@@ -30,7 +30,10 @@ back to "all enabled".
   "hooks":   { "<name>": true | false },
   "mcp":     { "<server>": true | false },
   "lang":    { "ts":   { "maxFileLines": 300, "maxFnLines": 60 },
-               "rust": { "maxFileLines": 500, "maxFnLines": 50, "maxImplLines": 200 } }
+               "rust": { "maxFileLines": 500, "maxFnLines": 50, "maxImplLines": 200 } },
+  "docsSync": { "surfaces": ["README.md", "docs/*.md", "*/SKILL.md"],
+               "surfaceExcludes": ["docs/releases/*"],
+               "codeSurfaces": ["*.ts", "*.rs", "*.sh", "*plugin.json"] }
 }
 ```
 
@@ -69,6 +72,29 @@ positive integer (`"maxFileLines": "120"`) is accepted and coerced to a number,
 so configs copy-pasted from sources that quote numbers still work. The gate never
 invokes biome/oxc/eslint/prettier/clippy/rustfmt; detecting them only tunes
 advisory wording. Resolver: `plugins/toolu/hooks/lib/quality-config.sh`.
+
+### Docs-sync surfaces (`docsSync`)
+
+The docs-sync backstop (`plugins/toolu/hooks/pre-tools/modules/docs-sync.sh`)
+fires an **advisory** on `git push` when the branch diff changes code but no
+documentation surface — a nudge to keep user-facing docs in sync with behavior.
+It never blocks the push and is silenced by a diff-`sha`-keyed attestation the
+agent writes to `.claude/tmp/docs-sync/<branch-slug>.json`.
+
+Three glob sets tune it; each resolves *project/user override → built-in
+default* (resolver `plugins/toolu/hooks/lib/docs-sync-config.sh`):
+
+| Key | Default | Meaning |
+|-----|---------|---------|
+| `docsSync.surfaces` | `README.md`, `*/README.md`, `docs/*.md`, `*/SKILL.md` | doc files whose change **satisfies** the check |
+| `docsSync.surfaceExcludes` | `docs/releases/*`, `*/docs/releases/*` | doc paths carved back out (release notes are per-release, not per-task) |
+| `docsSync.codeSurfaces` | `*.ts`, `*.rs`, `*.sh`, `*/commands/*`, `*plugin.json`, `*.config.json` | code files whose change **demands** a doc touch |
+
+Globs are matched with bash `case` fnmatch where a single `*` **crosses `/`** —
+so `docs/*.md` already covers nested paths (which is *why* `surfaceExcludes`
+exists: without it, `docs/*.md` would swallow `docs/releases/*.md`). A diff path
+counts as a doc touch when it matches `surfaces` **and not** `surfaceExcludes`.
+Setting any key replaces (does not merge with) that list's default.
 
 ### Recognized names
 

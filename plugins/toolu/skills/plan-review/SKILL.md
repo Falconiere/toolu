@@ -19,6 +19,7 @@ Read the plan and run it against the checklist. For each item ask *would an impl
 - **Error handling is planned, not deferred** — does the plan say how failures are handled (propagate/match/convert), or leave it as "add error handling later"? Later means never; the gate will block it anyway.
 - **Tests are real-data and located** — does each behavior have a planned test against real inputs (no mocks), in the right place (`__tests__/` / `tests/`)?
 - **Respects the conventions** — file size ceilings, one-responsibility files named after their export, concise docs. If a step grows a giant file, the split must be in the plan.
+- **Docs in sync** — if the plan changes behavior, interfaces, CLI flags, commands, or config but has no step updating the user-facing docs (README, `docs/` guides, `SKILL.md` triggers, release notes), that's a finding.
 - **Gate-aware sequencing** — are steps ordered so each lands clean? The quality gate blocks further edits while failing; a plan that stacks changes before a green checkpoint will stall.
 - **Verification is end-to-end** — is there a section proving the whole thing works (run the code / MCP / tests), not just unit checks?
 

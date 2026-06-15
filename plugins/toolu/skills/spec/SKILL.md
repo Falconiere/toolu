@@ -56,7 +56,7 @@ Unresolved decisions with an owner. An honest spec names what it doesn't know.
 
 ## Conventions carried forward
 
-Decide here so the later phases inherit, not discover: legible structure (one responsibility per file, named after its export), real-world-data testing, concise-but-required docs, and the per-project size ceilings — if the architecture implies a giant file, split it in the spec.
+Decide here so the later phases inherit, not discover: legible structure (one responsibility per file, named after its export), real-world-data testing, concise-but-required docs, **Docs in sync** (when the change touches a user-facing surface — behavior, interfaces, CLI, commands, config — the prose docs that describe it are updated in the same change: README, `docs/` guides, `SKILL.md` triggers, release notes; name it in Acceptance criteria), and the per-project size ceilings — if the architecture implies a giant file, split it in the spec.
 
 ## What "done" looks like
 

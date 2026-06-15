@@ -32,6 +32,7 @@ These are toolu defaults the later phases enforce, so decide them here rather th
 - **Legible structure** — one responsibility per file, files named after what they export. Code humans and AI can both navigate without a map.
 - **Test strategy** — tests colocate by language: TS in a sibling `__tests__/`, Rust in a sibling `tests/`. Real-world data only; no mock-data tests. Decide *what* you'll test against now.
 - **Docs** — every module and public symbol gets a concise doc line. Required, but brief — plan for it, don't bolt it on.
+- **Docs in sync** — when a change touches a user-facing surface (behavior, interfaces, CLI flags, commands, config), the prose docs that describe it stay current: README, `docs/` guides, `SKILL.md` trigger text, release notes. Distinct from the code-symbol doc line above. Decide here which surfaces this task touches so the later phases require, do, and check the update.
 - **Size discipline** — default ceilings of 300 code lines per TS file / 500 per Rust file (blanks and comments excluded, per-project overridable). If the design implies a giant file, split it in the design, not after the gate complains.
 
 ## What "done" looks like
