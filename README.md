@@ -129,13 +129,13 @@ Ten plugins, one marketplace. Install the core alone, or add the domain plugins.
 
 | Group | Plugin | Version | What it does |
 |--------|--------|:-------:|--------------|
-| Core | **`toolu`** | `1.17.0` | The registry-driven hook engine plus the 8-phase workflow skills, slash commands, the `push-review` gate, and the `deep-explore` agent. The one required plugin. |
+| Core | **`toolu`** | `1.18.0` | The registry-driven hook engine plus the 8-phase workflow skills, slash commands, the `push-review` gate, and the `deep-explore` agent. The one required plugin. |
 | Quality gate | **`rust-quality`** | `0.1.0` | Rust `PostToolUse` checks — file / function / `impl` size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, tests in a flat `tests/`. Registers into the core engine. |
 | Quality gate | **`ts-quality`** | `0.1.0` | TypeScript `PostToolUse` checks — size limits, no `../` imports, no `as` / hand-rolled guards, colocated `__tests__/`, duplicate-type detection. Registers into the core engine. |
 | Code intel | **`ast-grep`** | `0.1.1` | Structural code search & rewrite (**ast-grep**) — adds the `ast-grep` skill and a `Grep → ast-grep` nudge mirrored into the registry. Standalone. |
-| Code intel | **`comemory`** | `0.2.0` | Persistent cross-session **memory** + code-index search (**comemory ≥ 0.8.0**), with a `/comemory:setup` command (detect+guide the binary, then wire git index-code hooks), `delete`/`context` wrapper verbs, `PreToolUse` scope enforcement, and a `SessionStart` memory-count publisher for the statusline. |
-| Knowledge | **`context7`** | `1.17.0` | Live **library documentation** & code-example lookup via the Context7 REST API. Standalone, no dependencies. |
-| Knowledge | **`exa-search`** | `1.17.0` | **Web / code / URL search** plus deep research via the Exa REST API. Standalone, no dependencies. |
+| Code intel | **`comemory`** | `0.3.0` | Persistent cross-session **memory** + code-index search (**comemory ≥ 0.8.0**), with a `/comemory:setup` command (detect+guide the binary, then wire git index-code hooks), `delete`/`context` wrapper verbs, `PreToolUse` scope enforcement, and a `SessionStart` memory-count publisher for the statusline. |
+| Knowledge | **`context7`** | `1.18.0` | Live **library documentation** & code-example lookup via the Context7 REST API. Standalone, no dependencies. |
+| Knowledge | **`exa-search`** | `1.18.0` | **Web / code / URL search** plus deep research via the Exa REST API. Standalone, no dependencies. |
 | Workflow | **`code-review`** | `0.1.0` | `code-review:review` — pre-push review mirroring the CI bot's checklist (correctness, security, perf, coverage, doc accuracy); writes the `push-review` state so the gate passes. Standalone. |
 | Workflow | **`pr-babysit`** | `0.1.0` | `/pr-babysit:babysit` — cron-driven PR babysitter that fetches review comments + the CI review-bot verdict, triages, fixes, and chases findings to zero until CI is green. |
 | UI | **`statusline`** | `0.3.1` | Optional gate-aware statusline — `model \| effort \| ctx \| wk \| gate \| folder \| branch \| mem \| caveman`, wired via a stable symlink (`/statusline:setup` to enable). Claude Code only. Standalone. |
