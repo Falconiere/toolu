@@ -33,28 +33,40 @@ if [[ -n "${JIRA_STUB_FAIL:-}" ]]; then
   printf '{"errorMessages":["stub failure"]}\n'
   exit "$JIRA_STUB_FAIL"
 fi
+# Resolve an -o/--output target (download), if present.
+_out=""; _prev=""
+for _a in "$@"; do
+  [[ "$_prev" == "-o" || "$_prev" == "--output" ]] && _out="$_a"
+  _prev="$_a"
+done
+# Body = next queued fixture (one per call), else {}.
 if [[ -n "${JIRA_STUB_RESPONSES:-}" ]]; then
   mapfile -t _resp <<< "$JIRA_STUB_RESPONSES"
   _n=$(cat "$JIRA_STUB_COUNTER" 2>/dev/null || echo 0)
   _i=$_n
   (( _i >= ${#_resp[@]} )) && _i=$(( ${#_resp[@]} - 1 ))
   printf '%s\n' "$(( _n + 1 ))" > "$JIRA_STUB_COUNTER"
-  cat "${_resp[$_i]}"
+  _body=$(cat "${_resp[$_i]}")
 else
-  printf '{}\n'
+  _body='{}'
 fi
+if [[ -n "$_out" ]]; then printf '%s' "$_body" > "$_out"; else printf '%s\n' "$_body"; fi
 CURL
   chmod +x "$SANDBOX/bin/curl"
   export PATH="$SANDBOX/bin:$PATH"
 
-  # Default base URL; auth + version are set per-test.
+  # Default base URL; auth + version are set per-test. Point CLI-cred discovery
+  # at nothing so tests never read the host's real jira-cli config or keyring.
   export JIRA_BASE_URL="https://acme.atlassian.net"
+  export JIRA_CLI_CONFIG=/dev/null
+  export NETRC=/dev/null
 }
 
 teardown_sandbox() {
   [[ -n "${SANDBOX:-}" && -d "$SANDBOX" ]] && rm -rf "$SANDBOX"
   unset JIRA_BASE_URL JIRA_PAT JIRA_EMAIL JIRA_API_TOKEN JIRA_API_VERSION
   unset _JIRA_VER _JIRA_LEAN _JIRA_AUTH_MODE _JIRA_BASE JIRA_STUB_RESPONSES JIRA_STUB_FAIL REAL_PATH
+  unset JIRA_CLI_CONFIG JIRA_KEYRING_SERVICE NETRC
 }
 
 # stub_responses f1 [f2 ...] — queue fixture bodies for successive curl calls.

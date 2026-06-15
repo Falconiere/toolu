@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
-# attachment.sh — Jira issue attachments: add (multipart upload), list, get.
-# Sourced; depends on http.sh (jira_curl/jira_lean and the resolved transport
-# state _JIRA_AUTH_MODE/_JIRA_VER/_JIRA_BASE). The multipart `add` builds its own
-# curl (jira_curl only speaks JSON), reusing the same auth resolution.
+# attachment.sh — Jira issue attachments: add (multipart upload), list, get
+# (metadata), download (binary content), read (download + surface text content
+# as context). Sourced; depends on http.sh (jira_curl/jira_lean/jira_download and
+# the resolved transport state). The multipart `add` builds its own curl
+# (jira_curl only speaks JSON), reusing the same auth resolution.
 
 jira_attachment() {
   local action="${1:-}"; [[ $# -gt 0 ]] && shift
   case "$action" in
-    add)  _jira_attachment_add "$@";;
-    list) _jira_attachment_list "$@";;
-    get)  _jira_attachment_get "$@";;
-    *) echo "Usage: jira attachment <add|list|get> ..." >&2; return 1;;
+    add)      _jira_attachment_add "$@";;
+    list)     _jira_attachment_list "$@";;
+    get)      _jira_attachment_get "$@";;
+    download) _jira_attachment_download "$@";;
+    read)     _jira_attachment_read "$@";;
+    *) echo "Usage: jira attachment <add|list|get|download|read> ..." >&2; return 1;;
   esac
 }
 
@@ -42,4 +45,50 @@ _jira_attachment_get() {
   local id="${1:-}"
   [[ -z "$id" ]] && { echo "Usage: jira attachment get <ATTACHMENT_ID>" >&2; return 1; }
   jira_curl GET "/rest/api/${_JIRA_VER}/attachment/${id}" | jira_lean '.'
+}
+
+# _jira_attachment_download ATTACHMENT_ID [-o OUTFILE]: download the binary
+# content. Without -o, the filename is taken from the attachment metadata.
+_jira_attachment_download() {
+  local id="${1:-}"; [[ $# -gt 0 ]] && shift
+  local out=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -o|--output) out="$2"; shift 2;;
+      *) echo "attachment download: unknown option '$1'" >&2; return 1;;
+    esac
+  done
+  [[ -z "$id" ]] && { echo "Usage: jira attachment download <ATTACHMENT_ID> [-o OUTFILE]" >&2; return 1; }
+  if [[ -z "$out" ]]; then
+    local fn; fn=$(jira_curl GET "/rest/api/${_JIRA_VER}/attachment/${id}" | jq -r '.filename // empty')
+    out="${fn:-attachment-${id}}"
+  fi
+  jira_download "/rest/api/${_JIRA_VER}/attachment/content/${id}" "$out"
+  echo "downloaded attachment ${id} -> ${out}"
+}
+
+# _jira_attachment_read ATTACHMENT_ID: download the content and, for text-like
+# types, print it (so it becomes usable context); for binary types, report the
+# type/size and the saved path instead of dumping bytes.
+_jira_attachment_read() {
+  local id="${1:-}"
+  [[ -z "$id" ]] && { echo "Usage: jira attachment read <ATTACHMENT_ID>" >&2; return 1; }
+  local meta mime fn
+  meta=$(jira_curl GET "/rest/api/${_JIRA_VER}/attachment/${id}") || return 1
+  mime=$(jq -r '.mimeType // ""' <<<"$meta")
+  fn=$(jq -r '.filename // "attachment"' <<<"$meta")
+  local tmp; tmp="$(mktemp -t jira-attachment.XXXXXX)"
+  jira_download "/rest/api/${_JIRA_VER}/attachment/content/${id}" "$tmp" || { rm -f "$tmp"; return 1; }
+  case "$mime" in
+    text/*|application/json|application/xml|application/javascript|application/x-yaml|application/yaml|*+json|*+xml)
+      printf '# %s (%s)\n\n' "$fn" "$mime"
+      cat "$tmp"
+      rm -f "$tmp"
+      ;;
+    *)
+      local size; size=$(wc -c < "$tmp" | tr -d ' ')
+      printf '%s — binary attachment (%s, %s bytes) saved to %s\n' "$fn" "${mime:-unknown}" "$size" "$tmp"
+      printf 'Run `jira attachment download %s -o <path>` to save it elsewhere.\n' "$id"
+      ;;
+  esac
 }

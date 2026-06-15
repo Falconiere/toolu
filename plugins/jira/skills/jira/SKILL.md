@@ -17,7 +17,11 @@ Use this skill to work a Jira ticket without leaving the session: search by JQL,
 jira.sh [--api-version N] [--lean] <family> <action> [options]
 ```
 
-## Setup (environment only — never a .env file)
+## Setup
+
+**Easiest:** if the [`jira` CLI](https://github.com/ankitpokhrel/jira-cli) is configured (`jira init`), this plugin reuses its login automatically — server + login from `~/.config/.jira/.config.yml`, API token from the OS keyring (or `$JIRA_API_TOKEN`). No extra setup.
+
+**Or set environment variables** (these always take precedence; never a `.env` file):
 
 ```
 JIRA_BASE_URL                  required, e.g. https://acme.atlassian.net (no trailing slash)
@@ -26,7 +30,7 @@ JIRA_EMAIL + JIRA_API_TOKEN    basic auth — Cloud API token (used when JIRA_PA
 JIRA_API_VERSION               2 or 3 (default 3). Server/Data Center → 2.
 ```
 
-Auth resolves automatically: `JIRA_PAT` → Bearer; else `JIRA_EMAIL`+`JIRA_API_TOKEN` → basic; neither → error.
+Resolution: explicit env wins; else the jira CLI config + keyring fill the gaps. Auth: `JIRA_PAT` → Bearer; else `JIRA_EMAIL`+`JIRA_API_TOKEN` → basic. When nothing is available the plugin prints a short, friendly setup prompt (not an error) and exits.
 
 ## Families
 
@@ -47,6 +51,7 @@ jira.sh worklog add <KEY> -t <TIME> [-c COMMENT] | list <KEY> | delete <KEY> <WO
 jira.sh project list | get <KEY> | versions <KEY> | components <KEY>
 jira.sh user    whoami | search -q <QUERY> | get <ACCOUNT_ID>
 jira.sh attachment add <KEY> <FILE> | list <KEY> | get <ATTACHMENT_ID>
+              | download <ATTACHMENT_ID> [-o FILE] | read <ATTACHMENT_ID>   # read: text→context, binary→saved path
 jira.sh raw <GET|POST|PUT|DELETE> <PATH> [JSON_BODY]   # escape hatch; PATH relative to JIRA_BASE_URL
 ```
 

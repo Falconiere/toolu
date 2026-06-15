@@ -37,6 +37,42 @@ teardown() { teardown_sandbox; }
   grep -qx 'https://acme.atlassian.net/rest/api/3/attachment/10010' "$CURL_LOG"
 }
 
+@test "attachment: download saves content with auth and redirect-follow" {
+  stub_responses attachment-text-body.txt
+  run bash -c 'source "$1/lib/http.sh"; source "$1/lib/attachment.sh"; jira_require_env && jira_attachment download 10010 -o "$2"' _ "$TOOL_DIR" "$SANDBOX/out.bin"
+  [ "$status" -eq 0 ]
+  grep -qx -- '-L' "$CURL_LOG"
+  grep -qx 'https://acme.atlassian.net/rest/api/3/attachment/content/10010' "$CURL_LOG"
+  grep -qx 'Authorization: Bearer tok' "$CURL_LOG"
+  grep -q 'Deploy steps:' "$SANDBOX/out.bin"
+}
+
+@test "attachment: download without -o derives the filename from metadata" {
+  stub_responses attachment-text.json attachment-text-body.txt
+  run bash -c 'cd "$2"; source "$1/lib/http.sh"; source "$1/lib/attachment.sh"; jira_require_env && jira_attachment download 10010' _ "$TOOL_DIR" "$SANDBOX"
+  [ "$status" -eq 0 ]
+  [ -f "$SANDBOX/deploy-notes.txt" ]
+  grep -q 'Deploy steps:' "$SANDBOX/deploy-notes.txt"
+}
+
+@test "attachment: read prints text content as context" {
+  stub_responses attachment-text.json attachment-text-body.txt
+  run bash -c 'source "$1/lib/http.sh"; source "$1/lib/attachment.sh"; jira_require_env && jira_attachment read 10010' _ "$TOOL_DIR"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"# deploy-notes.txt (text/plain)"* ]]
+  [[ "$output" == *"Deploy steps:"* ]]
+}
+
+@test "attachment: read reports binary content instead of dumping bytes" {
+  stub_responses attachment-image.json attachment-text-body.txt
+  run bash -c 'source "$1/lib/http.sh"; source "$1/lib/attachment.sh"; jira_require_env && jira_attachment read 10011' _ "$TOOL_DIR"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"binary attachment (image/png"* ]]
+  [[ "$output" == *"architecture.png"* ]]
+  run grep -q 'Deploy steps:' <<< "$output"
+  [ "$status" -ne 0 ]
+}
+
 @test "attachment: unknown action exits 1 with usage" {
   run bash -c 'source "$1/lib/http.sh"; source "$1/lib/attachment.sh"; jira_require_env && jira_attachment bogus' _ "$TOOL_DIR"
   [ "$status" -eq 1 ]
