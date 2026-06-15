@@ -46,11 +46,12 @@ Use the project's `@/` path alias for all cross-module imports.
 const user = data as User;
 const config = JSON.parse(raw) as AppConfig;
 
-// ✅ CORRECT — use a type guard
+// ✅ CORRECT — use a type guard function
 function isUser(data: unknown): data is User {
   return typeof data === 'object' && data !== null && 'id' in data;
 }
-const user = isUser(data) ? data : throw new Error('Invalid user');
+if (!isUser(data)) throw new Error('Invalid user');
+const user = data;
 
 // ✅ CORRECT — use a Zod schema
 const AppConfigSchema = z.object({

@@ -1,6 +1,6 @@
 # stats — Usage Analytics Dashboard
 
-**Type:** UI | **Version:** 1.18.0 | **Standalone** (only needs `jq`)
+**Type:** UI | **Version:** 0.3.0 | **Standalone** (only needs `jq`)
 
 An on-demand `/stats` report of your **measured** Claude Code usage — tokens, estimated cost, and cache-hit rate — read straight from the session transcripts on disk. The first-party, no-estimate counterpart to the statusline's `wk:` sliver.
 
