@@ -51,7 +51,8 @@ stats_attach_billing() {
                      then (($wk.tokens * 100) / $wl | floor) else null end),
           basis: (if ($wl != null and $wl > 0) then "config" else "none" end),
           window_5h_tokens: null
-        }
+        },
+        warnings: (.warnings // [])     # pricing warnings (e.g. unknown model), grouped under billing
       } }
   '
 }

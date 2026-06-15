@@ -83,3 +83,17 @@ f() { jq -r "$1" <<<"$OUT"; }   # field of the last billing OUT
   OUT="$(agg 5 1000 | stats_attach_billing)"
   [ "$(f '.billing.mode')" = "api" ]
 }
+
+@test "billing.warnings carries the aggregate's unknown-model warnings" {
+  local r='[{"session_id":"s","project":"p","project_path":"/p","totals":{"tokens":1,"input":1,"output":0,"cache_read":0,"cache_write":0,"cost":0},"by_day":{},"by_model":{},"tools":{},"phases":{},"unknown_models":["claude-zz-9"]}]'
+  OUT="$(echo "$r" | stats_aggregate | stats_attach_billing)"
+  [ "$(f '.billing.warnings|length')" = "1" ]
+  [ "$(f '.billing.warnings[0]')" = "unknown model: claude-zz-9 (priced at Sonnet rate)" ]
+}
+
+@test "asof from STATS_PRICING_ASOF is surfaced on the billing object" {
+  export STATS_PRICING_ASOF=2026-06-15
+  OUT="$(agg 5 1000 | stats_attach_billing)"
+  unset STATS_PRICING_ASOF
+  [ "$(f '.billing.asof')" = "2026-06-15" ]
+}

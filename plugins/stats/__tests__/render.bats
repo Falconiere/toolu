@@ -136,3 +136,10 @@ rnd() { echo "$AGG" | stats_render; }
   echo "$output" | grep -q "API estimate"
   ! echo "$output" | grep -q "Subscription ("
 }
+
+@test "billing header states the pricing as-of date when set" {
+  export STATS_PRICING_ASOF=2026-06-15
+  AGG="$(echo "$ROLLUPS" | stats_aggregate | stats_attach_billing)"; unset STATS_PRICING_ASOF
+  run rnd
+  echo "$output" | grep -q "prices as of 2026-06-15"
+}
