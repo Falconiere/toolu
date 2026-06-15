@@ -15,25 +15,20 @@ input="$(cat 2>/dev/null)"   # consume stdin so the hook IPC never stalls
 command -v jq       >/dev/null 2>&1 || exit 0
 command -v comemory >/dev/null 2>&1 || exit 0
 
+# Shared canonical repo-scope key (basename of git-common-dir's parent), one
+# definition for all three comemory entry points. Missing lib → silent no-op,
+# consistent with this hook's non-fatal contract.
+_rs="$(cd "${BASH_SOURCE%/*}/../lib" 2>/dev/null && pwd)/repo-scope.sh"
+[ -r "$_rs" ] || exit 0
+# shellcheck source=../lib/repo-scope.sh
+. "$_rs"
+
 CFG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 cwd=$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null)
 [ -n "$cwd" ] || cwd="$PWD"
 
-# Main-repo key: basename of the parent of git-common-dir. A relative ".git"
-# (ordinary checkout) is absolutized via the cwd first; a linked worktree yields
-# an absolute path straight to the main repo's .git.
-repo_key() {  # $1 = dir
-  local c
-  c=$(git -C "$1" rev-parse --git-common-dir 2>/dev/null) || { printf 'unknown'; return; }
-  case "$c" in
-    /*) ;;
-    *) c=$(cd "$1" 2>/dev/null && cd "$c" 2>/dev/null && pwd) || { printf 'unknown'; return; } ;;
-  esac
-  basename "$(dirname "$c")"
-}
-
-KEY=$(repo_key "$cwd")
-[ -n "$KEY" ] && [ "$KEY" != unknown ] || exit 0
+KEY=$(comemory_repo_key "$cwd")
+[ -n "$KEY" ] || exit 0
 
 # Bound the call if a timeout tool is present; otherwise run unbounded but still
 # non-fatal (stock macOS has no `timeout`).

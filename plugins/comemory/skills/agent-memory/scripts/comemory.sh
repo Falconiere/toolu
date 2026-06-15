@@ -1,45 +1,20 @@
 #!/usr/bin/env bash
 # comemory CLI wrapper — persistent memory for AI agents
-# Defaults to the current project (auto-detected via detect_project_name) and
+# Defaults to the current project (auto-detected via comemory_repo_key) and
 # scopes every operation to it via comemory's server-side --repo filter.
 # Override the repo with MY_CLAUDE_COMEMORY_REPO=<name>.
 # Honors COMEMORY_DATA_DIR (passed through to the comemory CLI, which already
 # reads it from the environment) for the data root.
 set -euo pipefail
 
-# Self-contained project detection — no cross-plugin source path (this plugin
-# may be installed without a toolu checkout next to it). detect_project_name
-# uses an if-block (not a bare `[ -n ] && basename`) so it exits 0 outside a
-# git repo and `set -e` reaches the REPO="unknown" fallback below.
-#
-# Unlike the toolu core's hooks/lib/detect.sh (which resolves the per-worktree
-# --show-toplevel — correct for per-worktree gate state), memory scope must be
-# the CANONICAL repo root, SHARED across every git worktree: --show-toplevel is
-# the worktree path, so each worktree would otherwise mint a separate `--repo`
-# scope and saves made in a worktree become invisible from main and sibling
-# worktrees. All worktrees share one .git, and --git-common-dir points at the
-# main worktree's .git from every worktree AND the main checkout, so dirname of
-# it is the stable repo root. Mirrors comemory-status.sh's repo_key. Falls back
-# to --show-toplevel when common-dir is not "<root>/.git" (custom GIT_DIR / bare
-# layouts), then empty (→ "unknown") outside a repo.
-detect_project_root() {
-  local common
-  # --path-format=absolute needs git >= 2.31; retry plain then absolutize for older git.
-  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)
-  if [ -z "$common" ]; then
-    common=$(git rev-parse --git-common-dir 2>/dev/null || true)
-    [ -n "$common" ] && common=$(cd "$common" 2>/dev/null && pwd || true)
-  fi
-  case "$common" in
-    */.git) dirname "$common" ;;
-    *)      git rev-parse --show-toplevel 2>/dev/null || true ;;
-  esac
-}
-detect_project_name() {
-  local root
-  root=$(detect_project_root)
-  if [ -n "$root" ]; then basename "$root"; fi
-}
+# Canonical, worktree-shared repo scope via the plugin's own repo-scope lib (a
+# sibling that ships with comemory — no cross-plugin path, unlike toolu's
+# detect.sh which resolves the per-worktree --show-toplevel for gate state).
+# comemory_repo_key returns 0 even when empty so `set -e` reaches the
+# REPO="unknown" fallback below. Missing lib → noop key → "unknown".
+_rs="${BASH_SOURCE%/*}/../../../lib/repo-scope.sh"
+# shellcheck source=../../../lib/repo-scope.sh
+if [ -r "$_rs" ]; then . "$_rs"; else comemory_repo_key() { :; }; fi
 
 # `setup` must run BEFORE the binary-presence guard below: guiding the install
 # of an absent comemory CLI is the whole point of setup, so it cannot be gated
@@ -65,7 +40,7 @@ if ! command -v comemory >/dev/null 2>&1; then
   exit 0
 fi
 
-REPO="${MY_CLAUDE_COMEMORY_REPO:-$(detect_project_name)}"
+REPO="${MY_CLAUDE_COMEMORY_REPO:-$(comemory_repo_key)}"
 if [ -z "$REPO" ]; then
   REPO="unknown"
   # Visibility: outside a git repo with MY_CLAUDE_COMEMORY_REPO unset, every
