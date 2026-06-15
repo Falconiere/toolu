@@ -51,3 +51,56 @@ cost() {
   run cost "claude-opus-4-8" '{"cache_creation_input_tokens":1000000}'
   [ "$output" = "6.25" ]
 }
+
+# --- Fable / Mythos: the previously-missing tier ($10/$50, 2x Opus) ---
+
+@test "fable prices input \$10 + output \$50 per Mtok" {
+  run cost "claude-fable-5" '{"input_tokens":1000000,"output_tokens":1000000}'
+  [ "$status" -eq 0 ]
+  [ "$output" = "60" ]
+}
+
+@test "mythos is priced as fable \$10 input" {
+  run cost "claude-mythos-5" '{"input_tokens":1000000}'
+  [ "$output" = "10" ]
+}
+
+@test "fable cache_read billed 0.1x = \$1 per Mtok" {
+  run cost "claude-fable-5" '{"cache_read_input_tokens":1000000}'
+  [ "$output" = "1" ]
+}
+
+@test "fable cache write 5m 1.25x = \$12.50 per Mtok" {
+  run cost "claude-fable-5" '{"cache_creation":{"ephemeral_5m_input_tokens":1000000,"ephemeral_1h_input_tokens":0}}'
+  [ "$output" = "12.5" ]
+}
+
+@test "fable cache write 1h 2x = \$20 per Mtok" {
+  run cost "claude-fable-5" '{"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":1000000}}'
+  [ "$output" = "20" ]
+}
+
+# --- Mixed TTL in one message: 5m and 1h writes both counted ---
+
+@test "mixed 5m+1h in one message sums both writes (opus 6.25 + 10)" {
+  run cost "claude-opus-4-8" '{"cache_creation":{"ephemeral_5m_input_tokens":1000000,"ephemeral_1h_input_tokens":1000000}}'
+  [ "$output" = "16.25" ]
+}
+
+# --- Unknown-model flag: priced at Sonnet, but tagged so callers can warn ---
+
+@test "unknown model is flagged unknown:true on the rate struct" {
+  run jq -nr --arg m "some-future-model" "$(stats_pricing_jq) rates(\$m) | .unknown // false"
+  [ "$status" -eq 0 ]
+  [ "$output" = "true" ]
+}
+
+@test "known models are not flagged unknown" {
+  run jq -nr --arg m "claude-opus-4-8" "$(stats_pricing_jq) rates(\$m) | .unknown // false"
+  [ "$output" = "false" ]
+}
+
+@test "sonnet is explicitly matched, not via the unknown branch" {
+  run jq -nr --arg m "claude-sonnet-4-6" "$(stats_pricing_jq) rates(\$m) | [.i,.o,(.unknown // false)]|map(tostring)|join(\",\")"
+  [ "$output" = "3,15,false" ]
+}

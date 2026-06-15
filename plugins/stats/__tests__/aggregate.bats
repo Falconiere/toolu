@@ -117,4 +117,17 @@ j() { echo "$output" | jq -r "$1"; }
   [ "$(j '.totals.tokens')" = "0" ]
   [ "$(j '.totals.sessions')" = "0" ]
   [ "$(j '.by_project|length')" = "0" ]
+  [ "$(j '.warnings|length')" = "0" ]
+}
+
+@test "surfaces unknown-model warnings, deduped across sessions" {
+  ROLLUPS='[{"session_id":"x","project":"p","project_path":"/p","totals":{"tokens":1,"input":1,"output":0,"cache_read":0,"cache_write":0,"cost":0},"by_day":{},"by_model":{},"tools":{},"phases":{},"unknown_models":["claude-zz-9"]},{"session_id":"y","project":"p","project_path":"/p","totals":{"tokens":1,"input":1,"output":0,"cache_read":0,"cache_write":0,"cost":0},"by_day":{},"by_model":{},"tools":{},"phases":{},"unknown_models":["claude-zz-9"]}]' run agg
+  [ "$status" -eq 0 ]
+  [ "$(j '.warnings|length')" = "1" ]
+  [ "$(j '.warnings[0]')" = "unknown model: claude-zz-9 (priced at Sonnet rate)" ]
+}
+
+@test "no warnings when all models are known" {
+  run agg
+  [ "$(j '.warnings|length')" = "0" ]
 }

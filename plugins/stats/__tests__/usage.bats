@@ -84,4 +84,18 @@ j() { echo "$output" | jq -r "$1"; }
   [ "$(j '.messages')" = "0" ]
   [ "$(j '.totals.tokens')" = "0" ]
   [ "$(j '.cwd')" = "null" ]
+  [ "$(j '.unknown_models|length')" = "0" ]
+}
+
+@test "flags an unknown model in unknown_models so the caller can warn" {
+  printf '%s\n' '{"type":"assistant","timestamp":"2026-06-14T12:00:00Z","message":{"id":"m1","model":"claude-zztop-9","usage":{"input_tokens":10}}}' > "$BATS_TEST_TMPDIR/u.jsonl"
+  run stats_usage_rollup "$BATS_TEST_TMPDIR/u.jsonl"
+  [ "$status" -eq 0 ]
+  [ "$(j '.unknown_models|join(",")')" = "claude-zztop-9" ]
+}
+
+@test "known models leave unknown_models empty" {
+  run stats_usage_rollup "$F/multimodel.jsonl"
+  [ "$status" -eq 0 ]
+  [ "$(j '.unknown_models|length')" = "0" ]
 }

@@ -91,3 +91,12 @@ rnd() { echo "$AGG" | stats_render; }
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "no usage recorded"
 }
+
+@test "dashboard surfaces an unknown-model pricing warning" {
+  local r='[{"session_id":"s","project":"p","project_path":"/p","totals":{"tokens":10,"input":10,"output":0,"cache_read":0,"cache_write":0,"cost":0.01},"by_day":{"'"$TODAY"'":{"tokens":10,"input":10,"output":0,"cache_read":0,"cache_write":0,"cost":0.01}},"by_model":{"claude-zz-9":{"tokens":10,"input":10,"output":0,"cache_read":0,"cache_write":0,"cost":0.01}},"tools":{},"phases":{},"unknown_models":["claude-zz-9"]}]'
+  AGG="$(echo "$r" | stats_aggregate)"
+  run rnd
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "pricing warnings"
+  echo "$output" | grep -q "claude-zz-9"
+}

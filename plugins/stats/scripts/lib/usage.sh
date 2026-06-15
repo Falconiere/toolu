@@ -38,6 +38,7 @@ stats_usage_rollup() {
         | select(.message.id != null and .timestamp != null)
         | (.message.model // "") as $m
         | (.message.usage // {}) as $u
+        | (rates($m)) as $r
         | { id:          .message.id,
             day:         (try bucket(.timestamp) catch null),
             model:       $m,
@@ -48,7 +49,8 @@ stats_usage_rollup() {
             out:         ($u.output_tokens // 0),
             cache_read:  ($u.cache_read_input_tokens // 0),
             cache_write: ($u.cache_creation_input_tokens // 0),
-            cost:        msgcost($u; rates($m)),
+            cost:        msgcost($u; $r),
+            unknown:     ($r.unknown // false),
             cwd:         (.cwd // null) } ]
     | map(select(.day != null))
     | group_by(.id) | map(.[-1])                        # dedup streaming dups: keep the FINAL frame (full content/tool_use; usage is identical across frames)
@@ -60,6 +62,7 @@ stats_usage_rollup() {
         by_model: ( $msgs | group_by(.model) | map({ key: .[0].model, value: (. | sums) }) | from_entries ),
         tools:    ( [ $msgs[].tools[] ]      | group_by(.) | map({ key: .[0], value: length }) | from_entries ),
         phases:   ( [ $msgs[].skill | select(. != null) | sub("^toolu:"; "") ]
-                    | group_by(.) | map({ key: .[0], value: length }) | from_entries ) }
+                    | group_by(.) | map({ key: .[0], value: length }) | from_entries ),
+        unknown_models: ( [ $msgs[] | select(.unknown) | .model ] | unique ) }
   '
 }

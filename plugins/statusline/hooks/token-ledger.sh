@@ -11,16 +11,23 @@
 # It ALSO records the per-bucket token sums (input / output / cache_read /
 # cache_write) and a $-weighted `cost`, so the statusline can surface the true
 # cost picture — cache_read dominates volume but is cheap, so a tokens-only view
-# is misleading. Cost is priced per message at that message's model rate
-# (Opus $5/$25, Sonnet $3/$15, Haiku $1/$5 per Mtok; cache_read 0.1x input;
-# cache writes 1.25x for 5-min / 2x for 1-hour TTL, split via the usage block's
-# cache_creation.ephemeral_{5m,1h}_input_tokens). Unknown models price at the
-# Sonnet tier. Rates are 2026 sticker prices and may drift; treat cost as an
+# is misleading. Cost is priced per message at that message's model rate via the
+# shared msgcost() (Fable $10/$50, Opus $5/$25, Sonnet $3/$15, Haiku $1/$5 per
+# Mtok; cache_read 0.1x input; cache writes 1.25x 5-min / 2x 1-hour TTL). Unknown
+# models price at the Sonnet tier. The rates live in pricing-vendored.sh (a
+# byte-identical copy of the stats plugin's pricing.sh); treat cost as an
 # estimate, not a billing figure.
 #
 # Idempotent: a re-run recomputes from the full transcript and REPLACES this
 # session's per-week files, so the weekly total never double-counts.
 set -u
+
+# Pricing math is vendored from the stats plugin: stats and statusline install
+# under separate CLAUDE_PLUGIN_ROOTs, so we cannot source stats' pricing.sh at
+# runtime. pricing-vendored.sh is a byte-identical sibling copy, kept in sync by
+# plugins/statusline/scripts/sync-pricing.sh and guarded by pricing-sync.bats.
+# shellcheck source=pricing-vendored.sh
+source "$(dirname "${BASH_SOURCE[0]}")/pricing-vendored.sh" 2>/dev/null || exit 0
 
 command -v jq >/dev/null 2>&1 || exit 0
 
@@ -57,30 +64,21 @@ write_week_file() {  # $1=week $2=session $3=tokens $4=input $5=output $6=cache_
 # with a malformed timestamp rather than aborting the whole pass. Assumes Claude
 # Code's `...Z` (UTC) timestamp form; a numeric-offset timestamp would not parse
 # and that line would be dropped.
-jq -rs '
-  def rates(m):
-    if   (m | test("opus"))  then {i: 5, o: 25}
-    elif (m | test("haiku")) then {i: 1, o: 5}
-    else {i: 3, o: 15} end;          # default: Sonnet tier (also covers unknown models)
+jq -rs "$(_tl_pricing_jq)"'
   [ .[]
     | select(.type == "assistant")
     | select(.message.id != null and .timestamp != null)
     | rates(.message.model // "") as $r
     | (.message.usage // {}) as $u
-    | ($u.input_tokens // 0)               as $inp
-    | ($u.output_tokens // 0)              as $outp
-    | ($u.cache_read_input_tokens // 0)    as $crd
+    | ($u.input_tokens // 0)                as $inp
+    | ($u.output_tokens // 0)               as $outp
+    | ($u.cache_read_input_tokens // 0)     as $crd
     | ($u.cache_creation_input_tokens // 0) as $cwr
-    | ($u.cache_creation.ephemeral_5m_input_tokens // 0) as $w5
-    | ($u.cache_creation.ephemeral_1h_input_tokens // 0) as $w1
     | { id: .message.id,
         week: (try (.timestamp | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601 | strflocaltime("%G-W%V")) catch null),
         t:   ($inp + $outp + $cwr),
         in:  $inp, out: $outp, cr: $crd, cw: $cwr,
-        cost: ( ( $inp * $r.i + $outp * $r.o + $crd * $r.i * 0.1
-                + (if ($w5 + $w1) > 0 then $w5 * 1.25 * $r.i + $w1 * 2 * $r.i
-                                      else $cwr * 1.25 * $r.i end)
-                ) / 1000000 ) } ]
+        cost: msgcost($u; $r) } ]
   | map(select(.week != null))
   | group_by(.id) | map(.[0])
   | group_by(.week)
