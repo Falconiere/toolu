@@ -4,6 +4,9 @@
     "comemory": true,
     "ast-grep": true
   },
+  "agents": {
+    "research-agent": true
+  },
   "hooks": {
     "session-start": true,
     "user-prompt-submit": true,

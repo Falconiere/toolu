@@ -130,6 +130,21 @@ if [[ "$prompt_lower" =~ ${WB}(refactor|migrate|rewrite|redesign|overhaul|audit|
   orchestrate="Broad/multi-step task — delegate exploration, searches & reviews and parallelize independent work via subagents; return conclusions, not bytes, to keep main context lean. See the orchestrator skill."
 fi
 
+# 2c. Research nudge — independent of the single intent hint (a prompt can be
+# both a "fix" AND need external lookup). Fires on EXTERNAL-knowledge signals
+# (live docs, latest releases, third-party APIs) so the work is delegated to the
+# research-agent subagent — it isolates the token cost and routes
+# exa-search/context7 with a native fallback. Deliberately tight and
+# external-leaning: words here must NOT overlap the codebase-recall signals
+# (`how does`, `where is`) handled by the recall block above, so a local-code
+# question never gets misrouted to web research. WB/WE-wrapped. Gated by the
+# `agents.research-agent` toggle (default on).
+research=""
+if toolu_enabled agents research-agent &&
+   [[ "$prompt_lower" =~ ${WB}(latest|docs\ for|library\ docs|api\ reference|api\ docs|changelog|release\ notes|best\ practices?|look\ up|search\ the\ web|web\ search|how\ to\ use)${WE} ]]; then
+  research="External research — delegate to the research-agent subagent (routes exa-search/context7, native fallback) to keep main context lean."
+fi
+
 # 3. Per-project context hook — opt-in. Project may emit any string.
 project_ctx=""
 if [ -n "$PROJECT_ROOT" ] && [ -f "$PROJECT_ROOT/.claude/context.sh" ]; then
@@ -142,6 +157,7 @@ parts=()
 [[ -n "$recall" ]] && parts+=("$recall")
 [[ -n "$intent" ]] && parts+=("$intent")
 [[ -n "$orchestrate" ]] && parts+=("$orchestrate")
+[[ -n "$research" ]] && parts+=("$research")
 [[ -n "$project_ctx" ]] && parts+=("$project_ctx")
 [[ -n "$quality_gate_hint" ]] && parts+=("$quality_gate_hint")
 

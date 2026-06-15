@@ -232,3 +232,50 @@ write_failing_gate() {
   ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
   ! echo "$ctx" | grep -q 'orchestrator skill'
 }
+
+@test "user-prompt-submit: research nudge fires on an external-knowledge prompt" {
+  payload=$(build_input "look up the latest React Compiler docs")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  echo "$ctx" | grep -q 'research-agent subagent'
+}
+
+@test "user-prompt-submit: research nudge is independent of the intent hint" {
+  # "fix" -> intent hint; "release notes" -> research nudge. Both must appear.
+  payload=$(build_input "fix the parser per the latest release notes")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  echo "$ctx" | grep -q 'Fix in code'
+  echo "$ctx" | grep -q 'research-agent subagent'
+}
+
+@test "user-prompt-submit: no research nudge for a codebase 'where is' prompt" {
+  payload=$(build_input "where is the auth middleware defined")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  ! echo "$ctx" | grep -q 'research-agent subagent'
+}
+
+@test "user-prompt-submit: no research nudge for a codebase 'how does' prompt" {
+  payload=$(build_input "how does the parser work in this repo")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  ! echo "$ctx" | grep -q 'research-agent subagent'
+}
+
+@test "user-prompt-submit: research nudge suppressed when agents.research-agent is false" {
+  # Project config in the git-init'd TMP root toggles the agent off.
+  mkdir -p .claude
+  cat > .claude/toolu.config.json <<'CFG'
+{ "agents": { "research-agent": false } }
+CFG
+  payload=$(build_input "look up the latest React Compiler docs")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  ! echo "$ctx" | grep -q 'research-agent subagent'
+}
