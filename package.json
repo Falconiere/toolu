@@ -35,7 +35,8 @@
       "./plugins/comemory/skills",
       "./plugins/code-review/skills",
       "./plugins/context7/skills",
-      "./plugins/exa-search/skills"
+      "./plugins/exa-search/skills",
+      "./plugins/jira/skills"
     ],
     "prompts": [
       "./plugins/toolu/commands",
