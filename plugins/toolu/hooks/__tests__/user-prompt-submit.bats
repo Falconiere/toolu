@@ -53,11 +53,32 @@ CTX
 }
 
 @test "user-prompt-submit: no recall hint when prompt does not invite recall" {
-  payload=$(build_input "implement a new dashboard widget")
+  # A formatting tweak names no recall word and no task verb, so the recall
+  # branch must stay silent. (Task verbs like 'implement'/'add' now DO invite
+  # recall — see the two cases below.)
+  payload=$(build_input "reformat this block")
   run bash "$HOOK" <<<"$payload"
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q 'Recall first'
   ! echo "$output" | grep -q 'comemory search'
+}
+
+@test "user-prompt-submit: task verb 'implement' invites recall" {
+  payload=$(build_input "implement a new dashboard widget")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  # The recall branch fires for ordinary task verbs now: the recall line when
+  # comemory is available, a WARN when it is absent (as under the sanitized test
+  # PATH). Either proves the verb entered the branch — mirrors the architecture
+  # case above.
+  echo "$output" | grep -qE 'comemory|Recall first|WARN'
+}
+
+@test "user-prompt-submit: task verb 'add' invites recall" {
+  payload=$(build_input "add a retry to the fetch helper")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -qE 'comemory|Recall first|WARN'
 }
 
 @test "user-prompt-submit: recall hint NOT emitted for 'paste' (substring of past)" {

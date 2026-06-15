@@ -8,7 +8,9 @@ This protocol is **MANDATORY and ALWAYS ACTIVE**.
 
 ## Hard Constraints (Always)
 - Memory is required for recall and save.
-- **EVERY save/recall MUST be scoped to a repo.** The wrapper auto-detects the current repo via `detect_project_name` (git toplevel basename) and injects `--repo`. Raw `comemory` calls without `--repo` are blocked by the `comemory-scope` pre-tool hook.
+- **Recall FIRST, from the repository.** Before reading files to understand anything, run `comemory.sh search` — at the start of every task and whenever you hit an unfamiliar area. This is not optional and not something to ask permission for.
+- **A search miss is an obligation, not a dead end.** When recall returns nothing, do the native search (ast-grep → Grep → Read), and the moment you learn something reusable, **save the finding back** so the next miss becomes a hit. The wrapper prints this reminder on every empty `search`; honor it. Save patterns, bug fixes, conventions, decisions, gotchas, and nuances.
+- **EVERY save/recall MUST be scoped to a repo — always pass `--repo`.** The wrapper auto-detects the current repo via `detect_project_name` (git toplevel basename) and injects `--repo` for you; never strip it, and never fall back to a raw `comemory` call that omits it. Raw `comemory` calls without `--repo` are blocked by the `comemory-scope` pre-tool hook.
 - Before ANY save or recall, the agent MUST state which repo it is scoping (e.g. `Scope: toolu`). Wrong scope = wrong memories = wasted tokens or contaminated context.
 - Global quality gate is blocking — do not switch tasks while any errors/warnings/tests fail (even unrelated).
 - Test policy — NO mock-data tests. Use real-world data/integration paths.
@@ -153,7 +155,7 @@ ${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh save "<title>" "<b
 - Pattern documented or identified
 - Bug fixed (include root cause)
 - Convention established or clarified
-- Gotcha, edge case, or unexpected behavior found
+- Gotcha, nuance, edge case, or unexpected behavior found
 - User preference or constraint learned
 - Configuration change or environment setup
 - Quality gate/e2e failure discovered (save failing command + symptom)

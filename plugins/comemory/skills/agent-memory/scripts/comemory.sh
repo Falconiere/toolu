@@ -92,6 +92,38 @@ repo_flag() {
   esac
 }
 
+# True when a captured `search` result holds no memories. Branches on output mode:
+# --json carries an explicit "total":0 / "hits":[] (a hit's "total":N never matches
+# ":0" exactly — "total":10 has ":1"); plain output prints one score row per hit
+# (`0.99  lexical  <id>`) above a `query:`/`feedback:` trailer, so empty == no line
+# begins with a digit once ANSI colour is stripped (trailers begin with a letter).
+# Args: $1 = captured stdout, $2 = "json" when --json was passed.
+_search_is_empty() {
+  local out="$1" mode="$2"
+  if [ "$mode" = json ]; then
+    case "$out" in
+      *'"hits":[]'*|*'"total":0'*) return 0 ;;
+      *)                           return 1 ;;
+    esac
+  fi
+  if printf '%s\n' "$out" | sed $'s/\x1b\\[[0-9;]*m//g' | grep -qE '^[[:space:]]*[0-9]'; then
+    return 1
+  fi
+  return 0
+}
+
+# Print the miss -> save-back nudge. STDERR ONLY so --json stdout stays pure.
+# Conditional wording (IF reusable) — a miss can legitimately mean "nothing to do".
+# Args: $1 = query, $2 = repo scope.
+_emit_miss_banner() {
+  {
+    printf 'comemory.sh: no memory hit for "%s" (repo: %s).\n' "$1" "$2"
+    printf '  IF you learn something reusable answering this (pattern/bug/decision/nuance), save it back:\n'
+    printf '    comemory.sh save "<title>" "<body>" --kind pattern|bug|decision|discovery|note --tags "..."\n'
+    printf '  (the wrapper auto-injects --repo %s — scope is handled).\n' "$2"
+  } >&2
+}
+
 subcmd="${1:-}"
 shift 2>/dev/null || true
 
@@ -149,7 +181,23 @@ case "$subcmd" in
     query="${1:?search requires a query}"
     shift
     repo_flag "$@"
-    exec comemory search ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@" -- "$query"
+    # Capture stdout (not exec) so an EMPTY result can nudge a save-back — closing
+    # the miss -> native-search -> save loop. comemory's own stderr inherits ours
+    # (real errors stay visible); only stdout is captured and re-emitted verbatim.
+    # set +e around the capture: under `set -e`/pipefail a non-zero comemory must
+    # not abort the wrapper before we forward its exit code. The banner fires only
+    # on success (rc 0) AND empty — never masking an error as a miss.
+    _json_mode=""
+    case " $* " in *" --json "*|*" --json="*) _json_mode=json ;; esac
+    set +e
+    _out=$(comemory search ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@" -- "$query")
+    _rc=$?
+    set -e
+    printf '%s\n' "$_out"
+    if [ "$_rc" -eq 0 ] && _search_is_empty "$_out" "$_json_mode"; then
+      _emit_miss_banner "$query" "$REPO"
+    fi
+    exit "$_rc"
     ;;
   context)
     # Headline lookup (code symbol + memories). Repo-scoped like search: comemory
