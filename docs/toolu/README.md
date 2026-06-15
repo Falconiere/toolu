@@ -201,7 +201,7 @@ Defaults are opt-out — no file required. See [`docs/config.md`](../config.md) 
 
 ## Testing
 
-The hook engine and language gates are covered by **618 bats tests** across 60 suites. Run:
+The hook engine and language gates are covered by **997 bats tests** across 103 suites. Run:
 
 ```bash
 bats -r plugins
