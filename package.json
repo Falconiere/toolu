@@ -23,7 +23,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bats -r plugins && bun run typecheck"
+    "test": "bats -r plugins tooling && bun run typecheck"
   },
   "pi": {
     "extensions": [
