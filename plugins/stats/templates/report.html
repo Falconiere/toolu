@@ -4,99 +4,183 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Claude Code Usage</title>
-<style>
-:root{
-  --bg:#f6f7f9; --card:#ffffff; --fg:#1c2024; --muted:#6b7280;
-  --line:#e6e8ec; --accent:#7c5cff; --track:#eceef1;
-}
-@media (prefers-color-scheme:dark){
-  :root{
-    --bg:#0f1115; --card:#171a21; --fg:#e7e9ee; --muted:#9aa3b2;
-    --line:#252a33; --accent:#9b87ff; --track:#222631;
-  }
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);
-  font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  padding:32px 16px;}
-.wrap{max-width:760px;margin:0 auto}
-h1{font-size:18px;margin:0 0 2px;letter-spacing:-.01em}
-.sub{color:var(--muted);font-size:12px;margin:0 0 20px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;
-  padding:18px 20px;margin:0 0 16px}
-.metrics{display:flex;flex-wrap:wrap;gap:28px;align-items:baseline}
-.metric .n{font-size:26px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.metric .l{color:var(--muted);font-size:12px}
-.gauge{margin-top:16px}
-.gauge .track{height:10px;background:var(--track);border-radius:6px;overflow:hidden}
-.gauge .fill{height:100%;background:var(--accent);border-radius:6px}
-.gauge .l{color:var(--muted);font-size:12px;margin-top:6px}
-h2{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 12px}
-.spark{width:100%;height:52px;color:var(--accent);display:block}
-.spark rect{fill:currentColor;opacity:.85}
-.row{display:grid;grid-template-columns:175px 1fr 64px 78px;gap:14px;align-items:center;
-  padding:6px 0;border-top:1px solid var(--line)}
-.row:first-child{border-top:0}
-.name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:550}
-.track{height:8px;background:var(--track);border-radius:5px;overflow:hidden}
-.fill{display:block;height:100%;background:var(--accent);border-radius:5px}
-.tok{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
-.cost{text-align:right;font-variant-numeric:tabular-nums}
-.muted{color:var(--muted)}
-.activity{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px}
-.activity b{font-weight:600;color:var(--muted);font-weight:500;margin-right:4px}
-footer{color:var(--muted);font-size:11px;text-align:center;margin-top:18px}
+<!-- Styles are Tailwind CSS (v4) compiled to a self-contained stylesheet; the
+     report stays a single offline file. Source: templates/report.tailwind.css
+     (rebuild: see that file's header). -->
+<style id="tw">
+/*! tailwindcss v4.3.1 | MIT License | https://tailwindcss.com */
+@layer properties{@supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))){*,:before,:after,::backdrop{--tw-leading:initial;--tw-font-weight:initial;--tw-ease:initial}}}@layer theme{:root,:host{--font-sans:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";--font-mono:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;--color-emerald-400:oklch(76.5% .177 163.223);--spacing:.25rem;--container-5xl:64rem;--text-xs:.75rem;--text-xs--line-height:calc(1 / .75);--text-sm:.875rem;--text-sm--line-height:calc(1.25 / .875);--text-base:1rem;--text-base--line-height:calc(1.5 / 1);--text-lg:1.125rem;--text-lg--line-height:calc(1.75 / 1.125);--text-2xl:1.5rem;--text-2xl--line-height:calc(2 / 1.5);--text-3xl:1.875rem;--text-3xl--line-height:calc(2.25 / 1.875);--font-weight-semibold:600;--leading-tight:1.25;--radius-xl:.75rem;--ease-out:cubic-bezier(0, 0, .2, 1);--default-font-family:var(--font-sans);--default-mono-font-family:var(--font-mono)}}@layer base{*,:after,:before,::backdrop{box-sizing:border-box;border:0 solid;margin:0;padding:0}::file-selector-button{box-sizing:border-box;border:0 solid;margin:0;padding:0}html,:host{-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;font-family:var(--default-font-family,ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");font-feature-settings:var(--default-font-feature-settings,normal);font-variation-settings:var(--default-font-variation-settings,normal);-webkit-tap-highlight-color:transparent}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:var(--default-mono-font-family,ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);font-feature-settings:var(--default-mono-font-feature-settings,normal);font-variation-settings:var(--default-mono-font-variation-settings,normal);font-size:1em}small{font-size:80%}sub,sup{vertical-align:baseline;font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}:-moz-focusring{outline:auto}progress{vertical-align:baseline}summary{display:list-item}ol,ul,menu{list-style:none}img,svg,video,canvas,audio,iframe,embed,object{vertical-align:middle;display:block}img,video{max-width:100%;height:auto}button,input,select,optgroup,textarea{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}::file-selector-button{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}:where(select:is([multiple],[size])) optgroup{font-weight:bolder}:where(select:is([multiple],[size])) optgroup option{padding-inline-start:20px}::file-selector-button{margin-inline-end:4px}::placeholder{opacity:1}@supports (not ((-webkit-appearance:-apple-pay-button))) or (contain-intrinsic-size:1px){::placeholder{color:currentColor}@supports (color:color-mix(in lab, red, red)){::placeholder{color:color-mix(in oklab, currentcolor 50%, transparent)}}}textarea{resize:vertical}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-date-and-time-value{min-height:1lh;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-datetime-edit{padding-block:0}::-webkit-datetime-edit-year-field{padding-block:0}::-webkit-datetime-edit-month-field{padding-block:0}::-webkit-datetime-edit-day-field{padding-block:0}::-webkit-datetime-edit-hour-field{padding-block:0}::-webkit-datetime-edit-minute-field{padding-block:0}::-webkit-datetime-edit-second-field{padding-block:0}::-webkit-datetime-edit-millisecond-field{padding-block:0}::-webkit-datetime-edit-meridiem-field{padding-block:0}::-webkit-calendar-picker-indicator{line-height:1}:-moz-ui-invalid{box-shadow:none}button,input:where([type=button],[type=reset],[type=submit]){appearance:button}::file-selector-button{appearance:button}::-webkit-inner-spin-button{height:auto}::-webkit-outer-spin-button{height:auto}[hidden]:where(:not([hidden=until-found])){display:none!important}:root{--bg:oklch(13% .008 252);--bg2:oklch(17.5% .01 252);--line:oklch(26% .011 252);--line2:oklch(32% .012 252);--ink:oklch(96% .005 250);--ink2:oklch(80% .01 250);--muted:oklch(63% .013 250);--blue:oklch(70% .15 245);--blue2:oklch(60% .14 250);--yellow:oklch(86% .16 92);--grid:oklch(23% .009 252)}@media (prefers-color-scheme:light){:root{--bg:oklch(99% .002 250);--bg2:oklch(96.5% .004 250);--line:oklch(90% .005 250);--line2:oklch(84% .006 250);--ink:oklch(20% .012 250);--ink2:oklch(36% .013 250);--muted:oklch(46% .013 250);--blue:oklch(52% .16 250);--blue2:oklch(46% .15 252);--yellow:oklch(64% .15 78);--grid:oklch(92% .004 250)}}*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;text-rendering:optimizelegibility;margin:0;font:400 14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Inter,system-ui,sans-serif}}@layer components{.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}.tmuted{color:var(--muted)}.tink2{color:var(--ink2)}.mark{background:var(--blue);border-radius:8px;flex:none;place-items:center;width:30px;height:30px;display:grid}.sec{border-top:1px solid var(--line);margin-top:24px;padding-top:24px}.sechead{margin-bottom:calc(var(--spacing) * 4);justify-content:space-between;align-items:baseline;gap:calc(var(--spacing) * 3);display:flex}.sectitle{font-size:var(--text-sm);line-height:var(--tw-leading,var(--text-sm--line-height));--tw-font-weight:var(--font-weight-semibold);font-weight:var(--font-weight-semibold);letter-spacing:-.004em}.aside{font-size:var(--text-xs);line-height:var(--tw-leading,var(--text-xs--line-height));color:var(--muted);font-variant-numeric:tabular-nums}.aside b{color:var(--ink2);font-weight:600}.kpis{row-gap:calc(var(--spacing) * 6);grid-template-columns:repeat(2,minmax(0,1fr));display:grid}@media (min-width:48rem){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}.kpi{border-left:1px solid var(--line);padding-left:24px}.kpi:first-child{border-left:0;padding-left:0}@media (max-width:767px){.kpi:nth-child(odd){border-left:0;padding-left:0}}.kpi-label{margin-bottom:calc(var(--spacing) * 2);font-size:var(--text-xs);line-height:var(--tw-leading,var(--text-xs--line-height));color:var(--muted)}.kpi-value{font-size:var(--text-3xl);line-height:var(--tw-leading,var(--text-3xl--line-height));--tw-leading:1;--tw-font-weight:var(--font-weight-semibold);line-height:1;font-weight:var(--font-weight-semibold);letter-spacing:-.022em;font-variant-numeric:tabular-nums}.kpi-value.is-spend{color:var(--yellow)}.kpi-sub{margin-top:calc(var(--spacing) * 2);font-size:var(--text-xs);line-height:var(--tw-leading,var(--text-xs--line-height));color:var(--muted);font-variant-numeric:tabular-nums}.meter{background:var(--bg2);border-radius:99px;height:6px;margin-top:10px;overflow:hidden}.meter>i{background:var(--blue);transform-origin:0;border-radius:99px;height:100%;display:block}.colsplit{gap:28px;display:grid}@media (min-width:1024px){.colsplit{grid-template-columns:1.8fr 1fr}.colsplit>.right{border-left:1px solid var(--line);padding-left:32px}}@media (max-width:1023px){.colsplit>.right{border-top:1px solid var(--line);padding-top:24px}}.chart{position:relative}.spark{width:100%;height:auto;display:block}.spark .grid{stroke:var(--grid);stroke-width:1px}.spark .area{fill:url(#sparkfill)}.spark .g0{stop-color:var(--blue);stop-opacity:.3}.spark .g1{stop-color:var(--blue);stop-opacity:0}.spark .line{fill:none;stroke:var(--blue);stroke-width:2.5px;stroke-linejoin:round;stroke-linecap:round}.spark .peak{fill:var(--yellow);stroke:var(--bg);stroke-width:2.5px}.spark .xlab{fill:var(--muted);font-size:11px}.spark .plab{fill:var(--yellow);font-size:11px;font-weight:600}.spark .dot{fill:var(--yellow);stroke:var(--bg);stroke-width:2px;opacity:0;pointer-events:none}.spark .dot.is-on{opacity:1}.spark .hit{fill:#0000}.tip{pointer-events:none;white-space:nowrap;z-index:5;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;align-items:baseline;gap:8px;margin-top:-9px;padding:6px 10px;font-size:.72rem;display:flex;position:absolute;top:0;left:0;transform:translate(-50%,-100%)}.tip[hidden]{display:none}.tip .d{color:var(--ink);font-weight:600}.tip .t{color:var(--muted);font-variant-numeric:tabular-nums}.tip .c{color:var(--yellow);font-variant-numeric:tabular-nums}.thead{color:var(--muted);border-bottom:1px solid var(--line);grid-template-columns:minmax(72px,1.6fr) minmax(28px,1.2fr) 70px 84px;gap:0 16px;padding:0 0 9px;font-size:.7rem;display:grid}.thead .r{text-align:right}.row{border-bottom:1px solid var(--line);grid-template-columns:minmax(72px,1.6fr) minmax(28px,1.2fr) 70px 84px;align-items:center;gap:0 16px;padding:8px 0;transition:background .12s;display:grid}.row:last-child{border-bottom:0}.row:hover{background:var(--bg2)}.name{white-space:nowrap;text-overflow:ellipsis;color:var(--ink);font-size:.8125rem;font-weight:500;overflow:hidden}.track{background:var(--bg2);border-radius:99px;min-width:36px;height:7px;overflow:hidden}.fill{background:var(--blue);transform-origin:0;border-radius:99px;height:100%;display:block}.tok{text-align:right;color:var(--muted);font-size:.8125rem}.cost{text-align:right;color:var(--ink2);font-size:.8125rem;font-weight:500}.chiprow{flex-wrap:wrap;gap:7px 18px;display:flex}.chip{align-items:baseline;gap:5px;font-size:.78rem;display:inline-flex}.chip b{color:var(--ink2);font-weight:500}.chip i{color:var(--blue);font-variant-numeric:tabular-nums;font-style:normal}}@layer utilities{.mt-1{margin-top:var(--spacing)}.mt-2{margin-top:calc(var(--spacing) * 2)}.ml-auto{margin-left:auto}.flex{display:flex}.grid{display:grid}.hidden{display:none}.inline-flex{display:inline-flex}.table{display:table}.min-w-0{min-width:0}.items-center{align-items:center}.gap-2{gap:calc(var(--spacing) * 2)}.gap-3{gap:calc(var(--spacing) * 3)}.gap-5{gap:calc(var(--spacing) * 5)}.px-5{padding-inline:calc(var(--spacing) * 5)}.py-7{padding-block:calc(var(--spacing) * 7)}.text-base{font-size:var(--text-base);line-height:var(--tw-leading,var(--text-base--line-height))}.text-lg{font-size:var(--text-lg);line-height:var(--tw-leading,var(--text-lg--line-height))}.text-sm{font-size:var(--text-sm);line-height:var(--tw-leading,var(--text-sm--line-height))}.text-xs{font-size:var(--text-xs);line-height:var(--tw-leading,var(--text-xs--line-height))}.leading-tight{--tw-leading:var(--leading-tight);line-height:var(--leading-tight)}.font-semibold{--tw-font-weight:var(--font-weight-semibold);font-weight:var(--font-weight-semibold)}.text-emerald-400{color:var(--color-emerald-400)}.ease-out{--tw-ease:var(--ease-out);transition-timing-function:var(--ease-out)}@media (min-width:40rem){.sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (min-width:48rem){.md\:px-10{padding-inline:calc(var(--spacing) * 10)}}}@keyframes growx{0%{transform:scaleX(0)}to{transform:scaleX(1)}}@keyframes drawline{0%{stroke-dashoffset:1px}to{stroke-dashoffset:0}}@keyframes riseup{0%{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}.js-anim .fill,.js-anim .meter>i{animation:.85s cubic-bezier(.2,.85,.25,1) both growx}.js-anim .row:nth-child(2) .fill{animation-delay:30ms}.js-anim .row:nth-child(3) .fill{animation-delay:60ms}.js-anim .row:nth-child(4) .fill{animation-delay:90ms}.js-anim .row:nth-child(5) .fill{animation-delay:.12s}.js-anim .row:nth-child(6) .fill{animation-delay:.15s}.js-anim .row:nth-child(n+7) .fill{animation-delay:.18s}.js-anim .spark .line{stroke-dasharray:1;animation:1.15s cubic-bezier(.4,0,.2,1) forwards drawline}.js-anim .spark .area{animation:.9s ease-out both riseup}.js-anim .spark .peak{animation:.5s ease-out .9s both riseup}@media (prefers-reduced-motion:reduce){.js-anim *{animation:none!important;transform:none!important}}@property --tw-leading{syntax:"*";inherits:false}@property --tw-font-weight{syntax:"*";inherits:false}@property --tw-ease{syntax:"*";inherits:false}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Claude Code Usage</h1>
-  <p class="sub">Measured from session transcripts · {{GENERATED_AT}} · cost is an estimate</p>
+<div class="px-5 md:px-10 py-7">
 
-  <div class="card">
-    <div class="metrics">
-      <div class="metric"><div class="n">{{TOTAL_TOKENS}}</div><div class="l">tokens</div></div>
-      <div class="metric"><div class="n">${{TOTAL_COST}}</div><div class="l">estimated cost</div></div>
-      <div class="metric"><div class="n">{{SESSIONS}}</div><div class="l">sessions</div></div>
+  <!-- Toolbar -->
+  <header class="flex items-center gap-3">
+    <span class="mark" aria-hidden="true">
+      <svg width="17" height="17" viewBox="0 0 24 24"><g fill="oklch(15% 0.02 252)"><rect x="3" y="13" width="4" height="8" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></g></svg>
+    </span>
+    <div class="min-w-0">
+      <h1 class="text-base font-semibold leading-tight" style="letter-spacing:-.01em">Claude Code Usage</h1>
+      <p class="text-xs tmuted">Measured from session transcripts · cost estimated</p>
     </div>
-    <div class="gauge">
-      <div class="track"><div class="fill" style="width:{{CACHE_PCT}}%"></div></div>
-      <div class="l">cache hit {{CACHE_PCT}}%</div>
+    <span class="ml-auto inline-flex items-center gap-2 text-xs tmuted num">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--blue)"></span>{{GENERATED_AT}}
+    </span>
+  </header>
+
+  <!-- KPI band -->
+  <section class="sec kpis">
+    <div class="kpi">
+      <div class="kpi-label">Estimated spend</div>
+      <div class="kpi-value is-spend" data-to="{{TOTAL_COST_RAW}}" data-fmt="money" data-final="${{TOTAL_COST}}">${{TOTAL_COST}}</div>
+      <div class="kpi-sub">sticker estimate · all time</div>
     </div>
-  </div>
+    <div class="kpi">
+      <div class="kpi-label">Tokens</div>
+      <div class="kpi-value" data-to="{{TOTAL_TOKENS_RAW}}" data-fmt="tok" data-final="{{TOTAL_TOKENS}}">{{TOTAL_TOKENS}}</div>
+      <div class="kpi-sub">today {{TODAY_TOKENS}}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Sessions</div>
+      <div class="kpi-value" data-to="{{SESSIONS}}" data-fmt="int" data-final="{{SESSIONS}}">{{SESSIONS}}</div>
+      <div class="kpi-sub">all time</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Cache hit</div>
+      <div class="kpi-value">{{CACHE_PCT}}<span class="text-lg tmuted">%</span></div>
+      <div class="meter"><i style="width:{{CACHE_PCT}}%"></i></div>
+    </div>
+  </section>
 
-  <div class="card">
-    <h2>14-day trend</h2>
-    {{SPARKLINE_SVG}}
-    <p class="muted" style="margin:10px 0 0">today {{TODAY_TOKENS}} · this week {{WEEK_TOKENS}} · all-time {{ALL_TOKENS}}</p>
-  </div>
+  <!-- Trend chart -->
+  <section class="sec">
+    <div class="sechead">
+      <h2 class="sectitle">Token usage</h2>
+      <span class="aside">today <b>{{TODAY_TOKENS}}</b> · this week <b>{{WEEK_TOKENS}}</b> · all time <b>{{ALL_TOKENS}}</b></span>
+    </div>
+    <div class="chart">
+      {{SPARKLINE_SVG}}
+      <div class="tip" hidden><span class="d"></span><span class="t"></span><span class="c"></span></div>
+    </div>
+  </section>
 
-  <div class="card">
-    <h2>Projects</h2>
-    {{PROJECT_ROWS}}
-  </div>
+  <!-- Projects + Models -->
+  <section class="sec">
+    <div class="colsplit">
+      <div class="left">
+        <div class="sechead"><h2 class="sectitle">Projects</h2><span class="aside">{{PROJECTS_META}}</span></div>
+        <div class="thead"><span>Project</span><span></span><span class="r">Tokens</span><span class="r">Cost</span></div>
+        {{PROJECT_ROWS}}
+      </div>
+      <div class="right">
+        <div class="sechead"><h2 class="sectitle">Models</h2><span class="aside">{{MODELS_META}}</span></div>
+        <div class="thead"><span>Model</span><span></span><span class="r">Tokens</span><span class="r">Cost</span></div>
+        {{MODEL_ROWS}}
+      </div>
+    </div>
+  </section>
 
-  <div class="card">
-    <h2>Models</h2>
-    {{MODEL_ROWS}}
-  </div>
-
-  <div class="card">
-    <h2>Top sessions</h2>
+  <!-- Top sessions -->
+  <section class="sec">
+    <div class="sechead"><h2 class="sectitle">Top sessions</h2><span class="aside">{{SESSIONS_META}}</span></div>
+    <div class="thead"><span>Session</span><span></span><span class="r">Tokens</span><span class="r">Cost</span></div>
     {{SESSION_ROWS}}
-  </div>
+  </section>
 
-  <div class="card">
-    <h2>Activity</h2>
-    <div class="activity">
-      <span><b>tools</b>{{TOOLS}}</span>
-      <span><b>phases</b>{{PHASES}}</span>
-      <span><b>gate</b>{{GATE}}</span>
-      <span><b>comemory</b>{{COMEMORY}}</span>
+  <!-- Activity -->
+  <section class="sec">
+    <div class="sechead"><h2 class="sectitle">Activity</h2></div>
+    <div class="grid gap-5 sm:grid-cols-2">
+      <div>
+        <div class="kpi-label">Tools</div>
+        <div class="chiprow mt-2">{{TOOLS}}</div>
+      </div>
+      <div>
+        <div class="kpi-label">Workflow phases</div>
+        <div class="chiprow mt-2">{{PHASES}}</div>
+      </div>
+      <div>
+        <div class="kpi-label">Quality gate</div>
+        <div class="text-sm tink2 mt-1">{{GATE}}</div>
+      </div>
+      <div>
+        <div class="kpi-label">comemory writes</div>
+        <div class="text-sm tink2 num mt-1">{{COMEMORY}}</div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <footer>Generated by the toolu stats plugin · cost is a sticker-price estimate, not a bill</footer>
+  <footer class="sec text-xs tmuted">Generated by the toolu stats plugin · cost is a sticker-price estimate, not a bill</footer>
 </div>
+
+<script>
+/* Two enhancements, both safe to skip: a per-day chart tooltip (interaction)
+   and entrance motion + count-up KPIs (opt-in, gated by reduced-motion). The
+   report is fully rendered without either, so no-JS / headless / print still
+   show complete data. */
+(function(){
+  // Per-day tooltip: hover any day band to read its date, tokens and cost.
+  try{
+    var chart = document.querySelector('.chart');
+    if (chart){
+      var tip  = chart.querySelector('.tip');
+      var dots = chart.querySelectorAll('.spark .dot');
+      var clear = function(){ dots.forEach(function(d){ d.classList.remove('is-on'); }); };
+      var show = function(h){
+        tip.querySelector('.d').textContent = h.getAttribute('data-d');
+        tip.querySelector('.t').textContent = h.getAttribute('data-t') + ' tokens';
+        tip.querySelector('.c').textContent = h.getAttribute('data-c');
+        var dot = chart.querySelector('.spark .dot[data-i="'+h.getAttribute('data-i')+'"]');
+        clear(); if (dot) dot.classList.add('is-on');
+        tip.hidden = false;
+        var cb = chart.getBoundingClientRect();
+        var rb = (dot || h).getBoundingClientRect();
+        var x = rb.left + rb.width/2 - cb.left, half = tip.offsetWidth/2;
+        tip.style.left = Math.max(half+2, Math.min(cb.width-half-2, x)) + 'px';
+        tip.style.top  = (rb.top - cb.top) + 'px';
+      };
+      chart.querySelectorAll('.spark .hit').forEach(function(h){
+        h.addEventListener('pointerenter', function(){ show(h); });
+        h.addEventListener('pointermove',  function(){ show(h); });
+      });
+      chart.addEventListener('pointerleave', function(){ tip.hidden = true; clear(); });
+    }
+  } catch(e){ /* tooltip is optional */ }
+
+  // Entrance motion + count-up.
+  try{
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    document.documentElement.classList.add('js-anim');
+    var ease = function(p){ return 1 - Math.pow(1 - p, 3); };
+    var fmtTok = function(n){ n = Math.round(n);
+      return n>=1e6 ? (n/1e6).toFixed(1)+'M' : n>=1e3 ? Math.round(n/1e3)+'k' : ''+n; };
+    var fmt = function(v, kind){
+      if (kind==='money') return '$'+v.toFixed(2);
+      if (kind==='tok')   return fmtTok(v);
+      return ''+Math.round(v);
+    };
+    var run = function(){
+      document.querySelectorAll('[data-to]').forEach(function(el){
+        var to = parseFloat(el.getAttribute('data-to')) || 0;
+        var kind = el.getAttribute('data-fmt');
+        var fin = el.getAttribute('data-final');
+        var start = null, dur = 900;
+        el.textContent = fmt(0, kind);
+        var tick = function(t){
+          if (start===null) start = t;
+          var p = Math.min(1, (t - start) / dur);
+          el.textContent = fmt(to * ease(p), kind);
+          if (p < 1) requestAnimationFrame(tick); else el.textContent = fin;
+        };
+        requestAnimationFrame(tick);
+      });
+    };
+    if (document.readyState === 'loading')
+      document.addEventListener('DOMContentLoaded', run);
+    else run();
+  } catch(e){ /* never let motion break the report */ }
+})();
+</script>
 </body>
 </html>

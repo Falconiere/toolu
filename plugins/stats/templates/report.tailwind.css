@@ -1,0 +1,156 @@
+/* ── Tailwind source for templates/report.html ───────────────────────────────
+   Self-contained: compiled CSS is inlined into report.html <style id="tw">.
+   Rebuild:  cd plugins/stats/templates && npm i -D tailwindcss @tailwindcss/cli
+             npx @tailwindcss/cli -i report.tailwind.css -o /tmp/report.css --minify
+             then paste /tmp/report.css into <style id="tw">…</style> in report.html */
+@import "tailwindcss";
+@source "./report.html";
+
+/* ── Theme tokens ────────────────────────────────────────────────────────────
+   Full-bleed, cardless, shadowless usage dashboard on near-black. Blue is the
+   data colour; yellow marks the highlights (spend, chart peak). Light is a
+   media-query override of the same variables. */
+@layer base{
+  :root{
+    --bg:    oklch(13% 0.008 252);
+    --bg2:   oklch(17.5% 0.01 252);
+    --line:  oklch(26% 0.011 252);
+    --line2: oklch(32% 0.012 252);
+    --ink:   oklch(96% 0.005 250);
+    --ink2:  oklch(80% 0.01 250);
+    --muted: oklch(63% 0.013 250);
+    --blue:  oklch(70% 0.15 245);
+    --blue2: oklch(60% 0.14 250);
+    --yellow:oklch(86% 0.16 92);
+    --grid:  oklch(23% 0.009 252);
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:    oklch(99% 0.002 250);
+      --bg2:   oklch(96.5% 0.004 250);
+      --line:  oklch(90% 0.005 250);
+      --line2: oklch(84% 0.006 250);
+      --ink:   oklch(20% 0.012 250);
+      --ink2:  oklch(36% 0.013 250);
+      --muted: oklch(46% 0.013 250);
+      --blue:  oklch(52% 0.16 250);
+      --blue2: oklch(46% 0.15 252);
+      --yellow:oklch(64% 0.15 78);
+      --grid:  oklch(92% 0.004 250);
+    }
+  }
+  *{ box-sizing:border-box; }
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:400 14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+}
+
+@layer components{
+  .num{ font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; }
+  .tmuted{ color:var(--muted); }
+  .tink2{ color:var(--ink2); }
+
+  .mark{ display:grid; place-items:center; width:30px; height:30px; border-radius:8px;
+    background:var(--blue); flex:none; }
+
+  /* sections divided by hairlines, no cards/shadows */
+  .sec{ border-top:1px solid var(--line); padding-top:24px; margin-top:24px; }
+  .sechead{ @apply flex items-baseline justify-between gap-3 mb-4; }
+  .sectitle{ @apply text-sm font-semibold; letter-spacing:-.004em; }
+  .aside{ @apply text-xs; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .aside b{ color:var(--ink2); font-weight:600; }
+
+  /* KPI band (cardless cells separated by vertical hairlines) */
+  .kpis{ @apply grid grid-cols-2 gap-y-6 md:grid-cols-4; }
+  .kpi{ padding-left:24px; border-left:1px solid var(--line); }
+  .kpi:first-child{ border-left:0; padding-left:0; }
+  @media (max-width:767px){ .kpi:nth-child(odd){ border-left:0; padding-left:0; } }
+  .kpi-label{ @apply text-xs mb-2; color:var(--muted); }
+  .kpi-value{ @apply text-3xl font-semibold leading-none; letter-spacing:-.022em;
+    font-variant-numeric:tabular-nums; }
+  .kpi-value.is-spend{ color:var(--yellow); }
+  .kpi-sub{ @apply text-xs mt-2; color:var(--muted); font-variant-numeric:tabular-nums; }
+
+  .meter{ height:6px; border-radius:99px; background:var(--bg2); overflow:hidden; margin-top:10px; }
+  .meter > i{ display:block; height:100%; border-radius:99px;
+    background:var(--blue); transform-origin:left center; }
+
+  /* two-column split (projects | models) with a hairline divider */
+  .colsplit{ display:grid; gap:28px; }
+  @media (min-width:1024px){
+    .colsplit{ grid-template-columns:1.8fr 1fr; }
+    .colsplit > .right{ border-left:1px solid var(--line); padding-left:32px; }
+  }
+  @media (max-width:1023px){
+    .colsplit > .right{ border-top:1px solid var(--line); padding-top:24px; }
+  }
+
+  /* chart */
+  .chart{ position:relative; }
+  .spark{ display:block; width:100%; height:auto; }
+  .spark .grid{ stroke:var(--grid); stroke-width:1; }
+  .spark .area{ fill:url(#sparkfill); }
+  .spark .g0{ stop-color:var(--blue); stop-opacity:.30; }
+  .spark .g1{ stop-color:var(--blue); stop-opacity:0; }
+  .spark .line{ fill:none; stroke:var(--blue); stroke-width:2.5;
+    stroke-linejoin:round; stroke-linecap:round; }
+  .spark .peak{ fill:var(--yellow); stroke:var(--bg); stroke-width:2.5; }
+  .spark .xlab{ fill:var(--muted); font-size:11px; }
+  .spark .plab{ fill:var(--yellow); font-size:11px; font-weight:600; }
+  /* per-day hover: marker dot + transparent hit band + tooltip */
+  .spark .dot{ fill:var(--yellow); stroke:var(--bg); stroke-width:2; opacity:0; pointer-events:none; }
+  .spark .dot.is-on{ opacity:1; }
+  .spark .hit{ fill:transparent; }
+  .tip{ position:absolute; left:0; top:0; transform:translate(-50%,-100%);
+    margin-top:-9px; pointer-events:none; white-space:nowrap; z-index:5;
+    display:flex; gap:8px; align-items:baseline; padding:6px 10px; font-size:.72rem;
+    background:var(--bg2); border:1px solid var(--line2); border-radius:8px; }
+  .tip[hidden]{ display:none; }
+  .tip .d{ color:var(--ink); font-weight:600; }
+  .tip .t{ color:var(--muted); font-variant-numeric:tabular-nums; }
+  .tip .c{ color:var(--yellow); font-variant-numeric:tabular-nums; }
+
+  /* data tables (cardless rows on hairlines) */
+  .thead{ display:grid; grid-template-columns:minmax(72px,1.6fr) minmax(28px,1.2fr) 70px 84px;
+    gap:0 16px; padding:0 0 9px; color:var(--muted); font-size:.7rem;
+    border-bottom:1px solid var(--line); }
+  .thead .r{ text-align:right; }
+  .row{ display:grid; grid-template-columns:minmax(72px,1.6fr) minmax(28px,1.2fr) 70px 84px;
+    gap:0 16px; align-items:center; padding:8px 0; border-bottom:1px solid var(--line);
+    transition:background .12s ease; }
+  .row:last-child{ border-bottom:0; }
+  .row:hover{ background:var(--bg2); }
+  .name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    font-size:.8125rem; font-weight:500; color:var(--ink); }
+  .track{ height:7px; border-radius:99px; background:var(--bg2); overflow:hidden; min-width:36px; }
+  .fill{ display:block; height:100%; border-radius:99px;
+    background:var(--blue); transform-origin:left center; }
+  .tok{ text-align:right; font-size:.8125rem; color:var(--muted); }
+  .cost{ text-align:right; font-size:.8125rem; font-weight:500; color:var(--ink2); }
+
+  /* activity (flat tag list, no pills) */
+  .chiprow{ @apply flex flex-wrap; gap:7px 18px; }
+  .chip{ display:inline-flex; align-items:baseline; gap:5px; font-size:.78rem; }
+  .chip b{ font-weight:500; color:var(--ink2); }
+  .chip i{ font-style:normal; color:var(--blue); font-variant-numeric:tabular-nums; }
+}
+
+/* ── Motion (opt-in via .js-anim; default is fully drawn/visible so no-JS,
+   reduced-motion and headless renders show complete data) ─────────────────── */
+@keyframes growx{ from{ transform:scaleX(0); } to{ transform:scaleX(1); } }
+@keyframes drawline{ from{ stroke-dashoffset:1; } to{ stroke-dashoffset:0; } }
+@keyframes riseup{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+.js-anim .fill, .js-anim .meter > i{ animation:growx .85s cubic-bezier(.2,.85,.25,1) both; }
+.js-anim .row:nth-child(2) .fill{ animation-delay:.03s }
+.js-anim .row:nth-child(3) .fill{ animation-delay:.06s }
+.js-anim .row:nth-child(4) .fill{ animation-delay:.09s }
+.js-anim .row:nth-child(5) .fill{ animation-delay:.12s }
+.js-anim .row:nth-child(6) .fill{ animation-delay:.15s }
+.js-anim .row:nth-child(n+7) .fill{ animation-delay:.18s }
+.js-anim .spark .line{ stroke-dasharray:1; animation:drawline 1.15s cubic-bezier(.4,0,.2,1) forwards; }
+.js-anim .spark .area{ animation:riseup .9s ease-out both; }
+.js-anim .spark .peak{ animation:riseup .5s .9s ease-out both; }
+@media (prefers-reduced-motion: reduce){ .js-anim *{ animation:none !important; transform:none !important; } }

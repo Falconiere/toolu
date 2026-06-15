@@ -55,11 +55,12 @@ html() { echo "$AGG" | stats_render_html; }
   run grep -qF '\&amp;' "$REPORT"; [ "$status" -ne 0 ]   # not corrupted to literal backslash-entity
 }
 
-@test "draws CSS bar fills and an inline SVG sparkline" {
+@test "draws CSS bar fills and an inline SVG area+line chart" {
   html
   grep -qF 'class="fill" style="width:' "$REPORT"
   grep -qF '<svg class="spark"' "$REPORT"
-  grep -qF '<rect' "$REPORT"
+  grep -qF '<path class="area"' "$REPORT"
+  grep -qF '<path class="line"' "$REPORT"
 }
 
 @test "humanizes totals and shows the cache gauge width" {
