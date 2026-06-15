@@ -4,9 +4,13 @@
 # per-session rollup cache it maintains under $CLAUDE_CONFIG_DIR/stats/.
 #
 #   stats.sh [--today|--week|--all] [--project P] [--model M] [--session ID]
-#            [--this-session] [--since YYYY-MM-DD] [--limit N] [--json] [--html] [--rescan]
+#            [--this-session] [--since YYYY-MM-DD] [--limit N]
+#            [--plan pro|max5|max20] [--billing api|subscription|both]
+#            [--json] [--html] [--rescan]
 #
-# Cost figures are sticker-price estimates, not a bill.
+# Cost figures are sticker-price estimates, not a bill. With --plan (or a plan in
+# ~/.claude/stats.conf) the report also shows the Claude-subscription lens:
+# month-to-date API-equivalent value, savings vs the flat fee, and weekly quota.
 set -u
 
 # jq is the one hard dependency. Check before touching anything external so the
@@ -25,11 +29,18 @@ source "$LIB/aggregate.sh"
 source "$LIB/render.sh"
 # shellcheck source=/dev/null
 source "$LIB/render_html.sh"
+# shellcheck source=/dev/null
+source "$LIB/config.sh"
+# shellcheck source=/dev/null
+source "$LIB/billing.sh"
 
+# Print the leading comment block (after the shebang) as help, robust to its
+# length — stops at the first non-comment line.
 usage() {
-  sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'
+  awk 'NR==1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"
 }
 
+stats_load_config                 # file defaults; CLI flags below override them
 WINDOW=all; SINCE=""; THIS=0
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -44,6 +55,8 @@ while [ $# -gt 0 ]; do
     --model)   shift; export STATS_MODEL="${1:-}" ;;
     --session) shift; export STATS_SESSION="${1:-}" ;;
     --limit)   shift; export STATS_LIMIT="${1:-10}" ;;
+    --plan)    shift; export STATS_PLAN="${1:-}" ;;
+    --billing) shift; export STATS_BILLING="${1:-}" ;;
     --since)   shift; SINCE="${1:-}" ;;
     -h|--help) usage; exit 0 ;;
     *) echo "stats: unknown option: $1" >&2; usage >&2; exit 2 ;;
@@ -58,7 +71,7 @@ if [ "$THIS" -eq 1 ]; then
     echo "stats: no session transcript found for this directory."
     exit 0
   }
-  printf '[%s]\n' "$(stats_rollup_session "$t")" | stats_aggregate | stats_render
+  printf '[%s]\n' "$(stats_rollup_session "$t")" | stats_aggregate | stats_attach_billing | stats_render
   exit 0
 fi
 
@@ -68,4 +81,4 @@ if [ -n "$SINCE" ]; then
   rolls="$(printf '%s' "$rolls" | jq --arg s "$SINCE" \
     'map(select((([.by_day|keys[]] | max) // "0") >= $s))')"
 fi
-printf '%s' "$rolls" | stats_aggregate | stats_render
+printf '%s' "$rolls" | stats_aggregate | stats_attach_billing | stats_render

@@ -4,10 +4,12 @@
 
 setup() {
   source "${BATS_TEST_DIRNAME}/../scripts/lib/aggregate.sh"
+  source "${BATS_TEST_DIRNAME}/../scripts/lib/billing.sh"
   source "${BATS_TEST_DIRNAME}/../scripts/lib/render.sh"
   source "${BATS_TEST_DIRNAME}/../scripts/lib/render_html.sh"
   export CLAUDE_CONFIG_DIR="$BATS_TEST_TMPDIR/cfg"
   export STATS_NO_OPEN=1
+  unset STATS_PLAN STATS_BILLING STATS_WEEKLY_LIMIT
   TODAY="$(date +%Y-%m-%d)"
   full() { echo "{\"tokens\":$1,\"input\":$1,\"output\":0,\"cache_read\":0,\"cache_write\":0,\"cost\":$2}"; }
   # Project name carries HTML-special chars to exercise escaping.
@@ -21,7 +23,7 @@ setup() {
 ]
 EOF
 )
-  AGG="$(echo "$ROLLUPS" | stats_aggregate)"
+  AGG="$(echo "$ROLLUPS" | stats_aggregate | stats_attach_billing)"
   REPORT="$CLAUDE_CONFIG_DIR/stats/report.html"
 }
 
@@ -70,9 +72,31 @@ html() { echo "$AGG" | stats_render_html; }
 }
 
 @test "under --model the sparkline degrades to a note" {
-  export STATS_MODEL=opus; AGG="$(echo "$ROLLUPS" | stats_aggregate)"; unset STATS_MODEL
+  export STATS_MODEL=opus; AGG="$(echo "$ROLLUPS" | stats_aggregate | stats_attach_billing)"; unset STATS_MODEL
   html
   grep -qF "unavailable under a model filter" "$REPORT"
+}
+
+@test "report includes a Billing section with the API estimate" {
+  html
+  grep -qF "Billing" "$REPORT"
+  grep -qF "API estimate" "$REPORT"
+}
+
+@test "report shows the subscription lens when a plan is configured" {
+  export STATS_PLAN=max5; AGG="$(echo "$ROLLUPS" | stats_aggregate | stats_attach_billing)"; unset STATS_PLAN
+  html
+  grep -qF "Subscription · max5" "$REPORT"
+  grep -qF "month value" "$REPORT"
+  grep -qF "under-using" "$REPORT"          # $4.20 month value vs $100 fee -> negative
+}
+
+@test "report shows a weekly quota only against a configured limit" {
+  export STATS_PLAN=max5 STATS_WEEKLY_LIMIT=3000000
+  AGG="$(echo "$ROLLUPS" | stats_aggregate | stats_attach_billing)"
+  unset STATS_PLAN STATS_WEEKLY_LIMIT
+  html
+  grep -qF "Weekly quota" "$REPORT"
 }
 
 @test "errors non-zero when the template is missing" {

@@ -118,6 +118,46 @@ _stats_open_html() {  # $1=path
   fi
 }
 
+# Build the Billing section HTML from the .billing object (attached by
+# billing.sh): the API pay-per-token estimate (unless mode=subscription) plus the
+# Claude-subscription lens — month-to-date value, savings vs the flat fee,
+# effective $/Mtok, weekly quota — when a plan is configured. A quota percentage
+# appears ONLY against a user-set weekly limit. Returns "" when billing is absent.
+_stats_html_billing() {  # $1=agg
+  local agg="$1"
+  [ "$(printf '%s' "$agg" | jq -r 'has("billing")')" = "true" ] || return 0
+  local mode asof cost cells=""
+  mode="$(printf '%s' "$agg" | jq -r '.billing.mode // "both"')"
+  asof="$(printf '%s' "$agg" | jq -r '.billing.asof // empty')"
+  cost="$(printf '%s' "$agg" | jq -r '.billing.api.cost // 0')"
+  if [ "$mode" != "subscription" ]; then
+    cells+="<div><div class=\"kpi-label\">API estimate (pay-per-token)</div><div class=\"text-lg tink2 num mt-1\">\$$(stats_money "$cost")</div></div>"
+  fi
+  if [ "$mode" != "api" ] && [ "$(printf '%s' "$agg" | jq -r '.billing.subscription != null')" = "true" ]; then
+    local plan_h fee val sav rate netline rateline=""
+    plan_h="$(printf '%s' "$agg" | jq -r '.billing.plan | @html')"
+    IFS='|' read -r fee val sav rate < <(printf '%s' "$agg" | jq -r \
+      '.billing | [.plan_fee_monthly, .subscription.api_equivalent_value, .subscription.savings, (.subscription.effective_per_mtok // "n/a")] | join("|")')
+    case "$sav" in
+      -*) netline="-\$$(stats_money "${sav#-}") (under-using vs the fee)" ;;
+      *)  netline="\$$(stats_money "$sav") saved vs API" ;;
+    esac
+    [ "$rate" = "n/a" ] || rateline=" · ≈\$$(stats_money "$rate")/Mtok"
+    cells+="<div><div class=\"kpi-label\">Subscription · ${plan_h} · \$${fee}/mo flat</div><div class=\"text-sm tink2 num mt-1\">month value \$$(stats_money "$val") · ${netline}${rateline}</div></div>"
+    local wt wl wp basis
+    IFS='|' read -r wt wl wp basis < <(printf '%s' "$agg" | jq -r \
+      '.billing.quota | [(.week_tokens // "n/a"),(.weekly_limit // "n/a"),(.week_pct // "n/a"),.basis] | join("|")')
+    if [ "$basis" = "config" ]; then
+      cells+="<div><div class=\"kpi-label\">Weekly quota</div><div class=\"text-sm tink2 num mt-1\">$(stats_format_tokens "$wt") / $(stats_format_tokens "$wl") tokens (${wp}%)</div></div>"
+    elif [ "$wt" != "n/a" ] && [ "$wt" != "null" ]; then
+      cells+="<div><div class=\"kpi-label\">Weekly usage</div><div class=\"text-sm tink2 num mt-1\">$(stats_format_tokens "$wt") tokens · set weekly_limit_tokens for a %</div></div>"
+    fi
+  fi
+  [ -n "$cells" ] || return 0
+  printf '\n  <section class="sec">\n    <div class="sechead"><h2 class="sectitle">Billing</h2><span class="aside">%s</span></div>\n    <div class="grid gap-5 sm:grid-cols-2">%s</div>\n  </section>\n' \
+    "$([ -n "$asof" ] && printf 'prices as of %s' "$asof")" "$cells"
+}
+
 # stats_render_html < aggregate.json -> writes the report, prints its path.
 stats_render_html() {
   local agg; agg="$(cat)"
@@ -193,6 +233,7 @@ stats_render_html() {
   _stats_apply PHASES   " $phases"
   _stats_apply GATE     " $gate"
   _stats_apply COMEMORY " $comem"
+  _stats_apply BILLING  "$(_stats_html_billing "$agg")"
 
   local out; out="$(stats_html_path)"
   mkdir -p "$(dirname "$out")" || { echo "stats: cannot create $(dirname "$out")" >&2; return 1; }

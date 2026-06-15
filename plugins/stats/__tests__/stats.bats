@@ -118,3 +118,31 @@ run_stats() { run bash "$SCRIPT" "$@"; }
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "no usage recorded"
 }
+
+@test "--json always carries the API billing lens; no plan -> subscription null" {
+  run_stats --json
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.billing.api.cost >= 0' >/dev/null
+  [ "$(echo "$output" | jq -r '.billing.subscription')" = "null" ]
+}
+
+@test "--plan adds the subscription lens with the right fee" {
+  run_stats --json --plan max5
+  [ "$status" -eq 0 ]
+  [ "$(echo "$output" | jq -r '.billing.plan')" = "max5" ]
+  [ "$(echo "$output" | jq -r '.billing.plan_fee_monthly')" = "100" ]
+  echo "$output" | jq -e '.billing.subscription != null' >/dev/null
+}
+
+@test "--billing sets the lens mode carried in the aggregate" {
+  run_stats --json --billing subscription
+  [ "$(echo "$output" | jq -r '.billing.mode')" = "subscription" ]
+}
+
+@test "stats.conf supplies the plan when no --plan flag is given" {
+  printf 'plan=pro\n' > "$CLAUDE_CONFIG_DIR/stats.conf"
+  run_stats --json
+  [ "$status" -eq 0 ]
+  [ "$(echo "$output" | jq -r '.billing.plan')" = "pro" ]
+  [ "$(echo "$output" | jq -r '.billing.plan_fee_monthly')" = "20" ]
+}

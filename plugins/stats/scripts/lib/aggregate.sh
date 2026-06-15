@@ -68,6 +68,7 @@ stats_aggregate() {
         windows: ( if $model != "" then null else
                      { today: ( sumt([ $days[] | select(.key == $today) | .value ]) | {tokens, cost} ),
                        week:  ( sumt([ $days[] | select(weekof(.key) == $week) | .value ]) | {tokens, cost} ),
+                       month: ( sumt([ $days[] | select(.key[0:7] == $today[0:7]) | .value ]) | {tokens, cost} ),
                        all:   ( sumt([ $days[].value ]) | {tokens, cost} ) } end ),
         daily: ( if $model != "" then null else
                    ( [ $days[] | {key, t: .value.tokens, c: .value.cost} ] | group_by(.key)

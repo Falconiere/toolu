@@ -48,6 +48,11 @@ j() { echo "$output" | jq -r "$1"; }
   [ "$(j '.windows.all.tokens')" = "270" ]      # +50
 }
 
+@test "windows: month-to-date sums the current calendar month only" {
+  run agg
+  [ "$(j '.windows.month.tokens')" = "220" ]    # today's three sessions; 2020 day excluded
+}
+
 @test "daily: 14-day series, oldest-first, today last with summed tokens" {
   run agg
   [ "$(j '.daily|length')" = "14" ]
