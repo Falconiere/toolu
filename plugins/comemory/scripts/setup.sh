@@ -24,9 +24,17 @@ set -uo pipefail
 COMEMORY="${COMEMORY:-comemory}"
 
 # Mirror of toolu's COMEMORY_MIN_VERSION (plugins/toolu/hooks/lib/detect.sh).
-# Hardcoded because that lib lives in a sibling plugin with no stable runtime
-# path from here — keep the two values in sync.
-MIN_VERSION="0.8.0"
+# That lib is in a sibling plugin with no stable runtime path from here, so the
+# value is mirrored, not sourced; a version-const guard test fails CI if the two
+# drift. Same constant name in both files so the guard can match by name.
+COMEMORY_MIN_VERSION="0.8.0"
+
+# Shared repo-scope helpers (comemory_repo_key, version_ge) — one definition for
+# all three comemory entry points (this lib ships with the plugin, so the sibling
+# path is stable at runtime).
+_rs="${BASH_SOURCE%/*}/../lib/repo-scope.sh"
+# shellcheck source=../lib/repo-scope.sh
+. "$_rs" || { printf 'setup.sh: cannot load %s\n' "$_rs" >&2; exit 1; }
 
 # Canonical install (comemory is NOT published to crates.io — use the tap).
 BREW_INSTALL="brew install Falconiere/tap/comemory"
@@ -55,28 +63,6 @@ for a in "$@"; do
   esac
 done
 
-# Canonical repo scope (shared across worktrees): basename of the parent of
-# git-common-dir. Mirrors comemory.sh's detect_project_root so the index and the
-# memories share one --repo label. Empty outside a git repo.
-detect_scope() {
-  local common top
-  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)
-  if [ -z "$common" ]; then
-    common=$(git rev-parse --git-common-dir 2>/dev/null || true)
-    [ -n "$common" ] && common=$(cd "$common" 2>/dev/null && pwd || true)
-  fi
-  case "$common" in
-    */.git) basename "$(dirname "$common")" ;;
-    *)
-      top=$(git rev-parse --show-toplevel 2>/dev/null || true)
-      [ -n "$top" ] && basename "$top"
-      ;;
-  esac
-}
-
-# 0 if $1 >= $2 by version order (sort -V), else 1.
-version_ge() { [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; }
-
 # ── Phase 1 — binary gate ────────────────────────────────────────────────────
 if ! command -v "$COMEMORY" >/dev/null 2>&1; then
   say "MISSING comemory CLI not found on PATH."
@@ -94,14 +80,14 @@ if [ -z "$ver" ]; then
   exit 1
 fi
 
-if ! version_ge "$ver" "$MIN_VERSION"; then
-  say "OLD comemory $ver is below the v$MIN_VERSION floor toolu targets."
+if ! version_ge "$ver" "$COMEMORY_MIN_VERSION"; then
+  say "OLD comemory $ver is below the v$COMEMORY_MIN_VERSION floor toolu targets."
   say "Upgrade:"
   say "    $BREW_UPGRADE"
   exit 0
 fi
 
-say "READY comemory $ver (>= $MIN_VERSION). Wiring repo-local memory + indexing:"
+say "READY comemory $ver (>= $COMEMORY_MIN_VERSION). Wiring repo-local memory + indexing:"
 
 # ── Phase 2 — wiring (non-fatal) ─────────────────────────────────────────────
 data_dir="${COMEMORY_DATA_DIR:-$HOME/.comemory}"
@@ -111,7 +97,7 @@ else
   say "  data-dir: WARN could not create $data_dir"
 fi
 
-scope=$(detect_scope)
+scope=$(comemory_repo_key)
 if [ -n "$scope" ]; then
   say "  repo scope: $scope"
 else
