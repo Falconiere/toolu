@@ -1,14 +1,36 @@
 #!/usr/bin/env bats
-# conventions-detect — real data: this repo's git history + .github, plus a
-# temp empty-history repo and a PATH-masked (gh-absent) run. No mocks.
+# conventions-detect — real git, no mocks. Inference tests build a HERMETIC temp
+# repo with known conventional history + branches + release.yml, so they don't
+# depend on the ambient checkout (CI uses a shallow depth-1 clone → no history /
+# branches). Plus a temp empty-history repo and a PATH-masked (gh-absent) run.
 
 setup() {
   DETECT="$BATS_TEST_DIRNAME/../lib/conventions-detect.sh"
   ROOT="$(cd "$BATS_TEST_DIRNAME/../../../.." && pwd)"
 }
 
-@test "this repo: commit_format inferred as conventional-commits + scope + (#N) (AC#4)" {
-  run bash "$DETECT" "$ROOT"
+# Build a hermetic repo at $1: conventional commits (feat/fix/chore/test + a
+# chore(release) + (#N) suffixes), type/kebab branches, and a release.yml.
+mkrich() {
+  local d="$1"
+  mkdir -p "$d/.github/workflows"
+  ( cd "$d"
+    git init -q
+    git config user.email t@example.com; git config user.name tester
+    printf 'release stub\n' > .github/workflows/release.yml
+    printf 'x\n' > f; git add -A
+    git commit -qm "feat(core): init (#1)"
+    git commit -qm "fix(api): bug (#2)" --allow-empty
+    git commit -qm "chore(deps): bump (#3)" --allow-empty
+    git commit -qm "test(core): cover (#4)" --allow-empty
+    git commit -qm "chore(release): v1.2.0 (#5)" --allow-empty
+    git branch feat/a; git branch fix/b; git branch chore/c; git branch release/v1.2.0
+  )
+}
+
+@test "commit_format inferred as conventional-commits + scope + (#N) (AC#4)" {
+  REPO="$BATS_TEST_TMPDIR/rich"; mkrich "$REPO"
+  run bash "$DETECT" "$REPO"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.commit_format.convention == "conventional-commits"'
   echo "$output" | jq -e '.commit_format.scope == "used"'
@@ -16,15 +38,17 @@ setup() {
   echo "$output" | jq -e '.commit_format.types | (index("feat") and index("fix") and index("chore") and index("test"))'
 }
 
-@test "this repo: branch_naming inferred as type/kebab (AC#5)" {
-  run bash "$DETECT" "$ROOT"
+@test "branch_naming inferred as type/kebab (AC#5)" {
+  REPO="$BATS_TEST_TMPDIR/rich"; mkrich "$REPO"
+  run bash "$DETECT" "$REPO"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.branch_naming.pattern == "type/kebab"'
   echo "$output" | jq -e '.branch_naming.prefixes | (index("feat") and index("fix") and index("chore") and index("release"))'
 }
 
-@test "this repo: release tooling + version commit form (AC#7)" {
-  run bash "$DETECT" "$ROOT"
+@test "release tooling + version commit form (AC#7)" {
+  REPO="$BATS_TEST_TMPDIR/rich"; mkrich "$REPO"
+  run bash "$DETECT" "$REPO"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.release.tooling | index("release.yml-workflow")'
   echo "$output" | jq -e '.release.version_commit == "chore(release): vX"'
