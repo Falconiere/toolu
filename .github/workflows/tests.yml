@@ -62,7 +62,7 @@ jobs:
           # Every .bats suite must live in a colocated __tests__/ dir next to the
           # code it exercises. Fail the build (with the offending paths) if any
           # test file sits outside a __tests__ directory.
-          stray=$(find plugins benchmarks -name "*.bats" -not -path "*/__tests__/*" || true)
+          stray=$(find plugins benchmarks tooling -name "*.bats" -not -path "*/__tests__/*" || true)
           if [ -n "$stray" ]; then
             echo "Test files outside a __tests__/ dir:" >&2
             echo "$stray" >&2
@@ -77,7 +77,7 @@ jobs:
           # and skill tests live under their owning plugin; discovery is dynamic,
           # so new plugins are picked up automatically). Skill tests that wrap a
           # REST API stub curl on PATH, so they never hit real APIs.
-          mapfile -d '' suites < <(find plugins benchmarks -name "*.bats" -print0)
+          mapfile -d '' suites < <(find plugins benchmarks tooling -name "*.bats" -print0)
           if [ "${#suites[@]}" -eq 0 ]; then
             echo "No bats suites found — test discovery is broken" >&2
             exit 1
