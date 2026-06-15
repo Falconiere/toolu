@@ -24,6 +24,7 @@ Review the diff (the executed work) against the checklist. For each item ask *wo
 - **Tests** — real-world data only (no mocks), colocated (`__tests__/` TS, `tests/` Rust), and they actually exercise the new behavior including its failure paths.
 - **Structure** — one responsibility per file, named after its export, under the size ceiling; no leftover duplication of existing helpers.
 - **Docs** — public/exported symbols carry a concise doc; nothing verbose.
+- **Docs in sync** — user-facing docs match the shipped behavior: README, `docs/` guides, `SKILL.md` trigger text, and release notes reflect any changed interface/CLI/command/config. A stale doc is a finding.
 - **Gate is green** — the quality gate passes; the change didn't land by working around it.
 - **Ledger is fresh-green** — for ledger-tracked work, `bash plugins/toolu/hooks/lib/plan-ledger.sh status` reports every step fresh-green (status==green against the current diff_sha) before done; any red/pending/stale step is a blocker.
 

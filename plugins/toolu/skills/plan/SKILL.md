@@ -27,6 +27,7 @@ A design exists — ideally a reviewed spec (`spec` + `spec-review` ran for larg
 - **Layout** — one responsibility per file; files named after their export; tests in `__tests__/` (TS) or `tests/` (Rust), kept flat.
 - **Tests** — real-world data only, NO mocks. Name the fixtures/real inputs.
 - **Docs** — a concise doc line per new module/public symbol is part of "done", not a follow-up.
+- **Docs in sync** — when a step changes a user-facing surface (public API, CLI flags, commands, config, documented behavior), emit an explicit doc-update step touching the affected README / `docs/` guides / `SKILL.md` triggers / release notes; for ledger-tracked plans give it a runnable `check`.
 - **Size** — respect the per-project line limits (default 300 TS / 500 Rust); if a step grows a file past them, the plan must split it.
 - **Gate-aware** — the quality gate blocks further edits while failing; sequence steps so each lands clean.
 

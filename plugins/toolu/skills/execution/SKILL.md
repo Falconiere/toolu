@@ -30,6 +30,7 @@ For ledger-tracked work, read progress with `bash plugins/toolu/hooks/lib/plan-l
 - **Delegate to stay compact** — push exploration, large reads, and parallelizable work to subagents; keep the main context lean.
 - **No scope creep** — do only what the plan calls for. New needs go back to `plan` (and `plan-review`), not into this step.
 - **Honor the layout** — files named after their export, one responsibility each, under the line limit, docs present and concise.
+- **Docs in sync** — when a step changes a user-facing surface (behavior, interfaces, CLI flags, commands, config), update the prose docs that describe it (README, `docs/` guides, `SKILL.md` triggers, release notes) in the same step; it's part of "done", not a follow-up.
 - **Same approach failed twice? Stop.** Change the hypothesis (`systematic-debugging`), don't retry harder.
 
 ## What "done" looks like
