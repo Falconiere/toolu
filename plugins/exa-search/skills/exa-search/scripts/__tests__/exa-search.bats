@@ -2,7 +2,9 @@
 # Tests for the exa-search search.sh env resolution.
 # API key is supplied via the EXA_API_KEY environment variable.
 
-load helpers
+# Shared search-test helpers live in tooling/testdata/bats (one copy for
+# context7 + exa-search); resolve from this test's dir up to the repo root.
+load "${BATS_TEST_DIRNAME}/../../../../../../tooling/testdata/bats/search-helpers"
 
 setup() {
   setup_sandbox exa-search

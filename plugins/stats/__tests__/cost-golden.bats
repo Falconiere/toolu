@@ -12,7 +12,7 @@ setup() {
   source "${BATS_TEST_DIRNAME}/../scripts/lib/usage.sh"
   source "${BATS_TEST_DIRNAME}/../scripts/lib/aggregate.sh"
   source "${BATS_TEST_DIRNAME}/../scripts/lib/render.sh"
-  source "${BATS_TEST_DIRNAME}/../scripts/lib/render_html.sh"
+  source "${BATS_TEST_DIRNAME}/../scripts/lib/render-html.sh"
   export CLAUDE_CONFIG_DIR="$BATS_TEST_TMPDIR/cfg"
   export STATS_NO_OPEN=1
   F="${BATS_TEST_DIRNAME}/fixtures"
