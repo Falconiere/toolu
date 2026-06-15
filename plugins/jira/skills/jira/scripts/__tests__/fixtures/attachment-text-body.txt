@@ -1,0 +1,4 @@
+Deploy steps:
+1. build the image
+2. push to staging
+3. smoke test, then promote

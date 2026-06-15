@@ -130,6 +130,15 @@
       "category": "productivity",
       "keywords": ["exa", "web-search", "skills"],
       "license": "MIT"
+    },
+    {
+      "name": "jira",
+      "source": "./plugins/jira",
+      "description": "Jira issue search & workflow from the session via a REST wrapper (skill + bash). Cloud + Server/DC. Standalone, no dependencies.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["jira", "atlassian", "skills"],
+      "license": "MIT"
     }
   ]
 }
