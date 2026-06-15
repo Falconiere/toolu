@@ -28,7 +28,7 @@ source "$LIB/aggregate.sh"
 # shellcheck source=/dev/null
 source "$LIB/render.sh"
 # shellcheck source=/dev/null
-source "$LIB/render_html.sh"
+source "$LIB/render-html.sh"
 # shellcheck source=/dev/null
 source "$LIB/config.sh"
 # shellcheck source=/dev/null

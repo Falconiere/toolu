@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# render_html.sh — render the aggregate object as a self-contained HTML report by
+# render-html.sh — render the aggregate object as a self-contained HTML report by
 # filling templates/report.html. Values are substituted with bash literal
 # replacement (${tmpl//"{{K}}"/$v}) so paths/specials in the data never get
 # reinterpreted (unlike sed); data is HTML-escaped via jq @html. Requires the

@@ -1,12 +1,12 @@
 #!/usr/bin/env bats
-# render_html.sh — fills templates/report.html from a crafted aggregate (reusing
+# render-html.sh — fills templates/report.html from a crafted aggregate (reusing
 # aggregate.sh + render.sh humanizers). Browser-open suppressed via STATS_NO_OPEN.
 
 setup() {
   source "${BATS_TEST_DIRNAME}/../scripts/lib/aggregate.sh"
   source "${BATS_TEST_DIRNAME}/../scripts/lib/billing.sh"
   source "${BATS_TEST_DIRNAME}/../scripts/lib/render.sh"
-  source "${BATS_TEST_DIRNAME}/../scripts/lib/render_html.sh"
+  source "${BATS_TEST_DIRNAME}/../scripts/lib/render-html.sh"
   export CLAUDE_CONFIG_DIR="$BATS_TEST_TMPDIR/cfg"
   export STATS_NO_OPEN=1
   unset STATS_PLAN STATS_BILLING STATS_WEEKLY_LIMIT

@@ -2,7 +2,10 @@
   "name": "pr-babysit",
   "version": "0.1.0",
   "description": "Babysit a PR for the current branch: cron-driven loop that fetches unresolved review comments and the CI review-bot's verdict, triages, fixes, replies, resolves, and chases findings to zero until CI is green.",
-  "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+  "author": {
+    "name": "Falconiere Barbosa",
+    "email": "hello@falconiere.io"
+  },
   "homepage": "https://github.com/falconiere/toolu",
   "repository": "https://github.com/falconiere/toolu.git",
   "license": "MIT",
