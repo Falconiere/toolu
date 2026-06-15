@@ -105,6 +105,13 @@ html() { echo "$AGG" | stats_render_html; }
   echo "$output" | grep -qF "template not found"
 }
 
+@test "report footer states the pricing as-of date when set" {
+  export STATS_PRICING_ASOF=2026-06-15
+  AGG="$(echo "$ROLLUPS" | stats_aggregate | stats_attach_billing)"; unset STATS_PRICING_ASOF
+  html
+  grep -qF "prices as of 2026-06-15" "$REPORT"
+}
+
 @test "empty usage prints a notice and writes nothing" {
   AGG="$(echo '[]' | stats_aggregate)"
   run html

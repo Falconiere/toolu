@@ -234,6 +234,8 @@ stats_render_html() {
   _stats_apply GATE     " $gate"
   _stats_apply COMEMORY " $comem"
   _stats_apply BILLING  "$(_stats_html_billing "$agg")"
+  local pasof; pasof="$(printf '%s' "$agg" | jq -r '.billing.asof // empty')"
+  _stats_apply PRICING_ASOF "$([ -n "$pasof" ] && printf ' · prices as of %s' "$pasof")"
 
   local out; out="$(stats_html_path)"
   mkdir -p "$(dirname "$out")" || { echo "stats: cannot create $(dirname "$out")" >&2; return 1; }

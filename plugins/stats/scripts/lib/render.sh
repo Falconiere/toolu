@@ -74,9 +74,11 @@ stats_render() {
 
   # Surface pricing warnings (e.g. an unknown model priced at the Sonnet default)
   # so a silent mispricing becomes visible rather than buried in the estimate.
-  if [ "$(printf '%s' "$agg" | jq -r '(.warnings // []) | length')" -gt 0 ] 2>/dev/null; then
+  # billing.warnings is the canonical home; fall back to top-level for an
+  # aggregate rendered without the billing pass.
+  if [ "$(printf '%s' "$agg" | jq -r '(.billing.warnings // .warnings // []) | length')" -gt 0 ] 2>/dev/null; then
     printf '\n  ⚠ pricing warnings:\n'
-    printf '%s' "$agg" | jq -r '(.warnings // [])[] | "    - " + .'
+    printf '%s' "$agg" | jq -r '(.billing.warnings // .warnings // [])[] | "    - " + .'
   fi
 }
 
