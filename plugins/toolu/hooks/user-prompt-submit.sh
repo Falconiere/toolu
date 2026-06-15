@@ -80,10 +80,16 @@ if ! toolu_enabled skills ast-grep; then
   HAS_ASTGREP=""
 fi
 
-# 1. Memory recall hint — only when prompt explicitly invites recall.
+# 1. Memory recall hint — on explicit recall words AND ordinary task verbs.
+# Task verbs (add/implement/build/…) are included deliberately: starting work on
+# a feature is exactly when prior decisions/file-maps should be recalled first.
+# WB/WE word-boundary wrapping keeps base verbs from matching as substrings
+# (`add` not `address`, `build` not `rebuild`, `create` not `created`). `fix`,
+# `debug`, `bug` are intentionally NOT here — they already drive the intent hint
+# below; recall + intent may both fire, which is fine (they say different things).
 # (WB/WE word-boundary helpers are defined above the quality-gate block.)
 recall=""
-if [[ "$prompt_lower" =~ ${WB}(remember|recall|what\ did|previously|earlier|comemory|architecture|how\ does|where\ is|file-map|prior\ decision|history)${WE} ]]; then
+if [[ "$prompt_lower" =~ ${WB}(remember|recall|what\ did|previously|earlier|comemory|architecture|how\ does|where\ is|file-map|prior\ decision|history|add|implement|build|create|write|update|change|refactor|migrate|rename)${WE} ]]; then
   case "$(toolu_comemory_state)" in
     available)
       recall="Recall first: \`comemory.sh search \"<topic>\"\` before reading files."

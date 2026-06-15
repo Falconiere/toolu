@@ -4,6 +4,10 @@
 # never collide with real project memories, and deletes everything it creates
 # in teardown.
 
+# `run --separate-stderr` (used by the miss-banner tests) is a 1.5.0+ flag;
+# declare the floor so bats does not warn (BW02) about flag use.
+bats_require_minimum_version 1.5.0
+
 COMEMORY_SH="${BATS_TEST_DIRNAME}/../comemory.sh"
 
 # Throwaway repo: the wrapper auto-detects the repo from the git toplevel, so
@@ -306,4 +310,68 @@ _make_repo_with_worktree() {
   fi
   run bash "$COMEMORY_SH" feedback "$qid" --used "$mem_id" --json
   [ "$status" -eq 0 ]
+}
+
+@test "comemory: search miss emits the save-back banner on stderr, never on stdout (real binary)" {
+  export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-miss-plain"
+  mkdir -p "$COMEMORY_DATA_DIR"
+  run --separate-stderr bash "$COMEMORY_SH" search "zzqq-no-such-memory-xyz"
+  [ "$status" -eq 0 ]                       # exit code preserved on a miss
+  [[ "$stderr" == *"no memory hit"* ]]      # nudge reaches the agent...
+  [[ "$stderr" == *"save it back"* ]]
+  [[ "$output" != *"no memory hit"* ]]      # ...and never pollutes stdout
+}
+
+@test "comemory: search --json miss keeps stdout pure JSON, banner only on stderr (real binary)" {
+  command -v jq >/dev/null 2>&1 || skip "jq not installed"
+  export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-miss-json"
+  mkdir -p "$COMEMORY_DATA_DIR"
+  run --separate-stderr bash "$COMEMORY_SH" search "zzqq-no-such-memory-xyz" --json
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.total == 0' >/dev/null   # stdout still parses; zero hits
+  [[ "$output" != *"no memory hit"* ]]               # no banner bytes mixed into JSON
+  [[ "$stderr" == *"save it back"* ]]                # banner still delivered via stderr
+}
+
+@test "comemory: search with a real hit does NOT emit the miss banner (real binary)" {
+  command -v jq >/dev/null 2>&1 || skip "jq not installed"
+  export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-hit-no-banner"
+  mkdir -p "$COMEMORY_DATA_DIR"
+  run bash "$COMEMORY_SH" save "hit-probe-title" "hit probe body" --json
+  [ "$status" -eq 0 ]
+  local id
+  id=$(echo "$output" | jq -r '.id')
+  [ -n "$id" ] && [ "$id" != "null" ]
+  run --separate-stderr bash "$COMEMORY_SH" search "hit-probe-title"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"$id"* ]]                # the hit's id is on stdout (verbatim re-emit)
+  [[ "$stderr" != *"no memory hit"* ]]      # a hit must not trigger the nudge
+}
+
+@test "comemory: miss banner names the active --repo scope (real binary)" {
+  export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-miss-scope"
+  mkdir -p "$COMEMORY_DATA_DIR"
+  run --separate-stderr bash "$COMEMORY_SH" search "zzqq-no-such-memory-xyz"
+  [ "$status" -eq 0 ]
+  [[ "$stderr" == *"$TEST_REPO"* ]]         # scope surfaced in the nudge (ask #4 reinforced)
+}
+
+@test "comemory: a non-zero search exit is forwarded and never treated as a miss (stubbed failure)" {
+  # Shadow the real binary with a stub that fails — an ERROR (rc!=0) must not be
+  # confused with an empty result, so the save-back banner must stay silent and
+  # the exit code must pass through unmasked. Stubbing a crashing binary to test
+  # failure handling is allowed; the data under test is still real elsewhere.
+  local shimdir="$BATS_TEST_TMPDIR/shim"
+  mkdir -p "$shimdir"
+  cat > "$shimdir/comemory" <<'SH'
+#!/usr/bin/env bash
+echo "stub stdout line"
+echo "boom: simulated comemory failure" >&2
+exit 3
+SH
+  chmod +x "$shimdir/comemory"
+  PATH="$shimdir:$PATH" run --separate-stderr bash "$COMEMORY_SH" search "anything"
+  [ "$status" -eq 3 ]                          # exit code forwarded, not masked
+  [[ "$output" == *"stub stdout line"* ]]      # comemory stdout still re-emitted
+  [[ "$stderr" != *"no memory hit"* ]]         # an error is NOT a miss — no banner
 }
