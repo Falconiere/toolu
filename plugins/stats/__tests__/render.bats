@@ -4,7 +4,9 @@
 
 setup() {
   source "${BATS_TEST_DIRNAME}/../scripts/lib/aggregate.sh"
+  source "${BATS_TEST_DIRNAME}/../scripts/lib/billing.sh"
   source "${BATS_TEST_DIRNAME}/../scripts/lib/render.sh"
+  unset STATS_PLAN STATS_BILLING STATS_WEEKLY_LIMIT
   TODAY="$(date +%Y-%m-%d)"
   full() { echo "{\"tokens\":$1,\"input\":$1,\"output\":0,\"cache_read\":0,\"cache_write\":0,\"cost\":$2}"; }
   ROLLUPS=$(cat <<EOF
@@ -17,7 +19,7 @@ setup() {
 ]
 EOF
 )
-  AGG="$(echo "$ROLLUPS" | stats_aggregate)"
+  AGG="$(echo "$ROLLUPS" | stats_aggregate | stats_attach_billing)"
 }
 
 rnd() { echo "$AGG" | stats_render; }
@@ -64,7 +66,7 @@ rnd() { echo "$AGG" | stats_render; }
 }
 
 @test "model-filtered aggregate renders trend/windows as n/a" {
-  export STATS_MODEL=opus; AGG="$(echo "$ROLLUPS" | stats_aggregate)"; unset STATS_MODEL
+  export STATS_MODEL=opus; AGG="$(echo "$ROLLUPS" | stats_aggregate | stats_attach_billing)"; unset STATS_MODEL
   run rnd
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "n/a under --model filter"
@@ -94,9 +96,43 @@ rnd() { echo "$AGG" | stats_render; }
 
 @test "dashboard surfaces an unknown-model pricing warning" {
   local r='[{"session_id":"s","project":"p","project_path":"/p","totals":{"tokens":10,"input":10,"output":0,"cache_read":0,"cache_write":0,"cost":0.01},"by_day":{"'"$TODAY"'":{"tokens":10,"input":10,"output":0,"cache_read":0,"cache_write":0,"cost":0.01}},"by_model":{"claude-zz-9":{"tokens":10,"input":10,"output":0,"cache_read":0,"cache_write":0,"cost":0.01}},"tools":{},"phases":{},"unknown_models":["claude-zz-9"]}]'
-  AGG="$(echo "$r" | stats_aggregate)"
+  AGG="$(echo "$r" | stats_aggregate | stats_attach_billing)"
   run rnd
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "pricing warnings"
   echo "$output" | grep -q "claude-zz-9"
+}
+
+@test "dashboard always shows the API billing estimate" {
+  run rnd
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Billing"
+  echo "$output" | grep -q "API estimate"
+}
+
+@test "subscription lens appears when a plan is configured; under-use shown" {
+  export STATS_PLAN=max5; AGG="$(echo "$ROLLUPS" | stats_aggregate | stats_attach_billing)"; unset STATS_PLAN
+  run rnd
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Subscription (max5)"
+  echo "$output" | grep -q "month value"
+  echo "$output" | grep -q "under-using"          # $4.20 value vs $100 fee -> negative
+}
+
+@test "weekly quota shows a % only against a configured limit" {
+  export STATS_PLAN=max5 STATS_WEEKLY_LIMIT=3000000
+  AGG="$(echo "$ROLLUPS" | stats_aggregate | stats_attach_billing)"
+  unset STATS_PLAN STATS_WEEKLY_LIMIT
+  run rnd
+  echo "$output" | grep -q "Weekly quota"
+  echo "$output" | grep -qF "%"
+}
+
+@test "billing mode=api hides the subscription lens even with a plan" {
+  export STATS_PLAN=max5 STATS_BILLING=api
+  AGG="$(echo "$ROLLUPS" | stats_aggregate | stats_attach_billing)"
+  unset STATS_PLAN STATS_BILLING
+  run rnd
+  echo "$output" | grep -q "API estimate"
+  ! echo "$output" | grep -q "Subscription ("
 }

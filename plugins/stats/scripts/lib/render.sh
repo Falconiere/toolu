@@ -70,6 +70,8 @@ stats_render() {
   printf '\n  Activity  tools: %s · phases: %s · gate: %s · comemory: %s\n' \
     "$tools" "$phases" "$gate" "$comem"
 
+  _stats_render_billing "$agg"
+
   # Surface pricing warnings (e.g. an unknown model priced at the Sonnet default)
   # so a silent mispricing becomes visible rather than buried in the estimate.
   if [ "$(printf '%s' "$agg" | jq -r '(.warnings // []) | length')" -gt 0 ] 2>/dev/null; then
@@ -103,4 +105,46 @@ _stats_render_bars() {  # $1=agg $2=title $3=jq-rows
       printf '  %s %s  %7s  %8s  %3s sess\n' "$(_stats_pad "$nm" 22)" "$(stats_bar "$tk2" "$max" 14)" "$(stats_format_tokens "$tk2")" "\$$(stats_money "$co")" "$cn"
     fi
   done
+}
+
+# Render the billing lens(es) from the .billing object (attached by billing.sh):
+# the API pay-per-token estimate (unless mode=subscription), plus the Claude-
+# subscription view — month-to-date API-equivalent value, savings vs the flat
+# fee, effective $/Mtok, and weekly quota — when a plan is configured. A quota
+# percentage is shown ONLY against a user-set weekly limit (Anthropic publishes
+# no official ceiling); otherwise the measured weekly tokens are shown bare.
+_stats_render_billing() {  # $1=agg
+  local agg="$1" mode asof cost
+  mode="$(printf '%s' "$agg" | jq -r '.billing.mode // "both"')"
+  asof="$(printf '%s' "$agg" | jq -r '.billing.asof // empty')"
+  cost="$(printf '%s' "$agg" | jq -r '.billing.api.cost // 0')"
+  if [ -n "$asof" ]; then printf '\n  Billing  (prices as of %s)\n' "$asof"
+  else printf '\n  Billing\n'; fi
+  [ "$mode" = "subscription" ] || printf '    API estimate          $%s\n' "$(stats_money "$cost")"
+
+  [ "$mode" = "api" ] && return 0
+  [ "$(printf '%s' "$agg" | jq -r '.billing.subscription != null')" = "true" ] || return 0
+
+  local plan fee val sav rate
+  IFS='|' read -r plan fee val sav rate < <(printf '%s' "$agg" \
+    | jq -r '.billing | [.plan, .plan_fee_monthly, .subscription.api_equivalent_value,
+                         .subscription.savings, (.subscription.effective_per_mtok // "n/a")] | join("|")')
+  printf '    Subscription (%s)     $%s/mo flat\n' "$plan" "$fee"
+  printf '    This month value      $%s API-equivalent\n' "$(stats_money "$val")"
+  case "$sav" in
+    -*) printf '    Net                   -$%s (under-using vs the fee)\n' "$(stats_money "${sav#-}")" ;;
+    *)  printf '    Net                   $%s saved vs API\n'              "$(stats_money "$sav")" ;;
+  esac
+  [ "$rate" = "n/a" ] || printf '    Effective rate        ~$%s / Mtok this month\n' "$(stats_money "$rate")"
+
+  local wt wl wp basis
+  IFS='|' read -r wt wl wp basis < <(printf '%s' "$agg" \
+    | jq -r '.billing.quota | [(.week_tokens // "n/a"), (.weekly_limit // "n/a"),
+                              (.week_pct // "n/a"), .basis] | join("|")')
+  if [ "$basis" = "config" ]; then
+    printf '    Weekly quota          %s / %s tokens (%s%%)\n' \
+      "$(stats_format_tokens "$wt")" "$(stats_format_tokens "$wl")" "$wp"
+  elif [ "$wt" != "n/a" ] && [ "$wt" != "null" ]; then
+    printf '    Weekly usage          %s tokens (set weekly_limit_tokens for %%)\n' "$(stats_format_tokens "$wt")"
+  fi
 }
