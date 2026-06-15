@@ -91,6 +91,8 @@ stats_aggregate() {
                               | map({ key: .[0].key, value: (map(.value) | add) }) | from_entries ),
                     phases: ( $sessions | [ .[] | (.phases // {}) | to_entries[] ] | group_by(.key)
                               | map({ key: .[0].key, value: (map(.value) | add) }) | from_entries ),
-                    gate: $gate, comemory: $comem } }
+                    gate: $gate, comemory: $comem },
+        warnings: ( [ $sessions[] | (.unknown_models // [])[] ] | unique
+                    | map("unknown model: " + . + " (priced at Sonnet rate)") ) }
   '
 }

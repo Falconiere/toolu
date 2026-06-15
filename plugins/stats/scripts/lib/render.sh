@@ -69,6 +69,13 @@ stats_render() {
   comem="$(printf '%s' "$agg"  | jq -r '.activity.comemory')"
   printf '\n  Activity  tools: %s · phases: %s · gate: %s · comemory: %s\n' \
     "$tools" "$phases" "$gate" "$comem"
+
+  # Surface pricing warnings (e.g. an unknown model priced at the Sonnet default)
+  # so a silent mispricing becomes visible rather than buried in the estimate.
+  if [ "$(printf '%s' "$agg" | jq -r '(.warnings // []) | length')" -gt 0 ] 2>/dev/null; then
+    printf '\n  ⚠ pricing warnings:\n'
+    printf '%s' "$agg" | jq -r '(.warnings // [])[] | "    - " + .'
+  fi
 }
 
 # Render one labelled section as bars, scaled to the section's largest row.
