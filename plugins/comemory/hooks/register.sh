@@ -52,4 +52,27 @@ for dst in "$REG_DIR/${SPEC}__"*.sh; do
   [ -f "$src" ] || rm -f "$dst"
 done
 
+# Publish the scoped wrapper at a STABLE, env-independent path so the agent's
+# Bash tool can invoke it without ${CLAUDE_PLUGIN_ROOT} (that var is set for
+# hook subprocesses, NOT for the Bash tool's subshell — an agent that pastes
+# `${CLAUDE_PLUGIN_ROOT}/skills/.../comemory.sh` from SKILL.md hits an empty
+# expansion, runs `/skills/.../comemory.sh: No such file`, and misreads the
+# 0-byte stdout as "no memory hits"). Mirror the statusline plugin's pattern:
+#   ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh
+# Refreshed every SessionStart so plugin updates are picked up.
+PLUGIN_ROOT="$(cd "$SELF_DIR/.." 2>/dev/null && pwd)"
+wrapper_src="${PLUGIN_ROOT:+$PLUGIN_ROOT/skills/agent-memory/scripts/comemory.sh}"
+if [ -n "$wrapper_src" ] && [ -f "$wrapper_src" ]; then
+  pub_root="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory"
+  if mkdir -p "$pub_root" 2>/dev/null; then
+    pub_dst="$pub_root/comemory.sh"
+    # Own the path only when it is already our symlink or absent — never
+    # clobber a real file a user may have placed at that path (-L catches a
+    # broken/relinked symlink that -e would report as missing).
+    if [ -L "$pub_dst" ] || [ ! -e "$pub_dst" ]; then
+      ln -sf "$wrapper_src" "$pub_dst" 2>/dev/null || true
+    fi
+  fi
+fi
+
 exit 0

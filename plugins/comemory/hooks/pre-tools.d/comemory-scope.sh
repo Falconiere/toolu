@@ -154,14 +154,20 @@ while IFS= read -r segment; do
 done < <(split_statements "$cmd_only")
 
 if [[ -n "$violation" ]]; then
-  # Resolve the auto-scoping wrapper. Two levels up from this module is the
-  # comemory plugin root — valid in the repo checkout and installed plugin.
-  # When run from the runtime-registry COPY (~/.claude/toolu/pre-tools.d/)
-  # that path does not exist, so fall back to generic wording: the deny text
-  # only needs to point the agent at the wrapper, not at an exact path.
-  wrapper_root=$(cd "${BASH_SOURCE%/*}/../.." 2>/dev/null && pwd)
-  wrapper="${wrapper_root:+$wrapper_root/}skills/agent-memory/scripts/comemory.sh"
-  [[ -x "$wrapper" ]] || wrapper="the comemory plugin's skills/agent-memory/scripts/comemory.sh"
+  # Point the agent at the STABLE published path the SessionStart register.sh
+  # symlinks into ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh. The
+  # plugin-root path (skills/agent-memory/scripts/comemory.sh) is unreachable
+  # from the agent's Bash tool because ${CLAUDE_PLUGIN_ROOT} is not exported
+  # there — quoting that path in the deny message would just re-trigger the
+  # "empty results = not-found" failure mode this hook is trying to redirect.
+  pub_root="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory"
+  wrapper="$pub_root/comemory.sh"
+  # If the symlink hasn't been published yet (SessionStart not run, or run
+  # from the runtime-registry copy before the publish step), surface the
+  # SHELL TEMPLATE the agent can paste verbatim — single-quoted so $HOME and
+  # $CLAUDE_CONFIG_DIR stay literal in the deny text and expand at the agent's
+  # Bash subshell, not here.
+  [[ -e "$wrapper" ]] || wrapper='"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh"'
   jq -n --arg cmd "$violation" --arg wrapper "$wrapper" '{
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
