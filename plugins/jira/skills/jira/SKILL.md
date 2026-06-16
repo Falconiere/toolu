@@ -11,11 +11,15 @@ Use this skill to work a Jira ticket without leaving the session: search by JQL,
 
 ## CLI tool
 
-`${CLAUDE_PLUGIN_ROOT}/skills/jira/scripts/jira.sh` (repo checkout: `plugins/jira/skills/jira/scripts/jira.sh`) — bash wrapping the Jira REST API.
+Invoke at the **stable published path** (a symlink the plugin's SessionStart hook refreshes every session):
 
+```bash
+"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/jira/jira.sh" [--api-version N] [--lean] <family> <action> [options]
 ```
-jira.sh [--api-version N] [--lean] <family> <action> [options]
-```
+
+`$CLAUDE_CONFIG_DIR` IS exported into the Bash tool's subshell; `$CLAUDE_PLUGIN_ROOT` is **NOT** — it is only set for hook subprocesses. Using the plugin-root path from a Bash tool call expands to an empty string and runs `/skills/.../jira.sh: No such file`. **Always use the published path above.**
+
+Repo-checkout fallback (for tests/dev when the plugin is not installed): `plugins/jira/skills/jira/scripts/jira.sh`.
 
 ## Setup
 

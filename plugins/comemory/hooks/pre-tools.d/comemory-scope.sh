@@ -154,20 +154,20 @@ while IFS= read -r segment; do
 done < <(split_statements "$cmd_only")
 
 if [[ -n "$violation" ]]; then
-  # Point the agent at the STABLE published path the SessionStart register.sh
-  # symlinks into ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh. The
-  # plugin-root path (skills/agent-memory/scripts/comemory.sh) is unreachable
+  # Point the agent at the STABLE published path SessionStart register.sh
+  # symlinks into ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh.
+  # The plugin-root path (skills/agent-memory/scripts/comemory.sh) is unreachable
   # from the agent's Bash tool because ${CLAUDE_PLUGIN_ROOT} is not exported
   # there — quoting that path in the deny message would just re-trigger the
   # "empty results = not-found" failure mode this hook is trying to redirect.
-  pub_root="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory"
-  wrapper="$pub_root/comemory.sh"
-  # If the symlink hasn't been published yet (SessionStart not run, or run
-  # from the runtime-registry copy before the publish step), surface the
-  # SHELL TEMPLATE the agent can paste verbatim — single-quoted so $HOME and
-  # $CLAUDE_CONFIG_DIR stay literal in the deny text and expand at the agent's
-  # Bash subshell, not here.
-  [[ -e "$wrapper" ]] || wrapper='"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh"'
+  #
+  # Always emit the SHELL TEMPLATE (single-quoted so $HOME/$CLAUDE_CONFIG_DIR
+  # stay literal in the deny text and expand at the agent's Bash subshell, not
+  # here). Matches the form SKILL.md teaches — consistent muscle memory across
+  # the deny banner and the docs. Hook is non-fatal: even if the symlink hasn't
+  # been published yet, the template is what the agent should paste.
+  # shellcheck disable=SC2016  # literal template: variables expand in the agent's shell, not here.
+  wrapper='"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh"'
   jq -n --arg cmd "$violation" --arg wrapper "$wrapper" '{
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
