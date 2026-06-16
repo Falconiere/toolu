@@ -19,7 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # fetch-depth: 0 required — the action computes a merge-base
+          # against the PR base branch to produce the diff for review.
           fetch-depth: 0
-      - uses: Falconiere/toolu-ghactions/code-review@main
+      - uses: Falconiere/toolu-ghactions/code-review@d2af0b00d5835203339aa0e8e525847e40f22e3b
         with:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
