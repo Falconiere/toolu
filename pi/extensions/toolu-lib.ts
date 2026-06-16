@@ -149,7 +149,7 @@ export async function runHook(
   input: string,
   signal?: AbortSignal,
 ): Promise<{ code: number; stdout: string; stderr: string }> {
-  return new Promise((resolve, _reject) => {
+  return new Promise((resolve, reject) => {
     const child = spawn("bash", [script], {
       cwd,
       env: baseEnv(cwd),
@@ -159,6 +159,7 @@ export async function runHook(
 
     let stdout = "";
     let stderr = "";
+    let errorEmitted = false;
 
     child.stdout.on("data", (chunk) => {
       stdout += String(chunk);
@@ -167,13 +168,15 @@ export async function runHook(
       stderr += String(chunk);
     });
 
-    const handleError = (error: Error) => {
+    child.on("error", (error: Error) => {
+      errorEmitted = true;
       stderr += error.message;
-    };
-
-    child.on("error", handleError);
+      reject(error);
+    });
     child.on("close", (code) => {
-      resolve({ code: code ?? 1, stdout: stdout.trim(), stderr: stderr.trim() });
+      if (!errorEmitted) {
+        resolve({ code: code ?? 1, stdout: stdout.trim(), stderr: stderr.trim() });
+      }
     });
 
     child.stdin.end(input);
@@ -257,7 +260,10 @@ export async function runRegistrySync(cwd: string, scripts: string[]) {
         stdio: ["pipe", "ignore", "ignore"],
       });
       child.on("close", () => resolve());
-      child.on("error", () => resolve());
+      child.on("error", (err) => {
+        process.stderr.write(`toolu: registry sync failed for ${script}: ${err.message}\n`);
+        resolve();
+      });
       child.stdin.end("{}");
     });
   }

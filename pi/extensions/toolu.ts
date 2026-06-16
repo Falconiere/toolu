@@ -46,6 +46,7 @@ export type HookOutput = {
  * carries no repo-checkout fallback path (unlike context7, exa-search, jira).
  */
 function initComemoryPluginRoot() {
+  if (process.env.CLAUDE_PLUGIN_ROOT) return;
   const root = join(packageRoot, "plugins/comemory");
   if (existsSync(root)) {
     process.env.CLAUDE_PLUGIN_ROOT = root;

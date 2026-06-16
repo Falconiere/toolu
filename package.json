@@ -27,8 +27,7 @@
   },
   "pi": {
     "extensions": [
-      "./pi/extensions",
-      "pi-caveman/extensions/caveman.ts"
+      "./pi/extensions"
     ],
     "skills": [
       "./plugins/toolu/skills",
