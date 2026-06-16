@@ -110,18 +110,27 @@ teardown() {
   grep -qF '`toolu`' "$REPO/docs/releases/v1.1.0.md"
   grep -qF '`alpha`' "$REPO/docs/releases/v1.1.0.md"
   ! grep -qF '`beta`' "$REPO/docs/releases/v1.1.0.md"
-  # Section header uses "since v<prev>" when a previous tag exists.
-  grep -qF 'since v1.0.0' "$REPO/docs/releases/v1.1.0.md"
+  # Section header uses the exact "## Included changes since v<prev>" form.
+  grep -qF '## Included changes since v1.0.0' "$REPO/docs/releases/v1.1.0.md"
+  # Upgrade notes section is always drafted (matches tooling/templates/release-notes.md).
+  grep -qF '## Upgrade notes' "$REPO/docs/releases/v1.1.0.md"
   # Highlights placeholder.
   grep -qF '## Highlights' "$REPO/docs/releases/v1.1.0.md"
   grep -qF 'TODO' "$REPO/docs/releases/v1.1.0.md"
+  # toolu bullet shows the captured pre-bump version (1.0.0) — exercises the
+  # toolu_old variable (not a hardcoded index into old_versions).
+  grep -qF '(`toolu` 1.0.0 -> 1.1.0)' "$REPO/docs/releases/v1.1.0.md"
 }
 
-@test "release: apply refuses to overwrite an existing notes file" {
+@test "release: apply refuses to overwrite an existing notes file (and aborts before printing the plan)" {
   mkdir -p "$REPO/docs/releases"
   printf 'marker\n' > "$REPO/docs/releases/v1.1.0.md"
   run env RELEASE_ROOT="$REPO" bash "$SCRIPT" 1.1.0
   [ "$status" -ne 0 ]
+  # Error message is on stderr — captured by bats' `run` as $output.
+  [[ "$output" == *"already exists"* ]]
+  # Pre-flight runs before the plan banner, so the plan must NOT appear.
+  [[ "$output" != *"plan for v1.1.0"* ]]
   # Marker preserved verbatim.
   [ "$(cat "$REPO/docs/releases/v1.1.0.md")" = "marker" ]
   # Atomicity: no manifest was bumped.

@@ -50,6 +50,16 @@ while [ $# -gt 0 ]; do
 done
 is_semver "$NEW" || { usage >&2; exit 1; }
 
+# Pre-flight: refuse to clobber an existing notes file. Done as early as
+# possible (right after arg parsing, before any git work) so apply-mode users
+# fail fast and don't pay for the diffstat/plan computation. Skipped in
+# --dry-run mode so the plan still prints for review.
+NOTES_PATH="docs/releases/v${NEW}.md"
+if [ "$DRAFT_NOTES" -eq 1 ] && [ "$DRY_RUN" -eq 0 ] && [ -e "$NOTES_PATH" ]; then
+  printf 'release.sh: %s already exists — refusing to overwrite (remove it or pass --no-notes)\n' "$NOTES_PATH" >&2
+  exit 1
+fi
+
 # Replace the "version" field of a JSON file in place, touching only that line.
 set_version() {  # $1=file  $2=version
   local f="$1" v="$2"
@@ -104,7 +114,8 @@ stats+=("")
 plugin_names+=("")
 
 files+=(plugins/toolu/.claude-plugin/plugin.json)
-old_versions+=("$(cur_version plugins/toolu/.claude-plugin/plugin.json)")
+toolu_old="$(cur_version plugins/toolu/.claude-plugin/plugin.json)"
+old_versions+=("$toolu_old")
 new_versions+=("$NEW")
 stats+=("$(diffstat_for plugins/toolu)")
 plugin_names+=("toolu")
@@ -126,14 +137,6 @@ for manifest in plugins/*/.claude-plugin/plugin.json; do
   stats+=("$(diffstat_for "$dir")")
   plugin_names+=("$name")
 done
-
-# Pre-flight: refuse to clobber an existing notes file. Done before pass 2 so
-# atomicity holds (no manifest is bumped unless the release can complete).
-NOTES_PATH="docs/releases/v${NEW}.md"
-if [ "$DRAFT_NOTES" -eq 1 ] && [ "$DRY_RUN" -eq 0 ] && [ -e "$NOTES_PATH" ]; then
-  printf 'release.sh: %s already exists — refusing to overwrite (remove it or pass --no-notes)\n' "$NOTES_PATH" >&2
-  exit 1
-fi
 
 # Always print the plan so apply and dry-run look the same up to the "applied"
 # line. Greppable via the `release.sh:` prefix.
@@ -187,6 +190,11 @@ if [ "$DRAFT_NOTES" -eq 1 ]; then
   {
     printf '# toolu v%s\n\nReleased: %s\n\n' "$NEW" "$today"
     printf '## Highlights\n\n<!-- TODO: write 2-3 sentence summary of the release. -->\n\n'
+    # Always draft the Upgrade notes section so the template and the script
+    # output match. The human deletes the whole block (header + TODO) if there
+    # are no user-facing steps (e.g. /plugin install ...).
+    # shellcheck disable=SC2016  # backticks are literal markdown code spans in the output
+    printf '## Upgrade notes\n\n<!-- TODO: write any user-facing upgrade steps (e.g. `/plugin install foo@toolu`).\n     Delete this entire section if there are none. -->\n\n'
     if [ -n "$last_tag" ]; then
       printf '## Included changes since %s\n\n' "$last_tag"
     else
@@ -204,10 +212,10 @@ if [ "$DRAFT_NOTES" -eq 1 ]; then
       fi
       i=$((i+1))
     done
-    # Anchor: toolu was set to NEW above; old_versions[1] captured the pre-bump.
+    # Anchor: toolu was set to NEW above; toolu_old captured the pre-bump.
     # shellcheck disable=SC2016  # backticks are literal markdown code spans in the output
     printf -- '- `toolu`: <!-- TODO one-line summary --> (`toolu` %s -> %s)\n' \
-      "${old_versions[1]}" "$NEW"
+      "$toolu_old" "$NEW"
     unset i n
   } > "$NOTES_PATH"
   printf 'release.sh: drafted %s\n' "$NOTES_PATH"
