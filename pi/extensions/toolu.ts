@@ -22,6 +22,16 @@ const rustQualityRegister = join(packageRoot, "plugins/rust-quality/hooks/regist
 
 const gateStatusKey = "toolu-gate";
 
+// CLAUDE_PLUGIN_ROOT is a Claude Code convention that pi does not natively set.
+// Multiple skills reference it to resolve scripts inside their plugin directories
+// (e.g. comemory.sh, context7/search.sh, exa-search/search.sh). pi's bash tool
+// inherits the process environment, so we set it once here. We point it at the
+// comemory plugin directory because comemory is the ALWAYS ACTIVE agent-memory
+// skill — it carries no fallback path. Other plugins (context7, exa-search,
+// jira) document repo-checkout fallback paths in their SKILL.md, and cross-plugin
+// references like `${CLAUDE_PLUGIN_ROOT}/../context7/…` resolve correctly.
+process.env.CLAUDE_PLUGIN_ROOT = join(packageRoot, "plugins/comemory");
+
 type HookOutput = {
   systemMessage?: string;
   hookSpecificOutput?: {
