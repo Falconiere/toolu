@@ -55,3 +55,16 @@ teardown() { rm -rf "$TMP"; }
   after=$(readlink "$CLAUDE_CONFIG_DIR/context7/search.sh")
   [ "$before" = "$after" ]
 }
+
+# Fail-soft: a corrupted install where skills/ is missing must NOT break the
+# session. Copy the hook into a fake plugin layout with no wrapper source and
+# assert the hook exits 0, prints nothing, and publishes no symlink.
+@test "session-start: source wrapper missing -> exits 0, no symlink, silent (fail-soft)" {
+  fake="$TMP/fake-plugin/hooks"
+  mkdir -p "$fake"
+  cp "$HOOK" "$fake/session-start.sh"
+  run bash "$fake/session-start.sh" <<<'{}'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ ! -e "$CLAUDE_CONFIG_DIR/context7/search.sh" ]
+}

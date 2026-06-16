@@ -55,3 +55,15 @@ teardown() { rm -rf "$TMP"; }
   after=$(readlink "$CLAUDE_CONFIG_DIR/code-review/write-state.sh")
   [ "$before" = "$after" ]
 }
+
+# Fail-soft: a corrupted install where skills/ is missing must NOT break the
+# session. See context7's equivalent test for the rationale.
+@test "session-start: source helper missing -> exits 0, no symlink, silent (fail-soft)" {
+  fake="$TMP/fake-plugin/hooks"
+  mkdir -p "$fake"
+  cp "$HOOK" "$fake/session-start.sh"
+  run bash "$fake/session-start.sh" <<<'{}'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ ! -e "$CLAUDE_CONFIG_DIR/code-review/write-state.sh" ]
+}
