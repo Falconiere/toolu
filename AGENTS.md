@@ -43,6 +43,10 @@ plugins/<name>/
 ### 1. Cut a release
 
 ```sh
+# Always preview first:
+tooling/release.sh --dry-run <major.minor.patch>
+
+# Then apply (also auto-drafts docs/releases/v<version>.md):
 tooling/release.sh <major.minor.patch>
 ```
 
@@ -52,6 +56,9 @@ This is an **atomic, two-pass** script:
 |------|-------------|
 | 1 (validate) | Resolves every version bump without writing anything. If a single manifest is malformed, the whole release aborts — no partial writes. |
 | 2 (apply) | Edits `"version"` fields **in place by line** (sed, not jq, so key ordering is preserved). |
+| 3 (notes) | Auto-drafts `docs/releases/v<version>.md` as a template skeleton with per-plugin `(old → new)` attribution. Refuses to overwrite an existing file (pass `--no-notes` to skip). |
+
+`--dry-run` / `--plan` prints the full bump plan — anchor versions, per-plugin `old → new` transitions, per-plugin `git diff --shortstat` against the last `v*.*.*` tag, and the list of plugins that will be **skipped** (no diff since last tag) — then writes nothing. Re-run without `--dry-run` to apply.
 
 Version bump rules:
 
@@ -64,20 +71,9 @@ Version bump rules:
 
 The script only accepts strict `major.minor.patch` (no pre-release/build/extra segments). A malformed manifest version in any changed plugin **aborts without touching any file**.
 
-### 2. Tag
+### 2. Edit the release notes
 
-```sh
-git tag -a v<version> -m "v<version>"
-git push --follow-tags
-```
-
-### 3. CI gate: tag must match manifest
-
-CI's `release.yml` **verifies** that `git tag (vX.Y.Z)` matches `plugins/toolu/.claude-plugin/plugin.json` version. If they diverge, the release is blocked. This is the safety net for the "stale version" problem.
-
-### 4. Write release notes
-
-Create `docs/releases/v<version>.md` with:
+The apply step drafts `docs/releases/v<version>.md` (template at `tooling/templates/release-notes.md`) with `<!-- TODO ... -->` placeholders for `## Highlights`, `## Upgrade notes`, and each per-plugin bullet. Fill in the placeholders, delete the comment markers, and **delete the entire `## Upgrade notes` section** (header + TODO) if there are no user-facing steps. The shape matches the existing v1.10.0 / v1.12.0 notes:
 
 ```markdown
 # toolu vX.Y.Z
@@ -88,15 +84,34 @@ Released: YYYY-MM-DD
 
 <2-3 sentence summary>
 
+## Upgrade notes
+
+<user-facing upgrade steps, e.g. `/plugin install foo@toolu` — delete this section if none>
+
 ## Included changes since v<prev>
 
 - `<plugin>`: <change description>. (`<plugin>` <old-ver> → <new-ver>)
 - …
 ```
 
+### 3. Commit, tag, push
+
+```sh
+git add -A
+git commit -m "chore(release): v<version>"
+git tag -a v<version> -m "v<version> — see docs/releases/v<version>.md"
+git push --follow-tags
+```
+
+The tag annotation points reviewers at the curated notes (the same file that ships as the GitHub Release body in step 5).
+
+### 4. CI gate: tag must match manifest
+
+CI's `release.yml` **verifies** that `git tag (vX.Y.Z)` matches `plugins/toolu/.claude-plugin/plugin.json` version. If they diverge, the release is blocked. This is the safety net for the "stale version" problem.
+
 ### 5. GitHub Release
 
-On tag push, `release.yml` runs `gh release create` with `--generate-notes`. The tag gate (step 3) must pass first.
+On tag push, `release.yml` runs `gh release create`. If `docs/releases/v<version>.md` exists at the tagged commit, it is uploaded as the release body via `--notes-file`. For older tags that predate the file, the workflow falls back to `--generate-notes`. The tag gate (step 4) must pass first.
 
 ## CI Pipeline
 
@@ -105,7 +120,7 @@ All workflows live in `.github/workflows/`:
 | Workflow | Trigger | What it does |
 |----------|---------|--------------|
 | `tests.yml` | push/PR to `main` | Typecheck (bun), bats suite, colocated-test layout enforcement, deterministic benchmarks, context-budget guard |
-| `release.yml` | tag `v*.*.*` | Tag→manifest version check, `gh release create` |
+| `release.yml` | tag `v*.*.*` | Tag→manifest version check, `gh release create` (uses `docs/releases/v<tag>.md` as the release body when present) |
 | `code-review.yml` | PR opened/synchronize | CI review bot |
 | `codeql.yml` | cron + push to `main` | CodeQL analysis |
 | `secret-scan.yml` | push/PR | Secret scanning |
@@ -129,7 +144,8 @@ All workflows live in `.github/workflows/`:
 | `plugins/*/hooks/hooks.json` | Claude Code hook routing (event → script path + matcher) |
 | `pi/extensions/toolu.ts` | pi extension — runs the same shell hooks as Claude Code, surfaces gate status in pi's footer |
 | `docs/config.md` | Full config schema reference (`skills`, `hooks`, `mcp`, `lang` thresholds, `docsSync`) |
-| `tooling/release.sh` | Atomic version bump for the monorepo |
+| `tooling/release.sh` | Atomic version bump for the monorepo (`--dry-run`, `--no-notes`, auto-drafts `docs/releases/v<ver>.md`) |
+| `tooling/templates/release-notes.md` | Skeleton the release script copies + fills for the per-release notes |
 | `plugins/toolu/scripts/context-budget.sh` | CI-only: caps injected-context footprint |
 
 ## Contributing
