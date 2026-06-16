@@ -35,11 +35,12 @@ export type HookOutput = {
   };
 };
 
-/** Set CLAUDE_PLUGIN_ROOT so skill scripts resolve in pi. Does not require Claude Code — just the env var name skill .md files reference. Targets comemory (always-active, no fallback path). */
+/** Set TOOLU_PLUGIN_ROOT so comemory.sh resolves in pi. Also sets CLAUDE_PLUGIN_ROOT for compat with existing skill .md references. */
 function initComemoryPluginRoot() {
-  if (process.env.CLAUDE_PLUGIN_ROOT) return;
+  if (process.env.TOOLU_PLUGIN_ROOT) return;
   const root = join(packageRoot, "plugins/comemory");
   if (existsSync(root)) {
+    process.env.TOOLU_PLUGIN_ROOT = root;
     process.env.CLAUDE_PLUGIN_ROOT = root;
   }
 }
