@@ -38,14 +38,20 @@ Review `git diff <base>...HEAD` against these dimensions. Every finding blocks
 4. Record the clean state for the push-review gate:
 
    ```bash
-   bash "${CLAUDE_PLUGIN_ROOT}/skills/review/scripts/write-state.sh" \
+   bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/code-review/write-state.sh" \
      --findings-count 0 --reviewers '["code-review:review"]'
    ```
 
-   `write-state.sh` computes the gate's exact `diff_sha`/`base`/`slug`, bumps
-   `review_round`, and writes `.claude/tmp/push-review/<branch-slug>.json`
-   atomically. It is a harmless no-op when the toolu push-review gate is not
-   installed (the file simply goes unread).
+   `write-state.sh` is published as a symlink at
+   `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/code-review/write-state.sh` by the plugin's
+   SessionStart hook (refreshed every session). `$CLAUDE_CONFIG_DIR` IS exported into
+   the Bash tool's subshell; `$CLAUDE_PLUGIN_ROOT` is **NOT** — it is only set for
+   hook subprocesses, so the plugin-root path expands to an empty string from a
+   Bash tool call.
+
+   It computes the gate's exact `diff_sha`/`base`/`slug`, bumps `review_round`,
+   and writes `.claude/tmp/push-review/<branch-slug>.json` atomically. Harmless
+   no-op when the toolu push-review gate is not installed (the file goes unread).
 
 If findings remain that you cannot fix (e.g. needs a human decision), record them
 with `--findings-count <n> --findings '<json>'` instead of 0 — the gate will then

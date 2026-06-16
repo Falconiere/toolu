@@ -49,8 +49,9 @@ git diff --no-color main...HEAD
 
 # Fix accepted findings in code, re-review until none remain
 
-# Record the clean state
-bash "${CLAUDE_PLUGIN_ROOT}/skills/review/scripts/write-state.sh" \
+# Record the clean state (the SessionStart hook publishes this symlink;
+# $CLAUDE_PLUGIN_ROOT is NOT exported to the Bash tool subshell).
+bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/code-review/write-state.sh" \
   --findings-count 0 --reviewers '["code-review:review"]'
 ```
 
@@ -61,7 +62,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/review/scripts/write-state.sh" \
 If findings remain that need a human decision:
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/skills/review/scripts/write-state.sh" \
+bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/code-review/write-state.sh" \
   --findings-count 3 --findings '[{"path":"src/auth.ts","line":42,"issue":"Needs product decision on session timeout"}]'
 ```
 

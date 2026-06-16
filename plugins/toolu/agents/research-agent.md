@@ -39,11 +39,13 @@ research, **inherit** (frontier) only for deep-reasoning agents.
 
 | Query shape | Primary tool | Invocation |
 | --- | --- | --- |
-| library / framework / API / version / "docs for X" | **context7** | `${CLAUDE_PLUGIN_ROOT}/../context7/skills/context7/scripts/search.sh` — `search <lib>` to resolve the id, then `docs <id> "<question>" -t txt --fast` |
-| general web / topic / news / "latest" / comparison | **exa-search** | `${CLAUDE_PLUGIN_ROOT}/../exa-search/skills/exa-search/scripts/search.sh search -q "<query>" --lean --highlights 4000 -n 5` |
+| library / framework / API / version / "docs for X" | **context7** | `"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/context7/search.sh"` — `search <lib>` to resolve the id, then `docs <id> "<question>" -t txt --fast` |
+| general web / topic / news / "latest" / comparison | **exa-search** | `"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/exa-search/search.sh" search -q "<query>" --lean --highlights 4000 -n 5` |
 | a specific URL to read | **exa-search** | `… crawl <url> -m 3000` |
 
-Repo-checkout fallback paths (when `${CLAUDE_PLUGIN_ROOT}` is unset):
+The stable paths above are symlinks published by each plugin's SessionStart hook. `$CLAUDE_CONFIG_DIR` IS exported into the Bash tool's subshell; `$CLAUDE_PLUGIN_ROOT` is **NOT** — it is only set for hook subprocesses, so a plugin-root path expands to an empty string from a Bash tool call.
+
+Repo-checkout fallback paths (for tests/dev when the plugins are not installed):
 `plugins/context7/skills/context7/scripts/search.sh`,
 `plugins/exa-search/skills/exa-search/scripts/search.sh`.
 

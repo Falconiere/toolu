@@ -11,7 +11,15 @@ Use this skill when you need to search the web, find code examples, crawl a URL,
 
 ## CLI Tool
 
-`${CLAUDE_PLUGIN_ROOT}/skills/exa-search/scripts/search.sh` (repo checkout: `plugins/exa-search/skills/exa-search/scripts/search.sh`) — bash script wrapping the Exa REST API.
+Invoke at the **stable published path** (a symlink the plugin's SessionStart hook refreshes every session):
+
+```bash
+"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/exa-search/search.sh" <command> [options]
+```
+
+`$CLAUDE_CONFIG_DIR` IS exported into the Bash tool's subshell; `$CLAUDE_PLUGIN_ROOT` is **NOT** — it is only set for hook subprocesses. Using the plugin-root path from a Bash tool call expands to an empty string and runs `/skills/.../search.sh: No such file`. **Always use the published path above.**
+
+Repo-checkout fallback (for tests/dev when the plugin is not installed): `plugins/exa-search/skills/exa-search/scripts/search.sh`.
 
 ```
 search.sh <command> [options]

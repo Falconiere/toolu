@@ -87,6 +87,58 @@ teardown() { rm -rf "$TMP"; }
   [ -z "$output" ]
 }
 
+@test "register: publishes the wrapper symlink at \$CLAUDE_CONFIG_DIR/comemory/comemory.sh" {
+  run bash "$REGISTER" <<<'{}'
+  [ "$status" -eq 0 ]
+  dst="$CLAUDE_CONFIG_DIR/comemory/comemory.sh"
+  [ -L "$dst" ]
+  # The symlink target must point at the plugin-root wrapper.
+  src="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../skills/agent-memory/scripts" && pwd)/comemory.sh"
+  [ "$(readlink "$dst")" = "$src" ]
+  # And it must be executable (dereferences through the symlink).
+  [ -x "$dst" ]
+}
+
+@test "register: refreshes a stale wrapper symlink to the current target" {
+  pub_root="$CLAUDE_CONFIG_DIR/comemory"
+  mkdir -p "$pub_root"
+  ln -s /nonexistent/old/comemory.sh "$pub_root/comemory.sh"
+  run bash "$REGISTER" <<<'{}'
+  [ "$status" -eq 0 ]
+  src="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../skills/agent-memory/scripts" && pwd)/comemory.sh"
+  [ "$(readlink "$pub_root/comemory.sh")" = "$src" ]
+}
+
+@test "register: NEVER clobbers a real file the user placed at the wrapper path" {
+  pub_root="$CLAUDE_CONFIG_DIR/comemory"
+  mkdir -p "$pub_root"
+  printf '#!/usr/bin/env bash\necho user-override\n' > "$pub_root/comemory.sh"
+  chmod +x "$pub_root/comemory.sh"
+  before=$(cat "$pub_root/comemory.sh")
+  run bash "$REGISTER" <<<'{}'
+  [ "$status" -eq 0 ]
+  [ ! -L "$pub_root/comemory.sh" ]
+  [ "$(cat "$pub_root/comemory.sh")" = "$before" ]
+}
+
+@test "register: published wrapper actually executes (smoke: -h-style usage)" {
+  run bash "$REGISTER" <<<'{}'
+  [ "$status" -eq 0 ]
+  dst="$CLAUDE_CONFIG_DIR/comemory/comemory.sh"
+  # Stub `comemory` so the wrapper's bin-presence guard finds it; the wrapper's
+  # `list` path is exec'd via comemory, so the stub's argv is its own assertion.
+  stub_dir="$TMP/stub"
+  mkdir -p "$stub_dir"
+  cat >"$stub_dir/comemory" <<'EOF'
+#!/usr/bin/env bash
+echo "argv: $*"
+EOF
+  chmod +x "$stub_dir/comemory"
+  run env PATH="$stub_dir:$PATH" MY_CLAUDE_COMEMORY_REPO=stub-repo bash "$dst" list
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--repo stub-repo"* ]]
+}
+
 @test "register: clears its own AGED orphaned tmp residue, keeps fresh + foreign tmp" {
   regdir="$CLAUDE_CONFIG_DIR/toolu/pre-tools.d"
   mkdir -p "$regdir"

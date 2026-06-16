@@ -5,7 +5,16 @@ description: "Look up library documentation and code examples using Context7. Tr
 # Context7 — Library Documentation Lookup
 Use this skill to find up-to-date documentation and code examples for any programming library or framework.
 ## CLI Tool
-`${CLAUDE_PLUGIN_ROOT}/skills/context7/scripts/search.sh` (repo checkout: `plugins/context7/skills/context7/scripts/search.sh`) — bash script wrapping the Context7 REST API.
+
+Invoke at the **stable published path** (a symlink the plugin's SessionStart hook refreshes every session):
+
+```bash
+"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/context7/search.sh" <command> [options]
+```
+
+`$CLAUDE_CONFIG_DIR` IS exported into the Bash tool's subshell; `$CLAUDE_PLUGIN_ROOT` is **NOT** — it is only set for hook subprocesses. Using the plugin-root path from a Bash tool call expands to an empty string and runs `/skills/.../search.sh: No such file`. **Always use the published path above.**
+
+Repo-checkout fallback (for tests/dev when the plugin is not installed): `plugins/context7/skills/context7/scripts/search.sh`.
 ```
 search.sh <command> [options]
 Commands:
