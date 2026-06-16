@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Use when a task is broad or multi-step and should be delegated across subagents rather than run inline — exploration, codebase-wide searches, parallel builds, migrations, audits, reviews. Teaches the MAIN thread to delegate well: when to spawn a subagent vs edit inline, which agent for which job, how to parallelize independent work, how to keep main context lean, and which model tier fits each job. Tells: "orchestrate this", "delegate this", "break this down", "coordinate subagents", "this is a big task", or a UserPromptSubmit nudge flagged the prompt as broad/multi-step.
+description: "Use when a task is broad or multi-step and should be delegated across subagents rather than run inline — exploration, codebase-wide searches, parallel builds, migrations, audits, reviews. Teaches the MAIN thread to delegate well: when to spawn a subagent vs edit inline, which agent for which job, how to parallelize independent work, how to keep main context lean, and which model tier fits each job. Tells: \"orchestrate this\", \"delegate this\", \"break this down\", \"coordinate subagents\", \"this is a big task\", or a UserPromptSubmit nudge flagged the prompt as broad/multi-step."
 ---
 
 # Orchestrator
