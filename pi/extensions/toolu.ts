@@ -35,16 +35,7 @@ export type HookOutput = {
   };
 };
 
-/**
- * Set CLAUDE_PLUGIN_ROOT to the comemory plugin directory so scripts resolved
- * via `${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh` in skill
- * instructions work inside pi (pi does not natively set this Claude Code
- * convention). Called once from the extension factory so the side effect is
- * intentional and ordered, not a silent module-level mutation.
- *
- * We target comemory because its agent-memory skill is ALWAYS ACTIVE and
- * carries no repo-checkout fallback path (unlike context7, exa-search, jira).
- */
+/** Set CLAUDE_PLUGIN_ROOT so skill scripts resolve in pi. Does not require Claude Code — just the env var name skill .md files reference. Targets comemory (always-active, no fallback path). */
 function initComemoryPluginRoot() {
   if (process.env.CLAUDE_PLUGIN_ROOT) return;
   const root = join(packageRoot, "plugins/comemory");
