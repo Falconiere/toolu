@@ -73,7 +73,7 @@ The script only accepts strict `major.minor.patch` (no pre-release/build/extra s
 
 ### 2. Edit the release notes
 
-The apply step drafts `docs/releases/v<version>.md` (template at `tooling/templates/release-notes.md`) with `<!-- TODO ... -->` placeholders for `## Highlights` and each per-plugin bullet. Fill in the placeholders, delete the comment markers, and add an `## Upgrade notes` section if the release needs user-facing steps (e.g. `/plugin install foo@toolu`). The shape matches the existing v1.10.0 / v1.12.0 notes:
+The apply step drafts `docs/releases/v<version>.md` (template at `tooling/templates/release-notes.md`) with `<!-- TODO ... -->` placeholders for `## Highlights`, `## Upgrade notes`, and each per-plugin bullet. Fill in the placeholders, delete the comment markers, and **delete the entire `## Upgrade notes` section** (header + TODO) if there are no user-facing steps. The shape matches the existing v1.10.0 / v1.12.0 notes:
 
 ```markdown
 # toolu vX.Y.Z
@@ -83,6 +83,10 @@ Released: YYYY-MM-DD
 ## Highlights
 
 <2-3 sentence summary>
+
+## Upgrade notes
+
+<user-facing upgrade steps, e.g. `/plugin install foo@toolu` — delete this section if none>
 
 ## Included changes since v<prev>
 
