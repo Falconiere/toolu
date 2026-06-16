@@ -27,7 +27,8 @@
   },
   "pi": {
     "extensions": [
-      "./pi/extensions"
+      "./pi/extensions",
+      "pi-caveman/extensions/caveman.ts"
     ],
     "skills": [
       "./plugins/toolu/skills",
@@ -42,5 +43,8 @@
       "./plugins/toolu/commands",
       "./plugins/pr-babysit/commands"
     ]
+  },
+  "dependencies": {
+    "pi-caveman": "^1.0.7"
   }
 }

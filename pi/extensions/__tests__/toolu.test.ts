@@ -8,7 +8,7 @@ import {
   hookText,
   gateFile,
   projectRoot,
-} from "../toolu.ts";
+} from "../toolu-lib.ts";
 
 describe("mappedToolName", () => {
   test("maps known tools correctly", () => {
