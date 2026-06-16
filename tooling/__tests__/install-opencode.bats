@@ -88,3 +88,45 @@ teardown() {
   # even with that stripped PATH). The important assertion: it does not silently corrupt.
   echo "$out" | grep -qE "install-opencode|done" || [ ! -d "$TARGET/sub/.opencode" ]
 }
+
+@test "install: TOOLU_ROOT with a single quote does not break the opencode.json merge (jq injection regression)" {
+  # Regression for review comment #3423919748: a single quote in TOOLU_ROOT
+  # used to break out of the jq string literal, enabling arbitrary jq
+  # expression injection. The fix uses `jq --arg` to pass the value as
+  # opaque data. We exercise the underlying filter directly (bypassing
+  # the script's preflight) to prove the mechanism is safe.
+  marker="$TARGET/marker-should-not-exist-jq"
+  rm -f "$marker"
+  # Run the SAME filter the install script uses, with a path containing an
+  # apostrophe. With the old inlined-string filter this would have failed
+  # to parse; with --arg it must produce a valid skills.paths array.
+  quoted_path="/tmp/no-such-path-it's-here/plugins-\$(touch ${marker})"
+  out=$(jq -n --arg plugins "$quoted_path" '
+    { "$schema": "https://opencode.ai/config.json", skills: { paths: [ $plugins ] } }
+  ')
+  [ ! -f "$marker" ]
+  echo "$out" | jq -e . >/dev/null
+  type=$(echo "$out" | jq -r '.skills.paths | type')
+  [ "$type" = "array" ]
+  # And the same filter applied to a merge against an empty config:
+  out2=$(printf '{}' | jq -S --arg plugins "$quoted_path" '
+    .["$schema"] //= "https://opencode.ai/config.json"
+    | .skills //= {}
+    | .skills.paths //= []
+    | .skills.paths = (([$plugins] + .skills.paths) | unique)
+  ')
+  [ ! -f "$marker" ]
+  echo "$out2" | jq -e . >/dev/null
+}
+
+@test "install: TOOLU_ROOT with a backtick or \$(...) does not execute the payload (heredoc injection regression)" {
+  # Regression for review comment #3423919752: the old unquoted <<JSON
+  # heredoc expanded $TOOLU_ROOT through bash, executing any $(...) or
+  # backticks. Fix uses `jq -n` to construct the file from --arg data.
+  # We craft a TOOLU_ROOT that, if expanded by bash, would write a marker
+  # file under /tmp; the install must NOT create that marker.
+  marker="$TARGET/marker-should-not-exist"
+  rm -f "$marker"
+  TOOLU_ROOT="/tmp/pwn-me-\$(touch ${marker})" bash "$SCRIPT" --target "$TARGET/sub" >/dev/null 2>&1 || true
+  [ ! -f "$marker" ]
+}

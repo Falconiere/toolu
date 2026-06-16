@@ -11,6 +11,7 @@ import {
   mappedToolName,
   parseHookOutput,
   readGateStatus,
+  runHook,
   toolInputForEvent,
   toolCallPayload,
   toolResultPayload,
@@ -232,5 +233,33 @@ describe("gateStatusText + readGateStatus", () => {
     require("node:fs").mkdirSync(gateDir, { recursive: true });
     writeFileSync(join(gateDir, "quality-gate-status.json"), "{}");
     expect(gateStatusText(dir)).toBe("gate: clear");
+  });
+});
+
+describe("runHook", () => {
+  test("resolves (not hangs) when the script does not exist (ENOENT)", async () => {
+    // Regression for review comment #3423919709: when spawn fails, Node fires
+    // `error` but not `close`. The old handler only appended to stderr and
+    // never resolved the promise, so the opencode session hung forever.
+    // A 100ms deadline is a generous bound — pre-fix this would time out.
+    const result = await Promise.race([
+      runHook("/this/path/does/not/exist.sh", "/tmp", "{}"),
+      new Promise<{ code: number; stdout: string; stderr: string }>((_, reject) =>
+        setTimeout(() => reject(new Error("runHook hung past 100ms")), 100),
+      ),
+    ]);
+    expect(result.code).toBe(127);
+    expect(result.stderr.toLowerCase()).toMatch(/enoent|no such file/);
+  });
+
+  test("resolves with a script that exits non-zero", async () => {
+    const tmpScript = join(tmpdir(), `runhook-${Date.now()}.sh`);
+    writeFileSync(tmpScript, "#!/usr/bin/env bash\nexit 42\n");
+    try {
+      const r = await runHook(tmpScript, "/tmp", "{}");
+      expect(r.code).toBe(42);
+    } finally {
+      rmSync(tmpScript, { force: true });
+    }
   });
 });

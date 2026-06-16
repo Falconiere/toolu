@@ -27,8 +27,14 @@
 set -euo pipefail
 
 # ── Resolve script-relative paths ───────────────────────────────────────────
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-TOOLU_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Honor TOOLU_ROOT from the env so tests can exercise paths the script
+# does not itself live under (paths containing single quotes, command
+# substitutions, etc.). Production callers always invoke the script from
+# inside the toolu checkout, where the default resolution is correct.
+if [ -z "${TOOLU_ROOT:-}" ]; then
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+  TOOLU_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
 
 # ── Parse args ──────────────────────────────────────────────────────────────
 MODE="project"
@@ -120,19 +126,21 @@ done
 
 # ── 4. Wire skills.paths + $schema in opencode.json ─────────────────────────
 CFG="$TARGET/opencode.json"
+# Build the skills.paths entry once via --arg so the value is never subject
+# to shell or jq string interpolation. A TOOLU_ROOT containing a single
+# quote, double quote, backtick, or $() would otherwise be executed or
+# break the JSON; --arg treats the value as opaque.
+TOOLU_PLUGINS_PATH="$TOOLU_ROOT/plugins"
 if [ -f "$CFG" ]; then
   # Preserve the user's existing config: only add keys we own. We do NOT
   # touch any other field. `jq` may re-emit with different whitespace, so
   # we compare semantically (jq -S) rather than byte-for-byte.
   tmp=$(mktemp "${TMPDIR:-/tmp}/install-opencode.XXXXXX")
-  if ! jq -S '
+  if ! jq -S --arg plugins "$TOOLU_PLUGINS_PATH" '
     .["$schema"] //= "https://opencode.ai/config.json"
     | .skills //= {}
     | .skills.paths //= []
-    | .skills.paths = (
-        (["'"$TOOLU_ROOT"'/plugins"] + .skills.paths)
-        | unique
-      )
+    | .skills.paths = (([$plugins] + .skills.paths) | unique)
   ' "$CFG" > "$tmp"; then
     rm -f "$tmp"
     printf 'install-opencode: failed to merge into %s (check syntax)\n' "$CFG" >&2
@@ -153,14 +161,15 @@ if [ -f "$CFG" ]; then
     exit 1
   fi
 else
-  cat > "$CFG" <<JSON
-{
-  "\$schema": "https://opencode.ai/config.json",
-  "skills": {
-    "paths": ["$TOOLU_ROOT/plugins"]
-  }
-}
-JSON
+  # Create the new file via jq -n so the path value is treated as data, not
+  # subject to bash heredoc expansion. The previous <<JSON heredoc would
+  # have executed $(...) or backticks in a maliciously-named TOOLU_ROOT.
+  if ! jq -n --arg plugins "$TOOLU_PLUGINS_PATH" '
+    { "$schema": "https://opencode.ai/config.json", skills: { paths: [ $plugins ] } }
+  ' > "$CFG"; then
+    printf 'install-opencode: failed to create %s\n' "$CFG" >&2
+    exit 1
+  fi
   printf 'install-opencode:   ✓ config   → %s (created)\n' "${CFG#"$TARGET"/}"
 fi
 

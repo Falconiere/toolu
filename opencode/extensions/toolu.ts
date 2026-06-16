@@ -83,19 +83,30 @@ export function baseEnv(cwd: string): NodeJS.ProcessEnv {
   };
 }
 
-/** Resolve the git toplevel for `cwd`, falling back to `cwd` when it is not a repo. */
+/** Resolve the git toplevel for `cwd`, falling back to `cwd` when it is not a repo.
+ *  Memoized: every gated tool call would otherwise fork `git rev-parse`
+ *  synchronously on the hot path. The session's cwd is stable for the
+ *  lifetime of the plugin (worktree is fixed at session.created), so a
+ *  module-level cache is correct. The cache key is the input cwd so a
+ *  hypothetical second worktree in the same process would still resolve. */
+const projectRootCache = new Map<string, string>();
 export function projectRoot(cwd: string): string {
+  const cached = projectRootCache.get(cwd);
+  if (cached !== undefined) return cached;
   try {
-    return (
+    const result = (
       execFileSync("git", ["-C", cwd, "rev-parse", "--show-toplevel"], {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "ignore"],
       }).trim() || cwd
     );
+    projectRootCache.set(cwd, result);
+    return result;
   } catch (error) {
     process.stderr.write(
       `toolu: projectRoot falling back to cwd, not a git repo (${error instanceof Error ? error.message : String(error)})\n`,
     );
+    projectRootCache.set(cwd, cwd);
     return cwd;
   }
 }
@@ -222,7 +233,7 @@ export async function runHook(
   input: string,
   signal?: AbortSignal,
 ): Promise<{ code: number; stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const child = spawn("bash", [script], {
       cwd,
       env: baseEnv(cwd),
@@ -232,6 +243,16 @@ export async function runHook(
 
     let stdout = "";
     let stderr = "";
+    // `error` and `close` are not mutually exclusive on Node: when spawn fails
+    // (ENOENT, EACCES, …) only `error` fires, and a pending `close` listener
+    // never resolves the promise — the opencode session hangs forever. Resolve
+    // on whichever fires first; the second call is a no-op.
+    let settled = false;
+    const settle = (result: { code: number; stdout: string; stderr: string }) => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
 
     child.stdout.on("data", (chunk) => {
       stdout += String(chunk);
@@ -240,13 +261,11 @@ export async function runHook(
       stderr += String(chunk);
     });
 
-    const handleError = (error: Error) => {
-      stderr += error.message;
-    };
-
-    child.on("error", handleError);
+    child.on("error", (error) => {
+      settle({ code: 127, stdout: stdout.trim(), stderr: `${stderr}${error.message}`.trim() });
+    });
     child.on("close", (code) => {
-      resolve({ code: code ?? 1, stdout: stdout.trim(), stderr: stderr.trim() });
+      settle({ code: code ?? 1, stdout: stdout.trim(), stderr: stderr.trim() });
     });
 
     child.stdin.end(input);
@@ -418,12 +437,15 @@ const tooluOpencodePlugin: Plugin = async ({ directory, worktree }) => {
 
       // Surface the current gate status after every gated tool run. opencode
       // has no statusline bar; this is the closest inline equivalent.
+      // output.output may be undefined at runtime (type says string but the
+      // optional `|| ""` fallback above proves the runtime can drop it), so
+      // guard the template literal to avoid printing the literal "undefined".
       const status = readGateStatus(cwd);
       if (status?.status === "failing") {
         const reason = status.reason ? ` — ${status.reason}` : "";
-        output.output = `${output.output}\n[toolu-gate] gate: failing${reason}`.trim();
+        output.output = `${output.output || ""}\n[toolu-gate] gate: failing${reason}`.trim();
       } else if (status?.status === "unreadable") {
-        output.output = `${output.output}\n[toolu-gate] gate: status file unreadable`.trim();
+        output.output = `${output.output || ""}\n[toolu-gate] gate: status file unreadable`.trim();
       }
     },
 
