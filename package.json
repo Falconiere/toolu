@@ -27,7 +27,8 @@
   },
   "pi": {
     "extensions": [
-      "./pi/extensions"
+      "./pi/extensions",
+      "node_modules/pi-caveman/extensions/caveman.ts"
     ],
     "skills": [
       "./plugins/toolu/skills",
@@ -45,5 +46,8 @@
   },
   "dependencies": {
     "pi-caveman": "^1.0.7"
-  }
+  },
+  "bundledDependencies": [
+    "pi-caveman"
+  ],
 }
