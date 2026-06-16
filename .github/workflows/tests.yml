@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   typecheck:
-    name: typecheck (pi extension)
+    name: typecheck (pi + opencode extensions)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -25,8 +25,11 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Typecheck pi extension
+      - name: Typecheck pi + opencode extensions
         run: bun run typecheck
+
+      - name: Bun unit tests (pi + opencode adapters)
+        run: bun run test:ts
 
   bats:
     name: bats (plugins)

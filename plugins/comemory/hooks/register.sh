@@ -2,7 +2,7 @@
 # SessionStart registry sync for the comemory plugin.
 #
 # Mirrors hooks/pre-tools.d/*.sh into the toolu runtime registry
-# (${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu/pre-tools.d/) under the
+# (${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu/pre-tools.d/) under the
 # namespaced filename comemory@toolu__<name>.sh, and prunes entries
 # bearing OUR prefix whose source module no longer exists. Other plugins'
 # entries are never touched. The core toolu dispatcher executes the
@@ -14,7 +14,7 @@
 SPEC="comemory@toolu"
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 SRC_DIR="$SELF_DIR/pre-tools.d"
-REG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu/pre-tools.d"
+REG_DIR="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu/pre-tools.d"
 
 # Consume stdin so Claude Code's hook IPC never stalls.
 cat > /dev/null 2>&1 || true
@@ -58,12 +58,12 @@ done
 # `${CLAUDE_PLUGIN_ROOT}/skills/.../comemory.sh` from SKILL.md hits an empty
 # expansion, runs `/skills/.../comemory.sh: No such file`, and misreads the
 # 0-byte stdout as "no memory hits"). Mirror the statusline plugin's pattern:
-#   ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh
+#   ${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/comemory/comemory.sh
 # Refreshed every SessionStart so plugin updates are picked up.
 PLUGIN_ROOT="$(cd "$SELF_DIR/.." 2>/dev/null && pwd)"
 wrapper_src="${PLUGIN_ROOT:+$PLUGIN_ROOT/skills/agent-memory/scripts/comemory.sh}"
 if [ -n "$wrapper_src" ] && [ -f "$wrapper_src" ]; then
-  pub_root="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory"
+  pub_root="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/comemory"
   if mkdir -p "$pub_root" 2>/dev/null; then
     pub_dst="$pub_root/comemory.sh"
     # Own the path only when it is already our symlink or absent — never

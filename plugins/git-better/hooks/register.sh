@@ -2,7 +2,7 @@
 # SessionStart registry sync for the git-better plugin.
 #
 # Mirrors hooks/pre-tools.d/*.sh and hooks/post-tools.d/*.sh into the toolu
-# runtime registry (${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu/{pre,post}-tools.d/)
+# runtime registry (${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu/{pre,post}-tools.d/)
 # under the namespaced filename git-better@toolu__<name>.sh, prunes entries
 # bearing OUR prefix whose source module is gone, and installs/refreshes the
 # stable `gb` shim that execs the versioned wrapper. The core toolu dispatcher
@@ -13,7 +13,7 @@
 
 SPEC="git-better@toolu"
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
-REG_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu"
+REG_ROOT="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu"
 
 # Consume stdin so Claude Code's hook IPC never stalls.
 cat > /dev/null 2>&1 || true
