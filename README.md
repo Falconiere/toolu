@@ -4,12 +4,12 @@
 
 ### Engineering discipline, wired into your AI coding agent.
 
-AI writes code fast — then skips the parts that keep a codebase alive: oversized files, swallowed errors, mock-only tests, undocumented exports, unreviewed pushes. **toolu** bakes that discipline back in — as hooks that gate every edit, skills that enforce a design → review → build → review → test cadence, and a plugin registry so language-specific rules ride along automatically. Runs on **Claude Code** and **pi**.
+AI writes code fast — then skips the parts that keep a codebase alive: oversized files, swallowed errors, mock-only tests, undocumented exports, unreviewed pushes. **toolu** bakes that discipline back in — as hooks that gate every edit, skills that enforce a design → review → build → review → test cadence, and a plugin registry so language-specific rules ride along automatically. Runs on **Claude Code**, **pi**, and **opencode**.
 
 [![Release](https://img.shields.io/github/v/release/Falconiere/toolu?sort=semver&color=d97757)](https://github.com/Falconiere/toolu/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-638%20passing-brightgreen)](#testing)
-[![Hosts](https://img.shields.io/badge/hosts-Claude%20Code%20%2B%20pi-d97757)](#install)
+[![Tests](https://img.shields.io/badge/tests-665%20passing-brightgreen)](#testing)
+[![Hosts](https://img.shields.io/badge/hosts-Claude%20Code%20%2B%20pi%20%2B%20opencode-d97757)](#install)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
 [Why](#why) · [The quality gate](#the-quality-gate) · [Install](#install) · [What's inside](#whats-inside) · [Workflow skills](#workflow-skills) · [Architecture](#architecture) · [Configuration](#configuration)
@@ -28,7 +28,7 @@ toolu moves those rules out of your head and into the tool:
 - **Skills enforce a process** — an opinionated 8-phase workflow with a write/review checkpoint at every step, so design happens before code and review happens before "done."
 - **A registry keeps it modular** — drop in a domain plugin (Rust rules, TypeScript rules, structural search) and its hook modules register themselves into the core engine, fail-closed, with zero wiring.
 
-It's a personal bundle, built in the open, MIT-licensed. Take the whole thing or lift the pieces you like — on Claude Code or pi.
+It's a personal bundle, built in the open, MIT-licensed. Take the whole thing or lift the pieces you like — on Claude Code, pi, or opencode.
 
 ## The quality gate
 
@@ -62,7 +62,7 @@ The rule isn't "warn and move on" — it's a hard gate: **no new task while the 
 
 ## Install
 
-toolu runs on two hosts — install it the way that matches yours.
+toolu runs on three hosts — install it the way that matches yours.
 
 ### Claude Code
 
@@ -123,9 +123,42 @@ The package exposes the same discipline through pi's extension API:
 
 Config lives at `~/.pi/agent/toolu.config.json` (user) or `.pi/toolu.config.json` (project) — see [`docs/config.md`](./docs/config.md).
 
+### opencode
+
+toolu ships an opencode plugin (`opencode/extensions/toolu.ts`) that reuses the
+same shell hook engine the pi extension uses. Skills are auto-discovered via
+`skills.paths`; agents and commands are mirrored into `.opencode/` at install
+time. The adapter, the agents, and the commands are pure TypeScript / Markdown
+at the opencode side — the gate logic and quality rules are the same shell
+code, no port.
+
+```bash
+# Project install: from the project you want toolu in
+git clone https://github.com/Falconiere/toolu
+bash toolu/tooling/install-opencode.sh
+# → drops .opencode/plugins/toolu.ts, agents, commands, wires opencode.json
+
+# User install: makes the bundle available to every opencode session
+bash toolu/tooling/install-opencode.sh --global
+# → installs into ~/.config/opencode/
+
+# Re-run anytime; it's idempotent and content-hash-skips unchanged files.
+```
+
+> **Restart opencode** after the install — config and the plugin are loaded at
+> session start, not hot-reloaded. The first session sync (driven by
+> `session.created`) populates the opencode runtime registry under
+> `$TOOLU_CONFIG_DIR/toolu/{pre,post}-tools.d/`.
+
+opencode has no statusline bar the way Claude Code does. The closest
+equivalent is the `/toolu-status` slash command — it reads the project's
+quality-gate status file and prints it inline. See
+[`docs/opencode.md`](./docs/opencode.md) for adapter architecture, smoke
+test, and troubleshooting.
+
 ## What's inside
 
-Ten plugins, one marketplace. Install the core alone, or add the domain plugins. The same skills and gate run on Claude Code and pi; the statusline is Claude Code only (pi surfaces gate status in its own footer).
+Ten plugins, one marketplace. Install the core alone, or add the domain plugins. The same skills and gate run on Claude Code, pi, and opencode; the statusline is Claude Code only (pi surfaces gate status in its own footer; opencode uses the `/toolu-status` slash command).
 
 | Group | Plugin | Version | What it does |
 |--------|--------|:-------:|--------------|
@@ -204,6 +237,10 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
 .
 ├── docs/                       # Runtime config schema, design notes
 ├── pi/                         # pi extension (reuses the shell hooks) + tests
+├── opencode/                   # opencode plugin + opencode-format agents/commands
+│   ├── extensions/toolu.ts     # opencode plugin (session.created, tool.execute.*)
+│   ├── agents/                 # opencode-format agents (mirrored from plugins/*)
+│   └── commands/               # opencode-format slash commands
 └── plugins/
     ├── toolu/                  # Core plugin: hook engine + process gates
     │   ├── .claude-plugin/     # plugin.json manifest
@@ -228,7 +265,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
 
 ## Configuration
 
-Toggle individual skills, hooks, or MCP servers without uninstalling anything. On Claude Code, use `~/.claude/toolu.config.json` (or `$CLAUDE_PROJECT_DIR/.claude/toolu.config.json`). On pi, use `~/.pi/agent/toolu.config.json` (or `.pi/toolu.config.json`). Defaults are opt-out — no file required.
+Toggle individual skills, hooks, or MCP servers without uninstalling anything. On Claude Code, use `~/.claude/toolu.config.json` (or `$CLAUDE_PROJECT_DIR/.claude/toolu.config.json`). On pi, use `~/.pi/agent/toolu.config.json` (or `.pi/toolu.config.json`). On opencode, use `~/.config/opencode/toolu.config.json` (or `<project>/.opencode/toolu.config.json`). Defaults are opt-out — no file required.
 
 ```json
 {
@@ -241,10 +278,11 @@ Quality-gate thresholds (file/function/impl line limits) are configurable per pr
 
 ## Testing
 
-The hook engine and language gates are covered by **618 [bats](https://github.com/bats-core/bats-core) tests** across 60 suites, run in CI on every push:
+The hook engine and language gates are covered by **~656 [bats](https://github.com/bats-core/bats-core) tests** plus **40 bun unit tests** for the pi and opencode adapters, all run in CI on every push:
 
 ```sh
-bats -r plugins
+bun run test          # runs test:shell → test:ts → typecheck
+bats -r plugins tooling   # shell-only, fast feedback
 ```
 
 ## Contributing
@@ -264,6 +302,11 @@ PRs and issues welcome.
   [Slash commands](https://docs.claude.com/en/docs/claude-code/slash-commands) ·
   [Hooks](https://docs.claude.com/en/docs/claude-code/hooks) ·
   [Plugins](https://docs.claude.com/en/docs/claude-code/plugins)
+- [opencode docs](https://opencode.ai/docs/) ·
+  [Plugins](https://opencode.ai/docs/plugins/) ·
+  [Skills](https://opencode.ai/docs/skills/) ·
+  [Agents](https://opencode.ai/docs/agents/) ·
+  [Commands](https://opencode.ai/docs/commands/)
 
 ## License
 

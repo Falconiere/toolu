@@ -2,7 +2,7 @@
 # SessionStart registry sync for the ast-grep plugin.
 #
 # Mirrors hooks/pre-tools.d/*.sh and hooks/post-tools.d/*.sh into the toolu
-# runtime registry (${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu/{pre,post}-tools.d/)
+# runtime registry (${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu/{pre,post}-tools.d/)
 # under the namespaced filename ast-grep@toolu__<name>.sh, and prunes entries
 # bearing OUR prefix whose source module no longer exists. Other plugins'
 # entries are never touched. The core toolu dispatcher executes the synced
@@ -13,7 +13,7 @@
 
 SPEC="ast-grep@toolu"
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
-REG_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu"
+REG_ROOT="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu"
 
 # Consume stdin so Claude Code's hook IPC never stalls.
 cat > /dev/null 2>&1 || true
