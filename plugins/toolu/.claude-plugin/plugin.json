@@ -1,6 +1,6 @@
 {
   "name": "toolu",
-  "version": "1.19.0",
+  "version": "1.20.0",
   "description": "Falconiere's personal Claude Code bundle: skills, agents, slash commands, and hooks.",
   "author": {
     "name": "Falconiere Barbosa",
@@ -17,7 +17,13 @@
     "caveman"
   ],
   "dependencies": [
-    { "name": "code-simplifier", "marketplace": "claude-plugins-official" },
-    { "name": "caveman", "marketplace": "caveman" }
+    {
+      "name": "code-simplifier",
+      "marketplace": "claude-plugins-official"
+    },
+    {
+      "name": "caveman",
+      "marketplace": "caveman"
+    }
   ]
 }

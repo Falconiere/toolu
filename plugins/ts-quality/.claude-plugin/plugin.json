@@ -1,6 +1,6 @@
 {
   "name": "ts-quality",
-  "version": "0.1.1",
+  "version": "1.20.0",
   "description": "TypeScript PostToolUse quality checks registered into the toolu hook engine.",
   "author": {
     "name": "Falconiere Barbosa",
@@ -9,8 +9,16 @@
   "homepage": "https://github.com/falconiere/toolu",
   "repository": "https://github.com/falconiere/toolu.git",
   "license": "MIT",
-  "keywords": ["claude-code", "typescript", "quality", "hooks"],
+  "keywords": [
+    "claude-code",
+    "typescript",
+    "quality",
+    "hooks"
+  ],
   "dependencies": [
-    { "name": "toolu", "marketplace": "toolu" }
+    {
+      "name": "toolu",
+      "marketplace": "toolu"
+    }
   ]
 }

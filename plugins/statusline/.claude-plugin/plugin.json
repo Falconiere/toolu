@@ -1,6 +1,6 @@
 {
   "name": "statusline",
-  "version": "0.3.2",
+  "version": "1.20.0",
   "description": "Optional Claude Code statusline: model, effort, context, a loud quality-gate marker, weekly token usage (wk:), folder, branch, comemory count ([COMEMORY:N]), and caveman mode — wired via a stable symlink. Standalone, no dependencies.",
   "author": {
     "name": "Falconiere Barbosa",
@@ -9,5 +9,12 @@
   "homepage": "https://github.com/falconiere/toolu",
   "repository": "https://github.com/falconiere/toolu.git",
   "license": "MIT",
-  "keywords": ["claude-code", "statusline", "quality-gate", "caveman", "comemory", "token-usage"]
+  "keywords": [
+    "claude-code",
+    "statusline",
+    "quality-gate",
+    "caveman",
+    "comemory",
+    "token-usage"
+  ]
 }

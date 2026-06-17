@@ -1,6 +1,6 @@
 {
   "name": "exa-search",
-  "version": "1.18.2",
+  "version": "1.20.0",
   "description": "Web, code, and URL search plus deep research via Exa (skill + REST wrapper). Standalone, no dependencies.",
   "author": {
     "name": "Falconiere Barbosa",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/falconiere/toolu",
   "repository": "https://github.com/falconiere/toolu.git",
   "license": "MIT",
-  "keywords": ["claude-code", "exa", "web-search", "skills"]
+  "keywords": [
+    "claude-code",
+    "exa",
+    "web-search",
+    "skills"
+  ]
 }

@@ -1,6 +1,6 @@
 {
   "name": "code-review",
-  "version": "0.1.2",
+  "version": "1.20.0",
   "description": "Project-tuned pre-push code review mirroring the CI review bot's checklist (correctness, security, perf, test coverage, doc accuracy), writing the toolu push-review state so the gate passes. Standalone.",
   "author": {
     "name": "Falconiere Barbosa",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/falconiere/toolu",
   "repository": "https://github.com/falconiere/toolu.git",
   "license": "MIT",
-  "keywords": ["claude-code", "code-review", "push-review", "quality"]
+  "keywords": [
+    "claude-code",
+    "code-review",
+    "push-review",
+    "quality"
+  ]
 }
