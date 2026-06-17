@@ -294,6 +294,17 @@ PRs and issues welcome.
 3. Verify in a real session before committing.
 4. Use a [Conventional Commits](https://www.conventionalcommits.org/) subject (`feat(skills): add foo`).
 
+## Releases
+
+Releases are automated with [release-please](https://github.com/googleapis/release-please) — you do **not** bump versions or tag by hand.
+
+- Merge Conventional Commits to `main`. The scope names the plugin you changed (`feat(jira): …`, `fix(toolu): …`); release-please routes each commit to a plugin by the files it touches under `plugins/<name>/`.
+- It maintains one batched **Release PR** that bumps the affected plugins' `plugin.json` versions and updates each `CHANGELOG.md`. Review it, then **merge it to cut the release** — the only manual step.
+- Merging tags every bumped plugin (`toolu` → `vX.Y.Z`, others → `<plugin>-vX.Y.Z`) and publishes the GitHub Release(s). The marketplace re-extracts a plugin when its `plugin.json` version changes.
+- `feat` / `fix` / `feat!` (or `BREAKING CHANGE`) drive minor / patch / major bumps; `chore` / `docs` / `ci` / `refactor` ship no release. Commits touching only repo-root paths (`tooling/`, `.github/`, `docs/`) bump nothing.
+
+`tooling/release.sh` is **deprecated**, kept only as a manual escape hatch for when the automation is unavailable.
+
 ## References
 
 - [Claude Code docs](https://docs.claude.com/en/docs/claude-code) ·

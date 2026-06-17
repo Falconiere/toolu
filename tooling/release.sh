@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 # tooling/release.sh [--dry-run] [--no-notes] <major.minor.patch>
 #
+# DEPRECATED: releases are now automated with release-please (see the
+# "Releases" section of README.md and .github/workflows/release-please.yml).
+# The normal flow is: merge
+# Conventional Commits to main -> review the batched Release PR -> merge it.
+# This script is kept ONLY as a manual escape hatch for when the automation is
+# unavailable; do not use it in the normal release path. NOTE: the tag-triggered
+# release.yml referenced below has been removed.
+#
 # Atomic version bump for the toolu marketplace. The auto-update gate only
 # re-extracts a plugin when its plugin.json "version" changes, so a release that
 # forgets to bump a changed plugin silently ships stale code to users. This
