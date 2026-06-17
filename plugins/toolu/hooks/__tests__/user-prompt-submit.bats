@@ -279,3 +279,56 @@ CFG
   ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
   ! echo "$ctx" | grep -q 'research-agent subagent'
 }
+
+@test "user-prompt-submit: jira nudge fires on the word 'jira'" {
+  payload=$(build_input "create a task at jira")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  echo "$ctx" | grep -q 'use the `jira` skill'
+  echo "$ctx" | grep -q 'NOT the Atlassian MCP'
+}
+
+@test "user-prompt-submit: jira nudge fires on a pasted atlassian.net/browse link" {
+  payload=$(build_input "https://acme.atlassian.net/browse/ABC-123 please move it to done")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  echo "$ctx" | grep -q 'use the `jira` skill'
+}
+
+@test "user-prompt-submit: jira nudge fires on an issue key with a context word" {
+  payload=$(build_input "fix the bug in ABC-123 ticket")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  echo "$ctx" | grep -q 'use the `jira` skill'
+}
+
+@test "user-prompt-submit: jira nudge is independent of the intent hint" {
+  # "fix" -> intent hint; "ABC-123 ticket" -> jira nudge. Both must appear.
+  payload=$(build_input "fix the bug in ABC-123 ticket")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  echo "$ctx" | grep -q 'Fix in code'
+  echo "$ctx" | grep -q 'use the `jira` skill'
+}
+
+@test "user-prompt-submit: NO jira nudge for key-shaped tokens without a context word" {
+  # UTF-8 and GPT-4 match the issue-key shape but carry no jira-context word,
+  # so the gate must keep the nudge silent.
+  payload=$(build_input "decode the UTF-8 string and bump to GPT-4")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  ! echo "$ctx" | grep -q 'jira` skill'
+}
+
+@test "user-prompt-submit: NO jira nudge for an unrelated prompt" {
+  payload=$(build_input "list my files in the current directory")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  ! echo "$ctx" | grep -q 'jira` skill'
+}

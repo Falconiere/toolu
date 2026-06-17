@@ -140,6 +140,10 @@ Unknown names are silently ignored (forward compatible).
     (`see plugins/toolu/settings/mcp-blocklist.txt` for file entries, or
     `disabled via toolu config (mcp.<name>=false …)` for config
     entries) so users know where to undo it.
+  - A `mcp-blocklist.txt` line may add an optional `-> <text>` redirect hint
+    after the server prefix; when that server is denied the text is appended to
+    the deny reason (e.g. to steer the user to a replacement skill). See
+    `plugins/toolu/settings/README.md`.
   - Matcher wiring lives in `plugins/toolu/hooks/hooks.json`, which routes
     the `mcp__` prefix through `plugins/toolu/hooks/pre-tools/modules/mcp-blocker.sh`.
 

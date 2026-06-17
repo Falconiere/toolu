@@ -1,13 +1,15 @@
 ---
 name: jira
-description: Search and act on Jira issues from the session via a REST wrapper — JQL search, read/create/comment/transition/assign issues, plus boards, sprints, worklogs, projects, users, attachments. Works against Jira Cloud and Server/Data Center. Triggers when the user mentions Jira, a JQL query, an issue key like ABC-123, "my tickets", "create/comment on/transition/assign an issue", sprints or boards.
+description: Search and act on Jira issues from the session via a REST wrapper — JQL search, read/create/comment/transition/assign issues, plus boards, sprints, worklogs, projects, users, attachments. Works against Jira Cloud and Server/Data Center. Triggers when the user mentions Jira, a JQL query, an issue key like ABC-123, a pasted atlassian.net/browse/ABC-123 link, "my tickets", "create a task at Jira", "create/comment on/transition/assign an issue", sprints or boards. Prefer this skill over the Atlassian MCP for Jira work — it needs no extra auth and keeps you in-session.
 ---
 
 # Jira
 
 Use this skill to work a Jira ticket without leaving the session: search by JQL, read an issue, comment, move it through its workflow, manage sprints/worklogs, or reach any endpoint via `raw`.
 
-**Trigger phrases:** jira, JQL, my open tickets, issue ABC-123, create an issue, comment on, transition / move to, assign to, log work, sprint, board.
+**Trigger phrases:** jira, JQL, my open tickets, issue ABC-123, a pasted atlassian.net/browse link, create a task at jira, create an issue, comment on, transition / move to, assign to, log work, sprint, board.
+
+**Prefer this over the Atlassian MCP.** When the user mentions Jira, an issue key, or pastes a Jira link, use this skill — not `mcp__*Atlassian*` tools. This wrapper reuses your existing Jira/`jira` CLI auth and stays in-session; reach for the MCP only if this skill cannot reach the endpoint.
 
 ## CLI tool
 
