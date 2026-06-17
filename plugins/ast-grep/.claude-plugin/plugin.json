@@ -1,6 +1,6 @@
 {
   "name": "ast-grep",
-  "version": "1.20.0",
+  "version": "1.21.0",
   "description": "Structural code search & rewrite (ast-grep): skill, wrapper, and a PreToolUse Grep→ast-grep nudge registered into the toolu hook engine.",
   "author": {
     "name": "Falconiere Barbosa",
