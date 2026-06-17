@@ -1,6 +1,6 @@
 {
   "name": "pr-babysit",
-  "version": "0.1.1",
+  "version": "1.20.0",
   "description": "Babysit a PR for the current branch: cron-driven loop that fetches unresolved review comments and the CI review-bot's verdict, triages, fixes, replies, resolves, and chases findings to zero until CI is green.",
   "author": {
     "name": "Falconiere Barbosa",
@@ -9,8 +9,17 @@
   "homepage": "https://github.com/falconiere/toolu",
   "repository": "https://github.com/falconiere/toolu.git",
   "license": "MIT",
-  "keywords": ["claude-code", "pr", "review", "ci", "automation"],
+  "keywords": [
+    "claude-code",
+    "pr",
+    "review",
+    "ci",
+    "automation"
+  ],
   "dependencies": [
-    { "name": "toolu", "marketplace": "toolu" }
+    {
+      "name": "toolu",
+      "marketplace": "toolu"
+    }
   ]
 }
