@@ -1,6 +1,6 @@
 {
   "name": "stats",
-  "version": "1.20.0",
+  "version": "1.21.0",
   "description": "A visual /stats dashboard for Claude Code — see real token, cost, and cache-hit usage by project, model, and day as in-terminal bar charts and a sparkline trend, or export a self-contained HTML report with --html. Measured from session transcripts, not estimated. Standalone — only needs jq.",
   "author": {
     "name": "Falconiere Barbosa",

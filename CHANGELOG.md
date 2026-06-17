@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.21.0](https://github.com/Falconiere/toolu/compare/v1.20.0...v1.21.0) (2026-06-17)
+
+
+### Features
+
+* **jira:** nudge Claude to the jira skill over the Atlassian MCP ([10f06ae](https://github.com/Falconiere/toolu/commit/10f06aee0320e998eb8cc28cf565134996a552a6))
+
 ## [1.20.0](https://github.com/Falconiere/toolu/compare/v1.19.0...v1.20.0) (2026-06-17)
 
 
