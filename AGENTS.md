@@ -34,9 +34,8 @@ plugins/<name>/
 
 ### Plugin versioning
 
-- **`toolu` anchors the monorepo** — its `plugin.json` version and `package.json` version always match the git tag.
-- Every **other** plugin carries its **own independent** semver in its `plugin.json`.
-- The auto-update gate re-extracts a plugin **only** when its `plugin.json` version changes — so a stale version silently ships stale code.
+- **One version for the whole repo** — `package.json` and **every** plugin's `plugin.json` share the same `vX.Y.Z`, matching the git tag. They are bumped together on each release.
+- The auto-update gate re-extracts a plugin **only** when its `plugin.json` version changes; because all plugins move in lockstep, every release re-extracts every plugin (accepted — keeps the marketplace simple and avoids stale code).
 
 ## Release Process
 
@@ -44,19 +43,19 @@ Releases are automated with **release-please** (`.github/workflows/release-pleas
 
 ### 1. Merge Conventional Commits to `main`
 
-Scope each commit with the plugin it changes (`feat(jira): …`, `fix(toolu): …`). release-please routes a commit to a plugin **component** by the files it touches under `plugins/<name>/` (path match, not the scope string — but they align, since each plugin is its own dir). `feat` / `fix` / `feat!` (or `BREAKING CHANGE`) drive minor / patch / major bumps. `chore` / `docs` / `ci` / `refactor`, and commits touching only repo-root paths (`tooling/`, `.github/`, `docs/`), bump nothing.
+The repo is a **single release-please package** (`"."`, `release-type: node`), so **any** commit feeds the release regardless of path — a `feat` in `tooling/` or `.github/` counts the same as one under `plugins/`. `feat` / `fix` / `feat!` (or `BREAKING CHANGE`) drive minor / patch / major bumps; `chore` / `docs` / `ci` / `refactor` bump nothing.
 
 ### 2. Review and merge the Release PR
 
-release-please maintains a single batched **Release PR** (`separate-pull-requests: false`) that bumps each affected plugin's `plugin.json` `version` and updates its `CHANGELOG.md`. Edit the PR body to curate notes if you like, then **merge it to cut the release** — the only manual step.
+release-please maintains a single batched **Release PR** that bumps `package.json` `version` (owned natively by the `node` strategy) plus every plugin's `plugin.json` `version` (via `extra-files`), and updates `CHANGELOG.md`. Edit the PR body to curate notes if you like, then **merge it to cut the release** — the only manual step.
 
 ### 3. Tags + GitHub Releases (automatic)
 
-On merge, release-please tags every bumped plugin (`toolu` → `vX.Y.Z` via `include-component-in-tag: false`; others → `<plugin>-vX.Y.Z`) and publishes the GitHub Release(s) with the generated changelog as the body. The auto-update gate re-extracts a plugin when its `plugin.json` version changes. A non-fatal `[skip ci]` workflow step then syncs root `package.json` to the toolu version (release-please cannot update a file above a component dir).
+On merge, release-please tags the release `vX.Y.Z` (`component: toolu` + `include-component-in-tag: false` keeps the historical component-less tag shape) and publishes the GitHub Release with the generated changelog as the body. The auto-update gate then re-extracts every plugin (all `plugin.json` versions changed).
 
 ### Notes
 
-- **First-run baseline:** `bootstrap-sha` (top of `release-please-config.json`) pins adoption HEAD so the 12 currently untagged plugins do not all release on the first run; `toolu` baselines off its existing `vX.Y.Z` tag.
+- **Baseline:** `.release-please-manifest.json` pins the last released version (`"."` = the current `vX.Y.Z`); release-please collects commits since that tag. No `bootstrap-sha` needed — the existing `vX.Y.Z` tag is the baseline.
 - **`tooling/release.sh` is deprecated** — kept only as a manual escape hatch for when the automation is unavailable; it is no longer part of the normal flow.
 
 ## CI Pipeline
@@ -66,7 +65,7 @@ All workflows live in `.github/workflows/`:
 | Workflow | Trigger | What it does |
 |----------|---------|--------------|
 | `tests.yml` | push/PR to `main` | Typecheck (bun), bats suite, colocated-test layout enforcement, deterministic benchmarks, context-budget guard |
-| `release-please.yml` | push to `main` | Maintains the batched Release PR; on merge, bumps plugin versions + changelogs, tags, publishes GitHub Release(s), and syncs root `package.json` |
+| `release-please.yml` | push to `main` | Maintains the batched Release PR; on merge, bumps `package.json` + every `plugin.json` to the new `vX.Y.Z`, updates the changelog, tags, and publishes the GitHub Release |
 | `code-review.yml` | PR opened/synchronize | CI review bot |
 | `codeql.yml` | cron + push to `main` | CodeQL analysis |
 | `secret-scan.yml` | push/PR | Secret scanning |
