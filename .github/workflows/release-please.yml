@@ -20,6 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # release-please itself works via the API, but the package.json sync step
+      # below reads/commits files in the workspace, so the repo must be checked out.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Run release-please
         id: release
         uses: googleapis/release-please-action@v4
@@ -34,6 +39,10 @@ jobs:
       # diverges from it. Non-fatal: package.json's version is informational
       # (nothing publishes it), so a failed sync must never fail the release.
       - name: Sync root package.json to toolu version
+        # Informational mirror only — must never fail the release. GitHub injects
+        # `bash -e` into run steps, so continue-on-error guarantees a sync hiccup
+        # (the in-script `exit 0` guards notwithstanding) can't red the run.
+        continue-on-error: true
         run: |
           set -uo pipefail
           TOOLU="$(jq -r '."plugins/toolu"' .release-please-manifest.json)"
