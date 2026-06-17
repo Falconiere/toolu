@@ -177,7 +177,7 @@ fi
 # This is the same call the opencode adapter makes on session.created. We
 # run it once at install time so the user can verify the registry looks
 # correct before the first session.
-AGENT_DIR="$TOOLU_CONFIG_DIR"
+AGENT_DIR="${TOOLU_CONFIG_DIR:-}"
 if [ -z "$AGENT_DIR" ]; then
   if [ "$MODE" = "global" ]; then
     AGENT_DIR="$TARGET"
