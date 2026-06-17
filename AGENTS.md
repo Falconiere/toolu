@@ -40,78 +40,24 @@ plugins/<name>/
 
 ## Release Process
 
-### 1. Cut a release
+Releases are automated with **release-please** (`.github/workflows/release-please.yml`; config in `release-please-config.json` + `.release-please-manifest.json`). No manual version bumps or tags.
 
-```sh
-# Always preview first:
-tooling/release.sh --dry-run <major.minor.patch>
+### 1. Merge Conventional Commits to `main`
 
-# Then apply (also auto-drafts docs/releases/v<version>.md):
-tooling/release.sh <major.minor.patch>
-```
+Scope each commit with the plugin it changes (`feat(jira): …`, `fix(toolu): …`). release-please routes a commit to a plugin **component** by the files it touches under `plugins/<name>/` (path match, not the scope string — but they align, since each plugin is its own dir). `feat` / `fix` / `feat!` (or `BREAKING CHANGE`) drive minor / patch / major bumps. `chore` / `docs` / `ci` / `refactor`, and commits touching only repo-root paths (`tooling/`, `.github/`, `docs/`), bump nothing.
 
-This is an **atomic, two-pass** script:
+### 2. Review and merge the Release PR
 
-| Pass | What happens |
-|------|-------------|
-| 1 (validate) | Resolves every version bump without writing anything. If a single manifest is malformed, the whole release aborts — no partial writes. |
-| 2 (apply) | Edits `"version"` fields **in place by line** (sed, not jq, so key ordering is preserved). |
-| 3 (notes) | Auto-drafts `docs/releases/v<version>.md` as a template skeleton with per-plugin `(old → new)` attribution. Refuses to overwrite an existing file (pass `--no-notes` to skip). |
+release-please maintains a single batched **Release PR** (`separate-pull-requests: false`) that bumps each affected plugin's `plugin.json` `version` and updates its `CHANGELOG.md`. Edit the PR body to curate notes if you like, then **merge it to cut the release** — the only manual step.
 
-`--dry-run` / `--plan` prints the full bump plan — anchor versions, per-plugin `old → new` transitions, per-plugin `git diff --shortstat` against the last `v*.*.*` tag, and the list of plugins that will be **skipped** (no diff since last tag) — then writes nothing. Re-run without `--dry-run` to apply.
+### 3. Tags + GitHub Releases (automatic)
 
-Version bump rules:
+On merge, release-please tags every bumped plugin (`toolu` → `vX.Y.Z` via `include-component-in-tag: false`; others → `<plugin>-vX.Y.Z`) and publishes the GitHub Release(s) with the generated changelog as the body. The auto-update gate re-extracts a plugin when its `plugin.json` version changes. A non-fatal `[skip ci]` workflow step then syncs root `package.json` to the toolu version (release-please cannot update a file above a component dir).
 
-| Target | Rule |
-|--------|------|
-| `package.json` | Set to `<new-version>` |
-| `plugins/toolu/.claude-plugin/plugin.json` | Set to `<new-version>` (anchors the monorepo) |
-| Every **other** plugin whose files changed since the last `v*.*.*` tag | **PATCH bump** of its own independent version |
-| Unchanged plugins (no diff since last tag) | **Left alone** |
+### Notes
 
-The script only accepts strict `major.minor.patch` (no pre-release/build/extra segments). A malformed manifest version in any changed plugin **aborts without touching any file**.
-
-### 2. Edit the release notes
-
-The apply step drafts `docs/releases/v<version>.md` (template at `tooling/templates/release-notes.md`) with `<!-- TODO ... -->` placeholders for `## Highlights`, `## Upgrade notes`, and each per-plugin bullet. Fill in the placeholders, delete the comment markers, and **delete the entire `## Upgrade notes` section** (header + TODO) if there are no user-facing steps. The shape matches the existing v1.10.0 / v1.12.0 notes:
-
-```markdown
-# toolu vX.Y.Z
-
-Released: YYYY-MM-DD
-
-## Highlights
-
-<2-3 sentence summary>
-
-## Upgrade notes
-
-<user-facing upgrade steps, e.g. `/plugin install foo@toolu` — delete this section if none>
-
-## Included changes since v<prev>
-
-- `<plugin>`: <change description>. (`<plugin>` <old-ver> → <new-ver>)
-- …
-```
-
-### 3. Commit, tag, push
-
-```sh
-git add -A
-git commit -m "chore(release): v<version>"
-git tag -a v<version> -m "v<version> — see docs/releases/v<version>.md"
-git push --follow-tags
-```
-
-The tag annotation points reviewers at the curated notes (the same file that ships as the GitHub Release body in step 5).
-
-### 4. CI gate: tag must match manifest
-
-CI's `release.yml` **verifies** that `git tag (vX.Y.Z)` matches `plugins/toolu/.claude-plugin/plugin.json` version. If they diverge, the release is blocked. This is the safety net for the "stale version" problem.
-
-### 5. GitHub Release
-
-On tag push, `release.yml` runs `gh release create`. If `docs/releases/v<version>.md` exists at the tagged commit, it is uploaded as the release body via `--notes-file`. For older tags that predate the file, the workflow falls back to `--generate-notes`. The tag gate (step 4) must pass first.
+- **First-run baseline:** `bootstrap-sha` (top of `release-please-config.json`) pins adoption HEAD so the 12 currently untagged plugins do not all release on the first run; `toolu` baselines off its existing `vX.Y.Z` tag.
+- **`tooling/release.sh` is deprecated** — kept only as a manual escape hatch for when the automation is unavailable; it is no longer part of the normal flow.
 
 ## CI Pipeline
 
@@ -120,7 +66,7 @@ All workflows live in `.github/workflows/`:
 | Workflow | Trigger | What it does |
 |----------|---------|--------------|
 | `tests.yml` | push/PR to `main` | Typecheck (bun), bats suite, colocated-test layout enforcement, deterministic benchmarks, context-budget guard |
-| `release.yml` | tag `v*.*.*` | Tag→manifest version check, `gh release create` (uses `docs/releases/v<tag>.md` as the release body when present) |
+| `release-please.yml` | push to `main` | Maintains the batched Release PR; on merge, bumps plugin versions + changelogs, tags, publishes GitHub Release(s), and syncs root `package.json` |
 | `code-review.yml` | PR opened/synchronize | CI review bot |
 | `codeql.yml` | cron + push to `main` | CodeQL analysis |
 | `secret-scan.yml` | push/PR | Secret scanning |
@@ -148,7 +94,7 @@ All workflows live in `.github/workflows/`:
 | `tooling/install-opencode.sh` | Project/global installer: copies agents, commands, and the adapter into `.opencode/`, wires `skills.paths` in `opencode.json`, runs every plugin's `register.sh` |
 | `docs/config.md` | Full config schema reference (`skills`, `hooks`, `mcp`, `lang` thresholds, `docsSync`) |
 | `docs/opencode.md` | opencode adapter architecture, install, smoke test, troubleshooting |
-| `tooling/release.sh` | Atomic version bump for the monorepo (`--dry-run`, `--no-notes`, auto-drafts `docs/releases/v<ver>.md`) |
+| `tooling/release.sh` | **Deprecated** manual escape hatch — atomic version bump for the monorepo (`--dry-run`, `--no-notes`); releases are normally automated by release-please |
 | `tooling/templates/release-notes.md` | Skeleton the release script copies + fills for the per-release notes |
 | `plugins/toolu/scripts/context-budget.sh` | CI-only: caps injected-context footprint |
 
