@@ -8,6 +8,7 @@ name: Release Please
 on:
   push:
     branches: [main]
+  workflow_dispatch: {} # allow manual runs (validation / re-trigger if a push event is missed)
 
 permissions:
   contents: write
