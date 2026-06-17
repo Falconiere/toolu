@@ -82,7 +82,15 @@ JSON
   # Four levels up = the dir containing hooks/ — plugins/toolu since the
   # Plan 2 reorg (was the repo root).
   REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
-  tool_name=mcp__someserver__do input="$payload" HOME="$TMPHOME" \
+  # Pin the agent config dir to the test sandbox via an EXPORTED TOOLU_CONFIG_DIR
+  # (highest precedence in _toolu_agent_dir). Two reasons a `run` env-prefix
+  # won't do: (1) bash's temporary assignment on the `run` function does not
+  # export into the spawned subshell; (2) the ambient CLAUDE_CONFIG_DIR set by a
+  # real Claude Code session would otherwise win and point _toolu_user_cfg at
+  # the user's real config, not the sandbox. (Each @test is its own subshell, so
+  # this export does not leak to sibling tests.)
+  export TOOLU_CONFIG_DIR="$TMPHOME/.claude"
+  tool_name=mcp__someserver__do \
     run bash "$REPO_ROOT/hooks/pre-tools/modules/mcp-blocker.sh" <<<"$payload"
 
   [ "$status" -eq 0 ]
@@ -117,4 +125,23 @@ JSON
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("mcp-blocklist.txt")'
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("toolu config") | not'
+}
+
+@test "mcp-blocker: an entry's '-> redirect' hint is appended to the deny reason" {
+  printf '%s\n' "someserver -> use the jira skill instead" \
+    > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
+  tool_name=mcp__someserver__do run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("use the jira skill instead")'
+}
+
+@test "mcp-blocker: a '#'-commented entry does not block (nudge-only safety)" {
+  # read_list strips comment lines, so a documented-but-commented sample like
+  # the Atlassian example must NOT deny — Atlassian stays callable (nudge-only).
+  printf '%s\n' "# claude_ai_Atlassian -> use the jira skill instead" \
+    > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
+  tool_name=mcp__claude_ai_Atlassian__createIssue run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }

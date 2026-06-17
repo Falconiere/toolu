@@ -12,7 +12,7 @@ Standalone, no dependencies.
 
 ## What it provides
 
-- **`jira` skill** — work a ticket without leaving the session: JQL search, read/create/comment/transition/assign issues, plus boards, sprints, worklogs, projects, users, and attachments, with a `raw` verb for any endpoint. Triggers on Jira mentions, JQL, issue keys like `ABC-123`, "my tickets", and create/comment/transition/assign requests.
+- **`jira` skill** — work a ticket without leaving the session: JQL search, read/create/comment/transition/assign issues, plus boards, sprints, worklogs, projects, users, and attachments, with a `raw` verb for any endpoint. Triggers on Jira mentions, JQL, issue keys like `ABC-123`, a pasted `*.atlassian.net/browse/...` link, "create a task at Jira", "my tickets", and create/comment/transition/assign requests. **Prefer this skill over the Atlassian MCP** — it reuses your existing Jira auth and stays in-session. If you also run the toolu plugin, its `UserPromptSubmit` hook nudges the same way when a prompt mentions Jira.
 
 ## The Jira API
 

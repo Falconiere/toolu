@@ -145,6 +145,22 @@ if toolu_enabled agents research-agent &&
   research="External research — delegate to the research-agent subagent (routes exa-search/context7, native fallback) to keep main context lean."
 fi
 
+# 2d. Jira discoverability nudge — independent of the single intent hint. Names
+# the jira skill and warns off the Atlassian MCP so the skill wins
+# tool-selection when the user mentions Jira (today the model often reaches for
+# the Atlassian MCP instead). Fires on the words jira/atlassian, an
+# *.atlassian.net/browse/<KEY> link, or an issue key (ABC-123) GATED by a
+# jira-context word so bare key-shaped tokens (UTF-8, GPT-4, ISO-8601) don't
+# trigger it. The URL and issue-key matches use the ORIGINAL $prompt: the key is
+# case-sensitive ([A-Z]) and $prompt_lower has already been lowercased.
+jira_nudge=""
+if [[ "$prompt_lower" =~ ${WB}(jira|atlassian)${WE} ]] ||
+   [[ "$prompt" =~ atlassian[.]net/browse/[A-Z][A-Z0-9]+-[0-9]+ ]] ||
+   { [[ "$prompt" =~ [A-Z][A-Z0-9]+-[0-9]+ ]] &&
+     [[ "$prompt_lower" =~ ${WB}(ticket|issue|board|sprint|epic|backlog)${WE} ]]; }; then
+  jira_nudge="Jira mentioned — use the \`jira\` skill (REST wrapper over jira.sh), NOT the Atlassian MCP."
+fi
+
 # 3. Per-project context hook — opt-in. Project may emit any string.
 project_ctx=""
 if [ -n "$PROJECT_ROOT" ] && [ -f "$PROJECT_ROOT/.claude/context.sh" ]; then
@@ -158,6 +174,7 @@ parts=()
 [[ -n "$intent" ]] && parts+=("$intent")
 [[ -n "$orchestrate" ]] && parts+=("$orchestrate")
 [[ -n "$research" ]] && parts+=("$research")
+[[ -n "$jira_nudge" ]] && parts+=("$jira_nudge")
 [[ -n "$project_ctx" ]] && parts+=("$project_ctx")
 [[ -n "$quality_gate_hint" ]] && parts+=("$quality_gate_hint")
 

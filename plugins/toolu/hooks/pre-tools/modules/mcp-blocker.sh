@@ -61,14 +61,34 @@ file_list="$(read_list "$LIST_FILE")"
 # Track WHERE the matching entry came from so the deny reason can point the
 # user at the right file to edit.
 blocked_source=""
+# Redirect hint captured from the matching entry (file list only); surfaced in
+# the deny reason so a denied call points at its replacement. Empty when the
+# matched entry carries no hint.
+matched_redirect=""
 match_entry() {
-  local list_input="$1" name
+  local list_input="$1" name prefix redirect
   while IFS= read -r name; do
     [ -z "$name" ] && continue
+    # An entry may carry an optional " -> <text>" redirect hint after the
+    # server prefix (e.g. `claude_ai_Atlassian -> use the jira skill instead`).
+    # Split it off so the prefix alone drives the match; without this the arrow
+    # suffix would defeat the prefix-match below. Config-derived lists are bare
+    # server keys and never carry a hint.
+    if [[ "$name" == *" -> "* ]]; then
+      prefix="${name%% -> *}"
+      redirect="${name#* -> }"
+    else
+      prefix="$name"
+      redirect=""
+    fi
+    # Trim surrounding whitespace so a stray space can't defeat the exact match.
+    prefix="${prefix#"${prefix%%[![:space:]]*}"}"
+    prefix="${prefix%"${prefix##*[![:space:]]}"}"
+    [ -z "$prefix" ] && continue
     # Prefix match: an entry of `claude_ai_` blocks `claude_ai_Canva`. An
     # exact server name is the special case of a prefix with no suffix.
     case "$server" in
-      "$name"*) return 0 ;;
+      "$prefix"*) matched_redirect="$redirect"; return 0 ;;
     esac
   done <<< "$list_input"
   return 1
@@ -84,6 +104,7 @@ if [ -n "$blocked_source" ]; then
   jq -n \
     --arg s "$server" \
     --arg src "$blocked_source" \
+    --arg redir "$matched_redirect" \
     '{
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
@@ -94,7 +115,8 @@ if [ -n "$blocked_source" ]; then
             then "see settings/mcp-blocklist.txt"
             else "disabled via toolu config (mcp." + $s + "=false in toolu.config.json)"
            end) +
-          ")."
+          ")." +
+          (if $redir != "" then " " + $redir else "" end)
         )
       }
     }'

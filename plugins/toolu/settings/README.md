@@ -52,6 +52,24 @@ when you run them.
 Each plain-text file is one entry per line, `#` for comments. JSON files
 follow whatever schema the consuming script documents.
 
+### `mcp-blocklist.txt` redirect hints
+
+A blocklist line may carry an optional `-> <text>` suffix after the server
+prefix. When that server is denied, the text is appended to the deny reason so
+the user is pointed at the replacement. The prefix alone drives the match; the
+hint is ignored for matching.
+
+```text
+# <server-prefix> -> <redirect text shown in the deny reason>
+# Example (commented = inert; uncomment to actually block the Atlassian MCP and
+# steer Jira work to the bundled jira skill):
+# claude_ai_Atlassian -> use the `jira` skill instead
+```
+
+The example is shown **commented**, so nothing is blocked out of the box — the
+`jira`/toolu prompt nudge handles discoverability without denying the MCP.
+Uncomment the line (in your own settings dir) only if you want a hard block too.
+
 Allow/deny semantics for the bash guard: the denylist is checked first; a
 command that matches a deny rule is still allowed if it also matches an
 allowlist rule (the allowlist is an explicit override, not a default gate).
