@@ -1,8 +1,9 @@
 name: Release Please
 
 # Conventional commits merged to main accumulate into a single batched Release PR
-# (release-please manifest mode). Merging that PR bumps the touched plugins'
-# versions + changelogs and creates the GitHub Release(s). See the "Releases"
+# (release-please manifest mode, whole-repo single version). Merging that PR bumps
+# the repo version in package.json + every plugin's plugin.json, updates the
+# CHANGELOG, tags vX.Y.Z, and publishes the GitHub Release. See the "Releases"
 # section of README.md for the contributor-facing flow.
 
 on:
@@ -20,56 +21,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      # release-please itself works via the API, but the package.json sync step
-      # below reads/commits files in the workspace, so the repo must be checked out.
+      # The action reads config/manifest and edits files via the GitHub API,
+      # but checkout is the standard release-please-action pattern and a cheap
+      # safety net on the release critical path — keep it.
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Run release-please
-        id: release
         uses: googleapis/release-please-action@v4
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           token: ${{ github.token }} # default token; tests.yml does NOT run on the Release PR (accepted)
-
-      # release-please cannot update a file above a component dir (extra-files
-      # paths can't escape the package, by design), so the root package.json
-      # mirror of the toolu version is synced here once the merged manifest
-      # diverges from it. Non-fatal: package.json's version is informational
-      # (nothing publishes it), so a failed sync must never fail the release.
-      - name: Sync root package.json to toolu version
-        # Informational mirror only — must never fail the release. GitHub injects
-        # `bash -e` into run steps, so continue-on-error guarantees a sync hiccup
-        # (the in-script `exit 0` guards notwithstanding) can't red the run.
-        continue-on-error: true
-        run: |
-          set -uo pipefail
-          TOOLU="$(jq -r '."plugins/toolu"' .release-please-manifest.json)"
-          CUR="$(jq -r '.version' package.json)"
-          if ! printf '%s' "$TOOLU" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "::warning::package.json sync skipped: toolu version '$TOOLU' is not strict semver"
-            exit 0
-          fi
-          if [ "$TOOLU" = "$CUR" ]; then
-            echo "package.json already in sync ($CUR)"
-            exit 0
-          fi
-          echo "syncing root package.json $CUR -> $TOOLU"
-          tmp="$(mktemp)"
-          if ! jq --arg v "$TOOLU" '.version = $v' package.json > "$tmp"; then
-            echo "::warning::package.json sync skipped: jq rewrite failed"
-            exit 0
-          fi
-          if ! mv "$tmp" package.json; then
-            echo "::warning::package.json sync skipped: could not replace package.json"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json
-          git commit -m "chore: sync root package.json to $TOOLU [skip ci]" || {
-            echo "::warning::package.json sync skipped: nothing to commit"
-            exit 0
-          }
-          git push || echo "::warning::package.json sync push failed (branch protection?); version left unsynced"

@@ -1,98 +1,24 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "bootstrap-sha": "1706d44571c3a8bc1e496105c5553742943c229a",
-  "separate-pull-requests": false,
+  "release-type": "node",
   "packages": {
-    "plugins/toolu": {
-      "release-type": "simple",
+    ".": {
       "component": "toolu",
       "include-component-in-tag": false,
       "extra-files": [
-        { "type": "json", "path": ".claude-plugin/plugin.json", "jsonpath": "$.version" }
-      ]
-    },
-    "plugins/ast-grep": {
-      "release-type": "simple",
-      "component": "ast-grep",
-      "extra-files": [
-        { "type": "json", "path": ".claude-plugin/plugin.json", "jsonpath": "$.version" }
-      ]
-    },
-    "plugins/code-review": {
-      "release-type": "simple",
-      "component": "code-review",
-      "extra-files": [
-        { "type": "json", "path": ".claude-plugin/plugin.json", "jsonpath": "$.version" }
-      ]
-    },
-    "plugins/comemory": {
-      "release-type": "simple",
-      "component": "comemory",
-      "extra-files": [
-        { "type": "json", "path": ".claude-plugin/plugin.json", "jsonpath": "$.version" }
-      ]
-    },
-    "plugins/context7": {
-      "release-type": "simple",
-      "component": "context7",
-      "extra-files": [
-        { "type": "json", "path": ".claude-plugin/plugin.json", "jsonpath": "$.version" }
-      ]
-    },
-    "plugins/exa-search": {
-      "release-type": "simple",
-      "component": "exa-search",
-      "extra-files": [
-        { "type": "json", "path": ".claude-plugin/plugin.json", "jsonpath": "$.version" }
-      ]
-    },
-    "plugins/git-better": {
-      "release-type": "simple",
-      "component": "git-better",
-      "extra-files": [
-        { "type": "json", "path": ".claude-plugin/plugin.json", "jsonpath": "$.version" }
-      ]
-    },
-    "plugins/jira": {
-      "release-type": "simple",
-      "component": "jira",
-      "extra-files": [
-        { "type": "json", "path": ".claude-plugin/plugin.json", "jsonpath": "$.version" }
-      ]
-    },
-    "plugins/pr-babysit": {
-      "release-type": "simple",
-      "component": "pr-babysit",
-      "extra-files": [
-        { "type": "json", "path": ".claude-plugin/plugin.json", "jsonpath": "$.version" }
-      ]
-    },
-    "plugins/rust-quality": {
-      "release-type": "simple",
-      "component": "rust-quality",
-      "extra-files": [
-        { "type": "json", "path": ".claude-plugin/plugin.json", "jsonpath": "$.version" }
-      ]
-    },
-    "plugins/stats": {
-      "release-type": "simple",
-      "component": "stats",
-      "extra-files": [
-        { "type": "json", "path": ".claude-plugin/plugin.json", "jsonpath": "$.version" }
-      ]
-    },
-    "plugins/statusline": {
-      "release-type": "simple",
-      "component": "statusline",
-      "extra-files": [
-        { "type": "json", "path": ".claude-plugin/plugin.json", "jsonpath": "$.version" }
-      ]
-    },
-    "plugins/ts-quality": {
-      "release-type": "simple",
-      "component": "ts-quality",
-      "extra-files": [
-        { "type": "json", "path": ".claude-plugin/plugin.json", "jsonpath": "$.version" }
+        { "type": "json", "path": "plugins/toolu/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/ast-grep/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/code-review/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/comemory/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/context7/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/exa-search/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/git-better/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/jira/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/pr-babysit/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/rust-quality/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/stats/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/statusline/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/ts-quality/.claude-plugin/plugin.json", "jsonpath": "$.version" }
       ]
     }
   }

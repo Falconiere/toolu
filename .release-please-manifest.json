@@ -1,15 +1,3 @@
 {
-  "plugins/toolu": "1.19.0",
-  "plugins/ast-grep": "0.1.2",
-  "plugins/code-review": "0.1.2",
-  "plugins/comemory": "0.3.2",
-  "plugins/context7": "1.18.2",
-  "plugins/exa-search": "1.18.2",
-  "plugins/git-better": "0.1.1",
-  "plugins/jira": "1.17.2",
-  "plugins/pr-babysit": "0.1.1",
-  "plugins/rust-quality": "0.1.1",
-  "plugins/stats": "0.3.1",
-  "plugins/statusline": "0.3.2",
-  "plugins/ts-quality": "0.1.1"
+  ".": "1.19.0"
 }

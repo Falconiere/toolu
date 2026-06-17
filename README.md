@@ -296,12 +296,11 @@ PRs and issues welcome.
 
 ## Releases
 
-Releases are automated with [release-please](https://github.com/googleapis/release-please) — you do **not** bump versions or tag by hand.
+Releases are automated with [release-please](https://github.com/googleapis/release-please) — you do **not** bump versions or tag by hand. The repo ships as **one version**: `toolu` and every plugin share the same `vX.Y.Z`.
 
-- Merge Conventional Commits to `main`. The scope names the plugin you changed (`feat(jira): …`, `fix(toolu): …`); release-please routes each commit to a plugin by the files it touches under `plugins/<name>/`.
-- It maintains one batched **Release PR** that bumps the affected plugins' `plugin.json` versions and updates each `CHANGELOG.md`. Review it, then **merge it to cut the release** — the only manual step.
-- Merging tags every bumped plugin (`toolu` → `vX.Y.Z`, others → `<plugin>-vX.Y.Z`) and publishes the GitHub Release(s). The marketplace re-extracts a plugin when its `plugin.json` version changes.
-- `feat` / `fix` / `feat!` (or `BREAKING CHANGE`) drive minor / patch / major bumps; `chore` / `docs` / `ci` / `refactor` ship no release. Commits touching only repo-root paths (`tooling/`, `.github/`, `docs/`) bump nothing.
+- Merge Conventional Commits to `main`. release-please maintains one batched **Release PR** for the whole repo. **Any** path counts — a `feat` in `tooling/` or `.github/` releases just like one under `plugins/`.
+- `feat` / `fix` / `feat!` (or `BREAKING CHANGE`) drive minor / patch / major bumps; `chore` / `docs` / `ci` / `refactor` ship no release.
+- Review the Release PR, then **merge it to cut the release** — the only manual step. It bumps `package.json` and every plugin's `plugin.json` to the new version, updates `CHANGELOG.md`, tags `vX.Y.Z`, and publishes the GitHub Release. The marketplace re-extracts a plugin when its `plugin.json` version changes.
 
 `tooling/release.sh` is **deprecated**, kept only as a manual escape hatch for when the automation is unavailable.
 
