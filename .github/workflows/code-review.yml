@@ -22,6 +22,6 @@ jobs:
           # fetch-depth: 0 required — the action computes a merge-base
           # against the PR base branch to produce the diff for review.
           fetch-depth: 0
-      - uses: Falconiere/toolu-ghactions/code-review@1849658349383c8a46026c77389e1876e833e7c4
+      - uses: Falconiere/toolu-ghactions/code-review@v2
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
