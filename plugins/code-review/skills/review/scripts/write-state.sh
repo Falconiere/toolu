@@ -90,7 +90,7 @@ if ! jq -n \
   --argjson findings_count "$findings_count" \
   --argjson findings "$findings" \
   --argjson review_round "$review_round" \
-  '{version:1, branch:$branch, diff_sha:$diff_sha, base_branch:$base,
+  '{version:2, branch:$branch, diff_sha:$diff_sha, base_branch:$base,
     reviewed_at:$reviewed_at, reviewers:$reviewers,
     findings_count:$findings_count, findings:$findings, review_round:$review_round}' \
   > "$tmp"; then

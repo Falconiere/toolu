@@ -59,7 +59,7 @@ teardown() {
   git checkout -q -b feature
   echo a > f.txt && git add f.txt && git commit -qm work
   out=$(CLAUDE_PROJECT_DIR="$TMP" bash "$WS" --findings-count 0 --reviewers '["code-review:review"]')
-  [ "$(jq -r .version "$out")" = "1" ]
+  [ "$(jq -r .version "$out")" = "2" ]
   [ "$(jq -r .findings_count "$out")" = "0" ]
   [ "$(jq -r '.reviewers[0]' "$out")" = "code-review:review" ]
   [ "$(jq -r .review_round "$out")" = "1" ]
