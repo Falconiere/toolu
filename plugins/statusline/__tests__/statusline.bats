@@ -108,7 +108,7 @@ _plain() { printf '%s' "$1" | sed $'s/\033\\[[0-9;]*m//g'; }
 @test "statusline: ahead arrow shown when local is ahead of upstream" {
   repo="$TMP/repo"; remote="$TMP/remote"; mkdir -p "$repo" "$remote"
   (cd "$remote" && git init -q --bare)
-  (cd "$repo" && git init -q && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init && git remote add origin "$remote" && git push -q -u origin main && git -c user.email=t@t -c user.name=t commit --allow-empty -qm ahead)
+  (cd "$repo" && git init -q -b main && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init && git remote add origin "$remote" && git push -q -u origin main && git -c user.email=t@t -c user.name=t commit --allow-empty -qm ahead)
   out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$repo"'"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | bash "$SL")
   plain=$(_plain "$out") && [[ "$plain" == *"↑1"* ]]
 }
@@ -116,7 +116,7 @@ _plain() { printf '%s' "$1" | sed $'s/\033\\[[0-9;]*m//g'; }
 @test "statusline: behind arrow shown when local is behind upstream" {
   repo="$TMP/repo"; remote="$TMP/remote"; mkdir -p "$repo" "$remote"
   (cd "$remote" && git init -q --bare)
-  (cd "$repo" && git init -q && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init && git remote add origin "$remote" && git push -q -u origin main && git -c user.email=t@t -c user.name=t commit --allow-empty -qm behind && git push -q origin main && git reset --hard HEAD~1 -q)
+  (cd "$repo" && git init -q -b main && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init && git remote add origin "$remote" && git push -q -u origin main && git -c user.email=t@t -c user.name=t commit --allow-empty -qm behind && git push -q origin main && git reset --hard HEAD~1 -q)
   out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$repo"'"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | bash "$SL")
   plain=$(_plain "$out") && [[ "$plain" == *"↓1"* ]]
 }
@@ -124,7 +124,7 @@ _plain() { printf '%s' "$1" | sed $'s/\033\\[[0-9;]*m//g'; }
 @test "statusline: dirty and ahead shown together" {
   repo="$TMP/repo"; remote="$TMP/remote"; mkdir -p "$repo" "$remote"
   (cd "$remote" && git init -q --bare)
-  (cd "$repo" && git init -q && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init && git remote add origin "$remote" && git push -q -u origin main && git -c user.email=t@t -c user.name=t commit --allow-empty -qm ahead)
+  (cd "$repo" && git init -q -b main && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init && git remote add origin "$remote" && git push -q -u origin main && git -c user.email=t@t -c user.name=t commit --allow-empty -qm ahead)
   touch "$repo/new.txt"
   out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$repo"'"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | bash "$SL")
   plain=$(_plain "$out")
