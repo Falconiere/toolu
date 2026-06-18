@@ -22,8 +22,8 @@ case "$command" in
   *) exit 0 ;;
 esac
 
-SETTINGS_DIR=$(detect_settings_dir)
-PREFIX_FILE="$SETTINGS_DIR/commit-prefixes.txt"
+TOOLU_SETTINGS_DIR=$(toolu_settings_dir)
+PREFIX_FILE="$TOOLU_SETTINGS_DIR/commit-prefixes.txt"
 BASE_BRANCH=$(detect_base_branch)
 
 # read_list is sourced from lib/detect.sh.

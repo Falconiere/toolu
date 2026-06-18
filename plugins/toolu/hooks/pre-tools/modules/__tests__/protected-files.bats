@@ -5,9 +5,9 @@ HOOK="${BATS_TEST_DIRNAME}/../protected-files.sh"
 
 setup() {
   TMP=$(mktemp -d)
-  export MY_CLAUDE_SETTINGS_DIR="$TMP/settings"
-  mkdir -p "$MY_CLAUDE_SETTINGS_DIR"
-  cat > "$MY_CLAUDE_SETTINGS_DIR/protected-files.txt" <<'TXT'
+  export TOOLU_SETTINGS_DIR="$TMP/settings"
+  mkdir -p "$TOOLU_SETTINGS_DIR"
+  cat > "$TOOLU_SETTINGS_DIR/protected-files.txt" <<'TXT'
 .env
 .env.*
 **/secrets/**
@@ -17,7 +17,7 @@ TXT
 }
 
 teardown() {
-  unset MY_CLAUDE_SETTINGS_DIR
+  unset TOOLU_SETTINGS_DIR
   [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"
 }
 

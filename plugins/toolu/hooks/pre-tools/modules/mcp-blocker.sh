@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Block MCP tool usage for listed servers — redirect to CLI scripts.
-# Data-driven: server name prefixes come from $SETTINGS_DIR/mcp-blocklist.txt.
+# Data-driven: server name prefixes come from $TOOLU_SETTINGS_DIR/mcp-blocklist.txt.
 #
 # Inputs (from parent dispatcher pre-tools/mod.sh, via `export`):
 #   $tool_name - name of the tool being invoked
@@ -27,8 +27,8 @@ if [[ -z "$tool_name" ]]; then
   fi
 fi
 
-SETTINGS_DIR=$(detect_settings_dir)
-LIST_FILE="$SETTINGS_DIR/mcp-blocklist.txt"
+TOOLU_SETTINGS_DIR=$(toolu_settings_dir)
+LIST_FILE="$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
 
 # Only inspect mcp__<server>__* tool names.
 case "$tool_name" in

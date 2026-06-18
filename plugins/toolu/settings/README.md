@@ -82,18 +82,18 @@ Commands that match no deny rule are allowed by default.
 > (e.g. it would exempt `node -e '…'`). Prefer specific multi-token entries for
 > exemptions so the override stays argv-scoped to exactly the command you mean.
 
-Lookup order (see `detect_settings_dir` in `hooks/lib/detect.sh`, sibling of
+Lookup order (see `toolu_settings_dir` in `hooks/lib/detect.sh`, sibling of
 this directory inside the plugin):
-`$MY_CLAUDE_SETTINGS_DIR` (if set) → `~/.claude/settings` (if it exists) →
+`$TOOLU_SETTINGS_DIR` (if set) → `~/.claude/settings` (if it exists) →
 the plugin's own `settings/` directory, resolved relative to the hooks. There is
 no per-project `.claude/settings/` lookup — to override per project, point
-`MY_CLAUDE_SETTINGS_DIR` at a project-local directory.
+`TOOLU_SETTINGS_DIR` at a project-local directory.
 
 ## Env vars
 
 | Variable                  | Effect                                  |
 |---------------------------|-----------------------------------------|
-| `MY_CLAUDE_SETTINGS_DIR`  | Directory the hooks read data files from |
+| `TOOLU_SETTINGS_DIR`  | Directory the hooks read data files from |
 | `MY_CLAUDE_QUALITY`       | `off` to disable `quality-gate.sh`       |
 | `MY_CLAUDE_COMEMORY_REPO` | Overrides the comemory `--repo` scope used by the comemory wrapper (the comemory plugin's `skills/agent-memory/scripts/comemory.sh`). Defaults to the git project name. Not read by any hook. |
 

@@ -5,9 +5,9 @@ HOOK="${BATS_TEST_DIRNAME}/../mcp-blocker.sh"
 
 setup() {
   TMP=$(mktemp -d)
-  export MY_CLAUDE_SETTINGS_DIR="$TMP/settings"
-  mkdir -p "$MY_CLAUDE_SETTINGS_DIR"
-  printf '%s\n' "exampleblocked" > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
+  export TOOLU_SETTINGS_DIR="$TMP/settings"
+  mkdir -p "$TOOLU_SETTINGS_DIR"
+  printf '%s\n' "exampleblocked" > "$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
   # TMPHOME is created lazily by tests that need a per-test $HOME sandbox;
   # registering it here lets teardown clean it up even if the test aborts
   # mid-assertion.
@@ -15,7 +15,7 @@ setup() {
 }
 
 teardown() {
-  unset MY_CLAUDE_SETTINGS_DIR
+  unset TOOLU_SETTINGS_DIR
   if [ -n "${TMP:-}" ] && [ -d "$TMP" ]; then
     rm -rf "$TMP"
   fi
@@ -40,21 +40,21 @@ teardown() {
 # original code did exact equality. Prefix entries like `claude_ai_` silently
 # never matched.
 @test "mcp-blocker: prefix entry 'claude_ai_' blocks 'claude_ai_Canva'" {
-  printf '%s\n' "claude_ai_" > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
+  printf '%s\n' "claude_ai_" > "$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
   tool_name=mcp__claude_ai_Canva__search run bash "$HOOK"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
 }
 
 @test "mcp-blocker: prefix entry 'claude_ai_' does NOT block 'friend_ai_Canva'" {
-  printf '%s\n' "claude_ai_" > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
+  printf '%s\n' "claude_ai_" > "$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
   tool_name=mcp__friend_ai_Canva__search run bash "$HOOK"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
 
 @test "mcp-blocker: exact server name still blocks itself" {
-  printf '%s\n' "exampleblocked" > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
+  printf '%s\n' "exampleblocked" > "$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
   tool_name=mcp__exampleblocked__save run bash "$HOOK"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
@@ -129,7 +129,7 @@ JSON
 
 @test "mcp-blocker: an entry's '-> redirect' hint is appended to the deny reason" {
   printf '%s\n' "someserver -> use the jira skill instead" \
-    > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
+    > "$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
   tool_name=mcp__someserver__do run bash "$HOOK"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
@@ -140,7 +140,7 @@ JSON
   # read_list strips comment lines, so a documented-but-commented sample like
   # the Atlassian example must NOT deny — Atlassian stays callable (nudge-only).
   printf '%s\n' "# claude_ai_Atlassian -> use the jira skill instead" \
-    > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
+    > "$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
   tool_name=mcp__claude_ai_Atlassian__createIssue run bash "$HOOK"
   [ "$status" -eq 0 ]
   [ -z "$output" ]

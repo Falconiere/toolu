@@ -2,7 +2,7 @@
 # Post-tool check: Rust quality rules.
 # Project-agnostic: no-op outside Rust projects or when cargo is missing.
 # Unsafe-block exemptions for FFI crates come from
-# $SETTINGS_DIR/rust-unsafe-exemptions.txt.
+# $TOOLU_SETTINGS_DIR/rust-unsafe-exemptions.txt.
 #
 # Inputs (from parent dispatcher post-tools/mod.sh, via `export`):
 #   $tool_name     - name of the tool being invoked
@@ -58,8 +58,8 @@ command -v toolu_load_config >/dev/null 2>&1 && toolu_load_config 2>/dev/null ||
 command -v cargo >/dev/null 2>&1 || exit 0
 command -v jq    >/dev/null 2>&1 || exit 0
 
-SETTINGS_DIR=$(detect_settings_dir)
-EXEMPTIONS_FILE="$SETTINGS_DIR/rust-unsafe-exemptions.txt"
+TOOLU_SETTINGS_DIR=$(toolu_settings_dir)
+EXEMPTIONS_FILE="$TOOLU_SETTINGS_DIR/rust-unsafe-exemptions.txt"
 
 # read_list is sourced from lib/detect.sh.
 

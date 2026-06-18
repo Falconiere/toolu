@@ -5,12 +5,12 @@ HOOK="${BATS_TEST_DIRNAME}/../code-edit-rules.sh"
 
 setup() {
   TMP=$(mktemp -d)
-  export MY_CLAUDE_SETTINGS_DIR="$TMP/settings"
-  mkdir -p "$MY_CLAUDE_SETTINGS_DIR"
+  export TOOLU_SETTINGS_DIR="$TMP/settings"
+  mkdir -p "$TOOLU_SETTINGS_DIR"
 }
 
 teardown() {
-  unset MY_CLAUDE_SETTINGS_DIR
+  unset TOOLU_SETTINGS_DIR
   [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"
 }
 
@@ -32,21 +32,21 @@ run_hook_multiedit() {
 }
 
 @test "code-edit-rules: empty rules → no-op" {
-  printf '%s\n' '{"rules":[]}' > "$MY_CLAUDE_SETTINGS_DIR/code-edit-rules.json"
+  printf '%s\n' '{"rules":[]}' > "$TOOLU_SETTINGS_DIR/code-edit-rules.json"
   run_hook "/abs/src/foo.rs"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
 
 @test "code-edit-rules: missing file → no-op" {
-  # No code-edit-rules.json in MY_CLAUDE_SETTINGS_DIR.
+  # No code-edit-rules.json in TOOLU_SETTINGS_DIR.
   run_hook "/abs/src/foo.rs"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
 
 @test "code-edit-rules: matching glob surfaces docs" {
-  cat > "$MY_CLAUDE_SETTINGS_DIR/code-edit-rules.json" <<'JSON'
+  cat > "$TOOLU_SETTINGS_DIR/code-edit-rules.json" <<'JSON'
 { "rules": [ { "match": "*.rs", "docs": ["rust.md"] } ] }
 JSON
   run_hook "/abs/src/foo.rs"
@@ -57,7 +57,7 @@ JSON
 # Regression: MultiEdit was skipped (tool != Edit/Write), dropping rule
 # reminders. MultiEdit on a code file must emit the same reminder as Edit.
 @test "code-edit-rules: MultiEdit on .rs file surfaces docs" {
-  cat > "$MY_CLAUDE_SETTINGS_DIR/code-edit-rules.json" <<'JSON'
+  cat > "$TOOLU_SETTINGS_DIR/code-edit-rules.json" <<'JSON'
 { "rules": [ { "match": "*.rs", "docs": ["Rust: zero compiler/clippy warnings"] } ] }
 JSON
   run_hook_multiedit "/abs/src/foo.rs"
@@ -68,7 +68,7 @@ JSON
 # Regression: absolute path under a git repo must be normalized to repo-relative
 # so repo-relative match globs like "src/**/*.rs" fire.
 @test "code-edit-rules: ABSOLUTE path under repo normalizes to repo-relative for glob match" {
-  cat > "$MY_CLAUDE_SETTINGS_DIR/code-edit-rules.json" <<'JSON'
+  cat > "$TOOLU_SETTINGS_DIR/code-edit-rules.json" <<'JSON'
 { "rules": [ { "match": "src/**/*.rs", "docs": ["rust.md"] } ] }
 JSON
   # Resolve symlinks so the path we feed matches what `git rev-parse --show-toplevel`

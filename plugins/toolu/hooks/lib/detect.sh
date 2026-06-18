@@ -165,10 +165,10 @@ detect_base_branch() {
   fi
 }
 
-# Print the data dir for settings/ lookups. Override with $MY_CLAUDE_SETTINGS_DIR.
-detect_settings_dir() {
-  if [ -n "${MY_CLAUDE_SETTINGS_DIR:-}" ]; then
-    echo "$MY_CLAUDE_SETTINGS_DIR"
+# Print the data dir for settings/ lookups. Override with $TOOLU_SETTINGS_DIR.
+toolu_settings_dir() {
+  if [ -n "${TOOLU_SETTINGS_DIR:-}" ]; then
+    echo "$TOOLU_SETTINGS_DIR"
   elif [ -d "${HOME}/.claude/settings" ]; then
     echo "${HOME}/.claude/settings"
   else

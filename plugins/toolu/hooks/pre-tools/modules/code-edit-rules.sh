@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Pre-tool check: Remind to read rules before editing code files.
-# Data-driven: loads $SETTINGS_DIR/code-edit-rules.json. Empty/missing → no-op.
+# Data-driven: loads $TOOLU_SETTINGS_DIR/code-edit-rules.json. Empty/missing → no-op.
 #
 # Inputs (from parent dispatcher pre-tools/mod.sh, via `export`):
 #   $tool_name - name of the tool being invoked
@@ -18,8 +18,8 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 [[ "$tool_name" != "Edit" && "$tool_name" != "Write" && "$tool_name" != "MultiEdit" ]] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0
 
-SETTINGS_DIR=$(detect_settings_dir)
-RULES_FILE="$SETTINGS_DIR/code-edit-rules.json"
+TOOLU_SETTINGS_DIR=$(toolu_settings_dir)
+RULES_FILE="$TOOLU_SETTINGS_DIR/code-edit-rules.json"
 
 [ -f "$RULES_FILE" ] || exit 0
 
