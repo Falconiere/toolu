@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.0](https://github.com/Falconiere/toolu/compare/v1.21.0...v1.22.0) (2026-06-18)
+
+
+### Features
+
+* **design:** add design plugin with stack-aware design-review skill ([5fc238c](https://github.com/Falconiere/toolu/commit/5fc238c3d448f836939f75181a904eb5ae1c99dd))
+
 ## [1.21.0](https://github.com/Falconiere/toolu/compare/v1.20.0...v1.21.0) (2026-06-17)
 
 
