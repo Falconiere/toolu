@@ -41,7 +41,7 @@ for _a in "$@"; do
 done
 # Body = next queued fixture (one per call), else {}.
 if [[ -n "${JIRA_STUB_RESPONSES:-}" ]]; then
-  mapfile -t _resp <<< "$JIRA_STUB_RESPONSES"
+  _resp=(); while IFS= read -r _line; do _resp+=("$_line"); done <<< "$JIRA_STUB_RESPONSES"
   _n=$(cat "$JIRA_STUB_COUNTER" 2>/dev/null || echo 0)
   _i=$_n
   (( _i >= ${#_resp[@]} )) && _i=$(( ${#_resp[@]} - 1 ))
