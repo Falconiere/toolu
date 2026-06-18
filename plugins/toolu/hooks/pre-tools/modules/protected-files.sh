@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Pre-tool check: Protect quality infrastructure files from edits.
-# Data-driven: globs come from $SETTINGS_DIR/protected-files.txt.
+# Data-driven: globs come from $TOOLU_SETTINGS_DIR/protected-files.txt.
 #
 # Inputs (from parent dispatcher pre-tools/mod.sh, via `export`):
 #   $tool_name - name of the tool being invoked
@@ -19,8 +19,8 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 [[ "$tool_name" != "Edit" && "$tool_name" != "Write" && "$tool_name" != "MultiEdit" ]] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0
 
-SETTINGS_DIR=$(detect_settings_dir)
-LIST_FILE="$SETTINGS_DIR/protected-files.txt"
+TOOLU_SETTINGS_DIR=$(toolu_settings_dir)
+LIST_FILE="$TOOLU_SETTINGS_DIR/protected-files.txt"
 
 [ -f "$LIST_FILE" ] || exit 0
 

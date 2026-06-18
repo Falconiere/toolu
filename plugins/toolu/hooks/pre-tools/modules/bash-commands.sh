@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Pre-tool check: Bash/Shell command validation
-# Data-driven: loads allow/deny rules from $SETTINGS_DIR/bash-{allow,deny}list.txt.
+# Data-driven: loads allow/deny rules from $TOOLU_SETTINGS_DIR/bash-{allow,deny}list.txt.
 # Argv-aware: tokenizes the command and matches "<bin> <flag>" deny rules so
 # substring evasion is harder (e.g. `node -e "evil"` is rejected even if `node`
 # alone is allowed).
@@ -19,7 +19,7 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 [[ "$tool_name" != "Bash" && "$tool_name" != "Shell" ]] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0
 
-SETTINGS_DIR=$(detect_settings_dir)
+TOOLU_SETTINGS_DIR=$(toolu_settings_dir)
 
 # read_list + strip_heredocs are sourced from lib/detect.sh.
 
@@ -136,8 +136,8 @@ matches_allow() {
 bash_commands_decide() {
   local cmd="$1"
   local allowlist denylist hit
-  allowlist=$(read_list "$SETTINGS_DIR/bash-allowlist.txt")
-  denylist=$(read_list "$SETTINGS_DIR/bash-denylist.txt")
+  allowlist=$(read_list "$TOOLU_SETTINGS_DIR/bash-allowlist.txt")
+  denylist=$(read_list "$TOOLU_SETTINGS_DIR/bash-denylist.txt")
 
   # Strip heredoc bodies so we only check actual commands, not prose in commit messages.
   cmd=$(printf '%s\n' "$cmd" | strip_heredocs)

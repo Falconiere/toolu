@@ -5,18 +5,18 @@ HOOK="${BATS_TEST_DIRNAME}/../bash-commands.sh"
 
 setup() {
   TMP=$(mktemp -d)
-  export MY_CLAUDE_SETTINGS_DIR="$TMP/settings"
-  mkdir -p "$MY_CLAUDE_SETTINGS_DIR"
+  export TOOLU_SETTINGS_DIR="$TMP/settings"
+  mkdir -p "$TOOLU_SETTINGS_DIR"
 }
 
 teardown() {
-  unset MY_CLAUDE_SETTINGS_DIR
+  unset TOOLU_SETTINGS_DIR
   [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"
 }
 
 write_lists() {
-  printf '%s\n' "$1" > "$MY_CLAUDE_SETTINGS_DIR/bash-allowlist.txt"
-  printf '%s\n' "$2" > "$MY_CLAUDE_SETTINGS_DIR/bash-denylist.txt"
+  printf '%s\n' "$1" > "$TOOLU_SETTINGS_DIR/bash-allowlist.txt"
+  printf '%s\n' "$2" > "$TOOLU_SETTINGS_DIR/bash-denylist.txt"
 }
 
 run_hook() {
@@ -57,7 +57,7 @@ run_hook() {
 
 @test "bash-commands: no-op when data files are missing" {
   # Use a settings dir with no lists at all.
-  rm -f "$MY_CLAUDE_SETTINGS_DIR/bash-allowlist.txt" "$MY_CLAUDE_SETTINGS_DIR/bash-denylist.txt"
+  rm -f "$TOOLU_SETTINGS_DIR/bash-allowlist.txt" "$TOOLU_SETTINGS_DIR/bash-denylist.txt"
   run_hook "node -e 'rm -rf /'"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
