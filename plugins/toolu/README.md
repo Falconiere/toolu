@@ -12,7 +12,7 @@ Depends on `code-simplifier` (from the `claude-plugins-official` marketplace) an
 
 ## What it provides
 
-- **Workflow skills** — an 8-phase chain with a write step and a review step each: `brainstorm`, `spec`, `spec-review`, `plan`, `plan-review`, `execution`, `execution-review`, `test`. Plus an `orchestrator` skill for delegating broad work across subagents.
+- **Workflow skills** — an 8-phase chain with a write step and a review step each: `brainstorm`, `spec`, `spec-review`, `plan`, `plan-review`, `execution`, `execution-review`, `test`. Plus two non-chain skills: `orchestrator` for delegating broad work across subagents, and `debug` — a break-glass scientific-debug loop (reproduce → observe → hypothesize → isolate root cause → fix → regress) any phase can drop into, backed by language-agnostic evidence helpers (`debug-testfail`/`debug-stack`/`debug-log`) and an opt-in Sentry adapter.
 - **Quality gate engine** — the `PreToolUse` / `PostToolUse` / `SessionStart` hook dispatcher and runtime **registry** that domain plugins contribute checks to (fail-closed; a module runs only while its owning plugin is installed).
 - **\`push-review\` gate** — blocks \`git push\` on a feature branch until the diff has been run through an accepted reviewer (\`caveman:cavecrew-reviewer\`, the built-in \`/code-review\` skill, or \`toolu-review:review\`), with a round cap that escalates instead of looping.
 - **docs-sync backstop** — an advisory (never a block) on push when code changes but no docs surface does.
