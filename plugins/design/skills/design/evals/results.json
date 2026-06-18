@@ -1,19 +1,19 @@
 {
-  "skill": "design-review",
+  "skill": "design",
   "generated_at": "2026-06-18",
-  "judge": "LLM router judge given the skill description only (no gold labels). Snapshot — LLM-judged, re-runs may vary slightly.",
-  "n": 23,
-  "positives": 14,
-  "negatives": 9,
+  "judge": "LLM router judge given the skill description only (no gold labels). Snapshot \u2014 LLM-judged, re-runs may vary slightly.",
+  "n": 34,
+  "positives": 26,
+  "negatives": 8,
   "confusion": {
-    "tp": 14,
+    "tp": 26,
     "fp": 0,
     "fn": 0,
-    "tn": 9
+    "tn": 8
   },
-  "precision": 1,
-  "recall": 1,
-  "f1": 1,
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1": 1.0,
   "threshold": 0.9,
   "pass": true,
   "predictions": [
@@ -102,6 +102,78 @@
       "correct": true
     },
     {
+      "id": "n3",
+      "expected": true,
+      "fire": true,
+      "correct": true
+    },
+    {
+      "id": "n8",
+      "expected": true,
+      "fire": true,
+      "correct": true
+    },
+    {
+      "id": "b1",
+      "expected": true,
+      "fire": true,
+      "correct": true
+    },
+    {
+      "id": "b2",
+      "expected": true,
+      "fire": true,
+      "correct": true
+    },
+    {
+      "id": "b3",
+      "expected": true,
+      "fire": true,
+      "correct": true
+    },
+    {
+      "id": "b4",
+      "expected": true,
+      "fire": true,
+      "correct": true
+    },
+    {
+      "id": "b5",
+      "expected": true,
+      "fire": true,
+      "correct": true
+    },
+    {
+      "id": "b6",
+      "expected": true,
+      "fire": true,
+      "correct": true
+    },
+    {
+      "id": "b7",
+      "expected": true,
+      "fire": true,
+      "correct": true
+    },
+    {
+      "id": "b8",
+      "expected": true,
+      "fire": true,
+      "correct": true
+    },
+    {
+      "id": "b9",
+      "expected": true,
+      "fire": true,
+      "correct": true
+    },
+    {
+      "id": "b10",
+      "expected": true,
+      "fire": true,
+      "correct": true
+    },
+    {
       "id": "n1",
       "expected": false,
       "fire": false,
@@ -109,12 +181,6 @@
     },
     {
       "id": "n2",
-      "expected": false,
-      "fire": false,
-      "correct": true
-    },
-    {
-      "id": "n3",
       "expected": false,
       "fire": false,
       "correct": true
@@ -144,13 +210,13 @@
       "correct": true
     },
     {
-      "id": "n8",
+      "id": "n9",
       "expected": false,
       "fire": false,
       "correct": true
     },
     {
-      "id": "n9",
+      "id": "n10",
       "expected": false,
       "fire": false,
       "correct": true
