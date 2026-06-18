@@ -1,0 +1,29 @@
+{
+  "skill": "design-review",
+  "method": "Held-out trigger eval. A judge sees ONLY the skill's frontmatter `description` (the real selection signal) plus the prompt, and predicts whether design-review should fire. Predictions are scored against the `expected` gold labels below → precision/recall. LLM-judged, so results.json is a snapshot (re-runs may vary slightly).",
+  "cases": [
+    {"id": "p1",  "prompt": "review this login screen for design quality", "expected": true},
+    {"id": "p2",  "prompt": "is this signup form accessible?", "expected": true},
+    {"id": "p3",  "prompt": "can you do a design review of the dashboard component?", "expected": true},
+    {"id": "p4",  "prompt": "check the visual hierarchy on my landing page", "expected": true},
+    {"id": "p5",  "prompt": "audit this interface for UX issues", "expected": true},
+    {"id": "p6",  "prompt": "does this screen match iOS conventions?", "expected": true},
+    {"id": "p7",  "prompt": "review the contrast and spacing in Header.tsx", "expected": true},
+    {"id": "p8",  "prompt": "critique the UI of this settings page", "expected": true},
+    {"id": "p9",  "prompt": "is my navigation bar responsive across breakpoints?", "expected": true},
+    {"id": "p10", "prompt": "review the motion and animations on this modal", "expected": true},
+    {"id": "p11", "prompt": "does this button meet accessibility guidelines for tap targets?", "expected": true},
+    {"id": "p12", "prompt": "give me a design critique of this card layout", "expected": true},
+    {"id": "p13", "prompt": "does this feel native on Android / Material?", "expected": true},
+    {"id": "p14", "prompt": "review this component's design and call out the problems", "expected": true},
+    {"id": "n1",  "prompt": "review this PR for bugs and logic errors", "expected": false},
+    {"id": "n2",  "prompt": "fix the failing test in auth.test.ts", "expected": false},
+    {"id": "n3",  "prompt": "generate a login screen in React", "expected": false},
+    {"id": "n4",  "prompt": "refactor this function to reduce cyclomatic complexity", "expected": false},
+    {"id": "n5",  "prompt": "why is this API endpoint returning a 500?", "expected": false},
+    {"id": "n6",  "prompt": "write a commit message for these staged changes", "expected": false},
+    {"id": "n7",  "prompt": "search the codebase for where we call fetchUser()", "expected": false},
+    {"id": "n8",  "prompt": "build me a pricing page with Tailwind", "expected": false},
+    {"id": "n9",  "prompt": "optimize this SQL query for performance", "expected": false}
+  ]
+}

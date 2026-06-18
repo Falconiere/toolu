@@ -158,7 +158,7 @@ test, and troubleshooting.
 
 ## What's inside
 
-Ten plugins, one marketplace. Install the core alone, or add the domain plugins. The same skills and gate run on Claude Code, pi, and opencode; the statusline is Claude Code only (pi surfaces gate status in its own footer; opencode uses the `/toolu-status` slash command).
+Eleven plugins, one marketplace. Install the core alone, or add the domain plugins. The same skills and gate run on Claude Code, pi, and opencode; the statusline is Claude Code only (pi surfaces gate status in its own footer; opencode uses the `/toolu-status` slash command).
 
 | Group | Plugin | Version | What it does |
 |--------|--------|:-------:|--------------|
@@ -172,6 +172,7 @@ Ten plugins, one marketplace. Install the core alone, or add the domain plugins.
 | Workflow | **`code-review`** | `0.1.0` | `code-review:review` — pre-push review mirroring the CI bot's checklist (correctness, security, perf, coverage, doc accuracy); writes the `push-review` state so the gate passes. Standalone. |
 | Workflow | **`pr-babysit`** | `0.1.0` | `/pr-babysit:babysit` — cron-driven PR babysitter that fetches review comments + the CI review-bot verdict, triages, fixes, and chases findings to zero until CI is green. |
 | UI | **`statusline`** | `0.3.1` | Optional gate-aware statusline — `model \| effort \| ctx \| wk \| gate \| folder \| branch \| mem \| caveman`, wired via a stable symlink (`/statusline:setup` to enable). Claude Code only. Standalone. |
+| Design | **`design`** | `1.21.0` | **UI/UX design review** for web & mobile over a cited, stack-aware knowledge base (WCAG 2.2, Material 3, Apple HIG, NN/g) — adds the `design-review` skill plus a `detect-stack.sh` detector. Standalone, no dependencies. |
 
 Beyond the plugins, the core (`toolu`) also ships:
 
@@ -254,6 +255,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     ├── comemory/               # agent-memory skill + scope-enforcement & memory-count registry modules
     ├── context7/               # context7 skill + Context7 REST wrapper
     ├── exa-search/             # exa-search skill + Exa REST wrapper
+    ├── design/                 # design-review skill + detect-stack.sh + cited references/ knowledge base
     ├── rust-quality/           # Rust PostToolUse quality fragments, assembled at SessionStart
     ├── ts-quality/             # TypeScript PostToolUse quality fragments, assembled at SessionStart
     ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook
