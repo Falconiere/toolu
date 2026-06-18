@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.0.0](https://github.com/Falconiere/toolu/compare/v1.23.0...v2.0.0) (2026-06-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **design:** the design-review skill is renamed to design and is now invoked as /design <command> [target].
+
+### Features
+
+* **debug:** add break-glass debug skill with evidence helpers ([7f3be16](https://github.com/Falconiere/toolu/commit/7f3be166acaf4c859eada7dbea3fd70245b8d855))
+* **design:** replace review-only skill with /design command dispatcher ([d2c227e](https://github.com/Falconiere/toolu/commit/d2c227ed9c34cd00b40e4d0a3dd7790c7004b98d))
+
+
+### Bug Fixes
+
+* bash 3.2 portability (mapfile) and test env isolation ([80d0df9](https://github.com/Falconiere/toolu/commit/80d0df999c6066bbab75ec479d69e75ba5207a1a))
+
 ## [1.23.0](https://github.com/Falconiere/toolu/compare/v1.22.0...v1.23.0) (2026-06-18)
 
 
