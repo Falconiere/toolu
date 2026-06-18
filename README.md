@@ -179,7 +179,18 @@ Beyond the plugins, the core (`toolu`) also ships:
 - **docs-sync backstop** — on `git push`, an **advisory** (never a block) when the branch diff changes code but no documentation surface (README, `docs/` guides, `SKILL.md` triggers) — a nudge to keep user-facing docs in sync with behavior. Silenced by a diff-`sha`-keyed attestation; surfaces are tunable via `docsSync.*` ([config](docs/config.md#docs-sync-surfaces-docssync)). Pairs with the "Docs in sync" convention the workflow skills enforce.
 - **Slash commands** — `/commit` and `/review-and-commit`.
 - **`deep-explore` agent** — structural codebase exploration via ast-grep.
+- **Execution dashboard** — an optional, read-only realtime kanban over the plan-ledger (see below).
 - **Caveman mode** — ultra-compressed, token-frugal output (via the `caveman` dependency).
+
+### Execution dashboard
+
+An optional, read-only **realtime kanban** over the plan-ledger — the ledger stays the single source of truth; the dashboard only watches it. It is **off by default** and nothing auto-starts it. Launch it from the repo root:
+
+```bash
+bun run plugins/toolu/dashboard/index.ts [--open]
+```
+
+It binds an ephemeral localhost port, prints the URL, and (with `--open`) opens your browser. Cards live in four columns driven by ledger status — **To Do** (pending) · **Running** (pulsing) · **Blocked** (red) · **Done** (green; amber + ↻ when a step's diff has gone stale) — and animate between columns as `plan-ledger.sh run` writes each step. It is **purely read-only**: no route mutates the ledger, so it can be closed or crash with zero effect on execution.
 
 ## Workflow skills
 

@@ -23,7 +23,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test:ts": "bun test pi/extensions opencode/extensions",
+    "test:ts": "bun test pi/extensions opencode/extensions plugins/toolu/dashboard",
     "test:shell": "bats -r plugins tooling",
     "test": "bun run test:shell && bun run test:ts && bun run typecheck"
   },

@@ -15,7 +15,7 @@ A reviewed plan exists (`plan` + `plan-review` ran for non-trivial work). If the
 
 ## Loop (per step)
 
-For ledger-tracked work, read progress with `bash plugins/toolu/hooks/lib/plan-ledger.sh status` to find the next non-fresh-green step, do the loop below for it, then record it with `bash plugins/toolu/hooks/lib/plan-ledger.sh run --step <id>` — the script stamps green from mechanical truth, you cannot claim it. On plan deviation, edit the steps block and note it under `## Deviations`, then re-run. Before push, do a final full `bash plugins/toolu/hooks/lib/plan-ledger.sh run` so every step is fresh-green against the final code.
+For ledger-tracked work, **before the first step** run `bash plugins/toolu/hooks/lib/plan-ledger.sh preflight` — it refuses to start unless the plan is `Approved` and its declared spec (if any) is `Approved`. Then read progress with `bash plugins/toolu/hooks/lib/plan-ledger.sh status` to find the next non-fresh-green step, do the loop below for it, then record it with `bash plugins/toolu/hooks/lib/plan-ledger.sh run <plan_doc> --step <id>` — the engine requires the plan-doc positional arg, and stamps green from mechanical truth, you cannot claim it. On plan deviation, edit the steps block and note it under `## Deviations`, then re-run. Re-run any stale step (a `green` step whose diff has since changed) before calling the plan done. Before push, do a final full `bash plugins/toolu/hooks/lib/plan-ledger.sh run <plan_doc>` so every step is fresh-green against the final code.
 
 1. **Take one step** from the plan — the smallest shippable unit.
 2. **Write tests with the code** (see `test`) — real data, colocated. For a bugfix, reproduce first.

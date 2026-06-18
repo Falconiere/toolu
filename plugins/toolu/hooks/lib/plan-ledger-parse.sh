@@ -45,6 +45,28 @@ pl_parse_steps() {
   jq -c . <<< "$block"
 }
 
+# pl_doc_field DOC FIELD
+# Print the trimmed value of an inline-bold `**<FIELD>:**` from a packed doc
+# header line, or empty string if the field (or doc) is absent. Never errors:
+# a missing field is a valid "spec-less / unstamped" signal, not a failure.
+#
+# Header lines pack fields together, e.g.:
+#   **Date:** 2026-06-17   **Status:** Draft   **Spec:** path.md   **Topic:** …
+# Extraction (first matching line wins): strip up to and including `**FIELD:**`,
+# then cut from the next `**Word:**` bold key (preceded by whitespace) or EOL,
+# then trim surrounding whitespace. A trailing (last-on-line) field has no
+# following bold key, so it runs to EOL. The boundary requires ≥1 space before
+# the next `**…:**` so a value that happens to contain `**` mid-word is not
+# truncated, and both the 3-space house style and a 1-space packing are handled.
+pl_doc_field() {
+  local doc="$1" field="$2"
+  [ -n "$doc" ] && [ -f "$doc" ] || return 0
+  [ -n "$field" ] || return 0
+  # First line containing the bold key, then sed the value out of it.
+  grep -m1 -F "**${field}:**" "$doc" 2>/dev/null \
+    | sed -E "s/.*\\*\\*${field}:\\*\\*[[:space:]]*//; s/[[:space:]]+\\*\\*[^*]+:\\*\\*.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//"
+}
+
 # pl_read_ledger STATE_FILE
 # Print the ledger json to stdout. Empty or absent file -> non-zero, no output.
 pl_read_ledger() {

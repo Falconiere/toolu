@@ -15,6 +15,7 @@ A design exists — ideally a reviewed spec (`spec` + `spec-review` ran for larg
 
 ## Plan shape (keep it tight)
 
+0. **Header** — a line under the title, mirroring the spec header (inline bold, NOT YAML frontmatter): `**Date:** <YYYY-MM-DD>   **Status:** Draft   **Spec:** <docs/toolu/specs/<file>.md | none>   **Topic:** <one line>`. `**Spec:**` is `none` (or the line omitted) for spec-less work. `plan-review` stamps `**Status:** Approved` / `**Status:** Needs changes`; `execution`'s preflight gate reads both fields.
 1. **Context** — why this change, the problem it solves, intended outcome. 2–4 sentences.
 2. **Approach** — the chosen design only, not the alternatives. Name the reused functions/utilities with their paths.
 3. **Steps / workstreams** — ordered, each independently verifiable. For a pattern repeated across many files, describe it once and list a few representative paths — don't enumerate every file.
