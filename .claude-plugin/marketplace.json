@@ -151,6 +151,15 @@
       "dependencies": [
         { "name": "toolu", "marketplace": "toolu" }
       ]
+    },
+    {
+      "name": "design",
+      "source": "./plugins/design",
+      "description": "Web & mobile UI/UX design review over a cited, stack-aware knowledge base (skill + bash). Standalone, no dependencies.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["design", "ui", "ux", "accessibility", "skills"],
+      "license": "MIT"
     }
   ]
 }

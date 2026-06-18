@@ -1,0 +1,20 @@
+{
+  "name": "design",
+  "version": "1.21.0",
+  "description": "Web & mobile UI/UX design review over a cited, stack-aware knowledge base (skill + bash detector). Standalone, no dependencies.",
+  "author": {
+    "name": "Falconiere Barbosa",
+    "email": "hello@falconiere.io"
+  },
+  "homepage": "https://github.com/falconiere/toolu",
+  "repository": "https://github.com/falconiere/toolu.git",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "design",
+    "ui",
+    "ux",
+    "accessibility",
+    "skills"
+  ]
+}

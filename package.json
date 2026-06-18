@@ -38,7 +38,8 @@
       "./plugins/code-review/skills",
       "./plugins/context7/skills",
       "./plugins/exa-search/skills",
-      "./plugins/jira/skills"
+      "./plugins/jira/skills",
+      "./plugins/design/skills"
     ],
     "prompts": [
       "./plugins/toolu/commands",
