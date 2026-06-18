@@ -1,6 +1,6 @@
 {
-  "skill": "design-review",
-  "method": "Held-out trigger eval. A judge sees ONLY the skill's frontmatter `description` (the real selection signal) plus the prompt, and predicts whether design-review should fire. Predictions are scored against the `expected` gold labels below → precision/recall. LLM-judged, so results.json is a snapshot (re-runs may vary slightly).",
+  "skill": "design",
+  "method": "Held-out trigger eval. A judge sees ONLY the skill's frontmatter `description` (the real selection signal) plus the prompt, and predicts whether the `design` skill should fire. Predictions are scored against the `expected` gold labels below → precision/recall. The scope is now build + refine + enhance + fix + evaluate (not review-only), so UI-generation prompts (n3, n8) are positives. LLM-judged, so results.json is a snapshot (re-runs may vary slightly).",
   "cases": [
     {"id": "p1",  "prompt": "review this login screen for design quality", "expected": true},
     {"id": "p2",  "prompt": "is this signup form accessible?", "expected": true},
@@ -16,14 +16,25 @@
     {"id": "p12", "prompt": "give me a design critique of this card layout", "expected": true},
     {"id": "p13", "prompt": "does this feel native on Android / Material?", "expected": true},
     {"id": "p14", "prompt": "review this component's design and call out the problems", "expected": true},
+    {"id": "n3",  "prompt": "generate a login screen in React", "expected": true},
+    {"id": "n8",  "prompt": "build me a pricing page with Tailwind", "expected": true},
+    {"id": "b1",  "prompt": "redesign this dashboard, it feels generic", "expected": true},
+    {"id": "b2",  "prompt": "make this landing page bolder and more striking", "expected": true},
+    {"id": "b3",  "prompt": "this hero section is too loud, tone it down", "expected": true},
+    {"id": "b4",  "prompt": "add some motion and micro-interactions to this modal", "expected": true},
+    {"id": "b5",  "prompt": "this settings page is all gray, add some color", "expected": true},
+    {"id": "b6",  "prompt": "fix the typography hierarchy on this page", "expected": true},
+    {"id": "b7",  "prompt": "rewrite these form error messages to be clearer", "expected": true},
+    {"id": "b8",  "prompt": "make this component production-ready with proper empty and error states", "expected": true},
+    {"id": "b9",  "prompt": "set up the design context (PRODUCT.md) for this project", "expected": true},
+    {"id": "b10", "prompt": "the spacing and rhythm on this grid feels off, fix it", "expected": true},
     {"id": "n1",  "prompt": "review this PR for bugs and logic errors", "expected": false},
     {"id": "n2",  "prompt": "fix the failing test in auth.test.ts", "expected": false},
-    {"id": "n3",  "prompt": "generate a login screen in React", "expected": false},
     {"id": "n4",  "prompt": "refactor this function to reduce cyclomatic complexity", "expected": false},
     {"id": "n5",  "prompt": "why is this API endpoint returning a 500?", "expected": false},
     {"id": "n6",  "prompt": "write a commit message for these staged changes", "expected": false},
     {"id": "n7",  "prompt": "search the codebase for where we call fetchUser()", "expected": false},
-    {"id": "n8",  "prompt": "build me a pricing page with Tailwind", "expected": false},
-    {"id": "n9",  "prompt": "optimize this SQL query for performance", "expected": false}
+    {"id": "n9",  "prompt": "optimize this SQL query for performance", "expected": false},
+    {"id": "n10", "prompt": "add a Redis caching layer to the user service", "expected": false}
   ]
 }

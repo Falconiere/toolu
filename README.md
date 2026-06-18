@@ -172,7 +172,7 @@ Eleven plugins, one marketplace. Install the core alone, or add the domain plugi
 | Workflow | **\`toolu-review\`** | \`0.1.0\` | \`toolu-review:review\` — pre-push review mirroring the CI bot's checklist (correctness, security, perf, coverage, doc accuracy); writes the \`push-review\` state so the gate passes. Standalone. |
 | Workflow | **`pr-babysit`** | `0.1.0` | `/pr-babysit:babysit` — cron-driven PR babysitter that fetches review comments + the CI review-bot verdict, triages, fixes, and chases findings to zero until CI is green. |
 | UI | **`statusline`** | `0.3.1` | Optional gate-aware statusline — `model \| effort \| ctx \| wk \| gate \| folder \| branch \| mem \| caveman`, wired via a stable symlink (`/statusline:setup` to enable). Claude Code only. Standalone. |
-| Design | **`design`** | `1.21.0` | **UI/UX design review** for web & mobile over a cited, stack-aware knowledge base (WCAG 2.2, Material 3, Apple HIG, NN/g) — adds the `design-review` skill plus a `detect-stack.sh` detector. Standalone, no dependencies. |
+| Design | **`design`** | `1.21.0` | **UI/UX design dispatcher** for web & mobile — `/design <command> [target]` to build, refine, evaluate, or fix UI over a cited, stack-aware knowledge base (WCAG 2.2, Material 3, Apple HIG, NN/g). One skill, 23-command catalog (22 active across build/refine/enhance/evaluate/fix; `live` deferred), a `detect-stack.sh` detector, bans + AI-slop test. Clean-room, inspired by `pbakaus/impeccable`. Standalone, no dependencies. |
 
 Beyond the plugins, the core (`toolu`) also ships:
 
@@ -266,7 +266,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     ├── comemory/               # agent-memory skill + scope-enforcement & memory-count registry modules
     ├── context7/               # context7 skill + Context7 REST wrapper
     ├── exa-search/             # exa-search skill + Exa REST wrapper
-    ├── design/                 # design-review skill + detect-stack.sh + cited references/ knowledge base
+    ├── design/                 # /design dispatcher skill (23-command catalog) + detect-stack.sh + cited references/ knowledge base (commands/, registers/, bans, slop-test)
     ├── rust-quality/           # Rust PostToolUse quality fragments, assembled at SessionStart
     ├── ts-quality/             # TypeScript PostToolUse quality fragments, assembled at SessionStart
     ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook
