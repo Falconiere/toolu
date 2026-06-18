@@ -1,0 +1,24 @@
+{
+  "skill": "debug",
+  "method": "Held-out trigger eval. A judge sees ONLY the skill's frontmatter `description` (the real selection signal) plus the prompt, and predicts whether the debug skill should fire. Predictions are scored against the `expected` gold labels below → precision/recall. Bar: 100% positive recall, 0 false-positives. LLM-judged, so a results snapshot may vary slightly between runs.",
+  "cases": [
+    {"id": "p1",  "prompt": "why does this test keep failing?", "expected": true},
+    {"id": "p2",  "prompt": "the app crashes on startup, help me figure out why", "expected": true},
+    {"id": "p3",  "prompt": "this test is flaky — sometimes passes, sometimes fails", "expected": true},
+    {"id": "p4",  "prompt": "debug this stack trace for me", "expected": true},
+    {"id": "p5",  "prompt": "find the root cause of this null pointer exception", "expected": true},
+    {"id": "p6",  "prompt": "it worked before my last commit, now it's broken", "expected": true},
+    {"id": "p7",  "prompt": "the API returns a 500, track down why", "expected": true},
+    {"id": "p8",  "prompt": "wrong output: expected 5 but got -1, what's going on?", "expected": true},
+    {"id": "p9",  "prompt": "there's a memory leak somewhere, help me find it", "expected": true},
+    {"id": "p10", "prompt": "this function returns undefined and I can't tell why", "expected": true},
+    {"id": "p11", "prompt": "production threw this error overnight, what's the root cause?", "expected": true},
+    {"id": "p12", "prompt": "my cargo test panics with index out of bounds", "expected": true},
+    {"id": "n1",  "prompt": "add a dark mode toggle to the settings page", "expected": false},
+    {"id": "n2",  "prompt": "review this login screen for design quality", "expected": false},
+    {"id": "n3",  "prompt": "write tests for the new payment module", "expected": false},
+    {"id": "n4",  "prompt": "rename the getUser function to fetchUser across the repo", "expected": false},
+    {"id": "n5",  "prompt": "what's the latest version of the Anthropic SDK?", "expected": false},
+    {"id": "n6",  "prompt": "summarize what this module does", "expected": false}
+  ]
+}

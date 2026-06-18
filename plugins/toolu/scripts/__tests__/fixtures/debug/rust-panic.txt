@@ -1,0 +1,24 @@
+   Compiling panicker v0.1.0 (/private/var/folders/l8/jkg_7f4x3p9_nd9zqmwsz0ph0000gn/T/tmp.S8jppgpefp/panic)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running `target/debug/panicker`
+
+thread 'main' (254274031) panicked at src/main.rs:1:36:
+index out of bounds: the len is 3 but the index is 10
+stack backtrace:
+   0: __rustc::rust_begin_unwind
+             at /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/panicking.rs:689:5
+   1: core::panicking::panic_fmt
+             at /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/panicking.rs:80:14
+   2: core::panicking::panic_bounds_check
+             at /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/panicking.rs:271:5
+   3: panicker::level_three
+             at ./src/main.rs:1:36
+   4: panicker::level_two
+             at ./src/main.rs:2:34
+   5: panicker::level_one
+             at ./src/main.rs:3:48
+   6: panicker::main
+             at ./src/main.rs:4:28
+   7: core::ops::function::FnOnce::call_once
+             at /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ops/function.rs:250:5
+note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.

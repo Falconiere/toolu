@@ -1,0 +1,3000 @@
+       Fresh panicker v0.1.0 (/private/var/folders/l8/jkg_7f4x3p9_nd9zqmwsz0ph0000gn/T/tmp.S8jppgpefp/panic)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.00s
+       Fresh panicker v0.1.0 (/private/var/folders/l8/jkg_7f4x3p9_nd9zqmwsz0ph0000gn/T/tmp.S8jppgpefp/panic)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.00s
+bun add v1.3.14 (0d9b296a)
+Enqueue package manifest for download: lodash
+Resolving dependencies
+> HTTP/1.1 GET https://registry.npmjs.org/lodash
+> Accept: application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*
+> Connection: keep-alive
+> User-Agent: Bun/1.3.14
+> Host: registry.npmjs.org
+> Accept-Encoding: gzip, deflate, br, zstd
+< 200 OK
+< Date: Thu, 18 Jun 2026 17:46:24 GMT
+< Content-Type: application/vnd.npm.install-v1+json
+< Transfer-Encoding: chunked
+< Connection: keep-alive
+< set-cookie: _cfuvid=QRKZsSfEWITQai5sLRluDVZYfqOl0bi1hBGE.jcSyKY-1781804784.6316142-1.0.1.1-dgHL2tn19DfKb6JhG2wcVS8BAjJ70NUzStD04jcB_m0; HttpOnly; SameSite=None; Secure; Path=/; Domain=npmjs.org
+< CF-Ray: a0dc1cfffb25b2b4-GIG
+< CF-Cache-Status: HIT
+< Access-Control-Allow-Origin: *
+< Age: 13
+< Cache-Control: public, max-age=300
+< Vary: accept-encoding, accept
+< Last-Modified: Thu, 18 Jun 2026 01:25:47 GMT
+< Server: cloudflare
+< ETag: W/"5b4825fa248bb1dd179847e36b4db6d8"
+< Content-Encoding: br
+
+[PackageManager] waiting for 1 tasks
+    [101.67ms]
+Downloaded lodash versions
+[PackageManager] waiting for 1 tasks
+[PackageManager] waiting for 1 tasks
+   - "lodash": "" - lodash@4.18.1
+Resolved, downloaded and extracted [2]
+Clean lockfile: 7 packages - 7 packages in 19.2us
+Saved lockfile
+
++ lodash@4.18.1
+
+1 package installed [124.00ms]
+commit f11766342ec88c5de3f038d0d84e9a3efa789167
+Author: Falconiere Barbosa <falconieer@gmail.com>
+Date:   Thu Jun 18 13:04:36 2026 -0300
+
+    refactor(settings): rename settings variables to TOOLU_* convention
+    
+    - detect_settings_dir() → toolu_settings_dir()
+    - MY_CLAUDE_SETTINGS_DIR → TOOLU_SETTINGS_DIR (env var)
+    - SETTINGS_DIR → TOOLU_SETTINGS_DIR (local var in modules)
+    - Updated all call sites, tests, and docs
+
+diff --git a/plugins/rust-quality/hooks/concerns/00-preamble.sh b/plugins/rust-quality/hooks/concerns/00-preamble.sh
+index ffcafbe..9401381 100644
+--- a/plugins/rust-quality/hooks/concerns/00-preamble.sh
++++ b/plugins/rust-quality/hooks/concerns/00-preamble.sh
+@@ -2,7 +2,7 @@
+ # Post-tool check: Rust quality rules.
+ # Project-agnostic: no-op outside Rust projects or when cargo is missing.
+ # Unsafe-block exemptions for FFI crates come from
+-# $SETTINGS_DIR/rust-unsafe-exemptions.txt.
++# $TOOLU_SETTINGS_DIR/rust-unsafe-exemptions.txt.
+ #
+ # Inputs (from parent dispatcher post-tools/mod.sh, via `export`):
+ #   $tool_name     - name of the tool being invoked
+@@ -58,8 +58,8 @@ command -v toolu_load_config >/dev/null 2>&1 && toolu_load_config 2>/dev/null ||
+ command -v cargo >/dev/null 2>&1 || exit 0
+ command -v jq    >/dev/null 2>&1 || exit 0
+ 
+-SETTINGS_DIR=$(detect_settings_dir)
+-EXEMPTIONS_FILE="$SETTINGS_DIR/rust-unsafe-exemptions.txt"
++TOOLU_SETTINGS_DIR=$(toolu_settings_dir)
++EXEMPTIONS_FILE="$TOOLU_SETTINGS_DIR/rust-unsafe-exemptions.txt"
+ 
+ # read_list is sourced from lib/detect.sh.
+ 
+diff --git a/plugins/toolu/hooks/lib/detect.sh b/plugins/toolu/hooks/lib/detect.sh
+index b46ffb4..7404a0d 100755
+--- a/plugins/toolu/hooks/lib/detect.sh
++++ b/plugins/toolu/hooks/lib/detect.sh
+@@ -165,10 +165,10 @@ detect_base_branch() {
+   fi
+ }
+ 
+-# Print the data dir for settings/ lookups. Override with $MY_CLAUDE_SETTINGS_DIR.
+-detect_settings_dir() {
+-  if [ -n "${MY_CLAUDE_SETTINGS_DIR:-}" ]; then
+-    echo "$MY_CLAUDE_SETTINGS_DIR"
++# Print the data dir for settings/ lookups. Override with $TOOLU_SETTINGS_DIR.
++toolu_settings_dir() {
++  if [ -n "${TOOLU_SETTINGS_DIR:-}" ]; then
++    echo "$TOOLU_SETTINGS_DIR"
+   elif [ -d "${HOME}/.claude/settings" ]; then
+     echo "${HOME}/.claude/settings"
+   else
+diff --git a/plugins/toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats b/plugins/toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats
+index 377c223..b2ce972 100644
+--- a/plugins/toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats
++++ b/plugins/toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats
+@@ -5,18 +5,18 @@ HOOK="${BATS_TEST_DIRNAME}/../bash-commands.sh"
+ 
+ setup() {
+   TMP=$(mktemp -d)
+-  export MY_CLAUDE_SETTINGS_DIR="$TMP/settings"
+-  mkdir -p "$MY_CLAUDE_SETTINGS_DIR"
++  export TOOLU_SETTINGS_DIR="$TMP/settings"
++  mkdir -p "$TOOLU_SETTINGS_DIR"
+ }
+ 
+ teardown() {
+-  unset MY_CLAUDE_SETTINGS_DIR
++  unset TOOLU_SETTINGS_DIR
+   [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"
+ }
+ 
+ write_lists() {
+-  printf '%s\n' "$1" > "$MY_CLAUDE_SETTINGS_DIR/bash-allowlist.txt"
+-  printf '%s\n' "$2" > "$MY_CLAUDE_SETTINGS_DIR/bash-denylist.txt"
++  printf '%s\n' "$1" > "$TOOLU_SETTINGS_DIR/bash-allowlist.txt"
++  printf '%s\n' "$2" > "$TOOLU_SETTINGS_DIR/bash-denylist.txt"
+ }
+ 
+ run_hook() {
+@@ -57,7 +57,7 @@ run_hook() {
+ 
+ @test "bash-commands: no-op when data files are missing" {
+   # Use a settings dir with no lists at all.
+-  rm -f "$MY_CLAUDE_SETTINGS_DIR/bash-allowlist.txt" "$MY_CLAUDE_SETTINGS_DIR/bash-denylist.txt"
++  rm -f "$TOOLU_SETTINGS_DIR/bash-allowlist.txt" "$TOOLU_SETTINGS_DIR/bash-denylist.txt"
+   run_hook "node -e 'rm -rf /'"
+   [ "$status" -eq 0 ]
+   [ -z "$output" ]
+diff --git a/plugins/toolu/hooks/pre-tools/modules/__tests__/code-edit-rules.bats b/plugins/toolu/hooks/pre-tools/modules/__tests__/code-edit-rules.bats
+index f13a9d9..b4433e9 100644
+--- a/plugins/toolu/hooks/pre-tools/modules/__tests__/code-edit-rules.bats
++++ b/plugins/toolu/hooks/pre-tools/modules/__tests__/code-edit-rules.bats
+@@ -5,12 +5,12 @@ HOOK="${BATS_TEST_DIRNAME}/../code-edit-rules.sh"
+ 
+ setup() {
+   TMP=$(mktemp -d)
+-  export MY_CLAUDE_SETTINGS_DIR="$TMP/settings"
+-  mkdir -p "$MY_CLAUDE_SETTINGS_DIR"
++  export TOOLU_SETTINGS_DIR="$TMP/settings"
++  mkdir -p "$TOOLU_SETTINGS_DIR"
+ }
+ 
+ teardown() {
+-  unset MY_CLAUDE_SETTINGS_DIR
++  unset TOOLU_SETTINGS_DIR
+   [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"
+ }
+ 
+@@ -32,21 +32,21 @@ run_hook_multiedit() {
+ }
+ 
+ @test "code-edit-rules: empty rules → no-op" {
+-  printf '%s\n' '{"rules":[]}' > "$MY_CLAUDE_SETTINGS_DIR/code-edit-rules.json"
++  printf '%s\n' '{"rules":[]}' > "$TOOLU_SETTINGS_DIR/code-edit-rules.json"
+   run_hook "/abs/src/foo.rs"
+   [ "$status" -eq 0 ]
+   [ -z "$output" ]
+ }
+ 
+ @test "code-edit-rules: missing file → no-op" {
+-  # No code-edit-rules.json in MY_CLAUDE_SETTINGS_DIR.
++  # No code-edit-rules.json in TOOLU_SETTINGS_DIR.
+   run_hook "/abs/src/foo.rs"
+   [ "$status" -eq 0 ]
+   [ -z "$output" ]
+ }
+ 
+ @test "code-edit-rules: matching glob surfaces docs" {
+-  cat > "$MY_CLAUDE_SETTINGS_DIR/code-edit-rules.json" <<'JSON'
++  cat > "$TOOLU_SETTINGS_DIR/code-edit-rules.json" <<'JSON'
+ { "rules": [ { "match": "*.rs", "docs": ["rust.md"] } ] }
+ JSON
+   run_hook "/abs/src/foo.rs"
+@@ -57,7 +57,7 @@ JSON
+ # Regression: MultiEdit was skipped (tool != Edit/Write), dropping rule
+ # reminders. MultiEdit on a code file must emit the same reminder as Edit.
+ @test "code-edit-rules: MultiEdit on .rs file surfaces docs" {
+-  cat > "$MY_CLAUDE_SETTINGS_DIR/code-edit-rules.json" <<'JSON'
++  cat > "$TOOLU_SETTINGS_DIR/code-edit-rules.json" <<'JSON'
+ { "rules": [ { "match": "*.rs", "docs": ["Rust: zero compiler/clippy warnings"] } ] }
+ JSON
+   run_hook_multiedit "/abs/src/foo.rs"
+@@ -68,7 +68,7 @@ JSON
+ # Regression: absolute path under a git repo must be normalized to repo-relative
+ # so repo-relative match globs like "src/**/*.rs" fire.
+ @test "code-edit-rules: ABSOLUTE path under repo normalizes to repo-relative for glob match" {
+-  cat > "$MY_CLAUDE_SETTINGS_DIR/code-edit-rules.json" <<'JSON'
++  cat > "$TOOLU_SETTINGS_DIR/code-edit-rules.json" <<'JSON'
+ { "rules": [ { "match": "src/**/*.rs", "docs": ["rust.md"] } ] }
+ JSON
+   # Resolve symlinks so the path we feed matches what `git rev-parse --show-toplevel`
+diff --git a/plugins/toolu/hooks/pre-tools/modules/__tests__/commit-gate.bats b/plugins/toolu/hooks/pre-tools/modules/__tests__/commit-gate.bats
+index 982691e..862d044 100644
+--- a/plugins/toolu/hooks/pre-tools/modules/__tests__/commit-gate.bats
++++ b/plugins/toolu/hooks/pre-tools/modules/__tests__/commit-gate.bats
+@@ -5,14 +5,14 @@ HOOK="${BATS_TEST_DIRNAME}/../commit-gate.sh"
+ 
+ setup() {
+   TMP=$(mktemp -d)
+-  export MY_CLAUDE_SETTINGS_DIR="$TMP/settings"
+-  mkdir -p "$MY_CLAUDE_SETTINGS_DIR"
++  export TOOLU_SETTINGS_DIR="$TMP/settings"
++  mkdir -p "$TOOLU_SETTINGS_DIR"
+   printf '%s\n' "feat" "fix" "chore" "docs" "refactor" "test" \
+-    > "$MY_CLAUDE_SETTINGS_DIR/commit-prefixes.txt"
++    > "$TOOLU_SETTINGS_DIR/commit-prefixes.txt"
+ }
+ 
+ teardown() {
+-  unset MY_CLAUDE_SETTINGS_DIR
++  unset TOOLU_SETTINGS_DIR
+   [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"
+ }
+ 
+diff --git a/plugins/toolu/hooks/pre-tools/modules/__tests__/mcp-blocker.bats b/plugins/toolu/hooks/pre-tools/modules/__tests__/mcp-blocker.bats
+index 22ae727..9cc11b8 100644
+--- a/plugins/toolu/hooks/pre-tools/modules/__tests__/mcp-blocker.bats
++++ b/plugins/toolu/hooks/pre-tools/modules/__tests__/mcp-blocker.bats
+@@ -5,9 +5,9 @@ HOOK="${BATS_TEST_DIRNAME}/../mcp-blocker.sh"
+ 
+ setup() {
+   TMP=$(mktemp -d)
+-  export MY_CLAUDE_SETTINGS_DIR="$TMP/settings"
+-  mkdir -p "$MY_CLAUDE_SETTINGS_DIR"
+-  printf '%s\n' "exampleblocked" > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
++  export TOOLU_SETTINGS_DIR="$TMP/settings"
++  mkdir -p "$TOOLU_SETTINGS_DIR"
++  printf '%s\n' "exampleblocked" > "$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
+   # TMPHOME is created lazily by tests that need a per-test $HOME sandbox;
+   # registering it here lets teardown clean it up even if the test aborts
+   # mid-assertion.
+@@ -15,7 +15,7 @@ setup() {
+ }
+ 
+ teardown() {
+-  unset MY_CLAUDE_SETTINGS_DIR
++  unset TOOLU_SETTINGS_DIR
+   if [ -n "${TMP:-}" ] && [ -d "$TMP" ]; then
+     rm -rf "$TMP"
+   fi
+@@ -40,21 +40,21 @@ teardown() {
+ # original code did exact equality. Prefix entries like `claude_ai_` silently
+ # never matched.
+ @test "mcp-blocker: prefix entry 'claude_ai_' blocks 'claude_ai_Canva'" {
+-  printf '%s\n' "claude_ai_" > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
++  printf '%s\n' "claude_ai_" > "$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
+   tool_name=mcp__claude_ai_Canva__search run bash "$HOOK"
+   [ "$status" -eq 0 ]
+   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+ }
+ 
+ @test "mcp-blocker: prefix entry 'claude_ai_' does NOT block 'friend_ai_Canva'" {
+-  printf '%s\n' "claude_ai_" > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
++  printf '%s\n' "claude_ai_" > "$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
+   tool_name=mcp__friend_ai_Canva__search run bash "$HOOK"
+   [ "$status" -eq 0 ]
+   [ -z "$output" ]
+ }
+ 
+ @test "mcp-blocker: exact server name still blocks itself" {
+-  printf '%s\n' "exampleblocked" > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
++  printf '%s\n' "exampleblocked" > "$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
+   tool_name=mcp__exampleblocked__save run bash "$HOOK"
+   [ "$status" -eq 0 ]
+   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+@@ -129,7 +129,7 @@ JSON
+ 
+ @test "mcp-blocker: an entry's '-> redirect' hint is appended to the deny reason" {
+   printf '%s\n' "someserver -> use the jira skill instead" \
+-    > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
++    > "$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
+   tool_name=mcp__someserver__do run bash "$HOOK"
+   [ "$status" -eq 0 ]
+   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+@@ -140,7 +140,7 @@ JSON
+   # read_list strips comment lines, so a documented-but-commented sample like
+   # the Atlassian example must NOT deny — Atlassian stays callable (nudge-only).
+   printf '%s\n' "# claude_ai_Atlassian -> use the jira skill instead" \
+-    > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
++    > "$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
+   tool_name=mcp__claude_ai_Atlassian__createIssue run bash "$HOOK"
+   [ "$status" -eq 0 ]
+   [ -z "$output" ]
+diff --git a/plugins/toolu/hooks/pre-tools/modules/__tests__/protected-files.bats b/plugins/toolu/hooks/pre-tools/modules/__tests__/protected-files.bats
+index fe445e7..ed8bbd3 100644
+--- a/plugins/toolu/hooks/pre-tools/modules/__tests__/protected-files.bats
++++ b/plugins/toolu/hooks/pre-tools/modules/__tests__/protected-files.bats
+@@ -5,9 +5,9 @@ HOOK="${BATS_TEST_DIRNAME}/../protected-files.sh"
+ 
+ setup() {
+   TMP=$(mktemp -d)
+-  export MY_CLAUDE_SETTINGS_DIR="$TMP/settings"
+-  mkdir -p "$MY_CLAUDE_SETTINGS_DIR"
+-  cat > "$MY_CLAUDE_SETTINGS_DIR/protected-files.txt" <<'TXT'
++  export TOOLU_SETTINGS_DIR="$TMP/settings"
++  mkdir -p "$TOOLU_SETTINGS_DIR"
++  cat > "$TOOLU_SETTINGS_DIR/protected-files.txt" <<'TXT'
+ .env
+ .env.*
+ **/secrets/**
+@@ -17,7 +17,7 @@ TXT
+ }
+ 
+ teardown() {
+-  unset MY_CLAUDE_SETTINGS_DIR
++  unset TOOLU_SETTINGS_DIR
+   [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"
+ }
+ 
+diff --git a/plugins/toolu/hooks/pre-tools/modules/bash-commands.sh b/plugins/toolu/hooks/pre-tools/modules/bash-commands.sh
+index 9644da0..a1d6dae 100755
+--- a/plugins/toolu/hooks/pre-tools/modules/bash-commands.sh
++++ b/plugins/toolu/hooks/pre-tools/modules/bash-commands.sh
+@@ -1,6 +1,6 @@
+ #!/usr/bin/env bash
+ # Pre-tool check: Bash/Shell command validation
+-# Data-driven: loads allow/deny rules from $SETTINGS_DIR/bash-{allow,deny}list.txt.
++# Data-driven: loads allow/deny rules from $TOOLU_SETTINGS_DIR/bash-{allow,deny}list.txt.
+ # Argv-aware: tokenizes the command and matches "<bin> <flag>" deny rules so
+ # substring evasion is harder (e.g. `node -e "evil"` is rejected even if `node`
+ # alone is allowed).
+@@ -19,7 +19,7 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
+ [[ "$tool_name" != "Bash" && "$tool_name" != "Shell" ]] && exit 0
+ command -v jq >/dev/null 2>&1 || exit 0
+ 
+-SETTINGS_DIR=$(detect_settings_dir)
++TOOLU_SETTINGS_DIR=$(toolu_settings_dir)
+ 
+ # read_list + strip_heredocs are sourced from lib/detect.sh.
+ 
+@@ -136,8 +136,8 @@ matches_allow() {
+ bash_commands_decide() {
+   local cmd="$1"
+   local allowlist denylist hit
+-  allowlist=$(read_list "$SETTINGS_DIR/bash-allowlist.txt")
+-  denylist=$(read_list "$SETTINGS_DIR/bash-denylist.txt")
++  allowlist=$(read_list "$TOOLU_SETTINGS_DIR/bash-allowlist.txt")
++  denylist=$(read_list "$TOOLU_SETTINGS_DIR/bash-denylist.txt")
+ 
+   # Strip heredoc bodies so we only check actual commands, not prose in commit messages.
+   cmd=$(printf '%s\n' "$cmd" | strip_heredocs)
+diff --git a/plugins/toolu/hooks/pre-tools/modules/code-edit-rules.sh b/plugins/toolu/hooks/pre-tools/modules/code-edit-rules.sh
+index 9285629..e556aff 100755
+--- a/plugins/toolu/hooks/pre-tools/modules/code-edit-rules.sh
++++ b/plugins/toolu/hooks/pre-tools/modules/code-edit-rules.sh
+@@ -1,6 +1,6 @@
+ #!/usr/bin/env bash
+ # Pre-tool check: Remind to read rules before editing code files.
+-# Data-driven: loads $SETTINGS_DIR/code-edit-rules.json. Empty/missing → no-op.
++# Data-driven: loads $TOOLU_SETTINGS_DIR/code-edit-rules.json. Empty/missing → no-op.
+ #
+ # Inputs (from parent dispatcher pre-tools/mod.sh, via `export`):
+ #   $tool_name - name of the tool being invoked
+@@ -18,8 +18,8 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
+ [[ "$tool_name" != "Edit" && "$tool_name" != "Write" && "$tool_name" != "MultiEdit" ]] && exit 0
+ command -v jq >/dev/null 2>&1 || exit 0
+ 
+-SETTINGS_DIR=$(detect_settings_dir)
+-RULES_FILE="$SETTINGS_DIR/code-edit-rules.json"
++TOOLU_SETTINGS_DIR=$(toolu_settings_dir)
++RULES_FILE="$TOOLU_SETTINGS_DIR/code-edit-rules.json"
+ 
+ [ -f "$RULES_FILE" ] || exit 0
+ 
+diff --git a/plugins/toolu/hooks/pre-tools/modules/commit-gate.sh b/plugins/toolu/hooks/pre-tools/modules/commit-gate.sh
+index 4473e7c..35ad8ff 100755
+--- a/plugins/toolu/hooks/pre-tools/modules/commit-gate.sh
++++ b/plugins/toolu/hooks/pre-tools/modules/commit-gate.sh
+@@ -22,8 +22,8 @@ case "$command" in
+   *) exit 0 ;;
+ esac
+ 
+-SETTINGS_DIR=$(detect_settings_dir)
+-PREFIX_FILE="$SETTINGS_DIR/commit-prefixes.txt"
++TOOLU_SETTINGS_DIR=$(toolu_settings_dir)
++PREFIX_FILE="$TOOLU_SETTINGS_DIR/commit-prefixes.txt"
+ BASE_BRANCH=$(detect_base_branch)
+ 
+ # read_list is sourced from lib/detect.sh.
+diff --git a/plugins/toolu/hooks/pre-tools/modules/mcp-blocker.sh b/plugins/toolu/hooks/pre-tools/modules/mcp-blocker.sh
+index d5e6eef..a2a7c9f 100755
+--- a/plugins/toolu/hooks/pre-tools/modules/mcp-blocker.sh
++++ b/plugins/toolu/hooks/pre-tools/modules/mcp-blocker.sh
+@@ -1,6 +1,6 @@
+ #!/usr/bin/env bash
+ # Block MCP tool usage for listed servers — redirect to CLI scripts.
+-# Data-driven: server name prefixes come from $SETTINGS_DIR/mcp-blocklist.txt.
++# Data-driven: server name prefixes come from $TOOLU_SETTINGS_DIR/mcp-blocklist.txt.
+ #
+ # Inputs (from parent dispatcher pre-tools/mod.sh, via `export`):
+ #   $tool_name - name of the tool being invoked
+@@ -27,8 +27,8 @@ if [[ -z "$tool_name" ]]; then
+   fi
+ fi
+ 
+-SETTINGS_DIR=$(detect_settings_dir)
+-LIST_FILE="$SETTINGS_DIR/mcp-blocklist.txt"
++TOOLU_SETTINGS_DIR=$(toolu_settings_dir)
++LIST_FILE="$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
+ 
+ # Only inspect mcp__<server>__* tool names.
+ case "$tool_name" in
+diff --git a/plugins/toolu/hooks/pre-tools/modules/protected-files.sh b/plugins/toolu/hooks/pre-tools/modules/protected-files.sh
+index f5cb704..fa74887 100755
+--- a/plugins/toolu/hooks/pre-tools/modules/protected-files.sh
++++ b/plugins/toolu/hooks/pre-tools/modules/protected-files.sh
+@@ -1,6 +1,6 @@
+ #!/usr/bin/env bash
+ # Pre-tool check: Protect quality infrastructure files from edits.
+-# Data-driven: globs come from $SETTINGS_DIR/protected-files.txt.
++# Data-driven: globs come from $TOOLU_SETTINGS_DIR/protected-files.txt.
+ #
+ # Inputs (from parent dispatcher pre-tools/mod.sh, via `export`):
+ #   $tool_name - name of the tool being invoked
+@@ -19,8 +19,8 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
+ [[ "$tool_name" != "Edit" && "$tool_name" != "Write" && "$tool_name" != "MultiEdit" ]] && exit 0
+ command -v jq >/dev/null 2>&1 || exit 0
+ 
+-SETTINGS_DIR=$(detect_settings_dir)
+-LIST_FILE="$SETTINGS_DIR/protected-files.txt"
++TOOLU_SETTINGS_DIR=$(toolu_settings_dir)
++LIST_FILE="$TOOLU_SETTINGS_DIR/protected-files.txt"
+ 
+ [ -f "$LIST_FILE" ] || exit 0
+ 
+diff --git a/plugins/toolu/settings/README.md b/plugins/toolu/settings/README.md
+index 6ec51b1..e5dca65 100644
+--- a/plugins/toolu/settings/README.md
++++ b/plugins/toolu/settings/README.md
+@@ -82,18 +82,18 @@ Commands that match no deny rule are allowed by default.
+ > (e.g. it would exempt `node -e '…'`). Prefer specific multi-token entries for
+ > exemptions so the override stays argv-scoped to exactly the command you mean.
+ 
+-Lookup order (see `detect_settings_dir` in `hooks/lib/detect.sh`, sibling of
++Lookup order (see `toolu_settings_dir` in `hooks/lib/detect.sh`, sibling of
+ this directory inside the plugin):
+-`$MY_CLAUDE_SETTINGS_DIR` (if set) → `~/.claude/settings` (if it exists) →
++`$TOOLU_SETTINGS_DIR` (if set) → `~/.claude/settings` (if it exists) →
+ the plugin's own `settings/` directory, resolved relative to the hooks. There is
+ no per-project `.claude/settings/` lookup — to override per project, point
+-`MY_CLAUDE_SETTINGS_DIR` at a project-local directory.
++`TOOLU_SETTINGS_DIR` at a project-local directory.
+ 
+ ## Env vars
+ 
+ | Variable                  | Effect                                  |
+ |---------------------------|-----------------------------------------|
+-| `MY_CLAUDE_SETTINGS_DIR`  | Directory the hooks read data files from |
++| `TOOLU_SETTINGS_DIR`  | Directory the hooks read data files from |
+ | `MY_CLAUDE_QUALITY`       | `off` to disable `quality-gate.sh`       |
+ | `MY_CLAUDE_COMEMORY_REPO` | Overrides the comemory `--repo` scope used by the comemory wrapper (the comemory plugin's `skills/agent-memory/scripts/comemory.sh`). Defaults to the git project name. Not read by any hook. |
+ 
+
+commit 4b62de86adaa567c608ac0ddbd17d20bad7c3df9
+Author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+Date:   Thu Jun 18 07:10:17 2026 +0000
+
+    chore(main): release 1.22.0
+
+diff --git a/.release-please-manifest.json b/.release-please-manifest.json
+index 2c543c4..e9e21f7 100644
+--- a/.release-please-manifest.json
++++ b/.release-please-manifest.json
+@@ -1,3 +1,3 @@
+ {
+-  ".": "1.21.0"
++  ".": "1.22.0"
+ }
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 8ae3510..407c034 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,12 @@
+ # Changelog
+ 
++## [1.22.0](https://github.com/Falconiere/toolu/compare/v1.21.0...v1.22.0) (2026-06-18)
++
++
++### Features
++
++* **design:** add design plugin with stack-aware design-review skill ([5fc238c](https://github.com/Falconiere/toolu/commit/5fc238c3d448f836939f75181a904eb5ae1c99dd))
++
+ ## [1.21.0](https://github.com/Falconiere/toolu/compare/v1.20.0...v1.21.0) (2026-06-17)
+ 
+ 
+diff --git a/package.json b/package.json
+index c92dfe1..bc4de2d 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "toolu",
+-  "version": "1.21.0",
++  "version": "1.22.0",
+   "description": "Engineering discipline for coding agents — now packaged for Pi too.",
+   "type": "module",
+   "license": "MIT",
+diff --git a/plugins/ast-grep/.claude-plugin/plugin.json b/plugins/ast-grep/.claude-plugin/plugin.json
+index 73fa541..643944a 100644
+--- a/plugins/ast-grep/.claude-plugin/plugin.json
++++ b/plugins/ast-grep/.claude-plugin/plugin.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "ast-grep",
+-  "version": "1.21.0",
++  "version": "1.22.0",
+   "description": "Structural code search & rewrite (ast-grep): skill, wrapper, and a PreToolUse Grep→ast-grep nudge registered into the toolu hook engine.",
+   "author": {
+     "name": "Falconiere Barbosa",
+diff --git a/plugins/code-review/.claude-plugin/plugin.json b/plugins/code-review/.claude-plugin/plugin.json
+index fbf64e5..e414ee4 100644
+--- a/plugins/code-review/.claude-plugin/plugin.json
++++ b/plugins/code-review/.claude-plugin/plugin.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "code-review",
+-  "version": "1.21.0",
++  "version": "1.22.0",
+   "description": "Project-tuned pre-push code review mirroring the CI review bot's checklist (correctness, security, perf, test coverage, doc accuracy), writing the toolu push-review state so the gate passes. Standalone.",
+   "author": {
+     "name": "Falconiere Barbosa",
+diff --git a/plugins/comemory/.claude-plugin/plugin.json b/plugins/comemory/.claude-plugin/plugin.json
+index cf42fa4..3e955b7 100644
+--- a/plugins/comemory/.claude-plugin/plugin.json
++++ b/plugins/comemory/.claude-plugin/plugin.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "comemory",
+-  "version": "1.21.0",
++  "version": "1.22.0",
+   "description": "Persistent agent memory + code-index search (comemory): skill, scoped wrapper (with delete/context verbs), a /comemory:setup command that detect-and-guides the binary then wires git index-code hooks, PreToolUse scope enforcement, and a SessionStart memory-count publisher for the statusline — registered into the toolu hook engine.",
+   "author": {
+     "name": "Falconiere Barbosa",
+diff --git a/plugins/context7/.claude-plugin/plugin.json b/plugins/context7/.claude-plugin/plugin.json
+index 53dd340..a255e61 100644
+--- a/plugins/context7/.claude-plugin/plugin.json
++++ b/plugins/context7/.claude-plugin/plugin.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "context7",
+-  "version": "1.21.0",
++  "version": "1.22.0",
+   "description": "Library documentation & code-example lookup via Context7 (skill + REST wrapper). Standalone, no dependencies.",
+   "author": {
+     "name": "Falconiere Barbosa",
+diff --git a/plugins/design/.claude-plugin/plugin.json b/plugins/design/.claude-plugin/plugin.json
+index 16af5aa..902a991 100644
+--- a/plugins/design/.claude-plugin/plugin.json
++++ b/plugins/design/.claude-plugin/plugin.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "design",
+-  "version": "1.21.0",
++  "version": "1.22.0",
+   "description": "Web & mobile UI/UX design review over a cited, stack-aware knowledge base (skill + bash detector). Standalone, no dependencies.",
+   "author": {
+     "name": "Falconiere Barbosa",
+diff --git a/plugins/exa-search/.claude-plugin/plugin.json b/plugins/exa-search/.claude-plugin/plugin.json
+index 052506f..cb50d8b 100644
+--- a/plugins/exa-search/.claude-plugin/plugin.json
++++ b/plugins/exa-search/.claude-plugin/plugin.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "exa-search",
+-  "version": "1.21.0",
++  "version": "1.22.0",
+   "description": "Web, code, and URL search plus deep research via Exa (skill + REST wrapper). Standalone, no dependencies.",
+   "author": {
+     "name": "Falconiere Barbosa",
+diff --git a/plugins/git-better/.claude-plugin/plugin.json b/plugins/git-better/.claude-plugin/plugin.json
+index f8da6fd..f160312 100644
+--- a/plugins/git-better/.claude-plugin/plugin.json
++++ b/plugins/git-better/.claude-plugin/plugin.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "git-better",
+-  "version": "1.21.0",
++  "version": "1.22.0",
+   "description": "Token-lean git: a `gb` wrapper with lean defaults plus a cached repo-convention profile, surfaced via PreToolUse nudges registered into the toolu hook engine.",
+   "author": {
+     "name": "Falconiere Barbosa",
+diff --git a/plugins/jira/.claude-plugin/plugin.json b/plugins/jira/.claude-plugin/plugin.json
+index 729c0c8..ef455f7 100644
+--- a/plugins/jira/.claude-plugin/plugin.json
++++ b/plugins/jira/.claude-plugin/plugin.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "jira",
+-  "version": "1.21.0",
++  "version": "1.22.0",
+   "description": "Jira issue search and workflow from the session via a REST wrapper (skill + bash). Cloud + Server/DC, read and safe writes. Standalone, no dependencies.",
+   "author": {
+     "name": "Falconiere Barbosa",
+diff --git a/plugins/pr-babysit/.claude-plugin/plugin.json b/plugins/pr-babysit/.claude-plugin/plugin.json
+index d239008..c8af644 100644
+--- a/plugins/pr-babysit/.claude-plugin/plugin.json
++++ b/plugins/pr-babysit/.claude-plugin/plugin.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "pr-babysit",
+-  "version": "1.21.0",
++  "version": "1.22.0",
+   "description": "Babysit a PR for the current branch: cron-driven loop that fetches unresolved review comments and the CI review-bot's verdict, triages, fixes, replies, resolves, and chases findings to zero until CI is green.",
+   "author": {
+     "name": "Falconiere Barbosa",
+diff --git a/plugins/rust-quality/.claude-plugin/plugin.json b/plugins/rust-quality/.claude-plugin/plugin.json
+index 18801c1..57674a7 100644
+--- a/plugins/rust-quality/.claude-plugin/plugin.json
++++ b/plugins/rust-quality/.claude-plugin/plugin.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "rust-quality",
+-  "version": "1.21.0",
++  "version": "1.22.0",
+   "description": "Rust PostToolUse quality checks registered into the toolu hook engine.",
+   "author": {
+     "name": "Falconiere Barbosa",
+diff --git a/plugins/stats/.claude-plugin/plugin.json b/plugins/stats/.claude-plugin/plugin.json
+index 4f3c946..2ca4a20 100644
+--- a/plugins/stats/.claude-plugin/plugin.json
++++ b/plugins/stats/.claude-plugin/plugin.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "stats",
+-  "version": "1.21.0",
++  "version": "1.22.0",
+   "description": "A visual /stats dashboard for Claude Code — see real token, cost, and cache-hit usage by project, model, and day as in-terminal bar charts and a sparkline trend, or export a self-contained HTML report with --html. Measured from session transcripts, not estimated. Standalone — only needs jq.",
+   "author": {
+     "name": "Falconiere Barbosa",
+diff --git a/plugins/statusline/.claude-plugin/plugin.json b/plugins/statusline/.claude-plugin/plugin.json
+index 3db79c0..59293e5 100644
+--- a/plugins/statusline/.claude-plugin/plugin.json
++++ b/plugins/statusline/.claude-plugin/plugin.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "statusline",
+-  "version": "1.21.0",
++  "version": "1.22.0",
+   "description": "Optional Claude Code statusline: model, effort, context, a loud quality-gate marker, weekly token usage (wk:), folder, branch, comemory count ([COMEMORY:N]), and caveman mode — wired via a stable symlink. Standalone, no dependencies.",
+   "author": {
+     "name": "Falconiere Barbosa",
+diff --git a/plugins/toolu/.claude-plugin/plugin.json b/plugins/toolu/.claude-plugin/plugin.json
+index 0b5e303..012c48d 100644
+--- a/plugins/toolu/.claude-plugin/plugin.json
++++ b/plugins/toolu/.claude-plugin/plugin.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "toolu",
+-  "version": "1.21.0",
++  "version": "1.22.0",
+   "description": "Falconiere's personal Claude Code bundle: skills, agents, slash commands, and hooks.",
+   "author": {
+     "name": "Falconiere Barbosa",
+diff --git a/plugins/ts-quality/.claude-plugin/plugin.json b/plugins/ts-quality/.claude-plugin/plugin.json
+index 1e39635..8439e1e 100644
+--- a/plugins/ts-quality/.claude-plugin/plugin.json
++++ b/plugins/ts-quality/.claude-plugin/plugin.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "ts-quality",
+-  "version": "1.21.0",
++  "version": "1.22.0",
+   "description": "TypeScript PostToolUse quality checks registered into the toolu hook engine.",
+   "author": {
+     "name": "Falconiere Barbosa",
+
+commit 89adba63b21c10bd0289dd6d40e32eb82899a634
+Author: Falconiere Barbosa <falconieer@gmail.com>
+Date:   Thu Jun 18 02:00:24 2026 -0300
+
+    feat(plan-ledger): preflight gate, running state, and optional realtime dashboard
+    
+    Harden the execution phase and add an optional read-only kanban over the plan-ledger, keeping the ledger the single source of truth.
+    
+    Engine (bash+jq): preflight refuses execution until the plan is Approved and its declared spec (if any) is Approved, resolving status via a new pl_doc_field inline-bold header parser (new plan-ledger-preflight.sh keeps plan-ledger.sh under the size ceiling); the ledger gains a 'running' status + started_at/activity (version stays 1, additive — the push-gate denies version!=1); orphaned 'running' steps self-heal to pending past a stuck threshold; new path/root subcommands; the push-gate lists a running step as a blocker.
+    
+    Dashboard (Bun + vanilla JS + SSE, plugins/toolu/dashboard/): read-only realtime kanban that watches the ledger's parent dir (the writer renames via mv), re-arms + stat-poll fallback, and pushes initial state on SSE connect; git runs against the repo root so diff_sha matches the engine; never throws (absent ledger -> empty, git failure -> no false-stale, corrupt JSON -> error payload). Launch: bun run plugins/toolu/dashboard/index.ts [--open].
+    
+    Tests are real-data only (genuine git repos stamped by the real engine; no mocks) and cover the failure paths. Docs synced: execution/plan/plan-review SKILLs, README, contract bats. CI (test:ts glob + tsconfig include) extended to the dashboard.
+    
+    Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+diff --git a/README.md b/README.md
+index d4c2294..86090a4 100644
+--- a/README.md
++++ b/README.md
+@@ -180,8 +180,19 @@ Beyond the plugins, the core (`toolu`) also ships:
+ - **docs-sync backstop** — on `git push`, an **advisory** (never a block) when the branch diff changes code but no documentation surface (README, `docs/` guides, `SKILL.md` triggers) — a nudge to keep user-facing docs in sync with behavior. Silenced by a diff-`sha`-keyed attestation; surfaces are tunable via `docsSync.*` ([config](docs/config.md#docs-sync-surfaces-docssync)). Pairs with the "Docs in sync" convention the workflow skills enforce.
+ - **Slash commands** — `/commit` and `/review-and-commit`.
+ - **`deep-explore` agent** — structural codebase exploration via ast-grep.
++- **Execution dashboard** — an optional, read-only realtime kanban over the plan-ledger (see below).
+ - **Caveman mode** — ultra-compressed, token-frugal output (via the `caveman` dependency).
+ 
++### Execution dashboard
++
++An optional, read-only **realtime kanban** over the plan-ledger — the ledger stays the single source of truth; the dashboard only watches it. It is **off by default** and nothing auto-starts it. Launch it from the repo root:
++
++```bash
++bun run plugins/toolu/dashboard/index.ts [--open]
++```
++
++It binds an ephemeral localhost port, prints the URL, and (with `--open`) opens your browser. Cards live in four columns driven by ledger status — **To Do** (pending) · **Running** (pulsing) · **Blocked** (red) · **Done** (green; amber + ↻ when a step's diff has gone stale) — and animate between columns as `plan-ledger.sh run` writes each step. It is **purely read-only**: no route mutates the ledger, so it can be closed or crash with zero effect on execution.
++
+ ## Workflow skills
+ 
+ A native, opinionated process chain. Each phase has a **write step and a review step**, so a design exists before planning and an audit happens before code is called done:
+diff --git a/package.json b/package.json
+index 1b88d2d..c92dfe1 100644
+--- a/package.json
++++ b/package.json
+@@ -23,7 +23,7 @@
+   },
+   "scripts": {
+     "typecheck": "tsc --noEmit",
+-    "test:ts": "bun test pi/extensions opencode/extensions",
++    "test:ts": "bun test pi/extensions opencode/extensions plugins/toolu/dashboard",
+     "test:shell": "bats -r plugins tooling",
+     "test": "bun run test:shell && bun run test:ts && bun run typecheck"
+   },
+diff --git a/plugins/toolu/dashboard/__tests__/assets.test.ts b/plugins/toolu/dashboard/__tests__/assets.test.ts
+new file mode 100644
+index 0000000..6020bd2
+--- /dev/null
++++ b/plugins/toolu/dashboard/__tests__/assets.test.ts
+@@ -0,0 +1,64 @@
++// b3 check: the server delivers the public kanban assets. Starts the real server
++// (pinned to a temp repo so it never touches the dev ledger) and asserts the HTML
++// references app.js + styles.css and those static files load with sane types.
++
++import { afterAll, beforeAll, describe, expect, test } from "bun:test";
++import { mkdtempSync, rmSync } from "node:fs";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++
++import { startServer } from "../index.ts";
++
++let repo: string;
++let server: { port: number; stop: () => void };
++
++beforeAll(() => {
++  repo = mkdtempSync(join(tmpdir(), "dash-assets-"));
++  // No ledger needed — asset delivery is independent of ledger state.
++  server = startServer({ ledgerPath: join(repo, "none.json"), repoRoot: repo });
++});
++
++afterAll(() => {
++  server.stop();
++  rmSync(repo, { recursive: true, force: true });
++});
++
++describe("dashboard asset delivery", () => {
++  test("GET / returns HTML referencing app.js and styles.css", async () => {
++    const res = await fetch(`http://localhost:${server.port}/`);
++    expect(res.status).toBe(200);
++    expect(res.headers.get("content-type")).toContain("text/html");
++    const html = await res.text();
++    expect(html).toContain("/static/app.js");
++    expect(html).toContain("/static/styles.css");
++  });
++
++  test("GET /static/app.js returns 200 with a javascript content-type", async () => {
++    const res = await fetch(`http://localhost:${server.port}/static/app.js`);
++    expect(res.status).toBe(200);
++    expect(res.headers.get("content-type")).toContain("javascript");
++    expect((await res.text()).length).toBeGreaterThan(0);
++  });
++
++  test("GET /static/styles.css returns 200 with a css content-type", async () => {
++    const res = await fetch(`http://localhost:${server.port}/static/styles.css`);
++    expect(res.status).toBe(200);
++    expect(res.headers.get("content-type")).toContain("text/css");
++    expect((await res.text()).length).toBeGreaterThan(0);
++  });
++
++  test("path-traversal via ....// is rejected, not collapsed into ../", async () => {
++    // `..` is normalized away by URL before it reaches the server, so it never
++    // exercises serveStatic. `....//` survives the wire, and a naive string-strip
++    // collapses it to `../` (the bug). The server must 404 every climb and never
++    // serve a file outside public/ (index.ts, one level up, contains "startServer").
++    const sibling = await fetch(`http://localhost:${server.port}/static/....//index.ts`);
++    expect(sibling.status).toBe(404);
++    expect(await sibling.text()).not.toContain("startServer");
++
++    const deep = await fetch(
++      `http://localhost:${server.port}/static/${"....//".repeat(20)}etc/hosts`,
++    );
++    expect(deep.status).toBe(404);
++  });
++});
+diff --git a/plugins/toolu/dashboard/__tests__/server.test.ts b/plugins/toolu/dashboard/__tests__/server.test.ts
+new file mode 100644
+index 0000000..d395b36
+--- /dev/null
++++ b/plugins/toolu/dashboard/__tests__/server.test.ts
+@@ -0,0 +1,186 @@
++// b2 check: the real Bun.serve dashboard against a REAL temp ledger. SSE is read
++// by streaming response.body (EventSource may be absent under bun test), so we
++// parse event:/data: frames off the wire. No mocks; the ledger is produced by
++// the real plan-ledger.sh and mutated via mv-replace to prove the dir watch.
++
++import { afterAll, beforeAll, describe, expect, test } from "bun:test";
++import { execFileSync } from "node:child_process";
++import { mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++
++import { startServer } from "../index.ts";
++
++const ENGINE = join(import.meta.dir, "..", "..", "hooks", "lib", "plan-ledger.sh");
++
++const PLAN = `# Server Plan — Plan
++
++**Date:** 2026-06-17   **Status:** Approved   **Topic:** server.test fixture
++
++## Steps (machine-readable)
++
++\`\`\`json
++[
++  { "id": "s1", "title": "trivial true", "check": "true" }
++]
++\`\`\`
++`;
++
++function run(cmd: string, args: string[], cwd: string): string {
++  return execFileSync(cmd, args, { cwd, encoding: "utf8" }).trim();
++}
++
++const tmps: string[] = [];
++function mkTmp(prefix: string): string {
++  const dir = mkdtempSync(join(tmpdir(), prefix));
++  tmps.push(dir);
++  return dir;
++}
++
++let repo: string;
++let ledgerPath: string;
++let server: { port: number; stop: () => void };
++
++beforeAll(() => {
++  repo = mkTmp("dash-server-");
++  run("git", ["init", "-q", "-b", "main"], repo);
++  run("git", ["config", "user.email", "t@t.t"], repo);
++  run("git", ["config", "user.name", "t"], repo);
++  writeFileSync(join(repo, "file.txt"), "base\n");
++  run("git", ["add", "-A"], repo);
++  run("git", ["commit", "-qm", "init"], repo);
++  writeFileSync(join(repo, "plan.md"), PLAN);
++  run("bash", [ENGINE, "run", "plan.md", "--step", "s1"], repo);
++  ledgerPath = run("bash", [ENGINE, "path"], repo);
++  server = startServer({ ledgerPath, repoRoot: repo });
++});
++
++afterAll(() => {
++  server.stop();
++  for (const dir of tmps) rmSync(dir, { recursive: true, force: true });
++});
++
++/** Read one SSE `state` event's parsed data off a streaming response within ms,
++ *  honoring an AbortSignal. Returns null on timeout. */
++async function readStateEvent(
++  reader: ReadableStreamDefaultReader<Uint8Array>,
++  ms: number,
++): Promise<unknown | null> {
++  const decoder = new TextDecoder();
++  let buffer = "";
++  const deadline = Date.now() + ms;
++  while (Date.now() < deadline) {
++    const chunk = await Promise.race([
++      reader.read(),
++      Bun.sleep(deadline - Date.now()).then(() => ({ done: true, value: undefined }) as const),
++    ]);
++    if (chunk.done) break;
++    buffer += decoder.decode(chunk.value, { stream: true });
++    let sep = buffer.indexOf("\n\n");
++    while (sep !== -1) {
++      const frame = buffer.slice(0, sep);
++      buffer = buffer.slice(sep + 2);
++      if (frame.includes("event: state")) {
++        const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
++        if (dataLine) return JSON.parse(dataLine.slice("data:".length).trim());
++      }
++      sep = buffer.indexOf("\n\n");
++    }
++  }
++  return null;
++}
++
++describe("dashboard server — real ledger over the wire", () => {
++  test("SSE emits an initial `state` event on connect", async () => {
++    const ctrl = new AbortController();
++    const res = await fetch(`http://localhost:${server.port}/api/events`, {
++      signal: ctrl.signal,
++    });
++    expect(res.headers.get("content-type")).toContain("text/event-stream");
++    const reader = res.body!.getReader();
++    const state = (await readStateEvent(reader, 1000)) as { steps?: unknown[] };
++    expect(state).not.toBeNull();
++    expect(Array.isArray(state.steps)).toBe(true);
++    ctrl.abort();
++  });
++
++  test("an mv-replace of the ledger pushes a `state` event within ~300ms", async () => {
++    const ctrl = new AbortController();
++    const res = await fetch(`http://localhost:${server.port}/api/events`, {
++      signal: ctrl.signal,
++    });
++    const reader = res.body!.getReader();
++    // Consume the initial paint.
++    await readStateEvent(reader, 1000);
++
++    // Build an updated ledger off-disk and mv it into place (mirrors the engine's
++    // atomic temp+mv), which a file-path watch would miss but the dir watch sees.
++    const original = await Bun.file(ledgerPath).text();
++    const mutated = original.replace('"title": "trivial true"', '"title": "CHANGED title"');
++    const staging = `${ledgerPath}.tmp.test`;
++    writeFileSync(staging, mutated);
++    renameSync(staging, ledgerPath);
++
++    const state = (await readStateEvent(reader, 800)) as {
++      ledger?: { steps?: { title?: string }[] };
++    } | null;
++    expect(state).not.toBeNull();
++    expect(state!.ledger?.steps?.[0]?.title).toBe("CHANGED title");
++    ctrl.abort();
++  });
++
++  test("GET /api/state on a no-ledger branch returns {ledger:null,steps:[]} with 200", async () => {
++    // A fresh git repo with no ledger written yet -> the no-ledger shape, no 500.
++    const fresh = mkTmp("dash-noledger-");
++    run("git", ["init", "-q", "-b", "main"], fresh);
++    run("git", ["config", "user.email", "t@t.t"], fresh);
++    run("git", ["config", "user.name", "t"], fresh);
++    writeFileSync(join(fresh, "f.txt"), "x\n");
++    run("git", ["add", "-A"], fresh);
++    run("git", ["commit", "-qm", "init"], fresh);
++    const freshLedger = run("bash", [ENGINE, "path"], fresh);
++    const s = startServer({ ledgerPath: freshLedger, repoRoot: fresh });
++    try {
++      const res = await fetch(`http://localhost:${s.port}/api/state`);
++      expect(res.status).toBe(200);
++      const body = (await res.json()) as { ledger: unknown; steps: unknown[] };
++      expect(body.ledger).toBeNull();
++      expect(body.steps).toEqual([]);
++    } finally {
++      s.stop();
++    }
++  });
++
++  test("a client disconnect does not break later broadcasts", async () => {
++    // Open, read initial, then abort (client gone). The server must drop it from
++    // the hub so a subsequent change broadcast survives — proven by a NEW client
++    // still receiving a fresh state event after another mv-replace.
++    const gone = new AbortController();
++    const res1 = await fetch(`http://localhost:${server.port}/api/events`, {
++      signal: gone.signal,
++    });
++    const reader1 = res1.body!.getReader();
++    await readStateEvent(reader1, 1000);
++    gone.abort();
++    await Bun.sleep(50);
++
++    // Trigger another change.
++    const original = await Bun.file(ledgerPath).text();
++    const mutated = original.replace(/"title": "[^"]*"/, '"title": "AFTER disconnect"');
++    const staging = `${ledgerPath}.tmp.test2`;
++    writeFileSync(staging, mutated);
++    renameSync(staging, ledgerPath);
++
++    const alive = new AbortController();
++    const res2 = await fetch(`http://localhost:${server.port}/api/events`, {
++      signal: alive.signal,
++    });
++    const reader2 = res2.body!.getReader();
++    const state = (await readStateEvent(reader2, 1000)) as {
++      ledger?: { steps?: { title?: string }[] };
++    } | null;
++    expect(state).not.toBeNull();
++    expect(state!.ledger?.steps?.[0]?.title).toBe("AFTER disconnect");
++    alive.abort();
++  });
++});
+diff --git a/plugins/toolu/dashboard/__tests__/state.test.ts b/plugins/toolu/dashboard/__tests__/state.test.ts
+new file mode 100644
+index 0000000..7a8f471
+--- /dev/null
++++ b/plugins/toolu/dashboard/__tests__/state.test.ts
+@@ -0,0 +1,185 @@
++// b1 check: buildState over REAL ledgers produced by the real plan-ledger.sh.
++// No mocks and no hand-crafted ledger JSON — every fixture is a genuine git repo
++// stamped by the engine, so stale/stuck are exercised against real diff shas.
++
++import { afterAll, beforeAll, describe, expect, test } from "bun:test";
++import { execFileSync } from "node:child_process";
++import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++
++import { buildState } from "../state.ts";
++
++const ENGINE = join(
++  import.meta.dir,
++  "..",
++  "..",
++  "hooks",
++  "lib",
++  "plan-ledger.sh",
++);
++
++const PLAN = `# Tiny Plan — Plan
++
++**Date:** 2026-06-17   **Status:** Approved   **Topic:** state.test fixture
++
++## Steps (machine-readable)
++
++\`\`\`json
++[
++  { "id": "s1", "title": "trivial true", "check": "true" }
++]
++\`\`\`
++`;
++
++/** Run a command in cwd, returning trimmed stdout; throws on non-zero. */
++function run(cmd: string, args: string[], cwd: string): string {
++  return execFileSync(cmd, args, { cwd, encoding: "utf8" }).trim();
++}
++
++/** Resolve the ledger path for a repo via the real engine (single truth). */
++function ledgerPathOf(repo: string): string {
++  return run("bash", [ENGINE, "path"], repo);
++}
++
++const tmps: string[] = [];
++/** Create a throwaway temp dir, tracked for afterAll cleanup. */
++function mkTmp(prefix: string): string {
++  const dir = mkdtempSync(join(tmpdir(), prefix));
++  tmps.push(dir);
++  return dir;
++}
++
++// A real git repo on a FEATURE branch (base=main) so main...HEAD is non-empty
++// and a later commit changes the diff sha — the only way to exercise staleness.
++let featureRepo: string;
++let featureLedger: string;
++
++beforeAll(() => {
++  featureRepo = mkTmp("pl-state-feat-");
++  run("git", ["init", "-q", "-b", "main"], featureRepo);
++  run("git", ["config", "user.email", "t@t.t"], featureRepo);
++  run("git", ["config", "user.name", "t"], featureRepo);
++  writeFileSync(join(featureRepo, "file.txt"), "base\n");
++  run("git", ["add", "-A"], featureRepo);
++  run("git", ["commit", "-qm", "init"], featureRepo);
++  run("git", ["checkout", "-q", "-b", "feature"], featureRepo);
++  writeFileSync(join(featureRepo, "plan.md"), PLAN);
++  // Stamp s1 green via the REAL engine — its diff_sha is the current main...HEAD.
++  run("bash", [ENGINE, "run", "plan.md", "--step", "s1"], featureRepo);
++  featureLedger = ledgerPathOf(featureRepo);
++});
++
++afterAll(() => {
++  for (const dir of tmps) rmSync(dir, { recursive: true, force: true });
++});
++
++describe("buildState — real ledger fixtures", () => {
++  test("a fresh green step reads stale:false", () => {
++    const state = buildState({ ledgerPath: featureLedger, repoRoot: featureRepo });
++    expect(state.ledger).not.toBeNull();
++    expect(state.currentDiffSha).not.toBeNull();
++    const s1 = state.steps.find((s) => s.id === "s1");
++    expect(s1?.status).toBe("green");
++    expect(s1?.stale).toBe(false);
++    expect(s1?.stuck).toBe(false);
++  });
++
++  test("a new commit (changes base...HEAD) makes the prior green step stale", () => {
++    // New commit on feature -> main...HEAD sha changes, stored diff_sha does not.
++    writeFileSync(join(featureRepo, "file.txt"), "base\nmore\n");
++    run("git", ["add", "-A"], featureRepo);
++    run("git", ["commit", "-qm", "more work"], featureRepo);
++    const state = buildState({ ledgerPath: featureLedger, repoRoot: featureRepo });
++    const s1 = state.steps.find((s) => s.id === "s1");
++    expect(s1?.status).toBe("green");
++    expect(s1?.stale).toBe(true);
++  });
++
++  test("same result when the process cwd is outside the repo (git -C <root>)", () => {
++    const outside = mkTmp("pl-state-outside-");
++    const prevCwd = process.cwd();
++    try {
++      process.chdir(outside);
++      const state = buildState({ ledgerPath: featureLedger, repoRoot: featureRepo });
++      const s1 = state.steps.find((s) => s.id === "s1");
++      // Identical to the in-repo result above: green + stale after the commit.
++      expect(s1?.status).toBe("green");
++      expect(s1?.stale).toBe(true);
++      expect(state.currentDiffSha).not.toBeNull();
++    } finally {
++      process.chdir(prevCwd);
++    }
++  });
++
++  test("absent ledger -> {ledger:null, currentDiffSha:null, steps:[]}", () => {
++    const empty = mkTmp("pl-state-noledger-");
++    const state = buildState({
++      ledgerPath: join(empty, "missing.json"),
++      repoRoot: featureRepo,
++    });
++    expect(state.ledger).toBeNull();
++    expect(state.currentDiffSha).toBeNull();
++    expect(state.steps).toEqual([]);
++    expect(state.error).toBeUndefined();
++  });
++
++  test("non-git repoRoot -> currentDiffSha:null and every step stale:false", () => {
++    const nonGit = mkTmp("pl-state-nongit-");
++    // Reuse the real feature ledger (has a green step) but point git at a non-repo.
++    const state = buildState({ ledgerPath: featureLedger, repoRoot: nonGit });
++    expect(state.currentDiffSha).toBeNull();
++    expect(state.steps.length).toBeGreaterThan(0);
++    expect(state.steps.every((s) => s.stale === false)).toBe(true);
++  });
++
++  test("corrupt ledger json -> error-shaped payload, no throw", () => {
++    const corruptDir = mkTmp("pl-state-corrupt-");
++    const corrupt = join(corruptDir, "ledger.json");
++    writeFileSync(corrupt, "{ not valid json ]");
++    const state = buildState({ ledgerPath: corrupt, repoRoot: featureRepo });
++    expect(state.ledger).toBeNull();
++    expect(state.steps).toEqual([]);
++    expect(typeof state.error).toBe("string");
++  });
++
++  test("a real running step past the stuck threshold reads stuck:true", async () => {
++    // Background a --step run whose check sleeps, so the ledger genuinely holds a
++    // running step with a real started_at; poll until write #1 lands, then a 0s
++    // threshold proves the stuck derivation against real engine state.
++    const repo = mkTmp("pl-state-running-");
++    run("git", ["init", "-q", "-b", "main"], repo);
++    run("git", ["config", "user.email", "t@t.t"], repo);
++    run("git", ["config", "user.name", "t"], repo);
++    writeFileSync(join(repo, "file.txt"), "x\n");
++    run("git", ["add", "-A"], repo);
++    run("git", ["commit", "-qm", "init"], repo);
++    writeFileSync(
++      join(repo, "plan.md"),
++      PLAN.replace('"check": "true"', '"check": "sleep 1; true"'),
++    );
++    const ledger = ledgerPathOf(repo);
++    // Truly detached so the test process does not block on the 1s sleep.
++    const child = Bun.spawn(["bash", ENGINE, "run", "plan.md", "--step", "s1"], {
++      cwd: repo,
++      stdout: "ignore",
++      stderr: "ignore",
++    });
++    // Poll the on-disk ledger for the `running` write #1 the engine emits before
++    // the check runs (AC#2 mid-run observability), with a generous deadline.
++    let s1;
++    const deadline = Date.now() + 2000;
++    while (Date.now() < deadline) {
++      if (existsSync(ledger)) {
++        const state = buildState({ ledgerPath: ledger, repoRoot: repo, stuckThresholdSeconds: 0 });
++        s1 = state.steps.find((s) => s.id === "s1");
++        if (s1?.status === "running") break;
++      }
++      await Bun.sleep(20);
++    }
++    expect(s1?.status).toBe("running");
++    expect(s1?.started_at).not.toBeNull();
++    expect(s1?.stuck).toBe(true);
++    await child.exited;
++  });
++});
+diff --git a/plugins/toolu/dashboard/index.ts b/plugins/toolu/dashboard/index.ts
+new file mode 100644
+index 0000000..03eccaa
+--- /dev/null
++++ b/plugins/toolu/dashboard/index.ts
+@@ -0,0 +1,233 @@
++// Read-only realtime kanban dashboard over the plan-ledger. Bun.serve on an
++// ephemeral port; serves static assets, exposes ledger state as JSON, and pushes
++// updates over SSE. All serving/wiring lives here; ledger reading + derivation
++// lives in state.ts and path resolution in resolve.ts (keeps this file < 300).
++// Every server instance owns its own client hub + paths (no module globals) so
++// concurrent instances — e.g. parallel tests — never clobber each other.
++
++import { spawnSync } from "node:child_process";
++import { statSync, watch, type FSWatcher } from "node:fs";
++import { dirname, basename, join, extname, resolve, sep } from "node:path";
++
++import { buildState, type DashboardState } from "./state.ts";
++import { resolveLedgerPath, resolveRepoRoot } from "./resolve.ts";
++
++const PUBLIC_DIR = join(import.meta.dir, "public");
++const HEARTBEAT_MS = 15_000;
++const POLL_MS = 1_000;
++const DEBOUNCE_MS = 150;
++const ENCODER = new TextEncoder();
++
++const CONTENT_TYPES: Record<string, string> = {
++  ".html": "text/html; charset=utf-8",
++  ".js": "text/javascript; charset=utf-8",
++  ".css": "text/css; charset=utf-8",
++  ".json": "application/json; charset=utf-8",
++  ".svg": "image/svg+xml",
++};
++
++/** Optional pinned paths for tests (inject a temp ledger/repo); when unset the
++ *  engine is shelled on every resolve so a real branch switch is picked up. */
++export interface Pinned {
++  ledgerPath?: string;
++  repoRoot?: string;
++}
++
++/** Serialize a payload as one SSE `event: state` frame. */
++function stateFrame(state: DashboardState): Uint8Array {
++  return ENCODER.encode(`event: state\ndata: ${JSON.stringify(state)}\n\n`);
++}
++
++/** Serve a file from public/ with the right content-type, or 404. Resolves the
++ *  request path and rejects anything that escapes public/ — never rewrites the
++ *  path (string-stripping `..` is bypassable, e.g. `....//` -> `../`). */
++async function serveStatic(relPath: string): Promise<Response> {
++  const resolved = resolve(join(PUBLIC_DIR, relPath));
++  if (resolved !== PUBLIC_DIR && !resolved.startsWith(PUBLIC_DIR + sep)) {
++    return new Response("not found", { status: 404 });
++  }
++  const file = Bun.file(resolved);
++  if (!(await file.exists())) return new Response("not found", { status: 404 });
++  const type = CONTENT_TYPES[extname(resolved).toLowerCase()] ?? "application/octet-stream";
++  return new Response(file, { headers: { "content-type": type } });
++}
++
++/** Trailing-edge debounce: only the last call within the window runs. */
++function debounce(fn: () => void, ms: number): () => void {
++  let timer: ReturnType<typeof setTimeout> | undefined;
++  return () => {
++    if (timer) clearTimeout(timer);
++    timer = setTimeout(fn, ms);
++  };
++}
++
++/** Start the dashboard server on an ephemeral port. Tests may pin a temp
++ *  ledger/repo and must call stop() in afterAll; the CLI entry below uses it. */
++export function startServer(opts: Pinned = {}): { port: number; stop: () => void } {
++  // Per-instance client hub — a disconnected client is dropped so broadcast never throws.
++  const clients = new Set<ReadableStreamDefaultController<Uint8Array>>();
++
++  // Re-resolve each call so a branch switch is picked up; pinned (tests) wins.
++  const ledgerPathNow = (): string | null => opts.ledgerPath ?? resolveLedgerPath();
++  const repoRootNow = (): string | null => opts.repoRoot ?? resolveRepoRoot();
++
++  const currentState = (): DashboardState => {
++    const ledgerPath = ledgerPathNow();
++    const repoRoot = repoRootNow();
++    if (!ledgerPath || !repoRoot) {
++      return { ledger: null, currentDiffSha: null, steps: [], serverTime: new Date().toISOString() };
++    }
++    return buildState({ ledgerPath, repoRoot });
++  };
++
++  const broadcast = (): void => {
++    const frame = stateFrame(currentState());
++    for (const controller of clients) {
++      try {
++        controller.enqueue(frame);
++      } catch {
++        clients.delete(controller);
++      }
++    }
++  };
++
++  // SSE: emit current state immediately, then heartbeat; cancel drops the client.
++  const openEventStream = (): Response => {
++    let heartbeat: ReturnType<typeof setInterval> | undefined;
++    let self: ReadableStreamDefaultController<Uint8Array> | undefined;
++    const stream = new ReadableStream<Uint8Array>({
++      start(controller) {
++        self = controller;
++        clients.add(controller);
++        controller.enqueue(stateFrame(currentState()));
++        heartbeat = setInterval(() => {
++          try {
++            controller.enqueue(ENCODER.encode(": heartbeat\n\n"));
++          } catch {
++            clients.delete(controller);
++            if (heartbeat) clearInterval(heartbeat);
++          }
++        }, HEARTBEAT_MS);
++      },
++      cancel() {
++        if (heartbeat) clearInterval(heartbeat);
++        if (self) clients.delete(self);
++      },
++    });
++    return new Response(stream, {
++      headers: {
++        "content-type": "text/event-stream; charset=utf-8",
++        "cache-control": "no-cache",
++        connection: "keep-alive",
++      },
++    });
++  };
++
++  // Route a single GET request. POST/etc. -> 405 (read-only by contract).
++  const handle = async (req: Request): Promise<Response> => {
++    if (req.method !== "GET") return new Response("method not allowed", { status: 405 });
++    const path = new URL(req.url).pathname;
++    if (path === "/" || path === "/index.html") return serveStatic("index.html");
++    if (path.startsWith("/static/")) return serveStatic(path.slice("/static/".length));
++    if (path === "/api/state") {
++      return new Response(JSON.stringify(currentState()), {
++        headers: { "content-type": "application/json; charset=utf-8" },
++      });
++    }
++    if (path === "/api/events") return openEventStream();
++    return new Response("not found", { status: 404 });
++  };
++
++  // Watch the ledger's PARENT dir (the writer renames via mv, so a file-path
++  // watch misses updates), filter by basename, re-arm on each event, and run a
++  // stat-mtime poll fallback that also re-resolves the path each tick.
++  const fire = debounce(broadcast, DEBOUNCE_MS);
++  let watcher: FSWatcher | undefined;
++  let watchedDir = "";
++  let lastMtime = 0;
++
++  const arm = (ledgerPath: string): void => {
++    const dir = dirname(ledgerPath);
++    const base = basename(ledgerPath);
++    if (watcher && watchedDir === dir) return;
++    if (watcher) watcher.close();
++    watchedDir = dir;
++    try {
++      watcher = watch(dir, (_event, filename) => {
++        if (!filename || basename(filename.toString()) === base) {
++          arm(ledgerPath);
++          fire();
++        }
++      });
++      watcher.on("error", () => {
++        if (watcher) watcher.close();
++        watcher = undefined;
++        watchedDir = "";
++      });
++    } catch {
++      watcher = undefined;
++      watchedDir = "";
++    }
++  };
++
++  const tick = (): void => {
++    const ledgerPath = ledgerPathNow();
++    if (!ledgerPath) return;
++    arm(ledgerPath);
++    try {
++      const mtime = statSync(ledgerPath).mtimeMs;
++      if (mtime !== lastMtime) {
++        lastMtime = mtime;
++        fire();
++      }
++    } catch {
++      // Ledger absent yet — nothing to compare; the watcher catches creation.
++    }
++  };
++
++  const server = Bun.serve({ port: 0, fetch: handle, idleTimeout: 0 });
++  const port = server.port;
++  if (port === undefined) throw new Error("Bun.serve did not assign a port");
++
++  // Advisory port file — a failed write must not stop the server. Bun.write is
++  // async, so swallow the rejection on the Promise (a sync try/catch can't).
++  const root = repoRootNow();
++  if (root) {
++    void Bun.write(join(root, ".claude", "tmp", "dashboard.port"), String(port)).catch(
++      () => {
++        /* advisory only */
++      },
++    );
++  }
++
++  tick();
++  const poll = setInterval(tick, POLL_MS);
++
++  return {
++    port,
++    stop: () => {
++      clearInterval(poll);
++      if (watcher) watcher.close();
++      for (const c of clients) {
++        try {
++          c.close();
++        } catch {
++          /* already closed */
++        }
++      }
++      clients.clear();
++      server.stop(true);
++    },
++  };
++}
++
++// CLI entry: start, print the URL, optionally open the browser. Only runs when
++// invoked directly (not when imported by a test).
++if (import.meta.main) {
++  const { port } = startServer();
++  const url = `http://localhost:${port}`;
++  console.log(url);
++  if (process.argv.includes("--open") && process.platform === "darwin") {
++    spawnSync("open", [url]);
++  }
++}
+diff --git a/plugins/toolu/dashboard/public/app.js b/plugins/toolu/dashboard/public/app.js
+new file mode 100644
+index 0000000..b5b5df4
+--- /dev/null
++++ b/plugins/toolu/dashboard/public/app.js
+@@ -0,0 +1,151 @@
++// Read-only kanban client. Subscribes to /api/events (SSE), renders each ledger
++// step as a card in the column for its status, and animates column moves with
++// the FLIP technique plus pulse/shake/flash feedback. No framework, no build.
++
++const COLUMNS = ["pending", "running", "red", "green"];
++
++const els = {
++  board: document.getElementById("board"),
++  empty: document.getElementById("empty"),
++  status: document.getElementById("status"),
++  plan: document.getElementById("plan"),
++  cols: Object.fromEntries(COLUMNS.map((c) => [c, document.getElementById(`col-${c}`)])),
++  counts: Object.fromEntries(
++    COLUMNS.map((c) => [c, document.querySelector(`[data-count="${c}"]`)]),
++  ),
++};
++
++// Remember the last column of each card so we can FLIP-animate real moves.
++const lastColumn = new Map();
++let lastAllGreen = false;
++
++/** Map a derived step to its column key. */
++function columnOf(step) {
++  if (step.status === "running") return "running";
++  if (step.status === "red") return "red";
++  if (step.status === "green") return "green";
++  return "pending";
++}
++
++/** Build (or update) a card element for a step. */
++function renderCard(step) {
++  let card = document.getElementById(`card-${step.id}`);
++  if (!card) {
++    card = document.createElement("article");
++    card.className = "card";
++    card.id = `card-${step.id}`;
++    card.innerHTML =
++      '<div class="id"></div><div class="title"></div><div class="activity"></div>';
++  }
++  card.dataset.status = step.status;
++  card.classList.toggle("stale", Boolean(step.stale));
++  card.classList.toggle("stuck", Boolean(step.stuck));
++  let badge = "";
++  if (step.stale) badge = ' <span class="badge">↻ stale</span>';
++  else if (step.stuck) badge = ' <span class="badge">⚠ stuck</span>';
++  card.querySelector(".id").textContent = step.id;
++  card.querySelector(".title").innerHTML = escapeHtml(step.title) + badge;
++  const activity = card.querySelector(".activity");
++  activity.textContent = step.activity || "";
++  activity.hidden = !step.activity;
++  return card;
++}
++
++/** Minimal HTML escaping for untrusted title text. */
++function escapeHtml(s) {
++  return String(s).replace(
++    /[&<>"']/g,
++    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
++  );
++}
++
++/** Render a full state payload, FLIP-animating any card that changed column. */
++function render(state) {
++  els.plan.textContent = state.ledger ? state.ledger.plan_doc : "—";
++  const steps = state.steps || [];
++  els.empty.hidden = steps.length > 0;
++  els.board.hidden = steps.length === 0;
++
++  // FLIP step 1: record current positions before the DOM mutates.
++  const first = new Map();
++  for (const step of steps) {
++    const card = document.getElementById(`card-${step.id}`);
++    if (card) first.set(step.id, card.getBoundingClientRect());
++  }
++
++  const counts = { pending: 0, running: 0, red: 0, green: 0 };
++  const seen = new Set();
++  for (const step of steps) {
++    const col = columnOf(step);
++    counts[col]++;
++    seen.add(step.id);
++    const card = renderCard(step);
++    const prevCol = lastColumn.get(step.id);
++    els.cols[col].appendChild(card);
++    // Shake only on the transition into "red" (not when it stays blocked).
++    if (col === "red" && prevCol !== "red") {
++      card.classList.remove("shake");
++      void card.offsetWidth;
++      card.classList.add("shake");
++    }
++    lastColumn.set(step.id, col);
++  }
++
++  // Drop cards for steps that vanished (e.g. branch switch).
++  for (const id of [...lastColumn.keys()]) {
++    if (!seen.has(id)) {
++      document.getElementById(`card-${id}`)?.remove();
++      lastColumn.delete(id);
++    }
++  }
++
++  for (const c of COLUMNS) els.counts[c].textContent = String(counts[c]);
++
++  // FLIP step 2: invert + play for cards that moved.
++  for (const step of steps) {
++    const card = document.getElementById(`card-${step.id}`);
++    const prev = first.get(step.id);
++    if (!card || !prev) continue;
++    const now = card.getBoundingClientRect();
++    const dx = prev.left - now.left;
++    const dy = prev.top - now.top;
++    if (dx === 0 && dy === 0) continue;
++    card.classList.remove("flip");
++    card.style.transform = `translate(${dx}px, ${dy}px)`;
++    requestAnimationFrame(() => {
++      card.classList.add("flip");
++      card.style.transform = "";
++    });
++  }
++
++  // All-green flash on the transition into a fully-done board.
++  const allGreen = steps.length > 0 && steps.every((s) => s.status === "green" && !s.stale);
++  if (allGreen && !lastAllGreen) {
++    els.board.classList.remove("flash");
++    void els.board.offsetWidth;
++    els.board.classList.add("flash");
++  }
++  lastAllGreen = allGreen;
++}
++
++/** Connect to the SSE stream and re-render on each `state` event. */
++function connect() {
++  const source = new EventSource("/api/events");
++  source.addEventListener("open", () => setConn("open", "live"));
++  source.addEventListener("error", () => setConn("closed", "reconnecting…"));
++  source.addEventListener("state", (ev) => {
++    setConn("open", "live");
++    try {
++      render(JSON.parse(ev.data));
++    } catch {
++      /* ignore a malformed frame; the next one wins */
++    }
++  });
++}
++
++function setConn(stateName, label) {
++  els.status.dataset.state = stateName;
++  els.status.textContent = label;
++}
++
++connect();
+diff --git a/plugins/toolu/dashboard/public/index.html b/plugins/toolu/dashboard/public/index.html
+new file mode 100644
+index 0000000..4bb6184
+--- /dev/null
++++ b/plugins/toolu/dashboard/public/index.html
+@@ -0,0 +1,41 @@
++<!doctype html>
++<html lang="en">
++  <head>
++    <meta charset="utf-8" />
++    <meta name="viewport" content="width=device-width, initial-scale=1" />
++    <title>Execution Ledger — Kanban</title>
++    <link rel="stylesheet" href="/static/styles.css" />
++  </head>
++  <body>
++    <header class="topbar">
++      <h1>Execution Ledger</h1>
++      <div class="meta">
++        <span id="plan" class="plan">—</span>
++        <span id="status" class="conn" data-state="connecting">connecting…</span>
++      </div>
++    </header>
++
++    <main id="board" class="board" aria-live="polite">
++      <section class="column" data-col="pending">
++        <h2>To Do <span class="count" data-count="pending">0</span></h2>
++        <div class="cards" id="col-pending"></div>
++      </section>
++      <section class="column" data-col="running">
++        <h2>Running <span class="count" data-count="running">0</span></h2>
++        <div class="cards" id="col-running"></div>
++      </section>
++      <section class="column" data-col="red">
++        <h2>Blocked <span class="count" data-count="red">0</span></h2>
++        <div class="cards" id="col-red"></div>
++      </section>
++      <section class="column" data-col="green">
++        <h2>Done <span class="count" data-count="green">0</span></h2>
++        <div class="cards" id="col-green"></div>
++      </section>
++    </main>
++
++    <p id="empty" class="empty" hidden>No ledger yet on this branch — run a plan step to begin.</p>
++
++    <script src="/static/app.js"></script>
++  </body>
++</html>
+diff --git a/plugins/toolu/dashboard/public/styles.css b/plugins/toolu/dashboard/public/styles.css
+new file mode 100644
+index 0000000..9925b09
+--- /dev/null
++++ b/plugins/toolu/dashboard/public/styles.css
+@@ -0,0 +1,218 @@
++/* Read-only kanban over the plan-ledger. Columns map to step status; motion
++   (pulse/shake/flash) is purely visual feedback driven by app.js. */
++
++:root {
++  --bg: #0f1115;
++  --panel: #171a21;
++  --panel-2: #1d212b;
++  --ink: #e6e9ef;
++  --muted: #8b94a7;
++  --line: #2a2f3a;
++  --green: #2ecc71;
++  --amber: #f1c40f;
++  --red: #e74c3c;
++  --blue: #4aa3ff;
++  --radius: 10px;
++}
++
++* {
++  box-sizing: border-box;
++}
++
++body {
++  margin: 0;
++  background: var(--bg);
++  color: var(--ink);
++  font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
++}
++
++.topbar {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  padding: 14px 20px;
++  border-bottom: 1px solid var(--line);
++}
++
++.topbar h1 {
++  font-size: 16px;
++  margin: 0;
++  font-weight: 650;
++}
++
++.meta {
++  display: flex;
++  gap: 14px;
++  align-items: center;
++  color: var(--muted);
++}
++
++.plan {
++  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
++  font-size: 12px;
++}
++
++.conn {
++  font-size: 12px;
++  padding: 2px 8px;
++  border-radius: 999px;
++  border: 1px solid var(--line);
++}
++
++.conn[data-state="open"] {
++  color: var(--green);
++  border-color: var(--green);
++}
++
++.conn[data-state="closed"] {
++  color: var(--red);
++  border-color: var(--red);
++}
++
++.board {
++  display: grid;
++  grid-template-columns: repeat(4, 1fr);
++  gap: 14px;
++  padding: 18px 20px;
++  align-items: start;
++}
++
++.column {
++  background: var(--panel);
++  border: 1px solid var(--line);
++  border-radius: var(--radius);
++  min-height: 120px;
++}
++
++.column h2 {
++  font-size: 12px;
++  text-transform: uppercase;
++  letter-spacing: 0.06em;
++  color: var(--muted);
++  margin: 0;
++  padding: 12px 14px;
++  border-bottom: 1px solid var(--line);
++  display: flex;
++  justify-content: space-between;
++}
++
++.count {
++  color: var(--ink);
++  background: var(--panel-2);
++  border-radius: 999px;
++  padding: 0 8px;
++}
++
++.cards {
++  display: flex;
++  flex-direction: column;
++  gap: 10px;
++  padding: 12px;
++}
++
++.card {
++  background: var(--panel-2);
++  border: 1px solid var(--line);
++  border-left: 3px solid var(--muted);
++  border-radius: 8px;
++  padding: 10px 12px;
++  transition: border-color 0.2s ease;
++}
++
++.card .id {
++  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
++  font-size: 11px;
++  color: var(--muted);
++}
++
++.card .title {
++  margin-top: 2px;
++  font-weight: 550;
++}
++
++.card .activity {
++  margin-top: 4px;
++  font-size: 12px;
++  color: var(--muted);
++}
++
++.card[data-status="green"] {
++  border-left-color: var(--green);
++}
++.card[data-status="red"] {
++  border-left-color: var(--red);
++}
++.card[data-status="running"] {
++  border-left-color: var(--blue);
++}
++.card[data-status="pending"] {
++  border-left-color: var(--muted);
++}
++
++.card.stale,
++.card.stuck {
++  border-left-color: var(--amber);
++}
++
++.card .badge {
++  margin-left: 6px;
++  font-size: 11px;
++  color: var(--amber);
++}
++
++.empty {
++  text-align: center;
++  color: var(--muted);
++  padding: 30px;
++}
++
++/* Motion: running pulses, red shakes once on entry, an all-green flash. */
++.card[data-status="running"] {
++  animation: pulse 1.4s ease-in-out infinite;
++}
++
++@keyframes pulse {
++  0%,
++  100% {
++    box-shadow: 0 0 0 0 rgba(74, 163, 255, 0.4);
++  }
++  50% {
++    box-shadow: 0 0 0 4px rgba(74, 163, 255, 0);
++  }
++}
++
++.card.shake {
++  animation: shake 0.4s ease;
++}
++
++@keyframes shake {
++  0%,
++  100% {
++    transform: translateX(0);
++  }
++  25% {
++    transform: translateX(-4px);
++  }
++  75% {
++    transform: translateX(4px);
++  }
++}
++
++.board.flash {
++  animation: flash 0.6s ease;
++}
++
++@keyframes flash {
++  0%,
++  100% {
++    background: transparent;
++  }
++  50% {
++    background: rgba(46, 204, 113, 0.08);
++  }
++}
++
++/* FLIP: the transform set by app.js animates back to identity. */
++.card.flip {
++  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
++}
+diff --git a/plugins/toolu/dashboard/resolve.ts b/plugins/toolu/dashboard/resolve.ts
+new file mode 100644
+index 0000000..78a2f64
+--- /dev/null
++++ b/plugins/toolu/dashboard/resolve.ts
+@@ -0,0 +1,26 @@
++// Resolve the ledger path and repo root by shelling the real plan-ledger.sh, so
++// the dashboard never duplicates branch-slug or project-root logic. Pure helpers
++// with no server state; index.ts calls these on startup and on each poll.
++
++import { spawnSync } from "node:child_process";
++import { join } from "node:path";
++
++const ENGINE = join(import.meta.dir, "..", "hooks", "lib", "plan-ledger.sh");
++
++/** Run `plan-ledger.sh <sub>` and return trimmed stdout, or null on any failure. */
++function engine(sub: "path" | "root"): string | null {
++  const res = spawnSync("bash", [ENGINE, sub], { encoding: "utf8" });
++  if (res.status !== 0 || res.error) return null;
++  const out = res.stdout.trim();
++  return out.length > 0 ? out : null;
++}
++
++/** Current branch's ledger path (re-resolve each poll to pick up branch switches). */
++export function resolveLedgerPath(): string | null {
++  return engine("path");
++}
++
++/** Repo root for `git -C <root>` (detect_project_root). */
++export function resolveRepoRoot(): string | null {
++  return engine("root");
++}
+diff --git a/plugins/toolu/dashboard/state.ts b/plugins/toolu/dashboard/state.ts
+new file mode 100644
+index 0000000..b17a594
+--- /dev/null
++++ b/plugins/toolu/dashboard/state.ts
+@@ -0,0 +1,130 @@
++// Pure, cwd-independent dashboard state derivation over the plan-ledger JSON.
++// Reads the ledger file, computes the repo's current diff_sha via git, and
++// derives per-step `stale`/`stuck`. Never throws: every fs/git/JSON failure is
++// caught and turned into a well-shaped payload so the server never 500s.
++
++import { spawnSync } from "node:child_process";
++import { readFileSync, statSync } from "node:fs";
++
++/** A single ledger step as persisted by plan-ledger.sh (schema version 1). */
++export interface LedgerStep {
++  id: string;
++  title: string;
++  check: string;
++  status: "green" | "red" | "pending" | "running";
++  started_at: string | null;
++  activity: string | null;
++  exit_code: number | null;
++  diff_sha: string | null;
++  last_run: string | null;
++  evidence_tail: string | null;
++}
++
++/** The full per-branch ledger document. */
++export interface Ledger {
++  version: number;
++  branch: string;
++  base_branch: string;
++  plan_doc: string;
++  updated_at: string;
++  summary: Record<string, number>;
++  next: string | null;
++  steps: LedgerStep[];
++}
++
++/** A step enriched with the two derived flags the kanban renders. */
++export interface DerivedStep extends LedgerStep {
++  stale: boolean;
++  stuck: boolean;
++}
++
++/** The payload served at /api/state and pushed over SSE. */
++export interface DashboardState {
++  ledger: Ledger | null;
++  currentDiffSha: string | null;
++  steps: DerivedStep[];
++  serverTime: string;
++  /** Set only when the ledger file exists but is unreadable/corrupt. */
++  error?: string;
++}
++
++/** Inputs are injected explicitly so the module is pure and testable. */
++export interface BuildStateOptions {
++  ledgerPath: string;
++  repoRoot: string;
++  /** running-age (seconds) past which a step is `stuck`. Default 300. */
++  stuckThresholdSeconds?: number;
++}
++
++const DEFAULT_STUCK_SECONDS = 300;
++
++/** Compute `git diff --no-color <base>...HEAD | git hash-object --stdin` against
++ *  repoRoot (matching pl_diff_sha). Returns null on any git failure or empty sha. */
++export function currentDiffSha(repoRoot: string, base: string): string | null {
++  if (!base) return null;
++  const diff = spawnSync("git", ["-C", repoRoot, "diff", "--no-color", `${base}...HEAD`], {
++    encoding: "buffer",
++    maxBuffer: 256 * 1024 * 1024,
++  });
++  if (diff.status !== 0 || diff.error) return null;
++  const hash = spawnSync("git", ["-C", repoRoot, "hash-object", "--stdin"], {
++    input: diff.stdout,
++    encoding: "utf8",
++  });
++  if (hash.status !== 0 || hash.error) return null;
++  const sha = hash.stdout.trim();
++  return sha.length > 0 ? sha : null;
++}
++
++/** True when a running step's started_at is older than the stuck threshold. */
++function isStuck(step: LedgerStep, now: number, thresholdSeconds: number): boolean {
++  if (step.status !== "running" || !step.started_at) return false;
++  const startedMs = Date.parse(step.started_at);
++  if (Number.isNaN(startedMs)) return false;
++  return (now - startedMs) / 1000 > thresholdSeconds;
++}
++
++/** Read the ledger, compute current diff_sha, and derive stale/stuck per step.
++ *  Absent ledger -> {ledger:null,currentDiffSha:null,steps:[]}. Corrupt JSON ->
++ *  error-shaped payload. Git failure -> currentDiffSha:null and all stale:false. */
++export function buildState(opts: BuildStateOptions): DashboardState {
++  const { ledgerPath, repoRoot } = opts;
++  const threshold = opts.stuckThresholdSeconds ?? DEFAULT_STUCK_SECONDS;
++  const serverTime = new Date().toISOString();
++
++  let raw: string;
++  try {
++    statSync(ledgerPath);
++    raw = readFileSync(ledgerPath, "utf8");
++  } catch {
++    return { ledger: null, currentDiffSha: null, steps: [], serverTime };
++  }
++  if (raw.trim().length === 0) {
++    return { ledger: null, currentDiffSha: null, steps: [], serverTime };
++  }
++
++  let ledger: Ledger;
++  try {
++    ledger = JSON.parse(raw) as Ledger;
++  } catch {
++    return {
++      ledger: null,
++      currentDiffSha: null,
++      steps: [],
++      serverTime,
++      error: "ledger json is corrupt",
++    };
++  }
++
++  const sha = currentDiffSha(repoRoot, ledger.base_branch);
++  const now = Date.now();
++  const steps: DerivedStep[] = (ledger.steps ?? []).map((step) => ({
++    ...step,
++    // stale only when we have a real current sha to compare against; on git
++    // failure (sha === null) every step reads stale:false, never all-stale.
++    stale: sha !== null && step.status === "green" && step.diff_sha !== sha,
++    stuck: isStuck(step, now, threshold),
++  }));
++
++  return { ledger, currentDiffSha: sha, steps, serverTime };
++}
+diff --git a/plugins/toolu/hooks/lib/__tests__/plan-ledger-cli.bats b/plugins/toolu/hooks/lib/__tests__/plan-ledger-cli.bats
+index 76102ed..8807e8b 100644
+--- a/plugins/toolu/hooks/lib/__tests__/plan-ledger-cli.bats
++++ b/plugins/toolu/hooks/lib/__tests__/plan-ledger-cli.bats
+@@ -190,3 +190,110 @@ EOF
+   run bash "$SCRIPT" --self-test
+   [ "$status" -eq 0 ]
+ }
++
++# --- a4: running two-write, --activity, orphan self-heal, path/root ---
++
++# AC#2 — running is observable mid-run: background a --step run whose check sleeps,
++# poll the ledger for status==running + summary.running==1, then assert green after.
++@test "run --step: running observable mid-run, then green (AC#2)" {
++  doc="$REPO/plan.md"
++  # s1 sleeps then succeeds; s2 succeeds. Seed both first so the ledger exists.
++  _write_doc "$doc" "true" "true"
++  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
++  [ "$status" -eq 0 ]
++
++  _write_doc "$doc" "sleep 1; true" "true"
++  # Background the single-step run; capture its PID.
++  ( cd "$REPO" && bash "$SCRIPT" run "$doc" --step s1 --activity "checking s1" ) &
++  local run_pid=$!
++
++  # Poll the ledger for the running state during the sleep (up to ~2s).
++  local saw_running=0 i
++  for i in $(seq 1 40); do
++    if [ -f "$LEDGER" ] \
++       && [ "$(jq -r '.steps[] | select(.id=="s1") | .status' "$LEDGER" 2>/dev/null)" = "running" ]; then
++      saw_running=1
++      [ "$(jq -r '.steps[] | select(.id=="s1") | .started_at' "$LEDGER")" != "null" ]
++      [ "$(jq -r '.steps[] | select(.id=="s1") | .activity' "$LEDGER")" = "checking s1" ]
++      [ "$(jq -r '.summary.running' "$LEDGER")" = "1" ]
++      break
++    fi
++    sleep 0.05
++  done
++  [ "$saw_running" -eq 1 ]
++
++  wait "$run_pid"
++  # After the run returns, s1 is green and nothing is running.
++  [ "$(jq -r '.steps[] | select(.id=="s1") | .status' "$LEDGER")" = "green" ]
++  [ "$(jq -r '.summary.running' "$LEDGER")" = "0" ]
++}
++
++# AC#3 — orphaned running self-heals: hand-set s1 running with started_at 600s
++# ago, run `status`, and it comes back pending.
++@test "status: orphaned running (started_at 600s ago) self-heals to pending (AC#3)" {
++  doc="$REPO/plan.md"
++  _write_doc "$doc" "true" "true"
++  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
++  [ "$status" -eq 0 ]
++
++  # Hand-set s1 to running with an old started_at (600s in the past, UTC ISO-8601).
++  local old
++  old=$(date -u -v-600S +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '600 seconds ago' +%Y-%m-%dT%H:%M:%SZ)
++  local patched
++  patched=$(jq --arg old "$old" '
++    .steps |= map(if .id=="s1"
++      then .status="running" | .started_at=$old | .activity="stuck"
++      else . end)' "$LEDGER")
++  printf '%s\n' "$patched" > "$LEDGER"
++  [ "$(jq -r '.steps[] | select(.id=="s1") | .status' "$LEDGER")" = "running" ]
++
++  run bash -c "cd '$REPO' && bash '$SCRIPT' status"
++  [ "$(jq -r '.steps[] | select(.id=="s1") | .status' "$LEDGER")" = "pending" ]
++  [ "$(jq -r '.steps[] | select(.id=="s1") | .started_at' "$LEDGER")" = "null" ]
++  [ "$(jq -r '.summary.running' "$LEDGER")" = "0" ]
++}
++
++# A fresh running step (recent started_at) is NOT healed by status.
++@test "status: fresh running step (recent started_at) is preserved, not healed" {
++  doc="$REPO/plan.md"
++  _write_doc "$doc" "true" "true"
++  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
++  [ "$status" -eq 0 ]
++
++  local now
++  now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
++  local patched
++  patched=$(jq --arg now "$now" '
++    .steps |= map(if .id=="s1" then .status="running" | .started_at=$now else . end)' "$LEDGER")
++  printf '%s\n' "$patched" > "$LEDGER"
++
++  run bash -c "cd '$REPO' && bash '$SCRIPT' status"
++  [ "$(jq -r '.steps[] | select(.id=="s1") | .status' "$LEDGER")" = "running" ]
++  [ "$(jq -r '.summary.running' "$LEDGER")" = "1" ]
++}
++
++# AC#5 — path/root are the single truth.
++@test "path: prints <root>/.claude/tmp/plan-ledger/<slug>.json" {
++  run bash -c "cd '$REPO' && bash '$SCRIPT' path"
++  [ "$status" -eq 0 ]
++  # path is rooted at the git toplevel, which on macOS resolves /tmp -> /private/tmp;
++  # compare the suffix (slug-keyed file) and the resolved root separately.
++  [ "${output%/.claude/tmp/plan-ledger/feat_x.json}" != "$output" ]
++  local root_out
++  root_out="${output%/.claude/tmp/plan-ledger/feat_x.json}"
++  [ "$(cd "$root_out" && pwd -P)" = "$(cd "$REPO" && pwd -P)" ]
++}
++
++@test "root: prints detect_project_root (the repo toplevel)" {
++  run bash -c "cd '$REPO' && bash '$SCRIPT' root"
++  [ "$status" -eq 0 ]
++  # macOS /tmp is a symlink to /private/tmp; compare resolved paths.
++  [ "$(cd "$output" && pwd -P)" = "$(cd "$REPO" && pwd -P)" ]
++}
++
++@test "run: --activity without --step is rejected (exit 2)" {
++  doc="$REPO/plan.md"
++  _write_doc "$doc" "true" "true"
++  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' --activity foo"
++  [ "$status" -eq 2 ]
++}
+diff --git a/plugins/toolu/hooks/lib/__tests__/plan-ledger-doc-field.bats b/plugins/toolu/hooks/lib/__tests__/plan-ledger-doc-field.bats
+new file mode 100644
+index 0000000..3f489a7
+--- /dev/null
++++ b/plugins/toolu/hooks/lib/__tests__/plan-ledger-doc-field.bats
+@@ -0,0 +1,80 @@
++#!/usr/bin/env bats
++# Tests for pl_doc_field (hooks/lib/plan-ledger-parse.sh): extract an inline-bold
++# **Field:** value from a packed doc header line. Real fixture docs, no mocks.
++
++bats_require_minimum_version 1.5.0
++
++setup() {
++  TMP=$(mktemp -d)
++  # shellcheck source=../plan-ledger-parse.sh
++  . "${BATS_TEST_DIRNAME}/../plan-ledger-parse.sh"
++}
++
++teardown() {
++  [ -n "${TMP:-}" ] && rm -rf "$TMP"
++}
++
++# A header line that packs four fields with varying whitespace between them, plus
++# a title line above and prose below — proving the extractor anchors on the bold
++# key, not line position.
++_write_header_doc() {
++  cat > "$1" <<'EOF'
++# Some Plan — Plan
++
++**Date:** 2026-06-17   **Status:** Draft   **Spec:** docs/toolu/specs/x.md   **Topic:** Harden the thing
++
++## Context
++
++Prose below the header.
++EOF
++}
++
++@test "pl_doc_field: extracts a mid-line field, trimmed, stopping at the next bold key" {
++  doc="$TMP/plan.md"
++  _write_header_doc "$doc"
++  run pl_doc_field "$doc" Status
++  [ "$status" -eq 0 ]
++  [ "$output" = "Draft" ]
++}
++
++@test "pl_doc_field: extracts a field followed by a multi-space gap then next key" {
++  doc="$TMP/plan.md"
++  _write_header_doc "$doc"
++  run pl_doc_field "$doc" Spec
++  [ "$status" -eq 0 ]
++  [ "$output" = "docs/toolu/specs/x.md" ]
++}
++
++@test "pl_doc_field: trailing (last-on-line) field runs to EOL" {
++  doc="$TMP/plan.md"
++  _write_header_doc "$doc"
++  run pl_doc_field "$doc" Topic
++  [ "$status" -eq 0 ]
++  [ "$output" = "Harden the thing" ]
++}
++
++@test "pl_doc_field: missing field -> empty string, return 0" {
++  doc="$TMP/plan.md"
++  _write_header_doc "$doc"
++  run pl_doc_field "$doc" Author
++  [ "$status" -eq 0 ]
++  [ -z "$output" ]
++}
++
++@test "pl_doc_field: single-space-separated fields still stop at the next bold key" {
++  doc="$TMP/plan.md"
++  cat > "$doc" <<'EOF'
++# Tight Header — Plan
++
++**Status:** Approved **Spec:** none **Topic:** terse
++EOF
++  run pl_doc_field "$doc" Status
++  [ "$status" -eq 0 ]
++  [ "$output" = "Approved" ]
++}
++
++@test "pl_doc_field: absent doc -> empty string, return 0 (never errors)" {
++  run pl_doc_field "$TMP/nope.md" Status
++  [ "$status" -eq 0 ]
++  [ -z "$output" ]
++}
+diff --git a/plugins/toolu/hooks/lib/__tests__/plan-ledger-parse.bats b/plugins/toolu/hooks/lib/__tests__/plan-ledger-parse.bats
+index 3f77bac..ec00336 100644
+--- a/plugins/toolu/hooks/lib/__tests__/plan-ledger-parse.bats
++++ b/plugins/toolu/hooks/lib/__tests__/plan-ledger-parse.bats
+@@ -205,3 +205,52 @@ EOF
+   run pl_read_ledger "$ledger"
+   [ "$status" -ne 0 ]
+ }
++
++# --- additive schema (a1): started_at / activity / running (version stays 1) ---
++# These exercise pl_build_step_entry + pl_recompute from plan-ledger.sh, which
++# sources this parse lib. Sourcing it here pulls in the new helpers alongside the
++# parse/IO functions already loaded by setup().
++_source_ledger() {
++  # shellcheck source=../plan-ledger.sh
++  . "${BATS_TEST_DIRNAME}/../plan-ledger.sh"
++}
++
++@test "pl_build_step_entry: omitting started_at/activity defaults both to null" {
++  _source_ledger
++  steps='[{"id":"s1","title":"First","check":"true"}]'
++  run pl_build_step_entry "$steps" s1 green 0 deadbeef '"tail"'
++  [ "$status" -eq 0 ]
++  [ "$(echo "$output" | jq -r '.started_at')" = "null" ]
++  [ "$(echo "$output" | jq -r '.activity')" = "null" ]
++  # Existing fields still present and correct.
++  [ "$(echo "$output" | jq -r '.status')" = "green" ]
++  [ "$(echo "$output" | jq -r '.diff_sha')" = "deadbeef" ]
++}
++
++@test "pl_build_step_entry: started_at/activity passed through when given" {
++  _source_ledger
++  steps='[{"id":"s1","title":"First","check":"true"}]'
++  run pl_build_step_entry "$steps" s1 running null "" 'null' "2026-06-17T00:00:00Z" "editing foo.ts"
++  [ "$status" -eq 0 ]
++  [ "$(echo "$output" | jq -r '.status')" = "running" ]
++  [ "$(echo "$output" | jq -r '.started_at')" = "2026-06-17T00:00:00Z" ]
++  [ "$(echo "$output" | jq -r '.activity')" = "editing foo.ts" ]
++}
++
++@test "pl_recompute: summary gains running count; running step is not fresh_green" {
++  _source_ledger
++  ledger='{"version":1,"steps":[
++    {"id":"s1","status":"green","diff_sha":"abc"},
++    {"id":"s2","status":"running","started_at":"2026-06-17T00:00:00Z","diff_sha":null},
++    {"id":"s3","status":"pending","diff_sha":null}
++  ]}'
++  run pl_recompute "$ledger" "abc"
++  [ "$status" -eq 0 ]
++  [ "$(echo "$output" | jq -r '.summary.running')" = "1" ]
++  [ "$(echo "$output" | jq -r '.summary.green')" = "1" ]
++  [ "$(echo "$output" | jq -r '.summary.fresh_green')" = "1" ]
++  # next is the first non-fresh step: the running s2.
++  [ "$(echo "$output" | jq -r '.next')" = "s2" ]
++  # version is untouched (stays 1).
++  [ "$(echo "$output" | jq -r '.version')" = "1" ]
++}
+diff --git a/plugins/toolu/hooks/lib/__tests__/plan-ledger-preflight.bats b/plugins/toolu/hooks/lib/__tests__/plan-ledger-preflight.bats
+new file mode 100644
+index 0000000..74a76d3
+--- /dev/null
++++ b/plugins/toolu/hooks/lib/__tests__/plan-ledger-preflight.bats
+@@ -0,0 +1,123 @@
++#!/usr/bin/env bats
++# Tests for `plan-ledger.sh preflight` (plan-ledger-preflight.sh): the AC#1
++# precondition matrix. Real git sandbox + real plan/spec fixture docs, no mocks.
++
++bats_require_minimum_version 1.5.0
++
++SCRIPT="${BATS_TEST_DIRNAME}/../plan-ledger.sh"
++
++setup() {
++  TMP=$(mktemp -d)
++  REPO="$TMP/repo"
++  mkdir -p "$REPO/docs/toolu/specs" "$REPO/docs/toolu/plans"
++  (
++    cd "$REPO"
++    git init -b main -q
++    git config user.email "t@example.com"
++    git config user.name "Tester"
++    echo base > base.txt
++    git add base.txt
++    git commit -qm base
++    git checkout -q -b feat/x
++  )
++  export PUSH_REVIEW_BASE=main
++}
++
++teardown() {
++  [ -n "${TMP:-}" ] && rm -rf "$TMP"
++}
++
++# $1=path $2=Status $3=Spec field literal (omit the arg to leave the Spec line off)
++_write_plan() {
++  local path="$1" status="$2"
++  if [ "$#" -ge 3 ]; then
++    printf '# Fixture Plan — Plan\n\n**Date:** 2026-06-17   **Status:** %s   **Spec:** %s   **Topic:** t\n' \
++      "$status" "$3" > "$path"
++  else
++    printf '# Fixture Plan — Plan\n\n**Date:** 2026-06-17   **Status:** %s   **Topic:** t\n' \
++      "$status" > "$path"
++  fi
++}
++
++_write_spec() {
++  printf '# Fixture Spec — Design\n\n**Date:** 2026-06-17   **Status:** %s   **Topic:** t\n' \
++    "$2" > "$1"
++}
++
++preflight() {
++  run bash -c "cd '$REPO' && bash '$SCRIPT' preflight '$1'"
++}
++
++# AC#1: plan Draft -> exit 1 naming the plan.
++@test "preflight: plan Status Draft denies (exit 1) and names not-approved" {
++  _write_plan "$REPO/docs/toolu/plans/p.md" Draft none
++  preflight docs/toolu/plans/p.md
++  [ "$status" -eq 1 ]
++  [[ "$output" == *"not approved"* ]]
++  [[ "$output" == *"Draft"* ]]
++}
++
++# AC#1: plan Approved + spec Needs changes -> exit 1 naming the spec.
++@test "preflight: plan Approved but spec Needs changes denies (exit 1) naming the spec" {
++  _write_spec "$REPO/docs/toolu/specs/s.md" "Needs changes"
++  _write_plan "$REPO/docs/toolu/plans/p.md" Approved docs/toolu/specs/s.md
++  preflight docs/toolu/plans/p.md
++  [ "$status" -eq 1 ]
++  [[ "$output" == *"docs/toolu/specs/s.md"* ]]
++  [[ "$output" == *"not approved"* ]]
++}
++
++# AC#1: plan Approved + spec Approved -> exit 0 silently.
++@test "preflight: plan Approved + spec Approved passes (exit 0, silent)" {
++  _write_spec "$REPO/docs/toolu/specs/s.md" Approved
++  _write_plan "$REPO/docs/toolu/plans/p.md" Approved docs/toolu/specs/s.md
++  preflight docs/toolu/plans/p.md
++  [ "$status" -eq 0 ]
++  [ -z "$output" ]
++}
++
++# AC#1: case-insensitive approval ("approved" lowercase).
++@test "preflight: approval is case-insensitive" {
++  _write_plan "$REPO/docs/toolu/plans/p.md" approved none
++  preflight docs/toolu/plans/p.md
++  [ "$status" -eq 0 ]
++  [ -z "$output" ]
++}
++
++# AC#1: plan Approved + **Spec:** none -> spec-less, exit 0.
++@test "preflight: plan Approved with Spec none is spec-less and passes" {
++  _write_plan "$REPO/docs/toolu/plans/p.md" Approved none
++  preflight docs/toolu/plans/p.md
++  [ "$status" -eq 0 ]
++  [ -z "$output" ]
++}
++
++# AC#1: plan Approved + NO **Spec:** line -> spec-less, exit 0.
++@test "preflight: plan Approved with no Spec line is spec-less and passes" {
++  _write_plan "$REPO/docs/toolu/plans/p.md" Approved
++  preflight docs/toolu/plans/p.md
++  [ "$status" -eq 0 ]
++  [ -z "$output" ]
++}
++
++# AC#1: declared-but-unreadable spec -> exit 1 (NOT exit 2).
++@test "preflight: plan Approved but declared spec missing denies with exit 1" {
++  _write_plan "$REPO/docs/toolu/plans/p.md" Approved docs/toolu/specs/missing.md
++  preflight docs/toolu/plans/p.md
++  [ "$status" -eq 1 ]
++  [[ "$output" == *"docs/toolu/specs/missing.md"* ]]
++}
++
++# Header-less / malformed plan: empty Status -> exit 1 (not 2).
++@test "preflight: header-less plan (no Status) denies with exit 1" {
++  printf '# Bare Plan\n\nNo header line at all.\n' > "$REPO/docs/toolu/plans/p.md"
++  preflight docs/toolu/plans/p.md
++  [ "$status" -eq 1 ]
++  [[ "$output" == *"no **Status:** header"* ]]
++}
++
++# Plan doc missing entirely -> exit 2.
++@test "preflight: missing plan doc -> exit 2" {
++  preflight docs/toolu/plans/does-not-exist.md
++  [ "$status" -eq 2 ]
++}
+diff --git a/plugins/toolu/hooks/lib/plan-ledger-parse.sh b/plugins/toolu/hooks/lib/plan-ledger-parse.sh
+index fad91da..a58300e 100644
+--- a/plugins/toolu/hooks/lib/plan-ledger-parse.sh
++++ b/plugins/toolu/hooks/lib/plan-ledger-parse.sh
+@@ -45,6 +45,28 @@ pl_parse_steps() {
+   jq -c . <<< "$block"
+ }
+ 
++# pl_doc_field DOC FIELD
++# Print the trimmed value of an inline-bold `**<FIELD>:**` from a packed doc
++# header line, or empty string if the field (or doc) is absent. Never errors:
++# a missing field is a valid "spec-less / unstamped" signal, not a failure.
++#
++# Header lines pack fields together, e.g.:
++#   **Date:** 2026-06-17   **Status:** Draft   **Spec:** path.md   **Topic:** …
++# Extraction (first matching line wins): strip up to and including `**FIELD:**`,
++# then cut from the next `**Word:**` bold key (preceded by whitespace) or EOL,
++# then trim surrounding whitespace. A trailing (last-on-line) field has no
++# following bold key, so it runs to EOL. The boundary requires ≥1 space before
++# the next `**…:**` so a value that happens to contain `**` mid-word is not
++# truncated, and both the 3-space house style and a 1-space packing are handled.
++pl_doc_field() {
++  local doc="$1" field="$2"
++  [ -n "$doc" ] && [ -f "$doc" ] || return 0
++  [ -n "$field" ] || return 0
++  # First line containing the bold key, then sed the value out of it.
++  grep -m1 -F "**${field}:**" "$doc" 2>/dev/null \
++    | sed -E "s/.*\\*\\*${field}:\\*\\*[[:space:]]*//; s/[[:space:]]+\\*\\*[^*]+:\\*\\*.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//"
++}
++
+ # pl_read_ledger STATE_FILE
+ # Print the ledger json to stdout. Empty or absent file -> non-zero, no output.
+ pl_read_ledger() {
+diff --git a/plugins/toolu/hooks/lib/plan-ledger-preflight.sh b/plugins/toolu/hooks/lib/plan-ledger-preflight.sh
+new file mode 100644
+index 0000000..92a2a76
+--- /dev/null
++++ b/plugins/toolu/hooks/lib/plan-ledger-preflight.sh
+@@ -0,0 +1,137 @@
++#!/usr/bin/env bash
++# Plan-ledger preflight precondition gate. Sourced by plan-ledger.sh (keeps that
++# file under its 500-line size budget). Pure-ish: reads the plan + spec docs and
++# the ledger; runs no checks and writes nothing. jq-only via the parse lib.
++#
++# Depends on (already sourced by plan-ledger.sh before this file): pl_doc_field,
++# pl_ledger_path, pl_read_ledger (plan-ledger-parse.sh) + detect_project_root
++# (detect.sh).
++#
++# Source via:  . "${BASH_SOURCE%/*}/plan-ledger-preflight.sh"
++
++# pl_status_is_approved STATUS  ->  return 0 iff STATUS == "approved" (case-insensitive).
++pl_status_is_approved() {
++  local s
++  s=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
++  [ "$s" = "approved" ]
++}
++
++# Default age (seconds) after which a `running` step is considered orphaned (a
++# crash between the two writes wedged it). Overridable for tests.
++: "${PL_STUCK_THRESHOLD:=300}"
++
++# pl_heal_orphans LEDGER_JSON
++# Reset any `running` step whose started_at is older than PL_STUCK_THRESHOLD
++# seconds (or has no/empty started_at) back to `pending`, clearing started_at +
++# activity. A still-fresh running step is left as-is. Prints the (possibly
++# unchanged) ledger json on stdout. Pure: no I/O, no recompute.
++#
++# Comparison is lexical on the fixed ISO-8601 UTC format (`YYYY-MM-DDTHH:MM:SSZ`
++# sorts chronologically). The cutoff = now - threshold is computed in bash via
++# epoch math + reformat — portable across BSD (`date -r`) and GNU (`date -d @`),
++# and immune to jq mktime's local-timezone interpretation.
++pl_heal_orphans() {
++  local ledger="$1" now_epoch cutoff_epoch cutoff
++  now_epoch=$(date -u +%s)
++  cutoff_epoch=$((now_epoch - PL_STUCK_THRESHOLD))
++  cutoff=$(date -u -r "$cutoff_epoch" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
++        || date -u -d "@$cutoff_epoch" +%Y-%m-%dT%H:%M:%SZ) \
++    || return 1
++  jq --arg cutoff "$cutoff" '
++    .steps |= map(
++      if .status == "running"
++      then
++        (.started_at // "") as $st
++        | if ($st == "") or ($st < $cutoff)
++          then .status = "pending" | .started_at = null | .activity = null
++          else . end
++      else . end
++    )
++  ' <<< "$ledger"
++}
++
++# pl_cmd_preflight [PLAN_DOC]
++# Resolve the plan doc (arg, else the current branch ledger's plan_doc). Read its
++# **Status:** and **Spec:** via pl_doc_field. Pass (exit 0, silent) only when the
++# plan is Approved AND (spec-less OR the declared spec is Approved).
++#
++# Exit codes:
++#   0  preconditions met.
++#   1  preconditions unmet (plan not approved / declared spec unreadable / spec
++#      not approved / header-less plan with empty Status). One blocker line each.
++#   2  plan doc missing / unreadable, or cannot resolve a plan to check.
++pl_cmd_preflight() {
++  local plan="${1:-}" root ledger ledger_file
++
++  root=$(detect_project_root)
++
++  # Read the current branch's ledger if present, to (a) resolve the plan_doc when
++  # no arg was given and (b) self-heal orphaned `running` steps so a wedged step
++  # can't outlive a crash. Healing rewrites the ledger; absence is not an error.
++  if ledger_file=$(pl_ledger_path 2>/dev/null) && ledger=$(pl_read_ledger "$ledger_file" 2>/dev/null); then
++    local healed
++    if healed=$(pl_heal_orphans "$ledger" 2>/dev/null) && [ "$healed" != "$ledger" ]; then
++      pl_write_ledger "$ledger_file" "$healed" 2>/dev/null || true
++    fi
++    if [ -z "$plan" ]; then
++      plan=$(jq -r '.plan_doc // ""' <<< "$ledger" 2>/dev/null)
++    fi
++  fi
++  if [ -z "$plan" ]; then
++    echo "preflight: no plan doc given and no ledger plan_doc to resolve" >&2
++    return 2
++  fi
++
++  # A relative plan path is resolved against repo root (matching how it's run).
++  local plan_abs="$plan"
++  case "$plan" in
++    /*) : ;;
++    *)  [ -n "$root" ] && plan_abs="$root/$plan" ;;
++  esac
++  if [ ! -r "$plan_abs" ]; then
++    echo "preflight: plan doc not found or unreadable: $plan" >&2
++    return 2
++  fi
++
++  # Plan status. A header-less/malformed plan yields an empty Status -> blocker
++  # (exit 1, not 2 — the doc exists, it just isn't stamped).
++  local plan_status
++  plan_status=$(pl_doc_field "$plan_abs" Status)
++  if [ -z "$plan_status" ]; then
++    echo "preflight: plan has no **Status:** header ($plan) — run /toolu:plan-review to stamp it" >&2
++    return 1
++  fi
++  if ! pl_status_is_approved "$plan_status"; then
++    echo "preflight: plan not approved (Status: $plan_status) — run /toolu:plan-review" >&2
++    return 1
++  fi
++
++  # Spec gate. A missing **Spec:** line OR "none" is spec-less -> skip.
++  local spec
++  spec=$(pl_doc_field "$plan_abs" Spec)
++  local spec_lc
++  spec_lc=$(printf '%s' "$spec" | tr '[:upper:]' '[:lower:]')
++  if [ -z "$spec" ] || [ "$spec_lc" = "none" ]; then
++    return 0
++  fi
++
++  # Declared spec: resolve relative to repo root, must be readable.
++  local spec_abs="$spec"
++  case "$spec" in
++    /*) : ;;
++    *)  [ -n "$root" ] && spec_abs="$root/$spec" ;;
++  esac
++  if [ ! -r "$spec_abs" ]; then
++    echo "preflight: declared spec not found or unreadable: $spec" >&2
++    return 1
++  fi
++
++  local spec_status
++  spec_status=$(pl_doc_field "$spec_abs" Status)
++  if ! pl_status_is_approved "$spec_status"; then
++    echo "preflight: spec $spec not approved (Status: ${spec_status:-none}) — run /toolu:spec-review" >&2
++    return 1
++  fi
++
++  return 0
++}
+diff --git a/plugins/toolu/hooks/lib/plan-ledger.sh b/plugins/toolu/hooks/lib/plan-ledger.sh
+index bab2ec7..b7f7e5b 100644
+--- a/plugins/toolu/hooks/lib/plan-ledger.sh
++++ b/plugins/toolu/hooks/lib/plan-ledger.sh
+@@ -5,7 +5,8 @@
+ # claim green. Sourceable (functions only) and runnable (guarded `main`).
+ # jq-only. Parse/IO errors fail closed (exit 2).
+ #
+-# Run:    bash plan-ledger.sh run <doc.md> [--step <id>] | status | --self-test
++# Run:    bash plan-ledger.sh run <doc.md> [--step <id>] [--activity <label>]
++#         bash plan-ledger.sh status | preflight [<doc.md>] | path | root | --self-test
+ # Source: . "${BASH_SOURCE%/*}/plan-ledger.sh"   (defines pl_* helpers, no run)
+ 
+ # pipefail so the `git diff | git hash-object` pipe surfaces failures instead of
+@@ -18,6 +19,8 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}}"
+ . "$_toolu_lib/plan-ledger-parse.sh"
+ # shellcheck source=detect.sh
+ . "$_toolu_lib/detect.sh"
++# shellcheck source=plan-ledger-preflight.sh
++. "$_toolu_lib/plan-ledger-preflight.sh"
+ 
+ # pl_diff_sha BASE
+ # Print the content-addressed diff hash of BASE...HEAD (matches push-review.sh:88).
+@@ -54,10 +57,10 @@ pl_evidence() {
+ }
+ 
+ # pl_recompute LEDGER_JSON CURRENT_DIFF_SHA
+-# Recompute summary{total,green,red,pending,stale,fresh_green} and next against
+-# CURRENT_DIFF_SHA (a step is fresh-green iff status==green AND diff_sha matches;
+-# next = first non-fresh-green step id, null when all fresh-green). Print the
+-# updated ledger json on stdout.
++# Recompute summary{total,green,red,pending,running,stale,fresh_green} and next
++# against CURRENT_DIFF_SHA (a step is fresh-green iff status==green AND diff_sha
++# matches; a running step is never fresh; next = first non-fresh-green step id,
++# null when all fresh-green). Print the updated ledger json on stdout.
+ pl_recompute() {
+   local ledger="$1" cur="$2"
+   jq --arg cur "$cur" '
+@@ -67,6 +70,7 @@ pl_recompute() {
+       green:       ([.steps[] | select(.status == "green")]  | length),
+       red:         ([.steps[] | select(.status == "red")]    | length),
+       pending:     ([.steps[] | select(.status == "pending")]| length),
++      running:     ([.steps[] | select(.status == "running")]| length),
+       stale:       ([.steps[] | select(.status == "green" and .diff_sha != $cur)] | length),
+       fresh_green: ([.steps[] | select(is_fresh)] | length)
+     }
+@@ -95,11 +99,15 @@ pl_all_fresh() {
+ # pl_now  ->  UTC ISO-8601 timestamp.
+ pl_now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+ 
+-# pl_build_step_entry STEPS_JSON ID STATUS EXIT_CODE DIFF_SHA EVIDENCE_JSON
++# pl_build_step_entry STEPS_JSON ID STATUS EXIT_CODE DIFF_SHA EVIDENCE_JSON [STARTED_AT] [ACTIVITY]
+ # Print a single ledger step object merging the doc fields (id/title/check from
+ # STEPS_JSON) with the run results. EVIDENCE_JSON is an already-JSON-encoded string.
++# STARTED_AT/ACTIVITY are optional; an empty arg becomes JSON null (additive
++# schema fields — version stays 1). started_at is the ISO-8601 time the step
++# entered `running`; activity is an optional short label.
+ pl_build_step_entry() {
+   local steps="$1" id="$2" status="$3" code="$4" sha="$5" evidence="$6"
++  local started_at="${7:-}" activity="${8:-}"
+   jq -n \
+     --argjson steps "$steps" \
+     --arg id "$id" \
+@@ -107,26 +115,50 @@ pl_build_step_entry() {
+     --argjson code "$code" \
+     --arg sha "$sha" \
+     --arg now "$(pl_now)" \
+-    --argjson evidence "$evidence" '
++    --argjson evidence "$evidence" \
++    --arg started_at "$started_at" \
++    --arg activity "$activity" '
+     ($steps[] | select(.id == $id)) as $s
+     | { id: $s.id, title: $s.title, check: $s.check,
+-        status: $status, exit_code: $code, diff_sha: $sha,
++        status: $status,
++        started_at: (if $started_at == "" then null else $started_at end),
++        activity: (if $activity == "" then null else $activity end),
++        exit_code: $code, diff_sha: $sha,
+         last_run: $now, evidence_tail: $evidence }
+   '
+ }
+ 
+-# pl_cmd_run DOC [--step ID]
++# pl_cmd_run DOC [--step ID] [--activity LABEL]
+ # Parse DOC's steps; cd to project root; run checks (all, or only --step ID
+ # preserving other entries from an existing ledger); recompute and write the
+ # ledger; print the summary line. Exit 0 iff all fresh-green, else 1; parse/IO
+ # error -> exit 2 (writes nothing).
++#
++# When --step is given, the step is written `running` + started_at (+ activity)
++# in a first atomic write BEFORE its check runs, then rewritten green|red after
++# (two writes) so a watcher sees the in-flight state. --activity sets an optional
++# short label; it only applies with --step.
+ pl_cmd_run() {
+   local doc="$1"; shift
+-  local only_step="" steps base cur ledger_file root
+-  if [ "${1:-}" = "--step" ]; then
+-    only_step="${2:-}"
+-    [ -n "$only_step" ] || { echo "plan-ledger: --step requires an id" >&2; return 2; }
+-  fi
++  local only_step="" activity="" steps base cur ledger_file root
++  while [ "$#" -gt 0 ]; do
++    case "$1" in
++      --step)
++        only_step="${2:-}"
++        [ -n "$only_step" ] || { echo "plan-ledger: --step requires an id" >&2; return 2; }
++        shift 2
++        ;;
++      --activity)
++        activity="${2:-}"
++        [ -n "$activity" ] || { echo "plan-ledger: --activity requires a label" >&2; return 2; }
++        shift 2
++        ;;
++      *)
++        echo "plan-ledger: unknown run flag: $1" >&2; return 2
++        ;;
++    esac
++  done
++  [ -z "$activity" ] || [ -n "$only_step" ] || { echo "plan-ledger: --activity requires --step" >&2; return 2; }
+ 
+   # Parse first — on failure write NOTHING (crit8).
+   steps=$(pl_parse_steps "$doc") || return 2
+@@ -155,6 +187,48 @@ pl_cmd_run() {
+     fi
+   fi
+ 
++  # Write #1 (only with --step): mark the target step `running` + started_at
++  # (+ activity) and persist BEFORE running its check, so a watcher sees the
++  # in-flight state. Other steps keep their prior entry (or seed pending). The
++  # green|red rewrite (write #2) happens after the check, below.
++  local started_at=""
++  if [ -n "$only_step" ]; then
++    started_at=$(pl_now)
++    local pre_steps
++    pre_steps=$(jq -n \
++      --argjson ex "$existing" --argjson steps "$steps" \
++      --arg only "$only_step" --arg now "$started_at" --arg act "$activity" '
++      [ $steps[] | .id as $id
++        | ($ex[$id]) as $p
++        | if $id == $only
++          then ($steps[] | select(.id==$id)) as $s
++               | { id: $s.id, title: $s.title, check: $s.check,
++                   status: "running",
++                   started_at: $now,
++                   activity: (if $act == "" then null else $act end),
++                   exit_code: null, diff_sha: null,
++                   last_run: $now, evidence_tail: null }
++          elif $p != null then $p
++          else ($steps[] | select(.id==$id)) as $s
++               | { id: $s.id, title: $s.title, check: $s.check,
++                   status: "pending", started_at: null, activity: null,
++                   exit_code: null, diff_sha: null,
++                   last_run: null, evidence_tail: null }
++          end
++      ]') || { echo "plan-ledger: failed to assemble running pre-write" >&2; return 2; }
++    local pre_ledger
++    pre_ledger=$(jq -n \
++      --arg branch "$branch" --arg base "$base" --arg doc "$doc" \
++      --arg now "$started_at" --argjson steps "$pre_steps" '
++      { version: 1, branch: $branch, base_branch: $base, plan_doc: $doc,
++        updated_at: $now, summary: {}, next: null, steps: $steps }') \
++      || { echo "plan-ledger: failed to assemble running pre-ledger" >&2; return 2; }
++    pre_ledger=$(pl_recompute "$pre_ledger" "$cur") \
++      || { echo "plan-ledger: failed to recompute running pre-ledger" >&2; return 2; }
++    pl_write_ledger "$ledger_file" "$pre_ledger" \
++      || { echo "plan-ledger: running pre-write failed" >&2; return 2; }
++  fi
++
+   # Build the steps array.
+   local out_steps id check status code evidence tmpout new_entry
+   out_steps="[]"
+@@ -169,7 +243,8 @@ pl_cmd_run() {
+         | if $p != null then $p
+           else (($steps[] | select(.id==$id)) as $s
+                 | { id: $s.id, title: $s.title, check: $s.check,
+-                    status: "pending", exit_code: null, diff_sha: null,
++                    status: "pending", started_at: null, activity: null,
++                    exit_code: null, diff_sha: null,
+                     last_run: null, evidence_tail: null })
+           end
+       ') || { echo "plan-ledger: failed to assemble entry for step $id" >&2; return 2; }
+@@ -223,6 +298,10 @@ pl_cmd_status() {
+   branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || return 2
+   slug=$(branch_slug "$branch")
+ 
++  # Self-heal orphaned `running` steps (crash between the two run writes) back to
++  # pending before recomputing, so a stale running can't wedge status/push-gate.
++  ledger=$(pl_heal_orphans "$ledger") \
++    || { echo "plan-ledger: failed to heal orphaned running steps" >&2; return 2; }
+   ledger=$(pl_recompute "$ledger" "$cur") \
+     || { echo "plan-ledger: failed to recompute summary" >&2; return 2; }
+   pl_write_ledger "$ledger_file" "$ledger" || { echo "plan-ledger: ledger write failed" >&2; return 2; }
+@@ -278,11 +357,25 @@ main() {
+     status)
+       pl_cmd_status; exit $?
+       ;;
++    preflight)
++      pl_cmd_preflight "${1:-}"; exit $?
++      ;;
++    path)
++      pl_ledger_path || { echo "plan-ledger: cannot resolve ledger path" >&2; exit 2; }
++      exit 0
++      ;;
++    root)
++      local root
++      root=$(detect_project_root)
++      [ -n "$root" ] || { echo "plan-ledger: not in a git repo" >&2; exit 2; }
++      printf '%s\n' "$root"
++      exit 0
++      ;;
+     --self-test)
+       pl_self_test; exit $?
+       ;;
+     *)
+-      echo "plan-ledger: usage: run <doc> [--step <id>] | status | --self-test" >&2
++      echo "plan-ledger: usage: run <doc> [--step <id>] [--activity <label>] | status | preflight [<doc>] | path | root | --self-test" >&2
+       exit 2
+       ;;
+   esac
+diff --git a/plugins/toolu/hooks/pre-tools/modules/__tests__/plan-ledger.bats b/plugins/toolu/hooks/pre-tools/modules/__tests__/plan-ledger.bats
+index 8b4c893..4d0f520 100644
+--- a/plugins/toolu/hooks/pre-tools/modules/__tests__/plan-ledger.bats
++++ b/plugins/toolu/hooks/pre-tools/modules/__tests__/plan-ledger.bats
+@@ -209,6 +209,47 @@ denies() {
+   denies
+ }
+ 
++# a5/AC#4: a `running` step (fresh started_at) is listed as a push blocker.
++@test "plan-ledger gate (a5): a running step denies and is named as a blocker" {
++  echo "echo hi" > script.sh && git add script.sh && git commit -q -m "script"
++  local sha steps
++  sha=$(sandbox_diff_sha)
++  # s1 green+fresh, s2 running (fresh started_at) -> the running step blocks push.
++  steps=$(jq -n --arg sha "$sha" '[
++    { id: "s1", title: "first", check: "true", status: "green",
++      started_at: null, activity: null, exit_code: 0, diff_sha: $sha },
++    { id: "s2", title: "second", check: "true", status: "running",
++      started_at: "2026-06-17T12:00:00Z", activity: "checking s2",
++      exit_code: null, diff_sha: null }
++  ]')
++  write_ledger 1 "$steps" 2
++  payload=$(build_input "git push origin feat/example")
++  run_gate "Bash" "$payload"
++  [ "$status" -eq 0 ]
++  denies
++  [[ "$output" == *"s2"* ]]
++  [[ "$output" == *"running"* ]]
++}
++
++# a5: a version-1 ledger whose every step is fresh-green ALLOWS (the running case
++# above is what flips it to deny — this pins the positive control on v1 schema).
++@test "plan-ledger gate (a5): version-1 all-fresh-green ledger allows" {
++  echo "echo hi" > script.sh && git add script.sh && git commit -q -m "script"
++  local sha steps
++  sha=$(sandbox_diff_sha)
++  steps=$(jq -n --arg sha "$sha" '[
++    { id: "s1", title: "first", check: "true", status: "green",
++      started_at: null, activity: null, exit_code: 0, diff_sha: $sha },
++    { id: "s2", title: "second", check: "true", status: "green",
++      started_at: null, activity: null, exit_code: 0, diff_sha: $sha }
++  ]')
++  write_ledger 1 "$steps" 2
++  payload=$(build_input "git push origin feat/example")
++  run_gate "Bash" "$payload"
++  [ "$status" -eq 0 ]
++  ! denies
++}
++
+ # unparseable ledger -> DENY (fail closed).
+ @test "plan-ledger gate (corrupt): unparseable ledger denies (fail closed)" {
+   echo "echo hi" > script.sh && git add script.sh && git commit -q -m "script"
+diff --git a/plugins/toolu/skills/__tests__/plan-ledger-contract.bats b/plugins/toolu/skills/__tests__/plan-ledger-contract.bats
+index 19d525c..5e211f8 100644
+--- a/plugins/toolu/skills/__tests__/plan-ledger-contract.bats
++++ b/plugins/toolu/skills/__tests__/plan-ledger-contract.bats
+@@ -17,9 +17,11 @@ setup() {
+   grep -q 'empty steps' "$SKILLS/plan-review/SKILL.md"
+ }
+ 
+-@test "execution reads status and records each step via run --step" {
++@test "execution reads status and records each step via run <plan_doc> --step <id>" {
+   grep -q 'plan-ledger.sh status' "$SKILLS/execution/SKILL.md"
+-  grep -q 'run --step' "$SKILLS/execution/SKILL.md"
++  # the engine requires the plan-doc positional arg, so the doc must show it
++  grep -q 'run <plan_doc>' "$SKILLS/execution/SKILL.md"
++  grep -q -- '--step <id>' "$SKILLS/execution/SKILL.md"
+ }
+ 
+ @test "execution-review confirms all steps fresh-green" {
+diff --git a/plugins/toolu/skills/execution/SKILL.md b/plugins/toolu/skills/execution/SKILL.md
+index 05309a7..347f7fe 100644
+--- a/plugins/toolu/skills/execution/SKILL.md
++++ b/plugins/toolu/skills/execution/SKILL.md
+@@ -15,7 +15,7 @@ A reviewed plan exists (`plan` + `plan-review` ran for non-trivial work). If the
+ 
+ ## Loop (per step)
+ 
+-For ledger-tracked work, read progress with `bash plugins/toolu/hooks/lib/plan-ledger.sh status` to find the next non-fresh-green step, do the loop below for it, then record it with `bash plugins/toolu/hooks/lib/plan-ledger.sh run --step <id>` — the script stamps green from mechanical truth, you cannot claim it. On plan deviation, edit the steps block and note it under `## Deviations`, then re-run. Before push, do a final full `bash plugins/toolu/hooks/lib/plan-ledger.sh run` so every step is fresh-green against the final code.
++For ledger-tracked work, **before the first step** run `bash plugins/toolu/hooks/lib/plan-ledger.sh preflight` — it refuses to start unless the plan is `Approved` and its declared spec (if any) is `Approved`. Then read progress with `bash plugins/toolu/hooks/lib/plan-ledger.sh status` to find the next non-fresh-green step, do the loop below for it, then record it with `bash plugins/toolu/hooks/lib/plan-ledger.sh run <plan_doc> --step <id>` — the engine requires the plan-doc positional arg, and stamps green from mechanical truth, you cannot claim it. On plan deviation, edit the steps block and note it under `## Deviations`, then re-run. Re-run any stale step (a `green` step whose diff has since changed) before calling the plan done. Before push, do a final full `bash plugins/toolu/hooks/lib/plan-ledger.sh run <plan_doc>` so every step is fresh-green against the final code.
+ 
+ 1. **Take one step** from the plan — the smallest shippable unit.
+ 2. **Write tests with the code** (see `test`) — real data, colocated. For a bugfix, reproduce first.
+diff --git a/plugins/toolu/skills/plan-review/SKILL.md b/plugins/toolu/skills/plan-review/SKILL.md
+index cedb7c3..7191e8f 100644
+--- a/plugins/toolu/skills/plan-review/SKILL.md
++++ b/plugins/toolu/skills/plan-review/SKILL.md
+@@ -33,8 +33,8 @@ One line per finding, severity-tagged, location + problem + fix — no praise, n
+ <step/section>: 🔵 consider: <minor>. <the fix>.
+ ```
+ 
+-End with a verdict:
+-- **Approved** → ready for `execution`.
+-- **Needs changes** → list the blockers that must close first; back to `plan`.
++End with a verdict, and **stamp the plan's `**Status:**` header field** to match (mirroring how `spec-review` stamps the spec) — `execution`'s preflight gate reads it:
++- **Approved** → stamp `**Status:** Approved`; ready for `execution`.
++- **Needs changes** → stamp `**Status:** Needs changes`; list the blockers that must close first; back to `plan`.
+ 
+ Flag only what blocks confident execution. A plan that reads clean but can't be verified step-by-step is not clean — say so.
+diff --git a/plugins/toolu/skills/plan/SKILL.md b/plugins/toolu/skills/plan/SKILL.md
+index 8dc737d..0403b08 100644
+--- a/plugins/toolu/skills/plan/SKILL.md
++++ b/plugins/toolu/skills/plan/SKILL.md
+@@ -15,6 +15,7 @@ A design exists — ideally a reviewed spec (`spec` + `spec-review` ran for larg
+ 
+ ## Plan shape (keep it tight)
+ 
++0. **Header** — a line under the title, mirroring the spec header (inline bold, NOT YAML frontmatter): `**Date:** <YYYY-MM-DD>   **Status:** Draft   **Spec:** <docs/toolu/specs/<file>.md | none>   **Topic:** <one line>`. `**Spec:**` is `none` (or the line omitted) for spec-less work. `plan-review` stamps `**Status:** Approved` / `**Status:** Needs changes`; `execution`'s preflight gate reads both fields.
+ 1. **Context** — why this change, the problem it solves, intended outcome. 2–4 sentences.
+ 2. **Approach** — the chosen design only, not the alternatives. Name the reused functions/utilities with their paths.
+ 3. **Steps / workstreams** — ordered, each independently verifiable. For a pattern repeated across many files, describe it once and list a few representative paths — don't enumerate every file.
+diff --git a/tsconfig.json b/tsconfig.json
+index 32c58e5..3baf68f 100644
+--- a/tsconfig.json
++++ b/tsconfig.json
+@@ -12,6 +12,6 @@
+     "types": ["node", "bun-types"],
+     "allowImportingTsExtensions": true
+   },
+-  "include": ["pi/**/*.ts", "opencode/**/*.ts"],
++  "include": ["pi/**/*.ts", "opencode/**/*.ts", "plugins/toolu/dashboard/**/*.ts"],
+   "exclude": ["node_modules", "**/node_modules/**"]
+ }
+
+commit 5fc238c3d448f836939f75181a904eb5ae1c99dd
+Author: Falconiere Barbosa <falconieer@gmail.com>
+Date:   Thu Jun 18 03:48:37 2026 -0300
+
+    feat(design): add design plugin with stack-aware design-review skill
+    
+    New `design` plugin — web & mobile UI/UX design review over a cited,
+    research-verified knowledge base.
+    
+    - detect-stack.sh: portable stack detector (JSON output, --no-jq pure-bash
+      fallback, guarded under set -euo pipefail, exit 0 on unknown stack, exit 2
+      only on bad usage). Published via a SessionStart symlink, like jira.
+    - design-review skill: reviews source files / a served URL (static, Phase 1)
+      against the knowledge base, scoped to the detected platform; emits cited
+      findings + a verdict. Unknown-stack fallback skips platform-fit.
+    - references/: 7 primary-source docs (NN/g, WCAG 2.2, Material 3, Apple HIG,
+      MDN) — principles, ux-usability, accessibility, responsive, motion,
+      platform-web, platform-mobile.
+    - Tests: 8 bats over REAL OSS manifests (next-learn, flutter/samples, expo)
+      + PROVENANCE; design-review trigger evals at precision/recall 1.0.
+    - Registered in marketplace.json, package.json (pi.skills),
+      release-please-config.json, and README.
+    
+    Phase 1 of a planned multi-skill plugin; design-generate / design-from-source
+    / design-system and screenshot review are deferred to Phase 2.
+    
+    Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+diff --git a/.claude-plugin/marketplace.json b/.claude-plugin/marketplace.json
+index 3ea464d..9c1a985 100644
+--- a/.claude-plugin/marketplace.json
++++ b/.claude-plugin/marketplace.json
+@@ -151,6 +151,15 @@
+       "dependencies": [
+         { "name": "toolu", "marketplace": "toolu" }
+       ]
++    },
++    {
++      "name": "design",
++      "source": "./plugins/design",
++      "description": "Web & mobile UI/UX design review over a cited, stack-aware knowledge base (skill + bash). Standalone, no dependencies.",
++      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
++      "category": "productivity",
++      "keywords": ["design", "ui", "ux", "accessibility", "skills"],
++      "license": "MIT"
+     }
+   ]
+ }
+diff --git a/README.md b/README.md
+index 6cdea85..d4c2294 100644
+--- a/README.md
++++ b/README.md
+@@ -158,7 +158,7 @@ test, and troubleshooting.
+ 
+ ## What's inside
+ 
+-Ten plugins, one marketplace. Install the core alone, or add the domain plugins. The same skills and gate run on Claude Code, pi, and opencode; the statusline is Claude Code only (pi surfaces gate status in its own footer; opencode uses the `/toolu-status` slash command).
++Eleven plugins, one marketplace. Install the core alone, or add the domain plugins. The same skills and gate run on Claude Code, pi, and opencode; the statusline is Claude Code only (pi surfaces gate status in its own footer; opencode uses the `/toolu-status` slash command).
+ 
+ | Group | Plugin | Version | What it does |
+ |--------|--------|:-------:|--------------|
+@@ -172,6 +172,7 @@ Ten plugins, one marketplace. Install the core alone, or add the domain plugins.
+ | Workflow | **`code-review`** | `0.1.0` | `code-review:review` — pre-push review mirroring the CI bot's checklist (correctness, security, perf, coverage, doc accuracy); writes the `push-review` state so the gate passes. Standalone. |
+ | Workflow | **`pr-babysit`** | `0.1.0` | `/pr-babysit:babysit` — cron-driven PR babysitter that fetches review comments + the CI review-bot verdict, triages, fixes, and chases findings to zero until CI is green. |
+ | UI | **`statusline`** | `0.3.1` | Optional gate-aware statusline — `model \| effort \| ctx \| wk \| gate \| folder \| branch \| mem \| caveman`, wired via a stable symlink (`/statusline:setup` to enable). Claude Code only. Standalone. |
++| Design | **`design`** | `1.21.0` | **UI/UX design review** for web & mobile over a cited, stack-aware knowledge base (WCAG 2.2, Material 3, Apple HIG, NN/g) — adds the `design-review` skill plus a `detect-stack.sh` detector. Standalone, no dependencies. |
+ 
+ Beyond the plugins, the core (`toolu`) also ships:
+ 
+@@ -254,6 +255,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
+     ├── comemory/               # agent-memory skill + scope-enforcement & memory-count registry modules
+     ├── context7/               # context7 skill + Context7 REST wrapper
+     ├── exa-search/             # exa-search skill + Exa REST wrapper
++    ├── design/                 # design-review skill + detect-stack.sh + cited references/ knowledge base
+     ├── rust-quality/           # Rust PostToolUse quality fragments, assembled at SessionStart
+     ├── ts-quality/             # TypeScript PostToolUse quality fragments, assembled at SessionStart
+     ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook
+diff --git a/package.json b/package.json
+index 9aee856..1b88d2d 100644
+--- a/package.json
++++ b/package.json
