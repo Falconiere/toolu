@@ -75,8 +75,8 @@ tokens_contain_rule() {
 matches_deny() {
   local cmd="$1"
   local denylist="$2"
-  local rule tokens
-  mapfile -t tokens < <(bash_tokenize "$cmd")
+  local rule tokens _tok
+  tokens=(); while IFS= read -r _tok; do tokens+=("$_tok"); done < <(bash_tokenize "$cmd")
   # Tokenizer yielded nothing (empty/whitespace-only command): fall back to
   # the raw command as a single token — same shape bash_tokenize itself emits
   # on a parse failure. Substring rules below never consult tokens, so this
@@ -108,8 +108,8 @@ matches_deny() {
 matches_allow() {
   local cmd="$1"
   local allowlist="$2"
-  local rule tokens
-  mapfile -t tokens < <(bash_tokenize "$cmd")
+  local rule tokens _tok
+  tokens=(); while IFS= read -r _tok; do tokens+=("$_tok"); done < <(bash_tokenize "$cmd")
   # Same empty-tokenization fallback as matches_deny.
   [ ${#tokens[@]} -eq 0 ] && tokens=("$cmd")
   while IFS= read -r rule; do

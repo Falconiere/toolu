@@ -18,8 +18,9 @@ setup() {
   TMP=$(mktemp -d)
   export HOME="$TMP"
   # Ensure the fixture under $HOME is the file detect_plugin_installed reads
-  # (clear any inherited override pointing elsewhere).
-  unset CLAUDE_PLUGINS_REGISTRY
+  # (clear every inherited override in the resolution chain — CLAUDE_CONFIG_DIR
+  # et al. would otherwise point at a real ~/.claude-work manifest).
+  unset CLAUDE_PLUGINS_REGISTRY TOOLU_CONFIG_DIR CLAUDE_CONFIG_DIR PI_CODING_AGENT_DIR
   mkdir -p "$TMP/.claude/plugins"
 }
 teardown() { rm -rf "$TMP"; }
