@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# session-start.sh publishes the code-review write-state helper at a stable
+# session-start.sh publishes the toolu-review write-state helper at a stable
 # path the agent's Bash tool can reach without $CLAUDE_PLUGIN_ROOT.
 
 setup() {
@@ -11,17 +11,17 @@ setup() {
 
 teardown() { rm -rf "$TMP"; }
 
-@test "session-start: publishes helper symlink at \$CLAUDE_CONFIG_DIR/code-review/write-state.sh" {
+@test "session-start: publishes helper symlink at \$CLAUDE_CONFIG_DIR/toolu-review/write-state.sh" {
   run bash "$HOOK" <<<'{}'
   [ "$status" -eq 0 ]
-  dst="$CLAUDE_CONFIG_DIR/code-review/write-state.sh"
+  dst="$CLAUDE_CONFIG_DIR/toolu-review/write-state.sh"
   [ -L "$dst" ]
   [ "$(readlink "$dst")" = "$SRC" ]
   [ -x "$dst" ]
 }
 
 @test "session-start: refreshes a stale symlink to the current target" {
-  pub_root="$CLAUDE_CONFIG_DIR/code-review"
+  pub_root="$CLAUDE_CONFIG_DIR/toolu-review"
   mkdir -p "$pub_root"
   ln -s /nonexistent/old/write-state.sh "$pub_root/write-state.sh"
   run bash "$HOOK" <<<'{}'
@@ -30,7 +30,7 @@ teardown() { rm -rf "$TMP"; }
 }
 
 @test "session-start: NEVER clobbers a real file at the helper path" {
-  pub_root="$CLAUDE_CONFIG_DIR/code-review"
+  pub_root="$CLAUDE_CONFIG_DIR/toolu-review"
   mkdir -p "$pub_root"
   printf '#!/usr/bin/env bash\necho user-override\n' > "$pub_root/write-state.sh"
   chmod +x "$pub_root/write-state.sh"
@@ -49,10 +49,10 @@ teardown() { rm -rf "$TMP"; }
 
 @test "session-start: idempotent (second run leaves the symlink identical)" {
   bash "$HOOK" <<<'{}'
-  before=$(readlink "$CLAUDE_CONFIG_DIR/code-review/write-state.sh")
+  before=$(readlink "$CLAUDE_CONFIG_DIR/toolu-review/write-state.sh")
   run bash "$HOOK" <<<'{}'
   [ "$status" -eq 0 ]
-  after=$(readlink "$CLAUDE_CONFIG_DIR/code-review/write-state.sh")
+  after=$(readlink "$CLAUDE_CONFIG_DIR/toolu-review/write-state.sh")
   [ "$before" = "$after" ]
 }
 
@@ -65,5 +65,5 @@ teardown() { rm -rf "$TMP"; }
   run bash "$fake/session-start.sh" <<<'{}'
   [ "$status" -eq 0 ]
   [ -z "$output" ]
-  [ ! -e "$CLAUDE_CONFIG_DIR/code-review/write-state.sh" ]
+  [ ! -e "$CLAUDE_CONFIG_DIR/toolu-review/write-state.sh" ]
 }

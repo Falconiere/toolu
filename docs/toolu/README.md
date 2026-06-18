@@ -97,7 +97,7 @@ Blocks `git push` on a feature branch until the diff has been run through an acc
 ```text
 # Push is denied unless:
 #  - caveman:cavecrew-reviewer reviewed the diff (preferred when installed)
-#  - code-review:review skill reviewed the diff (CI-bot mirror)
+#  - toolu-review:review skill reviewed the diff (CI-bot mirror)
 #  - /code-review xhigh --fix ran and recorded clean state
 
 # Max 5 rounds — escalates instead of looping forever

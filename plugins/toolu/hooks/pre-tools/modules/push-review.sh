@@ -117,7 +117,7 @@ fi
 if [ -n "$(detect_plugin_installed 'caveman@caveman' 2>/dev/null)" ]; then
   reviewer_hint="\`caveman:cavecrew-reviewer\` (caveman is installed — preferred), recorded as \"caveman:cavecrew-reviewer\""
 else
-  reviewer_hint="the built-in \`/code-review xhigh --fix\` skill, recorded as \"code-review\" (or the \`code-review:review\` skill, or install the caveman plugin and use \`caveman:cavecrew-reviewer\`)"
+  reviewer_hint="the built-in \`/code-review xhigh --fix\` skill, recorded as \"code-review\" (or the \`toolu-review:review\` skill, or install the caveman plugin and use \`caveman:cavecrew-reviewer\`)"
 fi
 
 # State file gate.
@@ -131,7 +131,7 @@ if [[ ! -f "$state_file" ]]; then
         "Run a code reviewer on `git diff " + $base + "...HEAD` and apply its findings — use " + $hint + ". " +
         "Then atomically write " + $file + " (tmp+mv) with schema " +
         "{ version: 1, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round }. " +
-        "`reviewers` must include at least one accepted reviewer (caveman:cavecrew-reviewer, code-review, code-review:review, code-review:xhigh, review, or security-review), " +
+        "`reviewers` must include at least one accepted reviewer (caveman:cavecrew-reviewer, code-review, toolu-review:review, code-review:xhigh, review, or security-review), " +
         "`findings_count` must be 0, `review_round` starts at 1 and bumps by 1 each rewrite. " +
         "Retry push."
       )
@@ -164,7 +164,7 @@ fi
 # extra reviewers (e.g. code-simplifier first) is always fine. Requiring at
 # least one known name still prevents an agent from writing a junk reviewer
 # entry to bypass the gate.
-accepted_reviewers='["caveman:cavecrew-reviewer","code-review","code-review:review","code-review:xhigh","review","security-review"]'
+accepted_reviewers='["caveman:cavecrew-reviewer","code-review","toolu-review:review","code-review:xhigh","review","security-review"]'
 if ! jq -e --argjson acc "$accepted_reviewers" \
      '(.reviewers // []) as $r | any($acc[]; . as $x | $r | index($x) != null)' \
      "$state_file" >/dev/null 2>&1; then

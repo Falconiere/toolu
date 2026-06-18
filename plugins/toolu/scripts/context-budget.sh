@@ -87,7 +87,7 @@ run_skills() {
   check_skill spec-review      plugins/toolu/skills/spec-review/SKILL.md      60 "review the spec;poke holes in this spec"
   check_skill plan-review      plugins/toolu/skills/plan-review/SKILL.md      55 "review the plan;poke holes in the plan"
   check_skill execution-review plugins/toolu/skills/execution-review/SKILL.md 60 "review the execution;is this done"
-  check_skill code-review      plugins/code-review/skills/review/SKILL.md         65 "review before push"
+  check_skill toolu-review      plugins/toolu-review/skills/review/SKILL.md         65 "review before push"
   # Already-lean skills: word ceiling only, lock against regrowth.
   check_skill plan             plugins/toolu/skills/plan/SKILL.md             60 ""
   check_skill execution        plugins/toolu/skills/execution/SKILL.md        60 ""
