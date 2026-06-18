@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Statusline — the toolu statusline.
 # Reads the Claude Code statusline JSON on stdin and prints a single status line:
-#   model | effort | ctx | <gate> | folder | branch | <caveman>
+#   model | effort | ctx | <wk:> | <gate> | folder | branch [↑↓] [dirty] | <comemory> | <caveman>
 # The signature segment is the quality-gate marker: when this project's
 # PostToolUse gate is failing, it shows a loud red marker so you can't miss it.
 # (Lights up only when a gate writer — e.g. rust-quality/ts-quality/toolu — is present.)
@@ -79,11 +79,58 @@ if [ -n "$cwd" ]; then
   fi
 fi
 
-# --- Git branch + folder ---
-branch=""; folder=""
+# --- Git branch + folder + working tree status + ahead/behind ---
+branch=""; folder=""; _git_seg=""; _ab_seg=""; _first=true
 if [ -n "$cwd" ] && [ -d "$cwd" ]; then
   branch=$(git -C "$cwd" --no-optional-locks symbolic-ref --short HEAD 2>/dev/null)
   folder=$(basename "$cwd")
+  # One git status call yields file counts + ahead/behind; parse the branch
+  # header for ahead/behind, then count staged/unstaged/untracked from the
+  # remaining status lines.
+  _staged=0; _unstaged=0; _untracked=0; _ahead=0; _behind=0
+  while IFS= read -r _line; do
+    if [ "$_first" = true ]; then
+      _first=false
+      case "$_line" in
+        "## "*)
+          _rest="${_line:3}"
+          case "$_rest" in
+            *ahead*|*behind*)
+              _ab="${_rest#*[[]}"; _ab="${_ab%]}"
+              case "$_ab" in
+                *ahead*) _ahead_tmp="${_ab#*ahead }"; _ahead="${_ahead_tmp%%,*}"; _ahead="${_ahead%% *}" ;;
+              esac
+              case "$_ab" in
+                *behind*) _behind_tmp="${_ab#*behind }"; _behind="${_behind_tmp%%,*}"; _behind="${_behind%% *}" ;;
+              esac
+              ;;
+          esac
+          ;;
+      esac
+      continue
+    fi
+    [ ${#_line} -lt 2 ] && continue
+    case "${_line:0:2}" in
+      "??") _untracked=$(( _untracked + 1 )) ;;
+      "!!") ;;
+      *)
+        [ "${_line:0:1}" != " " ] && _staged=$(( _staged + 1 ))
+        [ "${_line:1:1}" != " " ] && _unstaged=$(( _unstaged + 1 ))
+        ;;
+    esac
+  done < <(git -C "$cwd" --no-optional-locks status --porcelain --branch 2>/dev/null)
+  # Build ahead/behind segment
+  _ab_txt=""
+  [ "${_ahead:-0}" -gt 0 ] 2>/dev/null && _ab_txt="${_ab_txt}↑${_ahead}"
+  [ "${_behind:-0}" -gt 0 ] 2>/dev/null && _ab_txt="${_ab_txt}↓${_behind}"
+  [ -n "$_ab_txt" ] && _ab_seg="${DIM}${_ab_txt}${RESET}"
+  # Build dirty-status segment
+  _parts=""
+  [ "${_staged:-0}" -gt 0 ]   && _parts="${_parts}+${_staged} "
+  [ "${_unstaged:-0}" -gt 0 ] && _parts="${_parts}~${_unstaged} "
+  [ "${_untracked:-0}" -gt 0 ] && _parts="${_parts}?${_untracked} "
+  _parts="${_parts%" "}"
+  [ -n "$_parts" ] && _git_seg="${YELLOW}[${_parts}]${RESET}"
 fi
 
 # --- Caveman mode (lights up when the caveman plugin is installed) ---
@@ -162,6 +209,10 @@ line="${line}${sep}${MAGENTA}ctx:${tokens_seg}${RESET}"
 [ -n "$gate_seg" ] && line="${line}${sep}${gate_seg}"
 [ -n "$folder" ] && line="${line}${sep}${BOLD}${folder}${RESET}"
 [ -n "$branch" ] && line="${line}${sep}${BLUE}${branch}${RESET}"
+if [ "$_first" = false ]; then
+  [ -n "$_ab_seg" ] && line="${line}${_ab_seg}"
+  [ -n "$_git_seg" ] && line="${line}${_git_seg}"
+fi
 [ -n "$comemory_seg" ] && line="${line}${sep}${comemory_seg}"
 [ -n "$caveman_seg" ] && line="${line}${sep}${caveman_seg}"
 
