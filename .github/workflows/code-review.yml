@@ -23,3 +23,9 @@ jobs:
       - uses: falconiere/toolu-ghactions/code-review@v2
         with:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          MODEL: deepseek/deepseek-v4-flash
+          # Custom App identity. Requires APP_ID + APP_PRIVATE_KEY secrets on
+          # THIS repo and the App installed here; otherwise falls back to
+          # github-actions[bot].
+          APP_ID: ${{ secrets.APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
