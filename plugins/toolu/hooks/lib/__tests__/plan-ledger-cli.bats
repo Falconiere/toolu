@@ -190,3 +190,110 @@ EOF
   run bash "$SCRIPT" --self-test
   [ "$status" -eq 0 ]
 }
+
+# --- a4: running two-write, --activity, orphan self-heal, path/root ---
+
+# AC#2 — running is observable mid-run: background a --step run whose check sleeps,
+# poll the ledger for status==running + summary.running==1, then assert green after.
+@test "run --step: running observable mid-run, then green (AC#2)" {
+  doc="$REPO/plan.md"
+  # s1 sleeps then succeeds; s2 succeeds. Seed both first so the ledger exists.
+  _write_doc "$doc" "true" "true"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$status" -eq 0 ]
+
+  _write_doc "$doc" "sleep 1; true" "true"
+  # Background the single-step run; capture its PID.
+  ( cd "$REPO" && bash "$SCRIPT" run "$doc" --step s1 --activity "checking s1" ) &
+  local run_pid=$!
+
+  # Poll the ledger for the running state during the sleep (up to ~2s).
+  local saw_running=0 i
+  for i in $(seq 1 40); do
+    if [ -f "$LEDGER" ] \
+       && [ "$(jq -r '.steps[] | select(.id=="s1") | .status' "$LEDGER" 2>/dev/null)" = "running" ]; then
+      saw_running=1
+      [ "$(jq -r '.steps[] | select(.id=="s1") | .started_at' "$LEDGER")" != "null" ]
+      [ "$(jq -r '.steps[] | select(.id=="s1") | .activity' "$LEDGER")" = "checking s1" ]
+      [ "$(jq -r '.summary.running' "$LEDGER")" = "1" ]
+      break
+    fi
+    sleep 0.05
+  done
+  [ "$saw_running" -eq 1 ]
+
+  wait "$run_pid"
+  # After the run returns, s1 is green and nothing is running.
+  [ "$(jq -r '.steps[] | select(.id=="s1") | .status' "$LEDGER")" = "green" ]
+  [ "$(jq -r '.summary.running' "$LEDGER")" = "0" ]
+}
+
+# AC#3 — orphaned running self-heals: hand-set s1 running with started_at 600s
+# ago, run `status`, and it comes back pending.
+@test "status: orphaned running (started_at 600s ago) self-heals to pending (AC#3)" {
+  doc="$REPO/plan.md"
+  _write_doc "$doc" "true" "true"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$status" -eq 0 ]
+
+  # Hand-set s1 to running with an old started_at (600s in the past, UTC ISO-8601).
+  local old
+  old=$(date -u -v-600S +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '600 seconds ago' +%Y-%m-%dT%H:%M:%SZ)
+  local patched
+  patched=$(jq --arg old "$old" '
+    .steps |= map(if .id=="s1"
+      then .status="running" | .started_at=$old | .activity="stuck"
+      else . end)' "$LEDGER")
+  printf '%s\n' "$patched" > "$LEDGER"
+  [ "$(jq -r '.steps[] | select(.id=="s1") | .status' "$LEDGER")" = "running" ]
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' status"
+  [ "$(jq -r '.steps[] | select(.id=="s1") | .status' "$LEDGER")" = "pending" ]
+  [ "$(jq -r '.steps[] | select(.id=="s1") | .started_at' "$LEDGER")" = "null" ]
+  [ "$(jq -r '.summary.running' "$LEDGER")" = "0" ]
+}
+
+# A fresh running step (recent started_at) is NOT healed by status.
+@test "status: fresh running step (recent started_at) is preserved, not healed" {
+  doc="$REPO/plan.md"
+  _write_doc "$doc" "true" "true"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$status" -eq 0 ]
+
+  local now
+  now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  local patched
+  patched=$(jq --arg now "$now" '
+    .steps |= map(if .id=="s1" then .status="running" | .started_at=$now else . end)' "$LEDGER")
+  printf '%s\n' "$patched" > "$LEDGER"
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' status"
+  [ "$(jq -r '.steps[] | select(.id=="s1") | .status' "$LEDGER")" = "running" ]
+  [ "$(jq -r '.summary.running' "$LEDGER")" = "1" ]
+}
+
+# AC#5 — path/root are the single truth.
+@test "path: prints <root>/.claude/tmp/plan-ledger/<slug>.json" {
+  run bash -c "cd '$REPO' && bash '$SCRIPT' path"
+  [ "$status" -eq 0 ]
+  # path is rooted at the git toplevel, which on macOS resolves /tmp -> /private/tmp;
+  # compare the suffix (slug-keyed file) and the resolved root separately.
+  [ "${output%/.claude/tmp/plan-ledger/feat_x.json}" != "$output" ]
+  local root_out
+  root_out="${output%/.claude/tmp/plan-ledger/feat_x.json}"
+  [ "$(cd "$root_out" && pwd -P)" = "$(cd "$REPO" && pwd -P)" ]
+}
+
+@test "root: prints detect_project_root (the repo toplevel)" {
+  run bash -c "cd '$REPO' && bash '$SCRIPT' root"
+  [ "$status" -eq 0 ]
+  # macOS /tmp is a symlink to /private/tmp; compare resolved paths.
+  [ "$(cd "$output" && pwd -P)" = "$(cd "$REPO" && pwd -P)" ]
+}
+
+@test "run: --activity without --step is rejected (exit 2)" {
+  doc="$REPO/plan.md"
+  _write_doc "$doc" "true" "true"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' --activity foo"
+  [ "$status" -eq 2 ]
+}

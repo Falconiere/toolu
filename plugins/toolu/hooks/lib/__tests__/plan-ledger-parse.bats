@@ -205,3 +205,52 @@ EOF
   run pl_read_ledger "$ledger"
   [ "$status" -ne 0 ]
 }
+
+# --- additive schema (a1): started_at / activity / running (version stays 1) ---
+# These exercise pl_build_step_entry + pl_recompute from plan-ledger.sh, which
+# sources this parse lib. Sourcing it here pulls in the new helpers alongside the
+# parse/IO functions already loaded by setup().
+_source_ledger() {
+  # shellcheck source=../plan-ledger.sh
+  . "${BATS_TEST_DIRNAME}/../plan-ledger.sh"
+}
+
+@test "pl_build_step_entry: omitting started_at/activity defaults both to null" {
+  _source_ledger
+  steps='[{"id":"s1","title":"First","check":"true"}]'
+  run pl_build_step_entry "$steps" s1 green 0 deadbeef '"tail"'
+  [ "$status" -eq 0 ]
+  [ "$(echo "$output" | jq -r '.started_at')" = "null" ]
+  [ "$(echo "$output" | jq -r '.activity')" = "null" ]
+  # Existing fields still present and correct.
+  [ "$(echo "$output" | jq -r '.status')" = "green" ]
+  [ "$(echo "$output" | jq -r '.diff_sha')" = "deadbeef" ]
+}
+
+@test "pl_build_step_entry: started_at/activity passed through when given" {
+  _source_ledger
+  steps='[{"id":"s1","title":"First","check":"true"}]'
+  run pl_build_step_entry "$steps" s1 running null "" 'null' "2026-06-17T00:00:00Z" "editing foo.ts"
+  [ "$status" -eq 0 ]
+  [ "$(echo "$output" | jq -r '.status')" = "running" ]
+  [ "$(echo "$output" | jq -r '.started_at')" = "2026-06-17T00:00:00Z" ]
+  [ "$(echo "$output" | jq -r '.activity')" = "editing foo.ts" ]
+}
+
+@test "pl_recompute: summary gains running count; running step is not fresh_green" {
+  _source_ledger
+  ledger='{"version":1,"steps":[
+    {"id":"s1","status":"green","diff_sha":"abc"},
+    {"id":"s2","status":"running","started_at":"2026-06-17T00:00:00Z","diff_sha":null},
+    {"id":"s3","status":"pending","diff_sha":null}
+  ]}'
+  run pl_recompute "$ledger" "abc"
+  [ "$status" -eq 0 ]
+  [ "$(echo "$output" | jq -r '.summary.running')" = "1" ]
+  [ "$(echo "$output" | jq -r '.summary.green')" = "1" ]
+  [ "$(echo "$output" | jq -r '.summary.fresh_green')" = "1" ]
+  # next is the first non-fresh step: the running s2.
+  [ "$(echo "$output" | jq -r '.next')" = "s2" ]
+  # version is untouched (stays 1).
+  [ "$(echo "$output" | jq -r '.version')" = "1" ]
+}

@@ -5,7 +5,8 @@
 # claim green. Sourceable (functions only) and runnable (guarded `main`).
 # jq-only. Parse/IO errors fail closed (exit 2).
 #
-# Run:    bash plan-ledger.sh run <doc.md> [--step <id>] | status | --self-test
+# Run:    bash plan-ledger.sh run <doc.md> [--step <id>] [--activity <label>]
+#         bash plan-ledger.sh status | preflight [<doc.md>] | path | root | --self-test
 # Source: . "${BASH_SOURCE%/*}/plan-ledger.sh"   (defines pl_* helpers, no run)
 
 # pipefail so the `git diff | git hash-object` pipe surfaces failures instead of
@@ -18,6 +19,8 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}}"
 . "$_toolu_lib/plan-ledger-parse.sh"
 # shellcheck source=detect.sh
 . "$_toolu_lib/detect.sh"
+# shellcheck source=plan-ledger-preflight.sh
+. "$_toolu_lib/plan-ledger-preflight.sh"
 
 # pl_diff_sha BASE
 # Print the content-addressed diff hash of BASE...HEAD (matches push-review.sh:88).
@@ -54,10 +57,10 @@ pl_evidence() {
 }
 
 # pl_recompute LEDGER_JSON CURRENT_DIFF_SHA
-# Recompute summary{total,green,red,pending,stale,fresh_green} and next against
-# CURRENT_DIFF_SHA (a step is fresh-green iff status==green AND diff_sha matches;
-# next = first non-fresh-green step id, null when all fresh-green). Print the
-# updated ledger json on stdout.
+# Recompute summary{total,green,red,pending,running,stale,fresh_green} and next
+# against CURRENT_DIFF_SHA (a step is fresh-green iff status==green AND diff_sha
+# matches; a running step is never fresh; next = first non-fresh-green step id,
+# null when all fresh-green). Print the updated ledger json on stdout.
 pl_recompute() {
   local ledger="$1" cur="$2"
   jq --arg cur "$cur" '
@@ -67,6 +70,7 @@ pl_recompute() {
       green:       ([.steps[] | select(.status == "green")]  | length),
       red:         ([.steps[] | select(.status == "red")]    | length),
       pending:     ([.steps[] | select(.status == "pending")]| length),
+      running:     ([.steps[] | select(.status == "running")]| length),
       stale:       ([.steps[] | select(.status == "green" and .diff_sha != $cur)] | length),
       fresh_green: ([.steps[] | select(is_fresh)] | length)
     }
@@ -95,11 +99,15 @@ pl_all_fresh() {
 # pl_now  ->  UTC ISO-8601 timestamp.
 pl_now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
-# pl_build_step_entry STEPS_JSON ID STATUS EXIT_CODE DIFF_SHA EVIDENCE_JSON
+# pl_build_step_entry STEPS_JSON ID STATUS EXIT_CODE DIFF_SHA EVIDENCE_JSON [STARTED_AT] [ACTIVITY]
 # Print a single ledger step object merging the doc fields (id/title/check from
 # STEPS_JSON) with the run results. EVIDENCE_JSON is an already-JSON-encoded string.
+# STARTED_AT/ACTIVITY are optional; an empty arg becomes JSON null (additive
+# schema fields — version stays 1). started_at is the ISO-8601 time the step
+# entered `running`; activity is an optional short label.
 pl_build_step_entry() {
   local steps="$1" id="$2" status="$3" code="$4" sha="$5" evidence="$6"
+  local started_at="${7:-}" activity="${8:-}"
   jq -n \
     --argjson steps "$steps" \
     --arg id "$id" \
@@ -107,26 +115,50 @@ pl_build_step_entry() {
     --argjson code "$code" \
     --arg sha "$sha" \
     --arg now "$(pl_now)" \
-    --argjson evidence "$evidence" '
+    --argjson evidence "$evidence" \
+    --arg started_at "$started_at" \
+    --arg activity "$activity" '
     ($steps[] | select(.id == $id)) as $s
     | { id: $s.id, title: $s.title, check: $s.check,
-        status: $status, exit_code: $code, diff_sha: $sha,
+        status: $status,
+        started_at: (if $started_at == "" then null else $started_at end),
+        activity: (if $activity == "" then null else $activity end),
+        exit_code: $code, diff_sha: $sha,
         last_run: $now, evidence_tail: $evidence }
   '
 }
 
-# pl_cmd_run DOC [--step ID]
+# pl_cmd_run DOC [--step ID] [--activity LABEL]
 # Parse DOC's steps; cd to project root; run checks (all, or only --step ID
 # preserving other entries from an existing ledger); recompute and write the
 # ledger; print the summary line. Exit 0 iff all fresh-green, else 1; parse/IO
 # error -> exit 2 (writes nothing).
+#
+# When --step is given, the step is written `running` + started_at (+ activity)
+# in a first atomic write BEFORE its check runs, then rewritten green|red after
+# (two writes) so a watcher sees the in-flight state. --activity sets an optional
+# short label; it only applies with --step.
 pl_cmd_run() {
   local doc="$1"; shift
-  local only_step="" steps base cur ledger_file root
-  if [ "${1:-}" = "--step" ]; then
-    only_step="${2:-}"
-    [ -n "$only_step" ] || { echo "plan-ledger: --step requires an id" >&2; return 2; }
-  fi
+  local only_step="" activity="" steps base cur ledger_file root
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --step)
+        only_step="${2:-}"
+        [ -n "$only_step" ] || { echo "plan-ledger: --step requires an id" >&2; return 2; }
+        shift 2
+        ;;
+      --activity)
+        activity="${2:-}"
+        [ -n "$activity" ] || { echo "plan-ledger: --activity requires a label" >&2; return 2; }
+        shift 2
+        ;;
+      *)
+        echo "plan-ledger: unknown run flag: $1" >&2; return 2
+        ;;
+    esac
+  done
+  [ -z "$activity" ] || [ -n "$only_step" ] || { echo "plan-ledger: --activity requires --step" >&2; return 2; }
 
   # Parse first — on failure write NOTHING (crit8).
   steps=$(pl_parse_steps "$doc") || return 2
@@ -155,6 +187,48 @@ pl_cmd_run() {
     fi
   fi
 
+  # Write #1 (only with --step): mark the target step `running` + started_at
+  # (+ activity) and persist BEFORE running its check, so a watcher sees the
+  # in-flight state. Other steps keep their prior entry (or seed pending). The
+  # green|red rewrite (write #2) happens after the check, below.
+  local started_at=""
+  if [ -n "$only_step" ]; then
+    started_at=$(pl_now)
+    local pre_steps
+    pre_steps=$(jq -n \
+      --argjson ex "$existing" --argjson steps "$steps" \
+      --arg only "$only_step" --arg now "$started_at" --arg act "$activity" '
+      [ $steps[] | .id as $id
+        | ($ex[$id]) as $p
+        | if $id == $only
+          then ($steps[] | select(.id==$id)) as $s
+               | { id: $s.id, title: $s.title, check: $s.check,
+                   status: "running",
+                   started_at: $now,
+                   activity: (if $act == "" then null else $act end),
+                   exit_code: null, diff_sha: null,
+                   last_run: $now, evidence_tail: null }
+          elif $p != null then $p
+          else ($steps[] | select(.id==$id)) as $s
+               | { id: $s.id, title: $s.title, check: $s.check,
+                   status: "pending", started_at: null, activity: null,
+                   exit_code: null, diff_sha: null,
+                   last_run: null, evidence_tail: null }
+          end
+      ]') || { echo "plan-ledger: failed to assemble running pre-write" >&2; return 2; }
+    local pre_ledger
+    pre_ledger=$(jq -n \
+      --arg branch "$branch" --arg base "$base" --arg doc "$doc" \
+      --arg now "$started_at" --argjson steps "$pre_steps" '
+      { version: 1, branch: $branch, base_branch: $base, plan_doc: $doc,
+        updated_at: $now, summary: {}, next: null, steps: $steps }') \
+      || { echo "plan-ledger: failed to assemble running pre-ledger" >&2; return 2; }
+    pre_ledger=$(pl_recompute "$pre_ledger" "$cur") \
+      || { echo "plan-ledger: failed to recompute running pre-ledger" >&2; return 2; }
+    pl_write_ledger "$ledger_file" "$pre_ledger" \
+      || { echo "plan-ledger: running pre-write failed" >&2; return 2; }
+  fi
+
   # Build the steps array.
   local out_steps id check status code evidence tmpout new_entry
   out_steps="[]"
@@ -169,7 +243,8 @@ pl_cmd_run() {
         | if $p != null then $p
           else (($steps[] | select(.id==$id)) as $s
                 | { id: $s.id, title: $s.title, check: $s.check,
-                    status: "pending", exit_code: null, diff_sha: null,
+                    status: "pending", started_at: null, activity: null,
+                    exit_code: null, diff_sha: null,
                     last_run: null, evidence_tail: null })
           end
       ') || { echo "plan-ledger: failed to assemble entry for step $id" >&2; return 2; }
@@ -223,6 +298,10 @@ pl_cmd_status() {
   branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || return 2
   slug=$(branch_slug "$branch")
 
+  # Self-heal orphaned `running` steps (crash between the two run writes) back to
+  # pending before recomputing, so a stale running can't wedge status/push-gate.
+  ledger=$(pl_heal_orphans "$ledger") \
+    || { echo "plan-ledger: failed to heal orphaned running steps" >&2; return 2; }
   ledger=$(pl_recompute "$ledger" "$cur") \
     || { echo "plan-ledger: failed to recompute summary" >&2; return 2; }
   pl_write_ledger "$ledger_file" "$ledger" || { echo "plan-ledger: ledger write failed" >&2; return 2; }
@@ -278,11 +357,25 @@ main() {
     status)
       pl_cmd_status; exit $?
       ;;
+    preflight)
+      pl_cmd_preflight "${1:-}"; exit $?
+      ;;
+    path)
+      pl_ledger_path || { echo "plan-ledger: cannot resolve ledger path" >&2; exit 2; }
+      exit 0
+      ;;
+    root)
+      local root
+      root=$(detect_project_root)
+      [ -n "$root" ] || { echo "plan-ledger: not in a git repo" >&2; exit 2; }
+      printf '%s\n' "$root"
+      exit 0
+      ;;
     --self-test)
       pl_self_test; exit $?
       ;;
     *)
-      echo "plan-ledger: usage: run <doc> [--step <id>] | status | --self-test" >&2
+      echo "plan-ledger: usage: run <doc> [--step <id>] [--activity <label>] | status | preflight [<doc>] | path | root | --self-test" >&2
       exit 2
       ;;
   esac

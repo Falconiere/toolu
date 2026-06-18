@@ -17,9 +17,11 @@ setup() {
   grep -q 'empty steps' "$SKILLS/plan-review/SKILL.md"
 }
 
-@test "execution reads status and records each step via run --step" {
+@test "execution reads status and records each step via run <plan_doc> --step <id>" {
   grep -q 'plan-ledger.sh status' "$SKILLS/execution/SKILL.md"
-  grep -q 'run --step' "$SKILLS/execution/SKILL.md"
+  # the engine requires the plan-doc positional arg, so the doc must show it
+  grep -q 'run <plan_doc>' "$SKILLS/execution/SKILL.md"
+  grep -q -- '--step <id>' "$SKILLS/execution/SKILL.md"
 }
 
 @test "execution-review confirms all steps fresh-green" {

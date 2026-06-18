@@ -12,6 +12,6 @@
     "types": ["node", "bun-types"],
     "allowImportingTsExtensions": true
   },
-  "include": ["pi/**/*.ts", "opencode/**/*.ts"],
+  "include": ["pi/**/*.ts", "opencode/**/*.ts", "plugins/toolu/dashboard/**/*.ts"],
   "exclude": ["node_modules", "**/node_modules/**"]
 }

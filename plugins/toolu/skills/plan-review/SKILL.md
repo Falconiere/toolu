@@ -33,8 +33,8 @@ One line per finding, severity-tagged, location + problem + fix — no praise, n
 <step/section>: 🔵 consider: <minor>. <the fix>.
 ```
 
-End with a verdict:
-- **Approved** → ready for `execution`.
-- **Needs changes** → list the blockers that must close first; back to `plan`.
+End with a verdict, and **stamp the plan's `**Status:**` header field** to match (mirroring how `spec-review` stamps the spec) — `execution`'s preflight gate reads it:
+- **Approved** → stamp `**Status:** Approved`; ready for `execution`.
+- **Needs changes** → stamp `**Status:** Needs changes`; list the blockers that must close first; back to `plan`.
 
 Flag only what blocks confident execution. A plan that reads clean but can't be verified step-by-step is not clean — say so.

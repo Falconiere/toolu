@@ -209,6 +209,47 @@ denies() {
   denies
 }
 
+# a5/AC#4: a `running` step (fresh started_at) is listed as a push blocker.
+@test "plan-ledger gate (a5): a running step denies and is named as a blocker" {
+  echo "echo hi" > script.sh && git add script.sh && git commit -q -m "script"
+  local sha steps
+  sha=$(sandbox_diff_sha)
+  # s1 green+fresh, s2 running (fresh started_at) -> the running step blocks push.
+  steps=$(jq -n --arg sha "$sha" '[
+    { id: "s1", title: "first", check: "true", status: "green",
+      started_at: null, activity: null, exit_code: 0, diff_sha: $sha },
+    { id: "s2", title: "second", check: "true", status: "running",
+      started_at: "2026-06-17T12:00:00Z", activity: "checking s2",
+      exit_code: null, diff_sha: null }
+  ]')
+  write_ledger 1 "$steps" 2
+  payload=$(build_input "git push origin feat/example")
+  run_gate "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  denies
+  [[ "$output" == *"s2"* ]]
+  [[ "$output" == *"running"* ]]
+}
+
+# a5: a version-1 ledger whose every step is fresh-green ALLOWS (the running case
+# above is what flips it to deny — this pins the positive control on v1 schema).
+@test "plan-ledger gate (a5): version-1 all-fresh-green ledger allows" {
+  echo "echo hi" > script.sh && git add script.sh && git commit -q -m "script"
+  local sha steps
+  sha=$(sandbox_diff_sha)
+  steps=$(jq -n --arg sha "$sha" '[
+    { id: "s1", title: "first", check: "true", status: "green",
+      started_at: null, activity: null, exit_code: 0, diff_sha: $sha },
+    { id: "s2", title: "second", check: "true", status: "green",
+      started_at: null, activity: null, exit_code: 0, diff_sha: $sha }
+  ]')
+  write_ledger 1 "$steps" 2
+  payload=$(build_input "git push origin feat/example")
+  run_gate "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  ! denies
+}
+
 # unparseable ledger -> DENY (fail closed).
 @test "plan-ledger gate (corrupt): unparseable ledger denies (fail closed)" {
   echo "echo hi" > script.sh && git add script.sh && git commit -q -m "script"

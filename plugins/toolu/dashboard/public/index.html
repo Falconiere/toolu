@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Execution Ledger — Kanban</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>Execution Ledger</h1>
+      <div class="meta">
+        <span id="plan" class="plan">—</span>
+        <span id="status" class="conn" data-state="connecting">connecting…</span>
+      </div>
+    </header>
+
+    <main id="board" class="board" aria-live="polite">
+      <section class="column" data-col="pending">
+        <h2>To Do <span class="count" data-count="pending">0</span></h2>
+        <div class="cards" id="col-pending"></div>
+      </section>
+      <section class="column" data-col="running">
+        <h2>Running <span class="count" data-count="running">0</span></h2>
+        <div class="cards" id="col-running"></div>
+      </section>
+      <section class="column" data-col="red">
+        <h2>Blocked <span class="count" data-count="red">0</span></h2>
+        <div class="cards" id="col-red"></div>
+      </section>
+      <section class="column" data-col="green">
+        <h2>Done <span class="count" data-count="green">0</span></h2>
+        <div class="cards" id="col-green"></div>
+      </section>
+    </main>
+
+    <p id="empty" class="empty" hidden>No ledger yet on this branch — run a plan step to begin.</p>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
