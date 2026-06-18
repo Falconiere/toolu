@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.23.0](https://github.com/Falconiere/toolu/compare/v1.22.0...v1.23.0) (2026-06-18)
+
+
+### Features
+
+* **statusline:** show git working-tree status and ahead/behind in statusline ([a3915f0](https://github.com/Falconiere/toolu/commit/a3915f037beeb2f942da4ac40475cbb5c394a2fd))
+
+
+### Bug Fixes
+
+* **statusline:** use explicit -b main in ahead/behind tests for CI compat ([c4c5ef7](https://github.com/Falconiere/toolu/commit/c4c5ef7ba076af2cb53bb222e82bd941b11a3244))
+
 ## [1.22.0](https://github.com/Falconiere/toolu/compare/v1.21.0...v1.22.0) (2026-06-18)
 
 

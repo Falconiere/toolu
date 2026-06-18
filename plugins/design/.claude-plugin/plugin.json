@@ -1,6 +1,6 @@
 {
   "name": "design",
-  "version": "1.22.0",
+  "version": "1.23.0",
   "description": "Web & mobile UI/UX design review over a cited, stack-aware knowledge base (skill + bash detector). Standalone, no dependencies.",
   "author": {
     "name": "Falconiere Barbosa",
