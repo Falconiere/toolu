@@ -65,6 +65,78 @@ _plain() { printf '%s' "$1" | sed $'s/\033\\[[0-9;]*m//g'; }
   [[ "$plain" == *"$(git -C "$TMP" symbolic-ref --short HEAD)"* ]]
 }
 
+@test "statusline: dirty shows staged files with [+N]" {
+  (cd "$TMP" && git init -q && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init)
+  touch "$TMP/staged.txt" && (cd "$TMP" && git add staged.txt)
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$TMP"'"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | bash "$SL")
+  plain=$(_plain "$out") && [[ "$plain" == *"[+1]"* ]]
+}
+
+@test "statusline: dirty shows unstaged files with [~N]" {
+  (cd "$TMP" && git init -q && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init)
+  echo "c" > "$TMP/f.txt" && (cd "$TMP" && git add f.txt && git -c user.email=t@t -c user.name=t commit -qm add)
+  echo "ch" >> "$TMP/f.txt"
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$TMP"'"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | bash "$SL")
+  plain=$(_plain "$out") && [[ "$plain" == *"[~1]"* ]]
+}
+
+@test "statusline: dirty shows untracked files with [?N]" {
+  (cd "$TMP" && git init -q && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init)
+  touch "$TMP/u.txt"
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$TMP"'"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | bash "$SL")
+  plain=$(_plain "$out") && [[ "$plain" == *"[?1]"* ]]
+}
+
+@test "statusline: dirty shows all three counts when mixed" {
+  (cd "$TMP" && git init -q && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init)
+  # Commit one file first so subsequent modifications show as unstaged.
+  echo "c" > "$TMP/f.txt" && (cd "$TMP" && git add f.txt && git -c user.email=t@t -c user.name=t commit -qm add)
+  echo "ch" >> "$TMP/f.txt"                                        # unstaged ~
+  touch "$TMP/s.txt" && (cd "$TMP" && git add s.txt)               # staged +
+  touch "$TMP/u.txt"                                                # untracked ?
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$TMP"'"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | bash "$SL")
+  plain=$(_plain "$out") && [[ "$plain" == *"[+1 ~1 ?1]"* ]]
+}
+
+@test "statusline: clean repo omits dirty bracket" {
+  (cd "$TMP" && git init -q && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init)
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$TMP"'"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | bash "$SL")
+  plain=$(_plain "$out")
+  [[ "$plain" != *"[+"* ]] && [[ "$plain" != *"[~"* ]] && [[ "$plain" != *"[?"* ]]
+}
+
+@test "statusline: ahead arrow shown when local is ahead of upstream" {
+  repo="$TMP/repo"; remote="$TMP/remote"; mkdir -p "$repo" "$remote"
+  (cd "$remote" && git init -q --bare)
+  (cd "$repo" && git init -q && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init && git remote add origin "$remote" && git push -q -u origin main && git -c user.email=t@t -c user.name=t commit --allow-empty -qm ahead)
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$repo"'"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | bash "$SL")
+  plain=$(_plain "$out") && [[ "$plain" == *"↑1"* ]]
+}
+
+@test "statusline: behind arrow shown when local is behind upstream" {
+  repo="$TMP/repo"; remote="$TMP/remote"; mkdir -p "$repo" "$remote"
+  (cd "$remote" && git init -q --bare)
+  (cd "$repo" && git init -q && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init && git remote add origin "$remote" && git push -q -u origin main && git -c user.email=t@t -c user.name=t commit --allow-empty -qm behind && git push -q origin main && git reset --hard HEAD~1 -q)
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$repo"'"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | bash "$SL")
+  plain=$(_plain "$out") && [[ "$plain" == *"↓1"* ]]
+}
+
+@test "statusline: dirty and ahead shown together" {
+  repo="$TMP/repo"; remote="$TMP/remote"; mkdir -p "$repo" "$remote"
+  (cd "$remote" && git init -q --bare)
+  (cd "$repo" && git init -q && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init && git remote add origin "$remote" && git push -q -u origin main && git -c user.email=t@t -c user.name=t commit --allow-empty -qm ahead)
+  touch "$repo/new.txt"
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$repo"'"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | bash "$SL")
+  plain=$(_plain "$out")
+  [[ "$plain" == *"↑1"* ]] && [[ "$plain" == *"[?1]"* ]]
+}
+
+@test "statusline: no dirty status outside a git repo" {
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$TMP"'"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | bash "$SL")
+  plain=$(_plain "$out")
+  [[ "$plain" != *"[+"* ]] && [[ "$plain" != *"[~"* ]] && [[ "$plain" != *"[?"* ]]
+}
+
 @test "statusline: gate marker resolves via git root when cwd is a subdir" {
   ( cd "$TMP" && git init -q && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init )
   mkdir -p "$TMP/.claude/tmp" "$TMP/packages/app/src"

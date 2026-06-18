@@ -4,7 +4,7 @@ An optional Claude Code statusline. One line, assembled defensively from the
 statusline JSON Claude Code sends on stdin:
 
 ```
-model | effort:high | ctx:45k/200k (22%) | wk:13.7M | ✗ gate:failing | my-folder | main | [COMEMORY:42] | [CAVEMAN]
+model | effort:high | ctx:45k/200k (22%) | wk:13.7M $1.45 | ✗ gate:failing | my-folder | main ↑2↓1 [+2 ~1 ?3] | [COMEMORY:42] | [CAVEMAN]
 ```
 
 | Segment | Source | Shows when |
@@ -14,11 +14,11 @@ model | effort:high | ctx:45k/200k (22%) | wk:13.7M | ✗ gate:failing | my-fold
 | ctx | `.context_window.*` | always |
 | `wk:` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline/usage/<week>/*.json` | any token usage has been recorded this week |
 | `✗ gate:failing` | `.claude/tmp/quality-gate-status.json` at the git root | a **gate writer** (e.g. the `rust-quality` / `ts-quality` / `toolu` plugins) marks the gate failing |
-| folder + branch | git, from the workspace dir | inside a git repo |
+| folder + branch + status | git, from the workspace dir | inside a git repo — `↑N↓M` shows ahead/behind of the tracked remote, `[+N ~N ?N]` shows staged/unstaged/untracked file counts (both omitted when clean and up-to-date) |
 | `[COMEMORY:N]` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory-status/<repo>.json` | the **comemory** plugin published a memory count this session |
 | `[CAVEMAN]` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.caveman-active` | the **caveman** plugin is active |
 
-The gate, usage, comemory, and caveman segments degrade gracefully — if the file
+The gate, usage, comemory, git status, and caveman segments degrade gracefully — if the file
 they read is absent, the segment simply doesn't render. So statusline is
 **standalone**: it declares no plugin dependencies. Those segments just light up
 automatically when the relevant plugins are also installed.
