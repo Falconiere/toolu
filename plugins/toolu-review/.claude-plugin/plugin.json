@@ -1,5 +1,5 @@
 {
-  "name": "code-review",
+  "name": "toolu-review",
   "version": "1.22.0",
   "description": "Project-tuned pre-push code review mirroring the CI review bot's checklist (correctness, security, perf, test coverage, doc accuracy), writing the toolu push-review state so the gate passes. Standalone.",
   "author": {
@@ -11,7 +11,7 @@
   "license": "MIT",
   "keywords": [
     "claude-code",
-    "code-review",
+    "toolu-review",
     "push-review",
     "quality"
   ]

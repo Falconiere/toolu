@@ -3,7 +3,7 @@
 # gate validates (.claude/tmp/push-review/<branch-slug>.json).
 #
 # The review JUDGMENT (which findings exist) belongs to the caller — the
-# `code-review:review` skill. This script does only the deterministic
+# `toolu-review:review` skill. This script does only the deterministic
 # bookkeeping: compute the gate's diff_sha/base/slug, bump review_round, and
 # write the JSON atomically.
 #
@@ -15,13 +15,13 @@
 #
 # Usage: write-state.sh --findings-count N [--reviewers JSON] [--findings JSON]
 #   --findings-count  (required) integer; the gate allows push only when 0.
-#   --reviewers       (default ["code-review:review"]) JSON array.
+#   --reviewers       (default ["toolu-review:review"]) JSON array.
 #   --findings        (default []) JSON array of {path,severity,text}.
 # Prints the state file path on success.
 set -o pipefail
 
 findings_count=""
-reviewers='["code-review:review"]'
+reviewers='["toolu-review:review"]'
 findings='[]'
 while [ $# -gt 0 ]; do
   case "$1" in

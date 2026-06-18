@@ -1,4 +1,4 @@
-# code-review — Pre-Push Code Review
+# toolu-review — Pre-Push Code Review
 
 **Type:** Workflow | **Version:** 0.1.0 | **Standalone** (no dependencies)
 
@@ -7,12 +7,12 @@ Project-tuned pre-push code review mirroring the CI review bot's checklist (corr
 ## Install
 
 ```text
-/plugin install code-review@toolu
+/plugin install toolu-review@toolu
 ```
 
 ## What It Provides
 
-### `code-review:review` Skill
+### \`toolu-review:review\` Skill
 
 Reviews the branch diff against seven dimensions the CI review bot (the `claude[bot]` verdict comment) flags. Does **not** auto-fire on edits — run it explicitly before pushing, or when `pr-babysit` needs a reviewer.
 
@@ -21,7 +21,7 @@ Reviews the branch diff against seven dimensions the CI review bot (the `claude[
 ### Basic Pre-Push Review
 
 ```text
-code-review:review
+toolu-review:review
 ```
 
 Resolves the diff with `git diff --no-color <base>...HEAD`, reviews every hunk against the checklist, fixes findings in code, and records clean state for the push-review gate.
@@ -51,8 +51,8 @@ git diff --no-color main...HEAD
 
 # Record the clean state (the SessionStart hook publishes this symlink;
 # $CLAUDE_PLUGIN_ROOT is NOT exported to the Bash tool subshell).
-bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/code-review/write-state.sh" \
-  --findings-count 0 --reviewers '["code-review:review"]'
+bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review/write-state.sh" \
+  --findings-count 0 --reviewers '["toolu-review:review"]'
 ```
 
 `write-state.sh` computes the gate's exact `diff_sha`/`base`/`slug`, bumps `review_round`, and writes `.claude/tmp/push-review/<branch-slug>.json` atomically. It's a harmless no-op when the toolu push-review gate is not installed.
@@ -62,7 +62,7 @@ bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/code-review/write-state.sh" \
 If findings remain that need a human decision:
 
 ```bash
-bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/code-review/write-state.sh" \
+bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review/write-state.sh" \
   --findings-count 3 --findings '[{"path":"src/auth.ts","line":42,"issue":"Needs product decision on session timeout"}]'
 ```
 
@@ -73,7 +73,7 @@ The gate keeps blocking — open findings mean the code is not ready to push.
 When `pr-babysit` needs a reviewer, it picks from:
 
 1. `caveman:cavecrew-reviewer` (when the caveman plugin is installed — preferred)
-2. `code-review:review` (the CI-bot mirror — best for cutting bot rework)
+2. \`toolu-review:review\` (the CI-bot mirror — best for cutting bot rework)
 3. Built-in `/code-review xhigh --fix` (always available)
 
 ## Output Format

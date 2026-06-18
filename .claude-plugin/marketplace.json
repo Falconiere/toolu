@@ -93,12 +93,12 @@
       "license": "MIT"
     },
     {
-      "name": "code-review",
-      "source": "./plugins/code-review",
+      "name": "toolu-review",
+      "source": "./plugins/toolu-review",
       "description": "Project-tuned pre-push code review mirroring the CI review bot's checklist; writes the toolu push-review state so the gate passes. Standalone, no dependencies.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
-      "keywords": ["code-review", "push-review", "quality", "skills"],
+      "keywords": ["toolu-review", "push-review", "quality", "skills"],
       "license": "MIT"
     },
     {

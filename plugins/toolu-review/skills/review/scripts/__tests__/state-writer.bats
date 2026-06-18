@@ -58,10 +58,10 @@ teardown() {
 @test "write-state: writes schema and bumps review_round 0->1->2" {
   git checkout -q -b feature
   echo a > f.txt && git add f.txt && git commit -qm work
-  out=$(CLAUDE_PROJECT_DIR="$TMP" bash "$WS" --findings-count 0 --reviewers '["code-review:review"]')
+  out=$(CLAUDE_PROJECT_DIR="$TMP" bash "$WS" --findings-count 0 --reviewers '["toolu-review:review"]')
   [ "$(jq -r .version "$out")" = "1" ]
   [ "$(jq -r .findings_count "$out")" = "0" ]
-  [ "$(jq -r '.reviewers[0]' "$out")" = "code-review:review" ]
+  [ "$(jq -r '.reviewers[0]' "$out")" = "toolu-review:review" ]
   [ "$(jq -r .review_round "$out")" = "1" ]
   out2=$(CLAUDE_PROJECT_DIR="$TMP" bash "$WS" --findings-count 0)
   [ "$(jq -r .review_round "$out2")" = "2" ]

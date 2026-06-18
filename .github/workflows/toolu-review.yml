@@ -1,4 +1,4 @@
-name: Code Review
+name: Toolu Review
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: code-review-${{ github.ref }}
+  group: toolu-review-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

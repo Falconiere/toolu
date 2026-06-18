@@ -245,7 +245,7 @@ No performative agreement. No "Great point!" / "Thanks for catching that!". Stat
 
 Before push, run the reviewer required by the `push-review` PreToolUse hook (writes `.claude/tmp/push-review/<branch>.json`; push denied otherwise):
 
-- Run a reviewer (agnostic): `caveman:cavecrew-reviewer` when the caveman plugin is installed (preferred), the `code-review:review` skill (mirrors the CI bot's checklist — best for cutting bot rework; records `code-review:review` and writes the state file via its `write-state.sh`), or the built-in `/code-review xhigh --fix` skill. Review the diff + apply findings, then record the reviewer name in the state file's `reviewers[]`. (Optionally run `code-simplifier` first for clarity — allowed, not required.)
+- Run a reviewer (agnostic): \`caveman:cavecrew-reviewer\` when the caveman plugin is installed (preferred), the \`toolu-review:review\` skill (mirrors the CI bot's checklist — best for cutting bot rework; records \`toolu-review:review\` and writes the state file via its \`write-state.sh\`), or the built-in \`/code-review xhigh --fix\` skill. Review the diff + apply findings, then record the reviewer name in the state file's \`reviewers[]\`. (Optionally run \`code-simplifier\` first for clarity — allowed, not required.)
 
 Loop until clean, then commit:
 

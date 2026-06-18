@@ -3,7 +3,7 @@ name: review
 description: Project-tuned pre-push code review that mirrors the CI review bot's checklist so the bot finds nothing on first push. Reviews the branch diff for correctness, security, performance, test coverage, doc accuracy, and tight assertions, then records a clean push-review state. Use before pushing a feature branch, when asked to "review before push", or when pr-babysit needs a reviewer. Explicit — does NOT auto-fire on edits.
 ---
 
-# code-review:review
+# toolu-review:review
 
 A pre-push reviewer tuned to what this repo's CI review bot (the `claude[bot]`
 verdict comment) flags — run it locally so the bot's verdict is clean on the
@@ -38,12 +38,12 @@ Review `git diff <base>...HEAD` against these dimensions. Every finding blocks
 4. Record the clean state for the push-review gate:
 
    ```bash
-   bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/code-review/write-state.sh" \
-     --findings-count 0 --reviewers '["code-review:review"]'
+   bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review/write-state.sh" \
+     --findings-count 0 --reviewers '["toolu-review:review"]'
    ```
 
    `write-state.sh` is published as a symlink at
-   `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/code-review/write-state.sh` by the plugin's
+   `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review/write-state.sh` by the plugin's
    SessionStart hook (refreshed every session). `$CLAUDE_CONFIG_DIR` IS exported into
    the Bash tool's subshell; `$CLAUDE_PLUGIN_ROOT` is **NOT** — it is only set for
    hook subprocesses, so the plugin-root path expands to an empty string from a

@@ -114,7 +114,7 @@ pi install https://github.com/Falconiere/toolu
 The package exposes the same discipline through pi's extension API:
 
 - the toolu workflow skills (`brainstorm`, `spec`, `plan`, `execution`, `test`, …)
-- the `ast-grep`, `agent-memory`, `code-review`, `context7`, and `exa-search` skills
+- the \`ast-grep\`, \`agent-memory\`, \`toolu-review\`, \`context7\`, and \`exa-search\` skills
 - a pi extension that reuses toolu's pre/post-tool shell hooks for:
   - protected-file and bash-command blocking
   - quality-gate enforcement between steps
@@ -169,14 +169,14 @@ Eleven plugins, one marketplace. Install the core alone, or add the domain plugi
 | Code intel | **`comemory`** | `0.3.0` | Persistent cross-session **memory** + code-index search (**comemory ≥ 0.8.0**), with a `/comemory:setup` command (detect+guide the binary, then wire git index-code hooks), `delete`/`context` wrapper verbs, `PreToolUse` scope enforcement, and a `SessionStart` memory-count publisher for the statusline. |
 | Knowledge | **`context7`** | `1.18.0` | Live **library documentation** & code-example lookup via the Context7 REST API. Standalone, no dependencies. |
 | Knowledge | **`exa-search`** | `1.18.0` | **Web / code / URL search** plus deep research via the Exa REST API. Standalone, no dependencies. |
-| Workflow | **`code-review`** | `0.1.0` | `code-review:review` — pre-push review mirroring the CI bot's checklist (correctness, security, perf, coverage, doc accuracy); writes the `push-review` state so the gate passes. Standalone. |
+| Workflow | **\`toolu-review\`** | \`0.1.0\` | \`toolu-review:review\` — pre-push review mirroring the CI bot's checklist (correctness, security, perf, coverage, doc accuracy); writes the \`push-review\` state so the gate passes. Standalone. |
 | Workflow | **`pr-babysit`** | `0.1.0` | `/pr-babysit:babysit` — cron-driven PR babysitter that fetches review comments + the CI review-bot verdict, triages, fixes, and chases findings to zero until CI is green. |
 | UI | **`statusline`** | `0.3.1` | Optional gate-aware statusline — `model \| effort \| ctx \| wk \| gate \| folder \| branch \| mem \| caveman`, wired via a stable symlink (`/statusline:setup` to enable). Claude Code only. Standalone. |
 | Design | **`design`** | `1.21.0` | **UI/UX design review** for web & mobile over a cited, stack-aware knowledge base (WCAG 2.2, Material 3, Apple HIG, NN/g) — adds the `design-review` skill plus a `detect-stack.sh` detector. Standalone, no dependencies. |
 
 Beyond the plugins, the core (`toolu`) also ships:
 
-- **`push-review` gate** — blocks `git push` on a feature branch until the diff has been run through an accepted reviewer (`caveman:cavecrew-reviewer` when installed, the built-in `/code-review xhigh --fix` skill, or the `code-review:review` skill), with a round cap (5) that escalates instead of looping forever.
+- **\`push-review\` gate** — blocks \`git push\` on a feature branch until the diff has been run through an accepted reviewer (\`caveman:cavecrew-reviewer\` when installed, the built-in \`/code-review xhigh --fix\` skill, or the \`toolu-review:review\` skill), with a round cap (5) that escalates instead of looping forever.
 - **docs-sync backstop** — on `git push`, an **advisory** (never a block) when the branch diff changes code but no documentation surface (README, `docs/` guides, `SKILL.md` triggers) — a nudge to keep user-facing docs in sync with behavior. Silenced by a diff-`sha`-keyed attestation; surfaces are tunable via `docsSync.*` ([config](docs/config.md#docs-sync-surfaces-docssync)). Pairs with the "Docs in sync" convention the workflow skills enforce.
 - **Slash commands** — `/commit` and `/review-and-commit`.
 - **`deep-explore` agent** — structural codebase exploration via ast-grep.
@@ -271,7 +271,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     ├── ts-quality/             # TypeScript PostToolUse quality fragments, assembled at SessionStart
     ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook
     ├── pr-babysit/             # /pr-babysit:babysit command + parse-verdict.sh
-    └── code-review/            # code-review:review skill + push-review state writer
+    └── toolu-review/            # toolu-review:review skill + push-review state writer
 ```
 
 </details>

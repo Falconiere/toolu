@@ -8,7 +8,7 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 |:--:|--------|------|:----------:|---------------|
 | 1 | [**toolu**](../toolu/README.md) | Core | `code-simplifier`, `caveman` | Hook engine + 8-phase workflow + push-review gate + deep-explore agent |
 | 2 | [**ast-grep**](../ast-grep/README.md) | Code Intel | — | Structural code search & rewrite (tree-sitter AST patterns) |
-| 3 | [**code-review**](../code-review/README.md) | Workflow | — | Pre-push review mirroring the CI review bot's checklist |
+| 3 | [**toolu-review**](../toolu-review/README.md) | Workflow | — | Pre-push review mirroring the CI review bot's checklist |
 | 4 | [**comemory**](../comemory/README.md) | Code Intel | `toolu` | Persistent cross-session agent memory + code-index search |
 | 5 | [**context7**](../context7/README.md) | Knowledge | — | Live library documentation & code-example lookup |
 | 6 | [**exa-search**](../exa-search/README.md) | Knowledge | — | Web / code / URL search plus deep research |
@@ -70,7 +70,7 @@ See [`config.md`](../config.md) for the full schema.
 /plugin install exa-search@toolu
 /plugin install git-better@toolu
 /plugin install jira@toolu
-/plugin install code-review@toolu
+/plugin install toolu-review@toolu
 /plugin install pr-babysit@toolu
 /plugin install stats@toolu
 /plugin install statusline@toolu

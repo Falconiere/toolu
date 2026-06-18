@@ -266,7 +266,7 @@ EOF
   [ -z "$output" ]
 }
 
-@test "push-review: code-review:review reviewer alone satisfies the accepted set" {
+@test "push-review: toolu-review:review reviewer alone satisfies the accepted set" {
   sha=$(current_diff_sha)
   branch=$(git rev-parse --abbrev-ref HEAD)
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
@@ -276,7 +276,7 @@ EOF
     diff_sha: $sha,
     base_branch: "development",
     reviewed_at: "2026-06-07T00:00:00Z",
-    reviewers: ["code-review:review"],
+    reviewers: ["toolu-review:review"],
     findings_count: 0,
     review_round: 1,
     findings: []

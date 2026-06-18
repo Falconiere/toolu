@@ -35,7 +35,7 @@
       "./plugins/toolu/skills",
       "./plugins/ast-grep/skills",
       "./plugins/comemory/skills",
-      "./plugins/code-review/skills",
+      "./plugins/toolu-review/skills",
       "./plugins/context7/skills",
       "./plugins/exa-search/skills",
       "./plugins/jira/skills",
