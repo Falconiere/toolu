@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.1](https://github.com/Falconiere/toolu/compare/v2.1.0...v2.1.1) (2026-06-19)
+
+
+### Bug Fixes
+
+* **pr-babysit:** add GraphQL no-suffix claude form to CI_REVIEWER ([427011a](https://github.com/Falconiere/toolu/commit/427011a46a968ab2707875f478a7e5aa4b84e354))
+* **pr-babysit:** reply to CI bot inline threads, drop summary comments ([f7f38ba](https://github.com/Falconiere/toolu/commit/f7f38baa6649f04d633b73677088188ca4ebe026))
+
 ## [2.1.0](https://github.com/Falconiere/toolu/compare/v2.0.0...v2.1.0) (2026-06-19)
 
 
