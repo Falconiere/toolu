@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/Falconiere/toolu/compare/v2.0.0...v2.1.0) (2026-06-19)
+
+
+### Features
+
+* **plan-ledger:** enrich step schema with ac_refs, retries, depends_on, input ([e0688a3](https://github.com/Falconiere/toolu/commit/e0688a395bf9b4190054f6a84eada85ee0d4adbc))
+
 ## [2.0.0](https://github.com/Falconiere/toolu/compare/v1.23.0...v2.0.0) (2026-06-18)
 
 
