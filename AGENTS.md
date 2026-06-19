@@ -66,10 +66,7 @@ All workflows live in `.github/workflows/`:
 |----------|---------|--------------|
 | `tests.yml` | push/PR to `main` | Typecheck (bun), bats suite, colocated-test layout enforcement, deterministic benchmarks, context-budget guard |
 | `release-please.yml` | push to `main` | Maintains the batched Release PR; on merge, bumps `package.json` + every `plugin.json` to the new `vX.Y.Z`, updates the changelog, tags, and publishes the GitHub Release |
-| \`toolu-review.yml\` | PR opened/synchronize | CI review bot |
-| `codeql.yml` | cron + push to `main` | CodeQL analysis |
-| `secret-scan.yml` | push/PR | Secret scanning |
-| `claude-mention.yml` | issue/PR comment | Claude Code mention automation |
+| `toolu-review.yml` | PR opened/synchronize | CI review bot |
 
 ### Tests CI details
 
