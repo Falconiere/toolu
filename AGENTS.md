@@ -68,12 +68,6 @@ All workflows live in `.github/workflows/`:
 | `release-please.yml` | push to `main` | Maintains the batched Release PR; on merge, bumps `package.json` + every `plugin.json` to the new `vX.Y.Z`, updates the changelog, tags, and publishes the GitHub Release |
 | `toolu-review.yml` | PR opened/synchronize | CI review bot |
 
-> **Removed (PR #115):** `codeql.yml` (CodeQL analysis), `secret-scan.yml` (secret
-> scanning), and `claude-mention.yml` (mention automation) — all callers of the
-> `Falconiere/workflows` reusable workflows — were deleted. **Security note:** CodeQL
-> and secret scanning no longer run in CI; reintroduce dedicated jobs if that coverage
-> is needed again.
-
 ### Tests CI details
 
 - **Colocated test enforcement**: any `.bats` file outside a `__tests__/` dir fails the build.
