@@ -1,6 +1,6 @@
 {
   "name": "git-better",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Token-lean git: a `gb` wrapper with lean defaults plus a cached repo-convention profile, surfaced via PreToolUse nudges registered into the toolu hook engine.",
   "author": {
     "name": "Falconiere Barbosa",
