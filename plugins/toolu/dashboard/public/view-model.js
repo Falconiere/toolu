@@ -72,9 +72,3 @@ export function columnize(steps) {
   }
   return cols;
 }
-
-/** Whether the project has any live agent activity (running/stale) worth a badge. */
-export function hasLiveActivity(activity) {
-  if (!activity) return false;
-  return (activity.running ?? 0) > 0 || (activity.stale ?? 0) > 0;
-}

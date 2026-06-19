@@ -5,7 +5,7 @@
 import React from "react";
 import htm from "htm";
 
-import { PROJECT_DOT, planTotals, hasLiveActivity } from "/static/view-model.js";
+import { PROJECT_DOT, planTotals } from "/static/view-model.js";
 
 const html = htm.bind(React.createElement);
 
@@ -21,7 +21,7 @@ function Dot({ dot }) {
 
 function ProjectRow({ summary, active, onSelect }) {
   const totals = planTotals(summary.planCounts);
-  const live = hasLiveActivity({ running: 0, stale: 0 }) || summary.dot === "running";
+  const live = summary.dot === "running";
   return html`<button
     type="button"
     onClick=${() => onSelect(summary.id)}

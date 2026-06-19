@@ -76,6 +76,14 @@ describe("loadConfig", () => {
     expect(config.port).toBe(8080);
   });
 
+  test("out-of-range numerics are floored (no busy-loop / negative depth)", () => {
+    const p = writeConfig("range.json", JSON.stringify({ pollMs: -5, scanDepth: -3, port: -1 }));
+    const { config } = loadConfig(p);
+    expect(config.pollMs).toBe(1); // floored at 1 so setInterval can't busy-loop
+    expect(config.scanDepth).toBe(0);
+    expect(config.port).toBe(0);
+  });
+
   test("empty file → defaults, no warning", () => {
     const p = writeConfig("empty.json", "   \n");
     const { config, warning } = loadConfig(p);
@@ -90,5 +98,9 @@ describe("expandHome", () => {
   });
   test("non-home path unchanged", () => {
     expect(expandHome("/var/tmp")).toBe("/var/tmp");
+  });
+  test("$HOME at the end of a path is expanded", () => {
+    expect(expandHome("/foo/$HOME")).toBe(`/foo/${homedir()}`);
+    expect(expandHome("/a/${HOME}")).toBe(`/a/${homedir()}`);
   });
 });
