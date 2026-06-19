@@ -41,6 +41,9 @@ someone could start building without guessing the contract.
 ## Acceptance criteria
 Testable outcomes phrased against real-world data (no mocks). Each one should
 map to a check `test` can write. "X produces Y given real input Z", not "X works".
+Give each criterion a stable `**AC-<n>:**` bold-prefix id (`- **AC-1:** …`) so a
+plan step can reference it (`ac_refs`) and `status` can report coverage; ids are
+labels, not indices — gaps are fine, just don't reuse one.
 
 ## Open Questions
 Unresolved decisions with an owner. An honest spec names what it doesn't know.
