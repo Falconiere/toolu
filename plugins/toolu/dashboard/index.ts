@@ -1,111 +1,97 @@
-// Read-only realtime kanban dashboard over the plan-ledger. Bun.serve on an
-// ephemeral port; serves static assets, exposes ledger state as JSON, and pushes
-// updates over SSE. All serving/wiring lives here; ledger reading + derivation
-// lives in state.ts and path resolution in resolve.ts (keeps this file < 300).
-// Every server instance owns its own client hub + paths (no module globals) so
-// concurrent instances — e.g. parallel tests — never clobber each other.
+// Bun HTTP server for the multi-project dashboard. Serves the SPA, a JSON
+// snapshot at /api/state, and a Server-Sent-Events stream at /api/events; both
+// accept ?project=<id> to select a project. State is produced by a change-gated
+// watcher over the configured roots, so an idle poll costs a walk + stats, never
+// a transcript parse. Read-only: any non-GET is 405, no route mutates anything.
 
 import { spawnSync } from "node:child_process";
-import { statSync, watch, type FSWatcher } from "node:fs";
-import { dirname, basename, join, extname, resolve, sep } from "node:path";
+import { homedir } from "node:os";
+import { join, normalize, sep } from "node:path";
 
-import { buildState, type DashboardState } from "./state.ts";
-import { resolveLedgerPath, resolveRepoRoot } from "./resolve.ts";
+import { claudeCodeSource } from "./activity/claude-code.ts";
+import type { LiveActivitySource } from "./activity/source.ts";
+import { type MultiDashboardState } from "./aggregate.ts";
+import { type DashboardConfig, loadConfig } from "./config.ts";
+import { createWatcher } from "./watch.ts";
 
-const PUBLIC_DIR = join(import.meta.dir, "public");
-const HEARTBEAT_MS = 15_000;
-const POLL_MS = 1_000;
-const DEBOUNCE_MS = 150;
 const ENCODER = new TextEncoder();
-
+const HEARTBEAT_MS = 15_000;
+const PUBLIC_DIR = join(import.meta.dir, "public");
 const CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
-  ".svg": "image/svg+xml",
 };
 
-/** Optional pinned paths for tests (inject a temp ledger/repo); when unset the
- *  engine is shelled on every resolve so a real branch switch is picked up. */
-export interface Pinned {
-  ledgerPath?: string;
-  repoRoot?: string;
-}
-
-/** Serialize a payload as one SSE `event: state` frame. */
-function stateFrame(state: DashboardState): Uint8Array {
+/** SSE frame carrying a full state snapshot. */
+function stateFrame(state: MultiDashboardState): Uint8Array {
   return ENCODER.encode(`event: state\ndata: ${JSON.stringify(state)}\n\n`);
 }
 
-/** Serve a file from public/ with the right content-type, or 404. Resolves the
- *  request path and rejects anything that escapes public/ — never rewrites the
- *  path (string-stripping `..` is bypassable, e.g. `....//` -> `../`). */
-async function serveStatic(relPath: string): Promise<Response> {
-  const resolved = resolve(join(PUBLIC_DIR, relPath));
-  if (resolved !== PUBLIC_DIR && !resolved.startsWith(PUBLIC_DIR + sep)) {
-    return new Response("not found", { status: 404 });
-  }
-  const file = Bun.file(resolved);
-  if (!(await file.exists())) return new Response("not found", { status: 404 });
-  const type = CONTENT_TYPES[extname(resolved).toLowerCase()] ?? "application/octet-stream";
-  return new Response(file, { headers: { "content-type": type } });
+/** Inject `config`/`source` in tests; production uses loadConfig() + the Claude Code source. */
+export interface ServerOptions {
+  config?: DashboardConfig;
+  source?: LiveActivitySource;
 }
 
-/** Trailing-edge debounce: only the last call within the window runs. */
-function debounce(fn: () => void, ms: number): () => void {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  return () => {
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(fn, ms);
-  };
-}
-
-/** Start the dashboard server on an ephemeral port. Tests may pin a temp
- *  ledger/repo and must call stop() in afterAll; the CLI entry below uses it. */
-export function startServer(opts: Pinned = {}): { port: number; stop: () => void } {
-  // Per-instance client hub — a disconnected client is dropped so broadcast never throws.
+/** Start the dashboard server. Returns its port and a stop() that tears everything down. */
+export function startServer(opts: ServerOptions = {}): { port: number; stop: () => void } {
+  const cfg = opts.config ?? loadConfig().config;
+  const source = opts.source ?? claudeCodeSource;
+  const watcher = createWatcher(cfg, source);
   const clients = new Set<ReadableStreamDefaultController<Uint8Array>>();
 
-  // Re-resolve each call so a branch switch is picked up; pinned (tests) wins.
-  const ledgerPathNow = (): string | null => opts.ledgerPath ?? resolveLedgerPath();
-  const repoRootNow = (): string | null => opts.repoRoot ?? resolveRepoRoot();
+  const empty = (): MultiDashboardState => ({
+    projects: [],
+    selected: null,
+    serverTime: new Date().toISOString(),
+  });
 
-  const currentState = (): DashboardState => {
-    const ledgerPath = ledgerPathNow();
-    const repoRoot = repoRootNow();
-    if (!ledgerPath || !repoRoot) {
-      return { ledger: null, currentDiffSha: null, steps: [], serverTime: new Date().toISOString() };
-    }
-    return buildState({ ledgerPath, repoRoot });
+  /** Apply an optional selection and return fresh-or-current state. */
+  const selectAndBuild = (projectId: string | null): MultiDashboardState => {
+    if (projectId !== null) watcher.setSelected(projectId);
+    return watcher.tick(Date.now()) ?? watcher.current() ?? empty();
   };
 
-  const broadcast = (): void => {
-    const frame = stateFrame(currentState());
-    for (const controller of clients) {
+  const broadcast = (state: MultiDashboardState): void => {
+    const frame = stateFrame(state);
+    for (const c of clients) {
       try {
-        controller.enqueue(frame);
+        c.enqueue(frame);
       } catch {
-        clients.delete(controller);
+        clients.delete(c);
       }
     }
   };
 
-  // SSE: emit current state immediately, then heartbeat; cancel drops the client.
-  const openEventStream = (): Response => {
+  const serveStatic = async (name: string): Promise<Response> => {
+    const full = normalize(join(PUBLIC_DIR, name));
+    if (full !== PUBLIC_DIR && !full.startsWith(PUBLIC_DIR + sep)) {
+      return new Response("forbidden", { status: 403 });
+    }
+    const file = Bun.file(full);
+    if (!(await file.exists())) return new Response("not found", { status: 404 });
+    const ext = name.slice(name.lastIndexOf("."));
+    return new Response(file, {
+      headers: { "content-type": CONTENT_TYPES[ext] ?? "application/octet-stream" },
+    });
+  };
+
+  const openEventStream = (projectId: string | null): Response => {
     let heartbeat: ReturnType<typeof setInterval> | undefined;
     let self: ReadableStreamDefaultController<Uint8Array> | undefined;
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         self = controller;
         clients.add(controller);
-        controller.enqueue(stateFrame(currentState()));
+        controller.enqueue(stateFrame(selectAndBuild(projectId)));
         heartbeat = setInterval(() => {
           try {
             controller.enqueue(ENCODER.encode(": heartbeat\n\n"));
           } catch {
-            clients.delete(controller);
             if (heartbeat) clearInterval(heartbeat);
+            clients.delete(controller);
           }
         }, HEARTBEAT_MS);
       },
@@ -126,88 +112,41 @@ export function startServer(opts: Pinned = {}): { port: number; stop: () => void
   // Route a single GET request. POST/etc. -> 405 (read-only by contract).
   const handle = async (req: Request): Promise<Response> => {
     if (req.method !== "GET") return new Response("method not allowed", { status: 405 });
-    const path = new URL(req.url).pathname;
+    const url = new URL(req.url);
+    const path = url.pathname;
+    const project = url.searchParams.get("project");
     if (path === "/" || path === "/index.html") return serveStatic("index.html");
     if (path.startsWith("/static/")) return serveStatic(path.slice("/static/".length));
     if (path === "/api/state") {
-      return new Response(JSON.stringify(currentState()), {
+      return new Response(JSON.stringify(selectAndBuild(project)), {
         headers: { "content-type": "application/json; charset=utf-8" },
       });
     }
-    if (path === "/api/events") return openEventStream();
+    if (path === "/api/events") return openEventStream(project);
     return new Response("not found", { status: 404 });
   };
 
-  // Watch the ledger's PARENT dir (the writer renames via mv, so a file-path
-  // watch misses updates), filter by basename, re-arm on each event, and run a
-  // stat-mtime poll fallback that also re-resolves the path each tick.
-  const fire = debounce(broadcast, DEBOUNCE_MS);
-  let watcher: FSWatcher | undefined;
-  let watchedDir = "";
-  let lastMtime = 0;
-
-  const arm = (ledgerPath: string): void => {
-    const dir = dirname(ledgerPath);
-    const base = basename(ledgerPath);
-    if (watcher && watchedDir === dir) return;
-    if (watcher) watcher.close();
-    watchedDir = dir;
-    try {
-      watcher = watch(dir, (_event, filename) => {
-        if (!filename || basename(filename.toString()) === base) {
-          arm(ledgerPath);
-          fire();
-        }
-      });
-      watcher.on("error", () => {
-        if (watcher) watcher.close();
-        watcher = undefined;
-        watchedDir = "";
-      });
-    } catch {
-      watcher = undefined;
-      watchedDir = "";
-    }
-  };
-
-  const tick = (): void => {
-    const ledgerPath = ledgerPathNow();
-    if (!ledgerPath) return;
-    arm(ledgerPath);
-    try {
-      const mtime = statSync(ledgerPath).mtimeMs;
-      if (mtime !== lastMtime) {
-        lastMtime = mtime;
-        fire();
-      }
-    } catch {
-      // Ledger absent yet — nothing to compare; the watcher catches creation.
-    }
-  };
-
-  const server = Bun.serve({ port: 0, fetch: handle, idleTimeout: 0 });
+  const server = Bun.serve({ port: cfg.port, fetch: handle, idleTimeout: 0 });
   const port = server.port;
   if (port === undefined) throw new Error("Bun.serve did not assign a port");
 
-  // Advisory port file — a failed write must not stop the server. Bun.write is
-  // async, so swallow the rejection on the Promise (a sync try/catch can't).
-  const root = repoRootNow();
-  if (root) {
-    void Bun.write(join(root, ".claude", "tmp", "dashboard.port"), String(port)).catch(
-      () => {
-        /* advisory only */
-      },
-    );
-  }
+  // Advisory machine-global port file — a failed write must not stop the server.
+  void Bun.write(join(homedir(), ".claude", "tmp", "dashboard.port"), String(port)).catch(() => {
+    /* advisory only */
+  });
 
-  tick();
-  const poll = setInterval(tick, POLL_MS);
+  // Initial build, then a change-gated poll that only broadcasts on real changes.
+  const first = watcher.tick(Date.now());
+  if (first) broadcast(first);
+  const poll = setInterval(() => {
+    const next = watcher.tick(Date.now());
+    if (next) broadcast(next);
+  }, cfg.pollMs);
 
   return {
     port,
     stop: () => {
       clearInterval(poll);
-      if (watcher) watcher.close();
       for (const c of clients) {
         try {
           c.close();
@@ -221,8 +160,7 @@ export function startServer(opts: Pinned = {}): { port: number; stop: () => void
   };
 }
 
-// CLI entry: start, print the URL, optionally open the browser. Only runs when
-// invoked directly (not when imported by a test).
+// CLI entry: start, print the URL, optionally open the browser. Only when run directly.
 if (import.meta.main) {
   const { port } = startServer();
   const url = `http://localhost:${port}`;

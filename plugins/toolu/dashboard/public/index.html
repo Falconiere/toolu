@@ -1,41 +1,49 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Execution Ledger — Kanban</title>
+    <title>toolu · execution dashboard</title>
+    <!-- Tailwind Play CDN (no build); see plan deviation s9 for the runtime-CDN trade-off. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              bg: "#0f1115",
+              panel: "#171a21",
+              panel2: "#1d212b",
+              ink: "#e6e9ef",
+              muted: "#8b94a7",
+              line: "#2a2f3a",
+              accent: "#4aa3ff",
+              ok: "#2ecc71",
+              warn: "#f1c40f",
+              bad: "#e74c3c",
+            },
+            fontFamily: {
+              mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+            },
+          },
+        },
+      };
+    </script>
     <link rel="stylesheet" href="/static/styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18.3.1",
+          "react-dom/client": "https://esm.sh/react-dom@18.3.1/client?external=react",
+          "htm": "https://esm.sh/htm@3.1.1"
+        }
+      }
+    </script>
   </head>
-  <body>
-    <header class="topbar">
-      <h1>Execution Ledger</h1>
-      <div class="meta">
-        <span id="plan" class="plan">—</span>
-        <span id="status" class="conn" data-state="connecting">connecting…</span>
-      </div>
-    </header>
-
-    <main id="board" class="board" aria-live="polite">
-      <section class="column" data-col="pending">
-        <h2>To Do <span class="count" data-count="pending">0</span></h2>
-        <div class="cards" id="col-pending"></div>
-      </section>
-      <section class="column" data-col="running">
-        <h2>Running <span class="count" data-count="running">0</span></h2>
-        <div class="cards" id="col-running"></div>
-      </section>
-      <section class="column" data-col="red">
-        <h2>Blocked <span class="count" data-count="red">0</span></h2>
-        <div class="cards" id="col-red"></div>
-      </section>
-      <section class="column" data-col="green">
-        <h2>Done <span class="count" data-count="green">0</span></h2>
-        <div class="cards" id="col-green"></div>
-      </section>
-    </main>
-
-    <p id="empty" class="empty" hidden>No ledger yet on this branch — run a plan step to begin.</p>
-
-    <script src="/static/app.js"></script>
+  <body class="bg-bg text-ink font-sans antialiased">
+    <div id="root"></div>
+    <noscript>This dashboard needs JavaScript (and network access for the React/Tailwind CDNs).</noscript>
+    <script type="module" src="/static/app.js"></script>
   </body>
 </html>
