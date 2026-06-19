@@ -107,10 +107,16 @@ The CI review posts ONE `claude[bot]` (or `github-actions[bot]`) issue comment t
 it **edits in place** — its header flips from "PR Review in Progress" to
 "Code Review —" and a `review / review` check can be `SUCCESS` *with* unaddressed
 `low`/nit findings still listed. Relying on the check conclusion alone misses them
-(this is the bug this command exists to fix). Parse the comment deterministically:
+(this is the bug this command exists to fix). Parse the comment deterministically.
+
+**CI_REVIEWER login set** (used by both this fetch and the Step 1 thread filter): the CI
+reviewer's login is API-surface-dependent — REST (`issues/comments`, `user.login`) returns the
+`[bot]` suffix, GraphQL (`reviewThreads`, `author.login`) drops it. Treat ALL of
+`{github-actions, github-actions[bot], claude[bot]}` as the CI reviewer. NEVER identify it by a
+generic `[bot]` substring test — that misclassifies the GraphQL `github-actions` form as human.
 
 ```bash
-# Find the CI review bot's comment, pass its body through the parser.
+# Find the CI review bot's comment, pass its body through the parser (REST form has the [bot] suffix).
 botbody=$(gh api repos/{owner}/{repo}/issues/{number}/comments \
   --jq '[.[] | select((.user.login=="claude[bot]") or (.user.login=="github-actions[bot]")) ] | last | .body // ""')
 verdict=$(printf '%s' "$botbody" | bash "${CLAUDE_PLUGIN_ROOT}/scripts/parse-verdict.sh")
@@ -122,28 +128,39 @@ verdict=$(printf '%s' "$botbody" | bash "${CLAUDE_PLUGIN_ROOT}/scripts/parse-ver
   check-conclusion behavior for this tick AND flag once:
   > "⚠️ PR #N: review-bot comment not in the expected format — verify findings manually: [link]"
 - `state:"in_progress"` → review still running → **keep-going tick** (do not parse findings, do not stop).
-- `state:"complete"` → every entry in `findings[]` (incl. `low`/`nit`) is an **actionable item**
-  fed through Step 2 triage. The goal is `findings: []` AND `verdict:"approved"` — chase ALL of them.
+- `state:"complete"` → use `verdict`/`state` as the overall **gate** (Step 6) and
+  `findings[].key` (stable `path:line:hash`) as the **round-level recurrence signal** (Step 4/6).
+  Do NOT act on `findings[]` directly, and do NOT post a summary comment.
 
-These bot findings are NOT GitHub review threads — there is nothing to resolve; they
-clear only when the next in-place verdict (after your fix-push) shows them gone. Track each
-by its `key`; post a per-round summary conversation comment of what you fixed/rejected.
+The CI reviewer publishes each finding as an **inline review thread** (and mirrors them in the
+parsed summary comment). Those inline threads ARE the actionable items: reply inline and resolve
+them in Step 4, exactly like human review threads. `parse-verdict.sh` is ONLY the verdict gate +
+recurrence keys, never the finding source. Never post a standalone round-N status writeup as its
+own conversation comment — every response is an inline thread reply.
 
 ### Filter to actionable
 
-**Review threads** — keep if ALL:
+**Review threads** (includes the CI reviewer's inline threads) — keep if ALL:
 
 - `isResolved` == `false`
 - Last comment NOT from `PR_AUTHOR`
-- ≥1 comment NOT from bot (login has `[bot]`)
-- NOT `isOutdated` unless latest reviewer comment explicitly asks for further changes
+- Author of the thread's last non-`PR_AUTHOR` comment is **either a human OR in the CI_REVIEWER
+  set** — a CI-reviewer thread is actionable BY NAME (reply + resolve in Step 4). Only bots NOT in
+  CI_REVIEWER are excluded. Do NOT use a generic `[bot]` test (GraphQL gives `github-actions`,
+  no suffix → it would wrongly read as human, and a later "exclude github-actions" tweak would
+  silently drop every finding).
+- NOT `isOutdated`. An outdated CI-reviewer thread is from a superseded diff hunk → **skip
+  silently** (no reply, no resolve); the next bot run drops it. For a human thread, keep only if
+  the latest reviewer comment explicitly asks for further changes.
 
 **Conversation comments** — keep if NOT `PR_AUTHOR`, NOT bot, no `PR_AUTHOR` reply after it.
 
 **Review-level** — keep if NOT `PR_AUTHOR`, NOT bot, `state` != `APPROVED`.
 
-> The bot-exclusion above is for *human-thread* filtering only. The CI review bot's
-> verdict findings are handled by the parser above — they are NOT filtered out.
+> The bot-exclusion above targets non-CI bots only (e.g. dependabot chatter). The CI reviewer's
+> inline threads ARE kept and replied to like any review thread. `parse-verdict.sh` is used only
+> for the overall verdict gate and recurrence keys — not as a separate finding channel, and never
+> as a reason to post a summary comment.
 
 Do NOT filter by `HEAD_DATE` — misses earlier unaddressed rounds. Use resolution status + reply chain.
 
@@ -197,7 +214,19 @@ Reproduce + verify locally before push. Run pre-push gate (toolu: `bats -r plugi
 
 ## Step 4 — Reply, resolve, push
 
+### Round-level recurrence gate (before any replies)
+
+The CI reviewer re-creates its inline threads each push, so a finding you fixed/rejected last
+round reappears as a NEW unresolved thread. A thread cannot be reliably mapped to its
+`parse-verdict` `key` (multiple findings can share `path:line`), so recurrence is handled per
+ROUND, not per thread: at the START of this step, if ANY `key` appears in BOTH `botFindingKeys`
+(this round) and `lastRoundFindingKeys` (previous) → **escalation stop (Step 6) before posting any
+replies this round**. The disagreement goes to the human; do not re-reply. Otherwise continue.
+
 ### Reply to every triaged item
+
+The CI reviewer's inline findings are review threads — reply to them with the **Review thread**
+mechanism below (NOT a conversation comment). Never post a standalone "round N" summary comment.
 
 **Review thread** — `databaseId` of FIRST comment (numeric, REST — NOT GraphQL `id`):
 
@@ -307,7 +336,7 @@ gh pr view "$NUMBER" --json statusCheckRollup,reviewThreads
 `CronDelete pr-babysit:${SLOT}` + remove state file **only** when ALL true same tick:
 
 - ✅ Every `statusCheckRollup` check `conclusion: SUCCESS` (or `NEUTRAL`/`SKIPPED`)
-- ✅ Unresolved actionable count == **0** (re-run Step 1 filter)
+- ✅ Unresolved actionable count == **0** (re-run Step 1 filter — includes the CI reviewer's inline threads)
 - ✅ CI review-bot verdict (parse-verdict.sh) is `state:"complete"`, `findings: []`, `verdict:"approved"`
   — OR `state:"unknown"`/`is_review_comment:false` (degraded: bot verdict can't be read, fall back to the two checks above + the manual-verify flag)
 
@@ -375,7 +404,9 @@ State at `/tmp/pr-babysit-${SLOT}.json` (one file per slot — keeps parallel ag
 
 `botFindingKeys` = the `key`s from this round's parse-verdict.sh output; `lastRoundFindingKeys`
 = the previous round's. A `key` present in BOTH = same-finding-twice → Escalation stop (Step 6).
-`fixAttempts` bumps once per fix→re-review round and caps at 5.
+These keys are the **round-level** recurrence signal only; reply/resolve acts on the inline
+threads independently (no per-thread key mapping). `fixAttempts` bumps once per fix→re-review
+round and caps at 5.
 
 Per tick: fetch current, diff vs saved. All reads/writes → slot-scoped path from Step 0 only.
 
