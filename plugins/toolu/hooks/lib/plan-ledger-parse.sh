@@ -41,8 +41,16 @@ pl_parse_steps() {
     echo "plan-ledger-parse: steps block in $doc is not a non-empty array of {id,title,check} strings" >&2
     return 1
   fi
-  # Emit the normalized array (jq-compacted) on stdout.
-  jq -c . <<< "$block"
+  # Emit the normalized array (jq-compacted) on stdout. Backfill the optional
+  # authored fields so downstream serialization always sees them: ac_refs and
+  # depends_on default to [], input to null. Legacy {id,title,check} steps thus
+  # gain []/[]/null; any authored values are preserved. Permissive `// default`
+  # also coerces a present-but-null field to its default.
+  jq -c 'map(
+    .ac_refs    = (.ac_refs // []) |
+    .depends_on = (.depends_on // []) |
+    .input      = (.input // null)
+  )' <<< "$block"
 }
 
 # pl_doc_field DOC FIELD
@@ -65,6 +73,59 @@ pl_doc_field() {
   # First line containing the bold key, then sed the value out of it.
   grep -m1 -F "**${field}:**" "$doc" 2>/dev/null \
     | sed -E "s/.*\\*\\*${field}:\\*\\*[[:space:]]*//; s/[[:space:]]+\\*\\*[^*]+:\\*\\*.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//"
+}
+
+# pl_parse_acs SPEC_DOC
+# Print the newline-separated list of acceptance-criterion ids (`AC-<n>`) declared
+# under the spec's `## Acceptance criteria` heading, in document order, deduped.
+# Ids come from the stable `**AC-<n>:**` bold prefix. A missing doc, a doc with no
+# such heading, or a heading with no AC lines all yield an empty list and a zero
+# return — "no ACs" is a valid state, never an error. Never writes.
+pl_parse_acs() {
+  local doc="$1"
+  [ -n "$doc" ] && [ -f "$doc" ] || return 0
+  # awk state machine: arm inside the `## Acceptance criteria` section, disarm at
+  # the next `## ` heading, and emit the id from each `**AC-<n>:**` bold prefix.
+  # `seen[]` dedups while preserving first-seen order.
+  awk '
+    /^## Acceptance criteria[[:space:]]*$/ { in_ac = 1; next }
+    in_ac && /^## / { in_ac = 0 }
+    in_ac {
+      if (match($0, /\*\*AC-[0-9]+:\*\*/)) {
+        id = substr($0, RSTART + 2, RLENGTH - 5)   # strip leading ** and trailing :**
+        if (!(id in seen)) { seen[id] = 1; print id }
+      }
+    }
+  ' "$doc"
+}
+
+# pl_check_ac_refs PLAN_DOC [SPEC_DOC]
+# Print each dangling ac_ref — an `ac_refs` id in the plan's steps block that is
+# NOT declared in the spec — one per line, and return non-zero iff any exist.
+# When SPEC_DOC is omitted, empty, or the literal "none" (case-insensitive), the
+# plan is spec-less: coverage is skipped, nothing is printed, return 0. A spec
+# present but lacking an `## Acceptance criteria` section declares zero ids, so
+# every non-empty ac_ref is dangling. Parse failure of the plan -> non-zero.
+pl_check_ac_refs() {
+  local plan="$1" spec="${2:-}" steps refs acs dangling
+  # Spec-less: nothing to resolve against -> pass with no dangling refs.
+  case "$(printf '%s' "$spec" | tr '[:upper:]' '[:lower:]')" in
+    ""|none) return 0 ;;
+  esac
+  steps=$(pl_parse_steps "$plan") || return 1
+  # All referenced ids across every step, deduped (order irrelevant for set diff).
+  refs=$(jq -r '[.[].ac_refs[]?] | unique[]' <<< "$steps") || return 1
+  # No refs at all -> nothing can dangle.
+  [ -n "$refs" ] || return 0
+  acs=$(pl_parse_acs "$spec")
+  # Set difference: refs not present in the spec's declared ids. comm needs both
+  # operands sorted; refs is already unique. Empty `acs` -> all refs dangle.
+  dangling=$(comm -23 <(printf '%s\n' "$refs" | sort) <(printf '%s\n' "$acs" | sort)) || return 1
+  if [ -n "$dangling" ]; then
+    printf '%s\n' "$dangling"
+    return 1
+  fi
+  return 0
 }
 
 # pl_read_ledger STATE_FILE

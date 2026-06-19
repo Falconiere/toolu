@@ -27,6 +27,7 @@ Review the diff (the executed work) against the checklist. For each item ask *wo
 - **Docs in sync** — user-facing docs match the shipped behavior: README, `docs/` guides, `SKILL.md` trigger text, and release notes reflect any changed interface/CLI/command/config. A stale doc is a finding.
 - **Gate is green** — the quality gate passes; the change didn't land by working around it.
 - **Ledger is fresh-green** — for ledger-tracked work, `bash plugins/toolu/hooks/lib/plan-ledger.sh status` reports every step fresh-green (status==green against the current diff_sha) before done; any red/pending/stale step is a blocker.
+- **AC coverage holds** — read the `status` AC-coverage report: every spec `AC-<n>` should be covered by a fresh-green step. An uncovered AC is report-only (not a hard gate yet), but flag it — "done" means the goal is proven, not just that the checks pass.
 
 ## Output
 

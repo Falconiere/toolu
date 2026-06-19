@@ -72,7 +72,8 @@ pl_recompute() {
       pending:     ([.steps[] | select(.status == "pending")]| length),
       running:     ([.steps[] | select(.status == "running")]| length),
       stale:       ([.steps[] | select(.status == "green" and .diff_sha != $cur)] | length),
-      fresh_green: ([.steps[] | select(is_fresh)] | length)
+      fresh_green: ([.steps[] | select(is_fresh)] | length),
+      retried:     ([.steps[] | select((.retries // []) | length > 0)] | length)
     }
     | .next = (first(.steps[] | select(is_fresh | not) | .id) // null)
   ' <<< "$ledger"
@@ -99,15 +100,24 @@ pl_all_fresh() {
 # pl_now  ->  UTC ISO-8601 timestamp.
 pl_now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
-# pl_build_step_entry STEPS_JSON ID STATUS EXIT_CODE DIFF_SHA EVIDENCE_JSON [STARTED_AT] [ACTIVITY]
-# Print a single ledger step object merging the doc fields (id/title/check from
-# STEPS_JSON) with the run results. EVIDENCE_JSON is an already-JSON-encoded string.
-# STARTED_AT/ACTIVITY are optional; an empty arg becomes JSON null (additive
-# schema fields — version stays 1). started_at is the ISO-8601 time the step
-# entered `running`; activity is an optional short label.
+# pl_build_step_entry STEPS_JSON ID STATUS EXIT_CODE DIFF_SHA EVIDENCE_JSON \
+#                     [STARTED_AT] [ACTIVITY] [PRIOR_ENTRY_JSON]
+# Print a single ledger step object merging the doc fields (id/title/check plus
+# the authored ac_refs/depends_on/input from STEPS_JSON) with the run results.
+# EVIDENCE_JSON is an already-JSON-encoded string. STARTED_AT/ACTIVITY are
+# optional; an empty arg becomes JSON null. started_at is the ISO-8601 time the
+# step entered `running`; activity is an optional short label.
+#
+# PRIOR_ENTRY_JSON is the step's prior on-disk ledger entry (or "" / "null" when
+# none). retries[] is the chronological list of reds preceding this state: if the
+# prior entry was red, it is archived as a retry record (attempt, exit_code,
+# diff_sha, evidence_tail, at=prior.last_run) appended after the prior's own
+# retries; otherwise the prior retries (or []) carry forward unchanged. Only reds
+# are archived. All additive — version stays 1.
 pl_build_step_entry() {
   local steps="$1" id="$2" status="$3" code="$4" sha="$5" evidence="$6"
-  local started_at="${7:-}" activity="${8:-}"
+  local started_at="${7:-}" activity="${8:-}" prior="${9:-}"
+  [ -n "$prior" ] || prior="null"
   jq -n \
     --argjson steps "$steps" \
     --arg id "$id" \
@@ -117,14 +127,28 @@ pl_build_step_entry() {
     --arg now "$(pl_now)" \
     --argjson evidence "$evidence" \
     --arg started_at "$started_at" \
-    --arg activity "$activity" '
+    --arg activity "$activity" \
+    --argjson prior "$prior" '
     ($steps[] | select(.id == $id)) as $s
+    | ($prior.retries // []) as $prior_retries
+    | (if ($prior.status // null) == "red"
+       then $prior_retries + [{
+         attempt:       (($prior_retries | length) + 1),
+         exit_code:     $prior.exit_code,
+         diff_sha:      $prior.diff_sha,
+         evidence_tail: $prior.evidence_tail,
+         at:            $prior.last_run }]
+       else $prior_retries end) as $retries
     | { id: $s.id, title: $s.title, check: $s.check,
         status: $status,
         started_at: (if $started_at == "" then null else $started_at end),
         activity: (if $activity == "" then null else $activity end),
         exit_code: $code, diff_sha: $sha,
-        last_run: $now, evidence_tail: $evidence }
+        last_run: $now, evidence_tail: $evidence,
+        ac_refs: ($s.ac_refs // []),
+        depends_on: ($s.depends_on // []),
+        input: ($s.input // null),
+        retries: $retries }
   '
 }
 
@@ -177,14 +201,23 @@ pl_cmd_run() {
   branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || return 2
   slug=$(branch_slug "$branch")
 
-  # Existing entries (preserved when running a single step). Indexed by id.
+  # Prior on-disk entries, indexed by id. Read for BOTH full and --step runs: a
+  # --step run preserves the other steps' entries verbatim, and EVERY run passes
+  # each step's prior entry to the serializer so a prior red is archived into
+  # retries[] (and prior retries carry forward). Captured once here from the
+  # ORIGINAL ledger, before any write below — so the --step running pre-write
+  # cannot overwrite the prior we archive from. Fail-closed: a present-but-corrupt
+  # ledger returns 2 (never silently dropped); an absent ledger is the empty map.
   local existing="{}"
-  if [ "$only_step" != "" ]; then
-    local prior
-    if prior=$(pl_read_ledger "$ledger_file" 2>/dev/null); then
-      existing=$(jq '[.steps[] | {key: .id, value: .}] | from_entries' <<< "$prior") \
-        || { echo "plan-ledger: corrupt prior ledger at $ledger_file" >&2; return 2; }
-    fi
+  local prior
+  if prior=$(pl_read_ledger "$ledger_file" 2>/dev/null); then
+    existing=$(jq '[.steps[] | {key: .id, value: .}] | from_entries' <<< "$prior") \
+      || { echo "plan-ledger: corrupt prior ledger at $ledger_file" >&2; return 2; }
+  elif [ -s "$ledger_file" ]; then
+    # File exists and is non-empty but pl_read_ledger refused it (unparseable
+    # json): corrupt, not absent. Fail closed rather than silently archiving
+    # nothing and clobbering it with a fresh run.
+    echo "plan-ledger: corrupt prior ledger at $ledger_file" >&2; return 2
   fi
 
   # Write #1 (only with --step): mark the target step `running` + started_at
@@ -200,20 +233,31 @@ pl_cmd_run() {
       --arg only "$only_step" --arg now "$started_at" --arg act "$activity" '
       [ $steps[] | .id as $id
         | ($ex[$id]) as $p
+        | ($steps[] | select(.id==$id)) as $s
         | if $id == $only
-          then ($steps[] | select(.id==$id)) as $s
-               | { id: $s.id, title: $s.title, check: $s.check,
-                   status: "running",
-                   started_at: $now,
-                   activity: (if $act == "" then null else $act end),
-                   exit_code: null, diff_sha: null,
-                   last_run: $now, evidence_tail: null }
-          elif $p != null then $p
-          else ($steps[] | select(.id==$id)) as $s
-               | { id: $s.id, title: $s.title, check: $s.check,
-                   status: "pending", started_at: null, activity: null,
-                   exit_code: null, diff_sha: null,
-                   last_run: null, evidence_tail: null }
+          then { id: $s.id, title: $s.title, check: $s.check,
+                 status: "running",
+                 started_at: $now,
+                 activity: (if $act == "" then null else $act end),
+                 exit_code: null, diff_sha: null,
+                 last_run: $now, evidence_tail: null,
+                 ac_refs: ($s.ac_refs // []),
+                 depends_on: ($s.depends_on // []),
+                 input: ($s.input // null),
+                 retries: ($p.retries // []) }
+          elif $p != null
+          then $p
+               | .ac_refs    = ($s.ac_refs // [])
+               | .depends_on = ($s.depends_on // [])
+               | .input      = ($s.input // null)
+          else { id: $s.id, title: $s.title, check: $s.check,
+                 status: "pending", started_at: null, activity: null,
+                 exit_code: null, diff_sha: null,
+                 last_run: null, evidence_tail: null,
+                 ac_refs: ($s.ac_refs // []),
+                 depends_on: ($s.depends_on // []),
+                 input: ($s.input // null),
+                 retries: [] }
           end
       ]') || { echo "plan-ledger: failed to assemble running pre-write" >&2; return 2; }
     local pre_ledger
@@ -237,15 +281,28 @@ pl_cmd_run() {
     check=$(jq -r --arg id "$id" '.[] | select(.id==$id) | .check' <<< "$steps") \
       || { echo "plan-ledger: failed to read check for step $id" >&2; return 2; }
     if [ -n "$only_step" ] && [ "$id" != "$only_step" ]; then
-      # Reuse the prior entry verbatim if present; else seed a pending entry.
+      # Carry the prior entry forward, but RE-DERIVE the authored fields
+      # (ac_refs/depends_on/input) from the current parsed step $s — they live in
+      # the plan doc and must reflect any edit since the last run (spec: authored
+      # fields are re-derived every run), while all engine state (status,
+      # exit_code, diff_sha, last_run, evidence_tail, retries) is preserved. No
+      # prior entry -> seed a pending step with the current authored fields.
       new_entry=$(jq -n --argjson ex "$existing" --argjson steps "$steps" --arg id "$id" '
         ($ex[$id]) as $p
-        | if $p != null then $p
-          else (($steps[] | select(.id==$id)) as $s
-                | { id: $s.id, title: $s.title, check: $s.check,
-                    status: "pending", started_at: null, activity: null,
-                    exit_code: null, diff_sha: null,
-                    last_run: null, evidence_tail: null })
+        | ($steps[] | select(.id==$id)) as $s
+        | if $p != null
+          then $p
+               | .ac_refs    = ($s.ac_refs // [])
+               | .depends_on = ($s.depends_on // [])
+               | .input      = ($s.input // null)
+          else { id: $s.id, title: $s.title, check: $s.check,
+                 status: "pending", started_at: null, activity: null,
+                 exit_code: null, diff_sha: null,
+                 last_run: null, evidence_tail: null,
+                 ac_refs: ($s.ac_refs // []),
+                 depends_on: ($s.depends_on // []),
+                 input: ($s.input // null),
+                 retries: [] }
           end
       ') || { echo "plan-ledger: failed to assemble entry for step $id" >&2; return 2; }
     else
@@ -256,7 +313,12 @@ pl_cmd_run() {
       [ "$code" -eq 0 ] && status="green" || status="red"
       evidence=$(pl_evidence "$(cat "$tmpout")")
       rm -f "$tmpout"
-      new_entry=$(pl_build_step_entry "$steps" "$id" "$status" "$code" "$cur" "$evidence") \
+      # Prior on-disk entry for this id (or "null"): the builder archives it into
+      # retries[] iff it was red, and carries its prior retries forward.
+      local prior_entry
+      prior_entry=$(jq -cn --argjson ex "$existing" --arg id "$id" '$ex[$id] // null') \
+        || { echo "plan-ledger: failed to read prior entry for step $id" >&2; return 2; }
+      new_entry=$(pl_build_step_entry "$steps" "$id" "$status" "$code" "$cur" "$evidence" "" "" "$prior_entry") \
         || { echo "plan-ledger: failed to build entry for step $id" >&2; return 2; }
     fi
     out_steps=$(jq --argjson e "$new_entry" '. + [$e]' <<< "$out_steps") \
@@ -284,10 +346,47 @@ pl_cmd_run() {
   pl_all_fresh "$ledger" && return 0 || return 1
 }
 
+# pl_ac_coverage_lines LEDGER_JSON CUR SPEC_DOC
+# Print a human-readable AC-coverage report to stdout (REPORT-ONLY — the caller
+# must never let it affect exit codes or the gate). For each AC id declared in
+# SPEC_DOC (via pl_parse_acs), list the ledger steps whose ac_refs name it and
+# whether at least one of those covering steps is fresh-green (status==green AND
+# diff_sha==CUR); an AC with no fresh-green covering step is flagged UNCOVERED.
+# Spec-less (SPEC_DOC empty / "none" / missing / no AC ids) -> print nothing and
+# return 0: coverage is skipped, never a blocker. Never writes, never errors out.
+pl_ac_coverage_lines() {
+  local ledger="$1" cur="$2" spec="$3" acs
+  case "$(printf '%s' "$spec" | tr '[:upper:]' '[:lower:]')" in
+    ""|none) return 0 ;;
+  esac
+  acs=$(pl_parse_acs "$spec")
+  [ -n "$acs" ] || return 0
+  printf 'AC coverage (report-only):\n'
+  # For each AC id, jq finds covering steps and whether any is fresh-green.
+  local ac line
+  while IFS= read -r ac; do
+    [ -n "$ac" ] || continue
+    line=$(jq -rn --argjson l "$ledger" --arg cur "$cur" --arg ac "$ac" '
+      [ $l.steps[] | select((.ac_refs // []) | index($ac)) ] as $cov
+      | ($cov | map(.id)) as $ids
+      | ($cov | any(.status == "green" and .diff_sha == $cur)) as $fresh
+      | if ($ids | length) == 0
+        then "  " + $ac + ": UNCOVERED (no step references it)"
+        elif $fresh
+        then "  " + $ac + ": covered by " + ($ids | join(", "))
+        else "  " + $ac + ": UNCOVERED (" + ($ids | join(", ")) + " not fresh-green)"
+        end
+    ') || { echo "plan-ledger: failed to compute AC coverage for $ac" >&2; return 0; }
+    printf '%s\n' "$line"
+  done <<< "$acs"
+  return 0
+}
+
 # pl_cmd_status
 # Read the current branch's ledger (absent -> exit 2), recompute summary/next vs
 # the current diff_sha WITHOUT running checks, write the refreshed ledger, print
-# the summary line. Exit 0 iff all fresh-green, else 1.
+# the summary line, then the AC-coverage report (report-only). Exit 0 iff all
+# fresh-green, else 1 — AC coverage NEVER changes the exit code.
 pl_cmd_status() {
   local base cur ledger_file ledger slug branch
   base="${PUSH_REVIEW_BASE:-$(detect_base_branch)}"
@@ -307,6 +406,32 @@ pl_cmd_status() {
   pl_write_ledger "$ledger_file" "$ledger" || { echo "plan-ledger: ledger write failed" >&2; return 2; }
 
   pl_summary_line "$ledger" "$slug"
+
+  # AC-coverage report (report-only): resolve the plan's **Spec:** doc relative to
+  # the project root, parse its AC ids, and report which are covered by a
+  # fresh-green step. REPORT-ONLY — coverage must never change the status exit
+  # code or wedge the gate (spec Non-Goal). A coverage failure is reported to
+  # stderr (not silently dropped), then status proceeds with its real exit code.
+  local plan_doc spec_field spec_path root
+  plan_doc=$(jq -r '.plan_doc // ""' <<< "$ledger") \
+    || { echo "plan-ledger: could not read plan_doc for AC coverage (skipping report)" >&2; plan_doc=""; }
+  if [ -n "$plan_doc" ]; then
+    root=$(detect_project_root)
+    [ -f "$plan_doc" ] || { [ -n "$root" ] && [ -f "$root/$plan_doc" ] && plan_doc="$root/$plan_doc"; }
+    if [ -f "$plan_doc" ]; then
+      spec_field=$(pl_doc_field "$plan_doc" Spec)
+      spec_path="$spec_field"
+      case "$(printf '%s' "$spec_field" | tr '[:upper:]' '[:lower:]')" in
+        ""|none) spec_path="$spec_field" ;;
+        *) [ -f "$spec_path" ] || { [ -n "$root" ] && [ -f "$root/$spec_field" ] && spec_path="$root/$spec_field"; } ;;
+      esac
+      # pl_ac_coverage_lines is itself report-only: it returns 0 even on an
+      # internal failure (after emitting a stderr diagnostic), so status's exit
+      # code below is decided solely by fresh-green state.
+      pl_ac_coverage_lines "$ledger" "$cur" "$spec_path"
+    fi
+  fi
+
   pl_all_fresh "$ledger" && return 0 || return 1
 }
 

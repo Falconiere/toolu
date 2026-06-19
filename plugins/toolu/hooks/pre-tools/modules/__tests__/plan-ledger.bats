@@ -259,3 +259,57 @@ denies() {
   [ "$status" -eq 0 ]
   denies
 }
+
+# --- s6: enrichment non-regression. The gate reads only .status/.diff_sha/version,
+# so the new ac_refs/depends_on/input/retries keys must not change its decision. ---
+
+# AC-4 — an ENRICHED v1 ledger whose every step is fresh-green still ALLOWS.
+@test "plan-ledger gate (AC-4): enriched v1 all-fresh-green ledger allows" {
+  echo "echo hi" > script.sh && git add script.sh && git commit -q -m "script"
+  local sha steps
+  sha=$(sandbox_diff_sha)
+  # Both steps carry the new keys (one with non-empty ac_refs/depends_on/input
+  # and a populated retries; the other with defaults) — none of which the gate reads.
+  steps=$(jq -n --arg sha "$sha" '[
+    { id: "s1", title: "first", check: "true", status: "green",
+      started_at: null, activity: null, exit_code: 0, diff_sha: $sha,
+      last_run: "2026-06-17T12:00:00Z", evidence_tail: "",
+      ac_refs: ["AC-1"], depends_on: ["s0"], input: "fixture",
+      retries: [ { attempt: 1, exit_code: 1, diff_sha: "old", evidence_tail: "boom", at: "2026-06-16T00:00:00Z" } ] },
+    { id: "s2", title: "second", check: "true", status: "green",
+      started_at: null, activity: null, exit_code: 0, diff_sha: $sha,
+      last_run: "2026-06-17T12:00:00Z", evidence_tail: "",
+      ac_refs: [], depends_on: [], input: null, retries: [] }
+  ]')
+  write_ledger 1 "$steps" 2
+  payload=$(build_input "git push origin feat/example")
+  run_gate "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  ! denies
+}
+
+# AC-4 — an ENRICHED v1 ledger with a red step still DENIES and names it.
+@test "plan-ledger gate (AC-4): enriched v1 ledger with a red step denies" {
+  echo "echo hi" > script.sh && git add script.sh && git commit -q -m "script"
+  local sha steps
+  sha=$(sandbox_diff_sha)
+  # s1 fresh-green, s2 red — both fully enriched. Enrichment must not mask the red.
+  steps=$(jq -n --arg sha "$sha" '[
+    { id: "s1", title: "first", check: "true", status: "green",
+      started_at: null, activity: null, exit_code: 0, diff_sha: $sha,
+      last_run: "2026-06-17T12:00:00Z", evidence_tail: "",
+      ac_refs: ["AC-1"], depends_on: [], input: null, retries: [] },
+    { id: "s2", title: "second", check: "false", status: "red",
+      started_at: null, activity: null, exit_code: 1, diff_sha: $sha,
+      last_run: "2026-06-17T12:00:00Z", evidence_tail: "nope",
+      ac_refs: ["AC-2"], depends_on: ["s1"], input: "fixture",
+      retries: [ { attempt: 1, exit_code: 1, diff_sha: "old", evidence_tail: "boom", at: "2026-06-16T00:00:00Z" } ] }
+  ]')
+  write_ledger 1 "$steps" 2
+  payload=$(build_input "git push origin feat/example")
+  run_gate "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  denies
+  [[ "$output" == *"s2"* ]]
+  [[ "$output" == *"red"* ]]
+}

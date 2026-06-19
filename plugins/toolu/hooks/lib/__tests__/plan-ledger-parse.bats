@@ -148,6 +148,39 @@ EOF
   [ -z "$output" ]
 }
 
+@test "pl_parse_steps: normalizes ac_refs/depends_on/input; legacy step gets []/[]/null (AC-1)" {
+  doc="$TMP/plan.md"
+  cat > "$doc" <<'EOF'
+# Enriched Plan
+
+## Steps (machine-readable)
+
+```json
+[
+  { "id": "s1", "title": "Enriched step", "check": "true",
+    "ac_refs": ["AC-1", "AC-2"], "depends_on": ["s0"], "input": "fixture docs" },
+  { "id": "s2", "title": "Legacy step", "check": "false" }
+]
+```
+EOF
+
+  run pl_parse_steps "$doc"
+  [ "$status" -eq 0 ]
+
+  # Enriched step carries its authored values through unchanged.
+  [ "$(echo "$output" | jq -c '.[0].ac_refs')" = '["AC-1","AC-2"]' ]
+  [ "$(echo "$output" | jq -c '.[0].depends_on')" = '["s0"]' ]
+  [ "$(echo "$output" | jq -r '.[0].input')" = "fixture docs" ]
+
+  # Legacy {id,title,check} step gets the defaults []/[]/null.
+  [ "$(echo "$output" | jq -c '.[1].ac_refs')" = '[]' ]
+  [ "$(echo "$output" | jq -c '.[1].depends_on')" = '[]' ]
+  [ "$(echo "$output" | jq -r '.[1].input')" = "null" ]
+  # And its core fields are untouched.
+  [ "$(echo "$output" | jq -r '.[1].id')" = "s2" ]
+  [ "$(echo "$output" | jq -r '.[1].check')" = "false" ]
+}
+
 @test "pl_read_ledger: round-trips json written by pl_write_ledger (jq -S equal)" {
   ledger="$TMP/nested/dir/feat-x.json"
   sample='{"version":1,"branch":"feat/x","steps":[{"id":"s1","status":"green"}]}'
