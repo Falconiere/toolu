@@ -62,6 +62,12 @@ function pick<T>(value: unknown, fallback: T): T {
   return fallback;
 }
 
+/** Pick a number, then floor it at `min` so out-of-range config can't misbehave
+ *  (e.g. a negative pollMs would busy-loop setInterval; negative scanDepth no-ops). */
+function num(value: unknown, fallback: number, min: number): number {
+  return Math.max(min, pick(value, fallback));
+}
+
 /** Merge a parsed object over DEFAULT_CONFIG with per-field type guards. */
 function merge(parsed: Record<string, unknown>): DashboardConfig {
   const rawRoots = parsed.roots;
@@ -70,12 +76,12 @@ function merge(parsed: Record<string, unknown>): DashboardConfig {
     : DEFAULT_CONFIG.roots;
   return {
     roots,
-    scanDepth: pick(parsed.scanDepth, DEFAULT_CONFIG.scanDepth),
-    activeWithinHours: pick(parsed.activeWithinHours, DEFAULT_CONFIG.activeWithinHours),
-    stuckThresholdSeconds: pick(parsed.stuckThresholdSeconds, DEFAULT_CONFIG.stuckThresholdSeconds),
-    agentStuckSeconds: pick(parsed.agentStuckSeconds, DEFAULT_CONFIG.agentStuckSeconds),
-    pollMs: pick(parsed.pollMs, DEFAULT_CONFIG.pollMs),
-    port: pick(parsed.port, DEFAULT_CONFIG.port),
+    scanDepth: num(parsed.scanDepth, DEFAULT_CONFIG.scanDepth, 0),
+    activeWithinHours: num(parsed.activeWithinHours, DEFAULT_CONFIG.activeWithinHours, 0),
+    stuckThresholdSeconds: num(parsed.stuckThresholdSeconds, DEFAULT_CONFIG.stuckThresholdSeconds, 0),
+    agentStuckSeconds: num(parsed.agentStuckSeconds, DEFAULT_CONFIG.agentStuckSeconds, 0),
+    pollMs: num(parsed.pollMs, DEFAULT_CONFIG.pollMs, 1),
+    port: num(parsed.port, DEFAULT_CONFIG.port, 0),
     open: pick(parsed.open, DEFAULT_CONFIG.open),
   };
 }

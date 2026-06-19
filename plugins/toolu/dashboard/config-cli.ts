@@ -13,21 +13,21 @@ import { dirname } from "node:path";
 
 import { type DashboardConfig, DEFAULT_CONFIG_PATH, expandHome, loadConfig } from "./config.ts";
 
-const NUMERIC_KEYS = ["scanDepth", "activeWithinHours", "stuckThresholdSeconds", "agentStuckSeconds", "pollMs", "port"];
-const BOOL_KEYS = ["open"];
+const NUMERIC_FIELDS = ["scanDepth", "activeWithinHours", "stuckThresholdSeconds", "agentStuckSeconds", "pollMs", "port"];
+const BOOL_FIELDS = ["open"];
 
 /** Set a scalar config key, coercing/validating by key. Throws on unknown key or bad value. */
 export function setKey(config: DashboardConfig, key: string, value: string): DashboardConfig {
-  if (NUMERIC_KEYS.includes(key)) {
+  if (NUMERIC_FIELDS.includes(key)) {
     const n = Number(value);
     if (Number.isNaN(n)) throw new Error(`${key} must be a number, got "${value}"`);
     return { ...config, [key]: n };
   }
-  if (BOOL_KEYS.includes(key)) {
+  if (BOOL_FIELDS.includes(key)) {
     if (value !== "true" && value !== "false") throw new Error(`${key} must be true|false`);
     return { ...config, [key]: value === "true" };
   }
-  throw new Error(`unknown or non-scalar key "${key}"; settable: ${[...NUMERIC_KEYS, ...BOOL_KEYS].join(", ")}`);
+  throw new Error(`unknown or non-scalar key "${key}"; settable: ${[...NUMERIC_FIELDS, ...BOOL_FIELDS].join(", ")}`);
 }
 
 /** Add a root (~-expanded, deduped). */

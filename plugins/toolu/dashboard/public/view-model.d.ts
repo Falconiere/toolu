@@ -30,7 +30,3 @@ export function planTotals(counts: PlanCounts): { total: number; donePct: number
 
 export const COLUMNS: { key: keyof PlanCounts; title: string; status: string }[];
 export function columnize(steps: DerivedStep[]): Record<keyof PlanCounts, DerivedStep[]>;
-
-export function hasLiveActivity(
-  activity: { running?: number; stale?: number } | null | undefined,
-): boolean;

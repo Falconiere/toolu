@@ -48,12 +48,13 @@ function statusOf(
   return "running";
 }
 
-/** Max depth of a forest (1 for a flat list of leaves), with a cycle guard. */
+/** Max depth of a forest (1 for a flat list of leaves), with a cycle guard keyed
+ *  on the unique agentId (toolUseId is not guaranteed unique across transcripts). */
 function maxDepth(nodes: AgentNode[], seen: Set<string>): number {
   let deepest = 0;
   for (const n of nodes) {
-    if (seen.has(n.toolUseId)) continue;
-    seen.add(n.toolUseId);
+    if (seen.has(n.agentId)) continue;
+    seen.add(n.agentId);
     deepest = Math.max(deepest, 1 + maxDepth(n.children, seen));
   }
   return deepest;
