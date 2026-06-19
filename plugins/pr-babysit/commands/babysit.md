@@ -112,8 +112,9 @@ it **edits in place** — its header flips from "PR Review in Progress" to
 **CI_REVIEWER login set** (used by both this fetch and the Step 1 thread filter): the CI
 reviewer's login is API-surface-dependent — REST (`issues/comments`, `user.login`) returns the
 `[bot]` suffix, GraphQL (`reviewThreads`, `author.login`) drops it. Treat ALL of
-`{github-actions, github-actions[bot], claude[bot]}` as the CI reviewer. NEVER identify it by a
-generic `[bot]` substring test — that misclassifies the GraphQL `github-actions` form as human.
+`{github-actions, github-actions[bot], claude, claude[bot]}` as the CI reviewer — BOTH the
+suffixed (REST) and no-suffix (GraphQL) form of each app. NEVER identify it by a generic `[bot]`
+substring test — that misclassifies the GraphQL `github-actions`/`claude` form as human.
 
 ```bash
 # Find the CI review bot's comment, pass its body through the parser (REST form has the [bot] suffix).

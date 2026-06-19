@@ -36,6 +36,14 @@ FIXTURE="${BATS_TEST_DIRNAME}/fixtures/pr115-threads.json"
   grep -qiE 'recurrence gate|before posting any repl' "$CMD"
 }
 
+@test "instructs skipping outdated CI-reviewer threads" {
+  grep -qiE 'outdated.*skip|skip silently' "$CMD"
+}
+
+@test "CI_REVIEWER covers both API forms for each app (no-suffix + [bot])" {
+  grep -q 'github-actions, github-actions\[bot\], claude, claude\[bot\]' "$CMD"
+}
+
 @test "retains the verdict-approved success gate" {
   grep -qiE 'verdict.*approved' "$CMD"
 }
