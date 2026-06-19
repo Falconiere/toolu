@@ -1,186 +1,144 @@
-// b2 check: the real Bun.serve dashboard against a REAL temp ledger. SSE is read
-// by streaming response.body (EventSource may be absent under bun test), so we
-// parse event:/data: frames off the wire. No mocks; the ledger is produced by
-// the real plan-ledger.sh and mutated via mv-replace to prove the dir watch.
+// Real-data tests for the multi-project server: real ledger files on disk served
+// over HTTP + SSE. The activity source is injected (interface DI; the real source
+// is covered in claude-code.test.ts) so this focuses on routing, the multi-project
+// payload, project selection, the never-500 contract, and live SSE updates (AC-11).
 
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { DEFAULT_CONFIG, type DashboardConfig } from "../config.ts";
+import type { ActivitySummary, AgentNode, LiveActivitySource } from "../activity/source.ts";
 import { startServer } from "../index.ts";
+import type { MultiDashboardState } from "../aggregate.ts";
 
-const ENGINE = join(import.meta.dir, "..", "..", "hooks", "lib", "plan-ledger.sh");
+const base = mkdtempSync(join(tmpdir(), "toolu-dash-server-"));
+afterAll(() => rmSync(base, { recursive: true, force: true }));
 
-const PLAN = `# Server Plan — Plan
+const EMPTY: ActivitySummary = { total: 0, running: 0, errored: 0, stale: 0, deepest: 0 };
+const inertSource: LiveActivitySource = {
+  countSpawned: () => 0,
+  tree: () => ({ agents: [] as AgentNode[], summary: { ...EMPTY } }),
+  activityFingerprint: () => 0,
+};
 
-**Date:** 2026-06-17   **Status:** Approved   **Topic:** server.test fixture
-
-## Steps (machine-readable)
-
-\`\`\`json
-[
-  { "id": "s1", "title": "trivial true", "check": "true" }
-]
-\`\`\`
-`;
-
-function run(cmd: string, args: string[], cwd: string): string {
-  return execFileSync(cmd, args, { cwd, encoding: "utf8" }).trim();
+function writeLedger(name: string, title: string): string {
+  const dir = join(base, name, ".claude", "tmp", "plan-ledger");
+  mkdirSync(dir, { recursive: true });
+  const p = join(dir, "main.json");
+  writeFileSync(
+    p,
+    JSON.stringify({
+      version: 1,
+      branch: "main",
+      base_branch: "main",
+      plan_doc: "p.md",
+      updated_at: "2026-06-19T00:00:00Z",
+      summary: {},
+      next: "s1",
+      steps: [{ id: "s1", title, check: "true", status: "pending", started_at: null, activity: null, exit_code: null, diff_sha: null, last_run: null, evidence_tail: null }],
+    }),
+  );
+  return p;
 }
 
-const tmps: string[] = [];
-function mkTmp(prefix: string): string {
-  const dir = mkdtempSync(join(tmpdir(), prefix));
-  tmps.push(dir);
-  return dir;
-}
+const cfg = (overrides: Partial<DashboardConfig>): DashboardConfig => ({
+  ...DEFAULT_CONFIG,
+  roots: [base],
+  scanDepth: 2,
+  pollMs: 50,
+  ...overrides,
+});
 
-let repo: string;
-let ledgerPath: string;
 let server: { port: number; stop: () => void };
+afterEach(() => server?.stop());
 
-beforeAll(() => {
-  repo = mkTmp("dash-server-");
-  run("git", ["init", "-q", "-b", "main"], repo);
-  run("git", ["config", "user.email", "t@t.t"], repo);
-  run("git", ["config", "user.name", "t"], repo);
-  writeFileSync(join(repo, "file.txt"), "base\n");
-  run("git", ["add", "-A"], repo);
-  run("git", ["commit", "-qm", "init"], repo);
-  writeFileSync(join(repo, "plan.md"), PLAN);
-  run("bash", [ENGINE, "run", "plan.md", "--step", "s1"], repo);
-  ledgerPath = run("bash", [ENGINE, "path"], repo);
-  server = startServer({ ledgerPath, repoRoot: repo });
+describe("HTTP routing + payload (AC-11)", () => {
+  beforeEach(() => {
+    writeLedger("srvA", "ONE");
+    server = startServer({ config: cfg({}), source: inertSource });
+  });
+
+  test("GET /api/state returns MultiDashboardState with projects + default selection", async () => {
+    const res = await fetch(`http://localhost:${server.port}/api/state`);
+    expect(res.status).toBe(200);
+    const state = (await res.json()) as MultiDashboardState;
+    expect(state.projects.length).toBeGreaterThanOrEqual(1);
+    expect(state.selected).not.toBeNull();
+    expect(state.selected!.plan.ledger?.branch).toBe("main");
+    expect(typeof state.serverTime).toBe("string");
+  });
+
+  test("?project=<id> selects that project", async () => {
+    const all = (await (await fetch(`http://localhost:${server.port}/api/state`)).json()) as MultiDashboardState;
+    const id = all.projects[0].id;
+    const res = await fetch(`http://localhost:${server.port}/api/state?project=${id}`);
+    const state = (await res.json()) as MultiDashboardState;
+    expect(state.selected!.id).toBe(id);
+  });
+
+  test("GET / serves the SPA", async () => {
+    const res = await fetch(`http://localhost:${server.port}/`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/html");
+  });
+
+  test("non-GET → 405, unknown path → 404", async () => {
+    expect((await fetch(`http://localhost:${server.port}/api/state`, { method: "POST" })).status).toBe(405);
+    expect((await fetch(`http://localhost:${server.port}/nope`)).status).toBe(404);
+  });
 });
 
-afterAll(() => {
-  server.stop();
-  for (const dir of tmps) rmSync(dir, { recursive: true, force: true });
+describe("never-500 contract", () => {
+  test("empty roots → 200 with empty projects, null selection", async () => {
+    server = startServer({ config: cfg({ roots: [] }), source: inertSource });
+    const res = await fetch(`http://localhost:${server.port}/api/state`);
+    expect(res.status).toBe(200);
+    const state = (await res.json()) as MultiDashboardState;
+    expect(state.projects).toEqual([]);
+    expect(state.selected).toBeNull();
+  });
 });
 
-/** Read one SSE `state` event's parsed data off a streaming response within ms,
- *  honoring an AbortSignal. Returns null on timeout. */
-async function readStateEvent(
-  reader: ReadableStreamDefaultReader<Uint8Array>,
-  ms: number,
-): Promise<unknown | null> {
-  const decoder = new TextDecoder();
-  let buffer = "";
-  const deadline = Date.now() + ms;
-  while (Date.now() < deadline) {
-    const chunk = await Promise.race([
-      reader.read(),
-      Bun.sleep(deadline - Date.now()).then(() => ({ done: true, value: undefined }) as const),
-    ]);
-    if (chunk.done) break;
-    buffer += decoder.decode(chunk.value, { stream: true });
-    let sep = buffer.indexOf("\n\n");
-    while (sep !== -1) {
-      const frame = buffer.slice(0, sep);
-      buffer = buffer.slice(sep + 2);
-      if (frame.includes("event: state")) {
+describe("SSE live updates (AC-11/AC-16)", () => {
+  test("streams an initial state frame, then a fresh frame after a ledger change", async () => {
+    const ledgerPath = writeLedger("srvSSE", "BEFORE");
+    server = startServer({ config: cfg({}), source: inertSource });
+
+    const ctrl = new AbortController();
+    const res = await fetch(`http://localhost:${server.port}/api/events`, { signal: ctrl.signal });
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+
+    const titles: string[] = [];
+    const deadline = Date.now() + 4000;
+    let buf = "";
+    let bumped = false;
+    while (Date.now() < deadline && titles.length < 2) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let i: number;
+      while ((i = buf.indexOf("\n\n")) >= 0) {
+        const frame = buf.slice(0, i);
+        buf = buf.slice(i + 2);
         const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
-        if (dataLine) return JSON.parse(dataLine.slice("data:".length).trim());
+        if (!dataLine) continue;
+        const state = JSON.parse(dataLine.slice(5).trim()) as MultiDashboardState;
+        const t = state.selected?.plan.ledger?.steps[0]?.title;
+        if (t) titles.push(t);
+        if (!bumped) {
+          // after the first real frame, mutate the ledger to trigger a new emit
+          bumped = true;
+          writeFileSync(ledgerPath, JSON.stringify({ version: 1, branch: "main", base_branch: "main", plan_doc: "p.md", summary: {}, next: "s1", steps: [{ id: "s1", title: "AFTER", check: "true", status: "pending", started_at: null, activity: null, exit_code: null, diff_sha: null, last_run: null, evidence_tail: null }] }));
+          const future = new Date(Date.now() + 10_000);
+          utimesSync(ledgerPath, future, future);
+        }
       }
-      sep = buffer.indexOf("\n\n");
     }
-  }
-  return null;
-}
-
-describe("dashboard server — real ledger over the wire", () => {
-  test("SSE emits an initial `state` event on connect", async () => {
-    const ctrl = new AbortController();
-    const res = await fetch(`http://localhost:${server.port}/api/events`, {
-      signal: ctrl.signal,
-    });
-    expect(res.headers.get("content-type")).toContain("text/event-stream");
-    const reader = res.body!.getReader();
-    const state = (await readStateEvent(reader, 1000)) as { steps?: unknown[] };
-    expect(state).not.toBeNull();
-    expect(Array.isArray(state.steps)).toBe(true);
     ctrl.abort();
-  });
-
-  test("an mv-replace of the ledger pushes a `state` event within ~300ms", async () => {
-    const ctrl = new AbortController();
-    const res = await fetch(`http://localhost:${server.port}/api/events`, {
-      signal: ctrl.signal,
-    });
-    const reader = res.body!.getReader();
-    // Consume the initial paint.
-    await readStateEvent(reader, 1000);
-
-    // Build an updated ledger off-disk and mv it into place (mirrors the engine's
-    // atomic temp+mv), which a file-path watch would miss but the dir watch sees.
-    const original = await Bun.file(ledgerPath).text();
-    const mutated = original.replace('"title": "trivial true"', '"title": "CHANGED title"');
-    const staging = `${ledgerPath}.tmp.test`;
-    writeFileSync(staging, mutated);
-    renameSync(staging, ledgerPath);
-
-    const state = (await readStateEvent(reader, 800)) as {
-      ledger?: { steps?: { title?: string }[] };
-    } | null;
-    expect(state).not.toBeNull();
-    expect(state!.ledger?.steps?.[0]?.title).toBe("CHANGED title");
-    ctrl.abort();
-  });
-
-  test("GET /api/state on a no-ledger branch returns {ledger:null,steps:[]} with 200", async () => {
-    // A fresh git repo with no ledger written yet -> the no-ledger shape, no 500.
-    const fresh = mkTmp("dash-noledger-");
-    run("git", ["init", "-q", "-b", "main"], fresh);
-    run("git", ["config", "user.email", "t@t.t"], fresh);
-    run("git", ["config", "user.name", "t"], fresh);
-    writeFileSync(join(fresh, "f.txt"), "x\n");
-    run("git", ["add", "-A"], fresh);
-    run("git", ["commit", "-qm", "init"], fresh);
-    const freshLedger = run("bash", [ENGINE, "path"], fresh);
-    const s = startServer({ ledgerPath: freshLedger, repoRoot: fresh });
-    try {
-      const res = await fetch(`http://localhost:${s.port}/api/state`);
-      expect(res.status).toBe(200);
-      const body = (await res.json()) as { ledger: unknown; steps: unknown[] };
-      expect(body.ledger).toBeNull();
-      expect(body.steps).toEqual([]);
-    } finally {
-      s.stop();
-    }
-  });
-
-  test("a client disconnect does not break later broadcasts", async () => {
-    // Open, read initial, then abort (client gone). The server must drop it from
-    // the hub so a subsequent change broadcast survives — proven by a NEW client
-    // still receiving a fresh state event after another mv-replace.
-    const gone = new AbortController();
-    const res1 = await fetch(`http://localhost:${server.port}/api/events`, {
-      signal: gone.signal,
-    });
-    const reader1 = res1.body!.getReader();
-    await readStateEvent(reader1, 1000);
-    gone.abort();
-    await Bun.sleep(50);
-
-    // Trigger another change.
-    const original = await Bun.file(ledgerPath).text();
-    const mutated = original.replace(/"title": "[^"]*"/, '"title": "AFTER disconnect"');
-    const staging = `${ledgerPath}.tmp.test2`;
-    writeFileSync(staging, mutated);
-    renameSync(staging, ledgerPath);
-
-    const alive = new AbortController();
-    const res2 = await fetch(`http://localhost:${server.port}/api/events`, {
-      signal: alive.signal,
-    });
-    const reader2 = res2.body!.getReader();
-    const state = (await readStateEvent(reader2, 1000)) as {
-      ledger?: { steps?: { title?: string }[] };
-    } | null;
-    expect(state).not.toBeNull();
-    expect(state!.ledger?.steps?.[0]?.title).toBe("AFTER disconnect");
-    alive.abort();
+    expect(titles[0]).toBe("BEFORE");
+    expect(titles).toContain("AFTER");
   });
 });

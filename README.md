@@ -182,18 +182,33 @@ Beyond the plugins, the core (`toolu`) also ships:
 - **docs-sync backstop** — on `git push`, an **advisory** (never a block) when the branch diff changes code but no documentation surface (README, `docs/` guides, `SKILL.md` triggers) — a nudge to keep user-facing docs in sync with behavior. Silenced by a diff-`sha`-keyed attestation; surfaces are tunable via `docsSync.*` ([config](docs/config.md#docs-sync-surfaces-docssync)). Pairs with the "Docs in sync" convention the workflow skills enforce.
 - **Slash commands** — `/commit` and `/review-and-commit`.
 - **`deep-explore` agent** — structural codebase exploration via ast-grep.
-- **Execution dashboard** — an optional, read-only realtime kanban over the plan-ledger (see below).
+- **Execution dashboard** — an optional, read-only, multi-project realtime view: a plan kanban plus a live agent-activity tree for every project on the machine (see below).
 - **Caveman mode** — ultra-compressed, token-frugal output (via the optional `caveman` companion).
 
 ### Execution dashboard
 
-An optional, read-only **realtime kanban** over the plan-ledger — the ledger stays the single source of truth; the dashboard only watches it. It is **off by default** and nothing auto-starts it. Launch it from the repo root:
+An optional, read-only, **multi-project** realtime view of everything executing on your machine — the ledgers and transcripts stay the single source of truth; the dashboard only watches them. It is **off by default** and nothing auto-starts it.
+
+First tell it which base dirs to scan (one repo, or a parent of many repos/worktrees), via the `dashboard-config` command:
+
+```bash
+bun run plugins/toolu/dashboard/config-cli.ts add-root ~/Projects
+bun run plugins/toolu/dashboard/config-cli.ts add-root ~/.herdr/worktrees
+bun run plugins/toolu/dashboard/config-cli.ts get        # show effective config
+```
+
+Config lives at `${XDG_CONFIG_HOME:-~/.config}/toolu/dashboard.json` (roots, `scanDepth`, `activeWithinHours`, `pollMs`, `stuckThresholdSeconds`, `agentStuckSeconds`, `port`, `open`). Then launch from any repo:
 
 ```bash
 bun run plugins/toolu/dashboard/index.ts [--open]
 ```
 
-It binds an ephemeral localhost port, prints the URL, and (with `--open`) opens your browser. Cards live in four columns driven by ledger status — **To Do** (pending) · **Running** (pulsing) · **Blocked** (red) · **Done** (green; amber + ↻ when a step's diff has gone stale) — and animate between columns as `plan-ledger.sh run` writes each step. It is **purely read-only**: no route mutates the ledger, so it can be closed or crash with zero effect on execution.
+It binds an ephemeral localhost port, prints the URL, and (with `--open`) opens your browser. A **sidebar** lists every active project (a running plan step, or a ledger touched within `activeWithinHours`) with a status dot and progress; selecting one shows that project's **two lanes**:
+
+- **Plan lane** — the four-column kanban (**To Do** · **Running** · **Blocked** · **Done**; amber + ↻ when a green step's diff has gone stale) driven by the plan-ledger. This is *verified truth* — "did the check pass."
+- **Activity lane** — the live **agent/sub-agent spawn tree** read from the Claude Code transcripts: each node is an agent (label, type, duration, status), nested under its parent, marked `running`/`done`/`error`/`stale`. This is *what's actually running* — so you can see an agent still working even after its plan step went green, and emergent sub-agents the static plan never listed.
+
+The UI is **React + TailwindCSS** loaded from CDN with no build step (so it needs network access for those CDNs; the JSON/SSE API works regardless). Updates stream over Server-Sent Events, gated on real file changes. It is **purely read-only**: no route mutates anything, so it can be closed or crash with zero effect on execution. The activity lane is Claude Code-specific for now (other runtimes degrade gracefully to the plan lane).
 
 ## Workflow skills
 

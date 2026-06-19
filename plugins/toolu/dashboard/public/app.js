@@ -1,151 +1,114 @@
-// Read-only kanban client. Subscribes to /api/events (SSE), renders each ledger
-// step as a card in the column for its status, and animates column moves with
-// the FLIP technique plus pulse/shake/flash feedback. No framework, no build.
+// Dashboard root. Subscribes to /api/events (SSE) — re-subscribing with
+// ?project=<id> when the selection changes — and renders the sidebar plus the
+// selected project's two lanes (plan kanban + live agent tree). React via htm,
+// no JSX/build; CDN-loaded per the s9 plan deviation.
 
-const COLUMNS = ["pending", "running", "red", "green"];
+import React, { useEffect, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import htm from "htm";
 
-const els = {
-  board: document.getElementById("board"),
-  empty: document.getElementById("empty"),
-  status: document.getElementById("status"),
-  plan: document.getElementById("plan"),
-  cols: Object.fromEntries(COLUMNS.map((c) => [c, document.getElementById(`col-${c}`)])),
-  counts: Object.fromEntries(
-    COLUMNS.map((c) => [c, document.querySelector(`[data-count="${c}"]`)]),
-  ),
-};
+import { Sidebar } from "/static/sidebar.js";
+import { Board } from "/static/board.js";
+import { Tree } from "/static/tree.js";
+import { planTotals } from "/static/view-model.js";
 
-// Remember the last column of each card so we can FLIP-animate real moves.
-const lastColumn = new Map();
-let lastAllGreen = false;
+const html = htm.bind(React.createElement);
 
-/** Map a derived step to its column key. */
-function columnOf(step) {
-  if (step.status === "running") return "running";
-  if (step.status === "red") return "red";
-  if (step.status === "green") return "green";
-  return "pending";
-}
+const EMPTY = { projects: [], selected: null, serverTime: null };
 
-/** Build (or update) a card element for a step. */
-function renderCard(step) {
-  let card = document.getElementById(`card-${step.id}`);
-  if (!card) {
-    card = document.createElement("article");
-    card.className = "card";
-    card.id = `card-${step.id}`;
-    card.innerHTML =
-      '<div class="id"></div><div class="title"></div><div class="activity"></div>';
-  }
-  card.dataset.status = step.status;
-  card.classList.toggle("stale", Boolean(step.stale));
-  card.classList.toggle("stuck", Boolean(step.stuck));
-  let badge = "";
-  if (step.stale) badge = ' <span class="badge">↻ stale</span>';
-  else if (step.stuck) badge = ' <span class="badge">⚠ stuck</span>';
-  card.querySelector(".id").textContent = step.id;
-  card.querySelector(".title").innerHTML = escapeHtml(step.title) + badge;
-  const activity = card.querySelector(".activity");
-  activity.textContent = step.activity || "";
-  activity.hidden = !step.activity;
-  return card;
-}
+/** Subscribe to SSE; re-subscribe when the selection changes. */
+function useDashboard() {
+  const [state, setState] = useState(EMPTY);
+  const [conn, setConn] = useState("connecting");
+  const [selectedId, setSelectedId] = useState(null);
+  const esRef = useRef(null);
 
-/** Minimal HTML escaping for untrusted title text. */
-function escapeHtml(s) {
-  return String(s).replace(
-    /[&<>"']/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
-  );
-}
-
-/** Render a full state payload, FLIP-animating any card that changed column. */
-function render(state) {
-  els.plan.textContent = state.ledger ? state.ledger.plan_doc : "—";
-  const steps = state.steps || [];
-  els.empty.hidden = steps.length > 0;
-  els.board.hidden = steps.length === 0;
-
-  // FLIP step 1: record current positions before the DOM mutates.
-  const first = new Map();
-  for (const step of steps) {
-    const card = document.getElementById(`card-${step.id}`);
-    if (card) first.set(step.id, card.getBoundingClientRect());
-  }
-
-  const counts = { pending: 0, running: 0, red: 0, green: 0 };
-  const seen = new Set();
-  for (const step of steps) {
-    const col = columnOf(step);
-    counts[col]++;
-    seen.add(step.id);
-    const card = renderCard(step);
-    const prevCol = lastColumn.get(step.id);
-    els.cols[col].appendChild(card);
-    // Shake only on the transition into "red" (not when it stays blocked).
-    if (col === "red" && prevCol !== "red") {
-      card.classList.remove("shake");
-      void card.offsetWidth;
-      card.classList.add("shake");
-    }
-    lastColumn.set(step.id, col);
-  }
-
-  // Drop cards for steps that vanished (e.g. branch switch).
-  for (const id of [...lastColumn.keys()]) {
-    if (!seen.has(id)) {
-      document.getElementById(`card-${id}`)?.remove();
-      lastColumn.delete(id);
-    }
-  }
-
-  for (const c of COLUMNS) els.counts[c].textContent = String(counts[c]);
-
-  // FLIP step 2: invert + play for cards that moved.
-  for (const step of steps) {
-    const card = document.getElementById(`card-${step.id}`);
-    const prev = first.get(step.id);
-    if (!card || !prev) continue;
-    const now = card.getBoundingClientRect();
-    const dx = prev.left - now.left;
-    const dy = prev.top - now.top;
-    if (dx === 0 && dy === 0) continue;
-    card.classList.remove("flip");
-    card.style.transform = `translate(${dx}px, ${dy}px)`;
-    requestAnimationFrame(() => {
-      card.classList.add("flip");
-      card.style.transform = "";
+  useEffect(() => {
+    const qs = selectedId ? `?project=${encodeURIComponent(selectedId)}` : "";
+    const es = new EventSource(`/api/events${qs}`);
+    esRef.current = es;
+    es.addEventListener("open", () => setConn("live"));
+    es.addEventListener("error", () => setConn("reconnecting"));
+    es.addEventListener("state", (ev) => {
+      setConn("live");
+      try {
+        setState(JSON.parse(ev.data));
+      } catch {
+        /* ignore a malformed frame; the next one will be clean */
+      }
     });
-  }
+    return () => es.close();
+  }, [selectedId]);
 
-  // All-green flash on the transition into a fully-done board.
-  const allGreen = steps.length > 0 && steps.every((s) => s.status === "green" && !s.stale);
-  if (allGreen && !lastAllGreen) {
-    els.board.classList.remove("flash");
-    void els.board.offsetWidth;
-    els.board.classList.add("flash");
-  }
-  lastAllGreen = allGreen;
+  return { state, conn, selectedId, setSelectedId };
 }
 
-/** Connect to the SSE stream and re-render on each `state` event. */
-function connect() {
-  const source = new EventSource("/api/events");
-  source.addEventListener("open", () => setConn("open", "live"));
-  source.addEventListener("error", () => setConn("closed", "reconnecting…"));
-  source.addEventListener("state", (ev) => {
-    setConn("open", "live");
-    try {
-      render(JSON.parse(ev.data));
-    } catch {
-      /* ignore a malformed frame; the next one wins */
-    }
-  });
+function ConnPill({ conn }) {
+  const color = conn === "live" ? "#2ecc71" : conn === "reconnecting" ? "#e74c3c" : "#8b94a7";
+  return html`<span class="inline-flex items-center gap-1.5 text-xs text-muted">
+    <span class="h-2 w-2 rounded-full" style=${{ backgroundColor: color }}></span>${conn}
+  </span>`;
 }
 
-function setConn(stateName, label) {
-  els.status.dataset.state = stateName;
-  els.status.textContent = label;
+function TopBar({ conn }) {
+  return html`<header class="h-12 shrink-0 flex items-center justify-between px-4 border-b border-line bg-panel">
+    <div class="flex items-center gap-2">
+      <span class="font-semibold tracking-tight">toolu</span>
+      <span class="text-muted text-sm">execution dashboard</span>
+    </div>
+    <${ConnPill} conn=${conn} />
+  </header>`;
 }
 
-connect();
+function ProjectHeader({ detail }) {
+  const counts = {
+    pending: detail.plan.steps.filter((s) => s.status === "pending").length,
+    running: detail.plan.steps.filter((s) => s.status === "running").length,
+    red: detail.plan.steps.filter((s) => s.status === "red").length,
+    green: detail.plan.steps.filter((s) => s.status === "green").length,
+  };
+  const totals = planTotals(counts);
+  const planDoc = detail.plan.ledger?.plan_doc ?? "—";
+  return html`<div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+    <div>
+      <h2 class="text-lg font-semibold">${detail.plan.ledger?.branch ?? detail.id}</h2>
+      <div class="font-mono text-xs text-muted">${planDoc}</div>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="font-mono text-sm">${counts.green}/${totals.total} done</span>
+      <div class="w-40 h-1.5 rounded bg-line overflow-hidden">
+        <div class="h-full bg-ok" style=${{ width: `${totals.donePct}%` }}></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function ProjectView({ detail }) {
+  return html`<div class="p-4 space-y-4">
+    <${ProjectHeader} detail=${detail} />
+    <${Board} plan=${detail.plan} />
+    <${Tree} agents=${detail.agents} activity=${detail.activity} />
+  </div>`;
+}
+
+function Empty() {
+  return html`<div class="h-full flex items-center justify-center text-muted text-sm">
+    Select a project to see its plan and live agents.
+  </div>`;
+}
+
+function App() {
+  const { state, conn, selectedId, setSelectedId } = useDashboard();
+  const sel = state.selected;
+  return html`<div class="h-screen flex flex-col">
+    <${TopBar} conn=${conn} />
+    <div class="flex flex-1 min-h-0">
+      <${Sidebar} projects=${state.projects} selectedId=${sel?.id ?? selectedId} onSelect=${setSelectedId} />
+      <main class="flex-1 min-w-0 overflow-auto">
+        ${sel ? html`<${ProjectView} detail=${sel} />` : html`<${Empty} />`}
+      </main>
+    </div>
+  </div>`;
+}
+
+createRoot(document.getElementById("root")).render(html`<${App} />`);

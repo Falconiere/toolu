@@ -7,6 +7,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { DEFAULT_CONFIG } from "../config.ts";
 import { startServer } from "../index.ts";
 
 let repo: string;
@@ -14,8 +15,8 @@ let server: { port: number; stop: () => void };
 
 beforeAll(() => {
   repo = mkdtempSync(join(tmpdir(), "dash-assets-"));
-  // No ledger needed — asset delivery is independent of ledger state.
-  server = startServer({ ledgerPath: join(repo, "none.json"), repoRoot: repo });
+  // Asset delivery is independent of config; empty roots ⟹ no projects to scan.
+  server = startServer({ config: { ...DEFAULT_CONFIG, roots: [], pollMs: 1000 } });
 });
 
 afterAll(() => {
@@ -38,6 +39,15 @@ describe("dashboard asset delivery", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("javascript");
     expect((await res.text()).length).toBeGreaterThan(0);
+  });
+
+  test("all React component modules are served as javascript", async () => {
+    for (const mod of ["sidebar.js", "board.js", "tree.js", "view-model.js"]) {
+      const res = await fetch(`http://localhost:${server.port}/static/${mod}`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toContain("javascript");
+      expect((await res.text()).length).toBeGreaterThan(0);
+    }
   });
 
   test("GET /static/styles.css returns 200 with a css content-type", async () => {
