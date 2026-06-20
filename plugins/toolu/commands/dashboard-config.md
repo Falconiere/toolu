@@ -22,10 +22,19 @@ bun run plugins/toolu/dashboard/config-cli.ts set pollMs 1000
 bun run plugins/toolu/dashboard/config-cli.ts set activeWithinHours 24
 ```
 
-Then launch the dashboard:
+Then launch the dashboard from the repo root:
 
 ```bash
 bun run plugins/toolu/dashboard/index.ts --open
+```
+
+Or, from anywhere in the terminal, via the `toolu-claude` launcher (published on
+PATH by the plugin's SessionStart hook — see the README for the one-time PATH
+setup):
+
+```bash
+toolu-claude dashboard --open
+toolu-claude dashboard config get        # forwards to config-cli.ts
 ```
 
 When the user asks to configure or set up the dashboard, run the appropriate
