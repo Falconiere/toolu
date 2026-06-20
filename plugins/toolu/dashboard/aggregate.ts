@@ -76,10 +76,14 @@ function isActive(p: DiscoveredProject, counts: ProjectSummary["planCounts"], cf
 }
 
 /** Sidebar rollups for every active project — ledger + readdir only, NO transcript parse, NO git. */
-export function buildSummaries(cfg: DashboardConfig, src: LiveActivitySource): ProjectSummary[] {
+export function buildSummaries(
+  cfg: DashboardConfig,
+  src: LiveActivitySource,
+  discovered: DiscoveredProject[] = discoverProjects(cfg),
+): ProjectSummary[] {
   const nowMs = Date.now();
   const out: ProjectSummary[] = [];
-  for (const p of discoverProjects(cfg)) {
+  for (const p of discovered) {
     const ledger = readLedger(p.ledgerPath);
     const planCounts = countSteps(ledger);
     if (!isActive(p, planCounts, cfg, nowMs)) continue;
@@ -116,6 +120,27 @@ export function buildSelectedDetail(
   return { id: projectId, plan, agents, activity: summary };
 }
 
+/** The default selection: an explicit choice, else the most-recently-active project. */
+export function defaultSelectedId(
+  projects: ProjectSummary[],
+  selectedId: string | null,
+): string | null {
+  return selectedId ?? projects[0]?.id ?? null;
+}
+
+/** Full payload from an already-built summaries list, so the watcher can reuse one scan. */
+export function buildMultiStateFrom(
+  cfg: DashboardConfig,
+  src: LiveActivitySource,
+  projects: ProjectSummary[],
+  selectedId: string | null,
+  nowMs: number,
+): MultiDashboardState {
+  const wanted = defaultSelectedId(projects, selectedId);
+  const selected = wanted ? buildSelectedDetail(cfg, src, wanted, nowMs) : null;
+  return { projects, selected, serverTime: new Date(nowMs).toISOString() };
+}
+
 /** Full payload: summaries + selected detail (defaulting to the most-recently-active). */
 export function buildMultiState(
   cfg: DashboardConfig,
@@ -123,8 +148,5 @@ export function buildMultiState(
   selectedId: string | null,
   nowMs: number,
 ): MultiDashboardState {
-  const projects = buildSummaries(cfg, src);
-  const wanted = selectedId ?? projects[0]?.id ?? null;
-  const selected = wanted ? buildSelectedDetail(cfg, src, wanted, nowMs) : null;
-  return { projects, selected, serverTime: new Date(nowMs).toISOString() };
+  return buildMultiStateFrom(cfg, src, buildSummaries(cfg, src), selectedId, nowMs);
 }

@@ -5,6 +5,8 @@
 
 import { readFileSync } from "node:fs";
 
+import { durationMs } from "./activity/tree-builder.ts";
+
 /** Spawn metadata pulled from an `Agent`/`Task` tool_use entry. */
 export interface SpawnInfo {
   name: string; // "Agent" | "Task"
@@ -102,15 +104,6 @@ export function extractResults(lines: Record<string, unknown>[]): Map<string, Re
     }
   }
   return out;
-}
-
-/** Difference of two ISO timestamps in ms, or null if either is missing/invalid. */
-function durationMs(start: string | null, end: string | null): number | null {
-  if (!start || !end) return null;
-  const a = Date.parse(start);
-  const b = Date.parse(end);
-  if (Number.isNaN(a) || Number.isNaN(b)) return null;
-  return b - a;
 }
 
 /** Join spawns to results found in the same line set. Unpaired spawns stay running. */

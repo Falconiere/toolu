@@ -10,6 +10,8 @@ import { join } from "node:path";
 
 import { DEFAULT_CONFIG, type DashboardConfig } from "../config.ts";
 import type { ActivitySummary, AgentNode, LiveActivitySource } from "../activity/source.ts";
+import { buildSummaries } from "../aggregate.ts";
+import { discoverProjects } from "../discovery.ts";
 import { createWatcher } from "../watch.ts";
 
 const base = mkdtempSync(join(tmpdir(), "toolu-dash-watch-"));
@@ -87,5 +89,97 @@ describe("createWatcher (AC-16)", () => {
     const after = w.tick(Date.now());
     expect(after).not.toBeNull();
     expect(treeCalls()).toBe(before + 1);
+  });
+
+  // Regression (default-target must match buildMultiState's active-filtered
+  // selection): with no explicit selection, fingerprint()'s default target must
+  // be buildSummaries(cfg, src)[0] — the newest-mtime *active* project — NOT the
+  // newest-mtime project over ALL discovered projects. When the newest-mtime
+  // project is IDLE (filtered out by isActive) while an older-mtime project is
+  // ACTIVE (running step), buildMultiState renders ACTIVE but the OLD line
+  // fingerprinted IDLE, so live-activity changes on the rendered ACTIVE project
+  // were missed (tick returned null, no rebuild). This test fails on the OLD
+  // line and passes on the fix.
+  test("default target tracks the active project's activity, not the newest idle ledger", () => {
+    // Isolate this scenario so other repos in `base` (all created ~now, hence
+    // active under the default window) cannot win the default selection.
+    const sub = mkdtempSync(join(base, "active-vs-idle-"));
+    const scenarioCfg: DashboardConfig = {
+      ...DEFAULT_CONFIG,
+      roots: [sub],
+      scanDepth: 2,
+      // Collapse the time-based activity window to nothing (floored at 0 in
+      // config), so a project is "active" ONLY via a running step. With this,
+      // IDLE (empty steps, mtime in the past) is inactive regardless of mtime,
+      // and ACTIVE is active purely because of its running step.
+      activeWithinHours: 0,
+    };
+
+    // IDLE: empty ledger (no running step) -> inactive under the 0h window.
+    const idleDir = join(sub, "IDLE", ".claude", "tmp", "plan-ledger");
+    mkdirSync(idleDir, { recursive: true });
+    const idlePath = join(idleDir, "main.json");
+    writeFileSync(idlePath, JSON.stringify({ version: 1, branch: "main", base_branch: "main", plan_doc: "p.md", summary: {}, next: null, steps: [] }));
+
+    // ACTIVE: ledger with one running step -> active via isActive's running gate.
+    const activeDir = join(sub, "ACTIVE", ".claude", "tmp", "plan-ledger");
+    mkdirSync(activeDir, { recursive: true });
+    const activePath = join(activeDir, "main.json");
+    writeFileSync(activePath, JSON.stringify({
+      version: 1, branch: "main", base_branch: "main", plan_doc: "p.md", summary: {}, next: "s1",
+      steps: [{ id: "s1", title: "go", check: "c", status: "running", started_at: null, activity: null, exit_code: null, diff_sha: null, last_run: null, evidence_tail: null }],
+    }));
+
+    // Make IDLE the NEWEST ledger mtime and ACTIVE strictly older — both in the
+    // real past so IDLE stays inactive (buildSummaries uses real Date.now()).
+    const realNow = Date.now();
+    const idleMtime = new Date(realNow - 1000); // newest of the two, still past
+    const activeMtime = new Date(realNow - 5000); // older than IDLE
+    utimesSync(idlePath, idleMtime, idleMtime);
+    utimesSync(activePath, activeMtime, activeMtime);
+
+    // A per-project activity fingerprint backed by a counter we can bump, keyed
+    // by project id — the same DI seam as countingSource (the real claude-code
+    // adapter is covered elsewhere), not a hidden mock of selection logic.
+    const activity = new Map<string, number>();
+    const src: LiveActivitySource = {
+      countSpawned: () => 0,
+      tree: () => ({ agents: [] as AgentNode[], summary: { ...EMPTY } }),
+      activityFingerprint: (project) => activity.get(project.id) ?? 0,
+    };
+
+    const w = createWatcher(scenarioCfg, src);
+
+    // Resolve the deterministic project ids from discovery (sha1 of root@branch).
+    const all = discoverProjects(scenarioCfg);
+    const activeId = all.find((p) => p.root === join(sub, "ACTIVE"))!.id;
+    const idleId = all.find((p) => p.root === join(sub, "IDLE"))!.id;
+    expect(activeId).not.toBe(idleId);
+
+    // Confirm the scenario against the REAL isActive/buildSummaries semantics:
+    // IDLE (newest mtime) is filtered out; ACTIVE is the sole/first summary.
+    const summaries = buildSummaries(scenarioCfg, src);
+    expect(summaries.map((s) => s.id)).toEqual([activeId]);
+
+    // 1) First tick emits and defaults selection to ACTIVE (matches buildMultiState).
+    const fixedNow = realNow + 60_000;
+    const first = w.tick(fixedNow);
+    expect(first).not.toBeNull();
+    expect(first!.selected).not.toBeNull();
+    expect(first!.selected!.id).toBe(activeId);
+
+    // Settle: nothing changed.
+    expect(w.tick(fixedNow)).toBeNull();
+
+    // 2) Bump ONLY ACTIVE's activity counter — no ledger mtime touched, IDLE's
+    //    fingerprint unchanged. The change-gate must notice because the rendered
+    //    (default) target is ACTIVE.
+    activity.set(activeId, 1);
+
+    // 3) Second tick must emit. With the OLD line the fingerprint tracked IDLE,
+    //    whose activity is still 0, so this would (wrongly) return null.
+    const after = w.tick(fixedNow);
+    expect(after).not.toBeNull();
+    expect(after!.selected!.id).toBe(activeId);
   });
 });
