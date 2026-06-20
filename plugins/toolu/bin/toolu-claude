@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# toolu-claude — terminal launcher for the toolu dashboard, runnable from anywhere.
+#
+# Published as a symlink on $PATH by the toolu SessionStart hook
+# (hooks/publish-cli.sh -> ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu/bin/toolu-claude),
+# so it survives plugin version bumps. This script resolves its own symlink chain
+# to find the live plugin dir, then `bun run`s the dashboard from there — no path
+# is baked in at publish time.
+#
+# Usage:
+#   toolu-claude dashboard [--open] [args...]   Start the multi-project dashboard
+#   toolu-claude dashboard config <get|set <key> <value>|add-root <dir>|rm-root <dir>>
+#                                               Read/edit dashboard config
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'EOF'
+toolu-claude — toolu dashboard launcher
+
+Usage:
+  toolu-claude dashboard [--open] [args...]
+      Start the multi-project dashboard (prints the URL; --open opens it on macOS).
+  toolu-claude dashboard config <get | set <key> <value> | add-root <dir> | rm-root <dir>>
+      Read or edit the dashboard config.
+EOF
+}
+
+# Resolve this script's real location through any symlink chain (it is invoked
+# via the published symlink on $PATH). Keeps us portable across shells/OSes that
+# lack `readlink -f`.
+# Resolve a directory to its absolute path; returns non-zero (does NOT exit) when
+# `cd` fails. The caller aborts via `|| die_resolve` at statement level — an
+# `exit` inside this function would only leave the `$(...)` subshell, and a bare
+# `var=$(cd ...)` assignment swallows the failure even under `set -e`.
+resolve_dir() {
+  cd "$1" 2>/dev/null && pwd
+}
+die_resolve() {
+  echo "toolu-claude: cannot resolve launcher directory (moved or removed?)" >&2
+  exit 1
+}
+
+src="${BASH_SOURCE[0]}"
+hops=0
+while [ -L "$src" ]; do
+  hops=$((hops + 1))
+  if [ "$hops" -gt 40 ]; then
+    echo "toolu-claude: symlink resolution loop at '$src'" >&2
+    exit 1
+  fi
+  target="$(readlink "$src")"
+  case "$target" in
+    /*) src="$target" ;;
+    *)
+      dir="$(resolve_dir "$(dirname "$src")")" || die_resolve
+      src="$dir/$target"
+      ;;
+  esac
+done
+bin_dir="$(resolve_dir "$(dirname "$src")")" || die_resolve
+plugin_dir="$(resolve_dir "$bin_dir/..")" || die_resolve
+dash="$plugin_dir/dashboard"
+
+cmd="${1:-}"
+case "$cmd" in
+  dashboard)
+    shift
+    command -v bun >/dev/null 2>&1 || {
+      echo "toolu-claude: 'bun' not found on PATH — install Bun (https://bun.sh) to run the dashboard" >&2
+      exit 127
+    }
+    if [ ! -d "$dash" ]; then
+      echo "toolu-claude: dashboard not found at $dash — is the toolu plugin installed?" >&2
+      exit 1
+    fi
+    if [ "${1:-}" = "config" ]; then
+      shift
+      exec bun run "$dash/config-cli.ts" "$@"
+    fi
+    exec bun run "$dash/index.ts" "$@"
+    ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  "")
+    usage
+    exit 1
+    ;;
+  *)
+    echo "toolu-claude: unknown command '$cmd'" >&2
+    usage
+    exit 1
+    ;;
+esac

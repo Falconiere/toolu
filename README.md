@@ -203,6 +203,22 @@ Config lives at `${XDG_CONFIG_HOME:-~/.config}/toolu/dashboard.json` (roots, `sc
 bun run plugins/toolu/dashboard/index.ts [--open]
 ```
 
+To launch from **anywhere** (not just the repo root), use the `toolu-claude` launcher. The plugin's SessionStart hook publishes it as a symlink at `${CLAUDE_CONFIG_DIR:-~/.claude}/toolu/bin/toolu-claude` (refreshed each session, so it survives plugin updates). Add that dir to your PATH once:
+
+```fish
+fish_add_path ~/.claude/toolu/bin              # fish
+```
+```bash
+export PATH="$HOME/.claude/toolu/bin:$PATH"    # bash/zsh — add to your shell rc
+```
+
+Then, from any directory:
+
+```bash
+toolu-claude dashboard --open
+toolu-claude dashboard config get              # forwards to config-cli.ts
+```
+
 It binds an ephemeral localhost port, prints the URL, and (with `--open`) opens your browser. A **sidebar** lists every active project (a running plan step, or a ledger touched within `activeWithinHours`) with a status dot and progress; selecting one shows that project's **two lanes**:
 
 - **Plan lane** — the four-column kanban (**To Do** · **Running** · **Blocked** · **Done**; amber + ↻ when a green step's diff has gone stale) driven by the plan-ledger. This is *verified truth* — "did the check pass."
