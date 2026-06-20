@@ -20,7 +20,11 @@ const BOOL_FIELDS = ["open"];
 export function setKey(config: DashboardConfig, key: string, value: string): DashboardConfig {
   if (NUMERIC_FIELDS.includes(key)) {
     const n = Number(value);
-    if (Number.isNaN(n)) throw new Error(`${key} must be a number, got "${value}"`);
+    // Reject NaN/Infinity/negatives: a non-finite scanDepth would make discovery
+    // recurse without bound, and negative intervals/depths are meaningless.
+    if (!Number.isFinite(n) || n < 0) {
+      throw new Error(`${key} must be a non-negative finite number, got "${value}"`);
+    }
     return { ...config, [key]: n };
   }
   if (BOOL_FIELDS.includes(key)) {
@@ -84,7 +88,12 @@ if (import.meta.main) {
   let path = DEFAULT_CONFIG_PATH;
   const pIdx = args.indexOf("--path");
   if (pIdx >= 0) {
-    path = args[pIdx + 1];
+    const val = args[pIdx + 1];
+    if (val === undefined) {
+      console.error("--path requires a file argument");
+      process.exit(1);
+    }
+    path = val;
     args.splice(pIdx, 2);
   }
   try {

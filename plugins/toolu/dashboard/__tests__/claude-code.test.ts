@@ -5,6 +5,16 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
+import {
+  appendFileSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { DiscoveredProject } from "../discovery.ts";
@@ -130,5 +140,69 @@ describe("AC-10: graceful degradation", () => {
     const { agents, summary } = claudeCodeSource.tree(NONE, Date.now(), 600);
     expect(agents).toEqual([]);
     expect(summary).toEqual({ total: 0, running: 0, errored: 0, stale: 0, deepest: 0 });
+  });
+});
+
+// Regression: activityFingerprint must change when an existing subagent *.jsonl is
+// appended to IN PLACE. The subagents *directory* mtime does NOT move on an in-place
+// append, so before the fix (which folds each child file's mtime+size in) the
+// fingerprint stayed constant and the dashboard never repolled. Builds a real
+// on-disk store (transcript + subagents/agent-<id>.jsonl) under its own temp
+// CLAUDE_CONFIG_DIR so it can't disturb the shared fixture used above.
+describe("AC-14: activityFingerprint folds in-place subagent appends", () => {
+  let tmpStore: string;
+  let savedCfgDir: string | undefined;
+  const ROOT = "/fingerprint/probe/repo";
+  const PROJ = project(ROOT);
+
+  beforeAll(() => {
+    tmpStore = mkdtempSync(join(tmpdir(), "toolu-fp-store-"));
+    const projDir = join(tmpStore, "projects", slugFor(ROOT));
+    const subagentsDir = join(projDir, "sess-fp", "subagents");
+    mkdirSync(subagentsDir, { recursive: true });
+    // Real session transcript + one subagent transcript, exactly as the store lays out.
+    writeFileSync(join(projDir, "sess-fp.jsonl"), '{"type":"summary"}\n');
+    writeFileSync(
+      join(subagentsDir, "agent-fp01.jsonl"),
+      '{"type":"text","toolUseId":"toolu_fp"}\n',
+    );
+    savedCfgDir = process.env.CLAUDE_CONFIG_DIR;
+    process.env.CLAUDE_CONFIG_DIR = tmpStore;
+  });
+
+  afterAll(() => {
+    if (savedCfgDir === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+    else process.env.CLAUDE_CONFIG_DIR = savedCfgDir;
+    rmSync(tmpStore, { recursive: true, force: true });
+  });
+
+  test("appending bytes to an existing agent-<id>.jsonl changes the fingerprint", () => {
+    const agentFile = join(
+      tmpStore,
+      "projects",
+      slugFor(ROOT),
+      "sess-fp",
+      "subagents",
+      "agent-fp01.jsonl",
+    );
+
+    // activityFingerprint is optional on LiveActivitySource; the Claude Code source
+    // implements it. Bind it once (after asserting it exists) to call it concretely.
+    const fingerprint = claudeCodeSource.activityFingerprint;
+    expect(fingerprint).toBeDefined();
+    if (!fingerprint) return;
+
+    const before = fingerprint.call(claudeCodeSource, PROJ);
+    // Control: nothing changed → stable fingerprint.
+    expect(fingerprint.call(claudeCodeSource, PROJ)).toBe(before);
+
+    // Append IN PLACE (no file added/removed) and push mtime forward so the change is
+    // deterministic even on filesystems with coarse mtime resolution.
+    appendFileSync(agentFile, '{"type":"text","toolUseId":"toolu_fp2"}\n');
+    const later = new Date(statSync(agentFile).mtimeMs + 60_000);
+    utimesSync(agentFile, later, later);
+
+    const after = fingerprint.call(claudeCodeSource, PROJ);
+    expect(after).not.toBe(before);
   });
 });

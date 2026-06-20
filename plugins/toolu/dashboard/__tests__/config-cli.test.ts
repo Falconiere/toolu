@@ -57,6 +57,23 @@ describe("runCli round-trip on a real file", () => {
   test("unknown command throws", () => {
     expect(() => runCli(["frobnicate"], join(dir, "x.json"))).toThrow();
   });
+
+  test("set rejects non-finite and negative numeric values", () => {
+    const path = join(dir, "reject.json");
+    expect(() => runCli(["set", "scanDepth", "Infinity"], path)).toThrow(
+      /non-negative finite/,
+    );
+    expect(() => runCli(["set", "pollMs", "-5"], path)).toThrow(/non-negative finite/);
+    // The rejected sets must not have written a config file.
+    expect(existsSync(path)).toBe(false);
+  });
+
+  test("set persists a valid non-negative numeric value", () => {
+    const path = join(dir, "valid.json");
+    runCli(["set", "pollMs", "1000"], path);
+    expect(existsSync(path)).toBe(true);
+    expect(loadConfig(path).config.pollMs).toBe(1000);
+  });
 });
 
 describe("real subprocess", () => {
@@ -65,5 +82,24 @@ describe("real subprocess", () => {
     saveConfig(path, { ...DEFAULT_CONFIG, pollMs: 777 });
     const out = execFileSync("bun", ["run", CLI, "get", "--path", path], { encoding: "utf8" });
     expect(JSON.parse(out).pollMs).toBe(777);
+  });
+
+  test("`--path` with no file argument errors non-zero (argv parse, not runCli)", () => {
+    let status = 0;
+    let stderr = "";
+    try {
+      // `--path` is the final arg with no value following it.
+      execFileSync("bun", ["run", CLI, "set", "pollMs", "1000", "--path"], {
+        encoding: "utf8",
+        // Hermetic: a bare default path would land under XDG_CONFIG_HOME, never ~/.config.
+        env: { ...process.env, XDG_CONFIG_HOME: dir },
+      });
+    } catch (err) {
+      const e = err as { status?: number; stderr?: string };
+      status = e.status ?? 1;
+      stderr = e.stderr ?? "";
+    }
+    expect(status).not.toBe(0);
+    expect(stderr).toContain("--path requires a file argument");
   });
 });

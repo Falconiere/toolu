@@ -145,7 +145,16 @@ export const claudeCodeSource: LiveActivitySource = {
     if (!newest) return 0;
     let fp = newest.mtimeMs;
     try {
+      // The dir mtime only moves when entries are added/removed, so also fold
+      // each subagent transcript's mtime+size — otherwise an in-place append
+      // (a child agent finishing) leaves the fingerprint unchanged and the live
+      // tree shows that agent stuck "running".
       fp += statSync(newest.subagentsDir).mtimeMs;
+      for (const f of readdirSync(newest.subagentsDir)) {
+        if (!f.endsWith(".jsonl")) continue;
+        const st = statSync(join(newest.subagentsDir, f));
+        fp += st.mtimeMs + st.size;
+      }
     } catch {
       // no subagents dir yet — transcript mtime alone is the signature
     }

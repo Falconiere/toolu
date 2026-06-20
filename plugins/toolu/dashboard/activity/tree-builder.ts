@@ -25,7 +25,7 @@ export interface ResultRec {
 }
 
 /** Difference of two ISO timestamps in ms, or null if either is missing/invalid. */
-function durationMs(start: string | null, end: string | null): number | null {
+export function durationMs(start: string | null, end: string | null): number | null {
   if (!start || !end) return null;
   const a = Date.parse(start);
   const b = Date.parse(end);
