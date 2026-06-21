@@ -118,6 +118,14 @@ command -v cargo >/dev/null 2>&1 || ap_die "cargo is required" 3
 git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
   || ap_die "not inside a git work tree: $REPO" 5
 
+# Enforce the clean-tree invariant the rollback relies on. The /rust-refactor
+# SKILL runs preflight first, but apply must self-guard: a direct invocation on a
+# dirty tree could sweep a user's pre-existing untracked/modified files into a
+# step commit via `git add -A`, and a later `git reset --hard HEAD~1` rollback
+# would then destroy them.
+[ -z "$(git -C "$REPO" status --porcelain)" ] \
+  || ap_die "working tree not clean: $REPO (run preflight, or commit/stash changes first)" 5
+
 # --------------------------------------------------------------------------
 # The mechanical pipeline, each step gated by the rollback helper.
 #

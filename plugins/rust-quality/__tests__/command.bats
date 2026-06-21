@@ -165,3 +165,13 @@ RS
   [ "$status" -ne 0 ]
   [[ "$output" == *"--path"* ]]
 }
+
+@test "rust-refactor-apply aborts on a dirty working tree (clean-tree invariant)" {
+  repo="$TMP/dirty"
+  _make_crate_repo "$repo"
+  printf 'stray' > "$repo/uncommitted.txt"
+  run "$APPLY" --path "$repo"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"not clean"* ]]
+  [ -f "$repo/uncommitted.txt" ]
+}

@@ -228,3 +228,11 @@ tsv_total() {
   [ "$status" -eq 0 ]
   [ "$(tsv_total "$output")" -eq 0 ]
 }
+
+@test "rr_emit collapses tabs and newlines in the message to one record" {
+  run rr_emit file-size block "src/x.rs" 1 split "$(printf 'first\tsecond\nthird')"
+  [ "$status" -eq 0 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [ "$(printf '%s' "$output" | awk -F'\t' '{print NF}')" -eq 6 ]
+  [[ "$output" == *"first second third"* ]]
+}

@@ -26,12 +26,13 @@
 RR_TAB=$(printf '\t')
 
 # rr_emit RULE SEVERITY FILE LINE AUTOFIX MESSAGE
-# Print one violation record. Message is last so it may contain anything except
-# a newline; tabs in the message would corrupt parsing, so they are squeezed to
-# spaces defensively.
+# Print one violation record. The message is last; both tabs AND newlines in it
+# would corrupt the tab-separated, one-record-per-line format, so both are
+# squeezed to spaces defensively (a message is meant to be a single line).
 rr_emit() {
   local rule="$1" sev="$2" file="$3" line="$4" autofix="$5" msg="$6"
   msg=${msg//$RR_TAB/ }
+  msg=${msg//$'\n'/ }
   printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$rule" "$sev" "$file" "$line" "$autofix" "$msg"
 }
 
