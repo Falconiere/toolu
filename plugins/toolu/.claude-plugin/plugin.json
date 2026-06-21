@@ -16,14 +16,5 @@
     "hooks",
     "caveman"
   ],
-  "dependencies": [
-    {
-      "name": "code-simplifier",
-      "marketplace": "claude-plugins-official"
-    },
-    {
-      "name": "caveman",
-      "marketplace": "caveman"
-    }
-  ]
+  "dependencies": []
 }

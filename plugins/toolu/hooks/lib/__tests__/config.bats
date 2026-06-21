@@ -117,3 +117,54 @@ teardown() {
   run toolu_enabled_explicit hooks session-end
   [ "$status" -eq 1 ]
 }
+
+@test "toolu_flag_true: success when setup_done is true" {
+  echo '{"version":1,"project":{"setup_done":true}}' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run toolu_flag_true project setup_done
+  [ "$status" -eq 0 ]
+}
+
+@test "toolu_flag_true: failure when key absent" {
+  echo '{"version":1,"project":{"other":true}}' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run toolu_flag_true project setup_done
+  [ "$status" -eq 1 ]
+}
+
+@test "toolu_flag_true: failure when value is false" {
+  echo '{"version":1,"project":{"setup_done":false}}' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run toolu_flag_true project setup_done
+  [ "$status" -eq 1 ]
+}
+
+@test "toolu_flag_true: failure when value is non-true string" {
+  echo '{"version":1,"project":{"setup_done":"yes"}}' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run toolu_flag_true project setup_done
+  [ "$status" -eq 1 ]
+}
+
+@test "toolu_flag_true: failure when value is a number" {
+  echo '{"version":1,"project":{"setup_done":1}}' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run toolu_flag_true project setup_done
+  [ "$status" -eq 1 ]
+}
+
+@test "toolu_flag_true: failure on malformed JSON" {
+  printf '{' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run toolu_flag_true project setup_done
+  [ "$status" -eq 1 ]
+}
+
+@test "toolu_flag_true: failure when jq unavailable" {
+  # Stub dir holds only the commands the loader needs (no jq), so `command -v
+  # jq` misses while bash/git/coreutils still resolve. env -i scopes the PATH
+  # override to the child shell.
+  STUB="$TMP/stub"
+  mkdir -p "$STUB"
+  for c in bash git cat printf mkdir; do
+    src=$(command -v "$c") && ln -s "$src" "$STUB/$c"
+  done
+  echo '{"version":1,"project":{"setup_done":true}}' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run env -i HOME="$HOME" CLAUDE_PROJECT_DIR="$CLAUDE_PROJECT_DIR" PATH="$STUB" bash -c \
+    ". \"$REPO_ROOT/hooks/lib/config.sh\"; toolu_flag_true project setup_done"
+  [ "$status" -eq 1 ]
+}

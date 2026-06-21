@@ -89,7 +89,7 @@ Add the language gates, search, and docs tooling too:
 /plugin install exa-search@toolu     # web / code / URL search + research
 ```
 
-> **Note** — `comemory`, `rust-quality`, and `ts-quality` depend on `toolu`; `ast-grep`, `context7`, and `exa-search` are standalone (zero deps); `toolu` depends on `code-simplifier` (official) and `caveman`. Adding the marketplaces in step 1 lets Claude Code resolve those automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
+> **Note** — `comemory`, `rust-quality`, and `ts-quality` depend on `toolu`; `ast-grep`, `context7`, and `exa-search` are standalone (zero deps). The only external-binary dependency in the bundle is `comemory` (see below). `caveman` and `code-simplifier` are **optional, recommended companions**, not required — install them only if you want caveman mode or the pre-simplify pass; when absent, `toolu` falls back (the `push-review` gate uses the built-in `/code-review`, and `code-simplifier` is invoked only if installed). Adding the marketplaces in step 1 lets Claude Code resolve those companions automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
 
 The `comemory` plugin wraps the standalone `comemory` binary — install it once (it is **not** on crates.io), then run setup:
 
@@ -102,6 +102,8 @@ curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Falconiere/comemory/rel
 ```text
 /comemory:setup   # detect+guide the binary, then wire git index-code hooks, an initial index, data dir, and completions
 ```
+
+The `comemory` persistent-memory mandate is **opt-in**: the `agent-memory` protocol activates only after you run `/comemory:setup` in a repo (per repo). Until then `comemory` does nothing — no memory is saved or required.
 
 ### pi
 
@@ -181,7 +183,7 @@ Beyond the plugins, the core (`toolu`) also ships:
 - **Slash commands** — `/commit` and `/review-and-commit`.
 - **`deep-explore` agent** — structural codebase exploration via ast-grep.
 - **Execution dashboard** — an optional, read-only realtime kanban over the plan-ledger (see below).
-- **Caveman mode** — ultra-compressed, token-frugal output (via the `caveman` dependency).
+- **Caveman mode** — ultra-compressed, token-frugal output (via the optional `caveman` companion).
 
 ### Execution dashboard
 

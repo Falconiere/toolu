@@ -8,7 +8,7 @@ Falconiere's personal Claude Code bundle: skills, agents, slash commands, and ho
 /plugin install toolu@toolu
 ```
 
-Depends on `code-simplifier` (from the `claude-plugins-official` marketplace) and `caveman` (from the `caveman` marketplace) — add those marketplaces first so Claude Code can resolve them. See the root [README](../../README.md) for the full install sequence.
+`toolu` has no required plugin dependencies; `comemory` is the bundle's sole external-binary dependency. `code-simplifier` (from the `claude-plugins-official` marketplace) and `caveman` (from the `caveman` marketplace) are **optional, recommended companions** — install them only if you want the pre-simplify pass or caveman mode. When they are absent `toolu` falls back: the `push-review` gate uses the built-in `/code-review`, and `code-simplifier` is invoked only if installed. Adding those two marketplaces first lets Claude Code resolve the optional companions automatically. See the root [README](../../README.md) for the full install sequence.
 
 ## What it provides
 

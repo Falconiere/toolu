@@ -69,13 +69,14 @@ JSON
   ! echo "$output" | grep -q "required plugins missing"
 }
 
-@test "dep-warning: real toolu manifest yields code-simplifier + caveman specs" {
+@test "dep-warning: real toolu manifest (empty deps) emits no missing-plugin warning" {
   cp "$PLUGINS_DIR/toolu/.claude-plugin/plugin.json" "$PLUGROOT/.claude-plugin/plugin.json"
   printf '%s' '{"plugins":{}}' > "$REG"
   run _run_entry
   [ "$status" -eq 0 ]
-  echo "$output" | grep -q "/plugin install code-simplifier@claude-plugins-official"
-  echo "$output" | grep -q "/plugin install caveman@caveman"
+  ! echo "$output" | grep -q "required plugins missing"
+  ! echo "$output" | grep -q "caveman"
+  ! echo "$output" | grep -q "code-simplifier"
 }
 
 @test "dep-warning: a nameless dependency entry is skipped (no null@ spec)" {
