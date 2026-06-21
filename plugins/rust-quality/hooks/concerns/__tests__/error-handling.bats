@@ -89,7 +89,10 @@ EOF
 @test "rust-quality: clean Result-based code produces no error output" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
+  # //! header satisfies rule_module_doc; this file must be clean under the FULL
+  # rule set (the gate now runs the canonical structural rules too).
   cat > src/good.rs <<'EOF'
+//! Reads a file and returns a Result.
 fn main() -> Result<(), std::io::Error> {
     let _ = std::fs::read_to_string("x")?;
     Ok(())

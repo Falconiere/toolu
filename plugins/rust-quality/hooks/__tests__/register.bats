@@ -9,18 +9,23 @@ MODULE="${SPEC}__rust-quality.sh"
 setup() {
   TMP=$(mktemp -d)
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
-  REGISTER="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/register.sh"
-  CONCERNS_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../concerns" && pwd)"
+  HOOKS_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+  REGISTER="$HOOKS_DIR/register.sh"
+  CONCERNS_DIR="$HOOKS_DIR/concerns"
+  LIB_DIR="$HOOKS_DIR/lib"
   REG_DIR="$CLAUDE_CONFIG_DIR/toolu/post-tools.d"
 }
 teardown() { rm -rf "$TMP"; }
 
-# Reproduce the assembly independently of register.sh: in-order concat of the
-# numeric-prefixed fragments with a newline after each.
+# Reproduce the assembly independently of register.sh: in-order concat of
+# (1) the preamble 00-*.sh, (2) the shared lib/*.sh, (3) the remaining
+# numeric-prefixed concern fragments — each followed by a newline.
 _expected_module() {
   local out="$1"; : > "$out"
-  local f
-  for f in "$CONCERNS_DIR"/[0-9][0-9]-*.sh; do
+  local f seen_preamble=""
+  for f in "$CONCERNS_DIR"/00-*.sh "$LIB_DIR"/*.sh "$CONCERNS_DIR"/[0-9][0-9]-*.sh; do
+    [ -f "$f" ] || continue
+    case "$f" in "$CONCERNS_DIR"/00-*.sh) [ -z "$seen_preamble" ] || continue; seen_preamble=1 ;; esac
     cat "$f" >> "$out"
     printf '\n' >> "$out"
   done

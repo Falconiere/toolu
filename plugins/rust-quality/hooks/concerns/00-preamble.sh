@@ -44,8 +44,8 @@ command -v gate_clear_file >/dev/null 2>&1 || gate_clear_file() {
       '{status: "passing", source: $source, updatedAt: $updatedAt}' > "$1"
   fi
 }
-command -v rust_max_file_lines >/dev/null 2>&1 || rust_max_file_lines() { echo "${DEFAULT_RUST_MAX_FILE_LINES:-500}"; }
-command -v rust_max_fn_lines   >/dev/null 2>&1 || rust_max_fn_lines()   { echo "${DEFAULT_RUST_MAX_FN_LINES:-50}"; }
+command -v rust_max_file_lines >/dev/null 2>&1 || rust_max_file_lines() { echo "${DEFAULT_RUST_MAX_FILE_LINES:-250}"; }
+command -v rust_max_fn_lines   >/dev/null 2>&1 || rust_max_fn_lines()   { echo "${DEFAULT_RUST_MAX_FN_LINES:-80}"; }
 command -v rust_max_impl_lines >/dev/null 2>&1 || rust_max_impl_lines() { echo "${DEFAULT_RUST_MAX_IMPL_LINES:-200}"; }
 # count_code_lines comes from detect.sh (sourced above) — no fallback needed.
 
@@ -54,12 +54,19 @@ command -v rust_max_impl_lines >/dev/null 2>&1 || rust_max_impl_lines() { echo "
 # re-merging (otherwise every wrapper re-spawns the jq merge).
 command -v toolu_load_config >/dev/null 2>&1 && toolu_load_config 2>/dev/null || true
 
-[ "$(detect_rust)" = "rust" ] || exit 0
+# Whether THIS edit belongs to a Rust crate is decided in 05-crate.sh, which
+# runs after lib/rust-rules.sh is concatenated in (so nearest_cargo_toml is
+# available): a root Cargo.toml OR an enclosing one above the edited file both
+# fire the gate. The cheap tool guards stay here — no cargo/jq means no gate
+# regardless of project shape.
 command -v cargo >/dev/null 2>&1 || exit 0
 command -v jq    >/dev/null 2>&1 || exit 0
 
 TOOLU_SETTINGS_DIR=$(toolu_settings_dir)
-EXEMPTIONS_FILE="$TOOLU_SETTINGS_DIR/rust-unsafe-exemptions.txt"
+# Consumed by the later-concatenated 40-unsafe.sh fragment (same process, one
+# assembled module). Exported so a standalone shellcheck of THIS partial sees it
+# as used-externally rather than dead.
+export EXEMPTIONS_FILE="$TOOLU_SETTINGS_DIR/rust-unsafe-exemptions.txt"
 
 # read_list is sourced from lib/detect.sh.
 

@@ -34,11 +34,11 @@ load_libs() {
 _project_cfg() { printf '%s' "$1" > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"; }
 _user_cfg()    { printf '%s' "$1" > "$HOME/.claude/toolu.config.json"; }
 
-@test "default when no config: TS 300, Rust 500/50/200" {
+@test "default when no config: TS 300, Rust 250/80/200" {
   load_libs
   run ts_max_file_lines;   [ "$output" = "300" ]
-  run rust_max_file_lines; [ "$output" = "500" ]
-  run rust_max_fn_lines;   [ "$output" = "50" ]
+  run rust_max_file_lines; [ "$output" = "250" ]
+  run rust_max_fn_lines;   [ "$output" = "80" ]
   run rust_max_impl_lines; [ "$output" = "200" ]
 }
 
@@ -145,8 +145,8 @@ _user_cfg()    { printf '%s' "$1" > "$HOME/.claude/toolu.config.json"; }
 @test "rust fn/impl never consult TS native config" {
   printf '%s' '{"rules":{"max-lines":["error",111]}}' > "$CLAUDE_PROJECT_DIR/.eslintrc.json"
   load_libs
-  run rust_max_fn_lines;   [ "$output" = "50" ]
-  run rust_max_file_lines; [ "$output" = "500" ]
+  run rust_max_fn_lines;   [ "$output" = "80" ]
+  run rust_max_file_lines; [ "$output" = "250" ]
 }
 
 @test "user vs project merge: project wins" {

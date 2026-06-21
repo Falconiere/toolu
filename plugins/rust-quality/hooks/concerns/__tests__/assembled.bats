@@ -171,9 +171,13 @@ EOF
 @test "rust assembled: clean file writes no failure (gate passing) and == monolith" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
+  # Truly clean under the FULL rule set: //! header (rule_module_doc), /// on the
+  # item, and pub(crate) not bare pub (rule_layering_file flags a bare `pub` in a
+  # child src/ module).
   cat > "$PROJ/src/good.rs" <<'EOF'
+//! Reads a file.
 /// Reads a file and returns its contents.
-pub fn read_it() -> Result<String, std::io::Error> {
+pub(crate) fn read_it() -> Result<String, std::io::Error> {
     let s = std::fs::read_to_string("x")?;
     Ok(s)
 }
@@ -205,7 +209,8 @@ EOF
   jq -e '.source == "rust-quality-hook"' "$GATE"
 
   # Phase 2: same file goes clean → the assembled module clears it → passing.
-  printf 'fn helper() {}\n' > "$PROJ/src/x.rs"
+  # (//! header satisfies rule_module_doc so the file is clean under all rules.)
+  printf '//! X module.\nfn helper() {}\n' > "$PROJ/src/x.rs"
   TOOLU_LIB_DIR="$TOOLU_LIB_DIR" tool_name=Edit input="$payload" \
     PROJECT_ROOT="$PROJ" bash "$ASSEMBLED" >/dev/null 2>&1
   jq -e '.status == "passing"' "$GATE"

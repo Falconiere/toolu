@@ -1,0 +1,59 @@
+# toolu rust-quality scaffold template — ci-rust.yml
+# GitHub Actions Rust quality workflow. The rust-refactor command merges this
+# `rust` job into the target repo's CI workflow (rather than overwriting it).
+#
+# The "Structural scan" step needs the toolu rust-quality `rust-scan.sh`, which
+# is NOT on a target repo's PATH by default — so it is resolved and SKIPPED
+# GRACEFULLY (with a note) when absent; the native cargo fmt/clippy/nextest steps
+# always run. A future enhancement may vendor rust-scan.sh into the target repo.
+name: Rust
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: rust-ci
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
+      - name: Format check
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo nextest run
+
+      - name: Structural scan
+        run: |
+          if command -v rust-scan.sh >/dev/null 2>&1; then
+            rust-scan.sh
+          else
+            echo "note: rust-scan.sh not on PATH — skipping structural scan (toolu rust-quality not installed)"
+          fi

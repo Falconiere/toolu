@@ -1,0 +1,13 @@
+# toolu rust-quality scaffold template — deny.toml
+# cargo-deny / cargo-audit configuration copied into a target repo's crate root
+# by the rust-refactor command. rust-quality merges only missing keys.
+#
+# Document each ignored advisory inline with:
+# - Root cause (which crate and why it's pulled in)
+# - Impact assessment (does our code actually exercise the vulnerable path?)
+# - Upgrade status (what's blocking the fix upstream)
+
+[advisories]
+# Project-specific ignores were intentionally dropped from this template.
+# Add RUSTSEC-XXXX-NNNN ids here only with a documented justification (see above).
+ignore = []

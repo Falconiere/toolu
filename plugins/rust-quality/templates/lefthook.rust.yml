@@ -1,0 +1,23 @@
+# toolu rust-quality scaffold template — lefthook.rust.yml
+# Pre-commit Rust gate. The rust-refactor command merges this `rust-check`
+# command into the target repo's lefthook.yml (rather than overwriting it).
+# Install: bun add -d lefthook && bunx lefthook install
+# Run manually: bunx lefthook run pre-commit
+#
+# The structural scan needs the toolu rust-quality `rust-scan.sh`, which is NOT
+# on a target repo's PATH by default — so it is resolved and SKIPPED GRACEFULLY
+# (with a note) when absent; the native cargo fmt/clippy steps always run. A
+# future enhancement may vendor rust-scan.sh into the target repo.
+pre-commit:
+  parallel: true
+  commands:
+    rust-check:
+      glob: "*.rs"
+      run: |
+        if command -v rust-scan.sh >/dev/null 2>&1; then
+          rust-scan.sh --staged
+        else
+          echo "note: rust-scan.sh not on PATH — skipping structural scan (toolu rust-quality not installed)"
+        fi
+        cargo fmt --all -- --check
+        cargo clippy --all-targets -- -D warnings

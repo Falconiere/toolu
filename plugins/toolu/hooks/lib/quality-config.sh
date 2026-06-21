@@ -26,8 +26,8 @@ _QC_LIB_DIR="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}}"
 # (tests set these to assert fall-through without touching call sites).
 : "${DEFAULT_TS_MAX_FILE_LINES:=300}"
 : "${DEFAULT_TS_MAX_FN_LINES:=60}"
-: "${DEFAULT_RUST_MAX_FILE_LINES:=500}"
-: "${DEFAULT_RUST_MAX_FN_LINES:=50}"
+: "${DEFAULT_RUST_MAX_FILE_LINES:=250}"
+: "${DEFAULT_RUST_MAX_FN_LINES:=80}"
 : "${DEFAULT_RUST_MAX_IMPL_LINES:=200}"
 
 # One jq filter that normalizes every eslint/oxlint `max-lines` encoding to a

@@ -88,7 +88,10 @@ EOF
   [ "$status" -eq 0 ]
   jq -e '.status == "failing"' "$TMP_PROJ/.claude/tmp/quality-gate-status.json"
 
+  # Clean version: drop the #[allow] AND carry a //! header so rule_module_doc
+  # (now part of the gate) is satisfied — otherwise the file is not truly clean.
   cat > src/bad.rs <<'EOF'
+//! Helper module.
 fn helper() {}
 EOF
   tool_name=Edit input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
@@ -120,14 +123,16 @@ EOF
   jq -e '.status == "failing"' "$GATE"
 
   # b.rs goes clean — a.rs's violation must survive and keep the gate failing.
-  printf 'fn b() {}\n' > src/b.rs
+  # (//! header keeps rule_module_doc satisfied so "clean" is truly clean.)
+  printf '//! B module.\nfn b() {}\n' > src/b.rs
   tool_name=Edit input="$payload_b" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
   [ "$status" -eq 0 ]
   jq -e '.status == "failing"' "$GATE"
   jq -e --arg f "$TMP_PROJ/src/a.rs" '.entries[$f]' "$GATE"
 
-  # a.rs goes clean too — now the gate may pass.
-  printf 'fn a() {}\n' > src/a.rs
+  # a.rs goes clean too — now the gate may pass. (//! header satisfies
+  # rule_module_doc so the file is truly clean under the full rule set.)
+  printf '//! A module.\nfn a() {}\n' > src/a.rs
   tool_name=Edit input="$payload_a" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
   [ "$status" -eq 0 ]
   jq -e '.status == "passing"' "$GATE"
@@ -149,7 +154,8 @@ EOF
   jq -e '.source == "rust-quality-hook"' "$GATE"
 
   # Rust file goes clean — the TS failure must be promoted back, not erased.
-  printf 'fn a() {}\n' > src/a.rs
+  # (//! header satisfies rule_module_doc so the rust file is truly clean.)
+  printf '//! A module.\nfn a() {}\n' > src/a.rs
   tool_name=Edit input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
   [ "$status" -eq 0 ]
   jq -e '.status == "failing"' "$GATE"

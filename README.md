@@ -48,17 +48,18 @@ The headline feature. When `rust-quality` and/or `ts-quality` is installed, ever
 
 </td><td>
 
-- File / function / `impl` line limits
+- File (250) / function (80) / `impl` (200) line limits
 - No `.unwrap()` / `.expect()` — use `?` or `match`
 - No `unsafe` blocks
 - No `#[allow]` / `#[expect]` lint suppression
-- Tests in `tests/`, never inline `#[cfg(test)]`
-- Flat `tests/` layout enforced
+- `mod.rs` carries no logic; no generic file names
+- Module `//!` docs; best-effort layering checks
+- Tests in a flat `tests/`, never inline `#[cfg(test)]`
 
 </td></tr>
 </table>
 
-The rule isn't "warn and move on" — it's a hard gate: **no new task while the gate is red.** Found a real problem? Fix it in code. (There's no "disable this check" escape hatch by design.)
+The rule isn't "warn and move on" — it's a hard gate: **no new task while the gate is red.** Found a real problem? Fix it in code. (There's no "disable this check" escape hatch by design.) `rust-quality` also ships **`/rust-refactor`** — a repo-wide command that audits an existing crate, scaffolds clippy / rustfmt / cargo-deny / lefthook / CI config, and brings it up to these structural rules under a report → confirm → apply flow.
 
 ## Install
 
@@ -163,7 +164,7 @@ Eleven plugins, one marketplace. Install the core alone, or add the domain plugi
 | Group | Plugin | Version | What it does |
 |--------|--------|:-------:|--------------|
 | Core | **`toolu`** | `1.18.0` | The registry-driven hook engine plus the 8-phase workflow skills, slash commands, the `push-review` gate, and the `deep-explore` agent. The one required plugin. |
-| Quality gate | **`rust-quality`** | `0.1.0` | Rust `PostToolUse` checks — file / function / `impl` size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, tests in a flat `tests/`. Registers into the core engine. |
+| Quality gate | **`rust-quality`** | `0.1.0` | Rust `PostToolUse` checks — file (250) / function (80) / `impl` (200) size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, `mod.rs`-no-logic, generic-name ban, module `//!` docs, layering, tests in a flat `tests/`. Ships the repo-wide `/rust-refactor` command. Registers into the core engine. |
 | Quality gate | **`ts-quality`** | `0.1.0` | TypeScript `PostToolUse` checks — size limits, no `../` imports, no `as` / hand-rolled guards, colocated `__tests__/`, duplicate-type detection. Registers into the core engine. |
 | Code intel | **`ast-grep`** | `0.1.1` | Structural code search & rewrite (**ast-grep**) — adds the `ast-grep` skill and a `Grep → ast-grep` nudge mirrored into the registry. Standalone. |
 | Code intel | **`comemory`** | `0.3.0` | Persistent cross-session **memory** + code-index search (**comemory ≥ 0.8.0**), with a `/comemory:setup` command (detect+guide the binary, then wire git index-code hooks), `delete`/`context` wrapper verbs, `PreToolUse` scope enforcement, and a `SessionStart` memory-count publisher for the statusline. |

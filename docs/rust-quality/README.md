@@ -22,8 +22,8 @@ Every Rust file the agent edits is checked on the spot, contributing to toolu's 
 
 | Limit | Default | Configurable via |
 |-------|---------|-----------------|
-| File line limit | 500 lines | `lang.rust.maxFileLines` in toolu.config.json |
-| Function line limit | 50 lines | `lang.rust.maxFnLines` |
+| File line limit | 250 lines | `lang.rust.maxFileLines` in toolu.config.json |
+| Function line limit | 80 lines | `lang.rust.maxFnLines` |
 | `impl` block line limit | 200 lines | `lang.rust.maxImplLines` |
 
 Line counting excludes blank lines and comments. If the scan ends mid-`/* */`, it falls back to raw line count rather than risk under-counting.
@@ -114,6 +114,45 @@ pub fn validate_token(token: &str) -> Result<Claims, AuthError> {
 
 Every public item must carry a concise doc line.
 
+### 7. Module Structure
+
+```rust
+// ❌ BANNED — a mod.rs that carries logic
+// src/auth/mod.rs
+pub mod token;
+pub fn validate(t: &str) -> bool { /* ... */ }   // logic belongs in a submodule
+
+// ✅ CORRECT — mod.rs is wiring only
+// src/auth/mod.rs
+//! Auth module.
+pub mod token;
+pub use self::token::validate;
+```
+
+- **`mod.rs`-no-logic** — a `mod.rs` may contain only `mod` declarations, `pub use` re-exports, doc comments, and attributes. Any item (`fn`/`struct`/`impl`/`const`/…) blocks. Toggle: `lang.rust.modRsNoLogic` (default on).
+- **Generic file names** — `utils.rs`, `helpers.rs`, `common.rs`, `misc.rs` are banned; rename to a name that states the file's single responsibility. Files directly under a `shared/` or `common/` directory are exempt. The forbidden list is `lang.rust.forbiddenFileNames` (default `utils,helpers,common,misc`).
+
+### 8. Module Docs
+
+```rust
+// ✅ CORRECT — //! header with a documented surface
+//! Token validation.
+//!
+//! # Public API
+//! - `validate` — verify a JWT and return its claims.
+```
+
+Every `mod.rs` / `lib.rs` / `main.rs` and every non-test `src/*.rs` file must open with a module-level `//!` doc header. A **missing header blocks**; a header that lacks a `# Public API` or `# Usage` section is **advisory** (case-insensitive). Toggle: `lang.rust.requireModuleDoc` (default on).
+
+### 9. Layering
+
+A child module file (a `src/*.rs` that is not `mod.rs`/`lib.rs`/`main.rs`) is checked for two leaks, **best-effort heuristics, not full visibility resolution**:
+
+- A top-level item declared bare `pub` — prefer `pub(super)` / `pub(crate)` unless it is part of the crate's public API. (`pub(...)` restricted forms are left alone.) **Blocks.**
+- A `use crate::…` that reaches several segments deep into a sibling's internals. **Blocks** per-file; the repo-wide scanner adds a cross-file check over `crate::`/`super::` imports (does the reached item appear in the sibling `mod.rs`'s `pub use` surface?) that is **advisory only** and conservatively skips anything ambiguous (glob/renamed re-exports, no declared surface). Toggle: `lang.rust.enforceLayering` (default on).
+
+These structural rules live in the canonical `rust-rules.sh` rule library, shared verbatim by the per-edit gate and the repo-wide scanner (see [`/rust-refactor`](#rust-refactor) below).
+
 ## How the Gate Works
 
 1. **Agent edits a `.rs` file** — `Write` or `Edit` tool call
@@ -122,6 +161,8 @@ Every public item must carry a concise doc line.
 4. **Fix the violation** → gate clears, continue working
 
 The gate is **multi-slot**: a failing test command and a failing file check are tracked independently — fixing one never silently masks the other.
+
+The gate keys on the **nearest** enclosing `Cargo.toml` walking up from the edited file, so a crate in a nested workspace (e.g. `packages/backend/`) is covered — not just one at the repo root.
 
 ## Configuration
 
@@ -132,15 +173,19 @@ Configure thresholds per project in `toolu.config.json`:
   "version": 1,
   "lang": {
     "rust": {
-      "maxFileLines": 600,
-      "maxFnLines": 60,
-      "maxImplLines": 250
+      "maxFileLines": 400,
+      "maxFnLines": 100,
+      "maxImplLines": 250,
+      "forbiddenFileNames": ["utils", "helpers", "common", "misc"],
+      "modRsNoLogic": true,
+      "requireModuleDoc": true,
+      "enforceLayering": true
     }
   }
 }
 ```
 
-Precedence: project/user override → built-in default (500/50/200). A value of `0` or `"off"` means "no override" and falls through.
+Precedence for the numeric thresholds: project/user override → built-in default (250/80/200). A value of `0` or `"off"` means "no override" and falls through. The structural toggles (`modRsNoLogic`, `requireModuleDoc`, `enforceLayering`) default to on; `forbiddenFileNames` defaults to `utils,helpers,common,misc`.
 
 ## Usage Example
 
@@ -153,8 +198,8 @@ Agent: *writes the function*
 > PostToolUse: Checking src/config.rs...
 > ❌ Gate: FAILING
 >   - src/config.rs:142: .unwrap() on Result — use ? or match
->   - src/config.rs:45: function validate_config exceeds 50-line limit (72 lines)
->   - src/config.rs:1: file exceeds 500-line limit (543 lines)
+>   - src/config.rs:45: Function exceeds 80-line limit (94 lines) — extract helpers
+>   - src/config.rs:1: File exceeds 250-line limit (312 code lines) — split into submodules
 
 # Agent is BLOCKED from starting new tasks until these are fixed:
 #   - Replace .unwrap() with ?
@@ -164,6 +209,25 @@ Agent: *writes the function*
 > PostToolUse: Checking src/config.rs...
 > ✅ Gate: PASSING
 ```
+
+## `/rust-refactor`
+
+The per-edit gate keeps a crate *clean as it grows*. `/rust-refactor` brings an **existing** Cargo workspace up to these rules in one pass. The workspace need not be at the repo root (a nested `packages/backend/` layout resolves). It always runs **report → confirm → apply** and never auto-applies:
+
+1. **Preflight** — abort on a dirty tree, a non-Cargo, or a non-git target; on success, work lands on a `rust-quality/refactor` branch.
+2. **Audit** (read-only) — `rust-scan.sh --json` reports structural violations (the same `rust-rules.sh` rules the gate runs, plus the cross-file advisory layering check) and which of `rustfmt.toml` / `clippy.toml` / `deny.toml` / `[workspace.lints]` are present or missing; `cargo fmt --check` and `cargo clippy` are captured but not fixed. Findings are grouped by autofix class (`fmt`, `clippy-fix`, `config`, `restructure`/`split`/`rename`/`move`, `manual`).
+3. **Confirm** — you approve all classes or a subset. `config` (scaffold) must run before `clippy-fix`, since the deny lints define what `clippy --fix` repairs; declining `config` while accepting `clippy-fix` is rejected.
+4. **Apply** — mechanical classes (`config`, `fmt`, `clippy-fix`) run via the scaffold + fix scripts; each step is committed, `cargo check`'d, and rolled back on failure. Structural classes are **agent-driven** (split oversized files into `dir/mod.rs` folder modules, extract inline tests, flatten nested tests, rename generic files, add `//!` docs, tighten visibility) — each step is likewise `cargo check`-gated and `git reset --hard` rolled back if it breaks the build, recorded as a `manual` residual. Files with non-standard module mapping (`#[path = …]`, `include!()`, macro-generated modules) are skipped as `manual`.
+5. **Report** — a diff summary of what landed plus the `manual` residuals for you to finish by hand.
+
+### Tools
+
+Both are sourced/driven by the command and can be run standalone:
+
+- **`scripts/rust-scan.sh`** `[--path <dir>] [--json] [--staged]` — the repo-wide structural scanner. It resolves the workspace, runs every `rust-rules.sh` rule over each `.rs` file plus the per-crate cross-file layering check, and emits a JSON or human report. It **sources** `rust-rules.sh` so the scan and the per-edit gate share one rule definition with zero drift.
+- **`scripts/rust-scaffold.sh`** `--path <repo>` — the deterministic config scaffolder. It writes `rustfmt.toml` / `clippy.toml` / `deny.toml`, a `lefthook.yml` rust pre-commit hook, and a `.github/workflows/rust.yml`, then propagates `[workspace.lints]` into the root manifest and opts every member crate in with `[lints] workspace = true`. It is **merge-not-clobber** and idempotent: absent files are copied, present files gain only the keys/tables they lack, and existing values/comments/ordering are preserved verbatim. Templates live in `plugins/rust-quality/templates/`.
+
+Repo-wide error-handling / `unsafe` / lint-suppression enforcement is owned by the scaffolded `cargo clippy` denies (live via `[workspace.lints]`); the per-edit gate keeps a fast ast-grep subset of those checks for instant edit-time feedback.
 
 ## Hooks
 
