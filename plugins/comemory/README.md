@@ -12,7 +12,7 @@ Requires the `toolu` plugin.
 
 ## What it provides
 
-- **`agent-memory` skill** — an always-active protocol: recall from memory *first* (before reading files), and save decisions, conventions, bugs, and discoveries proactively. A search miss is an obligation to save the finding back.
+- **`agent-memory` skill** — an always-active protocol: recall from memory *first* (before reading files), and save decisions, conventions, bugs, and discoveries proactively. A search miss is an obligation to save the finding back. The mandate is **opt-in**: it activates only after you run `/comemory:setup` in a repo (per repo) — until then the protocol stays dormant and nothing is saved or required.
 - **`/comemory:setup` command** — detects the `comemory` binary, guides the install if it is missing or too old (never runs a package manager itself), then wires the repo: data dir, git hooks that auto-refresh the code index on commit/merge/checkout, an initial index, and a completions hint.
 - **scoped wrapper** (`comemory.sh`) with `delete` / `context` verbs, plus `PreToolUse` scope enforcement keeping memory access inside the current repo.
 - **`comemory-status` (`SessionStart`)** — publishes the per-repo memory count the statusline's `[COMEMORY:N]` segment reads.

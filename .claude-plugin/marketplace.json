@@ -5,7 +5,7 @@
     "email": "hello@falconiere.io",
     "url": "https://github.com/falconiere"
   },
-  "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official", "caveman"],
+  "allowCrossMarketplaceDependenciesOn": [],
   "plugins": [
     {
       "name": "toolu",
@@ -18,10 +18,7 @@
       "category": "productivity",
       "keywords": ["caveman", "hooks", "skills", "agents"],
       "license": "MIT",
-      "dependencies": [
-        { "name": "code-simplifier", "marketplace": "claude-plugins-official" },
-        { "name": "caveman", "marketplace": "caveman" }
-      ]
+      "dependencies": []
     },
     {
       "name": "ast-grep",

@@ -166,8 +166,15 @@ fi
 # from turn one. Aggressive by design; the per-skill opt-out (toolu_enabled
 # skills <key> = false) is the escape hatch for a user who wants it off.
 mandates=()
-if [ "$HAS_COMEMORY" = "comemory" ] && toolu_enabled skills comemory && toolu_plugin_active comemory@toolu; then
+if [ "$HAS_COMEMORY" = "comemory" ] && toolu_enabled skills comemory && toolu_plugin_active comemory@toolu && toolu_flag_true comemory setup_done; then
   mandates+=("comemory (persistent memory) — you MUST, without being asked: (1) at the START of a task and BEFORE reading files, run \`comemory.sh search \"<topic>\"\` to recall prior decisions, bugs, patterns, and file-maps; (2) the MOMENT you make a decision, fix a bug, identify a pattern, or learn a reusable nuance, run \`comemory.sh save …\`; (3) when a \`search\` comes back EMPTY, do the native search (ast-grep/Grep), then SAVE what you find back so the next miss becomes a hit — the wrapper prints this reminder on every empty search. Treat recall+save as part of the task, never an optional extra, never something to ask permission for.")
+elif [ "$HAS_COMEMORY" = "comemory" ] && toolu_enabled skills comemory && toolu_plugin_active comemory@toolu && [ "$_TOOLU_HAS_JQ" = "1" ]; then
+  # comemory is installed + active but the user has not run /comemory:setup, so
+  # the mandate stays OFF (opt-in). Nudge once toward setup instead. The jq
+  # guard is load-bearing: without jq the setup_done marker can't be read, so
+  # toolu_flag_true always reports false — gating the nudge on jq prevents a
+  # perpetual "run setup" nudge on jq-less hosts where the flag is unreadable.
+  parts+=("comemory detected but not enabled — run \`/comemory:setup\` to turn on persistent memory (recall/save) for this repo.")
 fi
 if [ "$HAS_ASTGREP" = "ast-grep" ] && toolu_enabled skills ast-grep && toolu_plugin_active ast-grep@toolu; then
   mandates+=("ast-grep (structural search) — for ANY search by code shape (signatures, call sites, impls, trait/interface usage, patterns) you MUST reach for \`ast-grep run --pattern …\` FIRST. Grep/ripgrep/sed are a FALLBACK ONLY — use them for plain-text literals in non-code files, or when a query genuinely cannot be expressed structurally. Never reach for them first on code.")

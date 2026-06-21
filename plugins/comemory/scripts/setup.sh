@@ -134,6 +134,42 @@ else
   say "  index-code: skipped (not a git repo)"
 fi
 
+# Opt-in marker — record that setup ran so toolu treats comemory as enabled for
+# this repo. Writes ONLY a JSON config (no package manager). The target path
+# mirrors toolu's _toolu_project_cfg EXACTLY (config.sh is in a sibling plugin,
+# barred from sourcing per the header — so the path logic is replicated inline,
+# NOT comemory_repo_key, which returns a basename / the main-repo path).
+m_root="${TOOLU_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-}}"
+[ -z "$m_root" ] && m_root=$(git rev-parse --show-toplevel 2>/dev/null || true)
+m_dir="${TOOLU_PROJECT_CONFIG_DIRNAME:-.claude}"
+if [ -z "$m_root" ]; then
+  say "  memory: WARN not in a git repo (no TOOLU_PROJECT_DIR/CLAUDE_PROJECT_DIR) — skipped setup_done marker"
+elif ! command -v jq >/dev/null 2>&1; then
+  say "  memory: WARN jq unavailable — skipped setup_done marker"
+else
+  m_target="$m_root/$m_dir/toolu.config.json"
+  # jq-merge into the existing config (or {}) so all other keys survive; write
+  # atomically via a tmp file in the same dir + mv. Guard first: a pre-existing
+  # target that is NOT valid JSON would fail the merge with a generic WARN and
+  # leave the marker unwritten (opt-in silently never enables). Name the real
+  # cause and skip — never overwrite the user's file (no data loss).
+  if [ -f "$m_target" ] && ! jq -e . "$m_target" >/dev/null 2>&1; then
+    say "  memory: WARN $m_target is not valid JSON — fix it, then re-run /comemory:setup"
+  else
+    m_existing="{}"
+    [ -f "$m_target" ] && m_existing=$(cat "$m_target")
+    m_tmp="$m_target.tmp.$$"
+    if mkdir -p "$m_root/$m_dir" 2>/dev/null \
+       && printf '%s' "$m_existing" | jq '.comemory.setup_done = true' > "$m_tmp" 2>/dev/null \
+       && mv "$m_tmp" "$m_target" 2>/dev/null; then
+      say "  memory: enabled (setup_done marker written: $m_target)"
+    else
+      rm -f "$m_tmp" 2>/dev/null
+      say "  memory: WARN could not write setup_done marker to $m_target"
+    fi
+  fi
+fi
+
 # Shell completions — print the install one-liner for the detected shell (hint
 # only, no file write; consistent with the detect+guide stance).
 sh_name=$(basename "${SHELL:-}")

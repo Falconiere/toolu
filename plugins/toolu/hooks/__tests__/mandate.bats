@@ -5,6 +5,12 @@
 # proactively. Absent the plugin (registry parsed, spec not present), no
 # mandate. Drives the REAL entrypoint with a synthetic installed-plugins
 # registry; binary presence is real (skips when the tool is not installed).
+#
+# comemory's mandate is OPT-IN: it fires only after /comemory:setup has written
+# the `comemory.setup_done` flag into toolu.config.json. Before that the block
+# emits a one-line /comemory:setup nudge instead — but only when jq is present
+# (the flag is unreadable without jq, so the nudge is suppressed to avoid a
+# perpetual "run setup" on jq-less hosts).
 
 setup() {
   PLUGINS_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../.." && pwd)"
@@ -14,21 +20,85 @@ setup() {
 }
 teardown() { [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"; }
 
+# Write a project (and, since HOME=$TMP, user) toolu.config.json with the given
+# JSON body. Both config layers resolve to $TMP/.claude/toolu.config.json under
+# the test env, so one file feeds the merge.
+_write_config() {
+  mkdir -p "$TMP/.claude"
+  printf '%s' "$1" > "$TMP/.claude/toolu.config.json"
+}
+
 # Run session-start from an empty dir (no toolu manifest in PROJECT_ROOT,
 # so the dep-warning block stays quiet) with a synthetic plugins registry.
+# CLAUDE_PROJECT_DIR pins the project-config root at $TMP so _write_config's
+# toolu.config.json is the config the loader reads.
 _run_entry() {
   ( cd "$TMP" && env CLAUDE_PLUGINS_REGISTRY="$REG" HOME="$TMP" \
+      CLAUDE_PROJECT_DIR="$TMP" \
       bash "$ENTRY" <<<'{"hook_event_name":"SessionStart","source":"startup"}' )
 }
 
-@test "mandate: comemory plugin installed + binary present emits a proactive recall/save mandate" {
+# Run the entry under a sanitized PATH that LACKS jq but carries the coreutils
+# the hook needs (mirrors the jq-masking approach in lib/__tests__/config.bats):
+# symlink a known-good toolset into a stub bin dir, then env -i with that PATH.
+_run_entry_no_jq() {
+  local stub="$TMP/nojq-bin"
+  mkdir -p "$stub"
+  for t in bash sh env git grep sed awk tr head cut cat printf basename dirname mktemp rm mkdir comemory ast-grep sg; do
+    src=$(command -v "$t" 2>/dev/null) && ln -sf "$src" "$stub/$t"
+  done
+  ( cd "$TMP" && env -i \
+      PATH="$stub" \
+      HOME="$TMP" \
+      CLAUDE_PLUGINS_REGISTRY="$REG" \
+      CLAUDE_PROJECT_DIR="$TMP" \
+      bash "$ENTRY" <<<'{"hook_event_name":"SessionStart","source":"startup"}' )
+}
+
+@test "mandate: comemory mandate fires when plugin active + binary present + setup_done true" {
   command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
   printf '%s' '{"plugins":{"comemory@toolu":{}}}' > "$REG"
+  _write_config '{"comemory":{"setup_done":true}}'
   run _run_entry
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "MANDATORY"
   echo "$output" | grep -q 'comemory.sh search'
   echo "$output" | grep -q "do NOT ask permission"
+  # The opt-in path replaces the nudge, never both.
+  ! echo "$output" | grep -q '/comemory:setup'
+}
+
+@test "mandate: NO comemory mandate when setup_done absent — /comemory:setup nudge instead" {
+  command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
+  printf '%s' '{"plugins":{"comemory@toolu":{}}}' > "$REG"
+  # No comemory.setup_done flag written.
+  run _run_entry
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q 'comemory.sh search'
+  echo "$output" | grep -q '/comemory:setup'
+  echo "$output" | grep -q 'comemory detected but not enabled'
+}
+
+@test "mandate: NO comemory mandate when skills.comemory == false (even with setup_done true)" {
+  command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
+  printf '%s' '{"plugins":{"comemory@toolu":{}}}' > "$REG"
+  _write_config '{"skills":{"comemory":false},"comemory":{"setup_done":true}}'
+  run _run_entry
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q 'comemory.sh search'
+  # skills-disabled gates BOTH the mandate and the nudge.
+  ! echo "$output" | grep -q '/comemory:setup'
+}
+
+@test "mandate: jq masked — NEITHER comemory mandate NOR /comemory:setup nudge" {
+  command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
+  printf '%s' '{"plugins":{"comemory@toolu":{}}}' > "$REG"
+  _write_config '{"comemory":{"setup_done":true}}'
+  # Confirm the stub PATH really hides jq before asserting on absence.
+  run _run_entry_no_jq
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q 'comemory.sh search'
+  ! echo "$output" | grep -q '/comemory:setup'
 }
 
 @test "mandate: ast-grep plugin installed + binary present emits a structural-search mandate" {
@@ -43,9 +113,12 @@ _run_entry() {
 
 @test "mandate: no comemory mandate when the plugin is definitively absent" {
   printf '%s' '{"plugins":{}}' > "$REG"
+  _write_config '{"comemory":{"setup_done":true}}'
   run _run_entry
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q 'comemory.sh search'
+  # Plugin absent also gates the nudge.
+  ! echo "$output" | grep -q '/comemory:setup'
 }
 
 @test "mandate: no ast-grep mandate when the plugin is definitively absent" {
@@ -55,10 +128,11 @@ _run_entry() {
   ! echo "$output" | grep -q 'ast-grep run --pattern'
 }
 
-@test "mandate: both plugins installed emit both mandates under one MANDATORY header" {
+@test "mandate: both mandates fire under one MANDATORY header (comemory opted in)" {
   command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
   command -v ast-grep >/dev/null 2>&1 || command -v sg >/dev/null 2>&1 || skip "ast-grep binary not installed"
   printf '%s' '{"plugins":{"comemory@toolu":{},"ast-grep@toolu":{}}}' > "$REG"
+  _write_config '{"comemory":{"setup_done":true}}'
   run _run_entry
   [ "$status" -eq 0 ]
   [ "$(echo "$output" | grep -c "MANDATORY — proactive plugin use")" -eq 1 ]
@@ -69,9 +143,10 @@ _run_entry() {
   echo "$output" | grep -q "bind EVERY agent"
 }
 
-@test "mandate: indeterminate registry fails open — mandate still fires when binary present" {
+@test "mandate: indeterminate registry fails open — comemory mandate still fires when opted in" {
   command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
   rm -f "$REG"   # registry absent → toolu_plugin_active fails open
+  _write_config '{"comemory":{"setup_done":true}}'
   run _run_entry
   [ "$status" -eq 0 ]
   echo "$output" | grep -q 'comemory.sh search'
