@@ -10,9 +10,11 @@ import { join, normalize, sep } from "node:path";
 
 import { claudeCodeSource } from "./activity/claude-code.ts";
 import type { LiveActivitySource } from "./activity/source.ts";
-import { type MultiDashboardState } from "./aggregate.ts";
+import { buildSessionDetail, type MultiDashboardState } from "./aggregate.ts";
 import { type DashboardConfig, loadConfig } from "./config.ts";
 import { createWatcher } from "./watch.ts";
+
+const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" } as const;
 
 const ENCODER = new TextEncoder();
 const HEARTBEAT_MS = 15_000;
@@ -118,9 +120,18 @@ export function startServer(opts: ServerOptions = {}): { port: number; stop: () 
     if (path === "/" || path === "/index.html") return serveStatic("index.html");
     if (path.startsWith("/static/")) return serveStatic(path.slice("/static/".length));
     if (path === "/api/state") {
-      return new Response(JSON.stringify(selectAndBuild(project)), {
-        headers: { "content-type": "application/json; charset=utf-8" },
-      });
+      return new Response(JSON.stringify(selectAndBuild(project)), { headers: JSON_HEADERS });
+    }
+    if (path === "/api/session") {
+      const session = url.searchParams.get("session");
+      if (!project || !session) {
+        return new Response(JSON.stringify({ error: "project and session required" }), {
+          status: 400,
+          headers: JSON_HEADERS,
+        });
+      }
+      const detail = buildSessionDetail(project, session, Date.now(), cfg.agentStuckSeconds);
+      return new Response(JSON.stringify(detail), { headers: JSON_HEADERS });
     }
     if (path === "/api/events") return openEventStream(project);
     return new Response("not found", { status: 404 });

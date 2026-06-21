@@ -13,7 +13,7 @@ import { dirname } from "node:path";
 
 import { type DashboardConfig, DEFAULT_CONFIG_PATH, expandHome, loadConfig } from "./config.ts";
 
-const NUMERIC_FIELDS = ["scanDepth", "activeWithinHours", "stuckThresholdSeconds", "agentStuckSeconds", "pollMs", "port"];
+const NUMERIC_FIELDS = ["scanDepth", "activeWithinHours", "stuckThresholdSeconds", "agentStuckSeconds", "pollMs", "port", "retentionDays", "maxSessionsPerProject", "promptPreviewChars"];
 const BOOL_FIELDS = ["open"];
 
 /** Set a scalar config key, coercing/validating by key. Throws on unknown key or bad value. */

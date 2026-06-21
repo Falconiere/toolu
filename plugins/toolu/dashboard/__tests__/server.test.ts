@@ -11,7 +11,9 @@ import { join } from "node:path";
 import { DEFAULT_CONFIG, type DashboardConfig } from "../config.ts";
 import type { ActivitySummary, AgentNode, LiveActivitySource } from "../activity/source.ts";
 import { startServer } from "../index.ts";
-import type { MultiDashboardState } from "../aggregate.ts";
+import type { MultiDashboardState, SessionDetail } from "../aggregate.ts";
+import { backfillRepo } from "../activity/backfill.ts";
+import type { DiscoveredProject } from "../discovery.ts";
 
 const base = mkdtempSync(join(tmpdir(), "toolu-dash-server-"));
 afterAll(() => rmSync(base, { recursive: true, force: true }));
@@ -98,6 +100,65 @@ describe("never-500 contract", () => {
     const state = (await res.json()) as MultiDashboardState;
     expect(state.projects).toEqual([]);
     expect(state.selected).toBeNull();
+  });
+});
+
+// The history route reads the persisted store (not discovery), so we backfill the
+// real #117 cc-store fixture into a temp store and ask the live server for it.
+describe("GET /api/session (history lane)", () => {
+  const FIXTURE_SESSION = "sess-fixture";
+  const PROJECTS_ROOT = join(import.meta.dir, "fixtures", "cc-store", "projects");
+  const FIX_PROJECT: DiscoveredProject = {
+    id: "srvfixproj001",
+    root: "/fixture/repo", // slugFor -> -fixture-repo, matching the fixture dir
+    branch: "x",
+    label: "x",
+    ledgerPath: "",
+    ledgerMtimeMs: 0,
+  };
+  const storeDir = mkdtempSync(join(tmpdir(), "toolu-srv-store-"));
+  let prevStoreDir: string | undefined;
+
+  beforeEach(() => {
+    prevStoreDir = process.env.TOOLU_ACTIVITY_DIR;
+    process.env.TOOLU_ACTIVITY_DIR = storeDir;
+    backfillRepo(FIX_PROJECT, { projectsRoot: PROJECTS_ROOT });
+    server = startServer({ config: cfg({ roots: [] }), source: inertSource });
+  });
+  afterAll(() => {
+    if (prevStoreDir === undefined) delete process.env.TOOLU_ACTIVITY_DIR;
+    else process.env.TOOLU_ACTIVITY_DIR = prevStoreDir;
+    rmSync(storeDir, { recursive: true, force: true });
+  });
+
+  test("returns a real fixture session's tree + summary", async () => {
+    const res = await fetch(
+      `http://localhost:${server.port}/api/session?project=${FIX_PROJECT.id}&session=${FIXTURE_SESSION}`,
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("application/json");
+    const detail = (await res.json()) as SessionDetail;
+    expect(detail.tree.length).toBe(3); // 3 top-level agents
+    expect(detail.summary.total).toBe(5);
+    expect(detail.summary.errored).toBe(1);
+  });
+
+  test("missing project or session → 400 JSON", async () => {
+    const noSession = await fetch(`http://localhost:${server.port}/api/session?project=${FIX_PROJECT.id}`);
+    expect(noSession.status).toBe(400);
+    expect((await noSession.json()).error).toBeDefined();
+    const noProject = await fetch(`http://localhost:${server.port}/api/session?session=${FIXTURE_SESSION}`);
+    expect(noProject.status).toBe(400);
+  });
+
+  test("an unknown session yields an empty tree, never a 500", async () => {
+    const res = await fetch(
+      `http://localhost:${server.port}/api/session?project=${FIX_PROJECT.id}&session=nope`,
+    );
+    expect(res.status).toBe(200);
+    const detail = (await res.json()) as SessionDetail;
+    expect(detail.tree).toEqual([]);
+    expect(detail.summary.total).toBe(0);
   });
 });
 

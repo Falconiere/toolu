@@ -90,6 +90,35 @@ describe("loadConfig", () => {
     expect(warning).toBeUndefined();
     expect(config).toEqual(DEFAULT_CONFIG);
   });
+
+  test("activity-store keys default to 30 / 200 / 120", () => {
+    const { config } = loadConfig(join(dir, "missing-store-keys.json"));
+    expect(config.retentionDays).toBe(30);
+    expect(config.maxSessionsPerProject).toBe(200);
+    expect(config.promptPreviewChars).toBe(120);
+  });
+
+  test("activity-store keys merge over defaults when present", () => {
+    const p = writeConfig(
+      "store.json",
+      JSON.stringify({ retentionDays: 7, maxSessionsPerProject: 50, promptPreviewChars: 200 }),
+    );
+    const { config } = loadConfig(p);
+    expect(config.retentionDays).toBe(7);
+    expect(config.maxSessionsPerProject).toBe(50);
+    expect(config.promptPreviewChars).toBe(200);
+  });
+
+  test("negative activity-store numerics are floored at 0", () => {
+    const p = writeConfig(
+      "store-neg.json",
+      JSON.stringify({ retentionDays: -1, maxSessionsPerProject: -5, promptPreviewChars: -9 }),
+    );
+    const { config } = loadConfig(p);
+    expect(config.retentionDays).toBe(0);
+    expect(config.maxSessionsPerProject).toBe(0);
+    expect(config.promptPreviewChars).toBe(0);
+  });
 });
 
 describe("expandHome", () => {

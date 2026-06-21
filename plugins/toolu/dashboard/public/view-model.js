@@ -53,6 +53,54 @@ export function planTotals(counts) {
   return { total, donePct };
 }
 
+/** A session's status -> a dot color (running > errored > done). */
+export function sessionDotColor(s) {
+  if (s?.running) return AGENT_STATUS.running.color;
+  if (s?.errored) return AGENT_STATUS.error.color;
+  return AGENT_STATUS.done.color;
+}
+
+/** A session's representative instant (end, else start) as a Date, or null. */
+export function sessionDate(s) {
+  const iso = s?.endedAt ?? s?.startedAt;
+  if (!iso) return null;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** Day-bucket label for a date relative to `now`: "Today", "Yesterday", or a date. */
+export function dayLabel(d, now = new Date()) {
+  if (!d) return "Unknown";
+  const startOf = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diffDays = Math.round((startOf(now) - startOf(d)) / 86_400_000);
+  if (diffDays <= 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+/** Group sessions into ordered day buckets (newest day first, newest row first),
+ *  each `{ label, rows }`. Pure: no DOM/React, unit-tested on real summaries. */
+export function groupSessionsByDay(sessions, now = new Date()) {
+  const ordered = [...(sessions ?? [])].sort((a, b) => {
+    const da = sessionDate(a);
+    const db = sessionDate(b);
+    return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
+  });
+  const groups = [];
+  const byLabel = new Map();
+  for (const s of ordered) {
+    const label = dayLabel(sessionDate(s), now);
+    let bucket = byLabel.get(label);
+    if (!bucket) {
+      bucket = { label, rows: [] };
+      byLabel.set(label, bucket);
+      groups.push(bucket);
+    }
+    bucket.rows.push(s);
+  }
+  return groups;
+}
+
 /** The four kanban columns, in display order. */
 export const COLUMNS = [
   { key: "pending", title: "To Do", status: "pending" },
