@@ -56,6 +56,8 @@ _toolu_user_cfg() {
   fi
 }
 
+# Mirrored by the setup_done marker writer in plugins/comemory/scripts/setup.sh
+# (cross-plugin sourcing is barred; parity enforced by path-parity.bats).
 _toolu_project_cfg() {
   local root="${TOOLU_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-}}"
   [ -z "$root" ] && root=$(git rev-parse --show-toplevel 2>/dev/null || true)

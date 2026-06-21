@@ -139,6 +139,8 @@ fi
 # mirrors toolu's _toolu_project_cfg EXACTLY (config.sh is in a sibling plugin,
 # barred from sourcing per the header — so the path logic is replicated inline,
 # NOT comemory_repo_key, which returns a basename / the main-repo path).
+# Keep in sync with _toolu_project_cfg in plugins/toolu/hooks/lib/config.sh
+# (cross-plugin sourcing is barred; parity enforced by path-parity.bats).
 m_root="${TOOLU_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-}}"
 [ -z "$m_root" ] && m_root=$(git rev-parse --show-toplevel 2>/dev/null || true)
 m_dir="${TOOLU_PROJECT_CONFIG_DIRNAME:-.claude}"
