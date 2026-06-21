@@ -85,8 +85,14 @@ teardown() {
   # CRITICAL: wrap in `timeout` so a regression (infinite hop loop / kernel hang)
   # fails fast here instead of hanging the whole bats suite. `timeout` returns 124
   # only when it has to KILL the command — i.e. only when the launcher hung.
+  # Invoke the cyclic link by ABSOLUTE path, not a bare `toolu-claude` PATH
+  # lookup: a cyclic $0 can never exec the launcher (the kernel rejects it with
+  # ELOOP), so a PATH lookup would fall through to any real toolu-claude the dev
+  # has published on PATH (publish-cli does exactly that) and start a server —
+  # making this test pass only on a pristine PATH. The absolute path is
+  # hermetic: the loader rejects the cycle deterministically.
   status=0
-  output="$(timeout 10 toolu-claude dashboard 2>&1)" || status=$?
+  output="$(timeout 10 "$TMP/path/toolu-claude" dashboard 2>&1)" || status=$?
 
   # Must not hang: timeout never had to kill it.
   [ "$status" -ne 124 ]
