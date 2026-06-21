@@ -25,6 +25,12 @@ export interface DashboardConfig {
   port: number;
   /** Open the browser on start. */
   open: boolean;
+  /** Activity store: drop persisted session logs older than this many days. */
+  retentionDays: number;
+  /** Activity store: cap retained sessions per project; newest kept. */
+  maxSessionsPerProject: number;
+  /** Max characters of a user prompt to preview/persist. */
+  promptPreviewChars: number;
 }
 
 /** The defaults applied when a key is absent or the file is missing/corrupt. */
@@ -37,6 +43,9 @@ export const DEFAULT_CONFIG: DashboardConfig = {
   pollMs: 1500,
   port: 0,
   open: false,
+  retentionDays: 30,
+  maxSessionsPerProject: 200,
+  promptPreviewChars: 120,
 };
 
 /** Default config location, shared by the loader and the config CLI. */
@@ -83,6 +92,9 @@ function merge(parsed: Record<string, unknown>): DashboardConfig {
     pollMs: num(parsed.pollMs, DEFAULT_CONFIG.pollMs, 1),
     port: num(parsed.port, DEFAULT_CONFIG.port, 0),
     open: pick(parsed.open, DEFAULT_CONFIG.open),
+    retentionDays: num(parsed.retentionDays, DEFAULT_CONFIG.retentionDays, 0),
+    maxSessionsPerProject: num(parsed.maxSessionsPerProject, DEFAULT_CONFIG.maxSessionsPerProject, 0),
+    promptPreviewChars: num(parsed.promptPreviewChars, DEFAULT_CONFIG.promptPreviewChars, 0),
   };
 }
 

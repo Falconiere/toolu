@@ -4,14 +4,15 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 import { DEFAULT_CONFIG, type DashboardConfig } from "../config.ts";
 import { buildState } from "../state.ts";
+import { slugFor } from "../activity/claude-code.ts";
 import type { ActivitySummary, AgentNode, LiveActivitySource } from "../activity/source.ts";
-import { buildMultiState, buildSelectedDetail, buildSummaries } from "../aggregate.ts";
+import { buildMultiState, buildSelectedDetail, buildSessionDetail, buildSummaries } from "../aggregate.ts";
 
 const base = mkdtempSync(join(tmpdir(), "toolu-dash-aggregate-"));
 afterAll(() => rmSync(base, { recursive: true, force: true }));
@@ -123,5 +124,67 @@ describe("buildMultiState", () => {
     expect(state.selected).not.toBeNull();
     expect(state.selected!.id).toBe(state.projects[0].id);
     expect(typeof state.serverTime).toBe("string");
+  });
+});
+
+// Real-data history wiring: a real discovered git repo whose Claude Code slug
+// dir is the #117 cc-store fixture session (copied so slugFor(root) matches),
+// proving buildSelectedDetail backfills + attaches sessions, and that
+// buildSessionDetail reassembles that exact past run's tree.
+describe("buildSelectedDetail attaches persisted sessions (history lane)", () => {
+  const FIXTURE_SESSION = "sess-fixture";
+  const FIXTURE_CC = join(import.meta.dir, "fixtures", "cc-store", "projects", "-fixture-repo");
+  const histBase = mkdtempSync(join(tmpdir(), "toolu-dash-history-"));
+  const cfgDir = join(histBase, "cc"); // serves as $CLAUDE_CONFIG_DIR
+  const storeDir = join(histBase, "store"); // serves as $TOOLU_ACTIVITY_DIR
+  let histRoot: string;
+  let histCfg: DashboardConfig;
+  let prevCfgDir: string | undefined;
+  let prevStoreDir: string | undefined;
+
+  beforeAll(() => {
+    histRoot = makeRepo("histRepo", [
+      { id: "s1", title: "t", check: "true", status: "green", started_at: null, activity: null, exit_code: 0, diff_sha: "x", last_run: null, evidence_tail: null },
+    ]);
+    // Drop the real fixture transcript + subagents into the slug dir for this repo.
+    const slugDir = join(cfgDir, "projects", slugFor(histRoot));
+    mkdirSync(slugDir, { recursive: true });
+    cpSync(join(FIXTURE_CC, `${FIXTURE_SESSION}.jsonl`), join(slugDir, `${FIXTURE_SESSION}.jsonl`));
+    cpSync(join(FIXTURE_CC, FIXTURE_SESSION), join(slugDir, FIXTURE_SESSION), { recursive: true });
+
+    prevCfgDir = process.env.CLAUDE_CONFIG_DIR;
+    prevStoreDir = process.env.TOOLU_ACTIVITY_DIR;
+    process.env.CLAUDE_CONFIG_DIR = cfgDir;
+    process.env.TOOLU_ACTIVITY_DIR = storeDir;
+    // makeRepo creates the repo under the module-level `base`, so scan that.
+    histCfg = { ...DEFAULT_CONFIG, roots: [base], scanDepth: 3 };
+  });
+
+  afterAll(() => {
+    if (prevCfgDir === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+    else process.env.CLAUDE_CONFIG_DIR = prevCfgDir;
+    if (prevStoreDir === undefined) delete process.env.TOOLU_ACTIVITY_DIR;
+    else process.env.TOOLU_ACTIVITY_DIR = prevStoreDir;
+    rmSync(histBase, { recursive: true, force: true });
+  });
+
+  test("sessions are populated after backfilling the fixture project", () => {
+    const id = buildSummaries(histCfg, inertSource).find((s) => basename(s.root) === "histRepo")!.id;
+    const detail = buildSelectedDetail(histCfg, inertSource, id, Date.now())!;
+    expect(detail.sessions.length).toBe(1);
+    expect(detail.sessions[0].sessionId).toBe(FIXTURE_SESSION);
+    expect(detail.sessions[0].agentCount).toBe(5);
+    expect(detail.sessions[0].errored).toBe(true);
+    // live lane is untouched (the inert source yields an empty live tree)
+    expect(detail.agents).toEqual([]);
+  });
+
+  test("buildSessionDetail reassembles that past run's tree", () => {
+    const id = buildSummaries(histCfg, inertSource).find((s) => basename(s.root) === "histRepo")!.id;
+    buildSelectedDetail(histCfg, inertSource, id, Date.now()); // ensure persisted
+    const { tree, summary } = buildSessionDetail(id, FIXTURE_SESSION, 0, 600);
+    expect(tree.length).toBe(3); // 3 top-level agents in the fixture
+    expect(summary.total).toBe(5);
+    expect(summary.errored).toBe(1);
   });
 });

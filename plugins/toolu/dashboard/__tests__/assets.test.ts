@@ -42,12 +42,22 @@ describe("dashboard asset delivery", () => {
   });
 
   test("all React component modules are served as javascript", async () => {
-    for (const mod of ["sidebar.js", "board.js", "tree.js", "view-model.js"]) {
+    for (const mod of ["sidebar.js", "board.js", "tree.js", "history.js", "view-model.js"]) {
       const res = await fetch(`http://localhost:${server.port}/static/${mod}`);
       expect(res.status).toBe(200);
       expect(res.headers.get("content-type")).toContain("javascript");
       expect((await res.text()).length).toBeGreaterThan(0);
     }
+  });
+
+  test("the SPA references the history lane (module + mount id)", async () => {
+    const html = await (await fetch(`http://localhost:${server.port}/`)).text();
+    expect(html).toContain("/static/history.js");
+    expect(html).toContain("history-lane");
+    // the history module is served and renders into the #history-lane mount
+    const js = await (await fetch(`http://localhost:${server.port}/static/history.js`)).text();
+    expect(js).toContain("/api/session");
+    expect(js).toContain("history-lane");
   });
 
   test("GET /static/styles.css returns 200 with a css content-type", async () => {

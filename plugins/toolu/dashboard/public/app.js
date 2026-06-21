@@ -10,6 +10,7 @@ import htm from "htm";
 import { Sidebar } from "/static/sidebar.js";
 import { Board } from "/static/board.js";
 import { Tree } from "/static/tree.js";
+import { History } from "/static/history.js";
 import { planTotals } from "/static/view-model.js";
 
 const html = htm.bind(React.createElement);
@@ -84,10 +85,11 @@ function ProjectHeader({ detail }) {
 }
 
 function ProjectView({ detail }) {
-  return html`<div class="p-4 space-y-4">
+  return html`<div id="project-view" class="p-4 space-y-4">
     <${ProjectHeader} detail=${detail} />
     <${Board} plan=${detail.plan} />
     <${Tree} agents=${detail.agents} activity=${detail.activity} />
+    <${History} projectId=${detail.id} sessions=${detail.sessions} />
   </div>`;
 }
 

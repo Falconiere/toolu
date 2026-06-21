@@ -9,6 +9,14 @@ import type { DashboardConfig } from "./config.ts";
 import { discoverProjects, type DiscoveredProject } from "./discovery.ts";
 import { buildState, type DashboardState, type Ledger } from "./state.ts";
 import type { ActivitySummary, AgentNode, LiveActivitySource } from "./activity/source.ts";
+import { backfillRepo } from "./activity/backfill.ts";
+import {
+  applyRetention,
+  listSessions,
+  readSession,
+  type SessionSummary,
+} from "./activity/store.ts";
+import { buildTree } from "./activity/tree-builder.ts";
 
 /** Cheap per-project rollup for the sidebar. */
 export interface ProjectSummary {
@@ -23,12 +31,21 @@ export interface ProjectSummary {
   lastActiveMs: number;
 }
 
-/** Deep detail for the selected project: plan lane + activity tree + summary. */
+/** Deep detail for the selected project: plan lane + live activity tree + summary
+ *  + the persisted session history (the browsable past-runs lane). */
 export interface SelectedProjectDetail {
   id: string;
   plan: DashboardState;
   agents: AgentNode[];
   activity: ActivitySummary;
+  /** Past sessions for this project from the persistent store (newest first). */
+  sessions: SessionSummary[];
+}
+
+/** One past session reassembled into the same tree shape the live lane renders. */
+export interface SessionDetail {
+  tree: AgentNode[];
+  summary: ActivitySummary;
 }
 
 /** The full payload served at /api/state and pushed over SSE. */
@@ -102,6 +119,23 @@ export function buildSummaries(
   return out.sort((a, b) => b.lastActiveMs - a.lastActiveMs);
 }
 
+/** Persist this project's sessions into the store, prune by retention policy, and
+ *  return its session summaries (newest first). backfillRepo is mtime-cached so a
+ *  repeat call on an unchanged repo is a no-op. Never throws: any store/backfill
+ *  failure degrades to whatever the index already holds (possibly []). */
+function syncSessions(cfg: DashboardConfig, project: DiscoveredProject): SessionSummary[] {
+  try {
+    backfillRepo(project);
+    applyRetention(project.id, {
+      retentionDays: cfg.retentionDays,
+      maxSessionsPerProject: cfg.maxSessionsPerProject,
+    });
+  } catch {
+    // store is best-effort; fall through to whatever listSessions can read
+  }
+  return listSessions(project.id);
+}
+
 /** Deep detail for one project id, or null if no such active/discovered project. */
 export function buildSelectedDetail(
   cfg: DashboardConfig,
@@ -117,7 +151,22 @@ export function buildSelectedDetail(
     stuckThresholdSeconds: cfg.stuckThresholdSeconds,
   });
   const { agents, summary } = src.tree(project, nowMs, cfg.agentStuckSeconds);
-  return { id: projectId, plan, agents, activity: summary };
+  const sessions = syncSessions(cfg, project);
+  return { id: projectId, plan, agents, activity: summary, sessions };
+}
+
+/** Reassemble one persisted past session into a tree + summary, in the exact
+ *  shape the live lane renders. Reads tolerantly (a missing/empty session log
+ *  yields an empty tree, never throws), then runs #117's buildTree. */
+export function buildSessionDetail(
+  projectId: string,
+  sessionId: string,
+  nowMs: number,
+  agentStuckSeconds: number,
+): SessionDetail {
+  const { metas, spawns, results } = readSession(projectId, sessionId);
+  const { agents, summary } = buildTree(metas, spawns, results, nowMs, agentStuckSeconds);
+  return { tree: agents, summary };
 }
 
 /** The default selection: an explicit choice, else the most-recently-active project. */

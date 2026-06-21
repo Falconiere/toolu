@@ -197,7 +197,7 @@ bun run plugins/toolu/dashboard/config-cli.ts add-root ~/.herdr/worktrees
 bun run plugins/toolu/dashboard/config-cli.ts get        # show effective config
 ```
 
-Config lives at `${XDG_CONFIG_HOME:-~/.config}/toolu/dashboard.json` (roots, `scanDepth`, `activeWithinHours`, `pollMs`, `stuckThresholdSeconds`, `agentStuckSeconds`, `port`, `open`). Then launch from any repo:
+Config lives at `${XDG_CONFIG_HOME:-~/.config}/toolu/dashboard.json` (roots, `scanDepth`, `activeWithinHours`, `pollMs`, `stuckThresholdSeconds`, `agentStuckSeconds`, `port`, `open`, plus persistence: `retentionDays`, `maxSessionsPerProject`, `promptPreviewChars`). Then launch from any repo:
 
 ```bash
 bun run plugins/toolu/dashboard/index.ts [--open]
@@ -223,6 +223,7 @@ It binds an ephemeral localhost port, prints the URL, and (with `--open`) opens 
 
 - **Plan lane** — the four-column kanban (**To Do** · **Running** · **Blocked** · **Done**; amber + ↻ when a green step's diff has gone stale) driven by the plan-ledger. This is *verified truth* — "did the check pass."
 - **Activity lane** — the live **agent/sub-agent spawn tree** read from the Claude Code transcripts: each node is an agent (label, type, duration, status), nested under its parent, marked `running`/`done`/`error`/`stale`. This is *what's actually running* — so you can see an agent still working even after its plan step went green, and emergent sub-agents the static plan never listed.
+- **History lane** — browse **past sessions** for the selected project (grouped by day, newest first); click one to render that run's agent tree, identical to the live lane. Activity is persisted to a per-project store at `${CLAUDE_CONFIG_DIR:-~/.claude}/toolu/activity/<project-id>/` (keyed the same as discovery; backfilled from transcripts on view, mtime-cached), so history survives transcript pruning and session end. Retention is capped by `retentionDays` / `maxSessionsPerProject`, and only a `promptPreviewChars`-bounded preview of any prompt/label is ever stored.
 
 The UI is **React + TailwindCSS** loaded from CDN with no build step (so it needs network access for those CDNs; the JSON/SSE API works regardless). Updates stream over Server-Sent Events, gated on real file changes. It is **purely read-only**: no route mutates anything, so it can be closed or crash with zero effect on execution. The activity lane is Claude Code-specific for now (other runtimes degrade gracefully to the plan lane).
 

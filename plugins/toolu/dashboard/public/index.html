@@ -31,6 +31,9 @@
       };
     </script>
     <link rel="stylesheet" href="/static/styles.css" />
+    <!-- Preload the lane modules so the SPA's first render has them warm. The
+         history lane (#history-lane) is rendered into #root by app.js. -->
+    <link rel="modulepreload" href="/static/history.js" />
     <script type="importmap">
       {
         "imports": {
