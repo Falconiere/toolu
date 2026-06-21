@@ -130,8 +130,17 @@ export function startServer(opts: ServerOptions = {}): { port: number; stop: () 
           headers: JSON_HEADERS,
         });
       }
-      const detail = buildSessionDetail(project, session, Date.now(), cfg.agentStuckSeconds);
-      return new Response(JSON.stringify(detail), { headers: JSON_HEADERS });
+      // A malformed id (path-traversal attempt) makes the store throw; surface it
+      // as a 400, never a 500, so a bad id reads as a client error, not a crash.
+      try {
+        const detail = buildSessionDetail(project, session, Date.now(), cfg.agentStuckSeconds);
+        return new Response(JSON.stringify(detail), { headers: JSON_HEADERS });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: `invalid project or session: ${String(err)}` }), {
+          status: 400,
+          headers: JSON_HEADERS,
+        });
+      }
     }
     if (path === "/api/events") return openEventStream(project);
     return new Response("not found", { status: 404 });

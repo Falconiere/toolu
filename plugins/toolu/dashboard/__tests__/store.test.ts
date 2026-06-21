@@ -5,7 +5,7 @@
 // matches the captured cc-store fixture scenario (5 agents, nesting, statuses).
 
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
-import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -14,6 +14,7 @@ import {
   type ActivityRecord,
   appendRecord,
   applyRetention,
+  assertSafeId,
   activityBaseDir,
   listSessions,
   projectDir,
@@ -202,5 +203,53 @@ describe("applyRetention", () => {
 
   test("no-op when index absent", () => {
     expect(applyRetention("absent999", { retentionDays: 1, maxSessionsPerProject: 1 })).toEqual([]);
+  });
+});
+
+describe("assertSafeId (path-traversal chokepoint)", () => {
+  test("rejects empty, '.', '..', '..'-bearing, separators, and NUL", () => {
+    for (const bad of ["", ".", "..", "../escape", "..\\escape", "a/b", "a\\b", "a..b", "foo/../bar", "x\0y", ".hidden"]) {
+      expect(() => assertSafeId(bad)).toThrow();
+    }
+  });
+
+  test("accepts a real 12-hex projectId and a real uuid sessionId", () => {
+    const projectId = "abc123def456"; // a #117-shaped 12-hex projectId
+    const sessionId = "0172xDeC-Ho4x-PYFm-2M8M-Gb4G5e1f9a2b"; // a uuid/hex-dash sessionId
+    expect(assertSafeId(projectId)).toBe(projectId);
+    expect(assertSafeId(sessionId)).toBe(sessionId);
+    expect(assertSafeId("sess-fixture")).toBe("sess-fixture");
+  });
+
+  test("a malformed id makes the path-deriving store fns throw, not escape", () => {
+    expect(() => projectDir("../other")).toThrow();
+    // readSession validates before the fs read, so traversal is a hard error
+    // (not a silently-empty read like a genuinely missing file would be).
+    expect(() => readSession(PROJ, "../../etc/passwd")).toThrow();
+  });
+});
+
+describe("promptPreviewChars truncation at the write chokepoint", () => {
+  test("appendRecord stores a description truncated to the cap; full text absent on disk", () => {
+    const sessionId = "sess-truncate";
+    // Default promptPreviewChars is 120 (no dashboard.json in the test env).
+    const CAP = 120;
+    const longDescription = "P".repeat(CAP + 80); // well over the cap
+    appendRecord(PROJ, sessionId, {
+      kind: "meta",
+      agentId: "trunc-agent",
+      agentType: "general-purpose",
+      description: longDescription,
+      toolUseId: "toolu_truncate_1",
+    });
+
+    const data = readSession(PROJ, sessionId);
+    const meta = data.metas.find((m) => m.agentId === "trunc-agent")!;
+    expect(meta.description.length).toBe(CAP);
+    expect(meta.description).toBe("P".repeat(CAP));
+
+    // The full original text must NOT be present anywhere in the on-disk .jsonl.
+    const raw = readFileSync(join(projectDir(PROJ), `${sessionId}.jsonl`), "utf8");
+    expect(raw.includes(longDescription)).toBe(false);
   });
 });

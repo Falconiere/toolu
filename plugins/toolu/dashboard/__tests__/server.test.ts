@@ -160,6 +160,24 @@ describe("GET /api/session (history lane)", () => {
     expect(detail.tree).toEqual([]);
     expect(detail.summary.total).toBe(0);
   });
+
+  test("a path-traversal session id → 400 (not 500), reads nothing outside the store", async () => {
+    const res = await fetch(
+      `http://localhost:${server.port}/api/session?project=${FIX_PROJECT.id}&session=${encodeURIComponent("../escape")}`,
+    );
+    expect(res.status).toBe(400); // a malformed id is a client error, never a crash
+    expect(res.status).not.toBe(500);
+    expect((await res.json()).error).toBeDefined();
+  });
+
+  test("a path-traversal project id → 400 (not 500)", async () => {
+    const res = await fetch(
+      `http://localhost:${server.port}/api/session?project=${encodeURIComponent("../..")}&session=${FIXTURE_SESSION}`,
+    );
+    expect(res.status).toBe(400);
+    expect(res.status).not.toBe(500);
+    expect((await res.json()).error).toBeDefined();
+  });
 });
 
 describe("SSE live updates (AC-11/AC-16)", () => {

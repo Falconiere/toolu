@@ -22,6 +22,7 @@ import {
   readSession,
   type SessionData,
   summarizeSession,
+  truncateRecord,
   writeIndex,
 } from "./store.ts";
 import { type AgentMeta, type ResultRec, type SpawnRec } from "./tree-builder.ts";
@@ -130,10 +131,13 @@ function gather(session: DiscoveredSession): {
   return { spawns, results };
 }
 
-/** Flatten a parsed session into the store's meta/spawn/result record stream. */
+/** Flatten a parsed session into the store's meta/spawn/result record stream.
+ *  Each record is routed through the store's truncateRecord chokepoint, so a
+ *  meta's `description` is bounded to promptPreviewChars — backfill never persists
+ *  the full prompt text, matching the live appendRecord writer. */
 function recordsFor(data: SessionData): ActivityRecord[] {
   const recs: ActivityRecord[] = [];
-  for (const m of data.metas) recs.push({ kind: "meta", ...m });
+  for (const m of data.metas) recs.push(truncateRecord({ kind: "meta", ...m }));
   for (const [toolUseId, s] of data.spawns) {
     recs.push({ kind: "spawn", toolUseId, startedAt: s.startedAt, ownerAgentId: s.ownerAgentId });
   }

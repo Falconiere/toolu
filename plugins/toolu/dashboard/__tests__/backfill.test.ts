@@ -7,7 +7,7 @@
 // is idempotent (mtime-cached, no duplicate records).
 
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, statSync, utimesSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -132,5 +132,50 @@ describe("backfillRepo graceful degradation", () => {
     const NONE: DiscoveredProject = { ...PROJECT, id: "noproj000001", root: "/no/such/repo" };
     expect(backfillRepo(NONE, { projectsRoot: PROJECTS_ROOT })).toEqual([]);
     expect(listSessions("noproj000001")).toEqual([]);
+  });
+});
+
+describe("backfillRepo enforces promptPreviewChars", () => {
+  // Self-contained temp transcript root (the shared cc-store fixture is left
+  // pristine): one main transcript spawning one subagent whose meta sidecar
+  // carries a description far longer than the cap.
+  const CAP = 120; // default promptPreviewChars (no dashboard.json in the test env)
+  const LONG = "Z".repeat(CAP + 200);
+  const TOOL_ID = "toolu_backfill_truncate_1";
+  const AGENT_ID = "a1b2c3d4e5f60718";
+  const ROOT = mkdtempSync(join(tmpdir(), "toolu-backfill-trunc-"));
+  // slugFor("/trunc/repo") === "-trunc-repo"
+  const TRUNC_PROJECT: DiscoveredProject = { ...PROJECT, id: "truncproj001", root: "/trunc/repo" };
+
+  beforeEach(() => {
+    const slugDir = join(ROOT, "-trunc-repo");
+    const subDir = join(slugDir, SESSION, "subagents");
+    mkdirSync(subDir, { recursive: true });
+    writeFileSync(
+      join(slugDir, `${SESSION}.jsonl`),
+      JSON.stringify({
+        type: "assistant",
+        timestamp: "2026-06-20T10:00:00.000Z",
+        message: { content: [{ type: "tool_use", id: TOOL_ID, name: "Agent", input: { description: LONG, subagent_type: "general-purpose" } }] },
+      }) + "\n",
+    );
+    writeFileSync(
+      join(subDir, `agent-${AGENT_ID}.meta.json`),
+      JSON.stringify({ agentType: "general-purpose", description: LONG, toolUseId: TOOL_ID }),
+    );
+  });
+  afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
+
+  test("a meta description over the cap is persisted truncated; full text absent from the .jsonl", () => {
+    const written = backfillRepo(TRUNC_PROJECT, { projectsRoot: ROOT });
+    expect(written).toEqual([SESSION]);
+
+    const data = readSession(TRUNC_PROJECT.id, SESSION);
+    const meta = data.metas.find((m) => m.toolUseId === TOOL_ID)!;
+    expect(meta.description.length).toBe(CAP);
+    expect(meta.description).toBe("Z".repeat(CAP));
+
+    const raw = readFileSync(join(projectDir(TRUNC_PROJECT.id), `${SESSION}.jsonl`), "utf8");
+    expect(raw.includes(LONG)).toBe(false); // the full original text was never persisted
   });
 });
