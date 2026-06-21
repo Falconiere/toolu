@@ -1,14 +1,14 @@
 // Persistent per-repo activity store, keyed by #117's discovery.ts projectId
-// (sha1(`${root}@${branchSlug}`).slice(0,12)). Layout under the base dir
-// (env TOOLU_ACTIVITY_DIR, default `${CLAUDE_CONFIG_DIR:-~/.claude}/toolu/activity`):
+// (sha1(`${root}@${branchSlug}`).slice(0,12)). Layout under the base dir (env
+// TOOLU_ACTIVITY_DIR, default `${CLAUDE_CONFIG_DIR:-~/.claude}/toolu/activity`):
 //   <projectId>/<sessionId>.jsonl — append-only NDJSON of ActivityRecords
 //   <projectId>/index.json        — { sessions: SessionSummary[] }
-// Records are SHAPED so #117's tree-builder renders them: each carries exactly the
-// fields AgentMeta / SpawnRec / ResultRec need, tagged by a `kind` discriminator.
-// readSession reassembles {metas, spawns, results} ready for buildTree(...) and
-// tolerates a torn trailing NDJSON line (skip, never throw). appendRecord does a
-// single atomic O_APPEND line. applyRetention drops aged / over-cap session logs
-// and rewrites index.json atomically. No reader throws on a missing/corrupt store.
+// Records are SHAPED so #117's tree-builder renders them (kind-tagged AgentMeta /
+// SpawnRec / ResultRec). readSession reassembles {metas, spawns, results} for
+// buildTree, tolerating a torn trailing NDJSON line (skip, never throw). appendRecord
+// does a single atomic O_APPEND line; applyRetention drops aged / over-cap logs and
+// rewrites index.json atomically. No reader throws on a missing/corrupt store; every
+// caller-supplied id is assertSafeId-validated (path-traversal defence).
 
 import {
   closeSync,
@@ -26,7 +26,27 @@ import {
 import { homedir } from "node:os";
 import { join } from "node:path";
 
+import { loadConfig } from "../config.ts";
 import { type AgentMeta, type ResultRec, type SpawnRec } from "./tree-builder.ts";
+
+/** Allowlist for a projectId/sessionId path segment: leading alphanumeric, then
+ *  only `[A-Za-z0-9._-]`. A 12-hex projectId and a uuid/hex-dash sessionId match. */
+const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+/** Reject any id that could escape the store when joined into a path. Throws a
+ *  clear Error for empty, separator/NUL-bearing, `.`/`..`, `..`-containing, or
+ *  non-allowlisted ids — the single path-traversal chokepoint for every store fs
+ *  path derived from a caller-supplied projectId/sessionId. */
+export function assertSafeId(id: string): string {
+  const reject = (why: string): never => {
+    throw new Error(`activity store: unsafe id (${why}): ${JSON.stringify(id)}`);
+  };
+  if (typeof id !== "string" || id.length === 0) reject("empty");
+  if (id.includes("/") || id.includes("\\") || id.includes("\0")) reject("path separator or NUL");
+  if (id === "." || id === ".." || id.includes("..")) reject("resolves outside the store");
+  if (!SAFE_ID.test(id)) reject("not in allowlist [A-Za-z0-9][A-Za-z0-9._-]*");
+  return id;
+}
 
 /** A persisted meta record: an agent's identity (kind-tagged AgentMeta). */
 export interface MetaRecord extends AgentMeta {
@@ -36,15 +56,13 @@ export interface MetaRecord extends AgentMeta {
 /** A persisted spawn record: a tool_use start, keyed by toolUseId (kind-tagged SpawnRec). */
 export interface SpawnRecord extends SpawnRec {
   kind: "spawn";
-  /** The tool_use id this spawn belongs to (join key to its meta + result). */
-  toolUseId: string;
+  toolUseId: string; // join key to its meta + result
 }
 
 /** A persisted result record: a tool_result, keyed by toolUseId (kind-tagged ResultRec). */
 export interface ResultRecord extends ResultRec {
   kind: "result";
-  /** The tool_use id this result completes (join key to its spawn + meta). */
-  toolUseId: string;
+  toolUseId: string; // join key to its spawn + meta
 }
 
 /** One line in a session log. The discriminated union the store reads/writes. */
@@ -53,16 +71,11 @@ export type ActivityRecord = MetaRecord | SpawnRecord | ResultRecord;
 /** Per-session rollup stored in index.json (the history-lane session list). */
 export interface SessionSummary {
   sessionId: string;
-  /** Earliest spawn timestamp seen, or null if none recorded. */
-  startedAt: string | null;
-  /** Latest result timestamp seen, or null if any agent is still running. */
-  endedAt: string | null;
-  /** Number of agents (meta records) in the session. */
-  agentCount: number;
-  /** True if any recorded result carried is_error. */
-  errored: boolean;
-  /** True if any spawn has no matching result (an agent still running). */
-  running: boolean;
+  startedAt: string | null; // earliest spawn timestamp, or null if none recorded
+  endedAt: string | null; // latest result timestamp, or null while any agent runs
+  agentCount: number; // number of agents (meta records) in the session
+  errored: boolean; // true if any recorded result carried is_error
+  running: boolean; // true if any spawn has no matching result (an agent still running)
 }
 
 /** The {metas, spawns, results} bundle #117's buildTree consumes. */
@@ -87,23 +100,40 @@ export function activityBaseDir(): string {
   return join(base, "toolu", "activity");
 }
 
-/** The `<base>/<projectId>` directory for one project. */
+/** The `<base>/<projectId>` directory for one project (projectId is assertSafeId-validated). */
 export function projectDir(projectId: string): string {
-  return join(activityBaseDir(), projectId);
+  return join(activityBaseDir(), assertSafeId(projectId));
 }
 
-/** The append-only NDJSON log path for one session. */
+/** The append-only NDJSON log path for one session (both ids are assertSafeId-validated). */
 function sessionLogPath(projectId: string, sessionId: string): string {
-  return join(projectDir(projectId), `${sessionId}.jsonl`);
+  return join(projectDir(projectId), `${assertSafeId(sessionId)}.jsonl`);
 }
 
-/** Append a single record as one atomic O_APPEND NDJSON line. Creates the
- *  project dir on first write. Concurrent appenders are safe: each line is one
- *  write() to an O_APPEND fd, so lines never interleave. */
+/** The configured prompt-preview cap, read once and memoised (default 120). */
+let cachedPreviewChars: number | undefined;
+function promptPreviewChars(): number {
+  if (cachedPreviewChars === undefined) cachedPreviewChars = loadConfig().config.promptPreviewChars;
+  return cachedPreviewChars;
+}
+
+/** The single store-side truncation chokepoint: bound a record's preview field
+ *  (`description`) to promptPreviewChars before persisting, so no writer ever stores
+ *  the full prompt. Returns a new record; non-meta kinds pass through. */
+export function truncateRecord(rec: ActivityRecord, max: number = promptPreviewChars()): ActivityRecord {
+  if (rec.kind !== "meta") return rec;
+  const d = rec.description;
+  return d.length > max ? { ...rec, description: d.slice(0, max) } : rec;
+}
+
+/** Append a record as one atomic O_APPEND NDJSON line (creates the project dir on
+ *  first write). The preview field is truncated to promptPreviewChars first, so no
+ *  writer persists the full prompt. Each line is one write() to an O_APPEND fd, so
+ *  concurrent appends never interleave. */
 export function appendRecord(projectId: string, sessionId: string, rec: ActivityRecord): void {
   const dir = projectDir(projectId);
   mkdirSync(dir, { recursive: true });
-  const line = `${JSON.stringify(rec)}\n`;
+  const line = `${JSON.stringify(truncateRecord(rec))}\n`;
   // O_APPEND guarantees the kernel seeks to EOF atomically per write().
   const fd = openSync(sessionLogPath(projectId, sessionId), fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_APPEND, 0o644);
   try {
@@ -146,16 +176,18 @@ export function listSessions(projectId: string): SessionSummary[] {
 }
 
 /** Read a session log tolerantly into the {metas, spawns, results} bundle #117's
- *  buildTree consumes. Each NDJSON line is parsed; a torn/partial/unparseable line
- *  (e.g. an interrupted append) is SKIPPED, never thrown. Returns empty maps when
- *  the log is absent. A spawn/result without a toolUseId is ignored. */
+ *  buildTree consumes. A torn/unparseable line is SKIPPED (never thrown); empty maps
+ *  when the log is absent; a spawn/result without a toolUseId is ignored. A malformed
+ *  (path-traversal) id THROWS — validation runs before the fs read (hard error, not
+ *  the silently-empty read a genuinely missing file yields). */
 export function readSession(projectId: string, sessionId: string): SessionData {
   const metas: AgentMeta[] = [];
   const spawns = new Map<string, SpawnRec>();
   const results = new Map<string, ResultRec>();
+  const logPath = sessionLogPath(projectId, sessionId); // validates ids before the read
   let raw: string;
   try {
-    raw = readFileSync(sessionLogPath(projectId, sessionId), "utf8");
+    raw = readFileSync(logPath, "utf8");
   } catch {
     return { metas, spawns, results };
   }
@@ -200,10 +232,7 @@ export function summarizeSession(sessionId: string, data: SessionData): SessionS
   // Running = at least one spawn without a matching result.
   let running = false;
   for (const toolUseId of data.spawns.keys()) {
-    if (!data.results.has(toolUseId)) {
-      running = true;
-      break;
-    }
+    if (!data.results.has(toolUseId)) { running = true; break; }
   }
   return { sessionId, startedAt, endedAt: running ? null : endedAt, agentCount: data.metas.length, errored, running };
 }
@@ -215,39 +244,32 @@ function sessionTime(s: SessionSummary): string {
 
 /** Retention options; default to the loaded dashboard config when omitted. */
 export interface RetentionOptions {
-  /** Drop sessions older than this many days. */
-  retentionDays: number;
-  /** Keep at most this many sessions (newest first). */
-  maxSessionsPerProject: number;
+  retentionDays: number; // drop sessions older than this many days
+  maxSessionsPerProject: number; // keep at most this many sessions (newest first)
 }
 
 /** Drop session logs older than retentionDays OR beyond maxSessionsPerProject
- *  (keeping the newest), delete their NDJSON files, and rewrite index.json
- *  atomically. No-op when the index is absent. Returns the removed session ids. */
+ *  (newest kept), delete their NDJSON files, and rewrite index.json atomically.
+ *  No-op when the index is absent. Returns the removed session ids. */
 export function applyRetention(projectId: string, opts: RetentionOptions): string[] {
   const index = readIndex(projectId);
   if (!index) return [];
-  const dir = projectDir(projectId);
   const cutoffMs = Date.now() - opts.retentionDays * 24 * 60 * 60 * 1000;
-
   // Newest-first ordering for both the age cutoff and the count cap.
   const ranked = [...index.sessions].sort((a, b) => sessionTime(b).localeCompare(sessionTime(a)));
   const kept: SessionSummary[] = [];
   const removed: string[] = [];
   for (let i = 0; i < ranked.length; i++) {
     const s = ranked[i];
-    const tooOld = Date.parse(sessionTime(s)) < cutoffMs;
-    const overCap = i >= opts.maxSessionsPerProject;
-    if (tooOld || overCap) removed.push(s.sessionId);
+    if (Date.parse(sessionTime(s)) < cutoffMs || i >= opts.maxSessionsPerProject) removed.push(s.sessionId);
     else kept.push(s);
   }
   if (removed.length === 0) return [];
-
   for (const sessionId of removed) {
     try {
-      rmSync(sessionLogPath(projectId, sessionId), { force: true });
+      rmSync(sessionLogPath(projectId, sessionId), { force: true }); // best-effort; index is the truth
     } catch {
-      // Best-effort delete; the index rewrite below is the source of truth.
+      /* index rewrite below is the source of truth */
     }
   }
   writeIndex(projectId, { sessions: kept });
