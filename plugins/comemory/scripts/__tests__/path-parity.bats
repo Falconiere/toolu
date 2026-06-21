@@ -89,6 +89,13 @@ _assert_parity() {
     echo "WRITER actual path:   ${actual:-<none reported>}" >&2
     false
   fi
+  # Existence at $expected is necessary but NOT sufficient: under symlinks or a
+  # second config dir the file could exist there while the writer actually
+  # targeted a different literal path. Assert the writer's reported target string
+  # EQUALS the reader's resolver — the parity this test exists to guard.
+  local writer_path
+  writer_path=$(printf '%s\n' "$output" | sed -n 's/.*setup_done marker written: \(.*\))/\1/p')
+  [ "$writer_path" = "$expected" ]   # writer target must equal reader resolver
   [ "$(jq -r '.comemory.setup_done' "$expected")" = "true" ]
 }
 
