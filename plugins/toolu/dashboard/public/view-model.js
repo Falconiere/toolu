@@ -32,12 +32,13 @@ export function treeRows(agents) {
   return rows;
 }
 
-/** Human-readable duration: "—" when null, "1.4s", "2m 05s", "1h 03m". */
+/** Human-readable duration: "—" when null/invalid, "1.4s", "2m 05s", "1h 03m". */
 export function formatDuration(ms) {
   if (ms === null || ms === undefined || Number.isNaN(ms)) return "—";
-  if (ms < 0) ms = 0;
+  if (ms < 0) return "—"; // negative duration is corrupt upstream data, not "0.0s"
   const totalSec = Math.floor(ms / 1000);
-  if (totalSec < 60) return `${(ms / 1000).toFixed(1)}s`;
+  // Truncate (not round) the tenths so 59999ms reads "59.9s", never "60.0s".
+  if (totalSec < 60) return `${(Math.floor(ms / 100) / 10).toFixed(1)}s`;
   const min = Math.floor(totalSec / 60);
   const sec = totalSec % 60;
   if (min < 60) return `${min}m ${String(sec).padStart(2, "0")}s`;

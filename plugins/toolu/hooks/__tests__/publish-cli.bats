@@ -28,6 +28,12 @@ teardown() {
   [ "$(readlink "$dst")" = "$TMP/plugin/bin/toolu-claude" ]
 }
 
+@test "works when executed directly via its shebang, as the hook runner invokes it" {
+  run "$TMP/plugin/hooks/publish-cli.sh" </dev/null
+  [ "$status" -eq 0 ]
+  [ "$(readlink "$TMP/cfg/toolu/bin/toolu-claude")" = "$TMP/plugin/bin/toolu-claude" ]
+}
+
 @test "idempotent: re-running keeps the symlink pointing at the launcher" {
   bash "$TMP/plugin/hooks/publish-cli.sh" </dev/null
   run bash "$TMP/plugin/hooks/publish-cli.sh" </dev/null
