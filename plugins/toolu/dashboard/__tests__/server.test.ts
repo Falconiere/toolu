@@ -167,7 +167,12 @@ describe("GET /api/session (history lane)", () => {
     );
     expect(res.status).toBe(400); // a malformed id is a client error, never a crash
     expect(res.status).not.toBe(500);
-    expect((await res.json()).error).toBeDefined();
+    const body = (await res.json()) as Record<string, unknown>;
+    // Rejected by the store's validation chokepoint BEFORE any fs read, so the
+    // body carries only the rejection — no session payload, no file contents.
+    expect(String(body.error)).toContain("unsafe id");
+    expect(body).not.toHaveProperty("tree");
+    expect(body).not.toHaveProperty("summary");
   });
 
   test("a path-traversal project id → 400 (not 500)", async () => {

@@ -34,6 +34,13 @@ teardown() {
   [ "$(readlink "$TMP/cfg/toolu/bin/toolu-claude")" = "$TMP/plugin/bin/toolu-claude" ]
 }
 
+@test "falls back to \$HOME/.claude when CLAUDE_CONFIG_DIR is unset" {
+  mkdir -p "$TMP/home"
+  run env -u CLAUDE_CONFIG_DIR HOME="$TMP/home" bash "$TMP/plugin/hooks/publish-cli.sh" </dev/null
+  [ "$status" -eq 0 ]
+  [ "$(readlink "$TMP/home/.claude/toolu/bin/toolu-claude")" = "$TMP/plugin/bin/toolu-claude" ]
+}
+
 @test "idempotent: re-running keeps the symlink pointing at the launcher" {
   bash "$TMP/plugin/hooks/publish-cli.sh" </dev/null
   run bash "$TMP/plugin/hooks/publish-cli.sh" </dev/null

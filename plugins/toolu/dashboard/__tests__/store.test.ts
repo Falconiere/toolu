@@ -207,8 +207,8 @@ describe("applyRetention", () => {
 });
 
 describe("assertSafeId (path-traversal chokepoint)", () => {
-  test("rejects empty, '.', '..', '..'-bearing, separators, and NUL", () => {
-    for (const bad of ["", ".", "..", "../escape", "..\\escape", "a/b", "a\\b", "a..b", "foo/../bar", "x\0y", ".hidden"]) {
+  test("rejects empty, '.', '..', '..'-bearing, separators, NUL, and trailing dot", () => {
+    for (const bad of ["", ".", "..", "../escape", "..\\escape", "a/b", "a\\b", "a..b", "foo/../bar", "x\0y", ".hidden", "foo."]) {
       expect(() => assertSafeId(bad)).toThrow();
     }
   });
