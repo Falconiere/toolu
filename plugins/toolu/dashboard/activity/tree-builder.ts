@@ -24,12 +24,14 @@ export interface ResultRec {
   isError: boolean;
 }
 
-/** Difference of two ISO timestamps in ms, or null if either is missing/invalid. */
+/** Difference of two ISO timestamps in ms, or null if either is missing/invalid.
+ *  Out-of-order timestamps (end before start) count as invalid — a negative
+ *  duration would be nonsense in the UI, so treat it like corrupt data. */
 export function durationMs(start: string | null, end: string | null): number | null {
   if (!start || !end) return null;
   const a = Date.parse(start);
   const b = Date.parse(end);
-  if (Number.isNaN(a) || Number.isNaN(b)) return null;
+  if (Number.isNaN(a) || Number.isNaN(b) || b < a) return null;
   return b - a;
 }
 
