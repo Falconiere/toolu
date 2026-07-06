@@ -10,7 +10,8 @@
 # the `comemory.setup_done` flag into toolu.config.json. Before that the block
 # emits a one-line /comemory:setup nudge instead — but only when jq is present
 # (the flag is unreadable without jq, so the nudge is suppressed to avoid a
-# perpetual "run setup" on jq-less hosts).
+# perpetual "run setup" on jq-less hosts) and setup_done is not explicitly
+# false (an explicit false is a deliberate opt-out, not an unanswered nudge).
 
 setup() {
   PLUGINS_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../.." && pwd)"
@@ -77,6 +78,17 @@ _run_entry_no_jq() {
   ! echo "$output" | grep -q 'comemory.sh search'
   echo "$output" | grep -q '/comemory:setup'
   echo "$output" | grep -q 'comemory detected but not enabled'
+}
+
+@test "mandate: setup_done explicitly false — NO mandate and NO nudge (deliberate opt-out)" {
+  command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
+  printf '%s' '{"plugins":{"comemory@toolu":{}}}' > "$REG"
+  _write_config '{"comemory":{"setup_done":false}}'
+  run _run_entry
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q 'comemory.sh search'
+  # Explicit false is an answered question — nudging again would nag.
+  ! echo "$output" | grep -q '/comemory:setup'
 }
 
 @test "mandate: NO comemory mandate when skills.comemory == false (even with setup_done true)" {

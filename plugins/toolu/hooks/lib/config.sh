@@ -113,7 +113,10 @@ toolu_enabled() {
 }
 
 # Default-OFF inverse of toolu_enabled: 0 only when .<cat>.<name> is boolean
-# `true`; absent/false/non-true/malformed/no-jq -> 1.
+# `true`; absent/false/non-true/malformed/no-jq -> 1. Stricter than
+# toolu_enabled_explicit below, which also accepts the string "true" — use this
+# for machine-written markers (e.g. comemory.setup_done) where only the JSON
+# boolean is ever valid.
 toolu_flag_true() {
   local category="$1" name="$2"
   toolu_load_config
@@ -126,10 +129,27 @@ toolu_flag_true() {
   return 1
 }
 
+# Mirror of toolu_flag_true for explicit opt-outs: 0 only when .<cat>.<name>
+# is boolean `false`; absent/true/non-false/malformed/no-jq -> 1. Separates
+# "user explicitly said no" from "user never set the flag" — e.g. session-start
+# suppresses the /comemory:setup nudge when setup_done is explicitly false.
+toolu_flag_false() {
+  local category="$1" name="$2"
+  toolu_load_config
+  [ "$_TOOLU_HAS_JQ" = "1" ] || return 1
+  local val
+  val=$(jq -r --arg c "$category" --arg n "$name" \
+    'if (.[$c]? // {}) | has($n) then (.[$c][$n] == false) else false end' \
+    <<< "$TOOLU_CFG_JSON" 2>/dev/null)
+  [ "$val" = "true" ] && return 0
+  return 1
+}
+
 # Like toolu_enabled but DEFAULT OFF: returns 0 only when the key is
-# explicitly `true`. For opt-in components (e.g. the session-end comemory
-# reminder) where the default-enabled opt-out semantics are wrong. Missing jq or
-# a missing/non-true value -> 1 (disabled).
+# explicitly `true` (boolean, or the string "true" — laxer than
+# toolu_flag_true above). For hand-edited opt-in components (e.g. the
+# session-end comemory reminder) where the default-enabled opt-out semantics
+# are wrong. Missing jq or a missing/non-true value -> 1 (disabled).
 toolu_enabled_explicit() {
   local category="$1" name="$2"
   toolu_load_config

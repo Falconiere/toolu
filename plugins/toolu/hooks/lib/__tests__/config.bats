@@ -168,3 +168,52 @@ teardown() {
     ". \"$REPO_ROOT/hooks/lib/config.sh\"; toolu_flag_true project setup_done"
   [ "$status" -eq 1 ]
 }
+
+@test "toolu_flag_true: success with the real comemory/setup_done key" {
+  # Same category/name session-start.sh actually queries.
+  echo '{"version":1,"comemory":{"setup_done":true}}' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run toolu_flag_true comemory setup_done
+  [ "$status" -eq 0 ]
+}
+
+@test "toolu_flag_false: success only when explicitly boolean false" {
+  echo '{"version":1,"comemory":{"setup_done":false}}' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run toolu_flag_false comemory setup_done
+  [ "$status" -eq 0 ]
+}
+
+@test "toolu_flag_false: failure when value is true" {
+  echo '{"version":1,"comemory":{"setup_done":true}}' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run toolu_flag_false comemory setup_done
+  [ "$status" -eq 1 ]
+}
+
+@test "toolu_flag_false: failure when key absent" {
+  echo '{"version":1,"comemory":{"other":false}}' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run toolu_flag_false comemory setup_done
+  [ "$status" -eq 1 ]
+}
+
+@test "toolu_flag_false: failure when value is non-false string" {
+  echo '{"version":1,"comemory":{"setup_done":"false"}}' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run toolu_flag_false comemory setup_done
+  [ "$status" -eq 1 ]
+}
+
+@test "toolu_flag_false: failure on malformed JSON" {
+  printf '{' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run toolu_flag_false comemory setup_done
+  [ "$status" -eq 1 ]
+}
+
+@test "toolu_flag_false: failure when jq unavailable" {
+  STUB="$TMP/stub"
+  mkdir -p "$STUB"
+  for c in bash git cat printf mkdir; do
+    src=$(command -v "$c") && ln -s "$src" "$STUB/$c"
+  done
+  echo '{"version":1,"comemory":{"setup_done":false}}' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run env -i HOME="$HOME" CLAUDE_PROJECT_DIR="$CLAUDE_PROJECT_DIR" PATH="$STUB" bash -c \
+    ". \"$REPO_ROOT/hooks/lib/config.sh\"; toolu_flag_false comemory setup_done"
+  [ "$status" -eq 1 ]
+}
