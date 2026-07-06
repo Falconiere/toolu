@@ -44,6 +44,9 @@ export function assertSafeId(id: string): string {
   if (typeof id !== "string" || id.length === 0) reject("empty");
   if (id.includes("/") || id.includes("\\") || id.includes("\0")) reject("path separator or NUL");
   if (id === "." || id === ".." || id.includes("..")) reject("resolves outside the store");
+  // A trailing dot is stripped by some filesystems (NTFS), which would let two
+  // distinct ids collide on one directory — no real projectId/sessionId ends in one.
+  if (id.endsWith(".")) reject("trailing dot");
   if (!SAFE_ID.test(id)) reject("not in allowlist [A-Za-z0-9][A-Za-z0-9._-]*");
   return id;
 }
