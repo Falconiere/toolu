@@ -74,4 +74,13 @@ describe("formatDuration", () => {
     expect(formatDuration(125_000)).toBe("2m 05s");
     expect(formatDuration(3_780_000)).toBe("1h 03m");
   });
+
+  test("just-under-a-minute truncates to 59.9s, never rounds up to 60.0s", () => {
+    expect(formatDuration(59_999)).toBe("59.9s");
+    expect(formatDuration(60_000)).toBe("1m 00s");
+  });
+
+  test("negative duration is corrupt upstream data → em dash, not 0.0s", () => {
+    expect(formatDuration(-5000)).toBe("—");
+  });
 });

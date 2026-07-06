@@ -156,10 +156,22 @@ export function startServer(opts: ServerOptions = {}): { port: number; stop: () 
   });
 
   // Initial build, then a change-gated poll that only broadcasts on real changes.
-  const first = watcher.tick(Date.now());
+  // Every layer under tick() is written to never throw (discovery, ledger reads,
+  // git, transcript parsing all degrade to empty/null), but a throw escaping an
+  // interval callback would kill the whole process — so the poll guards anyway
+  // and keeps serving the last good state.
+  const safeTick = (): MultiDashboardState | null => {
+    try {
+      return watcher.tick(Date.now());
+    } catch (err) {
+      console.error(`dashboard: tick failed — serving last state (${String(err)})`);
+      return null;
+    }
+  };
+  const first = safeTick();
   if (first) broadcast(first);
   const poll = setInterval(() => {
-    const next = watcher.tick(Date.now());
+    const next = safeTick();
     if (next) broadcast(next);
   }, cfg.pollMs);
 
