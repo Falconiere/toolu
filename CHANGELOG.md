@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.0.0](https://github.com/Falconiere/toolu/compare/v2.1.1...v3.0.0) (2026-07-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* **comemory:** installing toolu no longer auto-installs caveman or code-simplifier — install them yourself if you want them. The comemory persistent-memory mandate is now opt-in: run /comemory:setup once per repo to enable recall/save; users who relied on auto-activation must run it.
+
+### Features
+
+* **comemory:** make comemory opt-in via /comemory:setup; drop caveman + code-simplifier to optional ([c7a25bf](https://github.com/Falconiere/toolu/commit/c7a25bff78589ff723d27e2977847546de352197))
+
+
+### Bug Fixes
+
+* **comemory:** suppress setup nudge on explicit setup_done=false ([fbccb6e](https://github.com/Falconiere/toolu/commit/fbccb6e41515865cf18e3f939c18fa4cd616da11))
+* **comemory:** tighten path-parity assertion + add resolver drift guards ([e41725d](https://github.com/Falconiere/toolu/commit/e41725d5c133230b4fb6dad921191521bcfc0b1c))
+
 ## [2.1.1](https://github.com/Falconiere/toolu/compare/v2.1.0...v2.1.1) (2026-06-19)
 
 
