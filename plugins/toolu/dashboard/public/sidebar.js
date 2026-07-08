@@ -52,7 +52,7 @@ export function Sidebar({ projects, selectedId, onSelect }) {
     </div>
     <div class="flex-1 overflow-auto p-2 space-y-1">
       ${projects.length === 0
-        ? html`<p class="px-3 py-6 text-sm text-muted">No active projects. Add roots with <span class="font-mono">dashboard-config</span>.</p>`
+        ? html`<p class="px-3 py-6 text-sm text-muted">No active projects. Add scan roots with <span class="font-mono">toolu-claude dashboard config add-root ~/Projects</span> (or the <span class="font-mono">/toolu:dashboard-config</span> command).</p>`
         : projects.map(
             (p) => html`<${ProjectRow} key=${p.id} summary=${p} active=${p.id === selectedId} onSelect=${onSelect} />`,
           )}
