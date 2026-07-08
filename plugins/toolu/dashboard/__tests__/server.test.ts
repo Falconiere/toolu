@@ -226,3 +226,21 @@ describe("SSE live updates (AC-11/AC-16)", () => {
     expect(titles).toContain("AFTER");
   });
 });
+
+describe("config warning surfacing", () => {
+  test("malformed dashboard.json prints a warning to stderr at startup", () => {
+    // Regression: loadConfig() computed a warning that no caller read, so a bad
+    // config silently reverted roots to [] and the board went empty with no trace.
+    // Run in a subprocess so DEFAULT_CONFIG_PATH resolves under our XDG home.
+    const xdg = join(base, "xdg-malformed");
+    mkdirSync(join(xdg, "toolu"), { recursive: true });
+    writeFileSync(join(xdg, "toolu", "dashboard.json"), '{"roots": [,]}');
+    const entry = join(import.meta.dir, "..", "index.ts");
+    const proc = Bun.spawnSync(
+      ["bun", "-e", `import { startServer } from ${JSON.stringify(entry)}; startServer().stop();`],
+      { env: { ...process.env, XDG_CONFIG_HOME: xdg } },
+    );
+    expect(proc.exitCode).toBe(0);
+    expect(proc.stderr.toString()).toContain("config json is malformed");
+  });
+});

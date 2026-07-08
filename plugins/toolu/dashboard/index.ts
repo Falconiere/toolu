@@ -39,7 +39,14 @@ export interface ServerOptions {
 
 /** Start the dashboard server. Returns its port and a stop() that tears everything down. */
 export function startServer(opts: ServerOptions = {}): { port: number; stop: () => void } {
-  const cfg = opts.config ?? loadConfig().config;
+  let cfg = opts.config;
+  if (!cfg) {
+    const loaded = loadConfig();
+    // A malformed config silently reverts roots to [] (empty board); the warning
+    // is the only trace, so it must reach the operator.
+    if (loaded.warning) console.error(`toolu dashboard: ${loaded.warning}`);
+    cfg = loaded.config;
+  }
   const source = opts.source ?? claudeCodeSource;
   const watcher = createWatcher(cfg, source);
   const clients = new Set<ReadableStreamDefaultController<Uint8Array>>();
