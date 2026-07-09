@@ -39,6 +39,23 @@ teardown() { teardown_sandbox; }
   [ "$status" -ne 0 ]
 }
 
+@test "plan path: a traversal key from argv is rejected, not interpolated" {
+  run bash -c 'cd "$2"; "$1" plan path ../../etc/passwd' _ "$TOOL_DIR/jira.sh" "$REPO"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"not a valid issue key"* ]]
+  # The rejection message echoes the offending key, so we cannot assert on its
+  # absence. Assert instead that no ledger path was ever built from it.
+  [[ "$output" != *"plan-ledger/jira-"* ]]
+}
+
+@test "plan init: a traversal key from argv writes no file outside the plans dir" {
+  stub_responses issue.json
+  run bash -c 'cd "$2"; "$1" plan init ../../../pwned' _ "$TOOL_DIR/jira.sh" "$REPO"
+  [ "$status" -ne 0 ]
+  [ ! -e "$SANDBOX/pwned.md" ]
+  [ ! -e "$REPO/../../../pwned.md" ]
+}
+
 @test "credential gate still applies to other plan actions" {
   unset JIRA_PAT JIRA_BASE_URL
   run bash -c 'cd "$2"; "$1" plan status ABC-123' _ "$TOOL_DIR/jira.sh" "$REPO"

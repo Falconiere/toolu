@@ -34,6 +34,29 @@ build() {
   [ "$status" -ne 0 ]
 }
 
+@test "ledger_path: refuses keys that would escape the ledger dir" {
+  # The key is interpolated into a filename; a slash or .. must never reach it.
+  for bad in "../../etc/passwd" "ABC-1/../../x" "/abs/path" "ABC-1;rm -rf ." "ABC" "-123" "ABC-" "ABC-1 2"; do
+    run bash -c "$S"'; jira_plan_ledger_path "$2"' _ "$TOOL_DIR" "$bad"
+    [ "$status" -ne 0 ] || { echo "accepted bad key: $bad"; return 1; }
+    [[ "$output" == *"not a valid issue key"* ]]
+  done
+}
+
+@test "doc_path: refuses keys that would escape the plans dir" {
+  run bash -c "$S"'; jira_plan_doc_path "../../../evil"' _ "$TOOL_DIR"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"not a valid issue key"* ]]
+}
+
+@test "ledger_path: accepts the real Jira key shapes" {
+  for ok in "ABC-123" "A-1" "PROJ_X-9999"; do
+    run bash -c "$S"'; cd "$3"; jira_plan_ledger_path "$2"' _ "$TOOL_DIR" "$ok" "$REPO"
+    [ "$status" -eq 0 ]
+    [[ "$output" == */plan-ledger/jira-${ok}.json ]]
+  done
+}
+
 @test "doc_path: <repo>/.claude/tmp/jira/plans/<KEY>.md" {
   run bash -c "$S"'; cd "$2"; jira_plan_doc_path ABC-123' _ "$TOOL_DIR" "$REPO"
   [ "$status" -eq 0 ]
