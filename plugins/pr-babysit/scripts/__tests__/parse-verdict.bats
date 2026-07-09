@@ -97,3 +97,52 @@ FIX="${BATS_TEST_DIRNAME}/fixtures"
   out=$(printf '' | bash "$PV")
   [ "$(jq -r .is_review_comment <<<"$out")" = "false" ]
 }
+
+# --- Current label shape (`merge-approved` / `request-changes`) ---------------
+# The bot's verdict label was renamed from `agent-merge-*` at some point and the
+# parser was never updated: both real comments below parsed to verdict "none",
+# so babysit's success stop (which requires "approved") could never fire.
+
+@test "parse-verdict: PR#122 real v6 comment → complete + approved via trailing chip" {
+  out=$(bash "$PV" < "$FIX/pr122-verdict-approved.txt")
+  [ "$(jq -r .is_review_comment <<<"$out")" = "true" ]
+  [ "$(jq -r .state <<<"$out")" = "complete" ]
+  [ "$(jq -r .verdict <<<"$out")" = "approved" ]
+  [ "$(jq -r .verdict_label <<<"$out")" = "merge-approved" ]
+  [ "$(jq '.findings | length' <<<"$out")" -eq 0 ]
+}
+
+@test "parse-verdict: PR#120 real comment → complete + changes via checklist label" {
+  out=$(bash "$PV" < "$FIX/pr120-verdict-changes.txt")
+  [ "$(jq -r .state <<<"$out")" = "complete" ]
+  [ "$(jq -r .verdict <<<"$out")" = "changes" ]
+  [ "$(jq -r .verdict_label <<<"$out")" = "request-changes" ]
+  [ "$(jq '.findings | length' <<<"$out")" -eq 3 ]
+}
+
+@test "parse-verdict: '**Verdict:** ✅ Approved' prose is read when no label exists" {
+  body=$'### Code Review — x\n\n- [x] done\n\n**Verdict:** ✅ Approved\n\n### Findings (0)\n\n_No findings._'
+  out=$(bash "$PV" <<<"$body")
+  [ "$(jq -r .verdict <<<"$out")" = "approved" ]
+  [ "$(jq -r .verdict_label <<<"$out")" = "" ]
+}
+
+@test "parse-verdict: '**Verdict:** ⚠️ Changes requested' prose is read when no label exists" {
+  body=$'### Code Review — x\n\n- [x] done\n\n**Verdict:** ⚠️ Changes requested   🟡 2 medium\n\n### Findings\n\n`a/b.sh:9`: high: real problem.'
+  out=$(bash "$PV" <<<"$body")
+  [ "$(jq -r .verdict <<<"$out")" = "changes" ]
+}
+
+@test "parse-verdict: a finding quoting \`request-changes\` cannot shadow the checklist label" {
+  body=$'### Code Review — x\n\n- [x] Set verdict label (`merge-approved`)\n\n### Findings\n\n`a/b.sh:9`: low: the label should be `request-changes` here.\n\n`merge-approved`'
+  out=$(bash "$PV" <<<"$body")
+  [ "$(jq -r .verdict <<<"$out")" = "approved" ]
+  [ "$(jq -r .verdict_label <<<"$out")" = "merge-approved" ]
+}
+
+@test "parse-verdict: a bare trailing chip alone identifies a review comment" {
+  body=$'some prose\n\n- [x] done\n\n`request-changes`'
+  out=$(bash "$PV" <<<"$body")
+  [ "$(jq -r .is_review_comment <<<"$out")" = "true" ]
+  [ "$(jq -r .verdict <<<"$out")" = "changes" ]
+}

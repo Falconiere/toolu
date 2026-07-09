@@ -1,0 +1,44 @@
+<img src="https://raw.githubusercontent.com/falconiere/toolu-ghactions/main/code-review/assets/logo.png" width="20" align="left"> **Toolu — Code Review**
+**AI Code Review finished in 26s** —— [View job](https://github.com/Falconiere/toolu/actions/runs/28975502966)
+
+---
+### Code Review — `worktree/lucky-river-6784`
+
+- [x] Read repository context and PR diff
+- [x] Review changed files
+- [x] Analyze correctness, security, performance
+- [x] Post findings
+- [x] Set verdict label (`request-changes`)
+
+**Verdict:** ⚠️ Changes requested   🟡 2 medium 🔵 1 low
+### Review Plan
+Reviewing 3 files: 1 correctness-critical (config warning surfacing), 1 docs-only (sidebar message), 2 SAST findings to assess.
+
+### Findings (3)
+
+`plugins/toolu/dashboard/__tests__/server.test.ts:240`: medium: The test spawns a subprocess that calls `startServer().stop()`, but `startServer` returns `{ port, stop }`, not a server object with a `.stop()` method. The returned `stop` is a function, so `startServer().stop()` is correct (calls the function). However, the test expects `proc.exitCode` to be 0, but if the config is malformed, `loadConfig()` will throw or return a warning, and the subprocess may exit with a non-zero code. The test does not verify that the warning is actually printed to stderr before the process exits. The `console.error` in `index.ts` runs synchronously, so it should be captured, but the test's `expect(proc.stderr.toString()).toContain(...)` is correct. No issue here — the test is fine. _(correctness · high)_
+`plugins/toolu/dashboard/index.ts:47`: medium: The warning is printed to stderr, but the test expects the string "config json is malformed" to appear in stderr. The `loaded.warning` message from `loadConfig()` must contain that exact substring. If `loadConfig()` returns a different warning message (e.g., "malformed config"), the test will fail. This is a tight coupling between the test and the implementation. However, this is acceptable for a regression test. No change needed. _(correctness · high)_
+`plugins/toolu/dashboard/public/sidebar.js:55`: low: The sidebar message references `toolu-claude dashboard config add-root ~/Projects` but the project conventions mention `dashboard-config` as a command. The message now says "Add scan roots" instead of "Add roots" — this is a documentation improvement and is accurate. No issue. _(doc/comment accuracy · high)_
+
+### Mechanical checks
+
+2 deterministic finding(s) — 2 gitleaks. See the **Code Scanning** tab for details.
+
+### Other checks
+The diff correctly surfaces the config warning to stderr and adds a regression test. The sidebar message is updated with more actionable instructions. The two gitleaks findings are real secrets in files outside the diff but should be addressed.
+
+### Top-N must-fix
+Remove hardcoded API key from plugins/context7/skills/context7/scripts/__tests__/context7.bats
+Remove hardcoded API key from plugins/toolu/dashboard/config-cli.ts
+<details><summary>📜 Review history (1 passes)</summary>
+
+| Pass | Commit | Verdict | New | Open | Resolved |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `eff7d24` | changes | 3 | 0 | 0 |
+
+</details>
+
+`request-changes`
+
+<!-- toolu-review-state:v1 H4sIAAAAAAAAA7VW247bNhD9lQERoDYgy2v5rmxTFHlp+5AWSN/iYEWRI4uBxFE5lL2u4aIf0S/slxSUbO86bdLmoX6xZZGHZ86cM9JRsCqxliIVnqhqRw53Bvcj9tKjiMQOHRuyIp1EojBWG7tlkb47ikb6UqSiqdqtsTzuNo+15DIn6fT44cEje354GDO6Hbo4XMaeRSQqY1GkyewuEow7dMYfRCpq1KatRSSU9LglF/5T5Bwqb5HDPkW2MBqtQpGK0mxLEYlfWvKoH3pIAd3n3Ubkrd2ICDZihOE7M3VDzsMR2Evn33aM4ASFoxpeHH94++ObmL0zdmuKwwCtd4fh6eXzxYNhzJ6awfBl9j4SkWBqXcejqgJnj49epOLnEiHUCdzIvWWQwG3eOFLIDL6UHpSsKobsn5CzCPLW39zLwKFvnWXIjhAqiCCshVMWgSUf8PtSKP+AysPe+BIkZBdEqNGXpGMIxHoo1OEEajIwgV/RWuUN2QiYPkErLDw3AgY9f1/idecwhu9oH/oYdf939eNjg8ozZKH4GB+Nf00aM/AEOcJdX6kpug1dW7fhlFpWBbkadQRZRVK/7u4ECntTVeBLR3sgd64EJOyls8ZuI5BWd1jP5K7lAcLBF1Es2dGv6AgUaewV6ahqQu7EDE4sDn2bAtYZvNNJ+VZW1QEaZ6xHHepgr9E5yLEgh92Gy8nhVO5PyBRZpgpjdI5cBsZCZqzGx9hzBq61DHywqnRkqeXq0LXBeOCS2koHrZRsfOuCJEGyi8BfMWS9xoNO4Z5M7Olt5+LBcBh7ek3WS2MHcRzfdDGGNwSGuUUo0SH8+fsfT50zDIWxGItIFI1IxWyyKIrFdKLmy/VCzvXdZLmYT9V0pZPZer6cYJ5govVMnKJ/nQmXyq8zYLb8X0aAKWAQ/IM6PjdxCDeNGGQdNbhSS+HF8XbHKRu+/GzOn9njb664bdY1DZ1DuwbBRpxt/4HJ3nh/IwKObBqULvjl3NreTrccQ76Z5Rb7QfZRZuqWfSg7eKB3NT5K5UNGehIxfF98vOkybyRoUxTo0PprpZfDBhhv4zBcr5zPGd6I4bMZ0GW2kKYK3A3388abbRlYtU0VIHP0e0T7tOkSZFM3FdZovQwz5mbEnKGUwsbLvEIoyIEEh1uHHJ5VHVJnclVKu0WwiEG1i6XzRYIJJqtJLpfzZZInOsEin6+Vnq1WyXSi82I1kbPlf7F00+aVUWM2GnPp4g9P3p7Pb7xd0f7W2JrUWFEdagzFtE6qwxc85AC+gdLXVXbfgKok89cb0TyOptAcRgsIPh1x3X/XrQ+2evWGwiAzu25ShecFx/Ct1sBKWnBEnvtZec+NtFfQgqwf1WRpI171bwiqkq3Gp/BcJrjUehRg4LfxT+cD7scB6xUMyHVt/TR0r2x6BR31oBeAoJS0ehjfj5tX2WeDee7F1a4OOx8rZMi+uIDsmuSzZmHtDm1wJUPd/4DsY9oZyOD2M+s+vBc+lvbA8sCwEbfqbwQYyx6lBirOdy83+hl9SZEm1V7DEbLiaIe9k6w+p6N10uPTqL+6f7FaYzLPk6kslsvJZI6L1WQ90Xqxnk+L9XohcYrrZIHi9D4SpWHf2fXdUXAZXhKxKJY6mQXJWaST5Wo6n80Wd0n3pqiNCl3oY9fP69aGdUdhcS/SaSSoQSvSu0g4ZKp2qLsLT15WIp2eTu9PfwFA84YckgoAAA== -->
+
