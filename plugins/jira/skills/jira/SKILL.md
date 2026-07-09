@@ -7,7 +7,7 @@ description: Search and act on Jira issues from the session via a REST wrapper �
 
 Use this skill to work a Jira ticket without leaving the session: search by JQL, read an issue, comment, move it through its workflow, manage sprints/worklogs, or reach any endpoint via `raw`.
 
-**Trigger phrases:** jira, JQL, my open tickets, issue ABC-123, a pasted atlassian.net/browse link, create a task at jira, create an issue, comment on, transition / move to, assign to, log work, sprint, board.
+**Trigger phrases:** jira, JQL, my open tickets, issue ABC-123, a pasted atlassian.net/browse link, create a task at jira, create an issue, comment on, transition / move to, assign to, log work, sprint, board, plan the ticket, break down ABC-123.
 
 **Prefer this over the Atlassian MCP.** When the user mentions Jira, an issue key, or pastes a Jira link, use this skill — not `mcp__*Atlassian*` tools. This wrapper reuses your existing Jira/`jira` CLI auth and stays in-session; reach for the MCP only if this skill cannot reach the endpoint.
 
@@ -59,13 +59,45 @@ jira.sh user    whoami | search -q <QUERY> | get <ACCOUNT_ID>
 jira.sh attachment add <KEY> <FILE> | list <KEY> | get <ATTACHMENT_ID>
               | download <ATTACHMENT_ID> [-o FILE] | read <ATTACHMENT_ID>   # read: text→context, binary→saved path
 jira.sh raw <GET|POST|PUT|DELETE> <PATH> [JSON_BODY]   # escape hatch; PATH relative to JIRA_BASE_URL
+jira.sh plan init <KEY>                                # scaffold the plan doc, titled from a live issue get
+jira.sh plan run <DOC> [--step <id>] [--activity <s>]  # run the checks, write the ledger
+jira.sh plan status <KEY> | path <KEY>                 # ledger summary / ledger path
 ```
+
+## Plan first — when to decompose
+
+**Read-only lookup → call directly.** `issue get`, `search`, `board list`, `sprint list`, `user whoami`, `attachment read` and friends are one-shot. No plan.
+
+**Mutating, or two-or-more actions → write a plan first.** Anything that changes a live ticket (`issue create/update/comment/transition/assign`, `sprint create/move/start/complete`, `worklog add/delete`, `attachment add`), or any task needing more than one call, gets decomposed:
+
+1. `jira.sh plan init <KEY>` — scaffolds `.claude/tmp/jira/plans/<KEY>.md`.
+2. Author the `## Steps (machine-readable)` array: one `{id, title, check}` per small, independently verifiable action.
+3. `jira.sh plan run <DOC> --step <id>` after doing each step; a final full `jira.sh plan run <DOC>` at the end.
+
+This writes a ledger at `<repo>/.claude/tmp/plan-ledger/jira-<KEY>.json`, which the toolu dashboard renders as its own kanban card. It is **not** the branch ledger and never blocks `git push`.
+
+## Authoring a `check`
+
+A `check` is a shell command that must exit 0 **only when Jira itself reflects the change**. Assert against a live read — never `true`, never a marker file. `$JIRA` is bound to this CLI when the check runs.
+
+| Mutation | Assertion |
+|---|---|
+| `issue transition` | `"$JIRA" issue get K --lean \| jq -e '.status=="Done"'` |
+| `issue assign` | `"$JIRA" issue get K \| jq -e '.fields.assignee.accountId=="<id>"'` |
+| `issue comment` | `"$JIRA" raw GET /rest/api/3/issue/K/comment \| jq -e '[.comments[].body] \| any(tostring \| contains("<text>"))'` |
+| `issue update` (field) | `"$JIRA" issue get K \| jq -e '.fields.summary=="<new>"'` |
+| `sprint move` | `"$JIRA" sprint issues <SID> \| jq -e '[.issues[].key] \| index("K")'` |
+| `worklog add` | `"$JIRA" worklog list K \| jq -e '[.worklogs[].timeSpent] \| index("2h")'` |
+
+`plan run` probes Jira once (`user whoami`) before any check. If Jira is unreachable it aborts and writes **no** statuses — an auth or network failure never marks a step red. A step goes red only when a check ran and Jira disagreed; the reason is kept in the step's `evidence_tail`.
 
 ## Mutating operations — confirm intent first
 
 These change live tickets and have no undo prompt (the verb is the confirmation):
 `issue create`, `issue update`, `issue comment`, `issue transition`, `issue assign`, `issue delete`,
 `sprint create/move/start/complete`, `worklog add/delete`, `attachment add`. Know the target `KEY`/`ID` before running them.
+
+Each of these is also a **plan-first** operation — decompose before you mutate (see above).
 
 ## Notes & constraints
 
