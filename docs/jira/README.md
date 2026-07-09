@@ -40,6 +40,51 @@ Resolution: explicit env wins; else the jira CLI config + keyring fill the gaps.
 
 Work a ticket without leaving the session: search, read, create, comment, transition, assign, manage sprints and worklogs, access attachments, and reach any endpoint via `raw`.
 
+### `plan` Family
+
+Decompose non-trivial ticket work into small, individually verifiable steps, tracked in a ledger the toolu dashboard renders as a kanban.
+
+## Plans
+
+Read-only lookups (`issue get`, `search`, `board list`) run directly. Anything that **mutates** a ticket, or needs two or more calls, is planned first.
+
+```bash
+# Scaffold a plan doc, titled from a live `issue get`
+jira.sh plan init ABC-123          # -> .claude/tmp/jira/plans/ABC-123.md
+
+# Author the steps, then run them
+jira.sh plan run .claude/tmp/jira/plans/ABC-123.md --step transition-done
+jira.sh plan run .claude/tmp/jira/plans/ABC-123.md --activity "closing out"
+
+jira.sh plan status ABC-123        # jira-ABC-123  2/3 green   next: comment-pr-link
+jira.sh plan path ABC-123          # ledger path; needs no credentials
+```
+
+Steps live in a `## Steps (machine-readable)` block:
+
+````markdown
+## Steps (machine-readable)
+
+```json
+[
+  { "id": "transition-done",
+    "title": "Move ABC-123 to Done",
+    "check": "\"$JIRA\" issue get ABC-123 --lean | jq -e '.status==\"Done\"' >/dev/null" }
+]
+```
+````
+
+A `check` must exit 0 **only when Jira itself reflects the change** — `$JIRA` is bound to the CLI when it runs. Green means Jira agrees, not that the agent claimed success. Before running any check, `plan run` probes once with `user whoami`: if Jira is unreachable it aborts and writes **no** statuses, so an auth or network failure never marks a step red. A red step keeps the check's output in `evidence_tail`.
+
+### Ledger and the dashboard
+
+The ledger is written atomically to `<repo>/.claude/tmp/plan-ledger/jira-<KEY>.json` (schema version 1). The toolu dashboard discovers it as its own project card, labelled `<repo> · jira-<KEY>`.
+
+Two properties are deliberate:
+
+- **It never blocks `git push`.** toolu's push gate reads only `<branch-slug>.json`; a file named for the issue key is invisible to it.
+- **Jira cards never go stale.** The ledger records `base_branch: ""`, so the dashboard's diff-hash comparison is skipped and a green Jira step stays green when unrelated code commits land.
+
 ## Usage Examples
 
 ### Search & Read Issues

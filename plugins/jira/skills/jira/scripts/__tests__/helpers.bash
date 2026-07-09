@@ -66,7 +66,7 @@ teardown_sandbox() {
   [[ -n "${SANDBOX:-}" && -d "$SANDBOX" ]] && rm -rf "$SANDBOX"
   unset JIRA_BASE_URL JIRA_PAT JIRA_EMAIL JIRA_API_TOKEN JIRA_API_VERSION
   unset _JIRA_VER _JIRA_LEAN _JIRA_AUTH_MODE _JIRA_BASE JIRA_STUB_RESPONSES JIRA_STUB_FAIL REAL_PATH
-  unset JIRA_CLI_CONFIG JIRA_KEYRING_SERVICE NETRC
+  unset JIRA_CLI_CONFIG JIRA_KEYRING_SERVICE NETRC JIRA_CLI
 }
 
 # stub_responses f1 [f2 ...] — queue fixture bodies for successive curl calls.

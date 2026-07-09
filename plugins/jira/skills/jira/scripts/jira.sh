@@ -6,7 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIB="$SCRIPT_DIR/lib"
-FAMILIES="search issue board sprint worklog project user attachment raw"
+FAMILIES="search issue board sprint worklog project user attachment raw plan"
 
 usage() {
   cat >&2 <<'EOF'
@@ -24,6 +24,7 @@ Families:
   user         whoami|search|get
   attachment   add|list|get
   raw          <METHOD> <path> [body]
+  plan         init|run|status|path
 
 Environment:
   JIRA_BASE_URL                      required (e.g. https://acme.atlassian.net)
@@ -61,5 +62,9 @@ source "$LIB/paginate.sh"
 # shellcheck source=/dev/null
 source "$LIB/$family.sh"
 
-jira_require_env
+# `plan path` only prints a local ledger path — it never reaches Jira, so it must
+# work without credentials. Every other family/action does reach Jira.
+if ! { [ "$family" = "plan" ] && [ "${1:-}" = "path" ]; }; then
+  jira_require_env
+fi
 "jira_$family" "$@"
