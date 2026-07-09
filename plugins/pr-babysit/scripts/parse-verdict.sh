@@ -33,7 +33,7 @@ _empty() { jq -nc '{is_review_comment:false, state:"unknown", complete:false, ve
 # (review headings, the [View job] CI link, a backticked agent-merge label) so a
 # stray "actions/runs/…" or "agent-merge-…" in arbitrary prose won't false-positive.
 is_review=false
-if printf '%s' "$input" | grep -qE '^### Code Review|^### PR Review in Progress|\[View job\]\([^)]*actions/runs/[0-9]+|`agent-merge-[a-z]'; then
+if printf '%s' "$input" | grep -qE '^### Code Review|^### PR Review in Progress|\[View job\]\([^)]*actions/runs/[0-9]+|`agent-merge-[a-z]|^`(merge-approved|request-changes)`$'; then
   is_review=true
 fi
 if [ "$is_review" != true ]; then _empty; exit 0; fi
@@ -48,22 +48,47 @@ else                              state="complete"
 fi
 complete=false; [ "$state" = complete ] && complete=true
 
-# --- Verdict --- the machine-readable `agent-merge-*` label is AUTHORITATIVE.
+# --- Verdict --- the machine-readable label is AUTHORITATIVE.
 # Don't infer from prose when a label exists: finding TEXT routinely discusses
 # "Changes requested"/"approved" (e.g. a finding about verdict parsing itself),
 # and a whole-body grep would misclassify an approved PR as "changes". Fall back
 # to prose only when no label is present (changes-first there, as the safe bias).
-verdict_label=$(printf '%s' "$input" | grep -oE 'agent-merge-[a-z-]+' | head -1 || true)
+#
+# The label has two historical shapes and BOTH must parse:
+#   legacy (<=PR#31): `agent-merge-approved` / `agent-merge-blocked`
+#   current:          `merge-approved` / `request-changes`
+# Resolution order matters. The checklist line `- [x] Set verdict label (`X`)`
+# is preferred because it is emitted before the findings section, so a finding
+# that quotes a label verbatim cannot shadow it. Next the standalone trailing
+# label chip (current shape emits only that). Only then a bare legacy scan.
+verdict_label=$(printf '%s\n' "$input" \
+  | grep -oE 'Set verdict label \(`[^`]+`\)' | head -1 | grep -oE '`[^`]+`' | tr -d '`' || true)
+if [ -z "$verdict_label" ]; then
+  verdict_label=$(printf '%s\n' "$input" \
+    | grep -oE '^`(agent-merge-[a-z-]+|merge-approved|request-changes)`$' | tail -1 | tr -d '`' || true)
+fi
+if [ -z "$verdict_label" ]; then
+  verdict_label=$(printf '%s' "$input" | grep -oE 'agent-merge-[a-z-]+' | head -1 || true)
+fi
+
+# `merge-approved` contains "approved"; `request-changes` contains "changes";
+# `agent-merge-blocked` contains "blocked". Test approved first so the shared
+# substring "merge" in either label can never decide the branch.
 if [[ "$verdict_label" == *approved* ]]; then
   verdict="approved"
 elif [[ "$verdict_label" == *blocked* || "$verdict_label" == *changes* ]]; then
   verdict="changes"
-elif printf '%s' "$input" | grep -qiE '\*\*Changes requested\*\*|changes-requested'; then
-  verdict="changes"
-elif printf '%s' "$input" | grep -qiE '\*\*Approved\*\*'; then
-  verdict="approved"
 else
-  verdict="none"
+  # No label. Prefer the single `**Verdict:**` summary line over a whole-body
+  # grep: the current bot bolds the KEY (`**Verdict:** ✅ Approved`), not the
+  # word, so the legacy `**Approved**` pattern never matches it.
+  vline=$(printf '%s\n' "$input" | grep -m1 -E '^\*\*Verdict:\*\*' || true)
+  if   printf '%s' "$vline" | grep -qiE 'changes requested'; then verdict="changes"
+  elif printf '%s' "$vline" | grep -qiE 'approved';          then verdict="approved"
+  elif printf '%s' "$input" | grep -qiE '\*\*Changes requested\*\*|changes-requested'; then verdict="changes"
+  elif printf '%s' "$input" | grep -qiE '\*\*Approved\*\*'; then verdict="approved"
+  else verdict="none"
+  fi
 fi
 
 # --- Findings: only the `### Findings` … next `### ` block, lines of the form
