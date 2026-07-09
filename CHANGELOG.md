@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.1.0](https://github.com/Falconiere/toolu/compare/v3.0.0...v3.1.0) (2026-07-09)
+
+
+### Features
+
+* **jira:** add plan family to decompose ticket work ([e0d0316](https://github.com/Falconiere/toolu/commit/e0d031674aad061a0feca6a7ef7cd1f393962736))
+
+
+### Bug Fixes
+
+* **dashboard:** surface dropped config warning ([5cf58e4](https://github.com/Falconiere/toolu/commit/5cf58e4f029f615b36054a30a805946ffc698116))
+* **jira:** validate the issue key before building any path ([03618c3](https://github.com/Falconiere/toolu/commit/03618c33c4432cdb87070dfdcfe2c94947857f96))
+* **pr-babysit:** parse the review bot's current verdict label ([375d648](https://github.com/Falconiere/toolu/commit/375d64842006f93533e740880c007d9e7ef38af4))
+
 ## [3.0.0](https://github.com/Falconiere/toolu/compare/v2.1.1...v3.0.0) (2026-07-06)
 
 
