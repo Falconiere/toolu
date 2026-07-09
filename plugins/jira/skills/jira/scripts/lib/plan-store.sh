@@ -20,11 +20,23 @@ jira_plan_repo_root() {
   git rev-parse --show-toplevel 2>/dev/null || pwd
 }
 
+# jira_plan_require_key KEY
+# Accept only a well-formed Jira key (LETTERS-DIGITS). Both path builders below
+# interpolate the key into a filename, so anything else -- a slash, a `..`, an
+# absolute path -- must be rejected here rather than escaping the ledger dir.
+jira_plan_require_key() {
+  local key="${1:-}"
+  if [[ ! "$key" =~ ^[A-Za-z][A-Za-z0-9_]*-[0-9]+$ ]]; then
+    echo "jira plan: not a valid issue key: '${key}'" >&2
+    return 1
+  fi
+}
+
 # jira_plan_ledger_path KEY
 # Print <repo_root>/.claude/tmp/plan-ledger/jira-<KEY>.json.
 jira_plan_ledger_path() {
   local key="$1"
-  [ -n "$key" ] || { echo "jira plan: ledger path needs an issue key" >&2; return 1; }
+  jira_plan_require_key "$key" || return 1
   printf '%s\n' "$(jira_plan_repo_root)/.claude/tmp/plan-ledger/jira-${key}.json"
 }
 
@@ -32,7 +44,7 @@ jira_plan_ledger_path() {
 # Print <repo_root>/.claude/tmp/jira/plans/<KEY>.md.
 jira_plan_doc_path() {
   local key="$1"
-  [ -n "$key" ] || { echo "jira plan: doc path needs an issue key" >&2; return 1; }
+  jira_plan_require_key "$key" || return 1
   printf '%s\n' "$(jira_plan_repo_root)/.claude/tmp/jira/plans/${key}.md"
 }
 
