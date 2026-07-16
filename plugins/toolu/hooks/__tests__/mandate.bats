@@ -6,6 +6,12 @@
 # mandate. Drives the REAL entrypoint with a synthetic installed-plugins
 # registry; binary presence is real (skips when the tool is not installed).
 #
+# exa-search / context7 have no binary on PATH — their presence signal is the
+# CLI wrapper their own SessionStart hooks publish under
+# ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/<plugin>/search.sh. exa-search's mandate
+# additionally requires EXA_API_KEY in the environment (the wrapper hard-fails
+# without it); context7 is keyless and fires on plugin + wrapper alone.
+#
 # comemory's mandate is OPT-IN: it fires only after /comemory:setup has written
 # the `comemory.setup_done` flag into toolu.config.json. Before that the block
 # emits a one-line /comemory:setup nudge instead — but only when jq is present
@@ -32,11 +38,25 @@ _write_config() {
 # Run session-start from an empty dir (no toolu manifest in PROJECT_ROOT,
 # so the dep-warning block stays quiet) with a synthetic plugins registry.
 # CLAUDE_PROJECT_DIR pins the project-config root at $TMP so _write_config's
-# toolu.config.json is the config the loader reads.
+# toolu.config.json is the config the loader reads. CLAUDE_CONFIG_DIR is
+# pinned to $TMP/.claude (identical to the HOME=$TMP default — explicit so a
+# dev shell's real CLAUDE_CONFIG_DIR can't leak in) and EXA_API_KEY is
+# blanked for the same reason. Extra VAR=value args pass through to env for
+# per-test overrides: `_run_entry EXA_API_KEY=x`.
 _run_entry() {
   ( cd "$TMP" && env CLAUDE_PLUGINS_REGISTRY="$REG" HOME="$TMP" \
-      CLAUDE_PROJECT_DIR="$TMP" \
+      CLAUDE_PROJECT_DIR="$TMP" CLAUDE_CONFIG_DIR="$TMP/.claude" \
+      EXA_API_KEY= "$@" \
       bash "$ENTRY" <<<'{"hook_event_name":"SessionStart","source":"startup"}' )
+}
+
+# Publish a stub CLI wrapper at the stable config-dir path the exa-search /
+# context7 plugins' SessionStart hooks symlink to — the mandate block treats
+# the wrapper file (executable) as the plugin's presence signal.
+_publish_wrapper() {
+  mkdir -p "$TMP/.claude/$1"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "$TMP/.claude/$1/search.sh"
+  chmod +x "$TMP/.claude/$1/search.sh"
 }
 
 # Run the entry under a sanitized PATH that LACKS jq but carries the coreutils
@@ -153,6 +173,94 @@ _run_entry_no_jq() {
   # Mandates propagate to nested subagents.
   echo "$output" | grep -q "Propagation"
   echo "$output" | grep -q "bind EVERY agent"
+}
+
+@test "mandate: exa-search mandate fires when plugin active + wrapper published + EXA_API_KEY set" {
+  printf '%s' '{"plugins":{"exa-search@toolu":{}}}' > "$REG"
+  _publish_wrapper exa-search
+  run _run_entry EXA_API_KEY=test-key
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "MANDATORY"
+  echo "$output" | grep -q 'exa-search/search.sh'
+  echo "$output" | grep -q "FALLBACK ONLY"
+}
+
+@test "mandate: NO exa-search mandate when EXA_API_KEY is unset (wrapper would hard-fail)" {
+  printf '%s' '{"plugins":{"exa-search@toolu":{}}}' > "$REG"
+  _publish_wrapper exa-search
+  run _run_entry
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q 'exa-search/search.sh'
+}
+
+@test "mandate: NO exa-search mandate when the wrapper is not published" {
+  printf '%s' '{"plugins":{"exa-search@toolu":{}}}' > "$REG"
+  # No _publish_wrapper — first-session race or broken publish hook.
+  run _run_entry EXA_API_KEY=test-key
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q 'exa-search/search.sh'
+}
+
+@test "mandate: NO exa-search mandate when skills.exa-search == false" {
+  printf '%s' '{"plugins":{"exa-search@toolu":{}}}' > "$REG"
+  _publish_wrapper exa-search
+  _write_config '{"skills":{"exa-search":false}}'
+  run _run_entry EXA_API_KEY=test-key
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q 'exa-search/search.sh'
+}
+
+@test "mandate: context7 mandate fires when plugin active + wrapper published (no API key needed)" {
+  printf '%s' '{"plugins":{"context7@toolu":{}}}' > "$REG"
+  _publish_wrapper context7
+  run _run_entry
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "MANDATORY"
+  echo "$output" | grep -q 'context7/search.sh'
+  echo "$output" | grep -q 'docs <id> <query>'
+}
+
+@test "mandate: NO context7 mandate when the wrapper is not published" {
+  printf '%s' '{"plugins":{"context7@toolu":{}}}' > "$REG"
+  # No _publish_wrapper — first-session race or broken publish hook.
+  run _run_entry
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q 'context7/search.sh'
+}
+
+@test "mandate: NO context7 mandate when the plugin is definitively absent (wrapper published)" {
+  printf '%s' '{"plugins":{}}' > "$REG"
+  _publish_wrapper context7
+  _publish_wrapper exa-search
+  run _run_entry EXA_API_KEY=test-key
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q 'context7/search.sh'
+  ! echo "$output" | grep -q 'exa-search/search.sh'
+}
+
+@test "mandate: NO context7 mandate when skills.context7 == false" {
+  printf '%s' '{"plugins":{"context7@toolu":{}}}' > "$REG"
+  _publish_wrapper context7
+  _write_config '{"skills":{"context7":false}}'
+  run _run_entry
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q 'context7/search.sh'
+}
+
+@test "mandate: all four mandates fire under one MANDATORY header" {
+  command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
+  command -v ast-grep >/dev/null 2>&1 || command -v sg >/dev/null 2>&1 || skip "ast-grep binary not installed"
+  printf '%s' '{"plugins":{"comemory@toolu":{},"ast-grep@toolu":{},"exa-search@toolu":{},"context7@toolu":{}}}' > "$REG"
+  _write_config '{"comemory":{"setup_done":true}}'
+  _publish_wrapper exa-search
+  _publish_wrapper context7
+  run _run_entry EXA_API_KEY=test-key
+  [ "$status" -eq 0 ]
+  [ "$(echo "$output" | grep -c "MANDATORY — proactive plugin use")" -eq 1 ]
+  echo "$output" | grep -q 'comemory.sh search'
+  echo "$output" | grep -q 'ast-grep run --pattern'
+  echo "$output" | grep -q 'exa-search/search.sh'
+  echo "$output" | grep -q 'context7/search.sh'
 }
 
 @test "mandate: indeterminate registry fails open — comemory mandate still fires when opted in" {

@@ -159,8 +159,9 @@ if [ "${#missing_tools[@]}" -gt 0 ]; then
 fi
 
 # ── Mandatory proactive tool use ────────────────────────────────────────────
-# When the comemory / ast-grep plugins are INSTALLED and their underlying tool
-# is on PATH, front-load a hard, proactive mandate into session context. The
+# When the comemory / ast-grep / exa-search / context7 plugins are INSTALLED
+# and their underlying tool is available (binary on PATH, or published CLI
+# wrapper), front-load a hard, proactive mandate into session context. The
 # skills are ALWAYS-ACTIVE, but their bodies only load on trigger and the agent
 # tends to wait to be asked — this injection makes the requirement unmissable
 # from turn one. Aggressive by design; the per-skill opt-out (toolu_enabled
@@ -180,6 +181,21 @@ elif [ "$HAS_COMEMORY" = "comemory" ] && toolu_enabled skills comemory && toolu_
 fi
 if [ "$HAS_ASTGREP" = "ast-grep" ] && toolu_enabled skills ast-grep && toolu_plugin_active ast-grep@toolu; then
   mandates+=("ast-grep (structural search) — for ANY search by code shape (signatures, call sites, impls, trait/interface usage, patterns) you MUST reach for \`ast-grep run --pattern …\` FIRST. Grep/ripgrep/sed are a FALLBACK ONLY — use them for plain-text literals in non-code files, or when a query genuinely cannot be expressed structurally. Never reach for them first on code.")
+fi
+# exa-search / context7 publish their CLI wrappers at a stable config-dir
+# path via their own SessionStart hooks — there is no binary on PATH to
+# detect, so the wrapper file itself is the presence signal. The symlink
+# persists across sessions; only the very first session of a fresh install
+# can race the publishing hook, and the mandate simply appears one session
+# later. exa-search additionally gates on EXA_API_KEY: the wrapper hard-fails
+# without it, and mandating a broken tool is worse than staying quiet.
+exa_wrapper="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/exa-search/search.sh"
+if [ -n "${EXA_API_KEY:-}" ] && [ -x "$exa_wrapper" ] && toolu_enabled skills exa-search && toolu_plugin_active exa-search@toolu; then
+  mandates+=("exa-search (web search) — for ANY web search, code-example hunt, URL crawl, or topic research you MUST reach for \`\"\${CLAUDE_CONFIG_DIR:-\$HOME/.claude}/exa-search/search.sh\"\` FIRST (commands: search / crawl / similar — see the exa-search skill). Native WebSearch/WebFetch are a FALLBACK ONLY — use them when the wrapper errors or a URL needs your logged-in session.")
+fi
+ctx7_wrapper="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/context7/search.sh"
+if [ -x "$ctx7_wrapper" ] && toolu_enabled skills context7 && toolu_plugin_active context7@toolu; then
+  mandates+=("context7 (library docs) — for ANY third-party library/framework question (API usage, current docs, code examples, version behavior) you MUST query \`\"\${CLAUDE_CONFIG_DIR:-\$HOME/.claude}/context7/search.sh\"\` FIRST (\`search <library>\` to resolve the ID, then \`docs <id> <query>\`) BEFORE answering from memory or searching the web. Web search is a FALLBACK ONLY when context7 lacks coverage.")
 fi
 if [ "${#mandates[@]}" -gt 0 ]; then
   mwarn="MANDATORY — proactive plugin use (installed + available; NOT optional, do NOT ask permission):"

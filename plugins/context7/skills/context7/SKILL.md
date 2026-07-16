@@ -1,6 +1,6 @@
 ---
 name: context7
-description: "Look up library documentation and code examples using Context7. Triggers when the user needs up-to-date docs, API references, or usage examples for any programming library."
+description: "ALWAYS ACTIVE — Library documentation protocol. You MUST use the context7 CLI to look up current docs, API references, and usage examples for any third-party library BEFORE answering from memory or searching the web; web search is a fallback only. Triggers on any library/framework API, usage, docs, or version question."
 ---
 # Context7 — Library Documentation Lookup
 Use this skill to find up-to-date documentation and code examples for any programming library or framework.
