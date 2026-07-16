@@ -1,6 +1,6 @@
 ---
 name: exa-search
-description: Guides effective use of built-in Exa tools for web search, code search, URL crawling, and deep research. Triggers when searching for external information, looking up docs/APIs, researching technologies, investigating topics, or crawling URLs.
+description: ALWAYS ACTIVE — Web search/crawl protocol. You MUST use the exa-search CLI (search / crawl / similar) instead of native WebSearch/WebFetch for web searches, code-example hunts, URL crawling, and topic research whenever EXA_API_KEY is set; native tools are a fallback only. Triggers when searching for external information, looking up docs/APIs, researching technologies, investigating topics, or crawling URLs.
 ---
 
 # Exa Search
