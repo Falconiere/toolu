@@ -180,7 +180,7 @@ _run_entry_no_jq() {
   _publish_wrapper exa-search
   run _run_entry EXA_API_KEY=test-key
   [ "$status" -eq 0 ]
-  echo "$output" | grep -q "MANDATORY"
+  echo "$output" | grep -q "MANDATORY — proactive plugin use"
   echo "$output" | grep -q 'exa-search/search.sh'
   echo "$output" | grep -q "FALLBACK ONLY"
 }
@@ -215,7 +215,7 @@ _run_entry_no_jq() {
   _publish_wrapper context7
   run _run_entry
   [ "$status" -eq 0 ]
-  echo "$output" | grep -q "MANDATORY"
+  echo "$output" | grep -q "MANDATORY — proactive plugin use"
   echo "$output" | grep -q 'context7/search.sh'
   echo "$output" | grep -q 'docs <id> <query>'
 }
@@ -257,6 +257,12 @@ _run_entry_no_jq() {
   run _run_entry EXA_API_KEY=test-key
   [ "$status" -eq 0 ]
   [ "$(echo "$output" | grep -c "MANDATORY — proactive plugin use")" -eq 1 ]
+  # Exactly the four mandate bullets carry "you MUST" — the header, the
+  # propagation bullet, and the session docs do not — so the occurrence
+  # count pins all four to one shared header block (not just "at least one
+  # fired"). grep -o (occurrences), not -c (lines): the hook emits one JSON
+  # line, so every mandate lands on the same line.
+  [ "$(echo "$output" | grep -o 'you MUST' | wc -l | tr -d ' ')" -eq 4 ]
   echo "$output" | grep -q 'comemory.sh search'
   echo "$output" | grep -q 'ast-grep run --pattern'
   echo "$output" | grep -q 'exa-search/search.sh'
