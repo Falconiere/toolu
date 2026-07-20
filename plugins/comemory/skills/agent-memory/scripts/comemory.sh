@@ -7,23 +7,46 @@
 # reads it from the environment) for the data root.
 set -euo pipefail
 
+# Real directory of THIS script, with symlinks resolved. BASH_SOURCE holds the
+# path as INVOKED, and register.sh publishes this wrapper as a SYMLINK at
+# $CLAUDE_CONFIG_DIR/comemory/comemory.sh — the path SKILL.md and the scope-hook
+# deny banner both tell agents to use. Through that link ${BASH_SOURCE%/*} is
+# the LINK's dir, so every sibling-relative path below resolved against a tree
+# that does not exist: the repo-scope lib silently went missing and every memory
+# landed in the shared "unknown" pool. Walk the link chain by hand (readlink -f
+# is not portable to older BSD/macOS) so paths resolve against the real tree.
+_self="${BASH_SOURCE[0]}"
+# Guarantee a directory component: for a bare `comemory.sh` invocation
+# `${_self%/*}` yields the FILENAME, not a dir, so both the relative-link join
+# and the final cd would resolve against nonsense.
+case "$_self" in */*) ;; *) _self="./$_self" ;; esac
+while [ -L "$_self" ]; do
+  _link=$(readlink "$_self")
+  case "$_link" in
+    /*) _self="$_link" ;;
+    *)  _self="${_self%/*}/$_link" ;;
+  esac
+done
+_dir=$(cd "${_self%/*}" 2>/dev/null && pwd) || _dir="."
+
 # Canonical, worktree-shared repo scope via the plugin's own repo-scope lib (a
 # sibling that ships with comemory — no cross-plugin path, unlike toolu's
 # detect.sh which resolves the per-worktree --show-toplevel for gate state).
 # comemory_repo_key returns 0 even when empty so `set -e` reaches the
-# REPO="unknown" fallback below. Missing lib → noop key → "unknown".
-_rs="${BASH_SOURCE%/*}/../../../lib/repo-scope.sh"
+# REPO="unknown" fallback below. Missing lib → noop key → "unknown"; _rs_ok
+# records which of those two causes fired so the warning below can name it.
+_rs="$_dir/../../../lib/repo-scope.sh"
 # shellcheck source=../../../lib/repo-scope.sh
-if [ -r "$_rs" ]; then . "$_rs"; else comemory_repo_key() { :; }; fi
+if [ -r "$_rs" ]; then . "$_rs"; _rs_ok=1; else comemory_repo_key() { :; }; _rs_ok=0; fi
 
 # `setup` must run BEFORE the binary-presence guard below: guiding the install
 # of an absent comemory CLI is the whole point of setup, so it cannot be gated
 # on the CLI already being present. Resolve the plugin root three levels up from
-# this wrapper (skills/agent-memory/scripts → plugin root) with cd+pwd so a
-# relative invocation still resolves, and hand the remaining args to setup.sh.
+# this wrapper (skills/agent-memory/scripts → plugin root) off the symlink-
+# resolved _dir, so a relative or symlinked invocation still finds setup.sh.
 if [ "${1:-}" = setup ]; then
   shift
-  _root=$(cd "${BASH_SOURCE%/*}/../../.." 2>/dev/null && pwd) || _root=""
+  _root=$(cd "$_dir/../../.." 2>/dev/null && pwd) || _root=""
   _setup_sh="${_root:+$_root/}scripts/setup.sh"
   if [ -x "$_setup_sh" ]; then
     exec "$_setup_sh" "$@"
@@ -43,10 +66,16 @@ fi
 REPO="${MY_CLAUDE_COMEMORY_REPO:-$(comemory_repo_key)}"
 if [ -z "$REPO" ]; then
   REPO="unknown"
-  # Visibility: outside a git repo with MY_CLAUDE_COMEMORY_REPO unset, every
-  # memory lands in the shared "unknown" pool, silently co-mingling across
-  # repo-less runs. Warn once so the contamination is not invisible.
-  printf 'comemory.sh: no git repo and MY_CLAUDE_COMEMORY_REPO unset — scoping to "unknown" (set MY_CLAUDE_COMEMORY_REPO to isolate)\n' >&2
+  # Visibility: an empty key means every memory lands in the shared "unknown"
+  # pool, silently co-mingling across runs. Warn once so the contamination is
+  # not invisible — and name the ACTUAL cause. A missing repo-scope lib produces
+  # the same empty key as being outside a repo, and blaming git for a broken
+  # install sends the reader hunting the wrong thing.
+  if [ "$_rs_ok" -eq 0 ]; then
+    printf 'comemory.sh: repo-scope lib not found at %s — cannot detect the repo, scoping to "unknown" (broken install; set MY_CLAUDE_COMEMORY_REPO to isolate)\n' "$_rs" >&2
+  else
+    printf 'comemory.sh: no git repo and MY_CLAUDE_COMEMORY_REPO unset — scoping to "unknown" (set MY_CLAUDE_COMEMORY_REPO to isolate)\n' >&2
+  fi
 fi
 # A flag-like repo value (leading '-') would be parsed by comemory/clap as a
 # flag rather than the --repo argument. Refuse it — fall back to "unknown".
