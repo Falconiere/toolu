@@ -15,7 +15,7 @@ Requires the `toolu` plugin.
 Every TypeScript file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks (assembled from ordered `hooks/concerns/` fragments into one module at `SessionStart`):
 
 - File / function line limits (config-driven).
-- No `../` relative imports — use the `@/` alias.
+- No `../` relative imports — use the `@/` alias (only enforced when the project defines a `@/*` path alias in its tsconfig).
 - No `as` type assertions and no hand-rolled type guards — use a type guard / Zod schema.
 - Tests colocated in a flat `__tests__/`.
 - Duplicate-type detection across the tree, plus "does too much" / too-many-factories heuristics.

@@ -165,6 +165,46 @@ describe("listSessions + index.json", () => {
   });
 });
 
+describe("readIndex shape guarding (isProjectIndex)", () => {
+  test("a corrupt index.json is treated as absent, never thrown", () => {
+    const pid = "idxcorrupt01";
+    const dir = projectDir(pid);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "index.json"), "{ not valid json");
+    expect(listSessions(pid)).toEqual([]); // corrupt JSON → absent, no throw
+  });
+
+  test("a well-formed index whose `sessions` is not an array is rejected", () => {
+    const pid = "idxshape0001";
+    const dir = projectDir(pid);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "index.json"), JSON.stringify({ sessions: "not-an-array" }));
+    expect(listSessions(pid)).toEqual([]); // isProjectIndex rejects the wrong shape
+  });
+});
+
+describe("readSession record guarding (isActivityRecord)", () => {
+  test("valid-JSON lines that are not known records are skipped; real records kept", () => {
+    const pid = "reckindpid01";
+    const sid = "sess-unknown-kind";
+    const dir = projectDir(pid);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, `${sid}.jsonl`),
+      [
+        JSON.stringify({ kind: "meta", agentId: "x", agentType: "t", description: "d", toolUseId: "toolu_x" }),
+        JSON.stringify({ kind: "bogus", toolUseId: "toolu_y" }), // valid JSON, unknown discriminant
+        JSON.stringify({ noKind: true }), // valid JSON object, no `kind`
+        "123", // valid JSON, not an object
+      ].join("\n") + "\n",
+    );
+    const data = readSession(pid, sid);
+    expect(data.metas.length).toBe(1); // only the real meta survives the guard
+    expect(data.spawns.size).toBe(0);
+    expect(data.results.size).toBe(0);
+  });
+});
+
 describe("applyRetention", () => {
   const RPROJ = "ret000111222";
   function summary(sessionId: string, endedAt: string): ReturnType<typeof summarizeSession> {

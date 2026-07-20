@@ -38,9 +38,20 @@ teardown() {
   [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"
 }
 
-# Minimal TS project (tsconfig + bun lockfile) so detect_ts/detect_node_pm pass
-# (verbatim from the monolith bats).
+# Minimal TS project (tsconfig + bun lockfile) so detect_ts/detect_node_pm pass.
+# The tsconfig declares a `@/*` path alias so the `../ import` rule (now gated on
+# the alias existing) fires — the fixtures below that assert on it rely on this.
 _ts_project() {
+  echo '{"compilerOptions":{"paths":{"@/*":["./src/*"]}}}' > "$PROJ/tsconfig.json"
+  echo '{"name":"x"}' > "$PROJ/package.json"
+  touch "$PROJ/bun.lock"
+  mkdir -p "$PROJ/src"
+  ( cd "$PROJ" && git add -A && git -c user.email=t@t -c user.name=t commit -q -m setup )
+}
+
+# Same minimal project but WITHOUT a `@/` path alias — the plain-NodeNext case
+# where a `../` import has no alias to move to.
+_ts_project_no_alias() {
   echo '{}' > "$PROJ/tsconfig.json"
   echo '{"name":"x"}' > "$PROJ/package.json"
   touch "$PROJ/bun.lock"
@@ -133,6 +144,35 @@ EOF
   echo "$still" | jq -e '.violations | contains("Forbidden ../ import")'
   echo "$still" | jq -e ".violations | contains(\"Forbidden 'as' type assertion\")"
   echo "$still" | jq -e '.violations | (contains("Forbidden console.log") | not)'
+}
+
+# --- ../ import rule is gated on a `@/` alias actually existing ---
+# Regression: the rule fired unconditionally and told the author to "use @/
+# alias" even in a repo with no such alias — an unactionable false positive that
+# blocked every edit to the file. With no alias configured, the `../` import must
+# NOT be flagged; an unrelated `as` cast in the same file still must, so the gate
+# is scoped to the import rule alone, not silenced wholesale.
+@test "ts assembled: ../ import NOT flagged when the project defines no @/ alias" {
+  _ts_project_no_alias
+  cat > "$PROJ/src/bad.ts" <<'EOF'
+import { thing } from "../other";
+export const x = thing as Bar;
+EOF
+  asm=$(_gate_canon "$ASSEMBLED" "$PROJ/src/bad.ts")
+  echo "$asm" | jq -e '.status == "failing"'                                   # the `as` cast still fails the gate
+  echo "$asm" | jq -e ".violations | contains(\"Forbidden 'as' type assertion\")"
+  echo "$asm" | jq -e '.violations | (contains("Forbidden ../ import") | not)' # ...but the import is not flagged
+}
+
+# Inverse: with a `@/` alias configured, the same `../` import IS flagged.
+@test "ts assembled: ../ import IS flagged when the project defines a @/ alias" {
+  _ts_project   # tsconfig here declares paths: { "@/*": ["./src/*"] }
+  cat > "$PROJ/src/bad.ts" <<'EOF'
+import { thing } from "../other";
+EOF
+  asm=$(_gate_canon "$ASSEMBLED" "$PROJ/src/bad.ts")
+  echo "$asm" | jq -e '.status == "failing"'
+  echo "$asm" | jq -e '.violations | contains("Forbidden ../ import")'
 }
 
 # --- Deliverable A.4: suppression preserved ---

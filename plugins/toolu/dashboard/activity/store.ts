@@ -146,21 +146,63 @@ export function appendRecord(projectId: string, sessionId: string, rec: Activity
   }
 }
 
+/** True for a Node fs "file not found" error — the store's normal "nothing
+ *  persisted yet" case, distinguished from real I/O errors worth surfacing.
+ *  `in`-narrows without an `as` assertion. */
+export function isEnoent(err: unknown): boolean {
+  return typeof err === "object" && err !== null && "code" in err && err.code === "ENOENT";
+}
+
+/** Surface an unexpected store error, staying quiet on the ENOENT that just
+ *  means "nothing persisted yet". The tolerant readers below degrade to an empty
+ *  fallback on any fs failure; routing that failure through here keeps a real
+ *  I/O fault (permissions, corruption) from vanishing silently. */
+function logStoreError(context: string, err: unknown): void {
+  if (!isEnoent(err)) console.error(`activity store: ${context} — ${String(err)}`);
+}
+
+/** Runtime shape check for a parsed index.json — the store treats anything that
+ *  fails as absent. A type guard (not an `as` cast): validates the one field the
+ *  readers rely on, `sessions` being an array. */
+function isProjectIndex(v: unknown): v is ProjectIndex {
+  return typeof v === "object" && v !== null && "sessions" in v && Array.isArray(v.sessions);
+}
+
+/** Runtime shape check for one parsed session-log line: an object tagged with a
+ *  known `kind`. A type guard (not an `as` cast); the per-kind field access
+ *  below stays defensively guarded, so this only needs the discriminant. */
+function isActivityRecord(v: unknown): v is ActivityRecord {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    "kind" in v &&
+    (v.kind === "meta" || v.kind === "spawn" || v.kind === "result")
+  );
+}
+
 /** Read and parse `<projectId>/index.json`, or null when absent/corrupt. */
 function readIndex(projectId: string): ProjectIndex | null {
   let raw: string;
   try {
     raw = readFileSync(join(projectDir(projectId), "index.json"), "utf8");
-  } catch {
+  } catch (err) {
+    // A missing index is the normal "no history yet" state (hit on every tick),
+    // so stay quiet on ENOENT; surface anything else (permissions, I/O) before
+    // treating the project as having no sessions.
+    if (!isEnoent(err)) {
+      console.error(`activity store: reading index for ${projectId} failed — treating as absent (${String(err)})`);
+    }
     return null;
   }
   if (raw.trim().length === 0) return null;
   try {
-    const parsed = JSON.parse(raw) as ProjectIndex;
-    if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.sessions)) return null;
-    return parsed;
-  } catch {
-    return null; // corrupt index: treated as absent, never fatal.
+    const parsed: unknown = JSON.parse(raw);
+    return isProjectIndex(parsed) ? parsed : null;
+  } catch (err) {
+    // The file existed and read cleanly, so a throw here is corrupt JSON — worth
+    // surfacing. Still treated as absent, never fatal.
+    console.error(`activity store: index for ${projectId} is corrupt JSON — treating as absent (${String(err)})`);
+    return null;
   }
 }
 
@@ -191,19 +233,21 @@ export function readSession(projectId: string, sessionId: string): SessionData {
   let raw: string;
   try {
     raw = readFileSync(logPath, "utf8");
-  } catch {
+  } catch (err) {
+    logStoreError(`reading session log ${sessionId}`, err);
     return { metas, spawns, results };
   }
   for (const line of raw.split("\n")) {
     const trimmed = line.trim();
     if (trimmed.length === 0) continue;
-    let rec: ActivityRecord;
+    let parsed: unknown;
     try {
-      rec = JSON.parse(trimmed) as ActivityRecord;
+      parsed = JSON.parse(trimmed);
     } catch {
       continue; // torn/partial line: skip it, keep going.
     }
-    if (!rec || typeof rec !== "object") continue;
+    if (!isActivityRecord(parsed)) continue;
+    const rec = parsed;
     if (rec.kind === "meta") {
       if (typeof rec.toolUseId === "string" && rec.toolUseId.length > 0) metas.push(rec);
     } else if (rec.kind === "spawn") {
@@ -288,7 +332,8 @@ export function applyRetention(projectId: string, opts: RetentionOptions, nowMs:
 export function storeHasProject(projectId: string): boolean {
   try {
     return statSync(projectDir(projectId)).isDirectory();
-  } catch {
+  } catch (err) {
+    logStoreError(`stat project ${projectId}`, err);
     return false;
   }
 }
@@ -298,7 +343,8 @@ export function listSessionFiles(projectId: string): string[] {
   let entries: string[];
   try {
     entries = readdirSync(projectDir(projectId));
-  } catch {
+  } catch (err) {
+    logStoreError(`listing session files for ${projectId}`, err);
     return [];
   }
   return entries

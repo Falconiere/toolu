@@ -39,6 +39,12 @@ import { auth } from '@/lib/auth';
 
 Use the project's `@/` path alias for all cross-module imports.
 
+This rule fires **only when the project actually defines a `@/*` path alias** (a
+`compilerOptions.paths` entry in a `tsconfig.json` / `tsconfig.base.json` up-tree
+from the edited file). A repo that uses plain NodeNext relative imports with no
+alias configured has nothing to switch to, so `../` imports are left alone
+there.
+
 ### 3. No `as` Type Assertions
 
 ```typescript
