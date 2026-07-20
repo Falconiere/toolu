@@ -204,6 +204,28 @@ describe("applyRetention", () => {
   test("no-op when index absent", () => {
     expect(applyRetention("absent999", { retentionDays: 1, maxSessionsPerProject: 1 })).toEqual([]);
   });
+
+  test("measures the age cutoff from the injected clock, not the wall clock", () => {
+    // Regression: the cutoff read Date.now() directly, so a caller with its own
+    // clock (buildSelectedDetail threads one through every other read) could not
+    // make eviction reproducible — any fixture with a fixed date silently aged
+    // out and started deleting itself once real time passed the window.
+    const CLK = "clk000111222";
+    const dated = "2026-06-19T19:45:00.000Z";
+    appendRecord(CLK, "dated-sess", { kind: "meta", agentId: "d", agentType: "t", description: "d", toolUseId: "toolu_d" });
+    writeIndex(CLK, { sessions: [summary("dated-sess", dated)] });
+
+    // One day after the session: inside a 30-day window, so it survives — even
+    // though the same call against the real clock would evict it.
+    const justAfter = Date.parse(dated) + 24 * 60 * 60 * 1000;
+    expect(applyRetention(CLK, { retentionDays: 30, maxSessionsPerProject: 200 }, justAfter)).toEqual([]);
+    expect(listSessions(CLK).map((s) => s.sessionId)).toEqual(["dated-sess"]);
+
+    // 31 days after: past the window, so the injected clock does evict.
+    const wellAfter = Date.parse(dated) + 31 * 24 * 60 * 60 * 1000;
+    expect(applyRetention(CLK, { retentionDays: 30, maxSessionsPerProject: 200 }, wellAfter)).toEqual(["dated-sess"]);
+    expect(listSessions(CLK)).toEqual([]);
+  });
 });
 
 describe("assertSafeId (path-traversal chokepoint)", () => {

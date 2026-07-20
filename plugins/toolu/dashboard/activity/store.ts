@@ -253,11 +253,15 @@ export interface RetentionOptions {
 
 /** Drop session logs older than retentionDays OR beyond maxSessionsPerProject
  *  (newest kept), delete their NDJSON files, and rewrite index.json atomically.
- *  No-op when the index is absent. Returns the removed session ids. */
-export function applyRetention(projectId: string, opts: RetentionOptions): string[] {
+ *  No-op when the index is absent. Returns the removed session ids.
+ *
+ *  nowMs is the clock the age cutoff is measured from; callers that already have
+ *  an injected clock (the aggregate lane threads one through every other read)
+ *  must pass it, so eviction is reproducible rather than wall-clock dependent. */
+export function applyRetention(projectId: string, opts: RetentionOptions, nowMs: number = Date.now()): string[] {
   const index = readIndex(projectId);
   if (!index) return [];
-  const cutoffMs = Date.now() - opts.retentionDays * 24 * 60 * 60 * 1000;
+  const cutoffMs = nowMs - opts.retentionDays * 24 * 60 * 60 * 1000;
   // Newest-first ordering for both the age cutoff and the count cap.
   const ranked = [...index.sessions].sort((a, b) => sessionTime(b).localeCompare(sessionTime(a)));
   const kept: SessionSummary[] = [];
