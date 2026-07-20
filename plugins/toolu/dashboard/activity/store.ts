@@ -255,9 +255,10 @@ export interface RetentionOptions {
  *  (newest kept), delete their NDJSON files, and rewrite index.json atomically.
  *  No-op when the index is absent. Returns the removed session ids.
  *
- *  nowMs is the clock the age cutoff is measured from; callers that already have
- *  an injected clock (the aggregate lane threads one through every other read)
- *  must pass it, so eviction is reproducible rather than wall-clock dependent. */
+ *  @param nowMs - the clock the age cutoff is measured from (default Date.now()).
+ *  Callers that already have an injected clock — the aggregate lane threads one
+ *  through every other read — must pass it, so eviction is reproducible rather
+ *  than wall-clock dependent. */
 export function applyRetention(projectId: string, opts: RetentionOptions, nowMs: number = Date.now()): string[] {
   const index = readIndex(projectId);
   if (!index) return [];

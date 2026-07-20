@@ -4,7 +4,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 
@@ -16,6 +16,27 @@ import { buildMultiState, buildSelectedDetail, buildSessionDetail, buildSummarie
 
 const base = mkdtempSync(join(tmpdir(), "toolu-dash-aggregate-"));
 afterAll(() => rmSync(base, { recursive: true, force: true }));
+
+/** Newest event timestamp (ms) across every .jsonl under a cc-store fixture dir
+ *  (session log + its subagents), derived at runtime so a test clock anchored to
+ *  it tracks the fixture instead of a hand-copied literal that could silently
+ *  drift. Throws if the fixture yields no parseable timestamp — a broken fixture
+ *  must fail loudly, not hand back a bogus anchor. */
+function latestFixtureEventMs(fixtureDir: string): number {
+  let max = Number.NEGATIVE_INFINITY;
+  for (const entry of readdirSync(fixtureDir, { recursive: true, withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".jsonl")) continue;
+    const body = readFileSync(join(entry.parentPath, entry.name), "utf8");
+    for (const m of body.matchAll(/"timestamp":"([^"]+)"/g)) {
+      const ms = Date.parse(m[1]);
+      if (!Number.isNaN(ms) && ms > max) max = ms;
+    }
+  }
+  if (max === Number.NEGATIVE_INFINITY) {
+    throw new Error(`no parseable "timestamp" in any .jsonl under ${fixtureDir}`);
+  }
+  return max;
+}
 
 /** Create a real git repo (branch `main`, one commit) with a real ledger. */
 function makeRepo(name: string, steps: unknown[]): string {
@@ -168,13 +189,15 @@ describe("buildSelectedDetail attaches persisted sessions (history lane)", () =>
     rmSync(histBase, { recursive: true, force: true });
   });
 
-  // The fixture's events are hardcoded to 2026-06-19, and syncSessions prunes by
-  // DEFAULT_CONFIG.retentionDays (30) measured from the clock passed in. Passing
-  // the real Date.now() made these tests a time bomb: they went red on
-  // 2026-07-19 when the fixture aged past the window and applyRetention deleted
-  // the session mid-test. Anchor the clock to the fixture instead — the lane
-  // under test is retention-independent, so pinning it is the point.
-  const FIXTURE_NOW = Date.parse("2026-06-19T19:45:00.000Z") + 1000;
+  // syncSessions prunes by DEFAULT_CONFIG.retentionDays (30) measured from the
+  // clock passed in. Passing the real Date.now() made these tests a time bomb:
+  // they went red once the fixture's events aged past the window and
+  // applyRetention deleted the session mid-test. Anchor the clock to the fixture
+  // itself — the lane under test is retention-independent, so pinning it is the
+  // point. Derive the anchor from the fixture's own newest event at runtime
+  // (not a hardcoded literal) so it stays correct if the fixture is ever
+  // re-dated, and never drifts with the wall clock.
+  const FIXTURE_NOW = latestFixtureEventMs(FIXTURE_CC) + 1000;
 
   test("sessions are populated after backfilling the fixture project", () => {
     const id = buildSummaries(histCfg, inertSource).find((s) => basename(s.root) === "histRepo")!.id;
