@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.1](https://github.com/Falconiere/toolu/compare/v3.2.0...v3.2.1) (2026-07-20)
+
+
+### Bug Fixes
+
+* **ts-quality:** gate the ../ import rule on a @/ alias, clean the store's as/catch ([#127](https://github.com/Falconiere/toolu/issues/127)) ([1c63157](https://github.com/Falconiere/toolu/commit/1c6315740ff314464f547e8a5d5c183ca6fd0ae6))
+
 ## [3.2.0](https://github.com/Falconiere/toolu/compare/v3.1.0...v3.2.0) (2026-07-20)
 
 
