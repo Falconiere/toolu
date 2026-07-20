@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.2.0](https://github.com/Falconiere/toolu/compare/v3.1.0...v3.2.0) (2026-07-20)
+
+
+### Features
+
+* **toolu:** add exa-search and context7 proactive-use mandates ([aed41a3](https://github.com/Falconiere/toolu/commit/aed41a30992adbee73776397700c4c92f6d329e5))
+
+
+### Bug Fixes
+
+* **comemory:** cap the symlink walk and cover relative link chains ([4f7becd](https://github.com/Falconiere/toolu/commit/4f7becd6676d11d052dc62d25c28b304db2a287d))
+* **comemory:** resolve the wrapper's own path through symlinks ([e50f1a1](https://github.com/Falconiere/toolu/commit/e50f1a1da705853297dcd310b248c8801f66ef69))
+* **dashboard:** address review — derive test clock from fixture, JSDoc the param ([4b88852](https://github.com/Falconiere/toolu/commit/4b88852771f329e80fc2b465d9fe7a784991c5de))
+* **dashboard:** thread the injected clock through session retention ([02cc295](https://github.com/Falconiere/toolu/commit/02cc295d21f201f7387422b4eb40461ecbf2e8f8))
+* **toolu:** address PR review feedback ([0ae9f6d](https://github.com/Falconiere/toolu/commit/0ae9f6d8fc7831678de332ad7fe2920491296785))
+* **toolu:** point the recall hint at the published wrapper path ([a426915](https://github.com/Falconiere/toolu/commit/a426915a2de5c2f788a222e13572e35e540d761e))
+
 ## [3.1.0](https://github.com/Falconiere/toolu/compare/v3.0.0...v3.1.0) (2026-07-09)
 
 
