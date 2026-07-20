@@ -1,0 +1,18 @@
+{
+  "name": "agent-browser",
+  "version": "3.2.0",
+  "description": "Efficient, token-lean browser automation for agents via agent-browser (skill + CLI wrapper) — accessibility-tree snapshots with @eN refs instead of HTML/screenshots. Standalone, no dependencies.",
+  "author": {
+    "name": "Falconiere Barbosa",
+    "email": "hello@falconiere.io"
+  },
+  "homepage": "https://github.com/falconiere/toolu",
+  "repository": "https://github.com/falconiere/toolu.git",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "agent-browser",
+    "browser-automation",
+    "skills"
+  ]
+}

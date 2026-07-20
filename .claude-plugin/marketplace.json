@@ -111,6 +111,15 @@
       ]
     },
     {
+      "name": "agent-browser",
+      "source": "./plugins/agent-browser",
+      "description": "Efficient, token-lean browser automation for agents via agent-browser (skill + CLI wrapper) — accessibility-tree snapshots with @eN refs instead of HTML/screenshots. Standalone, no dependencies.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["agent-browser", "browser-automation", "skills"],
+      "license": "MIT"
+    },
+    {
       "name": "context7",
       "source": "./plugins/context7",
       "description": "Library documentation & code-example lookup via Context7 (skill + REST wrapper). Standalone, no dependencies.",
