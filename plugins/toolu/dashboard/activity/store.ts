@@ -149,7 +149,7 @@ export function appendRecord(projectId: string, sessionId: string, rec: Activity
 /** True for a Node fs "file not found" error — the store's normal "nothing
  *  persisted yet" case, distinguished from real I/O errors worth surfacing.
  *  `in`-narrows without an `as` assertion. */
-function isEnoent(err: unknown): boolean {
+export function isEnoent(err: unknown): boolean {
   return typeof err === "object" && err !== null && "code" in err && err.code === "ENOENT";
 }
 

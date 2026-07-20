@@ -12,6 +12,7 @@ import type { ActivitySummary, AgentNode, LiveActivitySource } from "./activity/
 import { backfillRepo } from "./activity/backfill.ts";
 import {
   applyRetention,
+  isEnoent,
   listSessions,
   readSession,
   type SessionSummary,
@@ -68,9 +69,9 @@ function readLedger(path: string): Ledger | null {
     parsed = JSON.parse(readFileSync(path, "utf8"));
   } catch (err) {
     // A missing ledger is the normal "project has no plan" case; surface
-    // anything else (corrupt JSON, I/O) before treating it as absent.
-    const missing = typeof err === "object" && err !== null && "code" in err && err.code === "ENOENT";
-    if (!missing) console.error(`dashboard: reading ledger ${path} failed — treating as absent (${String(err)})`);
+    // anything else (corrupt JSON, I/O) before treating it as absent. Reuses the
+    // store's isEnoent so both readers classify fs errors the same way.
+    if (!isEnoent(err)) console.error(`dashboard: reading ledger ${path} failed — treating as absent (${String(err)})`);
     return null;
   }
   return isLedgerLike(parsed) ? parsed : null;
