@@ -1,6 +1,6 @@
 {
   "name": "exa-search",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "Web, code, and URL search plus deep research via Exa (skill + REST wrapper). Standalone, no dependencies.",
   "author": {
     "name": "Falconiere Barbosa",

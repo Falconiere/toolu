@@ -1,6 +1,6 @@
 {
   "name": "pr-babysit",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "Babysit a PR for the current branch: cron-driven loop that fetches unresolved review comments and the CI review-bot's verdict, triages, fixes, replies, resolves, and chases findings to zero until CI is green.",
   "author": {
     "name": "Falconiere Barbosa",
