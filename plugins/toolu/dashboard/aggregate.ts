@@ -55,14 +55,25 @@ export interface MultiDashboardState {
   serverTime: string;
 }
 
+/** A parsed ledger is accepted when it is a non-null object (the readers below
+ *  use optional access); a type guard, not a cast assertion. */
+function isLedgerLike(v: unknown): v is Ledger {
+  return typeof v === "object" && v !== null;
+}
+
 /** Parse a ledger file, or null if absent/corrupt (never throws). */
 function readLedger(path: string): Ledger | null {
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(readFileSync(path, "utf8")) as Ledger;
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch {
+    parsed = JSON.parse(readFileSync(path, "utf8"));
+  } catch (err) {
+    // A missing ledger is the normal "project has no plan" case; surface
+    // anything else (corrupt JSON, I/O) before treating it as absent.
+    const missing = typeof err === "object" && err !== null && "code" in err && err.code === "ENOENT";
+    if (!missing) console.error(`dashboard: reading ledger ${path} failed — treating as absent (${String(err)})`);
     return null;
   }
+  return isLedgerLike(parsed) ? parsed : null;
 }
 
 /** Tally step statuses into the four kanban buckets. */
