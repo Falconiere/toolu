@@ -28,27 +28,21 @@ teardown() { rm -rf "$TMP"; }
   run bash "$WRAP" snapshot
   [ "$status" -eq 0 ]
   line="$(cat "$AB_LOG")"
-  [[ "$line" == snapshot* ]]
-  [[ " $line " == *" -i "* ]]
-  [[ "$line" == *"--json"* ]]
-  [[ "$line" == *"--max-output 4000"* ]]
-  [[ "$line" == *"--content-boundaries"* ]]
+  [ "$line" = "snapshot -i --json --max-output 4000 --content-boundaries" ]
 }
 
 @test "snapshot --max-output 500: caller value kept, 4000 not added" {
   run bash "$WRAP" snapshot --max-output 500
   [ "$status" -eq 0 ]
   line="$(cat "$AB_LOG")"
-  [[ "$line" == *"--max-output 500"* ]]
-  [[ "$line" != *"4000"* ]]
+  [ "$line" = "snapshot -i --json --content-boundaries --max-output 500" ]
 }
 
 @test "snapshot -a: caller scope kept, -i NOT added" {
   run bash "$WRAP" snapshot -a
   [ "$status" -eq 0 ]
   line="$(cat "$AB_LOG")"
-  [[ " $line " == *" -a "* ]]
-  [[ " $line " != *" -i "* ]]
+  [ "$line" = "snapshot --json --max-output 4000 --content-boundaries -a" ]
 }
 
 @test "screenshot: passthrough, no injected flags" {
