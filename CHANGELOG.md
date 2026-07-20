@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.0](https://github.com/Falconiere/toolu/compare/v3.2.1...v3.3.0) (2026-07-20)
+
+
+### Features
+
+* **agent-browser:** token-lean browser automation plugin (skill + CLI wrapper) ([#129](https://github.com/Falconiere/toolu/issues/129)) ([9ffdac3](https://github.com/Falconiere/toolu/commit/9ffdac3567e1d82612b3a26ed1c5562712c6b325))
+
 ## [3.2.1](https://github.com/Falconiere/toolu/compare/v3.2.0...v3.2.1) (2026-07-20)
 
 
