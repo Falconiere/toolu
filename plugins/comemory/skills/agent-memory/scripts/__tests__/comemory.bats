@@ -445,3 +445,63 @@ _make_repo() {
   [[ "$stderr" == *"no git repo"* ]]
   [[ "$stderr" != *"repo-scope lib not found"* ]]
 }
+
+@test "comemory: --repo resolves through a multi-hop RELATIVE symlink chain (real repo, argv stub)" {
+  _stub_argv
+  _make_repo
+  # Relative link targets are the common case (a repo-internal shim, a hand-rolled
+  # `ln -s ../..` convenience link) and exercise the loop's join branch, which an
+  # absolute-target link never touches. Two hops, each relative, from different
+  # directories — so a join that forgot to re-base per hop lands nowhere.
+  local a="$BATS_TEST_TMPDIR/hop-a" b="$BATS_TEST_TMPDIR/hop-b"
+  mkdir -p "$a" "$b"
+  # PHYSICAL paths on both ends: on macOS BATS_TEST_TMPDIR sits under /var, a
+  # symlink to /private/var, so a relpath computed from the lexical path is off
+  # by one `..` and the link dangles.
+  local real b_phys
+  real="$(cd "${COMEMORY_SH%/*}" && pwd -P)/comemory.sh"
+  b_phys="$(cd "$b" && pwd -P)"
+  ln -sfn "$(python3 -c 'import os,sys;print(os.path.relpath(sys.argv[1],sys.argv[2]))' "$real" "$b_phys")" "$b/comemory.sh"
+  ln -sfn "../hop-b/comemory.sh" "$a/comemory.sh"
+  [ -L "$a/comemory.sh" ] && [ -L "$b/comemory.sh" ]
+  cd "$REPO_DIR"
+  run env -u MY_CLAUDE_COMEMORY_REPO PATH="$STUB:$PATH" bash "$a/comemory.sh" search "hi"
+  [ "$status" -eq 0 ]
+  local repo_val
+  repo_val=$(printf '%s\n' "$output" | awk '/^--repo$/{getline; print; exit}')
+  [ "$repo_val" = "linkrepo" ]
+  [ "$repo_val" != "unknown" ]
+}
+
+@test "comemory: a symlink chain past the hop cap stops instead of spinning" {
+  _stub_argv
+  # Not reachable via BASH_SOURCE[0] (the kernel resolves the chain to exec the
+  # file, so a real over-long chain fails before the script runs) — drive the
+  # guard directly against the same loop body over a synthetic 50-link chain to
+  # prove it terminates and reports rather than hanging.
+  local d="$BATS_TEST_TMPDIR/chain"
+  mkdir -p "$d"
+  : > "$d/link0"
+  local i
+  for i in $(seq 1 50); do ln -sfn "link$((i - 1))" "$d/link$i"; done
+  run bash -c '
+    _self="$1"
+    case "$_self" in */*) ;; *) _self="./$_self" ;; esac
+    _hops=0
+    while [ -L "$_self" ]; do
+      if [ "$_hops" -ge 40 ]; then
+        printf "capped at %s\n" "$_self" >&2
+        break
+      fi
+      _hops=$((_hops + 1))
+      _link=$(readlink "$_self")
+      case "$_link" in
+        /*) _self="$_link" ;;
+        *)  _self="${_self%/*}/$_link" ;;
+      esac
+    done
+    printf "hops=%s\n" "$_hops"
+  ' _ "$d/link50"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"hops=40"* ]]   # stopped at the cap, did not spin
+}

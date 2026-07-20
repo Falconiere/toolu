@@ -20,7 +20,19 @@ _self="${BASH_SOURCE[0]}"
 # `${_self%/*}` yields the FILENAME, not a dir, so both the relative-link join
 # and the final cd would resolve against nonsense.
 case "$_self" in */*) ;; *) _self="./$_self" ;; esac
+# Belt-and-braces hop cap. A true cycle is not reachable through BASH_SOURCE[0]
+# — the kernel already walked the chain to execute this file, so an ELOOP would
+# have failed the invocation before any of this ran — but an unbounded `while`
+# over attacker- or bug-supplied link data is not worth leaving in. 40 matches
+# the usual SYMLOOP_MAX; on hitting it, stop resolving and let the missing-lib
+# branch below report a broken install rather than spinning.
+_hops=0
 while [ -L "$_self" ]; do
+  if [ "$_hops" -ge 40 ]; then
+    printf 'comemory.sh: symlink chain exceeds 40 hops at %s — refusing to follow further\n' "$_self" >&2
+    break
+  fi
+  _hops=$((_hops + 1))
   _link=$(readlink "$_self")
   case "$_link" in
     /*) _self="$_link" ;;
