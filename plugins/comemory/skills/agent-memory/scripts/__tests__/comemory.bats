@@ -375,3 +375,73 @@ SH
   [[ "$output" == *"stub stdout line"* ]]      # comemory stdout still re-emitted
   [[ "$stderr" != *"no memory hit"* ]]         # an error is NOT a miss — no banner
 }
+
+# ── Symlinked invocation: sibling-relative paths must resolve through the link ─
+# Regression: the wrapper derived its sibling paths from BASH_SOURCE, which is
+# the path as INVOKED — and register.sh publishes the wrapper as a SYMLINK at
+# $CLAUDE_CONFIG_DIR/comemory/comemory.sh, the path SKILL.md and the scope-hook
+# deny banner both tell agents to use. Through that link
+# `${BASH_SOURCE%/*}/../../../lib` pointed at a directory that does not exist,
+# the repo-scope lib silently went missing, and every memory landed in the
+# shared "unknown" pool while the warning blamed git. The published path is the
+# ONLY path most callers use, so this broke repo scoping for every install.
+_make_repo() {
+  REPO_DIR="$BATS_TEST_TMPDIR/linkrepo"
+  git init -q "$REPO_DIR"
+  git -C "$REPO_DIR" config user.email t@t.t
+  git -C "$REPO_DIR" config user.name t
+  git -C "$REPO_DIR" commit -q --allow-empty -m init
+}
+
+@test "comemory: --repo still resolves when the wrapper is invoked through a symlink (real repo, argv stub)" {
+  _stub_argv
+  _make_repo
+  # Link from a directory whose ancestors look NOTHING like the plugin tree —
+  # the pre-fix path would land outside it and lose the lib.
+  local linkdir="$BATS_TEST_TMPDIR/some/deep/elsewhere"
+  mkdir -p "$linkdir"
+  ln -sfn "$(cd "${COMEMORY_SH%/*}" && pwd)/comemory.sh" "$linkdir/comemory.sh"
+  cd "$REPO_DIR"
+  run env -u MY_CLAUDE_COMEMORY_REPO PATH="$STUB:$PATH" bash "$linkdir/comemory.sh" search "hi"
+  [ "$status" -eq 0 ]
+  local repo_val
+  repo_val=$(printf '%s\n' "$output" | awk '/^--repo$/{getline; print; exit}')
+  [ "$repo_val" = "linkrepo" ]   # detected through the link
+  [ "$repo_val" != "unknown" ]   # NOT the shared contamination pool
+}
+
+@test "comemory: setup verb dispatches through a symlinked invocation" {
+  local linkdir="$BATS_TEST_TMPDIR/link-setup"
+  mkdir -p "$linkdir"
+  ln -sfn "$(cd "${COMEMORY_SH%/*}" && pwd)/comemory.sh" "$linkdir/comemory.sh"
+  run bash "$linkdir/comemory.sh" setup -h
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Usage: setup.sh"* ]]
+}
+
+# ── Empty-key warning must name the ACTUAL cause ──────────────────────────────
+@test "comemory: a missing repo-scope lib warns about the lib, not about git" {
+  _stub_argv
+  _make_repo
+  # A copy with no lib sibling — same empty key as being outside a repo, but a
+  # different cause. Blaming git for a broken install misdirects the reader.
+  local orphan="$BATS_TEST_TMPDIR/orphan"
+  mkdir -p "$orphan"
+  cp "$COMEMORY_SH" "$orphan/comemory.sh"
+  cd "$REPO_DIR"
+  run --separate-stderr env -u MY_CLAUDE_COMEMORY_REPO PATH="$STUB:$PATH" bash "$orphan/comemory.sh" search "hi"
+  [ "$status" -eq 0 ]
+  [[ "$stderr" == *"repo-scope lib not found"* ]]
+  [[ "$stderr" != *"no git repo"* ]]
+}
+
+@test "comemory: outside a git repo (lib present) still warns about the missing repo" {
+  _stub_argv
+  local outside="$BATS_TEST_TMPDIR/not-a-repo"
+  mkdir -p "$outside"
+  cd "$outside"
+  run --separate-stderr env -u MY_CLAUDE_COMEMORY_REPO PATH="$STUB:$PATH" bash "$COMEMORY_SH" search "hi"
+  [ "$status" -eq 0 ]
+  [[ "$stderr" == *"no git repo"* ]]
+  [[ "$stderr" != *"repo-scope lib not found"* ]]
+}
