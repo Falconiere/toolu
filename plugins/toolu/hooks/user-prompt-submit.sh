@@ -92,7 +92,14 @@ recall=""
 if [[ "$prompt_lower" =~ ${WB}(remember|recall|what\ did|previously|earlier|comemory|architecture|how\ does|where\ is|file-map|prior\ decision|history|add|implement|build|create|write|update|change|refactor|migrate|rename)${WE} ]]; then
   case "$(toolu_comemory_state)" in
     available)
-      recall="Recall first: \`comemory.sh search \"<topic>\"\` before reading files."
+      # Emit the STABLE published path register.sh symlinks into, not a bare
+      # `comemory.sh` — the wrapper is not on PATH by design, so the bare form
+      # dies with command-not-found and the agent reads that as "no memories".
+      # Single-quoted template: $CLAUDE_CONFIG_DIR/$HOME expand in the agent's
+      # Bash subshell, not here. Same form as SKILL.md and the scope-hook deny
+      # banner — one path, consistent muscle memory.
+      # shellcheck disable=SC2016  # literal template: expands in the agent's shell.
+      recall='Recall first: `"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh" search "<topic>"` before reading files.'
       ;;
     missing)
       recall="WARN: comemory CLI not installed — persistent memory recall disabled."

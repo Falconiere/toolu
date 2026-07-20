@@ -332,3 +332,23 @@ CFG
   ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
   ! echo "$ctx" | grep -q 'jira` skill'
 }
+
+@test "user-prompt-submit: recall hint points at the published wrapper path, not a bare comemory.sh" {
+  # Regression: the hint said `comemory.sh search "<topic>"`, but the wrapper is
+  # NOT on PATH — register.sh publishes it at $CLAUDE_CONFIG_DIR/comemory/
+  # comemory.sh. The bare form dies with command-not-found, whose 0-byte stdout
+  # the agent misreads as "no memories". Stub the binary so the state resolves
+  # to `available` and the recall branch (not the WARN branch) fires.
+  local stub="$BATS_TEST_TMPDIR/bin"
+  mkdir -p "$stub"
+  printf '#!/bin/sh\nexit 0\n' > "$stub/comemory"
+  chmod +x "$stub/comemory"
+  payload=$(build_input "implement a new dashboard widget")
+  run env PATH="$stub:$PATH" bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q 'Recall first'
+  # The published path template, left unexpanded for the agent's own shell.
+  echo "$output" | grep -qF '${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh'
+  # ...and never the bare command form that is not on PATH.
+  ! echo "$output" | grep -qF '`comemory.sh search'
+}
