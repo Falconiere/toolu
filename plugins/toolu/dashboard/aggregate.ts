@@ -123,13 +123,17 @@ export function buildSummaries(
  *  return its session summaries (newest first). backfillRepo is mtime-cached so a
  *  repeat call on an unchanged repo is a no-op. Never throws: any store/backfill
  *  failure degrades to whatever the index already holds (possibly []). */
-function syncSessions(cfg: DashboardConfig, project: DiscoveredProject): SessionSummary[] {
+function syncSessions(cfg: DashboardConfig, project: DiscoveredProject, nowMs: number): SessionSummary[] {
   try {
     backfillRepo(project);
-    applyRetention(project.id, {
-      retentionDays: cfg.retentionDays,
-      maxSessionsPerProject: cfg.maxSessionsPerProject,
-    });
+    applyRetention(
+      project.id,
+      {
+        retentionDays: cfg.retentionDays,
+        maxSessionsPerProject: cfg.maxSessionsPerProject,
+      },
+      nowMs,
+    );
   } catch {
     // store is best-effort; fall through to whatever listSessions can read
   }
@@ -151,7 +155,7 @@ export function buildSelectedDetail(
     stuckThresholdSeconds: cfg.stuckThresholdSeconds,
   });
   const { agents, summary } = src.tree(project, nowMs, cfg.agentStuckSeconds);
-  const sessions = syncSessions(cfg, project);
+  const sessions = syncSessions(cfg, project, nowMs);
   return { id: projectId, plan, agents, activity: summary, sessions };
 }
 

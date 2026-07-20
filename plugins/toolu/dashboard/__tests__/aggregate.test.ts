@@ -168,9 +168,17 @@ describe("buildSelectedDetail attaches persisted sessions (history lane)", () =>
     rmSync(histBase, { recursive: true, force: true });
   });
 
+  // The fixture's events are hardcoded to 2026-06-19, and syncSessions prunes by
+  // DEFAULT_CONFIG.retentionDays (30) measured from the clock passed in. Passing
+  // the real Date.now() made these tests a time bomb: they went red on
+  // 2026-07-19 when the fixture aged past the window and applyRetention deleted
+  // the session mid-test. Anchor the clock to the fixture instead — the lane
+  // under test is retention-independent, so pinning it is the point.
+  const FIXTURE_NOW = Date.parse("2026-06-19T19:45:00.000Z") + 1000;
+
   test("sessions are populated after backfilling the fixture project", () => {
     const id = buildSummaries(histCfg, inertSource).find((s) => basename(s.root) === "histRepo")!.id;
-    const detail = buildSelectedDetail(histCfg, inertSource, id, Date.now())!;
+    const detail = buildSelectedDetail(histCfg, inertSource, id, FIXTURE_NOW)!;
     expect(detail.sessions.length).toBe(1);
     expect(detail.sessions[0].sessionId).toBe(FIXTURE_SESSION);
     expect(detail.sessions[0].agentCount).toBe(5);
@@ -181,7 +189,7 @@ describe("buildSelectedDetail attaches persisted sessions (history lane)", () =>
 
   test("buildSessionDetail reassembles that past run's tree", () => {
     const id = buildSummaries(histCfg, inertSource).find((s) => basename(s.root) === "histRepo")!.id;
-    buildSelectedDetail(histCfg, inertSource, id, Date.now()); // ensure persisted
+    buildSelectedDetail(histCfg, inertSource, id, FIXTURE_NOW); // ensure persisted
     const { tree, summary } = buildSessionDetail(id, FIXTURE_SESSION, 0, 600);
     expect(tree.length).toBe(3); // 3 top-level agents in the fixture
     expect(summary.total).toBe(5);
