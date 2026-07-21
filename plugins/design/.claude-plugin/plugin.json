@@ -1,6 +1,6 @@
 {
   "name": "design",
-  "version": "3.2.1",
+  "version": "3.3.0",
   "description": "Web & mobile UI/UX design dispatcher — /design <command> [target] to build, refine, evaluate, or fix UI over a cited, stack-aware knowledge base. One skill, 23-command catalog, bans + AI-slop test, bash stack detector. Clean-room, inspired by pbakaus/impeccable. Standalone, no dependencies.",
   "author": {
     "name": "Falconiere Barbosa",
