@@ -112,9 +112,12 @@ json_arr() {
   printf '[%s]' "$out"
 }
 json_evidence() {
-  local out="" i=1 k v oldifs="$IFS"
-  IFS='|'; local vals=($ev_vals); IFS="$oldifs"   # split values on |, then restore IFS
-  for k in $ev_keys; do                            # keys split on whitespace (IFS restored)
+  local out="" i=1 k v
+  # Split values on | without touching IFS globally: `read -ra` scopes the split
+  # to the one call, so a later expansion can't inherit a half-restored IFS.
+  local vals=()
+  IFS='|' read -ra vals <<< "$ev_vals"
+  for k in $ev_keys; do                            # keys split on whitespace
     v="${vals[$((i-1))]:-}"; out="${out:+$out, }\"$k\": \"$v\""; i=$((i+1))
   done
   printf '{%s}' "$out"
