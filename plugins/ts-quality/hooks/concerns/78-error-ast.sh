@@ -2,7 +2,7 @@
 # --- Error-handling rules (zero tolerance) ---
 
 if command -v ast-grep >/dev/null 2>&1; then
-  # ONE ast-grep process for every rule below. The previous shape ran
+  # ONE ast-grep process for ALL the rules below, not one per rule. The previous shape ran
   # `ast-grep run -p <pattern>` once per pattern — 14 spawns, each re-parsing the
   # same file — and measured ~170ms of the TS gate's ~300ms on every edit.
   # `scan --inline-rules` parses once and returns every rule's hits as JSON
@@ -138,23 +138,34 @@ TS_AST_RULES
   ts_ast_rc=$?
   # Flatten every hit to "<ruleId>\t<file>:<line>:<source line>", one output line
   # per matched source line — the exact shape `run -p` emitted, now tagged with
-  # the rule that produced it. A jq failure here means ast-grep returned
-  # something that is not the documented JSON array, which is a tool failure too.
+  # the rule that produced it.
+  #
+  # Two distinct failure modes, reported distinctly: ast-grep itself broke, or it
+  # exited 0 and returned something that is not the documented JSON array. Both
+  # mean the rules could not be verified, but collapsing them into one message
+  # sends the reader to the wrong tool.
+  ts_ast_fail_stage=""
   if [[ "$ts_ast_rc" -ne 0 || -s "$ts_ast_err_file" ]]; then
     ts_ast_failed=1
+    ts_ast_fail_stage="ast-grep"
   elif ! ts_ast_lines=$(printf '%s' "$ts_ast_json" | jq -r '
         .[] | . as $m
         | ((($m.lines // "") | split("\n")) | to_entries[])
         | "\($m.ruleId)\t\($m.file):\($m.range.start.line + 1 + .key):\(.value)"
       ' 2>/dev/null); then
     ts_ast_failed=1
+    ts_ast_fail_stage="jq"
     ts_ast_lines=""
   fi
   if [[ "$ts_ast_failed" -ne 0 ]]; then
-    # Same diagnostic the per-pattern scanner surfaced: exit code plus the first
-    # stderr line (capped) so the agent learns WHAT broke, not just THAT it did.
+    # Exit code plus the first stderr line (capped) so the agent learns WHAT
+    # broke, not just THAT it did.
     ts_ast_stderr_first=$(head -n 1 "$ts_ast_err_file" 2>/dev/null | cut -c1-200)
-    ts_ast_fail_detail="exit ${ts_ast_rc}${ts_ast_stderr_first:+: $ts_ast_stderr_first}"
+    if [[ "$ts_ast_fail_stage" == "jq" ]]; then
+      ts_ast_fail_detail="ast-grep exited 0 but its output did not parse as the documented JSON array"
+    else
+      ts_ast_fail_detail="ast-grep exit ${ts_ast_rc}${ts_ast_stderr_first:+: $ts_ast_stderr_first}"
+    fi
   fi
 
   # ts_join_hits BLOCK... — concatenate non-empty hit blocks into $TS_JOINED with
@@ -226,6 +237,6 @@ TS_AST_RULES
 
   rm -f "$ts_ast_err_file"
   if [[ "$ts_ast_failed" -ne 0 ]]; then
-    add_error "ast-grep failed while scanning $FILE_PATH (${ts_ast_fail_detail:-unknown error}) — error-handling rules could not be verified; fix the tool/file and re-edit"
+    add_error "ast-grep failed while scanning $FILE_PATH — ${ts_ast_fail_detail:-unknown error}; error-handling rules could not be verified. Fix the tool/file and re-edit"
   fi
 fi

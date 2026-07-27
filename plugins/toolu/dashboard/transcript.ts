@@ -55,9 +55,12 @@ export function readJsonl(path: string): Record<string, unknown>[] {
       lastParseError = String(err);
     }
   }
-  // Exactly one unparseable line is the documented-normal case: a live transcript
-  // is read mid-append, so its tail is a half-written line. More than one means
-  // real corruption in the body. warnOnce on top of that, keyed by path: readJsonl
+  // Why >1 and not >0: a transcript is appended to while it is being read, so a
+  // read that lands mid-write sees a half-written final line. That is one torn
+  // line, always at the tail, and it repairs itself on the next read — reporting
+  // it would fire on healthy files. Two or more unparseable lines cannot come
+  // from a single interrupted append, so they mean real corruption in the body.
+  // warnOnce on top of that, keyed by path: readJsonl
   // runs on every poll tick, so a permanently corrupt transcript would otherwise
   // report forever.
   if (unparseable > 1) {

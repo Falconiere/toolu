@@ -64,23 +64,34 @@ RS_AST_RULES
   ast_json=$(ast-grep scan --inline-rules "$ast_rules" --json "$FILE_PATH" 2>"$ast_err_file")
   ast_rc=$?
   # Flatten every hit to "<ruleId>\t<file>:<line>:<source line>", one output line
-  # per matched source line. A jq failure means ast-grep returned something that
-  # is not the documented JSON array — a tool failure too.
+  # per matched source line.
+  #
+  # Two distinct failure modes, reported distinctly: ast-grep itself broke, or it
+  # exited 0 and returned something that is not the documented JSON array. Both
+  # mean the rules could not be verified, but collapsing them into one message
+  # sends the reader to the wrong tool.
+  ast_fail_stage=""
   if [[ "$ast_rc" -ne 0 || -s "$ast_err_file" ]]; then
     ast_grep_failed=1
+    ast_fail_stage="ast-grep"
   elif ! ast_lines=$(printf '%s' "$ast_json" | jq -r '
         .[] | . as $m
         | ((($m.lines // "") | split("\n")) | to_entries[])
         | "\($m.ruleId)\t\($m.file):\($m.range.start.line + 1 + .key):\(.value)"
       ' 2>/dev/null); then
     ast_grep_failed=1
+    ast_fail_stage="jq"
     ast_lines=""
   fi
   if [[ "$ast_grep_failed" -ne 0 ]]; then
     # Exit code plus the first stderr line (capped at ~200 chars) so the surfaced
     # message tells the agent WHAT broke, not just THAT it broke.
     ast_stderr_first=$(head -n 1 "$ast_err_file" 2>/dev/null | cut -c1-200)
-    ast_grep_fail_detail="exit ${ast_rc}${ast_stderr_first:+: $ast_stderr_first}"
+    if [[ "$ast_fail_stage" == "jq" ]]; then
+      ast_grep_fail_detail="ast-grep exited 0 but its output did not parse as the documented JSON array"
+    else
+      ast_grep_fail_detail="ast-grep exit ${ast_rc}${ast_stderr_first:+: $ast_stderr_first}"
+    fi
   fi
 
   # join_hits BLOCK... — concatenate non-empty hit blocks into $JOINED with one
@@ -127,6 +138,6 @@ RS_AST_RULES
 
   rm -f "$ast_err_file"
   if [[ "$ast_grep_failed" -ne 0 ]]; then
-    add_error "ast-grep failed while scanning $FILE_PATH (${ast_grep_fail_detail:-unknown error}) — error-handling rules could not be verified; fix the tool/file and re-edit"
+    add_error "ast-grep failed while scanning $FILE_PATH — ${ast_grep_fail_detail:-unknown error}; error-handling rules could not be verified. Fix the tool/file and re-edit"
   fi
 fi
