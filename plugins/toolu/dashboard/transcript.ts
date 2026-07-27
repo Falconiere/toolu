@@ -38,6 +38,8 @@ export function readJsonl(path: string): Record<string, unknown>[] {
     return [];
   }
   const out: Record<string, unknown>[] = [];
+  let unparseable = 0;
+  let lastParseError = "";
   for (const line of raw.split("\n")) {
     const trimmed = line.trim();
     if (trimmed.length === 0) continue;
@@ -46,9 +48,17 @@ export function readJsonl(path: string): Record<string, unknown>[] {
       if (obj !== null && typeof obj === "object" && !Array.isArray(obj)) {
         out.push(obj as Record<string, unknown>);
       }
-    } catch {
-      // truncated/garbled line (normal at the tail of a live transcript) — skip it
+    } catch (err) {
+      unparseable++;
+      lastParseError = String(err);
     }
+  }
+  // Exactly one unparseable line is the documented-normal case: a live transcript
+  // is read mid-append, so its tail is a half-written line. More than one means
+  // real corruption somewhere in the body — surface it once per read rather than
+  // once per line, which would spam every poll.
+  if (unparseable > 1) {
+    console.error(`dashboard: ${unparseable} unparseable lines in ${path} — skipped (last: ${lastParseError})`);
   }
   return out;
 }

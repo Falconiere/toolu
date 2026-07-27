@@ -84,7 +84,7 @@ describe("createWatcher (AC-16)", () => {
     const before = treeCalls();
 
     // pick a concrete project id different from the default selection target
-    const other = first.projects.find((p) => p.id !== first.selected?.id) ?? first.projects[0];
+    const other = first.projects.find((p) => p.id !== first.selected?.id) ?? first.projects[0]!;
     w.setSelected(other.id);
     const after = w.tick(Date.now());
     expect(after).not.toBeNull();

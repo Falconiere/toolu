@@ -146,8 +146,11 @@ function syncSessions(cfg: DashboardConfig, project: DiscoveredProject, nowMs: n
       },
       nowMs,
     );
-  } catch {
-    // store is best-effort; fall through to whatever listSessions can read
+  } catch (err) {
+    // Store work is best-effort: fall through to whatever listSessions can read
+    // rather than failing the whole dashboard tick. Report it so a persistently
+    // broken backfill/retention is visible instead of silently serving stale data.
+    console.error(`dashboard: session sync for ${project.id} failed — serving the stored index (${String(err)})`);
   }
   return listSessions(project.id);
 }

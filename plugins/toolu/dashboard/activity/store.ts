@@ -311,8 +311,7 @@ export function applyRetention(projectId: string, opts: RetentionOptions, nowMs:
   const ranked = [...index.sessions].sort((a, b) => sessionTime(b).localeCompare(sessionTime(a)));
   const kept: SessionSummary[] = [];
   const removed: string[] = [];
-  for (let i = 0; i < ranked.length; i++) {
-    const s = ranked[i];
+  for (const [i, s] of ranked.entries()) {
     if (Date.parse(sessionTime(s)) < cutoffMs || i >= opts.maxSessionsPerProject) removed.push(s.sessionId);
     else kept.push(s);
   }
@@ -320,8 +319,10 @@ export function applyRetention(projectId: string, opts: RetentionOptions, nowMs:
   for (const sessionId of removed) {
     try {
       rmSync(sessionLogPath(projectId, sessionId), { force: true }); // best-effort; index is the truth
-    } catch {
-      /* index rewrite below is the source of truth */
+    } catch (err) {
+      // The index rewrite below is the source of truth, so a failed unlink does
+      // not corrupt state — but it does leak a log file, which is worth naming.
+      logStoreError(`removing retired session log ${sessionId}`, err);
     }
   }
   writeIndex(projectId, { sessions: kept });

@@ -18,6 +18,7 @@ import { extractResults, extractSpawns, readJsonl } from "../transcript.ts";
 import { slugFor } from "./claude-code.ts";
 import {
   type ActivityRecord,
+  isEnoent,
   projectDir,
   readSession,
   type SessionData,
@@ -73,8 +74,10 @@ function discoverSessions(slug: string): DiscoveredSession[] {
         transcriptPath,
         subagentsDir: join(slug, basename(f, ".jsonl"), "subagents"),
       });
-    } catch {
-      // unreadable: skip this session, never fatal.
+    } catch (err) {
+      // The file was just listed by readdirSync, so a stat failure is a race or
+      // a permissions fault — skip the session, never fatal, but say so.
+      console.error(`backfill: skipping unreadable session ${transcriptPath} (${String(err)})`);
     }
   }
   return out.sort((a, b) => b.mtimeMs - a.mtimeMs);
@@ -100,8 +103,10 @@ function readMetas(subagentsDir: string): AgentMeta[] {
         description: typeof m.description === "string" ? m.description : "",
         toolUseId: typeof m.toolUseId === "string" ? m.toolUseId : "",
       });
-    } catch {
-      // skip an unreadable/corrupt sidecar
+    } catch (err) {
+      // Corrupt or unreadable sidecar: the agent is dropped from the tree, so
+      // report it rather than letting the subtree silently go missing.
+      console.error(`backfill: skipping unreadable agent sidecar ${join(subagentsDir, f)} (${String(err)})`);
     }
   }
   return metas.filter((m) => m.toolUseId.length > 0);
@@ -180,7 +185,10 @@ function rebuildIndex(project: DiscoveredProject): void {
   let entries: string[];
   try {
     entries = readdirSync(dir);
-  } catch {
+  } catch (err) {
+    // No store dir yet is the normal first-run case; anything else means the
+    // index is being left stale, which is worth a breadcrumb.
+    if (!isEnoent(err)) console.error(`backfill: cannot list ${dir} — index left as-is (${String(err)})`);
     return;
   }
   const sessions = [];

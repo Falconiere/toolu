@@ -158,8 +158,8 @@ export function startServer(opts: ServerOptions = {}): { port: number; stop: () 
   if (port === undefined) throw new Error("Bun.serve did not assign a port");
 
   // Advisory machine-global port file — a failed write must not stop the server.
-  void Bun.write(join(homedir(), ".claude", "tmp", "dashboard.port"), String(port)).catch(() => {
-    /* advisory only */
+  void Bun.write(join(homedir(), ".claude", "tmp", "dashboard.port"), String(port)).catch((err: unknown) => {
+    console.error(`dashboard: could not publish the port file — clients must be pointed at :${port} manually (${String(err)})`);
   });
 
   // Initial build, then a change-gated poll that only broadcasts on real changes.
@@ -189,8 +189,10 @@ export function startServer(opts: ServerOptions = {}): { port: number; stop: () 
       for (const c of clients) {
         try {
           c.close();
-        } catch {
-          /* already closed */
+        } catch (err) {
+          // A client that already disconnected is the common case, but a close
+          // that fails for any other reason leaks the stream — report it.
+          console.error(`dashboard: closing an SSE client failed (${String(err)})`);
         }
       }
       clients.clear();
@@ -203,7 +205,9 @@ export function startServer(opts: ServerOptions = {}): { port: number; stop: () 
 if (import.meta.main) {
   const { port } = startServer();
   const url = `http://localhost:${port}`;
-  console.log(url);
+  // Machine-readable stdout (the URL is meant to be copied/piped), not logging —
+  // written directly so it never picks up console formatting.
+  process.stdout.write(`${url}\n`);
   if (process.argv.includes("--open") && process.platform === "darwin") {
     spawnSync("open", [url]);
   }

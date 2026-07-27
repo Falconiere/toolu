@@ -61,10 +61,11 @@ export function runCli(argv: string[], path: string = DEFAULT_CONFIG_PATH): { me
     case "get":
       return { message: JSON.stringify(config, null, 2), changed: false };
     case "set": {
-      if (rest.length < 2) throw new Error("usage: set <key> <value>");
-      const next = setKey(config, rest[0], rest[1]);
+      const [key, value] = rest;
+      if (key === undefined || value === undefined) throw new Error("usage: set <key> <value>");
+      const next = setKey(config, key, value);
       saveConfig(path, next);
-      return { message: `set ${rest[0]} = ${rest[1]}`, changed: true };
+      return { message: `set ${key} = ${value}`, changed: true };
     }
     case "add-root": {
       if (!rest[0]) throw new Error("usage: add-root <dir>");
@@ -97,7 +98,8 @@ if (import.meta.main) {
     args.splice(pIdx, 2);
   }
   try {
-    console.log(runCli(args, path).message);
+    // CLI result on stdout (meant to be read/piped), not logging.
+    process.stdout.write(`${runCli(args, path).message}\n`);
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err));
     process.exit(1);

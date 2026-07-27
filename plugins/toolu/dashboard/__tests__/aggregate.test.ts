@@ -28,7 +28,9 @@ function latestFixtureEventMs(fixtureDir: string): number {
     if (!entry.isFile() || !entry.name.endsWith(".jsonl")) continue;
     const body = readFileSync(join(entry.parentPath, entry.name), "utf8");
     for (const m of body.matchAll(/"timestamp":"([^"]+)"/g)) {
-      const ms = Date.parse(m[1]);
+      const stamp = m[1];
+      if (stamp === undefined) continue;
+      const ms = Date.parse(stamp);
       if (!Number.isNaN(ms) && ms > max) max = ms;
     }
   }
@@ -143,7 +145,7 @@ describe("buildMultiState", () => {
     const state = buildMultiState(cfg, inertSource, null, Date.now());
     expect(state.projects.length).toBeGreaterThanOrEqual(1);
     expect(state.selected).not.toBeNull();
-    expect(state.selected!.id).toBe(state.projects[0].id);
+    expect(state.selected!.id).toBe(state.projects[0]!.id);
     expect(typeof state.serverTime).toBe("string");
   });
 });
@@ -203,9 +205,9 @@ describe("buildSelectedDetail attaches persisted sessions (history lane)", () =>
     const id = buildSummaries(histCfg, inertSource).find((s) => basename(s.root) === "histRepo")!.id;
     const detail = buildSelectedDetail(histCfg, inertSource, id, FIXTURE_NOW)!;
     expect(detail.sessions.length).toBe(1);
-    expect(detail.sessions[0].sessionId).toBe(FIXTURE_SESSION);
-    expect(detail.sessions[0].agentCount).toBe(5);
-    expect(detail.sessions[0].errored).toBe(true);
+    expect(detail.sessions[0]!.sessionId).toBe(FIXTURE_SESSION);
+    expect(detail.sessions[0]!.agentCount).toBe(5);
+    expect(detail.sessions[0]!.errored).toBe(true);
     // live lane is untouched (the inert source yields an empty live tree)
     expect(detail.agents).toEqual([]);
   });
