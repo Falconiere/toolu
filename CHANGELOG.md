@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.0.0](https://github.com/Falconiere/toolu/compare/v3.3.0...v4.0.0) (2026-07-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* pi and opencode are no longer supported hosts. Installs made via `pi install` or tooling/install-opencode.sh will not receive updates; the `pi` package manifest, the @earendil-works/pi-coding-agent dependency, and the opencode adapter are gone. Claude Code is the only supported host.
+
+### Bug Fixes
+
+* correct and speed up the quality gates; drop pi and opencode ([#131](https://github.com/Falconiere/toolu/issues/131)) ([47d7954](https://github.com/Falconiere/toolu/commit/47d79540dd585a41f6a209a5efa307c57ddbdd45))
+
 ## [3.3.0](https://github.com/Falconiere/toolu/compare/v3.2.1...v3.3.0) (2026-07-20)
 
 
