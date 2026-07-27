@@ -97,7 +97,7 @@ All workflows live in `.github/workflows/`:
 2. **Add tests** — colocated `__tests__/*.bats` for any hook logic. No mocks.
 3. **Verify in a real session** before committing.
 4. **Conventional Commits**: `feat(scope):`, `fix(scope):`, etc.
-5. **Run full CI locally**: `bun run test` (runs `lint:shell` then `test:shell` then `test:ts` then `typecheck`).
+5. **Run every CI check locally**: `bun run test` runs `lint:shell` → `test:shell` → `test:ts` → `typecheck` in sequence. CI runs the same four checks but splits them across two parallel jobs (`lint:shell` + `typecheck` + `test:ts` in one, the bats suite in the other), so the local order is a convenience, not a contract.
 
 ## Common Tasks
 
