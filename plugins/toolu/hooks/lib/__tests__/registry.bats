@@ -4,7 +4,7 @@
 setup() {
   . "${BATS_TEST_DIRNAME}/../registry.sh"
   TMP=$(mktemp -d)
-  unset TOOLU_CONFIG_DIR CLAUDE_CONFIG_DIR PI_CODING_AGENT_DIR
+  unset TOOLU_CONFIG_DIR CLAUDE_CONFIG_DIR
 }
 teardown() { rm -rf "$TMP"; }
 
@@ -26,17 +26,8 @@ teardown() { rm -rf "$TMP"; }
   [ "$output" = "$TMP/cfg/toolu/pre-tools.d" ]
 }
 
-@test "registry_event_dir honors PI_CODING_AGENT_DIR as fallback" {
-  run env -u CLAUDE_CONFIG_DIR -u TOOLU_CONFIG_DIR PI_CODING_AGENT_DIR="$TMP/pi" bash -c '
-    . "'"${BATS_TEST_DIRNAME}"'/../registry.sh"
-    toolu_registry_event_dir PostToolUse
-  '
-  [ "$status" -eq 0 ]
-  [ "$output" = "$TMP/pi/toolu/post-tools.d" ]
-}
-
 @test "registry_event_dir falls back to HOME/.claude" {
-  run env -u CLAUDE_CONFIG_DIR -u TOOLU_CONFIG_DIR -u PI_CODING_AGENT_DIR HOME="$TMP/home" bash -c '
+  run env -u CLAUDE_CONFIG_DIR -u TOOLU_CONFIG_DIR HOME="$TMP/home" bash -c '
     . "'"${BATS_TEST_DIRNAME}"'/../registry.sh"
     toolu_registry_event_dir PostToolUse
   '

@@ -4,6 +4,10 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -12,6 +16,6 @@
     "types": ["node", "bun-types"],
     "allowImportingTsExtensions": true
   },
-  "include": ["pi/**/*.ts", "opencode/**/*.ts", "plugins/toolu/dashboard/**/*.ts"],
+  "include": ["plugins/toolu/dashboard/**/*.ts"],
   "exclude": ["node_modules", "**/node_modules/**"]
 }

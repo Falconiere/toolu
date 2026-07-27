@@ -162,6 +162,78 @@ EOF
   echo "$output" | grep -q "swallows the error"
 }
 
+@test "ts-quality: bare-return catch (no value) is flagged as swallow" {
+  command -v ast-grep >/dev/null 2>&1 || skip "ast-grep not installed"
+  _ts_project
+  cat > src/bad.ts <<'EOF'
+export function f() {
+  try {
+    risky();
+  } catch {
+    return;
+  }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/bad.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "swallows the error"
+}
+
+# Regression: the rule used `try { $$$ } catch { return }` as an ast-grep
+# pattern, but a bare `return` there is a WILDCARD over the optional argument —
+# it matched `return []`, `return 42` and `return null` too, so every non-nullish
+# fallback was reported as "returns a nullish value".
+@test "ts-quality: catch returning a non-nullish value is NOT flagged as swallow" {
+  command -v ast-grep >/dev/null 2>&1 || skip "ast-grep not installed"
+  _ts_project
+  cat > src/ok.ts <<'EOF'
+/** Read a list, degrading to empty. */
+export function readList(): string[] {
+  try {
+    return risky();
+  } catch {
+    return [];
+  }
+}
+/** Count things, degrading to zero. */
+export function count(): number {
+  try {
+    return risky();
+  } catch (e) {
+    return 0;
+  }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/ok.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "swallows the error"
+}
+
+# The message body is fed to jq as a string; a literal backslash-n would come
+# back out as "\\n" and render as one run-on line with a visible \n in it.
+@test "ts-quality: violation excerpts are separated by real newlines, not a literal \\n" {
+  command -v ast-grep >/dev/null 2>&1 || skip "ast-grep not installed"
+  _ts_project
+  cat > src/bad.ts <<'EOF'
+export function bad() {
+  try {
+    foo();
+  } catch (e) {}
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/bad.ts"}}'
+  tool_name=Edit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')
+  # The headline and its excerpt must land on separate lines...
+  echo "$ctx" | grep -q "^Empty catch block"
+  echo "$ctx" | grep -qE "^${TMP}/src/bad.ts:[0-9]+:"
+  # ...and no literal backslash-n may survive anywhere in the message.
+  ! printf '%s' "$ctx" | grep -q '\\n'
+}
+
 @test "ts-quality: await with no try/catch emits a non-blocking advisory" {
   _ts_project
   cat > src/a.ts <<'EOF'

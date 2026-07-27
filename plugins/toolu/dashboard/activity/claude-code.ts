@@ -11,6 +11,8 @@ import { basename, join } from "node:path";
 import type { DiscoveredProject } from "../discovery.ts";
 import { extractResults, extractSpawns, readJsonl } from "../transcript.ts";
 import type { ActivitySummary, AgentNode, LiveActivitySource } from "./source.ts";
+import { warnOnce } from "../log.ts";
+import { isEnoent } from "./store.ts";
 import { type AgentMeta, buildTree, type ResultRec, type SpawnRec } from "./tree-builder.ts";
 
 const EMPTY_SUMMARY: ActivitySummary = { total: 0, running: 0, errored: 0, stale: 0, deepest: 0 };
@@ -85,8 +87,14 @@ function readMetas(subagentsDir: string): AgentMeta[] {
         description: typeof m.description === "string" ? m.description : "",
         toolUseId: typeof m.toolUseId === "string" ? m.toolUseId : "",
       });
-    } catch {
-      // skip an unreadable/corrupt sidecar
+    } catch (err) {
+      // Corrupt or unreadable sidecar: the agent is dropped from the tree, so
+      // report it rather than letting the subtree silently go missing. Once —
+      // readMetas re-runs on every poll tick.
+      warnOnce(
+        `meta:${join(subagentsDir, f)}`,
+        `activity: skipping unreadable agent sidecar ${join(subagentsDir, f)} (${String(err)})`,
+      );
     }
   }
   return metas.filter((m) => m.toolUseId.length > 0);
@@ -155,8 +163,17 @@ export const claudeCodeSource: LiveActivitySource = {
         const st = statSync(join(newest.subagentsDir, f));
         fp += st.mtimeMs + st.size;
       }
-    } catch {
-      // no subagents dir yet — transcript mtime alone is the signature
+    } catch (err) {
+      // No subagents dir yet is the normal pre-fan-out case — transcript mtime
+      // alone is the signature. Anything else means the fingerprint is missing
+      // a signal, which shows up as a "stuck" agent, so name it.
+      // warnOnce: the fingerprint is recomputed on every poll tick.
+      if (!isEnoent(err)) {
+        warnOnce(
+          `fingerprint:${newest.subagentsDir}`,
+          `activity: fingerprint for ${newest.subagentsDir} is incomplete (${String(err)})`,
+        );
+      }
     }
     return Math.round(fp);
   },

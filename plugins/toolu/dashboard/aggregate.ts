@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 
 import type { DashboardConfig } from "./config.ts";
 import { discoverProjects, type DiscoveredProject } from "./discovery.ts";
+import { warnOnce } from "./log.ts";
 import { buildState, type DashboardState, type Ledger } from "./state.ts";
 import type { ActivitySummary, AgentNode, LiveActivitySource } from "./activity/source.ts";
 import { backfillRepo } from "./activity/backfill.ts";
@@ -146,8 +147,15 @@ function syncSessions(cfg: DashboardConfig, project: DiscoveredProject, nowMs: n
       },
       nowMs,
     );
-  } catch {
-    // store is best-effort; fall through to whatever listSessions can read
+  } catch (err) {
+    // Store work is best-effort: fall through to whatever listSessions can read
+    // rather than failing the whole dashboard tick. Report it so a persistently
+    // broken backfill/retention is visible instead of silently serving stale
+    // data — once per project, since this runs on every poll tick.
+    warnOnce(
+      `sync:${project.id}`,
+      `dashboard: session sync for ${project.id} failed — serving the stored index (${String(err)})`,
+    );
   }
   return listSessions(project.id);
 }

@@ -5,6 +5,8 @@
 
 import { readFileSync } from "node:fs";
 
+import { warnOnce } from "./log.ts";
+
 import { durationMs } from "./activity/tree-builder.ts";
 
 /** Spawn metadata pulled from an `Agent`/`Task` tool_use entry. */
@@ -38,6 +40,8 @@ export function readJsonl(path: string): Record<string, unknown>[] {
     return [];
   }
   const out: Record<string, unknown>[] = [];
+  let unparseable = 0;
+  let lastParseError = "";
   for (const line of raw.split("\n")) {
     const trimmed = line.trim();
     if (trimmed.length === 0) continue;
@@ -46,9 +50,24 @@ export function readJsonl(path: string): Record<string, unknown>[] {
       if (obj !== null && typeof obj === "object" && !Array.isArray(obj)) {
         out.push(obj as Record<string, unknown>);
       }
-    } catch {
-      // truncated/garbled line (normal at the tail of a live transcript) — skip it
+    } catch (err) {
+      unparseable++;
+      lastParseError = String(err);
     }
+  }
+  // Why >1 and not >0: a transcript is appended to while it is being read, so a
+  // read that lands mid-write sees a half-written final line. That is one torn
+  // line, always at the tail, and it repairs itself on the next read — reporting
+  // it would fire on healthy files. Two or more unparseable lines cannot come
+  // from a single interrupted append, so they mean real corruption in the body.
+  // warnOnce on top of that, keyed by path: readJsonl
+  // runs on every poll tick, so a permanently corrupt transcript would otherwise
+  // report forever.
+  if (unparseable > 1) {
+    warnOnce(
+      `jsonl:${path}`,
+      `dashboard: ${unparseable} unparseable lines in ${path} — skipped (last: ${lastParseError})`,
+    );
   }
   return out;
 }

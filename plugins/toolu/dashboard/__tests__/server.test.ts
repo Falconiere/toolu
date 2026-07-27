@@ -74,7 +74,7 @@ describe("HTTP routing + payload (AC-11)", () => {
 
   test("?project=<id> selects that project", async () => {
     const all = (await (await fetch(`http://localhost:${server.port}/api/state`)).json()) as MultiDashboardState;
-    const id = all.projects[0].id;
+    const id = all.projects[0]!.id;
     const res = await fetch(`http://localhost:${server.port}/api/state?project=${id}`);
     const state = (await res.json()) as MultiDashboardState;
     expect(state.selected!.id).toBe(id);

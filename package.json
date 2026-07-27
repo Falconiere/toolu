@@ -1,50 +1,25 @@
 {
   "name": "toolu",
   "version": "3.3.0",
-  "description": "Engineering discipline for coding agents — now packaged for Pi too.",
+  "description": "Engineering discipline for coding agents.",
   "type": "module",
   "license": "MIT",
   "keywords": [
-    "pi-package",
-    "pi",
     "claude-code",
     "skills",
     "hooks",
     "quality-gate"
   ],
-  "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*"
-  },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "*",
     "@types/node": "^25.9.3",
     "bun-types": "^1.3.14",
     "typescript": "^5.8.0"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test:ts": "bun test pi/extensions opencode/extensions plugins/toolu/dashboard",
+    "lint:shell": "bash tooling/shellcheck.sh",
+    "test:ts": "bun test plugins/toolu/dashboard",
     "test:shell": "bats -r plugins tooling",
-    "test": "bun run test:shell && bun run test:ts && bun run typecheck"
-  },
-  "pi": {
-    "extensions": [
-      "./pi/extensions"
-    ],
-    "skills": [
-      "./plugins/toolu/skills",
-      "./plugins/ast-grep/skills",
-      "./plugins/comemory/skills",
-      "./plugins/toolu-review/skills",
-      "./plugins/context7/skills",
-      "./plugins/exa-search/skills",
-      "./plugins/jira/skills",
-      "./plugins/design/skills",
-      "./plugins/agent-browser/skills"
-    ],
-    "prompts": [
-      "./plugins/toolu/commands",
-      "./plugins/pr-babysit/commands"
-    ]
+    "test": "bun run lint:shell && bun run test:shell && bun run test:ts && bun run typecheck"
   }
 }

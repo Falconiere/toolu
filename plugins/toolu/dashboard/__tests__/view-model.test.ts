@@ -63,7 +63,7 @@ describe("treeRows on the real captured agent tree", () => {
     expect(rows.length).toBe(5); // 3 roots + 2 nested children
     expect(rows.some((r) => r.depth >= 1)).toBe(true);
     const parentIdx = rows.findIndex((r) => r.node.children.length > 0);
-    expect(rows[parentIdx + 1].depth).toBe(rows[parentIdx].depth + 1);
+    expect(rows[parentIdx + 1]!.depth).toBe(rows[parentIdx]!.depth + 1);
   });
 });
 

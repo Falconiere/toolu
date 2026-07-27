@@ -25,6 +25,15 @@ command -v git >/dev/null 2>&1 || exit 0
 project_root="$(detect_project_root)"
 [ -z "$project_root" ] && project_root="$(pwd)"
 
+gate_file="$project_root/.claude/tmp/quality-gate-status.json"
+
+# Cheap stat/jq checks FIRST. This module runs on every single tool call and the
+# gate is absent or passing almost always; the linked-worktree probe below costs
+# two `git rev-parse` processes (~13ms measured), so running it ahead of these
+# burned that on every call for nothing.
+[[ ! -f "$gate_file" ]] && exit 0
+[[ "$(jq -r '.status // ""' "$gate_file" 2>/dev/null)" != "failing" ]] && exit 0
+
 # Skip enforcement in git linked worktrees — quality state lives on the main checkout.
 git_dir="$(git -C "$project_root" rev-parse --path-format=absolute --git-dir 2>/dev/null || true)"
 common_dir="$(git -C "$project_root" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
@@ -33,11 +42,6 @@ common_dir="${common_dir%/}"
 if [[ -n "$git_dir" && -n "$common_dir" && "$git_dir" != "$common_dir" ]]; then
   exit 0
 fi
-
-gate_file="$project_root/.claude/tmp/quality-gate-status.json"
-
-[[ ! -f "$gate_file" ]] && exit 0
-[[ "$(jq -r '.status // ""' "$gate_file" 2>/dev/null)" != "failing" ]] && exit 0
 
 # Allowed quality-fix command patterns are auto-generated per package manager.
 pm="$(detect_node_pm)"

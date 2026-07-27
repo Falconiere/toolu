@@ -54,10 +54,10 @@ describe("backfillRepo persists the real cc-store fixture", () => {
 
     const sessions = listSessions(PROJECT_ID);
     expect(sessions.length).toBe(1);
-    expect(sessions[0].sessionId).toBe(SESSION);
-    expect(sessions[0].agentCount).toBe(5);
-    expect(sessions[0].errored).toBe(true); // a273da errored
-    expect(sessions[0].running).toBe(true); // a720f8d7 unresolved
+    expect(sessions[0]!.sessionId).toBe(SESSION);
+    expect(sessions[0]!.agentCount).toBe(5);
+    expect(sessions[0]!.errored).toBe(true); // a273da errored
+    expect(sessions[0]!.running).toBe(true); // a720f8d7 unresolved
   });
 
   test("the persisted store rebuilds the same tree #117's buildTree produces", () => {

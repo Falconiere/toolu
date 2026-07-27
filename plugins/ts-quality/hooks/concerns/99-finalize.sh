@@ -24,9 +24,15 @@ else
 
   # Advisories (non-blocking — no gate write). Duplication + docs combined into
   # a single additionalContext so the hook emits exactly one JSON object.
+  # Joined with REAL newlines. `${ADVISORY:+$ADVISORY\n}` appended a literal
+  # backslash-n (and ANSI-C quoting is not honored inside a :+ expansion either),
+  # so stacked advisories reached the agent as one run-on line.
   ADVISORY="$DUPLICATION_WARNING"
-  [[ -n "$DOC_ADVISORY" ]] && ADVISORY="${ADVISORY:+$ADVISORY\n}$DOC_ADVISORY"
-  [[ -n "$ERR_ADVISORY" ]] && ADVISORY="${ADVISORY:+$ADVISORY\n}$ERR_ADVISORY"
+  for _adv in "$DOC_ADVISORY" "$ERR_ADVISORY"; do
+    [[ -z "$_adv" ]] && continue
+    [[ -n "$ADVISORY" ]] && ADVISORY="${ADVISORY}"$'\n'
+    ADVISORY="${ADVISORY}${_adv}"
+  done
   if [[ -n "$ADVISORY" ]]; then
     jq -n --arg ctx "$ADVISORY" '{
       "hookSpecificOutput": {

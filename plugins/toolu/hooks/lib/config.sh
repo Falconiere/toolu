@@ -5,9 +5,8 @@
 #   1. <agent-config-dir>/toolu.config.json
 #   2. <project-root>/<project-config-dir>/toolu.config.json
 #
-# Defaults are Claude Code-compatible (~/.claude + .claude/), but callers can
-# point them at pi-style roots via TOOLU_CONFIG_DIR and
-# TOOLU_PROJECT_CONFIG_DIRNAME.
+# Defaults are Claude Code-compatible (~/.claude + .claude/); callers can point
+# them elsewhere via TOOLU_CONFIG_DIR and TOOLU_PROJECT_CONFIG_DIRNAME.
 #
 # Public API:
 #   toolu_load_config          - load + cache the merged config
@@ -35,8 +34,6 @@ _toolu_agent_dir() {
     printf '%s' "$TOOLU_CONFIG_DIR"
   elif [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
     printf '%s' "$CLAUDE_CONFIG_DIR"
-  elif [ -n "${PI_CODING_AGENT_DIR:-}" ]; then
-    printf '%s' "$PI_CODING_AGENT_DIR"
   else
     printf '%s/.claude' "$HOME"
   fi

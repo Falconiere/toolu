@@ -23,8 +23,8 @@ is **NOT** — it is only set for hook subprocesses. Using the plugin-root path 
 Bash tool call expands to an empty string and runs `/skills/.../agent-browser.sh:
 No such file`. **Always use the published path above.**
 
-Repo-checkout / other-host fallback (for tests, dev, or hosts like pi/opencode
-where the SessionStart hook does not run so the symlink may be absent):
+Repo-checkout fallback (for tests or dev, where the SessionStart hook has not run
+so the symlink may be absent):
 `plugins/agent-browser/skills/agent-browser/scripts/agent-browser.sh`.
 
 The wrapper bakes in token-lean defaults for the read-heavy commands

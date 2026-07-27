@@ -8,6 +8,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 
 import type { DashboardConfig } from "./config.ts";
+import { warnOnce } from "./log.ts";
 
 /** One discovered project = one branch ledger under one repo root. */
 export interface DiscoveredProject {
@@ -41,14 +42,22 @@ function makeProject(root: string, ledgerPath: string): DiscoveredProject {
   try {
     const parsed = JSON.parse(readFileSync(ledgerPath, "utf8")) as { branch?: unknown };
     if (typeof parsed.branch === "string" && parsed.branch.length > 0) branch = parsed.branch;
-  } catch {
-    // keep the slug-derived branch; an unreadable/corrupt ledger still lists the project
+  } catch (err) {
+    // The ledger was just listed by readdirSync, so a read/parse failure here is
+    // corruption or a race — not the ordinary "no ledger" case. Keep the
+    // slug-derived branch so the project still lists, but say why. warnOnce
+    // because discoverProjects re-runs on every poll tick.
+    warnOnce(
+      `branch:${ledgerPath}`,
+      `dashboard: reading branch from ${ledgerPath} failed — using the slug (${String(err)})`,
+    );
   }
   let ledgerMtimeMs = 0;
   try {
     ledgerMtimeMs = statSync(ledgerPath).mtimeMs;
-  } catch {
-    // leave 0 — treated as oldest by the activity TTL
+  } catch (err) {
+    // Leave 0 — treated as oldest by the activity TTL.
+    warnOnce(`stat:${ledgerPath}`, `dashboard: stat of ${ledgerPath} failed — treating as oldest (${String(err)})`);
   }
   const id = createHash("sha1").update(`${root}@${branchSlug}`).digest("hex").slice(0, 12);
   return { id, root, branch, label: `${basename(root)} · ${branch}`, ledgerPath, ledgerMtimeMs };
@@ -72,7 +81,12 @@ function collectFrom(dir: string, depth: number, maxDepth: number, out: Discover
   let children: import("node:fs").Dirent[] = [];
   try {
     children = readdirSync(dir, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    // Unreadable directory (permissions, vanished mid-walk): stop descending
+    // this branch. Skipping it silently would look identical to "no projects
+    // here", so the walk reports what it could not read — once, since the walk
+    // repeats on every poll tick.
+    warnOnce(`list:${dir}`, `dashboard: cannot list ${dir} — skipping subtree (${String(err)})`);
     return;
   }
   for (const ent of children) {
