@@ -6,13 +6,10 @@ disable what you do not want.
 
 ## Locations
 
-Claude Code:
-- User-global: `~/.claude/toolu.config.json`
-- Project override: `$CLAUDE_PROJECT_DIR/.claude/toolu.config.json`
-
-Pi (via the bundled pi extension):
-- User-global: `~/.pi/agent/toolu.config.json`
-- Project override: `<repo>/.pi/toolu.config.json`
+- User-global: `~/.claude/toolu.config.json` (override the root with `TOOLU_CONFIG_DIR`
+  or `CLAUDE_CONFIG_DIR`)
+- Project override: `$CLAUDE_PROJECT_DIR/.claude/toolu.config.json` (override the
+  directory name with `TOOLU_PROJECT_CONFIG_DIRNAME`)
 
 Both are optional. When both exist they are deep-merged via `jq '. * .'`;
 project values win on conflict. Missing keys default to **enabled**.

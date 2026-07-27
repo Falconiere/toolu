@@ -9,7 +9,7 @@
 
 # toolu_registry_root -> prints the registry root dir (not created).
 toolu_registry_root() {
-  local agent_dir="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-${PI_CODING_AGENT_DIR:-$HOME/.claude}}}"
+  local agent_dir="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}"
   printf '%s/toolu' "$agent_dir"
 }
 

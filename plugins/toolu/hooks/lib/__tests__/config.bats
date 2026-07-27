@@ -5,7 +5,7 @@ setup() {
   TMP=$(mktemp -d)
   export HOME="$TMP/home"
   export CLAUDE_PROJECT_DIR="$TMP/project"
-  unset TOOLU_CONFIG_DIR CLAUDE_CONFIG_DIR TOOLU_PROJECT_DIR TOOLU_PROJECT_CONFIG_DIRNAME PI_CODING_AGENT_DIR
+  unset TOOLU_CONFIG_DIR CLAUDE_CONFIG_DIR TOOLU_PROJECT_DIR TOOLU_PROJECT_CONFIG_DIRNAME
   mkdir -p "$HOME/.claude" "$CLAUDE_PROJECT_DIR/.claude"
 
   REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../.." && pwd)"
@@ -59,16 +59,16 @@ teardown() {
   [ "$output" = "disabled" ]
 }
 
-@test "user cfg path honors PI_CODING_AGENT_DIR" {
-  run env PI_CODING_AGENT_DIR="$TMP/pi" bash -c '
+@test "user cfg path honors TOOLU_CONFIG_DIR" {
+  run env TOOLU_CONFIG_DIR="$TMP/cfg" bash -c '
     . '"$REPO_ROOT/hooks/lib/config.sh"'; _toolu_user_cfg
   '
   [ "$status" -eq 0 ]
-  [ "$output" = "$TMP/pi/toolu.config.json" ]
+  [ "$output" = "$TMP/cfg/toolu.config.json" ]
 }
 
-@test "user cfg path honors TOOLU_CONFIG_DIR over PI_CODING_AGENT_DIR" {
-  run env TOOLU_CONFIG_DIR="$TMP/cfg" PI_CODING_AGENT_DIR="$TMP/pi" bash -c '
+@test "user cfg path honors TOOLU_CONFIG_DIR over CLAUDE_CONFIG_DIR" {
+  run env TOOLU_CONFIG_DIR="$TMP/cfg" CLAUDE_CONFIG_DIR="$TMP/claude" bash -c '
     . '"$REPO_ROOT/hooks/lib/config.sh"'; _toolu_user_cfg
   '
   [ "$status" -eq 0 ]
@@ -76,9 +76,9 @@ teardown() {
 }
 
 @test "project cfg path honors TOOLU_PROJECT_CONFIG_DIRNAME" {
-  mkdir -p "$CLAUDE_PROJECT_DIR/.pi"
-  echo '{"version":1,"skills":{"comemory":false}}' > "$CLAUDE_PROJECT_DIR/.pi/toolu.config.json"
-  run env TOOLU_PROJECT_CONFIG_DIRNAME=".pi" bash -c '
+  mkdir -p "$CLAUDE_PROJECT_DIR/.alt"
+  echo '{"version":1,"skills":{"comemory":false}}' > "$CLAUDE_PROJECT_DIR/.alt/toolu.config.json"
+  run env TOOLU_PROJECT_CONFIG_DIRNAME=".alt" bash -c '
     . '"$REPO_ROOT/hooks/lib/config.sh"'; toolu_enabled skills comemory
   '
   [ "$status" -eq 1 ]
