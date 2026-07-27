@@ -18,7 +18,7 @@ if [[ ! "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ && ! "$FILE_PATH" =~ \.d\.ts$ \
     }
   ' "$FILE_PATH" 2>/dev/null | head -3)
   if [[ -n "$_undoc" ]]; then
-    DOC_ADVISORY="Exported API missing a JSDoc in $FILE_PATH — add a concise /** */ doc:\n${_undoc}"
+    DOC_ADVISORY="Exported API missing a JSDoc in $FILE_PATH — add a concise /** */ doc:"$'\n'"${_undoc}"
   fi
   _verbose_doc=$(awk '
     !inb && /\/\*\*/ { inb=1; start=NR; cnt=0 }   # !inb: a /** in prose must not reset the count mid-block
@@ -26,7 +26,11 @@ if [[ ! "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ && ! "$FILE_PATH" =~ \.d\.ts$ \
     inb && /\*\// { if (cnt>12) printf "%d: JSDoc block is %d lines — trim to the essentials\n", start, cnt; inb=0 }
   ' "$FILE_PATH" 2>/dev/null | head -2)
   if [[ -n "$_verbose_doc" ]]; then
-    DOC_ADVISORY="${DOC_ADVISORY:+$DOC_ADVISORY\n}Verbose JSDoc in $FILE_PATH — docs must be present but concise:\n${_verbose_doc}"
+    # Separator appended on its own line: ANSI-C quoting is NOT honored inside a
+    # ${var:+word} expansion, so the old one-liner would have emitted a literal
+    # $'\n' there.
+    [[ -n "$DOC_ADVISORY" ]] && DOC_ADVISORY="${DOC_ADVISORY}"$'\n'
+    DOC_ADVISORY="${DOC_ADVISORY}Verbose JSDoc in $FILE_PATH — docs must be present but concise:"$'\n'"${_verbose_doc}"
   fi
 fi
 

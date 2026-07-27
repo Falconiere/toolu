@@ -98,7 +98,10 @@ if [[ -n "$_file_git_dir" && -n "$_file_common_dir" && "$_file_git_dir" != "$_fi
 fi
 
 MESSAGES=""
+# Separator is a REAL newline. It used to be a literal backslash-n inside double
+# quotes, which jq then encoded as "\\n" — so every multi-line violation reached
+# the agent as one run-on line with a visible \n in it.
 add_error() {
-  MESSAGES="${MESSAGES}${1}\n"
+  MESSAGES="${MESSAGES}${1}"$'\n'
 }
 

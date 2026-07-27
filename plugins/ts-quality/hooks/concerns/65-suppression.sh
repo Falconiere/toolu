@@ -7,6 +7,6 @@ if [[ ! "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ ]]; then
 fi
 DISABLE_LINES=$(grep -nE "(//|/\*+)[[:space:]]*(${SUPPRESS_TOKENS})" "$FILE_PATH" 2>/dev/null | head -3)
 if [[ -n "$DISABLE_LINES" ]]; then
-  add_error "Forbidden suppression comment in $FILE_PATH — fix the underlying issue in code, never silence it\n${DISABLE_LINES}"
+  add_error "Forbidden suppression comment in $FILE_PATH — fix the underlying issue in code, never silence it"$'\n'"${DISABLE_LINES}"
 fi
 

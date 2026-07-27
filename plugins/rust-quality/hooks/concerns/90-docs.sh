@@ -14,7 +14,7 @@ if [[ "$FILE_PATH" == */src/* && ! "$_is_rust_test" -eq 1 ]]; then
     }
   ' "$FILE_PATH" 2>/dev/null | head -3)
   if [[ -n "$_undoc" ]]; then
-    DOC_ADVISORY="Public items missing a /// doc comment in $FILE_PATH — add a concise one-line doc:\n${_undoc}"
+    DOC_ADVISORY="Public items missing a /// doc comment in $FILE_PATH — add a concise one-line doc:"$'\n'"${_undoc}"
   fi
   # Concise cap: flag doc-comment runs that have grown long.
   _verbose_doc=$(awk '
@@ -23,7 +23,10 @@ if [[ "$FILE_PATH" == */src/* && ! "$_is_rust_test" -eq 1 ]]; then
     END { if (run>12) printf "%d: doc block is %d lines — trim to the essentials\n", start, run }
   ' "$FILE_PATH" 2>/dev/null | head -2)
   if [[ -n "$_verbose_doc" ]]; then
-    DOC_ADVISORY="${DOC_ADVISORY:+$DOC_ADVISORY\n}Verbose doc comment in $FILE_PATH — docs must be present but concise:\n${_verbose_doc}"
+    # Separator appended on its own line: ANSI-C quoting is NOT honored inside a
+    # ${var:+word} expansion, so it cannot be inlined there.
+    [[ -n "$DOC_ADVISORY" ]] && DOC_ADVISORY="${DOC_ADVISORY}"$'\n'
+    DOC_ADVISORY="${DOC_ADVISORY}Verbose doc comment in $FILE_PATH — docs must be present but concise:"$'\n'"${_verbose_doc}"
   fi
 fi
 

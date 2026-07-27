@@ -74,6 +74,6 @@ FILE_PATH="${CLAUDE_FILE_PATHS:-$fp_from_input}"
 
 MESSAGES=""
 add_error() {
-  MESSAGES="${MESSAGES}${1}\n"
+  MESSAGES="${MESSAGES}${1}"$'\n'
 }
 

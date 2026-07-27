@@ -18,6 +18,6 @@ THROW_LITERAL=$(awk '
   }
 ' "$FILE_PATH" 2>/dev/null | head -3)
 if [[ -n "$THROW_LITERAL" ]]; then
-  add_error "throw of non-Error literal in $FILE_PATH — throw an Error (or subclass) instead\n${THROW_LITERAL}"
+  add_error "throw of non-Error literal in $FILE_PATH — throw an Error (or subclass) instead"$'\n'"${THROW_LITERAL}"
 fi
 
