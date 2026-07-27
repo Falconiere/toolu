@@ -5,6 +5,8 @@
 
 import { readFileSync } from "node:fs";
 
+import { warnOnce } from "./log.ts";
+
 import { durationMs } from "./activity/tree-builder.ts";
 
 /** Spawn metadata pulled from an `Agent`/`Task` tool_use entry. */
@@ -55,10 +57,14 @@ export function readJsonl(path: string): Record<string, unknown>[] {
   }
   // Exactly one unparseable line is the documented-normal case: a live transcript
   // is read mid-append, so its tail is a half-written line. More than one means
-  // real corruption somewhere in the body — surface it once per read rather than
-  // once per line, which would spam every poll.
+  // real corruption in the body. warnOnce on top of that, keyed by path: readJsonl
+  // runs on every poll tick, so a permanently corrupt transcript would otherwise
+  // report forever.
   if (unparseable > 1) {
-    console.error(`dashboard: ${unparseable} unparseable lines in ${path} — skipped (last: ${lastParseError})`);
+    warnOnce(
+      `jsonl:${path}`,
+      `dashboard: ${unparseable} unparseable lines in ${path} — skipped (last: ${lastParseError})`,
+    );
   }
   return out;
 }

@@ -11,6 +11,7 @@ import { basename, join } from "node:path";
 import type { DiscoveredProject } from "../discovery.ts";
 import { extractResults, extractSpawns, readJsonl } from "../transcript.ts";
 import type { ActivitySummary, AgentNode, LiveActivitySource } from "./source.ts";
+import { warnOnce } from "../log.ts";
 import { isEnoent } from "./store.ts";
 import { type AgentMeta, buildTree, type ResultRec, type SpawnRec } from "./tree-builder.ts";
 
@@ -88,8 +89,12 @@ function readMetas(subagentsDir: string): AgentMeta[] {
       });
     } catch (err) {
       // Corrupt or unreadable sidecar: the agent is dropped from the tree, so
-      // report it rather than letting the subtree silently go missing.
-      console.error(`activity: skipping unreadable agent sidecar ${join(subagentsDir, f)} (${String(err)})`);
+      // report it rather than letting the subtree silently go missing. Once —
+      // readMetas re-runs on every poll tick.
+      warnOnce(
+        `meta:${join(subagentsDir, f)}`,
+        `activity: skipping unreadable agent sidecar ${join(subagentsDir, f)} (${String(err)})`,
+      );
     }
   }
   return metas.filter((m) => m.toolUseId.length > 0);
@@ -162,8 +167,12 @@ export const claudeCodeSource: LiveActivitySource = {
       // No subagents dir yet is the normal pre-fan-out case — transcript mtime
       // alone is the signature. Anything else means the fingerprint is missing
       // a signal, which shows up as a "stuck" agent, so name it.
+      // warnOnce: the fingerprint is recomputed on every poll tick.
       if (!isEnoent(err)) {
-        console.error(`activity: fingerprint for ${newest.subagentsDir} is incomplete (${String(err)})`);
+        warnOnce(
+          `fingerprint:${newest.subagentsDir}`,
+          `activity: fingerprint for ${newest.subagentsDir} is incomplete (${String(err)})`,
+        );
       }
     }
     return Math.round(fp);

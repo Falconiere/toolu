@@ -14,6 +14,7 @@ import { homedir } from "node:os";
 import { basename, join } from "node:path";
 
 import type { DiscoveredProject } from "../discovery.ts";
+import { warnOnce } from "../log.ts";
 import { extractResults, extractSpawns, readJsonl } from "../transcript.ts";
 import { slugFor } from "./claude-code.ts";
 import {
@@ -76,8 +77,12 @@ function discoverSessions(slug: string): DiscoveredSession[] {
       });
     } catch (err) {
       // The file was just listed by readdirSync, so a stat failure is a race or
-      // a permissions fault — skip the session, never fatal, but say so.
-      console.error(`backfill: skipping unreadable session ${transcriptPath} (${String(err)})`);
+      // a permissions fault — skip the session, never fatal, but say so. Once:
+      // backfillRepo is driven from the poll loop.
+      warnOnce(
+        `session:${transcriptPath}`,
+        `backfill: skipping unreadable session ${transcriptPath} (${String(err)})`,
+      );
     }
   }
   return out.sort((a, b) => b.mtimeMs - a.mtimeMs);
@@ -105,8 +110,12 @@ function readMetas(subagentsDir: string): AgentMeta[] {
       });
     } catch (err) {
       // Corrupt or unreadable sidecar: the agent is dropped from the tree, so
-      // report it rather than letting the subtree silently go missing.
-      console.error(`backfill: skipping unreadable agent sidecar ${join(subagentsDir, f)} (${String(err)})`);
+      // report it rather than letting the subtree silently go missing. Once:
+      // backfillRepo is driven from the poll loop.
+      warnOnce(
+        `sidecar:${join(subagentsDir, f)}`,
+        `backfill: skipping unreadable agent sidecar ${join(subagentsDir, f)} (${String(err)})`,
+      );
     }
   }
   return metas.filter((m) => m.toolUseId.length > 0);
@@ -187,8 +196,11 @@ function rebuildIndex(project: DiscoveredProject): void {
     entries = readdirSync(dir);
   } catch (err) {
     // No store dir yet is the normal first-run case; anything else means the
-    // index is being left stale, which is worth a breadcrumb.
-    if (!isEnoent(err)) console.error(`backfill: cannot list ${dir} — index left as-is (${String(err)})`);
+    // index is being left stale, which is worth a breadcrumb. Once: this is
+    // reached from the poll loop.
+    if (!isEnoent(err)) {
+      warnOnce(`rebuild:${dir}`, `backfill: cannot list ${dir} — index left as-is (${String(err)})`);
+    }
     return;
   }
   const sessions = [];

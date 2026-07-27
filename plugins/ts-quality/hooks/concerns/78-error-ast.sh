@@ -7,7 +7,10 @@ if command -v ast-grep >/dev/null 2>&1; then
   # same file — and measured ~170ms of the TS gate's ~300ms on every edit.
   # `scan --inline-rules` parses once and returns every rule's hits as JSON
   # (~13ms). The excerpt lines rebuilt from .file/.range/.lines below are
-  # byte-identical to what `run -p` printed, so message bodies are unchanged.
+  # byte-identical to what `run -p` printed for every pattern rule. The one
+  # exception is swallow-bare, which had to become a catch_clause match (see its
+  # comment): its excerpt is the catch clause rather than the whole try
+  # statement, which is narrower, not malformed.
   #
   # severity is `warning` on purpose: `scan` exits non-zero when an ERROR-level
   # rule matches, which would be indistinguishable from a crashed tool. At
