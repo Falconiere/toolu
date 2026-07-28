@@ -1,6 +1,6 @@
 {
   "name": "toolu",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Falconiere's personal Claude Code bundle: skills, agents, slash commands, and hooks.",
   "author": {
     "name": "Falconiere Barbosa",

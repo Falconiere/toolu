@@ -1,6 +1,6 @@
 {
   "name": "context7",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Library documentation & code-example lookup via Context7 (skill + REST wrapper). Standalone, no dependencies.",
   "author": {
     "name": "Falconiere Barbosa",
