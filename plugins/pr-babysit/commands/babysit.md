@@ -273,16 +273,18 @@ No performative agreement. No "Great point!" / "Thanks for catching that!". Stat
 
 ### Push
 
-Before push, run the reviewer required by the `push-review` PreToolUse hook (writes `.claude/tmp/push-review/<branch>.json`; push denied otherwise):
+**Commit first, then review, then push.** The `push-review` gate binds `git diff <base>...HEAD` — the *committed* diff. A state file written while the fix is still uncommitted describes the pre-fix tree, so the commit staleifies it and the push denies. Reviewing after the commit costs nothing and matches what the gate measures.
 
-- Run a reviewer (agnostic): \`caveman:cavecrew-reviewer\` when the caveman plugin is installed (preferred), the \`toolu-review:review\` skill (mirrors the CI bot's checklist — best for cutting bot rework; records \`toolu-review:review\` and writes the state file via its \`write-state.sh\`), or the built-in \`/code-review xhigh --fix\` skill. Review the diff + apply findings, then record the reviewer name in the state file's \`reviewers[]\`. (Optionally run \`code-simplifier\` first for clarity — allowed, not required.)
+1. **Commit the fix:**
+   - Extract ticket from branch if present (`feature/CORE-1234-desc` → `CORE-1234`).
+   - Conventional commits: `fix(<scope>): address PR review feedback` (add ticket prefix to subject when present).
+   - Only the PR's changed-file set may be staged. Unrelated file appears → abort + flag user.
 
-Loop until clean, then commit:
+2. **Review the committed diff** and write the state file the gate reads (`<worktree>/.claude/tmp/push-review/<branch>.json`; push denied otherwise). Run a reviewer (agnostic): `caveman:cavecrew-reviewer` when the caveman plugin is installed (preferred), the `toolu-review:review` skill (mirrors the CI bot's checklist — best for cutting bot rework; records `toolu-review:review` and writes the state file via its `write-state.sh`), or the built-in `/code-review xhigh --fix` skill. Apply findings, then record the reviewer name in the state file's `reviewers[]`. (Optionally run `code-simplifier` first for clarity — allowed, not required.)
+   - Findings that need code changes → amend or add a commit, then re-review. `review_round` restarts whenever the diff changes, and caps at 5 rewrites against an *unchanged* diff.
+   - The state file must live under the worktree's own root — pass `--repo <worktree>` to `write-state.sh` when the session is rooted elsewhere. A state file written under the main checkout is invisible to the gate.
 
-- Extract ticket from branch if present (`feature/CORE-1234-desc` → `CORE-1234`).
-- Conventional commits: `fix(<scope>): address PR review feedback` (add ticket prefix to subject when present).
-
-Push from worktree. Autonomous — no per-push prompt. Pre-push: only PR's changed-file set may be staged. Unrelated file appears → abort push + flag user.
+3. **Push from the worktree.** Autonomous — no per-push prompt.
 
 ---
 
@@ -355,7 +357,7 @@ Stop with clear flag when can't make forward progress without human:
 - PR closed/merged externally
 - PR marked **stuck** (5 fix attempts, or 2 consecutive same-blocker)
 - **Bot finding recurs**: a finding `key` (from parse-verdict.sh) seen on two consecutive rounds — you fixed/rejected it but the bot re-raised it. Rejecting a bot finding always lands here (the bot re-derives from the diff and ignores reply comments), so a deliberate rejection surfaces the disagreement to the human rather than looping.
-- **Round cap**: 5 fix→re-review rounds without reaching zero findings (matches the push-review gate's `MAX_ROUNDS=5`).
+- **Round cap**: 5 fix→re-review rounds on an unchanged diff without reaching zero findings (matches the push-review gate's `MAX_ROUNDS=5`; a new commit restarts the count).
 - Merge conflict (`mergeable == CONFLICTING`)
 - CI failure needs human judgment
 
@@ -441,7 +443,7 @@ Reset to base immediately on change. Always reuse same `pr-babysit:${SLOT}` name
 - Never auto-rebase — surface conflicts w/ diff summary, user decides.
 - Never amend — always new fix commits.
 - Pre-push file validation (Step 4) — only PR's changed-file set staged.
-- Every push satisfies `push-review` PreToolUse hook (clean state file at `.claude/tmp/push-review/<branch>.json`, `findings_count: 0`).
+- Every push satisfies `push-review` PreToolUse hook (clean state file at `<worktree>/.claude/tmp/push-review/<branch>.json`, `findings_count: 0`, written after the fix commit).
 
 ---
 

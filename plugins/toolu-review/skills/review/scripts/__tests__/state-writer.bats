@@ -8,6 +8,9 @@ WS="${BATS_TEST_DIRNAME}/../write-state.sh"
 setup() {
   TMP=$(mktemp -d)
   cd "$TMP"
+  # Resolved path: on macOS mktemp -d hands back /var/... while git reports the
+  # /private/var/... realpath, and the writer keys off the git root.
+  TMP_REAL=$(pwd -P)
   git init -q -b main
   git config user.email t@t
   git config user.name t
@@ -52,10 +55,10 @@ teardown() {
   git checkout -q -b feat/x-y
   echo z > f.txt && git add f.txt && git commit -qm work
   out=$(CLAUDE_PROJECT_DIR="$TMP" bash "$WS" --findings-count 0)
-  [ "$out" = "$TMP/.claude/tmp/push-review/feat_x-y.json" ]
+  [ "$out" = "$TMP_REAL/.claude/tmp/push-review/feat_x-y.json" ]
 }
 
-@test "write-state: writes schema and bumps review_round 0->1->2" {
+@test "write-state: writes schema and bumps review_round 0->1->2 on an unchanged diff" {
   git checkout -q -b feature
   echo a > f.txt && git add f.txt && git commit -qm work
   out=$(CLAUDE_PROJECT_DIR="$TMP" bash "$WS" --findings-count 0 --reviewers '["toolu-review:review"]')
@@ -65,6 +68,63 @@ teardown() {
   [ "$(jq -r .review_round "$out")" = "1" ]
   out2=$(CLAUDE_PROJECT_DIR="$TMP" bash "$WS" --findings-count 0)
   [ "$(jq -r .review_round "$out2")" = "2" ]
+}
+
+@test "write-state: review_round restarts at 1 when the diff changes" {
+  git checkout -q -b feature
+  echo a > f.txt && git add f.txt && git commit -qm work
+  out=$(bash "$WS" --findings-count 0)
+  out=$(bash "$WS" --findings-count 0)
+  [ "$(jq -r .review_round "$out")" = "2" ]
+
+  # New commit → new diff_sha → the prior rounds judged code that no longer
+  # exists, so the counter restarts instead of marching toward MAX_ROUNDS.
+  echo b >> f.txt && git add f.txt && git commit -qm more
+  out=$(bash "$WS" --findings-count 0)
+  [ "$(jq -r .review_round "$out")" = "1" ]
+  [ "$(jq -r .diff_sha "$out")" = "$(git diff --no-color main...HEAD | git hash-object --stdin)" ]
+}
+
+@test "write-state: state file lands under the repo root, not \$CLAUDE_PROJECT_DIR" {
+  git checkout -q -b feature
+  echo a > f.txt && git add f.txt && git commit -qm work
+  elsewhere=$(mktemp -d)
+  out=$(CLAUDE_PROJECT_DIR="$elsewhere" bash "$WS" --findings-count 0)
+  [ "$out" = "$TMP_REAL/.claude/tmp/push-review/feature.json" ]
+  [ ! -e "$elsewhere/.claude/tmp/push-review/feature.json" ]
+  rm -rf "$elsewhere"
+}
+
+@test "write-state: --repo targets a worktree's own state dir" {
+  git checkout -q -b feature
+  echo a > f.txt && git add f.txt && git commit -qm work
+  git checkout -q main
+  wt="$TMP/wt"
+  git worktree add -q "$wt" feature
+  wt_real=$(cd "$wt" && pwd -P)
+
+  # Run from the main checkout, naming the worktree — the gate reads the state
+  # file under the pushed repo's root, so the writer must land it there.
+  out=$(bash "$WS" --findings-count 0 --repo "$wt")
+  [ "$out" = "$wt_real/.claude/tmp/push-review/feature.json" ]
+  [ "$(jq -r .branch "$out")" = "feature" ]
+  [ "$(jq -r .diff_sha "$out")" = "$(git -C "$wt" diff --no-color main...HEAD | git hash-object --stdin)" ]
+  [ ! -e "$TMP_REAL/.claude/tmp/push-review/feature.json" ]
+}
+
+@test "write-state: \$STATE_DIR override is honored (mirrors the gate)" {
+  git checkout -q -b feature
+  echo a > f.txt && git add f.txt && git commit -qm work
+  out=$(STATE_DIR="$TMP/custom" bash "$WS" --findings-count 0)
+  [ "$out" = "$TMP/custom/feature.json" ]
+}
+
+@test "write-state: --repo outside a git repo fails loudly" {
+  notrepo=$(mktemp -d)
+  run bash "$WS" --findings-count 0 --repo "$notrepo"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"not inside a git repo"* ]]
+  rm -rf "$notrepo"
 }
 
 @test "write-state: refuses the empty-blob SHA (no divergence from base)" {

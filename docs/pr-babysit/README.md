@@ -145,7 +145,7 @@ State at `/tmp/pr-babysit-<slot>.json` (one file per slot — parallel agents do
 - Never force-push, `reset --hard`, or destructive git
 - Never auto-rebase — surface conflicts for user decision
 - Never amend — always new fix commits
-- Every push satisfies `push-review` PreToolUse hook (clean state file)
+- Every push satisfies `push-review` PreToolUse hook (clean state file). Pushes run as `git -C <worktree> push`, which the gate detects and judges against the worktree's own branch and diff — so the state file must be written under the worktree root (`write-state.sh --repo <worktree>`), and it must be written *after* the fix is committed
 
 ### Untrusted Input Safety
 

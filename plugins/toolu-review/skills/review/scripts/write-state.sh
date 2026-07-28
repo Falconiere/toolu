@@ -14,20 +14,28 @@
 # installed (the file is simply never read).
 #
 # Usage: write-state.sh --findings-count N [--reviewers JSON] [--findings JSON]
+#                       [--repo PATH]
 #   --findings-count  (required) integer; the gate allows push only when 0.
 #   --reviewers       (default ["toolu-review:review"]) JSON array.
 #   --findings        (default []) JSON array of {path,severity,text}.
+#   --repo            (default: the cwd's repo root) the checkout being reviewed.
+#                     Pass the worktree path when reviewing a worktree from a
+#                     session rooted elsewhere — the gate reads the state file
+#                     under the pushed repo's own root, so writing it anywhere
+#                     else is invisible to the gate.
 # Prints the state file path on success.
 set -o pipefail
 
 findings_count=""
 reviewers='["toolu-review:review"]'
 findings='[]'
+repo=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --findings-count) findings_count="$2"; shift 2 ;;
     --reviewers)      reviewers="$2";      shift 2 ;;
     --findings)       findings="$2";       shift 2 ;;
+    --repo)           repo="$2";           shift 2 ;;
     *) echo "write-state.sh: unknown arg: $1" >&2; exit 2 ;;
   esac
 done
@@ -37,19 +45,26 @@ done
 command -v jq  >/dev/null 2>&1 || { echo "write-state.sh: jq required"  >&2; exit 2; }
 command -v git >/dev/null 2>&1 || { echo "write-state.sh: git required" >&2; exit 2; }
 
-branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+# Repo root — MIRROR of push_target_root's fallback chain. The gate resolves
+# the root from the push command (`git -C <path> push`), so the writer must be
+# able to name the same checkout or the two disagree in a worktree.
+repo_root=$(git -C "${repo:-.}" rev-parse --show-toplevel 2>/dev/null || echo "")
+[ -n "$repo_root" ] || { echo "write-state.sh: ${repo:-$(pwd)} is not inside a git repo" >&2; exit 1; }
+
+branch=$(git -C "$repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 { [ -n "$branch" ] && [ "$branch" != "HEAD" ]; } || { echo "write-state.sh: not on a branch (detached HEAD?)" >&2; exit 1; }
 
 # Base branch — mirror of detect_base_branch's core; $PUSH_REVIEW_BASE matches
 # the gate's own override.
 base="${PUSH_REVIEW_BASE:-}"
 if [ -z "$base" ]; then
-  base=$(git symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null | sed 's#refs/remotes/origin/##')
+  base=$(git -C "$repo_root" symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null | sed 's#refs/remotes/origin/##')
   [ -n "$base" ] || base="main"
 fi
 
-# diff_sha — MIRROR of push-review.sh:95 (cross-checked by state-writer.bats).
-diff_sha=$(git diff --no-color "${base}...HEAD" 2>/dev/null | git hash-object --stdin 2>/dev/null || echo "")
+# diff_sha — MIRROR of push-review.sh's current_diff_sha (cross-checked by
+# state-writer.bats).
+diff_sha=$(git -C "$repo_root" diff --no-color "${base}...HEAD" 2>/dev/null | git -C "$repo_root" hash-object --stdin 2>/dev/null || echo "")
 [ -n "$diff_sha" ] || { echo "write-state.sh: git diff ${base}...HEAD failed" >&2; exit 1; }
 
 # Refuse the empty-blob SHA: an empty diff against base means nothing diverged
@@ -66,15 +81,23 @@ fi
 slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
 [ -n "$slug" ] || slug="_default"
 
-state_dir="${CLAUDE_PROJECT_DIR:-$(pwd)}/.claude/tmp/push-review"
+# state_dir — MIRROR of the gate's resolution, including its $STATE_DIR override.
+state_dir="${STATE_DIR:-$repo_root/.claude/tmp/push-review}"
 state_file="$state_dir/${slug}.json"
 mkdir -p "$state_dir" || { echo "write-state.sh: cannot create $state_dir" >&2; exit 1; }
 
-# review_round: read existing // 0, then +1 (each rewrite bumps; gate caps it).
+# review_round counts rewrites AT THE SAME diff_sha, so the gate's MAX_ROUNDS
+# cap means "reviewers keep finding issues in code that never changed". A
+# changed diff restarts at 1: the previous rounds judged different code, and
+# nothing ever resets the counter after a push, so carrying it forward made the
+# cap terminal for any branch that lived long enough.
 prev_round=0
 if [ -f "$state_file" ]; then
-  prev_round=$(jq -r '.review_round // 0' "$state_file" 2>/dev/null || echo 0)
-  [[ "$prev_round" =~ ^[0-9]+$ ]] || prev_round=0
+  prev_sha=$(jq -r '.diff_sha // ""' "$state_file" 2>/dev/null || echo "")
+  if [ "$prev_sha" = "$diff_sha" ]; then
+    prev_round=$(jq -r '.review_round // 0' "$state_file" 2>/dev/null || echo 0)
+    [[ "$prev_round" =~ ^[0-9]+$ ]] || prev_round=0
+  fi
 fi
 review_round=$((prev_round + 1))
 

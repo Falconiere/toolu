@@ -41,21 +41,28 @@ Resolves the diff with `git diff --no-color <base>...HEAD`, reviews every hunk a
 ### Workflow
 
 ```bash
+# Commit the fix FIRST — the gate binds the committed diff <base>...HEAD
+
 # Resolve the diff (same way the push-review gate does)
 git diff --no-color main...HEAD
 
 # Review every changed hunk against the checklist
 # Read surrounding code, grep for usage before claiming a finding
 
-# Fix accepted findings in code, re-review until none remain
+# Fix accepted findings in code, commit, re-review until none remain
 
 # Record the clean state (the SessionStart hook publishes this symlink;
 # $CLAUDE_PLUGIN_ROOT is NOT exported to the Bash tool subshell).
 bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review/write-state.sh" \
   --findings-count 0 --reviewers '["toolu-review:review"]'
+
+# Reviewing a worktree from a session rooted elsewhere? Name the checkout —
+# the gate only reads the state file under the pushed repo's own root.
+bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review/write-state.sh" \
+  --findings-count 0 --repo /path/to/worktree
 ```
 
-`write-state.sh` computes the gate's exact `diff_sha`/`base`/`slug`, bumps `review_round`, and writes `.claude/tmp/push-review/<branch-slug>.json` atomically. It's a harmless no-op when the toolu push-review gate is not installed.
+`write-state.sh` computes the gate's exact `diff_sha`/`base`/`slug`, sets `review_round`, and writes `<repo root>/.claude/tmp/push-review/<branch-slug>.json` atomically. `--repo` defaults to the cwd's repo root and fails with "not inside a git repo" otherwise; `$STATE_DIR` overrides the directory for the writer and the gate alike. `review_round` starts at 1 for a new `diff_sha` and bumps only when rewriting at the same one, so the gate's 5-round cap means "reviewers keep finding issues in code that never changed". It's a harmless no-op when the toolu push-review gate is not installed.
 
 ### Unfixable Findings
 
@@ -63,7 +70,7 @@ If findings remain that need a human decision:
 
 ```bash
 bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review/write-state.sh" \
-  --findings-count 3 --findings '[{"path":"src/auth.ts","line":42,"issue":"Needs product decision on session timeout"}]'
+  --findings-count 3 --findings '[{"path":"src/auth.ts","severity":"blocker","text":"Needs product decision on session timeout"}]'
 ```
 
 The gate keeps blocking — open findings mean the code is not ready to push.

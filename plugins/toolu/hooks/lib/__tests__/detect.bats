@@ -461,3 +461,93 @@ _stub_comemory() {  # $1 = version string the stub reports
   run is_git_push "$(printf '%s\n' 'cat <<EOF' 'about git push' 'EOF')"
   [ "$status" -ne 0 ]
 }
+
+@test "is_git_push: 'git -C <path> push' matches (pr-babysit's worktree form)" {
+  source_lib
+  run is_git_push "git -C /tmp/wt push"
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: 'git -C \"<quoted path>\" push origin HEAD' matches" {
+  source_lib
+  run is_git_push 'git -C "/tmp/my wt" push origin HEAD'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: 'git -c k=v push' matches" {
+  source_lib
+  run is_git_push "git -c push.default=simple push"
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: 'git --no-pager push' matches" {
+  source_lib
+  run is_git_push "git --no-pager push"
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: 'git --git-dir=/x/.git push' matches" {
+  source_lib
+  run is_git_push "git --git-dir=/x/.git push"
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: 'git -C /tmp/wt status' does NOT match" {
+  source_lib
+  run is_git_push "git -C /tmp/wt status"
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: 'git commit -m \"push\"' does NOT match (subcommand is not an option)" {
+  source_lib
+  run is_git_push 'git commit -m "push"'
+  [ "$status" -ne 0 ]
+}
+
+@test "push_target_root: 'git -C <worktree> push' resolves the worktree root" {
+  source_lib
+  git -c user.email=t@t -c user.name=t checkout -q -b feature
+  git -c user.email=t@t -c user.name=t commit --allow-empty -qm work
+  git checkout -q -
+  git worktree add -q "$TMP/wt" feature
+  run push_target_root "git -C $TMP/wt push"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(cd "$TMP/wt" && pwd -P)" ]
+}
+
+@test "push_target_root: bare 'git push' resolves the cwd's root" {
+  source_lib
+  run push_target_root "git push"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(pwd -P)" ]
+}
+
+@test "push_target_root: unresolvable -C path falls back to the cwd's root" {
+  source_lib
+  run push_target_root "git -C /nonexistent/nope push"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(pwd -P)" ]
+}
+
+@test "push_target_root: -C from a different command in the chain is ignored" {
+  source_lib
+  git -c user.email=t@t -c user.name=t checkout -q -b feature
+  git -c user.email=t@t -c user.name=t commit --allow-empty -qm work
+  git checkout -q -
+  git worktree add -q "$TMP/wt" feature
+  other=$(mktemp -d)
+  git -C "$other" init -q
+  # The `-C $other` belongs to the status call, not the push.
+  run push_target_root "git -C $other status && git -C $TMP/wt push"
+  rm -rf "$other"
+  [ "$output" = "$(cd "$TMP/wt" && pwd -P)" ]
+}
+
+@test "push_target_root: cumulative -C flags compose like git's own" {
+  source_lib
+  mkdir -p "$TMP/outer/inner"
+  git -C "$TMP/outer/inner" init -q
+  # git applies each -C relative to the previous one.
+  run push_target_root "git -C $TMP/outer -C inner push"
+  [ "$output" = "$(cd "$TMP/outer/inner" && pwd -P)" ]
+}

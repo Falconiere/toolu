@@ -100,7 +100,12 @@ Blocks `git push` on a feature branch until the diff has been run through an acc
 #  - toolu-review:review skill reviewed the diff (CI-bot mirror)
 #  - /code-review xhigh --fix ran and recorded clean state
 
-# Max 5 rounds — escalates instead of looping forever
+# Max 5 rounds against an UNCHANGED diff — escalates instead of looping
+# forever; a changed diff restarts the count at 1
+
+# `git -C <worktree> push` is gated too: the hook resolves the target repo
+# from the command and reads that repo's own branch, diff, and state file
+# at <target root>/.claude/tmp/push-review/<branch-slug>.json
 ```
 
 ### 5. Docs-Sync Backstop

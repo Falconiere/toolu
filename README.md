@@ -125,7 +125,7 @@ Eleven plugins, one marketplace. Install the core alone, or add the domain plugi
 
 Beyond the plugins, the core (`toolu`) also ships:
 
-- **\`push-review\` gate** — blocks \`git push\` on a feature branch until the diff has been run through an accepted reviewer (\`caveman:cavecrew-reviewer\` when installed, the built-in \`/code-review xhigh --fix\` skill, or the \`toolu-review:review\` skill), with a round cap (5) that escalates instead of looping forever.
+- **\`push-review\` gate** — blocks \`git push\` on a feature branch until the diff has been run through an accepted reviewer (\`caveman:cavecrew-reviewer\` when installed, the built-in \`/code-review xhigh --fix\` skill, or the \`toolu-review:review\` skill), with a round cap (5 rewrites against an unchanged diff) that escalates instead of looping forever. The state file lives under the pushed repo's own root, so `git -C <worktree> push` is gated on the worktree's branch and diff.
 - **docs-sync backstop** — on `git push`, an **advisory** (never a block) when the branch diff changes code but no documentation surface (README, `docs/` guides, `SKILL.md` triggers) — a nudge to keep user-facing docs in sync with behavior. Silenced by a diff-`sha`-keyed attestation; surfaces are tunable via `docsSync.*` ([config](docs/config.md#docs-sync-surfaces-docssync)). Pairs with the "Docs in sync" convention the workflow skills enforce.
 - **Slash commands** — `/commit` and `/review-and-commit`.
 - **`deep-explore` agent** — structural codebase exploration via ast-grep.
