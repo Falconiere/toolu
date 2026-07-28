@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.0.1](https://github.com/Falconiere/toolu/compare/v4.0.0...v4.0.1) (2026-07-28)
+
+
+### Bug Fixes
+
+* **toolu:** gate pushes on the target repo, not the hook's cwd ([#133](https://github.com/Falconiere/toolu/issues/133)) ([adfe24c](https://github.com/Falconiere/toolu/commit/adfe24c929e750c6cad77fc132c145ac47e892ff))
+
 ## [4.0.0](https://github.com/Falconiere/toolu/compare/v3.3.0...v4.0.0) (2026-07-27)
 
 
