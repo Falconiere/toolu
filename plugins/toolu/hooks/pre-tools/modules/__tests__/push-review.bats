@@ -428,3 +428,118 @@ EOF
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+# --- worktree targeting -------------------------------------------------
+#
+# pr-babysit pushes with `git -C <worktree> push` from a session rooted in the
+# main checkout. These exercise the default (non-$STATE_DIR) resolution, since
+# the bug was precisely that the gate read the wrong repo's state.
+
+# Run the hook with $STATE_DIR unset so the default state-dir resolution runs.
+run_hook_default_statedir() {
+  local payload="$1"
+  run env -u STATE_DIR -u CLAUDE_PROJECT_DIR \
+    tool_name=Bash input="$payload" PUSH_REVIEW_BASE=development \
+    bash "$HOOK_SCRIPT" <<<"$payload"
+}
+
+# Write a state file under an arbitrary repo root's default state dir.
+write_state_in() {
+  local root="$1" branch="$2" sha="$3" count="$4"
+  local slug
+  slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
+  mkdir -p "$root/.claude/tmp/push-review"
+  jq -n --arg branch "$branch" --arg sha "$sha" --argjson count "$count" \
+    '{version:1, branch:$branch, diff_sha:$sha, base_branch:"development",
+      reviewed_at:"2026-07-28T00:00:00Z", reviewers:["code-review"],
+      findings_count:$count, review_round:1, findings:[]}' \
+    > "$root/.claude/tmp/push-review/${slug}.json"
+}
+
+setup_worktree() {
+  git checkout -q development
+  git worktree add -q "$SANDBOX/wt" feat/example
+  WT_REAL=$(cd "$SANDBOX/wt" && pwd -P)
+  WT_SHA=$(git -C "$SANDBOX/wt" diff --no-color development...HEAD | git hash-object --stdin)
+}
+
+# Move the main checkout onto a diverging branch that has no state file, so a
+# gate reading its own cwd would deny. Lets an "allow" assertion prove the gate
+# actually read the worktree rather than fell through the base-branch exemption.
+diverge_main_checkout() {
+  git checkout -q -b other development
+  echo other > other.txt
+  git add other.txt
+  git commit -q -m "other commit"
+}
+
+@test "push-review: git -C <worktree> push is gated on the worktree, not the cwd" {
+  setup_worktree
+  # The main checkout sits on the base branch. Before the fix the gate read its
+  # own cwd, matched current_branch == base_branch, and allowed the push
+  # unreviewed — a silent bypass on every babysit worktree push.
+  payload=$(build_input "git -C $SANDBOX/wt push")
+  run_hook_default_statedir "$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("Code review required before push")'
+}
+
+@test "push-review: a state file in the main checkout does not authorize a worktree push" {
+  setup_worktree
+  # Correct SHA, correct branch, wrong repo root — the reviewer wrote it where
+  # the gate used to look. It must not satisfy the worktree's push.
+  write_state_in "$SANDBOX" "feat/example" "$WT_SHA" 0
+  payload=$(build_input "git -C $SANDBOX/wt push")
+  run_hook_default_statedir "$payload"
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e --arg wt "$WT_REAL" \
+    '.hookSpecificOutput.permissionDecisionReason | test($wt)'
+}
+
+@test "push-review: worktree push allowed once the worktree's own state is clean" {
+  setup_worktree
+  # Park the main checkout on a diverging branch with no state file, so an
+  # allow here can only come from reading the worktree — a gate that consulted
+  # its own cwd would deny on `other`'s missing state.
+  diverge_main_checkout
+  payload=$(build_input "git -C $SANDBOX/wt push")
+
+  # Engaged: silence at this point would mean the push was never gated at all
+  # (the old is_git_push did not match `git -C <path> push`).
+  run_hook_default_statedir "$payload"
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+
+  write_state_in "$WT_REAL" "feat/example" "$WT_SHA" 0
+  run_hook_default_statedir "$payload"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "push-review: worktree push still denies on open findings" {
+  setup_worktree
+  write_state_in "$WT_REAL" "feat/example" "$WT_SHA" 2
+  payload=$(build_input "git -C $SANDBOX/wt push")
+  run_hook_default_statedir "$payload"
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("open findings")'
+}
+
+@test "push-review: \$CLAUDE_PROJECT_DIR no longer decides where state is read" {
+  setup_worktree
+  diverge_main_checkout
+  elsewhere=$(mktemp -d)
+  payload=$(build_input "git -C $SANDBOX/wt push")
+
+  run env -u STATE_DIR CLAUDE_PROJECT_DIR="$elsewhere" \
+    tool_name=Bash input="$payload" PUSH_REVIEW_BASE=development \
+    bash "$HOOK_SCRIPT" <<<"$payload"
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+
+  write_state_in "$WT_REAL" "feat/example" "$WT_SHA" 0
+  run env -u STATE_DIR CLAUDE_PROJECT_DIR="$elsewhere" \
+    tool_name=Bash input="$payload" PUSH_REVIEW_BASE=development \
+    bash "$HOOK_SCRIPT" <<<"$payload"
+  rm -rf "$elsewhere"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}

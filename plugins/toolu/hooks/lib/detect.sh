@@ -153,9 +153,12 @@ detect_ast_grep() {
 }
 
 # Return the base branch from origin/HEAD, or "main" if remote is missing.
+# Takes an optional repo root as $1 — callers gating a push must pass the root
+# the push targets, since a worktree and its main checkout can sit on different
+# branches with different origin/HEAD resolution.
 detect_base_branch() {
   local root ref
-  root=$(detect_project_root)
+  root="${1:-$(detect_project_root)}"
   [ -z "$root" ] && { echo main; return; }
   ref=$(git -C "$root" symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null)
   if [ -n "$ref" ]; then
@@ -229,9 +232,56 @@ branch_slug() {
 # Return 0 iff the raw command string $1 is a `git push` (heredoc bodies
 # stripped first so a `git push` inside a heredoc/commit-message is ignored).
 # Boundary-anchored on both sides so `gitpush`/`git pushup` do not match.
+#
+# Git's global options may sit between `git` and the subcommand, so the
+# optional group also accepts them. Matching bare `git\s+push` missed
+# `git -C <worktree> push` — the form pr-babysit uses to push from a worktree —
+# which silently skipped every push-time gate. Only tokens that begin with `-`
+# are consumed, so `git commit -m "push"` still does not match.
 is_git_push() {
   printf '%s\n' "$1" | strip_heredocs \
-    | grep -qE '(^|\s|&&|\|\||;)git\s+push(\s|;|&|\||$)'
+    | grep -qE '(^|\s|&&|\|\||;)git(\s+(-[cC]\s+("[^"]*"|\S+)|--\S+=\S+|--[a-z][a-z-]*|-[a-zA-Z]))*\s+push(\s|;|&|\||$)'
+}
+
+# Echo the absolute root of the repo a `git push` command ($1) targets.
+#
+# The hook's own cwd is not authoritative: `git -C <path> push` targets another
+# checkout entirely. Resolving from the command keeps a worktree push gated
+# against the worktree's own state, instead of reading the main checkout's state
+# file (wrong branch, wrong diff) or — when the main checkout happens to sit on
+# the base branch — skipping the gate altogether.
+#
+# Falls back to the cwd's toplevel, then $CLAUDE_PROJECT_DIR, then cwd.
+push_target_root() {
+  local command="$1" dir root
+  local -a cd_args=()
+
+  # Split on statement separators first: in `git -C a status && git -C b push`
+  # only the `push` segment's own -C counts. Within that segment, collect EVERY
+  # -C preceding `push` and replay them all — git applies them cumulatively
+  # (each relative to the last), so honouring only the first or last would
+  # resolve a different directory than the push itself uses.
+  while IFS= read -r dir; do
+    [ -n "$dir" ] || continue
+    dir=${dir%\"}
+    dir=${dir#\"}
+    cd_args+=(-C "$dir")
+  done < <(printf '%s\n' "$command" | strip_heredocs \
+    | awk '{ gsub(/&&|\|\||;|\|/, "\n"); print }' \
+    | awk '{
+        for (i = 1; i <= NF; i++)
+          if ($i == "push") {
+            for (j = 1; j < i; j++) if ($j == "-C") print $(j + 1)
+            exit
+          }
+      }')
+
+  if [ ${#cd_args[@]} -gt 0 ]; then
+    root=$(git "${cd_args[@]}" rev-parse --show-toplevel 2>/dev/null)
+  fi
+  [ -n "$root" ] || root=$(git rev-parse --show-toplevel 2>/dev/null)
+  [ -n "$root" ] || root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+  echo "$root"
 }
 
 # Read non-comment non-blank lines from a settings file. Returns 0 with no

@@ -30,17 +30,28 @@ Review `git diff <base>...HEAD` against these dimensions. Every finding blocks
 
 ## How to run
 
+**Commit the fix first, then review.** The gate binds `git diff <base>...HEAD` —
+the *committed* diff. State recorded while a fix is still uncommitted describes
+the pre-fix tree, so committing staleifies it and the push denies.
+
 1. Resolve the diff: `git diff --no-color <base>...HEAD` (base = the push-review
    gate's base; the helper below resolves it the same way).
 2. Review every changed hunk against the checklist. Read surrounding code and
    grep for usage before claiming a finding — no speculative nits.
-3. Fix accepted findings in code, re-review until none remain.
+3. Fix accepted findings in code, commit them, re-review until none remain.
 4. Record the clean state for the push-review gate:
 
    ```bash
    bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review/write-state.sh" \
      --findings-count 0 --reviewers '["toolu-review:review"]'
    ```
+
+   Pass `--repo <path>` when the reviewed checkout is not the session's cwd —
+   a worktree, say. The gate reads the state file under the **pushed repo's own
+   root**, so a file written anywhere else is invisible to it. `--repo` defaults
+   to the cwd's repo root and the script fails with "not inside a git repo" when
+   the path given is not one. `$STATE_DIR`, when set, overrides the directory for
+   the writer and the gate alike.
 
    `write-state.sh` is published as a symlink at
    `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review/write-state.sh` by the plugin's
@@ -49,8 +60,10 @@ Review `git diff <base>...HEAD` against these dimensions. Every finding blocks
    hook subprocesses, so the plugin-root path expands to an empty string from a
    Bash tool call.
 
-   It computes the gate's exact `diff_sha`/`base`/`slug`, bumps `review_round`,
-   and writes `.claude/tmp/push-review/<branch-slug>.json` atomically. Harmless
+   It computes the gate's exact `diff_sha`/`base`/`slug`, sets `review_round`
+   (1 for a new `diff_sha`, +1 only when rewriting at the same one — the gate
+   caps at 5 rounds on an unchanged diff), and writes
+   `<repo root>/.claude/tmp/push-review/<branch-slug>.json` atomically. Harmless
    no-op when the toolu push-review gate is not installed (the file goes unread).
 
 If findings remain that you cannot fix (e.g. needs a human decision), record them

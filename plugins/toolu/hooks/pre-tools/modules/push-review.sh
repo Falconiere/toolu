@@ -37,18 +37,25 @@ command=$(echo "$input" | jq -r '.tool_input.command // ""')
 # push-time check.
 is_git_push "$command" || exit 0
 
-current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+# Every check below reads the repo the push TARGETS, not the hook's cwd — a
+# `git -C <worktree> push` must be judged on the worktree's branch, diff and
+# state file. Keying off $CLAUDE_PROJECT_DIR (a main-checkout path) split the
+# state file in two: the reviewer wrote the worktree's copy while the gate read
+# the main checkout's, so no amount of re-reviewing could satisfy it.
+repo_root=$(push_target_root "$command")
+
+current_branch=$(git -C "$repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 slug=$(branch_slug "$current_branch")
 
-# Resolve state dir: env override takes precedence; else project-root default.
-state_dir=${STATE_DIR:-${CLAUDE_PROJECT_DIR:-$(pwd)}/.claude/tmp/push-review}
+# Resolve state dir: env override takes precedence; else target-repo default.
+state_dir=${STATE_DIR:-$repo_root/.claude/tmp/push-review}
 state_file="$state_dir/${slug}.json"
 
-# Base branch: env override > detect_base_branch.
-base_branch="${PUSH_REVIEW_BASE:-$(detect_base_branch)}"
+# Base branch: env override > detect_base_branch, resolved in the target repo.
+base_branch="${PUSH_REVIEW_BASE:-$(detect_base_branch "$repo_root")}"
 
 # Verify base branch exists locally.
-if ! git rev-parse --verify --quiet "$base_branch" >/dev/null; then
+if ! git -C "$repo_root" rev-parse --verify --quiet "$base_branch" >/dev/null; then
   jq -n --arg base "$base_branch" '{
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
@@ -85,7 +92,7 @@ fi
 # branch (e.g. after a force reset wipes commits).
 EMPTY_BLOB_SHA="e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
 
-current_diff_sha=$(git diff --no-color "${base_branch}...HEAD" 2>/dev/null | git hash-object --stdin 2>/dev/null || echo "")
+current_diff_sha=$(git -C "$repo_root" diff --no-color "${base_branch}...HEAD" 2>/dev/null | git -C "$repo_root" hash-object --stdin 2>/dev/null || echo "")
 if [[ -z "$current_diff_sha" ]]; then
   # git diff failed (disk full, etc). Allow push; underlying push will surface real failure.
   echo "push-review: git diff ${base_branch}...HEAD failed; allowing push to surface real error" >&2
@@ -132,7 +139,7 @@ if [[ ! -f "$state_file" ]]; then
         "Then atomically write " + $file + " (tmp+mv) with schema " +
         "{ version: 1, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round }. " +
         "`reviewers` must include at least one accepted reviewer (caveman:cavecrew-reviewer, code-review, toolu-review:review, code-review:xhigh, review, or security-review), " +
-        "`findings_count` must be 0, `review_round` starts at 1 and bumps by 1 each rewrite. " +
+        "`findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. " +
         "Retry push."
       )
     }
@@ -182,8 +189,13 @@ if ! jq -e --argjson acc "$accepted_reviewers" \
   exit 0
 fi
 
-# Max review rounds — bound the fix→re-review loop. Each rewrite must bump
-# `review_round`. Missing field is treated as round 1 for backward compat.
+# Max review rounds — bound the fix→re-review loop. `review_round` counts
+# rewrites AT THE SAME diff_sha: a changed diff resets it to 1, so the counter
+# measures "reviewers keep finding issues in code that never changed", not
+# "this branch has been worked on for a while". Counting every rewrite instead
+# made the cap terminal — nothing resets it after a push, so a long-lived
+# branch eventually denied every push forever.
+# Missing field is treated as round 1 for backward compat.
 # After MAX_ROUNDS, deny with an escalation message so the babysit triggers
 # its Step 6 escalation stop instead of looping indefinitely.
 MAX_ROUNDS=5
@@ -194,7 +206,7 @@ if [[ "$state_round" =~ ^[0-9]+$ ]] && (( state_round > MAX_ROUNDS )); then
       "hookEventName": "PreToolUse",
       "permissionDecision": "deny",
       "permissionDecisionReason": (
-        "ESCALATE: review loop hit " + $n + " rounds (max " + $max + ") at " + $file + ". " +
+        "ESCALATE: review loop hit " + $n + " rounds (max " + $max + ") on an unchanged diff at " + $file + ". " +
         "Reviewers keep finding new issues after each fix — stop auto-looping and surface the " +
         "current findings to the human. Babysit: treat as Escalation stop (Step 6)."
       )

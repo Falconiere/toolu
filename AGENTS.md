@@ -82,7 +82,7 @@ All workflows live in `.github/workflows/`:
 | `plugins/toolu/hooks/pre-tools/mod.sh` | Pre-tool gate dispatcher (protected files, bash commands, MCP blocker, commit gate, quality gate) |
 | `plugins/toolu/hooks/post-tools/mod.sh` | Post-tool gate dispatcher (quality checks on edited files) |
 | `plugins/toolu/hooks/lib/quality-config.sh` | Quality threshold resolver (override → linter config → built-in default) |
-| `plugins/toolu/hooks/lib/detect.sh` | Code-line counter, comemory version detection, tool availability |
+| `plugins/toolu/hooks/lib/detect.sh` | Code-line counter, comemory version detection, tool availability, `git push` detection (`is_git_push`) + push target repo resolution (`push_target_root`) |
 | `plugins/*/hooks/register.sh` | SessionStart: syncs hook modules into the toolu runtime registry under the agent config dir |
 | `plugins/*/hooks/hooks.json` | Claude Code hook routing (event → script path + matcher) |
 | `tooling/shellcheck.sh` | shellcheck gate: standalone scripts + each concerns dir assembled into the module that actually runs |
