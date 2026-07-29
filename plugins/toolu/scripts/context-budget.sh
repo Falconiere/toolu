@@ -75,6 +75,7 @@ check_skill() {
 
 run_docs() {
   check_doc session-start      plugins/toolu/hooks/docs/session-start.md      110
+  check_doc model-routing      plugins/toolu/hooks/docs/model-routing.md       90
   check_doc post-compaction    plugins/toolu/hooks/docs/post-compaction.md     28
   check_doc session-start-ts   plugins/toolu/hooks/docs/session-start-ts.md    30
   check_doc session-start-rust plugins/toolu/hooks/docs/session-start-rust.md  36

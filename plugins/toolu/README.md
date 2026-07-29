@@ -17,7 +17,8 @@ Falconiere's personal Claude Code bundle: skills, agents, slash commands, and ho
 - **\`push-review\` gate** — blocks \`git push\` on a feature branch until the diff has been run through an accepted reviewer (\`caveman:cavecrew-reviewer\`, the built-in \`/code-review\` skill, or \`toolu-review:review\`), with a round cap that escalates instead of looping (5 rewrites against an unchanged diff; a changed diff restarts the count). Gated per target repo — `git -C <worktree> push` is judged on the worktree's own branch, diff, and state file.
 - **docs-sync backstop** — an advisory (never a block) on push when code changes but no docs surface does.
 - **Slash commands** — `/commit` and `/review-and-commit`.
-- **`deep-explore` agent** — structural codebase exploration via ast-grep.
+- **Model routing** — delegated work is tiered by its class (mechanical → `haiku`; exploration / implementation / review → `sonnet`; synthesis / architecture → `opus`), injected at session start, honored by the workflow skills, pinnable per plan step (`"model": "<alias>"`), and remappable under `models` in the config.
+- **Tier-pinned agents** — `quick-task` (Haiku), `deep-explore` / `research-agent` / `implementer` (Sonnet), `architect` (Opus, read-only). Structural exploration runs on ast-grep; the cheap tiers escalate rather than guess.
 
 ## Configuration
 

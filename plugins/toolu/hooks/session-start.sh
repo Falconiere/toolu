@@ -64,8 +64,26 @@ render_doc() {
   local pm="${NODE_PM:-your package manager}"
   content="${content//\{\{project_name\}\}/$name}"
   content="${content//\{\{node_pm\}\}/$pm}"
+  # Model-tier placeholders: substituted from the resolved routing table so a
+  # user who remaps a tier in toolu.config.json sees THEIR aliases in the
+  # injected block, not the built-in defaults.
+  content="${content//\{\{model_mechanical\}\}/$MODEL_MECHANICAL}"
+  content="${content//\{\{model_exploration\}\}/$MODEL_EXPLORATION}"
+  content="${content//\{\{model_implementation\}\}/$MODEL_IMPLEMENTATION}"
+  content="${content//\{\{model_review\}\}/$MODEL_REVIEW}"
+  content="${content//\{\{model_synthesis\}\}/$MODEL_SYNTHESIS}"
+  content="${content//\{\{model_architecture\}\}/$MODEL_ARCHITECTURE}"
   printf '%s' "$content"
 }
+
+# Resolve the model-routing table once per session. Config-driven and stable
+# within a session, so it is safe for the cached SessionStart prefix.
+MODEL_MECHANICAL=$(toolu_model mechanical)
+MODEL_EXPLORATION=$(toolu_model exploration)
+MODEL_IMPLEMENTATION=$(toolu_model implementation)
+MODEL_REVIEW=$(toolu_model review)
+MODEL_SYNTHESIS=$(toolu_model synthesis)
+MODEL_ARCHITECTURE=$(toolu_model architecture)
 
 # ── Git context (branch only) ───────────────────────────────────────────────
 # Cache discipline: this string lands in the once-cached SessionStart prefix, so
@@ -110,6 +128,15 @@ case "$event" in
     [ -n "$main_doc" ] && parts+=("$main_doc")
     ;;
 esac
+
+# Model routing — which tier handles which class of delegated work. Injected on
+# every event (it must survive a compact, since post-compaction delegation is
+# exactly where the agent otherwise falls back to one model for everything).
+# Opt out with `"models": {"enabled": false}`.
+if toolu_enabled models enabled; then
+  routing_doc=$(render_doc "$HOOK_DIR/docs/model-routing.md")
+  [ -n "$routing_doc" ] && parts+=("$routing_doc")
+fi
 
 # Per-toolchain snippets — opt-in via $TOOLU_VERBOSE to save tokens.
 # Default off: the session-start.md core already covers project rules.

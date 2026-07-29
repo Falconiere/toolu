@@ -20,7 +20,7 @@ A design exists — ideally a reviewed spec (`spec` + `spec-review` ran for larg
 2. **Approach** — the chosen design only, not the alternatives. Name the reused functions/utilities with their paths.
 3. **Steps / workstreams** — ordered, each independently verifiable. For a pattern repeated across many files, describe it once and list a few representative paths — don't enumerate every file.
    - For non-trivial work (features/refactors/behavior changes), emit the plan doc at `docs/toolu/plans/<date>-<slug>.md` with a machine-readable steps block under a heading literally `## Steps (machine-readable)` — a single fenced ` ```json ` array of `{id,title,check}`, where `check` is a runnable command (exit 0 = green). This block is the ledger contract `execution` tracks against.
-     - A step may carry optional fields: `ac_refs` (array of spec `AC-<n>` ids this step satisfies — drives `status` AC-coverage), `depends_on` (array of step ids that should be green first — advisory, not enforced), and `input` (freeform note on what feeds the step). They default to `[]`/`[]`/`null`; legacy `{id,title,check}` steps stay valid.
+     - A step may carry optional fields: `ac_refs` (array of spec `AC-<n>` ids this step satisfies — drives `status` AC-coverage), `depends_on` (array of step ids that should be green first — advisory, not enforced), `input` (freeform note on what feeds the step), and `model` (the tier that should execute it — one of `haiku`, `sonnet`, `opus`, `fable`, `inherit`). They default to `[]`/`[]`/`null`/`null`; legacy `{id,title,check}` steps stay valid.
 4. **Critical files** — exact paths to create or modify.
 5. **Verification** — how to prove it works end-to-end: the commands to run, the tests to add, the real-data path to exercise.
 
@@ -30,6 +30,7 @@ A design exists — ideally a reviewed spec (`spec` + `spec-review` ran for larg
 - **Tests** — real-world data only, NO mocks. Name the fixtures/real inputs.
 - **Docs** — a concise doc line per new module/public symbol is part of "done", not a follow-up.
 - **Docs in sync** — when a step changes a user-facing surface (public API, CLI flags, commands, config, documented behavior), emit an explicit doc-update step touching the affected README / `docs/` guides / `SKILL.md` triggers / release notes; for ledger-tracked plans give it a runnable `check`.
+- **Tier per step** — set each step's `model` while the complexity is still fresh in your head: `haiku` for mechanical steps, `sonnet` for bounded edits and their tests, `opus` for a step that still has a design call in it. Any of hard-to-reverse / cross-cutting / undecided-how pushes a step up a tier. A step that needs `opus` to decide *and* `sonnet` to type is two steps — split it. Rubric: `plugins/toolu/skills/orchestrator/references/model-routing.md`.
 - **Size** — respect the per-project line limits (default 300 TS / 500 Rust); if a step grows a file past them, the plan must split it.
 - **Gate-aware** — the quality gate blocks further edits while failing; sequence steps so each lands clean.
 

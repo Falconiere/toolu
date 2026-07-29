@@ -25,6 +25,8 @@ The goal is a written design you and the user both believe in. Get there however
 4. **Weigh two or three approaches and recommend one.** Name the trade-off that actually matters for *this* problem — simplicity vs. flexibility, speed vs. correctness, blast radius vs. cleanliness — and say which way you'd go and why. A menu with no recommendation pushes the decision back onto the user; have an opinion.
 5. **Record the decision.** A short decision record: chosen approach, the why, the alternatives you rejected and why, and the risks still open. Save anything durable (a convention, a constraint, a non-obvious call) to memory via `agent-memory` so it outlives this conversation.
 
+**Delegate at the right tier.** Steps 3's prior-art hunt is exploration — send it to a mid-tier agent (`toolu:deep-explore`) and keep the bytes out of this thread. Step 4's trade-off call is architecture: it stays with the top tier (here, or `toolu:architect`). Never let a cheap tier settle the design, and never spend the top tier on the search that feeds it. Rubric: `plugins/toolu/skills/orchestrator/references/model-routing.md`.
+
 ## Conventions to carry forward
 
 These are toolu defaults the later phases enforce, so decide them here rather than discovering them mid-implementation:

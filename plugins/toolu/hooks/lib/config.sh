@@ -13,6 +13,8 @@
 #   toolu_enabled CAT NAME     - 0 if enabled (default), 1 if disabled
 #   toolu_comemory_state       - print 'available' | 'missing' | 'disabled'
 #   toolu_config_exists        - 0 if any config file is on disk (cheap stat-only check)
+#   toolu_model CLASS          - print the model alias routed to a work class
+#   toolu_model_valid ALIAS    - 0 if ALIAS is a routable model alias
 #
 # Defaults: missing key = enabled. Malformed JSON or missing jq = all enabled
 # with a single stderr warning.
@@ -156,6 +158,72 @@ toolu_enabled_explicit() {
     '(.[$c]? // {})[$n]? | tostring' <<< "$TOOLU_CFG_JSON" 2>/dev/null)
   [ "$val" = "true" ] && return 0
   return 1
+}
+
+# ── Model-tier routing ──────────────────────────────────────────────────────
+# Which model runs a delegated task is a function of the WORK CLASS, not of the
+# task's prose. Callers name the class; this resolves it to a Claude Code model
+# alias to hand the Agent tool's `model:` field.
+#
+# Aliases, not version ids, are the contract: `sonnet` keeps meaning "the
+# current mid tier" across model releases, so routing survives a new model
+# generation with zero edits. `inherit` is accepted as an override value and
+# means "whatever the lead thread is running".
+#
+# Precedence: `.models.<class>` in config -> built-in default. An unrecognized
+# value is REJECTED (warn + fall back to the default): routing must never emit
+# a model name the Agent tool would refuse, which would fail the delegation
+# instead of just mis-tiering it.
+TOOLU_MODEL_ALIASES="haiku sonnet opus fable inherit"
+TOOLU_MODEL_CLASSES="mechanical exploration implementation review synthesis architecture"
+
+# _toolu_model_default CLASS -> built-in alias for CLASS; returns 1 if unknown.
+_toolu_model_default() {
+  case "$1" in
+    mechanical)     printf 'haiku' ;;
+    exploration)    printf 'sonnet' ;;
+    implementation) printf 'sonnet' ;;
+    review)         printf 'sonnet' ;;
+    synthesis)      printf 'opus' ;;
+    architecture)   printf 'opus' ;;
+    *) return 1 ;;
+  esac
+}
+
+# toolu_model CLASS -> print the model alias for CLASS.
+# Unknown class: warn, print nothing, return 1 (a caller typo must be loud, not
+# silently routed to some default tier). Missing jq: the built-in default.
+toolu_model() {
+  local class="$1" def val
+  if ! def=$(_toolu_model_default "$class"); then
+    _toolu_warn "unknown model class '$class' (known: $TOOLU_MODEL_CLASSES)"
+    return 1
+  fi
+  toolu_load_config
+  if [ "$_TOOLU_HAS_JQ" != "1" ]; then
+    printf '%s' "$def"
+    return 0
+  fi
+  val=$(jq -r --arg c "$class" \
+    '((.models? // {})[$c]? // "") | tostring' <<< "$TOOLU_CFG_JSON" 2>/dev/null)
+  [ -n "$val" ] || { printf '%s' "$def"; return 0; }
+  case " $TOOLU_MODEL_ALIASES " in
+    *" $val "*) printf '%s' "$val" ;;
+    *)
+      _toolu_warn "models.$class: '$val' is not a model alias ($TOOLU_MODEL_ALIASES); using $def"
+      printf '%s' "$def"
+      ;;
+  esac
+}
+
+# toolu_model_valid ALIAS -> 0 if ALIAS is a routable model alias, else 1.
+# Shared by the plan-ledger step validator so the plan doc and the runtime
+# router agree on one alias list.
+toolu_model_valid() {
+  case " $TOOLU_MODEL_ALIASES " in
+    *" ${1:-} "*) [ -n "${1:-}" ] && return 0; return 1 ;;
+    *) return 1 ;;
+  esac
 }
 
 # Return 0 if any config file is on disk. Stat-only; no jq, no load. Used by

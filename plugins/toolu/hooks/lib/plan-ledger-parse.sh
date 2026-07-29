@@ -7,9 +7,11 @@
 # pl_parse_steps PLAN_DOC_PATH
 # Extract the FIRST ```json fenced block under the `## Steps (machine-readable)`
 # heading and print the JSON array to stdout. Validates with jq: must be a
-# non-empty array whose every element has non-empty string id/title/check.
-# On missing heading/block, empty array, or malformed json: error to stderr,
-# non-zero return, nothing on stdout. Never writes.
+# non-empty array whose every element has non-empty string id/title/check, and
+# whose optional `model` (the tier that should execute the step) is one of
+# haiku|sonnet|opus|fable|inherit.
+# On missing heading/block, empty array, malformed json, or an unroutable
+# model: error to stderr, non-zero return, nothing on stdout. Never writes.
 pl_parse_steps() {
   local doc="$1" block
   if [ ! -f "$doc" ]; then
@@ -41,15 +43,32 @@ pl_parse_steps() {
     echo "plan-ledger-parse: steps block in $doc is not a non-empty array of {id,title,check} strings" >&2
     return 1
   fi
+  # `model` is the tier that should execute the step. Optional, but when present
+  # it must be a routable alias — a typo here would send `execution` to delegate
+  # on a model the Agent tool rejects, failing the step for a reason that has
+  # nothing to do with the step. Reject at parse time instead.
+  local bad_models
+  bad_models=$(jq -r '
+    [ .[] | select(.model != null)
+          | select((.model | type) != "string"
+                   or ((.model) as $m
+                       | ["haiku","sonnet","opus","fable","inherit"] | index($m) | not))
+          | "\(.id)=\(.model|tostring)" ] | join(", ")
+  ' <<< "$block" 2>/dev/null) || bad_models=""
+  if [ -n "$bad_models" ]; then
+    echo "plan-ledger-parse: invalid step model in $doc ($bad_models); allowed: haiku sonnet opus fable inherit" >&2
+    return 1
+  fi
   # Emit the normalized array (jq-compacted) on stdout. Backfill the optional
   # authored fields so downstream serialization always sees them: ac_refs and
-  # depends_on default to [], input to null. Legacy {id,title,check} steps thus
-  # gain []/[]/null; any authored values are preserved. Permissive `// default`
-  # also coerces a present-but-null field to its default.
+  # depends_on default to [], input and model to null. Legacy {id,title,check}
+  # steps thus gain []/[]/null/null; any authored values are preserved.
+  # Permissive `// default` also coerces a present-but-null field to its default.
   jq -c 'map(
     .ac_refs    = (.ac_refs // []) |
     .depends_on = (.depends_on // []) |
-    .input      = (.input // null)
+    .input      = (.input // null) |
+    .model      = (.model // null)
   )' <<< "$block"
 }
 

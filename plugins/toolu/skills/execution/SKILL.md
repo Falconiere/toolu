@@ -28,6 +28,7 @@ For ledger-tracked work, **before the first step** run `bash plugins/toolu/hooks
 
 - **Global gate** — do NOT move to the next step while any error/warning/test failure stands, even in unrelated files.
 - **Delegate to stay compact** — push exploration, large reads, and parallelizable work to subagents; keep the main context lean.
+- **Delegate at the step's tier** — `status` prints `model=<alias>` for the next step when the plan declared one; hand that step to a subagent on that model (`toolu:quick-task` / `toolu:implementer` / `toolu:architect`, or an explicit `model:`). No declared tier, or a step that turns out harder than planned? Fall back to the rubric and escalate one tier rather than retrying the same tier: `plugins/toolu/skills/orchestrator/references/model-routing.md`.
 - **No scope creep** — do only what the plan calls for. New needs go back to `plan` (and `plan-review`), not into this step.
 - **Honor the layout** — files named after their export, one responsibility each, under the line limit, docs present and concise.
 - **Docs in sync** — when a step changes a user-facing surface (behavior, interfaces, CLI flags, commands, config), update the prose docs that describe it (README, `docs/` guides, `SKILL.md` triggers, release notes) in the same step; it's part of "done", not a follow-up.
