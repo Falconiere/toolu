@@ -26,6 +26,7 @@ back to "all enabled".
   "skills":  { "<name>": true | false },
   "hooks":   { "<name>": true | false },
   "mcp":     { "<server>": true | false },
+  "models":  { "enabled": true | false, "<class>": "haiku|sonnet|opus|fable|inherit" },
   "lang":    { "ts":   { "maxFileLines": 300, "maxFnLines": 60 },
                "rust": { "maxFileLines": 500, "maxFnLines": 50, "maxImplLines": 200 } },
   "docsSync": { "surfaces": ["README.md", "docs/*.md", "*/SKILL.md"],
@@ -70,6 +71,42 @@ so configs copy-pasted from sources that quote numbers still work. The gate neve
 invokes biome/oxc/eslint/prettier/clippy/rustfmt; detecting them only tunes
 advisory wording. Resolver: `plugins/toolu/hooks/lib/quality-config.sh`.
 
+### Model routing (`models`)
+
+Which model tier a delegated task is handed to, keyed by the **class of work**.
+`SessionStart` injects the resolved table into every session, so the agent routes
+subagents by task complexity without being asked; the full rubric lives in
+`plugins/toolu/skills/orchestrator/references/model-routing.md`.
+
+| Class | Default | Work that belongs here |
+|-------|---------|------------------------|
+| `mechanical` | `haiku` | Listings, single-symbol lookups, literal search, renames, formatting |
+| `exploration` | `sonnet` | Read-only search across many files |
+| `implementation` | `sonnet` | A bounded, already-decided edit plus its tests |
+| `review` | `sonnet` | Diff review, audits |
+| `synthesis` | `opus` | Reconciling several agents' findings into one answer |
+| `architecture` | `opus` | Design, trade-offs, hard-to-reverse decisions |
+
+Values are **aliases, not version ids** — `sonnet` keeps meaning "the current mid
+tier" across model releases, so a config written today survives the next model
+generation. Accepted: `haiku`, `sonnet`, `opus`, `fable`, `inherit` (`inherit` =
+the lead thread's model). Anything else is rejected with a stderr warning and
+falls back to the built-in default, so a typo mis-tiers nothing.
+
+`models.enabled = false` suppresses the SessionStart injection; the tiers still
+resolve for anything that reads them (`toolu_model` in
+`plugins/toolu/hooks/lib/config.sh`).
+
+Config remaps the **rubric** — the tiers passed on Agent calls and the injected
+table. It cannot rewrite the `model:` frontmatter of a pre-built agent
+(`toolu:quick-task` Haiku, `toolu:deep-explore` / `toolu:research-agent` /
+`toolu:implementer` Sonnet, `toolu:architect` Opus), which Claude Code reads
+straight from the file — edit the agent to re-tier it.
+
+Plan steps can pin their own tier: a step in a `## Steps (machine-readable)`
+block may carry `"model": "<alias>"`, validated at parse time and surfaced by
+`plan-ledger.sh status` as `model=<alias>` on the summary line for the next step.
+
 ### Docs-sync surfaces (`docsSync`)
 
 The docs-sync backstop (`plugins/toolu/hooks/pre-tools/modules/docs-sync.sh`)
@@ -100,6 +137,7 @@ Setting any key replaces (does not merge with) that list's default.
 | `skills` | `comemory`, `ast-grep` (the only skill keys any hook reads)                        |
 | `hooks`  | `session-start`, `user-prompt-submit`, `pre-tools`, `post-tools`, `pre-compact`, `session-end` |
 | `mcp`    | any MCP server name — e.g. `canva`, `figma`                                        |
+| `models` | `enabled`, `mechanical`, `exploration`, `implementation`, `review`, `synthesis`, `architecture` |
 
 Unknown names are silently ignored (forward compatible).
 

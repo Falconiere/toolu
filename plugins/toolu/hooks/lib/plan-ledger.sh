@@ -82,12 +82,19 @@ pl_recompute() {
 # pl_summary_line LEDGER_JSON SLUG
 # Print the single-line, parseable summary:
 #   plan-ledger <slug>: <fresh_green>/<total> fresh-green, next=<id|none>
+# When the next step declares a model tier, ` model=<alias>` is appended so the
+# executor knows which model to delegate it to without re-reading the plan doc.
+# The suffix is omitted entirely for steps with no declared tier, keeping the
+# line byte-identical for plans that never opted in.
 pl_summary_line() {
   local ledger="$1" slug="$2"
   jq -r --arg slug "$slug" '
-    "plan-ledger " + $slug + ": "
+    (.next) as $n
+    | ([.steps[] | select(.id == $n) | .model] | map(select(. != null)) | first) as $m
+    | "plan-ledger " + $slug + ": "
     + (.summary.fresh_green | tostring) + "/" + (.summary.total | tostring)
-    + " fresh-green, next=" + (.next // "none")
+    + " fresh-green, next=" + ($n // "none")
+    + (if $m == null then "" else " model=" + $m end)
   ' <<< "$ledger"
 }
 
@@ -103,7 +110,7 @@ pl_now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 # pl_build_step_entry STEPS_JSON ID STATUS EXIT_CODE DIFF_SHA EVIDENCE_JSON \
 #                     [STARTED_AT] [ACTIVITY] [PRIOR_ENTRY_JSON]
 # Print a single ledger step object merging the doc fields (id/title/check plus
-# the authored ac_refs/depends_on/input from STEPS_JSON) with the run results.
+# the authored ac_refs/depends_on/input/model from STEPS_JSON) with the run results.
 # EVIDENCE_JSON is an already-JSON-encoded string. STARTED_AT/ACTIVITY are
 # optional; an empty arg becomes JSON null. started_at is the ISO-8601 time the
 # step entered `running`; activity is an optional short label.
@@ -148,6 +155,7 @@ pl_build_step_entry() {
         ac_refs: ($s.ac_refs // []),
         depends_on: ($s.depends_on // []),
         input: ($s.input // null),
+        model: ($s.model // null),
         retries: $retries }
   '
 }
@@ -244,12 +252,14 @@ pl_cmd_run() {
                  ac_refs: ($s.ac_refs // []),
                  depends_on: ($s.depends_on // []),
                  input: ($s.input // null),
+                 model: ($s.model // null),
                  retries: ($p.retries // []) }
           elif $p != null
           then $p
                | .ac_refs    = ($s.ac_refs // [])
                | .depends_on = ($s.depends_on // [])
                | .input      = ($s.input // null)
+               | .model      = ($s.model // null)
           else { id: $s.id, title: $s.title, check: $s.check,
                  status: "pending", started_at: null, activity: null,
                  exit_code: null, diff_sha: null,
@@ -257,6 +267,7 @@ pl_cmd_run() {
                  ac_refs: ($s.ac_refs // []),
                  depends_on: ($s.depends_on // []),
                  input: ($s.input // null),
+                 model: ($s.model // null),
                  retries: [] }
           end
       ]') || { echo "plan-ledger: failed to assemble running pre-write" >&2; return 2; }
@@ -282,7 +293,7 @@ pl_cmd_run() {
       || { echo "plan-ledger: failed to read check for step $id" >&2; return 2; }
     if [ -n "$only_step" ] && [ "$id" != "$only_step" ]; then
       # Carry the prior entry forward, but RE-DERIVE the authored fields
-      # (ac_refs/depends_on/input) from the current parsed step $s — they live in
+      # (ac_refs/depends_on/input/model) from the current parsed step $s — they live in
       # the plan doc and must reflect any edit since the last run (spec: authored
       # fields are re-derived every run), while all engine state (status,
       # exit_code, diff_sha, last_run, evidence_tail, retries) is preserved. No
@@ -295,6 +306,7 @@ pl_cmd_run() {
                | .ac_refs    = ($s.ac_refs // [])
                | .depends_on = ($s.depends_on // [])
                | .input      = ($s.input // null)
+               | .model      = ($s.model // null)
           else { id: $s.id, title: $s.title, check: $s.check,
                  status: "pending", started_at: null, activity: null,
                  exit_code: null, diff_sha: null,
@@ -302,6 +314,7 @@ pl_cmd_run() {
                  ac_refs: ($s.ac_refs // []),
                  depends_on: ($s.depends_on // []),
                  input: ($s.input // null),
+                 model: ($s.model // null),
                  retries: [] }
           end
       ') || { echo "plan-ledger: failed to assemble entry for step $id" >&2; return 2; }

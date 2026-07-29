@@ -30,10 +30,16 @@ Rule of thumb: if the answer means reading across several files and you only nee
 
 ## Which agent for which job
 
-- **`toolu:deep-explore`** — structural/architecture exploration via ast-grep (runs on Sonnet). First choice for "where/how is X done across the code".
+Prefer a **tier-pinned** agent when one fits — its frontmatter fixes the model, so routing can't be forgotten:
+
+- **`toolu:quick-task`** (Haiku) — mechanical lookups, listings, literal searches, bounded mechanical edits.
+- **`toolu:deep-explore`** (Sonnet) — structural/architecture exploration via ast-grep. First choice for "where/how is X done across the code".
+- **`toolu:research-agent`** (Sonnet) — external docs / web research.
+- **`toolu:implementer`** (Sonnet) — one bounded plan step, edits plus its tests.
+- **`toolu:architect`** (Opus) — design, trade-offs, synthesis. Read-only; returns a recommendation.
 - **`Explore`** — broad read-only fan-out search when you need the conclusion, not file dumps.
 - **`Plan`** — design an implementation strategy for a non-trivial change.
-- **`general-purpose`** — multi-step research/execution that doesn't fit a specific agent.
+- **`general-purpose`** — multi-step research/execution that doesn't fit a specific agent; set `model:` yourself.
 - **`caveman:cavecrew-investigator` / `-builder` / `-reviewer`** — when the caveman plugin is installed: compressed-output locate / bounded 1–2 file edit / diff review. Output is ~60% smaller, so main context lasts longer.
 
 Carry the session mandates into every subagent prompt (comemory recall/save, ast-grep first). Delegation never exempts the work.
@@ -51,13 +57,22 @@ The expensive, recurring cost in a long session is **input tokens re-sent every 
 
 ## Model tiers
 
-Match the model to the job (the convention `deep-explore` follows):
+Route on the **class of work**, not on how the request is phrased — and pass `model:` on every Agent call, because leaving it unset sends everything to the lead thread's model.
 
-- **Haiku** — mechanical / lookup / formatting.
-- **Sonnet** — read-only exploration and standard edits (the bulk of delegated work).
-- **Frontier (inherit)** — only agents that must do deep reasoning or synthesis.
+| Class | Default | Belongs here |
+|---|---|---|
+| mechanical | `haiku` | lookups, listings, renames, formatting, one command |
+| exploration | `sonnet` | read-only search across many files |
+| implementation | `sonnet` | a bounded, already-decided edit + its tests |
+| review | `sonnet` | diff review, audits |
+| synthesis | `opus` | reconciling many findings into one answer |
+| architecture | `opus` | design, trade-offs, hard-to-reverse calls |
 
-Routing the bulk of work to Sonnet keeps the expensive frontier model for the lead thread's hard reasoning — large cost cut at near-full quality.
+Escalate one tier on any of: **hard to reverse**, **cross-cutting**, **the how isn't decided**, **must weigh alternatives**. De-escalate when the task is bounded and has one verifiable answer. Deciding and doing are different classes — one task often splits across two tiers.
+
+A subagent that returns `ESCALATE: <reason>` should be re-run one tier up with that reason in the prompt; never re-run the same tier hoping for a better roll.
+
+Full rubric (signals, worked examples, per-step plan tiers, config remap): `plugins/toolu/skills/orchestrator/references/model-routing.md`. Remap any class in `toolu.config.json` under `models`.
 
 ## Fan-out budget guardrail
 

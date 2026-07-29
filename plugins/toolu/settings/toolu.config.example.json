@@ -16,6 +16,15 @@
     "session-end": true
   },
   "mcp": {},
+  "models": {
+    "enabled": true,
+    "mechanical": "haiku",
+    "exploration": "sonnet",
+    "implementation": "sonnet",
+    "review": "sonnet",
+    "synthesis": "opus",
+    "architecture": "opus"
+  },
   "lang": {
     "ts": { "maxFileLines": 300, "maxFnLines": 60 },
     "rust": { "maxFileLines": 500, "maxFnLines": 50, "maxImplLines": 200 }
