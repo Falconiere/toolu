@@ -65,7 +65,7 @@ FIXTURE="${BATS_TEST_DIRNAME}/fixtures/pr115-threads.json"
   # GitHub exposes resolveReviewThread for review threads only — strict clearance
   # must not imply an issue comment can be resolved.
   grep -qi 'Resolve applies to review threads' "$CMD"
-  grep -qi 'no resolve API' "$CMD"
+  grep -qi 'Conversation and review-level comments have no thread' "$CMD"
 }
 
 @test "has an end-of-round clearance check" {
