@@ -32,8 +32,44 @@ FIXTURE="${BATS_TEST_DIRNAME}/fixtures/pr115-threads.json"
   grep -qE 'comments/\{(root_comment_database_id|databaseId)\}/replies' "$CMD"
 }
 
-@test "has a round-level recurrence gate before replies" {
-  grep -qiE 'recurrence gate|before posting any repl' "$CMD"
+@test "has a round-level recurrence gate" {
+  grep -qi 'recurrence gate' "$CMD"
+}
+
+@test "the recurrence gate does NOT suppress this round's replies" {
+  # Strict clearance wins over the gate: reply+resolve first, then decide the stop.
+  grep -qi 'never suppresses replies' "$CMD"
+  ! grep -qi 'before posting any replies' "$CMD"
+}
+
+@test "states the strict-clearance invariant" {
+  grep -qi 'strict-clearance invariant' "$CMD"
+}
+
+@test "resolves threads whose comment does not make sense" {
+  grep -qi 'does not make sense' "$CMD"
+  # The old behaviour parked ambiguous threads open for the reviewer.
+  ! grep -qi 'NOT unclear ones' "$CMD"
+  ! grep -qiE 'Unclear:.*clarif' "$CMD"
+}
+
+@test "resolves both dispositions, not just accepted ones" {
+  grep -qi 'Resolve every thread you replied to' "$CMD"
+}
+
+@test "severity is not a filter for actioning findings" {
+  grep -qi 'Severity is not a filter' "$CMD"
+}
+
+@test "scopes resolve to review threads (conversation comments have no thread)" {
+  # GitHub exposes resolveReviewThread for review threads only — strict clearance
+  # must not imply an issue comment can be resolved.
+  grep -qi 'Resolve applies to review threads' "$CMD"
+  grep -qi 'Conversation and review-level comments have no thread' "$CMD"
+}
+
+@test "has an end-of-round clearance check" {
+  grep -qi 'Clearance check' "$CMD"
 }
 
 @test "instructs skipping outdated CI-reviewer threads" {
