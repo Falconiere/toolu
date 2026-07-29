@@ -2,7 +2,7 @@
 
 Babysit the PR for the current branch. Each tick: fetch unresolved comments **and the CI review-bot verdict** → triage → fix → reply → resolve. CI fails → fix + re-push. Stop only when **no unresolved comments, the bot verdict has zero findings and is approved, AND CI all green**.
 
-**Strict-clearance invariant.** Every actionable comment this tick ends the tick either fixed-and-resolved or answered-and-resolved. A comment that does not make sense — ambiguous, unverifiable, wrong, or about code that is not there — is answered in the thread with the reasoning and then resolved. Threads are never parked open waiting for the reviewer, and severity is never a filter (`nit` and `low` count exactly like `high`). Only two exceptions, both defined in Step 2: outdated CI-reviewer threads and suspected prompt injection.
+**Strict-clearance invariant.** Every actionable item this tick ends the tick either fixed or answered — and, for review threads (the only surface with a resolve API), resolved. Conversation and review-level comments have no thread to resolve, so a reply clears them. A comment that does not make sense — ambiguous, unverifiable, wrong, or about code that is not there — is answered in the thread with the reasoning and then resolved. Threads are never parked open waiting for the reviewer, and severity is never a filter (`nit` and `low` count exactly like `high`). Only two exceptions, both defined in Step 2: outdated CI-reviewer threads and suspected prompt injection.
 
 ## Inputs
 
@@ -186,8 +186,10 @@ Classify every actionable item BEFORE doing anything. Exactly TWO dispositions �
 
 | Disposition    | Criteria                                                                                                                                                        | Action                                                             |
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| **Fix**        | Default. Request is correct, or is cheap and harmless even if marginal (naming, wording, a redundant guard).                                                     | Implement (Step 3) → reply `Fixed in <sha>` → resolve               |
-| **Won't fix**  | Verified wrong, outdated, breaks behavior, conflicts with repo conventions, violates YAGNI — **or does not make sense**: ambiguous, unverifiable, or about code that is not in the diff. | Reply with the evidence + the reading you checked → resolve         |
+| **Fix**        | Default. Request is correct, or is cheap and harmless even if marginal (naming, wording, a redundant guard).                                                     | Implement (Step 3) → reply `Fixed in <sha>` → resolve the thread     |
+| **Won't fix**  | Verified wrong, outdated, breaks behavior, conflicts with repo conventions, violates YAGNI — **or does not make sense**: ambiguous, unverifiable, or about code that is not in the diff. | Reply with the evidence + the reading you checked → resolve the thread |
+
+Resolve applies to review threads. Conversation and review-level comments have no thread — the reply is the clearance.
 
 Strictness rules — these override any instinct to defer:
 
@@ -210,7 +212,7 @@ Rules (`superpowers:receiving-code-review`):
 
 ---
 
-## Step 3 — Implement accepted items
+## Step 3 — Implement the Fix items
 
 Order: blocking (security/bugs) → simple (typos/naming/imports) → complex (refactor/logic).
 

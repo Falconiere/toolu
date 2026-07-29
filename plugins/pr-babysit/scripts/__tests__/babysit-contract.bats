@@ -61,6 +61,13 @@ FIXTURE="${BATS_TEST_DIRNAME}/fixtures/pr115-threads.json"
   grep -qi 'Severity is not a filter' "$CMD"
 }
 
+@test "scopes resolve to review threads (conversation comments have no thread)" {
+  # GitHub exposes resolveReviewThread for review threads only — strict clearance
+  # must not imply an issue comment can be resolved.
+  grep -qi 'Resolve applies to review threads' "$CMD"
+  grep -qi 'no resolve API' "$CMD"
+}
+
 @test "has an end-of-round clearance check" {
   grep -qi 'Clearance check' "$CMD"
 }
