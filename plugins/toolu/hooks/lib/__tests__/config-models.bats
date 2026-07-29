@@ -118,13 +118,14 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
-@test "toolu_model_valid: accepts every routable alias, rejects the rest" {
-  for a in haiku sonnet opus fable inherit; do
-    run toolu_model_valid "$a"
-    [ "$status" -eq 0 ]
-  done
-  for a in "" "claude-opus-5" "frontier" "Sonnet"; do
-    run toolu_model_valid "$a"
-    [ "$status" -eq 1 ]
+@test "toolu_model: every default is itself a routable alias" {
+  # Guards against a default drifting to a value the Agent tool would reject.
+  local class alias
+  for class in $TOOLU_MODEL_CLASSES; do
+    alias=$(toolu_model "$class")
+    case " $TOOLU_MODEL_ALIASES " in
+      *" $alias "*) : ;;
+      *) printf 'class %s resolved to unroutable %s\n' "$class" "$alias" >&2; return 1 ;;
+    esac
   done
 }

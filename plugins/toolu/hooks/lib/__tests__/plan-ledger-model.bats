@@ -50,6 +50,20 @@ $2
 EOF
 }
 
+@test "parity: the parser's alias list matches TOOLU_MODEL_ALIASES in config.sh" {
+  # plan-ledger-parse.sh is jq-only and must not source the config loader, so
+  # the alias list is duplicated. This test is what keeps the two honest: a new
+  # alias added to one side without the other fails here.
+  local lib_dir="${BATS_TEST_DIRNAME}/.."
+  # shellcheck source=../config.sh
+  . "$lib_dir/config.sh"
+  local from_parser
+  from_parser=$(grep -o '\["haiku"[^]]*\]' "$lib_dir/plan-ledger-parse.sh" \
+    | tr -d '"[]' | tr ',' ' ')
+  [ -n "$from_parser" ]
+  [ "$from_parser" = "$TOOLU_MODEL_ALIASES" ]
+}
+
 @test "parse: a legacy step with no model backfills to null" {
   doc="$TMP/plan.md"
   _write_doc "$doc" '[{ "id": "s1", "title": "Legacy", "check": "true" }]'

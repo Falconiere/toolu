@@ -47,14 +47,22 @@ pl_parse_steps() {
   # it must be a routable alias — a typo here would send `execution` to delegate
   # on a model the Agent tool rejects, failing the step for a reason that has
   # nothing to do with the step. Reject at parse time instead.
+  # The alias list mirrors TOOLU_MODEL_ALIASES in hooks/lib/config.sh; this lib
+  # stays jq-only rather than sourcing the config loader, so parity is enforced
+  # by __tests__/plan-ledger-model.bats.
   local bad_models
-  bad_models=$(jq -r '
+  if ! bad_models=$(jq -r '
     [ .[] | select(.model != null)
           | select((.model | type) != "string"
                    or ((.model) as $m
                        | ["haiku","sonnet","opus","fable","inherit"] | index($m) | not))
           | "\(.id)=\(.model|tostring)" ] | join(", ")
-  ' <<< "$block" 2>/dev/null) || bad_models=""
+  ' <<< "$block" 2>/dev/null); then
+    # Fail closed: an unvalidated model would reach the executor as a delegation
+    # target, so an internal validator failure is an error, not a pass.
+    echo "plan-ledger-parse: could not validate step models in $doc" >&2
+    return 1
+  fi
   if [ -n "$bad_models" ]; then
     echo "plan-ledger-parse: invalid step model in $doc ($bad_models); allowed: haiku sonnet opus fable inherit" >&2
     return 1

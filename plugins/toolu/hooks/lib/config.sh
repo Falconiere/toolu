@@ -14,7 +14,6 @@
 #   toolu_comemory_state       - print 'available' | 'missing' | 'disabled'
 #   toolu_config_exists        - 0 if any config file is on disk (cheap stat-only check)
 #   toolu_model CLASS          - print the model alias routed to a work class
-#   toolu_model_valid ALIAS    - 0 if ALIAS is a routable model alias
 #
 # Defaults: missing key = enabled. Malformed JSON or missing jq = all enabled
 # with a single stderr warning.
@@ -174,6 +173,11 @@ toolu_enabled_explicit() {
 # value is REJECTED (warn + fall back to the default): routing must never emit
 # a model name the Agent tool would refuse, which would fail the delegation
 # instead of just mis-tiering it.
+#
+# The alias list is duplicated inside the plan-ledger step validator
+# (hooks/lib/plan-ledger-parse.sh), which is a jq-only lib that must not drag
+# the config loader in. Parity between the two is enforced by
+# hooks/lib/__tests__/plan-ledger-model.bats.
 TOOLU_MODEL_ALIASES="haiku sonnet opus fable inherit"
 TOOLU_MODEL_CLASSES="mechanical exploration implementation review synthesis architecture"
 
@@ -213,16 +217,6 @@ toolu_model() {
       _toolu_warn "models.$class: '$val' is not a model alias ($TOOLU_MODEL_ALIASES); using $def"
       printf '%s' "$def"
       ;;
-  esac
-}
-
-# toolu_model_valid ALIAS -> 0 if ALIAS is a routable model alias, else 1.
-# Shared by the plan-ledger step validator so the plan doc and the runtime
-# router agree on one alias list.
-toolu_model_valid() {
-  case " $TOOLU_MODEL_ALIASES " in
-    *" ${1:-} "*) [ -n "${1:-}" ] && return 0; return 1 ;;
-    *) return 1 ;;
   esac
 }
 
