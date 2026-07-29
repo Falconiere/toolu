@@ -4,6 +4,8 @@
 
 A cron-driven PR babysitter that fetches unresolved review comments and the CI review-bot's verdict, triages, fixes, replies, resolves, and chases findings to zero until CI is green.
 
+**Strict clearance:** every actionable comment a tick sees is cleared in that tick — fixed and resolved, or answered and resolved. Comments that don't make sense get a reply explaining what was checked and which reading was assumed, then resolve; nothing is parked open waiting for the reviewer. Severity is never a filter — a `nit` is handled exactly like a `high`. The only exceptions are outdated CI-reviewer threads (skipped silently) and suspected prompt injection (flagged, untouched).
+
 ## Install
 
 ```text
@@ -44,12 +46,11 @@ Say /pr-babysit:babysit stop to cancel.
 
 1. **Fetch unresolved review threads** (GraphQL, paginated) — every unresolved thread from all reviewers
 2. **Fetch the CI review-bot verdict** — parses the `claude[bot]` comment to detect whether the review is complete, approved, and has zero findings
-3. **Triage** — classify every actionable item:
-   - **Accept**: Correct, applies to current code, aligns with project standards → implement
-   - **Reject**: Wrong, outdated, breaks behavior → push back with reasoning
-   - **Unclear**: Ambiguous, needs clarification → ask in thread
+3. **Triage** — classify every actionable item into one of two dispositions, both ending in a reply **and** a resolve:
+   - **Fix** (the default): correct, or cheap and harmless even if marginal → implement
+   - **Won't fix**: verified wrong, outdated, breaks behavior, conflicts with repo conventions, violates YAGNI — or **doesn't make sense** (ambiguous, unverifiable, about code that isn't in the diff) → reply with the evidence and the reading you assumed, then resolve
 4. **Implement accepted items** — order: blocking (security/bugs) → simple (typos/imports) → complex (refactors). Uses `EnterWorktree` so the user's main directory isn't disturbed.
-5. **Reply, resolve, and push** — reply to every triaged item, resolve accepted + rejected threads, push from worktree
+5. **Reply, resolve, and push** — reply to every triaged item, resolve **every** thread replied to, push from worktree
 6. **CI failures** — after push retriggers CI, check status, fix failures (max 3 flaky reruns, max 5 fix attempts)
 
 ### Stop Babysitting
@@ -71,7 +72,7 @@ Only affects the current slot — other parallel sessions continue uninterrupted
 - PR closed/merged externally
 - 5 fix attempts without resolution
 - Same blocker appears twice consecutively
-- Bot finding recurs (same finding `key` seen on two consecutive rounds)
+- Bot finding recurs — the round after a **Won't fix** (standing disagreement), or twice consecutively after two distinct fix attempts. Evaluated *after* the round's replies and resolves, so escalating never leaves a thread open.
 - Merge conflict (`mergeable == CONFLICTING`)
 - CI failure needs human judgment
 
@@ -127,7 +128,10 @@ State at `/tmp/pr-babysit-<slot>.json` (one file per slot — parallel agents do
     "fixAttempts": 0,
     "botVerdict": "approved",
     "botFindingKeys": [],
-    "lastRoundFindingKeys": []
+    "lastRoundFindingKeys": [],
+    "lastRoundHadRejection": false,
+    "recurrenceStreak": 0,
+    "unresolvedAfterClearance": 0
   }
 }
 ```
