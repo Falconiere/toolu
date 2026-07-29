@@ -1,6 +1,6 @@
 {
   "name": "comemory",
-  "version": "4.0.1",
+  "version": "4.1.0",
   "description": "Persistent agent memory + code-index search (comemory): skill, scoped wrapper (with delete/context verbs), a /comemory:setup command that detect-and-guides the binary then wires git index-code hooks, PreToolUse scope enforcement, and a SessionStart memory-count publisher for the statusline — registered into the toolu hook engine.",
   "author": {
     "name": "Falconiere Barbosa",

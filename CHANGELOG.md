@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.1.0](https://github.com/Falconiere/toolu/compare/v4.0.1...v4.1.0) (2026-07-29)
+
+
+### Features
+
+* **toolu:** route delegated work to a model tier by task complexity ([#137](https://github.com/Falconiere/toolu/issues/137)) ([6875c89](https://github.com/Falconiere/toolu/commit/6875c89c4be90b49b3f448e4e953e0b09b399010))
+
+
+### Bug Fixes
+
+* **pr-babysit:** strictly clear every PR comment each tick ([#135](https://github.com/Falconiere/toolu/issues/135)) ([0c488cd](https://github.com/Falconiere/toolu/commit/0c488cda5eeb5643c7648f8d73e36432d21822df))
+
 ## [4.0.1](https://github.com/Falconiere/toolu/compare/v4.0.0...v4.0.1) (2026-07-28)
 
 
