@@ -84,6 +84,26 @@ FIXTURE="${BATS_TEST_DIRNAME}/fixtures/pr115-threads.json"
   grep -qiE 'verdict.*approved' "$CMD"
 }
 
+@test "defines a resolution audit independent of the actionable filter" {
+  grep -qi 'Resolution audit' "$CMD"
+  grep -qi 'staleUnresolved' "$CMD"
+}
+
+@test "the clearance check runs the resolution audit, not the actionable filter" {
+  grep -qi 'Re-run the .*Resolution audit.* from Step 1 — never the Step 1 actionable filter' "$CMD"
+  # The stale bug this pins: reusing the last-comment filter as the resolved check.
+  ! grep -qi 'Re-run the Step 1 filter\. Every actionable thread must now be resolved' "$CMD"
+}
+
+@test "the success stop is gated on the resolution audit, not the actionable filter" {
+  grep -qi 're-run the .*Resolution audit.* (Step 1), never the actionable' "$CMD"
+}
+
+@test "resolve mutation failures are confirmed and retried, never assumed" {
+  grep -qi "Confirm, don.t assume" "$CMD"
+  grep -qi 'retry immediately' "$CMD"
+}
+
 @test "fixture is a non-empty array" {
   jq -e 'type=="array" and length>=1' "$FIXTURE" >/dev/null
 }

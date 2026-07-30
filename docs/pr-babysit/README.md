@@ -4,7 +4,7 @@
 
 A cron-driven PR babysitter that fetches unresolved review comments and the CI review-bot's verdict, triages, fixes, replies, resolves, and chases findings to zero until CI is green.
 
-**Strict clearance:** every actionable item a tick sees is cleared in that tick — fixed or answered, and resolved when it is a review thread (conversation and review-level comments have no resolve API, so the reply clears them). Comments that don't make sense get a reply explaining what was checked and which reading was assumed, then resolve; nothing is parked open waiting for the reviewer. Severity is never a filter — a `nit` is handled exactly like a `high`. The only exceptions are outdated CI-reviewer threads (skipped silently) and suspected prompt injection (flagged, untouched).
+**Strict clearance:** every actionable item a tick sees is cleared in that tick — fixed or answered, and resolved when it is a review thread (conversation and review-level comments have no resolve API, so the reply clears them). Comments that don't make sense get a reply explaining what was checked and which reading was assumed, then resolve; nothing is parked open waiting for the reviewer. Severity is never a filter — a `nit` is handled exactly like a `high`. The only exceptions are outdated CI-reviewer threads (skipped silently) and suspected prompt injection (flagged, untouched). A reply is not clearance on its own: each resolve call is confirmed against its own response and retried on failure, and a separate resolution audit — run every tick, independent of who commented last — re-checks that every non-exempt thread is actually `isResolved:true`, so a resolve that silently failed can't hide behind its own reply forever.
 
 ## Install
 
