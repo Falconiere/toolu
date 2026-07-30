@@ -1,6 +1,6 @@
 {
   "name": "statusline",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "Optional Claude Code statusline: model, effort, context, a loud quality-gate marker, weekly token usage (wk:), folder, branch, comemory count ([COMEMORY:N]), and caveman mode — wired via a stable symlink. Standalone, no dependencies.",
   "author": {
     "name": "Falconiere Barbosa",
