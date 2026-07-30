@@ -107,7 +107,7 @@ The `comemory` persistent-memory mandate is **opt-in**: the `agent-memory` proto
 
 ## What's inside
 
-Eleven plugins, one marketplace. Install the core alone, or add the domain plugins.
+Ten plugins, one marketplace. Install the core alone, or add the domain plugins.
 
 | Group | Plugin | Version | What it does |
 |--------|--------|:-------:|--------------|
@@ -120,8 +120,7 @@ Eleven plugins, one marketplace. Install the core alone, or add the domain plugi
 | Knowledge | **`exa-search`** | `1.18.0` | **Web / code / URL search** plus deep research via the Exa REST API. Standalone, no dependencies. |
 | Workflow | **\`toolu-review\`** | \`0.1.0\` | \`toolu-review:review\` — pre-push review mirroring the CI bot's checklist (correctness, security, perf, coverage, doc accuracy); writes the \`push-review\` state so the gate passes. Standalone. |
 | Workflow | **`pr-babysit`** | `0.1.0` | `/pr-babysit:babysit` — cron-driven PR babysitter that fetches review comments + the CI review-bot verdict, triages, fixes, and chases findings to zero until CI is green. |
-| UI | **`statusline`** | `0.3.1` | Optional gate-aware statusline — `model \| effort \| ctx \| wk \| gate \| folder \| branch \| mem \| caveman`, wired via a stable symlink (`/statusline:setup` to enable). Claude Code only. Standalone. |
-| Design | **`design`** | `1.21.0` | **UI/UX design dispatcher** for web & mobile — `/design <command> [target]` to build, refine, evaluate, or fix UI over a cited, stack-aware knowledge base (WCAG 2.2, Material 3, Apple HIG, NN/g). One skill, 23-command catalog (22 active across build/refine/enhance/evaluate/fix; `live` deferred), a `detect-stack.sh` detector, bans + AI-slop test. Clean-room, inspired by `pbakaus/impeccable`. Standalone, no dependencies. |
+| UI | **`statusline`** | `0.3.1` | Optional gate-aware statusline — `model \| effort \| ctx \| gate \| folder \| branch \| mem \| caveman`, wired via a stable symlink (`/statusline:setup` to enable). Claude Code only. Standalone. |
 
 Beyond the plugins, the core (`toolu`) also ships:
 
@@ -130,50 +129,7 @@ Beyond the plugins, the core (`toolu`) also ships:
 - **Slash commands** — `/commit` and `/review-and-commit`.
 - **Model routing** — delegated work is tiered by its *class*, not its phrasing: mechanical → `haiku`, exploration / implementation / review → `sonnet`, synthesis / architecture → `opus`. The table is injected at session start (so it applies from turn one, and survives a compact), the workflow skills route against it, plan steps can pin their own tier (`"model": "<alias>"`, surfaced by `plan-ledger.sh status`), and every class is remappable under `models` in [config](docs/config.md#model-routing-models). Tiers are named by alias, so a new model generation needs no edits.
 - **Tier-pinned agents** — `quick-task` (Haiku, mechanical), `deep-explore` / `research-agent` / `implementer` (Sonnet), `architect` (Opus, read-only design & synthesis). The cheap tiers return `ESCALATE:` instead of guessing, so routing down is safe.
-- **Execution dashboard** — an optional, read-only, multi-project realtime view: a plan kanban plus a live agent-activity tree for every project on the machine (see below).
 - **Caveman mode** — ultra-compressed, token-frugal output (via the optional `caveman` companion).
-
-### Execution dashboard
-
-An optional, read-only, **multi-project** realtime view of everything executing on your machine — the ledgers and transcripts stay the single source of truth; the dashboard only watches them. It is **off by default** and nothing auto-starts it.
-
-First tell it which base dirs to scan (one repo, or a parent of many repos/worktrees), via the `dashboard-config` command:
-
-```bash
-bun run plugins/toolu/dashboard/config-cli.ts add-root ~/Projects
-bun run plugins/toolu/dashboard/config-cli.ts add-root ~/.herdr/worktrees
-bun run plugins/toolu/dashboard/config-cli.ts get        # show effective config
-```
-
-Config lives at `${XDG_CONFIG_HOME:-~/.config}/toolu/dashboard.json` (roots, `scanDepth`, `activeWithinHours`, `pollMs`, `stuckThresholdSeconds`, `agentStuckSeconds`, `port`, `open`, plus persistence: `retentionDays`, `maxSessionsPerProject`, `promptPreviewChars`). Then launch from any repo:
-
-```bash
-bun run plugins/toolu/dashboard/index.ts [--open]
-```
-
-To launch from **anywhere** (not just the repo root), use the `toolu-claude` launcher. The plugin's SessionStart hook publishes it as a symlink at `${CLAUDE_CONFIG_DIR:-~/.claude}/toolu/bin/toolu-claude` (refreshed each session, so it survives plugin updates). Add that dir to your PATH once:
-
-```fish
-fish_add_path ~/.claude/toolu/bin              # fish
-```
-```bash
-export PATH="$HOME/.claude/toolu/bin:$PATH"    # bash/zsh — add to your shell rc
-```
-
-Then, from any directory:
-
-```bash
-toolu-claude dashboard --open
-toolu-claude dashboard config get              # forwards to config-cli.ts
-```
-
-It binds an ephemeral localhost port, prints the URL, and (with `--open`) opens your browser. A **sidebar** lists every active project (a running plan step, or a ledger touched within `activeWithinHours`) with a status dot and progress; selecting one shows that project's **two lanes**:
-
-- **Plan lane** — the four-column kanban (**To Do** · **Running** · **Blocked** · **Done**; amber + ↻ when a green step's diff has gone stale) driven by the plan-ledger. This is *verified truth* — "did the check pass."
-- **Activity lane** — the live **agent/sub-agent spawn tree** read from the Claude Code transcripts: each node is an agent (label, type, duration, status), nested under its parent, marked `running`/`done`/`error`/`stale`. This is *what's actually running* — so you can see an agent still working even after its plan step went green, and emergent sub-agents the static plan never listed.
-- **History lane** — browse **past sessions** for the selected project (grouped by day, newest first); click one to render that run's agent tree, identical to the live lane. Activity is persisted to a per-project store at `${CLAUDE_CONFIG_DIR:-~/.claude}/toolu/activity/<project-id>/` (keyed the same as discovery; backfilled from transcripts on view, mtime-cached), so history survives transcript pruning and session end. Retention is capped by `retentionDays` / `maxSessionsPerProject`, and only a `promptPreviewChars`-bounded preview of any prompt/label is ever stored.
-
-The UI is **React + TailwindCSS** loaded from CDN with no build step (so it needs network access for those CDNs; the JSON/SSE API works regardless). Updates stream over Server-Sent Events, gated on real file changes. It is **purely read-only**: no route mutates anything, so it can be closed or crash with zero effect on execution. The activity lane is Claude Code-specific for now (other runtimes degrade gracefully to the plan lane).
 
 ## Workflow skills
 
@@ -243,7 +199,6 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     ├── comemory/               # agent-memory skill + scope-enforcement & memory-count registry modules
     ├── context7/               # context7 skill + Context7 REST wrapper
     ├── exa-search/             # exa-search skill + Exa REST wrapper
-    ├── design/                 # /design dispatcher skill (23-command catalog) + detect-stack.sh + cited references/ knowledge base (commands/, registers/, bans, slop-test)
     ├── rust-quality/           # Rust PostToolUse quality fragments, assembled at SessionStart
     ├── ts-quality/             # TypeScript PostToolUse quality fragments, assembled at SessionStart
     ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook
@@ -268,10 +223,10 @@ Quality-gate thresholds (file/function/impl line limits) are configurable per pr
 
 ## Testing
 
-The hook engine and language gates are covered by **~1340 [bats](https://github.com/bats-core/bats-core) tests** plus the dashboard's bun unit tests, all run in CI on every push:
+The hook engine and language gates are covered by **~1340 [bats](https://github.com/bats-core/bats-core) tests**, all run in CI on every push:
 
 ```sh
-bun run test              # runs lint:shell → test:shell → test:ts → typecheck
+bun run test              # runs lint:shell → test:shell
 bats -r plugins tooling   # shell-only, fast feedback
 bun run lint:shell        # shellcheck: standalone scripts + assembled concern modules
 ```

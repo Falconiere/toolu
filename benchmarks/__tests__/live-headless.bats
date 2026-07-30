@@ -7,10 +7,9 @@
 
 setup() {
   BENCH_DIR="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"                 # benchmarks/
-  REPO="$(cd "$BENCH_DIR/.." && pwd)"
   CAVECREW="$BENCH_DIR/cases/cavecrew/run.sh"
   WHOLE="$BENCH_DIR/cases/whole-session/run.sh"
-  FIX="$REPO/plugins/stats/__tests__/fixtures"
+  FIX="$BENCH_DIR/__tests__/fixtures"
   export BENCH_RESULTS_DIR="$BATS_TEST_TMPDIR/results"
 }
 

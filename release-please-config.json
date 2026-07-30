@@ -16,10 +16,8 @@
         { "type": "json", "path": "plugins/jira/.claude-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/pr-babysit/.claude-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/rust-quality/.claude-plugin/plugin.json", "jsonpath": "$.version" },
-        { "type": "json", "path": "plugins/stats/.claude-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/statusline/.claude-plugin/plugin.json", "jsonpath": "$.version" },
-        { "type": "json", "path": "plugins/ts-quality/.claude-plugin/plugin.json", "jsonpath": "$.version" },
-        { "type": "json", "path": "plugins/design/.claude-plugin/plugin.json", "jsonpath": "$.version" }
+        { "type": "json", "path": "plugins/ts-quality/.claude-plugin/plugin.json", "jsonpath": "$.version" }
       ]
     }
   }

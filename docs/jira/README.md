@@ -42,7 +42,7 @@ Work a ticket without leaving the session: search, read, create, comment, transi
 
 ### `plan` Family
 
-Decompose non-trivial ticket work into small, individually verifiable steps, tracked in a ledger the toolu dashboard renders as a kanban.
+Decompose non-trivial ticket work into small, individually verifiable steps, tracked in a ledger.
 
 ## Plans
 
@@ -76,14 +76,14 @@ Steps live in a `## Steps (machine-readable)` block:
 
 A `check` must exit 0 **only when Jira itself reflects the change** — `$JIRA` is bound to the CLI when it runs. Green means Jira agrees, not that the agent claimed success. Before running any check, `plan run` probes once with `user whoami`: if Jira is unreachable it aborts and writes **no** statuses, so an auth or network failure never marks a step red. A red step keeps the check's output in `evidence_tail`.
 
-### Ledger and the dashboard
+### The ledger
 
-The ledger is written atomically to `<repo>/.claude/tmp/plan-ledger/jira-<KEY>.json` (schema version 1). The toolu dashboard discovers it as its own project card, labelled `<repo> · jira-<KEY>`.
+The ledger is written atomically to `<repo>/.claude/tmp/plan-ledger/jira-<KEY>.json` (schema version 1).
 
 Two properties are deliberate:
 
 - **It never blocks `git push`.** toolu's push gate reads only `<branch-slug>.json`; a file named for the issue key is invisible to it.
-- **Jira cards never go stale.** The ledger records `base_branch: ""`, so the dashboard's diff-hash comparison is skipped and a green Jira step stays green when unrelated code commits land.
+- **Jira steps never go stale.** The ledger records `base_branch: ""`, so a green Jira step stays green when unrelated code commits land.
 
 ## Usage Examples
 

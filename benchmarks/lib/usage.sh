@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
 # usage.sh — compute one session's usage rollup from its transcript file set.
 #
-# Source of truth for the stats math. Given a session's main transcript plus its
-# subagent transcripts, it: parses each line tolerantly (a malformed/truncated
-# line is skipped, never fatal), keeps only assistant messages, dedups by
-# message.id (Claude Code re-writes the same id as tokens stream), prices each
-# message at its model rate (pricing.sh), buckets by LOCAL day, and emits a
-# single rollup object: totals + by_day + by_model + tool-mix + phase counts.
+# benchmarks' own copy of the token/cost rollup math (originally written for the
+# now-removed `stats` plugin's report; kept here as the single source of truth
+# for benchmarks' live-tier token accounting — sourced not copied, so
+# cases/cavecrew/run.sh and cases/whole-session/run.sh share one implementation).
+# Given a session's main transcript plus its subagent transcripts, it: parses
+# each line tolerantly (a malformed/truncated line is skipped, never fatal),
+# keeps only assistant messages, dedups by message.id (Claude Code re-writes the
+# same id as tokens stream), prices each message at its model rate
+# (pricing.sh), buckets by LOCAL day, and emits a single rollup object: totals +
+# by_day + by_model + tool-mix + phase counts.
 #
 # `tokens` is the rate-limit-pacing total (input + output + cache_write);
 # cache_read is tracked separately, not folded in — it is ~98% of volume but
-# billed ~0.1x. Project identity (.cwd) is surfaced raw; scan.sh resolves the
-# label and the slug fallback.
+# billed ~0.1x. Project identity (.cwd) is surfaced raw, unresolved.
 set -u
 
 # stats_usage_rollup <transcript> [subagent-transcript ...] -> rollup JSON on stdout.

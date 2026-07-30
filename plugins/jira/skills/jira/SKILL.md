@@ -74,7 +74,7 @@ jira.sh plan status <KEY> | path <KEY>                 # ledger summary / ledger
 2. Author the `## Steps (machine-readable)` array: one `{id, title, check}` per small, independently verifiable action.
 3. `jira.sh plan run <DOC> --step <id>` after doing each step; a final full `jira.sh plan run <DOC>` at the end.
 
-This writes a ledger at `<repo>/.claude/tmp/plan-ledger/jira-<KEY>.json`, which the toolu dashboard renders as its own kanban card. It is **not** the branch ledger and never blocks `git push`.
+This writes a ledger at `<repo>/.claude/tmp/plan-ledger/jira-<KEY>.json`. It is **not** the branch ledger and never blocks `git push`.
 
 ## Authoring a `check`
 
