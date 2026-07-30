@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
-# common.bats — the benchmarks bootstrap resolves the repo root and exposes the
-# reused stats token-math functions. Real repo, no mocks.
+# common.bats — the benchmarks bootstrap resolves the repo root and exposes
+# benchmarks' own token-math functions. Real repo, no mocks.
 
 setup() {
   BENCH_LIB="$BATS_TEST_DIRNAME/../lib"
@@ -23,8 +23,8 @@ setup() {
   [ -n "$STATS_PRICING_ID" ]
 }
 
-@test "BENCH_STATS_LIB points at the real stats lib dir" {
+@test "BENCH_PRICING_LIB points at benchmarks' own pricing/usage lib dir" {
   source "$BENCH_LIB/common.sh"
-  [ -f "$BENCH_STATS_LIB/usage.sh" ]
-  [ -f "$BENCH_STATS_LIB/pricing.sh" ]
+  [ -f "$BENCH_PRICING_LIB/usage.sh" ]
+  [ -f "$BENCH_PRICING_LIB/pricing.sh" ]
 }

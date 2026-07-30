@@ -81,15 +81,6 @@
       "license": "MIT"
     },
     {
-      "name": "stats",
-      "source": "./plugins/stats",
-      "description": "On-demand /stats report of measured token/cost/cache usage and toolu activity, read from the session transcripts. Standalone, no dependencies.",
-      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
-      "category": "productivity",
-      "keywords": ["stats", "tokens", "cost", "usage"],
-      "license": "MIT"
-    },
-    {
       "name": "toolu-review",
       "source": "./plugins/toolu-review",
       "description": "Project-tuned pre-push code review mirroring the CI review bot's checklist; writes the toolu push-review state so the gate passes. Standalone, no dependencies.",
@@ -157,15 +148,6 @@
       "dependencies": [
         { "name": "toolu", "marketplace": "toolu" }
       ]
-    },
-    {
-      "name": "design",
-      "source": "./plugins/design",
-      "description": "Web & mobile UI/UX design review over a cited, stack-aware knowledge base (skill + bash). Standalone, no dependencies.",
-      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
-      "category": "productivity",
-      "keywords": ["design", "ui", "ux", "accessibility", "skills"],
-      "license": "MIT"
     }
   ]
 }

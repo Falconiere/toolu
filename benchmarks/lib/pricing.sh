@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# Per-model token pricing for the stats report.
+# Per-model token pricing for the benchmarks live tier's cost math.
+#
+# benchmarks' own copy of the token-pricing math (originally written for the
+# now-removed `stats` plugin's report; kept here as the single source of truth
+# for benchmarks' cost accounting).
 #
 # Sticker prices, in $/Mtok. Cost is an ESTIMATE, not an Anthropic bill.
 # Source of truth: platform.claude.com pricing, verified as of STATS_PRICING_ASOF.
@@ -11,7 +15,7 @@
 # falling back to cache_creation_input_tokens at 1.25x when the split is absent.
 #
 # STATS_PRICING_ID is the cache fingerprint: bump it on ANY rate change so cached
-# rollups recompute instead of serving stale cost (see scan.sh invalidation).
+# rollups recompute instead of serving stale cost.
 # STATS_PRICING_ASOF is the human-facing "prices as of" date.
 # Exported because they are consumed by the modules that source this file.
 export STATS_PRICING_ID="2026-06-15"

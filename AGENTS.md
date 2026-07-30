@@ -7,9 +7,8 @@
 ## Tech Stack
 
 - **Shell** (bash) — all hooks, gate logic, registry. The canonical language. `set -euo pipefail`, shellcheck-clean.
-- **TypeScript** — the activity dashboard (`plugins/toolu/dashboard/`), typecheck + bun unit tests.
 - **bats** — test framework. ~1340 tests, colocated in `__tests__/` dirs. Run via `bats -r plugins tooling`.
-- **Bun** — package manager (see `bun.lock`). `bun run typecheck` for TS, `bun run test:ts` for the dashboard unit tests.
+- **Bun** — package manager (see `bun.lock`). Also runs the bats suite via the `test`/`test:shell` scripts.
 - **shellcheck** — `bun run lint:shell` (`tooling/shellcheck.sh`) lints standalone scripts directly and each `hooks/concerns/` dir as its ASSEMBLED module, since fragments are partials of one script.
 
 ## Plugin Anatomy
@@ -97,7 +96,7 @@ All workflows live in `.github/workflows/`:
 2. **Add tests** — colocated `__tests__/*.bats` for any hook logic. No mocks.
 3. **Verify in a real session** before committing.
 4. **Conventional Commits**: `feat(scope):`, `fix(scope):`, etc.
-5. **Run every CI check locally**: `bun run test` runs `lint:shell` → `test:shell` → `test:ts` → `typecheck` in sequence. CI runs the same four checks but splits them across two parallel jobs (`lint:shell` + `typecheck` + `test:ts` in one, the bats suite in the other), so the local order is a convenience, not a contract.
+5. **Run every CI check locally**: `bun run test` runs `lint:shell` → `test:shell` in sequence.
 
 ## Common Tasks
 
@@ -106,7 +105,6 @@ All workflows live in `.github/workflows/`:
 - **Add a standalone hook module**: `plugins/<plugin>/hooks/<event>.d/module.sh` + `register.sh` to wire it into the registry.
 - **Add a new plugin**: create `plugins/<name>/.claude-plugin/plugin.json` + `README.md` (from `tooling/templates/plugin-README.md`). Add tests.
 - **Run subset of tests**: `bats plugins/<plugin>/hooks/__tests__/`.
-- **Typecheck**: `bun run typecheck`.
 
 ## Version
 

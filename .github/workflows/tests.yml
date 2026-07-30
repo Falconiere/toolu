@@ -11,8 +11,8 @@ permissions:
   contents: read
 
 jobs:
-  typecheck:
-    name: typecheck + shellcheck
+  shellcheck:
+    name: shellcheck
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -33,12 +33,6 @@ jobs:
 
       - name: Shellcheck (standalone scripts + assembled concern modules)
         run: bun run lint:shell
-
-      - name: Typecheck
-        run: bun run typecheck
-
-      - name: Bun unit tests (dashboard)
-        run: bun run test:ts
 
   bats:
     name: bats (plugins)
