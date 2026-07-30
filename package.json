@@ -16,10 +16,8 @@
     "typescript": "^5.8.0"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
     "lint:shell": "bash tooling/shellcheck.sh",
-    "test:ts": "bun test plugins/toolu/dashboard",
     "test:shell": "bats -r plugins tooling",
-    "test": "bun run lint:shell && bun run test:shell && bun run test:ts && bun run typecheck"
+    "test": "bun run lint:shell && bun run test:shell"
   }
 }

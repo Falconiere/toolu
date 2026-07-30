@@ -35,9 +35,12 @@ benchmarks/run.sh --validate <result.json>        # schema check
 
 ## Reuse, not reinvention
 
-Token math is the stats plugin's, sourced not copied: `stats_usage_rollup` and
-`stats_pricing_jq` from `plugins/stats/scripts/lib/`. The deterministic tier
-reuses the byte-savings comparison shape from `plugins/ast-grep`.
+Token math is benchmarks' own, sourced not reimplemented per-case:
+`stats_usage_rollup` and `stats_pricing_jq` from `benchmarks/lib/` (`usage.sh` +
+`pricing.sh`; originally written for the now-removed `stats` plugin's report,
+kept here as benchmarks' single source of truth for token/cost accounting). The
+deterministic tier reuses the byte-savings comparison shape from
+`plugins/ast-grep`.
 
 ## Conventions
 
