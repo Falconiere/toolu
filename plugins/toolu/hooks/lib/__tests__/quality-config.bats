@@ -193,3 +193,30 @@ _user_cfg()    { printf '%s' "$1" > "$HOME/.claude/toolu.config.json"; }
   run ts_max_file_lines_resolved
   [ "$output" = "120 override" ]
 }
+
+@test "quality_flag: true honored from project config" {
+  _project_cfg '{"lang":{"ts":{"noMocks":true}}}'
+  load_libs
+  run quality_flag ts noMocks false
+  [ "$output" = "true" ]
+}
+
+@test "quality_flag: false honored from project config" {
+  _project_cfg '{"lang":{"rust":{"noMocks":false}}}'
+  load_libs
+  run quality_flag rust noMocks true
+  [ "$output" = "false" ]
+}
+
+@test "quality_flag: missing key falls back to default" {
+  load_libs
+  run quality_flag ts noMocks true
+  [ "$output" = "true" ]
+}
+
+@test "quality_flag: non-boolean junk falls back to default" {
+  _project_cfg '{"lang":{"ts":{"noMocks":"nope"}}}'
+  load_libs
+  run quality_flag ts noMocks true
+  [ "$output" = "true" ]
+}

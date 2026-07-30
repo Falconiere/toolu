@@ -24,6 +24,10 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 . "$_toolu_lib/detect.sh"
 # shellcheck source=../../lib/docs-sync-config.sh
 . "$_toolu_lib/docs-sync-config.sh"
+# shellcheck source=../../lib/diff-sha.sh
+. "$_toolu_lib/diff-sha.sh"
+# shellcheck source=../../lib/telemetry.sh
+. "$_toolu_lib/telemetry.sh"
 
 # Degrade silent on anything that isn't a real push in a real branch.
 [[ "$tool_name" != "Bash" ]] && exit 0
@@ -48,7 +52,7 @@ changed=$(git diff --name-only "${base_branch}...HEAD" 2>/dev/null || echo "")
 
 # Content-addressed diff sha (mirrors push-review.sh) keys the attestation, so
 # changing the code invalidates a stale "not-needed" attestation.
-diff_sha=$(git diff --no-color "${base_branch}...HEAD" 2>/dev/null | git hash-object --stdin 2>/dev/null || echo "")
+diff_sha=$(toolu_diff_sha . "$base_branch")
 
 # Classify the changed paths against the configurable glob sets. `case` fnmatch
 # treats a single `*` as crossing `/`, so `docs/*.md` covers nested paths.
@@ -88,9 +92,15 @@ state_dir=${DOCS_SYNC_STATE_DIR:-${CLAUDE_PROJECT_DIR:-$(pwd)}/.claude/tmp/docs-
 state_file="$state_dir/${slug}.json"
 if [[ -f "$state_file" && -n "$diff_sha" ]]; then
   attested_sha=$(jq -r '.diff_sha // ""' "$state_file" 2>/dev/null || echo "")
-  [[ "$attested_sha" == "$diff_sha" ]] && exit 0
+  if [[ "$attested_sha" == "$diff_sha" ]]; then
+    attested_decision=$(jq -r '.decision // ""' "$state_file" 2>/dev/null || echo "")
+    telemetry_append "$(detect_project_root)" "docs_attested" \
+      "$(jq -cn --arg d "$attested_decision" '{decision: $d}')"
+    exit 0
+  fi
 fi
 
+telemetry_append "$(detect_project_root)" "docs_nudge"
 jq -n --arg sha "$diff_sha" --arg file "$state_file" '{
   "hookSpecificOutput": {
     "hookEventName": "PreToolUse",

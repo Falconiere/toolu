@@ -7,8 +7,8 @@ if [[ "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ && "$FILE_PATH" != */e2e/* ]]; th
     _after_tests="${FILE_PATH##*__tests__/}"
     if [[ "$_after_tests" == */* ]]; then
       _subdir="${_after_tests%%/*}"
-      if [[ "$_subdir" != "fixtures" && "$_subdir" != "helpers" && "$_subdir" != "mocks" && "$_subdir" != "utils" ]]; then
-        add_error "Test nested in __tests__/ subdirectory: $FILE_PATH — keep __tests__/ flat (only fixtures/helpers/mocks/utils subdirs allowed)"
+      if [[ "$_subdir" != "fixtures" && "$_subdir" != "helpers" && "$_subdir" != "utils" ]]; then
+        add_error "Test nested in __tests__/ subdirectory: $FILE_PATH — keep __tests__/ flat (only fixtures/helpers/utils subdirs allowed; no mocks/ — tests must exercise real data)"
       fi
     fi
     # `%` (shortest suffix) resolves to the NEAREST __tests__, matching the

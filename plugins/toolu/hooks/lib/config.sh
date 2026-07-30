@@ -14,6 +14,7 @@
 #   toolu_comemory_state       - print 'available' | 'missing' | 'disabled'
 #   toolu_config_exists        - 0 if any config file is on disk (cheap stat-only check)
 #   toolu_model CLASS          - print the model alias routed to a work class
+#   toolu_string PATH DEF A... - print a config string at dotted PATH if it's in A..., else DEF
 #
 # Defaults: missing key = enabled. Malformed JSON or missing jq = all enabled
 # with a single stderr warning.
@@ -215,6 +216,57 @@ toolu_model() {
     *" $val "*) printf '%s' "$val" ;;
     *)
       _toolu_warn "models.$class: '$val' is not a model alias ($TOOLU_MODEL_ALIASES); using $def"
+      printf '%s' "$def"
+      ;;
+  esac
+}
+
+# ── Generic string-enum reader ──────────────────────────────────────────────
+# toolu_string PATH DEFAULT ALLOWED...
+# PATH is a dotted jq path into the merged config (e.g. "agentTier.mode").
+# Prints the value at PATH if it is a JSON string AND is one of ALLOWED;
+# otherwise falls back to DEFAULT.
+#
+# Same warn-and-fall-back shape as toolu_model: a key that is simply absent
+# falls back to DEFAULT silently (an unset key is not a mistake); a key that
+# IS present but doesn't qualify (wrong type, or a string outside ALLOWED)
+# warns once on stderr before falling back — that is very likely a typo the
+# author should see.
+toolu_string() {
+  local path="$1" def="$2"
+  shift 2
+  local allowed=("$@")
+  toolu_load_config
+  if [ "$_TOOLU_HAS_JQ" != "1" ]; then
+    printf '%s' "$def"
+    return 0
+  fi
+  local out vtype vval
+  out=$(jq -r --arg p "$path" '
+    ($p | split(".")) as $ks
+    | (getpath($ks)) as $v
+    | [($v | type), (if ($v | type) == "string" then $v else "" end)]
+    | @tsv
+  ' <<< "$TOOLU_CFG_JSON" 2>/dev/null)
+  IFS=$'\t' read -r vtype vval <<< "$out"
+
+  case "$vtype" in
+    null|'')
+      printf '%s' "$def"
+      ;;
+    string)
+      local a
+      for a in "${allowed[@]}"; do
+        if [ "$vval" = "$a" ]; then
+          printf '%s' "$vval"
+          return 0
+        fi
+      done
+      _toolu_warn "$path: '$vval' is not an allowed value (${allowed[*]}); using $def"
+      printf '%s' "$def"
+      ;;
+    *)
+      _toolu_warn "$path: value is not a string; using $def"
       printf '%s' "$def"
       ;;
   esac

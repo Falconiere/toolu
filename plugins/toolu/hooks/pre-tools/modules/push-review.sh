@@ -22,6 +22,10 @@ set -o pipefail
 _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 # shellcheck source=../../lib/detect.sh
 . "$_toolu_lib/detect.sh"
+# shellcheck source=../../lib/diff-sha.sh
+. "$_toolu_lib/diff-sha.sh"
+# shellcheck source=../../lib/telemetry.sh
+. "$_toolu_lib/telemetry.sh"
 
 [[ "$tool_name" != "Bash" ]] && exit 0
 
@@ -53,6 +57,20 @@ state_file="$state_dir/${slug}.json"
 
 # Base branch: env override > detect_base_branch, resolved in the target repo.
 base_branch="${PUSH_REVIEW_BASE:-$(detect_base_branch "$repo_root")}"
+
+# push_check telemetry: one closed set of reason codes across every decision
+# exit below (no-state, stale-diff, schema, findings, reviewer, round-cap,
+# empty-diff, pass). ROUND is the state file's review_round when it's already
+# known at the call site; the exits that precede reading the state file (or
+# that fail its schema) pass "" -> JSON null.
+_pr_telemetry() {
+  local result="$1" code="$2" round="${3:-}"
+  local round_json="null"
+  [[ "$round" =~ ^[0-9]+$ ]] && round_json="$round"
+  telemetry_append "$repo_root" "push_check" \
+    "$(jq -cn --arg result "$result" --arg code "$code" --argjson round "$round_json" \
+         '{result: $result, reason_code: $code, round: $round}')"
+}
 
 # Verify base branch exists locally.
 if ! git -C "$repo_root" rev-parse --verify --quiet "$base_branch" >/dev/null; then
@@ -92,7 +110,7 @@ fi
 # branch (e.g. after a force reset wipes commits).
 EMPTY_BLOB_SHA="e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
 
-current_diff_sha=$(git -C "$repo_root" diff --no-color "${base_branch}...HEAD" 2>/dev/null | git -C "$repo_root" hash-object --stdin 2>/dev/null || echo "")
+current_diff_sha=$(toolu_diff_sha "$repo_root" "$base_branch")
 if [[ -z "$current_diff_sha" ]]; then
   # git diff failed (disk full, etc). Allow push; underlying push will surface real failure.
   echo "push-review: git diff ${base_branch}...HEAD failed; allowing push to surface real error" >&2
@@ -115,6 +133,7 @@ if [[ "$current_diff_sha" == "$EMPTY_BLOB_SHA" ]]; then
       )
     }
   }'
+  _pr_telemetry deny empty-diff
   exit 0
 fi
 
@@ -144,6 +163,7 @@ if [[ ! -f "$state_file" ]]; then
       )
     }
   }'
+  _pr_telemetry deny no-state
   exit 0
 fi
 
@@ -160,8 +180,15 @@ if [[ "$state_version" != "1" || -z "$state_sha" || -z "$state_findings" ]]; the
       "permissionDecisionReason": ("state file corrupted at " + $file + "; delete and re-review")
     }
   }'
+  _pr_telemetry deny schema
   exit 0
 fi
+
+# review_round: read here (once) rather than only at the round-cap check below,
+# so it's already known for the reviewer-acceptance telemetry exit too. Missing
+# field defaults to round 1 for backward compat (same default the round-cap
+# check uses).
+state_round=$(jq -r '.review_round // 1' "$state_file" 2>/dev/null || echo "1")
 
 # Reviewer-agnostic gate: at least ONE accepted reviewer must appear in the
 # state file. This keeps toolu usable without the caveman plugin — the
@@ -186,6 +213,7 @@ if ! jq -e --argjson acc "$accepted_reviewers" \
       )
     }
   }'
+  _pr_telemetry deny reviewer "$state_round"
   exit 0
 fi
 
@@ -199,7 +227,6 @@ fi
 # After MAX_ROUNDS, deny with an escalation message so the babysit triggers
 # its Step 6 escalation stop instead of looping indefinitely.
 MAX_ROUNDS=5
-state_round=$(jq -r '.review_round // 1' "$state_file" 2>/dev/null || echo "1")
 if [[ "$state_round" =~ ^[0-9]+$ ]] && (( state_round > MAX_ROUNDS )); then
   jq -n --arg n "$state_round" --arg max "$MAX_ROUNDS" --arg file "$state_file" '{
     "hookSpecificOutput": {
@@ -212,6 +239,7 @@ if [[ "$state_round" =~ ^[0-9]+$ ]] && (( state_round > MAX_ROUNDS )); then
       )
     }
   }'
+  _pr_telemetry deny round-cap "$state_round"
   exit 0
 fi
 
@@ -228,6 +256,7 @@ if [[ "$state_sha" != "$current_diff_sha" ]]; then
       )
     }
   }'
+  _pr_telemetry deny stale-diff "$state_round"
   exit 0
 fi
 
@@ -243,8 +272,10 @@ if [[ "$state_findings" != "0" ]]; then
       )
     }
   }'
+  _pr_telemetry deny findings "$state_round"
   exit 0
 fi
 
 # All gates pass: allow push.
+_pr_telemetry allow pass "$state_round"
 exit 0

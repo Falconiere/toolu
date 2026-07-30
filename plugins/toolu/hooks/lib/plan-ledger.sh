@@ -21,15 +21,20 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}}"
 . "$_toolu_lib/detect.sh"
 # shellcheck source=plan-ledger-preflight.sh
 . "$_toolu_lib/plan-ledger-preflight.sh"
+# shellcheck source=diff-sha.sh
+. "$_toolu_lib/diff-sha.sh"
+# shellcheck source=telemetry.sh
+. "$_toolu_lib/telemetry.sh"
 
 # pl_diff_sha BASE
 # Print the content-addressed diff hash of BASE...HEAD (matches push-review.sh:88).
-# Empty stdout + non-zero on git failure so callers can fail closed.
+# Empty stdout + non-zero on git failure so callers can fail closed. Both
+# callers below run with cwd already at the project root (pl_cmd_run cd's
+# there; pl_cmd_status assumes it like every other bare git call in this file),
+# so "." is the equivalent repo root.
 pl_diff_sha() {
-  local base="$1" sha
-  sha=$(git diff --no-color "${base}...HEAD" 2>/dev/null | git hash-object --stdin 2>/dev/null) || return 1
-  [ -n "$sha" ] || return 1
-  printf '%s\n' "$sha"
+  local base="$1"
+  toolu_diff_sha . "$base"
 }
 
 # pl_ledger_path
@@ -321,8 +326,12 @@ pl_cmd_run() {
     else
       tmpout="$ledger_file.run.$$.$id"
       mkdir -p "$(dirname "$ledger_file")" 2>/dev/null || true
+      local _pl_t0 _pl_t1 _pl_duration
+      _pl_t0=$(date +%s)
       bash -c "$check" >"$tmpout" 2>&1
       code=$?
+      _pl_t1=$(date +%s)
+      _pl_duration=$((_pl_t1 - _pl_t0))
       [ "$code" -eq 0 ] && status="green" || status="red"
       evidence=$(pl_evidence "$(cat "$tmpout")")
       rm -f "$tmpout"
@@ -333,6 +342,17 @@ pl_cmd_run() {
         || { echo "plan-ledger: failed to read prior entry for step $id" >&2; return 2; }
       new_entry=$(pl_build_step_entry "$steps" "$id" "$status" "$code" "$cur" "$evidence" "" "" "$prior_entry") \
         || { echo "plan-ledger: failed to build entry for step $id" >&2; return 2; }
+      # step_run telemetry: this branch is the ONE code path both the full-run
+      # (every id lands here) and --step run (only the targeted id lands here)
+      # share, so instrumenting it covers both per the spec. attempt =
+      # archived-retry count + 1, read off the entry pl_build_step_entry just
+      # archived, so it reflects the SAME retry history just computed.
+      local _pl_attempt
+      _pl_attempt=$(jq -r '(.retries | length) + 1' <<< "$new_entry")
+      telemetry_append "$root" "step_run" \
+        "$(jq -cn --arg id "$id" --arg status "$status" --argjson code "$code" \
+             --argjson duration "$_pl_duration" --argjson attempt "$_pl_attempt" \
+             '{step_id: $id, status: $status, exit_code: $code, duration_s: $duration, attempt: $attempt}')"
     fi
     out_steps=$(jq --argjson e "$new_entry" '. + [$e]' <<< "$out_steps") \
       || { echo "plan-ledger: failed to append step $id" >&2; return 2; }

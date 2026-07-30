@@ -33,6 +33,12 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 . "$_toolu_lib/detect.sh"
 # shellcheck source=../../lib/plan-ledger-parse.sh
 . "$_toolu_lib/plan-ledger-parse.sh"
+# shellcheck source=../../lib/diff-sha.sh
+. "$_toolu_lib/diff-sha.sh"
+# shellcheck source=../../lib/plan-ledger.sh
+. "$_toolu_lib/plan-ledger.sh"
+# shellcheck source=../../lib/telemetry.sh
+. "$_toolu_lib/telemetry.sh"
 
 [[ "$tool_name" != "Bash" ]] && exit 0
 
@@ -98,12 +104,39 @@ if [[ "$total" == "0" || "$step_count" == "0" ]]; then
 fi
 
 # Current branch diff_sha — the content hash the checker stamps when a step runs.
-current_diff_sha=$(git diff --no-color "${base_branch}...HEAD" 2>/dev/null | git hash-object --stdin 2>/dev/null || echo "")
+current_diff_sha=$(toolu_diff_sha . "$base_branch")
 if [[ -z "$current_diff_sha" ]]; then
   # git diff failed (disk full, etc): allow so the underlying push surfaces the
   # real error rather than denying on an indeterminate read.
   echo "plan-ledger: git diff ${base_branch}...HEAD failed; allowing push to surface real error" >&2
   exit 0
+fi
+
+# ac_coverage telemetry (report-only counts; never affects the decision below).
+# Mirrors lib/plan-ledger.sh's pl_cmd_status AC-coverage resolution: read the
+# ledger's plan_doc, resolve its **Spec:** field, and reuse pl_ac_coverage_lines
+# (sourced from lib/plan-ledger.sh above) to get the per-AC report, then count
+# covered vs UNCOVERED lines in it. Spec-less plans print no report -> no event.
+ac_plan_doc=$(jq -r '.plan_doc // ""' <<<"$ledger" 2>/dev/null || echo "")
+if [[ -n "$ac_plan_doc" ]]; then
+  ac_root=$(detect_project_root)
+  [[ -f "$ac_plan_doc" ]] || { [[ -n "$ac_root" && -f "$ac_root/$ac_plan_doc" ]] && ac_plan_doc="$ac_root/$ac_plan_doc"; }
+  if [[ -f "$ac_plan_doc" ]]; then
+    ac_spec_field=$(pl_doc_field "$ac_plan_doc" Spec)
+    ac_spec_path="$ac_spec_field"
+    case "$(printf '%s' "$ac_spec_field" | tr '[:upper:]' '[:lower:]')" in
+      ""|none) : ;;
+      *) [[ -f "$ac_spec_path" ]] || { [[ -n "$ac_root" && -f "$ac_root/$ac_spec_field" ]] && ac_spec_path="$ac_root/$ac_spec_field"; } ;;
+    esac
+    ac_report=$(pl_ac_coverage_lines "$ledger" "$current_diff_sha" "$ac_spec_path" 2>/dev/null)
+    if [[ -n "$ac_report" ]]; then
+      ac_total=$(grep -c '^  AC-' <<<"$ac_report" || true)
+      ac_uncovered=$(grep -c 'UNCOVERED' <<<"$ac_report" || true)
+      ac_covered=$(( ac_total - ac_uncovered ))
+      telemetry_append "$ac_root" "ac_coverage" \
+        "$(jq -cn --argjson c "$ac_covered" --argjson u "$ac_uncovered" '{covered: $c, uncovered: $u}')"
+    fi
+  fi
 fi
 
 # Build the list of non-fresh-green steps. A step is fresh-green iff
