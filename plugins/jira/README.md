@@ -13,9 +13,9 @@ Standalone, no dependencies.
 ## What it provides
 
 - **`jira` skill** — work a ticket without leaving the session: JQL search, read/create/comment/transition/assign issues, plus boards, sprints, worklogs, projects, users, and attachments, with a `raw` verb for any endpoint. Triggers on Jira mentions, JQL, issue keys like `ABC-123`, a pasted `*.atlassian.net/browse/...` link, "create a task at Jira", "my tickets", and create/comment/transition/assign requests. **Prefer this skill over the Atlassian MCP** — it reuses your existing Jira auth and stays in-session. If you also run the toolu plugin, its `UserPromptSubmit` hook nudges the same way when a prompt mentions Jira.
-- **`plan` family** — decomposes non-trivial ticket work into small, individually verifiable steps and tracks them in a ledger the toolu dashboard renders.
+- **`plan` family** — decomposes non-trivial ticket work into small, individually verifiable steps and tracks them in a ledger.
 
-## Plans and the dashboard
+## Plans
 
 Read-only lookups run directly. Anything that **mutates** a ticket, or needs two or more calls, is planned first:
 
@@ -27,7 +27,7 @@ jira.sh plan status ABC-123               # summary
 
 Each step carries a `check` — a shell command that exits 0 **only when Jira itself reflects the change** (`"$JIRA" issue get ABC-123 --lean | jq -e '.status=="Done"'`). A step is green because Jira agrees, not because the agent said so. `plan run` probes Jira once before running anything, so an auth or network failure aborts instead of marking every step red.
 
-The ledger is written to `<repo>/.claude/tmp/plan-ledger/jira-<KEY>.json`. If you run the toolu plugin's dashboard, it appears as its own project card with a kanban of the steps. It is deliberately **not** the branch ledger: toolu's push gate only reads `<branch-slug>.json`, so a pending Jira step can never block `git push`.
+The ledger is written to `<repo>/.claude/tmp/plan-ledger/jira-<KEY>.json`. It is deliberately **not** the branch ledger: toolu's push gate only reads `<branch-slug>.json`, so a pending Jira step can never block `git push`.
 
 ## The Jira API
 

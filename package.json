@@ -10,11 +10,6 @@
     "hooks",
     "quality-gate"
   ],
-  "devDependencies": {
-    "@types/node": "^25.9.3",
-    "bun-types": "^1.3.14",
-    "typescript": "^5.8.0"
-  },
   "scripts": {
     "lint:shell": "bash tooling/shellcheck.sh",
     "test:shell": "bats -r plugins tooling",

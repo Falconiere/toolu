@@ -16,7 +16,7 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 8 | [**jira**](../jira/README.md) | Workflow | — | Jira issue search & workflow from the session |
 | 9 | [**pr-babysit**](../pr-babysit/README.md) | Workflow | `toolu` | Cron-driven PR babysitter that chases review findings to zero |
 | 10 | [**rust-quality**](../rust-quality/README.md) | Quality Gate | `toolu` | Rust post-edit quality checks (size, unsafe, unwrap bans) |
-| 11 | [**statusline**](../statusline/README.md) | UI | — | Gate-aware terminal statusline (model, effort, ctx, usage, gate) |
+| 11 | [**statusline**](../statusline/README.md) | UI | — | Gate-aware terminal statusline (model, effort, ctx, gate) |
 | 12 | [**ts-quality**](../ts-quality/README.md) | Quality Gate | `toolu` | TypeScript post-edit quality checks (size, imports, type guards) |
 
 ## Architecture Overview

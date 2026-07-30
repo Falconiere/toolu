@@ -120,7 +120,7 @@ Ten plugins, one marketplace. Install the core alone, or add the domain plugins.
 | Knowledge | **`exa-search`** | `1.18.0` | **Web / code / URL search** plus deep research via the Exa REST API. Standalone, no dependencies. |
 | Workflow | **\`toolu-review\`** | \`0.1.0\` | \`toolu-review:review\` — pre-push review mirroring the CI bot's checklist (correctness, security, perf, coverage, doc accuracy); writes the \`push-review\` state so the gate passes. Standalone. |
 | Workflow | **`pr-babysit`** | `0.1.0` | `/pr-babysit:babysit` — cron-driven PR babysitter that fetches review comments + the CI review-bot verdict, triages, fixes, and chases findings to zero until CI is green. |
-| UI | **`statusline`** | `0.3.1` | Optional gate-aware statusline — `model \| effort \| ctx \| wk \| gate \| folder \| branch \| mem \| caveman`, wired via a stable symlink (`/statusline:setup` to enable). Claude Code only. Standalone. |
+| UI | **`statusline`** | `0.3.1` | Optional gate-aware statusline — `model \| effort \| ctx \| gate \| folder \| branch \| mem \| caveman`, wired via a stable symlink (`/statusline:setup` to enable). Claude Code only. Standalone. |
 
 Beyond the plugins, the core (`toolu`) also ships:
 
