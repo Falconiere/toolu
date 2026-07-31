@@ -67,6 +67,26 @@ write_review_state() {
     }' > "$state_dir/${slug}.json"
 }
 
+# --- parity ---------------------------------------------------------------
+
+@test "parity: verdict's ACCEPTED_REVIEWERS matches push-review.sh's accepted_reviewers literal" {
+  # verdict.sh implements the review gate's schema independently of
+  # pre-tools/modules/push-review.sh (see the file header) — the reviewer
+  # allow-list is duplicated, not shared, so this is what keeps the two lists
+  # from drifting apart silently (mirrors plan-ledger-model.bats's alias-list
+  # parity test).
+  local push_review="$LIB_DIR/../pre-tools/modules/push-review.sh"
+  [ -f "$push_review" ]
+  local from_verdict from_gate
+  from_verdict=$(grep -o "ACCEPTED_REVIEWERS='\[[^]]*\]'" "$SCRIPT" \
+    | sed -E "s/^ACCEPTED_REVIEWERS='(.*)'\$/\1/")
+  from_gate=$(grep -o "accepted_reviewers='\[[^]]*\]'" "$push_review" \
+    | sed -E "s/^accepted_reviewers='(.*)'\$/\1/")
+  [ -n "$from_verdict" ]
+  [ -n "$from_gate" ]
+  [ "$from_verdict" = "$from_gate" ]
+}
+
 # --- AC-1: quality gate failure -----------------------------------------
 
 @test "AC-1: recorded quality-gate failure -> blocked, exit 1, status renders" {
@@ -199,6 +219,73 @@ EOF
   TOOLU_CONFIG_DIR="$CFG_DIR" run bash "$SCRIPT" json
   echo "$output" | jq -e '.gates.review.state == "fail"'
   echo "$output" | jq -e '.gates.review.reason_code == "empty-diff"'
+}
+
+@test "AC-13: unparseable (present-but-garbage) push-review state -> reason_code schema, not no-state" {
+  REPO="$TMP/repo"
+  build_repo "$REPO"
+  (
+    cd "$REPO" || exit 1
+    git checkout -q -b feat/garbage
+    echo "echo hi" > script.sh
+    git add script.sh
+    git commit -q -m "add script"
+  )
+  mkdir -p "$REPO/.claude/tmp/push-review"
+  echo "not json" > "$REPO/.claude/tmp/push-review/feat_garbage.json"
+
+  cd "$REPO"
+  TOOLU_CONFIG_DIR="$CFG_DIR" run bash "$SCRIPT" json
+  echo "$output" | jq -e '.gates.review.state == "fail"'
+  echo "$output" | jq -e '.gates.review.reason_code == "schema"'
+}
+
+@test "AC-13: push-review state version 1 -> reason_code schema-v1" {
+  REPO="$TMP/repo"
+  build_repo "$REPO"
+  (
+    cd "$REPO" || exit 1
+    git checkout -q -b feat/v1
+    echo "echo hi" > script.sh
+    git add script.sh
+    git commit -q -m "add script"
+  )
+  sha=$(raw_diff_sha "$REPO" main)
+  mkdir -p "$REPO/.claude/tmp/push-review"
+  jq -n --arg sha "$sha" '{
+    version: 1, branch: "feat/v1", diff_sha: $sha, base_branch: "main",
+    reviewed_at: "2026-07-30T00:00:00Z", reviewers: ["code-review"],
+    findings_count: 0, findings: []
+  }' > "$REPO/.claude/tmp/push-review/feat_v1.json"
+
+  cd "$REPO"
+  TOOLU_CONFIG_DIR="$CFG_DIR" run bash "$SCRIPT" json
+  echo "$output" | jq -e '.gates.review.state == "fail"'
+  echo "$output" | jq -e '.gates.review.reason_code == "schema-v1"'
+}
+
+@test "AC-13: push-review state version 3 -> reason_code schema (not schema-v1)" {
+  REPO="$TMP/repo"
+  build_repo "$REPO"
+  (
+    cd "$REPO" || exit 1
+    git checkout -q -b feat/v3
+    echo "echo hi" > script.sh
+    git add script.sh
+    git commit -q -m "add script"
+  )
+  sha=$(raw_diff_sha "$REPO" main)
+  mkdir -p "$REPO/.claude/tmp/push-review"
+  jq -n --arg sha "$sha" '{
+    version: 3, branch: "feat/v3", diff_sha: $sha, base_branch: "main",
+    reviewed_at: "2026-07-30T00:00:00Z", reviewers: ["code-review"],
+    findings_count: 0, findings: [], reviewed_files: ["script.sh"]
+  }' > "$REPO/.claude/tmp/push-review/feat_v3.json"
+
+  cd "$REPO"
+  TOOLU_CONFIG_DIR="$CFG_DIR" run bash "$SCRIPT" json
+  echo "$output" | jq -e '.gates.review.state == "fail"'
+  echo "$output" | jq -e '.gates.review.reason_code == "schema"'
 }
 
 @test "AC-13: docs attestation found via docs-sync's own path resolution (CLAUDE_PROJECT_DIR, worktree)" {

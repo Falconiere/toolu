@@ -59,10 +59,10 @@ state_file="$state_dir/${slug}.json"
 base_branch="${PUSH_REVIEW_BASE:-$(detect_base_branch "$repo_root")}"
 
 # push_check telemetry: one closed set of reason codes across every decision
-# exit below (no-state, stale-diff, schema, findings, reviewer, round-cap,
-# empty-diff, pass). ROUND is the state file's review_round when it's already
-# known at the call site; the exits that precede reading the state file (or
-# that fail its schema) pass "" -> JSON null.
+# exit below (base-missing, detached-head, diff-failed, no-state, stale-diff,
+# schema, findings, reviewer, round-cap, empty-diff, pass). ROUND is the state
+# file's review_round when it's already known at the call site; the exits that
+# precede reading the state file (or that fail its schema) pass "" -> JSON null.
 _pr_telemetry() {
   local result="$1" code="$2" round="${3:-}"
   local round_json="null"
@@ -81,6 +81,7 @@ if ! git -C "$repo_root" rev-parse --verify --quiet "$base_branch" >/dev/null; t
       "permissionDecisionReason": ("base branch '\''" + $base + "'\'' not found locally; run `git fetch origin " + $base + ":" + $base + "`")
     }
   }'
+  _pr_telemetry deny base-missing
   exit 0
 fi
 
@@ -93,6 +94,7 @@ if [[ "$current_branch" == "HEAD" || -z "$current_branch" ]]; then
       "permissionDecisionReason": "detached HEAD — checkout a branch before push"
     }
   }'
+  _pr_telemetry deny detached-head
   exit 0
 fi
 
@@ -114,6 +116,7 @@ current_diff_sha=$(toolu_diff_sha "$repo_root" "$base_branch")
 if [[ -z "$current_diff_sha" ]]; then
   # git diff failed (disk full, etc). Allow push; underlying push will surface real failure.
   echo "push-review: git diff ${base_branch}...HEAD failed; allowing push to surface real error" >&2
+  _pr_telemetry allow diff-failed
   exit 0
 fi
 

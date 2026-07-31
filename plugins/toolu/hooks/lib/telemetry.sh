@@ -52,6 +52,10 @@ telemetry_append() {
   branch=$(git -C "$repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
   [[ -z "$branch" || "$branch" == "HEAD" ]] && return 0
 
+  # branch_slug comes from detect.sh, sourced softly above — an older/absent
+  # detect.sh must not turn into an unbound-function crash for every caller.
+  command -v branch_slug >/dev/null 2>&1 || return 0
+
   local slug now line dir file
   slug=$(branch_slug "$branch")
   now=$(date -u +%Y-%m-%dT%H:%M:%SZ)

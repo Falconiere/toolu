@@ -130,7 +130,11 @@ gate_record_failure() {
 
   # gate_fail telemetry: this function always ends in an attempted write (primary
   # or fallback), so it always represents a failure being recorded — one event
-  # per call, best-effort (never affects the write above).
+  # per call, best-effort (never affects the write above). Semantics: gate_fail
+  # fires on every failing EDIT, including a re-record of the same violation on
+  # the same file — it is not deduped per distinct failure. gate_clear (below)
+  # is the complementary half: it fires only on a true failing->passing
+  # transition, never on a re-clear of an already-passing gate.
   if _gate_file_ensure_telemetry; then
     telemetry_append "$(_gate_file_root "$gate_file")" "gate_fail" \
       "$(jq -cn --arg file "$file" --arg source "$source" '{file: $file, source: $source}')"

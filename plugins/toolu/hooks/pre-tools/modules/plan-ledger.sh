@@ -35,14 +35,6 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 . "$_toolu_lib/detect.sh"
 # shellcheck source=../../lib/plan-ledger-parse.sh
 . "$_toolu_lib/plan-ledger-parse.sh"
-# shellcheck source=../../lib/diff-sha.sh
-. "$_toolu_lib/diff-sha.sh"
-# shellcheck source=../../lib/plan-ledger.sh
-. "$_toolu_lib/plan-ledger.sh"
-# shellcheck source=../../lib/telemetry.sh
-. "$_toolu_lib/telemetry.sh"
-# shellcheck source=../../lib/config.sh
-. "$_toolu_lib/config.sh"
 
 [[ "$tool_name" != "Bash" ]] && exit 0
 
@@ -53,6 +45,18 @@ command=$(echo "$input" | jq -r '.tool_input.command // ""')
 
 # Push detection (strip_heredocs + boundary-anchored regex) shared via detect.sh.
 is_git_push "$command" || exit 0
+
+# Sourced here (past the Edit/Write/Grep and non-push cheap exits above) so
+# every other tool call skips the extra jq-merge/telemetry-lib load these four
+# pull in — only an actual `git push` pays for them.
+# shellcheck source=../../lib/diff-sha.sh
+. "$_toolu_lib/diff-sha.sh"
+# shellcheck source=../../lib/plan-ledger.sh
+. "$_toolu_lib/plan-ledger.sh"
+# shellcheck source=../../lib/telemetry.sh
+. "$_toolu_lib/telemetry.sh"
+# shellcheck source=../../lib/config.sh
+. "$_toolu_lib/config.sh"
 
 # Base branch: env override > detect_base_branch (must agree with the checker).
 base_branch="${PUSH_REVIEW_BASE:-$(detect_base_branch)}"
@@ -135,7 +139,7 @@ if [[ -n "$ac_plan_doc" ]]; then
     ac_report=$(pl_ac_coverage_lines "$ledger" "$current_diff_sha" "$ac_spec_path" 2>/dev/null)
     if [[ -n "$ac_report" ]]; then
       ac_total=$(grep -c '^  AC-' <<<"$ac_report" || true)
-      ac_uncovered=$(grep -c 'UNCOVERED' <<<"$ac_report" || true)
+      ac_uncovered=$(grep -Ec '^  AC-[^:]+: UNCOVERED' <<<"$ac_report" || true)
       ac_covered=$(( ac_total - ac_uncovered ))
       telemetry_append "$ac_root" "ac_coverage" \
         "$(jq -cn --argjson c "$ac_covered" --argjson u "$ac_uncovered" '{covered: $c, uncovered: $u}')"

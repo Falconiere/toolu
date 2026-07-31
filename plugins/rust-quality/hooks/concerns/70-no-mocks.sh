@@ -1,7 +1,9 @@
 # --- No-mocks (zero tolerance): forbid mock frameworks — real data/fixtures only ---
 # Split scope, because mock *definitions* live in src/ while mock *imports* are
 # pulled into test files:
-#   - src/**/*.rs: #[automock], #[cfg_attr(..., automock)], mock! { ... }.
+#   - src/**/*.rs: #[automock], #[cfg_attr(..., automock)], mock! { ... }
+#     (also the mock!(...) and mock![...] delimiter forms — mock! is a macro,
+#     so all three bracket kinds are valid Rust).
 #   - test files (tests/ placement, or *_test.rs / *_tests.rs basenames — the
 #     same path predicate 20-tests.sh uses; its attribute-based detection
 #     (#[test], #[rstest], ...) is not reused here since mock imports are `use`
@@ -44,7 +46,10 @@ language: rust
 severity: warning
 message: 'mock! { ... } mock definition'
 rule:
-  pattern: 'mock! { $$$ }'
+  any:
+    - pattern: 'mock! { $$$ }'
+    - pattern: 'mock!($$$)'
+    - pattern: 'mock![$$$]'
 RS_NOMOCK_SRC
 )
   fi

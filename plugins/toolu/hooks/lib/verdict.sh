@@ -240,8 +240,12 @@ vd_gate_review() {
   local state_json
   state_json=$(cat "$state_file" 2>/dev/null) || state_json=""
   if [ -z "$state_json" ] || ! jq -e . <<< "$state_json" >/dev/null 2>&1; then
+    # Present-but-garbage is a schema problem, not an absence — "no-state" is
+    # reserved for the file-absent case above, matching push-review.sh (an
+    # unparseable state there falls through to its version-mismatch "schema"
+    # deny, never its file-absent "no-state" one).
     vd_gate fail "push-review state file is unparseable at $state_file" \
-      '{"reason_code":"no-state","round":null}'
+      '{"reason_code":"schema","round":null}'
     return
   fi
 
@@ -255,9 +259,19 @@ vd_gate_review() {
   state_findings=$(jq -r '(.findings_count // "") | tostring' <<< "$state_json" 2>/dev/null)
   reviewed_type=$(jq -r '(.reviewed_files // null) | type' <<< "$state_json" 2>/dev/null)
 
-  if [ "$version_norm" != "2" ] || [ -z "$state_sha" ] || [ -z "$state_findings" ] || [ "$reviewed_type" != "array" ]; then
-    vd_gate fail "push-review state is schema v1 (or missing v2 fields); harness v2 requires reviewed_files — re-run the review to regenerate the state file" \
+  # schema-v1 is reserved for a state whose version normalizes to exactly "1"
+  # (the one-time-upgrade case push-review.sh gives its own deny message for);
+  # anything else malformed — version outside {1,2}, or a v2 missing a
+  # required field — is the generic "schema" code, mirroring push-review.sh's
+  # own split between its version==1 check and its version!=2-or-corrupt check.
+  if [ "$version_norm" = "1" ]; then
+    vd_gate fail "push-review state is schema v1; harness v2 requires reviewed_files — re-run the review to regenerate the state file" \
       "$(jq -cn --argjson round "$round_json" '{reason_code:"schema-v1", round:$round}')"
+    return
+  fi
+  if [ "$version_norm" != "2" ] || [ -z "$state_sha" ] || [ -z "$state_findings" ] || [ "$reviewed_type" != "array" ]; then
+    vd_gate fail "push-review state file is corrupted or missing required v2 fields at $state_file" \
+      "$(jq -cn --argjson round "$round_json" '{reason_code:"schema", round:$round}')"
     return
   fi
 
@@ -425,10 +439,13 @@ main() {
   g_docs=$(vd_gate_docs "$repo_root" "$branch")
 
   local overall
-  overall=$(jq -rn --argjson q "$g_quality" --argjson p "$g_plan" --argjson r "$g_review" --argjson d "$g_docs" '
+  if ! overall=$(jq -rn --argjson q "$g_quality" --argjson p "$g_plan" --argjson r "$g_review" --argjson d "$g_docs" '
     if ([$q, $p, $r, $d] | any(.state == "fail" or .state == "escalate"))
     then "blocked" else "ready" end
-  ')
+  ' 2>/dev/null) || [ -z "$overall" ]; then
+    echo "verdict: failed to assemble gate results (one of the four gate functions produced empty/invalid JSON)" >&2
+    return 2
+  fi
 
   local out
   out=$(jq -n \

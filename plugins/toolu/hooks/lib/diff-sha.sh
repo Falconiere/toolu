@@ -6,8 +6,11 @@
 # Public API:
 #   toolu_diff_sha REPO_ROOT BASE_REF  - print the hash of `git diff
 #                                        BASE_REF...HEAD` run in REPO_ROOT.
-#                                        Non-zero + empty stdout on git
-#                                        failure OR an empty diff stream.
+#                                        Non-zero + empty stdout only when git
+#                                        fails or prints nothing; an empty
+#                                        diff returns 0 with the well-known
+#                                        empty-blob sha — callers own the
+#                                        sentinel.
 #
 # NO sentinel mapping here (e.g. push-review's well-known-empty-blob-sha ->
 # "empty-diff" substitution) — an empty diff prints the real (empty-blob) sha

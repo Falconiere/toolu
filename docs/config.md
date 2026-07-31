@@ -143,6 +143,10 @@ controls enforcement:
 | `block` | Denies the push when code changed with no doc surface and no matching attestation; a valid attestation still allows it. |
 | `off` | Fully disabled — no telemetry (`docs_nudge`/`docs_attested`), no output; indistinguishable from the module not existing. |
 
+Unlike `agentTier.mode=off` above (which keeps recording its `delegation`
+telemetry), `docsSync.mode=off` is fully silent — the advisory nudge is this
+module's only artifact, so turning it off turns off everything.
+
 Three glob sets tune the code/doc classification; each resolves *project/user
 override → built-in default* (resolver
 `plugins/toolu/hooks/lib/docs-sync-config.sh`):
@@ -182,6 +186,11 @@ a delegation's `model` differs from that step's declared (non-null) `model`, it
 nudges: `advise` emits `additionalContext`, `block` denies the call,
 `off` records telemetry only. A delegation with no `model` param (tier-inherit)
 is always legitimate and never nudged.
+
+`agentTier.mode=off` is a deliberate, narrower "off" than `docsSync.mode=off`
+below: it silences only the advisory — the `delegation` telemetry event still
+fires on every call, because that telemetry *is* the primary artifact this
+feature produces (model-routing analytics), not a side effect of the nudge.
 
 ### AC-coverage promotion (`planLedger`)
 

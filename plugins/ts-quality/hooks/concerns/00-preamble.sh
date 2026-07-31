@@ -46,6 +46,9 @@ command -v gate_clear_file >/dev/null 2>&1 || gate_clear_file() {
 command -v ts_max_file_lines        >/dev/null 2>&1 || ts_max_file_lines()        { echo "${DEFAULT_TS_MAX_FILE_LINES:-300}"; }
 command -v ts_max_fn_lines          >/dev/null 2>&1 || ts_max_fn_lines()          { echo "${DEFAULT_TS_MAX_FN_LINES:-60}"; }
 command -v ts_max_file_lines_source >/dev/null 2>&1 || ts_max_file_lines_source() { printf 'default'; }
+# Boolean flag reader (e.g. noMocks) — falls back to the caller's default when
+# quality-config.sh predates this reader.
+command -v quality_flag >/dev/null 2>&1 || quality_flag() { printf '%s' "$3"; }
 # count_code_lines comes from detect.sh (sourced above) — no fallback needed.
 
 # Load the merged config ONCE in this shell so TOOLU_CFG_LOADED sticks for

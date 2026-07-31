@@ -160,6 +160,36 @@ run_plan_ledger_gate() {
   [ "$(jq -r '.round' "$TELEMETRY_FILE")" = "6" ]
 }
 
+@test "push-review push_check: base branch missing locally denies with reason_code=base-missing, round=null" {
+  commit_file feature.txt "feature"
+  payload=$(build_input "git push")
+  tool_name="Bash" input="$payload" PUSH_REVIEW_BASE=nonexistent-base \
+    run bash "$PUSH_REVIEW_SCRIPT" <<<"$payload"
+  [ "$status" -eq 0 ]
+
+  [ -f "$TELEMETRY_FILE" ]
+  [ "$(jq -r '.result' "$TELEMETRY_FILE")" = "deny" ]
+  [ "$(jq -r '.reason_code' "$TELEMETRY_FILE")" = "base-missing" ]
+  [ "$(jq -r '.round' "$TELEMETRY_FILE")" = "null" ]
+}
+
+@test "push-review push_check: git diff failure (corrupted objects) allows with reason_code=diff-failed, round=null" {
+  commit_file feature.txt "feature"
+  # Corrupt the object store AFTER the refs exist: `rev-parse --verify` on the
+  # base branch still resolves (ref lookup only) while `git diff` — which needs
+  # real commit/tree/blob objects — fails for real. No mocked commands.
+  rm -rf .git/objects
+  mkdir -p .git/objects
+  payload=$(build_input "git push")
+  run_push_review "$payload"
+  [ "$status" -eq 0 ]
+
+  [ -f "$TELEMETRY_FILE" ]
+  [ "$(jq -r '.result' "$TELEMETRY_FILE")" = "allow" ]
+  [ "$(jq -r '.reason_code' "$TELEMETRY_FILE")" = "diff-failed" ]
+  [ "$(jq -r '.round' "$TELEMETRY_FILE")" = "null" ]
+}
+
 @test "push-review push_check: empty diff denies with reason_code=empty-diff, round=null" {
   payload=$(build_input "git push")
   run_push_review "$payload"

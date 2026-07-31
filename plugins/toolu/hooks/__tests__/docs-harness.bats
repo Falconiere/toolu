@@ -16,8 +16,10 @@ PR_BABYSIT_README="$ROOT/docs/pr-babysit/README.md"
 
 # Hand-maintained: every new config key path introduced by workflow-harness-v2
 # (spec Interfaces + the already-shipped-but-missing docsSync globs), as a jq
-# path expression to probe for presence (not just non-null — some legitimate
-# values could be null/false, so `has`-style path presence is what we assert).
+# path expression to probe for presence. Asserted below via `!= null`, which is
+# only correct because none of these example-config values are legitimately
+# null; a key whose real value could be null/false would need `has`-style path
+# presence instead.
 REQUIRED_KEY_PATHS=(
   ".telemetry.enabled"
   ".agentTier.mode"

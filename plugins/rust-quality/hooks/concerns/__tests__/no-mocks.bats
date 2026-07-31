@@ -83,6 +83,29 @@ EOF
   echo "$output" | grep -q "mock! { ... }"
 }
 
+@test "rust-quality no-mocks: src/lib.rs with mock!(...) paren-delimiter form fails the gate" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not on PATH"
+  command -v ast-grep >/dev/null 2>&1 || skip "ast-grep not installed"
+  _rust_project
+  cat > src/lib.rs <<'EOF'
+pub trait Foo {
+    fn bar(&self) -> u8;
+}
+
+mock!(
+    pub MyMock {}
+    impl Foo for MyMock {
+        fn bar(&self) -> u8;
+    }
+);
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/lib.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "no-mocks"
+  echo "$output" | grep -q "mock! { ... } mock definition"
+}
+
 @test "rust-quality no-mocks: tests/integration_test.rs with use mockall::predicate::*; fails the gate" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not on PATH"
   command -v ast-grep >/dev/null 2>&1 || skip "ast-grep not installed"
