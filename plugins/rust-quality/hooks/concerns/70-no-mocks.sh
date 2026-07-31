@@ -92,6 +92,13 @@ RS_NOMOCK_TEST
       nm_grep_failed=1
       nm_stderr_first=$(head -n 1 "$nm_err_file" 2>/dev/null | cut -c1-200)
       nm_fail_detail="ast-grep exit ${nm_rc}${nm_stderr_first:+: $nm_stderr_first}"
+    elif [[ -z "$(printf '%s' "$nm_json" | tr -d '[:space:]')" ]]; then
+      # ast-grep exited 0 with genuinely empty stdout — jq also exits 0 on
+      # empty input with empty output, so left unchecked this would be
+      # indistinguishable from a clean "[]" scan and silently swallow a real
+      # breakage as "no hits". A well-behaved scan always emits at least "[]".
+      nm_grep_failed=1
+      nm_fail_detail="ast-grep exited 0 with empty output (expected at least the JSON array \"[]\")"
     elif ! nm_lines=$(printf '%s' "$nm_json" | jq -r '
           .[] | . as $m
           | ((($m.lines // "") | split("\n")) | to_entries[])

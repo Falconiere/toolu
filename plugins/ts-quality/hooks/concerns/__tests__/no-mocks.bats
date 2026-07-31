@@ -229,3 +229,26 @@ EOF
   echo "$output" | grep -q "ast-grep failed while scanning"
   echo "$output" | grep -q "boom"
 }
+
+# ast-grep exiting 0 with genuinely empty stdout (no output at all, not even
+# "[]") must also be surfaced as a tool failure, not silently treated as a
+# clean "no hits" scan — jq itself exits 0 on empty input too, so without
+# this check the two are indistinguishable.
+@test "ts-quality: ast-grep exit 0 with empty stdout while scanning for mocks is surfaced, not silent" {
+  _ts_project
+  echo 'export const dep = 1;' > src/dep.ts
+  mkdir -p src/__tests__
+  cat > src/__tests__/foo.test.ts <<'EOF'
+test("clean", () => {
+  expect(true).toBe(true);
+});
+EOF
+  mkdir -p "$TMP/bin"
+  printf '#!/bin/sh\nexit 0\n' > "$TMP/bin/ast-grep"
+  chmod +x "$TMP/bin/ast-grep"
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/__tests__/foo.test.ts"}}'
+  PATH="$TMP/bin:$PATH" tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "ast-grep failed while scanning"
+  echo "$output" | grep -q "empty output"
+}

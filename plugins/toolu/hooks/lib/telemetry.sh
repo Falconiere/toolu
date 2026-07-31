@@ -18,13 +18,16 @@
 #         own detached-HEAD refusal: branch_slug would otherwise collapse
 #         every such caller onto the shared "_default" slug, mixing unrelated
 #         branches' events into one file)
-#     A malformed EXTRA_JSON_OBJECT is a soft failure: warns on stderr,
-#     appends nothing, still returns 0.
+#     A malformed EXTRA_JSON_OBJECT, or an assembled line over 3900 bytes,
+#     is a soft failure: warns on stderr, appends nothing, still returns 0.
 #
 # CONCURRENCY: exactly one `printf '%s\n' >>` per call — a single O_APPEND
 # write. That is atomic only while the line stays under the platform's
-# atomic-pipe-write floor (historically 4 KB on POSIX); callers must keep
-# EXTRA_JSON_OBJECT small (mirrors gate-file.sh's single-writer assumption).
+# atomic-pipe-write floor (historically 4 KB on POSIX), so the assembled
+# line's byte length is checked before every write: over 3900 bytes
+# (headroom under that floor) it is dropped rather than risking a
+# torn/interleaved write with a concurrent writer — callers must still keep
+# EXTRA_JSON_OBJECT small so their events aren't silently lost this way.
 #
 # Source via:  . "${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}}/telemetry.sh"
 
@@ -56,7 +59,7 @@ telemetry_append() {
   # detect.sh must not turn into an unbound-function crash for every caller.
   command -v branch_slug >/dev/null 2>&1 || return 0
 
-  local slug now line dir file
+  local slug now line dir file line_bytes
   slug=$(branch_slug "$branch")
   now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
@@ -68,6 +71,16 @@ telemetry_append() {
         --arg event "$event" '$extra + {v: 1, t: $t, branch: $branch, event: $event}' \
         2>/dev/null) || [ -z "$line" ]; then
     printf 'telemetry: malformed extra JSON for event "%s"; skipping append\n' "$event" >&2
+    return 0
+  fi
+
+  # Keep the single O_APPEND write atomic (see CONCURRENCY above): a line
+  # over 3900 bytes risks crossing the platform's atomic-pipe-write floor, so
+  # drop it rather than risk tearing/interleaving with a concurrent writer.
+  line_bytes=$(printf '%s' "$line" | wc -c | tr -d ' ')
+  if [ "$line_bytes" -gt 3900 ]; then
+    printf 'telemetry: assembled line for event "%s" is %d bytes (>3900); skipping append\n' \
+      "$event" "$line_bytes" >&2
     return 0
   fi
 

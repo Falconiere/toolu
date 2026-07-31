@@ -101,7 +101,7 @@ teardown() {
 # Shared push-review/plan-ledger-module fixture (both existing suites `load`
 # this same file) — gives setup_sandbox/teardown_sandbox/build_input/run_hook/
 # REPO_ROOT/HOOK_SCRIPT (push-review.sh).
-load ../../pre-tools/modules/__tests__/helpers
+. "${BATS_TEST_DIRNAME}/../../pre-tools/modules/__tests__/helpers.bash"
 
 @test "parity (push-review.sh): empty diff against base still denied with sentinel reason" {
   setup_sandbox

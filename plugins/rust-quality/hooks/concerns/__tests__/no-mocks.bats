@@ -243,3 +243,26 @@ EOF
   echo "$output" | grep -q "no-mocks rules could not be verified"
   echo "$output" | grep -q "boom"
 }
+
+# ast-grep exiting 0 with genuinely empty stdout (no output at all, not even
+# "[]") must also be surfaced as a tool failure, not silently treated as a
+# clean "no hits" scan — jq itself exits 0 on empty input too, so without
+# this check the two are indistinguishable.
+@test "rust-quality no-mocks: ast-grep exit 0 with empty stdout is surfaced, not silent" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not on PATH"
+  _rust_project
+  mkdir -p "$TMP_PROJ/bin"
+  printf '#!/bin/sh\nexit 0\n' > "$TMP_PROJ/bin/ast-grep"
+  chmod +x "$TMP_PROJ/bin/ast-grep"
+  cat > src/service.rs <<'EOF'
+trait Service {
+    fn call(&self) -> u8;
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/service.rs"}}'
+  PATH="$TMP_PROJ/bin:$PATH" tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "ast-grep failed while scanning"
+  echo "$output" | grep -q "empty output"
+  echo "$output" | grep -q "no-mocks rules could not be verified"
+}

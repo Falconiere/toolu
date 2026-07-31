@@ -60,6 +60,13 @@ TS_NOMOCKS_RULES
     if [[ "$ts_nomocks_rc" -ne 0 || -s "$ts_nomocks_err_file" ]]; then
       ts_nomocks_failed=1
       ts_nomocks_fail_stage="ast-grep"
+    elif [[ -z "$(printf '%s' "$ts_nomocks_json" | tr -d '[:space:]')" ]]; then
+      # ast-grep exited 0 with genuinely empty stdout — jq also exits 0 on
+      # empty input with empty output, so left unchecked this would be
+      # indistinguishable from a clean "[]" scan and silently swallow a real
+      # breakage as "no hits". A well-behaved scan always emits at least "[]".
+      ts_nomocks_failed=1
+      ts_nomocks_fail_stage="empty-output"
     elif ! NOMOCKS_LINES=$(printf '%s' "$ts_nomocks_json" | jq -r '
           .[] | . as $m
           | ((($m.lines // "") | split("\n")) | to_entries[])
@@ -74,6 +81,8 @@ TS_NOMOCKS_RULES
       ts_nomocks_stderr_first=$(head -n 1 "$ts_nomocks_err_file" 2>/dev/null | cut -c1-200)
       if [[ "$ts_nomocks_fail_stage" == "jq" ]]; then
         add_error "ast-grep failed while scanning $FILE_PATH for mocks — its output did not parse as the documented JSON array; no-mocks rule could not be verified. Fix the tool/file and re-edit"
+      elif [[ "$ts_nomocks_fail_stage" == "empty-output" ]]; then
+        add_error "ast-grep failed while scanning $FILE_PATH for mocks — exited 0 with empty output (expected at least the JSON array \"[]\"); no-mocks rule could not be verified. Fix the tool/file and re-edit"
       else
         add_error "ast-grep failed while scanning $FILE_PATH for mocks — exit ${ts_nomocks_rc}${ts_nomocks_stderr_first:+: $ts_nomocks_stderr_first}; no-mocks rule could not be verified. Fix the tool/file and re-edit"
       fi

@@ -126,3 +126,29 @@ teardown() {
   [[ "$output" == *"malformed"* ]]
   [ ! -f "$TELEMETRY_FILE" ]
 }
+
+@test "telemetry_append: extra JSON cannot override the v/t/branch/event protocol fields" {
+  ( cd "$REPO" && telemetry_append "$REPO" "step_run" \
+    '{"v":9,"branch":"spoof","event":"x","t":"1999-01-01T00:00:00Z"}' )
+
+  [ -f "$TELEMETRY_FILE" ]
+  jq -e . "$TELEMETRY_FILE" >/dev/null
+  # Protocol fields win regardless of what extra tried to smuggle in.
+  [ "$(jq -r '.v' "$TELEMETRY_FILE")" = "1" ]
+  [ "$(jq -r '.branch' "$TELEMETRY_FILE")" = "feat/x" ]
+  [ "$(jq -r '.event' "$TELEMETRY_FILE")" = "step_run" ]
+  [[ "$(jq -r '.t' "$TELEMETRY_FILE")" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]
+  [ "$(jq -r '.t' "$TELEMETRY_FILE")" != "1999-01-01T00:00:00Z" ]
+}
+
+@test "telemetry_append: assembled line over 3900 bytes warns on stderr, appends nothing, still exits 0" {
+  local pad extra
+  pad=$(printf 'x%.0s' $(seq 1 4000))
+  extra=$(jq -cn --arg pad "$pad" '{pad: $pad}')
+
+  run telemetry_append "$REPO" step_run "$extra"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"telemetry:"* ]]
+  [[ "$output" == *"3900"* ]]
+  [ ! -f "$TELEMETRY_FILE" ]
+}

@@ -319,6 +319,41 @@ EOF
   echo "$output" | jq -e '.gates.docs.reason == "doc change attested as not needed"'
 }
 
+@test "docs attestation: CLAUDE_PROJECT_DIR unset -> writer and verdict both fall back to \$(pwd) and agree" {
+  REPO="$TMP/repo"
+  build_repo "$REPO"
+  (
+    cd "$REPO" || exit 1
+    git checkout -q -b feat/nopd
+    mkdir -p lib
+    echo "echo hi" > lib/foo.sh
+    git add lib/foo.sh
+    git commit -q -m "add foo.sh"
+  )
+
+  sha=$(raw_diff_sha "$REPO" main)
+
+  # Writer: same fallback formula docs-sync.sh/verdict.sh use —
+  # ${DOCS_SYNC_STATE_DIR:-${CLAUDE_PROJECT_DIR:-$(pwd)}/.claude/tmp/docs-sync}
+  # — with CLAUDE_PROJECT_DIR unset and cwd=$REPO, that's $REPO/.claude/tmp/docs-sync.
+  (
+    cd "$REPO" || exit 1
+    unset CLAUDE_PROJECT_DIR
+    mkdir -p "$(pwd)/.claude/tmp/docs-sync"
+    jq -n --arg sha "$sha" '{
+      version: 1, branch: "feat/nopd", diff_sha: $sha, base_branch: "main",
+      decision: "not-needed", note: "covered by test",
+      attested_at: "2026-07-30T00:00:00Z"
+    }' > "$(pwd)/.claude/tmp/docs-sync/feat_nopd.json"
+  )
+
+  cd "$REPO"
+  unset CLAUDE_PROJECT_DIR
+  TOOLU_CONFIG_DIR="$CFG_DIR" run bash "$SCRIPT" json
+  echo "$output" | jq -e '.gates.docs.state == "pass"'
+  echo "$output" | jq -e '.gates.docs.reason == "doc change attested as not needed"'
+}
+
 # --- exit 2: error cases -----------------------------------------------
 
 @test "exit 2: cwd is not a git repository" {
