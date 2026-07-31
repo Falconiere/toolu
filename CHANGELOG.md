@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.2.1](https://github.com/Falconiere/toolu/compare/v4.2.0...v4.2.1) (2026-07-31)
+
+
+### Bug Fixes
+
+* **toolu:** make the agent-tier pre-tool hook executable ([#143](https://github.com/Falconiere/toolu/issues/143)) ([5e7f112](https://github.com/Falconiere/toolu/commit/5e7f1124a105b65b383e0611f687f141aff25153))
+
 ## [4.2.0](https://github.com/Falconiere/toolu/compare/v4.1.1...v4.2.0) (2026-07-31)
 
 
