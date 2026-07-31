@@ -253,23 +253,25 @@ vd_gate_review() {
   round_json=$(jq -c '(.review_round // 1) | if type == "number" then . else null end' <<< "$state_json" 2>/dev/null)
   [ -n "$round_json" ] || round_json="null"
 
-  local version_norm state_sha state_findings reviewed_type
+  local version_norm state_sha state_findings
   version_norm=$(jq -r '(.version // "") | tostring' <<< "$state_json" 2>/dev/null)
   state_sha=$(jq -r '.diff_sha // ""' <<< "$state_json" 2>/dev/null)
   state_findings=$(jq -r '(.findings_count // "") | tostring' <<< "$state_json" 2>/dev/null)
-  reviewed_type=$(jq -r '(.reviewed_files // null) | type' <<< "$state_json" 2>/dev/null)
 
   # schema-v1 is reserved for a state whose version normalizes to exactly "1"
   # (the one-time-upgrade case push-review.sh gives its own deny message for);
-  # anything else malformed — version outside {1,2}, or a v2 missing a
-  # required field — is the generic "schema" code, mirroring push-review.sh's
+  # anything else malformed — version outside {1,2}, or a v2 missing diff_sha/
+  # findings_count — is the generic "schema" code, mirroring push-review.sh's
   # own split between its version==1 check and its version!=2-or-corrupt check.
+  # A v2 state with reviewed_files missing/non-array deliberately falls THROUGH
+  # to the file-coverage check (reads as empty set, denies naming every changed
+  # path) — exactly the gate's documented choice; do not type-check it here.
   if [ "$version_norm" = "1" ]; then
     vd_gate fail "push-review state is schema v1; harness v2 requires reviewed_files — re-run the review to regenerate the state file" \
       "$(jq -cn --argjson round "$round_json" '{reason_code:"schema-v1", round:$round}')"
     return
   fi
-  if [ "$version_norm" != "2" ] || [ -z "$state_sha" ] || [ -z "$state_findings" ] || [ "$reviewed_type" != "array" ]; then
+  if [ "$version_norm" != "2" ] || [ -z "$state_sha" ] || [ -z "$state_findings" ]; then
     vd_gate fail "push-review state file is corrupted or missing required v2 fields at $state_file" \
       "$(jq -cn --argjson round "$round_json" '{reason_code:"schema", round:$round}')"
     return

@@ -60,9 +60,12 @@ base_branch="${PUSH_REVIEW_BASE:-$(detect_base_branch "$repo_root")}"
 
 # push_check telemetry: one closed set of reason codes across every decision
 # exit below (base-missing, detached-head, diff-failed, no-state, stale-diff,
-# schema, findings, reviewer, round-cap, empty-diff, pass). ROUND is the state
-# file's review_round when it's already known at the call site; the exits that
-# precede reading the state file (or that fail its schema) pass "" -> JSON null.
+# schema-v1, schema, file-coverage, findings, reviewer, round-cap, empty-diff,
+# pass). detached-head is unreachable-by-contract in the stream: telemetry_append
+# refuses branch=="HEAD", so that deny never produces a line — the call stays for
+# consistency should the contract change. ROUND is the state file's review_round
+# when it's already known at the call site; the exits that precede reading the
+# state file (or that fail its schema) pass "" -> JSON null.
 _pr_telemetry() {
   local result="$1" code="$2" round="${3:-}"
   local round_json="null"
