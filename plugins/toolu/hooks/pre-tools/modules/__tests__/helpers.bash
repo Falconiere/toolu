@@ -62,6 +62,10 @@ current_diff_sha() {
 }
 
 # Write a state file with given SHA, findings count, and (optional) round.
+# reviewed_files is computed from the CURRENT real diff against development
+# (not from $sha, which callers sometimes set to a stale/bogus value on
+# purpose) — it always reflects actual file coverage for whatever the branch
+# looks like at call time.
 # Usage: write_state <sha> <findings_count> [<review_round>]
 write_state() {
   local sha="$1"
@@ -72,13 +76,17 @@ write_state() {
   local slug
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
   [[ -z "$slug" ]] && slug="_default"
+  local reviewed_files
+  reviewed_files=$(git diff --no-color "development...HEAD" --name-only \
+    | jq -R -s -c 'split("\n") | map(select(length > 0))')
   jq -n \
     --arg branch "$branch" \
     --arg sha "$sha" \
     --argjson count "$count" \
     --argjson round "$round" \
+    --argjson reviewed_files "$reviewed_files" \
     '{
-      version: 1,
+      version: 2,
       branch: $branch,
       diff_sha: $sha,
       base_branch: "development",
@@ -86,6 +94,7 @@ write_state() {
       reviewers: ["code-review"],
       findings_count: $count,
       review_round: $round,
+      reviewed_files: $reviewed_files,
       findings: []
     }' > "$STATE_DIR/${slug}.json"
 }

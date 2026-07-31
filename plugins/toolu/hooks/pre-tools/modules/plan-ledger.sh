@@ -20,6 +20,8 @@
 #   - summary.total == 0 / steps empty             -> allow (no-op).
 #   - every step fresh-green                        -> allow.
 #   - any red/pending/stale step                    -> deny, listing each.
+#   - planLedger.blockOnUncoveredAcs=true + an UNCOVERED spec AC -> deny,
+#     naming the AC id(s) (default false: advisory ac_coverage count only).
 
 # pipefail so a `git diff | git hash-object` failure surfaces; without it an
 # empty diff stream succeeds and yields the well-known empty-blob SHA.
@@ -39,6 +41,8 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 . "$_toolu_lib/plan-ledger.sh"
 # shellcheck source=../../lib/telemetry.sh
 . "$_toolu_lib/telemetry.sh"
+# shellcheck source=../../lib/config.sh
+. "$_toolu_lib/config.sh"
 
 [[ "$tool_name" != "Bash" ]] && exit 0
 
@@ -135,6 +139,22 @@ if [[ -n "$ac_plan_doc" ]]; then
       ac_covered=$(( ac_total - ac_uncovered ))
       telemetry_append "$ac_root" "ac_coverage" \
         "$(jq -cn --argjson c "$ac_covered" --argjson u "$ac_uncovered" '{covered: $c, uncovered: $u}')"
+
+      # Promotion (spec component 8): planLedger.blockOnUncoveredAcs (default
+      # false) turns UNCOVERED spec ACs from an advisory count into a push
+      # deny. The event above already recorded the counts either way.
+      if [[ "$ac_uncovered" -gt 0 ]] && toolu_flag_true planLedger blockOnUncoveredAcs; then
+        ac_uncovered_lines=$(grep -E '^  AC-[^:]+: UNCOVERED' <<<"$ac_report" | sed -E 's/^  //')
+        ac_reason=$(printf 'plan-ledger: push blocked — uncovered spec AC id(s):\n%s\n\ncover with a fresh-green step referencing it in ac_refs, or set planLedger.blockOnUncoveredAcs=false' "$ac_uncovered_lines")
+        jq -n --arg reason "$ac_reason" '{
+          "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": $reason
+          }
+        }'
+        exit 0
+      fi
     fi
   fi
 fi

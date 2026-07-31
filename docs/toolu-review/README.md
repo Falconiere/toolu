@@ -62,7 +62,9 @@ bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review/write-state.sh" \
   --findings-count 0 --repo /path/to/worktree
 ```
 
-`write-state.sh` computes the gate's exact `diff_sha`/`base`/`slug`, sets `review_round`, and writes `<repo root>/.claude/tmp/push-review/<branch-slug>.json` atomically. `--repo` defaults to the cwd's repo root and fails with "not inside a git repo" otherwise; `$STATE_DIR` overrides the directory for the writer and the gate alike. `review_round` starts at 1 for a new `diff_sha` and bumps only when rewriting at the same one, so the gate's 5-round cap means "reviewers keep finding issues in code that never changed". It's a harmless no-op when the toolu push-review gate is not installed.
+`write-state.sh` computes the gate's exact `diff_sha`/`base`/`slug`, sets `review_round`, and writes `<repo root>/.claude/tmp/push-review/<branch-slug>.json` atomically as schema version 2. `--repo` defaults to the cwd's repo root and fails with "not inside a git repo" otherwise; `$STATE_DIR` overrides the directory for the writer and the gate alike. `review_round` starts at 1 for a new `diff_sha` and bumps only when rewriting at the same one, so the gate's 5-round cap means "reviewers keep finding issues in code that never changed". It's a harmless no-op when the toolu push-review gate is not installed.
+
+`reviewed_files` — the actual reviewer file coverage the v2 gate checks — is auto-computed from `git diff --name-only <base>...HEAD`, matching the full diff by default. Pass `--reviewed-files <comma-separated paths>` to override it when the review's scope was deliberately partial or adjusted; the gate denies the push if `reviewed_files` doesn't match the diff's changed paths exactly (sorted, unique).
 
 ### Unfixable Findings
 

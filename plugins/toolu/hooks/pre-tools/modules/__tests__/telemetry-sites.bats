@@ -68,14 +68,21 @@ run_push_review() {
     run bash "$PUSH_REVIEW_SCRIPT" <<<"$payload"
 }
 
+# reviewed_files is computed from the real diff at call time (not from $sha,
+# which some callers set to a deliberately stale/bogus value) so it stays
+# accurate regardless of which check a given test means to exercise.
 write_push_state() {
-  local sha="$1" count="$2" round="${3:-1}" branch slug
+  local sha="$1" count="$2" round="${3:-1}" branch slug reviewed_files
   branch=$(git rev-parse --abbrev-ref HEAD)
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
-  jq -n --arg branch "$branch" --arg sha "$sha" --argjson count "$count" --argjson round "$round" '{
-    version: 1, branch: $branch, diff_sha: $sha, base_branch: "development",
+  reviewed_files=$(git diff --no-color "development...HEAD" --name-only \
+    | jq -R -s -c 'split("\n") | map(select(length > 0))')
+  jq -n --arg branch "$branch" --arg sha "$sha" --argjson count "$count" --argjson round "$round" \
+    --argjson reviewed_files "$reviewed_files" '{
+    version: 2, branch: $branch, diff_sha: $sha, base_branch: "development",
     reviewed_at: "2026-06-07T00:00:00Z", reviewers: ["code-review"],
-    findings_count: $count, review_round: $round, findings: []
+    findings_count: $count, review_round: $round, findings: [],
+    reviewed_files: $reviewed_files
   }' > "$STATE_DIR/${slug}.json"
 }
 
@@ -177,9 +184,9 @@ run_plan_ledger_gate() {
   branch=$(git rev-parse --abbrev-ref HEAD)
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
   jq -n --arg sha "$sha" '{
-    version: 1, branch: "feat/example", diff_sha: $sha, base_branch: "development",
+    version: 2, branch: "feat/example", diff_sha: $sha, base_branch: "development",
     reviewed_at: "2026-06-07T00:00:00Z", reviewers: ["simplify"],
-    findings_count: 0, review_round: 4, findings: []
+    findings_count: 0, review_round: 4, findings: [], reviewed_files: ["feature.txt"]
   }' > "$STATE_DIR/${slug}.json"
   payload=$(build_input "git push")
   run_push_review "$payload"
@@ -198,6 +205,23 @@ run_plan_ledger_gate() {
 
   [ "$(jq -r '.reason_code' "$TELEMETRY_FILE")" = "schema" ]
   [ "$(jq -r '.round' "$TELEMETRY_FILE")" = "null" ]
+}
+
+@test "push-review push_check: reviewed_files short of the diff denies with reason_code=file-coverage and the round" {
+  commit_file feature.txt "feature"
+  sha=$(current_diff_sha)
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
+  jq -n --arg sha "$sha" '{
+    version: 2, branch: "feat/example", diff_sha: $sha, base_branch: "development",
+    reviewed_at: "2026-06-07T00:00:00Z", reviewers: ["code-review"],
+    findings_count: 0, review_round: 2, findings: [], reviewed_files: []
+  }' > "$STATE_DIR/${slug}.json"
+  payload=$(build_input "git push")
+  run_push_review "$payload"
+
+  [ "$(jq -r '.reason_code' "$TELEMETRY_FILE")" = "file-coverage" ]
+  [ "$(jq -r '.round' "$TELEMETRY_FILE")" = "2" ]
 }
 
 # --- docs-sync.sh: docs_nudge / docs_attested -------------------------------

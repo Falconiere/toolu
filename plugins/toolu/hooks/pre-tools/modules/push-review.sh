@@ -156,9 +156,10 @@ if [[ ! -f "$state_file" ]]; then
         "Code review required before push (diff SHA " + $sha + ", base " + $base + ").\n" +
         "Run a code reviewer on `git diff " + $base + "...HEAD` and apply its findings — use " + $hint + ". " +
         "Then atomically write " + $file + " (tmp+mv) with schema " +
-        "{ version: 1, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round }. " +
+        "{ version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. " +
         "`reviewers` must include at least one accepted reviewer (caveman:cavecrew-reviewer, code-review, toolu-review:review, code-review:xhigh, review, or security-review), " +
         "`findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. " +
+        "`reviewed_files` must list every path from `git diff " + $base + "...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. " +
         "Retry push."
       )
     }
@@ -172,7 +173,22 @@ state_version=$(jq -r '.version // ""' "$state_file" 2>/dev/null || echo "")
 state_sha=$(jq -r '.diff_sha // ""' "$state_file" 2>/dev/null || echo "")
 state_findings=$(jq -r '.findings_count // ""' "$state_file" 2>/dev/null || echo "")
 
-if [[ "$state_version" != "1" || -z "$state_sha" || -z "$state_findings" ]]; then
+# A schema v1 state (no reviewed_files contract) gets a dedicated one-time
+# upgrade deny rather than the generic "corrupted" deny — the state is valid,
+# just stale-schema, and the fix is a re-review, not a delete-and-retry.
+if [[ "$state_version" == "1" ]]; then
+  jq -n '{
+    "hookSpecificOutput": {
+      "hookEventName": "PreToolUse",
+      "permissionDecision": "deny",
+      "permissionDecisionReason": "push-review state is schema v1; harness v2 requires reviewed_files — re-run the review to regenerate the state file"
+    }
+  }'
+  _pr_telemetry deny schema-v1
+  exit 0
+fi
+
+if [[ "$state_version" != "2" || -z "$state_sha" || -z "$state_findings" ]]; then
   jq -n --arg file "$state_file" '{
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
@@ -273,6 +289,34 @@ if [[ "$state_findings" != "0" ]]; then
     }
   }'
   _pr_telemetry deny findings "$state_round"
+  exit 0
+fi
+
+# Reviewer file coverage (v2): reviewed_files must equal the diff's changed
+# paths (sorted, unique) — catches honestly-reported partial review scope.
+# Not adversary-proof against a writer that lies about what it reviewed
+# (Non-Goal 3, spec). A missing/malformed reviewed_files reads as empty here
+# (jq errors are silenced), which correctly denies naming every changed path
+# as missing rather than passing vacuously.
+changed_sorted=$(git -C "$repo_root" diff --no-color "${base_branch}...HEAD" --name-only 2>/dev/null | sort -u)
+reviewed_sorted=$(jq -r '.reviewed_files[]' "$state_file" 2>/dev/null | sort -u)
+
+if [[ "$changed_sorted" != "$reviewed_sorted" ]]; then
+  missing=$(comm -23 <(printf '%s\n' "$changed_sorted") <(printf '%s\n' "$reviewed_sorted"))
+  extra=$(comm -13 <(printf '%s\n' "$changed_sorted") <(printf '%s\n' "$reviewed_sorted"))
+  jq -n --arg file "$state_file" --arg missing "$missing" --arg extra "$extra" --arg base "$base_branch" '{
+    "hookSpecificOutput": {
+      "hookEventName": "PreToolUse",
+      "permissionDecision": "deny",
+      "permissionDecisionReason": (
+        "reviewed_files does not match the current diff at " + $file + ".\n" +
+        (if ($missing | length) > 0 then "Missing from reviewed_files (changed but not reviewed): " + $missing + "\n" else "" end) +
+        (if ($extra | length) > 0 then "In reviewed_files but not in the current diff: " + $extra + "\n" else "" end) +
+        "Re-review the full diff and rewrite reviewed_files to match `git diff " + $base + "...HEAD --name-only` exactly."
+      )
+    }
+  }'
+  _pr_telemetry deny file-coverage "$state_round"
   exit 0
 fi
 

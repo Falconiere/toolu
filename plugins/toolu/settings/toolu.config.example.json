@@ -25,8 +25,23 @@
     "synthesis": "opus",
     "architecture": "opus"
   },
+  "telemetry": {
+    "enabled": true
+  },
+  "agentTier": {
+    "mode": "advise"
+  },
+  "planLedger": {
+    "blockOnUncoveredAcs": false
+  },
+  "docsSync": {
+    "mode": "advise",
+    "surfaces": ["README.md", "*/README.md", "docs/*.md", "*/SKILL.md"],
+    "surfaceExcludes": ["docs/releases/*", "*/docs/releases/*"],
+    "codeSurfaces": ["*.ts", "*.rs", "*.sh", "*/commands/*", "*plugin.json", "*.config.json"]
+  },
   "lang": {
-    "ts": { "maxFileLines": 300, "maxFnLines": 60 },
-    "rust": { "maxFileLines": 500, "maxFnLines": 50, "maxImplLines": 200 }
+    "ts": { "maxFileLines": 300, "maxFnLines": 60, "noMocks": true },
+    "rust": { "maxFileLines": 500, "maxFnLines": 50, "maxImplLines": 200, "noMocks": true }
   }
 }

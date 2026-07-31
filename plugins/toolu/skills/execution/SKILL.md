@@ -36,4 +36,4 @@ For ledger-tracked work, **before the first step** run `bash plugins/toolu/hooks
 
 ## What "done" looks like
 
-Working, verified increments that match the plan, with real error handling and real-data tests, landed under a green gate. Hand off to `execution-review` to confirm the work matches the plan and the conventions hold, then to `test` for the final pass.
+Working, verified increments that match the plan, with real error handling and real-data tests, landed under a green gate. Before handoff, `bash plugins/toolu/hooks/lib/verdict.sh status` gives the unified done-check across all four push gates (quality/plan/review/docs) in one place — `overall: blocked` names which gate and why. Hand off to `execution-review` to confirm the work matches the plan and the conventions hold, then to `test` for the final pass.

@@ -1,12 +1,21 @@
 #!/usr/bin/env bash
-# Pre-tool check: on `git push`, nudge (advisory, never block) when the branch
-# diff changes code but touches no documentation surface — the docs-sync
-# backstop for the toolu workflow's "Docs in sync" convention.
-#
-# Project-agnostic. Advisory-only: emits hookSpecificOutput.additionalContext
-# (merged by dispatch.sh) and NEVER a permissionDecision — it informs, it does
-# not gate (push-review.sh is the gate). Silenced by a diff-sha-keyed
+# Pre-tool check: on `git push`, flag when the branch diff changes code but
+# touches no documentation surface — the docs-sync backstop for the toolu
+# workflow's "Docs in sync" convention. Silenced by a diff-sha-keyed
 # attestation the agent writes when no doc change is warranted.
+#
+# Project-agnostic. Behavior is controlled by `docsSync.mode`
+# (advise|block|off, via toolu_string — unrecognized values warn and fall
+# back to advise):
+#   - advise (default): emits hookSpecificOutput.additionalContext (merged by
+#     dispatch.sh) and NEVER a permissionDecision — it informs, it does not
+#     gate (push-review.sh is the gate).
+#   - block: denies the push (permissionDecision: "deny") when code changed
+#     with no doc surface and no matching attestation. A valid attestation
+#     still allows the push in this mode.
+#   - off: the check is fully disabled — no telemetry, no output, exit 0.
+#     Not just "suppress the message": an off branch must be indistinguishable
+#     from docs-sync not existing at all.
 #
 # Inputs (exported by pre-tools/mod.sh): $tool_name, $input (JSON, also stdin).
 # Attestation: .claude/tmp/docs-sync/<branch-slug>.json (override $DOCS_SYNC_STATE_DIR).
@@ -22,6 +31,8 @@ set -o pipefail
 _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 # shellcheck source=../../lib/detect.sh
 . "$_toolu_lib/detect.sh"
+# shellcheck source=../../lib/config.sh
+. "$_toolu_lib/config.sh"
 # shellcheck source=../../lib/docs-sync-config.sh
 . "$_toolu_lib/docs-sync-config.sh"
 # shellcheck source=../../lib/diff-sha.sh
@@ -86,7 +97,15 @@ done <<< "$changed"
 # Nudge only when code changed AND no doc surface did.
 { [[ "$has_code" == 1 && "$has_doc" == 0 ]]; } || exit 0
 
-# Attestation gate: a fresh (diff-sha-matching) attestation silences the nudge.
+# off must be indistinguishable from the module not existing: no telemetry
+# (not even docs_attested for an otherwise-valid attestation below), no
+# output. Read here (rather than at top-of-file) so an off branch still pays
+# no cost beyond the code/doc classification already needed either way.
+mode=$(toolu_string docsSync.mode advise advise block off)
+[[ "$mode" == "off" ]] && exit 0
+
+# Attestation gate: a fresh (diff-sha-matching) attestation silences the nudge
+# (in both advise and block mode).
 slug=$(branch_slug "$current_branch")
 state_dir=${DOCS_SYNC_STATE_DIR:-${CLAUDE_PROJECT_DIR:-$(pwd)}/.claude/tmp/docs-sync}
 state_file="$state_dir/${slug}.json"
@@ -101,16 +120,30 @@ if [[ -f "$state_file" && -n "$diff_sha" ]]; then
 fi
 
 telemetry_append "$(detect_project_root)" "docs_nudge"
-jq -n --arg sha "$diff_sha" --arg file "$state_file" '{
-  "hookSpecificOutput": {
-    "hookEventName": "PreToolUse",
-    "additionalContext": (
-      "docs-sync: this branch changes code but no documentation surface " +
-      "(README / docs/*.md / SKILL.md). Update the doc that describes this " +
-      "behavior, OR attest none is needed by writing " + $file + " with " +
-      "{ \"version\": 1, \"diff_sha\": \"" + $sha + "\", \"decision\": \"not-needed\", \"note\": \"why\" }. " +
-      "Advisory only — this does not block the push."
-    )
-  }
-}'
+
+# Shared instructions (the attestation escape hatch) for both modes; only the
+# closing sentence and the JSON shape (additionalContext vs. deny) differ.
+jq -n --arg sha "$diff_sha" --arg file "$state_file" --arg mode "$mode" '
+  ("docs-sync: this branch changes code but no documentation surface " +
+   "(README / docs/*.md / SKILL.md). Update the doc that describes this " +
+   "behavior, OR attest none is needed by writing " + $file + " with " +
+   "{ \"version\": 1, \"diff_sha\": \"" + $sha + "\", \"decision\": \"not-needed\", \"note\": \"why\" }. " +
+   (if $mode == "block"
+    then "Push denied until a doc is updated or a valid attestation is written."
+    else "Advisory only — this does not block the push."
+    end)
+  ) as $reason
+  | if $mode == "block" then {
+      "hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "deny",
+        "permissionDecisionReason": $reason
+      }
+    } else {
+      "hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "additionalContext": $reason
+      }
+    } end
+'
 exit 0

@@ -11,7 +11,7 @@ The final phase of the toolu workflow. Tests are written **with** the code, not 
 
 ## The two non-negotiables
 
-1. **Real-world data only — NO mock-data tests.** Exercise real inputs and real code paths. A test that asserts against fabricated/mocked data proves nothing. Stubbing an external network call or a crashing binary to test failure handling is allowed; mocking the data under test is not.
+1. **Real-world data only — NO mock-data tests.** Exercise real inputs and real code paths. A test that asserts against fabricated/mocked data proves nothing. Stubbing an external network call or a crashing binary to test failure handling is allowed; mocking the data under test is not. This is mechanically enforced, not just prose: ts-quality's `85-no-mocks.sh` blocks `jest.mock`/`vi.mock`/`jest.fn`/`vi.fn`/`sinon.*`/`ts-mockito` in TS test files, and rust-quality's `70-no-mocks.sh` blocks `#[automock]`/`mock! {...}` in `src/` and `mockall`/`faux` imports in `tests/` — opt-out per-project via `lang.ts.noMocks` / `lang.rust.noMocks` (default `true`).
 2. **Colocate by language convention:**
    - **TS / TSX** → sibling `__tests__/` directory at the same level as the code under test. Keep it flat (only `fixtures/`, `helpers/`, `mocks/`, `utils/` subdirs). Files `*.test.ts` / `*.spec.ts`.
    - **Rust** → sibling `tests/` directory, kept flat (only `fixtures/`, `helpers/`, `common/` subdirs). No inline `#[cfg(test)]` in `src/`.

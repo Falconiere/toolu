@@ -1,9 +1,13 @@
 #!/usr/bin/env bats
 # Real-data tests for write-state.sh. No mocks — real temp git repos. The core
-# guarantee: the script's diff_sha/base/slug match the toolu push-review
-# gate's recipe, so a state file it writes is accepted (not rejected as stale).
+# guarantee: the script's diff_sha/base/slug/reviewed_files match the toolu
+# push-review gate's recipe, so a state file it writes is accepted (not
+# rejected as stale or as incomplete file coverage).
 
 WS="${BATS_TEST_DIRNAME}/../write-state.sh"
+# The real gate this writer's output must satisfy (schema v2, reviewed_files
+# contract) — cross-plugin path, not sourced, only invoked as a subprocess.
+GATE="${BATS_TEST_DIRNAME}/../../../../../toolu/hooks/pre-tools/modules/push-review.sh"
 
 setup() {
   TMP=$(mktemp -d)
@@ -62,7 +66,7 @@ teardown() {
   git checkout -q -b feature
   echo a > f.txt && git add f.txt && git commit -qm work
   out=$(CLAUDE_PROJECT_DIR="$TMP" bash "$WS" --findings-count 0 --reviewers '["toolu-review:review"]')
-  [ "$(jq -r .version "$out")" = "1" ]
+  [ "$(jq -r .version "$out")" = "2" ]
   [ "$(jq -r .findings_count "$out")" = "0" ]
   [ "$(jq -r '.reviewers[0]' "$out")" = "toolu-review:review" ]
   [ "$(jq -r .review_round "$out")" = "1" ]
@@ -140,4 +144,73 @@ teardown() {
   echo a > f.txt && git add f.txt && git commit -qm work
   run env CLAUDE_PROJECT_DIR="$TMP" bash "$WS" --findings-count notanumber
   [ "$status" -eq 2 ]
+}
+
+@test "write-state: reviewed_files is auto-computed from the real diff (v2)" {
+  git checkout -q -b feature
+  echo a > f.txt && git add f.txt && git commit -qm work
+  mkdir -p sub && echo b > sub/g.txt && git add sub/g.txt && git commit -qm work2
+  out=$(CLAUDE_PROJECT_DIR="$TMP" PUSH_REVIEW_BASE=main bash "$WS" --findings-count 0)
+  expected=$(git diff --no-color main...HEAD --name-only | sort -u \
+    | jq -R -s -c 'split("\n") | map(select(length > 0))')
+  [ "$(jq -c .reviewed_files "$out")" = "$expected" ]
+  [[ "$(jq -c .reviewed_files "$out")" == *"f.txt"* ]]
+  [[ "$(jq -c .reviewed_files "$out")" == *"sub/g.txt"* ]]
+}
+
+@test "write-state: --reviewed-files overrides the auto-computed list" {
+  git checkout -q -b feature
+  echo a > f.txt && git add f.txt && git commit -qm work
+  echo b > g.txt && git add g.txt && git commit -qm work2
+  out=$(CLAUDE_PROJECT_DIR="$TMP" PUSH_REVIEW_BASE=main bash "$WS" --findings-count 0 --reviewed-files "f.txt")
+  # The real diff touched both f.txt and g.txt, but the override names only
+  # f.txt — proving the override replaces auto-detection instead of merging
+  # with it (a merge would also list g.txt here).
+  [ "$(jq -c .reviewed_files "$out")" = '["f.txt"]' ]
+}
+
+@test "write-state: --reviewed-files dedupes and sorts, dropping empty entries" {
+  git checkout -q -b feature
+  echo a > f.txt && git add f.txt && git commit -qm work
+  out=$(CLAUDE_PROJECT_DIR="$TMP" PUSH_REVIEW_BASE=main bash "$WS" --findings-count 0 \
+    --reviewed-files "b.txt,a.txt,,a.txt")
+  [ "$(jq -c .reviewed_files "$out")" = '["a.txt","b.txt"]' ]
+}
+
+@test "write-state: emitted v2 state satisfies the real push-review gate (allow)" {
+  git checkout -q -b feature
+  echo a > f.txt && git add f.txt && git commit -qm work
+  echo b > g.txt && git add g.txt && git commit -qm work2
+  out=$(CLAUDE_PROJECT_DIR="$TMP" PUSH_REVIEW_BASE=main bash "$WS" --findings-count 0 \
+    --reviewers '["toolu-review:review"]')
+  [ -f "$out" ]
+  [ "$(jq -r .version "$out")" = "2" ]
+
+  # Drive the REAL gate against the state this writer just produced — the
+  # writer<->gate contract this test exists to prove. Same cwd (the sandbox
+  # repo) and same base override the writer used, so both resolve identical
+  # repo_root/diff_sha/reviewed_files.
+  payload=$(jq -n '{tool_name:"Bash", tool_input:{command:"git push origin feature"}}')
+  tool_name="Bash" input="$payload" PUSH_REVIEW_BASE=main \
+    run bash "$GATE" <<<"$payload"
+  [ "$status" -eq 0 ]
+  decision=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // empty')
+  [ "$decision" != "deny" ]
+}
+
+@test "write-state: a state missing a changed file still denies at the real gate" {
+  git checkout -q -b feature
+  echo a > f.txt && git add f.txt && git commit -qm work
+  echo b > g.txt && git add g.txt && git commit -qm work2
+  out=$(CLAUDE_PROJECT_DIR="$TMP" PUSH_REVIEW_BASE=main bash "$WS" --findings-count 0 \
+    --reviewed-files "f.txt")
+  [ -f "$out" ]
+
+  payload=$(jq -n '{tool_name:"Bash", tool_input:{command:"git push origin feature"}}')
+  tool_name="Bash" input="$payload" PUSH_REVIEW_BASE=main \
+    run bash "$GATE" <<<"$payload"
+  [ "$status" -eq 0 ]
+  decision=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // empty')
+  [ "$decision" = "deny" ]
+  [[ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')" == *"g.txt"* ]]
 }

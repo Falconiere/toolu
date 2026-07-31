@@ -10,17 +10,17 @@ Detection lives in `lib/detect.sh:is_git_push`, which accepts git's global optio
 2. Hook resolves the **target repo root** with `push_target_root`: every `-C <path>` preceding `push` in that command segment, replayed cumulatively the way git itself applies them (a `-C` belonging to another command in a `&&` chain is ignored), else the cwd's `git rev-parse --show-toplevel`, else `$CLAUDE_PROJECT_DIR`, else the cwd. Every git read below runs against that root, not the hook's cwd — a `git -C <worktree> push` is judged on the worktree's own branch, diff, and state file.
 3. Hook computes `git diff <base>...HEAD | git hash-object --stdin` in the target repo, where `<base>` is resolved dynamically via `detect_base_branch <root>` (origin/HEAD, falling back to `main`; `$PUSH_REVIEW_BASE` overrides for tests).
 4. Hook reads `<target repo root>/.claude/tmp/push-review/<branch-slug>.json`. `$STATE_DIR` overrides the directory (tests, and the `toolu-review` state writer honours the same variable).
-5. If the state file is missing, has a stale `diff_sha`, or has `findings_count > 0` → DENY with instructions.
+5. If the state file is missing, has a stale `diff_sha`, has `findings_count > 0`, or is schema `version: 1` → DENY with instructions.
 6. Agent runs a reviewer against the diff and applies its findings. The gate is **reviewer-agnostic** — it accepts at least one of: \`caveman:cavecrew-reviewer\`, \`code-review\`, \`toolu-review:review\`, \`code-review:xhigh\`, \`review\`, \`security-review\`. Prefer \`caveman:cavecrew-reviewer\` when the caveman plugin is installed; otherwise use the built-in \`/code-review xhigh --fix\` skill (always available, no plugin required) or the \`toolu-review:review\` skill from the \`toolu-review\` plugin. Running extra reviewers (e.g. `code-simplifier` first) is allowed — the check is membership, not equality.
 7. Re-run the reviewer on the new diff and loop until it returns zero findings.
-8. Agent writes state file atomically (`<file>.tmp` then `mv`) with `findings_count: 0` and the new SHA.
+8. Agent writes state file atomically (`<file>.tmp` then `mv`) with `findings_count: 0`, the new SHA, and `reviewed_files` set to every path the reviewer actually covered.
 9. Agent retries `git push` → hook allows.
 
-## State schema
+## State schema (version 2)
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "branch": "feat/x",
   "diff_sha": "<git-hash-object output>",
   "base_branch": "main",
@@ -28,9 +28,27 @@ Detection lives in `lib/detect.sh:is_git_push`, which accepts git's global optio
   "reviewers": ["code-review"],
   "findings_count": 0,
   "findings": [],
-  "review_round": 1
+  "review_round": 1,
+  "reviewed_files": ["path/a.ts", "path/b.rs"]
 }
 ```
+
+`version` must normalize to `"2"` (emitted as a JSON number; the gate compares
+the `jq -r`-normalized string, so a literal `"2"` string also passes). A
+`version: 1` state — the pre-`reviewed_files` schema — gets a dedicated
+one-time upgrade deny: *"push-review state is schema v1; harness v2 requires
+reviewed_files — re-run the review to regenerate the state file"*. There is no
+dual-accept: a v1 state cannot satisfy the v2 gate, because it silently waives
+file coverage for whatever the v1 writer claims (see reviewer honesty note
+below).
+
+`reviewed_files` (sorted, unique) must equal sorted `git diff --name-only
+<base>...HEAD` — the paths the reviewer actually covered. A mismatch denies,
+naming missing paths (changed but not reviewed) and extra paths (reviewed but
+not in the current diff) separately. This catches an *honestly-reported*
+partial review scope; it is not adversary-proof against a reviewer that lies
+about what it covered — that's a known, accepted limitation (mechanizing
+coverage claims, not reviewer honesty).
 
 `review_round` counts state-file rewrites **at the same `diff_sha`**: it starts
 at 1 for a new `diff_sha` and bumps by 1 only when the diff is unchanged. A
@@ -41,6 +59,11 @@ for backward compatibility and denies with an escalation message once the round
 exceeds 5 (`MAX_ROUNDS`), so a fix→re-review loop on an unchanged diff cannot
 run unbounded.
 
+The canonical writer, `plugins/toolu-review/skills/review/scripts/write-state.sh`,
+emits this v2 schema and auto-computes `reviewed_files` from `git diff
+--name-only` (override with `--reviewed-files <comma-list>` for a partial or
+adjusted review scope).
+
 ## Security posture
 
 `security-review` is **not separately enforced** by this gate (dropped in v1.2.0 per project decision) — though it is one of the accepted reviewers, so running it satisfies the gate. For diffs that touch authentication, secret handling, request parsing, or other security-sensitive code, run `/security-review` before push. The gate's reviewer catches correctness and clarity bugs but makes no security guarantees on its own.
@@ -50,8 +73,10 @@ run unbounded.
 - State file missing.
 - State file SHA != current diff SHA (diff changed).
 - `findings_count > 0`.
+- `version: 1` state file — one-time schema-upgrade deny (re-run the review to regenerate it).
 - Corrupted JSON or schema drift (wrong `version`, missing `diff_sha`/`findings_count`).
 - `reviewers` contains no accepted reviewer.
+- `reviewed_files` does not match the diff's changed paths (missing and/or extra paths named).
 - `review_round` exceeds the max (5) on an unchanged diff — escalation deny.
 - Detected base branch not present locally.
 - Detached HEAD.
