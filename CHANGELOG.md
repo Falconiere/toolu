@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.1.1](https://github.com/Falconiere/toolu/compare/v4.1.0...v4.1.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **pr-babysit:** catch replied-but-unresolved threads independent of last-comment filter ([#138](https://github.com/Falconiere/toolu/issues/138)) ([cabb726](https://github.com/Falconiere/toolu/commit/cabb726686e55aa2d36b10d69ef9c1e528d7c194))
+
 ## [4.1.0](https://github.com/Falconiere/toolu/compare/v4.0.1...v4.1.0) (2026-07-29)
 
 
