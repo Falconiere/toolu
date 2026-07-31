@@ -1,6 +1,6 @@
 {
   "name": "rust-quality",
-  "version": "4.2.0",
+  "version": "4.2.1",
   "description": "Rust PostToolUse quality checks registered into the toolu hook engine.",
   "author": {
     "name": "Falconiere Barbosa",
