@@ -47,6 +47,9 @@ command -v gate_clear_file >/dev/null 2>&1 || gate_clear_file() {
 command -v rust_max_file_lines >/dev/null 2>&1 || rust_max_file_lines() { echo "${DEFAULT_RUST_MAX_FILE_LINES:-500}"; }
 command -v rust_max_fn_lines   >/dev/null 2>&1 || rust_max_fn_lines()   { echo "${DEFAULT_RUST_MAX_FN_LINES:-50}"; }
 command -v rust_max_impl_lines >/dev/null 2>&1 || rust_max_impl_lines() { echo "${DEFAULT_RUST_MAX_IMPL_LINES:-200}"; }
+# Boolean flag reader (e.g. noMocks) — falls back to the caller's default when
+# quality-config.sh predates this reader.
+command -v quality_flag >/dev/null 2>&1 || quality_flag() { printf '%s' "$3"; }
 # count_code_lines comes from detect.sh (sourced above) — no fallback needed.
 
 # Load the merged config ONCE so TOOLU_CFG_LOADED sticks for the threshold

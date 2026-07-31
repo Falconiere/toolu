@@ -20,6 +20,8 @@
 #   - summary.total == 0 / steps empty             -> allow (no-op).
 #   - every step fresh-green                        -> allow.
 #   - any red/pending/stale step                    -> deny, listing each.
+#   - planLedger.blockOnUncoveredAcs=true + an UNCOVERED spec AC -> deny,
+#     naming the AC id(s) (default false: advisory ac_coverage count only).
 
 # pipefail so a `git diff | git hash-object` failure surfaces; without it an
 # empty diff stream succeeds and yields the well-known empty-blob SHA.
@@ -43,6 +45,18 @@ command=$(echo "$input" | jq -r '.tool_input.command // ""')
 
 # Push detection (strip_heredocs + boundary-anchored regex) shared via detect.sh.
 is_git_push "$command" || exit 0
+
+# Sourced here (past the Edit/Write/Grep and non-push cheap exits above) so
+# every other tool call skips the extra jq-merge/telemetry-lib load these four
+# pull in — only an actual `git push` pays for them.
+# shellcheck source=../../lib/diff-sha.sh
+. "$_toolu_lib/diff-sha.sh"
+# shellcheck source=../../lib/plan-ledger.sh
+. "$_toolu_lib/plan-ledger.sh"
+# shellcheck source=../../lib/telemetry.sh
+. "$_toolu_lib/telemetry.sh"
+# shellcheck source=../../lib/config.sh
+. "$_toolu_lib/config.sh"
 
 # Base branch: env override > detect_base_branch (must agree with the checker).
 base_branch="${PUSH_REVIEW_BASE:-$(detect_base_branch)}"
@@ -98,12 +112,55 @@ if [[ "$total" == "0" || "$step_count" == "0" ]]; then
 fi
 
 # Current branch diff_sha — the content hash the checker stamps when a step runs.
-current_diff_sha=$(git diff --no-color "${base_branch}...HEAD" 2>/dev/null | git hash-object --stdin 2>/dev/null || echo "")
+current_diff_sha=$(toolu_diff_sha . "$base_branch")
 if [[ -z "$current_diff_sha" ]]; then
   # git diff failed (disk full, etc): allow so the underlying push surfaces the
   # real error rather than denying on an indeterminate read.
   echo "plan-ledger: git diff ${base_branch}...HEAD failed; allowing push to surface real error" >&2
   exit 0
+fi
+
+# ac_coverage telemetry (report-only counts; never affects the decision below).
+# Mirrors lib/plan-ledger.sh's pl_cmd_status AC-coverage resolution: read the
+# ledger's plan_doc, resolve its **Spec:** field, and reuse pl_ac_coverage_lines
+# (sourced from lib/plan-ledger.sh above) to get the per-AC report, then count
+# covered vs UNCOVERED lines in it. Spec-less plans print no report -> no event.
+ac_plan_doc=$(jq -r '.plan_doc // ""' <<<"$ledger" 2>/dev/null || echo "")
+if [[ -n "$ac_plan_doc" ]]; then
+  ac_root=$(detect_project_root)
+  [[ -f "$ac_plan_doc" ]] || { [[ -n "$ac_root" && -f "$ac_root/$ac_plan_doc" ]] && ac_plan_doc="$ac_root/$ac_plan_doc"; }
+  if [[ -f "$ac_plan_doc" ]]; then
+    ac_spec_field=$(pl_doc_field "$ac_plan_doc" Spec)
+    ac_spec_path="$ac_spec_field"
+    case "$(printf '%s' "$ac_spec_field" | tr '[:upper:]' '[:lower:]')" in
+      ""|none) : ;;
+      *) [[ -f "$ac_spec_path" ]] || { [[ -n "$ac_root" && -f "$ac_root/$ac_spec_field" ]] && ac_spec_path="$ac_root/$ac_spec_field"; } ;;
+    esac
+    ac_report=$(pl_ac_coverage_lines "$ledger" "$current_diff_sha" "$ac_spec_path" 2>/dev/null)
+    if [[ -n "$ac_report" ]]; then
+      ac_total=$(grep -c '^  AC-' <<<"$ac_report" || true)
+      ac_uncovered=$(grep -Ec '^  AC-[^:]+: UNCOVERED' <<<"$ac_report" || true)
+      ac_covered=$(( ac_total - ac_uncovered ))
+      telemetry_append "$ac_root" "ac_coverage" \
+        "$(jq -cn --argjson c "$ac_covered" --argjson u "$ac_uncovered" '{covered: $c, uncovered: $u}')"
+
+      # Promotion (spec component 8): planLedger.blockOnUncoveredAcs (default
+      # false) turns UNCOVERED spec ACs from an advisory count into a push
+      # deny. The event above already recorded the counts either way.
+      if [[ "$ac_uncovered" -gt 0 ]] && toolu_flag_true planLedger blockOnUncoveredAcs; then
+        ac_uncovered_lines=$(grep -E '^  AC-[^:]+: UNCOVERED' <<<"$ac_report" | sed -E 's/^  //')
+        ac_reason=$(printf 'plan-ledger: push blocked — uncovered spec AC id(s):\n%s\n\ncover with a fresh-green step referencing it in ac_refs, or set planLedger.blockOnUncoveredAcs=false' "$ac_uncovered_lines")
+        jq -n --arg reason "$ac_reason" '{
+          "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": $reason
+          }
+        }'
+        exit 0
+      fi
+    fi
+  fi
 fi
 
 # Build the list of non-fresh-green steps. A step is fresh-green iff

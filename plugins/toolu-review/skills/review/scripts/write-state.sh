@@ -7,14 +7,17 @@
 # bookkeeping: compute the gate's diff_sha/base/slug, bump review_round, and
 # write the JSON atomically.
 #
-# The base / diff_sha / slug recipes are MIRRORS of the gate in
-# plugins/toolu/hooks/pre-tools/modules/push-review.sh — the cross-check in
-# scripts/__tests__/state-writer.bats asserts they produce identical SHAs, so a
-# drift in either recipe fails CI. Harmless no-op when the toolu gate is not
-# installed (the file is simply never read).
+# The base / diff_sha / slug / reviewed_files recipes are MIRRORS of the gate
+# in plugins/toolu/hooks/pre-tools/modules/push-review.sh — the cross-check in
+# scripts/__tests__/state-writer.bats asserts they produce identical SHAs (and,
+# for reviewed_files, an identical file list), so a drift in either recipe
+# fails CI. This mirror is deliberate (cross-plugin sourcing is barred here —
+# see spec Non-Goal 7): keep it local rather than sourcing toolu's diff-sha.sh.
+# Harmless no-op when the toolu gate is not installed (the file is simply
+# never read).
 #
 # Usage: write-state.sh --findings-count N [--reviewers JSON] [--findings JSON]
-#                       [--repo PATH]
+#                       [--repo PATH] [--reviewed-files a.ts,b.rs]
 #   --findings-count  (required) integer; the gate allows push only when 0.
 #   --reviewers       (default ["toolu-review:review"]) JSON array.
 #   --findings        (default []) JSON array of {path,severity,text}.
@@ -23,6 +26,13 @@
 #                     session rooted elsewhere — the gate reads the state file
 #                     under the pushed repo's own root, so writing it anywhere
 #                     else is invisible to the gate.
+#   --reviewed-files  (default: auto-computed) comma-separated list of paths,
+#                     overriding the auto-computed `git diff --name-only
+#                     <base>...HEAD` file list. The gate (schema v2) requires
+#                     `reviewed_files` (sorted, unique) to equal the diff's
+#                     changed paths exactly, so only override this when the
+#                     review genuinely covered a different path set than the
+#                     one auto-detected here.
 # Prints the state file path on success.
 set -o pipefail
 
@@ -30,12 +40,15 @@ findings_count=""
 reviewers='["toolu-review:review"]'
 findings='[]'
 repo=""
+reviewed_files_arg=""
+reviewed_files_set=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --findings-count) findings_count="$2"; shift 2 ;;
     --reviewers)      reviewers="$2";      shift 2 ;;
     --findings)       findings="$2";       shift 2 ;;
     --repo)           repo="$2";           shift 2 ;;
+    --reviewed-files) reviewed_files_arg="$2"; reviewed_files_set=1; shift 2 ;;
     *) echo "write-state.sh: unknown arg: $1" >&2; exit 2 ;;
   esac
 done
@@ -77,6 +90,23 @@ if [ "$diff_sha" = "$EMPTY_BLOB_SHA" ]; then
   exit 1
 fi
 
+# reviewed_files — MIRROR of the gate's `changed_sorted` (push-review.sh):
+# auto-computed from the real diff's changed paths (sorted, unique) unless
+# --reviewed-files overrides it. The gate denies unless this list equals its
+# own `git diff --name-only` computation exactly, so both branches emit a
+# sorted-unique JSON array of strings.
+if [ "$reviewed_files_set" -eq 1 ]; then
+  reviewed_files_json=$(printf '%s' "$reviewed_files_arg" \
+    | jq -R 'split(",") | map(select(length > 0)) | unique')
+else
+  reviewed_files_json=$(git -C "$repo_root" diff --no-color "${base}...HEAD" --name-only 2>/dev/null \
+    | sort -u | jq -R -s 'split("\n") | map(select(length > 0))')
+fi
+# jq always prints at least "[]" on success, so empty stdout here only
+# happens on a real git/jq failure — surface it rather than writing a state
+# file with a silently-wrong (and gate-denying) reviewed_files.
+[ -n "$reviewed_files_json" ] || { echo "write-state.sh: failed to compute reviewed_files" >&2; exit 1; }
+
 # slug — MIRROR of push-review.sh:_branch_slug.
 slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
 [ -n "$slug" ] || slug="_default"
@@ -113,11 +143,13 @@ if ! jq -n \
   --argjson findings_count "$findings_count" \
   --argjson findings "$findings" \
   --argjson review_round "$review_round" \
-  '{version:1, branch:$branch, diff_sha:$diff_sha, base_branch:$base,
+  --argjson reviewed_files "$reviewed_files_json" \
+  '{version:2, branch:$branch, diff_sha:$diff_sha, base_branch:$base,
     reviewed_at:$reviewed_at, reviewers:$reviewers,
-    findings_count:$findings_count, findings:$findings, review_round:$review_round}' \
+    findings_count:$findings_count, findings:$findings, review_round:$review_round,
+    reviewed_files:$reviewed_files}' \
   > "$tmp"; then
-  rm -f "$tmp"; echo "write-state.sh: jq failed (bad --reviewers/--findings JSON?)" >&2; exit 1
+  rm -f "$tmp"; echo "write-state.sh: jq failed (bad --reviewers/--findings/--reviewed-files JSON?)" >&2; exit 1
 fi
 mv "$tmp" "$state_file" || { rm -f "$tmp"; echo "write-state.sh: atomic mv failed" >&2; exit 1; }
 echo "$state_file"

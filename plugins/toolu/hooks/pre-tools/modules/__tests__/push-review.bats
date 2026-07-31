@@ -136,7 +136,7 @@ EOF
 @test "push-review: state file missing required keys is denied" {
   branch=$(git rev-parse --abbrev-ref HEAD)
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
-  echo '{"version": 1}' > "$STATE_DIR/${slug}.json"
+  echo '{"version": 2}' > "$STATE_DIR/${slug}.json"
   payload=$(build_input "git push")
   run_hook "Bash" "$payload"
   [ "$status" -eq 0 ]
@@ -147,12 +147,35 @@ EOF
 @test "push-review: state file with wrong version is denied" {
   branch=$(git rev-parse --abbrev-ref HEAD)
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
-  jq -n '{version: 2, diff_sha: "x", findings_count: 0}' > "$STATE_DIR/${slug}.json"
+  jq -n '{version: 3, diff_sha: "x", findings_count: 0}' > "$STATE_DIR/${slug}.json"
   payload=$(build_input "git push")
   run_hook "Bash" "$payload"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("corrupted")'
+}
+
+@test "push-review: state file with schema v1 is denied with the dedicated upgrade message" {
+  sha=$(current_diff_sha)
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
+  jq -n --arg sha "$sha" '{
+    version: 1,
+    branch: "feat/example",
+    diff_sha: $sha,
+    base_branch: "development",
+    reviewed_at: "2026-06-07T00:00:00Z",
+    reviewers: ["code-review"],
+    findings_count: 0,
+    review_round: 1,
+    findings: []
+  }' > "$STATE_DIR/${slug}.json"
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason ==
+    "push-review state is schema v1; harness v2 requires reviewed_files — re-run the review to regenerate the state file"'
 }
 
 @test "push-review: missing base branch is denied with fetch hint" {
@@ -241,14 +264,15 @@ EOF
   branch=$(git rev-parse --abbrev-ref HEAD)
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
   jq -n --arg sha "$sha" '{
-    version: 1,
+    version: 2,
     branch: "feat/example",
     diff_sha: $sha,
     base_branch: "development",
     reviewed_at: "2026-06-07T00:00:00Z",
     reviewers: ["simplify"],
     findings_count: 0,
-    findings: []
+    findings: [],
+    reviewed_files: ["feature.txt"]
   }' > "$STATE_DIR/${slug}.json"
   payload=$(build_input "git push")
   run_hook "Bash" "$payload"
@@ -271,7 +295,7 @@ EOF
   branch=$(git rev-parse --abbrev-ref HEAD)
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
   jq -n --arg sha "$sha" '{
-    version: 1,
+    version: 2,
     branch: "feat/example",
     diff_sha: $sha,
     base_branch: "development",
@@ -279,7 +303,8 @@ EOF
     reviewers: ["toolu-review:review"],
     findings_count: 0,
     review_round: 1,
-    findings: []
+    findings: [],
+    reviewed_files: ["feature.txt"]
   }' > "$STATE_DIR/${slug}.json"
   payload=$(build_input "git push")
   run_hook "Bash" "$payload"
@@ -292,7 +317,7 @@ EOF
   branch=$(git rev-parse --abbrev-ref HEAD)
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
   jq -n --arg sha "$sha" '{
-    version: 1,
+    version: 2,
     branch: "feat/example",
     diff_sha: $sha,
     base_branch: "development",
@@ -300,7 +325,8 @@ EOF
     reviewers: ["caveman:cavecrew-reviewer"],
     findings_count: 0,
     review_round: 1,
-    findings: []
+    findings: [],
+    reviewed_files: ["feature.txt"]
   }' > "$STATE_DIR/${slug}.json"
   payload=$(build_input "git push")
   run_hook "Bash" "$payload"
@@ -313,7 +339,7 @@ EOF
   branch=$(git rev-parse --abbrev-ref HEAD)
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
   jq -n --arg sha "$sha" '{
-    version: 1,
+    version: 2,
     branch: "feat/example",
     diff_sha: $sha,
     base_branch: "development",
@@ -321,7 +347,8 @@ EOF
     reviewers: ["code-simplifier"],
     findings_count: 0,
     review_round: 1,
-    findings: []
+    findings: [],
+    reviewed_files: ["feature.txt"]
   }' > "$STATE_DIR/${slug}.json"
   payload=$(build_input "git push")
   run_hook "Bash" "$payload"
@@ -335,7 +362,7 @@ EOF
   branch=$(git rev-parse --abbrev-ref HEAD)
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
   jq -n --arg sha "$sha" '{
-    version: 1,
+    version: 2,
     branch: "feat/example",
     diff_sha: $sha,
     base_branch: "development",
@@ -343,7 +370,8 @@ EOF
     reviewers: ["code-simplifier", "caveman:cavecrew-reviewer"],
     findings_count: 0,
     review_round: 1,
-    findings: []
+    findings: [],
+    reviewed_files: ["feature.txt"]
   }' > "$STATE_DIR/${slug}.json"
   payload=$(build_input "git push")
   run_hook "Bash" "$payload"
@@ -376,14 +404,15 @@ EOF
   branch=$(git rev-parse --abbrev-ref HEAD)
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
   jq -n --arg sha "$sha" '{
-    version: 1,
+    version: 2,
     branch: "feat/example",
     diff_sha: $sha,
     base_branch: "development",
     reviewed_at: "2026-06-07T00:00:00Z",
     reviewers: ["code-simplifier", "caveman:cavecrew-reviewer"],
     findings_count: 0,
-    findings: []
+    findings: [],
+    reviewed_files: ["feature.txt"]
   }' > "$STATE_DIR/${slug}.json"
   payload=$(build_input "git push")
   run_hook "Bash" "$payload"
@@ -429,6 +458,84 @@ EOF
   [ -z "$output" ]
 }
 
+# --- reviewer file coverage (push-review v2) ----------------------------
+
+@test "push-review: reviewed_files missing one changed file is denied naming the path" {
+  echo "second" > second.txt
+  git add second.txt
+  git commit -q -m "second file"
+  sha=$(current_diff_sha)
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
+  jq -n --arg sha "$sha" '{
+    version: 2,
+    branch: "feat/example",
+    diff_sha: $sha,
+    base_branch: "development",
+    reviewed_at: "2026-06-07T00:00:00Z",
+    reviewers: ["code-review"],
+    findings_count: 0,
+    review_round: 1,
+    findings: [],
+    reviewed_files: ["feature.txt"]
+  }' > "$STATE_DIR/${slug}.json"
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("reviewed_files does not match")'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("second.txt")'
+}
+
+@test "push-review: reviewed_files with the full changed-file list is allowed" {
+  echo "second" > second.txt
+  git add second.txt
+  git commit -q -m "second file"
+  sha=$(current_diff_sha)
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
+  jq -n --arg sha "$sha" '{
+    version: 2,
+    branch: "feat/example",
+    diff_sha: $sha,
+    base_branch: "development",
+    reviewed_at: "2026-06-07T00:00:00Z",
+    reviewers: ["code-review"],
+    findings_count: 0,
+    review_round: 1,
+    findings: [],
+    reviewed_files: ["feature.txt", "second.txt"]
+  }' > "$STATE_DIR/${slug}.json"
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "push-review: reviewed_files with an extra path not in the diff is denied naming it" {
+  sha=$(current_diff_sha)
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
+  jq -n --arg sha "$sha" '{
+    version: 2,
+    branch: "feat/example",
+    diff_sha: $sha,
+    base_branch: "development",
+    reviewed_at: "2026-06-07T00:00:00Z",
+    reviewers: ["code-review"],
+    findings_count: 0,
+    review_round: 1,
+    findings: [],
+    reviewed_files: ["feature.txt", "nonexistent.txt"]
+  }' > "$STATE_DIR/${slug}.json"
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("reviewed_files does not match")'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("nonexistent.txt")'
+}
+
 # --- worktree targeting -------------------------------------------------
 #
 # pr-babysit pushes with `git -C <worktree> push` from a session rooted in the
@@ -444,15 +551,20 @@ run_hook_default_statedir() {
 }
 
 # Write a state file under an arbitrary repo root's default state dir.
+# reviewed_files is computed from the real diff at $root (always feature.txt
+# across these worktree fixtures — the worktree never gains a second commit).
 write_state_in() {
   local root="$1" branch="$2" sha="$3" count="$4"
   local slug
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
   mkdir -p "$root/.claude/tmp/push-review"
-  jq -n --arg branch "$branch" --arg sha "$sha" --argjson count "$count" \
-    '{version:1, branch:$branch, diff_sha:$sha, base_branch:"development",
+  local reviewed_files
+  reviewed_files=$(git -C "$root" diff --no-color "development...HEAD" --name-only \
+    | jq -R -s -c 'split("\n") | map(select(length > 0))')
+  jq -n --arg branch "$branch" --arg sha "$sha" --argjson count "$count" --argjson reviewed_files "$reviewed_files" \
+    '{version:2, branch:$branch, diff_sha:$sha, base_branch:"development",
       reviewed_at:"2026-07-28T00:00:00Z", reviewers:["code-review"],
-      findings_count:$count, review_round:1, findings:[]}' \
+      findings_count:$count, review_round:1, findings:[], reviewed_files:$reviewed_files}' \
     > "$root/.claude/tmp/push-review/${slug}.json"
 }
 

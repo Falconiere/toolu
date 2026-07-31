@@ -63,8 +63,13 @@ the pre-fix tree, so committing staleifies it and the push denies.
    It computes the gate's exact `diff_sha`/`base`/`slug`, sets `review_round`
    (1 for a new `diff_sha`, +1 only when rewriting at the same one — the gate
    caps at 5 rounds on an unchanged diff), and writes
-   `<repo root>/.claude/tmp/push-review/<branch-slug>.json` atomically. Harmless
-   no-op when the toolu push-review gate is not installed (the file goes unread).
+   `<repo root>/.claude/tmp/push-review/<branch-slug>.json` atomically as
+   schema `version: 2`, including `reviewed_files` — auto-computed from
+   `git diff --name-only <base>...HEAD` (sorted, unique); pass
+   `--reviewed-files a.ts,b.rs` only if the review genuinely covered a
+   different path set than the one auto-detected. The gate denies unless
+   `reviewed_files` matches the diff's changed paths exactly. Harmless no-op
+   when the toolu push-review gate is not installed (the file goes unread).
 
 If findings remain that you cannot fix (e.g. needs a human decision), record them
 with `--findings-count <n> --findings '<json>'` instead of 0 — the gate will then

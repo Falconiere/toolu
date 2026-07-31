@@ -27,11 +27,15 @@ back to "all enabled".
   "hooks":   { "<name>": true | false },
   "mcp":     { "<server>": true | false },
   "models":  { "enabled": true | false, "<class>": "haiku|sonnet|opus|fable|inherit" },
-  "lang":    { "ts":   { "maxFileLines": 300, "maxFnLines": 60 },
-               "rust": { "maxFileLines": 500, "maxFnLines": 50, "maxImplLines": 200 } },
-  "docsSync": { "surfaces": ["README.md", "docs/*.md", "*/SKILL.md"],
+  "lang":    { "ts":   { "maxFileLines": 300, "maxFnLines": 60, "noMocks": true },
+               "rust": { "maxFileLines": 500, "maxFnLines": 50, "maxImplLines": 200, "noMocks": true } },
+  "docsSync": { "mode": "advise|block|off",
+               "surfaces": ["README.md", "docs/*.md", "*/SKILL.md"],
                "surfaceExcludes": ["docs/releases/*"],
-               "codeSurfaces": ["*.ts", "*.rs", "*.sh", "*plugin.json"] }
+               "codeSurfaces": ["*.ts", "*.rs", "*.sh", "*plugin.json"] },
+  "telemetry":  { "enabled": true },
+  "agentTier":  { "mode": "advise|block|off" },
+  "planLedger": { "blockOnUncoveredAcs": false }
 }
 ```
 
@@ -70,6 +74,21 @@ positive integer (`"maxFileLines": "120"`) is accepted and coerced to a number,
 so configs copy-pasted from sources that quote numbers still work. The gate never
 invokes biome/oxc/eslint/prettier/clippy/rustfmt; detecting them only tunes
 advisory wording. Resolver: `plugins/toolu/hooks/lib/quality-config.sh`.
+
+### No-mock test gate (`lang.<ts|rust>.noMocks`)
+
+`lang.ts.noMocks` / `lang.rust.noMocks` (default `true` — blocking) control the
+mechanical no-mock-test concerns: `ts-quality/hooks/concerns/85-no-mocks.sh`
+(TS/TSX test files — `jest.mock`/`vi.mock`/`jest.fn`/`vi.fn`/`sinon.*` calls and
+`ts-mockito` imports) and `rust-quality/hooks/concerns/70-no-mocks.sh` (`src/`
+mock *definitions* — `#[automock]`, `#[cfg_attr(..., automock)]`, `mock! {...}`
+— and `tests/`/`*_test.rs`/`*_tests.rs` mock *imports* — `mockall::`/`faux::`).
+Both reuse the `ast-grep scan --inline-rules` pattern from
+`60-error-handling.sh`; a real ast-grep failure (non-zero exit or unparseable
+JSON) is reported as a gate error, never a silent pass. Set to `false` to
+opt out — read via the boolean `quality_flag` reader in
+`plugins/toolu/hooks/lib/quality-config.sh` (`_qc_project_override` cannot
+carry a boolean, hence the separate reader).
 
 ### Model routing (`models`)
 
@@ -110,13 +129,27 @@ block may carry `"model": "<alias>"`, validated at parse time and surfaced by
 ### Docs-sync surfaces (`docsSync`)
 
 The docs-sync backstop (`plugins/toolu/hooks/pre-tools/modules/docs-sync.sh`)
-fires an **advisory** on `git push` when the branch diff changes code but no
-documentation surface — a nudge to keep user-facing docs in sync with behavior.
-It never blocks the push and is silenced by a diff-`sha`-keyed attestation the
-agent writes to `.claude/tmp/docs-sync/<branch-slug>.json`.
+fires on `git push` when the branch diff changes code but no documentation
+surface — a nudge to keep user-facing docs in sync with behavior. It is
+silenced by a diff-`sha`-keyed attestation the agent writes to
+`.claude/tmp/docs-sync/<branch-slug>.json`.
 
-Three glob sets tune it; each resolves *project/user override → built-in
-default* (resolver `plugins/toolu/hooks/lib/docs-sync-config.sh`):
+`docsSync.mode` (via `toolu_string`, unrecognized values warn and fall back)
+controls enforcement:
+
+| Mode | Behavior |
+|------|----------|
+| `advise` (default) | Emits `additionalContext` only — never blocks the push. |
+| `block` | Denies the push when code changed with no doc surface and no matching attestation; a valid attestation still allows it. |
+| `off` | Fully disabled — no telemetry (`docs_nudge`/`docs_attested`), no output; indistinguishable from the module not existing. |
+
+Unlike `agentTier.mode=off` above (which keeps recording its `delegation`
+telemetry), `docsSync.mode=off` is fully silent — the advisory nudge is this
+module's only artifact, so turning it off turns off everything.
+
+Three glob sets tune the code/doc classification; each resolves *project/user
+override → built-in default* (resolver
+`plugins/toolu/hooks/lib/docs-sync-config.sh`):
 
 | Key | Default | Meaning |
 |-----|---------|---------|
@@ -129,6 +162,45 @@ so `docs/*.md` already covers nested paths (which is *why* `surfaceExcludes`
 exists: without it, `docs/*.md` would swallow `docs/releases/*.md`). A diff path
 counts as a doc touch when it matches `surfaces` **and not** `surfaceExcludes`.
 Setting any key replaces (does not merge with) that list's default.
+
+### Workflow telemetry (`telemetry`)
+
+`telemetry.enabled` (default `true`) gates `plugins/toolu/hooks/lib/telemetry.sh`,
+the one append path every gate/lib event funnels through. When enabled it writes
+one JSONL line per event to `.claude/tmp/telemetry/<branch_slug>.jsonl`
+(`TELEMETRY_DIR` overrides the directory in tests): `step_run` (plan-ledger
+step executions), `gate_fail`/`gate_clear` (quality-gate transitions),
+`push_check` (push-review decisions), `docs_nudge`/`docs_attested` (docs-sync),
+`delegation` (Agent/Task model-tier calls), and `ac_coverage` (spec AC
+coverage counts on each push check). Set `telemetry.enabled: false` to disable
+all of it — every write site still succeeds (a telemetry bug never fails the
+caller's real work), it just writes nothing.
+
+### Agent-tier advisory (`agentTier`)
+
+`agentTier.mode` (default `advise`) controls `plugins/toolu/hooks/pre-tools/agent-tier.sh`,
+a standalone `PreToolUse` hook on `Agent`/`Task` calls. It always records a
+`delegation` telemetry event (model, subagent_type, and — when a plan ledger
+exists for the branch — the running/next step's id and declared `model`). When
+a delegation's `model` differs from that step's declared (non-null) `model`, it
+nudges: `advise` emits `additionalContext`, `block` denies the call,
+`off` records telemetry only. A delegation with no `model` param (tier-inherit)
+is always legitimate and never nudged.
+
+`agentTier.mode=off` is a deliberate, narrower "off" than `docsSync.mode=off`
+below: it silences only the advisory — the `delegation` telemetry event still
+fires on every call, because that telemetry *is* the primary artifact this
+feature produces (model-routing analytics), not a side effect of the nudge.
+
+### AC-coverage promotion (`planLedger`)
+
+`planLedger.blockOnUncoveredAcs` (default `false`) promotes spec AC coverage
+from advisory to blocking in `plugins/toolu/hooks/pre-tools/modules/plan-ledger.sh`.
+Either way, every push check appends an `ac_coverage` telemetry event with
+`covered`/`uncovered` counts (reusing `pl_ac_coverage_lines`). With the default
+`false`, an uncovered AC only shows up in that count and in `plan-ledger.sh
+status`'s AC-coverage report. With `true`, `git push` is denied naming the
+uncovered spec `AC-<n>` id(s) until a fresh-green step's `ac_refs` covers them.
 
 ### Recognized names
 

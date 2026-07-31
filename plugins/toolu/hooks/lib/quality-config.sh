@@ -61,6 +61,30 @@ _qc_project_override() {
   ' <<< "$TOOLU_CFG_JSON" 2>/dev/null
 }
 
+# quality_flag LANG KEY DEFAULT  ->  echoes "true" or "false".
+# Boolean reader for `.lang.<lang>.<key>` in the merged config, for keys that
+# ARE booleans (e.g. noMocks) — _qc_project_override above filters to positive
+# integers and can't carry a boolean, so this is a separate reader rather than
+# an extension of it. Only a literal JSON `true`/`false` is honored; anything
+# else (key absent, wrong type, malformed config, no jq) falls back to DEFAULT
+# unchanged. Never errors, never blocks a tool.
+quality_flag() {
+  local lang="$1" key="$2" def="$3"
+  command -v toolu_load_config >/dev/null 2>&1 || { printf '%s' "$def"; return 0; }
+  toolu_load_config
+  [ "${_TOOLU_HAS_JQ:-0}" = "1" ] || { printf '%s' "$def"; return 0; }
+  [ -n "${TOOLU_CFG_JSON:-}" ] || { printf '%s' "$def"; return 0; }
+  local val
+  val=$(jq -r --arg l "$lang" --arg k "$key" '
+    ((.lang? // {})[$l]? // {})[$k]?
+    | if type == "boolean" then tostring else empty end
+  ' <<< "$TOOLU_CFG_JSON" 2>/dev/null)
+  case "$val" in
+    true|false) printf '%s' "$val" ;;
+    *)          printf '%s' "$def" ;;
+  esac
+}
+
 # Memoize the git toplevel for this process. detect_project_root shells out to
 # `git rev-parse` every call; the root can't change mid-hook, so cache it once
 # (mirrors toolu_load_config's caching). A separate _CACHED flag is used so

@@ -217,3 +217,34 @@ teardown() {
     ". \"$REPO_ROOT/hooks/lib/config.sh\"; toolu_flag_false comemory setup_done"
   [ "$status" -eq 1 ]
 }
+
+@test "toolu_string: allowed value is returned" {
+  echo '{"version":1,"docsSync":{"mode":"block"}}' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run toolu_string docsSync.mode advise advise block off
+  [ "$status" -eq 0 ]
+  [ "$output" = "block" ]
+}
+
+@test "toolu_string: value outside the allowed set falls back to default and warns" {
+  echo '{"version":1,"docsSync":{"mode":"bogus"}}' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run toolu_string docsSync.mode advise advise block off
+  [ "$status" -eq 0 ]
+  # stdout+stderr are merged by `run`: the default must still be produced,
+  # and the rejection must be reported rather than silently swallowed.
+  echo "$output" | grep -q 'advise'
+  echo "$output" | grep -q 'is not an allowed value'
+}
+
+@test "toolu_string: missing key falls back to default" {
+  run toolu_string docsSync.mode advise advise block off
+  [ "$status" -eq 0 ]
+  [ "$output" = "advise" ]
+}
+
+@test "toolu_string: project layer overrides user layer" {
+  echo '{"version":1,"docsSync":{"mode":"off"}}'   > "$HOME/.claude/toolu.config.json"
+  echo '{"version":1,"docsSync":{"mode":"block"}}' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
+  run toolu_string docsSync.mode advise advise block off
+  [ "$status" -eq 0 ]
+  [ "$output" = "block" ]
+}

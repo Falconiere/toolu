@@ -29,6 +29,30 @@
 # Public API:
 #   gate_record_failure GATE_FILE FILE SOURCE REASON VIOLATIONS
 #   gate_clear_file     GATE_FILE FILE SOURCE
+#
+# Telemetry (gate_fail / gate_clear): this file has no repo root of its own to
+# hand telemetry_append, so it derives one from GATE_FILE's own path — every
+# caller passes a path shaped <root>/.claude/tmp/quality-gate-status.json, so
+# three dirname hops off GATE_FILE land back on <root>. telemetry.sh is
+# sourced LAZILY (only on first actual emit, not at file load) and every emit
+# is guarded by `command -v telemetry_append`, so an absent or older
+# telemetry.sh is never a hard dependency for this file's callers.
+
+# _gate_file_root GATE_FILE -> print <root> (three dirname hops off GATE_FILE).
+_gate_file_root() {
+  dirname "$(dirname "$(dirname "$1")")"
+}
+
+# _gate_file_ensure_telemetry -> 0 iff telemetry_append is callable (already
+# loaded, or successfully lazy-sourced from telemetry.sh next to this file).
+_gate_file_ensure_telemetry() {
+  command -v telemetry_append >/dev/null 2>&1 && return 0
+  local lib_dir="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}}"
+  [ -f "$lib_dir/telemetry.sh" ] || return 1
+  # shellcheck source=./telemetry.sh
+  . "$lib_dir/telemetry.sh"
+  command -v telemetry_append >/dev/null 2>&1
+}
 
 # gate_record_failure GATE_FILE FILE SOURCE REASON VIOLATIONS
 # Adds/replaces this file's entry and marks the gate failing. Writes via a
@@ -103,6 +127,18 @@ gate_record_failure() {
       '{status: "failing", reason: $reason, source: $source, file: $file,
         violations: $violations, updatedAt: $updatedAt}' > "$gate_file" 2>/dev/null || true
   fi
+
+  # gate_fail telemetry: this function always ends in an attempted write (primary
+  # or fallback), so it always represents a failure being recorded — one event
+  # per call, best-effort (never affects the write above). Semantics: gate_fail
+  # fires on every failing EDIT, including a re-record of the same violation on
+  # the same file — it is not deduped per distinct failure. gate_clear (below)
+  # is the complementary half: it fires only on a true failing->passing
+  # transition, never on a re-clear of an already-passing gate.
+  if _gate_file_ensure_telemetry; then
+    telemetry_append "$(_gate_file_root "$gate_file")" "gate_fail" \
+      "$(jq -cn --arg file "$file" --arg source "$source" '{file: $file, source: $source}')"
+  fi
 }
 
 # gate_clear_file GATE_FILE FILE SOURCE
@@ -151,6 +187,14 @@ gate_clear_file() {
       end
   ' <<< "$existing" > "$tmp" 2>/dev/null; then
     mv -f "$tmp" "$gate_file"
+    # gate_clear telemetry: ONLY here, after the write actually lands — every
+    # early return above (no file / unreadable / malformed / not failing /
+    # other-source entry) emits nothing, and so does a mktemp or jq failure
+    # below this point (the `else` branch), since no transition happened.
+    if _gate_file_ensure_telemetry; then
+      telemetry_append "$(_gate_file_root "$gate_file")" "gate_clear" \
+        "$(jq -cn --arg file "$file" --arg source "$source" '{file: $file, source: $source}')"
+    fi
   else
     rm -f "$tmp"
   fi
