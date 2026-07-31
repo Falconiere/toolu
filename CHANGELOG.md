@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.2.0](https://github.com/Falconiere/toolu/compare/v4.1.1...v4.2.0) (2026-07-31)
+
+
+### Features
+
+* **toolu:** workflow harness v2 — unified verdict, telemetry, hybrid enforcement ([#141](https://github.com/Falconiere/toolu/issues/141)) ([66a0a71](https://github.com/Falconiere/toolu/commit/66a0a7139a45dd83755e05014d9957829ff4b628))
+
 ## [4.1.1](https://github.com/Falconiere/toolu/compare/v4.1.0...v4.1.1) (2026-07-30)
 
 
