@@ -16,8 +16,8 @@
 # repo, or git/jq missing, or bad CLI usage).
 #
 # Push-review v2 schema (reviewed_files, version 2) is implemented HERE
-# directly against the state file, independent of the push-review.sh gate
-# itself still being v1 — see spec component 3 / component 7.
+# directly against the state file, mirroring rather than sourcing the
+# push-review.sh gate (both are v2) — see spec component 3 / component 7.
 
 set -o pipefail
 
@@ -34,8 +34,8 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}}"
 . "$_toolu_lib/plan-ledger-parse.sh"
 
 # Reviewer allow-list — keep in sync with pre-tools/modules/push-review.sh's
-# accepted_reviewers (parity is not test-enforced across files; a mismatch
-# would only surface as verdict disagreeing with the real gate).
+# accepted_reviewers; parity is asserted by the parity test in
+# __tests__/verdict.bats.
 ACCEPTED_REVIEWERS='["caveman:cavecrew-reviewer","code-review","toolu-review:review","code-review:xhigh","review","security-review"]'
 
 # vd_gate STATE REASON [EXTRA_JSON]
