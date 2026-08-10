@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Statusline — the toolu statusline.
 # Reads the Claude Code statusline JSON on stdin and prints a single status line:
-#   model | effort | ctx | <gate> | folder | branch [↑↓] [dirty] | <comemory> | <caveman>
+#   model | effort | ctx | <email domain> | <gate> | folder | branch [↑↓] [dirty] | <comemory> | <caveman>
 # The signature segment is the quality-gate marker: when this project's
 # PostToolUse gate is failing, it shows a loud red marker so you can't miss it.
 # (Lights up only when a gate writer — e.g. rust-quality/ts-quality/toolu — is present.)
@@ -63,6 +63,23 @@ if [[ "$ctx_pct" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
   tokens_seg="${ctx_used_fmt}/${ctx_size_fmt} ($(printf '%.0f%%' "$ctx_pct"))"
 else
   tokens_seg="${ctx_used_fmt}/${ctx_size_fmt}"
+fi
+
+# --- Account (Claude login email domain) ---
+# Reads the OAuth account email Claude Code itself stores in ~/.claude.json
+# (or $CLAUDE_CONFIG_DIR/.claude.json when that's set — no fallback to $HOME
+# in that case, so a custom config dir never leaks another account's email).
+# Only the domain is shown: enough to tell accounts apart across sessions
+# without printing the full address to the terminal.
+account_seg=""
+if [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
+  _acct_file="${CLAUDE_CONFIG_DIR}/.claude.json"
+else
+  _acct_file="$HOME/.claude.json"
+fi
+if [ -f "$_acct_file" ]; then
+  _acct_email=$(jq -r '.oauthAccount.emailAddress // empty' "$_acct_file" 2>/dev/null)
+  [[ "$_acct_email" == *@* ]] && account_seg="${GREEN}${_acct_email#*@}${RESET}"
 fi
 
 # --- Quality gate (toolu): red marker only when failing ---
@@ -176,6 +193,7 @@ sep="${DIM} | ${RESET}"
 line="${CYAN}${model}${RESET}"
 [ -n "$effort" ] && [ "$effort" != "null" ] && line="${line}${sep}${YELLOW}effort:${effort}${RESET}"
 line="${line}${sep}${MAGENTA}ctx:${tokens_seg}${RESET}"
+[ -n "$account_seg" ] && line="${line}${sep}${account_seg}"
 [ -n "$gate_seg" ] && line="${line}${sep}${gate_seg}"
 [ -n "$folder" ] && line="${line}${sep}${BOLD}${folder}${RESET}"
 [ -n "$branch" ] && line="${line}${sep}${BLUE}${branch}${RESET}"
