@@ -86,6 +86,7 @@ run_skills() {
   check_skill brainstorm       plugins/toolu/skills/brainstorm/SKILL.md       90 "where do I even start;help me scope it;think through the approach and tradeoffs"
   check_skill spec             plugins/toolu/skills/spec/SKILL.md             70 "write the spec;document the design"
   check_skill spec-review      plugins/toolu/skills/spec-review/SKILL.md      60 "review the spec;poke holes in this spec"
+  check_skill deep-research    plugins/toolu/skills/deep-research/SKILL.md    90 "deep research;cited report"
   check_skill plan-review      plugins/toolu/skills/plan-review/SKILL.md      55 "review the plan;poke holes in the plan"
   check_skill execution-review plugins/toolu/skills/execution-review/SKILL.md 60 "review the execution;is this done"
   check_skill toolu-review      plugins/toolu-review/skills/review/SKILL.md         65 "review before push"

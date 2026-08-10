@@ -153,7 +153,7 @@ flowchart LR
 
 Mechanical work (renames, dep bumps, one-liners) skips the ceremony — each skill declares when *not* to fire.
 
-The workflow skills, plus `ast-grep`, `agent-memory` (from `comemory`), `context7`, and `exa-search`, all run off the same shell hook engine.
+The workflow skills, plus `ast-grep`, `agent-memory` (from `comemory`), `context7`, and `exa-search`, all run off the same shell hook engine. The standalone `deep-research` skill combines `exa-search` and `context7` fan-out into cited reports under `docs/research/`.
 
 ## Architecture
 
@@ -190,7 +190,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     ├── toolu/                  # Core plugin: hook engine + process gates
     │   ├── .claude-plugin/     # plugin.json manifest
     │   ├── skills/             # brainstorm, spec(+review), plan(+review),
-    │   │                       #   execution(+review), test
+    │   │                       #   execution(+review), test, deep-research
     │   ├── agents/             # quick-task, deep-explore, research-agent, implementer, architect
     │   ├── commands/           # commit, review-and-commit
     │   ├── hooks/              # PreToolUse / PostToolUse / SessionStart … + lib/

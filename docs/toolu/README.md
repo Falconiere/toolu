@@ -80,7 +80,17 @@ Key rules:
 - **Parallelize independent work** — launch subagents in one message with multiple tool calls.
 - **Model tiers**: Haiku for mechanical, Sonnet for exploration, Frontier for hard reasoning.
 
-### 3. Hook Engine & Registry
+### 3. Deep-Research Skill
+
+The `deep-research` skill is a standalone knowledge workflow: it brainstorms guiding questions with the user, gates on approval, then fans out `research-agent` workers (exa-search + context7) before verifying and writing a cited report.
+
+```text
+"deep research on X" → brainstorms guiding questions, gate, fan-out
+                        research-agent workers, verification wave,
+                        cited report under docs/research/
+```
+
+### 4. Hook Engine & Registry
 
 The core dispatcher runs `PreToolUse`, `PostToolUse`, and `SessionStart` hooks. Domain plugins contribute check modules at `SessionStart` via `register.sh` scripts, and the core executes those modules only while the owning plugin is installed — **fail-closed**.
 
@@ -90,7 +100,7 @@ The core dispatcher runs `PreToolUse`, `PostToolUse`, and `SessionStart` hooks. 
 # SessionStart assembles registry modules from installed plugins
 ```
 
-### 4. Push-Review Gate
+### 5. Push-Review Gate
 
 Blocks `git push` on a feature branch until the diff has been run through an accepted reviewer:
 
@@ -108,7 +118,7 @@ Blocks `git push` on a feature branch until the diff has been run through an acc
 # at <target root>/.claude/tmp/push-review/<branch-slug>.json
 ```
 
-### 5. Docs-Sync Backstop
+### 6. Docs-Sync Backstop
 
 An **advisory** (never a block) on `git push` when code changes but no documentation surface does:
 
@@ -118,7 +128,7 @@ An **advisory** (never a block) on `git push` when code changes but no documenta
 # Silenced by writing an attestation to .claude/tmp/docs-sync/<branch>.json
 ```
 
-### 6. Slash Commands
+### 7. Slash Commands
 
 | Command | Purpose |
 |---------|---------|
@@ -146,7 +156,7 @@ An **advisory** (never a block) on `git push` when code changes but no documenta
   → Does NOT merge or push
 ```
 
-### 7. Deep-Explore Agent
+### 8. Deep-Explore Agent
 
 A specialized subagent for structural codebase exploration via ast-grep:
 
