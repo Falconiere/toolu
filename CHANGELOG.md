@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.3.0](https://github.com/Falconiere/toolu/compare/v4.2.1...v4.3.0) (2026-08-10)
+
+
+### Features
+
+* **statusline:** show the Claude account's email domain ([3f7640a](https://github.com/Falconiere/toolu/commit/3f7640aff33dc3c35c8af5ed57cd46eed195d17c))
+
+
+### Bug Fixes
+
+* **statusline:** tighten two bot-flagged test assertions ([f65a159](https://github.com/Falconiere/toolu/commit/f65a159b2e48ff170144aaf1fe8d26304082d310))
+
 ## [4.2.1](https://github.com/Falconiere/toolu/compare/v4.2.0...v4.2.1) (2026-07-31)
 
 
