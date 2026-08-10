@@ -164,7 +164,8 @@ _plain() { printf '%s' "$1" | sed $'s/\033\\[[0-9;]*m//g'; }
   printf '{"oauthAccount":{"emailAddress":"hello@example.com"}}' > "$TMP/cfg/.claude.json"
   out=$(printf '%s' '{"model":{"display_name":"Opus"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$SL")
   plain=$(_plain "$out")
-  [[ "$plain" == *"example.com"* ]]
+  # Adjacent to ctx (not just present anywhere) — pins the segment's position.
+  [[ "$plain" == *"ctx:1k/200k | example.com"* ]]
   [[ "$plain" != *"hello@example.com"* ]]
 }
 
@@ -177,13 +178,20 @@ _plain() { printf '%s' "$1" | sed $'s/\033\\[[0-9;]*m//g'; }
 }
 
 @test "statusline: account:a custom CLAUDE_CONFIG_DIR without .claude.json never falls back to \$HOME" {
-  # Put a distinctive fixture at the fake $HOME and confirm it does NOT leak
-  # through when CLAUDE_CONFIG_DIR points elsewhere and has no file of its own.
-  mkdir -p "$TMP/fakehome" "$TMP/cfg"
+  # Put a distinctive fixture at the fake $HOME and confirm no account segment
+  # renders at all when CLAUDE_CONFIG_DIR points elsewhere and has no file of
+  # its own — not just that this one fixture's domain is absent (a substring
+  # check alone wouldn't catch a fallback that happened to read a different
+  # domain), but that the line matches the true no-account baseline exactly.
+  mkdir -p "$TMP/fakehome" "$TMP/cfg" "$TMP/emptyhome"
   printf '{"oauthAccount":{"emailAddress":"hello@shouldnotleak.example"}}' > "$TMP/fakehome/.claude.json"
-  out=$(printf '%s' '{"model":{"display_name":"Opus"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | HOME="$TMP/fakehome" CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$SL")
+  payload='{"model":{"display_name":"Opus"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}'
+  out=$(printf '%s' "$payload" | HOME="$TMP/fakehome" CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$SL")
   plain=$(_plain "$out")
+  baseline=$(printf '%s' "$payload" | HOME="$TMP/emptyhome" CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$SL")
+  baseline_plain=$(_plain "$baseline")
   [[ "$plain" != *"shouldnotleak.example"* ]]
+  [ "$plain" = "$baseline_plain" ]
 }
 
 @test "statusline: comemory:renders the count from the comemory marker" {
