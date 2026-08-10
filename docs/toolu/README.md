@@ -28,7 +28,7 @@ flowchart LR
 
 | Phase | Skill | What It Does |
 |-------|-------|-------------|
-| **brainstorm** | `brainstorm` | Surface intent, constraints, prior art, and trade-offs. Decide the shape before any code. |
+| **brainstorm** | `brainstorm` | Sweep the design dimensions, then ask in rounds with concrete options until nothing material is open. Decide the shape before any code. |
 | **spec** | `spec` | Write a design contract to `docs/toolu/specs/<date>-<slug>-design.md`. |
 | **spec-review** | `spec-review` | Adversarial audit of the spec — gaps, ambiguities, untestable acceptance criteria. |
 | **plan** | `plan` | Turn the reviewed spec into concrete, verifiable steps with a machine-readable ledger. |
