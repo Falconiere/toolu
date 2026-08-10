@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.5.0](https://github.com/Falconiere/toolu/compare/v4.4.0...v4.5.0) (2026-08-10)
+
+
+### Features
+
+* **toolu:** add deep-research skill — brainstorm-first cited research pipeline ([9db0ceb](https://github.com/Falconiere/toolu/commit/9db0ceb424ef5b95fa99d50b489cc14ee8123b87))
+
+
+### Bug Fixes
+
+* **toolu:** address PR review feedback ([657bc01](https://github.com/Falconiere/toolu/commit/657bc01eb97a4eaa89e68b8e3adbb0fba5f9eb4a))
+
 ## [4.4.0](https://github.com/Falconiere/toolu/compare/v4.3.0...v4.4.0) (2026-08-10)
 
 
