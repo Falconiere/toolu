@@ -145,7 +145,7 @@ flowchart LR
     style ER fill:#1f6feb,color:#fff,stroke:none
 ```
 
-- **`brainstorm`** surfaces intent, constraints, and prior art before any code.
+- **`brainstorm`** surfaces intent, constraints, and prior art before any code — it sweeps the design dimensions, then asks in rounds with concrete options to choose between.
 - **`spec`** writes a design contract to `docs/toolu/specs/`; **`spec-review`** audits it.
 - **`plan`** turns the spec into concrete steps; **`plan-review`** checks it's executable.
 - **`execution`** drives the plan with verification checkpoints; **`execution-review`** is hard-focused on error handling.
