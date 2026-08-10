@@ -41,7 +41,7 @@ Use `$CLAUDE_CONFIG_DIR/statusline/statusline.sh` if you run with a custom confi
 A defensive one-line status bar:
 
 ```
-model | effort:high | ctx:45k/200k (22%) | ✗ gate:failing | my-folder | main ↑2↓1 [+2 ~1 ?3] | [COMEMORY:42] | [CAVEMAN]
+model | effort:high | ctx:45k/200k (22%) | example.com | ✗ gate:failing | my-folder | main ↑2↓1 [+2 ~1 ?3] | [COMEMORY:42] | [CAVEMAN]
 ```
 
 ### Segments
@@ -51,6 +51,7 @@ model | effort:high | ctx:45k/200k (22%) | ✗ gate:failing | my-folder | main �
 | `model` | `.model.display_name` | Always |
 | `effort` | `.effort.level` | Model reports an effort level |
 | `ctx` | `.context_window.*` | Always — current/total usage + % |
+| `example.com` | `.oauthAccount.emailAddress` in `~/.claude.json` (or `$CLAUDE_CONFIG_DIR/.claude.json`) | Logged in via Claude OAuth — shows only the email domain, not the full address |
 | `✗ gate:failing` | `.claude/tmp/quality-gate-status.json` at git root | Quality gate is failing |
 | `folder` + `branch` + `↑↓` + `[+~?]` | git, from workspace dir | Inside a git repo — `↑N↓M` shows ahead/behind of the tracked remote, `[+N ~N ?N]` shows staged/unstaged/untracked file counts (both omitted when clean and up-to-date) |
 | `[COMEMORY:N]` | `${CLAUDE_CONFIG_DIR}/comemory-status/<repo>.json` | Comemory plugin published a memory count |
@@ -58,7 +59,7 @@ model | effort:high | ctx:45k/200k (22%) | ✗ gate:failing | my-folder | main �
 
 ### Degradation
 
-The gate, comemory, git status, and caveman segments degrade gracefully — if the file they read is absent, the segment simply doesn't render. So statusline is **standalone**: it declares no plugin dependencies. Those segments just light up automatically when the relevant plugins are also installed.
+The account, gate, comemory, git status, and caveman segments degrade gracefully — if the file they read is absent, the segment simply doesn't render. So statusline is **standalone**: it declares no plugin dependencies. Those segments just light up automatically when the relevant plugins are also installed (or, for the account segment, when you're logged in via Claude OAuth rather than an API key).
 
 ## Migrating from toolu ≤ 1.5.0
 
