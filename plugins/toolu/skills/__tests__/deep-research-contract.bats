@@ -10,11 +10,15 @@ setup() {
 }
 
 @test "AC-1: frontmatter name and description carry the trigger phrases and deflections" {
-  grep -q 'name: deep-research' "$SKILLS/deep-research/SKILL.md"
-  grep -q 'deep research' "$SKILLS/deep-research/SKILL.md"
-  grep -q 'cited report' "$SKILLS/deep-research/SKILL.md"
-  grep -q 'research-agent' "$SKILLS/deep-research/SKILL.md"
-  grep -q 'deep-explore' "$SKILLS/deep-research/SKILL.md"
+  # Anchored to the frontmatter lines, not the whole file — a phrase drifting
+  # out of the description into body prose must fail, not silently pass.
+  grep -q '^name: deep-research$' "$SKILLS/deep-research/SKILL.md"
+  local desc
+  desc="$(grep '^description:' "$SKILLS/deep-research/SKILL.md")"
+  printf '%s' "$desc" | grep -q 'deep research'
+  printf '%s' "$desc" | grep -q 'cited report'
+  printf '%s' "$desc" | grep -q 'research-agent'
+  printf '%s' "$desc" | grep -q 'deep-explore'
 }
 
 @test "AC-2: approval gate blocks research behind AskUserQuestion" {
@@ -47,6 +51,10 @@ setup() {
   grep -q 'deep-research' "$ROOT/README.md"
 }
 
+# 120 is a deliberate hard budget, not a soft guideline: ~2.5x the largest
+# sibling skill (orchestrator, ~79 lines), leaving room for edge cases while
+# capping context bloat. If the skill legitimately outgrows it, raise the number
+# here in the same commit that grows SKILL.md, and justify it in that commit.
 @test "AC-7: SKILL.md stays within the 120-line skill budget" {
   local lines
   lines="$(wc -l < "$SKILLS/deep-research/SKILL.md")"

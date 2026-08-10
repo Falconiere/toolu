@@ -1,6 +1,6 @@
 ---
 name: deep-research
-description: "Use when the ask is deep research that must end in a multi-source cited report — tells: \"deep research\", \"research report\", \"cited report\", \"survey the state of the art\", \"investigate thoroughly\". Brainstorms the guiding questions WITH the user and gets sign-off before any research runs, then fans out per-question researchers combining exa-search and context7. NOT for quick single-fact or API lookups (use research-agent) and NOT for local codebase questions (use deep-explore). Standalone knowledge workflow — not part of the build chain."
+description: "Use when the ask is deep research that must end in a multi-source cited report — tells: \"deep research\", \"research report\", \"cited report\", \"survey the state of the art\", \"investigate thoroughly\". Brainstorms the guiding questions WITH the user and gets sign-off before any research runs, then fans out per-question researchers combining exa-search and context7. NOT for quick single-fact or API lookups — the research-agent subagent handles those internally — and NOT for local codebase questions (the deep-explore subagent). Standalone knowledge workflow — not part of the build chain."
 ---
 
 # Deep Research
