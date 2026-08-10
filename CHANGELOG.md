@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.4.0](https://github.com/Falconiere/toolu/compare/v4.3.0...v4.4.0) (2026-08-10)
+
+
+### Features
+
+* **brainstorm:** ask in rounds with options instead of one prose pass ([5f24e52](https://github.com/Falconiere/toolu/commit/5f24e520551ba329128fc34686c5d632684324b2))
+
 ## [4.3.0](https://github.com/Falconiere/toolu/compare/v4.2.1...v4.3.0) (2026-08-10)
 
 
