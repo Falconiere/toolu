@@ -7,7 +7,7 @@
 #   $tool_name - name of the tool being invoked
 #   $input     - raw JSON payload (also piped to stdin; this module reads the env var)
 #
-# State file: .claude/tmp/push-review/<branch-slug>.json
+# State file: <host-state>/tmp/push-review/<branch-slug>.json
 # Override via $STATE_DIR for testing.
 
 # pipefail so a `git diff | git hash-object` failure surfaces; without it,
@@ -52,7 +52,7 @@ current_branch=$(git -C "$repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null || 
 slug=$(branch_slug "$current_branch")
 
 # Resolve state dir: env override takes precedence; else target-repo default.
-state_dir=${STATE_DIR:-$repo_root/.claude/tmp/push-review}
+state_dir=${STATE_DIR:-$(toolu_project_state_dir push-review "$repo_root")}
 state_file="$state_dir/${slug}.json"
 
 # Base branch: env override > detect_base_branch, resolved in the target repo.

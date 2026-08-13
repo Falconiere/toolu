@@ -21,7 +21,14 @@ plugin_dir="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
 statusline_src="${plugin_dir:+$plugin_dir/statusline.sh}"
 [ -n "$statusline_src" ] && [ -f "$statusline_src" ] || exit 0
 
-reg_root="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline"
+if [ -n "${TOOLU_CONFIG_DIR:-}" ]; then
+  config_root="$TOOLU_CONFIG_DIR"
+elif [ "${TOOLU_HOST_OVERRIDE:-}" = codex ] || { [ -z "${TOOLU_HOST_OVERRIDE:-}" ] && [ -n "${PLUGIN_ROOT:-}" ]; }; then
+  config_root="${CODEX_HOME:-$HOME/.codex}"
+else
+  config_root="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+fi
+reg_root="$config_root/statusline"
 # Non-fatal hook: a failure here (e.g. a non-directory file occupies $reg_root)
 # must not break the session, but leave one stderr breadcrumb so the otherwise-
 # silent no-op is debuggable.

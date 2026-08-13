@@ -20,8 +20,32 @@ setup() {
   # Ensure the fixture under $HOME is the file detect_plugin_installed reads
   # (clear every inherited override in the resolution chain — CLAUDE_CONFIG_DIR
   # et al. would otherwise point at a real ~/.claude-work manifest).
-  unset CLAUDE_PLUGINS_REGISTRY TOOLU_CONFIG_DIR CLAUDE_CONFIG_DIR
+  unset CLAUDE_PLUGINS_REGISTRY TOOLU_CONFIG_DIR CLAUDE_CONFIG_DIR \
+    TOOLU_HOST_OVERRIDE TOOLU_CODEX_PLUGIN_SNAPSHOT PLUGIN_ROOT
   mkdir -p "$TMP/.claude/plugins"
+}
+
+@test "active: Codex uses the SessionStart snapshot without invoking the CLI" {
+  snapshot="$TMP/codex-plugins.json"
+  printf '%s\n' '{"version":1,"status":"ready","plugins":["comemory@toolu"]}' > "$snapshot"
+  run env TOOLU_HOST_OVERRIDE=codex TOOLU_CODEX_PLUGIN_SNAPSHOT="$snapshot" \
+    PATH=/usr/bin:/bin bash -c '. "$1"; toolu_plugin_active comemory@toolu' _ \
+    "${BATS_TEST_DIRNAME}/../detect.sh"
+  [ "$status" -eq 0 ]
+
+  run env TOOLU_HOST_OVERRIDE=codex TOOLU_CODEX_PLUGIN_SNAPSHOT="$snapshot" \
+    PATH=/usr/bin:/bin bash -c '. "$1"; toolu_plugin_active rust-quality@toolu' _ \
+    "${BATS_TEST_DIRNAME}/../detect.sh"
+  [ "$status" -eq 1 ]
+}
+
+@test "active: malformed Codex snapshot fails open" {
+  snapshot="$TMP/codex-plugins.json"
+  printf 'not-json\n' > "$snapshot"
+  run env TOOLU_HOST_OVERRIDE=codex TOOLU_CODEX_PLUGIN_SNAPSHOT="$snapshot" \
+    bash -c '. "$1"; toolu_plugin_active comemory@toolu' _ \
+    "${BATS_TEST_DIRNAME}/../detect.sh"
+  [ "$status" -eq 0 ]
 }
 teardown() { rm -rf "$TMP"; }
 

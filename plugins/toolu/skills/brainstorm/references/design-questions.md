@@ -6,8 +6,9 @@ options worth choosing between.
 
 ## How to ask
 
-Use the `AskUserQuestion` tool, not prose. Prose questions get one skimmed answer;
-options get a decision. Rules that make the difference:
+Use the active host's structured user-input interface from
+`workflows/host-mapping.md` when available; otherwise ask one concise optioned
+question in chat. Options get a decision. Rules that make the difference:
 
 - **Options are the design, not the survey.** Each option is a concrete commitment
   the user could act on — "SQLite table, one row per run" beats "some persistence".

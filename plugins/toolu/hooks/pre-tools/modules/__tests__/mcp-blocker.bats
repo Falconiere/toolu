@@ -71,6 +71,19 @@ teardown() {
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
 }
 
+@test "mcp-blocker: blocks a listed server from a complete Codex lifecycle payload" {
+  payload=$(jq -n --arg cwd "$TMP" \
+    '{session_id:"session-1",turn_id:"turn-1",cwd:$cwd,
+      hook_event_name:"PreToolUse",permission_mode:"default",
+      tool_name:"mcp__exampleblocked__search",tool_input:{query:"needle"}}')
+
+  TOOLU_HOST_OVERRIDE=codex run bash "$HOOK" <<<"$payload"
+
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("exampleblocked")'
+}
+
 @test "config.mcp disables a server without touching the blocklist file" {
   TMPHOME=$(mktemp -d)
   mkdir -p "$TMPHOME/.claude"

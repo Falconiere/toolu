@@ -10,11 +10,55 @@ setup() {
   mkdir -p "$HOME/.claude" "$CLAUDE_PROJECT_DIR/.claude"
 
   REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../.." && pwd)"
+  LIB="$REPO_ROOT/hooks/lib/config.sh"
   # shellcheck source=../config.sh
   . "$REPO_ROOT/hooks/lib/config.sh"
   TOOLU_CFG_LOADED=0
   _TOOLU_HAS_JQ=""
   TOOLU_CFG_JSON='{}'
+}
+
+@test "toolu_codex_model defaults every class to the specified model and effort" {
+  expected=$'mechanical\tgpt-5.6-luna\tmedium\nexploration\tgpt-5.6-terra\tmedium\nimplementation\tgpt-5.6-terra\tmedium\nreview\tgpt-5.6-terra\thigh\nsynthesis\tgpt-5.6-sol\thigh\narchitecture\tgpt-5.6-sol\thigh'
+  run env TOOLU_CONFIG_DIR="$TMP/empty" TOOLU_HOST_OVERRIDE=codex bash -c '
+    . "$1"
+    for class in $TOOLU_MODEL_CLASSES; do
+      printf "%s\t" "$class"
+      toolu_codex_model "$class"
+    done
+  ' _ "$LIB"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$expected" ]
+}
+
+@test "toolu_codex_model reads project overrides without changing Claude aliases" {
+  mkdir -p "$TMP/cfg" "$TMP/project/.codex"
+  cat > "$TMP/project/.codex/toolu.config.json" <<'JSON'
+{"models":{"implementation":"haiku","codex":{"implementation":{"model":"custom-codex","reasoningEffort":"xhigh"}}}}
+JSON
+  run env TOOLU_CONFIG_DIR="$TMP/cfg" TOOLU_PROJECT_DIR="$TMP/project" \
+    TOOLU_HOST_OVERRIDE=codex bash -c '
+      . "$1"
+      printf "claude="; toolu_model implementation; printf "\n"
+      printf "codex="; toolu_codex_model implementation
+    ' _ "$LIB"
+  [ "$status" -eq 0 ]
+  [ "${lines[0]}" = 'claude=haiku' ]
+  [ "${lines[1]}" = $'codex=custom-codex\txhigh' ]
+}
+
+@test "toolu_codex_model rejects malformed model and effort values independently" {
+  mkdir -p "$TMP/cfg"
+  cat > "$TMP/cfg/toolu.config.json" <<'JSON'
+{"models":{"codex":{"review":{"model":42,"reasoningEffort":"turbo"}}}}
+JSON
+  run env TOOLU_CONFIG_DIR="$TMP/cfg" TOOLU_HOST_OVERRIDE=codex bash -c '
+    . "$1"; toolu_codex_model review
+  ' _ "$LIB"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *$'gpt-5.6-terra\thigh'* ]]
+  [[ "$output" == *'models.codex.review.model: value is not a non-empty string'* ]]
+  [[ "$output" == *"reasoningEffort: 'turbo' is not supported"* ]]
 }
 
 teardown() {

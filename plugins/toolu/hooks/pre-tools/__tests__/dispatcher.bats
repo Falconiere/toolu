@@ -65,6 +65,69 @@ write_module() {
   echo "$output" | jq -e '.hookSpecificOutput.additionalContext | test("context-two")'
 }
 
+@test "normalized dispatcher: a deny on any apply_patch path blocks the whole patch" {
+  write_module "a_advisory" 'jq -n "{hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"seen-path\"}}"'
+  write_module "z_deny" 'p=$(jq -r ".tool_input.file_path" -); if [ "$p" = "hooks/lib/dispatch.sh" ]; then jq -n "{hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"deny\",permissionDecisionReason:\"protected-second-path\"}}"; fi'
+  patch=$'*** Begin Patch\n*** Update File: src/safe.ts\n@@\n-a\n+b\n*** Update File: hooks/lib/dispatch.sh\n@@\n-a\n+b\n*** End Patch'
+  input=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command}}')
+  tool_name=apply_patch
+  export input tool_name
+  run toolu_dispatch_hook "$MODULES_DIR" "PreToolUse"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null
+  echo "$output" | grep -q 'protected-second-path'
+  ! echo "$output" | grep -q 'seen-path'
+}
+
+@test "normalized dispatcher: duplicate advisories across patch paths are emitted once" {
+  write_module "a_same" 'jq -n "{hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"same-advisory\"}}"'
+  patch=$'*** Begin Patch\n*** Add File: a.ts\n+x\n*** Add File: b.ts\n+y\n*** End Patch'
+  input=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command}}')
+  tool_name=apply_patch
+  export input tool_name
+  run toolu_dispatch_hook "$MODULES_DIR" "PreToolUse"
+  [ "$status" -eq 0 ]
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext' | grep -c '^same-advisory$')" = 1 ]
+}
+
+@test "normalized dispatcher: malformed apply_patch fails closed before modules run" {
+  write_module "a_never" 'jq -n "{hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"must-not-run\"}}"'
+  patch=$'*** Begin Patch\n*** Update File: a.ts'
+  input=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command}}')
+  tool_name=apply_patch
+  export input tool_name
+  run toolu_dispatch_hook "$MODULES_DIR" "PreToolUse"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null
+  ! echo "$output" | grep -q 'must-not-run'
+}
+
+@test "pre-tools entrypoint blocks a protected path hidden later in a Codex patch" {
+  patch=$'*** Begin Patch\n*** Update File: README.md\n@@\n-a\n+b\n*** Update File: plugins/toolu/hooks/lib/dispatch.sh\n@@\n-a\n+b\n*** End Patch'
+  payload=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command}}')
+  run env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$TMP/codex" TOOLU_PROJECT_DIR="$REPO_ROOT" \
+    MY_CLAUDE_QUALITY=off bash "$REPO_ROOT/hooks/pre-tools/mod.sh" <<<"$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null
+  echo "$output" | grep -q 'plugins/toolu/hooks/lib/dispatch.sh'
+}
+
+@test "pre-tools entrypoint applies an active failure gate to every Codex patch path" {
+  project="$TMP/project"
+  mkdir -p "$project/.codex/tmp"
+  git -C "$project" init -q
+  git -C "$project" -c user.email=t@t -c user.name=t commit --allow-empty -qm init
+  printf '%s\n' '{"status":"failing","reason":"tests failed","violations":"fix tests"}' \
+    > "$project/.codex/tmp/quality-gate-status.json"
+  patch=$'*** Begin Patch\n*** Update File: src/fix.ts\n@@\n-a\n+b\n*** Update File: README.md\n@@\n-a\n+b\n*** End Patch'
+  payload=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command}}')
+  run bash -c 'cd "$1" && env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$2" TOOLU_PROJECT_DIR="$1" bash "$3" <<<"$4"' \
+    _ "$project" "$TMP/codex" "$REPO_ROOT/hooks/pre-tools/mod.sh" "$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null
+  echo "$output" | grep -q 'Quality gate failing'
+}
+
 @test "dispatcher: deny short-circuits later modules (no trailing advisory after deny)" {
   write_module "a_deny"     'jq -n "{hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"deny\",permissionDecisionReason:\"early-deny\"}}"'
   write_module "z_advisory" 'jq -n "{hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"should-not-appear\"}}"'

@@ -13,7 +13,14 @@
 
 SPEC="ast-grep@toolu"
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
-REG_ROOT="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu"
+if [ -n "${TOOLU_CONFIG_DIR:-}" ]; then
+  CONFIG_ROOT="$TOOLU_CONFIG_DIR"
+elif [ "${TOOLU_HOST_OVERRIDE:-}" = codex ] || { [ -z "${TOOLU_HOST_OVERRIDE:-}" ] && [ -n "${PLUGIN_ROOT:-}" ]; }; then
+  CONFIG_ROOT="${CODEX_HOME:-$HOME/.codex}"
+else
+  CONFIG_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+fi
+REG_ROOT="$CONFIG_ROOT/toolu"
 
 # Consume stdin so Claude Code's hook IPC never stalls.
 cat > /dev/null 2>&1 || true

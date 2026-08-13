@@ -19,4 +19,7 @@ Standalone, no dependencies.
 
 ## The `gb` shim
 
-`gb` is installed as a shim at `${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu/bin/gb` at `SessionStart`; if it is not on `$PATH`, call it by that full path. It wraps the system `git` binary — no separate install. The hook modules register into the core toolu dispatcher and run only while this plugin is installed.
+`gb` is installed as a shim at the host config root's `toolu/bin/gb` at
+`SessionStart` (`~/.claude` for Claude, `${CODEX_HOME:-~/.codex}` for Codex,
+or `TOOLU_CONFIG_DIR` when set). If it is not on `$PATH`, call that full path.
+It wraps the system `git` binary — no separate install.

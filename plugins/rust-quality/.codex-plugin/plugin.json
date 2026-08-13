@@ -1,0 +1,6 @@
+{
+  "name": "rust-quality",
+  "version": "4.5.0",
+  "description": "Rust PostToolUse quality checks registered into the toolu hook engine.",
+  "hooks": "./hooks/hooks.json"
+}

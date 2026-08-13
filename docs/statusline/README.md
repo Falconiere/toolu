@@ -1,14 +1,28 @@
 # statusline — Gate-Aware Terminal Statusline
 
-**Type:** UI | **Version:** 0.3.1 | **Standalone** (no plugin dependencies)
+**Type:** Status | **Version:** 4.5.0 | **Standalone** (no plugin dependencies)
 
-An optional Claude Code statusline. One line, assembled defensively from the statusline JSON Claude Code sends on stdin — segments degrade gracefully when their data source is absent.
+Host-native status. Claude Code gets an optional persistent statusline; Codex
+gets an explicit `$statusline:status` skill. Both consume the same repository,
+git, quality-gate, and comemory collector.
 
 ## Install
 
 ```text
 /plugin install statusline@toolu
 ```
+
+For Codex:
+
+```bash
+codex plugin add statusline@toolu
+```
+
+Run `$statusline:status`. Codex reports only locally available repository,
+branch, working-tree, gate (`<repo>/.codex/tmp/quality-gate-status.json`), and
+comemory state; it does not fabricate Claude-only model, effort, account, or
+context-window values. The remaining setup below applies only to Claude's
+persistent renderer.
 
 Then wire it once — easiest with the bundled setup command:
 

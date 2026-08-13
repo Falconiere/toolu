@@ -5,7 +5,10 @@ description: "Use when a task is broad or multi-step and should be delegated acr
 
 # Orchestrator
 
-The main thread is the **only** orchestrator — it alone holds the Agent tool. Subagents do the work; they do not spawn their own subagents (Claude Code discourages nested delegation, and it bloats context). This skill makes the main thread good at delegating: it decides *what* to hand off, to *which* agent, on *which* model tier, and *how* to keep its own context lean so a long task does not drown in tool output.
+The main thread owns orchestration. Subagents do bounded work and return concise
+results; they do not recursively delegate unless the task explicitly requires a
+nested workflow. Use [the host mapping](../../workflows/host-mapping.md) for the
+active delegation, user-input, and thread-control interfaces.
 
 **Trigger phrases:** orchestrate this, delegate this, break this down, coordinate subagents, fan this out, this is a big/multi-step task.
 
@@ -32,11 +35,11 @@ Rule of thumb: if the answer means reading across several files and you only nee
 
 Prefer a **tier-pinned** agent when one fits — its frontmatter fixes the model, so routing can't be forgotten:
 
-- **`toolu:quick-task`** (Haiku) — mechanical lookups, listings, literal searches, bounded mechanical edits.
-- **`toolu:deep-explore`** (Sonnet) — structural/architecture exploration via ast-grep. First choice for "where/how is X done across the code".
-- **`toolu:research-agent`** (Sonnet) — external docs / web research.
-- **`toolu:implementer`** (Sonnet) — one bounded plan step, edits plus its tests.
-- **`toolu:architect`** (Opus) — design, trade-offs, synthesis. Read-only; returns a recommendation.
+- **`toolu:quick-task` / Codex `quick-task`** — mechanical lookups and listings.
+- **`toolu:deep-explore` / Codex `deep-explore`** — structural exploration.
+- **`toolu:research-agent` / Codex `research-agent`** — external research.
+- **`toolu:implementer` / Codex `implementer`** — one bounded plan step and tests.
+- **`toolu:architect` / Codex `architect`** — design and synthesis, read-only.
 - **`Explore`** — broad read-only fan-out search when you need the conclusion, not file dumps.
 - **`Plan`** — design an implementation strategy for a non-trivial change.
 - **`general-purpose`** — multi-step research/execution that doesn't fit a specific agent; set `model:` yourself.
@@ -57,16 +60,18 @@ The expensive, recurring cost in a long session is **input tokens re-sent every 
 
 ## Model tiers
 
-Route on the **class of work**, not on how the request is phrased — and pass `model:` on every Agent call, because leaving it unset sends everything to the lead thread's model.
+Route on the **class of work**, not phrasing. Select the matching preconfigured
+agent or pass the active host's explicit model and reasoning settings. Omitting
+routing inherits host defaults, which may be inappropriate for the task.
 
-| Class | Default | Belongs here |
-|---|---|---|
-| mechanical | `haiku` | lookups, listings, renames, formatting, one command |
-| exploration | `sonnet` | read-only search across many files |
-| implementation | `sonnet` | a bounded, already-decided edit + its tests |
-| review | `sonnet` | diff review, audits |
-| synthesis | `opus` | reconciling many findings into one answer |
-| architecture | `opus` | design, trade-offs, hard-to-reverse calls |
+| Class | Claude default | Codex default | Belongs here |
+|---|---|---|---|
+| mechanical | `haiku` | Luna / medium | lookups, listings, formatting, one command |
+| exploration | `sonnet` | Terra / medium | read-only search across many files |
+| implementation | `sonnet` | Terra / medium | a bounded decided edit + tests |
+| review | `sonnet` | Terra / high | diff review, audits |
+| synthesis | `opus` | Sol / high | reconciling findings |
+| architecture | `opus` | Sol / high | design and hard-to-reverse calls |
 
 Escalate one tier on any of: **hard to reverse**, **cross-cutting**, **the how isn't decided**, **must weigh alternatives**. De-escalate when the task is bounded and has one verifiable answer. Deciding and doing are different classes — one task often splits across two tiers.
 

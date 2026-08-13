@@ -81,6 +81,16 @@ EOF
   [ "$(jq -r 'select(.event=="delegation") | .model' "$TELEMETRY_FILE" | tail -1)" = "haiku" ]
 }
 
+@test "tool_name spawn_agent: Codex task_name maps to subagent_type telemetry" {
+  codex_file="$REPO/.codex/tmp/telemetry/feat_x.jsonl"
+  payload=$(jq -n '{tool_name:"spawn_agent",tool_input:{model:"gpt-5.6-terra",task_name:"implementer",reasoning_effort:"medium"}}')
+  run bash -c "cd '$REPO' && printf '%s' '$payload' | TOOLU_HOST_OVERRIDE=codex TOOLU_PROJECT_DIR='$REPO' CODEX_HOME='$TMP/codex' bash '$HOOK'"
+  [ "$status" -eq 0 ]
+  [ -f "$codex_file" ]
+  [ "$(jq -r 'select(.event=="delegation") | .model' "$codex_file" | tail -1)" = "gpt-5.6-terra" ]
+  [ "$(jq -r 'select(.event=="delegation") | .subagent_type' "$codex_file" | tail -1)" = "implementer" ]
+}
+
 @test "no model param: event has model:null, no additionalContext, exit 0 (inherit is legitimate)" {
   _write_plan "true" "true"
   # --step s1 leaves s2 pending -> plan-ledger.sh correctly exits 1 here; run()
@@ -215,9 +225,9 @@ EOF
   [ "$(jq -r 'select(.event=="delegation") | .step_model' "$TELEMETRY_FILE" | tail -1)" = "null" ]
 }
 
-@test "hooks.json parses and contains the Agent|Task entry pointing at agent-tier.sh" {
+@test "hooks.json parses and contains the spawn_agent|Agent|Task entry pointing at agent-tier.sh" {
   HOOKS_JSON="${BATS_TEST_DIRNAME}/../../hooks.json"
   jq -e . "$HOOKS_JSON" >/dev/null
-  run jq -e '.hooks.PreToolUse[] | select(.matcher == "Agent|Task") | .hooks[0].command | test("pre-tools/agent-tier\\.sh$")' "$HOOKS_JSON"
+  run jq -e '.hooks.PreToolUse[] | select(.matcher == "spawn_agent|Agent|Task") | .hooks[0].command | test("pre-tools/agent-tier\\.sh$")' "$HOOKS_JSON"
   [ "$status" -eq 0 ]
 }

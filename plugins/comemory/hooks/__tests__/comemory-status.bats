@@ -44,6 +44,15 @@ _marker() { cat "$TMP/cfg/comemory-status/$KEY.json" 2>/dev/null; }
   [ -f "$TMP/cfg/comemory-status/$KEY.json" ]
 }
 
+@test "comemory-status: Codex marker is written under CODEX_HOME" {
+  local codex_home="$TMP/codex-home"
+  printf '{"cwd":"%s"}' "$TMP" \
+    | COMEMORY_DATA_DIR="$STORE" TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$codex_home" \
+      bash "$HOOK"
+  [ -f "$codex_home/comemory-status/$KEY.json" ]
+  [ ! -e "$TMP/cfg/comemory-status/$KEY.json" ]
+}
+
 @test "comemory-status: no marker when cwd is not a repo" {
   notrepo=$(mktemp -d)
   run sh -c "printf '{\"cwd\":\"$notrepo\"}' | COMEMORY_DATA_DIR=\"$STORE\" CLAUDE_CONFIG_DIR=\"$TMP/cfg\" bash \"$HOOK\""

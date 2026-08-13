@@ -1,6 +1,6 @@
 # toolu-review — Pre-Push Code Review
 
-**Type:** Workflow | **Version:** 0.1.0 | **Standalone** (no dependencies)
+**Type:** Workflow | **Version:** 4.5.0 | **Standalone** (no dependencies)
 
 Project-tuned pre-push code review mirroring the CI review bot's checklist (correctness, security, perf, test coverage, doc accuracy). Records the `push-review` state so toolu's push gate passes.
 
@@ -51,18 +51,27 @@ git diff --no-color main...HEAD
 
 # Fix accepted findings in code, commit, re-review until none remain
 
-# Record the clean state (the SessionStart hook publishes this symlink;
-# $CLAUDE_PLUGIN_ROOT is NOT exported to the Bash tool subshell).
-bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review/write-state.sh" \
+# Record the clean state on Codex (lifecycle variables are not exported to
+# ordinary shell calls, so the host and default root are explicit).
+TOOLU_HOST_OVERRIDE=codex bash \
+  "${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/toolu-review/write-state.sh" \
   --findings-count 0 --reviewers '["toolu-review:review"]'
 
-# Reviewing a worktree from a session rooted elsewhere? Name the checkout —
-# the gate only reads the state file under the pushed repo's own root.
-bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review/write-state.sh" \
-  --findings-count 0 --repo /path/to/worktree
+# Claude Code equivalent.
+TOOLU_HOST_OVERRIDE=claude bash \
+  "${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu-review/write-state.sh" \
+  --findings-count 0 --reviewers '["toolu-review:review"]'
 ```
 
-`write-state.sh` computes the gate's exact `diff_sha`/`base`/`slug`, sets `review_round`, and writes `<repo root>/.claude/tmp/push-review/<branch-slug>.json` atomically as schema version 2. `--repo` defaults to the cwd's repo root and fails with "not inside a git repo" otherwise; `$STATE_DIR` overrides the directory for the writer and the gate alike. `review_round` starts at 1 for a new `diff_sha` and bumps only when rewriting at the same one, so the gate's 5-round cap means "reviewers keep finding issues in code that never changed". It's a harmless no-op when the toolu push-review gate is not installed.
+When reviewing a worktree from a session rooted elsewhere, append
+`--repo /path/to/worktree` to the active-host command; the gate only reads the
+state file under the pushed repository's own root.
+
+`write-state.sh` computes the gate's exact `diff_sha`/`base`/`slug`, sets
+`review_round`, and writes the host-native `<repo root>/.claude/tmp/push-review/`
+or `<repo root>/.codex/tmp/push-review/` state atomically as schema version 2.
+`--repo` defaults to the cwd's repo root; `$STATE_DIR` overrides the directory
+for tests and explicit integrations.
 
 `reviewed_files` — the actual reviewer file coverage the v2 gate checks — is auto-computed from `git diff --name-only <base>...HEAD`, matching the full diff by default. Pass `--reviewed-files <comma-separated paths>` to override it when the review's scope was deliberately partial or adjusted; the gate denies the push if `reviewed_files` doesn't match the diff's changed paths exactly (sorted, unique).
 
@@ -71,11 +80,13 @@ bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review/write-state.sh" \
 If findings remain that need a human decision:
 
 ```bash
-bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review/write-state.sh" \
+TOOLU_HOST_OVERRIDE=codex bash \
+  "${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/toolu-review/write-state.sh" \
   --findings-count 3 --findings '[{"path":"src/auth.ts","severity":"blocker","text":"Needs product decision on session timeout"}]'
 ```
 
-The gate keeps blocking — open findings mean the code is not ready to push.
+Use the Claude host/root pair shown above when running on Claude Code. The gate
+keeps blocking — open findings mean the code is not ready to push.
 
 ### Integration with pr-babysit
 

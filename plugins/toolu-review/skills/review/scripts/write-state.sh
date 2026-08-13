@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # write-state.sh — write the push-review state file the toolu push-review
-# gate validates (.claude/tmp/push-review/<branch-slug>.json).
+# gate validates (<host-dir>/tmp/push-review/<branch-slug>.json).
 #
 # The review JUDGMENT (which findings exist) belongs to the caller — the
 # `toolu-review:review` skill. This script does only the deterministic
@@ -112,7 +112,16 @@ slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
 [ -n "$slug" ] || slug="_default"
 
 # state_dir — MIRROR of the gate's resolution, including its $STATE_DIR override.
-state_dir="${STATE_DIR:-$repo_root/.claude/tmp/push-review}"
+# The plugin is self-contained, so mirror the core adapter's project-dir choice.
+project_dir="${TOOLU_PROJECT_CONFIG_DIRNAME:-}"
+if [ -z "$project_dir" ]; then
+  if [ "${TOOLU_HOST_OVERRIDE:-}" = codex ] || { [ -z "${TOOLU_HOST_OVERRIDE:-}" ] && [ -n "${PLUGIN_ROOT:-}" ]; }; then
+    project_dir=.codex
+  else
+    project_dir=.claude
+  fi
+fi
+state_dir="${STATE_DIR:-$repo_root/$project_dir/tmp/push-review}"
 state_file="$state_dir/${slug}.json"
 mkdir -p "$state_dir" || { echo "write-state.sh: cannot create $state_dir" >&2; exit 1; }
 

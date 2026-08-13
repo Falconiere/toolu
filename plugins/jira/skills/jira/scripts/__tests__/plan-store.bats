@@ -63,6 +63,13 @@ build() {
   [[ "$output" == */.claude/tmp/jira/plans/ABC-123.md ]]
 }
 
+@test "paths: Codex host uses <repo>/.codex/tmp without affecting Claude defaults" {
+  run env TOOLU_HOST_OVERRIDE=codex bash -c "$S"'; cd "$2"; printf "%s\n%s\n" "$(jira_plan_ledger_path ABC-123)" "$(jira_plan_doc_path ABC-123)"' _ "$TOOL_DIR" "$REPO"
+  [ "$status" -eq 0 ]
+  [ "${lines[0]}" = "$(cd "$REPO" && pwd -P)/.codex/tmp/plan-ledger/jira-ABC-123.json" ]
+  [ "${lines[1]}" = "$(cd "$REPO" && pwd -P)/.codex/tmp/jira/plans/ABC-123.md" ]
+}
+
 @test "build: emits schema version 1 with branch jira-<KEY>" {
   run build
   [ "$status" -eq 0 ]

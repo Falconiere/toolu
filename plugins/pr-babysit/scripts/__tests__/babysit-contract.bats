@@ -4,11 +4,13 @@
 # (grep invariants) and pin the empirical facts the design relies on against a
 # captured real reviewThreads fixture from PR #115.
 
-CMD="${BATS_TEST_DIRNAME}/../../commands/babysit.md"
+CMD="${BATS_TEST_DIRNAME}/../../workflows/babysit.md"
+WRAPPER="${BATS_TEST_DIRNAME}/../../commands/babysit.md"
 FIXTURE="${BATS_TEST_DIRNAME}/fixtures/pr115-threads.json"
 
 @test "command file exists" {
   [ -f "$CMD" ]
+  grep -Fq 'workflows/babysit.md' "$WRAPPER"
 }
 
 @test "defines a CI_REVIEWER login set" {

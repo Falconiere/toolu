@@ -10,7 +10,7 @@
     {
       "name": "toolu",
       "source": "./plugins/toolu",
-      "description": "toolu workflow core: brainstorm → spec → plan → execution → test skills, agents, slash commands, and the hook engine.",
+      "description": "Dual-host engineering discipline for Claude Code and Codex: workflow skills, agents, commands, and registry-driven quality hooks.",
       "author": {
         "name": "Falconiere Barbosa",
         "email": "hello@falconiere.io"
@@ -23,7 +23,7 @@
     {
       "name": "ast-grep",
       "source": "./plugins/ast-grep",
-      "description": "Structural code search & rewrite (ast-grep) with a registry-driven Grep→ast-grep nudge hook.",
+      "description": "Structural code search & rewrite (ast-grep): skill, wrapper, and a PreToolUse Grep→ast-grep nudge registered into the toolu hook engine.",
       "author": {
         "name": "Falconiere Barbosa",
         "email": "hello@falconiere.io"
@@ -35,7 +35,7 @@
     {
       "name": "comemory",
       "source": "./plugins/comemory",
-      "description": "Persistent agent memory + code-index search (comemory) with registry-driven scope enforcement and a statusline memory-count publisher.",
+      "description": "Persistent agent memory + code-index search (comemory): skill, scoped wrapper (with delete/context verbs), a /comemory:setup command that detect-and-guides the binary then wires git index-code hooks, PreToolUse scope enforcement, and a SessionStart memory-count publisher for the statusline — registered into the toolu hook engine.",
       "author": {
         "name": "Falconiere Barbosa",
         "email": "hello@falconiere.io"
@@ -50,7 +50,7 @@
     {
       "name": "rust-quality",
       "source": "./plugins/rust-quality",
-      "description": "Rust PostToolUse quality checks via the toolu registry.",
+      "description": "Rust PostToolUse quality checks registered into the toolu hook engine.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["rust", "quality", "hooks"],
@@ -62,7 +62,7 @@
     {
       "name": "ts-quality",
       "source": "./plugins/ts-quality",
-      "description": "TypeScript PostToolUse quality checks via the toolu registry.",
+      "description": "TypeScript PostToolUse quality checks registered into the toolu hook engine.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["typescript", "quality", "hooks"],
@@ -74,7 +74,7 @@
     {
       "name": "statusline",
       "source": "./plugins/statusline",
-      "description": "Optional Claude Code statusline: model, effort, context, quality-gate marker, folder, branch, caveman mode. Standalone, no dependencies.",
+      "description": "Host-native project status: a persistent Claude Code statusline plus an explicit Codex status skill for repository, gate, git, and comemory state. Standalone, no dependencies.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["statusline", "quality-gate", "caveman", "hooks"],
@@ -83,7 +83,7 @@
     {
       "name": "toolu-review",
       "source": "./plugins/toolu-review",
-      "description": "Project-tuned pre-push code review mirroring the CI review bot's checklist; writes the toolu push-review state so the gate passes. Standalone, no dependencies.",
+      "description": "Project-tuned pre-push code review mirroring the CI review bot's checklist (correctness, security, perf, test coverage, doc accuracy), writing the toolu push-review state so the gate passes. Standalone.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["toolu-review", "push-review", "quality", "skills"],
@@ -92,7 +92,7 @@
     {
       "name": "pr-babysit",
       "source": "./plugins/pr-babysit",
-      "description": "Babysit a PR: fetch unresolved review comments + the CI review bot's verdict, triage, fix, reply, resolve, and chase findings to zero until CI is green. Cron-driven.",
+      "description": "Babysit a PR until review threads, the review-bot verdict, and CI are clear, using Claude cron or a durable Codex goal with isolated worktrees.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["pr", "review", "ci", "automation"],
@@ -131,7 +131,7 @@
     {
       "name": "jira",
       "source": "./plugins/jira",
-      "description": "Jira issue search & workflow from the session via a REST wrapper (skill + bash). Cloud + Server/DC. Standalone, no dependencies.",
+      "description": "Jira issue search and workflow from the session via a REST wrapper (skill + bash). Cloud + Server/DC, read and safe writes. Standalone, no dependencies.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["jira", "atlassian", "skills"],
@@ -140,7 +140,7 @@
     {
       "name": "git-better",
       "source": "./plugins/git-better",
-      "description": "Token-lean git: a `gb` wrapper with lean defaults plus a cached repo-convention profile, surfaced via registry-driven PreToolUse nudges.",
+      "description": "Token-lean git: a `gb` wrapper with lean defaults plus a cached repo-convention profile, surfaced via PreToolUse nudges registered into the toolu hook engine.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["git", "token-efficiency", "conventions", "hooks"],

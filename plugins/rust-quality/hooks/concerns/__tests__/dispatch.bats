@@ -97,6 +97,21 @@ EOF
   jq -e '.source == "rust-quality-hook"' "$TMP_PROJ/.claude/tmp/quality-gate-status.json"
 }
 
+@test "rust-quality: deleting a failing file clears its gate entry" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  printf '#[allow(dead_code)]\nfn helper() {}\n' > src/bad.rs
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/bad.rs"}}'
+  tool_name=Edit input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "failing"' "$TMP_PROJ/.claude/tmp/quality-gate-status.json" >/dev/null
+
+  rm "$TMP_PROJ/src/bad.rs"
+  TOOLU_EDIT_OPERATION=delete tool_name=Edit input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing"' "$TMP_PROJ/.claude/tmp/quality-gate-status.json" >/dev/null
+}
+
 @test "rust-quality: exits 0 silently when TOOLU_LIB_DIR is unset (fail soft)" {
   payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/main.rs"}}'
   run env -u TOOLU_LIB_DIR tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" bash "$HOOK"

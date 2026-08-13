@@ -41,6 +41,10 @@
 #     stderr (visible in claude --debug), the module's possibly-partial
 #     stdout is DISCARDED, and dispatch continues with the next module.
 
+_TOOLU_DISPATCH_LIB_DIR="$(cd "${BASH_SOURCE%/*}" && pwd)"
+# shellcheck source=edit-records.sh
+. "$_TOOLU_DISPATCH_LIB_DIR/edit-records.sh"
+
 toolu_dispatch_modules() {
   # With <2 args `shift 2` would not shift at all, leaving $1 to be re-globbed
   # as a registry dir and every built-in module run twice.
@@ -150,9 +154,17 @@ toolu_dispatch_modules() {
     esac
 
     ctx=$(jq -r '.hookSpecificOutput.additionalContext // empty' <<<"$result" 2>/dev/null)
-    [[ -n "$ctx" ]] && contexts+=("$ctx")
+    if [[ -n "$ctx" ]]; then
+      local seen=0 existing
+      for existing in "${contexts[@]}"; do [[ "$existing" == "$ctx" ]] && seen=1; done
+      [[ $seen -eq 0 ]] && contexts+=("$ctx")
+    fi
     msg=$(jq -r '.systemMessage // empty' <<<"$result" 2>/dev/null)
-    [[ -n "$msg" ]] && messages+=("$msg")
+    if [[ -n "$msg" ]]; then
+      local seen_msg=0 existing_msg
+      for existing_msg in "${messages[@]}"; do [[ "$existing_msg" == "$msg" ]] && seen_msg=1; done
+      [[ $seen_msg -eq 0 ]] && messages+=("$msg")
+    fi
   done
   rm -f "$err_file"
 
@@ -184,5 +196,119 @@ toolu_dispatch_modules() {
     '
   fi
 
+  return 0
+}
+
+# Host-aware dispatch wrapper. Non-edit tools preserve the single-dispatch
+# path. Edit tools are normalized to one synthetic Edit payload per path; any
+# per-path denial/block wins for the entire original patch, while exact
+# duplicate advisories are emitted once.
+toolu_dispatch_hook() {
+  [[ $# -lt 2 ]] && return 0
+  local modules_dir="$1" event="$2"; shift 2
+  local registry_dirs=("$@")
+  local original_input="${input:-}" original_tool="${tool_name:-}"
+  local records normalize_rc=0 record path operation from moved_to synthetic
+  local result rc decision ctx msg c existing seen
+  local contexts=() messages=()
+
+  records=$(toolu_normalize_edit_records "$original_input" "$original_tool") || normalize_rc=$?
+  if [ "$normalize_rc" -eq 1 ]; then
+    toolu_dispatch_modules "$modules_dir" "$event" "${registry_dirs[@]}"
+    return $?
+  fi
+  if [ "$normalize_rc" -eq 2 ] || [ -z "$records" ]; then
+    case "$event" in
+      PreToolUse)
+        printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Unable to parse apply_patch file headers; patch blocked so protected-file and quality gates cannot be bypassed."}}'
+        ;;
+      PostToolUse)
+        printf '%s\n' '{"decision":"block","reason":"Unable to parse apply_patch file headers; per-file post-edit quality checks could not run."}'
+        ;;
+    esac
+    return 0
+  fi
+
+  while IFS= read -r record; do
+    [ -n "$record" ] || continue
+    path=$(jq -er '.path | strings' <<<"$record" 2>/dev/null) || continue
+    operation=$(jq -r '.operation // "update"' <<<"$record" 2>/dev/null)
+    from=$(jq -r '.from // ""' <<<"$record" 2>/dev/null)
+    moved_to=$(jq -r '.moved_to // ""' <<<"$record" 2>/dev/null)
+    synthetic=$(jq -c --arg path "$path" --arg operation "$operation" \
+      --arg from "$from" --arg moved_to "$moved_to" '
+        .tool_name = "Edit"
+        | .tool_input = ((.tool_input // {}) + {
+            file_path: $path,
+            path: $path,
+            toolu_edit_operation: $operation,
+            toolu_edit_from: $from,
+            toolu_edit_moved_to: $moved_to
+          })
+      ' <<<"$original_input" 2>/dev/null) || continue
+
+    input="$synthetic"
+    tool_name=Edit
+    TOOLU_EDIT_OPERATION="$operation"
+    TOOLU_EDIT_FROM="$from"
+    TOOLU_EDIT_MOVED_TO="$moved_to"
+    export input tool_name TOOLU_EDIT_OPERATION TOOLU_EDIT_FROM TOOLU_EDIT_MOVED_TO
+
+    rc=0
+    result=$(toolu_dispatch_modules "$modules_dir" "$event" "${registry_dirs[@]}") || rc=$?
+    if [ "$rc" -eq 2 ]; then
+      input="$original_input"; tool_name="$original_tool"; export input tool_name
+      unset TOOLU_EDIT_OPERATION TOOLU_EDIT_FROM TOOLU_EDIT_MOVED_TO
+      return 2
+    fi
+    [ -n "$result" ] || continue
+
+    case "$event" in
+      PreToolUse)
+        decision=$(jq -r '.hookSpecificOutput.permissionDecision // empty' <<<"$result" 2>/dev/null)
+        ;;
+      PostToolUse)
+        decision=$(jq -r '.decision // empty' <<<"$result" 2>/dev/null)
+        ;;
+      *) decision="" ;;
+    esac
+    if [ "$decision" = deny ] || [ "$decision" = block ]; then
+      input="$original_input"; tool_name="$original_tool"; export input tool_name
+      unset TOOLU_EDIT_OPERATION TOOLU_EDIT_FROM TOOLU_EDIT_MOVED_TO
+      printf '%s\n' "$result"
+      return 0
+    fi
+
+    ctx=$(jq -r '.hookSpecificOutput.additionalContext // empty' <<<"$result" 2>/dev/null)
+    if [ -n "$ctx" ]; then
+      seen=0
+      for existing in "${contexts[@]}"; do [ "$existing" = "$ctx" ] && seen=1; done
+      [ "$seen" -eq 0 ] && contexts+=("$ctx")
+    fi
+    msg=$(jq -r '.systemMessage // empty' <<<"$result" 2>/dev/null)
+    if [ -n "$msg" ]; then
+      seen=0
+      for existing in "${messages[@]}"; do [ "$existing" = "$msg" ] && seen=1; done
+      [ "$seen" -eq 0 ] && messages+=("$msg")
+    fi
+  done <<<"$records"
+
+  input="$original_input"; tool_name="$original_tool"; export input tool_name
+  unset TOOLU_EDIT_OPERATION TOOLU_EDIT_FROM TOOLU_EDIT_MOVED_TO
+
+  local merged_ctx="" merged_msg=""
+  for c in "${contexts[@]}"; do
+    if [ -z "$merged_ctx" ]; then merged_ctx="$c"; else merged_ctx="${merged_ctx}"$'\n\n'"${c}"; fi
+  done
+  for c in "${messages[@]}"; do
+    if [ -z "$merged_msg" ]; then merged_msg="$c"; else merged_msg="${merged_msg}"$'\n\n'"${c}"; fi
+  done
+  if [ -n "$merged_ctx" ] || [ -n "$merged_msg" ]; then
+    jq -n --arg ctx "$merged_ctx" --arg msg "$merged_msg" --arg ev "$event" '
+      {}
+      | (if $ctx != "" then .hookSpecificOutput = {hookEventName:$ev,additionalContext:$ctx} else . end)
+      | (if $msg != "" then .systemMessage = $msg else . end)
+    '
+  fi
   return 0
 }

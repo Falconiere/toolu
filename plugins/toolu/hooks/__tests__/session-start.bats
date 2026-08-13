@@ -11,6 +11,23 @@ teardown() {
   [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"
 }
 
+@test "session-start: Codex snapshots installed plugins into its native cache" {
+  cd "$TMP"
+  git init -q
+  git -c user.email=t@t -c user.name=t commit --allow-empty -q -m init
+  mkdir -p "$TMP/bin" "$TMP/codex"
+  cat > "$TMP/bin/codex" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' '{"installed":[{"pluginId":"toolu@toolu","name":"toolu","marketplaceName":"toolu","installed":true}],"available":[]}'
+SH
+  chmod +x "$TMP/bin/codex"
+  run env PATH="$TMP/bin:$PATH" TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$TMP/codex" \
+    bash "$HOOK" <<<'{"source":"startup"}'
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .status "$TMP/codex/toolu/codex-plugins.json")" = ready ]
+  [ "$(jq -r '.plugins[0]' "$TMP/codex/toolu/codex-plugins.json")" = toolu@toolu ]
+}
+
 @test "session-start: runs without error in an empty git repo" {
   cd "$TMP"
   git init -q

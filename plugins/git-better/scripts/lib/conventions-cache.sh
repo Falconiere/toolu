@@ -23,7 +23,15 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-cfg="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}"
+if [ -n "${TOOLU_CONFIG_DIR:-}" ]; then
+  cfg="$TOOLU_CONFIG_DIR"
+elif [ "${TOOLU_HOST_OVERRIDE:-}" = codex ] || {
+  [ -z "${TOOLU_HOST_OVERRIDE:-}" ] && [ -n "${PLUGIN_ROOT:-}" ];
+}; then
+  cfg="${CODEX_HOME:-$HOME/.codex}"
+else
+  cfg="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+fi
 cache_dir="$cfg/toolu/git-better/conventions"
 repo_id="$(printf '%s' "$root" | _sha256)"
 cache_file="$cache_dir/$repo_id.json"

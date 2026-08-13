@@ -1,0 +1,7 @@
+{
+  "name": "jira",
+  "version": "4.5.0",
+  "description": "Jira issue search and workflow from the session via a REST wrapper (skill + bash). Cloud + Server/DC, read and safe writes. Standalone, no dependencies.",
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
+}

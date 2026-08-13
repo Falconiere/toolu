@@ -529,6 +529,17 @@ _stub_comemory() {  # $1 = version string the stub reports
   [ "$output" = "$(pwd -P)" ]
 }
 
+@test "push_target_root: outside git uses the Codex project override" {
+  source_lib
+  outside="$BATS_TEST_TMPDIR/outside"
+  project="$BATS_TEST_TMPDIR/codex-project"
+  mkdir -p "$outside" "$project"
+  cd "$outside"
+  TOOLU_HOST_OVERRIDE=codex TOOLU_PROJECT_DIR="$project" run push_target_root "git push"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$project" ]
+}
+
 @test "push_target_root: -C from a different command in the chain is ignored" {
   source_lib
   git -c user.email=t@t -c user.name=t checkout -q -b feature

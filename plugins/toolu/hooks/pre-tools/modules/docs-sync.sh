@@ -18,7 +18,7 @@
 #     from docs-sync not existing at all.
 #
 # Inputs (exported by pre-tools/mod.sh): $tool_name, $input (JSON, also stdin).
-# Attestation: .claude/tmp/docs-sync/<branch-slug>.json (override $DOCS_SYNC_STATE_DIR).
+# Attestation: <host-state>/tmp/docs-sync/<branch-slug>.json (override $DOCS_SYNC_STATE_DIR).
 # Base branch: $DOCS_SYNC_BASE override, else detect_base_branch.
 
 # pipefail so a `git diff | git hash-object` failure surfaces rather than
@@ -107,7 +107,7 @@ mode=$(toolu_string docsSync.mode advise advise block off)
 # Attestation gate: a fresh (diff-sha-matching) attestation silences the nudge
 # (in both advise and block mode).
 slug=$(branch_slug "$current_branch")
-state_dir=${DOCS_SYNC_STATE_DIR:-${CLAUDE_PROJECT_DIR:-$(pwd)}/.claude/tmp/docs-sync}
+state_dir=${DOCS_SYNC_STATE_DIR:-$(toolu_project_state_dir docs-sync)}
 state_file="$state_dir/${slug}.json"
 if [[ -f "$state_file" && -n "$diff_sha" ]]; then
   attested_sha=$(jq -r '.diff_sha // ""' "$state_file" 2>/dev/null || echo "")

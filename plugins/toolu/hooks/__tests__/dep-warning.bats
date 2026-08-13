@@ -13,6 +13,7 @@ setup() {
   TMP=$(mktemp -d)
   PLUGROOT="$TMP/plug"; mkdir -p "$PLUGROOT/.claude-plugin"
   REG="$TMP/installed_plugins.json"
+  BIN="$TMP/bin"; mkdir -p "$BIN"
 }
 teardown() { [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"; }
 
@@ -28,6 +29,20 @@ _run_entry() {
     bash "$ENTRY" <<<'{"hook_event_name":"SessionStart","source":"startup"}'
 }
 
+_run_codex_entry() {
+  cat > "$BIN/codex" <<'SH'
+#!/bin/sh
+printf '%s\n' '{"installed":[]}'
+SH
+  chmod +x "$BIN/codex"
+  env PLUGIN_ROOT="$PLUGROOT" \
+    CLAUDE_PLUGIN_ROOT="$PLUGROOT" \
+    CODEX_HOME="$TMP/codex" \
+    PATH="$BIN:$PATH" \
+    HOME="$TMP" \
+    bash "$ENTRY" <<<'{"hook_event_name":"SessionStart","source":"startup"}'
+}
+
 @test "dep-warning: warns with install command for a missing dependency" {
   _manifest <<'JSON'
 {"name":"toolu","dependencies":[{"name":"caveman","marketplace":"caveman"}]}
@@ -37,6 +52,22 @@ JSON
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "required plugins missing"
   echo "$output" | grep -q "/plugin install caveman@caveman"
+}
+
+@test "dep-warning: Codex reads shared dependencies and prints the exact native install command" {
+  mkdir -p "$PLUGROOT/.codex-plugin"
+  _manifest <<'JSON'
+{"name":"dependent","dependencies":[{"name":"toolu","marketplace":"toolu"}]}
+JSON
+  printf '%s\n' '{"name":"dependent","version":"1.0.0","description":"test"}' \
+    > "$PLUGROOT/.codex-plugin/plugin.json"
+
+  run _run_codex_entry
+
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q 'required plugins missing'
+  echo "$output" | grep -q 'codex plugin add toolu@toolu'
+  ! echo "$output" | grep -q '/plugin install toolu@toolu'
 }
 
 @test "dep-warning: silent when every dependency is installed" {

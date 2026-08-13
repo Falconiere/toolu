@@ -1,19 +1,25 @@
 # comemory
 
-Persistent agent memory + code-index search (comemory): a skill, a scoped wrapper, a `/comemory:setup` command, `PreToolUse` scope enforcement, and a `SessionStart` memory-count publisher — registered into the toolu hook engine.
+Persistent agent memory + code-index search (comemory): a skill, a scoped
+wrapper, host-native setup workflow, `PreToolUse` scope enforcement, and a
+`SessionStart` memory-count publisher — registered into the toolu hook engine.
 
 ## Install
 
-```
+```text
 /plugin install comemory@toolu
+```
+
+```bash
+codex plugin add comemory@toolu
 ```
 
 Requires the `toolu` plugin.
 
 ## What it provides
 
-- **`agent-memory` skill** — an always-active protocol: recall from memory *first* (before reading files), and save decisions, conventions, bugs, and discoveries proactively. A search miss is an obligation to save the finding back. The mandate is **opt-in**: it activates only after you run `/comemory:setup` in a repo (per repo) — until then the protocol stays dormant and nothing is saved or required.
-- **`/comemory:setup` command** — detects the `comemory` binary, guides the install if it is missing or too old (never runs a package manager itself), then wires the repo: data dir, git hooks that auto-refresh the code index on commit/merge/checkout, an initial index, and a completions hint.
+- **`agent-memory` skill** — an always-active protocol: recall from memory *first* (before reading files), and save decisions, conventions, bugs, and discoveries proactively. A search miss is an obligation to save the finding back. The mandate is **opt-in**: it activates only after you run `/comemory:setup` on Claude or `$comemory:setup` on Codex in a repo — until then the protocol stays dormant.
+- **setup workflow** — the Claude command and Codex skill share one body. It detects the `comemory` binary, guides installation if missing or old (never runs a package manager), then wires the repo's data dir, git index hooks, initial index, and completions hint.
 - **scoped wrapper** (`comemory.sh`) with `delete` / `context` verbs, plus `PreToolUse` scope enforcement keeping memory access inside the current repo.
 - **`comemory-status` (`SessionStart`)** — publishes the per-repo memory count the statusline's `[COMEMORY:N]` segment reads.
 
@@ -27,4 +33,4 @@ brew install Falconiere/tap/comemory
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Falconiere/comemory/releases/latest/download/comemory-installer.sh | sh
 ```
 
-Then run `/comemory:setup`.
+Then run `/comemory:setup` on Claude or `$comemory:setup` on Codex.

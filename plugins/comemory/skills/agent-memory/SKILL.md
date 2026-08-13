@@ -12,10 +12,16 @@ Invoke the wrapper at the **stable published path** (a symlink the plugin's
 SessionStart hook refreshes every session):
 
 ```bash
-"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh" <subcmd> …
+# Codex
+"${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/comemory/comemory.sh" <subcmd> …
+# Claude Code
+"${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/comemory/comemory.sh" <subcmd> …
 ```
 
-`$CLAUDE_CONFIG_DIR` IS exported into the Bash tool's subshell; `$CLAUDE_PLUGIN_ROOT` is **NOT** — it is only set for hook subprocesses. Using the plugin-root path from a Bash tool call expands to an empty string and runs `/skills/.../comemory.sh: No such file or directory`, which prints zero bytes to stdout and looks like "no memory hits". **Always use the published path above.**
+Choose the line for the active host. Ordinary shell calls do not inherit
+plugin lifecycle variables, so never collapse these into one ambiguous
+fallback. The `comemory.sh` shorthand below always means that chosen published
+path; plugin-root variables are lifecycle-only.
 
 Repo-checkout fallback (when running tests/scripts directly against this repo, with the plugin not installed): `plugins/comemory/skills/agent-memory/scripts/comemory.sh`.
 
@@ -34,19 +40,19 @@ Repo-checkout fallback (when running tests/scripts directly against this repo, w
 | Situation | Scope |
 |---|---|
 | Working in CWD that is a git repo | basename of `git rev-parse --show-toplevel` (the wrapper handles this) |
-| Override needed (cross-repo work) | `MY_CLAUDE_COMEMORY_REPO=<name>` env var before the call |
-| Not in a git repo | Wrapper falls back to `unknown` — set `MY_CLAUDE_COMEMORY_REPO` explicitly |
+| Override needed (cross-repo work) | `TOOLU_COMEMORY_REPO=<name>` env var before the call (`MY_CLAUDE_COMEMORY_REPO` remains a legacy alias) |
+| Not in a git repo | Wrapper falls back to `unknown` — set `TOOLU_COMEMORY_REPO` explicitly |
 
 Announce the scope in user-facing text before performing the operation. Example:
 > Scoping comemory to **toolu** for recall on "error handling rules".
 
 ## CLI Reference — Use the Wrapper
 
-The wrapper at `"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh" <subcmd>` auto-injects `--repo <current-repo>`. **Never use MCP tools for comemory.** Raw `comemory` invocations are denied by the `comemory-scope` hook unless they include `--repo`.
+The wrapper at `comemory.sh <subcmd>` auto-injects `--repo <current-repo>`. **Never use MCP tools for comemory.** Raw `comemory` invocations are denied by the `comemory-scope` hook unless they include `--repo`.
 
 ### Save a memory
 ```bash
-"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh" save "<title>" "<body>" --kind KIND --tags "a,b"
+comemory.sh save "<title>" "<body>" --kind KIND --tags "a,b"
 ```
 - `<title>`: Short, searchable title (required)
 - `<body>`: Structured content (required) — the wrapper folds title + body into one memory
@@ -58,25 +64,25 @@ comemory **auto-warns on near-duplicates**: if a similar memory already exists, 
 
 ### Search memories
 ```bash
-"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh" search "<query>" --kind KIND
+comemory.sh search "<query>" --kind KIND
 ```
 Query-driven recall — you must supply a natural-language `<query>`. Returns compact ranked results scoped to the current repo. comemory's default candidate window is 12; pass `--k N` to widen it, and `--kind` to filter by memory kind.
 
 ### Browse memories
 ```bash
-"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh" list --kind KIND
+comemory.sh list --kind KIND
 ```
 Lists the current repo's memories (optionally filtered by `--kind`). Use to browse what's stored when you don't have a specific query.
 
 ### Statistics / health
 ```bash
-"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh" stats
+comemory.sh stats
 ```
 Reports data-directory + index health (maps to `comemory doctor`).
 
 ### Headline context lookup
 ```bash
-"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh" context "<query>" --k N
+comemory.sh context "<query>" --k N
 ```
 Repo-scoped headline lookup — bundles the matching code symbol(s) with the
 memories for a key (symbol name, file fragment, or phrase). Auto-injects `--repo`
@@ -84,18 +90,21 @@ like `search`.
 
 ### Delete a memory
 ```bash
-"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh" delete <id>
+comemory.sh delete <id>
 ```
 Soft-deletes the 8-hex memory id (moves it to `.trash/`). The id is global, so
 no `--repo` is needed. Prefer `--supersedes` on a new `save` when you are
 *replacing* an outdated memory rather than removing it outright.
 
 ### First-time setup
-Run `/comemory:setup` once per machine/repo. It detect-and-guides the `comemory`
+Run the comemory setup workflow once per machine/repo (`/comemory:setup` on
+Claude Code or `$comemory:setup` on Codex). It detects and guides the `comemory`
 binary (printing `brew install Falconiere/tap/comemory` if it is absent — the CLI
 is **not** on crates.io), then wires the data dir, git hooks that auto-refresh the
 code index on commit/merge/checkout, an initial `index-code`, and a completions
-hint. Agents can trigger the same flow with `comemory.sh setup`. As of comemory
+hint. Agents can trigger the same flow with
+`TOOLU_HOST_OVERRIDE=codex comemory.sh setup` on Codex or
+`TOOLU_HOST_OVERRIDE=claude comemory.sh setup` on Claude Code. As of comemory
 0.9.0 those git hooks also drive **auto-reinforcement** — commits touching a
 memory's referenced files reinforce it with no manual `feedback`.
 
@@ -104,7 +113,7 @@ The loop verbs (`feedback`, `mine`, `tune`, `eval`, `prune`, `gc`, `rebuild`, `m
 
 The one verb you SHOULD call yourself: after you actually **use** a recalled memory, close the loop so future recall sharpens.
 ```bash
-"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh" feedback <query_id> --used <id>
+comemory.sh feedback <query_id> --used <id>
 ```
 - `<query_id>` comes from a prior `search --json` envelope (run search with `--json` to get it).
 - `--used <csv ids>` = memories that helped; `--irrelevant <csv ids>` = memories that didn't.
@@ -160,7 +169,7 @@ See also: `skills/ast-grep/SKILL.md` for structural search and rewrite.
 ## 2. Save What You Learn
 After any exploration that yields **reusable knowledge**, save (announce the scope first):
 ```bash
-"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh" save "<title>" "<body>" --kind KIND --tags "category,key"
+comemory.sh save "<title>" "<body>" --kind KIND --tags "category,key"
 ```
 ### When to save (mandatory)
 - Architecture or design decision made
@@ -201,7 +210,7 @@ If a memory updates an outdated one, pass `--supersedes <id>` to replace it (com
 ### Example save (with explicit scope announcement)
 > Scoping comemory to **toolu** for save: decision / auth-middleware.
 ```bash
-"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh" save "JWT auth middleware" "**What**: Added JWT validation middleware\n**Why**: API routes needed authentication\n**Where**: src/middleware/auth.ts\n**Learned**: Must set httpOnly flag on cookies" --kind decision --tags "auth,middleware"
+comemory.sh save "JWT auth middleware" "**What**: Added JWT validation middleware\n**Why**: API routes needed authentication\n**Where**: src/middleware/auth.ts\n**Learned**: Must set httpOnly flag on cookies" --kind decision --tags "auth,middleware"
 ```
 
 ## 3. Search Protocol (Progressive Disclosure)
@@ -221,14 +230,14 @@ Start at layer 1. Only go to `list` if a targeted query isn't enough.
 ### Session start (recommended)
 At the start of a session, announce the repo scope, then recall with a query for whatever you're about to work on:
 ```bash
-"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh" search "<what you're about to work on>"
+comemory.sh search "<what you're about to work on>"
 ```
 ### Realtime saves (mandatory)
 Save learnings immediately as they happen — after every decision, bugfix, discovery, or pattern. Do NOT defer to session end. Announce scope before each save.
 ### Post-compaction recovery
 If you see a compaction message or "FIRST ACTION REQUIRED":
 1. Announce the repo scope.
-2. Call `"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh" search "<current task / open thread>"` to recover relevant prior context.
+2. Call `comemory.sh search "<current task / open thread>"` to recover relevant prior context.
 3. Only THEN continue working.
 
 ## 5. Raw CLI Fallback (rare)

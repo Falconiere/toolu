@@ -83,6 +83,67 @@ write_module() {
   echo "$output" | jq -e '.hookSpecificOutput.additionalContext | test("context-two")'
 }
 
+@test "post normalized dispatcher: duplicate per-file advisories are deduplicated" {
+  write_module "a_same" 'jq -n "{hookSpecificOutput:{hookEventName:\"PostToolUse\",additionalContext:\"same-post-advisory\"}}"'
+  patch=$'*** Begin Patch\n*** Add File: a.ts\n+x\n*** Add File: b.ts\n+y\n*** End Patch'
+  input=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command},tool_response:"Done"}')
+  tool_name=apply_patch
+  export input tool_name
+  run toolu_dispatch_hook "$MODULES_DIR" "PostToolUse"
+  [ "$status" -eq 0 ]
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext' | grep -c '^same-post-advisory$')" = 1 ]
+}
+
+@test "post normalized dispatcher: malformed apply_patch blocks normal result processing" {
+  patch=$'*** Begin Patch\n*** Delete File: a.ts'
+  input=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command},tool_response:"Done"}')
+  tool_name=apply_patch
+  export input tool_name
+  run toolu_dispatch_hook "$MODULES_DIR" "PostToolUse"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.decision == "block" and (.reason | contains("parse apply_patch"))' >/dev/null
+}
+
+@test "post-tools entrypoint runs TypeScript and Rust concerns for every Codex patch path and clears deletions" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  project="$TMP/project"
+  codex_home="$TMP/codex"
+  mkdir -p "$project/src" "$codex_home/toolu"
+  git -C "$project" init -q
+  printf '%s\n' '{}' > "$project/tsconfig.json"
+  : > "$project/bun.lock"
+  printf '%s\n' '[package]' 'name="fixture"' 'version="0.1.0"' > "$project/Cargo.toml"
+  git -C "$project" add tsconfig.json bun.lock Cargo.toml
+  git -C "$project" -c user.email=t@t -c user.name=t commit -qm setup
+  printf 'console.log("bad");\n' > "$project/src/bad.ts"
+  printf '#[allow(dead_code)]\nfn bad() {}\n' > "$project/src/bad.rs"
+
+  env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$codex_home" \
+    bash "$REPO_ROOT/../ts-quality/hooks/register.sh" </dev/null
+  env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$codex_home" \
+    bash "$REPO_ROOT/../rust-quality/hooks/register.sh" </dev/null
+  printf '%s\n' '{"version":1,"status":"ready","plugins":["rust-quality@toolu","ts-quality@toolu"]}' \
+    > "$codex_home/toolu/codex-plugins.json"
+
+  patch=$'*** Begin Patch\n*** Update File: src/bad.ts\n@@\n-a\n+b\n*** Update File: src/bad.rs\n@@\n-a\n+b\n*** End Patch'
+  payload=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command},tool_response:"Done"}')
+  run bash -c 'cd "$1" && env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$2" TOOLU_PROJECT_DIR="$1" bash "$3" <<<"$4"' \
+    _ "$project" "$codex_home" "$REPO_ROOT/hooks/post-tools/mod.sh" "$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q 'Forbidden console.log'
+  echo "$output" | grep -q 'Forbidden lint suppression'
+  gate="$project/.codex/tmp/quality-gate-status.json"
+  jq -e '.status == "failing" and (.entries["src/bad.ts"] != null) and (.entries["src/bad.rs"] != null)' "$gate" >/dev/null
+
+  rm "$project/src/bad.ts" "$project/src/bad.rs"
+  delete_patch=$'*** Begin Patch\n*** Delete File: src/bad.ts\n*** Delete File: src/bad.rs\n*** End Patch'
+  delete_payload=$(jq -cn --arg command "$delete_patch" '{tool_name:"apply_patch",tool_input:{command:$command},tool_response:"Done"}')
+  run bash -c 'cd "$1" && env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$2" TOOLU_PROJECT_DIR="$1" bash "$3" <<<"$4"' \
+    _ "$project" "$codex_home" "$REPO_ROOT/hooks/post-tools/mod.sh" "$delete_payload"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing" and ((.entries // {}) | length == 0)' "$gate" >/dev/null
+}
+
 @test "post dispatcher: systemMessage advisories are merged into the final output" {
   write_module "a_msg" 'jq -n "{systemMessage:\"message-one\"}"'
   write_module "b_ctx" 'jq -n "{hookSpecificOutput:{hookEventName:\"PostToolUse\",additionalContext:\"context-two\"},systemMessage:\"message-two\"}"'

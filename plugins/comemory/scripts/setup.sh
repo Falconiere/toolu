@@ -101,7 +101,7 @@ scope=$(comemory_repo_key)
 if [ -n "$scope" ]; then
   say "  repo scope: $scope"
 else
-  say "  repo scope: WARN not in a git repo — memory scopes to 'unknown' (set MY_CLAUDE_COMEMORY_REPO)"
+  say "  repo scope: WARN not in a git repo — memory scopes to 'unknown' (set TOOLU_COMEMORY_REPO)"
 fi
 
 # git hooks: auto-refresh the code index on commit/merge/checkout. No --force by
@@ -141,11 +141,15 @@ fi
 # NOT comemory_repo_key, which returns a basename / the main-repo path).
 # Keep in sync with _toolu_project_cfg in plugins/toolu/hooks/lib/config.sh
 # (cross-plugin sourcing is barred; parity enforced by path-parity.bats).
-m_root="${TOOLU_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-}}"
+m_host="${TOOLU_HOST_OVERRIDE:-}"
+[ -n "$m_host" ] || { [ -n "${PLUGIN_ROOT:-}" ] && m_host=codex || m_host=claude; }
+m_root="${TOOLU_PROJECT_DIR:-}"
+[ -n "$m_root" ] || { [ "$m_host" = claude ] && m_root="${CLAUDE_PROJECT_DIR:-}" || true; }
 [ -z "$m_root" ] && m_root=$(git rev-parse --show-toplevel 2>/dev/null || true)
-m_dir="${TOOLU_PROJECT_CONFIG_DIRNAME:-.claude}"
+m_dir="${TOOLU_PROJECT_CONFIG_DIRNAME:-}"
+[ -n "$m_dir" ] || { [ "$m_host" = codex ] && m_dir=.codex || m_dir=.claude; }
 if [ -z "$m_root" ]; then
-  say "  memory: WARN not in a git repo (no TOOLU_PROJECT_DIR/CLAUDE_PROJECT_DIR) — skipped setup_done marker"
+  say "  memory: WARN not in a git repo (no host project root) — skipped setup_done marker"
 elif ! command -v jq >/dev/null 2>&1; then
   say "  memory: WARN jq unavailable — skipped setup_done marker"
 else

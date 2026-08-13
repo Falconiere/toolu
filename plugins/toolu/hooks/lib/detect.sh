@@ -2,6 +2,10 @@
 # Shared detection helpers for project-agnostic hooks.
 # Source via:   . "${BASH_SOURCE%/*}/../lib/detect.sh"
 
+_TOOLU_DETECT_LIB_DIR="$(cd "${BASH_SOURCE%/*}" && pwd)"
+# shellcheck source=host.sh
+. "$_TOOLU_DETECT_LIB_DIR/host.sh"
+
 # Print the absolute project root (git toplevel) or "" if not in a git repo.
 detect_project_root() {
   git rev-parse --show-toplevel 2>/dev/null || true
@@ -124,6 +128,10 @@ detect_clippy() {
 detect_plugin_installed() {
   local spec="$1"
   [ -z "$spec" ] && return 0
+  if [ "$(toolu_host)" = codex ]; then
+    toolu_codex_plugin_installed "$spec"
+    return $?
+  fi
   # Same config-root resolution as registry.sh, so the install gate and the
   # registry modules it gates follow CLAUDE_CONFIG_DIR together.
   local registry="${CLAUDE_PLUGINS_REGISTRY:-${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/plugins/installed_plugins.json}"
@@ -251,7 +259,7 @@ is_git_push() {
 # file (wrong branch, wrong diff) or — when the main checkout happens to sit on
 # the base branch — skipping the gate altogether.
 #
-# Falls back to the cwd's toplevel, then $CLAUDE_PROJECT_DIR, then cwd.
+# Falls back to the cwd's toplevel, then the host-native project root, then cwd.
 push_target_root() {
   local command="$1" dir root
   local -a cd_args=()
@@ -280,7 +288,8 @@ push_target_root() {
     root=$(git "${cd_args[@]}" rev-parse --show-toplevel 2>/dev/null)
   fi
   [ -n "$root" ] || root=$(git rev-parse --show-toplevel 2>/dev/null)
-  [ -n "$root" ] || root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+  [ -n "$root" ] || root=$(toolu_project_root)
+  [ -n "$root" ] || root=$(pwd)
   echo "$root"
 }
 

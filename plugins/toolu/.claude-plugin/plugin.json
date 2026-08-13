@@ -1,7 +1,7 @@
 {
   "name": "toolu",
   "version": "4.5.0",
-  "description": "Falconiere's personal Claude Code bundle: skills, agents, slash commands, and hooks.",
+  "description": "Dual-host engineering discipline for Claude Code and Codex: workflow skills, agents, commands, and registry-driven quality hooks.",
   "author": {
     "name": "Falconiere Barbosa",
     "email": "hello@falconiere.io"

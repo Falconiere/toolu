@@ -32,7 +32,7 @@ _sha256() { if command -v sha256sum >/dev/null 2>&1; then sha256sum | cut -d' ' 
 summary=""
 root=$(git rev-parse --show-toplevel 2>/dev/null || true)
 if [ -n "$root" ]; then
-  cfg="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}"
+  cfg="${TOOLU_CONFIG_DIR:-${CODEX_HOME:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}}"
   cf="$cfg/toolu/git-better/conventions/$(printf '%s' "$root" | _sha256).json"
   if [ -f "$cf" ]; then
     summary=$(jq -r '

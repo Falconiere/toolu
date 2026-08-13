@@ -11,17 +11,17 @@ turn one even when no skill has fired.
 
 ## The ladder
 
-Tiers are named by **alias**, never by version id — `sonnet` means "the current
-mid tier", so the routing survives a new model generation with no edits.
+Claude tiers use stable aliases. Codex routes each class through the model and
+reasoning-effort pair in `models.codex.<class>`.
 
-| Class | Default | What belongs here |
-|---|---|---|
-| `mechanical` | `haiku` | Listings, single-symbol lookups, exact-literal search, mechanical renames, formatting, extracting one value, running one command. |
-| `exploration` | `sonnet` | Read-only search across many files; "where/how is X done"; mapping a subsystem. |
-| `implementation` | `sonnet` | A bounded, already-decided edit plus its tests. |
-| `review` | `sonnet` | Diff review, audits, convention checks. |
-| `synthesis` | `opus` | Reconciling several agents' findings into one answer. |
-| `architecture` | `opus` | Design, trade-offs, hard-to-reverse or cross-cutting decisions. |
+| Class | Claude | Codex | What belongs here |
+|---|---|---|---|
+| `mechanical` | `haiku` | Luna / medium | Exact lookups, formatting, one command. |
+| `exploration` | `sonnet` | Terra / medium | Read-only subsystem mapping. |
+| `implementation` | `sonnet` | Terra / medium | A bounded decided edit plus tests. |
+| `review` | `sonnet` | Terra / high | Diff review and audits. |
+| `synthesis` | `opus` | Sol / high | Reconciling several findings. |
+| `architecture` | `opus` | Sol / high | Cross-cutting design and trade-offs. |
 
 `inherit` is also a valid value — "whatever the lead thread runs". Use it when a
 subagent must match the session's model exactly rather than a fixed tier.
@@ -71,9 +71,8 @@ pass `model:`, so prefer these when one fits:
 | `toolu:implementer` | `sonnet` | One bounded plan step + its tests |
 | `toolu:architect` | `opus` | Design, trade-offs, synthesis (read-only) |
 
-For anything else, pass `model:` explicitly on the Agent call. Leaving it unset
-routes everything to the lead thread's model — the exact waste this rubric exists
-to stop.
+For anything else, route explicitly with the active host's delegation interface.
+Leaving routing unset inherits host defaults.
 
 ## Plan steps carry their tier
 
@@ -102,10 +101,9 @@ else is rejected with a warning and falls back to the default, so a typo
 mis-tiers nothing. `{"models": {"enabled": false}}` turns off the session
 injection entirely.
 
-**Limit:** config remaps the *rubric* — the tiers you pass on Agent calls and the
-table injected at session start. It cannot rewrite the `model:` line in an
-agent's frontmatter, which Claude Code reads directly from the file. To re-tier a
-pre-built agent, edit its frontmatter.
+**Limit:** Claude config remaps the rubric but cannot rewrite a pre-built agent's
+frontmatter. Codex custom-agent files also take precedence over class routing;
+run `$toolu:setup` after plugin upgrades to install current profile templates.
 
 ## Budget note
 

@@ -14,7 +14,7 @@
 # forgets to bump a changed plugin silently ships stale code to users. This
 # script removes that manual step:
 #
-#   - package.json + the toolu plugin  -> <new-version>  (toolu anchors the
+#   - package.json + both toolu manifests  -> <new-version>  (toolu anchors the
 #     monorepo; release.yml's tag gate checks plugins/toolu against the git tag).
 #   - every OTHER plugin whose files changed since the last v*.*.* tag -> a PATCH
 #     bump of its own (independent) version. Unchanged plugins are left alone.
@@ -121,29 +121,49 @@ new_versions+=("$NEW")
 stats+=("")
 plugin_names+=("")
 
-files+=(plugins/toolu/.claude-plugin/plugin.json)
-toolu_old="$(cur_version plugins/toolu/.claude-plugin/plugin.json)"
+toolu_claude_manifest="plugins/toolu/.claude-plugin/plugin.json"
+toolu_codex_manifest="plugins/toolu/.codex-plugin/plugin.json"
+[ -f "$toolu_codex_manifest" ] || { printf 'release.sh: missing Codex manifest %s\n' "$toolu_codex_manifest" >&2; exit 1; }
+toolu_old="$(cur_version "$toolu_claude_manifest")"
+toolu_codex_old="$(cur_version "$toolu_codex_manifest")"
+[ "$toolu_old" = "$toolu_codex_old" ] || { printf 'release.sh: manifest versions differ for toolu (%s != %s)\n' "$toolu_old" "$toolu_codex_old" >&2; exit 1; }
+files+=("$toolu_claude_manifest")
 old_versions+=("$toolu_old")
 new_versions+=("$NEW")
 stats+=("$(diffstat_for plugins/toolu)")
 plugin_names+=("toolu")
 
+files+=("$toolu_codex_manifest")
+old_versions+=("$toolu_codex_old")
+new_versions+=("$NEW")
+stats+=("")
+plugin_names+=("")
+
 for manifest in plugins/*/.claude-plugin/plugin.json; do
   name="$(basename "$(dirname "$(dirname "$manifest")")")"
   [ "$name" = toolu ] && continue
   dir="plugins/$name"
+  codex_manifest="plugins/$name/.codex-plugin/plugin.json"
+  [ -f "$codex_manifest" ] || { printf 'release.sh: missing Codex manifest %s\n' "$codex_manifest" >&2; exit 1; }
   # Skip plugins untouched since the last release (only when we have a baseline).
   if [ -n "$last_tag" ] && git diff --quiet "$last_tag" -- "$dir"; then
     skipped+=("$name")
     continue
   fi
   cur="$(cur_version "$manifest")"
+  codex_cur="$(cur_version "$codex_manifest")"
+  [ "$cur" = "$codex_cur" ] || { printf 'release.sh: manifest versions differ for %s (%s != %s)\n' "$name" "$cur" "$codex_cur" >&2; exit 1; }
   next="$(bump_patch "$cur")" || { printf 'release.sh: %s has a malformed version "%s" — fix it first\n' "$manifest" "$cur" >&2; exit 1; }
   files+=("$manifest")
   old_versions+=("$cur")
   new_versions+=("$next")
   stats+=("$(diffstat_for "$dir")")
   plugin_names+=("$name")
+  files+=("$codex_manifest")
+  old_versions+=("$codex_cur")
+  new_versions+=("$next")
+  stats+=("")
+  plugin_names+=("")
 done
 
 # Always print the plan so apply and dry-run look the same up to the "applied"

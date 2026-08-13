@@ -59,7 +59,7 @@ fi
 # stale id can never grow unbounded; the report aggregates a single session.
 sid=$(jq -r '.session_id // "unknown"' <<<"$input" 2>/dev/null | tr -cd 'A-Za-z0-9-')
 [ -n "$sid" ] || sid="unknown"
-ledger_dir="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu/byte-savings"
+ledger_dir="${TOOLU_CONFIG_DIR:-${CODEX_HOME:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}}/toolu/byte-savings"
 mkdir -p "$ledger_dir" 2>/dev/null || exit 0
 printf '{"kind":"%s","returned":%s,"full":%s}\n' "$kind" "$returned" "$full" \
   >> "$ledger_dir/$sid.jsonl" 2>/dev/null

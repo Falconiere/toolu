@@ -1,6 +1,6 @@
 # jira — Jira Issue Search & Workflow
 
-**Type:** Workflow | **Version:** 1.17.0 | **Standalone** (no dependencies)
+**Type:** Workflow | **Version:** 4.5.0 | **Standalone** (no dependencies)
 
 Jira issue search and workflow from the session via a REST wrapper — a skill plus bash. Works with Jira Cloud and Server/Data Center, supporting both read and safe writes.
 
@@ -50,11 +50,11 @@ Read-only lookups (`issue get`, `search`, `board list`) run directly. Anything t
 
 ```bash
 # Scaffold a plan doc, titled from a live `issue get`
-jira.sh plan init ABC-123          # -> .claude/tmp/jira/plans/ABC-123.md
+jira.sh plan init ABC-123          # -> <repo>/<host-state>/tmp/jira/plans/ABC-123.md
 
 # Author the steps, then run them
-jira.sh plan run .claude/tmp/jira/plans/ABC-123.md --step transition-done
-jira.sh plan run .claude/tmp/jira/plans/ABC-123.md --activity "closing out"
+jira.sh plan run <printed-plan-path> --step transition-done
+jira.sh plan run <printed-plan-path> --activity "closing out"
 
 jira.sh plan status ABC-123        # jira-ABC-123  2/3 green   next: comment-pr-link
 jira.sh plan path ABC-123          # ledger path; needs no credentials
@@ -78,7 +78,9 @@ A `check` must exit 0 **only when Jira itself reflects the change** — `$JIRA` 
 
 ### The ledger
 
-The ledger is written atomically to `<repo>/.claude/tmp/plan-ledger/jira-<KEY>.json` (schema version 1).
+The ledger is written atomically to the native host path:
+`<repo>/.claude/tmp/plan-ledger/jira-<KEY>.json` for Claude or
+`<repo>/.codex/tmp/plan-ledger/jira-<KEY>.json` for Codex (schema version 1).
 
 Two properties are deliberate:
 

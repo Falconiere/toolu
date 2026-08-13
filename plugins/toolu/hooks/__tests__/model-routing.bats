@@ -30,6 +30,31 @@ _run_hook() {
       TOOLU_PROJECT_DIR="$TMP" bash "$HOOK" <<<"{\"source\":\"${1:-startup}\"}"
 }
 
+_run_codex_hook() {
+  run --separate-stderr env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$CFG" \
+      TOOLU_CONFIG_DIR="$CFG" TOOLU_PROJECT_DIR="$TMP" \
+      TOOLU_CODEX_PLUGIN_SNAPSHOT="$TMP/codex-plugins.json" \
+      bash "$HOOK" <<<"{\"source\":\"${1:-startup}\"}"
+}
+
+@test "session-start: Codex injects native model slugs with reasoning efforts" {
+  _run_codex_hook startup
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q 'mechanical (`gpt-5.6-luna`, effort `medium`)'
+  echo "$output" | grep -q 'review (`gpt-5.6-terra`, effort `high`)'
+  echo "$output" | grep -q 'architecture (`gpt-5.6-sol`, effort `high`)'
+}
+
+@test "session-start: Codex model and effort project overrides are independent" {
+  mkdir -p "$TMP/.codex"
+  echo '{"models":{"codex":{"review":{"model":"review-local","reasoningEffort":"xhigh"}}}}' \
+    > "$TMP/.codex/toolu.config.json"
+  _run_codex_hook startup
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q 'review (`review-local`, effort `xhigh`)'
+  echo "$output" | grep -q 'mechanical (`gpt-5.6-luna`, effort `medium`)'
+}
+
 @test "session-start: injects the routing block with the default tiers" {
   _run_hook startup
   [ "$status" -eq 0 ]

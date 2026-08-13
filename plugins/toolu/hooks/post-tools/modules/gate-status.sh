@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Post-tool check: Quality gate state tracking
-# Persists global gate state to .claude/tmp/quality-gate-status.json based on
+# Persists global gate state to the host-native project state directory based on
 # the exit code of recognized quality/test commands.
 #
 # Inputs (from parent dispatcher post-tools/mod.sh, via `export`):
@@ -15,7 +15,10 @@
 # Cursor Agent uses tool_name "Shell"; Claude Code uses "Bash".
 [[ "$tool_name" != "Bash" && "$tool_name" != "Shell" ]] && exit 0
 
-GATE_DIR="$PROJECT_ROOT/.claude/tmp"
+_toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
+# shellcheck source=../../lib/host.sh
+. "$_toolu_lib/host.sh"
+GATE_DIR="$(toolu_project_state_root "$PROJECT_ROOT")"
 GATE_FILE="$GATE_DIR/quality-gate-status.json"
 mkdir -p "$GATE_DIR"
 
@@ -65,7 +68,6 @@ fi
 # failure no longer clobbers a file hook's failure and vice-versa. Soft if
 # absent: the fallbacks keep legacy single-slot behavior when the toolu lib
 # predates gate-file.sh.
-_toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 # shellcheck source=../../lib/gate-file.sh
 [ -f "$_toolu_lib/gate-file.sh" ] && . "$_toolu_lib/gate-file.sh"
 command -v gate_record_failure >/dev/null 2>&1 || gate_record_failure() {

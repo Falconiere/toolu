@@ -20,6 +20,18 @@ jira_plan_repo_root() {
   git rev-parse --show-toplevel 2>/dev/null || pwd
 }
 
+# This skill is self-contained and cannot source the toolu plugin's host
+# adapter. Mirror only its host-native project directory decision here.
+jira_plan_project_dirname() {
+  if [ -n "${TOOLU_PROJECT_CONFIG_DIRNAME:-}" ]; then
+    printf '%s\n' "$TOOLU_PROJECT_CONFIG_DIRNAME"
+  elif [ "${TOOLU_HOST_OVERRIDE:-}" = codex ] || { [ -z "${TOOLU_HOST_OVERRIDE:-}" ] && [ -n "${PLUGIN_ROOT:-}" ]; }; then
+    printf '.codex\n'
+  else
+    printf '.claude\n'
+  fi
+}
+
 # jira_plan_require_key KEY
 # Accept only a well-formed Jira key (LETTERS-DIGITS). Both path builders below
 # interpolate the key into a filename, so anything else -- a slash, a `..`, an
@@ -33,19 +45,21 @@ jira_plan_require_key() {
 }
 
 # jira_plan_ledger_path KEY
-# Print <repo_root>/.claude/tmp/plan-ledger/jira-<KEY>.json.
+# Print <repo_root>/<host-dir>/tmp/plan-ledger/jira-<KEY>.json.
 jira_plan_ledger_path() {
-  local key="$1"
+  local key="$1" project_dir
   jira_plan_require_key "$key" || return 1
-  printf '%s\n' "$(jira_plan_repo_root)/.claude/tmp/plan-ledger/jira-${key}.json"
+  project_dir=$(jira_plan_project_dirname)
+  printf '%s\n' "$(jira_plan_repo_root)/${project_dir}/tmp/plan-ledger/jira-${key}.json"
 }
 
 # jira_plan_doc_path KEY
-# Print <repo_root>/.claude/tmp/jira/plans/<KEY>.md.
+# Print <repo_root>/<host-dir>/tmp/jira/plans/<KEY>.md.
 jira_plan_doc_path() {
-  local key="$1"
+  local key="$1" project_dir
   jira_plan_require_key "$key" || return 1
-  printf '%s\n' "$(jira_plan_repo_root)/.claude/tmp/jira/plans/${key}.md"
+  project_dir=$(jira_plan_project_dirname)
+  printf '%s\n' "$(jira_plan_repo_root)/${project_dir}/tmp/jira/plans/${key}.md"
 }
 
 # jira_plan_now — ISO-8601 UTC, second precision.

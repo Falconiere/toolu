@@ -4,12 +4,12 @@
 
 ### Engineering discipline, wired into your AI coding agent.
 
-AI writes code fast — then skips the parts that keep a codebase alive: oversized files, swallowed errors, mock-only tests, undocumented exports, unreviewed pushes. **toolu** bakes that discipline back in — as hooks that gate every edit, skills that enforce a design → review → build → review → test cadence, and a plugin registry so language-specific rules ride along automatically. Runs on **Claude Code**.
+AI writes code fast — then skips the parts that keep a codebase alive: oversized files, swallowed errors, mock-only tests, undocumented exports, unreviewed pushes. **toolu** bakes that discipline back in — as hooks that gate every edit, skills that enforce a design → review → build → review → test cadence, and a plugin registry so language-specific rules ride along automatically. Runs on **Claude Code and Codex**.
 
 [![Release](https://img.shields.io/github/v/release/Falconiere/toolu?sort=semver&color=d97757)](https://github.com/Falconiere/toolu/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-665%20passing-brightgreen)](#testing)
-[![Hosts](https://img.shields.io/badge/host-Claude%20Code-d97757)](#install)
+[![Tests](https://img.shields.io/badge/tests-1340%2B%20passing-brightgreen)](#testing)
+[![Hosts](https://img.shields.io/badge/hosts-Claude%20Code%20%7C%20Codex-d97757)](#install)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
 [Why](#why) · [The quality gate](#the-quality-gate) · [Install](#install) · [What's inside](#whats-inside) · [Workflow skills](#workflow-skills) · [Architecture](#architecture) · [Configuration](#configuration)
@@ -62,7 +62,8 @@ The rule isn't "warn and move on" — it's a hard gate: **no new task while the 
 
 ## Install
 
-toolu runs on three hosts — install it the way that matches yours.
+toolu has first-class packages for Claude Code and Codex. Codex support covers
+the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux.
 
 ### Claude Code
 
@@ -105,30 +106,78 @@ curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Falconiere/comemory/rel
 
 The `comemory` persistent-memory mandate is **opt-in**: the `agent-memory` protocol activates only after you run `/comemory:setup` in a repo (per repo). Until then `comemory` does nothing — no memory is saved or required.
 
+### Codex
+
+Add the marketplace and install the core first:
+
+```bash
+codex plugin marketplace add Falconiere/toolu
+codex plugin add toolu@toolu
+```
+
+Then install whichever domain plugins you want:
+
+```bash
+codex plugin add rust-quality@toolu
+codex plugin add ts-quality@toolu
+codex plugin add ast-grep@toolu
+codex plugin add comemory@toolu
+codex plugin add context7@toolu
+codex plugin add exa-search@toolu
+codex plugin add git-better@toolu
+codex plugin add jira@toolu
+codex plugin add toolu-review@toolu
+codex plugin add pr-babysit@toolu
+codex plugin add statusline@toolu
+codex plugin add agent-browser@toolu
+```
+
+Plugins that depend on the core detect a missing installation at SessionStart
+and print the exact repair command: `codex plugin add toolu@toolu`.
+
+Codex discovers the same canonical workflows as namespaced skills:
+
+- `$toolu:commit`, `$toolu:review-and-commit`
+- `$comemory:setup`
+- `$statusline:status`
+- `$pr-babysit:babysit`
+- `$toolu:setup` to preview, install, update, back up, or remove the five bundled Codex agent profiles
+
+Codex requires explicit hash-based trust before plugin hooks execute. Review and
+trust the installed hooks through Codex's `/hooks` interface after installation;
+a changed hook must be trusted again. Codex cloud and Windows are not supported
+in this release. Custom agent profiles are installed locally under
+`${CODEX_HOME:-~/.codex}/agents`, so they are also unavailable in Codex cloud.
+
 ## What's inside
 
-Ten plugins, one marketplace. Install the core alone, or add the domain plugins.
+Thirteen plugins, one marketplace. Every plugin ships synchronized Claude and
+Codex manifests at the repository version (`4.5.0` here). Install the core
+alone, or add the domain plugins.
 
 | Group | Plugin | Version | What it does |
 |--------|--------|:-------:|--------------|
-| Core | **`toolu`** | `1.18.0` | The registry-driven hook engine plus the 8-phase workflow skills, slash commands, the `push-review` gate, and the `deep-explore` agent. The one required plugin. |
-| Quality gate | **`rust-quality`** | `0.1.0` | Rust `PostToolUse` checks — file / function / `impl` size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, tests in a flat `tests/`. Registers into the core engine. |
-| Quality gate | **`ts-quality`** | `0.1.0` | TypeScript `PostToolUse` checks — size limits, no `../` imports, no `as` / hand-rolled guards, colocated `__tests__/`, duplicate-type detection. Registers into the core engine. |
-| Code intel | **`ast-grep`** | `0.1.1` | Structural code search & rewrite (**ast-grep**) — adds the `ast-grep` skill and a `Grep → ast-grep` nudge mirrored into the registry. Standalone. |
-| Code intel | **`comemory`** | `0.3.0` | Persistent cross-session **memory** + code-index search (**comemory ≥ 0.8.0**), with a `/comemory:setup` command (detect+guide the binary, then wire git index-code hooks), `delete`/`context` wrapper verbs, `PreToolUse` scope enforcement, and a `SessionStart` memory-count publisher for the statusline. |
-| Knowledge | **`context7`** | `1.18.0` | Live **library documentation** & code-example lookup via the Context7 REST API. Standalone, no dependencies. |
-| Knowledge | **`exa-search`** | `1.18.0` | **Web / code / URL search** plus deep research via the Exa REST API. Standalone, no dependencies. |
-| Workflow | **\`toolu-review\`** | \`0.1.0\` | \`toolu-review:review\` — pre-push review mirroring the CI bot's checklist (correctness, security, perf, coverage, doc accuracy); writes the \`push-review\` state so the gate passes. Standalone. |
-| Workflow | **`pr-babysit`** | `0.1.0` | `/pr-babysit:babysit` — cron-driven PR babysitter that fetches review comments + the CI review-bot verdict, triages, fixes, and chases findings to zero until CI is green. |
-| UI | **`statusline`** | `0.3.1` | Optional gate-aware statusline — `model \| effort \| ctx \| gate \| folder \| branch \| mem \| caveman`, wired via a stable symlink (`/statusline:setup` to enable). Claude Code only. Standalone. |
+| Core | **`toolu`** | `4.5.0` | Registry-driven hook engine, 8-phase workflow, commit workflows, model routing, push-review gate, and custom-agent templates. |
+| Quality gate | **`rust-quality`** | `4.5.0` | Rust post-edit checks — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests. |
+| Quality gate | **`ts-quality`** | `4.5.0` | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
+| Code intel | **`ast-grep`** | `4.5.0` | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
+| Code intel | **`comemory`** | `4.5.0` | Persistent memory and code indexing with host-native setup, scope enforcement, and status publishing. |
+| Browser | **`agent-browser`** | `4.5.0` | Token-lean browser automation through accessibility-tree snapshots and stable element references. |
+| Knowledge | **`context7`** | `4.5.0` | Live library documentation and code examples through Context7. |
+| Knowledge | **`exa-search`** | `4.5.0` | Web, code, URL search, and deep research through Exa. |
+| Workflow | **`git-better`** | `4.5.0` | Lean git reads and cached repository-convention discovery. |
+| Workflow | **`jira`** | `4.5.0` | Jira Cloud and Server/DC search plus safe issue workflow operations. |
+| Workflow | **`toolu-review`** | `4.5.0` | Pre-push review matching the CI review bot and writing review attestations. |
+| Workflow | **`pr-babysit`** | `4.5.0` | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
+| Status | **`statusline`** | `4.5.0` | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
 
 Beyond the plugins, the core (`toolu`) also ships:
 
 - **\`push-review\` gate** — blocks \`git push\` on a feature branch until the diff has been run through an accepted reviewer (\`caveman:cavecrew-reviewer\` when installed, the built-in \`/code-review xhigh --fix\` skill, or the \`toolu-review:review\` skill), with a round cap (5 rewrites against an unchanged diff) that escalates instead of looping forever. The state file lives under the pushed repo's own root, so `git -C <worktree> push` is gated on the worktree's branch and diff.
 - **docs-sync backstop** — on `git push`, an **advisory** (never a block) when the branch diff changes code but no documentation surface (README, `docs/` guides, `SKILL.md` triggers) — a nudge to keep user-facing docs in sync with behavior. Silenced by a diff-`sha`-keyed attestation; surfaces are tunable via `docsSync.*` ([config](docs/config.md#docs-sync-surfaces-docssync)). Pairs with the "Docs in sync" convention the workflow skills enforce.
-- **Slash commands** — `/commit` and `/review-and-commit`.
-- **Model routing** — delegated work is tiered by its *class*, not its phrasing: mechanical → `haiku`, exploration / implementation / review → `sonnet`, synthesis / architecture → `opus`. The table is injected at session start (so it applies from turn one, and survives a compact), the workflow skills route against it, plan steps can pin their own tier (`"model": "<alias>"`, surfaced by `plan-ledger.sh status`), and every class is remappable under `models` in [config](docs/config.md#model-routing-models). Tiers are named by alias, so a new model generation needs no edits.
-- **Tier-pinned agents** — `quick-task` (Haiku, mechanical), `deep-explore` / `research-agent` / `implementer` (Sonnet), `architect` (Opus, read-only design & synthesis). The cheap tiers return `ESCALATE:` instead of guessing, so routing down is safe.
+- **Commit workflows** — Claude exposes `/commit` and `/review-and-commit`; Codex exposes `$toolu:commit` and `$toolu:review-and-commit`. Both read the same canonical workflow files, preventing host drift.
+- **Model routing** — delegated work is tiered by its *class*, not its phrasing. Claude defaults to Haiku/Sonnet/Opus aliases; Codex defaults to Luna/medium for mechanical work, Terra/medium for exploration and implementation, Terra/high for review, and Sol/high for synthesis and architecture. Both mappings are configurable in [config](docs/config.md#model-routing-models).
+- **Tier-pinned agents** — Claude reads the bundled agent definitions directly. `$toolu:setup` manages Codex TOML profiles for `quick-task` (Luna/medium, read-only), `deep-explore` and `research-agent` (Terra/medium, read-only), `implementer` (Terra/medium, workspace-write), and `architect` (Sol/high, read-only), with previews, conflict refusal, timestamped backups, and recoverable removal.
 - **Caveman mode** — ultra-compressed, token-frugal output (via the optional `caveman` companion).
 
 ## Workflow skills
@@ -170,7 +219,7 @@ flowchart TD
         AG["ast-grep<br/>register.sh"]
         CM["comemory<br/>register.sh"]
     end
-    RQ -- "assemble concern fragments at SessionStart" --> R[("registry<br/>agent config dir/toolu/")]
+    RQ -- "assemble concern fragments at SessionStart" --> R[("registry<br/>host config dir/toolu/")]
     TQ -- "one assembled module per language" --> R
     AG -- "namespaced plugin__name.sh" --> R
     CM -- "namespaced plugin__name.sh" --> R
@@ -188,7 +237,8 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
 ├── docs/                       # Runtime config schema, design notes
 └── plugins/
     ├── toolu/                  # Core plugin: hook engine + process gates
-    │   ├── .claude-plugin/     # plugin.json manifest
+    │   ├── .claude-plugin/     # Claude Code plugin.json manifest
+    │   ├── .codex-plugin/      # Codex plugin.json manifest
     │   ├── skills/             # brainstorm, spec(+review), plan(+review),
     │   │                       #   execution(+review), test, deep-research
     │   ├── agents/             # quick-task, deep-explore, research-agent, implementer, architect
@@ -202,7 +252,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     ├── rust-quality/           # Rust PostToolUse quality fragments, assembled at SessionStart
     ├── ts-quality/             # TypeScript PostToolUse quality fragments, assembled at SessionStart
     ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook
-    ├── pr-babysit/             # /pr-babysit:babysit command + parse-verdict.sh
+    ├── pr-babysit/             # Claude command + Codex skill + strict shared workflow
     └── toolu-review/            # toolu-review:review skill + push-review state writer
 ```
 
@@ -210,7 +260,12 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
 
 ## Configuration
 
-Toggle individual skills, hooks, or MCP servers without uninstalling anything. Use `~/.claude/toolu.config.json` (or `$CLAUDE_PROJECT_DIR/.claude/toolu.config.json`); `TOOLU_CONFIG_DIR` and `TOOLU_PROJECT_CONFIG_DIRNAME` override both roots. Defaults are opt-out — no file required.
+Toggle individual skills, hooks, or MCP servers without uninstalling anything.
+Claude uses `~/.claude/toolu.config.json` and `<repo>/.claude/toolu.config.json`;
+Codex uses `${CODEX_HOME:-~/.codex}/toolu.config.json` and
+`<repo>/.codex/toolu.config.json`. `TOOLU_CONFIG_DIR` and
+`TOOLU_PROJECT_CONFIG_DIRNAME` override both roots. Defaults are opt-out — no
+file required.
 
 ```json
 {
@@ -223,7 +278,7 @@ Quality-gate thresholds (file/function/impl line limits) are configurable per pr
 
 ## Testing
 
-The hook engine and language gates are covered by **~1340 [bats](https://github.com/bats-core/bats-core) tests**, all run in CI on every push:
+The hook engine and language gates are covered by **1340+ [bats](https://github.com/bats-core/bats-core) tests**, all run in CI on every push, including real temporary-home Codex install/remove smoke coverage:
 
 ```sh
 bun run test              # runs lint:shell → test:shell
@@ -246,7 +301,7 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 
 - Merge Conventional Commits to `main`. release-please maintains one batched **Release PR** for the whole repo. **Any** path counts — a `feat` in `tooling/` or `.github/` releases just like one under `plugins/`.
 - `feat` / `fix` / `feat!` (or `BREAKING CHANGE`) drive minor / patch / major bumps; `chore` / `docs` / `ci` / `refactor` ship no release.
-- Review the Release PR, then **merge it to cut the release** — the only manual step. It bumps `package.json` and every plugin's `plugin.json` to the new version, updates `CHANGELOG.md`, tags `vX.Y.Z`, and publishes the GitHub Release. The marketplace re-extracts a plugin when its `plugin.json` version changes.
+- Review the Release PR, then **merge it to cut the release** — the only manual step. It bumps `package.json` and every Claude and Codex plugin manifest to the new version, updates `CHANGELOG.md`, tags `vX.Y.Z`, and publishes the GitHub Release. The marketplace re-extracts a plugin when its manifest version changes.
 
 `tooling/release.sh` is **deprecated**, kept only as a manual escape hatch for when the automation is unavailable.
 
@@ -258,6 +313,9 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
   [Slash commands](https://docs.claude.com/en/docs/claude-code/slash-commands) ·
   [Hooks](https://docs.claude.com/en/docs/claude-code/hooks) ·
   [Plugins](https://docs.claude.com/en/docs/claude-code/plugins)
+- [Codex plugins](https://developers.openai.com/plugins/build/plugins) ·
+  [Hooks and trust](https://learn.chatgpt.com/docs/hooks) ·
+  [Custom subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents)
 
 ## License
 

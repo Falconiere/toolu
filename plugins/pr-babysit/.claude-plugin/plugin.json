@@ -1,7 +1,7 @@
 {
   "name": "pr-babysit",
   "version": "4.5.0",
-  "description": "Babysit a PR for the current branch: cron-driven loop that fetches unresolved review comments and the CI review-bot's verdict, triages, fixes, replies, resolves, and chases findings to zero until CI is green.",
+  "description": "Babysit a PR until review threads, the review-bot verdict, and CI are clear, using Claude cron or a durable Codex goal with isolated worktrees.",
   "author": {
     "name": "Falconiere Barbosa",
     "email": "hello@falconiere.io"

@@ -39,7 +39,7 @@ pl_diff_sha() {
 
 # pl_ledger_path
 # Print the ledger path for the current branch:
-#   <project_root>/.claude/tmp/plan-ledger/<branch_slug>.json
+#   <project_root>/<host-state>/tmp/plan-ledger/<branch_slug>.json
 # Non-zero if the project root can't be resolved (not a git repo).
 pl_ledger_path() {
   local root branch slug
@@ -47,7 +47,7 @@ pl_ledger_path() {
   [ -n "$root" ] || return 1
   branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || return 1
   slug=$(branch_slug "$branch")
-  printf '%s\n' "$root/.claude/tmp/plan-ledger/${slug}.json"
+  printf '%s/%s.json\n' "$(toolu_project_state_dir plan-ledger "$root")" "$slug"
 }
 
 # pl_evidence COMBINED_OUTPUT

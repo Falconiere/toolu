@@ -7,17 +7,31 @@
       "include-component-in-tag": false,
       "extra-files": [
         { "type": "json", "path": "plugins/toolu/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/toolu/.codex-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/agent-browser/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/agent-browser/.codex-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/ast-grep/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/ast-grep/.codex-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/toolu-review/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/toolu-review/.codex-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/comemory/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/comemory/.codex-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/context7/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/context7/.codex-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/exa-search/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/exa-search/.codex-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/git-better/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/git-better/.codex-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/jira/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/jira/.codex-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/pr-babysit/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/pr-babysit/.codex-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/rust-quality/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/rust-quality/.codex-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/statusline/.claude-plugin/plugin.json", "jsonpath": "$.version" },
-        { "type": "json", "path": "plugins/ts-quality/.claude-plugin/plugin.json", "jsonpath": "$.version" }
+        { "type": "json", "path": "plugins/statusline/.codex-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/ts-quality/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/ts-quality/.codex-plugin/plugin.json", "jsonpath": "$.version" }
       ]
     }
   }

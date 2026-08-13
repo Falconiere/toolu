@@ -1,6 +1,6 @@
 # toolu — Core Plugin
 
-**Type:** Core | **Version:** 1.18.0 | **Depends on:** `code-simplifier`, `caveman`
+**Type:** Core | **Version:** 4.5.0 | **Optional companions:** `code-simplifier`, `caveman`
 
 The registry-driven hook engine plus the 8-phase workflow, the `push-review` gate, and the `deep-explore` agent. **The one required plugin** — all domain plugins register into it.
 

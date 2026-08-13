@@ -44,7 +44,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit|Bash|Shell|Grep",
+        "matcher": "apply_patch|Edit|Write|MultiEdit|Bash|Shell|Grep",
         "hooks": [
           {
             "type": "command",
@@ -62,7 +62,7 @@
         ]
       },
       {
-        "matcher": "Agent|Task",
+        "matcher": "spawn_agent|Agent|Task",
         "hooks": [
           {
             "type": "command",
@@ -73,7 +73,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit|Bash|Shell|Grep",
+        "matcher": "apply_patch|Edit|Write|MultiEdit|Bash|Shell|Grep",
         "hooks": [
           {
             "type": "command",

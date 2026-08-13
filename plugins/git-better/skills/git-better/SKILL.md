@@ -7,7 +7,15 @@ description: "ALWAYS ACTIVE — Token-lean git. Use `gb` (status/diff/log/show) 
 
 Raw git burns context two ways: bloated read output (`git diff` dumps every hunk incl. lockfiles + color codes) and re-discovering repo conventions (PR template, commit/branch style) on every commit. `gb` fixes both. **Always active.**
 
-`gb` is installed as a shim at `${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu/bin/gb` (SessionStart). If `gb` is not on `$PATH`, call it by that full path, or use the raw-git fallbacks below — they need zero setup.
+`gb` is installed as a shim at one host-native path (SessionStart):
+
+- Codex: `TOOLU_HOST_OVERRIDE=codex ${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/toolu/bin/gb`
+- Claude Code: `TOOLU_HOST_OVERRIDE=claude ${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu/bin/gb`
+
+Choose the active host explicitly; ordinary shell calls do not inherit plugin
+lifecycle variables. The published `gb` shim also preserves that identity for
+commands invoked from `$PATH`. If `gb` is not on `$PATH`, call the complete
+host-specific command above, or use the raw-git fallbacks below.
 
 ## Pillar 1 — lean reads
 

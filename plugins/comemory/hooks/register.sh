@@ -14,7 +14,14 @@
 SPEC="comemory@toolu"
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 SRC_DIR="$SELF_DIR/pre-tools.d"
-REG_DIR="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu/pre-tools.d"
+if [ -n "${TOOLU_CONFIG_DIR:-}" ]; then
+  CONFIG_ROOT="$TOOLU_CONFIG_DIR"
+elif [ "${TOOLU_HOST_OVERRIDE:-}" = codex ] || { [ -z "${TOOLU_HOST_OVERRIDE:-}" ] && [ -n "${PLUGIN_ROOT:-}" ]; }; then
+  CONFIG_ROOT="${CODEX_HOME:-$HOME/.codex}"
+else
+  CONFIG_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+fi
+REG_DIR="$CONFIG_ROOT/toolu/pre-tools.d"
 
 # Consume stdin so Claude Code's hook IPC never stalls.
 cat > /dev/null 2>&1 || true
@@ -63,7 +70,7 @@ done
 PLUGIN_ROOT="$(cd "$SELF_DIR/.." 2>/dev/null && pwd)"
 wrapper_src="${PLUGIN_ROOT:+$PLUGIN_ROOT/skills/agent-memory/scripts/comemory.sh}"
 if [ -n "$wrapper_src" ] && [ -f "$wrapper_src" ]; then
-  pub_root="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/comemory"
+  pub_root="$CONFIG_ROOT/comemory"
   if mkdir -p "$pub_root" 2>/dev/null; then
     pub_dst="$pub_root/comemory.sh"
     # Own the path only when it is already our symlink or absent — never

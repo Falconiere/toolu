@@ -13,6 +13,13 @@ shopt -u patsub_replacement 2>/dev/null || true
 . "$HOOK_DIR/lib/detect.sh"
 # shellcheck source=lib/config.sh
 . "$HOOK_DIR/lib/config.sh"
+# shellcheck source=lib/registry.sh
+. "$HOOK_DIR/lib/registry.sh"
+
+# Codex has no installed_plugins.json equivalent on the hot path. Snapshot the
+# CLI's installed set once at SessionStart; all later checks consume this file.
+toolu_snapshot_codex_plugins
+toolu_registry_prune_inactive
 
 # Transitional orphan sweep (safe to delete this block once users have migrated,
 # ~v1.7+): the statusline moved to the standalone `statusline` plugin
@@ -24,7 +31,8 @@ shopt -u patsub_replacement 2>/dev/null || true
 # removes OUR symlink — a real file a user placed there is left untouched.
 # Deliberately runs BEFORE the `toolu_enabled` opt-out below: a user who
 # disables session-start context should still not be left with a dangling symlink.
-_old_sl="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu/statusline.sh"
+_config_root="$(toolu_config_root)"
+_old_sl="$_config_root/toolu/statusline.sh"
 [ -L "$_old_sl" ] && rm -f "$_old_sl"
 
 if ! toolu_enabled hooks session-start; then
@@ -73,17 +81,40 @@ render_doc() {
   content="${content//\{\{model_review\}\}/$MODEL_REVIEW}"
   content="${content//\{\{model_synthesis\}\}/$MODEL_SYNTHESIS}"
   content="${content//\{\{model_architecture\}\}/$MODEL_ARCHITECTURE}"
+  content="${content//\{\{effort_mechanical\}\}/$EFFORT_MECHANICAL}"
+  content="${content//\{\{effort_exploration\}\}/$EFFORT_EXPLORATION}"
+  content="${content//\{\{effort_implementation\}\}/$EFFORT_IMPLEMENTATION}"
+  content="${content//\{\{effort_review\}\}/$EFFORT_REVIEW}"
+  content="${content//\{\{effort_synthesis\}\}/$EFFORT_SYNTHESIS}"
+  content="${content//\{\{effort_architecture\}\}/$EFFORT_ARCHITECTURE}"
   printf '%s' "$content"
 }
 
 # Resolve the model-routing table once per session. Config-driven and stable
 # within a session, so it is safe for the cached SessionStart prefix.
-MODEL_MECHANICAL=$(toolu_model mechanical)
-MODEL_EXPLORATION=$(toolu_model exploration)
-MODEL_IMPLEMENTATION=$(toolu_model implementation)
-MODEL_REVIEW=$(toolu_model review)
-MODEL_SYNTHESIS=$(toolu_model synthesis)
-MODEL_ARCHITECTURE=$(toolu_model architecture)
+EFFORT_MECHANICAL="" EFFORT_EXPLORATION="" EFFORT_IMPLEMENTATION=""
+EFFORT_REVIEW="" EFFORT_SYNTHESIS="" EFFORT_ARCHITECTURE=""
+if [ "$(toolu_host)" = codex ]; then
+  IFS=$'\t' read -r MODEL_MECHANICAL _effort <<<"$(toolu_codex_model mechanical)"
+  EFFORT_MECHANICAL=", effort \`$_effort\`"
+  IFS=$'\t' read -r MODEL_EXPLORATION _effort <<<"$(toolu_codex_model exploration)"
+  EFFORT_EXPLORATION=", effort \`$_effort\`"
+  IFS=$'\t' read -r MODEL_IMPLEMENTATION _effort <<<"$(toolu_codex_model implementation)"
+  EFFORT_IMPLEMENTATION=", effort \`$_effort\`"
+  IFS=$'\t' read -r MODEL_REVIEW _effort <<<"$(toolu_codex_model review)"
+  EFFORT_REVIEW=", effort \`$_effort\`"
+  IFS=$'\t' read -r MODEL_SYNTHESIS _effort <<<"$(toolu_codex_model synthesis)"
+  EFFORT_SYNTHESIS=", effort \`$_effort\`"
+  IFS=$'\t' read -r MODEL_ARCHITECTURE _effort <<<"$(toolu_codex_model architecture)"
+  EFFORT_ARCHITECTURE=", effort \`$_effort\`"
+else
+  MODEL_MECHANICAL=$(toolu_model mechanical)
+  MODEL_EXPLORATION=$(toolu_model exploration)
+  MODEL_IMPLEMENTATION=$(toolu_model implementation)
+  MODEL_REVIEW=$(toolu_model review)
+  MODEL_SYNTHESIS=$(toolu_model synthesis)
+  MODEL_ARCHITECTURE=$(toolu_model architecture)
+fi
 
 # ── Git context (branch only) ───────────────────────────────────────────────
 # Cache discipline: this string lands in the once-cached SessionStart prefix, so
@@ -216,13 +247,13 @@ fi
 # can race the publishing hook, and the mandate simply appears one session
 # later. exa-search additionally gates on EXA_API_KEY: the wrapper hard-fails
 # without it, and mandating a broken tool is worse than staying quiet.
-exa_wrapper="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/exa-search/search.sh"
+exa_wrapper="$_config_root/exa-search/search.sh"
 if [ -n "${EXA_API_KEY:-}" ] && [ -x "$exa_wrapper" ] && toolu_enabled skills exa-search && toolu_plugin_active exa-search@toolu; then
-  mandates+=("exa-search (web search) — for ANY web search, code-example hunt, URL crawl, or topic research you MUST reach for \`\"\${CLAUDE_CONFIG_DIR:-\$HOME/.claude}/exa-search/search.sh\"\` FIRST (commands: search / crawl / similar — see the exa-search skill). Native WebSearch/WebFetch are a FALLBACK ONLY — use them when the wrapper errors or a URL needs your logged-in session.")
+  mandates+=("exa-search (web search) — for ANY web search, code-example hunt, URL crawl, or topic research you MUST reach for \`\"$exa_wrapper\"\` FIRST (commands: search / crawl / similar — see the exa-search skill). Native web tools are a FALLBACK ONLY — use them when the wrapper errors or a URL needs your logged-in session.")
 fi
-ctx7_wrapper="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/context7/search.sh"
+ctx7_wrapper="$_config_root/context7/search.sh"
 if [ -x "$ctx7_wrapper" ] && toolu_enabled skills context7 && toolu_plugin_active context7@toolu; then
-  mandates+=("context7 (library docs) — for ANY third-party library/framework question (API usage, current docs, code examples, version behavior) you MUST query \`\"\${CLAUDE_CONFIG_DIR:-\$HOME/.claude}/context7/search.sh\"\` FIRST (\`search <library>\` to resolve the ID, then \`docs <id> <query>\`) BEFORE answering from memory or searching the web. Web search is a FALLBACK ONLY when context7 lacks coverage.")
+  mandates+=("context7 (library docs) — for ANY third-party library/framework question (API usage, current docs, code examples, version behavior) you MUST query \`\"$ctx7_wrapper\"\` FIRST (\`search <library>\` to resolve the ID, then \`docs <id> <query>\`) BEFORE answering from memory or searching the web. Web search is a FALLBACK ONLY when context7 lacks coverage.")
 fi
 if [ "${#mandates[@]}" -gt 0 ]; then
   mwarn="MANDATORY — proactive plugin use (installed + available; NOT optional, do NOT ask permission):"
@@ -248,12 +279,24 @@ fi
 # inherits these helpers — the block silently no-ops. Intentional: repo-A
 # should not WARN about plugin deps declared in repo-B's manifest.
 plugin_manifest=""
-if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "$CLAUDE_PLUGIN_ROOT/.claude-plugin/plugin.json" ]; then
-  plugin_manifest="$CLAUDE_PLUGIN_ROOT/.claude-plugin/plugin.json"
+plugin_root=$(toolu_plugin_root)
+if [ "$(toolu_host)" = codex ] && [ -n "$plugin_root" ] && [ -f "$plugin_root/.codex-plugin/plugin.json" ]; then
+  plugin_manifest="$plugin_root/.codex-plugin/plugin.json"
+elif [ -n "$plugin_root" ] && [ -f "$plugin_root/.claude-plugin/plugin.json" ]; then
+  plugin_manifest="$plugin_root/.claude-plugin/plugin.json"
 elif [ -f "$PROJECT_ROOT/plugins/toolu/.claude-plugin/plugin.json" ]; then
   plugin_manifest="$PROJECT_ROOT/plugins/toolu/.claude-plugin/plugin.json"
 fi
 if [[ -n "$plugin_manifest" && -f "$plugin_manifest" ]] && command -v jq >/dev/null 2>&1; then
+  dependency_manifest="$plugin_manifest"
+  # Codex's published manifest schema has no dependency field. The Claude
+  # manifest remains the shared dependency declaration inside each dual-host
+  # plugin, so Codex reads it when its native manifest has no dependencies.
+  if [ "$(toolu_host)" = codex ] && ! jq -e '.dependencies | type == "array"' \
+      "$dependency_manifest" >/dev/null 2>&1 && \
+      [ -f "$plugin_root/.claude-plugin/plugin.json" ]; then
+    dependency_manifest="$plugin_root/.claude-plugin/plugin.json"
+  fi
   missing_plugins=()
   indeterminate=0
   while IFS= read -r req_spec; do
@@ -268,7 +311,7 @@ if [[ -n "$plugin_manifest" && -f "$plugin_manifest" ]] && command -v jq >/dev/n
       break
     fi
     if [ -z "$installed" ]; then
-      missing_plugins+=("/plugin install ${req_spec}")
+      missing_plugins+=("$(toolu_plugin_install_command "$req_spec")")
     fi
   done < <(jq -r '
     (.dependencies // [])[]
@@ -276,7 +319,7 @@ if [[ -n "$plugin_manifest" && -f "$plugin_manifest" ]] && command -v jq >/dev/n
       elif (type == "object" and (.name | type) == "string")
         then (if .marketplace then "\(.name)@\(.marketplace)" else .name end)
       else empty end
-  ' "$plugin_manifest" 2>/dev/null)
+  ' "$dependency_manifest" 2>/dev/null)
   if [ "$indeterminate" -eq 0 ] && [ "${#missing_plugins[@]}" -gt 0 ]; then
     pwarn="WARN: required plugins missing — review/simplify pipelines will fail. Install:"
     for cmd in "${missing_plugins[@]}"; do
