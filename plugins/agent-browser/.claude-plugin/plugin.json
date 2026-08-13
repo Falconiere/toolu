@@ -1,6 +1,6 @@
 {
   "name": "agent-browser",
-  "version": "4.5.0",
+  "version": "4.6.0",
   "description": "Efficient, token-lean browser automation for agents via agent-browser (skill + CLI wrapper) — accessibility-tree snapshots with @eN refs instead of HTML/screenshots. Standalone, no dependencies.",
   "author": {
     "name": "Falconiere Barbosa",

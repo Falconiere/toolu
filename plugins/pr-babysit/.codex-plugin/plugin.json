@@ -1,6 +1,6 @@
 {
   "name": "pr-babysit",
-  "version": "4.5.0",
+  "version": "4.6.0",
   "description": "Babysit a PR until review threads, the review-bot verdict, and CI are clear, using Claude cron or a durable Codex goal with isolated worktrees.",
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json"
