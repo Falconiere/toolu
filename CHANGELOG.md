@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.6.0](https://github.com/Falconiere/toolu/compare/v4.5.0...v4.6.0) (2026-08-13)
+
+
+### Features
+
+* **codex:** add first-class plugin support ([d87b7e0](https://github.com/Falconiere/toolu/commit/d87b7e0cf1a6b892327e6fc1df244295fe7be1a3))
+
+
+### Bug Fixes
+
+* **codex:** fail open when jq is unavailable ([193f373](https://github.com/Falconiere/toolu/commit/193f37356ebd2460033321e44df74a089c4e82ad))
+
 ## [4.5.0](https://github.com/Falconiere/toolu/compare/v4.4.0...v4.5.0) (2026-08-10)
 
 
