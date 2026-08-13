@@ -134,10 +134,11 @@ _toolu_apply_patch_records() {
 #   0: emitted one or more records
 #   1: TOOL_NAME is not an edit tool
 #   2: edit payload is malformed
+#   3: normalization dependency is unavailable
 toolu_normalize_edit_records() {
   local raw_input="$1" edit_tool="$2" path operation patch
   toolu_is_edit_tool "$edit_tool" || return 1
-  command -v jq >/dev/null 2>&1 || return 2
+  command -v jq >/dev/null 2>&1 || return 3
 
   if [ "$edit_tool" = apply_patch ]; then
     patch=$(jq -er '.tool_input.command | strings' <<<"$raw_input" 2>/dev/null) || return 2

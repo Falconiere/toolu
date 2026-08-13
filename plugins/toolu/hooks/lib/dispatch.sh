@@ -213,7 +213,7 @@ toolu_dispatch_hook() {
   local contexts=() messages=()
 
   records=$(toolu_normalize_edit_records "$original_input" "$original_tool") || normalize_rc=$?
-  if [ "$normalize_rc" -eq 1 ]; then
+  if [ "$normalize_rc" -eq 1 ] || [ "$normalize_rc" -eq 3 ]; then
     toolu_dispatch_modules "$modules_dir" "$event" "${registry_dirs[@]}"
     return $?
   fi

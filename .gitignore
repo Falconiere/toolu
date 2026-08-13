@@ -1,4 +1,5 @@
 .claude/tmp/
+.codex/tmp/
 # Atomic-write leftovers (e.g. interrupted editor writes: file.sh.tmp.PID.HASH)
 *.tmp.*
 
