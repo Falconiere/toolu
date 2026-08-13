@@ -102,6 +102,25 @@ write_module() {
   ! echo "$output" | grep -q 'must-not-run'
 }
 
+@test "normalized dispatcher: missing jq fails open instead of reporting a malformed patch" {
+  patch=$'*** Begin Patch\n*** Update File: a.ts\n@@\n-a\n+b\n*** End Patch'
+  input=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command}}')
+  empty_path="$TMP/no-jq"
+  mkdir -p "$empty_path"
+
+  run env PATH="$empty_path" /bin/bash -c '
+    . "$1"
+    toolu_dispatch_modules() { printf "%s\n" modules-ran; }
+    input="$2"
+    tool_name=apply_patch
+    export input tool_name
+    toolu_dispatch_hook "$3" PreToolUse
+  ' _ "$REPO_ROOT/hooks/lib/dispatch.sh" "$input" "$MODULES_DIR"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = modules-ran ]
+}
+
 @test "pre-tools entrypoint blocks a protected path hidden later in a Codex patch" {
   patch=$'*** Begin Patch\n*** Update File: README.md\n@@\n-a\n+b\n*** Update File: plugins/toolu/hooks/lib/dispatch.sh\n@@\n-a\n+b\n*** End Patch'
   payload=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command}}')
