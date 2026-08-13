@@ -1,6 +1,6 @@
 # ts-quality — TypeScript Quality Gate
 
-**Type:** Quality Gate | **Version:** 0.1.0 | **Depends on:** `toolu`
+**Type:** Quality Gate | **Version:** 4.5.0 | **Depends on:** `toolu`
 
 TypeScript `PostToolUse` quality checks registered into the toolu hook engine. Every TypeScript file the agent edits is checked on the spot.
 

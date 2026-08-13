@@ -7,7 +7,7 @@
 #   telemetry_append REPO_ROOT EVENT [EXTRA_JSON_OBJECT]
 #     Appends one line `{"v":1,"t":<iso8601 UTC>,"branch":<branch>,
 #     "event":<name>, ...EXTRA_JSON_OBJECT}` to
-#     REPO_ROOT/.claude/tmp/telemetry/<branch_slug>.jsonl
+#     REPO_ROOT/<host-state>/tmp/telemetry/<branch_slug>.jsonl
 #     ($TELEMETRY_DIR overrides the directory). EXTRA_JSON_OBJECT defaults to
 #     "{}"; its keys are merged in but can never override v/t/branch/event.
 #     Always returns 0 — a telemetry bug must never fail the caller's real
@@ -84,7 +84,7 @@ telemetry_append() {
     return 0
   fi
 
-  dir="${TELEMETRY_DIR:-$repo_root/.claude/tmp/telemetry}"
+  dir="${TELEMETRY_DIR:-$(toolu_project_state_dir telemetry "$repo_root")}"
   file="$dir/${slug}.jsonl"
   mkdir -p "$dir" 2>/dev/null || return 0
 

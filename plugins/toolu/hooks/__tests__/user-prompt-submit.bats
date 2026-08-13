@@ -38,6 +38,16 @@ CTX
   echo "$output" | grep -q "CUSTOM_PROJECT_CONTEXT_MARKER"
 }
 
+@test "user-prompt-submit: Codex sources .codex/context.sh" {
+  mkdir -p .codex
+  printf '%s\n' '#!/usr/bin/env bash' 'echo CODEX_PROJECT_CONTEXT_MARKER' > .codex/context.sh
+  chmod +x .codex/context.sh
+  payload=$(build_input "implement a new feature")
+  run env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$TMP/codex-home" bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "CODEX_PROJECT_CONTEXT_MARKER"
+}
+
 @test "user-prompt-submit: output does not mention yamless or routo" {
   payload=$(build_input "refactor the engine module")
   run bash "$HOOK" <<<"$payload"
@@ -344,11 +354,22 @@ CFG
   printf '#!/bin/sh\nexit 0\n' > "$stub/comemory"
   chmod +x "$stub/comemory"
   payload=$(build_input "implement a new dashboard widget")
-  run env PATH="$stub:$PATH" bash "$HOOK" <<<"$payload"
+  run env PATH="$stub:$PATH" HOME="$TMP/home" bash "$HOOK" <<<"$payload"
   [ "$status" -eq 0 ]
   echo "$output" | grep -q 'Recall first'
-  # The published path template, left unexpanded for the agent's own shell.
-  echo "$output" | grep -qF '${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh'
+  echo "$output" | grep -qF "$TMP/home/.claude/comemory/comemory.sh"
   # ...and never the bare command form that is not on PATH.
   ! echo "$output" | grep -qF '`comemory.sh search'
+}
+
+@test "user-prompt-submit: Codex recall hint uses CODEX_HOME" {
+  local stub="$BATS_TEST_TMPDIR/bin"
+  mkdir -p "$stub"
+  printf '#!/bin/sh\nexit 0\n' > "$stub/comemory"
+  chmod +x "$stub/comemory"
+  payload=$(build_input "implement a new dashboard widget")
+  run env PATH="$stub:$PATH" TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$TMP/codex-home" \
+    bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -qF "$TMP/codex-home/comemory/comemory.sh"
 }

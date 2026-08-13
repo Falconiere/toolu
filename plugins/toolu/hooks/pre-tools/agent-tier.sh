@@ -4,12 +4,12 @@
 # sibling script here is invisible to it and, like mcp-blocker.sh, must read
 # its own stdin instead of relying on the parent dispatcher's `export`s).
 #
-# Registered in hooks.json under matcher "Agent|Task" — deliberately loose
+# Registered in hooks.json under matcher "spawn_agent|Agent|Task" — deliberately loose
 # (it also matches TaskCreate/TaskUpdate/etc.); the real guard is the exact
 # tool_name equality check below (resolves spec OQ-1).
 #
 # Behavior:
-#   - Anything but tool_name == "Agent" or "Task" -> exit 0, no output.
+#   - Anything but tool_name == "spawn_agent", "Agent", or "Task" -> no-op.
 #   - Always append a `delegation` telemetry event: {model, subagent_type,
 #     step_id, step_model}, all null when not applicable. The plan-ledger join
 #     (step_id/step_model) only happens when a ledger file for the current
@@ -40,10 +40,10 @@ _input=$(cat 2>/dev/null || true)
 tool_name=$(jq -r '.tool_name // empty' <<<"$_input" 2>/dev/null || true)
 
 # Exact-equality self-filter: the hooks.json matcher is deliberately loose
-# (Agent|Task), so everything else — including TaskCreate/TaskUpdate — must be
+# (spawn_agent|Agent|Task), so everything else — including TaskCreate/TaskUpdate — must be
 # silently ignored here.
 case "$tool_name" in
-  Agent|Task) ;;
+  Agent|Task|spawn_agent) ;;
   *) exit 0 ;;
 esac
 
@@ -53,7 +53,8 @@ root=$(detect_project_root)
 [ -n "$root" ] || exit 0
 
 call_model=$(jq -r '.tool_input.model // empty' <<<"$_input" 2>/dev/null || true)
-subagent_type=$(jq -r '.tool_input.subagent_type // empty' <<<"$_input" 2>/dev/null || true)
+subagent_type=$(jq -r '.tool_input.subagent_type // .tool_input.task_name // .tool_input.agent_type // empty' <<<"$_input" 2>/dev/null || true)
+reasoning_effort=$(jq -r '.tool_input.reasoning_effort // .tool_input.reasoningEffort // empty' <<<"$_input" 2>/dev/null || true)
 
 # Ledger join: cheap stat first, so a repo with no active plan pays no extra
 # jq cost. LEDGER_DIR mirrors pre-tools/modules/plan-ledger.sh's override.
@@ -61,7 +62,7 @@ step_id="" step_model=""
 branch=$(git -C "$root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 if [ -n "$branch" ] && [ "$branch" != "HEAD" ]; then
   slug=$(branch_slug "$branch")
-  ledger_dir="${LEDGER_DIR:-$root/.claude/tmp/plan-ledger}"
+  ledger_dir="${LEDGER_DIR:-$(toolu_project_state_dir plan-ledger "$root")}"
   ledger_file="$ledger_dir/${slug}.json"
   if [ -f "$ledger_file" ]; then
     ledger_json=$(cat "$ledger_file" 2>/dev/null || true)
@@ -84,11 +85,13 @@ fi
 extra=$(jq -n \
   --arg model "$call_model" \
   --arg subagent_type "$subagent_type" \
+  --arg reasoning_effort "$reasoning_effort" \
   --arg step_id "$step_id" \
   --arg step_model "$step_model" \
   '{
     model:         (if $model == ""         then null else $model end),
     subagent_type: (if $subagent_type == "" then null else $subagent_type end),
+    reasoning_effort: (if $reasoning_effort == "" then null else $reasoning_effort end),
     step_id:       (if $step_id == ""       then null else $step_id end),
     step_model:    (if $step_model == ""    then null else $step_model end)
   }')

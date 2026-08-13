@@ -9,7 +9,7 @@
 #   $tool_name - name of the tool being invoked
 #   $input     - raw JSON payload (also piped to stdin; this module reads the env var)
 #
-# Ledger file: <project-root>/.claude/tmp/plan-ledger/<branch-slug>.json
+# Ledger file: <project-root>/<host-state>/tmp/plan-ledger/<branch-slug>.json
 # Override the parent dir via $LEDGER_DIR for testing.
 #
 # Decisions:
@@ -65,7 +65,7 @@ current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 slug=$(branch_slug "$current_branch")
 
 # Ledger lives next to push-review's state, keyed by the same branch slug.
-ledger_dir="${LEDGER_DIR:-$(detect_project_root)/.claude/tmp/plan-ledger}"
+ledger_dir="${LEDGER_DIR:-$(toolu_project_state_dir plan-ledger "$(detect_project_root)")}"
 state_file="$ledger_dir/${slug}.json"
 
 # Ledger absent: never deny on absence. Nudge only when the push diff touches a

@@ -81,7 +81,7 @@ vd_gate_quality() {
     return
   fi
 
-  gate_file="$repo_root/.claude/tmp/quality-gate-status.json"
+  gate_file="$(toolu_project_state_root "$repo_root")/quality-gate-status.json"
   if [ ! -f "$gate_file" ]; then
     vd_gate pass "no quality-gate failure recorded"
     return
@@ -105,7 +105,7 @@ vd_gate_plan() {
   local repo_root="$1" branch="$2" base="$3" cur="$4"
   local slug ledger_dir state_file zero_extra='{"summary":{"total":0,"fresh_green":0},"ac_uncovered":0}'
   slug=$(branch_slug "$branch")
-  ledger_dir="${LEDGER_DIR:-$repo_root/.claude/tmp/plan-ledger}"
+  ledger_dir="${LEDGER_DIR:-$(toolu_project_state_dir plan-ledger "$repo_root")}"
   state_file="$ledger_dir/${slug}.json"
 
   if [ ! -f "$state_file" ]; then
@@ -228,7 +228,7 @@ vd_gate_review() {
 
   local slug state_dir state_file
   slug=$(branch_slug "$branch")
-  state_dir="${STATE_DIR:-$repo_root/.claude/tmp/push-review}"
+  state_dir="${STATE_DIR:-$(toolu_project_state_dir push-review "$repo_root")}"
   state_file="$state_dir/${slug}.json"
 
   if [ ! -f "$state_file" ]; then
@@ -377,7 +377,7 @@ vd_gate_docs() {
   # must find the same file the writer wrote.
   local diff_sha state_dir state_file
   diff_sha=$(toolu_diff_sha "$repo_root" "$base") || diff_sha=""
-  state_dir="${DOCS_SYNC_STATE_DIR:-${CLAUDE_PROJECT_DIR:-$(pwd)}/.claude/tmp/docs-sync}"
+  state_dir="${DOCS_SYNC_STATE_DIR:-$(toolu_project_state_dir docs-sync)}"
   state_file="$state_dir/$(branch_slug "$branch").json"
   if [ -f "$state_file" ] && [ -n "$diff_sha" ]; then
     local attested_sha

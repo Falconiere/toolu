@@ -17,7 +17,17 @@
 # Resolve the jira CLI a check invokes as "$JIRA". JIRA_CLI overrides it, which
 # is how the bats sandbox points checks at its stubbed copy instead of the host's.
 jira_plan_cli() {
-  printf '%s\n' "${JIRA_CLI:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/jira/jira.sh}"
+  if [ -n "${JIRA_CLI:-}" ]; then
+    printf '%s\n' "$JIRA_CLI"
+  elif [ -n "${TOOLU_CONFIG_DIR:-}" ]; then
+    printf '%s/jira/jira.sh\n' "$TOOLU_CONFIG_DIR"
+  elif [ "${TOOLU_HOST_OVERRIDE:-}" = codex ] || {
+    [ -z "${TOOLU_HOST_OVERRIDE:-}" ] && [ -n "${PLUGIN_ROOT:-}" ];
+  }; then
+    printf '%s/jira/jira.sh\n' "${CODEX_HOME:-$HOME/.codex}"
+  else
+    printf '%s/jira/jira.sh\n' "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+  fi
 }
 
 # jira_plan_probe CLI

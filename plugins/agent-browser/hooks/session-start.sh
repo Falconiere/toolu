@@ -21,7 +21,14 @@ plugin_dir="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
 src="${plugin_dir:+$plugin_dir/skills/agent-browser/scripts/agent-browser.sh}"
 [ -n "$src" ] && [ -f "$src" ] || exit 0
 
-reg_root="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/agent-browser"
+if [ -n "${TOOLU_CONFIG_DIR:-}" ]; then
+  config_root="$TOOLU_CONFIG_DIR"
+elif [ "${TOOLU_HOST_OVERRIDE:-}" = codex ] || { [ -z "${TOOLU_HOST_OVERRIDE:-}" ] && [ -n "${PLUGIN_ROOT:-}" ]; }; then
+  config_root="${CODEX_HOME:-$HOME/.codex}"
+else
+  config_root="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+fi
+reg_root="$config_root/agent-browser"
 mkdir -p "$reg_root" 2>/dev/null || { echo "agent-browser: cannot create $reg_root — wrapper not published" >&2; exit 0; }
 
 # Own the path only when it is already our symlink or absent — never clobber

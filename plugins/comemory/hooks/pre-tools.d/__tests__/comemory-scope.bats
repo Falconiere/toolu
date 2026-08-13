@@ -219,19 +219,17 @@ _decision() {
 }
 
 # Tight assertion: the deny message must surface the STABLE published-path
-# template the agent's Bash subshell can expand (CLAUDE_CONFIG_DIR), NOT the
-# old plugin-root path (which expands to empty in the Bash tool because
-# CLAUDE_PLUGIN_ROOT is exported to hooks only). Regressing to the old path
-# would re-trigger the "empty results = not-found" bug class this fix exists
-# to close. Match the exact template (literal $ signs, single-quoted in the
-# regex so they don't expand in the assertion either).
-@test "comemory-scope: deny message teaches the stable \$CLAUDE_CONFIG_DIR template" {
+# template the agent's Bash subshell can expand on either host, NOT an ephemeral
+# plugin-root path. Regressing to a plugin-root path would re-trigger the
+# "empty results = not-found" bug class this fix exists to close. Match the
+# exact template (literal $ signs, single-quoted so they don't expand here).
+@test "comemory-scope: deny message teaches the stable host-native template" {
   payload=$(_mk 'comemory search "x"')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
   [ "$status" -eq 0 ]
   reason=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')
   # The template appears verbatim (with literal $); fixed-string substring check.
-  echo "$reason" | grep -qF '${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh'
+  echo "$reason" | grep -qF '${TOOLU_CONFIG_DIR:-${CODEX_HOME:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}}/comemory/comemory.sh'
   # Belt-and-braces: the old plugin-root path must NOT appear.
   ! echo "$reason" | grep -qF 'CLAUDE_PLUGIN_ROOT'
   ! echo "$reason" | grep -qF 'skills/agent-memory/scripts/comemory.sh'

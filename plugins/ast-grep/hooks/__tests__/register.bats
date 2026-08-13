@@ -23,6 +23,16 @@ teardown() { rm -rf "$TMP"; }
   done
 }
 
+@test "register: Codex PLUGIN_ROOT takes precedence and writes under CODEX_HOME" {
+  local codex_home="$TMP/codex-home"
+  local isolated_home="$TMP/home"
+  run env -u CLAUDE_CONFIG_DIR HOME="$isolated_home" PLUGIN_ROOT="$(cd "$(dirname "$REGISTER")/.." && pwd)" CODEX_HOME="$codex_home" \
+    bash "$REGISTER" <<<'{}'
+  [ "$status" -eq 0 ]
+  [ -f "$codex_home/toolu/pre-tools.d/ast-grep@toolu__search-nudge.sh" ]
+  [ ! -e "$isolated_home/.claude/toolu/pre-tools.d/ast-grep@toolu__search-nudge.sh" ]
+}
+
 @test "register: prunes its own stale entries but not other plugins'" {
   regdir="$CLAUDE_CONFIG_DIR/toolu/pre-tools.d"
   mkdir -p "$regdir"

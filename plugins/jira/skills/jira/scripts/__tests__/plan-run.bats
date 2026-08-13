@@ -24,6 +24,14 @@ teardown() { teardown_sandbox; }
 
 runplan() { bash -c "$S"'; cd "$2"; shift 2; jira_plan_run ABC-123 "$@"' _ "$TOOL_DIR" "$REPO" "$@"; }
 
+@test "plan CLI: explicit Codex host uses HOME/.codex without lifecycle variables" {
+  run env -u JIRA_CLI -u CODEX_HOME -u PLUGIN_ROOT \
+    HOME="$SANDBOX/home" TOOLU_HOST_OVERRIDE=codex \
+    bash -c "$S"'; jira_plan_cli' _ "$TOOL_DIR"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$SANDBOX/home/.codex/jira/jira.sh" ]
+}
+
 @test "run: green when Jira agrees, red when it does not; exits non-zero" {
   stub_responses issue.json
   run runplan "$DOC"

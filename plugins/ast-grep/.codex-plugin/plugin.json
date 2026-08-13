@@ -1,0 +1,7 @@
+{
+  "name": "ast-grep",
+  "version": "4.5.0",
+  "description": "Structural code search & rewrite (ast-grep): skill, wrapper, and a PreToolUse Grep→ast-grep nudge registered into the toolu hook engine.",
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
+}

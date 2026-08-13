@@ -124,4 +124,4 @@ Hold off until pattern is proven across ≥3 files.
 ## Cross-Reference
 
 - Memory: `skills/agent-memory/SKILL.md`
-- Project rules: `CLAUDE.md`
+- Project rules: `AGENTS.md`, `CLAUDE.md`, and other host instruction files

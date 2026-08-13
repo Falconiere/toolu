@@ -1,6 +1,6 @@
 # <NAME>
 
-<ONE-LINE-SUMMARY — lift the plugin.json `description`.>
+<ONE-LINE-SUMMARY — lift the shared Claude/Codex plugin.json `description`.>
 
 ## Install
 
@@ -8,7 +8,9 @@
 /plugin install <NAME>@toolu
 ```
 
-<DEPENDENCY-NOTE — if plugin.json lists a dependency, e.g. "Requires the `toolu` plugin." Otherwise: "Standalone, no dependencies.">
+<DEPENDENCY-NOTE — if the Claude plugin.json lists a dependency, e.g. "Requires the `toolu` plugin." Otherwise: "Standalone, no dependencies.">
+
+Keep `name`, `version`, and `description` identical in the plugin's `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`. Declare `./skills/` and `./hooks/hooks.json` in the Codex manifest when those directories exist, then add matching entries to both marketplaces.
 
 ## What it provides
 

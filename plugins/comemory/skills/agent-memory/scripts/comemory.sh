@@ -2,7 +2,8 @@
 # comemory CLI wrapper — persistent memory for AI agents
 # Defaults to the current project (auto-detected via comemory_repo_key) and
 # scopes every operation to it via comemory's server-side --repo filter.
-# Override the repo with MY_CLAUDE_COMEMORY_REPO=<name>.
+# Override the repo with TOOLU_COMEMORY_REPO=<name>. The historical
+# MY_CLAUDE_COMEMORY_REPO name remains a lower-precedence compatibility alias.
 # Honors COMEMORY_DATA_DIR (passed through to the comemory CLI, which already
 # reads it from the environment) for the data root.
 set -euo pipefail
@@ -75,7 +76,7 @@ if ! command -v comemory >/dev/null 2>&1; then
   exit 0
 fi
 
-REPO="${MY_CLAUDE_COMEMORY_REPO:-$(comemory_repo_key)}"
+REPO="${TOOLU_COMEMORY_REPO:-${MY_CLAUDE_COMEMORY_REPO:-$(comemory_repo_key)}}"
 if [ -z "$REPO" ]; then
   REPO="unknown"
   # Visibility: an empty key means every memory lands in the shared "unknown"
@@ -84,9 +85,9 @@ if [ -z "$REPO" ]; then
   # the same empty key as being outside a repo, and blaming git for a broken
   # install sends the reader hunting the wrong thing.
   if [ "$_rs_ok" -eq 0 ]; then
-    printf 'comemory.sh: repo-scope lib not found at %s — cannot detect the repo, scoping to "unknown" (broken install; set MY_CLAUDE_COMEMORY_REPO to isolate)\n' "$_rs" >&2
+    printf 'comemory.sh: repo-scope lib not found at %s — cannot detect the repo, scoping to "unknown" (broken install; set TOOLU_COMEMORY_REPO to isolate)\n' "$_rs" >&2
   else
-    printf 'comemory.sh: no git repo and MY_CLAUDE_COMEMORY_REPO unset — scoping to "unknown" (set MY_CLAUDE_COMEMORY_REPO to isolate)\n' >&2
+    printf 'comemory.sh: no git repo and no repo override — scoping to "unknown" (set TOOLU_COMEMORY_REPO to isolate)\n' >&2
   fi
 fi
 # A flag-like repo value (leading '-') would be parsed by comemory/clap as a

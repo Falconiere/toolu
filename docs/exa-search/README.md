@@ -1,6 +1,6 @@
 # exa-search — Web, Code & URL Search
 
-**Type:** Knowledge | **Version:** 1.18.0 | **Standalone** (no dependencies)
+**Type:** Knowledge | **Version:** 4.5.0 | **Standalone** (no dependencies)
 
 Web search, code-example search, URL crawling, and deep research via the Exa REST API — a skill plus a bash REST wrapper.
 

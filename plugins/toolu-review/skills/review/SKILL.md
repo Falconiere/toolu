@@ -42,7 +42,14 @@ the pre-fix tree, so committing staleifies it and the push denies.
 4. Record the clean state for the push-review gate:
 
    ```bash
-   bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review/write-state.sh" \
+   # Codex
+   TOOLU_HOST_OVERRIDE=codex bash \
+     "${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/toolu-review/write-state.sh" \
+     --findings-count 0 --reviewers '["toolu-review:review"]'
+
+   # Claude Code
+   TOOLU_HOST_OVERRIDE=claude bash \
+     "${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu-review/write-state.sh" \
      --findings-count 0 --reviewers '["toolu-review:review"]'
    ```
 
@@ -53,17 +60,16 @@ the pre-fix tree, so committing staleifies it and the push denies.
    the path given is not one. `$STATE_DIR`, when set, overrides the directory for
    the writer and the gate alike.
 
-   `write-state.sh` is published as a symlink at
-   `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review/write-state.sh` by the plugin's
-   SessionStart hook (refreshed every session). `$CLAUDE_CONFIG_DIR` IS exported into
-   the Bash tool's subshell; `$CLAUDE_PLUGIN_ROOT` is **NOT** — it is only set for
-   hook subprocesses, so the plugin-root path expands to an empty string from a
-   Bash tool call.
+   `write-state.sh` is published below the active host's explicit config root,
+   as shown above, by the plugin's SessionStart hook. Always pass the matching
+   host override in the same command: plugin-root variables are lifecycle
+   context and are not reliable in ordinary shell calls.
 
    It computes the gate's exact `diff_sha`/`base`/`slug`, sets `review_round`
    (1 for a new `diff_sha`, +1 only when rewriting at the same one — the gate
    caps at 5 rounds on an unchanged diff), and writes
-   `<repo root>/.claude/tmp/push-review/<branch-slug>.json` atomically as
+   the active host's `<repo root>/.claude/tmp/push-review/` or
+   `<repo root>/.codex/tmp/push-review/` path atomically as
    schema `version: 2`, including `reviewed_files` — auto-computed from
    `git diff --name-only <base>...HEAD` (sorted, unique); pass
    `--reviewed-files a.ts,b.rs` only if the review genuinely covered a

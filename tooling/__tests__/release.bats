@@ -14,11 +14,17 @@ setup() {
     git init -q
     git config user.email a@b.c
     git config user.name t
-    mkdir -p plugins/toolu/.claude-plugin plugins/alpha/.claude-plugin plugins/beta/.claude-plugin
+    mkdir -p \
+      plugins/toolu/.claude-plugin plugins/toolu/.codex-plugin \
+      plugins/alpha/.claude-plugin plugins/alpha/.codex-plugin \
+      plugins/beta/.claude-plugin plugins/beta/.codex-plugin
     printf '{\n  "name": "toolu",\n  "version": "1.0.0"\n}\n' > package.json
     printf '{\n  "name": "toolu",\n  "version": "1.0.0"\n}\n' > plugins/toolu/.claude-plugin/plugin.json
+    printf '{\n  "name": "toolu",\n  "version": "1.0.0"\n}\n' > plugins/toolu/.codex-plugin/plugin.json
     printf '{\n  "name": "alpha",\n  "version": "0.1.0"\n}\n' > plugins/alpha/.claude-plugin/plugin.json
+    printf '{\n  "name": "alpha",\n  "version": "0.1.0"\n}\n' > plugins/alpha/.codex-plugin/plugin.json
     printf '{\n  "name": "beta",\n  "version": "0.2.0"\n}\n' > plugins/beta/.claude-plugin/plugin.json
+    printf '{\n  "name": "beta",\n  "version": "0.2.0"\n}\n' > plugins/beta/.codex-plugin/plugin.json
     git add -A && git commit -qm init && git tag -m rel v1.0.0
     printf 'echo hi\n' > plugins/alpha/run.sh   # change ONLY alpha after the tag
     git add -A && git commit -qm "touch alpha"
@@ -33,6 +39,13 @@ teardown() {
   RELEASE_ROOT="$REPO" bash "$SCRIPT" 1.1.0
   [ "$(jq -r .version "$REPO/package.json")" = "1.1.0" ]
   [ "$(_ver plugins/toolu/.claude-plugin/plugin.json)" = "1.1.0" ]
+}
+
+@test "release: keeps each changed plugin's Codex manifest synchronized" {
+  RELEASE_ROOT="$REPO" bash "$SCRIPT" 1.1.0
+  [ "$(_ver plugins/toolu/.codex-plugin/plugin.json)" = "1.1.0" ]
+  [ "$(_ver plugins/alpha/.codex-plugin/plugin.json)" = "0.1.1" ]
+  [ "$(_ver plugins/beta/.codex-plugin/plugin.json)" = "0.2.0" ]
 }
 
 @test "release: patch-bumps a plugin changed since the last tag" {

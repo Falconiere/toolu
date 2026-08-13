@@ -23,7 +23,13 @@ _rs="$(cd "${BASH_SOURCE%/*}/../lib" 2>/dev/null && pwd)/repo-scope.sh"
 # shellcheck source=../lib/repo-scope.sh
 . "$_rs"
 
-CFG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+if [ -n "${TOOLU_CONFIG_DIR:-}" ]; then
+  CFG="$TOOLU_CONFIG_DIR"
+elif [ "${TOOLU_HOST_OVERRIDE:-}" = codex ] || { [ -z "${TOOLU_HOST_OVERRIDE:-}" ] && [ -n "${PLUGIN_ROOT:-}" ]; }; then
+  CFG="${CODEX_HOME:-$HOME/.codex}"
+else
+  CFG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+fi
 cwd=$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null)
 [ -n "$cwd" ] || cwd="$PWD"
 

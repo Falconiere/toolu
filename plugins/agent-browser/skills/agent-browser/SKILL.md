@@ -15,13 +15,15 @@ Invoke at the **stable published path** (a symlink the plugin's SessionStart hoo
 refreshes every session):
 
 ```bash
-"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/agent-browser/agent-browser.sh" <command> [args]
+# Codex
+"${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/agent-browser/agent-browser.sh" <command> [args]
+# Claude Code
+"${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/agent-browser/agent-browser.sh" <command> [args]
 ```
 
-`$CLAUDE_CONFIG_DIR` IS exported into the Bash tool's subshell; `$CLAUDE_PLUGIN_ROOT`
-is **NOT** — it is only set for hook subprocesses. Using the plugin-root path from a
-Bash tool call expands to an empty string and runs `/skills/.../agent-browser.sh:
-No such file`. **Always use the published path above.**
+Choose the line for the active host. Ordinary shell calls do not inherit
+plugin lifecycle variables, so never collapse these into one ambiguous
+fallback. Use the published path; plugin-root variables are lifecycle-only.
 
 Repo-checkout fallback (for tests or dev, where the SessionStart hook has not run
 so the symlink may be absent):
@@ -69,6 +71,7 @@ manager for you.
 
 - **Static docs / a library API question** → use the `context7` skill.
 - **A plain web search or fetching a static page's text/JSON** → use `exa-search`
-  (or WebFetch). Spinning up a browser for a static GET is pure waste.
+  (or the active host's native web fetch). Spinning up a browser for a static
+  GET is pure waste.
 - Reach for agent-browser only when the page is interactive or JS-rendered, or the
   task requires clicking/typing/submitting in a live browser.

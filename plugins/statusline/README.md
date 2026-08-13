@@ -1,7 +1,7 @@
 # statusline
 
-An optional Claude Code statusline. One line, assembled defensively from the
-statusline JSON Claude Code sends on stdin:
+Host-native project status. Claude Code gets an optional persistent one-line
+statusline assembled defensively from the JSON Claude sends on stdin:
 
 ```
 model | effort:high | ctx:45k/200k (22%) | example.com | ✗ gate:failing | my-folder | main ↑2↓1 [+2 ~1 ?3] | [COMEMORY:42] | [CAVEMAN]
@@ -13,10 +13,16 @@ model | effort:high | ctx:45k/200k (22%) | example.com | ✗ gate:failing | my-f
 | effort | `.effort.level` | the model reports an effort level |
 | ctx | `.context_window.*` | always |
 | `example.com` | `.oauthAccount.emailAddress` in `~/.claude.json` (or `$CLAUDE_CONFIG_DIR/.claude.json`) | logged in via Claude OAuth — shows only the email domain, not the full address |
-| `✗ gate:failing` | `.claude/tmp/quality-gate-status.json` at the git root | a **gate writer** (e.g. the `rust-quality` / `ts-quality` / `toolu` plugins) marks the gate failing |
+| `✗ gate:failing` | host-native `.claude/tmp/quality-gate-status.json` at the git root | a **gate writer** (e.g. the `rust-quality` / `ts-quality` / `toolu` plugins) marks the gate failing |
 | folder + branch + status | git, from the workspace dir | inside a git repo — `↑N↓M` shows ahead/behind of the tracked remote, `[+N ~N ?N]` shows staged/unstaged/untracked file counts (both omitted when clean and up-to-date) |
 | `[COMEMORY:N]` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory-status/<repo>.json` | the **comemory** plugin published a memory count this session |
 | `[CAVEMAN]` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.caveman-active` | the **caveman** plugin is active |
+
+Codex exposes `$statusline:status` instead of a persistent bar. It reports the
+repository, branch/ahead/behind state, working-tree counts, quality gate from
+`<repo>/.codex/tmp/quality-gate-status.json`, and comemory count. It deliberately
+omits account, model, effort, and context-window fields that Codex does not make
+available to the skill.
 
 The account, gate, comemory, git status, and caveman segments degrade gracefully — if the file
 they read is absent, the segment simply doesn't render. So statusline is
@@ -24,7 +30,16 @@ they read is absent, the segment simply doesn't render. So statusline is
 automatically when the relevant plugins are also installed (or, for the account
 segment, when you're logged in via Claude OAuth rather than an API key).
 
-## Install & wire up
+## Codex install
+
+```bash
+codex plugin add statusline@toolu
+```
+
+Run `$statusline:status` whenever you want a current report. No setup or
+persistent renderer is required.
+
+## Claude Code install & wire up
 
 Claude Code does not let a plugin declare `statusLine` in its manifest, so the
 SessionStart hook symlinks the script to a stable, version-independent path:

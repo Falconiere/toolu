@@ -16,10 +16,19 @@ Use this skill to work a Jira ticket without leaving the session: search by JQL,
 Invoke at the **stable published path** (a symlink the plugin's SessionStart hook refreshes every session):
 
 ```bash
-"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/jira/jira.sh" [--api-version N] [--lean] <family> <action> [options]
+# Codex
+TOOLU_HOST_OVERRIDE=codex \
+  "${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/jira/jira.sh" [--api-version N] [--lean] <family> <action> [options]
+# Claude Code
+TOOLU_HOST_OVERRIDE=claude \
+  "${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/jira/jira.sh" [--api-version N] [--lean] <family> <action> [options]
 ```
 
-`$CLAUDE_CONFIG_DIR` IS exported into the Bash tool's subshell; `$CLAUDE_PLUGIN_ROOT` is **NOT** — it is only set for hook subprocesses. Using the plugin-root path from a Bash tool call expands to an empty string and runs `/skills/.../jira.sh: No such file`. **Always use the published path above.**
+Choose the complete command for the active host, including its override; every
+`jira.sh` shorthand below means that chosen prefix. The override propagates to
+nested plan checks and their state paths. Ordinary shell calls do not inherit
+plugin lifecycle variables, so never collapse these into one ambiguous
+fallback. Use the published path; plugin-root variables are lifecycle-only.
 
 Repo-checkout fallback (for tests/dev when the plugin is not installed): `plugins/jira/skills/jira/scripts/jira.sh`.
 
@@ -70,11 +79,14 @@ jira.sh plan status <KEY> | path <KEY>                 # ledger summary / ledger
 
 **Mutating, or two-or-more actions → write a plan first.** Anything that changes a live ticket (`issue create/update/comment/transition/assign`, `sprint create/move/start/complete`, `worklog add/delete`, `attachment add`), or any task needing more than one call, gets decomposed:
 
-1. `jira.sh plan init <KEY>` — scaffolds `.claude/tmp/jira/plans/<KEY>.md`.
+1. `jira.sh plan init <KEY>` — scaffolds the active host's project state path:
+   `.claude/tmp/jira/plans/<KEY>.md` or `.codex/tmp/jira/plans/<KEY>.md`.
 2. Author the `## Steps (machine-readable)` array: one `{id, title, check}` per small, independently verifiable action.
 3. `jira.sh plan run <DOC> --step <id>` after doing each step; a final full `jira.sh plan run <DOC>` at the end.
 
-This writes a ledger at `<repo>/.claude/tmp/plan-ledger/jira-<KEY>.json`. It is **not** the branch ledger and never blocks `git push`.
+This writes a ledger below the active host's `<repo>/.claude/tmp/plan-ledger/`
+or `<repo>/.codex/tmp/plan-ledger/`. It is **not** the branch ledger and never
+blocks `git push`.
 
 ## Authoring a `check`
 

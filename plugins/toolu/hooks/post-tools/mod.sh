@@ -25,6 +25,8 @@ fi
 
 # Exported only once the hook is enabled, so disabled runs keep the env clean.
 export TOOLU_LIB_DIR="$HOOK_LIB"
+TOOLU_CONFIG_DIR="$(toolu_config_root)"
+export TOOLU_CONFIG_DIR
 
 input=$(cat 2>/dev/null || echo "{}")
 tool_name=$(jq -r '.tool_name // ""' <<<"$input" 2>/dev/null || echo "")
@@ -37,4 +39,4 @@ export input tool_name PROJECT_ROOT
 HOOK_DIR="$(cd "$(dirname "$0")" && pwd)/modules"
 
 # Exits 2 if a module hard-blocks via exit code 2 (stderr forwarded).
-toolu_dispatch_modules "$HOOK_DIR" "PostToolUse" "$(toolu_registry_event_dir PostToolUse)"
+toolu_dispatch_hook "$HOOK_DIR" "PostToolUse" "$(toolu_registry_event_dir PostToolUse)"

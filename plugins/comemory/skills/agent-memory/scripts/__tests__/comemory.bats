@@ -99,6 +99,15 @@ _stub_argv() {
   printf '%s\n' "$output" | grep -qx 'hello'      # query passed as positional
 }
 
+@test "comemory: host-neutral repo override takes precedence over the Claude legacy alias" {
+  _stub_argv
+  run env PATH="$STUB:$PATH" TOOLU_COMEMORY_REPO=neutral \
+    MY_CLAUDE_COMEMORY_REPO=legacy bash "$COMEMORY_SH" search "hello"
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -qx 'neutral'
+  ! printf '%s\n' "$output" | grep -qx 'legacy'
+}
+
 @test "comemory: caller --repo suppresses the wrapper's injection — no duplicate (behavioral argv)" {
   _stub_argv
   run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$COMEMORY_SH" search "hi" --repo caller

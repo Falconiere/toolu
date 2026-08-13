@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # UserPromptSubmit hook
 # Validates prompts, injects optional per-project context, git context, intent hints.
-# Project-agnostic: no project literals. Per-project hints opt-in via $root/.claude/context.sh.
+# Project-agnostic: no project literals. Per-project hints opt in via the
+# host-native project directory's context.sh.
 
 HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -25,7 +26,7 @@ fi
 
 PROJECT_ROOT="$(detect_project_root)"
 [ -z "$PROJECT_ROOT" ] && PROJECT_ROOT="$(pwd)"
-GATE_FILE="$PROJECT_ROOT/.claude/tmp/quality-gate-status.json"
+GATE_FILE="$(toolu_project_state_root "$PROJECT_ROOT")/quality-gate-status.json"
 prompt_lower=$(printf '%s' "$prompt" | tr '[:upper:]' '[:lower:]')
 
 # ── Skip trivial prompts (confirmations, short replies) ───────────────────────
@@ -95,11 +96,7 @@ if [[ "$prompt_lower" =~ ${WB}(remember|recall|what\ did|previously|earlier|come
       # Emit the STABLE published path register.sh symlinks into, not a bare
       # `comemory.sh` — the wrapper is not on PATH by design, so the bare form
       # dies with command-not-found and the agent reads that as "no memories".
-      # Single-quoted template: $CLAUDE_CONFIG_DIR/$HOME expand in the agent's
-      # Bash subshell, not here. Same form as SKILL.md and the scope-hook deny
-      # banner — one path, consistent muscle memory.
-      # shellcheck disable=SC2016  # literal template: expands in the agent's shell.
-      recall='Recall first: `"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh" search "<topic>"` before reading files.'
+      recall="Recall first: \`\"$(toolu_config_root)/comemory/comemory.sh\" search \"<topic>\"\` before reading files."
       ;;
     missing)
       recall="WARN: comemory CLI not installed — persistent memory recall disabled."
@@ -170,9 +167,10 @@ fi
 
 # 3. Per-project context hook — opt-in. Project may emit any string.
 project_ctx=""
-if [ -n "$PROJECT_ROOT" ] && [ -f "$PROJECT_ROOT/.claude/context.sh" ]; then
+PROJECT_CONTEXT="$PROJECT_ROOT/$(toolu_project_dirname)/context.sh"
+if [ -n "$PROJECT_ROOT" ] && [ -f "$PROJECT_CONTEXT" ]; then
   # shellcheck disable=SC1091  # path is project-specific; sourced only if present
-  project_ctx=$(PROMPT="$prompt" bash "$PROJECT_ROOT/.claude/context.sh" 2>/dev/null || true)
+  project_ctx=$(PROMPT="$prompt" bash "$PROJECT_CONTEXT" 2>/dev/null || true)
 fi
 
 # ── Combine and output ───────────────────────────────────────────────────────

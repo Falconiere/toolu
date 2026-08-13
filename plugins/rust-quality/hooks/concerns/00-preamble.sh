@@ -72,6 +72,18 @@ if [[ "$tool_name" == "Write" || "$tool_name" == "Edit" || "$tool_name" == "Mult
 fi
 FILE_PATH="${CLAUDE_FILE_PATHS:-$fp_from_input}"
 
+# Deleted files and move sources cannot be linted after apply_patch completes,
+# but their path-owned quality failure must not remain active forever.
+EDIT_OPERATION="${TOOLU_EDIT_OPERATION:-$(echo "$input" | jq -r '.tool_input.toolu_edit_operation // ""' 2>/dev/null || echo "")}"
+EDIT_MOVED_TO="${TOOLU_EDIT_MOVED_TO:-$(echo "$input" | jq -r '.tool_input.toolu_edit_moved_to // ""' 2>/dev/null || echo "")}"
+if [[ "$EDIT_OPERATION" == delete || -n "$EDIT_MOVED_TO" ]]; then
+  if [[ -n "$FILE_PATH" && "$FILE_PATH" =~ \.rs$ ]]; then
+    GATE_FILE="$(toolu_project_state_root "$PROJECT_ROOT")/quality-gate-status.json"
+    gate_clear_file "$GATE_FILE" "$FILE_PATH" "rust-quality-hook"
+  fi
+  exit 0
+fi
+
 [[ -z "$FILE_PATH" || ! -f "$FILE_PATH" ]] && exit 0
 [[ ! "$FILE_PATH" =~ \.rs$ ]] && exit 0
 
@@ -79,4 +91,3 @@ MESSAGES=""
 add_error() {
   MESSAGES="${MESSAGES}${1}"$'\n'
 }
-

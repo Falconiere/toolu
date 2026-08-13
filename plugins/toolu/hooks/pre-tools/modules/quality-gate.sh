@@ -25,7 +25,7 @@ command -v git >/dev/null 2>&1 || exit 0
 project_root="$(detect_project_root)"
 [ -z "$project_root" ] && project_root="$(pwd)"
 
-gate_file="$project_root/.claude/tmp/quality-gate-status.json"
+gate_file="$(toolu_project_state_root "$project_root")/quality-gate-status.json"
 
 # Cheap stat/jq checks FIRST. This module runs on every single tool call and the
 # gate is absent or passing almost always; the linked-worktree probe below costs

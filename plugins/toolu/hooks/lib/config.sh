@@ -19,6 +19,10 @@
 # Defaults: missing key = enabled. Malformed JSON or missing jq = all enabled
 # with a single stderr warning.
 
+_TOOLU_CONFIG_LIB_DIR="$(cd "${BASH_SOURCE%/*}" && pwd)"
+# shellcheck source=host.sh
+. "$_TOOLU_CONFIG_LIB_DIR/host.sh"
+
 # Merged config is held in memory, not a temp file: hooks are short-lived
 # processes, and a per-PID cache file under $TMPDIR was never cleaned up —
 # one leaked file per hook invocation. $(...) subshells inherit the variable
@@ -32,36 +36,23 @@ _toolu_warn() {
 }
 
 _toolu_agent_dir() {
-  if [ -n "${TOOLU_CONFIG_DIR:-}" ]; then
-    printf '%s' "$TOOLU_CONFIG_DIR"
-  elif [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
-    printf '%s' "$CLAUDE_CONFIG_DIR"
-  else
-    printf '%s/.claude' "$HOME"
-  fi
+  toolu_config_root | tr -d '\n'
 }
 
 _toolu_project_cfg_dirname() {
-  printf '%s' "${TOOLU_PROJECT_CONFIG_DIRNAME:-.claude}"
+  toolu_project_dirname | tr -d '\n'
 }
 
 _toolu_user_cfg() {
   local agent_dir
   agent_dir=$(_toolu_agent_dir)
-  if [ "$agent_dir" = "$HOME/.claude" ]; then
-    printf '%s/.claude/toolu.config.json' "$HOME"
-  else
-    printf '%s/toolu.config.json' "$agent_dir"
-  fi
+  printf '%s/toolu.config.json' "$agent_dir"
 }
 
 # Mirrored by the setup_done marker writer in plugins/comemory/scripts/setup.sh
 # (cross-plugin sourcing is barred; parity enforced by path-parity.bats).
 _toolu_project_cfg() {
-  local root="${TOOLU_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-}}"
-  [ -z "$root" ] && root=$(git rev-parse --show-toplevel 2>/dev/null || true)
-  [ -z "$root" ] && return 0
-  printf '%s/%s/toolu.config.json' "$root" "$(_toolu_project_cfg_dirname)"
+  toolu_project_config | tr -d '\n'
 }
 
 toolu_load_config() {
@@ -221,6 +212,88 @@ toolu_model() {
   esac
 }
 
+# ── Codex model + effort routing ───────────────────────────────────────────
+# Claude keeps the long-standing `.models.<class>` alias contract above.
+# Codex uses a separate nested namespace because its model slugs and reasoning
+# effort are independent values:
+#   .models.codex.<class>.model
+#   .models.codex.<class>.reasoningEffort
+#
+# toolu_codex_model CLASS prints two tab-separated fields followed by a newline:
+# `<model>\t<reasoning-effort>`. Callers can consume them safely with IFS/read.
+TOOLU_CODEX_REASONING_EFFORTS="low medium high xhigh max ultra"
+
+_toolu_codex_model_default() {
+  case "$1" in
+    mechanical)     printf 'gpt-5.6-luna\tmedium' ;;
+    exploration)    printf 'gpt-5.6-terra\tmedium' ;;
+    implementation) printf 'gpt-5.6-terra\tmedium' ;;
+    review)         printf 'gpt-5.6-terra\thigh' ;;
+    synthesis)      printf 'gpt-5.6-sol\thigh' ;;
+    architecture)   printf 'gpt-5.6-sol\thigh' ;;
+    *) return 1 ;;
+  esac
+}
+
+toolu_codex_model() {
+  local class="$1" defaults def_model def_effort model_type model effort_type effort
+  if ! defaults=$(_toolu_codex_model_default "$class"); then
+    _toolu_warn "unknown model class '$class' (known: $TOOLU_MODEL_CLASSES)"
+    return 1
+  fi
+  IFS=$'\t' read -r def_model def_effort <<<"$defaults"
+  toolu_load_config
+  if [ "$_TOOLU_HAS_JQ" != 1 ]; then
+    printf '%s\t%s\n' "$def_model" "$def_effort"
+    return 0
+  fi
+
+  model_type=$(jq -r --arg c "$class" \
+    '((.models?.codex? // {})[$c]?.model? // null) | type' \
+    <<<"$TOOLU_CFG_JSON" 2>/dev/null)
+  model=$(jq -r --arg c "$class" \
+    '((.models?.codex? // {})[$c]?.model? // "") | if type == "string" then . else "" end' \
+    <<<"$TOOLU_CFG_JSON" 2>/dev/null)
+  case "$model_type" in
+    null) model="$def_model" ;;
+    string)
+      if [ -z "$model" ]; then
+        _toolu_warn "models.codex.$class.model: value is not a non-empty string; using $def_model"
+        model="$def_model"
+      fi
+      ;;
+    *)
+      _toolu_warn "models.codex.$class.model: value is not a non-empty string; using $def_model"
+      model="$def_model"
+      ;;
+  esac
+
+  effort_type=$(jq -r --arg c "$class" \
+    '((.models?.codex? // {})[$c]?.reasoningEffort? // null) | type' \
+    <<<"$TOOLU_CFG_JSON" 2>/dev/null)
+  effort=$(jq -r --arg c "$class" \
+    '((.models?.codex? // {})[$c]?.reasoningEffort? // "") | if type == "string" then . else "" end' \
+    <<<"$TOOLU_CFG_JSON" 2>/dev/null)
+  case "$effort_type" in
+    null) effort="$def_effort" ;;
+    string)
+      case " $TOOLU_CODEX_REASONING_EFFORTS " in
+        *" $effort "*) ;;
+        *)
+          _toolu_warn "models.codex.$class.reasoningEffort: '$effort' is not supported ($TOOLU_CODEX_REASONING_EFFORTS); using $def_effort"
+          effort="$def_effort"
+          ;;
+      esac
+      ;;
+    *)
+      _toolu_warn "models.codex.$class.reasoningEffort: value is not a string; using $def_effort"
+      effort="$def_effort"
+      ;;
+  esac
+
+  printf '%s\t%s\n' "$model" "$effort"
+}
+
 # ── Generic string-enum reader ──────────────────────────────────────────────
 # toolu_string PATH DEFAULT ALLOWED...
 # PATH is a dotted jq path into the merged config (e.g. "agentTier.mode").
@@ -302,4 +375,3 @@ toolu_comemory_state() {
     printf 'missing'
   fi
 }
-

@@ -51,6 +51,9 @@ jobs:
       - name: Install ast-grep
         run: npm install -g @ast-grep/cli
 
+      - name: Install Codex CLI
+        run: npm install -g @openai/codex
+
       - name: Install bun
         uses: oven-sh/setup-bun@v2
 
@@ -59,6 +62,7 @@ jobs:
           bats --version
           jq --version
           ast-grep --version
+          codex --version
           python3 --version
           bun --version
 

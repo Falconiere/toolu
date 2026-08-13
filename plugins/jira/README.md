@@ -20,14 +20,17 @@ Standalone, no dependencies.
 Read-only lookups run directly. Anything that **mutates** a ticket, or needs two or more calls, is planned first:
 
 ```
-jira.sh plan init ABC-123                 # scaffold .claude/tmp/jira/plans/ABC-123.md
+jira.sh plan init ABC-123                 # scaffold the host-native Jira plan path
 jira.sh plan run <DOC> [--step <id>]      # run each step's check, update the ledger
 jira.sh plan status ABC-123               # summary
 ```
 
 Each step carries a `check` — a shell command that exits 0 **only when Jira itself reflects the change** (`"$JIRA" issue get ABC-123 --lean | jq -e '.status=="Done"'`). A step is green because Jira agrees, not because the agent said so. `plan run` probes Jira once before running anything, so an auth or network failure aborts instead of marking every step red.
 
-The ledger is written to `<repo>/.claude/tmp/plan-ledger/jira-<KEY>.json`. It is deliberately **not** the branch ledger: toolu's push gate only reads `<branch-slug>.json`, so a pending Jira step can never block `git push`.
+The ledger is written to `<repo>/.claude/tmp/plan-ledger/jira-<KEY>.json` on
+Claude or `<repo>/.codex/tmp/plan-ledger/jira-<KEY>.json` on Codex. It is
+deliberately **not** the branch ledger: toolu's push gate only reads
+`<branch-slug>.json`, so a pending Jira step can never block `git push`.
 
 ## The Jira API
 

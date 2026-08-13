@@ -1,6 +1,6 @@
 # context7 — Live Library Documentation Lookup
 
-**Type:** Knowledge | **Version:** 1.18.0 | **Standalone** (no dependencies)
+**Type:** Knowledge | **Version:** 4.5.0 | **Standalone** (no dependencies)
 
 Library documentation and code-example lookup via the Context7 REST API — a skill plus a bash REST wrapper.
 

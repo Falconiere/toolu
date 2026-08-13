@@ -155,19 +155,16 @@ done < <(split_statements "$cmd_only")
 
 if [[ -n "$violation" ]]; then
   # Point the agent at the STABLE published path SessionStart register.sh
-  # symlinks into ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh.
+  # symlinks into the active host's config root at comemory/comemory.sh.
   # The plugin-root path (skills/agent-memory/scripts/comemory.sh) is unreachable
   # from the agent's Bash tool because ${CLAUDE_PLUGIN_ROOT} is not exported
   # there — quoting that path in the deny message would just re-trigger the
   # "empty results = not-found" failure mode this hook is trying to redirect.
   #
-  # Always emit the SHELL TEMPLATE (single-quoted so $HOME/$CLAUDE_CONFIG_DIR
-  # stay literal in the deny text and expand at the agent's Bash subshell, not
-  # here). Matches the form SKILL.md teaches — consistent muscle memory across
-  # the deny banner and the docs. Hook is non-fatal: even if the symlink hasn't
-  # been published yet, the template is what the agent should paste.
+  # Always emit the SHELL TEMPLATE (single-quoted so the host variables stay
+  # literal in the deny text and expand at the agent's shell, not here).
   # shellcheck disable=SC2016  # literal template: variables expand in the agent's shell, not here.
-  wrapper='"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory/comemory.sh"'
+  wrapper='"${TOOLU_CONFIG_DIR:-${CODEX_HOME:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}}/comemory/comemory.sh"'
   jq -n --arg cmd "$violation" --arg wrapper "$wrapper" '{
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",

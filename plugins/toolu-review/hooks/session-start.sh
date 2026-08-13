@@ -16,7 +16,14 @@ plugin_dir="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
 src="${plugin_dir:+$plugin_dir/skills/review/scripts/write-state.sh}"
 [ -n "$src" ] && [ -f "$src" ] || exit 0
 
-reg_root="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu-review"
+if [ -n "${TOOLU_CONFIG_DIR:-}" ]; then
+  config_root="$TOOLU_CONFIG_DIR"
+elif [ "${TOOLU_HOST_OVERRIDE:-}" = codex ] || { [ -z "${TOOLU_HOST_OVERRIDE:-}" ] && [ -n "${PLUGIN_ROOT:-}" ]; }; then
+  config_root="${CODEX_HOME:-$HOME/.codex}"
+else
+  config_root="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+fi
+reg_root="$config_root/toolu-review"
 mkdir -p "$reg_root" 2>/dev/null || { echo "toolu-review: cannot create $reg_root — helper not published" >&2; exit 0; }
 
 dst="$reg_root/write-state.sh"

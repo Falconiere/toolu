@@ -47,6 +47,31 @@ command -v jq >/dev/null 2>&1 || { printf 'toolu'; exit 0; }
 [ -n "$ctx_size" ] || ctx_size=0
 [ -n "$ctx_used" ] || ctx_used=0
 
+# Resolve the real plugin directory even when this renderer was invoked through
+# the stable SessionStart symlink. Shared project status lives in the collector;
+# this file only adds Claude's transient model/context/account presentation.
+_self="${BASH_SOURCE[0]}"
+case "$_self" in */*) ;; *) _self="./$_self" ;; esac
+_hops=0
+while [ -L "$_self" ] && [ "$_hops" -lt 40 ]; do
+  _hops=$((_hops + 1))
+  _link=$(readlink "$_self")
+  case "$_link" in
+    /*) _self="$_link" ;;
+    *) _self="${_self%/*}/$_link" ;;
+  esac
+done
+_plugin_dir=$(cd "${_self%/*}" 2>/dev/null && pwd) || _plugin_dir=""
+_collector="${_plugin_dir:+$_plugin_dir/}scripts/collect-status.sh"
+if [ -n "$cwd" ] && [ -f "$_collector" ]; then
+  project_status=$(bash "$_collector" "$cwd" 2>/dev/null || true)
+else
+  project_status=""
+fi
+if ! jq -e 'type == "object"' <<<"$project_status" >/dev/null 2>&1; then
+  project_status='{"repo_root":"","folder":"","branch":"","ahead":0,"behind":0,"working_tree":{"staged":0,"unstaged":0,"untracked":0},"gate":{"status":"","reason":""},"comemory_count":null}'
+fi
+
 format_tokens() {
   local n="$1"
   # Guard non-numeric input (a future schema change could emit a string) so the
@@ -87,68 +112,32 @@ fi
 # via $PROJECT_ROOT), not at $cwd — a subdir-launched session or worktree has
 # cwd != project root, which would silently miss the marker.
 gate_seg=""
-if [ -n "$cwd" ]; then
-  _gate_root=$(git -C "$cwd" --no-optional-locks rev-parse --show-toplevel 2>/dev/null)
-  gate_file="${_gate_root:-$cwd}/.claude/tmp/quality-gate-status.json"
-  if [ -f "$gate_file" ]; then
-    gate_status=$(jq -r '.status // ""' "$gate_file" 2>/dev/null)
-    [ "$gate_status" = "failing" ] && gate_seg="${BOLD}${RED}✗ gate:failing${RESET}"
-  fi
-fi
+gate_status=$(jq -r '.gate.status // ""' <<<"$project_status")
+[ "$gate_status" = "failing" ] && gate_seg="${BOLD}${RED}✗ gate:failing${RESET}"
 
 # --- Git branch + folder + working tree status + ahead/behind ---
-branch=""; folder=""; _git_seg=""; _ab_seg=""; _first=true
-if [ -n "$cwd" ] && [ -d "$cwd" ]; then
-  branch=$(git -C "$cwd" --no-optional-locks symbolic-ref --short HEAD 2>/dev/null)
-  folder=$(basename "$cwd")
-  # One git status call yields file counts + ahead/behind; parse the branch
-  # header for ahead/behind, then count staged/unstaged/untracked from the
-  # remaining status lines.
-  _staged=0; _unstaged=0; _untracked=0; _ahead=0; _behind=0
-  while IFS= read -r _line; do
-    if [ "$_first" = true ]; then
-      _first=false
-      case "$_line" in
-        "## "*)
-          _rest="${_line:3}"
-          case "$_rest" in
-            *ahead*|*behind*)
-              _ab="${_rest#*[[]}"; _ab="${_ab%]}"
-              case "$_ab" in
-                *ahead*) _ahead_tmp="${_ab#*ahead }"; _ahead="${_ahead_tmp%%,*}"; _ahead="${_ahead%% *}" ;;
-              esac
-              case "$_ab" in
-                *behind*) _behind_tmp="${_ab#*behind }"; _behind="${_behind_tmp%%,*}"; _behind="${_behind%% *}" ;;
-              esac
-              ;;
-          esac
-          ;;
-      esac
-      continue
-    fi
-    [ ${#_line} -lt 2 ] && continue
-    case "${_line:0:2}" in
-      "??") _untracked=$(( _untracked + 1 )) ;;
-      "!!") ;;
-      *)
-        [ "${_line:0:1}" != " " ] && _staged=$(( _staged + 1 ))
-        [ "${_line:1:1}" != " " ] && _unstaged=$(( _unstaged + 1 ))
-        ;;
-    esac
-  done < <(git -C "$cwd" --no-optional-locks status --porcelain --branch 2>/dev/null)
-  # Build ahead/behind segment
-  _ab_txt=""
-  [ "${_ahead:-0}" -gt 0 ] 2>/dev/null && _ab_txt="${_ab_txt}↑${_ahead}"
-  [ "${_behind:-0}" -gt 0 ] 2>/dev/null && _ab_txt="${_ab_txt}↓${_behind}"
-  [ -n "$_ab_txt" ] && _ab_seg="${DIM}${_ab_txt}${RESET}"
-  # Build dirty-status segment
-  _parts=""
-  [ "${_staged:-0}" -gt 0 ]   && _parts="${_parts}+${_staged} "
-  [ "${_unstaged:-0}" -gt 0 ] && _parts="${_parts}~${_unstaged} "
-  [ "${_untracked:-0}" -gt 0 ] && _parts="${_parts}?${_untracked} "
-  _parts="${_parts%" "}"
-  [ -n "$_parts" ] && _git_seg="${YELLOW}[${_parts}]${RESET}"
-fi
+branch=$(jq -r '.branch // ""' <<<"$project_status")
+folder=$(jq -r '.folder // ""' <<<"$project_status")
+_repo_root=$(jq -r '.repo_root // ""' <<<"$project_status")
+_ahead=$(jq -r '.ahead // 0' <<<"$project_status")
+_behind=$(jq -r '.behind // 0' <<<"$project_status")
+_staged=$(jq -r '.working_tree.staged // 0' <<<"$project_status")
+_unstaged=$(jq -r '.working_tree.unstaged // 0' <<<"$project_status")
+_untracked=$(jq -r '.working_tree.untracked // 0' <<<"$project_status")
+_first=true
+[ -z "$_repo_root" ] || _first=false
+_ab_txt=""
+[ "$_ahead" -gt 0 ] && _ab_txt="${_ab_txt}↑${_ahead}"
+[ "$_behind" -gt 0 ] && _ab_txt="${_ab_txt}↓${_behind}"
+_ab_seg=""
+[ -n "$_ab_txt" ] && _ab_seg="${DIM}${_ab_txt}${RESET}"
+_parts=""
+[ "$_staged" -gt 0 ] && _parts="${_parts}+${_staged} "
+[ "$_unstaged" -gt 0 ] && _parts="${_parts}~${_unstaged} "
+[ "$_untracked" -gt 0 ] && _parts="${_parts}?${_untracked} "
+_parts="${_parts%" "}"
+_git_seg=""
+[ -n "$_parts" ] && _git_seg="${YELLOW}[${_parts}]${RESET}"
 
 # --- Caveman mode (lights up when the caveman plugin is installed) ---
 # Read the flag file written by caveman-activate; refuse symlinks, cap the read,
@@ -169,24 +158,9 @@ fi
 # Read the marker written by comemory's comemory-status SessionStart hook.
 # The key derivation MUST match that hook (git-common-dir → main-repo basename)
 # so a worktree resolves to the same scope as its main checkout.
-CFG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 comemory_seg=""
-if [ -n "$cwd" ]; then
-  _ck=$(git -C "$cwd" --no-optional-locks rev-parse --git-common-dir 2>/dev/null)
-  if [ -n "$_ck" ]; then
-    case "$_ck" in
-      /*) ;;
-      *) _ck=$(cd "$cwd" 2>/dev/null && cd "$_ck" 2>/dev/null && pwd) ;;
-    esac
-    if [ -n "$_ck" ]; then  # absolutize may fail; never build a key from an empty path
-      _cfile="${CFG}/comemory-status/$(basename "$(dirname "$_ck")").json"
-      if [ -f "$_cfile" ]; then
-        _cn=$(jq -r '.count // empty' "$_cfile" 2>/dev/null)
-        [ -n "$_cn" ] && comemory_seg="${BOLD}${GREEN}[COMEMORY:${_cn}]${RESET}"
-      fi
-    fi
-  fi
-fi
+_cn=$(jq -r '.comemory_count // empty' <<<"$project_status")
+[ -n "$_cn" ] && comemory_seg="${BOLD}${GREEN}[COMEMORY:${_cn}]${RESET}"
 
 # --- Assemble ---
 sep="${DIM} | ${RESET}"

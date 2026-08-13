@@ -9,10 +9,15 @@ Use this skill to find up-to-date documentation and code examples for any progra
 Invoke at the **stable published path** (a symlink the plugin's SessionStart hook refreshes every session):
 
 ```bash
-"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/context7/search.sh" <command> [options]
+# Codex
+"${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/context7/search.sh" <command> [options]
+# Claude Code
+"${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/context7/search.sh" <command> [options]
 ```
 
-`$CLAUDE_CONFIG_DIR` IS exported into the Bash tool's subshell; `$CLAUDE_PLUGIN_ROOT` is **NOT** — it is only set for hook subprocesses. Using the plugin-root path from a Bash tool call expands to an empty string and runs `/skills/.../search.sh: No such file`. **Always use the published path above.**
+Choose the line for the active host. Ordinary shell calls do not inherit
+plugin lifecycle variables, so never collapse these into one ambiguous
+fallback. Use the published path; plugin-root variables are lifecycle-only.
 
 Repo-checkout fallback (for tests/dev when the plugin is not installed): `plugins/context7/skills/context7/scripts/search.sh`.
 ```

@@ -27,7 +27,7 @@ if toolu_enabled hooks session-end && [ "$(toolu_comemory_state)" = "available" 
   # assume where comemory stores data (the throttle only needs a stable, writable
   # path of our own). $CLAUDE_CONFIG_DIR override is honored for parity with the
   # rest of toolu.
-  _cm_stamp_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu"
+  _cm_stamp_dir="$(toolu_config_root)/toolu"
   _cm_stamp="$_cm_stamp_dir/.comemory-last-maintain"
   _cm_today="$(date -u +%Y%m%d 2>/dev/null || echo '')"
   if [ -n "$_cm_today" ] && [ "$(cat "$_cm_stamp" 2>/dev/null || echo '')" != "$_cm_today" ]; then

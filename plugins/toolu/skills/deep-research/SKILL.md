@@ -16,7 +16,13 @@ The user wants a real research deliverable: multi-source, verified, cited. Not a
 Five phases, driven from the main thread. Workers run on sonnet, synthesis stays on the frontier tier — rubric: `plugins/toolu/skills/orchestrator/references/model-routing.md`.
 
 1. **Target brainstorm (main thread).** Restate the topic in one sentence. Decompose it into guiding questions with sub-questions — 5 is the typical fan-out, 7 the hard cap (the orchestrator skill's parallel-agent guardrail is the reason). Name the assumptions and what is out of scope.
-2. **Approval gate (blocking).** Print the numbered question set in chat, then one `AskUserQuestion` call: approve-all / approve-with-edits (edits arrive as free text) / restart targeting. The tool caps options at 4, so this single-approval shape is the contract — not per-question multi-select. The rule is absolute: no research runs before approval. A restart goes back to question design; zero approved questions → abort, nothing written.
+2. **Approval gate (blocking).** Print the numbered question set, then use the
+   active host's structured user-input interface from
+   [the host mapping](../../workflows/host-mapping.md) for one choice:
+   approve-all / approve-with-edits / restart targeting. If that interface is
+   unavailable, ask the same single concise question in chat. No research runs
+   before approval. Restart returns to question design; zero approved questions
+   aborts without writing.
 3. **Research fan-out.** One `research-agent` (sonnet) per approved question, launched in parallel. Each researcher combines both engines per its routing table — `context7` for library/API/docs-shaped questions, `exa-search` for general web, topics, and URL crawls — with native fallback inherited. Override the agent's default depth per call: ask for a 10–15 sentence synthesis, up to 8 sources, and `Claim → source URL` pairs for the 2–3 load-bearing claims.
 4. **Verification wave.** One `research-agent` (sonnet) per finding set, prompted as an adversarial verifier: re-crawl up to 2 cited URLs per load-bearing claim (exa-search, native fallback) and return a per-claim verdict — confirmed / unsupported / source-unreachable. Unsupported claims are dropped or flagged in the report — never silently kept. If every researcher answered from training knowledge only (`Tools used: none`), skip the wave — nothing is crawlable — and banner the report "unverified — no live sources".
 5. **Synthesis + delivery (main thread).** Merge the verified findings into the report format below, write it under `docs/research/`, and give the user a TLDR in chat.

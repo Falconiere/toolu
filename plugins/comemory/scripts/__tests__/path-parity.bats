@@ -25,7 +25,7 @@ setup() {
 
 teardown() {
   # Drop any env overrides a scenario set, so they never leak between tests.
-  unset TOOLU_PROJECT_DIR CLAUDE_PROJECT_DIR TOOLU_PROJECT_CONFIG_DIRNAME
+  unset TOOLU_PROJECT_DIR CLAUDE_PROJECT_DIR TOOLU_PROJECT_CONFIG_DIRNAME TOOLU_HOST_OVERRIDE PLUGIN_ROOT CODEX_HOME
 }
 
 # Canonicalize a (possibly symlinked) dir to its physical path. On macOS
@@ -105,6 +105,14 @@ _assert_parity() {
   _assert_parity
   # And it is exactly the .claude path under the repo root.
   [ -f "$REPO/.claude/toolu.config.json" ]
+}
+
+@test "parity: Codex host -> <repo>/.codex/toolu.config.json" {
+  _make_repo
+  cd "$REPO"
+  _assert_parity TOOLU_HOST_OVERRIDE=codex
+  [ -f "$REPO/.codex/toolu.config.json" ]
+  [ ! -f "$REPO/.claude/toolu.config.json" ]
 }
 
 @test "parity: real git worktree, run INSIDE the worktree, resolves to the WORKTREE not the main repo" {

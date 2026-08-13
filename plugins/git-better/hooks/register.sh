@@ -13,7 +13,23 @@
 
 SPEC="git-better@toolu"
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
-REG_ROOT="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu"
+if [ -n "${TOOLU_CONFIG_DIR:-}" ]; then
+  CONFIG_ROOT="$TOOLU_CONFIG_DIR"
+elif [ "${TOOLU_HOST_OVERRIDE:-}" = codex ] || { [ -z "${TOOLU_HOST_OVERRIDE:-}" ] && [ -n "${PLUGIN_ROOT:-}" ]; }; then
+  CONFIG_ROOT="${CODEX_HOME:-$HOME/.codex}"
+  HOST=codex
+else
+  CONFIG_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+  HOST=claude
+fi
+[ -n "${HOST:-}" ] || {
+  if [ "${TOOLU_HOST_OVERRIDE:-}" = codex ] || { [ -z "${TOOLU_HOST_OVERRIDE:-}" ] && [ -n "${PLUGIN_ROOT:-}" ]; }; then
+    HOST=codex
+  else
+    HOST=claude
+  fi
+}
+REG_ROOT="$CONFIG_ROOT/toolu"
 
 # Consume stdin so Claude Code's hook IPC never stalls.
 cat > /dev/null 2>&1 || true
@@ -52,11 +68,12 @@ sync_dir() {
 # path is version-stable; this rewrites it whenever the plugin version moves
 # (SessionStart re-runs), so `gb` always points at the installed wrapper.
 install_shim() {
-  local script="$1" bin_dir shim want
-  bin_dir="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu/bin"
+  local script="$1" host="$2" bin_dir shim want
+  bin_dir="$CONFIG_ROOT/toolu/bin"
   mkdir -p "$bin_dir" 2>/dev/null || return 0
   shim="$bin_dir/gb"
   want="#!/usr/bin/env bash
+export TOOLU_HOST_OVERRIDE=\"$host\"
 exec bash \"$script\" \"\$@\""
   if [ ! -f "$shim" ] || [ "$(cat "$shim" 2>/dev/null)" != "$want" ]; then
     if printf '%s\n' "$want" > "$shim.tmp.$$" 2>/dev/null; then
@@ -70,6 +87,6 @@ sync_dir "$SELF_DIR/pre-tools.d"  "$REG_ROOT/pre-tools.d"
 sync_dir "$SELF_DIR/post-tools.d" "$REG_ROOT/post-tools.d"
 
 gb_script="$(cd "$SELF_DIR/.." && pwd)/scripts/git-better.sh"
-[ -f "$gb_script" ] && install_shim "$gb_script"
+[ -f "$gb_script" ] && install_shim "$gb_script" "$HOST"
 
 exit 0

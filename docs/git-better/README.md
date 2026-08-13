@@ -1,6 +1,6 @@
 # git-better — Token-Lean Git
 
-**Type:** Workflow | **Version:** 0.1.0 | **Standalone** (no dependencies)
+**Type:** Workflow | **Version:** 4.5.0 | **Standalone** (no dependencies)
 
 A `gb` wrapper with lean defaults plus a cached repo-convention profile, surfaced via `PreToolUse` nudges registered into the toolu hook engine.
 

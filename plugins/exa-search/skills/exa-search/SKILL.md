@@ -1,6 +1,6 @@
 ---
 name: exa-search
-description: ALWAYS ACTIVE — Web search/crawl protocol. You MUST use the exa-search CLI (search / crawl / similar) instead of native WebSearch/WebFetch for web searches, code-example hunts, URL crawling, and topic research whenever EXA_API_KEY is set; native tools are a fallback only. Triggers when searching for external information, looking up docs/APIs, researching technologies, investigating topics, or crawling URLs.
+description: ALWAYS ACTIVE — Web search/crawl protocol. You MUST use the exa-search CLI (search / crawl / similar) instead of host-native web tools for web searches, code-example hunts, URL crawling, and topic research whenever EXA_API_KEY is set; native tools are a fallback only. Triggers when searching for external information, looking up docs/APIs, researching technologies, investigating topics, or crawling URLs.
 ---
 
 # Exa Search
@@ -14,10 +14,15 @@ Use this skill when you need to search the web, find code examples, crawl a URL,
 Invoke at the **stable published path** (a symlink the plugin's SessionStart hook refreshes every session):
 
 ```bash
-"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/exa-search/search.sh" <command> [options]
+# Codex
+"${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/exa-search/search.sh" <command> [options]
+# Claude Code
+"${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/exa-search/search.sh" <command> [options]
 ```
 
-`$CLAUDE_CONFIG_DIR` IS exported into the Bash tool's subshell; `$CLAUDE_PLUGIN_ROOT` is **NOT** — it is only set for hook subprocesses. Using the plugin-root path from a Bash tool call expands to an empty string and runs `/skills/.../search.sh: No such file`. **Always use the published path above.**
+Choose the line for the active host. Ordinary shell calls do not inherit
+plugin lifecycle variables, so never collapse these into one ambiguous
+fallback. Use the published path; plugin-root variables are lifecycle-only.
 
 Repo-checkout fallback (for tests/dev when the plugin is not installed): `plugins/exa-search/skills/exa-search/scripts/search.sh`.
 

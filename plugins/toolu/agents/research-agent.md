@@ -39,11 +39,15 @@ research, **inherit** (frontier) only for deep-reasoning agents.
 
 | Query shape | Primary tool | Invocation |
 | --- | --- | --- |
-| library / framework / API / version / "docs for X" | **context7** | `"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/context7/search.sh"` — `search <lib>` to resolve the id, then `docs <id> "<question>" -t txt --fast` |
-| general web / topic / news / "latest" / comparison | **exa-search** | `"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/exa-search/search.sh" search -q "<query>" --lean --highlights 4000 -n 5` |
+| library / framework / API / version / "docs for X" | **context7** | `context7/search.sh` — `search <lib>` to resolve the id, then `docs <id> "<question>" -t txt --fast` |
+| general web / topic / news / "latest" / comparison | **exa-search** | `exa-search/search.sh search -q "<query>" --lean --highlights 4000 -n 5` |
 | a specific URL to read | **exa-search** | `… crawl <url> -m 3000` |
 
-The stable paths above are symlinks published by each plugin's SessionStart hook. `$CLAUDE_CONFIG_DIR` IS exported into the Bash tool's subshell; `$CLAUDE_PLUGIN_ROOT` is **NOT** — it is only set for hook subprocesses, so a plugin-root path expands to an empty string from a Bash tool call.
+The stable paths above are published by each plugin's SessionStart hook. Resolve
+their root explicitly: `${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}` on
+Codex or `${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}` on Claude
+Code. Ordinary shell calls do not inherit plugin lifecycle variables, so never
+collapse the two roots into one ambiguous fallback.
 
 Repo-checkout fallback paths (for tests/dev when the plugins are not installed):
 `plugins/context7/skills/context7/scripts/search.sh`,
@@ -57,7 +61,7 @@ failure:
 1. Run the primary CLI for the route.
 2. **On nonzero exit** (missing API key — e.g. exa prints `EXA_API_KEY unset` and
    exits 1 — rate limit, network error, empty result): fall back to the native
-   **`WebSearch`** tool, and **`WebFetch`** to read the top source(s).
+   host-native web search and fetch tools to read the top source(s).
 3. **If native web tools are also unreachable** (headless/offline): answer from
    your training knowledge and state explicitly that the answer may be **stale**
    and was not verified against the live web. Never hang or fabricate sources.

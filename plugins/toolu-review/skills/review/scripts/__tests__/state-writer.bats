@@ -62,6 +62,14 @@ teardown() {
   [ "$out" = "$TMP_REAL/.claude/tmp/push-review/feat_x-y.json" ]
 }
 
+@test "write-state: Codex host stores attestations under .codex/tmp" {
+  git checkout -q -b feature
+  echo z > f.txt && git add f.txt && git commit -qm work
+  out=$(TOOLU_HOST_OVERRIDE=codex bash "$WS" --findings-count 0)
+  [ "$out" = "$TMP_REAL/.codex/tmp/push-review/feature.json" ]
+  [ ! -e "$TMP_REAL/.claude/tmp/push-review/feature.json" ]
+}
+
 @test "write-state: writes schema and bumps review_round 0->1->2 on an unchanged diff" {
   git checkout -q -b feature
   echo a > f.txt && git add f.txt && git commit -qm work

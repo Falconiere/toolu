@@ -6,10 +6,12 @@ disable what you do not want.
 
 ## Locations
 
-- User-global: `~/.claude/toolu.config.json` (override the root with `TOOLU_CONFIG_DIR`
-  or `CLAUDE_CONFIG_DIR`)
-- Project override: `$CLAUDE_PROJECT_DIR/.claude/toolu.config.json` (override the
-  directory name with `TOOLU_PROJECT_CONFIG_DIRNAME`)
+- Claude Code: `~/.claude/toolu.config.json` and
+  `<repo>/.claude/toolu.config.json` (`CLAUDE_CONFIG_DIR` remains supported).
+- Codex: `${CODEX_HOME:-~/.codex}/toolu.config.json` and
+  `<repo>/.codex/toolu.config.json`.
+- `TOOLU_CONFIG_DIR`, `TOOLU_PROJECT_DIR`, and
+  `TOOLU_PROJECT_CONFIG_DIRNAME` are explicit cross-host overrides.
 
 Both are optional. When both exist they are deep-merged via `jq '. * .'`;
 project values win on conflict. Missing keys default to **enabled**.
@@ -26,7 +28,10 @@ back to "all enabled".
   "skills":  { "<name>": true | false },
   "hooks":   { "<name>": true | false },
   "mcp":     { "<server>": true | false },
-  "models":  { "enabled": true | false, "<class>": "haiku|sonnet|opus|fable|inherit" },
+  "models":  { "enabled": true | false,
+               "<class>": "haiku|sonnet|opus|fable|inherit",
+               "codex": { "<class>": { "model": "<slug>",
+                                         "reasoningEffort": "low|medium|high|xhigh|max|ultra" } } },
   "lang":    { "ts":   { "maxFileLines": 300, "maxFnLines": 60, "noMocks": true },
                "rust": { "maxFileLines": 500, "maxFnLines": 50, "maxImplLines": 200, "noMocks": true } },
   "docsSync": { "mode": "advise|block|off",
@@ -97,14 +102,14 @@ Which model tier a delegated task is handed to, keyed by the **class of work**.
 subagents by task complexity without being asked; the full rubric lives in
 `plugins/toolu/skills/orchestrator/references/model-routing.md`.
 
-| Class | Default | Work that belongs here |
-|-------|---------|------------------------|
-| `mechanical` | `haiku` | Listings, single-symbol lookups, literal search, renames, formatting |
-| `exploration` | `sonnet` | Read-only search across many files |
-| `implementation` | `sonnet` | A bounded, already-decided edit plus its tests |
-| `review` | `sonnet` | Diff review, audits |
-| `synthesis` | `opus` | Reconciling several agents' findings into one answer |
-| `architecture` | `opus` | Design, trade-offs, hard-to-reverse decisions |
+| Class | Claude default | Codex default | Work that belongs here |
+|-------|----------------|---------------|------------------------|
+| `mechanical` | `haiku` | Luna / medium | Listings, single-symbol lookups, literal search, renames, formatting |
+| `exploration` | `sonnet` | Terra / medium | Read-only search across many files |
+| `implementation` | `sonnet` | Terra / medium | A bounded, already-decided edit plus its tests |
+| `review` | `sonnet` | Terra / high | Diff review, audits |
+| `synthesis` | `opus` | Sol / high | Reconciling several agents' findings into one answer |
+| `architecture` | `opus` | Sol / high | Design, trade-offs, hard-to-reverse decisions |
 
 Values are **aliases, not version ids** — `sonnet` keeps meaning "the current mid
 tier" across model releases, so a config written today survives the next model
@@ -112,15 +117,20 @@ generation. Accepted: `haiku`, `sonnet`, `opus`, `fable`, `inherit` (`inherit` =
 the lead thread's model). Anything else is rejected with a stderr warning and
 falls back to the built-in default, so a typo mis-tiers nothing.
 
+Those legacy `models.<class>` aliases remain Claude-only and backward
+compatible. Codex reads `models.codex.<class>.model` and
+`models.codex.<class>.reasoningEffort`; model must be a non-empty slug and an
+invalid effort warns and falls back to the class default.
+
 `models.enabled = false` suppresses the SessionStart injection; the tiers still
 resolve for anything that reads them (`toolu_model` in
 `plugins/toolu/hooks/lib/config.sh`).
 
-Config remaps the **rubric** — the tiers passed on Agent calls and the injected
-table. It cannot rewrite the `model:` frontmatter of a pre-built agent
-(`toolu:quick-task` Haiku, `toolu:deep-explore` / `toolu:research-agent` /
-`toolu:implementer` Sonnet, `toolu:architect` Opus), which Claude Code reads
-straight from the file — edit the agent to re-tier it.
+Config remaps the **rubric** and the tiers passed on delegated work. It does not
+rewrite installed agent definitions. Claude reads the plugin's agent
+frontmatter directly. Codex profiles live under `${CODEX_HOME:-~/.codex}/agents`
+and are managed explicitly with `$toolu:setup`; customize a copied profile if
+you need a fixed tier that differs from the routing table.
 
 Plan steps can pin their own tier: a step in a `## Steps (machine-readable)`
 block may carry `"model": "<alias>"`, validated at parse time and surfaced by
@@ -131,8 +141,9 @@ block may carry `"model": "<alias>"`, validated at parse time and surfaced by
 The docs-sync backstop (`plugins/toolu/hooks/pre-tools/modules/docs-sync.sh`)
 fires on `git push` when the branch diff changes code but no documentation
 surface — a nudge to keep user-facing docs in sync with behavior. It is
-silenced by a diff-`sha`-keyed attestation the agent writes to
-`.claude/tmp/docs-sync/<branch-slug>.json`.
+silenced by a diff-`sha`-keyed attestation the agent writes to the host-native
+project state path: `.claude/tmp/docs-sync/<branch-slug>.json` for Claude or
+`.codex/tmp/docs-sync/<branch-slug>.json` for Codex.
 
 `docsSync.mode` (via `toolu_string`, unrecognized values warn and fall back)
 controls enforcement:
@@ -167,11 +178,13 @@ Setting any key replaces (does not merge with) that list's default.
 
 `telemetry.enabled` (default `true`) gates `plugins/toolu/hooks/lib/telemetry.sh`,
 the one append path every gate/lib event funnels through. When enabled it writes
-one JSONL line per event to `.claude/tmp/telemetry/<branch_slug>.jsonl`
+one JSONL line per event to the host-native
+`.claude/tmp/telemetry/<branch_slug>.jsonl` or
+`.codex/tmp/telemetry/<branch_slug>.jsonl`
 (`TELEMETRY_DIR` overrides the directory in tests): `step_run` (plan-ledger
 step executions), `gate_fail`/`gate_clear` (quality-gate transitions),
 `push_check` (push-review decisions), `docs_nudge`/`docs_attested` (docs-sync),
-`delegation` (Agent/Task model-tier calls), and `ac_coverage` (spec AC
+`delegation` (Claude `Agent`/`Task` or Codex `spawn_agent` model-tier calls), and `ac_coverage` (spec AC
 coverage counts on each push check). Set `telemetry.enabled: false` to disable
 all of it — every write site still succeeds (a telemetry bug never fails the
 caller's real work), it just writes nothing.
@@ -179,7 +192,8 @@ caller's real work), it just writes nothing.
 ### Agent-tier advisory (`agentTier`)
 
 `agentTier.mode` (default `advise`) controls `plugins/toolu/hooks/pre-tools/agent-tier.sh`,
-a standalone `PreToolUse` hook on `Agent`/`Task` calls. It always records a
+a standalone `PreToolUse` hook on Claude `Agent`/`Task` and Codex `spawn_agent`
+calls. It always records a
 `delegation` telemetry event (model, subagent_type, and — when a plan ledger
 exists for the branch — the running/next step's id and declared `model`). When
 a delegation's `model` differs from that step's declared (non-null) `model`, it
@@ -209,7 +223,7 @@ uncovered spec `AC-<n>` id(s) until a fresh-green step's `ac_refs` covers them.
 | `skills` | `comemory`, `ast-grep` (the only skill keys any hook reads)                        |
 | `hooks`  | `session-start`, `user-prompt-submit`, `pre-tools`, `post-tools`, `pre-compact`, `session-end` |
 | `mcp`    | any MCP server name — e.g. `canva`, `figma`                                        |
-| `models` | `enabled`, `mechanical`, `exploration`, `implementation`, `review`, `synthesis`, `architecture` |
+| `models` | `enabled`, the six Claude class aliases, and `codex.<class>.{model,reasoningEffort}` |
 
 Unknown names are silently ignored (forward compatible).
 
@@ -229,7 +243,7 @@ Unknown names are silently ignored (forward compatible).
 
 - `hooks.<name> = false`
   - The named hook exits early and emits nothing. Its stdin is drained
-    first so Claude Code's IPC does not stall.
+    first so the host's hook IPC does not stall.
   - **Exception — `session-end` reminder is opt-IN**: the end-of-session
     comemory "save your learnings" reminder is OFF by default (the agent-memory
     protocol already saves proactively, so the Stop-time nag is redundant
@@ -254,10 +268,12 @@ Unknown names are silently ignored (forward compatible).
   - Matcher wiring lives in `plugins/toolu/hooks/hooks.json`, which routes
     the `mcp__` prefix through `plugins/toolu/hooks/pre-tools/modules/mcp-blocker.sh`.
 
-Agents and commands are loaded by Claude Code from the plugin manifest at
-session start, so they cannot be toggled at runtime. A future `toolu
-sync` command may rewrite the manifest from config; until then, install or
-uninstall the plugin to control them.
+Skills, hooks, Claude agents, and Claude commands are loaded from plugin
+manifests at session start, so config does not remove those files from host
+discovery. Codex command equivalents are ordinary plugin skills. Codex custom
+agents are intentionally separate: `$toolu:setup` previews and installs the
+five bundled TOML profiles under `${CODEX_HOME:-~/.codex}/agents`, refusing
+unmanaged conflicts and preserving timestamped backups.
 
 ## comemory version
 
@@ -267,7 +283,7 @@ surface — the retrieval-quality loop (`feedback`/`mine`/`tune`/`eval`/`prune`/
 `gc`/`rebuild`) and **comemory** (`search-code`/`index-code`/`graph`). An older
 binary lacks some of these and will error on them, so session start emits a
 non-fatal upgrade WARN when it detects one. Basics (`search`/`save`/`list`)
-still work. Upgrade with `brew upgrade Falconiere/tap/comemory` (comemory is not published to crates.io; the Homebrew tap or the curl installer are the canonical paths). Run `/comemory:setup` to verify and wire it.
+still work. Upgrade with `brew upgrade Falconiere/tap/comemory` (comemory is not published to crates.io; the Homebrew tap or the curl installer are the canonical paths). Run `/comemory:setup` on Claude or `$comemory:setup` on Codex to verify and wire it.
 
 ## Examples
 
@@ -292,10 +308,12 @@ Block several MCP servers without touching the blocklist file:
 User-global disables, project-local re-enable:
 
 ```jsonc
-// ~/.claude/toolu.config.json
+// Claude: ~/.claude/toolu.config.json
+// Codex:  ~/.codex/toolu.config.json
 { "version": 1, "skills": { "ast-grep": false } }
 
-// <repo>/.claude/toolu.config.json
+// Claude: <repo>/.claude/toolu.config.json
+// Codex:  <repo>/.codex/toolu.config.json
 { "version": 1, "skills": { "ast-grep": true } }
 ```
 
@@ -306,13 +324,13 @@ into the model's context at session start — recurring cost that shrinks your
 usable context window. To reclaim it:
 
 - **Disable a whole plugin you don't use** — via Claude Code's `/plugin` UI or
-  the `enabledPlugins` setting. This is what actually drops its skill
+  Codex's `codex plugin remove <name>@toolu`. This is what actually drops its skill
   descriptions from session load. Note the toolu `skills.<name>` config
   does **not** do this: it only gates hook behavior for `comemory`/`ast-grep`
   (see *Effects* above — `SKILL.md` files stay on disk and their descriptions
   still load).
-- **MCP tools defer natively** — Claude Code loads their schemas on demand via
-  tool search, so an idle connector costs little. Use `mcp.<server>: false` to
+- **MCP tools defer natively** — supported hosts load their schemas on demand,
+  so an idle connector costs little. Use `mcp.<server>: false` to
   block a noisy one entirely.
 
 The harness caps its *own* injected footprint with

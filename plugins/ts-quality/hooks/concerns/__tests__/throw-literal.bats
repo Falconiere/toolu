@@ -175,3 +175,17 @@ EOF
   [ "$status" -eq 0 ]
   jq -e '.status == "passing"' "$GATE"
 }
+
+@test "ts-quality: deleting a failing file clears its gate entry" {
+  _ts_project
+  printf 'console.log("bad");\n' > "$TMP/src/bad.ts"
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/bad.ts"}}'
+  tool_name=Edit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "failing"' "$TMP/.claude/tmp/quality-gate-status.json" >/dev/null
+
+  rm "$TMP/src/bad.ts"
+  TOOLU_EDIT_OPERATION=delete tool_name=Edit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing"' "$TMP/.claude/tmp/quality-gate-status.json" >/dev/null
+}

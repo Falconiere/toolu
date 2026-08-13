@@ -77,6 +77,16 @@ _enable() { echo '{"version":1,"hooks":{"session-end":true}}' > "$HOME/.claude/t
   [ -f "$STAMP" ]
 }
 
+@test "session-end: Codex maintenance stamp uses CODEX_HOME" {
+  command -v comemory >/dev/null 2>&1 || skip "comemory not installed"
+  local codex_home="$TMP/codex"
+  local codex_stamp="$codex_home/toolu/.comemory-last-maintain"
+  run env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$codex_home" TOOLU_PROJECT_DIR="$TMP/proj" \
+    bash -c "'$SCRIPT' < /dev/null"
+  [ "$status" -eq 0 ]
+  [ -f "$codex_stamp" ]
+}
+
 # Contract fix: hooks.session-end:false disables BOTH the reminder and the
 # autonomous maintenance — no stamp, no store mutation. Clear the pre-stamp so a
 # present stamp can only mean maintenance ran (it must not).

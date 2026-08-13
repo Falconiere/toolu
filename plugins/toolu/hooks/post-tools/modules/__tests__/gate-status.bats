@@ -61,6 +61,21 @@ _write_gate() {
   echo "$output" | grep -q "Global quality gate failing"
 }
 
+@test "gate-status: Codex Bash failure uses the Codex project state path" {
+  payload=$(jq -n --arg cwd "$TMP" \
+    '{session_id:"session-1",turn_id:"turn-1",cwd:$cwd,
+      hook_event_name:"PostToolUse",tool_name:"Bash",
+      tool_input:{command:"bun test"},
+      tool_response:{metadata:{exit_code:1},stdout:"",stderr:"failed"}}')
+
+  TOOLU_HOST_OVERRIDE=codex tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" \
+    run bash "$HOOK"
+
+  [ "$status" -eq 0 ]
+  jq -e '.status == "failing"' "$TMP/.codex/tmp/quality-gate-status.json"
+  [ ! -e "$TMP/.claude/tmp/quality-gate-status.json" ]
+}
+
 @test "gate-status: failing rust-quality-hook gate survives unrelated successful quality command" {
   _write_gate "rust-quality-hook" "failing"
   payload=$(_payload "cargo clippy" 0)

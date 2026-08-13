@@ -1,13 +1,19 @@
 # comemory — Persistent Agent Memory
 
-**Type:** Code Intel | **Version:** 0.3.0 | **Depends on:** `toolu`
+**Type:** Code Intel | **Version:** 4.5.0 | **Depends on:** `toolu`
 
-Persistent cross-session agent memory + code-index search — a skill, a scoped wrapper, a `/comemory:setup` command, `PreToolUse` scope enforcement, and a `SessionStart` memory-count publisher.
+Persistent cross-session agent memory + code-index search — a skill, a scoped
+wrapper, shared Claude `/comemory:setup` and Codex `$comemory:setup` workflow,
+`PreToolUse` scope enforcement, and a `SessionStart` memory-count publisher.
 
 ## Install
 
 ```text
 /plugin install comemory@toolu
+```
+
+```bash
+codex plugin add comemory@toolu
 ```
 
 Requires the standalone `comemory` binary (**not** on crates.io):
@@ -23,6 +29,8 @@ Then run the setup command:
 ```text
 /comemory:setup
 ```
+
+Use `$comemory:setup` on Codex.
 
 This detects the binary (guides install if missing/old), then wires: data directory, git hooks that auto-refresh the code index on commit/merge/checkout, an initial index, and shell completions.
 
