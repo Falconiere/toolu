@@ -27,8 +27,6 @@ setup() {
 
 teardown() {
   [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"
-  # Always clean the real-modules probe, even if an assertion failed mid-test.
-  [ -n "${REPO_ROOT:-}" ] && rm -f "$REPO_ROOT/hooks/pre-tools/modules/zzz-libdir-probe.sh"
 }
 
 write_module() {
@@ -359,28 +357,32 @@ EOF
 }
 
 @test "pre-tools entrypoint exports TOOLU_LIB_DIR to modules" {
-  # Drop a probe module into the REAL modules dir with a last-running name so
-  # it is dispatched by the actual mod.sh entrypoint. It echoes back whatever
-  # TOOLU_LIB_DIR it inherited from the entrypoint's exported environment.
-  local probe="$REPO_ROOT/hooks/pre-tools/modules/zzz-libdir-probe.sh"
-  # Belt #1: clear any stale probe left by a prior hard-killed run before writing.
-  rm -f "$probe"
-  # Belt #2: the probe self-deletes after emitting JSON, so a single execution
-  # cleans itself even if bats is killed before teardown.
+  # The probe module goes into a COPY of the hooks tree, never the live one.
+  # Writing it into the real modules dir made this test mutate the tree every
+  # other test runs against: a concurrent run could execute a half-written
+  # probe, or delete it out from under this one. The entrypoint under test is
+  # still the real script — mod.sh resolves its lib dir from its own location,
+  # so a faithful copy exercises exactly the same code path.
+  cp -R "$REPO_ROOT/hooks" "$TMP/hooks"
+  local probe="$TMP/hooks/pre-tools/modules/zzz-libdir-probe.sh"
   cat > "$probe" <<'EOF'
 #!/usr/bin/env bash
 jq -n --arg v "${TOOLU_LIB_DIR:-UNSET}" \
   '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:("LIBDIRPROBE="+$v)}}'
-rm -f "${BASH_SOURCE[0]}"
 EOF
   chmod +x "$probe"
 
-  # Run the REAL entrypoint with the env var UNSET: only mod.sh's own export
-  # can make the probe see a value.
-  run env -u TOOLU_LIB_DIR bash "$REPO_ROOT/hooks/pre-tools/mod.sh" <<<'{"tool_name":"Read"}'
+  # Run the entrypoint with the env var UNSET: only mod.sh's own export can
+  # make the probe see a value.
+  run env -u TOOLU_LIB_DIR bash "$TMP/hooks/pre-tools/mod.sh" <<<'{"tool_name":"Read"}'
 
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.additionalContext | test("LIBDIRPROBE=/") and (contains("LIBDIRPROBE=UNSET")|not)' >/dev/null
+  # The lib dir the modules saw must be the copy's own, not the live tree's.
+  echo "$output" | jq -e --arg tmp "$TMP" '.hookSpecificOutput.additionalContext | contains("LIBDIRPROBE=" + $tmp)' >/dev/null
+
+  # And the live tree is untouched.
+  [ ! -e "$REPO_ROOT/hooks/pre-tools/modules/zzz-libdir-probe.sh" ]
 }
 
 @test "pre-tools entrypoint executes an active-plugin registry module" {
