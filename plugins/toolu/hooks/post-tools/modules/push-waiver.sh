@@ -17,8 +17,26 @@
 #   $tool_name - name of the tool being invoked
 #   $input     - raw JSON payload on stdin
 
-# pipefail for parity with the other gate modules. NOT -e: this module's control
-# flow uses non-zero returns as signal (nothing pending to promote is a normal 1).
+# pipefail for parity with the other gate modules (push-review.sh,
+# plan-ledger.sh, docs-sync.sh all use exactly this).
+#
+# Deliberately NOT -e and NOT -u, for the same underlying reason: both options
+# apply to the shared libraries this module SOURCES, which are written for the
+# shell they are sourced into rather than for a strict one.
+#
+#   -e: this module's control flow uses non-zero returns as signal —
+#       push_waiver_promote returns 1 whenever there is nothing to promote,
+#       which is the normal case on most pushes.
+#   -u: the libraries use the guard-then-assign idiom, reading a variable
+#       before it is ever assigned. hooks/lib/detect.sh:307 is one of several:
+#           [ -n "$root" ] || root=$(git rev-parse --show-toplevel 2>/dev/null)
+#       Under nounset that aborts with "root: unbound variable" before this
+#       module reaches its own work, so a real push silently fails to record
+#       its waiver. Verified: adding -u fails
+#       __tests__/push-waiver.bats "the module never writes to stdout".
+#
+# Making these strict is a repo-wide change to how the shared libraries are
+# written, not a per-module flag.
 set -o pipefail
 
 : "${tool_name:=}"
