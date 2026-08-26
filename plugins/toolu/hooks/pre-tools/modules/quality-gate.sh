@@ -37,9 +37,6 @@ command -v git >/dev/null 2>&1 || exit 0
 # before any file is read.
 [[ "$tool_name" != "Bash" && "$tool_name" != "Shell" ]] && exit 0
 
-mode=$(toolu_gate_mode qualityGate)
-[ "$mode" = "off" ] && exit 0
-
 command=$(echo "$input" | jq -r '.tool_input.command // ""')
 cmd_only=$(printf '%s\n' "$command" | strip_heredocs)
 
@@ -49,6 +46,12 @@ cmd_only=$(printf '%s\n' "$command" | strip_heredocs)
 if ! is_git_commit "$cmd_only" && ! is_git_push "$cmd_only"; then
   exit 0
 fi
+
+# Only now is the config worth loading. This module runs on every Bash call and
+# almost none of them are a commit or a push; resolving the mode first would
+# have paid a config read + jq parse for every `ls`.
+mode=$(toolu_gate_mode qualityGate)
+[ "$mode" = "off" ] && exit 0
 
 project_root="$(detect_project_root)"
 [ -z "$project_root" ] && project_root="$(pwd)"
@@ -70,7 +73,15 @@ fi
 reason=$(jq -r '.reason // "Quality gate failing"' "$gate_file" 2>/dev/null || echo "Quality gate failing")
 violations=$(jq -r '.violations // ""' "$gate_file" 2>/dev/null || echo "")
 
-toolu_gate_emit "$mode" "BLOCKED: quality gate failing — fix the violations before committing or pushing.
+# The lead sentence follows the mode: claiming something was BLOCKED while
+# merely advising would be a lie in the one place the user is reading closely.
+case "$mode" in
+  block) lead="BLOCKED: quality gate failing — fix the violations before committing or pushing." ;;
+  ask)   lead="The quality gate is failing. Commit/push anyway?" ;;
+  *)     lead="Heads up: the quality gate is failing (commit and push are not blocked at this setting)." ;;
+esac
+
+toolu_gate_emit "$mode" "$lead
 $reason
 $violations"
 exit 0

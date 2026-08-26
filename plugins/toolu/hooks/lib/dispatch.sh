@@ -206,13 +206,16 @@ toolu_dispatch_modules() {
   # A held ask is the decision, and it absorbs every advisory collected after
   # it so nothing a later module wanted to say is dropped.
   if [[ -n "$ask_result" ]]; then
+    # If the enrichment fails for any reason, emit the ask EXACTLY as the module
+    # wrote it. Losing an advisory is a cosmetic loss; losing the decision would
+    # turn a prompt into a silent allow.
     jq -n --argjson ask "$ask_result" --arg ctx "$merged_ctx" --arg msg "$merged_msg" '
       ($ask.hookSpecificOutput.permissionDecisionReason // "") as $reason
       | $ask
       | .hookSpecificOutput.permissionDecisionReason =
           (if $ctx != "" then ($reason + "\n\n" + $ctx) else $reason end)
       | (if $msg != "" then .systemMessage = ((.systemMessage // "") | if . == "" then $msg else . + "\n\n" + $msg end) else . end)
-    '
+    ' 2>/dev/null || printf '%s\n' "$ask_result"
     return 0
   fi
 
@@ -341,13 +344,14 @@ toolu_dispatch_hook() {
     if [ -z "$merged_msg" ]; then merged_msg="$c"; else merged_msg="${merged_msg}"$'\n\n'"${c}"; fi
   done
   if [ -n "$ask_result" ]; then
+    # Same fail-closed fallback as toolu_dispatch_modules above.
     jq -n --argjson ask "$ask_result" --arg ctx "$merged_ctx" --arg msg "$merged_msg" '
       ($ask.hookSpecificOutput.permissionDecisionReason // "") as $reason
       | $ask
       | .hookSpecificOutput.permissionDecisionReason =
           (if $ctx != "" then ($reason + "\n\n" + $ctx) else $reason end)
       | (if $msg != "" then .systemMessage = ((.systemMessage // "") | if . == "" then $msg else . + "\n\n" + $msg end) else . end)
-    '
+    ' 2>/dev/null || printf '%s\n' "$ask_result"
     return 0
   fi
   if [ -n "$merged_ctx" ] || [ -n "$merged_msg" ]; then

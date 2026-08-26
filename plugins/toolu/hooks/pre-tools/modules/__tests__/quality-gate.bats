@@ -166,7 +166,30 @@ gate_config() {
   payload=$(jq -n '{tool_input:{command:"git push"}}')
   tool_name=Bash input="$payload" run bash "$HOOK"
   [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // "none"')" = "none" ]
-  [[ "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')" == *"quality gate failing"* ]]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')
+  [[ "$ctx" == *"quality gate is failing"* ]]
+  # An advisory must not claim it blocked anything.
+  [[ "$ctx" != *"BLOCKED"* ]]
+}
+
+@test "quality-gate: ask mode phrases the reason as a question" {
+  gate_config '{"version":1,"gates":{"qualityGate":{"mode":"ask"}}}'
+  payload=$(jq -n '{tool_input:{command:"git push"}}')
+  tool_name=Bash input="$payload" run bash "$HOOK"
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "ask" ]
+  reason=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')
+  [[ "$reason" == *"anyway?"* ]]
+  [[ "$reason" != *"BLOCKED"* ]]
+}
+
+@test "quality-gate: a non-commit non-push command never loads config" {
+  # Regression guard for the hot path: this module runs on EVERY Bash call, so
+  # a malformed config (which the loader warns about on stderr) must not even
+  # be read for a command the gate does not care about.
+  printf 'not json' > "$TMP/.claude/toolu.config.json"
+  payload=$(jq -n '{tool_input:{command:"ls -la"}}')
+  tool_name=Bash input="$payload" run bash "$HOOK" 2>&1
+  [ -z "$output" ]
 }
 
 @test "quality-gate: per-gate off emits nothing on a push" {
