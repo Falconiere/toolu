@@ -131,20 +131,28 @@ write_module() {
   echo "$output" | grep -q 'plugins/toolu/hooks/lib/dispatch.sh'
 }
 
-@test "pre-tools entrypoint applies an active failure gate to every Codex patch path" {
+@test "pre-tools entrypoint lets an apply_patch through while the quality gate is failing" {
   project="$TMP/project"
   mkdir -p "$project/.codex/tmp"
   git -C "$project" init -q
   git -C "$project" -c user.email=t@t -c user.name=t commit --allow-empty -qm init
   printf '%s\n' '{"status":"failing","reason":"tests failed","violations":"fix tests"}' \
     > "$project/.codex/tmp/quality-gate-status.json"
+  # A failing gate stops SHIPPING, not working: edits stay open so the
+  # violation can be fixed. Committing is what it denies — asserted below and
+  # in quality-gate.bats.
   patch=$'*** Begin Patch\n*** Update File: src/fix.ts\n@@\n-a\n+b\n*** Update File: README.md\n@@\n-a\n+b\n*** End Patch'
   payload=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command}}')
   run bash -c 'cd "$1" && env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$2" TOOLU_PROJECT_DIR="$1" bash "$3" <<<"$4"' \
     _ "$project" "$TMP/codex" "$REPO_ROOT/hooks/pre-tools/mod.sh" "$payload"
   [ "$status" -eq 0 ]
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // "none"')" = "none" ]
+
+  commit_payload=$(jq -cn '{tool_name:"Bash",tool_input:{command:"git commit -m \"feat: x\""}}')
+  run bash -c 'cd "$1" && env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$2" TOOLU_PROJECT_DIR="$1" bash "$3" <<<"$4"' \
+    _ "$project" "$TMP/codex" "$REPO_ROOT/hooks/pre-tools/mod.sh" "$commit_payload"
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null
-  echo "$output" | grep -q 'Quality gate failing'
+  echo "$output" | grep -q 'quality gate failing'
 }
 
 @test "dispatcher: deny short-circuits later modules (no trailing advisory after deny)" {
@@ -410,4 +418,114 @@ EOF
     bash "$REPO_ROOT/hooks/pre-tools/mod.sh" <<<'{"tool_name":"Read"}'
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q "should-not-appear"
+}
+
+# ── ask handling (AC-21, AC-22) ─────────────────────────────────────────────
+#
+# `ask` is held rather than emitted on sight: a later module must still be able
+# to deny, and an advisory raised after the ask must ride along on its reason.
+
+@test "ask reaches the caller as an ask decision" {
+  write_module "10-ask" 'echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"push without a review?\"}}"'
+  run toolu_dispatch_modules "$MODULES_DIR" "PreToolUse"
+  [ "$status" -eq 0 ]
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "ask" ]
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')" = "push without a review?" ]
+}
+
+@test "a later deny outranks an earlier ask" {
+  write_module "10-ask" 'echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"prompt me\"}}"'
+  write_module "20-deny" 'echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"protected file\"}}"'
+  run toolu_dispatch_modules "$MODULES_DIR" "PreToolUse"
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "deny" ]
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')" = "protected file" ]
+}
+
+@test "an earlier deny still short-circuits before a later ask" {
+  write_module "10-deny" 'echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"blocked first\"}}"'
+  write_module "20-ask" 'echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"prompt me\"}}"'
+  run toolu_dispatch_modules "$MODULES_DIR" "PreToolUse"
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "deny" ]
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')" = "blocked first" ]
+}
+
+@test "the first ask wins when two modules ask" {
+  write_module "10-ask" 'echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"first\"}}"'
+  write_module "20-ask" 'echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"second\"}}"'
+  run toolu_dispatch_modules "$MODULES_DIR" "PreToolUse"
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')" = "first" ]
+}
+
+@test "an advisory raised after an ask is appended to the ask reason" {
+  write_module "10-ask" 'echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"push without a review?\"}}"'
+  write_module "20-advice" 'echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"docs look stale\"}}"'
+  run toolu_dispatch_modules "$MODULES_DIR" "PreToolUse"
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "ask" ]
+  reason=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')
+  [[ "$reason" == *"push without a review?"* ]]
+  [[ "$reason" == *"docs look stale"* ]]
+}
+
+@test "an advisory raised before an ask is also appended" {
+  write_module "10-advice" 'echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"gate is red\"}}"'
+  write_module "20-ask" 'echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"push anyway?\"}}"'
+  run toolu_dispatch_modules "$MODULES_DIR" "PreToolUse"
+  reason=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')
+  [[ "$reason" == *"push anyway?"* ]]
+  [[ "$reason" == *"gate is red"* ]]
+}
+
+@test "a systemMessage from another module survives an ask" {
+  write_module "10-ask" 'echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"prompt\"}}"'
+  write_module "20-msg" 'echo "{\"systemMessage\":\"heads up\"}"'
+  run toolu_dispatch_modules "$MODULES_DIR" "PreToolUse"
+  [ "$(echo "$output" | jq -r '.systemMessage')" = "heads up" ]
+}
+
+@test "a module exiting 2 after an ask still hard-blocks" {
+  write_module "10-ask" 'echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"prompt\"}}"'
+  write_module "20-exit2" 'echo "hard block reason" >&2; exit 2'
+  run toolu_dispatch_modules "$MODULES_DIR" "PreToolUse"
+  [ "$status" -eq 2 ]
+}
+
+@test "normalized dispatcher: an ask on one apply_patch path prompts for the whole patch" {
+  write_module "a_ask" 'p=$(jq -r ".tool_input.file_path" -); if [ "$p" = "src/risky.ts" ]; then jq -n "{hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"ask\",permissionDecisionReason:\"risky-path\"}}"; fi'
+  patch=$'*** Begin Patch\n*** Update File: src/safe.ts\n@@\n-a\n+b\n*** Update File: src/risky.ts\n@@\n-a\n+b\n*** End Patch'
+  input=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command}}')
+  tool_name=apply_patch
+  export input tool_name
+  run toolu_dispatch_hook "$MODULES_DIR" "PreToolUse"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "ask"' >/dev/null
+  echo "$output" | grep -q 'risky-path'
+}
+
+@test "normalized dispatcher: a deny on a later path outranks an ask on an earlier one" {
+  write_module "a_mixed" 'p=$(jq -r ".tool_input.file_path" -); case "$p" in
+    src/first.ts) jq -n "{hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"ask\",permissionDecisionReason:\"ask-first\"}}" ;;
+    hooks/lib/dispatch.sh) jq -n "{hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"deny\",permissionDecisionReason:\"deny-second\"}}" ;;
+  esac'
+  patch=$'*** Begin Patch\n*** Update File: src/first.ts\n@@\n-a\n+b\n*** Update File: hooks/lib/dispatch.sh\n@@\n-a\n+b\n*** End Patch'
+  input=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command}}')
+  tool_name=apply_patch
+  export input tool_name
+  run toolu_dispatch_hook "$MODULES_DIR" "PreToolUse"
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null
+  echo "$output" | grep -q 'deny-second'
+}
+
+@test "normalized dispatcher: an advisory from another path rides on the ask reason" {
+  write_module "a_mixed" 'p=$(jq -r ".tool_input.file_path" -); case "$p" in
+    src/first.ts) jq -n "{hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"ask\",permissionDecisionReason:\"ask-first\"}}" ;;
+    src/second.ts) jq -n "{hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"advice-second\"}}" ;;
+  esac'
+  patch=$'*** Begin Patch\n*** Update File: src/first.ts\n@@\n-a\n+b\n*** Update File: src/second.ts\n@@\n-a\n+b\n*** End Patch'
+  input=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command}}')
+  tool_name=apply_patch
+  export input tool_name
+  run toolu_dispatch_hook "$MODULES_DIR" "PreToolUse"
+  reason=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')
+  [[ "$reason" == *"ask-first"* ]]
+  [[ "$reason" == *"advice-second"* ]]
 }

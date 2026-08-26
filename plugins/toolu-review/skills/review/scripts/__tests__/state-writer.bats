@@ -207,6 +207,10 @@ teardown() {
 }
 
 @test "write-state: a state missing a changed file still denies at the real gate" {
+  # File-coverage is the subject; pin the blocking mode so the gate's answer is
+  # a deny rather than the shipped default's prompt.
+  mkdir -p "$TMP/.claude"
+  printf '%s' '{"version":1,"gates":{"preset":"strict"}}' > "$TMP/.claude/toolu.config.json"
   git checkout -q -b feature
   echo a > f.txt && git add f.txt && git commit -qm work
   echo b > g.txt && git add g.txt && git commit -qm work2

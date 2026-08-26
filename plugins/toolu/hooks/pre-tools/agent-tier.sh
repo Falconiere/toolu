@@ -32,6 +32,8 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../lib}"
 . "$_toolu_lib/config.sh"
 # shellcheck source=../lib/telemetry.sh
 . "$_toolu_lib/telemetry.sh"
+# shellcheck source=../lib/gate-mode.sh
+. "$_toolu_lib/gate-mode.sh"
 
 command -v jq >/dev/null 2>&1 || exit 0
 
@@ -101,28 +103,9 @@ telemetry_append "$root" delegation "$extra"
 # call supplied one AND they differ. A missing call model is tier-inherit —
 # always legitimate, never nudged or denied.
 if [ -n "$step_model" ] && [ -n "$call_model" ] && [ "$step_model" != "$call_model" ]; then
-  mode=$(toolu_string agentTier.mode advise advise block off)
+  mode=$(toolu_gate_mode agentTier)
   reason="plan step \"$step_id\" expects model tier \"$step_model\" but this delegation used \"$call_model\""
-  case "$mode" in
-    advise)
-      jq -n --arg reason "$reason" '{
-        hookSpecificOutput: {
-          hookEventName: "PreToolUse",
-          additionalContext: $reason
-        }
-      }'
-      ;;
-    block)
-      jq -n --arg reason "$reason" '{
-        hookSpecificOutput: {
-          hookEventName: "PreToolUse",
-          permissionDecision: "deny",
-          permissionDecisionReason: $reason
-        }
-      }'
-      ;;
-    off) ;;
-  esac
+  toolu_gate_emit "$mode" "$reason"
 fi
 
 exit 0

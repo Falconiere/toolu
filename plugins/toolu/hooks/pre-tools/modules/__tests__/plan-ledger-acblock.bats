@@ -89,7 +89,17 @@ _write_plan() {
 }
 
 # _write_config BOOL — project-level planLedger.blockOnUncoveredAcs.
+# blockOnUncoveredAcs decides whether an uncovered AC is a gate FAILURE at all;
+# gates.planLedger.mode decides how that failure is delivered. These cases are
+# about the former, so they pin the latter to `block` rather than inheriting
+# whatever the shipped preset delivers.
 _write_config() {
+  printf '{"version":1,"planLedger":{"blockOnUncoveredAcs":%s},"gates":{"planLedger":{"mode":"block"}}}' "$1" \
+    > "$TOOLU_PROJECT_DIR/.claude/toolu.config.json"
+}
+
+# Same flag, delivery left at the shipped default.
+_write_config_default_mode() {
   printf '{"version":1,"planLedger":{"blockOnUncoveredAcs":%s}}' "$1" \
     > "$TOOLU_PROJECT_DIR/.claude/toolu.config.json"
 }
@@ -214,4 +224,43 @@ _ac_coverage_event() {
   # reaches the ac_coverage telemetry call (TELEMETRY_FILE still exists from
   # _build_ledger's step_run event, so assert on event presence, not the file).
   [ -z "$(_ac_coverage_event)" ]
+}
+
+@test "blockOnUncoveredAcs=true advises rather than denies under the shipped preset" {
+  # The two knobs are orthogonal on purpose: the flag says an uncovered AC is a
+  # failure, the mode says how loudly. Default delivery is advise, so a user who
+  # never touched gates.* gets the AC report without a wall.
+  commit_file script.sh "echo hi"
+
+  spec="$SANDBOX/spec.md"
+  plan="$SANDBOX/plan.md"
+  _write_spec "$spec"
+  _write_plan "$plan" "$spec" \
+    '[ { "id": "s1", "title": "covers AC-1", "check": "true", "ac_refs": ["AC-1"] } ]'
+  _build_ledger "$plan"
+  _write_config_default_mode true
+
+  payload=$(build_input "git push")
+  run_plan_ledger_gate "$payload"
+
+  [ "$status" -eq 0 ]
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // "none"')" = "none" ]
+  [[ "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')" == *"AC-2"* ]]
+}
+
+@test "gates.planLedger.mode off silences the ledger gate entirely" {
+  commit_file script.sh "echo hi"
+  spec="$SANDBOX/spec.md"
+  plan="$SANDBOX/plan.md"
+  _write_spec "$spec"
+  _write_plan "$plan" "$spec" \
+    '[ { "id": "s1", "title": "covers AC-1", "check": "true", "ac_refs": ["AC-1"] } ]'
+  _build_ledger "$plan"
+  printf '{"version":1,"planLedger":{"blockOnUncoveredAcs":true},"gates":{"planLedger":{"mode":"off"}}}' \
+    > "$TOOLU_PROJECT_DIR/.claude/toolu.config.json"
+
+  payload=$(build_input "git push")
+  run_plan_ledger_gate "$payload"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }

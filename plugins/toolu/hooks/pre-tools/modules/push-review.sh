@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
-# Pre-tool check: block `git push` until branch has been reviewed.
+# Pre-tool check: gate `git push` on a recorded code review.
+#
+# How firmly it gates is a mode, not a constant — see lib/gate-mode.sh. At the
+# shipped default (balanced) this ASKS, and a "yes" is remembered as a waiver
+# for that exact diff (lib/push-waiver.sh), so the same code is never queried
+# twice. `gates.pushReview.mode: block` restores the original hard deny.
 # Project-agnostic: base branch is detected via detect_base_branch
 # (or env-overridden with $PUSH_REVIEW_BASE for tests).
 #
@@ -26,6 +31,10 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 . "$_toolu_lib/diff-sha.sh"
 # shellcheck source=../../lib/telemetry.sh
 . "$_toolu_lib/telemetry.sh"
+# shellcheck source=../../lib/gate-mode.sh
+. "$_toolu_lib/gate-mode.sh"
+# shellcheck source=../../lib/push-waiver.sh
+. "$_toolu_lib/push-waiver.sh"
 
 [[ "$tool_name" != "Bash" ]] && exit 0
 
@@ -40,6 +49,11 @@ command=$(echo "$input" | jq -r '.tool_input.command // ""')
 # could append `;` and slip the push past the gate, which is now the only
 # push-time check.
 is_git_push "$command" || exit 0
+
+# Resolve the delivery mode before doing any work: `off` means this gate has
+# nothing to say, and the git plumbing below is not free.
+mode=$(toolu_gate_mode pushReview)
+[ "$mode" = "off" ] && exit 0
 
 # Every check below reads the repo the push TARGETS, not the hook's cwd — a
 # `git -C <worktree> push` must be judged on the worktree's branch, diff and
@@ -75,30 +89,44 @@ _pr_telemetry() {
          '{result: $result, reason_code: $code, round: $round}')"
 }
 
+# _pr_decide CODE REASON [ROUND]
+# Deliver one failed check in the configured mode, record it, and stop.
+#
+# In `ask` mode the question is also written down as a pending waiver keyed to
+# the diff being asked about, so post-tools/modules/push-waiver.sh can promote
+# it if the push actually happens. Checks that fail before a diff SHA exists
+# (missing base, detached HEAD) have nothing to key a waiver to and simply skip
+# that step — they are operational errors, not review decisions.
+_pr_decide() {
+  local code="$1" reason="$2" round="${3:-}"
+  local result="$mode"
+  case "$mode" in
+    block)  result=deny ;;
+    ask)
+      result=ask
+      reason="No clean review is recorded for this diff. Approving pushes anyway, and the approval is remembered until the diff changes.
+
+$reason"
+      if [ -n "${current_diff_sha:-}" ]; then
+        push_waiver_pend "$repo_root" "$slug" "$current_diff_sha" "$base_branch" "$code" \
+          || echo "push-review: could not record the pending waiver; a yes will be asked again" >&2
+      fi
+      ;;
+    advise) result=advise ;;
+  esac
+  toolu_gate_emit "$mode" "$reason"
+  _pr_telemetry "$result" "$code" "$round"
+  exit 0
+}
+
 # Verify base branch exists locally.
 if ! git -C "$repo_root" rev-parse --verify --quiet "$base_branch" >/dev/null; then
-  jq -n --arg base "$base_branch" '{
-    "hookSpecificOutput": {
-      "hookEventName": "PreToolUse",
-      "permissionDecision": "deny",
-      "permissionDecisionReason": ("base branch '\''" + $base + "'\'' not found locally; run `git fetch origin " + $base + ":" + $base + "`")
-    }
-  }'
-  _pr_telemetry deny base-missing
-  exit 0
+  _pr_decide base-missing "base branch '$base_branch' not found locally; run \`git fetch origin $base_branch:$base_branch\`"
 fi
 
 # Detect detached HEAD (current_branch == "HEAD" from rev-parse).
 if [[ "$current_branch" == "HEAD" || -z "$current_branch" ]]; then
-  jq -n '{
-    "hookSpecificOutput": {
-      "hookEventName": "PreToolUse",
-      "permissionDecision": "deny",
-      "permissionDecisionReason": "detached HEAD — checkout a branch before push"
-    }
-  }'
-  _pr_telemetry deny detached-head
-  exit 0
+  _pr_decide detached-head "detached HEAD — checkout a branch before push"
 fi
 
 # Pushing the base branch itself (e.g. fast-forwarded main after a local merge)
@@ -128,18 +156,14 @@ if [[ "$current_diff_sha" == "$EMPTY_BLOB_SHA" ]]; then
   # a sentinel that NEVER satisfies the cache check, then deny the push so
   # the user is forced to confirm intent rather than push a no-op.
   current_diff_sha="empty-diff"
-  jq -n --arg base "$base_branch" '{
-    "hookSpecificOutput": {
-      "hookEventName": "PreToolUse",
-      "permissionDecision": "deny",
-      "permissionDecisionReason": (
-        "Refusing to push: diff against " + $base + " is empty. " +
-        "Either no commits diverged from base, or the branch was force-reset. " +
-        "Verify intent before pushing."
-      )
-    }
-  }'
-  _pr_telemetry deny empty-diff
+  _pr_decide empty-diff "Refusing to push: diff against $base_branch is empty. Either no commits diverged from base, or the branch was force-reset. Verify intent before pushing."
+fi
+
+# A waiver for THIS diff means the user already answered "push anyway" for
+# exactly this code. Honor it silently — asking again about an answered
+# question is the nag this gate is trying not to be.
+if push_waiver_matches "$repo_root" "$slug" "$current_diff_sha"; then
+  _pr_telemetry allow waived
   exit 0
 fi
 
@@ -154,24 +178,8 @@ fi
 
 # State file gate.
 if [[ ! -f "$state_file" ]]; then
-  jq -n --arg sha "$current_diff_sha" --arg base "$base_branch" --arg file "$state_file" --arg hint "$reviewer_hint" '{
-    "hookSpecificOutput": {
-      "hookEventName": "PreToolUse",
-      "permissionDecision": "deny",
-      "permissionDecisionReason": (
-        "Code review required before push (diff SHA " + $sha + ", base " + $base + ").\n" +
-        "Run a code reviewer on `git diff " + $base + "...HEAD` and apply its findings — use " + $hint + ". " +
-        "Then atomically write " + $file + " (tmp+mv) with schema " +
-        "{ version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. " +
-        "`reviewers` must include at least one accepted reviewer (caveman:cavecrew-reviewer, code-review, toolu-review:review, code-review:xhigh, review, or security-review), " +
-        "`findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. " +
-        "`reviewed_files` must list every path from `git diff " + $base + "...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. " +
-        "Retry push."
-      )
-    }
-  }'
-  _pr_telemetry deny no-state
-  exit 0
+  _pr_decide no-state "Code review required before push (diff SHA $current_diff_sha, base $base_branch).
+Run a code reviewer on \`git diff $base_branch...HEAD\` and apply its findings — use $reviewer_hint. Then atomically write $state_file (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. \`reviewers\` must include at least one accepted reviewer (caveman:cavecrew-reviewer, code-review, toolu-review:review, code-review:xhigh, review, or security-review), \`findings_count\` must be 0, \`review_round\` starts at 1 for a new \`diff_sha\` and bumps by 1 only when rewriting at the same \`diff_sha\`. \`reviewed_files\` must list every path from \`git diff $base_branch...HEAD --name-only\` (sorted, unique) — the actual reviewer file coverage. Retry push."
 fi
 
 # Validate state file: version, diff_sha, findings_count, reviewers.
@@ -183,27 +191,11 @@ state_findings=$(jq -r '.findings_count // ""' "$state_file" 2>/dev/null || echo
 # upgrade deny rather than the generic "corrupted" deny — the state is valid,
 # just stale-schema, and the fix is a re-review, not a delete-and-retry.
 if [[ "$state_version" == "1" ]]; then
-  jq -n '{
-    "hookSpecificOutput": {
-      "hookEventName": "PreToolUse",
-      "permissionDecision": "deny",
-      "permissionDecisionReason": "push-review state is schema v1; harness v2 requires reviewed_files — re-run the review to regenerate the state file"
-    }
-  }'
-  _pr_telemetry deny schema-v1
-  exit 0
+  _pr_decide schema-v1 "push-review state is schema v1; harness v2 requires reviewed_files — re-run the review to regenerate the state file"
 fi
 
 if [[ "$state_version" != "2" || -z "$state_sha" || -z "$state_findings" ]]; then
-  jq -n --arg file "$state_file" '{
-    "hookSpecificOutput": {
-      "hookEventName": "PreToolUse",
-      "permissionDecision": "deny",
-      "permissionDecisionReason": ("state file corrupted at " + $file + "; delete and re-review")
-    }
-  }'
-  _pr_telemetry deny schema
-  exit 0
+  _pr_decide schema "state file corrupted at $state_file; delete and re-review"
 fi
 
 # review_round: read here (once) rather than only at the round-cap check below,
@@ -224,19 +216,9 @@ accepted_reviewers='["caveman:cavecrew-reviewer","code-review","toolu-review:rev
 if ! jq -e --argjson acc "$accepted_reviewers" \
      '(.reviewers // []) as $r | any($acc[]; . as $x | $r | index($x) != null)' \
      "$state_file" >/dev/null 2>&1; then
-  jq -n --arg file "$state_file" --arg acc "$accepted_reviewers" --arg hint "$reviewer_hint" '{
-    "hookSpecificOutput": {
-      "hookEventName": "PreToolUse",
-      "permissionDecision": "deny",
-      "permissionDecisionReason": (
-        "state file lists no accepted reviewer at " + $file + "\n" +
-        "`reviewers` must include at least one of: " + $acc + "\n" +
-        "Run a reviewer — use " + $hint + " — then rewrite the state file."
-      )
-    }
-  }'
-  _pr_telemetry deny reviewer "$state_round"
-  exit 0
+  _pr_decide reviewer "state file lists no accepted reviewer at $state_file
+\`reviewers\` must include at least one of: $accepted_reviewers
+Run a reviewer — use $reviewer_hint — then rewrite the state file." "$state_round"
 fi
 
 # Max review rounds — bound the fix→re-review loop. `review_round` counts
@@ -250,52 +232,20 @@ fi
 # its Step 6 escalation stop instead of looping indefinitely.
 MAX_ROUNDS=5
 if [[ "$state_round" =~ ^[0-9]+$ ]] && (( state_round > MAX_ROUNDS )); then
-  jq -n --arg n "$state_round" --arg max "$MAX_ROUNDS" --arg file "$state_file" '{
-    "hookSpecificOutput": {
-      "hookEventName": "PreToolUse",
-      "permissionDecision": "deny",
-      "permissionDecisionReason": (
-        "ESCALATE: review loop hit " + $n + " rounds (max " + $max + ") on an unchanged diff at " + $file + ". " +
-        "Reviewers keep finding new issues after each fix — stop auto-looping and surface the " +
-        "current findings to the human. Babysit: treat as Escalation stop (Step 6)."
-      )
-    }
-  }'
-  _pr_telemetry deny round-cap "$state_round"
-  exit 0
+  _pr_decide round-cap "ESCALATE: review loop hit $state_round rounds (max $MAX_ROUNDS) on an unchanged diff at $state_file. Reviewers keep finding new issues after each fix — stop auto-looping and surface the current findings to the human. Babysit: treat as Escalation stop (Step 6)." "$state_round"
 fi
 
 if [[ "$state_sha" != "$current_diff_sha" ]]; then
-  jq -n --arg sha "$current_diff_sha" --arg file "$state_file" '{
-    "hookSpecificOutput": {
-      "hookEventName": "PreToolUse",
-      "permissionDecision": "deny",
-      "permissionDecisionReason": (
-        "Code review required: diff changed since review.\n" +
-        "Current diff SHA: " + $sha + "\n" +
-        "State file: " + $file + " (stale)\n" +
-        "Re-run reviewers on the new diff and rewrite the state file."
-      )
-    }
-  }'
-  _pr_telemetry deny stale-diff "$state_round"
-  exit 0
+  _pr_decide stale-diff "Code review required: diff changed since review.
+Current diff SHA: $current_diff_sha
+State file: $state_file (stale)
+Re-run reviewers on the new diff and rewrite the state file." "$state_round"
 fi
 
 if [[ "$state_findings" != "0" ]]; then
-  jq -n --arg count "$state_findings" --arg file "$state_file" '{
-    "hookSpecificOutput": {
-      "hookEventName": "PreToolUse",
-      "permissionDecision": "deny",
-      "permissionDecisionReason": (
-        "Code review has open findings (" + $count + ").\n" +
-        "State file: " + $file + "\n" +
-        "Address every finding (any finding blocks). Re-commit. Re-run reviewers. Rewrite state file with findings_count=0."
-      )
-    }
-  }'
-  _pr_telemetry deny findings "$state_round"
-  exit 0
+  _pr_decide findings "Code review has open findings ($state_findings).
+State file: $state_file
+Address every finding (any finding blocks). Re-commit. Re-run reviewers. Rewrite state file with findings_count=0." "$state_round"
 fi
 
 # Reviewer file coverage (v2): reviewed_files must equal the diff's changed
@@ -310,20 +260,14 @@ reviewed_sorted=$(jq -r '.reviewed_files[]' "$state_file" 2>/dev/null | sort -u)
 if [[ "$changed_sorted" != "$reviewed_sorted" ]]; then
   missing=$(comm -23 <(printf '%s\n' "$changed_sorted") <(printf '%s\n' "$reviewed_sorted"))
   extra=$(comm -13 <(printf '%s\n' "$changed_sorted") <(printf '%s\n' "$reviewed_sorted"))
-  jq -n --arg file "$state_file" --arg missing "$missing" --arg extra "$extra" --arg base "$base_branch" '{
-    "hookSpecificOutput": {
-      "hookEventName": "PreToolUse",
-      "permissionDecision": "deny",
-      "permissionDecisionReason": (
-        "reviewed_files does not match the current diff at " + $file + ".\n" +
-        (if ($missing | length) > 0 then "Missing from reviewed_files (changed but not reviewed): " + $missing + "\n" else "" end) +
-        (if ($extra | length) > 0 then "In reviewed_files but not in the current diff: " + $extra + "\n" else "" end) +
-        "Re-review the full diff and rewrite reviewed_files to match `git diff " + $base + "...HEAD --name-only` exactly."
-      )
-    }
-  }'
-  _pr_telemetry deny file-coverage "$state_round"
-  exit 0
+  reason="reviewed_files does not match the current diff at $state_file."
+  [ -n "$missing" ] && reason="$reason
+Missing from reviewed_files (changed but not reviewed): $missing"
+  [ -n "$extra" ] && reason="$reason
+In reviewed_files but not in the current diff: $extra"
+  reason="$reason
+Re-review the full diff and rewrite reviewed_files to match \`git diff $base_branch...HEAD --name-only\` exactly."
+  _pr_decide file-coverage "$reason" "$state_round"
 fi
 
 # All gates pass: allow push.

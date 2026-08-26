@@ -17,6 +17,15 @@ setup_sandbox() {
   export STATE_DIR="$SANDBOX/.claude/tmp/push-review"
   mkdir -p "$STATE_DIR"
 
+  # Config isolation: point both config layers at the sandbox so a real
+  # ~/.claude/toolu.config.json on the machine running the suite cannot change
+  # what mode these tests resolve.
+  export HOME="$SANDBOX/home"
+  export TOOLU_PROJECT_DIR="$SANDBOX"
+  export CLAUDE_PROJECT_DIR="$SANDBOX"
+  unset TOOLU_CONFIG_DIR CLAUDE_CONFIG_DIR TOOLU_HOST_OVERRIDE
+  mkdir -p "$HOME/.claude" "$SANDBOX/.claude"
+
   cd "$SANDBOX"
   git init -q -b development .
   git config user.email "test@example.com"
@@ -29,6 +38,20 @@ setup_sandbox() {
   echo "feature" > feature.txt
   git add feature.txt
   git commit -q -m "feature commit"
+}
+
+# Pin the gate preset (or a single gate's mode) for a test.
+#   gate_config '{"gates":{"preset":"strict"}}'
+# Most of the pre-existing cases below describe BLOCK behavior, which is now
+# the `strict` preset rather than the built-in default — they say so explicitly
+# instead of relying on whatever ships as the default.
+gate_config() {
+  printf '%s' "$1" > "$SANDBOX/.claude/toolu.config.json"
+}
+
+# Shorthand for the common case.
+use_strict_preset() {
+  gate_config '{"version":1,"gates":{"preset":"strict"}}'
 }
 
 teardown_sandbox() {

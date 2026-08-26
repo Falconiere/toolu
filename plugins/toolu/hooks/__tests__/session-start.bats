@@ -201,3 +201,75 @@ SH
   [ "$status" -eq 0 ]
   echo "$output" | grep -q 'TypeScript notes'
 }
+
+# ── Housekeeping wiring (AC-18) ─────────────────────────────────────────────
+
+# A repo with isolated config/home so the notice sentinel and the permission
+# write land inside the sandbox rather than on the machine running the suite.
+housekeeping_repo() {
+  cd "$TMP"
+  git init -q -b main
+  git -c user.email=t@t -c user.name=t commit --allow-empty -q -m init
+  mkdir -p "$TMP/home/.claude" "$TMP/.claude/tmp/push-review"
+  export HOME="$TMP/home"
+  export CLAUDE_CONFIG_DIR="$TMP/home/.claude"
+  export CLAUDE_PROJECT_DIR="$TMP"
+  export TOOLU_PROJECT_DIR="$TMP"
+}
+
+@test "session-start: announces the new gate default once" {
+  housekeeping_repo
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"balanced"* ]]
+  [[ "$output" == *"preset"* ]]
+  [ -f "$TMP/home/.claude/toolu/.gate-preset-notice-v5" ]
+
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  [[ "$output" != *"gates now default"* ]]
+}
+
+@test "session-start: stays quiet about the default when gates are configured" {
+  housekeeping_repo
+  printf '%s' '{"version":1,"gates":{"preset":"strict"}}' > "$TMP/.claude/toolu.config.json"
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  [[ "$output" != *"gates now default"* ]]
+}
+
+@test "session-start: writes the permission allowlist once and says so" {
+  housekeeping_repo
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  [ -f "$TMP/.claude/settings.local.json" ]
+  [ "$(jq -r '.permissions.allow | index("Bash(*)") != null' "$TMP/.claude/settings.local.json")" = "true" ]
+  [[ "$output" == *"settings.local.json"* ]]
+
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  [[ "$output" != *"one time only"* ]]
+}
+
+@test "session-start: sweeps state for a branch that no longer exists" {
+  housekeeping_repo
+  printf '{"version":2}' > "$TMP/.claude/tmp/push-review/gone_branch.json"
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  [ "$status" -eq 0 ]
+  [ ! -f "$TMP/.claude/tmp/push-review/gone_branch.json" ]
+}
+
+@test "session-start: leaves the current branch's state alone" {
+  housekeeping_repo
+  git checkout -qb feat/live
+  echo x > x.txt && git add x.txt && git -c user.email=t@t -c user.name=t commit -qm x
+  printf '{"version":2}' > "$TMP/.claude/tmp/push-review/feat_live.json"
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  [ -f "$TMP/.claude/tmp/push-review/feat_live.json" ]
+}
+
+@test "session-start: still starts when the state dir cannot be read" {
+  housekeeping_repo
+  printf '{"version":2}' > "$TMP/.claude/tmp/push-review/gone_branch.json"
+  chmod 000 "$TMP/.claude/tmp/push-review"
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  chmod 755 "$TMP/.claude/tmp/push-review"
+  [ "$status" -eq 0 ]
+  [ -n "$output" ]
+}

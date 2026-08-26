@@ -251,6 +251,23 @@ is_git_push() {
     | grep -qE '(^|\s|&&|\|\||;)git(\s+(-[cC]\s+("[^"]*"|\S+)|--\S+=\S+|--[a-z][a-z-]*|-[a-zA-Z]))*\s+push(\s|;|&|\||$)'
 }
 
+# Return 0 iff the raw command string $1 is a `git commit`.
+#
+# Mirrors is_git_push exactly — same heredoc stripping, same tolerance for
+# git's global options between `git` and the subcommand — because the two
+# callers that need it have the same evasion surface. commit-gate.sh used to
+# pattern-match the literal prefix `git commit`, which missed `git -C <path>
+# commit` and any command that reached commit after a `&&`; the narrowed
+# quality gate cannot afford that hole, since commit is one of the only two
+# things it still stops.
+#
+# The trailing boundary keeps `git commit-tree` out: the character after
+# `commit` there is `-`, which is not a boundary.
+is_git_commit() {
+  printf '%s\n' "$1" | strip_heredocs \
+    | grep -qE '(^|\s|&&|\|\||;)git(\s+(-[cC]\s+("[^"]*"|\S+)|--\S+=\S+|--[a-z][a-z-]*|-[a-zA-Z]))*\s+commit(\s|;|&|\||$)'
+}
+
 # Echo the absolute root of the repo a `git push` command ($1) targets.
 #
 # The hook's own cwd is not authoritative: `git -C <path> push` targets another

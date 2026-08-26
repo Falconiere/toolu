@@ -23,6 +23,12 @@
 #     "deny"` is authoritative — its output is emitted immediately and
 #     dispatch stops (security wins; a deny must not be suppressed by an
 #     advisory).
+#   - PreToolUse: a module emitting `permissionDecision == "ask"` is HELD, not
+#     emitted immediately, and dispatch continues — a later module must still
+#     be able to deny, and a prompt the user could answer "yes" to must never
+#     outrank a hard block. The first ask wins if several fire; it is emitted
+#     at the end with any collected advisories appended to its reason, so an
+#     advisory is never lost behind a prompt.
 #   - PostToolUse: a module emitting top-level `decision == "block"` is
 #     authoritative — its output is emitted immediately and dispatch stops.
 #     (PostToolUse has no permissionDecision; that is PreToolUse-only.)
@@ -53,6 +59,8 @@ toolu_dispatch_modules() {
   local registry_dirs=("$@")
   local script result rc err_file decision ctx msg c base plugin
   local contexts=() messages=()
+  # First `ask` seen this dispatch, held until every module has run.
+  local ask_result=""
   # Per-dispatch memo of plugin-active lookups (space-delimited spec lists;
   # plain strings, not associative arrays, for bash 3.2 compatibility).
   local active_specs=" " inactive_specs=" "
@@ -142,6 +150,13 @@ toolu_dispatch_modules() {
           rm -f "$err_file"
           return 0
         fi
+        if [[ "$decision" == "ask" ]]; then
+          # Hold the first ask and keep going: a later deny outranks it. The
+          # ask payload carries its text in permissionDecisionReason, not in
+          # additionalContext, so there is nothing to harvest below.
+          [[ -z "$ask_result" ]] && ask_result="$result"
+          continue
+        fi
         ;;
       PostToolUse)
         decision=$(jq -r '.decision // empty' <<<"$result" 2>/dev/null)
@@ -188,6 +203,19 @@ toolu_dispatch_modules() {
     done
   fi
 
+  # A held ask is the decision, and it absorbs every advisory collected after
+  # it so nothing a later module wanted to say is dropped.
+  if [[ -n "$ask_result" ]]; then
+    jq -n --argjson ask "$ask_result" --arg ctx "$merged_ctx" --arg msg "$merged_msg" '
+      ($ask.hookSpecificOutput.permissionDecisionReason // "") as $reason
+      | $ask
+      | .hookSpecificOutput.permissionDecisionReason =
+          (if $ctx != "" then ($reason + "\n\n" + $ctx) else $reason end)
+      | (if $msg != "" then .systemMessage = ((.systemMessage // "") | if . == "" then $msg else . + "\n\n" + $msg end) else . end)
+    '
+    return 0
+  fi
+
   if [[ -n "$merged_ctx" || -n "$merged_msg" ]]; then
     jq -n --arg ctx "$merged_ctx" --arg msg "$merged_msg" --arg ev "$event" '
       {}
@@ -211,6 +239,9 @@ toolu_dispatch_hook() {
   local records normalize_rc=0 record path operation from moved_to synthetic
   local result rc decision ctx msg c existing seen
   local contexts=() messages=()
+  # Same hold-the-ask discipline as toolu_dispatch_modules, across the
+  # synthetic per-path payloads of one apply_patch.
+  local ask_result=""
 
   records=$(toolu_normalize_edit_records "$original_input" "$original_tool") || normalize_rc=$?
   if [ "$normalize_rc" -eq 1 ] || [ "$normalize_rc" -eq 3 ]; then
@@ -278,6 +309,12 @@ toolu_dispatch_hook() {
       printf '%s\n' "$result"
       return 0
     fi
+    if [ "$decision" = ask ]; then
+      # One path asking is enough to prompt for the whole patch, but a later
+      # path may still deny it outright — so hold and keep walking.
+      [ -z "$ask_result" ] && ask_result="$result"
+      continue
+    fi
 
     ctx=$(jq -r '.hookSpecificOutput.additionalContext // empty' <<<"$result" 2>/dev/null)
     if [ -n "$ctx" ]; then
@@ -303,6 +340,16 @@ toolu_dispatch_hook() {
   for c in "${messages[@]}"; do
     if [ -z "$merged_msg" ]; then merged_msg="$c"; else merged_msg="${merged_msg}"$'\n\n'"${c}"; fi
   done
+  if [ -n "$ask_result" ]; then
+    jq -n --argjson ask "$ask_result" --arg ctx "$merged_ctx" --arg msg "$merged_msg" '
+      ($ask.hookSpecificOutput.permissionDecisionReason // "") as $reason
+      | $ask
+      | .hookSpecificOutput.permissionDecisionReason =
+          (if $ctx != "" then ($reason + "\n\n" + $ctx) else $reason end)
+      | (if $msg != "" then .systemMessage = ((.systemMessage // "") | if . == "" then $msg else . + "\n\n" + $msg end) else . end)
+    '
+    return 0
+  fi
   if [ -n "$merged_ctx" ] || [ -n "$merged_msg" ]; then
     jq -n --arg ctx "$merged_ctx" --arg msg "$merged_msg" --arg ev "$event" '
       {}

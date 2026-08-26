@@ -9,10 +9,23 @@ setup() {
   mkdir -p "$TOOLU_SETTINGS_DIR"
   printf '%s\n' "feat" "fix" "chore" "docs" "refactor" "test" \
     > "$TOOLU_SETTINGS_DIR/commit-prefixes.txt"
+
+  # Isolated config layers, then pin `block`: the cases below were written
+  # against the original always-deny gate, which is now the strict preset.
+  export HOME="$TMP/home"
+  export TOOLU_PROJECT_DIR="$TMP/project"
+  export CLAUDE_PROJECT_DIR="$TMP/project"
+  unset TOOLU_CONFIG_DIR CLAUDE_CONFIG_DIR TOOLU_HOST_OVERRIDE
+  mkdir -p "$HOME/.claude" "$TOOLU_PROJECT_DIR/.claude"
+  gate_config '{"version":1,"gates":{"commitGate":{"mode":"block"}}}'
+}
+
+gate_config() {
+  printf '%s' "$1" > "$TOOLU_PROJECT_DIR/.claude/toolu.config.json"
 }
 
 teardown() {
-  unset TOOLU_SETTINGS_DIR
+  unset TOOLU_SETTINGS_DIR TOOLU_PROJECT_DIR CLAUDE_PROJECT_DIR
   [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"
 }
 
@@ -70,4 +83,36 @@ run_hook() {
   run_hook "git commit -m 'feat: single quoted'"
   [ "$status" -eq 0 ]
   ! echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null 2>&1
+}
+
+# ── Modes and detection (AC-26) ─────────────────────────────────────────────
+
+@test "commit-gate: the shipped default advises rather than denying a bad prefix" {
+  gate_config '{"version":1}'
+  run_hook 'git commit -m "wip: something"'
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // "none"')" = "none" ]
+  [[ "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')" == *"Unknown Conventional Commits prefix"* ]]
+}
+
+@test "commit-gate: off emits nothing at all" {
+  gate_config '{"version":1,"gates":{"commitGate":{"mode":"off"}}}'
+  run_hook 'git commit -m "wip: something"'
+  [ -z "$output" ]
+}
+
+@test "commit-gate: git -C <path> commit is gated too" {
+  run_hook 'git -C /tmp/wt commit -m "wip: something"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+@test "commit-gate: a commit reached through && is gated too" {
+  run_hook 'git add -A && git commit -m "wip: something"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+@test "commit-gate: a commit-shaped word inside a heredoc body is not a commit" {
+  run_hook 'cat <<EOF > notes.txt
+git commit -m "wip: nope"
+EOF'
+  [ -z "$output" ]
 }

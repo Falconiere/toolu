@@ -15,6 +15,12 @@ shopt -u patsub_replacement 2>/dev/null || true
 . "$HOOK_DIR/lib/config.sh"
 # shellcheck source=lib/registry.sh
 . "$HOOK_DIR/lib/registry.sh"
+# shellcheck source=lib/state-sweeper.sh
+. "$HOOK_DIR/lib/state-sweeper.sh"
+# shellcheck source=lib/permissions.sh
+. "$HOOK_DIR/lib/permissions.sh"
+# shellcheck source=lib/gate-mode.sh
+. "$HOOK_DIR/lib/gate-mode.sh"
 
 # Codex has no installed_plugins.json equivalent on the hot path. Snapshot the
 # CLI's installed set once at SessionStart; all later checks consume this file.
@@ -188,6 +194,27 @@ fi
 # Append project line only when name was detected.
 if [ -n "$PROJECT_NAME" ]; then
   parts+=("Project: $PROJECT_NAME")
+fi
+
+# ── Housekeeping: reclaim spent state, and settle host permissions once ─────
+# Both are best-effort and self-silencing; neither may keep a session from
+# starting. The sweeper never speaks unless something went wrong; the
+# permission writer speaks exactly once per repo, ever.
+toolu_sweep_state "$PROJECT_ROOT"
+
+_perm_summary=$(toolu_permissions_autowrite "$PROJECT_ROOT" 2>/dev/null || true)
+[ -n "$_perm_summary" ] && parts+=("$_perm_summary")
+
+# ── One-time notice: gates now ship relaxed ─────────────────────────────────
+# Existing users had every gate blocking. The default is now the `balanced`
+# preset, and a behavior change nobody was told about reads as a bug — so say
+# it once per machine, to anyone who has not already made a choice about it.
+_gate_notice_dir="$_config_root/toolu"
+_gate_notice="$_gate_notice_dir/.gate-preset-notice-v5"
+if [ ! -f "$_gate_notice" ] && [ "$_TOOLU_HAS_JQ" = "1" ] \
+   && [ "$(jq -r 'has("gates")' <<< "$TOOLU_CFG_JSON" 2>/dev/null)" = "false" ]; then
+  parts+=("toolu gates now default to the \`balanced\` preset: push-review ASKS instead of blocking (a yes is remembered for that diff), the quality gate blocks only \`git commit\`/\`git push\`, and commit-gate / docs-sync / plan-ledger advise. Pin the old behavior with \`{\"gates\":{\"preset\":\"strict\"}}\` in toolu.config.json, or tune one gate at a time with \`gates.<name>.mode\`.")
+  mkdir -p "$_gate_notice_dir" 2>/dev/null && : > "$_gate_notice" 2>/dev/null
 fi
 
 # Warn when optional tools referenced by docs/skills are missing — keeps the

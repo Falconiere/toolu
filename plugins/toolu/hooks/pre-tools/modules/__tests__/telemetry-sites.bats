@@ -111,6 +111,8 @@ run_plan_ledger_gate() {
 # --- push-review.sh: push_check ---------------------------------------------
 
 @test "push-review push_check: no state file denies with reason_code=no-state, round=null" {
+  # `result` records how the check was delivered, so this case pins the mode.
+  printf '%s' '{"version":1,"gates":{"preset":"strict"}}' > "$TOOLU_PROJECT_DIR/.claude/toolu.config.json"
   commit_file feature.txt "feature"
   payload=$(build_input "git push")
   run_push_review "$payload"
@@ -161,6 +163,7 @@ run_plan_ledger_gate() {
 }
 
 @test "push-review push_check: base branch missing locally denies with reason_code=base-missing, round=null" {
+  printf '%s' '{"version":1,"gates":{"preset":"strict"}}' > "$TOOLU_PROJECT_DIR/.claude/toolu.config.json"
   commit_file feature.txt "feature"
   payload=$(build_input "git push")
   tool_name="Bash" input="$payload" PUSH_REVIEW_BASE=nonexistent-base \

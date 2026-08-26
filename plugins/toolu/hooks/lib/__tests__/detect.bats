@@ -562,3 +562,55 @@ _stub_comemory() {  # $1 = version string the stub reports
   run push_target_root "git -C $TMP/outer -C inner push"
   [ "$output" = "$(cd "$TMP/outer/inner" && pwd -P)" ]
 }
+
+# ── is_git_commit (AC-26) ───────────────────────────────────────────────────
+
+@test "is_git_commit matches a plain commit" {
+  source_lib
+  run is_git_commit 'git commit -m "feat: x"'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_commit matches git -C <path> commit" {
+  source_lib
+  run is_git_commit 'git -C /tmp/worktree commit -m "fix: y"'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_commit matches a global-option form" {
+  source_lib
+  run is_git_commit 'git --no-pager commit'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_commit matches a commit after a chain operator" {
+  source_lib
+  run is_git_commit 'git add -A && git commit -m "chore: z"'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_commit does not match git commit-tree" {
+  source_lib
+  run is_git_commit 'git commit-tree abc123'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_commit does not match a bare word" {
+  source_lib
+  run is_git_commit 'gitcommit'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_commit does not match commit prose inside a heredoc body" {
+  source_lib
+  run is_git_commit 'cat <<EOF > notes.txt
+remember to git commit later
+EOF'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_commit does not match a push" {
+  source_lib
+  run is_git_commit 'git push origin feat/x'
+  [ "$status" -ne 0 ]
+}

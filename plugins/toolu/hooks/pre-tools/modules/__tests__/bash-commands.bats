@@ -7,10 +7,24 @@ setup() {
   TMP=$(mktemp -d)
   export TOOLU_SETTINGS_DIR="$TMP/settings"
   mkdir -p "$TOOLU_SETTINGS_DIR"
+
+  # Isolated config layers, then pin `block`: these cases are about WHICH
+  # commands match a deny rule, not about how the match is delivered. The
+  # delivery modes get their own cases at the end of this file.
+  export HOME="$TMP/home"
+  export TOOLU_PROJECT_DIR="$TMP/project"
+  export CLAUDE_PROJECT_DIR="$TMP/project"
+  unset TOOLU_CONFIG_DIR CLAUDE_CONFIG_DIR TOOLU_HOST_OVERRIDE
+  mkdir -p "$HOME/.claude" "$TOOLU_PROJECT_DIR/.claude"
+  gate_config '{"version":1,"gates":{"bashCommands":{"mode":"block"}}}'
+}
+
+gate_config() {
+  printf '%s' "$1" > "$TOOLU_PROJECT_DIR/.claude/toolu.config.json"
 }
 
 teardown() {
-  unset TOOLU_SETTINGS_DIR
+  unset TOOLU_SETTINGS_DIR TOOLU_PROJECT_DIR CLAUDE_PROJECT_DIR
   [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"
 }
 
@@ -184,4 +198,44 @@ run_hook() {
   run_hook "mycargo test"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
+}
+
+# ── Delivery modes ──────────────────────────────────────────────────────────
+
+@test "bash-commands: the shipped default asks instead of denying" {
+  write_lists "" "node -e"
+  gate_config '{"version":1}'
+  run_hook 'node -e "console.log(1)"'
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "ask" ]
+  [[ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')" == *"Run it anyway?"* ]]
+}
+
+@test "bash-commands: strict preset restores the hard deny" {
+  write_lists "" "node -e"
+  gate_config '{"version":1,"gates":{"preset":"strict"}}'
+  run_hook 'node -e "console.log(1)"'
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "deny" ]
+}
+
+@test "bash-commands: off turns the denylist into a no-op" {
+  write_lists "" "node -e"
+  gate_config '{"version":1,"gates":{"bashCommands":{"mode":"off"}}}'
+  run_hook 'node -e "console.log(1)"'
+  [ -z "$output" ]
+}
+
+@test "bash-commands: an allowlisted command is silent whatever the mode" {
+  write_lists "node -e" "node -e"
+  gate_config '{"version":1}'
+  run_hook 'node -e "console.log(1)"'
+  [ -z "$output" ]
+}
+
+@test "bash-commands: ask degrades to advise on codex" {
+  write_lists "" "node -e"
+  gate_config '{"version":1}'
+  payload=$(jq -n --arg c 'node -e "x"' '{tool_name:"Bash",tool_input:{command:$c}}')
+  tool_name=Bash input="$payload" TOOLU_HOST_OVERRIDE=codex run bash "$HOOK" <<<"$payload"
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // "none"')" = "none" ]
+  [ -n "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')" ]
 }
