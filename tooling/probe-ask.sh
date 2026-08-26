@@ -16,7 +16,7 @@
 # Usage: bash tooling/probe-ask.sh
 # Exit 0 = ask emitted; exit 1 = something else came out (details on stderr).
 
-set -uo pipefail
+set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MOD="$REPO_ROOT/plugins/toolu/hooks/pre-tools/mod.sh"

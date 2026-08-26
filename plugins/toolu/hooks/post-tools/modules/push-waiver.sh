@@ -17,6 +17,10 @@
 #   $tool_name - name of the tool being invoked
 #   $input     - raw JSON payload on stdin
 
+# pipefail for parity with the other gate modules. NOT -e: this module's control
+# flow uses non-zero returns as signal (nothing pending to promote is a normal 1).
+set -o pipefail
+
 : "${tool_name:=}"
 : "${input:=}"
 

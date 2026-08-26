@@ -34,6 +34,15 @@ project_config() {
   [ "$output" = "ask" ]
 }
 
+@test "resolving a known gate writes nothing to stderr" {
+  # `run` merges stderr into $output, so the assertions above would not notice a
+  # stray warning riding along with a correct value. Assert the clean path is
+  # actually silent.
+  mode=$(toolu_gate_mode pushReview 2>"$TMP/warn")
+  [ "$mode" = "ask" ]
+  [ ! -s "$TMP/warn" ]
+}
+
 @test "no config: qualityGate is block" {
   run toolu_gate_mode qualityGate
   [ "$output" = "block" ]

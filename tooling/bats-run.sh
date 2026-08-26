@@ -18,7 +18,7 @@
 #                                 Lets the runner's decisions be tested without
 #                                 nesting one bats run inside another.
 
-set -uo pipefail
+set -euo pipefail
 
 paths=("$@")
 [ "${#paths[@]}" -gt 0 ] || paths=(plugins tooling)
