@@ -721,3 +721,106 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" != *"AC coverage"* ]]
 }
+
+# ── run efficiency and liveness ─────────────────────────────────────────────
+#
+# Three defects covered here, all of which read to a user as "it hangs":
+# a full run re-executed checks that were already fresh-green; it printed
+# nothing at all until the very end; and a check that blocked on stdin (or
+# simply never returned) hung forever with no bound.
+
+@test "run: a second full run skips steps that are already fresh-green" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  _write_doc "$doc" "echo x >> '$marker'; true" "true"
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "1" ]
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "1" ]
+  [[ "$output" == *"fresh-green, skipped"* ]]
+}
+
+@test "run: --force re-runs a fresh-green step" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  _write_doc "$doc" "echo x >> '$marker'; true" "true"
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' --force"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "2" ]
+}
+
+@test "run: an explicit --step runs even when it is already fresh-green" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  _write_doc "$doc" "echo x >> '$marker'; true" "true"
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' --step s1"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "2" ]
+}
+
+@test "run: a red step is retried on the next full run" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  _write_doc "$doc" "echo x >> '$marker'; false" "true"
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "2" ]
+}
+
+@test "run: a changed diff re-runs a previously green step" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  _write_doc "$doc" "echo x >> '$marker'; true" "true"
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  run bash -c "cd '$REPO' && echo changed > changed.txt && git add changed.txt && git commit -qm 'feat: change'"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "2" ]
+}
+
+@test "run: progress reaches stderr as each step starts and finishes" {
+  doc="$REPO/plan.md"
+  _write_doc "$doc" "true" "true"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' 2>&1"
+  [[ "$output" == *"[1/2] s1: running check"* ]]
+  [[ "$output" == *"[2/2] s2: green"* ]]
+}
+
+@test "run: stdout stays the summary line only, progress goes to stderr" {
+  doc="$REPO/plan.md"
+  _write_doc "$doc" "true" "true"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' > '$TMP/out' 2> '$TMP/err'"
+  [ "$(wc -l < "$TMP/out" | tr -d ' ')" = "1" ]
+  grep -q "fresh-green" "$TMP/out"
+  grep -q "running check" "$TMP/err"
+}
+
+@test "run: a check that reads stdin cannot block the run" {
+  doc="$REPO/plan.md"
+  # Without </dev/null the check inherits the caller's stdin and waits forever.
+  _write_doc "$doc" "read -r line; true" "true"
+  run timeout 20 bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$status" -ne 124 ]
+}
+
+@test "run: a check that never returns is killed and marked red with the reason" {
+  doc="$REPO/plan.md"
+  _write_doc "$doc" "sleep 30" "true"
+  run env PLAN_LEDGER_STEP_TIMEOUT=2 timeout 25 bash -c "cd '$REPO' && PLAN_LEDGER_STEP_TIMEOUT=2 bash '$SCRIPT' run '$doc'"
+  [ "$status" -ne 124 ]
+  [ "$(jq -r '.steps[] | select(.id=="s1") | .status' "$LEDGER")" = "red" ]
+  [ "$(jq -r '.steps[] | select(.id=="s1") | .exit_code' "$LEDGER")" = "124" ]
+  [[ "$(jq -r '.steps[] | select(.id=="s1") | .evidence_tail' "$LEDGER")" == *"timed out after 2s"* ]]
+}
+
+@test "run: the timeout bound can be disabled" {
+  doc="$REPO/plan.md"
+  _write_doc "$doc" "sleep 1; true" "true"
+  run timeout 25 bash -c "cd '$REPO' && PLAN_LEDGER_STEP_TIMEOUT=0 bash '$SCRIPT' run '$doc'"
+  [ "$status" -eq 0 ]
+}
