@@ -564,8 +564,13 @@ $evidence")
   local prior_json="${prior:-}"
   [ -n "$prior_json" ] || prior_json='{}'
   prior_verified=$(jq -r '.verified_sha // ""' <<< "$prior_json" 2>/dev/null) || prior_verified=""
+  # Read freshness off the summary pl_recompute just wrote rather than
+  # restating the rule here. The two were equivalent, but only by an argument
+  # about what --verify does to the skip logic — and an argument is not a
+  # guarantee once someone edits is_fresh. summary.fresh_green is computed by
+  # that same definition, so the stamp cannot drift from it.
   if [ -n "$verify" ] && [ -z "$only_step" ] \
-     && [ "$(jq -r --arg cur "$cur" '[.steps[] | select(.status != "green" or .diff_sha != $cur)] | length' <<< "$ledger")" = "0" ]; then
+     && [ "$(jq -r '.summary.fresh_green == .summary.total' <<< "$ledger")" = "true" ]; then
     ledger=$(jq -c --arg sha "$cur" '.verified_sha = $sha' <<< "$ledger") || return 2
   else
     ledger=$(jq -c --arg sha "$prior_verified" \
