@@ -47,7 +47,11 @@ back to "all enabled".
                   "stateTtlHours": 24,
                   "telemetryRetentionDays": 7 },
   "permissions": { "autoAllow": true,
-                   "allow": ["Bash(*)", "Edit", "Write"] }
+                   "allow": ["Bash(*)", "Edit", "Write"] },
+  "projectSkills": { "enabled": true,
+                     "staleAfterDays": 30,
+                     "archiveAfterDays": 90,
+                     "indexCap": 20 }
 }
 ```
 
@@ -327,6 +331,7 @@ uncovered spec `AC-<n>` id(s) until a fresh-green step's `ac_refs` covers them.
 | Category | Names                                                                              |
 |----------|------------------------------------------------------------------------------------|
 | `skills` | `comemory`, `ast-grep` (the only skill keys any hook reads)                        |
+| `projectSkills` | `enabled`, `staleAfterDays`, `archiveAfterDays`, `indexCap` — comemory plugin project-skill curator |
 | `hooks`  | `session-start`, `user-prompt-submit`, `pre-tools`, `post-tools`, `pre-compact`, `session-end` |
 | `mcp`    | any MCP server name — e.g. `canva`, `figma`                                        |
 | `models` | `enabled`, the six Claude class aliases, and `codex.<class>.{model,reasoningEffort}` |
@@ -345,7 +350,9 @@ Unknown names are silently ignored (forward compatible).
     `SessionEnd`. `skills.ast-grep = false` removes the ast-grep STOP /
     install-hint advisories in `search-nudge` (a registry module shipped
     by the ast-grep plugin); the generic `grep/rg → Grep tool` advisory
-    still fires.
+    still fires. `skills.comemory = false` also disables the project-skills
+    loop (SessionStart index, usage tracking, unused-skill archive). Marketplace
+    plugin skills under `plugins/*/skills/` are never curated.
 
 - `hooks.<name> = false`
   - The named hook exits early and emits nothing. Its stdin is drained

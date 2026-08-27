@@ -149,6 +149,28 @@ comemory.sh feedback <query_id> --used abc1,def2 --irrelevant ghi3
 
 The retrieval-quality loop verbs (`mine`, `tune`, `eval`, `prune`, `gc`, `rebuild`) run automatically once per day via the toolu `SessionEnd` hook — local and token-free.
 
+## Project skills (procedural memory)
+
+Facts stay in comemory. Recurring **procedures** live as agent-created `SKILL.md` files:
+
+```
+<repo>/.toolu/skills/<name>/SKILL.md   # committed
+<repo>/.toolu/skills/.usage.json       # gitignored (local telemetry)
+<repo>/.toolu/skills/.archive/         # gitignored (recoverable)
+```
+
+```bash
+# After a proven class-level workflow (not a ticket narrative):
+skills.sh create deploy-staging --description "Deploy this repo to staging. Use when shipping a branch to staging." --file ./skill.md
+
+skills.sh list
+skills.sh pin deploy-staging
+skills.sh curate --dry-run
+skills.sh restore deploy-staging
+```
+
+The published wrapper is `${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/comemory/skills.sh` (Codex: `$CODEX_HOME/comemory/skills.sh`). SessionStart injects at most 20 name+description lines; `Read` the `SKILL.md` to load it (that Read is what increments use). A Stop hook archives unused agent-created skills after 90 idle days (stale at 30). It **never auto-deletes** and **never touches** marketplace `plugins/*/skills/`. Disable with `skills.comemory: false` or `projectSkills.enabled: false`.
+
 ### Post-Compaction Recovery
 
 When you see a compaction message or "FIRST ACTION REQUIRED":

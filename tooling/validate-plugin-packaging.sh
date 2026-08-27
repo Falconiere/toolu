@@ -104,7 +104,7 @@ for skill_file in plugins/*/skills/*/SKILL.md; do
   awk 'NR > 1 && $0 == "---" { found=1; exit } END { exit !found }' "$skill_file" || fail "$skill_file is missing closing frontmatter"
   skill_count=$((skill_count + 1))
 done
-[ "$skill_count" -eq 25 ] || fail "expected 25 discoverable skills, found $skill_count"
+[ "$skill_count" -eq 26 ] || fail "expected 26 discoverable skills, found $skill_count"
 
 required_skills=(
   plugins/toolu/skills/commit/SKILL.md

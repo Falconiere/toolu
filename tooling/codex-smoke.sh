@@ -94,7 +94,7 @@ for hook_file in "$ROOT"/plugins/*/hooks/hooks.json; do
     session_start_count=$((session_start_count + 1))
   done < <(jq -r '.hooks.SessionStart[]?.hooks[]? | select(.type == "command") | .command' "$hook_file")
 done
-[ "$session_start_count" -eq 17 ] || fail "expected 17 SessionStart commands, ran $session_start_count"
+[ "$session_start_count" -eq 18 ] || fail "expected 18 SessionStart commands, ran $session_start_count"
 printf 'codex-smoke: session-start=%d\n' "$session_start_count"
 
 removed_count=0

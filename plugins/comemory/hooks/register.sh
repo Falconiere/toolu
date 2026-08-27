@@ -68,18 +68,20 @@ done
 #   ${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/comemory/comemory.sh
 # Refreshed every SessionStart so plugin updates are picked up.
 PLUGIN_ROOT="$(cd "$SELF_DIR/.." 2>/dev/null && pwd)"
-wrapper_src="${PLUGIN_ROOT:+$PLUGIN_ROOT/skills/agent-memory/scripts/comemory.sh}"
-if [ -n "$wrapper_src" ] && [ -f "$wrapper_src" ]; then
-  pub_root="$CONFIG_ROOT/comemory"
-  if mkdir -p "$pub_root" 2>/dev/null; then
-    pub_dst="$pub_root/comemory.sh"
-    # Own the path only when it is already our symlink or absent — never
-    # clobber a real file a user may have placed at that path (-L catches a
-    # broken/relinked symlink that -e would report as missing).
-    if [ -L "$pub_dst" ] || [ ! -e "$pub_dst" ]; then
-      ln -sf "$wrapper_src" "$pub_dst" 2>/dev/null || true
+pub_root="$CONFIG_ROOT/comemory"
+if [ -n "$PLUGIN_ROOT" ] && mkdir -p "$pub_root" 2>/dev/null; then
+  # Own the path only when it is already our symlink or absent — never
+  # clobber a real file a user may have placed at that path (-L catches a
+  # broken/relinked symlink that -e would report as missing).
+  _publish() {
+    local src="$1" dst="$2"
+    [ -f "$src" ] || return 0
+    if [ -L "$dst" ] || [ ! -e "$dst" ]; then
+      ln -sf "$src" "$dst" 2>/dev/null || true
     fi
-  fi
+  }
+  _publish "$PLUGIN_ROOT/skills/agent-memory/scripts/comemory.sh" "$pub_root/comemory.sh"
+  _publish "$PLUGIN_ROOT/skills/project-skills/scripts/skills.sh" "$pub_root/skills.sh"
 fi
 
 exit 0
