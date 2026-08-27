@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.7.1](https://github.com/Falconiere/toolu/compare/v4.7.0...v4.7.1) (2026-08-27)
+
+
+### Bug Fixes
+
+* **pr-babysit:** surface Top-N must-fix, and stop superseded CI runs ([#159](https://github.com/Falconiere/toolu/issues/159)) ([a10ed16](https://github.com/Falconiere/toolu/commit/a10ed16163ced2da6d8274e26f54026b7ca66f62))
+
 ## [4.7.0](https://github.com/Falconiere/toolu/compare/v4.6.0...v4.7.0) (2026-08-27)
 
 
