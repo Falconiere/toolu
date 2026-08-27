@@ -4,6 +4,16 @@
 
 **toolu** — Engineering discipline for AI coding agents. A plugin marketplace that bakes code-quality rules into every edit via hooks, skills, and a runtime registry. Runs on Claude Code.
 
+## Agent instructions
+
+This file is the single source of truth for how agents work in this repo. Codex
+and others read `AGENTS.md` by convention; Claude Code reaches it through a
+one-line `CLAUDE.md` that does nothing but `@AGENTS.md`, which loads this file
+at launch.
+
+Put agent instructions here, not in `CLAUDE.md`. Both files are docs-sync
+surfaces, so a change that makes either stale is caught rather than merged.
+
 ## Tech Stack
 
 - **Shell** (bash) — all hooks, gate logic, registry. The canonical language. `set -euo pipefail`, shellcheck-clean.

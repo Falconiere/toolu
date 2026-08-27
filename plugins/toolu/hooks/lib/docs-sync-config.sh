@@ -27,7 +27,11 @@ _DS_LIB_DIR="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}}"
 : "${DEFAULT_DOCS_SYNC_SURFACES:=README.md
 */README.md
 docs/*.md
-*/SKILL.md}"
+*/SKILL.md
+AGENTS.md
+*/AGENTS.md
+CLAUDE.md
+*/CLAUDE.md}"
 : "${DEFAULT_DOCS_SYNC_SURFACE_EXCLUDES:=docs/releases/*
 */docs/releases/*}"
 : "${DEFAULT_DOCS_SYNC_CODE_SURFACES:=*.ts
