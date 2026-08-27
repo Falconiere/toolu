@@ -64,3 +64,42 @@ ds() {
   ds docs_sync_surfaces
   echo "$output" | grep -qFx 'README.md'
 }
+
+# ── the main memory is a protected surface ─────────────────────────────────
+#
+# AGENTS.md is the single source of truth for how agents work in this repo, and
+# it was not a docs-sync surface — so a change that made it stale raised nothing.
+# That is not hypothetical: a branch changed how the test suite runs and left
+# AGENTS.md describing the old commands, and the gate said nothing.
+
+@test "docs_sync_surfaces includes the agent instruction files" {
+  ds docs_sync_surfaces
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -qFx 'AGENTS.md'
+  echo "$output" | grep -qFx 'CLAUDE.md'
+}
+
+@test "docs_sync_surfaces covers nested agent instruction files" {
+  # A plugin or subproject can carry its own; those count too.
+  ds docs_sync_surfaces
+  echo "$output" | grep -qFx '*/AGENTS.md'
+  echo "$output" | grep -qFx '*/CLAUDE.md'
+}
+
+@test "the original surfaces still hold alongside the new ones" {
+  ds docs_sync_surfaces
+  echo "$output" | grep -qFx 'README.md'
+  echo "$output" | grep -qFx '*/README.md'
+  echo "$output" | grep -qFx 'docs/*.md'
+  echo "$output" | grep -qFx '*/SKILL.md'
+}
+
+@test "an explicit surfaces override still drops the agent files" {
+  # Override semantics are unchanged: naming surfaces replaces the defaults
+  # wholesale rather than appending to them.
+  printf '%s' '{"docsSync":{"surfaces":["CUSTOM.md"]}}' \
+    > "$PROJECT/.claude/toolu.config.json"
+  ds docs_sync_surfaces
+  echo "$output" | grep -qFx 'CUSTOM.md'
+  ! echo "$output" | grep -qFx 'AGENTS.md'
+}
