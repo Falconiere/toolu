@@ -16,10 +16,17 @@ teardown() {
 }
 
 @test "context7: CONTEXT7_API_KEY env var is sent as Bearer token" {
-  export CONTEXT7_API_KEY="ctx7sk_abc123"
+  # The ctx7sk_ prefix is load-bearing — the rejection test below asserts a key
+  # without it is dropped — but a literal `ctx7sk_<random>` reads as a live
+  # credential to secret scanners, and did: gitleaks flagged this line as a
+  # generic-api-key on every PR. Assembling it from a prefix and an obviously
+  # inert suffix keeps the behaviour under test and drops the entropy that made
+  # it look real.
+  prefix=ctx7sk_
+  export CONTEXT7_API_KEY="${prefix}not-a-real-key"
   run "$TOOL_DIR/search.sh" search react
   [ "$status" -eq 0 ]
-  grep -q '^Authorization: Bearer ctx7sk_abc123$' "$CURL_LOG"
+  grep -q "^Authorization: Bearer ${prefix}not-a-real-key\$" "$CURL_LOG"
 }
 
 @test "context7: missing env var runs in unauthenticated rate-limited mode" {
