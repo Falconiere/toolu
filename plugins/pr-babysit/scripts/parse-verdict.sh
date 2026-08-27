@@ -14,6 +14,13 @@
 #   findings[]: { path, line|null, severity, text, key }  (key = path:line:sha1(text)[:8])
 #   must_fix[]:  free-text lines from `### Top-N must-fix`
 #
+# state can also be "provider_error": the action posted a comment but the model
+# never produced a usable review — "Review incomplete — provider error", every
+# file marked unreviewed. That is NOT a verdict about the code, and the check
+# still reports success, so a caller that reads only `verdict` sees a plain
+# `changes` with no findings and cannot tell "reviewed, nothing actionable"
+# from "never reviewed". complete is false for this state.
+#
 # must_fix is NOT a duplicate of findings. The bot populates the two sections
 # independently, and they disagree in both directions: a review has reported
 # `Findings (0)` while Top-N listed three actionable items, and an `approved`
@@ -101,6 +108,15 @@ else
   fi
 fi
 
+# --- Provider error: the action ran, the model did not. Detected before the
+# findings block because there is nothing to find — the review never happened,
+# and reporting its absence as a normal `changes` verdict is what lets a
+# transient failure look like a considered judgement.
+if printf '%s' "$input" | grep -qE 'Review incomplete — provider error|\*\*Provider error:\*\*'; then
+  state="provider_error"
+  complete=false
+fi
+
 # --- Findings: only the `### Findings` … next `### ` block, lines of the form
 #     `path[:line]`: severity: text
 _sha1() { (sha1sum 2>/dev/null || shasum 2>/dev/null || echo nohash) | cut -c1-8; }
@@ -135,7 +151,8 @@ while IFS= read -r line; do
   line="${line#\* }"
   [[ "$line" =~ ^[0-9]+\.[[:space:]]+(.*)$ ]] && line="${BASH_REMATCH[1]}"
   [ -n "$line" ] || continue
-  must_fix_json=$(jq -c --arg t "$line" '. + [$t]' <<<"$must_fix_json") || continue
+  next_json=$(jq -c --arg t "$line" '. + [$t]' <<<"$must_fix_json") || continue
+  must_fix_json="$next_json"
 done <<< "$must_fix_block"
 
 jq -nc \

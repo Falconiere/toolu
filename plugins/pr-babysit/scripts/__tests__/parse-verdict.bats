@@ -195,3 +195,41 @@ FIX="${BATS_TEST_DIRNAME}/fixtures"
   [ "$(jq -r '.must_fix | type' <<<"$out")" = "array" ]
   [ "$(jq '.must_fix | length' <<<"$out")" -eq 0 ]
 }
+
+# ── provider error: the action ran, the model did not ──────────────────────
+#
+# Captured from a real run on PR #159. The check reported SUCCESS and the
+# comment carried `request-changes`, so a caller reading only the verdict sees
+# an ordinary "changes with no findings" — indistinguishable from a review that
+# ran and found nothing actionable. It was transient; the rerun produced a real
+# review. That is exactly why it must be legible: a one-off failure that looks
+# like a considered judgement is worse than one that announces itself.
+
+@test "parse-verdict: a provider error is its own state, not a verdict" {
+  out=$(bash "$PV" < "$FIX/provider-error.txt")
+  [ "$(jq -r .state <<<"$out")" = "provider_error" ]
+  [ "$(jq -r .complete <<<"$out")" = "false" ]
+}
+
+@test "parse-verdict: a provider error yields no findings and no must_fix" {
+  out=$(bash "$PV" < "$FIX/provider-error.txt")
+  [ "$(jq '.findings | length' <<<"$out")" -eq 0 ]
+  [ "$(jq '.must_fix | length' <<<"$out")" -eq 0 ]
+}
+
+@test "parse-verdict: a real review is never mistaken for a provider error" {
+  out=$(bash "$PV" < "$FIX/pr31-verdict.txt")
+  [ "$(jq -r .state <<<"$out")" = "complete" ]
+  [ "$(jq -r .complete <<<"$out")" = "true" ]
+}
+
+@test "parse-verdict: a partial write cannot clobber collected must_fix items" {
+  # The accumulator used `x=$(jq ...) || continue`, which assigns first and
+  # branches second — a jq failure replaced the whole array with empty output
+  # instead of skipping one line. Many lines must survive intact.
+  out=$(printf '%s\n' '### Code Review — `x`' '**Verdict:** ⚠️ Changes requested' \
+    '### Top-N must-fix' 'First item.' 'Second item.' 'Third item.' \
+    '<details>' '`request-changes`' | bash "$PV")
+  [ "$(jq '.must_fix | length' <<<"$out")" -eq 3 ]
+  [ "$(jq -r '.must_fix[0]' <<<"$out")" = "First item." ]
+}

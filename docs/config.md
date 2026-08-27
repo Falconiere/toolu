@@ -270,7 +270,7 @@ override → built-in default* (resolver
 
 | Key | Default | Meaning |
 |-----|---------|---------|
-| `docsSync.surfaces` | `README.md`, `*/README.md`, `docs/*.md`, `*/SKILL.md`, `AGENTS.md`, `*/AGENTS.md`, `CLAUDE.md`, `*/CLAUDE.md` | doc files whose change **satisfies** the check |
+| `docsSync.surfaces` | `README.md`, `*/README.md`, `docs/*.md`, `*/SKILL.md`, `AGENTS.md`, `*/AGENTS.md`, `CLAUDE.md`, `*/CLAUDE.md`, `*/workflows/*.md` | doc files whose change **satisfies** the check |
 | `docsSync.surfaceExcludes` | `docs/releases/*`, `*/docs/releases/*` | doc paths carved back out (release notes are per-release, not per-task) |
 | `docsSync.codeSurfaces` | `*.ts`, `*.rs`, `*.sh`, `*/commands/*`, `*plugin.json`, `*.config.json` | code files whose change **demands** a doc touch |
 
