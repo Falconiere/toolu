@@ -2,7 +2,6 @@
 # project-skills-index.sh SessionStart payload.
 
 HOOK="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/project-skills-index.sh"
-SKILLS_SH="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../skills/project-skills/scripts" && pwd)/skills.sh"
 
 setup() {
   command -v jq >/dev/null 2>&1 || skip "jq not installed"
@@ -28,9 +27,19 @@ teardown() { rm -rf "$TMP"; }
   [ -z "$output" ]
 }
 
-@test "index hook emits additionalContext after create" {
-  BODY="$TMP/body.md"
-  cat >"$BODY" <<'EOF'
+_seed_skill() {
+  local name="${1:-deploy-staging}" now
+  now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  mkdir -p "$REPO/.toolu/skills/$name"
+  cat >"$REPO/.toolu/skills/$name/SKILL.md" <<EOF
+---
+name: $name
+description: Deploy this repo to staging. Use when shipping a branch to staging.
+metadata:
+  toolu:
+    origin: agent
+    created: $now
+---
 ## When to Use
 x
 
@@ -43,8 +52,10 @@ x
 ## Verification
 ok
 EOF
-  DESC='Deploy this repo to staging. Use when shipping a branch to staging.'
-  bash -c "cd '$REPO' && bash '$SKILLS_SH' create deploy-staging --description '$DESC' --file '$BODY'"
+}
+
+@test "index hook emits additionalContext after create" {
+  _seed_skill deploy-staging
   payload=$(jq -n --arg c "$REPO" '{cwd:$c}')
   run bash "$HOOK" <<<"$payload"
   [ "$status" -eq 0 ]
@@ -52,22 +63,7 @@ EOF
 }
 
 @test "AC-10: skills.comemory=false emits nothing even with skills on disk" {
-  BODY="$TMP/body.md"
-  cat >"$BODY" <<'EOF'
-## When to Use
-x
-
-## Procedure
-1. y
-
-## Pitfalls
-- z
-
-## Verification
-ok
-EOF
-  DESC='Deploy this repo to staging. Use when shipping a branch to staging.'
-  bash -c "cd '$REPO' && bash '$SKILLS_SH' create deploy-staging --description '$DESC' --file '$BODY'"
+  _seed_skill deploy-staging
   printf '%s\n' '{"version":1,"skills":{"comemory":false}}' >"$CLAUDE_CONFIG_DIR/toolu.config.json"
   payload=$(jq -n --arg c "$REPO" '{cwd:$c}')
   run bash "$HOOK" <<<"$payload"

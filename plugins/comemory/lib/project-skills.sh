@@ -187,10 +187,10 @@ ps_strip_frontmatter() {
 
 ps_has_required_headings() {
   local body="$1"
-  printf '%s\n' "$body" | grep -qx '## When to Use' || return 1
-  printf '%s\n' "$body" | grep -qx '## Procedure' || return 1
-  printf '%s\n' "$body" | grep -qx '## Pitfalls' || return 1
-  printf '%s\n' "$body" | grep -qx '## Verification' || return 1
+  printf '%s\n' "$body" | tr -d '\r' | grep -q '^## When to Use$' || return 1
+  printf '%s\n' "$body" | tr -d '\r' | grep -q '^## Procedure$' || return 1
+  printf '%s\n' "$body" | tr -d '\r' | grep -q '^## Pitfalls$' || return 1
+  printf '%s\n' "$body" | tr -d '\r' | grep -q '^## Verification$' || return 1
 }
 
 ps_skill_origin() {

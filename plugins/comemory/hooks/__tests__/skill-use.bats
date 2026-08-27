@@ -2,7 +2,6 @@
 # skill-use.sh against real PostToolUse JSON (spec AC-8, AC-10).
 
 HOOK="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/skill-use.sh"
-SKILLS_SH="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../skills/project-skills/scripts" && pwd)/skills.sh"
 
 setup() {
   command -v jq >/dev/null 2>&1 || skip "jq not installed"
@@ -17,8 +16,23 @@ setup() {
   printf 'init\n' >"$REPO/README.md"
   git -C "$REPO" add README.md
   git -C "$REPO" commit -q -m init
-  BODY="$TMP/body.md"
-  cat >"$BODY" <<'EOF'
+  _seed_skill deploy-staging
+}
+
+_seed_skill() {
+  local name="${1:-deploy-staging}" now
+  now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  mkdir -p "$REPO/.toolu/skills/$name" "$REPO/.toolu/skills/.archive"
+  printf '%s\n' '.archive/' '.usage.json' >"$REPO/.toolu/skills/.gitignore"
+  cat >"$REPO/.toolu/skills/$name/SKILL.md" <<EOF
+---
+name: $name
+description: Deploy this repo to staging. Use when shipping a branch to staging.
+metadata:
+  toolu:
+    origin: agent
+    created: $now
+---
 ## When to Use
 x
 
@@ -31,8 +45,9 @@ x
 ## Verification
 ok
 EOF
-  DESC='Deploy this repo to staging. Use when shipping a branch to staging.'
-  bash -c "cd '$REPO' && bash '$SKILLS_SH' create deploy-staging --description '$DESC' --file '$BODY'"
+  jq -n --arg n "$name" --arg t "$now" \
+    '{($n):{origin:"agent",created_at:$t,use_count:0,patch_count:0,last_used_at:null,last_patched_at:null,state:"active",pinned:false,first_seen_at:$t}}' \
+    >"$REPO/.toolu/skills/.usage.json"
 }
 
 teardown() { rm -rf "$TMP"; }
