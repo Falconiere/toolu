@@ -208,22 +208,48 @@ write_failing_gate() {
   ! echo "$output" | grep -qE 'Branch: .*(clean|uncommitted)'
 }
 
-@test "user-prompt-submit: orchestration nudge fires on a broad/multi-step prompt" {
-  payload=$(build_input "refactor the auth module across the codebase")
+@test "user-prompt-submit: scale nudge fires on a genuinely large prompt" {
+  payload=$(build_input "migrate every plugin to the new manifest format")
   run bash "$HOOK" <<<"$payload"
   [ "$status" -eq 0 ]
   ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
   echo "$ctx" | grep -q 'orchestrator skill'
 }
 
-@test "user-prompt-submit: orchestration nudge is independent of the intent hint" {
-  # "fix" -> intent hint; "across" -> orchestration nudge. Both must appear.
-  payload=$(build_input "fix the login bug across all services")
+@test "user-prompt-submit: scale nudge is independent of the intent hint" {
+  # "fix" -> intent hint; "throughout" -> scale nudge. Both must appear.
+  payload=$(build_input "fix the login bug throughout the services")
   run bash "$HOOK" <<<"$payload"
   [ "$status" -eq 0 ]
   ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
   echo "$ctx" | grep -q 'Fix in code'
   echo "$ctx" | grep -q 'orchestrator skill'
+}
+
+@test "user-prompt-submit: the nudge suggests rather than instructs a fan-out" {
+  # It must not tell the model to delegate — that is the decision the
+  # orchestrator skill makes on the merits, not a reflex from one keyword.
+  payload=$(build_input "migrate every plugin to the new manifest format")
+  run bash "$HOOK" <<<"$payload"
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  echo "$ctx" | grep -q 'consider decomposing'
+  echo "$ctx" | grep -q 'just do it'
+  ! echo "$ctx" | grep -q 'delegate exploration'
+}
+
+@test "user-prompt-submit: everyday words no longer trigger a fan-out nudge" {
+  # Each of these is ordinary single-thread work. Telling it to spawn agents
+  # makes it slower, which is the whole reason these words were dropped.
+  for prompt in "refactor this function" \
+                "audit the login helper" \
+                "rename the flag across two files" \
+                "rewrite this comment"; do
+    payload=$(build_input "$prompt")
+    run bash "$HOOK" <<<"$payload"
+    [ "$status" -eq 0 ]
+    ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+    ! echo "$ctx" | grep -q 'orchestrator skill'
+  done
 }
 
 @test "user-prompt-submit: no orchestration nudge for a narrow single-file prompt" {

@@ -39,3 +39,16 @@ Compact and literal:
 - Locations as a `path:line` list.
 - Values verbatim, no paraphrase.
 - One line of context, maximum. No summary of what you did, no suggestions.
+
+### What you return
+
+A direct answer and nothing else: the path, the value, the list, the `file:line`.
+No preamble, no summary of how you searched, no suggestions about what to do next
+— the caller asked one mechanical question and is waiting on one answer.
+
+### When to stop
+
+This work is bounded by definition. If the task turns out to need judgment — the
+answer depends on a trade-off, the "rename" is really a refactor, the value you
+were sent for does not exist — stop and say so in one line rather than improvise.
+Returning "not found, here is what I checked" is a useful answer; guessing is not.

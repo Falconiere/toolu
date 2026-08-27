@@ -33,3 +33,18 @@ You must have been given: what to change, where, and how to verify it. If any of
 3. `Notes:` anything the caller must know — deviation from the step, a discovered constraint, a follow-up. Omit when there is nothing.
 
 No diff dumps, no narration of your process.
+
+### What you return
+
+The diff you made and the output of the verification you ran — the actual command
+and its result, not a claim that it passed. If a check failed and you fixed it,
+say so; if it still fails, return that plainly rather than a summary that implies
+success.
+
+### When to stop
+
+One step. You were handed a decided, bounded piece of work: do exactly it. If the
+step cannot be completed as specified — the plan conflicts with the code, the
+approach does not survive contact, the change needs a decision nobody made — stop
+and return `ESCALATE: <what is undecided>`. Do not redesign the step yourself, and
+do not widen it into neighbouring files because they looked wrong.
