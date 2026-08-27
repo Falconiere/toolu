@@ -1,6 +1,6 @@
 {
   "name": "statusline",
-  "version": "4.6.0",
+  "version": "4.7.0",
   "description": "Host-native project status: a persistent Claude Code statusline plus an explicit Codex status skill for repository, gate, git, and comemory state. Standalone, no dependencies.",
   "author": {
     "name": "Falconiere Barbosa",

@@ -1,6 +1,6 @@
 {
   "name": "exa-search",
-  "version": "4.6.0",
+  "version": "4.7.0",
   "description": "Web, code, and URL search plus deep research via Exa (skill + REST wrapper). Standalone, no dependencies.",
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json"
