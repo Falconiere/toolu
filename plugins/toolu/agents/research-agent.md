@@ -93,3 +93,15 @@ If any provider failed or you fell back to training knowledge, note the
 degradation on the `Tools used:` line (e.g. `Tools used: native (exa
 unavailable: EXA_API_KEY unset)` or `Tools used: none — answered from training
 knowledge, may be stale`).
+
+### What you return
+
+A synthesis with source URLs, sized to the question: what the answer is, how
+current it is, and where it came from. Not a transcript of your searches.
+
+### When to stop
+
+When the question is answered by sources you actually read. If the sources
+disagree, say so and give both. If you cannot find a credible answer, return that
+plus what you searched — an honest "the docs do not cover this" lets the caller
+act, while an inferred answer presented confidently does not.

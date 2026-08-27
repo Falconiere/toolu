@@ -66,18 +66,22 @@ Mechanical work (renames, dep bumps, one-liners) skips the ceremony — each pha
 
 ### 2. Orchestrator
 
-The `orchestrator` skill teaches the main thread to delegate broad work across subagents:
+The `orchestrator` skill teaches the main thread how to run a large task — starting with whether to split it at all:
 
 ```text
-"orchestrate this"       → decompose the task, fan out subagents in parallel
-"delegate this"          → hand off heavy exploration/work to subagents
-"this is a big task"     → auto-triggers on broad/multi-step prompts
+"orchestrate this"       → decide if delegation pays, then decompose what does
+"delegate this"          → hand off heavy exploration that buys isolation
+"should I use subagents" → apply the test rather than guess
 ```
 
 Key rules:
-- **Subagents do the work**; the main thread synthesizes conclusions.
+- **Inline is the default.** A subagent costs a brief, a round trip, and a summary you must trust. It earns that back only by buying **isolation** (a large read you need only the conclusion of) or **parallelism** (genuinely independent units) — and only when the work is bigger than a handful of tool calls.
+- **A dependent chain is not orchestration.** A → B → C where each needs the last is strictly slower delegated: every round trip paid, no parallelism gained.
 - **Return conclusions, not bytes** — a subagent reads 50k tokens but returns a 1–2k distilled answer.
-- **Parallelize independent work** — launch subagents in one message with multiple tool calls.
+- **Parallelize genuinely independent work** — launch those subagents in one message with multiple tool calls.
+- **Bound every delegation.** One answerable question, a stated return shape, and if it goes quiet: check once, then take the work back inline and say so. Never block on a subagent.
+
+The arithmetic, and the cases where delegation loses, are in [`references/delegation-cost.md`](../../plugins/toolu/skills/orchestrator/references/delegation-cost.md).
 - **Model tiers**: Haiku for mechanical, Sonnet for exploration, Frontier for hard reasoning.
 
 ### 3. Deep-Research Skill

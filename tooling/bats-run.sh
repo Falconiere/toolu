@@ -12,7 +12,7 @@
 # per-file state on purpose — a throwaway comemory repo label, a cwd, a fixture
 # repo built in setup — and parallelising inside a file would race them.
 #
-# Usage: bash tooling/bats-run.sh [path...]     (default: plugins tooling)
+# Usage: bash tooling/bats-run.sh [path...]     (default: plugins benchmarks tooling)
 # Env:   BATS_JOBS=N              force the job count; 1 forces a serial run.
 #        BATS_RUN_PRINT_PLAN=1    print the command that would run, then exit.
 #                                 Lets the runner's decisions be tested without
@@ -21,7 +21,9 @@
 set -euo pipefail
 
 paths=("$@")
-[ "${#paths[@]}" -gt 0 ] || paths=(plugins tooling)
+# These three are the whole suite. benchmarks/ used to be missing from the local
+# default while CI ran it, so 40 tests only ever failed in CI.
+[ "${#paths[@]}" -gt 0 ] || paths=(plugins benchmarks tooling)
 
 command -v bats >/dev/null 2>&1 || {
   echo "bats-run: bats is not installed" >&2
@@ -44,6 +46,14 @@ if [ "$jobs" -gt 1 ]; then
   else
     echo "bats-run: GNU parallel not found; running serially (install it for a ~3x faster suite)" >&2
   fi
+fi
+
+# `bats -r` on a path with no suites is a confusing error; discovery being
+# broken is worth naming directly.
+found=$(find "${paths[@]}" -name '*.bats' -print -quit 2>/dev/null || true)
+if [ -z "$found" ]; then
+  echo "bats-run: no .bats suites found under ${paths[*]} — test discovery is broken" >&2
+  exit 1
 fi
 
 if [ "$parallel_ok" -eq 1 ]; then

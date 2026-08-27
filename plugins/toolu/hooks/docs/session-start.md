@@ -6,11 +6,10 @@
 - Only what's asked: no drive-by refactors or unsolicited files (gate excepted).
 - Match effort to task: low + thinking off for routine work; full for hard.
 
-## Orchestrator (mandatory)
-Orchestrate from main; work in subagents; keep context minimal.
-- Delegate exploration, search, builds, reviews; edit inline only for trivial single-file work.
-- Return conclusions, not bytes; parallelize independent tasks.
-- Broad/multi-step? `orchestrator` skill.
+## Delegation
+Inline by default. Delegate only to isolate a large read or run truly independent
+units — never for small work. One question and one return shape per agent. Quiet
+agent? Take it back inline.
 
 ## Mandatory
 - Quality gate: never advance while any error/warning/test failure stands, even unrelated.

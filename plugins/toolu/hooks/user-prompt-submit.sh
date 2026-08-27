@@ -124,14 +124,21 @@ elif [[ "$prompt_lower" =~ ${WB}(review|audit)${WE} ]]; then
   intent="Review: forbidden syntax, quality gates, test coverage."
 fi
 
-# 2b. Orchestration nudge — independent of the single intent hint above (a task
-# can be both a "fix" AND broad). Fires on breadth / multi-step signals so big
-# work gets decomposed and delegated to subagents instead of run inline,
-# bloating main context. WB/WE-wrapped like the other hints to avoid substring
-# false positives. Deliberately tight: strong breadth verbs + scope words only.
+# 2b. Scale nudge — independent of the single intent hint above (a task can be
+# both a "fix" AND large). Fires only on words that indicate real SCALE, and it
+# suggests considering a split rather than instructing a fan-out.
+#
+# The trigger list used to include `refactor`, `audit` and `across`, which are
+# everyday words: "refactor this function", "audit this helper" and "rename it
+# across two files" are all single-thread work, and each one was being told to
+# delegate and parallelize. Spawning agents for small tasks is slower than doing
+# them, so a nudge that fires on ordinary phrasing costs time rather than saving
+# it. What remains names a scope no single sweep covers.
+#
+# WB/WE-wrapped like the other hints to avoid substring false positives.
 orchestrate=""
-if [[ "$prompt_lower" =~ ${WB}(refactor|migrate|rewrite|redesign|overhaul|audit|across|throughout|codebase-wide|end-to-end)${WE} ]]; then
-  orchestrate="Broad/multi-step task — delegate exploration, searches & reviews and parallelize independent work via subagents; return conclusions, not bytes, to keep main context lean. See the orchestrator skill."
+if [[ "$prompt_lower" =~ ${WB}(migrate|codebase-wide|throughout|end-to-end)${WE} ]]; then
+  orchestrate="Possibly large task — if it splits into genuinely independent units, consider decomposing it; if it is really one thread of work, just do it. The orchestrator skill has the test for which."
 fi
 
 # 2c. Research nudge — independent of the single intent hint (a prompt can be

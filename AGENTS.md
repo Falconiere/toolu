@@ -7,7 +7,7 @@
 ## Tech Stack
 
 - **Shell** (bash) — all hooks, gate logic, registry. The canonical language. `set -euo pipefail`, shellcheck-clean.
-- **bats** — test framework. ~1340 tests, colocated in `__tests__/` dirs. Run via `bats -r plugins tooling`.
+- **bats** — test framework. ~1700 tests, colocated in `__tests__/` dirs. Run via `bash tooling/bats-run.sh`, which covers `plugins benchmarks tooling` and runs files in parallel (tests within a file stay serial). `bun run test:shell:serial` forces the serial path when debugging a suspected ordering bug.
 - **Bun** — package manager (see `bun.lock`). Also runs the bats suite via the `test`/`test:shell` scripts.
 - **shellcheck** — `bun run lint:shell` (`tooling/shellcheck.sh`) lints standalone scripts directly and each `hooks/concerns/` dir as its ASSEMBLED module, since fragments are partials of one script.
 
@@ -88,7 +88,7 @@ All workflows live in `.github/workflows/`:
 | `docs/config.md` | Full config schema reference (`skills`, `hooks`, `mcp`, `lang` thresholds, `docsSync`) |
 | `tooling/release.sh` | **Deprecated** manual escape hatch — atomic version bump for the monorepo (`--dry-run`, `--no-notes`); releases are normally automated by release-please |
 | `tooling/templates/release-notes.md` | Skeleton the release script copies + fills for the per-release notes |
-| `plugins/toolu/scripts/context-budget.sh` | CI-only: caps injected-context footprint |
+| `plugins/toolu/scripts/context-budget.sh` | Caps injected-context footprint; runs in CI and in `bun run test` |
 
 ## Contributing
 
@@ -96,7 +96,7 @@ All workflows live in `.github/workflows/`:
 2. **Add tests** — colocated `__tests__/*.bats` for any hook logic. No mocks.
 3. **Verify in a real session** before committing.
 4. **Conventional Commits**: `feat(scope):`, `fix(scope):`, etc.
-5. **Run every CI check locally**: `bun run test` runs `lint:shell` → `test:shell` in sequence.
+5. **Run every CI check locally**: `bun run test` runs `lint:shell` → `test:context-budget` → `test:shell` in sequence.
 
 ## Common Tasks
 
