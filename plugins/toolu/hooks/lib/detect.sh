@@ -237,35 +237,261 @@ branch_slug() {
   echo "$slug"
 }
 
-# Return 0 iff the raw command string $1 is a `git push` (heredoc bodies
-# stripped first so a `git push` inside a heredoc/commit-message is ignored).
-# Boundary-anchored on both sides so `gitpush`/`git pushup` do not match.
+# Split a command string into simple statements, honouring shell quoting.
 #
-# Git's global options may sit between `git` and the subcommand, so the
-# optional group also accepts them. Matching bare `git\s+push` missed
-# `git -C <worktree> push` — the form pr-babysit uses to push from a worktree —
-# which silently skipped every push-time gate. Only tokens that begin with `-`
-# are consumed, so `git commit -m "push"` still does not match.
-is_git_push() {
-  printf '%s\n' "$1" | strip_heredocs \
-    | grep -qE '(^|\s|&&|\|\||;)git(\s+(-[cC]\s+("[^"]*"|\S+)|--\S+=\S+|--[a-z][a-z-]*|-[a-zA-Z]))*\s+push(\s|;|&|\||$)'
+# Statements keep their original text (quotes included) — the tokenizer below
+# removes those. Only UNQUOTED `;`, `&&`, `||`, `|`, `&` and newlines separate
+# statements, so an operator inside a quoted argument does not split it.
+#
+# Command-substitution bodies — `$(...)` and backticks — are lifted out and
+# emitted as statements in their own right, because `foo $(git push)` really
+# does push. Inside single quotes nothing is substituted, so those are left as
+# literal text.
+#
+# Results land in the global array $_TOOLU_STMTS (bash 3.2 has no nameref).
+_toolu_split_statements() {
+  local s="$1"
+  local i=0 n=${#s} c nxt q="" cur="" body depth start
+  _TOOLU_STMTS=()
+
+  _toolu_flush_stmt() {
+    case "$cur" in
+      *[![:space:]]*) _TOOLU_STMTS+=("$cur") ;;
+    esac
+    cur=""
+  }
+
+  while [ "$i" -lt "$n" ]; do
+    c="${s:$i:1}"
+
+    # Single quotes: literal to the closing quote. No operators, no expansion.
+    if [ "$q" = "'" ]; then
+      cur+="$c"
+      [ "$c" = "'" ] && q=""
+      i=$((i + 1))
+      continue
+    fi
+
+    # Double quotes: operators are literal, but substitutions still run.
+    if [ "$q" = '"' ]; then
+      if [ "$c" = '\' ]; then
+        cur+="${s:$i:2}"
+        i=$((i + 2))
+        continue
+      fi
+      if [ "$c" = '"' ]; then
+        cur+="$c"
+        q=""
+        i=$((i + 1))
+        continue
+      fi
+      if [ "$c" = '$' ] && [ "${s:$((i + 1)):1}" = "(" ]; then
+        depth=1
+        start=$((i + 2))
+        i=$start
+        while [ "$i" -lt "$n" ] && [ "$depth" -gt 0 ]; do
+          case "${s:$i:1}" in
+            "(") depth=$((depth + 1)) ;;
+            ")") depth=$((depth - 1)) ;;
+          esac
+          i=$((i + 1))
+        done
+        body="${s:$start:$((i - start - 1))}"
+        [ -n "$body" ] && _TOOLU_SUBSTS+=("$body")
+        continue
+      fi
+      cur+="$c"
+      i=$((i + 1))
+      continue
+    fi
+
+    # Unquoted.
+    case "$c" in
+      "'"|'"')
+        q="$c"
+        cur+="$c"
+        ;;
+      '\')
+        cur+="${s:$i:2}"
+        i=$((i + 1))
+        ;;
+      '`')
+        start=$((i + 1))
+        i=$start
+        while [ "$i" -lt "$n" ] && [ "${s:$i:1}" != '`' ]; do
+          i=$((i + 1))
+        done
+        body="${s:$start:$((i - start))}"
+        [ -n "$body" ] && _TOOLU_SUBSTS+=("$body")
+        ;;
+      '$')
+        if [ "${s:$((i + 1)):1}" = "(" ]; then
+          depth=1
+          start=$((i + 2))
+          i=$start
+          while [ "$i" -lt "$n" ] && [ "$depth" -gt 0 ]; do
+            case "${s:$i:1}" in
+              "(") depth=$((depth + 1)) ;;
+              ")") depth=$((depth - 1)) ;;
+            esac
+            i=$((i + 1))
+          done
+          body="${s:$start:$((i - start - 1))}"
+          [ -n "$body" ] && _TOOLU_SUBSTS+=("$body")
+          continue
+        fi
+        cur+="$c"
+        ;;
+      ';'|'&'|'|'|$'\n')
+        nxt="${s:$((i + 1)):1}"
+        if { [ "$c" = '&' ] && [ "$nxt" = '&' ]; } || { [ "$c" = '|' ] && [ "$nxt" = '|' ]; }; then
+          i=$((i + 1))
+        fi
+        _toolu_flush_stmt
+        ;;
+      *)
+        cur+="$c"
+        ;;
+    esac
+    i=$((i + 1))
+  done
+  _toolu_flush_stmt
+  unset -f _toolu_flush_stmt
 }
 
-# Return 0 iff the raw command string $1 is a `git commit`.
+# Tokenize ONE statement into argv, dropping quote characters and keeping a
+# quoted run as a single token. This is what makes prose safe: in
+# `echo "no git push rules"` the quoted text is one argument token, so the
+# command is `echo`, not `git`.
 #
-# Mirrors is_git_push exactly — same heredoc stripping, same tolerance for
-# git's global options between `git` and the subcommand — because the two
-# callers that need it have the same evasion surface. commit-gate.sh used to
-# pattern-match the literal prefix `git commit`, which missed `git -C <path>
-# commit` and any command that reached commit after a `&&`; the narrowed
-# quality gate cannot afford that hole, since commit is one of the only two
-# things it still stops.
+# Results land in the global array $_TOOLU_TOKENS.
+_toolu_statement_tokens() {
+  local s="$1"
+  local i=0 n=${#s} c q="" tok="" started=0
+  _TOOLU_TOKENS=()
+  while [ "$i" -lt "$n" ]; do
+    c="${s:$i:1}"
+    if [ -n "$q" ]; then
+      if [ "$c" = "$q" ]; then
+        q=""
+      elif [ "$c" = '\' ] && [ "$q" = '"' ]; then
+        tok+="${s:$((i + 1)):1}"
+        i=$((i + 1))
+      else
+        tok+="$c"
+      fi
+      i=$((i + 1))
+      continue
+    fi
+    case "$c" in
+      "'"|'"')
+        q="$c"
+        started=1
+        ;;
+      '\')
+        tok+="${s:$((i + 1)):1}"
+        i=$((i + 1))
+        started=1
+        ;;
+      ' '|$'\t'|$'\n')
+        if [ "$started" = 1 ]; then
+          _TOOLU_TOKENS+=("$tok")
+          tok=""
+          started=0
+        fi
+        ;;
+      *)
+        tok+="$c"
+        started=1
+        ;;
+    esac
+    i=$((i + 1))
+  done
+  [ "$started" = 1 ] && _TOOLU_TOKENS+=("$tok")
+  return 0
+}
+
+# Print the git subcommand a statement invokes, or nothing.
 #
-# The trailing boundary keeps `git commit-tree` out: the character after
-# `commit` there is `-`, which is not a boundary.
+# Git's global options sit between `git` and the subcommand, and two of them
+# (-C, -c) take a separate value — consuming those is what keeps
+# `git -c push.default=simple push` a push and `git commit -m "push"` a commit.
+_toolu_git_subcommand() {
+  _toolu_statement_tokens "$1"
+  [ "${#_TOOLU_TOKENS[@]}" -gt 1 ] || return 1
+  [ "${_TOOLU_TOKENS[0]}" = "git" ] || return 1
+
+  local i=1 t
+  while [ "$i" -lt "${#_TOOLU_TOKENS[@]}" ]; do
+    t="${_TOOLU_TOKENS[$i]}"
+    case "$t" in
+      -C|-c)
+        i=$((i + 2))
+        ;;
+      --*=*|--*|-?)
+        i=$((i + 1))
+        ;;
+      *)
+        printf '%s' "$t"
+        return 0
+        ;;
+    esac
+  done
+  return 1
+}
+
+# Return 0 iff COMMAND ($1) invokes `git <SUBCOMMAND>` ($2) anywhere.
+#
+# Structural, not textual. The old regex matched the raw string, so any prose
+# containing the two words in sequence — `echo "no git push rules"`, a commit
+# message, a doc line — fired the push gates. Resolving the actual command of
+# each statement is the difference between "these words appear" and "this runs".
+toolu_runs_git_subcommand() {
+  local cmd sub="$2" stmt found=1
+  cmd=$(printf '%s\n' "$1" | strip_heredocs)
+
+  _TOOLU_SUBSTS=()
+  _toolu_split_statements "$cmd"
+  local -a stmts=("${_TOOLU_STMTS[@]}")
+  local -a substs=("${_TOOLU_SUBSTS[@]}")
+
+  for stmt in ${stmts[@]+"${stmts[@]}"}; do
+    if [ "$(_toolu_git_subcommand "$stmt")" = "$sub" ]; then
+      found=0
+      break
+    fi
+  done
+
+  # A substitution body is its own command line; scan each recursively so a
+  # push hidden in `$(...)` is not missed.
+  if [ "$found" -ne 0 ]; then
+    for stmt in ${substs[@]+"${substs[@]}"}; do
+      if toolu_runs_git_subcommand "$stmt" "$sub"; then
+        found=0
+        break
+      fi
+    done
+  fi
+  return "$found"
+}
+
+# Return 0 iff COMMAND ($1) runs `git push`.
+#
+# Structural, via toolu_runs_git_subcommand: the command is parsed into
+# statements and git's real subcommand is resolved, so the two words appearing
+# in prose (`echo "no git push rules"`, a commit message, a doc line) is not a
+# push. Heredoc bodies are stripped first, and `$(...)`/backtick bodies are
+# scanned as commands of their own.
+is_git_push() {
+  toolu_runs_git_subcommand "$1" push
+}
+
+# Return 0 iff COMMAND ($1) runs `git commit`.
+#
+# Same structural detection as is_git_push — `git commit-tree` is a different
+# subcommand and does not match, and `echo "remember to git commit"` is prose.
 is_git_commit() {
-  printf '%s\n' "$1" | strip_heredocs \
-    | grep -qE '(^|\s|&&|\|\||;)git(\s+(-[cC]\s+("[^"]*"|\S+)|--\S+=\S+|--[a-z][a-z-]*|-[a-zA-Z]))*\s+commit(\s|;|&|\||$)'
+  toolu_runs_git_subcommand "$1" commit
 }
 
 # Echo the absolute root of the repo a `git push` command ($1) targets.

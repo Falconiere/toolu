@@ -26,7 +26,9 @@ cannot prompt, `ask` degrades to `advise`.
 A refused prompt leaves the pending marker orphaned; the SessionStart state
 sweeper reclaims it.
 
-Detection lives in `lib/detect.sh:is_git_push`, which accepts git's global options between `git` and the subcommand — `git -C <path> push`, `git -c k=v push`, `git --no-pager push`, `git --git-dir=<path> push` are all gated. Only tokens starting with `-` are consumed, so `git commit -m "push"` still does not match.
+Detection lives in `lib/detect.sh:is_git_push`, which is **structural, not textual**: the command is split into statements (honouring shell quoting), each statement is tokenized, and git's real subcommand is resolved after consuming git's global options. So `git -C <path> push`, `git -c k=v push`, `git --no-pager push`, and `git --git-dir=<path> push` are all gated, while `git commit -m "push"` is a commit.
+
+Prose is not a command. `echo "no git push rules remain"`, a grep pattern like `grep -qE "^git push" file`, or a commit message that explains the gate are all arguments, not invocations, and do not fire it — the earlier regex over the raw string did fire on every one of them. Heredoc bodies are stripped first, and `$(...)` / backtick bodies are scanned as commands in their own right, so `out=$(git push)` is still a push.
 
 ## Flow
 
