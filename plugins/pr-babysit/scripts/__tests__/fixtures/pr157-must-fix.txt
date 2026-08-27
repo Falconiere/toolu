@@ -1,0 +1,33 @@
+<img src="logo.png" width="20" align="left"> **Toolu — Code Review**
+**AI Code Review finished in 31s** —— [View job](https://github.com/Falconiere/toolu/actions/runs/33041645196)
+
+---
+### Code Review — `perf/plan-ledger-step-scope`
+
+- [x] Reviewed 8-file diff — verdict set
+
+**Verdict:** ⚠️ Changes requested   
+### Review Plan
+Reviewing 8 files.
+
+### Findings (0)
+
+_No findings._
+
+### Coverage
+
+reviewed: 8
+
+### Top-N must-fix
+Fix pl_scope_sha to handle git diff failures explicitly
+Ensure scope freshness invalidates when a step's paths change between runs
+Guard against path injection with leading dashes in git diff
+<details><summary>📜 Review history (1 passes)</summary>
+
+| Pass | Commit | Verdict | New | Open | Resolved |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `d997dd5` | changes | 0 | 0 | 0 |
+
+</details>
+
+`request-changes`

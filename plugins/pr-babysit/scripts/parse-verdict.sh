@@ -5,13 +5,30 @@
 # against a captured real comment) and stable.
 #
 # stdin : raw comment body (markdown)
-# stdout: { is_review_comment, state, complete, verdict, verdict_label, findings[] }
+# stdout: { is_review_comment, state, complete, verdict, verdict_label, findings[], must_fix[] }
 #   state: in_progress | complete | unknown
 #     - unknown  → no checkbox checklist found (cannot judge completeness; the
 #                  caller degrades to GitHub check-conclusion behaviour)
 #     - in_progress → ≥1 unchecked `- [ ]` (review still running; do not act)
 #     - complete → ≥1 checkbox AND none unchecked
 #   findings[]: { path, line|null, severity, text, key }  (key = path:line:sha1(text)[:8])
+#   must_fix[]:  free-text lines from `### Top-N must-fix`
+#
+# state can also be "provider_error": the action posted a comment but the model
+# never produced a usable review — "Review incomplete — provider error", every
+# file marked unreviewed. That is NOT a verdict about the code, and the check
+# still reports success, so a caller that reads only `verdict` sees a plain
+# `changes` with no findings and cannot tell "reviewed, nothing actionable"
+# from "never reviewed". complete is false for this state.
+#
+# must_fix is NOT a duplicate of findings. The bot populates the two sections
+# independently, and they disagree in both directions: a review has reported
+# `Findings (0)` while Top-N listed three actionable items, and an `approved`
+# verdict has shipped with Top-N still populated. A caller that reads only
+# findings[] therefore both misses work and over-trusts a pass. These are plain
+# sentences, not `path:line` findings, so they carry no key and cannot be
+# resolved as threads — surface them to a human rather than acting on them
+# mechanically.
 #
 # Identification is by MARKER, robust to both header states the bot uses
 # ("PR Review in Progress" → "Code Review —"): a CI job link, a "Code Review"
@@ -91,6 +108,16 @@ else
   fi
 fi
 
+# --- Provider error: the action ran, the model did not. Detected before the
+# findings block because there is nothing to find — the review never happened,
+# and reporting its absence as a normal `changes` verdict is what lets a
+# transient failure look like a considered judgement.
+verdict_line=$(printf '%s\n' "$input" | grep -m1 -E '^\*\*Verdict:\*\*' || true)
+if printf '%s' "$verdict_line" | grep -qiE 'review incomplete|provider error'; then
+  state="provider_error"
+  complete=false
+fi
+
 # --- Findings: only the `### Findings` … next `### ` block, lines of the form
 #     `path[:line]`: severity: text
 _sha1() { (sha1sum 2>/dev/null || shasum 2>/dev/null || echo nohash) | cut -c1-8; }
@@ -109,6 +136,29 @@ while IFS= read -r line; do
   findings_json=$(jq -c --argjson o "$obj" '. + [$o]' <<<"$findings_json")
 done <<< "$findings_block"
 
+# --- Top-N must-fix: free-text lines until the next heading or <details>.
+# Same decorated-header tolerance as Findings above; entries may be bare lines
+# or markdown list items.
+must_fix_block=$(printf '%s\n' "$input" | awk 'BEGIN{IGNORECASE=1} /^###[[:space:]]+Top-N[[:space:]]+must-fix([[:space:]]|$)/{f=1;next} /^### |^<details>/{f=0} f')
+must_fix_json="[]"
+while IFS= read -r line; do
+  line="${line#"${line%%[![:space:]]*}"}"
+  line="${line%"${line##*[![:space:]]}"}"
+  [ -n "$line" ] || continue
+  # Strip a leading list marker only — "- " or "1. ". A blanket "first word"
+  # strip ate the first word of every unmarked line ("Fix the silent
+  # swallowing..." became "the silent swallowing...").
+  line="${line#- }"
+  line="${line#\* }"
+  [[ "$line" =~ ^[0-9]+\.[[:space:]]+(.*)$ ]] && line="${BASH_REMATCH[1]}"
+  [ -n "$line" ] || continue
+  if ! next_json=$(jq -c --arg t "$line" '. + [$t]' <<<"$must_fix_json"); then
+    printf 'parse-verdict: could not record a Top-N line; dropping it: %s\n' "$line" >&2
+    continue
+  fi
+  must_fix_json="$next_json"
+done <<< "$must_fix_block"
+
 jq -nc \
   --argjson is_review "$is_review" \
   --arg state "$state" \
@@ -116,4 +166,5 @@ jq -nc \
   --arg verdict "$verdict" \
   --arg verdict_label "${verdict_label:-}" \
   --argjson findings "$findings_json" \
-  '{is_review_comment:$is_review, state:$state, complete:$complete, verdict:$verdict, verdict_label:$verdict_label, findings:$findings}'
+  --argjson must_fix "$must_fix_json" \
+  '{is_review_comment:$is_review, state:$state, complete:$complete, verdict:$verdict, verdict_label:$verdict_label, findings:$findings, must_fix:$must_fix}'

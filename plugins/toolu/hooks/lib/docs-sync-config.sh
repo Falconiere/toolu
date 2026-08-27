@@ -31,7 +31,8 @@ docs/*.md
 AGENTS.md
 */AGENTS.md
 CLAUDE.md
-*/CLAUDE.md}"
+*/CLAUDE.md
+*/workflows/*.md}"
 : "${DEFAULT_DOCS_SYNC_SURFACE_EXCLUDES:=docs/releases/*
 */docs/releases/*}"
 : "${DEFAULT_DOCS_SYNC_CODE_SURFACES:=*.ts

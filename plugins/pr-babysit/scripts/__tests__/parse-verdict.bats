@@ -146,3 +146,121 @@ FIX="${BATS_TEST_DIRNAME}/fixtures"
   [ "$(jq -r .is_review_comment <<<"$out")" = "true" ]
   [ "$(jq -r .verdict <<<"$out")" = "changes" ]
 }
+
+# ── Top-N must-fix ─────────────────────────────────────────────────────────
+#
+# The bot populates `### Findings` and `### Top-N must-fix` independently, and
+# they disagree in both directions. The fixture here is the real comment from
+# PR #157 pass 1: `Findings (0)` while Top-N carried all three actionable
+# items. A caller reading only findings[] sees nothing to do and stops.
+
+@test "parse-verdict: Top-N items survive an empty findings section" {
+  out=$(bash "$PV" < "$FIX/pr157-must-fix.txt")
+  [ "$(jq '.findings | length' <<<"$out")" -eq 0 ]
+  [ "$(jq '.must_fix | length' <<<"$out")" -eq 3 ]
+  [ "$(jq -r '.verdict' <<<"$out")" = "changes" ]
+}
+
+@test "parse-verdict: a must_fix line keeps its whole sentence" {
+  out=$(bash "$PV" < "$FIX/pr157-must-fix.txt")
+  [ "$(jq -r '.must_fix[0]' <<<"$out")" = "Fix pl_scope_sha to handle git diff failures explicitly" ]
+  [ "$(jq -r '.must_fix[2]' <<<"$out")" = "Guard against path injection with leading dashes in git diff" ]
+}
+
+@test "parse-verdict: must_fix stops at the history block" {
+  out=$(bash "$PV" < "$FIX/pr157-must-fix.txt")
+  # The <details> history table follows Top-N; none of its rows may leak in.
+  [ "$(jq -r '[.must_fix[] | select(test("Pass|d997dd5|---"))] | length' <<<"$out")" -eq 0 ]
+}
+
+@test "parse-verdict: list markers are stripped, sentences are not" {
+  out=$(printf '%s\n' '### Code Review — `x`' '**Verdict:** ⚠️ Changes requested' \
+    '### Top-N must-fix' 'Fix the bare line.' '- Fix the dash item.' \
+    '* Fix the star item.' '1. Fix the numbered item.' '<details>' '`request-changes`' \
+    | bash "$PV")
+  [ "$(jq -r '.must_fix | join("|")' <<<"$out")" = "Fix the bare line.|Fix the dash item.|Fix the star item.|Fix the numbered item." ]
+}
+
+@test "parse-verdict: an approved verdict can still carry must_fix" {
+  # Observed on PR #157's final pass: approved, zero findings, Top-N populated.
+  out=$(printf '%s\n' '### Code Review — `x`' '**Verdict:** ✅ Approved' \
+    '### Findings (0)' '### Top-N must-fix' 'Something the bot still wants.' \
+    '<details>' '`merge-approved`' | bash "$PV")
+  [ "$(jq -r '.verdict' <<<"$out")" = "approved" ]
+  [ "$(jq '.must_fix | length' <<<"$out")" -eq 1 ]
+}
+
+@test "parse-verdict: no Top-N section yields an empty list, not an error" {
+  out=$(bash "$PV" < "$FIX/pr31-verdict.txt")
+  [ "$(jq -r '.must_fix | type' <<<"$out")" = "array" ]
+  [ "$(jq '.must_fix | length' <<<"$out")" -eq 0 ]
+}
+
+# ── provider error: the action ran, the model did not ──────────────────────
+#
+# Captured from a real run on PR #159. The check reported SUCCESS and the
+# comment carried `request-changes`, so a caller reading only the verdict sees
+# an ordinary "changes with no findings" — indistinguishable from a review that
+# ran and found nothing actionable. It was transient; the rerun produced a real
+# review. That is exactly why it must be legible: a one-off failure that looks
+# like a considered judgement is worse than one that announces itself.
+
+@test "parse-verdict: a provider error is its own state, not a verdict" {
+  out=$(bash "$PV" < "$FIX/provider-error.txt")
+  [ "$(jq -r .state <<<"$out")" = "provider_error" ]
+  [ "$(jq -r .complete <<<"$out")" = "false" ]
+}
+
+@test "parse-verdict: a provider error yields no findings and no must_fix" {
+  out=$(bash "$PV" < "$FIX/provider-error.txt")
+  [ "$(jq '.findings | length' <<<"$out")" -eq 0 ]
+  [ "$(jq '.must_fix | length' <<<"$out")" -eq 0 ]
+}
+
+@test "parse-verdict: a real review is never mistaken for a provider error" {
+  out=$(bash "$PV" < "$FIX/pr31-verdict.txt")
+  [ "$(jq -r .state <<<"$out")" = "complete" ]
+  [ "$(jq -r .complete <<<"$out")" = "true" ]
+}
+
+@test "parse-verdict: a partial write cannot clobber collected must_fix items" {
+  # The accumulator used `x=$(jq ...) || continue`, which assigns first and
+  # branches second — a jq failure replaced the whole array with empty output
+  # instead of skipping one line. Many lines must survive intact.
+  out=$(printf '%s\n' '### Code Review — `x`' '**Verdict:** ⚠️ Changes requested' \
+    '### Top-N must-fix' 'First item.' 'Second item.' 'Third item.' \
+    '<details>' '`request-changes`' | bash "$PV")
+  [ "$(jq '.must_fix | length' <<<"$out")" -eq 3 ]
+  [ "$(jq -r '.must_fix[0]' <<<"$out")" = "First item." ]
+}
+
+@test "parse-verdict: a finding that quotes the provider-error phrase is not a provider error" {
+  # Self-referential hazard: a review OF this feature contains the phrase in
+  # prose. Detection reads the verdict line, so quoting it changes nothing.
+  out=$(printf '%s\n' '### Code Review — `x`' '**Verdict:** ⚠️ Changes requested' \
+    '### Findings (1)' \
+    '`a.sh:1`: medium: the action prints **Provider error:** when the model fails' \
+    '<details>' '`request-changes`' | bash "$PV")
+  [ "$(jq -r .state <<<"$out")" != "provider_error" ]
+  [ "$(jq '.findings | length' <<<"$out")" -eq 1 ]
+}
+
+@test "parse-verdict: the provider-error verdict line is still detected" {
+  out=$(bash "$PV" < "$FIX/provider-error.txt")
+  [ "$(jq -r .state <<<"$out")" = "provider_error" ]
+}
+
+@test "parse-verdict: a decorated Top-N heading is matched" {
+  out=$(printf '%s\n' '### Code Review — `x`' '**Verdict:** ⚠️ Changes requested' \
+    '### Top-N must-fix (3)' 'One item.' '<details>' '`request-changes`' | bash "$PV")
+  [ "$(jq '.must_fix | length' <<<"$out")" -eq 1 ]
+}
+
+@test "parse-verdict: real fixtures keep their state after the anchoring change" {
+  out=$(bash "$PV" < "$FIX/pr31-verdict.txt")
+  [ "$(jq -r .state <<<"$out")" = "complete" ]
+  [ "$(jq -r .verdict <<<"$out")" = "approved" ]
+  out2=$(bash "$PV" < "$FIX/pr157-must-fix.txt")
+  [ "$(jq -r .state <<<"$out2")" = "complete" ]
+  [ "$(jq -r .verdict <<<"$out2")" = "changes" ]
+}

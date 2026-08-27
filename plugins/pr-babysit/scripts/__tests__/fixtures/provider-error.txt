@@ -1,0 +1,26 @@
+<img src="logo.png" width="20" align="left"> **Toolu — Code Review**
+**AI Code Review finished in 12s** —— [View job](https://github.com/Falconiere/toolu/actions/runs/33044151381)
+
+---
+### Code Review — `fix/review-parse-and-ci-triggers`
+
+- [x] Reviewed 5-file diff — verdict set
+
+**Verdict:** 🚫 Review incomplete — provider error   
+
+> ⚠️ **Provider error:** No object generated: response did not match schema. [finish_reason: stop]
+### Findings (0)
+
+_No findings._
+
+> ⚠️ **LLM judgment unavailable** — no deterministic findings either.
+
+### Coverage
+
+unreviewed: 5
+
+- `.github/workflows/tests.yml`: unreviewed
+- `plugins/pr-babysit/scripts/parse-verdict.sh`: unreviewed
+
+
+`request-changes`

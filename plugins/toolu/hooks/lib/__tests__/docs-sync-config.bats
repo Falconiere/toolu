@@ -103,3 +103,12 @@ ds() {
   echo "$output" | grep -qFx 'CUSTOM.md'
   ! echo "$output" | grep -qFx 'AGENTS.md'
 }
+
+@test "docs_sync_surfaces covers plugin workflow docs" {
+  # A plugin's workflows/*.md is prose that describes behaviour — pr-babysit's
+  # babysit.md is the whole contract for how that plugin runs. It was not a
+  # surface, so the gate fired "code changed, no docs" on the very push that
+  # rewrote it.
+  ds docs_sync_surfaces
+  echo "$output" | grep -qFx '*/workflows/*.md'
+}

@@ -7,6 +7,14 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Superseded runs are wasted minutes: pushing twice in quick succession left the
+# first Tests run grinding to completion while the second did the same work.
+# toolu-review.yml already cancels; this matches it — except on main, where each
+# commit keeps its own result rather than being cancelled by the next.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 permissions:
   contents: read
 
