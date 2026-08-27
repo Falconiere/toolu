@@ -22,7 +22,7 @@ root=$(ps_repo_root "$cwd")
 index=$(PS_CWD="$root" ps_index)
 [ -n "$index" ] || exit 0
 
-header="Project skills — Read $root/.toolu/skills/<name>/SKILL.md to load the procedure. Do not rely on this index as the body."
+header="Project skills — Read .toolu/skills/<name>/SKILL.md to load the procedure. Do not rely on this index as the body."
 ctx=$(printf '%s\n%s\n' "$header" "$index")
 jq -n --arg ctx "$ctx" '{
   hookSpecificOutput: {

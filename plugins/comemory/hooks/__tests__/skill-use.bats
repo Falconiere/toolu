@@ -47,7 +47,7 @@ _payload() {
   skill="$REPO/.toolu/skills/deploy-staging/SKILL.md"
   run bash "$HOOK" < <(_payload Read "$skill")
   [ "$status" -eq 0 ]
-  jq -e '.["deploy-staging"].use_count==1 and .["deploy-staging"].last_used_at' \
+  jq -e '.["deploy-staging"].use_count==1 and (.["deploy-staging"].last_used_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"))' \
     "$REPO/.toolu/skills/.usage.json" >/dev/null
 }
 
@@ -68,6 +68,13 @@ _payload() {
   [ "$status" -eq 0 ]
   jq -e '.["deploy-staging"].patch_count==1 and .["deploy-staging"].state=="active"' \
     "$REPO/.toolu/skills/.usage.json" >/dev/null
+}
+
+@test "AC-8: .. in a path is canonicalized and does not invent a skill name" {
+  sneak="$REPO/.toolu/skills/.archive/../deploy-staging/SKILL.md"
+  run bash "$HOOK" < <(_payload Read "$sneak")
+  [ "$status" -eq 0 ]
+  jq -e '.["deploy-staging"].use_count==1' "$REPO/.toolu/skills/.usage.json" >/dev/null
 }
 
 @test "AC-8: read_file (Codex/Grok) also counts as use" {

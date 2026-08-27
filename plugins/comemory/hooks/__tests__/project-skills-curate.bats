@@ -45,8 +45,7 @@ teardown() { rm -rf "$TMP"; }
   run bash "$HOOK" </dev/null
   [ "$status" -eq 0 ]
   [ ! -f "$MARK" ]
-  [ ! -f "$CLAUDE_CONFIG_DIR/toolu/.project-skills-last-curate" ] || \
-    [ "$(cat "$CLAUDE_CONFIG_DIR/toolu/.project-skills-last-curate" 2>/dev/null)" != "$(date -u +%Y%m%d)" ]
+  [ ! -f "$CLAUDE_CONFIG_DIR/toolu/.project-skills-last-curate" ]
 }
 
 @test "AC-10: projectSkills.enabled=false does not curate" {

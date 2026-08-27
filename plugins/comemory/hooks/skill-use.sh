@@ -38,6 +38,12 @@ case "$rel" in
   *)  abs="$cwd/$rel" ;;
 esac
 
+# Resolve .. / symlinks before matching so .archive/../name cannot sneak in.
+_dir=$(dirname "$abs")
+_base=$(basename "$abs")
+_dir=$(cd "$_dir" 2>/dev/null && pwd -P) || exit 0
+abs="$_dir/$_base"
+
 # Reject archive paths and anything that is not .../.toolu/skills/<name>/SKILL.md
 name=""
 case "$abs" in
@@ -46,7 +52,7 @@ case "$abs" in
     rest="${abs#*/.toolu/skills/}"
     name="${rest%%/SKILL.md}"
     case "$name" in
-      */*) exit 0 ;;
+      */*|.*|"") exit 0 ;;
     esac
     ;;
   *) exit 0 ;;

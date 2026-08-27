@@ -38,6 +38,6 @@ _cm_to=""
 if command -v timeout >/dev/null 2>&1; then _cm_to="timeout 30"
 elif command -v gtimeout >/dev/null 2>&1; then _cm_to="gtimeout 30"; fi
 
-{ $_cm_to "$_sh" curate; } >/dev/null 2>&1 &
+{ $_cm_to "$_sh" curate; } </dev/null >/dev/null 2>&1 &
 disown 2>/dev/null || true
 exit 0

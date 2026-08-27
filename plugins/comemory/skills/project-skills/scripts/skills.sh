@@ -22,17 +22,16 @@ done
 _dir=$(cd "${_self%/*}" 2>/dev/null && pwd) || _dir="."
 # scripts/ -> skill -> skills -> plugin root -> lib/project-skills.sh
 _lib="$_dir/../../../lib/project-skills.sh"
+if ! command -v jq >/dev/null 2>&1; then
+  printf 'skills.sh: jq is required\n' >&2
+  exit 1
+fi
 if [ ! -r "$_lib" ]; then
   printf 'skills.sh: lib not found at %s\n' "$_lib" >&2
   exit 1
 fi
 # shellcheck source=../../../lib/project-skills.sh
 . "$_lib"
-
-if ! command -v jq >/dev/null 2>&1; then
-  printf 'skills.sh: jq is required\n' >&2
-  exit 1
-fi
 
 usage() {
   cat <<'USAGE'

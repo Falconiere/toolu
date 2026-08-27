@@ -150,11 +150,12 @@ ps_save_usage() {
   return 1
 }
 
+# 1–64 chars: leading [a-z] plus 0–63 of [a-z0-9-].
 ps_valid_name() {
   case "$1" in
     ''|*[!a-z0-9-]*|-*|*-) return 1 ;;
   esac
-  printf '%s' "$1" | grep -qE '^[a-z][a-z0-9-]{1,63}$'
+  printf '%s' "$1" | grep -qE '^[a-z][a-z0-9-]{0,63}$'
 }
 
 ps_word_count() {
@@ -264,7 +265,7 @@ ps_create() {
     printf 'skills.sh: not in a git repo\n' >&2
     return 1
   fi
-  ps_valid_name "$name" || { printf 'skills.sh: invalid name "%s" (expected [a-z][a-z0-9-]{1,63})\n' "$name" >&2; return 1; }
+  ps_valid_name "$name" || { printf 'skills.sh: invalid name "%s" (1–64 chars, [a-z][a-z0-9-]*)\n' "$name" >&2; return 1; }
   if [ "$(ps_word_count "$desc")" -gt 30 ]; then
     printf 'skills.sh: description must be ≤ 30 words\n' >&2
     return 1
@@ -512,11 +513,20 @@ ps_seed_missing() {
   printf '%s' "$usage"
 }
 
+# 0 when elapsed time is at least DAYS full 86400-second periods.
+ps_idle_at_least() {
+  local iso="$1" days="$2" now_e then_e
+  now_e=$(ps_now_epoch)
+  then_e=$(ps_iso_to_epoch "$iso") || return 1
+  [ $((now_e - then_e)) -ge $((days * 86400)) ]
+}
+
+# Display helper (ceil of elapsed days).
 ps_idle_days() {
   local iso="$1" now_e then_e
   now_e=$(ps_now_epoch)
   then_e=$(ps_iso_to_epoch "$iso") || { printf '0'; return 0; }
-  printf '%s' $(( (now_e - then_e) / 86400 ))
+  printf '%s' $(( (now_e - then_e + 86399) / 86400 ))
 }
 
 ps_curate() {
@@ -547,10 +557,10 @@ ps_curate() {
       continue
     fi
     days=$(ps_idle_days "$ts")
-    if [ "$days" -ge "$PS_ARCHIVE" ]; then
+    if ps_idle_at_least "$ts" "$PS_ARCHIVE"; then
       local uc
       uc=$(jq -r --arg n "$name" '.[$n].use_count // 0' <<<"$usage")
-      if [ "$uc" = "0" ] && [ "$days" -lt "$PS_STALE" ]; then
+      if [ "$uc" = "0" ] && ! ps_idle_at_least "$ts" "$PS_STALE"; then
         continue
       fi
       if [ "$dry" = 1 ]; then
@@ -573,7 +583,7 @@ ps_curate() {
       else
         printf 'skills.sh: failed to archive %s — left in place\n' "$name" >&2
       fi
-    elif [ "$days" -ge "$PS_STALE" ]; then
+    elif ps_idle_at_least "$ts" "$PS_STALE"; then
       if [ "$dry" = 1 ]; then
         printf 'would stale %s (%sd idle)\n' "$name" "$days"
         continue
