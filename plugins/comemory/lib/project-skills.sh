@@ -35,8 +35,7 @@ ps_repo_root() {
 }
 
 ps_now() {
-  date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null && return
-  printf '%sT00:00:00Z' "$(date -u +%Y-%m-%d 2>/dev/null)" && return
+  python3 -c 'from datetime import datetime, timezone; print(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))' 2>/dev/null && return 0
   printf '1970-01-01T00:00:00Z'
 }
 
