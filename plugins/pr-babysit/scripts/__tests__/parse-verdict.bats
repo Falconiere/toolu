@@ -233,3 +233,34 @@ FIX="${BATS_TEST_DIRNAME}/fixtures"
   [ "$(jq '.must_fix | length' <<<"$out")" -eq 3 ]
   [ "$(jq -r '.must_fix[0]' <<<"$out")" = "First item." ]
 }
+
+@test "parse-verdict: a finding that quotes the provider-error phrase is not a provider error" {
+  # Self-referential hazard: a review OF this feature contains the phrase in
+  # prose. Detection reads the verdict line, so quoting it changes nothing.
+  out=$(printf '%s\n' '### Code Review — `x`' '**Verdict:** ⚠️ Changes requested' \
+    '### Findings (1)' \
+    '`a.sh:1`: medium: the action prints **Provider error:** when the model fails' \
+    '<details>' '`request-changes`' | bash "$PV")
+  [ "$(jq -r .state <<<"$out")" != "provider_error" ]
+  [ "$(jq '.findings | length' <<<"$out")" -eq 1 ]
+}
+
+@test "parse-verdict: the provider-error verdict line is still detected" {
+  out=$(bash "$PV" < "$FIX/provider-error.txt")
+  [ "$(jq -r .state <<<"$out")" = "provider_error" ]
+}
+
+@test "parse-verdict: a decorated Top-N heading is matched" {
+  out=$(printf '%s\n' '### Code Review — `x`' '**Verdict:** ⚠️ Changes requested' \
+    '### Top-N must-fix (3)' 'One item.' '<details>' '`request-changes`' | bash "$PV")
+  [ "$(jq '.must_fix | length' <<<"$out")" -eq 1 ]
+}
+
+@test "parse-verdict: real fixtures keep their state after the anchoring change" {
+  out=$(bash "$PV" < "$FIX/pr31-verdict.txt")
+  [ "$(jq -r .state <<<"$out")" = "complete" ]
+  [ "$(jq -r .verdict <<<"$out")" = "approved" ]
+  out2=$(bash "$PV" < "$FIX/pr157-must-fix.txt")
+  [ "$(jq -r .state <<<"$out2")" = "complete" ]
+  [ "$(jq -r .verdict <<<"$out2")" = "changes" ]
+}

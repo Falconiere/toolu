@@ -112,7 +112,8 @@ fi
 # findings block because there is nothing to find — the review never happened,
 # and reporting its absence as a normal `changes` verdict is what lets a
 # transient failure look like a considered judgement.
-if printf '%s' "$input" | grep -qE 'Review incomplete — provider error|\*\*Provider error:\*\*'; then
+verdict_line=$(printf '%s\n' "$input" | grep -m1 -E '^\*\*Verdict:\*\*' || true)
+if printf '%s' "$verdict_line" | grep -qiE 'review incomplete|provider error'; then
   state="provider_error"
   complete=false
 fi
@@ -138,7 +139,7 @@ done <<< "$findings_block"
 # --- Top-N must-fix: free-text lines until the next heading or <details>.
 # Same decorated-header tolerance as Findings above; entries may be bare lines
 # or markdown list items.
-must_fix_block=$(printf '%s\n' "$input" | awk '/^### Top-N must-fix([[:space:]]|$)/{f=1;next} /^### |^<details>/{f=0} f')
+must_fix_block=$(printf '%s\n' "$input" | awk 'BEGIN{IGNORECASE=1} /^###[[:space:]]+Top-N[[:space:]]+must-fix([[:space:]]|$)/{f=1;next} /^### |^<details>/{f=0} f')
 must_fix_json="[]"
 while IFS= read -r line; do
   line="${line#"${line%%[![:space:]]*}"}"
@@ -151,7 +152,10 @@ while IFS= read -r line; do
   line="${line#\* }"
   [[ "$line" =~ ^[0-9]+\.[[:space:]]+(.*)$ ]] && line="${BASH_REMATCH[1]}"
   [ -n "$line" ] || continue
-  next_json=$(jq -c --arg t "$line" '. + [$t]' <<<"$must_fix_json") || continue
+  if ! next_json=$(jq -c --arg t "$line" '. + [$t]' <<<"$must_fix_json"); then
+    printf 'parse-verdict: could not record a Top-N line; dropping it: %s\n' "$line" >&2
+    continue
+  fi
   must_fix_json="$next_json"
 done <<< "$must_fix_block"
 
