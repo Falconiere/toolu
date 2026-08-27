@@ -46,7 +46,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update -y
-          sudo apt-get install -y bats jq
+          sudo apt-get install -y bats jq parallel
 
       - name: Install ast-grep
         run: npm install -g @ast-grep/cli
@@ -87,12 +87,12 @@ jobs:
           # and skill tests live under their owning plugin; discovery is dynamic,
           # so new plugins are picked up automatically). Skill tests that wrap a
           # REST API stub curl on PATH, so they never hit real APIs.
-          mapfile -d '' suites < <(find plugins benchmarks tooling -name "*.bats" -print0)
-          if [ "${#suites[@]}" -eq 0 ]; then
-            echo "No bats suites found — test discovery is broken" >&2
-            exit 1
-          fi
-          bats "${suites[@]}"
+          #
+          # Through tooling/bats-run.sh so CI runs the suite the same way a
+          # developer does, and gets the same parallelism: files in parallel,
+          # tests within a file serial. It owns discovery and the
+          # nothing-found guard.
+          bash tooling/bats-run.sh plugins benchmarks tooling
 
       - name: Deterministic benchmarks (hermetic)
         run: |

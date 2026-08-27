@@ -77,7 +77,22 @@ _path_without_parallel() {
 
 @test "defaults to the repo suite paths when none are given" {
   run env BATS_RUN_PRINT_PLAN=1 BATS_JOBS=1 bash "$RUNNER"
-  [[ "$output" == *"bats -r plugins tooling"* ]]
+  [[ "$output" == *"bats -r plugins benchmarks tooling"* ]]
+}
+
+@test "the default covers every directory holding suites" {
+  # A suite directory missing from the default is a suite nobody runs locally.
+  run env BATS_RUN_PRINT_PLAN=1 BATS_JOBS=1 bash "$RUNNER"
+  for dir in plugins benchmarks tooling; do
+    [[ "$output" == *"$dir"* ]]
+  done
+}
+
+@test "a path with no suites fails loudly rather than confusingly" {
+  mkdir -p "$TMP/empty"
+  run env BATS_RUN_PRINT_PLAN=1 BATS_JOBS=1 bash "$RUNNER" "$TMP/empty"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"test discovery is broken"* ]]
 }
 
 @test "the given paths are what it plans to run" {
