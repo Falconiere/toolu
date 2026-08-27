@@ -824,3 +824,142 @@ EOF
   run timeout 25 bash -c "cd '$REPO' && PLAN_LEDGER_STEP_TIMEOUT=0 bash '$SCRIPT' run '$doc'"
   [ "$status" -eq 0 ]
 }
+
+# ── per-step scope (`paths`) ───────────────────────────────────────────────
+#
+# Freshness used to key on the branch-wide diff hash, so ANY change anywhere
+# invalidated every step — a comment-only commit re-ran the whole plan, test
+# suite included. A step that declares `paths` is now judged on just those.
+
+_write_scoped_doc() {
+  local doc="$1" marker="$2"
+  cat > "$doc" <<DOC
+# Scoped Plan
+
+## Steps (machine-readable)
+
+\`\`\`json
+[
+  { "id": "s1", "title": "scoped", "check": "echo x >> '$marker'; true",
+    "paths": ["src/watched.txt"] },
+  { "id": "s2", "title": "unscoped", "check": "true" }
+]
+\`\`\`
+DOC
+}
+
+@test "scope: a change outside a step's paths leaves it fresh-green" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  mkdir -p "$REPO/src"
+  ( cd "$REPO" && echo watched > src/watched.txt && git add src/watched.txt && git commit -qm "feat: watched" )
+  _write_scoped_doc "$doc" "$marker"
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "1" ]
+
+  # Touch something the step does not depend on.
+  ( cd "$REPO" && echo note > UNRELATED.md && git add UNRELATED.md && git commit -qm "docs: unrelated" )
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "1" ]
+  [[ "$output" == *"fresh-green, skipped"* ]]
+}
+
+@test "scope: a change inside a step's paths re-runs it" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  mkdir -p "$REPO/src"
+  ( cd "$REPO" && echo watched > src/watched.txt && git add src/watched.txt && git commit -qm "feat: watched" )
+  _write_scoped_doc "$doc" "$marker"
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  ( cd "$REPO" && echo changed > src/watched.txt && git add src/watched.txt && git commit -qm "feat: change watched" )
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "2" ]
+}
+
+@test "scope: a step without paths still re-runs on any change" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  mkdir -p "$REPO/src"
+  ( cd "$REPO" && echo watched > src/watched.txt && git add src/watched.txt && git commit -qm "feat: watched" )
+  # s2 is unscoped; give it the marker so its re-runs are counted.
+  cat > "$doc" <<DOC
+# Scoped Plan
+
+## Steps (machine-readable)
+
+\`\`\`json
+[
+  { "id": "s1", "title": "scoped", "check": "true", "paths": ["src/watched.txt"] },
+  { "id": "s2", "title": "unscoped", "check": "echo x >> '$marker'; true" }
+]
+\`\`\`
+DOC
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  ( cd "$REPO" && echo note > UNRELATED.md && git add UNRELATED.md && git commit -qm "docs: unrelated" )
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "2" ]
+}
+
+@test "scope: --verify ignores paths and re-runs on any change" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  mkdir -p "$REPO/src"
+  ( cd "$REPO" && echo watched > src/watched.txt && git add src/watched.txt && git commit -qm "feat: watched" )
+  _write_scoped_doc "$doc" "$marker"
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  ( cd "$REPO" && echo note > UNRELATED.md && git add UNRELATED.md && git commit -qm "docs: unrelated" )
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' --verify"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "2" ]
+}
+
+@test "scope: only --verify stamps verified_sha" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  mkdir -p "$REPO/src"
+  ( cd "$REPO" && echo watched > src/watched.txt && git add src/watched.txt && git commit -qm "feat: watched" )
+  _write_scoped_doc "$doc" "$marker"
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(jq -r '.verified_sha // "null"' "$LEDGER")" = "null" ]
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' --verify"
+  sha=$(cd "$REPO" && git diff --no-color "main...HEAD" | git hash-object --stdin)
+  [ "$(jq -r '.verified_sha' "$LEDGER")" = "$sha" ]
+}
+
+@test "scope: a red step leaves verified_sha unset even under --verify" {
+  doc="$REPO/plan.md"
+  _write_doc "$doc" "true" "false"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' --verify"
+  [ "$(jq -r '.verified_sha // "null"' "$LEDGER")" = "null" ]
+}
+
+@test "scope: the scope hash is recorded on the step entry" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  mkdir -p "$REPO/src"
+  ( cd "$REPO" && echo watched > src/watched.txt && git add src/watched.txt && git commit -qm "feat: watched" )
+  _write_scoped_doc "$doc" "$marker"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(jq -r '.steps[] | select(.id=="s1") | .scope_sha' "$LEDGER")" != "null" ]
+  [ "$(jq -r '.steps[] | select(.id=="s2") | .scope_sha' "$LEDGER")" = "null" ]
+}
+
+@test "scope: a malformed paths field is rejected at parse time" {
+  doc="$REPO/plan.md"
+  cat > "$doc" <<'DOC'
+# Bad Plan
+
+## Steps (machine-readable)
+
+```json
+[ { "id": "s1", "title": "bad", "check": "true", "paths": "not-an-array" } ]
+```
+DOC
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"invalid step paths"* ]]
+}

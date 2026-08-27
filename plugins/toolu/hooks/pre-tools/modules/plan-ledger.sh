@@ -158,6 +158,8 @@ if [[ -n "$ac_plan_doc" ]]; then
   fi
 fi
 
+plan_doc_hint=$(jq -r '.plan_doc // "<plan_doc>"' <<<"$ledger" 2>/dev/null || echo "<plan_doc>")
+
 # Build the list of non-fresh-green steps. A step is fresh-green iff
 # status==green AND diff_sha==current; a green with a stale diff_sha is `stale`.
 # `effective` is the status the agent sees: green -> stale when sha drifts.
@@ -170,13 +172,30 @@ blockers=$(jq -r --arg cur "$current_diff_sha" '
   | (.id // "?") + ": " + $eff + " — " + (.title // "")
 ' <<<"$ledger" 2>/dev/null || echo "")
 
-# All fresh-green -> allow.
+# A step may be fresh-green on its own declared `paths` — enough to keep
+# iteration fast, not enough to push on. The gate requires a --verify run:
+# every step judged against the whole branch diff, so a narrow or stale scope
+# declaration cannot hold a green through a change it failed to account for.
+# A ledger written before per-step scope existed has no `verified_sha` key at
+# all, and every step in it was judged against the whole branch diff — which is
+# exactly what --verify means. Requiring the field of those would deny every
+# push until the plan is re-run, for no safety gained. The new contract applies
+# only to ledgers that carry the key.
+has_verified=$(jq -r 'has("verified_sha")' <<<"$ledger" 2>/dev/null || echo "false")
+verified_sha=$(jq -r '.verified_sha // ""' <<<"$ledger" 2>/dev/null || echo "")
+if [[ -z "$blockers" && "$has_verified" == "true" && "$verified_sha" != "$current_diff_sha" ]]; then
+  reason=$(printf 'plan-ledger: every step is green, but not verified against the current diff.\n\nScoped runs judge a step on its own `paths`; the push gate judges it on the whole branch.\n\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run %s --verify' "$plan_doc_hint")
+  toolu_gate_emit "$mode" "$reason"
+  exit 0
+fi
+
+# All fresh-green AND verified -> allow.
 if [[ -z "$blockers" ]]; then
   exit 0
 fi
 
 # Otherwise deny, listing each non-fresh-green step + remediation.
-plan_doc=$(jq -r '.plan_doc // "<plan_doc>"' <<<"$ledger" 2>/dev/null || echo "<plan_doc>")
+plan_doc="$plan_doc_hint"
 reason=$(printf 'plan-ledger: push blocked — steps not fresh-green:\n%s\n\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run %s' "$blockers" "$plan_doc")
 toolu_gate_emit "$mode" "$reason"
 exit 0

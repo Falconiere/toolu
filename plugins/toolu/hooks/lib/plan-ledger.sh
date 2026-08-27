@@ -5,7 +5,7 @@
 # claim green. Sourceable (functions only) and runnable (guarded `main`).
 # jq-only. Parse/IO errors fail closed (exit 2).
 #
-# Run:    bash plan-ledger.sh run <doc.md> [--step <id>] [--activity <label>] [--force]
+# Run:    bash plan-ledger.sh run <doc.md> [--step <id>] [--activity <label>] [--force] [--verify]
 #         bash plan-ledger.sh status | preflight [<doc.md>] | path | root | --self-test
 # Source: . "${BASH_SOURCE%/*}/plan-ledger.sh"   (defines pl_* helpers, no run)
 
@@ -61,22 +61,65 @@ pl_evidence() {
     | jq -Rs .
 }
 
+# pl_scope_sha BASE PATHS_JSON
+# Print the content hash of BASE...HEAD restricted to PATHS_JSON (a JSON array
+# of pathspecs), or nothing when the array is empty.
+#
+# This is what lets a step stay green through a change it does not depend on. A
+# branch-wide hash says "something moved"; this says "something YOU read moved".
+pl_scope_sha() {
+  local base="$1" paths_json="$2"
+  local -a paths=()
+  local p
+  while IFS= read -r p; do
+    [ -n "$p" ] && paths+=("$p")
+  done < <(jq -r '.[]?' <<< "$paths_json" 2>/dev/null)
+  [ "${#paths[@]}" -gt 0 ] || return 0
+  git diff --no-color "${base}...HEAD" -- "${paths[@]}" 2>/dev/null | git hash-object --stdin
+}
+
+# pl_scope_map STEPS_JSON BASE
+# Print {step_id: scope_sha} for every step declaring `paths`. Steps without
+# paths are absent from the map and fall back to the branch-wide hash.
+pl_scope_map() {
+  local steps="$1" base="$2" id paths sha out="{}"
+  while IFS=$'\t' read -r id paths; do
+    [ -n "$id" ] || continue
+    sha=$(pl_scope_sha "$base" "$paths") || sha=""
+    [ -n "$sha" ] || continue
+    out=$(jq -c --arg id "$id" --arg sha "$sha" '. + {($id): $sha}' <<< "$out") || return 1
+  done < <(jq -r '.[] | select((.paths // []) | length > 0) | "\(.id)\t\(.paths | tojson)"' <<< "$steps" 2>/dev/null)
+  printf '%s' "$out"
+}
+
 # pl_recompute LEDGER_JSON CURRENT_DIFF_SHA
 # Recompute summary{total,green,red,pending,running,stale,fresh_green} and next
 # against CURRENT_DIFF_SHA (a step is fresh-green iff status==green AND diff_sha
 # matches; a running step is never fresh; next = first non-fresh-green step id,
 # null when all fresh-green). Print the updated ledger json on stdout.
 pl_recompute() {
-  local ledger="$1" cur="$2"
-  jq --arg cur "$cur" '
-    def is_fresh: (.status == "green") and (.diff_sha == $cur);
+  local ledger="$1" cur="$2" scope_map="${3:-}" verify="${4:-}"
+  [ -n "$scope_map" ] || scope_map='{}'
+  jq --arg cur "$cur" --argjson scope "$scope_map" --arg verify "$verify" '
+    # A step is fresh when it is green and nothing it depends on has moved.
+    # "Depends on" is the branch diff by default; a step that declared `paths`
+    # is judged on the hash of just those, so an unrelated edit no longer
+    # re-runs it. `--verify` ignores scope entirely and judges every step on
+    # the branch hash — the pre-push contract, where a narrow or stale `paths`
+    # declaration must not be able to hold a green.
+    def scoped_sha: $scope[.id] // null;
+    def is_fresh:
+      (.status == "green")
+      and (if ($verify != "1") and (scoped_sha != null)
+           then (.scope_sha != null) and (.scope_sha == scoped_sha)
+           else (.diff_sha == $cur) end);
     .summary = {
       total:       (.steps | length),
       green:       ([.steps[] | select(.status == "green")]  | length),
       red:         ([.steps[] | select(.status == "red")]    | length),
       pending:     ([.steps[] | select(.status == "pending")]| length),
       running:     ([.steps[] | select(.status == "running")]| length),
-      stale:       ([.steps[] | select(.status == "green" and .diff_sha != $cur)] | length),
+      stale:       ([.steps[] | select(.status == "green" and (is_fresh | not))] | length),
       fresh_green: ([.steps[] | select(is_fresh)] | length),
       retried:     ([.steps[] | select((.retries // []) | length > 0)] | length)
     }
@@ -204,7 +247,7 @@ pl_run_check() {
 
 pl_cmd_run() {
   local doc="$1"; shift
-  local only_step="" activity="" force="" steps base cur ledger_file root
+  local only_step="" activity="" force="" verify="" steps base cur ledger_file root
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --step)
@@ -219,6 +262,13 @@ pl_cmd_run() {
         ;;
       --force)
         force=1
+        shift
+        ;;
+      --verify)
+        # Judge every step on the branch diff, ignoring per-step `paths`. This
+        # is the pre-push contract: a narrow or stale scope declaration must not
+        # be able to hold a green through a change it failed to account for.
+        verify=1
         shift
         ;;
       *)
@@ -314,13 +364,19 @@ pl_cmd_run() {
       { version: 1, branch: $branch, base_branch: $base, plan_doc: $doc,
         updated_at: $now, summary: {}, next: null, steps: $steps }') \
       || { echo "plan-ledger: failed to assemble running pre-ledger" >&2; return 2; }
-    pre_ledger=$(pl_recompute "$pre_ledger" "$cur") \
+    pre_ledger=$(pl_recompute "$pre_ledger" "$cur" "$scope_map" "$verify") \
       || { echo "plan-ledger: failed to recompute running pre-ledger" >&2; return 2; }
     pl_write_ledger "$ledger_file" "$pre_ledger" \
       || { echo "plan-ledger: running pre-write failed" >&2; return 2; }
   fi
 
   # Build the steps array.
+  # Per-step scope hashes for this run. Empty for steps that declare no
+  # `paths`, which keeps them on the branch-wide rule they have always used.
+  local scope_map
+  scope_map=$(pl_scope_map "$steps" "$base") || scope_map='{}'
+  [ -n "$scope_map" ] || scope_map='{}'
+
   local out_steps id check status code evidence tmpout new_entry
   local _pl_index=0 _pl_total
   _pl_total=$(jq 'length' <<< "$steps")
@@ -341,6 +397,7 @@ pl_cmd_run() {
         | ($steps[] | select(.id==$id)) as $s
         | if $p != null
           then $p
+               | .scope_sha     = (.scope_sha // null)
                | .ac_refs       = ($s.ac_refs // [])
                | .depends_on    = ($s.depends_on // [])
                | .input         = ($s.input // null)
@@ -380,13 +437,27 @@ pl_cmd_run() {
       # edited step used to re-execute every check, which is what made "run the
       # whole plan" feel like a hang. An explicit --step always runs (you asked
       # for that one); --force re-runs everything.
+      # Fresh means "nothing this step depends on moved". For a step with
+      # `paths` that is its own scope hash; otherwise the branch hash, as before.
+      # `--verify` forces the branch hash for everything.
+      local _pl_scope_now _pl_prior_key _pl_now_key
+      _pl_scope_now=$(jq -r --arg id "$id" '.[$id] // ""' <<< "$scope_map")
+      if [ -z "$verify" ] && [ -n "$_pl_scope_now" ]; then
+        _pl_prior_key=$(jq -r '.scope_sha // ""' <<< "$prior_entry")
+        _pl_now_key="$_pl_scope_now"
+      else
+        _pl_prior_key=$(jq -r '.diff_sha // ""' <<< "$prior_entry")
+        _pl_now_key="$cur"
+      fi
+
       if [ -z "$force" ] && [ -z "$only_step" ] \
          && [ "$(jq -r '.status // ""' <<< "$prior_entry")" = "green" ] \
-         && [ "$(jq -r '.diff_sha // ""' <<< "$prior_entry")" = "$cur" ]; then
+         && [ -n "$_pl_now_key" ] && [ "$_pl_prior_key" = "$_pl_now_key" ]; then
         pl_progress "[$_pl_index/$_pl_total] $id: fresh-green, skipped (--force re-runs)"
         new_entry=$(jq -n --argjson p "$prior_entry" --argjson steps "$steps" --arg id "$id" '
           ($steps[] | select(.id==$id)) as $s
           | $p
+          | .scope_sha  = (.scope_sha // null)
           | .ac_refs    = ($s.ac_refs // [])
           | .depends_on = ($s.depends_on // [])
           | .input      = ($s.input // null)
@@ -428,6 +499,11 @@ $evidence")
       pl_progress "[$_pl_index/$_pl_total] $id: $status (${_pl_duration}s)"
       new_entry=$(pl_build_step_entry "$steps" "$id" "$status" "$code" "$cur" "$evidence" "" "" "$prior_entry") \
         || { echo "plan-ledger: failed to build entry for step $id" >&2; return 2; }
+      # Record what the step's declared scope hashed to when it ran, so the next
+      # run can tell whether anything it depends on has moved since.
+      new_entry=$(jq -c --arg sha "$_pl_scope_now" \
+        '.scope_sha = (if $sha == "" then null else $sha end)' <<< "$new_entry") \
+        || { echo "plan-ledger: failed to stamp scope for step $id" >&2; return 2; }
       # step_run telemetry: this branch is the ONE code path both the full-run
       # (every id lands here) and --step run (only the targeted id lands here)
       # share, so instrumenting it covers both per the spec. attempt =
@@ -456,8 +532,22 @@ $evidence")
       updated_at: $now,
       summary: {}, next: null, steps: $steps }
   ') || { echo "plan-ledger: failed to assemble ledger" >&2; return 2; }
-  ledger=$(pl_recompute "$ledger" "$cur") \
+  ledger=$(pl_recompute "$ledger" "$cur" "$scope_map" "$verify") \
     || { echo "plan-ledger: failed to recompute summary" >&2; return 2; }
+
+  # verified_sha is the branch hash at which a --verify run last found every
+  # step green. The push gate reads it rather than per-step freshness, so a
+  # scoped green can speed up iteration without ever standing in for the
+  # full check before a push.
+  local prior_verified
+  prior_verified=$(jq -r '.verified_sha // ""' <<< "${prior:-{\}}" 2>/dev/null) || prior_verified=""
+  if [ -n "$verify" ] && [ -z "$only_step" ] \
+     && [ "$(jq -r '[.steps[] | select(.status != "green")] | length' <<< "$ledger")" = "0" ]; then
+    ledger=$(jq -c --arg sha "$cur" '.verified_sha = $sha' <<< "$ledger") || return 2
+  else
+    ledger=$(jq -c --arg sha "$prior_verified" \
+      '.verified_sha = (if $sha == "" then null else $sha end)' <<< "$ledger") || return 2
+  fi
 
   pl_write_ledger "$ledger_file" "$ledger" || { echo "plan-ledger: ledger write failed" >&2; return 2; }
 
