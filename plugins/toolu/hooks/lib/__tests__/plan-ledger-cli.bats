@@ -963,3 +963,98 @@ DOC
   [ "$status" -eq 2 ]
   [[ "$output" == *"invalid step paths"* ]]
 }
+
+@test "scope: editing a step's paths invalidates its green" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  mkdir -p "$REPO/src"
+  ( cd "$REPO" && echo a > src/one.txt && echo b > src/two.txt && git add -A && git commit -qm "feat: two files" )
+
+  cat > "$doc" <<DOC
+# Scoped Plan
+
+## Steps (machine-readable)
+
+\`\`\`json
+[ { "id": "s1", "title": "scoped", "check": "echo x >> '$marker'; true", "paths": ["src/one.txt"] } ]
+\`\`\`
+DOC
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "1" ]
+
+  # Widen the declaration without touching any file. The step now depends on
+  # more than it was proven against, so it must re-run.
+  cat > "$doc" <<DOC
+# Scoped Plan
+
+## Steps (machine-readable)
+
+\`\`\`json
+[ { "id": "s1", "title": "scoped", "check": "echo x >> '$marker'; true", "paths": ["src/one.txt", "src/two.txt"] } ]
+\`\`\`
+DOC
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "2" ]
+}
+
+@test "scope: unchanged paths keep a stable hash across runs" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  mkdir -p "$REPO/src"
+  ( cd "$REPO" && echo a > src/one.txt && git add -A && git commit -qm "feat: one" )
+  cat > "$doc" <<DOC
+# Scoped Plan
+
+## Steps (machine-readable)
+
+\`\`\`json
+[ { "id": "s1", "title": "scoped", "check": "echo x >> '$marker'; true", "paths": ["src/one.txt"] } ]
+\`\`\`
+DOC
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  first=$(jq -r '.steps[] | select(.id=="s1") | .scope_sha' "$LEDGER")
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(jq -r '.steps[] | select(.id=="s1") | .scope_sha' "$LEDGER")" = "$first" ]
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "1" ]
+}
+
+@test "scope: a path with a leading dash is a pathspec, not an option" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  ( cd "$REPO" && printf 'x\n' > -dash.txt && git add -- -dash.txt && git commit -qm "feat: dash" )
+  cat > "$doc" <<DOC
+# Scoped Plan
+
+## Steps (machine-readable)
+
+\`\`\`json
+[ { "id": "s1", "title": "scoped", "check": "echo x >> '$marker'; true", "paths": ["-dash.txt"] } ]
+\`\`\`
+DOC
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.steps[] | select(.id=="s1") | .scope_sha' "$LEDGER")" != "null" ]
+}
+
+@test "scope: a step whose paths match nothing still gets a stable hash" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  cat > "$doc" <<DOC
+# Scoped Plan
+
+## Steps (machine-readable)
+
+\`\`\`json
+[ { "id": "s1", "title": "scoped", "check": "echo x >> '$marker'; true", "paths": ["does/not/exist/**"] } ]
+\`\`\`
+DOC
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$status" -eq 0 ]
+  # An empty diff is a legitimate "nothing here changed" — it must hash
+  # stably rather than being mistaken for a failure.
+  first=$(jq -r '.steps[] | select(.id=="s1") | .scope_sha' "$LEDGER")
+  [ "$first" != "null" ]
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(jq -r '.steps[] | select(.id=="s1") | .scope_sha' "$LEDGER")" = "$first" ]
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "1" ]
+}

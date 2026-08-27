@@ -75,7 +75,21 @@ pl_scope_sha() {
     [ -n "$p" ] && paths+=("$p")
   done < <(jq -r '.[]?' <<< "$paths_json" 2>/dev/null)
   [ "${#paths[@]}" -gt 0 ] || return 0
-  git diff --no-color "${base}...HEAD" -- "${paths[@]}" 2>/dev/null | git hash-object --stdin
+
+  # Capture the diff separately rather than piping straight into hash-object.
+  # A failed `git diff` writes nothing, and hashing nothing yields the
+  # well-known empty-blob sha — indistinguishable from "these paths are
+  # genuinely unchanged". Stored, that sha would match on every later run and
+  # pin the step green forever. Returning non-zero instead drops the step back
+  # to the branch-wide rule, which re-runs it. (push-review.sh guards the same
+  # empty-blob hazard on its own diff.)
+  local diff_out
+  diff_out=$(git diff --no-color "${base}...HEAD" -- "${paths[@]}" 2>/dev/null) || return 1
+
+  # The declaration is part of the identity: hashing only the diff would let a
+  # step keep a green after its `paths` were edited, as long as the new set
+  # happened to produce identical content — widening a scope must invalidate it.
+  { printf '%s\0' "${paths[@]}"; printf '%s' "$diff_out"; } | git hash-object --stdin
 }
 
 # pl_scope_map STEPS_JSON BASE
