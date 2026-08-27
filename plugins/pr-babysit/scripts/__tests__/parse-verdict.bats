@@ -146,3 +146,52 @@ FIX="${BATS_TEST_DIRNAME}/fixtures"
   [ "$(jq -r .is_review_comment <<<"$out")" = "true" ]
   [ "$(jq -r .verdict <<<"$out")" = "changes" ]
 }
+
+# ── Top-N must-fix ─────────────────────────────────────────────────────────
+#
+# The bot populates `### Findings` and `### Top-N must-fix` independently, and
+# they disagree in both directions. The fixture here is the real comment from
+# PR #157 pass 1: `Findings (0)` while Top-N carried all three actionable
+# items. A caller reading only findings[] sees nothing to do and stops.
+
+@test "parse-verdict: Top-N items survive an empty findings section" {
+  out=$(bash "$PV" < "$FIX/pr157-must-fix.txt")
+  [ "$(jq '.findings | length' <<<"$out")" -eq 0 ]
+  [ "$(jq '.must_fix | length' <<<"$out")" -eq 3 ]
+  [ "$(jq -r '.verdict' <<<"$out")" = "changes" ]
+}
+
+@test "parse-verdict: a must_fix line keeps its whole sentence" {
+  out=$(bash "$PV" < "$FIX/pr157-must-fix.txt")
+  [ "$(jq -r '.must_fix[0]' <<<"$out")" = "Fix pl_scope_sha to handle git diff failures explicitly" ]
+  [ "$(jq -r '.must_fix[2]' <<<"$out")" = "Guard against path injection with leading dashes in git diff" ]
+}
+
+@test "parse-verdict: must_fix stops at the history block" {
+  out=$(bash "$PV" < "$FIX/pr157-must-fix.txt")
+  # The <details> history table follows Top-N; none of its rows may leak in.
+  [ "$(jq -r '[.must_fix[] | select(test("Pass|d997dd5|---"))] | length' <<<"$out")" -eq 0 ]
+}
+
+@test "parse-verdict: list markers are stripped, sentences are not" {
+  out=$(printf '%s\n' '### Code Review — `x`' '**Verdict:** ⚠️ Changes requested' \
+    '### Top-N must-fix' 'Fix the bare line.' '- Fix the dash item.' \
+    '* Fix the star item.' '1. Fix the numbered item.' '<details>' '`request-changes`' \
+    | bash "$PV")
+  [ "$(jq -r '.must_fix | join("|")' <<<"$out")" = "Fix the bare line.|Fix the dash item.|Fix the star item.|Fix the numbered item." ]
+}
+
+@test "parse-verdict: an approved verdict can still carry must_fix" {
+  # Observed on PR #157's final pass: approved, zero findings, Top-N populated.
+  out=$(printf '%s\n' '### Code Review — `x`' '**Verdict:** ✅ Approved' \
+    '### Findings (0)' '### Top-N must-fix' 'Something the bot still wants.' \
+    '<details>' '`merge-approved`' | bash "$PV")
+  [ "$(jq -r '.verdict' <<<"$out")" = "approved" ]
+  [ "$(jq '.must_fix | length' <<<"$out")" -eq 1 ]
+}
+
+@test "parse-verdict: no Top-N section yields an empty list, not an error" {
+  out=$(bash "$PV" < "$FIX/pr31-verdict.txt")
+  [ "$(jq -r '.must_fix | type' <<<"$out")" = "array" ]
+  [ "$(jq '.must_fix | length' <<<"$out")" -eq 0 ]
+}

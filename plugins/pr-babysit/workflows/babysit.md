@@ -176,7 +176,7 @@ verdict=$(printf '%s' "$botbody" | bash "<plugin-root>/scripts/parse-verdict.sh"
 Resolve `<plugin-root>` from the installed skill/workflow location. Do not rely
 on a plugin-root environment variable from an ordinary shell call.
 
-`parse-verdict.sh` returns `{is_review_comment,state,complete,verdict,verdict_label,findings[]}`:
+`parse-verdict.sh` returns `{is_review_comment,state,complete,verdict,verdict_label,findings[],must_fix[]}`:
 
 - `is_review_comment:false` OR `state:"unknown"` → **degrade**: fall back to GitHub
   check-conclusion behavior for this tick AND flag once:
@@ -185,6 +185,23 @@ on a plugin-root environment variable from an ordinary shell call.
 - `state:"complete"` → use `verdict`/`state` as the overall **gate** (Step 6) and
   `findings[].key` (stable `path:line:hash`) as the **round-level recurrence signal** (Step 4/6).
   Do NOT act on `findings[]` directly, and do NOT post a summary comment.
+
+**`must_fix[]` is not a copy of `findings[]`.** The bot fills the two sections
+independently and they disagree in both directions — observed on one PR: pass 1
+reported `Findings (0)` while `Top-N must-fix` carried all three actionable
+items, and the final pass returned `approved` with Top-N still populated. So:
+
+- **A verdict of `changes` with `findings[]` empty is not "nothing to do".** Read
+  `must_fix[]` before concluding the round is clear; treating an empty finding
+  set as clearance is how a request-changes verdict becomes an escalation with
+  no work attached.
+- **`approved` with a populated `must_fix[]` is still approved.** The verdict
+  gates the Success stop; Top-N does not block it.
+- These are prose sentences, not `path:line` findings. They carry no key, match
+  no review thread, and cannot be resolved — so they are **surfaced to the
+  human**, never mechanically replied to or resolved. Where a Top-N item is
+  genuinely actionable and no inline thread carries it, fix it in code and say
+  so in the tick report.
 
 The CI reviewer publishes each finding as an **inline review thread** (and mirrors them in the
 parsed summary comment). Those inline threads ARE the actionable items: reply inline and resolve

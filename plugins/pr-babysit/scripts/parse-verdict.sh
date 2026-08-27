@@ -5,13 +5,23 @@
 # against a captured real comment) and stable.
 #
 # stdin : raw comment body (markdown)
-# stdout: { is_review_comment, state, complete, verdict, verdict_label, findings[] }
+# stdout: { is_review_comment, state, complete, verdict, verdict_label, findings[], must_fix[] }
 #   state: in_progress | complete | unknown
 #     - unknown  → no checkbox checklist found (cannot judge completeness; the
 #                  caller degrades to GitHub check-conclusion behaviour)
 #     - in_progress → ≥1 unchecked `- [ ]` (review still running; do not act)
 #     - complete → ≥1 checkbox AND none unchecked
 #   findings[]: { path, line|null, severity, text, key }  (key = path:line:sha1(text)[:8])
+#   must_fix[]:  free-text lines from `### Top-N must-fix`
+#
+# must_fix is NOT a duplicate of findings. The bot populates the two sections
+# independently, and they disagree in both directions: a review has reported
+# `Findings (0)` while Top-N listed three actionable items, and an `approved`
+# verdict has shipped with Top-N still populated. A caller that reads only
+# findings[] therefore both misses work and over-trusts a pass. These are plain
+# sentences, not `path:line` findings, so they carry no key and cannot be
+# resolved as threads — surface them to a human rather than acting on them
+# mechanically.
 #
 # Identification is by MARKER, robust to both header states the bot uses
 # ("PR Review in Progress" → "Code Review —"): a CI job link, a "Code Review"
@@ -109,6 +119,25 @@ while IFS= read -r line; do
   findings_json=$(jq -c --argjson o "$obj" '. + [$o]' <<<"$findings_json")
 done <<< "$findings_block"
 
+# --- Top-N must-fix: free-text lines until the next heading or <details>.
+# Same decorated-header tolerance as Findings above; entries may be bare lines
+# or markdown list items.
+must_fix_block=$(printf '%s\n' "$input" | awk '/^### Top-N must-fix([[:space:]]|$)/{f=1;next} /^### |^<details>/{f=0} f')
+must_fix_json="[]"
+while IFS= read -r line; do
+  line="${line#"${line%%[![:space:]]*}"}"
+  line="${line%"${line##*[![:space:]]}"}"
+  [ -n "$line" ] || continue
+  # Strip a leading list marker only — "- " or "1. ". A blanket "first word"
+  # strip ate the first word of every unmarked line ("Fix the silent
+  # swallowing..." became "the silent swallowing...").
+  line="${line#- }"
+  line="${line#\* }"
+  [[ "$line" =~ ^[0-9]+\.[[:space:]]+(.*)$ ]] && line="${BASH_REMATCH[1]}"
+  [ -n "$line" ] || continue
+  must_fix_json=$(jq -c --arg t "$line" '. + [$t]' <<<"$must_fix_json") || continue
+done <<< "$must_fix_block"
+
 jq -nc \
   --argjson is_review "$is_review" \
   --arg state "$state" \
@@ -116,4 +145,5 @@ jq -nc \
   --arg verdict "$verdict" \
   --arg verdict_label "${verdict_label:-}" \
   --argjson findings "$findings_json" \
-  '{is_review_comment:$is_review, state:$state, complete:$complete, verdict:$verdict, verdict_label:$verdict_label, findings:$findings}'
+  --argjson must_fix "$must_fix_json" \
+  '{is_review_comment:$is_review, state:$state, complete:$complete, verdict:$verdict, verdict_label:$verdict_label, findings:$findings, must_fix:$must_fix}'
