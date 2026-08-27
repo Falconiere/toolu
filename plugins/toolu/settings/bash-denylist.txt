@@ -6,6 +6,14 @@
 #   single token — substring-matched against the whole command for tokens like
 #   "biome" or "cargo test".
 #
+# Delivery is a MODE, not a constant: `gates.bashCommands.mode` decides whether
+# a match here denies, asks (the shipped default), advises, or is ignored. A
+# rule in this file means "worth a question", not "impossible".
+#
+# git and gh are deliberately absent. Every git operation — force pushes and
+# pushes to the base branch included — is the user's call to make at the
+# prompt, not this file's call to make on their behalf.
+#
 # Security-hardened: argv-aware blocks the JSON matcher cannot reliably reject.
 node -e
 node -p
@@ -13,11 +21,5 @@ node --eval
 node --print
 bun -e
 bun --eval
-git push --force
-git push --force-with-lease
-git push --force-if-includes
-git push -f
-git push origin main
-git push origin master
 # General policy: never run cargo test (use nextest instead).
 cargo test

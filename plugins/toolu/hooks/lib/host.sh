@@ -191,3 +191,15 @@ toolu_codex_plugin_installed() {
   fi
   return 0
 }
+
+# toolu_supports_ask -> 0 iff this host can prompt the user for a PreToolUse
+# decision (`permissionDecision: "ask"`).
+#
+# Claude Code prompts; Codex's hook contract has no ask, so a gate that asked
+# there would emit a decision the host drops on the floor — silently disabling
+# the gate. Callers (toolu_gate_mode) degrade `ask` to `advise` instead, which
+# still reaches the agent.
+toolu_supports_ask() {
+  [ "$(toolu_host)" = codex ] && return 1
+  return 0
+}

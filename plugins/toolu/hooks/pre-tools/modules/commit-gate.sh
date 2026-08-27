@@ -10,17 +10,22 @@
 _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 # shellcheck source=../../lib/detect.sh
 . "$_toolu_lib/detect.sh"
+# shellcheck source=../../lib/gate-mode.sh
+. "$_toolu_lib/gate-mode.sh"
 
 [[ "$tool_name" != "Bash" ]] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0
 
 command=$(echo "$input" | jq -r '.tool_input.command // ""' 2>/dev/null || echo "")
 
-# Only match git commit commands
-case "$command" in
-  "git commit"*) ;;
-  *) exit 0 ;;
-esac
+# Only match git commit commands. is_git_commit (lib/detect.sh) is used rather
+# than a literal prefix match so `git -C <path> commit` and a commit reached
+# through `&&` are seen too, and a heredoc body that merely mentions committing
+# is not.
+is_git_commit "$command" || exit 0
+
+mode=$(toolu_gate_mode commitGate)
+[ "$mode" = "off" ] && exit 0
 
 TOOLU_SETTINGS_DIR=$(toolu_settings_dir)
 PREFIX_FILE="$TOOLU_SETTINGS_DIR/commit-prefixes.txt"
@@ -50,13 +55,7 @@ if [ -n "$msg" ] && [ -n "$prefixes" ]; then
   subject_prefix=$(printf '%s' "$msg" | head -1 | sed -nE 's/^([a-z]+)(\(.*\))?:.*/\1/p')
   if [ -n "$subject_prefix" ]; then
     if ! echo "$prefixes" | grep -qFx "$subject_prefix"; then
-      jq -n --arg p "$subject_prefix" --arg base "$BASE_BRANCH" '{
-        "hookSpecificOutput": {
-          "hookEventName": "PreToolUse",
-          "permissionDecision": "deny",
-          "permissionDecisionReason": ("Unknown Conventional Commits prefix: \"" + $p + "\". Allowed prefixes are in settings/commit-prefixes.txt. Base branch: " + $base)
-        }
-      }'
+      toolu_gate_emit "$mode" "Unknown Conventional Commits prefix: \"$subject_prefix\". Allowed prefixes are in settings/commit-prefixes.txt. Base branch: $BASE_BRANCH"
       exit 0
     fi
   fi

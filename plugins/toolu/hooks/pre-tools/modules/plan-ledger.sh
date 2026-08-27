@@ -57,6 +57,13 @@ is_git_push "$command" || exit 0
 . "$_toolu_lib/telemetry.sh"
 # shellcheck source=../../lib/config.sh
 . "$_toolu_lib/config.sh"
+# shellcheck source=../../lib/gate-mode.sh
+. "$_toolu_lib/gate-mode.sh"
+
+# How firmly this gate speaks is configurable (lib/gate-mode.sh); `off` means
+# it has nothing to say, so skip the git plumbing entirely.
+mode=$(toolu_gate_mode planLedger)
+[ "$mode" = "off" ] && exit 0
 
 # Base branch: env override > detect_base_branch (must agree with the checker).
 base_branch="${PUSH_REVIEW_BASE:-$(detect_base_branch)}"
@@ -94,13 +101,7 @@ ledger=$(pl_read_ledger "$state_file") || {
 # Schema gate: version must be 1 (fail closed on mismatch).
 version=$(jq -r '.version // ""' <<<"$ledger" 2>/dev/null || echo "")
 if [[ "$version" != "1" ]]; then
-  jq -n --arg file "$state_file" --arg v "$version" '{
-    "hookSpecificOutput": {
-      "hookEventName": "PreToolUse",
-      "permissionDecision": "deny",
-      "permissionDecisionReason": ("plan-ledger: ledger schema mismatch at " + $file + " (version=\"" + $v + "\", expected 1); delete and re-run `bash plugins/toolu/hooks/lib/plan-ledger.sh run <plan_doc>`")
-    }
-  }'
+  toolu_gate_emit "$mode" "plan-ledger: ledger schema mismatch at $state_file (version=\"$version\", expected 1); delete and re-run \`bash plugins/toolu/hooks/lib/plan-ledger.sh run <plan_doc>\`"
   exit 0
 fi
 
@@ -150,13 +151,7 @@ if [[ -n "$ac_plan_doc" ]]; then
       if [[ "$ac_uncovered" -gt 0 ]] && toolu_flag_true planLedger blockOnUncoveredAcs; then
         ac_uncovered_lines=$(grep -E '^  AC-[^:]+: UNCOVERED' <<<"$ac_report" | sed -E 's/^  //')
         ac_reason=$(printf 'plan-ledger: push blocked — uncovered spec AC id(s):\n%s\n\ncover with a fresh-green step referencing it in ac_refs, or set planLedger.blockOnUncoveredAcs=false' "$ac_uncovered_lines")
-        jq -n --arg reason "$ac_reason" '{
-          "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "deny",
-            "permissionDecisionReason": $reason
-          }
-        }'
+        toolu_gate_emit "$mode" "$ac_reason"
         exit 0
       fi
     fi
@@ -183,11 +178,5 @@ fi
 # Otherwise deny, listing each non-fresh-green step + remediation.
 plan_doc=$(jq -r '.plan_doc // "<plan_doc>"' <<<"$ledger" 2>/dev/null || echo "<plan_doc>")
 reason=$(printf 'plan-ledger: push blocked — steps not fresh-green:\n%s\n\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run %s' "$blockers" "$plan_doc")
-jq -n --arg reason "$reason" '{
-  "hookSpecificOutput": {
-    "hookEventName": "PreToolUse",
-    "permissionDecision": "deny",
-    "permissionDecisionReason": $reason
-  }
-}'
+toolu_gate_emit "$mode" "$reason"
 exit 0

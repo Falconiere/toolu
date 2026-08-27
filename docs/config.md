@@ -40,12 +40,118 @@ back to "all enabled".
                "codeSurfaces": ["*.ts", "*.rs", "*.sh", "*plugin.json"] },
   "telemetry":  { "enabled": true },
   "agentTier":  { "mode": "advise|block|off" },
-  "planLedger": { "blockOnUncoveredAcs": false }
+  "planLedger": { "blockOnUncoveredAcs": false },
+  "gates":      { "preset": "strict|balanced|relaxed",
+                  "<gate>": { "mode": "block|ask|advise|off" },
+                  "sweep": true,
+                  "stateTtlHours": 24,
+                  "telemetryRetentionDays": 7 },
+  "permissions": { "autoAllow": true,
+                   "allow": ["Bash(*)", "Edit", "Write"] }
 }
 ```
 
 `version` is reserved for future schema bumps; v1 is the current value.
 See `plugins/toolu/settings/toolu.config.example.json` for a fully-populated example.
+
+### Gate modes (`gates`)
+
+How firmly a gate says no is configuration, not a constant. Full reference:
+`plugins/toolu/hooks/docs/gates.md`.
+
+| Mode | Effect |
+|------|--------|
+| `block` | `permissionDecision: "deny"` — the call does not run |
+| `ask` | `permissionDecision: "ask"` — the user decides |
+| `advise` | `additionalContext` only — nothing is stopped |
+| `off` | no output at all |
+
+`ask` requires a host that can prompt; on Codex it degrades to `advise`, so the
+gate still speaks rather than silently doing nothing.
+
+`gates.preset` sets all seven at once and **defaults to `balanced`**:
+
+| Gate | `strict` | **`balanced`** | `relaxed` |
+|------|----------|----------------|-----------|
+| `pushReview` | block | **ask** | advise |
+| `qualityGate` | block | **block** | advise |
+| `commitGate` | block | **advise** | advise |
+| `bashCommands` | block | **ask** | ask |
+| `planLedger` | block | **advise** | off |
+| `docsSync` | block | **advise** | off |
+| `agentTier` | block | **advise** | off |
+
+`protected-files` and `mcp-blocker` are deliberately absent: they deny at every
+preset. Presets relax judgement calls, not guardrails.
+
+Precedence is `gates.<name>.mode` → the legacy top-level key (`docsSync.mode`,
+`agentTier.mode` only) → the preset table → `balanced`. An unrecognized value
+warns once on stderr and falls through, so a typo never silently opens a gate.
+
+Two consequences worth stating plainly:
+
+- **`gates.bashCommands: "off"` is a security decision, not a convenience
+  one.** It disables the whole `settings/bash-denylist.txt` check, including
+  the `node -e` / `bun -e` arbitrary-code-execution rules. `ask` (the default)
+  keeps the question; `off` removes it.
+- **`permissions.deny` in Claude Code settings overrides a hook's `ask`.** A
+  command denied there is denied outright and toolu never gets to prompt.
+  `permissions.allow` does *not* have that power — an allowlisted command still
+  reaches these gates. This is why toolu's shipped
+  `settings/permissions.fragment.json` no longer denies `git push --force` or
+  `node -e`: those are gate decisions now, and a deny rule would silently
+  outrank the mode you configured.
+
+`qualityGate` in `block` mode stops `git commit` and `git push` and nothing
+else — reading, searching, editing, and running commands stay open while the
+gate is red. `MY_CLAUDE_QUALITY=off` remains a full kill switch.
+
+#### Push waivers
+
+With `pushReview` in `ask` mode, a "yes" is remembered for that exact diff:
+the gate writes a pending marker, `post-tools/modules/push-waiver.sh` promotes
+it once the push actually succeeds, and the next push of the same code is
+silent. A new commit changes the diff SHA and the gate asks again. A refused
+prompt records nothing.
+
+#### State sweeping (`gates.sweep`, `gates.stateTtlHours`, `gates.telemetryRetentionDays`)
+
+`SessionStart` reclaims spent transient state under `<repo>/<host-dir>/tmp` so
+`rm -rf .claude/tmp/*` stops being a manual chore:
+
+| Target | Reclaimed when |
+|--------|----------------|
+| `push-review/`, `plan-ledger/`, `docs-sync/` (incl. `.waiver.json`, `.pending-waiver.json`) | the branch is gone, merged into base, or the file is older than `stateTtlHours` (default 24) |
+| `quality-gate-status.json` | it is passing, or it is failing about files that no longer exist |
+| `telemetry/<slug>.jsonl` | lines older than `telemetryRetentionDays` (default 7) are dropped; the file goes only if nothing recent remains |
+
+The **current branch's** state is never reclaimed, however old. A failing gate
+about files that still exist survives too — a violation is not fixed by
+forgetting it. Anything else under `tmp/` is left alone. `gates.sweep: false`
+disables the sweep; every failure is best-effort and can never keep a session
+from starting.
+
+### Host permissions (`permissions`)
+
+The first toolu session in a repository writes an allowlist into that repo's
+`.claude/settings.local.json` — by default `Bash(*)`, `Edit`, `Write`
+(`Bash(*)` subsumes `Bash(git:*)` and `Bash(gh:*)`) — and records a sentinel at
+`.claude/tmp/.permissions-written` so it never writes again. Delete a rule by
+hand and it stays deleted.
+
+- `permissions.autoAllow: false` disables the write entirely.
+- `permissions.allow` replaces the default set with your own.
+- Existing entries and any `deny` block are preserved: the merge is a union,
+  and a `settings.local.json` that cannot be parsed is left byte-identical.
+- The sentinel deliberately does **not** live in `toolu.config.json`, which is
+  committed — a marker there would ride into the repo and every clone would
+  think the write had already happened.
+- Claude Code only; on Codex this is a no-op.
+
+**This is a broad grant.** `Bash(*)` means the host stops prompting for shell
+commands, destructive ones included. toolu's own gates and the `deny` rules in
+your settings still apply; nothing else does. Set `autoAllow: false` if that
+is not the trade you want.
 
 ### Quality thresholds (`lang`)
 

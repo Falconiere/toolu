@@ -105,6 +105,9 @@ teardown() {
 
 @test "parity (push-review.sh): empty diff against base still denied with sentinel reason" {
   setup_sandbox
+  # This suite is about the SHA formula, not delivery: pin the blocking mode so
+  # the assertion stays about the sentinel reason.
+  use_strict_preset
   git checkout -q development
   git checkout -q -b feat/empty
   payload=$(build_input "git push")

@@ -1,8 +1,34 @@
 # push-review hook
 
-PreToolUse hook on `Bash(git push)`. Blocks pushes until a clean code review is recorded in `<target repo root>/.claude/tmp/push-review/<branch-slug>.json`.
+PreToolUse hook on `Bash(git push)`. Gates pushes on a clean code review recorded in `<target repo root>/.claude/tmp/push-review/<branch-slug>.json`.
 
-Detection lives in `lib/detect.sh:is_git_push`, which accepts git's global options between `git` and the subcommand — `git -C <path> push`, `git -c k=v push`, `git --no-pager push`, `git --git-dir=<path> push` are all gated. Only tokens starting with `-` are consumed, so `git commit -m "push"` still does not match.
+**How firmly it gates is a mode**, not a constant — see [gates.md](./gates.md).
+At the shipped default (`balanced`) this hook **asks**: every failed check
+below becomes a prompt carrying the same reason text, and answering yes records
+a waiver for that exact diff so the same code is never queried twice.
+`{"gates":{"pushReview":{"mode":"block"}}}` restores the original hard deny;
+`advise` reports without stopping; `off` silences it. On Codex, where the host
+cannot prompt, `ask` degrades to `advise`.
+
+## Waivers
+
+1. In `ask` mode the gate writes `<branch-slug>.pending-waiver.json` naming the
+   diff SHA it asked about.
+2. `post-tools/modules/push-waiver.sh` promotes that marker to
+   `<branch-slug>.waiver.json` once the push has actually run **and succeeded**
+   — PostToolUse fires when a tool ran, not when it worked, and a rejected
+   non-fast-forward push has been reviewed by nobody.
+3. A matching waiver makes the gate pass silently (telemetry
+   `push_check reason_code=waived`).
+4. A new commit changes the diff SHA, the waiver stops applying, and the gate
+   asks again.
+
+A refused prompt leaves the pending marker orphaned; the SessionStart state
+sweeper reclaims it.
+
+Detection lives in `lib/detect.sh:is_git_push`, which is **structural, not textual**: the command is split into statements (honouring shell quoting), each statement is tokenized, and git's real subcommand is resolved after consuming git's global options. So `git -C <path> push`, `git -c k=v push`, `git --no-pager push`, and `git --git-dir=<path> push` are all gated, while `git commit -m "push"` is a commit.
+
+Prose is not a command. `echo "no git push rules remain"`, a grep pattern like `grep -qE "^git push" file`, or a commit message that explains the gate are all arguments, not invocations, and do not fire it — the earlier regex over the raw string did fire on every one of them. Heredoc bodies are stripped first, and `$(...)` / backtick bodies are scanned as commands in their own right, so `out=$(git push)` is still a push.
 
 ## Flow
 
@@ -68,7 +94,10 @@ adjusted review scope).
 
 `security-review` is **not separately enforced** by this gate (dropped in v1.2.0 per project decision) — though it is one of the accepted reviewers, so running it satisfies the gate. For diffs that touch authentication, secret handling, request parsing, or other security-sensitive code, run `/security-review` before push. The gate's reviewer catches correctness and clarity bugs but makes no security guarantees on its own.
 
-## Failure modes the hook denies
+## Failed checks
+
+Each of these fails the gate. What the user sees — a denial, a prompt, a note,
+or nothing — is the mode's business, not this list's.
 
 - State file missing.
 - State file SHA != current diff SHA (diff changed).

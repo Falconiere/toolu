@@ -15,6 +15,8 @@
 _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 # shellcheck source=../../lib/detect.sh
 . "$_toolu_lib/detect.sh"
+# shellcheck source=../../lib/gate-mode.sh
+. "$_toolu_lib/gate-mode.sh"
 
 [[ "$tool_name" != "Bash" && "$tool_name" != "Shell" ]] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0
@@ -164,13 +166,12 @@ decision=$(bash_commands_decide "$command")
 case "$decision" in
   deny:*)
     rule="${decision#deny:}"
-    jq -n --arg rule "$rule" '{
-      "hookSpecificOutput": {
-        "hookEventName": "PreToolUse",
-        "permissionDecision": "deny",
-        "permissionDecisionReason": ("Command blocked by deny rule: " + $rule)
-      }
-    }'
+    mode=$(toolu_gate_mode bashCommands)
+    case "$mode" in
+      ask) reason="Command matches deny rule \"$rule\" (plugins/toolu/settings/bash-denylist.txt). Run it anyway?" ;;
+      *)   reason="Command blocked by deny rule: $rule" ;;
+    esac
+    toolu_gate_emit "$mode" "$reason"
     ;;
 esac
 

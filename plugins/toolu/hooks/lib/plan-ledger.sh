@@ -5,7 +5,7 @@
 # claim green. Sourceable (functions only) and runnable (guarded `main`).
 # jq-only. Parse/IO errors fail closed (exit 2).
 #
-# Run:    bash plan-ledger.sh run <doc.md> [--step <id>] [--activity <label>]
+# Run:    bash plan-ledger.sh run <doc.md> [--step <id>] [--activity <label>] [--force]
 #         bash plan-ledger.sh status | preflight [<doc.md>] | path | root | --self-test
 # Source: . "${BASH_SOURCE%/*}/plan-ledger.sh"   (defines pl_* helpers, no run)
 
@@ -175,9 +175,36 @@ pl_build_step_entry() {
 # in a first atomic write BEFORE its check runs, then rewritten green|red after
 # (two writes) so a watcher sees the in-flight state. --activity sets an optional
 # short label; it only applies with --step.
+# Seconds a single step's check may run before it is killed and marked red.
+# A check that waits on something that never comes (a prompt, a lock, a network
+# read) would otherwise hang the whole run with no way to tell from outside.
+# 0 disables the bound.
+PL_STEP_TIMEOUT="${PLAN_LEDGER_STEP_TIMEOUT:-1800}"
+
+# pl_progress MESSAGE — a line to stderr, so stdout stays the summary contract.
+# A full run can take minutes; silence for that long is indistinguishable from
+# a hang, which is exactly how it was being read.
+pl_progress() {
+  printf 'plan-ledger: %s\n' "$1" >&2
+}
+
+# pl_run_check CHECK OUTFILE -> exit code of CHECK.
+#
+# stdin is /dev/null: a check that reads stdin (a `git commit` without -m, any
+# prompt) would otherwise inherit the caller's terminal and block forever.
+# `timeout` bounds the rest; 124 is its kill signal and reads as red.
+pl_run_check() {
+  local check="$1" outfile="$2"
+  if [ "${PL_STEP_TIMEOUT:-0}" != "0" ] && command -v timeout >/dev/null 2>&1; then
+    timeout "$PL_STEP_TIMEOUT" bash -c "$check" >"$outfile" 2>&1 </dev/null
+    return $?
+  fi
+  bash -c "$check" >"$outfile" 2>&1 </dev/null
+}
+
 pl_cmd_run() {
   local doc="$1"; shift
-  local only_step="" activity="" steps base cur ledger_file root
+  local only_step="" activity="" force="" steps base cur ledger_file root
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --step)
@@ -189,6 +216,10 @@ pl_cmd_run() {
         activity="${2:-}"
         [ -n "$activity" ] || { echo "plan-ledger: --activity requires a label" >&2; return 2; }
         shift 2
+        ;;
+      --force)
+        force=1
+        shift
         ;;
       *)
         echo "plan-ledger: unknown run flag: $1" >&2; return 2
@@ -291,6 +322,8 @@ pl_cmd_run() {
 
   # Build the steps array.
   local out_steps id check status code evidence tmpout new_entry
+  local _pl_index=0 _pl_total
+  _pl_total=$(jq 'length' <<< "$steps")
   out_steps="[]"
   while IFS= read -r id; do
     [ -n "$id" ] || continue
@@ -308,10 +341,20 @@ pl_cmd_run() {
         | ($steps[] | select(.id==$id)) as $s
         | if $p != null
           then $p
-               | .ac_refs    = ($s.ac_refs // [])
-               | .depends_on = ($s.depends_on // [])
-               | .input      = ($s.input // null)
-               | .model      = ($s.model // null)
+               | .ac_refs       = ($s.ac_refs // [])
+               | .depends_on    = ($s.depends_on // [])
+               | .input         = ($s.input // null)
+               | .model         = ($s.model // null)
+               | .title         = $s.title
+               | .check         = $s.check
+               | .status        = (.status // "pending")
+               | .started_at    = (.started_at // null)
+               | .activity      = (.activity // null)
+               | .exit_code     = (.exit_code // null)
+               | .diff_sha      = (.diff_sha // null)
+               | .last_run      = (.last_run // null)
+               | .evidence_tail = (.evidence_tail // null)
+               | .retries       = (.retries // [])
           else { id: $s.id, title: $s.title, check: $s.check,
                  status: "pending", started_at: null, activity: null,
                  exit_code: null, diff_sha: null,
@@ -324,22 +367,65 @@ pl_cmd_run() {
           end
       ') || { echo "plan-ledger: failed to assemble entry for step $id" >&2; return 2; }
     else
-      tmpout="$ledger_file.run.$$.$id"
-      mkdir -p "$(dirname "$ledger_file")" 2>/dev/null || true
-      local _pl_t0 _pl_t1 _pl_duration
-      _pl_t0=$(date +%s)
-      bash -c "$check" >"$tmpout" 2>&1
-      code=$?
-      _pl_t1=$(date +%s)
-      _pl_duration=$((_pl_t1 - _pl_t0))
-      [ "$code" -eq 0 ] && status="green" || status="red"
-      evidence=$(pl_evidence "$(cat "$tmpout")")
-      rm -f "$tmpout"
       # Prior on-disk entry for this id (or "null"): the builder archives it into
       # retries[] iff it was red, and carries its prior retries forward.
       local prior_entry
       prior_entry=$(jq -cn --argjson ex "$existing" --arg id "$id" '$ex[$id] // null') \
         || { echo "plan-ledger: failed to read prior entry for step $id" >&2; return 2; }
+
+      _pl_index=$((_pl_index + 1))
+
+      # A step already green AT THIS diff sha has nothing new to prove: re-running
+      # it burns the same minutes to reach the same answer. A full run after one
+      # edited step used to re-execute every check, which is what made "run the
+      # whole plan" feel like a hang. An explicit --step always runs (you asked
+      # for that one); --force re-runs everything.
+      if [ -z "$force" ] && [ -z "$only_step" ] \
+         && [ "$(jq -r '.status // ""' <<< "$prior_entry")" = "green" ] \
+         && [ "$(jq -r '.diff_sha // ""' <<< "$prior_entry")" = "$cur" ]; then
+        pl_progress "[$_pl_index/$_pl_total] $id: fresh-green, skipped (--force re-runs)"
+        new_entry=$(jq -n --argjson p "$prior_entry" --argjson steps "$steps" --arg id "$id" '
+          ($steps[] | select(.id==$id)) as $s
+          | $p
+          | .ac_refs    = ($s.ac_refs // [])
+          | .depends_on = ($s.depends_on // [])
+          | .input      = ($s.input // null)
+          | .model      = ($s.model // null)
+          | .title         = $s.title
+          | .check         = $s.check
+          | .status        = (.status // "pending")
+          | .started_at    = (.started_at // null)
+          | .activity      = (.activity // null)
+          | .exit_code     = (.exit_code // null)
+          | .diff_sha      = (.diff_sha // null)
+          | .last_run      = (.last_run // null)
+          | .evidence_tail = (.evidence_tail // null)
+          | .retries       = (.retries // [])
+        ') || { echo "plan-ledger: failed to carry forward step $id" >&2; return 2; }
+        out_steps=$(jq --argjson e "$new_entry" '. + [$e]' <<< "$out_steps") \
+          || { echo "plan-ledger: failed to append step $id" >&2; return 2; }
+        continue
+      fi
+
+      tmpout="$ledger_file.run.$$.$id"
+      mkdir -p "$(dirname "$ledger_file")" 2>/dev/null || true
+      local _pl_t0 _pl_t1 _pl_duration
+      pl_progress "[$_pl_index/$_pl_total] $id: running check"
+      _pl_t0=$(date +%s)
+      pl_run_check "$check" "$tmpout"
+      code=$?
+      _pl_t1=$(date +%s)
+      _pl_duration=$((_pl_t1 - _pl_t0))
+      [ "$code" -eq 0 ] && status="green" || status="red"
+      evidence=$(pl_evidence "$(cat "$tmpout")")
+      if [ "$code" -eq 124 ]; then
+        # Name the timeout in the evidence, or the ledger just shows a red step
+        # with whatever partial output the check managed before it was killed.
+        evidence=$(pl_evidence "timed out after ${PL_STEP_TIMEOUT}s (PLAN_LEDGER_STEP_TIMEOUT)
+$evidence")
+      fi
+      rm -f "$tmpout"
+      pl_progress "[$_pl_index/$_pl_total] $id: $status (${_pl_duration}s)"
       new_entry=$(pl_build_step_entry "$steps" "$id" "$status" "$code" "$cur" "$evidence" "" "" "$prior_entry") \
         || { echo "plan-ledger: failed to build entry for step $id" >&2; return 2; }
       # step_run telemetry: this branch is the ONE code path both the full-run

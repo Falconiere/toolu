@@ -13,6 +13,9 @@ GATE_SCRIPT="$REPO_ROOT/hooks/pre-tools/modules/plan-ledger.sh"
 
 setup() {
   setup_sandbox
+  # These cases describe the ledger gate BLOCKING a push, which is the
+  # `strict` preset now that the shipped default advises instead.
+  use_strict_preset
   # Ledger lives under .claude/tmp/plan-ledger/ (sibling of push-review's dir).
   export LEDGER_DIR="$SANDBOX/.claude/tmp/plan-ledger"
   mkdir -p "$LEDGER_DIR"

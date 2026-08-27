@@ -39,6 +39,8 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 . "$_toolu_lib/diff-sha.sh"
 # shellcheck source=../../lib/telemetry.sh
 . "$_toolu_lib/telemetry.sh"
+# shellcheck source=../../lib/gate-mode.sh
+. "$_toolu_lib/gate-mode.sh"
 
 # Degrade silent on anything that isn't a real push in a real branch.
 [[ "$tool_name" != "Bash" ]] && exit 0
@@ -101,7 +103,7 @@ done <<< "$changed"
 # (not even docs_attested for an otherwise-valid attestation below), no
 # output. Read here (rather than at top-of-file) so an off branch still pays
 # no cost beyond the code/doc classification already needed either way.
-mode=$(toolu_string docsSync.mode advise advise block off)
+mode=$(toolu_gate_mode docsSync)
 [[ "$mode" == "off" ]] && exit 0
 
 # Attestation gate: a fresh (diff-sha-matching) attestation silences the nudge
@@ -123,27 +125,13 @@ telemetry_append "$(detect_project_root)" "docs_nudge"
 
 # Shared instructions (the attestation escape hatch) for both modes; only the
 # closing sentence and the JSON shape (additionalContext vs. deny) differ.
-jq -n --arg sha "$diff_sha" --arg file "$state_file" --arg mode "$mode" '
-  ("docs-sync: this branch changes code but no documentation surface " +
-   "(README / docs/*.md / SKILL.md). Update the doc that describes this " +
-   "behavior, OR attest none is needed by writing " + $file + " with " +
-   "{ \"version\": 1, \"diff_sha\": \"" + $sha + "\", \"decision\": \"not-needed\", \"note\": \"why\" }. " +
-   (if $mode == "block"
-    then "Push denied until a doc is updated or a valid attestation is written."
-    else "Advisory only — this does not block the push."
-    end)
-  ) as $reason
-  | if $mode == "block" then {
-      "hookSpecificOutput": {
-        "hookEventName": "PreToolUse",
-        "permissionDecision": "deny",
-        "permissionDecisionReason": $reason
-      }
-    } else {
-      "hookSpecificOutput": {
-        "hookEventName": "PreToolUse",
-        "additionalContext": $reason
-      }
-    } end
-'
+# The instructions (and the attestation escape hatch) are the same in every
+# mode; only the closing sentence changes, because what happens next does.
+case "$mode" in
+  block) consequence="Push denied until a doc is updated or a valid attestation is written." ;;
+  ask)   consequence="Approve to push anyway, or update the doc first." ;;
+  *)     consequence="Advisory only — this does not block the push." ;;
+esac
+
+toolu_gate_emit "$mode" "docs-sync: this branch changes code but no documentation surface (README / docs/*.md / SKILL.md). Update the doc that describes this behavior, OR attest none is needed by writing $state_file with { \"version\": 1, \"diff_sha\": \"$diff_sha\", \"decision\": \"not-needed\", \"note\": \"why\" }. $consequence"
 exit 0

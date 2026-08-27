@@ -1,5 +1,40 @@
 {
   "version": 1,
+  "gates": {
+    "preset": "balanced",
+    "pushReview": {
+      "mode": "ask"
+    },
+    "qualityGate": {
+      "mode": "block"
+    },
+    "commitGate": {
+      "mode": "advise"
+    },
+    "bashCommands": {
+      "mode": "ask"
+    },
+    "planLedger": {
+      "mode": "advise"
+    },
+    "docsSync": {
+      "mode": "advise"
+    },
+    "agentTier": {
+      "mode": "advise"
+    },
+    "sweep": true,
+    "stateTtlHours": 24,
+    "telemetryRetentionDays": 7
+  },
+  "permissions": {
+    "autoAllow": true,
+    "allow": [
+      "Bash(*)",
+      "Edit",
+      "Write"
+    ]
+  },
   "skills": {
     "comemory": true,
     "ast-grep": true
@@ -25,12 +60,30 @@
     "synthesis": "opus",
     "architecture": "opus",
     "codex": {
-      "mechanical": { "model": "gpt-5.6-luna", "reasoningEffort": "medium" },
-      "exploration": { "model": "gpt-5.6-terra", "reasoningEffort": "medium" },
-      "implementation": { "model": "gpt-5.6-terra", "reasoningEffort": "medium" },
-      "review": { "model": "gpt-5.6-terra", "reasoningEffort": "high" },
-      "synthesis": { "model": "gpt-5.6-sol", "reasoningEffort": "high" },
-      "architecture": { "model": "gpt-5.6-sol", "reasoningEffort": "high" }
+      "mechanical": {
+        "model": "gpt-5.6-luna",
+        "reasoningEffort": "medium"
+      },
+      "exploration": {
+        "model": "gpt-5.6-terra",
+        "reasoningEffort": "medium"
+      },
+      "implementation": {
+        "model": "gpt-5.6-terra",
+        "reasoningEffort": "medium"
+      },
+      "review": {
+        "model": "gpt-5.6-terra",
+        "reasoningEffort": "high"
+      },
+      "synthesis": {
+        "model": "gpt-5.6-sol",
+        "reasoningEffort": "high"
+      },
+      "architecture": {
+        "model": "gpt-5.6-sol",
+        "reasoningEffort": "high"
+      }
     }
   },
   "telemetry": {
@@ -44,12 +97,36 @@
   },
   "docsSync": {
     "mode": "advise",
-    "surfaces": ["README.md", "*/README.md", "docs/*.md", "*/SKILL.md"],
-    "surfaceExcludes": ["docs/releases/*", "*/docs/releases/*"],
-    "codeSurfaces": ["*.ts", "*.rs", "*.sh", "*/commands/*", "*plugin.json", "*.config.json"]
+    "surfaces": [
+      "README.md",
+      "*/README.md",
+      "docs/*.md",
+      "*/SKILL.md"
+    ],
+    "surfaceExcludes": [
+      "docs/releases/*",
+      "*/docs/releases/*"
+    ],
+    "codeSurfaces": [
+      "*.ts",
+      "*.rs",
+      "*.sh",
+      "*/commands/*",
+      "*plugin.json",
+      "*.config.json"
+    ]
   },
   "lang": {
-    "ts": { "maxFileLines": 300, "maxFnLines": 60, "noMocks": true },
-    "rust": { "maxFileLines": 500, "maxFnLines": 50, "maxImplLines": 200, "noMocks": true }
+    "ts": {
+      "maxFileLines": 300,
+      "maxFnLines": 60,
+      "noMocks": true
+    },
+    "rust": {
+      "maxFileLines": 500,
+      "maxFnLines": 50,
+      "maxImplLines": 200,
+      "noMocks": true
+    }
   }
 }

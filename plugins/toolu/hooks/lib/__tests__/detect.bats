@@ -562,3 +562,275 @@ _stub_comemory() {  # $1 = version string the stub reports
   run push_target_root "git -C $TMP/outer -C inner push"
   [ "$output" = "$(cd "$TMP/outer/inner" && pwd -P)" ]
 }
+
+# ── is_git_commit (AC-26) ───────────────────────────────────────────────────
+
+@test "is_git_commit matches a plain commit" {
+  source_lib
+  run is_git_commit 'git commit -m "feat: x"'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_commit matches git -C <path> commit" {
+  source_lib
+  run is_git_commit 'git -C /tmp/worktree commit -m "fix: y"'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_commit matches a global-option form" {
+  source_lib
+  run is_git_commit 'git --no-pager commit'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_commit matches a commit after a chain operator" {
+  source_lib
+  run is_git_commit 'git add -A && git commit -m "chore: z"'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_commit does not match git commit-tree" {
+  source_lib
+  run is_git_commit 'git commit-tree abc123'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_commit does not match a bare word" {
+  source_lib
+  run is_git_commit 'gitcommit'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_commit does not match commit prose inside a heredoc body" {
+  source_lib
+  run is_git_commit 'cat <<EOF > notes.txt
+remember to git commit later
+EOF'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_commit does not match a push" {
+  source_lib
+  run is_git_commit 'git push origin feat/x'
+  [ "$status" -ne 0 ]
+}
+
+# ── prose is not a command (the echo false positive) ────────────────────────
+#
+# Detection used to be a regex over the raw string, so any text containing the
+# two words in sequence fired the push gates — including a shell command whose
+# only crime was talking about pushing.
+
+@test "is_git_push: the words inside an echo argument are not a push" {
+  source_lib
+  run is_git_push 'echo "no git push rules remain"'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: the words inside a single-quoted argument are not a push" {
+  source_lib
+  run is_git_push "echo 'git push'"
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: a grep pattern mentioning the subcommand is not a push" {
+  source_lib
+  run is_git_push 'grep -qE "^git push" plugins/toolu/settings/bash-denylist.txt'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: a commit message mentioning it is not a push" {
+  source_lib
+  run is_git_push 'git commit -m "explain why git push is gated"'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_commit: the same message IS a commit" {
+  source_lib
+  run is_git_commit 'git commit -m "explain why git push is gated"'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: an operator inside a quoted argument does not split a statement" {
+  source_lib
+  run is_git_push 'echo "first; git push"'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_commit: prose about committing is not a commit" {
+  source_lib
+  run is_git_commit 'echo "remember to git commit later"'
+  [ "$status" -ne 0 ]
+}
+
+# ── but a real invocation still counts, however it is reached ───────────────
+
+@test "is_git_push: a push inside command substitution matches" {
+  source_lib
+  run is_git_push 'out=$(git push origin HEAD)'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a push inside backticks matches" {
+  source_lib
+  run is_git_push 'out=`git push`'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a push inside a substitution within double quotes matches" {
+  source_lib
+  run is_git_push 'echo "$(git push)"'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a real push after a quoted argument containing an operator matches" {
+  source_lib
+  run is_git_push 'echo "a; b" && git push'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a quoted subcommand still matches" {
+  source_lib
+  run is_git_push 'git "push"'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a pipeline ending in a push matches" {
+  source_lib
+  run is_git_push 'echo hi | git push'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: newline-separated statements are seen" {
+  source_lib
+  run is_git_push "$(printf '%s\n' 'echo one' 'git push')"
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: an empty command is not a push" {
+  source_lib
+  run is_git_push ""
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: a path that merely contains the words is not a push" {
+  source_lib
+  run is_git_push 'cat /tmp/git push notes.txt'
+  [ "$status" -ne 0 ]
+}
+
+# ── parsing corners that hid a real push ───────────────────────────────────
+#
+# Both of these were caught in review: the detector said "no push" about a
+# command line that pushes, which is the dangerous direction to be wrong in.
+
+@test "is_git_push: a quoted paren inside a substitution does not truncate the scan" {
+  source_lib
+  run is_git_push 'echo "$(echo ")")" ; git push'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a single-quoted paren inside a substitution is handled too" {
+  source_lib
+  run is_git_push "echo \"\$(echo ')')\" && git push"
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a nested substitution still resolves" {
+  source_lib
+  run is_git_push 'echo "$(echo "$(git push)")"'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a push in a case arm is seen" {
+  source_lib
+  run is_git_push 'case x in a) git push;; esac'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a push in a subshell is seen" {
+  source_lib
+  run is_git_push '(cd /tmp/wt && git push)'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a push in a function body is seen" {
+  source_lib
+  run is_git_push 'deploy() { git push; }'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_commit: a commit in a case arm is seen" {
+  source_lib
+  run is_git_commit 'case $x in ready) git commit -m "feat: x";; esac'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a parenthesised word in prose is still not a push" {
+  source_lib
+  run is_git_push 'echo "run it (git push) later"'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: statements with spaces and globs are not word-split" {
+  source_lib
+  run is_git_push 'git push origin "my branch"'
+  [ "$status" -eq 0 ]
+  run is_git_push 'git push *.txt'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: git with a dangling -C and no subcommand is not a push" {
+  source_lib
+  run is_git_push 'git -C'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: an environment assignment before the command is seen" {
+  source_lib
+  run is_git_push 'GIT_SSH_COMMAND="ssh -i k" git push'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a negated push is seen" {
+  source_lib
+  run is_git_push 'if ! git push; then echo failed; fi'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: 'echo git push' is still not a push" {
+  source_lib
+  run is_git_push 'echo git push'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: a removed substitution does not fuse text into a command" {
+  source_lib
+  # Neither side is a command; joining them would manufacture `git push`.
+  run is_git_push 'gi$(echo t) push'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: a removed backtick substitution does not fuse either" {
+  source_lib
+  run is_git_push 'gi`echo t` push'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: text either side of a substitution stays separate" {
+  source_lib
+  run is_git_push 'echo "pre $(echo x) post" && git push'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a dangling -c with no value is not a push" {
+  source_lib
+  run is_git_push 'git -c'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: a dangling -C before a real push in the next statement still matches" {
+  source_lib
+  run is_git_push 'git -C; git push'
+  [ "$status" -eq 0 ]
+}

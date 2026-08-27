@@ -5,6 +5,10 @@ load helpers
 
 setup() {
   setup_sandbox
+  # These cases were written against the original always-deny gate; that is
+  # now the `strict` preset. The balanced/ask default has its own block at the
+  # end of this file.
+  use_strict_preset
 }
 
 teardown() {
@@ -654,4 +658,144 @@ diverge_main_checkout() {
   rm -rf "$elsewhere"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
+}
+
+# ── Modes: the shipped default and its neighbours ───────────────────────────
+#
+# Everything above pins `strict`. These cases exercise what a user actually
+# gets out of the box (balanced -> ask), the waiver that follows a yes, and
+# the two escape hatches.
+
+# Promote a pending waiver the way post-tools/modules/push-waiver.sh does,
+# using the real lib rather than a hand-written file.
+promote_waiver() {
+  local sha="$1"
+  STATE_DIR="$STATE_DIR" bash -c '
+    . "'"$REPO_ROOT"'/hooks/lib/push-waiver.sh"
+    push_waiver_promote "'"$SANDBOX"'" feat_example "'"$sha"'"
+  '
+}
+
+@test "push-review: default preset asks instead of denying" {
+  gate_config '{"version":1}'
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "ask" ]
+}
+
+@test "push-review: the ask keeps the reviewer instructions" {
+  gate_config '{"version":1}'
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  reason=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')
+  [[ "$reason" == *"Code review required before push"* ]]
+  [[ "$reason" == *"remembered until the diff changes"* ]]
+}
+
+@test "push-review: asking records a pending waiver for the current diff" {
+  gate_config '{"version":1}'
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  sha=$(current_diff_sha)
+  [ -f "$STATE_DIR/feat_example.pending-waiver.json" ]
+  [ "$(jq -r '.diff_sha' "$STATE_DIR/feat_example.pending-waiver.json")" = "$sha" ]
+  [ "$(jq -r '.reason_code' "$STATE_DIR/feat_example.pending-waiver.json")" = "no-state" ]
+}
+
+@test "push-review: a promoted waiver lets the same diff through silently" {
+  gate_config '{"version":1}'
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  promote_waiver "$(current_diff_sha)"
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "push-review: a new commit invalidates the waiver and asks again" {
+  gate_config '{"version":1}'
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  promote_waiver "$(current_diff_sha)"
+  echo "more" > more.txt && git add more.txt && git commit -q -m "feat: more"
+  run_hook "Bash" "$payload"
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "ask" ]
+}
+
+@test "push-review: a waiver does not cover a different branch" {
+  gate_config '{"version":1}'
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  promote_waiver "$(current_diff_sha)"
+  git checkout -q -b feat/other
+  echo "other" > other.txt && git add other.txt && git commit -q -m "feat: other"
+  run_hook "Bash" "$payload"
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "ask" ]
+}
+
+@test "push-review: a clean review still passes under the default preset" {
+  gate_config '{"version":1}'
+  write_state "$(current_diff_sha)" 0
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "push-review: open findings ask rather than deny under the default preset" {
+  gate_config '{"version":1}'
+  write_state "$(current_diff_sha)" 2
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "ask" ]
+  [ "$(jq -r '.reason_code' "$STATE_DIR/feat_example.pending-waiver.json")" = "findings" ]
+}
+
+@test "push-review: per-gate off emits nothing at all" {
+  gate_config '{"version":1,"gates":{"pushReview":{"mode":"off"}}}'
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ ! -f "$STATE_DIR/feat_example.pending-waiver.json" ]
+}
+
+@test "push-review: advise mode reports without deciding" {
+  gate_config '{"version":1,"gates":{"pushReview":{"mode":"advise"}}}'
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // "none"')" = "none" ]
+  [[ "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')" == *"Code review required"* ]]
+  [ ! -f "$STATE_DIR/feat_example.pending-waiver.json" ]
+}
+
+@test "push-review: ask degrades to advise on codex" {
+  gate_config '{"version":1}'
+  payload=$(build_input "git push")
+  tool_name="Bash" input="$payload" PUSH_REVIEW_BASE=development \
+    TOOLU_HOST_OVERRIDE=codex run bash "$HOOK_SCRIPT" <<<"$payload"
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // "none"')" = "none" ]
+  [ -n "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')" ]
+}
+
+@test "push-review: an empty diff asks under the default preset" {
+  gate_config '{"version":1}'
+  git checkout -q -b feat/empty development
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  reason=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "ask" ]
+  [[ "$reason" == *"is empty"* ]]
+}
+
+@test "push-review: telemetry records the waived push" {
+  gate_config '{"version":1}'
+  export TELEMETRY_DIR="$SANDBOX/.claude/tmp/telemetry"
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  promote_waiver "$(current_diff_sha)"
+  run_hook "Bash" "$payload"
+  grep -q '"reason_code":"waived"' "$TELEMETRY_DIR/feat_example.jsonl"
+  grep -q '"result":"ask"' "$TELEMETRY_DIR/feat_example.jsonl"
 }

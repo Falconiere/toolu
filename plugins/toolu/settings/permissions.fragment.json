@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "Bash(*)",
       "Bash(plugins/ast-grep/skills/ast-grep/scripts/ast-grep.sh:*)",
       "Bash(.claude/worktrees/*/plugins/ast-grep/skills/ast-grep/scripts/ast-grep.sh:*)",
       "Bash(plugins/comemory/skills/agent-memory/scripts/comemory.sh:*)",
@@ -27,19 +28,9 @@
       "Bash(which:*)"
     ],
     "deny": [
-      "Bash(bun --eval:*)",
-      "Bash(bun -e:*)",
       "Bash(chmod 777:*)",
       "Bash(dd if=/dev/zero:*)",
-      "Bash(git push --force*)",
-      "Bash(git push -f *)",
-      "Bash(git push*main*)",
-      "Bash(git push*master*)",
       "Bash(mkfs:*)",
-      "Bash(node --eval:*)",
-      "Bash(node --print:*)",
-      "Bash(node -e:*)",
-      "Bash(node -p:*)",
       "Bash(rm -rf /)",
       "Bash(sudo rm:*)"
     ]

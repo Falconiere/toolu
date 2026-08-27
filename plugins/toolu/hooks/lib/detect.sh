@@ -237,18 +237,324 @@ branch_slug() {
   echo "$slug"
 }
 
-# Return 0 iff the raw command string $1 is a `git push` (heredoc bodies
-# stripped first so a `git push` inside a heredoc/commit-message is ignored).
-# Boundary-anchored on both sides so `gitpush`/`git pushup` do not match.
+# Find the end of a `$(...)` body that starts at index $2 of string $1.
 #
-# Git's global options may sit between `git` and the subcommand, so the
-# optional group also accepts them. Matching bare `git\s+push` missed
-# `git -C <worktree> push` — the form pr-babysit uses to push from a worktree —
-# which silently skipped every push-time gate. Only tokens that begin with `-`
-# are consumed, so `git commit -m "push"` still does not match.
+# Quotes inside the body hide parens: in `$(echo ")")` the first `)` is data,
+# not the terminator. A depth counter that ignores quoting stops there, returns
+# a truncated body, and the rest of the command line is parsed as if it were
+# inside the substitution — which is how a real `git push` after one used to go
+# unseen.
+#
+# Sets $_TOOLU_SUBST_BODY (the body, parens excluded) and $_TOOLU_SUBST_END
+# (the index just past the closing paren).
+_toolu_subst_body() {
+  local s="$1" i="$2" start="$2"
+  local n=${#s} depth=1 q="" c
+  while [ "$i" -lt "$n" ] && [ "$depth" -gt 0 ]; do
+    c="${s:$i:1}"
+    if [ -n "$q" ]; then
+      if [ "$c" = '\' ] && [ "$q" = '"' ]; then
+        i=$((i + 2))
+        continue
+      fi
+      [ "$c" = "$q" ] && q=""
+      i=$((i + 1))
+      continue
+    fi
+    case "$c" in
+      "'"|'"') q="$c" ;;
+      '\') i=$((i + 1)) ;;
+      "(") depth=$((depth + 1)) ;;
+      ")") depth=$((depth - 1)) ;;
+    esac
+    i=$((i + 1))
+  done
+  _TOOLU_SUBST_BODY="${s:$start:$((i - start - 1))}"
+  _TOOLU_SUBST_END="$i"
+}
+
+# Split a command string into simple statements, honouring shell quoting.
+#
+# Statements keep their original text (quotes included) — the tokenizer below
+# removes those. Only UNQUOTED `;`, `&&`, `||`, `|`, `&` and newlines separate
+# statements, so an operator inside a quoted argument does not split it.
+#
+# Command-substitution bodies — `$(...)` and backticks — are lifted out and
+# emitted as statements in their own right, because `foo $(git push)` really
+# does push. Inside single quotes nothing is substituted, so those are left as
+# literal text.
+#
+# Results land in the global array $_TOOLU_STMTS (bash 3.2 has no nameref).
+_toolu_split_statements() {
+  local s="$1"
+  local i=0 n=${#s} c nxt q="" cur="" body depth start
+  _TOOLU_STMTS=()
+
+  _toolu_flush_stmt() {
+    case "$cur" in
+      *[![:space:]]*) _TOOLU_STMTS+=("$cur") ;;
+    esac
+    cur=""
+  }
+
+  while [ "$i" -lt "$n" ]; do
+    c="${s:$i:1}"
+
+    # Single quotes: literal to the closing quote. No operators, no expansion.
+    if [ "$q" = "'" ]; then
+      cur+="$c"
+      [ "$c" = "'" ] && q=""
+      i=$((i + 1))
+      continue
+    fi
+
+    # Double quotes: operators are literal, but substitutions still run.
+    if [ "$q" = '"' ]; then
+      if [ "$c" = '\' ]; then
+        cur+="${s:$i:2}"
+        i=$((i + 2))
+        continue
+      fi
+      if [ "$c" = '"' ]; then
+        cur+="$c"
+        q=""
+        i=$((i + 1))
+        continue
+      fi
+      if [ "$c" = '$' ] && [ "${s:$((i + 1)):1}" = "(" ]; then
+        _toolu_subst_body "$s" "$((i + 2))"
+        [ -n "$_TOOLU_SUBST_BODY" ] && _TOOLU_SUBSTS+=("$_TOOLU_SUBST_BODY")
+        # A space, not nothing: the text on either side of a removed
+        # substitution was never one word, and joining it could manufacture a
+        # command that was not written (`gi$(x)t push`).
+        cur+=" "
+        i="$_TOOLU_SUBST_END"
+        continue
+      fi
+      cur+="$c"
+      i=$((i + 1))
+      continue
+    fi
+
+    # Unquoted.
+    case "$c" in
+      "'"|'"')
+        q="$c"
+        cur+="$c"
+        ;;
+      '\')
+        cur+="${s:$i:2}"
+        i=$((i + 1))
+        ;;
+      '`')
+        start=$((i + 1))
+        i=$start
+        while [ "$i" -lt "$n" ] && [ "${s:$i:1}" != '`' ]; do
+          i=$((i + 1))
+        done
+        body="${s:$start:$((i - start))}"
+        [ -n "$body" ] && _TOOLU_SUBSTS+=("$body")
+        cur+=" "
+        ;;
+      '$')
+        if [ "${s:$((i + 1)):1}" = "(" ]; then
+          _toolu_subst_body "$s" "$((i + 2))"
+          [ -n "$_TOOLU_SUBST_BODY" ] && _TOOLU_SUBSTS+=("$_TOOLU_SUBST_BODY")
+          cur+=" "
+          i="$_TOOLU_SUBST_END"
+          continue
+        fi
+        cur+="$c"
+        ;;
+      '('|')')
+        # A command can follow an unquoted paren: a case-arm pattern
+        # (`a) git push;;`), a subshell (`(cd x && git push)`), a function body.
+        # Without treating these as boundaries the arm's command was glued to
+        # the pattern, so the statement's first token was `a)` and the push was
+        # never seen. A paren opening a substitution is consumed above and never
+        # reaches here.
+        _toolu_flush_stmt
+        ;;
+      ';'|'&'|'|'|$'\n')
+        nxt="${s:$((i + 1)):1}"
+        if { [ "$c" = '&' ] && [ "$nxt" = '&' ]; } || { [ "$c" = '|' ] && [ "$nxt" = '|' ]; }; then
+          i=$((i + 1))
+        fi
+        _toolu_flush_stmt
+        ;;
+      *)
+        cur+="$c"
+        ;;
+    esac
+    i=$((i + 1))
+  done
+  _toolu_flush_stmt
+  unset -f _toolu_flush_stmt
+}
+
+# Tokenize ONE statement into argv, dropping quote characters and keeping a
+# quoted run as a single token. This is what makes prose safe: in
+# `echo "no git push rules"` the quoted text is one argument token, so the
+# command is `echo`, not `git`.
+#
+# Results land in the global array $_TOOLU_TOKENS.
+_toolu_statement_tokens() {
+  local s="$1"
+  local i=0 n=${#s} c q="" tok="" started=0
+  _TOOLU_TOKENS=()
+  while [ "$i" -lt "$n" ]; do
+    c="${s:$i:1}"
+    if [ -n "$q" ]; then
+      if [ "$c" = "$q" ]; then
+        q=""
+      elif [ "$c" = '\' ] && [ "$q" = '"' ]; then
+        tok+="${s:$((i + 1)):1}"
+        i=$((i + 1))
+      else
+        tok+="$c"
+      fi
+      i=$((i + 1))
+      continue
+    fi
+    case "$c" in
+      "'"|'"')
+        q="$c"
+        started=1
+        ;;
+      '\')
+        tok+="${s:$((i + 1)):1}"
+        i=$((i + 1))
+        started=1
+        ;;
+      ' '|$'\t'|$'\n')
+        if [ "$started" = 1 ]; then
+          _TOOLU_TOKENS+=("$tok")
+          tok=""
+          started=0
+        fi
+        ;;
+      *)
+        tok+="$c"
+        started=1
+        ;;
+    esac
+    i=$((i + 1))
+  done
+  [ "$started" = 1 ] && _TOOLU_TOKENS+=("$tok")
+  return 0
+}
+
+# Print the git subcommand a statement invokes, or nothing.
+#
+# Git's global options sit between `git` and the subcommand, and two of them
+# (-C, -c) take a separate value — consuming those is what keeps
+# `git -c push.default=simple push` a push and `git commit -m "push"` a commit.
+_toolu_git_subcommand() {
+  _toolu_statement_tokens "$1"
+  [ "${#_TOOLU_TOKENS[@]}" -gt 1 ] || return 1
+
+  # A command is not always the statement's first token. Grouping and keyword
+  # tokens can precede it (`deploy() { git push; }`, `if ! git push`), and so
+  # can environment assignments (`GIT_DIR=x git push`). Skipping them is what
+  # keeps those a push; `echo git push` is untouched, because `echo` is a
+  # command, not a prefix.
+  local start=0
+  while [ "$start" -lt "${#_TOOLU_TOKENS[@]}" ]; do
+    case "${_TOOLU_TOKENS[$start]}" in
+      "{"|"}"|"!"|if|while|until|then|else|elif|do|time|exec|command|builtin|env|nohup|sudo)
+        start=$((start + 1))
+        ;;
+      [A-Za-z_]*=*)
+        start=$((start + 1))
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  [ "$((start + 1))" -lt "${#_TOOLU_TOKENS[@]}" ] || return 1
+  [ "${_TOOLU_TOKENS[$start]}" = "git" ] || return 1
+
+  local i=$((start + 1)) t
+  while [ "$i" -lt "${#_TOOLU_TOKENS[@]}" ]; do
+    t="${_TOOLU_TOKENS[$i]}"
+    case "$t" in
+      -C|-c)
+        # These take a separate value. With nothing after them the command line
+        # is malformed (`git -C` alone is a git usage error), so there is no
+        # subcommand to report rather than one to guess at.
+        [ "$((i + 2))" -lt "${#_TOOLU_TOKENS[@]}" ] || return 1
+        i=$((i + 2))
+        ;;
+      --*=*|--*|-?)
+        i=$((i + 1))
+        ;;
+      *)
+        printf '%s' "$t"
+        return 0
+        ;;
+    esac
+  done
+  return 1
+}
+
+# Return 0 iff COMMAND ($1) invokes `git <SUBCOMMAND>` ($2) anywhere.
+#
+# Structural, not textual. The old regex matched the raw string, so any prose
+# containing the two words in sequence — `echo "no git push rules"`, a commit
+# message, a doc line — fired the push gates. Resolving the actual command of
+# each statement is the difference between "these words appear" and "this runs".
+toolu_runs_git_subcommand() {
+  local cmd sub="$2" stmt found=1
+  cmd=$(printf '%s\n' "$1" | strip_heredocs)
+
+  _TOOLU_SUBSTS=()
+  _toolu_split_statements "$cmd"
+  local -a stmts=("${_TOOLU_STMTS[@]}")
+  local -a substs=("${_TOOLU_SUBSTS[@]}")
+
+  if [ "${#stmts[@]}" -gt 0 ]; then
+    for stmt in "${stmts[@]}"; do
+      if [ "$(_toolu_git_subcommand "$stmt")" = "$sub" ]; then
+        found=0
+        break
+      fi
+    done
+  fi
+
+  # A substitution body is its own command line; scan each recursively so a
+  # push hidden in `$(...)` is not missed.
+  if [ "$found" -ne 0 ]; then
+    if [ "${#substs[@]}" -gt 0 ]; then
+      for stmt in "${substs[@]}"; do
+        if toolu_runs_git_subcommand "$stmt" "$sub"; then
+          found=0
+          break
+        fi
+      done
+    fi
+  fi
+  return "$found"
+}
+
+# Return 0 iff COMMAND ($1) runs `git push`.
+#
+# Structural, via toolu_runs_git_subcommand: the command is parsed into
+# statements and git's real subcommand is resolved, so the two words appearing
+# in prose (`echo "no git push rules"`, a commit message, a doc line) is not a
+# push. Heredoc bodies are stripped first, and `$(...)`/backtick bodies are
+# scanned as commands of their own.
 is_git_push() {
-  printf '%s\n' "$1" | strip_heredocs \
-    | grep -qE '(^|\s|&&|\|\||;)git(\s+(-[cC]\s+("[^"]*"|\S+)|--\S+=\S+|--[a-z][a-z-]*|-[a-zA-Z]))*\s+push(\s|;|&|\||$)'
+  toolu_runs_git_subcommand "$1" push
+}
+
+# Return 0 iff COMMAND ($1) runs `git commit`.
+#
+# Same structural detection as is_git_push — `git commit-tree` is a different
+# subcommand and does not match, and `echo "remember to git commit"` is prose.
+is_git_commit() {
+  toolu_runs_git_subcommand "$1" commit
 }
 
 # Echo the absolute root of the repo a `git push` command ($1) targets.
