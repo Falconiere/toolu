@@ -34,7 +34,11 @@ ps_repo_root() {
   return 0
 }
 
-ps_now() { date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ; }
+ps_now() {
+  date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null && return
+  printf '%sT00:00:00Z' "$(date -u +%Y-%m-%d 2>/dev/null)" && return
+  printf '1970-01-01T00:00:00Z'
+}
 
 # Canonical path including a final symlink (SKILL.md → elsewhere).
 ps_realpath() {
@@ -452,13 +456,14 @@ ps_adopt() {
   [ -f "$file" ] || { printf 'skills.sh: no skill "%s"\n' "$name" >&2; return 1; }
   desc=$(ps_skill_description "$file")
   [ -n "$desc" ] || desc="$name"
-  created=$(ps_now)
+  usage=$(ps_load_usage "$(ps_usage_path "$root")")
+  created=$(jq -r --arg n "$name" '.[$n].created_at // empty' <<<"$usage")
+  if [ -z "$created" ] || [ "$created" = "null" ]; then created=$(ps_now); fi
   body=$(ps_strip_frontmatter <"$file")
   body=$(printf '%s\n' "$body" | sed '1{/^$/d;}')
   ps_render_skill "$name" "$desc" agent "$created" "$body" >"$file" || return 1
-  usage=$(ps_load_usage "$(ps_usage_path "$root")")
-  usage=$(jq --arg n "$name" --arg t "$created" '
-    .[$n] = ((.[$n] // {use_count:0,patch_count:0,state:"active",pinned:false,first_seen_at:$t,created_at:$t}) + {origin:"agent"})
+  usage=$(jq --arg n "$name" --arg t "$created" --arg nnow "$(ps_now)" '
+    .[$n] = ((.[$n] // {use_count:0,patch_count:0,state:"active",pinned:false,first_seen_at:$nnow,created_at:$t}) + {origin:"agent"})
   ' <<<"$usage") || return 1
   ps_save_usage "$(ps_usage_path "$root")" "$usage" || return 1
   printf 'adopted %s\n' "$name"
@@ -508,12 +513,12 @@ ps_record() {
       end
     ))
   ' <<<"$usage") || return 0
-  ps_save_usage "$path" "$usage" || true
+  ps_save_usage "$path" "$usage" || printf 'project-skills: failed to write %s\n' "$path" >&2
 }
 
 # Seed missing usage entries for on-disk agent-created skills. Prints updated JSON.
 ps_seed_missing() {
-  local dir="$1" usage="$2" now="$3" name origin created entry
+  local dir="$1" usage="$2" now="$3" name origin created entry _seeded
   for name in $(ps_list_skill_names "$dir"); do
     origin=$(ps_skill_origin "$dir/$name/SKILL.md")
     [ "$origin" = "agent" ] || continue
@@ -522,7 +527,11 @@ ps_seed_missing() {
     fi
     created=$(ps_now)
     entry=$(ps_default_entry agent "$created" "$now")
-    usage=$(jq --arg n "$name" --argjson e "$entry" '.[$n]=$e' <<<"$usage") || true
+    _seeded=$(jq --arg n "$name" --argjson e "$entry" '.[$n]=$e' <<<"$usage") || {
+      printf 'project-skills: failed to seed usage for %s\n' "$name" >&2
+      continue
+    }
+    usage=$_seeded
   done
   printf '%s' "$usage"
 }
@@ -574,8 +583,10 @@ ps_curate() {
     if ps_idle_at_least "$ts" "$PS_ARCHIVE"; then
       local uc
       uc=$(jq -r --arg n "$name" '.[$n].use_count // 0' <<<"$usage")
-      if [ "$uc" = "0" ] && ! ps_idle_at_least "$ts" "$PS_STALE"; then
-        continue
+      # Used skills (use_count>0) archive at archiveAfterDays.
+      # Never-used skills need the staleAfterDays grace floor first.
+      if [ "$uc" = "0" ]; then
+        ps_idle_at_least "$ts" "$PS_STALE" || continue
       fi
       if [ "$dry" = 1 ]; then
         printf 'would archive %s (%sd idle)\n' "$name" "$days"
@@ -606,6 +617,7 @@ ps_curate() {
     fi
   done
   if [ "$dry" != 1 ]; then
-    ps_save_usage "$(ps_usage_path "$root")" "$usage" || true
+    ps_save_usage "$(ps_usage_path "$root")" "$usage" \
+      || printf 'project-skills: failed to write usage.json\n' >&2
   fi
 }
