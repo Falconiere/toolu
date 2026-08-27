@@ -100,7 +100,14 @@ pl_scope_map() {
   while IFS=$'\t' read -r id paths; do
     [ -n "$id" ] || continue
     sha=$(pl_scope_sha "$base" "$paths") || sha=""
-    [ -n "$sha" ] || continue
+    if [ -z "$sha" ]; then
+      # Falling back to the branch-wide rule is the safe direction — it re-runs
+      # the step more often, never less — but a `paths` declaration that quietly
+      # does nothing looks identical to one that works. Say so.
+      printf 'plan-ledger: step %s declares paths that could not be hashed; judging it on the whole branch diff\n' \
+        "$id" >&2
+      continue
+    fi
     out=$(jq -c --arg id "$id" --arg sha "$sha" '. + {($id): $sha}' <<< "$out") || return 1
   done < <(jq -r '.[] | select((.paths // []) | length > 0) | "\(.id)\t\(.paths | tojson)"' <<< "$steps" 2>/dev/null)
   printf '%s' "$out"
@@ -554,9 +561,11 @@ $evidence")
   # scoped green can speed up iteration without ever standing in for the
   # full check before a push.
   local prior_verified
-  prior_verified=$(jq -r '.verified_sha // ""' <<< "${prior:-{\}}" 2>/dev/null) || prior_verified=""
+  local prior_json="${prior:-}"
+  [ -n "$prior_json" ] || prior_json='{}'
+  prior_verified=$(jq -r '.verified_sha // ""' <<< "$prior_json" 2>/dev/null) || prior_verified=""
   if [ -n "$verify" ] && [ -z "$only_step" ] \
-     && [ "$(jq -r '[.steps[] | select(.status != "green")] | length' <<< "$ledger")" = "0" ]; then
+     && [ "$(jq -r --arg cur "$cur" '[.steps[] | select(.status != "green" or .diff_sha != $cur)] | length' <<< "$ledger")" = "0" ]; then
     ledger=$(jq -c --arg sha "$cur" '.verified_sha = $sha' <<< "$ledger") || return 2
   else
     ledger=$(jq -c --arg sha "$prior_verified" \

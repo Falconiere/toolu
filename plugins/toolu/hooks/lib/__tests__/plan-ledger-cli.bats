@@ -1058,3 +1058,50 @@ DOC
   [ "$(jq -r '.steps[] | select(.id=="s1") | .scope_sha' "$LEDGER")" = "$first" ]
   [ "$(wc -l < "$marker" | tr -d ' ')" = "1" ]
 }
+
+@test "verify: verified_sha is stamped only when every step is fresh at the current diff" {
+  doc="$REPO/plan.md"
+  _write_doc "$doc" "true" "true"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' --verify"
+  sha=$(cd "$REPO" && git diff --no-color "main...HEAD" | git hash-object --stdin)
+  [ "$(jq -r '.verified_sha' "$LEDGER")" = "$sha" ]
+
+  # Hand-plant a green step carrying an older diff_sha, the shape a future
+  # change to the skip logic could reintroduce. "All green" would accept it;
+  # "all fresh" must not.
+  jq '.steps[0].diff_sha = "an-older-diff"' "$LEDGER" > "$LEDGER.tmp" && mv "$LEDGER.tmp" "$LEDGER"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' status"
+  [ "$(jq -r '.summary.fresh_green' "$LEDGER")" != "$(jq -r '.summary.total' "$LEDGER")" ]
+}
+
+@test "verify: a prior verified_sha survives a later scoped run" {
+  doc="$REPO/plan.md"
+  _write_doc "$doc" "true" "true"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' --verify"
+  sha=$(jq -r '.verified_sha' "$LEDGER")
+  [ "$sha" != "null" ]
+  # A plain run must not erase what a verify run established.
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(jq -r '.verified_sha' "$LEDGER")" = "$sha" ]
+}
+
+@test "scope: a paths declaration that cannot be hashed says so" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  # An empty pathspec list after filtering: jq yields no strings, so the step
+  # gets no scope and must fall back loudly rather than look scoped.
+  cat > "$doc" <<DOC
+# Scoped Plan
+
+## Steps (machine-readable)
+
+\`\`\`json
+[ { "id": "s1", "title": "scoped", "check": "echo x >> '$marker'; true", "paths": [] } ]
+\`\`\`
+DOC
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' 2>&1"
+  [ "$status" -eq 0 ]
+  # An empty array is "no scope declared", which is the documented default and
+  # must stay silent — only a declared-but-unhashable scope warns.
+  [[ "$output" != *"could not be hashed"* ]]
+}
