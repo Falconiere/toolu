@@ -803,3 +803,34 @@ EOF'
   run is_git_push 'echo git push'
   [ "$status" -ne 0 ]
 }
+
+@test "is_git_push: a removed substitution does not fuse text into a command" {
+  source_lib
+  # Neither side is a command; joining them would manufacture `git push`.
+  run is_git_push 'gi$(echo t) push'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: a removed backtick substitution does not fuse either" {
+  source_lib
+  run is_git_push 'gi`echo t` push'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: text either side of a substitution stays separate" {
+  source_lib
+  run is_git_push 'echo "pre $(echo x) post" && git push'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a dangling -c with no value is not a push" {
+  source_lib
+  run is_git_push 'git -c'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: a dangling -C before a real push in the next statement still matches" {
+  source_lib
+  run is_git_push 'git -C; git push'
+  [ "$status" -eq 0 ]
+}

@@ -324,6 +324,10 @@ _toolu_split_statements() {
       if [ "$c" = '$' ] && [ "${s:$((i + 1)):1}" = "(" ]; then
         _toolu_subst_body "$s" "$((i + 2))"
         [ -n "$_TOOLU_SUBST_BODY" ] && _TOOLU_SUBSTS+=("$_TOOLU_SUBST_BODY")
+        # A space, not nothing: the text on either side of a removed
+        # substitution was never one word, and joining it could manufacture a
+        # command that was not written (`gi$(x)t push`).
+        cur+=" "
         i="$_TOOLU_SUBST_END"
         continue
       fi
@@ -350,11 +354,13 @@ _toolu_split_statements() {
         done
         body="${s:$start:$((i - start))}"
         [ -n "$body" ] && _TOOLU_SUBSTS+=("$body")
+        cur+=" "
         ;;
       '$')
         if [ "${s:$((i + 1)):1}" = "(" ]; then
           _toolu_subst_body "$s" "$((i + 2))"
           [ -n "$_TOOLU_SUBST_BODY" ] && _TOOLU_SUBSTS+=("$_TOOLU_SUBST_BODY")
+          cur+=" "
           i="$_TOOLU_SUBST_END"
           continue
         fi
@@ -475,6 +481,10 @@ _toolu_git_subcommand() {
     t="${_TOOLU_TOKENS[$i]}"
     case "$t" in
       -C|-c)
+        # These take a separate value. With nothing after them the command line
+        # is malformed (`git -C` alone is a git usage error), so there is no
+        # subcommand to report rather than one to guess at.
+        [ "$((i + 2))" -lt "${#_TOOLU_TOKENS[@]}" ] || return 1
         i=$((i + 2))
         ;;
       --*=*|--*|-?)
@@ -504,22 +514,26 @@ toolu_runs_git_subcommand() {
   local -a stmts=("${_TOOLU_STMTS[@]}")
   local -a substs=("${_TOOLU_SUBSTS[@]}")
 
-  for stmt in ${stmts[@]+"${stmts[@]}"}; do
-    if [ "$(_toolu_git_subcommand "$stmt")" = "$sub" ]; then
-      found=0
-      break
-    fi
-  done
-
-  # A substitution body is its own command line; scan each recursively so a
-  # push hidden in `$(...)` is not missed.
-  if [ "$found" -ne 0 ]; then
-    for stmt in ${substs[@]+"${substs[@]}"}; do
-      if toolu_runs_git_subcommand "$stmt" "$sub"; then
+  if [ "${#stmts[@]}" -gt 0 ]; then
+    for stmt in "${stmts[@]}"; do
+      if [ "$(_toolu_git_subcommand "$stmt")" = "$sub" ]; then
         found=0
         break
       fi
     done
+  fi
+
+  # A substitution body is its own command line; scan each recursively so a
+  # push hidden in `$(...)` is not missed.
+  if [ "$found" -ne 0 ]; then
+    if [ "${#substs[@]}" -gt 0 ]; then
+      for stmt in "${substs[@]}"; do
+        if toolu_runs_git_subcommand "$stmt" "$sub"; then
+          found=0
+          break
+        fi
+      done
+    fi
   fi
   return "$found"
 }
