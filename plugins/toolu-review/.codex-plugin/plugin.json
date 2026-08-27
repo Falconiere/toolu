@@ -1,6 +1,6 @@
 {
   "name": "toolu-review",
-  "version": "4.7.1",
+  "version": "4.8.0",
   "description": "Project-tuned pre-push code review mirroring the CI review bot's checklist (correctness, security, perf, test coverage, doc accuracy), writing the toolu push-review state so the gate passes. Standalone.",
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json"

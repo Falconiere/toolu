@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.8.0](https://github.com/Falconiere/toolu/compare/v4.7.1...v4.8.0) (2026-08-27)
+
+
+### Features
+
+* **comemory:** add project-skills self-learning harness ([#161](https://github.com/Falconiere/toolu/issues/161)) ([84916b1](https://github.com/Falconiere/toolu/commit/84916b104591bc6488ef0df48186b77372c2b8f3))
+
 ## [4.7.1](https://github.com/Falconiere/toolu/compare/v4.7.0...v4.7.1) (2026-08-27)
 
 
