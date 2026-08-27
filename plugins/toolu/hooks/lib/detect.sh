@@ -237,6 +237,42 @@ branch_slug() {
   echo "$slug"
 }
 
+# Find the end of a `$(...)` body that starts at index $2 of string $1.
+#
+# Quotes inside the body hide parens: in `$(echo ")")` the first `)` is data,
+# not the terminator. A depth counter that ignores quoting stops there, returns
+# a truncated body, and the rest of the command line is parsed as if it were
+# inside the substitution — which is how a real `git push` after one used to go
+# unseen.
+#
+# Sets $_TOOLU_SUBST_BODY (the body, parens excluded) and $_TOOLU_SUBST_END
+# (the index just past the closing paren).
+_toolu_subst_body() {
+  local s="$1" i="$2" start="$2"
+  local n=${#s} depth=1 q="" c
+  while [ "$i" -lt "$n" ] && [ "$depth" -gt 0 ]; do
+    c="${s:$i:1}"
+    if [ -n "$q" ]; then
+      if [ "$c" = '\' ] && [ "$q" = '"' ]; then
+        i=$((i + 2))
+        continue
+      fi
+      [ "$c" = "$q" ] && q=""
+      i=$((i + 1))
+      continue
+    fi
+    case "$c" in
+      "'"|'"') q="$c" ;;
+      '\') i=$((i + 1)) ;;
+      "(") depth=$((depth + 1)) ;;
+      ")") depth=$((depth - 1)) ;;
+    esac
+    i=$((i + 1))
+  done
+  _TOOLU_SUBST_BODY="${s:$start:$((i - start - 1))}"
+  _TOOLU_SUBST_END="$i"
+}
+
 # Split a command string into simple statements, honouring shell quoting.
 #
 # Statements keep their original text (quotes included) — the tokenizer below
@@ -286,18 +322,9 @@ _toolu_split_statements() {
         continue
       fi
       if [ "$c" = '$' ] && [ "${s:$((i + 1)):1}" = "(" ]; then
-        depth=1
-        start=$((i + 2))
-        i=$start
-        while [ "$i" -lt "$n" ] && [ "$depth" -gt 0 ]; do
-          case "${s:$i:1}" in
-            "(") depth=$((depth + 1)) ;;
-            ")") depth=$((depth - 1)) ;;
-          esac
-          i=$((i + 1))
-        done
-        body="${s:$start:$((i - start - 1))}"
-        [ -n "$body" ] && _TOOLU_SUBSTS+=("$body")
+        _toolu_subst_body "$s" "$((i + 2))"
+        [ -n "$_TOOLU_SUBST_BODY" ] && _TOOLU_SUBSTS+=("$_TOOLU_SUBST_BODY")
+        i="$_TOOLU_SUBST_END"
         continue
       fi
       cur+="$c"
@@ -326,21 +353,21 @@ _toolu_split_statements() {
         ;;
       '$')
         if [ "${s:$((i + 1)):1}" = "(" ]; then
-          depth=1
-          start=$((i + 2))
-          i=$start
-          while [ "$i" -lt "$n" ] && [ "$depth" -gt 0 ]; do
-            case "${s:$i:1}" in
-              "(") depth=$((depth + 1)) ;;
-              ")") depth=$((depth - 1)) ;;
-            esac
-            i=$((i + 1))
-          done
-          body="${s:$start:$((i - start - 1))}"
-          [ -n "$body" ] && _TOOLU_SUBSTS+=("$body")
+          _toolu_subst_body "$s" "$((i + 2))"
+          [ -n "$_TOOLU_SUBST_BODY" ] && _TOOLU_SUBSTS+=("$_TOOLU_SUBST_BODY")
+          i="$_TOOLU_SUBST_END"
           continue
         fi
         cur+="$c"
+        ;;
+      '('|')')
+        # A command can follow an unquoted paren: a case-arm pattern
+        # (`a) git push;;`), a subshell (`(cd x && git push)`), a function body.
+        # Without treating these as boundaries the arm's command was glued to
+        # the pattern, so the statement's first token was `a)` and the push was
+        # never seen. A paren opening a substitution is consumed above and never
+        # reaches here.
+        _toolu_flush_stmt
         ;;
       ';'|'&'|'|'|$'\n')
         nxt="${s:$((i + 1)):1}"
@@ -419,9 +446,31 @@ _toolu_statement_tokens() {
 _toolu_git_subcommand() {
   _toolu_statement_tokens "$1"
   [ "${#_TOOLU_TOKENS[@]}" -gt 1 ] || return 1
-  [ "${_TOOLU_TOKENS[0]}" = "git" ] || return 1
 
-  local i=1 t
+  # A command is not always the statement's first token. Grouping and keyword
+  # tokens can precede it (`deploy() { git push; }`, `if ! git push`), and so
+  # can environment assignments (`GIT_DIR=x git push`). Skipping them is what
+  # keeps those a push; `echo git push` is untouched, because `echo` is a
+  # command, not a prefix.
+  local start=0
+  while [ "$start" -lt "${#_TOOLU_TOKENS[@]}" ]; do
+    case "${_TOOLU_TOKENS[$start]}" in
+      "{"|"}"|"!"|if|while|until|then|else|elif|do|time|exec|command|builtin|env|nohup|sudo)
+        start=$((start + 1))
+        ;;
+      [A-Za-z_]*=*)
+        start=$((start + 1))
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  [ "$((start + 1))" -lt "${#_TOOLU_TOKENS[@]}" ] || return 1
+  [ "${_TOOLU_TOKENS[$start]}" = "git" ] || return 1
+
+  local i=$((start + 1)) t
   while [ "$i" -lt "${#_TOOLU_TOKENS[@]}" ]; do
     t="${_TOOLU_TOKENS[$i]}"
     case "$t" in

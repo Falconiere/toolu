@@ -718,3 +718,88 @@ EOF'
   run is_git_push 'cat /tmp/git push notes.txt'
   [ "$status" -ne 0 ]
 }
+
+# ── parsing corners that hid a real push ───────────────────────────────────
+#
+# Both of these were caught in review: the detector said "no push" about a
+# command line that pushes, which is the dangerous direction to be wrong in.
+
+@test "is_git_push: a quoted paren inside a substitution does not truncate the scan" {
+  source_lib
+  run is_git_push 'echo "$(echo ")")" ; git push'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a single-quoted paren inside a substitution is handled too" {
+  source_lib
+  run is_git_push "echo \"\$(echo ')')\" && git push"
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a nested substitution still resolves" {
+  source_lib
+  run is_git_push 'echo "$(echo "$(git push)")"'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a push in a case arm is seen" {
+  source_lib
+  run is_git_push 'case x in a) git push;; esac'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a push in a subshell is seen" {
+  source_lib
+  run is_git_push '(cd /tmp/wt && git push)'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a push in a function body is seen" {
+  source_lib
+  run is_git_push 'deploy() { git push; }'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_commit: a commit in a case arm is seen" {
+  source_lib
+  run is_git_commit 'case $x in ready) git commit -m "feat: x";; esac'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a parenthesised word in prose is still not a push" {
+  source_lib
+  run is_git_push 'echo "run it (git push) later"'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: statements with spaces and globs are not word-split" {
+  source_lib
+  run is_git_push 'git push origin "my branch"'
+  [ "$status" -eq 0 ]
+  run is_git_push 'git push *.txt'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: git with a dangling -C and no subcommand is not a push" {
+  source_lib
+  run is_git_push 'git -C'
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: an environment assignment before the command is seen" {
+  source_lib
+  run is_git_push 'GIT_SSH_COMMAND="ssh -i k" git push'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: a negated push is seen" {
+  source_lib
+  run is_git_push 'if ! git push; then echo failed; fi'
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: 'echo git push' is still not a push" {
+  source_lib
+  run is_git_push 'echo git push'
+  [ "$status" -ne 0 ]
+}
