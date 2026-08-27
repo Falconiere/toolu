@@ -67,14 +67,35 @@ pl_parse_steps() {
     echo "plan-ledger-parse: invalid step model in $doc ($bad_models); allowed: haiku sonnet opus fable inherit" >&2
     return 1
   fi
+  # `paths` narrows what a step's freshness depends on. A step that declares it
+  # is re-run only when those paths change, instead of on every change anywhere
+  # in the branch diff. Wrong contents here would silently keep a step green
+  # after its real inputs moved, so the shape is checked rather than trusted:
+  # an array of non-empty strings, or absent.
+  local bad_paths
+  if ! bad_paths=$(jq -r '
+    [ .[] | select(.paths != null)
+          | select((.paths | type) != "array"
+                   or ([.paths[] | select((type) != "string" or (. == ""))] | length) > 0)
+          | .id ] | join(", ")
+  ' <<< "$block" 2>/dev/null); then
+    echo "plan-ledger-parse: could not validate step paths in $doc" >&2
+    return 2
+  fi
+  if [ -n "$bad_paths" ]; then
+    echo "plan-ledger-parse: invalid step paths in $doc ($bad_paths); expected an array of non-empty strings" >&2
+    return 2
+  fi
+
   # Emit the normalized array (jq-compacted) on stdout. Backfill the optional
-  # authored fields so downstream serialization always sees them: ac_refs and
-  # depends_on default to [], input and model to null. Legacy {id,title,check}
-  # steps thus gain []/[]/null/null; any authored values are preserved.
+  # authored fields so downstream serialization always sees them: ac_refs,
+  # depends_on and paths default to [], input and model to null. Legacy
+  # {id,title,check} steps thus gain the defaults; authored values are preserved.
   # Permissive `// default` also coerces a present-but-null field to its default.
   jq -c 'map(
     .ac_refs    = (.ac_refs // []) |
     .depends_on = (.depends_on // []) |
+    .paths      = (.paths // []) |
     .input      = (.input // null) |
     .model      = (.model // null)
   )' <<< "$block"

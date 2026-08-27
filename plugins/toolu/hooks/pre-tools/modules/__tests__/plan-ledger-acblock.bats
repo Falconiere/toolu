@@ -108,7 +108,10 @@ _write_config_default_mode() {
 # from the real mechanism, not a hand-authored ledger.
 _build_ledger() {
   local plan="$1"
-  PUSH_REVIEW_BASE=development run bash "$PLAN_LEDGER_LIB" run "$plan"
+  # --verify: these cases are about AC coverage at the push gate, and a
+  # push-ready ledger is a verified one. Without it the gate correctly asks for
+  # a verify run first, which would mask what each case is actually asserting.
+  PUSH_REVIEW_BASE=development run bash "$PLAN_LEDGER_LIB" run "$plan" --verify
   [ "$status" -eq 0 ]
 }
 

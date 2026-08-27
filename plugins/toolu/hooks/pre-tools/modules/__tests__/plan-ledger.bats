@@ -316,3 +316,74 @@ denies() {
   [[ "$output" == *"s2"* ]]
   [[ "$output" == *"red"* ]]
 }
+
+# ── the verified contract ──────────────────────────────────────────────────
+#
+# A step can be fresh-green on its own declared `paths` — enough to keep
+# iteration fast, not enough to push on. The gate asks for a --verify run, in
+# which every step is judged against the whole branch diff, so a narrow or
+# stale scope declaration cannot hold a green through a change it missed.
+
+# Like write_ledger, but carrying the verified_sha key this version writes.
+write_ledger_verified() {
+  local steps="$1" total="$2" verified="$3" branch
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  jq -n --arg branch "$branch" --argjson steps "$steps" --argjson total "$total" \
+    --arg verified "$verified" '{
+      version: 1, branch: $branch, base_branch: "development",
+      plan_doc: "docs/toolu/plans/fixture.md",
+      updated_at: "2026-08-27T00:00:00Z",
+      summary: { total: $total },
+      verified_sha: (if $verified == "" then null else $verified end),
+      steps: $steps
+    }' > "$(ledger_path)"
+}
+
+@test "plan-ledger gate: all green but never verified asks for a verify run" {
+  sha=$(sandbox_diff_sha)
+  write_ledger_verified "$(jq -cn --arg s "$sha" '[{id:"s1",title:"one",check:"true",status:"green",diff_sha:$s}]')" 1 ""
+  payload=$(build_input "git push")
+  run_gate "Bash" "$payload"
+  reason=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason // ""')
+  [[ "$reason" == *"--verify"* ]]
+}
+
+@test "plan-ledger gate: a verified ledger at the current diff allows" {
+  sha=$(sandbox_diff_sha)
+  write_ledger_verified "$(jq -cn --arg s "$sha" '[{id:"s1",title:"one",check:"true",status:"green",diff_sha:$s}]')" 1 "$sha"
+  payload=$(build_input "git push")
+  run_gate "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "plan-ledger gate: a verified ledger from an older diff asks again" {
+  sha=$(sandbox_diff_sha)
+  write_ledger_verified "$(jq -cn --arg s "$sha" '[{id:"s1",title:"one",check:"true",status:"green",diff_sha:$s}]')" 1 "stale-sha-from-an-earlier-diff"
+  payload=$(build_input "git push")
+  run_gate "Bash" "$payload"
+  reason=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason // ""')
+  [[ "$reason" == *"--verify"* ]]
+}
+
+@test "plan-ledger gate: a red step is still reported before any verify talk" {
+  sha=$(sandbox_diff_sha)
+  write_ledger_verified "$(jq -cn --arg s "$sha" '[{id:"s1",title:"one",check:"false",status:"red",diff_sha:$s}]')" 1 ""
+  payload=$(build_input "git push")
+  run_gate "Bash" "$payload"
+  reason=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason // ""')
+  [[ "$reason" == *"s1"* ]]
+  [[ "$reason" != *"--verify"* ]]
+}
+
+@test "plan-ledger gate: a legacy ledger without the key keeps the old contract" {
+  # Written before per-step scope existed: every step was judged against the
+  # whole branch diff, which is what --verify means. Demanding the field of
+  # those would deny every push until the plan is re-run, for nothing gained.
+  sha=$(sandbox_diff_sha)
+  write_ledger 1 "$(jq -cn --arg s "$sha" '[{id:"s1",title:"one",check:"true",status:"green",diff_sha:$s}]')" 1
+  payload=$(build_input "git push")
+  run_gate "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}

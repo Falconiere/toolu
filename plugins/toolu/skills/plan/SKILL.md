@@ -20,7 +20,15 @@ A design exists — ideally a reviewed spec (`spec` + `spec-review` ran for larg
 2. **Approach** — the chosen design only, not the alternatives. Name the reused functions/utilities with their paths.
 3. **Steps / workstreams** — ordered, each independently verifiable. For a pattern repeated across many files, describe it once and list a few representative paths — don't enumerate every file.
    - For non-trivial work (features/refactors/behavior changes), emit the plan doc at `docs/toolu/plans/<date>-<slug>.md` with a machine-readable steps block under a heading literally `## Steps (machine-readable)` — a single fenced ` ```json ` array of `{id,title,check}`, where `check` is a runnable command (exit 0 = green). This block is the ledger contract `execution` tracks against.
-     - A step may carry optional fields: `ac_refs` (array of spec `AC-<n>` ids this step satisfies — drives `status` AC-coverage), `depends_on` (array of step ids that should be green first — advisory, not enforced), `input` (freeform note on what feeds the step), and `model` (the tier that should execute it — one of `haiku`, `sonnet`, `opus`, `fable`, `inherit`). They default to `[]`/`[]`/`null`/`null`; legacy `{id,title,check}` steps stay valid.
+     - A step may carry optional fields: `ac_refs` (array of spec `AC-<n>` ids this step satisfies — drives `status` AC-coverage), `depends_on` (array of step ids that should be green first — advisory, not enforced), `paths` (array of pathspecs the step's check actually depends on), `input` (freeform note on what feeds the step), and `model` (the tier that should execute it — one of `haiku`, `sonnet`, `opus`, `fable`, `inherit`). They default to `[]`/`[]`/`[]`/`null`/`null`; legacy `{id,title,check}` steps stay valid.
+     - `paths` is what stops an unrelated edit re-running a step. Without it, freshness keys on the whole branch diff, so a comment-only commit invalidates every step and re-runs the entire plan — test suite included. With it, the step is judged on the hash of just those paths. Declare what the check reads, including its own test file:
+       ```json
+       { "id": "9", "title": "state sweeper + tests",
+         "check": "bats plugins/toolu/hooks/lib/__tests__/state-sweeper.bats",
+         "paths": ["plugins/toolu/hooks/lib/state-sweeper.sh",
+                   "plugins/toolu/hooks/lib/__tests__/state-sweeper.bats"] }
+       ```
+       Under-declaring is the failure mode: a step whose real inputs moved outside its `paths` stays green when it should re-run. That is why `--verify` exists and why the push gate requires it — before a push every step is re-judged against the whole diff, so a narrow declaration can speed up iteration but never reach the gate as a false green.
 4. **Critical files** — exact paths to create or modify.
 5. **Verification** — how to prove it works end-to-end: the commands to run, the tests to add, the real-data path to exercise.
 

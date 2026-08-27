@@ -824,3 +824,284 @@ EOF
   run timeout 25 bash -c "cd '$REPO' && PLAN_LEDGER_STEP_TIMEOUT=0 bash '$SCRIPT' run '$doc'"
   [ "$status" -eq 0 ]
 }
+
+# ── per-step scope (`paths`) ───────────────────────────────────────────────
+#
+# Freshness used to key on the branch-wide diff hash, so ANY change anywhere
+# invalidated every step — a comment-only commit re-ran the whole plan, test
+# suite included. A step that declares `paths` is now judged on just those.
+
+_write_scoped_doc() {
+  local doc="$1" marker="$2"
+  cat > "$doc" <<DOC
+# Scoped Plan
+
+## Steps (machine-readable)
+
+\`\`\`json
+[
+  { "id": "s1", "title": "scoped", "check": "echo x >> '$marker'; true",
+    "paths": ["src/watched.txt"] },
+  { "id": "s2", "title": "unscoped", "check": "true" }
+]
+\`\`\`
+DOC
+}
+
+@test "scope: a change outside a step's paths leaves it fresh-green" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  mkdir -p "$REPO/src"
+  ( cd "$REPO" && echo watched > src/watched.txt && git add src/watched.txt && git commit -qm "feat: watched" )
+  _write_scoped_doc "$doc" "$marker"
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "1" ]
+
+  # Touch something the step does not depend on.
+  ( cd "$REPO" && echo note > UNRELATED.md && git add UNRELATED.md && git commit -qm "docs: unrelated" )
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "1" ]
+  [[ "$output" == *"fresh-green, skipped"* ]]
+}
+
+@test "scope: a change inside a step's paths re-runs it" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  mkdir -p "$REPO/src"
+  ( cd "$REPO" && echo watched > src/watched.txt && git add src/watched.txt && git commit -qm "feat: watched" )
+  _write_scoped_doc "$doc" "$marker"
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  ( cd "$REPO" && echo changed > src/watched.txt && git add src/watched.txt && git commit -qm "feat: change watched" )
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "2" ]
+}
+
+@test "scope: a step without paths still re-runs on any change" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  mkdir -p "$REPO/src"
+  ( cd "$REPO" && echo watched > src/watched.txt && git add src/watched.txt && git commit -qm "feat: watched" )
+  # s2 is unscoped; give it the marker so its re-runs are counted.
+  cat > "$doc" <<DOC
+# Scoped Plan
+
+## Steps (machine-readable)
+
+\`\`\`json
+[
+  { "id": "s1", "title": "scoped", "check": "true", "paths": ["src/watched.txt"] },
+  { "id": "s2", "title": "unscoped", "check": "echo x >> '$marker'; true" }
+]
+\`\`\`
+DOC
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  ( cd "$REPO" && echo note > UNRELATED.md && git add UNRELATED.md && git commit -qm "docs: unrelated" )
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "2" ]
+}
+
+@test "scope: --verify ignores paths and re-runs on any change" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  mkdir -p "$REPO/src"
+  ( cd "$REPO" && echo watched > src/watched.txt && git add src/watched.txt && git commit -qm "feat: watched" )
+  _write_scoped_doc "$doc" "$marker"
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  ( cd "$REPO" && echo note > UNRELATED.md && git add UNRELATED.md && git commit -qm "docs: unrelated" )
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' --verify"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "2" ]
+}
+
+@test "scope: only --verify stamps verified_sha" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  mkdir -p "$REPO/src"
+  ( cd "$REPO" && echo watched > src/watched.txt && git add src/watched.txt && git commit -qm "feat: watched" )
+  _write_scoped_doc "$doc" "$marker"
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(jq -r '.verified_sha // "null"' "$LEDGER")" = "null" ]
+
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' --verify"
+  sha=$(cd "$REPO" && git diff --no-color "main...HEAD" | git hash-object --stdin)
+  [ "$(jq -r '.verified_sha' "$LEDGER")" = "$sha" ]
+}
+
+@test "scope: a red step leaves verified_sha unset even under --verify" {
+  doc="$REPO/plan.md"
+  _write_doc "$doc" "true" "false"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' --verify"
+  [ "$(jq -r '.verified_sha // "null"' "$LEDGER")" = "null" ]
+}
+
+@test "scope: the scope hash is recorded on the step entry" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  mkdir -p "$REPO/src"
+  ( cd "$REPO" && echo watched > src/watched.txt && git add src/watched.txt && git commit -qm "feat: watched" )
+  _write_scoped_doc "$doc" "$marker"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(jq -r '.steps[] | select(.id=="s1") | .scope_sha' "$LEDGER")" != "null" ]
+  [ "$(jq -r '.steps[] | select(.id=="s2") | .scope_sha' "$LEDGER")" = "null" ]
+}
+
+@test "scope: a malformed paths field is rejected at parse time" {
+  doc="$REPO/plan.md"
+  cat > "$doc" <<'DOC'
+# Bad Plan
+
+## Steps (machine-readable)
+
+```json
+[ { "id": "s1", "title": "bad", "check": "true", "paths": "not-an-array" } ]
+```
+DOC
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"invalid step paths"* ]]
+}
+
+@test "scope: editing a step's paths invalidates its green" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  mkdir -p "$REPO/src"
+  ( cd "$REPO" && echo a > src/one.txt && echo b > src/two.txt && git add -A && git commit -qm "feat: two files" )
+
+  cat > "$doc" <<DOC
+# Scoped Plan
+
+## Steps (machine-readable)
+
+\`\`\`json
+[ { "id": "s1", "title": "scoped", "check": "echo x >> '$marker'; true", "paths": ["src/one.txt"] } ]
+\`\`\`
+DOC
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "1" ]
+
+  # Widen the declaration without touching any file. The step now depends on
+  # more than it was proven against, so it must re-run.
+  cat > "$doc" <<DOC
+# Scoped Plan
+
+## Steps (machine-readable)
+
+\`\`\`json
+[ { "id": "s1", "title": "scoped", "check": "echo x >> '$marker'; true", "paths": ["src/one.txt", "src/two.txt"] } ]
+\`\`\`
+DOC
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "2" ]
+}
+
+@test "scope: unchanged paths keep a stable hash across runs" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  mkdir -p "$REPO/src"
+  ( cd "$REPO" && echo a > src/one.txt && git add -A && git commit -qm "feat: one" )
+  cat > "$doc" <<DOC
+# Scoped Plan
+
+## Steps (machine-readable)
+
+\`\`\`json
+[ { "id": "s1", "title": "scoped", "check": "echo x >> '$marker'; true", "paths": ["src/one.txt"] } ]
+\`\`\`
+DOC
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  first=$(jq -r '.steps[] | select(.id=="s1") | .scope_sha' "$LEDGER")
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(jq -r '.steps[] | select(.id=="s1") | .scope_sha' "$LEDGER")" = "$first" ]
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "1" ]
+}
+
+@test "scope: a path with a leading dash is a pathspec, not an option" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  ( cd "$REPO" && printf 'x\n' > -dash.txt && git add -- -dash.txt && git commit -qm "feat: dash" )
+  cat > "$doc" <<DOC
+# Scoped Plan
+
+## Steps (machine-readable)
+
+\`\`\`json
+[ { "id": "s1", "title": "scoped", "check": "echo x >> '$marker'; true", "paths": ["-dash.txt"] } ]
+\`\`\`
+DOC
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.steps[] | select(.id=="s1") | .scope_sha' "$LEDGER")" != "null" ]
+}
+
+@test "scope: a step whose paths match nothing still gets a stable hash" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  cat > "$doc" <<DOC
+# Scoped Plan
+
+## Steps (machine-readable)
+
+\`\`\`json
+[ { "id": "s1", "title": "scoped", "check": "echo x >> '$marker'; true", "paths": ["does/not/exist/**"] } ]
+\`\`\`
+DOC
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$status" -eq 0 ]
+  # An empty diff is a legitimate "nothing here changed" — it must hash
+  # stably rather than being mistaken for a failure.
+  first=$(jq -r '.steps[] | select(.id=="s1") | .scope_sha' "$LEDGER")
+  [ "$first" != "null" ]
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(jq -r '.steps[] | select(.id=="s1") | .scope_sha' "$LEDGER")" = "$first" ]
+  [ "$(wc -l < "$marker" | tr -d ' ')" = "1" ]
+}
+
+@test "verify: verified_sha is stamped only when every step is fresh at the current diff" {
+  doc="$REPO/plan.md"
+  _write_doc "$doc" "true" "true"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' --verify"
+  sha=$(cd "$REPO" && git diff --no-color "main...HEAD" | git hash-object --stdin)
+  [ "$(jq -r '.verified_sha' "$LEDGER")" = "$sha" ]
+
+  # Hand-plant a green step carrying an older diff_sha, the shape a future
+  # change to the skip logic could reintroduce. "All green" would accept it;
+  # "all fresh" must not.
+  jq '.steps[0].diff_sha = "an-older-diff"' "$LEDGER" > "$LEDGER.tmp" && mv "$LEDGER.tmp" "$LEDGER"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' status"
+  [ "$(jq -r '.summary.fresh_green' "$LEDGER")" != "$(jq -r '.summary.total' "$LEDGER")" ]
+}
+
+@test "verify: a prior verified_sha survives a later scoped run" {
+  doc="$REPO/plan.md"
+  _write_doc "$doc" "true" "true"
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' --verify"
+  sha=$(jq -r '.verified_sha' "$LEDGER")
+  [ "$sha" != "null" ]
+  # A plain run must not erase what a verify run established.
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc'"
+  [ "$(jq -r '.verified_sha' "$LEDGER")" = "$sha" ]
+}
+
+@test "scope: a paths declaration that cannot be hashed says so" {
+  doc="$REPO/plan.md"
+  marker="$REPO/ran"
+  # An empty pathspec list after filtering: jq yields no strings, so the step
+  # gets no scope and must fall back loudly rather than look scoped.
+  cat > "$doc" <<DOC
+# Scoped Plan
+
+## Steps (machine-readable)
+
+\`\`\`json
+[ { "id": "s1", "title": "scoped", "check": "echo x >> '$marker'; true", "paths": [] } ]
+\`\`\`
+DOC
+  run bash -c "cd '$REPO' && bash '$SCRIPT' run '$doc' 2>&1"
+  [ "$status" -eq 0 ]
+  # An empty array is "no scope declared", which is the documented default and
+  # must stay silent — only a declared-but-unhashable scope warns.
+  [[ "$output" != *"could not be hashed"* ]]
+}
