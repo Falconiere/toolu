@@ -36,6 +36,20 @@ ps_repo_root() {
 
 ps_now() { date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ; }
 
+# Canonical path including a final symlink (SKILL.md → elsewhere).
+ps_realpath() {
+  local p="$1" out
+  out=$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$p" 2>/dev/null) && {
+    printf '%s' "$out"
+    return 0
+  }
+  out=$(readlink -f "$p" 2>/dev/null) && {
+    printf '%s' "$out"
+    return 0
+  }
+  return 1
+}
+
 ps_now_epoch() { date -u +%s 2>/dev/null || printf '0'; }
 
 # ps_iso_to_epoch ISO — GNU date first, BSD next. Empty on failure.

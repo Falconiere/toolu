@@ -38,11 +38,8 @@ case "$rel" in
   *)  abs="$cwd/$rel" ;;
 esac
 
-# Resolve .. / symlinks before matching so .archive/../name cannot sneak in.
-_dir=$(dirname "$abs")
-_base=$(basename "$abs")
-_dir=$(cd "$_dir" 2>/dev/null && pwd -P) || exit 0
-abs="$_dir/$_base"
+# Resolve .. and the file itself (SKILL.md may be a symlink into .archive/).
+abs=$(ps_realpath "$abs") || exit 0
 
 # Reject archive paths and anything that is not .../.toolu/skills/<name>/SKILL.md
 name=""

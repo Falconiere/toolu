@@ -34,10 +34,11 @@ else
 fi
 [ -n "$_sh" ] || exit 0
 
-_cm_to=""
-if command -v timeout >/dev/null 2>&1; then _cm_to="timeout 30"
-elif command -v gtimeout >/dev/null 2>&1; then _cm_to="gtimeout 30"; fi
-
-{ $_cm_to "$_sh" curate; } </dev/null >/dev/null 2>&1 &
+_cmd=()
+if command -v nohup >/dev/null 2>&1; then _cmd+=(nohup); fi
+if command -v timeout >/dev/null 2>&1; then _cmd+=(timeout 30)
+elif command -v gtimeout >/dev/null 2>&1; then _cmd+=(gtimeout 30); fi
+_cmd+=("$_sh" curate)
+"${_cmd[@]}" </dev/null >/dev/null 2>&1 &
 disown 2>/dev/null || true
 exit 0

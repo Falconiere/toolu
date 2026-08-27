@@ -48,7 +48,7 @@ EOF
   payload=$(jq -n --arg c "$REPO" '{cwd:$c}')
   run bash "$HOOK" <<<"$payload"
   [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.hookSpecificOutput.additionalContext | test("- deploy-staging: ")' >/dev/null
+  echo "$output" | jq -e '.hookSpecificOutput.additionalContext | test("- deploy-staging: Deploy this repo to staging")' >/dev/null
 }
 
 @test "AC-10: skills.comemory=false emits nothing even with skills on disk" {

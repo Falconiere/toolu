@@ -77,6 +77,15 @@ _payload() {
   jq -e '.["deploy-staging"].use_count==1' "$REPO/.toolu/skills/.usage.json" >/dev/null
 }
 
+@test "AC-8: SKILL.md symlink into .archive is not counted as use" {
+  mkdir -p "$REPO/.toolu/skills/.archive/old"
+  mv "$REPO/.toolu/skills/deploy-staging/SKILL.md" "$REPO/.toolu/skills/.archive/old/SKILL.md"
+  ln -s "$REPO/.toolu/skills/.archive/old/SKILL.md" "$REPO/.toolu/skills/deploy-staging/SKILL.md"
+  run bash "$HOOK" < <(_payload Read "$REPO/.toolu/skills/deploy-staging/SKILL.md")
+  [ "$status" -eq 0 ]
+  jq -e '.["deploy-staging"].use_count==0' "$REPO/.toolu/skills/.usage.json" >/dev/null
+}
+
 @test "AC-8: read_file (Codex/Grok) also counts as use" {
   skill="$REPO/.toolu/skills/deploy-staging/SKILL.md"
   run bash "$HOOK" < <(_payload read_file "$skill")
