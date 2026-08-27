@@ -246,3 +246,5 @@ Only use raw `comemory` directly when the wrapper is unavailable AND you can pas
 comemory <subcmd> … --repo <repo-name>
 ```
 Prefer the wrapper.
+
+Procedures (how to do a recurring workflow) are **project skills**, not memories — see `skills/project-skills/SKILL.md` and `skills.sh create`. Keep comemory entries small; put the runbook in `.toolu/skills/`.

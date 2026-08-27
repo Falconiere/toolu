@@ -65,6 +65,13 @@ teardown() { rm -rf "$TMP"; }
   [ -z "$output" ]
 }
 
+@test "register: publishes skills.sh next to comemory.sh" {
+  run bash "$REGISTER" <<<'{}'
+  [ "$status" -eq 0 ]
+  [ -L "$CLAUDE_CONFIG_DIR/comemory/skills.sh" ]
+  [ -L "$CLAUDE_CONFIG_DIR/comemory/comemory.sh" ]
+}
+
 @test "register e2e: synced comemory-scope denies an unscoped call through the core dispatcher when installed" {
   CORE_MOD="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../toolu/hooks/pre-tools" && pwd)/mod.sh"
   bash "$REGISTER" <<<'{}'

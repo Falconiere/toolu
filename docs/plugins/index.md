@@ -9,7 +9,7 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 1 | [**toolu**](../toolu/README.md) | Core | — | Dual-host hook engine + workflow + push-review gate + agent routing |
 | 2 | [**ast-grep**](../ast-grep/README.md) | Code Intel | — | Structural code search & rewrite (tree-sitter AST patterns) |
 | 3 | [**toolu-review**](../toolu-review/README.md) | Workflow | — | Pre-push review mirroring the CI review bot's checklist |
-| 4 | [**comemory**](../comemory/README.md) | Code Intel | `toolu` | Persistent cross-session agent memory + code-index search |
+| 4 | [**comemory**](../comemory/README.md) | Code Intel | `toolu` | Persistent cross-session agent memory + project skills + code-index search |
 | 5 | [**context7**](../context7/README.md) | Knowledge | — | Live library documentation & code-example lookup |
 | 6 | [**exa-search**](../exa-search/README.md) | Knowledge | — | Web / code / URL search plus deep research |
 | 7 | [**git-better**](../git-better/README.md) | Workflow | — | Token-lean `gb` wrapper with repo-convention detection |
@@ -28,7 +28,7 @@ The **toolu core** (`toolu` plugin) is the hub: it provides the hook dispatcher 
 toolu core (hook dispatcher + registry)
   ├── rust-quality  ──→ PostToolUse checks on Rust files
   ├── ts-quality    ──→ PostToolUse checks on TS files
-  ├── comemory      ──→ PreToolUse scope enforcement + SessionStart memory count
+  ├── comemory      ──→ PreToolUse scope enforcement + SessionStart memory count + project-skills index/curator
   ├── ast-grep      ──→ PreToolUse Grep→ast-grep nudge + PostToolUse byte-savings
   └── git-better    ──→ PreToolUse git→gb nudge + PostToolUse byte-savings
 ```

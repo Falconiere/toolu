@@ -6,6 +6,7 @@ ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
   skills=(
     "plugins/agent-browser/skills/agent-browser/SKILL.md"
     "plugins/comemory/skills/agent-memory/SKILL.md"
+    "plugins/comemory/skills/project-skills/SKILL.md"
     "plugins/context7/skills/context7/SKILL.md"
     "plugins/exa-search/skills/exa-search/SKILL.md"
     "plugins/git-better/skills/git-better/SKILL.md"

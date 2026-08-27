@@ -39,6 +39,12 @@
     "comemory": true,
     "ast-grep": true
   },
+  "projectSkills": {
+    "enabled": true,
+    "staleAfterDays": 30,
+    "archiveAfterDays": 90,
+    "indexCap": 20
+  },
   "agents": {
     "research-agent": true
   },

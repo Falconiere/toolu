@@ -95,6 +95,7 @@ run_skills() {
   check_skill execution        plugins/toolu/skills/execution/SKILL.md        60 ""
   check_skill test             plugins/toolu/skills/test/SKILL.md             60 ""
   check_skill agent-memory     plugins/comemory/skills/agent-memory/SKILL.md      30 ""
+  check_skill project-skills   plugins/comemory/skills/project-skills/SKILL.md    60 "project skill;unused skill;.toolu/skills"
   check_skill ast-grep         plugins/ast-grep/skills/ast-grep/SKILL.md          40 ""
 }
 
