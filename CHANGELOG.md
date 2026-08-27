@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.7.0](https://github.com/Falconiere/toolu/compare/v4.6.0...v4.7.0) (2026-08-27)
+
+
+### Features
+
+* **toolu:** gates as configurable modes, relaxed defaults, self-cleaning state ([#153](https://github.com/Falconiere/toolu/issues/153)) ([13015b5](https://github.com/Falconiere/toolu/commit/13015b578b2bc09977f488c9a9c3556bffc264e7))
+* **toolu:** make inline the default and bound every delegation ([#155](https://github.com/Falconiere/toolu/issues/155)) ([1cb438e](https://github.com/Falconiere/toolu/commit/1cb438e37b741b9f9be8be70d2987edead660ba3))
+
 ## [4.6.0](https://github.com/Falconiere/toolu/compare/v4.5.0...v4.6.0) (2026-08-13)
 
 
