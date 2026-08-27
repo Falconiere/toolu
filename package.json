@@ -13,7 +13,8 @@
   "scripts": {
     "lint:shell": "bash tooling/shellcheck.sh",
     "test:shell": "bash tooling/bats-run.sh",
-    "test": "bun run lint:shell && bun run test:shell",
-    "test:shell:serial": "bats -r plugins benchmarks tooling"
+    "test": "bun run lint:shell && bun run test:context-budget && bun run test:shell",
+    "test:shell:serial": "bats -r plugins benchmarks tooling",
+    "test:context-budget": "bash plugins/toolu/scripts/context-budget.sh"
   }
 }
