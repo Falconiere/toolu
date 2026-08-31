@@ -79,6 +79,7 @@ run_docs() {
   check_doc post-compaction    plugins/toolu/hooks/docs/post-compaction.md     28
   check_doc session-start-ts   plugins/toolu/hooks/docs/session-start-ts.md    30
   check_doc session-start-rust plugins/toolu/hooks/docs/session-start-rust.md  36
+  check_doc session-start-python plugins/toolu/hooks/docs/session-start-python.md 36
 }
 
 run_skills() {

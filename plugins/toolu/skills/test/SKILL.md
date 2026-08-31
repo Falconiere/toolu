@@ -1,6 +1,6 @@
 ---
 name: test
-description: Use when writing or organizing tests for any feature or bugfix. Enforces the toolu test layout (TS __tests__/, Rust tests/), real-world data only (NO mocks), and test-first discipline. Native toolu workflow; the final test phase of brainstorm → spec → spec-review → plan → plan-review → execution → execution-review → test.
+description: Use when writing or organizing tests for any feature or bugfix. Enforces the toolu test layout (TS __tests__/, Rust module-sibling tests/, Python colocated test_*.py), real-world data only (NO mocks), and test-first discipline. Native toolu workflow; the final test phase of brainstorm → spec → spec-review → plan → plan-review → execution → execution-review → test.
 ---
 
 # Test
@@ -11,12 +11,13 @@ The final phase of the toolu workflow. Tests are written **with** the code, not 
 
 ## The two non-negotiables
 
-1. **Real-world data only — NO mock-data tests.** Exercise real inputs and real code paths. A test that asserts against fabricated/mocked data proves nothing. Stubbing an external network call or a crashing binary to test failure handling is allowed; mocking the data under test is not. This is mechanically enforced, not just prose: ts-quality's `85-no-mocks.sh` blocks `jest.mock`/`vi.mock`/`jest.fn`/`vi.fn`/`sinon.*`/`ts-mockito` in TS test files, and rust-quality's `70-no-mocks.sh` blocks `#[automock]`/`mock! {...}` in `src/` and `mockall`/`faux` imports in `tests/` — opt-out per-project via `lang.ts.noMocks` / `lang.rust.noMocks` (default `true`).
+1. **Real-world data only — NO mock-data tests.** Exercise real inputs and real code paths. A test that asserts against fabricated/mocked data proves nothing. Stubbing an external network call or a crashing binary to test failure handling is allowed; mocking the data under test is not. This is mechanically enforced, not just prose: ts-quality's `85-no-mocks.sh` blocks `jest.mock`/`vi.mock`/`jest.fn`/`vi.fn`/`sinon.*`/`ts-mockito` in TS test files, rust-quality's `70-no-mocks.sh` blocks `#[automock]`/`mock! {...}` in `src/` and `mockall`/`faux` imports in `tests/`, and python-quality's `70-no-mocks.sh` blocks `unittest.mock`/`pytest-mock`/`MagicMock`/`monkeypatch` in test files — opt-out per-project via `lang.ts.noMocks` / `lang.rust.noMocks` / `lang.python.noMocks` (default `true`).
 2. **Colocate by language convention:**
    - **TS / TSX** → sibling `__tests__/` directory at the same level as the code under test. Keep it flat (only `fixtures/`, `helpers/`, `mocks/`, `utils/` subdirs). Files `*.test.ts` / `*.spec.ts`.
-   - **Rust** → sibling `tests/` directory, kept flat (only `fixtures/`, `helpers/`, `common/` subdirs). No inline `#[cfg(test)]` in `src/`.
+   - **Rust** → module-sibling `tests/` directory for unit tests, wired by a bodyless `#[cfg(test)] mod tests;` declaration; crate-root `tests/` for cargo integration tests. Kept flat (only `fixtures/`, `helpers/`, `common/` subdirs). No inline test bodies in `src/`.
+   - **Python** → colocated `test_<module>.py` beside the module it tests (`conftest.py` allowed anywhere).
 
-The rust-quality / ts-quality gate enforces both placements on every edit — a misplaced test fails the gate.
+The rust-quality / ts-quality / python-quality gates enforce these placements on every edit — a misplaced test fails the gate.
 
 ## Test-first loop
 

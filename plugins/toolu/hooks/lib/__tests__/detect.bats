@@ -79,6 +79,40 @@ source_lib() {
   [ -z "$output" ]
 }
 
+@test "detect_python returns python when pyproject.toml present" {
+  touch pyproject.toml
+  source_lib
+  run detect_python
+  [ "$output" = "python" ]
+}
+
+@test "detect_python returns python when setup.py present" {
+  touch setup.py
+  source_lib
+  run detect_python
+  [ "$output" = "python" ]
+}
+
+@test "detect_python returns python when setup.cfg present" {
+  touch setup.cfg
+  source_lib
+  run detect_python
+  [ "$output" = "python" ]
+}
+
+@test "detect_python returns python when requirements.txt present" {
+  touch requirements.txt
+  source_lib
+  run detect_python
+  [ "$output" = "python" ]
+}
+
+@test "detect_python returns empty when no marker file present" {
+  source_lib
+  run detect_python
+  [ -z "$output" ]
+}
+
 @test "detect_ts returns ts when tsconfig.json present" {
   echo '{}' > tsconfig.json
   git add tsconfig.json
@@ -86,6 +120,34 @@ source_lib() {
   source_lib
   run detect_ts
   [ "$output" = "ts" ]
+}
+
+@test "detect_python_linter: ruff when ruff.toml present" {
+  touch ruff.toml
+  source_lib
+  run detect_python_linter
+  [ "$output" = "ruff" ]
+}
+
+@test "detect_python_linter: ruff when .ruff.toml present" {
+  touch .ruff.toml
+  source_lib
+  run detect_python_linter
+  [ "$output" = "ruff" ]
+}
+
+@test "detect_python_linter: ruff when pyproject.toml has [tool.ruff]" {
+  printf '%s\n' '[tool.ruff]' 'line-length = 100' > pyproject.toml
+  source_lib
+  run detect_python_linter
+  [ "$output" = "ruff" ]
+}
+
+@test "detect_python_linter: empty when no ruff config" {
+  touch pyproject.toml
+  source_lib
+  run detect_python_linter
+  [ -z "$output" ]
 }
 
 @test "detect_ts_linter: biome wins over oxc and eslint" {
@@ -141,6 +203,22 @@ source_lib() {
   source_lib
   run count_code_lines f.rs
   [ "$output" = "2" ]
+}
+
+@test "count_python_code_lines: excludes blanks and full-line # comments; trailing comments and docstrings count as code" {
+  printf '%s\n' \
+    'import os' \
+    '' \
+    '# a full comment' \
+    '   ' \
+    '    # indented comment' \
+    'def foo():' \
+    '    """A docstring line."""' \
+    '    x = 1  # trailing comment counts as code' \
+    '    return x' > f.py
+  source_lib
+  run count_python_code_lines f.py
+  [ "$output" = "5" ]
 }
 
 @test "detect_clippy: clippy token when config present" {

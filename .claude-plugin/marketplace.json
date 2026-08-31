@@ -48,6 +48,18 @@
       ]
     },
     {
+      "name": "python-quality",
+      "source": "./plugins/python-quality",
+      "description": "Python PostToolUse quality checks registered into the toolu hook engine.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["python", "quality", "hooks"],
+      "license": "MIT",
+      "dependencies": [
+        { "name": "toolu", "marketplace": "toolu" }
+      ]
+    },
+    {
       "name": "rust-quality",
       "source": "./plugins/rust-quality",
       "description": "Rust PostToolUse quality checks registered into the toolu hook engine.",

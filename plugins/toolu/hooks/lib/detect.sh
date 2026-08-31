@@ -41,6 +41,16 @@ detect_rust() {
   [ -f "$root/Cargo.toml" ] && echo rust
 }
 
+# Echo "python" if any of pyproject.toml, setup.py, setup.cfg, or
+# requirements.txt exists at the project root.
+detect_python() {
+  local root
+  root=$(detect_project_root)
+  [ -z "$root" ] && return 0
+  { [ -f "$root/pyproject.toml" ] || [ -f "$root/setup.py" ] \
+      || [ -f "$root/setup.cfg" ] || [ -f "$root/requirements.txt" ]; } && echo python
+}
+
 # Echo "ts" if a tsconfig*.json exists anywhere in the project.
 detect_ts() {
   local root
@@ -102,6 +112,18 @@ detect_ts_linter() {
   [ -f "$root/.oxlintrc.json" ]                                             && echo oxc    && return
   { compgen -G "$root/.eslintrc*" >/dev/null 2>&1 \
       || compgen -G "$root/eslint.config.*" >/dev/null 2>&1; }              && echo eslint && return
+}
+
+# Echo the project's Python linter: ruff | "" (presence-only, by config-file
+# or a `[tool.ruff` section in pyproject.toml at the project root). Used to
+# point the agent at the real tool and to suppress our own overlapping nits —
+# we never invoke the tool.
+detect_python_linter() {
+  local root
+  root=$(detect_project_root)
+  [ -z "$root" ] && return 0
+  { [ -f "$root/ruff.toml" ] || [ -f "$root/.ruff.toml" ]; } && echo ruff && return
+  [ -f "$root/pyproject.toml" ] && grep -q '^\[tool\.ruff' "$root/pyproject.toml" 2>/dev/null && echo ruff
 }
 
 # Echo "clippy" if a clippy config exists at the git root.
@@ -641,6 +663,25 @@ count_code_lines() {
     # normally exclude). That is the fail-toward-flagging choice — better to
     # over-count and flag than under-count and let an oversized file pass.
     END { if (inblock) print NR; else print n }
+  ' "$1" 2>/dev/null
+}
+
+# count_python_code_lines FILE  ->  lines of real code (blank lines and
+# full-line `#` comments excluded). Trailing `#` comments on a code line, and
+# docstring lines (they are plain string-literal lines, not `#`-prefixed),
+# COUNT as code — deliberate fail-toward-flagging: distinguishing a real
+# comment from a `#` inside a string, or tracking docstring state, isn't worth
+# it here, and over-counting risks a false positive, not a missed oversized file.
+count_python_code_lines() {
+  awk '
+    {
+      line=$0
+      gsub(/^[ \t]+|[ \t]+$/, "", line)
+      if (length(line) == 0) next
+      if (substr(line, 1, 1) == "#") next
+      n++
+    }
+    END { print n+0 }
   ' "$1" 2>/dev/null
 }
 

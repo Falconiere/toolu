@@ -33,7 +33,8 @@ back to "all enabled".
                "codex": { "<class>": { "model": "<slug>",
                                          "reasoningEffort": "low|medium|high|xhigh|max|ultra" } } },
   "lang":    { "ts":   { "maxFileLines": 300, "maxFnLines": 60, "noMocks": true },
-               "rust": { "maxFileLines": 500, "maxFnLines": 50, "maxImplLines": 200, "noMocks": true } },
+               "rust": { "maxFileLines": 500, "maxFnLines": 50, "maxImplLines": 200, "noMocks": true },
+               "python": { "maxFileLines": 400, "maxFnLines": 50, "noMocks": true } },
   "docsSync": { "mode": "advise|block|off",
                "surfaces": ["README.md", "docs/*.md", "*/SKILL.md", "AGENTS.md", "CLAUDE.md"],
                "surfaceExcludes": ["docs/releases/*"],
@@ -160,10 +161,10 @@ is not the trade you want.
 
 ### Quality thresholds (`lang`)
 
-The rust-quality and ts-quality gates' line limits are not hardcoded. Each threshold resolves
-with this precedence (first hit wins, always a positive integer):
+The rust-quality, ts-quality, and python-quality gates' line limits are not hardcoded. Each
+threshold resolves with this precedence (first hit wins, always a positive integer):
 
-1. **Project / user override** — the `lang.<ts|rust>.<key>` value above.
+1. **Project / user override** — the `lang.<ts|rust|python>.<key>` value above.
 2. **Native linter config** (TS `maxFileLines` only) — the `max-lines` rule from
    the *active* linter's JSON config: `.oxlintrc.json` when oxc is detected,
    `.eslintrc.json` when eslint is (detection precedence is biome > oxc > eslint;
@@ -173,11 +174,15 @@ with this precedence (first hit wins, always a positive integer):
    `["error", {"max": N}]`. Flat config `eslint.config.{js,mjs,ts}` is JavaScript
    and not parsed — it falls through.
 3. **Built-in default** — TS `maxFileLines` 300 / `maxFnLines` 60; Rust
-   `maxFileLines` 500 / `maxFnLines` 50 / `maxImplLines` 200.
+   `maxFileLines` 500 / `maxFnLines` 50 / `maxImplLines` 200; Python
+   `maxFileLines` 400 / `maxFnLines` 50 (no native-linter layer — ruff is
+   detected presence-only for advisory wording, never parsed or invoked).
 
 The file-size limit counts real code only: `count_code_lines`
 (`plugins/toolu/hooks/lib/detect.sh`) excludes blank lines and `//` + `/* */`
-comments. It is a lexical heuristic, not a parser — a `//` inside a string literal
+comments; Python uses `count_python_code_lines` (same file), which excludes
+blank lines and full-line `#` comments — trailing comments and docstrings count
+as code, deliberately failing toward flagging. It is a lexical heuristic, not a parser — a `//` inside a string literal
 (e.g. a `"https://…"` URL) is treated as a line-ending comment, so a file dense in
 such literals can count slightly low. The gate deliberately fails *toward*
 flagging: when the scan ends mid-`/* */` (an unterminated block, or a `/*` inside a
@@ -191,14 +196,18 @@ so configs copy-pasted from sources that quote numbers still work. The gate neve
 invokes biome/oxc/eslint/prettier/clippy/rustfmt; detecting them only tunes
 advisory wording. Resolver: `plugins/toolu/hooks/lib/quality-config.sh`.
 
-### No-mock test gate (`lang.<ts|rust>.noMocks`)
+### No-mock test gate (`lang.<ts|rust|python>.noMocks`)
 
-`lang.ts.noMocks` / `lang.rust.noMocks` (default `true` — blocking) control the
-mechanical no-mock-test concerns: `ts-quality/hooks/concerns/85-no-mocks.sh`
+`lang.ts.noMocks` / `lang.rust.noMocks` / `lang.python.noMocks` (default `true`
+— blocking) control the mechanical no-mock-test concerns:
+`ts-quality/hooks/concerns/85-no-mocks.sh`
 (TS/TSX test files — `jest.mock`/`vi.mock`/`jest.fn`/`vi.fn`/`sinon.*` calls and
-`ts-mockito` imports) and `rust-quality/hooks/concerns/70-no-mocks.sh` (`src/`
+`ts-mockito` imports), `rust-quality/hooks/concerns/70-no-mocks.sh` (`src/`
 mock *definitions* — `#[automock]`, `#[cfg_attr(..., automock)]`, `mock! {...}`
-— and `tests/`/`*_test.rs`/`*_tests.rs` mock *imports* — `mockall::`/`faux::`).
+— and `tests/`/`*_test.rs`/`*_tests.rs` mock *imports* — `mockall::`/`faux::`),
+and `python-quality/hooks/concerns/70-no-mocks.sh` (Python test files —
+`unittest.mock`/`mock`/`pytest_mock` imports, which cover `MagicMock`, and
+`mocker`/`monkeypatch` fixture parameters).
 Both reuse the `ast-grep scan --inline-rules` pattern from
 `60-error-handling.sh`; a real ast-grep failure (non-zero exit or unparseable
 JSON) is reported as a gate error, never a silent pass. Set to `false` to

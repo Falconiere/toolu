@@ -29,6 +29,8 @@ _QC_LIB_DIR="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}}"
 : "${DEFAULT_RUST_MAX_FILE_LINES:=500}"
 : "${DEFAULT_RUST_MAX_FN_LINES:=50}"
 : "${DEFAULT_RUST_MAX_IMPL_LINES:=200}"
+: "${DEFAULT_PYTHON_MAX_FILE_LINES:=400}"
+: "${DEFAULT_PYTHON_MAX_FN_LINES:=50}"
 
 # One jq filter that normalizes every eslint/oxlint `max-lines` encoding to a
 # positive integer (or empty): bare number, ["error", N], ["error", {"max": N}].
@@ -178,3 +180,5 @@ ts_max_fn_lines()     { quality_threshold ts   maxFnLines   "$DEFAULT_TS_MAX_FN_
 rust_max_file_lines() { quality_threshold rust maxFileLines "$DEFAULT_RUST_MAX_FILE_LINES"; }
 rust_max_fn_lines()   { quality_threshold rust maxFnLines   "$DEFAULT_RUST_MAX_FN_LINES"; }
 rust_max_impl_lines() { quality_threshold rust maxImplLines "$DEFAULT_RUST_MAX_IMPL_LINES"; }
+python_max_file_lines() { quality_threshold python maxFileLines "$DEFAULT_PYTHON_MAX_FILE_LINES"; }
+python_max_fn_lines()   { quality_threshold python maxFnLines   "$DEFAULT_PYTHON_MAX_FN_LINES"; }

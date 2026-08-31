@@ -42,6 +42,39 @@ _user_cfg()    { printf '%s' "$1" > "$HOME/.claude/toolu.config.json"; }
   run rust_max_impl_lines; [ "$output" = "200" ]
 }
 
+@test "default when no config: Python 400/50" {
+  load_libs
+  run python_max_file_lines; [ "$output" = "400" ]
+  run python_max_fn_lines;   [ "$output" = "50" ]
+}
+
+@test "python project override wins over default" {
+  _project_cfg '{"lang":{"python":{"maxFileLines":250,"maxFnLines":30}}}'
+  load_libs
+  run python_max_file_lines; [ "$output" = "250" ]
+  run python_max_fn_lines;   [ "$output" = "30" ]
+}
+
+@test "python env-default override changes the built-in default" {
+  export DEFAULT_PYTHON_MAX_FILE_LINES=111
+  load_libs
+  run python_max_file_lines
+  [ "$output" = "111" ]
+}
+
+@test "quality_flag python noMocks: defaults to true when unset" {
+  load_libs
+  run quality_flag python noMocks true
+  [ "$output" = "true" ]
+}
+
+@test "quality_flag python noMocks: false honored from project config" {
+  _project_cfg '{"lang":{"python":{"noMocks":false}}}'
+  load_libs
+  run quality_flag python noMocks true
+  [ "$output" = "false" ]
+}
+
 @test "project override wins over default" {
   _project_cfg '{"lang":{"ts":{"maxFileLines":120}}}'
   load_libs

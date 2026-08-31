@@ -5,9 +5,28 @@ _has_inline_cfg_test=0
 # `#[cfg(not(test))]` (the opposite gate) and `#[cfg(feature = "test-utils")]`
 # (test inside a string). A non-leading `test` predicate (`all(feature, test)`)
 # is the rare miss we accept to keep zero false positives.
+#
+# EXEMPTION: a bare `#[cfg(test)]` that wires a BODYLESS `mod <name>;` decl —
+# single-line (`#[cfg(test)] mod tests;`) or rustfmt's attribute-on-its-own-line
+# two-line form (`#[cfg(test)]` then `mod tests;`) — is a pointer to an external
+# module-sibling tests/ dir, not inline test code, and is not flagged. Only the
+# BARE cfg(test) form earns this: the all()/any() combinator stays blocked
+# unconditionally (even ahead of a bodyless decl), and any body (`mod tests {`,
+# either line form) stays blocked. grep is line-based, so the two-line pairing
+# needs awk (getline the next line); no \b — BSD awk has none, use a negated
+# [[:alnum:]_] class (or line end) for the boundary instead.
 if [[ "$FILE_PATH" == */src/* ]] \
-   && grep -qE '^[[:space:]]*#\[cfg\((test\)|all\(test\b|any\(test\b)' "$FILE_PATH" 2>/dev/null; then
-  add_error "Inline #[cfg(test)] in $FILE_PATH — tests must live in tests/ directory"
+   && awk '
+       /^[[:space:]]*#\[cfg\((all|any)\(test([^[:alnum:]_]|$)/ { found=1; exit }
+       /^[[:space:]]*#\[cfg\(test\)\][[:space:]]*(pub[[:space:]]+)?mod[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*;[[:space:]]*(\/\/.*)?$/ { next }
+       /^[[:space:]]*#\[cfg\(test\)\][[:space:]]*$/ {
+         if ((getline nxt) > 0 && nxt ~ /^[[:space:]]*(pub[[:space:]]+)?mod[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*;[[:space:]]*(\/\/.*)?$/) { next }
+         found=1; exit
+       }
+       /^[[:space:]]*#\[cfg\(test\)\]/ { found=1; exit }
+       END { exit (found ? 0 : 1) }
+     ' "$FILE_PATH" 2>/dev/null; then
+  add_error "Inline #[cfg(test)] in $FILE_PATH — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests"
   _has_inline_cfg_test=1
 fi
 
