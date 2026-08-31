@@ -22,8 +22,8 @@ jobs:
           fetch-depth: 0
       - uses: falconiere/toolu-ghactions/code-review@v7
         with:
-          PROVIDER: deepseek
-          API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          PROVIDER: openrouter
+          API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           # v5 defaults FAIL_ON to "changes", which fails this job whenever the
           # bot requests changes. Pinned to "none" to keep the v3 advisory
           # behaviour; drop this line to adopt the merge gate.
