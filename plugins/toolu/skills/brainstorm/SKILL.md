@@ -17,7 +17,7 @@ Skip it only for genuinely mechanical work where the design is not in question �
 
 ## How to run it
 
-The goal is a written design the rest of the workflow can inherit. Get there however the problem demands; the steps below are the usual path, not a ritual. Do not open the host mapping's user-choice interface — pick the recommended default, state it, and proceed. The user can override.
+The goal is a written design the rest of the workflow can inherit. Get there however the problem demands; the steps below are the usual path, not a ritual. Do not open the host mapping's user-choice interface — pick the recommended default, state it, and proceed. The user can override by speaking up.
 
 1. **Restate the intent in one sentence.** If you can't, you don't understand it yet — that's the first thing to fix. A wrong restatement is cheap to correct now and ruinous to discover after implementation.
 2. **Sweep the design dimensions and pick a default for each.** Walk the full list — intent & success, scope boundary, data & state, interface & UX shape, failure behavior, integration & blast radius, constraints, effort & horizon — and sort each one into *default* (you can settle it; say so) or *N/A*. Never leave a material dimension open waiting for an answer. Bank: `plugins/toolu/skills/brainstorm/references/design-questions.md`.
