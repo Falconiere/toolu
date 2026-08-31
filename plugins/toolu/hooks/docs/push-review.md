@@ -3,12 +3,12 @@
 PreToolUse hook on `Bash(git push)`. Gates pushes on a clean code review recorded in `<target repo root>/.claude/tmp/push-review/<branch-slug>.json`.
 
 **How firmly it gates is a mode**, not a constant — see [gates.md](./gates.md).
-At the shipped default (`balanced`) this hook **asks**: every failed check
-below becomes a prompt carrying the same reason text, and answering yes records
+At the shipped default (`balanced`) this hook **advises**: every failed check
+below is reported to the agent and the push is not stopped.
+`{"gates":{"pushReview":{"mode":"ask"}}}` prompts, and answering yes records
 a waiver for that exact diff so the same code is never queried twice.
-`{"gates":{"pushReview":{"mode":"block"}}}` restores the original hard deny;
-`advise` reports without stopping; `off` silences it. On Codex, where the host
-cannot prompt, `ask` degrades to `advise`.
+`block` restores the original hard deny; `off` silences it. On Codex, where
+the host cannot prompt, `ask` degrades to `advise`.
 
 ## Waivers
 
@@ -36,11 +36,11 @@ Prose is not a command. `echo "no git push rules remain"`, a grep pattern like `
 2. Hook resolves the **target repo root** with `push_target_root`: every `-C <path>` preceding `push` in that command segment, replayed cumulatively the way git itself applies them (a `-C` belonging to another command in a `&&` chain is ignored), else the cwd's `git rev-parse --show-toplevel`, else `$CLAUDE_PROJECT_DIR`, else the cwd. Every git read below runs against that root, not the hook's cwd — a `git -C <worktree> push` is judged on the worktree's own branch, diff, and state file.
 3. Hook computes `git diff <base>...HEAD | git hash-object --stdin` in the target repo, where `<base>` is resolved dynamically via `detect_base_branch <root>` (origin/HEAD, falling back to `main`; `$PUSH_REVIEW_BASE` overrides for tests).
 4. Hook reads `<target repo root>/.claude/tmp/push-review/<branch-slug>.json`. `$STATE_DIR` overrides the directory (tests, and the `toolu-review` state writer honours the same variable).
-5. If the state file is missing, has a stale `diff_sha`, has `findings_count > 0`, or is schema `version: 1` → DENY with instructions.
+5. If the state file is missing, has a stale `diff_sha`, has `findings_count > 0`, or is schema `version: 1` → the check fails and delivery follows the configured mode (advise at the shipped default; `ask` / `block` are opt-in).
 6. Agent runs a reviewer against the diff and applies its findings. The gate is **reviewer-agnostic** — it accepts at least one of: \`caveman:cavecrew-reviewer\`, \`code-review\`, \`toolu-review:review\`, \`code-review:xhigh\`, \`review\`, \`security-review\`. Prefer \`caveman:cavecrew-reviewer\` when the caveman plugin is installed; otherwise use the built-in \`/code-review xhigh --fix\` skill (always available, no plugin required) or the \`toolu-review:review\` skill from the \`toolu-review\` plugin. Running extra reviewers (e.g. `code-simplifier` first) is allowed — the check is membership, not equality.
 7. Re-run the reviewer on the new diff and loop until it returns zero findings.
 8. Agent writes state file atomically (`<file>.tmp` then `mv`) with `findings_count: 0`, the new SHA, and `reviewed_files` set to every path the reviewer actually covered.
-9. Agent retries `git push` → hook allows.
+9. Agent retries `git push` → a clean state file lets the check pass silently.
 
 ## State schema (version 2)
 

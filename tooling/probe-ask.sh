@@ -36,10 +36,12 @@ cat > "$TMP/repo/.claude/settings.local.json" <<'JSON'
 {"permissions":{"allow":["Bash(*)","Edit","Write"]}}
 JSON
 
-# A denylist with one rule, and the default (balanced) gate config.
+# A denylist with one rule, and bashCommands pinned to ask (the shipped
+# default advises; this probe is about whether an ask still survives the
+# blanket allowlist).
 printf 'node -e\n' > "$TMP/settings/bash-denylist.txt"
 : > "$TMP/settings/bash-allowlist.txt"
-printf '%s' '{"version":1}' > "$TMP/repo/.claude/toolu.config.json"
+printf '%s' '{"version":1,"gates":{"bashCommands":{"mode":"ask"}}}' > "$TMP/repo/.claude/toolu.config.json"
 
 payload=$(jq -n '{tool_name:"Bash",tool_input:{command:"node -e \"console.log(1)\""}}')
 

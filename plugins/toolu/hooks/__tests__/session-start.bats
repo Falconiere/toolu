@@ -221,19 +221,41 @@ housekeeping_repo() {
   housekeeping_repo
   run bash "$HOOK" <<<'{"source":"startup"}'
   [ "$status" -eq 0 ]
+  [[ "$output" == *"no longer prompt"* ]]
   [[ "$output" == *"balanced"* ]]
-  [[ "$output" == *"preset"* ]]
-  [ -f "$TMP/home/.claude/toolu/.gate-preset-notice-v5" ]
+  [ -f "$TMP/home/.claude/toolu/.gate-preset-notice-v6" ]
 
   run bash "$HOOK" <<<'{"source":"startup"}'
-  [[ "$output" != *"gates now default"* ]]
+  [[ "$output" != *"no longer prompt"* ]]
 }
 
-@test "session-start: stays quiet about the default when gates are configured" {
+@test "session-start: stays quiet about the default when a preset is pinned" {
   housekeeping_repo
   printf '%s' '{"version":1,"gates":{"preset":"strict"}}' > "$TMP/.claude/toolu.config.json"
   run bash "$HOOK" <<<'{"source":"startup"}'
-  [[ "$output" != *"gates now default"* ]]
+  [[ "$output" != *"no longer prompt"* ]]
+}
+
+@test "session-start: stays quiet about the default when a per-gate mode is pinned" {
+  housekeeping_repo
+  printf '%s' '{"version":1,"gates":{"pushReview":{"mode":"ask"}}}' > "$TMP/.claude/toolu.config.json"
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  [[ "$output" != *"no longer prompt"* ]]
+}
+
+@test "session-start: still announces when gates only set sweep/ttl" {
+  housekeeping_repo
+  printf '%s' '{"version":1,"gates":{"sweep":true,"stateTtlHours":24}}' > "$TMP/.claude/toolu.config.json"
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  [[ "$output" == *"no longer prompt"* ]]
+}
+
+@test "session-start: still announces when gates is a non-object" {
+  housekeeping_repo
+  printf '%s' '{"version":1,"gates":[]}' > "$TMP/.claude/toolu.config.json"
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"no longer prompt"* ]]
 }
 
 @test "session-start: writes the permission allowlist once and says so" {

@@ -14,3 +14,7 @@ Use the host-native interface for the same workflow concept:
 Never name or call a host interface that is unavailable in the active host. A
 missing optional interface is a reason to use the mapped fallback, not to
 fabricate a tool call.
+
+Workflow skills do not open the user-choice row. They pick the recommended
+default, state it, and proceed. Open that interface only when the user asked
+to choose.
