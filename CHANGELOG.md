@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.10.0](https://github.com/Falconiere/toolu/compare/v4.9.0...v4.10.0) (2026-08-31)
+
+
+### Features
+
+* **python-quality:** add Python quality gate plugin + Rust colocated tests ([#165](https://github.com/Falconiere/toolu/issues/165)) ([fcf7d5d](https://github.com/Falconiere/toolu/commit/fcf7d5dab72442e74e602087daed9bde94b9a89b))
+
 ## [4.9.0](https://github.com/Falconiere/toolu/compare/v4.8.0...v4.9.0) (2026-08-31)
 
 
