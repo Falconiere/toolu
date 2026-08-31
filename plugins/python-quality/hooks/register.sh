@@ -5,9 +5,9 @@
 # → finalize) into ONE runtime module in the toolu registry
 # (${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu/post-tools.d/) under the
 # namespaced filename python-quality@toolu__python-quality.sh. The fragments are
-# partials of a single script; concatenating them in numeric order rebuilds the
-# original monolith so one process does one gate write (preserving
-# byte-identical behavior). Prunes any stale entry bearing OUR prefix, and
+# partials of a single script; concatenating them in numeric order yields the
+# one module that runs as a single process doing one gate write (authored
+# fragment-first — unlike rust/ts-quality there was never a pre-split monolith). Prunes any stale entry bearing OUR prefix, and
 # clears our own crashed tmp residue. Other plugins' entries are never touched.
 #
 # Silent on success (SessionStart stdout becomes context); errors are
