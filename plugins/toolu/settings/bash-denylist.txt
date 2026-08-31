@@ -7,12 +7,12 @@
 #   "biome" or "cargo test".
 #
 # Delivery is a MODE, not a constant: `gates.bashCommands.mode` decides whether
-# a match here denies, asks (the shipped default), advises, or is ignored. A
-# rule in this file means "worth a question", not "impossible".
+# a match here denies, asks, advises (the shipped default), or is ignored. A
+# rule in this file means "worth telling the agent about", not "impossible".
+# `ask` is opt-in via `gates.bashCommands.mode`.
 #
 # git and gh are deliberately absent. Every git operation — force pushes and
-# pushes to the base branch included — is the user's call to make at the
-# prompt, not this file's call to make on their behalf.
+# pushes to the base branch included — is not this file's call to make.
 #
 # Security-hardened: argv-aware blocks the JSON matcher cannot reliably reject.
 node -e

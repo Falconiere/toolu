@@ -55,8 +55,12 @@ use_strict_preset() {
 }
 
 # Opt-in prompt path: waivers and ask-mode delivery only fire when asked.
+# Write both host layouts so a Codex override still sees the pin.
 use_ask_mode() {
-  gate_config '{"version":1,"gates":{"pushReview":{"mode":"ask"}}}'
+  local json='{"version":1,"gates":{"pushReview":{"mode":"ask"}}}'
+  gate_config "$json"
+  mkdir -p "$SANDBOX/.codex"
+  printf '%s' "$json" > "$SANDBOX/.codex/toolu.config.json"
 }
 
 teardown_sandbox() {

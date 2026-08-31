@@ -207,7 +207,7 @@ run_hook() {
   gate_config '{"version":1}'
   run_hook 'node -e "console.log(1)"'
   [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // "none"')" = "none" ]
-  [[ "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')" == *"Command blocked by deny rule"* ]]
+  [[ "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')" == *"The command was not stopped"* ]]
 }
 
 @test "bash-commands: ask mode prompts instead of denying" {
@@ -241,9 +241,10 @@ run_hook() {
 
 @test "bash-commands: ask degrades to advise on codex" {
   write_lists "" "node -e"
-  gate_config '{"version":1,"gates":{"bashCommands":{"mode":"ask"}}}'
+  mkdir -p "$TOOLU_PROJECT_DIR/.codex"
+  printf '%s' '{"version":1,"gates":{"bashCommands":{"mode":"ask"}}}' > "$TOOLU_PROJECT_DIR/.codex/toolu.config.json"
   payload=$(jq -n --arg c 'node -e "x"' '{tool_name:"Bash",tool_input:{command:$c}}')
   tool_name=Bash input="$payload" TOOLU_HOST_OVERRIDE=codex run bash "$HOOK" <<<"$payload"
   [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // "none"')" = "none" ]
-  [ -n "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')" ]
+  [[ "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')" == *"The command was not stopped"* ]]
 }

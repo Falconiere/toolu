@@ -163,12 +163,13 @@ project_config() {
 # ── Host degrade (AC-8) ─────────────────────────────────────────────────────
 
 @test "ask degrades to advise on codex" {
+  # qualityGate defaults to block, so a missed .codex load cannot pass as advise.
   export TOOLU_HOST_OVERRIDE=codex
   export TOOLU_PROJECT_DIR="$CLAUDE_PROJECT_DIR"
   mkdir -p "$TOOLU_PROJECT_DIR/.codex"
-  printf '%s' '{"version":1,"gates":{"pushReview":{"mode":"ask"}}}' > "$TOOLU_PROJECT_DIR/.codex/toolu.config.json"
+  printf '%s' '{"version":1,"gates":{"qualityGate":{"mode":"ask"}}}' > "$TOOLU_PROJECT_DIR/.codex/toolu.config.json"
   TOOLU_CFG_LOADED=0
-  run toolu_gate_mode pushReview
+  run toolu_gate_mode qualityGate
   [ "$output" = "advise" ]
 }
 

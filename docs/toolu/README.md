@@ -109,7 +109,7 @@ The core dispatcher runs `PreToolUse`, `PostToolUse`, and `SessionStart` hooks. 
 Advises on `git push` on a feature branch until the diff has been run through an accepted reviewer (`block` / `ask` are opt-in):
 
 ```text
-# Push is denied unless:
+# The check fails (and advises, by default) unless:
 #  - caveman:cavecrew-reviewer reviewed the diff (preferred when installed)
 #  - toolu-review:review skill reviewed the diff (CI-bot mirror)
 #  - /code-review xhigh --fix ran and recorded clean state

@@ -785,7 +785,7 @@ promote_waiver() {
   tool_name="Bash" input="$payload" PUSH_REVIEW_BASE=development \
     TOOLU_HOST_OVERRIDE=codex run bash "$HOOK_SCRIPT" <<<"$payload"
   [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // "none"')" = "none" ]
-  [ -n "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')" ]
+  [[ "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')" == *"Code review required"* ]]
 }
 
 @test "push-review: an empty diff advises under the default preset" {

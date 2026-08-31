@@ -212,8 +212,17 @@ _perm_summary=$(toolu_permissions_autowrite "$PROJECT_ROOT" 2>/dev/null || true)
 # anyone who has not already made a choice about it.
 _gate_notice_dir="$_config_root/toolu"
 _gate_notice="$_gate_notice_dir/.gate-preset-notice-v6"
+# Skip only when the user already pinned delivery (a preset, or a per-gate
+# mode). A sweep/TTL-only `gates` object is not a delivery choice — those
+# users still need to hear that balanced no longer prompts.
+_gate_delivery_pinned=$(jq -r '
+  if (.gates.preset? != null) then "yes"
+  elif ([.gates // {} | to_entries[] | select((.value | type) == "object" and (.value | has("mode")))] | length) > 0 then "yes"
+  else "no"
+  end
+' <<< "$TOOLU_CFG_JSON" 2>/dev/null || echo "no")
 if [ ! -f "$_gate_notice" ] && [ "$_TOOLU_HAS_JQ" = "1" ] \
-   && [ "$(jq -r 'has("gates")' <<< "$TOOLU_CFG_JSON" 2>/dev/null)" = "false" ]; then
+   && [ "$_gate_delivery_pinned" != "yes" ]; then
   parts+=("toolu gates no longer prompt: the \`balanced\` preset advises on push-review and denylist hits, and the quality gate still blocks only \`git commit\`/\`git push\`. Pin a prompt with \`gates.<name>.mode: ask\`, or the old hard denies with \`{\"gates\":{\"preset\":\"strict\"}}\`.")
   mkdir -p "$_gate_notice_dir" 2>/dev/null && : > "$_gate_notice" 2>/dev/null
 fi
