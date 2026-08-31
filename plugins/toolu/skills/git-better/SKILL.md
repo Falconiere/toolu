@@ -9,13 +9,7 @@ Raw git burns context two ways: bloated read output (`git diff` dumps every hunk
 
 ## Resolving `gb`
 
-This skill ships its own wrapper — no separate plugin, no PATH shim, no SessionStart install step. Resolve the script from wherever this skill is currently loaded from and alias it to `gb` for the rest of the session:
-
-```
-gb() { bash "<this-skill's-directory>/scripts/git-better.sh" "$@"; }
-```
-
-`<this-skill's-directory>` is the base directory reported when this skill loads (the installed skill's own path, e.g. under the plugin cache) — or, when working directly in a checkout of this repo, `plugins/toolu/skills/git-better`. Resolve it once per session and reuse the alias; don't re-derive it on every call.
+This skill ships its own wrapper — no separate plugin, no PATH shim, no SessionStart install step. When this skill loads, the harness reports its base directory (a line like "Base directory for this skill: /root/.claude/plugins/cache/toolu/toolu/<version>/skills/git-better"). Take that reported path, append `/scripts/git-better.sh`, and use it for every `gb <subcommand>` below — e.g. `bash "<reported base directory>/scripts/git-better.sh" status`. Resolve it once per session, not on every call. Working directly in a checkout of this repo instead (no skill load — e.g. running the bats suite): the script is at `plugins/toolu/skills/git-better/scripts/git-better.sh`.
 
 ## Pillar 1 — lean reads
 
