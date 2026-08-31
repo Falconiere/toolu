@@ -1,6 +1,6 @@
 {
   "name": "ts-quality",
-  "version": "4.9.0",
+  "version": "4.10.0",
   "description": "TypeScript PostToolUse quality checks registered into the toolu hook engine.",
   "hooks": "./hooks/hooks.json"
 }

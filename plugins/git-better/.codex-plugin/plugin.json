@@ -1,6 +1,6 @@
 {
   "name": "git-better",
-  "version": "4.9.0",
+  "version": "4.10.0",
   "description": "Token-lean git: a `gb` wrapper with lean defaults plus a cached repo-convention profile, surfaced via PreToolUse nudges registered into the toolu hook engine.",
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json"
