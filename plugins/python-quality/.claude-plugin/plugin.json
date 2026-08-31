@@ -1,6 +1,6 @@
 {
   "name": "python-quality",
-  "version": "4.8.0",
+  "version": "4.9.0",
   "description": "Python PostToolUse quality checks registered into the toolu hook engine.",
   "author": {
     "name": "Falconiere Barbosa",
