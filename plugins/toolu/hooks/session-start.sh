@@ -205,15 +205,16 @@ toolu_sweep_state "$PROJECT_ROOT"
 _perm_summary=$(toolu_permissions_autowrite "$PROJECT_ROOT" 2>/dev/null || true)
 [ -n "$_perm_summary" ] && parts+=("$_perm_summary")
 
-# ── One-time notice: gates now ship relaxed ─────────────────────────────────
-# Existing users had every gate blocking. The default is now the `balanced`
-# preset, and a behavior change nobody was told about reads as a bug — so say
-# it once per machine, to anyone who has not already made a choice about it.
+# ── One-time notice: gates no longer prompt ─────────────────────────────────
+# Existing users had push-review and the denylist asking. The default is now
+# advise (quality gate still blocks commit/push), and a behavior change
+# nobody was told about reads as a bug — so say it once per machine, to
+# anyone who has not already made a choice about it.
 _gate_notice_dir="$_config_root/toolu"
-_gate_notice="$_gate_notice_dir/.gate-preset-notice-v5"
+_gate_notice="$_gate_notice_dir/.gate-preset-notice-v6"
 if [ ! -f "$_gate_notice" ] && [ "$_TOOLU_HAS_JQ" = "1" ] \
    && [ "$(jq -r 'has("gates")' <<< "$TOOLU_CFG_JSON" 2>/dev/null)" = "false" ]; then
-  parts+=("toolu gates now default to the \`balanced\` preset: push-review ASKS instead of blocking (a yes is remembered for that diff), the quality gate blocks only \`git commit\`/\`git push\`, and commit-gate / docs-sync / plan-ledger advise. Pin the old behavior with \`{\"gates\":{\"preset\":\"strict\"}}\` in toolu.config.json, or tune one gate at a time with \`gates.<name>.mode\`.")
+  parts+=("toolu gates no longer prompt: the \`balanced\` preset advises on push-review and denylist hits, and the quality gate still blocks only \`git commit\`/\`git push\`. Pin a prompt with \`gates.<name>.mode: ask\`, or the old hard denies with \`{\"gates\":{\"preset\":\"strict\"}}\`.")
   mkdir -p "$_gate_notice_dir" 2>/dev/null && : > "$_gate_notice" 2>/dev/null
 fi
 

@@ -2,9 +2,10 @@
 # Pre-tool check: gate `git push` on a recorded code review.
 #
 # How firmly it gates is a mode, not a constant — see lib/gate-mode.sh. At the
-# shipped default (balanced) this ASKS, and a "yes" is remembered as a waiver
-# for that exact diff (lib/push-waiver.sh), so the same code is never queried
-# twice. `gates.pushReview.mode: block` restores the original hard deny.
+# shipped default (balanced) this ADVISES: the agent is told, the push is not
+# stopped. `gates.pushReview.mode: ask` prompts and remembers a yes as a
+# waiver for that exact diff (lib/push-waiver.sh). `block` restores the
+# original hard deny.
 # Project-agnostic: base branch is detected via detect_base_branch
 # (or env-overridden with $PUSH_REVIEW_BASE for tests).
 #

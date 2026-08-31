@@ -3,7 +3,7 @@
   "gates": {
     "preset": "balanced",
     "pushReview": {
-      "mode": "ask"
+      "mode": "advise"
     },
     "qualityGate": {
       "mode": "block"
@@ -12,7 +12,7 @@
       "mode": "advise"
     },
     "bashCommands": {
-      "mode": "ask"
+      "mode": "advise"
     },
     "planLedger": {
       "mode": "advise"

@@ -21,11 +21,11 @@ setup() {
   printf '%s' "$desc" | grep -q 'deep-explore'
 }
 
-@test "AC-2: approval gate blocks research behind the host-native user-input interface" {
-  grep -q "active host's structured user-input interface" "$SKILLS/deep-research/SKILL.md"
+@test "AC-2: targeting states the questions and runs without an approval gate" {
   grep -q 'host-mapping.md' "$SKILLS/deep-research/SKILL.md"
-  tr '\n' ' ' < "$SKILLS/deep-research/SKILL.md" |
-    grep -qi 'no research runs[[:space:]]*before approval'
+  grep -q 'Do not wait for approval' "$SKILLS/deep-research/SKILL.md"
+  grep -q 'Do not open the host mapping' "$SKILLS/deep-research/SKILL.md"
+  ! grep -qi 'no research runs before approval' "$SKILLS/deep-research/SKILL.md"
 }
 
 @test "AC-3: fan-out uses research-agent workers with both engines and the routing rubric" {

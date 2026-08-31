@@ -3,12 +3,12 @@
 PreToolUse hook on `Bash(git push)`. Gates pushes on a clean code review recorded in `<target repo root>/.claude/tmp/push-review/<branch-slug>.json`.
 
 **How firmly it gates is a mode**, not a constant — see [gates.md](./gates.md).
-At the shipped default (`balanced`) this hook **asks**: every failed check
-below becomes a prompt carrying the same reason text, and answering yes records
+At the shipped default (`balanced`) this hook **advises**: every failed check
+below is reported to the agent and the push is not stopped.
+`{"gates":{"pushReview":{"mode":"ask"}}}` prompts, and answering yes records
 a waiver for that exact diff so the same code is never queried twice.
-`{"gates":{"pushReview":{"mode":"block"}}}` restores the original hard deny;
-`advise` reports without stopping; `off` silences it. On Codex, where the host
-cannot prompt, `ask` degrades to `advise`.
+`block` restores the original hard deny; `off` silences it. On Codex, where
+the host cannot prompt, `ask` degrades to `advise`.
 
 ## Waivers
 

@@ -28,7 +28,7 @@ flowchart LR
 
 | Phase | Skill | What It Does |
 |-------|-------|-------------|
-| **brainstorm** | `brainstorm` | Sweep the design dimensions, then ask in rounds with concrete options until nothing material is open. Decide the shape before any code. |
+| **brainstorm** | `brainstorm` | Sweep the design dimensions, pick a default for each, and proceed. Decide the shape before any code. |
 | **spec** | `spec` | Write a design contract to `docs/toolu/specs/<date>-<slug>-design.md`. |
 | **spec-review** | `spec-review` | Adversarial audit of the spec — gaps, ambiguities, untestable acceptance criteria. |
 | **plan** | `plan` | Turn the reviewed spec into concrete, verifiable steps with a machine-readable ledger. |
@@ -86,10 +86,10 @@ The arithmetic, and the cases where delegation loses, are in [`references/delega
 
 ### 3. Deep-Research Skill
 
-The `deep-research` skill is a standalone knowledge workflow: it brainstorms guiding questions with the user, gates on approval, then fans out `research-agent` workers (exa-search + context7) before verifying and writing a cited report.
+The `deep-research` skill is a standalone knowledge workflow: it picks guiding questions, then fans out `research-agent` workers (exa-search + context7) before verifying and writing a cited report.
 
 ```text
-"deep research on X" → brainstorms guiding questions, gate, fan-out
+"deep research on X" → picks guiding questions, fan-out
                         research-agent workers, verification wave,
                         cited report under docs/research/
 ```
@@ -106,7 +106,7 @@ The core dispatcher runs `PreToolUse`, `PostToolUse`, and `SessionStart` hooks. 
 
 ### 5. Push-Review Gate
 
-Blocks `git push` on a feature branch until the diff has been run through an accepted reviewer:
+Advises on `git push` on a feature branch until the diff has been run through an accepted reviewer (`block` / `ask` are opt-in):
 
 ```text
 # Push is denied unless:

@@ -221,9 +221,9 @@ housekeeping_repo() {
   housekeeping_repo
   run bash "$HOOK" <<<'{"source":"startup"}'
   [ "$status" -eq 0 ]
+  [[ "$output" == *"no longer prompt"* ]]
   [[ "$output" == *"balanced"* ]]
-  [[ "$output" == *"preset"* ]]
-  [ -f "$TMP/home/.claude/toolu/.gate-preset-notice-v5" ]
+  [ -f "$TMP/home/.claude/toolu/.gate-preset-notice-v6" ]
 
   run bash "$HOOK" <<<'{"source":"startup"}'
   [[ "$output" != *"gates now default"* ]]

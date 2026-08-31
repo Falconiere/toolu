@@ -77,10 +77,10 @@ gate still speaks rather than silently doing nothing.
 
 | Gate | `strict` | **`balanced`** | `relaxed` |
 |------|----------|----------------|-----------|
-| `pushReview` | block | **ask** | advise |
+| `pushReview` | block | **advise** | advise |
 | `qualityGate` | block | **block** | advise |
-| `commitGate` | block | **advise** | advise |
-| `bashCommands` | block | **ask** | ask |
+| `commitGate` | block | **advise** | off |
+| `bashCommands` | block | **advise** | advise |
 | `planLedger` | block | **advise** | off |
 | `docsSync` | block | **advise** | off |
 | `agentTier` | block | **advise** | off |
@@ -96,8 +96,9 @@ Two consequences worth stating plainly:
 
 - **`gates.bashCommands: "off"` is a security decision, not a convenience
   one.** It disables the whole `settings/bash-denylist.txt` check, including
-  the `node -e` / `bun -e` arbitrary-code-execution rules. `ask` (the default)
-  keeps the question; `off` removes it.
+  the `node -e` / `bun -e` arbitrary-code-execution rules. `advise` (the
+  default) tells the agent the rule fired; `off` removes it; `ask` is opt-in
+  if you want a prompt.
 - **`permissions.deny` in Claude Code settings overrides a hook's `ask`.** A
   command denied there is denied outright and toolu never gets to prompt.
   `permissions.allow` does *not* have that power — an allowlisted command still
@@ -112,7 +113,7 @@ gate is red. `MY_CLAUDE_QUALITY=off` remains a full kill switch.
 
 #### Push waivers
 
-With `pushReview` in `ask` mode, a "yes" is remembered for that exact diff:
+`pushReview` in `ask` mode (opt-in) remembers a "yes" for that exact diff:
 the gate writes a pending marker, `post-tools/modules/push-waiver.sh` promotes
 it once the push actually succeeds, and the next push of the same code is
 silent. A new commit changes the diff SHA and the gate asks again. A refused

@@ -202,9 +202,17 @@ run_hook() {
 
 # ── Delivery modes ──────────────────────────────────────────────────────────
 
-@test "bash-commands: the shipped default asks instead of denying" {
+@test "bash-commands: the shipped default advises instead of denying" {
   write_lists "" "node -e"
   gate_config '{"version":1}'
+  run_hook 'node -e "console.log(1)"'
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // "none"')" = "none" ]
+  [[ "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')" == *"Command blocked by deny rule"* ]]
+}
+
+@test "bash-commands: ask mode prompts instead of denying" {
+  write_lists "" "node -e"
+  gate_config '{"version":1,"gates":{"bashCommands":{"mode":"ask"}}}'
   run_hook 'node -e "console.log(1)"'
   [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "ask" ]
   [[ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')" == *"Run it anyway?"* ]]
@@ -233,7 +241,7 @@ run_hook() {
 
 @test "bash-commands: ask degrades to advise on codex" {
   write_lists "" "node -e"
-  gate_config '{"version":1}'
+  gate_config '{"version":1,"gates":{"bashCommands":{"mode":"ask"}}}'
   payload=$(jq -n --arg c 'node -e "x"' '{tool_name:"Bash",tool_input:{command:$c}}')
   tool_name=Bash input="$payload" TOOLU_HOST_OVERRIDE=codex run bash "$HOOK" <<<"$payload"
   [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // "none"')" = "none" ]

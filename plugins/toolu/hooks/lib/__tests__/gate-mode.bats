@@ -28,10 +28,10 @@ project_config() {
 
 # ── Defaults (AC-1) ─────────────────────────────────────────────────────────
 
-@test "no config: pushReview is ask" {
+@test "no config: pushReview is advise" {
   run toolu_gate_mode pushReview
   [ "$status" -eq 0 ]
-  [ "$output" = "ask" ]
+  [ "$output" = "advise" ]
 }
 
 @test "resolving a known gate writes nothing to stderr" {
@@ -39,7 +39,7 @@ project_config() {
   # stray warning riding along with a correct value. Assert the clean path is
   # actually silent.
   mode=$(toolu_gate_mode pushReview 2>"$TMP/warn")
-  [ "$mode" = "ask" ]
+  [ "$mode" = "advise" ]
   [ ! -s "$TMP/warn" ]
 }
 
@@ -53,9 +53,9 @@ project_config() {
   [ "$output" = "advise" ]
 }
 
-@test "no config: bashCommands is ask" {
+@test "no config: bashCommands is advise" {
   run toolu_gate_mode bashCommands
-  [ "$output" = "ask" ]
+  [ "$output" = "advise" ]
 }
 
 @test "no config: preset resolves to balanced" {
@@ -73,12 +73,16 @@ project_config() {
   done
 }
 
-@test "relaxed preset advises the push and quality gates and turns the rest off" {
+@test "relaxed preset advises the push, quality, and bash gates and turns the rest off" {
   project_config '{"version":1,"gates":{"preset":"relaxed"}}'
   run toolu_gate_mode pushReview
   [ "$output" = "advise" ]
   run toolu_gate_mode qualityGate
   [ "$output" = "advise" ]
+  run toolu_gate_mode bashCommands
+  [ "$output" = "advise" ]
+  run toolu_gate_mode commitGate
+  [ "$output" = "off" ]
   run toolu_gate_mode planLedger
   [ "$output" = "off" ]
   run toolu_gate_mode docsSync
@@ -125,7 +129,7 @@ project_config() {
 @test "a legacy key on a gate that never had one is ignored" {
   project_config '{"version":1,"pushReview":{"mode":"off"}}'
   run toolu_gate_mode pushReview
-  [ "$output" = "ask" ]
+  [ "$output" = "advise" ]
 }
 
 # ── Bad values (AC-4) ───────────────────────────────────────────────────────
@@ -142,7 +146,7 @@ project_config() {
 @test "unknown preset warns and falls back to balanced" {
   project_config '{"version":1,"gates":{"preset":"yolo"}}'
   mode=$(toolu_gate_mode pushReview 2>"$TMP/warn")
-  [ "$mode" = "ask" ]
+  [ "$mode" = "advise" ]
   grep -q "not an allowed value" "$TMP/warn"
 }
 
@@ -160,6 +164,10 @@ project_config() {
 
 @test "ask degrades to advise on codex" {
   export TOOLU_HOST_OVERRIDE=codex
+  export TOOLU_PROJECT_DIR="$CLAUDE_PROJECT_DIR"
+  mkdir -p "$TOOLU_PROJECT_DIR/.codex"
+  printf '%s' '{"version":1,"gates":{"pushReview":{"mode":"ask"}}}' > "$TOOLU_PROJECT_DIR/.codex/toolu.config.json"
+  TOOLU_CFG_LOADED=0
   run toolu_gate_mode pushReview
   [ "$output" = "advise" ]
 }

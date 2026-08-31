@@ -1,36 +1,30 @@
 # Design question bank
 
 Referenced by `brainstorm`. The dimension sweep in `SKILL.md` names the axes; this
-file says what a good question on each axis looks like, and how to turn one into
-options worth choosing between.
+file says what a good default on each axis looks like. Pick one, state it, proceed.
+Do not open the host mapping's user-choice interface.
 
-## How to ask
+## How to pick a default
 
-Use the active host's structured user-input interface from
-`workflows/host-mapping.md` when available; otherwise ask one concise optioned
-question in chat. Options get a decision. Rules that make the difference:
+For each material dimension, name two or three real options internally, take the
+recommended one, and say so out loud. Rules that make the difference:
 
 - **Options are the design, not the survey.** Each option is a concrete commitment
-  the user could act on — "SQLite table, one row per run" beats "some persistence".
-- **Span the range.** Three options that differ by 5% waste the ask. Reach for the
+  you could act on — "SQLite table, one row per run" beats "some persistence".
+- **Span the range.** Three options that differ by 5% are not a choice. Reach for the
   minimal one, the conventional one, and the ambitious one, then cut whatever is
   genuinely dead.
-- **Mutually exclusive**, unless you set `multiSelect: true`. If two options can
-  both be true, they are one question about scope, not two rival designs.
-- **Lead with your recommendation** as the first option, suffixed `(Recommended)`,
-  and say in its `description` why you'd go that way. A menu with no opinion pushes
-  the work back onto the user.
-- **`description` carries the cost.** Not a restatement of the label — the thing the
-  user can't see: what it forecloses, what it costs, what breaks later.
-- **Use `preview` when the choice is a shape** — a file layout, a schema, a CLI
-  surface, an interface signature, a rendered UI block. Seeing two ASCII sketches
-  side by side settles arguments that two sentences cannot. Single-select only.
-- **Four questions per call, max.** Batch a round; never trickle.
+- **Mutually exclusive.** If two options can both be true, they are one question
+  about scope, not two rival designs.
+- **Lead with your recommendation** and say why. A menu with no pick pushes the
+  work back onto the user.
+- **State the cost.** Not a restatement of the label — the thing that is easy to
+  miss: what it forecloses, what it costs, what breaks later.
 
 ## The dimensions
 
-Sweep all of these. Most rounds ask about three or four of them — the rest either
-have an obvious default (state it, don't ask) or don't apply (skip silently).
+Sweep all of these. Pick a default for every axis that would change the design;
+skip the ones that don't apply.
 
 ### Intent & success
 What does this actually accomplish, and how do we know it worked?
@@ -80,42 +74,31 @@ How much of the good idea do we actually buy today?
 - Is this a throwaway prototype, or code that will be maintained for years?
 - What are you willing to leave as a TODO with a comment?
 
-## Turning an answer into the next question
+## Follow-through on a default
 
-A round of answers usually opens a fork the first round couldn't see. That's not
-scope creep, it's convergence — ask the follow-up. Common chains:
+Picking a default often opens a fork the first pass couldn't see. Settle that
+fork the same way — pick, state, proceed. Common chains:
 
 - "persist it" → *where*, and *does it migrate?*
 - "reuse the existing mechanism" → *what happens to its current callers?*
 - "fail loud" → *loud to whom — logs, exit code, or a user-facing error?*
 - "just the first slice" → *what is the seam, so slice two isn't a rewrite?*
 
-Stop when a round produces no answer that would change the design. That's the
-convergence test, and it's the only reason to stop — not question count, and not
-the sense that you've asked enough.
+Stop when no remaining fork would change the design.
 
 ## Worked example
 
 Request: *"add caching to the API client."*
 
-**Round 1** — four questions, options each:
+Sweep, pick, state:
 
-| Question | Options |
-| --- | --- |
-| What are we optimizing? | Latency on repeat reads *(Recommended — the usual reason)* / Rate-limit headroom / Offline capability |
-| Cache lifetime? | Process memory, dies on restart *(Recommended — no invalidation bugs)* / On-disk, survives restarts / Shared across processes (Redis) |
-| Staleness tolerance? | Seconds — TTL 30s / Minutes — TTL 5m *(Recommended)* / Must always be fresh, validate with ETag |
-| On a cache write failure? | Ignore, serve from origin *(Recommended — cache is an optimization)* / Fail the request / Log and disable the cache for the session |
+| Dimension | Pick | Why |
+| --- | --- | --- |
+| Intent | Latency on repeat reads | The usual reason to cache an API client |
+| Lifetime | Process memory, dies on restart | Avoids invalidation bugs; enough for the stated goal |
+| Staleness | TTL 5m | Seconds is noisy; "always fresh" is not a cache |
+| Write failure | Ignore, serve from origin | Cache is an optimization, not a dependency |
+| Location / eviction | N/A | In-memory, so no disk path or LRU to choose |
 
-Answers: latency, on-disk, ETag validation, ignore failures.
-
-**Round 2** — "on-disk + ETag" opened a fork round 1 couldn't see:
-
-| Question | Options |
-| --- | --- |
-| Where does the disk cache live? | `$XDG_CACHE_HOME/<app>` *(Recommended — respects the platform)* / Alongside the config / Configurable, defaulting to XDG |
-| Eviction? | Size-capped LRU, 100 MB *(Recommended)* / TTL-only, never evict early / Manual `cache clear` only |
-
-Round 3 would produce nothing that changes the design — so it doesn't run. Now the
-approach options (step 5) are worth writing, because they're arguing about a design
-whose constraints are actually pinned down.
+Approach options are now worth writing, because they're arguing about a design
+whose constraints are actually pinned down. Take the recommended one and proceed.

@@ -54,6 +54,11 @@ use_strict_preset() {
   gate_config '{"version":1,"gates":{"preset":"strict"}}'
 }
 
+# Opt-in prompt path: waivers and ask-mode delivery only fire when asked.
+use_ask_mode() {
+  gate_config '{"version":1,"gates":{"pushReview":{"mode":"ask"}}}'
+}
+
 teardown_sandbox() {
   [[ -n "${SANDBOX:-}" && -d "$SANDBOX" ]] && rm -rf "$SANDBOX"
 }

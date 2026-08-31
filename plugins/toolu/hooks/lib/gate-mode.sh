@@ -55,18 +55,14 @@ _toolu_gate_preset_mode() {
       ;;
     balanced)
       case "$name" in
-        pushReview)   printf 'ask' ;;
         qualityGate)  printf 'block' ;;
-        bashCommands) printf 'ask' ;;
         *)            printf 'advise' ;;
       esac
       ;;
     relaxed)
       case "$name" in
-        pushReview)   printf 'advise' ;;
-        qualityGate)  printf 'advise' ;;
-        bashCommands) printf 'ask' ;;
-        *)            printf 'off' ;;
+        pushReview|qualityGate|bashCommands) printf 'advise' ;;
+        *)                                   printf 'off' ;;
       esac
       ;;
     *)

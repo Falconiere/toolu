@@ -14,7 +14,8 @@ mode you configure.
 | `off` | nothing | the gate is silent |
 
 `ask` needs a host that can prompt. Codex cannot, so `ask` degrades to `advise`
-there — the gate still speaks, it just cannot hold the door.
+there — the gate still speaks, it just cannot hold the door. No preset
+prompts: `ask` is opt-in via `gates.<name>.mode`.
 
 ## Presets
 
@@ -22,10 +23,10 @@ there — the gate still speaks, it just cannot hold the door.
 
 | Gate | `strict` | **`balanced`** (default) | `relaxed` |
 |------|----------|--------------------------|-----------|
-| `pushReview` | block | **ask** | advise |
+| `pushReview` | block | **advise** | advise |
 | `qualityGate` | block | **block** | advise |
-| `commitGate` | block | **advise** | advise |
-| `bashCommands` | block | **ask** | ask |
+| `commitGate` | block | **advise** | off |
+| `bashCommands` | block | **advise** | advise |
 | `planLedger` | block | **advise** | off |
 | `docsSync` | block | **advise** | off |
 | `agentTier` | block | **advise** | off |
@@ -51,7 +52,7 @@ typo mis-delivers nothing.
 
 ## The push waiver
 
-With `pushReview` in `ask` mode, answering "yes" is remembered:
+`pushReview` in `ask` mode (opt-in) remembers a "yes":
 
 1. The gate asks, and records a **pending** waiver naming the diff SHA it asked
    about (`.claude/tmp/push-review/<branch>.pending-waiver.json`).
