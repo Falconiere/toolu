@@ -7,15 +7,15 @@ description: "ALWAYS ACTIVE — Token-lean git. Use `gb` (status/diff/log/show) 
 
 Raw git burns context two ways: bloated read output (`git diff` dumps every hunk incl. lockfiles + color codes) and re-discovering repo conventions (PR template, commit/branch style) on every commit. `gb` fixes both. **Always active.**
 
-`gb` is installed as a shim at one host-native path (SessionStart):
+## Resolving `gb`
 
-- Codex: `TOOLU_HOST_OVERRIDE=codex ${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/toolu/bin/gb`
-- Claude Code: `TOOLU_HOST_OVERRIDE=claude ${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu/bin/gb`
+This skill ships its own wrapper — no separate plugin, no PATH shim, no SessionStart install step. Resolve the script from wherever this skill is currently loaded from and alias it to `gb` for the rest of the session:
 
-Choose the active host explicitly; ordinary shell calls do not inherit plugin
-lifecycle variables. The published `gb` shim also preserves that identity for
-commands invoked from `$PATH`. If `gb` is not on `$PATH`, call the complete
-host-specific command above, or use the raw-git fallbacks below.
+```
+gb() { bash "<this-skill's-directory>/scripts/git-better.sh" "$@"; }
+```
+
+`<this-skill's-directory>` is the base directory reported when this skill loads (the installed skill's own path, e.g. under the plugin cache) — or, when working directly in a checkout of this repo, `plugins/toolu/skills/git-better`. Resolve it once per session and reuse the alias; don't re-derive it on every call.
 
 ## Pillar 1 — lean reads
 
@@ -29,7 +29,7 @@ host-specific command above, or use the raw-git fallbacks below.
 
 **Rule:** a *bare* `gb diff`/`gb show` applies the lean default; the moment you pass a path or any git flag it forwards verbatim (color off). `gb diff --full` / `gb show --full` force full hunks.
 
-**Zero-setup raw-git fallbacks** (identical effect, no shim needed):
+**Zero-setup raw-git fallbacks** (identical effect, no wrapper needed):
 - `git -c color.ui=false status -sb`
 - `git -c color.ui=false diff --stat -- . ':(exclude)*.lock' ':(exclude)*-lock.json'`
 - `git -c color.ui=false log --oneline -n 20`
@@ -44,7 +44,7 @@ gb conventions          # compact summary
 gb conventions --json    # full profile
 ```
 
-It reports the repo's `commit_format` (e.g. conventional + scope + `(#N)`), `branch_naming` (e.g. `type/kebab`), PR template/sections, and release tooling — inferred from declared files *and* git history (most repos declare nothing; inference is the point). The profile is cached and refreshes only when convention files change, so repeated calls are free. Follow what it reports.
+It reports the repo's `commit_format` (e.g. conventional + scope + `(#N)`), `branch_naming` (e.g. `type/kebab`), PR template/sections, and release tooling — inferred from declared files *and* git history (most repos declare nothing; inference is the point). The profile is cached under `${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/toolu/git-better/conventions/` (Codex) or `${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu/git-better/conventions/` (Claude Code) and refreshes only when convention files change, so repeated calls are free. Follow what it reports.
 
 ### Prose conventions (one-time distill)
 
@@ -58,7 +58,7 @@ The text is read from STDIN and cached against the file's hash; it re-prompts on
 
 ## Recommended CLI levers (user-set)
 
-These the plugin cannot set for you — suggest them for scripted/repeated runs:
+These the skill cannot set for you — suggest them for scripted/repeated runs:
 
 - `--allowedTools "Bash(git diff *)" "Bash(git log *)" "Bash(git status *)"` — git reads run without a permission round-trip.
 - `--exclude-dynamic-system-prompt-sections` — moves machine-specific git/cwd lines out of the system prompt, improving prompt-cache reuse across runs.

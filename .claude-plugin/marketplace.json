@@ -148,18 +148,6 @@
       "category": "productivity",
       "keywords": ["jira", "atlassian", "skills"],
       "license": "MIT"
-    },
-    {
-      "name": "git-better",
-      "source": "./plugins/git-better",
-      "description": "Token-lean git: a `gb` wrapper with lean defaults plus a cached repo-convention profile, surfaced via PreToolUse nudges registered into the toolu hook engine.",
-      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
-      "category": "productivity",
-      "keywords": ["git", "token-efficiency", "conventions", "hooks"],
-      "license": "MIT",
-      "dependencies": [
-        { "name": "toolu", "marketplace": "toolu" }
-      ]
     }
   ]
 }

@@ -12,18 +12,19 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 4 | [**comemory**](../comemory/README.md) | Code Intel | `toolu` | Persistent cross-session agent memory + project skills + code-index search |
 | 5 | [**context7**](../context7/README.md) | Knowledge | — | Live library documentation & code-example lookup |
 | 6 | [**exa-search**](../exa-search/README.md) | Knowledge | — | Web / code / URL search plus deep research |
-| 7 | [**git-better**](../git-better/README.md) | Workflow | — | Token-lean `gb` wrapper with repo-convention detection |
-| 8 | [**jira**](../jira/README.md) | Workflow | — | Jira issue search & workflow from the session |
-| 9 | [**pr-babysit**](../pr-babysit/README.md) | Workflow | `toolu` | Claude cron / durable Codex PR babysitter that chases findings to zero |
-| 10 | [**python-quality**](../python-quality/README.md) | Quality Gate | `toolu` | Python post-edit quality checks (size, suppression, test layout, no-mocks) |
-| 11 | [**rust-quality**](../rust-quality/README.md) | Quality Gate | `toolu` | Rust post-edit quality checks (size, unsafe, unwrap bans) |
-| 12 | [**statusline**](../statusline/README.md) | Status | — | Persistent Claude statusline plus explicit Codex repository/gate status |
-| 13 | [**ts-quality**](../ts-quality/README.md) | Quality Gate | `toolu` | TypeScript post-edit quality checks (size, imports, type guards) |
-| 14 | [**agent-browser**](../../plugins/agent-browser/README.md) | Browser | — | Token-lean live browser automation via accessibility-tree snapshots |
+| 7 | [**jira**](../jira/README.md) | Workflow | — | Jira issue search & workflow from the session |
+| 8 | [**pr-babysit**](../pr-babysit/README.md) | Workflow | `toolu` | Claude cron / durable Codex PR babysitter that chases findings to zero |
+| 9 | [**python-quality**](../python-quality/README.md) | Quality Gate | `toolu` | Python post-edit quality checks (size, suppression, test layout, no-mocks) |
+| 10 | [**rust-quality**](../rust-quality/README.md) | Quality Gate | `toolu` | Rust post-edit quality checks (size, unsafe, unwrap bans) |
+| 11 | [**statusline**](../statusline/README.md) | Status | — | Persistent Claude statusline plus explicit Codex repository/gate status |
+| 12 | [**ts-quality**](../ts-quality/README.md) | Quality Gate | `toolu` | TypeScript post-edit quality checks (size, imports, type guards) |
+| 13 | [**agent-browser**](../../plugins/agent-browser/README.md) | Browser | — | Token-lean live browser automation via accessibility-tree snapshots |
+
+`git-better` (token-lean `gb` reads + cached repo-convention detection) is bundled as a skill inside `toolu` core — no separate plugin/install/marketplace row.
 
 ## Architecture Overview
 
-The **toolu core** (`toolu` plugin) is the hub: it provides the hook dispatcher (`PreToolUse`, `PostToolUse`, `SessionStart`, …) and a runtime registry. Domain plugins (`rust-quality`, `ts-quality`, `python-quality`, `comemory`, `ast-grep`, `git-better`) contribute hook modules to that registry — each module runs only while its owning plugin is installed, fail-closed.
+The **toolu core** (`toolu` plugin) is the hub: it provides the hook dispatcher (`PreToolUse`, `PostToolUse`, `SessionStart`, …) and a runtime registry. Domain plugins (`rust-quality`, `ts-quality`, `python-quality`, `comemory`, `ast-grep`) contribute hook modules to that registry — each module runs only while its owning plugin is installed, fail-closed.
 
 ```
 toolu core (hook dispatcher + registry)
@@ -31,8 +32,7 @@ toolu core (hook dispatcher + registry)
   ├── ts-quality      ──→ PostToolUse checks on TS files
   ├── python-quality  ──→ PostToolUse checks on Python files
   ├── comemory        ──→ PreToolUse scope enforcement + SessionStart memory count + project-skills index/curator
-  ├── ast-grep        ──→ PreToolUse Grep→ast-grep nudge + PostToolUse byte-savings
-  └── git-better      ──→ PreToolUse git→gb nudge + PostToolUse byte-savings
+  └── ast-grep        ──→ PreToolUse Grep→ast-grep nudge + PostToolUse byte-savings
 ```
 
 Standalone plugins (no `toolu` dependency) work independently via their own skills and commands.
@@ -75,7 +75,6 @@ See [`config.md`](../config.md) for the full schema.
 /plugin install comemory@toolu
 /plugin install context7@toolu
 /plugin install exa-search@toolu
-/plugin install git-better@toolu
 /plugin install jira@toolu
 /plugin install toolu-review@toolu
 /plugin install pr-babysit@toolu

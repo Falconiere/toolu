@@ -135,7 +135,6 @@ codex plugin add ast-grep@toolu
 codex plugin add comemory@toolu
 codex plugin add context7@toolu
 codex plugin add exa-search@toolu
-codex plugin add git-better@toolu
 codex plugin add jira@toolu
 codex plugin add toolu-review@toolu
 codex plugin add pr-babysit@toolu
@@ -162,7 +161,7 @@ in this release. Custom agent profiles are installed locally under
 
 ## What's inside
 
-Fourteen plugins, one marketplace. Every plugin ships synchronized Claude and
+Thirteen plugins, one marketplace. Every plugin ships synchronized Claude and
 Codex manifests at the repository version (`4.10.0` here). Install the core
 alone, or add the domain plugins.
 
@@ -177,7 +176,6 @@ alone, or add the domain plugins.
 | Browser | **`agent-browser`** | `4.10.0` | Token-lean browser automation through accessibility-tree snapshots and stable element references. |
 | Knowledge | **`context7`** | `4.10.0` | Live library documentation and code examples through Context7. |
 | Knowledge | **`exa-search`** | `4.10.0` | Web, code, URL search, and deep research through Exa. |
-| Workflow | **`git-better`** | `4.10.0` | Lean git reads and cached repository-convention discovery. |
 | Workflow | **`jira`** | `4.10.0` | Jira Cloud and Server/DC search plus safe issue workflow operations. |
 | Workflow | **`toolu-review`** | `4.10.0` | Pre-push review matching the CI review bot and writing review attestations. |
 | Workflow | **`pr-babysit`** | `4.10.0` | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
@@ -191,6 +189,7 @@ Beyond the plugins, the core (`toolu`) also ships:
 - **Model routing** — delegated work is tiered by its *class*, not its phrasing. Claude defaults to Haiku/Sonnet/Opus aliases; Codex defaults to Luna/medium for mechanical work, Terra/medium for exploration and implementation, Terra/high for review, and Sol/high for synthesis and architecture. Both mappings are configurable in [config](docs/config.md#model-routing-models).
 - **Tier-pinned agents** — Claude reads the bundled agent definitions directly. `$toolu:setup` manages Codex TOML profiles for `quick-task` (Luna/medium, read-only), `deep-explore` and `research-agent` (Terra/medium, read-only), `implementer` (Terra/medium, workspace-write), and `architect` (Sol/high, read-only), with previews, conflict refusal, timestamped backups, and recoverable removal.
 - **Caveman mode** — ultra-compressed, token-frugal output (via the optional `caveman` companion).
+- **`git-better` skill** — a bundled `gb` wrapper (token-lean `status`/`diff`/`log`/`show`) plus a cached repo-convention profile (`gb conventions`). Skill-only — no separate plugin, no hooks, no install step.
 
 ## Workflow skills
 

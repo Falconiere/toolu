@@ -9,7 +9,6 @@ ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
     "plugins/comemory/skills/project-skills/SKILL.md"
     "plugins/context7/skills/context7/SKILL.md"
     "plugins/exa-search/skills/exa-search/SKILL.md"
-    "plugins/git-better/skills/git-better/SKILL.md"
     "plugins/jira/skills/jira/SKILL.md"
     "plugins/toolu-review/skills/review/SKILL.md"
     "plugins/toolu/agents/research-agent.md"
@@ -56,9 +55,7 @@ ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
 @test "published helpers and registry modules preserve Codex config-root precedence" {
   files=(
     "plugins/ast-grep/hooks/post-tools.d/byte-savings.sh"
-    "plugins/git-better/hooks/pre-tools.d/git-conventions-nudge.sh"
-    "plugins/git-better/hooks/post-tools.d/git-byte-savings.sh"
-    "plugins/git-better/scripts/lib/conventions-cache.sh"
+    "plugins/toolu/skills/git-better/scripts/lib/conventions-cache.sh"
     "plugins/comemory/hooks/pre-tools.d/comemory-scope.sh"
     "plugins/jira/skills/jira/scripts/lib/plan-run.sh"
   )

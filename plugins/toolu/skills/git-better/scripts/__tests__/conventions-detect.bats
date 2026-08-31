@@ -6,7 +6,7 @@
 
 setup() {
   DETECT="$BATS_TEST_DIRNAME/../lib/conventions-detect.sh"
-  ROOT="$(cd "$BATS_TEST_DIRNAME/../../../.." && pwd)"
+  ROOT="$(cd "$BATS_TEST_DIRNAME/../../../../../.." && pwd)"
 }
 
 # Build a hermetic repo at $1: conventional commits (feat/fix/chore/test + a
