@@ -18,9 +18,9 @@ _has_inline_cfg_test=0
 if [[ "$FILE_PATH" == */src/* ]] \
    && awk '
        /^[[:space:]]*#\[cfg\((all|any)\(test([^[:alnum:]_]|$)/ { found=1; exit }
-       /^[[:space:]]*#\[cfg\(test\)\][[:space:]]*(pub[[:space:]]+)?mod[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*;[[:space:]]*$/ { next }
+       /^[[:space:]]*#\[cfg\(test\)\][[:space:]]*(pub[[:space:]]+)?mod[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*;[[:space:]]*(\/\/.*)?$/ { next }
        /^[[:space:]]*#\[cfg\(test\)\][[:space:]]*$/ {
-         if ((getline nxt) > 0 && nxt ~ /^[[:space:]]*(pub[[:space:]]+)?mod[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*;[[:space:]]*$/) { next }
+         if ((getline nxt) > 0 && nxt ~ /^[[:space:]]*(pub[[:space:]]+)?mod[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*;[[:space:]]*(\/\/.*)?$/) { next }
          found=1; exit
        }
        /^[[:space:]]*#\[cfg\(test\)\]/ { found=1; exit }
