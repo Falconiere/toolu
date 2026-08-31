@@ -235,6 +235,120 @@ EOF
   ! echo "$output" | grep -q "test file outside"
 }
 
+# Colocation fix: a bodyless `#[cfg(test)] mod tests;` wires an external
+# module-sibling tests/ dir and must NOT trip the inline-cfg(test) rule.
+@test "rust-quality: single-line bodyless #[cfg(test)] mod tests; passes" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/foo.rs <<'EOF'
+pub fn add(a: u8, b: u8) -> u8 {
+    a + b
+}
+
+#[cfg(test)] mod tests;
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
+@test "rust-quality: rustfmt two-line bodyless #[cfg(test)] / mod tests; passes" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/foo.rs <<'EOF'
+pub fn add(a: u8, b: u8) -> u8 {
+    a + b
+}
+
+#[cfg(test)]
+mod tests;
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
+@test "rust-quality: two-line bodyless #[cfg(test)] / pub mod foo_tests; passes" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/foo.rs <<'EOF'
+pub fn add(a: u8, b: u8) -> u8 {
+    a + b
+}
+
+#[cfg(test)]
+pub mod foo_tests;
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
+@test "rust-quality: single-line #[cfg(test)] mod tests { with a body still fails" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/foo.rs <<'EOF'
+pub fn add(a: u8, b: u8) -> u8 {
+    a + b
+}
+
+#[cfg(test)] mod tests {
+    #[test]
+    fn it_adds() {
+        assert_eq!(super::add(1, 2), 3);
+    }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
+@test "rust-quality: two-line #[cfg(test)] / mod tests { with a body still fails" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/foo.rs <<'EOF'
+pub fn add(a: u8, b: u8) -> u8 {
+    a + b
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_adds() {
+        assert_eq!(super::add(1, 2), 3);
+    }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
+# The all()/any() combinator forms stay blocked unconditionally, even ahead of
+# an otherwise-exempt bodyless mod declaration.
+@test "rust-quality: #[cfg(all(test, ...))] followed by bodyless mod tests; still fails" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/foo.rs <<'EOF'
+pub fn add(a: u8, b: u8) -> u8 {
+    a + b
+}
+
+#[cfg(all(test, feature = "unit"))]
+mod tests;
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
 @test "rust-quality: #[cfg(test)] only in a doc comment does NOT suppress placement enforcement" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project

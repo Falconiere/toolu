@@ -18,7 +18,7 @@ Every Rust file the agent edits is checked on the spot, contributing to toolu's 
 - No `.unwrap()` / `.expect()` — use `?` or `match`.
 - No `unsafe` blocks.
 - No `#[allow]` / `#[expect]` lint suppression.
-- Tests in a flat `tests/`, never inline `#[cfg(test)]`.
+- Unit tests in a module-sibling `tests/` (wired by a bodyless `#[cfg(test)] mod tests;`); crate-root `tests/` for integration. No inline test bodies in `src/`.
 - Doc-comment checks on public items.
 
 The fragments register into the core toolu dispatcher and run only while this plugin is installed — uninstall it and the Rust rules vanish, fail-closed.
