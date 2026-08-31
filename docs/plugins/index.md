@@ -15,22 +15,24 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 7 | [**git-better**](../git-better/README.md) | Workflow | — | Token-lean `gb` wrapper with repo-convention detection |
 | 8 | [**jira**](../jira/README.md) | Workflow | — | Jira issue search & workflow from the session |
 | 9 | [**pr-babysit**](../pr-babysit/README.md) | Workflow | `toolu` | Claude cron / durable Codex PR babysitter that chases findings to zero |
-| 10 | [**rust-quality**](../rust-quality/README.md) | Quality Gate | `toolu` | Rust post-edit quality checks (size, unsafe, unwrap bans) |
-| 11 | [**statusline**](../statusline/README.md) | Status | — | Persistent Claude statusline plus explicit Codex repository/gate status |
-| 12 | [**ts-quality**](../ts-quality/README.md) | Quality Gate | `toolu` | TypeScript post-edit quality checks (size, imports, type guards) |
-| 13 | [**agent-browser**](../../plugins/agent-browser/README.md) | Browser | — | Token-lean live browser automation via accessibility-tree snapshots |
+| 10 | [**python-quality**](../python-quality/README.md) | Quality Gate | `toolu` | Python post-edit quality checks (size, suppression, test layout, no-mocks) |
+| 11 | [**rust-quality**](../rust-quality/README.md) | Quality Gate | `toolu` | Rust post-edit quality checks (size, unsafe, unwrap bans) |
+| 12 | [**statusline**](../statusline/README.md) | Status | — | Persistent Claude statusline plus explicit Codex repository/gate status |
+| 13 | [**ts-quality**](../ts-quality/README.md) | Quality Gate | `toolu` | TypeScript post-edit quality checks (size, imports, type guards) |
+| 14 | [**agent-browser**](../../plugins/agent-browser/README.md) | Browser | — | Token-lean live browser automation via accessibility-tree snapshots |
 
 ## Architecture Overview
 
-The **toolu core** (`toolu` plugin) is the hub: it provides the hook dispatcher (`PreToolUse`, `PostToolUse`, `SessionStart`, …) and a runtime registry. Domain plugins (`rust-quality`, `ts-quality`, `comemory`, `ast-grep`, `git-better`) contribute hook modules to that registry — each module runs only while its owning plugin is installed, fail-closed.
+The **toolu core** (`toolu` plugin) is the hub: it provides the hook dispatcher (`PreToolUse`, `PostToolUse`, `SessionStart`, …) and a runtime registry. Domain plugins (`rust-quality`, `ts-quality`, `python-quality`, `comemory`, `ast-grep`, `git-better`) contribute hook modules to that registry — each module runs only while its owning plugin is installed, fail-closed.
 
 ```
 toolu core (hook dispatcher + registry)
-  ├── rust-quality  ──→ PostToolUse checks on Rust files
-  ├── ts-quality    ──→ PostToolUse checks on TS files
-  ├── comemory      ──→ PreToolUse scope enforcement + SessionStart memory count + project-skills index/curator
-  ├── ast-grep      ──→ PreToolUse Grep→ast-grep nudge + PostToolUse byte-savings
-  └── git-better    ──→ PreToolUse git→gb nudge + PostToolUse byte-savings
+  ├── rust-quality    ──→ PostToolUse checks on Rust files
+  ├── ts-quality      ──→ PostToolUse checks on TS files
+  ├── python-quality  ──→ PostToolUse checks on Python files
+  ├── comemory        ──→ PreToolUse scope enforcement + SessionStart memory count + project-skills index/curator
+  ├── ast-grep        ──→ PreToolUse Grep→ast-grep nudge + PostToolUse byte-savings
+  └── git-better      ──→ PreToolUse git→gb nudge + PostToolUse byte-savings
 ```
 
 Standalone plugins (no `toolu` dependency) work independently via their own skills and commands.
@@ -68,6 +70,7 @@ See [`config.md`](../config.md) for the full schema.
 # 3. Install domain plugins
 /plugin install rust-quality@toolu
 /plugin install ts-quality@toolu
+/plugin install python-quality@toolu
 /plugin install ast-grep@toolu
 /plugin install comemory@toolu
 /plugin install context7@toolu
@@ -87,6 +90,7 @@ codex plugin marketplace add Falconiere/toolu
 codex plugin add toolu@toolu
 codex plugin add rust-quality@toolu
 codex plugin add ts-quality@toolu
+codex plugin add python-quality@toolu
 # Repeat `codex plugin add <name>@toolu` for any other plugin above.
 ```
 

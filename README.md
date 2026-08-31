@@ -8,7 +8,7 @@ AI writes code fast — then skips the parts that keep a codebase alive: oversiz
 
 [![Release](https://img.shields.io/github/v/release/Falconiere/toolu?sort=semver&color=d97757)](https://github.com/Falconiere/toolu/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-1340%2B%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-1700%2B%20passing-brightgreen)](#testing)
 [![Hosts](https://img.shields.io/badge/hosts-Claude%20Code%20%7C%20Codex-d97757)](#install)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
@@ -35,7 +35,7 @@ It's a personal bundle, built in the open, MIT-licensed. Take the whole thing or
 The headline feature. When `rust-quality`, `ts-quality`, and/or `python-quality` is installed, every Rust/TypeScript/Python file the agent edits is checked on the spot. Limits are **config-driven** (project/user override → the active native linter's `max-lines` → built-in default), and the gate is **multi-slot**: a failing test command and a failing file check are tracked independently, so fixing one never silently masks the other.
 
 <table>
-<tr><th align="left">TypeScript</th><th align="left">Rust</th></tr>
+<tr><th align="left">TypeScript</th><th align="left">Rust</th><th align="left">Python</th></tr>
 <tr valign="top"><td>
 
 - File / function line limits
@@ -54,6 +54,15 @@ The headline feature. When `rust-quality`, `ts-quality`, and/or `python-quality`
 - No `#[allow]` / `#[expect]` lint suppression
 - Tests in `tests/`, never inline `#[cfg(test)]`
 - Flat `tests/` layout enforced
+
+</td><td>
+
+- File / function line limits
+- No bare `except:` / one-line `except: pass`
+- No blanket `# noqa` / `# type: ignore`
+- No mocks in `test_*.py` / `*_test.py`
+- Tests colocated as `test_*.py` next to the module
+- Docstrings on public `def`/`class` (advisory)
 
 </td></tr>
 </table>
@@ -154,25 +163,25 @@ in this release. Custom agent profiles are installed locally under
 ## What's inside
 
 Fourteen plugins, one marketplace. Every plugin ships synchronized Claude and
-Codex manifests at the repository version (`4.9.0` here). Install the core
+Codex manifests at the repository version (`4.10.0` here). Install the core
 alone, or add the domain plugins.
 
 | Group | Plugin | Version | What it does |
 |--------|--------|:-------:|--------------|
-| Core | **`toolu`** | `4.9.0` | Registry-driven hook engine, 8-phase workflow, commit workflows, model routing, push-review gate, and custom-agent templates. |
-| Quality gate | **`rust-quality`** | `4.9.0` | Rust post-edit checks — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests. |
-| Quality gate | **`ts-quality`** | `4.9.0` | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
-| Quality gate | **`python-quality`** | `4.9.0` | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
-| Code intel | **`ast-grep`** | `4.9.0` | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
-| Code intel | **`comemory`** | `4.9.0` | Persistent memory and code indexing with host-native setup, scope enforcement, and status publishing. |
-| Browser | **`agent-browser`** | `4.9.0` | Token-lean browser automation through accessibility-tree snapshots and stable element references. |
-| Knowledge | **`context7`** | `4.9.0` | Live library documentation and code examples through Context7. |
-| Knowledge | **`exa-search`** | `4.9.0` | Web, code, URL search, and deep research through Exa. |
-| Workflow | **`git-better`** | `4.9.0` | Lean git reads and cached repository-convention discovery. |
-| Workflow | **`jira`** | `4.9.0` | Jira Cloud and Server/DC search plus safe issue workflow operations. |
-| Workflow | **`toolu-review`** | `4.9.0` | Pre-push review matching the CI review bot and writing review attestations. |
-| Workflow | **`pr-babysit`** | `4.9.0` | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
-| Status | **`statusline`** | `4.9.0` | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
+| Core | **`toolu`** | `4.10.0` | Registry-driven hook engine, 8-phase workflow, commit workflows, model routing, push-review gate, and custom-agent templates. |
+| Quality gate | **`rust-quality`** | `4.10.0` | Rust post-edit checks — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests. |
+| Quality gate | **`ts-quality`** | `4.10.0` | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
+| Quality gate | **`python-quality`** | `4.10.0` | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
+| Code intel | **`ast-grep`** | `4.10.0` | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
+| Code intel | **`comemory`** | `4.10.0` | Persistent memory and code indexing with host-native setup, scope enforcement, and status publishing. |
+| Browser | **`agent-browser`** | `4.10.0` | Token-lean browser automation through accessibility-tree snapshots and stable element references. |
+| Knowledge | **`context7`** | `4.10.0` | Live library documentation and code examples through Context7. |
+| Knowledge | **`exa-search`** | `4.10.0` | Web, code, URL search, and deep research through Exa. |
+| Workflow | **`git-better`** | `4.10.0` | Lean git reads and cached repository-convention discovery. |
+| Workflow | **`jira`** | `4.10.0` | Jira Cloud and Server/DC search plus safe issue workflow operations. |
+| Workflow | **`toolu-review`** | `4.10.0` | Pre-push review matching the CI review bot and writing review attestations. |
+| Workflow | **`pr-babysit`** | `4.10.0` | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
+| Status | **`statusline`** | `4.10.0` | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
 
 Beyond the plugins, the core (`toolu`) also ships:
 
@@ -282,7 +291,7 @@ Quality-gate thresholds (file/function/impl line limits) are configurable per pr
 
 ## Testing
 
-The hook engine and language gates are covered by **1340+ [bats](https://github.com/bats-core/bats-core) tests**, all run in CI on every push, including real temporary-home Codex install/remove smoke coverage:
+The hook engine and language gates are covered by **1700+ [bats](https://github.com/bats-core/bats-core) tests**, all run in CI on every push, including real temporary-home Codex install/remove smoke coverage:
 
 ```sh
 bun run test              # runs lint:shell → test:shell
