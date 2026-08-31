@@ -1,0 +1,24 @@
+{
+  "name": "python-quality",
+  "version": "4.8.0",
+  "description": "Python PostToolUse quality checks registered into the toolu hook engine.",
+  "author": {
+    "name": "Falconiere Barbosa",
+    "email": "hello@falconiere.io"
+  },
+  "homepage": "https://github.com/falconiere/toolu",
+  "repository": "https://github.com/falconiere/toolu.git",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "python",
+    "quality",
+    "hooks"
+  ],
+  "dependencies": [
+    {
+      "name": "toolu",
+      "marketplace": "toolu"
+    }
+  ]
+}

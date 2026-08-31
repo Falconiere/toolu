@@ -12,6 +12,7 @@
     { "name": "git-better", "source": { "source": "local", "path": "./plugins/git-better" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },
     { "name": "jira", "source": { "source": "local", "path": "./plugins/jira" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },
     { "name": "pr-babysit", "source": { "source": "local", "path": "./plugins/pr-babysit" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },
+    { "name": "python-quality", "source": { "source": "local", "path": "./plugins/python-quality" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },
     { "name": "rust-quality", "source": { "source": "local", "path": "./plugins/rust-quality" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },
     { "name": "statusline", "source": { "source": "local", "path": "./plugins/statusline" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },
     { "name": "toolu", "source": { "source": "local", "path": "./plugins/toolu" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },

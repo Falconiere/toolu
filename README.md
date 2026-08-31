@@ -32,7 +32,7 @@ It's a personal bundle, built in the open, MIT-licensed. Take the whole thing or
 
 ## The quality gate
 
-The headline feature. When `rust-quality` and/or `ts-quality` is installed, every Rust/TypeScript file the agent edits is checked on the spot. Limits are **config-driven** (project/user override → the active native linter's `max-lines` → built-in default), and the gate is **multi-slot**: a failing test command and a failing file check are tracked independently, so fixing one never silently masks the other.
+The headline feature. When `rust-quality`, `ts-quality`, and/or `python-quality` is installed, every Rust/TypeScript/Python file the agent edits is checked on the spot. Limits are **config-driven** (project/user override → the active native linter's `max-lines` → built-in default), and the gate is **multi-slot**: a failing test command and a failing file check are tracked independently, so fixing one never silently masks the other.
 
 <table>
 <tr><th align="left">TypeScript</th><th align="left">Rust</th></tr>
@@ -84,13 +84,14 @@ Add the language gates, search, and docs tooling too:
 ```text
 /plugin install rust-quality@toolu   # Rust quality gates
 /plugin install ts-quality@toolu     # TypeScript quality gates
+/plugin install python-quality@toolu # Python quality gates
 /plugin install ast-grep@toolu       # structural code search & rewrite
 /plugin install comemory@toolu       # persistent cross-session memory
 /plugin install context7@toolu       # live library documentation lookup
 /plugin install exa-search@toolu     # web / code / URL search + research
 ```
 
-> **Note** — `comemory`, `rust-quality`, and `ts-quality` depend on `toolu`; `ast-grep`, `context7`, and `exa-search` are standalone (zero deps). The only external-binary dependency in the bundle is `comemory` (see below). `caveman` and `code-simplifier` are **optional, recommended companions**, not required — install them only if you want caveman mode or the pre-simplify pass; when absent, `toolu` falls back (the `push-review` gate uses the built-in `/code-review`, and `code-simplifier` is invoked only if installed). Adding the marketplaces in step 1 lets Claude Code resolve those companions automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
+> **Note** — `comemory`, `rust-quality`, `ts-quality`, and `python-quality` depend on `toolu`; `ast-grep`, `context7`, and `exa-search` are standalone (zero deps). The only external-binary dependency in the bundle is `comemory` (see below). `caveman` and `code-simplifier` are **optional, recommended companions**, not required — install them only if you want caveman mode or the pre-simplify pass; when absent, `toolu` falls back (the `push-review` gate uses the built-in `/code-review`, and `code-simplifier` is invoked only if installed). Adding the marketplaces in step 1 lets Claude Code resolve those companions automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
 
 The `comemory` plugin wraps the standalone `comemory` binary — install it once (it is **not** on crates.io), then run setup:
 
@@ -120,6 +121,7 @@ Then install whichever domain plugins you want:
 ```bash
 codex plugin add rust-quality@toolu
 codex plugin add ts-quality@toolu
+codex plugin add python-quality@toolu
 codex plugin add ast-grep@toolu
 codex plugin add comemory@toolu
 codex plugin add context7@toolu
@@ -151,25 +153,26 @@ in this release. Custom agent profiles are installed locally under
 
 ## What's inside
 
-Thirteen plugins, one marketplace. Every plugin ships synchronized Claude and
-Codex manifests at the repository version (`4.5.0` here). Install the core
+Fourteen plugins, one marketplace. Every plugin ships synchronized Claude and
+Codex manifests at the repository version (`4.8.0` here). Install the core
 alone, or add the domain plugins.
 
 | Group | Plugin | Version | What it does |
 |--------|--------|:-------:|--------------|
-| Core | **`toolu`** | `4.5.0` | Registry-driven hook engine, 8-phase workflow, commit workflows, model routing, push-review gate, and custom-agent templates. |
-| Quality gate | **`rust-quality`** | `4.5.0` | Rust post-edit checks — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests. |
-| Quality gate | **`ts-quality`** | `4.5.0` | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
-| Code intel | **`ast-grep`** | `4.5.0` | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
-| Code intel | **`comemory`** | `4.5.0` | Persistent memory and code indexing with host-native setup, scope enforcement, and status publishing. |
-| Browser | **`agent-browser`** | `4.5.0` | Token-lean browser automation through accessibility-tree snapshots and stable element references. |
-| Knowledge | **`context7`** | `4.5.0` | Live library documentation and code examples through Context7. |
-| Knowledge | **`exa-search`** | `4.5.0` | Web, code, URL search, and deep research through Exa. |
-| Workflow | **`git-better`** | `4.5.0` | Lean git reads and cached repository-convention discovery. |
-| Workflow | **`jira`** | `4.5.0` | Jira Cloud and Server/DC search plus safe issue workflow operations. |
-| Workflow | **`toolu-review`** | `4.5.0` | Pre-push review matching the CI review bot and writing review attestations. |
-| Workflow | **`pr-babysit`** | `4.5.0` | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
-| Status | **`statusline`** | `4.5.0` | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
+| Core | **`toolu`** | `4.8.0` | Registry-driven hook engine, 8-phase workflow, commit workflows, model routing, push-review gate, and custom-agent templates. |
+| Quality gate | **`rust-quality`** | `4.8.0` | Rust post-edit checks — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests. |
+| Quality gate | **`ts-quality`** | `4.8.0` | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
+| Quality gate | **`python-quality`** | `4.8.0` | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
+| Code intel | **`ast-grep`** | `4.8.0` | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
+| Code intel | **`comemory`** | `4.8.0` | Persistent memory and code indexing with host-native setup, scope enforcement, and status publishing. |
+| Browser | **`agent-browser`** | `4.8.0` | Token-lean browser automation through accessibility-tree snapshots and stable element references. |
+| Knowledge | **`context7`** | `4.8.0` | Live library documentation and code examples through Context7. |
+| Knowledge | **`exa-search`** | `4.8.0` | Web, code, URL search, and deep research through Exa. |
+| Workflow | **`git-better`** | `4.8.0` | Lean git reads and cached repository-convention discovery. |
+| Workflow | **`jira`** | `4.8.0` | Jira Cloud and Server/DC search plus safe issue workflow operations. |
+| Workflow | **`toolu-review`** | `4.8.0` | Pre-push review matching the CI review bot and writing review attestations. |
+| Workflow | **`pr-babysit`** | `4.8.0` | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
+| Status | **`statusline`** | `4.8.0` | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
 
 Beyond the plugins, the core (`toolu`) also ships:
 
@@ -227,7 +230,7 @@ flowchart TD
     D -- "runs a module only while its plugin is installed" --> OUT([enforced edit])
 ```
 
-At `SessionStart`, each domain plugin's `register.sh` contributes to the registry as `<plugin-spec>__<name>.sh` — `ast-grep` and `comemory` mirror their `hooks/<event>.d/*.sh` one-to-one, while `rust-quality`/`ts-quality` assemble their ordered `hooks/concerns/` fragments into a single module per language. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed.
+At `SessionStart`, each domain plugin's `register.sh` contributes to the registry as `<plugin-spec>__<name>.sh` — `ast-grep` and `comemory` mirror their `hooks/<event>.d/*.sh` one-to-one, while `rust-quality`/`ts-quality`/`python-quality` assemble their ordered `hooks/concerns/` fragments into a single module per language. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed.
 
 <details>
 <summary><b>Full repository layout</b></summary>
@@ -251,6 +254,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     ├── exa-search/             # exa-search skill + Exa REST wrapper
     ├── rust-quality/           # Rust PostToolUse quality fragments, assembled at SessionStart
     ├── ts-quality/             # TypeScript PostToolUse quality fragments, assembled at SessionStart
+    ├── python-quality/         # Python PostToolUse quality fragments, assembled at SessionStart
     ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook
     ├── pr-babysit/             # Claude command + Codex skill + strict shared workflow
     └── toolu-review/            # toolu-review:review skill + push-review state writer

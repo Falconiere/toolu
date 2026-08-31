@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# Post-tool check: Python quality rules.
+# Project-agnostic: no-op outside Python projects or when python3 is missing.
+#
+# Inputs (from parent dispatcher post-tools/mod.sh, via `export`):
+#   $tool_name     - name of the tool being invoked
+#   $input         - raw JSON payload on stdin
+#   $PROJECT_ROOT  - repository root
+
+: "${tool_name:=}"
+: "${input:=}"
+: "${PROJECT_ROOT:=$(pwd)}"
+
+# Core lib comes from the toolu dispatcher via TOOLU_LIB_DIR (set by
+# plugins/toolu/hooks/post-tools/mod.sh before registry dispatch). Outside
+# that pipeline there is no relative path to it — fail SOFT: a quality check
+# must never break a tool call by erroring.
+[ -n "${TOOLU_LIB_DIR:-}" ] && [ -f "$TOOLU_LIB_DIR/detect.sh" ] || exit 0
+# shellcheck source=../../../toolu/hooks/lib/detect.sh
+. "$TOOLU_LIB_DIR/detect.sh"
+# Threshold resolver (defaults + project/native overrides). Soft if absent.
+# shellcheck source=../../../toolu/hooks/lib/quality-config.sh
+[ -f "$TOOLU_LIB_DIR/quality-config.sh" ] && . "$TOOLU_LIB_DIR/quality-config.sh"
+# Multi-slot gate writer (entries keyed by file — one hook's failure no longer
+# clobbers another's). Soft if absent: fallbacks below keep the legacy
+# single-slot behavior when the toolu lib predates gate-file.sh.
+# shellcheck source=../../../toolu/hooks/lib/gate-file.sh
+[ -f "$TOOLU_LIB_DIR/gate-file.sh" ] && . "$TOOLU_LIB_DIR/gate-file.sh"
+command -v gate_record_failure >/dev/null 2>&1 || gate_record_failure() {
+  jq -n --arg reason "$4" --arg source "$3" --arg file "$2" --arg violations "$5" \
+    --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '{status: "failing", reason: $reason, source: $source, file: $file,
+      violations: $violations, updatedAt: $updatedAt}' > "$1"
+}
+command -v gate_clear_file >/dev/null 2>&1 || gate_clear_file() {
+  [ -f "$1" ] || return 0
+  local _src _file
+  _src=$(jq -r '.source // ""' "$1" 2>/dev/null || echo "")
+  _file=$(jq -r '.file // ""' "$1" 2>/dev/null || echo "")
+  if [ "$_src" = "$3" ] && [ "$_file" = "$2" ]; then
+    jq -n --arg source "$3" --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      '{status: "passing", source: $source, updatedAt: $updatedAt}' > "$1"
+  fi
+}
+command -v python_max_file_lines >/dev/null 2>&1 || python_max_file_lines() { echo "${DEFAULT_PYTHON_MAX_FILE_LINES:-400}"; }
+command -v python_max_fn_lines   >/dev/null 2>&1 || python_max_fn_lines()   { echo "${DEFAULT_PYTHON_MAX_FN_LINES:-50}"; }
+# Boolean flag reader (e.g. noMocks) — falls back to the caller's default when
+# quality-config.sh predates this reader.
+command -v quality_flag >/dev/null 2>&1 || quality_flag() { printf '%s' "$3"; }
+# count_python_code_lines comes from detect.sh (sourced above) — no fallback needed.
+
+# Load the merged config ONCE so TOOLU_CFG_LOADED sticks for the threshold
+# lookups below — each runs in a $(...) subshell that inherits it and skips
+# re-merging (otherwise every wrapper re-spawns the jq merge).
+command -v toolu_load_config >/dev/null 2>&1 && toolu_load_config 2>/dev/null || true
+
+[ "$(detect_python)" = "python" ] || exit 0
+command -v python3 >/dev/null 2>&1 || exit 0
+command -v jq      >/dev/null 2>&1 || exit 0
+
+fp_from_input=""
+if [[ "$tool_name" == "Write" || "$tool_name" == "Edit" || "$tool_name" == "MultiEdit" ]]; then
+  fp_from_input=$(echo "$input" | jq -r '.tool_input.path // .tool_input.file_path // .tool_input.target_file // empty' 2>/dev/null || echo "")
+fi
+FILE_PATH="${CLAUDE_FILE_PATHS:-$fp_from_input}"
+
+# Deleted files and move sources cannot be linted after apply_patch completes,
+# but their path-owned quality failure must not remain active forever.
+EDIT_OPERATION="${TOOLU_EDIT_OPERATION:-$(echo "$input" | jq -r '.tool_input.toolu_edit_operation // ""' 2>/dev/null || echo "")}"
+EDIT_MOVED_TO="${TOOLU_EDIT_MOVED_TO:-$(echo "$input" | jq -r '.tool_input.toolu_edit_moved_to // ""' 2>/dev/null || echo "")}"
+if [[ "$EDIT_OPERATION" == delete || -n "$EDIT_MOVED_TO" ]]; then
+  if [[ -n "$FILE_PATH" && "$FILE_PATH" =~ \.py$ ]]; then
+    GATE_FILE="$(toolu_project_state_root "$PROJECT_ROOT")/quality-gate-status.json"
+    gate_clear_file "$GATE_FILE" "$FILE_PATH" "python-quality-hook"
+  fi
+  exit 0
+fi
+
+[[ -z "$FILE_PATH" || ! -f "$FILE_PATH" ]] && exit 0
+[[ ! "$FILE_PATH" =~ \.py$ ]] && exit 0
+
+MESSAGES=""
+add_error() {
+  MESSAGES="${MESSAGES}${1}"$'\n'
+}

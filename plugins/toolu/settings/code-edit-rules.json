@@ -58,8 +58,9 @@
     {
       "match": "*.py",
       "docs": [
-        "Python: keep lint/tests green",
-        "keep it simple — no speculative abstractions"
+        "Python: colocated test_<module>.py, real-data tests (no mocks)",
+        "no bare except:/blanket # noqa/bare # type: ignore — fix the cause",
+        "size limits via lang.python.* (default 400/file, 50/function)"
       ]
     }
   ]

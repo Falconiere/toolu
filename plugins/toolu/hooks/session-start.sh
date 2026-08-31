@@ -52,6 +52,7 @@ PROJECT_NAME="$(detect_project_name)"
 NODE_PM="$(detect_node_pm)"
 HAS_RUST="$(detect_rust)"
 HAS_TS="$(detect_ts)"
+HAS_PYTHON="$(detect_python)"
 
 # ── Parse stdin to detect event type ────────────────────────────────────────
 input=$(cat 2>/dev/null || echo "{}")
@@ -188,6 +189,10 @@ if [ "${TOOLU_VERBOSE:-0}" != "0" ]; then
   if [ "$HAS_RUST" = "rust" ]; then
     rust_doc=$(render_doc "$HOOK_DIR/docs/session-start-rust.md")
     [ -n "$rust_doc" ] && parts+=("$rust_doc")
+  fi
+  if [ "$HAS_PYTHON" = "python" ]; then
+    python_doc=$(render_doc "$HOOK_DIR/docs/session-start-python.md")
+    [ -n "$python_doc" ] && parts+=("$python_doc")
   fi
 fi
 
