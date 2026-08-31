@@ -250,6 +250,14 @@ housekeeping_repo() {
   [[ "$output" == *"no longer prompt"* ]]
 }
 
+@test "session-start: still announces when gates is a non-object" {
+  housekeeping_repo
+  printf '%s' '{"version":1,"gates":[]}' > "$TMP/.claude/toolu.config.json"
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"no longer prompt"* ]]
+}
+
 @test "session-start: writes the permission allowlist once and says so" {
   housekeeping_repo
   run bash "$HOOK" <<<'{"source":"startup"}'

@@ -216,8 +216,9 @@ _gate_notice="$_gate_notice_dir/.gate-preset-notice-v6"
 # mode). A sweep/TTL-only `gates` object is not a delivery choice — those
 # users still need to hear that balanced no longer prompts.
 _gate_delivery_pinned=$(jq -r '
-  if (.gates.preset? != null) then "yes"
-  elif ([.gates // {} | to_entries[] | select((.value | type) == "object" and (.value | has("mode")))] | length) > 0 then "yes"
+  if (.gates | type) != "object" then "no"
+  elif .gates.preset? != null then "yes"
+  elif ([.gates | to_entries[] | select((.value | type) == "object" and (.value | has("mode")))] | length) > 0 then "yes"
   else "no"
   end
 ' <<< "$TOOLU_CFG_JSON" 2>/dev/null || echo "no")
