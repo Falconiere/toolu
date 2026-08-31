@@ -20,8 +20,6 @@
         { "type": "json", "path": "plugins/context7/.codex-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/exa-search/.claude-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/exa-search/.codex-plugin/plugin.json", "jsonpath": "$.version" },
-        { "type": "json", "path": "plugins/git-better/.claude-plugin/plugin.json", "jsonpath": "$.version" },
-        { "type": "json", "path": "plugins/git-better/.codex-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/jira/.claude-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/jira/.codex-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/pr-babysit/.claude-plugin/plugin.json", "jsonpath": "$.version" },

@@ -102,7 +102,7 @@ no per-project `.claude/settings/` lookup — to override per project, point
 The statusline moved to its own optional plugin, **`statusline`** — it shows
 `model | effort | ctx | <gate> | folder | branch | <caveman>`, with a loud red
 `✗ gate:failing` marker driven by the same `.claude/tmp/quality-gate-status.json`
-the rust-quality / ts-quality hooks write. Install it and wire `settings.json` per
+the rust-quality / ts-quality / python-quality hooks write. Install it and wire `settings.json` per
 `plugins/statusline/README.md`:
 
 ```

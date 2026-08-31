@@ -13,7 +13,7 @@ model | effort:high | ctx:45k/200k (22%) | example.com | ✗ gate:failing | my-f
 | effort | `.effort.level` | the model reports an effort level |
 | ctx | `.context_window.*` | always |
 | `example.com` | `.oauthAccount.emailAddress` in `~/.claude.json` (or `$CLAUDE_CONFIG_DIR/.claude.json`) | logged in via Claude OAuth — shows only the email domain, not the full address |
-| `✗ gate:failing` | host-native `.claude/tmp/quality-gate-status.json` at the git root | a **gate writer** (e.g. the `rust-quality` / `ts-quality` / `toolu` plugins) marks the gate failing |
+| `✗ gate:failing` | host-native `.claude/tmp/quality-gate-status.json` at the git root | a **gate writer** (e.g. the `rust-quality` / `ts-quality` / `python-quality` / `toolu` plugins) marks the gate failing |
 | folder + branch + status | git, from the workspace dir | inside a git repo — `↑N↓M` shows ahead/behind of the tracked remote, `[+N ~N ?N]` shows staged/unstaged/untracked file counts (both omitted when clean and up-to-date) |
 | `[COMEMORY:N]` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory-status/<repo>.json` | the **comemory** plugin published a memory count this session |
 | `[CAVEMAN]` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.caveman-active` | the **caveman** plugin is active |

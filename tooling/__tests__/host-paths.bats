@@ -31,7 +31,6 @@ ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)"
   for item in \
     'ast-grep:pre-tools.d/ast-grep@toolu__search-nudge.sh' \
     'comemory:pre-tools.d/comemory@toolu__comemory-scope.sh' \
-    'git-better:pre-tools.d/git-better@toolu__git-lean-nudge.sh' \
     'rust-quality:post-tools.d/rust-quality@toolu__rust-quality.sh' \
     'ts-quality:post-tools.d/ts-quality@toolu__ts-quality.sh'; do
     plugin=${item%%:*}
