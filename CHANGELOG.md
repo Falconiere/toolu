@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.9.0](https://github.com/Falconiere/toolu/compare/v4.8.0...v4.9.0) (2026-08-31)
+
+
+### Features
+
+* **toolu:** stop prompting on default gates and workflow skills ([#163](https://github.com/Falconiere/toolu/issues/163)) ([8db67b6](https://github.com/Falconiere/toolu/commit/8db67b67f2cb246b007cdf14bb8d7a5ff0d4a813))
+
 ## [4.8.0](https://github.com/Falconiere/toolu/compare/v4.7.1...v4.8.0) (2026-08-27)
 
 
