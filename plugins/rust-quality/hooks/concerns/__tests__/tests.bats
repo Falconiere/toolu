@@ -367,3 +367,23 @@ EOF
   # ...and placement enforcement must still fire on the real #[tokio::test].
   echo "$output" | grep -q "Rust test file outside tests/"
 }
+
+@test "rust-quality: cfg(all(test)) with no comma is still flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  printf '#[cfg(all(test))]\nmod tests {\n    fn t() {}\n}\n' > src/allnocomma.rs
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/allnocomma.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
+@test "rust-quality: cfg(all(test , feature)) with space before comma is still flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  printf '#[cfg(all(test , feature = "x"))]\nmod tests;\n' > src/allspace.rs
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/allspace.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
