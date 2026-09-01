@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.10.1](https://github.com/Falconiere/toolu/compare/v4.10.0...v4.10.1) (2026-09-01)
+
+
+### Bug Fixes
+
+* **rust-quality:** exempt #[path]-wired test modules and test-file allow headers ([#171](https://github.com/Falconiere/toolu/issues/171)) ([4fbcc19](https://github.com/Falconiere/toolu/commit/4fbcc197b3f529bf669a299b324bb3f3c19468b0))
+
 ## [4.10.0](https://github.com/Falconiere/toolu/compare/v4.9.0...v4.10.0) (2026-08-31)
 
 
