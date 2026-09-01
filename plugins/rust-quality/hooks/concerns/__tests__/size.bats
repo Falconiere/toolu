@@ -284,7 +284,7 @@ EOF
   payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/store/tests/big.rs"}}'
   tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
   [ "$status" -eq 0 ]
-  ! echo "$output" | grep -q "Function too long"
+  ! echo "$output" | grep -qF "Function too long in"
 }
 
 @test "rust-quality: oversized impl in a COLOCATED test under src/ is NOT flagged" {
@@ -303,5 +303,5 @@ EOF
   payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/store/tests/big.rs"}}'
   tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
   [ "$status" -eq 0 ]
-  ! echo "$output" | grep -q "Impl block too large"
+  ! echo "$output" | grep -qF "Impl block too large in"
 }
