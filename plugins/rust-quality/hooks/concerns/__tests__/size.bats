@@ -257,3 +257,51 @@ EOF
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q "Impl block too large"
 }
+
+# --- test-file exemption (50-size-fn / 55-size-impl) ---
+#
+# A table-driven test is one long fn by nature, and the toolu-conventions Rust
+# test header prescribes `clippy::too_many_lines` for exactly that reason. A
+# crate that bans mod.rs wires its colocated tests as src/<mod>/tests/<name>.rs
+# — under src/, but test code all the same — so the size rules key on the file
+# being test code, not on the directory.
+
+@test "rust-quality: long fn in a COLOCATED test under src/ is NOT flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p "$TMP_PROJ/.claude"
+  echo '{"lang":{"rust":{"maxFnLines":3}}}' > "$TMP_PROJ/.claude/toolu.config.json"
+  mkdir -p src/store/tests
+  cat > src/store/tests/big.rs <<'EOF'
+#[test]
+fn table_driven() {
+    let a = 1;
+    let b = 2;
+    let c = 3;
+    assert_eq!(a + b + c, 6);
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/store/tests/big.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Function too long"
+}
+
+@test "rust-quality: oversized impl in a COLOCATED test under src/ is NOT flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p "$TMP_PROJ/.claude"
+  echo '{"lang":{"rust":{"maxImplLines":6}}}' > "$TMP_PROJ/.claude/toolu.config.json"
+  mkdir -p src/store/tests
+  : > src/store/tests/big.rs
+  echo '#[test]' >> src/store/tests/big.rs
+  echo 'fn anchor() { assert!(true); }' >> src/store/tests/big.rs
+  echo 'struct Fixture;' >> src/store/tests/big.rs
+  echo 'impl Fixture {' >> src/store/tests/big.rs
+  for i in $(seq 1 8); do echo "    const V$i: u8 = $i;" >> src/store/tests/big.rs; done
+  echo '}' >> src/store/tests/big.rs
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/store/tests/big.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Impl block too large"
+}
