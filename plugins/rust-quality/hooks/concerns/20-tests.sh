@@ -14,7 +14,10 @@ _has_inline_cfg_test=0
 # only wiring a crate that bans mod.rs has for a module-sibling test file, so
 # the decl is looked for past any attribute run, bounded so it cannot scan the
 # whole file. Inner attributes (`#![...]`) are deliberately not skipped — they
-# cannot precede a declaration. Only the BARE cfg(test) form earns this: the
+# cannot precede a declaration, and neither is an attribute split across lines
+# (`#[path =` / `"x.rs"]`) — same line-based limitation as 30-suppression.sh,
+# and it fails closed: the file is reported rather than silently exempted.
+# Only the BARE cfg(test) form earns this: the
 # all()/any() combinator stays blocked unconditionally (even ahead of a bodyless
 # decl), and any body (`mod tests {`, any line form) stays blocked. grep is
 # line-based, so the multi-line pairing needs awk (getline the next lines); no

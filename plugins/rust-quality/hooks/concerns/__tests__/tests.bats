@@ -327,6 +327,23 @@ EOF
   ! echo "$output" | grep -q "Inline #\[cfg(test)\]"
 }
 
+# The attribute run is bounded so a pathological file cannot be scanned end to
+# end; past the bound the rule fails closed and reports.
+@test "rust-quality: a decl behind more attributes than the bound is still flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  {
+    printf 'pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n'
+    printf '#[cfg(test)]\n'
+    for i in 1 2 3 4 5 6 7 8 9; do printf '#[path = "tests/p%s.rs"]\n' "$i"; done
+    printf 'mod tests;\n'
+  } > src/foo.rs
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
 @test "rust-quality: #[path]-wired #[cfg(test)] mod tests { with a body still fails" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
