@@ -8,7 +8,7 @@
 # production panic. Same `_is_rust_test` gate 90-docs.sh already uses (set in
 # 20-tests.sh: *_test.rs/*_tests.rs filename, or a #[test]/#[rstest]/#[test_case]
 # attribute in the body).
-if [[ "$FILE_PATH" == */src/* && ! "$_is_rust_test" -eq 1 ]] && command -v ast-grep >/dev/null 2>&1; then
+if [[ "$FILE_PATH" == */src/* && "$_is_rust_test" -ne 1 ]] && command -v ast-grep >/dev/null 2>&1; then
   # ONE ast-grep process for all six rules. `ast-grep run -p` re-parses the file
   # per pattern; `scan --inline-rules` parses once and returns every rule's hits
   # as JSON. The excerpt lines rebuilt from .file/.range/.lines below are

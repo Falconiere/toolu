@@ -32,7 +32,7 @@ LONG_RS_FUNCS=$(awk -v max="$RUST_MAX_FN" -v q="'" '
 # Test files are exempt: a table-driven test is one long fn by nature, and the
 # toolu-conventions Rust test header prescribes `clippy::too_many_lines` for
 # exactly that reason — flagging it here would contradict the template.
-if [[ -n "$LONG_RS_FUNCS" && ! "$_is_rust_test" -eq 1 ]]; then
+if [[ -n "$LONG_RS_FUNCS" && "$_is_rust_test" -ne 1 ]]; then
   add_error "Function too long in $FILE_PATH (>${RUST_MAX_FN} lines) — extract helpers."
 fi
 
