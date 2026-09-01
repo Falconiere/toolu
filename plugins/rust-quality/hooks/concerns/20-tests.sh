@@ -9,18 +9,34 @@ _has_inline_cfg_test=0
 # EXEMPTION: a bare `#[cfg(test)]` that wires a BODYLESS `mod <name>;` decl —
 # single-line (`#[cfg(test)] mod tests;`) or rustfmt's attribute-on-its-own-line
 # two-line form (`#[cfg(test)]` then `mod tests;`) — is a pointer to an external
-# module-sibling tests/ dir, not inline test code, and is not flagged. Only the
-# BARE cfg(test) form earns this: the all()/any() combinator stays blocked
-# unconditionally (even ahead of a bodyless decl), and any body (`mod tests {`,
-# either line form) stays blocked. grep is line-based, so the two-line pairing
-# needs awk (getline the next line); no \b — BSD awk has none, use a negated
-# [[:alnum:]_] class (or line end) for the boundary instead.
+# module-sibling tests/ dir, not inline test code, and is not flagged. Further
+# OUTER attributes may sit between the two: `#[path = "tests/stats.rs"]` is the
+# only wiring a crate that bans mod.rs has for a module-sibling test file, so
+# the decl is looked for past any attribute run, bounded so it cannot scan the
+# whole file. Inner attributes (`#![...]`) are deliberately not skipped — they
+# cannot precede a declaration, and neither is an attribute split across lines
+# (`#[path =` / `"x.rs"]`) — same line-based limitation as 30-suppression.sh,
+# and it fails closed: the file is reported rather than silently exempted.
+# Only the BARE cfg(test) form earns this: the
+# all()/any() combinator stays blocked unconditionally (even ahead of a bodyless
+# decl), and any body (`mod tests {`, any line form) stays blocked. grep is
+# line-based, so the multi-line pairing needs awk (getline the next lines); no
+# \b — BSD awk has none, use a negated [[:alnum:]_] class (or line end) for the
+# boundary instead.
 if [[ "$FILE_PATH" == */src/* ]] \
    && awk '
        /^[[:space:]]*#\[cfg\((all|any)\(test([^[:alnum:]_]|$)/ { found=1; exit }
        /^[[:space:]]*#\[cfg\(test\)\][[:space:]]*(pub[[:space:]]+)?mod[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*;[[:space:]]*(\/\/.*)?$/ { next }
        /^[[:space:]]*#\[cfg\(test\)\][[:space:]]*$/ {
-         if ((getline nxt) > 0 && nxt ~ /^[[:space:]]*(pub[[:space:]]+)?mod[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*;[[:space:]]*(\/\/.*)?$/) { next }
+         nxt=""
+         # 8 attributes plus the decl line itself — each pass reads one line, so
+         # the bound has to leave room for the decl read or a decl behind the
+         # full 8 attributes is reported.
+         for (i = 0; i < 9; i++) {
+           if ((getline nxt) <= 0) { found=1; exit }
+           if (nxt !~ /^[[:space:]]*#\[[^!]/) break
+         }
+         if (nxt ~ /^[[:space:]]*(pub[[:space:]]+)?mod[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*;[[:space:]]*(\/\/.*)?$/) { next }
          found=1; exit
        }
        /^[[:space:]]*#\[cfg\(test\)\]/ { found=1; exit }

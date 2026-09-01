@@ -287,6 +287,103 @@ EOF
   ! echo "$output" | grep -q "Inline #\[cfg(test)\]"
 }
 
+# A crate that bans mod.rs can only wire a module-sibling test file with
+# #[path], which puts an attribute between the cfg and the decl.
+@test "rust-quality: #[path]-wired bodyless #[cfg(test)] mod tests; passes" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p src/api
+  cat > src/api/stats.rs <<'EOF'
+pub fn add(a: u8, b: u8) -> u8 {
+    a + b
+}
+
+#[cfg(test)]
+#[path = "tests/stats.rs"]
+mod tests;
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/api/stats.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
+@test "rust-quality: a run of attributes before the bodyless mod decl still passes" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/foo.rs <<'EOF'
+pub fn add(a: u8, b: u8) -> u8 {
+    a + b
+}
+
+#[cfg(test)]
+#[path = "tests/foo.rs"]
+#[cfg_attr(miri, ignore)]
+pub mod foo_tests;
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
+# The bound is 8 attributes, and the decl behind the full 8 is still reached —
+# the lookahead reads one more line for the decl itself.
+@test "rust-quality: a decl behind the full attribute bound is exempt" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  {
+    printf 'pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n'
+    printf '#[cfg(test)]\n'
+    for i in 1 2 3 4 5 6 7 8; do printf '#[path = "tests/p%s.rs"]\n' "$i"; done
+    printf 'mod tests;\n'
+  } > src/foo.rs
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
+# Past the bound a pathological file cannot be scanned end to end — the rule
+# fails closed and reports.
+@test "rust-quality: a decl behind more attributes than the bound is still flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  {
+    printf 'pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n'
+    printf '#[cfg(test)]\n'
+    for i in 1 2 3 4 5 6 7 8 9; do printf '#[path = "tests/p%s.rs"]\n' "$i"; done
+    printf 'mod tests;\n'
+  } > src/foo.rs
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
+@test "rust-quality: #[path]-wired #[cfg(test)] mod tests { with a body still fails" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/foo.rs <<'EOF'
+pub fn add(a: u8, b: u8) -> u8 {
+    a + b
+}
+
+#[cfg(test)]
+#[path = "tests/foo.rs"]
+mod tests {
+    #[test]
+    fn it_adds() {
+        assert_eq!(super::add(1, 2), 3);
+    }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
 @test "rust-quality: single-line #[cfg(test)] mod tests { with a body still fails" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
