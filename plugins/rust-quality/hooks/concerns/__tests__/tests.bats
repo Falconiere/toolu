@@ -287,6 +287,69 @@ EOF
   ! echo "$output" | grep -q "Inline #\[cfg(test)\]"
 }
 
+# A crate that bans mod.rs can only wire a module-sibling test file with
+# #[path], which puts an attribute between the cfg and the decl.
+@test "rust-quality: #[path]-wired bodyless #[cfg(test)] mod tests; passes" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p src/api
+  cat > src/api/stats.rs <<'EOF'
+pub fn add(a: u8, b: u8) -> u8 {
+    a + b
+}
+
+#[cfg(test)]
+#[path = "tests/stats.rs"]
+mod tests;
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/api/stats.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
+@test "rust-quality: a run of attributes before the bodyless mod decl still passes" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/foo.rs <<'EOF'
+pub fn add(a: u8, b: u8) -> u8 {
+    a + b
+}
+
+#[cfg(test)]
+#[path = "tests/foo.rs"]
+#[cfg_attr(miri, ignore)]
+pub mod foo_tests;
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
+@test "rust-quality: #[path]-wired #[cfg(test)] mod tests { with a body still fails" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/foo.rs <<'EOF'
+pub fn add(a: u8, b: u8) -> u8 {
+    a + b
+}
+
+#[cfg(test)]
+#[path = "tests/foo.rs"]
+mod tests {
+    #[test]
+    fn it_adds() {
+        assert_eq!(super::add(1, 2), 3);
+    }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
 @test "rust-quality: single-line #[cfg(test)] mod tests { with a body still fails" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
