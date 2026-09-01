@@ -139,7 +139,7 @@ EOF
   tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "Forbidden lint suppression"
-  echo "$output" | grep -q "only the file-level #!\[allow(...)\] header is accepted"
+  echo "$output" | grep -qF 'only the file-level #![allow(...)] header is accepted'
 }
 
 @test "rust-quality: file-level #![allow] header outside tests/ IS still flagged" {
@@ -156,5 +156,5 @@ EOF
   tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "Forbidden lint suppression"
-  ! echo "$output" | grep -q "only the file-level"
+  ! echo "$output" | grep -qF 'only the file-level #![allow(...)] header is accepted'
 }

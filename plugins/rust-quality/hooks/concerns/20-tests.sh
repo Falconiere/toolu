@@ -29,7 +29,10 @@ if [[ "$FILE_PATH" == */src/* ]] \
        /^[[:space:]]*#\[cfg\(test\)\][[:space:]]*(pub[[:space:]]+)?mod[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*;[[:space:]]*(\/\/.*)?$/ { next }
        /^[[:space:]]*#\[cfg\(test\)\][[:space:]]*$/ {
          nxt=""
-         for (i = 0; i < 8; i++) {
+         # 8 attributes plus the decl line itself — each pass reads one line, so
+         # the bound has to leave room for the decl read or a decl behind the
+         # full 8 attributes is reported.
+         for (i = 0; i < 9; i++) {
            if ((getline nxt) <= 0) { found=1; exit }
            if (nxt !~ /^[[:space:]]*#\[[^!]/) break
          }
