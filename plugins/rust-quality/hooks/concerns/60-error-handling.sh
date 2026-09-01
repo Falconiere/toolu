@@ -1,8 +1,14 @@
 # shellcheck shell=bash
 # --- Error-handling rules (zero tolerance) ---
-# src/ is production code (tests must live in tests/, enforced above), so
-# any panic-on-error pattern here is a prod panic.
-if [[ "$FILE_PATH" == */src/* ]] && command -v ast-grep >/dev/null 2>&1; then
+# src/ is production code, so any panic-on-error pattern here is a prod panic
+# — EXCEPT in a test file. "tests must live in tests/" is true of the crate-root
+# suite but not of a module-sibling one: a crate that bans mod.rs wires its
+# colocated tests as src/<mod>/tests/<name>.rs, which is under src/ and is still
+# test code. `.unwrap()` there is how a test reports a failed assertion, not a
+# production panic. Same `_is_rust_test` gate 90-docs.sh already uses (set in
+# 20-tests.sh: *_test.rs/*_tests.rs filename, or a #[test]/#[rstest]/#[test_case]
+# attribute in the body).
+if [[ "$FILE_PATH" == */src/* && ! "$_is_rust_test" -eq 1 ]] && command -v ast-grep >/dev/null 2>&1; then
   # ONE ast-grep process for all six rules. `ast-grep run -p` re-parses the file
   # per pattern; `scan --inline-rules` parses once and returns every rule's hits
   # as JSON. The excerpt lines rebuilt from .file/.range/.lines below are

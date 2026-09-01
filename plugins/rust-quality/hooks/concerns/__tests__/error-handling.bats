@@ -152,3 +152,42 @@ EOF
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "unreachable!"
 }
+
+@test "rust-quality: .unwrap() in a COLOCATED test under src/ is not flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  command -v ast-grep >/dev/null 2>&1 || skip "ast-grep not installed"
+  _rust_project
+  # A crate that bans mod.rs wires its module-sibling tests as
+  # src/<mod>/tests/<name>.rs — under src/, but test code all the same.
+  mkdir -p src/store/tests
+  cat > src/store/tests/migrate.rs <<'EOF'
+#[test]
+fn migration_applies() {
+    let conn = open().unwrap();
+    assert_eq!(conn.version(), 14);
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/store/tests/migrate.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -qv ".unwrap()" || [ -z "$(echo "$output" | grep '.unwrap()')" ]
+}
+
+@test "rust-quality: .unwrap() in a NON-test file under a src/.../tests/ path is still flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  command -v ast-grep >/dev/null 2>&1 || skip "ast-grep not installed"
+  _rust_project
+  # The exemption keys on the file being test code (filename or a #[test]
+  # attribute), NOT on the directory alone — a helper with neither stays
+  # production code even sitting in a tests/ dir.
+  mkdir -p src/store/tests
+  cat > src/store/tests/helper.rs <<'EOF'
+pub fn open_or_die() -> Conn {
+    connect().unwrap()
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/store/tests/helper.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q ".unwrap()"
+}

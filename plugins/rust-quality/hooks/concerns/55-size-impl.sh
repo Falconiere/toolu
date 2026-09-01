@@ -21,7 +21,8 @@ LONG_IMPL=$(awk -v max="$RUST_MAX_IMPL" -v q="'" '
     }
   }
 ' "$FILE_PATH" 2>/dev/null)
-if [[ -n "$LONG_IMPL" ]]; then
+# Exempt in test files, for the same reason as the fn-length rule above.
+if [[ -n "$LONG_IMPL" && ! "$_is_rust_test" -eq 1 ]]; then
   add_error "Impl block too large in $FILE_PATH (>${RUST_MAX_IMPL} lines) — split into trait impls or modules."
 fi
 
