@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.10.2](https://github.com/Falconiere/toolu/compare/v4.10.1...v4.10.2) (2026-09-01)
+
+
+### Bug Fixes
+
+* **rust-quality:** exempt colocated tests under src/ from production rules ([#174](https://github.com/Falconiere/toolu/issues/174)) ([b867e16](https://github.com/Falconiere/toolu/commit/b867e16349d5121950e6811bb66a91cf31af961e))
+
 ## [4.10.1](https://github.com/Falconiere/toolu/compare/v4.10.0...v4.10.1) (2026-09-01)
 
 

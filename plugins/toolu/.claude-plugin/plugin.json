@@ -1,6 +1,6 @@
 {
   "name": "toolu",
-  "version": "4.10.1",
+  "version": "4.10.2",
   "description": "Dual-host engineering discipline for Claude Code and Codex: workflow skills, agents, commands, and registry-driven quality hooks.",
   "author": {
     "name": "Falconiere Barbosa",
