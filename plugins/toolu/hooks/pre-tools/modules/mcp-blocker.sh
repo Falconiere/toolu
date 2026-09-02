@@ -109,7 +109,19 @@ elif match_entry "$disabled_from_cfg"; then
 fi
 
 if [ -n "$blocked_source" ]; then
-  mode=$(toolu_gate_mode mcpBlocker)
+  # Same validate-then-fail-closed discipline as protected-files.sh: an
+  # unresolvable mode blocks, and says that it did.
+  mode_note=""
+  mode=$(toolu_gate_mode mcpBlocker) || mode=""
+  case " $TOOLU_GATE_MODES " in
+    *" $mode "*) ;;
+    *)
+      printf 'toolu-mcp-blocker: could not resolve gates.mcpBlocker.mode (got %s); blocking\n' \
+        "${mode:-<empty>}" >&2
+      mode_note=" [toolu could not resolve gates.mcpBlocker.mode, so this failed closed]"
+      mode="block"
+      ;;
+  esac
 
   if [ "$blocked_source" = "file" ]; then
     origin="listed in settings/mcp-blocklist.txt"
@@ -123,7 +135,8 @@ if [ -n "$blocked_source" ]; then
 
   case "$mode" in
     ask)
-      reason=$(toolu_gate_guardrail_warning "$headline" "$detail")
+      reason=$(toolu_gate_guardrail_warning "$headline" "$detail") || reason=""
+      [ -n "$reason" ] || reason="$headline $detail"
       ;;
     advise)
       reason="MCP server \"$server\" is blocked ($origin). $detail The call was NOT stopped — gates.mcpBlocker.mode is 'advise'."
@@ -133,6 +146,6 @@ if [ -n "$blocked_source" ]; then
       ;;
   esac
 
-  toolu_gate_emit "$mode" "$reason"
+  toolu_gate_emit "$mode" "${reason}${mode_note}"
 fi
 exit 0

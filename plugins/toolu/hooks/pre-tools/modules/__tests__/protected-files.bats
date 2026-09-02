@@ -209,6 +209,36 @@ run_hook_multiedit() {
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
 }
 
+@test "protected-files: an unresolvable mode fails closed AND says it did" {
+  # Fault injection, not a mock: a REAL copy of lib/ with gate-mode.sh's
+  # resolver corrupted to return a value that is not a mode. That is the
+  # drift this guard exists for, and the hook must both block and explain.
+  cp -R "${BATS_TEST_DIRNAME}/../../../lib" "$TMP/lib"
+  cat >> "$TMP/lib/gate-mode.sh" <<'SH'
+toolu_gate_mode() { printf 'not-a-mode'; return 0; }
+SH
+  local payload out
+  payload=$(jq -n '{tool_name:"Edit",tool_input:{file_path:".env"}}')
+  # Keep the streams apart: the decision goes to stdout, the operator-facing
+  # diagnostic to stderr, and both matter here.
+  out=$(tool_name=Edit input="$payload" TOOLU_LIB_DIR="$TMP/lib" \
+    bash "$HOOK" <<<"$payload" 2>"$TMP/warn")
+  echo "$out" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  [[ "$(echo "$out" | jq -r '.hookSpecificOutput.permissionDecisionReason')" == *"failed closed"* ]]
+  grep -q "could not resolve gates.protectedFiles.mode" "$TMP/warn"
+}
+
+@test "protected-files: the ask prompt is never emitted empty" {
+  run_hook ".env"
+  [ "$status" -eq 0 ]
+  local reason
+  reason=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')
+  [ -n "$reason" ]
+  [ "$reason" != "null" ]
+  # Even a degraded prompt has to name the path and the stake.
+  [[ "$reason" == *".env"* ]]
+}
+
 # ── Bash/Shell coverage (issue #176) ────────────────────────────────────────
 
 @test "protected-files: Bash redirect '>' onto .env asks" {

@@ -113,7 +113,20 @@ for candidate in "${candidates[@]}"; do
   done <<< "$list"
 
   if [ -n "$matched" ]; then
-    mode=$(toolu_gate_mode protectedFiles)
+    # Resolve the delivery mode, then VALIDATE it. Falling through to the
+    # emit's `*)` arm would also block, but silently: a deny the user cannot
+    # explain is a deny they work around. Fail closed AND say why.
+    mode_note=""
+    mode=$(toolu_gate_mode protectedFiles) || mode=""
+    case " $TOOLU_GATE_MODES " in
+      *" $mode "*) ;;
+      *)
+        printf 'toolu-protected-files: could not resolve gates.protectedFiles.mode (got %s); blocking\n' \
+          "${mode:-<empty>}" >&2
+        mode_note=" [toolu could not resolve gates.protectedFiles.mode, so this failed closed]"
+        mode="block"
+        ;;
+    esac
 
     if [[ "$tool_name" == "Bash" || "$tool_name" == "Shell" ]]; then
       headline="This command would WRITE to $candidate, a protected path (matches \"$matched\")."
@@ -143,7 +156,10 @@ for candidate in "${candidates[@]}"; do
 
     case "$mode" in
       ask)
-        reason=$(toolu_gate_guardrail_warning "$headline" "$detail")
+        reason=$(toolu_gate_guardrail_warning "$headline" "$detail") || reason=""
+        # A prompt with no text is worse than a blunt one — the user is being
+        # asked to approve a security override and must see what for.
+        [ -n "$reason" ] || reason="$headline $detail"
         ;;
       advise)
         reason="Protected path $candidate (matches \"$matched\"). $detail The write was NOT stopped — gates.protectedFiles.mode is 'advise'."
@@ -153,7 +169,7 @@ for candidate in "${candidates[@]}"; do
         ;;
     esac
 
-    toolu_gate_emit "$mode" "$reason"
+    toolu_gate_emit "$mode" "${reason}${mode_note}"
     exit 0
   fi
 done
