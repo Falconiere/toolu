@@ -248,6 +248,38 @@ strip_heredocs() {
   '
 }
 
+# Echo the bodies of UNQUOTED heredocs read on stdin, one line each.
+#
+# The mirror of strip_heredocs, for the one case stripping gets wrong: bash
+# expands `$(...)` inside an UNQUOTED heredoc (`<<EOF`), so a command
+# substitution in that body really runs. A QUOTED tag (`<<'EOF'`, `<<"EOF"`)
+# expands nothing, so its body is literal text and is NOT emitted here.
+#
+# Used by bash_write_targets to catch a write hidden in a heredoc body.
+_toolu_unquoted_heredoc_bodies() {
+  awk '
+    BEGIN { in_heredoc = 0; tag = ""; tag_tab = ""; quoted = 0 }
+    {
+      if (in_heredoc) {
+        if ($0 == tag || $0 == tag_tab) { in_heredoc = 0; tag = ""; tag_tab = ""; quoted = 0 }
+        else if (!quoted) { print }
+        next
+      }
+      if (match($0, /<<-?[ \t]*"?'\''?[A-Za-z_][A-Za-z0-9_]*"?'\''?/)) {
+        m = substr($0, RSTART, RLENGTH)
+        # A quote anywhere in the tag token means the body never expands.
+        quoted = (m ~ /["'\'']/) ? 1 : 0
+        gsub(/^<<-?[ \t]*"?'\''?/, "", m)
+        gsub(/"?'\''?$/, "", m)
+        tag = m
+        tag_tab = "\t" m
+        in_heredoc = 1
+        next
+      }
+    }
+  '
+}
+
 # Echo a filesystem-safe slug for a branch name: '/'→'_', strip to
 # [a-zA-Z0-9_-], empty → "_default". Used to key per-branch transient state
 # files (push-review, plan-ledger). Takes the branch name as $1.
@@ -680,9 +712,17 @@ bash_write_targets() {
           for ((j = i + 1; j < n; j++)); do
             if [ "${tokens[$j]}" = "-c" ]; then
               local script="${tokens[$((j + 1))]:-}"
-              if [[ "$script" =~ open\([\'\"]([^\'\"]+)[\'\"][[:space:]]*,[[:space:]]*[\'\"][wa] ]]; then
+              # EVERY open() in the script, not just the first: a second write
+              # hidden behind a benign one is a bypass, not a footnote. The
+              # matched text is removed with a QUOTED expansion so a glob
+              # metacharacter in the script can't corrupt the walk.
+              #
+              # Modes: w/a/x always write; r is read-only UNLESS it carries a
+              # '+' (r+, rb+), which opens for writing too. Bare r/rb stay out.
+              while [[ "$script" =~ open\([\'\"]([^\'\"]+)[\'\"][[:space:]]*,[[:space:]]*[\'\"]([wax][^\'\"]*|r[^\'\"]*\+[^\'\"]*)[\'\"] ]]; do
                 printf '%s\n' "${BASH_REMATCH[1]}"
-              fi
+                script="${script#*"${BASH_REMATCH[0]}"}"
+              done
               break
             fi
           done
@@ -696,6 +736,22 @@ bash_write_targets() {
   for stmt in "${substs[@]}"; do
     bash_write_targets "$stmt"
   done
+
+  # strip_heredocs dropped every heredoc body above, which is right for prose
+  # -- but bash EXPANDS `$(...)` inside an UNQUOTED heredoc, so
+  # `cat <<EOF` / `$(echo x > .env)` / `EOF` really does write .env. Scan the
+  # substitutions in those bodies (and only those: a quoted tag, <<'EOF',
+  # expands nothing, so its body stays literal text).
+  local hd_bodies
+  hd_bodies=$(printf '%s\n' "$1" | _toolu_unquoted_heredoc_bodies)
+  if [ -n "$hd_bodies" ]; then
+    _TOOLU_SUBSTS=()
+    _toolu_split_statements "$hd_bodies"
+    local -a hd_substs=("${_TOOLU_SUBSTS[@]}")
+    for stmt in "${hd_substs[@]}"; do
+      bash_write_targets "$stmt"
+    done
+  fi
 }
 
 # Echo the absolute root of the repo a `git push` command ($1) targets.

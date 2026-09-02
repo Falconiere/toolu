@@ -963,7 +963,10 @@ EOF'
   source_lib
   run bash_write_targets "sed -i 's/a/b/' .env.example"
   [ "$status" -eq 0 ]
-  [[ "$output" == *".env.example"* ]]
+  # Two lines: the deliberately over-included script argument, then the file.
+  # A sed script is not path-shaped, so it matches no protected pattern.
+  [ "$output" = "s/a/b/
+.env.example" ]
 }
 
 @test "bash_write_targets: 'cp SRC DEST' names the last (dest) token" {
@@ -991,7 +994,9 @@ EOF'
   source_lib
   run bash_write_targets "perl -i -pe 's/a/b/' .env.example"
   [ "$status" -eq 0 ]
-  [[ "$output" == *".env.example"* ]]
+  # Same two-line shape as sed -i: over-included script argument, then the file.
+  [ "$output" = "s/a/b/
+.env.example" ]
 }
 
 @test "bash_write_targets: 'dd of=FILE' names the of= value" {
@@ -1055,4 +1060,65 @@ EOF'
   run bash_write_targets 'echo hi > /tmp/scratch.txt'
   [ "$status" -eq 0 ]
   [ "$output" = "/tmp/scratch.txt" ]
+}
+
+@test "bash_write_targets: EVERY open() in a -c script is reported, not just the first" {
+  source_lib
+  run bash_write_targets "python3 -c \"open('.env','w'); open('.secrets','w')\""
+  [ "$status" -eq 0 ]
+  # A second write hidden behind a benign first one is a bypass, not a footnote.
+  [ "$output" = ".env
+.secrets" ]
+}
+
+@test "bash_write_targets: open() mode 'x' (exclusive create) is a write" {
+  source_lib
+  run bash_write_targets "python3 -c \"open('.env','x').write(y)\""
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: open() mode 'r+' (read-write) is a write" {
+  source_lib
+  run bash_write_targets "python3 -c \"open('.env','r+').write(y)\""
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: open() binary write mode 'wb' is a write" {
+  source_lib
+  run bash_write_targets "python3 -c \"open('.env','wb').write(y)\""
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: open() read-only mode 'r' is NOT a write" {
+  source_lib
+  run bash_write_targets "python3 -c \"print(open('.env','r').read())\""
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "bash_write_targets: open() read-only binary mode 'rb' is NOT a write" {
+  source_lib
+  run bash_write_targets "python3 -c \"print(open('.env','rb').read())\""
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "bash_write_targets: a substitution inside an UNQUOTED heredoc body is found" {
+  source_lib
+  # bash expands $(...) in an unquoted heredoc, so this really writes .env --
+  # even though strip_heredocs drops the body before the main parse.
+  run bash_write_targets "$(printf '%s\n' 'cat <<EOF' '$(echo hi > .env)' 'EOF')"
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: a substitution inside a QUOTED heredoc body is NOT a write" {
+  source_lib
+  # <<'EOF' expands nothing -- the body is literal text, not a command.
+  run bash_write_targets "$(printf '%s\n' "cat <<'EOF'" '$(echo hi > .env)' 'EOF')"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }

@@ -37,8 +37,15 @@ declare -a candidates=()
 if [[ "$tool_name" == "Bash" || "$tool_name" == "Shell" ]]; then
   command_str=$(echo "$input" | jq -r '.tool_input.command // ""')
   [ -z "$command_str" ] && exit 0
+  # Deduplicated: the same path can surface twice (once in the main command,
+  # once via a command substitution the extractor recurses into), and checking
+  # one path against the whole pattern list twice buys nothing.
   while IFS= read -r target; do
-    [ -n "$target" ] && candidates+=("$target")
+    [ -n "$target" ] || continue
+    case " ${candidates[*]-} " in
+      *" $target "*) continue ;;
+    esac
+    candidates+=("$target")
   done < <(bash_write_targets "$command_str")
   [ ${#candidates[@]} -eq 0 ] && exit 0
 else

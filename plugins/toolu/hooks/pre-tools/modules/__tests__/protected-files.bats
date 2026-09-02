@@ -119,8 +119,11 @@ run_hook_multiedit() {
 @test "protected-files: deny reason no longer implies a user-approval override exists" {
   run_hook ".env"
   [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("unless explicitly requested") | not'
-  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("always denies")'
+  # Exact reason, not a substring probe: the point of this test is that the
+  # message does not promise an override that does not exist, and a substring
+  # assertion passes just as happily on a reason that says it somewhere else.
+  local expected='File .env is protected (matches ".env"). This guardrail always denies: it is not a judgement call a user approval can relax (see plugins/toolu/hooks/docs/gates.md).'
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')" = "$expected" ]
 }
 
 # ── Bash/Shell coverage (issue #176) ────────────────────────────────────────
@@ -152,8 +155,21 @@ run_hook_multiedit() {
 @test "protected-files: Bash reason names the write target and the tool-agnostic guardrail" {
   run_hook_bash 'echo hi > .env'
   [ "$status" -eq 0 ]
+  local expected='Command would write to .env, which is protected (matches ".env"). Same guardrail as Edit/Write: it always denies, in every tool, with no session override (see plugins/toolu/hooks/docs/gates.md).'
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')" = "$expected" ]
+}
+
+@test "protected-files: Bash write hidden in an unquoted heredoc substitution is denied" {
+  # bash expands $(...) inside <<EOF, so this really writes .env.
+  run_hook_bash "$(printf '%s\n' 'cat <<EOF' '$(echo hi > .env)' 'EOF')"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+@test "protected-files: Bash second open() behind a benign first is still denied" {
+  run_hook_bash "python3 -c \"open('ok.txt','w'); open('.env','w')\""
+  [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains(".env")'
-  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("no session override")'
 }
 
 @test "protected-files: Bash command writing an unprotected path is allowed" {
