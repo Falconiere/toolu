@@ -579,6 +579,125 @@ is_git_commit() {
   toolu_runs_git_subcommand "$1" commit
 }
 
+# Echo candidate file-write targets a Bash COMMAND ($1) may write to, one per
+# line -- best-effort, not a full shell grammar. Extends protected-file
+# coverage (protected-files.sh) to the Bash tool: Edit/Write/MultiEdit carry a
+# path-shaped tool_input the hook can check directly, but `Bash` does not, so
+# `sed -i` or a redirect against the same path had no structured field to
+# inspect and sailed through (github.com/Falconiere/toolu/issues/176).
+#
+# Covers the realistic bypasses, not every one a shell can express:
+#   - output redirection: >, >>, and fd-qualified/duplicated forms
+#     (1>, 2>>, &>, &>>) -- the token right after the operator. `2>&1` (fd
+#     duplication, not a file) is excluded.
+#   - `tee [-a] FILE...`                      -- every non-flag token after `tee`
+#   - `sed -i[SUFFIX] ...` / `perl -i[SUFFIX] ...` -- every non-flag token once
+#     `-i` is seen (over-includes the script argument; harmless, since
+#     protected patterns are path-shaped and a sed/perl script is not)
+#   - `cp ... DEST` / `mv ... DEST` / `install ... DEST` -- the last non-flag
+#     token
+#   - `dd of=FILE`
+#   - `python3 -c '...open("FILE", "w"...)...'` (and `python -c`) -- the first
+#     string literal passed to `open()` in a write/append mode; the exact
+#     bypass reported in the issue above
+#
+# Heredoc bodies are stripped first via strip_heredocs, and the command is
+# split into statements/tokens via _toolu_split_statements /
+# _toolu_statement_tokens -- the same quote- and heredoc-safe parsing
+# toolu_runs_git_subcommand uses -- so a path mentioned in prose or a commit
+# message is not mistaken for a write target.
+bash_write_targets() {
+  local cmd stmt
+  cmd=$(printf '%s\n' "$1" | strip_heredocs)
+
+  _TOOLU_SUBSTS=()
+  _toolu_split_statements "$cmd"
+  local -a stmts=("${_TOOLU_STMTS[@]}")
+  local -a substs=("${_TOOLU_SUBSTS[@]}")
+
+  for stmt in "${stmts[@]}"; do
+    _toolu_statement_tokens "$stmt"
+    local -a tokens=("${_TOOLU_TOKENS[@]}")
+    local n=${#tokens[@]} i first bin
+    [ "$n" -eq 0 ] && continue
+
+    # Resolve the command token past env-var assignments / sudo / env / command.
+    first=0
+    while [ "$first" -lt "$n" ]; do
+      case "${tokens[$first]}" in
+        sudo|env|command|nohup) first=$((first + 1)) ;;
+        [A-Za-z_]*=*) first=$((first + 1)) ;;
+        *) break ;;
+      esac
+    done
+    bin="${tokens[$first]:-}"
+
+    for ((i = 0; i < n; i++)); do
+      local tok="${tokens[$i]}" next
+
+      # Redirection operator as its own token: >, >>, N>, N>>, &>, &>>.
+      if [[ "$tok" =~ ^([0-9]*|&)\>{1,2}$ ]]; then
+        next="${tokens[$((i + 1))]:-}"
+        [[ "$next" =~ ^\&[0-9]+$ ]] && continue
+        [ -n "$next" ] && printf '%s\n' "$next"
+        continue
+      fi
+
+      [ "$i" -eq "$first" ] || continue
+      local j
+      case "$bin" in
+        tee)
+          for ((j = i + 1; j < n; j++)); do
+            [[ "${tokens[$j]}" == -* ]] && continue
+            printf '%s\n' "${tokens[$j]}"
+          done
+          ;;
+        sed|perl)
+          local seen_i=0
+          for ((j = i + 1; j < n; j++)); do
+            if [ "$seen_i" -eq 0 ]; then
+              [[ "${tokens[$j]}" == -i* ]] && seen_i=1
+              continue
+            fi
+            [[ "${tokens[$j]}" == -* ]] && continue
+            printf '%s\n' "${tokens[$j]}"
+          done
+          ;;
+        cp|mv|install)
+          local last=""
+          for ((j = i + 1; j < n; j++)); do
+            [[ "${tokens[$j]}" == -* ]] && continue
+            last="${tokens[$j]}"
+          done
+          [ -n "$last" ] && printf '%s\n' "$last"
+          ;;
+        dd)
+          for ((j = i + 1; j < n; j++)); do
+            [[ "${tokens[$j]}" == of=* ]] && printf '%s\n' "${tokens[$j]#of=}"
+          done
+          ;;
+        python|python3)
+          for ((j = i + 1; j < n; j++)); do
+            if [ "${tokens[$j]}" = "-c" ]; then
+              local script="${tokens[$((j + 1))]:-}"
+              if [[ "$script" =~ open\([\'\"]([^\'\"]+)[\'\"][[:space:]]*,[[:space:]]*[\'\"][wa] ]]; then
+                printf '%s\n' "${BASH_REMATCH[1]}"
+              fi
+              break
+            fi
+          done
+          ;;
+      esac
+    done
+  done
+
+  # A path hidden in a command substitution is still a write once that
+  # substitution runs -- recurse the same way toolu_runs_git_subcommand does.
+  for stmt in "${substs[@]}"; do
+    bash_write_targets "$stmt"
+  done
+}
+
 # Echo the absolute root of the repo a `git push` command ($1) targets.
 #
 # The hook's own cwd is not authoritative: `git -C <path> push` targets another

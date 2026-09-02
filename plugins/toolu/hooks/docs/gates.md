@@ -32,7 +32,15 @@ prompts: `ask` is opt-in via `gates.<name>.mode`.
 | `agentTier` | block | **advise** | off |
 
 `protected-files` and `mcp-blocker` are not in this table on purpose: they deny
-at every preset. A preset relaxes judgement calls, not guardrails.
+at every preset, in every tool. A preset relaxes judgement calls, not
+guardrails, and there is no session-level way to turn a `protected-files`
+deny into an `ask` a user can approve — the deny reason says so rather than
+implying otherwise. `protected-files` also inspects `Bash`/`Shell` commands
+for redirects, `tee`, `sed -i`/`perl -i`, `cp`/`mv`/`install`, `dd of=`, and
+`python -c open(..., "w"/"a")` write targets, so a protected path can't be
+edited through Bash once the structured `Edit`/`Write` path is closed to it
+(github.com/Falconiere/toolu/issues/176). That detection is best-effort, not
+a full shell grammar — see `bash_write_targets` in `hooks/lib/detect.sh`.
 
 ## Per-gate overrides
 

@@ -87,7 +87,13 @@ gate still speaks rather than silently doing nothing.
 | `agentTier` | block | **advise** | off |
 
 `protected-files` and `mcp-blocker` are deliberately absent: they deny at every
-preset. Presets relax judgement calls, not guardrails.
+preset, in every tool, with no session-level way to turn the deny into an
+`ask`. Presets relax judgement calls, not guardrails. `protected-files` also
+covers `Bash`/`Shell`: a command that would write a protected path via a
+redirect, `tee`, `sed -i`/`perl -i`, `cp`/`mv`/`install`, `dd of=`, or
+`python -c open(..., "w"/"a")` is denied the same as a structured `Edit`/
+`Write` (github.com/Falconiere/toolu/issues/176) — best-effort detection, not
+a full shell grammar.
 
 Precedence is `gates.<name>.mode` → the legacy top-level key (`docsSync.mode`,
 `agentTier.mode` only) → the preset table → `balanced`. An unrecognized value

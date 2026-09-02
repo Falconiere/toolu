@@ -28,6 +28,15 @@ run_hook() {
   tool_name=Edit input="$payload" run bash "$HOOK" <<<"$payload"
 }
 
+# Issue #176: Bash/Shell writes against a protected path had no path-shaped
+# tool_input to check and sailed through the Edit/Write-only deny.
+run_hook_bash() {
+  local command="$1"
+  local payload
+  payload=$(jq -n --arg c "$command" '{tool_name:"Bash",tool_input:{command:$c}}')
+  tool_name=Bash input="$payload" run bash "$HOOK" <<<"$payload"
+}
+
 # MultiEdit carries .tool_input.file_path (plus an edits[] array). The
 # PreToolUse matcher includes MultiEdit, so a protected path edited via
 # MultiEdit must be denied exactly like Edit/Write — not silently bypassed.
@@ -105,4 +114,64 @@ run_hook_multiedit() {
   [ "$status" -eq 0 ]
   [ -z "$output" ]
   rm -rf "$REPO"
+}
+
+@test "protected-files: deny reason no longer implies a user-approval override exists" {
+  run_hook ".env"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("unless explicitly requested") | not'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("always denies")'
+}
+
+# ── Bash/Shell coverage (issue #176) ────────────────────────────────────────
+
+@test "protected-files: Bash redirect '>' onto .env is denied" {
+  run_hook_bash 'echo hi > .env'
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+@test "protected-files: Bash 'sed -i' on .env.example is denied" {
+  run_hook_bash "sed -i 's/a/b/' .env.example"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+@test "protected-files: Bash python3 -c open(FILE, 'w') is denied -- the issue #176 repro" {
+  run_hook_bash "python3 -c \"open('.env', 'w').write(x)\""
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+@test "protected-files: Bash 'tee' onto a protected path is denied" {
+  run_hook_bash 'echo hi | tee .env'
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+@test "protected-files: Bash reason names the write target and the tool-agnostic guardrail" {
+  run_hook_bash 'echo hi > .env'
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains(".env")'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("no session override")'
+}
+
+@test "protected-files: Bash command writing an unprotected path is allowed" {
+  run_hook_bash 'echo hi > /tmp/scratch.txt'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "protected-files: Bash command reading .env.example is allowed" {
+  run_hook_bash 'cat .env.example'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "protected-files: Shell tool_name is covered the same as Bash" {
+  local payload
+  payload=$(jq -n --arg c 'echo hi > .env' '{tool_name:"Shell",tool_input:{command:$c}}')
+  tool_name=Shell input="$payload" run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
 }
