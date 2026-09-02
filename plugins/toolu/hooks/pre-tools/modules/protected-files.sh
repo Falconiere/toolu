@@ -125,12 +125,17 @@ for candidate in "${candidates[@]}"; do
     # deciding. A generic "it is protected" teaches nothing and gets waved
     # through; naming the actual stake is the difference between a real
     # decision and a reflex.
-    case "$matched" in
+    case "$rel_path" in
+      *.env.example|*.env.template|*.env.sample)
+        # Matched by the .env.* glob, but this one is meant to be committed.
+        # Calling a template a secrets file is wrong, and a prompt that
+        # overstates its case is one people learn to click through.
+        detail="This is an example/template env file. It is committed on purpose, so it should carry placeholders and never live values — it is guarded because a real credential pasted here is a credential published to the repo." ;;
       .env|.env.*|*secrets*)
         detail="This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push." ;;
-      .git/*)
+      .git/*|*/.git/*)
         detail="This is git's internal state. Approving lets an agent rewrite refs, hooks, or config — including hooks that run on your machine at every commit." ;;
-      hooks/*|skills/*)
+      *hooks/*|*skills/*)
         detail="This is toolu's own enforcement code — the hooks that run every other gate. Approving lets an agent edit the thing that is supposed to be watching it, which is how a guardrail gets quietly switched off." ;;
       *)
         detail="This path is listed in settings/protected-files.txt because edits to it are hard to notice and expensive to get wrong." ;;

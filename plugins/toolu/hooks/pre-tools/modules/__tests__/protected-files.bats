@@ -139,6 +139,27 @@ run_hook_multiedit() {
   [[ "$reason" == *"THIS ONE CALL"* ]]
 }
 
+@test "protected-files: a .env.example prompt calls it a template, not a secrets file" {
+  # It matches the .env.* glob, but it is committed on purpose. This is the
+  # exact file issue #176 was about, and calling it a secrets file is both
+  # wrong and the fastest way to teach people the prompt exaggerates.
+  run_hook ".env.example"
+  [ "$status" -eq 0 ]
+  local reason
+  reason=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')
+  [[ "$reason" == *"example/template env file"* ]]
+  [[ "$reason" != *"This is a secrets file"* ]]
+}
+
+@test "protected-files: a real .env still reads as a secrets file" {
+  run_hook ".env"
+  [ "$status" -eq 0 ]
+  local reason
+  reason=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')
+  [[ "$reason" == *"This is a secrets file"* ]]
+  [[ "$reason" != *"example/template"* ]]
+}
+
 @test "protected-files: the why-line is specific to the KIND of protected path" {
   run_hook "hooks/lib/detect.sh"
   [ "$status" -eq 0 ]
@@ -202,7 +223,7 @@ run_hook_multiedit() {
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "ask"'
 }
 
-@test "protected-files: Bash python3 -c open(FILE, 'w') is denied -- the issue #176 repro" {
+@test "protected-files: Bash python3 -c open(FILE, 'w') asks -- the issue #176 repro" {
   run_hook_bash "python3 -c \"open('.env', 'w').write(x)\""
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "ask"'
