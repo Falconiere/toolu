@@ -282,10 +282,17 @@ SH
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "ask"'
 }
 
-@test "protected-files: Bash second open() behind a benign first is still denied" {
+@test "protected-files: Bash second open() behind a benign first still asks, naming .env" {
   run_hook_bash "python3 -c \"open('ok.txt','w'); open('.env','w')\""
   [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains(".env")'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "ask"'
+  local reason
+  reason=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')
+  # The prompt must name the PROTECTED target, not merely mention it: a
+  # `contains(".env")` would also pass on a prompt about ok.txt that happened
+  # to quote the command line.
+  [[ "$reason" == *"would WRITE to .env,"* ]]
+  [[ "$reason" != *"would WRITE to ok.txt"* ]]
 }
 
 @test "protected-files: Bash command writing an unprotected path is allowed" {
