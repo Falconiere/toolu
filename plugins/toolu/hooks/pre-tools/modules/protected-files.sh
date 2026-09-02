@@ -2,6 +2,17 @@
 # Pre-tool check: Protect quality infrastructure files from edits.
 # Data-driven: globs come from $TOOLU_SETTINGS_DIR/protected-files.txt.
 #
+# Delivery is a MODE (gates.protectedFiles.mode), not a constant. It ships as
+# `ask`: the user is prompted with a loud warning and decides, per call. It
+# used to be an unconditional deny with no way through in-session, which is
+# what github.com/Falconiere/toolu/issues/176 reported — an agent could be told
+# "yes, edit that .env.example" by the user and STILL be refused, with the deny
+# text claiming an override existed that did not.
+#
+# `block` restores the old hard deny; `advise` only warns; `off` disables the
+# check. On a host that cannot prompt, `ask` degrades to `block`, never to
+# `advise` — see lib/gate-mode.sh.
+#
 # Inputs (from parent dispatcher pre-tools/mod.sh, via `export`):
 #   $tool_name - name of the tool being invoked
 #   $input     - raw JSON payload on stdin
@@ -12,6 +23,8 @@
 _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 # shellcheck source=../../lib/detect.sh
 . "$_toolu_lib/detect.sh"
+# shellcheck source=../../lib/gate-mode.sh
+. "$_toolu_lib/gate-mode.sh"
 
 # MultiEdit is in the PreToolUse matcher and carries .tool_input.file_path just
 # like Edit/Write — omitting it here would let a MultiEdit silently bypass the
@@ -100,23 +113,42 @@ for candidate in "${candidates[@]}"; do
   done <<< "$list"
 
   if [ -n "$matched" ]; then
+    mode=$(toolu_gate_mode protectedFiles)
+
     if [[ "$tool_name" == "Bash" || "$tool_name" == "Shell" ]]; then
-      jq -n --arg p "$matched" --arg f "$candidate" '{
-        "hookSpecificOutput": {
-          "hookEventName": "PreToolUse",
-          "permissionDecision": "deny",
-          "permissionDecisionReason": ("Command would write to " + $f + ", which is protected (matches \"" + $p + "\"). Same guardrail as Edit/Write: it always denies, in every tool, with no session override (see plugins/toolu/hooks/docs/gates.md).")
-        }
-      }'
+      headline="This command would WRITE to $candidate, a protected path (matches \"$matched\")."
     else
-      jq -n --arg p "$matched" --arg f "$candidate" '{
-        "hookSpecificOutput": {
-          "hookEventName": "PreToolUse",
-          "permissionDecision": "deny",
-          "permissionDecisionReason": ("File " + $f + " is protected (matches \"" + $p + "\"). This guardrail always denies: it is not a judgement call a user approval can relax (see plugins/toolu/hooks/docs/gates.md).")
-        }
-      }'
+      headline="Claude is trying to edit $candidate, a protected path (matches \"$matched\")."
     fi
+
+    # Why THIS path is guarded, in the words that matter to the person
+    # deciding. A generic "it is protected" teaches nothing and gets waved
+    # through; naming the actual stake is the difference between a real
+    # decision and a reflex.
+    case "$matched" in
+      .env|.env.*|*secrets*)
+        detail="This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push." ;;
+      .git/*)
+        detail="This is git's internal state. Approving lets an agent rewrite refs, hooks, or config — including hooks that run on your machine at every commit." ;;
+      hooks/*|skills/*)
+        detail="This is toolu's own enforcement code — the hooks that run every other gate. Approving lets an agent edit the thing that is supposed to be watching it, which is how a guardrail gets quietly switched off." ;;
+      *)
+        detail="This path is listed in settings/protected-files.txt because edits to it are hard to notice and expensive to get wrong." ;;
+    esac
+
+    case "$mode" in
+      ask)
+        reason=$(toolu_gate_guardrail_warning "$headline" "$detail")
+        ;;
+      advise)
+        reason="Protected path $candidate (matches \"$matched\"). $detail The write was NOT stopped — gates.protectedFiles.mode is 'advise'."
+        ;;
+      *)
+        reason="$headline $detail Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md)."
+        ;;
+    esac
+
+    toolu_gate_emit "$mode" "$reason"
     exit 0
   fi
 done

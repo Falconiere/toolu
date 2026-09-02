@@ -202,9 +202,17 @@ run_hook() {
 
 # ── Delivery modes ──────────────────────────────────────────────────────────
 
-@test "bash-commands: the shipped default advises instead of denying" {
+@test "bash-commands: the shipped default asks instead of denying or waving through" {
   write_lists "" "node -e"
   gate_config '{"version":1}'
+  run_hook 'node -e "console.log(1)"'
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "ask" ]
+  [[ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')" == *"SECURITY GUARDRAIL"* ]]
+}
+
+@test "bash-commands: advise mode still only warns" {
+  write_lists "" "node -e"
+  gate_config '{"version":1,"gates":{"bashCommands":{"mode":"advise"}}}'
   run_hook 'node -e "console.log(1)"'
   [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // "none"')" = "none" ]
   [[ "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')" == *"The command was not stopped"* ]]
@@ -215,7 +223,11 @@ run_hook() {
   gate_config '{"version":1,"gates":{"bashCommands":{"mode":"ask"}}}'
   run_hook 'node -e "console.log(1)"'
   [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "ask" ]
-  [[ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')" == *"Run it anyway?"* ]]
+  local reason
+  reason=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')
+  [[ "$reason" == *"SECURITY GUARDRAIL — OVERRIDE REQUESTED"* ]]
+  [[ "$reason" == *"node -e"* ]]
+  [[ "$reason" == *"full shell privileges"* ]]
 }
 
 @test "bash-commands: strict preset restores the hard deny" {
@@ -239,12 +251,13 @@ run_hook() {
   [ -z "$output" ]
 }
 
-@test "bash-commands: ask degrades to advise on codex" {
+@test "bash-commands: ask degrades to BLOCK on codex (guardrail fails closed)" {
   write_lists "" "node -e"
   mkdir -p "$TOOLU_PROJECT_DIR/.codex"
   printf '%s' '{"version":1,"gates":{"bashCommands":{"mode":"ask"}}}' > "$TOOLU_PROJECT_DIR/.codex/toolu.config.json"
   payload=$(jq -n --arg c 'node -e "x"' '{tool_name:"Bash",tool_input:{command:$c}}')
   tool_name=Bash input="$payload" TOOLU_HOST_OVERRIDE=codex run bash "$HOOK" <<<"$payload"
-  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // "none"')" = "none" ]
-  [[ "$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')" == *"The command was not stopped"* ]]
+  # bashCommands is a guardrail: with no way to prompt, it denies rather than
+  # letting arbitrary code execution through with a note.
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "deny" ]
 }

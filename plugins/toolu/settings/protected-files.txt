@@ -7,8 +7,11 @@
 # Bare-basename patterns (no `/`) additionally match against the file basename.
 #
 # This list gates Edit/Write/MultiEdit AND Bash/Shell (a command's candidate
-# write targets, extracted by bash_write_targets in hooks/lib/detect.sh) —
-# always a hard deny, at every gates.preset, with no session-level override.
+# write targets, extracted by bash_write_targets in hooks/lib/detect.sh).
+#
+# ⚠️  A match now PROMPTS YOU rather than denying outright: you approve or
+# refuse per call, and approving lets the write happen. Set
+# gates.protectedFiles.mode to "block" to restore the old hard deny.
 # See hooks/docs/gates.md and github.com/Falconiere/toolu/issues/176.
 #
 # Lint/format configs from the original hook.

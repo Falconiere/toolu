@@ -2,6 +2,12 @@
 # Block MCP tool usage for listed servers — redirect to CLI scripts.
 # Data-driven: server name prefixes come from $TOOLU_SETTINGS_DIR/mcp-blocklist.txt.
 #
+# Delivery is a MODE (gates.mcpBlocker.mode), not a constant. It ships as
+# `ask`: the user is prompted and decides per call, instead of the call being
+# refused with no way through. `block` restores the old hard deny; `advise`
+# only warns; `off` disables it. On a host that cannot prompt, `ask` degrades
+# to `block` — see lib/gate-mode.sh.
+#
 # Inputs (from parent dispatcher pre-tools/mod.sh, via `export`):
 #   $tool_name - name of the tool being invoked
 
@@ -12,6 +18,8 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 . "$_toolu_lib/detect.sh"
 # shellcheck source=../../lib/config.sh
 . "$_toolu_lib/config.sh"
+# shellcheck source=../../lib/gate-mode.sh
+. "$_toolu_lib/gate-mode.sh"
 
 command -v jq >/dev/null 2>&1 || exit 0
 
@@ -101,24 +109,30 @@ elif match_entry "$disabled_from_cfg"; then
 fi
 
 if [ -n "$blocked_source" ]; then
-  jq -n \
-    --arg s "$server" \
-    --arg src "$blocked_source" \
-    --arg redir "$matched_redirect" \
-    '{
-      hookSpecificOutput: {
-        hookEventName: "PreToolUse",
-        permissionDecision: "deny",
-        permissionDecisionReason: (
-          "MCP server \"" + $s + "\" is blocked (" +
-          (if $src == "file"
-            then "see settings/mcp-blocklist.txt"
-            else "disabled via toolu config (mcp." + $s + "=false in toolu.config.json)"
-           end) +
-          ")." +
-          (if $redir != "" then " " + $redir else "" end)
-        )
-      }
-    }'
+  mode=$(toolu_gate_mode mcpBlocker)
+
+  if [ "$blocked_source" = "file" ]; then
+    origin="listed in settings/mcp-blocklist.txt"
+  else
+    origin="disabled in your toolu config (mcp.${server}=false)"
+  fi
+
+  headline="Claude is calling MCP tool \"$tool_name\", on the blocked server \"$server\" ($origin)."
+  detail="Blocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither."
+  [ -n "$matched_redirect" ] && detail="$detail Use instead: $matched_redirect"
+
+  case "$mode" in
+    ask)
+      reason=$(toolu_gate_guardrail_warning "$headline" "$detail")
+      ;;
+    advise)
+      reason="MCP server \"$server\" is blocked ($origin). $detail The call was NOT stopped — gates.mcpBlocker.mode is 'advise'."
+      ;;
+    *)
+      reason="MCP server \"$server\" is blocked ($origin). $detail"
+      ;;
+  esac
+
+  toolu_gate_emit "$mode" "$reason"
 fi
 exit 0

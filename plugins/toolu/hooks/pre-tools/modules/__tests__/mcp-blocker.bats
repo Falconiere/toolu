@@ -24,10 +24,10 @@ teardown() {
   fi
 }
 
-@test "mcp-blocker: blocks a listed server" {
+@test "mcp-blocker: asks on a listed server" {
   tool_name=mcp__exampleblocked__search run bash "$HOOK"
   [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "ask"'
 }
 
 @test "mcp-blocker: allows an unlisted server" {
@@ -43,7 +43,7 @@ teardown() {
   printf '%s\n' "claude_ai_" > "$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
   tool_name=mcp__claude_ai_Canva__search run bash "$HOOK"
   [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "ask"'
 }
 
 @test "mcp-blocker: prefix entry 'claude_ai_' does NOT block 'friend_ai_Canva'" {
@@ -57,7 +57,7 @@ teardown() {
   printf '%s\n' "exampleblocked" > "$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
   tool_name=mcp__exampleblocked__save run bash "$HOOK"
   [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "ask"'
 }
 
 # Regression: this module is wired as a STANDALONE PreToolUse hook (matcher
@@ -68,10 +68,12 @@ teardown() {
   payload=$(jq -n '{tool_name:"mcp__exampleblocked__search",tool_input:{}}')
   run bash "$HOOK" <<<"$payload"
   [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "ask"'
 }
 
-@test "mcp-blocker: blocks a listed server from a complete Codex lifecycle payload" {
+@test "mcp-blocker: BLOCKS a listed server on Codex, where no prompt is possible" {
+  # Same payload a Codex host really sends. Codex cannot deliver an `ask`, and
+  # a guardrail fails closed rather than degrading to a note nobody enforces.
   payload=$(jq -n --arg cwd "$TMP" \
     '{session_id:"session-1",turn_id:"turn-1",cwd:$cwd,
       hook_event_name:"PreToolUse",permission_mode:"default",
@@ -108,7 +110,7 @@ JSON
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"someserver"* ]]
-  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "ask"'
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("toolu config")'
   # TMPHOME cleanup happens in teardown so an assertion failure above does
   # not leak the temp dir.
@@ -145,7 +147,7 @@ JSON
     > "$TOOLU_SETTINGS_DIR/mcp-blocklist.txt"
   tool_name=mcp__someserver__do run bash "$HOOK"
   [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "ask"'
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("use the jira skill instead")'
 }
 

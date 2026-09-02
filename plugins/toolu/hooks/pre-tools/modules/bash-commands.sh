@@ -168,9 +168,17 @@ case "$decision" in
     rule="${decision#deny:}"
     mode=$(toolu_gate_mode bashCommands)
     case "$mode" in
-      ask)    reason="Command matches deny rule \"$rule\" (plugins/toolu/settings/bash-denylist.txt). Run it anyway?" ;;
-      advise) reason="Command matches deny rule \"$rule\" (plugins/toolu/settings/bash-denylist.txt). The command was not stopped." ;;
-      *)      reason="Command blocked by deny rule: $rule" ;;
+      ask)
+        reason=$(toolu_gate_guardrail_warning \
+          "Claude wants to run a command matching the deny rule \"$rule\"." \
+          "Rules in settings/bash-denylist.txt cover commands that execute arbitrary code from a string (node -e, bun -e) or that this project has ruled out. The command runs with your full shell privileges if you approve.")
+        ;;
+      advise)
+        reason="Command matches deny rule \"$rule\" (plugins/toolu/settings/bash-denylist.txt). The command was not stopped — gates.bashCommands.mode is 'advise'."
+        ;;
+      *)
+        reason="Command blocked by deny rule: $rule"
+        ;;
     esac
     toolu_gate_emit "$mode" "$reason"
     ;;

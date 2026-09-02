@@ -53,9 +53,19 @@ project_config() {
   [ "$output" = "advise" ]
 }
 
-@test "no config: bashCommands is advise" {
+@test "no config: bashCommands asks (guardrail default)" {
   run toolu_gate_mode bashCommands
-  [ "$output" = "advise" ]
+  [ "$output" = "ask" ]
+}
+
+@test "no config: protectedFiles asks (guardrail default)" {
+  run toolu_gate_mode protectedFiles
+  [ "$output" = "ask" ]
+}
+
+@test "no config: mcpBlocker asks (guardrail default)" {
+  run toolu_gate_mode mcpBlocker
+  [ "$output" = "ask" ]
 }
 
 @test "no config: preset resolves to balanced" {
@@ -67,19 +77,17 @@ project_config() {
 
 @test "strict preset blocks every gate" {
   project_config '{"version":1,"gates":{"preset":"strict"}}'
-  for gate in pushReview qualityGate commitGate bashCommands planLedger docsSync agentTier; do
+  for gate in pushReview qualityGate commitGate bashCommands planLedger docsSync agentTier protectedFiles mcpBlocker; do
     run toolu_gate_mode "$gate"
     [ "$output" = "block" ]
   done
 }
 
-@test "relaxed preset advises the push, quality, and bash gates and turns the rest off" {
+@test "relaxed preset advises the judgement gates, turns the soft ones off, and STILL asks on guardrails" {
   project_config '{"version":1,"gates":{"preset":"relaxed"}}'
   run toolu_gate_mode pushReview
   [ "$output" = "advise" ]
   run toolu_gate_mode qualityGate
-  [ "$output" = "advise" ]
-  run toolu_gate_mode bashCommands
   [ "$output" = "advise" ]
   run toolu_gate_mode commitGate
   [ "$output" = "off" ]
@@ -87,6 +95,25 @@ project_config() {
   [ "$output" = "off" ]
   run toolu_gate_mode docsSync
   [ "$output" = "off" ]
+  # relaxed means "stop lecturing me", not "write my .env without telling me".
+  run toolu_gate_mode bashCommands
+  [ "$output" = "ask" ]
+  run toolu_gate_mode protectedFiles
+  [ "$output" = "ask" ]
+  run toolu_gate_mode mcpBlocker
+  [ "$output" = "ask" ]
+}
+
+@test "a guardrail can still be turned off explicitly, per gate" {
+  project_config '{"version":1,"gates":{"protectedFiles":{"mode":"off"}}}'
+  run toolu_gate_mode protectedFiles
+  [ "$output" = "off" ]
+}
+
+@test "a guardrail can be put back to a hard block explicitly" {
+  project_config '{"version":1,"gates":{"protectedFiles":{"mode":"block"}}}'
+  run toolu_gate_mode protectedFiles
+  [ "$output" = "block" ]
 }
 
 # ── Per-gate override beats preset (AC-3) ───────────────────────────────────
@@ -161,6 +188,21 @@ project_config() {
 }
 
 # ── Host degrade (AC-8) ─────────────────────────────────────────────────────
+
+@test "a GUARDRAIL's ask degrades to block on codex, never to advise" {
+  # The security-critical half of the degrade rule: where no human can be
+  # prompted, a guardrail must fail closed. Degrading to advise would hand an
+  # agent silent .env access on exactly the hosts nobody is watching.
+  export TOOLU_HOST_OVERRIDE=codex
+  export TOOLU_PROJECT_DIR="$CLAUDE_PROJECT_DIR"
+  mkdir -p "$TOOLU_PROJECT_DIR/.codex"
+  printf '%s' '{"version":1}' > "$TOOLU_PROJECT_DIR/.codex/toolu.config.json"
+  TOOLU_CFG_LOADED=0
+  for gate in protectedFiles mcpBlocker bashCommands; do
+    run toolu_gate_mode "$gate"
+    [ "$output" = "block" ]
+  done
+}
 
 @test "ask degrades to advise on codex" {
   # qualityGate defaults to block, so a missed .codex load cannot pass as advise.
