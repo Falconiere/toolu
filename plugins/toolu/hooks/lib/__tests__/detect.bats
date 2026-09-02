@@ -935,7 +935,7 @@ EOF'
   source_lib
   run bash_write_targets 'cmd &> .env'
   [ "$status" -eq 0 ]
-  [[ "$output" == *".env"* ]]
+  [ "$output" = ".env" ]
 }
 
 @test "bash_write_targets: fd duplication '2>&1' is not a file target" {
@@ -1052,7 +1052,7 @@ EOF'
   source_lib
   run bash_write_targets 'echo "$(echo hi > .env)"'
   [ "$status" -eq 0 ]
-  [[ "$output" == *".env"* ]]
+  [ "$output" = ".env" ]
 }
 
 @test "bash_write_targets: redirect to an unrelated path is reported (caller filters)" {
