@@ -980,6 +980,20 @@ EOF'
   [ "$output" = ".env" ]
 }
 
+@test "bash_write_targets: 'install SRC DEST' names the last (dest) token" {
+  source_lib
+  run bash_write_targets 'install -m 644 source.txt .env'
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: 'perl -i' names the target file (same as sed -i)" {
+  source_lib
+  run bash_write_targets "perl -i -pe 's/a/b/' .env.example"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *".env.example"* ]]
+}
+
 @test "bash_write_targets: 'dd of=FILE' names the of= value" {
   source_lib
   run bash_write_targets 'dd if=/dev/zero of=.env'
