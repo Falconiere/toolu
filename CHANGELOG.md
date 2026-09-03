@@ -1,5 +1,16 @@
 # Changelog
 
+## [5.0.0](https://github.com/Falconiere/toolu/compare/v4.10.2...v5.0.0) (2026-09-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **hooks:** protectedFiles, mcpBlocker and bashCommands now prompt the user by default instead of hard-denying. Approving lets the call through. Restore the old behavior with {"gates":{"protectedFiles":{"mode":"block"},"mcpBlocker":{"mode":"block"}, "bashCommands":{"mode":"block"}}} or {"gates":{"preset":"strict"}}.
+
+### Bug Fixes
+
+* **hooks:** close protected-files Bash bypass, fix misleading deny message ([#177](https://github.com/Falconiere/toolu/issues/177)) ([d143c83](https://github.com/Falconiere/toolu/commit/d143c83e409bec0903f308a117acdb57a74c7477))
+
 ## [4.10.2](https://github.com/Falconiere/toolu/compare/v4.10.1...v4.10.2) (2026-09-01)
 
 
