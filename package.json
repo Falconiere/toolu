@@ -1,6 +1,6 @@
 {
   "name": "toolu",
-  "version": "4.10.2",
+  "version": "5.0.0",
   "description": "Engineering discipline for coding agents.",
   "type": "module",
   "license": "MIT",
