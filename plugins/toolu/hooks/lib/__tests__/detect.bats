@@ -912,3 +912,213 @@ EOF'
   run is_git_push 'git -C; git push'
   [ "$status" -eq 0 ]
 }
+
+# ── bash_write_targets ──────────────────────────────────────────────────────
+# Extends protected-file coverage to the Bash tool (issue #176): echoes every
+# candidate file-write target it can find in a command, one per line.
+
+@test "bash_write_targets: simple redirect '>'" {
+  source_lib
+  run bash_write_targets 'echo hi > .env'
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: append redirect '>>'" {
+  source_lib
+  run bash_write_targets 'echo hi >> .env.example'
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env.example" ]
+}
+
+@test "bash_write_targets: '&>' combined stdout+stderr redirect" {
+  source_lib
+  run bash_write_targets 'cmd &> .env'
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: fd duplication '2>&1' is not a file target" {
+  source_lib
+  run bash_write_targets 'cmd 2>&1'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "bash_write_targets: 'tee FILE' after a pipe" {
+  source_lib
+  run bash_write_targets 'echo hi | tee .env'
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: 'tee -a FILE' skips the flag" {
+  source_lib
+  run bash_write_targets 'echo hi | tee -a .env'
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: 'sed -i' names the target file" {
+  source_lib
+  run bash_write_targets "sed -i 's/a/b/' .env.example"
+  [ "$status" -eq 0 ]
+  # Two lines: the deliberately over-included script argument, then the file.
+  # A sed script is not path-shaped, so it matches no protected pattern.
+  [ "$output" = "s/a/b/
+.env.example" ]
+}
+
+@test "bash_write_targets: 'cp SRC DEST' names the last (dest) token" {
+  source_lib
+  run bash_write_targets 'cp source.txt .env'
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: 'mv SRC DEST' names the last (dest) token" {
+  source_lib
+  run bash_write_targets 'mv source.txt .env'
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: 'install SRC DEST' names the last (dest) token" {
+  source_lib
+  run bash_write_targets 'install -m 644 source.txt .env'
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: 'perl -i' names the target file (same as sed -i)" {
+  source_lib
+  run bash_write_targets "perl -i -pe 's/a/b/' .env.example"
+  [ "$status" -eq 0 ]
+  # Same two-line shape as sed -i: over-included script argument, then the file.
+  [ "$output" = "s/a/b/
+.env.example" ]
+}
+
+@test "bash_write_targets: 'dd of=FILE' names the of= value" {
+  source_lib
+  run bash_write_targets 'dd if=/dev/zero of=.env'
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: python3 -c open(FILE, 'w') -- the exact issue #176 bypass" {
+  source_lib
+  run bash_write_targets "python3 -c \"open('.env', 'w').write(x)\""
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: python -c open(FILE, 'a') append mode also matches" {
+  source_lib
+  run bash_write_targets "python -c \"open('.env.example', 'a').write(x)\""
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env.example" ]
+}
+
+@test "bash_write_targets: python3 -c with double-quoted open() args (single-quoted -c)" {
+  source_lib
+  run bash_write_targets 'python3 -c '\''open(".env", "w").write(x)'\'''
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: a read-only command has no targets" {
+  source_lib
+  run bash_write_targets 'cat .env.example'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "bash_write_targets: 'git commit -m' prose mentioning a path is not a target" {
+  source_lib
+  run bash_write_targets 'git commit -m "clean up .env handling"'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "bash_write_targets: a redirect target inside a heredoc body is ignored" {
+  source_lib
+  run bash_write_targets "$(printf '%s\n' 'cat <<EOF' 'echo hi > .env' 'EOF')"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "bash_write_targets: target hidden in a command substitution is still found" {
+  source_lib
+  run bash_write_targets 'echo "$(echo hi > .env)"'
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: redirect to an unrelated path is reported (caller filters)" {
+  source_lib
+  run bash_write_targets 'echo hi > /tmp/scratch.txt'
+  [ "$status" -eq 0 ]
+  [ "$output" = "/tmp/scratch.txt" ]
+}
+
+@test "bash_write_targets: EVERY open() in a -c script is reported, not just the first" {
+  source_lib
+  run bash_write_targets "python3 -c \"open('.env','w'); open('.secrets','w')\""
+  [ "$status" -eq 0 ]
+  # A second write hidden behind a benign first one is a bypass, not a footnote.
+  [ "$output" = ".env
+.secrets" ]
+}
+
+@test "bash_write_targets: open() mode 'x' (exclusive create) is a write" {
+  source_lib
+  run bash_write_targets "python3 -c \"open('.env','x').write(y)\""
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: open() mode 'r+' (read-write) is a write" {
+  source_lib
+  run bash_write_targets "python3 -c \"open('.env','r+').write(y)\""
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: open() binary write mode 'wb' is a write" {
+  source_lib
+  run bash_write_targets "python3 -c \"open('.env','wb').write(y)\""
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: open() read-only mode 'r' is NOT a write" {
+  source_lib
+  run bash_write_targets "python3 -c \"print(open('.env','r').read())\""
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "bash_write_targets: open() read-only binary mode 'rb' is NOT a write" {
+  source_lib
+  run bash_write_targets "python3 -c \"print(open('.env','rb').read())\""
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "bash_write_targets: a substitution inside an UNQUOTED heredoc body is found" {
+  source_lib
+  # bash expands $(...) in an unquoted heredoc, so this really writes .env --
+  # even though strip_heredocs drops the body before the main parse.
+  run bash_write_targets "$(printf '%s\n' 'cat <<EOF' '$(echo hi > .env)' 'EOF')"
+  [ "$status" -eq 0 ]
+  [ "$output" = ".env" ]
+}
+
+@test "bash_write_targets: a substitution inside a QUOTED heredoc body is NOT a write" {
+  source_lib
+  # <<'EOF' expands nothing -- the body is literal text, not a command.
+  run bash_write_targets "$(printf '%s\n' "cat <<'EOF'" '$(echo hi > .env)' 'EOF')"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}

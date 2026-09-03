@@ -12,6 +12,22 @@
 #   advise  additionalContext           — the agent is told, nothing is stopped
 #   off     nothing at all
 #
+# Two CLASSES of gate, and the difference only shows up when `ask` cannot be
+# delivered:
+#
+#   judgement gates (pushReview, qualityGate, commitGate, planLedger,
+#     docsSync, agentTier) — soft calls about process. `ask` on a host that
+#     cannot prompt degrades to `advise`: say the thing, don't stop the work.
+#
+#   SECURITY GUARDRAILS ($TOOLU_GATE_GUARDRAILS: protectedFiles, mcpBlocker,
+#     bashCommands) — the ones standing between an agent and your secrets,
+#     your git internals, the hook framework itself, and arbitrary code
+#     execution. These now ASK by default instead of denying outright, so a
+#     human decides in the moment. That only holds if the human can actually
+#     be reached: on a host with no prompt, `ask` degrades to `block`, NOT to
+#     `advise`. Degrading a guardrail to advise would silently turn it off
+#     exactly where nobody is watching.
+#
 # Resolution precedence, first hit wins:
 #   1. .gates.<name>.mode
 #   2. the legacy top-level key (.docsSync.mode / .agentTier.mode only)
@@ -26,6 +42,8 @@
 #   toolu_gate_preset            print the resolved preset name
 #   toolu_gate_mode NAME         print block|ask|advise|off for gate NAME
 #   toolu_gate_emit MODE REASON  print the PreToolUse JSON for MODE
+#   toolu_gate_guardrail_warning HEADLINE DETAIL
+#                                compose a guardrail's `ask` prompt text
 
 _TOOLU_GATE_MODE_LIB_DIR="$(cd "${BASH_SOURCE%/*}" && pwd)"
 # shellcheck source=config.sh
@@ -33,8 +51,15 @@ _TOOLU_GATE_MODE_LIB_DIR="$(cd "${BASH_SOURCE%/*}" && pwd)"
 
 TOOLU_GATE_MODES="block ask advise off"
 TOOLU_GATE_PRESETS="strict balanced relaxed"
-TOOLU_GATE_NAMES="pushReview qualityGate commitGate bashCommands planLedger docsSync agentTier"
+TOOLU_GATE_NAMES="pushReview qualityGate commitGate bashCommands planLedger docsSync agentTier protectedFiles mcpBlocker"
 TOOLU_GATE_DEFAULT_PRESET="balanced"
+
+# The security guardrails. Two things are special about this list:
+#   1. `ask` degrades to `block` (not `advise`) where the host cannot prompt.
+#   2. They ask at every preset except `strict`, which still denies outright.
+# `off` remains available per-gate for anyone who wants it, deliberately and
+# in writing, in their own config.
+TOOLU_GATE_GUARDRAILS="protectedFiles mcpBlocker bashCommands"
 
 # Gates whose pre-`gates.*` config key is still honored, as "<gate>:<path>".
 # Only these two ever had a documented top-level mode key; a gate absent here
@@ -55,14 +80,18 @@ _toolu_gate_preset_mode() {
       ;;
     balanced)
       case "$name" in
-        qualityGate)  printf 'block' ;;
-        *)            printf 'advise' ;;
+        qualityGate)                            printf 'block' ;;
+        protectedFiles|mcpBlocker|bashCommands) printf 'ask' ;;
+        *)                                      printf 'advise' ;;
       esac
       ;;
     relaxed)
       case "$name" in
-        pushReview|qualityGate|bashCommands) printf 'advise' ;;
-        *)                                   printf 'off' ;;
+        # `relaxed` relaxes judgement calls. A guardrail still asks: relaxed
+        # means "stop lecturing me", not "write my .env without telling me".
+        protectedFiles|mcpBlocker|bashCommands) printf 'ask' ;;
+        pushReview|qualityGate)                 printf 'advise' ;;
+        *)                                      printf 'off' ;;
       esac
       ;;
     *)
@@ -132,12 +161,46 @@ toolu_gate_mode() {
   [ -n "$mode" ] || mode="block"
 
   # `ask` needs a host that can prompt. Where none can, the gate still speaks —
-  # it just advises instead of silently doing nothing.
+  # but WHAT it degrades to depends on the gate's class:
+  #
+  #   judgement gate  -> advise. Say it, don't stop the work.
+  #   guardrail       -> block.  The whole point of asking is that a human
+  #                      decides; with no human reachable the safe answer is
+  #                      no. Degrading these to advise would hand an agent
+  #                      silent write access to .env on exactly the hosts
+  #                      where nobody is watching.
   if [ "$mode" = "ask" ] && ! toolu_supports_ask; then
-    mode="advise"
+    case " $TOOLU_GATE_GUARDRAILS " in
+      *" $name "*) mode="block" ;;
+      *)           mode="advise" ;;
+    esac
   fi
 
   printf '%s' "$mode"
+}
+
+# toolu_gate_guardrail_warning HEADLINE DETAIL
+# Compose the prompt text for a SECURITY GUARDRAIL's `ask`.
+#
+# Loud on purpose. Answering yes here overrides a protection that exists
+# precisely so an agent cannot do this quietly, and a prompt that reads like an
+# ordinary "allow this command?" trains people to wave it through. The banner,
+# the WHY, and the "this call only" line are the three things a person needs to
+# make a real decision in the two seconds they will actually spend on it.
+toolu_gate_guardrail_warning() {
+  local headline="$1" detail="$2"
+  printf '%s' "\
+############################################################
+##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##
+############################################################
+
+$headline
+
+WHY THIS IS GUARDED
+$detail
+
+Approving covers THIS ONE CALL. Nothing is remembered and the next attempt
+asks again. If you did not just ask for this, the answer is no."
 }
 
 # toolu_gate_emit MODE REASON

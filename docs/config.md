@@ -74,20 +74,49 @@ How firmly a gate says no is configuration, not a constant. Full reference:
 `ask` requires a host that can prompt; on Codex it degrades to `advise`, so the
 gate still speaks rather than silently doing nothing.
 
-`gates.preset` sets all seven at once and **defaults to `balanced`**:
+`gates.preset` sets all nine at once and **defaults to `balanced`**:
 
 | Gate | `strict` | **`balanced`** | `relaxed` |
 |------|----------|----------------|-----------|
 | `pushReview` | block | **advise** | advise |
 | `qualityGate` | block | **block** | advise |
 | `commitGate` | block | **advise** | off |
-| `bashCommands` | block | **advise** | advise |
 | `planLedger` | block | **advise** | off |
 | `docsSync` | block | **advise** | off |
 | `agentTier` | block | **advise** | off |
+| `bashCommands` ⚠️ | block | **ask** | ask |
+| `protectedFiles` ⚠️ | block | **ask** | ask |
+| `mcpBlocker` ⚠️ | block | **ask** | ask |
 
-`protected-files` and `mcp-blocker` are deliberately absent: they deny at every
-preset. Presets relax judgement calls, not guardrails.
+> ### ⚠️ The three guardrails ASK now — they used to deny outright
+>
+> `protectedFiles`, `mcpBlocker` and `bashCommands` were unanswerable hard
+> denies. They now **prompt you** by default, and approving lets the call
+> through: an agent can write `.env`, edit a toolu hook, reach a blocked MCP
+> server, or run `node -e` **if you say yes**. You are the control now. Approve
+> without reading and nothing protects you.
+>
+> This was [#176](https://github.com/Falconiere/toolu/issues/176): the old deny
+> could not be answered even when the user explicitly wanted the edit, and its
+> own message claimed an override that did not exist — so the work moved to
+> `Bash`, which the check never inspected. An honest prompt beats a guardrail
+> people route around.
+>
+> **Put the hard denies back** with
+> `{"gates":{"protectedFiles":{"mode":"block"},"mcpBlocker":{"mode":"block"},"bashCommands":{"mode":"block"}}}`
+> or `{"gates":{"preset":"strict"}}`.
+
+All three are ordinary gates now: `block` / `ask` / `advise` / `off` all work.
+Two rules keep them honest — they **ask at every preset except `strict`**
+(`relaxed` relaxes judgement calls, not guardrails), and their `ask` degrades
+to **`block`** rather than `advise` on a host that cannot prompt, so they fail
+closed where no human can answer.
+
+`protectedFiles` also covers `Bash`/`Shell`: a command that would write a
+protected path via a redirect, `tee`, `sed -i`/`perl -i`, `cp`/`mv`/`install`,
+`dd of=`, `python -c open(..., "w"/"a")`, or a substitution inside an unquoted
+heredoc is caught the same as a structured `Edit`/`Write` — best-effort
+detection, not a full shell grammar.
 
 Precedence is `gates.<name>.mode` → the legacy top-level key (`docsSync.mode`,
 `agentTier.mode` only) → the preset table → `balanced`. An unrecognized value
