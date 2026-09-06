@@ -141,7 +141,16 @@ if [[ "$prompt_lower" =~ ${WB}(migrate|codebase-wide|throughout|end-to-end)${WE}
   orchestrate="Possibly large task — if it splits into genuinely independent units, consider decomposing it; if it is really one thread of work, just do it. The orchestrator skill has the test for which."
 fi
 
-# 2c. Research nudge — independent of the single intent hint (a prompt can be
+# 2c. Brainstorm nudge — independent of intent and scale. These terms signal a
+# design conversation, but the nudge remains advisory: bounded or mechanical
+# requests should continue directly without launching a workflow.
+brainstorm=""
+if [[ "$prompt_lower" =~ ${WB}(brainstorms?|designs?|scopes?|approach(es)?|architectures?|trade-?offs?|redesigns?|overhauls?)${WE} ]] ||
+   [[ "$prompt_lower" =~ ${WB}new[[:space:]]+(feature|workflow|system)${WE} ]]; then
+  brainstorm="Scope may be unresolved — consider the \`brainstorm\` skill for material design choices; skip it when the request is already bounded or mechanical."
+fi
+
+# 2d. Research nudge — independent of the single intent hint (a prompt can be
 # both a "fix" AND need external lookup). Fires on EXTERNAL-knowledge signals
 # (live docs, latest releases, third-party APIs) so the work is delegated to the
 # research-agent subagent — it isolates the token cost and routes
@@ -156,7 +165,7 @@ if toolu_enabled agents research-agent &&
   research="External research — delegate to the research-agent subagent (routes exa-search/context7, native fallback) to keep main context lean."
 fi
 
-# 2d. Jira discoverability nudge — independent of the single intent hint. Names
+# 2e. Jira discoverability nudge — independent of the single intent hint. Names
 # the jira skill and warns off the Atlassian MCP so the skill wins
 # tool-selection when the user mentions Jira (today the model often reaches for
 # the Atlassian MCP instead). Fires on the words jira/atlassian, an
@@ -185,6 +194,7 @@ parts=()
 [[ -n "$recall" ]] && parts+=("$recall")
 [[ -n "$intent" ]] && parts+=("$intent")
 [[ -n "$orchestrate" ]] && parts+=("$orchestrate")
+[[ -n "$brainstorm" ]] && parts+=("$brainstorm")
 [[ -n "$research" ]] && parts+=("$research")
 [[ -n "$jira_nudge" ]] && parts+=("$jira_nudge")
 [[ -n "$project_ctx" ]] && parts+=("$project_ctx")
