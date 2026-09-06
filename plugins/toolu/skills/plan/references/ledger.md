@@ -13,5 +13,6 @@ Optional fields preserve the existing ledger contract:
 
 `paths` narrows iteration freshness to what the check actually reads. Declare
 all such paths: under-declaring can leave a stale green result. Before delivery,
-`plan-ledger --verify` judges every step against the whole branch diff, so
+`plan-ledger.sh run <plan_doc> --verify` judges every step against the whole
+branch diff, so
 scoped freshness never replaces final verification.

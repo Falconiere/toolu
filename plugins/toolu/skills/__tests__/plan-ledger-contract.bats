@@ -50,6 +50,10 @@ setup() {
   grep -q 'input' "$SKILLS/plan/references/ledger.md"
 }
 
+@test "shared plan reference uses the supported final verification command" {
+  grep -q 'plan-ledger.sh run <plan_doc> --verify' "$SKILLS/plan/references/ledger.md"
+}
+
 @test "plan is evidence-first and keeps detailed steps only in the ledger" {
   grep -q 'Evidence first' "$SKILLS/plan/SKILL.md"
   grep -q 'Mechanical work' "$SKILLS/plan/SKILL.md"
