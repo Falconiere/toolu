@@ -1,5 +1,18 @@
 # Changelog
 
+## [5.1.0](https://github.com/Falconiere/toolu/compare/v5.0.0...v5.1.0) (2026-09-06)
+
+
+### Features
+
+* **brainstorm:** add adaptive triage ([e57459d](https://github.com/Falconiere/toolu/commit/e57459d95c15753e81a7759df50f93ca09771918))
+
+
+### Bug Fixes
+
+* **brainstorm:** link routing rubric ([9eac919](https://github.com/Falconiere/toolu/commit/9eac919a8c05a3d68465633b7ba50904a324b129))
+* **brainstorm:** restore routing rubric link ([f2a29be](https://github.com/Falconiere/toolu/commit/f2a29be08e8491571bec2602326d403b2abc97da))
+
 ## [5.0.0](https://github.com/Falconiere/toolu/compare/v4.10.2...v5.0.0) (2026-09-03)
 
 
