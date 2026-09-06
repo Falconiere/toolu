@@ -138,3 +138,9 @@ _run_codex_hook() {
     grep -q 'model-routing.md' "$root/plugins/toolu/skills/$skill/SKILL.md"
   done
 }
+
+@test "routing rubric: Brainstorm links to the rubric relative to its skill" {
+  local root="${BATS_TEST_DIRNAME}/../../../.."
+  grep -Fq '[model-routing.md](../orchestrator/references/model-routing.md)' \
+    "$root/plugins/toolu/skills/brainstorm/SKILL.md"
+}

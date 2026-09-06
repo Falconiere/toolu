@@ -24,7 +24,7 @@ Start with memory recall, one targeted structural or exact-text search, then
 inspect the best hits. Reuse demonstrated repository conventions when they
 settle the choice. Delegate only when the search needs a broad map; keep the
 final trade-off decision in the main architecture tier. Use the tier rubric in
-`plugins/toolu/skills/orchestrator/references/model-routing.md`.
+[model-routing.md](../orchestrator/references/model-routing.md).
 
 Set material defaults and proceed. Ask one structured question (2–3 options)
 only when prompt and repository evidence cannot settle a goal-defining or hard-to-reverse fork. If several forks qualify, ask about the
