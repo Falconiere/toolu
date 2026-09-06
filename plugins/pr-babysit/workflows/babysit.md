@@ -12,6 +12,17 @@ Babysit the PR for the current branch. Each tick: fetch unresolved comments **an
 
 No other flags. Don't add any. Want different behavior → edit this file.
 
+## Authorization and execution handoff
+
+The no-argument interface is unchanged. A direct user invocation authorizes
+babysitting. A verified execution handoff is also sufficient authorization: it
+may invoke this workflow automatically only after execution's local readiness
+checks pass. Before automatic delivery, stop before delivery and report the
+exact prerequisite that is unavailable: **GitHub authentication is
+unavailable**, **the current branch is the repository default branch**, or
+**the optional `pr-babysit` plugin is unavailable**. Do not add a handoff flag
+or accept hidden arguments.
+
 ## Target resolution
 
 Target = PR for current branch:

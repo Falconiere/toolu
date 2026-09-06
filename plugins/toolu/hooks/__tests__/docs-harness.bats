@@ -46,7 +46,7 @@ REQUIRED_DOC_NAMES=(
   "lang.rust.noMocks"
 )
 
-VERDICT_SKILLS=(execution execution-review)
+VERDICT_SKILLS=(execution)
 DELEGATION_SKILLS=(plan plan-review)
 
 setup() {
@@ -86,7 +86,7 @@ setup() {
   done
 }
 
-@test "execution + execution-review SKILL.mds: mention the verdict command" {
+@test "execution SKILL.md: owns the local verdict check" {
   for skill in "${VERDICT_SKILLS[@]}"; do
     f="$ROOT/plugins/toolu/skills/$skill/SKILL.md"
     [ -f "$f" ]
@@ -95,21 +95,44 @@ setup() {
   done
 }
 
-@test "execution-review SKILL.md: names the reviewed_files v2 requirement" {
-  f="$ROOT/plugins/toolu/skills/execution-review/SKILL.md"
-  grep -q 'reviewed_files' "$f"
+@test "execution SKILL.md: requires v2 push-review state" {
+  f="$ROOT/plugins/toolu/skills/execution/SKILL.md"
+  grep -q 'version: 2' "$f"
 }
 
-@test "plan + plan-review SKILL.mds: mention delegation telemetry for model tiers" {
-  for skill in "${DELEGATION_SKILLS[@]}"; do
-    f="$ROOT/plugins/toolu/skills/$skill/SKILL.md"
-    [ -f "$f" ]
-    grep -qi 'delegation' "$f" \
-      || { echo "$f: does not mention delegation telemetry" >&2; return 1; }
+@test "execution-review is no longer a workflow skill" {
+  [ ! -e "$ROOT/plugins/toolu/skills/execution-review" ]
+}
+
+@test "workflow docs: describe the six-stage delivery chain and reusable test method" {
+  for f in "$ROOT/README.md" "$ROOT/plugins/toolu/README.md"; do
+    grep -q 'spec.*spec-review.*plan.*plan-review.*execution.*pr-babysit' "$f"
+    grep -qi 'brainstorm.*optional' "$f"
+    grep -qi 'test.*reusable' "$f"
   done
 }
 
-@test "test SKILL.md: the no-mocks rule is named as mechanically enforced" {
+@test "babysit docs: accept a verified execution handoff without new arguments" {
+  for f in "$ROOT/plugins/pr-babysit/README.md" "$ROOT/docs/pr-babysit/README.md" "$ROOT/plugins/pr-babysit/workflows/babysit.md"; do
+    grep -qi 'verified execution handoff' "$f"
+    grep -qi 'sufficient authorization' "$f"
+  done
+  grep -q 'no args' "$ROOT/plugins/pr-babysit/workflows/babysit.md"
+  ! grep -qiE -- '--handoff|--from-execution' "$ROOT/plugins/pr-babysit/workflows/babysit.md"
+}
+
+@test "plan + plan-review SKILL.mds: require AC coverage and real-input evidence" {
+  for skill in "${DELEGATION_SKILLS[@]}"; do
+    f="$ROOT/plugins/toolu/skills/$skill/SKILL.md"
+    [ -f "$f" ]
+    grep -qi 'AC' "$f" \
+      || { echo "$f: does not mention acceptance-criteria coverage" >&2; return 1; }
+    grep -qi 'real input' "$f" \
+      || { echo "$f: does not mention real-input evidence" >&2; return 1; }
+  done
+}
+
+@test "test SKILL.md: requires a behavior-to-evidence map" {
   f="$ROOT/plugins/toolu/skills/test/SKILL.md"
-  grep -qi 'no-mocks.sh' "$f"
+  grep -qi 'behavior-to-evidence map' "$f"
 }

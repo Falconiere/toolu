@@ -5,7 +5,7 @@ description: "Use when something is broken and you need the root cause — a fai
 
 # Debug
 
-The break-glass loop of the toolu workflow. The 8-phase chain builds; this is what you reach for when something *broke*. It is not a chain step — any phase (most often `execution` or `test`) drops into it and returns. Its discipline is the session protocol made concrete: **evidence before claims; the same approach failed twice → stop and change the hypothesis, don't retry harder.**
+The break-glass loop of the toolu workflow. The six-stage delivery chain builds; this is what you reach for when something *broke*. It is not a chain step — any phase (most often `execution`, using the reusable `test` method) drops into it and returns. Its discipline is the session protocol made concrete: **evidence before claims; the same approach failed twice → stop and change the hypothesis, don't retry harder.**
 
 **Trigger phrases:** why does X fail, it crashes, this is broken, flaky test, debug this, find the root cause, it worked before, track down this bug, what's wrong with, stack trace.
 
@@ -47,4 +47,4 @@ When the bug originates from a Sentry issue and the Sentry MCP is authenticated,
 
 ## Return to the chain
 
-A debug session ends by handing back: the fix re-enters `test` (write/confirm the regression test) and then `execution-review`. Don't call the work done from inside the loop — a fix without a regression test and a green gate isn't done.
+A debug session ends by handing back: the fix re-enters `execution`, uses `test` to write and confirm the regression evidence, then completes execution's local readiness checks and authorized PR handoff. Don't call the work done from inside the loop — a fix without a regression test and a green gate isn't done.

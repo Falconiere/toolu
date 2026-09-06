@@ -193,23 +193,22 @@ Beyond the plugins, the core (`toolu`) also ships:
 
 ## Workflow skills
 
-A native, opinionated process chain. Each phase has a **write step and a review step**, so a design exists before planning and an audit happens before code is called done:
+A native, opinionated delivery chain. `brainstorm` is optional upstream triage; the delivery path has a **write step and a review step** before execution, which owns local readiness and the verified PR handoff:
 
 ```mermaid
 flowchart LR
-    B(brainstorm) --> S(spec) --> SR(spec-review) --> P(plan) --> PR(plan-review) --> E(execution) --> ER(execution-review) --> T(test)
+    B(brainstorm, optional) -.-> S(spec) --> SR(spec-review) --> P(plan) --> PR(plan-review) --> E(execution) --> PB(pr-babysit)
     style B fill:#d97757,color:#fff,stroke:none
-    style T fill:#3fb950,color:#fff,stroke:none
+    style PB fill:#3fb950,color:#fff,stroke:none
     style SR fill:#1f6feb,color:#fff,stroke:none
     style PR fill:#1f6feb,color:#fff,stroke:none
-    style ER fill:#1f6feb,color:#fff,stroke:none
 ```
 
-- **`brainstorm`** (Brainstorm) uses adaptive materiality triage and a default-and-proceed baseline: it skips mechanical work, records a compact capsule for bounded work, and reserves full analysis for material design risk. Its nudge is advisory rather than an automatic launch; the no-prompt policy has one narrow unresolved-fork exception.
+- **`brainstorm`** (Brainstorm) is optional upstream triage: it uses adaptive materiality triage and a default-and-proceed baseline, skipping mechanical work and reserving full analysis for material design risk.
 - **`spec`** writes a design contract to `docs/toolu/specs/`; **`spec-review`** audits it.
 - **`plan`** turns the spec into concrete steps; **`plan-review`** checks it's executable.
-- **`execution`** drives the plan with verification checkpoints; **`execution-review`** is hard-focused on error handling.
-- **`test`** enforces real-data tests (no mocks), colocated by language.
+- **`execution`** drives the plan with real-data verification, complete acceptance-criteria and documentation checks, local review readiness, and—when delivery is authorized—the automatic `pr-babysit` handoff.
+- **`test`** is a reusable execution-time method for real-data tests (no mocks), colocated by language; it is not a terminal phase.
 
 Mechanical work (renames, dep bumps, one-liners) skips the ceremony — each skill declares when *not* to fire.
 
@@ -250,8 +249,8 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     ├── toolu/                  # Core plugin: hook engine + process gates
     │   ├── .claude-plugin/     # Claude Code plugin.json manifest
     │   ├── .codex-plugin/      # Codex plugin.json manifest
-    │   ├── skills/             # brainstorm, spec(+review), plan(+review),
-    │   │                       #   execution(+review), test, deep-research
+    │   ├── skills/             # brainstorm (optional), spec(+review), plan(+review),
+    │   │                       #   execution, test (reusable), deep-research
     │   ├── agents/             # quick-task, deep-explore, research-agent, implementer, architect
     │   ├── commands/           # commit, review-and-commit
     │   ├── hooks/              # PreToolUse / PostToolUse / SessionStart … + lib/

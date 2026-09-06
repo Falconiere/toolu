@@ -1,21 +1,18 @@
 ---
 name: spec
-description: "Use AFTER a design is agreed (brainstorm done) and BEFORE planning, when the work deserves a written contract — a new system, a cross-cutting feature, anything multiple sessions build against. Tells: \"write the spec\", \"spec this out\", \"document the design\", \"pin down the requirements\". Produces a concise design spec (problem, non-goals, architecture, interfaces, acceptance criteria) under docs/toolu/specs/. Spec phase of the toolu workflow. Skip for mechanical or already-specced work."
+description: "Use to write the spec or document the design before planning a new system, cross-cutting feature, public interface, or other durable contract. Clear requirements may enter directly; brainstorm is optional upstream triage."
 ---
 
 # Spec
 
-Second phase of the toolu workflow. A spec is the contract: it says what we're building and how it must behave, precisely enough that `plan` can turn it into steps and `test` can turn it into checks — without re-litigating the design. Brainstorm decided the *shape*; the spec writes it down so it stops living in one head.
+Write a spec when the cost of ambiguity is high. It is the durable contract for
+`plan`, `execution`, and `test`, not a transcript of brainstorming. Start from
+an agreed brainstorm decision when one helped resolve the shape; clear,
+complete requirements may enter here directly. Return to `brainstorm` only when
+a material design choice remains undecided.
 
-Write a spec when the cost of being wrong is high: a new system, a public interface, a cross-cutting change, anything more than one session will build against. Skip it for mechanical work or anything already specced — a spec for a rename is ceremony, not value.
-
-## Precondition
-
-A design is agreed (`brainstorm` ran, or the user supplied clear requirements). If the shape is still fuzzy — competing approaches, unknown constraints — go back to `brainstorm`. A spec written over guesses just launders them into something that looks decided.
-
-## Format
-
-Write to `docs/toolu/specs/<YYYY-MM-DD>-<slug>-design.md` (today's date from the environment; kebab-case slug from the title). Use this template — keep every section tight, cut anything that isn't load-bearing:
+Write `docs/toolu/specs/<YYYY-MM-DD>-<slug>-design.md`. Keep every section
+short and concrete:
 
 ```markdown
 # <Title> — Design
@@ -23,44 +20,45 @@ Write to `docs/toolu/specs/<YYYY-MM-DD>-<slug>-design.md` (today's date from the
 **Date:** <YYYY-MM-DD>   **Status:** Draft   **Author:** <name>   **Topic:** <one line>
 
 ## Problem
-2–4 sentences: the user pain, why it matters now. Not the solution.
+The user pain and why it matters now.
 
 ## Non-Goals
-Numbered, explicit out-of-scope. The boundary is half the value of a spec —
-it's what stops scope creep in `plan` and `execution`.
+Explicit, numbered scope boundaries.
 
 ## Architecture
-The chosen approach. Name the one trade-off that actually drove the decision
-(simplicity vs flexibility, blast radius vs cleanliness). Reference existing
-code/utilities to reuse, with paths.
+Chosen approach, the decisive trade-off, and existing paths/utilities to reuse.
 
 ## Interfaces / Schema
-Concrete signatures, types, JSON shapes, file paths, config keys — enough that
-someone could start building without guessing the contract.
+Concrete signatures, types, JSON shapes, paths, or config keys.
+
+## Failure modes and edge cases
+Bad, empty, absent, partial, concurrent, or otherwise boundary inputs; state
+the observable behavior and whether failure propagates, is converted, or is
+recovered.
 
 ## Acceptance criteria
-Testable outcomes phrased against real-world data (no mocks). Each one should
-map to a check `test` can write. "X produces Y given real input Z", not "X works".
-Give each criterion a stable `**AC-<n>:**` bold-prefix id (`- **AC-1:** …`) so a
-plan step can reference it (`ac_refs`) and `status` can report coverage; ids are
-labels, not indices — gaps are fine, just don't reuse one.
+- **AC-1:** A testable outcome stated against a real input and observable result.
+
+## Acceptance evidence
+For every AC, name the representative real input or fixture, expected observable
+result, applicable boundary/failure case, and runnable check that will prove it.
+
+## Documentation impact
+State the affected README, `docs/`, `SKILL.md`, command/config, or release-note
+surface; say `None — <reason>` only when no user-facing documentation changes.
 
 ## Open Questions
-Unresolved decisions with an owner. An honest spec names what it doesn't know.
+Unresolved decisions, owner, and whether each question blocks implementation.
 ```
 
-## Why these sections
+Acceptance-criterion ids use stable bold prefixes (`**AC-<n>:**`). They are
+labels rather than indices: gaps are fine, but never reuse an id. Each criterion
+must describe an observable real-data outcome — “given input X, produces Y” —
+so a ledger step can cite it through `ac_refs` and `test` can demonstrate it.
 
-- **Problem before solution** — if you can't state the pain in a few sentences, the solution is aimed at nothing.
-- **Non-goals** — the cheapest scope control there is; an unwritten boundary gets crossed.
-- **Architecture with the trade-off named** — a decision without its *why* gets re-argued the moment it's inconvenient.
-- **Concrete interfaces** — vagueness here becomes rework in `execution`; pin the contract now.
-- **Real-data acceptance criteria** — they are the bridge to `test`; criteria you can't test on real inputs aren't criteria.
+## What done means
 
-## Conventions carried forward
-
-Decide here so the later phases inherit, not discover: legible structure (one responsibility per file, named after its export), real-world-data testing, concise-but-required docs, **Docs in sync** (when the change touches a user-facing surface — behavior, interfaces, CLI, commands, config — the prose docs that describe it are updated in the same change: README, `docs/` guides, `SKILL.md` triggers, release notes; name it in Acceptance criteria), and the per-project size ceilings — if the architecture implies a giant file, split it in the spec.
-
-## What "done" looks like
-
-A spec file with every section filled, `Status: Draft`, no hand-waving in Architecture or Acceptance criteria, and Open Questions either answered or owned. Hand off to `spec-review` to pressure-test it, then to `plan`.
+Every authored section is filled; acceptance evidence covers every AC; failure
+behavior and documentation impact are explicit; and each open question is
+resolved, owned, or clearly non-blocking. Keep `Status: Draft` and hand off to
+`spec-review`.

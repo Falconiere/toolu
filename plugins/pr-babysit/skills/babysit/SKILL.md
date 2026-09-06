@@ -1,12 +1,15 @@
 ---
 name: babysit
-description: Use when the user explicitly asks Codex to monitor and autonomously clear the current branch's pull request until CI, review threads, and the review-bot verdict are all green.
+description: Use when the user explicitly asks Codex, or an authorized verified execution handoff invokes it, to monitor and autonomously clear the current branch's pull request until CI, review threads, and the review-bot verdict are all green.
 ---
 
 # Babysit a PR
 
-This invocation explicitly authorizes one durable babysitting goal for the
-current repository and PR. Read [the canonical workflow](../../workflows/babysit.md)
+This no-argument invocation explicitly authorizes one durable babysitting goal
+for the current repository and PR. A verified execution handoff is sufficient authorization
+when execution already confirmed delivery authorization, GitHub
+auth, a non-default branch, and this installed plugin; do not ask again or
+introduce handoff arguments. Read [the canonical workflow](../../workflows/babysit.md)
 completely and follow only its Codex controller branches plus every shared
 strict-clearance step.
 

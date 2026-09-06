@@ -30,6 +30,12 @@ Codex uses `$pr-babysit:babysit` for the same clearance contract. The user
 invocation authorizes one durable goal; pending CI keeps it active, success
 alone completes it, and `stop`/`cancel` performs slot-local cleanup.
 
+The no-argument interface is unchanged: direct user invocation remains valid,
+and a verified execution handoff is sufficient authorization for automatic
+delivery. Before that handoff, execution must stop before delivery and report
+the exact unavailable prerequisite: GitHub authentication, a non-default
+branch, or the optional `pr-babysit` plugin.
+
 ### `/pr-babysit:babysit stop`
 
 Cancels this slot's cron and clears its state. One slot per agent — multiple babysit sessions can run in parallel without interfering.

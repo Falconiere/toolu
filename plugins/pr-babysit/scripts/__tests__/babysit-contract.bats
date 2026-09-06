@@ -13,6 +13,14 @@ FIXTURE="${BATS_TEST_DIRNAME}/fixtures/pr115-threads.json"
   grep -Fq 'workflows/babysit.md' "$WRAPPER"
 }
 
+@test "skill accepts a verified execution handoff without changing its no-argument interface" {
+  local skill="$BATS_TEST_DIRNAME/../../skills/babysit/SKILL.md"
+  grep -qi 'verified execution handoff' "$skill"
+  grep -qi 'sufficient authorization' "$skill"
+  grep -qi 'no-argument invocation' "$skill"
+  ! grep -qiE -- '--handoff|--from-execution' "$skill"
+}
+
 @test "defines a CI_REVIEWER login set" {
   grep -q 'CI_REVIEWER' "$CMD"
 }
