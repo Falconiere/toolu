@@ -21,6 +21,15 @@ SKILL="$ROOT/plugins/toolu/skills/execution/SKILL.md"
   grep -qi 'overall: green' "$SKILL"
 }
 
+@test "execution attests the committed branch before delivery" {
+  local commit_line ledger_line review_line
+  commit_line="$(grep -ni 'commit the scoped changes' "$SKILL" | cut -d: -f1)"
+  ledger_line="$(grep -n 'plan-ledger.sh run <plan_doc> --verify' "$SKILL" | tail -n1 | cut -d: -f1)"
+  review_line="$(grep -n 'toolu-review:review' "$SKILL" | tail -n1 | cut -d: -f1)"
+  [ "$commit_line" -lt "$ledger_line" ]
+  [ "$ledger_line" -lt "$review_line" ]
+}
+
 @test "execution only delivers with authorization and all delivery prerequisites" {
   grep -qi 'delivery authorization' "$SKILL"
   grep -qi 'GitHub auth' "$SKILL"

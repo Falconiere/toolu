@@ -38,9 +38,26 @@ For ledger-tracked work, **before the first step** run `bash plugins/toolu/hooks
 
 Working, verified increments that match the plan, with real error handling and per-step real-data evidence, landed under a green gate. Execution owns the final local review; do not hand work to a separate review or terminal-test phase.
 
+## Authorized delivery preflight
+
+Only perform delivery when the user's request includes delivery authorization.
+Before committing, pushing, creating a PR, or starting a durable babysitting
+goal, check every prerequisite and stop before delivery with the exact unmet
+prerequisite if any applies:
+
+- delivery authorization is absent;
+- GitHub auth is unavailable (`gh auth status` fails);
+- the current branch is the repository default branch, detached, or otherwise not a non-default branch;
+- the optional `pr-babysit` plugin is not installed and its `$pr-babysit:babysit` skill is unavailable.
+
+When the per-step direct checks, documentation work, and prerequisites pass,
+commit the scoped changes using the repository's conventions. Do not include
+unrelated work.
+
 ## Local release-readiness audit
 
-Before any delivery action, establish all of the following with command output, not assertion:
+After that scoped commit and before pushing, establish all of the following
+against the committed branch diff with command output, not assertion:
 
 1. Re-run each affected step's real-data runner and ensure its AC/risk evidence is current. Read `plan-ledger.sh status` and resolve every missing or stale AC coverage entry.
 2. Run `bash plugins/toolu/hooks/lib/plan-ledger.sh run <plan_doc> --verify`. This is the supported branch-wide verification command: it validates every step against the final diff and stamps the ledger only when all steps are fresh-green.
@@ -48,18 +65,10 @@ Before any delivery action, establish all of the following with command output, 
 4. Run `$toolu-review:review` (or the host's installed `toolu-review:review` invocation) against the committed branch diff. Its resulting push-review state must be v2 (`version: 2`) and cover every changed file; open findings or stale/incomplete coverage are blockers.
 5. Run `bash plugins/toolu/hooks/lib/verdict.sh status`. Advance only when it reports `overall: green`; quality, plan, review, and docs must each be green.
 
-## Authorized PR delivery
+## PR delivery
 
-Only perform this section when the user's request includes delivery authorization. Before committing, pushing, creating a PR, or starting a durable babysitting goal, check every prerequisite and stop before delivery with the exact unmet prerequisite if any applies:
+When the committed-diff audit and every prerequisite pass:
 
-- delivery authorization is absent;
-- GitHub auth is unavailable (`gh auth status` fails);
-- the current branch is the repository default branch, detached, or otherwise not a non-default branch;
-- the optional `pr-babysit` plugin is not installed and its `$pr-babysit:babysit` skill is unavailable.
-
-When all local release-readiness checks and prerequisites pass:
-
-1. Commit the scoped changes using the repository's conventions. Do not include unrelated work.
-2. Push the non-default feature branch to its configured remote.
-3. Discover the repository default branch, then locate or create a pull request for the current branch targeting that repository default branch. Verify that PR's number and head/base branches.
-4. Invoke `$pr-babysit:babysit` with no arguments. The verified execution handoff plus this delivery authorization is sufficient authorization for its durable PR-clearing goal; do not add a handoff argument or weaken its isolated-worktree, strict-clearance, or durable-goal rules.
+1. Push the non-default feature branch to its configured remote.
+2. Discover the repository default branch, then locate or create a pull request for the current branch targeting that repository default branch. Verify that PR's number and head/base branches.
+3. Invoke `$pr-babysit:babysit` with no arguments. The verified execution handoff plus this delivery authorization is sufficient authorization for its durable PR-clearing goal; do not add a handoff argument or weaken its isolated-worktree, strict-clearance, or durable-goal rules.
