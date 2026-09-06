@@ -205,7 +205,7 @@ flowchart LR
     style ER fill:#1f6feb,color:#fff,stroke:none
 ```
 
-- **`brainstorm`** surfaces intent, constraints, and prior art before any code — it sweeps the design dimensions, picks a default for each, and proceeds.
+- **`brainstorm`** (Brainstorm) uses adaptive materiality triage and a default-and-proceed baseline: it skips mechanical work, records a compact capsule for bounded work, and reserves full analysis for material design risk. Its nudge is advisory rather than an automatic launch; the no-prompt policy has one narrow unresolved-fork exception.
 - **`spec`** writes a design contract to `docs/toolu/specs/`; **`spec-review`** audits it.
 - **`plan`** turns the spec into concrete steps; **`plan-review`** checks it's executable.
 - **`execution`** drives the plan with verification checkpoints; **`execution-review`** is hard-focused on error handling.
