@@ -2,7 +2,7 @@
 
 **Type:** Core | **Version:** 4.5.0 | **Optional companions:** `code-simplifier`, `caveman`
 
-The registry-driven hook engine plus the 8-phase workflow, the `push-review` gate, and the `deep-explore` agent. **The one required plugin** — all domain plugins register into it.
+The registry-driven hook engine plus the adaptive delivery workflow, the `push-review` gate, and the `deep-explore` agent. **The one required plugin** — all domain plugins register into it.
 
 ## Install
 
@@ -17,31 +17,33 @@ The registry-driven hook engine plus the 8-phase workflow, the `push-review` gat
 
 ## What It Provides
 
-### 1. 8-Phase Workflow
+### 1. Adaptive Delivery Workflow
 
-An opinionated process chain where each phase has a **write step and a review step**:
+An opinionated delivery chain: **Brainstorm** is optional upstream triage, then
+each behavior change moves through a write step and review step before
+execution-owned readiness and PR handoff.
 
 ```mermaid
 flowchart LR
-    B(brainstorm) --> S(spec) --> SR(spec-review) --> P(plan) --> PR(plan-review) --> E(execution) --> ER(execution-review) --> T(test)
+    B(brainstorm, optional) -.-> S(spec) --> SR(spec-review) --> P(plan) --> PR(plan-review) --> E(execution) --> PB(pr-babysit)
 ```
 
 | Phase | Skill | What It Does |
 |-------|-------|-------------|
-| **brainstorm** | `brainstorm` | Brainstorm uses adaptive materiality triage with a default-and-proceed baseline: skip mechanical work, use a compact capsule for bounded work, and use Full analysis only for material design risk. Its advisory nudge is not an automatic launch; the no-prompt rule has one narrow unresolved-fork exception. |
+| **brainstorm** (optional) | `brainstorm` | Brainstorm uses adaptive materiality triage with a default-and-proceed baseline: skip mechanical work, use a compact capsule for bounded work, and use Full analysis only for material design risk. Its advisory nudge is not an automatic launch; the no-prompt rule has one narrow unresolved-fork exception. |
 | **spec** | `spec` | Write a design contract to `docs/toolu/specs/<date>-<slug>-design.md`. |
 | **spec-review** | `spec-review` | Adversarial audit of the spec — gaps, ambiguities, untestable acceptance criteria. |
 | **plan** | `plan` | Turn the reviewed spec into concrete, verifiable steps with a machine-readable ledger. |
 | **plan-review** | `plan-review` | Pressure-test the plan: is every step independently verifiable? Are conventions honored? |
-| **execution** | `execution` | Drive the plan step by step, tracking progress via the ledger. Respect the quality gate. |
-| **execution-review** | `execution-review` | Review built work against the plan — hard focus on error handling. |
-| **test** | `test` | Enforce real-data tests (no mocks), colocated by language convention. |
+| **execution** | `execution` | Drive the plan step by step with real-data evidence, local review readiness, and (when authorized) verified PR handoff to `pr-babysit`. |
+| **pr-babysit** | `pr-babysit` | Clear CI and review findings from the delivered PR using isolated worktrees and strict clearance. |
+| **test** (reusable) | `test` | A high-signal execution-time method: enforce real-data, colocated behavior and regression tests. |
 
 #### Usage Examples
 
 ```text
-# Start any feature by brainstorming the approach
-"I want to add real-time collaboration" → brainstorm fires automatically
+# Use optional Brainstorm triage when requirements need shaping
+"I want to add real-time collaboration" → brainstorm records the material design choices
 
 # Write a spec once the design is settled
 "spec this out" → writes docs/toolu/specs/2026-06-15-realtime-collab-design.md
@@ -55,11 +57,11 @@ flowchart LR
 # Execute the plan
 "execute the plan" → drives step-by-step with verification checkpoints
 
-# Review what was built
-"review what I built" → execution-review checks plan-match + error handling
+# Execute and deliver an approved plan
+"execute the plan" → verifies real-data evidence, local readiness, and hands an authorized PR to pr-babysit
 
-# Run the test pass
-"add tests" → enforces real-data tests in __tests__/ (TS) or tests/ (Rust)
+# Use tests throughout execution
+"add a regression test" → enforces real-data tests in __tests__/ (TS) or tests/ (Rust)
 ```
 
 Mechanical work (renames, dep bumps, one-liners) skips the ceremony — each phase declares when *not* to fire.

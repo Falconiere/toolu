@@ -1,37 +1,46 @@
 ---
 name: test
-description: Use when writing or organizing tests for any feature or bugfix. Enforces the toolu test layout (TS __tests__/, Rust module-sibling tests/, Python colocated test_*.py), real-world data only (NO mocks), and test-first discipline. Native toolu workflow; the final test phase of brainstorm → spec → spec-review → plan → plan-review → execution → execution-review → test.
+description: "Use while executing any feature, fix, refactor, or regression to design high-signal, real-data tests. Enforces test-first discipline and colocated layout; it is a reusable method, not a terminal workflow phase."
 ---
 
 # Test
 
-The final phase of the toolu workflow. Tests are written **with** the code, not after — this skill defines how and where.
+`test` is a **reusable execution-time method**: use it in every behavior step
+and again when reproducing regressions. Tests are written with the change,
+through red → green → refactor, never saved for a terminal phase.
 
-**Trigger phrases:** write tests, add a test, test this, TDD, cover this with tests.
+## Non-negotiables
 
-## The two non-negotiables
+- Exercise real inputs and real code paths. Do not use mocked or fabricated
+  data as a mock-substitute for the behavior under test. A controlled external
+  failure may be stubbed only to prove failure propagation.
+- Colocate tests: TS/TSX in sibling `__tests__/`, Rust in module-sibling
+  `tests/` (or crate-root integration `tests/`), and Python `test_<module>.py`
+  beside its module. Use the project runner and existing no-mock gates.
 
-1. **Real-world data only — NO mock-data tests.** Exercise real inputs and real code paths. A test that asserts against fabricated/mocked data proves nothing. Stubbing an external network call or a crashing binary to test failure handling is allowed; mocking the data under test is not. This is mechanically enforced, not just prose: ts-quality's `85-no-mocks.sh` blocks `jest.mock`/`vi.mock`/`jest.fn`/`vi.fn`/`sinon.*`/`ts-mockito` in TS test files, rust-quality's `70-no-mocks.sh` blocks `#[automock]`/`mock! {...}` in `src/` and `mockall`/`faux` imports in `tests/`, and python-quality's `70-no-mocks.sh` blocks `unittest.mock`/`pytest-mock`/`MagicMock`/`monkeypatch` in test files — opt-out per-project via `lang.ts.noMocks` / `lang.rust.noMocks` / `lang.python.noMocks` (default `true`).
-2. **Colocate by language convention:**
-   - **TS / TSX** → sibling `__tests__/` directory at the same level as the code under test. Keep it flat (only `fixtures/`, `helpers/`, `mocks/`, `utils/` subdirs). Files `*.test.ts` / `*.spec.ts`.
-   - **Rust** → module-sibling `tests/` directory for unit tests, wired by a bodyless `#[cfg(test)] mod tests;` declaration; crate-root `tests/` for cargo integration tests. Kept flat (only `fixtures/`, `helpers/`, `common/` subdirs). No inline test bodies in `src/`.
-   - **Python** → colocated `test_<module>.py` beside the module it tests (`conftest.py` allowed anywhere).
+## Behavior-to-evidence map
 
-The rust-quality / ts-quality / python-quality gates enforce these placements on every edit — a misplaced test fails the gate.
+Before writing each test, record a compact map containing:
+
+- relevant AC or risk;
+- representative real input or fixture;
+- observable expected result;
+- boundary or failure case when applicable; and
+- runner command.
+
+Prioritize changed behavior, invalid/boundary input, failure propagation, and
+reproduced regressions. Reject duplicate tests, implementation-detail tests,
+mock-substitute tests, and happy-path-only tests.
 
 ## Test-first loop
 
-1. **Red** — write a failing test that pins the intended behavior (for a bug, reproduce it first).
-2. **Green** — write the minimum code to pass.
-3. **Refactor** — clean up under the gate (line limits, no swallowed errors, concise docs), tests staying green.
+1. **Red** — add a focused failing test that demonstrates the intended behavior
+   or reproduces the regression; run it and observe the expected failure.
+2. **Green** — make the smallest production change that passes with the real
+   input.
+3. **Refactor** — improve structure without changing behavior; keep the runner
+   green.
 
-## Practice
-
-- One behavior per test; name the test after the behavior, not the function.
-- Prefer the project's real runner (vitest/jest/bun test, cargo test/nextest) over hand-rolled harnesses.
-- Cover the real edge cases surfaced in `brainstorm`, not happy-path only.
-- A failing test is a finding — report it with the output; never mark work done while a test is red.
-
-## Output
-
-A green suite that exercises real data and lives in the right place. Branch is ready for review/finish.
+One test demonstrates one behavior and names that behavior. A red test is a
+finding: report its output and never claim the execution step complete until
+the mapped runner is green.

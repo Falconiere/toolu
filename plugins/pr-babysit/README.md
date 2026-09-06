@@ -18,6 +18,15 @@ codex plugin add pr-babysit@toolu
 
 Requires the `toolu` plugin.
 
+## Authorization and delivery handoff
+
+The no-argument interface is unchanged. A user can invoke babysit directly, or
+`execution` can invoke it after a verified execution handoff; that handoff is
+sufficient authorization to create the durable goal and begin delivery. Before
+an automatic handoff, stop before delivery and report the exact missing
+prerequisite: GitHub authentication is unavailable, the current branch is the
+repository default branch, or the optional `pr-babysit` plugin is unavailable.
+
 ## What it provides
 
 - **Claude `/pr-babysit:babysit` and Codex `$pr-babysit:babysit`** — target the PR for the current branch. Each cycle fetches unresolved comments **and** the CI review-bot verdict → triages → fixes → replies → resolves; failed CI is fixed and re-pushed. Success requires zero unresolved comments, an approved zero-finding verdict, and all-green CI.
