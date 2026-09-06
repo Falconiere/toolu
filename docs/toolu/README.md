@@ -28,7 +28,7 @@ flowchart LR
 
 | Phase | Skill | What It Does |
 |-------|-------|-------------|
-| **brainstorm** | `brainstorm` | Sweep the design dimensions, pick a default for each, and proceed. Decide the shape before any code. |
+| **brainstorm** | `brainstorm` | Brainstorm uses adaptive materiality triage with a default-and-proceed baseline: skip mechanical work, use a compact capsule for bounded work, and use Full analysis only for material design risk. Its advisory nudge is not an automatic launch; the no-prompt rule has one narrow unresolved-fork exception. |
 | **spec** | `spec` | Write a design contract to `docs/toolu/specs/<date>-<slug>-design.md`. |
 | **spec-review** | `spec-review` | Adversarial audit of the spec — gaps, ambiguities, untestable acceptance criteria. |
 | **plan** | `plan` | Turn the reviewed spec into concrete, verifiable steps with a machine-readable ledger. |

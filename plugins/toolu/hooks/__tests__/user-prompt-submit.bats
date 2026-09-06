@@ -269,6 +269,78 @@ write_failing_gate() {
   ! echo "$ctx" | grep -q 'orchestrator skill'
 }
 
+@test "user-prompt-submit: brainstorm nudge fires for unresolved design work" {
+  payload=$(build_input "help me design a new workflow for onboarding")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  echo "$ctx" | grep -Fq '`brainstorm` skill'
+  echo "$ctx" | grep -q 'Scope may be unresolved'
+}
+
+@test "user-prompt-submit: brainstorm nudge covers its explicit design terms" {
+  for prompt in "brainstorm the caching change" \
+                "design the caching change" \
+                "scope the caching change" \
+                "choose an approach for caching" \
+                "review the caching architecture" \
+                "explain the caching tradeoff" \
+                "explain the caching trade-off" \
+                "build a new feature for caching" \
+                "build a new workflow for caching" \
+                "build a new system for caching" \
+                "redesign caching" \
+                "overhaul caching"; do
+    payload=$(build_input "$prompt")
+    run bash "$HOOK" <<<"$payload"
+    [ "$status" -eq 0 ]
+    ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+    echo "$ctx" | grep -Fq '`brainstorm` skill'
+  done
+}
+
+@test "user-prompt-submit: brainstorm nudge stays silent for narrow work" {
+  for prompt in "add a button to settings" \
+                "fix a parser error" \
+                "refactor this function" \
+                "rename a flag" \
+                "implement a widget"; do
+    payload=$(build_input "$prompt")
+    run bash "$HOOK" <<<"$payload"
+    [ "$status" -eq 0 ]
+    ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+    ! echo "$ctx" | grep -q 'brainstorm skill'
+  done
+}
+
+@test "user-prompt-submit: brainstorm nudge matches base forms, not inflections" {
+  # Base-form terms must not match derived words such as designer or scoped.
+  for prompt in "update the designated owner field" \
+                "assign a designer to the project" \
+                "brainstorming notes for the meeting" \
+                "the scoped change is ready" \
+                "architectural notes are attached" \
+                "the redesigned page is ready" \
+                "the overhauled service is ready"; do
+    payload=$(build_input "$prompt")
+    run bash "$HOOK" <<<"$payload"
+    [ "$status" -eq 0 ]
+    ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+    ! echo "$ctx" | grep -Fq '`brainstorm` skill'
+  done
+}
+
+@test "user-prompt-submit: brainstorm nudge coexists with recall and intent hints" {
+  # "architecture" -> recall; "fix" -> intent; "design" -> brainstorm.
+  payload=$(build_input "fix the architecture design for the parser")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  echo "$ctx" | grep -qE 'comemory|Recall first|WARN'
+  echo "$ctx" | grep -q 'Fix in code'
+  echo "$ctx" | grep -Fq '`brainstorm` skill'
+}
+
 @test "user-prompt-submit: research nudge fires on an external-knowledge prompt" {
   payload=$(build_input "look up the latest React Compiler docs")
   run bash "$HOOK" <<<"$payload"
