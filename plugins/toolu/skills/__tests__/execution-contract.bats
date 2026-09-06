@@ -22,12 +22,17 @@ SKILL="$ROOT/plugins/toolu/skills/execution/SKILL.md"
 }
 
 @test "execution attests the committed branch before delivery" {
-  local commit_line ledger_line review_line
+  local commit_line ledger_line review_line verdict_line push_line
+  [ "$(grep -Fc 'plan-ledger.sh run <plan_doc> --verify' "$SKILL")" -eq 1 ]
   commit_line="$(grep -ni 'commit the scoped changes' "$SKILL" | cut -d: -f1)"
-  ledger_line="$(grep -n 'plan-ledger.sh run <plan_doc> --verify' "$SKILL" | tail -n1 | cut -d: -f1)"
-  review_line="$(grep -n 'toolu-review:review' "$SKILL" | tail -n1 | cut -d: -f1)"
+  ledger_line="$(grep -n 'plan-ledger.sh run <plan_doc> --verify' "$SKILL" | cut -d: -f1)"
+  review_line="$(grep -n 'toolu-review:review' "$SKILL" | cut -d: -f1)"
+  verdict_line="$(grep -n 'verdict.sh status' "$SKILL" | cut -d: -f1)"
+  push_line="$(grep -ni 'push the non-default feature branch' "$SKILL" | cut -d: -f1)"
   [ "$commit_line" -lt "$ledger_line" ]
   [ "$ledger_line" -lt "$review_line" ]
+  [ "$review_line" -lt "$verdict_line" ]
+  [ "$verdict_line" -lt "$push_line" ]
 }
 
 @test "execution only delivers with authorization and all delivery prerequisites" {
