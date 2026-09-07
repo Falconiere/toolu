@@ -51,6 +51,7 @@ SKILL="$ROOT/plugins/toolu/skills/execution/SKILL.md"
   grep -qi 'push' "$SKILL"
   grep -qiE 'locate.*or create.*pull request|create.*or locate.*pull request' "$SKILL"
   grep -qi 'repository default branch' "$SKILL"
+  grep -qiE 'verify.*PR.*number.*head/base|verify.*head/base.*branches' "$SKILL"
   grep -Fq '$pr-babysit:babysit' "$SKILL"
 }
 
