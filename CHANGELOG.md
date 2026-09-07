@@ -1,5 +1,19 @@
 # Changelog
 
+## [5.2.0](https://github.com/Falconiere/toolu/compare/v5.1.0...v5.2.0) (2026-09-07)
+
+
+### Features
+
+* **workflow:** adopt adaptive delivery chain ([b8991cd](https://github.com/Falconiere/toolu/commit/b8991cd20a3be6eb538cebc34858b995103004c0))
+
+
+### Bug Fixes
+
+* **workflow:** attest the committed delivery diff ([47f9388](https://github.com/Falconiere/toolu/commit/47f93882745e4cb8d7d6053fff42d3ed58908045))
+* **workflow:** clarify delivery artifacts ([3811fed](https://github.com/Falconiere/toolu/commit/3811fedfd764f95ec8de5787f13012fc4d71ec69))
+* **workflow:** require one final ledger verification ([0292340](https://github.com/Falconiere/toolu/commit/0292340b32575fcc8ff96b49f4154237120d4f3c))
+
 ## [5.1.0](https://github.com/Falconiere/toolu/compare/v5.0.0...v5.1.0) (2026-09-06)
 
 
