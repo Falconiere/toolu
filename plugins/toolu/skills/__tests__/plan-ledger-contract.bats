@@ -6,6 +6,7 @@
 
 setup() {
   SKILLS="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+  ROOT="$(cd "$SKILLS/../../.." && pwd)"
 }
 
 @test "plan emits a machine-readable steps block" {
@@ -62,6 +63,11 @@ setup() {
   [ -f "$SKILLS/plan/references/ledger.md" ]
 }
 
+@test "plan delegates the full ledger schema to its shared reference" {
+  ! grep -q 'each item has non-empty' "$SKILLS/plan/SKILL.md"
+  grep -q 'canonical ledger shape' "$SKILLS/plan/SKILL.md"
+}
+
 @test "plan-review asserts ac_refs resolve via pl_check_ac_refs" {
   grep -q 'ac_refs' "$SKILLS/plan-review/SKILL.md"
   grep -q 'pl_check_ac_refs' "$SKILLS/plan-review/SKILL.md"
@@ -80,6 +86,11 @@ setup() {
   grep -q 'mock-substitute' "$SKILLS/test/SKILL.md"
   grep -q 'happy-path-only' "$SKILLS/test/SKILL.md"
   ! grep -q 'mocks/' "$SKILLS/test/SKILL.md"
+}
+
+@test "workflow diagrams show test feeding execution-time evidence" {
+  grep -Fq 'T(test, reusable execution-time method) -.-> E' "$ROOT/README.md"
+  grep -Fq 'T(test, reusable execution-time method) -.-> E' "$ROOT/docs/toolu/README.md"
 }
 
 @test "execution reads AC coverage from status" {

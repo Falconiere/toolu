@@ -42,6 +42,10 @@ SKILL="$ROOT/plugins/toolu/skills/execution/SKILL.md"
   grep -qi 'pr-babysit.*installed' "$SKILL"
 }
 
+@test "execution makes brainstorm optional upstream triage" {
+  grep -qiE 'brainstorm.*optional upstream triage' "$SKILL"
+}
+
 @test "execution commits pushes creates or finds a default-branch PR then invokes babysit" {
   grep -qiE 'commit.*scoped changes' "$SKILL"
   grep -qi 'push' "$SKILL"

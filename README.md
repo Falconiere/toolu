@@ -4,7 +4,7 @@
 
 ### Engineering discipline, wired into your AI coding agent.
 
-AI writes code fast — then skips the parts that keep a codebase alive: oversized files, swallowed errors, mock-only tests, undocumented exports, unreviewed pushes. **toolu** bakes that discipline back in — as hooks that gate every edit, skills that enforce a design → review → build → review → test cadence, and a plugin registry so language-specific rules ride along automatically. Runs on **Claude Code and Codex**.
+AI writes code fast — then skips the parts that keep a codebase alive: oversized files, swallowed errors, mock-only tests, undocumented exports, unreviewed pushes. **toolu** bakes that discipline back in — as hooks that gate every edit, skills that enforce an adaptive design-to-delivery workflow, and a plugin registry so language-specific rules ride along automatically. Runs on **Claude Code and Codex**.
 
 [![Release](https://img.shields.io/github/v/release/Falconiere/toolu?sort=semver&color=d97757)](https://github.com/Falconiere/toolu/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
@@ -25,7 +25,7 @@ Your AI coding agent is a superb pair-programmer, but left alone it optimizes fo
 toolu moves those rules out of your head and into the tool:
 
 - **Hooks enforce on every edit** — a post-edit quality gate checks each file the agent touches and **blocks the session from moving on while any error, warning, or test failure exists** — even in unrelated files.
-- **Skills enforce a process** — an opinionated 8-phase workflow with a write/review checkpoint at every step, so design happens before code and review happens before "done."
+- **Skills enforce a process** — a six-stage delivery chain with write/review checkpoints before execution, so design happens before code and review happens before delivery.
 - **A registry keeps it modular** — drop in a domain plugin (Rust rules, TypeScript rules, structural search) and its hook modules register themselves into the core engine, fail-closed, with zero wiring.
 
 It's a personal bundle, built in the open, MIT-licensed. Take the whole thing or lift the pieces you like.
@@ -167,7 +167,7 @@ alone, or add the domain plugins.
 
 | Group | Plugin | Version | What it does |
 |--------|--------|:-------:|--------------|
-| Core | **`toolu`** | `4.10.0` | Registry-driven hook engine, 8-phase workflow, commit workflows, model routing, push-review gate, and custom-agent templates. |
+| Core | **`toolu`** | `4.10.0` | Registry-driven hook engine, adaptive delivery workflow, commit workflows, model routing, push-review gate, and custom-agent templates. |
 | Quality gate | **`rust-quality`** | `4.10.0` | Rust post-edit checks — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests. |
 | Quality gate | **`ts-quality`** | `4.10.0` | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
 | Quality gate | **`python-quality`** | `4.10.0` | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
@@ -198,7 +198,9 @@ A native, opinionated delivery chain. `brainstorm` is optional upstream triage; 
 ```mermaid
 flowchart LR
     B(brainstorm, optional) -.-> S(spec) --> SR(spec-review) --> P(plan) --> PR(plan-review) --> E(execution) --> PB(pr-babysit)
+    T(test, reusable execution-time method) -.-> E
     style B fill:#d97757,color:#fff,stroke:none
+    style T fill:#6e7681,color:#fff,stroke:none
     style PB fill:#3fb950,color:#fff,stroke:none
     style SR fill:#1f6feb,color:#fff,stroke:none
     style PR fill:#1f6feb,color:#fff,stroke:none
