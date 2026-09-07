@@ -5,7 +5,7 @@ description: Use when you have a reviewed plan to implement and, when delivery i
 
 # Execution
 
-The execution phase comes after `plan-review`. It carries out a reviewed plan with discipline: small steps, evidence before claims, and no skipped gate. `brainstorm` can be useful upstream when the shape is not settled; `test` is the execution-time method for producing high-signal evidence, not a final workflow phase.
+The execution phase comes after `plan-review`. It carries out a reviewed plan with discipline: small steps, evidence before claims, and no skipped gate. `brainstorm` is optional upstream triage when the shape is not settled; `test` is the execution-time method for producing high-signal evidence, not a final workflow phase.
 
 **Trigger phrases:** execute the plan, implement this, start building, work through the plan.
 

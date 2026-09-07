@@ -26,6 +26,7 @@ execution-owned readiness and PR handoff.
 ```mermaid
 flowchart LR
     B(brainstorm, optional) -.-> S(spec) --> SR(spec-review) --> P(plan) --> PR(plan-review) --> E(execution) --> PB(pr-babysit)
+    T(test, reusable execution-time method) -.-> E
 ```
 
 | Phase | Skill | What It Does |

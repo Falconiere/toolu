@@ -33,9 +33,8 @@ brainstorm.
 3. **Workstream summary** — a short, non-duplicative overview of the sequence
    (for example, “parser → validation → docs”). It is not a second task list.
 4. **Steps (machine-readable)** — one JSON array under the literal heading
-   `## Steps (machine-readable)`. This ledger is the **sole detailed step list**:
-   each item has non-empty `id`, `title`, and runnable `check`; behavior steps
-   cite the ACs they satisfy and use checks with real inputs.
+   `## Steps (machine-readable)`. This ledger is the **sole detailed step list**;
+   use the shared reference for its schema and real-input evidence conventions.
 5. **Critical files** — exact paths to create or modify.
 6. **Verification** — end-to-end outcome, real inputs, failure/boundary checks,
    and required documentation synchronization.
