@@ -11,7 +11,6 @@
 # Public API:
 #   toolu_load_config          - load + cache the merged config
 #   toolu_enabled CAT NAME     - 0 if enabled (default), 1 if disabled
-#   toolu_comemory_state       - print 'available' | 'missing' | 'disabled'
 #   toolu_config_exists        - 0 if any config file is on disk (cheap stat-only check)
 #   toolu_model CLASS          - print the model alias routed to a work class
 #   toolu_string PATH DEF A... - print a config string at dotted PATH if it's in A..., else DEF
@@ -49,8 +48,6 @@ _toolu_user_cfg() {
   printf '%s/toolu.config.json' "$agent_dir"
 }
 
-# Mirrored by the setup_done marker writer in plugins/comemory/scripts/setup.sh
-# (cross-plugin sourcing is barred; parity enforced by path-parity.bats).
 _toolu_project_cfg() {
   toolu_project_config | tr -d '\n'
 }
@@ -355,23 +352,4 @@ toolu_config_exists() {
   project_cfg=$(_toolu_project_cfg)
   [ -n "$project_cfg" ] && [ -f "$project_cfg" ] && return 0
   return 1
-}
-
-# Print comemory availability for hook reminder text:
-#   'available' — CLI installed AND skills.comemory != false
-#   'missing'   — CLI absent AND skills.comemory != false (emit install hint)
-#   'disabled'  — skills.comemory == false (silent; user opted out)
-#
-# Centralizes the tri-state so pre-compact / session-end / user-prompt-submit
-# do not each hand-roll the branching.
-toolu_comemory_state() {
-  if ! toolu_enabled skills comemory; then
-    printf 'disabled'
-    return 0
-  fi
-  if command -v comemory >/dev/null 2>&1; then
-    printf 'available'
-  else
-    printf 'missing'
-  fi
 }

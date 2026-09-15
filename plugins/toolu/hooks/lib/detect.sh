@@ -60,46 +60,6 @@ detect_ts() {
     | grep -q . && echo ts
 }
 
-# Echo "comemory" if the comemory CLI is on PATH.
-detect_comemory() {
-  command -v comemory >/dev/null 2>&1 && echo comemory
-}
-
-# Minimum comemory version toolu targets. The wrapper relies on the full
-# verb surface (search/save/list/summary, the retrieval-quality loop
-# feedback/mine/tune/eval/prune/gc/rebuild, and comemory search-code/index-code/
-# graph). 0.8.0 is the current release; bump this constant when comemory ships a
-# newer one that toolu should rely on.
-COMEMORY_MIN_VERSION="0.8.0"
-
-# Echo the installed comemory version (e.g. "0.8.0"), or nothing.
-# Returns 1 when the CLI is absent or the version can't be parsed.
-comemory_version() {
-  command -v comemory >/dev/null 2>&1 || return 1
-  local v
-  # Pin to comemory's OWN version token (`comemory <X.Y.Z>`), not any X.Y.Z in
-  # the output, so a future `--version` that also prints a dep version (e.g.
-  # "built against sqlite 3.45.0, version 0.8.0") can't match the wrong number.
-  v=$(comemory --version 2>/dev/null \
-        | grep -oE 'comemory[[:space:]]+v?[0-9]+\.[0-9]+\.[0-9]+' \
-        | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-  [ -n "$v" ] && { echo "$v"; return 0; }
-  return 1
-}
-
-# Compare the installed comemory against $COMEMORY_MIN_VERSION.
-#   0 = installed >= minimum (good)
-#   1 = installed <  minimum (outdated — caller should advise an upgrade)
-#   2 = indeterminate (CLI absent or version unparseable — caller stays quiet)
-comemory_version_ok() {
-  local cur
-  # comemory_version returns non-zero when the CLI is absent or unparseable.
-  cur=$(comemory_version) || return 2
-  # sort -V puts the lower version first; installed is OK iff the minimum is not
-  # strictly greater (i.e. the minimum is the lower-or-equal of the two).
-  [ "$(printf '%s\n%s\n' "$COMEMORY_MIN_VERSION" "$cur" | sort -V | head -1)" = "$COMEMORY_MIN_VERSION" ]
-}
-
 # Echo the project's TS linter: biome | oxc | eslint | "" (presence-only, by
 # config-file at the git root; precedence biome > oxc > eslint). Used to point
 # the agent at the real tool and to suppress our own overlapping nits — we

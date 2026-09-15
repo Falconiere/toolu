@@ -27,9 +27,9 @@ setup() {
 
 @test "active: Codex uses the SessionStart snapshot without invoking the CLI" {
   snapshot="$TMP/codex-plugins.json"
-  printf '%s\n' '{"version":1,"status":"ready","plugins":["comemory@toolu"]}' > "$snapshot"
+  printf '%s\n' '{"version":1,"status":"ready","plugins":["fixture@toolu"]}' > "$snapshot"
   run env TOOLU_HOST_OVERRIDE=codex TOOLU_CODEX_PLUGIN_SNAPSHOT="$snapshot" \
-    PATH=/usr/bin:/bin bash -c '. "$1"; toolu_plugin_active comemory@toolu' _ \
+    PATH=/usr/bin:/bin bash -c '. "$1"; toolu_plugin_active fixture@toolu' _ \
     "${BATS_TEST_DIRNAME}/../detect.sh"
   [ "$status" -eq 0 ]
 
@@ -43,7 +43,7 @@ setup() {
   snapshot="$TMP/codex-plugins.json"
   printf 'not-json\n' > "$snapshot"
   run env TOOLU_HOST_OVERRIDE=codex TOOLU_CODEX_PLUGIN_SNAPSHOT="$snapshot" \
-    bash -c '. "$1"; toolu_plugin_active comemory@toolu' _ \
+    bash -c '. "$1"; toolu_plugin_active fixture@toolu' _ \
     "${BATS_TEST_DIRNAME}/../detect.sh"
   [ "$status" -eq 0 ]
 }
@@ -54,19 +54,19 @@ _write_installed() {
 }
 
 @test "active: returns 0 when plugin present in installed_plugins.json" {
-  _write_installed '{"plugins":{"comemory@toolu":{}}}'
-  run toolu_plugin_active comemory@toolu
+  _write_installed '{"plugins":{"fixture@toolu":{}}}'
+  run toolu_plugin_active fixture@toolu
   [ "$status" -eq 0 ]
 }
 
 @test "active: returns 1 when plugin absent" {
   _write_installed '{"plugins":{"other@toolu":{}}}'
-  run toolu_plugin_active comemory@toolu
+  run toolu_plugin_active fixture@toolu
   [ "$status" -eq 1 ]
 }
 
 @test "active: indeterminate (no manifest) defaults to active (fail-open)" {
   rm -f "$TMP/.claude/plugins/installed_plugins.json"
-  run toolu_plugin_active comemory@toolu
+  run toolu_plugin_active fixture@toolu
   [ "$status" -eq 0 ]
 }

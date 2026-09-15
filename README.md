@@ -95,26 +95,26 @@ Add the language gates, search, and docs tooling too:
 /plugin install ts-quality@toolu     # TypeScript quality gates
 /plugin install python-quality@toolu # Python quality gates
 /plugin install ast-grep@toolu       # structural code search & rewrite
-/plugin install comemory@toolu       # persistent cross-session memory
 /plugin install context7@toolu       # live library documentation lookup
 /plugin install exa-search@toolu     # web / code / URL search + research
 ```
 
-> **Note** — `comemory`, `rust-quality`, `ts-quality`, and `python-quality` depend on `toolu`; `ast-grep`, `context7`, and `exa-search` are standalone (zero deps). The only external-binary dependency in the bundle is `comemory` (see below). `caveman` and `code-simplifier` are **optional, recommended companions**, not required — install them only if you want caveman mode or the pre-simplify pass; when absent, `toolu` falls back (the `push-review` gate uses the built-in `/code-review`, and `code-simplifier` is invoked only if installed). Adding the marketplaces in step 1 lets Claude Code resolve those companions automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
+> **Note** — `rust-quality`, `ts-quality`, and `python-quality` depend on `toolu`; `ast-grep`, `context7`, and `exa-search` are standalone (zero deps). `caveman` and `code-simplifier` are **optional, recommended companions**, not required — install them only if you want caveman mode or the pre-simplify pass; when absent, `toolu` falls back (the `push-review` gate uses the built-in `/code-review`, and `code-simplifier` is invoked only if installed). Adding the marketplaces in step 1 lets Claude Code resolve those companions automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
 
-The `comemory` plugin wraps the standalone `comemory` binary — install it once (it is **not** on crates.io), then run setup:
+> **Deprecation:** comemory host integration now lives in
+> [Falconiere/comemory](https://github.com/Falconiere/comemory). First obtain a
+> current comemory binary and verify `comemory install --help`; then run
+> `comemory install claude` or `comemory install codex`. After that succeeds,
+> disable the legacy plugin with `/plugin uninstall comemory@toolu` or
+> `codex plugin remove comemory@toolu`.
+
+To migrate an existing legacy installation, obtain the standalone `comemory` binary:
 
 ```bash
 brew install Falconiere/tap/comemory   # macOS + Linuxbrew (canonical)
 # or the curl installer:
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Falconiere/comemory/releases/latest/download/comemory-installer.sh | sh
 ```
-
-```text
-/comemory:setup   # detect+guide the binary, then wire git index-code hooks, an initial index, data dir, and completions
-```
-
-The `comemory` persistent-memory mandate is **opt-in**: the `agent-memory` protocol activates only after you run `/comemory:setup` in a repo (per repo). Until then `comemory` does nothing — no memory is saved or required.
 
 ### Codex
 
@@ -132,7 +132,6 @@ codex plugin add rust-quality@toolu
 codex plugin add ts-quality@toolu
 codex plugin add python-quality@toolu
 codex plugin add ast-grep@toolu
-codex plugin add comemory@toolu
 codex plugin add context7@toolu
 codex plugin add exa-search@toolu
 codex plugin add jira@toolu
@@ -148,7 +147,6 @@ and print the exact repair command: `codex plugin add toolu@toolu`.
 Codex discovers the same canonical workflows as namespaced skills:
 
 - `$toolu:commit`, `$toolu:review-and-commit`
-- `$comemory:setup`
 - `$statusline:status`
 - `$pr-babysit:babysit`
 - `$toolu:setup` to preview, install, update, back up, or remove the five bundled Codex agent profiles
@@ -172,7 +170,6 @@ alone, or add the domain plugins.
 | Quality gate | **`ts-quality`** | `4.10.0` | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
 | Quality gate | **`python-quality`** | `4.10.0` | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
 | Code intel | **`ast-grep`** | `4.10.0` | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
-| Code intel | **`comemory`** | `4.10.0` | Persistent memory and code indexing with host-native setup, scope enforcement, and status publishing. |
 | Browser | **`agent-browser`** | `4.10.0` | Token-lean browser automation through accessibility-tree snapshots and stable element references. |
 | Knowledge | **`context7`** | `4.10.0` | Live library documentation and code examples through Context7. |
 | Knowledge | **`exa-search`** | `4.10.0` | Web, code, URL search, and deep research through Exa. |
@@ -214,7 +211,7 @@ flowchart LR
 
 Mechanical work (renames, dep bumps, one-liners) skips the ceremony — each skill declares when *not* to fire.
 
-The workflow skills, plus `ast-grep`, `agent-memory` (from `comemory`), `context7`, and `exa-search`, all run off the same shell hook engine. The standalone `deep-research` skill combines `exa-search` and `context7` fan-out into cited reports under `docs/research/`.
+The workflow skills, plus `ast-grep`, `context7`, and `exa-search`, all run off the same shell hook engine. The standalone `deep-research` skill combines `exa-search` and `context7` fan-out into cited reports under `docs/research/`.
 
 ## Architecture
 
@@ -229,7 +226,6 @@ flowchart TD
         RQ["rust-quality<br/>register.sh"]
         TQ["ts-quality<br/>register.sh"]
         AG["ast-grep<br/>register.sh"]
-        CM["comemory<br/>register.sh"]
     end
     RQ -- "assemble concern fragments at SessionStart" --> R[("registry<br/>host config dir/toolu/")]
     TQ -- "one assembled module per language" --> R
@@ -239,7 +235,7 @@ flowchart TD
     D -- "runs a module only while its plugin is installed" --> OUT([enforced edit])
 ```
 
-At `SessionStart`, each domain plugin's `register.sh` contributes to the registry as `<plugin-spec>__<name>.sh` — `ast-grep` and `comemory` mirror their `hooks/<event>.d/*.sh` one-to-one, while `rust-quality`/`ts-quality`/`python-quality` assemble their ordered `hooks/concerns/` fragments into a single module per language. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed.
+At `SessionStart`, each domain plugin's `register.sh` contributes to the registry as `<plugin-spec>__<name>.sh` — `ast-grep` mirrors its `hooks/<event>.d/*.sh` one-to-one, while `rust-quality`/`ts-quality`/`python-quality` assemble their ordered `hooks/concerns/` fragments into a single module per language. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed.
 
 <details>
 <summary><b>Full repository layout</b></summary>
@@ -258,7 +254,6 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     │   ├── hooks/              # PreToolUse / PostToolUse / SessionStart … + lib/
     │   └── settings/           # reusable settings fragments
     ├── ast-grep/               # ast-grep skill + Grep→ast-grep nudge registry module
-    ├── comemory/               # agent-memory skill + scope-enforcement & memory-count registry modules
     ├── context7/               # context7 skill + Context7 REST wrapper
     ├── exa-search/             # exa-search skill + Exa REST wrapper
     ├── rust-quality/           # Rust PostToolUse quality fragments, assembled at SessionStart

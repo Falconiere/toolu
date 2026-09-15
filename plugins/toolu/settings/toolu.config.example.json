@@ -36,14 +36,7 @@
     ]
   },
   "skills": {
-    "comemory": true,
     "ast-grep": true
-  },
-  "projectSkills": {
-    "enabled": true,
-    "staleAfterDays": 30,
-    "archiveAfterDays": 90,
-    "indexCap": 20
   },
   "agents": {
     "research-agent": true
@@ -53,8 +46,7 @@
     "user-prompt-submit": true,
     "pre-tools": true,
     "post-tools": true,
-    "pre-compact": true,
-    "session-end": true
+    "pre-compact": true
   },
   "mcp": {},
   "models": {

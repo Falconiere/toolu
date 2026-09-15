@@ -150,7 +150,7 @@ SH
   [ "$output" = toolu@toolu ]
 
   run_host env TOOLU_HOST_OVERRIDE=codex TOOLU_CODEX_PLUGIN_SNAPSHOT="$snapshot" \
-    bash -c '. "$1"; toolu_codex_plugin_installed comemory@toolu' _ "$LIB"
+    bash -c '. "$1"; toolu_codex_plugin_installed fixture@toolu' _ "$LIB"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 

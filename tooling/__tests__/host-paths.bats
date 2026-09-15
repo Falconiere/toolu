@@ -30,7 +30,6 @@ ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)"
   isolated_home="$BATS_TEST_TMPDIR/home"
   for item in \
     'ast-grep:pre-tools.d/ast-grep@toolu__search-nudge.sh' \
-    'comemory:pre-tools.d/comemory@toolu__comemory-scope.sh' \
     'rust-quality:post-tools.d/rust-quality@toolu__rust-quality.sh' \
     'ts-quality:post-tools.d/ts-quality@toolu__ts-quality.sh'; do
     plugin=${item%%:*}

@@ -76,63 +76,6 @@ _run_entry_no_jq() {
       bash "$ENTRY" <<<'{"hook_event_name":"SessionStart","source":"startup"}' )
 }
 
-@test "mandate: comemory mandate fires when plugin active + binary present + setup_done true" {
-  command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
-  printf '%s' '{"plugins":{"comemory@toolu":{}}}' > "$REG"
-  _write_config '{"comemory":{"setup_done":true}}'
-  run _run_entry
-  [ "$status" -eq 0 ]
-  echo "$output" | grep -q "MANDATORY"
-  echo "$output" | grep -q 'comemory.sh search'
-  echo "$output" | grep -q "do NOT ask permission"
-  # The opt-in path replaces the nudge, never both.
-  ! echo "$output" | grep -q '/comemory:setup'
-}
-
-@test "mandate: NO comemory mandate when setup_done absent — /comemory:setup nudge instead" {
-  command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
-  printf '%s' '{"plugins":{"comemory@toolu":{}}}' > "$REG"
-  # No comemory.setup_done flag written.
-  run _run_entry
-  [ "$status" -eq 0 ]
-  ! echo "$output" | grep -q 'comemory.sh search'
-  echo "$output" | grep -q '/comemory:setup'
-  echo "$output" | grep -q 'comemory detected but not enabled'
-}
-
-@test "mandate: setup_done explicitly false — NO mandate and NO nudge (deliberate opt-out)" {
-  command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
-  printf '%s' '{"plugins":{"comemory@toolu":{}}}' > "$REG"
-  _write_config '{"comemory":{"setup_done":false}}'
-  run _run_entry
-  [ "$status" -eq 0 ]
-  ! echo "$output" | grep -q 'comemory.sh search'
-  # Explicit false is an answered question — nudging again would nag.
-  ! echo "$output" | grep -q '/comemory:setup'
-}
-
-@test "mandate: NO comemory mandate when skills.comemory == false (even with setup_done true)" {
-  command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
-  printf '%s' '{"plugins":{"comemory@toolu":{}}}' > "$REG"
-  _write_config '{"skills":{"comemory":false},"comemory":{"setup_done":true}}'
-  run _run_entry
-  [ "$status" -eq 0 ]
-  ! echo "$output" | grep -q 'comemory.sh search'
-  # skills-disabled gates BOTH the mandate and the nudge.
-  ! echo "$output" | grep -q '/comemory:setup'
-}
-
-@test "mandate: jq masked — NEITHER comemory mandate NOR /comemory:setup nudge" {
-  command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
-  printf '%s' '{"plugins":{"comemory@toolu":{}}}' > "$REG"
-  _write_config '{"comemory":{"setup_done":true}}'
-  # Confirm the stub PATH really hides jq before asserting on absence.
-  run _run_entry_no_jq
-  [ "$status" -eq 0 ]
-  ! echo "$output" | grep -q 'comemory.sh search'
-  ! echo "$output" | grep -q '/comemory:setup'
-}
-
 @test "mandate: ast-grep plugin installed + binary present emits a structural-search mandate" {
   command -v ast-grep >/dev/null 2>&1 || command -v sg >/dev/null 2>&1 || skip "ast-grep binary not installed"
   printf '%s' '{"plugins":{"ast-grep@toolu":{}}}' > "$REG"
@@ -143,36 +86,11 @@ _run_entry_no_jq() {
   echo "$output" | grep -q "FALLBACK ONLY"
 }
 
-@test "mandate: no comemory mandate when the plugin is definitively absent" {
-  printf '%s' '{"plugins":{}}' > "$REG"
-  _write_config '{"comemory":{"setup_done":true}}'
-  run _run_entry
-  [ "$status" -eq 0 ]
-  ! echo "$output" | grep -q 'comemory.sh search'
-  # Plugin absent also gates the nudge.
-  ! echo "$output" | grep -q '/comemory:setup'
-}
-
 @test "mandate: no ast-grep mandate when the plugin is definitively absent" {
   printf '%s' '{"plugins":{}}' > "$REG"
   run _run_entry
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q 'ast-grep run --pattern'
-}
-
-@test "mandate: both mandates fire under one MANDATORY header (comemory opted in)" {
-  command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
-  command -v ast-grep >/dev/null 2>&1 || command -v sg >/dev/null 2>&1 || skip "ast-grep binary not installed"
-  printf '%s' '{"plugins":{"comemory@toolu":{},"ast-grep@toolu":{}}}' > "$REG"
-  _write_config '{"comemory":{"setup_done":true}}'
-  run _run_entry
-  [ "$status" -eq 0 ]
-  [ "$(echo "$output" | grep -c "MANDATORY — proactive plugin use")" -eq 1 ]
-  echo "$output" | grep -q 'comemory.sh search'
-  echo "$output" | grep -q 'ast-grep run --pattern'
-  # Mandates propagate to nested subagents.
-  echo "$output" | grep -q "Propagation"
-  echo "$output" | grep -q "bind EVERY agent"
 }
 
 @test "mandate: exa-search mandate fires when plugin active + wrapper published + EXA_API_KEY set" {
@@ -245,35 +163,4 @@ _run_entry_no_jq() {
   run _run_entry
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q 'context7/search.sh'
-}
-
-@test "mandate: all four mandates fire under one MANDATORY header" {
-  command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
-  command -v ast-grep >/dev/null 2>&1 || command -v sg >/dev/null 2>&1 || skip "ast-grep binary not installed"
-  printf '%s' '{"plugins":{"comemory@toolu":{},"ast-grep@toolu":{},"exa-search@toolu":{},"context7@toolu":{}}}' > "$REG"
-  _write_config '{"comemory":{"setup_done":true}}'
-  _publish_wrapper exa-search
-  _publish_wrapper context7
-  run _run_entry EXA_API_KEY=test-key
-  [ "$status" -eq 0 ]
-  [ "$(echo "$output" | grep -c "MANDATORY — proactive plugin use")" -eq 1 ]
-  # Exactly the four mandate bullets carry "you MUST" — the header, the
-  # propagation bullet, and the session docs do not — so the occurrence
-  # count pins all four to one shared header block (not just "at least one
-  # fired"). grep -o (occurrences), not -c (lines): the hook emits one JSON
-  # line, so every mandate lands on the same line.
-  [ "$(echo "$output" | grep -o 'you MUST' | wc -l | tr -d ' ')" -eq 4 ]
-  echo "$output" | grep -q 'comemory.sh search'
-  echo "$output" | grep -q 'ast-grep run --pattern'
-  echo "$output" | grep -q 'exa-search/search.sh'
-  echo "$output" | grep -q 'context7/search.sh'
-}
-
-@test "mandate: indeterminate registry fails open — comemory mandate still fires when opted in" {
-  command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
-  rm -f "$REG"   # registry absent → toolu_plugin_active fails open
-  _write_config '{"comemory":{"setup_done":true}}'
-  run _run_entry
-  [ "$status" -eq 0 ]
-  echo "$output" | grep -q 'comemory.sh search'
 }

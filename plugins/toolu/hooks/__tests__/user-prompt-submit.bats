@@ -62,52 +62,6 @@ CTX
   [ -z "$output" ]
 }
 
-@test "user-prompt-submit: no recall hint when prompt does not invite recall" {
-  # A formatting tweak names no recall word and no task verb, so the recall
-  # branch must stay silent. (Task verbs like 'implement'/'add' now DO invite
-  # recall — see the two cases below.)
-  payload=$(build_input "reformat this block")
-  run bash "$HOOK" <<<"$payload"
-  [ "$status" -eq 0 ]
-  ! echo "$output" | grep -q 'Recall first'
-  ! echo "$output" | grep -q 'comemory search'
-}
-
-@test "user-prompt-submit: task verb 'implement' invites recall" {
-  payload=$(build_input "implement a new dashboard widget")
-  run bash "$HOOK" <<<"$payload"
-  [ "$status" -eq 0 ]
-  # The recall branch fires for ordinary task verbs now: the recall line when
-  # comemory is available, a WARN when it is absent (as under the sanitized test
-  # PATH). Either proves the verb entered the branch — mirrors the architecture
-  # case above.
-  echo "$output" | grep -qE 'comemory|Recall first|WARN'
-}
-
-@test "user-prompt-submit: task verb 'add' invites recall" {
-  payload=$(build_input "add a retry to the fetch helper")
-  run bash "$HOOK" <<<"$payload"
-  [ "$status" -eq 0 ]
-  echo "$output" | grep -qE 'comemory|Recall first|WARN'
-}
-
-@test "user-prompt-submit: recall hint NOT emitted for 'paste' (substring of past)" {
-  payload=$(build_input "paste this snippet at the top of the file")
-  run bash "$HOOK" <<<"$payload"
-  [ "$status" -eq 0 ]
-  ! echo "$output" | grep -q 'Recall first'
-  ! echo "$output" | grep -q 'comemory search'
-}
-
-@test "user-prompt-submit: recall hint emitted when prompt mentions architecture" {
-  payload=$(build_input "explain the architecture of the auth module")
-  run bash "$HOOK" <<<"$payload"
-  [ "$status" -eq 0 ]
-  # Recall hint only when comemory is available; warning when missing.
-  # Either way the response must mention comemory or a warn, not be silent.
-  echo "$output" | grep -qE 'comemory|Recall first|WARN'
-}
-
 @test "user-prompt-submit: emits at most one intent hint per prompt" {
   # Prompt matches multiple regex categories (fix + test + delete + review).
   payload=$(build_input "fix and remove the failing test review the code")
@@ -330,13 +284,12 @@ write_failing_gate() {
   done
 }
 
-@test "user-prompt-submit: brainstorm nudge coexists with recall and intent hints" {
-  # "architecture" -> recall; "fix" -> intent; "design" -> brainstorm.
+@test "user-prompt-submit: brainstorm nudge coexists with an intent hint" {
+  # "fix" -> intent; "design" -> brainstorm.
   payload=$(build_input "fix the architecture design for the parser")
   run bash "$HOOK" <<<"$payload"
   [ "$status" -eq 0 ]
   ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
-  echo "$ctx" | grep -qE 'comemory|Recall first|WARN'
   echo "$ctx" | grep -q 'Fix in code'
   echo "$ctx" | grep -Fq '`brainstorm` skill'
 }
@@ -439,35 +392,4 @@ CFG
   [ "$status" -eq 0 ]
   ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
   ! echo "$ctx" | grep -q 'jira` skill'
-}
-
-@test "user-prompt-submit: recall hint points at the published wrapper path, not a bare comemory.sh" {
-  # Regression: the hint said `comemory.sh search "<topic>"`, but the wrapper is
-  # NOT on PATH — register.sh publishes it at $CLAUDE_CONFIG_DIR/comemory/
-  # comemory.sh. The bare form dies with command-not-found, whose 0-byte stdout
-  # the agent misreads as "no memories". Stub the binary so the state resolves
-  # to `available` and the recall branch (not the WARN branch) fires.
-  local stub="$BATS_TEST_TMPDIR/bin"
-  mkdir -p "$stub"
-  printf '#!/bin/sh\nexit 0\n' > "$stub/comemory"
-  chmod +x "$stub/comemory"
-  payload=$(build_input "implement a new dashboard widget")
-  run env PATH="$stub:$PATH" HOME="$TMP/home" bash "$HOOK" <<<"$payload"
-  [ "$status" -eq 0 ]
-  echo "$output" | grep -q 'Recall first'
-  echo "$output" | grep -qF "$TMP/home/.claude/comemory/comemory.sh"
-  # ...and never the bare command form that is not on PATH.
-  ! echo "$output" | grep -qF '`comemory.sh search'
-}
-
-@test "user-prompt-submit: Codex recall hint uses CODEX_HOME" {
-  local stub="$BATS_TEST_TMPDIR/bin"
-  mkdir -p "$stub"
-  printf '#!/bin/sh\nexit 0\n' > "$stub/comemory"
-  chmod +x "$stub/comemory"
-  payload=$(build_input "implement a new dashboard widget")
-  run env PATH="$stub:$PATH" TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$TMP/codex-home" \
-    bash "$HOOK" <<<"$payload"
-  [ "$status" -eq 0 ]
-  echo "$output" | grep -qF "$TMP/codex-home/comemory/comemory.sh"
 }

@@ -409,57 +409,6 @@ _stub_comemory() {  # $1 = version string the stub reports
   chmod +x "$TMP/stub/comemory"
 }
 
-@test "comemory_version parses X.Y.Z from --version output" {
-  source_lib
-  _stub_comemory "1.2.3"
-  PATH="$TMP/stub:$PATH" run comemory_version
-  [ "$status" -eq 0 ]
-  [ "$output" = "1.2.3" ]
-}
-
-@test "comemory_version_ok: 0 when installed > minimum" {
-  source_lib
-  _stub_comemory "0.9.0"
-  PATH="$TMP/stub:$PATH" run comemory_version_ok
-  [ "$status" -eq 0 ]
-}
-
-@test "comemory_version_ok: 0 when installed == minimum (boundary)" {
-  source_lib
-  _stub_comemory "$COMEMORY_MIN_VERSION"
-  PATH="$TMP/stub:$PATH" run comemory_version_ok
-  [ "$status" -eq 0 ]
-}
-
-@test "comemory_version_ok: 1 when installed < minimum" {
-  source_lib
-  _stub_comemory "0.6.0"
-  PATH="$TMP/stub:$PATH" run comemory_version_ok
-  [ "$status" -eq 1 ]
-}
-
-@test "comemory_version picks comemory's own version, not a trailing dependency version" {
-  source_lib
-  mkdir -p "$TMP/stub"
-  printf '#!/bin/sh\necho "comemory 1.2.3 (built against sqlite 3.45.0)"\n' > "$TMP/stub/comemory"
-  chmod +x "$TMP/stub/comemory"
-  PATH="$TMP/stub:$PATH" run comemory_version
-  [ "$status" -eq 0 ]
-  [ "$output" = "1.2.3" ]
-}
-
-@test "comemory_version_ok: 2 (indeterminate) when comemory absent" {
-  source_lib
-  bin="$TMP/cleanbin"; mkdir -p "$bin"
-  for t in bash sh grep sort head; do ln -s "$(command -v "$t")" "$bin/$t" 2>/dev/null || true; done
-  PATH="$bin" run comemory_version_ok
-  [ "$status" -eq 2 ]
-}
-
-# ── branch_slug ─────────────────────────────────────────────────────────────
-# Shared with push-review.sh / write-state.sh: '/'→'_', strip to safe charset,
-# empty → "_default". Keyed branch-slug naming for transient state files.
-
 @test "branch_slug: feat/foo -> feat_foo" {
   source_lib
   run branch_slug "feat/foo"

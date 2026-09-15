@@ -73,7 +73,7 @@ fi
 
 # ── Build context parts ──────────────────────────────────────────────────────
 # Token-budget rule: every part below must be opt-in via prompt content.
-# We do NOT re-inject SessionStart material (branch, gates, recall protocol)
+# We do NOT re-inject SessionStart material (branch and gates)
 # on every prompt — that duplicates context already in the session.
 
 HAS_ASTGREP="$(detect_ast_grep)"
@@ -81,28 +81,6 @@ if ! toolu_enabled skills ast-grep; then
   HAS_ASTGREP=""
 fi
 
-# 1. Memory recall hint — on explicit recall words AND ordinary task verbs.
-# Task verbs (add/implement/build/…) are included deliberately: starting work on
-# a feature is exactly when prior decisions/file-maps should be recalled first.
-# WB/WE word-boundary wrapping keeps base verbs from matching as substrings
-# (`add` not `address`, `build` not `rebuild`, `create` not `created`). `fix`,
-# `debug`, `bug` are intentionally NOT here — they already drive the intent hint
-# below; recall + intent may both fire, which is fine (they say different things).
-# (WB/WE word-boundary helpers are defined above the quality-gate block.)
-recall=""
-if [[ "$prompt_lower" =~ ${WB}(remember|recall|what\ did|previously|earlier|comemory|architecture|how\ does|where\ is|file-map|prior\ decision|history|add|implement|build|create|write|update|change|refactor|migrate|rename)${WE} ]]; then
-  case "$(toolu_comemory_state)" in
-    available)
-      # Emit the STABLE published path register.sh symlinks into, not a bare
-      # `comemory.sh` — the wrapper is not on PATH by design, so the bare form
-      # dies with command-not-found and the agent reads that as "no memories".
-      recall="Recall first: \`\"$(toolu_config_root)/comemory/comemory.sh\" search \"<topic>\"\` before reading files."
-      ;;
-    missing)
-      recall="WARN: comemory CLI not installed — persistent memory recall disabled."
-      ;;
-  esac
-fi
 
 # 2. Intent hint — at most ONE. Most-specific pattern wins.
 intent=""
@@ -155,9 +133,8 @@ fi
 # (live docs, latest releases, third-party APIs) so the work is delegated to the
 # research-agent subagent — it isolates the token cost and routes
 # exa-search/context7 with a native fallback. Deliberately tight and
-# external-leaning: words here must NOT overlap the codebase-recall signals
-# (`how does`, `where is`) handled by the recall block above, so a local-code
-# question never gets misrouted to web research. WB/WE-wrapped. Gated by the
+# external-leaning: local-code questions should not be routed to web research.
+# WB/WE-wrapped. Gated by the
 # `agents.research-agent` toggle (default on).
 research=""
 if toolu_enabled agents research-agent &&
@@ -191,7 +168,6 @@ fi
 
 # ── Combine and output ───────────────────────────────────────────────────────
 parts=()
-[[ -n "$recall" ]] && parts+=("$recall")
 [[ -n "$intent" ]] && parts+=("$intent")
 [[ -n "$orchestrate" ]] && parts+=("$orchestrate")
 [[ -n "$brainstorm" ]] && parts+=("$brainstorm")

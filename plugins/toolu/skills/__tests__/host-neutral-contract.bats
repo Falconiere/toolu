@@ -5,8 +5,6 @@ ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
 @test "published helper paths name unambiguous defaults for both hosts" {
   skills=(
     "plugins/agent-browser/skills/agent-browser/SKILL.md"
-    "plugins/comemory/skills/agent-memory/SKILL.md"
-    "plugins/comemory/skills/project-skills/SKILL.md"
     "plugins/context7/skills/context7/SKILL.md"
     "plugins/exa-search/skills/exa-search/SKILL.md"
     "plugins/jira/skills/jira/SKILL.md"
@@ -24,10 +22,6 @@ ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
 @test "Codex-only command skills pass an explicit host to shared shell workflows" {
   grep -Fq 'TOOLU_HOST_OVERRIDE=codex' \
     "$ROOT/plugins/statusline/skills/status/SKILL.md"
-  grep -Fq 'TOOLU_HOST_OVERRIDE=codex' \
-    "$ROOT/plugins/comemory/skills/setup/SKILL.md"
-  grep -Fq 'TOOLU_HOST_OVERRIDE=claude' \
-    "$ROOT/plugins/comemory/commands/setup.md"
   grep -Fq 'TOOLU_HOST_OVERRIDE=codex' \
     "$ROOT/plugins/toolu-review/skills/review/SKILL.md"
   grep -Fq 'TOOLU_HOST_OVERRIDE=claude' \
@@ -47,16 +41,10 @@ ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
   ! grep -Fq 'AskUserQuestion` —' "$ROOT/plugins/toolu/skills/brainstorm/SKILL.md"
 }
 
-@test "host-neutral skills do not instruct Codex to invoke Claude slash commands" {
-  ! rg -n 'Run `/comemory:setup|re-run `/comemory:setup' \
-    "$ROOT/plugins/comemory/skills/agent-memory/SKILL.md"
-}
-
 @test "published helpers and registry modules preserve Codex config-root precedence" {
   files=(
     "plugins/ast-grep/hooks/post-tools.d/byte-savings.sh"
     "plugins/toolu/skills/git-better/scripts/lib/conventions-cache.sh"
-    "plugins/comemory/hooks/pre-tools.d/comemory-scope.sh"
     "plugins/jira/skills/jira/scripts/lib/plan-run.sh"
   )
 

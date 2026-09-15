@@ -2,7 +2,7 @@
 
 Dual-host engineering discipline for Claude Code and Codex: workflow skills,
 agents, commands, and registry-driven quality hooks. This is the core plugin;
-domain plugins (`rust-quality`, `ts-quality`, `comemory`, …) register into it.
+domain plugins (`rust-quality`, `ts-quality`, …) register into it.
 
 ## Install
 
@@ -15,7 +15,7 @@ codex plugin marketplace add Falconiere/toolu
 codex plugin add toolu@toolu
 ```
 
-`toolu` has no required plugin dependencies; `comemory` is the bundle's sole external-binary dependency. `code-simplifier` (from the `claude-plugins-official` marketplace) and `caveman` (from the `caveman` marketplace) are **optional, recommended companions** — install them only if you want the pre-simplify pass or caveman mode. When they are absent `toolu` falls back: the `push-review` gate uses the built-in `/code-review`, and `code-simplifier` is invoked only if installed. Adding those two marketplaces first lets Claude Code resolve the optional companions automatically. See the root [README](../../README.md) for the full install sequence.
+`toolu` has no required plugin dependencies. `code-simplifier` (from the `claude-plugins-official` marketplace) and `caveman` (from the `caveman` marketplace) are **optional, recommended companions** — install them only if you want the pre-simplify pass or caveman mode. When they are absent `toolu` falls back: the `push-review` gate uses the built-in `/code-review`, and `code-simplifier` is invoked only if installed. Adding those two marketplaces first lets Claude Code resolve the optional companions automatically. See the root [README](../../README.md) for the full install sequence.
 
 ## What it provides
 

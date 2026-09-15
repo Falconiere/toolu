@@ -369,9 +369,8 @@ uncovered spec `AC-<n>` id(s) until a fresh-green step's `ac_refs` covers them.
 
 | Category | Names                                                                              |
 |----------|------------------------------------------------------------------------------------|
-| `skills` | `comemory`, `ast-grep` (the only skill keys any hook reads)                        |
-| `projectSkills` | `enabled`, `staleAfterDays`, `archiveAfterDays`, `indexCap` — comemory plugin project-skill curator |
-| `hooks`  | `session-start`, `user-prompt-submit`, `pre-tools`, `post-tools`, `pre-compact`, `session-end` |
+| `skills` | `ast-grep` (the only skill key any hook reads)                                     |
+| `hooks`  | `session-start`, `user-prompt-submit`, `pre-tools`, `post-tools`, `pre-compact` |
 | `mcp`    | any MCP server name — e.g. `canva`, `figma`                                        |
 | `models` | `enabled`, the six Claude class aliases, and `codex.<class>.{model,reasoningEffort}` |
 
@@ -379,33 +378,13 @@ Unknown names are silently ignored (forward compatible).
 
 ## Effects
 
-- `skills.<name> = false`
-  - The hooks that reference the skill behave as if its CLI is not
-    installed AND they suppress the "not installed" warning. Skill files
-    themselves stay on disk.
-  - Concretely: `skills.comemory = false` silences the `MANDATORY: recall`
-    hint in `UserPromptSubmit`, the comemory entry in the `SessionStart`
-    "missing tools" warning, and the comemory reminder in `PreCompact` and
-    `SessionEnd`. `skills.ast-grep = false` removes the ast-grep STOP /
-    install-hint advisories in `search-nudge` (a registry module shipped
-    by the ast-grep plugin); the generic `grep/rg → Grep tool` advisory
-    still fires. `skills.comemory = false` also disables the project-skills
-    loop (SessionStart index, usage tracking, unused-skill archive). Marketplace
-    plugin skills under `plugins/*/skills/` are never curated.
+- `skills.ast-grep = false`
+  - Suppresses ast-grep STOP/install advisories in its registry module. The
+    generic `grep/rg → Grep tool` advisory still fires.
 
 - `hooks.<name> = false`
-  - The named hook exits early and emits nothing. Its stdin is drained
-    first so the host's hook IPC does not stall.
-  - **Exception — `session-end` reminder is opt-IN**: the end-of-session
-    comemory "save your learnings" reminder is OFF by default (the agent-memory
-    protocol already saves proactively, so the Stop-time nag is redundant
-    noise). It emits only when you set `hooks.session-end: true`. Every other
-    hook is opt-out (on unless set to `false`).
-  - **`session-end` also drives autonomous comemory maintenance** (a once-per-day
-    `mine`/`prune`/`gc` pass, local and token-free) — this is opt-OUT, ON by
-    default, independent of the opt-IN reminder. Setting `hooks.session-end: false`
-    disables BOTH the reminder and the maintenance, keeping the "exits early,
-    mutates nothing" contract. (`skills.comemory: false` also disables it.)
+  - The named hook exits early and emits nothing. Its stdin is drained first so
+    the host's hook IPC does not stall.
 
 - `mcp.<name> = false`
   - Any `mcp__<name>__*` tool invocation is blocked at `PreToolUse` with
@@ -427,23 +406,14 @@ agents are intentionally separate: `$toolu:setup` previews and installs the
 five bundled TOML profiles under `${CODEX_HOME:-~/.codex}/agents`, refusing
 unmanaged conflicts and preserving timestamped backups.
 
-## comemory version
+## comemory migration
 
-toolu targets **comemory ≥ 0.8.0** (pinned as `COMEMORY_MIN_VERSION` in
-`plugins/toolu/hooks/lib/detect.sh`). The wrapper uses comemory's full verb
-surface — the retrieval-quality loop (`feedback`/`mine`/`tune`/`eval`/`prune`/
-`gc`/`rebuild`) and **comemory** (`search-code`/`index-code`/`graph`). An older
-binary lacks some of these and will error on them, so session start emits a
-non-fatal upgrade WARN when it detects one. Basics (`search`/`save`/`list`)
-still work. Upgrade with `brew upgrade Falconiere/tap/comemory` (comemory is not published to crates.io; the Homebrew tap or the curl installer are the canonical paths). Run `/comemory:setup` on Claude or `$comemory:setup` on Codex to verify and wire it.
+Toolu no longer owns comemory integration. Obtain a current binary, verify
+`comemory install --help`, run `comemory install claude` or `comemory install
+codex`, and only then uninstall `comemory@toolu`. See
+[`docs/comemory`](comemory/README.md).
 
 ## Examples
-
-Disable comemory completely (no recall hint, no install nag):
-
-```json
-{ "version": 1, "skills": { "comemory": false } }
-```
 
 Disable a single hook only in this project:
 
@@ -478,7 +448,7 @@ usable context window. To reclaim it:
 - **Disable a whole plugin you don't use** — via Claude Code's `/plugin` UI or
   Codex's `codex plugin remove <name>@toolu`. This is what actually drops its skill
   descriptions from session load. Note the toolu `skills.<name>` config
-  does **not** do this: it only gates hook behavior for `comemory`/`ast-grep`
+  does **not** do this: it only gates hook behavior for `ast-grep`
   (see *Effects* above — `SKILL.md` files stay on disk and their descriptions
   still load).
 - **MCP tools defer natively** — supported hosts load their schemas on demand,
