@@ -25,7 +25,9 @@ setup() {
   codex plugin add pr-babysit@toolu --json >/dev/null
   fifo="$BATS_TEST_TMPDIR/session-start-input"
 
-  run timeout 2 bash -c \
+  local -a timer=(timeout 2)
+  command -v timeout >/dev/null 2>&1 || timer=(perl -e 'alarm shift; exec @ARGV' 2)
+  run "${timer[@]}" bash -c \
     'mkfifo "$1"; (sleep 10) >"$1" & holder=$!; trap '\''kill "$holder" 2>/dev/null || true; wait "$holder" 2>/dev/null || true'\'' EXIT; env PLUGIN_ROOT="$2" bash "$3" <"$1"' \
     _ "$fifo" "$ROOT/plugins/pr-babysit" "$SCRIPT"
 
@@ -62,7 +64,7 @@ setup() {
 }
 
 @test "all core-dependent plugins ship the same self-contained check" {
-  for plugin in comemory rust-quality ts-quality pr-babysit; do
+  for plugin in rust-quality ts-quality pr-babysit; do
     file="$ROOT/plugins/$plugin/hooks/check-toolu.sh"
     [ -x "$file" ]
     cmp "$SCRIPT" "$file"

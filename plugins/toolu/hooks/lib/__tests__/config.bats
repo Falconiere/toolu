@@ -52,13 +52,6 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
-@test "comemory_state returns 'disabled' when skills.comemory=false" {
-  echo '{"version":1,"skills":{"comemory":false}}' > "$HOME/.claude/toolu.config.json"
-  run toolu_comemory_state
-  [ "$status" -eq 0 ]
-  [ "$output" = "disabled" ]
-}
-
 @test "user cfg path honors TOOLU_CONFIG_DIR" {
   run env TOOLU_CONFIG_DIR="$TMP/cfg" bash -c '
     . '"$REPO_ROOT/hooks/lib/config.sh"'; _toolu_user_cfg
@@ -83,17 +76,6 @@ teardown() {
   '
   [ "$status" -eq 1 ]
 }
-
-@test "comemory_state returns 'missing' when enabled but CLI absent" {
-  # Use a subshell with env -i so the PATH override stays scoped to the
-  # child process; the bats `run` function would otherwise mutate the
-  # outer shell's PATH for the remainder of this test.
-  run env -i HOME="$HOME" PATH=/usr/bin:/bin bash -c \
-    ". \"$REPO_ROOT/hooks/lib/config.sh\"; toolu_comemory_state"
-  [ "$status" -eq 0 ]
-  [ "$output" = "missing" ]
-}
-
 
 @test "toolu_enabled_explicit: disabled by default (no config)" {
   run toolu_enabled_explicit hooks session-end

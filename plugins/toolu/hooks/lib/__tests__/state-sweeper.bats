@@ -60,7 +60,11 @@ state_file() {
 
 # Backdate a file so the TTL check sees it as old.
 age_file() {
-  touch -d "3 days ago" "$1" 2>/dev/null || touch -A -7200 "$1"
+  python3 - "$1" <<'PY'
+import os, sys, time
+old = time.time() - 3 * 24 * 60 * 60
+os.utime(sys.argv[1], (old, old))
+PY
 }
 
 @test "state for a branch that no longer exists is reclaimed" {

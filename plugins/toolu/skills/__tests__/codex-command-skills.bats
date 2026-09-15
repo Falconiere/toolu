@@ -6,7 +6,6 @@ ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
   expected=(
     "plugins/toolu/skills/commit/SKILL.md"
     "plugins/toolu/skills/review-and-commit/SKILL.md"
-    "plugins/comemory/skills/setup/SKILL.md"
     "plugins/statusline/skills/status/SKILL.md"
     "plugins/pr-babysit/skills/babysit/SKILL.md"
     "plugins/toolu/skills/setup/SKILL.md"
@@ -24,7 +23,6 @@ ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
   pairs=(
     "toolu|commands/commit.md|skills/commit/SKILL.md|workflows/commit.md"
     "toolu|commands/review-and-commit.md|skills/review-and-commit/SKILL.md|workflows/review-and-commit.md"
-    "comemory|commands/setup.md|skills/setup/SKILL.md|workflows/setup.md"
   )
 
   for pair in "${pairs[@]}"; do
@@ -41,7 +39,6 @@ ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
   for skill in \
     "$ROOT/plugins/toolu/skills/commit/SKILL.md" \
     "$ROOT/plugins/toolu/skills/review-and-commit/SKILL.md" \
-    "$ROOT/plugins/comemory/skills/setup/SKILL.md" \
     "$ROOT/plugins/statusline/skills/status/SKILL.md" \
     "$ROOT/plugins/pr-babysit/skills/babysit/SKILL.md" \
     "$ROOT/plugins/toolu/skills/setup/SKILL.md"; do

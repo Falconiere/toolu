@@ -14,6 +14,10 @@ teardown() {
   [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"
 }
 
+file_mtime() {
+  python3 -c 'import os, sys; print(os.stat(sys.argv[1]).st_mtime_ns)' "$1"
+}
+
 @test "agent templates contain the required models efforts sandboxes and instructions" {
   expected=(
     "quick-task|gpt-5.6-luna|medium|read-only"
@@ -57,13 +61,13 @@ teardown() {
 @test "unchanged profiles are not backed up or rewritten" {
   codex_home="$TMP/codex"
   env CODEX_HOME="$codex_home" HOME="$TEST_HOME" bash "$SCRIPT" install >/dev/null
-  before=$(stat -c %Y "$codex_home/agents/quick-task.toml")
+  before=$(file_mtime "$codex_home/agents/quick-task.toml")
 
   run env CODEX_HOME="$codex_home" HOME="$TEST_HOME" bash "$SCRIPT" install
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"UNCHANGED 5"* ]]
-  [ "$before" = "$(stat -c %Y "$codex_home/agents/quick-task.toml")" ]
+  [ "$before" = "$(file_mtime "$codex_home/agents/quick-task.toml")" ]
   [ ! -e "$codex_home/agents/.toolu-backups" ]
 }
 
@@ -71,8 +75,9 @@ teardown() {
   codex_home="$TMP/codex"
   stamp="20260813T190000Z"
   env CODEX_HOME="$codex_home" HOME="$TEST_HOME" bash "$SCRIPT" install >/dev/null
-  sed -i 's/model_reasoning_effort = "medium"/model_reasoning_effort = "low"/' \
-    "$codex_home/agents/quick-task.toml"
+  sed 's/model_reasoning_effort = "medium"/model_reasoning_effort = "low"/' \
+    "$codex_home/agents/quick-task.toml" > "$TMP/changed-profile.toml"
+  mv "$TMP/changed-profile.toml" "$codex_home/agents/quick-task.toml"
 
   run env CODEX_HOME="$codex_home" HOME="$TEST_HOME" TOOLU_TIMESTAMP="$stamp" \
     bash "$SCRIPT" install

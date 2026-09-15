@@ -214,7 +214,7 @@ write_module() {
 
 @test "dispatch runs a registry module from an active plugin" {
   builtin_dir=$(mktemp -d); reg_dir=$(mktemp -d)
-  cat > "$reg_dir/comemory@toolu__probe.sh" <<'EOF'
+  cat > "$reg_dir/fixture@toolu__probe.sh" <<'EOF'
 #!/usr/bin/env bash
 jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"from-registry"}}'
 EOF
@@ -308,7 +308,7 @@ EOF
   mkdir -p "$builtin_dir" "$reg_dir"
   local n
   for n in one two three; do
-    printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "$reg_dir/comemory@toolu__$n.sh"
+    printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "$reg_dir/fixture@toolu__$n.sh"
   done
   printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "$reg_dir/other@toolu__solo.sh"
   run bash -c '
@@ -388,16 +388,16 @@ EOF
 @test "pre-tools entrypoint executes an active-plugin registry module" {
   cfg="$TMP/e2e-cfg"
   regdir="$cfg/toolu/pre-tools.d"; mkdir -p "$regdir"
-  cat > "$regdir/comemory@toolu__probe.sh" <<'EOF'
+  cat > "$regdir/fixture@toolu__probe.sh" <<'EOF'
 #!/usr/bin/env bash
 jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"e2e-registry"}}'
 EOF
-  # Make comemory@toolu read as installed. With CLAUDE_CONFIG_DIR set,
+  # Make fixture@toolu read as installed. With CLAUDE_CONFIG_DIR set,
   # detect_plugin_installed reads <config-dir>/plugins/installed_plugins.json
   # — NOT <HOME>/.claude/plugins/. Writing the wrong path passes via fail-open
   # (manifest missing = indeterminate) and silently stops testing the gate.
   mkdir -p "$cfg/plugins"
-  printf '%s' '{"plugins":{"comemory@toolu":{}}}' > "$cfg/plugins/installed_plugins.json"
+  printf '%s' '{"plugins":{"fixture@toolu":{}}}' > "$cfg/plugins/installed_plugins.json"
   # macOS BSD `env` requires option flags (-u) before VAR=val operands.
   run env -u CLAUDE_PLUGINS_REGISTRY CLAUDE_CONFIG_DIR="$cfg" HOME="$cfg" \
     bash "$REPO_ROOT/hooks/pre-tools/mod.sh" <<<'{"tool_name":"Read"}'
@@ -408,7 +408,7 @@ EOF
 @test "pre-tools entrypoint SKIPS a registry module whose plugin is definitively absent" {
   cfg="$TMP/e2e-cfg-absent"
   regdir="$cfg/toolu/pre-tools.d"; mkdir -p "$regdir"
-  cat > "$regdir/comemory@toolu__probe.sh" <<'EOF'
+  cat > "$regdir/fixture@toolu__probe.sh" <<'EOF'
 #!/usr/bin/env bash
 jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"should-not-appear"}}'
 EOF

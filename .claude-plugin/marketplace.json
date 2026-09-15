@@ -33,21 +33,6 @@
       "license": "MIT"
     },
     {
-      "name": "comemory",
-      "source": "./plugins/comemory",
-      "description": "Persistent agent memory + code-index search (comemory): skill, scoped wrapper (with delete/context verbs), project-skills harness (create/index/archive unused agent-created SKILL.md under .toolu/skills/), a /comemory:setup command that detect-and-guides the binary then wires git index-code hooks, PreToolUse scope enforcement, and a SessionStart memory-count publisher for the statusline — registered into the toolu hook engine.",
-      "author": {
-        "name": "Falconiere Barbosa",
-        "email": "hello@falconiere.io"
-      },
-      "category": "productivity",
-      "keywords": ["comemory", "memory", "hooks"],
-      "license": "MIT",
-      "dependencies": [
-        { "name": "toolu", "marketplace": "toolu" }
-      ]
-    },
-    {
       "name": "python-quality",
       "source": "./plugins/python-quality",
       "description": "Python PostToolUse quality checks registered into the toolu hook engine.",
