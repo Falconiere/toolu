@@ -17,7 +17,7 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 9 | [**rust-quality**](../rust-quality/README.md) | Quality Gate | `toolu` | Rust post-edit quality checks (size, unsafe, unwrap bans) |
 | 10 | [**statusline**](../statusline/README.md) | Status | — | Persistent Claude statusline plus explicit Codex repository/gate status |
 | 11 | [**ts-quality**](../ts-quality/README.md) | Quality Gate | `toolu` | TypeScript post-edit quality checks (size, imports, type guards) |
-| 13 | [**agent-browser**](../../plugins/agent-browser/README.md) | Browser | — | Token-lean live browser automation via accessibility-tree snapshots |
+| 12 | [**agent-browser**](../../plugins/agent-browser/README.md) | Browser | — | Token-lean live browser automation via accessibility-tree snapshots |
 
 `git-better` (token-lean `gb` reads + cached repo-convention detection) is bundled as a skill inside `toolu` core — no separate plugin/install/marketplace row.
 
