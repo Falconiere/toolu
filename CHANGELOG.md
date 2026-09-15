@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.3.0](https://github.com/Falconiere/toolu/compare/v5.2.0...v5.3.0) (2026-09-15)
+
+
+### Features
+
+* **comemory:** retire legacy toolu plugin ([22c7314](https://github.com/Falconiere/toolu/commit/22c731418c3f1d7823439724b98e1a3e30db95e2))
+
 ## [5.2.0](https://github.com/Falconiere/toolu/compare/v5.1.0...v5.2.0) (2026-09-07)
 
 
