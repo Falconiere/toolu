@@ -1,0 +1,19 @@
+{
+  "name": "jev",
+  "version": "5.3.0",
+  "description": "Typed judgments from TypeSafe's Jev model at runtime (skill + REST wrapper) — yes/no probabilities, choices, and scores a script can branch on. Standalone, no dependencies.",
+  "author": {
+    "name": "Falconiere Barbosa",
+    "email": "hello@falconiere.io"
+  },
+  "homepage": "https://github.com/falconiere/toolu",
+  "repository": "https://github.com/falconiere/toolu.git",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "typesafe",
+    "jev",
+    "judgment",
+    "skills"
+  ]
+}

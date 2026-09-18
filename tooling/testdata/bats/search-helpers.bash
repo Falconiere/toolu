@@ -1,33 +1,46 @@
 #!/usr/bin/env bash
-# Shared bats helpers for the context7 / exa-search search.sh script tests.
+# Shared bats helpers for the REST-wrapper script tests (context7, exa-search, jev).
 #
 # Each test gets a fresh sandbox with a `curl` stub on PATH that records its
 # argv to <TMP>/curl.log instead of hitting the network. Tests assert against
 # curl.log to verify behavior. API keys are passed via the environment
-# variables CONTEXT7_API_KEY / EXA_API_KEY — never via a .env file.
+# variables CONTEXT7_API_KEY / EXA_API_KEY / TYPESAFE_API_KEY — never via a
+# .env file.
 #
-# Shared from tooling/ so context7 and exa-search keep ONE copy. SCRIPT_DIR is
+# Shared from tooling/ so every wrapper plugin keeps ONE copy. SCRIPT_DIR is
 # derived from BATS_TEST_DIRNAME (the consuming test's own scripts/__tests__),
-# NOT this helper's location, so each plugin resolves its OWN scripts/search.sh.
+# NOT this helper's location, so each plugin resolves its OWN script.
+#
+# The stub replies `{}` by default. Set CURL_STUB_BODY to a real API response
+# body when a test needs to assert on what the script PRINTS rather than on
+# what it sent.
 
 SCRIPT_DIR="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
 
+# setup_sandbox TOOL [SCRIPT_NAME]
+# SCRIPT_NAME defaults to search.sh, so existing callers stay unchanged.
 setup_sandbox() {
   local tool="$1"
+  local script="${2:-search.sh}"
   SANDBOX="$(mktemp -d)"
   export SANDBOX
   export CURL_LOG="$SANDBOX/curl.log"
   export TOOL_DIR="$SANDBOX/$tool"
 
   mkdir -p "$TOOL_DIR" "$SANDBOX/bin"
-  cp "$SCRIPT_DIR/search.sh" "$TOOL_DIR/search.sh"
-  chmod +x "$TOOL_DIR/search.sh"
+  cp "$SCRIPT_DIR/$script" "$TOOL_DIR/$script"
+  chmod +x "$TOOL_DIR/$script"
 
   cat > "$SANDBOX/bin/curl" <<'CURL'
 #!/usr/bin/env bash
 printf '%s\n' "$@" >> "$CURL_LOG"
-# Emit a minimal JSON body so `jq '.'` downstream does not choke.
-printf '{}\n'
+# Emit a response body so `jq` downstream does not choke. A test that asserts
+# on printed output sets CURL_STUB_BODY to a real API response.
+if [ -n "${CURL_STUB_BODY:-}" ]; then
+  printf '%s\n' "$CURL_STUB_BODY"
+else
+  printf '{}\n'
+fi
 CURL
   chmod +x "$SANDBOX/bin/curl"
 
@@ -35,6 +48,7 @@ CURL
 }
 
 teardown_sandbox() {
+  unset CURL_STUB_BODY
   [[ -n "${SANDBOX:-}" && -d "$SANDBOX" ]] && rm -rf "$SANDBOX"
 }
 

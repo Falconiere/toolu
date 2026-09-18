@@ -87,7 +87,7 @@ for claude_manifest in plugins/*/.claude-plugin/plugin.json; do
   count=$((count + 1))
 done
 
-[ "$count" -eq 12 ] || fail "expected 12 plugins, found $count"
+[ "$count" -eq 13 ] || fail "expected 13 plugins, found $count"
 [ "$(jq '[.plugins[].name] | length' "$claude_catalog")" -eq "$count" ] || fail 'Claude marketplace count does not match plugin manifests'
 [ "$(jq '[.plugins[].name] | length' "$codex_catalog")" -eq "$count" ] || fail 'Codex marketplace count does not match plugin manifests'
 
@@ -104,7 +104,7 @@ for skill_file in plugins/*/skills/*/SKILL.md; do
   awk 'NR > 1 && $0 == "---" { found=1; exit } END { exit !found }' "$skill_file" || fail "$skill_file is missing closing frontmatter"
   skill_count=$((skill_count + 1))
 done
-[ "$skill_count" -eq 22 ] || fail "expected 22 discoverable skills, found $skill_count"
+[ "$skill_count" -eq 23 ] || fail "expected 23 discoverable skills, found $skill_count"
 
 required_skills=(
   plugins/toolu/skills/commit/SKILL.md
@@ -167,7 +167,7 @@ for hook_file in plugins/*/hooks/hooks.json; do
   done < <(jq -r '.hooks | to_entries[].value[]?.hooks[]? | select(.type == "command") | .command' "$hook_file")
   hook_count=$((hook_count + 1))
 done
-[ "$hook_count" -eq 12 ] || fail "expected 12 hook manifests, found $hook_count"
+[ "$hook_count" -eq 13 ] || fail "expected 13 hook manifests, found $hook_count"
 
 printf 'validate-plugin-packaging: validated %d plugins, %d skills, %d agents, and %d hook manifests\n' \
   "$count" "$skill_count" "$agent_count" "$hook_count"
