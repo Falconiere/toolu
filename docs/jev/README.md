@@ -40,7 +40,7 @@ Commands:
 Shared options:
   -s, --state VALUE   State to judge: literal text, @FILE, or - for stdin  [required]
   -m, --model NAME    Model (default: jev-latest)
-      --id NAME       Question id in the answer map (default: q)
+      --id NAME       Question id in the answer map (noul/choice/score; default: q)
       --raw           Print the whole response body instead of just .answers
 
 noul:    --true DESC / --false DESC   what a yes / a no means

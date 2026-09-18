@@ -36,8 +36,9 @@ setup() {
 }
 
 @test "jev live: an invalid key fails loudly instead of returning an empty answer" {
-  TYPESAFE_API_KEY="sk-not-a-real-key" run "$SCRIPT" noul -s "anything" "Is this urgent?"
-  [ "$status" -ne 0 ]
-  [ "$status" -ne 1 ]
+  run env TYPESAFE_API_KEY="sk-not-a-real-key" "$SCRIPT" noul -s "anything" "Is this urgent?"
+  # 22 is curl's --fail-with-body status: the API rejected the key and the
+  # script propagated that instead of printing an answer.
+  [ "$status" -eq 22 ]
   [[ "$output" == *"{"* ]]
 }
