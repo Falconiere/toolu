@@ -97,9 +97,10 @@ Add the language gates, search, and docs tooling too:
 /plugin install ast-grep@toolu       # structural code search & rewrite
 /plugin install context7@toolu       # live library documentation lookup
 /plugin install exa-search@toolu     # web / code / URL search + research
+/plugin install jev@toolu            # typed judgments (probability / choice / score)
 ```
 
-> **Note** — `rust-quality`, `ts-quality`, and `python-quality` depend on `toolu`; `ast-grep`, `context7`, and `exa-search` are standalone (zero deps). `caveman` and `code-simplifier` are **optional, recommended companions**, not required — install them only if you want caveman mode or the pre-simplify pass; when absent, `toolu` falls back (the `push-review` gate uses the built-in `/code-review`, and `code-simplifier` is invoked only if installed). Adding the marketplaces in step 1 lets Claude Code resolve those companions automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
+> **Note** — `rust-quality`, `ts-quality`, and `python-quality` depend on `toolu`; `ast-grep`, `context7`, `exa-search`, and `jev` are standalone (zero deps). `caveman` and `code-simplifier` are **optional, recommended companions**, not required — install them only if you want caveman mode or the pre-simplify pass; when absent, `toolu` falls back (the `push-review` gate uses the built-in `/code-review`, and `code-simplifier` is invoked only if installed). Adding the marketplaces in step 1 lets Claude Code resolve those companions automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
 
 > **Deprecation:** comemory host integration now lives in
 > [Falconiere/comemory](https://github.com/Falconiere/comemory). First obtain a
@@ -134,6 +135,7 @@ codex plugin add python-quality@toolu
 codex plugin add ast-grep@toolu
 codex plugin add context7@toolu
 codex plugin add exa-search@toolu
+codex plugin add jev@toolu
 codex plugin add jira@toolu
 codex plugin add toolu-review@toolu
 codex plugin add pr-babysit@toolu
@@ -173,6 +175,7 @@ alone, or add the domain plugins.
 | Browser | **`agent-browser`** | `4.10.0` | Token-lean browser automation through accessibility-tree snapshots and stable element references. |
 | Knowledge | **`context7`** | `4.10.0` | Live library documentation and code examples through Context7. |
 | Knowledge | **`exa-search`** | `4.10.0` | Web, code, URL search, and deep research through Exa. |
+| Knowledge | **`jev`** | `5.3.0` | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores a script can branch on. |
 | Workflow | **`jira`** | `4.10.0` | Jira Cloud and Server/DC search plus safe issue workflow operations. |
 | Workflow | **`toolu-review`** | `4.10.0` | Pre-push review matching the CI review bot and writing review attestations. |
 | Workflow | **`pr-babysit`** | `4.10.0` | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
@@ -256,6 +259,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     ├── ast-grep/               # ast-grep skill + Grep→ast-grep nudge registry module
     ├── context7/               # context7 skill + Context7 REST wrapper
     ├── exa-search/             # exa-search skill + Exa REST wrapper
+    ├── jev/                    # jev skill + TypeSafe System One REST wrapper
     ├── rust-quality/           # Rust PostToolUse quality fragments, assembled at SessionStart
     ├── ts-quality/             # TypeScript PostToolUse quality fragments, assembled at SessionStart
     ├── python-quality/         # Python PostToolUse quality fragments, assembled at SessionStart

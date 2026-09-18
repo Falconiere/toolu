@@ -95,6 +95,7 @@ run_skills() {
   check_skill execution        plugins/toolu/skills/execution/SKILL.md        60 ""
   check_skill test             plugins/toolu/skills/test/SKILL.md             60 ""
   check_skill ast-grep         plugins/ast-grep/skills/ast-grep/SKILL.md          40 ""
+  check_skill jev              plugins/jev/skills/jev/SKILL.md                    60 ""
 }
 
 main() {

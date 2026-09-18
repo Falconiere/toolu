@@ -126,6 +126,15 @@
       "license": "MIT"
     },
     {
+      "name": "jev",
+      "source": "./plugins/jev",
+      "description": "Typed judgments from TypeSafe's Jev model at runtime (skill + REST wrapper) — yes/no probabilities, choices, and scores a script can branch on. Standalone, no dependencies.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["typesafe", "jev", "judgment", "skills"],
+      "license": "MIT"
+    },
+    {
       "name": "jira",
       "source": "./plugins/jira",
       "description": "Jira issue search and workflow from the session via a REST wrapper (skill + bash). Cloud + Server/DC, read and safe writes. Standalone, no dependencies.",
