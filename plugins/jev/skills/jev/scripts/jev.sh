@@ -153,7 +153,7 @@ evaluate() {
 
 # ── noul ────────────────────────────────────────────────────
 cmd_noul() {
-  local true_desc="" false_desc="" has_criteria=false consumed
+  local true_desc="" false_desc="" consumed
 
   while [[ $# -gt 0 ]]; do
     consumed=0
@@ -161,9 +161,9 @@ cmd_noul() {
     if [[ "$consumed" -gt 0 ]]; then shift "$consumed"; continue; fi
     case "$1" in
       --true)  [[ $# -ge 2 ]] || die "--true needs a value"
-               true_desc="$2"; has_criteria=true; shift 2;;
+               true_desc="$2"; shift 2;;
       --false) [[ $# -ge 2 ]] || die "--false needs a value"
-               false_desc="$2"; has_criteria=true; shift 2;;
+               false_desc="$2"; shift 2;;
       -*)      die "unknown option: $1";;
       *)       [[ -z "$INSTRUCTIONS" ]] || die "unexpected argument: $1"
                INSTRUCTIONS="$1"; shift;;
@@ -173,20 +173,18 @@ cmd_noul() {
   require_instructions
   require_state
 
-  # criteria is omitted entirely when neither flag is given, and carries only
-  # the side(s) actually described.
-  local criteria question
-  criteria=$(jq -n \
-    --arg t "$true_desc" \
-    --arg f "$false_desc" \
-    '(if $t == "" then {} else {"true": $t} end) + (if $f == "" then {} else {"false": $f} end)')
-  question=$(jq -n \
+  # criteria carries only the side(s) actually described, and is omitted
+  # entirely when neither was.
+  local question
+  question=$(jq -nc \
     --arg id "$QID" \
     --arg instructions "$INSTRUCTIONS" \
-    --argjson criteria "$criteria" \
-    --argjson has_criteria "$has_criteria" \
-    '{($id): ({type: "noul", instructions: $instructions}
-              + (if $has_criteria then {criteria: $criteria} else {} end))}')
+    --arg t "$true_desc" \
+    --arg f "$false_desc" \
+    '((if $t == "" then {} else {"true": $t} end)
+      + (if $f == "" then {} else {"false": $f} end)) as $criteria
+     | {($id): ({type: "noul", instructions: $instructions}
+                + (if ($criteria | length) > 0 then {criteria: $criteria} else {} end))}')
   evaluate "$question"
 }
 
@@ -272,6 +270,8 @@ cmd_ask() {
   local src="" consumed text questions
 
   while [[ $# -gt 0 ]]; do
+    # ask answers under the ids in the payload, so --id would name nothing.
+    [[ "$1" == "--id" ]] && die "ask takes its question ids from the payload; --id does not apply"
     consumed=0
     parse_shared "$@" || consumed=$?
     if [[ "$consumed" -gt 0 ]]; then shift "$consumed"; continue; fi

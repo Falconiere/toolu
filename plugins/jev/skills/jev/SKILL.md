@@ -44,7 +44,7 @@ Commands:
 Shared options:
   -s, --state VALUE   State to judge: literal text, @FILE, or - for stdin  [required]
   -m, --model NAME    Model (default: jev-latest)
-      --id NAME       Question id in the answer map (default: q)
+      --id NAME       Question id in the answer map (noul/choice/score; default: q)
       --raw           Print the whole response body instead of just .answers
 
 noul:    --true DESC / --false DESC   what a yes / a no means
@@ -82,7 +82,8 @@ jev.sh ask questions.json -s @ticket.json
    parallel. Independent questions belong in one `ask` call, not N calls —
    including speculative ones your code may discard.
 2. **Put the meaning in the question.** `--id` is for your code; the model never
-   sees it. Instructions and criteria carry the whole judgment.
+   sees it. Instructions and criteria carry the whole judgment. `ask` takes its
+   ids from the payload's own keys, so `--id` does not apply there.
 3. **Ask one narrow judgment per question.** Split independent dimensions;
    don't fuse two decisions into one.
 4. **Branch on the number, not on vibes.** Pick thresholds against your own

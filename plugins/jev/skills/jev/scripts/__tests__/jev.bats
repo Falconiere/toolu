@@ -339,19 +339,52 @@ JSON
   [ "$(jq -r '.model' <<<"$(body_json)")" = "jev-1.13.0" ]
 }
 
+# flag_value FLAG — the argv entry curl received right after FLAG.
+flag_value() {
+  awk -v flag="$1" '$0 == flag { getline; print; exit }' "$CURL_LOG"
+}
+
 @test "jev: curl carries the transient-retry flags and the default 60s timeout" {
   run "$TOOL_DIR/jev.sh" noul -s "$TICKET" "Urgent?"
   [ "$status" -eq 0 ]
-  grep -qx -- '--retry' "$CURL_LOG"
-  grep -qx -- '2' "$CURL_LOG"
-  grep -qx -- '--max-time' "$CURL_LOG"
-  grep -qx -- '60' "$CURL_LOG"
+  [ "$(flag_value '--retry')" = "2" ]
+  [ "$(flag_value '--retry-delay')" = "1" ]
+  [ "$(flag_value '--max-time')" = "60" ]
+  grep -qx -- '--fail-with-body' "$CURL_LOG"
 }
 
 @test "jev: JEV_TIMEOUT overrides the curl timeout" {
   export JEV_TIMEOUT=5
   run "$TOOL_DIR/jev.sh" noul -s "$TICKET" "Urgent?"
   [ "$status" -eq 0 ]
-  grep -qx -- '--max-time' "$CURL_LOG"
-  grep -qx -- '5' "$CURL_LOG"
+  [ "$(flag_value '--max-time')" = "5" ]
+}
+
+@test "jev: --help prints the usage banner and exits 1" {
+  run "$TOOL_DIR/jev.sh" --help
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"jev.sh <command> [options]"* ]]
+  [[ "$output" == *"Many typed questions in ONE call"* ]]
+  [ ! -s "$CURL_LOG" ]
+}
+
+@test "jev: an option missing its value exits 1 before any request" {
+  run "$TOOL_DIR/jev.sh" noul "Urgent?" -s
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"--state needs a value"* ]]
+  [ ! -s "$CURL_LOG" ]
+}
+
+@test "jev: ask rejects --id instead of silently ignoring it" {
+  write_questions
+  run "$TOOL_DIR/jev.sh" ask "$SANDBOX/questions.json" -s "$TICKET" --id mine
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"--id does not apply"* ]]
+  [ ! -s "$CURL_LOG" ]
+}
+
+@test "jev: an empty --true is not sent as an empty criteria object" {
+  run "$TOOL_DIR/jev.sh" noul -s "$TICKET" "Urgent?" --true ""
+  [ "$status" -eq 0 ]
+  [ "$(jq '.questions.q | has("criteria")' <<<"$(body_json)")" = "false" ]
 }
