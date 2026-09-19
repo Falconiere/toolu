@@ -93,9 +93,11 @@ teardown() {
   export TYPESAFE_API_KEY=local-test-key
   run bash "$installed/hooks/session-start.sh" <<<'{}'
   [ "$status" -eq 0 ]
-  jq -e --arg dst "$TOOLU_CONFIG_DIR/jev/jev.sh" --arg source "$installed/skills/jev/SKILL.md" '
+  # Context names both the callable wrapper and the SKILL.md syntax reference.
+  jq -e --arg wrapper "$TOOLU_CONFIG_DIR/jev/jev.sh" --arg skill_path "$installed/skills/jev/SKILL.md" '
     .hookSpecificOutput | .hookEventName == "SessionStart" and
-    (.additionalContext | contains($dst) and contains($source))' <<<"$output"
+    (.additionalContext | contains($wrapper) and contains($skill_path))' <<<"$output"
+  # The published wrapper separately links to the installed executable.
   [ "$(readlink "$TOOLU_CONFIG_DIR/jev/jev.sh")" = "$installed/skills/jev/scripts/jev.sh" ]
 }
 
