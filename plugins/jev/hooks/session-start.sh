@@ -9,7 +9,7 @@
 # Refreshed every session; silent on success; every step non-fatal.
 
 # Consume stdin so Claude Code's hook IPC never stalls.
-cat > /dev/null 2>&1 || true
+cat >/dev/null 2>&1 || true
 
 plugin_dir="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
 src="${plugin_dir:+$plugin_dir/skills/jev/scripts/jev.sh}"

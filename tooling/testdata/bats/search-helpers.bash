@@ -48,8 +48,12 @@ CURL
 }
 
 teardown_sandbox() {
+  # Unset first and unconditionally: an early failure that leaves SANDBOX unset
+  # must still clear the stub body, or it leaks into the next test.
   unset CURL_STUB_BODY
-  [[ -n "${SANDBOX:-}" && -d "$SANDBOX" ]] && rm -rf "$SANDBOX"
+  if [[ -n "${SANDBOX:-}" && -d "$SANDBOX" ]]; then
+    rm -rf "$SANDBOX"
+  fi
 }
 
 # Set or unset an API key for the next script invocation.

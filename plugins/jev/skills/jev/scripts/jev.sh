@@ -12,8 +12,9 @@ command -v curl >/dev/null 2>&1 || { echo "jev: curl required" >&2; exit 1; }
 JEV_URL="https://api.typesafe.ai/v1/systemone"
 DEFAULT_MODEL="jev-latest"
 
-TYPESAFE_API_KEY="${TYPESAFE_API_KEY:-}"
-if [[ -z "$TYPESAFE_API_KEY" ]]; then
+# One check covers both unset and empty; the inline default keeps `set -u`
+# from aborting before the message can print.
+if [[ -z "${TYPESAFE_API_KEY:-}" ]]; then
   echo "jev: TYPESAFE_API_KEY unset" >&2
   exit 1
 fi
