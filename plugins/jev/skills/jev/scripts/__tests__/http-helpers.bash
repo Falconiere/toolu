@@ -25,6 +25,11 @@ EOF
 }
 
 teardown_http() {
+  if [ -n "${CLIENT_PID:-}" ]; then
+    kill "$CLIENT_PID" 2>/dev/null || true
+    wait "$CLIENT_PID" 2>/dev/null || true
+    unset CLIENT_PID
+  fi
   kill "$SERVER_PID" 2>/dev/null || true
   wait "$SERVER_PID" 2>/dev/null || true
   rm -rf "$SANDBOX"

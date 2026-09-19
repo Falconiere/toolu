@@ -27,8 +27,11 @@ class Handler(BaseHTTPRequestHandler):
         plan_file = root / "responses.json"
         if plan_file.exists():
             plan = json.loads(plan_file.read_text())
+            # Repeat the final response until teardown (including persistent errors).
             response = plan.pop(0) if len(plan) > 1 else plan[0]
-            plan_file.write_text(json.dumps(plan))
+            pending = plan_file.with_suffix(".tmp")
+            pending.write_text(json.dumps(plan))
+            pending.replace(plan_file)
         else:
             response = {"status": 200}
         time.sleep(response.get("delay", 0))
@@ -63,7 +66,7 @@ class Handler(BaseHTTPRequestHandler):
                                   "usage": {"input_tokens": 312, "output_tokens": 48}})
         try:
             self.wfile.write(payload.encode())
-        except (BrokenPipeError, ssl.SSLError):
+        except (BrokenPipeError, ConnectionResetError, ssl.SSLEOFError):
             pass
 
 
