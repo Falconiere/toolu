@@ -152,6 +152,10 @@ for hook_file in plugins/*/hooks/hooks.json; do
   ' "$hook_file" >/dev/null || fail "invalid hook schema: $hook_file"
   plugin_root="${hook_file%/hooks/hooks.json}"
   while IFS= read -r hook_command; do
+    # A single quoted executable path is valid for plugin caches with spaces.
+    case "$hook_command" in
+      \"*\") hook_command="${hook_command#\"}"; hook_command="${hook_command%\"}";;
+    esac
     case "$hook_command" in
       '${CLAUDE_PLUGIN_ROOT}/'*)
         hook_path="${hook_command#'${CLAUDE_PLUGIN_ROOT}/'}"

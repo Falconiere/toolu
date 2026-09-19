@@ -8,6 +8,10 @@ description: "Use to review the plan or poke holes in the plan before execution.
 Pressure-test a draft plan before code changes begin. Find the gap that would
 force an implementer to guess; do not restate the plan or praise it.
 
+Use [semantic judgments](../../workflows/semantic-judgments.md) for useful
+step-to-requirement comparisons. Keep ledger validation and the approval
+verdict grounded in the checks below.
+
 ## Checklist
 
 - **Evidence and scope** — approach follows the approved spec or agreed

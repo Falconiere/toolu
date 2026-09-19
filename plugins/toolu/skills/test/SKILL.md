@@ -9,6 +9,11 @@ description: "Use while executing any feature, fix, refactor, or regression to d
 and again when reproducing regressions. Tests are written with the change,
 through red → green → refactor, never saved for a terminal phase.
 
+For semantic boundary cases in supplied examples, apply
+[semantic judgments](../../workflows/semantic-judgments.md) when useful.
+Expected outputs and pass/fail assertions must come from the contract and real
+execution, never from Jev's confidence.
+
 ## Non-negotiables
 
 - Exercise real inputs and real code paths. Do not use mocked or fabricated
