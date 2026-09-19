@@ -85,6 +85,20 @@ teardown() {
   [[ "$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")" == *"$CODEX_HOME/jev/jev.sh"* ]]
 }
 
+@test "session-start: paths with quotes and newlines remain JSON string data" {
+  installed="$TMP/"$'plugin "cache"\nfolder'
+  mkdir -p "$installed"
+  cp -R "${HOOK%/hooks/session-start.sh}/." "$installed/"
+  export TOOLU_CONFIG_DIR="$TMP/"$'profile "quoted"\nfolder'
+  export TYPESAFE_API_KEY=local-test-key
+  run bash "$installed/hooks/session-start.sh" <<<'{}'
+  [ "$status" -eq 0 ]
+  jq -e --arg dst "$TOOLU_CONFIG_DIR/jev/jev.sh" --arg source "$installed/skills/jev/SKILL.md" '
+    .hookSpecificOutput | .hookEventName == "SessionStart" and
+    (.additionalContext | contains($dst) and contains($source))' <<<"$output"
+  [ "$(readlink "$TOOLU_CONFIG_DIR/jev/jev.sh")" = "$installed/skills/jev/scripts/jev.sh" ]
+}
+
 @test "session-start: explicit config directory takes precedence on both hosts" {
   export TOOLU_CONFIG_DIR="$TMP/custom profile"
   export TOOLU_HOST_OVERRIDE=codex
@@ -98,7 +112,7 @@ teardown() {
   plugin_root="${HOOK%/hooks/session-start.sh}"
   installed="$TMP/plugin cache/jev"
   mkdir -p "$installed"
-  cp -R "$plugin_root/" "$installed/"
+  cp -R "$plugin_root/." "$installed/"
   export CLAUDE_PLUGIN_ROOT="$installed"
   hook_command=$(jq -r '.hooks.SessionStart[0].hooks[0].command' "$installed/hooks/hooks.json")
   run bash -c "$hook_command" <<<'{"source":"startup"}'

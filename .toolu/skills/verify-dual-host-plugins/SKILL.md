@@ -18,9 +18,9 @@ startup behavior in both Codex and Claude Code.
    configuration, hooks, skills, and docs.
 2. Read the service's live API documentation and the hosts' hook contracts.
    Distinguish installing a skill from injecting mandatory session instructions.
-3. Run the plugin's colocated tests. For REST wrappers, exercise real curl with
-   the loopback HTTPS fixture pattern in `plugins/jev/skills/jev/scripts/__tests__/`;
-   check request JSON, retries, output validation, and error propagation.
+3. Run the plugin's colocated tests. For REST wrappers, exercise real curl against
+   a private loopback HTTPS fixture; check request JSON, retries, output
+   validation, and error propagation.
 4. Install from the checkout with both actual plugin CLIs in temporary,
    separately configured profiles. Invoke hook commands from the installed
    caches, including a path containing spaces. Verify host-specific published
@@ -38,6 +38,10 @@ startup behavior in both Codex and Claude Code.
   unavailable credentials explicitly; do not read keys from `.env`.
 - Packaging and Codex smoke assertions contain explicit plugin/skill/hook counts.
   Update relevant counts together when adding a plugin.
+- Keep host overrides scoped to the operation being verified. A Codex override
+  inherited by the full suite redirects Claude fixtures away from their temporary
+  configuration directories. Unset it in the test subprocess when running a
+  Codex-scoped plan ledger.
 
 ## Verification
 

@@ -18,6 +18,10 @@ if [[ -z "${TYPESAFE_API_KEY:-}" ]]; then
   echo "jev: TYPESAFE_API_KEY unset" >&2
   exit 1
 fi
+if [[ "$TYPESAFE_API_KEY" == *$'\r'* || "$TYPESAFE_API_KEY" == *$'\n'* ]]; then
+  echo "jev: TYPESAFE_API_KEY must not contain line breaks" >&2
+  exit 1
+fi
 
 die() { echo "jev: $1" >&2; exit 1; }
 
@@ -113,15 +117,18 @@ require_instructions() { [[ -n "$INSTRUCTIONS" ]] || usage; }
 
 jev_post() (
   local request="$1" tmp code status attempt delay retry_after
-  tmp=$(mktemp -d) || return 1
+  umask 077
+  tmp=$(mktemp -d "${TMPDIR:-/tmp}/jev.XXXXXXXX") || return 1
   trap 'rm -rf "$tmp"' EXIT
+  # Keep the key out of process arguments; the private directory is removed on exit.
+  printf 'Authorization: Bearer %s\n' "$TYPESAFE_API_KEY" > "$tmp/auth-header"
   for attempt in 1 2 3; do
     status=0
     code=$(printf '%s' "$request" | curl -sS \
       --max-time "${JEV_TIMEOUT:-60}" \
       --output "$tmp/body" --dump-header "$tmp/headers" --write-out '%{http_code}' \
       -X POST "$JEV_URL" \
-      -H "Authorization: Bearer $TYPESAFE_API_KEY" \
+      -H "@$tmp/auth-header" \
       -H "Content-Type: application/json" -H "Accept: application/json" \
       --data-binary @- 2>"$tmp/error") || status=$?
     if [[ "$status" -eq 0 && "$code" == 2* ]]; then

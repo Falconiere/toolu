@@ -2,9 +2,6 @@
 # Exercise the unmodified CLI with real curl against a loopback HTTPS server.
 load http-helpers
 
-# The API reference's own example response.
-RESPONSE='{"model":"jev-1.13.0","answers":{"q":{"type":"noul","noul":0.92}},"usage":{"input_tokens":312,"output_tokens":48}}'
-
 # A real support ticket, the docs' running example.
 TICKET="Help! My payouts have been failing for 3 days."
 
@@ -24,6 +21,45 @@ teardown() { teardown_http; }
   run "$TOOL_DIR/jev.sh" noul -s "$TICKET" "Does this convey urgency?"
   [ "$status" -eq 1 ]
   [[ "$output" == *"TYPESAFE_API_KEY unset"* ]]
+}
+
+@test "jev: credential line breaks are rejected before a request" {
+  for separator in $'\r' $'\n'; do
+    export TYPESAFE_API_KEY="test-key${separator}X-Injected: value"
+    run "$TOOL_DIR/jev.sh" noul -s "$TICKET" "Urgent?"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"TYPESAFE_API_KEY must not contain line breaks"* ]]
+    [[ "$output" != *X-Injected* ]]
+    [ ! -s "$CURL_LOG" ]
+  done
+}
+
+@test "jev: authorization stays out of curl arguments and temporary credentials are private and cleaned" {
+  mkdir "$SANDBOX/tmp"
+  printf '%s' '[{"status":200,"delay":2}]' > "$SANDBOX/responses.json"
+  TMPDIR="$SANDBOX/tmp" "$TOOL_DIR/jev.sh" noul -s "$TICKET" "Urgent?" >"$SANDBOX/out" 2>"$SANDBOX/err" &
+  CLIENT_PID=$!
+  for _ in {1..100}; do
+    [ -s "$CURL_LOG" ] && break
+    sleep 0.02
+  done
+  [ -s "$CURL_LOG" ]
+  argv=$(ps -axo command | awk -v marker="$SANDBOX/tmp/" 'index($0, "curl -sS") && index($0, marker)')
+  [ -n "$argv" ]
+  [[ "$argv" != *"$TYPESAFE_API_KEY"* ]]
+  headers=("$SANDBOX/tmp"/*/auth-header)
+  python3 - "${headers[0]}" <<'PY'
+import stat
+import sys
+from pathlib import Path
+p = Path(sys.argv[1])
+assert stat.S_IMODE(p.stat().st_mode) == 0o600
+assert stat.S_IMODE(p.parent.stat().st_mode) == 0o700
+PY
+  wait "$CLIENT_PID"
+  unset CLIENT_PID
+  [ ! -e "${headers[0]}" ]
+  jq -e '.authorization == "Bearer test-typesafe-key-123"' "$CURL_LOG"
 }
 
 @test "jev: no command prints the usage banner and exits 1" {
@@ -128,7 +164,8 @@ teardown() { teardown_http; }
 }
 
 @test "jev: default output prints just the answers; --raw prints the whole body" {
-  response_body "$RESPONSE"
+  # The API reference's own example response.
+  response_body '{"model":"jev-1.13.0","answers":{"q":{"type":"noul","noul":0.92}},"usage":{"input_tokens":312,"output_tokens":48}}'
   run "$TOOL_DIR/jev.sh" noul -s "$TICKET" "Urgent?"
   [ "$status" -eq 0 ]
   [ "$output" = '{"q":{"type":"noul","noul":0.92}}' ]
