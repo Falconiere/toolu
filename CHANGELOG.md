@@ -1,5 +1,20 @@
 # Changelog
 
+## [5.4.0](https://github.com/Falconiere/toolu/compare/v5.3.0...v5.4.0) (2026-09-19)
+
+
+### Features
+
+* **jev:** add typed-judgment plugin over TypeSafe System One ([85fed7b](https://github.com/Falconiere/toolu/commit/85fed7b3d7f99f928fbba97d0af293c3f7b66a3f))
+
+
+### Bug Fixes
+
+* **jev:** apply the CI reviewer's three findings ([c536330](https://github.com/Falconiere/toolu/commit/c5363308d3585a26bfae3cfece5d81e080215031))
+* **jev:** integrate conditional workflow use and reliable transport ([3366908](https://github.com/Falconiere/toolu/commit/3366908edba62de9284d0b9399034c1e92fad4ee))
+* **jev:** protect credentials and address review feedback ([591ba19](https://github.com/Falconiere/toolu/commit/591ba199eda1b5b63f8560c40f9d1d6b4619075c))
+* **jev:** tighten the wrapper's option contract and its tests ([ae9ab1c](https://github.com/Falconiere/toolu/commit/ae9ab1c12bb9790cf3c7ef99f8c1024eb3c3e69c))
+
 ## [5.3.0](https://github.com/Falconiere/toolu/compare/v5.2.0...v5.3.0) (2026-09-15)
 
 
