@@ -59,7 +59,7 @@ PY
   wait "$CLIENT_PID"
   unset CLIENT_PID
   [ ! -e "${headers[0]}" ]
-  jq -e '.authorization == "Bearer test-typesafe-key-123"' "$CURL_LOG"
+  jq -se 'length == 1 and .[0].authorization == "Bearer test-typesafe-key-123"' "$CURL_LOG"
 }
 
 @test "jev: no command prints the usage banner and exits 1" {
@@ -164,7 +164,8 @@ PY
 }
 
 @test "jev: default output prints just the answers; --raw prints the whole body" {
-  # The API reference's own example response.
+  # This fixed local response makes the complete projection deterministic;
+  # exact stdout also catches envelope metadata or extra text leaking through.
   response_body '{"model":"jev-1.13.0","answers":{"q":{"type":"noul","noul":0.92}},"usage":{"input_tokens":312,"output_tokens":48}}'
   run "$TOOL_DIR/jev.sh" noul -s "$TICKET" "Urgent?"
   [ "$status" -eq 0 ]
