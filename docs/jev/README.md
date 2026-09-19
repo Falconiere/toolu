@@ -6,21 +6,42 @@ Ask TypeSafe's Jev model a **typed** question about some state and get an answer
 
 ## Install
 
+Claude Code:
+
 ```text
+/plugin marketplace add Falconiere/toolu
 /plugin install jev@toolu
 ```
 
+Codex:
+
+```bash
+codex plugin marketplace add Falconiere/toolu
+codex plugin add jev@toolu
+```
+
+Restart the host after installation. In Codex, review and trust the installed
+hook through `/hooks`; installation alone does not trust hooks. Both hosts
+need `curl`, `jq`, and `TYPESAFE_API_KEY` in their launch environment.
+
 Set `TYPESAFE_API_KEY` in the environment for the wrapper to authenticate
 (keys: `https://console.typesafe.ai/settings/keys`). It is never read from a
-`.env` file. `JEV_TIMEOUT` overrides the 60-second curl timeout.
+`.env` file. `JEV_TIMEOUT` overrides the 60-second timeout per attempt.
 
 ## What It Provides
 
 ### `jev` Skill
 
-Always active. The typed-judgment protocol: when to ask Jev instead of spending
-a reasoning turn, how to shape the question, and how to read the answer.
-Triggers on classify, rank, rate, judge, route, or pick-one-of work.
+Mandatory when a bounded semantic judgment over supplied evidence would change
+the next action. This applies to brainstorm, spec, spec review, plan, plan review,
+execution, and review when useful. Calls are not required just to enter a stage.
+Batch independent questions and reuse unchanged evidence across stages; keep
+architecture, code correctness, tests, and exact rules with the agent and tools.
+
+The plugin injects this rule on startup, resume, clear, and compaction, without
+calling the API. Missing prerequisites produce an actionable fallback message.
+Enforcement is through workflow instructions; it does not block edits or commits.
+See the [workflow guidance](../../plugins/toolu/workflows/semantic-judgments.md).
 
 ### `jev.sh` Wrapper
 
@@ -99,8 +120,12 @@ code may discard included.
 ### Branch on the answer
 
 ```bash
-urgency=$(jev.sh noul -s @ticket.txt "Is this urgent?" | jq -r '.q.noul')
-if (( $(echo "$urgency > 0.8" | bc -l) )); then page_oncall; fi
+# Example threshold only: validate it on representative tickets first.
+if answers=$(jev.sh noul -s @ticket.txt "Is this urgent?"); then
+  if jq -e '.q.noul > 0.8' <<<"$answers" >/dev/null; then page_oncall; fi
+else
+  printf '%s\n' 'Urgency evaluation failed; use the manual triage path.' >&2
+fi
 ```
 
 ## Behavior and Limits
@@ -110,15 +135,15 @@ if (( $(echo "$urgency > 0.8" | bc -l) )); then page_oncall; fi
 | State | Literal text stays a string. `@FILE` and `-` are sent as structured JSON only when they parse as an object or array; anything else, including a bare scalar, is sent as a string. |
 | Input | Text only — string, JSON object, or array. Pre-process anything else. |
 | Context | 64k tokens per request; 32k for `state` plus the longest question. Slice large files first. |
-| Output | Default prints `.answers` compactly. `--raw` adds `model` and token `usage`. A response with no answers prints `null` rather than inventing one. |
-| Errors | `401` bad key, `422` malformed request, `429` rate limit, `529` overloaded. curl retries the transient set twice with a 1s delay; `529` is outside that set and surfaces immediately. |
-| Exit codes | `1` local usage or config error (nothing sent), `22` HTTP error with the API's body on stderr, `28` timeout. |
+| Output | Default prints `.answers` compactly. `--raw` adds `model` and token `usage`. Missing or invalid typed answers fail explicitly, including with `--raw`. |
+| Errors | Up to three attempts for timeouts and HTTP `408/429/500/502/503/504/529`, with 1s then 2s backoff. Numeric `Retry-After` up to 60s is honored; longer waits surface the error. Other HTTP errors are not retried. |
+| Exit codes | `1` usage/config error or invalid response, `22` HTTP error with the API's body on stderr, `28` timeout. |
 | Confidence | For `choice`/`score`, `confidence` describes how concentrated the distribution is — not whether the answer is right. Tune thresholds against your own data. |
 
 ## Tests
 
 ```bash
-bats plugins/jev/skills/jev/scripts/__tests__/jev.bats   # offline, curl stubbed at the process boundary
+bats plugins/jev/skills/jev/scripts/__tests__/jev.bats   # offline, real curl + loopback HTTPS
 bats plugins/jev/hooks/__tests__                          # SessionStart publishing
 
 JEV_LIVE=1 TYPESAFE_API_KEY=… \

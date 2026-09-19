@@ -73,7 +73,7 @@ state_json() {
       return
       ;;
   esac
-  if printf '%s' "$text" | jq -e 'type == "object" or type == "array"' >/dev/null 2>&1; then
+  if printf '%s' "$text" | jq -se 'length == 1 and (.[0] | type == "object" or type == "array")' >/dev/null 2>&1; then
     printf '%s' "$text" | jq -c '.'
   else
     printf '%s' "$text" | jq -Rs '.'
@@ -111,16 +111,44 @@ parse_shared() {
 require_state() { [[ "$STATE_SET" == true ]] || die "--state is required"; }
 require_instructions() { [[ -n "$INSTRUCTIONS" ]] || usage; }
 
-jev_post() {
-  curl -sS --fail-with-body \
-    --retry 2 --retry-delay 1 \
-    --max-time "${JEV_TIMEOUT:-60}" \
-    -X POST "$JEV_URL" \
-    -H "Authorization: Bearer $TYPESAFE_API_KEY" \
-    -H "Content-Type: application/json" \
-    -H "Accept: application/json" \
-    -d "$1"
-}
+jev_post() (
+  local request="$1" tmp code status attempt delay retry_after
+  tmp=$(mktemp -d) || return 1
+  trap 'rm -rf "$tmp"' EXIT
+  for attempt in 1 2 3; do
+    status=0
+    code=$(printf '%s' "$request" | curl -sS \
+      --max-time "${JEV_TIMEOUT:-60}" \
+      --output "$tmp/body" --dump-header "$tmp/headers" --write-out '%{http_code}' \
+      -X POST "$JEV_URL" \
+      -H "Authorization: Bearer $TYPESAFE_API_KEY" \
+      -H "Content-Type: application/json" -H "Accept: application/json" \
+      --data-binary @- 2>"$tmp/error") || status=$?
+    if [[ "$status" -eq 0 && "$code" == 2* ]]; then
+      cat "$tmp/body"
+      return 0
+    fi
+    # curl's built-in retry set omits TypeSafe's documented 529 overload.
+    # Separate attempt bodies so transient errors never become answer JSON.
+    delay=$((1 << (attempt - 1)))
+    retry_after=$(awk 'tolower($1) == "retry-after:" {gsub("\r", "", $2); print $2}' "$tmp/headers")
+    if [[ "$retry_after" =~ ^[0-9]+$ ]]; then
+      if [[ ${#retry_after} -gt 2 ]] || ((10#$retry_after > 60)); then
+        break
+      fi
+      ((10#$retry_after <= delay)) || delay=$((10#$retry_after))
+    fi
+    [[ "$attempt" -lt 3 ]] || break
+    case "$status:$code" in
+      0:408|0:429|0:500|0:502|0:503|0:504|0:529|28:*) sleep "$delay";;
+      *) break;;
+    esac
+  done
+  [[ ! -s "$tmp/error" ]] || cat "$tmp/error" >&2
+  [[ ! -s "$tmp/body" ]] || cat "$tmp/body" >&2
+  [[ "$status" -ne 0 ]] || status=22
+  return "$status"
+)
 
 # evaluate QUESTIONS_JSON — send the request and print the answers.
 # An HTTP failure propagates: the API's error body goes to stderr and the exit
@@ -130,11 +158,8 @@ evaluate() {
   # Resolved in its own statement: a failure inside state_json exits the command
   # substitution's subshell, and only an explicit check propagates that here.
   state="$(state_json)" || exit $?
-  body=$(jq -nc \
-    --argjson state "$state" \
-    --arg model "$MODEL" \
-    --argjson questions "$questions" \
-    '{state: $state, model: $model, questions: $questions}')
+  body=$(printf '%s\n%s\n' "$state" "$questions" | jq -sc --arg model "$MODEL" \
+    '{state: .[0], model: $model, questions: .[1]}')
 
   set +e
   out="$(jev_post "$body")"
@@ -144,6 +169,36 @@ evaluate() {
     [[ -n "$out" ]] && printf '%s\n' "$out" >&2
     exit "$status"
   fi
+
+  # Never let a malformed success response be consumed as a false/no judgment.
+  printf '%s\n%s\n' "$questions" "$out" | jq -se '
+    def probability: type == "number" and . >= 0 and . <= 1;
+    def tokens: type == "number" and . >= 0 and . == floor;
+    def distribution($keys):
+      type == "object" and keys == ($keys | sort) and
+      all(.[]; probability) and (([.[]] | add) - 1 | fabs) < 0.000001;
+    length == 2 and
+    (.[0] as $questions | .[1] as $response | $response.answers as $answers |
+      ($response.model | type == "string" and length > 0) and
+      ($response.usage.input_tokens | tokens) and ($response.usage.output_tokens | tokens) and
+      ($answers | type == "object") and
+      (($questions | keys) == ($answers | keys)) and
+      all($questions | to_entries[];
+        . as $q | $answers[$q.key] as $a |
+        $a.type == $q.value.type and
+        if $a.type == "noul" then ($a.noul | probability)
+        elif $a.type == "choice" then
+          ($a.confidence | probability) and
+          ($a.probabilities | distribution($q.value.criteria | keys)) and
+          ($q.value.criteria | has($a.choice))
+        elif $a.type == "score" then
+          [range($q.value.criteria | length) | tostring] as $levels |
+          ($a.confidence | probability) and ($a.score | type == "number") and
+          $a.score >= 0 and $a.score <= ($q.value.criteria | length) - 1 and
+          ($a.legend | type == "object" and keys == ($levels | sort)) and
+          ($a.probabilities | distribution($levels))
+        else false end))
+  ' >/dev/null 2>&1 || die "invalid response: expected a typed answer for every question"
 
   if [[ "$RAW" == true ]]; then
     printf '%s\n' "$out" | jq '.'
@@ -296,7 +351,7 @@ cmd_ask() {
     text="$(cat "$src")"
   fi
 
-  questions="$(printf '%s' "$text" | jq -c '.' 2>/dev/null)" || die "invalid JSON in $src"
+  questions="$(printf '%s' "$text" | jq -sc 'if length == 1 then .[0] else error("expected one questions object") end' 2>/dev/null)" || die "invalid JSON in $src"
   [[ "$(jq -r 'type' <<<"$questions")" == "object" ]] || die "questions must be a JSON object"
   [[ "$(jq 'length' <<<"$questions")" -ge 1 ]] || die "questions must not be empty"
 

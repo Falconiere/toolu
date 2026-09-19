@@ -26,6 +26,10 @@ settle the choice. Delegate only when the search needs a broad map; keep the
 final trade-off decision in the main architecture tier. Use the tier rubric in
 [model-routing.md](../orchestrator/references/model-routing.md).
 
+When comparing concrete alternatives against stated preferences, apply
+[semantic judgments](../../workflows/semantic-judgments.md) if Jev's answer
+would change the choice. Keep architectural synthesis in the main thread.
+
 Set material defaults and proceed. Ask one structured question (2–3 options)
 only when prompt and repository evidence cannot settle a goal-defining or hard-to-reverse fork. If several forks qualify, ask about the
 highest-blast-radius decision and record defaults and risks for the rest.

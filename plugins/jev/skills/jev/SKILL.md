@@ -1,13 +1,31 @@
 ---
 name: jev
-description: ALWAYS ACTIVE — Typed-judgment protocol. When a task needs a semantic decision code can branch on — is this diff behavioral, which candidate fits, how severe is this — you MUST call the jev CLI for a calibrated probability, choice, or score instead of spending a reasoning turn. Triggers on classify, rank, rate, judge, route, pick one of.
+description: Use when development needs a bounded semantic decision over supplied evidence — classify, rank, rate, judge, route, or pick one of concrete candidates — including brainstorm, spec, spec review, plan, plan review, execution, and review.
 ---
 
 # Jev — Typed Judgments
 
 Ask TypeSafe's Jev model a **typed** question about some state and get an answer
 a script can branch on: a probability, a chosen option, or a score on your own
-levels. No prose to parse, no reasoning turn spent.
+levels. Code consumes the result directly.
+
+## Workflow rule
+
+At each development stage, identify whether a bounded semantic judgment over
+available evidence would change the next action. **If and only if it would,
+and Jev is available, you MUST call it.** Use it during brainstorm to compare
+concrete candidates against stated preferences; during spec/review to check
+requirement wording or requirement/evidence alignment; during plan/review to
+check semantic step coverage; during execution to triage supplied findings.
+
+Keep architecture, code correctness, exact checks, arithmetic, and test verdicts
+with the agent and deterministic tools. Do not call Jev merely because a stage
+started. Reuse prior judgments while evidence and question meanings remain
+unchanged. Record the question, answer, and decision impact where useful.
+
+If the plugin, credentials, or service is unavailable, state the limitation and
+continue with an explicit reasoning/evidence fallback. Never fabricate a result
+or make a Jev answer substitute for required tests, review, or authorization.
 
 **Trigger phrases:** classify this, rank these, rate this, how severe, which one
 of these, does this count as, route this, judge whether
@@ -93,6 +111,13 @@ jev.sh ask questions.json -s @ticket.json
    option you left out.
 6. **Keep code in code.** Exact lookups, arithmetic, and known rules stay in the
    script. Jev supplies only the semantic call.
+7. **Handle uncertainty.** A Noul near 0.5 is uncertain, not medium severity.
+   Investigate or fall back when uncertainty matters. For graded ranking, use
+   comparable per-candidate Scores, not Choice probabilities as absolute scores.
+8. **Measure.** Use `--raw` to retain actual model and token usage when evaluating
+   efficiency; pin `--model` when thresholds depend on a tested version. Extra
+   questions still cost tokens. Read the live API and relevant primitive or
+   cookbook before designing new question formats.
 
 ## Constraints
 
@@ -100,8 +125,8 @@ jev.sh ask questions.json -s @ticket.json
 |---|---|
 | Input | Text only — string, JSON object, or array. Pre-process anything else. |
 | Context | 64k tokens per request; 32k for `state` plus the longest question. Slice large files before sending. |
-| Errors | `401` bad key, `422` malformed request, `429` rate limit, `529` overloaded. curl retries the transient set twice; `529` is outside it and surfaces immediately. |
-| Exit codes | `1` local usage/config error (nothing sent), `22` HTTP error (body on stderr), `28` timeout (`JEV_TIMEOUT`, default 60s). |
+| Errors | Up to three attempts for timeouts and HTTP `408/429/500/502/503/504/529`, with 1s then 2s backoff. Numeric `Retry-After` up to 60s is honored; longer waits surface the error. Other HTTP errors are not retried. |
+| Exit codes | `1` usage/config error or invalid response, `22` HTTP error (body on stderr), `28` timeout (`JEV_TIMEOUT`, default 60s per attempt). |
 | Output | Default prints `.answers` compactly; `--raw` adds `model` and token `usage`. |
 
 Live docs: `https://docs.typesafe.ai/llms.txt` (append `.md` to any page path).

@@ -78,6 +78,10 @@ for hook_file in "$ROOT"/plugins/*/hooks/hooks.json; do
   [ -f "$hook_file" ] || continue
   plugin_root="${hook_file%/hooks/hooks.json}"
   while IFS= read -r hook_command; do
+    # A quoted executable path supports plugin caches below homes with spaces.
+    case "$hook_command" in
+      \"*\") hook_command="${hook_command#\"}"; hook_command="${hook_command%\"}";;
+    esac
     hook_path="${hook_command#'${CLAUDE_PLUGIN_ROOT}/'}"
     [ "$hook_path" != "$hook_command" ] || hook_path="${hook_command#'${PLUGIN_ROOT}/'}"
     [ "$hook_path" != "$hook_command" ] || fail "unsupported SessionStart command: $hook_command"
