@@ -444,6 +444,14 @@ JSON
   [ "$(wc -l < "$CURL_LOG" | tr -d ' ')" -eq 3 ]
 }
 
+@test "jev: a dropped connection is retried like the SDK's connection errors" {
+  printf '%s' '[{"close":true},{"status":200}]' > "$SANDBOX/responses.json"
+  run "$TOOL_DIR/jev.sh" noul -s "$TICKET" "Urgent?"
+  [ "$status" -eq 0 ]
+  [ "$output" = '{"q":{"type":"noul","noul":0.92}}' ]
+  [ "$(wc -l < "$CURL_LOG" | tr -d ' ')" -eq 2 ]
+}
+
 @test "jev: retry-after-ms is honored when Retry-After is absent" {
   printf '%s' '[{"status":429,"retry_after_ms":1500,"body":"{\"error\":\"rate limited\"}"},{"status":200}]' > "$SANDBOX/responses.json"
   start=$(date +%s)

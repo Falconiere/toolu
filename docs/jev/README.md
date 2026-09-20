@@ -146,7 +146,7 @@ fi
 | Limits | Choice: 2–255 options. Score: 2–10 levels. Checked locally before any request (the API rejects 11 levels with `Too many score levels`). |
 | Context | 64k tokens per request; 32k for `state` plus the longest question. Slice large files first. |
 | Output | Default prints `.answers` compactly. `--raw` adds `model` and token `usage`. Missing or invalid typed answers fail explicitly, including with `--raw`. |
-| Errors | Up to three attempts for timeouts and HTTP `408`, `429`, and any `5xx` — the SDK's default retry set — with 1s then 2s backoff. `Retry-After` (seconds) or `retry-after-ms` up to 60s is honored; longer waits surface the error. `401`/`422` and other 4xx are not retried. |
+| Errors | Up to three attempts for timeouts, connection failures, and HTTP `408`, `429`, and any `5xx` — the SDK's default retry set — with 1s then 2s backoff. `Retry-After` (seconds) or `retry-after-ms` up to 60s is honored; longer waits surface the error. `401`/`422` and other 4xx are not retried. |
 | Exit codes | `1` usage/config error or invalid response, `22` HTTP error with the API's body on stderr, `28` timeout. |
 | Confidence | For `choice`/`score`, `confidence` describes how concentrated the distribution is — not whether the answer is right. Tune thresholds against your own data. |
 

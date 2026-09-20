@@ -155,7 +155,7 @@ Verified against the live docs (`/primitives`, `/model-jaggedness/jev-1.13`):
 | Input | Text only — string, JSON object, or array. Pre-process anything else. English is the primary training language. |
 | Limits | Choice: 2–255 options. Score: 2–10 levels. Both are checked locally before any request. |
 | Context | 64k tokens per request; 32k for `state` plus the longest question. Slice large files before sending. |
-| Errors | Up to three attempts for timeouts and HTTP `408`, `429`, and any `5xx` (the SDK's default set), with 1s then 2s backoff. `Retry-After` (seconds) or `retry-after-ms` up to 60s is honored; longer waits surface the error. `401`/`422` and other 4xx are not retried. |
+| Errors | Up to three attempts for timeouts, connection failures, and HTTP `408`, `429`, and any `5xx` (the SDK's default set), with 1s then 2s backoff. `Retry-After` (seconds) or `retry-after-ms` up to 60s is honored; longer waits surface the error. `401`/`422` and other 4xx are not retried. |
 | Exit codes | `1` usage/config error or invalid response, `22` HTTP error (body on stderr), `28` timeout (`JEV_TIMEOUT`, default 60s per attempt). |
 | Output | Default prints `.answers` compactly; `--raw` adds `model` and token `usage`. |
 
