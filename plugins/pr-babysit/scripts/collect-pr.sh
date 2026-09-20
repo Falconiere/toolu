@@ -82,8 +82,10 @@ _job() {
 _fan_out() {
   local j pids=""
   _job pr pr view "$number" --repo "$repo" --json "$(pb_pr_view_fields)" & pids="$pids $!"
+  # Strings go through -f (raw); -F would coerce a numeric-looking owner or
+  # repo name into a JSON number and break the GraphQL variable types.
   _job threads api graphql --paginate --slurp \
-    -F owner="$owner" -F repo="$name" -F number="$number" -F pageSize="$page_size" \
+    -f owner="$owner" -f repo="$name" -F number="$number" -F pageSize="$page_size" \
     -f query="$(pb_gql_threads)" & pids="$pids $!"
   _job comments api --paginate --slurp "repos/$repo/issues/$number/comments?per_page=$page_size" & pids="$pids $!"
   _job reviews api --paginate --slurp "repos/$repo/pulls/$number/reviews?per_page=$page_size" & pids="$pids $!"
@@ -110,7 +112,7 @@ _complete_thread_comments() {
     cursor=$(jq -r --arg id "$tid" '.[] | select(.id == $id) | .commentsEndCursor' "$PB_TMPDIR/threads.norm.json")
     # The first page is already in hand: resume from its endCursor.
     pb_gh "$PB_TMPDIR/tc.json" api graphql --paginate --slurp \
-      -F id="$tid" -F pageSize="$page_size" -F endCursor="$cursor" \
+      -f id="$tid" -F pageSize="$page_size" -f endCursor="$cursor" \
       -f query="$(pb_gql_thread_comments)" || pb_gh_fail threadComments
     pb_gh_json_ok "$PB_TMPDIR/tc.json" || pb_fail invalid_json "collect-pr.sh: thread comment page for $tid is not valid JSON" '{"source":"threadComments"}'
     extra=$((extra + $(jq 'length' "$PB_TMPDIR/tc.json")))

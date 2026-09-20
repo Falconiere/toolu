@@ -50,7 +50,7 @@ mutation='mutation($threadId:ID!){ resolveReviewThread(input:{threadId:$threadId
 attempt=0; confirmed=false; last=""
 while [ "$attempt" -lt 3 ]; do
   attempt=$((attempt + 1))
-  pb_gh "$PB_TMPDIR/resolve.json" api graphql -F threadId="$thread" -f query="$mutation" || pb_gh_fail resolve
+  pb_gh "$PB_TMPDIR/resolve.json" api graphql -f threadId="$thread" -f query="$mutation" || pb_gh_fail resolve
   pb_gh_json_ok "$PB_TMPDIR/resolve.json" || pb_fail invalid_json "resolve-thread.sh: mutation response carried errors[]" \
     "$(jq -c '{source:"resolve", errors:(.errors // [])}' "$PB_TMPDIR/resolve.json")"
   last=$(jq -c '.data.resolveReviewThread.thread // null' "$PB_TMPDIR/resolve.json")
