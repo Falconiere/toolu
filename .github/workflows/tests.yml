@@ -18,9 +18,15 @@ concurrency:
 permissions:
   contents: read
 
+# A release commit only bumps versions and CHANGELOG. The commits it packages
+# were already tested when they landed on main, and the Release PR is that same
+# diff. Running this suite on the Release PR and again on the merge only burns
+# minutes. Skip those two cases. Any other push, pull request, or manual run
+# still tests. Release Please itself still runs on the merge so the tag publishes.
 jobs:
   shellcheck:
     name: shellcheck
+    if: "${{ !startsWith(github.head_ref || '', 'release-please--') && !(startsWith(github.event.head_commit.message || '', 'chore(main): release ') && (github.event.head_commit.author.email || '') == '41898282+github-actions[bot]@users.noreply.github.com') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -44,6 +50,7 @@ jobs:
 
   bats:
     name: bats (plugins)
+    if: "${{ !startsWith(github.head_ref || '', 'release-please--') && !(startsWith(github.event.head_commit.message || '', 'chore(main): release ') && (github.event.head_commit.author.email || '') == '41898282+github-actions[bot]@users.noreply.github.com') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
