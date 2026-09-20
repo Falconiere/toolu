@@ -53,6 +53,11 @@ the pre-fix tree, so committing staleifies it and the push denies.
      --findings-count 0 --reviewers '["toolu-review:review"]'
    ```
 
+   Pass `--branch <name>` on a detached checkout — pr-babysit's
+   `git worktree add --detach` + `git push origin HEAD:<name>` contract — so
+   the state file is keyed to the branch the push targets; the push-review gate
+   resolves that same branch from the refspec. Omitting it there fails with
+   "not on a branch (detached HEAD?)".
    Pass `--repo <path>` when the reviewed checkout is not the session's cwd —
    a worktree, say. The gate reads the state file under the **pushed repo's own
    root**, so a file written anywhere else is invisible to it. `--repo` defaults

@@ -63,7 +63,11 @@ mode=$(toolu_gate_mode pushReview)
 # the main checkout's, so no amount of re-reviewing could satisfy it.
 repo_root=$(push_target_root "$command")
 
-current_branch=$(git -C "$repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+# The checked-out branch, or — on a detached checkout such as pr-babysit's
+# `git worktree add --detach` + `push origin HEAD:<branch>` — the refspec
+# destination (push_target_branch in lib/detect.sh). Empty means neither
+# names a branch and the detached-head deny below stands.
+current_branch=$(push_target_branch "$command" "$repo_root")
 slug=$(branch_slug "$current_branch")
 
 # Resolve state dir: env override takes precedence; else target-repo default.
@@ -125,9 +129,9 @@ if ! git -C "$repo_root" rev-parse --verify --quiet "$base_branch" >/dev/null; t
   _pr_decide base-missing "base branch '$base_branch' not found locally; run \`git fetch origin $base_branch:$base_branch\`"
 fi
 
-# Detect detached HEAD (current_branch == "HEAD" from rev-parse).
+# Detached HEAD with no refspec destination to judge instead.
 if [[ "$current_branch" == "HEAD" || -z "$current_branch" ]]; then
-  _pr_decide detached-head "detached HEAD — checkout a branch before push"
+  _pr_decide detached-head "detached HEAD — checkout a branch, or push an explicit \`HEAD:<branch>\` refspec so the review state can be keyed to that branch"
 fi
 
 # Pushing the base branch itself (e.g. fast-forwarded main after a local merge)

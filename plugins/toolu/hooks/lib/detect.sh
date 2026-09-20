@@ -756,6 +756,57 @@ push_target_root() {
   echo "$root"
 }
 
+# push_target_branch COMMAND REPO_ROOT -> the branch the push should be judged
+# as, or empty when it cannot be named.
+#
+# Attached HEAD: the checked-out branch, exactly as before — the review state
+# file is keyed by it and a refspec must not silently re-key it.
+# Detached HEAD (pr-babysit's `git worktree add --detach` + `push origin
+# HEAD:<branch>` contract): the refspec DESTINATION of the push segment —
+# `HEAD:x`, `+HEAD:refs/heads/x`, `src:x`, bare `x` all name `x`; a delete
+# (`:x`), bare `HEAD`, or a wildcard yields empty, and the gate's detached
+# deny stands.
+push_target_branch() {
+  local command="$1" root="$2" branch refspec dst
+  branch=$(git -C "$root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+  if [ -n "$branch" ] && [ "$branch" != "HEAD" ]; then
+    echo "$branch"
+    return 0
+  fi
+  # First positional after the remote in the `push` segment (same statement
+  # split as push_target_root). Option values for the few value-taking push
+  # options are skipped so `-o ci.skip origin HEAD:x` still finds the refspec.
+  refspec=$(printf '%s\n' "$command" | strip_heredocs \
+    | awk '{ gsub(/&&|\|\||;|\|/, "\n"); print }' \
+    | awk '{
+        for (i = 1; i <= NF; i++)
+          if ($i == "push") {
+            n = 0
+            for (j = i + 1; j <= NF; j++) {
+              if ($j == "--") continue
+              if ($j ~ /^-/) {
+                if ($j == "-o" || $j == "--push-option" || $j == "--receive-pack" || $j == "--exec" || $j == "--repo") j++
+                continue
+              }
+              n++
+              if (n == 2) { print $j; exit }
+            }
+            exit
+          }
+      }')
+  refspec=${refspec#+}
+  [ -n "$refspec" ] || return 0
+  case "$refspec" in
+    :*) return 0 ;;          # delete refspec: no destination to review
+    HEAD) return 0 ;;        # bare HEAD on a detached checkout names nothing
+    *:*) dst=${refspec#*:} ;;
+    *) dst=$refspec ;;
+  esac
+  dst=${dst#refs/heads/}
+  case "$dst" in *'*'*|'') return 0 ;; esac
+  echo "$dst"
+}
+
 # Read non-comment non-blank lines from a settings file. Returns 0 with no
 # output if the file is missing.
 read_list() {

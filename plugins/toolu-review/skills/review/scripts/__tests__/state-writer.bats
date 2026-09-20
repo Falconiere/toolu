@@ -226,3 +226,52 @@ teardown() {
   [ "$decision" = "deny" ]
   [[ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecisionReason')" == *"g.txt"* ]]
 }
+
+# --- detached worktree contract (pr-babysit: worktree add --detach + push HEAD:<branch>)
+
+@test "write-state: detached worktree + --branch writes a state the real gate accepts for HEAD:<branch>" {
+  git checkout -q -b feature
+  echo a > f.txt && git add f.txt && git commit -qm work
+  git checkout -q main
+  git worktree add -q --detach "$TMP/wt" feature
+  [ "$(git -C "$TMP/wt" rev-parse --abbrev-ref HEAD)" = HEAD ]
+  out=$(PUSH_REVIEW_BASE=main bash "$WS" --repo "$TMP/wt" --branch feature --findings-count 0)
+  [ -f "$out" ]
+  [[ "$out" == "$(cd "$TMP/wt" && pwd -P)"/.claude/tmp/push-review/feature.json ]]
+  [ "$(jq -r .branch "$out")" = feature ]
+  [ "$(jq -r .version "$out")" = 2 ]
+  [ "$(jq -r .diff_sha "$out")" = "$(git -C "$TMP/wt" diff --no-color main...HEAD | git hash-object --stdin)" ]
+  # The real gate, judging the exact push the babysit workflow issues.
+  payload=$(jq -n --arg c "git -C $TMP/wt push origin HEAD:feature" '{tool_name:"Bash", tool_input:{command:$c}}')
+  tool_name="Bash" input="$payload" PUSH_REVIEW_BASE=main \
+    run bash "$GATE" <<<"$payload"
+  [ "$status" -eq 0 ]
+  decision=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // empty')
+  [ "$decision" != "deny" ]
+}
+
+@test "write-state: detached HEAD without --branch still fails, and says what to pass" {
+  git checkout -q -b feature
+  echo a > f.txt && git add f.txt && git commit -qm work
+  git checkout -q "$(git rev-parse HEAD)"
+  run env PUSH_REVIEW_BASE=main bash "$WS" --findings-count 0
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"detached HEAD"* ]]
+  [[ "$output" == *"--branch"* ]]
+}
+
+@test "write-state: --branch must name a real ref, and must match the checked-out branch when attached" {
+  git checkout -q -b feature
+  echo a > f.txt && git add f.txt && git commit -qm work
+  git checkout -q "$(git rev-parse HEAD)"
+  run env PUSH_REVIEW_BASE=main bash "$WS" --branch nope --findings-count 0
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"unknown branch 'nope'"* ]]
+  git checkout -q feature
+  run env PUSH_REVIEW_BASE=main bash "$WS" --branch other --findings-count 0
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"does not match the checked-out branch 'feature'"* ]]
+  out=$(PUSH_REVIEW_BASE=main bash "$WS" --branch feature --findings-count 0)
+  [ "$(jq -r .branch "$out")" = feature ]
+}
+
