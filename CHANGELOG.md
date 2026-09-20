@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.1.1](https://github.com/Falconiere/toolu/compare/v6.1.0...v6.1.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **codex:** address PR review feedback ([a66205d](https://github.com/Falconiere/toolu/commit/a66205d7ef14d282757c779fa617b31b263ffcdb))
+* **codex:** drain pre-compact hook input ([7c8759e](https://github.com/Falconiere/toolu/commit/7c8759ea795b2bd25f736a2f7d6d09b88e89ea5f))
+* **codex:** handle pre-compact hook output ([1344624](https://github.com/Falconiere/toolu/commit/134462447a828ad1aa63ba30d9a0aaf113a775a2))
+
 ## [6.1.0](https://github.com/Falconiere/toolu/compare/v6.0.0...v6.1.0) (2026-09-20)
 
 
