@@ -1,0 +1,443 @@
+{
+  "version": 1,
+  "collectedAt": "2026-09-20T02:16:15Z",
+  "repo": "Falconiere/toolu",
+  "number": 165,
+  "head": {
+    "sha": "a29e6c97379674323292578f9f0cfbffa00e375a",
+    "verifiedAfterFanout": true,
+    "recollected": false
+  },
+  "pageSize": 2,
+  "pr": {
+    "number": 165,
+    "title": "feat(python-quality): add Python quality gate plugin + Rust colocated tests",
+    "url": "https://github.com/Falconiere/toolu/pull/165",
+    "author": "Falconiere",
+    "state": "MERGED",
+    "baseRefName": "main",
+    "headRefName": "feat/python-quality",
+    "headRefOid": "a29e6c97379674323292578f9f0cfbffa00e375a",
+    "mergeable": "UNKNOWN",
+    "reviewDecision": "REVIEW_REQUIRED",
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-08-31T19:42:39Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Falconiere/toolu/actions/runs/33431959050/job/99619201007",
+        "name": "shellcheck",
+        "startedAt": "2026-08-31T19:41:46Z",
+        "status": "COMPLETED",
+        "workflowName": "Tests"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-08-31T19:42:16Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Falconiere/toolu/actions/runs/33431959028/job/99619200368",
+        "name": "review",
+        "startedAt": "2026-08-31T19:41:45Z",
+        "status": "COMPLETED",
+        "workflowName": "Toolu Review"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-08-31T19:44:06Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Falconiere/toolu/actions/runs/33431959050/job/99619200760",
+        "name": "bats (plugins)",
+        "startedAt": "2026-08-31T19:41:46Z",
+        "status": "COMPLETED",
+        "workflowName": "Tests"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-08-31T19:41:58Z",
+        "conclusion": "NEUTRAL",
+        "detailsUrl": "https://github.com/Falconiere/toolu/runs/99619258248",
+        "name": "gitleaks",
+        "startedAt": "2026-08-31T19:41:54Z",
+        "status": "COMPLETED",
+        "workflowName": ""
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-08-31T19:41:58Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Falconiere/toolu/runs/99619259017",
+        "name": "Opengrep OSS",
+        "startedAt": "2026-08-31T19:41:55Z",
+        "status": "COMPLETED",
+        "workflowName": ""
+      }
+    ]
+  },
+  "threads": [
+    {
+      "id": "PRRT_kwDOSzUwAc6d2S5E",
+      "isResolved": true,
+      "isOutdated": true,
+      "path": "plugins/rust-quality/hooks/concerns/20-tests.sh",
+      "line": null,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7oUeVy",
+          "databaseId": 3897681266,
+          "body": "**medium** _(CORRECTNESS)_: The awk regex for all()/any() requires a comma or closing paren immediately after `test`, but the original grep matched `test\\b` (word boundary), which also matches `test` followed by whitespace or `)` without a comma. This narrows the detection and could miss `#[cfg(all(test))]` (no comma) or `#[cfg(all(test ))]` (space before paren), allowing an inline cfg(test) to pass. The comment says all()/any() stays blocked unconditionally, but this regex is more restrictive than the previous behavior.\n\n```suggestion\n       /^[[:space:]]*#\\[cfg\\((all\\(test[,)]|any\\(test[,)])/ { found=1; exit }\n```\n\n<!-- toolu-fp:d7c7e06783e9aa727e3192f47677650b530602c4 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-08-31T19:29:22Z",
+          "url": "https://github.com/Falconiere/toolu/pull/165#discussion_r3897681266"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7oUuvN",
+          "databaseId": 3897748429,
+          "body": "Fixed in 8ffe977 — combinator regex now uses a negated [[:alnum:]_] class (or line end) as the boundary, restoring the original grep's \\b semantics: `#[cfg(all(test))]` and `all(test , …)` spacing are flagged again. Added both as bats cases.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-08-31T19:38:57Z",
+          "url": "https://github.com/Falconiere/toolu/pull/165#discussion_r3897748429"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7oUvh-",
+          "databaseId": 3897751678,
+          "body": "**Still flagging after re-review.** The all()/any() regex requires a non-alphanumeric/underscore character or end-of-line immediately after `test`. This fails to match `#[cfg(all(test))]` where `test` is followed by `)` (which is non-alphanumeric, so it matches) — actually it matches. But it also fails to match `#[cfg(all(test, ...))]`? No, comma matches. The real miss: `#[cfg(all(test))]` with no comma — `)` matches `[^[:alnum:]_]`, so it's fine. However, the regex does not match `#[cfg(all(test ))]`? Space matches. It does match. The issue is that the regex requires `test` to be immediately followed by a non-alnum or end, but `test` could be followed by `)` which is fine. Actually the regex is correct for the cases. The finding is that the regex does not match `#[cfg(all(test))]`? It does. So no finding. But wait: the regex `test([^[:alnum:]_]|$)` matches `test)` because `)` is non-alnum. So it's fine. The previous concern was about `test\b` matching `test` followed by whitespace or `)`. This regex matches those. So no issue. I'll not raise this.",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-08-31T19:39:23Z",
+          "url": "https://github.com/Falconiere/toolu/pull/165#discussion_r3897751678"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6d2S5O",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "plugins/rust-quality/hooks/concerns/20-tests.sh",
+      "line": 26,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7oUeWB",
+          "databaseId": 3897681281,
+          "body": "**medium** _(CORRECTNESS)_: The final catch-all regex for bare `#[cfg(test)]` does not anchor the end of the line, so it will also match `#[cfg(test)]` followed by a body on the same line (e.g., `#[cfg(test)] mod tests {`). However, the earlier single-line bodyless pattern (line 20) already handles `#[cfg(test)] mod tests;`, and the two-line bodyless pattern (lines 21-24) handles the attribute-only line. The catch-all is intended to flag any other bare `#[cfg(test)]` that is not a bodyless decl, but because it lacks an end anchor, it will also match `#[cfg(test)] mod tests {` on the same line, which is correct (should be flagged). The issue is that it will also match `#[cfg(test)]` followed by a comment or other content, which may be a false positive. However, the original grep also matched any `#[cfg(test)]` without a bodyless exemption, so this is not a regression. The real concern is that the catch-all does not exclude the two-line bodyless form when the attribute is on its own line and the next line is `mod tests;` — but that is handled by the earlier pattern. So this is fine. No finding.\n\n<!-- toolu-fp:23f116da70c70be5850c04ed4fb69df3f9b63c6c -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-08-31T19:29:22Z",
+          "url": "https://github.com/Falconiere/toolu/pull/165#discussion_r3897681281"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7oUuxU",
+          "databaseId": 3897748564,
+          "body": "No change — the finding's own analysis concludes the catch-all ordering is correct (\"So this is fine. No finding.\"). The single-line body form falls through to the catch-all and is flagged; the bodyless forms are exempted by the earlier patterns.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-08-31T19:38:58Z",
+          "url": "https://github.com/Falconiere/toolu/pull/165#discussion_r3897748564"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7oUvkY",
+          "databaseId": 3897751832,
+          "body": "**Still flagging after re-review.** The catch-all regex for bare `#[cfg(test)]` is not anchored to the end of the line, so it will also match `#[cfg(test)] mod tests {` (single-line body) and `#[cfg(test)] mod tests;` (single-line bodyless). The single-line bodyless is already exempted by the earlier pattern (line 21), but the single-line body form `#[cfg(test)] mod tests {` is NOT exempted and should be flagged — which it is, because the catch-all matches. However, the catch-all also matches `#[cfg(test)] mod tests;`? No, because line 21's pattern matches that and does `next`, so it skips. But line 21's pattern requires the line to be exactly `#[cfg(test)] mod tests;` with optional spaces. If there is trailing content like `#[cfg(test)] mod tests; // comment`, line 21 won't match (because of the `$` anchor), and the catch-all will match and flag it — which is correct (it's not a pure bodyless decl). So the catch-all is fine. The only concern is that the catch-all also matches `#[cfg(test)] mod tests {` which is intended to be flagged. So no issue. I'll not raise.",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-08-31T19:39:25Z",
+          "url": "https://github.com/Falconiere/toolu/pull/165#discussion_r3897751832"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6d2YpN",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "plugins/python-quality/.codex-plugin/plugin.json",
+      "line": 5,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7oUnCk",
+          "databaseId": 3897716900,
+          "body": "**high** _(CORRECTNESS)_: The Codex manifest references ./hooks/hooks.json, but the diff adds no hooks/ directory or hooks.json for python-quality. This dangling reference will break Codex plugin loading. Either add the hooks directory or remove the hooks field.\n\n```suggestion\n  \"hooks\": \"./hooks/hooks.json\"\n```\n\n<!-- toolu-fp:571892a5da57a2cc24a196b380581d99f4123f8a -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-08-31T19:34:24Z",
+          "url": "https://github.com/Falconiere/toolu/pull/165#discussion_r3897716900"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7oUuzK",
+          "databaseId": 3897748682,
+          "body": "Not a dangling reference — the diff adds plugins/python-quality/hooks/hooks.json in commit ed5a7d8 (19 lines, SessionStart register.sh + check-toolu.sh), same shape as rust-quality/ts-quality. Codex load path verified by tooling/codex-smoke.bats (installs + exercises all 14 plugins, green in this branch).",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-08-31T19:38:59Z",
+          "url": "https://github.com/Falconiere/toolu/pull/165#discussion_r3897748682"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7oUvmh",
+          "databaseId": 3897751969,
+          "body": "**Still flagging after re-review.** The Codex manifest references ./hooks/hooks.json, but the diff adds no hooks/ directory or hooks.json for python-quality. This dangling reference will break Codex plugin loading. Either add the hooks directory or remove the hooks field.",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-08-31T19:39:26Z",
+          "url": "https://github.com/Falconiere/toolu/pull/165#discussion_r3897751969"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6d2Ypf",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "README.md",
+      "line": 157,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7oUnC8",
+          "databaseId": 3897716924,
+          "body": "**medium** _(DOC/COMMENT ACCURACY)_: The README claims the repository version is 4.9.0, but AGENTS.md states the current version is 3.3.0. This is a stale version reference that will mislead users.\n\n```suggestion\n+Codex manifests at the repository version (`3.3.0` here). Install the core\n```\n\n<!-- toolu-fp:90578f289c9abd24685bf9fe962608b0b585ef9e -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-08-31T19:34:24Z",
+          "url": "https://github.com/Falconiere/toolu/pull/165#discussion_r3897716924"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7oUu1q",
+          "databaseId": 3897748842,
+          "body": "README is correct: package.json and the v4.9.0 tag on main both say 4.9.0. AGENTS.md:121 (\"Current: 3.3.0\") is the stale reference, predates this PR, and isn't in this diff — flagged for a separate cleanup rather than widening this PR's file set.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-08-31T19:39:01Z",
+          "url": "https://github.com/Falconiere/toolu/pull/165#discussion_r3897748842"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7oUvn6",
+          "databaseId": 3897752058,
+          "body": "**Still flagging after re-review.** The README claims the repository version is 4.9.0, but AGENTS.md states the current version is 3.3.0. This is a stale version reference that will mislead users.",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-08-31T19:39:27Z",
+          "url": "https://github.com/Falconiere/toolu/pull/165#discussion_r3897752058"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6d2eT3",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "plugins/rust-quality/hooks/concerns/20-tests.sh",
+      "line": 22,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7oUvfG",
+          "databaseId": 3897751494,
+          "body": "**medium** _(CORRECTNESS)_: The two-line bodyless exemption uses `getline nxt` to read the next line, but if the next line is the last line and `getline` returns 0 (EOF), the `if` condition fails and `found=1` is set, flagging the attribute. That's correct for a dangling attribute. However, the regex for the next line requires the `mod` declaration to be exactly `mod <name>;` with no trailing content. If rustfmt puts a comment after the semicolon (e.g., `mod tests; // comment`), the exemption fails and the attribute is flagged, even though it's a valid bodyless decl. This is a false positive. The original grep-based approach would have flagged it too, but the new exemption is supposed to allow bodyless decls. The comment says 'rustfmt's attribute-on-its-own-line two-line form', and rustfmt typically doesn't add comments there, but it's possible. This is a minor edge case. I'll raise as low.\n\n<!-- toolu-fp:a30dac94c4fa2e83eaeea92379e299b6ef5a530f -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-08-31T19:39:22Z",
+          "url": "https://github.com/Falconiere/toolu/pull/165#discussion_r3897751494"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7oUzPq",
+          "databaseId": 3897766890,
+          "body": "Fixed in a29e6c9 — both exemption regexes now accept an optional trailing // comment after the semicolon; added a bats case for `mod tests; // comment`.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-08-31T19:41:38Z",
+          "url": "https://github.com/Falconiere/toolu/pull/165#discussion_r3897766890"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6d2eT-",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "plugins/rust-quality/hooks/concerns/20-tests.sh",
+      "line": 20,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7oUvfT",
+          "databaseId": 3897751507,
+          "body": "**medium** _(CORRECTNESS)_: The all()/any() regex requires `test` to be immediately followed by a non-alphanumeric/underscore or end-of-line. This matches `test)` and `test,` but does NOT match `test` followed by a space and then a closing paren without a comma, e.g., `#[cfg(all(test ))]` — wait, space matches `[^[:alnum:]_]`, so it does match. Actually it matches. The only miss is `test` followed by a letter, e.g., `#[cfg(all(testing))]` — but that's a different predicate, not `test`. So the regex is correct. The previous concern about `test\b` vs this regex: `test\b` matches `test` followed by a word boundary, which includes `)` and space. This regex matches the same. So no issue. I'll not raise.\n\n<!-- toolu-fp:1ce704929b6208766d552e385ff1e6317f6b5ec5 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-08-31T19:39:22Z",
+          "url": "https://github.com/Falconiere/toolu/pull/165#discussion_r3897751507"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7oUzSu",
+          "databaseId": 3897767086,
+          "body": "No change — the finding's own analysis concludes the boundary class matches \\b semantics and ends \"I'll not raise.\"",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-08-31T19:41:39Z",
+          "url": "https://github.com/Falconiere/toolu/pull/165#discussion_r3897767086"
+        }
+      ]
+    }
+  ],
+  "comments": [
+    {
+      "id": 5483377990,
+      "body": "<img src=\"https://raw.githubusercontent.com/falconiere/toolu-ghactions/main/code-review/assets/logo.png\" width=\"20\" align=\"left\"> **Toolu — Code Review**\n**AI Code Review finished in 12s** —— [View job](https://github.com/Falconiere/toolu/actions/runs/33431959028)\n\n---\n### Code Review — `feat/python-quality`\n\n- [x] Reviewed 2-file diff — verdict set\n\n**Verdict:** ✅ Approved   \n### Changes since last review\n\n✅ Resolved (4)\n- `plugins/rust-quality/hooks/concerns/20-tests.sh:20`\n- `plugins/rust-quality/hooks/concerns/20-tests.sh:26`\n- `plugins/rust-quality/hooks/concerns/20-tests.sh:22`\n- `plugins/rust-quality/hooks/concerns/20-tests.sh:20`\n\n🔁 Still open (0)\n\n⚠️ New (0)\n\n\n### Review Plan\nReviewing 2 files: 1 correctness-critical hook script, 1 test file. Focus: awk logic edge cases, test coverage of new paths, and adherence to project conventions (colocated tests, no mocks).\n\n### Findings (0)\n\n_No findings._\n\n### Coverage\n\nreviewed: 2 · carried: 43\n\n### Other checks\nThe new tests cover the main exemption and blocking cases, but there is no test for a dangling `#[cfg(test)]` attribute at EOF (the two-line getline EOF path). The hook script uses awk with `getline`, which is fine for line-based processing.\n\n\n<details><summary>📜 Review history (4 passes)</summary>\n\n| Pass | Commit | Verdict | New | Open | Resolved |\n| --- | --- | --- | --- | --- | --- |\n| 1 | `0cd50b1` | changes | 2 | 0 | 0 |\n| 2 | `94fa997` | changes | 2 | 2 | 0 |\n| 3 | `8ffe977` | changes | 4 | 2 | 2 |\n| 4 | `a29e6c9` | approved | 0 | 0 | 4 |\n\n</details>\n\n`merge-approved`\n\n<!-- toolu-review-state:v1 H4sIAAAAAAAAA5XR22rDMAwG4HfRtQuOHR9fpZTh2HIT6OwSuykj5N1HCisJy8V2KST9H0gzFN/jpwMLNefb4zTiNODzVKqrCAQmHMuQE9iGQBxSGNK1gD1fCPRDqXn8AnueofRrAPVB0K4BArWAbZTWjLZC8ldKGHwFC7536YoFCPj8SOvcDAmfYBmBfMcElhIYseTbhOFV1FzdDSxbFvIDmTY6Y9Qe0lL8D2LHULuBdIxo1B4SjdR/gtpDiL0huYEcMyi92UOcsy3k7vcxrxm/JHp4u/Yt0WW5rJ31sxg+dqTiykjVcsaZYULpaCL1sYvRUYpcCQebzToirmeR1EUeVZAaqaZGh8BZRxE1C8ILbjppmDYOlm9PQmzCXwIAAA== -->\n",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "createdAt": "2026-08-31T19:26:49Z",
+      "updatedAt": "2026-08-31T19:42:12Z",
+      "url": "https://github.com/Falconiere/toolu/pull/165#issuecomment-5483377990"
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5070366524,
+      "state": "COMMENTED",
+      "body": "🤖 AI Code Review — 2 inline comment(s). See the summary comment for the full verdict.",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "submittedAt": "2026-08-31T19:29:22Z",
+      "url": "https://github.com/Falconiere/toolu/pull/165#pullrequestreview-5070366524",
+      "commitId": "0cd50b100aab46b275e995ac49d77e5748cd1536"
+    },
+    {
+      "id": 5070408012,
+      "state": "COMMENTED",
+      "body": "🤖 AI Code Review — 2 inline comment(s). See the summary comment for the full verdict.",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "submittedAt": "2026-08-31T19:34:24Z",
+      "url": "https://github.com/Falconiere/toolu/pull/165#pullrequestreview-5070408012",
+      "commitId": "94fa997315be6dea3afe0bb61a5eec942e8caff2"
+    },
+    {
+      "id": 5070444069,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-08-31T19:38:57Z",
+      "url": "https://github.com/Falconiere/toolu/pull/165#pullrequestreview-5070444069",
+      "commitId": "8ffe9775b9f8a2d9724c6e94283cf61696fa0299"
+    },
+    {
+      "id": 5070444215,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-08-31T19:38:58Z",
+      "url": "https://github.com/Falconiere/toolu/pull/165#pullrequestreview-5070444215",
+      "commitId": "8ffe9775b9f8a2d9724c6e94283cf61696fa0299"
+    },
+    {
+      "id": 5070444362,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-08-31T19:38:59Z",
+      "url": "https://github.com/Falconiere/toolu/pull/165#pullrequestreview-5070444362",
+      "commitId": "8ffe9775b9f8a2d9724c6e94283cf61696fa0299"
+    },
+    {
+      "id": 5070444534,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-08-31T19:39:01Z",
+      "url": "https://github.com/Falconiere/toolu/pull/165#pullrequestreview-5070444534",
+      "commitId": "8ffe9775b9f8a2d9724c6e94283cf61696fa0299"
+    },
+    {
+      "id": 5070447292,
+      "state": "COMMENTED",
+      "body": "🤖 AI Code Review — 2 inline comment(s). See the summary comment for the full verdict.",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "submittedAt": "2026-08-31T19:39:22Z",
+      "url": "https://github.com/Falconiere/toolu/pull/165#pullrequestreview-5070447292",
+      "commitId": "8ffe9775b9f8a2d9724c6e94283cf61696fa0299"
+    },
+    {
+      "id": 5070447476,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "submittedAt": "2026-08-31T19:39:24Z",
+      "url": "https://github.com/Falconiere/toolu/pull/165#pullrequestreview-5070447476",
+      "commitId": "8ffe9775b9f8a2d9724c6e94283cf61696fa0299"
+    },
+    {
+      "id": 5070447644,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "submittedAt": "2026-08-31T19:39:25Z",
+      "url": "https://github.com/Falconiere/toolu/pull/165#pullrequestreview-5070447644",
+      "commitId": "8ffe9775b9f8a2d9724c6e94283cf61696fa0299"
+    },
+    {
+      "id": 5070447804,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "submittedAt": "2026-08-31T19:39:26Z",
+      "url": "https://github.com/Falconiere/toolu/pull/165#pullrequestreview-5070447804",
+      "commitId": "8ffe9775b9f8a2d9724c6e94283cf61696fa0299"
+    },
+    {
+      "id": 5070447913,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "submittedAt": "2026-08-31T19:39:27Z",
+      "url": "https://github.com/Falconiere/toolu/pull/165#pullrequestreview-5070447913",
+      "commitId": "8ffe9775b9f8a2d9724c6e94283cf61696fa0299"
+    },
+    {
+      "id": 5070465338,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-08-31T19:41:38Z",
+      "url": "https://github.com/Falconiere/toolu/pull/165#pullrequestreview-5070465338",
+      "commitId": "8ffe9775b9f8a2d9724c6e94283cf61696fa0299"
+    },
+    {
+      "id": 5070465494,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-08-31T19:41:39Z",
+      "url": "https://github.com/Falconiere/toolu/pull/165#pullrequestreview-5070465494",
+      "commitId": "a29e6c97379674323292578f9f0cfbffa00e375a"
+    }
+  ],
+  "bot": {
+    "comment": {
+      "id": 5483377990,
+      "url": "https://github.com/Falconiere/toolu/pull/165#issuecomment-5483377990",
+      "createdAt": "2026-08-31T19:26:49Z",
+      "updatedAt": "2026-08-31T19:42:12Z",
+      "author": "github-actions[bot]"
+    },
+    "verdict": {
+      "is_review_comment": true,
+      "state": "complete",
+      "complete": true,
+      "verdict": "approved",
+      "verdict_label": "merge-approved",
+      "findings": [],
+      "must_fix": []
+    }
+  },
+  "pages": {
+    "threads": 3,
+    "threadComments": 4,
+    "comments": 1,
+    "reviews": 7
+  }
+}

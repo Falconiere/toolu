@@ -1,0 +1,1315 @@
+{
+  "version": 1,
+  "collectedAt": "2026-09-20T02:16:24Z",
+  "repo": "Falconiere/comemory",
+  "number": 216,
+  "head": {
+    "sha": "faf36f31dcebdd28a31c32a09acf6fe10f872a60",
+    "verifiedAfterFanout": true,
+    "recollected": false
+  },
+  "pageSize": 2,
+  "pr": {
+    "number": 216,
+    "title": "refactor(store)!: build supported runtime queries with toolu-orm",
+    "url": "https://github.com/Falconiere/comemory/pull/216",
+    "author": "Falconiere",
+    "state": "MERGED",
+    "baseRefName": "main",
+    "headRefName": "raw-query-to-toolu-orm",
+    "headRefOid": "faf36f31dcebdd28a31c32a09acf6fe10f872a60",
+    "mergeable": "UNKNOWN",
+    "reviewDecision": "REVIEW_REQUIRED",
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-09-18T16:44:34Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/35370206707/job/105682123104",
+        "name": "review",
+        "startedAt": "2026-09-18T16:44:04Z",
+        "status": "COMPLETED",
+        "workflowName": "Code Review"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-09-18T16:44:34Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/35370207514/job/105682125009",
+        "name": "plan",
+        "startedAt": "2026-09-18T16:44:05Z",
+        "status": "COMPLETED",
+        "workflowName": "Release"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-09-18T16:50:05Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/35370206603/job/105682122899",
+        "name": "test",
+        "startedAt": "2026-09-18T16:44:04Z",
+        "status": "COMPLETED",
+        "workflowName": "Test"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-09-18T16:44:34Z",
+        "conclusion": "SKIPPED",
+        "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/35370207514/job/105682300285",
+        "name": "build-local-artifacts (${{ join(matrix.targets, ', ') }})",
+        "startedAt": "2026-09-18T16:44:35Z",
+        "status": "COMPLETED",
+        "workflowName": "Release"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-09-18T16:44:34Z",
+        "conclusion": "SKIPPED",
+        "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/35370207514/job/105682300136",
+        "name": "build-global-artifacts",
+        "startedAt": "2026-09-18T16:44:35Z",
+        "status": "COMPLETED",
+        "workflowName": "Release"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-09-18T16:44:34Z",
+        "conclusion": "SKIPPED",
+        "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/35370207514/job/105682300761",
+        "name": "host",
+        "startedAt": "2026-09-18T16:44:35Z",
+        "status": "COMPLETED",
+        "workflowName": "Release"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-09-18T16:44:34Z",
+        "conclusion": "SKIPPED",
+        "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/35370207514/job/105682301258",
+        "name": "publish-homebrew-formula",
+        "startedAt": "2026-09-18T16:44:35Z",
+        "status": "COMPLETED",
+        "workflowName": "Release"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-09-18T16:44:35Z",
+        "conclusion": "SKIPPED",
+        "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/35370207514/job/105682302812",
+        "name": "announce",
+        "startedAt": "2026-09-18T16:44:35Z",
+        "status": "COMPLETED",
+        "workflowName": "Release"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-09-18T16:44:35Z",
+        "conclusion": "SKIPPED",
+        "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/35370207514/job/105682303449",
+        "name": "custom-release-finalize",
+        "startedAt": "2026-09-18T16:44:35Z",
+        "status": "COMPLETED",
+        "workflowName": "Release"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-09-18T16:44:18Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Falconiere/comemory/runs/105682196650",
+        "name": "Opengrep OSS",
+        "startedAt": "2026-09-18T16:44:15Z",
+        "status": "COMPLETED",
+        "workflowName": ""
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-09-18T16:44:19Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Falconiere/comemory/runs/105682195833",
+        "name": "gitleaks",
+        "startedAt": "2026-09-18T16:44:15Z",
+        "status": "COMPLETED",
+        "workflowName": ""
+      }
+    ]
+  },
+  "threads": [
+    {
+      "id": "PRRT_kwDOSzYYFc6jy5_p",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/domains/graph/coactivate.rs",
+      "line": 24,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdah",
+          "databaseId": 4048148129,
+          "body": "**low** _(CORRECTNESS)_: The import of `memory_row` was removed but `memory_row` is still used at line 164 via `bump_access`. The function `bump_access` was moved to `memory_signals`, so the caller correctly imports `memory_signals` and calls `memory_signals::bump_access`. No defect — the import change is consistent with the call-site change at line 165.\n\n<!-- toolu-fp:9f320d8d4cd19d761bf7787e401e65c36ea1a19e -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:10Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148129"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTJ3i",
+          "databaseId": 4048330210,
+          "body": "Verified the import and call site together: src/domains/graph/coactivate.rs:165 calls memory_signals::bump_access, matching its new import. The finding itself confirms there is no defect. No code change needed.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:50:46Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048330210"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy5_u",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/orm.rs",
+      "line": 19,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdar",
+          "databaseId": 4048148139,
+          "body": "**high** _(PERFORMANCE)_: `prepare_cached` is called on every `execute`/`query_all`/`query_one`/`query_optional` invocation. For the per-row loop in `memory_signals::update_rank_scores` (L14-L22), this generates and caches a distinct SQL string per memory id, causing unbounded statement-cache growth and defeating the purpose of `prepare_cached`. The original code used a single `conn.prepare(\"UPDATE memories SET rank_score = ?1 WHERE id = ?2\")` outside the loop.\n\n<!-- toolu-fp:8568baf16240511af75425342e033eea30b41445 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:10Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148139"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTbQC",
+          "databaseId": 4048401410,
+          "body": "Fixed in efe5e09 — added orm::execute_many so batch callers generate one SQL template and prepare it once, then rebind every row in order. The prior SQL was already parameterized (IDs were not cached as literals), but this removes per-row builder/render/cache-lookup work. Two real SQLite tests cover rebinding, matched-row counts, native constraint errors, early exit, and caller rollback.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:59:36Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048401410"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy5_5",
+      "isResolved": true,
+      "isOutdated": true,
+      "path": "src/store/memory_signals.rs",
+      "line": null,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSda2",
+          "databaseId": 4048148150,
+          "body": "**high** _(PERFORMANCE)_: `update_rank_scores` generates a new SQL string and calls `prepare_cached` per memory id inside a loop. The original code prepared one statement and reused it. This is a regression from a single prepared statement to N distinct cached statements, each with a different bound id literal.\n\n<!-- toolu-fp:1f868598a3a3c1aa6c9c9aae9e36fda3262fed4e -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:10Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148150"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTbWG",
+          "databaseId": 4048401798,
+          "body": "Fixed in efe5e09 — memory rank updates now construct one generated UPDATE outside the loop and use orm::execute_many with (score, id) bindings. The existing positional zip and caller transaction semantics are preserved; the full 2,462-test suite passes.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:59:39Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048401798"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy5_9",
+      "isResolved": true,
+      "isOutdated": true,
+      "path": "src/store/code_row.rs",
+      "line": null,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSda9",
+          "databaseId": 4048148157,
+          "body": "**high** _(PERFORMANCE)_: `update_rank_scores` generates a new SQL string per (repo, path) pair inside a loop. The original code prepared one statement and reused it. Same regression pattern as `memory_signals::update_rank_scores`.\n\n<!-- toolu-fp:81e95cf256a36eb1c57a5f5db1a3602699a6864b -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:10Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148157"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTbad",
+          "databaseId": 4048402077,
+          "body": "Fixed in efe5e09 — code rank updates now generate and prepare one statement for the batch, rebinding (score, repo, path) for each pair. The saturated affected-row total is preserved. Real batch execution regressions and the full 2,462-test suite pass.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:59:42Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048402077"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6AB",
+      "isResolved": true,
+      "isOutdated": true,
+      "path": "src/store/migrate.rs",
+      "line": null,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdbD",
+          "databaseId": 4048148163,
+          "body": "**high** _(PERFORMANCE)_: `recompute_simhashes` generates a new `UpdateBuilder` SQL string per row inside a loop. The original code prepared one update statement and reused it. This is a regression from a single prepared statement to N distinct cached statements.\n\n<!-- toolu-fp:2ed096803eef2a6c58a44f506dc53328d2b89b82 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:10Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148163"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTbfB",
+          "databaseId": 4048402369,
+          "body": "Fixed in efe5e09 — simhash recomputation now constructs one generated UPDATE, prepares it once through execute_many, and rebinds (hash, native SQLite id) for each loaded row. This also removes the unnecessary native-to-ORM Value conversion. The historical migration matrix and full test suite pass.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:59:44Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048402369"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6AE",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/feedback.rs",
+      "line": 158,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdbL",
+          "databaseId": 4048148171,
+          "body": "**medium** _(CORRECTNESS)_: `event_counts` reads `SUM(CASE ...)` columns as `Option<i64>` (L173-L175) and unwraps with `.unwrap_or(0)`. The original code read them as plain `i64` because `COUNT(*)` guarantees at least one row. The ORM-generated query still produces one row, so the `Option` unwrap is harmless but the type change is unnecessary and could mask a future query regression.\n\n<!-- toolu-fp:9008a87caebb3b341f5ade6cb55340894ec5609a -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:11Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148171"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTJ9S",
+          "databaseId": 4048330578,
+          "body": "The Option<i64> decoders are unchanged from the base (e2f1ed17:src/store/feedback.rs, event_counts). COUNT(*) returns one row but SUM over an empty input is NULL, so the other three projections require Option. The real-database test event_counts_sums_verdicts_and_the_implicit_share_numerator checks the empty table returns (0, 0, 0, 0), then checks populated counts. Keeping the existing NULL handling.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:50:49Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048330578"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6AK",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/edge_fts.rs",
+      "line": 251,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdbW",
+          "databaseId": 4048148182,
+          "body": "**medium** _(CORRECTNESS)_: `matches_any` uses `.columns_typed(&[])` (L252) with an empty column list, then adds a literal `1` via `.column_expr(\"1\", \"present\")`. The resulting SQL is `SELECT 1 AS present FROM edge_fts WHERE ...`. The row decoder reads `row.get::<_, i64>(0)` (L258), which matches. However, the original query was `SELECT 1 FROM edge_fts WHERE edge_fts MATCH ?1 LIMIT 1` — the ORM version adds an unnecessary alias and an empty typed-column list that may produce a trailing comma in some builder implementations.\n\n<!-- toolu-fp:aeb0501de1ce276a41bd5be89074886ebcf4acdd -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:11Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148182"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTKCQ",
+          "databaseId": 4048330896,
+          "body": "Inspected the resolved toolu-orm-query 0.6.0 SELECT renderer: it joins actual projection items, so an empty typed-column slice contributes no comma. This query renders SELECT 1 AS \"present\" FROM \"edge_fts\" WHERE \"edge_fts\" MATCH ?1 LIMIT ?2 (bound limit 1). The alias does not change the value or decoder. All 18 edge_fts real-database tests passed on this commit, including empty/malformed MATCH handling. No defect found.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:50:52Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048330896"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6AM",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/edge_fts.rs",
+      "line": 277,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdbc",
+          "databaseId": 4048148188,
+          "body": "**medium** _(CORRECTNESS)_: `run_match` uses `bm25(\"edge_fts\", &[])` with an empty weight slice. The original SQL used `bm25(edge_fts)` with no arguments (default weights). The `fts5::bm25` function with an empty slice may produce `bm25(edge_fts, 0.0)` instead of `bm25(edge_fts)`, which changes the BM25 score computation by setting the first column weight to 0.0 rather than using the default 1.0 for all columns.\n\n<!-- toolu-fp:18684131ea1657a4666b3389fe4c15a4d1af03ee -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:11Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148188"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTKGu",
+          "databaseId": 4048331182,
+          "body": "Verified toolu-orm-core 0.6.0 src/fts5/aux_fn/score.rs: empty weights produce exactly bm25(\"edge_fts\"); extra arguments are emitted only while iterating actual weights. The upstream rendering test also checks the empty-weight form. All 18 edge_fts tests passed. Keeping the default-weight builder call.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:50:54Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048331182"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6AS",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/document_fts.rs",
+      "line": 81,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdbl",
+          "databaseId": 4048148197,
+          "body": "**medium** _(CORRECTNESS)_: `search` uses `bm25(col::document_id.table, &[])` with an empty weight slice. Same issue as `edge_fts::run_match`: the original SQL used `bm25(document_fts)` with default weights; an empty slice may produce `bm25(document_fts, 0.0)`, zeroing the first column weight.\n\n<!-- toolu-fp:5c23cd3c161c05099de6bc43a69a7ce188fe314a -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:11Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148197"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTKLw",
+          "databaseId": 4048331504,
+          "body": "Verified the resolved FTS renderer emits -bm25(\"document_fts\") AS \"score\" for this projection, with no weight arguments. This preserves the former default weights and score sign. All four document_fts tests passed, including the real-data density ranking regression at src/store/tests/document_fts.rs:82. No change needed.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:50:57Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048331504"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6AY",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/fts.rs",
+      "line": 358,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdbr",
+          "databaseId": 4048148203,
+          "body": "**medium** _(CORRECTNESS)_: `search_code` converts f32 BM25 weights to f64 via `to_string()` then `parse::<f64>()` (L349-L357). This round-trip through decimal strings can change the binary value for some f32 literals (e.g., 1.5_f32 → \"1.5\" → 1.5_f64 is exact, but 0.1_f32 → \"0.1\" → 0.1_f64 is not the same binary value). The original code interpolated the f32 values directly into the SQL string with `format!(\"...\", w_sym, w_snip, w_path)`, preserving the exact f32 bit pattern.\n\n<!-- toolu-fp:8b1e25e1d0ab3e7cb34f468089b6c26770284075 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:11Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148203"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTKQd",
+          "databaseId": 4048331805,
+          "body": "The original format! uses f32 Display, which emits decimal text (0.1_f32 becomes \"0.1\"); it does not preserve the binary f32 bit pattern in SQLite. Direct widening instead gives approximately 0.10000000149011612_f64 and changes BM25 scores. The current string-to-f64 conversion deliberately preserves the original SQL decimal literal. src/store/tests/fts.rs:60 compares result score bits with independent original-style SQLite SQL for three fractional weight sets; it passes. Keeping this compatibility conversion.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:50:59Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048331805"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6Ad",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/vector.rs",
+      "line": 43,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdb0",
+          "databaseId": 4048148212,
+          "body": "**medium** _(CORRECTNESS)_: `is_loaded` uses `SelectBuilder::raw()` which may produce `SELECT vec_version() AS version` — a valid query. However, the original code used `conn.query_row(\"SELECT vec_version()\", [], |r| r.get::<_, String>(0))` with no alias. If `SelectBuilder::raw()` generates a different SQL shape (e.g., adds a `FROM` clause or wraps the expression), this could break the vec0 extension probe.\n\n<!-- toolu-fp:a88caff16206cb99f19ddd61d360c9fc9ff9dce4 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:11Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148212"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTKVX",
+          "databaseId": 4048332119,
+          "body": "Checked SelectBuilder::raw in the resolved query crate: it sets is_raw and the renderer omits FROM in that mode. This produces SELECT vec_version() AS \"version\", and the alias does not affect positional decoding. The vector extension probe test at src/store/tests/vector.rs:250 passes, as do all 10 vector tests. No query-shape regression.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:51:02Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048332119"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6Ah",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/vector.rs",
+      "line": 194,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdb7",
+          "databaseId": 4048148219,
+          "body": "**medium** _(CORRECTNESS)_: `knn_code` constructs a `Column::<Real>::new(\"code_vec\", \"distance\")` for the vec0 `distance` hidden column. The original SQL used `v.distance` directly. If the ORM builder qualifies this as `code_vec.distance` or wraps it incorrectly, the vec0 KNN query may fail or return wrong results. The `k` column filter (L248) uses the same pattern — vec0's `k` is a special hidden column that must be referenced exactly as `k` or `code_vec.k`.\n\n<!-- toolu-fp:76ec54f491fe2dd11bf7551302d6b632f46cbc2b -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:11Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148219"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTKbz",
+          "databaseId": 4048332531,
+          "body": "Verified Column::qualified quotes table and column separately. The filters render \"code_vec\".\"embedding\" MATCH ?1 AND \"code_vec\".\"k\" = ?2; the distance expression uses the same valid table qualification. All 10 vector tests passed, including real vec0 KNN repo/language filtering at src/store/tests/vector.rs:122. The hidden columns are accepted by SQLite/vec0.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:51:05Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048332531"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6Al",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/memory_row.rs",
+      "line": 362,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdcF",
+          "databaseId": 4048148229,
+          "body": "**high** _(CORRECTNESS)_: The functions `update_rank_scores` and `bump_access` were removed from `memory_row.rs` and moved to the new `memory_signals.rs` module. Any caller that imported these from `crate::store::memory_row` will fail to compile. The diff does not show updates to the call sites in `domains/`.\n\n<!-- toolu-fp:abcb5374cc42b6f46fd4c2d4a011af9348b93dfc -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:11Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148229"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTKg3",
+          "databaseId": 4048332855,
+          "body": "Both callers are updated in this PR: src/domains/graph/memory_rank.rs:128 calls memory_signals::update_rank_scores and src/domains/graph/coactivate.rs:165 calls memory_signals::bump_access. Their imports were updated, and store.rs declares the new module. The full all-features suite compiled and passed before publishing this commit. No stale caller remains.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:51:07Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048332855"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6Ap",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/edges.rs",
+      "line": 376,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdcQ",
+          "databaseId": 4048148240,
+          "body": "**medium** _(CORRECTNESS)_: `memory_co_citation_edges` was NOT converted to the ORM and remains raw SQL. The function `fetch_weighted_edges` was deleted (L358-L368 removed), but `memory_co_citation_edges` now inlines the query_map/collect logic. This is intentional per the PR brief ('keeping unsupported operations in raw SQL'), but the inconsistency with `memory_direct_relation_edges` (which WAS converted) is notable.\n\n<!-- toolu-fp:3cb8af0925ec031d0bf43912ec58eaf409ab5b3b -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:11Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148240"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTKlj",
+          "databaseId": 4048333155,
+          "body": "This retained SQL is intentional and tracked in docs/guides/runtime-orm.md: the co-citation query needs GROUP BY and a compound self-join with aliases, which the resolved ORM cannot express (Falconiere/toolu-orm#109 and #111). memory_direct_relation_edges is a different query that the builders support. Converting supported queries within mixed files follows the requested scope; keeping the unsupported set-based query preserves its behavior.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:51:10Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048333155"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6Ar",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/edges.rs",
+      "line": 443,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdcW",
+          "databaseId": 4048148246,
+          "body": "**low** _(CORRECTNESS)_: `file_neighbor_rows` delegates to the new `edges_neighbors` module. The `NEIGHBOR_SQL` static and `FILE_PREFIX`/`ID_BODY_START` constants were moved there. The `pub(crate)` visibility of `edges_neighbors::file_neighbor_rows` matches the original `pub(crate)` visibility of `edges::file_neighbor_rows`, so callers in `domains::graph::neighbors` should still compile.\n\n<!-- toolu-fp:1d8563c75018524a72d0886fd2a12de9db21b7c4 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:11Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148246"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTKrb",
+          "databaseId": 4048333531,
+          "body": "Verified the delegation and visibility: edges::file_neighbor_rows remains pub(crate), delegates to the declared edges_neighbors module, and the graph neighbors caller still uses the same API. The full suite compiled and passed before this commit was published. The finding describes the intended extraction and identifies no broken caller; no change needed.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:51:13Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048333531"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6Au",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/stats_counts.rs",
+      "line": 55,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdcb",
+          "databaseId": 4048148251,
+          "body": "**medium** _(SECURITY)_: `count_table` accepts a `&'static str` table name and passes it to `SelectBuilder::new(table)`. The original code interpolated `table` directly into a `format!(\"SELECT COUNT(*) FROM {table}\")` string. If `SelectBuilder::new` does not quote/validate the table name, this is safe because the parameter is `&'static str` (compile-time constant). However, the guardrails.config.json convention requires that SQL identifiers be quoted; verify that `SelectBuilder::new` properly quotes the table name.\n\n<!-- toolu-fp:ed5b2dea86070456405e90494ba3f3ec8a2b567a -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:11Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148251"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTKxf",
+          "databaseId": 4048333919,
+          "body": "Verified toolu-orm-query SelectBuilder::to_count_sql_for passes the table through the dialect identifier-quoting function, so count_table generates SELECT COUNT(*) FROM \"table_name\". The callers supply the fixed edges and repo_marker tables (src/domains/maintenance/stats.rs). All four store stats-count tests passed. The identifier is quoted, as requested.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:51:16Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048333919"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6Az",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/orm.rs",
+      "line": 1,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdcj",
+          "databaseId": 4048148259,
+          "body": "**low** _(CONVENTION ADHERENCE)_: guardrails.config.json `fileSize.max` is 300 lines. `orm.rs` is 66 lines — within the limit. However, many converted store files (e.g., `edges.rs` at ~460 lines, `memory_meta.rs` at ~340 lines) now exceed the 300-line limit after the ORM conversion added verbosity. The guardrails config does not have overrides for these files.\n\n<!-- toolu-fp:3987a7692b3412dae6af2aa489b835e5f80eb42a -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:11Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148259"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTK1r",
+          "databaseId": 4048334187,
+          "body": "AGENTS.md Binding Rule 4 defines the ceiling as 300 code lines, excluding blank lines and comments; physical file length is not the metric. The configured guardrails count passes for orm.rs, edges.rs, and memory_meta.rs. Re-ran bash scripts/guardrails/run.sh successfully during this review cycle. No size override is needed.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:51:18Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048334187"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6A1",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/edges.rs",
+      "line": 1,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdcn",
+          "databaseId": 4048148263,
+          "body": "**low** _(CONVENTION ADHERENCE)_: guardrails.config.json `fileSize.max` is 300 lines. The post-change `edges.rs` is approximately 460 lines, exceeding the limit. No override exists in the config for this file.\n\n<!-- toolu-fp:2315e4b168eb98c5a52c3a5761864cd578a495d6 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:11Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148263"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTK6r",
+          "databaseId": 4048334507,
+          "body": "The repository ceiling excludes blank lines and comments (AGENTS.md Binding Rule 4). edges.rs is below 300 code lines under the configured guardrail; its physical length includes extensive API documentation. bash scripts/guardrails/run.sh passed in this review cycle. Keeping the module within the existing policy without an override.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:51:20Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048334507"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6A3",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/tests/edges_retrieval.rs",
+      "line": 343,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSdcu",
+          "databaseId": 4048148270,
+          "body": "**medium** _(CORRECTNESS)_: The test inserts edges for files[0] and files[16_380] but the working set passed to co_change_weight includes all 16,381 files. The assertion only checks that the call succeeds and returns 18.0, but the test name claims it verifies 'reuses bindings for large working sets'. There is no assertion that bindings are actually reused or that the query handles the parameter count correctly — only that it doesn't error. This is a weak test that could pass even if bindings are not shared across orientations.\n\n```suggestion\n    let files: Vec<String> = (0..16_381).map(|n| format!(\"file:r:{n}.rs\")).collect();\n    // Verify the query actually executes with the full working set by checking\n    // that the result is deterministic and matches the expected weight sum.\n    let weight = co_change_weight(&conn, fid, &files).expect(\"co_change_weight\");\n    assert_eq!(weight, 18.0, \"weight must be sum of co_changed edges for fid\");\n```\n\n<!-- toolu-fp:6224e8074d2c1f8462d20bb10799ec055973d41a -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:11Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148270"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTbjs",
+          "databaseId": 4048402668,
+          "body": "Fixed in efe5e09 — renamed the regression to co_change_weight_handles_large_working_sets and documented why 16,381 paths are material: binding both orientations independently needs 32,767 variables, above bundled SQLite's 32,766 limit. The test failed before reusable placeholders were restored; the asserted 18.0 also verifies both edge directions contribute. It passes in the full suite.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:59:47Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048402668"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6BF",
+      "isResolved": true,
+      "isOutdated": true,
+      "path": "src/store/schema_core.rs",
+      "line": null,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xSddB",
+          "databaseId": 4048148289,
+          "body": "**nit** _(DOC/COMMENT ACCURACY)_: The updated doc comment says the structs are 'shared by migration generation and runtime query builders', but the previous comment explicitly stated the generated column constants and query builders 'are unused by comemory's own code'. The new comment is accurate for the post-refactor state, but the file still only contains schema declarations — the actual runtime query builders live in orm.rs and the individual store modules. The comment could be misleading by implying this file contains runtime query logic.\n\n<!-- toolu-fp:b48f426e586310ad226a7ea95eb760f341e37f4b -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T15:30:11Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048148289"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTbpb",
+          "databaseId": 4048403035,
+          "body": "Fixed in efe5e09 — clarified that these attributes generate schema metadata, column constants, and query constructors; runtime helpers in other modules consume those generated APIs. The comment now explicitly distinguishes declarations from execution.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T15:59:49Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048403035"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jzmXp",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/code_row.rs",
+      "line": 296,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xThzC",
+          "databaseId": 4048428226,
+          "body": "**blocker** _(CORRECTNESS)_: `update_rank_scores` builds a template query with `.set(&c::rank_score, 0.0)` and `.filter(c::path.eq(\"\"))`, then calls `execute_many` with `(score, repo, path)` tuples. The template's placeholder shape is `(rank_score, repo, path)` — three parameters — but each row tuple provides only `(score, repo, path)`. The `set` value `0.0` is a literal in the SQL, not a placeholder, so the generated SQL has only two placeholders (`repo` and `path`). The row tuples supply three values, causing a parameter-count mismatch at runtime.\n\n<!-- toolu-fp:1b09a6a43d2f8761e0d070fb409c733b1b2783c4 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T16:03:18Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048428226"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTnqF",
+          "databaseId": 4048452229,
+          "body": "Verified against the published toolu-orm-query 0.7.0 renderer: update.rs:40–44 records `.set` as SetClause::Value, and :75–78 emits a numbered placeholder for every such value. `.set_expr` is the separate literal-expression API; it is not used here.\n\nA standalone executable using exactly 0.7.0 rendered this template as:\n```sql\nUPDATE \"code_symbols\" SET \"rank_score\" = ?1 WHERE \"code_symbols\".\"repo\" = ?2 AND \"code_symbols\".\"path\" = ?3\n```\nIt returned three bindings `[Real(0.0), Text(\"comemory\"), Text(\"\")]`, matching `(score, repo, path)`. Reran 131 rank/simhash/bridge/migration tests on efe5e09: all passed. There is no parameter-count mismatch; keeping the bound batch update.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T16:06:17Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048452229"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jzmXw",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/memory_signals.rs",
+      "line": 14,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xThzJ",
+          "databaseId": 4048428233,
+          "body": "**blocker** _(CORRECTNESS)_: `update_rank_scores` builds a template query with `.set(&memories::rank_score, 0.0)` and `.filter(memories::id.eq(\"\"))`, then calls `execute_many` with `(score, id)` tuples. The `set` value `0.0` is a literal, not a placeholder, so the generated SQL has only one placeholder (`id`). The row tuples supply two values, causing a parameter-count mismatch at runtime.\n\n<!-- toolu-fp:b982b7d6e1d27ac2c4682cfcc70171ee33a6b914 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T16:03:18Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048428233"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTnuT",
+          "databaseId": 4048452499,
+          "body": "The numeric `.set` value is bound, not interpolated. In published toolu-orm-query 0.7.0, update.rs:75–78 renders every SetClause::Value with dialect.param(set_idx). A standalone executable on that release produced:\n```sql\nUPDATE \"memories\" SET \"rank_score\" = ?1 WHERE \"memories\".\"id\" = ?2\n```\nThe returned bindings were `[Real(0.0), Text(\"\")]`, exactly the two slots replaced by `(score, id)`. All 131 rank/simhash/bridge/migration tests passed on this commit, including actual memory rank materialization. Keeping the parameterized template.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T16:06:19Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048452499"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jzmX0",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/migrate.rs",
+      "line": 283,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xThzR",
+          "databaseId": 4048428241,
+          "body": "**blocker** _(CORRECTNESS)_: `recompute_simhashes` builds an update template with `.set(simhash_column, 0_i64)` and `.filter(id_column.eq(Value::Null))`, then calls `execute_many` with `(hash, id)` tuples. The `set` value `0_i64` is a literal, not a placeholder, so the generated SQL has only one placeholder (the id filter). The row tuples supply two values, causing a parameter-count mismatch at runtime.\n\n<!-- toolu-fp:c9ccc8a045680f0b203b0c0a1c58fe365a042d49 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T16:03:18Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048428241"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xTnys",
+          "databaseId": 4048452780,
+          "body": "Verified the actual 0.7.0 generated SQL with a standalone executable:\n```sql\nUPDATE \"memories\" SET \"simhash\" = ?1 WHERE \"memories\".\"id\" = ?2\n```\nThe template returns two bindings `[Integer(0), Null]`; execute_many replaces both with `(hash, id)`. `.set` emits a bound value (toolu-orm-query src/update.rs:40–44,75–78), and `eq(Value::Null)` keeps the second placeholder. All 131 targeted rank/simhash/bridge/migration tests passed on efe5e09, including the historical upgrade matrix. The alleged one-placeholder statement is not generated; no change needed.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T16:06:22Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048452780"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6j0G2N",
+      "isResolved": true,
+      "isOutdated": true,
+      "path": "docs/guides/runtime-orm.md",
+      "line": null,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xUS63",
+          "databaseId": 4048629431,
+          "body": "**medium** _(MIGRATION WARNINGS)_: The `scoped_count` API signature change is documented as a future breaking change, but the diff does not show the actual signature change in `src/store/stats_counts.rs`. If the change is already in this PR, the doc is stale; if it is not, callers will break silently on the next release without an in-session deprecation warning.\n\n```suggestion\n// TODO: emit deprecation warning when scoped_count is called with old signature\n```\n\n<!-- toolu-fp:e30f5b63c6278a22246bedf70252ee91c3b10f44 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T16:30:17Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048629431"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xUmrI",
+          "databaseId": 4048710344,
+          "body": "Fixed in faf36f31 — the doc said \"the next minor release changes ...\", but the new `(conn, Corpus, repo)` signature is already in this diff (src/store/stats_counts.rs:33). Reworded to say the conversion makes the change here and that it ships in the next release. No deprecation shim: `scoped_count` is `pub` inside the crate only (no external caller can hold the old signature), and the old one took `&'static str` SQL text, which is exactly what this PR removes from the store boundary.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T16:41:27Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048710344"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6j0G2h",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/domains/graph/imports.rs",
+      "line": 68,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xUS7S",
+          "databaseId": 4048629458,
+          "body": "**high** _(CORRECTNESS)_: The new `ImportCollector` preserves first-seen order, but the original code deduplicated with a `HashSet` and collected into a `Vec` from the raw (order-preserving) `for_each_match` output. The old `rust_imports` appended in pattern-match order, and `ts_js_imports` appended in AST traversal order. The new `ast_imports` feeds the same `ImportCollector` for all languages, but the Rust case now uses `ast_imports` with `RUST_PATTERNS` — the old `rust_imports` had its own `for_each_match` loop that appended in pattern-match order. The new code's order may differ from the old code's order for Rust imports, which could change downstream behavior that depends on import order (e.g., module resolution priority).\n\n<!-- toolu-fp:4e6cf45e3da2f323bdda43e3c286b3e91a73d593 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T16:30:17Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048629458"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xUmtQ",
+          "databaseId": 4048710480,
+          "body": "Won't fix — the order is unchanged. The old `rust_imports` used the same `for_each_match(Rust, source, patterns, ...)` helper over the same four-row pattern table, in the same order; `ast_imports` is that loop with the table lifted to `RUST_PATTERNS` (src/domains/graph/imports.rs:232-237) and the same helper called at line 279. The only move is where dedup happens: before, `extract_imports` post-filtered the raw `Vec` with `!m.is_empty() && seen.insert(m.clone())`; now `ImportCollector::push` applies the identical predicate at push time. Both keep first-seen order, and `for_each_match` traversal is untouched, so Rust import order is byte-identical. `tests/graph/imports.rs` pins the extraction order and passes.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T16:41:28Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048710480"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6j0G2o",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/domains/code/ast/extractor.rs",
+      "line": 72,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xUS7b",
+          "databaseId": 4048629467,
+          "body": "**medium** _(CORRECTNESS)_: The `compiled` function uses a single `[OnceLock; 5]` array indexed by match arm order (Rust=0, Tsx=1, JavaScript=2, Python=3, Go=4). The `Lang::Typescript` arm calls `pattern_cache::cached(&CELLS[1], Tsx, ...)` and `Lang::Javascript` calls `&CELLS[2]` with `JavaScript`. This is correct for the current `Lang` enum order, but if the enum variants are reordered or a new variant is inserted, the indices will silently map to the wrong cache slot, causing cross-language pattern contamination or panics. The original code used separate named statics per language, which was immune to enum reordering.\n\n<!-- toolu-fp:cf395c944753b3a5573c8598dee4e6c7969918be -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T16:30:17Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048629467"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xUmvz",
+          "databaseId": 4048710643,
+          "body": "Won't fix — the stated failure mode cannot happen. The `CELLS` indices are literals inside match arms selected by variant *name*, not by discriminant (`Lang::Rust => cached(&CELLS[0], Rust, ...)`, src/domains/code/ast/extractor.rs:71-77). Reordering `Lang`'s variants moves no arm and changes no index, and the grammar is passed next to the index in the same arm, so a slot can never be paired with another language's parser. Inserting a variant does not fail silently either: the match is exhaustive over `Lang`, so a new variant is a compile error until an arm is added, and a literal `CELLS[5]` on a 5-element array is a compile-time out-of-bounds error, not a runtime one. Deriving the index (`CELLS[lang as usize]`) would actually weaken that — the bound check would move to runtime.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T16:41:30Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048710643"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6j0G2u",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/config/env.rs",
+      "line": 90,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xUS7k",
+          "databaseId": 4048629476,
+          "body": "**low** _(CONVENTION ADHERENCE)_: guardrails.config.json `functionSize.max` is 100 lines. The new `apply_override` function is 10 lines — well within the limit. However, the refactored `apply_retrieval_env` method grew from ~30 lines to ~60 lines due to the verbose `apply_override` call pattern. The method is still under 100 lines, so no violation. No finding.\n\n<!-- toolu-fp:07943f9d0b455c9f0170703a3b0b3052c5f19868 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T16:30:17Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048629476"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xUmyV",
+          "databaseId": 4048710805,
+          "body": "No change — the comment's own conclusion is \"No finding\": `apply_override` is 10 lines and `apply_retrieval_env` stays under the `functionSize.max` of 100 in guardrails.config.json. `scripts/guardrails-check.sh` passes on this diff. Resolving as no-op.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T16:41:31Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048710805"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6j0G25",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/tests/fts.rs",
+      "line": 96,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xUS7w",
+          "databaseId": 4048629488,
+          "body": "**medium** _(CORRECTNESS)_: The test hardcodes a leading `0.0` weight in the BM25 call, which does not match the ORM-generated query that uses `bm25(code_fts, w_sym, w_snip, w_path)` with three weights. The expected SQL should use the same three-argument form as the ORM to validate the actual query shape.\n\n```suggestion\n            \"SELECT symbol_id, bm25(code_fts, {}, {}, {}) AS score \\\n```\n\n<!-- toolu-fp:3dffd7fecef30cd7d77da8775b6db66c8dc589e1 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T16:30:18Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048629488"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xUm1E",
+          "databaseId": 4048710980,
+          "body": "Won't fix — the four-weight form is the correct one. `code_fts` has four columns (`symbol_id` unindexed, `symbol`, `snippet`, `path_tokens`; src/store/schema_code.rs:71-82), and FTS5 `bm25()` takes one weight per column, so the ORM path builds `[0.0, w_sym, w_snip, w_path]` (src/store/fts.rs:350) — the leading `0.0` is the `symbol_id` column, not a stray argument. The test's `bm25(code_fts, 0.0, {}, {}, {})` mirrors that exactly, which is the point of the differential check: `store::fts::tests::fractional_code_weights_preserve_sqlite_score_bits` compares the ORM result against this independent SQLite query and passes. A three-weight call would be `wrong number of arguments to function bm25()`.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T16:41:33Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048710980"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6j0G3B",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/tests/fts.rs",
+      "line": 98,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xUS8A",
+          "databaseId": 4048629504,
+          "body": "**medium** _(CORRECTNESS)_: The format arguments supply three weights but the SQL template has four placeholders (the leading `0.0` plus three `{}`). This causes a format argument count mismatch at runtime — the test will panic when it reaches this line.\n\n<!-- toolu-fp:9d60a585e26556314f54111d09c51e8f881b2eb4 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T16:30:18Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048629504"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xUm3j",
+          "databaseId": 4048711139,
+          "body": "Won't fix — there is no argument mismatch. The format string has three `{}` placeholders and three arguments (`weights.0`, `weights.1`, `weights.2`); the leading `0.0` is literal SQL text inside the string, not a placeholder (src/store/tests/fts.rs:94-98). Rust checks `format!` arity at compile time, so a real mismatch would fail the build rather than panic at runtime — the crate compiles and `store::fts::tests::fractional_code_weights_preserve_sqlite_score_bits` passes.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T16:41:34Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048711139"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6j0G3H",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "src/store/tests/edges_retrieval.rs",
+      "line": 367,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzYYFc7xUS8J",
+          "databaseId": 4048629513,
+          "body": "**low** _(CORRECTNESS)_: The expected weight 18.0 is the sum of the two inserted edge weights (7 + 11). However, `co_change_weight` sums co-change affinity across the working set, which includes all 16,381 file IDs. The test inserts edges only for `files[0]` and `files[16_380]`, so the sum should indeed be 18.0. But the test does not verify that the function correctly handles the large parameter count — it only checks the final sum, which could be computed incorrectly for the non-edge files without detection.\n\n<!-- toolu-fp:b9f26542a5775e89cd64d398bfe0c623a1c266a6 -->",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-09-18T16:30:18Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048629513"
+        },
+        {
+          "id": "PRRC_kwDOSzYYFc7xUm6Y",
+          "databaseId": 4048711320,
+          "body": "Fixed in faf36f31 — added a second assertion so the test proves edgeless IDs contribute nothing: the same working set minus the two endpoints (`&files[1..16_380]`, still 16,379 bound IDs) must sum to `0.0`. That is the part the single `18.0` check left implicit, and it is what would catch a placeholder-reuse bug that pulled in unrelated rows. Test passes.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-09-18T16:41:35Z",
+          "url": "https://github.com/Falconiere/comemory/pull/216#discussion_r4048711320"
+        }
+      ]
+    }
+  ],
+  "comments": [
+    {
+      "id": 5732242131,
+      "body": "<img src=\"https://raw.githubusercontent.com/falconiere/toolu-ghactions/main/code-review/assets/logo.png\" width=\"20\" align=\"left\"> **Toolu — Code Review**\n**AI Code Review finished in 8s** —— [View job](https://github.com/Falconiere/comemory/actions/runs/35370206707)\n\n---\n### Code Review — `raw-query-to-toolu-orm`\n\n- [x] Reviewed 2-file diff — verdict set\n\n**Verdict:** ✅ Approved   \n### Changes since last review\n\n✅ Resolved (2)\n- `docs/guides/runtime-orm.md:94`\n- `src/store/tests/edges_retrieval.rs:367`\n\n🔁 Still open (0)\n\n⚠️ New (0)\n\n\n### Review Plan\nReviewing 2 files: 1 docs-only (runtime-orm.md), 1 test-only (edges_retrieval.rs). Docs: check DOC/COMMENT ACCURACY, MIGRATION WARNINGS. Tests: check CORRECTNESS, TIGHT ASSERTIONS, TEST COVERAGE.\n\n### Findings (0)\n\n_No findings._\n\n### Coverage\n\nreviewed: 2 · excluded: 1 · carried: 82\n\n\n<details><summary>📜 Review history (5 passes)</summary>\n\n| Pass | Commit | Verdict | New | Open | Resolved |\n| --- | --- | --- | --- | --- | --- |\n| 1 | `a6714d2` | changes | 20 | 0 | 0 |\n| 2 | `efe5e09` | changes | 3 | 0 | 20 |\n| 3 | `efe5e09` | approved | 0 | 0 | 0 |\n| 4 | `5872b3c` | changes | 7 | 0 | 0 |\n| 5 | `faf36f3` | approved | 0 | 0 | 2 |\n\n</details>\n\n`merge-approved`\n\n<!-- toolu-review-state:v1 H4sIAAAAAAAAA6XS3WoDIRAF4HeZawv+7Orqq4RQRh2zC6mG1SSUkHcvGyjdpYUEejk4no8Dc4MaRvpAcNBKOZ7fZrpMdH2rDRsBgwvNdSoZnGCQphynfKjgdnsG41RbmT/B7W5QxyUAtRFdlMCgVXDCDNZ0fSf6R0qcQgMHYcR8oAoMQjnnZe8Gma7gJGdQTpTBcQYz1XK8UHwMrTQ8Lgv3O/umKFFP3G4oo6x9iVJ/SvKHUs8k3cm1hKfTXJaQX9SzUutO/WCkV2EjWS5e62SeQGYFJUxKJ7WFBm3/U0muK+2Xl+WMKL5vSBED+RjlgEoEJZFbDEknEjwNRqLmsPrZZiJwoGzSSgyWfKcCJY6Ra2O08V7q6HnyljAm7OD+BWGu9T/MAgAA -->\n",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "createdAt": "2026-09-18T15:29:29Z",
+      "updatedAt": "2026-09-18T16:44:29Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#issuecomment-5732242131"
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5249550039,
+      "state": "COMMENTED",
+      "body": "🤖 AI Code Review — 20 inline comment(s). See the summary comment for the full verdict.",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "submittedAt": "2026-09-18T15:30:10Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249550039",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249791325,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:50:47Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249791325",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249791821,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:50:49Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249791821",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249792233,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:50:52Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249792233",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249792569,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:50:54Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249792569",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249792939,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:50:57Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249792939",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249793352,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:51:00Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249793352",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249793714,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:51:02Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249793714",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249794128,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:51:05Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249794128",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249794495,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:51:07Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249794495",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249794849,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:51:10Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249794849",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249795309,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:51:13Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249795309",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249795747,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:51:16Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249795747",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249796062,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:51:18Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249796062",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249796409,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:51:21Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249796409",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249878299,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:59:37Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249878299",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249878729,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:59:39Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249878729",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249879059,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:59:42Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249879059",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249879398,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:59:44Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249879398",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249879758,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:59:47Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249879758",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249880096,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T15:59:49Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249880096",
+      "commitId": "a6714d295432074606ceafb9aea78722370cb09b"
+    },
+    {
+      "id": 5249910077,
+      "state": "COMMENTED",
+      "body": "🤖 AI Code Review — 3 inline comment(s). See the summary comment for the full verdict.",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "submittedAt": "2026-09-18T16:03:18Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249910077",
+      "commitId": "efe5e0916e4c1e6d08e9385481d0c4bff88bd64e"
+    },
+    {
+      "id": 5249938834,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T16:06:17Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249938834",
+      "commitId": "efe5e0916e4c1e6d08e9385481d0c4bff88bd64e"
+    },
+    {
+      "id": 5249939284,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T16:06:19Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249939284",
+      "commitId": "efe5e0916e4c1e6d08e9385481d0c4bff88bd64e"
+    },
+    {
+      "id": 5249939648,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T16:06:22Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5249939648",
+      "commitId": "efe5e0916e4c1e6d08e9385481d0c4bff88bd64e"
+    },
+    {
+      "id": 5250146748,
+      "state": "COMMENTED",
+      "body": "🤖 AI Code Review — 7 inline comment(s). See the summary comment for the full verdict.",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "submittedAt": "2026-09-18T16:30:17Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5250146748",
+      "commitId": "5872b3ce51ceaf4804713a3615abbeb319547131"
+    },
+    {
+      "id": 5250241980,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T16:41:27Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5250241980",
+      "commitId": "5872b3ce51ceaf4804713a3615abbeb319547131"
+    },
+    {
+      "id": 5250242158,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T16:41:28Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5250242158",
+      "commitId": "5872b3ce51ceaf4804713a3615abbeb319547131"
+    },
+    {
+      "id": 5250242341,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T16:41:30Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5250242341",
+      "commitId": "5872b3ce51ceaf4804713a3615abbeb319547131"
+    },
+    {
+      "id": 5250242543,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T16:41:31Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5250242543",
+      "commitId": "5872b3ce51ceaf4804713a3615abbeb319547131"
+    },
+    {
+      "id": 5250242725,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T16:41:33Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5250242725",
+      "commitId": "5872b3ce51ceaf4804713a3615abbeb319547131"
+    },
+    {
+      "id": 5250242892,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T16:41:34Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5250242892",
+      "commitId": "5872b3ce51ceaf4804713a3615abbeb319547131"
+    },
+    {
+      "id": 5250243087,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-09-18T16:41:35Z",
+      "url": "https://github.com/Falconiere/comemory/pull/216#pullrequestreview-5250243087",
+      "commitId": "5872b3ce51ceaf4804713a3615abbeb319547131"
+    }
+  ],
+  "bot": {
+    "comment": {
+      "id": 5732242131,
+      "url": "https://github.com/Falconiere/comemory/pull/216#issuecomment-5732242131",
+      "createdAt": "2026-09-18T15:29:29Z",
+      "updatedAt": "2026-09-18T16:44:29Z",
+      "author": "github-actions[bot]"
+    },
+    "verdict": {
+      "is_review_comment": true,
+      "state": "complete",
+      "complete": true,
+      "verdict": "approved",
+      "verdict_label": "merge-approved",
+      "findings": [],
+      "must_fix": []
+    }
+  },
+  "pages": {
+    "threads": 15,
+    "threadComments": 0,
+    "comments": 1,
+    "reviews": 17
+  }
+}
