@@ -169,18 +169,13 @@ if push_waiver_matches "$repo_root" "$slug" "$current_diff_sha"; then
 fi
 
 # Reviewer guidance is agnostic: any one accepted reviewer satisfies the gate.
-# Prefer caveman's cavecrew-reviewer when that plugin is installed; otherwise the
-# built-in /code-review skill is the always-available baseline.
-if [ -n "$(detect_plugin_installed 'caveman@caveman' 2>/dev/null)" ]; then
-  reviewer_hint="\`caveman:cavecrew-reviewer\` (caveman is installed — preferred), recorded as \"caveman:cavecrew-reviewer\""
-else
-  reviewer_hint="the built-in \`/code-review xhigh --fix\` skill, recorded as \"code-review\" (or the \`toolu-review:review\` skill, or install the caveman plugin and use \`caveman:cavecrew-reviewer\`)"
-fi
+# The built-in /code-review skill is the always-available baseline.
+reviewer_hint="the built-in \`/code-review xhigh --fix\` skill, recorded as \"code-review\" (or the \`toolu-review:review\` skill)"
 
 # State file gate.
 if [[ ! -f "$state_file" ]]; then
   _pr_decide no-state "Code review required before push (diff SHA $current_diff_sha, base $base_branch).
-Run a code reviewer on \`git diff $base_branch...HEAD\` and apply its findings — use $reviewer_hint. Then atomically write $state_file (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. \`reviewers\` must include at least one accepted reviewer (caveman:cavecrew-reviewer, code-review, toolu-review:review, code-review:xhigh, review, or security-review), \`findings_count\` must be 0, \`review_round\` starts at 1 for a new \`diff_sha\` and bumps by 1 only when rewriting at the same \`diff_sha\`. \`reviewed_files\` must list every path from \`git diff $base_branch...HEAD --name-only\` (sorted, unique) — the actual reviewer file coverage. Retry push."
+Run a code reviewer on \`git diff $base_branch...HEAD\` and apply its findings — use $reviewer_hint. Then atomically write $state_file (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. \`reviewers\` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), \`findings_count\` must be 0, \`review_round\` starts at 1 for a new \`diff_sha\` and bumps by 1 only when rewriting at the same \`diff_sha\`. \`reviewed_files\` must list every path from \`git diff $base_branch...HEAD --name-only\` (sorted, unique) — the actual reviewer file coverage. Retry push."
 fi
 
 # Validate state file: version, diff_sha, findings_count, reviewers.
@@ -206,14 +201,12 @@ fi
 state_round=$(jq -r '.review_round // 1' "$state_file" 2>/dev/null || echo "1")
 
 # Reviewer-agnostic gate: at least ONE accepted reviewer must appear in the
-# state file. This keeps toolu usable without the caveman plugin — the
-# built-in /code-review skill is the always-available baseline — while still
-# accepting caveman:cavecrew-reviewer (preferred when installed) and other known
-# reviewers. The check is "intersection non-empty", not equality, so running
-# extra reviewers (e.g. code-simplifier first) is always fine. Requiring at
-# least one known name still prevents an agent from writing a junk reviewer
-# entry to bypass the gate.
-accepted_reviewers='["caveman:cavecrew-reviewer","code-review","toolu-review:review","code-review:xhigh","review","security-review"]'
+# state file. The built-in /code-review skill is the always-available baseline;
+# other known reviewers are accepted too. The check is "intersection non-empty",
+# not equality, so running extra reviewers (e.g. code-simplifier first) is always
+# fine. Requiring at least one known name still prevents an agent from writing a
+# junk reviewer entry to bypass the gate.
+accepted_reviewers='["code-review","toolu-review:review","code-review:xhigh","review","security-review"]'
 if ! jq -e --argjson acc "$accepted_reviewers" \
      '(.reviewers // []) as $r | any($acc[]; . as $x | $r | index($x) != null)' \
      "$state_file" >/dev/null 2>&1; then

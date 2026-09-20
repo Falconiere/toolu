@@ -1,6 +1,6 @@
 # toolu — Core Plugin
 
-**Type:** Core | **Version:** 4.5.0 | **Optional companions:** `code-simplifier`, `caveman`
+**Type:** Core | **Version:** 4.5.0 | **Optional companion:** `code-simplifier`
 
 The registry-driven hook engine plus the adaptive delivery workflow, the `push-review` gate, and the `deep-explore` agent. **The one required plugin** — all domain plugins register into it.
 
@@ -9,7 +9,6 @@ The registry-driven hook engine plus the adaptive delivery workflow, the `push-r
 ```text
 # Add prerequisite marketplaces first
 /plugin marketplace add anthropics/claude-plugins-official
-/plugin marketplace add JuliusBrussee/caveman
 /plugin marketplace add Falconiere/toolu
 
 /plugin install toolu@toolu
@@ -113,7 +112,6 @@ Advises on `git push` on a feature branch until the diff has been run through an
 
 ```text
 # The check fails (and advises, by default) unless:
-#  - caveman:cavecrew-reviewer reviewed the diff (preferred when installed)
 #  - toolu-review:review skill reviewed the diff (CI-bot mirror)
 #  - /code-review xhigh --fix ran and recorded clean state
 

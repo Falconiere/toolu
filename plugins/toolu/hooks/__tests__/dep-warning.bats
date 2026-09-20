@@ -45,13 +45,13 @@ SH
 
 @test "dep-warning: warns with install command for a missing dependency" {
   _manifest <<'JSON'
-{"name":"toolu","dependencies":[{"name":"caveman","marketplace":"caveman"}]}
+{"name":"toolu","dependencies":[{"name":"ts-quality","marketplace":"toolu"}]}
 JSON
   printf '%s' '{"plugins":{}}' > "$REG"
   run _run_entry
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "required plugins missing"
-  echo "$output" | grep -q "/plugin install caveman@caveman"
+  echo "$output" | grep -q "/plugin install ts-quality@toolu"
 }
 
 @test "dep-warning: Codex reads shared dependencies and prints the exact native install command" {
@@ -72,9 +72,9 @@ JSON
 
 @test "dep-warning: silent when every dependency is installed" {
   _manifest <<'JSON'
-{"name":"toolu","dependencies":[{"name":"caveman","marketplace":"caveman"}]}
+{"name":"toolu","dependencies":[{"name":"ts-quality","marketplace":"toolu"}]}
 JSON
-  printf '%s' '{"plugins":{"caveman@caveman":{}}}' > "$REG"
+  printf '%s' '{"plugins":{"ts-quality@toolu":{}}}' > "$REG"
   run _run_entry
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q "required plugins missing"
@@ -82,7 +82,7 @@ JSON
 
 @test "dep-warning: suppressed entirely when registry is indeterminate (missing file)" {
   _manifest <<'JSON'
-{"name":"toolu","dependencies":[{"name":"caveman","marketplace":"caveman"}]}
+{"name":"toolu","dependencies":[{"name":"ts-quality","marketplace":"toolu"}]}
 JSON
   rm -f "$REG"
   run _run_entry
@@ -106,27 +106,27 @@ JSON
   run _run_entry
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q "required plugins missing"
-  ! echo "$output" | grep -q "caveman"
+  ! echo "$output" | grep -q "/plugin install"
   ! echo "$output" | grep -q "code-simplifier"
 }
 
 @test "dep-warning: a nameless dependency entry is skipped (no null@ spec)" {
   _manifest <<'JSON'
-{"name":"toolu","dependencies":[{"marketplace":"caveman"},{"name":"caveman","marketplace":"caveman"}]}
+{"name":"toolu","dependencies":[{"marketplace":"toolu"},{"name":"ts-quality","marketplace":"toolu"}]}
 JSON
   printf '%s' '{"plugins":{}}' > "$REG"
   run _run_entry
   [ "$status" -eq 0 ]
-  echo "$output" | grep -q "/plugin install caveman@caveman"
+  echo "$output" | grep -q "/plugin install ts-quality@toolu"
   ! echo "$output" | grep -q "null@"
 }
 
 @test "dep-warning: a malformed scalar entry does not suppress warnings for valid deps" {
   _manifest <<'JSON'
-{"name":"toolu","dependencies":[42,{"name":"caveman","marketplace":"caveman"}]}
+{"name":"toolu","dependencies":[42,{"name":"ts-quality","marketplace":"toolu"}]}
 JSON
   printf '%s' '{"plugins":{}}' > "$REG"
   run _run_entry
   [ "$status" -eq 0 ]
-  echo "$output" | grep -q "/plugin install caveman@caveman"
+  echo "$output" | grep -q "/plugin install ts-quality@toolu"
 }

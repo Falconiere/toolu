@@ -1,1 +1,0 @@
-List every file under benchmarks/__tests__/ that defines a bats test (files ending in .bats), and for each one give a one-sentence summary of what it covers. Do not modify any files. Answer with a plain bulleted list, one bullet per .bats file, then stop.

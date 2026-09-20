@@ -92,9 +92,8 @@ keeps blocking — open findings mean the code is not ready to push.
 
 When `pr-babysit` needs a reviewer, it picks from:
 
-1. `caveman:cavecrew-reviewer` (when the caveman plugin is installed — preferred)
-2. \`toolu-review:review\` (the CI-bot mirror — best for cutting bot rework)
-3. Built-in `/code-review xhigh --fix` (always available)
+1. \`toolu-review:review\` (the CI-bot mirror — best for cutting bot rework)
+2. Built-in `/code-review xhigh --fix` (always available)
 
 ## Output Format
 

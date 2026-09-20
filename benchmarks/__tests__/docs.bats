@@ -14,7 +14,8 @@ setup() {
   local f="$BENCH_DIR/results/README.md"
   [ -f "$f" ]
   grep -qi "methodology"        "$f"
-  grep -qi "answer concisely"   "$f"   # fair baseline rule
+  grep -qi "fair baseline"      "$f"   # fair baseline rule
+  grep -qi "pins its baseline"  "$f"   # baseline prompt is committed + auditable
   grep -qi "never mixed"        "$f"   # tokenizer modes
   grep -qi "message.usage"      "$f"   # live tiers use real usage
   grep -qi "provenance"         "$f"

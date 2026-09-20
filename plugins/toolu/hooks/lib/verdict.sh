@@ -36,7 +36,7 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}}"
 # Reviewer allow-list — keep in sync with pre-tools/modules/push-review.sh's
 # accepted_reviewers; parity is asserted by the parity test in
 # __tests__/verdict.bats.
-ACCEPTED_REVIEWERS='["caveman:cavecrew-reviewer","code-review","toolu-review:review","code-review:xhigh","review","security-review"]'
+ACCEPTED_REVIEWERS='["code-review","toolu-review:review","code-review:xhigh","review","security-review"]'
 
 # vd_gate STATE REASON [EXTRA_JSON]
 # Print one gate object: {state, reason} merged with EXTRA_JSON (default "{}").

@@ -354,10 +354,10 @@ source_lib() {
   reg="$BATS_TEST_TMPDIR/installed.json"
   # Value is a number — prior `.plugins[$s] | length > 0` filter errored;
   # `has($s)` returns true (key is present, regardless of value shape).
-  printf '%s\n' '{"plugins":{"caveman@caveman":42}}' > "$reg"
-  CLAUDE_PLUGINS_REGISTRY="$reg" run detect_plugin_installed "caveman@caveman"
+  printf '%s\n' '{"plugins":{"ts-quality@toolu":42}}' > "$reg"
+  CLAUDE_PLUGINS_REGISTRY="$reg" run detect_plugin_installed "ts-quality@toolu"
   [ "$status" -eq 0 ]
-  [ "$output" = "caveman@caveman" ]
+  [ "$output" = "ts-quality@toolu" ]
 }
 
 @test "detect_plugin_installed: indeterminate (exit 2) when registry missing" {

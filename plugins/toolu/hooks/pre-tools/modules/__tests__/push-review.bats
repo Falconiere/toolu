@@ -316,7 +316,7 @@ EOF
   [ -z "$output" ]
 }
 
-@test "push-review: caveman reviewer alone satisfies the accepted set" {
+@test "push-review: security-review reviewer alone satisfies the accepted set" {
   sha=$(current_diff_sha)
   branch=$(git rev-parse --abbrev-ref HEAD)
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
@@ -326,7 +326,7 @@ EOF
     diff_sha: $sha,
     base_branch: "development",
     reviewed_at: "2026-06-07T00:00:00Z",
-    reviewers: ["caveman:cavecrew-reviewer"],
+    reviewers: ["security-review"],
     findings_count: 0,
     review_round: 1,
     findings: [],
@@ -371,7 +371,7 @@ EOF
     diff_sha: $sha,
     base_branch: "development",
     reviewed_at: "2026-06-07T00:00:00Z",
-    reviewers: ["code-simplifier", "caveman:cavecrew-reviewer"],
+    reviewers: ["code-simplifier", "code-review"],
     findings_count: 0,
     review_round: 1,
     findings: [],
@@ -413,7 +413,7 @@ EOF
     diff_sha: $sha,
     base_branch: "development",
     reviewed_at: "2026-06-07T00:00:00Z",
-    reviewers: ["code-simplifier", "caveman:cavecrew-reviewer"],
+    reviewers: ["code-simplifier", "code-review"],
     findings_count: 0,
     findings: [],
     reviewed_files: ["feature.txt"]

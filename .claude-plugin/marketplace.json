@@ -16,7 +16,7 @@
         "email": "hello@falconiere.io"
       },
       "category": "productivity",
-      "keywords": ["caveman", "hooks", "skills", "agents"],
+      "keywords": ["hooks", "skills", "agents"],
       "license": "MIT",
       "dependencies": []
     },
@@ -74,7 +74,7 @@
       "description": "Host-native project status: a persistent Claude Code statusline plus an explicit Codex status skill for repository, gate, git, and comemory state. Standalone, no dependencies.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
-      "keywords": ["statusline", "quality-gate", "caveman", "hooks"],
+      "keywords": ["statusline", "quality-gate", "hooks"],
       "license": "MIT"
     },
     {

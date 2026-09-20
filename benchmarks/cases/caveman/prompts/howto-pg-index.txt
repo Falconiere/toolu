@@ -1,4 +1,0 @@
-How do I decide whether to add a B-tree index versus a partial index on a
-PostgreSQL table that has 50 million rows, where most queries filter on
-`status = 'active'` (only about 2% of rows) and also order by `created_at`? Walk me
-through the trade-offs and the index I should create.

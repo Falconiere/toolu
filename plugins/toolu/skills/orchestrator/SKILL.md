@@ -105,7 +105,6 @@ Prefer a **tier-pinned** agent when one fits — its frontmatter fixes the model
 - **`Explore`** — broad read-only fan-out search when you need the conclusion, not file dumps.
 - **`Plan`** — design an implementation strategy for a non-trivial change.
 - **`general-purpose`** — multi-step research/execution that doesn't fit a specific agent; set `model:` yourself.
-- **`caveman:cavecrew-investigator` / `-builder` / `-reviewer`** — when the caveman plugin is installed: compressed-output locate / bounded 1–2 file edit / diff review. Output is ~60% smaller, so main context lasts longer.
 
 Carry the session mandates into every subagent prompt (comemory recall/save, ast-grep first). Delegation never exempts the work.
 
@@ -115,7 +114,7 @@ Launch independent subagents in **one message with multiple tool calls** so they
 
 ## Keep main context lean
 
-The expensive, recurring cost in a long session is **input tokens re-sent every turn** (see the token-efficiency report). Two rules follow:
+The expensive, recurring cost in a long session is **input tokens re-sent every turn**. Two rules follow:
 
 - **Return conclusions, not bytes.** A subagent may read 50k tokens but should return a 1–2k-token distilled answer. The detailed context stays isolated in the subagent and never re-enters — or re-caches into — the main thread.
 - **Prefer compact return formats** (tables, file:line lists) over prose dumps.

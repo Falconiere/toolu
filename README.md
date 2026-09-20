@@ -79,9 +79,8 @@ the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux.
 Install from the public marketplace in any Claude Code session:
 
 ```text
-# 1. Add the upstream marketplaces the plugins depend on
+# 1. Add the upstream marketplace the plugins depend on
 /plugin marketplace add anthropics/claude-plugins-official
-/plugin marketplace add JuliusBrussee/caveman
 
 # 2. Add this marketplace and install the core bundle
 /plugin marketplace add Falconiere/toolu
@@ -100,7 +99,7 @@ Add the language gates, search, and docs tooling too:
 /plugin install jev@toolu            # typed judgments (probability / choice / score)
 ```
 
-> **Note** — `rust-quality`, `ts-quality`, and `python-quality` depend on `toolu`; `ast-grep`, `context7`, `exa-search`, and `jev` are standalone (zero deps). `caveman` and `code-simplifier` are **optional, recommended companions**, not required — install them only if you want caveman mode or the pre-simplify pass; when absent, `toolu` falls back (the `push-review` gate uses the built-in `/code-review`, and `code-simplifier` is invoked only if installed). Adding the marketplaces in step 1 lets Claude Code resolve those companions automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
+> **Note** — `rust-quality`, `ts-quality`, and `python-quality` depend on `toolu`; `ast-grep`, `context7`, `exa-search`, and `jev` are standalone (zero deps). `code-simplifier` is an **optional, recommended companion**, not required — install it only if you want the pre-simplify pass; when absent, `toolu` simply skips it. Adding the marketplace in step 1 lets Claude Code resolve that companion automatically. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
 
 > **Deprecation:** comemory host integration now lives in
 > [Falconiere/comemory](https://github.com/Falconiere/comemory). First obtain a
@@ -183,12 +182,11 @@ alone, or add the domain plugins.
 
 Beyond the plugins, the core (`toolu`) also ships:
 
-- **\`push-review\` gate** — blocks \`git push\` on a feature branch until the diff has been run through an accepted reviewer (\`caveman:cavecrew-reviewer\` when installed, the built-in \`/code-review xhigh --fix\` skill, or the \`toolu-review:review\` skill), with a round cap (5 rewrites against an unchanged diff) that escalates instead of looping forever. The state file lives under the pushed repo's own root, so `git -C <worktree> push` is gated on the worktree's branch and diff.
+- **\`push-review\` gate** — blocks \`git push\` on a feature branch until the diff has been run through an accepted reviewer (the built-in \`/code-review xhigh --fix\` skill or the \`toolu-review:review\` skill), with a round cap (5 rewrites against an unchanged diff) that escalates instead of looping forever. The state file lives under the pushed repo's own root, so `git -C <worktree> push` is gated on the worktree's branch and diff.
 - **docs-sync backstop** — on `git push`, an **advisory** (never a block) when the branch diff changes code but no documentation surface (README, `docs/` guides, `SKILL.md` triggers) — a nudge to keep user-facing docs in sync with behavior. Silenced by a diff-`sha`-keyed attestation; surfaces are tunable via `docsSync.*` ([config](docs/config.md#docs-sync-surfaces-docssync)). Pairs with the "Docs in sync" convention the workflow skills enforce.
 - **Commit workflows** — Claude exposes `/commit` and `/review-and-commit`; Codex exposes `$toolu:commit` and `$toolu:review-and-commit`. Both read the same canonical workflow files, preventing host drift.
 - **Model routing** — delegated work is tiered by its *class*, not its phrasing. Claude defaults to Haiku/Sonnet/Opus aliases; Codex defaults to Luna/medium for mechanical work, Terra/medium for exploration and implementation, Terra/high for review, and Sol/high for synthesis and architecture. Both mappings are configurable in [config](docs/config.md#model-routing-models).
 - **Tier-pinned agents** — Claude reads the bundled agent definitions directly. `$toolu:setup` manages Codex TOML profiles for `quick-task` (Luna/medium, read-only), `deep-explore` and `research-agent` (Terra/medium, read-only), `implementer` (Terra/medium, workspace-write), and `architect` (Sol/high, read-only), with previews, conflict refusal, timestamped backups, and recoverable removal.
-- **Caveman mode** — ultra-compressed, token-frugal output (via the optional `caveman` companion).
 - **`git-better` skill** — a bundled `gb` wrapper (token-lean `status`/`diff`/`log`/`show`) plus a cached repo-convention profile (`gb conventions`). Skill-only — no separate plugin, no hooks, no install step.
 
 ## Workflow skills

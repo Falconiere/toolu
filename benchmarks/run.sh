@@ -2,9 +2,9 @@
 # run.sh — benchmarks harness entry point.
 #
 # Dispatches to per-mechanism cases by tier. The deterministic tier (retrieval)
-# is hermetic and CI-safe; the live tier (caveman, cavecrew, whole-session) needs
-# an API key / the claude CLI and is run manually. Live cases that have not been
-# built yet are skipped with a notice rather than failing the run.
+# is hermetic and CI-safe; the live tier (whole-session) needs an API key / the
+# claude CLI and is run manually. Live cases that have not been built yet are
+# skipped with a notice rather than failing the run.
 set -u
 
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,7 +16,7 @@ usage: run.sh --tier <deterministic|live|both> [--mechanism <name|all>]
 
 mechanisms:
   retrieval                         deterministic tier (hermetic, CI)
-  caveman cavecrew whole-session    live tier (manual; needs API key / claude CLI)
+  whole-session                     live tier (manual; needs API key / claude CLI)
   all                               every mechanism for the selected tier
 USAGE
 }
@@ -50,11 +50,11 @@ main() {
 
   if [ "$tier" = "live" ] || [ "$tier" = "both" ]; then
     local live_sel="$mechanism"
-    [ "$live_sel" = "all" ] && live_sel="caveman cavecrew whole-session"
+    [ "$live_sel" = "all" ] && live_sel="whole-session"
     local m
     for m in $live_sel; do
       case "$m" in
-        caveman|cavecrew|whole-session)
+        whole-session)
           if [ -x "$_dir/cases/$m/run.sh" ]; then
             bash "$_dir/cases/$m/run.sh" || rc=1
           else

@@ -4,7 +4,7 @@ Host-native project status. Claude Code gets an optional persistent one-line
 statusline assembled defensively from the JSON Claude sends on stdin:
 
 ```
-model | effort:high | ctx:45k/200k (22%) | example.com | ✗ gate:failing | my-folder | main ↑2↓1 [+2 ~1 ?3] | [COMEMORY:42] | [CAVEMAN]
+model | effort:high | ctx:45k/200k (22%) | example.com | ✗ gate:failing | my-folder | main ↑2↓1 [+2 ~1 ?3] | [COMEMORY:42]
 ```
 
 | Segment | Source | Shows when |
@@ -16,7 +16,6 @@ model | effort:high | ctx:45k/200k (22%) | example.com | ✗ gate:failing | my-f
 | `✗ gate:failing` | host-native `.claude/tmp/quality-gate-status.json` at the git root | a **gate writer** (e.g. the `rust-quality` / `ts-quality` / `python-quality` / `toolu` plugins) marks the gate failing |
 | folder + branch + status | git, from the workspace dir | inside a git repo — `↑N↓M` shows ahead/behind of the tracked remote, `[+N ~N ?N]` shows staged/unstaged/untracked file counts (both omitted when clean and up-to-date) |
 | `[COMEMORY:N]` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory-status/<repo>.json` | the **comemory** plugin published a memory count this session |
-| `[CAVEMAN]` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.caveman-active` | the **caveman** plugin is active |
 
 Codex exposes `$statusline:status` instead of a persistent bar. It reports the
 repository, branch/ahead/behind state, working-tree counts, quality gate from
@@ -24,7 +23,7 @@ repository, branch/ahead/behind state, working-tree counts, quality gate from
 omits account, model, effort, and context-window fields that Codex does not make
 available to the skill.
 
-The account, gate, comemory, git status, and caveman segments degrade gracefully — if the file
+The account, gate, comemory, and git status segments degrade gracefully — if the file
 they read is absent, the segment simply doesn't render. So statusline is
 **standalone**: it declares no plugin dependencies. Those segments just light up
 automatically when the relevant plugins are also installed (or, for the account
