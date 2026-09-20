@@ -22,13 +22,13 @@ teardown() {
 @test "no bash-4-only constructs in any helper script" {
   # mapfile/readarray, associative arrays, wait -n, case-modifying expansions,
   # |& shorthand, ${var@Q}-style transformations.
-  for f in $FILES; do
+  while IFS= read -r f; do
     ! grep -nE '(^|[^a-zA-Z_])(mapfile|readarray)([^a-zA-Z_]|$)' "$f"
     ! grep -nE 'declare +-[a-zA-Z]*A' "$f"
     ! grep -nE 'wait +-n' "$f"
     ! grep -nE '\$\{[a-zA-Z_][a-zA-Z0-9_]*(\[[^]]*\])?(,,|\^\^|@[QEPAa])\}' "$f"
     ! grep -nE '\|&' "$f"
-  done
+  done <<<"$FILES"
 }
 
 @test "every entrypoint sets -euo pipefail; every lib documents that it is sourced" {
@@ -43,22 +43,22 @@ teardown() {
 }
 
 @test "the helper never reads a session-specific environment variable for repo, PR, home or root" {
-  for f in $FILES; do
+  while IFS= read -r f; do
     ! grep -nE '\$\{?(CLAUDE_PLUGIN_ROOT|PLUGIN_ROOT|CLAUDE_PROJECT_DIR|CODEX_HOME|HOME)\b' "$f"
-  done
+  done <<<"$FILES"
   grep -q 'BASH_SOURCE\[0\]' "$SCRIPTS/lib/common.sh"
 }
 
 @test "no Python anywhere in the helper" {
-  for f in $FILES; do
+  while IFS= read -r f; do
     ! grep -nE '(^|[^a-zA-Z_])python3?([^a-zA-Z_]|$)' "$f"
-  done
+  done <<<"$FILES"
 }
 
 @test "/bin/bash 3.2 (macOS) parses every script and reproduces the reducer output byte for byte" {
   [ -x /bin/bash ] || skip "no /bin/bash"
   /bin/bash --version | head -1 | grep -q 'version 3\.2' || skip "/bin/bash is not 3.2 ($(/bin/bash --version | head -1))"
-  for f in $FILES; do
+  while IFS= read -r f; do
     /bin/bash -n "$f"
   done
   jq '.pr.state = "OPEN" | .pr.mergeable = "MERGEABLE"' "$SNAP/toolu-165.json" >"$TMP/open.json"

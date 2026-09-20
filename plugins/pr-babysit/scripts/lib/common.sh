@@ -71,19 +71,26 @@ pb_json_valid() { jq -e . "$1" >/dev/null 2>&1; }
 # rename it over TARGET only when CMD exited 0 AND the output parses as JSON.
 # Any failure removes the temp file and leaves TARGET byte-identical, so a
 # reader never sees a partial document and a crashed writer leaves no residue.
+# The in-flight temp file is published in PB_ATOMIC_TMP so pb_on_exit can
+# remove it when a signal lands between mktemp and mv.
+PB_ATOMIC_TMP=""
 pb_atomic_write_json() {
   local target="$1"; shift
   local dir tmp
   dir=$(dirname "$target")
   mkdir -p "$dir" || return 1
   tmp=$(mktemp "$dir/.$(basename "$target").tmp.XXXXXX") || return 1
+  PB_ATOMIC_TMP="$tmp"
   if ! "$@" >"$tmp"; then
-    rm -f "$tmp"; return 1
+    rm -f "$tmp"; PB_ATOMIC_TMP=""; return 1
   fi
   if ! pb_json_valid "$tmp"; then
-    rm -f "$tmp"; return 1
+    rm -f "$tmp"; PB_ATOMIC_TMP=""; return 1
   fi
-  mv -f "$tmp" "$target" || { rm -f "$tmp"; return 1; }
+  if ! mv -f "$tmp" "$target"; then
+    rm -f "$tmp"; PB_ATOMIC_TMP=""; return 1
+  fi
+  PB_ATOMIC_TMP=""
 }
 
 # pb_retry_on_rc RETRY_RC ATTEMPTS CMD [ARGS...]
@@ -117,6 +124,7 @@ pb_on_exit() {
   # A second signal must not re-enter `exit` and abort the cleanup midway.
   trap '' TERM INT
   if declare -F pb_lock_release >/dev/null 2>&1; then pb_lock_release; fi
+  [ -n "${PB_ATOMIC_TMP:-}" ] && rm -f "$PB_ATOMIC_TMP"
   [ -n "${PB_TMPDIR:-}" ] && [ -d "${PB_TMPDIR:-}" ] && rm -rf "$PB_TMPDIR"
   return "$rc"
 }

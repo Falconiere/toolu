@@ -33,7 +33,8 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ -n "$state_file" ] || pb_fail usage "resolve-thread.sh: --state-file required"
-[ -n "$thread" ] || pb_fail usage "resolve-thread.sh: --thread <graphqlId> required"
+# GraphQL node ids are base64url-ish; anything else is a caller bug, not a request.
+[[ "$thread" =~ ^[A-Za-z0-9_=-]+$ ]] || pb_fail usage "resolve-thread.sh: --thread <graphqlId> required (got '${thread:-}')"
 
 pb_require jq gh
 pb_init

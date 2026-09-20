@@ -81,6 +81,8 @@ repo_root=$(git -C "${repo:-.}" rev-parse --show-toplevel 2>/dev/null || echo ""
 branch=$(git -C "$repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 if [ -z "$branch" ] || [ "$branch" = "HEAD" ]; then
   [ -n "$branch_arg" ] || { echo "write-state.sh: not on a branch (detached HEAD?) — pass --branch <name> naming the branch the push targets (git push origin HEAD:<name>)" >&2; exit 1; }
+  git check-ref-format --branch "$branch_arg" >/dev/null 2>&1 \
+    || { echo "write-state.sh: --branch '$branch_arg' is not a valid branch name" >&2; exit 1; }
   if ! git -C "$repo_root" show-ref --verify --quiet "refs/heads/$branch_arg" \
      && ! git -C "$repo_root" show-ref --verify --quiet "refs/remotes/origin/$branch_arg"; then
     echo "write-state.sh: unknown branch '$branch_arg' (no refs/heads/$branch_arg or refs/remotes/origin/$branch_arg)" >&2; exit 1

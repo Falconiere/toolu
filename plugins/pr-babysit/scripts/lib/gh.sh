@@ -37,7 +37,10 @@ pb_run_with_timeout() {
   rcfile=$(mktemp "${PB_TMPDIR:-${TMPDIR:-/tmp}}/pb-rc.XXXXXX") || return 1
   wdfile="$rcfile.wd"
   : >"$rcfile"; : >"$wdfile"
+  # `set +e` inside: the caller's errexit would otherwise end the subshell
+  # before the exit code is recorded, and an empty rc file reads as a timeout.
   (
+    set +e
     "$@" >"$out" 2>"$err"
     echo $? >"$rcfile"
   ) &
@@ -86,7 +89,7 @@ pb_gh_classify() {
       return 0 ;;
     4??) echo permanent; return 0 ;;
   esac
-  if printf '%s' "$text" | grep -qiE 'connection refused|connection reset|no such host|i/o timeout|TLS handshake|EOF|network is unreachable|temporary failure|timed out'; then
+  if printf '%s' "$text" | grep -qiE 'connection refused|connection reset|no such host|i/o timeout|TLS handshake|unexpected EOF|EOF$|network is unreachable|temporary failure|timed out'; then
     echo transient; return 0
   fi
   # GraphQL errors[] without an HTTP status (NOT_FOUND etc.) are permanent.

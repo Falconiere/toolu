@@ -92,7 +92,7 @@ All workflows live in `.github/workflows/`:
 | `plugins/toolu/hooks/post-tools/mod.sh` | Post-tool gate dispatcher (quality checks on edited files) |
 | `plugins/toolu/hooks/lib/quality-config.sh` | Quality threshold resolver (override → linter config → built-in default) |
 | `plugins/toolu/hooks/lib/detect.sh` | Code-line counter, comemory version detection, tool availability, `git push` detection (`is_git_push`) + push target repo/branch resolution (`push_target_root`, `push_target_branch` — refspec destination on a detached checkout) |
-| `plugins/pr-babysit/scripts/babysit-tick.sh` | The babysit tick both hosts run: lock → `collect-pr.sh` → `reduce-state.sh` → persist → result; write side in `reply-thread.sh`, `resolve-thread.sh`, `record.sh` |
+| `plugins/pr-babysit/scripts/babysit-tick.sh` | Shared babysit tick helper (not a hook or gate) invoked by the Claude command and the Codex skill: lock → `collect-pr.sh` → `reduce-state.sh` → persist → result; write side in `reply-thread.sh`, `resolve-thread.sh`, `record.sh` |
 | `plugins/*/hooks/register.sh` | SessionStart: syncs hook modules into the toolu runtime registry under the agent config dir |
 | `plugins/*/hooks/hooks.json` | Claude Code hook routing (event → script path + matcher) |
 | `tooling/shellcheck.sh` | shellcheck gate: standalone scripts + each concerns dir assembled into the module that actually runs |

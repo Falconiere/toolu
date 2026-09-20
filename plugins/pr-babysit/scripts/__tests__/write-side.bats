@@ -118,7 +118,10 @@ teardown() {
   [ "$status" -eq 2 ]; [[ "$output" == *"reply body is empty"* ]]
   run bash "$SCRIPTS/reply-thread.sh" --state-file "$STATE" --kind conversation --comment-id 1 --body-file "$TMP/nope.txt"
   [ "$status" -eq 2 ]
-  ! grep -q -- '--body ' "$SCRIPTS/reply-thread.sh"
+  # The body reaches gh only through --input <file>; never as a field/flag.
+  grep -q -- '--input "\$PB_TMPDIR/payload.json"' "$SCRIPTS/reply-thread.sh"
+  grep -q -- '--rawfile body' "$SCRIPTS/reply-thread.sh"
+  ! grep -qE -- '(-f|-F|--raw-field|--field) +body=' "$SCRIPTS/reply-thread.sh"
 }
 
 @test "resolve: a thread already recorded as confirmed returns 0 with no request" {

@@ -214,7 +214,9 @@ EOF
   [ "$status" -eq 0 ]
   decision=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // empty')
   [ "$decision" != "deny" ]
-  ! echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("detached HEAD")' >/dev/null 2>&1
+  # A clean pass is silent under the strict preset: no decision, no reason.
+  [ -z "$decision" ]
+  [ -z "$output" ]
 }
 
 @test "push-review: detached worktree pushing HEAD:<branch> WITHOUT a state file is denied for the missing review, not as detached" {
@@ -224,6 +226,9 @@ EOF
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
   ! echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("detached HEAD")' >/dev/null 2>&1
+  # Denied for the missing review of feat/example specifically.
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("No push-review state|no review|state file|review")'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("feat_example|feat/example")'
 }
 
 @test "push-review: detached worktree pushing with no refspec is still denied as detached, naming the fix" {

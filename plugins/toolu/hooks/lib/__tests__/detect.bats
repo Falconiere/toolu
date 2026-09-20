@@ -1095,6 +1095,9 @@ EOF'
   [ "$(push_target_branch "git push -o ci.skip origin HEAD:feat/x" "$TMP")" = "feat/x" ]
   [ "$(push_target_branch "git push --push-option=ci.skip origin HEAD:feat/x" "$TMP")" = "feat/x" ]
   [ "$(push_target_branch "cd /tmp && git push origin HEAD:feat/x" "$TMP")" = "feat/x" ]
+  # A pipe after the push does not split the push segment away from its refspec.
+  [ "$(push_target_branch "git push origin HEAD:feat/x | cat" "$TMP")" = "feat/x" ]
+  [ "$(push_target_branch "git push origin HEAD:feat/x 2>&1 | tee log" "$TMP")" = "feat/x" ]
 }
 
 @test "push_target_branch: detached HEAD with nothing to key to is empty" {
