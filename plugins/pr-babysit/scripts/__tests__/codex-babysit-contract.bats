@@ -30,3 +30,21 @@ WORKFLOW="$ROOT/workflows/babysit.md"
   grep -Fq '../../workflows/babysit.md' "$SKILL"
   grep -Fq 'workflows/babysit.md' "$ROOT/commands/babysit.md"
 }
+
+@test "Codex branch runs the same shipped helper with the Codex slot path and bounded waits from the result" {
+  grep -Fq 'scripts/babysit-tick.sh' "$SKILL"
+  grep -Fq 'references/helper.md' "$SKILL"
+  grep -Fq -- '--state-file' "$SKILL"
+  codex=$(awk '/^### Codex start or resume/{f=1} /^### Codex cancel/{f=0} f' "$WORKFLOW")
+  grep -q 'backoff.waitSeconds' <<<"$codex"
+  grep -q '60 seconds' <<<"$codex"
+  grep -Fq 'record.sh status' "$WORKFLOW"
+  ! grep -iE '(write|create|implement) (a |your own |the )?(python |bash )?(polling )?(script|controller)' "$SKILL" | grep -viq 'never'
+}
+
+@test "Codex Step 3 delegates fixes through spawn_agent at the routed tier" {
+  step3=$(awk '/^## Step 3/{f=1} /^## Step 4/{f=0} f' "$WORKFLOW")
+  grep -q 'spawn_agent' <<<"$step3"
+  grep -q 'Luna' <<<"$step3"; grep -q 'Terra' <<<"$step3"; grep -q 'Sol' <<<"$step3"
+}
+

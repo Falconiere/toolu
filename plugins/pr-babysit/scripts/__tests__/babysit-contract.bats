@@ -125,3 +125,98 @@ FIXTURE="${BATS_TEST_DIRNAME}/fixtures/pr115-threads.json"
 @test "fixture contains an isOutdated thread (skip-silently case)" {
   jq -e 'map(select(.isOutdated==true)) | length>=1' "$FIXTURE" >/dev/null
 }
+
+# --- shipped helper + trust boundary (issue #185) -----------------------------
+
+HELPER_DOC="${BATS_TEST_DIRNAME}/../../skills/babysit/references/helper.md"
+SKILL="${BATS_TEST_DIRNAME}/../../skills/babysit/SKILL.md"
+
+@test "both host branches run the shipped tick helper, not inline gh/GraphQL fetches" {
+  grep -Fq 'scripts/babysit-tick.sh' "$CMD"
+  grep -Fq 'scripts/babysit-tick.sh' "$WRAPPER"
+  grep -Fq 'scripts/babysit-tick.sh' "$SKILL"
+  # The tick path carries no raw fetch the agent could copy-paste and drift on.
+  ! grep -qE 'gh api graphql -f query=' "$CMD"
+  ! grep -qE 'gh api repos/\{owner\}/\{repo\}/issues/\{number\}/comments *$' "$CMD"
+  ! grep -qE 'gh pr checks' "$CMD"
+}
+
+@test "workflow, skill and command state the trust boundary and forbid home-grown controllers" {
+  grep -qi 'Trust boundary' "$CMD"
+  grep -qi 'Never write a polling script or controller of your own' "$CMD"
+  grep -qi 'Never re-fetch what the result reports' "$CMD"
+  grep -qi 'overridden only by naming the result field' "$CMD"
+  for f in "$SKILL" "$WRAPPER"; do
+    grep -qi 'never write a polling script or controller of your own' "$f"
+    grep -qi 'never re-fetch' "$f"
+    grep -Fq 'references/helper.md' "$f"
+  done
+  # No surface tells the agent to build the machinery itself: every line that
+  # mentions writing a script/controller is a prohibition ("never ...").
+  for f in "$CMD" "$SKILL" "$WRAPPER"; do
+    ! grep -iE '(write|create|implement) (a |your own |the )?(python |bash )?(polling )?(script|controller)' "$f" | grep -viq 'never'
+  done
+}
+
+@test "the write side goes through the helper: reply-thread, resolve-thread, record" {
+  grep -Fq 'scripts/reply-thread.sh' "$CMD"
+  grep -Fq 'scripts/resolve-thread.sh' "$CMD"
+  grep -Fq 'record.sh round' "$CMD"
+  grep -Fq 'record.sh flag-injection' "$CMD"
+  grep -Fq 'record.sh status' "$CMD"
+  grep -Fq 'duplicate_reply' "$CMD"
+  grep -Fq 'resolve_unconfirmed' "$CMD"
+  grep -Fq -- '--body-file' "$CMD"
+}
+
+@test "the workflow reads decisions from the result fields the reducer emits" {
+  for field in 'decision' 'reasons\[\]' 'threads.actionable\[\]' 'threads.staleUnresolved\[\]' 'threads.skippedOutdated\[\]' 'threads.flaggedInjection\[\]' 'threads.unresolved' 'ci.status' 'ci.checks\[\]' 'sameRunAsLastTick' 'backoff.waitSeconds' 'backoff.intervalMinutes' 'recurrence.recurringKeys' 'mustFix\[\]'; do
+    grep -qE -- "$field" "$CMD"
+  done
+  for code in pr_merged pr_closed merge_conflict fix_attempts_exhausted recurrence_after_rejection recurrence_streak provider_error_repeated ci_pending review_in_progress mergeable_unknown manual_verify unchanged; do
+    grep -Fq "$code" "$CMD"
+  done
+}
+
+@test "AC-16: Step 3 routes each fix by the model-routing rubric through both hosts' delegation interfaces" {
+  step3=$(awk '/^## Step 3/{f=1} /^## Step 4/{f=0} f' "$CMD")
+  grep -qi 'Model routing for fixes' <<<"$step3"
+  grep -q 'model-routing' <<<"$step3"
+  for tier in haiku sonnet opus mechanical implementation architecture; do grep -q "$tier" <<<"$step3"; done
+  grep -q 'spawn_agent' <<<"$step3"
+  grep -q '`Agent`' <<<"$step3"
+  grep -q 'toolu:implementer' <<<"$step3"
+  grep -qi 'Deciding and doing are different classes' <<<"$step3"
+}
+
+@test "references/helper.md documents every result and state field the workflow names" {
+  [ -f "$HELPER_DOC" ]
+  for f in slot changed decision 'reasons\[\]' ci.status 'ci.checks\[\]' verdict.state verdict.verdict verdict.findingsCount 'findingKeys\[\]' 'mustFix\[\]' verdict.degraded degradedReason sameRunAsLastTick threads.total 'threads.actionable\[\]' 'threads.staleUnresolved\[\]' 'threads.skippedOutdated\[\]' 'threads.flaggedInjection\[\]' 'conversation.actionable\[\]' 'reviews.actionable\[\]' recurrence backoff 'errors\[\]' snapshotPath statePath; do
+    grep -qE -- "$f" "$HELPER_DOC"
+  done
+  for f in cronName lastUpdate totalTicks idleStreak currentInterval waitSeconds status worktree pr.key ciStatus reviewDecision mergeable unresolvedThreads headSha fixAttempts botVerdict botState botCommentId botCommentUpdatedAt botFindingKeys lastRoundFindingKeys lastRoundHadRejection recurrenceStreak unresolvedAfterClearance lastError actions.replied actions.resolved actions.flagged lastGoodSnapshot; do
+    grep -Fq -- "$f" "$HELPER_DOC"
+  done
+  # One captured example per decision value, plus the structured-error shape.
+  grep -Fq '"decision":"success"' "$HELPER_DOC"
+  grep -Fq '"decision":"keep_going"' "$HELPER_DOC"
+  grep -Fq '"decision":"escalate"' "$HELPER_DOC"
+  grep -Fq '"code":"locked"' "$HELPER_DOC"
+  for code in usage gh_unavailable jq_required api_error invalid_json head_moved state_malformed slot_mismatch locked duplicate_reply resolve_unconfirmed; do
+    grep -Fq "$code" "$HELPER_DOC"
+  done
+}
+
+@test "the closed reason set in helper.md matches the reducer's emitted codes" {
+  for code in ci_pending ci_failed ci_pass threads_unresolved threads_stale_unresolved threads_clear review_absent review_in_progress review_changes review_approved review_unknown_format provider_error provider_error_repeated manual_verify pr_closed pr_merged merge_conflict mergeable_unknown fix_attempts_exhausted recurrence_after_rejection recurrence_streak unchanged; do
+    grep -Fq "$code" "$HELPER_DOC"
+    grep -Fq "\"$code\"" "${BATS_TEST_DIRNAME}/../reduce-state.sh"
+  done
+}
+
+@test "detached worktree push is documented end to end: --branch for the writer, HEAD:<branch> for the push" {
+  grep -Fq -- '--branch "$BRANCH"' "$CMD"
+  grep -Fq 'push origin "HEAD:$BRANCH"' "$CMD"
+  grep -Fq -- '--branch <name>' "${BATS_TEST_DIRNAME}/../../../toolu-review/skills/review/SKILL.md"
+}
+
