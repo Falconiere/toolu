@@ -1,5 +1,18 @@
 # Changelog
 
+## [6.1.0](https://github.com/Falconiere/toolu/compare/v6.0.0...v6.1.0) (2026-09-20)
+
+
+### Features
+
+* **statusline:** display Jev readiness ([4a085ad](https://github.com/Falconiere/toolu/commit/4a085adec4930c294ca84b1da5def554a0a6a499))
+
+
+### Bug Fixes
+
+* **statusline:** preserve no-workspace rendering and tighten checks ([7ea0e1c](https://github.com/Falconiere/toolu/commit/7ea0e1c07418b4aef5606036907f71e18dd28567))
+* **statusline:** skip project reads without a workspace ([c8d07d8](https://github.com/Falconiere/toolu/commit/c8d07d846b8159220d918fb7a98473fc199a6e77))
+
 ## [6.0.0](https://github.com/Falconiere/toolu/compare/v5.4.0...v6.0.0) (2026-09-20)
 
 
