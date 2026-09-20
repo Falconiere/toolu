@@ -12,8 +12,8 @@ auth, a non-default branch, and this installed plugin; do not ask again or
 introduce handoff arguments. Read [the canonical workflow](../../workflows/babysit.md)
 completely and follow only its Codex controller branches plus every shared
 strict-clearance step. Each tick is one command — the shipped
-`scripts/babysit-tick.sh` under this plugin's root, with `--state-file` set to
-the Codex slot path; its output contract is [references/helper.md](references/helper.md).
+`scripts/babysit-tick.sh` under this plugin's root (`../../scripts/babysit-tick.sh`
+relative to this file), with `--state-file` set to the Codex slot path; its output contract is [references/helper.md](references/helper.md).
 Trust that result: never write a polling script or controller of your own,
 never re-fetch with ad-hoc `gh` calls what the result already reports, and act
 through `reply-thread.sh`, `resolve-thread.sh` and `record.sh`.

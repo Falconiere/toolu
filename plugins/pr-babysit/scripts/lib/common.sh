@@ -49,7 +49,8 @@ pb_require() {
 # pb_error CODE MESSAGE [EXTRA_JSON] -> one structured error document on stdout.
 # EXTRA_JSON (an object) is merged into the error entry.
 pb_error() {
-  local code="$1" message="$2" extra="${3:-{\}}"
+  local code="$1" message="$2" extra="${3:-}"
+  [ -n "$extra" ] || extra='{}'
   jq -nc --arg code "$code" --arg message "$message" --argjson extra "$extra" \
     '{version:1, errors:[({code:$code, message:$message} + $extra)]}'
 }
@@ -71,26 +72,33 @@ pb_json_valid() { jq -e . "$1" >/dev/null 2>&1; }
 # rename it over TARGET only when CMD exited 0 AND the output parses as JSON.
 # Any failure removes the temp file and leaves TARGET byte-identical, so a
 # reader never sees a partial document and a crashed writer leaves no residue.
-# The in-flight temp file is published in PB_ATOMIC_TMP so pb_on_exit can
-# remove it when a signal lands between mktemp and mv.
+# The in-flight temp file is published so pb_on_exit can remove it when a
+# signal lands mid-write: PB_ATOMIC_PREFIX is set BEFORE mktemp runs (a trap
+# can fire between mktemp returning and the assignment below, so the exact
+# name may never be recorded), and it carries $$ so the sweep only ever
+# touches this process's own temps.
 PB_ATOMIC_TMP=""
+PB_ATOMIC_PREFIX=""
 pb_atomic_write_json() {
   local target="$1"; shift
   local dir tmp
   dir=$(dirname "$target")
   mkdir -p "$dir" || return 1
-  tmp=$(mktemp "$dir/.$(basename "$target").tmp.XXXXXX") || return 1
+  PB_ATOMIC_PREFIX="$dir/.$(basename "$target").tmp.$$."
+  if ! tmp=$(mktemp "${PB_ATOMIC_PREFIX}XXXXXX"); then
+    PB_ATOMIC_PREFIX=""; return 1
+  fi
   PB_ATOMIC_TMP="$tmp"
   if ! "$@" >"$tmp"; then
-    rm -f "$tmp"; PB_ATOMIC_TMP=""; return 1
+    rm -f "$tmp"; PB_ATOMIC_TMP=""; PB_ATOMIC_PREFIX=""; return 1
   fi
   if ! pb_json_valid "$tmp"; then
-    rm -f "$tmp"; PB_ATOMIC_TMP=""; return 1
+    rm -f "$tmp"; PB_ATOMIC_TMP=""; PB_ATOMIC_PREFIX=""; return 1
   fi
   if ! mv -f "$tmp" "$target"; then
-    rm -f "$tmp"; PB_ATOMIC_TMP=""; return 1
+    rm -f "$tmp"; PB_ATOMIC_TMP=""; PB_ATOMIC_PREFIX=""; return 1
   fi
-  PB_ATOMIC_TMP=""
+  PB_ATOMIC_TMP=""; PB_ATOMIC_PREFIX=""
 }
 
 # pb_retry_on_rc RETRY_RC ATTEMPTS CMD [ARGS...]
@@ -125,6 +133,7 @@ pb_on_exit() {
   trap '' TERM INT
   if declare -F pb_lock_release >/dev/null 2>&1; then pb_lock_release; fi
   [ -n "${PB_ATOMIC_TMP:-}" ] && rm -f "$PB_ATOMIC_TMP"
+  [ -n "${PB_ATOMIC_PREFIX:-}" ] && rm -f "${PB_ATOMIC_PREFIX}"*
   [ -n "${PB_TMPDIR:-}" ] && [ -d "${PB_TMPDIR:-}" ] && rm -rf "$PB_TMPDIR"
   return "$rc"
 }

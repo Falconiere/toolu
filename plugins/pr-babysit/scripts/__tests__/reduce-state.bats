@@ -156,7 +156,8 @@ reasons() { jq -r '[.reasons[].code] | join(",")' <<<"$1"; }
   [ "$(jq '.verdict.findingKeys | length' <<<"$out")" = "$(jq '.verdict.findingsCount' <<<"$out")" ]
   [ "$(jq -r .decision <<<"$out")" = keep_going ]
   [[ "$(reasons "$out")" == *review_changes* ]]
-  [ "$(jq -c '.pr.botFindingKeys == .pr.botFindingKeys' "$TMP/next.json")" = true ]
+  # The state carries exactly the keys the result reported for this verdict.
+  [ "$(jq -c --argjson keys "$(jq -c '.verdict.findingKeys' <<<"$out")" '.pr.botFindingKeys == $keys' "$TMP/next.json")" = true ]
   [ "$(jq '.pr.botFindingKeys | length' "$TMP/next.json")" -gt 0 ]
 }
 

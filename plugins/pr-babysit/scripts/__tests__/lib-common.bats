@@ -181,7 +181,8 @@ retry_probe() {
   run with_libs "pb_retry_on_rc 10 2 '$TMP/probe.sh' '$TMP' 10 0"
   [ "$status" -eq 0 ]
   [ "$(cat "$TMP/count")" = 2 ]
-  [[ "$output" == *"attempt 1 of 2 returned 10; retrying"* ]]
+  # The log names the retried command ($1 after the two policy arguments).
+  [[ "$output" == *"attempt 1 of 2 returned 10; retrying $TMP/probe.sh"* ]]
   # moved twice → the retry code comes back after exactly 2 calls (collect-pr.sh maps it to head_moved)
   rm -f "$TMP/count"
   run with_libs "pb_retry_on_rc 10 2 '$TMP/probe.sh' '$TMP' 10 10 0"
