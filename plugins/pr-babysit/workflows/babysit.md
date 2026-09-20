@@ -348,7 +348,8 @@ by habit. Classify each Fix item with the
 [model-routing rubric](../../toolu/skills/orchestrator/references/model-routing.md)
 (the same table the toolu SessionStart hook injects) and hand it to the host's
 delegation interface from
-[`host-mapping.md`](../../toolu/workflows/host-mapping.md):
+[`host-mapping.md`](../../toolu/workflows/host-mapping.md) — the file at
+`plugins/toolu/workflows/host-mapping.md` in this repository:
 
 | Fix looks like | Class | Claude Code | Codex |
 | --- | --- | --- | --- |
