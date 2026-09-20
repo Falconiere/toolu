@@ -108,7 +108,7 @@ jobs:
           # Regenerate + validate the deterministic retrieval benchmark. No API
           # key in CI, so token counting is the offline heuristic — fully
           # hermetic. Guards the harness against regressions; the live tier
-          # (caveman/cavecrew/whole-session) is run manually, never in CI.
+          # (whole-session) is run manually, never in CI.
           bash benchmarks/run.sh --tier deterministic
           f=$(ls benchmarks/results/retrieval-deterministic-*.json | tail -1)
           bash benchmarks/run.sh --validate "$f"

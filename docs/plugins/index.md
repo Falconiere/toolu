@@ -58,7 +58,6 @@ See [`config.md`](../config.md) for the full schema.
 ```text
 # 1. Add marketplaces
 /plugin marketplace add anthropics/claude-plugins-official
-/plugin marketplace add JuliusBrussee/caveman
 /plugin marketplace add Falconiere/toolu
 
 # 2. Install core

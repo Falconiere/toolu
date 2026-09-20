@@ -13,8 +13,7 @@
     "claude-code",
     "skills",
     "agents",
-    "hooks",
-    "caveman"
+    "hooks"
   ],
   "dependencies": []
 }

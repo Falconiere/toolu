@@ -1,21 +1,20 @@
 #!/usr/bin/env bats
-# live-headless.bats — HERMETIC tests for the live cavecrew + whole-session
-# runners. NO `claude` CLI is ever invoked and there is no network: we prove the
+# live-headless.bats — HERMETIC tests for the live whole-session runner. NO
+# `claude` CLI is ever invoked and there is no network: we prove the
 # measurement BACKEND (stats_usage_rollup over a real transcript fixture set) and
 # the runner CONTRACT (arg-validation, schema-valid output, executable bits)
 # without paying for a live A/B. The live runs themselves are manual.
 
 setup() {
   BENCH_DIR="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"                 # benchmarks/
-  CAVECREW="$BENCH_DIR/cases/cavecrew/run.sh"
   WHOLE="$BENCH_DIR/cases/whole-session/run.sh"
   FIX="$BENCH_DIR/__tests__/fixtures"
   export BENCH_RESULTS_DIR="$BATS_TEST_TMPDIR/results"
 }
 
-# --- WIRING: the cavecrew/whole-session measurement backend ------------------
+# --- WIRING: the whole-session measurement backend ---------------------------
 # Feed the REAL sub-session transcript + its subagent transcripts through
-# stats_usage_rollup (the exact call both runners make) and prove it yields a
+# stats_usage_rollup (the exact call the runner makes) and prove it yields a
 # usable rollup. This is the key test: it proves the backend is wired correctly.
 @test "stats_usage_rollup rolls up the real sub-session transcript set" {
   run bash -c '
@@ -35,22 +34,11 @@ setup() {
 
 # --- ARG VALIDATION: live tier needs the claude CLI -------------------------
 # Strip /opt/homebrew/bin (where `claude` lives) from PATH but keep bash/jq/git.
-# Both runners must refuse with a non-zero status and a message naming the CLI.
-@test "cavecrew/run.sh fails clearly when the claude CLI is absent" {
-  PATH="/usr/bin:/bin" run bash "$CAVECREW"
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"claude CLI"* ]]
-}
-
+# The runner must refuse with a non-zero status and a message naming the CLI.
 @test "whole-session/run.sh fails clearly when the claude CLI is absent" {
   PATH="/usr/bin:/bin" run bash "$WHOLE"
   [ "$status" -ne 0 ]
   [[ "$output" == *"claude CLI"* ]]
-}
-
-@test "cavecrew/run.sh rejects an unknown arg with status 2" {
-  run bash "$CAVECREW" --bogus
-  [ "$status" -eq 2 ]
 }
 
 @test "whole-session/run.sh rejects an unknown arg with status 2" {
@@ -59,27 +47,8 @@ setup() {
 }
 
 # --- EXECUTABLE BITS --------------------------------------------------------
-@test "both live run.sh are executable" {
-  [ -x "$CAVECREW" ]
+@test "the live run.sh is executable" {
   [ -x "$WHOLE" ]
-}
-
-# --- SCHEMA: hand-built samples pass bench_result_validate ------------------
-@test "a hand-built cavecrew result passes bench_result_validate" {
-  out="$BENCH_RESULTS_DIR/cavecrew-live-2026-06-15.json"
-  mkdir -p "$BENCH_RESULTS_DIR"
-  jq -n '{
-    mechanism:"cavecrew", tier:"live", method:"headless-ab",
-    tokenizer:{mode:"usage", source:"usage"},
-    provenance:{model:"claude-sonnet-4-6", date:"2026-06-15", commit:"deadbeef", n_runs:5, pricing_id:"2026-06"},
-    baseline: {label:"inline",   tokens:{input:null,output:null,cache_read:null,cache_write:null,total:90000}, cost:null},
-    treatment:{label:"cavecrew", tokens:{input:null,output:null,cache_read:null,cache_write:null,total:40000}, cost:null},
-    delta:{tokens_pct:55, cost_pct:null, abs_tokens:50000, mean:40000, stddev:1200},
-    cases:[{id:"list-bats-tests", baseline_tokens:90000, treatment_tokens:40000}],
-    notes:"hermetic sample"
-  }' > "$out"
-  run bash -c 'source "$1/lib/result.sh"; bench_result_validate "$2"' _ "$BENCH_DIR" "$out"
-  [ "$status" -eq 0 ]
 }
 
 # --- EMIT PIPELINE: stub the `claude` boundary, run the REAL pipeline ---------
@@ -104,20 +73,6 @@ STUB
   chmod +x "$1/claude"
 }
 
-@test "stubbed cavecrew run drives the real emit pipeline to a schema-valid result" {
-  export CLAUDE_CONFIG_DIR="$BATS_TEST_TMPDIR/cfg"
-  _make_claude_stub "$BATS_TEST_TMPDIR/bin"
-  PATH="$BATS_TEST_TMPDIR/bin:$PATH" run bash "$CAVECREW" --n 1
-  [ "$status" -eq 0 ]
-  local out; out="$(ls "$BENCH_RESULTS_DIR"/cavecrew-live-*.json | head -1)"
-  [ -f "$out" ]
-  [ "$(jq -r '.mechanism'         "$out")" = "cavecrew" ]
-  [ "$(jq -r '.tokenizer.mode'    "$out")" = "usage" ]
-  [ "$(jq -r '.delta.tokens_pct'  "$out")" != "null" ]
-  run bash -c 'source "$1/lib/result.sh"; bench_result_validate "$2"' _ "$BENCH_DIR" "$out"
-  [ "$status" -eq 0 ]
-}
-
 @test "stubbed whole-session run drives the real emit pipeline (incl cost) to a schema-valid result" {
   export CLAUDE_CONFIG_DIR="$BATS_TEST_TMPDIR/cfg"
   _make_claude_stub "$BATS_TEST_TMPDIR/bin"
@@ -126,12 +81,15 @@ STUB
   local out; out="$(ls "$BENCH_RESULTS_DIR"/whole-session-live-*.json | head -1)"
   [ -f "$out" ]
   [ "$(jq -r '.mechanism'         "$out")" = "whole-session" ]
+  [ "$(jq -r '.tokenizer.mode'    "$out")" = "usage" ]
+  [ "$(jq -r '.delta.tokens_pct'  "$out")" != "null" ]
   [ "$(jq -r '.baseline.cost'     "$out")" != "null" ]   # cost path exercised
   [ "$(jq -r '.delta.cost_pct'    "$out")" != "null" ]
   run bash -c 'source "$1/lib/result.sh"; bench_result_validate "$2"' _ "$BENCH_DIR" "$out"
   [ "$status" -eq 0 ]
 }
 
+# --- SCHEMA: a hand-built sample passes bench_result_validate ---------------
 @test "a hand-built whole-session result passes bench_result_validate" {
   out="$BENCH_RESULTS_DIR/whole-session-live-2026-06-15.json"
   mkdir -p "$BENCH_RESULTS_DIR"

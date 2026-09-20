@@ -1,4 +1,0 @@
-Explain the CAP theorem and what the practical trade-off between consistency and
-availability means when a network partition actually happens in a distributed
-database. Give a concrete example of a system that chooses CP and one that chooses
-AP.

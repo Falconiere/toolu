@@ -1,4 +1,0 @@
-My Rust code fails to compile with "cannot borrow `self.cache` as mutable more
-than once at a time". I have a method that loops over `self.items` and, inside the
-loop, calls `self.insert_into_cache(item)` which mutates `self.cache`. Why does the
-borrow checker reject this, and what is the idiomatic fix?

@@ -9,17 +9,15 @@ result cannot be flattered.
 
 - **Deterministic** (`retrieval`): hermetic, regenerated in CI from real
   tool output. No model, no network.
-- **Live** (`caveman`, `cavecrew`, `whole-session`): run by hand against the real
-  API / `claude -p`, then committed. Non-deterministic — reported as mean±stddev
-  over `n_runs ≥ 5`, never a single cherry-picked run.
+- **Live** (`whole-session`): run by hand against the real API / `claude -p`,
+  then committed. Non-deterministic — reported as mean±stddev over `n_runs ≥ 5`,
+  never a single cherry-picked run.
 
-## Fair baseline (caveman)
+## Fair baseline
 
-The caveman comparison baseline is **"answer concisely"**, not a verbose
-assistant. The original "~75%" claim was inflated precisely because it measured
-against a deliberately wordy baseline. The pinned baseline prompt is committed
-next to the runner (`cases/caveman/baseline-system.txt`) so the comparison is
-auditable.
+A live comparison pins its baseline prompt next to the runner and commits it, so
+the comparison is auditable and cannot be flattered by a deliberately weak
+baseline.
 
 ## Tokenizer modes are never mixed
 
@@ -57,9 +55,8 @@ cases[], notes
 Whole-session results are an aggregate (toolu on vs off), **not** the sum of the
 per-mechanism deltas.
 
-`delta.mean` / `delta.stddev` describe the treatment side's run-to-run spread:
-**output tokens** for caveman, **main-thread tokens** for cavecrew, **cost (USD)**
-for whole-session. Live results may carry extra diagnostic keys — `baseline_stats`
-/ `treatment_stats` (cavecrew) and `token_stats` / `cost_stats` (whole-session) —
-holding the full `{mean,stddev,n}` for each measured quantity. These are
-informational; the required schema above is the contract.
+`delta.mean` / `delta.stddev` describe the treatment side's run-to-run spread —
+**cost (USD)** for whole-session. Live results may carry extra diagnostic keys —
+`token_stats` / `cost_stats` (whole-session) — holding the full `{mean,stddev,n}`
+for each measured quantity. These are informational; the required schema above is
+the contract.

@@ -1,18 +1,18 @@
 # benchmarks
 
 Measured token/cost deltas for toolu's efficiency mechanisms — built to replace
-unsubstantiated headline claims (caveman "~75%", cavecrew "~60%") with real,
-committed numbers. Honest by construction: it records what tools and models
-actually return, never a fabricated counterfactual.
+unsubstantiated headline claims with real, committed numbers. Honest by
+construction: it records what tools and models actually return, never a
+fabricated counterfactual.
 
 ## Tiers
 
 - **Deterministic (CI, hermetic):** `retrieval`. No model in the loop — compares
   full-file read bytes vs ast-grep targeted-match bytes, as tokens. Runs in CI
   with no API key; its result is committed under `results/`.
-- **Live (manual, non-CI):** `caveman`, `cavecrew`, `whole-session`. Real API /
-  `claude -p` runs; token counts come from real `message.usage`. Results are run
-  by hand and committed with provenance (model, commit, n_runs, variance).
+- **Live (manual, non-CI):** `whole-session`. Real API / `claude -p` runs; token
+  counts come from real `message.usage`. Results are run by hand and committed
+  with provenance (model, commit, n_runs, variance).
 
 ## Layout
 
@@ -29,7 +29,7 @@ benchmarks/
 
 ```sh
 benchmarks/run.sh --tier deterministic            # hermetic; writes results/retrieval-*.json
-benchmarks/run.sh --tier live --mechanism caveman # manual; needs ANTHROPIC_API_KEY
+benchmarks/run.sh --tier live --mechanism whole-session  # manual; needs ANTHROPIC_API_KEY
 benchmarks/run.sh --validate <result.json>        # schema check
 ```
 

@@ -1,3 +1,0 @@
-Answer the question concisely. Give the technically correct answer and the
-essential reasoning, nothing more. No preamble, no pleasantries, no summary
-recap. Use a code block when code is the clearest answer.

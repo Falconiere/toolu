@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Statusline — the toolu statusline.
 # Reads the Claude Code statusline JSON on stdin and prints a single status line:
-#   model | effort | ctx | <email domain> | <gate> | folder | branch [↑↓] [dirty] | <comemory> | <caveman>
+#   model | effort | ctx | <email domain> | <gate> | folder | branch [↑↓] [dirty] | <comemory>
 # The signature segment is the quality-gate marker: when this project's
 # PostToolUse gate is failing, it shows a loud red marker so you can't miss it.
 # (Lights up only when a gate writer — e.g. rust-quality/ts-quality/toolu — is present.)
@@ -139,21 +139,6 @@ _parts="${_parts%" "}"
 _git_seg=""
 [ -n "$_parts" ] && _git_seg="${YELLOW}[${_parts}]${RESET}"
 
-# --- Caveman mode (lights up when the caveman plugin is installed) ---
-# Read the flag file written by caveman-activate; refuse symlinks, cap the read,
-# strip to a safe charset, whitelist known modes.
-caveman_seg=""
-caveman_flag="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.caveman-active"
-if [ -f "$caveman_flag" ] && [ ! -L "$caveman_flag" ]; then
-  caveman_mode=$(head -c 64 "$caveman_flag" 2>/dev/null | tr -d '\n\r' | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-')
-  case "$caveman_mode" in
-    off) ;;
-    "") caveman_seg="${BOLD}${GREEN}[CAVEMAN]${RESET}" ;;
-    full|lite|ultra|wenyan-lite|wenyan|wenyan-full|wenyan-ultra|commit|review|compress)
-      caveman_seg="${BOLD}${GREEN}[CAVEMAN:$(printf '%s' "$caveman_mode" | tr '[:lower:]' '[:upper:]')]${RESET}" ;;
-  esac
-fi
-
 # --- Comemory memory count ([COMEMORY:N]): per-project, main-repo scoped ---
 # Read the marker written by comemory's comemory-status SessionStart hook.
 # The key derivation MUST match that hook (git-common-dir → main-repo basename)
@@ -176,6 +161,5 @@ if [ "$_first" = false ]; then
   [ -n "$_git_seg" ] && line="${line}${_git_seg}"
 fi
 [ -n "$comemory_seg" ] && line="${line}${sep}${comemory_seg}"
-[ -n "$caveman_seg" ] && line="${line}${sep}${caveman_seg}"
 
 printf '%s' "$line"
