@@ -221,6 +221,20 @@ PY
   [ "$(jq -r '.questions.q.criteria.billing' <<<"$body")" = "second" ]
 }
 
+@test "jev: choice with 256 options exits 1 before any request (API cap is 255)" {
+  args=()
+  for i in $(seq 1 256); do args+=(-o "opt$i"); done
+  run "$TOOL_DIR/jev.sh" choice -s "$TICKET" "Which?" "${args[@]}"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"at most 255 options"* ]]
+  [ ! -s "$CURL_LOG" ]
+  args=()
+  for i in $(seq 1 255); do args+=(-o "opt$i"); done
+  run "$TOOL_DIR/jev.sh" choice -s "$TICKET" "Which?" "${args[@]}"
+  [ "$status" -eq 0 ]
+  [ "$(jq '.questions.q.criteria | length' <<<"$(body_json)")" -eq 255 ]
+}
+
 @test "jev: choice without options exits 1 before any request" {
   run "$TOOL_DIR/jev.sh" choice -s "$TICKET" "Which team?"
   [ "$status" -eq 1 ]
@@ -244,6 +258,18 @@ PY
   [ "$status" -eq 1 ]
   [[ "$output" == *"at least 2 levels"* ]]
   [ ! -s "$CURL_LOG" ]
+}
+
+@test "jev: score with 11 levels exits 1 before any request (API cap is 10)" {
+  # The live API answers 11 levels with "Too many score levels. Must have at
+  # most 10 levels." — catch it locally, before a paid round trip.
+  run "$TOOL_DIR/jev.sh" score -s "$TICKET" "How severe?" -l a -l b -l c -l d -l e -l f -l g -l h -l i -l j -l k
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"at most 10 levels"* ]]
+  [ ! -s "$CURL_LOG" ]
+  run "$TOOL_DIR/jev.sh" score -s "$TICKET" "How severe?" -l a -l b -l c -l d -l e -l f -l g -l h -l i -l j
+  [ "$status" -eq 0 ]
+  [ "$(jq '.questions.q.criteria | length' <<<"$(body_json)")" -eq 10 ]
 }
 
 @test "jev: score answers print through the default projection" {
@@ -408,6 +434,25 @@ JSON
   [ "$status" -eq 22 ]
   [[ "$output" == *"overloaded"* ]]
   [ "$(wc -l < "$CURL_LOG" | tr -d ' ')" -eq 3 ]
+}
+
+@test "jev: any 5xx is retried like the SDK default policy, not only the listed few" {
+  printf '%s' '[{"status":520,"body":"{\"error\":\"edge\"}"},{"status":503,"body":"{\"error\":\"unavailable\"}"},{"status":200}]' > "$SANDBOX/responses.json"
+  run "$TOOL_DIR/jev.sh" noul -s "$TICKET" "Urgent?"
+  [ "$status" -eq 0 ]
+  [ "$output" = '{"q":{"type":"noul","noul":0.92}}' ]
+  [ "$(wc -l < "$CURL_LOG" | tr -d ' ')" -eq 3 ]
+}
+
+@test "jev: retry-after-ms is honored when Retry-After is absent" {
+  printf '%s' '[{"status":429,"retry_after_ms":1500,"body":"{\"error\":\"rate limited\"}"},{"status":200}]' > "$SANDBOX/responses.json"
+  start=$(date +%s)
+  run "$TOOL_DIR/jev.sh" noul -s "$TICKET" "Urgent?"
+  elapsed=$(( $(date +%s) - start ))
+  [ "$status" -eq 0 ]
+  [ "$(wc -l < "$CURL_LOG" | tr -d ' ')" -eq 2 ]
+  # 1500ms rounds up to a 2s wait, above the 1s first backoff.
+  [ "$elapsed" -ge 2 ]
 }
 
 @test "jev: 401 is not retried and error JSON goes only to stderr" {

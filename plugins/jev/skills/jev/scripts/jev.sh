@@ -42,8 +42,8 @@ Shared options:
       --raw           Print the whole response body instead of just .answers
 
 noul:    --true DESC / --false DESC   what a yes / a no means
-choice:  -o, --option KEY=DESC        repeatable, at least 2 (bare -o KEY sends no description)
-score:   -l, --level DESC             repeatable, at least 2, lowest level first
+choice:  -o, --option KEY=DESC        repeatable, 2..255 (bare -o KEY sends no description)
+score:   -l, --level DESC             repeatable, 2..10, lowest level first
 EOF
   exit 1
 }
@@ -135,10 +135,28 @@ jev_post() (
       cat "$tmp/body"
       return 0
     fi
-    # curl's built-in retry set omits TypeSafe's documented 529 overload.
-    # Separate attempt bodies so transient errors never become answer JSON.
+    # Same retry set as TypeSafe's SDK default policy: 408, 429, every 5xx
+    # (which covers the documented 529 overload), and timeouts. curl's own
+    # --retry omits 529, so the loop lives here. Separate attempt bodies so
+    # transient errors never become answer JSON.
     delay=$((1 << (attempt - 1)))
+    # Retry-After (seconds) wins over retry-after-ms (milliseconds, rounded up);
+    # both are documented SDK-honored headers. Waits over 60s surface the error.
     retry_after=$(awk 'tolower($1) == "retry-after:" {gsub("\r", "", $2); print $2}' "$tmp/headers")
+    if [[ ! "$retry_after" =~ ^[0-9]+$ ]]; then
+      retry_after=$(awk 'tolower($1) == "retry-after-ms:" {gsub("\r", "", $2); print $2}' "$tmp/headers")
+      if [[ "$retry_after" =~ ^[0-9]+$ ]]; then
+        # More than 8 digits is already past the 60s ceiling; skip the arithmetic
+        # so an absurd header cannot overflow into a negative delay.
+        if [[ ${#retry_after} -gt 8 ]]; then
+          retry_after=61
+        else
+          retry_after=$(( (10#$retry_after + 999) / 1000 ))
+        fi
+      else
+        retry_after=""
+      fi
+    fi
     if [[ "$retry_after" =~ ^[0-9]+$ ]]; then
       if [[ ${#retry_after} -gt 2 ]] || ((10#$retry_after > 60)); then
         break
@@ -147,7 +165,7 @@ jev_post() (
     fi
     [[ "$attempt" -lt 3 ]] || break
     case "$status:$code" in
-      0:408|0:429|0:500|0:502|0:503|0:504|0:529|28:*) sleep "$delay";;
+      0:408|0:429|0:5[0-9][0-9]|28:*) sleep "$delay";;
       *) break;;
     esac
   done
@@ -282,6 +300,8 @@ cmd_choice() {
   require_instructions
   require_state
   [[ "$(jq 'length' <<<"$criteria")" -ge 2 ]] || die "choice needs at least 2 options"
+  # The API accepts up to 255 options per Choice.
+  [[ "$(jq 'length' <<<"$criteria")" -le 255 ]] || die "choice accepts at most 255 options"
 
   local question
   question=$(jq -nc \
@@ -315,6 +335,8 @@ cmd_score() {
   require_instructions
   require_state
   [[ "$(jq 'length' <<<"$levels")" -ge 2 ]] || die "score needs at least 2 levels"
+  # The API accepts up to 10 levels per Score.
+  [[ "$(jq 'length' <<<"$levels")" -le 10 ]] || die "score accepts at most 10 levels"
 
   local question
   question=$(jq -nc \

@@ -1,9 +1,12 @@
 # Jev in the development workflow
 
-Use the optional `jev` skill **if and only if** the current stage has a bounded
-semantic decision, the relevant evidence is available, and its typed answer
-would change the next action. When those conditions hold and Jev is available,
-calling it is mandatory. Installation alone does not justify a request.
+The `jev` skill is **mandatory on every task**. Before acting on a request,
+identify at least one bounded semantic decision it contains — the table below
+names the useful one per stage — and, when Jev is available, call it. Prefer
+the decision whose typed answer changes the next action; when several qualify,
+batch them in one `ask` call. A task with genuinely no semantic decision (a
+confirmation, a single deterministic lookup) is stated as such in one sentence,
+never skipped silently.
 
 | Stage | Useful judgment | Keep with the agent or deterministic tools |
 | --- | --- | --- |
@@ -16,11 +19,16 @@ calling it is mandatory. Installation alone does not justify a request.
 | Test design | Identify semantic boundary cases in supplied examples. | Compute expected outputs and assert test results. |
 
 Read the installed `jev` skill for the host's published wrapper path and CLI.
-If the plugin, wrapper, credentials, or service is unavailable, state that limitation once and
-continue with explicit reasoning and repository evidence. Do not install tools
-or make ceremonial calls simply to satisfy a workflow stage.
+If the plugin, wrapper, credentials, or service is unavailable, state that
+limitation once per task and continue with explicit reasoning and repository
+evidence. Do not install tools to satisfy the rule, and keep each call a real
+decision over real evidence rather than a ceremonial one.
 
-Send only the relevant excerpts, named candidates, and rubric. Batch independent
+Send only the relevant excerpts, named candidates, and rubric, preferably as an
+object with named fields the questions point at by backticked path. Write the
+exact condition (Jev reads literally), one judgment per question, levels that
+describe situations rather than degrees, and no arithmetic, counting, or date
+comparison — extract parts, compute in code. Batch independent
 questions over the same state into one `ask` request. A Choice picks one option;
 use comparable per-candidate Scores when graded ranking matters. A Noul near
 0.5 expresses uncertainty. For Choice/Score, confidence measures distribution

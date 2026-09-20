@@ -9,9 +9,10 @@ Review the spec adversarially before it becomes a plan. Judge whether a
 competent builder could proceed without guessing; do not add replacement design
 work or praise.
 
-Apply [semantic judgments](../../workflows/semantic-judgments.md) to useful,
-bounded requirement/evidence comparisons. Verify every finding against the
-source; Jev's confidence cannot approve the spec or replace this checklist.
+Apply [semantic judgments](../../workflows/semantic-judgments.md) to bounded
+requirement/evidence comparisons — Jev is mandatory on every task. Verify every
+finding against the source; Jev's confidence cannot approve the spec or replace
+this checklist.
 
 ## Checklist
 

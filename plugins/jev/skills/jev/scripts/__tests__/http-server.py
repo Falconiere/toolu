@@ -39,6 +39,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         if "retry_after" in response:
             self.send_header("Retry-After", str(response["retry_after"]))
+        if "retry_after_ms" in response:
+            self.send_header("retry-after-ms", str(response["retry_after_ms"]))
         self.end_headers()
         response_file = root / "response.json"
         if "body" in response:

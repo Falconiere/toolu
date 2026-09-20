@@ -32,14 +32,19 @@ Set `TYPESAFE_API_KEY` in the environment for the wrapper to authenticate
 
 ### `jev` Skill
 
-Mandatory when a bounded semantic judgment over supplied evidence would change
-the next action. This applies to brainstorm, spec, spec review, plan, plan review,
-execution, and review when useful. Calls are not required just to enter a stage.
-Batch independent questions and reuse unchanged evidence across stages; keep
-architecture, code correctness, tests, and exact rules with the agent and tools.
+Mandatory on every task: before acting on a request, the agent identifies at
+least one bounded semantic decision it contains (classify the request or its
+scope, rank or route candidate approaches, judge supplied evidence) and calls
+Jev for it, across brainstorm, spec, spec review, plan, plan review, execution,
+and review. A task with genuinely no semantic decision is stated as such in one
+sentence, never skipped silently. Batch independent questions and reuse
+unchanged evidence across stages; keep architecture, code correctness, tests,
+and exact rules with the agent and tools.
 
-The plugin injects this rule on startup, resume, clear, and compaction, without
-calling the API. Missing prerequisites produce an actionable fallback message.
+The SessionStart hook injects the full rule on startup, resume, clear, and
+compaction; the UserPromptSubmit hook restates a short form on every prompt so
+the rule survives long sessions. Neither calls the API. Missing prerequisites
+produce one actionable fallback message at session start and silence per prompt.
 Enforcement is through workflow instructions; it does not block edits or commits.
 See the [workflow guidance](../../plugins/toolu/workflows/semantic-judgments.md).
 
@@ -65,9 +70,13 @@ Shared options:
       --raw           Print the whole response body instead of just .answers
 
 noul:    --true DESC / --false DESC   what a yes / a no means
-choice:  -o, --option KEY=DESC        repeatable, at least 2 (bare -o KEY sends no description)
-score:   -l, --level DESC             repeatable, at least 2, lowest level first
+choice:  -o, --option KEY=DESC        repeatable, 2..255 (bare -o KEY sends no description)
+score:   -l, --level DESC             repeatable, 2..10, lowest level first
 ```
+
+Structured `instructions` and `criteria` (objects, arrays, `null`), which the
+API accepts on every question type, go through `ask`; the single-question
+commands take strings.
 
 ## Usage Examples
 
@@ -133,10 +142,11 @@ fi
 | Concern | Detail |
 |---|---|
 | State | Literal text stays a string. `@FILE` and `-` are sent as structured JSON only when they parse as an object or array; anything else, including a bare scalar, is sent as a string. |
-| Input | Text only — string, JSON object, or array. Pre-process anything else. |
+| Input | Text only — string, JSON object, or array. Pre-process anything else. English is the primary training language. |
+| Limits | Choice: 2–255 options. Score: 2–10 levels. Checked locally before any request (the API rejects 11 levels with `Too many score levels`). |
 | Context | 64k tokens per request; 32k for `state` plus the longest question. Slice large files first. |
 | Output | Default prints `.answers` compactly. `--raw` adds `model` and token `usage`. Missing or invalid typed answers fail explicitly, including with `--raw`. |
-| Errors | Up to three attempts for timeouts and HTTP `408/429/500/502/503/504/529`, with 1s then 2s backoff. Numeric `Retry-After` up to 60s is honored; longer waits surface the error. Other HTTP errors are not retried. |
+| Errors | Up to three attempts for timeouts and HTTP `408`, `429`, and any `5xx` — the SDK's default retry set — with 1s then 2s backoff. `Retry-After` (seconds) or `retry-after-ms` up to 60s is honored; longer waits surface the error. `401`/`422` and other 4xx are not retried. |
 | Exit codes | `1` usage/config error or invalid response, `22` HTTP error with the API's body on stderr, `28` timeout. |
 | Confidence | For `choice`/`score`, `confidence` describes how concentrated the distribution is — not whether the answer is right. Tune thresholds against your own data. |
 
@@ -144,7 +154,7 @@ fi
 
 ```bash
 bats plugins/jev/skills/jev/scripts/__tests__/jev.bats   # offline, real curl + loopback HTTPS
-bats plugins/jev/hooks/__tests__                          # SessionStart publishing
+bats plugins/jev/hooks/__tests__                          # SessionStart publishing + per-prompt mandate
 
 JEV_LIVE=1 TYPESAFE_API_KEY=… \
   bats plugins/jev/skills/jev/scripts/__tests__/jev-live.bats   # real API, opt-in
