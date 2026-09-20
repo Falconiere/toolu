@@ -26,6 +26,13 @@
 #                     session rooted elsewhere — the gate reads the state file
 #                     under the pushed repo's own root, so writing it anywhere
 #                     else is invisible to the gate.
+#   --branch          (default: the checked-out branch) the branch the push
+#                     targets. Required on a detached checkout — pr-babysit's
+#                     `git worktree add --detach` + `push origin HEAD:<branch>`
+#                     contract — and must name an existing refs/heads or
+#                     refs/remotes/origin ref. On an attached checkout it must
+#                     equal the checked-out branch: the gate keys the state
+#                     file by that branch and would never read a re-keyed one.
 #   --reviewed-files  (default: auto-computed) comma-separated list of paths,
 #                     overriding the auto-computed `git diff --name-only
 #                     <base>...HEAD` file list. The gate (schema v2) requires
@@ -40,6 +47,7 @@ findings_count=""
 reviewers='["toolu-review:review"]'
 findings='[]'
 repo=""
+branch_arg=""
 reviewed_files_arg=""
 reviewed_files_set=0
 while [ $# -gt 0 ]; do
@@ -48,6 +56,7 @@ while [ $# -gt 0 ]; do
     --reviewers)      reviewers="$2";      shift 2 ;;
     --findings)       findings="$2";       shift 2 ;;
     --repo)           repo="$2";           shift 2 ;;
+    --branch)         branch_arg="$2";     shift 2 ;;
     --reviewed-files) reviewed_files_arg="$2"; reviewed_files_set=1; shift 2 ;;
     *) echo "write-state.sh: unknown arg: $1" >&2; exit 2 ;;
   esac
@@ -64,8 +73,22 @@ command -v git >/dev/null 2>&1 || { echo "write-state.sh: git required" >&2; exi
 repo_root=$(git -C "${repo:-.}" rev-parse --show-toplevel 2>/dev/null || echo "")
 [ -n "$repo_root" ] || { echo "write-state.sh: ${repo:-$(pwd)} is not inside a git repo" >&2; exit 1; }
 
+# Branch — MIRROR of push_target_branch (lib/detect.sh): the checked-out
+# branch when attached; on a detached checkout the branch the push targets,
+# which the caller names with --branch because the writer never sees the push
+# command. Validated against real refs so a typo cannot key a state file the
+# gate will never read.
 branch=$(git -C "$repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-{ [ -n "$branch" ] && [ "$branch" != "HEAD" ]; } || { echo "write-state.sh: not on a branch (detached HEAD?)" >&2; exit 1; }
+if [ -z "$branch" ] || [ "$branch" = "HEAD" ]; then
+  [ -n "$branch_arg" ] || { echo "write-state.sh: not on a branch (detached HEAD?) — pass --branch <name> naming the branch the push targets (git push origin HEAD:<name>)" >&2; exit 1; }
+  if ! git -C "$repo_root" show-ref --verify --quiet "refs/heads/$branch_arg" \
+     && ! git -C "$repo_root" show-ref --verify --quiet "refs/remotes/origin/$branch_arg"; then
+    echo "write-state.sh: unknown branch '$branch_arg' (no refs/heads/$branch_arg or refs/remotes/origin/$branch_arg)" >&2; exit 1
+  fi
+  branch="$branch_arg"
+elif [ -n "$branch_arg" ] && [ "$branch_arg" != "$branch" ]; then
+  echo "write-state.sh: --branch '$branch_arg' does not match the checked-out branch '$branch'; the gate keys the state file by the checked-out branch" >&2; exit 1
+fi
 
 # Base branch — mirror of detect_base_branch's core; $PUSH_REVIEW_BASE matches
 # the gate's own override.

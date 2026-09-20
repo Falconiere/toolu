@@ -1071,3 +1071,52 @@ EOF'
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+# --- push_target_branch -----------------------------------------------------
+
+@test "push_target_branch: attached HEAD is the checked-out branch, whatever the refspec says" {
+  source_lib
+  git -c user.email=t@t -c user.name=t checkout -q -b feat/x
+  [ "$(push_target_branch "git push origin HEAD:feat/y" "$TMP")" = "feat/x" ]
+  [ "$(push_target_branch "git push" "$TMP")" = "feat/x" ]
+  [ "$(push_target_branch "git push -u origin feat/x" "$TMP")" = "feat/x" ]
+}
+
+@test "push_target_branch: detached HEAD resolves the push refspec destination" {
+  source_lib
+  git -c user.email=t@t -c user.name=t checkout -q -b feat/x
+  git checkout -q "$(git rev-parse HEAD)"
+  [ "$(git rev-parse --abbrev-ref HEAD)" = HEAD ]
+  [ "$(push_target_branch "git push origin HEAD:feat/x" "$TMP")" = "feat/x" ]
+  [ "$(push_target_branch "git -C $TMP push origin HEAD:feat/x" "$TMP")" = "feat/x" ]
+  [ "$(push_target_branch "git push origin +HEAD:refs/heads/feat/x" "$TMP")" = "feat/x" ]
+  [ "$(push_target_branch "git push -u origin feat/x" "$TMP")" = "feat/x" ]
+  [ "$(push_target_branch "git push origin abc123:feat/x" "$TMP")" = "feat/x" ]
+  [ "$(push_target_branch "git push -o ci.skip origin HEAD:feat/x" "$TMP")" = "feat/x" ]
+  [ "$(push_target_branch "git push --push-option=ci.skip origin HEAD:feat/x" "$TMP")" = "feat/x" ]
+  [ "$(push_target_branch "cd /tmp && git push origin HEAD:feat/x" "$TMP")" = "feat/x" ]
+}
+
+@test "push_target_branch: detached HEAD with nothing to key to is empty" {
+  source_lib
+  git -c user.email=t@t -c user.name=t checkout -q -b feat/x
+  git checkout -q "$(git rev-parse HEAD)"
+  [ -z "$(push_target_branch "git push" "$TMP")" ]
+  [ -z "$(push_target_branch "git push origin" "$TMP")" ]
+  [ -z "$(push_target_branch "git push origin HEAD" "$TMP")" ]
+  [ -z "$(push_target_branch "git push origin :feat/x" "$TMP")" ]
+  [ -z "$(push_target_branch "git push origin refs/heads/*:refs/heads/*" "$TMP")" ]
+  [ -z "$(push_target_branch "git push --force origin" "$TMP")" ]
+}
+
+@test "push_target_branch: a detached worktree pushing HEAD:<branch> names that branch" {
+  source_lib
+  git -c user.email=t@t -c user.name=t checkout -q -b feature
+  git -c user.email=t@t -c user.name=t commit --allow-empty -qm work
+  git checkout -q -
+  git worktree add -q --detach "$TMP/wt" feature
+  [ "$(git -C "$TMP/wt" rev-parse --abbrev-ref HEAD)" = HEAD ]
+  [ "$(push_target_branch "git -C $TMP/wt push origin HEAD:feature" "$TMP/wt")" = "feature" ]
+  [ -z "$(push_target_branch "git -C $TMP/wt push" "$TMP/wt")" ]
+}
+

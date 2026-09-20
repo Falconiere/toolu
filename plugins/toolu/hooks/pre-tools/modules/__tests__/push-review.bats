@@ -202,6 +202,41 @@ EOF
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("detached HEAD")'
 }
 
+@test "push-review: detached worktree pushing HEAD:<branch> is judged as that branch and passes with a clean state" {
+  # pr-babysit's contract: `git worktree add --detach` + `push origin HEAD:<branch>`.
+  git worktree add -q --detach "$SANDBOX/wt" HEAD
+  [ "$(git -C "$SANDBOX/wt" rev-parse --abbrev-ref HEAD)" = HEAD ]
+  # Clean review state for feat/example (the branch the push targets); same
+  # diff as the worktree, so the SHA matches.
+  write_state "$(current_diff_sha)" 0
+  payload=$(build_input "git -C $SANDBOX/wt push origin HEAD:feat/example")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  decision=$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // empty')
+  [ "$decision" != "deny" ]
+  ! echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("detached HEAD")' >/dev/null 2>&1
+}
+
+@test "push-review: detached worktree pushing HEAD:<branch> WITHOUT a state file is denied for the missing review, not as detached" {
+  git worktree add -q --detach "$SANDBOX/wt" HEAD
+  payload=$(build_input "git -C $SANDBOX/wt push origin HEAD:feat/example")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  ! echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("detached HEAD")' >/dev/null 2>&1
+}
+
+@test "push-review: detached worktree pushing with no refspec is still denied as detached, naming the fix" {
+  git worktree add -q --detach "$SANDBOX/wt" HEAD
+  write_state "$(current_diff_sha)" 0
+  payload=$(build_input "git -C $SANDBOX/wt push")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("detached HEAD")'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("HEAD:<branch>")'
+}
+
 @test "push-review: denial reason instructs agent to use atomic write" {
   payload=$(build_input "git push")
   run_hook "Bash" "$payload"
