@@ -20,8 +20,8 @@ startup behavior in both Codex and Claude Code.
    marketplace descriptions must exactly match their plugin manifests.
 2. Read the service's live API documentation and the hosts' hook contracts.
    Distinguish installing a skill from injecting mandatory session instructions.
-   For every changed hook event, validate successful stdout against each host's
-   event-specific output schema; syntactically valid JSON is not sufficient.
+   For every changed hook event, validate successful stdout or silent success
+   against each host's event-specific output schema; valid JSON is not sufficient.
 3. Run the plugin's colocated tests. For REST wrappers, exercise real curl against
    a private loopback HTTPS fixture; check request JSON, retries, output
    validation, and error propagation.
