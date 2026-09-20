@@ -8,6 +8,12 @@ SCRIPT="${BATS_TEST_DIRNAME}/../pre-compact.sh"
   [ -z "$output" ]
 }
 
+@test "pre-compact drains large stdin without closing the producer pipe" {
+  run bash -o pipefail -c "head -c 1048576 /dev/zero | '$SCRIPT' 2>&1"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "pre-compact is silent with empty stdin" {
   run bash -c "'$SCRIPT' < /dev/null 2>&1"
   [ "$status" -eq 0 ]
