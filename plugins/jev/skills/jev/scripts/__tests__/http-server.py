@@ -35,6 +35,12 @@ class Handler(BaseHTTPRequestHandler):
         else:
             response = {"status": 200}
         time.sleep(response.get("delay", 0))
+        if response.get("close"):
+            # Drop the connection without a status line: curl reports an
+            # empty reply (52) or a receive failure (56), never an HTTP code.
+            self.close_connection = True
+            self.connection.close()
+            return
         self.send_response(response["status"])
         self.send_header("Content-Type", "application/json")
         if "retry_after" in response:

@@ -58,6 +58,19 @@ publish() {
   done
 }
 
+@test "user-prompt-submit: whitespace around a lone token is still trivial, but a multi-line task is not" {
+  export TYPESAFE_API_KEY=local-test-key
+  publish
+  # Newlines and tabs around a single confirmation token: still a confirmation.
+  run bash "$HOOK" <<<"$(payload $'\n\ty\t\n')"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  # The same token inside a multi-line request: the anchored regex cannot match.
+  run bash "$HOOK" <<<"$(payload $'ok\nnow add pagination to the users endpoint')"
+  [ "$status" -eq 0 ]
+  [[ "$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")" == *"mandatory for this task"* ]]
+}
+
 @test "user-prompt-submit: empty or missing prompt exits 0 silently" {
   export TYPESAFE_API_KEY=local-test-key
   publish

@@ -63,7 +63,9 @@ teardown() {
   [[ "$context" == *"mandatory on every task"* ]]
   [[ "$context" == *"MUST call \"$CLAUDE_CONFIG_DIR/jev/jev.sh\""* ]]
   [[ "$context" == *"Batch independent"* ]]
-  # The rule is unconditional per task: no "only when it would change" escape hatch.
+  # The rule is unconditional per task: the no-decision clause is present and
+  # the old "only when it would change" escape hatch is gone.
+  [[ "$context" == *"say so in one sentence rather than skipping silently"* ]]
   [[ "$context" != *"only when"* ]]
   [[ "$context" != *local-test-key* ]]
 }
@@ -141,6 +143,20 @@ teardown() {
   mkdir -p "$fake"
   cp "$HOOK" "$fake/session-start.sh"
   run bash "$fake/session-start.sh" <<<'{}'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ ! -e "$CLAUDE_CONFIG_DIR/jev/jev.sh" ]
+}
+
+# Fail-soft: skills/ present but hooks/lib/ missing (partial install) must NOT
+# break the session either — the guard exits before sourcing.
+@test "session-start: shared lib missing -> exits 0, no symlink, silent (fail-soft)" {
+  fake="$TMP/fake-plugin"
+  mkdir -p "$fake/hooks" "$fake/skills/jev/scripts"
+  cp "$HOOK" "$fake/hooks/session-start.sh"
+  cp "$SRC" "$fake/skills/jev/scripts/jev.sh"
+  export TYPESAFE_API_KEY=local-test-key
+  run bash "$fake/hooks/session-start.sh" <<<'{}'
   [ "$status" -eq 0 ]
   [ -z "$output" ]
   [ ! -e "$CLAUDE_CONFIG_DIR/jev/jev.sh" ]

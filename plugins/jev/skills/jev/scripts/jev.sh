@@ -135,10 +135,10 @@ jev_post() (
       cat "$tmp/body"
       return 0
     fi
-    # Same retry set as TypeSafe's SDK default policy: 408, 429, every 5xx
-    # (which covers the documented 529 overload), and timeouts. curl's own
-    # --retry omits 529, so the loop lives here. Separate attempt bodies so
-    # transient errors never become answer JSON.
+    # Same retry set as TypeSafe's SDK default policy: HTTP 408, 429, every
+    # 5xx (which covers the documented 529 overload), timeouts, and connection
+    # errors. curl's own --retry omits 529, so the loop lives here. Separate
+    # attempt bodies so transient errors never become answer JSON.
     delay=$((1 << (attempt - 1)))
     # Retry-After (seconds) wins over retry-after-ms (milliseconds, rounded up);
     # both are documented SDK-honored headers. Waits over 60s surface the error.
@@ -164,8 +164,12 @@ jev_post() (
       ((10#$retry_after <= delay)) || delay=$((10#$retry_after))
     fi
     [[ "$attempt" -lt 3 ]] || break
+    # $code is curl's %{http_code}: three digits, or 000 when no status line
+    # arrived. Connection-level failures carry curl's own exit status instead:
+    # 7 (connect), 28 (timeout), 35 (TLS handshake), 52 (empty reply),
+    # 55 (send), 56 (receive) — the SDK retries these as connection errors.
     case "$status:$code" in
-      0:408|0:429|0:5[0-9][0-9]|28:*) sleep "$delay";;
+      0:408|0:429|0:5[0-9][0-9]|7:*|28:*|35:*|52:*|55:*|56:*) sleep "$delay";;
       *) break;;
     esac
   done
