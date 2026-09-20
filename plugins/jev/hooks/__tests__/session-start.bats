@@ -101,7 +101,7 @@ teardown() {
   # Context names both the callable wrapper and the SKILL.md syntax reference.
   jq -e --arg wrapper "$TOOLU_CONFIG_DIR/jev/jev.sh" --arg skill_path "$installed/skills/jev/SKILL.md" '
     .hookSpecificOutput | .hookEventName == "SessionStart" and
-    (.additionalContext | contains($wrapper) and contains($skill_path))' <<<"$output"
+    (.additionalContext | contains("\"" + $wrapper + "\"") and contains($skill_path + " for syntax"))' <<<"$output"
   # The published wrapper separately links to the installed executable.
   [ "$(readlink "$TOOLU_CONFIG_DIR/jev/jev.sh")" = "$installed/skills/jev/scripts/jev.sh" ]
 }
