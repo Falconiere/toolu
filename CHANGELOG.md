@@ -1,5 +1,16 @@
 # Changelog
 
+## [6.0.0](https://github.com/Falconiere/toolu/compare/v5.4.0...v6.0.0) (2026-09-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* a push-review state file listing only `caveman:cavecrew-reviewer` no longer satisfies the push-review gate. Re-review with /code-review or toolu-review:review to regenerate it.
+
+### Features
+
+* remove the caveman integration entirely ([e3e3dae](https://github.com/Falconiere/toolu/commit/e3e3daec4e3c179c6cbeddf954d4252805d72ec3))
+
 ## [5.4.0](https://github.com/Falconiere/toolu/compare/v5.3.0...v5.4.0) (2026-09-19)
 
 
