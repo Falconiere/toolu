@@ -20,6 +20,8 @@ startup behavior in both Codex and Claude Code.
    marketplace descriptions must exactly match their plugin manifests.
 2. Read the service's live API documentation and the hosts' hook contracts.
    Distinguish installing a skill from injecting mandatory session instructions.
+   For every changed hook event, validate successful stdout against each host's
+   event-specific output schema; syntactically valid JSON is not sufficient.
 3. Run the plugin's colocated tests. For REST wrappers, exercise real curl against
    a private loopback HTTPS fixture; check request JSON, retries, output
    validation, and error propagation.
@@ -36,6 +38,8 @@ startup behavior in both Codex and Claude Code.
   should publish their own bounded context without relying on hook ordering.
 - Codex installation does not grant hook trust. Do not bypass the user's trust
   controls or claim that manually invoking a hook verifies a full agent session.
+- Claude-compatible `hookSpecificOutput` is not valid for every Codex event.
+  Prefer silent success when a hook has no portable output or decision to emit.
 - Offline fixtures prove transport behavior, not live inference quality. Report
   unavailable credentials explicitly; do not read keys from `.env`.
 - Packaging and Codex smoke assertions contain explicit plugin/skill/hook counts.
@@ -54,6 +58,7 @@ startup behavior in both Codex and Claude Code.
 ## Verification
 
 Require passing packaging, targeted regressions, and CI commands; successful
-isolated installation on both hosts; and observed cached-hook output. Report
+isolated installation on both hosts; and cached-hook output that satisfies each
+host's event-specific schema for enabled and disabled branches. Report
 live-service and full-session checks separately. Keep user profile configuration
 out of fixture cleanup and preserve unrelated workspace changes.
