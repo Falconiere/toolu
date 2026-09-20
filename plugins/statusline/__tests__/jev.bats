@@ -1,5 +1,8 @@
 #!/usr/bin/env bats
 # Exercise the real Jev publisher and both statusline consumers, without API calls.
+# These repository integration tests use the sibling Jev source to verify its
+# published-wrapper contract. Installed statusline code remains self-contained
+# and only reads the active profile; it never loads the sibling plugin.
 
 ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
 JEV_HOOK="$ROOT/../jev/hooks/session-start.sh"
@@ -29,7 +32,7 @@ render_claude() {
   publish_jev claude
   run render_claude
   [ "$status" -eq 0 ]
-  [[ "$output" == *$'\033[32m[JEV:READY]'* ]]
+  [[ "$output" == *$'\033[1m\033[32m[JEV:READY]\033[0m'* ]]
   [[ "$output" != *"$TYPESAFE_API_KEY"* ]]
 }
 
@@ -46,7 +49,7 @@ render_claude() {
   unset TYPESAFE_API_KEY
   run render_claude
   [ "$status" -eq 0 ]
-  [[ "$output" == *$'\033[33m[JEV:UNAVAILABLE: missing TYPESAFE_API_KEY]'* ]]
+  [[ "$output" == *$'\033[1m\033[33m[JEV:UNAVAILABLE: missing TYPESAFE_API_KEY]\033[0m'* ]]
 
   publish_jev codex
   export TYPESAFE_API_KEY=""
@@ -57,11 +60,11 @@ render_claude() {
 
 @test "Jev readiness: malformed credentials are unavailable without exposing their contents" {
   publish_jev claude
-  for TYPESAFE_API_KEY in $'secret\nvalue' $'secret\rvalue'; do
+  for TYPESAFE_API_KEY in $'secret\nvalue' $'secret\rvalue' $'\r' $'\n'; do
     export TYPESAFE_API_KEY
     run render_claude
     [ "$status" -eq 0 ]
-    [[ "$output" == *"[JEV:UNAVAILABLE: invalid TYPESAFE_API_KEY]"* ]]
+    [[ "$output" == *$'\033[1m\033[33m[JEV:UNAVAILABLE: invalid TYPESAFE_API_KEY]\033[0m'* ]]
     [[ "$output" != *"secret"* ]]
     [[ "$output" != *"value"* ]]
   done
@@ -81,7 +84,7 @@ render_claude() {
   ln -s "$TMP/removed/jev.sh" "$CLAUDE_CONFIG_DIR/jev/jev.sh"
   run render_claude
   [ "$status" -eq 0 ]
-  [[ "$output" == *"[JEV:UNAVAILABLE: missing executable wrapper]"* ]]
+  [[ "$output" == *$'\033[1m\033[33m[JEV:UNAVAILABLE: missing executable wrapper]\033[0m'* ]]
 }
 
 @test "Jev readiness: a non-executable wrapper or directory cannot be ready" {
@@ -90,13 +93,13 @@ render_claude() {
   chmod -x "$CLAUDE_CONFIG_DIR/jev/jev.sh"
   run render_claude
   [ "$status" -eq 0 ]
-  [[ "$output" == *"[JEV:UNAVAILABLE: missing executable wrapper]"* ]]
+  [[ "$output" == *$'\033[1m\033[33m[JEV:UNAVAILABLE: missing executable wrapper]\033[0m'* ]]
 
   rm "$CLAUDE_CONFIG_DIR/jev/jev.sh"
   mkdir "$CLAUDE_CONFIG_DIR/jev/jev.sh"
   run render_claude
   [ "$status" -eq 0 ]
-  [[ "$output" == *"[JEV:UNAVAILABLE: missing executable wrapper]"* ]]
+  [[ "$output" == *$'\033[1m\033[33m[JEV:UNAVAILABLE: missing executable wrapper]\033[0m'* ]]
 }
 
 @test "Jev readiness: collector reports missing curl using only local prerequisites" {
@@ -128,7 +131,7 @@ render_claude() {
   publish_jev claude
   run render_claude
   [ "$status" -eq 0 ]
-  [[ "$output" == *"[JEV:READY]"* ]]
+  [[ "$output" == *$'\033[1m\033[32m[JEV:READY]\033[0m'* ]]
   run bash "$ROOT/scripts/status.sh" "$TMP/workspace"
   [ "$status" -eq 0 ]
   [[ "$output" == *"Jev: ready"* ]]
@@ -136,7 +139,8 @@ render_claude() {
 
 @test "Jev readiness: Claude still renders readiness when payload has no workspace" {
   publish_jev claude
+  cd "$TMP/workspace"
   run bash "$ROOT/statusline.sh" <<<'{}'
   [ "$status" -eq 0 ]
-  [[ "$output" == *"[JEV:READY]"* ]]
+  [ "$output" = $'\033[36mClaude\033[0m\033[2m | \033[0m\033[35mctx:0/0\033[0m\033[2m | \033[0m\033[1m\033[32m[JEV:READY]\033[0m' ]
 }

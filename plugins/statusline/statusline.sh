@@ -68,7 +68,11 @@ if [ -f "$_collector" ]; then
 else
   project_status=""
 fi
-if ! jq -e 'type == "object"' <<<"$project_status" >/dev/null 2>&1; then
+# Without a payload workspace, only profile-level Jev readiness is meaningful.
+# Preserve the prior omission of project segments instead of exposing $PWD.
+if ! project_status=$(jq -ce --arg cwd "$cwd" '
+  select(type == "object") |
+  if $cwd == "" then {jev: .jev} else . end' <<<"$project_status" 2>/dev/null); then
   project_status='{"repo_root":"","folder":"","branch":"","ahead":0,"behind":0,"working_tree":{"staged":0,"unstaged":0,"untracked":0},"gate":{"status":"","reason":""},"comemory_count":null}'
 fi
 

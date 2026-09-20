@@ -105,7 +105,9 @@ jev_status=""
 jev_reason=""
 jev_wrapper="$config_root/jev/jev.sh"
 if [ -e "$jev_wrapper" ] || [ -L "$jev_wrapper" ]; then
-  [ -f "$jev_wrapper" ] && [ -x "$jev_wrapper" ] || jev_reason="missing executable wrapper; "
+  if [ ! -f "$jev_wrapper" ] || [ ! -x "$jev_wrapper" ]; then
+    jev_reason="missing executable wrapper; "
+  fi
   command -v curl >/dev/null 2>&1 || jev_reason="${jev_reason}missing curl; "
   if [ -z "${TYPESAFE_API_KEY:-}" ]; then
     jev_reason="${jev_reason}missing TYPESAFE_API_KEY; "
