@@ -61,7 +61,7 @@ main() {
             echo "run.sh: live case not yet available: $m (skipping)" >&2
           fi ;;
         retrieval) : ;;
-        *) echo "run.sh: unknown mechanism: $m" >&2; rc=2 ;;
+        *) echo "run.sh: unknown mechanism: $m (live tier: whole-session)" >&2; rc=2 ;;
       esac
     done
   fi
