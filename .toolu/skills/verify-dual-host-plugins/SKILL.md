@@ -16,6 +16,8 @@ startup behavior in both Codex and Claude Code.
 1. Recall relevant repo decisions. Compare the branch against its base, including
    untracked files, and inspect both manifests, marketplace entries, release
    configuration, hooks, skills, and docs.
+   Run `bash tooling/validate-plugin-packaging.sh` after manifest edits: Claude
+   marketplace descriptions must exactly match their plugin manifests.
 2. Read the service's live API documentation and the hosts' hook contracts.
    Distinguish installing a skill from injecting mandatory session instructions.
 3. Run the plugin's colocated tests. For REST wrappers, exercise real curl against
@@ -42,6 +44,12 @@ startup behavior in both Codex and Claude Code.
   inherited by the full suite redirects Claude fixtures away from their temporary
   configuration directories. Unset it in the test subprocess when running a
   Codex-scoped plan ledger.
+- On macOS, isolate pre-start launch stalls with a trivial executable script
+  outside the repo and compare direct execution with `bash script.sh`. Sample
+  the waiting process and inspect `syspolicyd` scan logs before changing hooks;
+  other projects can congest the shared Gatekeeper/XProtect scan queue.
+  If scanner stacks show `CFBundle`/`readdir`, measure the referenced build
+  directory's entry count and enumeration time before proposing cache cleanup.
 
 ## Verification
 
