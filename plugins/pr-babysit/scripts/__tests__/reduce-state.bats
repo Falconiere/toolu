@@ -33,9 +33,17 @@ reduce() {
 # verdict_of FIXTURE.txt -> parse-verdict.sh output for a real bot comment
 verdict_of() { bash "$SCRIPTS/parse-verdict.sh" <"$FX/$1"; }
 
-# with_verdict SNAPSHOT FIXTURE.txt -> snapshot whose bot verdict is that comment's
+# with_verdict SNAPSHOT FIXTURE.txt -> snapshot whose bot verdict is that comment's.
+# The parser is a real subprocess pipeline; make a silently degraded parse
+# (empty findings for a comment that has them) fail HERE, not three
+# assertions later in a recurrence test.
 with_verdict() {
-  jq --argjson v "$(verdict_of "$2")" '.bot.verdict = $v' "$1"
+  local v
+  v=$(verdict_of "$2")
+  if grep -qE '^`[^`]+`: (blocker|high|medium|low|nit): ' "$FX/$2"; then
+    [ "$(jq '.findings | length' <<<"$v")" -gt 0 ] || { echo "with_verdict: parser returned no findings for $2" >&2; return 1; }
+  fi
+  jq --argjson v "$v" '.bot.verdict = $v' "$1"
 }
 
 reasons() { jq -r '[.reasons[].code] | join(",")' <<<"$1"; }
