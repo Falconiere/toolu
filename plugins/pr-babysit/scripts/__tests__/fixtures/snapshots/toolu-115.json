@@ -1,0 +1,785 @@
+{
+  "version": 1,
+  "collectedAt": "2026-09-20T02:16:08Z",
+  "repo": "Falconiere/toolu",
+  "number": 115,
+  "head": {
+    "sha": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44",
+    "verifiedAfterFanout": true,
+    "recollected": false
+  },
+  "pageSize": 2,
+  "pr": {
+    "number": 115,
+    "title": "ci: remove Falconiere/workflows reusable workflow callers",
+    "url": "https://github.com/Falconiere/toolu/pull/115",
+    "author": "Falconiere",
+    "state": "MERGED",
+    "baseRefName": "main",
+    "headRefName": "worktree/brave-meadow-85e8",
+    "headRefOid": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44",
+    "mergeable": "UNKNOWN",
+    "reviewDecision": "REVIEW_REQUIRED",
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-06-19T20:13:52Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Falconiere/toolu/actions/runs/27846430687/job/82416495138",
+        "name": "typecheck (pi + opencode extensions)",
+        "startedAt": "2026-06-19T20:13:41Z",
+        "status": "COMPLETED",
+        "workflowName": "Tests"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-06-19T20:17:01Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Falconiere/toolu/actions/runs/27846430682/job/82416495304",
+        "name": "review",
+        "startedAt": "2026-06-19T20:13:42Z",
+        "status": "COMPLETED",
+        "workflowName": "Toolu Review"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-06-19T20:16:19Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Falconiere/toolu/actions/runs/27846430687/job/82416495111",
+        "name": "bats (plugins)",
+        "startedAt": "2026-06-19T20:13:42Z",
+        "status": "COMPLETED",
+        "workflowName": "Tests"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-06-19T20:13:53Z",
+        "conclusion": "NEUTRAL",
+        "detailsUrl": "https://github.com/Falconiere/toolu/runs/82416519311",
+        "name": "gitleaks",
+        "startedAt": "2026-06-19T20:13:51Z",
+        "status": "COMPLETED",
+        "workflowName": ""
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-06-19T20:13:53Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Falconiere/toolu/runs/82416519501",
+        "name": "Opengrep OSS",
+        "startedAt": "2026-06-19T20:13:52Z",
+        "status": "COMPLETED",
+        "workflowName": ""
+      }
+    ]
+  },
+  "threads": [
+    {
+      "id": "PRRT_kwDOSzUwAc6K6RmM",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "AGENTS.md",
+      "line": 66,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NSua6",
+          "databaseId": 3444238010,
+          "body": "**high** _(MIGRATION WARNINGS)_: Three CI workflows (claude-mention.yml, codeql.yml, secret-scan.yml) are deleted without any migration warning. The AGENTS.md table is updated to remove their rows, but there is no changelog entry, deprecation notice, or in-session warning. This violates the project's MIGRATION WARNINGS dimension: breaking changes (removed paths, renamed APIs) must surface actionable in-session warnings, not silent failures.\n\n```suggestion\nAdd a migration warning in the diff (e.g., in a CHANGELOG or a separate notice) that the three workflows (claude-mention.yml, codeql.yml, secret-scan.yml) have been removed, and explain the replacement or rationale. The AGENTS.md table update alone is insufficient — users relying on these workflows will silently lose functionality.\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:19:50Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444238010"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7NTawx",
+          "databaseId": 3444419633,
+          "body": "Rejected by maintainer decision. These are GitHub Actions workflow files with no runtime/in-session surface to emit a warning from, and CHANGELOG.md is release-please-auto-generated from the `ci:` removal commit (a manual entry would be overwritten). The removal — including the CodeQL/secret-scan trade-off — is documented in the PR description. See https://github.com/Falconiere/toolu/pull/115#issuecomment-4754195418.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-06-19T20:14:51Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444419633"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6RmW",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "AGENTS.md",
+      "line": 66,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NSubI",
+          "databaseId": 3444238024,
+          "body": "**medium** _(DOC/COMMENT ACCURACY)_: The CI Pipeline table in AGENTS.md now omits the three deleted workflows, but the introductory sentence 'All workflows live in .github/workflows/:' remains unchanged. This is misleading — not all workflows listed are still present. The doc should either update the header or add a note about the removals.\n\n```suggestion\nThe AGENTS.md table now lists only two workflows (tests.yml, release-please.yml, toolu-review.yml) but the CI Pipeline section header still says 'All workflows live in .github/workflows/:' — this is now inaccurate because three workflows have been deleted. Either update the header to reflect the remaining workflows, or add a note that some workflows were removed.\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:19:50Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444238024"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7NTaxz",
+          "databaseId": 3444419699,
+          "body": "Rejected by maintainer decision. These are GitHub Actions workflow files with no runtime/in-session surface to emit a warning from, and CHANGELOG.md is release-please-auto-generated from the `ci:` removal commit (a manual entry would be overwritten). The removal — including the CodeQL/secret-scan trade-off — is documented in the PR description. See https://github.com/Falconiere/toolu/pull/115#issuecomment-4754195418.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-06-19T20:14:53Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444419699"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6Rmf",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "AGENTS.md",
+      "line": 66,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NSubR",
+          "databaseId": 3444238033,
+          "body": "**low** _(CONVENTION ADHERENCE)_: Removing three CI workflows without any migration warning violates the project's stated convention that breaking changes must surface actionable in-session warnings, not silent failures.\n\n```suggestion\nThe project conventions state: 'breaking changes (moved paths, removed symlinks, renamed APIs) must surface actionable in-session warnings, not silent failures.' Removing three CI workflows without any warning or changelog entry is a silent failure. Add a migration notice.\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:19:50Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444238033"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7NTazY",
+          "databaseId": 3444419800,
+          "body": "Rejected by maintainer decision. These are GitHub Actions workflow files with no runtime/in-session surface to emit a warning from, and CHANGELOG.md is release-please-auto-generated from the `ci:` removal commit (a manual entry would be overwritten). The removal — including the CodeQL/secret-scan trade-off — is documented in the PR description. See https://github.com/Falconiere/toolu/pull/115#issuecomment-4754195418.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-06-19T20:14:55Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444419800"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6VND",
+      "isResolved": true,
+      "isOutdated": true,
+      "path": "AGENTS.md",
+      "line": null,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NSzNP",
+          "databaseId": 3444257615,
+          "body": "**low** _(DOC/COMMENT ACCURACY)_: The note in AGENTS.md accurately documents the removals but does not provide actionable guidance for users who need to restore the security coverage.\n\n```suggestion\nConsider adding a brief note on how to restore this coverage (e.g., 'To re-enable, create a new workflow using GitHub's built-in CodeQL action and secret scanning').\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:24:59Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444257615"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6XJW",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "AGENTS.md",
+      "line": 69,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NS15V",
+          "databaseId": 3444268629,
+          "body": "**medium** _(DOC/COMMENT ACCURACY)_: The AGENTS.md table still has the deleted workflows listed (codeql.yml, secret-scan.yml, claude-mention.yml) but the diff shows they were removed. The table now has a gap: the header and separator are on lines 66-67, then the remaining row `toolu-review.yml` is on line 69, but the deleted rows are not shown in the diff. This means the table is inconsistent — the deleted workflows are still documented as existing, which is inaccurate.\n\n```suggestion\nThe table in AGENTS.md now has a gap: after removing the rows for `codeql.yml`, `secret-scan.yml`, and `claude-mention.yml`, the remaining row `toolu-review.yml` is on line 69 but the table header and separator are on lines 66-67. The table should be reflowed to remove the empty rows and ensure the table is contiguous. Alternatively, if the removal is intentional, the table should be updated to remove the deleted workflows entirely and adjust the row count.\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:28:23Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444268629"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7NTa0o",
+          "databaseId": 3444419880,
+          "body": "Rejected by maintainer decision. These are GitHub Actions workflow files with no runtime/in-session surface to emit a warning from, and CHANGELOG.md is release-please-auto-generated from the `ci:` removal commit (a manual entry would be overwritten). The removal — including the CodeQL/secret-scan trade-off — is documented in the PR description. See https://github.com/Falconiere/toolu/pull/115#issuecomment-4754195418.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-06-19T20:14:56Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444419880"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6XJf",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "AGENTS.md",
+      "line": 66,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NS15d",
+          "databaseId": 3444268637,
+          "body": "**high** _(MIGRATION WARNINGS)_: Three CI workflows (codeql.yml, secret-scan.yml, claude-mention.yml) are deleted without any migration warning or documentation update. The AGENTS.md still references them in the table (the diff only shows removal of the rows, but the table is not updated to remove them). This is a breaking change that removes security scanning (CodeQL, secret scanning) and automation (Claude mention). Users relying on these workflows will be silently affected.\n\n```suggestion\nThe deletion of three CI workflows (codeql.yml, secret-scan.yml, claude-mention.yml) is a breaking change that removes security scanning and automation. The AGENTS.md documentation must be updated to reflect this removal, and users should be warned that these workflows are no longer available. If the workflows are being replaced by other mechanisms, that should be documented. If they are being removed entirely, a migration warning should be added to the changelog or release notes.\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:28:23Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444268637"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7NTa77",
+          "databaseId": 3444420347,
+          "body": "Rejected by maintainer decision. These are GitHub Actions workflow files with no runtime/in-session surface to emit a warning from, and CHANGELOG.md is release-please-auto-generated from the `ci:` removal commit (a manual entry would be overwritten). The removal — including the CodeQL/secret-scan trade-off — is documented in the PR description. See https://github.com/Falconiere/toolu/pull/115#issuecomment-4754195418.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-06-19T20:15:04Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444420347"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6XJi",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "AGENTS.md",
+      "line": 69,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NS15g",
+          "databaseId": 3444268640,
+          "body": "**medium** _(CONVENTION ADHERENCE)_: The AGENTS.md table still lists the deleted workflows (codeql.yml, secret-scan.yml, claude-mention.yml) as active. The diff shows removal of the rows, but the table is not updated to remove them. This violates the project's convention of keeping documentation accurate and up-to-date.\n\n```suggestion\nThe AGENTS.md table should be updated to remove the deleted workflows entirely. The current diff shows removal of three rows but the table is not reflowed, leaving a gap. Per the project's own documentation standards, the table should accurately reflect the current state of workflows.\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:28:23Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444268640"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7NTa8z",
+          "databaseId": 3444420403,
+          "body": "Rejected by maintainer decision. These are GitHub Actions workflow files with no runtime/in-session surface to emit a warning from, and CHANGELOG.md is release-please-auto-generated from the `ci:` removal commit (a manual entry would be overwritten). The removal — including the CodeQL/secret-scan trade-off — is documented in the PR description. See https://github.com/Falconiere/toolu/pull/115#issuecomment-4754195418.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-06-19T20:15:05Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444420403"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6nEg",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "AGENTS.md",
+      "line": 66,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NTLKY",
+          "databaseId": 3444355736,
+          "body": "**high** _(DOC/COMMENT ACCURACY)_: AGENTS.md CI table now shows only `toolu-review.yml` but the deleted workflows (`codeql.yml`, `secret-scan.yml`, `claude-mention.yml`) are no longer present. The table is incomplete and misleading — it should either list all current workflows or be removed entirely.\n\n```suggestion\nThe table now lists only `toolu-review.yml` but the deleted workflows (`codeql.yml`, `secret-scan.yml`, `claude-mention.yml`) are no longer present. The table should be removed entirely or replaced with a note that these workflows have been removed. Currently the table is misleading as it implies only one CI workflow exists.\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:56:54Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444355736"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7NTa9b",
+          "databaseId": 3444420443,
+          "body": "Rejected by maintainer decision. These are GitHub Actions workflow files with no runtime/in-session surface to emit a warning from, and CHANGELOG.md is release-please-auto-generated from the `ci:` removal commit (a manual entry would be overwritten). The removal — including the CodeQL/secret-scan trade-off — is documented in the PR description. See https://github.com/Falconiere/toolu/pull/115#issuecomment-4754195418.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-06-19T20:15:06Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444420443"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6nEk",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "plugins/pr-babysit/commands/babysit.md",
+      "line": 112,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NTLKe",
+          "databaseId": 3444355742,
+          "body": "**high** _(CORRECTNESS)_: The CI_REVIEWER set includes `claude[bot]` but does not include a GraphQL form for claude (e.g., `claude` without suffix). If GraphQL drops the `[bot]` suffix for claude as well, then the set is incomplete and will misclassify claude's GraphQL threads as human.\n\n```suggestion\nThe set includes `github-actions` (no suffix) and `github-actions[bot]` (with suffix). However, the REST API returns `github-actions[bot]` and GraphQL returns `github-actions`. The set should be `{github-actions, github-actions[bot], claude[bot]}`. But note: `claude[bot]` is the REST form; what is the GraphQL form for claude? If it's `claude` (no suffix), then the set is incomplete. If it's always `claude[bot]`, then the set is correct. This is a potential edge case that should be clarified.\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:56:54Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444355742"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7NTaHE",
+          "databaseId": 3444416964,
+          "body": "Fixed in c44875d — added the GraphQL no-suffix form `claude` to CI_REVIEWER, so both API forms (REST `[bot]` + GraphQL no-suffix) of each app are covered.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-06-19T20:14:05Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444416964"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6nEm",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "plugins/pr-babysit/commands/babysit.md",
+      "line": 120,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NTLKh",
+          "databaseId": 3444355745,
+          "body": "**medium** _(CORRECTNESS)_: The REST API fetch correctly uses the `[bot]` suffix forms. However, the CI_REVIEWER set also includes `github-actions` (no suffix) which is only used for GraphQL. The code does not handle the case where the REST API might return a different login format for claude (e.g., if claude also has a no-suffix form in some contexts).\n\n```suggestion\nThe REST API fetch only checks for `claude[bot]` and `github-actions[bot]`. But the CI_REVIEWER set also includes `github-actions` (no suffix). The REST API returns the `[bot]` suffix, so this is correct for REST. However, the comment on line 119 says \"REST form has the [bot] suffix\" which is accurate. No change needed here, but the inconsistency with the previous finding (missing claude GraphQL form) is noted.\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:56:54Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444355745"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7NTaIt",
+          "databaseId": 3444417069,
+          "body": "Fixed in c44875d — added the GraphQL no-suffix form `claude` to CI_REVIEWER, so both API forms (REST `[bot]` + GraphQL no-suffix) of each app are covered.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-06-19T20:14:08Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444417069"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6nEn",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "plugins/pr-babysit/commands/babysit.md",
+      "line": 148,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NTLKk",
+          "databaseId": 3444355748,
+          "body": "**medium** _(CORRECTNESS)_: The CI_REVIEWER set includes `claude[bot]` but not a GraphQL form for claude. If GraphQL returns `claude` (no suffix), then claude's inline threads would be excluded from the actionable set, causing the babysit to miss CI reviewer findings from claude.\n\n```suggestion\nThe logic says to keep threads where the last non-PR_AUTHOR comment author is either human OR in CI_REVIEWER. But the CI_REVIEWER set includes `github-actions` (no suffix) and `github-actions[bot]` (with suffix). If the GraphQL API returns `github-actions` (no suffix), then the check `author.login in CI_REVIEWER` would match. However, if the REST API returns `github-actions[bot]`, the check would also match. This is correct. But the set also includes `claude[bot]` — if GraphQL returns `claude` (no suffix), then claude's threads would be excluded. This is a potential bug.\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:56:54Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444355748"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7NTaJa",
+          "databaseId": 3444417114,
+          "body": "Fixed in c44875d — added the GraphQL no-suffix form `claude` to CI_REVIEWER, so both API forms (REST `[bot]` + GraphQL no-suffix) of each app are covered.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-06-19T20:14:09Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444417114"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6nEr",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "plugins/pr-babysit/commands/babysit.md",
+      "line": 153,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NTLKq",
+          "databaseId": 3444355754,
+          "body": "**medium** _(CORRECTNESS)_: The test at line 51-53 only asserts the fixture contains an outdated thread, but does not test that the command actually skips it. This is a test coverage gap — the behavior of skipping outdated CI-reviewer threads is not tested.\n\n```suggestion\nThe fixture includes an `isOutdated: true` thread (line 32 of fixture). The test at line 51-53 asserts the fixture contains an outdated thread. This is correct for testing the skip-silently behavior. However, the command prose says to skip outdated CI-reviewer threads silently, but the test only checks that the fixture has one — it doesn't test that the command actually skips it. This is a test coverage gap.\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:56:54Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444355754"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7NTaKa",
+          "databaseId": 3444417178,
+          "body": "Fixed in c44875d — added contract assertions that the command instructs skipping outdated threads and that CI_REVIEWER covers both API forms per app. The command is prose, so behavioural skip is asserted via the documented instruction plus the fixture's real outdated case, not by executing a filter.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-06-19T20:14:10Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444417178"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6nEv",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "plugins/pr-babysit/scripts/__tests__/babysit-contract.bats",
+      "line": 24,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NTLKu",
+          "databaseId": 3444355758,
+          "body": "**low** _(TIGHT ASSERTIONS)_: The regex `login has .?\\[bot\\].? *$` is tight but may miss variations like \"login has  [bot]\" (two spaces before [bot]). Consider using `\\s*` for more robust matching.\n\n```suggestion\nThe regex `login has .?\\[bot\\].? *$` is quite specific. It matches lines like \"login has [bot]\" or \"login has [bot] \" but not \"login has [bot] something\". This is a tight assertion that correctly targets the fragile heuristic. However, the regex uses `.?` which matches zero or one character before `[bot]`. This could miss variations like \"login has  [bot]\" (two spaces). Consider using `.*?` or `\\s*` for more robust matching.\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:56:55Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444355758"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7NTaY6",
+          "databaseId": 3444418106,
+          "body": "Keeping as-is. These assertions target a fixed, self-authored prose file whose wording we control; loosening or tightening the regex adds no real safety here (YAGNI).",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-06-19T20:14:26Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444418106"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6nEw",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "plugins/pr-babysit/scripts/__tests__/babysit-contract.bats",
+      "line": 28,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NTLKz",
+          "databaseId": 3444355763,
+          "body": "**low** _(TIGHT ASSERTIONS)_: The regex may miss variations like \"per round summary\" (with space) or \"summary comment\" (without conversation). Consider adding more patterns for robustness.\n\n```suggestion\nThe regex `per-round summary|summary conversation comment` is case-insensitive. This is a tight assertion that correctly targets the prohibited pattern. However, it might miss variations like \"per round summary\" (with space) or \"summary comment\" (without conversation). Consider adding more variations or using a more comprehensive regex.\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:56:55Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444355763"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7NTabs",
+          "databaseId": 3444418284,
+          "body": "Keeping as-is. These assertions target a fixed, self-authored prose file whose wording we control; loosening or tightening the regex adds no real safety here (YAGNI).",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-06-19T20:14:29Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444418284"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6nEz",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "plugins/pr-babysit/scripts/__tests__/babysit-contract.bats",
+      "line": 36,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NTLK3",
+          "databaseId": 3444355767,
+          "body": "**low** _(TIGHT ASSERTIONS)_: The regex is acceptable but could be more precise by anchoring to the specific phrase in the command.\n\n```suggestion\nThe regex `recurrence gate|before posting any repl` is case-insensitive. This is a tight assertion that correctly targets the required pattern. However, the second alternative `before posting any repl` is a substring match that could match unintended text like \"before posting any replies\" (which is correct) but also \"before posting any replication\" (unlikely but possible). This is acceptable.\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:56:55Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444355767"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7NTacu",
+          "databaseId": 3444418350,
+          "body": "Keeping as-is. These assertions target a fixed, self-authored prose file whose wording we control; loosening or tightening the regex adds no real safety here (YAGNI).",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-06-19T20:14:30Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444418350"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6nE1",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "plugins/pr-babysit/scripts/__tests__/babysit-contract.bats",
+      "line": 48,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NTLK6",
+          "databaseId": 3444355770,
+          "body": "**low** _(TIGHT ASSERTIONS)_: The regex `verdict.*approved` could match negative statements like \"verdict is not approved\" which would be a false positive. Consider using a more specific pattern.\n\n```suggestion\nThe regex `verdict.*approved` is case-insensitive. This is a tight assertion that correctly targets the required pattern. However, it could match unintended text like \"verdict is not approved\" (which would be a false positive). Consider using a more specific regex like `verdict.*\"approved\"` or `verdict.*approved` with word boundaries.\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:56:55Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444355770"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7NTagE",
+          "databaseId": 3444418564,
+          "body": "Keeping as-is. These assertions target a fixed, self-authored prose file whose wording we control; loosening or tightening the regex adds no real safety here (YAGNI).",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-06-19T20:14:34Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444418564"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6nE5",
+      "isResolved": true,
+      "isOutdated": false,
+      "path": "plugins/pr-babysit/scripts/__tests__/fixtures/pr115-threads.json",
+      "line": 1,
+      "comments": [
+        {
+          "id": "PRRC_kwDOSzUwAc7NTLK9",
+          "databaseId": 3444355773,
+          "body": "**low** _(CORRECTNESS)_: The fixture only includes threads with `login: \"github-actions\"` (no suffix, GraphQL form). It does not include threads with `login: \"github-actions[bot]\"` or `login: \"claude[bot]\"` (REST forms). This is a test coverage gap — the fixture should include both forms to ensure the command handles both API surfaces.\n\n```suggestion\nThe fixture is a JSON array of 7 objects. The test at line 43-45 asserts it's a non-empty array. The test at line 47-49 asserts at least one object has `login==\"github-actions\"`. The test at line 51-53 asserts at least one object has `isOutdated==true`. All these assertions pass with the current fixture. However, the fixture does not include any threads with `login==\"claude[bot]\"` or `login==\"github-actions[bot]\"` (with suffix). This is a coverage gap — the fixture only tests the GraphQL form, not the REST form.\n```",
+          "author": "github-actions",
+          "authorType": "Bot",
+          "createdAt": "2026-06-19T19:56:55Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444355773"
+        },
+        {
+          "id": "PRRC_kwDOSzUwAc7NTahE",
+          "databaseId": 3444418628,
+          "body": "Keeping as-is. This is a real GraphQL `reviewThreads` capture, and GraphQL never returns the `[bot]` suffix — adding `github-actions[bot]`/`claude[bot]` entries would be fabricated data, violating the repo's real-data-only test rule. The REST `[bot]` forms are exercised by the parse-verdict path, not this fixture.",
+          "author": "Falconiere",
+          "authorType": "User",
+          "createdAt": "2026-06-19T20:14:35Z",
+          "url": "https://github.com/Falconiere/toolu/pull/115#discussion_r3444418628"
+        }
+      ]
+    }
+  ],
+  "comments": [
+    {
+      "id": 4754146994,
+      "body": "<img src=\"https://raw.githubusercontent.com/falconiere/toolu-ghactions/main/code-review/assets/logo.png\" width=\"20\" align=\"left\"> **Toolu — Code Review**\n**AI Code Review finished in 3m 1s** —— [View job](https://github.com/Falconiere/toolu/actions/runs/27846430682)\n\n---\n### Code Review — `worktree/brave-meadow-85e8`\n\n- [x] Read repository context and PR diff\n- [x] Review changed files\n- [x] Analyze correctness, security, performance\n- [x] Post findings\n- [x] Set verdict label (`request-changes`)\n\n**Verdict:** 🚫 Review incomplete — provider error   \n\n> ⚠️ **Provider error:** This operation was aborted\n### Changes since last review\n\n✅ Resolved (0)\n\n🔁 Still open (0)\n\n⚠️ New (0)\n\n\n### Review Plan\n_No review plan provided._\n\n### Findings (0)\n\n_No findings._\n\n### Mechanical checks\n\n1 deterministic finding(s) — 1 gitleaks. See the **Code Scanning** tab for details.\n\n> ⚠️ **LLM judgment unavailable** — showing deterministic findings only.\n\n### Other checks\n_No additional checks performed._\n\n### Top-N must-fix\n_None._\n<details><summary>📜 Review history (7 passes)</summary>\n\n| Pass | Commit | Verdict | New | Open | Resolved |\n| --- | --- | --- | --- | --- | --- |\n| 1 | `d717ada` | changes | 0 | 0 | 0 |\n| 2 | `ff5f4b8` | changes | 3 | 0 | 0 |\n| 3 | `9b91509` | changes | 1 | 0 | 3 |\n| 4 | `bac88c9` | changes | 3 | 0 | 1 |\n| 5 | `f9e6d27` | changes | 10 | 0 | 3 |\n| 6 | `9f94469` | error | 0 | 0 | 10 |\n| 7 | `9ee4e5b` | error | 0 | 0 | 0 |\n\n</details>\n\n`request-changes`\n\n<!-- toolu-review-state:v1 H4sIAAAAAAAAA6XS22rEIBAG4HeZaxc0Jw+vsuyF0XETSLWom6WEvHvZQEssgYb2zgGZj5/5F0hmwDcNCnII0+MScR7xeUlZZwQCM8Y0Bg+KEXCjt6O/J1DXG4FhTDnED1DXBdLwWmA549pqIJATKMYFE7LrqnbbYkeTQYEZtL9jAgImPPzr3wIen6AogfCOfntETGGa0W5DDllPoOi6ki/IudY1vSghLsQpqP4FqneQ7CVrqSwgTiU/BbFDqP6G2A7qtRHC/IBqWv0jETtM5CR2tuIFJCmrzyU6PtIu0v5K0smm6cpMsmuLOmCMIZ4tAztug0RssO13jqS0YuLPTsHc1k8L8NeSIwMAAA== -->\n",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "createdAt": "2026-06-19T19:16:40Z",
+      "updatedAt": "2026-06-19T20:16:59Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#issuecomment-4754146994"
+    },
+    {
+      "id": 4754188631,
+      "body": "**Babysit round 1 — addressing review-bot findings (`AGENTS.md:66`)**\n\n- **Accepted (medium, DOC ACCURACY):** Added a removal notice under the CI Pipeline table documenting that `codeql.yml`, `secret-scan.yml`, and `claude-mention.yml` were deleted. — `d45cfcd`\n- **High / low (MIGRATION WARNINGS / CONVENTION):** The same notice serves as the deprecation note, and it carries an explicit **security caveat** that CodeQL + secret scanning no longer run in CI. The \"in-session warning\" part of the convention doesn't apply here — these are GitHub Actions workflow files with no runtime/CLI surface to warn from. The changelog is auto-generated by release-please from the `ci:` removal commit, so a manual CHANGELOG entry would be overwritten. Removal is the user's explicit, documented decision.",
+      "author": "Falconiere",
+      "authorType": "User",
+      "createdAt": "2026-06-19T19:24:43Z",
+      "updatedAt": "2026-06-19T19:24:43Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#issuecomment-4754188631"
+    },
+    {
+      "id": 4754195418,
+      "body": "**Correction to round 1 — rejecting the `AGENTS.md:66` findings (`2ec08ee`)**\n\nI reverted the removal-notice I added in `d45cfcd`. AGENTS.md documents the *current* repo state for agents; a \"Removed in PR #115\" tombstone is changelog content, not living docs. The CI Pipeline table already lists only the workflows that still exist, which is the correct end state.\n\n- **DOC ACCURACY:** resolved — table reflects reality, no stale/confusing note.\n- **MIGRATION WARNINGS / CONVENTION:** rejected. These are GitHub Actions workflow files with no runtime/CLI surface, so there is no \"in-session warning\" to emit. Removal history lives in git and this PR; the `ci:` removal commit flows through release-please into the changelog automatically. The deletion (incl. the CodeQL + secret-scan security trade-off) is a deliberate, documented decision in the PR description.\n\nThis is an intentional disagreement with the bot, decided by the maintainer.",
+      "author": "Falconiere",
+      "authorType": "User",
+      "createdAt": "2026-06-19T19:26:05Z",
+      "updatedAt": "2026-06-19T19:26:05Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#issuecomment-4754195418"
+    }
+  ],
+  "reviews": [
+    {
+      "id": 4534889304,
+      "state": "COMMENTED",
+      "body": "🤖 AI Code Review — 3 inline comment(s). See the summary comment for the full verdict.",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "submittedAt": "2026-06-19T19:19:50Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4534889304",
+      "commitId": "4e44e31e57231e37468f574d2ce2dc8d1295bb97"
+    },
+    {
+      "id": 4534910875,
+      "state": "COMMENTED",
+      "body": "🤖 AI Code Review — 1 inline comment(s). See the summary comment for the full verdict.",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "submittedAt": "2026-06-19T19:24:59Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4534910875",
+      "commitId": "d45cfcdac6f67ae6de4524356b7e6d64b6ec19dc"
+    },
+    {
+      "id": 4534923948,
+      "state": "COMMENTED",
+      "body": "🤖 AI Code Review — 3 inline comment(s). See the summary comment for the full verdict.",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "submittedAt": "2026-06-19T19:28:23Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4534923948",
+      "commitId": "2ec08ee9575af424aedb00bd3de31d46e4b156e0"
+    },
+    {
+      "id": 4535026835,
+      "state": "COMMENTED",
+      "body": "🤖 AI Code Review — 10 inline comment(s). See the summary comment for the full verdict.",
+      "author": "github-actions[bot]",
+      "authorType": "Bot",
+      "submittedAt": "2026-06-19T19:56:54Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535026835",
+      "commitId": "15c8e32a98b317fbf4c37e0b97337cd82a436d7d"
+    },
+    {
+      "id": 4535100149,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-06-19T20:14:05Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535100149",
+      "commitId": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44"
+    },
+    {
+      "id": 4535100269,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-06-19T20:14:08Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535100269",
+      "commitId": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44"
+    },
+    {
+      "id": 4535100343,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-06-19T20:14:09Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535100343",
+      "commitId": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44"
+    },
+    {
+      "id": 4535100430,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-06-19T20:14:10Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535100430",
+      "commitId": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44"
+    },
+    {
+      "id": 4535101273,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-06-19T20:14:26Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535101273",
+      "commitId": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44"
+    },
+    {
+      "id": 4535101450,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-06-19T20:14:29Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535101450",
+      "commitId": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44"
+    },
+    {
+      "id": 4535101507,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-06-19T20:14:30Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535101507",
+      "commitId": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44"
+    },
+    {
+      "id": 4535101744,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-06-19T20:14:34Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535101744",
+      "commitId": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44"
+    },
+    {
+      "id": 4535101799,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-06-19T20:14:35Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535101799",
+      "commitId": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44"
+    },
+    {
+      "id": 4535102726,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-06-19T20:14:51Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535102726",
+      "commitId": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44"
+    },
+    {
+      "id": 4535102781,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-06-19T20:14:53Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535102781",
+      "commitId": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44"
+    },
+    {
+      "id": 4535102901,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-06-19T20:14:55Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535102901",
+      "commitId": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44"
+    },
+    {
+      "id": 4535102967,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-06-19T20:14:56Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535102967",
+      "commitId": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44"
+    },
+    {
+      "id": 4535103399,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-06-19T20:15:04Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535103399",
+      "commitId": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44"
+    },
+    {
+      "id": 4535103472,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-06-19T20:15:05Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535103472",
+      "commitId": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44"
+    },
+    {
+      "id": 4535103546,
+      "state": "COMMENTED",
+      "body": "",
+      "author": "Falconiere",
+      "authorType": "User",
+      "submittedAt": "2026-06-19T20:15:06Z",
+      "url": "https://github.com/Falconiere/toolu/pull/115#pullrequestreview-4535103546",
+      "commitId": "c44875dfd8e0bee26d9516cd32af03a2a3c4be44"
+    }
+  ],
+  "bot": {
+    "comment": {
+      "id": 4754146994,
+      "url": "https://github.com/Falconiere/toolu/pull/115#issuecomment-4754146994",
+      "createdAt": "2026-06-19T19:16:40Z",
+      "updatedAt": "2026-06-19T20:16:59Z",
+      "author": "github-actions[bot]"
+    },
+    "verdict": {
+      "is_review_comment": true,
+      "state": "provider_error",
+      "complete": false,
+      "verdict": "changes",
+      "verdict_label": "request-changes",
+      "findings": [],
+      "must_fix": [
+        "_None._"
+      ]
+    }
+  },
+  "pages": {
+    "threads": 9,
+    "threadComments": 0,
+    "comments": 2,
+    "reviews": 10
+  }
+}
