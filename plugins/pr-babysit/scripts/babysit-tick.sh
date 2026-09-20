@@ -75,11 +75,23 @@ fi
 # _record_error DOC — on a collection failure, keep the prior state but stamp
 # pr.lastError so the next reader sees what happened and when.
 _record_error() {
-  local doc="$1"
+  local doc="$1" entry
   [ "$have_state" -eq 1 ] || return 0
-  pb_atomic_write_json "$state_file" jq -c --argjson e "$(jq -c '.errors[0]' <<<"$doc")" --arg now "$now" \
-    '.pr.lastError = {code: $e.code, message: $e.message, at: $now}' "$state_file" \
+  # A structured error always carries errors[0]; anything else is recorded as
+  # an api_error with the raw text so the failure is never lost.
+  entry=$(jq -c '.errors[0] // empty' <<<"$doc" 2>/dev/null || true)
+  [ -n "$entry" ] || entry=$(jq -nc --arg m "$doc" '{code:"api_error", message:$m}')
+  pb_atomic_write_json "$state_file" jq -c --argjson e "$entry" --arg now "$now" \
+    '.pr.lastError = {code: ($e.code // "api_error"), message: ($e.message // ""), at: $now}' "$state_file" \
     || echo "babysit-tick.sh: could not record lastError in $state_file" >&2
+}
+
+# _exit_with_doc DOC — print a structured error and exit with the code its
+# errors[0].code maps to, so the exit code and the document never disagree.
+_exit_with_doc() {
+  local doc="$1"
+  printf '%s\n' "$doc"
+  exit "$(pb_exit_code "$(jq -r '.errors[0].code // "api_error"' <<<"$doc")")"
 }
 
 # --- snapshot: collect, or take the one handed in ----------------------------
@@ -99,8 +111,7 @@ else
     doc=$(grep '^{' "$PB_TMPDIR/collect.out" | tail -n 1 || true)
     [ -n "$doc" ] || doc=$(pb_error api_error "babysit-tick.sh: collect-pr.sh exited $rc without a structured error" '{"source":"collect"}')
     _record_error "$doc"
-    printf '%s\n' "$doc"
-    exit "$rc"
+    _exit_with_doc "$doc"
   fi
 fi
 
@@ -113,8 +124,7 @@ if [ "$rc" -ne 0 ]; then
   doc=$(grep '^{' "$PB_TMPDIR/reduce.out" | tail -n 1 || true)
   [ -n "$doc" ] || doc=$(pb_error invalid_json "babysit-tick.sh: reduce-state.sh exited $rc without a structured error" '{"source":"reduce"}')
   _record_error "$doc"
-  printf '%s\n' "$doc"
-  exit "$rc"
+  _exit_with_doc "$doc"
 fi
 
 # --- persist: snapshot first (the state points at it), then state -----------

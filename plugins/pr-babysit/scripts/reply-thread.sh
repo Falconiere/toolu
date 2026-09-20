@@ -45,9 +45,11 @@ done
 [ -n "$state_file" ] || pb_fail usage "reply-thread.sh: --state-file required"
 [ -n "$body_file" ] && [ -f "$body_file" ] || pb_fail usage "reply-thread.sh: --body-file <existing file> required"
 [ -s "$body_file" ] || pb_fail usage "reply-thread.sh: reply body is empty"
+# GitHub caps comment bodies at 65536 characters; refuse before the request.
+[ "$(wc -c <"$body_file" | tr -d ' ')" -le 65536 ] || pb_fail usage "reply-thread.sh: reply body exceeds GitHub's 65536-character limit"
 case "$kind" in
   thread)
-    [ -n "$thread" ] || pb_fail usage "reply-thread.sh: --thread <graphqlId> required for --kind thread"
+    [[ "$thread" =~ ^[A-Za-z0-9_=-]+$ ]] || pb_fail usage "reply-thread.sh: --thread <graphqlId> required for --kind thread"
     [[ "$root" =~ ^[0-9]+$ ]] || pb_fail usage "reply-thread.sh: --root-comment <databaseId> required for --kind thread"
     [[ "$in_reply_to" =~ ^[0-9]+$ ]] || pb_fail usage "reply-thread.sh: --in-reply-to <databaseId> required for --kind thread"
     key="thread:${thread}@${in_reply_to}" ;;
