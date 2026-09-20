@@ -86,6 +86,23 @@ pb_atomic_write_json() {
   mv -f "$tmp" "$target" || { rm -f "$tmp"; return 1; }
 }
 
+# pb_retry_on_rc RETRY_RC ATTEMPTS CMD [ARGS...]
+# Run CMD; while it returns exactly RETRY_RC and attempts remain, run it
+# again. Returns CMD's last exit code. Used for "collect again once when the
+# PR head moved under us": any other failure propagates on the first try.
+pb_retry_on_rc() {
+  local retry_rc="$1" attempts="$2"; shift 2
+  local n=0 rc=0
+  while :; do
+    n=$((n + 1))
+    rc=0
+    "$@" || rc=$?
+    [ "$rc" -eq "$retry_rc" ] || return "$rc"
+    [ "$n" -lt "$attempts" ] || return "$rc"
+    echo "pr-babysit: attempt $n of $attempts returned $rc; retrying $1" >&2
+  done
+}
+
 # pb_mktmpdir -> create the per-run scratch dir (removed by pb_on_exit).
 pb_mktmpdir() {
   PB_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/pr-babysit.XXXXXX") || return 1
