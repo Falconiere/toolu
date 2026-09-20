@@ -13,9 +13,11 @@
 # watchdog is a background job plus a sleeping killer subshell — bash 3.2 has
 # no `wait -n`, so the job's exit code is read from a status file it writes.
 #
-# Retry policy (spec §Architecture): 3 attempts, 2/4/8 s backoff, for
-# timeouts, 5xx, connection errors, HTTP 429, and 403 whose body mentions the
-# rate limit. Any other 4xx is permanent and never retried. Observed real
+# Retry policy (spec §Architecture): 3 attempts with waits of 2 s and 4 s
+# between them (the 8 s step of PB_GH_BACKOFF only applies when
+# PB_GH_ATTEMPTS is raised), for timeouts, 5xx, connection errors, HTTP 429,
+# and 403 whose body mentions the rate limit. Any other 4xx is permanent and
+# never retried. Observed real
 # shapes this classifies (2026-09-19, gh 2.101.0):
 #   refused host  → rc 1, stderr `dial tcp 127.0.0.1:1: connect: connection refused`
 #   404           → rc 1, stdout `{"message":"Not Found",…,"status":"404"}`, stderr `gh: Not Found (HTTP 404)`

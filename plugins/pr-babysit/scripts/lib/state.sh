@@ -17,6 +17,12 @@ pb_state_load() {
     || pb_fail state_malformed "state file is not a version-2 pr-babysit state: $state_file" "$(jq -c '{source:"state", version:(.version // null)}' "$state_file")"
   PB_STATE_REPO=$(jq -r '.repo' "$state_file")
   PB_STATE_NUMBER=$(jq -r '.number' "$state_file")
+  # These are spliced into REST paths: refuse anything but owner/name and an
+  # integer, whatever a hand-edited state file says.
+  [[ "$PB_STATE_REPO" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]] \
+    || pb_fail state_malformed "state file repo is not owner/name: $PB_STATE_REPO" '{"source":"state"}'
+  [[ "$PB_STATE_NUMBER" =~ ^[0-9]+$ ]] \
+    || pb_fail state_malformed "state file number is not an integer: $PB_STATE_NUMBER" '{"source":"state"}'
   PB_STATE_HEAD=$(jq -r '.pr.headSha // ""' "$state_file")
   export PB_STATE_REPO PB_STATE_NUMBER PB_STATE_HEAD
 }

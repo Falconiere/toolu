@@ -83,6 +83,6 @@ jq -e '.id | type == "number"' "$PB_TMPDIR/reply.json" >/dev/null 2>&1 \
 
 pb_state_update "$state_file" \
   '.actions.replied[$k] = {commentId: $r.id, url: $r.html_url, at: $now, headSha: $head, kind: $kind}' \
-  --arg k "$key" --slurpfile rr "$PB_TMPDIR/reply.json" --arg now "$(pb_now)" --arg head "$PB_STATE_HEAD" --arg kind "$kind" \
+  --arg k "$key" --arg now "$(pb_now)" --arg head "$PB_STATE_HEAD" --arg kind "$kind" \
   --argjson r "$(jq -c '{id, html_url}' "$PB_TMPDIR/reply.json")"
 jq -c --arg k "$key" '{ok:true, key:$k, commentId:.id, url:.html_url}' "$PB_TMPDIR/reply.json"
