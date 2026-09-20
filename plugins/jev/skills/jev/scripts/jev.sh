@@ -165,11 +165,12 @@ jev_post() (
     fi
     [[ "$attempt" -lt 3 ]] || break
     # $code is curl's %{http_code}: three digits, or 000 when no status line
-    # arrived. Connection-level failures carry curl's own exit status instead:
+    # arrived (retried as a connection error whatever the exit status).
+    # Connection-level failures carry curl's own exit status instead:
     # 7 (connect), 28 (timeout), 35 (TLS handshake), 52 (empty reply),
     # 55 (send), 56 (receive) — the SDK retries these as connection errors.
     case "$status:$code" in
-      0:408|0:429|0:5[0-9][0-9]|7:*|28:*|35:*|52:*|55:*|56:*) sleep "$delay";;
+      0:408|0:429|0:5[0-9][0-9]|0:000|7:*|28:*|35:*|52:*|55:*|56:*) sleep "$delay";;
       *) break;;
     esac
   done

@@ -129,7 +129,7 @@ publish() {
   [ "$status" -eq 0 ]
   jq -e --arg wrapper "$TOOLU_CONFIG_DIR/jev/jev.sh" --arg skill_path "$installed/skills/jev/SKILL.md" '
     .hookSpecificOutput | .hookEventName == "UserPromptSubmit" and
-    (.additionalContext | contains($wrapper) and contains($skill_path))' <<<"$output"
+    (.additionalContext | contains("\"" + $wrapper + "\"") and contains($skill_path + "."))' <<<"$output"
 }
 
 @test "user-prompt-submit: manifest command runs from an installed plugin path containing spaces" {
