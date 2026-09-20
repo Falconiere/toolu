@@ -20,8 +20,6 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 12 | [**agent-browser**](../../plugins/agent-browser/README.md) | Browser | — | Token-lean live browser automation via accessibility-tree snapshots |
 | 13 | [**jev**](../jev/README.md) | Knowledge | — | Typed judgments from TypeSafe's Jev — probability, choice, and score answers code can branch on |
 
-`git-better` (token-lean `gb` reads + cached repo-convention detection) is bundled as a skill inside `toolu` core — no separate plugin/install/marketplace row.
-
 ## Architecture Overview
 
 
