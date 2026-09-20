@@ -3,8 +3,8 @@
 #
 # benchmarks' own copy of the token/cost rollup math (originally written for the
 # now-removed `stats` plugin's report; kept here as the single source of truth
-# for benchmarks' live-tier token accounting — sourced not copied, so
-# cases/whole-session/run.sh uses one shared implementation).
+# for benchmarks' live-tier token accounting — sourced not copied, so a live
+# case such as cases/whole-session/run.sh never reimplements it).
 # Given a session's main transcript plus its subagent transcripts, it: parses
 # each line tolerantly (a malformed/truncated line is skipped, never fatal),
 # keeps only assistant messages, dedups by message.id (Claude Code re-writes the
