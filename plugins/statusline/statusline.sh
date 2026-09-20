@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Statusline — the toolu statusline.
 # Reads the Claude Code statusline JSON on stdin and prints a single status line:
-#   model | effort | ctx | <email domain> | <gate> | folder | branch [↑↓] [dirty] | <comemory>
+#   model | effort | ctx | <email domain> | <gate> | folder | branch [↑↓] [dirty] | <comemory> | <jev>
 # The signature segment is the quality-gate marker: when this project's
 # PostToolUse gate is failing, it shows a loud red marker so you can't miss it.
 # (Lights up only when a gate writer — e.g. rust-quality/ts-quality/toolu — is present.)
@@ -63,8 +63,8 @@ while [ -L "$_self" ] && [ "$_hops" -lt 40 ]; do
 done
 _plugin_dir=$(cd "${_self%/*}" 2>/dev/null && pwd) || _plugin_dir=""
 _collector="${_plugin_dir:+$_plugin_dir/}scripts/collect-status.sh"
-if [ -n "$cwd" ] && [ -f "$_collector" ]; then
-  project_status=$(bash "$_collector" "$cwd" 2>/dev/null || true)
+if [ -f "$_collector" ]; then
+  project_status=$(bash "$_collector" "${cwd:-$PWD}" 2>/dev/null || true)
 else
   project_status=""
 fi
@@ -147,6 +147,17 @@ comemory_seg=""
 _cn=$(jq -r '.comemory_count // empty' <<<"$project_status")
 [ -n "$_cn" ] && comemory_seg="${BOLD}${GREEN}[COMEMORY:${_cn}]${RESET}"
 
+# --- Jev readiness (local prerequisites only; no inference or health request) ---
+jev_seg=""
+jev_status=$(jq -r '.jev.status // ""' <<<"$project_status")
+case "$jev_status" in
+  ready) jev_seg="${BOLD}${GREEN}[JEV:READY]${RESET}" ;;
+  unavailable)
+    jev_reason=$(jq -r '.jev.reason // ""' <<<"$project_status")
+    jev_seg="${BOLD}${YELLOW}[JEV:UNAVAILABLE: ${jev_reason}]${RESET}"
+    ;;
+esac
+
 # --- Assemble ---
 sep="${DIM} | ${RESET}"
 line="${CYAN}${model}${RESET}"
@@ -161,5 +172,6 @@ if [ "$_first" = false ]; then
   [ -n "$_git_seg" ] && line="${line}${_git_seg}"
 fi
 [ -n "$comemory_seg" ] && line="${line}${sep}${comemory_seg}"
+[ -n "$jev_seg" ] && line="${line}${sep}${jev_seg}"
 
 printf '%s' "$line"

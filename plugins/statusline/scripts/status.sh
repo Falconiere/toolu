@@ -18,6 +18,8 @@ untracked=$(jq -r '.working_tree.untracked' <<<"$status_json")
 gate_status=$(jq -r '.gate.status' <<<"$status_json")
 gate_reason=$(jq -r '.gate.reason' <<<"$status_json")
 comemory=$(jq -r '.comemory_count // empty' <<<"$status_json")
+jev_status=$(jq -r '.jev.status // empty' <<<"$status_json")
+jev_reason=$(jq -r '.jev.reason // empty' <<<"$status_json")
 
 [ "$host" = codex ] && host_label=Codex || host_label='Claude Code'
 printf 'Host: %s\n' "$host_label"
@@ -47,3 +49,7 @@ case "$gate_status" in
   *) printf 'Quality gate: no recorded state\n' ;;
 esac
 [ -z "$comemory" ] || printf 'Comemory: %s memories\n' "$comemory"
+case "$jev_status" in
+  ready) printf 'Jev: ready\n' ;;
+  unavailable) printf 'Jev: unavailable — %s\n' "$jev_reason" ;;
+esac
