@@ -1,6 +1,6 @@
 ---
 name: status
-description: Use when the user asks for current repository, branch, working-tree, quality-gate, or comemory status in Codex.
+description: Use when the user asks for current repository, branch, working-tree, quality-gate, comemory, or Jev readiness status in Codex.
 ---
 
 # Status

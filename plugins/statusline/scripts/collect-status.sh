@@ -99,6 +99,27 @@ if [ -n "$repo_root" ]; then
   fi
 fi
 
+# Readiness is local configuration, not a service health check. Never execute
+# the wrapper or send a request on the statusline's per-prompt hot path.
+jev_status=""
+jev_reason=""
+jev_wrapper="$config_root/jev/jev.sh"
+if [ -e "$jev_wrapper" ] || [ -L "$jev_wrapper" ]; then
+  [ -f "$jev_wrapper" ] && [ -x "$jev_wrapper" ] || jev_reason="missing executable wrapper; "
+  command -v curl >/dev/null 2>&1 || jev_reason="${jev_reason}missing curl; "
+  if [ -z "${TYPESAFE_API_KEY:-}" ]; then
+    jev_reason="${jev_reason}missing TYPESAFE_API_KEY; "
+  elif [[ "$TYPESAFE_API_KEY" == *$'\r'* || "$TYPESAFE_API_KEY" == *$'\n'* ]]; then
+    jev_reason="${jev_reason}invalid TYPESAFE_API_KEY; "
+  fi
+  jev_reason="${jev_reason%; }"
+  if [ -n "$jev_reason" ]; then
+    jev_status=unavailable
+  else
+    jev_status=ready
+  fi
+fi
+
 jq -cn \
   --arg host "$host" \
   --arg cwd "$cwd" \
@@ -108,6 +129,8 @@ jq -cn \
   --arg gate_status "$gate_status" \
   --arg gate_reason "$gate_reason" \
   --arg comemory_count "$comemory_count" \
+  --arg jev_status "$jev_status" \
+  --arg jev_reason "$jev_reason" \
   --argjson ahead "${ahead:-0}" \
   --argjson behind "${behind:-0}" \
   --argjson staged "$staged" \
@@ -117,4 +140,5 @@ jq -cn \
     ahead:$ahead,behind:$behind,
     working_tree:{staged:$staged,unstaged:$unstaged,untracked:$untracked},
     gate:{status:$gate_status,reason:$gate_reason},
+    jev:{status:$jev_status,reason:$jev_reason},
     comemory_count:(if $comemory_count == "" then null else ($comemory_count | tonumber) end)}'
