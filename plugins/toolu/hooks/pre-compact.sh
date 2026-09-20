@@ -11,14 +11,8 @@ if ! toolu_enabled hooks pre-compact; then
   exit 0
 fi
 
-# Consume stdin (Claude Code sends hook input via stdin)
+# Both hosts send hook input via stdin. PreCompact has no shared context-output
+# shape, so a successful no-op must be silent.
 cat > /dev/null 2>&1 || true
 
-reminder="Context compacted. Continue from the available session context."
-
-jq -n --arg reminder "$reminder" '{
-  "hookSpecificOutput": {
-    "hookEventName": "PreCompact",
-    "additionalContext": $reminder
-  }
-}'
+exit 0
