@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.3.1](https://github.com/Falconiere/toolu/compare/v6.3.0...v6.3.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **agents:** restore CLAUDE.md pointer so Claude Code reaches AGENTS.md ([8e7fab6](https://github.com/Falconiere/toolu/commit/8e7fab6ce6eec5de090b029dd0be648530c898b8))
+* **workflows:** address PR review feedback ([7d450ce](https://github.com/Falconiere/toolu/commit/7d450ce6d55e3f4646566f5552e627d7a2cf952c))
+
 ## [6.3.0](https://github.com/Falconiere/toolu/compare/v6.2.0...v6.3.0) (2026-09-20)
 
 
