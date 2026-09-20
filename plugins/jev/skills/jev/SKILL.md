@@ -1,6 +1,6 @@
 ---
 name: jev
-description: Use when development needs a bounded semantic decision over supplied evidence — classify, rank, rate, judge, route, or pick one of concrete candidates — including brainstorm, spec, spec review, plan, plan review, execution, and review.
+description: Mandatory on every task — make at least one bounded semantic decision over supplied evidence (classify, rank, rate, judge, route, or pick one of concrete candidates) during brainstorm, spec, spec review, plan, plan review, execution, and review.
 ---
 
 # Jev — Typed Judgments
@@ -11,17 +11,21 @@ levels. Code consumes the result directly.
 
 ## Workflow rule
 
-At each development stage, identify whether a bounded semantic judgment over
-available evidence would change the next action. **If and only if it would,
-and Jev is available, you MUST call it.** Use it during brainstorm to compare
-concrete candidates against stated preferences; during spec/review to check
-requirement wording or requirement/evidence alignment; during plan/review to
-check semantic step coverage; during execution to triage supplied findings.
+Jev is **mandatory on every task**. Before acting on a request, identify at
+least one bounded semantic decision it contains and, when Jev is available,
+**you MUST call it**: classify the request or its scope, compare concrete
+candidates against stated preferences (brainstorm), check requirement wording
+or requirement/evidence alignment (spec, spec review), check semantic step
+coverage (plan, plan review), or triage supplied findings (execution, review).
+Prefer the decision that changes the next action; when several qualify, batch
+them in one `ask` call.
 
 Keep architecture, code correctness, exact checks, arithmetic, and test verdicts
-with the agent and deterministic tools. Do not call Jev merely because a stage
-started. Reuse prior judgments while evidence and question meanings remain
-unchanged. Record the question, answer, and decision impact where useful.
+with the agent and deterministic tools. Reuse prior judgments while evidence and
+question meanings remain unchanged. Record the question, answer, and decision
+impact where useful. If a request truly has no semantic decision (a confirmation
+or a single deterministic lookup), say so in one sentence rather than skipping
+silently.
 
 If the plugin, credentials, or service is unavailable, state the limitation and
 continue with an explicit reasoning/evidence fallback. Never fabricate a result
@@ -66,8 +70,8 @@ Shared options:
       --raw           Print the whole response body instead of just .answers
 
 noul:    --true DESC / --false DESC   what a yes / a no means
-choice:  -o, --option KEY=DESC        repeatable, at least 2 (bare -o KEY sends no description)
-score:   -l, --level DESC             repeatable, at least 2, lowest level first
+choice:  -o, --option KEY=DESC        repeatable, 2..255 (bare -o KEY sends no description)
+score:   -l, --level DESC             repeatable, 2..10, lowest level first
 ```
 
 ### Examples
@@ -93,6 +97,31 @@ jev.sh score -s @finding.md "How severe is this finding?" \
 # Many questions, ONE call — the cheapest way to ask several things.
 jev.sh ask questions.json -s @ticket.json
 ```
+
+## Writing questions Jev answers well
+
+Verified against the live docs (`/primitives`, `/model-jaggedness/jev-1.13`):
+
+- **Literal reading.** Jev answers the words you wrote, not the intent. State
+  the exact condition; put boundary cases in the criteria. When you catch
+  yourself explaining what you "really meant", that sentence belongs in the
+  instruction. Keep instructions and criteria saying the same thing.
+- **One judgment per question.** "Angry AND asking for a refund" is two
+  Nouls. Phrase Nouls so a high value means yes; never invert ("is free of").
+- **Levels describe situations, not degrees.** "Broken, workaround exists"
+  matches; "moderately severe" and bare numbers do not. Each level is judged
+  on its own, so ordering words ("worse than the previous") mean nothing.
+- **No arithmetic, counting, or date comparison.** Extract parts as a Choice
+  over closed sets, then compute in code. Never read a fractional score as an
+  exact magnitude.
+- **Minimal, relevant state.** Filter in code first; unrelated material costs
+  accuracy. Prefer an object with named fields and point questions at them by
+  backticked path (`ticket.messages[0].text`).
+- **No cross-type identities.** A threshold tuned on a Noul does not carry to
+  a Choice; `P(yes)` and `1 - P(not yes)` need not agree. A Choice is relative
+  (which option), a Noul is absolute (does it hold at all).
+- **Structured instructions and criteria** (objects, arrays, `null`) go
+  through `ask`; the single-question commands take strings.
 
 ## How to use it well
 
@@ -123,9 +152,10 @@ jev.sh ask questions.json -s @ticket.json
 
 | Constraint | Detail |
 |---|---|
-| Input | Text only — string, JSON object, or array. Pre-process anything else. |
+| Input | Text only — string, JSON object, or array. Pre-process anything else. English is the primary training language. |
+| Limits | Choice: 2–255 options. Score: 2–10 levels. Both are checked locally before any request. |
 | Context | 64k tokens per request; 32k for `state` plus the longest question. Slice large files before sending. |
-| Errors | Up to three attempts for timeouts and HTTP `408/429/500/502/503/504/529`, with 1s then 2s backoff. Numeric `Retry-After` up to 60s is honored; longer waits surface the error. Other HTTP errors are not retried. |
+| Errors | Up to three attempts for timeouts and HTTP `408`, `429`, and any `5xx` (the SDK's default set), with 1s then 2s backoff. `Retry-After` (seconds) or `retry-after-ms` up to 60s is honored; longer waits surface the error. `401`/`422` and other 4xx are not retried. |
 | Exit codes | `1` usage/config error or invalid response, `22` HTTP error (body on stderr), `28` timeout (`JEV_TIMEOUT`, default 60s per attempt). |
 | Output | Default prints `.answers` compactly; `--raw` adds `model` and token `usage`. |
 

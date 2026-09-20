@@ -26,9 +26,10 @@ Standalone, no plugin dependencies.
 
 ## What it provides
 
-- **`jev` skill** — mandatory for useful, bounded semantic decisions over supplied evidence, with batching and explicit fallback.
+- **`jev` skill** — mandatory on every task: at least one bounded semantic decision over supplied evidence, with batching and explicit fallback.
 - **`jev.sh` wrapper** — `noul` (probability of yes), `choice` (pick one, with the full distribution), `score` (rate on your own ordered levels), and `ask` (many questions in one call).
-- **SessionStart hook** — publishes `jev.sh` at `<config-dir>/jev/jev.sh` and injects a short mandatory workflow on startup, resume, clear, and compaction. It checks local prerequisites and makes no API call.
+- **SessionStart hook** — publishes `jev.sh` at `<config-dir>/jev/jev.sh` and injects the full mandate on startup, resume, clear, and compaction. It checks local prerequisites and makes no API call.
+- **UserPromptSubmit hook** — restates the mandate on every prompt so it survives long sessions; silent for trivial confirmations and when prerequisites are missing (SessionStart already reported them). No API call.
 
 ## Wiring
 

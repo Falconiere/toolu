@@ -60,9 +60,11 @@ teardown() {
   [ "$status" -eq 0 ]
   context=$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")
   [ "$(jq -r '.hookSpecificOutput.hookEventName' <<<"$output")" = SessionStart ]
-  [[ "$context" == *MUST* ]]
-  [[ "$context" == *"$CLAUDE_CONFIG_DIR/jev/jev.sh"* ]]
+  [[ "$context" == *"mandatory on every task"* ]]
+  [[ "$context" == *"MUST call \"$CLAUDE_CONFIG_DIR/jev/jev.sh\""* ]]
   [[ "$context" == *"Batch independent"* ]]
+  # The rule is unconditional per task: no "only when it would change" escape hatch.
+  [[ "$context" != *"only when"* ]]
   [[ "$context" != *local-test-key* ]]
 }
 
@@ -72,6 +74,7 @@ teardown() {
   context=$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")
   [[ "$context" == *TYPESAFE_API_KEY* ]]
   [[ "$context" == *fallback* ]]
+  [[ "$context" == *"mandatory on every task once available"* ]]
   [[ "$context" != *"MUST call"* ]]
 }
 

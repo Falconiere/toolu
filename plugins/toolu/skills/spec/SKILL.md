@@ -11,9 +11,9 @@ an agreed brainstorm decision when one helped resolve the shape; clear,
 complete requirements may enter here directly. Return to `brainstorm` only when
 a material design choice remains undecided.
 
-For ambiguous requirement wording or observable-outcome checks, apply
-[semantic judgments](../../workflows/semantic-judgments.md) only when useful.
-The agent still owns the contract and technical feasibility.
+For requirement wording and observable-outcome checks, apply
+[semantic judgments](../../workflows/semantic-judgments.md) — Jev is mandatory
+on every task. The agent still owns the contract and technical feasibility.
 
 Write `docs/toolu/specs/<YYYY-MM-DD>-<slug>-design.md`. Keep every section
 short and concrete:
