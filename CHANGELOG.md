@@ -1,5 +1,22 @@
 # Changelog
 
+## [6.3.0](https://github.com/Falconiere/toolu/compare/v6.2.0...v6.3.0) (2026-09-20)
+
+
+### Features
+
+* **pr-babysit:** add reducer, tick orchestrator and write side ([b0520e5](https://github.com/Falconiere/toolu/commit/b0520e5e37eacc1f3a1ad5a3762a71410cb9d6ac))
+* **pr-babysit:** ship tick helper libs and collector ([4356d52](https://github.com/Falconiere/toolu/commit/4356d52fcb8dd6fd148913d0768217ed9690ee70))
+
+
+### Bug Fixes
+
+* **pr-babysit:** address CI review round 1 ([1e69667](https://github.com/Falconiere/toolu/commit/1e69667ecad334ba680daed5bfb3406f3fa416b3))
+* **pr-babysit:** address CI review round 2 and close two residue windows ([39f7aa8](https://github.com/Falconiere/toolu/commit/39f7aa8729bdadbf10f567f143d2d117cf508b8f))
+* **pr-babysit:** pass GraphQL string variables raw and validate state identity ([b8823f3](https://github.com/Falconiere/toolu/commit/b8823f398127a31df9f0b3147b2b83768fd08b63))
+* **pr-babysit:** test the head-moved retry and state resolve error codes precisely ([1524020](https://github.com/Falconiere/toolu/commit/15240206d4e1cf9c0ea3d6673e03d34647ac74f7))
+* **toolu,toolu-review:** accept detached-worktree pushes with a refspec ([d09f0aa](https://github.com/Falconiere/toolu/commit/d09f0aac74d6409fa457e77fbca6133f42f87cf4))
+
 ## [6.2.0](https://github.com/Falconiere/toolu/compare/v6.1.1...v6.2.0) (2026-09-20)
 
 
