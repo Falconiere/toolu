@@ -1,6 +1,6 @@
 {
   "name": "jev",
-  "version": "6.1.1",
+  "version": "6.2.0",
   "description": "Typed judgments from TypeSafe's Jev model at runtime (skill + REST wrapper) — yes/no probabilities, choices, and scores a script can branch on. Standalone, no dependencies.",
   "author": {
     "name": "Falconiere Barbosa",

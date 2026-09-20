@@ -1,5 +1,18 @@
 # Changelog
 
+## [6.2.0](https://github.com/Falconiere/toolu/compare/v6.1.1...v6.2.0) (2026-09-20)
+
+
+### Features
+
+* **jev:** enforce Jev on every task and align wrapper with live docs ([a96095e](https://github.com/Falconiere/toolu/commit/a96095efedd1904c07b54ea36f5634f9d4157ec9))
+
+
+### Bug Fixes
+
+* **jev:** address PR review feedback ([c489ea4](https://github.com/Falconiere/toolu/commit/c489ea45462a5d2c1c1dca603e21f49ab29aff22))
+* **jev:** tighten path assertions and retry a 000 status ([07bfd94](https://github.com/Falconiere/toolu/commit/07bfd942222c9fc3eaf7ae05b8b290ee8909769c))
+
 ## [6.1.1](https://github.com/Falconiere/toolu/compare/v6.1.0...v6.1.1) (2026-09-20)
 
 
