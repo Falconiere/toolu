@@ -74,9 +74,9 @@ All workflows live in `.github/workflows/`:
 
 | Workflow | Trigger | What it does |
 |----------|---------|--------------|
-| `tests.yml` | push/PR to `main`, except a release-please version bump (the Release PR and the `chore(main): release` commit on `main`) | Typecheck (bun), bats suite, colocated-test layout enforcement, deterministic benchmarks, context-budget guard |
+| `tests.yml` | push/PR to `main`, except a diff that only changes release version files and `CHANGELOG.md` (manual dispatch still runs) | Typecheck (bun), bats suite, colocated-test layout enforcement, deterministic benchmarks, context-budget guard |
 | `release-please.yml` | push to `main` | Maintains the batched Release PR; on merge, bumps `package.json` + every `plugin.json` to the new `vX.Y.Z`, updates the changelog, tags, and publishes the GitHub Release |
-| `toolu-review.yml` | PR opened/synchronize, except release-please PRs | CI review bot |
+| `toolu-review.yml` | PR opened/synchronize, except a diff that only changes release version files and `CHANGELOG.md` | CI review bot |
 
 ### Tests CI details
 
