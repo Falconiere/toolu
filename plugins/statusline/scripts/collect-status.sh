@@ -7,7 +7,8 @@ command -v jq >/dev/null 2>&1 || {
   exit 1
 }
 
-cwd="${1:-$PWD}"
+# Omitted cwd uses the current directory; an explicit empty cwd is profile-only.
+cwd="${1-$PWD}"
 if [ "${TOOLU_HOST_OVERRIDE:-}" = codex ] || {
   [ -z "${TOOLU_HOST_OVERRIDE:-}" ] && [ -n "${PLUGIN_ROOT:-}" ]
 }; then
@@ -77,7 +78,7 @@ fi
 gate_status=""
 gate_reason=""
 gate_file="${repo_root:-$cwd}/$project_state/tmp/quality-gate-status.json"
-if [ -f "$gate_file" ]; then
+if [ -n "$cwd" ] && [ -f "$gate_file" ]; then
   gate_status=$(jq -r '.status | strings // empty' "$gate_file" 2>/dev/null || true)
   gate_reason=$(jq -r '.reason | strings // empty' "$gate_file" 2>/dev/null || true)
 fi

@@ -144,3 +144,30 @@ render_claude() {
   [ "$status" -eq 0 ]
   [ "$output" = $'\033[36mClaude\033[0m\033[2m | \033[0m\033[35mctx:0/0\033[0m\033[2m | \033[0m\033[1m\033[32m[JEV:READY]\033[0m' ]
 }
+
+@test "Jev readiness: an explicit empty collector cwd omits project state" {
+  publish_jev claude
+  cd "$TMP/workspace"
+  git init -q
+  mkdir -p .claude/tmp
+  printf '%s' '{"status":"failing","reason":"fixture"}' > .claude/tmp/quality-gate-status.json
+  run bash "$ROOT/scripts/collect-status.sh" ""
+  [ "$status" -eq 0 ]
+  jq -e '. == {host:"claude",cwd:"",repo_root:"",folder:"",branch:"",
+    ahead:0,behind:0,working_tree:{staged:0,unstaged:0,untracked:0},
+    gate:{status:"",reason:""},comemory_count:null,jev:{status:"ready",reason:""}}' <<<"$output"
+
+  run bash "$ROOT/scripts/collect-status.sh"
+  [ "$status" -eq 0 ]
+  jq -e '.folder == "workspace" and .repo_root != "" and
+    .gate == {status:"failing",reason:"fixture"} and .working_tree.untracked == 1' <<<"$output"
+}
+
+@test "Jev readiness: an apostrophe in the workspace is literal path data" {
+  publish_jev claude
+  mkdir -p "$TMP/user's project"
+  payload=$(jq -nc --arg cwd "$TMP/user's project" '{workspace:{current_dir:$cwd}}')
+  run bash "$ROOT/statusline.sh" <<<"$payload"
+  [ "$status" -eq 0 ]
+  [ "$output" = $'\033[36mClaude\033[0m\033[2m | \033[0m\033[35mctx:0/0\033[0m\033[2m | \033[0m\033[1muser\'s project\033[0m\033[2m | \033[0m\033[1m\033[32m[JEV:READY]\033[0m' ]
+}

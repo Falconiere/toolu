@@ -64,15 +64,11 @@ done
 _plugin_dir=$(cd "${_self%/*}" 2>/dev/null && pwd) || _plugin_dir=""
 _collector="${_plugin_dir:+$_plugin_dir/}scripts/collect-status.sh"
 if [ -f "$_collector" ]; then
-  project_status=$(bash "$_collector" "${cwd:-$PWD}" 2>/dev/null || true)
+  project_status=$(bash "$_collector" "$cwd" 2>/dev/null || true)
 else
   project_status=""
 fi
-# Without a payload workspace, only profile-level Jev readiness is meaningful.
-# Preserve the prior omission of project segments instead of exposing $PWD.
-if ! project_status=$(jq -ce --arg cwd "$cwd" '
-  select(type == "object") |
-  if $cwd == "" then {jev: .jev} else . end' <<<"$project_status" 2>/dev/null); then
+if ! jq -e 'type == "object"' <<<"$project_status" >/dev/null 2>&1; then
   project_status='{"repo_root":"","folder":"","branch":"","ahead":0,"behind":0,"working_tree":{"staged":0,"unstaged":0,"untracked":0},"gate":{"status":"","reason":""},"comemory_count":null}'
 fi
 
