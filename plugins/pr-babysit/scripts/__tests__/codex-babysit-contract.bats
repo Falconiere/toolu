@@ -39,7 +39,9 @@ WORKFLOW="$ROOT/workflows/babysit.md"
   grep -q 'backoff.waitSeconds' <<<"$codex"
   grep -q '60 seconds' <<<"$codex"
   grep -Fq 'record.sh status' "$WORKFLOW"
-  ! grep -iE '(write|create|implement) (a |your own |the )?(python |bash )?(polling )?(script|controller)' "$SKILL" | grep -viq 'never'
+  mentions=$(grep -iE '(write|create|implement) (a |your own |the )?(python |bash )?(polling )?(script|controller)' "$SKILL" || true)
+  [ -n "$mentions" ]
+  [ -z "$(grep -viE 'never' <<<"$mentions" || true)" ]
 }
 
 @test "Codex Step 3 delegates fixes through spawn_agent at the routed tier" {

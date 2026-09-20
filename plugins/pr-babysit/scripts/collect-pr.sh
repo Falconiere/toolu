@@ -59,10 +59,26 @@ PARSER="$(pb_plugin_root)/scripts/parse-verdict.sh"
 PB_HEAD_MOVED_RC=10
 [ -f "$PARSER" ] || pb_fail usage "collect-pr.sh: parse-verdict.sh not found at $PARSER"
 
-# _read_head -> current headRefOid, or exits through pb_gh_fail.
+# _read_head -> current headRefOid on stdout, or a structured error document
+# on stdout with a non-zero status. It runs inside `$(...)`, so it must NOT
+# exit: an `exit` there only leaves the subshell and the caller would carry
+# on with the error text as a "head". The caller re-emits via _die_with_doc.
 _read_head() {
-  pb_gh "$PB_TMPDIR/head.json" pr view "$number" --repo "$repo" --json headRefOid || pb_gh_fail head
-  jq -er '.headRefOid' "$PB_TMPDIR/head.json" 2>/dev/null || pb_fail invalid_json "collect-pr.sh: head read returned no headRefOid" '{"source":"head"}'
+  pb_gh "$PB_TMPDIR/head.json" pr view "$number" --repo "$repo" --json headRefOid || {
+    pb_error api_error "gh head failed after ${PB_GH_ATTEMPTED:-0} attempt(s): ${PB_GH_LAST_ERR:-rc ${PB_GH_LAST_RC:-?}}" \
+      "$(jq -nc --argjson attempts "${PB_GH_ATTEMPTED:-0}" --arg class "${PB_GH_CLASS:-}" --arg lastMessage "${PB_GH_LAST_ERR:-}" \
+          '{source:"head", attempts:$attempts, class:$class, lastMessage:$lastMessage}')"
+    return 1
+  }
+  jq -er '.headRefOid' "$PB_TMPDIR/head.json" 2>/dev/null \
+    || { pb_error invalid_json "collect-pr.sh: head read returned no headRefOid" '{"source":"head"}'; return 1; }
+}
+
+# _die_with_doc DOC — re-emit a captured error document on the real stdout
+# and exit with the code it maps to (used after a failed head read).
+_die_with_doc() {
+  printf '%s\n' "$1"
+  exit "$(pb_exit_code "$(jq -r '.errors[0].code // "api_error"' <<<"$1" 2>/dev/null || echo api_error)")"
 }
 
 # _job NAME GH_ARGS... — one background read. Writes NAME.json and NAME.meta
@@ -158,14 +174,14 @@ _select_bot_comment() {
 
 _collect_once() {
   local head_before head_after
-  head_before=$(_read_head)
+  head_before=$(_read_head) || _die_with_doc "$head_before"
   _fan_out
   jq "$(pb_jq_threads_from_pages)" "$PB_TMPDIR/threads.json" >"$PB_TMPDIR/threads.norm.json"
   _complete_thread_comments
   jq "$(pb_jq_rest_items) | map($(pb_jq_issue_comment))" "$PB_TMPDIR/comments.json" >"$PB_TMPDIR/comments.norm.json"
   jq "$(pb_jq_rest_items) | map($(pb_jq_review))" "$PB_TMPDIR/reviews.json" >"$PB_TMPDIR/reviews.norm.json"
   _select_bot_comment
-  head_after=$(_read_head)
+  head_after=$(_read_head) || _die_with_doc "$head_after"
   if [ "$head_before" != "$head_after" ]; then
     : >"$PB_TMPDIR/head.moved"
     return "$PB_HEAD_MOVED_RC"

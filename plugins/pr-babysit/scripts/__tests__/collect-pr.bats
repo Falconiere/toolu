@@ -106,7 +106,8 @@ live() {
   [ "$(jq -r '.errors[0].class' <<<"$doc")" = transient ]
   [[ "$(jq -r '.errors[0].lastMessage' <<<"$doc")" == *"connection refused"* ]]
   [ ! -e "$TMP/s.json" ]
-  [ $((end - start)) -lt 60 ]
+  # Three refused connections with zero backoff: well under 10 s, or a hang crept in.
+  [ $((end - start)) -lt 10 ]
   # No scratch dir or temp file left behind.
   [ -z "$(ls -A "$TMP")" ]
 }

@@ -22,16 +22,16 @@ tick() { bash "$SCRIPTS/babysit-tick.sh" --repo Falconiere/toolu --pr 165 --stat
 
 @test "first tick from a captured snapshot: result on stdout, state + snapshot beside it, nothing else" {
   out=$(tick --now "$NOW")
-  [ "$(jq -r .version <<<"$out")" = 1 ]
+  jq -e '.version == 1' <<<"$out" >/dev/null
   [ "$(jq -r .decision <<<"$out")" = escalate ]
   [ "$(jq -r '.reasons[0].code' <<<"$out")" = pr_merged ]
   [ "$(jq -r .statePath <<<"$out")" = "$STATE" ]
   [ "$(jq -r .snapshotPath <<<"$out")" = "$TMP/pr-babysit-falconiere-toolu-165.snapshot.json" ]
-  [ "$(jq -r .version "$STATE")" = 2 ]
+  jq -e '.version == 2' "$STATE" >/dev/null
   [ "$(jq -r .totalTicks "$STATE")" = 1 ]
   [ "$(jq -r .lastGoodSnapshot "$STATE")" = "$TMP/pr-babysit-falconiere-toolu-165.snapshot.json" ]
   cmp "$SNAP/toolu-165.json" "$TMP/pr-babysit-falconiere-toolu-165.snapshot.json"
-  [ "$(ls -A "$TMP" | sort | tr '\n' ' ')" = "pr-babysit-falconiere-toolu-165.json pr-babysit-falconiere-toolu-165.snapshot.json " ]
+  [ "$(ls -A "$TMP" | sort | paste -sd ' ' -)" = "pr-babysit-falconiere-toolu-165.json pr-babysit-falconiere-toolu-165.snapshot.json" ]
   # Lock released.
   [ ! -d "$STATE.lock" ]
 }
@@ -148,7 +148,13 @@ tick() { bash "$SCRIPTS/babysit-tick.sh" --repo Falconiere/toolu --pr 165 --stat
     kill -TERM "$victim" 2>/dev/null || true
     wait "$victim" 2>/dev/null || true
     jq -e '.version == 2' "$STATE" >/dev/null
-    if ! cmp -s "$STATE" "$TMP/old.json"; then cmp "$STATE" "$TMP/new.json"; fi
+    # Either the untouched old state, or the complete new one. `new.json` was
+    # produced through a differently named state file, so its lastGoodSnapshot
+    # path is the one field that legitimately differs.
+    if ! cmp -s "$STATE" "$TMP/old.json"; then
+      cmp <(jq -S 'del(.lastGoodSnapshot)' "$STATE") <(jq -S 'del(.lastGoodSnapshot)' "$TMP/new.json")
+      [ "$(jq -r .lastGoodSnapshot "$STATE")" = "$TMP/pr-babysit-falconiere-toolu-165.snapshot.json" ]
+    fi
     [ -z "$(ls -A "$TMP" | grep -E '\.tmp\.')" ]
     [ ! -d "$STATE.lock" ]
   done
@@ -173,12 +179,12 @@ tick() { bash "$SCRIPTS/babysit-tick.sh" --repo Falconiere/toolu --pr 165 --stat
   gh auth status >/dev/null 2>&1 || skip "gh not authenticated"
   state="$TMP/pr-babysit-falconiere-toolu-115.json"
   out=$(bash "$SCRIPTS/babysit-tick.sh" --repo Falconiere/toolu --pr 115 --state-file "$state")
-  [ "$(jq -r .version <<<"$out")" = 1 ]
+  jq -e '.version == 1' <<<"$out" >/dev/null
   [ "$(jq -r .decision <<<"$out")" = escalate ]
   [ "$(jq -r '.reasons[0].code' <<<"$out")" = pr_merged ]
   [ "$(jq '.reasons | length' <<<"$out")" -ge 2 ]
   [ "$(jq -r .threads.total <<<"$out")" = 17 ]
-  [ "$(jq -r .version "$state")" = 2 ]
+  jq -e '.version == 2' "$state" >/dev/null
   [ "$(jq -r .pr.key "$state")" = "Falconiere/toolu#115" ]
-  [ "$(ls -A "$TMP" | sort | tr '\n' ' ')" = "pr-babysit-falconiere-toolu-115.json pr-babysit-falconiere-toolu-115.snapshot.json " ]
+  [ "$(ls -A "$TMP" | sort | paste -sd ' ' -)" = "pr-babysit-falconiere-toolu-115.json pr-babysit-falconiere-toolu-115.snapshot.json" ]
 }

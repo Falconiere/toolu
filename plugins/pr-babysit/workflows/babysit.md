@@ -347,7 +347,8 @@ Every fix is delegated at the tier its class deserves — never all on one model
 by habit. Classify each Fix item with the
 [model-routing rubric](../../toolu/skills/orchestrator/references/model-routing.md)
 (the same table the toolu SessionStart hook injects) and hand it to the host's
-delegation interface from `host-mapping.md`:
+delegation interface from
+[`host-mapping.md`](../../toolu/workflows/host-mapping.md):
 
 | Fix looks like | Class | Claude Code | Codex |
 | --- | --- | --- | --- |

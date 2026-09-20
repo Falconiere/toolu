@@ -27,7 +27,7 @@ teardown() {
     ! grep -nE 'declare +-[a-zA-Z]*A' "$f"
     ! grep -nE 'wait +-n' "$f"
     ! grep -nE '\$\{[a-zA-Z_][a-zA-Z0-9_]*(\[[^]]*\])?(,,|\^\^|@[QEPAa])\}' "$f"
-    ! grep -nE '\|&' "$f"
+    ! grep -nE '[|]&' "$f"
   done <<<"$FILES"
 }
 

@@ -152,9 +152,12 @@ SKILL="${BATS_TEST_DIRNAME}/../../skills/babysit/SKILL.md"
     grep -Fq 'references/helper.md' "$f"
   done
   # No surface tells the agent to build the machinery itself: every line that
-  # mentions writing a script/controller is a prohibition ("never ...").
+  # mentions writing a script/controller must be a prohibition ("never ...").
   for f in "$CMD" "$SKILL" "$WRAPPER"; do
-    ! grep -iE '(write|create|implement) (a |your own |the )?(python |bash )?(polling )?(script|controller)' "$f" | grep -viq 'never'
+    mentions=$(grep -iE '(write|create|implement) (a |your own |the )?(python |bash )?(polling )?(script|controller)' "$f" || true)
+    [ -n "$mentions" ]
+    encouraging=$(grep -viE 'never' <<<"$mentions" || true)
+    [ -z "$encouraging" ]
   done
 }
 

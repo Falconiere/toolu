@@ -1,7 +1,8 @@
 # pr-babysit helper contract
 
 The tick helper is the deterministic half of babysitting. It lives under the
-plugin's `scripts/` directory, is plain bash (`gh`, `jq`, `git`; bash 3.2), and
+plugin's `scripts/` directory, is plain bash (`gh` and `jq` only; bash 3.2 — `git`
+is used by the workflow's worktree steps, not by these scripts), and
 is the same on Claude Code and Codex — only `--state-file` differs by host.
 Read this file instead of the script sources: every field the agent may act
 on is listed here. Fields not listed are not part of the contract.
