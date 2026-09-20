@@ -3,6 +3,15 @@ name: Toolu Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
+    # Same release-only set as tests.yml. A generated version bump does not
+    # get a review call. A branch named release-please-- that changes anything
+    # else still does: the name is not a signal.
+    paths-ignore:
+      - "CHANGELOG.md"
+      - ".release-please-manifest.json"
+      - "package.json"
+      - "plugins/*/.claude-plugin/plugin.json"
+      - "plugins/*/.codex-plugin/plugin.json"
 
 permissions:
   contents: read
@@ -15,9 +24,6 @@ concurrency:
 
 jobs:
   review:
-    # release-please PRs only change versions and CHANGELOG. Reviewing that
-    # diff spends an API call on a generated bump.
-    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
