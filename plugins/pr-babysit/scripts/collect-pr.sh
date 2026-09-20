@@ -55,6 +55,8 @@ pb_init
 pb_mktmpdir
 owner="${repo%%/*}"; name="${repo#*/}"
 PARSER="$(pb_plugin_root)/scripts/parse-verdict.sh"
+# _collect_once returns this when the PR head moved between its two reads.
+PB_HEAD_MOVED_RC=10
 [ -f "$PARSER" ] || pb_fail usage "collect-pr.sh: parse-verdict.sh not found at $PARSER"
 
 # _read_head -> current headRefOid, or exits through pb_gh_fail.
@@ -164,16 +166,20 @@ _collect_once() {
   jq "$(pb_jq_rest_items) | map($(pb_jq_review))" "$PB_TMPDIR/reviews.json" >"$PB_TMPDIR/reviews.norm.json"
   _select_bot_comment
   head_after=$(_read_head)
-  [ "$head_before" = "$head_after" ] || return 10
+  if [ "$head_before" != "$head_after" ]; then
+    : >"$PB_TMPDIR/head.moved"
+    return "$PB_HEAD_MOVED_RC"
+  fi
   printf '%s' "$head_after" >"$PB_TMPDIR/head.sha"
 }
 
+# A moved head (rc 10) earns exactly one more collection; anything else has
+# already exited through pb_fail inside _collect_once.
 moved=0
-if ! _collect_once; then
-  moved=1
-  echo "pr-babysit: PR head moved during collection; collecting again" >&2
-  _collect_once || pb_fail head_moved "collect-pr.sh: PR head moved twice during collection" '{"source":"head"}'
+if ! pb_retry_on_rc "$PB_HEAD_MOVED_RC" 2 _collect_once; then
+  pb_fail head_moved "collect-pr.sh: PR head moved twice during collection" '{"source":"head"}'
 fi
+[ ! -f "$PB_TMPDIR/head.moved" ] || moved=1
 
 _build_snapshot() {
   jq -n \

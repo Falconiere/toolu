@@ -170,3 +170,13 @@ live() {
   [ "$(jq -r '.errors[0].class' <<<"$doc")" = permanent ]
   [ ! -e "$TMP/s.json" ]
 }
+
+@test "collect-pr: the head-moved policy is the shared retry-once helper mapped to head_moved" {
+  # The two-read head check and its retry live in one place each; pin both so
+  # a refactor cannot silently drop the recollect or the exit code.
+  grep -Fq 'pb_retry_on_rc "$PB_HEAD_MOVED_RC" 2 _collect_once' "$SCRIPTS/collect-pr.sh"
+  grep -Fq 'pb_fail head_moved' "$SCRIPTS/collect-pr.sh"
+  grep -Fq 'return "$PB_HEAD_MOVED_RC"' "$SCRIPTS/collect-pr.sh"
+  grep -Fq 'head.moved' "$SCRIPTS/collect-pr.sh"
+  [ "$(grep -c '_read_head)' "$SCRIPTS/collect-pr.sh")" -eq 2 ]
+}

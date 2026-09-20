@@ -160,3 +160,42 @@ with_libs() {
   [ ! -d "$TMP/slot.json.lock" ]
   [ ! -d "$scratch" ]
 }
+
+# --- pb_retry_on_rc (the head-moved policy in collect-pr.sh) -----------------
+
+# A real command whose exit code is driven by a counter file, so each call is
+# observable: exits with the N-th code from its argument list on the N-th
+# call, or 0 once the list runs out.
+retry_probe() {
+  printf '%s\n' '#!/usr/bin/env bash' \
+    'dir=$1; shift' \
+    'n=$(cat "$dir/count" 2>/dev/null || echo 0); n=$((n + 1)); echo "$n" >"$dir/count"' \
+    'i=1; for code in "$@"; do [ "$i" -eq "$n" ] && exit "$code"; i=$((i + 1)); done' \
+    'exit 0' >"$TMP/probe.sh"
+  chmod +x "$TMP/probe.sh"
+}
+
+@test "pb_retry_on_rc: the retry code earns exactly one more attempt, then the second result stands" {
+  retry_probe
+  # moved once, then consistent → success after 2 calls
+  run with_libs "pb_retry_on_rc 10 2 '$TMP/probe.sh' '$TMP' 10 0"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TMP/count")" = 2 ]
+  [[ "$output" == *"attempt 1 of 2 returned 10; retrying"* ]]
+  # moved twice → the retry code comes back after exactly 2 calls (collect-pr.sh maps it to head_moved)
+  rm -f "$TMP/count"
+  run with_libs "pb_retry_on_rc 10 2 '$TMP/probe.sh' '$TMP' 10 10 0"
+  [ "$status" -eq 10 ]
+  [ "$(cat "$TMP/count")" = 2 ]
+}
+
+@test "pb_retry_on_rc: any other failure propagates on the first call, success never retries" {
+  retry_probe
+  run with_libs "pb_retry_on_rc 10 2 '$TMP/probe.sh' '$TMP' 3 0"
+  [ "$status" -eq 3 ]
+  [ "$(cat "$TMP/count")" = 1 ]
+  rm -f "$TMP/count"
+  run with_libs "pb_retry_on_rc 10 2 '$TMP/probe.sh' '$TMP' 0 10"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TMP/count")" = 1 ]
+}

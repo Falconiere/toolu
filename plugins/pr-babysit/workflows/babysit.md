@@ -444,12 +444,14 @@ reviewer" path: a comment that does not make sense was answered above, so it res
 bash "$PLUGIN_ROOT/scripts/resolve-thread.sh" --state-file "$STATE_FILE" --thread "$THREAD_ID"
 ```
 
-**Confirm, don't assume.** The helper reads `thread.isResolved` from the mutation response. Error,
-non-2xx, or `isResolved:false` back → retry immediately (the helper does, up to 2 more times). Still not `true`
-after retries → exit `5` (`resolve_unconfirmed`): this thread is **not** cleared, no matter how good
-the reply was — do not let the tick end quietly on it. Name it in this tick's escalation (Step 6)
-with the API error, and let the Resolution audit (Step 1) pick it back up next tick as
-`staleUnresolved` instead of losing it to the actionable filter's blind spot.
+**Confirm, don't assume.** The helper reads `thread.isResolved` from the mutation response.
+`isResolved:false` back → retry immediately (the helper does, up to 2 more times). Still not `true`
+after retries → exit `5` (`resolve_unconfirmed`). A transport or API error (timeout, 5xx, rate
+limit — after `lib/gh.sh`'s own bounded retries — or any other non-2xx) → exit `3` (`api_error`)
+at once, nothing recorded. Either way this thread is **not** cleared, no matter how good the reply
+was — do not let the tick end quietly on it. Name it in this tick's escalation (Step 6) with the
+error, and let the Resolution audit (Step 1) pick it back up next tick as `staleUnresolved` instead
+of losing it to the actionable filter's blind spot.
 
 Also resolve every `threads.staleUnresolved[]` entry from Step 1 — no new reply needed.
 
