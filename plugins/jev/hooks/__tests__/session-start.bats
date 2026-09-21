@@ -67,10 +67,10 @@ teardown() {
   # the old "only when it would change" escape hatch is gone.
   [[ "$context" == *"say so in one sentence rather than skipping silently"* ]]
   [[ "$context" != *"only when"* ]]
-  [[ "$context" == *"After initial exploration"* ]]
+  [[ "$context" == *"After initial exploration, identify useful judgments over supplied evidence"* ]]
   [[ "$context" == *"before the decision it informs"* ]]
-  [[ "$context" == *"new evidence, failed hypotheses, or changed requirements"* ]]
-  [[ "$context" == *"Reuse unchanged evidence and questions"* ]]
+  [[ "$context" == *"Reassess after new evidence, failed hypotheses, or changed requirements"* ]]
+  [[ "$context" == *"Reuse unchanged evidence and questions rather than repeating calls"* ]]
   [[ "$context" != *"before acting"* ]]
   [[ "$context" != *"Before acting"* ]]
   [[ "$context" != *"at least one"* ]]
@@ -108,7 +108,7 @@ teardown() {
   # Context names both the callable wrapper and the SKILL.md syntax reference.
   jq -e --arg wrapper "$TOOLU_CONFIG_DIR/jev/jev.sh" --arg skill_path "$installed/skills/jev/SKILL.md" '
     .hookSpecificOutput | .hookEventName == "SessionStart" and
-    (.additionalContext | contains("\"" + $wrapper + "\"") and contains($skill_path))' <<<"$output"
+    (.additionalContext | contains("\"" + $wrapper + "\"") and contains($skill_path + "."))' <<<"$output"
   # The published wrapper separately links to the installed executable.
   [ "$(readlink "$TOOLU_CONFIG_DIR/jev/jev.sh")" = "$installed/skills/jev/scripts/jev.sh" ]
 }
