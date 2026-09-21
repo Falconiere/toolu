@@ -13,6 +13,10 @@
 #      register.sh does and lints the ASSEMBLED module — i.e. the code that
 #      actually runs.
 #
+# Vendored `tooling/conventions/` shell is excluded: those fragments are owned by
+# the pinned upstream pin and are sourced by run.sh (same failure mode as
+# concerns/ if linted alone).
+#
 # Severity is `warning`: info-level SC2016 ("expressions don't expand in single
 # quotes") fires on every jq/awk program in the repo, where single quotes are the
 # whole point. Raising the floor keeps the gate meaningful without scattering
@@ -36,7 +40,10 @@ standalone=()
 while IFS= read -r f; do
   standalone+=("$f")
 done < <(find plugins tooling benchmarks .claude-plugin -name '*.sh' \
-           -not -path '*/node_modules/*' -not -path '*/concerns/*' | sort)
+  -not -path '*/node_modules/*' \
+  -not -path '*/concerns/*' \
+  -not -path 'tooling/conventions/*' \
+  | sort)
 
 if [ ${#standalone[@]} -gt 0 ]; then
   echo "shellcheck: ${#standalone[@]} standalone scripts"

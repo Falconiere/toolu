@@ -1,0 +1,16 @@
+{
+  "$schema": "./tooling/conventions/guardrails/workspace.schema.json",
+  "version": 2,
+  "packages": ["tooling"],
+  "bannedDeps": ["axios", "yup", "joi", "valibot", "superstruct", "ajv"],
+  "secrets": {
+    "neverTracked": [".env", ".env.local"]
+  },
+  "shadowConfigs": [
+    {
+      "found": "lefthook.yaml",
+      "use": "lefthook.yml",
+      "why": "lefthook 2.x installer shadows .yaml — documented only; this repo does not install Lefthook as a Claude hook pipeline"
+    }
+  ]
+}

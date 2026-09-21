@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/knip/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [],
+      "project": []
+    },
+    "tooling": {
+      "entry": [
+        "src/gate-coverage-inventory.ts",
+        "src/opencode-capability-probe.ts"
+      ],
+      "project": ["src/**/*.ts"],
+      "ignore": ["fixtures/**", "conventions/**", "__tests__/**"]
+    }
+  },
+  "ignoreBinaries": ["bats"],
+  "ignoreDependencies": ["oxlint", "oxlint-tsgolint"]
+}

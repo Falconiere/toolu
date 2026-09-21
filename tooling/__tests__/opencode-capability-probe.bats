@@ -1,8 +1,8 @@
 #!/usr/bin/env bats
-# Real-data checks for tooling/opencode-capability-probe.ts (#205).
+# Real-data checks for tooling/src/opencode-capability-probe.ts (#205).
 
 ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)"
-PROBE="$ROOT/tooling/opencode-capability-probe.ts"
+PROBE="$ROOT/tooling/src/opencode-capability-probe.ts"
 
 @test "capability probe fixture mode passes against committed doc+fixture" {
   run env PORTABLE_CORE_PROBE_MODE=fixture bun run "$PROBE"

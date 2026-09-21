@@ -5,15 +5,13 @@
  * Modes:
  * - default/live: require discoverable CLI matching the doc pin; refresh fixture+doc
  * - PORTABLE_CORE_PROBE_MODE=fixture: verify doc results block matches committed fixture (CI)
- *
- * Fail-closed: missing/mismatched CLI (live), nonexistent OPENCODE_BIN, or doc/fixture drift.
- * Never prints an "enforced" success summary on failure.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { z } from "zod";
 
-const ROOT = join(import.meta.dir, "..");
+const ROOT = join(import.meta.dir, "../..");
 const DOC = process.env.PORTABLE_CORE_DOC ?? join(ROOT, "docs/portable-core.md");
 const FIXTURE =
   process.env.PORTABLE_CORE_FIXTURE ??
@@ -23,44 +21,48 @@ const START_MARK = "<!-- portable-core-capability-results:start -->";
 const END_MARK = "<!-- portable-core-capability-results:end -->";
 const PIN = "v2.0.12";
 
-type ProbeResults = {
-  recordedAt: string;
-  cliVersion: string;
-  sdkPackage: string;
-  sdkVersion: string;
-  bunVersion: string;
-  docsUrl: string;
-  permissionEvaluateHardDeny: boolean;
-  permissionRulesHardDeny: boolean;
-  toolExecuteBeforeHardDeny: boolean;
-  toolExecuteBeforeMutateOnly: boolean;
-  shellCreateBeforeHardDeny: boolean;
-  shellCreateBeforeMutateOnly: boolean;
-  sessionPromptTypedRejection: boolean;
-  notes: string[];
-};
+const ProbeResultsSchema = z.object({
+  recordedAt: z.string(),
+  cliVersion: z.string(),
+  sdkPackage: z.string(),
+  sdkVersion: z.string(),
+  bunVersion: z.string(),
+  docsUrl: z.string(),
+  permissionEvaluateHardDeny: z.boolean(),
+  permissionRulesHardDeny: z.boolean(),
+  toolExecuteBeforeHardDeny: z.boolean(),
+  toolExecuteBeforeMutateOnly: z.boolean(),
+  shellCreateBeforeHardDeny: z.boolean(),
+  shellCreateBeforeMutateOnly: z.boolean(),
+  sessionPromptTypedRejection: z.boolean(),
+  notes: z.array(z.string()),
+});
+type ProbeResults = z.infer<typeof ProbeResultsSchema>;
 
 function fail(msg: string): never {
   console.error(`opencode-capability-probe: ${msg}`);
   process.exit(1);
 }
 
-function readJson<T>(path: string): T {
-  return JSON.parse(readFileSync(path, "utf8")) as T;
+function parseProbeResults(raw: unknown): ProbeResults {
+  const parsed = ProbeResultsSchema.safeParse(raw);
+  if (!parsed.success) fail(`probe results schema invalid: ${parsed.error.message}`);
+  return parsed.data;
 }
 
 function extractResultsBlock(doc: string): string {
   const start = doc.indexOf(START_MARK);
   const end = doc.indexOf(END_MARK);
-  if (start < 0 || end < 0 || end <= start) fail("docs/portable-core.md missing capability-results markers");
+  if (start < 0 || end < 0 || end <= start)
+    fail("docs/portable-core.md missing capability-results markers");
   return doc.slice(start + START_MARK.length, end).trim();
 }
 
 function parseDocResults(doc: string): ProbeResults {
   const block = extractResultsBlock(doc);
   const jsonMatch = block.match(/```json\n([\s\S]*?)\n```/);
-  if (!jsonMatch) fail("capability-results block missing json fence");
-  return JSON.parse(jsonMatch[1]) as ProbeResults;
+  if (!jsonMatch?.[1]) fail("capability-results block missing json fence");
+  return parseProbeResults(JSON.parse(jsonMatch[1]));
 }
 
 function renderResults(results: ProbeResults): string {
@@ -80,7 +82,9 @@ function writeDocResults(results: ProbeResults): void {
 function resolveCli(): string {
   if (process.env.OPENCODE_BIN) return process.env.OPENCODE_BIN;
   const which = spawnSync("bash", ["-c", "command -v opencode"], { encoding: "utf8" });
-  if (which.status !== 0 || !which.stdout.trim()) fail("OpenCode CLI not found (set OPENCODE_BIN or install opencode)");
+  if (which.status !== 0 || !which.stdout.trim()) {
+    fail("OpenCode CLI not found (set OPENCODE_BIN or install opencode)");
+  }
   return which.stdout.trim();
 }
 
@@ -90,7 +94,7 @@ function cliVersion(bin: string): string {
   if (r.status !== 0) fail(`opencode --version exited ${r.status}`);
   const out = `${r.stdout}${r.stderr}`.trim();
   const m = out.match(/v?\d+\.\d+\.\d+/);
-  if (!m) fail(`could not parse version from: ${out}`);
+  if (!m?.[0]) fail(`could not parse version from: ${out}`);
   return m[0].startsWith("v") ? m[0] : `v${m[0]}`;
 }
 
@@ -134,7 +138,7 @@ function docsCapabilityMatrix(cli: string, sdk: string, bun: string): ProbeResul
 }
 
 function assertSameCapabilityFlags(a: ProbeResults, b: ProbeResults): void {
-  const keys: (keyof ProbeResults)[] = [
+  const keys = [
     "cliVersion",
     "permissionEvaluateHardDeny",
     "permissionRulesHardDeny",
@@ -143,7 +147,7 @@ function assertSameCapabilityFlags(a: ProbeResults, b: ProbeResults): void {
     "shellCreateBeforeHardDeny",
     "shellCreateBeforeMutateOnly",
     "sessionPromptTypedRejection",
-  ];
+  ] as const;
   for (const k of keys) {
     if (a[k] !== b[k]) fail(`fixture/doc mismatch on ${k}: ${String(a[k])} vs ${String(b[k])}`);
   }
@@ -153,18 +157,18 @@ function main(): void {
   if (!existsSync(DOC)) fail(`missing ${DOC}`);
   if (!existsSync(FIXTURE)) fail(`missing ${FIXTURE}`);
 
-  const fixture = readJson<ProbeResults>(FIXTURE);
+  const fixture = parseProbeResults(JSON.parse(readFileSync(FIXTURE, "utf8")));
   const docResults = parseDocResults(readFileSync(DOC, "utf8"));
 
   if (MODE === "fixture") {
     assertSameCapabilityFlags(fixture, docResults);
     if (fixture.cliVersion !== PIN) fail(`fixture pin ${fixture.cliVersion} != ${PIN}`);
-    if (!fixture.permissionEvaluateHardDeny) fail("fixture must record permissionEvaluateHardDeny=true");
-    console.log("opencode-capability-probe: fixture ok");
+    if (!fixture.permissionEvaluateHardDeny)
+      fail("fixture must record permissionEvaluateHardDeny=true");
+    process.stdout.write("opencode-capability-probe: fixture ok\n");
     return;
   }
 
-  // Live mode — OPENCODE_BIN=/nonexistent must fail here.
   const bin = resolveCli();
   if (bin.includes("/") && !existsSync(bin)) fail(`OpenCode CLI not executable: ${bin}`);
 
@@ -176,7 +180,7 @@ function main(): void {
 
   const results = docsCapabilityMatrix(version, sdk === "unknown" ? "2.0.12" : sdk, bunVersion());
   writeDocResults(results);
-  console.log("opencode-capability-probe: live refresh ok");
+  process.stdout.write("opencode-capability-probe: live refresh ok\n");
 }
 
 main();
