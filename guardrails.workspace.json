@@ -1,7 +1,12 @@
 {
   "$schema": "./tooling/conventions/guardrails/workspace.schema.json",
   "version": 2,
-  "packages": ["tooling"],
+  "packages": [
+    "tooling",
+    "packages/toolu-core",
+    "tools/toolu-opencode",
+    "tools/toolu-conformance"
+  ],
   "bannedDeps": ["axios", "yup", "joi", "valibot", "superstruct", "ajv"],
   "secrets": {
     "neverTracked": [".env", ".env.local"]

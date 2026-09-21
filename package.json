@@ -15,19 +15,25 @@
     "test:shell": "bash tooling/bats-run.sh",
     "test:portable-core": "bash tooling/check-portable-core-doc.sh && PORTABLE_CORE_PROBE_MODE=fixture bun run tooling/src/opencode-capability-probe.ts && bats tooling/__tests__/check-portable-core-doc.bats tooling/__tests__/opencode-capability-probe.bats",
     "test:gate-coverage": "bun run tooling/src/gate-coverage-inventory.ts check && bats tooling/__tests__/gate-coverage-inventory.bats",
-    "test": "bun run lint:shell && bun run test:context-budget && bun run test:portable-core && bun run test:gate-coverage && bun run test:conventions && bun run test:shell",
+    "test": "bun run lint:shell && bun run test:context-budget && bun run test:portable-core && bun run test:gate-coverage && bun run test:ts && bun run test:shell",
     "test:shell:serial": "bats -r plugins benchmarks tooling",
     "test:context-budget": "bash plugins/toolu/scripts/context-budget.sh",
-    "format:check": "oxfmt --check tooling/src",
-    "lint:ts": "bash -c 'cd tooling && oxlint --type-aware --deny-warnings -c .oxlintrc.json src'",
+    "format:check": "oxfmt --check tooling/src packages/*/src tools/*/src",
+    "lint:ts": "bash tooling/lint-ts.sh",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "guardrails": "bash tooling/conventions/guardrails/run.sh",
     "knip": "knip",
     "jscpd": "jscpd --config .jscpd.json",
-    "test:conventions": "bun run format:check && bun run lint:ts && bun run typecheck && bun run guardrails && bun run knip && bun run jscpd && bats tooling/__tests__/conventions-guardrails.bats"
+    "test:conventions": "bun run format:check && bun run lint:ts && bun run typecheck && bun run guardrails && bun run knip && bun run jscpd && bats tooling/__tests__/conventions-guardrails.bats tooling/__tests__/workspace-skeleton.bats",
+    "test:unit": "bun test packages tools",
+    "test:workspace": "bash tooling/check-workspace.sh",
+    "test:ts": "bun run test:conventions && bun run test:unit && bun run test:workspace"
   },
   "dependencies": {
-    "zod": "4.1.5"
+    "zod": "4.1.5",
+    "@toolu/core": "workspace:*",
+    "@toolu/opencode": "workspace:*",
+    "@toolu/conformance": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "1.2.20",
@@ -39,6 +45,12 @@
     "typescript": "5.9.3"
   },
   "workspaces": [
-    "tooling"
-  ]
+    "tooling",
+    "packages/toolu-core",
+    "tools/toolu-opencode",
+    "tools/toolu-conformance"
+  ],
+  "engines": {
+    "bun": ">=1.4.0 <1.5.0"
+  }
 }

@@ -1,0 +1,12 @@
+{
+  "name": "@toolu/conformance",
+  "version": "6.4.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./run-stub": "./src/cli/run-stub.ts"
+  },
+  "dependencies": {
+    "@toolu/core": "workspace:*"
+  }
+}

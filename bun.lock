@@ -5,6 +5,9 @@
     "": {
       "name": "toolu",
       "dependencies": {
+        "@toolu/conformance": "workspace:*",
+        "@toolu/core": "workspace:*",
+        "@toolu/opencode": "workspace:*",
         "zod": "4.1.5",
       },
       "devDependencies": {
@@ -17,9 +20,30 @@
         "typescript": "5.9.3",
       },
     },
+    "packages/toolu-core": {
+      "name": "@toolu/core",
+      "version": "6.4.0",
+      "dependencies": {
+        "zod": "4.1.5",
+      },
+    },
     "tooling": {
       "name": "@toolu/tooling",
       "version": "6.4.0",
+    },
+    "tools/toolu-conformance": {
+      "name": "@toolu/conformance",
+      "version": "6.4.0",
+      "dependencies": {
+        "@toolu/core": "workspace:*",
+      },
+    },
+    "tools/toolu-opencode": {
+      "name": "@toolu/opencode",
+      "version": "6.4.0",
+      "dependencies": {
+        "@toolu/core": "workspace:*",
+      },
     },
   },
   "packages": {
@@ -180,6 +204,12 @@
     "@oxlint/binding-win32-ia32-msvc": ["@oxlint/binding-win32-ia32-msvc@1.77.0", "", { "os": "win32", "cpu": "ia32" }, "sha512-zja5b7+6a7UsRFgAQSrnax5vrzliEyNPLCjfXONu/vTWswaIVZGFajJZptaeRvPE4LghtFdAzVFlexTm7MVTGA=="],
 
     "@oxlint/binding-win32-x64-msvc": ["@oxlint/binding-win32-x64-msvc@1.77.0", "", { "os": "win32", "cpu": "x64" }, "sha512-+teyvPDZ2RjUvo+SuCqS/UhaJl1QtdW5fWT5NJTV61V5MIuIS90Db9LixmtEGvXixyttiK62P96MSu3UlpviBw=="],
+
+    "@toolu/conformance": ["@toolu/conformance@workspace:tools/toolu-conformance"],
+
+    "@toolu/core": ["@toolu/core@workspace:packages/toolu-core"],
+
+    "@toolu/opencode": ["@toolu/opencode@workspace:tools/toolu-opencode"],
 
     "@toolu/tooling": ["@toolu/tooling@workspace:tooling"],
 
