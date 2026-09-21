@@ -68,6 +68,12 @@ jobs:
         with:
           bun-version: "1.4.2"
 
+      - name: Install bats
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y bats jq
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
