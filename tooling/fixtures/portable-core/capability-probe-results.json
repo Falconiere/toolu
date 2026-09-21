@@ -1,0 +1,20 @@
+{
+  "recordedAt": "2026-09-21",
+  "cliVersion": "v2.0.12",
+  "sdkPackage": "@opencode/plugin",
+  "sdkVersion": "2.0.12",
+  "bunVersion": "1.4.2",
+  "docsUrl": "https://opencode.ai/v2/docs/build/plugins",
+  "permissionEvaluateHardDeny": true,
+  "permissionRulesHardDeny": true,
+  "toolExecuteBeforeHardDeny": false,
+  "toolExecuteBeforeMutateOnly": true,
+  "shellCreateBeforeHardDeny": false,
+  "shellCreateBeforeMutateOnly": true,
+  "sessionPromptTypedRejection": false,
+  "notes": [
+    "permission.hook(evaluate) may set effect to deny; configured deny skips the hook",
+    "tool.execute.before and shell.create.before document mutation/observe only — insufficient alone for hard deny",
+    "session.prompt has no typed rejection API"
+  ]
+}

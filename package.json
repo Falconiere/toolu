@@ -13,7 +13,8 @@
   "scripts": {
     "lint:shell": "bash tooling/shellcheck.sh",
     "test:shell": "bash tooling/bats-run.sh",
-    "test": "bun run lint:shell && bun run test:context-budget && bun run test:shell",
+    "test:portable-core": "bash tooling/check-portable-core-doc.sh && PORTABLE_CORE_PROBE_MODE=fixture bun run tooling/opencode-capability-probe.ts && bats tooling/__tests__/check-portable-core-doc.bats tooling/__tests__/opencode-capability-probe.bats",
+    "test": "bun run lint:shell && bun run test:context-budget && bun run test:portable-core && bun run test:shell",
     "test:shell:serial": "bats -r plugins benchmarks tooling",
     "test:context-budget": "bash plugins/toolu/scripts/context-budget.sh"
   }

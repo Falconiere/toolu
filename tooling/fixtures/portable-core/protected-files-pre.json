@@ -1,0 +1,16 @@
+{
+  "protocolVersion": 1,
+  "event": "tool/pre",
+  "sessionId": "sess_fixture_1",
+  "toolCallId": "call_fixture_1",
+  "cwd": "/repo",
+  "projectRoot": "/repo",
+  "worktree": "/repo",
+  "toolName": "Edit",
+  "toolInput": {
+    "file_path": "/repo/.env"
+  },
+  "host": "opencode",
+  "deadlineMs": 15000,
+  "maxStdoutBytes": 1048576
+}
