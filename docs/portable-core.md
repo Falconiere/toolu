@@ -25,6 +25,8 @@ Platforms for #212: macOS and Linux with Bash ≥5, `jq`, Bun 1.4.x. Windows out
 
 Root: one `bun.lock`, Bun-only scripts/tests, frozen installs. Unified release `vX.Y.Z` across root, packages, and every `plugin.json`. Claude Code/Codex keep native Bash paths and gain **no** mandatory Bun dependency.
 
+TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, jscpd, Zod-only validators) is adopted in [#213](https://github.com/Falconiere/toolu/issues/213) — see [`docs/conventions-adoption.md`](conventions-adoption.md). Workspace package dirs and CI wiring land in #208.
+
 ### Core export map (frozen for #210)
 
 | Export | Responsibility |
@@ -83,7 +85,7 @@ Classification vocabulary (only these tokens):
 
 Implementation choice is orthogonal to host interception. Required unsupported enforcement is a **release blocker**, never `no-map`.
 
-Exhaustive per-source rows: [docs/gate-coverage-matrix.md](gate-coverage-matrix.md) (checked by `bun run tooling/gate-coverage-inventory.ts check`).
+Exhaustive per-source rows: [docs/gate-coverage-matrix.md](gate-coverage-matrix.md) (checked by `bun run tooling/src/gate-coverage-inventory.ts check`).
 
 ## Protected-files gate trace
 
@@ -133,7 +135,7 @@ Source: https://opencode.ai/v2/docs/build/plugins (V2).
 ```
 <!-- portable-core-capability-results:end -->
 
-Refresh with `bun run tooling/opencode-capability-probe.ts` (live CLI) or verify with `PORTABLE_CORE_PROBE_MODE=fixture` (CI).
+Refresh with `bun run tooling/src/opencode-capability-probe.ts` (live CLI) or verify with `PORTABLE_CORE_PROBE_MODE=fixture` (CI).
 
 ## Release blockers (parity)
 

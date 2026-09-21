@@ -1,0 +1,15 @@
+{
+  "path": ["tooling/src"],
+  "threshold": 0,
+  "exitCode": 1,
+  "minLines": 10,
+  "minTokens": 60,
+  "reporters": ["console"],
+  "gitignore": true,
+  "ignore": [
+    "**/__tests__/**",
+    "**/node_modules/**",
+    "**/fixtures/**",
+    "**/conventions/**"
+  ]
+}

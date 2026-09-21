@@ -1,0 +1,42 @@
+{
+  "$schema": "./conventions/guardrails/schema.json",
+  "version": 2,
+  "srcRoot": "src",
+  "src": {
+    "topLevel": ["gate-coverage"],
+    "nested": {
+      "gate-coverage": ["__tests__"]
+    },
+    "requireReadme": []
+  },
+  "fileSize": {
+    "max": 300,
+    "skipExtensions": [".ts"]
+  },
+  "functionSize": {
+    "max": 60
+  },
+  "testDir": "__tests__",
+  "testGlob": "*.test.ts",
+  "barrelNames": ["index.ts", "index.tsx"],
+  "barrelExempt": [],
+  "bannedDeps": ["axios", "yup", "joi", "valibot", "superstruct", "ajv"],
+  "requiredFiles": [],
+  "secrets": {
+    "neverTracked": [".env", ".env.local"]
+  },
+  "shadowConfigs": [
+    {
+      "found": "lefthook.yaml",
+      "use": "lefthook.yml",
+      "why": "lefthook 2.x installer shadows .yaml"
+    }
+  ],
+  "ownedByLinter": [
+    "folder-tree",
+    "colocated-tests",
+    "no-barrels",
+    "filename-case",
+    "patterns"
+  ]
+}

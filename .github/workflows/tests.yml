@@ -78,6 +78,9 @@ jobs:
       - name: Install bun
         uses: oven-sh/setup-bun@v2
 
+      - name: Install JS deps
+        run: bun install --frozen-lockfile
+
       - name: Confirm tooling
         run: |
           bats --version
@@ -86,6 +89,7 @@ jobs:
           codex --version
           python3 --version
           bun --version
+          bunx oxlint --version
 
       - name: Enforce colocated __tests__ layout
         run: |

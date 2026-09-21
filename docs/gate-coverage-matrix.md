@@ -2,7 +2,7 @@
 
 **Issue:** [#209](https://github.com/Falconiere/toolu/issues/209) (epic [#203](https://github.com/Falconiere/toolu/issues/203))  
 **Inventory:** `tooling/fixtures/gate-coverage/inventory.json`  
-**Check:** `bun run tooling/gate-coverage-inventory.ts check`
+**Check:** `bun run tooling/src/gate-coverage-inventory.ts check`
 
 Classifications match [docs/portable-core.md](portable-core.md): `shell-out` · `port-native` · `port-new` · `no-map`.
 

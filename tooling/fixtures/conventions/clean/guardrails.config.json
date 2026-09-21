@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../conventions/guardrails/schema.json",
+  "version": 2,
+  "srcRoot": "src",
+  "src": { "topLevel": ["utilities"], "nested": { "utilities": ["__tests__"] }, "requireReadme": [] },
+  "fileSize": { "max": 300, "skipExtensions": [".ts"] },
+  "functionSize": { "max": 60 },
+  "testDir": "__tests__",
+  "testGlob": "*.test.ts",
+  "barrelNames": ["index.ts"],
+  "barrelExempt": [],
+  "bannedDeps": ["axios", "yup", "joi", "valibot", "superstruct", "ajv"],
+  "requiredFiles": [],
+  "secrets": { "neverTracked": [".env"] },
+  "shadowConfigs": [],
+  "ownedByLinter": ["folder-tree", "colocated-tests", "no-barrels", "filename-case", "patterns"]
+}

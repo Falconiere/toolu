@@ -1,8 +1,8 @@
 #!/usr/bin/env bats
-# Real-data checks for tooling/gate-coverage-inventory.ts (#209).
+# Real-data checks for tooling/src/gate-coverage-inventory.ts (#209).
 
 ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)"
-CLI="$ROOT/tooling/gate-coverage-inventory.ts"
+CLI="$ROOT/tooling/src/gate-coverage-inventory.ts"
 
 @test "discover emits >=90 rows including protected-files, gate-mode, and a ts-quality concern" {
   run bun run "$CLI" discover
