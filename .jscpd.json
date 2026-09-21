@@ -1,5 +1,5 @@
 {
-  "path": ["tooling/src"],
+  "path": ["tooling/src", "packages/toolu-core/src", "tools/toolu-opencode/src", "tools/toolu-conformance/src"],
   "threshold": 0,
   "exitCode": 1,
   "minLines": 10,

@@ -45,14 +45,26 @@ This repo is a **library/plugin Bun workspace**, not a Workers/web app. Upstream
 | Script | Gate |
 |--------|------|
 | `bun run format:check` | oxfmt |
-| `bun run lint:ts` | type-aware oxlint |
+| `bun run lint:ts` | type-aware oxlint (every workspace package) |
 | `bun run typecheck` | `tsc --noEmit` |
 | `bun run guardrails` | vendored `run.sh` |
 | `bun run knip` | dead code |
 | `bun run jscpd` | duplication |
-| `bun run test:conventions` | scripts + bats fixtures |
+| `bun run test:unit` | `bun test` in `packages/` + `tools/` |
+| `bun run test:workspace` | Bun 1.4.x pin + export smoke |
+| `bun run test:conventions` | format/lint/tsc/guardrails/knip/jscpd + conventions bats |
+| `bun run test:ts` | conventions + unit + workspace (CI `typescript` job) |
 
-`bun install --frozen-lockfile` is required before these scripts in CI (#208) and locally after dependency changes.
+`bun install --frozen-lockfile` is required before these scripts in CI and locally after dependency changes. Missing required workspace config or tooling is an error, not a successful skip.
+
+## Local TS CI
+
+```bash
+bun install --frozen-lockfile
+bun run test:ts
+```
+
+CI job `typescript` in `.github/workflows/tests.yml` runs the same gate on every non-release-only PR/push, independent of the shellcheck/bats jobs.
 
 ## Related contracts
 

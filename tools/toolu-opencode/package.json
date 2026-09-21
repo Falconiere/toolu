@@ -1,0 +1,12 @@
+{
+  "name": "@toolu/opencode",
+  "version": "6.4.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./plugin-stub": "./src/plugin/plugin-stub.ts"
+  },
+  "dependencies": {
+    "@toolu/core": "workspace:*"
+  }
+}

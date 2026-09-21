@@ -21,11 +21,11 @@ Platforms for #212: macOS and Linux with Bash ≥5, `jq`, Bun 1.4.x. Windows out
 |------|------|--------------|
 | `packages/toolu-core/` | Zod schemas, normalization, decisions, policy, bash-bridge protocol | `@opencode/plugin`, host SDKs, generated skills |
 | `tools/toolu-opencode/` | OpenCode `setup`, hooks, generators, host config | Duplicated Zod contracts |
-| Conformance CLI (default `tools/toolu-conformance/`, name finalized in #208) | Second real consumer of core exports | Host SDK |
+| Conformance CLI (`tools/toolu-conformance/`) | Second real consumer of core exports | Host SDK |
 
 Root: one `bun.lock`, Bun-only scripts/tests, frozen installs. Unified release `vX.Y.Z` across root, packages, and every `plugin.json`. Claude Code/Codex keep native Bash paths and gain **no** mandatory Bun dependency.
 
-TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, jscpd, Zod-only validators) is adopted in [#213](https://github.com/Falconiere/toolu/issues/213) — see [`docs/conventions-adoption.md`](conventions-adoption.md). Workspace package dirs and CI wiring land in #208.
+TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, jscpd, Zod-only validators) is adopted in [#213](https://github.com/Falconiere/toolu/issues/213) — see [`docs/conventions-adoption.md`](conventions-adoption.md). Bun workspaces (`packages/toolu-core`, `tools/toolu-opencode`, `tools/toolu-conformance`) and the mandatory CI `typescript` job land in [#208](https://github.com/Falconiere/toolu/issues/208): `bun run test:ts` must pass before runtime implementation merges. Missing Bun/lockfile/tooling fails closed (no successful skip).
 
 ### Core export map (frozen for #210)
 

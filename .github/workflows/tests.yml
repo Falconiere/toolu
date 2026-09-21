@@ -55,6 +55,30 @@ jobs:
       - name: Shellcheck (standalone scripts + assembled concern modules)
         run: bun run lint:shell
 
+  typescript:
+    name: typescript
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: TS workspace gates
+        run: |
+          set -euo pipefail
+          # Mandatory Bun/TS lane (#208): format, type-aware lint, tsc, guardrails,
+          # knip, jscpd, conventions bats, package unit tests, workspace smoke.
+          # Failures here block merges even when shell bats are green.
+          bun run test:ts
+
   bats:
     name: bats (plugins)
     runs-on: ubuntu-latest
@@ -97,7 +121,7 @@ jobs:
           # Every .bats suite must live in a colocated __tests__/ dir next to the
           # code it exercises. Fail the build (with the offending paths) if any
           # test file sits outside a __tests__ directory.
-          stray=$(find plugins benchmarks tooling -name "*.bats" -not -path "*/__tests__/*" || true)
+          stray=$(find plugins benchmarks tooling packages tools -name "*.bats" -not -path "*/__tests__/*" 2>/dev/null || true)
           if [ -n "$stray" ]; then
             echo "Test files outside a __tests__/ dir:" >&2
             echo "$stray" >&2
@@ -116,8 +140,9 @@ jobs:
           # Through tooling/bats-run.sh so CI runs the suite the same way a
           # developer does, and gets the same parallelism: files in parallel,
           # tests within a file serial. It owns discovery and the
-          # nothing-found guard.
-          bash tooling/bats-run.sh plugins benchmarks tooling
+          # nothing-found guard. Roots include packages/ and tools/ so new
+          # workspace Bats cannot be silently skipped (#208).
+          bash tooling/bats-run.sh plugins benchmarks tooling packages tools
 
       - name: Deterministic benchmarks (hermetic)
         run: |

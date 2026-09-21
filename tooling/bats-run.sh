@@ -23,7 +23,7 @@ set -euo pipefail
 paths=("$@")
 # These three are the whole suite. benchmarks/ used to be missing from the local
 # default while CI ran it, so 40 tests only ever failed in CI.
-[ "${#paths[@]}" -gt 0 ] || paths=(plugins benchmarks tooling)
+[ "${#paths[@]}" -gt 0 ] || paths=(plugins benchmarks tooling packages tools)
 
 command -v bats >/dev/null 2>&1 || {
   echo "bats-run: bats is not installed" >&2

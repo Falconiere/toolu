@@ -1,0 +1,38 @@
+{
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
+  "extends": ["../../tooling/conventions/lint/base.oxlintrc.json"],
+  "jsPlugins": ["../../tooling/conventions/guardrails/oxlint-plugin/index.js"],
+  "env": { "builtin": true },
+  "ignorePatterns": ["node_modules", "**/__tests__/**"],
+  "rules": {
+    "max-lines": ["error", { "max": 300, "skipBlankLines": true, "skipComments": true }],
+    "max-lines-per-function": ["error", { "max": 60, "skipBlankLines": true, "skipComments": true }],
+    "no-console": ["error", { "allow": ["warn", "error"] }],
+    "house/folder-tree": "error",
+    "house/colocated-tests": "error",
+    "house/no-barrels": "error",
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["**/index", "**/index.js", "**/index.ts"],
+            "message": "No barrel imports"
+          },
+          {
+            "group": ["yup", "yup/*", "joi", "joi/*", "valibot", "valibot/*", "superstruct", "superstruct/*", "ajv", "ajv/*"],
+            "message": "One validator: use zod"
+          },
+          {
+            "group": ["@toolu/opencode", "@toolu/opencode/*", "@toolu/conformance", "@toolu/conformance/*"],
+            "message": "Core must not import adapter/conformance packages"
+          },
+          {
+            "group": ["@opencode/plugin", "@opencode/plugin/*"],
+            "message": "Host SDK stays out of shared packages until #211 scopes it to tools/toolu-opencode"
+          }
+        ]
+      }
+    ]
+  }
+}

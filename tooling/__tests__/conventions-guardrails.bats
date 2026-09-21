@@ -15,7 +15,7 @@ setup() {
 }
 
 @test "package.json wires test:conventions and zod without yup" {
-  jq -e '.scripts["test:conventions"] and (.scripts.test | contains("test:conventions"))' "$ROOT/package.json"
+  jq -e '.scripts["test:conventions"] and .scripts["test:ts"] and (.scripts.test | contains("test:ts"))' "$ROOT/package.json"
   jq -e '.dependencies.zod and (.dependencies|has("yup")|not)' "$ROOT/package.json"
 }
 
