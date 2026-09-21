@@ -10,9 +10,10 @@ competent builder could proceed without guessing; do not add replacement design
 work or praise.
 
 Apply [semantic judgments](../../workflows/semantic-judgments.md) to bounded
-requirement/evidence comparisons — Jev is mandatory on every task. Verify every
-finding against the source; Jev's confidence cannot approve the spec or replace
-this checklist.
+requirement/evidence comparisons — Jev is mandatory when semantic decisions exist.
+Verify every finding against the source; Jev's confidence cannot approve the spec or
+replace this checklist. Reassess useful judgments after new evidence, failed
+hypotheses, or changed requirements.
 
 ## Checklist
 

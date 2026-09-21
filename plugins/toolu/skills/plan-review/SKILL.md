@@ -8,9 +8,10 @@ description: "Use to review the plan or poke holes in the plan before execution.
 Pressure-test a draft plan before code changes begin. Find the gap that would
 force an implementer to guess; do not restate the plan or praise it.
 
-Use [semantic judgments](../../workflows/semantic-judgments.md) for
-step-to-requirement comparisons — Jev is mandatory on every task. Keep ledger
-validation and the approval verdict grounded in the checks below.
+Use [semantic judgments](../../workflows/semantic-judgments.md) for step-to-
+requirement comparisons — Jev is mandatory when semantic decisions exist. Keep ledger
+validation and the approval verdict grounded in the checks below. Reassess useful
+judgments after new evidence, failed hypotheses, or changed requirements.
 
 ## Checklist
 
