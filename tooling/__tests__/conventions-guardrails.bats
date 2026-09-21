@@ -5,7 +5,6 @@ setup() {
   ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
   FIX="$ROOT/tooling/fixtures/conventions"
   GR="$ROOT/tooling/conventions/guardrails/run.sh"
-  OXLINT="$ROOT/node_modules/.bin/oxlint"
 }
 
 @test "adoption docs record pin, thresholds, and Lefthook note" {
@@ -37,7 +36,8 @@ setup() {
 }
 
 @test "oxlint fails on explicit any and type assertion fixture" {
-  run "$OXLINT" -c "$FIX/oxlint.fixture.json" --deny-warnings \
+  # Prefer bunx so CI bats (after bun install) resolves the locked oxlint binary.
+  run bunx oxlint -c "$FIX/oxlint.fixture.json" --deny-warnings \
     "$FIX/violating/src/utilities/bad.ts"
   [ "$status" -ne 0 ]
   printf '%s\n' "$output" "$stderr" | grep -Eiq 'any|assertion|explicit|typescript'
