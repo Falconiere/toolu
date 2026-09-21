@@ -62,7 +62,8 @@ See `plugins/toolu/settings/toolu.config.example.json` for a fully-populated exa
 ### Gate modes (`gates`)
 
 How firmly a gate says no is configuration, not a constant. Full reference:
-`plugins/toolu/hooks/docs/gates.md`.
+`plugins/toolu/hooks/docs/gates.md`. OpenCode / shared-core contracts:
+[`docs/portable-core.md`](portable-core.md).
 
 | Mode | Effect |
 |------|--------|
