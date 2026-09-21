@@ -9,6 +9,11 @@ The break-glass loop of the toolu workflow. The six-stage delivery chain builds;
 
 **Trigger phrases:** why does X fail, it crashes, this is broken, flaky test, debug this, find the root cause, it worked before, track down this bug, what's wrong with, stack trace.
 
+After gathering observations, use [semantic judgments](../../workflows/semantic-judgments.md)
+to compare supplied hypotheses and choose the next experiment. Reassess after new
+evidence or a failed hypothesis; reuse unchanged judgments. Include an insufficient-evidence
+outcome. Jev prioritizes investigation; reproduction and tests establish the cause.
+
 ## The one rule that matters
 
 **Find the root cause, then fix the root cause.** Patching the symptom — silencing the error, adding a retry, special-casing the failing input — is the single most expensive mistake in debugging, because the bug survives and the next occurrence is harder to see. Every step below exists to push you toward the cause and away from the symptom.

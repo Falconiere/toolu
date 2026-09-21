@@ -1,6 +1,6 @@
 ---
 name: jev
-description: Mandatory on every task — make at least one bounded semantic decision over supplied evidence (classify, rank, rate, judge, route, or pick one of concrete candidates) during brainstorm, spec, spec review, plan, plan review, execution, and review.
+description: Mandatory when a task contains semantic decisions — use evidence-based typed judgments throughout search, debugging, planning, execution, and review; reassess as evidence changes.
 ---
 
 # Jev — Typed Judgments
@@ -11,14 +11,21 @@ levels. Code consumes the result directly.
 
 ## Workflow rule
 
-Jev is **mandatory on every task**. Before acting on a request, identify at
-least one bounded semantic decision it contains and, when Jev is available,
-**you MUST call it**: classify the request or its scope, compare concrete
-candidates against stated preferences (brainstorm), check requirement wording
-or requirement/evidence alignment (spec, spec review), check semantic step
-coverage (plan, plan review), or triage supplied findings (execution, review).
-Prefer the decision that changes the next action; when several qualify, batch
-them in one `ask` call.
+Jev is **mandatory on every task that contains a semantic decision**. After
+initial exploration, identify focused judgments over evidence you have gathered:
+rank retrieved excerpts, compare supplied hypotheses, compare concrete approaches
+against user preferences, or assess a claim against its source. When available,
+**you MUST call it before the decision it informs**.
+
+Revisit opportunities throughout problem solving: after new evidence, failed
+hypotheses, or changed requirements, assess which judgments now help choose the
+next action. A first call does not discharge the rule for the rest of the task.
+Do not invent questions to fill a quota or repeat calls without changed inputs.
+Batch independent questions over shared state in one `ask` call; questions that
+need a prior answer or a new experiment belong in a later call.
+
+See [problem-solving examples](references/problem-solving.md) for executable
+search, debugging, planning, and review patterns, interpretation, and fallbacks.
 
 Keep architecture, code correctness, exact checks, arithmetic, and test verdicts
 with the agent and deterministic tools. Reuse prior judgments while evidence and
@@ -92,7 +99,8 @@ jev.sh choice -s @ticket.json "Which team should handle this?" \
 
 # Rate severity on your own levels.
 jev.sh score -s @finding.md "How severe is this finding?" \
-  -l "Cosmetic" -l "Should fix" -l "Blocks release"
+  -l "Appearance only; functionality works" -l "Feature broken; workaround exists" \
+  -l "Essential workflow blocked; no workaround exists"
 
 # Many questions, ONE call — the cheapest way to ask several things.
 jev.sh ask questions.json -s @ticket.json
@@ -100,14 +108,16 @@ jev.sh ask questions.json -s @ticket.json
 
 ## Writing questions Jev answers well
 
-Verified against the live docs (`/primitives`, `/model-jaggedness/jev-1.13`):
+Use the primitive docs and the linked examples to choose a rubric:
 
 - **Literal reading.** Jev answers the words you wrote, not the intent. State
   the exact condition; put boundary cases in the criteria. When you catch
   yourself explaining what you "really meant", that sentence belongs in the
   instruction. Keep instructions and criteria saying the same thing.
-- **One judgment per question.** "Angry AND asking for a refund" is two
-  Nouls. Phrase Nouls so a high value means yes; never invert ("is free of").
+- **Split independently useful judgments.** Ask anger and refund intent
+  separately when they drive different actions. A coherent contextual judgment
+  (whether an excerpt supports a claim) may need several facts together. Phrase
+  Nouls so a high value clearly means the stated condition holds.
 - **Levels describe situations, not degrees.** "Broken, workaround exists"
   matches; "moderately severe" and bare numbers do not. Each level is judged
   on its own, so ordering words ("worse than the previous") mean nothing.
@@ -131,8 +141,8 @@ Verified against the live docs (`/primitives`, `/model-jaggedness/jev-1.13`):
 2. **Put the meaning in the question.** `--id` is for your code; the model never
    sees it. Instructions and criteria carry the whole judgment. `ask` takes its
    ids from the payload's own keys, so `--id` does not apply there.
-3. **Ask one narrow judgment per question.** Split independent dimensions;
-   don't fuse two decisions into one.
+3. **Keep each question focused.** Split independently useful dimensions,
+   while preserving context needed for a coherent judgment.
 4. **Branch on the number, not on vibes.** Pick thresholds against your own
    data. For `choice`/`score`, `confidence` describes how concentrated the
    distribution is — not whether the answer is right.

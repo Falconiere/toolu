@@ -32,14 +32,17 @@ Set `TYPESAFE_API_KEY` in the environment for the wrapper to authenticate
 
 ### `jev` Skill
 
-Mandatory on every task: before acting on a request, the agent identifies at
-least one bounded semantic decision it contains (classify the request or its
-scope, rank or route candidate approaches, judge supplied evidence) and calls
-Jev for it, across brainstorm, spec, spec review, plan, plan review, execution,
-and review. A task with genuinely no semantic decision is stated as such in one
-sentence, never skipped silently. Batch independent questions and reuse
-unchanged evidence across stages; keep architecture, code correctness, tests,
-and exact rules with the agent and tools.
+Mandatory on every task containing semantic decisions: after initial exploration,
+use Jev for focused judgments over gathered evidence before the decision it informs.
+Reassess after new evidence, failed hypotheses, or changed requirements throughout
+search, debugging, planning, execution, and review. Batch independent questions and
+reuse results while evidence and question meanings stay unchanged. A task with no
+semantic decision is stated as such in one sentence. Keep architecture, code
+correctness, tests, and exact rules with the agent and deterministic tools.
+
+The [problem-solving reference](../../plugins/jev/skills/jev/references/problem-solving.md)
+contains executable examples with named evidence, rubrics, interpretation, and
+next actions, including no-match and uncertain outcomes.
 
 The SessionStart hook injects the full rule on startup, resume, clear, and
 compaction; the UserPromptSubmit hook restates a short form on every prompt so
@@ -103,7 +106,8 @@ jev.sh choice -s @ticket.json "Which team should handle this?" \
 
 ```bash
 jev.sh score -s @finding.md "How severe is this finding?" \
-  -l "Cosmetic" -l "Should fix" -l "Blocks release"
+  -l "Appearance only; functionality works" -l "Feature broken; workaround exists" \
+  -l "Essential workflow blocked; no workaround exists"
 ```
 
 ### Fan out — many questions, one call
@@ -123,8 +127,8 @@ jev.sh ask questions.json -s @ticket.json
 ```
 
 Jev ingests the state once and answers every question in parallel, so a fan-out
-call costs far less than one request per question — speculative questions your
-code may discard included.
+call shares state across questions. Extra questions still cost tokens; include
+independent questions that can inform an action, including useful speculative ones.
 
 ### Branch on the answer
 

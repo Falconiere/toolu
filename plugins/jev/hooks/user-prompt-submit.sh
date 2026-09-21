@@ -35,7 +35,7 @@ plugin_dir="$(cd "$HOOK_DIR/.." 2>/dev/null && pwd)"
 dst="$(jev_published_path)"
 [ -z "$(jev_missing_prereqs "$dst")" ] || exit 0
 
-context="Jev is mandatory for this task: before acting, you MUST call \"$dst\" on at least one bounded semantic decision the request contains (classify the request or its scope, rank or route candidate approaches, judge supplied evidence), batching independent questions in one ask call. If the task has no semantic decision, say so in one sentence. Syntax: $plugin_dir/skills/jev/SKILL.md."
+context="Jev is mandatory for this task when it contains semantic decisions. After initial exploration, identify useful judgments over supplied evidence; you MUST call \"$dst\" before the decision it informs. Reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions in one ask call. Reuse unchanged evidence and questions rather than repeating calls. If a task has no semantic decision, say so in one sentence rather than skipping silently. Syntax and linked examples: $plugin_dir/skills/jev/SKILL.md. On failure, state the limitation and use an evidence fallback; Jev never replaces tests or authorization."
 jev_emit UserPromptSubmit "$context"
 
 exit 0

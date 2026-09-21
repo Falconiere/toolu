@@ -7,6 +7,12 @@ description: "Use when the ask is deep research that must end in a multi-source 
 
 A standalone knowledge workflow — outside the build chain; its reports can feed `brainstorm` or `spec`. It exists because the expensive failure in research is not weak sources — it is aiming a whole fan-out at a misunderstood question. So the target is written down first, then the pipeline spends tokens. Do not wait for approval.
 
+Use [semantic judgments](../../workflows/semantic-judgments.md) after retrieval to
+rank excerpts and detect when none answers a guiding question, and during verification
+to assess support, contradiction, or missing evidence. Reassess when new sources or
+requirements change the question; batch independent judgments and reuse unchanged ones.
+Verify quotes and source provenance with tools; Jev does not establish truth.
+
 ## When this fires
 
 The user wants a real research deliverable: multi-source, verified, cited. Not a quick fact or API lookup — that stays with `research-agent` — and not a question about this codebase — that is `deep-explore`'s job. Every run is multi-agent by design; if the fan-out isn't warranted, the ask wasn't deep research.

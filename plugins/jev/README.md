@@ -26,7 +26,7 @@ Standalone, no plugin dependencies.
 
 ## What it provides
 
-- **`jev` skill** — mandatory on every task: at least one bounded semantic decision over supplied evidence, with batching and explicit fallback.
+- **`jev` skill** — mandatory when semantic decisions exist: gather evidence, call before the decision it informs, and reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions and reuse unchanged results.
 - **`jev.sh` wrapper** — `noul` (probability of yes), `choice` (pick one, with the full distribution), `score` (rate on your own ordered levels), and `ask` (many questions in one call).
 - **SessionStart hook** — publishes `jev.sh` at `<config-dir>/jev/jev.sh` and injects the full mandate on startup, resume, clear, and compaction. It checks local prerequisites and makes no API call.
 - **UserPromptSubmit hook** — restates the mandate on every prompt so it survives long sessions; silent for trivial confirmations and when prerequisites are missing (SessionStart already reported them). No API call.
@@ -41,4 +41,5 @@ it is never read from a `.env` file. `JEV_TIMEOUT` overrides the 60-second timeo
 per attempt. Model defaults to `jev-latest`.
 
 Full CLI reference and usage guidance: [`skills/jev/SKILL.md`](skills/jev/SKILL.md).
+Executable [problem-solving examples](skills/jev/references/problem-solving.md) cover search, debugging, planning, and review with uncertainty and no-match handling.
 Plugin page: [`docs/jev/README.md`](../../docs/jev/README.md).

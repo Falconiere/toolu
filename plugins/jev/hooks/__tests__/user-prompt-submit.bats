@@ -37,6 +37,13 @@ publish() {
   [[ "$context" == *"MUST call \"$CLAUDE_CONFIG_DIR/jev/jev.sh\""* ]]
   [[ "$context" == *"$PLUGIN_DIR/skills/jev/SKILL.md"* ]]
   [[ "$context" == *"one ask call"* ]]
+  [[ "$context" == *"After initial exploration"* ]]
+  [[ "$context" == *"before the decision it informs"* ]]
+  [[ "$context" == *"new evidence, failed hypotheses, or changed requirements"* ]]
+  [[ "$context" == *"Reuse unchanged evidence and questions"* ]]
+  [[ "$context" != *"before acting"* ]]
+  [[ "$context" != *"Before acting"* ]]
+  [[ "$context" != *"at least one"* ]]
   [[ "$context" != *local-test-key* ]]
 }
 
