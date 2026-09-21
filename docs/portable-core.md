@@ -83,6 +83,8 @@ Classification vocabulary (only these tokens):
 
 Implementation choice is orthogonal to host interception. Required unsupported enforcement is a **release blocker**, never `no-map`.
 
+Exhaustive per-source rows: [docs/gate-coverage-matrix.md](gate-coverage-matrix.md) (checked by `bun run tooling/gate-coverage-inventory.ts check`).
+
 ## Protected-files gate trace
 
 **Fixture:** `tooling/fixtures/portable-core/protected-files-pre.json` (Edit targeting `/repo/.env`).
