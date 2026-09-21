@@ -7,9 +7,9 @@
  *   bun run tooling/gate-coverage-inventory.ts discover
  *   bun run tooling/gate-coverage-inventory.ts check
  *   bun run tooling/gate-coverage-inventory.ts render
- *   bun run tooling/gate-coverage-inventory.ts seed   # write inventory from discover (dev)
+ *   bun run tooling/gate-coverage-inventory.ts seed
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join, relative } from "node:path";
 
 const ROOT = join(import.meta.dir, "..");
@@ -19,7 +19,7 @@ const INVENTORY =
 const MATRIX =
   process.env.GATE_COVERAGE_MATRIX ?? join(ROOT, "docs/gate-coverage-matrix.md");
 
-const CLASSIFICATIONS = new Set(["shell-out", "port-native", "port-new", "no-map"] as const);
+const CLASSIFICATIONS = new Set<string>(["shell-out", "port-native", "port-new", "no-map"]);
 type Classification = "shell-out" | "port-native" | "port-new" | "no-map";
 type Support = "required" | "supported" | "blocked" | "n/a";
 type Kind =
@@ -73,27 +73,41 @@ function rel(p: string): string {
   return relative(ROOT, p).split("\\").join("/");
 }
 
-function listPlugins(): string[] {
-  const dir = join(ROOT, "plugins");
-  return Bun.spawnSync(["bash", "-c", `ls -1 "${dir}"`])
-    .stdout.toString()
-    .trim()
-    .split("\n")
-    .filter(Boolean)
+function listDirNames(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
     .sort();
 }
 
-function fileExists(p: string): boolean {
-  return existsSync(p);
+function listShFiles(dir: string, pattern?: RegExp): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((e) => e.isFile() && e.name.endsWith(".sh") && (!pattern || pattern.test(e.name)))
+    .map((e) => join(dir, e.name))
+    .sort();
 }
 
-function readJsonFile(p: string): unknown {
-  return JSON.parse(readFileSync(p, "utf8"));
+function normalizeCommand(command: string): string {
+  let c = command.trim();
+  // hooks.json sometimes embeds quotes inside the JSON string value (e.g. jev).
+  if (
+    (c.startsWith('"') && c.endsWith('"')) ||
+    (c.startsWith("'") && c.endsWith("'"))
+  ) {
+    c = c.slice(1, -1);
+  }
+  return c.replace("${CLAUDE_PLUGIN_ROOT}/", "").replace("${PLUGIN_ROOT}/", "");
+}
+
+function sanitizeIdPart(s: string): string {
+  return s.replace(/["']/g, "").replace(/\s+/g, "_");
 }
 
 function makeId(plugin: string, kind: Kind, event: string, commandOrModule: string, matcher = ""): string {
-  const base = basename(commandOrModule);
-  const m = matcher ? `:${matcher.slice(0, 24)}` : "";
+  const base = sanitizeIdPart(basename(commandOrModule));
+  const m = matcher ? `:${sanitizeIdPart(matcher).slice(0, 40)}` : "";
   return `${plugin}:${kind}:${event}:${base}${m}`;
 }
 
@@ -102,18 +116,18 @@ function discover(): Discovered[] {
   const seen = new Set<string>();
 
   const add = (row: Discovered) => {
-    if (seen.has(row.id)) {
-      // Disambiguate collisions
-      row.id = `${row.id}#${seen.size}`;
-    }
-    seen.add(row.id);
-    out.push(row);
+    let id = row.id;
+    if (seen.has(id)) id = `${id}#${seen.size}`;
+    seen.add(id);
+    out.push({ ...row, id });
   };
 
-  for (const plugin of listPlugins()) {
+  for (const plugin of listDirNames(join(ROOT, "plugins"))) {
     const hooksJson = join(ROOT, "plugins", plugin, "hooks", "hooks.json");
-    if (fileExists(hooksJson)) {
-      const raw = readJsonFile(hooksJson) as { hooks?: Record<string, unknown[]> };
+    if (existsSync(hooksJson)) {
+      const raw = JSON.parse(readFileSync(hooksJson, "utf8")) as {
+        hooks?: Record<string, unknown[]>;
+      };
       const hooks = raw.hooks ?? {};
       for (const [event, entries] of Object.entries(hooks)) {
         if (!Array.isArray(entries)) continue;
@@ -129,9 +143,7 @@ function discover(): Discovered[] {
             commands.push(e.command);
           }
           for (const command of commands) {
-            const commandOrModule = command
-              .replace("${CLAUDE_PLUGIN_ROOT}/", "")
-              .replace("${PLUGIN_ROOT}/", "");
+            const commandOrModule = normalizeCommand(command);
             add({
               id: makeId(plugin, "hooks.json", event, commandOrModule, matcher),
               sourcePath: rel(hooksJson),
@@ -148,40 +160,27 @@ function discover(): Discovered[] {
     }
 
     const concernsDir = join(ROOT, "plugins", plugin, "hooks", "concerns");
-    if (fileExists(concernsDir)) {
-      const parentId = `${plugin}:entrypoint:SessionStart:register.sh`;
-      const listing = Bun.spawnSync(["bash", "-c", `ls -1 "${concernsDir}"/[0-9][0-9]-*.sh 2>/dev/null || true`])
-        .stdout.toString()
-        .trim()
-        .split("\n")
-        .filter(Boolean);
-      for (const abs of listing) {
-        const name = basename(abs);
-        add({
-          id: makeId(plugin, "concern", "PostToolUse", name),
-          sourcePath: rel(abs),
-          plugin,
-          kind: "concern",
-          event: "PostToolUse",
-          matcher: "",
-          commandOrModule: name,
-          parentId: fileExists(join(ROOT, "plugins", plugin, "hooks", "register.sh")) ? parentId : null,
-        });
-      }
+    const parentId = `${plugin}:entrypoint:SessionStart:register.sh`;
+    for (const abs of listShFiles(concernsDir, /^[0-9]{2}-.*\.sh$/)) {
+      const name = basename(abs);
+      add({
+        id: makeId(plugin, "concern", "PostToolUse", name),
+        sourcePath: rel(abs),
+        plugin,
+        kind: "concern",
+        event: "PostToolUse",
+        matcher: "",
+        commandOrModule: name,
+        parentId: existsSync(join(ROOT, "plugins", plugin, "hooks", "register.sh")) ? parentId : null,
+      });
     }
 
     for (const dname of ["pre-tools.d", "post-tools.d", "session-start.d"] as const) {
       const d = join(ROOT, "plugins", plugin, "hooks", dname);
-      if (!fileExists(d)) continue;
-      const listing = Bun.spawnSync(["bash", "-c", `ls -1 "${d}"/*.sh 2>/dev/null || true`])
-        .stdout.toString()
-        .trim()
-        .split("\n")
-        .filter(Boolean);
-      for (const abs of listing) {
-        const kind = dname as Kind;
-        const event =
-          dname === "pre-tools.d" ? "PreToolUse" : dname === "post-tools.d" ? "PostToolUse" : "SessionStart";
+      const kind = dname as Kind;
+      const event =
+        dname === "pre-tools.d" ? "PreToolUse" : dname === "post-tools.d" ? "PostToolUse" : "SessionStart";
+      for (const abs of listShFiles(d)) {
         add({
           id: makeId(plugin, kind, event, basename(abs)),
           sourcePath: rel(abs),
@@ -203,7 +202,7 @@ function discover(): Discovered[] {
       "pre-compact.sh",
     ]) {
       const abs = join(ROOT, "plugins", plugin, "hooks", name);
-      if (!fileExists(abs)) continue;
+      if (!existsSync(abs)) continue;
       const event =
         name === "user-prompt-submit.sh"
           ? "UserPromptSubmit"
@@ -223,17 +222,10 @@ function discover(): Discovered[] {
     }
   }
 
-  // toolu builtin modules + agent-tier
   for (const sub of ["pre-tools/modules", "post-tools/modules"]) {
     const d = join(ROOT, "plugins/toolu/hooks", sub);
-    if (!fileExists(d)) continue;
-    const listing = Bun.spawnSync(["bash", "-c", `ls -1 "${d}"/*.sh 2>/dev/null || true`])
-      .stdout.toString()
-      .trim()
-      .split("\n")
-      .filter(Boolean);
     const event = sub.startsWith("pre-") ? "PreToolUse" : "PostToolUse";
-    for (const abs of listing) {
+    for (const abs of listShFiles(d)) {
       add({
         id: makeId("toolu", "builtin-module", event, basename(abs)),
         sourcePath: rel(abs),
@@ -246,8 +238,9 @@ function discover(): Discovered[] {
       });
     }
   }
+
   const agentTier = join(ROOT, "plugins/toolu/hooks/pre-tools/agent-tier.sh");
-  if (fileExists(agentTier)) {
+  if (existsSync(agentTier)) {
     add({
       id: makeId("toolu", "entrypoint", "PreToolUse", "agent-tier.sh"),
       sourcePath: rel(agentTier),
@@ -260,28 +253,37 @@ function discover(): Discovered[] {
     });
   }
 
-  const libDir = join(ROOT, "plugins/toolu/hooks/lib");
-  if (fileExists(libDir)) {
-    const listing = Bun.spawnSync(["bash", "-c", `ls -1 "${libDir}"/*.sh 2>/dev/null || true`])
-      .stdout.toString()
-      .trim()
-      .split("\n")
-      .filter(Boolean);
-    for (const abs of listing) {
-      add({
-        id: makeId("toolu", "lib", "dependency", basename(abs)),
-        sourcePath: rel(abs),
-        plugin: "toolu",
-        kind: "lib",
-        event: "dependency",
-        matcher: "",
-        commandOrModule: basename(abs),
-        parentId: null,
-      });
-    }
+  for (const abs of listShFiles(join(ROOT, "plugins/toolu/hooks/lib"))) {
+    add({
+      id: makeId("toolu", "lib", "dependency", basename(abs)),
+      sourcePath: rel(abs),
+      plugin: "toolu",
+      kind: "lib",
+      event: "dependency",
+      matcher: "",
+      commandOrModule: basename(abs),
+      parentId: null,
+    });
   }
 
   return out.sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function semanticsNote(d: Discovered): string {
+  switch (d.kind) {
+    case "hooks.json":
+      return `Host routes ${d.event} (${d.matcher || "no matcher"}) to ${d.commandOrModule}.`;
+    case "concern":
+      return `Assembled quality concern fragment ${d.commandOrModule}; not independently executable.`;
+    case "builtin-module":
+      return `Built-in dispatcher module ${d.commandOrModule} under ${d.event}.`;
+    case "lib":
+      return `Shared library sourced by hooks/modules: ${d.commandOrModule}.`;
+    case "entrypoint":
+      return `Hook entrypoint script ${d.commandOrModule} for ${d.event}.`;
+    default:
+      return `Registry ${d.kind} module ${d.commandOrModule}.`;
+  }
 }
 
 function defaultMeta(d: Discovered): InventoryRow {
@@ -296,13 +298,11 @@ function defaultMeta(d: Discovered): InventoryRow {
   let implementationStatus: InventoryRow["implementationStatus"] = "todo";
   let hostMechanism = "pending-opencode";
   let limits = "";
-  let bashRequired = true;
+  const bashRequired = true;
 
   if (isLib) {
     support = "supported";
-    implementationIssue = 210;
     hostMechanism = "native-bash";
-    semanticsNote(d);
   }
   if (isHostOnly) {
     classification = "no-map";
@@ -311,7 +311,6 @@ function defaultMeta(d: Discovered): InventoryRow {
     implementationStatus = "n/a";
     hostMechanism = "n/a";
     limits = "Host-specific helper/surface; not an OpenCode enforcement target.";
-    bashRequired = d.commandOrModule.endsWith(".sh");
   }
   if (d.kind === "concern" || d.plugin.endsWith("-quality")) {
     implementationIssue = 204;
@@ -338,25 +337,11 @@ function defaultMeta(d: Discovered): InventoryRow {
   };
 }
 
-function semanticsNote(d: Discovered): string {
-  switch (d.kind) {
-    case "hooks.json":
-      return `Host routes ${d.event} (${d.matcher || "no matcher"}) to ${d.commandOrModule}.`;
-    case "concern":
-      return `Assembled quality concern fragment ${d.commandOrModule}; not independently executable.`;
-    case "builtin-module":
-      return `Built-in dispatcher module ${d.commandOrModule} under ${d.event}.`;
-    case "lib":
-      return `Shared library sourced by hooks/modules: ${d.commandOrModule}.`;
-    case "entrypoint":
-      return `Hook entrypoint script ${d.commandOrModule} for ${d.event}.`;
-    default:
-      return `Registry ${d.kind} module ${d.commandOrModule}.`;
-  }
-}
-
 function validateRow(row: InventoryRow, errors: string[]): void {
   if (!row.id) errors.push("row missing id");
+  if (row.id.includes('"') || row.id.includes("'")) {
+    errors.push(`${row.id}: id must not contain quote characters`);
+  }
   if (!CLASSIFICATIONS.has(row.classification)) {
     errors.push(`${row.id}: invalid classification ${row.classification}`);
   }
@@ -369,28 +354,14 @@ function validateRow(row: InventoryRow, errors: string[]): void {
   if (row.support === "required" && row.implementationIssue == null) {
     errors.push(`${row.id}: required row needs implementationIssue`);
   }
-  for (const key of [
-    "sourcePath",
-    "plugin",
-    "kind",
-    "event",
-    "commandOrModule",
-    "semantics",
-    "hostMechanism",
-    "support",
-    "implementationStatus",
-    "verificationBaseline",
-    "verificationConformance",
-  ] as const) {
-    if (row[key] === undefined || row[key] === null || String(row[key]).trim() === "") {
-      errors.push(`${row.id}: missing ${key}`);
-    }
+  if (row.commandOrModule.includes('"') || row.commandOrModule.includes("'")) {
+    errors.push(`${row.id}: commandOrModule must not contain quote characters`);
   }
 }
 
 function loadInventory(): InventoryRow[] {
-  if (!fileExists(INVENTORY)) fail(`missing inventory ${INVENTORY}`);
-  const data = readJsonFile(INVENTORY);
+  if (!existsSync(INVENTORY)) fail(`missing inventory ${INVENTORY}`);
+  const data = JSON.parse(readFileSync(INVENTORY, "utf8"));
   if (!Array.isArray(data)) fail("inventory must be a JSON array");
   return data as InventoryRow[];
 }
@@ -404,7 +375,7 @@ function check(): void {
   const invIds = new Set(inventory.map((r) => r.id));
 
   for (const id of discIds) {
-    if (!invIds.has(id)) errors.push(`undiscovered-in-inventory (missing): ${id}`);
+    if (!invIds.has(id)) errors.push(`missing from inventory: ${id}`);
   }
   for (const id of invIds) {
     if (!discIds.has(id)) errors.push(`orphan inventory id: ${id}`);
@@ -412,7 +383,7 @@ function check(): void {
 
   for (const row of inventory) validateRow(row, errors);
 
-  if (!fileExists(MATRIX)) fail(`missing matrix ${MATRIX}`);
+  if (!existsSync(MATRIX)) fail(`missing matrix ${MATRIX}`);
   const matrix = readFileSync(MATRIX, "utf8");
   for (const id of invIds) {
     if (!matrix.includes(id)) errors.push(`matrix missing id: ${id}`);

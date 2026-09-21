@@ -18,12 +18,15 @@ CLI="$ROOT/tooling/gate-coverage-inventory.ts"
 @test "check passes on the committed inventory and matrix" {
   run bun run "$CLI" check
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ok"* ]]
+  [ "$output" = "gate-coverage-inventory: ok" ]
 }
 
 @test "check fails when inventory drops a discovered hooks.json id" {
   local tmp="$BATS_TEST_TMPDIR/inventory.json"
-  local drop='toolu:hooks.json:PreToolUse:mod.sh:apply_patch|Edit|Write|M'
+  local drop
+  drop=$(jq -r '.[] | select(.kind=="hooks.json" and .plugin=="toolu" and (.commandOrModule|endswith("mod.sh")) and .event=="PreToolUse") | .id' \
+    "$ROOT/tooling/fixtures/gate-coverage/inventory.json" | head -1)
+  [ -n "$drop" ]
   jq --arg id "$drop" '[.[] | select(.id != $id)]' \
     "$ROOT/tooling/fixtures/gate-coverage/inventory.json" >"$tmp"
   local before after
@@ -41,7 +44,7 @@ CLI="$ROOT/tooling/gate-coverage-inventory.ts"
   grep -vF "$id" "$ROOT/docs/gate-coverage-matrix.md" >"$tmp"
   run env GATE_COVERAGE_MATRIX="$tmp" bun run "$CLI" check
   [ "$status" -ne 0 ]
-  [[ "$output$stderr" == *"matrix missing id"* ]]
+  printf '%s\n' "$output" "$stderr" | grep -Fq "matrix missing id: $id"
 }
 
 @test "check fails on invalid classification maybe-later" {
@@ -49,7 +52,7 @@ CLI="$ROOT/tooling/gate-coverage-inventory.ts"
   jq '.[0].classification = "maybe-later"' "$ROOT/tooling/fixtures/gate-coverage/inventory.json" >"$tmp"
   run env GATE_COVERAGE_INVENTORY="$tmp" bun run "$CLI" check
   [ "$status" -ne 0 ]
-  [[ "$output$stderr" == *"invalid classification"* ]]
+  printf '%s\n' "$output" "$stderr" | grep -Fq "invalid classification maybe-later"
 }
 
 @test "check fails when support=n/a pairs with shell-out" {
@@ -58,5 +61,5 @@ CLI="$ROOT/tooling/gate-coverage-inventory.ts"
     "$ROOT/tooling/fixtures/gate-coverage/inventory.json" >"$tmp"
   run env GATE_COVERAGE_INVENTORY="$tmp" bun run "$CLI" check
   [ "$status" -ne 0 ]
-  [[ "$output$stderr" == *"support=n/a"* ]]
+  printf '%s\n' "$output" "$stderr" | grep -Fq "support=n/a requires classification=no-map"
 }
