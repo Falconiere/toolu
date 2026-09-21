@@ -126,7 +126,7 @@ codex plugin add ts-quality@toolu
 ```
 <!-- /install-everything:codex -->
 
-> **Note** — `rust-quality`, `ts-quality`, and `python-quality` depend on `toolu`; `ast-grep`, `context7`, `exa-search`, and `jev` are standalone (zero deps). `code-simplifier` is an **optional, recommended companion**, not required — install it only if you want the pre-simplify pass; when absent, `toolu` simply skips it. The Claude prompt adds `anthropics/claude-plugins-official` first so Claude Code can resolve that companion. The prompt does not install `code-simplifier`. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
+> **Note** — `pr-babysit`, `python-quality`, `rust-quality`, and `ts-quality` depend on `toolu`. The other catalog plugins are standalone. `code-simplifier` is an **optional, recommended companion**, not required — install it only if you want the pre-simplify pass; when absent, `toolu` simply skips it. The Claude prompt adds `anthropics/claude-plugins-official` first so Claude Code can resolve that companion. The prompt does not install `code-simplifier`. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
 
 > **Deprecation:** comemory host integration now lives in
 > [Falconiere/comemory](https://github.com/Falconiere/comemory). First obtain a
