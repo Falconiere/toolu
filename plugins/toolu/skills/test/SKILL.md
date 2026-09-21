@@ -9,11 +9,8 @@ description: "Use while executing any feature, fix, refactor, or regression to d
 and again when reproducing regressions. Tests are written with the change,
 through red → green → refactor, never saved for a terminal phase.
 
-For semantic boundary cases in supplied examples, apply [semantic
-judgments](../../workflows/semantic-judgments.md) — Jev is mandatory when semantic
-decisions exist. Expected outputs and pass/fail assertions must come from the
-contract and real execution, never from Jev's confidence. Reassess useful judgments
-after new evidence, failed hypotheses, or changed requirements.
+Use the mandatory [Jev workflow](../../workflows/semantic-judgments.md) for
+semantic boundaries in supplied examples. Derive expected outputs and verdicts from contracts and execution.
 
 ## Non-negotiables
 

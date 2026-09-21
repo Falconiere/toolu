@@ -9,11 +9,8 @@ description: "Use after requirements are agreed when a behavior change needs an 
 search the codebase for existing paths, helpers, tests, and docs before drafting.
 Do not turn assumptions into steps.
 
-Apply [semantic judgments](../../workflows/semantic-judgments.md) to the bounded
-classification that changes a step's handling — Jev is mandatory when semantic
-decisions exist. Reuse relevant earlier answers; derive paths, dependencies, and
-ordering from repository evidence. Reassess useful judgments after new evidence,
-failed hypotheses, or changed requirements.
+Use the mandatory [Jev workflow](../../workflows/semantic-judgments.md) for
+classifications that change step handling. Derive paths, dependencies, and ordering from repository evidence.
 
 When a ledger step needs delegation, declare its model tier using the
 [`model-routing` rubric](../orchestrator/references/model-routing.md) and map

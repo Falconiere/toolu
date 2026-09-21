@@ -79,3 +79,20 @@ a trivial temporary script. A minimal Debian container lacked CI tools and
 failed loopback transport checks; an Ubuntu run using mawk hit a regex compiler
 panic in unchanged debug-log tests. Matching the test tools and using GNU awk
 resolved those environment failures without production-code changes.
+
+## Prompt-size audit — 2026-09-21
+
+Compared with commit `7c5915e`, the skill + shared workflow decreased from
+1,908 to 762 whitespace-delimited words (13,063 to 5,841 UTF-8 bytes).
+These are size measurements, not tokenizer counts. Stage prompts link to the
+shared rules; transport details and evaluation records load only on demand.
+Examples explicitly load Setup + the relevant section. All six executable
+Bash blocks remain byte-identical to the previously evaluated examples.
+
+A fresh agent loaded only the compact skill and Setup + Debugging. Live calls
+through the byte-identical wrapper in the sibling checkout selected `cache`,
+then `insufficient` after changed observations; next experiment shifted to the
+saved override. The isolated checkout call did not complete and was terminated;
+no answer was inferred. Missing-key invocation returned exit 1. The agent
+recognized unchanged-input reuse and retained explicit manual fallback. This
+checks prompt usability, not installed-host behavior or production accuracy.

@@ -15,11 +15,8 @@ A reviewed plan exists (`plan` + `plan-review` ran for non-trivial work). If the
 
 ## Loop (per step)
 
-Use [semantic judgments](../../workflows/semantic-judgments.md) to triage supplied
-evidence, including during local review — Jev is mandatory when semantic decisions
-exist. Reuse unchanged judgments; correctness still requires the real checks below.
-Reassess useful judgments after new evidence, failed hypotheses, or changed
-requirements.
+Use the mandatory [Jev workflow](../../workflows/semantic-judgments.md) to triage
+evidence, including local review. Correctness requires the checks below.
 
 For ledger-tracked work, **before the first step** run `bash plugins/toolu/hooks/lib/plan-ledger.sh preflight` — it refuses to start unless the plan is `Approved` and its declared spec (if any) is `Approved`. Then read progress with `bash plugins/toolu/hooks/lib/plan-ledger.sh status` to find the next non-fresh-green step, do the loop below for it, then record it with `bash plugins/toolu/hooks/lib/plan-ledger.sh run <plan_doc> --step <id>` — the engine requires the plan-doc positional arg, and stamps green from mechanical truth, you cannot claim it. On plan deviation, edit the steps block and note it under `## Deviations`, then re-run. Re-run any stale step (a `green` step whose diff has since changed) before calling the plan done. `status` also prints an AC-coverage report (report-only): read it to confirm every spec `AC-<n>` is covered by a fresh-green step — an uncovered AC is surfaced, not yet a push blocker, but it means the goal isn't proven done.
 

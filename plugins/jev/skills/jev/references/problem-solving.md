@@ -1,24 +1,18 @@
-# Jev throughout problem solving
+# Jev problem-solving patterns
 
-Gather evidence, ask a focused typed question, interpret the result, then act.
-After an experiment, retrieval, or requirement change, decide which questions need
-fresh evidence. Reuse an answer when its evidence, question, and criteria remain
-unchanged; do not call again just because the workflow stage changed.
+Load Setup + the matching example only. Evidence → focused judgment → next action.
+Reassess changed inputs; reuse unchanged evidence/questions/criteria across stages.
+Synthetic scenarios; replace observations with actual evidence in real work.
 
-These synthetic examples adapt TypeSafe's [semantic search](https://docs.typesafe.ai/cookbooks/semantic_find.md)
-(separate answer existence from ranking), [citation checking](https://docs.typesafe.ai/cookbooks/citation_check.md)
-(check exact quotes with code before judging context), and [batching](https://docs.typesafe.ai/patterns/fan-out.md)
-(independent questions share one request). They use the existing CLI, not an SDK.
-The search example uses comparable Scores for graded relevance; a Choice's
-probabilities describe relative alternatives, not absolute relevance.
-
-The [opt-in evaluation record](../evals/README.md) describes how to repeat the
-agent-session checks and records observed decision impact.
+Sources: TypeSafe [semantic search](https://docs.typesafe.ai/cookbooks/semantic_find.md)
+(separate ranking/existence), [citation checking](https://docs.typesafe.ai/cookbooks/citation_check.md)
+(exact quote check before context judgment), [batching](https://docs.typesafe.ai/patterns/fan-out.md)
+(independent questions, shared state). Evaluation only: [record](../evals/README.md).
 
 ## Setup and failure handling
 
-Run setup and the desired example in the same Bash shell. Requires `curl`, `jq`,
-and `TYPESAFE_API_KEY` already in the launch environment; never read `.env`.
+Run setup + selected example in one Bash shell. Requires `curl`, `jq`, environment
+`TYPESAFE_API_KEY`; never read `.env`.
 
 ```bash
 # Codex (for Claude Code use the second line instead):
@@ -41,16 +35,14 @@ judge() {
 }
 ```
 
-On failure, use the manual next action described below. An absent result is never
-a negative judgment. Keep raw model/usage when evaluating, without credentials.
-Numbers and confidence are evidence to inspect, not correctness or authorization.
-There are no universal thresholds here: ambiguous or conflicting distributions
-mean gather evidence, narrow the question, or reason explicitly from the source.
+Failure → apply the example's rubric manually. Missing output is not a negative
+judgment. Uncertain/conflicting distributions → inspect source, gather evidence,
+or narrow question. No universal thresholds. Confidence is concentration, not
+correctness. Retain raw model/usage for evaluation; never credentials.
 
 ## Search: rank excerpts and detect no answer
 
-Evidence: two retrieved excerpts, identified by their source paths. The query
-asks about retention; neither excerpt supplies a retention duration.
+Named retrieved excerpts: access/restoration and billing. Neither states retention.
 
 ```bash
 cat > "$JEV_EXAMPLES/search.state.json" <<'JSON'
@@ -84,18 +76,17 @@ JSON
 judge search
 ```
 
-Interpretation: sort the comparable relevance Scores in code to choose what to
-read first. Inspect the returned legend and distribution: the highest score can
-still describe an incomplete answer. Here, even if access ranks first, the
-existence judgment should be negative. Next action: retrieve retention policy
-material; do not infer a duration from the billing cycle. If existence is unclear,
-inspect source context and refine retrieval. If Jev fails, manually observe that
-neither excerpt states a duration and take the same retrieval step.
+Interpret: sort comparable Scores in code; inspect legend/distribution. A top
+rank can still be incomplete. Choice probabilities are relative, not graded
+relevance. Here, access ranks first but existence should be negative.
+Next: retrieve retention policy; never infer retention from billing frequency.
+Uncertain → inspect surrounding source/refine retrieval. API failure → manually
+confirm missing duration, then retrieve policy.
 
 ## Debugging: prioritize an experiment, then reassess
 
-Evidence: a synthetic observed failure and two supplied hypotheses. Jev compares
-their fit; it neither invents observations nor proves a cause.
+Supplied observations + hypotheses + experiments. Judgments prioritize tests;
+they do not prove causes.
 
 ```bash
 cat > "$JEV_EXAMPLES/debug.state.json" <<'JSON'
@@ -123,20 +114,16 @@ cp "$JEV_EXAMPLES/debug.questions.json" "$JEV_EXAMPLES/debug-next.questions.json
 judge debug-next
 ```
 
-Interpretation: the first result can prioritize the cache experiment. After that
-hypothesis fails, the changed observations invalidate reuse of the first answer.
-The second result should favor `insufficient`: neither supplied hypothesis fits
-all the new evidence. Next action: form a local-storage hypothesis and test it by
-removing only the saved override in a disposable profile, then reproducing with
-and without it. Do not ship a cache fix based on the first answer. If the model
-still favors cache, inspect the contradictory observation and revise the candidate
-set yourself. A close distribution or API failure calls for the discriminating
-experiment and explicit reasoning, not a claim of certainty.
+Interpret: first judgment prioritizes the cache experiment. New observations
+invalidate reuse; second should select `insufficient`. Next: test a local-storage
+hypothesis by removing/restoring only the saved override in a disposable profile.
+Confirm through reproduction before fixing. Cache still selected → inspect
+contradictory evidence, revise candidates. Uncertainty/API failure → choose the
+discriminating experiment from explicit evidence, without claiming certainty.
 
 ## Planning: compare approaches against separate preferences
 
-Evidence: two concrete alternatives and two user preferences. These preferences
-can favor different alternatives, so ask separate questions in one batch.
+Named alternatives + separate preferences → independent questions, one batch.
 
 ```bash
 cat > "$JEV_EXAMPLES/plan.state.json" <<'JSON'
@@ -162,19 +149,16 @@ JSON
 judge plan
 ```
 
-Interpretation: worker is favored under these assumptions. Next action: inspect
-the existing worker's capacity, retry semantics, and export requirements before
-choosing the architecture. These judgments cannot validate estimates or technical
-feasibility. Conflicting preferences, `neither`, or uncertainty require examining
-tradeoffs or missing requirements. If an unchanged plan moves to review, reuse
-these results. If capacity evidence changes an approach, reassess affected
-questions. On failure, compare each preference against the supplied alternatives
-manually and keep the same technical checks.
+Interpret: worker fits both supplied preferences. Next: verify worker capacity,
+retry semantics, and export requirements; Jev cannot validate estimates or
+feasibility. Conflicting preferences/`neither`/uncertainty → inspect tradeoffs or
+missing requirements. Reuse unchanged results at review; changed capacity →
+reassess affected questions. API failure → manually compare each preference and
+retain the technical checks.
 
 ## Review: support, contradiction, or unsupported claim
 
-Evidence: a synthetic policy excerpt, a quote, and a claim. Check quote presence
-exactly in code, then judge its meaning in context.
+Named policy source + quote + claim. Check quote presence with code, then context.
 
 ```bash
 cat > "$JEV_EXAMPLES/review.state.json" <<'JSON'
@@ -201,15 +185,13 @@ else
 fi
 ```
 
-Interpretation: `contradicts` directs the reviewer to correct the claim to match
-the policy and cite the full passage. `unsupported` means retrieve more evidence,
-qualify, or drop the claim; it does not mean the claim is false. Even `supports`
-is about the supplied excerpt, not proof that the source is current or truthful.
-Next action: verify provenance and the actual product behavior with deterministic
-checks. Inspect uncertain distributions manually; on API failure, read the full
-passage and record the contradiction without fabricating a Jev verdict.
+Interpret: `contradicts` → correct claim and cite full passage. `unsupported` →
+retrieve evidence, qualify, or drop claim; unsupported does not mean false.
+`supports` concerns this excerpt, not source truth/currency. Next: verify provenance
+and product behavior with tools. Uncertain/API failure → read full passage and
+record explicit reasoning; never fabricate a Jev verdict.
 
-Clean up the scratch directory after retaining any evaluation notes:
+Clean up after retaining evaluation notes:
 
 ```bash
 rm -rf "$JEV_EXAMPLES"

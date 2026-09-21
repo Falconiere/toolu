@@ -43,3 +43,19 @@ per attempt. Model defaults to `jev-latest`.
 Full CLI reference and usage guidance: [`skills/jev/SKILL.md`](skills/jev/SKILL.md).
 Executable [problem-solving examples](skills/jev/references/problem-solving.md) cover search, debugging, planning, and review with uncertainty and no-match handling.
 Plugin page: [`docs/jev/README.md`](../../docs/jev/README.md).
+
+## Wrapper reference
+
+Text input only; preprocess other formats. Context: 64k tokens/request, 32k for
+state + longest question. Slice large inputs. English is the primary training language.
+
+`@FILE`/stdin become structured state only for a JSON object/array; other values
+stay strings. Default output is `.answers`; `--raw` includes model/token usage.
+Missing/invalid answers fail explicitly.
+
+Retries: at most three attempts for timeout, connection failure, HTTP 408/429/5xx;
+1s then 2s backoff. `Retry-After` seconds or `retry-after-ms` up to 60s is honored;
+longer waits surface the error. Other 4xx, including 401/422, are not retried.
+
+Exit codes: `1` usage/config/invalid response; `22` HTTP error (body on stderr);
+`28` timeout. `JEV_TIMEOUT` sets timeout per attempt (default 60s).
