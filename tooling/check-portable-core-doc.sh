@@ -47,7 +47,7 @@ for token in shell-out port-native port-new no-map; do
   printf '%s\n' "$policy_section" | grep -qF "$token" || fail "missing classification token: $token"
 done
 # Flag a known-invalid token if someone adds it to the vocabulary section
-if printf '%s\n' "$policy_section" | grep -qE '`maybe-later`|^\s*-\s*maybe-later\b'; then
+if printf '%s\n' "$policy_section" | grep -qE '`maybe-later`|^\s*-\s*maybe-later'; then
   fail "invalid classification token maybe-later"
 fi
 

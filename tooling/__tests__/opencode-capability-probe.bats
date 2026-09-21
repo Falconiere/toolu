@@ -14,8 +14,6 @@ PROBE="$ROOT/tooling/opencode-capability-probe.ts"
   run env -u PORTABLE_CORE_PROBE_MODE OPENCODE_BIN=/nonexistent/opencode \
     bash -c 'bun run "'"$PROBE"'"'
   [ "$status" -ne 0 ]
-  [[ "$output$stderr" != *"[Ee]nforced"* ]] || [[ "$output$stderr" != *"enforced success"* ]]
-  # Explicit: must not claim success
   ! printf '%s\n' "$output$stderr" | grep -qi 'enforced'
 }
 

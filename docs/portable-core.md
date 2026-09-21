@@ -1,7 +1,6 @@
 # Portable Bun/TS core contracts
 
 **Issue:** [#205](https://github.com/Falconiere/toolu/issues/205) (epic [#203](https://github.com/Falconiere/toolu/issues/203))  
-**Design:** [docs/toolu/specs/2026-09-21-portable-core-design.md](toolu/specs/2026-09-21-portable-core-design.md)  
 **Status:** Contract freeze for implementation in #208/#210/#211/#204. This document does **not** claim complete OpenCode support.
 
 ## Pins
@@ -146,4 +145,4 @@ Until a live probe proves otherwise for a required action class:
 
 - Runtime gate modes: [plugins/toolu/hooks/docs/gates.md](../plugins/toolu/hooks/docs/gates.md)
 - Config schema: [docs/config.md](config.md)
-- Design record: [docs/toolu/specs/2026-09-21-portable-core-design.md](toolu/specs/2026-09-21-portable-core-design.md)
+- Tracking: [#205](https://github.com/Falconiere/toolu/issues/205) / epic [#203](https://github.com/Falconiere/toolu/issues/203)

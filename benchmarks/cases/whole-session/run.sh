@@ -65,7 +65,8 @@ whole_session_run_one() {
   transcript="$(whole_session_transcript_path "$cwd" "$sid")"
   [ -s "$transcript" ] || return 1
 
-  local files=() f
+  local files=()
+  local f
   while IFS= read -r f; do
     [ -n "$f" ] && files+=("$f")
   done < <(whole_session_files "$transcript")
