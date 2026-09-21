@@ -1,5 +1,17 @@
 # Changelog
 
+## [6.4.0](https://github.com/Falconiere/toolu/compare/v6.3.1...v6.4.0) (2026-09-21)
+
+
+### Features
+
+* **jev:** use evidence-based judgments throughout problem solving ([b1277f6](https://github.com/Falconiere/toolu/commit/b1277f68a48dc043ecb2707646fe1829f0e56d4e))
+
+
+### Bug Fixes
+
+* **jev:** tighten ongoing-use reminder assertions ([ab95d37](https://github.com/Falconiere/toolu/commit/ab95d37f7c9d72667f1213d25fd4865cad7440aa))
+
 ## [6.3.1](https://github.com/Falconiere/toolu/compare/v6.3.0...v6.3.1) (2026-09-20)
 
 
