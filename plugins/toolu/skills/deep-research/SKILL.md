@@ -7,11 +7,8 @@ description: "Use when the ask is deep research that must end in a multi-source 
 
 A standalone knowledge workflow — outside the build chain; its reports can feed `brainstorm` or `spec`. It exists because the expensive failure in research is not weak sources — it is aiming a whole fan-out at a misunderstood question. So the target is written down first, then the pipeline spends tokens. Do not wait for approval.
 
-Use [semantic judgments](../../workflows/semantic-judgments.md) after retrieval to
-rank excerpts and detect when none answers a guiding question, and during verification
-to assess support, contradiction, or missing evidence. Reassess when new sources or
-requirements change the question; batch independent judgments and reuse unchanged ones.
-Verify quotes and source provenance with tools; Jev does not establish truth.
+Use the mandatory [Jev workflow](../../workflows/semantic-judgments.md) to rank
+retrieved excerpts, detect no answer, and judge claim/source support. Verify quotes and provenance with tools.
 
 ## When this fires
 

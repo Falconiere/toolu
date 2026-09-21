@@ -9,10 +9,9 @@ The break-glass loop of the toolu workflow. The six-stage delivery chain builds;
 
 **Trigger phrases:** why does X fail, it crashes, this is broken, flaky test, debug this, find the root cause, it worked before, track down this bug, what's wrong with, stack trace.
 
-After gathering observations, use [semantic judgments](../../workflows/semantic-judgments.md)
-to compare supplied hypotheses and choose the next experiment. Reassess after new
-evidence or a failed hypothesis; reuse unchanged judgments. Include an insufficient-evidence
-outcome. Jev prioritizes investigation; reproduction and tests establish the cause.
+Use the mandatory [Jev workflow](../../workflows/semantic-judgments.md) after
+observations to compare hypotheses and prioritize experiments; allow insufficient evidence.
+Reproduction/tests establish causes.
 
 ## The one rule that matters
 

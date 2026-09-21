@@ -26,10 +26,8 @@ settle the choice. Delegate only when the search needs a broad map; keep the
 final trade-off decision in the main architecture tier. Use the tier rubric in
 [model-routing.md](../orchestrator/references/model-routing.md).
 
-When comparing concrete alternatives against stated preferences, apply [semantic
-judgments](../../workflows/semantic-judgments.md) — Jev is mandatory when semantic
-decisions exist. Keep architectural synthesis in the main thread. Reassess useful
-judgments after new evidence, failed hypotheses, or changed requirements.
+Use the mandatory [Jev workflow](../../workflows/semantic-judgments.md) to compare
+alternatives per user preference. Keep architectural synthesis in the main thread.
 
 Set material defaults and proceed. Ask one structured question (2–3 options)
 only when prompt and repository evidence cannot settle a goal-defining or hard-to-reverse fork. If several forks qualify, ask about the

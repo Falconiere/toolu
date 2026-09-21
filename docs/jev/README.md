@@ -81,65 +81,12 @@ Structured `instructions` and `criteria` (objects, arrays, `null`), which the
 API accepts on every question type, go through `ask`; the single-question
 commands take strings.
 
-## Usage Examples
+## Problem-solving examples
 
-### Yes/no with a probability
-
-```bash
-jev.sh noul -s @/tmp/diff.txt "Does this diff change runtime behavior?" \
-  --true "Logic, control flow, or output changes" \
-  --false "Formatting, comments, or renames only"
-# {"q":{"type":"noul","noul":0.93}}
-```
-
-### Pick one, with the full distribution
-
-```bash
-jev.sh choice -s @ticket.json "Which team should handle this?" \
-  -o billing="Payments, invoicing, refunds" \
-  -o technical="Bugs, outages, integrations" \
-  -o sales="Pricing, upgrades, new accounts"
-# {"q":{"type":"choice","choice":"technical","probabilities":{...},"confidence":0.82}}
-```
-
-### Rate on your own levels
-
-```bash
-jev.sh score -s @finding.md "How severe is this finding?" \
-  -l "Appearance only; functionality works" -l "Feature broken; workaround exists" \
-  -l "Essential workflow blocked; no workaround exists"
-```
-
-### Fan out — many questions, one call
-
-```bash
-cat > questions.json <<'JSON'
-{
-  "is_urgent":   { "type": "noul",   "instructions": "Does this convey urgency?" },
-  "department":  { "type": "choice", "instructions": "Which team should handle this?",
-                   "criteria": { "billing": "Payments and refunds", "technical": "Bugs and outages" } },
-  "frustration": { "type": "score",  "instructions": "How frustrated is the customer?",
-                   "criteria": ["Calm", "Frustrated", "Very angry"] }
-}
-JSON
-
-jev.sh ask questions.json -s @ticket.json
-```
-
-Jev ingests the state once and answers every question in parallel, so a fan-out
-call shares state across questions. Extra questions still cost tokens; include
-independent questions that can inform an action, including useful speculative ones.
-
-### Branch on the answer
-
-```bash
-# Example threshold only: validate it on representative tickets first.
-if answers=$(jev.sh noul -s @ticket.txt "Is this urgent?"); then
-  if jq -e '.q.noul > 0.8' <<<"$answers" >/dev/null; then page_oncall; fi
-else
-  printf '%s\n' 'Urgency evaluation failed; use the manual triage path.' >&2
-fi
-```
+Load only Setup + the needed [example](../../plugins/jev/skills/jev/references/problem-solving.md):
+search (rank + existence), debugging (hypotheses + new evidence), planning
+(separate preferences), or review (support/contradiction/unsupported).
+[Live evaluation record](../../plugins/jev/skills/jev/evals/README.md).
 
 ## Behavior and Limits
 
