@@ -20,12 +20,13 @@ setup() {
 }
 
 @test "CI workflow defines a typescript job running test:ts" {
-  awk '
+  run awk '
     /^  typescript:/ { in_job=1; found_job=1; next }
-    /^  [a-z]/ { if ($0 !~ /^  typescript:/) in_job=0 }
+    /^  [a-z]/ && $0 !~ /^    / { if ($0 !~ /^  typescript:/) in_job=0 }
     in_job && /bun run test:ts/ { found_run=1 }
-    END { exit (found_job && found_run) ? 0 : 1 }
+    END { if (!(found_job && found_run)) { print "missing typescript job or bun run test:ts"; exit 1 } }
   ' "$ROOT/.github/workflows/tests.yml"
+  [ "$status" -eq 0 ]
 }
 
 @test "root test script includes test:ts" {
