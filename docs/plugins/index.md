@@ -53,38 +53,59 @@ See [`config.md`](../config.md) for the full schema.
 
 ## Quick Start — Install Everything
 
+Paste one prompt into the host. It adds the marketplace and installs every
+plugin in the catalog, core first. Do not install comemory. The same prompts
+are in the root [README](../../README.md#install-everything).
+
+#### Claude Code
+
+<!-- install-everything:claude -->
 ```text
-# 1. Add marketplaces
-/plugin marketplace add anthropics/claude-plugins-official
-/plugin marketplace add Falconiere/toolu
+Install every toolu plugin for Claude Code at user scope. Run these commands in a terminal, in order. Skip a command that reports the marketplace or plugin is already installed.
 
-# 2. Install core
-/plugin install toolu@toolu
-
-# 3. Install domain plugins
-/plugin install rust-quality@toolu
-/plugin install ts-quality@toolu
-/plugin install python-quality@toolu
-/plugin install ast-grep@toolu
-/plugin install context7@toolu
-/plugin install exa-search@toolu
-/plugin install jira@toolu
-/plugin install toolu-review@toolu
-/plugin install pr-babysit@toolu
-/plugin install statusline@toolu
-/plugin install agent-browser@toolu
+claude plugin marketplace add anthropics/claude-plugins-official
+claude plugin marketplace add Falconiere/toolu
+claude plugin install toolu@toolu --scope user
+claude plugin install agent-browser@toolu --scope user
+claude plugin install ast-grep@toolu --scope user
+claude plugin install context7@toolu --scope user
+claude plugin install exa-search@toolu --scope user
+claude plugin install jev@toolu --scope user
+claude plugin install jira@toolu --scope user
+claude plugin install pr-babysit@toolu --scope user
+claude plugin install python-quality@toolu --scope user
+claude plugin install rust-quality@toolu --scope user
+claude plugin install statusline@toolu --scope user
+claude plugin install toolu-review@toolu --scope user
+claude plugin install ts-quality@toolu --scope user
 ```
+<!-- /install-everything:claude -->
 
-For Codex, install the core first, then the optional plugins:
+#### Codex
 
-```bash
+<!-- install-everything:codex -->
+```text
+Install every toolu plugin for Codex. Run these commands in a terminal, in order. Skip a command that reports the marketplace or plugin is already installed. After they are installed, review and trust the hooks in /hooks before they run.
+
 codex plugin marketplace add Falconiere/toolu
 codex plugin add toolu@toolu
-codex plugin add rust-quality@toolu
-codex plugin add ts-quality@toolu
+codex plugin add agent-browser@toolu
+codex plugin add ast-grep@toolu
+codex plugin add context7@toolu
+codex plugin add exa-search@toolu
+codex plugin add jev@toolu
+codex plugin add jira@toolu
+codex plugin add pr-babysit@toolu
 codex plugin add python-quality@toolu
-# Repeat `codex plugin add <name>@toolu` for any other plugin above.
+codex plugin add rust-quality@toolu
+codex plugin add statusline@toolu
+codex plugin add toolu-review@toolu
+codex plugin add ts-quality@toolu
 ```
+<!-- /install-everything:codex -->
+
+`code-simplifier` is an optional companion from `claude-plugins-official`. The
+Claude prompt adds that marketplace and does not install the companion.
 
 Codex support covers CLI, IDE extension, and ChatGPT desktop Codex on macOS
 and Linux. Codex cloud and Windows are limitations for this release. Review

@@ -74,32 +74,59 @@ The rule isn't "warn and move on" — it's a hard gate: **no new task while the 
 toolu has first-class packages for Claude Code and Codex. Codex support covers
 the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux.
 
-### Claude Code
+### Install everything
 
-Install from the public marketplace in any Claude Code session:
+Paste one prompt into the host. It adds the marketplace and installs every
+plugin in the catalog, core first. Do not install comemory.
 
+#### Claude Code
+
+<!-- install-everything:claude -->
 ```text
-# 1. Add the upstream marketplace the plugins depend on
-/plugin marketplace add anthropics/claude-plugins-official
+Install every toolu plugin for Claude Code at user scope. Run these commands in a terminal, in order. Skip a command that reports the marketplace or plugin is already installed.
 
-# 2. Add this marketplace and install the core bundle
-/plugin marketplace add Falconiere/toolu
-/plugin install toolu@toolu
+claude plugin marketplace add anthropics/claude-plugins-official
+claude plugin marketplace add Falconiere/toolu
+claude plugin install toolu@toolu --scope user
+claude plugin install agent-browser@toolu --scope user
+claude plugin install ast-grep@toolu --scope user
+claude plugin install context7@toolu --scope user
+claude plugin install exa-search@toolu --scope user
+claude plugin install jev@toolu --scope user
+claude plugin install jira@toolu --scope user
+claude plugin install pr-babysit@toolu --scope user
+claude plugin install python-quality@toolu --scope user
+claude plugin install rust-quality@toolu --scope user
+claude plugin install statusline@toolu --scope user
+claude plugin install toolu-review@toolu --scope user
+claude plugin install ts-quality@toolu --scope user
 ```
+<!-- /install-everything:claude -->
 
-Add the language gates, search, and docs tooling too:
+#### Codex
 
+<!-- install-everything:codex -->
 ```text
-/plugin install rust-quality@toolu   # Rust quality gates
-/plugin install ts-quality@toolu     # TypeScript quality gates
-/plugin install python-quality@toolu # Python quality gates
-/plugin install ast-grep@toolu       # structural code search & rewrite
-/plugin install context7@toolu       # live library documentation lookup
-/plugin install exa-search@toolu     # web / code / URL search + research
-/plugin install jev@toolu            # typed judgments (probability / choice / score)
-```
+Install every toolu plugin for Codex. Run these commands in a terminal, in order. Skip a command that reports the marketplace or plugin is already installed. After they are installed, review and trust the hooks in /hooks before they run.
 
-> **Note** — `rust-quality`, `ts-quality`, and `python-quality` depend on `toolu`; `ast-grep`, `context7`, `exa-search`, and `jev` are standalone (zero deps). `code-simplifier` is an **optional, recommended companion**, not required — install it only if you want the pre-simplify pass; when absent, `toolu` simply skips it. Adding the marketplace in step 1 lets Claude Code resolve that companion automatically. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
+codex plugin marketplace add Falconiere/toolu
+codex plugin add toolu@toolu
+codex plugin add agent-browser@toolu
+codex plugin add ast-grep@toolu
+codex plugin add context7@toolu
+codex plugin add exa-search@toolu
+codex plugin add jev@toolu
+codex plugin add jira@toolu
+codex plugin add pr-babysit@toolu
+codex plugin add python-quality@toolu
+codex plugin add rust-quality@toolu
+codex plugin add statusline@toolu
+codex plugin add toolu-review@toolu
+codex plugin add ts-quality@toolu
+```
+<!-- /install-everything:codex -->
+
+> **Note** — `rust-quality`, `ts-quality`, and `python-quality` depend on `toolu`; `ast-grep`, `context7`, `exa-search`, and `jev` are standalone (zero deps). `code-simplifier` is an **optional, recommended companion**, not required — install it only if you want the pre-simplify pass; when absent, `toolu` simply skips it. The Claude prompt adds `anthropics/claude-plugins-official` first so Claude Code can resolve that companion. The prompt does not install `code-simplifier`. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
 
 > **Deprecation:** comemory host integration now lives in
 > [Falconiere/comemory](https://github.com/Falconiere/comemory). First obtain a
@@ -114,32 +141,6 @@ To migrate an existing legacy installation, obtain the standalone `comemory` bin
 brew install Falconiere/tap/comemory   # macOS + Linuxbrew (canonical)
 # or the curl installer:
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Falconiere/comemory/releases/latest/download/comemory-installer.sh | sh
-```
-
-### Codex
-
-Add the marketplace and install the core first:
-
-```bash
-codex plugin marketplace add Falconiere/toolu
-codex plugin add toolu@toolu
-```
-
-Then install whichever domain plugins you want:
-
-```bash
-codex plugin add rust-quality@toolu
-codex plugin add ts-quality@toolu
-codex plugin add python-quality@toolu
-codex plugin add ast-grep@toolu
-codex plugin add context7@toolu
-codex plugin add exa-search@toolu
-codex plugin add jev@toolu
-codex plugin add jira@toolu
-codex plugin add toolu-review@toolu
-codex plugin add pr-babysit@toolu
-codex plugin add statusline@toolu
-codex plugin add agent-browser@toolu
 ```
 
 Plugins that depend on the core detect a missing installation at SessionStart
