@@ -31,7 +31,10 @@
         { "type": "json", "path": "plugins/statusline/.claude-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/statusline/.codex-plugin/plugin.json", "jsonpath": "$.version" },
         { "type": "json", "path": "plugins/ts-quality/.claude-plugin/plugin.json", "jsonpath": "$.version" },
-        { "type": "json", "path": "plugins/ts-quality/.codex-plugin/plugin.json", "jsonpath": "$.version" }
+        { "type": "json", "path": "plugins/ts-quality/.codex-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "packages/toolu-core/package.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "tools/toolu-opencode/package.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "tools/toolu-conformance/package.json", "jsonpath": "$.version" }
       ]
     }
   }

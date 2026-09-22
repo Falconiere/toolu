@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
     # GitHub skips the workflow only when every changed file matches this list.
-    # A release-please bump is exactly these files. Any other path still runs
+    # A release-please bump is exactly these files (root + workspace package.json
+    # version lines + plugin manifests). Any other path still runs
     # the suite, including a release-please branch that also touches code.
     # Branch name and commit author are not consulted: both can be forged.
     # workflow_dispatch ignores path filters, so a manual run always tests.
@@ -13,6 +14,8 @@ on:
       - "CHANGELOG.md"
       - ".release-please-manifest.json"
       - "package.json"
+      - "packages/*/package.json"
+      - "tools/*/package.json"
       - "plugins/*/.claude-plugin/plugin.json"
       - "plugins/*/.codex-plugin/plugin.json"
   pull_request:

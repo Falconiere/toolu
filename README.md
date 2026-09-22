@@ -74,6 +74,15 @@ The rule isn't "warn and move on" — it's a hard gate: **no new task while the 
 toolu has first-class packages for Claude Code and Codex. Codex support covers
 the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux.
 
+### OpenCode (preview)
+
+OpenCode support is **git-clone + Bun** only (no npm package yet). It wires
+`permission.evaluate` to the same bash gate engine for the coverage proven in
+[#212](https://github.com/Falconiere/toolu/issues/212) — not the full Claude/Codex
+hook surface. Prerequisites, frozen install, project `.opencode/` layout, gate
+smoke, update, and uninstall: **[docs/opencode.md](docs/opencode.md)**. Claude
+Code and Codex installs below are unchanged.
+
 ### Install everything
 
 Paste one prompt into the host. It adds the marketplace and installs every
@@ -311,7 +320,7 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 
 - Merge Conventional Commits to `main`. release-please maintains one batched **Release PR** for the whole repo. **Any** path counts — a `feat` in `tooling/` or `.github/` releases just like one under `plugins/`.
 - `feat` / `fix` / `feat!` (or `BREAKING CHANGE`) drive minor / patch / major bumps; `chore` / `docs` / `ci` / `refactor` ship no release.
-- Review the Release PR, then **merge it to cut the release** — the only manual step. It bumps `package.json` and every Claude and Codex plugin manifest to the new version, updates `CHANGELOG.md`, tags `vX.Y.Z`, and publishes the GitHub Release. The marketplace re-extracts a plugin when its manifest version changes.
+- Review the Release PR, then **merge it to cut the release** — the only manual step. It bumps root `package.json`, `@toolu/core` / `@toolu/opencode` / `@toolu/conformance`, and every Claude and Codex plugin manifest to the new version, updates `CHANGELOG.md`, tags `vX.Y.Z`, and publishes the GitHub Release. The marketplace re-extracts a plugin when its manifest version changes.
 
 `tooling/release.sh` is **deprecated**, kept only as a manual escape hatch for when the automation is unavailable.
 

@@ -87,6 +87,22 @@ for claude_manifest in plugins/*/.claude-plugin/plugin.json; do
   count=$((count + 1))
 done
 
+workspace_packages=(
+  packages/toolu-core/package.json
+  tools/toolu-opencode/package.json
+  tools/toolu-conformance/package.json
+)
+for ws_pkg in "${workspace_packages[@]}"; do
+  [ -f "$ws_pkg" ] || fail "missing $ws_pkg"
+  jq -e . "$ws_pkg" >/dev/null || fail "invalid JSON: $ws_pkg"
+  [ "$(jq -er '.version' "$ws_pkg")" = "$package_version" ] || fail "$ws_pkg version differs from package.json"
+  if ! jq -e --arg path "$ws_pkg" \
+    '.packages["."]["extra-files"][] | select(.type == "json" and .path == $path and .jsonpath == "$.version")' \
+    "$release_config" >/dev/null; then
+    fail "release-please is missing $ws_pkg"
+  fi
+done
+
 [ "$count" -eq 13 ] || fail "expected 13 plugins, found $count"
 [ "$(jq '[.plugins[].name] | length' "$claude_catalog")" -eq "$count" ] || fail 'Claude marketplace count does not match plugin manifests'
 [ "$(jq '[.plugins[].name] | length' "$codex_catalog")" -eq "$count" ] || fail 'Codex marketplace count does not match plugin manifests'
