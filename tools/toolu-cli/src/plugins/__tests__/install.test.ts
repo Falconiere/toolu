@@ -42,7 +42,14 @@ describe("dry run plans without touching the host", () => {
       expect(step.outcome).toBe("skipped");
       expect(step.argv).toContain("install");
     }
+  });
+
+  // Proving the host was untouched needs a host to ask. Without one the plan
+  // assertions above already establish that no install command ran.
+  test.skipIf(!hasClaude)("a dry run leaves the host with nothing installed", async () => {
+    await installPlugins({ ...base, requested: [], dryRun: true });
     const after = await run([...claudeAdapter.listInstalled().argv], env);
+    expect(after.code).toBe(0);
     expect(claudeAdapter.parseList(after.stdout).length).toBe(0);
   });
 
