@@ -24,8 +24,29 @@ setup() {
   done
 }
 
-@test "the publish workflow triggers on a published release" {
-  grep -Fq 'types: [published]' "$WF"
+# release-please creates the Release with the default GITHUB_TOKEN, and GitHub
+# does not start a workflow run from an event created by that token. A
+# `release: published` trigger here is silently ignored -- that is exactly why
+# the 6.7.0 release published nothing.
+@test "the publish workflow is chained from release-please, not triggered by the release event" {
+  RP="$ROOT/.github/workflows/release-please.yml"
+  grep -Fq 'uses: ./.github/workflows/npm-publish.yml' "$RP"
+  grep -Fq "needs.release-please.outputs.releases_created == 'true'" "$RP"
+  grep -Fq 'workflow_call:' "$WF"
+  # The trigger that cannot fire must not come back.
+  run grep -Fq 'types: [published]' "$WF"
+  [ "$status" -ne 0 ]
+}
+
+@test "the publish workflow stays runnable by hand for a given tag" {
+  grep -Fq 'workflow_dispatch:' "$WF"
+  grep -Fq 'ref: ${{ inputs.tag }}' "$WF"
+}
+
+# A tag cut before a package became publishable must still be retryable.
+@test "private packages are skipped rather than failing the run" {
+  run bash -c "grep -c 'is private at' '$WF'"
+  [ "$output" = "2" ]
 }
 
 @test "the publish workflow grants id-token for provenance and publishes with it" {

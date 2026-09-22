@@ -1,10 +1,14 @@
 name: npm publish
 
-# Publishes the `toolu` CLI to npm when a GitHub Release is published.
+# Publishes the npm packages for a released tag.
 #
-# Decoupled from release-please.yml on purpose: that workflow's job is to cut the
-# tag and the Release. This one reacts to the Release existing, so a publish can
-# be re-run from the Actions tab without re-running the release machinery.
+# Called by release-please.yml in the same run that cuts the release, and
+# separately runnable from the Actions tab to retry a tag.
+#
+# It is NOT triggered by `release: published`. release-please creates the Release
+# with the default GITHUB_TOKEN, and GitHub does not start a workflow run from an
+# event created by that token -- a `release:` trigger here is silently ignored,
+# which is exactly how the 6.7.0 release published nothing.
 #
 # Three packages publish, in dependency order: @toolu/core, then
 # @toolu/opencode which depends on it, then the unscoped `toolu` CLI.
@@ -14,13 +18,18 @@ name: npm publish
 # `opencode plugin add @toolu/opencode` needs no clone and no TOOLU_REPO_ROOT.
 
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag to publish (vX.Y.Z)
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       tag:
         description: Release tag to publish (vX.Y.Z)
         required: true
+        type: string
 
 permissions:
   contents: read
@@ -35,7 +44,7 @@ jobs:
       - name: Checkout the released tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          ref: ${{ inputs.tag }}
 
       # Node and npm pins match Falconiere/toolu-conventions, which already
       # publishes @toolu/create with this same NPM_TOKEN. Provenance needs
@@ -61,8 +70,12 @@ jobs:
       - name: Check the tag matches every package version
         run: |
           set -euo pipefail
-          tag="${{ github.event.release.tag_name || inputs.tag }}"
+          tag="${{ inputs.tag }}"
           for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli; do
+            if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
+              echo "$dir is private at $tag; skipping"
+              continue
+            fi
             pkg=$(node -p "require('./$dir/package.json').version")
             if [ "v$pkg" != "$tag" ]; then
               echo "tag $tag does not match $dir version $pkg" >&2
@@ -80,6 +93,10 @@ jobs:
           set -uo pipefail
           status=0
           for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli; do
+            if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
+              echo "$dir is private at $tag; skipping"
+              continue
+            fi
             name=$(node -p "require('./$dir/package.json').name")
             pkg=$(node -p "require('./$dir/package.json').version")
             if out=$(npm view "$name@$pkg" version 2>&1); then
