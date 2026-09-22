@@ -22,6 +22,6 @@ jq -e '.workspaces | index("packages/toolu-core") and index("tools/toolu-opencod
 # Export smoke via bun module resolution (assert return values)
 bun -e 'import { parseDecision } from "@toolu/core/decision"; const d = parseDecision({ kind: "allow" }); if (d.kind !== "allow") throw new Error("decision");'
 bun -e 'import { classifyStub } from "@toolu/opencode/plugin-stub"; const r = classifyStub("shell-out"); if (r !== "shell-out") throw new Error("classify");'
-bun -e 'import { checkConfigStub } from "@toolu/conformance/run-stub"; const r = checkConfigStub({ version: 1 }); if (r.version !== 1) throw new Error("config");'
+bun -e 'import { runProtectedFilesConformance } from "@toolu/conformance/run-stub"; const r = await runProtectedFilesConformance(); if (!r.pass) throw new Error(r.message);'
 
 echo "check-workspace: ok"

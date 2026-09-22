@@ -8,7 +8,8 @@
       "events",
       "bridge",
       "policy",
-      "config"
+      "config",
+      "runner"
     ],
     "nested": {
       "decision": [
@@ -18,12 +19,20 @@
         "__tests__"
       ],
       "bridge": [
+        "hook-map.ts",
+        "test-helpers.ts",
         "__tests__"
       ],
       "policy": [
         "__tests__"
       ],
       "config": [
+        "__tests__"
+      ],
+      "runner": [
+        "runner-read.ts",
+        "runner-exec.ts",
+        "runner-types.ts",
         "__tests__"
       ]
     },
