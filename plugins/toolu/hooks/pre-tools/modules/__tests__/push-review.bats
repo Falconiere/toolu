@@ -378,7 +378,7 @@ EOF
   [ -z "$output" ]
 }
 
-@test "push-review: code-simplifier alone (not an accepted reviewer) is denied" {
+@test "push-review: non-accepted reviewer alone is denied" {
   sha=$(current_diff_sha)
   branch=$(git rev-parse --abbrev-ref HEAD)
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
@@ -388,7 +388,7 @@ EOF
     diff_sha: $sha,
     base_branch: "development",
     reviewed_at: "2026-06-07T00:00:00Z",
-    reviewers: ["code-simplifier"],
+    reviewers: ["extra-pass"],
     findings_count: 0,
     review_round: 1,
     findings: [],
@@ -411,7 +411,7 @@ EOF
     diff_sha: $sha,
     base_branch: "development",
     reviewed_at: "2026-06-07T00:00:00Z",
-    reviewers: ["code-simplifier", "code-review"],
+    reviewers: ["extra-pass", "code-review"],
     findings_count: 0,
     review_round: 1,
     findings: [],
@@ -453,7 +453,7 @@ EOF
     diff_sha: $sha,
     base_branch: "development",
     reviewed_at: "2026-06-07T00:00:00Z",
-    reviewers: ["code-simplifier", "code-review"],
+    reviewers: ["extra-pass", "code-review"],
     findings_count: 0,
     findings: [],
     reviewed_files: ["feature.txt"]

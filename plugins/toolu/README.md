@@ -15,7 +15,7 @@ codex plugin marketplace add Falconiere/toolu
 codex plugin add toolu@toolu
 ```
 
-`toolu` has no required plugin dependencies. `code-simplifier` (from the `claude-plugins-official` marketplace) is an **optional, recommended companion** — install it only if you want the pre-simplify pass. When it is absent `toolu` simply skips it; the `push-review` gate uses the built-in `/code-review`. Adding that marketplace first lets Claude Code resolve the optional companion automatically. See the root [README](../../README.md) for the full install sequence.
+`toolu` has no required plugin dependencies. The `push-review` gate is reviewer-agnostic and uses the built-in `/code-review` (or `toolu-review:review`). See the root [README](../../README.md) for the full install sequence.
 
 ## What it provides
 

@@ -342,7 +342,7 @@ if [[ -n "$plugin_manifest" && -f "$plugin_manifest" ]] && command -v jq >/dev/n
       else empty end
   ' "$dependency_manifest" 2>/dev/null)
   if [ "$indeterminate" -eq 0 ] && [ "${#missing_plugins[@]}" -gt 0 ]; then
-    pwarn="WARN: required plugins missing — review/simplify pipelines will fail. Install:"
+    pwarn="WARN: required plugins missing — dependent workflows will fail. Install:"
     for cmd in "${missing_plugins[@]}"; do
       pwarn+="
   • $cmd"
