@@ -25,15 +25,21 @@ interface Expectation {
 const EXPECTED: readonly Expectation[] = [
   {
     dir: "tools/toolu-cli",
-    name: "toolu",
-    required: ["package.json", "assets/marketplace.json", "dist/cli.js"],
+    name: "@toolu/cli",
+    required: ["package.json", "README.md", "LICENSE", "assets/marketplace.json", "dist/cli.js"],
     forbidden: ["plugins/", "src/", "node_modules/", ".env"],
     exact: true,
   },
   {
     dir: "packages/toolu-core",
     name: "@toolu/core",
-    required: ["package.json", "src/decision/decision.ts", "src/runner/runner.ts"],
+    required: [
+      "package.json",
+      "README.md",
+      "LICENSE",
+      "src/decision/decision.ts",
+      "src/runner/runner.ts",
+    ],
     forbidden: ["plugins/", "dist/", "node_modules/", ".env"],
     exact: false,
   },
@@ -42,6 +48,8 @@ const EXPECTED: readonly Expectation[] = [
     name: "@toolu/opencode",
     required: [
       "package.json",
+      "README.md",
+      "LICENSE",
       "src/plugin/toolu.ts",
       "plugins/toolu/hooks/hooks.json",
       "plugins/rust-quality/.claude-plugin/plugin.json",

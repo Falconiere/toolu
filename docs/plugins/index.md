@@ -67,7 +67,7 @@ claude plugin marketplace add anthropics/claude-plugins-official
 
 # Adds the toolu marketplace and installs every catalog plugin, core first.
 # Already-installed plugins are reported and left alone.
-npx toolu plugins install
+npx @toolu/cli plugins install
 ```
 <!-- /install-everything:claude -->
 
@@ -76,7 +76,7 @@ npx toolu plugins install
 <!-- install-everything:codex -->
 ```bash
 # Adds the toolu marketplace and installs every catalog plugin, core first.
-npx toolu plugins install --host codex
+npx @toolu/cli plugins install --host codex
 ```
 
 After they are installed, review and trust the hooks in `/hooks` before they run.

@@ -11,7 +11,7 @@ name: npm publish
 # which is exactly how the 6.7.0 release published nothing.
 #
 # Three packages publish, in dependency order: @toolu/core, then
-# @toolu/opencode which depends on it, then the unscoped `toolu` CLI.
+# @toolu/opencode which depends on it, then the `@toolu/cli` package.
 # @toolu/conformance stays private — it is an internal test harness.
 #
 # @toolu/opencode carries the bash plugins/ tree, staged by its prepack, so an

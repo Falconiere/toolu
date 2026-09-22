@@ -1,5 +1,5 @@
 {
-  "name": "toolu",
+  "name": "@toolu/cli",
   "version": "6.8.0",
   "description": "Install toolu plugins and Codex agent profiles into Claude Code, Codex, and OpenCode.",
   "keywords": [
