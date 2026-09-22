@@ -27,9 +27,10 @@
     "knip": "knip",
     "jscpd": "jscpd --config .jscpd.json",
     "test:conventions": "bun run format:check && bun run lint:ts && bun run typecheck && bun run guardrails && bun run knip && bun run jscpd && bats tooling/__tests__/conventions-guardrails.bats tooling/__tests__/workspace-skeleton.bats",
+    "test:conformance": "bun run tools/toolu-conformance/src/cli/run.ts",
     "test:unit": "bun test packages tools",
     "test:workspace": "bash tooling/check-workspace.sh",
-    "test:ts": "bun run test:conventions && bun run test:unit && bun run test:workspace"
+    "test:ts": "bun run test:conventions && bun run test:unit && bun run test:workspace && bun run test:conformance"
   },
   "dependencies": {
     "zod": "4.1.5",
