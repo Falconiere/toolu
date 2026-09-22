@@ -106,6 +106,23 @@ async function collectOutputs(
   return { stdoutOut, stderrOut, exitCode };
 }
 
+async function settleMaybePromise(value: number | Promise<number> | undefined): Promise<void> {
+  if (value === undefined || typeof value === "number") {
+    return;
+  }
+  await value;
+}
+
+async function feedStdin(proc: Subprocess<"pipe", "pipe", "pipe">, stdin: string): Promise<void> {
+  try {
+    proc.stdin.write(stdin);
+    await settleMaybePromise(proc.stdin.flush());
+    await settleMaybePromise(proc.stdin.end());
+  } catch {
+    // Child already closed stdin / exited — runner still collects exit.
+  }
+}
+
 async function openSpawn(args: BashRunArgs): Promise<Spawned | RawProcessResult> {
   const cmd = args.argv[0];
   if (cmd === undefined || cmd.length === 0) {
@@ -123,15 +140,7 @@ async function openSpawn(args: BashRunArgs): Promise<Spawned | RawProcessResult>
       stdout: "pipe",
       stderr: "pipe",
     });
-    proc.stdin.write(args.stdin);
-    const flushed = proc.stdin.flush();
-    if (typeof flushed !== "number") {
-      await flushed;
-    }
-    const ended = proc.stdin.end();
-    if (typeof ended !== "number") {
-      await ended;
-    }
+    await feedStdin(proc, args.stdin);
     return { proc, sessionLeader: wrapped.sessionLeader };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -165,7 +174,12 @@ export async function execBashRun(args: BashRunArgs): Promise<RawProcessResult> 
   }
 
   const abort = raceAbort(args.deadlineMs, args.signal);
-  const raced = await Promise.race([opened.proc.exited.then(() => "done" as const), abort.promise]);
+  // Attach both fulfill/reject so a losing racer cannot raise unhandledRejection.
+  const exitedDone = opened.proc.exited.then(
+    () => "done" as const,
+    () => "done" as const,
+  );
+  const raced = await Promise.race([exitedDone, abort.promise]);
 
   if (raced !== "done") {
     abort.clear();
@@ -173,6 +187,7 @@ export async function execBashRun(args: BashRunArgs): Promise<RawProcessResult> 
   }
 
   abort.clear();
+  await exitedDone;
   const { stdoutOut, stderrOut, exitCode } = await collectOutputs(opened.proc, args.maxStdoutBytes);
 
   if (stdoutOut.truncated) {

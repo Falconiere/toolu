@@ -97,7 +97,7 @@ export async function runPreToolBridge(
     const decision: Decision = {
       kind: "runtime_failure",
       reason: `runPreToolBridge supports tool/pre only, got ${request.event}`,
-      code: "nonzero",
+      code: "parse",
     };
     return {
       ok: false,
