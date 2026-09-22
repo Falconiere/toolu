@@ -86,12 +86,13 @@ jobs:
 
       # Dependency order: @toolu/opencode depends on @toolu/core, and Bun rewrites
       # its workspace:* to that exact version at pack time, so core must land first.
-      # Publishing is idempotent per package: a version already on the registry is
-      # skipped, so a re-run after a partial failure resumes rather than aborting.
+      # A failure therefore ABORTS rather than continuing: publishing opencode after
+      # core failed would ship a package whose declared @toolu/core version is not on
+      # the registry. Packages already published are skipped, so a re-run resumes
+      # from the one that failed.
       - name: Publish
         run: |
           set -uo pipefail
-          status=0
           for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli; do
             if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
               echo "$dir is private at $tag; skipping"
@@ -108,9 +109,11 @@ jobs:
               exit 1
             fi
             echo "publishing $name@$pkg"
-            ( cd "$dir" && npm publish --provenance --access public ) || status=1
+            if ! ( cd "$dir" && npm publish --provenance --access public ); then
+              echo "publishing $name@$pkg failed; stopping before its dependents" >&2
+              exit 1
+            fi
           done
-          exit "$status"
         env:
           # setup-node's registry-url writes an .npmrc that reads NODE_AUTH_TOKEN.
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

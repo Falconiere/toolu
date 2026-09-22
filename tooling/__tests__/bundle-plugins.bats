@@ -48,6 +48,10 @@ setup() {
 }
 
 @test "the package's own staged copy is gitignored so it never lands in a commit" {
-  run git -C "$ROOT" check-ignore -q "$ROOT/tools/toolu-opencode/plugins"
+  # Assert on a path INSIDE the directory. The .gitignore pattern is `plugins/`,
+  # and git only matches a trailing-slash pattern against a path it can see is a
+  # directory -- so checking the bare directory passes locally, where a previous
+  # run created it, and fails on a clean CI checkout where it does not exist.
+  run git -C "$ROOT" check-ignore -q "tools/toolu-opencode/plugins/toolu/hooks/hooks.json"
   [ "$status" -eq 0 ]
 }

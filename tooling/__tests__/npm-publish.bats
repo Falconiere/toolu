@@ -95,6 +95,15 @@ setup() {
   grep -Fq 'skipping' "$WF"
 }
 
+# @toolu/opencode declares a concrete @toolu/core version. Publishing it after
+# core failed would put a package on the registry whose dependency is absent.
+@test "a failed publish aborts instead of continuing to dependent packages" {
+  grep -Fq 'stopping before its dependents' "$WF"
+  # No accumulate-and-continue: the old loop set a status flag and carried on.
+  run grep -Fq 'status=1' "$WF"
+  [ "$status" -ne 0 ]
+}
+
 @test "an npm view failure that is not a 404 fails the job instead of publishing" {
   grep -Fq "grep -q 'E404'" "$WF"
   grep -Fq 'for a reason other than the version being absent' "$WF"
