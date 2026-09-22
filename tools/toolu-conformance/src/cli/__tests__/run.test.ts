@@ -10,6 +10,9 @@ test("runConformanceMatrix passes all fixture suites (live lane skipped by defau
   const { pass, results } = await runConformanceMatrix();
   const live = results.find((r) => r.id === "live-opencode");
   expect(live?.outcome.status).toBe("skip");
+  if (live?.outcome.status === "skip") {
+    expect(live.outcome.message).toContain("TOOLU_LIVE_OPENCODE");
+  }
   expect(pass).toBe(true);
   for (const { id, outcome } of results) {
     if (id === "live-opencode") {

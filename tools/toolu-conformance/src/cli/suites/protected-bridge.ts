@@ -15,7 +15,13 @@ export type ProtectedBridgeContext = {
 export async function runProtectedEditBridge(ctx: ProtectedBridgeContext): Promise<SuiteOutcome> {
   const root = repoRoot();
   const fixturePath = join(root, "tooling/fixtures/portable-core/protected-files-pre.json");
-  const fixtureRaw: unknown = JSON.parse(readFileSync(fixturePath, "utf8"));
+  let fixtureRaw: unknown;
+  try {
+    fixtureRaw = JSON.parse(readFileSync(fixturePath, "utf8"));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { status: "fail", message: `${ctx.failPrefix}: fixture read failed: ${message}` };
+  }
 
   const request = {
     ...(typeof fixtureRaw === "object" && fixtureRaw !== null ? fixtureRaw : {}),
@@ -25,10 +31,16 @@ export async function runProtectedEditBridge(ctx: ProtectedBridgeContext): Promi
     toolInput: { file_path: ctx.envPath },
   };
 
-  const response = await runPreToolBridge(request, {
-    repoRoot: root,
-    env: bridgeEnvClaude(root),
-  });
+  let response;
+  try {
+    response = await runPreToolBridge(request, {
+      repoRoot: root,
+      env: bridgeEnvClaude(root),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { status: "fail", message: `${ctx.failPrefix}: bridge threw: ${message}` };
+  }
 
   if (!response.ok) {
     return {

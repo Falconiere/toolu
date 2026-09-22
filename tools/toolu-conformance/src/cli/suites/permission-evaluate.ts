@@ -30,7 +30,12 @@ export async function runPermissionEvaluateSuite(): Promise<SuiteOutcome> {
   });
 
   const event = editEvent(envPath);
-  await handler(event);
+  try {
+    await handler(event);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { status: "fail", message: `permission evaluate threw: ${message}` };
+  }
 
   if (event.effect === "deny") {
     return { status: "pass" };

@@ -12,7 +12,10 @@ export async function runBootstrapReadinessSuite(): Promise<SuiteOutcome> {
   const dataRoot = mkdtempSync(join(tmpBase(), "toolu-conformance-bs-data-"));
   const pluginsRoot = join(root, "plugins");
   const manifests = listPluginManifests(pluginsRoot);
-  const toolu = manifests?.find((m) => m.name === "toolu");
+  if (manifests === null) {
+    return { status: "fail", message: `cannot read plugins root: ${pluginsRoot}` };
+  }
+  const toolu = manifests.find((m) => m.name === "toolu");
   if (!toolu) {
     return { status: "fail", message: "toolu plugin manifest missing under plugins/" };
   }
