@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.7.0](https://github.com/Falconiere/toolu/compare/v6.6.0...v6.7.0) (2026-09-22)
+
+
+### Features
+
+* **release:** publish the toolu CLI to npm and fix its version drift ([#231](https://github.com/Falconiere/toolu/issues/231)) ([9dc7f7b](https://github.com/Falconiere/toolu/commit/9dc7f7b9b147a749fd641e71ad602471db32b2fe))
+
 ## [6.6.0](https://github.com/Falconiere/toolu/compare/v6.5.0...v6.6.0) (2026-09-22)
 
 
