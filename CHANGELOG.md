@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.6.0](https://github.com/Falconiere/toolu/compare/v6.5.0...v6.6.0) (2026-09-22)
+
+
+### Features
+
+* **cli:** toolu CLI — catalog, host adapters, and the plugins verbs ([#229](https://github.com/Falconiere/toolu/issues/229)) ([9250549](https://github.com/Falconiere/toolu/commit/9250549d3efbb903b2ec8c89701275678d69dd5a))
+
 ## [6.5.0](https://github.com/Falconiere/toolu/compare/v6.4.0...v6.5.0) (2026-09-22)
 
 
