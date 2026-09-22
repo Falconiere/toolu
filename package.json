@@ -1,7 +1,7 @@
 {
   "name": "toolu-workspace",
   "private": true,
-  "version": "6.7.0",
+  "version": "6.8.0",
   "description": "Engineering discipline for coding agents.",
   "type": "module",
   "license": "MIT",

@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.8.0](https://github.com/Falconiere/toolu/compare/v6.7.0...v6.8.0) (2026-09-22)
+
+
+### Features
+
+* **opencode:** publish @toolu/core and @toolu/opencode with the bash gates bundled ([#233](https://github.com/Falconiere/toolu/issues/233)) ([b852630](https://github.com/Falconiere/toolu/commit/b852630ba53e6dbf02c9f10a69cb4df82716cf34))
+
 ## [6.7.0](https://github.com/Falconiere/toolu/compare/v6.6.0...v6.7.0) (2026-09-22)
 
 
