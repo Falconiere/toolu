@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath } from "node:fs/promises";
 import { join } from "node:path";
 import { createBunBashRunner } from "../runner.ts";
 
@@ -65,7 +65,8 @@ test("runner path with spaces cwd runs echo ok", async () => {
   });
   expect(result.ok).toBe(true);
   if (result.ok) {
-    expect(result.stdout.trim()).toBe(cwd);
+    // macOS exposes TMPDIR as /var/... while pwd resolves /private/var/...
+    expect(result.stdout.trim()).toBe(await realpath(cwd));
   }
 });
 

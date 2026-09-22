@@ -29,7 +29,8 @@ setup() {
   ' _ "$BENCH_DIR" "$FIX"
   [ "$status" -eq 0 ]
   # last line is the message count; must be a positive integer
-  [ "${lines[-1]}" -gt 0 ]
+  # bash 3.2 (macOS /bin/bash) has no negative array subscripts
+  [ "${lines[$((${#lines[@]} - 1))]}" -gt 0 ]
 }
 
 # --- ARG VALIDATION: live tier needs the claude CLI -------------------------
