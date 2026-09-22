@@ -1,5 +1,6 @@
 /** Prerequisite probe for OpenCode bootstrap (#211). */
-import { createBunBashRunner } from "@toolu/core/runner";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
 export type PreflightTool = "bash" | "jq" | "git" | "bun" | "opencode";
 
@@ -17,17 +18,23 @@ export type PreflightReport = {
 
 const REQUIRED_FOR_BOOTSTRAP: PreflightTool[] = ["bash", "jq"];
 
-async function commandPresent(binary: string, env: Record<string, string>): Promise<boolean> {
-  const runner = createBunBashRunner();
-  const result = await runner.run({
-    argv: ["bash", "-lc", `command -v ${binary}`],
-    cwd: env.PWD ?? process.cwd(),
-    env,
-    stdin: "",
-    deadlineMs: 5_000,
-    maxStdoutBytes: 4_096,
-  });
-  return result.ok && result.exitCode === 0;
+const ALLOWED_BINARY = /^[A-Za-z0-9._+-]+$/;
+
+/** PATH lookup without shell — binary must be a simple tool name. */
+function commandPresent(binary: string, env: Record<string, string>): boolean {
+  if (!ALLOWED_BINARY.test(binary)) {
+    return false;
+  }
+  const pathEnv = env.PATH ?? process.env.PATH ?? "";
+  for (const dir of pathEnv.split(":")) {
+    if (dir.length === 0) {
+      continue;
+    }
+    if (existsSync(join(dir, binary))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /** Structured prerequisite report; missing bash/jq fail closed for bootstrap. */
@@ -41,15 +48,12 @@ function stringEnv(source: NodeJS.ProcessEnv): Record<string, string> {
   return out;
 }
 
-export async function runPreflight(options?: {
-  env?: Record<string, string>;
-}): Promise<PreflightReport> {
+export function runPreflight(options?: { env?: Record<string, string> }): PreflightReport {
   const env = { ...stringEnv(process.env), ...options?.env };
   const tools: PreflightTool[] = ["bash", "jq", "git", "bun", "opencode"];
-  const presence = await Promise.all(tools.map((tool) => commandPresent(tool, env)));
-  const entries: PreflightEntry[] = tools.map((tool, index) => ({
+  const entries: PreflightEntry[] = tools.map((tool) => ({
     tool,
-    present: presence[index] ?? false,
+    present: commandPresent(tool, env),
   }));
   const reasons: string[] = [];
   for (const required of REQUIRED_FOR_BOOTSTRAP) {

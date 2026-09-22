@@ -1,4 +1,7 @@
-/** Discover SessionStart / register entrypoints per plugin (#211). */
+/** Discover SessionStart / register entrypoints per plugin (#211).
+ * Prefer hooks/register.sh; fall back to toolu's hooks/session-start.sh.
+ * Missing both → null (caller skips; not every plugin registers).
+ */
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 

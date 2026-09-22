@@ -1,6 +1,5 @@
 /** Assemble registry via argv-only bash runner (#211). */
 import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
 import { createBunBashRunner, type BashRunner } from "@toolu/core/runner";
 import { opencodeDataRoot } from "../host/roots.ts";
 import type { PluginManifest } from "../inventory/types.ts";
@@ -65,7 +64,6 @@ async function runEntrypoint(
 export async function bootstrapRuntime(options: BootstrapRuntimeOptions): Promise<BootstrapResult> {
   const dataRoot = options.dataRoot ?? opencodeDataRoot({ projectRoot: options.projectRoot });
   mkdirSync(dataRoot, { recursive: true });
-  mkdirSync(dirname(dataRoot), { recursive: true });
 
   const runner = options.runner ?? createBunBashRunner();
   const env = bootstrapEnv(options, dataRoot);
@@ -77,8 +75,9 @@ export async function bootstrapRuntime(options: BootstrapRuntimeOptions): Promis
       return null;
     }
     const script = pluginBootstrapScript(plugin.pluginDir);
+    // Not every plugin has register.sh / session-start.sh — skip, don't abort.
     if (!script) {
-      return notReady(`no bootstrap entrypoint for plugin ${plugin.spec}`);
+      return runChain(index + 1);
     }
     const failure = await runEntrypoint(runner, script, options.projectRoot, env, deadlineMs);
     if (failure) {

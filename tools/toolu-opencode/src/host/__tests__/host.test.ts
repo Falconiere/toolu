@@ -31,5 +31,7 @@ test("selection path lives under project .opencode", () => {
   const project = mkdtempSync(join(tmpBase, "toolu-oc-sel-"));
   mkdirSync(join(project, ".opencode", "toolu"), { recursive: true });
   writeFileSync(opencodePluginSelectionPath(project), '{"version":1,"enabled":["toolu"]}\n');
-  expect(opencodePluginSelectionPath(project)).toContain(".opencode/toolu/plugins.json");
+  expect(opencodePluginSelectionPath(project)).toBe(
+    join(project, ".opencode", "toolu", "plugins.json"),
+  );
 });

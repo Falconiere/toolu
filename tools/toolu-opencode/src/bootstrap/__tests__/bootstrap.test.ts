@@ -83,17 +83,17 @@ test("AC-3: two project roots do not share bootstrap state", async () => {
   if (resultA.status !== "ready" || resultB.status !== "ready") {
     return;
   }
-  expect(resultA.artifacts.some((a) => a.includes("ts-quality"))).toBe(true);
-  expect(resultB.artifacts.some((a) => a.includes("ts-quality"))).toBe(true);
-  const moduleA = resultA.artifacts.find((a) => a.includes("post-tools.d"));
-  const moduleB = resultB.artifacts.find((a) => a.includes("post-tools.d"));
-  expect(moduleA).toBeDefined();
-  expect(moduleB).toBeDefined();
-  if (!moduleA || !moduleB) {
+  const postA = resultA.artifacts.find((a) => /\/post-tools\.d\/[^/]+\.sh$/.test(a));
+  const postB = resultB.artifacts.find((a) => /\/post-tools\.d\/[^/]+\.sh$/.test(a));
+  expect(postA).toBeDefined();
+  expect(postB).toBeDefined();
+  if (!postA || !postB) {
     return;
   }
-  expect(moduleA).not.toBe(moduleB);
-  expect(readFileSync(moduleA, "utf8").length).toBeGreaterThan(0);
+  expect(postA.startsWith(dataA + "/")).toBe(true);
+  expect(postB.startsWith(dataB + "/")).toBe(true);
+  expect(postA).not.toBe(postB);
+  expect(readFileSync(postA, "utf8").length).toBeGreaterThan(0);
   expect(existsSync(join(dataA, "toolu"))).toBe(true);
   expect(existsSync(join(dataB, "toolu"))).toBe(true);
 });
@@ -143,6 +143,6 @@ test("AC-1: core-only session-start and core+quality register bootstrap", async 
   });
   expect(bothResult.status).toBe("ready");
   if (bothResult.status === "ready") {
-    expect(bothResult.artifacts.some((a) => a.includes("post-tools.d"))).toBe(true);
+    expect(bothResult.artifacts.some((a) => /\/post-tools\.d\/[^/]+\.sh$/.test(a))).toBe(true);
   }
 });

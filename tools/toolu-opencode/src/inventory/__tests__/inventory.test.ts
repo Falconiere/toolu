@@ -46,7 +46,9 @@ test("enabled selection from .opencode/toolu/plugins.json", () => {
   expect(result.enabled.has("toolu")).toBe(true);
   expect(result.enabled.has("ts-quality")).toBe(false);
   const inventory = buildInventory(pluginsRoot, result.enabled);
-  expect(inventory?.find((e) => e.name === "ts-quality")?.enabled).toBe("disabled");
+  const tsEntry = inventory?.find((e) => e.name === "ts-quality");
+  expect(tsEntry).toBeDefined();
+  expect(tsEntry?.enabled).toBe("disabled");
 });
 
 test("skills false in toolu.config disables plugin", () => {

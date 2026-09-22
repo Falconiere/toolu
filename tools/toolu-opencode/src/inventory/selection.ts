@@ -13,7 +13,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { opencodePluginSelectionPath, opencodeProjectConfigPath } from "../host/roots.ts";
 import { listPluginManifests } from "./scan.ts";
 import { z } from "zod";
-import { parseTooluConfig } from "@toolu/core/config";
+import { TooluConfigSchema } from "@toolu/core/config";
 
 const SelectionFileSchema = z
   .object({
@@ -46,8 +46,11 @@ function readSkillsDisabled(projectRoot: string): Set<string> {
   }
   try {
     const raw: unknown = JSON.parse(readFileSync(configPath, "utf8"));
-    const config = parseTooluConfig(raw);
-    const skills = config.skills;
+    const parsed = TooluConfigSchema.safeParse(raw);
+    if (!parsed.success) {
+      return disabled;
+    }
+    const skills = parsed.data.skills;
     if (!skills) {
       return disabled;
     }
