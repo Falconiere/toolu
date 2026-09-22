@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.5.0](https://github.com/Falconiere/toolu/compare/v6.4.0...v6.5.0) (2026-09-22)
+
+
+### Features
+
+* **conformance:** fixture matrix for bridge bootstrap and gates ([#212](https://github.com/Falconiere/toolu/issues/212)) ([#224](https://github.com/Falconiere/toolu/issues/224)) ([1fd7e32](https://github.com/Falconiere/toolu/commit/1fd7e322d687218c8c9570872fff4f567401944e))
+* **core:** Zod contracts and argv bash bridge ([#210](https://github.com/Falconiere/toolu/issues/210)) ([#220](https://github.com/Falconiere/toolu/issues/220)) ([7c4c925](https://github.com/Falconiere/toolu/commit/7c4c925b9346c545683674c0f56395d78de07a42))
+* **opencode:** generate portable skills/agents/commands surface ([#206](https://github.com/Falconiere/toolu/issues/206)) ([#223](https://github.com/Falconiere/toolu/issues/223)) ([bf999bf](https://github.com/Falconiere/toolu/commit/bf999bfb8531fb7cd47eb16ddd8f254b1af99ddd))
+* **opencode:** host bootstrap, inventory, and registry readiness ([#211](https://github.com/Falconiere/toolu/issues/211)) ([#221](https://github.com/Falconiere/toolu/issues/221)) ([88eb746](https://github.com/Falconiere/toolu/commit/88eb7469d9b063ab60b4e68fc567f0c57d824142))
+* **opencode:** wire permission.evaluate to core bridge ([#204](https://github.com/Falconiere/toolu/issues/204)) ([#222](https://github.com/Falconiere/toolu/issues/222)) ([bff27d6](https://github.com/Falconiere/toolu/commit/bff27d6a080990fba56b3f010c0b22a7ac8e36f2))
+* **tooling:** adopt toolu-conventions TS guardrails ([#213](https://github.com/Falconiere/toolu/issues/213)) ([#218](https://github.com/Falconiere/toolu/issues/218)) ([002ff63](https://github.com/Falconiere/toolu/commit/002ff6396ba7f19ef8dfaf21d96c5aa2673fabec))
+* **tooling:** gate coverage inventory and matrix ([#209](https://github.com/Falconiere/toolu/issues/209)) ([#217](https://github.com/Falconiere/toolu/issues/217)) ([3b920b3](https://github.com/Falconiere/toolu/commit/3b920b3ef15795de1a50b38d0e68d140a6043cf8))
+* **tooling:** portable-core contracts and OpenCode capability probe ([#205](https://github.com/Falconiere/toolu/issues/205)) ([#215](https://github.com/Falconiere/toolu/issues/215)) ([eabad7e](https://github.com/Falconiere/toolu/commit/eabad7e8093920f9adf0e86ebb2b1b8babb13889))
+* **workspace:** Bun packages skeleton and CI TS lane ([#208](https://github.com/Falconiere/toolu/issues/208)) ([#219](https://github.com/Falconiere/toolu/issues/219)) ([ceac986](https://github.com/Falconiere/toolu/commit/ceac98625623979e727ea8b02f1d579307c9aa69))
+
 ## [6.4.0](https://github.com/Falconiere/toolu/compare/v6.3.1...v6.4.0) (2026-09-21)
 
 
