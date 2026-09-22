@@ -43,7 +43,8 @@ extract_region() {
   local fence
   fence="$(extract_region "$ROOT/README.md" "opencode")"
   [ -n "$fence" ]
-  ! printf '%s\n' "$fence" | grep -q 'comemory'
+  # Mentions the ban explicitly (same intent as Claude/Codex omitting comemory installs).
+  printf '%s\n' "$fence" | grep -q 'Do not install comemory via toolu'
   ! printf '%s\n' "$fence" | grep -qE '[a-z0-9-]+@toolu'
   printf '%s\n' "$fence" | grep -q 'TOOLU_REPO_ROOT'
   printf '%s\n' "$fence" | grep -q '@toolu/opencode'
