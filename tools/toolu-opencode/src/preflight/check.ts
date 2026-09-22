@@ -1,5 +1,5 @@
 /** Prerequisite probe for OpenCode bootstrap (#211). */
-import { existsSync } from "node:fs";
+import { statSync } from "node:fs";
 import { join } from "node:path";
 
 export type PreflightTool = "bash" | "jq" | "git" | "bun" | "opencode";
@@ -30,8 +30,13 @@ function commandPresent(binary: string, env: Record<string, string>): boolean {
     if (dir.length === 0) {
       continue;
     }
-    if (existsSync(join(dir, binary))) {
-      return true;
+    const candidate = join(dir, binary);
+    try {
+      if (statSync(candidate).isFile()) {
+        return true;
+      }
+    } catch {
+      continue;
     }
   }
   return false;
