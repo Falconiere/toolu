@@ -1,6 +1,6 @@
 ---
 name: review
-description: Project-tuned pre-push code review that mirrors the CI Toolu Code Review action (code-review@v8 + Jev) so first push stays clean. Reviews the branch diff for correctness, security, performance, test coverage, doc accuracy, and tight assertions, then records a clean push-review state. Use before pushing a feature branch, when asked to "review before push", or when pr-babysit needs a reviewer. Explicit — does NOT auto-fire on edits.
+description: Pre-push review mirroring CI code-review@v8 (+ Jev) so first push stays clean. Reviews correctness, security, performance, test coverage, doc accuracy, and tight assertions, then records push-review state. Use before pushing a feature branch, when asked to review before push, or when pr-babysit needs a reviewer. Explicit — does NOT auto-fire on edits.
 ---
 
 # toolu-review:review

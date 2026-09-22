@@ -79,9 +79,9 @@ the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux.
 OpenCode support is **git-clone + Bun** only (no npm package yet). It wires
 `permission.evaluate` to the same bash gate engine for the coverage proven in
 [#212](https://github.com/Falconiere/toolu/issues/212) — not the full Claude/Codex
-hook surface. Prerequisites, frozen install, project `.opencode/` layout, gate
-smoke, update, and uninstall: **[docs/opencode.md](docs/opencode.md)**. Claude
-Code and Codex installs below are unchanged.
+hook surface. Paste the **OpenCode** prompt under [Install everything](#install-everything),
+or follow **[docs/opencode.md](docs/opencode.md)** for prerequisites, layout, smoke,
+update, and uninstall. Claude Code and Codex marketplace installs below are unchanged.
 
 ### Install everything
 
@@ -134,6 +134,28 @@ codex plugin add toolu-review@toolu
 codex plugin add ts-quality@toolu
 ```
 <!-- /install-everything:codex -->
+
+#### OpenCode
+
+OpenCode has no marketplace install yet — paste this prompt so the agent follows the git-clone + Bun wiring in [docs/opencode.md](docs/opencode.md). Phase-1 enables the `toolu` bash plugin only.
+
+<!-- install-everything:opencode -->
+```text
+Install toolu for OpenCode in this project (git-clone + Bun; no marketplace). Skip steps already done.
+
+1. Clone https://github.com/Falconiere/toolu.git and check out the latest release tag (vX.Y.Z). In that clone run: bun install --frozen-lockfile
+2. export TOOLU_REPO_ROOT=/absolute/path/to/that/clone  (TOOLU_ROOT is an alias)
+3. In THIS project create:
+   - .opencode/package.json with dependencies "@toolu/opencode": "file:$TOOLU_REPO_ROOT/tools/toolu-opencode", "@toolu/core": "file:$TOOLU_REPO_ROOT/packages/toolu-core", "@opencode/plugin": "2.0.12" (adjust file: paths to your layout)
+   - .opencode/plugins/toolu.ts containing: export { default } from "@toolu/opencode/plugin";
+   - .opencode/toolu/plugins.json containing: { "version": 1, "enabled": ["toolu"] }
+   - optional .opencode/toolu.config.json for gates (same schema as other hosts)
+4. In opencode.json (or .opencode/opencode.json), set skills.paths to include $TOOLU_REPO_ROOT/tools/toolu-opencode/generated/skills so the generated surface is discoverable
+5. Restart OpenCode. Smoke-check: bun run test:conformance in the toolu clone, or attempt a protected .env edit with protectedFiles mode block and confirm deny before bytes change
+
+Do not install comemory via toolu. Full detail: docs/opencode.md
+```
+<!-- /install-everything:opencode -->
 
 > **Note** — `pr-babysit`, `python-quality`, `rust-quality`, and `ts-quality` depend on `toolu`. The other catalog plugins are standalone. `code-simplifier` is an **optional, recommended companion**, not required — install it only if you want the pre-simplify pass; when absent, `toolu` simply skips it. The Claude prompt adds `anthropics/claude-plugins-official` first so Claude Code can resolve that companion. The prompt does not install `code-simplifier`. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
 

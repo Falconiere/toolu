@@ -23,6 +23,8 @@ Per-gate tool dependencies (Rust, TypeScript, Python linters, etc.) are unchange
 
 ## First install (git clone)
 
+A pasteable agent prompt lives in the root [README § Install everything → OpenCode](../README.md#install-everything) (`<!-- install-everything:opencode -->`) and is mirrored in [`docs/plugins/index.md`](plugins/index.md). The steps below are the canonical detail that prompt summarizes.
+
 Install from a **release tag**, not `main`, unless you are developing toolu itself.
 
 ```bash
