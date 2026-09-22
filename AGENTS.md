@@ -49,7 +49,7 @@ Any Conventional Commit on `main` counts, any path. `feat` / `fix` / `feat!` bum
 |----------|------|------|
 | `tests.yml` | push/PR to `main`, or a manual run. Skipped when the diff is only release version files and `CHANGELOG.md` | shellcheck, bats, colocated-test layout, deterministic benchmarks, context budget |
 | `release-please.yml` | push to `main` | Release PR; on merge, tag and GitHub Release |
-| `toolu-review.yml` | PR opened/synchronize, except a release-version-and-changelog-only diff | CI review bot |
+| `toolu-review.yml` | PR opened/synchronize, except a release-version-and-changelog-only diff | `falconiere/toolu-ghactions/code-review@v8` (Jev on: `JEV_ENABLED` + `JEV_MODEL_ID: typesafe/jev-1.13`) |
 
 A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context budget caps the Session Protocol, per-language docs, and skill descriptions.
 

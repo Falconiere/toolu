@@ -80,7 +80,7 @@
     {
       "name": "toolu-review",
       "source": "./plugins/toolu-review",
-      "description": "Project-tuned pre-push code review mirroring the CI review bot's checklist (correctness, security, perf, test coverage, doc accuracy), writing the toolu push-review state so the gate passes. Standalone.",
+      "description": "Project-tuned pre-push code review mirroring CI falconiere/toolu-ghactions/code-review@v8 (Jev-enabled), writing the toolu push-review state so the gate passes. Standalone.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["toolu-review", "push-review", "quality", "skills"],

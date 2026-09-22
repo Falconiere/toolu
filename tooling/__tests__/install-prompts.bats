@@ -16,7 +16,7 @@ extract_region() {
 
 @test "install-everything fences match in the README and the plugin index" {
   local host readme docs
-  for host in claude codex; do
+  for host in claude codex opencode; do
     readme="$(extract_region "$ROOT/README.md" "$host")"
     docs="$(extract_region "$ROOT/docs/plugins/index.md" "$host")"
     [ -n "$readme" ]
@@ -37,4 +37,17 @@ extract_region() {
     first="$(printf '%s\n' "$fence" | grep -oE '[a-z0-9-]+@toolu' | head -n 1)"
     [ "$first" = "toolu@toolu" ]
   done
+}
+
+@test "install-everything opencode fence is git-clone wiring, not marketplace plugins" {
+  local fence
+  fence="$(extract_region "$ROOT/README.md" "opencode")"
+  [ -n "$fence" ]
+  # Mentions the ban explicitly (same intent as Claude/Codex omitting comemory installs).
+  printf '%s\n' "$fence" | grep -q 'Do not install comemory via toolu'
+  ! printf '%s\n' "$fence" | grep -qE '[a-z0-9-]+@toolu'
+  printf '%s\n' "$fence" | grep -q 'TOOLU_REPO_ROOT'
+  printf '%s\n' "$fence" | grep -q '@toolu/opencode'
+  printf '%s\n' "$fence" | grep -q 'bun install --frozen-lockfile'
+  printf '%s\n' "$fence" | grep -q 'tools/toolu-opencode/generated/skills'
 }

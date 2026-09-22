@@ -179,17 +179,19 @@ Read from the result (contract: `references/helper.md`):
 
 ### What the helper implements (so you can read the result correctly)
 
-**CI_REVIEWER login set.** The CI reviewer's login is API-surface-dependent: REST
-(`issues/comments`, `user.login`) returns the `[bot]` suffix, GraphQL
-(`reviewThreads`, `author.login`) drops it. The helper treats ALL of
+**CI_REVIEWER login set.** This repo's Toolu Code Review action
+(`falconiere/toolu-ghactions/code-review@v8`) posts as `github-actions[bot]`
+(REST) / `github-actions` (GraphQL). The helper still treats ALL of
 `{github-actions, github-actions[bot], claude, claude[bot]}` as the CI reviewer —
-BOTH the suffixed (REST) and no-suffix (GraphQL) form of each app — and NEVER
-identifies it by a generic `[bot]` substring test (that misclassifies the GraphQL
+BOTH the suffixed (REST) and no-suffix (GraphQL) form of each app — so legacy
+`claude[bot]` comments remain classified correctly. It NEVER identifies the
+reviewer by a generic `[bot]` substring test (that misclassifies the GraphQL
 `github-actions`/`claude` form as human). `authorClass: ci_reviewer` in the result
 is that set; non-CI bots are excluded from `actionable[]` altogether.
 
-**CI review-bot verdict (deterministic — never eyeballed).** The CI review posts ONE
-`claude[bot]` (or `github-actions[bot]`) issue comment that it **edits in place** —
+**CI review-bot verdict (deterministic — never eyeballed).** The CI Toolu Code Review
+action (`falconiere/toolu-ghactions/code-review@v8`, with Jev assessment when enabled)
+posts ONE `github-actions[bot]` issue comment that it **edits in place** —
 its header flips from "PR Review in Progress" to "Code Review —" and a
 `review / review` check can be `SUCCESS` *with* unaddressed `low`/nit findings
 still listed. Relying on the check conclusion alone misses them (this is the bug

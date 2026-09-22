@@ -1,12 +1,13 @@
 ---
 name: review
-description: Project-tuned pre-push code review that mirrors the CI review bot's checklist so the bot finds nothing on first push. Reviews the branch diff for correctness, security, performance, test coverage, doc accuracy, and tight assertions, then records a clean push-review state. Use before pushing a feature branch, when asked to "review before push", or when pr-babysit needs a reviewer. Explicit — does NOT auto-fire on edits.
+description: Pre-push review mirroring CI code-review@v8 (+ Jev) so first push stays clean. Reviews correctness, security, performance, test coverage, doc accuracy, and tight assertions, then records push-review state. Use before pushing a feature branch, when asked to review before push, or when pr-babysit needs a reviewer. Explicit — does NOT auto-fire on edits.
 ---
 
 # toolu-review:review
 
-A pre-push reviewer tuned to what this repo's CI review bot (the `claude[bot]`
-verdict comment) flags — run it locally so the bot's verdict is clean on the
+A pre-push reviewer tuned to what this repo's CI Toolu Code Review action
+(`falconiere/toolu-ghactions/code-review@v8`, Jev-enabled; posts as
+`github-actions[bot]`) flags — run it locally so the verdict is clean on the
 first push instead of bouncing low/nit findings back as rework.
 
 ## What it reviews
@@ -27,6 +28,8 @@ Review `git diff <base>...HEAD` against these dimensions. Every finding blocks
    (`*/statusline/statusline.sh`, not `*/statusline.sh`).
 7. **In-session migration WARNs** — a breaking change (moved path, removed symlink)
    must surface an actionable in-session hint, not a silent failure later.
+8. **Convention adherence** — follow `AGENTS.md` / related convention files the CI
+   action reads from the base ref (same bar as `code-review@v8`).
 
 ## How to run
 

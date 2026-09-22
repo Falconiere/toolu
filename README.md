@@ -79,9 +79,9 @@ the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux.
 OpenCode support is **git-clone + Bun** only (no npm package yet). It wires
 `permission.evaluate` to the same bash gate engine for the coverage proven in
 [#212](https://github.com/Falconiere/toolu/issues/212) — not the full Claude/Codex
-hook surface. Prerequisites, frozen install, project `.opencode/` layout, gate
-smoke, update, and uninstall: **[docs/opencode.md](docs/opencode.md)**. Claude
-Code and Codex installs below are unchanged.
+hook surface. Paste the **OpenCode** prompt under [Install everything](#install-everything),
+or follow **[docs/opencode.md](docs/opencode.md)** for prerequisites, layout, smoke,
+update, and uninstall. Claude Code and Codex marketplace installs below are unchanged.
 
 ### Install everything
 
@@ -135,6 +135,28 @@ codex plugin add ts-quality@toolu
 ```
 <!-- /install-everything:codex -->
 
+#### OpenCode
+
+OpenCode has no marketplace install yet — paste this prompt so the agent follows the git-clone + Bun wiring in [docs/opencode.md](docs/opencode.md). Phase-1 enables the `toolu` bash plugin only.
+
+<!-- install-everything:opencode -->
+```text
+Install toolu for OpenCode in this project (git-clone + Bun; no marketplace). Skip steps already done.
+
+1. Clone https://github.com/Falconiere/toolu.git and check out the latest release tag (vX.Y.Z). In that clone run: bun install --frozen-lockfile
+2. export TOOLU_REPO_ROOT=/absolute/path/to/that/clone  (TOOLU_ROOT is an alias)
+3. In THIS project create:
+   - .opencode/package.json with dependencies "@toolu/opencode": "file:$TOOLU_REPO_ROOT/tools/toolu-opencode", "@toolu/core": "file:$TOOLU_REPO_ROOT/packages/toolu-core", "@opencode/plugin": "2.0.12" (adjust file: paths to your layout)
+   - .opencode/plugins/toolu.ts containing: export { default } from "@toolu/opencode/plugin";
+   - .opencode/toolu/plugins.json containing: { "version": 1, "enabled": ["toolu"] }
+   - optional .opencode/toolu.config.json for gates (same schema as other hosts)
+4. In opencode.json (or .opencode/opencode.json), set skills.paths to include $TOOLU_REPO_ROOT/tools/toolu-opencode/generated/skills so the generated surface is discoverable
+5. Restart OpenCode. Smoke-check: bun run test:conformance in the toolu clone, or attempt a protected .env edit with protectedFiles mode block and confirm deny before bytes change
+
+Do not install comemory via toolu. Full detail: docs/opencode.md
+```
+<!-- /install-everything:opencode -->
+
 > **Note** — `pr-babysit`, `python-quality`, `rust-quality`, and `ts-quality` depend on `toolu`. The other catalog plugins are standalone. `code-simplifier` is an **optional, recommended companion**, not required — install it only if you want the pre-simplify pass; when absent, `toolu` simply skips it. The Claude prompt adds `anthropics/claude-plugins-official` first so Claude Code can resolve that companion. The prompt does not install `code-simplifier`. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
 
 > **Deprecation:** comemory host integration now lives in
@@ -171,24 +193,24 @@ in this release. Custom agent profiles are installed locally under
 ## What's inside
 
 Thirteen plugins, one marketplace. Every plugin ships synchronized Claude and
-Codex manifests at the repository version (`4.10.0` here). Install the core
+Codex manifests at the repository version (`6.5.0` here). Install the core
 alone, or add the domain plugins.
 
 | Group | Plugin | Version | What it does |
 |--------|--------|:-------:|--------------|
-| Core | **`toolu`** | `4.10.0` | Registry-driven hook engine, adaptive delivery workflow, commit workflows, model routing, push-review gate, and custom-agent templates. |
-| Quality gate | **`rust-quality`** | `4.10.0` | Rust post-edit checks — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests. |
-| Quality gate | **`ts-quality`** | `4.10.0` | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
-| Quality gate | **`python-quality`** | `4.10.0` | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
-| Code intel | **`ast-grep`** | `4.10.0` | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
-| Browser | **`agent-browser`** | `4.10.0` | Token-lean browser automation through accessibility-tree snapshots and stable element references. |
-| Knowledge | **`context7`** | `4.10.0` | Live library documentation and code examples through Context7. |
-| Knowledge | **`exa-search`** | `4.10.0` | Web, code, URL search, and deep research through Exa. |
-| Knowledge | **`jev`** | `5.3.0` | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores a script can branch on. |
-| Workflow | **`jira`** | `4.10.0` | Jira Cloud and Server/DC search plus safe issue workflow operations. |
-| Workflow | **`toolu-review`** | `4.10.0` | Pre-push review matching the CI review bot and writing review attestations. |
-| Workflow | **`pr-babysit`** | `4.10.0` | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
-| Status | **`statusline`** | `4.10.0` | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
+| Core | **`toolu`** | `6.5.0` | Registry-driven hook engine, adaptive delivery workflow, commit workflows, model routing, push-review gate, and custom-agent templates. |
+| Quality gate | **`rust-quality`** | `6.5.0` | Rust post-edit checks — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests. |
+| Quality gate | **`ts-quality`** | `6.5.0` | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
+| Quality gate | **`python-quality`** | `6.5.0` | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
+| Code intel | **`ast-grep`** | `6.5.0` | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
+| Browser | **`agent-browser`** | `6.5.0` | Token-lean browser automation through accessibility-tree snapshots and stable element references. |
+| Knowledge | **`context7`** | `6.5.0` | Live library documentation and code examples through Context7. |
+| Knowledge | **`exa-search`** | `6.5.0` | Web, code, URL search, and deep research through Exa. |
+| Knowledge | **`jev`** | `6.5.0` | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores a script can branch on. |
+| Workflow | **`jira`** | `6.5.0` | Jira Cloud and Server/DC search plus safe issue workflow operations. |
+| Workflow | **`toolu-review`** | `6.5.0` | Pre-push review matching CI `code-review@v8` (Jev-enabled) and writing review attestations. |
+| Workflow | **`pr-babysit`** | `6.5.0` | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
+| Status | **`statusline`** | `6.5.0` | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
 
 Beyond the plugins, the core (`toolu`) also ships:
 
