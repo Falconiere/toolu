@@ -1,0 +1,81 @@
+name: npm publish
+
+# Publishes the `toolu` CLI to npm when a GitHub Release is published.
+#
+# Decoupled from release-please.yml on purpose: that workflow's job is to cut the
+# tag and the Release. This one reacts to the Release existing, so a publish can
+# be re-run from the Actions tab without re-running the release machinery.
+#
+# Only tools/toolu-cli publishes today. @toolu/core and @toolu/opencode stay
+# private until the OpenCode wiring that consumes them exists — publishing a name
+# is permanent, and nothing would be able to use them yet.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish (vX.Y.Z)
+        required: true
+
+permissions:
+  contents: read
+  id-token: write # npm provenance attestation
+
+jobs:
+  publish-cli:
+    name: publish toolu
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout the released tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check the tag matches the package version
+        working-directory: tools/toolu-cli
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.release.tag_name || inputs.tag }}"
+          pkg=$(node -p "require('./package.json').version")
+          if [ "v$pkg" != "$tag" ]; then
+            echo "tag $tag does not match tools/toolu-cli version $pkg" >&2
+            exit 1
+          fi
+          echo "publishing toolu@$pkg"
+
+      - name: Skip when the version is already on the registry
+        id: existing
+        working-directory: tools/toolu-cli
+        run: |
+          set -uo pipefail
+          pkg=$(node -p "require('./package.json').version")
+          if npm view "toolu@$pkg" version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "toolu@$pkg is already published; nothing to do"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish
+        if: steps.existing.outputs.published == 'false'
+        working-directory: tools/toolu-cli
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

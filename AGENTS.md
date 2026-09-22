@@ -35,13 +35,15 @@ plugins/<name>/
   settings/                    # core only
 ```
 
-Root `package.json`, Bun workspace packages (`packages/toolu-core`, `tools/toolu-opencode`, `tools/toolu-conformance`), and every `plugin.json` share one `vX.Y.Z`, matching the git tag. A plugin is re-extracted only when its `plugin.json` version changes, so a release re-extracts all of them.
+Root `package.json`, Bun workspace packages (`packages/toolu-core`, `tools/toolu-opencode`, `tools/toolu-conformance`, `tools/toolu-cli`), and every `plugin.json` share one `vX.Y.Z`, matching the git tag. A plugin is re-extracted only when its `plugin.json` version changes, so a release re-extracts all of them.
 
 ## Releases
 
 release-please (`.github/workflows/release-please.yml`). No manual bumps or tags.
 
 Any Conventional Commit on `main` counts, any path. `feat` / `fix` / `feat!` bump minor / patch / major. `chore` / `docs` / `ci` / `refactor` bump nothing. Merge the Release PR to publish: it bumps root `package.json`, Bun workspace packages under `packages/` and `tools/`, and every `plugin.json`, updates `CHANGELOG.md`, tags `vX.Y.Z` with no component prefix, and opens the GitHub Release. `tooling/release.sh` is a deprecated escape hatch. OpenCode install: `docs/opencode.md`.
+
+**npm.** `npm-publish.yml` reacts to the published GitHub Release and publishes **only** `tools/toolu-cli` as the unscoped `toolu`, with provenance via OIDC and `secrets.NPM_TOKEN`. `@toolu/core`, `@toolu/opencode` and `@toolu/conformance` stay `private` until something consumes them. The tarball's file list is gated by `bun run test:pack`.
 
 ## CI
 

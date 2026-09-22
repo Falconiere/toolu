@@ -31,7 +31,8 @@
     "test:conformance": "bun run tools/toolu-conformance/src/cli/run.ts",
     "test:unit": "bun test packages tools",
     "test:workspace": "bash tooling/check-workspace.sh",
-    "test:ts": "bun run test:conventions && bun run test:unit && bun run test:workspace && bun run test:conformance"
+    "test:ts": "bun run test:conventions && bun run test:unit && bun run test:workspace && bun run test:pack && bun run test:conformance",
+    "test:pack": "bun run tooling/src/pack-inventory.ts && bats tooling/__tests__/npm-publish.bats"
   },
   "dependencies": {
     "zod": "4.1.5",

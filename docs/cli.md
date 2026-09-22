@@ -7,6 +7,23 @@ yet — see the tracking PR. Until then the pasted install prompts in the
 
 Design: `docs/toolu/specs/2026-09-22-npx-toolu-cli-design.md` (untracked; `docs/toolu/` is gitignored).
 
+## Install
+
+Published to npm as the unscoped `toolu` when a GitHub Release is published:
+
+```bash
+npx toolu plugins list
+```
+
+Only this package publishes. `@toolu/core` and `@toolu/opencode` remain private
+until the OpenCode wiring that would consume them exists — an npm name is
+permanent, and nothing could use them yet.
+
+The tarball is three files: `package.json`, `dist/cli.js`, and
+`assets/marketplace.json`. The 3.2 MB bash `plugins/` tree is deliberately
+excluded, because Claude Code and Codex fetch plugin content through their own
+host CLIs. `bun run test:pack` fails if anything else appears in it.
+
 ## Grammar
 
 Resource noun, then verb:

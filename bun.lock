@@ -22,7 +22,7 @@
     },
     "packages/toolu-core": {
       "name": "@toolu/core",
-      "version": "6.5.0",
+      "version": "6.6.0",
       "dependencies": {
         "zod": "4.1.5",
       },
@@ -33,7 +33,7 @@
     },
     "tools/toolu-cli": {
       "name": "toolu",
-      "version": "6.5.0",
+      "version": "6.6.0",
       "bin": {
         "toolu": "dist/cli.js",
       },
@@ -43,7 +43,7 @@
     },
     "tools/toolu-conformance": {
       "name": "@toolu/conformance",
-      "version": "6.5.0",
+      "version": "6.6.0",
       "bin": {
         "toolu-conformance": "./src/cli/run.ts",
       },
@@ -54,7 +54,7 @@
     },
     "tools/toolu-opencode": {
       "name": "@toolu/opencode",
-      "version": "6.5.0",
+      "version": "6.6.0",
       "dependencies": {
         "@opencode/plugin": "2.0.12",
         "@toolu/core": "workspace:*",
