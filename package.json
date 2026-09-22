@@ -11,6 +11,8 @@
     "quality-gate"
   ],
   "scripts": {
+    "generate:opencode-surface": "bun run tools/toolu-opencode/scripts/generate-surface.ts",
+    "check:opencode-surface": "bun run tools/toolu-opencode/scripts/check-surface-drift.ts",
     "lint:shell": "bash tooling/shellcheck.sh",
     "test:shell": "bash tooling/bats-run.sh",
     "test:portable-core": "bash tooling/check-portable-core-doc.sh && PORTABLE_CORE_PROBE_MODE=fixture bun run tooling/src/opencode-capability-probe.ts && bats tooling/__tests__/check-portable-core-doc.bats tooling/__tests__/opencode-capability-probe.bats",

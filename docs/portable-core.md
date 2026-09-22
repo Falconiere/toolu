@@ -52,6 +52,17 @@ TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, 
 | `@toolu/opencode/adapter/permission-map` | OpenCode permission event ↔ bridge request; decision → effect |
 | `@toolu/opencode/adapter/evaluate` | `createPermissionEvaluateHandler` (real `runPreToolBridge`) |
 
+### OpenCode surface generator ([#206](https://github.com/Falconiere/toolu/issues/206))
+
+| Artifact | Role |
+|----------|------|
+| `tools/toolu-opencode/scripts/generate-surface.ts` | Deterministic skills/agents/commands mirror under `tools/toolu-opencode/generated/` |
+| `docs/portable-frontmatter.md` | Frontmatter preserve/map/reject table |
+| `bun run generate:opencode-surface` | Regenerate committed tree |
+| `bun run check:opencode-surface` | Fail if sources drift without regen |
+
+Phase 1 enables the `toolu` plugin only (override with `--enabled`); `${CLAUDE_PLUGIN_ROOT}` becomes `${TOOLU_PLUGIN_ROOT}` in bodies.
+
 ## Zod boundary rules
 
 | Envelope | Unknown fields | Missing required | Bad version |
