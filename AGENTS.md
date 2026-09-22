@@ -67,7 +67,7 @@ A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context b
 | `plugins/pr-babysit/scripts/babysit-tick.sh` | Babysit tick. Writes go through `reply-thread.sh`, `resolve-thread.sh`, `record.sh` |
 | `plugins/*/hooks/register.sh` | SessionStart registry sync |
 | `plugins/*/hooks/hooks.json` | Claude Code hook routing |
-| `tools/toolu-cli/src/cli.ts` | `npx @toolu/cli` entry: parses argv, resolves the host, dispatches a noun |
+| `tools/toolu-cli/src/cli.ts` | CLI entry (`npx @toolu/cli …`, or `toolu …` once installed): parses argv, resolves the host, dispatches a noun |
 | `tools/toolu-cli/src/plugins/install.ts` | Dependency-ordered install; core failure stops dependents, others continue |
 | `tools/toolu-cli/src/host/` | Per-host adapters normalizing `plugin list --json` into one shape |
 | `tooling/src/pack-inventory.ts` | Published-tarball file-list gate |
