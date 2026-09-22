@@ -1,5 +1,6 @@
 /** OpenCode plugin entry — bootstrap + permission.evaluate bridge (#204). */
 import { Plugin } from "@opencode/plugin";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { bootstrapRuntime } from "../bootstrap/runtime.ts";
 import { runPreflight } from "../preflight/check.ts";
@@ -14,6 +15,16 @@ function readNonEmptyString(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
+/**
+ * The published package carries the bash plugins/ tree beside its sources, so an
+ * npm install needs no environment variable. Absent that copy — a contributor
+ * running from a clone — this returns undefined and the explicit sources win.
+ */
+function bundledRepoRoot(): string | undefined {
+  const packageRoot = join(import.meta.dir, "../..");
+  return existsSync(join(packageRoot, "plugins")) ? packageRoot : undefined;
+}
+
 function repoRootFromOptions(
   options: Readonly<Record<string, unknown>>,
   env: Record<string, string>,
@@ -21,7 +32,8 @@ function repoRootFromOptions(
   return (
     readNonEmptyString(options.repoRoot) ??
     readNonEmptyString(env.TOOLU_REPO_ROOT) ??
-    readNonEmptyString(env.TOOLU_ROOT)
+    readNonEmptyString(env.TOOLU_ROOT) ??
+    bundledRepoRoot()
   );
 }
 
@@ -114,7 +126,7 @@ export default Plugin.define({
       await ctx.permission.hook(
         "evaluate",
         createDenyAllPermissionHandler(
-          "toolu: set plugin option repoRoot or TOOLU_REPO_ROOT for gate enforcement",
+          "toolu: no bundled plugins/ tree; set plugin option repoRoot or TOOLU_REPO_ROOT",
         ),
       );
       return;

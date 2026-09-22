@@ -1,38 +1,50 @@
 name: npm publish
 
-# Publishes the `toolu` CLI to npm when a GitHub Release is published.
+# Publishes the npm packages for a released tag.
 #
-# Decoupled from release-please.yml on purpose: that workflow's job is to cut the
-# tag and the Release. This one reacts to the Release existing, so a publish can
-# be re-run from the Actions tab without re-running the release machinery.
+# Called by release-please.yml in the same run that cuts the release, and
+# separately runnable from the Actions tab to retry a tag.
 #
-# Only tools/toolu-cli publishes today. @toolu/core and @toolu/opencode stay
-# private until the OpenCode wiring that consumes them exists — publishing a name
-# is permanent, and nothing would be able to use them yet.
+# It is NOT triggered by `release: published`. release-please creates the Release
+# with the default GITHUB_TOKEN, and GitHub does not start a workflow run from an
+# event created by that token -- a `release:` trigger here is silently ignored,
+# which is exactly how the 6.7.0 release published nothing.
+#
+# Three packages publish, in dependency order: @toolu/core, then
+# @toolu/opencode which depends on it, then the unscoped `toolu` CLI.
+# @toolu/conformance stays private — it is an internal test harness.
+#
+# @toolu/opencode carries the bash plugins/ tree, staged by its prepack, so an
+# `opencode plugin add @toolu/opencode` needs no clone and no TOOLU_REPO_ROOT.
 
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag to publish (vX.Y.Z)
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       tag:
         description: Release tag to publish (vX.Y.Z)
         required: true
+        type: string
 
 permissions:
   contents: read
   id-token: write # npm provenance attestation
 
 jobs:
-  publish-cli:
-    name: publish toolu
+  publish:
+    name: publish npm packages
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout the released tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          ref: ${{ inputs.tag }}
 
       # Node and npm pins match Falconiere/toolu-conventions, which already
       # publishes @toolu/create with this same NPM_TOKEN. Provenance needs
@@ -55,45 +67,53 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Check the tag matches the package version
-        working-directory: tools/toolu-cli
+      - name: Check the tag matches every package version
         run: |
           set -euo pipefail
-          tag="${{ github.event.release.tag_name || inputs.tag }}"
-          pkg=$(node -p "require('./package.json').version")
-          if [ "v$pkg" != "$tag" ]; then
-            echo "tag $tag does not match tools/toolu-cli version $pkg" >&2
-            exit 1
-          fi
-          echo "publishing toolu@$pkg"
+          tag="${{ inputs.tag }}"
+          for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli; do
+            if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
+              echo "$dir is private at $tag; skipping"
+              continue
+            fi
+            pkg=$(node -p "require('./$dir/package.json').version")
+            if [ "v$pkg" != "$tag" ]; then
+              echo "tag $tag does not match $dir version $pkg" >&2
+              exit 1
+            fi
+          done
+          echo "publishing $tag"
 
-      # `npm view` failing is the expected path for a version that is not yet
-      # published, so -e is deliberately off. But a lookup that fails for any
-      # OTHER reason -- network, auth, registry outage -- must not be read as
-      # "not published": that would turn an unknown into a publish attempt.
-      # Only a genuine E404 means absent; anything else fails the job.
-      - name: Skip when the version is already on the registry
-        id: existing
-        working-directory: tools/toolu-cli
+      # Dependency order: @toolu/opencode depends on @toolu/core, and Bun rewrites
+      # its workspace:* to that exact version at pack time, so core must land first.
+      # A failure therefore ABORTS rather than continuing: publishing opencode after
+      # core failed would ship a package whose declared @toolu/core version is not on
+      # the registry. Packages already published are skipped, so a re-run resumes
+      # from the one that failed.
+      - name: Publish
         run: |
           set -uo pipefail
-          pkg=$(node -p "require('./package.json').version")
-          if out=$(npm view "toolu@$pkg" version 2>&1); then
-            echo "published=true" >> "$GITHUB_OUTPUT"
-            echo "toolu@$pkg is already published ($out); nothing to do"
-          elif printf '%s' "$out" | grep -q 'E404'; then
-            echo "published=false" >> "$GITHUB_OUTPUT"
-            echo "toolu@$pkg is not on the registry yet"
-          else
-            echo "npm view failed for a reason other than the version being absent:" >&2
-            printf '%s\n' "$out" >&2
-            exit 1
-          fi
-
-      - name: Publish
-        if: steps.existing.outputs.published == 'false'
-        working-directory: tools/toolu-cli
-        run: npm publish --provenance --access public
+          for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli; do
+            if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
+              echo "$dir is private at $tag; skipping"
+              continue
+            fi
+            name=$(node -p "require('./$dir/package.json').name")
+            pkg=$(node -p "require('./$dir/package.json').version")
+            if out=$(npm view "$name@$pkg" version 2>&1); then
+              echo "$name@$pkg is already published ($out); skipping"
+              continue
+            elif ! printf '%s' "$out" | grep -q 'E404'; then
+              echo "npm view failed for $name for a reason other than the version being absent:" >&2
+              printf '%s\n' "$out" >&2
+              exit 1
+            fi
+            echo "publishing $name@$pkg"
+            if ! ( cd "$dir" && npm publish --provenance --access public ); then
+              echo "publishing $name@$pkg failed; stopping before its dependents" >&2
+              exit 1
+            fi
+          done
         env:
           # setup-node's registry-url writes an .npmrc that reads NODE_AUTH_TOKEN.
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -24,8 +24,29 @@ setup() {
   done
 }
 
-@test "the publish workflow triggers on a published release" {
-  grep -Fq 'types: [published]' "$WF"
+# release-please creates the Release with the default GITHUB_TOKEN, and GitHub
+# does not start a workflow run from an event created by that token. A
+# `release: published` trigger here is silently ignored -- that is exactly why
+# the 6.7.0 release published nothing.
+@test "the publish workflow is chained from release-please, not triggered by the release event" {
+  RP="$ROOT/.github/workflows/release-please.yml"
+  grep -Fq 'uses: ./.github/workflows/npm-publish.yml' "$RP"
+  grep -Fq "needs.release-please.outputs.releases_created == 'true'" "$RP"
+  grep -Fq 'workflow_call:' "$WF"
+  # The trigger that cannot fire must not come back.
+  run grep -Fq 'types: [published]' "$WF"
+  [ "$status" -ne 0 ]
+}
+
+@test "the publish workflow stays runnable by hand for a given tag" {
+  grep -Fq 'workflow_dispatch:' "$WF"
+  grep -Fq 'ref: ${{ inputs.tag }}' "$WF"
+}
+
+# A tag cut before a package became publishable must still be retryable.
+@test "private packages are skipped rather than failing the run" {
+  run bash -c "grep -c 'is private at' '$WF'"
+  [ "$output" = "2" ]
 }
 
 @test "the publish workflow grants id-token for provenance and publishes with it" {
@@ -47,30 +68,45 @@ setup() {
   [ "$status" -ne 0 ]
 }
 
-@test "the publish workflow refuses a tag that disagrees with the package version" {
-  grep -Fq 'does not match tools/toolu-cli version' "$WF"
+@test "the publish workflow refuses a tag that disagrees with any package version" {
+  grep -Fq 'does not match $dir version' "$WF"
 }
 
-@test "only the CLI is published; the library packages stay private" {
-  # Every working-directory in the workflow must be the CLI's -- a second
-  # package directory appearing here is exactly the regression to catch.
-  run bash -c "grep -E '^\s+working-directory:' '$WF' | sed 's/.*working-directory: *//' | sort -u"
-  [ "$status" -eq 0 ]
-  [ "$output" = "tools/toolu-cli" ]
-
-  # And the publish step itself runs there, rather than merely some step doing so.
-  run bash -c "grep -A3 'name: Publish' '$WF' | grep -c 'working-directory: tools/toolu-cli'"
-  [ "$output" = "1" ]
-
-  for p in packages/toolu-core tools/toolu-opencode tools/toolu-conformance; do
-    jq -e '.private == true' "$ROOT/$p/package.json" >/dev/null
+@test "the three published packages are publishable and conformance stays private" {
+  for p in packages/toolu-core tools/toolu-opencode tools/toolu-cli; do
+    jq -e '.private == null' "$ROOT/$p/package.json" >/dev/null
+    jq -e '.license == "MIT"' "$ROOT/$p/package.json" >/dev/null
+    jq -e '.publishConfig.access == "public" and .publishConfig.provenance == true' \
+      "$ROOT/$p/package.json" >/dev/null
   done
-  jq -e '.private == null' "$ROOT/tools/toolu-cli/package.json" >/dev/null
+  # The conformance harness is internal and must never ship.
+  jq -e '.private == true' "$ROOT/tools/toolu-conformance/package.json" >/dev/null
+}
+
+# @toolu/opencode depends on @toolu/core, and Bun rewrites workspace:* to a
+# concrete version at pack time, so core must reach the registry first.
+@test "the workflow publishes in dependency order, core before opencode" {
+  run bash -c "grep -oE 'packages/toolu-core tools/toolu-opencode tools/toolu-cli' '$WF' | head -1"
+  [ "$output" = "packages/toolu-core tools/toolu-opencode tools/toolu-cli" ]
+}
+
+@test "a package already on the registry is skipped so a re-run resumes" {
+  grep -Fq 'is already published' "$WF"
+  grep -Fq 'skipping' "$WF"
+}
+
+# @toolu/opencode declares a concrete @toolu/core version. Publishing it after
+# core failed would put a package on the registry whose dependency is absent.
+@test "a failed publish aborts instead of continuing to dependent packages" {
+  grep -Fq 'stopping before its dependents' "$WF"
+  # No accumulate-and-continue: the old loop set a status flag and carried on.
+  run grep -Fq 'status=1' "$WF"
+  [ "$status" -ne 0 ]
 }
 
 @test "an npm view failure that is not a 404 fails the job instead of publishing" {
-  grep -Fq "elif printf '%s' \"\$out\" | grep -q 'E404'" "$WF"
-  grep -Fq 'npm view failed for a reason other than the version being absent' "$WF"
+  grep -Fq "grep -q 'E404'" "$WF"
+  grep -Fq 'for a reason other than the version being absent' "$WF"
 }
 
 @test "the published tarball carries the bundle and the manifest and nothing else" {

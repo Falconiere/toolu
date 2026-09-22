@@ -28,8 +28,30 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run release-please
+        id: release
         uses: googleapis/release-please-action@v4
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           token: ${{ github.token }} # default token. tests.yml and toolu-review.yml skip a diff that is only version files and CHANGELOG; this workflow still runs on the merge so the tag publishes
+
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+
+  # Publishing is chained here rather than triggered by `release: published`.
+  # release-please creates the Release with the default GITHUB_TOKEN, and GitHub
+  # does not start a workflow run from an event created by that token, so a
+  # `release:` trigger never fires. Chaining keeps it in the same run that cut
+  # the tag and needs no App token.
+  publish:
+    name: Publish to npm
+    needs: release-please
+    if: needs.release-please.outputs.releases_created == 'true'
+    permissions:
+      contents: read
+      id-token: write # npm provenance attestation
+    uses: ./.github/workflows/npm-publish.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+    secrets: inherit

@@ -1,7 +1,30 @@
 {
   "name": "@toolu/core",
   "version": "6.7.0",
-  "private": true,
+  "description": "Portable decision, policy and bridge core shared by toolu's host adapters.",
+  "keywords": [
+    "toolu",
+    "opencode",
+    "hooks",
+    "policy"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Falconiere/toolu.git",
+    "directory": "packages/toolu-core"
+  },
+  "homepage": "https://github.com/Falconiere/toolu#readme",
+  "bugs": {
+    "url": "https://github.com/Falconiere/toolu/issues"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "files": [
+    "src"
+  ],
   "type": "module",
   "exports": {
     "./decision": "./src/decision/decision.ts",
