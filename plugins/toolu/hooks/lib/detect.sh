@@ -106,7 +106,7 @@ detect_clippy() {
 #                        warnings rather than spam users on a box where the
 #                        registry was moved or jq was uninstalled.
 #
-# Usage:  detect_plugin_installed "code-simplifier@claude-plugins-official"
+# Usage:  detect_plugin_installed "ts-quality@toolu"
 detect_plugin_installed() {
   local spec="$1"
   [ -z "$spec" ] && return 0

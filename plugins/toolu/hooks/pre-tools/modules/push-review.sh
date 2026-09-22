@@ -207,7 +207,7 @@ state_round=$(jq -r '.review_round // 1' "$state_file" 2>/dev/null || echo "1")
 # Reviewer-agnostic gate: at least ONE accepted reviewer must appear in the
 # state file. The built-in /code-review skill is the always-available baseline;
 # other known reviewers are accepted too. The check is "intersection non-empty",
-# not equality, so running extra reviewers (e.g. code-simplifier first) is always
+# not equality, so running extra reviewers first is always
 # fine. Requiring at least one known name still prevents an agent from writing a
 # junk reviewer entry to bypass the gate.
 accepted_reviewers='["code-review","toolu-review:review","code-review:xhigh","review","security-review"]'

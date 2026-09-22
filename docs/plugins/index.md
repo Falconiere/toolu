@@ -63,7 +63,6 @@ are in the root [README](../../README.md#install-everything).
 ```text
 Install every toolu plugin for Claude Code at user scope. Run these commands in a terminal, in order. Skip a command that reports the marketplace or plugin is already installed.
 
-claude plugin marketplace add anthropics/claude-plugins-official
 claude plugin marketplace add Falconiere/toolu
 claude plugin install toolu@toolu --scope user
 claude plugin install agent-browser@toolu --scope user
@@ -125,9 +124,6 @@ Install toolu for OpenCode in this project (git-clone + Bun; no marketplace). Sk
 Do not install comemory via toolu. Full detail: docs/opencode.md
 ```
 <!-- /install-everything:opencode -->
-
-`code-simplifier` is an optional companion from `claude-plugins-official`. The
-Claude prompt adds that marketplace and does not install the companion.
 
 Codex support covers CLI, IDE extension, and ChatGPT desktop Codex on macOS
 and Linux. Codex cloud and Windows are limitations for this release. Review

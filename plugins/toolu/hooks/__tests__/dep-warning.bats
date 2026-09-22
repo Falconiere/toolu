@@ -107,7 +107,7 @@ JSON
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q "required plugins missing"
   ! echo "$output" | grep -q "/plugin install"
-  ! echo "$output" | grep -q "code-simplifier"
+  ! echo "$output" | grep -q "claude-plugins-official"
 }
 
 @test "dep-warning: a nameless dependency entry is skipped (no null@ spec)" {

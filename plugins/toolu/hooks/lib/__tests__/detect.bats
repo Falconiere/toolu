@@ -334,17 +334,17 @@ source_lib() {
 @test "detect_plugin_installed: echoes spec when registry contains the key" {
   source_lib
   reg="$BATS_TEST_TMPDIR/installed.json"
-  printf '%s\n' '{"plugins":{"code-simplifier@claude-plugins-official":[{"scope":"user"}]}}' > "$reg"
-  CLAUDE_PLUGINS_REGISTRY="$reg" run detect_plugin_installed "code-simplifier@claude-plugins-official"
+  printf '%s\n' '{"plugins":{"ts-quality@toolu":[{"scope":"user"}]}}' > "$reg"
+  CLAUDE_PLUGINS_REGISTRY="$reg" run detect_plugin_installed "ts-quality@toolu"
   [ "$status" -eq 0 ]
-  [ "$output" = "code-simplifier@claude-plugins-official" ]
+  [ "$output" = "ts-quality@toolu" ]
 }
 
 @test "detect_plugin_installed: empty + exit 0 when key absent" {
   source_lib
   reg="$BATS_TEST_TMPDIR/installed.json"
   printf '%s\n' '{"plugins":{"other@marketplace":[]}}' > "$reg"
-  CLAUDE_PLUGINS_REGISTRY="$reg" run detect_plugin_installed "code-simplifier@claude-plugins-official"
+  CLAUDE_PLUGINS_REGISTRY="$reg" run detect_plugin_installed "ts-quality@toolu"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
@@ -363,7 +363,7 @@ source_lib() {
 @test "detect_plugin_installed: indeterminate (exit 2) when registry missing" {
   source_lib
   CLAUDE_PLUGINS_REGISTRY="$BATS_TEST_TMPDIR/does-not-exist.json" \
-    run detect_plugin_installed "code-simplifier@claude-plugins-official"
+    run detect_plugin_installed "ts-quality@toolu"
   [ "$status" -eq 2 ]
   [ -z "$output" ]
 }
@@ -372,7 +372,7 @@ source_lib() {
   source_lib
   reg="$BATS_TEST_TMPDIR/installed.json"
   printf '%s\n' 'not json' > "$reg"
-  CLAUDE_PLUGINS_REGISTRY="$reg" run detect_plugin_installed "code-simplifier@claude-plugins-official"
+  CLAUDE_PLUGINS_REGISTRY="$reg" run detect_plugin_installed "ts-quality@toolu"
   [ "$status" -eq 2 ]
   [ -z "$output" ]
 }
@@ -381,7 +381,7 @@ source_lib() {
   source_lib
   reg="$BATS_TEST_TMPDIR/installed.json"
   printf '%s\n' '{"plugins":"not-an-object"}' > "$reg"
-  CLAUDE_PLUGINS_REGISTRY="$reg" run detect_plugin_installed "code-simplifier@claude-plugins-official"
+  CLAUDE_PLUGINS_REGISTRY="$reg" run detect_plugin_installed "ts-quality@toolu"
   [ "$status" -eq 2 ]
   [ -z "$output" ]
 }
