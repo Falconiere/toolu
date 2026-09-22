@@ -1,12 +1,5 @@
 /** Write generated OpenCode surface tree (#206). */
-import {
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import type { PluginManifest } from "../../src/inventory/types.ts";
 import { GENERATED_SEGMENT, TOOLU_PLUGIN_ROOT } from "./constants.ts";
@@ -121,13 +114,19 @@ export function planSurface(options: GenerateSurfaceOptions): GenerateSurfaceRes
     "## Stripped frontmatter",
     "",
     stripped.size > 0
-      ? [...stripped].sort().map((k) => `- \`${k}\``).join("\n")
+      ? [...stripped]
+          .sort()
+          .map((k) => `- \`${k}\``)
+          .join("\n")
       : "- (none)",
     "",
     "## Literal `.claude` references (not rewritten)",
     "",
     dotClaude.size > 0
-      ? [...dotClaude].sort().map((line) => `- ${line}`).join("\n")
+      ? [...dotClaude]
+          .sort()
+          .map((line) => `- ${line}`)
+          .join("\n")
       : "- (none in scanned bodies)",
     "",
   ].join("\n");

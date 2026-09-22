@@ -5,12 +5,7 @@ import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { selectPluginsByEnabledNames } from "../src/select/resolve.ts";
 import { DEFAULT_ENABLED, GENERATED_SEGMENT } from "./lib/constants.ts";
-import {
-  planSurface,
-  readTree,
-  treesEqual,
-  writeSurface,
-} from "./lib/emit.ts";
+import { planSurface, readTree, treesEqual, writeSurface } from "./lib/emit.ts";
 
 const CliSchema = z.object({
   repoRoot: z.string().min(1).optional(),
@@ -42,7 +37,10 @@ function parseArgs(argv: string[]): z.infer<typeof CliSchema> {
       continue;
     }
     if (arg === "--enabled" && argv[i + 1]) {
-      out.enabled = argv[i + 1].split(",").map((s) => s.trim()).filter(Boolean);
+      out.enabled = argv[i + 1]
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
       i += 1;
     }
   }

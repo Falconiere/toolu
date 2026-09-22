@@ -12,12 +12,9 @@ export function candidateKey(candidate: ArtifactCandidate): string {
   return `${candidate.kind}\0${candidate.plugin}\0${candidate.localId}`;
 }
 
-export function assignSurfaceIds(
-  candidates: ArtifactCandidate[],
-): Map<string, string> {
+export function assignSurfaceIds(candidates: ArtifactCandidate[]): Map<string, string> {
   const sorted = [...candidates].sort((a, b) => {
-    const kindDelta =
-      ARTIFACT_KIND_ORDER.indexOf(a.kind) - ARTIFACT_KIND_ORDER.indexOf(b.kind);
+    const kindDelta = ARTIFACT_KIND_ORDER.indexOf(a.kind) - ARTIFACT_KIND_ORDER.indexOf(b.kind);
     if (kindDelta !== 0) {
       return kindDelta;
     }

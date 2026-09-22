@@ -41,10 +41,7 @@ test("drift check fails when a source skill changes", () => {
   const code = runGenerateSurface(["--repo", copyRoot, "--out", outDir]);
   expect(code).toBe(0);
 
-  const skillPath = join(
-    copyRoot,
-    "plugins/toolu/skills/brainstorm/SKILL.md",
-  );
+  const skillPath = join(copyRoot, "plugins/toolu/skills/brainstorm/SKILL.md");
   writeFileSync(skillPath, `${readFileSync(skillPath, "utf8")}\n<!-- drift probe -->\n`);
   const drift = runGenerateSurface(["--repo", copyRoot, "--out", outDir, "--check"]);
   expect(drift).toBe(1);
@@ -67,9 +64,7 @@ test("toolu surface ids are unique", () => {
 test("commands rewrite CLAUDE_PLUGIN_ROOT to TOOLU_PLUGIN_ROOT", () => {
   const out = mkdtempSync(join(tmpBase, "toolu-surface-rewrite-"));
   const plan = planDefault(out);
-  const command = plan.files.get(
-    join(out, "commands", "toolu--commit.md"),
-  );
+  const command = plan.files.get(join(out, "commands", "toolu--commit.md"));
   expect(command).toBeDefined();
   expect(command?.includes(TOOLU_PLUGIN_ROOT)).toBe(true);
   expect(command?.includes("${CLAUDE_PLUGIN_ROOT}")).toBe(false);

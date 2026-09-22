@@ -1,15 +1,11 @@
 /** Scan plugin trees for portable surface sources (#206). */
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { basename, join, relative } from "node:path";
+import { existsSync, readdirSync, readFileSync, realpathSync, lstatSync, statSync } from "node:fs";
+import { basename, dirname, join, relative } from "node:path";
 import type { PluginManifest } from "../../src/inventory/types.ts";
 import type { ArtifactKind } from "./constants.ts";
 import { parseFrontmatter, serializeFrontmatter } from "./frontmatter.ts";
 import { rewriteBody } from "./rewrite.ts";
-import {
-  assignSurfaceIds,
-  candidateKey,
-  type ArtifactCandidate,
-} from "./ids.ts";
+import { assignSurfaceIds, candidateKey, type ArtifactCandidate } from "./ids.ts";
 
 export type SurfaceArtifact = {
   kind: ArtifactKind;
@@ -21,6 +17,13 @@ export type SurfaceArtifact = {
   strippedKeys: string[];
   rewriteNotes: ReturnType<typeof rewriteBody>["notes"];
   skillDirName?: string;
+};
+
+type SourceEntry = {
+  kind: ArtifactKind;
+  path: string;
+  localId: string;
+  text: string;
 };
 
 function listSkillFiles(skillsRoot: string): string[] {
@@ -47,24 +50,64 @@ function listMarkdownFiles(dir: string): string[] {
     .map((name) => join(dir, name));
 }
 
-function localIdFromSource(sourcePath: string, kind: ArtifactKind): string {
-  const text = readFileSync(sourcePath, "utf8");
-  const parsed = parseFrontmatter(text);
-  if (parsed.frontmatter.name?.trim()) {
-    return parsed.frontmatter.name.trim();
+function localIdFromParsed(
+  kind: ArtifactKind,
+  sourcePath: string,
+  name: string | undefined,
+): string {
+  if (name?.trim()) {
+    return name.trim();
   }
   if (kind === "skill") {
-    return basename(join(sourcePath, ".."));
+    return basename(dirname(sourcePath));
   }
   return basename(sourcePath, ".md");
 }
 
-function buildMarkdown(surfaceId: string, sourcePath: string): {
+function collectSources(root: string): SourceEntry[] {
+  const entries: SourceEntry[] = [];
+  for (const path of listMarkdownFiles(join(root, "agents"))) {
+    const text = readFileSync(path, "utf8");
+    const parsed = parseFrontmatter(text);
+    entries.push({
+      kind: "agent",
+      path,
+      localId: localIdFromParsed("agent", path, parsed.frontmatter.name),
+      text,
+    });
+  }
+  for (const path of listMarkdownFiles(join(root, "commands"))) {
+    const text = readFileSync(path, "utf8");
+    const parsed = parseFrontmatter(text);
+    entries.push({
+      kind: "command",
+      path,
+      localId: localIdFromParsed("command", path, parsed.frontmatter.name),
+      text,
+    });
+  }
+  for (const path of listSkillFiles(join(root, "skills"))) {
+    const text = readFileSync(path, "utf8");
+    const parsed = parseFrontmatter(text);
+    entries.push({
+      kind: "skill",
+      path,
+      localId: localIdFromParsed("skill", path, parsed.frontmatter.name),
+      text,
+    });
+  }
+  return entries;
+}
+
+function buildMarkdown(
+  surfaceId: string,
+  text: string,
+): {
   content: string;
   strippedKeys: string[];
   rewriteNotes: ReturnType<typeof rewriteBody>["notes"];
 } {
-  const parsed = parseFrontmatter(readFileSync(sourcePath, "utf8"));
+  const parsed = parseFrontmatter(text);
   const { body, notes } = rewriteBody(parsed.body);
   const frontmatter = { ...parsed.frontmatter, name: surfaceId };
   return {
@@ -79,82 +122,30 @@ export function buildSurfaceForPlugin(
   repoRoot: string,
 ): SurfaceArtifact[] {
   const plugin = manifest.name;
-  const root = manifest.pluginDir;
-  const candidates: ArtifactCandidate[] = [];
-
-  for (const agentPath of listMarkdownFiles(join(root, "agents"))) {
-    candidates.push({
-      kind: "agent",
-      plugin,
-      localId: localIdFromSource(agentPath, "agent"),
-    });
-  }
-  for (const commandPath of listMarkdownFiles(join(root, "commands"))) {
-    candidates.push({
-      kind: "command",
-      plugin,
-      localId: localIdFromSource(commandPath, "command"),
-    });
-  }
-  for (const skillPath of listSkillFiles(join(root, "skills"))) {
-    candidates.push({
-      kind: "skill",
-      plugin,
-      localId: localIdFromSource(skillPath, "skill"),
-    });
-  }
-
+  const sources = collectSources(manifest.pluginDir);
+  const candidates: ArtifactCandidate[] = sources.map((s) => ({
+    kind: s.kind,
+    plugin,
+    localId: s.localId,
+  }));
   const idMap = assignSurfaceIds(candidates);
   const artifacts: SurfaceArtifact[] = [];
 
-  for (const agentPath of listMarkdownFiles(join(root, "agents"))) {
-    const localId = localIdFromSource(agentPath, "agent");
-    const surfaceId = idMap.get(candidateKey({ kind: "agent", plugin, localId }));
+  for (const source of sources) {
+    const surfaceId = idMap.get(
+      candidateKey({ kind: source.kind, plugin, localId: source.localId }),
+    );
     if (!surfaceId) {
-      throw new Error(`missing id for agent ${localId}`);
+      throw new Error(`missing id for ${source.kind} ${source.localId}`);
     }
-    const built = buildMarkdown(surfaceId, agentPath);
+    const built = buildMarkdown(surfaceId, source.text);
     artifacts.push({
-      kind: "agent",
+      kind: source.kind,
       plugin,
       surfaceId,
-      sourcePath: agentPath,
-      relativeSource: relative(repoRoot, agentPath),
-      ...built,
-    });
-  }
-
-  for (const commandPath of listMarkdownFiles(join(root, "commands"))) {
-    const localId = localIdFromSource(commandPath, "command");
-    const surfaceId = idMap.get(candidateKey({ kind: "command", plugin, localId }));
-    if (!surfaceId) {
-      throw new Error(`missing id for command ${localId}`);
-    }
-    const built = buildMarkdown(surfaceId, commandPath);
-    artifacts.push({
-      kind: "command",
-      plugin,
-      surfaceId,
-      sourcePath: commandPath,
-      relativeSource: relative(repoRoot, commandPath),
-      ...built,
-    });
-  }
-
-  for (const skillPath of listSkillFiles(join(root, "skills"))) {
-    const localId = localIdFromSource(skillPath, "skill");
-    const surfaceId = idMap.get(candidateKey({ kind: "skill", plugin, localId }));
-    if (!surfaceId) {
-      throw new Error(`missing id for skill ${localId}`);
-    }
-    const built = buildMarkdown(surfaceId, skillPath);
-    artifacts.push({
-      kind: "skill",
-      plugin,
-      surfaceId,
-      sourcePath: skillPath,
-      relativeSource: relative(repoRoot, skillPath),
-      skillDirName: basename(join(skillPath, "..")),
+      sourcePath: source.path,
+      relativeSource: relative(repoRoot, source.path),
+      ...(source.kind === "skill" ? { skillDirName: basename(dirname(source.path)) } : {}),
       ...built,
     });
   }
@@ -162,13 +153,20 @@ export function buildSurfaceForPlugin(
   return artifacts.sort((a, b) => a.surfaceId.localeCompare(b.surfaceId));
 }
 
-function listFilesRecursive(dir: string): string[] {
+function listFilesRecursive(dir: string, rootReal: string): string[] {
   const out: string[] = [];
   for (const name of readdirSync(dir).sort()) {
     const full = join(dir, name);
-    if (statSync(full).isDirectory()) {
-      out.push(...listFilesRecursive(full));
-    } else {
+    const st = lstatSync(full);
+    if (st.isSymbolicLink()) {
+      const real = realpathSync(full);
+      if (!real.startsWith(rootReal + "/") && real !== rootReal) {
+        continue;
+      }
+    }
+    if (st.isDirectory()) {
+      out.push(...listFilesRecursive(full, rootReal));
+    } else if (st.isFile()) {
       out.push(full);
     }
   }
@@ -184,14 +182,18 @@ export function planSkillResources(
   if (artifact.kind !== "skill") {
     return;
   }
-  const skillDir = join(artifact.sourcePath, "..");
+  const skillDir = dirname(artifact.sourcePath);
   for (const sub of ["references", "scripts"] as const) {
     const src = join(skillDir, sub);
     if (!existsSync(src) || !statSync(src).isDirectory()) {
       continue;
     }
-    for (const file of listFilesRecursive(src)) {
+    const srcReal = realpathSync(src);
+    for (const file of listFilesRecursive(src, srcReal)) {
       const rel = relative(src, file);
+      if (rel.startsWith("..")) {
+        continue;
+      }
       const dest = join(outSkillDir, sub, rel);
       files.set(dest, readFileSync(file, "utf8"));
     }

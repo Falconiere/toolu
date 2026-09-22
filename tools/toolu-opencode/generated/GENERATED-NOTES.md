@@ -13,4 +13,4 @@ Do not edit by hand. Regenerate with `bun run generate:opencode-surface`.
 
 ## Literal `.claude` references (not rewritten)
 
-- Codex or `${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}` on Claude
+- (none in scanned bodies)
