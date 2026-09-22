@@ -1,6 +1,6 @@
 # jira — Jira Issue Search & Workflow
 
-**Type:** Workflow | **Version:** 6.4.0 | **Standalone** (no dependencies)
+**Type:** Workflow | **Version:** 6.5.0 | **Standalone** (no dependencies)
 
 Jira issue search and workflow from the session via a REST wrapper — a skill plus bash. Works with Jira Cloud and Server/Data Center, supporting both read and safe writes.
 

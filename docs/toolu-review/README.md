@@ -1,6 +1,6 @@
 # toolu-review — Pre-Push Code Review
 
-**Type:** Workflow | **Version:** 6.4.0 | **Standalone** (no dependencies)
+**Type:** Workflow | **Version:** 6.5.0 | **Standalone** (no dependencies)
 
 Project-tuned pre-push code review mirroring this repo's CI Toolu Code Review action (`falconiere/toolu-ghactions/code-review@v8` with Jev assessment). Records the `push-review` state so toolu's push gate passes.
 

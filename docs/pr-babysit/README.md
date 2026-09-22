@@ -1,6 +1,6 @@
 # pr-babysit — PR Babysitter
 
-**Type:** Workflow | **Version:** 6.4.0 | **Depends on:** `toolu`
+**Type:** Workflow | **Version:** 6.5.0 | **Depends on:** `toolu`
 
 A strict PR babysitter that uses Claude cron or an explicitly requested durable
 Codex goal. Codex runs bounded continuation cycles in a native isolated git

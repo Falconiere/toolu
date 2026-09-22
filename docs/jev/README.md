@@ -1,6 +1,6 @@
 # jev — Typed Judgments from TypeSafe
 
-**Type:** Knowledge | **Version:** 6.4.0 | **Standalone** (no dependencies)
+**Type:** Knowledge | **Version:** 6.5.0 | **Standalone** (no dependencies)
 
 Ask TypeSafe's Jev model a **typed** question about some state and get an answer code can branch on — a probability, a chosen option, or a score on your own levels — through a skill plus a bash REST wrapper.
 
