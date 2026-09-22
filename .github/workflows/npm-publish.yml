@@ -67,17 +67,27 @@ jobs:
           fi
           echo "publishing toolu@$pkg"
 
+      # `npm view` failing is the expected path for a version that is not yet
+      # published, so -e is deliberately off. But a lookup that fails for any
+      # OTHER reason -- network, auth, registry outage -- must not be read as
+      # "not published": that would turn an unknown into a publish attempt.
+      # Only a genuine E404 means absent; anything else fails the job.
       - name: Skip when the version is already on the registry
         id: existing
         working-directory: tools/toolu-cli
         run: |
           set -uo pipefail
           pkg=$(node -p "require('./package.json').version")
-          if npm view "toolu@$pkg" version >/dev/null 2>&1; then
+          if out=$(npm view "toolu@$pkg" version 2>&1); then
             echo "published=true" >> "$GITHUB_OUTPUT"
-            echo "toolu@$pkg is already published; nothing to do"
-          else
+            echo "toolu@$pkg is already published ($out); nothing to do"
+          elif printf '%s' "$out" | grep -q 'E404'; then
             echo "published=false" >> "$GITHUB_OUTPUT"
+            echo "toolu@$pkg is not on the registry yet"
+          else
+            echo "npm view failed for a reason other than the version being absent:" >&2
+            printf '%s\n' "$out" >&2
+            exit 1
           fi
 
       - name: Publish

@@ -14,7 +14,7 @@ const REQUIRED: readonly string[] = ["package.json", "assets/marketplace.json", 
 const FORBIDDEN: readonly string[] = ["plugins/", "src/", "node_modules/", ".env"];
 
 /** File paths `bun pm pack --dry-run` reports for a package directory. */
-export function packedFiles(directory: string): readonly string[] {
+function packedFiles(directory: string): readonly string[] {
   const result = spawnSync("bun", ["pm", "pack", "--dry-run"], {
     cwd: directory,
     encoding: "utf8",
