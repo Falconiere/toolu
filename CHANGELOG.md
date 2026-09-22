@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.8.1](https://github.com/Falconiere/toolu/compare/v6.8.0...v6.8.1) (2026-09-22)
+
+
+### Bug Fixes
+
+* **npm:** scope the CLI as @toolu/cli and ship a README and LICENSE ([#235](https://github.com/Falconiere/toolu/issues/235)) ([cd6306b](https://github.com/Falconiere/toolu/commit/cd6306bcddec35f1c5bacf14e4ba7a656d877666))
+
 ## [6.8.0](https://github.com/Falconiere/toolu/compare/v6.7.0...v6.8.0) (2026-09-22)
 
 
