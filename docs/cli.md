@@ -17,20 +17,27 @@ Design: `docs/toolu/specs/2026-09-22-npx-toolu-cli-design.md` (untracked; `docs/
 
 ## Install
 
-Published to npm as the unscoped `toolu` when a GitHub Release is published:
+Published to npm as `@toolu/cli` when a GitHub Release is published:
 
 ```bash
-npx toolu plugins list
+npx @toolu/cli plugins list
 ```
 
-Only this package publishes. `@toolu/core` and `@toolu/opencode` remain private
-until the OpenCode wiring that would consume them exists — an npm name is
-permanent, and nothing could use them yet.
+The package is scoped because npm rejects the unscoped name `toolu` as too
+similar to the existing package `toml`. The **command** it installs is still
+`toolu`, so a global install gives you `toolu plugins install`.
 
-The tarball is three files: `package.json`, `dist/cli.js`, and
-`assets/marketplace.json`. The 3.2 MB bash `plugins/` tree is deliberately
-excluded, because Claude Code and Codex fetch plugin content through their own
-host CLIs. `bun run test:pack` fails if anything else appears in it.
+[`@toolu/core`](https://www.npmjs.com/package/@toolu/core) and
+[`@toolu/opencode`](https://www.npmjs.com/package/@toolu/opencode) publish from
+the same release. `@toolu/conformance` stays private — it is an internal
+harness.
+
+The CLI tarball is five files: `package.json`, `README.md`, `LICENSE`,
+`dist/cli.js`, and `assets/marketplace.json`. The bash `plugins/` tree is
+deliberately excluded, because Claude Code and Codex fetch plugin content
+through their own host CLIs — it ships inside `@toolu/opencode` instead, which
+is the one runtime that reads it. `bun run test:pack` fails if anything else
+appears in any of the three.
 
 ## Grammar
 

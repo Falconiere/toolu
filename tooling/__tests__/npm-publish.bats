@@ -113,3 +113,18 @@ setup() {
   run bun run "$ROOT/tooling/src/pack-inventory.ts"
   [ "$status" -eq 0 ]
 }
+
+# npm rejected the unscoped name `toolu` as too similar to the existing package
+# `toml` (E403 at publish time, after a 404 had suggested it was free). The
+# similarity filter applies to unscoped names only, so the CLI is scoped.
+@test "the CLI publishes under a scoped name, keeping toolu as the command" {
+  jq -e '.name == "@toolu/cli"' "$ROOT/tools/toolu-cli/package.json" >/dev/null
+  jq -e '.bin.toolu == "dist/cli.js"' "$ROOT/tools/toolu-cli/package.json" >/dev/null
+}
+
+@test "every published package carries a README and a LICENSE" {
+  for p in packages/toolu-core tools/toolu-opencode tools/toolu-cli; do
+    [ -f "$ROOT/$p/README.md" ] || { echo "$p has no README.md"; return 1; }
+    [ -f "$ROOT/$p/LICENSE" ] || { echo "$p has no LICENSE"; return 1; }
+  done
+}
