@@ -3,8 +3,31 @@
   "version": 2,
   "srcRoot": "src",
   "src": {
-    "topLevel": ["plugin"],
-    "nested": { "plugin": ["__tests__"] },
+    "topLevel": [
+      "plugin",
+      "host",
+      "inventory",
+      "select",
+      "bootstrap",
+      "preflight",
+      "lifecycle"
+    ],
+    "nested": {
+      "plugin": ["__tests__"],
+      "host": ["types.ts", "detect.ts", "roots.ts", "__tests__"],
+      "inventory": ["types.ts", "manifest.ts", "scan.ts", "selection.ts", "__tests__"],
+      "select": ["resolve.ts", "__tests__"],
+      "bootstrap": [
+        "result.ts",
+        "readiness.ts",
+        "entrypoint.ts",
+        "runtime.ts",
+        "test-helpers.ts",
+        "__tests__"
+      ],
+      "preflight": ["check.ts", "__tests__"],
+      "lifecycle": ["table.ts", "__tests__"]
+    },
     "requireReadme": []
   },
   "fileSize": { "max": 300, "skipExtensions": [".ts"] },
@@ -12,7 +35,14 @@
   "testDir": "__tests__",
   "testGlob": "*.test.ts",
   "barrelNames": ["index.ts", "index.tsx"],
-  "barrelExempt": [],
+  "barrelExempt": [
+    "src/host/index.ts",
+    "src/inventory/index.ts",
+    "src/select/index.ts",
+    "src/bootstrap/index.ts",
+    "src/preflight/index.ts",
+    "src/lifecycle/index.ts"
+  ],
   "bannedDeps": ["axios", "yup", "joi", "valibot", "superstruct", "ajv"],
   "requiredFiles": [],
   "secrets": { "neverTracked": [".env", ".env.local"] },
