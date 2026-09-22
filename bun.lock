@@ -34,8 +34,12 @@
     "tools/toolu-conformance": {
       "name": "@toolu/conformance",
       "version": "6.4.0",
+      "bin": {
+        "toolu-conformance": "./src/cli/run.ts",
+      },
       "dependencies": {
         "@toolu/core": "workspace:*",
+        "@toolu/opencode": "workspace:*",
       },
     },
     "tools/toolu-opencode": {

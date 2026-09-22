@@ -4,7 +4,7 @@
   "srcRoot": "src",
   "src": {
     "topLevel": ["cli"],
-    "nested": { "cli": ["__tests__"] },
+    "nested": { "cli": ["__tests__", "suites"] },
     "requireReadme": []
   },
   "fileSize": { "max": 300, "skipExtensions": [".ts"] },

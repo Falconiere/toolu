@@ -1,2 +1,2 @@
 /** Back-compat export for workspace smoke (#208). */
-export { runProtectedFilesConformance } from "./run.ts";
+export { runConformanceMatrix, runProtectedFilesConformance } from "./matrix.ts";
