@@ -33,6 +33,14 @@ setup() {
   grep -Fq 'npm publish --provenance --access public' "$WF"
 }
 
+# Provenance attestation needs npm >= 11.5.1 and Node >= 22.14. setup-node
+# installs the npm bundled with Node, which is older, so the upgrade is
+# load-bearing -- Falconiere/toolu-conventions hit this publishing @toolu/create.
+@test "the publish workflow pins Node and upgrades npm high enough for provenance" {
+  grep -Fq 'node-version: "22.14"' "$WF"
+  grep -Fq 'npm install --global npm@11.5.1' "$WF"
+}
+
 @test "the publish workflow reads the token from secrets, never a literal" {
   grep -Fq 'NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}' "$WF"
   run grep -Eq 'npm_[A-Za-z0-9]{20,}' "$WF"

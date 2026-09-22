@@ -34,11 +34,18 @@ jobs:
         with:
           ref: ${{ github.event.release.tag_name || inputs.tag }}
 
+      # Node and npm pins match Falconiere/toolu-conventions, which already
+      # publishes @toolu/create with this same NPM_TOKEN. Provenance needs
+      # npm >= 11.5.1, and setup-node ships whatever npm Node bundles, which
+      # is older.
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22.14"
           registry-url: https://registry.npmjs.org
+
+      - name: Set up an npm new enough to attest provenance
+        run: npm install --global npm@11.5.1
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -78,4 +85,5 @@ jobs:
         working-directory: tools/toolu-cli
         run: npm publish --provenance --access public
         env:
+          # setup-node's registry-url writes an .npmrc that reads NODE_AUTH_TOKEN.
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
