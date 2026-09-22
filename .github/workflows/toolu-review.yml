@@ -10,6 +10,8 @@ on:
       - "CHANGELOG.md"
       - ".release-please-manifest.json"
       - "package.json"
+      - "packages/*/package.json"
+      - "tools/*/package.json"
       - "plugins/*/.claude-plugin/plugin.json"
       - "plugins/*/.codex-plugin/plugin.json"
 
