@@ -4,6 +4,7 @@
   "srcRoot": "src",
   "src": {
     "topLevel": [
+      "adapter",
       "plugin",
       "host",
       "inventory",
@@ -13,7 +14,8 @@
       "lifecycle"
     ],
     "nested": {
-      "plugin": ["__tests__"],
+      "adapter": ["permission-map.ts", "evaluate.ts", "__tests__"],
+      "plugin": ["plugin-stub.ts", "toolu.ts", "__tests__"],
       "host": ["types.ts", "detect.ts", "roots.ts", "__tests__"],
       "inventory": ["types.ts", "manifest.ts", "scan.ts", "selection.ts", "__tests__"],
       "select": ["resolve.ts", "__tests__"],
