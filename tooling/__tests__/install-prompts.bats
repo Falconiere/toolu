@@ -24,19 +24,26 @@ extract_region() {
   done
 }
 
-@test "install-everything fences list the marketplace plugins, core first" {
-  local host fence tokens catalog first
-  catalog="$(jq -r '.plugins[].name' "$ROOT/.claude-plugin/marketplace.json" | sort)"
-  [ -n "$catalog" ]
+# The fences used to enumerate every plugin as `<name>@toolu`, core first, and
+# this test compared that list against the catalog. The CLI now derives both the
+# set and the order from .claude-plugin/marketplace.json itself -- covered by
+# tools/toolu-cli/src/catalog/__tests__/order.test.ts -- so the README must NOT
+# hand-enumerate them: a second copy of the catalog is exactly the drift the
+# version column already taught us about.
+@test "install-everything fences drive the CLI instead of enumerating plugins" {
+  local host fence
   for host in claude codex; do
     fence="$(extract_region "$ROOT/README.md" "$host")"
     [ -n "$fence" ]
+    printf '%s\n' "$fence" | grep -q 'npx toolu plugins install'
     ! printf '%s\n' "$fence" | grep -q 'comemory'
-    tokens="$(printf '%s\n' "$fence" | grep -oE '[a-z0-9-]+@toolu' | sed 's/@toolu$//' | sort)"
-    [ "$tokens" = "$catalog" ]
-    first="$(printf '%s\n' "$fence" | grep -oE '[a-z0-9-]+@toolu' | head -n 1)"
-    [ "$first" = "toolu@toolu" ]
+    ! printf '%s\n' "$fence" | grep -qE '[a-z0-9-]+@toolu'
   done
+}
+
+@test "the codex fence targets codex and the claude fence does not" {
+  printf '%s\n' "$(extract_region "$ROOT/README.md" codex)" | grep -q -- '--host codex'
+  ! printf '%s\n' "$(extract_region "$ROOT/README.md" claude)" | grep -q -- '--host'
 }
 
 @test "install-everything opencode fence is git-clone wiring, not marketplace plugins" {
@@ -50,4 +57,13 @@ extract_region() {
   printf '%s\n' "$fence" | grep -q '@toolu/opencode'
   printf '%s\n' "$fence" | grep -q 'bun install --frozen-lockfile'
   printf '%s\n' "$fence" | grep -q 'tools/toolu-opencode/generated/skills'
+}
+
+# The README used to carry a per-plugin version column that release-please never
+# updated, so it silently went stale at every release. The column is gone; this
+# keeps a hardcoded repository version from creeping back into the file.
+@test "README does not hardcode the repository version" {
+  root=$(jq -r .version "$ROOT/package.json")
+  run grep -Fc "$root" "$ROOT/README.md"
+  [ "$output" = "0" ]
 }

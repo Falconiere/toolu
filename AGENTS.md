@@ -11,8 +11,9 @@ This file is the source of truth. Codex, Cursor, and Claude Code read it directl
 ## Tech stack
 
 - **bash** — hooks, gates, registry. `set -euo pipefail`, shellcheck-clean.
-- **bats** — colocated `__tests__/`. `bash tooling/bats-run.sh` runs `plugins`, `benchmarks`, and `tooling` (files in parallel, tests in a file serial). `bun run test:shell:serial` is the serial path.
+- **bats** — colocated `__tests__/`. `bash tooling/bats-run.sh` runs `plugins`, `benchmarks`, `tooling`, `packages`, and `tools` (files in parallel, tests in a file serial). `bun run test:shell:serial` is the serial path.
 - **Bun** — `bun.lock`. `bun run test` is `lint:shell`, then `test:context-budget`, then `test:shell`.
+- **`toolu` CLI** — `tools/toolu-cli`, a Node bundle published to npm as the unscoped `toolu`. Installs plugins across hosts by shelling out to each host's own plugin CLI. See `docs/cli.md`.
 - **shellcheck** — `bun run lint:shell` lints standalone scripts and each `hooks/concerns/` directory as the assembled module.
 
 ## Plugin layout
@@ -35,13 +36,15 @@ plugins/<name>/
   settings/                    # core only
 ```
 
-Root `package.json`, Bun workspace packages (`packages/toolu-core`, `tools/toolu-opencode`, `tools/toolu-conformance`), and every `plugin.json` share one `vX.Y.Z`, matching the git tag. A plugin is re-extracted only when its `plugin.json` version changes, so a release re-extracts all of them.
+Root `package.json`, Bun workspace packages (`packages/toolu-core`, `tools/toolu-opencode`, `tools/toolu-conformance`, `tools/toolu-cli`), and every `plugin.json` share one `vX.Y.Z`, matching the git tag. A plugin is re-extracted only when its `plugin.json` version changes, so a release re-extracts all of them.
 
 ## Releases
 
 release-please (`.github/workflows/release-please.yml`). No manual bumps or tags.
 
 Any Conventional Commit on `main` counts, any path. `feat` / `fix` / `feat!` bump minor / patch / major. `chore` / `docs` / `ci` / `refactor` bump nothing. Merge the Release PR to publish: it bumps root `package.json`, Bun workspace packages under `packages/` and `tools/`, and every `plugin.json`, updates `CHANGELOG.md`, tags `vX.Y.Z` with no component prefix, and opens the GitHub Release. `tooling/release.sh` is a deprecated escape hatch. OpenCode install: `docs/opencode.md`.
+
+**npm.** `npm-publish.yml` reacts to the published GitHub Release and publishes **only** `tools/toolu-cli` as the unscoped `toolu`, with provenance via OIDC and `secrets.NPM_TOKEN`. `@toolu/core`, `@toolu/opencode` and `@toolu/conformance` stay `private` until something consumes them. The tarball's file list is gated by `bun run test:pack`.
 
 ## CI
 
@@ -64,6 +67,10 @@ A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context b
 | `plugins/pr-babysit/scripts/babysit-tick.sh` | Babysit tick. Writes go through `reply-thread.sh`, `resolve-thread.sh`, `record.sh` |
 | `plugins/*/hooks/register.sh` | SessionStart registry sync |
 | `plugins/*/hooks/hooks.json` | Claude Code hook routing |
+| `tools/toolu-cli/src/cli.ts` | `npx toolu` entry: parses argv, resolves the host, dispatches a noun |
+| `tools/toolu-cli/src/plugins/install.ts` | Dependency-ordered install; core failure stops dependents, others continue |
+| `tools/toolu-cli/src/host/` | Per-host adapters normalizing `plugin list --json` into one shape |
+| `tooling/src/pack-inventory.ts` | Published-tarball file-list gate |
 | `tooling/shellcheck.sh` | shellcheck gate |
 | `docs/config.md` | Config schema |
 | `plugins/toolu/scripts/context-budget.sh` | Injected-context word ceilings |

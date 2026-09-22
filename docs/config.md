@@ -460,3 +460,42 @@ The harness caps its *own* injected footprint with
 `plugins/toolu/scripts/context-budget.sh` (run in CI): word ceilings on the
 Session Protocol + per-language docs and on every skill `description`, so the
 baseline cannot silently regrow.
+
+## CLI selection file (`.toolu/plugins.json`)
+
+Separate from the hook config above: this file records **which plugins to
+install**, and is read by the [`toolu` CLI](cli.md), not by any hook. It sits
+beside the tracked `.toolu/skills/` convention.
+
+```json
+{
+  "version": 1,
+  "generatorVersion": "6.6.0",
+  "host": "claude",
+  "enabled": ["toolu", "rust-quality", "ts-quality"]
+}
+```
+
+| Key | Meaning |
+|-----|---------|
+| `version` | File-format version. Only `1` is understood; anything else is rejected rather than guessed at. |
+| `generatorVersion` | The CLI that wrote the file. A file from a **newer major** is rejected with both versions named, instead of being read under the wrong assumptions. |
+| `host` | Advisory. `--host` always wins. |
+| `enabled` | Plugin names. Order does not matter — install order comes from the catalog's dependency edges. |
+
+Replay a saved selection with `--config`, which makes a run fully
+non-interactive:
+
+```bash
+npx toolu plugins install --config .toolu/plugins.json
+```
+
+Writes are atomic: a temporary file in the same directory, then a rename, so a
+concurrent reader sees either the old file or the new one, never a partial one.
+
+### `--no-input`
+
+Forces the non-interactive path regardless of whether a terminal is attached.
+Without it the CLI prompts only when stdin *and* stdout are both TTYs. Use it in
+CI so a job on an allocated TTY fails fast, listing what is missing, instead of
+blocking on a prompt nobody can answer. Missing input in that state exits `3`.
