@@ -1,6 +1,6 @@
 {
   "name": "python-quality",
-  "version": "6.6.0",
+  "version": "6.7.0",
   "description": "Python PostToolUse quality checks registered into the toolu hook engine.",
   "hooks": "./hooks/hooks.json"
 }

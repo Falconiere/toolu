@@ -1,6 +1,6 @@
 {
   "name": "toolu",
-  "version": "6.6.0",
+  "version": "6.7.0",
   "description": "Install toolu plugins and Codex agent profiles into Claude Code, Codex, and OpenCode.",
   "keywords": [
     "claude-code",
