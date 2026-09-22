@@ -16,23 +16,12 @@ function manifestByName(manifests: PluginManifest[]): Map<string, PluginManifest
   return map;
 }
 
-/** Resolve enabled plugins and transitive manifest dependencies. */
-export function selectPluginsWithDependencies(
+function closePluginDependencies(
   pluginsRoot: string,
-  projectRoot: string,
+  byName: Map<string, PluginManifest>,
+  seedNames: Iterable<string>,
 ): SelectResult {
-  const enabledResult = resolveEnabledPluginNames(pluginsRoot, projectRoot);
-  if (!enabledResult.ok) {
-    return { ok: false, reason: enabledResult.reason };
-  }
-
-  const allManifests = listPluginManifests(pluginsRoot);
-  if (allManifests === null) {
-    return { ok: false, reason: `cannot read plugins root: ${pluginsRoot}` };
-  }
-  const byName = manifestByName(allManifests);
-
-  const queue = [...enabledResult.enabled];
+  const queue = [...seedNames];
   const selected = new Set<string>();
   const ordered: PluginManifest[] = [];
 
@@ -52,19 +41,47 @@ export function selectPluginsWithDependencies(
     selected.add(name);
     ordered.push(manifest);
     for (const dep of manifest.dependencies) {
-      const depName = dep.name;
-      if (!byName.has(depName)) {
+      if (!byName.has(dep.name)) {
         return {
           ok: false,
           reason: `plugin "${manifest.spec}" requires missing dependency ${pluginSpec(dep.name, dep.marketplace)}`,
-          missingDependency: depName,
+          missingDependency: dep.name,
         };
       }
-      if (!selected.has(depName)) {
-        queue.push(depName);
+      if (!selected.has(dep.name)) {
+        queue.push(dep.name);
       }
     }
   }
 
   return { ok: true, plugins: ordered };
+}
+
+/** Resolve enabled plugins and transitive manifest dependencies. */
+export function selectPluginsWithDependencies(
+  pluginsRoot: string,
+  projectRoot: string,
+): SelectResult {
+  const enabledResult = resolveEnabledPluginNames(pluginsRoot, projectRoot);
+  if (!enabledResult.ok) {
+    return { ok: false, reason: enabledResult.reason };
+  }
+
+  const allManifests = listPluginManifests(pluginsRoot);
+  if (allManifests === null) {
+    return { ok: false, reason: `cannot read plugins root: ${pluginsRoot}` };
+  }
+  return closePluginDependencies(pluginsRoot, manifestByName(allManifests), enabledResult.enabled);
+}
+
+/** Resolve an explicit enabled list plus manifest dependency closure (#211). */
+export function selectPluginsByEnabledNames(
+  pluginsRoot: string,
+  enabledNames: readonly string[],
+): SelectResult {
+  const allManifests = listPluginManifests(pluginsRoot);
+  if (allManifests === null) {
+    return { ok: false, reason: `cannot read plugins root: ${pluginsRoot}` };
+  }
+  return closePluginDependencies(pluginsRoot, manifestByName(allManifests), enabledNames);
 }

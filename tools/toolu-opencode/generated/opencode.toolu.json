@@ -1,0 +1,116 @@
+{
+  "$comment": "OpenCode toolu surface catalog. version=1; surfaceRoot=repo-relative; plugins[].skills|agents|commands[]={id,path,source}; path is relative to surfaceRoot.",
+  "version": 1,
+  "surfaceRoot": "tools/toolu-opencode/generated",
+  "plugins": [
+    {
+      "name": "toolu",
+      "skills": [
+        {
+          "id": "toolu--brainstorm",
+          "path": "skills/toolu--brainstorm/SKILL.md",
+          "source": "plugins/toolu/skills/brainstorm/SKILL.md"
+        },
+        {
+          "id": "toolu--commit--skill",
+          "path": "skills/toolu--commit--skill/SKILL.md",
+          "source": "plugins/toolu/skills/commit/SKILL.md"
+        },
+        {
+          "id": "toolu--debug",
+          "path": "skills/toolu--debug/SKILL.md",
+          "source": "plugins/toolu/skills/debug/SKILL.md"
+        },
+        {
+          "id": "toolu--deep-research",
+          "path": "skills/toolu--deep-research/SKILL.md",
+          "source": "plugins/toolu/skills/deep-research/SKILL.md"
+        },
+        {
+          "id": "toolu--execution",
+          "path": "skills/toolu--execution/SKILL.md",
+          "source": "plugins/toolu/skills/execution/SKILL.md"
+        },
+        {
+          "id": "toolu--orchestrator",
+          "path": "skills/toolu--orchestrator/SKILL.md",
+          "source": "plugins/toolu/skills/orchestrator/SKILL.md"
+        },
+        {
+          "id": "toolu--plan",
+          "path": "skills/toolu--plan/SKILL.md",
+          "source": "plugins/toolu/skills/plan/SKILL.md"
+        },
+        {
+          "id": "toolu--plan-review",
+          "path": "skills/toolu--plan-review/SKILL.md",
+          "source": "plugins/toolu/skills/plan-review/SKILL.md"
+        },
+        {
+          "id": "toolu--review-and-commit--skill",
+          "path": "skills/toolu--review-and-commit--skill/SKILL.md",
+          "source": "plugins/toolu/skills/review-and-commit/SKILL.md"
+        },
+        {
+          "id": "toolu--setup",
+          "path": "skills/toolu--setup/SKILL.md",
+          "source": "plugins/toolu/skills/setup/SKILL.md"
+        },
+        {
+          "id": "toolu--spec",
+          "path": "skills/toolu--spec/SKILL.md",
+          "source": "plugins/toolu/skills/spec/SKILL.md"
+        },
+        {
+          "id": "toolu--spec-review",
+          "path": "skills/toolu--spec-review/SKILL.md",
+          "source": "plugins/toolu/skills/spec-review/SKILL.md"
+        },
+        {
+          "id": "toolu--test",
+          "path": "skills/toolu--test/SKILL.md",
+          "source": "plugins/toolu/skills/test/SKILL.md"
+        }
+      ],
+      "agents": [
+        {
+          "id": "toolu--architect",
+          "path": "agents/toolu--architect.md",
+          "source": "plugins/toolu/agents/architect.md"
+        },
+        {
+          "id": "toolu--deep-explore",
+          "path": "agents/toolu--deep-explore.md",
+          "source": "plugins/toolu/agents/deep-explore.md"
+        },
+        {
+          "id": "toolu--implementer",
+          "path": "agents/toolu--implementer.md",
+          "source": "plugins/toolu/agents/implementer.md"
+        },
+        {
+          "id": "toolu--quick-task",
+          "path": "agents/toolu--quick-task.md",
+          "source": "plugins/toolu/agents/quick-task.md"
+        },
+        {
+          "id": "toolu--research-agent",
+          "path": "agents/toolu--research-agent.md",
+          "source": "plugins/toolu/agents/research-agent.md"
+        }
+      ],
+      "commands": [
+        {
+          "id": "toolu--commit",
+          "path": "commands/toolu--commit.md",
+          "source": "plugins/toolu/commands/commit.md"
+        },
+        {
+          "id": "toolu--review-and-commit",
+          "path": "commands/toolu--review-and-commit.md",
+          "source": "plugins/toolu/commands/review-and-commit.md"
+        }
+      ]
+    }
+  ]
+}
