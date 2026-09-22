@@ -5,17 +5,28 @@
     "tooling",
     "packages/toolu-core",
     "tools/toolu-opencode",
-    "tools/toolu-conformance"
+    "tools/toolu-conformance",
+    "tools/toolu-cli"
   ],
-  "bannedDeps": ["axios", "yup", "joi", "valibot", "superstruct", "ajv"],
+  "bannedDeps": [
+    "axios",
+    "yup",
+    "joi",
+    "valibot",
+    "superstruct",
+    "ajv"
+  ],
   "secrets": {
-    "neverTracked": [".env", ".env.local"]
+    "neverTracked": [
+      ".env",
+      ".env.local"
+    ]
   },
   "shadowConfigs": [
     {
       "found": "lefthook.yaml",
       "use": "lefthook.yml",
-      "why": "lefthook 2.x installer shadows .yaml — documented only; this repo does not install Lefthook as a Claude hook pipeline"
+      "why": "lefthook 2.x installer shadows .yaml \u2014 documented only; this repo does not install Lefthook as a Claude hook pipeline"
     }
   ]
 }

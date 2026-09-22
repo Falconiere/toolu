@@ -1,0 +1,30 @@
+{
+  "$schema": "../../tooling/conventions/guardrails/schema.json",
+  "version": 2,
+  "srcRoot": "src",
+  "src": {
+    "topLevel": ["args", "catalog", "config", "host", "plugins", "agents", "opencode", "ui"],
+    "nested": {
+      "args": ["types.ts", "parse.ts", "__tests__"],
+      "catalog": ["types.ts", "manifest.ts", "order.ts", "__tests__"],
+      "config": ["schema.ts", "read.ts", "write.ts", "__tests__"],
+      "host": ["types.ts", "detect.ts", "claude.ts", "codex.ts", "opencode.ts", "run.ts", "__tests__"],
+      "plugins": ["install.ts", "list.ts", "remove.ts", "update.ts", "__tests__"],
+      "agents": ["locate.ts", "run.ts", "__tests__"],
+      "opencode": ["wire.ts", "merge.ts", "__tests__"],
+      "ui": ["prompts.ts", "report.ts", "__tests__"]
+    },
+    "requireReadme": []
+  },
+  "fileSize": { "max": 300, "skipExtensions": [".ts"] },
+  "functionSize": { "max": 60 },
+  "testDir": "__tests__",
+  "testGlob": "*.test.ts",
+  "barrelNames": ["index.ts", "index.tsx"],
+  "barrelExempt": [],
+  "bannedDeps": ["axios", "yup", "joi", "valibot", "superstruct", "ajv"],
+  "requiredFiles": [],
+  "secrets": { "neverTracked": [".env", ".env.local"] },
+  "shadowConfigs": [],
+  "ownedByLinter": ["folder-tree", "colocated-tests", "no-barrels", "filename-case", "patterns"]
+}

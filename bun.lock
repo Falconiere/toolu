@@ -22,7 +22,7 @@
     },
     "packages/toolu-core": {
       "name": "@toolu/core",
-      "version": "6.4.0",
+      "version": "6.5.0",
       "dependencies": {
         "zod": "4.1.5",
       },
@@ -31,9 +31,19 @@
       "name": "@toolu/tooling",
       "version": "6.4.0",
     },
+    "tools/toolu-cli": {
+      "name": "toolu",
+      "version": "6.5.0",
+      "bin": {
+        "toolu": "dist/cli.js",
+      },
+      "dependencies": {
+        "zod": "4.1.5",
+      },
+    },
     "tools/toolu-conformance": {
       "name": "@toolu/conformance",
-      "version": "6.4.0",
+      "version": "6.5.0",
       "bin": {
         "toolu-conformance": "./src/cli/run.ts",
       },
@@ -44,7 +54,7 @@
     },
     "tools/toolu-opencode": {
       "name": "@toolu/opencode",
-      "version": "6.4.0",
+      "version": "6.5.0",
       "dependencies": {
         "@opencode/plugin": "2.0.12",
         "@toolu/core": "workspace:*",
@@ -918,6 +928,8 @@
     "to-regex-range": ["to-regex-range@5.0.1", "", { "dependencies": { "is-number": "^7.0.0" } }, "sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ=="],
 
     "token-stream": ["token-stream@1.0.0", "", {}, "sha512-VSsyNPPW74RpHwR8Fc21uubwHY7wMDeJLys2IX5zJNih+OnAnaifKHo+1LHT7DAdloQ7apeaaWg8l7qnf/TnEg=="],
+
+    "toolu": ["toolu@workspace:tools/toolu-cli"],
 
     "treeverse": ["treeverse@3.0.0", "", {}, "sha512-gcANaAnd2QDZFmHFEOF4k7uc1J/6a6z3DJMd/QwEyxLoKGiptJRwid582r7QIsFlFMIZ3SnxfS52S4hm2DHkuQ=="],
 

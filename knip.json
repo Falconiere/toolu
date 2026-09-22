@@ -1,26 +1,64 @@
 {
   "$schema": "./node_modules/knip/schema.json",
   "workspaces": {
-    ".": { "entry": [], "project": [] },
+    ".": {
+      "entry": [],
+      "project": []
+    },
     "tooling": {
-      "entry": ["src/gate-coverage-inventory.ts", "src/opencode-capability-probe.ts"],
-      "project": ["src/**/*.ts"],
-      "ignore": ["fixtures/**", "conventions/**", "__tests__/**"]
+      "entry": [
+        "src/gate-coverage-inventory.ts",
+        "src/opencode-capability-probe.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ],
+      "ignore": [
+        "fixtures/**",
+        "conventions/**",
+        "__tests__/**"
+      ]
     },
     "packages/toolu-core": {
-      "entry": ["src/**/*.ts!", "src/**/__tests__/**"],
-      "project": ["src/**/*.ts"]
+      "entry": [
+        "src/**/*.ts!",
+        "src/**/__tests__/**"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
     },
     "tools/toolu-opencode": {
-      "entry": ["src/**/*.ts!", "src/**/__tests__/**"],
-      "project": ["src/**/*.ts"]
+      "entry": [
+        "src/**/*.ts!",
+        "src/**/__tests__/**"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
     },
     "tools/toolu-conformance": {
-      "entry": ["src/**/*.ts!", "src/**/__tests__/**"],
-      "project": ["src/**/*.ts"]
+      "entry": [
+        "src/**/*.ts!",
+        "src/**/__tests__/**"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
+    },
+    "tools/toolu-cli": {
+      "entry": [
+        "src/cli.ts!",
+        "src/**/__tests__/**"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
     }
   },
-  "ignoreBinaries": ["bats"],
+  "ignoreBinaries": [
+    "bats"
+  ],
   "ignoreDependencies": [
     "oxlint",
     "oxlint-tsgolint",
