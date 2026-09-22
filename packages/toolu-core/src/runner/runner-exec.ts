@@ -3,40 +3,10 @@ import type { Subprocess } from "bun";
 import { readLimitedStream } from "./runner-read.ts";
 import type { BashRunArgs, RawProcessResult } from "./runner-types.ts";
 
-function killProcessGroup(pid: number): void {
-  // Negative PID = process group (child is group leader via setsid when available).
-  try {
-    process.kill(-pid, "SIGTERM");
-  } catch {
-    try {
-      process.kill(pid, "SIGTERM");
-    } catch {
-      /* already exited */
-    }
-  }
-}
-
-function spawnArgv(argv: string[]): string[] {
-  // Own session/group so timeout can SIGTERM the whole tree, not only the root PID.
-  if (argv[0] === "setsid") {
-    return argv;
-  }
-  const setsidBin = Bun.which("setsid");
-  if (setsidBin !== null) {
-    return [setsidBin, ...argv];
-  }
-  // macOS has setsid(2) but no setsid(1); start a new session via python3.
-  const python = Bun.which("python3") ?? Bun.which("python");
-  if (python !== null) {
-    return [
-      python,
-      "-c",
-      "import os, sys; os.setsid(); os.execvp(sys.argv[1], sys.argv[1:])",
-      ...argv,
-    ];
-  }
-  return argv;
-}
+type Spawned = {
+  proc: Subprocess<"pipe", "pipe", "pipe">;
+  sessionLeader: boolean;
+};
 
 function spawnFailure(message: string): RawProcessResult {
   return {
@@ -48,6 +18,46 @@ function spawnFailure(message: string): RawProcessResult {
     stderr: message,
     truncated: false,
   };
+}
+
+function killSpawned(spawned: Spawned): void {
+  const { proc, sessionLeader } = spawned;
+  if (sessionLeader) {
+    try {
+      process.kill(-proc.pid, "SIGTERM");
+      return;
+    } catch {
+      /* fall through to PID kill */
+    }
+  }
+  try {
+    process.kill(proc.pid, "SIGTERM");
+  } catch {
+    /* already exited */
+  }
+}
+
+function withSession(argv: string[]): { argv: string[]; sessionLeader: boolean } {
+  if (argv[0] === "setsid") {
+    return { argv, sessionLeader: true };
+  }
+  const setsidBin = Bun.which("setsid");
+  if (setsidBin !== null) {
+    return { argv: [setsidBin, ...argv], sessionLeader: true };
+  }
+  const python = Bun.which("python3") ?? Bun.which("python");
+  if (python !== null) {
+    return {
+      argv: [
+        python,
+        "-c",
+        "import os, sys; os.setsid(); os.execvp(sys.argv[1], sys.argv[1:])",
+        ...argv,
+      ],
+      sessionLeader: true,
+    };
+  }
+  return { argv, sessionLeader: false };
 }
 
 function raceAbort(
@@ -96,53 +106,74 @@ async function collectOutputs(
   return { stdoutOut, stderrOut, exitCode };
 }
 
-export async function execBashRun(args: BashRunArgs): Promise<RawProcessResult> {
+async function openSpawn(args: BashRunArgs): Promise<Spawned | RawProcessResult> {
   const cmd = args.argv[0];
   if (cmd === undefined || cmd.length === 0) {
     return spawnFailure("empty argv");
   }
-  // Resolve before session wrap so a missing binary is spawn failure, not wrapper exit 1.
   if (!cmd.includes("/") && Bun.which(cmd) === null) {
     return spawnFailure(`command not found: ${cmd}`);
   }
-
-  let proc;
+  const wrapped = withSession(args.argv);
   try {
-    proc = Bun.spawn(spawnArgv(args.argv), {
+    const proc = Bun.spawn(wrapped.argv, {
       cwd: args.cwd,
       env: { ...process.env, ...args.env },
       stdin: "pipe",
       stdout: "pipe",
       stderr: "pipe",
     });
-    void proc.stdin.write(args.stdin);
-    void proc.stdin.end();
+    proc.stdin.write(args.stdin);
+    const flushed = proc.stdin.flush();
+    if (typeof flushed !== "number") {
+      await flushed;
+    }
+    const ended = proc.stdin.end();
+    if (typeof ended !== "number") {
+      await ended;
+    }
+    return { proc, sessionLeader: wrapped.sessionLeader };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return spawnFailure(message);
   }
+}
+
+async function finishTimedOut(
+  spawned: Spawned,
+  code: "timeout" | "cancelled",
+  maxStdoutBytes: number,
+): Promise<RawProcessResult> {
+  killSpawned(spawned);
+  await spawned.proc.exited;
+  const { stdoutOut, stderrOut } = await collectOutputs(spawned.proc, maxStdoutBytes);
+  return {
+    ok: false,
+    code,
+    message: code === "cancelled" ? "process cancelled" : "process timed out",
+    exitCode: null,
+    stdout: stdoutOut.text,
+    stderr: stderrOut.text,
+    truncated: stdoutOut.truncated || stderrOut.truncated,
+  };
+}
+
+export async function execBashRun(args: BashRunArgs): Promise<RawProcessResult> {
+  const opened = await openSpawn(args);
+  if (!("proc" in opened)) {
+    return opened;
+  }
 
   const abort = raceAbort(args.deadlineMs, args.signal);
-  const raced = await Promise.race([proc.exited.then(() => "done" as const), abort.promise]);
+  const raced = await Promise.race([opened.proc.exited.then(() => "done" as const), abort.promise]);
 
   if (raced !== "done") {
-    killProcessGroup(proc.pid);
-    await proc.exited.catch(() => undefined);
     abort.clear();
-    const { stdoutOut, stderrOut } = await collectOutputs(proc, args.maxStdoutBytes);
-    return {
-      ok: false,
-      code: raced,
-      message: raced === "cancelled" ? "process cancelled" : "process timed out",
-      exitCode: null,
-      stdout: stdoutOut.text,
-      stderr: stderrOut.text,
-      truncated: stdoutOut.truncated || stderrOut.truncated,
-    };
+    return finishTimedOut(opened, raced, args.maxStdoutBytes);
   }
 
   abort.clear();
-  const { stdoutOut, stderrOut, exitCode } = await collectOutputs(proc, args.maxStdoutBytes);
+  const { stdoutOut, stderrOut, exitCode } = await collectOutputs(opened.proc, args.maxStdoutBytes);
 
   if (stdoutOut.truncated) {
     return {

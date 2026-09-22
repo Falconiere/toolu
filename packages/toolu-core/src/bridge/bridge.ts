@@ -57,7 +57,7 @@ export { toHookStdin, decisionFromHookResult } from "./hook-map.ts";
 
 function responseFromProcess(event: BridgeRequest["event"], raw: RawProcessResult): BridgeResponse {
   const meta = {
-    exitCode: raw.ok ? raw.exitCode : raw.exitCode,
+    exitCode: raw.exitCode,
     stdout: raw.stdout,
     stderr: raw.stderr,
     truncated: raw.truncated,
@@ -93,10 +93,10 @@ export async function runPreToolBridge(
   opts: PreToolBridgeOptions,
 ): Promise<BridgeResponse> {
   const request = parseBridgeRequest(requestInput);
-  if (request.event !== "tool/pre" && request.event !== "shell/pre") {
+  if (request.event !== "tool/pre") {
     const decision: Decision = {
       kind: "runtime_failure",
-      reason: `runPreToolBridge supports tool/pre and shell/pre, got ${request.event}`,
+      reason: `runPreToolBridge supports tool/pre only, got ${request.event}`,
       code: "nonzero",
     };
     return {
@@ -116,7 +116,7 @@ export async function runPreToolBridge(
     CLAUDE_PROJECT_DIR: request.projectRoot,
   };
 
-  const runArgs = {
+  const raw = await runner.run({
     argv: ["bash", modSh],
     cwd: request.cwd,
     env,
@@ -124,22 +124,7 @@ export async function runPreToolBridge(
     deadlineMs: request.deadlineMs,
     maxStdoutBytes: request.maxStdoutBytes,
     ...(opts.signal !== undefined ? { signal: opts.signal } : {}),
-  };
-  const raw = await runner.run(runArgs);
+  });
 
-  const response = responseFromProcess(request.event, raw);
-  if (!response.ok && request.event === "tool/pre") {
-    if (response.decision.kind === "allow") {
-      return {
-        ok: false,
-        decision: {
-          kind: "runtime_failure",
-          reason: "enabled pre-tool bridge must not emit allow on failure",
-          code: "nonzero",
-        },
-        meta: response.meta,
-      };
-    }
-  }
-  return response;
+  return responseFromProcess(request.event, raw);
 }
