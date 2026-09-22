@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "./args/parse";
 import { CliError, EXIT, UsageError, type ExitCode } from "./exit";
+import { dispatchPlugins } from "./plugins/dispatch";
 
 const HELP = `toolu <noun> <verb> [options]
 
@@ -47,6 +48,16 @@ async function packageVersion(): Promise<string> {
   throw new Error("package version is missing");
 }
 
+/** The CLI prompts only on a real terminal, and never when --no-input is passed. */
+function isInteractive(noInput: boolean): boolean {
+  return !noInput && process.stdin.isTTY === true && process.stdout.isTTY === true;
+}
+
+/** The repository the published package was built from, for its bundled manifest. */
+function repoRoot(): string {
+  return resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+}
+
 export async function main(argv: readonly string[] = process.argv.slice(2)): Promise<ExitCode> {
   try {
     const args = parseArgs(argv);
@@ -57,6 +68,13 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     if (args.help || args.noun === undefined) {
       process.stdout.write(HELP);
       return args.noun === undefined && !args.help ? EXIT.usage : EXIT.ok;
+    }
+    if (args.noun === "plugins") {
+      return await dispatchPlugins(args, {
+        manifestPath: resolve(repoRoot(), ".claude-plugin/marketplace.json"),
+        interactive: isInteractive(args.noInput),
+        write: (text: string) => process.stdout.write(text),
+      });
     }
     throw new UsageError(`${args.noun} ${args.verb ?? ""} is not implemented yet`.trim());
   } catch (error) {
