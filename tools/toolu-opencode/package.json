@@ -1,7 +1,35 @@
 {
   "name": "@toolu/opencode",
   "version": "6.7.0",
-  "private": true,
+  "description": "OpenCode plugin bridging toolu's bash quality gates into permission.evaluate.",
+  "keywords": [
+    "toolu",
+    "opencode",
+    "plugin",
+    "quality-gate"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Falconiere/toolu.git",
+    "directory": "tools/toolu-opencode"
+  },
+  "homepage": "https://github.com/Falconiere/toolu/blob/main/docs/opencode.md",
+  "bugs": {
+    "url": "https://github.com/Falconiere/toolu/issues"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "files": [
+    "src",
+    "generated",
+    "plugins"
+  ],
+  "scripts": {
+    "prepack": "bash scripts/bundle-plugins.sh"
+  },
   "type": "module",
   "exports": {
     "./host": "./src/host/index.ts",

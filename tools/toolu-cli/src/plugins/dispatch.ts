@@ -42,7 +42,9 @@ async function handleInstall(
 async function resolvedHost(args: ParsedArgs): Promise<"claude" | "codex"> {
   const { host } = await resolveHost(args.host);
   if (host === "opencode") {
-    throw new UsageError("OpenCode wiring is not implemented yet; see docs/opencode.md");
+    throw new UsageError(
+      "OpenCode is not wired into the CLI yet. Install the bridge with `opencode plugin add @toolu/opencode`; see docs/opencode.md",
+    );
   }
   assertScopeAllowed(args.scope, host);
   return host;

@@ -1,7 +1,27 @@
 # OpenCode install
 
 **Issue:** [#207](https://github.com/Falconiere/toolu/issues/207) (epic [#203](https://github.com/Falconiere/toolu/issues/203))  
-**Status:** Git-clone install only (no npm publish). Enforcement scope matches [#212](https://github.com/Falconiere/toolu/issues/212) fixture evidence — not every bash gate is wired yet.
+**Status:** `@toolu/opencode` publishes to npm from v6.7.0. Install it with OpenCode's own plugin CLI — no clone, no `TOOLU_REPO_ROOT`:
+
+```bash
+opencode plugin add @toolu/opencode
+```
+
+The package carries the bash `plugins/` tree, so the bridge resolves its plugin
+root to its own package directory. Choose which bash plugins are active with
+`<project>/.opencode/toolu/plugins.json`:
+
+```json
+{ "version": 1, "enabled": ["toolu"] }
+```
+
+`npx toolu plugins install --host opencode` does not drive this yet — the CLI
+has no OpenCode adapter. Until it does, run the two steps above.
+
+The git-clone flow below remains the contributor path, and is still how you work
+against an unreleased checkout.
+
+**Previous status:** Git-clone install only (no npm publish). Enforcement scope matches [#212](https://github.com/Falconiere/toolu/issues/212) fixture evidence — not every bash gate is wired yet.
 
 Claude Code and Codex keep their existing marketplace installs and **bash-only** runtime; they do **not** require Bun. OpenCode uses the Bun/TS packages in this repo plus the same bash hook tree under `plugins/`.
 

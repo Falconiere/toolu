@@ -47,30 +47,36 @@ setup() {
   [ "$status" -ne 0 ]
 }
 
-@test "the publish workflow refuses a tag that disagrees with the package version" {
-  grep -Fq 'does not match tools/toolu-cli version' "$WF"
+@test "the publish workflow refuses a tag that disagrees with any package version" {
+  grep -Fq 'does not match $dir version' "$WF"
 }
 
-@test "only the CLI is published; the library packages stay private" {
-  # Every working-directory in the workflow must be the CLI's -- a second
-  # package directory appearing here is exactly the regression to catch.
-  run bash -c "grep -E '^\s+working-directory:' '$WF' | sed 's/.*working-directory: *//' | sort -u"
-  [ "$status" -eq 0 ]
-  [ "$output" = "tools/toolu-cli" ]
-
-  # And the publish step itself runs there, rather than merely some step doing so.
-  run bash -c "grep -A3 'name: Publish' '$WF' | grep -c 'working-directory: tools/toolu-cli'"
-  [ "$output" = "1" ]
-
-  for p in packages/toolu-core tools/toolu-opencode tools/toolu-conformance; do
-    jq -e '.private == true' "$ROOT/$p/package.json" >/dev/null
+@test "the three published packages are publishable and conformance stays private" {
+  for p in packages/toolu-core tools/toolu-opencode tools/toolu-cli; do
+    jq -e '.private == null' "$ROOT/$p/package.json" >/dev/null
+    jq -e '.license == "MIT"' "$ROOT/$p/package.json" >/dev/null
+    jq -e '.publishConfig.access == "public" and .publishConfig.provenance == true' \
+      "$ROOT/$p/package.json" >/dev/null
   done
-  jq -e '.private == null' "$ROOT/tools/toolu-cli/package.json" >/dev/null
+  # The conformance harness is internal and must never ship.
+  jq -e '.private == true' "$ROOT/tools/toolu-conformance/package.json" >/dev/null
+}
+
+# @toolu/opencode depends on @toolu/core, and Bun rewrites workspace:* to a
+# concrete version at pack time, so core must reach the registry first.
+@test "the workflow publishes in dependency order, core before opencode" {
+  run bash -c "grep -oE 'packages/toolu-core tools/toolu-opencode tools/toolu-cli' '$WF' | head -1"
+  [ "$output" = "packages/toolu-core tools/toolu-opencode tools/toolu-cli" ]
+}
+
+@test "a package already on the registry is skipped so a re-run resumes" {
+  grep -Fq 'is already published' "$WF"
+  grep -Fq 'skipping' "$WF"
 }
 
 @test "an npm view failure that is not a 404 fails the job instead of publishing" {
-  grep -Fq "elif printf '%s' \"\$out\" | grep -q 'E404'" "$WF"
-  grep -Fq 'npm view failed for a reason other than the version being absent' "$WF"
+  grep -Fq "grep -q 'E404'" "$WF"
+  grep -Fq 'for a reason other than the version being absent' "$WF"
 }
 
 @test "the published tarball carries the bundle and the manifest and nothing else" {

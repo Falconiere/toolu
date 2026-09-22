@@ -9,11 +9,18 @@ const ADAPTERS: readonly HostAdapter[] = [claudeAdapter, codexAdapter];
 const OPENCODE_BIN = "opencode";
 const PROBED = ["claude", "codex", OPENCODE_BIN] as const;
 
-/** The adapter for an explicitly requested host. OpenCode has no plugin CLI. */
+/**
+ * The adapter for an explicitly requested host.
+ *
+ * OpenCode has its own plugin CLI (`opencode plugin add|list|remove`), but it
+ * installs npm packages rather than marketplace entries, so the 13 bash plugins
+ * are not addressable through it. Its adapter installs the `@toolu/opencode`
+ * bridge instead, and does not exist yet.
+ */
 export function adapterFor(host: Host): HostAdapter {
   const adapter = ADAPTERS.find((candidate) => candidate.host === host);
   if (adapter === undefined) {
-    throw new UsageError(`${host} has no plugin CLI; it is wired through project files instead`);
+    throw new UsageError(`${host} has no adapter yet; see docs/opencode.md`);
   }
   return adapter;
 }

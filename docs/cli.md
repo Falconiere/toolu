@@ -2,8 +2,13 @@
 
 **Status:** in progress. The `plugins` verbs below work against Claude Code and
 Codex today, and the [README](../README.md#install) install snippets use them.
-`agents`, OpenCode wiring, and the interactive prompts are not built yet, so
-OpenCode keeps its git-clone wiring in [docs/opencode.md](opencode.md).
+`agents`, OpenCode wiring, and the interactive prompts are not built yet.
+
+`--host opencode` exits `2`. OpenCode has its own plugin CLI, but it installs npm
+packages rather than marketplace entries, so the thirteen bash plugins are not
+addressable through it — what it installs is the `@toolu/opencode` bridge. Until
+the adapter lands, run `opencode plugin add @toolu/opencode` and write
+`.opencode/toolu/plugins.json` yourself; see [docs/opencode.md](opencode.md).
 
 The npm package ships with the next release; until then use each host's own
 plugin commands.
