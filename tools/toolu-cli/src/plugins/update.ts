@@ -1,3 +1,4 @@
+import { CliError, EXIT } from "../exit";
 import { run } from "../host/run";
 import type { HostAdapter } from "../host/types";
 
@@ -32,6 +33,14 @@ export async function updatePlugins(
   const installed = await versions(adapter, adapter.listInstalled().argv, env);
   const offered = await versions(adapter, adapter.listAvailable().argv, env);
   const targets = names.length > 0 ? names : [...installed.keys()];
+  if (targets.length === 0) {
+    // An empty request plus an empty installed set means the host told us
+    // nothing. Saying so beats returning no steps and reading as success.
+    throw new CliError(
+      EXIT.failed,
+      `${adapter.bin} reported no installed plugins, so there is nothing to update`,
+    );
+  }
   const steps: UpdateStep[] = [];
   for (const name of targets) {
     const { argv } = adapter.update(name, marketplaceName);
@@ -45,7 +54,12 @@ export async function updatePlugins(
     steps.push({
       name,
       outcome: result.code === 0 ? "updated" : "failed",
-      detail: result.code === 0 ? `updated to ${want ?? "latest"}` : "update failed",
+      detail:
+        result.code === 0
+          ? want === undefined
+            ? "updated"
+            : `updated to ${want}`
+          : "update failed",
       argv,
     });
   }

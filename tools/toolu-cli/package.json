@@ -34,7 +34,7 @@
     "assets"
   ],
   "scripts": {
-    "build": "cp ../../.claude-plugin/marketplace.json assets/marketplace.json && bun build src/cli.ts --target=node --outfile=dist/cli.js && chmod 755 dist/cli.js",
+    "build": "mkdir -p assets dist && cp ../../.claude-plugin/marketplace.json assets/marketplace.json && bun build src/cli.ts --target=node --outfile=dist/cli.js && chmod 755 dist/cli.js",
     "prepack": "bun run build >/dev/null"
   },
   "dependencies": {

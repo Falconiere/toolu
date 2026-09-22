@@ -102,12 +102,16 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
   const { positionals, booleans, values } = collect(argv);
   const help = booleans.has("--help") || booleans.has("-h");
   const version = booleans.has("--version") || booleans.has("-v");
-  const noun = help || version ? readNounSafely(positionals) : readNoun(positionals);
+  // An unknown noun is a usage error even alongside --help: `toolu skills --help`
+  // must not answer as though `skills` were a command.
+  const noun = readNoun(positionals);
   const verb = help || version ? undefined : readVerb(noun, positionals);
   const host = readEnum<Host>(values, "--host", hostSchema, HOSTS);
   const scope = readEnum<Scope>(values, "--scope", scopeSchema, SCOPES);
+  // With an explicit host this is decidable now. With an implicit one the check
+  // runs again once detection resolves, in assertScopeAllowed.
   if (scope !== undefined && host !== undefined && host !== "claude") {
-    throw new UsageError(`--scope is Claude Code only; --host ${host} has no scope concept`);
+    throw new UsageError(scopeRejection(host));
   }
   return {
     noun,
@@ -126,9 +130,12 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
   };
 }
 
-function readNounSafely(positionals: readonly string[]): Noun | undefined {
-  const first = positionals[0];
-  if (first === undefined) return undefined;
-  const parsed = nounSchema.safeParse(first);
-  return parsed.success ? parsed.data : undefined;
+/** The message used whether the host was named or detected. */
+function scopeRejection(host: Host): string {
+  return `--scope is Claude Code only; ${host} has no scope concept`;
+}
+
+/** Re-checks --scope once an implicit host has been resolved. */
+export function assertScopeAllowed(scope: Scope | undefined, host: Host): void {
+  if (scope !== undefined && host !== "claude") throw new UsageError(scopeRejection(host));
 }

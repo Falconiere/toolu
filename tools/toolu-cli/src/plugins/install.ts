@@ -1,6 +1,7 @@
 import { dependentsOf, installOrder } from "../catalog/order";
 import type { Marketplace } from "../catalog/types";
 import { run } from "../host/run";
+import { firstLine } from "../text";
 import type { HostAdapter, InstalledPlugin } from "../host/types";
 
 type StepOutcome = "installed" | "already" | "skew" | "failed" | "skipped";
@@ -56,15 +57,6 @@ function presentStep(
   };
 }
 
-function firstLine(text: string): string {
-  return (
-    text
-      .split("\n")
-      .find((line) => line.trim().length > 0)
-      ?.trim() ?? ""
-  );
-}
-
 /**
  * Installs the requested plugins in dependency order, adding the marketplace first.
  *
@@ -87,11 +79,12 @@ export async function installPlugins(options: InstallOptions): Promise<readonly 
     options.adapter.listAvailable().argv,
     options.env,
   );
+  const coreDependents = new Set(dependentsOf(options.marketplace, CORE));
   const steps: InstallStep[] = [];
   let coreFailed = false;
   for (const name of order) {
     const { argv } = options.adapter.install(name, options.marketplaceName, options.scope);
-    if (coreFailed && dependentsOf(options.marketplace, CORE).includes(name)) {
+    if (coreFailed && coreDependents.has(name)) {
       steps.push({ name, outcome: "skipped", detail: `skipped: ${CORE} failed`, argv });
       continue;
     }
@@ -109,7 +102,7 @@ export async function installPlugins(options: InstallOptions): Promise<readonly 
     steps.push({
       name,
       outcome: ok ? "installed" : "failed",
-      detail: ok ? "installed" : firstLine(result.stderr) || "install failed",
+      detail: ok ? "installed" : firstLine(result.stderr, "install failed"),
       argv,
     });
     if (!ok && name === CORE) coreFailed = true;

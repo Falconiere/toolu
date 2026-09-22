@@ -1,13 +1,5 @@
 import { run } from "../host/run";
-
-function firstLine(text: string): string {
-  return (
-    text
-      .split("\n")
-      .find((line) => line.trim().length > 0)
-      ?.trim() ?? "remove failed"
-  );
-}
+import { firstLine } from "../text";
 import type { HostAdapter } from "../host/types";
 
 export interface RemoveStep {
@@ -31,7 +23,7 @@ export async function removePlugins(
     steps.push({
       name,
       removed: result.code === 0,
-      detail: result.code === 0 ? "removed" : firstLine(result.stderr),
+      detail: result.code === 0 ? "removed" : firstLine(result.stderr, "remove failed"),
       argv,
     });
   }

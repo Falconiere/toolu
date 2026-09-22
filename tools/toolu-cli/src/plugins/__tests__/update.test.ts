@@ -34,3 +34,11 @@ describe("updatePlugins with an unreachable host binary", () => {
     expect(steps[0]?.detail).toBe("update failed");
   });
 });
+
+describe("an empty request against a host that reports nothing", () => {
+  test("says so rather than returning no steps, which would read as success", async () => {
+    expect(
+      updatePlugins(claudeAdapter, "toolu", [], { ...process.env, PATH: "/nonexistent" }),
+    ).rejects.toThrow(/reported no installed plugins/);
+  });
+});

@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import type { InstallStep } from "../../plugins/install";
+import type { RemoveStep } from "../../plugins/remove";
 import { anyFailed, reportInstall, reportList, reportRemove, reportUpdate } from "../report";
 
 describe("reportInstall", () => {
@@ -33,19 +35,32 @@ describe("reportInstall", () => {
 });
 
 describe("anyFailed", () => {
+  const install = (outcome: InstallStep["outcome"]): InstallStep => ({
+    name: "p",
+    outcome,
+    detail: "",
+    argv: [],
+  });
+  const removal = (removed: boolean): RemoveStep => ({
+    name: "p",
+    removed,
+    detail: "",
+    argv: [],
+  });
+
   test("is true for a failed install step and for a failed removal", () => {
-    expect(anyFailed([{ outcome: "failed" }])).toBe(true);
-    expect(anyFailed([{ removed: false }])).toBe(true);
+    expect(anyFailed([install("failed")])).toBe(true);
+    expect(anyFailed([removal(false)])).toBe(true);
   });
 
   test("is false when every step succeeded or was already satisfied", () => {
-    expect(anyFailed([{ outcome: "installed" }, { outcome: "already" }])).toBe(false);
-    expect(anyFailed([{ removed: true }])).toBe(false);
+    expect(anyFailed([install("installed"), install("already")])).toBe(false);
+    expect(anyFailed([removal(true)])).toBe(false);
     expect(anyFailed([])).toBe(false);
   });
 
   test("a skew is not a failure, because the plugin is still installed", () => {
-    expect(anyFailed([{ outcome: "skew" }])).toBe(false);
+    expect(anyFailed([install("skew")])).toBe(false);
   });
 });
 

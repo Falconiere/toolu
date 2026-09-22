@@ -51,9 +51,10 @@ export function reportUpdate(steps: readonly UpdateStep[]): string {
   return steps.map((step) => line(MARK[step.outcome] ?? "?", step.name, step.detail)).join("");
 }
 
+/** Every step shape a verb can report. */
+type AnyStep = InstallStep | RemoveStep | UpdateStep;
+
 /** Exit 1 when any step failed, so a caller's shell sees the failure. */
-export function anyFailed(
-  steps: readonly { readonly outcome?: string; readonly removed?: boolean }[],
-): boolean {
-  return steps.some((step) => step.outcome === "failed" || step.removed === false);
+export function anyFailed(steps: readonly AnyStep[]): boolean {
+  return steps.some((step) => ("removed" in step ? !step.removed : step.outcome === "failed"));
 }

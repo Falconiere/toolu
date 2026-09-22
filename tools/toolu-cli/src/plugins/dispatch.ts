@@ -1,6 +1,7 @@
 import type { ParsedArgs } from "../args/types";
 import { readMarketplace } from "../catalog/manifest";
 import type { Marketplace } from "../catalog/types";
+import { assertScopeAllowed } from "../args/parse";
 import { adapterFor, resolveHost } from "../host/detect";
 import { CliError, EXIT, UsageError, type ExitCode } from "../exit";
 import { installPlugins } from "./install";
@@ -23,10 +24,7 @@ async function handleInstall(
   marketplace: Marketplace,
   context: DispatchContext,
 ): Promise<ExitCode> {
-  const { host } = await resolveHost(args.host);
-  if (host === "opencode") {
-    throw new UsageError("OpenCode wiring is not implemented yet; see docs/opencode.md");
-  }
+  const host = await resolvedHost(args);
   const steps = await installPlugins({
     adapter: adapterFor(host),
     marketplace,
@@ -40,12 +38,22 @@ async function handleInstall(
   return anyFailed(steps) ? EXIT.failed : EXIT.ok;
 }
 
+/** Resolves the host and applies the checks every verb shares. */
+async function resolvedHost(args: ParsedArgs): Promise<"claude" | "codex"> {
+  const { host } = await resolveHost(args.host);
+  if (host === "opencode") {
+    throw new UsageError("OpenCode wiring is not implemented yet; see docs/opencode.md");
+  }
+  assertScopeAllowed(args.scope, host);
+  return host;
+}
+
 async function handleRemove(args: ParsedArgs, context: DispatchContext): Promise<ExitCode> {
   if (args.names.length === 0) throw new UsageError("plugins remove requires at least one name");
   if (!args.yes) {
     throw new CliError(EXIT.missingInput, "plugins remove requires --yes to confirm");
   }
-  const { host } = await resolveHost(args.host);
+  const host = await resolvedHost(args);
   const steps = await removePlugins(adapterFor(host), MARKETPLACE_NAME, args.names);
   context.write(reportRemove(steps));
   return anyFailed(steps) ? EXIT.failed : EXIT.ok;
@@ -59,7 +67,7 @@ export async function dispatchPlugins(
   const marketplace = await readMarketplace(context.manifestPath);
   if (args.verb === "install") return handleInstall(args, marketplace, context);
   if (args.verb === "remove") return handleRemove(args, context);
-  const { host } = await resolveHost(args.host);
+  const host = await resolvedHost(args);
   if (args.verb === "list") {
     const entries = await listPlugins(adapterFor(host), marketplace);
     context.write(args.json ? `${JSON.stringify(entries, null, 2)}\n` : reportList(entries));

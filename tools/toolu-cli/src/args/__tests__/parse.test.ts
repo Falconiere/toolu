@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { EXIT, UsageError } from "../../exit";
-import { parseArgs } from "../parse";
+import { assertScopeAllowed, parseArgs } from "../parse";
 
 describe("parseArgs", () => {
   test("reads a full plugins install invocation", () => {
@@ -73,5 +73,25 @@ describe("parseArgs", () => {
     const args = parseArgs([]);
     expect(args.noun).toBeUndefined();
     expect(args.names).toEqual([]);
+  });
+});
+
+describe("review-driven behavior", () => {
+  test("an unknown noun is a usage error even alongside --help or --version", () => {
+    expect(() => parseArgs(["skills", "--help"])).toThrow(/unknown command: skills/);
+    expect(() => parseArgs(["skills", "--version"])).toThrow(/unknown command: skills/);
+  });
+
+  test("--help on a known noun, and bare --help, still answer", () => {
+    expect(parseArgs(["plugins", "--help"]).noun).toBe("plugins");
+    expect(parseArgs(["--help"]).noun).toBeUndefined();
+  });
+
+  test("--scope without --host parses, and is re-checked once the host resolves", () => {
+    expect(parseArgs(["plugins", "install", "--scope", "user"]).scope).toBe("user");
+    expect(() => assertScopeAllowed("user", "claude")).not.toThrow();
+    expect(() => assertScopeAllowed("user", "codex")).toThrow(/Claude Code only/);
+    expect(() => assertScopeAllowed("user", "opencode")).toThrow(/Claude Code only/);
+    expect(() => assertScopeAllowed(undefined, "codex")).not.toThrow();
   });
 });
