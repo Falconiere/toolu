@@ -15,9 +15,9 @@ async function protectedEnvProject(): Promise<{ projectRoot: string; envPath: st
   const projectRoot = await mkdtemp(join(tmpBase, "toolu-oc-eval-"));
   const envPath = join(projectRoot, ".env");
   await writeFile(envPath, "SECRET=1\n", "utf8");
-  await mkdir(join(projectRoot, ".claude"), { recursive: true });
+  await mkdir(join(projectRoot, ".opencode"), { recursive: true });
   await writeFile(
-    join(projectRoot, ".claude/toolu.config.json"),
+    join(projectRoot, ".opencode/toolu.config.json"),
     JSON.stringify({
       version: 1,
       gates: { protectedFiles: { mode: "block" } },
@@ -37,7 +37,7 @@ function editEvent(envPath: string): PermissionEvaluationEvent {
   };
 }
 
-test("AC-2: evaluate handler + real bridge on protected .env yields deny or ask", async () => {
+test("AC-2: evaluate handler + real bridge on protected .env yields deny", async () => {
   const root = repoRoot();
   const { projectRoot, envPath } = await protectedEnvProject();
   const handler = createPermissionEvaluateHandler({
@@ -50,14 +50,15 @@ test("AC-2: evaluate handler + real bridge on protected .env yields deny or ask"
     },
     env: {
       TOOLU_SETTINGS_DIR: join(root, "plugins/toolu/settings"),
-      TOOLU_HOST_OVERRIDE: "claude",
+      TOOLU_HOST_OVERRIDE: "opencode",
+      TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",
     },
   });
 
   const event = editEvent(envPath);
   await handler(event);
 
-  expect(event.effect === "deny" || event.effect === "ask").toBe(true);
+  expect(event.effect).toBe("deny");
 });
 
 test("AC-3: runtime_failure from bad repoRoot maps to deny", async () => {

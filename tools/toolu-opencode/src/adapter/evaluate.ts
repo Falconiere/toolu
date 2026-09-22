@@ -39,11 +39,6 @@ export function createPermissionEvaluateHandler(
       ...(opts.env !== undefined ? { env: opts.env } : {}),
     });
 
-    if (!response.ok && response.decision.kind === "runtime_failure") {
-      applyDecisionToPermission(response.decision, event);
-      return;
-    }
-
     applyDecisionToPermission(response.decision, event);
   };
 }
