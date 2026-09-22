@@ -23,12 +23,16 @@
             "group": ["yup", "yup/*", "joi", "joi/*", "valibot", "valibot/*", "superstruct", "superstruct/*", "ajv", "ajv/*"],
             "message": "One validator: use zod"
           },
-          {
-            "group": ["@opencode/plugin", "@opencode/plugin/*"],
-            "message": "OpenCode SDK lands in #211 — stub must not depend on it yet"
-          }
         ]
       }
     ]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["src/plugin/toolu.ts"],
+      "rules": {
+        "import/no-default-export": "off"
+      }
+    }
+  ]
 }

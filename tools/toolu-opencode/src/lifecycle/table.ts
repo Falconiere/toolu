@@ -1,6 +1,7 @@
 /**
- * OpenCode lifecycle handler map (stubs until #204 SDK wiring).
- * Aligns with portable-core / #209: filesystem bootstrap only.
+ * OpenCode lifecycle handler map.
+ * permission/evaluate hard-deny path is wired in #204; remaining session/tool
+ * hooks stay deferred until fuller host coverage / #212 evidence.
  */
 
 export type LifecycleSupport = "supported" | "deferred" | "unsupported";
@@ -26,7 +27,7 @@ const TABLE: Record<LifecycleEvent, LifecycleSupport> = {
   "session/load": "deferred",
   prompt: "unsupported",
   pre_compact: "unsupported",
-  "permission/evaluate": "deferred",
+  "permission/evaluate": "supported",
   "tool/pre": "deferred",
   "tool/post": "deferred",
   "shell/pre": "deferred",
