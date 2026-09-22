@@ -3,8 +3,15 @@
   "version": "6.4.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "toolu-conformance": "./src/cli/run.ts"
+  },
   "exports": {
+    "./run": "./src/cli/run.ts",
     "./run-stub": "./src/cli/run-stub.ts"
+  },
+  "scripts": {
+    "start": "bun run src/cli/run.ts"
   },
   "dependencies": {
     "@toolu/core": "workspace:*"

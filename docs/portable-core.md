@@ -1,7 +1,7 @@
 # Portable Bun/TS core contracts
 
 **Issue:** [#205](https://github.com/Falconiere/toolu/issues/205) (epic [#203](https://github.com/Falconiere/toolu/issues/203))  
-**Status:** Contract freeze for implementation in #208/#210/#211/#204. This document does **not** claim complete OpenCode support.
+**Status:** Zod contracts and argv bash bridge are **implemented** in `@toolu/core` ([#210](https://github.com/Falconiere/toolu/issues/210)). OpenCode adapter wiring ([#211](https://github.com/Falconiere/toolu/issues/211)/[#204](https://github.com/Falconiere/toolu/issues/204)) is still pending.
 
 ## Pins
 
@@ -36,6 +36,7 @@ TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, 
 | `./bridge` | Bash bridge request/response schemas |
 | `./policy` | Classification enum + precedence helpers |
 | `./config` | `toolu.config.json` Zod (`version: 1`) |
+| `./runner` | `BashRunner` + `createBunBashRunner` (argv-only `Bun.spawn`) |
 
 ## Zod boundary rules
 
