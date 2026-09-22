@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: falconiere/toolu-ghactions/code-review@v7
+      - uses: falconiere/toolu-ghactions/code-review@v8
         with:
           PROVIDER: openrouter
           API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -39,6 +39,8 @@ jobs:
           # bot requests changes. Pinned to "none" to keep the v3 advisory
           # behaviour; drop this line to adopt the merge gate.
           FAIL_ON: none
+          JEV_ENABLED: 'true'
+          JEV_MODEL_ID: typesafe/jev-1.13
           # Custom App identity. Requires APP_ID + APP_PRIVATE_KEY secrets on
           # THIS repo and the App installed here; otherwise falls back to
           # github-actions[bot].
