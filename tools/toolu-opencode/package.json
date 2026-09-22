@@ -4,9 +4,16 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./host": "./src/host/index.ts",
+    "./inventory": "./src/inventory/index.ts",
+    "./select": "./src/select/index.ts",
+    "./bootstrap": "./src/bootstrap/index.ts",
+    "./preflight": "./src/preflight/index.ts",
+    "./lifecycle": "./src/lifecycle/index.ts",
     "./plugin-stub": "./src/plugin/plugin-stub.ts"
   },
   "dependencies": {
-    "@toolu/core": "workspace:*"
+    "@toolu/core": "workspace:*",
+    "zod": "4.1.5"
   }
 }

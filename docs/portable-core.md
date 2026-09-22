@@ -1,7 +1,7 @@
 # Portable Bun/TS core contracts
 
 **Issue:** [#205](https://github.com/Falconiere/toolu/issues/205) (epic [#203](https://github.com/Falconiere/toolu/issues/203))  
-**Status:** Zod contracts and argv bash bridge are **implemented** in `@toolu/core` ([#210](https://github.com/Falconiere/toolu/issues/210)). OpenCode adapter wiring ([#211](https://github.com/Falconiere/toolu/issues/211)/[#204](https://github.com/Falconiere/toolu/issues/204)) is still pending.
+**Status:** Zod contracts and argv bash bridge are **implemented** in `@toolu/core` ([#210](https://github.com/Falconiere/toolu/issues/210)). OpenCode **filesystem bootstrap** (host roots, inventory, selection, register/session-start assembly, preflight, lifecycle stubs) is **implemented** in `@toolu/opencode` ([#211](https://github.com/Falconiere/toolu/issues/211)). SDK hook registration and `permission.evaluate` wiring remain ([#204](https://github.com/Falconiere/toolu/issues/204)).
 
 ## Pins
 
@@ -37,6 +37,17 @@ TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, 
 | `./policy` | Classification enum + precedence helpers |
 | `./config` | `toolu.config.json` Zod (`version: 1`) |
 | `./runner` | `BashRunner` + `createBunBashRunner` (argv-only `Bun.spawn`) |
+
+### OpenCode export map ([#211](https://github.com/Falconiere/toolu/issues/211))
+
+| Export | Responsibility |
+|--------|----------------|
+| `@toolu/opencode/host` | `detectHost`, OpenCode data/config roots (`TOOLU_OPENCODE_HOME`, `TOOLU_CONFIG_DIR`, `.opencode/`) |
+| `@toolu/opencode/inventory` | Installed/enabled/absent/unknown; selection via `.opencode/toolu/plugins.json` + `toolu.config` skills |
+| `@toolu/opencode/select` | Enabled set + manifest dependency closure |
+| `@toolu/opencode/bootstrap` | `bootstrapRuntime` → Ready \| NotReady with registry/session artifacts |
+| `@toolu/opencode/preflight` | bash/jq/git/bun/opencode probe; missing bash/jq fail closed |
+| `@toolu/opencode/lifecycle` | Event → supported \| deferred \| unsupported stubs until #204 |
 
 ## Zod boundary rules
 
