@@ -1,9 +1,12 @@
 # `toolu` CLI
 
 **Status:** in progress. The `plugins` verbs below work against Claude Code and
-Codex today. `agents`, OpenCode wiring, and the interactive prompts are not built
-yet — see the tracking PR. Until then the pasted install prompts in the
-[README](../README.md#install) remain the supported install path.
+Codex today, and the [README](../README.md#install) install snippets use them.
+`agents`, OpenCode wiring, and the interactive prompts are not built yet, so
+OpenCode keeps its git-clone wiring in [docs/opencode.md](opencode.md).
+
+The npm package ships with the next release; until then use each host's own
+plugin commands.
 
 Design: `docs/toolu/specs/2026-09-22-npx-toolu-cli-design.md` (untracked; `docs/toolu/` is gitignored).
 

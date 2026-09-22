@@ -83,55 +83,59 @@ hook surface. Paste the **OpenCode** prompt under [Install everything](#install-
 or follow **[docs/opencode.md](docs/opencode.md)** for prerequisites, layout, smoke,
 update, and uninstall. Claude Code and Codex marketplace installs below are unchanged.
 
+### The `toolu` CLI
+
+Installation goes through a published CLI that drives each host's own plugin CLI
+in catalog dependency order:
+
+```bash
+npx toolu plugins install              # everything, core first
+npx toolu plugins install rust-quality # one plugin and its dependency
+npx toolu plugins list                 # catalog joined with what is installed
+npx toolu plugins remove jira --yes
+npx toolu plugins update
+```
+
+> **Not published yet.** The `toolu` npm package ships with the next release. Until
+> that lands, install with the host's own commands — `claude plugin marketplace add
+> Falconiere/toolu` then `claude plugin install <name>@toolu --scope user` for each
+> plugin, `toolu` first, or `codex plugin add <name>@toolu` on Codex.
+
+Claude Code and Codex are covered. Codex agent profiles, OpenCode wiring, and the
+interactive prompts are not built yet. Full grammar, exit codes, and the
+`.toolu/plugins.json` selection file: **[docs/cli.md](docs/cli.md)**.
+
 ### Install everything
 
-Paste one prompt into the host. It adds the marketplace and installs every
-plugin in the catalog, core first. Do not install comemory.
+One command per host. It adds the marketplace and installs every plugin in the
+catalog, core first, deriving that order from the catalog's own dependency
+edges. Do not install comemory — it has moved to its own installer (below).
+
+OpenCode has no marketplace yet, so it keeps the git-clone wiring.
 
 #### Claude Code
 
 <!-- install-everything:claude -->
-```text
-Install every toolu plugin for Claude Code at user scope. Run these commands in a terminal, in order. Skip a command that reports the marketplace or plugin is already installed.
+```bash
+# Optional: lets Claude Code resolve the code-simplifier companion. Nothing is
+# installed from it; skip if you do not want the pre-simplify pass.
+claude plugin marketplace add anthropics/claude-plugins-official
 
-claude plugin marketplace add Falconiere/toolu
-claude plugin install toolu@toolu --scope user
-claude plugin install agent-browser@toolu --scope user
-claude plugin install ast-grep@toolu --scope user
-claude plugin install context7@toolu --scope user
-claude plugin install exa-search@toolu --scope user
-claude plugin install jev@toolu --scope user
-claude plugin install jira@toolu --scope user
-claude plugin install pr-babysit@toolu --scope user
-claude plugin install python-quality@toolu --scope user
-claude plugin install rust-quality@toolu --scope user
-claude plugin install statusline@toolu --scope user
-claude plugin install toolu-review@toolu --scope user
-claude plugin install ts-quality@toolu --scope user
+# Adds the toolu marketplace and installs every catalog plugin, core first.
+# Already-installed plugins are reported and left alone.
+npx toolu plugins install
 ```
 <!-- /install-everything:claude -->
 
 #### Codex
 
 <!-- install-everything:codex -->
-```text
-Install every toolu plugin for Codex. Run these commands in a terminal, in order. Skip a command that reports the marketplace or plugin is already installed. After they are installed, review and trust the hooks in /hooks before they run.
-
-codex plugin marketplace add Falconiere/toolu
-codex plugin add toolu@toolu
-codex plugin add agent-browser@toolu
-codex plugin add ast-grep@toolu
-codex plugin add context7@toolu
-codex plugin add exa-search@toolu
-codex plugin add jev@toolu
-codex plugin add jira@toolu
-codex plugin add pr-babysit@toolu
-codex plugin add python-quality@toolu
-codex plugin add rust-quality@toolu
-codex plugin add statusline@toolu
-codex plugin add toolu-review@toolu
-codex plugin add ts-quality@toolu
+```bash
+# Adds the toolu marketplace and installs every catalog plugin, core first.
+npx toolu plugins install --host codex
 ```
+
+After they are installed, review and trust the hooks in `/hooks` before they run.
 <!-- /install-everything:codex -->
 
 #### OpenCode
@@ -192,24 +196,26 @@ in this release. Custom agent profiles are installed locally under
 ## What's inside
 
 Thirteen plugins, one marketplace. Every plugin ships synchronized Claude and
-Codex manifests at the repository version (`6.5.0` here). Install the core
-alone, or add the domain plugins.
+Codex manifests, and release-please holds all of them — plus the workspace
+packages and the root — at one version matching the git tag, so a plugin's
+version is always the repository's. Install the core alone, or add the domain
+plugins.
 
-| Group | Plugin | Version | What it does |
-|--------|--------|:-------:|--------------|
-| Core | **`toolu`** | `6.5.0` | Registry-driven hook engine, adaptive delivery workflow, commit workflows, model routing, push-review gate, and custom-agent templates. |
-| Quality gate | **`rust-quality`** | `6.5.0` | Rust post-edit checks — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests. |
-| Quality gate | **`ts-quality`** | `6.5.0` | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
-| Quality gate | **`python-quality`** | `6.5.0` | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
-| Code intel | **`ast-grep`** | `6.5.0` | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
-| Browser | **`agent-browser`** | `6.5.0` | Token-lean browser automation through accessibility-tree snapshots and stable element references. |
-| Knowledge | **`context7`** | `6.5.0` | Live library documentation and code examples through Context7. |
-| Knowledge | **`exa-search`** | `6.5.0` | Web, code, URL search, and deep research through Exa. |
-| Knowledge | **`jev`** | `6.5.0` | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores a script can branch on. |
-| Workflow | **`jira`** | `6.5.0` | Jira Cloud and Server/DC search plus safe issue workflow operations. |
-| Workflow | **`toolu-review`** | `6.5.0` | Pre-push review matching CI `code-review@v8` (Jev-enabled) and writing review attestations. |
-| Workflow | **`pr-babysit`** | `6.5.0` | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
-| Status | **`statusline`** | `6.5.0` | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
+| Group | Plugin | What it does |
+|--------|--------|--------------|
+| Core | **`toolu`** | Registry-driven hook engine, adaptive delivery workflow, commit workflows, model routing, push-review gate, and custom-agent templates. |
+| Quality gate | **`rust-quality`** | Rust post-edit checks — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests. |
+| Quality gate | **`ts-quality`** | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
+| Quality gate | **`python-quality`** | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
+| Code intel | **`ast-grep`** | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
+| Browser | **`agent-browser`** | Token-lean browser automation through accessibility-tree snapshots and stable element references. |
+| Knowledge | **`context7`** | Live library documentation and code examples through Context7. |
+| Knowledge | **`exa-search`** | Web, code, URL search, and deep research through Exa. |
+| Knowledge | **`jev`** | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores a script can branch on. |
+| Workflow | **`jira`** | Jira Cloud and Server/DC search plus safe issue workflow operations. |
+| Workflow | **`toolu-review`** | Pre-push review matching CI `code-review@v8` (Jev-enabled) and writing review attestations. |
+| Workflow | **`pr-babysit`** | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
+| Status | **`statusline`** | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
 
 Beyond the plugins, the core (`toolu`) also ships:
 

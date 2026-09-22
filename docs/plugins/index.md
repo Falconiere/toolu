@@ -60,47 +60,26 @@ are in the root [README](../../README.md#install-everything).
 #### Claude Code
 
 <!-- install-everything:claude -->
-```text
-Install every toolu plugin for Claude Code at user scope. Run these commands in a terminal, in order. Skip a command that reports the marketplace or plugin is already installed.
+```bash
+# Optional: lets Claude Code resolve the code-simplifier companion. Nothing is
+# installed from it; skip if you do not want the pre-simplify pass.
+claude plugin marketplace add anthropics/claude-plugins-official
 
-claude plugin marketplace add Falconiere/toolu
-claude plugin install toolu@toolu --scope user
-claude plugin install agent-browser@toolu --scope user
-claude plugin install ast-grep@toolu --scope user
-claude plugin install context7@toolu --scope user
-claude plugin install exa-search@toolu --scope user
-claude plugin install jev@toolu --scope user
-claude plugin install jira@toolu --scope user
-claude plugin install pr-babysit@toolu --scope user
-claude plugin install python-quality@toolu --scope user
-claude plugin install rust-quality@toolu --scope user
-claude plugin install statusline@toolu --scope user
-claude plugin install toolu-review@toolu --scope user
-claude plugin install ts-quality@toolu --scope user
+# Adds the toolu marketplace and installs every catalog plugin, core first.
+# Already-installed plugins are reported and left alone.
+npx toolu plugins install
 ```
 <!-- /install-everything:claude -->
 
 #### Codex
 
 <!-- install-everything:codex -->
-```text
-Install every toolu plugin for Codex. Run these commands in a terminal, in order. Skip a command that reports the marketplace or plugin is already installed. After they are installed, review and trust the hooks in /hooks before they run.
-
-codex plugin marketplace add Falconiere/toolu
-codex plugin add toolu@toolu
-codex plugin add agent-browser@toolu
-codex plugin add ast-grep@toolu
-codex plugin add context7@toolu
-codex plugin add exa-search@toolu
-codex plugin add jev@toolu
-codex plugin add jira@toolu
-codex plugin add pr-babysit@toolu
-codex plugin add python-quality@toolu
-codex plugin add rust-quality@toolu
-codex plugin add statusline@toolu
-codex plugin add toolu-review@toolu
-codex plugin add ts-quality@toolu
+```bash
+# Adds the toolu marketplace and installs every catalog plugin, core first.
+npx toolu plugins install --host codex
 ```
+
+After they are installed, review and trust the hooks in `/hooks` before they run.
 <!-- /install-everything:codex -->
 
 #### OpenCode
