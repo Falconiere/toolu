@@ -1,8 +1,8 @@
 # toolu-review — Pre-Push Code Review
 
-**Type:** Workflow | **Version:** 4.5.0 | **Standalone** (no dependencies)
+**Type:** Workflow | **Version:** 6.4.0 | **Standalone** (no dependencies)
 
-Project-tuned pre-push code review mirroring the CI review bot's checklist (correctness, security, perf, test coverage, doc accuracy). Records the `push-review` state so toolu's push gate passes.
+Project-tuned pre-push code review mirroring this repo's CI Toolu Code Review action (`falconiere/toolu-ghactions/code-review@v8` with Jev assessment). Records the `push-review` state so toolu's push gate passes.
 
 ## Install
 
@@ -14,7 +14,7 @@ Project-tuned pre-push code review mirroring the CI review bot's checklist (corr
 
 ### \`toolu-review:review\` Skill
 
-Reviews the branch diff against seven dimensions the CI review bot (the `claude[bot]` verdict comment) flags. Does **not** auto-fire on edits — run it explicitly before pushing, or when `pr-babysit` needs a reviewer.
+Reviews the branch diff against the dimensions the CI Toolu Code Review action (verdict comment from `github-actions[bot]`) flags. Does **not** auto-fire on edits — run it explicitly before pushing, or when `pr-babysit` needs a reviewer.
 
 ## Usage Examples
 
@@ -37,6 +37,7 @@ Resolves the diff with `git diff --no-color <base>...HEAD`, reviews every hunk a
 | 5 | **Doc/comment accuracy** | Comments must match behavior — no stale paths, no "one-time" on code that runs every invocation |
 | 6 | **Tight test assertions** | Assert full identity, not loose suffixes (`*/statusline/statusline.sh`, not `*/statusline.sh`) |
 | 7 | **In-session migration WARNs** | Breaking changes (moved paths, removed symlinks) must surface actionable hints, not silent failures |
+| 8 | **Convention adherence** | Diff must follow the repo's own convention files the CI action gathers from the base ref (`AGENTS.md`, `CLAUDE.md`, etc.) |
 
 ### Workflow
 
@@ -109,4 +110,4 @@ Ends with a verdict — either **Approved** (ready to push) or **Needs changes**
 
 ## Why Run It Locally
 
-The CI review bot (`claude[bot]`) edits its verdict comment **in place** — its header flips from "PR Review in Progress" to "Code Review —" and a `review / review` check can show `SUCCESS` *while low/nit findings remain unaddressed*. Running this review locally catches those before the first push, so the bot's verdict is clean on arrival.
+The CI Toolu Code Review action (`falconiere/toolu-ghactions/code-review@v8`, Jev enabled via `JEV_ENABLED` / `JEV_MODEL_ID`) posts as `github-actions[bot]` and edits its verdict comment **in place** — its header flips from "PR Review in Progress" to "Code Review —" and a `review / review` check can show `SUCCESS` *while low/nit findings remain unaddressed*. Running this review locally catches those before the first push, so the bot's verdict is clean on arrival.

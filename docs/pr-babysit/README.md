@@ -1,6 +1,6 @@
 # pr-babysit — PR Babysitter
 
-**Type:** Workflow | **Version:** 4.5.0 | **Depends on:** `toolu`
+**Type:** Workflow | **Version:** 6.4.0 | **Depends on:** `toolu`
 
 A strict PR babysitter that uses Claude cron or an explicitly requested durable
 Codex goal. Codex runs bounded continuation cycles in a native isolated git
@@ -80,7 +80,7 @@ Say /pr-babysit:babysit stop to cancel.
 ### What Happens Each Tick
 
 1. **Fetch unresolved review threads** (GraphQL, paginated) — every unresolved thread from all reviewers
-2. **Fetch the CI review-bot verdict** — parses the `claude[bot]` comment to detect whether the review is complete, approved, and has zero findings
+2. **Fetch the CI review-bot verdict** — parses the Toolu Code Review action comment (posted as `github-actions[bot]`) to detect whether the review is complete, approved, and has zero findings
 3. **Triage** — classify every actionable item into one of two dispositions, both ending in a reply **and** a resolve:
    - **Fix** (the default): correct, or cheap and harmless even if marginal → implement
    - **Won't fix**: verified wrong, outdated, breaks behavior, conflicts with repo conventions, violates YAGNI — or **doesn't make sense** (ambiguous, unverifiable, about code that isn't in the diff) → reply with the evidence and the reading you assumed, then resolve

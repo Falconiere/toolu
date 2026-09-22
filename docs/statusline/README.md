@@ -1,6 +1,6 @@
 # statusline — Gate-Aware Terminal Statusline
 
-**Type:** Status | **Version:** 4.5.0 | **Standalone** (no plugin dependencies)
+**Type:** Status | **Version:** 6.4.0 | **Standalone** (no plugin dependencies)
 
 Host-native status. Claude Code gets an optional persistent statusline; Codex
 gets an explicit `$statusline:status` skill. Both consume the same repository,

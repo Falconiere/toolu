@@ -1,6 +1,6 @@
 # jev — Typed Judgments from TypeSafe
 
-**Type:** Knowledge | **Version:** 5.3.0 | **Standalone** (no dependencies)
+**Type:** Knowledge | **Version:** 6.4.0 | **Standalone** (no dependencies)
 
 Ask TypeSafe's Jev model a **typed** question about some state and get an answer code can branch on — a probability, a chosen option, or a score on your own levels — through a skill plus a bash REST wrapper.
 
@@ -27,6 +27,11 @@ need `curl`, `jq`, and `TYPESAFE_API_KEY` in their launch environment.
 Set `TYPESAFE_API_KEY` in the environment for the wrapper to authenticate
 (keys: `https://console.typesafe.ai/settings/keys`). It is never read from a
 `.env` file. `JEV_TIMEOUT` overrides the 60-second timeout per attempt.
+
+This repo's PR review workflow (`falconiere/toolu-ghactions/code-review@v8`) also
+opts into Jev finding assessment with `JEV_ENABLED: 'true'` and
+`JEV_MODEL_ID: typesafe/jev-1.13` (OpenRouter), separate from the in-session
+`jev` plugin CLI.
 
 ## What It Provides
 

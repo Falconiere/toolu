@@ -171,24 +171,24 @@ in this release. Custom agent profiles are installed locally under
 ## What's inside
 
 Thirteen plugins, one marketplace. Every plugin ships synchronized Claude and
-Codex manifests at the repository version (`4.10.0` here). Install the core
+Codex manifests at the repository version (`6.4.0` here). Install the core
 alone, or add the domain plugins.
 
 | Group | Plugin | Version | What it does |
 |--------|--------|:-------:|--------------|
-| Core | **`toolu`** | `4.10.0` | Registry-driven hook engine, adaptive delivery workflow, commit workflows, model routing, push-review gate, and custom-agent templates. |
-| Quality gate | **`rust-quality`** | `4.10.0` | Rust post-edit checks — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests. |
-| Quality gate | **`ts-quality`** | `4.10.0` | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
-| Quality gate | **`python-quality`** | `4.10.0` | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
-| Code intel | **`ast-grep`** | `4.10.0` | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
-| Browser | **`agent-browser`** | `4.10.0` | Token-lean browser automation through accessibility-tree snapshots and stable element references. |
-| Knowledge | **`context7`** | `4.10.0` | Live library documentation and code examples through Context7. |
-| Knowledge | **`exa-search`** | `4.10.0` | Web, code, URL search, and deep research through Exa. |
-| Knowledge | **`jev`** | `5.3.0` | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores a script can branch on. |
-| Workflow | **`jira`** | `4.10.0` | Jira Cloud and Server/DC search plus safe issue workflow operations. |
-| Workflow | **`toolu-review`** | `4.10.0` | Pre-push review matching the CI review bot and writing review attestations. |
-| Workflow | **`pr-babysit`** | `4.10.0` | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
-| Status | **`statusline`** | `4.10.0` | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
+| Core | **`toolu`** | `6.4.0` | Registry-driven hook engine, adaptive delivery workflow, commit workflows, model routing, push-review gate, and custom-agent templates. |
+| Quality gate | **`rust-quality`** | `6.4.0` | Rust post-edit checks — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests. |
+| Quality gate | **`ts-quality`** | `6.4.0` | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
+| Quality gate | **`python-quality`** | `6.4.0` | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
+| Code intel | **`ast-grep`** | `6.4.0` | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
+| Browser | **`agent-browser`** | `6.4.0` | Token-lean browser automation through accessibility-tree snapshots and stable element references. |
+| Knowledge | **`context7`** | `6.4.0` | Live library documentation and code examples through Context7. |
+| Knowledge | **`exa-search`** | `6.4.0` | Web, code, URL search, and deep research through Exa. |
+| Knowledge | **`jev`** | `6.4.0` | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores a script can branch on. |
+| Workflow | **`jira`** | `6.4.0` | Jira Cloud and Server/DC search plus safe issue workflow operations. |
+| Workflow | **`toolu-review`** | `6.4.0` | Pre-push review matching CI `code-review@v8` (Jev-enabled) and writing review attestations. |
+| Workflow | **`pr-babysit`** | `6.4.0` | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
+| Status | **`statusline`** | `6.4.0` | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
 
 Beyond the plugins, the core (`toolu`) also ships:
 

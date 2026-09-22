@@ -1,6 +1,6 @@
 # python-quality — Python Quality Gate
 
-**Type:** Quality Gate | **Version:** 4.10.0 | **Depends on:** `toolu`
+**Type:** Quality Gate | **Version:** 6.4.0 | **Depends on:** `toolu`
 
 Python `PostToolUse` quality checks registered into the toolu hook engine. Every Python file the agent edits is checked on the spot. Static-only — the gate never invokes `ruff`, `pylint`, `mypy`, or any other linter/type-checker.
 

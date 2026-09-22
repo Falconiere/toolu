@@ -8,7 +8,7 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 |:--:|--------|------|:----------:|---------------|
 | 1 | [**toolu**](../toolu/README.md) | Core | — | Dual-host hook engine + workflow + push-review gate + agent routing |
 | 2 | [**ast-grep**](../ast-grep/README.md) | Code Intel | — | Structural code search & rewrite (tree-sitter AST patterns) |
-| 3 | [**toolu-review**](../toolu-review/README.md) | Workflow | — | Pre-push review mirroring the CI review bot's checklist |
+| 3 | [**toolu-review**](../toolu-review/README.md) | Workflow | — | Pre-push review mirroring CI `code-review@v8` (Jev-enabled) |
 | 4 | [**context7**](../context7/README.md) | Knowledge | — | Live library documentation & code-example lookup |
 | 5 | [**exa-search**](../exa-search/README.md) | Knowledge | — | Web / code / URL search plus deep research |
 | 6 | [**jira**](../jira/README.md) | Workflow | — | Jira issue search & workflow from the session |

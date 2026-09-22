@@ -1,6 +1,6 @@
 ---
 name: toolu-review
-description: CI review instructions for the Falconiere/workflows toolu-review bot on this repo. Report only blocking (medium+) findings so an otherwise-correct PR gets a clean verdict.
+description: CI review instructions for falconiere/toolu-ghactions/code-review@v8 on this repo (Jev assessments enabled). Report only blocking (medium+) findings so an otherwise-correct PR gets a clean verdict.
 ---
 
 # Code review instructions — toolu

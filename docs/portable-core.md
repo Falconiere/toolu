@@ -1,7 +1,7 @@
 # Portable Bun/TS core contracts
 
 **Issue:** [#205](https://github.com/Falconiere/toolu/issues/205) (epic [#203](https://github.com/Falconiere/toolu/issues/203))  
-**Status:** Zod contracts and argv bash bridge are **implemented** in `@toolu/core` ([#210](https://github.com/Falconiere/toolu/issues/210)). OpenCode **filesystem bootstrap** (host roots, inventory, selection, register/session-start assembly, preflight, lifecycle stubs) is **implemented** in `@toolu/opencode` ([#211](https://github.com/Falconiere/toolu/issues/211)). OpenCode **`permission.evaluate` wiring** (Plugin.define + real `runPreToolBridge`) is **implemented** in `@toolu/opencode` ([#204](https://github.com/Falconiere/toolu/issues/204)). Live multi-host conformance evidence remains ([#212](https://github.com/Falconiere/toolu/issues/212)).
+**Status:** Zod contracts and argv bash bridge are **implemented** in `@toolu/core` ([#210](https://github.com/Falconiere/toolu/issues/210)). OpenCode **filesystem bootstrap** (host roots, inventory, selection, register/session-start assembly, preflight, lifecycle) is **implemented** in `@toolu/opencode` ([#211](https://github.com/Falconiere/toolu/issues/211)). OpenCode **`permission.evaluate` wiring** (Plugin.define + real `runPreToolBridge`) is **implemented** in `@toolu/opencode` ([#204](https://github.com/Falconiere/toolu/issues/204)). Fixture-suite conformance evidence is **implemented** in `@toolu/conformance` ([#212](https://github.com/Falconiere/toolu/issues/212)); see [`conformance-report.md`](conformance-report.md).
 
 ## Pins
 
@@ -47,7 +47,7 @@ TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, 
 | `@toolu/opencode/select` | Enabled set + manifest dependency closure |
 | `@toolu/opencode/bootstrap` | `bootstrapRuntime` → Ready \| NotReady with registry/session artifacts |
 | `@toolu/opencode/preflight` | bash/jq/git/bun/opencode probe; missing bash/jq fail closed |
-| `@toolu/opencode/lifecycle` | Event → supported \| deferred \| unsupported stubs until #204 |
+| `@toolu/opencode/lifecycle` | Event → supported \| deferred \| unsupported (evaluate wired in #204; other events may stay deferred) |
 | `@toolu/opencode/plugin` | Default `Plugin.define` entry: preflight, bootstrap, `permission.hook("evaluate")` |
 | `@toolu/opencode/adapter/permission-map` | OpenCode permission event ↔ bridge request; decision → effect |
 | `@toolu/opencode/adapter/evaluate` | `createPermissionEvaluateHandler` (real `runPreToolBridge`) |

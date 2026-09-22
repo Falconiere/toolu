@@ -45,8 +45,9 @@ _empty() { jq -nc '{is_review_comment:false, state:"unknown", complete:false, ve
 [ -n "${input//[[:space:]]/}" ] || { _empty; exit 0; }
 
 # --- Identify: marker-based, both states ---
-# Precondition: the babysit pre-filters comments to claude[bot]/github-actions[bot]
-# before calling this; the markers below are anchored to the bot's own structures
+# Precondition: the babysit pre-filters comments to the CI Toolu Code Review
+# poster (`github-actions[bot]`; legacy `claude[bot]` still accepted) before calling
+# this; the markers below are anchored to the bot's own structures
 # (review headings, the [View job] CI link, a backticked agent-merge label) so a
 # stray "actions/runs/…" or "agent-merge-…" in arbitrary prose won't false-positive.
 is_review=false
