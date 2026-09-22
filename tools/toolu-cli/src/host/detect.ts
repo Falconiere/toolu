@@ -28,13 +28,12 @@ export async function availableHosts(env?: NodeJS.ProcessEnv): Promise<readonly 
 }
 
 /**
- * Resolves the host to act on. An explicit choice always wins. Exactly one
- * available host is selected silently. Ambiguity is never resolved silently:
- * without a TTY the caller is told to choose.
+ * Resolves the host to act on. An explicit choice always wins, and exactly one
+ * available host is selected without asking. Ambiguity always refuses and names
+ * the candidates, so a host is never chosen on the user's behalf.
  */
 export async function resolveHost(
   requested: Host | undefined,
-  interactive: boolean,
   env?: NodeJS.ProcessEnv,
 ): Promise<{ host: Host; ambiguous: readonly Host[] }> {
   if (requested !== undefined) return { host: requested, ambiguous: [] };
@@ -47,11 +46,10 @@ export async function resolveHost(
   }
   const only = available[0];
   if (available.length === 1 && only !== undefined) return { host: only, ambiguous: [] };
-  if (!interactive) {
-    throw new CliError(
-      EXIT.missingInput,
-      `several hosts found (${available.join(", ")}). Choose one with --host.`,
-    );
-  }
-  return { host: available[0] ?? "claude", ambiguous: available };
+  // Ambiguity is never resolved silently. Interactive selection arrives with the
+  // prompt layer; until then both paths refuse and name the choice.
+  throw new CliError(
+    EXIT.missingInput,
+    `several hosts found (${available.join(", ")}). Choose one with --host.`,
+  );
 }

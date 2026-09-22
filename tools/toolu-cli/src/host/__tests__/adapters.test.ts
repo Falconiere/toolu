@@ -76,20 +76,20 @@ describe("parsing real host output", () => {
 
 describe("host detection", () => {
   test("an explicit host always wins, even when others are present", async () => {
-    expect((await resolveHost("codex", false)).host).toBe("codex");
-    expect((await resolveHost("opencode", false)).host).toBe("opencode");
+    expect((await resolveHost("codex")).host).toBe("codex");
+    expect((await resolveHost("opencode")).host).toBe("opencode");
   });
 
   test("no host on PATH reports exit 3 naming every probed binary", async () => {
     const env = { ...process.env, PATH: "/nonexistent" };
-    expect(resolveHost(undefined, false, env)).rejects.toThrow(/no host found on PATH/);
+    expect(resolveHost(undefined, env)).rejects.toThrow(/no host found on PATH/);
     expect(await binaryExists("claude", env)).toBe(false);
   });
 
   test.skipIf(hosts.length < 2)(
     "several hosts with no TTY refuses rather than choosing silently",
     async () => {
-      expect(resolveHost(undefined, false)).rejects.toThrow(/several hosts found/);
+      expect(resolveHost(undefined)).rejects.toThrow(/several hosts found/);
     },
   );
 });

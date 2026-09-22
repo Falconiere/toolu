@@ -1,4 +1,7 @@
 import { spawn } from "node:child_process";
+import { constants } from "node:fs";
+import { access } from "node:fs/promises";
+import { delimiter, join } from "node:path";
 
 interface RunResult {
   readonly code: number;
@@ -32,10 +35,25 @@ export function run(
   });
 }
 
-/** True when the binary resolves on PATH. */
-export async function binaryExists(bin: string, env?: NodeJS.ProcessEnv): Promise<boolean> {
-  const result = await run(["command", "-v", bin], env).catch(() => undefined);
-  if (result !== undefined && result.code === 0) return true;
-  const which = await run(["/usr/bin/which", bin], env).catch(() => undefined);
-  return which !== undefined && which.code === 0;
+/**
+ * True when the binary resolves on PATH.
+ *
+ * Resolved by reading PATH directly rather than shelling out: `command` is a
+ * shell builtin, so spawning it always fails, and `which` costs a process per
+ * probe on a path the CLI walks for every host on every run.
+ */
+export async function binaryExists(
+  bin: string,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<boolean> {
+  for (const directory of (env.PATH ?? "").split(delimiter)) {
+    if (directory.length === 0) continue;
+    try {
+      await access(join(directory, bin), constants.X_OK);
+      return true;
+    } catch {
+      continue;
+    }
+  }
+  return false;
 }

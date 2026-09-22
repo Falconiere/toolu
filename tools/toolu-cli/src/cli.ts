@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { access, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "./args/parse";
@@ -53,9 +54,33 @@ function isInteractive(noInput: boolean): boolean {
   return !noInput && process.stdin.isTTY === true && process.stdout.isTTY === true;
 }
 
-/** The repository the published package was built from, for its bundled manifest. */
-function repoRoot(): string {
-  return resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+/**
+ * Locates the marketplace manifest.
+ *
+ * The published package carries its own copy under assets/, because there is no
+ * repository beside an installed tarball. Running from source in this repo, that
+ * copy is absent and the real manifest four levels up is used instead.
+ */
+async function manifestPath(): Promise<string> {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    resolve(here, "../assets/marketplace.json"),
+    resolve(here, "../../assets/marketplace.json"),
+    resolve(here, "../../../.claude-plugin/marketplace.json"),
+  ];
+  for (const candidate of candidates) {
+    if (await readable(candidate)) return candidate;
+  }
+  throw new Error("marketplace manifest not found beside the CLI or in the repository");
+}
+
+async function readable(path: string): Promise<boolean> {
+  try {
+    await access(path, constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function main(argv: readonly string[] = process.argv.slice(2)): Promise<ExitCode> {
@@ -71,7 +96,7 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     }
     if (args.noun === "plugins") {
       return await dispatchPlugins(args, {
-        manifestPath: resolve(repoRoot(), ".claude-plugin/marketplace.json"),
+        manifestPath: await manifestPath(),
         interactive: isInteractive(args.noInput),
         write: (text: string) => process.stdout.write(text),
       });
