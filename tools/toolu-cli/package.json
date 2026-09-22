@@ -1,0 +1,43 @@
+{
+  "name": "toolu",
+  "version": "6.5.0",
+  "description": "Install toolu plugins and Codex agent profiles into Claude Code, Codex, and OpenCode.",
+  "keywords": [
+    "claude-code",
+    "codex",
+    "opencode",
+    "plugins",
+    "cli"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Falconiere/toolu.git"
+  },
+  "homepage": "https://github.com/Falconiere/toolu#readme",
+  "bugs": {
+    "url": "https://github.com/Falconiere/toolu/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "toolu": "dist/cli.js"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "files": [
+    "dist/cli.js",
+    "assets"
+  ],
+  "scripts": {
+    "build": "mkdir -p assets dist && cp ../../.claude-plugin/marketplace.json assets/marketplace.json && bun build src/cli.ts --target=node --outfile=dist/cli.js && chmod 755 dist/cli.js",
+    "prepack": "bun run build >/dev/null"
+  },
+  "dependencies": {
+    "zod": "4.1.5"
+  }
+}

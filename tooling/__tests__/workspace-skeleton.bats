@@ -5,18 +5,21 @@ setup() {
   ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
 }
 
-@test "workspaces list core, opencode, and conformance packages" {
+@test "workspaces list core, opencode, conformance, and cli packages" {
   jq -e '
     (.workspaces | index("packages/toolu-core")) and
     (.workspaces | index("tools/toolu-opencode")) and
-    (.workspaces | index("tools/toolu-conformance"))
+    (.workspaces | index("tools/toolu-conformance")) and
+    (.workspaces | index("tools/toolu-cli"))
   ' "$ROOT/package.json"
   test -f "$ROOT/packages/toolu-core/package.json"
   test -f "$ROOT/tools/toolu-opencode/package.json"
   test -f "$ROOT/tools/toolu-conformance/package.json"
+  test -f "$ROOT/tools/toolu-cli/package.json"
   test -d "$ROOT/packages/toolu-core/src"
   test -d "$ROOT/tools/toolu-opencode/src"
   test -d "$ROOT/tools/toolu-conformance/src"
+  test -d "$ROOT/tools/toolu-cli/src"
 }
 
 @test "CI workflow defines a typescript job running test:ts" {

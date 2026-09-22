@@ -1,5 +1,6 @@
 {
-  "name": "toolu",
+  "name": "toolu-workspace",
+  "private": true,
   "version": "6.5.0",
   "description": "Engineering discipline for coding agents.",
   "type": "module",
@@ -51,7 +52,8 @@
     "tooling",
     "packages/toolu-core",
     "tools/toolu-opencode",
-    "tools/toolu-conformance"
+    "tools/toolu-conformance",
+    "tools/toolu-cli"
   ],
   "engines": {
     "bun": ">=1.4.0 <1.5.0"
