@@ -145,3 +145,6 @@ jobs:
             done
             echo "$name@$pkg resolves on the registry"
           done
+        env:
+          # Same .npmrc as the publish step: it reads NODE_AUTH_TOKEN on every npm call.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

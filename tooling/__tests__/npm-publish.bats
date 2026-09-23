@@ -143,4 +143,8 @@ setup() {
   # The wait is bounded and the job timeout leaves room for it.
   grep -Fq 'deadline=$(( $(date +%s) + 8 * 60 ))' "$WF"
   grep -Fq 'timeout-minutes: 20' "$WF"
+  # setup-node's .npmrc reads NODE_AUTH_TOKEN on every npm call, so the wait
+  # step needs the token too, not only the publish step.
+  run bash -c "grep -c 'NODE_AUTH_TOKEN: \${{ secrets.NPM_TOKEN }}' '$WF'"
+  [ "$output" = "2" ]
 }
