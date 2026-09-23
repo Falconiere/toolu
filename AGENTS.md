@@ -44,7 +44,7 @@ release-please (`.github/workflows/release-please.yml`). No manual bumps or tags
 
 Any Conventional Commit on `main` counts, any path. `feat` / `fix` / `feat!` bump minor / patch / major. `chore` / `docs` / `ci` / `refactor` bump nothing. Merge the Release PR to publish: it bumps root `package.json`, Bun workspace packages under `packages/` and `tools/`, and every `plugin.json`, updates `CHANGELOG.md`, tags `vX.Y.Z` with no component prefix, and opens the GitHub Release. `tooling/release.sh` is a deprecated escape hatch. OpenCode install: `docs/opencode.md`.
 
-**npm.** `npm-publish.yml` reacts to the published GitHub Release and publishes **only** `tools/toolu-cli` as `@toolu/cli`, with provenance via OIDC and `secrets.NPM_TOKEN`. `@toolu/core`, `@toolu/opencode` and `@toolu/conformance` stay `private` until something consumes them. The tarball's file list is gated by `bun run test:pack`.
+**npm.** `release-please.yml` calls `npm-publish.yml` after the Release, which publishes `@toolu/core`, `@toolu/opencode`, then `@toolu/cli` with provenance via OIDC and `secrets.NPM_TOKEN`, and does not go green until each one resolves on the registry (a first publish can take minutes to stop answering 404). `@toolu/conformance` stays `private`; it is an internal harness. The tarball's file list is gated by `bun run test:pack`.
 
 ## CI
 

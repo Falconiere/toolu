@@ -128,3 +128,19 @@ setup() {
     [ -f "$ROOT/$p/LICENSE" ] || { echo "$p has no LICENSE"; return 1; }
   done
 }
+
+# npm acknowledges a publish minutes before the packument stops returning 404.
+# The first ever @toolu/cli (6.8.1) was 404 for about six minutes after
+# "+ @toolu/cli@6.8.1", so `npx @toolu/cli` failed right after the release went
+# green. Green must mean installable.
+@test "the workflow waits until every published package resolves before going green" {
+  grep -Fq 'resolves on the registry' "$WF"
+  grep -Fq 'is still not fetchable from the registry' "$WF"
+  # The wait follows the publish loop; it is not a pre-publish check.
+  publish_line=$(grep -n '^      - name: Publish$' "$WF" | cut -d: -f1)
+  wait_line=$(grep -n '^      - name: Wait until every package resolves' "$WF" | cut -d: -f1)
+  [ -n "$publish_line" ] && [ -n "$wait_line" ] && [ "$wait_line" -gt "$publish_line" ]
+  # The wait is bounded and the job timeout leaves room for it.
+  grep -Fq 'deadline=$(( $(date +%s) + 8 * 60 ))' "$WF"
+  grep -Fq 'timeout-minutes: 20' "$WF"
+}

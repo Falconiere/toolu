@@ -16,6 +16,12 @@ name: npm publish
 #
 # @toolu/opencode carries the bash plugins/ tree, staged by its prepack, so an
 # `opencode plugin add @toolu/opencode` needs no clone and no TOOLU_REPO_ROOT.
+#
+# npm acknowledges a publish minutes before the package is fetchable. The first
+# ever @toolu/cli (6.8.1) answered 404 for about six minutes after
+# "+ @toolu/cli@6.8.1", so `npx @toolu/cli` failed right after the release went
+# green. The last step polls until every package resolves, so green means
+# installable and a re-run after green skips instead of publishing twice.
 
 on:
   workflow_call:
@@ -39,7 +45,7 @@ jobs:
   publish:
     name: publish npm packages
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Checkout the released tag
         uses: actions/checkout@v4
@@ -117,3 +123,25 @@ jobs:
         env:
           # setup-node's registry-url writes an .npmrc that reads NODE_AUTH_TOKEN.
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Wait until every package resolves on the registry
+        run: |
+          set -euo pipefail
+          deadline=$(( $(date +%s) + 8 * 60 ))
+          for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli; do
+            if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
+              echo "$dir is private; nothing to wait for"
+              continue
+            fi
+            name=$(node -p "require('./$dir/package.json').name")
+            pkg=$(node -p "require('./$dir/package.json').version")
+            until npm view "$name@$pkg" version >/dev/null 2>&1; do
+              if [ "$(date +%s)" -ge "$deadline" ]; then
+                echo "$name@$pkg is still not fetchable from the registry: the publish was accepted but has not propagated" >&2
+                exit 1
+              fi
+              echo "$name@$pkg is not fetchable yet; retrying in 15s"
+              sleep 15
+            done
+            echo "$name@$pkg resolves on the registry"
+          done
