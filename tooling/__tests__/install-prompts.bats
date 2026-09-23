@@ -46,17 +46,21 @@ extract_region() {
   ! printf '%s\n' "$(extract_region "$ROOT/README.md" claude)" | grep -q -- '--host'
 }
 
-@test "install-everything opencode fence is git-clone wiring, not marketplace plugins" {
+# @toolu/opencode is on npm (from 6.8.0) and carries the bash plugins/ tree, so
+# the user prompt installs it with OpenCode's own plugin CLI. The git clone is
+# the contributor path in docs/opencode.md, not something a user is told to do.
+@test "install-everything opencode fence installs the npm bridge, not a clone or marketplace plugins" {
   local fence
   fence="$(extract_region "$ROOT/README.md" "opencode")"
   [ -n "$fence" ]
   # Mentions the ban explicitly (same intent as Claude/Codex omitting comemory installs).
   printf '%s\n' "$fence" | grep -q 'Do not install comemory via toolu'
   ! printf '%s\n' "$fence" | grep -qE '[a-z0-9-]+@toolu'
-  printf '%s\n' "$fence" | grep -q 'TOOLU_REPO_ROOT'
-  printf '%s\n' "$fence" | grep -q '@toolu/opencode'
-  printf '%s\n' "$fence" | grep -q 'bun install --frozen-lockfile'
-  printf '%s\n' "$fence" | grep -q 'tools/toolu-opencode/generated/skills'
+  printf '%s\n' "$fence" | grep -q 'opencode plugin add @toolu/opencode'
+  printf '%s\n' "$fence" | grep -q '.opencode/toolu/plugins.json'
+  ! printf '%s\n' "$fence" | grep -q 'TOOLU_REPO_ROOT'
+  ! printf '%s\n' "$fence" | grep -q 'git clone'
+  ! printf '%s\n' "$fence" | grep -q 'bun install'
 }
 
 # The README used to carry a per-plugin version column that release-please never
