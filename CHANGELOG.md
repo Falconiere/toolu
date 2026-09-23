@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.8.2](https://github.com/Falconiere/toolu/compare/v6.8.1...v6.8.2) (2026-09-23)
+
+
+### Bug Fixes
+
+* **release:** wait for npm propagation before the publish job goes green ([#237](https://github.com/Falconiere/toolu/issues/237)) ([5d9f060](https://github.com/Falconiere/toolu/commit/5d9f0601a7cd5cc9c531383243eff7f5e657e59f))
+
 ## [6.8.1](https://github.com/Falconiere/toolu/compare/v6.8.0...v6.8.1) (2026-09-22)
 
 
