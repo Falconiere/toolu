@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 # npm publish wiring: the CLI is versioned by release-please and published by
-# a workflow that reacts to the GitHub Release.
+# a workflow release-please calls once the Release exists.
 
 setup() {
   ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"

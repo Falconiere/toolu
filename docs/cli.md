@@ -10,9 +10,6 @@ addressable through it — what it installs is the `@toolu/opencode` bridge. Unt
 the adapter lands, run `opencode plugin add @toolu/opencode` and write
 `.opencode/toolu/plugins.json` yourself; see [docs/opencode.md](opencode.md).
 
-The npm package ships with the next release; until then use each host's own
-plugin commands.
-
 Design: `docs/toolu/specs/2026-09-22-npx-toolu-cli-design.md` (untracked; `docs/toolu/` is gitignored).
 
 ## Install

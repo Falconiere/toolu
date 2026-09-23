@@ -84,23 +84,19 @@ After they are installed, review and trust the hooks in `/hooks` before they run
 
 #### OpenCode
 
-OpenCode has no marketplace install yet — paste this prompt so the agent follows the git-clone + Bun wiring in [docs/opencode.md](../opencode.md). Phase-1 enables the `toolu` bash plugin only.
+OpenCode has no marketplace — paste this prompt so the agent installs the npm bridge from [docs/opencode.md](../opencode.md). Phase-1 enables the `toolu` bash plugin only.
 
 <!-- install-everything:opencode -->
 ```text
-Install toolu for OpenCode in this project (git-clone + Bun; no marketplace). Skip steps already done.
+Install toolu for OpenCode in this project (npm bridge; no marketplace, no clone). Skip steps already done.
 
-1. Clone https://github.com/Falconiere/toolu.git and check out the latest release tag (vX.Y.Z). In that clone run: bun install --frozen-lockfile
-2. export TOOLU_REPO_ROOT=/absolute/path/to/that/clone  (TOOLU_ROOT is an alias)
-3. In THIS project create:
-   - .opencode/package.json with dependencies "@toolu/opencode": "file:$TOOLU_REPO_ROOT/tools/toolu-opencode", "@toolu/core": "file:$TOOLU_REPO_ROOT/packages/toolu-core", "@opencode/plugin": "2.0.12" (adjust file: paths to your layout)
-   - .opencode/plugins/toolu.ts containing: export { default } from "@toolu/opencode/plugin";
-   - .opencode/toolu/plugins.json containing: { "version": 1, "enabled": ["toolu"] }
-   - optional .opencode/toolu.config.json for gates (same schema as other hosts)
-4. In opencode.json (or .opencode/opencode.json), set skills.paths to include $TOOLU_REPO_ROOT/tools/toolu-opencode/generated/skills so the generated surface is discoverable
-5. Restart OpenCode. Smoke-check: bun run test:conformance in the toolu clone, or attempt a protected .env edit with protectedFiles mode block and confirm deny before bytes change
+1. Run: opencode plugin add @toolu/opencode
+2. In THIS project create .opencode/toolu/plugins.json containing: { "version": 1, "enabled": ["toolu"] }
+   Add rust-quality, ts-quality, or python-quality to "enabled" only if this project wants that language's gates and has its linters installed.
+3. Optional: .opencode/toolu.config.json for gate modes (same schema as other hosts), e.g. { "version": 1, "gates": { "protectedFiles": { "mode": "block" } } }
+4. Restart OpenCode. Smoke-check: attempt a protected .env edit with protectedFiles mode block and confirm it is denied before bytes change.
 
-Do not install comemory via toolu. Full detail: docs/opencode.md
+Do not install comemory via toolu. Working on toolu itself? Use the git-clone contributor path in docs/opencode.md instead. Full detail: docs/opencode.md
 ```
 <!-- /install-everything:opencode -->
 

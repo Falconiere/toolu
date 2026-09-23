@@ -76,11 +76,18 @@ the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux.
 
 ### OpenCode (preview)
 
-OpenCode support is **git-clone + Bun** only (no npm package yet). It wires
-`permission.evaluate` to the same bash gate engine for the coverage proven in
-[#212](https://github.com/Falconiere/toolu/issues/212) — not the full Claude/Codex
-hook surface. Paste the **OpenCode** prompt under [Install everything](#install-everything),
-or follow **[docs/opencode.md](docs/opencode.md)** for prerequisites, layout, smoke,
+OpenCode installs the npm bridge through its own plugin CLI — no clone, no
+`TOOLU_REPO_ROOT`:
+
+```bash
+opencode plugin add @toolu/opencode
+```
+
+It wires `permission.evaluate` to the same bash gate engine for the coverage
+proven in [#212](https://github.com/Falconiere/toolu/issues/212) — not the full
+Claude/Codex hook surface. Paste the **OpenCode** prompt under
+[Install everything](#install-everything), or follow
+**[docs/opencode.md](docs/opencode.md)** for prerequisites, layout, smoke,
 update, and uninstall. Claude Code and Codex marketplace installs below are unchanged.
 
 ### The `toolu` CLI
@@ -96,11 +103,6 @@ npx @toolu/cli plugins remove jira --yes
 npx @toolu/cli plugins update
 ```
 
-> **Not published yet.** The `toolu` npm package ships with the next release. Until
-> that lands, install with the host's own commands — `claude plugin marketplace add
-> Falconiere/toolu` then `claude plugin install <name>@toolu --scope user` for each
-> plugin, `toolu` first, or `codex plugin add <name>@toolu` on Codex.
-
 Claude Code and Codex are covered. Codex agent profiles, OpenCode wiring, and the
 interactive prompts are not built yet. Full grammar, exit codes, and the
 `.toolu/plugins.json` selection file: **[docs/cli.md](docs/cli.md)**.
@@ -111,7 +113,7 @@ One command per host. It adds the marketplace and installs every plugin in the
 catalog, core first, deriving that order from the catalog's own dependency
 edges. Do not install comemory — it has moved to its own installer (below).
 
-OpenCode has no marketplace yet, so it keeps the git-clone wiring.
+OpenCode has no marketplace; it installs the npm bridge instead.
 
 #### Claude Code
 
@@ -140,23 +142,19 @@ After they are installed, review and trust the hooks in `/hooks` before they run
 
 #### OpenCode
 
-OpenCode has no marketplace install yet — paste this prompt so the agent follows the git-clone + Bun wiring in [docs/opencode.md](docs/opencode.md). Phase-1 enables the `toolu` bash plugin only.
+OpenCode has no marketplace — paste this prompt so the agent installs the npm bridge from [docs/opencode.md](docs/opencode.md). Phase-1 enables the `toolu` bash plugin only.
 
 <!-- install-everything:opencode -->
 ```text
-Install toolu for OpenCode in this project (git-clone + Bun; no marketplace). Skip steps already done.
+Install toolu for OpenCode in this project (npm bridge; no marketplace, no clone). Skip steps already done.
 
-1. Clone https://github.com/Falconiere/toolu.git and check out the latest release tag (vX.Y.Z). In that clone run: bun install --frozen-lockfile
-2. export TOOLU_REPO_ROOT=/absolute/path/to/that/clone  (TOOLU_ROOT is an alias)
-3. In THIS project create:
-   - .opencode/package.json with dependencies "@toolu/opencode": "file:$TOOLU_REPO_ROOT/tools/toolu-opencode", "@toolu/core": "file:$TOOLU_REPO_ROOT/packages/toolu-core", "@opencode/plugin": "2.0.12" (adjust file: paths to your layout)
-   - .opencode/plugins/toolu.ts containing: export { default } from "@toolu/opencode/plugin";
-   - .opencode/toolu/plugins.json containing: { "version": 1, "enabled": ["toolu"] }
-   - optional .opencode/toolu.config.json for gates (same schema as other hosts)
-4. In opencode.json (or .opencode/opencode.json), set skills.paths to include $TOOLU_REPO_ROOT/tools/toolu-opencode/generated/skills so the generated surface is discoverable
-5. Restart OpenCode. Smoke-check: bun run test:conformance in the toolu clone, or attempt a protected .env edit with protectedFiles mode block and confirm deny before bytes change
+1. Run: opencode plugin add @toolu/opencode
+2. In THIS project create .opencode/toolu/plugins.json containing: { "version": 1, "enabled": ["toolu"] }
+   Add rust-quality, ts-quality, or python-quality to "enabled" only if this project wants that language's gates and has its linters installed.
+3. Optional: .opencode/toolu.config.json for gate modes (same schema as other hosts), e.g. { "version": 1, "gates": { "protectedFiles": { "mode": "block" } } }
+4. Restart OpenCode. Smoke-check: attempt a protected .env edit with protectedFiles mode block and confirm it is denied before bytes change.
 
-Do not install comemory via toolu. Full detail: docs/opencode.md
+Do not install comemory via toolu. Working on toolu itself? Use the git-clone contributor path in docs/opencode.md instead. Full detail: docs/opencode.md
 ```
 <!-- /install-everything:opencode -->
 
