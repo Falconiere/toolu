@@ -1,6 +1,6 @@
 {
   "name": "@toolu/opencode",
-  "version": "6.8.1",
+  "version": "6.8.2",
   "description": "OpenCode plugin bridging toolu's bash quality gates into permission.evaluate.",
   "keywords": [
     "toolu",
