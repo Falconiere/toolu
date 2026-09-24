@@ -57,7 +57,7 @@ async function hostsFor(
   const hosts = await resolveHosts(args.host, {
     interactive: context.interactive,
     mode,
-    env: context.env,
+    ...(context.env === undefined ? {} : { env: context.env }),
     selectHosts: context.selectHosts ?? defaultSelectHosts,
     selectHost: context.selectHost ?? defaultSelectHost,
   });
@@ -96,7 +96,7 @@ async function handleInstall(
       requested,
       scope: args.scope,
       dryRun: args.dryRun,
-      env: context.env,
+      ...(context.env === undefined ? {} : { env: context.env }),
     });
     sections.push({ host, steps });
   }

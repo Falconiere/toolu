@@ -101,9 +101,9 @@ describe("host detection", () => {
   });
 
   test("several wired hosts with no interactive refuse rather than choosing silently", async () => {
-    await expect(resolveHosts(undefined, { interactive: false, mode: "single", env: stubEnv })).rejects.toThrow(
-      /several hosts found/,
-    );
+    await expect(
+      resolveHosts(undefined, { interactive: false, mode: "single", env: stubEnv }),
+    ).rejects.toThrow(/several hosts found/);
   });
 
   test("interactive multi-select returns every injected host", async () => {

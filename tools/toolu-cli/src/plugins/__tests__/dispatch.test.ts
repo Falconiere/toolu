@@ -57,7 +57,10 @@ describe("dispatchPlugins install", () => {
           write: () => undefined,
         },
       ),
-    ).rejects.toMatchObject({ code: EXIT.missingInput, message: expect.stringMatching(/several hosts/) });
+    ).rejects.toMatchObject({
+      code: EXIT.missingInput,
+      message: expect.stringMatching(/several hosts/),
+    });
   });
 
   test("named plugins skip the plugin picker", async () => {

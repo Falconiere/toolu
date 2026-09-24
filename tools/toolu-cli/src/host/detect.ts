@@ -122,9 +122,9 @@ export async function resolveHost(
   const hosts = await resolveHosts(requested, {
     interactive: options?.interactive ?? false,
     mode: "single",
-    env,
-    selectHost: options?.selectHost,
-    selectHosts: options?.selectHosts,
+    ...(env === undefined ? {} : { env }),
+    ...(options?.selectHost === undefined ? {} : { selectHost: options.selectHost }),
+    ...(options?.selectHosts === undefined ? {} : { selectHosts: options.selectHosts }),
   });
   const host = hosts[0];
   if (host === undefined) {
