@@ -1,9 +1,10 @@
 /**
  * Asserts each published tarball's file list.
  *
- * The `toolu` CLI ships a Node bundle and its bundled marketplace manifest and
- * nothing else — above all not the bash plugins/ tree, which Claude Code and
- * Codex users never read from npm.
+ * `@toolu/plugins`, the `toolu` CLI, ships a Node bundle and its bundled
+ * marketplace manifest and nothing else — above all not the bash plugins/ tree,
+ * which Claude Code and Codex users never read from npm. It packs from
+ * tools/toolu-cli/npm, not the workspace, so no local package shares its name.
  *
  * `@toolu/opencode` is the one package that DOES carry that tree, because its
  * OpenCode bridge enforces the bash gates and npm cannot reach outside a package
@@ -24,8 +25,8 @@ interface Expectation {
 
 const EXPECTED: readonly Expectation[] = [
   {
-    dir: "tools/toolu-cli",
-    name: "@toolu/cli",
+    dir: "tools/toolu-cli/npm",
+    name: "@toolu/plugins",
     required: ["package.json", "README.md", "LICENSE", "assets/marketplace.json", "dist/cli.js"],
     forbidden: ["plugins/", "src/", "node_modules/", ".env"],
     exact: true,

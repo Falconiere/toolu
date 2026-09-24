@@ -1,0 +1,40 @@
+{
+  "name": "@toolu/plugins",
+  "version": "6.8.2",
+  "description": "Install toolu plugins into Claude Code and Codex: npx @toolu/plugins install",
+  "keywords": [
+    "claude-code",
+    "codex",
+    "opencode",
+    "plugins",
+    "cli"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Falconiere/toolu.git",
+    "directory": "tools/toolu-cli/npm"
+  },
+  "homepage": "https://github.com/Falconiere/toolu#readme",
+  "bugs": {
+    "url": "https://github.com/Falconiere/toolu/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "toolu": "dist/cli.js"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "files": [
+    "dist/cli.js",
+    "assets"
+  ],
+  "scripts": {
+    "prepack": "bun run --cwd .. build >/dev/null"
+  }
+}

@@ -22,7 +22,7 @@
     },
     "packages/toolu-core": {
       "name": "@toolu/core",
-      "version": "6.8.0",
+      "version": "6.8.2",
       "dependencies": {
         "zod": "4.1.5",
       },
@@ -32,18 +32,15 @@
       "version": "6.4.0",
     },
     "tools/toolu-cli": {
-      "name": "@toolu/cli",
-      "version": "6.8.0",
-      "bin": {
-        "toolu": "dist/cli.js",
-      },
+      "name": "toolu-cli",
+      "version": "6.8.2",
       "dependencies": {
         "zod": "4.1.5",
       },
     },
     "tools/toolu-conformance": {
       "name": "@toolu/conformance",
-      "version": "6.8.0",
+      "version": "6.8.2",
       "bin": {
         "toolu-conformance": "./src/cli/run.ts",
       },
@@ -54,7 +51,7 @@
     },
     "tools/toolu-opencode": {
       "name": "@toolu/opencode",
-      "version": "6.8.0",
+      "version": "6.8.2",
       "dependencies": {
         "@opencode/plugin": "2.0.12",
         "@toolu/core": "workspace:*",
@@ -430,8 +427,6 @@
     "@smithy/util-utf8": ["@smithy/util-utf8@4.2.2", "", { "dependencies": { "@smithy/util-buffer-from": "^4.2.2", "tslib": "^2.6.2" } }, "sha512-75MeYpjdWRe8M5E3AW0O4Cx3UadweS+cwdXjwYGBW5h/gxxnbeZ877sLPX/ZJA9GVTlL/qG0dXP29JWFCD1Ayw=="],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
-
-    "@toolu/cli": ["@toolu/cli@workspace:tools/toolu-cli"],
 
     "@toolu/conformance": ["@toolu/conformance@workspace:tools/toolu-conformance"],
 
@@ -930,6 +925,8 @@
     "to-regex-range": ["to-regex-range@5.0.1", "", { "dependencies": { "is-number": "^7.0.0" } }, "sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ=="],
 
     "token-stream": ["token-stream@1.0.0", "", {}, "sha512-VSsyNPPW74RpHwR8Fc21uubwHY7wMDeJLys2IX5zJNih+OnAnaifKHo+1LHT7DAdloQ7apeaaWg8l7qnf/TnEg=="],
+
+    "toolu-cli": ["toolu-cli@workspace:tools/toolu-cli"],
 
     "treeverse": ["treeverse@3.0.0", "", {}, "sha512-gcANaAnd2QDZFmHFEOF4k7uc1J/6a6z3DJMd/QwEyxLoKGiptJRwid582r7QIsFlFMIZ3SnxfS52S4hm2DHkuQ=="],
 

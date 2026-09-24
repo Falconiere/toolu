@@ -4,21 +4,20 @@ import { access, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "./args/parse";
-import { CliError, EXIT, UsageError, type ExitCode } from "./exit";
+import { CliError, EXIT, type ExitCode } from "./exit";
 import { dispatchPlugins } from "./plugins/dispatch";
 
-const HELP = `toolu <noun> <verb> [options]
+const HELP = `npx @toolu/plugins <command> [options]
 
-Install toolu plugins and Codex agent profiles.
+Install toolu plugins into Claude Code and Codex.
 
 Commands:
-  plugins install [name...]   Install plugins, core first (no names = all)
-  plugins list                Show catalog and installation state
-  plugins remove <name...>    Uninstall plugins
-  plugins update [name...]    Update plugins to the marketplace version
-  agents preview              Show the Codex agent-profile plan, writing nothing
-  agents install              Install Codex agent profiles
-  agents remove --yes         Remove Codex agent profiles
+  install [name...]   Install plugins, core first (no names = all)
+  list                Show catalog and installation state
+  remove <name...>    Uninstall plugins
+  update [name...]    Update plugins to the marketplace version
+
+For example: npx @toolu/plugins install
 
 Options:
   --host <id>       claude | codex | opencode (detected when omitted)
@@ -90,18 +89,15 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
       process.stdout.write(`${await packageVersion()}\n`);
       return EXIT.ok;
     }
-    if (args.help || args.noun === undefined) {
+    if (args.help || args.verb === undefined) {
       process.stdout.write(HELP);
-      return args.noun === undefined && !args.help ? EXIT.usage : EXIT.ok;
+      return args.verb === undefined && !args.help ? EXIT.usage : EXIT.ok;
     }
-    if (args.noun === "plugins") {
-      return await dispatchPlugins(args, {
-        manifestPath: await manifestPath(),
-        interactive: isInteractive(args.noInput),
-        write: (text: string) => process.stdout.write(text),
-      });
-    }
-    throw new UsageError(`${args.noun} ${args.verb ?? ""} is not implemented yet`.trim());
+    return await dispatchPlugins(args, args.verb, {
+      manifestPath: await manifestPath(),
+      interactive: isInteractive(args.noInput),
+      write: (text: string) => process.stdout.write(text),
+    });
   } catch (error) {
     if (error instanceof CliError) {
       process.stderr.write(`toolu: ${error.message}\n`);

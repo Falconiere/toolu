@@ -35,7 +35,7 @@ extract_region() {
   for host in claude codex; do
     fence="$(extract_region "$ROOT/README.md" "$host")"
     [ -n "$fence" ]
-    printf '%s\n' "$fence" | grep -q 'npx @toolu/cli@latest plugins install'
+    printf '%s\n' "$fence" | grep -q 'npx @toolu/plugins install'
     ! printf '%s\n' "$fence" | grep -q 'comemory'
     ! printf '%s\n' "$fence" | grep -qE '[a-z0-9-]+@toolu'
   done

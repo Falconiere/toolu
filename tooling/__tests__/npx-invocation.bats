@@ -1,18 +1,18 @@
 #!/usr/bin/env bats
-# Every documented npx invocation of the CLI must be `npx @toolu/cli@latest`.
+# `npx @toolu/plugins <verb>` must reach the registry from any directory, this
+# repository included, with no @latest tag.
 #
-# npm exec checks the local project tree before the registry. For a bare name,
-# or an exact version, any local package called @toolu/cli wins. Inside a toolu
-# checkout that is the tools/toolu-cli workspace, which has no built bin, so the
-# bare form printed `sh: toolu: command not found` from every worktree. In a
-# user's project that already depends on the CLI, it silently ran that older
-# copy. A dist-tag always resolves against the registry, so `@latest` fetches
-# the newest release wherever it runs.
+# npm exec checks the local project tree before the registry. When the root
+# package or a declared workspace carries the requested name, npx treats it as
+# installed and runs its bin from node_modules/.bin, which here does not exist:
+# `sh: toolu: command not found`. The old @toolu/cli did exactly that from every
+# toolu checkout, because tools/toolu-cli was a workspace under that name.
 #
-# The unscoped `npx toolu` names a package that does not exist on npm; npm
-# rejected the name when the CLI was first published.
+# So the CLI publishes from tools/toolu-cli/npm, a folder no workspace declares,
+# and the workspace itself is private under another name.
 
 ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)"
+PUBLISH_DIR="$ROOT/tools/toolu-cli/npm"
 
 # Tracked markdown only: gitignored scratch specs are not published docs.
 # CHANGELOG.md is release-please history and stays as it was written.
@@ -20,15 +20,70 @@ tracked_markdown() {
   git -C "$ROOT" ls-files -z -- '*.md' ':!CHANGELOG.md'
 }
 
-@test "documented npx invocations of the CLI all pin @latest" {
+# The same lookup libnpmexec runs before it decides to install: Arborist's
+# loadActual over the project, then an inventory query by package name. Uses
+# the Arborist that ships inside npm, so it cannot drift from what npx does.
+# Prints the locations of every local package with that name, as JSON.
+local_matches() {
+  local arborist
+  arborist="$(npm root -g)/npm/node_modules/@npmcli/arborist"
+  node -e '
+    const Arborist = require(process.argv[1]);
+    new Arborist({ path: process.argv[2] }).loadActual().then((tree) => {
+      const hits = [...tree.inventory.query("packageName", process.argv[3])];
+      console.log(JSON.stringify(hits.map((node) => node.location)));
+    });
+  ' "$arborist" "$ROOT" "$1"
+}
+
+@test "npm sees no local package named @toolu/plugins, so npx goes to the registry" {
+  # The probe must still find the dev workspace, or an empty answer proves nothing.
+  run local_matches toolu-cli
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"tools/toolu-cli"'* ]]
+
+  run local_matches @toolu/plugins
+  [ "$status" -eq 0 ]
+  [ "$output" = "[]" ]
+}
+
+@test "the packed tarball runs through npx with the verb as the first argument" {
+  local tgz version
+  # Isolated cache, and no update notice mixed into the captured output.
+  export npm_config_cache="$BATS_TEST_TMPDIR/npm-cache"
+  export npm_config_update_notifier=false
+  (cd "$PUBLISH_DIR" && npm pack --silent --pack-destination "$BATS_TEST_TMPDIR" >/dev/null)
+  tgz=$(find "$BATS_TEST_TMPDIR" -maxdepth 1 -name 'toolu-plugins-*.tgz')
+  [ -n "$tgz" ]
+  version=$(jq -r .version "$PUBLISH_DIR/package.json")
+  cd "$BATS_TEST_TMPDIR"
+  # A bare path is executed as a command; the file: spec makes npx install the
+  # tarball and pick its bin exactly as it would for the registry package.
+  tgz="file:$tgz"
+
+  run npx --yes "$tgz" --version
+  [ "$status" -eq 0 ]
+  [ "$output" = "$version" ]
+
+  run npx --yes "$tgz" --help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"npx @toolu/plugins install"* ]]
+
+  # The noun grammar of the old @toolu/cli is gone: `plugins` is not a verb.
+  run npx --yes "$tgz" plugins install
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"unknown command: plugins"* ]]
+}
+
+@test "documented npx invocations use the bare @toolu/plugins name" {
   local found offenders
   found=$(cd "$ROOT" && tracked_markdown |
-    xargs -0 grep -noE 'npx( +-[[:alnum:]-]+)* +@toolu/cli[^[:space:]`]*' || true)
+    xargs -0 grep -noE 'npx( +-[[:alnum:]-]+)* +@toolu/(cli|plugins)[^[:space:]`]*' || true)
   # The pattern must still see the documented commands, or this test is vacuous.
   [ -n "$found" ]
-  offenders=$(printf '%s\n' "$found" | grep -vE '@toolu/cli@latest$' || true)
+  offenders=$(printf '%s\n' "$found" | grep -vE ':npx @toolu/plugins$' || true)
   if [ -n "$offenders" ]; then
-    printf 'use npx @toolu/cli@latest; these resolve a local package first:\n%s\n' "$offenders" >&2
+    printf 'document npx @toolu/plugins <verb>, with no tag, version, or old name:\n%s\n' "$offenders" >&2
     return 1
   fi
 }
@@ -38,7 +93,7 @@ tracked_markdown() {
   offenders=$(cd "$ROOT" && tracked_markdown |
     xargs -0 grep -nE 'npx( +-[[:alnum:]-]+)* +toolu([[:space:]`]|$)' || true)
   if [ -n "$offenders" ]; then
-    printf 'the unscoped toolu package does not exist on npm; use npx @toolu/cli@latest:\n%s\n' "$offenders" >&2
+    printf 'the unscoped toolu package does not exist on npm; use npx @toolu/plugins:\n%s\n' "$offenders" >&2
     return 1
   fi
 }

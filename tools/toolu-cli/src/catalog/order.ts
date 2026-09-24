@@ -22,7 +22,9 @@ function visit(name: string, walk: Walk): void {
   if (walk.active.has(name)) throw new UsageError(`circular plugin dependency involving ${name}`);
   const entry = walk.entries.get(name);
   if (entry === undefined) {
-    throw new UsageError(`unknown plugin: ${name}. Run \`toolu plugins list\` for the catalog.`);
+    throw new UsageError(
+      `unknown plugin: ${name}. Run \`npx @toolu/plugins list\` for the catalog.`,
+    );
   }
   walk.active.add(name);
   for (const dependency of dependencyNames(entry)) {
