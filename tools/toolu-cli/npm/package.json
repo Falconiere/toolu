@@ -1,6 +1,6 @@
 {
   "name": "@toolu/plugins",
-  "version": "6.8.2",
+  "version": "7.0.0",
   "description": "Install toolu plugins into Claude Code and Codex: npx @toolu/plugins install",
   "keywords": [
     "claude-code",

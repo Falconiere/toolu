@@ -1,6 +1,6 @@
 {
   "name": "toolu-review",
-  "version": "6.8.2",
+  "version": "7.0.0",
   "description": "Project-tuned pre-push code review mirroring CI falconiere/toolu-ghactions/code-review@v8 (Jev-enabled), writing the toolu push-review state so the gate passes. Standalone.",
   "author": {
     "name": "Falconiere Barbosa",

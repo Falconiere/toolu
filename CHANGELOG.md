@@ -1,5 +1,17 @@
 # Changelog
 
+## [7.0.0](https://github.com/Falconiere/toolu/compare/v6.8.2...v7.0.0) (2026-09-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cli:** the install command is `npx @toolu/plugins <verb>`. `@toolu/cli` and its `toolu plugins <verb>` grammar are no longer published, and the unbuilt `agents` noun is gone.
+
+### Features
+
+* **cli:** interactive host and plugin prompts ([#242](https://github.com/Falconiere/toolu/issues/242)) ([9ca8ef9](https://github.com/Falconiere/toolu/commit/9ca8ef917e69358146e11c016a3b0ff736ada28f))
+* **cli:** publish the CLI as @toolu/plugins so `npx @toolu/plugins install` works everywhere ([#240](https://github.com/Falconiere/toolu/issues/240)) ([2137060](https://github.com/Falconiere/toolu/commit/21370607ccdcdeffa2b33c1f8bc4492e3bd143f3))
+
 ## [6.8.2](https://github.com/Falconiere/toolu/compare/v6.8.1...v6.8.2) (2026-09-23)
 
 
