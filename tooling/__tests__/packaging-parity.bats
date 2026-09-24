@@ -16,8 +16,11 @@ copy_packaging_fixture() {
 
 @test "plugin packaging validator accepts the checked-in dual-host catalog" {
   run bash "$SCRIPT"
+  if [ "$status" -ne 0 ]; then
+    printf 'packaging validator failed:\n%s\n' "$output" >&2
+  fi
   [ "$status" -eq 0 ]
-  [[ "$output" == *"validated 13 plugins"* ]]
+  [[ "$output" == *"validated 14 plugins"* ]]
 }
 
 @test "plugin packaging validator rejects a release config that omits a Codex manifest" {

@@ -12,15 +12,24 @@ const marketplace = await readMarketplace(MANIFEST);
 describe("catalog against the real .claude-plugin/marketplace.json", () => {
   test("reads every catalog plugin", () => {
     expect(catalogNames(marketplace)).toContain("toolu");
-    expect(catalogNames(marketplace).length).toBeGreaterThanOrEqual(13);
+    expect(catalogNames(marketplace).length).toBeGreaterThanOrEqual(14);
   });
 
-  test("the four declared dependents really depend on toolu", () => {
+  test("the declared dependents really depend on toolu", () => {
     expect([...dependentsOf(marketplace, "toolu")].sort()).toEqual([
+      "epic-orchestrator",
       "pr-babysit",
       "python-quality",
       "rust-quality",
       "ts-quality",
+    ]);
+  });
+
+  test("epic-orchestrator pulls toolu then pr-babysit", () => {
+    expect(installOrder(marketplace, ["epic-orchestrator"])).toEqual([
+      "toolu",
+      "pr-babysit",
+      "epic-orchestrator",
     ]);
   });
 

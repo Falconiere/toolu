@@ -4,7 +4,7 @@ Do not edit by hand. Regenerate with `bun run generate:opencode-surface`.
 
 ## Path rewrites
 
-- `${TOOLU_PLUGIN_ROOT}` replaces Claude `${CLAUDE_PLUGIN_ROOT}` (4 substitution(s) in phase-1 `toolu` set).
+- `${TOOLU_PLUGIN_ROOT}` replaces Claude `${CLAUDE_PLUGIN_ROOT}` (9 substitution(s) in phase-1 `toolu` set).
 - Bootstrap must set `TOOLU_PLUGIN_ROOT` to the installed plugin directory (workflows, hooks).
 
 ## Stripped frontmatter
@@ -13,4 +13,4 @@ Do not edit by hand. Regenerate with `bun run generate:opencode-surface`.
 
 ## Literal `.claude` references (not rewritten)
 
-- (none in scanned bodies)
+- `~/.claude/epics/<owner>-<repo>-<n>/`, Codex: `$CODEX_HOME/toolu/epics/…`,

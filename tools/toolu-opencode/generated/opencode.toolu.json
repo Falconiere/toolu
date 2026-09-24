@@ -4,6 +4,42 @@
   "surfaceRoot": "tools/toolu-opencode/generated",
   "plugins": [
     {
+      "name": "epic-orchestrator",
+      "skills": [
+        {
+          "id": "epic-orchestrator--epic-orchestrator",
+          "path": "skills/epic-orchestrator--epic-orchestrator/SKILL.md",
+          "source": "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md"
+        }
+      ],
+      "agents": [],
+      "commands": [
+        {
+          "id": "epic-orchestrator--epic",
+          "path": "commands/epic-orchestrator--epic.md",
+          "source": "plugins/epic-orchestrator/commands/epic.md"
+        }
+      ]
+    },
+    {
+      "name": "pr-babysit",
+      "skills": [
+        {
+          "id": "pr-babysit--babysit--skill",
+          "path": "skills/pr-babysit--babysit--skill/SKILL.md",
+          "source": "plugins/pr-babysit/skills/babysit/SKILL.md"
+        }
+      ],
+      "agents": [],
+      "commands": [
+        {
+          "id": "pr-babysit--babysit",
+          "path": "commands/pr-babysit--babysit.md",
+          "source": "plugins/pr-babysit/commands/babysit.md"
+        }
+      ]
+    },
+    {
       "name": "toolu",
       "skills": [
         {

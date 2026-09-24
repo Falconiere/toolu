@@ -99,6 +99,19 @@
       ]
     },
     {
+      "name": "epic-orchestrator",
+      "source": "./plugins/epic-orchestrator",
+      "description": "Drive a GitHub epic to merged PRs: dependency graph, herdr worktrees, parallel Claude workers (spec→plan→execution→babysit), merge gate, and cleanup.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["epic", "github", "herdr", "orchestration"],
+      "license": "MIT",
+      "dependencies": [
+        { "name": "toolu", "marketplace": "toolu" },
+        { "name": "pr-babysit", "marketplace": "toolu" }
+      ]
+    },
+    {
       "name": "agent-browser",
       "source": "./plugins/agent-browser",
       "description": "Efficient, token-lean browser automation for agents via agent-browser (skill + CLI wrapper) — accessibility-tree snapshots with @eN refs instead of HTML/screenshots. Standalone, no dependencies.",

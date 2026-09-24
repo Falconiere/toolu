@@ -193,7 +193,7 @@ in this release. Custom agent profiles are installed locally under
 
 ## What's inside
 
-Thirteen plugins, one marketplace. Every plugin ships synchronized Claude and
+Fourteen plugins, one marketplace. Every plugin ships synchronized Claude and
 Codex manifests, and release-please holds all of them — plus the workspace
 packages and the root — at one version matching the git tag, so a plugin's
 version is always the repository's. Install the core alone, or add the domain
@@ -213,6 +213,7 @@ plugins.
 | Workflow | **`jira`** | Jira Cloud and Server/DC search plus safe issue workflow operations. |
 | Workflow | **`toolu-review`** | Pre-push review matching CI `code-review@v8` (Jev-enabled) and writing review attestations. |
 | Workflow | **`pr-babysit`** | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
+| Workflow | **`epic-orchestrator`** | Drive a GitHub epic to merged PRs via herdr workers, dependency waves, and a merge gate. |
 | Status | **`statusline`** | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
 
 Beyond the plugins, the core (`toolu`) also ships:
