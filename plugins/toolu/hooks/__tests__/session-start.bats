@@ -229,6 +229,31 @@ housekeeping_repo() {
   [[ "$output" != *"no longer prompt"* ]]
 }
 
+@test "session-start: announces retired workflow skills once on Claude" {
+  housekeeping_repo
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN: toolu workflow skills moved to delivery-flow"* ]]
+  [[ "$output" == *"/plugin install delivery-flow@toolu"* ]]
+  [[ "$output" == *"/delivery-flow:delivery-flow"* ]]
+  [ -f "$TMP/home/.claude/toolu/.delivery-flow-migration-v7" ]
+
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  [[ "$output" != *"workflow skills moved to delivery-flow"* ]]
+}
+
+@test "session-start: Codex migration notice names dependency-aware installation" {
+  housekeeping_repo
+  mkdir -p "$TMP/home/.codex"
+  run env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$TMP/home/.codex" \
+    bash "$HOOK" <<<'{"source":"startup"}'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN: toolu workflow skills moved to delivery-flow"* ]]
+  [[ "$output" == *"npx @toolu/plugins install delivery-flow --host codex"* ]]
+  [[ "$output" == *'$delivery-flow:delivery-flow'* ]]
+  [ -f "$TMP/home/.codex/toolu/.delivery-flow-migration-v7" ]
+}
+
 @test "session-start: stays quiet about the default when a preset is pinned" {
   housekeeping_repo
   printf '%s' '{"version":1,"gates":{"preset":"strict"}}' > "$TMP/.claude/toolu.config.json"
