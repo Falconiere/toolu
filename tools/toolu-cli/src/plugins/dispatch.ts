@@ -13,6 +13,9 @@ import { anyFailed, reportInstall, reportList, reportRemove, reportUpdate } from
 const MARKETPLACE_NAME = "toolu";
 const MARKETPLACE_SOURCE = "Falconiere/toolu";
 
+/** Parsed arguments once a verb is known to be present. */
+type RoutedArgs = ParsedArgs & { readonly verb: Verb };
+
 interface DispatchContext {
   readonly manifestPath: string;
   readonly interactive: boolean;
@@ -63,15 +66,14 @@ async function handleRemove(args: ParsedArgs, context: DispatchContext): Promise
 
 /** Routes a parsed invocation to its verb. */
 export async function dispatchPlugins(
-  args: ParsedArgs,
-  verb: Verb,
+  args: RoutedArgs,
   context: DispatchContext,
 ): Promise<ExitCode> {
   const marketplace = await readMarketplace(context.manifestPath);
-  if (verb === "install") return handleInstall(args, marketplace, context);
-  if (verb === "remove") return handleRemove(args, context);
+  if (args.verb === "install") return handleInstall(args, marketplace, context);
+  if (args.verb === "remove") return handleRemove(args, context);
   const host = await resolvedHost(args);
-  if (verb === "list") {
+  if (args.verb === "list") {
     const entries = await listPlugins(adapterFor(host), marketplace);
     context.write(args.json ? `${JSON.stringify(entries, null, 2)}\n` : reportList(entries));
     return EXIT.ok;

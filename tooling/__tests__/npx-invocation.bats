@@ -71,6 +71,11 @@ local_matches() {
   [ "$status" -eq 0 ]
   [ "${lines[0]}" = "npx @toolu/plugins <command> [options]" ]
 
+  # No command at all prints the same help, but as a usage error.
+  run npx --yes "$tgz"
+  [ "$status" -eq 2 ]
+  [ "${lines[0]}" = "npx @toolu/plugins <command> [options]" ]
+
   # The noun grammar of the old @toolu/cli is gone: `plugins` is not a verb,
   # and the error says what to type instead.
   run npx --yes "$tgz" plugins install

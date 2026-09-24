@@ -80,13 +80,16 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     }
     if (args.help || args.verb === undefined) {
       process.stdout.write(HELP);
-      return args.verb === undefined && !args.help ? EXIT.usage : EXIT.ok;
+      return args.help ? EXIT.ok : EXIT.usage;
     }
-    return await dispatchPlugins(args, args.verb, {
-      manifestPath: await manifestPath(),
-      interactive: isInteractive(args.noInput),
-      write: (text: string) => process.stdout.write(text),
-    });
+    return await dispatchPlugins(
+      { ...args, verb: args.verb },
+      {
+        manifestPath: await manifestPath(),
+        interactive: isInteractive(args.noInput),
+        write: (text: string) => process.stdout.write(text),
+      },
+    );
   } catch (error) {
     if (error instanceof CliError) {
       process.stderr.write(`toolu: ${error.message}\n`);

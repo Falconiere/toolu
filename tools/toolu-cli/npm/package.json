@@ -35,6 +35,6 @@
     "assets"
   ],
   "scripts": {
-    "prepack": "bun run --cwd .. build >/dev/null"
+    "prepack": "bun run --cwd .. build"
   }
 }
