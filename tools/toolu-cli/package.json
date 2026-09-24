@@ -1,6 +1,6 @@
 {
   "name": "toolu-cli",
-  "version": "6.8.2",
+  "version": "7.0.0",
   "private": true,
   "description": "Source of the @toolu/plugins CLI. Publishes from npm/, never from here: a workspace named @toolu/plugins would shadow the registry for npx.",
   "license": "MIT",
