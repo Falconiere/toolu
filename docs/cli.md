@@ -17,8 +17,16 @@ Design: `docs/toolu/specs/2026-09-22-npx-toolu-cli-design.md` (untracked; `docs/
 Published to npm as `@toolu/cli` when a GitHub Release is published:
 
 ```bash
-npx @toolu/cli plugins list
+npx @toolu/cli@latest plugins list
 ```
+
+Keep the `@latest` tag. Without a tag, or with an exact version, npx runs any
+local package named `@toolu/cli` before it asks the registry. Inside a toolu
+checkout that local package is the unbuilt `tools/toolu-cli` workspace, so the
+command fails with `sh: toolu: command not found`. In a project that already
+depends on the CLI, it runs that older copy instead. A tag always resolves
+against the registry. `tooling/__tests__/npx-invocation.bats` fails if a
+documented command drops it.
 
 The package is scoped because npm rejects the unscoped name `toolu` as too
 similar to the existing package `toml`. The **command** it installs is still

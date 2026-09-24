@@ -487,7 +487,7 @@ Replay a saved selection with `--config`, which makes a run fully
 non-interactive:
 
 ```bash
-npx @toolu/cli plugins install --config .toolu/plugins.json
+npx @toolu/cli@latest plugins install --config .toolu/plugins.json
 ```
 
 Writes are atomic: a temporary file in the same directory, then a rename, so a

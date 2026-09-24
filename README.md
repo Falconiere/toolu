@@ -96,11 +96,11 @@ Installation goes through a published CLI that drives each host's own plugin CLI
 in catalog dependency order:
 
 ```bash
-npx @toolu/cli plugins install              # everything, core first
-npx @toolu/cli plugins install rust-quality # one plugin and its dependency
-npx @toolu/cli plugins list                 # catalog joined with what is installed
-npx @toolu/cli plugins remove jira --yes
-npx @toolu/cli plugins update
+npx @toolu/cli@latest plugins install              # everything, core first
+npx @toolu/cli@latest plugins install rust-quality # one plugin and its dependency
+npx @toolu/cli@latest plugins list                 # catalog joined with what is installed
+npx @toolu/cli@latest plugins remove jira --yes
+npx @toolu/cli@latest plugins update
 ```
 
 Claude Code and Codex are covered. Codex agent profiles, OpenCode wiring, and the
@@ -125,7 +125,7 @@ claude plugin marketplace add anthropics/claude-plugins-official
 
 # Adds the toolu marketplace and installs every catalog plugin, core first.
 # Already-installed plugins are reported and left alone.
-npx @toolu/cli plugins install
+npx @toolu/cli@latest plugins install
 ```
 <!-- /install-everything:claude -->
 
@@ -134,7 +134,7 @@ npx @toolu/cli plugins install
 <!-- install-everything:codex -->
 ```bash
 # Adds the toolu marketplace and installs every catalog plugin, core first.
-npx @toolu/cli plugins install --host codex
+npx @toolu/cli@latest plugins install --host codex
 ```
 
 After they are installed, review and trust the hooks in `/hooks` before they run.

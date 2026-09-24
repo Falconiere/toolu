@@ -15,7 +15,7 @@ root to its own package directory. Choose which bash plugins are active with
 { "version": 1, "enabled": ["toolu"] }
 ```
 
-`npx @toolu/cli plugins install --host opencode` does not drive this yet — the CLI
+`npx @toolu/cli@latest plugins install --host opencode` does not drive this yet — the CLI
 has no OpenCode adapter. Until it does, run the two steps above.
 
 The git-clone flow below remains the contributor path, and is still how you work

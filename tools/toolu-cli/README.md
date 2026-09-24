@@ -5,11 +5,11 @@ Install [toolu](https://github.com/Falconiere/toolu) plugins into Claude Code an
 The package is scoped; the command it installs is `toolu`.
 
 ```bash
-npx @toolu/cli plugins install              # every catalog plugin, core first
-npx @toolu/cli plugins install rust-quality # one plugin and its dependency
-npx @toolu/cli plugins list                 # catalog joined with what is installed
-npx @toolu/cli plugins remove jira --yes
-npx @toolu/cli plugins update
+npx @toolu/cli@latest plugins install              # every catalog plugin, core first
+npx @toolu/cli@latest plugins install rust-quality # one plugin and its dependency
+npx @toolu/cli@latest plugins list                 # catalog joined with what is installed
+npx @toolu/cli@latest plugins remove jira --yes
+npx @toolu/cli@latest plugins update
 ```
 
 ## What it does
