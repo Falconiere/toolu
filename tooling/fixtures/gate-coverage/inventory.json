@@ -160,6 +160,26 @@
     "bashRequired": true
   },
   {
+    "id": "epic-orchestrator:entrypoint:SessionStart:session-start.sh",
+    "sourcePath": "plugins/epic-orchestrator/hooks/session-start.sh",
+    "plugin": "epic-orchestrator",
+    "kind": "entrypoint",
+    "event": "SessionStart",
+    "matcher": "",
+    "commandOrModule": "session-start.sh",
+    "parentId": null,
+    "semantics": "Hook entrypoint script session-start.sh for SessionStart (OpenCode bootstrap; wraps check-deps.sh).",
+    "classification": "shell-out",
+    "hostMechanism": "pending-opencode",
+    "support": "required",
+    "implementationIssue": 211,
+    "implementationStatus": "todo",
+    "verificationBaseline": "none",
+    "verificationConformance": "pending-#212",
+    "limits": "",
+    "bashRequired": true
+  },
+  {
     "id": "epic-orchestrator:hooks.json:SessionStart:check-deps.sh:startup|resume|clear|compact",
     "sourcePath": "plugins/epic-orchestrator/hooks/hooks.json",
     "plugin": "epic-orchestrator",

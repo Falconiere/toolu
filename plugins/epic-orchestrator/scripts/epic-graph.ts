@@ -197,7 +197,9 @@ export function computeLevels(
       return d !== undefined && [...d].every((b) => b in levels);
     });
     if (progress.length === 0) {
-      return [levels, [...pending].sort()];
+      // Refuse all waves until the cycle is fixed — partial levels would
+      // schedule acyclic siblings while the graph is still unschedulable.
+      return [{}, [...pending].sort()];
     }
     for (const r of progress) {
       const d = deps[r] ?? new Set<string>();

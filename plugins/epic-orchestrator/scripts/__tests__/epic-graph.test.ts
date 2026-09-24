@@ -80,7 +80,7 @@ describe("GraphTest", () => {
     const [levels, cycle] = computeLevels(cloned);
     expect(cycle).toContain("Falconiere/comemory#255");
     expect(cycle).toContain("Falconiere/comemory#257");
-    expect(levels).not.toHaveProperty("Falconiere/comemory#255");
+    expect(levels).toEqual({});
   });
 });
 

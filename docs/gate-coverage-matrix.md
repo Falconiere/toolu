@@ -16,6 +16,7 @@ Classifications match [docs/portable-core.md](portable-core.md): `shell-out` · 
 | `ast-grep:pre-tools.d:PreToolUse:search-nudge.sh` | `plugins/ast-grep/hooks/pre-tools.d/search-nudge.sh` | ast-grep | PreToolUse | shell-out | required | #210/todo | pending-opencode | yes | — |
 | `context7:entrypoint:SessionStart:session-start.sh` | `plugins/context7/hooks/session-start.sh` | context7 | SessionStart | shell-out | required | #211/todo | pending-opencode | yes | — |
 | `context7:hooks.json:SessionStart:session-start.sh:startup|resume|clear|compact` | `plugins/context7/hooks/hooks.json` | context7 | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
+| `epic-orchestrator:entrypoint:SessionStart:session-start.sh` | `plugins/epic-orchestrator/hooks/session-start.sh` | epic-orchestrator | SessionStart | shell-out | required | #211/todo | pending-opencode | yes | — |
 | `epic-orchestrator:hooks.json:SessionStart:check-deps.sh:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
 | `exa-search:entrypoint:SessionStart:session-start.sh` | `plugins/exa-search/hooks/session-start.sh` | exa-search | SessionStart | shell-out | required | #211/todo | pending-opencode | yes | — |
 | `exa-search:hooks.json:SessionStart:session-start.sh:startup|resume|clear|compact` | `plugins/exa-search/hooks/hooks.json` | exa-search | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
