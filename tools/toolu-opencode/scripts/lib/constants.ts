@@ -1,5 +1,5 @@
 /** Shared constants for OpenCode surface generation (#206). */
-export const DEFAULT_ENABLED = ["toolu"] as const;
+export const DEFAULT_ENABLED = ["toolu", "pr-babysit", "epic-orchestrator"] as const;
 
 export const GENERATED_SEGMENT = "tools/toolu-opencode/generated";
 

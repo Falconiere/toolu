@@ -15,6 +15,10 @@ root to its own package directory. Choose which bash plugins are active with
 { "version": 1, "enabled": ["toolu"] }
 ```
 
+`pr-babysit` and `epic-orchestrator` ship in the committed OpenCode surface —
+add them to `enabled` when you want those workflows (dependencies close
+automatically).
+
 `npx @toolu/plugins install --host opencode` does not drive this yet — the CLI
 has no OpenCode adapter. Until it does, run the two steps above.
 
@@ -96,9 +100,10 @@ In **your application repo** (not inside the toolu clone):
 
    ```json
    { "version": 1, "enabled": ["toolu"] }
+
    ```
 
-   Add names (for example `ts-quality`) only when those directories exist under `$TOOLU_REPO_ROOT/plugins/` and you accept their extra prerequisites. Manifest dependencies are closed automatically (`@toolu/opencode/select`).
+   Add names (for example `ts-quality`, `pr-babysit`, `epic-orchestrator`) only when those directories exist under `$TOOLU_REPO_ROOT/plugins/` (or the npm package tree) and you accept their extra prerequisites. Manifest dependencies are closed automatically (`@toolu/opencode/select`).
 
 5. **Generated surface** — skills, agents, and commands for OpenCode live under `tools/toolu-opencode/generated/` (catalog: `opencode.toolu.json`). Regenerate after changing upstream skills with `bun run generate:opencode-surface` in the toolu clone. Wire OpenCode to those paths using your OpenCode project config; the committed tree is the canonical mirror from [#206](https://github.com/Falconiere/toolu/issues/206).
 

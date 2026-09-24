@@ -1,9 +1,12 @@
+---
+name: epic-orchestrator--epic
+---
 # Epic orchestrator
 
 Resolve the plugin root, then read and execute the skill:
 
 ```bash
-ROOT="${CLAUDE_PLUGIN_ROOT}"
+ROOT="${TOOLU_PLUGIN_ROOT}"
 ROOT="${ROOT:-${PLUGIN_ROOT:-${TOOLU_PLUGIN_ROOT}}}"
 ```
 

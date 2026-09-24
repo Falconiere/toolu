@@ -3,8 +3,15 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { issueKey, parseRef, slugify } from "../common.ts";
-import { classify, computeLevels, downstreamCounts, ISSUE_REF, type GraphIssue } from "../epic-graph.ts";
+import { homedir } from "node:os";
+import { defaultEpicsHome, issueKey, parseRef, slugify } from "../common.ts";
+import {
+  classify,
+  computeLevels,
+  downstreamCounts,
+  ISSUE_REF,
+  type GraphIssue,
+} from "../epic-graph.ts";
 
 const FIXTURE = join(import.meta.dir, "..", "fixtures", "epic248-graph.json");
 
@@ -127,6 +134,19 @@ describe("CommonTest", () => {
   test("slugify drops epic prefix", () => {
     expect(slugify("[Realtime replication] Drain durable push/pull backlogs safely")).toBe(
       "drain-durable-push-pull-backlogs",
+    );
+  });
+
+  test("defaultEpicsHome follows host override and EPIC_STATE_HOME", () => {
+    expect(defaultEpicsHome({ EPIC_STATE_HOME: "/tmp/epics" })).toBe("/tmp/epics");
+    expect(defaultEpicsHome({ TOOLU_HOST_OVERRIDE: "codex", CODEX_HOME: "/c" })).toBe(
+      "/c/toolu/epics",
+    );
+    expect(defaultEpicsHome({ TOOLU_HOST_OVERRIDE: "opencode", TOOLU_OPENCODE_HOME: "/o" })).toBe(
+      "/o/toolu/epics",
+    );
+    expect(defaultEpicsHome({ TOOLU_HOST_OVERRIDE: "claude" })).toBe(
+      join(homedir(), ".claude", "epics"),
     );
   });
 });

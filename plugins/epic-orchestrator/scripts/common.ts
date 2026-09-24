@@ -10,7 +10,22 @@ export const PLUGIN_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const REF_DIR = join(PLUGIN_ROOT, "skills", "epic-orchestrator", "references");
 export const SCRIPTS_DIR = join(PLUGIN_ROOT, "scripts");
 
-export const EPICS_HOME = process.env.EPIC_STATE_HOME ?? join(homedir(), ".claude", "epics");
+/** Resolve epic state root for the active host (override with EPIC_STATE_HOME). */
+export function defaultEpicsHome(env: NodeJS.ProcessEnv = process.env): string {
+  if (env.EPIC_STATE_HOME) return env.EPIC_STATE_HOME;
+  const host = (env.TOOLU_HOST_OVERRIDE ?? "").toLowerCase();
+  if (host === "codex" || (host === "" && env.CODEX_HOME && !env.CLAUDE_CONFIG_DIR)) {
+    return join(env.CODEX_HOME || join(homedir(), ".codex"), "toolu", "epics");
+  }
+  if (host === "opencode" || (host === "" && (env.OPENCODE_HOME || env.TOOLU_OPENCODE_HOME))) {
+    const root = env.TOOLU_OPENCODE_HOME || env.OPENCODE_HOME || join(homedir(), ".opencode");
+    return join(root, "toolu", "epics");
+  }
+  // Claude Code, Cursor Agent, and unspecified hosts share the Claude-shaped home.
+  return join(homedir(), ".claude", "epics");
+}
+
+export const EPICS_HOME = defaultEpicsHome();
 
 const REF_URL = /github\.com\/([^/\s]+)\/([^/\s]+)\/(?:issues|pull)\/(\d+)/;
 const REF_SHORT = /^([\w.-]+)\/([\w.-]+)#(\d+)$/;

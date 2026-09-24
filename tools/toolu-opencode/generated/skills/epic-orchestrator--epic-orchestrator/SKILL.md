@@ -1,6 +1,6 @@
 ---
-name: epic-orchestrator
 description: Drive a GitHub epic to done. Each open sub-issue gets its own herdr git worktree and Claude agent, which runs spec → spec-review → plan → plan-review → execution with tests → PR → pr-babysit. Independent issues run in parallel based on the dependency graph. Every branch is rebased on main, green PRs are merged automatically (--admin only when branch protection is the only thing blocking), and the epic closes when every sub-issue is closed. Use this whenever the user points at an epic, tracking issue, parent issue with sub-issues, or a checklist of linked issues and wants it worked, implemented, shipped, delivered, driven, resumed, or orchestrated. Examples — "work epic #248", "ship all the sub-issues of <url>", "pick up the replication epic", "which issues in this epic can run in parallel", "dry-run the epic", "where is the epic at". Not for a single standalone issue or PR.
+name: epic-orchestrator--epic-orchestrator
 ---
 
 # Epic orchestrator
@@ -16,7 +16,7 @@ decision is needed.
 ```bash
 # Claude / Cursor Agent: CLAUDE_PLUGIN_ROOT. Codex: PLUGIN_ROOT.
 # OpenCode generated surface rewrites CLAUDE_PLUGIN_ROOT → TOOLU_PLUGIN_ROOT.
-ROOT="${CLAUDE_PLUGIN_ROOT}"
+ROOT="${TOOLU_PLUGIN_ROOT}"
 ROOT="${ROOT:-${PLUGIN_ROOT:-${TOOLU_PLUGIN_ROOT}}}"
 S="${ROOT}/scripts"
 ```
