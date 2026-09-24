@@ -363,8 +363,9 @@ async function build(epicRef: string, maxParallel: number): Promise<Record<strin
       const stem = name.slice(0, -5);
       launched[stem] = readJson(join(stateDir, "issues", name), {});
     }
-  } catch {
-    // no state dir yet
+  } catch (err: unknown) {
+    const code = err && typeof err === "object" && "code" in err ? err.code : undefined;
+    if (code !== "ENOENT") throw err;
   }
   const issues: Record<string, GraphIssue> = {};
   for (const d of details) {

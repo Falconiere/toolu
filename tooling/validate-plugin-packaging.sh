@@ -6,6 +6,8 @@ ROOT="${PACKAGING_ROOT:-$(cd "${BASH_SOURCE%/*}/.." && pwd)}"
 cd "$ROOT"
 
 fail() {
+  # stdout so bats `run` always surfaces the reason in CI logs
+  printf 'validate-plugin-packaging: %s\n' "$*"
   printf 'validate-plugin-packaging: %s\n' "$*" >&2
   exit 1
 }

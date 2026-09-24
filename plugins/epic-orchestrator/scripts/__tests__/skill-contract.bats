@@ -4,8 +4,9 @@ ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)"
 SKILL="$ROOT/skills/epic-orchestrator/SKILL.md"
 CMD="$ROOT/commands/epic.md"
 
-@test "skill invokes bun CLIs via CLAUDE_PLUGIN_ROOT" {
-  grep -Fq 'S="${CLAUDE_PLUGIN_ROOT}/scripts"' "$SKILL"
+@test "skill invokes bun CLIs via host plugin root" {
+  grep -Fq 'ROOT="${CLAUDE_PLUGIN_ROOT}"' "$SKILL"
+  grep -Fq 'S="${ROOT}/scripts"' "$SKILL"
   grep -Fq 'bun "$S/epic-graph.ts"' "$SKILL"
   grep -Fq 'bun "$S/launch-issue.ts"' "$SKILL"
   grep -Fq 'bun "$S/epic-watch.ts"' "$SKILL"

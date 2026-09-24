@@ -100,8 +100,9 @@ function snapshot(
       if (!name.endsWith(".json")) continue;
       records[name.slice(0, -5)] = readJson(join(state, "issues", name), {});
     }
-  } catch {
-    // empty
+  } catch (err: unknown) {
+    const code = err && typeof err === "object" && "code" in err ? err.code : undefined;
+    if (code !== "ENOENT") throw err;
   }
   const active: Record<string, Record<string, unknown>> = {};
   for (const [k, r] of Object.entries(records)) {
