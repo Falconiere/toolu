@@ -98,6 +98,16 @@
         },
         {
           "type": "json",
+          "path": "plugins/epic-orchestrator/.claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/epic-orchestrator/.codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "plugins/python-quality/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
         },

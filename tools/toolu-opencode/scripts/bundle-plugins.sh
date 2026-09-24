@@ -22,5 +22,5 @@ mkdir -p "$DEST"
 (cd "$SRC" && tar --exclude='__tests__' -cf - .) | (cd "$DEST" && tar -xf -)
 
 count=$(find "$DEST" -name plugin.json -path '*.claude-plugin*' | wc -l | tr -d ' ')
-[ "$count" -ge 13 ] || { echo "bundle-plugins: only $count plugin manifests copied" >&2; exit 1; }
+[ "$count" -ge 14 ] || { echo "bundle-plugins: only $count plugin manifests copied" >&2; exit 1; }
 echo "bundle-plugins: $count plugins staged in $DEST"

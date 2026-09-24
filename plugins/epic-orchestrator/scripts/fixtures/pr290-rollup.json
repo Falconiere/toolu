@@ -1,0 +1,112 @@
+[
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-09-24T14:05:05Z",
+    "conclusion": "SUCCESS",
+    "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/36010142702/job/107668426989",
+    "name": "review",
+    "startedAt": "2026-09-24T14:04:39Z",
+    "status": "COMPLETED",
+    "workflowName": "Code Review"
+  },
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-09-24T14:05:05Z",
+    "conclusion": "SUCCESS",
+    "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/36010143206/job/107668429155",
+    "name": "plan",
+    "startedAt": "2026-09-24T14:04:37Z",
+    "status": "COMPLETED",
+    "workflowName": "Release"
+  },
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-09-24T14:12:57Z",
+    "conclusion": "SUCCESS",
+    "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/36010142650/job/107668427082",
+    "name": "test",
+    "startedAt": "2026-09-24T14:04:36Z",
+    "status": "COMPLETED",
+    "workflowName": "Test"
+  },
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-09-24T14:05:06Z",
+    "conclusion": "SKIPPED",
+    "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/36010143206/job/107668652429",
+    "name": "build-local-artifacts (${{ join(matrix.targets, ', ') }})",
+    "startedAt": "2026-09-24T14:05:06Z",
+    "status": "COMPLETED",
+    "workflowName": "Release"
+  },
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-09-24T14:05:06Z",
+    "conclusion": "SKIPPED",
+    "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/36010143206/job/107668655153",
+    "name": "build-global-artifacts",
+    "startedAt": "2026-09-24T14:05:07Z",
+    "status": "COMPLETED",
+    "workflowName": "Release"
+  },
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-09-24T14:05:07Z",
+    "conclusion": "SKIPPED",
+    "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/36010143206/job/107668659109",
+    "name": "host",
+    "startedAt": "2026-09-24T14:05:07Z",
+    "status": "COMPLETED",
+    "workflowName": "Release"
+  },
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-09-24T14:05:07Z",
+    "conclusion": "SKIPPED",
+    "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/36010143206/job/107668662073",
+    "name": "publish-homebrew-formula",
+    "startedAt": "2026-09-24T14:05:08Z",
+    "status": "COMPLETED",
+    "workflowName": "Release"
+  },
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-09-24T14:05:08Z",
+    "conclusion": "SKIPPED",
+    "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/36010143206/job/107668664818",
+    "name": "announce",
+    "startedAt": "2026-09-24T14:05:08Z",
+    "status": "COMPLETED",
+    "workflowName": "Release"
+  },
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-09-24T14:05:08Z",
+    "conclusion": "SKIPPED",
+    "detailsUrl": "https://github.com/Falconiere/comemory/actions/runs/36010143206/job/107668668982",
+    "name": "custom-release-finalize",
+    "startedAt": "2026-09-24T14:05:09Z",
+    "status": "COMPLETED",
+    "workflowName": "Release"
+  },
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-09-24T14:04:52Z",
+    "conclusion": "SUCCESS",
+    "detailsUrl": "https://github.com/Falconiere/comemory/runs/107668542754",
+    "name": "Opengrep OSS",
+    "startedAt": "2026-09-24T14:04:50Z",
+    "status": "COMPLETED",
+    "workflowName": ""
+  },
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-09-24T14:04:52Z",
+    "conclusion": "SUCCESS",
+    "detailsUrl": "https://github.com/Falconiere/comemory/runs/107668541850",
+    "name": "gitleaks",
+    "startedAt": "2026-09-24T14:04:50Z",
+    "status": "COMPLETED",
+    "workflowName": ""
+  }
+]

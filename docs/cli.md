@@ -100,8 +100,9 @@ npx @toolu/plugins update [name...]    Update only what is behind the marketplac
 ## Behavior worth knowing
 
 **Install order comes from the catalog, not the CLI.** `.claude-plugin/marketplace.json`
-declares that `python-quality`, `rust-quality`, `ts-quality`, and `pr-babysit`
-depend on `toolu`. Requesting a dependent installs its dependency first. Adding a
+declares that `python-quality`, `rust-quality`, `ts-quality`, `pr-babysit`, and
+`epic-orchestrator` depend on `toolu` (and `epic-orchestrator` also depends on
+`pr-babysit`). Requesting a dependent installs its dependency first. Adding a
 plugin to the catalog needs no CLI change.
 
 **Already installed is not an error.** A plugin already present is reported and
@@ -109,7 +110,7 @@ left alone. When its version differs from the one the marketplace offers, both
 versions are named and it is still left alone — `update` is how you move it. Exit stays `0`.
 
 **Only a core failure stops dependents.** If `toolu` itself fails to install, its
-four dependents are skipped, because they cannot succeed without it. Any other
+dependents are skipped, because they cannot succeed without it. Any other
 failure is recorded and the remaining plugins are still attempted. Either way the
 exit code is `1` and every failure is named.
 

@@ -13,12 +13,13 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 5 | [**exa-search**](../exa-search/README.md) | Knowledge | — | Web / code / URL search plus deep research |
 | 6 | [**jira**](../jira/README.md) | Workflow | — | Jira issue search & workflow from the session |
 | 7 | [**pr-babysit**](../pr-babysit/README.md) | Workflow | `toolu` | Claude cron / durable Codex PR babysitter that chases findings to zero |
-| 8 | [**python-quality**](../python-quality/README.md) | Quality Gate | `toolu` | Python post-edit quality checks (size, suppression, test layout, no-mocks) |
-| 9 | [**rust-quality**](../rust-quality/README.md) | Quality Gate | `toolu` | Rust post-edit quality checks (size, unsafe, unwrap bans) |
-| 10 | [**statusline**](../statusline/README.md) | Status | — | Persistent Claude statusline plus explicit Codex repository/gate status |
-| 11 | [**ts-quality**](../ts-quality/README.md) | Quality Gate | `toolu` | TypeScript post-edit quality checks (size, imports, type guards) |
-| 12 | [**agent-browser**](../../plugins/agent-browser/README.md) | Browser | — | Token-lean live browser automation via accessibility-tree snapshots |
-| 13 | [**jev**](../jev/README.md) | Knowledge | — | Typed judgments from TypeSafe's Jev — probability, choice, and score answers code can branch on |
+| 8 | [**epic-orchestrator**](../epic-orchestrator/README.md) | Workflow | `toolu`, `pr-babysit` | Drive a GitHub epic to merged PRs via herdr workers and a merge gate |
+| 9 | [**python-quality**](../python-quality/README.md) | Quality Gate | `toolu` | Python post-edit quality checks (size, suppression, test layout, no-mocks) |
+| 10 | [**rust-quality**](../rust-quality/README.md) | Quality Gate | `toolu` | Rust post-edit quality checks (size, unsafe, unwrap bans) |
+| 11 | [**statusline**](../statusline/README.md) | Status | — | Persistent Claude statusline plus explicit Codex repository/gate status |
+| 12 | [**ts-quality**](../ts-quality/README.md) | Quality Gate | `toolu` | TypeScript post-edit quality checks (size, imports, type guards) |
+| 13 | [**agent-browser**](../../plugins/agent-browser/README.md) | Browser | — | Token-lean live browser automation via accessibility-tree snapshots |
+| 14 | [**jev**](../jev/README.md) | Knowledge | — | Typed judgments from TypeSafe's Jev — probability, choice, and score answers code can branch on |
 
 ## Architecture Overview
 

@@ -1,0 +1,376 @@
+{
+  "epic": {
+    "ref": "Falconiere/comemory#248",
+    "title": "[Realtime replication] Shared data everywhere with a required resident daemon",
+    "state": "open",
+    "url": "https://github.com/Falconiere/comemory/issues/248"
+  },
+  "state_dir": "/Users/falconiere/.claude/epics/falconiere-comemory-248",
+  "max_parallel": 3,
+  "issues": [
+    {
+      "ref": "Falconiere/comemory#249",
+      "title": "[Realtime replication] Establish the real-process test harness and permanent CI coverage gates",
+      "state": "closed",
+      "url": "https://github.com/Falconiere/comemory/issues/249",
+      "repo": "Falconiere/comemory",
+      "number": 249,
+      "blockers": {},
+      "prs": [],
+      "deps_source": "native+text",
+      "key": "comemory-249",
+      "status": "done",
+      "open_blockers": [],
+      "wave": null,
+      "unblocks": 9,
+      "checkout": "/Volumes/Projects/ccvps/comemory",
+      "branch": "feat/249-establish-the-real-process-test",
+      "stage": null
+    },
+    {
+      "ref": "Falconiere/comemory#250",
+      "title": "[Realtime replication] Add a versioned journal, operation receipts and server-ordered protocol",
+      "state": "closed",
+      "url": "https://github.com/Falconiere/comemory/issues/250",
+      "repo": "Falconiere/comemory",
+      "number": 250,
+      "blockers": {
+        "Falconiere/comemory#249": "closed"
+      },
+      "prs": [],
+      "deps_source": "native+text",
+      "key": "comemory-250",
+      "status": "done",
+      "open_blockers": [],
+      "wave": null,
+      "unblocks": 9,
+      "checkout": "/Volumes/Projects/ccvps/comemory",
+      "branch": "feat/250-add-a-versioned-journal-operation",
+      "stage": null
+    },
+    {
+      "ref": "Falconiere/comemory#251",
+      "title": "[Realtime replication] Capture every memory mutation and recover interrupted markdown writes",
+      "state": "closed",
+      "url": "https://github.com/Falconiere/comemory/issues/251",
+      "repo": "Falconiere/comemory",
+      "number": 251,
+      "blockers": {
+        "Falconiere/comemory#250": "closed",
+        "Falconiere/comemory#249": "closed"
+      },
+      "prs": [
+        {
+          "headRefName": "feat/251-memory-mutation-capture",
+          "number": 274,
+          "state": "MERGED",
+          "url": "https://github.com/Falconiere/comemory/pull/274"
+        }
+      ],
+      "deps_source": "native+text",
+      "key": "comemory-251",
+      "status": "done",
+      "open_blockers": [],
+      "wave": null,
+      "unblocks": 2,
+      "checkout": "/Volumes/Projects/ccvps/comemory",
+      "branch": "feat/251-capture-every-memory-mutation-and",
+      "stage": null
+    },
+    {
+      "ref": "Falconiere/comemory#252",
+      "title": "[Realtime replication] Replicate code generations bidirectionally without overwriting local indexes",
+      "state": "closed",
+      "url": "https://github.com/Falconiere/comemory/issues/252",
+      "repo": "Falconiere/comemory",
+      "number": 252,
+      "blockers": {
+        "Falconiere/comemory#250": "closed",
+        "Falconiere/comemory#249": "closed"
+      },
+      "prs": [
+        {
+          "headRefName": "feat/252-code-generation-replication",
+          "number": 287,
+          "state": "MERGED",
+          "url": "https://github.com/Falconiere/comemory/pull/287"
+        }
+      ],
+      "deps_source": "native+text",
+      "key": "comemory-252",
+      "status": "done",
+      "open_blockers": [],
+      "wave": null,
+      "unblocks": 2,
+      "checkout": "/Volumes/Projects/ccvps/comemory",
+      "branch": "feat/252-replicate-code-generations-bidirectionally-without",
+      "stage": null
+    },
+    {
+      "ref": "Falconiere/comemory#253",
+      "title": "[Realtime replication] Sync portable document revisions and searchable remote caches",
+      "state": "closed",
+      "url": "https://github.com/Falconiere/comemory/issues/253",
+      "repo": "Falconiere/comemory",
+      "number": 253,
+      "blockers": {
+        "Falconiere/comemory#250": "closed",
+        "Falconiere/comemory#249": "closed"
+      },
+      "prs": [
+        {
+          "headRefName": "feat/253-document-replication",
+          "number": 289,
+          "state": "MERGED",
+          "url": "https://github.com/Falconiere/comemory/pull/289"
+        }
+      ],
+      "deps_source": "native+text",
+      "key": "comemory-253",
+      "status": "done",
+      "open_blockers": [],
+      "wave": null,
+      "unblocks": 2,
+      "checkout": "/Volumes/Projects/ccvps/comemory",
+      "branch": "feat/253-sync-portable-document-revisions-and",
+      "stage": null
+    },
+    {
+      "ref": "Falconiere/comemory#254",
+      "title": "[Realtime replication] Sync feedback and activity with exactly-once effects and preserved provenance",
+      "state": "open",
+      "url": "https://github.com/Falconiere/comemory/issues/254",
+      "repo": "Falconiere/comemory",
+      "number": 254,
+      "blockers": {
+        "Falconiere/comemory#250": "closed",
+        "Falconiere/comemory#249": "closed"
+      },
+      "prs": [],
+      "deps_source": "native+text",
+      "key": "comemory-254",
+      "status": "ready",
+      "open_blockers": [],
+      "wave": 1,
+      "unblocks": 2,
+      "checkout": "/Volumes/Projects/ccvps/comemory",
+      "branch": "feat/254-sync-feedback-and-activity-with",
+      "stage": null
+    },
+    {
+      "ref": "Falconiere/comemory#255",
+      "title": "[Realtime replication] Drain durable push/pull backlogs safely across failures and policy changes",
+      "state": "open",
+      "url": "https://github.com/Falconiere/comemory/issues/255",
+      "repo": "Falconiere/comemory",
+      "number": 255,
+      "blockers": {
+        "Falconiere/comemory#250": "closed",
+        "Falconiere/comemory#249": "closed"
+      },
+      "prs": [],
+      "deps_source": "native+text",
+      "key": "comemory-255",
+      "status": "ready",
+      "open_blockers": [],
+      "wave": 1,
+      "unblocks": 5,
+      "checkout": "/Volumes/Projects/ccvps/comemory",
+      "branch": "feat/255-drain-durable-push-pull-backlogs",
+      "stage": null
+    },
+    {
+      "ref": "Falconiere/comemory#256",
+      "title": "[Realtime replication] Preserve replica state through bootstrap, rebuild, purge and recovery",
+      "state": "open",
+      "url": "https://github.com/Falconiere/comemory/issues/256",
+      "repo": "Falconiere/comemory",
+      "number": 256,
+      "blockers": {
+        "Falconiere/comemory#250": "closed",
+        "Falconiere/comemory#251": "closed",
+        "Falconiere/comemory#252": "closed",
+        "Falconiere/comemory#253": "closed",
+        "Falconiere/comemory#254": "open",
+        "Falconiere/comemory#255": "open",
+        "Falconiere/comemory#249": "closed"
+      },
+      "prs": [],
+      "deps_source": "native+text",
+      "key": "comemory-256",
+      "status": "blocked",
+      "open_blockers": ["Falconiere/comemory#254", "Falconiere/comemory#255"],
+      "wave": 2,
+      "unblocks": 0,
+      "checkout": "/Volumes/Projects/ccvps/comemory",
+      "branch": "feat/256-preserve-replica-state-through-bootstrap",
+      "stage": null
+    },
+    {
+      "ref": "Falconiere/comemory#257",
+      "title": "[Realtime replication] Make the daemon required, always resident and self-healing",
+      "state": "open",
+      "url": "https://github.com/Falconiere/comemory/issues/257",
+      "repo": "Falconiere/comemory",
+      "number": 257,
+      "blockers": {
+        "Falconiere/comemory#250": "closed",
+        "Falconiere/comemory#255": "open",
+        "Falconiere/comemory#249": "closed"
+      },
+      "prs": [],
+      "deps_source": "native+text",
+      "key": "comemory-257",
+      "status": "blocked",
+      "open_blockers": ["Falconiere/comemory#255"],
+      "wave": 2,
+      "unblocks": 3,
+      "checkout": "/Volumes/Projects/ccvps/comemory",
+      "branch": "feat/257-make-the-daemon-required-always",
+      "stage": null
+    },
+    {
+      "ref": "Falconiere/comemory#258",
+      "title": "[Realtime replication] Start and verify the required daemon after every managed install or update",
+      "state": "open",
+      "url": "https://github.com/Falconiere/comemory/issues/258",
+      "repo": "Falconiere/comemory",
+      "number": 258,
+      "blockers": {
+        "Falconiere/comemory#257": "open",
+        "Falconiere/comemory#249": "closed"
+      },
+      "prs": [],
+      "deps_source": "native+text",
+      "key": "comemory-258",
+      "status": "blocked",
+      "open_blockers": ["Falconiere/comemory#257"],
+      "wave": 3,
+      "unblocks": 1,
+      "checkout": "/Volumes/Projects/ccvps/comemory",
+      "branch": "feat/258-start-and-verify-the-required",
+      "stage": null
+    },
+    {
+      "ref": "Falconiere/homebrew-tap#1",
+      "title": "[Realtime replication] Keep the required daemon running across Homebrew install, upgrade and formula regeneration",
+      "state": "open",
+      "url": "https://github.com/Falconiere/homebrew-tap/issues/1",
+      "repo": "Falconiere/homebrew-tap",
+      "number": 1,
+      "blockers": {
+        "Falconiere/comemory#258": "open",
+        "Falconiere/comemory#257": "open",
+        "Falconiere/comemory#249": "closed"
+      },
+      "prs": [],
+      "deps_source": "native+text",
+      "key": "homebrew-tap-1",
+      "status": "blocked",
+      "open_blockers": ["Falconiere/comemory#257", "Falconiere/comemory#258"],
+      "wave": 4,
+      "unblocks": 0,
+      "checkout": null,
+      "branch": "feat/1-keep-the-required-daemon-running",
+      "stage": null
+    },
+    {
+      "ref": "CodaSignal/comemory.io#183",
+      "title": "[Realtime replication] Gate replica APIs by workspace and current repository policy",
+      "state": "open",
+      "url": "https://github.com/CodaSignal/comemory.io/issues/183",
+      "repo": "CodaSignal/comemory.io",
+      "number": 183,
+      "blockers": {
+        "Falconiere/comemory#250": "closed",
+        "Falconiere/comemory#249": "closed"
+      },
+      "prs": [],
+      "deps_source": "native+text",
+      "key": "comemory-io-183",
+      "status": "ready",
+      "open_blockers": [],
+      "wave": 1,
+      "unblocks": 2,
+      "checkout": "/Volumes/Projects/ccvps/comemory.io",
+      "branch": "feat/183-gate-replica-apis-by-workspace",
+      "stage": null
+    },
+    {
+      "ref": "CodaSignal/comemory.io#184",
+      "title": "[Realtime replication] Relay committed engine changes to workspace channels with reconnect recovery",
+      "state": "open",
+      "url": "https://github.com/CodaSignal/comemory.io/issues/184",
+      "repo": "CodaSignal/comemory.io",
+      "number": 184,
+      "blockers": {
+        "Falconiere/comemory#250": "closed",
+        "CodaSignal/comemory.io#183": "open",
+        "Falconiere/comemory#249": "closed"
+      },
+      "prs": [],
+      "deps_source": "native+text",
+      "key": "comemory-io-184",
+      "status": "blocked",
+      "open_blockers": ["CodaSignal/comemory.io#183"],
+      "wave": 2,
+      "unblocks": 1,
+      "checkout": "/Volumes/Projects/ccvps/comemory.io",
+      "branch": "feat/184-relay-committed-engine-changes-to",
+      "stage": null
+    },
+    {
+      "ref": "CodaSignal/comemory.io#185",
+      "title": "[Realtime replication] Refresh all shared console views and expose actionable sync status",
+      "state": "open",
+      "url": "https://github.com/CodaSignal/comemory.io/issues/185",
+      "repo": "CodaSignal/comemory.io",
+      "number": 185,
+      "blockers": {
+        "CodaSignal/comemory.io#183": "open",
+        "CodaSignal/comemory.io#184": "open",
+        "Falconiere/comemory#251": "closed",
+        "Falconiere/comemory#252": "closed",
+        "Falconiere/comemory#253": "closed",
+        "Falconiere/comemory#254": "open",
+        "Falconiere/comemory#255": "open",
+        "Falconiere/comemory#257": "open",
+        "Falconiere/comemory#249": "closed"
+      },
+      "prs": [],
+      "deps_source": "native+text",
+      "key": "comemory-io-185",
+      "status": "blocked",
+      "open_blockers": [
+        "CodaSignal/comemory.io#183",
+        "CodaSignal/comemory.io#184",
+        "Falconiere/comemory#254",
+        "Falconiere/comemory#255",
+        "Falconiere/comemory#257"
+      ],
+      "wave": 3,
+      "unblocks": 0,
+      "checkout": "/Volumes/Projects/ccvps/comemory.io",
+      "branch": "feat/185-refresh-all-shared-console-views",
+      "stage": null
+    }
+  ],
+  "counts": {
+    "done": 5,
+    "in_flight": 0,
+    "ready": 3,
+    "blocked": 6,
+    "external_blocked": 0
+  },
+  "in_flight": [],
+  "ready": ["Falconiere/comemory#255", "CodaSignal/comemory.io#183", "Falconiere/comemory#254"],
+  "launch_batch": [
+    "Falconiere/comemory#255",
+    "CodaSignal/comemory.io#183",
+    "Falconiere/comemory#254"
+  ],
+  "cycle": [],
+  "missing_checkouts": ["Falconiere/homebrew-tap"],
+  "clone_root": "/Volumes/Projects/ccvps",
+  "complete": false
+}

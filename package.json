@@ -21,7 +21,7 @@
     "test": "bun run lint:shell && bun run test:context-budget && bun run test:portable-core && bun run test:gate-coverage && bun run test:ts && bun run test:shell",
     "test:shell:serial": "bats -r plugins benchmarks tooling",
     "test:context-budget": "bash plugins/toolu/scripts/context-budget.sh",
-    "format:check": "oxfmt --check tooling/src packages/*/src tools/*/src",
+    "format:check": "oxfmt --check tooling/src packages/*/src tools/*/src plugins/epic-orchestrator/scripts/*.ts plugins/epic-orchestrator/scripts/__tests__/*.ts",
     "lint:ts": "bash tooling/lint-ts.sh",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "guardrails": "bash tooling/conventions/guardrails/run.sh",
@@ -29,7 +29,7 @@
     "jscpd": "jscpd --config .jscpd.json",
     "test:conventions": "bun run format:check && bun run lint:ts && bun run typecheck && bun run guardrails && bun run knip && bun run jscpd && bats tooling/__tests__/conventions-guardrails.bats tooling/__tests__/workspace-skeleton.bats",
     "test:conformance": "bun run tools/toolu-conformance/src/cli/run.ts",
-    "test:unit": "bun test packages tools",
+    "test:unit": "bun test packages tools plugins/epic-orchestrator",
     "test:workspace": "bash tooling/check-workspace.sh",
     "test:ts": "bun run test:conventions && bun run test:unit && bun run test:workspace && bun run test:pack && bun run test:conformance",
     "test:pack": "bun run tooling/src/pack-inventory.ts && bats tooling/__tests__/npm-publish.bats"

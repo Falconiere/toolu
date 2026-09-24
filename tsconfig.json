@@ -3,7 +3,8 @@
   "include": [
     "tooling/src/**/*.ts",
     "packages/*/src/**/*.ts",
-    "tools/*/src/**/*.ts"
+    "tools/*/src/**/*.ts",
+    "plugins/epic-orchestrator/scripts/**/*.ts"
   ],
   "exclude": ["node_modules", "**/fixtures/**", "tooling/conventions/**"]
 }
