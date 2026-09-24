@@ -11,6 +11,7 @@ setup() {
   jq -e '
     [.packages["."]["extra-files"][].path] as $paths
     | ($paths | index("tools/toolu-cli/package.json"))
+      and ($paths | index("tools/toolu-cli/npm/package.json"))
       and ($paths | index("packages/toolu-core/package.json"))
       and ($paths | index("tools/toolu-opencode/package.json"))
   ' "$ROOT/release-please-config.json"
@@ -18,7 +19,7 @@ setup() {
 
 @test "the CLI version matches every other workspace package" {
   root=$(jq -r .version "$ROOT/package.json")
-  for p in tools/toolu-cli packages/toolu-core tools/toolu-opencode tools/toolu-conformance; do
+  for p in tools/toolu-cli tools/toolu-cli/npm packages/toolu-core tools/toolu-opencode tools/toolu-conformance; do
     have=$(jq -r .version "$ROOT/$p/package.json")
     [ "$have" = "$root" ] || { echo "$p is $have, root is $root"; return 1; }
   done
@@ -73,7 +74,7 @@ setup() {
 }
 
 @test "the three published packages are publishable and conformance stays private" {
-  for p in packages/toolu-core tools/toolu-opencode tools/toolu-cli; do
+  for p in packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm; do
     jq -e '.private == null' "$ROOT/$p/package.json" >/dev/null
     jq -e '.license == "MIT"' "$ROOT/$p/package.json" >/dev/null
     jq -e '.publishConfig.access == "public" and .publishConfig.provenance == true' \
@@ -81,13 +82,16 @@ setup() {
   done
   # The conformance harness is internal and must never ship.
   jq -e '.private == true' "$ROOT/tools/toolu-conformance/package.json" >/dev/null
+  # The CLI's dev workspace must never ship, and must not carry the published
+  # name: a workspace called @toolu/plugins would shadow the registry for npx.
+  jq -e '.private == true and .name != "@toolu/plugins"' "$ROOT/tools/toolu-cli/package.json" >/dev/null
 }
 
 # @toolu/opencode depends on @toolu/core, and Bun rewrites workspace:* to a
 # concrete version at pack time, so core must reach the registry first.
 @test "the workflow publishes in dependency order, core before opencode" {
-  run bash -c "grep -oE 'packages/toolu-core tools/toolu-opencode tools/toolu-cli' '$WF' | head -1"
-  [ "$output" = "packages/toolu-core tools/toolu-opencode tools/toolu-cli" ]
+  run bash -c "grep -oE 'packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm' '$WF' | head -1"
+  [ "$output" = "packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm" ]
 }
 
 @test "a package already on the registry is skipped so a re-run resumes" {
@@ -116,14 +120,17 @@ setup() {
 
 # npm rejected the unscoped name `toolu` as too similar to the existing package
 # `toml` (E403 at publish time, after a 404 had suggested it was free). The
-# similarity filter applies to unscoped names only, so the CLI is scoped.
-@test "the CLI publishes under a scoped name, keeping toolu as the command" {
-  jq -e '.name == "@toolu/cli"' "$ROOT/tools/toolu-cli/package.json" >/dev/null
-  jq -e '.bin.toolu == "dist/cli.js"' "$ROOT/tools/toolu-cli/package.json" >/dev/null
+# similarity filter applies to unscoped names only, so the CLI is scoped. It
+# declares exactly one bin: npx runs the only bin, which is what makes
+# `npx @toolu/plugins install` hand `install` to the CLI.
+@test "the CLI publishes as @toolu/plugins with toolu as its only command" {
+  jq -e '.name == "@toolu/plugins"' "$ROOT/tools/toolu-cli/npm/package.json" >/dev/null
+  jq -e '(.bin | length) == 1 and .bin.toolu == "dist/cli.js"' \
+    "$ROOT/tools/toolu-cli/npm/package.json" >/dev/null
 }
 
 @test "every published package carries a README and a LICENSE" {
-  for p in packages/toolu-core tools/toolu-opencode tools/toolu-cli; do
+  for p in packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm; do
     [ -f "$ROOT/$p/README.md" ] || { echo "$p has no README.md"; return 1; }
     [ -f "$ROOT/$p/LICENSE" ] || { echo "$p has no LICENSE"; return 1; }
   done

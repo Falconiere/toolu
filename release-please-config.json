@@ -153,6 +153,11 @@
         },
         {
           "type": "json",
+          "path": "tools/toolu-cli/npm/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "tools/toolu-conformance/package.json",
           "jsonpath": "$.version"
         }

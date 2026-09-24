@@ -1,2 +1,6 @@
-dist/
-assets/marketplace.json
+# Build output, written into the publish folder.
+npm/dist/
+npm/assets/
+# Left behind by builds from before the CLI published from npm/.
+/dist/
+/assets/

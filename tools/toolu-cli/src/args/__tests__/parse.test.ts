@@ -3,9 +3,8 @@ import { EXIT, UsageError } from "../../exit";
 import { assertScopeAllowed, parseArgs } from "../parse";
 
 describe("parseArgs", () => {
-  test("reads a full plugins install invocation", () => {
+  test("reads a full install invocation", () => {
     const args = parseArgs([
-      "plugins",
       "install",
       "toolu",
       "rust-quality",
@@ -15,7 +14,6 @@ describe("parseArgs", () => {
       "user",
       "--yes",
     ]);
-    expect(args.noun).toBe("plugins");
     expect(args.verb).toBe("install");
     expect(args.names).toEqual(["toolu", "rust-quality"]);
     expect(args.host).toBe("claude");
@@ -24,28 +22,29 @@ describe("parseArgs", () => {
     expect(args.dryRun).toBe(false);
   });
 
-  test("reads the agents noun and its verbs", () => {
-    expect(parseArgs(["agents", "preview"]).verb).toBe("preview");
-    expect(parseArgs(["agents", "remove", "--yes"]).yes).toBe(true);
+  test("reads every verb as the first argument, the way npx @toolu/plugins passes it", () => {
+    for (const verb of ["install", "list", "remove", "update"] as const) {
+      expect(parseArgs([verb]).verb).toBe(verb);
+    }
   });
 
   test("--version and --help parse without requiring a verb", () => {
     expect(parseArgs(["--version"]).version).toBe(true);
     expect(parseArgs(["--help"]).help).toBe(true);
-    expect(parseArgs(["plugins", "--help"]).help).toBe(true);
+    expect(parseArgs(["install", "--help"]).help).toBe(true);
   });
 
   test.each([
-    ["unknown noun", ["skills", "install"]],
-    ["unknown plugins verb", ["plugins", "sync"]],
-    ["unknown agents verb", ["agents", "update"]],
-    ["missing verb", ["plugins"]],
-    ["unknown flag", ["plugins", "install", "--turbo"]],
-    ["value flag without a value", ["plugins", "install", "--host"]],
-    ["value flag followed by a flag", ["plugins", "install", "--host", "--yes"]],
-    ["unknown host", ["plugins", "install", "--host", "cursor"]],
-    ["unknown scope", ["plugins", "install", "--scope", "global"]],
-  ])("rejects %s with exit %i", (_label, argv) => {
+    ["unknown verb", ["sync"]],
+    ["the plugins noun of the old @toolu/cli", ["plugins", "install"]],
+    ["the agents noun, which was never built", ["agents", "preview"]],
+    ["unknown flag", ["install", "--turbo"]],
+    ["--force, which only the unbuilt agents noun would have read", ["install", "--force"]],
+    ["value flag without a value", ["install", "--host"]],
+    ["value flag followed by a flag", ["install", "--host", "--yes"]],
+    ["unknown host", ["install", "--host", "cursor"]],
+    ["unknown scope", ["install", "--scope", "global"]],
+  ])("rejects %s with exit 2", (_label, argv) => {
     expect(() => parseArgs(argv)).toThrow(UsageError);
     try {
       parseArgs(argv);
@@ -54,41 +53,51 @@ describe("parseArgs", () => {
     }
   });
 
+  test("names every valid verb when the first argument is not one", () => {
+    expect(() => parseArgs(["sync"])).toThrow(
+      "unknown command: sync. Expected one of: install, list, remove, update",
+    );
+  });
+
+  test("tells a user of the old toolu plugins grammar to drop the noun", () => {
+    expect(() => parseArgs(["plugins", "install"])).toThrow(
+      "unknown command: plugins. The package name already says plugins: run `npx @toolu/plugins install`",
+    );
+  });
+
   test("rejects --scope on a host that has no scope concept", () => {
     for (const host of ["codex", "opencode"]) {
-      expect(() => parseArgs(["plugins", "install", "--scope", "user", "--host", host])).toThrow(
+      expect(() => parseArgs(["install", "--scope", "user", "--host", host])).toThrow(
         /--scope is Claude Code only/,
       );
     }
   });
 
   test("accepts --scope when the host is claude or unspecified", () => {
-    expect(parseArgs(["plugins", "install", "--scope", "user", "--host", "claude"]).scope).toBe(
-      "user",
-    );
-    expect(parseArgs(["plugins", "install", "--scope", "project"]).scope).toBe("project");
+    expect(parseArgs(["install", "--scope", "user", "--host", "claude"]).scope).toBe("user");
+    expect(parseArgs(["install", "--scope", "project"]).scope).toBe("project");
   });
 
-  test("an empty argv yields no noun rather than throwing", () => {
+  test("an empty argv yields no verb rather than throwing", () => {
     const args = parseArgs([]);
-    expect(args.noun).toBeUndefined();
+    expect(args.verb).toBeUndefined();
     expect(args.names).toEqual([]);
   });
 });
 
 describe("review-driven behavior", () => {
-  test("an unknown noun is a usage error even alongside --help or --version", () => {
+  test("an unknown verb is a usage error even alongside --help or --version", () => {
     expect(() => parseArgs(["skills", "--help"])).toThrow(/unknown command: skills/);
     expect(() => parseArgs(["skills", "--version"])).toThrow(/unknown command: skills/);
   });
 
-  test("--help on a known noun, and bare --help, still answer", () => {
-    expect(parseArgs(["plugins", "--help"]).noun).toBe("plugins");
-    expect(parseArgs(["--help"]).noun).toBeUndefined();
+  test("--help on a known verb, and bare --help, still answer", () => {
+    expect(parseArgs(["install", "--help"]).verb).toBe("install");
+    expect(parseArgs(["--help"]).verb).toBeUndefined();
   });
 
   test("--scope without --host parses, and is re-checked once the host resolves", () => {
-    expect(parseArgs(["plugins", "install", "--scope", "user"]).scope).toBe("user");
+    expect(parseArgs(["install", "--scope", "user"]).scope).toBe("user");
     expect(() => assertScopeAllowed("user", "claude")).not.toThrow();
     expect(() => assertScopeAllowed("user", "codex")).toThrow(/Claude Code only/);
     expect(() => assertScopeAllowed("user", "opencode")).toThrow(/Claude Code only/);

@@ -5,7 +5,7 @@ Internal library for [toolu](https://github.com/Falconiere/toolu). It holds the 
 **There is no standalone use for this package.** It is published because [`@toolu/opencode`](https://www.npmjs.com/package/@toolu/opencode) depends on it. If you are looking to install toolu, you want one of:
 
 ```bash
-npx toolu plugins install          # Claude Code, Codex
+npx @toolu/plugins install           # Claude Code, Codex
 opencode plugin add @toolu/opencode  # OpenCode
 ```
 

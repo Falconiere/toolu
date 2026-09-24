@@ -11,17 +11,22 @@ name: npm publish
 # which is exactly how the 6.7.0 release published nothing.
 #
 # Three packages publish, in dependency order: @toolu/core, then
-# @toolu/opencode which depends on it, then the `@toolu/cli` package.
+# @toolu/opencode which depends on it, then @toolu/plugins, the `toolu` CLI.
 # @toolu/conformance stays private — it is an internal test harness.
+#
+# @toolu/plugins publishes from tools/toolu-cli/npm, not from its private dev
+# workspace. npx checks the local project tree before the registry, so a
+# workspace under the published name made `npx @toolu/cli` fail with
+# "toolu: command not found" from every toolu checkout.
 #
 # @toolu/opencode carries the bash plugins/ tree, staged by its prepack, so an
 # `opencode plugin add @toolu/opencode` needs no clone and no TOOLU_REPO_ROOT.
 #
 # npm acknowledges a publish minutes before the package is fetchable. The first
-# ever @toolu/cli (6.8.1) answered 404 for about six minutes after
-# "+ @toolu/cli@6.8.1", so `npx @toolu/cli` failed right after the release went
-# green. The last step polls until every package resolves, so green means
-# installable and a re-run after green skips instead of publishing twice.
+# ever CLI package, @toolu/cli 6.8.1, answered 404 for about six minutes after
+# "+ @toolu/cli@6.8.1", so npx failed right after the release went green. The
+# last step polls until every package resolves, so green means installable and
+# a re-run after green skips instead of publishing twice.
 
 on:
   workflow_call:
@@ -77,7 +82,7 @@ jobs:
         run: |
           set -euo pipefail
           tag="${{ inputs.tag }}"
-          for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli; do
+          for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm; do
             if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
               echo "$dir is private at $tag; skipping"
               continue
@@ -99,7 +104,7 @@ jobs:
       - name: Publish
         run: |
           set -uo pipefail
-          for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli; do
+          for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm; do
             if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
               echo "$dir is private at $tag; skipping"
               continue
@@ -128,7 +133,7 @@ jobs:
         run: |
           set -euo pipefail
           deadline=$(( $(date +%s) + 8 * 60 ))
-          for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli; do
+          for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm; do
             if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
               echo "$dir is private; nothing to wait for"
               continue

@@ -1,4 +1,4 @@
-import type { ParsedArgs } from "../args/types";
+import type { ParsedArgs, Verb } from "../args/types";
 import { readMarketplace } from "../catalog/manifest";
 import type { Marketplace } from "../catalog/types";
 import { assertScopeAllowed } from "../args/parse";
@@ -12,6 +12,9 @@ import { anyFailed, reportInstall, reportList, reportRemove, reportUpdate } from
 
 const MARKETPLACE_NAME = "toolu";
 const MARKETPLACE_SOURCE = "Falconiere/toolu";
+
+/** Parsed arguments once a verb is known to be present. */
+type RoutedArgs = ParsedArgs & { readonly verb: Verb };
 
 interface DispatchContext {
   readonly manifestPath: string;
@@ -51,9 +54,9 @@ async function resolvedHost(args: ParsedArgs): Promise<"claude" | "codex"> {
 }
 
 async function handleRemove(args: ParsedArgs, context: DispatchContext): Promise<ExitCode> {
-  if (args.names.length === 0) throw new UsageError("plugins remove requires at least one name");
+  if (args.names.length === 0) throw new UsageError("remove requires at least one name");
   if (!args.yes) {
-    throw new CliError(EXIT.missingInput, "plugins remove requires --yes to confirm");
+    throw new CliError(EXIT.missingInput, "remove requires --yes to confirm");
   }
   const host = await resolvedHost(args);
   const steps = await removePlugins(adapterFor(host), MARKETPLACE_NAME, args.names);
@@ -61,9 +64,9 @@ async function handleRemove(args: ParsedArgs, context: DispatchContext): Promise
   return anyFailed(steps) ? EXIT.failed : EXIT.ok;
 }
 
-/** Routes a parsed `plugins` invocation to its verb. */
+/** Routes a parsed invocation to its verb. */
 export async function dispatchPlugins(
-  args: ParsedArgs,
+  args: RoutedArgs,
   context: DispatchContext,
 ): Promise<ExitCode> {
   const marketplace = await readMarketplace(context.manifestPath);

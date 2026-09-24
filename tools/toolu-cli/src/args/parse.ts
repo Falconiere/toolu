@@ -1,24 +1,21 @@
 import { UsageError } from "../exit";
 import type { z } from "zod";
 import {
-  AGENT_VERBS,
   HOSTS,
-  NOUNS,
-  PLUGIN_VERBS,
   SCOPES,
+  VERBS,
   hostSchema,
-  nounSchema,
   scopeSchema,
+  verbSchema,
   type Host,
-  type Noun,
   type ParsedArgs,
   type Scope,
+  type Verb,
 } from "./types";
 
 const BOOLEAN_FLAGS = new Set([
   "--yes",
   "-y",
-  "--force",
   "--dry-run",
   "--no-input",
   "--json",
@@ -61,25 +58,23 @@ function collect(argv: readonly string[]): Collected {
   return { positionals, booleans, values };
 }
 
-function readNoun(positionals: readonly string[]): Noun | undefined {
+/**
+ * The verb is the first argument: `npx @toolu/plugins install` hands the CLI
+ * `install`, because the package name already says what it acts on.
+ */
+function readVerb(positionals: readonly string[]): Verb | undefined {
   const first = positionals[0];
   if (first === undefined) return undefined;
-  const parsed = nounSchema.safeParse(first);
+  if (first === "plugins") {
+    throw new UsageError(
+      "unknown command: plugins. The package name already says plugins: run `npx @toolu/plugins install`",
+    );
+  }
+  const parsed = verbSchema.safeParse(first);
   if (!parsed.success) {
-    throw new UsageError(`unknown command: ${first}. Expected one of: ${NOUNS.join(", ")}`);
+    throw new UsageError(`unknown command: ${first}. Expected one of: ${VERBS.join(", ")}`);
   }
   return parsed.data;
-}
-
-function readVerb(noun: Noun | undefined, positionals: readonly string[]): string | undefined {
-  if (noun === undefined) return undefined;
-  const verb = positionals[1];
-  const allowed: readonly string[] = noun === "plugins" ? PLUGIN_VERBS : AGENT_VERBS;
-  if (verb === undefined) throw new UsageError(`${noun} requires a verb: ${allowed.join(", ")}`);
-  if (!allowed.includes(verb)) {
-    throw new UsageError(`unknown ${noun} verb: ${verb}. Expected one of: ${allowed.join(", ")}`);
-  }
-  return verb;
 }
 
 function readEnum<T extends string>(
@@ -102,10 +97,9 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
   const { positionals, booleans, values } = collect(argv);
   const help = booleans.has("--help") || booleans.has("-h");
   const version = booleans.has("--version") || booleans.has("-v");
-  // An unknown noun is a usage error even alongside --help: `toolu skills --help`
+  // An unknown verb is a usage error even alongside --help: `toolu skills --help`
   // must not answer as though `skills` were a command.
-  const noun = readNoun(positionals);
-  const verb = help || version ? undefined : readVerb(noun, positionals);
+  const verb = readVerb(positionals);
   const host = readEnum<Host>(values, "--host", hostSchema, HOSTS);
   const scope = readEnum<Scope>(values, "--scope", scopeSchema, SCOPES);
   // With an explicit host this is decidable now. With an implicit one the check
@@ -114,14 +108,12 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
     throw new UsageError(scopeRejection(host));
   }
   return {
-    noun,
     verb,
-    names: positionals.slice(2),
+    names: positionals.slice(1),
     host,
     scope,
     config: values.get("--config"),
     yes: booleans.has("--yes") || booleans.has("-y"),
-    force: booleans.has("--force"),
     dryRun: booleans.has("--dry-run"),
     noInput: booleans.has("--no-input"),
     json: booleans.has("--json"),

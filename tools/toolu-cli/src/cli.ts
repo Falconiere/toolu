@@ -4,28 +4,27 @@ import { access, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "./args/parse";
-import { CliError, EXIT, UsageError, type ExitCode } from "./exit";
+import { manifestCandidates } from "./catalog/manifest";
+import { CliError, EXIT, type ExitCode } from "./exit";
 import { dispatchPlugins } from "./plugins/dispatch";
 
-const HELP = `toolu <noun> <verb> [options]
+const HELP = `npx @toolu/plugins <command> [options]
 
-Install toolu plugins and Codex agent profiles.
+Install toolu plugins into Claude Code and Codex.
 
 Commands:
-  plugins install [name...]   Install plugins, core first (no names = all)
-  plugins list                Show catalog and installation state
-  plugins remove <name...>    Uninstall plugins
-  plugins update [name...]    Update plugins to the marketplace version
-  agents preview              Show the Codex agent-profile plan, writing nothing
-  agents install              Install Codex agent profiles
-  agents remove --yes         Remove Codex agent profiles
+  install [name...]   Install plugins, core first (no names = all)
+  list                Show catalog and installation state
+  remove <name...>    Uninstall plugins
+  update [name...]    Update plugins to the marketplace version
+
+For example: npx @toolu/plugins install
 
 Options:
   --host <id>       claude | codex | opencode (detected when omitted)
   --scope <scope>   user | project | local (Claude Code only)
   --config <path>   Replay a .toolu/plugins.json selection
   --yes, -y         Confirm destructive or command-declaring operations
-  --force           Replace an unmanaged conflicting file, after backup
   --dry-run         Print the host commands without running them
   --no-input        Never prompt; fail listing what is missing
   --json            Machine-readable output where supported
@@ -54,21 +53,10 @@ function isInteractive(noInput: boolean): boolean {
   return !noInput && process.stdin.isTTY === true && process.stdout.isTTY === true;
 }
 
-/**
- * Locates the marketplace manifest.
- *
- * The published package carries its own copy under assets/, because there is no
- * repository beside an installed tarball. Running from source in this repo, that
- * copy is absent and the real manifest four levels up is used instead.
- */
+/** Locates the marketplace manifest for this bundle or source run. */
 async function manifestPath(): Promise<string> {
   const here = dirname(fileURLToPath(import.meta.url));
-  const candidates = [
-    resolve(here, "../assets/marketplace.json"),
-    resolve(here, "../../assets/marketplace.json"),
-    resolve(here, "../../../.claude-plugin/marketplace.json"),
-  ];
-  for (const candidate of candidates) {
+  for (const candidate of manifestCandidates(here)) {
     if (await readable(candidate)) return candidate;
   }
   throw new Error("marketplace manifest not found beside the CLI or in the repository");
@@ -90,18 +78,18 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
       process.stdout.write(`${await packageVersion()}\n`);
       return EXIT.ok;
     }
-    if (args.help || args.noun === undefined) {
+    if (args.help || args.verb === undefined) {
       process.stdout.write(HELP);
-      return args.noun === undefined && !args.help ? EXIT.usage : EXIT.ok;
+      return args.help ? EXIT.ok : EXIT.usage;
     }
-    if (args.noun === "plugins") {
-      return await dispatchPlugins(args, {
+    return await dispatchPlugins(
+      { ...args, verb: args.verb },
+      {
         manifestPath: await manifestPath(),
         interactive: isInteractive(args.noInput),
         write: (text: string) => process.stdout.write(text),
-      });
-    }
-    throw new UsageError(`${args.noun} ${args.verb ?? ""} is not implemented yet`.trim());
+      },
+    );
   } catch (error) {
     if (error instanceof CliError) {
       process.stderr.write(`toolu: ${error.message}\n`);

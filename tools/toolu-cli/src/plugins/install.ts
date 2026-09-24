@@ -52,7 +52,7 @@ function presentStep(
   return {
     name,
     outcome: "skew",
-    detail: `installed at ${present.version}, marketplace offers ${offered.version}; left untouched. Run \`toolu plugins update ${name}\` to change it.`,
+    detail: `installed at ${present.version}, marketplace offers ${offered.version}; left untouched. Run \`npx @toolu/plugins update ${name}\` to change it.`,
     argv,
   };
 }
