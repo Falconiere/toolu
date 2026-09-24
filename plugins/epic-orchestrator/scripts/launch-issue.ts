@@ -212,8 +212,9 @@ async function prepareCheckout(
 ): Promise<[string, string]> {
   let checkout = issue.checkout;
   if (!checkout) {
-    const repoName = issue.repo.split("/")[1];
-    if (!repoName) throw new Error(`bad repo: ${issue.repo}`);
+    const parts = issue.repo.split("/");
+    const repoName = parts[1];
+    if (!repoName || parts.length !== 2) throw new Error(`bad repo: ${issue.repo}`);
     checkout = join(graph.clone_root, repoName);
     const cmd = ["gh", "repo", "clone", issue.repo, checkout];
     log.push(shellJoin(cmd));
