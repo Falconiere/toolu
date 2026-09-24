@@ -39,6 +39,7 @@ describe("parseArgs", () => {
     ["the plugins noun of the old @toolu/cli", ["plugins", "install"]],
     ["the agents noun, which was never built", ["agents", "preview"]],
     ["unknown flag", ["install", "--turbo"]],
+    ["--force, which only the unbuilt agents noun would have read", ["install", "--force"]],
     ["value flag without a value", ["install", "--host"]],
     ["value flag followed by a flag", ["install", "--host", "--yes"]],
     ["unknown host", ["install", "--host", "cursor"]],
@@ -53,8 +54,14 @@ describe("parseArgs", () => {
   });
 
   test("names every valid verb when the first argument is not one", () => {
+    expect(() => parseArgs(["sync"])).toThrow(
+      "unknown command: sync. Expected one of: install, list, remove, update",
+    );
+  });
+
+  test("tells a user of the old toolu plugins grammar to drop the noun", () => {
     expect(() => parseArgs(["plugins", "install"])).toThrow(
-      "unknown command: plugins. Expected one of: install, list, remove, update",
+      "unknown command: plugins. The package name already says plugins: run `npx @toolu/plugins install`",
     );
   });
 

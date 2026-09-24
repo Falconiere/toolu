@@ -21,7 +21,6 @@ export interface ParsedArgs {
   readonly scope: Scope | undefined;
   readonly config: string | undefined;
   readonly yes: boolean;
-  readonly force: boolean;
   readonly dryRun: boolean;
   readonly noInput: boolean;
   readonly json: boolean;

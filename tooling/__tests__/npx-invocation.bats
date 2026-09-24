@@ -11,7 +11,9 @@
 # So the CLI publishes from tools/toolu-cli/npm, a folder no workspace declares,
 # and the workspace itself is private under another name.
 
-ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)"
+# Physical path: Arborist reports a workspace twice when the project path and
+# the workspace's realpath differ only by a symlink (macOS /var -> /private/var).
+ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd -P)"
 PUBLISH_DIR="$ROOT/tools/toolu-cli/npm"
 
 # Tracked markdown only: gitignored scratch specs are not published docs.
@@ -40,7 +42,7 @@ local_matches() {
   # The probe must still find the dev workspace, or an empty answer proves nothing.
   run local_matches toolu-cli
   [ "$status" -eq 0 ]
-  [[ "$output" == *'"tools/toolu-cli"'* ]]
+  [ "$output" = '["tools/toolu-cli"]' ]
 
   run local_matches @toolu/plugins
   [ "$status" -eq 0 ]
@@ -67,12 +69,13 @@ local_matches() {
 
   run npx --yes "$tgz" --help
   [ "$status" -eq 0 ]
-  [[ "$output" == *"npx @toolu/plugins install"* ]]
+  [ "${lines[0]}" = "npx @toolu/plugins <command> [options]" ]
 
-  # The noun grammar of the old @toolu/cli is gone: `plugins` is not a verb.
+  # The noun grammar of the old @toolu/cli is gone: `plugins` is not a verb,
+  # and the error says what to type instead.
   run npx --yes "$tgz" plugins install
   [ "$status" -eq 2 ]
-  [[ "$output" == *"unknown command: plugins"* ]]
+  [ "$output" = 'toolu: unknown command: plugins. The package name already says plugins: run `npx @toolu/plugins install`' ]
 }
 
 @test "documented npx invocations use the bare @toolu/plugins name" {

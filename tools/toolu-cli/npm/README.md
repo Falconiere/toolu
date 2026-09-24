@@ -10,7 +10,7 @@ npx @toolu/plugins remove jira --yes
 npx @toolu/plugins update
 ```
 
-A global install (`npm install -g @toolu/plugins`) puts the same commands on your `PATH` as `toolu install`, `toolu list`, and so on. This package replaces `@toolu/cli`.
+A global install (`npm install -g @toolu/plugins`) puts the same commands on your `PATH` as `toolu install`, `toolu list`, and so on. This package replaces `@toolu/cli`; if you installed that globally, run `npm uninstall -g @toolu/cli` first, because both provide the `toolu` command.
 
 ## What it does
 

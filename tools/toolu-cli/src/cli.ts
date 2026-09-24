@@ -4,6 +4,7 @@ import { access, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "./args/parse";
+import { manifestCandidates } from "./catalog/manifest";
 import { CliError, EXIT, type ExitCode } from "./exit";
 import { dispatchPlugins } from "./plugins/dispatch";
 
@@ -24,7 +25,6 @@ Options:
   --scope <scope>   user | project | local (Claude Code only)
   --config <path>   Replay a .toolu/plugins.json selection
   --yes, -y         Confirm destructive or command-declaring operations
-  --force           Replace an unmanaged conflicting file, after backup
   --dry-run         Print the host commands without running them
   --no-input        Never prompt; fail listing what is missing
   --json            Machine-readable output where supported
@@ -53,21 +53,10 @@ function isInteractive(noInput: boolean): boolean {
   return !noInput && process.stdin.isTTY === true && process.stdout.isTTY === true;
 }
 
-/**
- * Locates the marketplace manifest.
- *
- * The published package carries its own copy under assets/, because there is no
- * repository beside an installed tarball. Running from source in this repo, that
- * copy is absent and the real manifest four levels up is used instead.
- */
+/** Locates the marketplace manifest for this bundle or source run. */
 async function manifestPath(): Promise<string> {
   const here = dirname(fileURLToPath(import.meta.url));
-  const candidates = [
-    resolve(here, "../assets/marketplace.json"),
-    resolve(here, "../../assets/marketplace.json"),
-    resolve(here, "../../../.claude-plugin/marketplace.json"),
-  ];
-  for (const candidate of candidates) {
+  for (const candidate of manifestCandidates(here)) {
     if (await readable(candidate)) return candidate;
   }
   throw new Error("marketplace manifest not found beside the CLI or in the repository");

@@ -16,7 +16,6 @@ import {
 const BOOLEAN_FLAGS = new Set([
   "--yes",
   "-y",
-  "--force",
   "--dry-run",
   "--no-input",
   "--json",
@@ -66,6 +65,11 @@ function collect(argv: readonly string[]): Collected {
 function readVerb(positionals: readonly string[]): Verb | undefined {
   const first = positionals[0];
   if (first === undefined) return undefined;
+  if (first === "plugins") {
+    throw new UsageError(
+      "unknown command: plugins. The package name already says plugins: run `npx @toolu/plugins install`",
+    );
+  }
   const parsed = verbSchema.safeParse(first);
   if (!parsed.success) {
     throw new UsageError(`unknown command: ${first}. Expected one of: ${VERBS.join(", ")}`);
@@ -110,7 +114,6 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
     scope,
     config: values.get("--config"),
     yes: booleans.has("--yes") || booleans.has("-y"),
-    force: booleans.has("--force"),
     dryRun: booleans.has("--dry-run"),
     noInput: booleans.has("--no-input"),
     json: booleans.has("--json"),

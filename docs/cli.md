@@ -28,7 +28,10 @@ gives you `toolu install`.
 
 The package is scoped because npm rejects the unscoped name `toolu` as too
 similar to the existing package `toml`. It replaces `@toolu/cli`, which used a
-`toolu plugins install` grammar and is no longer published.
+`toolu plugins install` grammar and is no longer published. If you installed
+`@toolu/cli` globally, run `npm uninstall -g @toolu/cli` first: both packages
+provide the `toolu` command, and npm refuses to overwrite one package's command
+with another's.
 
 **Why it publishes from `tools/toolu-cli/npm`.** npx checks the local project
 tree before the registry. If the repository root or a declared workspace carried
