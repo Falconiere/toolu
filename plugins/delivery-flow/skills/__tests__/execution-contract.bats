@@ -52,10 +52,18 @@ SKILL="$ROOT/plugins/delivery-flow/skills/delivery-flow/references/execution.md"
   grep -qiE 'locate.*or create.*pull request|create.*or locate.*pull request' "$SKILL"
   grep -qi 'repository default branch' "$SKILL"
   grep -qiE 'verify.*PR.*number.*head/base|verify.*head/base.*branches' "$SKILL"
-  grep -Fq '$pr-babysit:babysit' "$SKILL"
+  grep -Fq 'pr-babysit:babysit' "$SKILL"
 }
 
 @test "execution has no execution-review or terminal-test handoff" {
   ! grep -qi 'execution-review' "$SKILL"
   ! grep -qi 'then to `test` for the final pass' "$SKILL"
+}
+
+@test "execution uses private routing and host-neutral delivery invocations" {
+  grep -Fq '[model-routing.md](model-routing.md)' "$SKILL"
+  grep -Fq '[host-mapping.md](host-mapping.md)' "$SKILL"
+  ! grep -Fq 'plugins/toolu/skills/orchestrator/references/model-routing.md' "$SKILL"
+  ! grep -Fq '$toolu-review:review' "$SKILL"
+  ! grep -Fq '$pr-babysit:babysit' "$SKILL"
 }

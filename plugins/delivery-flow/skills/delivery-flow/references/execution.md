@@ -32,7 +32,7 @@ Before the first step run `bash "$TOOLU_LIB/plan-ledger.sh" preflight` — it re
 
 - **Global gate** — do NOT move to the next step while any error/warning/test failure stands, even in unrelated files.
 - **Delegate to stay compact** — push exploration, large reads, and parallelizable work to subagents; keep the main context lean.
-- **Delegate at the step's tier** — `status` prints `model=<alias>` for the next step when the plan declared one; hand that step to a subagent on that model (`toolu:quick-task` / `toolu:implementer` / `toolu:architect`, or an explicit `model:`). No declared tier, or a step that turns out harder than planned? Fall back to the rubric and escalate one tier rather than retrying the same tier: `plugins/toolu/skills/orchestrator/references/model-routing.md`.
+- **Delegate at the step's tier** — `status` prints `model=<alias>` for the next step when the plan declared one; hand that step to a subagent on that model (`toolu:quick-task` / `toolu:implementer` / `toolu:architect`, or an explicit `model:`). No declared tier, or a step that turns out harder than planned? Fall back to [model-routing.md](model-routing.md) and escalate one tier rather than retrying the same tier.
 - **No scope creep** — do only what the plan calls for. New needs go back to `plan` (and `plan-review`), not into this step.
 - **Honor the layout** — files named after their export, one responsibility each, under the line limit, docs present and concise.
 - **Docs in sync** — when a step changes a user-facing surface (behavior, interfaces, CLI flags, commands, config), update the prose docs that describe it (README, `docs/` guides, `SKILL.md` triggers, release notes) in the same step; it's part of "done", not a follow-up.
@@ -51,7 +51,7 @@ prerequisite if any applies:
 
 - GitHub API authentication is unavailable (`gh api user` fails);
 - the current branch is the repository default branch, detached, or otherwise not a non-default branch;
-- the required `pr-babysit` plugin is not installed or its `$pr-babysit:babysit` skill is unavailable.
+- the required `pr-babysit` plugin is not installed or its `pr-babysit:babysit` skill is unavailable.
 
 When the per-step direct checks, documentation work, and prerequisites pass,
 commit the scoped changes using the repository's conventions. Do not include
@@ -65,7 +65,7 @@ against the committed branch diff with command output, not assertion:
 1. Re-run each affected step's real-data runner and ensure its AC/risk evidence is current. Read `plan-ledger.sh status` and resolve every missing or stale AC coverage entry.
 2. Run `bash "$TOOLU_LIB/plan-ledger.sh" run <plan_doc> --verify`. This is the supported branch-wide verification command: it validates every step against the final diff and stamps the ledger only when all steps are fresh-green.
 3. Confirm user-facing documentation is synchronized for every changed behavior, interface, CLI, command, or configuration surface. Treat a missing applicable doc update as a blocker.
-4. Run `$toolu-review:review` (or the host's installed `toolu-review:review` invocation) against the committed branch diff. Its resulting push-review state must be v2 (`version: 2`) and cover every changed file; open findings or stale/incomplete coverage are blockers.
+4. Run the active host's `toolu-review:review` invocation (see [host-mapping.md](host-mapping.md)) against the committed branch diff. Its resulting push-review state must be v2 (`version: 2`) and cover every changed file; open findings or stale/incomplete coverage are blockers.
 5. Run `bash "$TOOLU_LIB/verdict.sh" status`. Advance only when it reports `overall: ready`; quality, plan, review, and docs must each pass or be legitimately skipped.
 
 ## PR delivery
@@ -74,4 +74,4 @@ When the committed-diff audit and every prerequisite pass:
 
 1. Push the non-default feature branch to its configured remote.
 2. Discover the repository default branch, then locate or create a pull request for the current branch targeting that repository default branch. Verify that PR's number and head/base branches.
-3. Invoke `$pr-babysit:babysit` with no arguments. The verified execution handoff plus this delivery authorization is sufficient authorization for its durable PR-clearing goal; do not add a handoff argument or weaken its isolated-worktree, strict-clearance, or durable-goal rules.
+3. Invoke the active host's `pr-babysit:babysit` (see [host-mapping.md](host-mapping.md)) with no arguments. The verified execution handoff plus this delivery authorization is sufficient authorization for its durable PR-clearing goal; do not add a handoff argument or weaken its isolated-worktree, strict-clearance, or durable-goal rules.
