@@ -1,7 +1,7 @@
 {
   "name": "epic-orchestrator",
-  "version": "6.8.2",
-  "description": "Drive a GitHub epic to merged PRs: dependency graph, herdr worktrees, parallel Claude workers (spec→plan→execution→babysit), merge gate, and cleanup.",
+  "version": "7.0.0",
+  "description": "Drive a GitHub epic to merged PRs: dependency graph, herdr worktrees, parallel Claude workers (spec\u2192plan\u2192execution\u2192babysit), merge gate, and cleanup.",
   "author": {
     "name": "Falconiere Barbosa",
     "email": "hello@falconiere.io"
