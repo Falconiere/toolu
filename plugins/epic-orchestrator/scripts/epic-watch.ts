@@ -1,4 +1,3 @@
-#!/usr/bin/env bun
 /** Block until an epic worker needs the orchestrator, then print events and exit. */
 
 import { readdirSync } from "node:fs";

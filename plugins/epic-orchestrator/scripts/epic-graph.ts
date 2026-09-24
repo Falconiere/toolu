@@ -1,4 +1,3 @@
-#!/usr/bin/env bun
 /** Build an epic's sub-issue dependency graph and pick the next launch batch. */
 
 import { mkdir, writeFile } from "node:fs/promises";
@@ -390,14 +389,9 @@ async function build(epicRef: string, maxParallel: number): Promise<Record<strin
     .filter(([, i]) => i.status === "in_flight")
     .map(([r]) => r);
   const slots = Math.max(0, maxParallel - inFlight.length);
-  const ready = pickBatch(
-    Object.entries(issues)
-      .filter(([, i]) => i.status === "ready")
-      .map(([r]) => r),
-    issues,
-    inFlight,
-    10 ** 6,
-  );
+  const ready = Object.entries(issues)
+    .filter(([, i]) => i.status === "ready")
+    .map(([r]) => r);
   const epicCheckout = checkouts[`${owner}/${repo}`];
   const cloneRoot = dirname(epicCheckout ?? process.cwd());
   return {

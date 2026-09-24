@@ -1,4 +1,3 @@
-#!/usr/bin/env bun
 /** Launch or resume one sub-issue: herdr worktree -> Claude agent -> worker brief. */
 
 import { readFileSync } from "node:fs";
@@ -220,18 +219,25 @@ async function prepareCheckout(
     log.push(shellJoin(cmd));
     if (!dry) await run(cmd);
   }
-  const base = (
-    await run([
-      "gh",
-      "repo",
-      "view",
-      issue.repo,
-      "--json",
-      "defaultBranchRef",
-      "-q",
-      ".defaultBranchRef.name",
-    ])
-  ).trim();
+  // Dry-run must not call the network: CI and offline dry-runs have no access
+  // to every epic repo. Live launches still resolve the real default branch.
+  let base = "main";
+  if (!dry) {
+    base = (
+      await run([
+        "gh",
+        "repo",
+        "view",
+        issue.repo,
+        "--json",
+        "defaultBranchRef",
+        "-q",
+        ".defaultBranchRef.name",
+      ])
+    ).trim();
+  } else {
+    log.push(`# dry-run: skip gh repo view; assume default branch ${base}`);
+  }
   const fetch = ["git", "-C", checkout, "fetch", "origin", base];
   log.push(shellJoin(fetch));
   if (!dry) await run(fetch);

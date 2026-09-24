@@ -1,4 +1,3 @@
-#!/usr/bin/env bun
 /** Verify a sub-issue PR against the epic merge policy and optionally merge it. */
 
 import { join } from "node:path";

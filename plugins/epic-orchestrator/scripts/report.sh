@@ -25,7 +25,7 @@ done
 
 mkdir -p "$(dirname "$file")"
 prev='{}'
-[[ -s $file ]] && prev=$(cat "$file")
+[[ -s $file ]] && prev=$(jq -c '.' "$file" 2>/dev/null || echo '{}')
 now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
 jq --arg phase "$phase" --arg pr "$pr" --arg note "$note" --arg now "$now" '

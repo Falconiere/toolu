@@ -20,7 +20,7 @@ if [[ $mode != --abandon ]]; then
 fi
 
 # 1. Exit the agent (babysit's cron is session-scoped and ends with it).
-if herdr agent get "$agent" >/dev/null 2>&1; then
+if [[ -n $agent ]] && herdr agent get "$agent" >/dev/null 2>&1; then
   herdr agent send-keys "$agent" esc >/dev/null 2>&1 || true
   herdr agent prompt "$agent" "/exit" >/dev/null 2>&1 || true
   for _ in 1 2 3 4 5 6 7 8 9 10; do herdr agent get "$agent" >/dev/null 2>&1 || break; sleep 1; done
@@ -37,6 +37,8 @@ if [[ -n $ws ]]; then
   else
     herdr worktree remove --workspace "$ws" --force >/dev/null && removed=true
   fi
+else
+  echo "WARN: no workspace_id on record $key; skipping worktree remove" >&2
 fi
 
 # 3. Delete the local branch only when merged (squash merges need -D).
