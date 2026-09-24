@@ -28,7 +28,7 @@ export function adapterFor(host: Host): HostAdapter {
 }
 
 /** True when the host has a working adapter in this CLI. */
-export function hasAdapter(host: Host): boolean {
+function hasAdapter(host: Host): boolean {
   return ADAPTERS.some((adapter) => adapter.host === host);
 }
 
@@ -41,14 +41,9 @@ export async function availableHosts(env?: NodeJS.ProcessEnv): Promise<readonly 
   return found;
 }
 
-/** Wired hosts on PATH (OpenCode is probed but omitted — no adapter yet). */
-export async function selectableHosts(env?: NodeJS.ProcessEnv): Promise<readonly Host[]> {
-  return (await availableHosts(env)).filter(hasAdapter);
-}
+type HostResolveMode = "single" | "multi";
 
-export type HostResolveMode = "single" | "multi";
-
-export interface ResolveHostsOptions {
+interface ResolveHostsOptions {
   readonly interactive: boolean;
   readonly mode: HostResolveMode;
   readonly env?: NodeJS.ProcessEnv;

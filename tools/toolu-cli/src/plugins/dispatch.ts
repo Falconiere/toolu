@@ -30,7 +30,7 @@ const MARKETPLACE_SOURCE = "Falconiere/toolu";
 /** Parsed arguments once a verb is known to be present. */
 type RoutedArgs = ParsedArgs & { readonly verb: Verb };
 
-export interface DispatchContext {
+interface DispatchContext {
   readonly manifestPath: string;
   readonly interactive: boolean;
   readonly write: (text: string) => void;
