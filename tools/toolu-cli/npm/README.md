@@ -18,6 +18,8 @@ It drives each host's own plugin CLI — `claude plugin install`, `codex plugin 
 
 Already-installed plugins are reported and left alone. If the installed version differs from the one the marketplace offers, both are named and nothing changes; `update` is how you move it.
 
+On a TTY (without `--no-input`), several hosts on `PATH` prompts instead of failing: `install` multi-selects hosts and, when no names were given, multi-selects plugins (default: all). Other verbs single-select one host. Cancel exits `130`.
+
 ## Options
 
 | Flag | Meaning |
@@ -37,7 +39,7 @@ Already-installed plugins are reported and left alone. If the installed version 
 | `0` | Succeeded, or already satisfied |
 | `1` | Something failed; every failure is named on stderr |
 | `2` | Usage error: unknown command, flag, host, or plugin |
-| `3` | Required input missing, or an ambiguous host with no `--host` |
+| `3` | Required input missing, or an ambiguous host with no TTY / `--no-input` |
 | `130` | An interactive prompt was cancelled |
 
 ## Not yet supported

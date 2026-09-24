@@ -1,3 +1,4 @@
+import type { Host } from "../args/types";
 import type { CatalogState } from "../plugins/list";
 import type { InstallStep } from "../plugins/install";
 import type { RemoveStep } from "../plugins/remove";
@@ -27,6 +28,21 @@ export function reportInstall(steps: readonly InstallStep[], dryRun: boolean): s
     )
     .join("");
   return `${header}${body}`;
+}
+
+/** Install report with a section per host when more than one was targeted. */
+export function reportInstallByHost(
+  sections: readonly { readonly host: Host; readonly steps: readonly InstallStep[] }[],
+  dryRun: boolean,
+): string {
+  if (sections.length === 0) return "";
+  if (sections.length === 1) {
+    const only = sections[0];
+    return only === undefined ? "" : reportInstall(only.steps, dryRun);
+  }
+  return sections
+    .map((section) => `${section.host}:\n${reportInstall(section.steps, dryRun)}`)
+    .join("\n");
 }
 
 export function reportList(entries: readonly CatalogState[]): string {

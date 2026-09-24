@@ -2,7 +2,8 @@
 
 **Status:** in progress. The commands below work against Claude Code and Codex
 today, and the [README](../README.md#install) install snippets use them.
-OpenCode wiring and the interactive prompts are not built yet.
+Interactive host and plugin prompts are live on a TTY. OpenCode wiring is not
+built yet.
 
 `--host opencode` exits `2`. OpenCode has its own plugin CLI, but it installs npm
 packages rather than marketplace entries, so the thirteen bash plugins are not
@@ -68,7 +69,7 @@ appears in any of the three.
 The command comes first. The package name already says what it acts on:
 
 ```
-npx @toolu/plugins install [name...]   Install plugins, core first (no names = all)
+npx @toolu/plugins install [name...]   Install plugins, core first (TTY: pick; else all)
 npx @toolu/plugins list                Catalog joined with what the host reports
 npx @toolu/plugins remove <name...>    Uninstall, requires --yes
 npx @toolu/plugins update [name...]    Update only what is behind the marketplace
@@ -93,7 +94,7 @@ npx @toolu/plugins update [name...]    Update only what is behind the marketplac
 | `0` | Everything succeeded or was already satisfied |
 | `1` | Something failed; every failure is named on stderr |
 | `2` | Usage error: unknown command, flag, host, or plugin |
-| `3` | Required input missing, or an ambiguous host with no `--host` |
+| `3` | Required input missing, or an ambiguous host with no TTY / `--no-input` |
 | `130` | An interactive prompt was cancelled |
 
 ## Behavior worth knowing
@@ -112,8 +113,13 @@ four dependents are skipped, because they cannot succeed without it. Any other
 failure is recorded and the remaining plugins are still attempted. Either way the
 exit code is `1` and every failure is named.
 
-**Host ambiguity is never resolved silently.** With more than one host on `PATH`
-and no `--host`, the CLI exits `3` and names the candidates rather than guessing.
+**Host ambiguity is never resolved silently.** With more than one wired host on
+`PATH` and no `--host`, a TTY prompts: `install` multi-selects hosts (and, when
+no plugin names were given, multi-selects plugins with every catalog entry
+selected by default), then runs once per chosen host with a sectioned report.
+`list`, `remove`, and `update` single-select one host. Without a TTY, or with
+`--no-input`, the CLI exits `3` and names the candidates rather than guessing.
+Cancelling a prompt exits `130`.
 
 **`-y` is never supplied on your behalf.** Claude Code requires `-y` to accept a
 marketplace-declared command without confirmation. That flag exists so a person

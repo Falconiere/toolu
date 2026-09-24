@@ -1,12 +1,26 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
+import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { CliError, EXIT } from "../../exit";
 import { claudeAdapter } from "../claude";
 import { codexAdapter } from "../codex";
-import { availableHosts, resolveHost } from "../detect";
+import { availableHosts, resolveHost, resolveHosts } from "../detect";
 import { binaryExists, run } from "../run";
 
 const hosts = await availableHosts();
 const hasClaude = hosts.includes("claude");
 const hasCodex = hosts.includes("codex");
+
+const stubDir = await mkdtemp(join(tmpdir(), "toolu-hosts-"));
+await writeFile(join(stubDir, "claude"), "#!/bin/sh\n", { mode: 0o755 });
+await writeFile(join(stubDir, "codex"), "#!/bin/sh\n", { mode: 0o755 });
+await chmod(join(stubDir, "claude"), 0o755);
+await chmod(join(stubDir, "codex"), 0o755);
+const stubEnv = { ...process.env, PATH: stubDir };
+afterAll(async () => {
+  await rm(stubDir, { recursive: true, force: true });
+});
 
 describe("command construction", () => {
   test("claude builds marketplace, install with scope, remove and update", () => {
@@ -86,10 +100,42 @@ describe("host detection", () => {
     expect(await binaryExists("claude", env)).toBe(false);
   });
 
-  test.skipIf(hosts.length < 2)(
-    "several hosts with no TTY refuses rather than choosing silently",
-    async () => {
-      expect(resolveHost(undefined)).rejects.toThrow(/several hosts found/);
-    },
-  );
+  test("several wired hosts with no interactive refuse rather than choosing silently", async () => {
+    await expect(
+      resolveHosts(undefined, { interactive: false, mode: "single", env: stubEnv }),
+    ).rejects.toThrow(/several hosts found/);
+  });
+
+  test("interactive multi-select returns every injected host", async () => {
+    const chosen = await resolveHosts(undefined, {
+      interactive: true,
+      mode: "multi",
+      env: stubEnv,
+      selectHosts: async () => ["claude", "codex"],
+    });
+    expect(chosen).toEqual(["claude", "codex"]);
+  });
+
+  test("interactive single-select returns the injected host", async () => {
+    const chosen = await resolveHosts(undefined, {
+      interactive: true,
+      mode: "single",
+      env: stubEnv,
+      selectHost: async () => "codex",
+    });
+    expect(chosen).toEqual(["codex"]);
+  });
+
+  test("cancel from the host picker surfaces exit 130", async () => {
+    await expect(
+      resolveHosts(undefined, {
+        interactive: true,
+        mode: "single",
+        env: stubEnv,
+        selectHost: async () => {
+          throw new CliError(EXIT.cancelled, "cancelled");
+        },
+      }),
+    ).rejects.toMatchObject({ code: EXIT.cancelled });
+  });
 });
