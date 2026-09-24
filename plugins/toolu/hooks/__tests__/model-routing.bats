@@ -130,17 +130,11 @@ _run_codex_hook() {
   ! grep -E '^tools:.*(Edit|Write)' "$AGENTS/architect.md"
 }
 
-@test "routing rubric: the reference doc exists and is cited by the workflow skills" {
-  local ref="plugins/toolu/skills/orchestrator/references/model-routing.md"
+@test "routing rubric: the private delivery references remain self-contained" {
   local root="${BATS_TEST_DIRNAME}/../../../.."
-  [ -f "$root/$ref" ]
-  for skill in orchestrator brainstorm plan execution; do
-    grep -q 'model-routing.md' "$root/plugins/toolu/skills/$skill/SKILL.md"
+  local refs="$root/plugins/delivery-flow/skills/delivery-flow/references"
+  [ -f "$refs/model-routing.md" ]
+  for phase in brainstorm plan execution; do
+    grep -q 'model-routing.md' "$refs/$phase.md"
   done
-}
-
-@test "routing rubric: Brainstorm links to the rubric relative to its skill" {
-  local root="${BATS_TEST_DIRNAME}/../../../.."
-  grep -Fq '[model-routing.md](../orchestrator/references/model-routing.md)' \
-    "$root/plugins/toolu/skills/brainstorm/SKILL.md"
 }

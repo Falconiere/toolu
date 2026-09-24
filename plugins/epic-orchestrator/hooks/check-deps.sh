@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Codex lacks a plugin-dependency manifest field. Warn when this dependent
-# plugin is installed without toolu or pr-babysit, using Codex's list.
+# plugin is installed without delivery-flow and its companions, using Codex's list.
 set -u
 
 [ "${TOOLU_HOST_OVERRIDE:-}" != claude ] || exit 0
@@ -20,6 +20,8 @@ plugin_ok() {
 
 missing=()
 plugin_ok "toolu@toolu" || missing+=("toolu@toolu")
+plugin_ok "delivery-flow@toolu" || missing+=("delivery-flow@toolu")
+plugin_ok "toolu-review@toolu" || missing+=("toolu-review@toolu")
 plugin_ok "pr-babysit@toolu" || missing+=("pr-babysit@toolu")
 [ "${#missing[@]}" -eq 0 ] && exit 0
 

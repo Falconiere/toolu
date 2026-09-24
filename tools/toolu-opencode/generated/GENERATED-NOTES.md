@@ -14,3 +14,4 @@ Do not edit by hand. Regenerate with `bun run generate:opencode-surface`.
 ## Literal `.claude` references (not rewritten)
 
 - `~/.claude/epics/<owner>-<repo>-<n>/`, Codex: `$CODEX_HOME/toolu/epics/…`,
+- the active host's `<repo root>/.claude/tmp/push-review/` or

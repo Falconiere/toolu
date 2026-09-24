@@ -23,11 +23,13 @@ describe("BriefTest", () => {
     expect(brief).toContain("Part of Falconiere/comemory#248");
     expect(brief).toContain(join(HERE, "report.sh"));
     for (const phase of [
-      "/toolu:spec",
-      "/toolu:spec-review",
-      "/toolu:plan",
-      "/toolu:plan-review",
-      "/toolu:execution",
+      "report brainstorm",
+      "report spec",
+      "report spec-review",
+      "report plan",
+      "report plan-review",
+      "report execution",
+      "/delivery-flow:delivery-flow",
       "/pr-babysit:babysit",
     ]) {
       expect(brief).toContain(phase);

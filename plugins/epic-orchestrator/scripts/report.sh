@@ -4,7 +4,7 @@
 # Writes {phase, pr, note, updated_at, history[]} atomically; history keeps every transition.
 set -euo pipefail
 
-PHASES="spec spec-review plan plan-review execution pr-open babysit rebasing ready needs-human failed"
+PHASES="brainstorm spec spec-review plan plan-review execution pr-open babysit rebasing ready needs-human failed"
 
 usage() { echo "usage: report.sh <status-file> <phase> [--pr N] [--note text]; phases: $PHASES" >&2; exit 2; }
 

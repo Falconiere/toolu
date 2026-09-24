@@ -12,11 +12,12 @@ const marketplace = await readMarketplace(MANIFEST);
 describe("catalog against the real .claude-plugin/marketplace.json", () => {
   test("reads every catalog plugin", () => {
     expect(catalogNames(marketplace)).toContain("toolu");
-    expect(catalogNames(marketplace).length).toBeGreaterThanOrEqual(14);
+    expect(catalogNames(marketplace).length).toBeGreaterThanOrEqual(15);
   });
 
   test("the declared dependents really depend on toolu", () => {
     expect([...dependentsOf(marketplace, "toolu")].sort()).toEqual([
+      "delivery-flow",
       "epic-orchestrator",
       "pr-babysit",
       "python-quality",
@@ -25,10 +26,18 @@ describe("catalog against the real .claude-plugin/marketplace.json", () => {
     ]);
   });
 
-  test("epic-orchestrator pulls toolu then pr-babysit", () => {
+  test("delivery-flow and epic-orchestrator close their plugin dependencies", () => {
+    expect(installOrder(marketplace, ["delivery-flow"])).toEqual([
+      "toolu",
+      "toolu-review",
+      "pr-babysit",
+      "delivery-flow",
+    ]);
     expect(installOrder(marketplace, ["epic-orchestrator"])).toEqual([
       "toolu",
+      "toolu-review",
       "pr-babysit",
+      "delivery-flow",
       "epic-orchestrator",
     ]);
   });

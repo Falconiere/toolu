@@ -50,7 +50,7 @@ publish() {
 @test "user-prompt-submit: slash-command tasks are tasks too" {
   export TYPESAFE_API_KEY=local-test-key
   publish
-  run bash "$HOOK" <<<"$(payload '/toolu:plan ship the export feature')"
+  run bash "$HOOK" <<<"$(payload '/delivery-flow:delivery-flow ship the export feature')"
   [ "$status" -eq 0 ]
   [[ "$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")" == *"mandatory for this task"* ]]
 }

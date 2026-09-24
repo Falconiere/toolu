@@ -2,7 +2,7 @@
 
 **Type:** Core | **Version:** 4.5.0 | **Optional companion:** `code-simplifier`
 
-The registry-driven hook engine plus the adaptive delivery workflow, the `push-review` gate, and the `deep-explore` agent. **The one required plugin** — all domain plugins register into it.
+The registry-driven hook engine, the `push-review` gate, and the `deep-explore` agent. **The one required plugin** — all domain plugins register into it.
 
 ## Install
 
@@ -16,55 +16,9 @@ The registry-driven hook engine plus the adaptive delivery workflow, the `push-r
 
 ## What It Provides
 
-### 1. Adaptive Delivery Workflow
+### 1. Delivery Flow
 
-An opinionated delivery chain: **Brainstorm** is optional upstream triage, then
-each behavior change moves through a write step and review step before
-execution-owned readiness and PR handoff.
-
-```mermaid
-flowchart LR
-    B(brainstorm, optional) -.-> S(spec) --> SR(spec-review) --> P(plan) --> PR(plan-review) --> E(execution) --> PB(pr-babysit)
-    T(test, reusable execution-time method) -.-> E
-```
-
-| Phase | Skill | What It Does |
-|-------|-------|-------------|
-| **brainstorm** (optional) | `brainstorm` | Brainstorm uses adaptive materiality triage with a default-and-proceed baseline: skip mechanical work, use a compact capsule for bounded work, and use Full analysis only for material design risk. Its advisory nudge is not an automatic launch; the no-prompt rule has one narrow unresolved-fork exception. |
-| **spec** | `spec` | Write a design contract to `docs/toolu/specs/<date>-<slug>-design.md`. |
-| **spec-review** | `spec-review` | Adversarial audit of the spec — gaps, ambiguities, untestable acceptance criteria. |
-| **plan** | `plan` | Turn the reviewed spec into concrete, verifiable steps with a machine-readable ledger. |
-| **plan-review** | `plan-review` | Pressure-test the plan: is every step independently verifiable? Are conventions honored? |
-| **execution** | `execution` | Drive the plan step by step with real-data evidence, local review readiness, and (when authorized) verified PR handoff to `pr-babysit`. |
-| **pr-babysit** | `pr-babysit` | Clear CI and review findings from the delivered PR using isolated worktrees and strict clearance. |
-| **test** (reusable) | `test` | A high-signal execution-time method: enforce real-data, colocated behavior and regression tests. |
-
-#### Usage Examples
-
-```text
-# Use optional Brainstorm triage when requirements need shaping
-"I want to add real-time collaboration" → brainstorm records the material design choices
-
-# Write a spec once the design is settled
-"spec this out" → writes docs/toolu/specs/2026-06-15-realtime-collab-design.md
-
-# Review the spec before planning
-"review the spec" → spec-review audits and marks Status: Approved or Needs changes
-
-# Plan implementation
-"plan this out" → writes docs/toolu/plans/2026-06-15-realtime-collab.md with runnable steps
-
-# Execute the plan
-"execute the plan" → drives step-by-step with verification checkpoints
-
-# Execute and deliver an approved plan
-"execute the plan" → verifies real-data evidence, local readiness, and hands an authorized PR to pr-babysit
-
-# Use tests throughout execution
-"add a regression test" → enforces real-data tests in __tests__/ (TS) or tests/ (Rust)
-```
-
-Mechanical work (renames, dep bumps, one-liners) skips the ceremony — each phase declares when *not* to fire.
+The separate `delivery-flow` plugin exposes one skill: `/delivery-flow:delivery-flow` in Claude Code or `$delivery-flow:delivery-flow` in Codex. It requires brainstorm → spec → spec review → plan → plan review → execution with real-data tests → PR → babysit for every task. Private references retain the phase procedures and approval checks. Brainstorm uses a default-and-proceed baseline; small fixes receive concise spec and ledger artifacts. Rejected reviews and failed gates stop at that phase, and invocation authorizes checked delivery.
 
 ### 2. Orchestrator
 
@@ -193,7 +147,7 @@ toolu core
 │   ├── session-end.sh
 │   ├── user-prompt-submit.sh
 │   └── pre-compact.sh
-├── skills/                     ← brainstorm, spec, plan, execution, test, …
+├── skills/                     ← orchestrator, debug, research, command skills
 ├── agents/                     ← deep-explore, research-agent
 ├── commands/                   ← commit, review-and-commit
 └── settings/                   ← reusable settings fragments

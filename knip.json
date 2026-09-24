@@ -6,10 +6,7 @@
       "project": []
     },
     "tooling": {
-      "entry": [
-        "src/gate-coverage-inventory.ts",
-        "src/opencode-capability-probe.ts"
-      ],
+      "entry": [],
       "project": [
         "src/**/*.ts"
       ],

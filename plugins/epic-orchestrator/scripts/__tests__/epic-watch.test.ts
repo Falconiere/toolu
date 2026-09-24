@@ -31,6 +31,7 @@ describe("ReportTest", () => {
   test("history and pr persist", async () => {
     const dir = mkdtempSync(join(tmpdir(), "epic-watch-"));
     const f = join(dir, "status", "k.json");
+    expect((await report(f, "brainstorm")).code).toBe(0);
     expect((await report(f, "spec")).code).toBe(0);
     expect((await report(f, "pr-open", "--pr", "301")).code).toBe(0);
     expect((await report(f, "babysit")).code).toBe(0);
@@ -41,7 +42,7 @@ describe("ReportTest", () => {
     };
     expect(data.phase).toBe("babysit");
     expect(data.pr).toBe(301);
-    expect(data.history.map((h) => h.phase)).toEqual(["spec", "pr-open", "babysit"]);
+    expect(data.history.map((h) => h.phase)).toEqual(["brainstorm", "spec", "pr-open", "babysit"]);
   });
 
   test("rejects unknown phase and bad pr", async () => {

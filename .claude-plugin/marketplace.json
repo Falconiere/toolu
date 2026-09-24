@@ -1,5 +1,6 @@
 {
   "name": "toolu",
+  "description": "Dual-host engineering quality plugins and delivery workflow.",
   "owner": {
     "name": "Falconiere Barbosa",
     "email": "hello@falconiere.io",
@@ -99,15 +100,30 @@
       ]
     },
     {
+      "name": "delivery-flow",
+      "source": "./plugins/delivery-flow",
+      "description": "One dual-host delivery skill for brainstorm, approved spec and plan, real-data execution, PR creation, and pr-babysit handoff.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["delivery", "workflow", "skills"],
+      "license": "MIT",
+      "dependencies": [
+        { "name": "toolu", "marketplace": "toolu" },
+        { "name": "toolu-review", "marketplace": "toolu" },
+        { "name": "pr-babysit", "marketplace": "toolu" }
+      ]
+    },
+    {
       "name": "epic-orchestrator",
       "source": "./plugins/epic-orchestrator",
-      "description": "Drive a GitHub epic to merged PRs: dependency graph, herdr worktrees, parallel Claude workers (spec→plan→execution→babysit), merge gate, and cleanup.",
+      "description": "Drive a GitHub epic to merged PRs: dependency graph, herdr worktrees, parallel Claude workers (delivery-flow→babysit), merge gate, and cleanup.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["epic", "github", "herdr", "orchestration"],
       "license": "MIT",
       "dependencies": [
         { "name": "toolu", "marketplace": "toolu" },
+        { "name": "delivery-flow", "marketplace": "toolu" },
         { "name": "pr-babysit", "marketplace": "toolu" }
       ]
     },

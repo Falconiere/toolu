@@ -156,6 +156,7 @@ export function buildSurfaceForPlugin(
 function listFilesRecursive(dir: string, rootReal: string): string[] {
   const out: string[] = [];
   for (const name of readdirSync(dir).sort()) {
+    if (name === "__tests__") continue;
     const full = join(dir, name);
     const st = lstatSync(full);
     if (st.isSymbolicLink()) {

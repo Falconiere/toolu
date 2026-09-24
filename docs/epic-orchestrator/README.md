@@ -1,7 +1,7 @@
 # epic-orchestrator — Epic Orchestrator
 
 Drive a GitHub epic to merged PRs: dependency graph, herdr worktrees, parallel
-Claude workers (spec → plan → execution → pr-babysit), merge gate, and cleanup.
+Claude workers (delivery-flow from brainstorm through PR and babysit), merge gate, and cleanup.
 
 ## Install
 
@@ -10,12 +10,10 @@ Claude workers (spec → plan → execution → pr-babysit), merge gate, and cle
 ```
 
 ```bash
-codex plugin add toolu@toolu
-codex plugin add pr-babysit@toolu
-codex plugin add epic-orchestrator@toolu
+npx @toolu/plugins install delivery-flow epic-orchestrator --host codex
 ```
 
-Requires `toolu` and `pr-babysit`. Runtime binaries: `bun`, `gh`, `herdr`
+Requires `delivery-flow` and its `toolu`, `toolu-review`, and `pr-babysit` dependencies. Runtime binaries: `bun`, `gh`, `herdr`
 (orchestrator session must run inside a herdr pane with `HERDR_ENV=1`).
 
 ## Usage

@@ -20,7 +20,7 @@ copy_packaging_fixture() {
     printf 'packaging validator failed:\n%s\n' "$output" >&2
   fi
   [ "$status" -eq 0 ]
-  [[ "$output" == *"validated 14 plugins"* ]]
+  [[ "$output" == *"validated 15 plugins"* ]]
 }
 
 @test "plugin packaging validator rejects a release config that omits a Codex manifest" {

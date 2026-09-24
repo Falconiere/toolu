@@ -88,7 +88,7 @@ setup() {
 
 @test "execution SKILL.md: owns the local verdict check" {
   for skill in "${VERDICT_SKILLS[@]}"; do
-    f="$ROOT/plugins/toolu/skills/$skill/SKILL.md"
+    f="$ROOT/plugins/delivery-flow/skills/delivery-flow/references/$skill.md"
     [ -f "$f" ]
     grep -q 'verdict.sh' "$f" \
       || { echo "$f: does not mention verdict.sh" >&2; return 1; }
@@ -96,7 +96,7 @@ setup() {
 }
 
 @test "execution SKILL.md: requires v2 push-review state" {
-  f="$ROOT/plugins/toolu/skills/execution/SKILL.md"
+  f="$ROOT/plugins/delivery-flow/skills/delivery-flow/references/execution.md"
   grep -q 'version: 2' "$f"
 }
 
@@ -104,12 +104,11 @@ setup() {
   [ ! -e "$ROOT/plugins/toolu/skills/execution-review" ]
 }
 
-@test "workflow docs: describe the six-stage delivery chain and reusable test method" {
-  for f in "$ROOT/README.md" "$ROOT/plugins/toolu/README.md"; do
-    grep -q 'spec.*spec-review.*plan.*plan-review.*execution.*pr-babysit' "$f"
-    grep -qi 'brainstorm.*optional' "$f"
-    grep -qi 'test.*reusable' "$f"
+@test "workflow docs: describe the unified delivery chain" {
+  for f in "$ROOT/README.md" "$ROOT/plugins/toolu/README.md" "$ROOT/docs/toolu/README.md"; do
+    grep -q 'delivery-flow' "$f"
   done
+  grep -Fq 'brainstorm → spec → spec review → plan → plan review → execution with real-data tests → PR → babysit' "$ROOT/README.md"
 }
 
 @test "babysit docs: accept a verified execution handoff without new arguments" {
@@ -123,7 +122,7 @@ setup() {
 
 @test "plan + plan-review SKILL.mds: require AC coverage and real-input evidence" {
   for skill in "${DELEGATION_SKILLS[@]}"; do
-    f="$ROOT/plugins/toolu/skills/$skill/SKILL.md"
+    f="$ROOT/plugins/delivery-flow/skills/delivery-flow/references/$skill.md"
     [ -f "$f" ]
     grep -qi 'AC' "$f" \
       || { echo "$f: does not mention acceptance-criteria coverage" >&2; return 1; }
@@ -133,6 +132,6 @@ setup() {
 }
 
 @test "test SKILL.md: requires a behavior-to-evidence map" {
-  f="$ROOT/plugins/toolu/skills/test/SKILL.md"
+  f="$ROOT/plugins/delivery-flow/skills/delivery-flow/references/test.md"
   grep -qi 'behavior-to-evidence map' "$f"
 }

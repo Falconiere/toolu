@@ -4,6 +4,18 @@
   "surfaceRoot": "tools/toolu-opencode/generated",
   "plugins": [
     {
+      "name": "delivery-flow",
+      "skills": [
+        {
+          "id": "delivery-flow--delivery-flow",
+          "path": "skills/delivery-flow--delivery-flow/SKILL.md",
+          "source": "plugins/delivery-flow/skills/delivery-flow/SKILL.md"
+        }
+      ],
+      "agents": [],
+      "commands": []
+    },
+    {
       "name": "epic-orchestrator",
       "skills": [
         {
@@ -43,11 +55,6 @@
       "name": "toolu",
       "skills": [
         {
-          "id": "toolu--brainstorm",
-          "path": "skills/toolu--brainstorm/SKILL.md",
-          "source": "plugins/toolu/skills/brainstorm/SKILL.md"
-        },
-        {
           "id": "toolu--commit--skill",
           "path": "skills/toolu--commit--skill/SKILL.md",
           "source": "plugins/toolu/skills/commit/SKILL.md"
@@ -63,24 +70,9 @@
           "source": "plugins/toolu/skills/deep-research/SKILL.md"
         },
         {
-          "id": "toolu--execution",
-          "path": "skills/toolu--execution/SKILL.md",
-          "source": "plugins/toolu/skills/execution/SKILL.md"
-        },
-        {
           "id": "toolu--orchestrator",
           "path": "skills/toolu--orchestrator/SKILL.md",
           "source": "plugins/toolu/skills/orchestrator/SKILL.md"
-        },
-        {
-          "id": "toolu--plan",
-          "path": "skills/toolu--plan/SKILL.md",
-          "source": "plugins/toolu/skills/plan/SKILL.md"
-        },
-        {
-          "id": "toolu--plan-review",
-          "path": "skills/toolu--plan-review/SKILL.md",
-          "source": "plugins/toolu/skills/plan-review/SKILL.md"
         },
         {
           "id": "toolu--review-and-commit--skill",
@@ -91,21 +83,6 @@
           "id": "toolu--setup",
           "path": "skills/toolu--setup/SKILL.md",
           "source": "plugins/toolu/skills/setup/SKILL.md"
-        },
-        {
-          "id": "toolu--spec",
-          "path": "skills/toolu--spec/SKILL.md",
-          "source": "plugins/toolu/skills/spec/SKILL.md"
-        },
-        {
-          "id": "toolu--spec-review",
-          "path": "skills/toolu--spec-review/SKILL.md",
-          "source": "plugins/toolu/skills/spec-review/SKILL.md"
-        },
-        {
-          "id": "toolu--test",
-          "path": "skills/toolu--test/SKILL.md",
-          "source": "plugins/toolu/skills/test/SKILL.md"
         }
       ],
       "agents": [
@@ -147,6 +124,18 @@
           "source": "plugins/toolu/commands/review-and-commit.md"
         }
       ]
+    },
+    {
+      "name": "toolu-review",
+      "skills": [
+        {
+          "id": "toolu-review--review",
+          "path": "skills/toolu-review--review/SKILL.md",
+          "source": "plugins/toolu-review/skills/review/SKILL.md"
+        }
+      ],
+      "agents": [],
+      "commands": []
     }
   ]
 }

@@ -98,6 +98,16 @@
         },
         {
           "type": "json",
+          "path": "plugins/delivery-flow/.claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/delivery-flow/.codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "plugins/epic-orchestrator/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
         },
