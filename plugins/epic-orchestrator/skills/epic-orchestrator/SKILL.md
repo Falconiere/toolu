@@ -40,7 +40,7 @@ sub-issues only:
 
 `--admin` is allowed only when branch protection (for example, a required
 approval on a solo repo) is the only thing blocking a gate-green PR.
-`merge_gate.py` enforces that rule. `--admin` never overrides a failing check,
+`merge-gate.ts` enforces that rule. `--admin` never overrides a failing check,
 a pending check, or an unresolved thread.
 
 Not authorized: pushing to `main`, or touching PRs, branches or worktrees
@@ -136,7 +136,7 @@ watcher running. After you handle the events, start it again.
 | `needs-human` | Read the `note`. If the issue, epic or code answers it, send the answer with `herdr agent prompt <key> "<answer>"`. Otherwise ask the user and relay their answer. |
 | `failed` | Read the note, then `herdr agent read <key> --source recent-unwrapped --lines 80`. Send a concrete new direction, or escalate to the user. |
 | `blocked` | Read the agent's screen. If the pending approval is inside the authorization boundary, approve it with `herdr agent send-keys`. Otherwise ask the user. |
-| `gone` | Re-run `launch_issue.py` for that issue. It resumes in the same worktree. After 2 relaunches, escalate. |
+| `gone` | Re-run `bun "$S/launch-issue.ts" --graph <state_dir>/graph.json --issue <ref>` for that issue. It resumes in the same worktree. After 2 relaunches, escalate. |
 | `stalled` | `herdr agent prompt <key> "STATUS?" --wait --timeout 120000`, then read the reply. Nudge the worker or treat it as `failed`. |
 | `recheck` | Re-run the merge gate for each listed key. |
 | `heartbeat` | Re-run the graph (`--save`). This catches issues closed or reopened outside the run, and fills any free slot. |
@@ -194,10 +194,11 @@ The epic is complete when every sub-issue is closed (`complete: true`). Then:
 
 - **Resume.** Use the same invocation. The graph marks launched, unfinished
   issues as `in_flight`. For each one whose agent isn't live, re-run
-  `launch_issue.py`; it sends a resume prompt that continues from the last
-  reported phase. Then start the watcher.
+  `bun "$S/launch-issue.ts" --graph <state_dir>/graph.json --issue <ref>`; it
+  sends a resume prompt that continues from the last reported phase. Then start
+  the watcher.
   The state dir is the source of truth. If you lose track (context
-  compaction), re-run the graph and `epic_watch.py --peek`.
+  compaction), re-run the graph and `bun "$S/epic-watch.ts" --state-dir <state_dir> --peek`.
 - **Status.** Print the graph table plus
   `bun "$S/epic-watch.ts" --state-dir <state_dir> --peek` (per-issue stage,
   phase, PR and agent state). This consumes no events.

@@ -96,12 +96,20 @@ describe("CommonTest", () => {
       ["homebrew-tap", 1],
       ["9lives", 3],
       ["an-extremely-long-repository-name-for-testing", 12345],
+      ["Falconiere/comemory", 255],
     ] as const) {
       const key = issueKey(repo, n);
       expect(key).toMatch(name);
       expect(key.endsWith(`-${n}`)).toBe(true);
     }
     expect(issueKey("comemory.io", 183)).toBe("comemory-io-183");
+    expect(issueKey("Falconiere/comemory", 255)).toBe("falconiere-comemory-255");
+  });
+
+  test("issue_key folds owner so same-name repos do not collide", () => {
+    expect(issueKey("orgA/foo", 1)).not.toBe(issueKey("orgB/foo", 1));
+    expect(issueKey("orgA/foo", 1)).toMatch(/^[a-z][a-z0-9_-]{0,31}$/);
+    expect(issueKey("orgB/foo", 1)).toMatch(/^[a-z][a-z0-9_-]{0,31}$/);
   });
 
   test("slugify drops epic prefix", () => {

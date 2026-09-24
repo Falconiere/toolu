@@ -11,6 +11,7 @@ CMD="$ROOT/commands/epic.md"
   grep -Fq 'bun "$S/epic-watch.ts"' "$SKILL"
   grep -Fq 'bun "$S/merge-gate.ts"' "$SKILL"
   ! grep -q 'python3' "$SKILL"
+  ! grep -qE '\.py' "$SKILL" "$ROOT/skills/epic-orchestrator/references/recovery.md"
   ! grep -q '~/.claude/skills/epic-orchestrator' "$SKILL"
 }
 

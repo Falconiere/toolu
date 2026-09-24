@@ -8,7 +8,7 @@ re-run the same script. All the scripts are idempotent.
 - **`HERDR_ENV` unset**: the orchestrator isn't running inside herdr. Stop and
   tell the user to start the session from a herdr pane.
 - **`worktree_create_failed ... already exists`**: a worktree directory for
-  that branch is left over. `launch_issue.py` reopens worktrees that git knows
+  that branch is left over. `launch-issue.ts` reopens worktrees that git knows
   about. If git doesn't list it (a stale directory), run
   `git -C <checkout> worktree prune` and launch again. Don't delete the
   directory unless `git -C <dir> status` shows no work worth keeping.

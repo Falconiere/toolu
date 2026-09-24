@@ -127,7 +127,9 @@ export async function currentRepo(): Promise<string> {
   ).trim();
 }
 
-/** Stable id that is also a valid herdr agent name: [a-z][a-z0-9_-]{0,31}. */
+/** Stable id that is also a valid herdr agent name: [a-z][a-z0-9_-]{0,31}.
+ * Pass `owner/repo` (preferred) or a bare repo name. Owner is folded into the
+ * slug so `orgA/foo#1` and `orgB/foo#1` do not collide. */
 export function issueKey(repo: string, number: number): string {
   let base =
     repo

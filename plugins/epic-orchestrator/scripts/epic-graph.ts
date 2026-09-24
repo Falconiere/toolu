@@ -363,9 +363,7 @@ async function build(epicRef: string, maxParallel: number): Promise<Record<strin
   }
   const issues: Record<string, GraphIssue> = {};
   for (const d of details) {
-    const repoName = d.repo.split("/")[1];
-    if (!repoName) throw new Error(`bad repo: ${d.repo}`);
-    issues[d.ref] = { ...d, key: issueKey(repoName, d.number) };
+    issues[d.ref] = { ...d, key: issueKey(d.repo, d.number) };
   }
   const [levels, cycle] = computeLevels(issues);
   const downstream = downstreamCounts(issues);
