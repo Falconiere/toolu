@@ -1,7 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import type { InstallStep } from "../../plugins/install";
 import type { RemoveStep } from "../../plugins/remove";
-import { anyFailed, reportInstall, reportList, reportRemove, reportUpdate } from "../report";
+import {
+  anyFailed,
+  reportInstall,
+  reportInstallByHost,
+  reportList,
+  reportRemove,
+  reportUpdate,
+} from "../report";
 
 describe("reportInstall", () => {
   const steps = [
@@ -31,6 +38,35 @@ describe("reportInstall", () => {
 
   test("an empty plan renders without throwing", () => {
     expect(reportInstall([], false)).toBe("");
+  });
+});
+
+describe("reportInstallByHost", () => {
+  const step = (name: string): InstallStep => ({
+    name,
+    outcome: "skipped",
+    detail: "dry-run",
+    argv: ["claude", "plugin", "install", name],
+  });
+
+  test("a single host omits the section header", () => {
+    const text = reportInstallByHost([{ host: "claude", steps: [step("toolu")] }], true);
+    expect(text).not.toContain("claude:");
+    expect(text).toContain("claude plugin install toolu");
+  });
+
+  test("multiple hosts get a labeled section each", () => {
+    const text = reportInstallByHost(
+      [
+        { host: "claude", steps: [step("toolu")] },
+        { host: "codex", steps: [step("jira")] },
+      ],
+      true,
+    );
+    expect(text).toContain("claude:");
+    expect(text).toContain("codex:");
+    expect(text).toContain("toolu");
+    expect(text).toContain("jira");
   });
 });
 
