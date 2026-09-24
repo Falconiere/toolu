@@ -9,8 +9,8 @@ SCRIPT="$ROOT/tooling/codex-smoke.sh"
   run bash "$SCRIPT"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"available=13"* ]]
-  [[ "$output" == *"installed=13"* ]]
-  [[ "$output" == *"session-start=16"* ]]
-  [[ "$output" == *"removed=13"* ]]
+  [[ "$output" == *"available=14"* ]]
+  [[ "$output" == *"installed=14"* ]]
+  [[ "$output" == *"session-start=17"* ]]
+  [[ "$output" == *"removed=14"* ]]
 }

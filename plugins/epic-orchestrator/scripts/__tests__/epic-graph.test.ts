@@ -4,7 +4,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { issueKey, parseRef, slugify } from "../common.ts";
-import { classify, computeLevels, downstreamCounts, type GraphIssue } from "../epic-graph.ts";
+import { classify, computeLevels, downstreamCounts, ISSUE_REF, type GraphIssue } from "../epic-graph.ts";
 
 const FIXTURE = join(import.meta.dir, "..", "fixtures", "epic248-graph.json");
 
@@ -87,6 +87,18 @@ describe("CommonTest", () => {
     expect(parseRef("CodaSignal/comemory.io#183")).toEqual(["CodaSignal", "comemory.io", 183]);
     expect(parseRef("#12", "a/b")).toEqual(["a", "b", 12]);
     expect(() => parseRef("not a ref", "a/b")).toThrow();
+  });
+
+  test("ISSUE_REF matches checklist short-form owner/repo#N", () => {
+    const line = "- [ ] CodaSignal/comemory.io#183 Drain durable push";
+    const re = new RegExp(ISSUE_REF.source, ISSUE_REF.flags);
+    const hits: string[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(line)) !== null) hits.push(m[0]);
+    expect(hits).toEqual(["CodaSignal/comemory.io#183"]);
+    const hit = hits[0];
+    expect(hit).toBeDefined();
+    expect(parseRef(hit ?? "", "Falconiere/comemory")).toEqual(["CodaSignal", "comemory.io", 183]);
   });
 
   test("issue_key is a valid herdr agent name", () => {

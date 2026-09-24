@@ -15,6 +15,9 @@ import {
 import { resolveCheckouts } from "./checkouts.ts";
 
 const DEP_LINE = /\b(?:blocked by|depends on)\b[^\n]*/gi;
+/** URL, owner/repo#N, or bare #N (default repo supplied by parseRef). */
+export const ISSUE_REF =
+  /https:\/\/github\.com\/[^\s)]+\/issues\/\d+|[\w.-]+\/[\w.-]+#\d+|(?<![\w/])#\d+/g;
 const CLOSING_PRS = `query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){issue(number:$n){
 closedByPullRequestsReferences(first:10,includeClosedPrs:true){nodes{number state url headRefName}}}}}`;
 
@@ -84,7 +87,8 @@ async function fetchSubIssues(
   const refs: string[] = [];
   for (const line of body.split("\n")) {
     if (/^\s*[-*]\s*\[[ xX]\]/.test(line)) {
-      const re = /https:\/\/github\.com\/[^\s)]+\/issues\/\d+|(?<![\w/])#\d+/g;
+      // Same shapes as DEP_LINE extraction: URL, owner/repo#N, and bare #N.
+      const re = new RegExp(ISSUE_REF.source, ISSUE_REF.flags);
       let m: RegExpExecArray | null;
       while ((m = re.exec(line)) !== null) {
         const [o, r, n] = parseRef(m[0], `${owner}/${repo}`);
@@ -126,7 +130,7 @@ async function fetchDetails(sub: SubIssue): Promise<Omit<GraphIssue, "key">> {
   ])) as { body: string | null };
   const body = bodyResp.body ?? "";
   for (const line of body.match(DEP_LINE) ?? []) {
-    const re = /https:\/\/github\.com\/[^\s)]+\/issues\/\d+|[\w.-]+\/[\w.-]+#\d+|(?<![\w/])#\d+/g;
+    const re = new RegExp(ISSUE_REF.source, ISSUE_REF.flags);
     let m: RegExpExecArray | null;
     while ((m = re.exec(line)) !== null) {
       const [o, r, n] = parseRef(m[0], `${owner}/${repo}`);

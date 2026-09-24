@@ -188,7 +188,7 @@ async function doMerge(
     "--match-head-commit",
     head,
   ];
-  const first = Bun.spawnSync(base, { cwd: "/", stdout: "pipe", stderr: "pipe" });
+  const first = Bun.spawnSync(base, { stdout: "pipe", stderr: "pipe" });
   let admin = false;
   if (first.exitCode !== 0) {
     const errText = first.stderr.toString() + first.stdout.toString();
@@ -196,7 +196,6 @@ async function doMerge(
       return { merged: false, error: errText.trim() };
     }
     const second = Bun.spawnSync([...base, "--admin"], {
-      cwd: "/",
       stdout: "pipe",
       stderr: "pipe",
     });

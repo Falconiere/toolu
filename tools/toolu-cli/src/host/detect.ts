@@ -15,7 +15,7 @@ const PROBED = ["claude", "codex", OPENCODE_BIN] as const;
  * The adapter for an explicitly requested host.
  *
  * OpenCode has its own plugin CLI (`opencode plugin add|list|remove`), but it
- * installs npm packages rather than marketplace entries, so the 13 bash plugins
+ * installs npm packages rather than marketplace entries, so the 14 bash plugins
  * are not addressable through it. Its adapter installs the `@toolu/opencode`
  * bridge instead, and does not exist yet.
  */
