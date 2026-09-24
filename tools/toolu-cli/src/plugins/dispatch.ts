@@ -79,7 +79,12 @@ async function handleInstall(
   let requested = args.names;
   if (requested.length === 0 && context.interactive) {
     const pick = context.selectPlugins ?? defaultSelectPlugins;
-    requested = await pick(marketplace.plugins);
+    try {
+      requested = await pick(marketplace.plugins);
+    } catch (error) {
+      if (error instanceof CliError && error.code === EXIT.cancelled) return EXIT.cancelled;
+      throw error;
+    }
   }
   const sections: { host: Host; steps: Awaited<ReturnType<typeof installPlugins>> }[] = [];
   for (const host of hosts) {

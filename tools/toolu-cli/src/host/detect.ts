@@ -85,7 +85,12 @@ export async function resolveHosts(
   }
 
   const candidates = available.filter(hasAdapter);
-  if (candidates.length === 0) return available.slice(0, 1);
+  // Only unwired hosts on PATH (today: opencode). A single one still surfaces so
+  // dispatch can explain the missing adapter; more than one is ambiguity.
+  if (candidates.length === 0) {
+    if (available.length === 1) return available.slice(0, 1);
+    throw ambiguousError(available);
+  }
   if (candidates.length === 1) {
     const only = candidates[0];
     if (only === undefined) throw ambiguousError(available);

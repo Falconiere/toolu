@@ -84,4 +84,23 @@ describe("dispatchPlugins install", () => {
     expect(pluginsAsked).toBe(false);
     expect(chunks.join("")).toContain("jira");
   });
+
+  test("cancelling the plugin picker returns exit 130", async () => {
+    const args = parseArgs(["install", "--dry-run", "--host", "claude"]);
+    if (args.verb === undefined) throw new Error("verb missing");
+    const { CliError } = await import("../../exit");
+    const code = await dispatchPlugins(
+      { ...args, verb: args.verb },
+      {
+        manifestPath,
+        interactive: true,
+        env: stubEnv,
+        write: () => undefined,
+        selectPlugins: async () => {
+          throw new CliError(EXIT.cancelled, "cancelled");
+        },
+      },
+    );
+    expect(code).toBe(EXIT.cancelled);
+  });
 });
