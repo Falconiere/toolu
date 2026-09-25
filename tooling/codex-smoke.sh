@@ -51,7 +51,7 @@ grep -Eq '^toolu[[:space:]]' "$SMOKE_HOME/marketplaces.txt" || fail 'toolu marke
 
 run_codex plugin list --available --json > "$SMOKE_HOME/available.json"
 available_count="$(jq '.available | length' "$SMOKE_HOME/available.json")"
-[ "$available_count" -eq 14 ] || fail "expected 14 available plugins, found $available_count"
+[ "$available_count" -eq 15 ] || fail "expected 15 available plugins, found $available_count"
 expected_names="$(for manifest in "$ROOT"/plugins/*/.codex-plugin/plugin.json; do jq -r '.name' "$manifest"; done | sort)"
 available_names="$(jq -r '.available[].name' "$SMOKE_HOME/available.json" | sort)"
 [ "$available_names" = "$expected_names" ] || fail 'available plugin names differ from checked-in manifests'
@@ -67,7 +67,7 @@ done
 run_codex plugin list --json > "$SMOKE_HOME/installed.json"
 installed_count="$(jq '.installed | length' "$SMOKE_HOME/installed.json")"
 installed_names="$(jq -r '.installed[].name' "$SMOKE_HOME/installed.json" | sort)"
-[ "$installed_count" -eq 14 ] || fail "expected 14 installed plugins, found $installed_count"
+[ "$installed_count" -eq 15 ] || fail "expected 15 installed plugins, found $installed_count"
 [ "$installed_names" = "$expected_names" ] || fail 'installed plugin names differ from checked-in manifests'
 printf 'codex-smoke: installed=%d\n' "$installed_count"
 

@@ -11,7 +11,7 @@ setup() {
   codex plugin marketplace add "$ROOT" --json >/dev/null
 }
 
-@test "warns when toolu and pr-babysit are missing" {
+@test "warns when delivery-flow and its dependencies are missing" {
   bin="$BATS_TEST_TMPDIR/bin"
   mkdir -p "$bin"
   printf '%s\n' '#!/usr/bin/env bash' 'printf "%s\n" "{\"installed\":[]}"' >"$bin/codex"
@@ -22,14 +22,16 @@ setup() {
   [ "$status" -eq 0 ]
   [ "$(jq -r '.hookSpecificOutput.hookEventName' <<<"$output")" = SessionStart ]
   [[ "$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")" == *"codex plugin add toolu@toolu"* ]]
+  [[ "$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")" == *"codex plugin add delivery-flow@toolu"* ]]
+  [[ "$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")" == *"codex plugin add toolu-review@toolu"* ]]
   [[ "$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")" == *"codex plugin add pr-babysit@toolu"* ]]
 }
 
-@test "silent when toolu and pr-babysit are installed" {
+@test "silent when delivery-flow and its dependencies are installed" {
   bin="$BATS_TEST_TMPDIR/bin"
   mkdir -p "$bin"
   printf '%s\n' '#!/usr/bin/env bash' \
-    'printf "%s\n" "{\"installed\":[{\"pluginId\":\"toolu@toolu\",\"installed\":true,\"enabled\":true},{\"pluginId\":\"pr-babysit@toolu\",\"installed\":true,\"enabled\":true}]}"' \
+    'printf "%s\n" "{\"installed\":[{\"pluginId\":\"toolu@toolu\",\"installed\":true,\"enabled\":true},{\"pluginId\":\"delivery-flow@toolu\",\"installed\":true,\"enabled\":true},{\"pluginId\":\"toolu-review@toolu\",\"installed\":true,\"enabled\":true},{\"pluginId\":\"pr-babysit@toolu\",\"installed\":true,\"enabled\":true}]}"' \
     >"$bin/codex"
   chmod +x "$bin/codex"
 

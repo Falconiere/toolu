@@ -233,6 +233,19 @@ if [ ! -f "$_gate_notice" ] && [ "$_TOOLU_HAS_JQ" = "1" ] \
   mkdir -p "$_gate_notice_dir" 2>/dev/null && : > "$_gate_notice" 2>/dev/null
 fi
 
+# The seven former public workflow skills now live as private references in
+# delivery-flow. Tell users the replacement once, in the session that
+# would otherwise leave the old invocations failing without a useful hint.
+_flow_notice="$_config_root/toolu/.delivery-flow-migration-v7"
+if [ ! -f "$_flow_notice" ]; then
+  if [ "$(toolu_host)" = codex ]; then
+    parts+=("WARN: toolu workflow skills moved to delivery-flow (brainstorm, spec, spec-review, plan, plan-review, execution, test). Install with \`npx @toolu/plugins install delivery-flow --host codex\`, then invoke \`\$delivery-flow:delivery-flow\`.")
+  else
+    parts+=("WARN: toolu workflow skills moved to delivery-flow (brainstorm, spec, spec-review, plan, plan-review, execution, test). Install with \`/plugin install delivery-flow@toolu\`, then invoke \`/delivery-flow:delivery-flow\`.")
+  fi
+  mkdir -p "${_flow_notice%/*}" 2>/dev/null && : > "$_flow_notice" 2>/dev/null
+fi
+
 # Warn when optional tools referenced by docs/skills are missing — keeps the
 # session start honest about which capabilities are actually available.
 HAS_ASTGREP="$(detect_ast_grep)"

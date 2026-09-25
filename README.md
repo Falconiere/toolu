@@ -12,7 +12,7 @@ AI writes code fast — then skips the parts that keep a codebase alive: oversiz
 [![Hosts](https://img.shields.io/badge/hosts-Claude%20Code%20%7C%20Codex-d97757)](#install)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
-[Why](#why) · [The quality gate](#the-quality-gate) · [Install](#install) · [What's inside](#whats-inside) · [Workflow skills](#workflow-skills) · [Architecture](#architecture) · [Configuration](#configuration)
+[Why](#why) · [The quality gate](#the-quality-gate) · [Install](#install) · [What's inside](#whats-inside) · [Delivery workflow](#delivery-workflow) · [Architecture](#architecture) · [Configuration](#configuration)
 
 </div>
 
@@ -25,7 +25,7 @@ Your AI coding agent is a superb pair-programmer, but left alone it optimizes fo
 toolu moves those rules out of your head and into the tool:
 
 - **Hooks enforce on every edit** — a post-edit quality gate checks each file the agent touches and **blocks the session from moving on while any error, warning, or test failure exists** — even in unrelated files.
-- **Skills enforce a process** — a six-stage delivery chain with write/review checkpoints before execution, so design happens before code and review happens before delivery.
+- **Skills enforce a process** — one delivery-flow skill with write/review checkpoints before execution, so design happens before code and review happens before delivery.
 - **A registry keeps it modular** — drop in a domain plugin (Rust rules, TypeScript rules, structural search) and its hook modules register themselves into the core engine, fail-closed, with zero wiring.
 
 It's a personal bundle, built in the open, MIT-licensed. Take the whole thing or lift the pieces you like.
@@ -158,7 +158,7 @@ Do not install comemory via toolu. Working on toolu itself? Use the git-clone co
 ```
 <!-- /install-everything:opencode -->
 
-> **Note** — `pr-babysit`, `python-quality`, `rust-quality`, and `ts-quality` depend on `toolu`. The other catalog plugins are standalone. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
+> **Note** — `delivery-flow` depends on `toolu`, `toolu-review`, and `pr-babysit`; `epic-orchestrator` uses `delivery-flow`. Quality plugins and `pr-babysit` depend on `toolu`. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
 
 > **Deprecation:** comemory host integration now lives in
 > [Falconiere/comemory](https://github.com/Falconiere/comemory). First obtain a
@@ -182,6 +182,7 @@ Codex discovers the same canonical workflows as namespaced skills:
 
 - `$toolu:commit`, `$toolu:review-and-commit`
 - `$statusline:status`
+- `$delivery-flow:delivery-flow` for checked delivery
 - `$pr-babysit:babysit`
 - `$toolu:setup` to preview, install, update, back up, or remove the five bundled Codex agent profiles
 
@@ -193,7 +194,7 @@ in this release. Custom agent profiles are installed locally under
 
 ## What's inside
 
-Fourteen plugins, one marketplace. Every plugin ships synchronized Claude and
+Fifteen plugins, one marketplace. Every plugin ships synchronized Claude and
 Codex manifests, and release-please holds all of them — plus the workspace
 packages and the root — at one version matching the git tag, so a plugin's
 version is always the repository's. Install the core alone, or add the domain
@@ -201,7 +202,7 @@ plugins.
 
 | Group | Plugin | What it does |
 |--------|--------|--------------|
-| Core | **`toolu`** | Registry-driven hook engine, adaptive delivery workflow, commit workflows, model routing, push-review gate, and custom-agent templates. |
+| Core | **`toolu`** | Registry-driven hook engine, commit workflows, model routing, push-review gate, and custom-agent templates. |
 | Quality gate | **`rust-quality`** | Rust post-edit checks — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests. |
 | Quality gate | **`ts-quality`** | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
 | Quality gate | **`python-quality`** | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
@@ -212,6 +213,7 @@ plugins.
 | Knowledge | **`jev`** | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores a script can branch on. |
 | Workflow | **`jira`** | Jira Cloud and Server/DC search plus safe issue workflow operations. |
 | Workflow | **`toolu-review`** | Pre-push review matching CI `code-review@v8` (Jev-enabled) and writing review attestations. |
+| Workflow | **`delivery-flow`** | One public skill for brainstorm through PR and babysit, with private phase guidance. |
 | Workflow | **`pr-babysit`** | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
 | Workflow | **`epic-orchestrator`** | Drive a GitHub epic to merged PRs via herdr workers, dependency waves, and a merge gate. |
 | Status | **`statusline`** | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
@@ -224,28 +226,16 @@ Beyond the plugins, the core (`toolu`) also ships:
 - **Model routing** — delegated work is tiered by its *class*, not its phrasing. Claude defaults to Haiku/Sonnet/Opus aliases; Codex defaults to Luna/medium for mechanical work, Terra/medium for exploration and implementation, Terra/high for review, and Sol/high for synthesis and architecture. Both mappings are configurable in [config](docs/config.md#model-routing-models).
 - **Tier-pinned agents** — Claude reads the bundled agent definitions directly. `$toolu:setup` manages Codex TOML profiles for `quick-task` (Luna/medium, read-only), `deep-explore` and `research-agent` (Terra/medium, read-only), `implementer` (Terra/medium, workspace-write), and `architect` (Sol/high, read-only), with previews, conflict refusal, timestamped backups, and recoverable removal.
 
-## Workflow skills
+## Delivery workflow
 
-A native, opinionated delivery chain. `brainstorm` is optional upstream triage; the delivery path has a **write step and a review step** before execution, which owns local readiness and the verified PR handoff:
+Install `delivery-flow@toolu`, then invoke `/delivery-flow:delivery-flow` in Claude Code or `$delivery-flow:delivery-flow` in Codex. Invocation authorizes commit, push, PR creation, and babysit after the gates pass. The single public skill reads private phase references and runs every phase, including for small fixes: brainstorm → spec → spec review → plan → plan review → execution with real-data tests → PR → babysit.
 
 ```mermaid
 flowchart LR
-    B(brainstorm, optional) -.-> S(spec) --> SR(spec-review) --> P(plan) --> PR(plan-review) --> E(execution) --> PB(pr-babysit)
-    T(test, reusable execution-time method) -.-> E
-    style B fill:#d97757,color:#fff,stroke:none
-    style T fill:#6e7681,color:#fff,stroke:none
-    style PB fill:#3fb950,color:#fff,stroke:none
-    style SR fill:#1f6feb,color:#fff,stroke:none
-    style PR fill:#1f6feb,color:#fff,stroke:none
+    B(brainstorm) --> S(spec) --> SR(spec-review) --> P(plan) --> PR(plan-review) --> E(execution with real-data tests) --> D(PR) --> PB(pr-babysit)
 ```
 
-- **`brainstorm`** (Brainstorm) is optional upstream triage: it uses adaptive materiality triage and a default-and-proceed baseline, skipping mechanical work and reserving full analysis for material design risk.
-- **`spec`** writes a design contract to `docs/toolu/specs/`; **`spec-review`** audits it.
-- **`plan`** turns the spec into concrete steps; **`plan-review`** checks it's executable.
-- **`execution`** drives the plan with real-data verification, complete acceptance-criteria and documentation checks, local review readiness, and—when delivery is authorized—the automatic `pr-babysit` handoff.
-- **`test`** is a reusable execution-time method for real-data tests (no mocks), colocated by language; it is not a terminal phase.
-
-Mechanical work (renames, dep bumps, one-liners) skips the ceremony — each skill declares when *not* to fire.
+Spec and plan reviews must approve before the next phase. The execution phase verifies ledger steps, real-data tests, documentation, local review, and the green verdict. A rejection or failed check stops the flow at that phase; resume there and refresh stale evidence. Missing GitHub auth, a non-default branch, a dependency, or a gate is reported as a specific delivery blocker.
 
 The workflow skills, plus `ast-grep`, `context7`, and `exa-search`, all run off the same shell hook engine. The standalone `deep-research` skill combines `exa-search` and `context7` fan-out into cited reports under `docs/research/`.
 
@@ -283,8 +273,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     ├── toolu/                  # Core plugin: hook engine + process gates
     │   ├── .claude-plugin/     # Claude Code plugin.json manifest
     │   ├── .codex-plugin/      # Codex plugin.json manifest
-    │   ├── skills/             # brainstorm (optional), spec(+review), plan(+review),
-    │   │                       #   execution, test (reusable), deep-research
+    │   ├── skills/             # core orchestration, debug, research, and command skills
     │   ├── agents/             # quick-task, deep-explore, research-agent, implementer, architect
     │   ├── commands/           # commit, review-and-commit
     │   ├── hooks/              # PreToolUse / PostToolUse / SessionStart … + lib/
@@ -297,6 +286,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     ├── ts-quality/             # TypeScript PostToolUse quality fragments, assembled at SessionStart
     ├── python-quality/         # Python PostToolUse quality fragments, assembled at SessionStart
     ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook
+    ├── delivery-flow/          # one public skill, private phase references
     ├── pr-babysit/             # Claude command + Codex skill + strict shared workflow
     └── toolu-review/            # toolu-review:review skill + push-review state writer
 ```

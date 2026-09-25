@@ -84,16 +84,10 @@ run_docs() {
 
 run_skills() {
   # Trimmed skills: word ceiling + trigger phrases that MUST survive the trim.
-  check_skill brainstorm       plugins/toolu/skills/brainstorm/SKILL.md       90 "where do I even start;help me scope it;think through the approach and tradeoffs"
-  check_skill spec             plugins/toolu/skills/spec/SKILL.md             70 "write the spec;document the design"
-  check_skill spec-review      plugins/toolu/skills/spec-review/SKILL.md      60 "review the spec;poke holes in this spec"
+  check_skill delivery-flow    plugins/delivery-flow/skills/delivery-flow/SKILL.md  50 "implement and deliver;real-data execution;PR"
   check_skill deep-research    plugins/toolu/skills/deep-research/SKILL.md    90 "deep research;cited report"
-  check_skill plan-review      plugins/toolu/skills/plan-review/SKILL.md      55 "review the plan;poke holes in the plan"
   check_skill toolu-review      plugins/toolu-review/skills/review/SKILL.md         65 "review before push"
   # Already-lean skills: word ceiling only, lock against regrowth.
-  check_skill plan             plugins/toolu/skills/plan/SKILL.md             60 ""
-  check_skill execution        plugins/toolu/skills/execution/SKILL.md        60 ""
-  check_skill test             plugins/toolu/skills/test/SKILL.md             60 ""
   check_skill ast-grep         plugins/ast-grep/skills/ast-grep/SKILL.md          40 ""
   check_skill jev              plugins/jev/skills/jev/SKILL.md                    60 ""
 }

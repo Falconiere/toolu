@@ -98,11 +98,11 @@ pl_cmd_preflight() {
   local plan_status
   plan_status=$(pl_doc_field "$plan_abs" Status)
   if [ -z "$plan_status" ]; then
-    echo "preflight: plan has no **Status:** header ($plan) — run /toolu:plan-review to stamp it" >&2
+    echo "preflight: plan has no **Status:** header ($plan) — run /delivery-flow:delivery-flow (plan review phase) to stamp it" >&2
     return 1
   fi
   if ! pl_status_is_approved "$plan_status"; then
-    echo "preflight: plan not approved (Status: $plan_status) — run /toolu:plan-review" >&2
+    echo "preflight: plan not approved (Status: $plan_status) — run /delivery-flow:delivery-flow (plan review phase)" >&2
     return 1
   fi
 
@@ -129,7 +129,7 @@ pl_cmd_preflight() {
   local spec_status
   spec_status=$(pl_doc_field "$spec_abs" Status)
   if ! pl_status_is_approved "$spec_status"; then
-    echo "preflight: spec $spec not approved (Status: ${spec_status:-none}) — run /toolu:spec-review" >&2
+    echo "preflight: spec $spec not approved (Status: ${spec_status:-none}) — run /delivery-flow:delivery-flow (spec review phase)" >&2
     return 1
   fi
 

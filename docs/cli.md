@@ -6,7 +6,7 @@ Interactive host and plugin prompts are live on a TTY. OpenCode wiring is not
 built yet.
 
 `--host opencode` exits `2`. OpenCode has its own plugin CLI, but it installs npm
-packages rather than marketplace entries, so the thirteen bash plugins are not
+packages rather than marketplace entries, so the fifteen bash plugins are not
 addressable through it — what it installs is the `@toolu/opencode` bridge. Until
 the adapter lands, run `opencode plugin add @toolu/opencode` and write
 `.opencode/toolu/plugins.json` yourself; see [docs/opencode.md](opencode.md).
@@ -100,9 +100,10 @@ npx @toolu/plugins update [name...]    Update only what is behind the marketplac
 ## Behavior worth knowing
 
 **Install order comes from the catalog, not the CLI.** `.claude-plugin/marketplace.json`
-declares that `python-quality`, `rust-quality`, `ts-quality`, `pr-babysit`, and
-`epic-orchestrator` depend on `toolu` (and `epic-orchestrator` also depends on
-`pr-babysit`). Requesting a dependent installs its dependency first. Adding a
+declares that `python-quality`, `rust-quality`, `ts-quality`, `pr-babysit`,
+`delivery-flow`, and `epic-orchestrator` depend on `toolu`. `delivery-flow`
+also depends on `toolu-review` and `pr-babysit`; `epic-orchestrator` depends on
+`delivery-flow` and `pr-babysit`. Requesting a dependent installs its dependency first. Adding a
 plugin to the catalog needs no CLI change.
 
 **Already installed is not an error.** A plugin already present is reported and

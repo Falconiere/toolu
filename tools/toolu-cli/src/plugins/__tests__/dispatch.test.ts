@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "../../args/parse";
@@ -10,10 +10,8 @@ const REPO_ROOT = resolve(import.meta.dir, "../../../../..");
 const manifestPath = resolve(REPO_ROOT, ".claude-plugin/marketplace.json");
 
 const stubDir = await mkdtemp(join(tmpdir(), "toolu-dispatch-hosts-"));
-await writeFile(join(stubDir, "claude"), "#!/bin/sh\n", { mode: 0o755 });
-await writeFile(join(stubDir, "codex"), "#!/bin/sh\n", { mode: 0o755 });
-await chmod(join(stubDir, "claude"), 0o755);
-await chmod(join(stubDir, "codex"), 0o755);
+await symlink("/usr/bin/true", join(stubDir, "claude"));
+await symlink("/usr/bin/true", join(stubDir, "codex"));
 const stubEnv = { ...process.env, PATH: stubDir };
 afterAll(async () => {
   await rm(stubDir, { recursive: true, force: true });

@@ -20,6 +20,7 @@ while IFS= read -r cfg; do
   ) || status=1
 done < <(
   find "$ROOT/tooling" "$ROOT/packages" "$ROOT/tools" "$ROOT/plugins" \
-    -name .oxlintrc.json -not -path '*/node_modules/*' | sort
+    -name .oxlintrc.json -not -path '*/node_modules/*' \
+    -not -path "$ROOT/tools/toolu-opencode/plugins/*" | sort
 )
 exit "$status"

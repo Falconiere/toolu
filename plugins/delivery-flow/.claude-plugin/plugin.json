@@ -1,0 +1,15 @@
+{
+  "name": "delivery-flow",
+  "version": "7.1.0",
+  "description": "One dual-host delivery skill for brainstorm, approved spec and plan, real-data execution, PR creation, and pr-babysit handoff.",
+  "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+  "homepage": "https://github.com/falconiere/toolu",
+  "repository": "https://github.com/falconiere/toolu.git",
+  "license": "MIT",
+  "keywords": ["delivery", "workflow", "skills"],
+  "dependencies": [
+    { "name": "toolu", "marketplace": "toolu" },
+    { "name": "toolu-review", "marketplace": "toolu" },
+    { "name": "pr-babysit", "marketplace": "toolu" }
+  ]
+}

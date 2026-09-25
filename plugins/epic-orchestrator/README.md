@@ -1,8 +1,7 @@
 # epic-orchestrator
 
 Drive a GitHub epic to merged PRs. Builds the sub-issue dependency graph,
-launches herdr worktrees with workers (spec → plan → execution →
-pr-babysit), merges green PRs, and cleans up until the epic is complete.
+launches herdr worktrees with workers (delivery-flow from brainstorm through PR and babysit), merges green PRs, and cleans up until the epic is complete.
 
 Works on **Claude Code**, **Codex**, **Cursor Agent**, and **OpenCode**. The
 orchestrator skill runs on whichever host you invoke it from; workers still
@@ -10,7 +9,7 @@ default to `herdr agent start --kind claude` (override with `--kind`).
 
 ## Install
 
-Requires the `toolu` and `pr-babysit` plugins. Runtime: `bun`, `gh`, and `herdr`
+Requires `delivery-flow` and its `toolu`, `toolu-review`, and `pr-babysit` dependencies. Runtime: `bun`, `gh`, and `herdr`
 (with `HERDR_ENV=1` inside a herdr pane).
 
 ### Claude Code
@@ -22,9 +21,7 @@ Requires the `toolu` and `pr-babysit` plugins. Runtime: `bun`, `gh`, and `herdr`
 ### Codex
 
 ```bash
-codex plugin add toolu@toolu
-codex plugin add pr-babysit@toolu
-codex plugin add epic-orchestrator@toolu
+npx @toolu/plugins install delivery-flow epic-orchestrator --host codex
 ```
 
 ### Cursor Agent
@@ -42,7 +39,7 @@ opencode plugin add @toolu/opencode
 Enable the bash plugins in `<project>/.opencode/toolu/plugins.json`:
 
 ```json
-{ "version": 1, "enabled": ["toolu", "pr-babysit", "epic-orchestrator"] }
+{ "version": 1, "enabled": ["delivery-flow", "epic-orchestrator"] }
 ```
 
 Wire OpenCode to the generated surface under
@@ -58,7 +55,7 @@ generated skill.
   orchestrator merges and advances the graph.
 - **Bun CLIs** under `scripts/` — `epic-graph.ts`, `launch-issue.ts`,
   `epic-watch.ts`, `merge-gate.ts`, plus `finish_issue.sh` / `report.sh`.
-- **Codex SessionStart** — warns when `toolu` or `pr-babysit` is missing.
+- **Codex SessionStart** — warns when `delivery-flow` or its dependencies are missing.
 
 ## State directory
 
