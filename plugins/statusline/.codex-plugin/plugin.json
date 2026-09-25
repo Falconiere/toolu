@@ -1,6 +1,6 @@
 {
   "name": "statusline",
-  "version": "7.1.0",
+  "version": "7.2.0",
   "description": "Host-native project status: a persistent Claude Code statusline plus an explicit Codex status skill for repository, gate, git, comemory, and Jev readiness. Standalone, no dependencies.",
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json"

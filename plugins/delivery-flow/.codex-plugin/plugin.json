@@ -1,11 +1,20 @@
 {
   "name": "delivery-flow",
-  "version": "7.1.0",
+  "version": "7.2.0",
   "description": "One dual-host delivery skill for brainstorm, approved spec and plan, real-data execution, PR creation, and pr-babysit handoff.",
   "skills": "./skills/",
   "dependencies": [
-    { "name": "toolu", "marketplace": "toolu" },
-    { "name": "toolu-review", "marketplace": "toolu" },
-    { "name": "pr-babysit", "marketplace": "toolu" }
+    {
+      "name": "toolu",
+      "marketplace": "toolu"
+    },
+    {
+      "name": "toolu-review",
+      "marketplace": "toolu"
+    },
+    {
+      "name": "pr-babysit",
+      "marketplace": "toolu"
+    }
   ]
 }
