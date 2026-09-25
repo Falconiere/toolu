@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.2.0](https://github.com/Falconiere/toolu/compare/v7.1.0...v7.2.0) (2026-09-25)
+
+
+### Features
+
+* **delivery-flow:** unify delivery workflow ([#245](https://github.com/Falconiere/toolu/issues/245)) ([63a4340](https://github.com/Falconiere/toolu/commit/63a4340d3a3c2fe764bdb1409138e09a2a961db0))
+
 ## [7.1.0](https://github.com/Falconiere/toolu/compare/v7.0.0...v7.1.0) (2026-09-24)
 
 
