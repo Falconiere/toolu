@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.1.0](https://github.com/Falconiere/toolu/compare/v7.0.0...v7.1.0) (2026-09-24)
+
+
+### Features
+
+* **epic-orchestrator:** marketplace plugin with Bun CLIs ([#243](https://github.com/Falconiere/toolu/issues/243)) ([3389675](https://github.com/Falconiere/toolu/commit/33896753b15443e4f3a41e559a1ad5c184e7749b))
+
 ## [7.0.0](https://github.com/Falconiere/toolu/compare/v6.8.2...v7.0.0) (2026-09-24)
 
 

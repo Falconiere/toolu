@@ -1,6 +1,6 @@
 {
   "name": "@toolu/core",
-  "version": "7.0.0",
+  "version": "7.1.0",
   "description": "Portable decision, policy and bridge core shared by toolu's host adapters.",
   "keywords": [
     "toolu",
