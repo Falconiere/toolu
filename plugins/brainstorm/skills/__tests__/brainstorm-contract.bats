@@ -65,6 +65,8 @@ setup() {
   grep -Fq 'request_user_input' "$BRAINSTORM"
   grep -Fq 'Jev' "$BRAINSTORM"
   ! grep -Fq 'AskUserQuestion` —' "$BRAINSTORM"
+  grep -Fq 'structured question' "$ROOT/plugins/toolu/workflows/host-mapping.md"
+  grep -Fq 'goal-defining or hard-to-reverse fork' "$ROOT/plugins/toolu/workflows/host-mapping.md"
 }
 
 @test "brainstorm manifests share identity and declare no dependencies" {

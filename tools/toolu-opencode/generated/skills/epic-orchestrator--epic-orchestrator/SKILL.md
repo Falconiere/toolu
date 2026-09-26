@@ -58,7 +58,7 @@ Stop and report the first check that fails:
 - `command -v bun` succeeds.
 - `gh auth status` and `herdr status` both succeed (herdr server is running).
 - Your skill list includes `delivery-flow:delivery-flow` and its `toolu`,
-  `toolu-review`, and `pr-babysit` dependencies (or the OpenCode-generated equivalents). Workers run as
+  `toolu-review`, `pr-babysit`, and `brainstorm` dependencies (or the OpenCode-generated equivalents). Workers run as
   herdr agents (default `--kind claude`) and need those skills in the worker
   host.
 
