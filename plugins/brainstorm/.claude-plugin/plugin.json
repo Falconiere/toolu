@@ -1,0 +1,18 @@
+{
+  "name": "brainstorm",
+  "version": "7.2.0",
+  "description": "Think a change through before building: evidence-backed triage, alternatives, trade-offs, and a recommended approach, without editing code. Standalone, and phase 1 of delivery-flow. No dependencies.",
+  "author": {
+    "name": "Falconiere Barbosa",
+    "email": "hello@falconiere.io"
+  },
+  "homepage": "https://github.com/falconiere/toolu",
+  "repository": "https://github.com/falconiere/toolu.git",
+  "license": "MIT",
+  "keywords": [
+    "brainstorm",
+    "design",
+    "workflow",
+    "skills"
+  ]
+}

@@ -100,6 +100,15 @@
       ]
     },
     {
+      "name": "brainstorm",
+      "source": "./plugins/brainstorm",
+      "description": "Think a change through before building: evidence-backed triage, alternatives, trade-offs, and a recommended approach, without editing code. Standalone, and phase 1 of delivery-flow. No dependencies.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["brainstorm", "design", "workflow", "skills"],
+      "license": "MIT"
+    },
+    {
       "name": "delivery-flow",
       "source": "./plugins/delivery-flow",
       "description": "One dual-host delivery skill for brainstorm, approved spec and plan, real-data execution, PR creation, and pr-babysit handoff.",
@@ -110,7 +119,8 @@
       "dependencies": [
         { "name": "toolu", "marketplace": "toolu" },
         { "name": "toolu-review", "marketplace": "toolu" },
-        { "name": "pr-babysit", "marketplace": "toolu" }
+        { "name": "pr-babysit", "marketplace": "toolu" },
+        { "name": "brainstorm", "marketplace": "toolu" }
       ]
     },
     {

@@ -30,7 +30,6 @@ ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
 
 @test "toolu skills map structured questions and delegation through the host reference" {
   for skill in \
-    "$ROOT/plugins/delivery-flow/skills/delivery-flow/references/brainstorm.md" \
     "$ROOT/plugins/toolu/skills/deep-research/SKILL.md" \
     "$ROOT/plugins/toolu/skills/orchestrator/SKILL.md" \
     "$ROOT/plugins/delivery-flow/skills/delivery-flow/references/plan.md"; do
@@ -38,7 +37,7 @@ ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
   done
 
   ! grep -Fq 'alone holds the Agent tool' "$ROOT/plugins/toolu/skills/orchestrator/SKILL.md"
-  ! grep -Fq 'AskUserQuestion` —' "$ROOT/plugins/delivery-flow/skills/delivery-flow/references/brainstorm.md"
+  ! grep -Fq 'AskUserQuestion` —' "$ROOT/plugins/brainstorm/skills/brainstorm/SKILL.md"
 }
 
 @test "published helpers and registry modules preserve Codex config-root precedence" {

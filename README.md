@@ -158,7 +158,7 @@ Do not install comemory via toolu. Working on toolu itself? Use the git-clone co
 ```
 <!-- /install-everything:opencode -->
 
-> **Note** — `delivery-flow` depends on `toolu`, `toolu-review`, and `pr-babysit`; `epic-orchestrator` uses `delivery-flow`. Quality plugins and `pr-babysit` depend on `toolu`. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
+> **Note** — `delivery-flow` depends on `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm`; `epic-orchestrator` uses `delivery-flow`. Quality plugins and `pr-babysit` depend on `toolu`. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
 
 > **Deprecation:** comemory host integration now lives in
 > [Falconiere/comemory](https://github.com/Falconiere/comemory). First obtain a
@@ -182,6 +182,7 @@ Codex discovers the same canonical workflows as namespaced skills:
 
 - `$toolu:commit`, `$toolu:review-and-commit`
 - `$statusline:status`
+- `$brainstorm:brainstorm` to think a change through without delivering it
 - `$delivery-flow:delivery-flow` for checked delivery
 - `$pr-babysit:babysit`
 - `$toolu:setup` to preview, install, update, back up, or remove the five bundled Codex agent profiles
@@ -194,7 +195,7 @@ in this release. Custom agent profiles are installed locally under
 
 ## What's inside
 
-Fifteen plugins, one marketplace. Every plugin ships synchronized Claude and
+Sixteen plugins, one marketplace. Every plugin ships synchronized Claude and
 Codex manifests, and release-please holds all of them — plus the workspace
 packages and the root — at one version matching the git tag, so a plugin's
 version is always the repository's. Install the core alone, or add the domain
@@ -213,6 +214,7 @@ plugins.
 | Knowledge | **`jev`** | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores a script can branch on. |
 | Workflow | **`jira`** | Jira Cloud and Server/DC search plus safe issue workflow operations. |
 | Workflow | **`toolu-review`** | Pre-push review matching CI `code-review@v8` (Jev-enabled) and writing review attestations. |
+| Workflow | **`brainstorm`** | Evidence-backed design triage, alternatives, and a recommended approach — standalone, and phase 1 of delivery-flow. |
 | Workflow | **`delivery-flow`** | One public skill for brainstorm through PR and babysit, with private phase guidance. |
 | Workflow | **`pr-babysit`** | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
 | Workflow | **`epic-orchestrator`** | Drive a GitHub epic to merged PRs via herdr workers, dependency waves, and a merge gate. |
@@ -228,12 +230,14 @@ Beyond the plugins, the core (`toolu`) also ships:
 
 ## Delivery workflow
 
-Install `delivery-flow@toolu`, then invoke `/delivery-flow:delivery-flow` in Claude Code or `$delivery-flow:delivery-flow` in Codex. Invocation authorizes commit, push, PR creation, and babysit after the gates pass. The single public skill reads private phase references and runs every phase, including for small fixes: brainstorm → spec → spec review → plan → plan review → execution with real-data tests → PR → babysit.
+Install `delivery-flow@toolu`, then invoke `/delivery-flow:delivery-flow` in Claude Code or `$delivery-flow:delivery-flow` in Codex. Invocation authorizes commit, push, PR creation, and babysit after the gates pass. The single public skill reads private phase references, runs `brainstorm` as phase 1, and runs every phase, including for small fixes: brainstorm → spec → spec review → plan → plan review → execution with real-data tests → PR → babysit.
 
 ```mermaid
 flowchart LR
     B(brainstorm) --> S(spec) --> SR(spec-review) --> P(plan) --> PR(plan-review) --> E(execution with real-data tests) --> D(PR) --> PB(pr-babysit)
 ```
+
+To think a change through without starting delivery, invoke `/brainstorm:brainstorm` (Claude Code) or `$brainstorm:brainstorm` (Codex). It posts a capsule in chat — outcome, defaults, evidence, risk, next step — and writes `docs/toolu/brainstorms/<date>-<slug>.md` only on its Full path or when you ask.
 
 Spec and plan reviews must approve before the next phase. The execution phase verifies ledger steps, real-data tests, documentation, local review, and the green verdict. A rejection or failed check stops the flow at that phase; resume there and refresh stale evidence. Missing GitHub auth, a non-default branch, a dependency, or a gate is reported as a specific delivery blocker.
 
@@ -286,6 +290,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     ├── ts-quality/             # TypeScript PostToolUse quality fragments, assembled at SessionStart
     ├── python-quality/         # Python PostToolUse quality fragments, assembled at SessionStart
     ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook
+    ├── brainstorm/             # brainstorm skill + design question bank
     ├── delivery-flow/          # one public skill, private phase references
     ├── pr-babysit/             # Claude command + Codex skill + strict shared workflow
     └── toolu-review/            # toolu-review:review skill + push-review state writer

@@ -98,6 +98,16 @@
         },
         {
           "type": "json",
+          "path": "plugins/brainstorm/.claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/brainstorm/.codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "plugins/delivery-flow/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
         },

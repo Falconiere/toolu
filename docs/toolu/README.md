@@ -18,7 +18,7 @@ The registry-driven hook engine, the `push-review` gate, and the `deep-explore` 
 
 ### 1. Delivery Flow
 
-The separate `delivery-flow` plugin exposes one skill: `/delivery-flow:delivery-flow` in Claude Code or `$delivery-flow:delivery-flow` in Codex. It requires brainstorm → spec → spec review → plan → plan review → execution with real-data tests → PR → babysit for every task. Private references retain the phase procedures and approval checks. Brainstorm uses a default-and-proceed baseline; small fixes receive concise spec and ledger artifacts. Rejected reviews and failed gates stop at that phase, and invocation authorizes checked delivery.
+The separate `delivery-flow` plugin exposes one skill: `/delivery-flow:delivery-flow` in Claude Code or `$delivery-flow:delivery-flow` in Codex. It requires brainstorm → spec → spec review → plan → plan review → execution with real-data tests → PR → babysit for every task. Phase 1 runs the standalone `brainstorm` plugin (`/brainstorm:brainstorm`), which delivery-flow depends on; private references retain the remaining phase procedures and approval checks. Brainstorm uses a default-and-proceed baseline; small fixes receive concise spec and ledger artifacts. Rejected reviews and failed gates stop at that phase, and invocation authorizes checked delivery.
 
 ### 2. Orchestrator
 

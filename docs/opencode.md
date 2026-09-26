@@ -15,7 +15,7 @@ root to its own package directory. Choose which bash plugins are active with
 { "version": 1, "enabled": ["toolu"] }
 ```
 
-`delivery-flow`, `pr-babysit`, and `epic-orchestrator` ship in the committed OpenCode surface —
+`delivery-flow`, `brainstorm`, `pr-babysit`, and `epic-orchestrator` ship in the committed OpenCode surface —
 add them to `enabled` when you want those workflows (dependencies close
 automatically).
 
