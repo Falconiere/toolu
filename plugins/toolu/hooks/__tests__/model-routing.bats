@@ -134,7 +134,7 @@ _run_codex_hook() {
   local root="${BATS_TEST_DIRNAME}/../../../.."
   local refs="$root/plugins/delivery-flow/skills/delivery-flow/references"
   [ -f "$refs/model-routing.md" ]
-  for phase in brainstorm plan execution; do
+  for phase in plan execution; do
     grep -q 'model-routing.md' "$refs/$phase.md"
   done
 }

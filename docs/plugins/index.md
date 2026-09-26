@@ -12,7 +12,7 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 4 | [**context7**](../context7/README.md) | Knowledge | — | Live library documentation & code-example lookup |
 | 5 | [**exa-search**](../exa-search/README.md) | Knowledge | — | Web / code / URL search plus deep research |
 | 6 | [**jira**](../jira/README.md) | Workflow | — | Jira issue search & workflow from the session |
-| 7 | [**delivery-flow**](../../plugins/delivery-flow/README.md) | Workflow | `toolu`, `toolu-review`, `pr-babysit` | One skill for brainstorm through checked PR delivery |
+| 7 | [**delivery-flow**](../../plugins/delivery-flow/README.md) | Workflow | `toolu`, `toolu-review`, `pr-babysit`, `brainstorm` | One skill for brainstorm through checked PR delivery |
 | 8 | [**pr-babysit**](../pr-babysit/README.md) | Workflow | `toolu` | Claude cron / durable Codex PR babysitter that chases findings to zero |
 | 9 | [**epic-orchestrator**](../epic-orchestrator/README.md) | Workflow | `delivery-flow` | Drive a GitHub epic to merged PRs via herdr workers and a merge gate |
 | 10 | [**python-quality**](../python-quality/README.md) | Quality Gate | `toolu` | Python post-edit quality checks (size, suppression, test layout, no-mocks) |
@@ -21,6 +21,7 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 13 | [**ts-quality**](../ts-quality/README.md) | Quality Gate | `toolu` | TypeScript post-edit quality checks (size, imports, type guards) |
 | 14 | [**agent-browser**](../../plugins/agent-browser/README.md) | Browser | — | Token-lean live browser automation via accessibility-tree snapshots |
 | 15 | [**jev**](../jev/README.md) | Knowledge | — | Typed judgments from TypeSafe's Jev — probability, choice, and score answers code can branch on |
+| 16 | [**brainstorm**](../../plugins/brainstorm/README.md) | Workflow | — | Evidence-backed design triage and a recommended approach; standalone and delivery-flow phase 1 |
 
 ## Architecture Overview
 

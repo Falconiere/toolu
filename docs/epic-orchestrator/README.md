@@ -13,7 +13,7 @@ Claude workers (delivery-flow from brainstorm through PR and babysit), merge gat
 npx @toolu/plugins install delivery-flow epic-orchestrator --host codex
 ```
 
-Requires `delivery-flow` and its `toolu`, `toolu-review`, and `pr-babysit` dependencies. Runtime binaries: `bun`, `gh`, `herdr`
+Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies. Runtime binaries: `bun`, `gh`, `herdr`
 (orchestrator session must run inside a herdr pane with `HERDR_ENV=1`).
 
 ## Usage

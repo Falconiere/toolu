@@ -12,7 +12,7 @@ const marketplace = await readMarketplace(MANIFEST);
 describe("catalog against the real .claude-plugin/marketplace.json", () => {
   test("reads every catalog plugin", () => {
     expect(catalogNames(marketplace)).toContain("toolu");
-    expect(catalogNames(marketplace).length).toBeGreaterThanOrEqual(15);
+    expect(catalogNames(marketplace).length).toBeGreaterThanOrEqual(16);
   });
 
   test("the declared dependents really depend on toolu", () => {
@@ -31,12 +31,14 @@ describe("catalog against the real .claude-plugin/marketplace.json", () => {
       "toolu",
       "toolu-review",
       "pr-babysit",
+      "brainstorm",
       "delivery-flow",
     ]);
     expect(installOrder(marketplace, ["epic-orchestrator"])).toEqual([
       "toolu",
       "toolu-review",
       "pr-babysit",
+      "brainstorm",
       "delivery-flow",
       "epic-orchestrator",
     ]);
@@ -57,6 +59,7 @@ describe("catalog against the real .claude-plugin/marketplace.json", () => {
 
   test("a standalone plugin brings nothing else along", () => {
     expect(installOrder(marketplace, ["jira"])).toEqual(["jira"]);
+    expect(installOrder(marketplace, ["brainstorm"])).toEqual(["brainstorm"]);
   });
 
   test("a repeated name appears once", () => {

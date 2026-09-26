@@ -4,6 +4,18 @@
   "surfaceRoot": "tools/toolu-opencode/generated",
   "plugins": [
     {
+      "name": "brainstorm",
+      "skills": [
+        {
+          "id": "brainstorm--brainstorm",
+          "path": "skills/brainstorm--brainstorm/SKILL.md",
+          "source": "plugins/brainstorm/skills/brainstorm/SKILL.md"
+        }
+      ],
+      "agents": [],
+      "commands": []
+    },
+    {
       "name": "delivery-flow",
       "skills": [
         {

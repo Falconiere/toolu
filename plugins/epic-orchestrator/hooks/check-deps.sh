@@ -23,6 +23,7 @@ plugin_ok "toolu@toolu" || missing+=("toolu@toolu")
 plugin_ok "delivery-flow@toolu" || missing+=("delivery-flow@toolu")
 plugin_ok "toolu-review@toolu" || missing+=("toolu-review@toolu")
 plugin_ok "pr-babysit@toolu" || missing+=("pr-babysit@toolu")
+plugin_ok "brainstorm@toolu" || missing+=("brainstorm@toolu")
 [ "${#missing[@]}" -eq 0 ] && exit 0
 
 msg="WARN: this plugin requires"

@@ -102,7 +102,7 @@ npx @toolu/plugins update [name...]    Update only what is behind the marketplac
 **Install order comes from the catalog, not the CLI.** `.claude-plugin/marketplace.json`
 declares that `python-quality`, `rust-quality`, `ts-quality`, `pr-babysit`,
 `delivery-flow`, and `epic-orchestrator` depend on `toolu`. `delivery-flow`
-also depends on `toolu-review` and `pr-babysit`; `epic-orchestrator` depends on
+also depends on `toolu-review`, `pr-babysit`, and `brainstorm`; `epic-orchestrator` depends on
 `delivery-flow` and `pr-babysit`. Requesting a dependent installs its dependency first. Adding a
 plugin to the catalog needs no CLI change.
 

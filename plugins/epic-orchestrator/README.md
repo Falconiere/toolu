@@ -9,7 +9,7 @@ default to `herdr agent start --kind claude` (override with `--kind`).
 
 ## Install
 
-Requires `delivery-flow` and its `toolu`, `toolu-review`, and `pr-babysit` dependencies. Runtime: `bun`, `gh`, and `herdr`
+Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies. Runtime: `bun`, `gh`, and `herdr`
 (with `HERDR_ENV=1` inside a herdr pane).
 
 ### Claude Code

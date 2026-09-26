@@ -25,13 +25,14 @@ setup() {
   [[ "$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")" == *"codex plugin add delivery-flow@toolu"* ]]
   [[ "$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")" == *"codex plugin add toolu-review@toolu"* ]]
   [[ "$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")" == *"codex plugin add pr-babysit@toolu"* ]]
+  [[ "$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")" == *"codex plugin add brainstorm@toolu"* ]]
 }
 
 @test "silent when delivery-flow and its dependencies are installed" {
   bin="$BATS_TEST_TMPDIR/bin"
   mkdir -p "$bin"
   printf '%s\n' '#!/usr/bin/env bash' \
-    'printf "%s\n" "{\"installed\":[{\"pluginId\":\"toolu@toolu\",\"installed\":true,\"enabled\":true},{\"pluginId\":\"delivery-flow@toolu\",\"installed\":true,\"enabled\":true},{\"pluginId\":\"toolu-review@toolu\",\"installed\":true,\"enabled\":true},{\"pluginId\":\"pr-babysit@toolu\",\"installed\":true,\"enabled\":true}]}"' \
+    'printf "%s\n" "{\"installed\":[{\"pluginId\":\"toolu@toolu\",\"installed\":true,\"enabled\":true},{\"pluginId\":\"delivery-flow@toolu\",\"installed\":true,\"enabled\":true},{\"pluginId\":\"toolu-review@toolu\",\"installed\":true,\"enabled\":true},{\"pluginId\":\"pr-babysit@toolu\",\"installed\":true,\"enabled\":true},{\"pluginId\":\"brainstorm@toolu\",\"installed\":true,\"enabled\":true}]}"' \
     >"$bin/codex"
   chmod +x "$bin/codex"
 

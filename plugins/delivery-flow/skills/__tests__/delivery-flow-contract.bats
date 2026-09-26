@@ -7,12 +7,22 @@ REFS="$ROOT/plugins/delivery-flow/skills/delivery-flow/references"
 @test "one public skill owns every required phase and private guidance" {
   [ -f "$SKILL" ]
   [ "$(find "$ROOT/plugins/delivery-flow/skills" -name SKILL.md | wc -l | tr -d ' ')" -eq 1 ]
-  for phase in brainstorm spec spec-review plan plan-review execution test; do
+  for phase in spec spec-review plan plan-review execution test; do
     [ -f "$REFS/$phase.md" ]
     [ ! -e "$ROOT/plugins/toolu/skills/$phase/SKILL.md" ]
     grep -Fq "references/$phase.md" "$SKILL"
   done
   grep -Fq 'brainstorm → spec → spec review → plan → plan review → execution' "$SKILL"
+}
+
+@test "brainstorm phase runs the brainstorm plugin instead of a private copy" {
+  [ ! -e "$REFS/brainstorm.md" ]
+  [ ! -e "$REFS/design-questions.md" ]
+  grep -Fq 'brainstorm:brainstorm' "$SKILL"
+  grep -Fq 'installed `brainstorm`' "$SKILL"
+  for manifest in "$ROOT/plugins/delivery-flow/.claude-plugin/plugin.json" "$ROOT/plugins/delivery-flow/.codex-plugin/plugin.json"; do
+    jq -e '.dependencies | map(.name) | index("brainstorm")' "$manifest" >/dev/null
+  done
 }
 
 @test "delivery stops at failed reviews and resumes from the failed phase" {

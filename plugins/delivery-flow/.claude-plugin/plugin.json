@@ -26,6 +26,10 @@
     {
       "name": "pr-babysit",
       "marketplace": "toolu"
+    },
+    {
+      "name": "brainstorm",
+      "marketplace": "toolu"
     }
   ]
 }

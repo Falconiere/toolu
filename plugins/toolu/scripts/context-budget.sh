@@ -85,6 +85,7 @@ run_docs() {
 run_skills() {
   # Trimmed skills: word ceiling + trigger phrases that MUST survive the trim.
   check_skill delivery-flow    plugins/delivery-flow/skills/delivery-flow/SKILL.md  50 "implement and deliver;real-data execution;PR"
+  check_skill brainstorm       plugins/brainstorm/skills/brainstorm/SKILL.md        50 "brainstorm;trade-offs"
   check_skill deep-research    plugins/toolu/skills/deep-research/SKILL.md    90 "deep research;cited report"
   check_skill toolu-review      plugins/toolu-review/skills/review/SKILL.md         65 "review before push"
   # Already-lean skills: word ceiling only, lock against regrowth.
