@@ -5,7 +5,12 @@ import { opencodeRegistryRoot } from "../host/roots.ts";
 
 const REGISTRY_EVENT_DIRS = ["pre-tools.d", "post-tools.d"] as const;
 
-const SESSION_ARTIFACT_NAMES = [".gate-preset-notice-v6"] as const;
+// `.session-start-ready` is written unconditionally by toolu's session-start.sh
+// the moment it runs, so a core-only bootstrap (no register.sh, therefore no
+// registry modules) has a deterministic success artifact. `.gate-preset-notice-v6`
+// is kept for installs bootstrapped by older releases, where it was the only
+// session artifact.
+const SESSION_ARTIFACT_NAMES = [".session-start-ready", ".gate-preset-notice-v6"] as const;
 
 function listShModules(dir: string): string[] {
   if (!existsSync(dir)) {

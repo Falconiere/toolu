@@ -87,11 +87,25 @@ setup() {
   jq -e '.private == true and .name != "@toolu/plugins"' "$ROOT/tools/toolu-cli/package.json" >/dev/null
 }
 
-# @toolu/opencode depends on @toolu/core, and Bun rewrites workspace:* to a
-# concrete version at pack time, so core must reach the registry first.
+# @toolu/opencode depends on @toolu/core. The dependency is a caret range, not
+# the workspace: protocol (npm would ship that verbatim and Bun's installer
+# would reject it — #287), so core must reach the registry first.
 @test "the workflow publishes in dependency order, core before opencode" {
   run bash -c "grep -oE 'packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm' '$WF' | head -1"
   [ "$output" = "packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm" ]
+}
+
+@test "@toolu/opencode declares @toolu/core as a caret range, never workspace:*" {
+  jq -e '.dependencies["@toolu/core"] | test("^\\^[0-9]+\\.[0-9]+\\.[0-9]+$")' \
+    "$ROOT/tools/toolu-opencode/package.json" >/dev/null
+  run grep -Fq 'workspace:' "$ROOT/tools/toolu-opencode/package.json"
+  [ "$status" -ne 0 ]
+}
+
+@test "@toolu/opencode ships a resolvable default entry" {
+  jq -e '.main == "./src/plugin/toolu.ts" and .exports["."] == "./src/plugin/toolu.ts"' \
+    "$ROOT/tools/toolu-opencode/package.json" >/dev/null
+  [ -f "$ROOT/tools/toolu-opencode/src/plugin/toolu.ts" ]
 }
 
 @test "a package already on the registry is skipped so a re-run resumes" {

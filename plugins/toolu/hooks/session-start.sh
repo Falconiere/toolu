@@ -41,6 +41,17 @@ _config_root="$(toolu_config_root)"
 _old_sl="$_config_root/toolu/statusline.sh"
 [ -L "$_old_sl" ] && rm -f "$_old_sl"
 
+# Bootstrap readiness marker. The OpenCode bridge runs this hook as its bootstrap
+# entrypoint and requires a concrete artifact before it will stop failing closed
+# (tools/toolu-opencode/src/bootstrap/readiness.ts). The only other candidate —
+# the .gate-preset-notice-v6 write below — is conditional (jq present + delivery
+# not pinned), so a clean no-op run would otherwise produce no artifact and the
+# bridge would lock the whole session. Reaching this line means the hook really
+# ran, so emit the marker unconditionally: before the disabled-session-start
+# early exit, because the quality gate still enforces even when context is off.
+_marker_dir="$_config_root/toolu"
+mkdir -p "$_marker_dir" 2>/dev/null && : > "$_marker_dir/.session-start-ready" 2>/dev/null
+
 if ! toolu_enabled hooks session-start; then
   cat > /dev/null 2>&1 || true
   exit 0
