@@ -8,7 +8,9 @@ opencode plugin add @toolu/opencode
 ```
 
 The package carries the bash `plugins/` tree, so the bridge resolves its plugin
-root to its own package directory. Choose which bash plugins are active with
+root to its own package directory, and it ships a resolvable default entry
+(`exports["."]` / `main` → `./src/plugin/toolu.ts`), so `opencode plugin add`
+loads it with no local shim. Choose which bash plugins are active with
 `<project>/.opencode/toolu/plugins.json`:
 
 ```json

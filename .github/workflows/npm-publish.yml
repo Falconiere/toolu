@@ -95,8 +95,9 @@ jobs:
           done
           echo "publishing $tag"
 
-      # Dependency order: @toolu/opencode depends on @toolu/core, and Bun rewrites
-      # its workspace:* to that exact version at pack time, so core must land first.
+      # Dependency order: @toolu/opencode depends on @toolu/core via a caret range
+      # (never the workspace: protocol — npm would ship that verbatim and Bun's
+      # installer would reject it, #287), so core must land first.
       # A failure therefore ABORTS rather than continuing: publishing opencode after
       # core failed would ship a package whose declared @toolu/core version is not on
       # the registry. Packages already published are skipped, so a re-run resumes

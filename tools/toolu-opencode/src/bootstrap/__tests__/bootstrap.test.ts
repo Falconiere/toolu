@@ -146,3 +146,40 @@ test("AC-1: core-only session-start and core+quality register bootstrap", async 
     expect(bothResult.artifacts.some((a) => /\/post-tools\.d\/[^/]+\.sh$/.test(a))).toBe(true);
   }
 });
+
+test("AC-1b: core-only bootstrap is ready even when the gate notice is pinned", async () => {
+  // Pinning delivery skips the conditional .gate-preset-notice-v6 write. A
+  // core-only selection (no register.sh, so no registry modules) used to then
+  // produce zero artifacts and fail closed. The deterministic
+  // .session-start-ready marker must carry readiness on its own.
+  const root = repoRoot();
+  const pluginsRoot = join(root, "plugins");
+  const project = mkdtempSync(join(tmpBase, "toolu-bs-pinned-"));
+  mkdirSync(join(project, ".opencode", "toolu"), { recursive: true });
+  writeFileSync(
+    opencodePluginSelectionPath(project),
+    JSON.stringify({ version: 1, enabled: ["toolu"] }),
+  );
+  writeFileSync(
+    join(project, ".opencode", "toolu.config.json"),
+    JSON.stringify({ version: 1, gates: { preset: "strict" } }),
+  );
+  const select = selectPluginsWithDependencies(pluginsRoot, project);
+  expect(select.ok).toBe(true);
+  if (!select.ok) {
+    return;
+  }
+  const dataRoot = mkdtempSync(join(tmpBase, "toolu-bs-pinned-data-"));
+  const result = await bootstrapRuntime({
+    repoRoot: root,
+    projectRoot: project,
+    dataRoot,
+    plugins: select.plugins,
+    isolatedHome: isolatedHome(),
+  });
+  expect(result.status).toBe("ready");
+  if (result.status === "ready") {
+    expect(result.artifacts.some((a) => a.endsWith(".session-start-ready"))).toBe(true);
+    expect(result.artifacts.some((a) => a.endsWith(".gate-preset-notice-v6"))).toBe(false);
+  }
+});
