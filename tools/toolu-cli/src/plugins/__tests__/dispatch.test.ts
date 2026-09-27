@@ -27,6 +27,7 @@ describe("dispatchPlugins install", () => {
       {
         manifestPath,
         interactive: true,
+        terminal: true,
         env: stubEnv,
         write: (text) => {
           chunks.push(text);
@@ -40,6 +41,7 @@ describe("dispatchPlugins install", () => {
     expect(text).toContain("claude:");
     expect(text).toContain("codex:");
     expect(text).toContain("jira");
+    expect(text).not.toContain("\u001b");
   });
 
   test("non-interactive multi-host install still exits 3", async () => {

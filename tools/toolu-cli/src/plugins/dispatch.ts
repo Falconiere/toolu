@@ -5,6 +5,7 @@ import { assertScopeAllowed } from "../args/parse";
 import { adapterFor, resolveHosts } from "../host/detect";
 import { CliError, EXIT, UsageError, type ExitCode } from "../exit";
 import { installPlugins } from "./install";
+import { installProgress } from "../ui/progress";
 import { listPlugins } from "./list";
 import { removePlugins } from "./remove";
 import { updatePlugins } from "./update";
@@ -33,6 +34,7 @@ type RoutedArgs = ParsedArgs & { readonly verb: Verb };
 interface DispatchContext {
   readonly manifestPath: string;
   readonly interactive: boolean;
+  readonly terminal?: boolean;
   readonly write: (text: string) => void;
   readonly env?: NodeJS.ProcessEnv;
   readonly selectHosts?: SelectHosts;
@@ -88,17 +90,26 @@ async function handleInstall(
   }
   const sections: { host: Host; steps: Awaited<ReturnType<typeof installPlugins>> }[] = [];
   for (const host of hosts) {
-    const steps = await installPlugins({
-      adapter: adapterFor(host),
-      marketplace,
-      marketplaceName: MARKETPLACE_NAME,
-      marketplaceSource: MARKETPLACE_SOURCE,
-      requested,
-      scope: args.scope,
-      dryRun: args.dryRun,
-      ...(context.env === undefined ? {} : { env: context.env }),
-    });
-    sections.push({ host, steps });
+    const progress =
+      context.terminal === true && !args.dryRun && !args.json
+        ? installProgress(host, context.write)
+        : undefined;
+    try {
+      const steps = await installPlugins({
+        adapter: adapterFor(host),
+        marketplace,
+        marketplaceName: MARKETPLACE_NAME,
+        marketplaceSource: MARKETPLACE_SOURCE,
+        requested,
+        scope: args.scope,
+        dryRun: args.dryRun,
+        ...(progress === undefined ? {} : { onProgress: progress.update }),
+        ...(context.env === undefined ? {} : { env: context.env }),
+      });
+      sections.push({ host, steps });
+    } finally {
+      progress?.stop();
+    }
   }
   context.write(reportInstallByHost(sections, args.dryRun));
   return anyFailed(sections.flatMap((section) => section.steps)) ? EXIT.failed : EXIT.ok;
