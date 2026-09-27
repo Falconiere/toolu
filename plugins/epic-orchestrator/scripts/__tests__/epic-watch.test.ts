@@ -4,7 +4,8 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { issueEvents } from "../epic-watch.ts";
+import { coolHost, issueEvents, limitLine } from "../epic-watch.ts";
+import { coolingHosts } from "../route.ts";
 
 const REPORT = join(import.meta.dir, "..", "report.sh");
 const REC = {
@@ -105,5 +106,31 @@ describe("EventsTest", () => {
     expect(issueEvents("comemory-255", REC, freshBabysit, { "comemory-255": "idle" }, {})).toEqual(
       [],
     );
+  });
+});
+
+describe("HostLimitTest", () => {
+  test("finds the newest limit line in a pane tail", () => {
+    const tail = [
+      "  ✓ 12 tests passed",
+      "  ■ You've hit your usage limit. Try again at 6:40 PM.",
+      "",
+      "  › Ask Codex to do anything",
+    ].join("\n");
+    expect(limitLine(tail)).toBe("■ You've hit your usage limit. Try again at 6:40 PM.");
+    expect(limitLine("  ✓ all green\n  › waiting")).toBeNull();
+  });
+
+  test("coolHost writes a cooldown that routing honors", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "epic-watch-"));
+    const now = Date.parse("2026-09-26T12:00:00Z");
+    await coolHost(dir, "cursor-agent", "usage limit", now);
+    const hosts = JSON.parse(readFileSync(join(dir, "hosts.json"), "utf8")) as Record<
+      string,
+      { until: string; reason: string }
+    >;
+    expect(hosts.cursor?.reason).toBe("usage limit");
+    expect([...coolingHosts(hosts, now + 30 * 60_000)]).toEqual(["cursor"]);
+    expect([...coolingHosts(hosts, now + 61 * 60_000)]).toEqual([]);
   });
 });

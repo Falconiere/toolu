@@ -14,7 +14,7 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 6 | [**jira**](../jira/README.md) | Workflow | — | Jira issue search & workflow from the session |
 | 7 | [**delivery-flow**](../../plugins/delivery-flow/README.md) | Workflow | `toolu`, `toolu-review`, `pr-babysit`, `brainstorm` | One skill for brainstorm through checked PR delivery |
 | 8 | [**pr-babysit**](../pr-babysit/README.md) | Workflow | `toolu` | Claude cron / durable Codex PR babysitter that chases findings to zero |
-| 9 | [**epic-orchestrator**](../epic-orchestrator/README.md) | Workflow | `delivery-flow` | Drive a GitHub epic to merged PRs via herdr workers and a merge gate |
+| 9 | [**epic-orchestrator**](../epic-orchestrator/README.md) | Workflow | `delivery-flow` | Drive a GitHub, Jira, or Linear epic to merged PRs via herdr workers on any host and a merge gate |
 | 10 | [**python-quality**](../python-quality/README.md) | Quality Gate | `toolu` | Python post-edit quality checks (size, suppression, test layout, no-mocks) |
 | 11 | [**rust-quality**](../rust-quality/README.md) | Quality Gate | `toolu` | Rust post-edit quality checks (size, unsafe, unwrap bans) |
 | 12 | [**statusline**](../statusline/README.md) | Status | — | Persistent Claude statusline plus explicit Codex repository/gate status |

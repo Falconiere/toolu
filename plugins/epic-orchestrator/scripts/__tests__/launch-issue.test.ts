@@ -36,6 +36,15 @@ describe("BriefTest", () => {
     }
   });
 
+  test("Jira items read through jira.sh and resolve by key", () => {
+    const jiraGraph = { ...graph, tracker: "jira" };
+    const issue = { ...findIssue(graph, "Falconiere/comemory#255"), ref: "PAY-12", number: null };
+    const brief = renderBrief(jiraGraph, issue, { worktree: "/wt", status: "/s.json" }, "main");
+    expect(brief).toContain("Resolves PAY-12");
+    expect(brief).toContain("jira.sh issue get PAY-12");
+    expect(brief).not.toContain("{{");
+  });
+
   test("find_issue by key or ref", () => {
     expect(findIssue(graph, "comemory-io-183").ref).toBe("CodaSignal/comemory.io#183");
     expect(() => findIssue(graph, "Falconiere/comemory#999")).toThrow();
@@ -79,6 +88,32 @@ describe("DryRunTest", () => {
     expect(out.code).toBe(0);
     const cloneTo = `${graph.clone_root}/homebrew-tap`;
     expect(out.stdout).toContain(`gh repo clone Falconiere/homebrew-tap ${cloneTo}`);
+  });
+
+  test("routed host: codex with bypass, model, and effort; codex skill syntax", async () => {
+    const out = await runDry("Falconiere/comemory#255", [
+      "--kind",
+      "codex",
+      "--model",
+      "gpt-6-sol",
+      "--effort",
+      "medium",
+    ]);
+    expect(out.code).toBe(0);
+    const start = out.stdout.split("\n").find((l) => l.startsWith("herdr agent start"));
+    expect(start).toBe(
+      "herdr agent start comemory-255 --kind codex --pane '<root-pane>' --timeout 90000 -- " +
+        "--dangerously-bypass-approvals-and-sandbox --model gpt-6-sol -c model_reasoning_effort=medium",
+    );
+    expect(out.stdout).toContain("`$delivery-flow:delivery-flow`");
+    expect(out.stdout).not.toContain("`/delivery-flow:delivery-flow`");
+  });
+
+  test("--safe keeps approval prompts on", async () => {
+    const out = await runDry("Falconiere/comemory#255", ["--kind", "cursor-agent", "--safe"]);
+    expect(out.code).toBe(0);
+    expect(out.stdout).toContain("--kind cursor --pane '<root-pane>' --timeout 90000 -- --trust");
+    expect(out.stdout).not.toContain("--yolo");
   });
 
   test("blocked issue is refused", async () => {

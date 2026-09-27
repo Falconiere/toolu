@@ -3,7 +3,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PROTECTION, checkBuckets, tickBody } from "../merge-gate.ts";
+import { PROTECTION, autoMergeArgs, checkBuckets } from "../merge-gate.ts";
+import { tickBody } from "../trackers/github.ts";
 
 const FIX = join(import.meta.dir, "..", "fixtures");
 
@@ -121,4 +122,20 @@ describe("ProtectionTest", () => {
       expect(PROTECTION.test(msg)).toBe(false);
     }
   });
+});
+
+test("auto-merge is pinned to the verified head and deletes the branch", () => {
+  expect(autoMergeArgs("o", "r", 12, "abc123", "squash")).toEqual([
+    "gh",
+    "pr",
+    "merge",
+    "12",
+    "-R",
+    "o/r",
+    "--auto",
+    "--squash",
+    "--delete-branch",
+    "--match-head-commit",
+    "abc123",
+  ]);
 });

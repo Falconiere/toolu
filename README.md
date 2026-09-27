@@ -217,7 +217,7 @@ plugins.
 | Workflow | **`brainstorm`** | Evidence-backed design triage, alternatives, and a recommended approach — standalone, and phase 1 of delivery-flow. |
 | Workflow | **`delivery-flow`** | One public skill for brainstorm through PR and babysit, with private phase guidance. |
 | Workflow | **`pr-babysit`** | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
-| Workflow | **`epic-orchestrator`** | Drive a GitHub epic to merged PRs via herdr workers, dependency waves, and a merge gate. |
+| Workflow | **`epic-orchestrator`** | Drive a GitHub, Jira, or Linear epic to merged PRs via herdr workers on any host, dependency waves, and a merge gate with auto-merge. |
 | Status | **`statusline`** | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
 
 Beyond the plugins, the core (`toolu`) also ships:

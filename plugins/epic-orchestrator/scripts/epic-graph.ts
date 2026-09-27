@@ -3,47 +3,15 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { readdirSync } from "node:fs";
-import {
-  CommandError,
-  ghJson,
-  issueKey,
-  parseRef,
-  readJson,
-  slugify,
-  stateDirFor,
-} from "./common.ts";
+import { EPICS_HOME, currentRepo, ghJson, issueKey, readJson, slugify } from "./common.ts";
 import { resolveCheckouts } from "./checkouts.ts";
+import { mapLimit } from "./ratelimit.ts";
+import { detectTracker, makeTracker } from "./trackers/index.ts";
+import type { PrNode, TrackedIssue } from "./trackers/types.ts";
 
-const DEP_LINE = /\b(?:blocked by|depends on)\b[^\n]*/gi;
-/** URL, owner/repo#N, or bare #N (default repo supplied by parseRef). */
-export const ISSUE_REF =
-  /https:\/\/github\.com\/[^\s)]+\/issues\/\d+|[\w.-]+\/[\w.-]+#\d+|(?<![\w/])#\d+/g;
-const CLOSING_PRS = `query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){issue(number:$n){
-closedByPullRequestsReferences(first:10,includeClosedPrs:true){nodes{number state url headRefName}}}}}`;
-
-type IssueItem = {
-  repository_url: string;
-  number: number;
-  title: string;
-  state: string;
-  html_url: string;
-};
-
-type SubIssue = {
-  ref: string;
-  title: string;
-  state: string;
-  url: string;
-};
-
-type PrNode = { number: number; state: string; url: string; headRefName: string };
-
-export type GraphIssue = SubIssue & {
-  repo: string;
-  number: number;
-  blockers: Record<string, string>;
-  prs: PrNode[];
-  deps_source: string;
+export type GraphIssue = Omit<TrackedIssue, "labels" | "excerpt"> & {
+  labels?: string[];
+  excerpt?: string;
   key: string;
   status?: string;
   open_blockers?: string[];
@@ -55,120 +23,35 @@ export type GraphIssue = SubIssue & {
   stage?: string | null;
 };
 
-function refOf(item: IssueItem): string {
-  const parts = item.repository_url.replace(/\/$/, "").split("/");
-  const owner = parts[parts.length - 2];
-  const repo = parts[parts.length - 1];
-  if (!owner || !repo) throw new Error(`bad repository_url: ${item.repository_url}`);
-  return `${owner}/${repo}#${item.number}`;
+/** herdr agent name for a work item: `repo-N` for GitHub, the lowercased
+ * key (`abc-12`) for Jira/Linear, which already starts with a letter. */
+export function keyFor(issue: Pick<TrackedIssue, "ref" | "repo" | "number">): string {
+  if (issue.number !== null) return issueKey(issue.repo, issue.number);
+  return issue.ref
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .slice(0, 32);
 }
 
-async function fetchSubIssues(
-  owner: string,
-  repo: string,
-  number: number,
-  body: string,
-): Promise<SubIssue[]> {
-  const items = (await ghJson([
-    "api",
-    "--paginate",
-    "--slurp",
-    `repos/${owner}/${repo}/issues/${number}/sub_issues?per_page=100`,
-  ])) as IssueItem[][] | null;
-  const subs = (items ?? []).flat();
-  if (subs.length > 0) {
-    return subs.map((i) => ({
-      ref: refOf(i),
-      title: i.title,
-      state: i.state,
-      url: i.html_url,
-    }));
-  }
-  const refs: string[] = [];
-  for (const line of body.split("\n")) {
-    if (/^\s*[-*]\s*\[[ xX]\]/.test(line)) {
-      // Same shapes as DEP_LINE extraction: URL, owner/repo#N, and bare #N.
-      const re = new RegExp(ISSUE_REF.source, ISSUE_REF.flags);
-      let m: RegExpExecArray | null;
-      while ((m = re.exec(line)) !== null) {
-        const [o, r, n] = parseRef(m[0], `${owner}/${repo}`);
-        refs.push(`${o}/${r}#${n}`);
-      }
-    }
-  }
-  const out: SubIssue[] = [];
-  for (const ref of Array.from(new Set(refs))) {
-    const [o, r, n] = parseRef(ref);
-    const i = (await ghJson([`api`, `repos/${o}/${r}/issues/${n}`])) as IssueItem;
-    out.push({ ref, title: i.title, state: i.state, url: i.html_url });
-  }
-  return out;
+export function branchFor(issue: Pick<TrackedIssue, "ref" | "number" | "title">): string {
+  const id = issue.number !== null ? String(issue.number) : issue.ref.toLowerCase();
+  return `feat/${id}-${slugify(issue.title)}`;
 }
 
-async function fetchDetails(sub: SubIssue): Promise<Omit<GraphIssue, "key">> {
-  const [owner, repo, number] = parseRef(sub.ref);
-  const blockers: Record<string, string> = {};
-  let depsApi = true;
-  try {
-    const blocked =
-      ((await ghJson([
-        "api",
-        `repos/${owner}/${repo}/issues/${number}/dependencies/blocked_by`,
-      ])) as IssueItem[] | null) ?? [];
-    for (const b of blocked) {
-      blockers[refOf(b)] = b.state;
-    }
-  } catch (err) {
-    if (err instanceof CommandError) depsApi = false;
-    else throw err;
-  }
-  const bodyResp = (await ghJson([
-    "api",
-    `repos/${owner}/${repo}/issues/${number}`,
-    "--jq",
-    "{body: .body}",
-  ])) as { body: string | null };
-  const body = bodyResp.body ?? "";
-  for (const line of body.match(DEP_LINE) ?? []) {
-    const re = new RegExp(ISSUE_REF.source, ISSUE_REF.flags);
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(line)) !== null) {
-      const [o, r, n] = parseRef(m[0], `${owner}/${repo}`);
-      const ref = `${o}/${r}#${n}`;
-      if (!(ref in blockers) && ref !== sub.ref) {
-        const st = (await ghJson([
-          "api",
-          `repos/${o}/${r}/issues/${n}`,
-          "--jq",
-          "{s: .state}",
-        ])) as { s: string };
-        blockers[ref] = st.s;
-      }
-    }
-  }
-  const prs =
-    ((await ghJson([
-      "api",
-      "graphql",
-      "-f",
-      `query=${CLOSING_PRS}`,
-      "-F",
-      `o=${owner}`,
-      "-F",
-      `r=${repo}`,
-      "-F",
-      `n=${number}`,
-      "--jq",
-      ".data.repository.issue.closedByPullRequestsReferences.nodes",
-    ])) as PrNode[] | null) ?? [];
-  return {
-    ...sub,
-    repo: `${owner}/${repo}`,
-    number,
-    blockers,
-    prs,
-    deps_source: depsApi ? "native+text" : "text",
-  };
+/** Jira/Linear items have no closing-PR references; find PRs by branch. */
+async function prsByBranch(repo: string, branch: string): Promise<PrNode[]> {
+  return ((await ghJson([
+    "pr",
+    "list",
+    "-R",
+    repo,
+    "--head",
+    branch,
+    "--state",
+    "all",
+    "--json",
+    "number,state,url,headRefName",
+  ])) ?? []) as PrNode[];
 }
 
 export function computeLevels(
@@ -296,7 +179,7 @@ export function pickBatch(
   const sortKey = (r: string): [number, number, number, string, number] => {
     const i = issues[r];
     if (!i) return [0, 0, 0, "", 0];
-    return [-(i.chain ?? 0), -(i.unblocks ?? 0), load[i.repo] ?? 0, i.repo, i.number];
+    return [-(i.chain ?? 0), -(i.unblocks ?? 0), load[i.repo] ?? 0, i.repo, i.number ?? 0];
   };
   const keyLess = (
     a: [number, number, number, string, number],
@@ -345,17 +228,15 @@ export function classify(
   return openBlockers.length > 0 ? "blocked" : "ready";
 }
 
-async function build(epicRef: string, maxParallel: number): Promise<Record<string, unknown>> {
-  const [owner, repo, number] = parseRef(epicRef);
-  const epic = (await ghJson([`api`, `repos/${owner}/${repo}/issues/${number}`])) as {
-    title: string;
-    state: string;
-    html_url: string;
-    body?: string | null;
-  };
-  const subs = await fetchSubIssues(owner, repo, number, epic.body ?? "");
-  const details = await Promise.all(subs.map(fetchDetails));
-  const stateDir = stateDirFor(owner, repo, number);
+type BuildOpts = { maxParallel: number; tracker?: string; repo?: string };
+
+async function build(epicRef: string, opts: BuildOpts): Promise<Record<string, unknown>> {
+  const kind = detectTracker(epicRef, opts.tracker);
+  const defaultRepo = opts.repo ?? (kind === "github" ? "" : await currentRepo());
+  const tracker = makeTracker(kind, epicRef, defaultRepo);
+  const epic = await tracker.epic();
+  const details = await tracker.children();
+  const stateDir = join(EPICS_HOME, tracker.stateSlug());
   const launched: Record<string, Record<string, unknown>> = {};
   try {
     for (const name of readdirSync(join(stateDir, "issues"))) {
@@ -369,13 +250,28 @@ async function build(epicRef: string, maxParallel: number): Promise<Record<strin
   }
   const issues: Record<string, GraphIssue> = {};
   for (const d of details) {
-    issues[d.ref] = { ...d, key: issueKey(d.repo, d.number) };
+    issues[d.ref] = { ...d, key: keyFor(d) };
+  }
+  if (kind !== "github") {
+    const withBranch = Object.values(issues).filter(
+      (i) => typeof launched[i.key]?.branch === "string",
+    );
+    await mapLimit(withBranch, 4, async (i) => {
+      i.prs = await prsByBranch(i.repo, String(launched[i.key]?.branch));
+    });
   }
   const [levels, cycle] = computeLevels(issues);
   const downstream = downstreamCounts(issues);
   const chains = chainLengths(issues);
   const checkouts = await resolveCheckouts(
-    [...new Set([...Object.values(issues).map((i) => i.repo), `${owner}/${repo}`])].sort(),
+    [
+      ...new Set([
+        ...Object.values(issues).map((i) => i.repo),
+        ...(kind === "github" ? [tracker.epicRef.split("#")[0] ?? ""] : [defaultRepo]),
+      ]),
+    ]
+      .filter(Boolean)
+      .sort(),
   );
   for (const [ref, i] of Object.entries(issues)) {
     i.status = classify(i, new Set(Object.keys(issues)), launched);
@@ -389,27 +285,25 @@ async function build(epicRef: string, maxParallel: number): Promise<Record<strin
     i.checkout = checkouts[i.repo] ?? null;
     const rec = launched[i.key] ?? {};
     const branch = typeof rec.branch === "string" ? rec.branch : null;
-    i.branch = branch ?? `feat/${i.number}-${slugify(i.title)}`;
+    i.branch = branch ?? branchFor(i);
     i.stage = typeof rec.stage === "string" ? rec.stage : null;
   }
   const inFlight = Object.entries(issues)
     .filter(([, i]) => i.status === "in_flight")
     .map(([r]) => r);
-  const slots = Math.max(0, maxParallel - inFlight.length);
+  const slots = Math.max(0, opts.maxParallel - inFlight.length);
   const ready = Object.entries(issues)
     .filter(([, i]) => i.status === "ready")
     .map(([r]) => r);
-  const epicCheckout = checkouts[`${owner}/${repo}`];
+  const epicCheckout =
+    checkouts[kind === "github" ? (tracker.epicRef.split("#")[0] ?? "") : defaultRepo];
   const cloneRoot = dirname(epicCheckout ?? process.cwd());
   return {
-    epic: {
-      ref: `${owner}/${repo}#${number}`,
-      title: epic.title,
-      state: epic.state,
-      url: epic.html_url,
-    },
+    tracker: kind,
+    epic,
+    default_repo: defaultRepo || null,
     state_dir: stateDir,
-    max_parallel: maxParallel,
+    max_parallel: opts.maxParallel,
     issues: Object.values(issues),
     counts: Object.fromEntries(
       (["done", "in_flight", "ready", "blocked", "external_blocked"] as const).map((s) => [
@@ -489,6 +383,8 @@ async function main(): Promise<void> {
   let asJson = false;
   let outFile: string | undefined;
   let save = false;
+  let tracker: string | undefined;
+  let repo: string | undefined;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--max") {
@@ -500,11 +396,20 @@ async function main(): Promise<void> {
       outFile = argv[++i];
       if (outFile === undefined) throw new Error("--out needs a path");
     } else if (a === "--save") save = true;
+    else if (a === "--tracker") tracker = argv[++i];
+    else if (a === "--repo") repo = argv[++i];
     else if (a !== undefined && !a.startsWith("-")) epic = a;
     else throw new Error(`unknown arg: ${a}`);
   }
-  if (!epic) throw new Error("usage: epic-graph.ts EPIC [--max N] [--json] [--out FILE] [--save]");
-  const graph = await build(epic, maxParallel);
+  if (!epic) {
+    throw new Error(
+      "usage: epic-graph.ts EPIC [--max N] [--tracker github|jira|linear] [--repo OWNER/NAME] [--json] [--out FILE] [--save]",
+    );
+  }
+  const opts: BuildOpts = { maxParallel };
+  if (tracker !== undefined) opts.tracker = tracker;
+  if (repo !== undefined) opts.repo = repo;
+  const graph = await build(epic, opts);
   const targets: string[] = [];
   if (outFile) targets.push(outFile);
   if (save) targets.push(join(String(graph.state_dir), "graph.json"));

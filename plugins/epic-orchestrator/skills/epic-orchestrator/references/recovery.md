@@ -45,6 +45,30 @@ re-run the same script. All the scripts are idempotent.
   Read the reopening comment before relaunching. A regression usually deserves
   a fresh branch (`--force` if the graph blocks it) and a new PR.
 
+## Hosts and API limits
+
+- **`host-limited`** (usage limit, 429, quota): the host is on cooldown in
+  `<state_dir>/hosts.json`. Reroute and relaunch with `--replace` (see the
+  watcher table). To lift a cooldown early, delete that host's entry.
+- **Wrong model name** (the agent exits right after start): the routing table
+  names a model the host doesn't offer. Check `codex debug models`,
+  `cursor-agent --list-models`, or `opencode models`, fix `routing.json`, then
+  relaunch with `--replace`.
+- **`RateLimitError` from a script**: the reset is further out than the sleep
+  cap. Wait until the printed time, then re-run the same script.
+- **Jira `no-done-transition`**: the workflow has no transition into the Done
+  category from the current status. Tell the user; move it by hand.
+
+## Lost work
+
+- **A worktree vanished or was reset**: every snapshot is in
+  `git -C <checkout> reflog refs/epic-wip/<key>`. Check one out on a new
+  branch (`git checkout -b recover/<key> refs/epic-wip/<key>`), compare with
+  the issue branch, and have the worker continue from it.
+- **Unpushed commits after a crash**: the snapshot pins them as well; push the
+  recovered branch with `--force-with-lease` only after checking the remote
+  branch has nothing newer.
+
 ## Workers
 
 - **The worker reports `ready` but the gate says `fix` with unresolved threads**:
