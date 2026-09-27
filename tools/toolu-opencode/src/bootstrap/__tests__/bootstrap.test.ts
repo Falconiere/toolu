@@ -180,8 +180,6 @@ test("AC-1b: core-only bootstrap is ready even when the gate notice is pinned", 
   expect(result.status).toBe("ready");
   if (result.status === "ready") {
     expect(result.artifacts.some((a) => a.endsWith(".session-start-ready"))).toBe(true);
-    expect(
-      result.artifacts.some((a) => a.endsWith(".gate-preset-notice-v6")),
-    ).toBe(false);
+    expect(result.artifacts.some((a) => a.endsWith(".gate-preset-notice-v6"))).toBe(false);
   }
 });
