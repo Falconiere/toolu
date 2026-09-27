@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.4.1](https://github.com/Falconiere/toolu/compare/v7.4.0...v7.4.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **opencode:** repair npm publish, bootstrap lockout, and default entry ([#288](https://github.com/Falconiere/toolu/issues/288)) ([ee8aa41](https://github.com/Falconiere/toolu/commit/ee8aa41f790d8ede95e1d9c95ce65fcf52d7748a)), closes [#287](https://github.com/Falconiere/toolu/issues/287)
+
 ## [7.4.0](https://github.com/Falconiere/toolu/compare/v7.3.0...v7.4.0) (2026-09-27)
 
 
