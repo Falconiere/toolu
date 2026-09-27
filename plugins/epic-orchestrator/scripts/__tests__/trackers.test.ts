@@ -55,6 +55,12 @@ describe("refs", () => {
       id: "4f2a9c1b8e7d",
     });
     expect(parseLinearRef("project:abc123")).toEqual({ kind: "project", id: "abc123" });
+    // A trailing hyphen never yields an empty id; an id-less URL is refused.
+    expect(parseLinearRef("https://linear.app/acme/project/sync-4f2a9c1b8e7d-/")).toEqual({
+      kind: "project",
+      id: "4f2a9c1b8e7d",
+    });
+    expect(parseLinearRef("https://linear.app/acme/project/-")).toBeNull();
   });
 
   test("keys and branches for Jira/Linear items are valid herdr names", () => {

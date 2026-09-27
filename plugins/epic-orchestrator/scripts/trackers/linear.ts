@@ -35,7 +35,11 @@ export function parseLinearRef(ref: string): LinearRef | null {
   const issue = ISSUE_URL.exec(t);
   if (issue?.[1]) return { kind: "issue", id: issue[1].toUpperCase() };
   const project = PROJECT_URL.exec(t);
-  if (project?.[1]) return { kind: "project", id: project[1].split("-").pop() ?? project[1] };
+  if (project?.[1]) {
+    // Project URLs are `<name>-<slugId>`; the slugId is the last non-empty segment.
+    const id = project[1].split("-").filter(Boolean).pop();
+    if (id) return { kind: "project", id };
+  }
   if (/^project[:/]/i.test(t)) return { kind: "project", id: t.replace(/^project[:/]/i, "") };
   return IDENT.test(t.toUpperCase()) ? { kind: "issue", id: t.toUpperCase() } : null;
 }
