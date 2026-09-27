@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.4.0](https://github.com/Falconiere/toolu/compare/v7.3.0...v7.4.0) (2026-09-27)
+
+
+### Features
+
+* **epic-orchestrator:** multi-tracker, multi-host workers with guardrails ([#282](https://github.com/Falconiere/toolu/issues/282)) ([2cec3c9](https://github.com/Falconiere/toolu/commit/2cec3c9991906b0196ac25876a9fcdde9a7830fa))
+
 ## [7.3.0](https://github.com/Falconiere/toolu/compare/v7.2.0...v7.3.0) (2026-09-26)
 
 
