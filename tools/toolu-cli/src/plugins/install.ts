@@ -6,6 +6,12 @@ import type { HostAdapter, InstalledPlugin } from "../host/types";
 
 type StepOutcome = "installed" | "already" | "skew" | "failed" | "skipped";
 
+export interface InstallProgress {
+  readonly completed: number;
+  readonly total: number;
+  readonly label: string;
+}
+
 export interface InstallStep {
   readonly name: string;
   readonly outcome: StepOutcome;
@@ -22,6 +28,7 @@ interface InstallOptions {
   readonly scope: string | undefined;
   readonly dryRun: boolean;
   readonly env?: NodeJS.ProcessEnv;
+  readonly onProgress?: (progress: InstallProgress) => void;
 }
 
 const CORE = "toolu";
@@ -66,9 +73,14 @@ function presentStep(
  */
 export async function installPlugins(options: InstallOptions): Promise<readonly InstallStep[]> {
   const order = installOrder(options.marketplace, options.requested);
+  const progress = (completed: number, label: string): void => {
+    options.onProgress?.({ completed, total: order.length, label });
+  };
+  progress(0, "Preparing marketplace");
   if (!options.dryRun) {
     await run([...options.adapter.addMarketplace(options.marketplaceSource).argv], options.env);
   }
+  progress(0, "Checking installed plugins");
   const installed = await versionsFrom(
     options.adapter,
     options.adapter.listInstalled().argv,
@@ -83,6 +95,7 @@ export async function installPlugins(options: InstallOptions): Promise<readonly 
   const steps: InstallStep[] = [];
   let coreFailed = false;
   for (const name of order) {
+    progress(steps.length, `Installing ${name}`);
     const { argv } = options.adapter.install(name, options.marketplaceName, options.scope);
     if (coreFailed && coreDependents.has(name)) {
       steps.push({ name, outcome: "skipped", detail: `skipped: ${CORE} failed`, argv });
@@ -107,5 +120,6 @@ export async function installPlugins(options: InstallOptions): Promise<readonly 
     });
     if (!ok && name === CORE) coreFailed = true;
   }
+  progress(steps.length, "Finished");
   return steps;
 }

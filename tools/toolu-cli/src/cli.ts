@@ -87,6 +87,7 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
       {
         manifestPath: await manifestPath(),
         interactive: isInteractive(args.noInput),
+        terminal: process.stdout.isTTY === true && process.env.TERM !== "dumb",
         write: (text: string) => process.stdout.write(text),
       },
     );

@@ -99,6 +99,12 @@ npx @toolu/plugins update [name...]    Update only what is behind the marketplac
 
 ## Behavior worth knowing
 
+**Live install progress.** Terminals show an animated bar for each host, with
+the current plugin and completed/total count (including dependencies). Already
+installed, failed, and skipped plugins count as processed; the final report
+shows each outcome. Redirected output, `TERM=dumb`, `--json`, and dry runs omit
+the animation. `--no-input` disables prompts but still shows progress on a terminal.
+
 **Install order comes from the catalog, not the CLI.** `.claude-plugin/marketplace.json`
 declares that `python-quality`, `rust-quality`, `ts-quality`, `pr-babysit`,
 `delivery-flow`, and `epic-orchestrator` depend on `toolu`. `delivery-flow`

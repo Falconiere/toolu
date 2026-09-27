@@ -7,7 +7,7 @@ import { dependentsOf } from "../../catalog/order";
 import { claudeAdapter } from "../../host/claude";
 import { availableHosts } from "../../host/detect";
 import { run } from "../../host/run";
-import { installPlugins } from "../install";
+import { installPlugins, type InstallProgress } from "../install";
 import { listPlugins } from "../list";
 import { removePlugins } from "../remove";
 
@@ -65,12 +65,43 @@ describe("dry run plans without touching the host", () => {
   });
 });
 
+test("progress completes after a missing host fails core and skips its dependent", async () => {
+  const updates: InstallProgress[] = [];
+  const steps = await installPlugins({
+    ...base,
+    env: { ...env, PATH: configDir },
+    requested: ["rust-quality"],
+    dryRun: false,
+    onProgress: (progress) => {
+      updates.push(progress);
+    },
+  });
+  expect(steps.map((step) => step.outcome)).toEqual(["failed", "skipped"]);
+  expect(updates.map((progress) => progress.completed)).toEqual([0, 0, 0, 1, 2]);
+  expect(updates.at(-1)).toEqual({ completed: 2, total: 2, label: "Finished" });
+});
+
 describe.skipIf(!hasClaude)("real install against a temporary CLAUDE_CONFIG_DIR", () => {
   test("installs a standalone plugin, reports it already installed, then removes it", async () => {
     const added = await run([...claudeAdapter.addMarketplace("Falconiere/toolu").argv], env);
     expect(added.code).toBe(0);
 
-    const first = await installPlugins({ ...base, requested: ["jira"], dryRun: false });
+    const updates: InstallProgress[] = [];
+    const first = await installPlugins({
+      ...base,
+      requested: ["jira"],
+      dryRun: false,
+      onProgress: (progress) => {
+        updates.push(progress);
+      },
+    });
+    expect(updates.map((progress) => progress.label)).toEqual([
+      "Preparing marketplace",
+      "Checking installed plugins",
+      "Installing jira",
+      "Finished",
+    ]);
+    expect(updates.at(-1)).toEqual({ completed: 1, total: 1, label: "Finished" });
     expect(first.map((step) => step.name)).toEqual(["jira"]);
     expect(first[0]?.outcome).toBe("installed");
 
