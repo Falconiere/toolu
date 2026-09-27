@@ -5,13 +5,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { defaultEpicsHome, issueKey, parseRef, slugify } from "../common.ts";
-import {
-  classify,
-  computeLevels,
-  downstreamCounts,
-  ISSUE_REF,
-  type GraphIssue,
-} from "../epic-graph.ts";
+import { classify, computeLevels, downstreamCounts, type GraphIssue } from "../epic-graph.ts";
+import { ISSUE_REF } from "../trackers/github.ts";
 
 const FIXTURE = join(import.meta.dir, "..", "fixtures", "epic248-graph.json");
 

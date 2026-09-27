@@ -1,9 +1,12 @@
-/** Launch or resume one sub-issue: herdr worktree -> Claude agent -> worker brief. */
+/** Launch or resume one sub-issue: herdr worktree -> routed host agent -> worker brief. */
 
 import { readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { CommandError, REF_DIR, SCRIPTS_DIR, herdr, readJson, run, writeJson } from "./common.ts";
+import { agentArgs, hostKind, skillRef, type HostKind } from "./hosts.ts";
+import { budgetLow, ghBudget } from "./ratelimit.ts";
+import type { Route } from "./route.ts";
 
 const START_PROMPT =
   "You are an epic worker. Read {brief} and follow it exactly, starting at Pipeline step 1. " +
@@ -17,6 +20,7 @@ const REPORT_PATH = join(SCRIPTS_DIR, "report.sh");
 const BRIEF_TEMPLATE = join(REF_DIR, "worker-brief.md");
 
 type Graph = {
+  tracker?: string;
   epic: { ref: string; url: string; title: string };
   state_dir: string;
   clone_root: string;
@@ -29,7 +33,7 @@ type GraphIssue = {
   url: string;
   title: string;
   repo: string;
-  number: number;
+  number: number | null;
   status: string;
   open_blockers: string[];
   blockers: Record<string, string>;
@@ -38,13 +42,51 @@ type GraphIssue = {
 };
 
 type LaunchOpts = {
-  kind: string;
+  /** Explicit host; otherwise the issue's route, otherwise claude. */
+  kind?: string;
   model?: string;
+  effort?: string;
   permissionMode: string;
+  /** Keep approval prompts on (attended run). Default is unattended. */
+  safe: boolean;
   dryRun: boolean;
   force: boolean;
   reprompt: boolean;
+  /** Exit a live agent first, e.g. to move the issue to another host. */
+  replace: boolean;
 };
+
+type Resolved = { kind: HostKind; model?: string | undefined; effort?: string | undefined };
+
+/** Explicit flags win; a route supplies host, model, and effort; a model or
+ * effort from the route applies only when its host is the one launching. */
+export function resolveHost(opts: LaunchOpts, route: Route | null): Resolved {
+  const kind = hostKind(opts.kind ?? route?.host ?? "claude");
+  const fromRoute = route?.host === kind ? route : null;
+  return {
+    kind,
+    model: opts.model ?? fromRoute?.model ?? undefined,
+    effort: opts.effort ?? fromRoute?.effort ?? undefined,
+  };
+}
+
+/** How the worker reads its issue and what its PR body must say, per tracker. */
+function trackerLines(graph: Graph, issue: GraphIssue): { read: string; closes: string } {
+  if (graph.tracker === "jira") {
+    return {
+      read: `\`jira.sh issue get ${issue.ref}\` (the toolu jira skill)`,
+      closes: `Resolves ${issue.ref}`,
+    };
+  }
+  if (graph.tracker === "linear") {
+    return { read: `the Linear issue ${issue.url}`, closes: `Fixes ${issue.ref}` };
+  }
+  // The issue URL and canonical ref (`owner/repo#N`) already carry the number.
+  return {
+    read: `\`gh issue view ${issue.url} --comments\``,
+    closes: `Closes ${issue.ref}`,
+  };
+}
 
 function shellJoin(argv: string[]): string {
   return argv
@@ -70,7 +112,9 @@ export function renderBrief(
   issue: GraphIssue,
   paths: { worktree: string; status: string; brief?: string },
   base: string,
+  kind: HostKind = "claude",
 ): string {
+  const lines = trackerLines(graph, issue);
   const closed = Object.entries(issue.blockers)
     .filter(([, s]) => s === "closed")
     .map(([b]) => b);
@@ -78,8 +122,12 @@ export function renderBrief(
     ISSUE_REF: issue.ref,
     ISSUE_URL: issue.url,
     ISSUE_TITLE: issue.title,
-    ISSUE_REPO: issue.repo,
-    ISSUE_NUMBER: String(issue.number),
+    ISSUE_READ: lines.read,
+    CLOSES: lines.closes,
+    HOST: kind,
+    DELIVERY: skillRef(kind, "delivery-flow", "delivery-flow"),
+    BABYSIT: skillRef(kind, "pr-babysit", "babysit"),
+    DEBUG: skillRef(kind, "toolu", "debug"),
     EPIC_REF: graph.epic.ref,
     EPIC_URL: graph.epic.url,
     EPIC_TITLE: graph.epic.title,
@@ -90,7 +138,8 @@ export function renderBrief(
     STATUS_FILE: paths.status,
     BLOCKERS: closed.join(", ") || "none",
   };
-  let text = readFileSync(BRIEF_TEMPLATE, "utf8");
+  // The leading comment documents the placeholders for maintainers only.
+  let text = readFileSync(BRIEF_TEMPLATE, "utf8").replace(/^<!--[\s\S]*?-->\n+/, "");
   for (const [key, val] of Object.entries(values)) {
     text = text.replaceAll(`{{${key}}}`, val);
   }
@@ -171,37 +220,92 @@ async function ensureWorktree(
   };
 }
 
+async function liveAgent(key: string): Promise<boolean> {
+  const live = ((await herdr(["agent", "list"])).agents as { name?: string }[] | undefined) ?? [];
+  return live.some((a) => a.name === key);
+}
+
+/** Ask a live agent to exit and wait until herdr no longer lists it. Local
+ * work stays in the worktree; the watcher checkpoints it as well. */
+async function stopAgent(key: string, log: string[]): Promise<void> {
+  log.push(`herdr agent prompt ${key} /exit`);
+  await herdr(["agent", "send-keys", key, "esc"]).catch(() => ({}));
+  await herdr(["agent", "prompt", key, "/exit"]).catch(() => ({}));
+  for (let i = 0; i < 30; i++) {
+    if (!(await liveAgent(key))) return;
+    await Bun.sleep(1000);
+  }
+  throw new CommandError(`agent ${key} did not exit; stop it by hand before --replace`);
+}
+
+type AgentPlan = {
+  host: Resolved;
+  bypass: boolean;
+  permissionMode: string;
+  /** Previous host for this issue, if it ran before. */
+  previousKind: string | undefined;
+  launches: number;
+};
+
+/** Start (or keep) the worker agent. Returns [started, resumed]. */
 async function ensureAgent(
   key: string,
   pane: string,
+  plan: AgentPlan,
   opts: LaunchOpts,
   log: string[],
-): Promise<boolean> {
-  if (!opts.dryRun) {
-    const live = ((await herdr(["agent", "list"])).agents as { name?: string }[] | undefined) ?? [];
-    if (live.some((a) => a.name === key)) {
+): Promise<[boolean, boolean]> {
+  const { kind } = plan.host;
+  if (!opts.dryRun && (await liveAgent(key))) {
+    const moving = plan.previousKind !== undefined && plan.previousKind !== kind;
+    if (!opts.replace && !moving) {
       log.push(`agent ${key} already live`);
-      return false;
+      return [false, false];
     }
+    await stopAgent(key, log);
   }
-  const agentArgs = ["--permission-mode", opts.permissionMode, "-n", key];
-  if (opts.model) agentArgs.push("--model", opts.model);
-  const cmd = [
-    "agent",
-    "start",
-    key,
-    "--kind",
-    opts.kind,
-    "--pane",
-    pane,
-    "--timeout",
-    "90000",
-    "--",
-    ...agentArgs,
-  ];
-  log.push("herdr " + shellJoin(cmd));
-  if (!opts.dryRun) await herdr(cmd);
-  return true;
+  // Same host again: continue its last conversation so no context is lost.
+  const resume = plan.launches > 0 && plan.previousKind === kind;
+  const start = async (withResume: boolean): Promise<void> => {
+    const args = agentArgs(kind, {
+      key,
+      model: plan.host.model,
+      effort: plan.host.effort,
+      bypass: plan.bypass,
+      permissionMode: plan.permissionMode,
+      resume: withResume,
+    });
+    const cmd = [
+      "agent",
+      "start",
+      key,
+      "--kind",
+      kind,
+      "--pane",
+      pane,
+      "--timeout",
+      "90000",
+      "--",
+      ...args,
+    ];
+    log.push("herdr " + shellJoin(cmd));
+    if (!opts.dryRun) await herdr(cmd);
+  };
+  if (!resume) {
+    await start(false);
+    return [true, false];
+  }
+  try {
+    await start(true);
+    return [true, true];
+  } catch (err) {
+    // No session to continue (history pruned, new machine): start fresh; the
+    // resume prompt still rebuilds context from git and the status file.
+    if (!(err instanceof CommandError)) throw err;
+    log.push(`# resume failed (${err.message.slice(0, 120)}); starting a fresh session`);
+    await start(false);
+    return [true, false];
+  }
 }
 
 async function prepareCheckout(
@@ -245,6 +349,17 @@ async function prepareCheckout(
   return [checkout, base];
 }
 
+/** New workers each add babysit polling on the same GitHub token; refuse to
+ * start one when the budget is already under its floor. */
+async function guardBudget(): Promise<void> {
+  const budget = await ghBudget();
+  const low = budget ? budgetLow(budget) : null;
+  if (low && budget) {
+    const reset = new Date(Math.min(budget.core.reset, budget.graphql.reset)).toISOString();
+    throw new CommandError(`${low}; resets by ${reset}. Launch later, or pass --force.`);
+  }
+}
+
 async function launch(
   graph: Graph,
   issue: GraphIssue,
@@ -260,21 +375,33 @@ async function launch(
   }
   const state = graph.state_dir;
   const record = readJson<Record<string, unknown>>(join(state, "issues", `${issue.key}.json`), {});
+  const route = readJson<Route | null>(join(state, "routes", `${issue.key}.json`), null);
+  const host = resolveHost(opts, route);
+  const launches = typeof record.launches === "number" ? record.launches : 0;
+  if (!dry && launches === 0 && !opts.force) await guardBudget();
   const [checkout, base] = await prepareCheckout(graph, issue, dry, log);
   const wt = await ensureWorktree(checkout, issue, base, dry, log);
-  const started = await ensureAgent(issue.key, wt.pane_id, opts, log);
+  const plan: AgentPlan = {
+    host,
+    bypass: !opts.safe,
+    permissionMode: opts.permissionMode,
+    previousKind: typeof record.kind === "string" ? record.kind : undefined,
+    launches,
+  };
+  const [started, resumed] = await ensureAgent(issue.key, wt.pane_id, plan, opts, log);
   const paths = {
     worktree: wt.worktree,
     status: join(state, "status", `${issue.key}.json`),
     brief: join(state, "briefs", `${issue.key}.md`),
   };
-  const brief = renderBrief(graph, issue, paths, base);
+  const brief = renderBrief(graph, issue, paths, base, host.kind);
   const resuming = Object.keys(record).length > 0 || issue.status === "in_flight";
   const promptTpl = resuming ? RESUME_PROMPT : START_PROMPT;
   const prompt = promptTpl
     .replace("{brief}", paths.brief)
     .replace("{status}", paths.status)
-    .replace("{base}", base);
+    .replace("{base}", base)
+    .concat(resumed ? " Your previous conversation for this issue is loaded above." : "");
   const promptCmd = [
     "agent",
     "prompt",
@@ -293,6 +420,7 @@ async function launch(
     return {
       dry_run: true,
       issue: issue.ref,
+      host,
       commands: log,
       brief_path: paths.brief,
       brief,
@@ -310,12 +438,16 @@ async function launch(
     checkout,
     ...wt,
     agent: issue.key,
+    kind: host.kind,
+    model: host.model ?? null,
+    effort: host.effort ?? null,
+    bypass: !opts.safe,
     stage: "running",
     status_file: paths.status,
     brief: paths.brief,
     launched_at: record.launched_at ?? now,
     last_launch: now,
-    launches: (typeof record.launches === "number" ? record.launches : 0) + 1,
+    launches: launches + 1,
   });
   await writeJson(join(state, "issues", `${issue.key}.json`), record);
   return { issue: issue.ref, commands: log, ...record };
@@ -326,11 +458,12 @@ async function main(): Promise<void> {
   let graphPath: string | undefined;
   let issueRef: string | undefined;
   const opts: LaunchOpts = {
-    kind: "claude",
     permissionMode: "auto",
+    safe: false,
     dryRun: false,
     force: false,
     reprompt: false,
+    replace: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -342,10 +475,16 @@ async function main(): Promise<void> {
     } else if (a === "--model") {
       const v = argv[++i];
       if (v !== undefined) opts.model = v;
+    } else if (a === "--effort") {
+      const v = argv[++i];
+      if (v !== undefined) opts.effort = v;
     } else if (a === "--permission-mode") {
       const v = argv[++i];
       if (v) opts.permissionMode = v;
-    } else if (a === "--dry-run") opts.dryRun = true;
+      opts.safe = true;
+    } else if (a === "--safe") opts.safe = true;
+    else if (a === "--replace") opts.replace = true;
+    else if (a === "--dry-run") opts.dryRun = true;
     else if (a === "--force") opts.force = true;
     else if (a === "--reprompt") opts.reprompt = true;
     else throw new Error(`unknown arg: ${a}`);

@@ -2,6 +2,7 @@
 
 import { join } from "node:path";
 import { ghJson, parseRef, readJson, run, writeJson } from "./common.ts";
+import { detectTracker, makeTracker } from "./trackers/index.ts";
 
 const STAGE_AFTER: Record<string, string> = {
   merge: "running",
@@ -68,7 +69,7 @@ async function assess(
     "-R",
     `${owner}/${repo}`,
     "--json",
-    "state,isDraft,mergeable,headRefOid,headRefName,baseRefName,statusCheckRollup,url",
+    "state,isDraft,mergeable,headRefOid,headRefName,baseRefName,statusCheckRollup,url,autoMergeRequest",
   ])) as {
     state: string;
     isDraft: boolean;
@@ -78,12 +79,14 @@ async function assess(
     baseRefName: string;
     statusCheckRollup: CheckItem[] | null;
     url: string;
+    autoMergeRequest: unknown;
   };
   const result: Record<string, unknown> = {
     pr: `${owner}/${repo}#${number}`,
     url: pr.url,
     head: pr.headRefOid,
     reasons: [] as string[],
+    auto_merge_armed: pr.autoMergeRequest !== null && pr.autoMergeRequest !== undefined,
   };
   if (pr.state !== "OPEN") {
     return { ...result, verdict: pr.state.toLowerCase() };
@@ -233,110 +236,110 @@ async function doMerge(
   };
 }
 
-async function closeIssue(issue: string, prUrl: string, epic: string | undefined): Promise<string> {
-  const [o, r, n] = parseRef(issue);
-  for (let i = 0; i < 5; i++) {
-    const state = (
-      await run([
-        "gh",
-        "issue",
-        "view",
-        String(n),
-        "-R",
-        `${o}/${r}`,
-        "--json",
-        "state",
-        "-q",
-        ".state",
-      ])
-    ).trim();
-    if (state === "CLOSED") return "closed-by-pr";
-    await Bun.sleep(3000);
-  }
-  const note = `Delivered in ${prUrl}` + (epic ? ` (epic ${epic}).` : ".");
-  await run([
+/** Arm GitHub auto-merge pinned to the verified head: GitHub merges the moment
+ * the pending checks pass, with no orchestrator polling. A later push does
+ * not match the pinned SHA, and the gate disarms on `rebase`/`fix`. */
+export function autoMergeArgs(
+  owner: string,
+  repo: string,
+  number: number,
+  head: string,
+  method: string,
+): string[] {
+  return [
     "gh",
-    "issue",
-    "close",
-    String(n),
+    "pr",
+    "merge",
+    String(number),
     "-R",
-    `${o}/${r}`,
-    "--reason",
-    "completed",
-    "--comment",
-    note,
-  ]);
-  return "closed-manually";
+    `${owner}/${repo}`,
+    "--auto",
+    `--${method}`,
+    "--delete-branch",
+    "--match-head-commit",
+    head,
+  ];
 }
 
-function words(text: string): string[] {
-  return (
-    text
-      .replace(/^\s*\[[^\]]*\]\s*/, "")
-      .toLowerCase()
-      .match(/[a-z0-9]+/g) ?? []
-  );
+/** Arm only a PR that is waiting on checks alone; disarm whenever the worker
+ * is about to push (rebase/fix), so no unverified head can merge itself. */
+export function autoMergeAction(
+  verdict: string,
+  armed: boolean,
+  wanted: boolean,
+): "arm" | "disarm" | null {
+  if (armed && (verdict === "rebase" || verdict === "fix")) return "disarm";
+  if (wanted && !armed && verdict === "wait") return "arm";
+  return null;
 }
 
-export function tickBody(
-  body: string,
-  epicRepo: [string, string],
-  issue: string,
-  title = "",
-): string {
-  const [io, ir, inum] = parseRef(issue);
-  const full = [`https://github.com/${io}/${ir}/issues/${inum}`, `${io}/${ir}#${inum}`];
-  const task = new RegExp(
-    `^(\\s*[-*]\\s*)\\[ \\](\\s*)(${full.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})(?!\\d)`,
-    "i",
-  );
-  const sameRepo =
-    io.toLowerCase() === epicRepo[0].toLowerCase() &&
-    ir.toLowerCase() === epicRepo[1].toLowerCase();
-  const bare = new RegExp(`^(\\s*[-*]\\s*)\\[ \\](\\s*)(#${inum})(?!\\d)(.*)$`);
-  const head = words(title).slice(0, 3);
-  const lines = body.split("\n");
-  for (let idx = 0; idx < lines.length; idx++) {
-    const line = lines[idx];
-    if (line === undefined) continue;
-    if (task.test(line)) {
-      lines[idx] = line.replace(task, "$1[x]$2$3");
-    } else if (sameRepo) {
-      const m = bare.exec(line);
-      if (m) {
-        const rest = words(m[4] ?? "");
-        if (
-          rest.length === 0 ||
-          (head.length > 0 && rest.slice(0, head.length).join() === head.join())
-        ) {
-          lines[idx] = line.replace(bare, "$1[x]$2$3$4");
-        }
-      }
-    }
+/** Auto-merge state after this gate run, for the issue record: `armed`,
+ * `off`, or `unavailable` (arming was tried and the repo refused it). */
+export function autoMergeState(r: {
+  auto_merge_armed?: unknown;
+  auto_merge?: unknown;
+  auto_merge_disarmed?: unknown;
+}): "armed" | "off" | "unavailable" {
+  if (r.auto_merge_disarmed === true) return "off";
+  if (r.auto_merge === true) return "armed";
+  if (r.auto_merge === false) return "unavailable";
+  return r.auto_merge_armed === true ? "armed" : "off";
+}
+
+async function armAutoMerge(
+  owner: string,
+  repo: string,
+  number: number,
+  head: string,
+  method: string,
+): Promise<Record<string, unknown>> {
+  try {
+    await run(autoMergeArgs(owner, repo, number, head, method), { write: true });
+    return { auto_merge: true, method };
+  } catch (err) {
+    // Repos with auto-merge off: the watcher's recheck merges instead.
+    return {
+      auto_merge: false,
+      auto_merge_error: err instanceof Error ? err.message : String(err),
+    };
   }
-  return lines.join("\n");
 }
 
-async function tickEpic(epic: string, issue: string): Promise<boolean> {
-  const [eo, er, en] = parseRef(epic);
-  const [io, ir, inum] = parseRef(issue);
-  const titleResp = (await ghJson([
-    "api",
-    `repos/${io}/${ir}/issues/${inum}`,
-    "--jq",
-    "{t: .title}",
-  ])) as { t: string };
-  const bodyResp = (await ghJson([
-    "api",
-    `repos/${eo}/${er}/issues/${en}`,
-    "--jq",
-    "{b: .body}",
-  ])) as { b: string | null };
-  const body = bodyResp.b ?? "";
-  const next = tickBody(body, [eo, er], issue, titleResp.t);
-  if (next === body) return false;
-  await run(["gh", "api", "-X", "PATCH", `repos/${eo}/${er}/issues/${en}`, "-f", `body=${next}`]);
-  return true;
+async function disarmAutoMerge(owner: string, repo: string, number: number): Promise<void> {
+  await run(["gh", "pr", "merge", String(number), "-R", `${owner}/${repo}`, "--disable-auto"], {
+    write: true,
+  });
+}
+
+type GraphLite = {
+  tracker?: string;
+  default_repo?: string | null;
+  epic?: { ref: string };
+  issues?: { ref: string; key: string; title: string }[];
+};
+
+/** Close the delivered item and tick the epic through the epic's tracker
+ * (read from the saved graph, else detected from the epic ref). */
+async function settleIssue(
+  issue: string,
+  prUrl: string,
+  epic: string | undefined,
+  graph: GraphLite,
+): Promise<{ issue: string; epic_ticked?: boolean }> {
+  const epicRef = epic ?? graph.epic?.ref;
+  const kind = detectTracker(epicRef ?? issue, graph.tracker);
+  const tracker = makeTracker(kind, epicRef ?? issue, graph.default_repo ?? "");
+  const note = `Delivered in ${prUrl}` + (epicRef ? ` (epic ${epicRef}).` : ".");
+  const closed = await tracker.closeIssue(issue, note);
+  if (!epicRef) return { issue: closed };
+  let title = graph.issues?.find((i) => i.ref === issue || i.key === issue)?.title;
+  if (title === undefined && kind === "github") {
+    const [o, r, n] = parseRef(issue);
+    title = (
+      (await ghJson(["api", `repos/${o}/${r}/issues/${n}`, "--jq", "{t: .title}"])) as { t: string }
+    ).t;
+  }
+  return { issue: closed, epic_ticked: await tracker.tickEpic(issue, title ?? "") };
 }
 
 async function main(): Promise<void> {
@@ -345,6 +348,7 @@ async function main(): Promise<void> {
   let issue: string | undefined;
   let epic: string | undefined;
   let doMergeFlag = false;
+  let autoFlag = false;
   let method: string | undefined;
   let stateDir: string | undefined;
   let key: string | undefined;
@@ -354,6 +358,7 @@ async function main(): Promise<void> {
     else if (a === "--issue") issue = argv[++i];
     else if (a === "--epic") epic = argv[++i];
     else if (a === "--merge") doMergeFlag = true;
+    else if (a === "--auto") autoFlag = true;
     else if (a === "--method") method = argv[++i];
     else if (a === "--state-dir") stateDir = argv[++i];
     else if (a === "--key") key = argv[++i];
@@ -374,9 +379,21 @@ async function main(): Promise<void> {
       ),
     );
   }
+  const action = autoMergeAction(
+    String(result.verdict),
+    result.auto_merge_armed === true,
+    autoFlag,
+  );
+  if (action === "arm") {
+    const m = await mergeMethod(owner, repo, method);
+    Object.assign(result, await armAutoMerge(owner, repo, number, String(result.head), m));
+  } else if (action === "disarm") {
+    await disarmAutoMerge(owner, repo, number);
+    result.auto_merge_disarmed = true;
+  }
   if ((result.merged || result.verdict === "merged") && issue) {
-    result.issue = await closeIssue(issue, String(result.url), epic);
-    if (epic) result.epic_ticked = await tickEpic(epic, issue);
+    const graph = stateDir ? readJson<GraphLite>(join(stateDir, "graph.json"), {}) : {};
+    Object.assign(result, await settleIssue(issue, String(result.url), epic, graph));
   }
   if (stateDir && key) {
     const recPath = join(stateDir, "issues", `${key}.json`);
@@ -389,6 +406,7 @@ async function main(): Promise<void> {
       head: result.head,
       merged: result.merged,
       admin_used: result.admin_used,
+      auto_merge: autoMergeState(result),
     };
     await writeJson(recPath, rec);
   }

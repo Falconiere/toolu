@@ -126,7 +126,7 @@
     {
       "name": "epic-orchestrator",
       "source": "./plugins/epic-orchestrator",
-      "description": "Drive a GitHub epic to merged PRs: dependency graph, herdr worktrees, parallel Claude workers (delivery-flow→babysit), merge gate, and cleanup.",
+      "description": "Drive a GitHub, Jira, or Linear epic to merged PRs: dependency graph, herdr worktrees, parallel Claude Code / Codex / Cursor Agent / OpenCode workers routed by Jev complexity, merge gate, rate-limit and progress guardrails.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["epic", "github", "herdr", "orchestration"],

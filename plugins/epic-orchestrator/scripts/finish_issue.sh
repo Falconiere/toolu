@@ -26,8 +26,16 @@ if [[ -n $agent ]] && herdr agent get "$agent" >/dev/null 2>&1; then
   for _ in 1 2 3 4 5 6 7 8 9 10; do herdr agent get "$agent" >/dev/null 2>&1 || break; sleep 1; done
 fi
 
-# 2. Remove the worktree workspace. After a merge, leftovers are disposable; record them first.
+# 2. Snapshot the worktree to refs/epic-wip/<key> (survives the removal below),
+#    then remove the worktree workspace. Leftovers are also listed on the record.
 wt_path=$(field worktree)
+snap=$(bun "$(dirname "$0")/checkpoint.ts" --state-dir "$state" --key "$key" 2>/dev/null \
+  | jq -r '.[0] | if .changed or .sha then .ref else empty end' 2>/dev/null || true)
+if [[ $mode == --abandon && -n $wt_path && -d $wt_path && -z $snap ]] \
+  && [[ -n $(git -C "$wt_path" status --porcelain 2>/dev/null) ]]; then
+  echo "refusing --abandon: $wt_path has uncommitted work and the snapshot failed" >&2
+  exit 1
+fi
 dirty=""
 [[ -d $wt_path ]] && dirty=$(git -C "$wt_path" status --porcelain 2>/dev/null | head -20 || true)
 removed=false
@@ -50,8 +58,9 @@ fi
 stage=merged; [[ $mode == --abandon ]] && stage=abandoned
 now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 jq --arg stage "$stage" --arg now "$now" --arg dirty "$dirty" --argjson removed "$removed" \
-   --argjson bd "$branch_deleted" \
+   --argjson bd "$branch_deleted" --arg snap "$snap" \
    '.stage = $stage | .finished_at = $now | .worktree_removed = $removed | .branch_deleted = $bd
+    | .wip_ref = (if $snap == "" then null else $snap end)
     | .leftover_files = ($dirty | split("\n") | map(select(length > 0)))' "$rec" >"$rec.tmp"
 mv "$rec.tmp" "$rec"
-jq -c '{key, stage, worktree_removed, branch_deleted, leftover_files}' "$rec"
+jq -c '{key, stage, worktree_removed, branch_deleted, wip_ref, leftover_files}' "$rec"

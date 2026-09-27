@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { defaultPolicy, ghResetAt, withRetry } from "./ratelimit.ts";
 
 export const PLUGIN_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const REF_DIR = join(PLUGIN_ROOT, "skills", "epic-orchestrator", "references");
@@ -37,10 +38,21 @@ export class CommandError extends Error {
   }
 }
 
-export async function run(
-  cmd: string[],
-  opts: { cwd?: string; check?: boolean } = {},
-): Promise<string> {
+export type RunOpts = { cwd?: string; check?: boolean; write?: boolean };
+
+/** Run a command. `gh` calls retry transient failures and wait out rate
+ * limits; pass `write: true` for non-idempotent gh mutations so only rate
+ * limits (rejected before any effect) are retried. */
+export async function run(cmd: string[], opts: RunOpts = {}): Promise<string> {
+  if (cmd[0] !== "gh" || opts.check === false) return runOnce(cmd, opts);
+  return withRetry(() => runOnce(cmd, opts), {
+    ...defaultPolicy(),
+    resetAt: ghResetAt,
+    retryTransient: !opts.write,
+  });
+}
+
+async function runOnce(cmd: string[], opts: RunOpts): Promise<string> {
   const check = opts.check ?? true;
   const spawnOpts: { cwd?: string; stdout: "pipe"; stderr: "pipe" } = {
     stdout: "pipe",
@@ -160,10 +172,6 @@ export function slugify(title: string, words = 5): string {
   const cleaned = title.replace(/^\s*\[[^\]]*\]\s*/, "");
   const parts = cleaned.toLowerCase().match(/[a-z0-9]+/g) ?? [];
   return parts.slice(0, words).join("-") || "work";
-}
-
-export function stateDirFor(owner: string, repo: string, number: number): string {
-  return join(EPICS_HOME, `${owner}-${repo}-${number}`.toLowerCase());
 }
 
 export function readJson<T>(path: string, fallback: T): T {

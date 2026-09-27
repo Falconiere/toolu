@@ -1,7 +1,11 @@
 # epic-orchestrator — Epic Orchestrator
 
-Drive a GitHub epic to merged PRs: dependency graph, herdr worktrees, parallel
-Claude workers (delivery-flow from brainstorm through PR and babysit), merge gate, and cleanup.
+Drive a GitHub, Jira, or Linear epic to merged PRs: dependency graph, herdr
+worktrees, parallel workers on Claude Code, Codex, Cursor Agent, or OpenCode
+(delivery-flow from brainstorm through PR and babysit) routed by Jev
+complexity, a merge gate with GitHub auto-merge, rate-limit and progress
+guardrails, and cleanup. See the plugin README for trackers, hosts, and
+guardrails.
 
 ## Install
 
@@ -31,11 +35,14 @@ Scripts (invoked by the skill via `${CLAUDE_PLUGIN_ROOT}/scripts`):
 
 | Script | Role |
 |--------|------|
-| `epic-graph.ts` | Build graph, classify issues, pick launch batch |
-| `launch-issue.ts` | Clone/fetch, herdr worktree + agent, worker brief |
-| `epic-watch.ts` | Background poll; emit ready/failed/blocked/… events |
-| `merge-gate.ts` | Assess/merge PR; `--admin` only for protection-only blocks |
-| `finish_issue.sh` | Tear down agent/worktree after merge |
+| `epic-graph.ts` | Build graph (GitHub, Jira, or Linear), classify issues, pick launch batch |
+| `route.ts` | Jev complexity tier, then host, model, and effort per issue |
+| `launch-issue.ts` | Clone/fetch, herdr worktree + routed host agent, worker brief |
+| `epic-watch.ts` | Background poll; ready/failed/blocked/host-limited/gh-budget-low events; checkpoints |
+| `merge-gate.ts` | Assess/merge PR; `--auto` arms GitHub auto-merge; `--admin` only for protection-only blocks |
+| `checkpoint.ts` | Snapshot a worktree to `refs/epic-wip/<key>` |
+| `epic-close.ts` | Post the summary and close the epic in its tracker |
+| `finish_issue.sh` | Snapshot, then tear down agent/worktree after merge |
 | `report.sh` | Worker phase reporter |
 
 Full procedure: `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`.

@@ -3,7 +3,14 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PROTECTION, checkBuckets, tickBody } from "../merge-gate.ts";
+import {
+  PROTECTION,
+  autoMergeAction,
+  autoMergeArgs,
+  autoMergeState,
+  checkBuckets,
+} from "../merge-gate.ts";
+import { tickBody } from "../trackers/github.ts";
 
 const FIX = join(import.meta.dir, "..", "fixtures");
 
@@ -121,4 +128,40 @@ describe("ProtectionTest", () => {
       expect(PROTECTION.test(msg)).toBe(false);
     }
   });
+});
+
+test("auto-merge is pinned to the verified head and deletes the branch", () => {
+  expect(autoMergeArgs("o", "r", 12, "abc123", "squash")).toEqual([
+    "gh",
+    "pr",
+    "merge",
+    "12",
+    "-R",
+    "o/r",
+    "--auto",
+    "--squash",
+    "--delete-branch",
+    "--match-head-commit",
+    "abc123",
+  ]);
+});
+
+test("auto-merge arms only on wait and disarms before any worker push", () => {
+  expect(autoMergeAction("wait", false, true)).toBe("arm");
+  expect(autoMergeAction("wait", false, false)).toBeNull();
+  expect(autoMergeAction("wait", true, true)).toBeNull();
+  expect(autoMergeAction("merge", false, true)).toBeNull();
+  expect(autoMergeAction("rebase", true, false)).toBe("disarm");
+  expect(autoMergeAction("fix", true, true)).toBe("disarm");
+  expect(autoMergeAction("fix", false, true)).toBeNull();
+});
+
+test("recorded auto-merge state reflects this run's arm/disarm outcome", () => {
+  // Disarmed this run: off, even though the assessment saw it armed.
+  expect(autoMergeState({ auto_merge_armed: true, auto_merge_disarmed: true })).toBe("off");
+  expect(autoMergeState({ auto_merge_armed: false, auto_merge: true })).toBe("armed");
+  // Arming was tried and the repo refused it.
+  expect(autoMergeState({ auto_merge_armed: false, auto_merge: false })).toBe("unavailable");
+  expect(autoMergeState({ auto_merge_armed: true })).toBe("armed");
+  expect(autoMergeState({ auto_merge_armed: false })).toBe("off");
 });
