@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.5.0](https://github.com/Falconiere/toolu/compare/v7.4.1...v7.5.0) (2026-09-27)
+
+
+### Features
+
+* **cli:** show live plugin installation progress ([#290](https://github.com/Falconiere/toolu/issues/290)) ([712bcea](https://github.com/Falconiere/toolu/commit/712bcead216678beef0bc4f650b55c09fbd95d05))
+
 ## [7.4.1](https://github.com/Falconiere/toolu/compare/v7.4.0...v7.4.1) (2026-09-27)
 
 
