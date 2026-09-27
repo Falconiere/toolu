@@ -260,18 +260,14 @@ async function build(epicRef: string, opts: BuildOpts): Promise<Record<string, u
       i.prs = await prsByBranch(i.repo, String(launched[i.key]?.branch));
     });
   }
+  // GitHub epics live in their own repo (`owner/repo#N`); Jira and Linear
+  // epics point at the run's default code repo.
+  const epicRepo = kind === "github" ? tracker.epicRef.replace(/#\d+$/, "") : defaultRepo;
   const [levels, cycle] = computeLevels(issues);
   const downstream = downstreamCounts(issues);
   const chains = chainLengths(issues);
   const checkouts = await resolveCheckouts(
-    [
-      ...new Set([
-        ...Object.values(issues).map((i) => i.repo),
-        ...(kind === "github" ? [tracker.epicRef.split("#")[0] ?? ""] : [defaultRepo]),
-      ]),
-    ]
-      .filter(Boolean)
-      .sort(),
+    [...new Set([...Object.values(issues).map((i) => i.repo), epicRepo])].filter(Boolean).sort(),
   );
   for (const [ref, i] of Object.entries(issues)) {
     i.status = classify(i, new Set(Object.keys(issues)), launched);
@@ -295,8 +291,7 @@ async function build(epicRef: string, opts: BuildOpts): Promise<Record<string, u
   const ready = Object.entries(issues)
     .filter(([, i]) => i.status === "ready")
     .map(([r]) => r);
-  const epicCheckout =
-    checkouts[kind === "github" ? (tracker.epicRef.split("#")[0] ?? "") : defaultRepo];
+  const epicCheckout = checkouts[epicRepo];
   const cloneRoot = dirname(epicCheckout ?? process.cwd());
   return {
     tracker: kind,

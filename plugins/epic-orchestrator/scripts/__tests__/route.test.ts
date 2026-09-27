@@ -121,4 +121,20 @@ describe("routeIssues", () => {
     );
     expect(routes.map((r) => r.host)).toEqual(["claude", null]);
   });
+
+  test("issues resolve by ref or by key; unknown ones are refused", async () => {
+    const g = graphInTmp();
+    const pool = parseHosts("claude:3", 3);
+    const { routes } = await routeIssues(
+      g,
+      ["comemory-255", "CodaSignal/comemory.io#183"],
+      pool,
+      opts,
+    );
+    expect(routes.map((r) => r.ref)).toEqual([
+      "Falconiere/comemory#255",
+      "CodaSignal/comemory.io#183",
+    ]);
+    expect(routeIssues(g, ["nope-1"], pool, opts)).rejects.toThrow("nope-1 is not in the graph");
+  });
 });

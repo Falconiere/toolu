@@ -252,9 +252,11 @@ export async function routeIssues(
   opts: { jev: boolean; reroute: boolean; table: RoutingTable },
 ): Promise<{ routes: Route[]; note: string | null }> {
   const dir = join(graph.state_dir, "routes");
-  const byRef = new Map(graph.issues.flatMap((i) => [[i.ref, i] as const, [i.key, i] as const]));
+  // Separate maps so a ref can never be shadowed by another issue's key.
+  const byRef = new Map(graph.issues.map((i) => [i.ref, i] as const));
+  const byKey = new Map(graph.issues.map((i) => [i.key, i] as const));
   const targets = wanted.map((w) => {
-    const i = byRef.get(w);
+    const i = byRef.get(w) ?? byKey.get(w);
     if (!i) throw new Error(`${w} is not in the graph`);
     return i;
   });
