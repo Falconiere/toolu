@@ -83,7 +83,7 @@ Stop and report the first check that fails:
 - Each host in `--hosts` is on PATH (`claude`, `codex`, `cursor-agent`,
   `opencode`) and logged in.
 - Jira epic: `jira.sh` is installed (toolu `jira` plugin) and authenticated.
-  Linear epic: `LINEAR_API_KEY` is set.
+  Linear epic: `LINEAR_API_KEY` is set (personal key or OAuth token).
 - `gh api rate_limit` shows core above 1000 (`EPIC_GH_CORE_FLOOR`). Below it,
   wait for the reset: every worker's babysit spends the same token.
 - Your skill list includes `delivery-flow:delivery-flow` and its `toolu`,

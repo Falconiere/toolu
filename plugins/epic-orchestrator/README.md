@@ -17,7 +17,8 @@ Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `bra
 
 Optional: `jev` with `TYPESAFE_API_KEY` (complexity routing; without it tiers
 come from a heuristic), the `jira` plugin (Jira epics), and `LINEAR_API_KEY`
-(Linear epics).
+(Linear epics: a personal key `lin_api_…` is sent bare, an OAuth token
+`lin_oauth_…` as `Bearer`; `LINEAR_API_URL` overrides the endpoint).
 
 ### Claude Code
 

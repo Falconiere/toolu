@@ -48,6 +48,15 @@ function closed(s: State | undefined): "open" | "closed" {
   return s && CLOSED_TYPES.has(s.type) ? "closed" : "open";
 }
 
+/** Linear's two auth schemes: a personal API key (`lin_api_…`) goes in the
+ * header bare, an OAuth2 access token (`lin_oauth_…`) as `Bearer <token>`.
+ * https://linear.app/developers/graphql#authentication */
+export function linearAuthHeader(token: string): string {
+  const t = token.trim();
+  if (/^bearer\s/i.test(t)) return t;
+  return t.startsWith("lin_oauth_") ? `Bearer ${t}` : t;
+}
+
 export function linearBlockers(i: LinearIssue): Record<string, string> {
   const out: Record<string, string> = {};
   for (const r of i.inverseRelations?.nodes ?? []) {
@@ -60,25 +69,30 @@ export class LinearTracker implements Tracker {
   readonly kind = "linear";
   readonly epicRef: string;
   private readonly ref: LinearRef;
-  private readonly key: string;
+  private readonly auth: string;
+  private readonly api: string;
 
+  /** `LINEAR_API_KEY` holds a personal key or an OAuth token;
+   * `LINEAR_API_URL` overrides the endpoint (a proxy, or a test server). */
   constructor(
     ref: string,
     private readonly defaultRepo: string,
+    env: NodeJS.ProcessEnv = process.env,
   ) {
     const parsed = parseLinearRef(ref);
     if (!parsed) throw new Error(`not a Linear issue identifier or URL: ${ref}`);
-    const key = process.env.LINEAR_API_KEY;
+    const key = env.LINEAR_API_KEY;
     if (!key) throw new Error("LINEAR_API_KEY is not set");
     this.ref = parsed;
-    this.key = key;
+    this.auth = linearAuthHeader(key);
+    this.api = env.LINEAR_API_URL || API;
     this.epicRef = parsed.kind === "project" ? `project:${parsed.id}` : parsed.id;
   }
 
   private async gql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
-    const res = (await fetchJson(API, {
+    const res = (await fetchJson(this.api, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: this.key },
+      headers: { "Content-Type": "application/json", Authorization: this.auth },
       body: JSON.stringify({ query, variables }),
     })) as { data?: T; errors?: { message: string }[] };
     if (res.errors?.length)
