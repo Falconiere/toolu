@@ -1,6 +1,6 @@
 {
   "name": "brainstorm",
-  "version": "7.2.0",
+  "version": "7.3.0",
   "description": "Think a change through before building: evidence-backed triage, alternatives, trade-offs, and a recommended approach, without editing code. Standalone, and phase 1 of delivery-flow. No dependencies.",
   "skills": "./skills/"
 }

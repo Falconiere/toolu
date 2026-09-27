@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.3.0](https://github.com/Falconiere/toolu/compare/v7.2.0...v7.3.0) (2026-09-26)
+
+
+### Features
+
+* **brainstorm:** extract brainstorm into its own plugin ([#280](https://github.com/Falconiere/toolu/issues/280)) ([edc96d8](https://github.com/Falconiere/toolu/commit/edc96d8692c56974a644d5c1fbcfe67a727dedca))
+
 ## [7.2.0](https://github.com/Falconiere/toolu/compare/v7.1.0...v7.2.0) (2026-09-25)
 
 
