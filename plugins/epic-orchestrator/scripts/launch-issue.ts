@@ -81,9 +81,10 @@ function trackerLines(graph: Graph, issue: GraphIssue): { read: string; closes: 
   if (graph.tracker === "linear") {
     return { read: `the Linear issue ${issue.url}`, closes: `Fixes ${issue.ref}` };
   }
+  // The issue URL and canonical ref (`owner/repo#N`) already carry the number.
   return {
-    read: `\`gh issue view ${issue.number ?? ""} --repo ${issue.repo} --comments\``,
-    closes: `Closes ${issue.repo}#${issue.number ?? ""}`,
+    read: `\`gh issue view ${issue.url} --comments\``,
+    closes: `Closes ${issue.ref}`,
   };
 }
 

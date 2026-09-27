@@ -4,7 +4,7 @@ import { readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { snapshot, snapshotActive, type Snapshot } from "./checkpoint.ts";
 import { CommandError, herdr, readJson, writeJson } from "./common.ts";
-import { HOST_LIMIT, hostKind } from "./hosts.ts";
+import { HOST_LIMIT, parseHostKind } from "./hosts.ts";
 import { budgetLow, envNumber, ghBudget } from "./ratelimit.ts";
 import type { Cooldowns } from "./route.ts";
 
@@ -126,13 +126,23 @@ async function paneTail(agent: string): Promise<string> {
   return code === 0 ? out : "";
 }
 
-/** Put a host on cooldown so routing sends new and moved work elsewhere. */
-export async function coolHost(state: string, kind: string, reason: string, now = Date.now()) {
+/** Put a host on cooldown so routing sends new and moved work elsewhere.
+ * Returns false (and writes nothing) when `kind` names no known host, e.g. a
+ * hand-edited record: one bad record must not crash the whole watcher. */
+export async function coolHost(
+  state: string,
+  kind: string,
+  reason: string,
+  now = Date.now(),
+): Promise<boolean> {
+  const host = parseHostKind(kind);
+  if (!host) return false;
   const path = join(state, "hosts.json");
   const hosts = readJson<Cooldowns>(path, {});
   const minutes = envNumber("EPIC_HOST_COOLDOWN_MIN", 60);
-  hosts[hostKind(kind)] = { until: new Date(now + minutes * 60_000).toISOString(), reason };
+  hosts[host] = { until: new Date(now + minutes * 60_000).toISOString(), reason };
   await writeJson(path, hosts);
+  return true;
 }
 
 /** Idle workers whose status went quiet get their pane tail scanned for a
@@ -163,12 +173,14 @@ export async function limitEvents(
     }
     if (line && mark.limited !== stamp) {
       if (stamp !== undefined) mark.limited = stamp;
-      await coolHost(state, kind, line.slice(0, 200));
+      const cooled = await coolHost(state, kind, line.slice(0, 200));
+      // Still report it: an unknown host needs the orchestrator's eyes more.
       events.push({
         key,
         ref: rec.ref,
         type: "host-limited",
         host: kind,
+        cooldown: cooled,
         note: line.slice(0, 200),
       });
     }

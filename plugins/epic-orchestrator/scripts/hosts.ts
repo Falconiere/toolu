@@ -17,8 +17,13 @@ const ALIASES: Record<string, HostKind> = {
   opencode: "opencode",
 };
 
+/** The host a name or alias refers to, or null when it names no host. */
+export function parseHostKind(name: string): HostKind | null {
+  return ALIASES[name.trim().toLowerCase()] ?? null;
+}
+
 export function hostKind(name: string): HostKind {
-  const kind = ALIASES[name.trim().toLowerCase()];
+  const kind = parseHostKind(name);
   if (!kind) throw new Error(`unknown host ${name}; use one of ${HOST_KINDS.join(", ")}`);
   return kind;
 }

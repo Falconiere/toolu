@@ -9,7 +9,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { EPICS_HOME, readJson, writeJson } from "./common.ts";
-import { HOST_KINDS, hostKind, type HostKind } from "./hosts.ts";
+import { HOST_KINDS, hostKind, parseHostKind, type HostKind } from "./hosts.ts";
 
 export const TIERS = ["trivial", "standard", "complex", "critical"] as const;
 
@@ -233,14 +233,17 @@ function liveHostCounts(state: string): Partial<Record<HostKind, number>> {
   let names: string[] = [];
   try {
     names = readdirSync(join(state, "issues"));
-  } catch {
-    return used;
+  } catch (err: unknown) {
+    const code = err && typeof err === "object" && "code" in err ? err.code : undefined;
+    if (code === "ENOENT") return used;
+    throw err;
   }
   for (const name of names) {
     const rec = readJson<{ stage?: string; kind?: string }>(join(state, "issues", name), {});
     if (rec.stage !== "running" && rec.stage !== "awaiting_merge") continue;
-    const kind = hostKind(rec.kind ?? "claude");
-    used[kind] = (used[kind] ?? 0) + 1;
+    // A record naming no known host occupies no host's capacity.
+    const kind = parseHostKind(rec.kind ?? "claude");
+    if (kind) used[kind] = (used[kind] ?? 0) + 1;
   }
   return used;
 }

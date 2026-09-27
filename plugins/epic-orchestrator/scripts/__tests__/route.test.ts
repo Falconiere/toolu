@@ -122,6 +122,28 @@ describe("routeIssues", () => {
     expect(routes.map((r) => r.host)).toEqual(["claude", null]);
   });
 
+  test("a live record naming an unknown host neither crashes routing nor takes capacity", async () => {
+    const g = graphInTmp();
+    mkdirSync(join(g.state_dir, "issues"), { recursive: true });
+    writeFileSync(
+      join(g.state_dir, "issues", "x-1.json"),
+      JSON.stringify({ stage: "running", kind: "gemini" }),
+    );
+    writeFileSync(
+      join(g.state_dir, "issues", "x-2.json"),
+      JSON.stringify({ stage: "running", kind: "claude" }),
+    );
+    const pool = parseHosts("claude:2", 2);
+    const { routes } = await routeIssues(
+      g,
+      ["Falconiere/comemory#255", "CodaSignal/comemory.io#183"],
+      pool,
+      opts,
+    );
+    // One claude slot is taken by x-2; the gemini record takes none.
+    expect(routes.map((r) => r.host)).toEqual(["claude", null]);
+  });
+
   test("issues resolve by ref or by key; unknown ones are refused", async () => {
     const g = graphInTmp();
     const pool = parseHosts("claude:3", 3);

@@ -21,6 +21,9 @@ describe("BriefTest", () => {
     expect(brief).not.toContain("{{");
     expect(brief.startsWith("# Epic worker brief — Falconiere/comemory#255")).toBe(true);
     expect(brief).toContain("Closes Falconiere/comemory#255");
+    expect(brief).toContain(
+      "`gh issue view https://github.com/Falconiere/comemory/issues/255 --comments`",
+    );
     expect(brief).toContain("Part of Falconiere/comemory#248");
     expect(brief).toContain(join(HERE, "report.sh"));
     for (const phase of [

@@ -1,7 +1,7 @@
 /** Per-host CLI args: approval bypass, model/effort, resume, skill syntax. */
 
 import { describe, expect, test } from "bun:test";
-import { HOST_LIMIT, agentArgs, hostKind, skillRef } from "../hosts.ts";
+import { HOST_LIMIT, agentArgs, hostKind, parseHostKind, skillRef } from "../hosts.ts";
 
 const base = { key: "toolu-12", bypass: true, permissionMode: "auto", resume: false };
 
@@ -71,6 +71,8 @@ test("host aliases", () => {
   expect(hostKind("cursor-agent")).toBe("cursor");
   expect(hostKind("Claude-Code")).toBe("claude");
   expect(() => hostKind("gemini")).toThrow("unknown host");
+  expect(parseHostKind(" Cursor-Agent ")).toBe("cursor");
+  expect(parseHostKind("gemini")).toBeNull();
 });
 
 test("skill syntax per host", () => {

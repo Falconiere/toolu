@@ -1,7 +1,7 @@
 /** Watcher event rules plus the real report.sh writing the status files it reads. */
 
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { coolHost, issueEvents, limitEvents, limitLine } from "../epic-watch.ts";
@@ -150,6 +150,7 @@ test("a worker's rate-limited report cools its host and raises host-limited once
       ref: REC.ref,
       type: "host-limited",
       host: "codex",
+      cooldown: true,
       note: "rate-limited: codex usage limit",
     },
   ]);
@@ -159,4 +160,23 @@ test("a worker's rate-limited report cools its host and raises host-limited once
   >;
   expect(Object.keys(hosts)).toEqual(["codex"]);
   expect(await limitEvents(dir, active, { k: st }, agents, seen)).toEqual([]);
+});
+
+test("a record naming an unknown host is still reported, without a cooldown or a crash", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "epic-watch-"));
+  const f = join(dir, "status", "k.json");
+  expect((await report(f, "failed", "--note", "rate-limited: quota exceeded")).code).toBe(0);
+  const st = JSON.parse(readFileSync(f, "utf8")) as Record<string, unknown>;
+  const events = await limitEvents(dir, { k: { ...REC, kind: "gemini" } }, { k: st }, {}, {});
+  expect(events).toEqual([
+    {
+      key: "k",
+      ref: REC.ref,
+      type: "host-limited",
+      host: "gemini",
+      cooldown: false,
+      note: "rate-limited: quota exceeded",
+    },
+  ]);
+  expect(existsSync(join(dir, "hosts.json"))).toBe(false);
 });
