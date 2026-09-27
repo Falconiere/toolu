@@ -3,7 +3,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PROTECTION, autoMergeArgs, checkBuckets } from "../merge-gate.ts";
+import { PROTECTION, autoMergeAction, autoMergeArgs, checkBuckets } from "../merge-gate.ts";
 import { tickBody } from "../trackers/github.ts";
 
 const FIX = join(import.meta.dir, "..", "fixtures");
@@ -138,4 +138,14 @@ test("auto-merge is pinned to the verified head and deletes the branch", () => {
     "--match-head-commit",
     "abc123",
   ]);
+});
+
+test("auto-merge arms only on wait and disarms before any worker push", () => {
+  expect(autoMergeAction("wait", false, true)).toBe("arm");
+  expect(autoMergeAction("wait", false, false)).toBeNull();
+  expect(autoMergeAction("wait", true, true)).toBeNull();
+  expect(autoMergeAction("merge", false, true)).toBeNull();
+  expect(autoMergeAction("rebase", true, false)).toBe("disarm");
+  expect(autoMergeAction("fix", true, true)).toBe("disarm");
+  expect(autoMergeAction("fix", false, true)).toBeNull();
 });

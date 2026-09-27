@@ -5,6 +5,7 @@ import {
   RateLimitError,
   budgetLow,
   classifyFailure,
+  fetchJson,
   mapLimit,
   resetFromHeaders,
   withRetry,
@@ -131,4 +132,52 @@ test("budgetLow names the exhausted resource", () => {
   };
   expect(budgetLow(b, { core: 1000, graphql: 500 })).toContain("core budget 400/5000");
   expect(budgetLow(b, { core: 100, graphql: 500 })).toBeNull();
+});
+
+test("fetchJson waits out a real 429 with Retry-After, then succeeds", async () => {
+  let hits = 0;
+  const server = Bun.serve({
+    port: 0,
+    fetch() {
+      hits++;
+      if (hits === 1) {
+        return new Response("slow down", { status: 429, headers: { "retry-after": "0" } });
+      }
+      if (hits === 2) {
+        return Response.json({ errors: [{ message: "x", extensions: { code: "RATELIMITED" } }] });
+      }
+      return Response.json({ data: { ok: true } });
+    },
+  });
+  try {
+    const out = await fetchJson(
+      `http://localhost:${server.port}/graphql`,
+      { method: "POST" },
+      FAST,
+    );
+    expect(out).toEqual({ data: { ok: true } });
+    expect(hits).toBe(3);
+  } finally {
+    await server.stop(true);
+  }
+});
+
+test("fetchJson does not retry a 404", async () => {
+  let hits = 0;
+  const server = Bun.serve({
+    port: 0,
+    fetch() {
+      hits++;
+      return new Response("nope", { status: 404 });
+    },
+  });
+  try {
+    const err = await fetchJson(`http://localhost:${server.port}/x`, {}, FAST).catch(
+      (e: unknown) => e,
+    );
+    expect(String(err)).toContain("HTTP 404");
+    expect(hits).toBe(1);
+  } finally {
+    await server.stop(true);
+  }
 });

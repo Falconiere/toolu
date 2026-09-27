@@ -137,7 +137,7 @@ export async function coolHost(state: string, kind: string, reason: string, now 
 
 /** Idle workers whose status went quiet get their pane tail scanned for a
  * provider limit; a worker may also report `failed` with a rate-limited note. */
-async function limitEvents(
+export async function limitEvents(
   state: string,
   active: Record<string, Record<string, unknown>>,
   statuses: Record<string, Record<string, unknown>>,

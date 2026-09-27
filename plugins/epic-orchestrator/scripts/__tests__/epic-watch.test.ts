@@ -4,7 +4,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { coolHost, issueEvents, limitLine } from "../epic-watch.ts";
+import { coolHost, issueEvents, limitEvents, limitLine } from "../epic-watch.ts";
 import { coolingHosts } from "../route.ts";
 
 const REPORT = join(import.meta.dir, "..", "report.sh");
@@ -133,4 +133,30 @@ describe("HostLimitTest", () => {
     expect([...coolingHosts(hosts, now + 30 * 60_000)]).toEqual(["cursor"]);
     expect([...coolingHosts(hosts, now + 61 * 60_000)]).toEqual([]);
   });
+});
+
+test("a worker's rate-limited report cools its host and raises host-limited once", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "epic-watch-"));
+  const f = join(dir, "status", "k.json");
+  expect((await report(f, "failed", "--note", "rate-limited: codex usage limit")).code).toBe(0);
+  const st = JSON.parse(readFileSync(f, "utf8")) as Record<string, unknown>;
+  const active = { k: { ...REC, kind: "codex" } };
+  const seen = {};
+  const agents = { "comemory-255": "working" };
+  const first = await limitEvents(dir, active, { k: st }, agents, seen);
+  expect(first).toEqual([
+    {
+      key: "k",
+      ref: REC.ref,
+      type: "host-limited",
+      host: "codex",
+      note: "rate-limited: codex usage limit",
+    },
+  ]);
+  const hosts = JSON.parse(readFileSync(join(dir, "hosts.json"), "utf8")) as Record<
+    string,
+    unknown
+  >;
+  expect(Object.keys(hosts)).toEqual(["codex"]);
+  expect(await limitEvents(dir, active, { k: st }, agents, seen)).toEqual([]);
 });

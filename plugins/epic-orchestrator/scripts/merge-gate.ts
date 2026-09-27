@@ -261,6 +261,18 @@ export function autoMergeArgs(
   ];
 }
 
+/** Arm only a PR that is waiting on checks alone; disarm whenever the worker
+ * is about to push (rebase/fix), so no unverified head can merge itself. */
+export function autoMergeAction(
+  verdict: string,
+  armed: boolean,
+  wanted: boolean,
+): "arm" | "disarm" | null {
+  if (armed && (verdict === "rebase" || verdict === "fix")) return "disarm";
+  if (wanted && !armed && verdict === "wait") return "arm";
+  return null;
+}
+
 async function armAutoMerge(
   owner: string,
   repo: string,
@@ -354,12 +366,15 @@ async function main(): Promise<void> {
       ),
     );
   }
-  if (autoFlag && result.verdict === "wait" && !result.auto_merge_armed) {
+  const action = autoMergeAction(
+    String(result.verdict),
+    result.auto_merge_armed === true,
+    autoFlag,
+  );
+  if (action === "arm") {
     const m = await mergeMethod(owner, repo, method);
     Object.assign(result, await armAutoMerge(owner, repo, number, String(result.head), m));
-  }
-  // Never leave auto-merge armed on a PR the worker is about to push to.
-  if ((result.verdict === "rebase" || result.verdict === "fix") && result.auto_merge_armed) {
+  } else if (action === "disarm") {
     await disarmAutoMerge(owner, repo, number);
     result.auto_merge_disarmed = true;
   }
