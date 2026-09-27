@@ -19,6 +19,7 @@ describe("BriefTest", () => {
     const paths = { worktree: "/wt/comemory/feat-255", status: "/state/status/comemory-255.json" };
     const brief = renderBrief(graph, issue, paths, "main");
     expect(brief).not.toContain("{{");
+    expect(brief.startsWith("# Epic worker brief — Falconiere/comemory#255")).toBe(true);
     expect(brief).toContain("Closes Falconiere/comemory#255");
     expect(brief).toContain("Part of Falconiere/comemory#248");
     expect(brief).toContain(join(HERE, "report.sh"));

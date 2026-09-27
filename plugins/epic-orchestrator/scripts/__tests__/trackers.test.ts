@@ -5,7 +5,7 @@ import { branchFor, keyFor } from "../epic-graph.ts";
 import { detectTracker } from "../trackers/index.ts";
 import { adfText, jiraBlockers, parseJiraRef } from "../trackers/jira.ts";
 import { linearBlockers, parseLinearRef } from "../trackers/linear.ts";
-import { repoFor } from "../trackers/types.ts";
+import { EXCERPT_CHARS, excerpt, repoFor } from "../trackers/types.ts";
 
 describe("detectTracker", () => {
   // A HOME without a jira CLI login, so only the env decides.
@@ -125,4 +125,12 @@ test("code repo: label, then Repo: line, then default", () => {
   expect(repoFor(["backend", "repo:acme/api"], "Repo: acme/web", "acme/mono")).toBe("acme/api");
   expect(repoFor([], "Context\nRepo: acme/web\n", "acme/mono")).toBe("acme/web");
   expect(repoFor([], "no hint", "acme/mono")).toBe("acme/mono");
+});
+
+test("excerpt cuts on code points, never inside a surrogate pair", () => {
+  const text = "a".repeat(EXCERPT_CHARS - 1) + "😀😀";
+  const out = excerpt(text);
+  expect(Array.from(out)).toHaveLength(EXCERPT_CHARS);
+  expect(out.endsWith("😀")).toBe(true);
+  expect(out.isWellFormed()).toBe(true);
 });

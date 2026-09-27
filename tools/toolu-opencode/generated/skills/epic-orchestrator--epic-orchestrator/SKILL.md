@@ -174,7 +174,9 @@ Launch issues one at a time. For each issue the launcher:
    effort and the host's approval-bypass flags. A relaunch on the same host
    continues its last session (`--continue`, or `codex resume --last`).
    Refuses a first launch while the GitHub budget is under its floor.
-5. renders `references/worker-brief.md` into `<state_dir>/briefs/<key>.md`
+5. renders `references/worker-brief.md` into `<state_dir>/briefs/<key>.md`,
+   filling host-specific skill invocations and tracker-specific issue-read
+   and PR-closing lines (the template's header comment lists them)
 6. prompts the agent to follow the brief
 7. records the issue in `<state_dir>/issues/<key>.json`
 

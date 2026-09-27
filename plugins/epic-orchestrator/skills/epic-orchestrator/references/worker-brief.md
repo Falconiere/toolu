@@ -1,3 +1,17 @@
+<!-- Template, rendered per issue by scripts/launch-issue.ts (renderBrief), which
+strips this comment. Workers only ever read the rendered copy. Host- and
+tracker-specific placeholders (written here without braces so they survive):
+- DELIVERY, BABYSIT, DEBUG: the host's skill invocation, e.g. for delivery-flow
+  `/delivery-flow:delivery-flow` (Claude Code), `$delivery-flow:delivery-flow`
+  (Codex), "the `delivery-flow:delivery-flow` skill" (Cursor Agent), "the
+  `delivery-flow--delivery-flow` skill" (OpenCode). See hosts.ts skillRef.
+- ISSUE_READ: how to read the issue: `gh issue view N --repo OWNER/REPO
+  --comments` (GitHub), `jira.sh issue get KEY` (Jira), the issue URL (Linear).
+- CLOSES: the PR body's closing line: `Closes OWNER/REPO#N` (GitHub),
+  `Resolves KEY-12` (Jira), `Fixes ENG-12` (Linear).
+- HOST: the worker's host kind.
+scripts/__tests__/skill-contract.bats fails if any placeholder goes unfilled. -->
+
 # Epic worker brief — {{ISSUE_REF}}
 
 You are the worker for exactly one sub-issue of epic {{EPIC_REF}}. An

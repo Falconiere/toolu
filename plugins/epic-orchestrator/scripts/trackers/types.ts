@@ -49,8 +49,11 @@ export interface Tracker {
 
 export const EXCERPT_CHARS = 1500;
 
+/** First EXCERPT_CHARS code points; never splits a surrogate pair. */
 export function excerpt(text: string | null | undefined): string {
-  return (text ?? "").trim().slice(0, EXCERPT_CHARS);
+  return Array.from((text ?? "").trim())
+    .slice(0, EXCERPT_CHARS)
+    .join("");
 }
 
 const REPO_LABEL = /^repo:([\w.-]+\/[\w.-]+)$/i;

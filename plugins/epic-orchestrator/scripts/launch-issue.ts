@@ -137,7 +137,8 @@ export function renderBrief(
     STATUS_FILE: paths.status,
     BLOCKERS: closed.join(", ") || "none",
   };
-  let text = readFileSync(BRIEF_TEMPLATE, "utf8");
+  // The leading comment documents the placeholders for maintainers only.
+  let text = readFileSync(BRIEF_TEMPLATE, "utf8").replace(/^<!--[\s\S]*?-->\n+/, "");
   for (const [key, val] of Object.entries(values)) {
     text = text.replaceAll(`{{${key}}}`, val);
   }
