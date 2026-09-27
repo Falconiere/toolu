@@ -3,7 +3,13 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PROTECTION, autoMergeAction, autoMergeArgs, checkBuckets } from "../merge-gate.ts";
+import {
+  PROTECTION,
+  autoMergeAction,
+  autoMergeArgs,
+  autoMergeState,
+  checkBuckets,
+} from "../merge-gate.ts";
 import { tickBody } from "../trackers/github.ts";
 
 const FIX = join(import.meta.dir, "..", "fixtures");
@@ -148,4 +154,14 @@ test("auto-merge arms only on wait and disarms before any worker push", () => {
   expect(autoMergeAction("rebase", true, false)).toBe("disarm");
   expect(autoMergeAction("fix", true, true)).toBe("disarm");
   expect(autoMergeAction("fix", false, true)).toBeNull();
+});
+
+test("recorded auto-merge state reflects this run's arm/disarm outcome", () => {
+  // Disarmed this run: off, even though the assessment saw it armed.
+  expect(autoMergeState({ auto_merge_armed: true, auto_merge_disarmed: true })).toBe("off");
+  expect(autoMergeState({ auto_merge_armed: false, auto_merge: true })).toBe("armed");
+  // Arming was tried and the repo refused it.
+  expect(autoMergeState({ auto_merge_armed: false, auto_merge: false })).toBe("unavailable");
+  expect(autoMergeState({ auto_merge_armed: true })).toBe("armed");
+  expect(autoMergeState({ auto_merge_armed: false })).toBe("off");
 });

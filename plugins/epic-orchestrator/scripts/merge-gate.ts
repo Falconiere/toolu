@@ -273,6 +273,19 @@ export function autoMergeAction(
   return null;
 }
 
+/** Auto-merge state after this gate run, for the issue record: `armed`,
+ * `off`, or `unavailable` (arming was tried and the repo refused it). */
+export function autoMergeState(r: {
+  auto_merge_armed?: unknown;
+  auto_merge?: unknown;
+  auto_merge_disarmed?: unknown;
+}): "armed" | "off" | "unavailable" {
+  if (r.auto_merge_disarmed === true) return "off";
+  if (r.auto_merge === true) return "armed";
+  if (r.auto_merge === false) return "unavailable";
+  return r.auto_merge_armed === true ? "armed" : "off";
+}
+
 async function armAutoMerge(
   owner: string,
   repo: string,
@@ -393,7 +406,7 @@ async function main(): Promise<void> {
       head: result.head,
       merged: result.merged,
       admin_used: result.admin_used,
-      auto_merge: result.auto_merge ?? result.auto_merge_armed,
+      auto_merge: autoMergeState(result),
     };
     await writeJson(recPath, rec);
   }
