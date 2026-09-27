@@ -93,6 +93,10 @@ describe("withRetry", () => {
 
 describe("resetFromHeaders", () => {
   const now = 1_700_000_000_000;
+  test("Retry-After HTTP-date (always GMT)", () => {
+    const h = new Headers({ "retry-after": "Wed, 21 Oct 2015 07:28:00 GMT" });
+    expect(resetFromHeaders(h, now)).toBe(Date.UTC(2015, 9, 21, 7, 28, 0));
+  });
   test("Retry-After seconds", () => {
     expect(resetFromHeaders(new Headers({ "retry-after": "30" }), now)).toBe(now + 30_000);
   });
@@ -180,4 +184,16 @@ test("fetchJson does not retry a 404", async () => {
   } finally {
     await server.stop(true);
   }
+});
+
+test("mapLimit rejects on the first failure, including a synchronous throw", async () => {
+  const seen: number[] = [];
+  const run = mapLimit([1, 2, 3, 4], 2, (n) => {
+    seen.push(n);
+    if (n === 2) throw new Error("bad item 2");
+    return Promise.resolve(n);
+  });
+  expect(run).rejects.toThrow("bad item 2");
+  await run.catch(() => undefined);
+  expect(seen).toContain(2);
 });

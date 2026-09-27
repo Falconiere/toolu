@@ -129,10 +129,26 @@ type RateResource = { remaining: number; limit: number; reset: number };
 
 /** GitHub budget from `gh api rate_limit` (that endpoint does not count against
  * the budget). Returns null when gh cannot answer. Reset is epoch ms. */
-export async function ghBudget(): Promise<GhBudget | null> {
-  const proc = Bun.spawn(["gh", "api", "rate_limit"], { stdout: "pipe", stderr: "pipe" });
-  const [out, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
-  if (code !== 0) return null;
+export async function ghBudget(policy: RetryPolicy = defaultPolicy()): Promise<GhBudget | null> {
+  let out: string;
+  try {
+    // Transient failures retry; a rate limit here cannot wait for itself.
+    out = await withRetry(
+      async () => {
+        const proc = Bun.spawn(["gh", "api", "rate_limit"], { stdout: "pipe", stderr: "pipe" });
+        const [text, err, code] = await Promise.all([
+          new Response(proc.stdout).text(),
+          new Response(proc.stderr).text(),
+          proc.exited,
+        ]);
+        if (code !== 0) throw new Error(`gh api rate_limit failed (${code}): ${err.trim()}`);
+        return text;
+      },
+      { ...policy, maxSleepMs: Math.min(policy.maxSleepMs, 30_000) },
+    );
+  } catch {
+    return null;
+  }
   try {
     const data = JSON.parse(out) as { resources?: Record<string, RateResource> };
     const core = data.resources?.core;

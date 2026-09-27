@@ -74,7 +74,13 @@ export async function snapshot(worktree: string, key: string): Promise<Snapshot>
       if (!commit.ok) return { ...base, dirty, unpushed, skipped: "commit-tree failed" };
       sha = commit.out;
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      // Best-effort temp cleanup: a failure here must not replace the
+      // snapshot result or the error that got us into this block.
+      try {
+        rmSync(dir, { recursive: true, force: true });
+      } catch (err) {
+        process.stderr.write(`epic-wip: could not remove ${dir}: ${String(err)}\n`);
+      }
     }
   }
   const current = await git(worktree, ["rev-parse", "--verify", "--quiet", ref]);
