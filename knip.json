@@ -61,7 +61,6 @@
   "ignoreDependencies": [
     "oxlint",
     "oxlint-tsgolint",
-    "@toolu/core",
     "@toolu/opencode",
     "@toolu/conformance"
   ]
