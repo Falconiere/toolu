@@ -246,10 +246,16 @@ pb_d_settle() {
 # exit the agent, and record the outcome (pb_d_settle). A group that reported
 # done in a worktree git can no longer read is worktree_lost, not a crash.
 pb_d_settle_group() {
-  local seq="$1" g agent pane outcome head="" wt
+  local seq="$1" g agent pane outcome head="" wt read_err=""
   g=$(jq -c --argjson s "$seq" '.fixer.groups[] | select(.seq == $s)' "$PB_D_STATE")
   agent=$(jq -r '.agent' <<<"$g")
-  pane=$(herdr agent read "$agent" --source recent-unwrapped --lines 40 2>/dev/null || true)
+  # `agent read` prints the pane as plain text, not JSON, so it is called
+  # directly (pb_herdr_try would discard it). A failed read is kept on the
+  # group, so a lost screen is never mistaken for a quiet no_report.
+  if ! pane=$(herdr agent read "$agent" --source recent-unwrapped --lines 40 2>&1); then
+    read_err="could not read the fixer's last screen: $(printf '%s' "$pane" | head -c 160 | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+    pane=""
+  fi
   outcome=$(pb_fixer_settle "$(jq -r '.report' <<<"$g")" "$pane")
   pb_herdr_agent_stop "$agent" || true
   if [ "$outcome" = "done" ]; then
@@ -259,5 +265,5 @@ pb_d_settle_group() {
       return 0
     fi
   fi
-  pb_d_settle "$seq" "$outcome" "$head"
+  pb_d_settle "$seq" "$outcome" "$head" "$([ "$outcome" = no_report ] && printf '%s' "$read_err")"
 }

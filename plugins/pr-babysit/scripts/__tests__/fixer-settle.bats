@@ -67,6 +67,12 @@ limit_lines() {
   [ ! -e "$TMP/r.json" ]
   run bash "$SCRIPTS/fixer-report.sh"
   [ "$status" -eq 2 ]
+  [ "$(jq -r '.errors[0].message' <<<"$output")" = "fixer-report.sh: <report-file> done|failed [--note <text>]" ]
+  # One argument: the report file is read; the missing status is what is named.
+  run bash "$SCRIPTS/fixer-report.sh" "$TMP/r.json"
+  [ "$status" -eq 2 ]
+  [ "$(jq -r '.errors[0].message' <<<"$output")" = "fixer-report.sh: status must be done or failed" ]
+  [ ! -e "$TMP/r.json" ]
 }
 
 @test "AC-8 boundary: agent names are herdr-valid, stable per slot/round/group, distinct across slots" {

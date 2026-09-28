@@ -14,7 +14,11 @@ PB_SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
 . "$PB_SCRIPT_DIR/lib/common.sh"
 
 report="${1:-}"; status="${2:-}"
-[ $# -ge 2 ] && shift 2 || shift $#
+if [ $# -ge 2 ]; then
+  shift 2
+elif [ $# -ge 1 ]; then
+  shift
+fi
 note=""; has_note=false
 while [ $# -gt 0 ]; do
   case "$1" in

@@ -1,8 +1,9 @@
 <!-- Template, rendered per fixer group by scripts/dispatch-fix.sh, which strips
-this comment. Placeholders (written here without braces so they survive): PR,
-ROUND, GROUP, GROUPS, TIER, WORKTREE, SLOT_BRANCH, BRANCH, BASE, ITEMS,
-REPORT_DONE, REPORT_FAILED. dispatch-fix.bats fails if any placeholder goes
-unfilled. -->
+this comment. The body below uses {{NAME}} placeholders. This comment lists
+the names bare, without braces, so the renderer never rewrites the comment
+itself: PR, ROUND, GROUP, GROUPS, TIER, WORKTREE, SLOT_BRANCH, BRANCH, BASE,
+ITEMS, REPORT_DONE, REPORT_FAILED. dispatch-fix.bats checks that each one is
+filled with its expected value. -->
 
 # pr-babysit fixer brief — {{PR}}, round {{ROUND}}, group {{GROUP}} of {{GROUPS}}
 

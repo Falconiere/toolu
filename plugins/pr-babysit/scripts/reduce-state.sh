@@ -135,6 +135,9 @@ $snap as $snap | $prev as $prev
 # in the audit count.
 | (if $prev == null then null else ($prev.fixer // null) end) as $fixer
 | ($fixer != null and (($fixer.status == "running") or ($fixer.status == "blocked"))) as $fixerActive
+# Ids compare as strings: jq `tostring` leaves a string id ("PRRT_…") as it
+# is and turns a numeric one (a conversation or review comment id) into its
+# digits, so both kinds match whichever form the items file used.
 | (if $fixerActive then ($fixer.items // [] | map(tostring)) else [] end) as $fixingIds
 | def owned: (.id | tostring) as $i | $fixingIds | index([$i]) != null;
   ($threads | map(select(.flags.actionable)) | map(del(.flags, .isResolved))) as $allActionable
