@@ -22,6 +22,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -128,6 +129,20 @@ export function buildPlugins(root: string): BundleEntry[] {
   });
 }
 
+function isExecutable(path: string): boolean {
+  return (statSync(path).mode & 0o111) !== 0;
+}
+
+/**
+ * Same bytes and, for a shebang bundle (a skill CLI run by path, which `bun
+ * build` marks executable), the same exec bit: losing it breaks the CLI.
+ */
+function sameBundle(committed: string, staged: string): boolean {
+  const bytes = readFileSync(staged);
+  if (!readFileSync(committed).equals(bytes)) return false;
+  return !bytes.subarray(0, 2).equals(Buffer.from("#!")) || isExecutable(committed);
+}
+
 /** Rebuilds into a temp dir and reports every committed bundle that disagrees. */
 export function checkPluginBundles(root: string): DriftProblem[] {
   return withStaging(root, (staged, entries) => {
@@ -138,11 +153,7 @@ export function checkPluginBundles(root: string): DriftProblem[] {
       wanted.add(path);
       if (!existsSync(join(root, path))) {
         problems.push({ kind: "missing", path });
-      } else if (
-        !readFileSync(join(root, path)).equals(
-          readFileSync(join(staged, entry.plugin, `${entry.name}.js`)),
-        )
-      ) {
+      } else if (!sameBundle(join(root, path), join(staged, entry.plugin, `${entry.name}.js`))) {
         problems.push({ kind: "drift", path });
       }
     }

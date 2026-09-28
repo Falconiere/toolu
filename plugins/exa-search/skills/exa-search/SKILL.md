@@ -24,7 +24,7 @@ Choose the line for the active host. Ordinary shell calls do not inherit
 plugin lifecycle variables, so never collapse these into one ambiguous
 fallback. Use the published path; plugin-root variables are lifecycle-only.
 
-Repo-checkout fallback (for tests/dev when the plugin is not installed): `plugins/exa-search/skills/exa-search/scripts/search.sh`.
+Repo-checkout fallback (for tests/dev when the plugin is not installed): the executable Bun bundle `plugins/exa-search/hooks/dist/search.js`.
 
 ```
 search.sh <command> [options]

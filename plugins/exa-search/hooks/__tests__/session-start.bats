@@ -6,7 +6,7 @@ setup() {
   TMP=$(mktemp -d)
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
   HOOK="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/session-start.sh"
-  SRC="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../skills/exa-search/scripts" && pwd)/search.sh"
+  SRC="$(cd "$(dirname "$BATS_TEST_FILENAME")/../dist" && pwd)/search.js"
 }
 
 teardown() { rm -rf "$TMP"; }
@@ -56,7 +56,7 @@ teardown() { rm -rf "$TMP"; }
   [ "$before" = "$after" ]
 }
 
-# Fail-soft: a corrupted install where skills/ is missing must NOT break the
+# Fail-soft: a corrupted install where hooks/dist/ is missing must NOT break the
 # session. See context7's equivalent test for the rationale.
 @test "session-start: source wrapper missing -> exits 0, no symlink, silent (fail-soft)" {
   fake="$TMP/fake-plugin/hooks"
@@ -66,4 +66,13 @@ teardown() { rm -rf "$TMP"; }
   [ "$status" -eq 0 ]
   [ -z "$output" ]
   [ ! -e "$CLAUDE_CONFIG_DIR/exa-search/search.sh" ]
+}
+
+@test "session-start: the published path runs the TypeScript CLI bundle" {
+  run bash "$HOOK" <<<'{}'
+  [ "$status" -eq 0 ]
+  dst="$CLAUDE_CONFIG_DIR/exa-search/search.sh"
+  EXA_API_KEY=k run "$dst"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Exa Search CLI"* ]]
 }

@@ -32,7 +32,7 @@
     "jscpd": "jscpd --config .jscpd.json",
     "test:conventions": "bun run format:check && bun run lint:ts && bun run typecheck && bun run guardrails && bun run knip && bun run jscpd && bun test --timeout 60000 tooling/src/__tests__/conventions-guardrails.test.ts tooling/src/__tests__/workspace-skeleton.test.ts",
     "test:conformance": "bun run tools/toolu-conformance/src/cli/run.ts",
-    "test:unit": "bun test --timeout 60000 tooling/src packages tools plugins/epic-orchestrator plugins/toolu/hooks/src",
+    "test:unit": "bun test --timeout 60000 tooling/src packages tools plugins",
     "test:workspace": "bash tooling/check-workspace.sh",
     "test:ts": "bun run test:conventions && bun run test:unit && bun run check:plugin-bundles && bun run check:hooks-json && bun run test:workspace && bun run test:pack && bun run test:conformance",
     "test:pack": "bun run tooling/src/pack-inventory.ts && bun test --timeout 60000 tooling/src/__tests__/npm-publish.test.ts"

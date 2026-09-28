@@ -26,8 +26,8 @@ plugin lifecycle variables, so never collapse these into one ambiguous
 fallback. Use the published path; plugin-root variables are lifecycle-only.
 
 Repo-checkout fallback (for tests or dev, where the SessionStart hook has not run
-so the symlink may be absent):
-`plugins/agent-browser/skills/agent-browser/scripts/agent-browser.sh`.
+so the symlink may be absent): the executable Bun bundle
+`plugins/agent-browser/hooks/dist/agent-browser.js`.
 
 The wrapper bakes in token-lean defaults for the read-heavy commands
 (`snapshot` → `-i --json --max-output 4000 --content-boundaries`; `get`/`find`/`diff`

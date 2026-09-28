@@ -2,11 +2,14 @@
 # session-start.sh publishes the agent-browser wrapper at a stable path
 # the agent's Bash tool can reach without $CLAUDE_PLUGIN_ROOT.
 
+# `run -127` (asserting the CLI's exit code) is a 1.5.0+ flag.
+bats_require_minimum_version 1.5.0
+
 setup() {
   TMP=$(mktemp -d)
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
   HOOK="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/session-start.sh"
-  SRC="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../skills/agent-browser/scripts" && pwd)/agent-browser.sh"
+  SRC="$(cd "$(dirname "$BATS_TEST_FILENAME")/../dist" && pwd)/agent-browser.js"
 }
 
 teardown() { rm -rf "$TMP"; }
@@ -56,7 +59,7 @@ teardown() { rm -rf "$TMP"; }
   [ "$before" = "$after" ]
 }
 
-# Fail-soft: a corrupted install where skills/ is missing must NOT break the
+# Fail-soft: a corrupted install where hooks/dist/ is missing must NOT break the
 # session. Copy the hook into a fake plugin layout with no wrapper source and
 # assert the hook exits 0, prints nothing, and publishes no symlink.
 @test "session-start: source wrapper missing -> exits 0, no symlink, silent (fail-soft)" {
@@ -67,4 +70,12 @@ teardown() { rm -rf "$TMP"; }
   [ "$status" -eq 0 ]
   [ -z "$output" ]
   [ ! -e "$CLAUDE_CONFIG_DIR/agent-browser/agent-browser.sh" ]
+}
+
+@test "session-start: the published path runs the TypeScript CLI bundle" {
+  run bash "$HOOK" <<<'{}'
+  [ "$status" -eq 0 ]
+  dst="$CLAUDE_CONFIG_DIR/agent-browser/agent-browser.sh"
+  AGENT_BROWSER_BIN="$TMP/absent" run -127 "$dst" snapshot
+  [[ "$output" == *"agent-browser not found"* ]]
 }

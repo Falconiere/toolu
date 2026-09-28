@@ -4,9 +4,9 @@
 #
 # ${CLAUDE_PLUGIN_ROOT} is exported to hook subprocesses only — NOT to the
 # Bash tool's subshell — so SKILL.md's
-#   "${CLAUDE_PLUGIN_ROOT}/skills/context7/scripts/search.sh …"
-# expands to "/skills/.../search.sh: No such file" when an agent pastes it.
-# Mirror the statusline plugin: symlink the wrapper to
+#   "${CLAUDE_PLUGIN_ROOT}/hooks/dist/search.js …"
+# expands to "/hooks/dist/search.js: No such file" when an agent pastes it.
+# Mirror the statusline plugin: symlink the CLI bundle (hooks/dist/search.js) to
 #   ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/context7/search.sh
 # which the Bash subshell CAN expand. Refreshed every session so plugin
 # updates land with no settings change. Silent on success; every step is
@@ -18,7 +18,7 @@ cat > /dev/null 2>&1 || true
 
 # Resolve the plugin dir from this hook's location: hooks/.. = plugin root.
 plugin_dir="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
-src="${plugin_dir:+$plugin_dir/skills/context7/scripts/search.sh}"
+src="${plugin_dir:+$plugin_dir/hooks/dist/search.js}"
 [ -n "$src" ] && [ -f "$src" ] || exit 0
 
 if [ -n "${TOOLU_CONFIG_DIR:-}" ]; then

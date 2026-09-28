@@ -33,7 +33,9 @@
     "./policy": "./src/policy/policy.ts",
     "./config": "./src/config/config.ts",
     "./runner": "./src/runner/runner.ts",
-    "./launcher": "./src/launcher/launcher.ts"
+    "./launcher": "./src/launcher/launcher.ts",
+    "./cli": "./src/cli/cli.ts",
+    "./rest": "./src/rest/rest.ts"
   },
   "dependencies": {
     "zod": "4.1.5"

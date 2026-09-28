@@ -3,8 +3,12 @@
   "version": 2,
   "srcRoot": "src",
   "src": {
-    "topLevel": ["cli", "harness"],
-    "nested": { "cli": ["__tests__", "suites"], "harness": ["__tests__"] },
+    "topLevel": ["cli", "harness", "https-fixture"],
+    "nested": {
+      "cli": ["__tests__", "suites"],
+      "harness": ["__tests__"],
+      "https-fixture": ["__tests__", "connect-proxy.ts"]
+    },
     "requireReadme": []
   },
   "fileSize": { "max": 300, "skipExtensions": [".ts"] },

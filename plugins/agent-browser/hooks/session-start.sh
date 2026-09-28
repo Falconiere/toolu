@@ -4,9 +4,10 @@
 #
 # ${CLAUDE_PLUGIN_ROOT} is exported to hook subprocesses only — NOT to the
 # Bash tool's subshell — so SKILL.md's
-#   "${CLAUDE_PLUGIN_ROOT}/skills/agent-browser/scripts/agent-browser.sh …"
-# expands to "/skills/.../agent-browser.sh: No such file" when an agent pastes
-# it. Mirror the statusline plugin: symlink the wrapper to
+#   "${CLAUDE_PLUGIN_ROOT}/hooks/dist/agent-browser.js …"
+# expands to "/hooks/dist/agent-browser.js: No such file" when an agent pastes
+# it. Mirror the statusline plugin: symlink the CLI bundle
+# (hooks/dist/agent-browser.js) to
 #   ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/agent-browser/agent-browser.sh
 # which the Bash subshell CAN expand. Refreshed every session so plugin
 # updates land with no settings change. Silent on success; every step is
@@ -18,7 +19,7 @@ cat > /dev/null 2>&1 || true
 
 # Resolve the plugin dir from this hook's location: hooks/.. = plugin root.
 plugin_dir="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
-src="${plugin_dir:+$plugin_dir/skills/agent-browser/scripts/agent-browser.sh}"
+src="${plugin_dir:+$plugin_dir/hooks/dist/agent-browser.js}"
 [ -n "$src" ] && [ -f "$src" ] || exit 0
 
 if [ -n "${TOOLU_CONFIG_DIR:-}" ]; then

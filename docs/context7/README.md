@@ -2,7 +2,7 @@
 
 **Type:** Knowledge | **Version:** 6.5.0 | **Standalone** (no dependencies)
 
-Library documentation and code-example lookup via the Context7 REST API — a skill plus a bash REST wrapper.
+Library documentation and code-example lookup via the Context7 REST API — a skill plus a TypeScript REST CLI (an executable Bun bundle, published as `search.sh`).
 
 ## Install
 

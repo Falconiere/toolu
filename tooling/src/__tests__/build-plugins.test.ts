@@ -1,6 +1,15 @@
 import { afterEach, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import {
@@ -118,6 +127,36 @@ test("a failing entry rejects and leaves the committed bundles untouched", () =>
 
   expect(() => buildPlugins(root)).toThrow("plugins/demo/hooks/src/entry.ts");
   expect(readFileSync(join(root, "plugins/demo/hooks/dist/entry.js"))).toEqual(before);
+});
+
+test("a shebang entry builds to an executable bundle; a plain entry does not", () => {
+  const root = demoTree();
+  write(
+    root,
+    "plugins/demo/hooks/src/tool.ts",
+    '#!/usr/bin/env bun\nprocess.stdout.write("tool\\n");\n',
+  );
+  buildPlugins(root);
+  const tool = join(root, "plugins/demo/hooks/dist/tool.js");
+  expect(readFileSync(tool, "utf8")).toStartWith("#!/usr/bin/env bun\n");
+  expect(statSync(tool).mode & 0o777).toBe(0o755);
+  expect(statSync(join(root, "plugins/demo/hooks/dist/entry.js")).mode & 0o777).toBe(0o644);
+  expect(spawnSync(tool, { encoding: "utf8" }).stdout).toBe("tool\n");
+});
+
+test("a shebang bundle that lost its exec bit is drift", () => {
+  const root = demoTree();
+  write(
+    root,
+    "plugins/demo/hooks/src/tool.ts",
+    '#!/usr/bin/env bun\nprocess.stdout.write("tool\\n");\n',
+  );
+  buildPlugins(root);
+  expect(checkPluginBundles(root)).toEqual([]);
+  chmodSync(join(root, "plugins/demo/hooks/dist/tool.js"), 0o644);
+  expect(checkPluginBundles(root)).toEqual([
+    { kind: "drift", path: "plugins/demo/hooks/dist/tool.js" },
+  ]);
 });
 
 test("the CLI exits non-zero on drift and names the stale bundle", () => {

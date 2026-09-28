@@ -6,7 +6,7 @@ setup() {
   TMP=$(mktemp -d)
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
   HOOK="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/session-start.sh"
-  SRC="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../skills/context7/scripts" && pwd)/search.sh"
+  SRC="$(cd "$(dirname "$BATS_TEST_FILENAME")/../dist" && pwd)/search.js"
 }
 
 teardown() { rm -rf "$TMP"; }
@@ -56,7 +56,7 @@ teardown() { rm -rf "$TMP"; }
   [ "$before" = "$after" ]
 }
 
-# Fail-soft: a corrupted install where skills/ is missing must NOT break the
+# Fail-soft: a corrupted install where hooks/dist/ is missing must NOT break the
 # session. Copy the hook into a fake plugin layout with no wrapper source and
 # assert the hook exits 0, prints nothing, and publishes no symlink.
 @test "session-start: source wrapper missing -> exits 0, no symlink, silent (fail-soft)" {
@@ -67,4 +67,13 @@ teardown() { rm -rf "$TMP"; }
   [ "$status" -eq 0 ]
   [ -z "$output" ]
   [ ! -e "$CLAUDE_CONFIG_DIR/context7/search.sh" ]
+}
+
+@test "session-start: the published path runs the TypeScript CLI bundle" {
+  run bash "$HOOK" <<<'{}'
+  [ "$status" -eq 0 ]
+  dst="$CLAUDE_CONFIG_DIR/context7/search.sh"
+  run "$dst"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Context7 CLI"* ]]
 }

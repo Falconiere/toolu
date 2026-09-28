@@ -3,9 +3,9 @@
 # env-independent path. See context7's session-start.sh for the same fix
 # rationale: ${CLAUDE_PLUGIN_ROOT} is exported to hook subprocesses only —
 # NOT to the agent's Bash tool subshell — so a SKILL.md path of
-# "${CLAUDE_PLUGIN_ROOT}/skills/exa-search/scripts/search.sh" expands to
-# "/skills/.../search.sh: No such file" when an agent pastes it. Mirror the
-# statusline plugin: symlink the wrapper to
+# "${CLAUDE_PLUGIN_ROOT}/hooks/dist/search.js" expands to
+# "/hooks/dist/search.js: No such file" when an agent pastes it. Mirror the
+# statusline plugin: symlink the CLI bundle (hooks/dist/search.js) to
 #   ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/exa-search/search.sh
 # Refreshed every session; silent on success; every step non-fatal.
 
@@ -13,7 +13,7 @@
 cat > /dev/null 2>&1 || true
 
 plugin_dir="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
-src="${plugin_dir:+$plugin_dir/skills/exa-search/scripts/search.sh}"
+src="${plugin_dir:+$plugin_dir/hooks/dist/search.js}"
 [ -n "$src" ] && [ -f "$src" ] || exit 0
 
 if [ -n "${TOOLU_CONFIG_DIR:-}" ]; then

@@ -18,4 +18,4 @@ Standalone, no dependencies.
 
 ## The Exa API
 
-The skill drives `scripts/search.sh`, a bash wrapper over the Exa REST API. Set your Exa API key in the environment for the wrapper to authenticate.
+The skill drives a TypeScript CLI over the Exa REST API, shipped as the executable Bun bundle `hooks/dist/search.js` (source `hooks/src/search.ts`) and published at `<config>/exa-search/search.sh` by a SessionStart hook. Set `EXA_API_KEY` in the environment for it to authenticate; it never reads a `.env` file. Exit status: `1` usage or missing key, `22` HTTP error (body on stdout), `5` non-JSON response.
