@@ -1,0 +1,59 @@
+{
+  "round": 1,
+  "items": [
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6Au",
+      "kind": "thread",
+      "path": "src/store/stats_counts.rs",
+      "line": 55,
+      "severity": "medium",
+      "task": "Prevent SQL injection through the table name count_table passes to SelectBuilder: accept only known schema tables.",
+      "quote": "**medium** _(SECURITY)_: `count_table` accepts a `&'static str` table name and passes it to `SelectBuilder::new(table)`. The original code interpolated `table` directly into a `format!(\"SELECT COUNT(*) FROM {table}\")` string. If `SelectBuilder::new` does not quote/validate the table name, this is safe because the parameter is `&'static str` (compile-time constant). However, the guardrails.config.json convention requires that SQL identifiers be quoted; verify that `SelectBuilder::new` properly quotes the table name.\n\n<!-- toolu-fp:ed5b2dea86070456405e90494ba3f3ec8a2b567a -->"
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy5_u",
+      "kind": "thread",
+      "path": "src/store/orm.rs",
+      "line": 19,
+      "severity": "high",
+      "task": "Stop re-preparing statements on every execute/query call in the ORM hot path; reuse the prepared statement per query shape.",
+      "quote": "**high** _(PERFORMANCE)_: `prepare_cached` is called on every `execute`/`query_all`/`query_one`/`query_optional` invocation. For the per-row loop in `memory_signals::update_rank_scores` (L14-L22), this generates and caches a distinct SQL string per memory id, causing unbounded statement-cache growth and defeating the purpose of `prepare_cached`. The original code used a single `conn.prepare(\"UPDATE memories SET rank_score = ?1 WHERE id = ?2\")` outside the loop.\n\n<!-- toolu-fp:8568baf16240511af75425342e033eea30b41445 -->"
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6nEk",
+      "kind": "thread",
+      "path": "plugins/pr-babysit/commands/babysit.md",
+      "line": 112,
+      "severity": "high",
+      "task": "Add the GraphQL claude login form to the CI_REVIEWER set in the babysit command.",
+      "quote": "**high** _(CORRECTNESS)_: The CI_REVIEWER set includes `claude[bot]` but does not include a GraphQL form for claude (e.g., `claude` without suffix). If GraphQL drops the `[bot]` suffix for claude as well, then the set is incomplete and will misclassify claude's GraphQL threads as human.\n\n```suggestion\nThe set includes `github-actions` (no suffix) and `github-actions[bot]` (with suffix). However, the REST API returns `github-actions[bot]` and GraphQL returns `github-actions`. The set should be `{github-actions, github-actions[bot], claude[bot]}`. But note: `claude[bot]` is the REST form; what is the GraphQL form for claude? If it's `claude` (no suffix), then the set is incomplete. If it's always `claude[bot]`, then the set is correct. This is a potential edge case that should be clarified.\n```"
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6d2Ypf",
+      "kind": "thread",
+      "path": "README.md",
+      "line": 157,
+      "severity": "medium",
+      "task": "Make the README version statement match the version AGENTS.md states.",
+      "quote": "**medium** _(DOC/COMMENT ACCURACY)_: The README claims the repository version is 4.9.0, but AGENTS.md states the current version is 3.3.0. This is a stale version reference that will mislead users.\n\n```suggestion\n+Codex manifests at the repository version (`3.3.0` here). Install the core\n```\n\n<!-- toolu-fp:90578f289c9abd24685bf9fe962608b0b585ef9e -->"
+    },
+    {
+      "id": "PRRT_kwDOSzYYFc6jy6BF",
+      "kind": "thread",
+      "path": "src/store/schema_core.rs",
+      "line": null,
+      "severity": "nit",
+      "task": "Reword the schema_core doc comment so it describes who actually shares the structs.",
+      "quote": "**nit** _(DOC/COMMENT ACCURACY)_: The updated doc comment says the structs are 'shared by migration generation and runtime query builders', but the previous comment explicitly stated the generated column constants and query builders 'are unused by comemory's own code'. The new comment is accurate for the post-refactor state, but the file still only contains schema declarations — the actual runtime query builders live in orm.rs and the individual store modules. The comment could be misleading by implying this file contains runtime query logic.\n\n<!-- toolu-fp:b48f426e586310ad226a7ea95eb760f341e37f4b -->"
+    },
+    {
+      "id": "PRRT_kwDOSzUwAc6K6VND",
+      "kind": "thread",
+      "path": "AGENTS.md",
+      "line": null,
+      "severity": "low",
+      "task": "Add one actionable sentence to the AGENTS.md removal note telling users what replaces the deleted workflows.",
+      "quote": "**low** _(DOC/COMMENT ACCURACY)_: The note in AGENTS.md accurately documents the removals but does not provide actionable guidance for users who need to restore the security coverage.\n\n```suggestion\nConsider adding a brief note on how to restore this coverage (e.g., 'To re-enable, create a new workflow using GitHub's built-in CodeQL action and secret scanning').\n```"
+    }
+  ]
+}

@@ -32,7 +32,8 @@ teardown() {
 }
 
 @test "every entrypoint sets -euo pipefail; every lib documents that it is sourced" {
-  for f in "$SCRIPTS"/collect-pr.sh "$SCRIPTS"/reduce-state.sh "$SCRIPTS"/babysit-tick.sh "$SCRIPTS"/reply-thread.sh "$SCRIPTS"/resolve-thread.sh "$SCRIPTS"/record.sh; do
+  for f in "$SCRIPTS"/collect-pr.sh "$SCRIPTS"/reduce-state.sh "$SCRIPTS"/babysit-tick.sh "$SCRIPTS"/reply-thread.sh "$SCRIPTS"/resolve-thread.sh "$SCRIPTS"/record.sh \
+           "$SCRIPTS"/route-fix.sh "$SCRIPTS"/dispatch-fix.sh "$SCRIPTS"/fixer-report.sh; do
     grep -q '^set -euo pipefail$' "$f"
     [ -x "$f" ]
     head -1 "$f" | grep -q '^#!/usr/bin/env bash$'
@@ -43,7 +44,15 @@ teardown() {
 }
 
 @test "the helper never reads a session-specific environment variable for repo, PR, home or root" {
+  # lib/config.sh's pb_agent_home is the one sanctioned reader of the user's
+  # home: toolu.config.json and jev.sh are installed under ~/.claude or
+  # ~/.codex by definition. It still never reads a session root or project dir.
   while IFS= read -r f; do
+    if [ "$f" = "$SCRIPTS/lib/config.sh" ]; then
+      ! grep -nE '\$\{?(CLAUDE_PLUGIN_ROOT|PLUGIN_ROOT|CLAUDE_PROJECT_DIR)\b' "$f"
+      [ "$(grep -cE '\$\{?(CODEX_HOME|HOME)\b' "$f")" -eq 2 ]
+      continue
+    fi
     ! grep -nE '\$\{?(CLAUDE_PLUGIN_ROOT|PLUGIN_ROOT|CLAUDE_PROJECT_DIR|CODEX_HOME|HOME)\b' "$f"
   done <<<"$FILES"
   grep -q 'BASH_SOURCE\[0\]' "$SCRIPTS/lib/common.sh"
@@ -58,9 +67,12 @@ teardown() {
 @test "/bin/bash 3.2 (macOS) parses every script and reproduces the reducer output byte for byte" {
   [ -x /bin/bash ] || skip "no /bin/bash"
   /bin/bash --version | head -1 | grep -q 'version 3\.2' || skip "/bin/bash is not 3.2 ($(/bin/bash --version | head -1))"
+  n=0
   while IFS= read -r f; do
     /bin/bash -n "$f"
-  done
+    n=$((n + 1))
+  done <<<"$FILES"
+  [ "$n" -ge 17 ]
   jq '.pr.state = "OPEN" | .pr.mergeable = "MERGEABLE"' "$SNAP/toolu-165.json" >"$TMP/open.json"
   /bin/bash "$SCRIPTS/reduce-state.sh" --snapshot "$TMP/open.json" --state "$TMP/none.json" --now 2026-09-19T12:00:00Z --state-out "$TMP/a.state.json" >"$TMP/a.json"
   bash "$SCRIPTS/reduce-state.sh" --snapshot "$TMP/open.json" --state "$TMP/none.json" --now 2026-09-19T12:00:00Z --state-out "$TMP/b.state.json" >"$TMP/b.json"
@@ -71,4 +83,23 @@ teardown() {
   [ "$(jq -r .decision "$TMP/tick.json")" = escalate ]
   /bin/bash "$SCRIPTS/record.sh" round --state-file "$TMP/slot.json" --had-rejection false --fix-pushed >/dev/null
   [ "$(jq -r .pr.fixAttempts "$TMP/slot.json")" = 1 ]
+  # The fixer path: route and a dispatch dry run are byte-identical under 3.2.
+  mkdir -p "$TMP/bin" "$TMP/cfg"; ln -s "$(command -v jq)" "$TMP/bin/jq"
+  printf '#!/bin/sh\nexit 0\n' >"$TMP/bin/claude"; chmod +x "$TMP/bin/claude"
+  items="${BATS_TEST_DIRNAME}/fixtures/items/review-items.json"
+  route_with() {
+    TOOLU_CONFIG_DIR="$TMP/cfg" TOOLU_PROJECT_DIR="$TMP/cfg" PATH="$TMP/bin:/usr/bin:/bin" \
+      "$1" "$SCRIPTS/route-fix.sh" --items "$items" --host claude --no-jev --now 2026-09-19T12:00:00Z
+  }
+  route_with /bin/bash >"$TMP/route.32.json"
+  route_with bash >"$TMP/route.cur.json"
+  cmp "$TMP/route.32.json" "$TMP/route.cur.json"
+  dry_with() {
+    PATH="$TMP/bin:/usr/bin:/bin" "$1" "$SCRIPTS/dispatch-fix.sh" start --state-file "$TMP/slot.json" --plan "$TMP/route.cur.json" \
+      --items "$items" --repo-root /tmp/repo --branch feat/python-quality --dry-run
+  }
+  dry_with /bin/bash >"$TMP/dry.32.json"
+  dry_with bash >"$TMP/dry.cur.json"
+  cmp "$TMP/dry.32.json" "$TMP/dry.cur.json"
+  [ "$(jq '.commands | length' "$TMP/dry.32.json")" -eq 5 ]
 }

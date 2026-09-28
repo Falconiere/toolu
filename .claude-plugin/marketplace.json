@@ -90,7 +90,7 @@
     {
       "name": "pr-babysit",
       "source": "./plugins/pr-babysit",
-      "description": "Babysit a PR until review threads, the review-bot verdict, and CI are clear, using Claude cron or a durable Codex goal with isolated worktrees.",
+      "description": "Babysit a PR until review threads, the review-bot verdict, and CI are clear, using Claude cron or a durable Codex goal; fixes run on Jev-routed Claude Code, Codex or Cursor Agent sessions in a herdr worktree.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["pr", "review", "ci", "automation"],

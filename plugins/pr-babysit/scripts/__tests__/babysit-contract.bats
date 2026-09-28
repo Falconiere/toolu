@@ -211,7 +211,7 @@ SKILL="${BATS_TEST_DIRNAME}/../../skills/babysit/SKILL.md"
 }
 
 @test "the closed reason set in helper.md matches the reducer's emitted codes" {
-  for code in ci_pending ci_failed ci_pass threads_unresolved threads_stale_unresolved threads_clear review_absent review_in_progress review_changes review_approved review_unknown_format provider_error provider_error_repeated manual_verify pr_closed pr_merged merge_conflict mergeable_unknown fix_attempts_exhausted recurrence_after_rejection recurrence_streak unchanged; do
+  for code in ci_pending ci_failed ci_pass threads_unresolved threads_stale_unresolved threads_clear review_absent review_in_progress review_changes review_approved review_unknown_format provider_error provider_error_repeated manual_verify pr_closed pr_merged merge_conflict mergeable_unknown fix_attempts_exhausted recurrence_after_rejection recurrence_streak unchanged fixer_running; do
     grep -Fq "$code" "$HELPER_DOC"
     grep -Fq "\"$code\"" "${BATS_TEST_DIRNAME}/../reduce-state.sh"
   done
@@ -223,3 +223,63 @@ SKILL="${BATS_TEST_DIRNAME}/../../skills/babysit/SKILL.md"
   grep -Fq -- '--branch <name>' "${BATS_TEST_DIRNAME}/../../../toolu-review/skills/review/SKILL.md"
 }
 
+
+@test "the reducer emits no reason code outside helper.md's closed set" {
+  set_line=$(awk '/^### `reasons\[\]\.code` \(closed set\)/{f=1; next} /^### /{f=0} f' "$HELPER_DOC")
+  for code in $(grep -oE 'code:"[a-z_]+"' "${BATS_TEST_DIRNAME}/../reduce-state.sh" | sed -E 's/code:"([a-z_]+)"/\1/' | sort -u); do
+    grep -Fq "\`$code\`" <<<"$set_line" || { echo "undocumented reason code: $code" >&2; return 1; }
+  done
+}
+
+@test "AC-11: Step 3 routes Fix items with route-fix.sh and dispatches herdr fixers, inline as the fallback" {
+  step3=$(awk '/^## Step 3/{f=1} /^## Step 4/{f=0} f' "$CMD")
+  grep -Fq 'scripts/route-fix.sh' <<<"$step3"
+  grep -Fq 'dispatch-fix.sh" start' <<<"$step3"
+  grep -Fq 'dispatch-fix.sh" wait' <<<"$step3"
+  grep -Fq 'threads.fixing[]' <<<"$step3"
+  grep -Fq -- '--raise' <<<"$step3"
+  grep -qi 'Inline delegation' <<<"$step3"
+  grep -Fq '`dispatch: "inline"`' <<<"$(tr '\n' ' ' <<<"$step3" | sed 's/  */ /g')"
+  for s in running done failed blocked host_limited herdr_unavailable; do grep -Fq "$s" <<<"$step3"; done
+}
+
+@test "AC-11: Step 3 verifies fixer commits before the push from the herdr worktree" {
+  step3=$(awk '/^## Step 3/{f=1} /^## Step 4/{f=0} f' "$CMD")
+  grep -qi 'Verify before push' <<<"$step3"
+  grep -Fq -- '--repo "$WORKTREE" --branch "$BRANCH"' <<<"$step3"
+  grep -Fq 'git -C "$WORKTREE" push origin "HEAD:$BRANCH"' <<<"$step3"
+}
+
+@test "AC-11: isolation, git safety and every stop path cover the herdr worktree" {
+  iso=$(awk '/^## Isolation invariants/{f=1; next} /^## /{f=0} f' "$CMD")
+  grep -Fq 'pr-babysit/<slot>' <<<"$iso"
+  grep -qi 'herdr worktree' <<<"$iso"
+  git_safety=$(awk '/^## Git safety/{f=1; next} /^## /{f=0} f' "$CMD")
+  grep -Fq 'pr-babysit/<slot>' <<<"$git_safety"
+  grep -Fq 'stale_branch' <<<"$git_safety"
+  # stop (Claude), cancel (Codex) and the success stop all clean the fixer worktree.
+  [ "$(grep -c 'dispatch-fix.sh cleanup' "$CMD")" -ge 3 ]
+}
+
+@test "AC-11: helper.md documents the fixer scripts, fields, reason and error codes" {
+  for f in route-fix.sh dispatch-fix.sh fixer-report.sh 'threads.fixing\[\]' '`fixer`' herdrWorktree hostCooldowns fixer_running \
+           config_invalid plan_invalid fixer_running herdr_unavailable herdr_error worktree_dirty stale_branch \
+           no_report reported_failed host_limited agent_blocked agent_start_failed '--jev-answers-in'; do
+    grep -qE -- "$f" "$HELPER_DOC" || { echo "helper.md misses $f" >&2; return 1; }
+  done
+}
+
+@test "AC-11: every prBabysit key the config reader accepts is documented in docs/config.md" {
+  doc="${BATS_TEST_DIRNAME}/../../../../docs/config.md"
+  section=$(awk '/^### PR babysit fixers \(`prBabysit`\)/{f=1; next} /^### /{f=0} f' "$doc")
+  [ -n "$section" ]
+  for k in $(bash -c ". '${BATS_TEST_DIRNAME}/../lib/config.sh'; pb_config_keys"); do
+    grep -Fq "| \`$k\` |" <<<"$section" || { echo "docs/config.md misses prBabysit.$k" >&2; return 1; }
+  done
+  grep -Fq '"prBabysit"' "$doc"
+}
+
+@test "the Codex skill bounds each fixer wait below the 60-second continuation cap" {
+  grep -Fq 'dispatch-fix.sh wait --timeout-seconds 55' "$SKILL"
+  grep -Fq 'route-fix.sh --host codex' "$SKILL"
+}

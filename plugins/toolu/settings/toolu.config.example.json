@@ -126,5 +126,12 @@
       "maxImplLines": 200,
       "noMocks": true
     }
+  },
+  "prBabysit": {
+    "dispatch": "herdr",
+    "hosts": ["claude", "codex", "cursor"],
+    "prefer": { "critical": ["claude"] },
+    "unattended": true,
+    "jev": true
   }
 }

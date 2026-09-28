@@ -129,7 +129,14 @@ $snap as $snap | $prev as $prev
                 skippedOutdated: ($open and $t.isOutdated and $class == "ci_reviewer"),
                 replied: ($repliedKeys | index("thread:" + $t.id + "@" + (($lastNonAuthor.databaseId // 0) | tostring)) != null)} }
   )) as $threads
-| ($threads | map(select(.flags.actionable)) | map(del(.flags, .isResolved))) as $actionable
+# ---- a running fixer (dispatch-fix.sh) owns its items until it settles: they
+# leave actionable[] (never dispatched twice) but stay in the audit count.
+| (if $prev == null then null else ($prev.fixer // null) end) as $fixer
+| ($fixer != null and $fixer.status == "running") as $fixerRunning
+| (if $fixerRunning then ($fixer.items // []) else [] end) as $fixingIds
+| ($threads | map(select(.flags.actionable)) | map(del(.flags, .isResolved))) as $allActionable
+| ($allActionable | map(select(.id as $i | $fixingIds | index([$i]) | not))) as $actionable
+| ($allActionable | map(select(.id as $i | $fixingIds | index([$i]) != null)) | map(.id)) as $fixing
 | ($threads | map(select(.flags.audited))) as $audited
 | ($audited | map(select(.flags.actionable | not)) | map({id, path, line, repliedAt: .lastCommentAt, lastCommentAuthor})) as $staleUnresolved
 | ($threads | map(select(.flags.skippedOutdated)) | map(.id)) as $skippedOutdated
@@ -180,10 +187,11 @@ $snap as $snap | $prev as $prev
       elif $degraded then {code:$degradedReason, detail:"bot verdict cannot be read"} else empty end),
      (if $degraded then {code:"manual_verify", detail:"verify review findings manually: \($botComment.url // "no bot comment")"} else empty end),
      (if $pr.mergeable == "UNKNOWN" and $pr.state == "OPEN" then {code:"mergeable_unknown", detail:"GitHub has not computed mergeability yet"} else empty end),
+     (if $fixerRunning then {code:"fixer_running", detail:"fixer group \($fixer.current // 1) of \(($fixer.groups // []) | length) running; \($fixingIds | length) item(s) in flight"} else empty end),
      (if $changed then empty else {code:"unchanged", detail:"nothing changed since the last tick"} end)
    ]) as $signals
 | (($escalations | length) > 0) as $escalate
-| ($pr.state == "OPEN" and $ciStatus == "pass" and $unresolved == 0 and $pr.mergeable != "UNKNOWN"
+| ($pr.state == "OPEN" and $ciStatus == "pass" and $unresolved == 0 and $pr.mergeable != "UNKNOWN" and ($fixerRunning | not)
    and ( ($botState == "complete" and $botVerdict == "approved" and $findingsCount == 0) or $degraded )) as $successReady
 | (if $escalate then "escalate" elif $successReady then "success" else "keep_going" end) as $decision
 | ($escalations + $signals) as $reasons
@@ -197,6 +205,9 @@ $snap as $snap | $prev as $prev
     idleStreak: $idleStreak, currentInterval: $intervalMinutes, waitSeconds: $waitSeconds,
     status: (if $prev == null then "active" else ($prev.status // "active") end),
     worktree: (if $prev == null then null else ($prev.worktree // null) end),
+    fixer: $fixer,
+    herdrWorktree: (if $prev == null then null else ($prev.herdrWorktree // null) end),
+    hostCooldowns: (if $prev == null then {} else ($prev.hostCooldowns // {}) end),
     pr: {
       key: $key, ciStatus: $ciStatus, reviewDecision: $pr.reviewDecision, mergeable: $pr.mergeable,
       unresolvedThreads: $unresolved, headSha: $head, fixAttempts: $fixAttempts,
@@ -217,10 +228,11 @@ $snap as $snap | $prev as $prev
               mustFix: ($v.must_fix // []), commentUrl: ($botComment.url // null), commentId: ($botComment.id // null),
               degraded: $degraded, degradedReason: $degradedReason, sameRunAsLastTick: $sameRun},
     threads: {total: ($snap.threads | length), unresolved: $unresolved,
-              actionable: $actionable, staleUnresolved: $staleUnresolved,
+              actionable: $actionable, fixing: $fixing, staleUnresolved: $staleUnresolved,
               skippedOutdated: $skippedOutdated, flaggedInjection: $flaggedInjection},
     conversation: {actionable: $convActionable},
     reviews: {actionable: $reviewActionable},
+    fixer: $fixer,
     recurrence: {streak: $streak, lastRoundHadRejection: $lastRoundHadRejection, recurringKeys: $recurringKeys, fixAttempts: $fixAttempts},
     backoff: {idleStreak: $idleStreak, intervalMinutes: $intervalMinutes, waitSeconds: $waitSeconds},
     errors: [], snapshotPath: $snapshotPath, statePath: $statePath

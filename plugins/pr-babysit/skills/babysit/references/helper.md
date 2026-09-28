@@ -18,12 +18,17 @@ on is listed here. Fields not listed are not part of the contract.
 | `resolve-thread.sh` | Write side: `resolveReviewThread`, confirmed from the response, retried, recorded. | `0` · `2` · `3` · `5` resolve_unconfirmed · `75` |
 | `record.sh` | Hand agent decisions to the reducer: `round`, `flag-injection`, `status`. | `0` · `2` · `3` · `75` |
 | `parse-verdict.sh` | Existing verdict parser; unchanged. | — |
+| `route-fix.sh` | Fix routing: Jev-scores the round's items file, tiers and groups it, picks host/model/effort per group from `prBabysit` config. Reads no GitHub. | `0` · `2` · `3` |
+| `dispatch-fix.sh` | Herdr fixer dispatch: `start` / `wait` / `cleanup` of the slot's herdr worktree and fixer agents. | `0` · `2` · `3` · `75` |
+| `fixer-report.sh` | Run by a fixer agent, never by the controller: writes its done/failed report. | `0` · `2` |
 
 Structured errors are one JSON document on stdout:
 `{"version":1,"errors":[{"code":"…","message":"…", …}]}`. `code` is a closed set:
 `usage`, `gh_unavailable`, `jq_required`, `api_error`, `invalid_json`,
 `head_moved`, `state_malformed`, `slot_mismatch`, `locked`, `duplicate_reply`,
-`resolve_unconfirmed`.
+`resolve_unconfirmed` — plus, from fixer dispatch (all exit `3`):
+`config_invalid`, `plan_invalid`, `fixer_running`, `herdr_unavailable`,
+`herdr_error`, `worktree_dirty`, `stale_branch`.
 
 ## `babysit-tick.sh`
 
@@ -75,6 +80,8 @@ What the agent acts on. Printed on stdout by `babysit-tick.sh`.
 | `threads.staleUnresolved[]` | Audit members that are NOT actionable: the PR author replied but no resolve landed. Resolve them without a new reply. |
 | `threads.skippedOutdated[]` | Outdated CI-reviewer threads: skipped silently. |
 | `threads.flaggedInjection[]` | Threads the agent recorded with `record.sh flag-injection`. |
+| `threads.fixing[]` | Ids of threads a **running** herdr fixer owns. They are removed from `actionable[]` (never dispatched twice) and still counted in `unresolved`. |
+| `fixer` | The slot's fixer record (see State), or `null`. |
 | `conversation.actionable[]` | Human issue comments with no later author comment and no recorded reply. |
 | `reviews.actionable[]` | Human non-`APPROVED` reviews with a body and no recorded reply. |
 | `recurrence` | `{streak, lastRoundHadRejection, recurringKeys[], fixAttempts}` — the Step 4 gate inputs. |
@@ -90,13 +97,14 @@ What the agent acts on. Printed on stdout by `babysit-tick.sh`.
 `review_unknown_format`, `provider_error`, `provider_error_repeated`,
 `manual_verify`, `pr_closed`, `pr_merged`, `merge_conflict`,
 `mergeable_unknown`, `fix_attempts_exhausted`, `recurrence_after_rejection`,
-`recurrence_streak`, `unchanged`.
+`recurrence_streak`, `unchanged`, `fixer_running`.
 
 ### Decision rules
 
 - `success` — `pr.state == OPEN`, `ci.status == pass`, `threads.unresolved == 0`,
-  `mergeable != UNKNOWN`, and the verdict is `complete`/`approved`/zero findings
-  — or `degraded` (reasons then include `manual_verify`).
+  `mergeable != UNKNOWN`, no fixer `running`, and the verdict is
+  `complete`/`approved`/zero findings — or `degraded` (reasons then include
+  `manual_verify`).
 - `escalate` — PR merged/closed, `mergeable == CONFLICTING`, `fixAttempts ≥ 5`,
   finding keys recurring after a Won't-fix round, a recurrence streak of 2, or
   `provider_error` twice on the same head.
@@ -128,6 +136,9 @@ and `resolve-thread.sh`.
 | `actions.resolved` | `threadId → {confirmed, at, attempts, headSha}`. |
 | `actions.flagged` | `threadId → {reason, at}`. |
 | `lastGoodSnapshot` | Path of the last snapshot that produced a result. |
+| `fixer` | Written by `dispatch-fix.sh`: `{round, status (running·done·failed·blocked), reason, startedAt, current, unattended, context, itemsFile, items[], groups[{seq, tier, host, model, effort, items[], agent, status, reason, brief, report, startedAt, finishedAt, head}]}`, or `null`. `record.sh round` clears a non-running record. |
+| `herdrWorktree` | `{path, workspaceId, paneId, branch: "pr-babysit/<slot>", prBranch, repoRoot, base}` of the slot's herdr worktree, or `null`. |
+| `hostCooldowns` | `{<host>: {until, reason: "host_limited"}}` — a host that hit a provider usage limit is skipped by `route-fix.sh` for 60 min. |
 
 ## Write side
 
@@ -152,7 +163,56 @@ record.sh status --state-file <path> --status complete|escalated|cancelled
   re-requested.
 - `record.sh round` runs once per round, after this round's replies and before
   the push: it rotates `botFindingKeys → lastRoundFindingKeys`, sets
-  `lastRoundHadRejection`, and with `--fix-pushed` bumps `fixAttempts`.
+  `lastRoundHadRejection`, with `--fix-pushed` bumps `fixAttempts`, and clears
+  a settled `fixer` record.
+
+## Fixer dispatch
+
+```
+route-fix.sh --items <file> --host claude|codex [--state-file <path>] [--raise <itemId>]... [--no-jev]
+             [--jev-answers-in <file>] [--now <iso8601>]
+dispatch-fix.sh start   --state-file <p> --plan <route.json> --items <items.json> --repo-root <dir> --branch <pr-branch> [--dry-run]
+dispatch-fix.sh wait    --state-file <p> [--timeout-seconds N]
+dispatch-fix.sh cleanup --state-file <p> [--dry-run]
+fixer-report.sh <report-file> done|failed [--note <text>]
+```
+
+- **Items file** (the agent writes it): `{round, items:[{id, kind: thread|conversation|review|ci,
+  task, path?, line?, severity?, quote?}]}`. `task` is the agent's instruction; `quote` is the
+  reviewer's text, which reaches a fixer only inside an untrusted-data fence and never reaches Jev
+  or the heuristic.
+- **Route** (`route-fix.sh` stdout): `{version:1, dispatch: herdr|inline, unattended, source:
+  jev|heuristic|mixed, note, items:[{id, tier, score, confidence, raised, source}], groups:[{seq,
+  tier, class, host, model, effort, items[]}]}`. Tier = `clamp(round(score + 0.15), 0, 3)` over
+  `trivial · standard · complex · critical`; `class` maps to the inline rubric (`mechanical ·
+  implementation · architecture · architecture`). A host is dropped when cooling
+  (`hostCooldowns`) or when its CLI (`claude`, `codex`, `cursor-agent`) is not on `PATH`; no host
+  left → `dispatch: inline` with a `note`. `--jev-answers-in` replays a captured Jev answer map
+  (tests, debugging — the workflow never passes it).
+- **Dispatch status** (`start` / `wait` stdout): `{version:1, status: running|done|failed|blocked|none,
+  reason: null|no_report|reported_failed|host_limited|agent_blocked|agent_start_failed, group,
+  worktree, branch, commits[], groups[{seq, tier, host, model, effort, agent, status, reason, error?}]}`
+  — `error` carries herdr's message when a group failed to start.
+  `commits[]` = `git rev-list --reverse origin/<pr-branch>..HEAD` in the worktree. `--dry-run`
+  prints `{dryRun:true, commands:[[argv…]…], brief}` and writes nothing.
+- **Agents** are named `pb-<6 hex of the slot>-r<round>g<seq>` and started with
+  `herdr agent start <name> --kind <host> --pane <pane> -- <host args>`: Claude
+  `--dangerously-skip-permissions -n <name> --model --effort`, Codex
+  `--dangerously-bypass-approvals-and-sandbox --model -c model_reasoning_effort=<e>`, Cursor
+  `--yolo --trust --approve-mcps --model` (safe mode with `prBabysit.unattended: false`).
+- **Brief and report** sit beside the state file: `<state>.fixer-r<round>g<seq>.md` and
+  `.report.json`. A settled agent with no report is `no_report`, or `host_limited` when its pane
+  shows a provider usage/rate limit (the host then cools for 60 min).
+- **Startup trust prompt.** A Claude fixer in a new worktree starts blocked (`agent_not_ready`) at
+  Claude Code's first-run workspace-trust prompt. The dispatcher accepts that prompt only when it is
+  the standard one naming exactly this worktree (epic-orchestrator's recovery rule); any other
+  blocked screen fails the group with `agent_start_failed` and is never answered.
+- **Session artifacts are not work.** Untracked files under `.claude/`, `.codex/` or `.cursor/` (a
+  fixer's own SessionStart hooks write `.claude/settings.local.json` and `.claude/tmp/`) do not make
+  the worktree dirty; any other change does (`worktree_dirty`, with `changes[]`).
+- **Cleanup** exits a live fixer, removes the worktree (`--force`, discarding only those session
+  artifacts) when it has no other changes, and deletes `pr-babysit/<slot>` only when
+  `origin/<pr-branch>` contains it.
 
 ## Examples (captured from Falconiere/toolu#165)
 
