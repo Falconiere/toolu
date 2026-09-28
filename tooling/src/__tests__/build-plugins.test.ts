@@ -97,6 +97,19 @@ test("a removed source leaves an orphan that the next build deletes; a new entry
   expect(checkPluginBundles(root)).toEqual([]);
 });
 
+test("removing a plugin's last entry removes its hooks/dist directory on the next build", () => {
+  const root = demoTree();
+  write(root, "plugins/other/hooks/src/only.ts", 'process.stdout.write("only\\n");\n');
+  buildPlugins(root);
+  expect(existsSync(join(root, "plugins/other/hooks/dist/only.js"))).toBe(true);
+
+  rmSync(join(root, "plugins/other/hooks/src/only.ts"));
+  buildPlugins(root);
+  expect(existsSync(join(root, "plugins/other/hooks/dist"))).toBe(false);
+  expect(existsSync(join(root, "plugins/demo/hooks/dist/entry.js"))).toBe(true);
+  expect(checkPluginBundles(root)).toEqual([]);
+});
+
 test("a failing entry rejects and leaves the committed bundles untouched", () => {
   const root = demoTree();
   buildPlugins(root);
@@ -118,6 +131,21 @@ test("the CLI exits non-zero on drift and names the stale bundle", () => {
   });
   expect(run.status).toBe(1);
   expect(run.stderr).toContain("RED  drift plugins/demo/hooks/dist/entry.js");
+});
+
+test("the CLI rejects an unknown argument without touching committed bundles", () => {
+  const root = demoTree();
+  buildPlugins(root);
+  const before = readFileSync(join(root, "plugins/demo/hooks/dist/entry.js"));
+  write(root, "plugins/demo/hooks/src/entry.ts", 'process.stdout.write("changed\\n");\n');
+
+  const run = spawnSync(process.execPath, [CLI, "--chek", "--root", root], {
+    cwd: temp(),
+    encoding: "utf8",
+  });
+  expect(run.status).toBe(1);
+  expect(run.stderr).toContain("unknown argument: --chek");
+  expect(readFileSync(join(root, "plugins/demo/hooks/dist/entry.js"))).toEqual(before);
 });
 
 test("repository bundles are byte-identical across builds and match the committed output", () => {

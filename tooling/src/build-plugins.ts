@@ -150,14 +150,24 @@ export function checkPluginBundles(root: string): DriftProblem[] {
   });
 }
 
+/** Rejects anything but `--check` and `--root <dir>`: a mistyped `--check` must not rebuild. */
 function parseArgs(argv: readonly string[]): { check: boolean; root: string } {
-  const at = argv.indexOf("--root");
-  const rootArg = at === -1 ? undefined : argv[at + 1];
-  if (at !== -1 && rootArg === undefined) throw new Error("--root needs a directory");
-  return {
-    check: argv.includes("--check"),
-    root: resolve(rootArg ?? resolve(import.meta.dir, "../..")),
-  };
+  let check = false;
+  let root = resolve(import.meta.dir, "../..");
+  for (let at = 0; at < argv.length; at += 1) {
+    const arg = argv[at];
+    if (arg === "--check") {
+      check = true;
+    } else if (arg === "--root") {
+      const dir = argv[at + 1];
+      if (dir === undefined) throw new Error("--root needs a directory");
+      root = resolve(dir);
+      at += 1;
+    } else {
+      throw new Error(`unknown argument: ${String(arg)}`);
+    }
+  }
+  return { check, root };
 }
 
 function main(argv: readonly string[]): number {
