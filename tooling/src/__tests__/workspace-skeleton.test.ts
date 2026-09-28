@@ -64,3 +64,17 @@ test.concurrent("portable-core documents tools/toolu-conformance", () => {
 test.concurrent("conventions adoption documents local TS CI commands", () => {
   expect(readText("docs/conventions-adoption.md")).toMatch(/test:ts|typescript/);
 });
+
+// Real-subprocess suites run concurrently and outrun bun's 5 s default per-test
+// timeout on a loaded CI runner. bunfig has no timeout key, and a preload's
+// setDefaultTimeout does not reach bun's serial multi-file mode, so every
+// `bun test` a script runs carries the flag (docs/testing.md).
+test.concurrent("every bun test script raises the per-test timeout", () => {
+  const runs = Object.values(rootPackage.scripts).flatMap((script) =>
+    script.split("&&").filter((part) => part.trim().startsWith("bun test")),
+  );
+  expect(runs.length).toBeGreaterThan(0);
+  for (const part of runs) {
+    expect(part.trim()).toStartWith("bun test --timeout 60000 ");
+  }
+});

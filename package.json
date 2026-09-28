@@ -19,8 +19,8 @@
     "check:hooks-json": "bun run tooling/src/check-hooks-json.ts",
     "lint:shell": "bash tooling/shellcheck.sh",
     "test:shell": "bash tooling/bats-run.sh",
-    "test:portable-core": "bash tooling/check-portable-core-doc.sh && PORTABLE_CORE_PROBE_MODE=fixture bun run tooling/src/opencode-capability-probe.ts && bun test tooling/src/__tests__/check-portable-core-doc.test.ts tooling/src/__tests__/opencode-capability-probe.test.ts",
-    "test:gate-coverage": "bun run tooling/src/gate-coverage-inventory.ts check && bun test tooling/src/__tests__/gate-coverage-inventory.test.ts",
+    "test:portable-core": "bash tooling/check-portable-core-doc.sh && PORTABLE_CORE_PROBE_MODE=fixture bun run tooling/src/opencode-capability-probe.ts && bun test --timeout 60000 tooling/src/__tests__/check-portable-core-doc.test.ts tooling/src/__tests__/opencode-capability-probe.test.ts",
+    "test:gate-coverage": "bun run tooling/src/gate-coverage-inventory.ts check && bun test --timeout 60000 tooling/src/__tests__/gate-coverage-inventory.test.ts",
     "test": "bun run lint:shell && bun run test:context-budget && bun run test:portable-core && bun run test:gate-coverage && bun run test:ts && bun run test:shell",
     "test:shell:serial": "bats -r plugins benchmarks tooling",
     "test:context-budget": "bash plugins/toolu/scripts/context-budget.sh",
@@ -30,12 +30,12 @@
     "guardrails": "bash tooling/conventions/guardrails/run.sh",
     "knip": "knip",
     "jscpd": "jscpd --config .jscpd.json",
-    "test:conventions": "bun run format:check && bun run lint:ts && bun run typecheck && bun run guardrails && bun run knip && bun run jscpd && bun test tooling/src/__tests__/conventions-guardrails.test.ts tooling/src/__tests__/workspace-skeleton.test.ts",
+    "test:conventions": "bun run format:check && bun run lint:ts && bun run typecheck && bun run guardrails && bun run knip && bun run jscpd && bun test --timeout 60000 tooling/src/__tests__/conventions-guardrails.test.ts tooling/src/__tests__/workspace-skeleton.test.ts",
     "test:conformance": "bun run tools/toolu-conformance/src/cli/run.ts",
-    "test:unit": "bun test tooling/src packages tools plugins/epic-orchestrator plugins/toolu/hooks/src",
+    "test:unit": "bun test --timeout 60000 tooling/src packages tools plugins/epic-orchestrator plugins/toolu/hooks/src",
     "test:workspace": "bash tooling/check-workspace.sh",
     "test:ts": "bun run test:conventions && bun run test:unit && bun run check:plugin-bundles && bun run check:hooks-json && bun run test:workspace && bun run test:pack && bun run test:conformance",
-    "test:pack": "bun run tooling/src/pack-inventory.ts && bun test tooling/src/__tests__/npm-publish.test.ts"
+    "test:pack": "bun run tooling/src/pack-inventory.ts && bun test --timeout 60000 tooling/src/__tests__/npm-publish.test.ts"
   },
   "dependencies": {
     "zod": "4.1.5",
