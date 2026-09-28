@@ -522,7 +522,7 @@ with_fixer() {
   [ "$(jq -r '.reasons[] | select(.code == "fixer_running") | .detail' <<<"$out")" = "fixer blocked: group 1 of 1; 1 item(s) in flight" ]
 }
 
-@test "AC-6: while a fixer is active, unchanged ticks keep the base backoff so dispatch-fix.sh wait runs every tick" {
+@test "AC-6: while a fixer runs, unchanged ticks keep the base backoff so dispatch-fix.sh wait runs every tick" {
   id=$(ci_thread)
   jq --arg id "$id" '(.threads[] | select(.id == $id) | .isResolved) = false' "$TMP/open.json" >"$TMP/s.json"
   reduce "$TMP/s.json" "$TMP/absent.json" >/dev/null
@@ -532,12 +532,16 @@ with_fixer() {
     cp "$TMP/next.json" "$TMP/prev.json"
     [ "$(jq -c '[.changed, .backoff.idleStreak, .backoff.intervalMinutes, .backoff.waitSeconds]' <<<"$out")" = '[false,0,3,15]' ]
   done
-  # The same unchanged ticks without a fixer widen the interval.
-  jq '.fixer = null' "$TMP/prev.json" >"$TMP/nofixer.json"
-  for t in 2026-09-19T12:15:00Z 2026-09-19T12:18:00Z 2026-09-19T12:21:00Z; do
-    out=$(reduce "$TMP/s.json" "$TMP/nofixer.json" "$t"); cp "$TMP/next.json" "$TMP/nofixer.json"
+  # The same unchanged ticks without a fixer, or with one blocked waiting for a
+  # human, widen the interval.
+  for st in none blocked; do
+    if [ "$st" = none ]; then jq '.fixer = null' "$TMP/prev.json" >"$TMP/other.json"
+    else jq '.fixer.status = "blocked"' "$TMP/prev.json" >"$TMP/other.json"; fi
+    for t in 2026-09-19T12:15:00Z 2026-09-19T12:18:00Z 2026-09-19T12:21:00Z; do
+      out=$(reduce "$TMP/s.json" "$TMP/other.json" "$t"); cp "$TMP/next.json" "$TMP/other.json"
+    done
+    [ "$(jq -c '[.backoff.idleStreak, .backoff.intervalMinutes]' <<<"$out")" = '[3,6]' ] || { echo "no backoff with fixer=$st" >&2; return 1; }
   done
-  [ "$(jq -c '[.backoff.idleStreak, .backoff.intervalMinutes]' <<<"$out")" = '[3,6]' ]
 }
 
 @test "AC-6: a conversation comment in the fixer's items moves to conversation.fixing[]" {

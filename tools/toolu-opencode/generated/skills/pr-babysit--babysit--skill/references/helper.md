@@ -28,7 +28,7 @@ Structured errors are one JSON document on stdout:
 `head_moved`, `state_malformed`, `slot_mismatch`, `locked`, `duplicate_reply`,
 `resolve_unconfirmed` — plus, from fixer dispatch (all exit `3`):
 `config_invalid`, `plan_invalid`, `fixer_running`, `herdr_unavailable`,
-`herdr_error`, `worktree_dirty`, `stale_branch`.
+`herdr_error`, `git_error`, `worktree_dirty`, `stale_branch`.
 
 ## `babysit-tick.sh`
 
@@ -86,7 +86,7 @@ What the agent acts on. Printed on stdout by `babysit-tick.sh`.
 | `reviews.actionable[]` | Human non-`APPROVED` reviews with a body and no recorded reply. |
 | `conversation.fixing[]`, `reviews.fixing[]` | Comments and reviews an active fixer owns (by item id), moved out of `actionable[]` like `threads.fixing[]`. |
 | `recurrence` | `{streak, lastRoundHadRejection, recurringKeys[], fixAttempts}` — the Step 4 gate inputs. |
-| `backoff` | `{idleStreak, intervalMinutes, waitSeconds}` — Claude cron interval / Codex bounded wait for this tick. While a fixer is active `idleStreak` stays 0, so the interval stays at its base and every tick runs `dispatch-fix.sh wait`. |
+| `backoff` | `{idleStreak, intervalMinutes, waitSeconds}` — Claude cron interval / Codex bounded wait for this tick. While a fixer is running `idleStreak` stays 0, so the interval stays at its base and every tick runs `dispatch-fix.sh wait`; a blocked fixer waits for a human and backs off normally. |
 | `errors[]` | Always empty on exit 0. |
 | `snapshotPath`, `statePath` | Where the full evidence lives. |
 
@@ -192,14 +192,18 @@ fixer-report.sh <report-file> done|failed [--note <text>]
   (tests, debugging — the workflow never passes it).
 - **Start** validates everything before a side effect: the plan and items (`plan_invalid`, including a
   `round` that is not a positive integer), each group's host and model/effort (`config_invalid`), an
-  active fixer (`fixer_running`, also when blocked), then herdr (`herdr_unavailable`).
+  active fixer (`fixer_running`, also when blocked), then herdr (`herdr_unavailable`). It fetches
+  `origin/<base>` (the brief's changed-file rule diffs against it) and the PR branch; a failed git
+  step is `git_error`.
 - **Wait** waits at most `--timeout-seconds` (default 480) for the running group. A group moves
-  `pending → launching → running`; a launch cut off midway is retried by the next `wait`. The next
-  group starts only with at least 60 s of the wait left, otherwise in the next call; starting an
-  agent normally takes seconds, and up to about 3 minutes only when it fails. A `blocked` fixer
-  whose prompt was answered, or whose agent is gone, is picked up again.
+  `pending → launching → running`. A launch that is due (a group never started, or one cut off
+  midway) runs first in every call, whatever the timeout; the next group starts in the same call
+  right after a settle only with at least 250 s of the wait left, otherwise in the next call.
+  Starting an agent normally takes seconds, and up to about 4 minutes only when it fails. A
+  `blocked` fixer whose prompt was answered, or whose agent is gone, is picked up again. `wait`
+  has no `--dry-run` (usage error).
 - **Dispatch status** (`start` / `wait` stdout): `{version:1, status: running|done|failed|blocked|none,
-  reason: null|no_report|reported_failed|host_limited|agent_blocked|agent_start_failed, group,
+  reason: null|no_report|reported_failed|host_limited|agent_blocked|agent_start_failed|worktree_lost, group,
   worktree, branch, commits[], groups[{seq, tier, host, model, effort, agent, status, reason, error?}]}`
   — `error` carries herdr's message when a group failed to start.
   `commits[]` = `git rev-list --reverse origin/<pr-branch>..HEAD` in the worktree. `--dry-run`

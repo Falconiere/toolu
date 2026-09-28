@@ -101,5 +101,5 @@ teardown() {
   dry_with /bin/bash >"$TMP/dry.32.json"
   dry_with bash >"$TMP/dry.cur.json"
   cmp "$TMP/dry.32.json" "$TMP/dry.cur.json"
-  [ "$(jq '.commands | length' "$TMP/dry.32.json")" -eq 5 ]
+  [ "$(jq '.commands | length' "$TMP/dry.32.json")" -eq 6 ]
 }

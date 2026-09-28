@@ -46,17 +46,20 @@ pb_herdr_reachable() {
 # is exactly Claude Code's standard first-run workspace-trust prompt for
 # WORKTREE: "Accessing workspace:", the worktree path on its own line, and the
 # two options "No, exit" / "Yes, I trust this folder". The variant that also
-# asks to accept repository-declared permissions, hooks or MCP servers ("Only
-# proceed if you trust this configuration", "No, continue without these
-# permissions") is refused. Pure: reads only its arguments.
+# asks to accept repository-declared permissions, hooks or MCP servers is
+# refused. Its markers are matched on the screen's text with the path line
+# removed (a repository named "*hooks*" is fine) and line breaks joined
+# (Claude's UI hard-wraps text to the pane width). Pure: reads only its
+# arguments.
 pb_herdr_is_claude_trust_prompt() {
-  local screen
+  local screen prose
   screen=$(printf '%s\n' "$1" | sed 's/[[:space:]]*$//' | awk '/Accessing workspace:/{buf=""} {buf = buf $0 "\n"} END{printf "%s", buf}')
   grep -Fq 'Accessing workspace:' <<<"$screen" || return 1
   grep -Fxq " $2" <<<"$screen" || grep -Fxq "$2" <<<"$screen" || return 1
   grep -Fq 'Yes, I trust this folder' <<<"$screen" || return 1
   grep -Fq 'No, exit' <<<"$screen" || return 1
-  if grep -Eqi 'only proceed if you trust this configuration|without these permissions|headersHelper|mcp server|hooks' <<<"$screen"; then
+  prose=$(grep -Fxv -e " $2" -e "$2" <<<"$screen" | tr -s '[:space:]' ' ')
+  if grep -Eqi 'only proceed if you trust|trust this configuration|without these permissions|pre-approves|this folder adds|headershelper|mcp server|\bhooks?\b' <<<"$prose"; then
     return 1
   fi
   return 0

@@ -44,9 +44,11 @@ PB_SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
 sub="${1:-}"; [ $# -gt 0 ] && shift
 PB_D_STATE=""; PB_D_PLAN=""; PB_D_DRY=0; PB_D_ROUND=1
 plan_file=""; items_file=""; repo_root=""; branch=""; base=""; timeout_s=480
-# Settling a group takes seconds; starting the next agent up to ~3 minutes
-# when it fails. Start one only with at least this much of the wait left.
-PB_D_LAUNCH_BUDGET=60
+# A launch that is due runs first in every `wait` call. Starting the NEXT
+# group right after one settles needs this much of the wait left: a failing
+# start can take ~4 minutes (stop, start, trust prompt, prompt), and a
+# Claude `wait` must stay inside the Bash tool's 10-minute ceiling.
+PB_D_LAUNCH_BUDGET=250
 while [ $# -gt 0 ]; do
   case "$1" in
     --state-file)      PB_D_STATE="${2:-}"; shift 2 ;;
@@ -63,6 +65,7 @@ done
 case "$sub" in start|wait|cleanup) ;; *) pb_fail usage "dispatch-fix.sh: subcommand must be start, wait or cleanup" ;; esac
 [ -n "$PB_D_STATE" ] || pb_fail usage "dispatch-fix.sh: --state-file required"
 [[ "$timeout_s" =~ ^[0-9]+$ ]] || pb_fail usage "dispatch-fix.sh: --timeout-seconds must be a whole number"
+[ "$sub" != wait ] || [ "$PB_D_DRY" -eq 0 ] || pb_fail usage "dispatch-fix.sh: --dry-run applies to start and cleanup, not wait"
 pb_require jq git
 pb_init
 pb_state_load "$PB_D_STATE"
@@ -97,6 +100,8 @@ start() {
     pb_herdr_reachable || pb_fail herdr_unavailable "herdr is not reachable (not installed, or its server is not running); run this round inline"
   fi
   local unattended ctx items_copy="${PB_D_STATE%.json}.fixer-items.json"
+  # The brief's "files this PR changes" rule diffs against origin/<base>.
+  pb_d_cmd git -C "$repo_root" fetch --quiet origin "$base" >&2 || pb_fail git_error "git fetch origin $base failed in $repo_root"
   pb_d_worktree "$repo_root" "$branch" "$(jq -r '.slot' "$PB_D_STATE")" "$PB_STATE_NUMBER"
   unattended=$(jq -r 'if .unattended == false then "false" else "true" end' <<<"$PB_D_PLAN")
   ctx=$(jq -nc --arg pr "$PB_STATE_REPO#$PB_STATE_NUMBER" --argjson round "$PB_D_ROUND" \
@@ -129,19 +134,8 @@ launch_current() { # the current group was never started, or its start was cut o
     "$(jq -r '.herdrWorktree.paneId' "$PB_D_STATE")" "$(jq -r 'if .fixer.unattended == false then "false" else "true" end' "$PB_D_STATE")"
 }
 
-settle_group() { # SEQ -> read the settled agent's outcome, exit it, record it
-  local seq="$1" g agent pane outcome head=""
-  g=$(jq -c --argjson s "$seq" '.fixer.groups[] | select(.seq == $s)' "$PB_D_STATE")
-  agent=$(jq -r '.agent' <<<"$g")
-  pane=$(herdr agent read "$agent" --source recent-unwrapped --lines 40 2>/dev/null || true)
-  outcome=$(pb_fixer_settle "$(jq -r '.report' <<<"$g")" "$pane")
-  pb_herdr_agent_stop "$agent" || true
-  [ "$outcome" = "done" ] && head=$(git -C "$(jq -r '.herdrWorktree.path' "$PB_D_STATE")" rev-parse HEAD)
-  pb_d_settle "$seq" "$outcome" "$head"
-}
-
 wait_fixer() {
-  local deadline seq groups gstatus agent remaining out st
+  local deadline seq groups gstatus agent remaining out st fresh=1
   if [ "$(jq -r '.fixer // null | type' "$PB_D_STATE")" != object ]; then
     jq -nc '{version: 1, status: "none"}'
     return 0
@@ -163,10 +157,13 @@ wait_fixer() {
     seq=$(jq -r '.fixer.current' "$PB_D_STATE"); groups=$(jq -r '.fixer.groups | length' "$PB_D_STATE")
     gstatus=$(jq -r --argjson s "$seq" '.fixer.groups[] | select(.seq == $s) | .status' "$PB_D_STATE")
     if [ "$gstatus" = pending ] || [ "$gstatus" = launching ]; then
-      [ "$remaining" -ge "$PB_D_LAUNCH_BUDGET" ] || break
+      # A due launch runs first in a call; right after a settle it needs budget.
+      [ "$fresh" -eq 1 ] || [ "$remaining" -ge "$PB_D_LAUNCH_BUDGET" ] || break
+      fresh=0
       launch_current
       continue
     fi
+    fresh=0
     agent=$(jq -r --argjson s "$seq" '.fixer.groups[] | select(.seq == $s) | .agent' "$PB_D_STATE")
     if out=$(pb_herdr_try agent wait "$agent" --timeout "$((remaining * 1000))"); then
       st=$(jq -r '.agent.agent_status // "unknown"' <<<"$out")
@@ -182,7 +179,7 @@ wait_fixer() {
       pb_d_group_set "$seq" '{"status": "blocked", "reason": "agent_blocked"}'
       break
     fi
-    settle_group "$seq"
+    pb_d_settle_group "$seq"
     [ "$(jq -r '.fixer.status' "$PB_D_STATE")" = running ] || break
     if [ "$seq" -ge "$groups" ]; then
       pb_d_save '.fixer.status = "done" | .fixer.finishedAt = $now' --arg now "$(pb_now)"

@@ -168,9 +168,10 @@ $snap as $snap | $prev as $prev
 | ({ciStatus: $ciStatus, reviewDecision: $pr.reviewDecision, mergeable: $pr.mergeable, unresolvedThreads: $unresolved,
     headSha: $head, botVerdict: $botVerdict, botState: $botState, botFindingKeys: $keys}) as $cmp
 | ($prev == null or ($prev.pr | {ciStatus, reviewDecision, mergeable, unresolvedThreads, headSha, botVerdict, botState, botFindingKeys}) != $cmp) as $changed
-# An active fixer changes nothing GitHub shows, yet each tick must still run
-# `dispatch-fix.sh wait`: hold backoff at its base while one is active.
-| (if $changed or $fixerActive then 0 else (($prev.idleStreak // 0) + 1) end) as $idleStreak
+# A running fixer changes nothing GitHub shows, yet each tick must still run
+# `dispatch-fix.sh wait`: hold backoff at its base while one runs. A blocked
+# fixer waits for a human, so it backs off like any unchanged tick.
+| (if $changed or ($fixerActive and $fixer.status == "running") then 0 else (($prev.idleStreak // 0) + 1) end) as $idleStreak
 | (if $idleStreak >= 9 then 15 elif $idleStreak >= 6 then 12 elif $idleStreak >= 3 then 6 elif $ciStatus == "fail" then 1 else 3 end) as $intervalMinutes
 | (if $idleStreak >= 6 then 60 elif $idleStreak >= 3 then 30 else 15 end) as $waitSeconds
 # ---- decision (Step 6)

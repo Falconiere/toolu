@@ -274,8 +274,8 @@ SKILL="${BATS_TEST_DIRNAME}/../../skills/babysit/SKILL.md"
 
 @test "AC-11: helper.md documents the fixer scripts, fields, reason and error codes" {
   for f in route-fix.sh dispatch-fix.sh fixer-report.sh 'threads.fixing\[\]' '`fixer`' herdrWorktree hostCooldowns fixer_running \
-           config_invalid plan_invalid fixer_running herdr_unavailable herdr_error worktree_dirty stale_branch \
-           no_report reported_failed host_limited agent_blocked agent_start_failed '--jev-answers-in'; do
+           config_invalid plan_invalid fixer_running herdr_unavailable herdr_error git_error worktree_dirty stale_branch \
+           no_report reported_failed host_limited agent_blocked agent_start_failed worktree_lost '--jev-answers-in'; do
     grep -qE -- "$f" "$HELPER_DOC" || { echo "helper.md misses $f" >&2; return 1; }
   done
 }

@@ -48,6 +48,7 @@ start_dry() {
   out=$(start_dry)
   [ "$(jq -r .dryRun <<<"$out")" = true ]
   want=$(jq -nc --arg root "$ROOT" --arg a "$AGENT" --arg brief "$BRIEF" --arg b "$PR_BRANCH" --arg slot "$SLOT" '[
+    ["git","-C",$root,"fetch","--quiet","origin","main"],
     ["git","-C",$root,"fetch","--quiet","origin",$b],
     ["git","-C",$root,"worktree","prune"],
     ["herdr","worktree","create","--cwd",$root,"--branch",("pr-babysit/" + $slot),"--base",("origin/" + $b),"--label","pb-165","--no-focus"],
@@ -82,9 +83,9 @@ start_dry() {
                         prBranch: "feat/python-quality", repoRoot: "/tmp/repo", base: "origin/feat/python-quality"}' "$STATE" >"$TMP/s" && mv "$TMP/s" "$STATE"
   cp "$STATE" "$TMP/state.before"
   out=$(start_dry)
-  [ "$(jq -c '.commands[0:2]' <<<"$out")" = '[["git","-C","/tmp/pb-wt","fetch","--quiet","origin","feat/python-quality"],["git","-C","/tmp/pb-wt","merge","--quiet","--ff-only","refs/remotes/origin/feat/python-quality"]]' ]
+  [ "$(jq -c '.commands[1:3]' <<<"$out")" = '[["git","-C","/tmp/pb-wt","fetch","--quiet","origin","feat/python-quality"],["git","-C","/tmp/pb-wt","merge","--quiet","--ff-only","refs/remotes/origin/feat/python-quality"]]' ]
   [ "$(jq '[.commands[] | select(.[1] == "worktree")] | length' <<<"$out")" = 0 ]
-  [ "$(jq -r '.commands[2] | .[index("--pane") + 1]' <<<"$out")" = "w9:p1" ]
+  [ "$(jq -r '.commands[3] | .[index("--pane") + 1]' <<<"$out")" = "w9:p1" ]
   [ "$(jq '[.commands[] | select(.[3] == "worktree")] | length' <<<"$out")" = 0 ]
   cmp "$STATE" "$TMP/state.before"
 }
@@ -92,8 +93,8 @@ start_dry() {
 @test "AC-5: unattended:false in the plan starts the fixer in the host's safe mode" {
   jq '.unattended = false' "$TMP/plan.json" >"$TMP/safe.json"
   out=$(dispatch start --state-file "$STATE" --plan "$TMP/safe.json" --items "$ITEMS" --repo-root "$ROOT" --branch "$PR_BRANCH" --base main --dry-run)
-  [ "$(jq -c '.commands[3] | .[index("--") + 1:index("--") + 3]' <<<"$out")" = '["--permission-mode","auto"]' ]
-  ! jq -e '.commands[3] | index("--dangerously-skip-permissions")' <<<"$out" >/dev/null
+  [ "$(jq -c '.commands[4] | .[index("--") + 1:index("--") + 3]' <<<"$out")" = '["--permission-mode","auto"]' ]
+  ! jq -e '.commands[4] | index("--dangerously-skip-permissions")' <<<"$out" >/dev/null
 }
 
 @test "AC-5 boundary: a dry run leaves the state byte-identical and writes no brief" {
@@ -152,6 +153,9 @@ start_dry() {
   [ "$status" -eq 2 ]
   run dispatch start --state-file "$STATE" --plan "$TMP/plan.json"
   [ "$status" -eq 2 ]
+  run dispatch wait --state-file "$STATE" --dry-run
+  [ "$status" -eq 2 ]
+  [ "$(jq -r '.errors[0].message' <<<"$output")" = "dispatch-fix.sh: --dry-run applies to start and cleanup, not wait" ]
 }
 
 @test "cleanup --dry-run removes the recorded worktree by workspace and deletes the slot branch" {
@@ -242,7 +246,7 @@ git_topology() {
 @test "AC-5: a dry run renders the plan's group even when a previous fixer record is in state" {
   jq '.fixer = {round: 1, status: "failed", groups: [{seq: 1, tier: "trivial", host: "codex", model: "gpt-old", effort: "low", items: [], status: "failed"}]}' "$STATE" >"$TMP/s" && mv "$TMP/s" "$STATE"
   out=$(start_dry)
-  [ "$(jq -c '.commands[3] | [.[index("--kind") + 1], .[index("--model") + 1]]' <<<"$out")" = '["claude","opus"]' ]
+  [ "$(jq -c '.commands[4] | [.[index("--kind") + 1], .[index("--model") + 1]]' <<<"$out")" = '["claude","opus"]' ]
   jq -r .brief <<<"$out" | grep -Fq "| Tier | critical |"
 }
 
@@ -268,6 +272,16 @@ git_topology() {
       -e 's/No, exit/No, continue without these permissions/' "$TMP/pane" >"$TMP/variant"
   ! grep -Fq 'No, exit' "$TMP/variant"
   ! with_dispatch "pb_herdr_is_claude_trust_prompt \"\$(cat '$TMP/variant')\" '$wt'"
+  # The same variant as Claude's UI prints it: hard-wrapped, cancel label unchanged.
+  sed -e 's/^ Claude Code.ll be able to read, edit, and execute files here\.$/ This folder pre-approves permissions for tools, hooks and MCP servers\
+ in .claude\/settings.json. Only proceed if you trust this\
+ configuration./' "$TMP/pane" >"$TMP/wrapped"
+  grep -Fq 'No, exit' "$TMP/wrapped"
+  ! grep -Fq 'trust this configuration' "$TMP/wrapped"
+  ! with_dispatch "pb_herdr_is_claude_trust_prompt \"\$(cat '$TMP/wrapped')\" '$wt'"
+  # A repository whose name contains "hooks" is still the standard prompt.
+  sed "s#$wt#/w/react-hooks/pr-babysit-acme-react-hooks-7#" "$TMP/pane" >"$TMP/hooks-repo"
+  with_dispatch "pb_herdr_is_claude_trust_prompt \"\$(cat '$TMP/hooks-repo')\" /w/react-hooks/pr-babysit-acme-react-hooks-7"
   # An old prompt above the latest screen does not count.
   { cat "$TMP/pane"; printf ' Accessing workspace:\n\n /somewhere/else\n\n ❯ 1. Yes, proceed\n'; } >"$TMP/stale"
   ! with_dispatch "pb_herdr_is_claude_trust_prompt \"\$(cat '$TMP/stale')\" '$wt'"
@@ -326,6 +340,40 @@ git_topology() {
   rm -f "$TMP/bin/claude"
   out=$(dispatch wait --state-file "$STATE" --timeout-seconds 120)
   [ "$(jq -c '[.status, .reason, .groups[0].error]' <<<"$out")" = '["failed","agent_start_failed","claude is not on PATH"]' ]
+}
+
+@test "wait: a due launch runs first even under a short (Codex, 45 s) wait; a cut-off launch is retried" {
+  rm -f "$TMP/bin/claude"
+  # Group 1 done, group 2 never started: a 45 s wait must still start it.
+  with_fixer_record running
+  jq '.fixer.current = 2 | .fixer.groups[0].status = "done"' "$STATE" >"$TMP/s" && mv "$TMP/s" "$STATE"
+  out=$(dispatch wait --state-file "$STATE" --timeout-seconds 45)
+  [ "$(jq -c '[.status, .group, (.groups | map(.status)), .groups[1].error]' <<<"$out")" = '["failed",2,["done","failed"],"claude is not on PATH"]' ]
+  # A launch cut off midway (status launching) is retried, not waited on.
+  with_fixer_record running
+  jq --arg a "$AGENT" '.fixer.groups[0] += {status: "launching", agent: $a}' "$STATE" >"$TMP/s" && mv "$TMP/s" "$STATE"
+  out=$(dispatch wait --state-file "$STATE" --timeout-seconds 45)
+  [ "$(jq -c '[.status, .reason, .groups[0].status, .groups[0].error]' <<<"$out")" = '["failed","agent_start_failed","failed","claude is not on PATH"]' ]
+}
+
+@test "pb_d_settle_group: done at a readable worktree records its head; a lost worktree is worktree_lost, not a crash" {
+  git_topology
+  with_fixer_record running
+  report="$TMP/pr-babysit-$SLOT.fixer-r1g1.report.json"
+  bash "$SCRIPTS/fixer-report.sh" "$report" done --note ok
+  jq --arg r "$report" --arg p "$ROOT" '.fixer.groups[0] += {status: "running", agent: "pb-nosuch-r1g1", report: $r} | .herdrWorktree = {path: $p}' "$STATE" >"$TMP/s" && mv "$TMP/s" "$STATE"
+  with_dispatch 'pb_d_settle_group 1'
+  [ "$(jq -c '.fixer.groups[0] | [.status, .head]' "$STATE")" = "[\"done\",\"$(git -C "$ROOT" rev-parse HEAD)\"]" ]
+  jq --arg r "$report" '.fixer.groups[0] += {status: "running", head: null} | .herdrWorktree = {path: "/nonexistent/pb-wt"}' "$STATE" >"$TMP/s" && mv "$TMP/s" "$STATE"
+  with_dispatch 'pb_d_settle_group 1'
+  [ "$(jq -c '[.fixer.status, .fixer.reason, .fixer.groups[0].error]' "$STATE")" = '["failed","worktree_lost","the fixer reported done, but its worktree is not readable: /nonexistent/pb-wt"]' ]
+}
+
+@test "pb_d_worktree: a PR branch origin does not have is git_error (real git)" {
+  git_topology
+  run --separate-stderr with_dispatch "pb_d_worktree '$ROOT' no-such-branch '$SLOT' 165"
+  [ "$status" -eq 3 ]
+  [ "$(jq -c '.errors[0] | [.code, .message]' <<<"$output")" = "[\"git_error\",\"git fetch origin no-such-branch failed in $ROOT\"]" ]
 }
 
 @test "wait (live herdr): a blocked fixer whose agent is gone is picked up again and settled from its report" {

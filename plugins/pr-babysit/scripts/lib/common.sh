@@ -14,7 +14,8 @@
 #   state_malformed/slot_mismatch 3 · duplicate_reply 4 · resolve_unconfirmed 5
 #   locked 75 (EX_TEMPFAIL)
 #   Fixer dispatch (route-fix.sh, dispatch-fix.sh): config_invalid/plan_invalid/
-#   fixer_running/herdr_unavailable/herdr_error/worktree_dirty/stale_branch 3
+#   fixer_running/herdr_unavailable/herdr_error/git_error/worktree_dirty/
+#   stale_branch 3
 pb_exit_code() {
   case "$1" in
     usage) echo 2 ;;
@@ -22,7 +23,7 @@ pb_exit_code() {
     resolve_unconfirmed) echo 5 ;;
     locked) echo 75 ;;
     gh_unavailable|jq_required|api_error|invalid_json|head_moved|state_malformed|slot_mismatch) echo 3 ;;
-    config_invalid|plan_invalid|fixer_running|herdr_unavailable|herdr_error|worktree_dirty|stale_branch) echo 3 ;;
+    config_invalid|plan_invalid|fixer_running|herdr_unavailable|herdr_error|git_error|worktree_dirty|stale_branch) echo 3 ;;
     *) echo 3 ;;
   esac
 }

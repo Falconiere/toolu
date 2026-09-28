@@ -123,7 +123,7 @@ pb_d_worktree() {
   path=$(jq -r '.path // ""' <<<"$wt")
   if [ -n "$path" ] && { [ "$PB_D_DRY" -eq 1 ] || [ -d "$path" ]; }; then
     pb_d_clean_or_fail "$path"
-    pb_d_cmd git -C "$path" fetch --quiet origin "$pr" >&2 || pb_fail herdr_error "git fetch origin $pr failed in $path"
+    pb_d_cmd git -C "$path" fetch --quiet origin "$pr" >&2 || pb_fail git_error "git fetch origin $pr failed in $path"
     pb_d_cmd git -C "$path" merge --quiet --ff-only "refs/remotes/origin/$pr" >&2 \
       || pb_fail stale_branch "$branch cannot fast-forward to origin/$pr (the PR branch was rewritten); run dispatch-fix.sh cleanup, then start again" \
            "$(jq -nc --arg b "$branch" '{branch:$b}')"
@@ -136,10 +136,10 @@ pb_d_worktree() {
       ws=$(jq -r '.workspace.workspace_id' <<<"$out"); pane=$(jq -r '.root_pane.pane_id' <<<"$out")
     fi
   else
-    pb_d_cmd git -C "$root" fetch --quiet origin "$pr" >&2 || pb_fail herdr_error "git fetch origin $pr failed in $root"
+    pb_d_cmd git -C "$root" fetch --quiet origin "$pr" >&2 || pb_fail git_error "git fetch origin $pr failed in $root"
     # A fixer worktree deleted by hand leaves git metadata that would block
     # the create; prune drops only entries whose directory is gone.
-    pb_d_cmd git -C "$root" worktree prune >&2 || pb_fail herdr_error "git worktree prune failed in $root"
+    pb_d_cmd git -C "$root" worktree prune >&2 || pb_fail git_error "git worktree prune failed in $root"
     pb_d_drop_branch "$root" "$branch" "$pr"
     pb_d_record herdr worktree create --cwd "$root" --branch "$branch" --base "origin/$pr" --label "pb-$number" --no-focus
     out=$(pb_d_herdr worktree create --cwd "$root" --branch "$branch" --base "origin/$pr" --label "pb-$number" --no-focus) \
@@ -214,7 +214,8 @@ pb_d_launch() {
 # pb_d_settle SEQ OUTCOME [HEAD] [ERROR] -> record how group SEQ ended.
 #   done              the group is done at worktree HEAD
 #   host_limited      the host cools down for 60 min; the fixer fails
-#   reported_failed | no_report | agent_start_failed   the fixer fails
+#   reported_failed | no_report | agent_start_failed | worktree_lost
+#                     the fixer fails (ERROR, when given, is kept on the group)
 # Pure state transition (no herdr call), so it is tested on real state files.
 pb_d_settle() {
   local seq="$1" outcome="$2" head="${3:-}" err="${4:-}" now
@@ -234,4 +235,24 @@ pb_d_settle() {
                                           + (if $e == "" then {} else {error: $e} end) else . end)' \
         --arg r "$outcome" --arg e "$err" --argjson s "$seq" --arg now "$now" ;;
   esac
+}
+
+# pb_d_settle_group SEQ -> read the settled agent's report and last screen,
+# exit the agent, and record the outcome (pb_d_settle). A group that reported
+# done in a worktree git can no longer read is worktree_lost, not a crash.
+pb_d_settle_group() {
+  local seq="$1" g agent pane outcome head="" wt
+  g=$(jq -c --argjson s "$seq" '.fixer.groups[] | select(.seq == $s)' "$PB_D_STATE")
+  agent=$(jq -r '.agent' <<<"$g")
+  pane=$(herdr agent read "$agent" --source recent-unwrapped --lines 40 2>/dev/null || true)
+  outcome=$(pb_fixer_settle "$(jq -r '.report' <<<"$g")" "$pane")
+  pb_herdr_agent_stop "$agent" || true
+  if [ "$outcome" = "done" ]; then
+    wt=$(jq -r '.herdrWorktree.path // ""' "$PB_D_STATE")
+    if ! head=$(git -C "$wt" rev-parse HEAD 2>/dev/null); then
+      pb_d_settle "$seq" worktree_lost "" "the fixer reported done, but its worktree is not readable: $wt"
+      return 0
+    fi
+  fi
+  pb_d_settle "$seq" "$outcome" "$head"
 }

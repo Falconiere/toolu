@@ -19,8 +19,8 @@ never re-fetch with ad-hoc `gh` calls what the result already reports, and act
 through `reply-thread.sh`, `resolve-thread.sh` and `record.sh`. Fix items go
 through `route-fix.sh --host codex` and, when it dispatches to herdr,
 `dispatch-fix.sh start` then `dispatch-fix.sh wait --timeout-seconds 45` — one
-bounded wait per continuation; starting a fixer agent adds its own short,
-bounded startup time.
+bounded wait per continuation. A fixer launch that is due runs first in the
+call; it normally takes seconds and is bounded when an agent fails to start.
 
 Use `get_goal` before `create_goal`; keep one active goal for the resolved
 repository/PR. Continue with bounded cycles: use the native `wait` mechanism for

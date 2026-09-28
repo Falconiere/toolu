@@ -394,12 +394,12 @@ bash "$PLUGIN_ROOT/scripts/dispatch-fix.sh" start --state-file "$STATE_FILE" --p
 bash "$PLUGIN_ROOT/scripts/dispatch-fix.sh" wait --state-file "$STATE_FILE"   # Codex: --timeout-seconds 45
 ```
 
-`wait` waits for the fixer at most `--timeout-seconds` (480 by default).
-Settling a group takes seconds; starting the next agent normally takes seconds
-too, is skipped when under 60 s of the wait remain (the next call starts it),
-and can take up to about 3 minutes only when an agent fails to start. On
-Claude, run `wait` with the Bash tool's `timeout: 600000`; on Codex pass
-`--timeout-seconds 45`.
+`wait` waits for the fixer at most `--timeout-seconds` (480 by default). A
+launch that is due runs first in every call; the next group starts in the
+same call only when enough of the wait is left, otherwise in the next one.
+Starting an agent normally takes seconds and up to about 4 minutes only when
+it fails. On Claude, run `wait` with the Bash tool's `timeout: 600000`; on
+Codex pass `--timeout-seconds 45`.
 
 `dispatch-fix.sh wait` is the one fixer command per tick — including a tick
 where nothing changed: it waits for the running group, records it when it
@@ -415,7 +415,7 @@ reply to and resolve the fixer's items from those `fixing[]` lists. Act on
 | --- | --- |
 | `running` | Keep going; call `wait` again next tick. |
 | `done` | Verify, then Step 4. `commits[]` and `worktree` are in the result. |
-| `failed` | `host_limited`: the host is cooling for 60 min — route the remaining items again (another host) and `start`. `no_report` / `reported_failed` / `agent_start_failed` (herdr's message is in `groups[].error`): route again, or fix that group inline **in the herdr worktree** (`worktree`), which already holds the earlier groups' commits. |
+| `failed` | `host_limited`: the host is cooling for 60 min — route the remaining items again (another host) and `start`. `no_report` / `reported_failed` / `agent_start_failed` (herdr's message is in `groups[].error`): route again, or fix that group inline **in the herdr worktree** (`worktree`), which already holds the earlier groups' commits. `worktree_lost`: the worktree is gone — run `cleanup`, then `start` again. |
 | `blocked` | The fixer waits at a prompt (safe mode). Surface it to the user; never answer it. Once the user answers, the next `wait` picks the group up again. |
 
 **After a failed group.** `start` and `cleanup` refuse a worktree with
