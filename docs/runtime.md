@@ -37,7 +37,7 @@ There is no `node` fallback. Measured warm hook startup on macOS: bash plus jq 6
 ## Decision record
 
 - **Decision:** run every plugin, hook, gate, script, and test on TypeScript under Bun; remove bash and bats when nothing remains.
-- **Why:** every host except OpenCode spawns command hooks in any language, and OpenCode loads TypeScript in-process, so TypeScript on Bun is the one language every host can run. Bun matches bash on hook startup (5.2 ms versus 6.3 ms), so the rewrite does not slow hooks.
-- **Evidence:** the latency measurements above, taken on macOS and recorded in [epic #247](https://github.com/Falconiere/toolu/issues/247).
+- **Why:** every host except OpenCode spawns command hooks in any language, and OpenCode loads TypeScript in-process, so TypeScript on Bun is the one language every host can run. The measurements show parity, not a speed-up: Bun (5.2 ms) is within 1.1 ms of bash plus jq (6.3 ms), so the rewrite does not slow hooks. The reason to migrate is one language across all hosts, not speed.
+- **Evidence:** the latency measurements above (macOS, recorded in [epic #247](https://github.com/Falconiere/toolu/issues/247)) support only that Bun does not regress hook startup and that node is 8x slower than Bun; they do not by themselves justify the rewrite.
 - **Consequence:** Bun 1.4.x is a documented prerequisite for every host; a missing runtime fails closed on enforcing events.
 - **Supersedes:** the #203 non-goal of keeping Claude Code and Codex free of a mandatory Bun dependency.
