@@ -3,7 +3,7 @@
   "version": 2,
   "srcRoot": "src",
   "src": {
-    "topLevel": ["gate-coverage"],
+    "topLevel": ["gate-coverage", "__tests__"],
     "nested": {
       "gate-coverage": ["__tests__"]
     },
