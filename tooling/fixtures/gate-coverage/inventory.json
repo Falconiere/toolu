@@ -1420,6 +1420,26 @@
     "bashRequired": true
   },
   {
+    "id": "toolu:hooks.json:SessionStart:session-start.js:startup|resume",
+    "sourcePath": "plugins/toolu/hooks/hooks.json",
+    "plugin": "toolu",
+    "kind": "hooks.json",
+    "event": "SessionStart",
+    "matcher": "startup|resume",
+    "commandOrModule": "hooks/dist/session-start.js",
+    "parentId": null,
+    "semantics": "Host routes SessionStart (startup|resume) through the Bun launcher to hooks/dist/session-start.js, which reports the resolved Bun path and version; without Bun the launcher prints an advisory systemMessage.",
+    "classification": "no-map",
+    "hostMechanism": "n/a",
+    "support": "n/a",
+    "implementationIssue": null,
+    "implementationStatus": "n/a",
+    "verificationBaseline": "none",
+    "verificationConformance": "pending-#212",
+    "limits": "Command-hook launcher diagnostic (#250); OpenCode runs TypeScript in-process and never spawns the launcher.",
+    "bashRequired": false
+  },
+  {
     "id": "toolu:hooks.json:SessionStart:session-start.sh:startup|resume|clear|compact",
     "sourcePath": "plugins/toolu/hooks/hooks.json",
     "plugin": "toolu",

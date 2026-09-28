@@ -186,7 +186,11 @@ for hook_file in plugins/*/hooks/hooks.json; do
         ;;
     esac
     [ -x "$plugin_root/$hook_path" ] || fail "$hook_file references a missing or non-executable hook: $hook_path"
-  done < <(jq -r '.hooks | to_entries[].value[]?.hooks[]? | select(.type == "command") | .command' "$hook_file")
+  # Launcher hooks (a hooks/dist bundle, a bun call, or commandWindows) are shell
+  # one-liners, not script paths; tooling/src/check-hooks-json.ts gates them.
+  done < <(jq -r '.hooks | to_entries[].value[]?.hooks[]? | select(.type == "command")
+    | select((.commandWindows == null) and ((.command | test("hooks/dist/|\\bbun\\b")) | not))
+    | .command' "$hook_file")
   hook_count=$((hook_count + 1))
 done
 [ "$hook_count" -eq 14 ] || fail "expected 14 hook manifests, found $hook_count"
