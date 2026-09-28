@@ -43,7 +43,7 @@ bats ran files in parallel and tests within a file serially, because suites shar
 - Never call `process.chdir` and never write `process.env`. Pass `cwd` and `env` to `run` instead.
 - Latency measurements are the exception: they time one process at a time, so a timing test stays a plain `test`.
 
-The suites pass under `bun test --parallel --concurrent`.
+The suites pass under `bun test --parallel --concurrent`. The root `bunfig.toml` preloads `harness/preload.ts`, which raises the per-test timeout from 5 s to 60 s because real subprocesses under concurrency outrun bun's default on a loaded CI runner.
 
 ## Porting a bats file
 

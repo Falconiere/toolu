@@ -1,0 +1,3 @@
+# Raise bun test's per-test timeout for real-subprocess suites (docs/testing.md).
+[test]
+preload = ["./tools/toolu-conformance/src/harness/preload.ts"]
