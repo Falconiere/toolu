@@ -4,6 +4,8 @@ Typed judgments from TypeSafe's Jev model at runtime (skill + REST wrapper) — 
 
 ## Install
 
+**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
+
 Claude Code:
 
 ```text

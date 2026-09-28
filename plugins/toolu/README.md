@@ -6,6 +6,8 @@ domain plugins (`rust-quality`, `ts-quality`, …) register into it.
 
 ## Install
 
+**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
+
 ```text
 /plugin install toolu@toolu
 ```

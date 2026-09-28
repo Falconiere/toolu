@@ -4,6 +4,8 @@ Project-tuned pre-push code review mirroring this repo's CI Toolu Code Review ac
 
 ## Install
 
+**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
+
 ```
 /plugin install toolu-review@toolu
 ```

@@ -4,6 +4,8 @@ Efficient, token-lean browser automation for agents via agent-browser (skill + C
 
 ## Install
 
+**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
+
 ```
 /plugin install agent-browser@toolu
 ```

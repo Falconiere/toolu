@@ -4,6 +4,8 @@ Web, code, and URL search plus deep research via Exa — a skill plus a REST wra
 
 ## Install
 
+**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
+
 ```
 /plugin install exa-search@toolu
 ```

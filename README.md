@@ -74,6 +74,8 @@ The rule isn't "warn and move on" — it's a hard gate: **no new task while the 
 toolu has first-class packages for Claude Code and Codex. Codex support covers
 the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux.
 
+**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH` for every host. Resolution order, missing-runtime behaviour, and rationale: [docs/runtime.md](docs/runtime.md).
+
 ### OpenCode (preview)
 
 OpenCode installs the npm bridge through its own plugin CLI — no clone, no
