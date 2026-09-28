@@ -12,6 +12,8 @@ table picks the model and effort per host.
 
 ## Install
 
+**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
+
 Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies, in every worker host. Runtime: `bun`, `gh`, and `herdr`
 (with `HERDR_ENV=1` inside a herdr pane).
 

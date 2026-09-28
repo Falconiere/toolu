@@ -4,6 +4,8 @@ Library documentation & code-example lookup via Context7 — a skill plus a REST
 
 ## Install
 
+**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
+
 ```
 /plugin install context7@toolu
 ```

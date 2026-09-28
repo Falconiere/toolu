@@ -41,6 +41,10 @@ they read is absent, the segment simply doesn't render. So statusline is
 automatically when the relevant plugins are also installed (or, for the account
 segment, when you're logged in via Claude OAuth rather than an API key).
 
+## Install
+
+**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
+
 ## Codex install
 
 ```bash

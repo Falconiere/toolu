@@ -29,7 +29,7 @@ against an unreleased checkout.
 
 **Previous status:** Git-clone install only (no npm publish). Enforcement scope matches [#212](https://github.com/Falconiere/toolu/issues/212) fixture evidence — not every bash gate is wired yet.
 
-Claude Code and Codex keep their existing marketplace installs and **bash-only** runtime; they do **not** require Bun. OpenCode uses the Bun/TS packages in this repo plus the same bash hook tree under `plugins/`.
+Bun 1.4.x is a prerequisite on every host, Claude Code and Codex included; see the [runtime contract](runtime.md). Claude Code and Codex keep their marketplace installs. OpenCode uses the Bun/TS packages in this repo plus the bash hook tree under `plugins/` until each plugin's TypeScript port lands.
 
 ## Prerequisites
 

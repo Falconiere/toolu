@@ -8,6 +8,8 @@ effort Jev picks for its complexity.
 
 ## Install
 
+**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
+
 ```text
 /plugin install pr-babysit@toolu
 ```

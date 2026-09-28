@@ -4,6 +4,8 @@ Jira issue search and workflow from the session via a REST wrapper — a skill p
 
 ## Install
 
+**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
+
 ```
 /plugin install jira@toolu
 ```

@@ -4,6 +4,8 @@ Python `PostToolUse` quality checks registered into the toolu hook engine.
 
 ## Install
 
+**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
+
 ```
 /plugin install python-quality@toolu
 ```

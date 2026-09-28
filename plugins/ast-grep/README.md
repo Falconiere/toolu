@@ -4,6 +4,8 @@ Structural code search & rewrite (ast-grep): a skill, a wrapper, and a `PreToolU
 
 ## Install
 
+**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
+
 ```
 /plugin install ast-grep@toolu
 ```

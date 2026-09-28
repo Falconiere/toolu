@@ -4,6 +4,8 @@ Think a change through before building: evidence-backed triage, alternatives, tr
 
 ## Install
 
+**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
+
 ```
 /plugin install brainstorm@toolu
 ```

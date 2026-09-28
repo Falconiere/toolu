@@ -13,7 +13,7 @@
 | Docs baseline | OpenCode V2 plugin hooks | https://opencode.ai/v2/docs/build/plugins |
 | Unsupported | `opencode-ai@1.18.31` (V1 line) | Do not target for this port |
 
-Platforms for #212: macOS and Linux with Bash ≥5, `jq`, Bun 1.4.x. Windows out of scope until probed.
+Runtime contract: [`runtime.md`](runtime.md). Platforms for #212: macOS and Linux with Bash ≥5, `jq`, Bun 1.4.x. Windows out of scope until probed.
 
 ## Package boundaries
 
@@ -23,7 +23,7 @@ Platforms for #212: macOS and Linux with Bash ≥5, `jq`, Bun 1.4.x. Windows out
 | `tools/toolu-opencode/` | OpenCode `setup`, hooks, generators, host config | Duplicated Zod contracts |
 | Conformance CLI (`tools/toolu-conformance/`) | Second real consumer of core exports | Host SDK |
 
-Root: one `bun.lock`, Bun-only scripts/tests, frozen installs. Unified release `vX.Y.Z` across root, packages, and every `plugin.json`. Claude Code/Codex keep native Bash paths and gain **no** mandatory Bun dependency.
+Root: one `bun.lock`, Bun-only scripts/tests, frozen installs. Unified release `vX.Y.Z` across root, packages, and every `plugin.json`. Bun 1.4.x is a prerequisite for every host, including Claude Code and Codex (epic [#247](https://github.com/Falconiere/toolu/issues/247) retires the #203 no-Bun constraint); see [`runtime.md`](runtime.md). Bash hooks remain until each plugin's TypeScript port merges.
 
 TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, jscpd, Zod-only validators) is adopted in [#213](https://github.com/Falconiere/toolu/issues/213) — see [`docs/conventions-adoption.md`](conventions-adoption.md). Bun workspaces (`packages/toolu-core`, `tools/toolu-opencode`, `tools/toolu-conformance`) and the mandatory CI `typescript` job land in [#208](https://github.com/Falconiere/toolu/issues/208): `bun run test:ts` must pass before runtime implementation merges. Missing Bun/lockfile/tooling fails closed (no successful skip).
 
