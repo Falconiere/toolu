@@ -10,8 +10,10 @@
  * `systemMessage` payload and exits 0.
  *
  * `${CLAUDE_PLUGIN_ROOT}` is the only braced variable: Claude Code substitutes it
- * as text (and does not always export it), Codex and Cursor export it. Every other
- * variable stays brace-less so no host templater rewrites it.
+ * as text (and does not always export it), and Codex exports it. Every other
+ * variable stays brace-less so no host templater rewrites it. The line is plain
+ * POSIX `sh -c`, the shape Cursor's third-party hook loader runs; no Cursor host
+ * is exercised yet (epic #247 follow-up).
  *
  * `commandWindows` is Codex's cmd.exe override. It is shape-only: no Windows host
  * runs it in CI (epic #247 non-goal).

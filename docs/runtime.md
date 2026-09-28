@@ -40,7 +40,7 @@ bun run tooling/src/check-hooks-json.ts --print <plugin> <Event> <entry>   # ent
 
 The printed hook has two strings:
 
-- **`command`** is a POSIX `sh -c` one-liner. It takes the first executable of `$TOOLU_BUN`, `command -v bun`, `$HOME/.bun/bin/bun` and `exec`s `"${CLAUDE_PLUGIN_ROOT}/hooks/dist/<entry>.js"`, so stdin, stdout and the bundle's exit code (a deny's `2`) pass straight through. `${CLAUDE_PLUGIN_ROOT}` is its only braced variable: Claude Code substitutes it as text, while Codex and Cursor export it.
+- **`command`** is a POSIX `sh -c` one-liner. It takes the first executable of `$TOOLU_BUN`, `command -v bun`, `$HOME/.bun/bin/bun` and `exec`s `"${CLAUDE_PLUGIN_ROOT}/hooks/dist/<entry>.js"`, so stdin, stdout and the bundle's exit code (a deny's `2`) pass straight through. `${CLAUDE_PLUGIN_ROOT}` is its only braced variable: Claude Code substitutes it as text and Codex exports it. The line is plain POSIX so Cursor's third-party hook loader can run it too, though no Cursor host is exercised yet.
 - **`commandWindows`** is Codex's `cmd.exe /C` override. It resolves `%TOOLU_BUN%`, `where bun`, `%USERPROFILE%\.bun\bin\bun.exe` in the same order and fails the same way. It is generated and gated but not exercised on Windows.
 
 Without Bun the launcher itself answers, with no bundle involved:

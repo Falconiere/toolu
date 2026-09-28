@@ -152,3 +152,19 @@ test("--print emits the generated hook for a new entry", () => {
     launcherHook({ plugin: "jev", event: "PreToolUse", entry: "pre-tool-use" }),
   );
 });
+
+test("--print rejects missing or invalid arguments with a usage line", () => {
+  for (const args of [
+    [],
+    ["jev", "PreToolUse"],
+    ["jev", "PreToolUse", "Bad Entry"],
+    ["jev", "", "x"],
+  ]) {
+    const result = cli("--print", ...args);
+    expect(result.status).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toStartWith(
+      "usage: check-hooks-json.ts --print <plugin> <Event> <entry>\n",
+    );
+  }
+});

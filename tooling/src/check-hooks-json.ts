@@ -131,7 +131,14 @@ export function checkHooksJson(root: string): HooksJsonProblem[] {
 function main(argv: string[]): number {
   if (argv[0] === "--print") {
     const [plugin = "", event = "", entry = ""] = argv.slice(1);
-    process.stdout.write(`${JSON.stringify(launcherHook({ plugin, event, entry }), null, 2)}\n`);
+    const hook = event === "" ? "launcher event is required" : expectedHook(plugin, event, entry);
+    if (typeof hook === "string") {
+      process.stderr.write(
+        `usage: check-hooks-json.ts --print <plugin> <Event> <entry>\n${hook}\n`,
+      );
+      return 2;
+    }
+    process.stdout.write(`${JSON.stringify(hook, null, 2)}\n`);
     return 0;
   }
   const rootAt = argv.indexOf("--root");
