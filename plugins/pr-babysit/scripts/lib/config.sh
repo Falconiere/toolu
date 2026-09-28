@@ -46,7 +46,8 @@ pb_config_project_path() {
   printf '%s/%s/toolu.config.json\n' "$root" "$dir"
 }
 
-# _pb_config_block FILE -> the file's prBabysit object ({} when absent). A
+# _pb_config_block FILE -> the file's prBabysit value ({} when absent; any
+# other JSON value is returned as-is for pb_config_load to reject). A
 # malformed file warns once on stderr and counts as {} — the toolu loader's rule.
 _pb_config_block() {
   local file="$1"
@@ -56,17 +57,27 @@ _pb_config_block() {
     echo '{}'
     return 0
   fi
-  jq -c '.prBabysit // {}' "$file"
+  jq -c 'if type == "object" and has("prBabysit") then .prBabysit else {} end' "$file"
+}
+
+# _pb_config_object FILE -> that file's prBabysit object, or exit
+# config_invalid when the value is not an object (a string, array or false).
+_pb_config_object() {
+  local out
+  out=$(_pb_config_block "$1") || pb_fail config_invalid "could not read $1"
+  jq -e 'type == "object"' >/dev/null <<<"$out" \
+    || pb_fail config_invalid "prBabysit must be an object (in $1)" "$(jq -nc --arg f "$1" '{file: $f}')"
+  printf '%s\n' "$out"
 }
 
 # pb_config_load HOST -> the validated, defaulted prBabysit object:
 #   {dispatch, hosts[], prefer{tier:[host]}, routing{host:[4]}, unattended, jev}
 # Invalid values exit config_invalid.
 pb_config_load() {
-  local host="$1" user project merged out
-  user=$(_pb_config_block "$(pb_config_user_path "$host")")
-  project=$(_pb_config_block "$(pb_config_project_path "$host")")
-  merged=$(jq -cn --argjson u "$user" --argjson p "$project" '$u * $p')
+  local host="$1" user="" project="" merged out
+  pb_capture user _pb_config_object "$(pb_config_user_path "$host")"
+  pb_capture project _pb_config_object "$(pb_config_project_path "$host")"
+  merged=$(jq -cn --argjson u "$user" --argjson p "$project" '$u * $p') || pb_fail config_invalid "prBabysit could not be merged"
   out=$(jq -c --arg host "$host" --arg safe "$PB_SHELL_SAFE_RE" --argjson defaults "$(pb_default_routing_json)" '
     def kind: {"claude":"claude","claude-code":"claude","codex":"codex","cursor":"cursor","cursor-agent":"cursor"}
       [tostring | ascii_downcase | sub("^\\s+"; "") | sub("\\s+$"; "")];

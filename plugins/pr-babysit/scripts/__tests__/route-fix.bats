@@ -95,7 +95,7 @@ project_config() { jq -n --argjson v "$1" '{prBabysit:$v}' >"$TMP/project/.claud
   jq -n '{version:2, hostCooldowns:{codex:{until:"2026-09-28T12:30:00Z", reason:"host_limited"}}}' >"$TMP/state.json"
   out=$(route --host claude --no-jev --state-file "$TMP/state.json")
   [ "$(jq -c '[.groups[] | [.tier, .host, .model]]' <<<"$out")" = '[["critical","cursor","gpt-5.6-sol-xhigh"],["complex","cursor","claude-opus-5-thinking-high"],["standard","cursor","gpt-5.6-sol-high"],["trivial","cursor","composer-2.5"]]' ]
-  jq -r '.note' <<<"$out" | grep -q 'cooling: codex'
+  [ "$(jq -r '.note' <<<"$out")" = "jev disabled; heuristic tiers used; cooling: codex" ]
 }
 
 @test "AC-2 boundary: an expired cooldown is ignored" {
@@ -112,7 +112,7 @@ project_config() { jq -n --argjson v "$1" '{prBabysit:$v}' >"$TMP/project/.claud
   [ "$(jq -r '.dispatch' <<<"$out")" = inline ]
   [ "$(jq -c '[.groups[] | [.host, .model, .effort]] | unique' <<<"$out")" = '[[null,null,null]]' ]
   [ "$(jq -c '[.groups[] | .class]' <<<"$out")" = '["architecture","architecture","implementation","mechanical"]' ]
-  jq -r '.note' <<<"$out" | grep -q 'no fixer host available (cooling: codex, cursor)'
+  [ "$(jq -r '.note' <<<"$out")" = "jev disabled; heuristic tiers used; no fixer host available (cooling: codex, cursor)" ]
 }
 
 @test "AC-2 boundary: a pool host whose CLI is not on PATH is dropped with a note" {
@@ -120,7 +120,7 @@ project_config() { jq -n --argjson v "$1" '{prBabysit:$v}' >"$TMP/project/.claud
   clis claude codex
   out=$(route --host claude --no-jev)
   [ "$(jq -c '[.groups[] | .host] | unique' <<<"$out")" = '["codex"]' ]
-  jq -r '.note' <<<"$out" | grep -q 'dropped (CLI not on PATH): cursor'
+  [ "$(jq -r '.note' <<<"$out")" = "jev disabled; heuristic tiers used; dropped (CLI not on PATH): cursor" ]
 }
 
 @test "AC-2 boundary: an unknown pool host is config_invalid (exit 3)" {
@@ -162,15 +162,38 @@ project_config() { jq -n --argjson v "$1" '{prBabysit:$v}' >"$TMP/project/.claud
   printf '#!/bin/sh\necho "service down" >&2\nexit 1\n' >"$TMP/jev-down.sh"
   out=$(PB_JEV="$TMP/jev-down.sh" TYPESAFE_API_KEY=unused route --host claude)
   [ "$(jq -r '.source' <<<"$out")" = heuristic ]
-  jq -r '.note' <<<"$out" | grep -q 'jev failed (exit 1): service down'
+  [ "$(jq -r '.note' <<<"$out")" = "jev failed (exit 1): service down; heuristic tiers used" ]
 }
 
 @test "AC-3 boundary: no jev.sh installed or no key -> heuristic with the reason" {
   out=$(route --host claude)
-  jq -r '.note' <<<"$out" | grep -q 'jev.sh not installed'
+  [ "$(jq -r '.note' <<<"$out")" = "jev unavailable (jev.sh not installed); heuristic tiers used" ]
   printf '#!/bin/sh\nexit 0\n' >"$TMP/jev-ok.sh"
   out=$(PB_JEV="$TMP/jev-ok.sh" route --host claude)
-  jq -r '.note' <<<"$out" | grep -q 'TYPESAFE_API_KEY not set'
+  [ "$(jq -r '.note' <<<"$out")" = "jev unavailable (TYPESAFE_API_KEY not set); heuristic tiers used" ]
+}
+
+@test "AC-3 boundary: a Jev answer that is not a JSON object falls back to the heuristic" {
+  printf '#!/bin/sh\necho "Service Unavailable"\n' >"$TMP/jev-garbage.sh"
+  out=$(PB_JEV="$TMP/jev-garbage.sh" TYPESAFE_API_KEY=unused route --host claude)
+  [ "$(jq -r '[.source, .note] | @tsv' <<<"$out")" = "$(printf 'heuristic\tjev returned an unparsable answer; heuristic tiers used')" ]
+}
+
+@test "AC-2: prBabysit.dispatch inline and jev false are honoured" {
+  project_config '{"dispatch":"inline","jev":false}'
+  out=$(route --host claude)
+  [ "$(jq -c '[.dispatch, .source, .note]' <<<"$out")" = '["inline","heuristic","jev disabled; heuristic tiers used; prBabysit.dispatch is inline"]' ]
+  [ "$(jq -c '[.groups[] | [.host, .model, .effort]] | unique' <<<"$out")" = '[[null,null,null]]' ]
+}
+
+@test "AC-1 boundary: a bad kind, duplicate ids and a bad round are plan_invalid" {
+  for edit in '.items[0].kind = "commit"' '.items[1].id = .items[0].id' '.round = "abc"' '.round = 2.5' '.round = 0'; do
+    jq "$edit" "$ITEMS" >"$TMP/bad.json"
+    run bash -c "PATH='$TMP/bin:/usr/bin:/bin' bash '$SCRIPTS/route-fix.sh' --items '$TMP/bad.json' --host claude --no-jev"
+    [ "$status" -eq 3 ] || { echo "accepted: $edit" >&2; return 1; }
+    [ "$(jq -r '.errors[0].code' <<<"$output")" = plan_invalid ]
+  done
+  [ "$(jq -r '.errors[0].message' <<<"$output")" = "round must be a positive integer" ]
 }
 
 @test "AC-3 live: a real Jev call tiers every item (runs when a key and jev.sh exist)" {

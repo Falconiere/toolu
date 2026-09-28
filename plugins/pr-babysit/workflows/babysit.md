@@ -377,8 +377,9 @@ falls back to a task/severity heuristic and says why in `note`. Any single
 **yes** on reversibility, blast radius, ambiguity or reasoning depth raises an
 item one tier: route again with `--raise <id>` and say so in the report. Never
 lower a tier. `dispatch: "herdr"` → **Multi-host dispatch**; `dispatch:
-"inline"` (config, every pool host cooling or missing, or herdr unreachable) →
-**Inline delegation**, using each group's `class`.
+"inline"` (the config says so, or every pool host is cooling or has no CLI on
+`PATH`) → **Inline delegation**, using each group's `class`. herdr itself is
+probed by `dispatch-fix.sh start`: `herdr_unavailable` also means inline.
 
 ### Multi-host dispatch (herdr)
 
@@ -389,26 +390,38 @@ tests and commits only. You keep verification, push, replies and resolves.
 
 ```bash
 bash "$PLUGIN_ROOT/scripts/dispatch-fix.sh" start --state-file "$STATE_FILE" --plan "$PB_TMP/route.json" \
-  --items "$PB_TMP/items.json" --repo-root "$REPO_ROOT" --branch "$BRANCH"
-bash "$PLUGIN_ROOT/scripts/dispatch-fix.sh" wait --state-file "$STATE_FILE"   # Codex: --timeout-seconds 55
+  --items "$PB_TMP/items.json" --repo-root "$REPO_ROOT" --branch "$BRANCH" --base "$BASE"   # BASE = pr.base
+bash "$PLUGIN_ROOT/scripts/dispatch-fix.sh" wait --state-file "$STATE_FILE"   # Codex: --timeout-seconds 45
 ```
 
-On Claude, run `wait` with the Bash tool's `timeout: 600000` — its 540 s
-default outlasts the tool's 2-minute default.
+`wait` waits for the fixer at most `--timeout-seconds` (480 by default).
+Settling a group takes seconds; starting the next agent normally takes seconds
+too, is skipped when under 60 s of the wait remain (the next call starts it),
+and can take up to about 3 minutes only when an agent fails to start. On
+Claude, run `wait` with the Bash tool's `timeout: 600000`; on Codex pass
+`--timeout-seconds 45`.
 
-`dispatch-fix.sh wait` is the one fixer command per tick: it waits (540 s by
-default; Codex passes 55) for the running group, records it when it settles,
-exits its agent and starts the next group. While a fixer runs, the result lists
-its threads under `threads.fixing[]` (not `actionable[]`) with reason
-`fixer_running`, so they are never dispatched twice — answer Won't-fix items
-meanwhile. Act on `status`:
+`dispatch-fix.sh wait` is the one fixer command per tick — including a tick
+where nothing changed: it waits for the running group, records it when it
+settles, exits its agent and starts the next group. While a fixer is active
+(running or blocked), the result moves its items from `actionable[]` to
+`threads.fixing[]`, `conversation.fixing[]` and `reviews.fixing[]` — the same
+objects, reply ids included — with reason `fixer_running`, so they are never
+dispatched twice. Answer Won't-fix items meanwhile. When `wait` says `done`,
+reply to and resolve the fixer's items from those `fixing[]` lists. Act on
+`status`:
 
 | `status` | Action |
 | --- | --- |
 | `running` | Keep going; call `wait` again next tick. |
 | `done` | Verify, then Step 4. `commits[]` and `worktree` are in the result. |
-| `failed` | `host_limited`: the host is cooling for 60 min — route again (another host) and `start`. `no_report` / `reported_failed` / `agent_start_failed` (herdr's message is in `groups[].error`): route again, or do that group inline. |
-| `blocked` | The fixer waits at a prompt (safe mode). Surface it to the user; never answer it. |
+| `failed` | `host_limited`: the host is cooling for 60 min — route the remaining items again (another host) and `start`. `no_report` / `reported_failed` / `agent_start_failed` (herdr's message is in `groups[].error`): route again, or fix that group inline **in the herdr worktree** (`worktree`), which already holds the earlier groups' commits. |
+| `blocked` | The fixer waits at a prompt (safe mode). Surface it to the user; never answer it. Once the user answers, the next `wait` picks the group up again. |
+
+**After a failed group.** `start` and `cleanup` refuse a worktree with
+uncommitted work (`worktree_dirty`, with `changes[]`) — a fixer can stop
+mid-edit. Finish or commit that work yourself in the herdr worktree when it is
+sound; otherwise escalate it. Never discard it with a reset or checkout.
 
 `start` refuses with `fixer_running`, `plan_invalid`, `herdr_unavailable`,
 `worktree_dirty` or `stale_branch` (see
@@ -675,7 +688,7 @@ Anything else, incl. indefinite waits — `decision: keep_going`:
 - Bot findings remain after this round's fix-push (re-read next tick)
 - New comments landed after this tick's clearance check (they get disposed next tick — a tick never *ends* with an actionable thread it already saw still open)
 - `mergeable_unknown` — GitHub has not computed mergeability yet
-- Nothing changed since last tick (`changed: false`, reason `unchanged`): silent no-op; the helper bumped `idleStreak` and widened backoff; never terminate
+- Nothing changed since last tick (`changed: false`, reason `unchanged`): silent no-op; the helper bumped `idleStreak` and widened backoff; never terminate. **Exception — an active fixer** (`fixer_running`): run Step 3's `dispatch-fix.sh wait` and act on its status; the helper holds backoff at its base while a fixer is active
 
 ---
 
@@ -740,7 +753,7 @@ idempotency ledger. `lastError` is the last failed tick's structured error, or `
 
 Per tick the helper diffs current vs saved. All reads/writes → slot-scoped path from Step 0 only.
 
-- **Nothing changed** (same `ciStatus`/`reviewDecision`/`mergeable`/`unresolvedThreads`/`headSha`/`botVerdict`/`botState`/`botFindingKeys`) → `changed: false`; the helper bumped `idleStreak` and widened backoff. **Zero output.** Exit.
+- **Nothing changed** (same `ciStatus`/`reviewDecision`/`mergeable`/`unresolvedThreads`/`headSha`/`botVerdict`/`botState`/`botFindingKeys`) → `changed: false`; the helper bumped `idleStreak` and widened backoff. **Zero output.** Exit — unless `fixer` is running or blocked (reason `fixer_running`): a fixer changes nothing GitHub shows, so run Step 3's `dispatch-fix.sh wait` first and act on its status. The helper keeps `idleStreak` at 0 while a fixer is active.
 - **Something changed** → `changed: true`, `idleStreak` reset to 0, run Steps 2–6.
 
 ### Adaptive backoff
@@ -796,6 +809,6 @@ Fixed + resolved: 2 | Won't fix + resolved: 1 | Left open: 0 | Commits pushed: 1
 `Left open` is 0 on every completed tick. Non-zero means the clearance check failed — say which
 thread and why in the report. If you overrode the helper's `decision`, name the field and why.
 
-Tick where nothing changed: silent — exit.
+Tick where nothing changed: silent — exit (after `dispatch-fix.sh wait` when a fixer is active).
 
 On stop: print Step 6 terminal message.

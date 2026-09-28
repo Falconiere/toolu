@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # dispatch.sh — the steps behind dispatch-fix.sh: record-and-run commands (so
 # --dry-run prints exactly what a live run executes), slot-state writes under
-# the lock, the herdr worktree, and launching one fixer group.
+# the lock, plan validation, the herdr worktree, launching one fixer group and
+# recording how a group settled.
 #
 # Sourced by dispatch-fix.sh after common/lock/state/hosts/fixer/herdr. Reads
-# the globals the entrypoint sets: PB_D_STATE, PB_D_DRY, PB_D_ROUND.
+# the globals the entrypoint sets: PB_D_STATE, PB_D_DRY, PB_D_ROUND, PB_D_PLAN.
+# Group status: pending -> launching -> running -> done | failed | blocked.
 
 PB_D_CMDS='[]'
 PB_D_WT_PATH=""; PB_D_WT_PANE=""; PB_D_BRIEF=""
@@ -25,10 +27,10 @@ pb_d_cmd() {
   "$@"
 }
 
-# pb_d_herdr ARGS... -> record `herdr ARGS` and run it through pb_herdr_try
-# unless dry (dry prints {}). Returns 1 with herdr's normalized error.
+# pb_d_herdr ARGS... -> run `herdr ARGS` through pb_herdr_try unless dry (dry
+# prints {}). Returns 1 with herdr's normalized error. Callers capture its
+# output with $(...), so they record the argv themselves (pb_d_record).
 pb_d_herdr() {
-  pb_d_record herdr "$@"
   [ "$PB_D_DRY" -eq 1 ] && { echo '{}'; return 0; }
   pb_herdr_try "$@"
 }
@@ -42,19 +44,39 @@ pb_d_save() {
   pb_lock_release
 }
 
+# pb_d_group_set SEQ JSON_PATCH -> merge JSON_PATCH into group SEQ's record.
+pb_d_group_set() {
+  pb_d_save '.fixer.groups |= map(if .seq == $s then . + $p else . end)' --argjson s "$1" --argjson p "$2"
+}
+
 # pb_d_status -> the dispatcher's status document, from the slot state.
 pb_d_status() {
   local wt pr commits='[]'
   wt=$(jq -r '.herdrWorktree.path // ""' "$PB_D_STATE")
   pr=$(jq -r '.herdrWorktree.prBranch // ""' "$PB_D_STATE")
   if [ -n "$wt" ] && [ -d "$wt" ] && [ -n "$pr" ]; then
-    commits=$(git -C "$wt" rev-list --reverse "refs/remotes/origin/$pr..HEAD" 2>/dev/null | jq -Rsc 'split("\n") | map(select(length > 0))')
+    # A worktree that is gone or no longer a repository has no commits to report.
+    commits=$(git -C "$wt" rev-list --reverse "refs/remotes/origin/$pr..HEAD" 2>/dev/null | jq -Rsc 'split("\n") | map(select(length > 0))') \
+      || commits='[]'
   fi
   jq -c --argjson commits "$commits" '
     {version: 1, status: (.fixer.status // "none"), reason: (.fixer.reason // null),
      group: (.fixer.current // null), worktree: (.herdrWorktree.path // null),
      branch: (.herdrWorktree.branch // null), commits: $commits,
      groups: [(.fixer.groups // [])[] | {seq, tier, host, model, effort, agent, status, reason} + (if .error then {error} else {} end)]}' "$PB_D_STATE"
+}
+
+# pb_d_validate_plan -> exit config_invalid before any side effect when a
+# group names a host other than claude/codex/cursor or carries a model/effort
+# the pane shell would mangle (pb_agent_args checks it).
+pb_d_validate_plan() {
+  local g host argv=""
+  while IFS= read -r g; do
+    host=$(jq -r '.host' <<<"$g")
+    [ "$(pb_host_kind_try "$host" || true)" = "$host" ] \
+      || pb_fail config_invalid "plan group $(jq -r '.seq' <<<"$g") names host '$host'; use claude, codex or cursor"
+    pb_capture argv pb_agent_args "$host" pb-000000-r1g1 "$(jq -r '.model // ""' <<<"$g")" "$(jq -r '.effort // ""' <<<"$g")" true auto
+  done < <(jq -c '.groups[]' <<<"$PB_D_PLAN")
 }
 
 # pb_d_dirt DIR -> `git status --porcelain` lines that are real uncommitted
@@ -76,6 +98,21 @@ pb_d_clean_or_fail() {
     "$(jq -nc --arg p "$1" --arg d "$dirt" '{path: $p, changes: ($d | split("\n"))}')"
 }
 
+# pb_d_drop_branch ROOT BRANCH PR -> delete a leftover local BRANCH that
+# origin/PR already contains; exit stale_branch when it holds other commits or
+# git refuses (it is still checked out somewhere).
+pb_d_drop_branch() {
+  local root="$1" branch="$2" pr="$3"
+  [ "$PB_D_DRY" -eq 1 ] && return 0
+  git -C "$root" rev-parse --verify --quiet "refs/heads/$branch" >/dev/null || return 0
+  git -C "$root" merge-base --is-ancestor "refs/heads/$branch" "refs/remotes/origin/$pr" \
+    || pb_fail stale_branch "local $branch holds commits origin/$pr does not; inspect it before babysit reuses the name" \
+         "$(jq -nc --arg b "$branch" '{branch:$b}')"
+  pb_d_cmd git -C "$root" branch --quiet -D "$branch" >&2 \
+    || pb_fail stale_branch "git could not delete $branch (is it checked out in another worktree?)" \
+         "$(jq -nc --arg b "$branch" '{branch:$b}')"
+}
+
 # pb_d_worktree REPO_ROOT PR_BRANCH SLOT NUMBER -> ensure the slot's herdr
 # worktree on pr-babysit/<slot>, fast-forwarded to origin/<PR_BRANCH>, and
 # record it in state. Sets PB_D_WT_PATH and PB_D_WT_PANE (never call it under
@@ -93,6 +130,7 @@ pb_d_worktree() {
     ws=$(jq -r '.workspaceId // ""' <<<"$wt"); pane=$(jq -r '.paneId // ""' <<<"$wt")
     if [ "$PB_D_DRY" -eq 0 ] && ! pb_herdr_try pane list --workspace "$ws" | jq -e --arg p "$pane" '(.panes // []) | any(.pane_id == $p)' >/dev/null 2>&1; then
       # The worktree survived but its herdr workspace was closed: reopen it.
+      pb_d_record herdr worktree open --cwd "$root" --path "$path" --label "pb-$number" --no-focus
       out=$(pb_d_herdr worktree open --cwd "$root" --path "$path" --label "pb-$number" --no-focus) \
         || pb_fail herdr_error "herdr worktree open: $(jq -r '"\(.error.code): \(.error.message)"' <<<"$out")"
       ws=$(jq -r '.workspace.workspace_id' <<<"$out"); pane=$(jq -r '.root_pane.pane_id' <<<"$out")
@@ -102,17 +140,11 @@ pb_d_worktree() {
     # A fixer worktree deleted by hand leaves git metadata that would block
     # the create; prune drops only entries whose directory is gone.
     pb_d_cmd git -C "$root" worktree prune >&2 || pb_fail herdr_error "git worktree prune failed in $root"
-    if [ "$PB_D_DRY" -eq 0 ] && git -C "$root" rev-parse --verify --quiet "refs/heads/$branch" >/dev/null; then
-      git -C "$root" merge-base --is-ancestor "refs/heads/$branch" "refs/remotes/origin/$pr" \
-        || pb_fail stale_branch "local $branch holds commits origin/$pr does not; inspect it before babysit reuses the name" \
-             "$(jq -nc --arg b "$branch" '{branch:$b}')"
-      pb_d_cmd git -C "$root" branch --quiet -D "$branch" >&2
-    fi
+    pb_d_drop_branch "$root" "$branch" "$pr"
+    pb_d_record herdr worktree create --cwd "$root" --branch "$branch" --base "origin/$pr" --label "pb-$number" --no-focus
     out=$(pb_d_herdr worktree create --cwd "$root" --branch "$branch" --base "origin/$pr" --label "pb-$number" --no-focus) \
       || pb_fail herdr_error "herdr worktree create: $(jq -r '"\(.error.code): \(.error.message)"' <<<"$out")"
     if [ "$PB_D_DRY" -eq 1 ]; then
-      # The command list above was recorded in a subshell; record it here too.
-      pb_d_record herdr worktree create --cwd "$root" --branch "$branch" --base "origin/$pr" --label "pb-$number" --no-focus
       path="<herdr worktree path>"; ws="<workspace>"; pane="<root pane>"
     else
       path=$(jq -r '.worktree.path' <<<"$out"); ws=$(jq -r '.workspace.workspace_id' <<<"$out"); pane=$(jq -r '.root_pane.pane_id' <<<"$out")
@@ -125,14 +157,18 @@ pb_d_worktree() {
 }
 
 # pb_d_launch SEQ ITEMS_FILE CONTEXT_JSON PANE UNATTENDED -> start group SEQ's
-# agent in PANE and hand it its brief. A failed start marks the group and the
-# fixer failed (agent_start_failed) instead of leaving a phantom `running`.
-# Sets PB_D_BRIEF to the rendered brief on a dry run. Never call it under $(...).
+# agent in PANE and hand it its brief. The group is `launching` until the
+# prompt lands, then `running`; a failed start marks the group and the fixer
+# failed (agent_start_failed, herdr's message in `error`) instead of leaving a
+# phantom record. Sets PB_D_BRIEF on a dry run. Never call it under $(...).
 pb_d_launch() {
-  local seq="$1" items="$2" ctx="$3" pane="$4" unattended="$5" g host model effort agent brief report cli args a
+  local seq="$1" items="$2" ctx="$3" pane="$4" unattended="$5" g host model effort agent brief report args a err=""
   local -a argv=()
-  g=$(jq -c --argjson s "$seq" '(.fixer.groups // [])[] | select(.seq == $s)' "$PB_D_STATE")
-  [ -n "$g" ] || g=$(jq -c --argjson s "$seq" '.groups[] | select(.seq == $s)' <<<"$PB_D_PLAN")
+  if [ "$PB_D_DRY" -eq 1 ]; then
+    g=$(jq -c --argjson s "$seq" '.groups[] | select(.seq == $s)' <<<"$PB_D_PLAN")
+  else
+    g=$(jq -c --argjson s "$seq" '(.fixer.groups // [])[] | select(.seq == $s)' "$PB_D_STATE")
+  fi
   host=$(jq -r '.host' <<<"$g"); model=$(jq -r '.model // ""' <<<"$g"); effort=$(jq -r '.effort // ""' <<<"$g")
   agent=$(pb_fixer_agent_name "$(jq -r '.slot' "$PB_D_STATE")" "$PB_D_ROUND" "$seq")
   brief=$(pb_fixer_brief_path "$PB_D_STATE" "$PB_D_ROUND" "$seq")
@@ -140,19 +176,23 @@ pb_d_launch() {
   ctx=$(jq -c --arg d "bash '$(pb_plugin_root)/scripts/fixer-report.sh' '$report' done --note \"<one-line summary>\"" \
               --arg f "bash '$(pb_plugin_root)/scripts/fixer-report.sh' '$report' failed --note \"<the reason>\"" \
               '. + {reportDone: $d, reportFailed: $f}' <<<"$ctx")
-  args=""
   pb_capture args pb_agent_args "$host" "$agent" "$model" "$effort" "$unattended" auto
   while IFS= read -r a; do argv+=("$a"); done <<<"$args"
-  if [ "$PB_D_DRY" -eq 0 ]; then
+  if [ "$PB_D_DRY" -eq 1 ]; then
+    PB_D_BRIEF=$(pb_fixer_render_brief "$(pb_plugin_root)/skills/babysit/references/fixer-brief.md" "$items" "$g" "$ctx")
+    export PB_D_BRIEF
+  else
     rm -f "$report"
     pb_fixer_render_brief "$(pb_plugin_root)/skills/babysit/references/fixer-brief.md" "$items" "$g" "$ctx" >"$brief"
   fi
-  pb_d_save '.fixer.current = $s | .fixer.groups |= map(if .seq == $s then . + {agent: $a, brief: $b, report: $r, status: "running", startedAt: $now} else . end)' \
-    --argjson s "$seq" --arg a "$agent" --arg b "$brief" --arg r "$report" --arg now "$(pb_now)"
-  cli=$(pb_host_cli "$host")
-  local err=""
-  if [ "$PB_D_DRY" -eq 0 ] && ! command -v "$cli" >/dev/null 2>&1; then
-    err="$cli is not on PATH"
+  pb_d_save '.fixer.current = $s' --argjson s "$seq"
+  pb_d_group_set "$seq" "$(jq -nc --arg a "$agent" --arg b "$brief" --arg r "$report" --arg now "$(pb_now)" \
+    '{agent: $a, brief: $b, report: $r, status: "launching", reason: null, startedAt: $now}')"
+  pb_d_record herdr agent start "$agent" --kind "$host" --pane "$pane" --timeout 90000 -- "${argv[@]}"
+  pb_d_record herdr agent prompt "$agent" "You are a pr-babysit fixer. Read $brief and follow it exactly." \
+    --wait --until working --until blocked --timeout 60000
+  if [ "$PB_D_DRY" -eq 0 ] && ! command -v "$(pb_host_cli "$host")" >/dev/null 2>&1; then
+    err="$(pb_host_cli "$host") is not on PATH"
   elif ! err=$(pb_d_herdr agent start "$agent" --kind "$host" --pane "$pane" --timeout 90000 -- "${argv[@]}") \
        && ! { [ "$host" = claude ] && [ "$(jq -r '.error.code' <<<"$err")" = agent_not_ready ] \
               && pb_herdr_accept_claude_trust "$agent" "$(jq -r '.herdrWorktree.path' "$PB_D_STATE")"; }; then
@@ -164,21 +204,34 @@ pb_d_launch() {
     err=""
   fi
   if [ -n "$err" ]; then
-    pb_herdr_agent_stop "$agent" || true
-    pb_d_save '.fixer.status = "failed" | .fixer.reason = "agent_start_failed"
-               | .fixer.groups |= map(if .seq == $s then . + {status: "failed", reason: "agent_start_failed", error: $e, finishedAt: $now} else . end)' \
-      --argjson s "$seq" --arg e "$err" --arg now "$(pb_now)"
+    [ "$PB_D_DRY" -eq 1 ] || pb_herdr_agent_stop "$agent" || true
+    pb_d_settle "$seq" agent_start_failed "" "$err"
     return 0
   fi
-  # pb_d_herdr ran in $(...) above: record the argv here for --dry-run.
-  if [ "$PB_D_DRY" -eq 1 ]; then
-    pb_d_record herdr agent start "$agent" --kind "$host" --pane "$pane" --timeout 90000 -- "${argv[@]}"
-    pb_d_record herdr agent prompt "$agent" "You are a pr-babysit fixer. Read $brief and follow it exactly." \
-      --wait --until working --until blocked --timeout 60000
-  fi
-  if [ "$PB_D_DRY" -eq 1 ]; then
-    PB_D_BRIEF=$(pb_fixer_render_brief "$(pb_plugin_root)/skills/babysit/references/fixer-brief.md" "$items" "$g" "$ctx")
-    export PB_D_BRIEF
-  fi
-  return 0
+  pb_d_group_set "$seq" '{"status": "running"}'
+}
+
+# pb_d_settle SEQ OUTCOME [HEAD] [ERROR] -> record how group SEQ ended.
+#   done              the group is done at worktree HEAD
+#   host_limited      the host cools down for 60 min; the fixer fails
+#   reported_failed | no_report | agent_start_failed   the fixer fails
+# Pure state transition (no herdr call), so it is tested on real state files.
+pb_d_settle() {
+  local seq="$1" outcome="$2" head="${3:-}" err="${4:-}" now
+  now=$(pb_now)
+  case "$outcome" in
+    done)
+      pb_d_group_set "$seq" "$(jq -nc --arg now "$now" --arg h "$head" '{status: "done", reason: null, finishedAt: $now, head: $h}')" ;;
+    host_limited)
+      pb_d_save '.hostCooldowns[$host] = {until: (now + 3600 | todate), reason: "host_limited"}
+                 | .fixer.status = "failed" | .fixer.reason = "host_limited"
+                 | .fixer.groups |= map(if .seq == $s then . + {status: "failed", reason: "host_limited", finishedAt: $now} else . end)' \
+        --arg host "$(jq -r --argjson s "$seq" '.fixer.groups[] | select(.seq == $s) | .host' "$PB_D_STATE")" \
+        --argjson s "$seq" --arg now "$now" ;;
+    *)
+      pb_d_save '.fixer.status = "failed" | .fixer.reason = $r
+                 | .fixer.groups |= map(if .seq == $s then . + {status: "failed", reason: $r, finishedAt: $now}
+                                          + (if $e == "" then {} else {error: $e} end) else . end)' \
+        --arg r "$outcome" --arg e "$err" --argjson s "$seq" --arg now "$now" ;;
+  esac
 }

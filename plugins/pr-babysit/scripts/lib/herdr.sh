@@ -42,18 +42,35 @@ pb_herdr_reachable() {
   pb_herdr_try workspace list >/dev/null
 }
 
-# pb_herdr_accept_claude_trust NAME WORKTREE -> 0 after answering Claude Code's
-# standard first-run workspace-trust prompt for exactly WORKTREE (the herdr
-# worktree babysit created from the user's own PR branch) and seeing the agent
-# become idle. Any other blocked screen returns 1 untouched — the same rule as
-# epic-orchestrator's recovery guide: approve only the standard trust prompt
-# for this worktree, never anything else.
+# pb_herdr_is_claude_trust_prompt PANE WORKTREE -> 0 when PANE's last screen
+# is exactly Claude Code's standard first-run workspace-trust prompt for
+# WORKTREE: "Accessing workspace:", the worktree path on its own line, and the
+# two options "No, exit" / "Yes, I trust this folder". The variant that also
+# asks to accept repository-declared permissions, hooks or MCP servers ("Only
+# proceed if you trust this configuration", "No, continue without these
+# permissions") is refused. Pure: reads only its arguments.
+pb_herdr_is_claude_trust_prompt() {
+  local screen
+  screen=$(printf '%s\n' "$1" | sed 's/[[:space:]]*$//' | awk '/Accessing workspace:/{buf=""} {buf = buf $0 "\n"} END{printf "%s", buf}')
+  grep -Fq 'Accessing workspace:' <<<"$screen" || return 1
+  grep -Fxq " $2" <<<"$screen" || grep -Fxq "$2" <<<"$screen" || return 1
+  grep -Fq 'Yes, I trust this folder' <<<"$screen" || return 1
+  grep -Fq 'No, exit' <<<"$screen" || return 1
+  if grep -Eqi 'only proceed if you trust this configuration|without these permissions|headersHelper|mcp server|hooks' <<<"$screen"; then
+    return 1
+  fi
+  return 0
+}
+
+# pb_herdr_accept_claude_trust NAME WORKTREE -> 0 after answering the standard
+# trust prompt (pb_herdr_is_claude_trust_prompt) for exactly WORKTREE — the
+# herdr worktree babysit created from the user's own PR branch — and seeing
+# the agent become idle. Any other blocked screen returns 1 untouched: the
+# same rule as epic-orchestrator's recovery guide.
 pb_herdr_accept_claude_trust() {
   local name="$1" worktree="$2" pane i st
-  pane=$(herdr agent read "$name" --source recent-unwrapped --lines 40 2>/dev/null | sed 's/[[:space:]]*$//') || return 1
-  grep -Fq 'Accessing workspace:' <<<"$pane" || return 1
-  grep -Fxq " $worktree" <<<"$pane" || grep -Fxq "$worktree" <<<"$pane" || return 1
-  grep -Fq 'Yes, I trust this folder' <<<"$pane" || return 1
+  pane=$(herdr agent read "$name" --source recent-unwrapped --lines 40 2>/dev/null) || return 1
+  pb_herdr_is_claude_trust_prompt "$pane" "$worktree" || return 1
   pb_herdr_try agent send-keys "$name" down >/dev/null || return 1
   pb_herdr_try agent send-keys "$name" enter >/dev/null || return 1
   for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do
@@ -63,6 +80,19 @@ pb_herdr_accept_claude_trust() {
   done
   echo "pr-babysit: $name was still not idle ${i}s after the trust prompt" >&2
   return 1
+}
+
+# pb_herdr_agent_status NAME -> the live agent's status (idle, working,
+# blocked, done, unknown), or `gone` when herdr lists no such agent.
+pb_herdr_agent_status() {
+  local out
+  if out=$(pb_herdr_try agent get "$1"); then
+    jq -r '.agent.agent_status // "unknown"' <<<"$out"
+  elif [ "$(jq -r '.error.code' <<<"$out")" = agent_not_found ]; then
+    echo gone
+  else
+    pb_fail herdr_error "herdr agent get $1: $(jq -r '"\(.error.code): \(.error.message)"' <<<"$out")"
+  fi
 }
 
 # pb_herdr_agent_live NAME -> 0 when herdr lists a live agent with that name.

@@ -5,8 +5,9 @@
 # and a real Claude Code fixer, inside a throwaway local git topology (a bare
 # "origin" plus a clone). Nothing is pushed to GitHub. Proves: start creates
 # the pr-babysit/<slot> herdr worktree and starts the fixer; a second start is
-# refused (fixer_running); wait settles `done` with exactly one commit touching
-# the smoke file; cleanup leaves no worktree, branch or agent behind.
+# refused (fixer_running); wait settles two tier groups in order (the second
+# launched by wait itself), `done` with exactly two commits touching only the
+# smoke file; cleanup leaves no worktree, branch or agent behind.
 #
 # Manual runner (needs herdr, claude, jq, git) — like tooling/codex-smoke.sh.
 # PB_SMOKE_MODEL / PB_SMOKE_EFFORT pick the fixer model (default haiku / low).
@@ -60,20 +61,24 @@ jq '.repo = "local/pb-smoke" | .number = 1 | .pr.state = "OPEN"' "$SNAP" >"$TMP/
 bash "$S/babysit-tick.sh" --repo local/pb-smoke --pr 1 --state-file "$STATE" --snapshot-in "$TMP/snap.json" >/dev/null
 [ "$(jq -r .slot "$STATE")" = local-pb-smoke-1 ] || fail "unexpected slot $(jq -r .slot "$STATE")"
 
-# ---- one Fix item, routed to a real Claude fixer at the chosen model/effort
-jq -n '{round: 1, items: [{id: "smoke-1", kind: "conversation", path: "smoke.txt", severity: "nit",
-  task: "Append exactly one line reading: fixed by pr-babysit smoke — to the end of smoke.txt, then commit only that change with the message: fix(smoke): append line. Change nothing else and run no tests (this file has none)."}]}' >"$TMP/items.json"
+# ---- two Fix items in two tiers, routed to real Claude fixers
+jq -n '{round: 1, items: [
+  {id: "smoke-1", kind: "conversation", path: "smoke.txt", severity: "medium",
+   task: "Append exactly one line reading: fixed by pr-babysit smoke — to the end of smoke.txt, then commit only that change with the message: fix(smoke): append line. Change nothing else and run no tests (this file has none)."},
+  {id: "smoke-2", kind: "conversation", path: "smoke.txt", severity: "nit",
+   task: "Fix the typo on the first line of smoke.txt: it must read hello world instead of hello. Commit only that change with the message: fix(smoke): typo. Change nothing else and run no tests."}]}' >"$TMP/items.json"
 mkdir -p "$TMP/cfg"
 jq -n --arg m "$MODEL" --arg e "$EFFORT" '{prBabysit: {hosts: ["claude"], jev: false,
   routing: {claude: [range(4) | {model: $m, effort: $e}]}}}' >"$TMP/cfg/toolu.config.json"
 TOOLU_CONFIG_DIR="$TMP/cfg" TOOLU_PROJECT_DIR="$TMP/cfg" \
   bash "$S/route-fix.sh" --items "$TMP/items.json" --host claude --no-jev >"$TMP/route.json"
 [ "$(jq -r '.dispatch' "$TMP/route.json")" = herdr ] || fail "route did not dispatch to herdr: $(cat "$TMP/route.json")"
+[ "$(jq -c '[.groups[] | .tier]' "$TMP/route.json")" = '["standard","trivial"]' ] || fail "expected two tier groups: $(cat "$TMP/route.json")"
 step "route: $(jq -c '[.groups[] | {tier, host, model, effort}]' "$TMP/route.json")"
 
 # ---- start: worktree + fixer agent
 out=$(bash "$S/dispatch-fix.sh" start --state-file "$STATE" --plan "$TMP/route.json" --items "$TMP/items.json" \
-  --repo-root "$CLONE" --branch feat/smoke) || fail "start failed: $out"
+  --repo-root "$CLONE" --branch feat/smoke --base main) || fail "start failed: $out"
 step "start: $(jq -c '{status, reason, worktree, branch, agent: .groups[0].agent}' <<<"$out")"
 [ "$(jq -r .status <<<"$out")" = running ] || fail "start status is not running: $out"
 WT=$(jq -r .worktree <<<"$out")
@@ -83,23 +88,25 @@ AGENT=$(jq -r '.groups[0].agent' <<<"$out")
 
 # ---- boundary: a second start is refused while the fixer runs
 rc=0; again=$(bash "$S/dispatch-fix.sh" start --state-file "$STATE" --plan "$TMP/route.json" --items "$TMP/items.json" \
-  --repo-root "$CLONE" --branch feat/smoke) || rc=$?
+  --repo-root "$CLONE" --branch feat/smoke --base main) || rc=$?
 [ "$rc" -eq 3 ] && [ "$(jq -r '.errors[0].code' <<<"$again")" = fixer_running ] || fail "second start was not refused: rc=$rc $again"
 step "second start: fixer_running (exit 3)"
 
 # ---- wait until the fixer settles (bounded)
 status=running
-for _ in 1 2 3 4; do
+for _ in 1 2 3 4 5 6; do
   out=$(bash "$S/dispatch-fix.sh" wait --state-file "$STATE" --timeout-seconds 150)
   status=$(jq -r .status <<<"$out")
   step "wait: $(jq -c '{status, reason, commits}' <<<"$out")"
   [ "$status" = running ] || break
 done
 [ "$status" = "done" ] || fail "fixer did not finish done: $out"
-[ "$(jq '.commits | length' <<<"$out")" -eq 1 ] || fail "expected exactly one fixer commit: $out"
-changed=$(git -C "$WT" show --name-only --format= HEAD)
-[ "$changed" = smoke.txt ] || fail "fixer commit touched: $changed"
-tail -1 "$WT/smoke.txt" | grep -q 'fixed by pr-babysit smoke' || fail "smoke.txt does not end with the fixer's line"
+[ "$(jq -c '[.groups[] | .status]' <<<"$out")" = '["done","done"]' ] || fail "both groups should be done: $out"
+[ "$(jq '.commits | length' <<<"$out")" -eq 2 ] || fail "expected exactly two fixer commits: $out"
+changed=$(git -C "$WT" log --name-only --format= "refs/remotes/origin/feat/smoke..HEAD" | sort -u | sed '/^$/d')
+[ "$changed" = smoke.txt ] || fail "fixer commits touched: $changed"
+tail -1 "$WT/smoke.txt" | grep -q 'fixed by pr-babysit smoke' || fail "smoke.txt does not end with the first fixer's line"
+[ "$(head -1 "$WT/smoke.txt")" = "hello world" ] || fail "the second fixer did not fix the first line"
 
 # ---- the controller's push (to the local origin), then cleanup
 git -C "$WT" push --quiet origin "HEAD:feat/smoke"

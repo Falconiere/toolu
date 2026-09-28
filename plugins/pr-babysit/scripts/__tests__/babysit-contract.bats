@@ -240,7 +240,18 @@ SKILL="${BATS_TEST_DIRNAME}/../../skills/babysit/SKILL.md"
   grep -Fq -- '--raise' <<<"$step3"
   grep -qi 'Inline delegation' <<<"$step3"
   grep -Fq '`dispatch: "inline"`' <<<"$(tr '\n' ' ' <<<"$step3" | sed 's/  */ /g')"
-  for s in running done failed blocked host_limited herdr_unavailable; do grep -Fq "$s" <<<"$step3"; done
+  for s in running done failed blocked host_limited herdr_unavailable worktree_dirty 'conversation.fixing[]' 'reviews.fixing[]'; do grep -Fq "$s" <<<"$step3"; done
+  grep -Fq -- '--base "$BASE"' <<<"$step3"
+  grep -Fq -- '--timeout-seconds 45' <<<"$step3"
+  grep -Fq 'timeout: 600000' <<<"$step3"
+}
+
+@test "an unchanged tick still runs dispatch-fix.sh wait while a fixer is active" {
+  keep=$(awk '/^### Keep going/{f=1; next} /^## /{f=0} f' "$CMD")
+  grep -Fq 'dispatch-fix.sh wait' <<<"$keep"
+  state=$(awk '/^## State \+ backoff/{f=1; next} /^## /{f=0} f' "$CMD")
+  grep -Fq 'unless `fixer` is running or blocked' <<<"$state"
+  grep -qi 'after `dispatch-fix.sh wait` when a fixer is active' "$CMD"
 }
 
 @test "AC-11: Step 3 verifies fixer commits before the push from the herdr worktree" {
@@ -280,6 +291,6 @@ SKILL="${BATS_TEST_DIRNAME}/../../skills/babysit/SKILL.md"
 }
 
 @test "the Codex skill bounds each fixer wait below the 60-second continuation cap" {
-  grep -Fq 'dispatch-fix.sh wait --timeout-seconds 55' "$SKILL"
+  grep -Fq 'dispatch-fix.sh wait --timeout-seconds 45' "$SKILL"
   grep -Fq 'route-fix.sh --host codex' "$SKILL"
 }

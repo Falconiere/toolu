@@ -38,8 +38,8 @@ pb_fixer_settle() {
 }
 
 # pb_fixer_render_brief TEMPLATE ITEMS_FILE GROUP_JSON CONTEXT_JSON -> the brief.
-# CONTEXT_JSON: {pr, round, groups, worktree, slotBranch, branch, reportDone,
-# reportFailed}. Each item's `task` (the controller's words) is the
+# CONTEXT_JSON: {pr, round, groups, worktree, slotBranch, branch, base,
+# reportDone, reportFailed}. Each item's `task` (the controller's words) is the
 # instruction; its `quote` (the reviewer's text) sits inside a tilde fence
 # longer than any tilde run in the quote, so it can never close its own fence.
 pb_fixer_render_brief() {
@@ -58,6 +58,6 @@ pb_fixer_render_brief() {
     | $tpl | sub("^<!--(.|\n)*?-->\n+"; "")
     | fill("PR"; $ctx.pr) | fill("ROUND"; $ctx.round) | fill("GROUP"; $g.seq) | fill("GROUPS"; $ctx.groups)
     | fill("TIER"; $g.tier) | fill("WORKTREE"; $ctx.worktree) | fill("SLOT_BRANCH"; $ctx.slotBranch)
-    | fill("BRANCH"; $ctx.branch) | fill("REPORT_DONE"; $ctx.reportDone) | fill("REPORT_FAILED"; $ctx.reportFailed)
+    | fill("BRANCH"; $ctx.branch) | fill("BASE"; $ctx.base) | fill("REPORT_DONE"; $ctx.reportDone) | fill("REPORT_FAILED"; $ctx.reportFailed)
     | fill("ITEMS"; $items)' "$2"
 }

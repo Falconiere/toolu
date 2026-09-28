@@ -96,7 +96,7 @@ teardown() {
   cmp "$TMP/route.32.json" "$TMP/route.cur.json"
   dry_with() {
     PATH="$TMP/bin:/usr/bin:/bin" "$1" "$SCRIPTS/dispatch-fix.sh" start --state-file "$TMP/slot.json" --plan "$TMP/route.cur.json" \
-      --items "$items" --repo-root /tmp/repo --branch feat/python-quality --dry-run
+      --items "$items" --repo-root /tmp/repo --branch feat/python-quality --base main --dry-run
   }
   dry_with /bin/bash >"$TMP/dry.32.json"
   dry_with bash >"$TMP/dry.cur.json"

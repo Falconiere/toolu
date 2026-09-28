@@ -80,12 +80,13 @@ What the agent acts on. Printed on stdout by `babysit-tick.sh`.
 | `threads.staleUnresolved[]` | Audit members that are NOT actionable: the PR author replied but no resolve landed. Resolve them without a new reply. |
 | `threads.skippedOutdated[]` | Outdated CI-reviewer threads: skipped silently. |
 | `threads.flaggedInjection[]` | Threads the agent recorded with `record.sh flag-injection`. |
-| `threads.fixing[]` | Ids of threads a **running** herdr fixer owns. They are removed from `actionable[]` (never dispatched twice) and still counted in `unresolved`. |
+| `threads.fixing[]` | Threads an **active** herdr fixer (running or blocked) owns: the same objects `actionable[]` would hold, reply ids included, moved out of it (never dispatched twice) and still counted in `unresolved`. Reply to them from here when `dispatch-fix.sh wait` says `done`. |
 | `fixer` | The slot's fixer record (see State), or `null`. |
 | `conversation.actionable[]` | Human issue comments with no later author comment and no recorded reply. |
 | `reviews.actionable[]` | Human non-`APPROVED` reviews with a body and no recorded reply. |
+| `conversation.fixing[]`, `reviews.fixing[]` | Comments and reviews an active fixer owns (by item id), moved out of `actionable[]` like `threads.fixing[]`. |
 | `recurrence` | `{streak, lastRoundHadRejection, recurringKeys[], fixAttempts}` — the Step 4 gate inputs. |
-| `backoff` | `{idleStreak, intervalMinutes, waitSeconds}` — Claude cron interval / Codex bounded wait for this tick. |
+| `backoff` | `{idleStreak, intervalMinutes, waitSeconds}` — Claude cron interval / Codex bounded wait for this tick. While a fixer is active `idleStreak` stays 0, so the interval stays at its base and every tick runs `dispatch-fix.sh wait`. |
 | `errors[]` | Always empty on exit 0. |
 | `snapshotPath`, `statePath` | Where the full evidence lives. |
 
@@ -102,7 +103,7 @@ What the agent acts on. Printed on stdout by `babysit-tick.sh`.
 ### Decision rules
 
 - `success` — `pr.state == OPEN`, `ci.status == pass`, `threads.unresolved == 0`,
-  `mergeable != UNKNOWN`, no fixer `running`, and the verdict is
+  `mergeable != UNKNOWN`, no fixer active (running or blocked), and the verdict is
   `complete`/`approved`/zero findings — or `degraded` (reasons then include
   `manual_verify`).
 - `escalate` — PR merged/closed, `mergeable == CONFLICTING`, `fixAttempts ≥ 5`,
@@ -136,7 +137,7 @@ and `resolve-thread.sh`.
 | `actions.resolved` | `threadId → {confirmed, at, attempts, headSha}`. |
 | `actions.flagged` | `threadId → {reason, at}`. |
 | `lastGoodSnapshot` | Path of the last snapshot that produced a result. |
-| `fixer` | Written by `dispatch-fix.sh`: `{round, status (running·done·failed·blocked), reason, startedAt, current, unattended, context, itemsFile, items[], groups[{seq, tier, host, model, effort, items[], agent, status, reason, brief, report, startedAt, finishedAt, head}]}`, or `null`. `record.sh round` clears a non-running record. |
+| `fixer` | Written by `dispatch-fix.sh`: `{round, status (running·done·failed·blocked), reason, startedAt, finishedAt, current, unattended, context, itemsFile, items[], groups[{seq, tier, host, model, effort, items[], agent, status (pending·launching·running·done·failed·blocked), reason, error?, brief, report, startedAt, finishedAt, head}]}`, or `null`. `record.sh round` clears a done or failed record; a running or blocked one has a live agent and is kept. |
 | `herdrWorktree` | `{path, workspaceId, paneId, branch: "pr-babysit/<slot>", prBranch, repoRoot, base}` of the slot's herdr worktree, or `null`. |
 | `hostCooldowns` | `{<host>: {until, reason: "host_limited"}}` — a host that hit a provider usage limit is skipped by `route-fix.sh` for 60 min. |
 
@@ -164,14 +165,14 @@ record.sh status --state-file <path> --status complete|escalated|cancelled
 - `record.sh round` runs once per round, after this round's replies and before
   the push: it rotates `botFindingKeys → lastRoundFindingKeys`, sets
   `lastRoundHadRejection`, with `--fix-pushed` bumps `fixAttempts`, and clears
-  a settled `fixer` record.
+  a done or failed `fixer` record.
 
 ## Fixer dispatch
 
 ```
 route-fix.sh --items <file> --host claude|codex [--state-file <path>] [--raise <itemId>]... [--no-jev]
              [--jev-answers-in <file>] [--now <iso8601>]
-dispatch-fix.sh start   --state-file <p> --plan <route.json> --items <items.json> --repo-root <dir> --branch <pr-branch> [--dry-run]
+dispatch-fix.sh start   --state-file <p> --plan <route.json> --items <items.json> --repo-root <dir> --branch <pr-branch> --base <base-branch> [--dry-run]
 dispatch-fix.sh wait    --state-file <p> [--timeout-seconds N]
 dispatch-fix.sh cleanup --state-file <p> [--dry-run]
 fixer-report.sh <report-file> done|failed [--note <text>]
@@ -189,6 +190,14 @@ fixer-report.sh <report-file> done|failed [--note <text>]
   (`hostCooldowns`) or when its CLI (`claude`, `codex`, `cursor-agent`) is not on `PATH`; no host
   left → `dispatch: inline` with a `note`. `--jev-answers-in` replays a captured Jev answer map
   (tests, debugging — the workflow never passes it).
+- **Start** validates everything before a side effect: the plan and items (`plan_invalid`, including a
+  `round` that is not a positive integer), each group's host and model/effort (`config_invalid`), an
+  active fixer (`fixer_running`, also when blocked), then herdr (`herdr_unavailable`).
+- **Wait** waits at most `--timeout-seconds` (default 480) for the running group. A group moves
+  `pending → launching → running`; a launch cut off midway is retried by the next `wait`. The next
+  group starts only with at least 60 s of the wait left, otherwise in the next call; starting an
+  agent normally takes seconds, and up to about 3 minutes only when it fails. A `blocked` fixer
+  whose prompt was answered, or whose agent is gone, is picked up again.
 - **Dispatch status** (`start` / `wait` stdout): `{version:1, status: running|done|failed|blocked|none,
   reason: null|no_report|reported_failed|host_limited|agent_blocked|agent_start_failed, group,
   worktree, branch, commits[], groups[{seq, tier, host, model, effort, agent, status, reason, error?}]}`
@@ -210,9 +219,13 @@ fixer-report.sh <report-file> done|failed [--note <text>]
 - **Session artifacts are not work.** Untracked files under `.claude/`, `.codex/` or `.cursor/` (a
   fixer's own SessionStart hooks write `.claude/settings.local.json` and `.claude/tmp/`) do not make
   the worktree dirty; any other change does (`worktree_dirty`, with `changes[]`).
-- **Cleanup** exits a live fixer, removes the worktree (`--force`, discarding only those session
-  artifacts) when it has no other changes, and deletes `pr-babysit/<slot>` only when
-  `origin/<pr-branch>` contains it.
+- **Cleanup** exits a live fixer and clears the `fixer` record, then removes the worktree (`--force`,
+  discarding only those session artifacts) when it has no other changes (`worktree_dirty`
+  otherwise, the worktree stays recorded), prunes git's worktree metadata, deletes
+  `pr-babysit/<slot>` only when `origin/<pr-branch>` contains it, and removes this slot's
+  `<state>.fixer-*` brief, report and items files. It prints `{version:1, status:"cleaned",
+  worktreeRemoved, branchDeleted, note}`; `note` says why a branch was kept, or that no worktree
+  was recorded.
 
 ## Examples (captured from Falconiere/toolu#165)
 

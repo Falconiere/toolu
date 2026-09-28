@@ -493,21 +493,61 @@ with_fixer() {
     | .hostCooldowns = {cursor: {until: "2026-09-19T13:00:00Z", reason: "host_limited"}}' "$1"
 }
 
-@test "AC-6: a running fixer moves its thread to threads.fixing[], keeps it unresolved, carries every fixer field" {
+@test "AC-6: a running fixer moves its thread, reply ids and all, to threads.fixing[] and carries every fixer field" {
   id=$(ci_thread); [ -n "$id" ]
   jq --arg id "$id" '(.threads[] | select(.id == $id) | .isResolved) = false' "$TMP/open.json" >"$TMP/s.json"
-  reduce "$TMP/s.json" "$TMP/absent.json" >/dev/null
+  plain=$(reduce "$TMP/s.json" "$TMP/absent.json")
   with_fixer "$TMP/next.json" running "[\"$id\"]" >"$TMP/prev.json"
   out=$(reduce "$TMP/s.json" "$TMP/prev.json" "$LATER")
-  [ "$(jq -c .threads.fixing <<<"$out")" = "[\"$id\"]" ]
+  # The same object the actionable list would have held: Step 4 replies need its ids.
+  [ "$(jq -c '.threads.fixing' <<<"$out")" = "$(jq -c '.threads.actionable' <<<"$plain")" ]
+  [ "$(jq -r '.threads.fixing[0] | [.id, (.rootCommentId | type), (.inReplyTo | type)] | @csv' <<<"$out")" = "\"$id\",\"number\",\"number\"" ]
   [ "$(jq '.threads.actionable | length' <<<"$out")" = 0 ]
   [ "$(jq -r .threads.unresolved <<<"$out")" = 1 ]
-  [[ "$(reasons "$out")" == *fixer_running* ]]
+  [ "$(jq -r '.reasons[] | select(.code == "fixer_running") | .detail' <<<"$out")" = "fixer running: group 1 of 1; 1 item(s) in flight" ]
   [ "$(jq -r .decision <<<"$out")" = keep_going ]
   for f in fixer herdrWorktree hostCooldowns; do
     [ "$(jq -S -c ".$f" "$TMP/next.json")" = "$(jq -S -c ".$f" "$TMP/prev.json")" ]
   done
   [ "$(jq -S -c .fixer <<<"$out")" = "$(jq -S -c .fixer "$TMP/prev.json")" ]
+}
+
+@test "AC-6: a blocked fixer still owns its items (its agent is alive at a prompt)" {
+  id=$(ci_thread)
+  jq --arg id "$id" '(.threads[] | select(.id == $id) | .isResolved) = false' "$TMP/open.json" >"$TMP/s.json"
+  reduce "$TMP/s.json" "$TMP/absent.json" >/dev/null
+  with_fixer "$TMP/next.json" blocked "[\"$id\"]" >"$TMP/prev.json"
+  out=$(reduce "$TMP/s.json" "$TMP/prev.json" "$LATER")
+  [ "$(jq -r '.threads.fixing[0].id' <<<"$out")" = "$id" ]
+  [ "$(jq -r '.reasons[] | select(.code == "fixer_running") | .detail' <<<"$out")" = "fixer blocked: group 1 of 1; 1 item(s) in flight" ]
+}
+
+@test "AC-6: while a fixer is active, unchanged ticks keep the base backoff so dispatch-fix.sh wait runs every tick" {
+  id=$(ci_thread)
+  jq --arg id "$id" '(.threads[] | select(.id == $id) | .isResolved) = false' "$TMP/open.json" >"$TMP/s.json"
+  reduce "$TMP/s.json" "$TMP/absent.json" >/dev/null
+  with_fixer "$TMP/next.json" running "[\"$id\"]" >"$TMP/prev.json"
+  for t in 2026-09-19T12:03:00Z 2026-09-19T12:06:00Z 2026-09-19T12:09:00Z 2026-09-19T12:12:00Z; do
+    out=$(reduce "$TMP/s.json" "$TMP/prev.json" "$t")
+    cp "$TMP/next.json" "$TMP/prev.json"
+    [ "$(jq -c '[.changed, .backoff.idleStreak, .backoff.intervalMinutes, .backoff.waitSeconds]' <<<"$out")" = '[false,0,3,15]' ]
+  done
+  # The same unchanged ticks without a fixer widen the interval.
+  jq '.fixer = null' "$TMP/prev.json" >"$TMP/nofixer.json"
+  for t in 2026-09-19T12:15:00Z 2026-09-19T12:18:00Z 2026-09-19T12:21:00Z; do
+    out=$(reduce "$TMP/s.json" "$TMP/nofixer.json" "$t"); cp "$TMP/next.json" "$TMP/nofixer.json"
+  done
+  [ "$(jq -c '[.backoff.idleStreak, .backoff.intervalMinutes]' <<<"$out")" = '[3,6]' ]
+}
+
+@test "AC-6: a conversation comment in the fixer's items moves to conversation.fixing[]" {
+  author=$(jq -r .pr.author "$TMP/open.json")
+  jq --arg a "$author" '.comments = [{id: 9001, author: "a-reviewer", authorType: "User", body: "Please rename the helper.", createdAt: "2026-09-19T11:00:00Z", url: "https://github.com/Falconiere/toolu/pull/165#issuecomment-9001"}]' "$TMP/open.json" >"$TMP/s.json"
+  reduce "$TMP/s.json" "$TMP/absent.json" >/dev/null
+  with_fixer "$TMP/next.json" running '["9001"]' >"$TMP/prev.json"
+  out=$(reduce "$TMP/s.json" "$TMP/prev.json" "$LATER")
+  [ "$(jq -c '[(.conversation.actionable | length), (.conversation.fixing | map(.id))]' <<<"$out")" = '[0,[9001]]' ]
+  [ "$(jq -r .decision <<<"$out")" = keep_going ]
 }
 
 @test "AC-6 boundary: a done fixer no longer hides its thread and emits no fixer_running" {
@@ -516,9 +556,9 @@ with_fixer() {
   reduce "$TMP/s.json" "$TMP/absent.json" >/dev/null
   with_fixer "$TMP/next.json" done "[\"$id\"]" >"$TMP/prev.json"
   out=$(reduce "$TMP/s.json" "$TMP/prev.json" "$LATER")
-  [ "$(jq -c .threads.fixing <<<"$out")" = '[]' ]
+  [ "$(jq -c '[.threads.fixing, .conversation.fixing, .reviews.fixing]' <<<"$out")" = '[[],[],[]]' ]
   [ "$(jq -r '.threads.actionable[0].id' <<<"$out")" = "$id" ]
-  [[ "$(reasons "$out")" != *fixer_running* ]]
+  [ "$(jq '[.reasons[] | select(.code == "fixer_running")] | length' <<<"$out")" = 0 ]
 }
 
 @test "AC-6 boundary: a running fixer blocks success even when CI, threads and the verdict are clear" {
@@ -527,5 +567,5 @@ with_fixer() {
   with_fixer "$TMP/next.json" running '["ci:shellcheck"]' >"$TMP/prev.json"
   out=$(reduce "$TMP/open.json" "$TMP/prev.json" "$LATER")
   [ "$(jq -r .decision <<<"$out")" = keep_going ]
-  [[ "$(reasons "$out")" == *fixer_running* ]]
+  [ "$(jq -r '.reasons[] | select(.code == "fixer_running") | .detail' <<<"$out")" = "fixer running: group 1 of 1; 1 item(s) in flight" ]
 }

@@ -59,6 +59,7 @@ problem=$(jq -r --argjson raise "$raise" '
     elif ($it | map(.id) | unique | length) != ($it | length) then "item ids must be unique"
     elif any($it[]; (.task | type) != "string" or .task == "") then "every item needs a task"
     elif any($it[]; .kind as $k | (["thread","conversation","review","ci"] | index([$k])) == null) then "item kind must be thread, conversation, review or ci"
+    elif ((.round // 1) | (type != "number") or . < 1 or (floor != .)) then "round must be a positive integer"
     elif any($raise[]; . as $r | ($it | map(.id) | index([$r])) == null) then "--raise names an item that is not in the items file"
     else "" end' "$items_file")
 [ -z "$problem" ] || pb_fail plan_invalid "$problem"
@@ -109,7 +110,7 @@ else
   rc=0
   bash "$jev" ask "$PB_TMPDIR/questions.json" -s "@$PB_TMPDIR/state.json" >"$PB_TMPDIR/answers.json" 2>"$PB_TMPDIR/jev.err" || rc=$?
   if [ "$rc" -ne 0 ]; then
-    jev_note="jev failed (exit $rc): $(head -c 160 "$PB_TMPDIR/jev.err" | tr '\n' ' '); heuristic tiers used"
+    jev_note="jev failed (exit $rc): $(head -c 160 "$PB_TMPDIR/jev.err" | tr '\n' ' ' | sed 's/[[:space:]]*$//'); heuristic tiers used"
   elif ! jq -e 'type == "object"' "$PB_TMPDIR/answers.json" >/dev/null 2>&1; then
     jev_note="jev returned an unparsable answer; heuristic tiers used"
   else

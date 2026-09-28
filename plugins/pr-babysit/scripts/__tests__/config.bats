@@ -91,6 +91,19 @@ toolu_paths() {
   done
 }
 
+@test "AC-9 boundary: a prBabysit that is not an object is config_invalid naming the file, also through route-fix.sh" {
+  export TOOLU_CONFIG_DIR="$TMP/user" TOOLU_PROJECT_DIR="$TMP/project"
+  for bad in '"x"' '[]' 'false'; do
+    jq -n --argjson v "$bad" '{prBabysit:$v}' >"$TMP/project/.claude/toolu.config.json"
+    run with_config 'pb_config_load claude'
+    [ "$status" -eq 3 ] || { echo "accepted: $bad" >&2; return 1; }
+    [ "$(jq -c '.errors[0] | [.code, .file]' <<<"$output")" = "[\"config_invalid\",\"$TMP/project/.claude/toolu.config.json\"]" ]
+  done
+  run bash "${BATS_TEST_DIRNAME}/../route-fix.sh" --items "${BATS_TEST_DIRNAME}/fixtures/items/review-items.json" --host claude --no-jev
+  [ "$status" -eq 3 ]
+  [ "$(jq -r '.errors[0].message' <<<"$output")" = "prBabysit must be an object (in $TMP/project/.claude/toolu.config.json)" ]
+}
+
 @test "pb_config_keys lists exactly the keys the reader accepts" {
   [ "$(with_config 'pb_config_keys' | tr '\n' ' ')" = "dispatch hosts prefer routing unattended jev " ]
 }
