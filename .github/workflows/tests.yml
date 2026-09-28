@@ -71,11 +71,17 @@ jobs:
         with:
           bun-version: "1.4.2"
 
-      - name: Install bats
+      # The tooling suites run here under bun test (#251). Several drive real
+      # tools and skip when one is missing, so install every one of them: a
+      # skipped suite in CI is a suite nobody runs.
+      - name: Install test tools
         run: |
           set -euo pipefail
           sudo apt-get update -y
-          sudo apt-get install -y bats jq
+          sudo apt-get install -y bats jq shellcheck parallel
+
+      - name: Install Codex CLI
+        run: npm install -g @openai/codex
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -84,7 +90,7 @@ jobs:
         run: |
           set -euo pipefail
           # Mandatory Bun/TS lane (#208): format, type-aware lint, tsc, guardrails,
-          # knip, jscpd, conventions bats, package unit tests, workspace smoke.
+          # knip, jscpd, package and tooling unit tests (bun test), workspace smoke.
           # Failures here block merges even when shell bats are green.
           bun run test:ts
 

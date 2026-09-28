@@ -34,7 +34,7 @@ This repo is a **library/plugin Bun workspace**, not a Workers/web app. Upstream
 | File ≤ **300** code lines | oxlint `max-lines` | `25-size-file.sh` default 300 | Aligned |
 | Function ≤ **60** code lines | oxlint `max-lines-per-function` | `30-size-fn.sh` default 60 | Aligned with hook; upstream template used 50 |
 | No `any` / assertions / non-null | oxlint type-aware | concerns | Repo TS CI/local SoT once #208 wires CI |
-| Colocated `__tests__` | guardrails + oxlint plugin | `20-tests.sh` | Tooling CLIs may keep `tooling/__tests__/*.bats`; new TS units use `__tests__/*.test.ts` under `src/` |
+| Colocated `__tests__` | guardrails + oxlint plugin | `20-tests.sh` | Tests are `__tests__/*.test.ts` under `src/`, tooling suites included (`tooling/src/__tests__`, see [`testing.md`](testing.md)) |
 | Banned validators | guardrails `bannedDeps` | — | Zod only (`package.json` dependency) |
 | Dead code / duplication | knip / jscpd | — | |
 

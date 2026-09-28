@@ -115,7 +115,7 @@ async function settleMaybePromise(value: number | Promise<number> | undefined): 
 
 async function feedStdin(proc: Subprocess<"pipe", "pipe", "pipe">, stdin: string): Promise<void> {
   try {
-    proc.stdin.write(stdin);
+    await settleMaybePromise(proc.stdin.write(stdin));
     await settleMaybePromise(proc.stdin.flush());
     await settleMaybePromise(proc.stdin.end());
   } catch {
