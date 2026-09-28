@@ -134,3 +134,11 @@ test.concurrent("a child that exits without reading a large stdin still resolves
   const res = await run(["sh", "-c", "exit 4"], { stdin: "x".repeat(4_000_000) });
   expect(res).toMatchObject({ exitCode: 4, timedOut: false });
 });
+
+test.concurrent("a missing cwd is reported, not mistaken for a missing binary", async () => {
+  const err = await run(["true"], { cwd: "/nonexistent/toolu-harness-cwd" }).then(
+    () => null,
+    (e: unknown) => e,
+  );
+  expect(String(err)).toContain("cwd does not exist: /nonexistent/toolu-harness-cwd");
+});

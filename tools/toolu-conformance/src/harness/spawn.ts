@@ -62,9 +62,14 @@ function spawnOrMissing(
   argv: string[],
   opts: RunOptions,
 ): Bun.Subprocess<"pipe", "pipe", "pipe"> | null {
+  const cwd = opts.cwd ?? process.cwd();
+  // Bun reports a missing cwd as ENOENT too; name it so it is not read as a missing binary.
+  if (!existsSync(cwd)) {
+    throw new Error(`run: cwd does not exist: ${cwd}`);
+  }
   try {
     return Bun.spawn(argv, {
-      cwd: opts.cwd ?? process.cwd(),
+      cwd,
       env: childEnv(opts.env),
       stdin: "pipe",
       stdout: "pipe",
@@ -124,9 +129,17 @@ export async function run(argv: string[], opts: RunOptions = {}): Promise<RunRes
     };
   }
   let timedOut = false;
+  let killError: unknown = null;
   const timer = setTimeout(() => {
     timedOut = true;
-    killGroup(proc.pid);
+    try {
+      killGroup(proc.pid);
+    } catch (err: unknown) {
+      // A throw inside a timer would be uncaught: stop the direct child instead
+      // and surface the group-kill failure to the caller once it exits.
+      killError = err;
+      proc.kill("SIGKILL");
+    }
   }, opts.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   await feedStdin(proc, opts.stdin ?? "");
   const [stdout, stderr] = await Promise.all([
@@ -135,6 +148,9 @@ export async function run(argv: string[], opts: RunOptions = {}): Promise<RunRes
     proc.exited,
   ]);
   clearTimeout(timer);
+  if (killError !== null) {
+    throw killError;
+  }
   const exitCode = proc.exitCode ?? SIGNAL_EXIT_BASE + SIGKILL;
   return { exitCode, stdout, stderr, durationMs: performance.now() - started, timedOut };
 }
