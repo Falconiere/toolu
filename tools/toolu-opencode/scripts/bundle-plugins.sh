@@ -18,8 +18,10 @@ DEST="${BUNDLE_PLUGINS_DEST:-$PKG_DIR/plugins}"
 rm -rf "$DEST"
 mkdir -p "$DEST"
 # -R follows the tree; __tests__ are excluded because a published plugin never
-# runs them and they are a third of the bytes.
-(cd "$SRC" && tar --exclude='__tests__' -cf - .) | (cd "$DEST" && tar -xf -)
+# runs them and they are a third of the bytes. hooks/src is excluded because a
+# plugin runs its committed hooks/dist bundles, never the TypeScript they are
+# built from.
+(cd "$SRC" && tar --exclude='__tests__' --exclude='*/hooks/src' -cf - .) | (cd "$DEST" && tar -xf -)
 
 count=$(find "$DEST" -name plugin.json -path '*.claude-plugin*' | wc -l | tr -d ' ')
 [ "$count" -ge 16 ] || { echo "bundle-plugins: only $count plugin manifests copied" >&2; exit 1; }

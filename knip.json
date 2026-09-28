@@ -6,7 +6,9 @@
       "project": []
     },
     "tooling": {
-      "entry": [],
+      "entry": [
+        "src/**/__tests__/**"
+      ],
       "project": [
         "src/**/*.ts"
       ],

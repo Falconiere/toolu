@@ -8,59 +8,72 @@
  *
  * `@toolu/opencode` is the one package that DOES carry that tree, because its
  * OpenCode bridge enforces the bash gates and npm cannot reach outside a package
- * directory. Its prepack stages the copy.
+ * directory. Its prepack stages the copy, which must carry every committed
+ * hooks/dist bundle and none of the hooks/src sources they are built from.
  */
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
+import { committedBundles } from "./build-plugins.ts";
 
 const ROOT = resolve(import.meta.dir, "../..");
 
-interface Expectation {
+/** A plugin's TypeScript hook sources: they ship built into hooks/dist, never in source form. */
+export const HOOK_SOURCES = /(^|\/)hooks\/src\//;
+
+export interface Expectation {
   readonly dir: string;
   readonly name: string;
   readonly required: readonly string[];
   readonly forbidden: readonly string[];
+  readonly forbiddenPatterns?: readonly RegExp[];
   readonly exact: boolean;
 }
 
-const EXPECTED: readonly Expectation[] = [
-  {
-    dir: "tools/toolu-cli/npm",
-    name: "@toolu/plugins",
-    required: ["package.json", "README.md", "LICENSE", "assets/marketplace.json", "dist/cli.js"],
-    forbidden: ["plugins/", "src/", "node_modules/", ".env"],
-    exact: true,
-  },
-  {
-    dir: "packages/toolu-core",
-    name: "@toolu/core",
-    required: [
-      "package.json",
-      "README.md",
-      "LICENSE",
-      "src/decision/decision.ts",
-      "src/runner/runner.ts",
-    ],
-    forbidden: ["plugins/", "dist/", "node_modules/", ".env"],
-    exact: false,
-  },
-  {
-    dir: "tools/toolu-opencode",
-    name: "@toolu/opencode",
-    required: [
-      "package.json",
-      "README.md",
-      "LICENSE",
-      "src/plugin/toolu.ts",
-      "plugins/toolu/hooks/hooks.json",
-      "plugins/rust-quality/.claude-plugin/plugin.json",
-    ],
-    forbidden: ["node_modules/", ".env"],
-    exact: false,
-  },
-];
+/** Every published tarball's expected file list, given the repository at `root`. */
+export function expectations(root: string): readonly Expectation[] {
+  return [
+    {
+      dir: "tools/toolu-cli/npm",
+      name: "@toolu/plugins",
+      required: ["package.json", "README.md", "LICENSE", "assets/marketplace.json", "dist/cli.js"],
+      forbidden: ["plugins/", "src/", "node_modules/", ".env"],
+      forbiddenPatterns: [HOOK_SOURCES],
+      exact: true,
+    },
+    {
+      dir: "packages/toolu-core",
+      name: "@toolu/core",
+      required: [
+        "package.json",
+        "README.md",
+        "LICENSE",
+        "src/decision/decision.ts",
+        "src/runner/runner.ts",
+      ],
+      forbidden: ["plugins/", "dist/", "node_modules/", ".env"],
+      exact: false,
+    },
+    {
+      dir: "tools/toolu-opencode",
+      name: "@toolu/opencode",
+      required: [
+        "package.json",
+        "README.md",
+        "LICENSE",
+        "src/plugin/toolu.ts",
+        "plugins/toolu/hooks/hooks.json",
+        "plugins/rust-quality/.claude-plugin/plugin.json",
+        ...committedBundles(root),
+      ],
+      forbidden: ["node_modules/", ".env"],
+      forbiddenPatterns: [HOOK_SOURCES],
+      exact: false,
+    },
+  ];
+}
 
-function packedFiles(directory: string): readonly string[] {
+/** The file list `bun pm pack` would publish from `directory` (absolute, or relative to the repo root). */
+export function packedFiles(directory: string): readonly string[] {
   const result = spawnSync("bun", ["pm", "pack", "--dry-run"], {
     cwd: resolve(ROOT, directory),
     encoding: "utf8",
@@ -75,7 +88,8 @@ function packedFiles(directory: string): readonly string[] {
     .map((line) => line.replace(/^packed \S+ /, ""));
 }
 
-function checkOne(expectation: Expectation, files: readonly string[]): readonly string[] {
+/** Every way `files` breaks `expectation`, one human-readable problem per line. */
+export function checkOne(expectation: Expectation, files: readonly string[]): readonly string[] {
   const problems: string[] = [];
   for (const required of expectation.required) {
     if (!files.includes(required)) {
@@ -87,18 +101,24 @@ function checkOne(expectation: Expectation, files: readonly string[]): readonly 
       problems.push(`${expectation.name} tarball must not contain ${file}`);
     }
   }
+  for (const pattern of expectation.forbiddenPatterns ?? []) {
+    for (const file of files.filter((candidate) => pattern.test(candidate))) {
+      problems.push(`${expectation.name} tarball must not contain ${file}`);
+    }
+  }
   if (expectation.exact) {
     const allowed = new Set(expectation.required);
     for (const file of files.filter((candidate) => !allowed.has(candidate))) {
       problems.push(`${expectation.name} tarball has an undeclared file: ${file}`);
     }
   }
-  return problems;
+  // A file can break a prefix rule and a pattern rule at once; report it once.
+  return [...new Set(problems)];
 }
 
 function run(): number {
   const problems: string[] = [];
-  for (const expectation of EXPECTED) {
+  for (const expectation of expectations(ROOT)) {
     const files = packedFiles(expectation.dir);
     problems.push(...checkOne(expectation, files));
     process.stdout.write(`pack-inventory: ${expectation.name} — ${files.length} files\n`);
@@ -108,4 +128,4 @@ function run(): number {
   return problems.length === 0 ? 0 : 1;
 }
 
-process.exitCode = run();
+if (import.meta.main) process.exitCode = run();

@@ -6,7 +6,7 @@
  * import. Output lands in `plugins/<name>/hooks/dist/<entry>.js`, inlines
  * `@toolu/core` and its dependencies, and runs under `bun` with no node_modules.
  *
- * `bun build` writes each bundled module's path as a comment relative to the
+ * `bun build` writes each bundled module's path into a comment relative to the
  * process cwd (the `root` option does not change that), so every build runs with
  * cwd pinned to the repository root: that is what makes output byte-identical
  * across machines, checkouts and callers.
@@ -94,7 +94,7 @@ function withStaging<T>(root: string, use: (staged: string, entries: BundleEntry
   }
 }
 
-/** Committed bundles in the tree as repository-relative paths, sorted. */
+/** Repository-relative paths of the committed bundles in the tree, sorted. */
 export function committedBundles(root: string): string[] {
   return childNames(join(root, "plugins"), true).flatMap((plugin) =>
     childNames(join(root, "plugins", plugin, "hooks/dist"), false)

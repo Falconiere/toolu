@@ -40,6 +40,15 @@ setup() {
   [ "$output" -gt 0 ]
 }
 
+@test "hook sources are excluded while their built bundles ship" {
+  bash "$SCRIPT" >/dev/null
+  run bash -c "find '$DEST' -type d -path '*/hooks/src' | wc -l | tr -d ' '"
+  [ "$output" = "0" ]
+  [ -f "$DEST/toolu/hooks/dist/sample.js" ]
+  # The source tree really does have them, so the exclusion is doing work.
+  [ -f "$ROOT/plugins/toolu/hooks/src/sample.ts" ]
+}
+
 @test "a re-run replaces the copy rather than accumulating stale files" {
   bash "$SCRIPT" >/dev/null
   touch "$DEST/stale-marker"
