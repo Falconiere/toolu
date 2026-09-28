@@ -252,6 +252,16 @@ SKILL="${BATS_TEST_DIRNAME}/../../skills/babysit/SKILL.md"
   state=$(awk '/^## State \+ backoff/{f=1; next} /^## /{f=0} f' "$CMD")
   grep -Fq 'unless `fixer` is running or blocked' <<<"$state"
   grep -qi 'after `dispatch-fix.sh wait` when a fixer is active' "$CMD"
+  # Backoff holds only while a fixer runs (reduce-state.sh), never "while active".
+  ! grep -qi 'backoff at its base while a fixer is active' "$CMD"
+  ! grep -qi 'idleStreak` at 0 while a fixer is active' "$CMD"
+}
+
+@test "Step 3 names every structured error dispatch-fix.sh start can return" {
+  step3=$(awk '/^## Step 3/{f=1} /^## Step 4/{f=0} f' "$CMD")
+  for code in plan_invalid config_invalid fixer_running herdr_unavailable git_error worktree_dirty stale_branch; do
+    grep -Fq "\`$code\`" <<<"$step3" || { echo "Step 3 misses $code" >&2; return 1; }
+  done
 }
 
 @test "AC-11: Step 3 verifies fixer commits before the push from the herdr worktree" {

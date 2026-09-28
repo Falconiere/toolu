@@ -423,10 +423,11 @@ uncommitted work (`worktree_dirty`, with `changes[]`) — a fixer can stop
 mid-edit. Finish or commit that work yourself in the herdr worktree when it is
 sound; otherwise escalate it. Never discard it with a reset or checkout.
 
-`start` refuses with `fixer_running`, `plan_invalid`, `herdr_unavailable`,
-`worktree_dirty` or `stale_branch` (see
-[references/helper.md](../skills/babysit/references/helper.md)); on
-`herdr_unavailable` run the round inline.
+`start` refuses with `plan_invalid` or `config_invalid` (fix the items or
+the `prBabysit` config), `fixer_running` (run `wait`), `herdr_unavailable`
+(run the round inline), `git_error` (a fetch failed — check the remote and
+retry next tick), `worktree_dirty` or `stale_branch` (see
+[references/helper.md](../skills/babysit/references/helper.md)).
 
 **Verify before push.** In the herdr worktree (`WORKTREE` = `worktree` from the
 result): re-run the tests for the touched files, check that only the PR's
@@ -688,7 +689,7 @@ Anything else, incl. indefinite waits — `decision: keep_going`:
 - Bot findings remain after this round's fix-push (re-read next tick)
 - New comments landed after this tick's clearance check (they get disposed next tick — a tick never *ends* with an actionable thread it already saw still open)
 - `mergeable_unknown` — GitHub has not computed mergeability yet
-- Nothing changed since last tick (`changed: false`, reason `unchanged`): silent no-op; the helper bumped `idleStreak` and widened backoff; never terminate. **Exception — an active fixer** (`fixer_running`): run Step 3's `dispatch-fix.sh wait` and act on its status; the helper holds backoff at its base while a fixer is active
+- Nothing changed since last tick (`changed: false`, reason `unchanged`): silent no-op; the helper bumped `idleStreak` and widened backoff; never terminate. **Exception — an active fixer** (`fixer_running`): run Step 3's `dispatch-fix.sh wait` and act on its status; the helper holds backoff at its base while a fixer is running (a blocked one waits for a human and backs off)
 
 ---
 
@@ -753,7 +754,7 @@ idempotency ledger. `lastError` is the last failed tick's structured error, or `
 
 Per tick the helper diffs current vs saved. All reads/writes → slot-scoped path from Step 0 only.
 
-- **Nothing changed** (same `ciStatus`/`reviewDecision`/`mergeable`/`unresolvedThreads`/`headSha`/`botVerdict`/`botState`/`botFindingKeys`) → `changed: false`; the helper bumped `idleStreak` and widened backoff. **Zero output.** Exit — unless `fixer` is running or blocked (reason `fixer_running`): a fixer changes nothing GitHub shows, so run Step 3's `dispatch-fix.sh wait` first and act on its status. The helper keeps `idleStreak` at 0 while a fixer is active.
+- **Nothing changed** (same `ciStatus`/`reviewDecision`/`mergeable`/`unresolvedThreads`/`headSha`/`botVerdict`/`botState`/`botFindingKeys`) → `changed: false`; the helper bumped `idleStreak` and widened backoff. **Zero output.** Exit — unless `fixer` is running or blocked (reason `fixer_running`): a fixer changes nothing GitHub shows, so run Step 3's `dispatch-fix.sh wait` first and act on its status. The helper keeps `idleStreak` at 0 while a fixer is running; a blocked fixer backs off like any unchanged tick.
 - **Something changed** → `changed: true`, `idleStreak` reset to 0, run Steps 2–6.
 
 ### Adaptive backoff
