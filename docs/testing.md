@@ -43,7 +43,7 @@ bats ran files in parallel and tests within a file serially, because suites shar
 - Never call `process.chdir` and never write `process.env`. Pass `cwd` and `env` to `run` instead.
 - Latency measurements are the exception: they time one process at a time, so a timing test stays a plain `test`.
 
-The suites pass under `bun test --parallel --concurrent`. Every `bun test` in the package scripts passes `--timeout 60000`, because real subprocesses under concurrency outrun bun's 5 s default on a loaded CI runner. Pass it too when you run several suite files by hand.
+The suites pass under `bun test --parallel --concurrent --timeout 60000`. Every `bun test` in the package scripts passes `--timeout 60000`, because real subprocesses under concurrency outrun bun's 5 s default on a loaded CI runner. Pass it too when you run several suite files by hand.
 
 ## Porting a bats file
 
