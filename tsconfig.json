@@ -4,7 +4,8 @@
     "tooling/src/**/*.ts",
     "packages/*/src/**/*.ts",
     "tools/*/src/**/*.ts",
-    "plugins/epic-orchestrator/scripts/**/*.ts"
+    "plugins/epic-orchestrator/scripts/**/*.ts",
+    "plugins/*/hooks/src/**/*.ts"
   ],
   "exclude": ["node_modules", "**/fixtures/**", "tooling/conventions/**"]
 }
