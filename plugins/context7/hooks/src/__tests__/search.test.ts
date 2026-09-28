@@ -5,6 +5,7 @@
 import { afterAll, beforeEach, expect, test } from "bun:test";
 import { startHttpsFixture } from "@toolu/conformance/https-fixture";
 import { join } from "node:path";
+import { DOCS_USAGE, MAIN_USAGE, SEARCH_USAGE } from "../context7/usage.ts";
 
 const BUNDLE = join(import.meta.dir, "../../dist/search.js");
 const fixture = await startHttpsFixture(["context7.com"]);
@@ -105,7 +106,7 @@ test("docs needs both a library id and a query", async () => {
   const runs = await Promise.all([["docs"], ["docs", "/vercel/next.js"]].map((a) => context7(a)));
   for (const run of runs) {
     expect(run.status).toBe(1);
-    expect(run.stderr).toStartWith("Usage: search.sh docs <library_id> <query>\n");
+    expect(run.stderr).toBe(`${DOCS_USAGE}\n`);
     expect(run.stderr).toContain("--fast");
   }
   expect(fixture.connects).toHaveLength(0);
@@ -119,10 +120,10 @@ test("no command prints the banner; search without a library prints its usage", 
   ]);
   for (const run of [banner, help]) {
     expect(run.status).toBe(1);
-    expect(run.stderr).toStartWith("Context7 CLI — Library Documentation Lookup\n");
+    expect(run.stderr).toBe(`${MAIN_USAGE}\n`);
   }
   expect(search.status).toBe(1);
-  expect(search.stderr).toStartWith("Usage: search.sh search <library> [query]\n");
+  expect(search.stderr).toBe(`${SEARCH_USAGE}\n`);
 });
 
 test("bad arguments exit 1 before any request", async () => {
@@ -161,4 +162,51 @@ test("a dropped connection exits 1 with a request-failed message", async () => {
   const run = await context7(["search", "react"]);
   expect(run.status).toBe(1);
   expect(run.stderr).toStartWith("context7: request failed: ");
+});
+
+test("long-form flags and an explicit --type json", async () => {
+  const search = await context7(["search", "--library", "prisma", "--query", "relations"]);
+  expect(search.status).toBe(0);
+  expect(onlyRequest().path).toBe("/api/v2/libs/search?libraryName=prisma&query=relations");
+  fixture.plan([]);
+  const docs = await context7([
+    "docs",
+    "--library-id",
+    "/prisma/prisma",
+    "--query",
+    "upsert",
+    "--type",
+    "json",
+  ]);
+  expect(docs.status).toBe(0);
+  expect(onlyRequest().path).toBe(
+    "/api/v2/context?libraryId=%2Fprisma%2Fprisma&query=upsert&type=json",
+  );
+});
+
+test("any -t other than json prints the body raw", async () => {
+  fixture.plan([{ body: "not json at all", contentType: "text/markdown" }]);
+  const run = await context7(["docs", "/x", "q", "-t", "md"]);
+  expect(run.status).toBe(0);
+  expect(run.stdout).toBe("not json at all");
+});
+
+test("docs -t txt passes a JSON error body through raw, as cat did", async () => {
+  fixture.plan([{ status: 404, body: '{"error":"not_found"}' }]);
+  const run = await context7(["docs", "/x", "q", "-t", "txt"]);
+  expect(run.status).toBe(22);
+  expect(run.stdout).toBe('{"error":"not_found"}');
+});
+
+test("a library that names an Object.prototype member is still a library", async () => {
+  const run = await context7(["search", "constructor"]);
+  expect(run.status).toBe(0);
+  expect(onlyRequest().path).toBe("/api/v2/libs/search?libraryName=constructor&query=constructor");
+});
+
+test("an empty success body prints nothing and exits 0, as jq did", async () => {
+  fixture.plan([{ status: 204, body: "" }]);
+  const run = await context7(["search", "react"]);
+  expect(run.status).toBe(0);
+  expect(run.stdout).toBe("");
 });

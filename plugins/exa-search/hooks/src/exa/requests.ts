@@ -41,7 +41,8 @@ function readSearchArgs(argv: readonly string[]): SearchArgs {
   const args: SearchArgs = { values: new Map(), spelled: new Map(), switches: new Set() };
   for (let at = 0; at < argv.length; at += 1) {
     const arg = argv[at] ?? "";
-    const option = SEARCH_VALUES[arg];
+    // Own keys only: a bare query such as "constructor" is not a flag.
+    const option = Object.hasOwn(SEARCH_VALUES, arg) ? SEARCH_VALUES[arg] : undefined;
     if (option !== undefined) {
       args.values.set(option, flagValue(TOOL, argv, at));
       args.spelled.set(option, arg);

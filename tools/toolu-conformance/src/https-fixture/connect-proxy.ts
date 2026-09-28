@@ -40,11 +40,31 @@ function handle(client: Socket, target: number, onConnect: OnConnect): void {
   client.on("error", () => client.destroy());
 }
 
+export interface ConnectProxy {
+  readonly port: number;
+  /** Destroys open tunnels, then closes the listener: a lingering client cannot hold it open. */
+  close(): Promise<void>;
+}
+
 /** Starts the proxy on an ephemeral loopback port. */
-export function startConnectProxy(target: number, onConnect: OnConnect): Promise<Server> {
-  const server = createServer((client) => handle(client, target, onConnect));
+export function startConnectProxy(target: number, onConnect: OnConnect): Promise<ConnectProxy> {
+  const sockets = new Set<Socket>();
+  const server: Server = createServer((client) => {
+    sockets.add(client);
+    client.on("close", () => sockets.delete(client));
+    handle(client, target, onConnect);
+  });
+  const close = (): Promise<void> =>
+    new Promise((resolve) => {
+      for (const socket of sockets) socket.destroy();
+      server.close(() => resolve());
+    });
   return new Promise((resolve, reject) => {
     server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      const port = typeof address === "object" && address !== null ? address.port : 0;
+      resolve({ port, close });
+    });
   });
 }

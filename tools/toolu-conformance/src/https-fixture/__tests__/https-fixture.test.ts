@@ -1,4 +1,6 @@
 import { afterAll, beforeEach, expect, test } from "bun:test";
+import { readdirSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { startHttpsFixture } from "../https-fixture.ts";
 
 const fixture = await startHttpsFixture(["api.example.test", "docs.example.test"]);
@@ -70,4 +72,27 @@ test("TLS verification stays on: without the fixture CA the client fails", async
   });
   expect(run.status).not.toBe(0);
   expect(fixture.requests).toHaveLength(0);
+});
+
+function leftovers(): number {
+  return readdirSync(tmpdir()).filter((name) => name.startsWith("toolu-https-fixture-")).length;
+}
+
+test("a failed start (no openssl on PATH) throws and leaves no temp dir behind", async () => {
+  const before = leftovers();
+  const path = process.env["PATH"];
+  process.env["PATH"] = "/nonexistent";
+  try {
+    let failure: unknown;
+    try {
+      await startHttpsFixture(["api.example.test"]);
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toBeInstanceOf(Error);
+    expect(String(failure)).toContain("openssl failed");
+  } finally {
+    process.env["PATH"] = path;
+  }
+  expect(leftovers()).toBe(before);
 });

@@ -20,18 +20,35 @@ export function flagValue(tool: string, argv: readonly string[], index: number):
   return value;
 }
 
-/** `text` as a finite number, or exit 1 before any request is sent. */
+/** A JSON number as `jq --argjson` reads one: surrounding space, a leading `+` or `0`, a trailing `.`. */
+const JQ_NUMBER = /^\s*[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?\s*$/;
+
+/**
+ * `text` as a number, or exit 2 before any request is sent: the bash wrappers
+ * fed it to `jq --argjson`, whose rejection ended the script with status 2.
+ */
 export function numberValue(tool: string, flag: string, text: string): number {
-  const value = Number(text);
-  if (text.trim() === "" || !Number.isFinite(value)) {
-    throw new CliExit(1, `${tool}: ${flag} must be a number`);
-  }
-  return value;
+  if (!JQ_NUMBER.test(text)) throw new CliExit(2, `${tool}: ${flag} must be a number`);
+  return Number(text);
 }
 
-/** Writes `text` to stdout and waits until it is flushed, so a following exit cannot truncate it. */
+function isBrokenPipe(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "EPIPE";
+}
+
+/**
+ * Writes `text` to stdout and waits until it is flushed, so a following exit
+ * cannot truncate it. A reader that went away (`| head`) ends the CLI quietly
+ * with 141, the status a shell script got from SIGPIPE.
+ */
 export async function writeStdout(text: string): Promise<void> {
-  if (text !== "") await Bun.write(Bun.stdout, text);
+  if (text === "") return;
+  try {
+    await Bun.write(Bun.stdout, text);
+  } catch (error) {
+    if (isBrokenPipe(error)) process.exit(141);
+    throw error;
+  }
 }
 
 async function writeStderr(text: string): Promise<void> {

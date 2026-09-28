@@ -5,6 +5,7 @@
 import { afterAll, beforeEach, expect, test } from "bun:test";
 import { startHttpsFixture } from "@toolu/conformance/https-fixture";
 import { join } from "node:path";
+import { CRAWL_USAGE, MAIN_USAGE, SEARCH_USAGE, SIMILAR_USAGE } from "../exa/usage.ts";
 
 const BUNDLE = join(import.meta.dir, "../../dist/search.js");
 const fixture = await startHttpsFixture(["api.exa.ai"]);
@@ -183,14 +184,14 @@ test("no command prints the banner and exits 1", async () => {
   const runs = await Promise.all([[], ["-h"], ["--help"]].map((args) => exa(args)));
   for (const run of runs) {
     expect(run.status).toBe(1);
-    expect(run.stderr).toStartWith("Exa Search CLI\n\nUsage: search.sh <command> [options]\n");
+    expect(run.stderr).toBe(`${MAIN_USAGE}\n`);
   }
 });
 
 test("search usage advertises the spec-compliant type and category enums", async () => {
   const run = await exa(["search"]);
   expect(run.status).toBe(1);
-  expect(run.stderr).toStartWith("Usage: search.sh search -q <query> [options]\n");
+  expect(run.stderr).toBe(`${SEARCH_USAGE}\n`);
   expect(run.stderr).toContain("instant|fast|auto|deep-lite|deep|deep-reasoning");
   expect(run.stderr).toContain("company|research paper|news|personal site|financial report|people");
   expect(run.stderr).not.toContain("neural");
@@ -200,24 +201,40 @@ test("search usage advertises the spec-compliant type and category enums", async
 test("crawl and similar without a url print their usage and exit 1", async () => {
   const crawl = await exa(["crawl"]);
   expect(crawl.status).toBe(1);
-  expect(crawl.stderr).toStartWith("Usage: search.sh crawl <url> [url...] [-m max_chars]\n");
+  expect(crawl.stderr).toBe(`${CRAWL_USAGE}\n`);
   const similar = await exa(["similar"]);
   expect(similar.status).toBe(1);
-  expect(similar.stderr).toStartWith("Usage: search.sh similar <url> [-n num_results]\n");
+  expect(similar.stderr).toBe(`${SIMILAR_USAGE}\n`);
 });
 
-test("bad arguments exit 1 before any request", async () => {
-  const cases: Array<[string[], string]> = [
-    [["search", "-q", "x", "-n", "abc"], "exa-search: -n must be a number\n"],
-    [["search", "-q"], "exa-search: -q needs a value\n"],
-    [["search", "-q", "x", "extra"], "Unknown option: extra\n"],
-    [["similar", "https://a.test", "https://b.test"], "Unknown option: https://b.test\n"],
-    [["crawl", "https://a.test", "-m"], "exa-search: -m needs a value\n"],
+test("bad arguments exit before any request: 2 for a number jq would reject, else 1", async () => {
+  const cases: Array<[string[], number, string]> = [
+    [["search", "-q", "x", "-n", "abc"], 2, "exa-search: -n must be a number\n"],
+    [
+      ["search", "-q", "x", "--highlights", "0x10"],
+      2,
+      "exa-search: --highlights must be a number\n",
+    ],
+    [
+      ["similar", "https://a.test", "--num-results", "ten"],
+      2,
+      "exa-search: --num-results must be a number\n",
+    ],
+    [
+      ["crawl", "https://a.test", "--max-chars", "1k"],
+      2,
+      "exa-search: --max-chars must be a number\n",
+    ],
+    [["search", "-q"], 1, "exa-search: -q needs a value\n"],
+    [["search", "-q", "x", "extra"], 1, "Unknown option: extra\n"],
+    [["similar", "https://a.test", "https://b.test"], 1, "Unknown option: https://b.test\n"],
+    [["crawl", "https://a.test", "-m"], 1, "exa-search: -m needs a value\n"],
   ];
   const runs = await Promise.all(cases.map(([args]) => exa(args)));
   runs.forEach((run, index) => {
-    expect(run.status).toBe(1);
-    expect(run.stderr).toBe(cases[index]?.[1] ?? "");
+    const [, status, stderr] = cases[index] ?? [[], -1, ""];
+    expect(run.status).toBe(status);
+    expect(run.stderr).toBe(stderr);
   });
   expect(fixture.connects).toHaveLength(0);
 });
@@ -243,4 +260,46 @@ test("a dropped connection exits 1 with a request-failed message", async () => {
   const run = await exa(["search", "-q", "x"]);
   expect(run.status).toBe(1);
   expect(run.stderr).toStartWith("exa-search: request failed: ");
+});
+
+test("a bare query that names an Object.prototype member is still a query", async () => {
+  const run = await exa(["constructor"]);
+  expect(run.status).toBe(0);
+  expect(onlyRequest().json).toMatchObject({ query: "constructor" });
+});
+
+test("an empty -q leaves the query to the next bare argument", async () => {
+  const run = await exa(["search", "-q", "", "late query"]);
+  expect(run.status).toBe(0);
+  expect(onlyRequest().json).toMatchObject({ query: "late query" });
+});
+
+test("an empty --include-domains adds no domain filter", async () => {
+  const run = await exa(["search", "-q", "x", "--include-domains", ""]);
+  expect(run.status).toBe(0);
+  expect(onlyRequest().json).not.toHaveProperty("includeDomains");
+});
+
+test("long-form crawl and similar flags", async () => {
+  const crawl = await exa(["crawl", "https://a.test", "--max-chars", "70"]);
+  expect(crawl.status).toBe(0);
+  expect(onlyRequest().json).toMatchObject({ highlights: { maxCharacters: 70 } });
+  fixture.plan([]);
+  const similar = await exa(["similar", "https://a.test", "--num-results", "4"]);
+  expect(similar.status).toBe(0);
+  expect(onlyRequest().json).toMatchObject({ numResults: 4 });
+});
+
+test("an empty success body prints nothing and exits 0, as jq did", async () => {
+  fixture.plan([{ status: 204, body: "" }]);
+  const run = await exa(["search", "-q", "x", "--lean"]);
+  expect(run.status).toBe(0);
+  expect(run.stdout).toBe("");
+});
+
+test("--lean with an HTTP error prints the real error body, not an empty projection", async () => {
+  fixture.plan([{ status: 401, body: '{"error":"bad"}' }]);
+  const run = await exa(["search", "-q", "x", "--lean"]);
+  expect(run.status).toBe(22);
+  expect(run.stdout).toBe('{\n  "error": "bad"\n}\n');
 });

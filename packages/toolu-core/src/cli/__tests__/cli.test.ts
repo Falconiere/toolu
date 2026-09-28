@@ -27,15 +27,24 @@ test("flagValue exits 1 naming the flag when its value is missing", () => {
   expect(exit.message).toBe("tool: -q needs a value");
 });
 
-test("numberValue parses JSON-style numbers", () => {
-  expect(numberValue("tool", "-n", "5")).toBe(5);
-  expect(numberValue("tool", "-n", "2.5")).toBe(2.5);
+test("numberValue accepts what jq --argjson accepts", () => {
+  const accepted: Array<[string, number]> = [
+    ["5", 5],
+    ["2.5", 2.5],
+    ["+5", 5],
+    ["007", 7],
+    ["5.", 5],
+    [" 5", 5],
+    ["1e2", 100],
+    ["-3", -3],
+  ];
+  for (const [text, value] of accepted) expect(numberValue("tool", "-n", text)).toBe(value);
 });
 
-test("numberValue exits 1 on non-numeric and empty text", () => {
-  for (const text of ["abc", "", " ", "5x"]) {
+test("numberValue exits 2, as jq --argjson did, on what jq rejects", () => {
+  for (const text of ["abc", "", " ", "5x", "0x10", "0b11", "Infinity"]) {
     const exit = thrown(() => numberValue("tool", "-n", text));
-    expect(exit.code).toBe(1);
+    expect(exit.code).toBe(2);
     expect(exit.message).toBe("tool: -n must be a number");
   }
 });
@@ -74,4 +83,22 @@ test("runCli maps an unexpected error to exit 1 with its message", () => {
   const run = runScript(`await runCli(async () => { throw new Error("boom"); });`);
   expect(run.status).toBe(1);
   expect(run.stderr).toContain("boom");
+});
+
+test("a reader that goes away ends the CLI quietly with 141, as SIGPIPE did", () => {
+  const dir = mkdtempSync(join(tmpdir(), "toolu-cli-"));
+  try {
+    const script = join(dir, "main.ts");
+    writeFileSync(
+      script,
+      `import { runCli, writeStdout } from ${JSON.stringify(CLI)};\n` +
+        `await runCli(async () => { await writeStdout("x".repeat(1 << 22)); return 0; });\n`,
+    );
+    const pipeline = `set -o pipefail; "$0" "$1" | head -c 10 >/dev/null`;
+    const run = spawnSync("bash", ["-c", pipeline, process.execPath, script], { encoding: "utf8" });
+    expect(run.status).toBe(141);
+    expect(run.stderr).toBe("");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

@@ -3,9 +3,9 @@
 # env-independent path.
 #
 # ${CLAUDE_PLUGIN_ROOT} is exported to hook subprocesses only — NOT to the
-# Bash tool's subshell — so SKILL.md's
+# Bash tool's subshell — so any SKILL.md path built on it, e.g.
 #   "${CLAUDE_PLUGIN_ROOT}/hooks/dist/agent-browser.js …"
-# expands to "/hooks/dist/agent-browser.js: No such file" when an agent pastes
+# would expand to "/hooks/dist/agent-browser.js: No such file" when an agent pastes
 # it. Mirror the statusline plugin: symlink the CLI bundle
 # (hooks/dist/agent-browser.js) to
 #   ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/agent-browser/agent-browser.sh

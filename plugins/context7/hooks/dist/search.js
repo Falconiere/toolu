@@ -18,9 +18,19 @@ function flagValue(tool, argv, index) {
     throw new CliExit(1, `${tool}: ${argv[index] ?? ""} needs a value`);
   return value;
 }
+function isBrokenPipe(error) {
+  return error instanceof Error && "code" in error && error.code === "EPIPE";
+}
 async function writeStdout(text) {
-  if (text !== "")
+  if (text === "")
+    return;
+  try {
     await Bun.write(Bun.stdout, text);
+  } catch (error) {
+    if (isBrokenPipe(error))
+      process.exit(141);
+    throw error;
+  }
 }
 async function writeStderr(text) {
   if (text !== "")
@@ -64,11 +74,20 @@ function parseJson(tool, text) {
     throw new CliExit(5, `${tool}: response is not JSON`);
   return parsed.value;
 }
+function jsonOutput(tool, text, project = (value) => value) {
+  if (text.trim() === "")
+    return "";
+  return formatJson(project(parseJson(tool, text)));
+}
 function reason(error) {
   return error instanceof Error ? error.message : String(error);
 }
 async function send(tool, request) {
-  const init = { method: request.method ?? "GET", headers: { ...request.headers } };
+  const init = {
+    method: request.method ?? "GET",
+    headers: { ...request.headers },
+    redirect: "manual"
+  };
   if (request.body !== undefined)
     init.body = JSON.stringify(request.body);
   let status;
@@ -81,8 +100,8 @@ async function send(tool, request) {
     throw new CliExit(1, `${tool}: request failed: ${reason(error)}`);
   }
   if (status >= 400) {
-    const parsed = tryParse(text);
-    const body = parsed.ok ? formatJson(parsed.value) : text;
+    const parsed = request.json === false ? undefined : tryParse(text);
+    const body = parsed?.ok === true ? formatJson(parsed.value) : text;
     throw new CliExit(22, `${tool}: HTTP ${status} from ${request.url}`, body);
   }
   return text;
@@ -142,7 +161,7 @@ function readArgs(argv, slotFlags, docs) {
   const parsed = { first: "", second: "", type: "json", fast: false };
   for (let at = 0;at < argv.length; at += 1) {
     const arg = argv[at] ?? "";
-    const slot = slotFlags[arg];
+    const slot = Object.hasOwn(slotFlags, arg) ? slotFlags[arg] : undefined;
     if (slot !== undefined) {
       const value = flagValue(TOOL, argv, at);
       if (slot === 1)
@@ -218,9 +237,10 @@ async function main() {
     headers["Authorization"] = `Bearer ${key}`;
   const text = await send(TOOL2, {
     url: `${C7_URL}/${call.endpoint}${encodeQuery(call.params)}`,
-    headers
+    headers,
+    json: call.json
   });
-  await writeStdout(call.json ? formatJson(parseJson(TOOL2, text)) : text);
+  await writeStdout(call.json ? jsonOutput(TOOL2, text) : text);
   return 0;
 }
 await runCli(main);

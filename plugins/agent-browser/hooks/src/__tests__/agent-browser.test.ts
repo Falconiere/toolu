@@ -18,14 +18,30 @@ writeFileSync(
   `#!${process.execPath}
 import { appendFileSync } from "node:fs";
 appendFileSync(process.env.AB_LOG, process.argv.slice(2).join(" ") + "\\n");
+if (process.env.STUB_ECHO) process.stdout.write("out:" + (await Bun.stdin.text()));
 if (process.env.STUB_SIGNAL) process.kill(process.pid, process.env.STUB_SIGNAL);
-process.exit(Number(process.env.STUB_EXIT ?? 0));
+if (process.env.STUB_WAIT) {
+  process.on("SIGTERM", () => {
+    appendFileSync(process.env.AB_LOG, "got SIGTERM\\n");
+    process.exit(7);
+  });
+  setInterval(() => {}, 1000);
+} else {
+  process.exit(Number(process.env.STUB_EXIT ?? 0));
+}
 `,
 );
 chmodSync(STUB, 0o755);
 
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 beforeEach(() => writeFileSync(LOG, ""));
+
+/** Polls `done` every 20 ms for up to 5 s. */
+async function until(done: () => boolean, deadline = Date.now() + 5000): Promise<void> {
+  if (done() || Date.now() > deadline) return;
+  await Bun.sleep(20);
+  return until(done, deadline);
+}
 
 async function wrap(args: readonly string[], extra: Record<string, string> = {}) {
   const env = { ...process.env, AB_LOG: LOG, AGENT_BROWSER_BIN: STUB, ...extra };
@@ -76,4 +92,41 @@ test("an absent binary prints the install guide and exits 127", async () => {
     expect(run.stderr).toStartWith("agent-browser not found — install: npm i -g agent-browser");
     expect(run.argv).toBe("");
   }
+});
+
+test("stdin and stdout pass straight through to and from the binary", async () => {
+  const env = { ...process.env, AB_LOG: LOG, AGENT_BROWSER_BIN: STUB, STUB_ECHO: "1" };
+  const child = Bun.spawn([BUNDLE, "eval"], { env, stdin: "pipe", stdout: "pipe" });
+  void child.stdin.write("document.title");
+  void child.stdin.end();
+  const [stdout, status] = await Promise.all([new Response(child.stdout).text(), child.exited]);
+  expect(status).toBe(0);
+  expect(stdout).toBe("out:document.title");
+});
+
+test("an empty or bare-name AGENT_BROWSER_BIN resolves agent-browser on PATH", async () => {
+  const path = `${dir}:${process.env["PATH"] ?? ""}`;
+  const empty = await wrap(["click", "@e1"], { AGENT_BROWSER_BIN: "", PATH: path });
+  expect(empty.status).toBe(0);
+  expect(empty.argv).toBe("click @e1\n");
+  writeFileSync(LOG, "");
+  const bare = await wrap(["click", "@e2"], { AGENT_BROWSER_BIN: "agent-browser", PATH: path });
+  expect(bare.status).toBe(0);
+  expect(bare.argv).toBe("click @e2\n");
+});
+
+test("--raw still needs the binary", async () => {
+  const run = await wrap(["--raw", "snapshot"], { AGENT_BROWSER_BIN: join(dir, "absent") });
+  expect(run.status).toBe(127);
+  expect(run.argv).toBe("");
+});
+
+test("SIGTERM to the wrapper reaches the binary, whose status the wrapper returns", async () => {
+  const env = { ...process.env, AB_LOG: LOG, AGENT_BROWSER_BIN: STUB, STUB_WAIT: "1" };
+  const child = Bun.spawn([BUNDLE, "open", "https://example.test"], { env, stdout: "pipe" });
+  // Wait until the binary is up (it logs its argv first thing).
+  await until(() => readFileSync(LOG, "utf8").includes("open"));
+  child.kill("SIGTERM");
+  expect(await child.exited).toBe(7);
+  expect(readFileSync(LOG, "utf8")).toBe("open https://example.test\ngot SIGTERM\n");
 });

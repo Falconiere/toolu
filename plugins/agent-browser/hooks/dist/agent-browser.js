@@ -12,9 +12,19 @@ class CliExit extends Error {
     this.stdout = stdout;
   }
 }
+function isBrokenPipe(error) {
+  return error instanceof Error && "code" in error && error.code === "EPIPE";
+}
 async function writeStdout(text) {
-  if (text !== "")
+  if (text === "")
+    return;
+  try {
     await Bun.write(Bun.stdout, text);
+  } catch (error) {
+    if (isBrokenPipe(error))
+      process.exit(141);
+    throw error;
+  }
 }
 async function writeStderr(text) {
   if (text !== "")

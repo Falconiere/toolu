@@ -32,7 +32,8 @@ function readArgs(
   const parsed: Parsed = { first: "", second: "", type: "json", fast: false };
   for (let at = 0; at < argv.length; at += 1) {
     const arg = argv[at] ?? "";
-    const slot = slotFlags[arg];
+    // Own keys only: a library named "constructor" is not a flag.
+    const slot = Object.hasOwn(slotFlags, arg) ? slotFlags[arg] : undefined;
     if (slot !== undefined) {
       const value = flagValue(TOOL, argv, at);
       if (slot === 1) parsed.first = value;

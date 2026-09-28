@@ -2,8 +2,8 @@
 # SessionStart hook — publish the exa-search wrapper at a STABLE,
 # env-independent path. See context7's session-start.sh for the same fix
 # rationale: ${CLAUDE_PLUGIN_ROOT} is exported to hook subprocesses only —
-# NOT to the agent's Bash tool subshell — so a SKILL.md path of
-# "${CLAUDE_PLUGIN_ROOT}/hooks/dist/search.js" expands to
+# NOT to the agent's Bash tool subshell — so any SKILL.md path built on it
+# (e.g. "${CLAUDE_PLUGIN_ROOT}/hooks/dist/search.js") would expand to
 # "/hooks/dist/search.js: No such file" when an agent pastes it. Mirror the
 # statusline plugin: symlink the CLI bundle (hooks/dist/search.js) to
 #   ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/exa-search/search.sh

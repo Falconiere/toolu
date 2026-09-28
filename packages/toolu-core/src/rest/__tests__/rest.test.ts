@@ -1,6 +1,6 @@
 import { afterAll, expect, test } from "bun:test";
 import { CliExit } from "../../cli/cli.ts";
-import { encodeQuery, formatJson, parseJson, send } from "../rest.ts";
+import { encodeQuery, formatJson, jsonOutput, parseJson, send } from "../rest.ts";
 
 interface Seen {
   method: string;
@@ -26,6 +26,13 @@ const server = Bun.serve({
     if (url.pathname === "/denied") return Response.json({ error: "bad" }, { status: 401 });
     if (url.pathname === "/html-error") return new Response("<html>", { status: 502 });
     if (url.pathname === "/html") return new Response("<html>");
+    if (url.pathname === "/empty") return new Response(null, { status: 204 });
+    if (url.pathname === "/moved") {
+      return new Response('{"moved":true}', {
+        status: 302,
+        headers: { location: `${url.origin}/elsewhere` },
+      });
+    }
     return Response.json({ ok: true });
   },
 });
@@ -112,4 +119,23 @@ test("encodeQuery percent-encodes everything but RFC 3986 unreserved characters"
   expect(encodeQuery([["q", "a!b'c(d)e*f~g_h-i.j"]])).toBe("?q=a%21b%27c%28d%29e%2Af~g_h-i.j");
   expect(encodeQuery([["q", "é"]])).toBe("?q=%C3%A9");
   expect(encodeQuery([])).toBe("");
+});
+
+test("redirects are not followed, so a key header never reaches another location", async () => {
+  seen.length = 0;
+  const text = await send("tool", { url: `${base}/moved`, headers: { "x-api-key": "k" } });
+  expect(text).toBe('{"moved":true}');
+  expect(seen.map((request) => request.path)).toEqual(["/moved"]);
+});
+
+test("json: false passes an error body through unformatted", async () => {
+  const exit = await rejected(send("tool", { url: `${base}/denied`, json: false }));
+  expect(exit.code).toBe(22);
+  expect(exit.stdout).toBe('{"error":"bad"}');
+});
+
+test("jsonOutput prints nothing for an empty body and projects a JSON one", async () => {
+  expect(jsonOutput("tool", await send("tool", { url: `${base}/empty` }))).toBe("");
+  expect(jsonOutput("tool", '{"a":1}', () => ({ b: 2 }))).toBe('{\n  "b": 2\n}\n');
+  expect(jsonOutput("tool", "[1]")).toBe("[\n  1\n]\n");
 });

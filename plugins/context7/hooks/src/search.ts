@@ -6,7 +6,7 @@
  * starting with `ctx7sk` is sent, as a Bearer token.
  */
 import { CliExit, runCli, writeStdout } from "@toolu/core/cli";
-import { encodeQuery, formatJson, parseJson, send } from "@toolu/core/rest";
+import { encodeQuery, jsonOutput, send } from "@toolu/core/rest";
 import { type Context7Call, docsCall, searchCall } from "./context7/requests.ts";
 import { MAIN_USAGE } from "./context7/usage.ts";
 
@@ -38,8 +38,9 @@ async function main(): Promise<number> {
   const text = await send(TOOL, {
     url: `${C7_URL}/${call.endpoint}${encodeQuery(call.params)}`,
     headers,
+    json: call.json,
   });
-  await writeStdout(call.json ? formatJson(parseJson(TOOL, text)) : text);
+  await writeStdout(call.json ? jsonOutput(TOOL, text) : text);
   return 0;
 }
 

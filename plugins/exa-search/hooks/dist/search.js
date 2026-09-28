@@ -18,16 +18,25 @@ function flagValue(tool, argv, index) {
     throw new CliExit(1, `${tool}: ${argv[index] ?? ""} needs a value`);
   return value;
 }
+var JQ_NUMBER = /^\s*[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?\s*$/;
 function numberValue(tool, flag, text) {
-  const value = Number(text);
-  if (text.trim() === "" || !Number.isFinite(value)) {
-    throw new CliExit(1, `${tool}: ${flag} must be a number`);
-  }
-  return value;
+  if (!JQ_NUMBER.test(text))
+    throw new CliExit(2, `${tool}: ${flag} must be a number`);
+  return Number(text);
+}
+function isBrokenPipe(error) {
+  return error instanceof Error && "code" in error && error.code === "EPIPE";
 }
 async function writeStdout(text) {
-  if (text !== "")
+  if (text === "")
+    return;
+  try {
     await Bun.write(Bun.stdout, text);
+  } catch (error) {
+    if (isBrokenPipe(error))
+      process.exit(141);
+    throw error;
+  }
 }
 async function writeStderr(text) {
   if (text !== "")
@@ -71,11 +80,20 @@ function parseJson(tool, text) {
     throw new CliExit(5, `${tool}: response is not JSON`);
   return parsed.value;
 }
+function jsonOutput(tool, text, project = (value) => value) {
+  if (text.trim() === "")
+    return "";
+  return formatJson(project(parseJson(tool, text)));
+}
 function reason(error) {
   return error instanceof Error ? error.message : String(error);
 }
 async function send(tool, request) {
-  const init = { method: request.method ?? "GET", headers: { ...request.headers } };
+  const init = {
+    method: request.method ?? "GET",
+    headers: { ...request.headers },
+    redirect: "manual"
+  };
   if (request.body !== undefined)
     init.body = JSON.stringify(request.body);
   let status;
@@ -88,8 +106,8 @@ async function send(tool, request) {
     throw new CliExit(1, `${tool}: request failed: ${reason(error)}`);
   }
   if (status >= 400) {
-    const parsed = tryParse(text);
-    const body = parsed.ok ? formatJson(parsed.value) : text;
+    const parsed = request.json === false ? undefined : tryParse(text);
+    const body = parsed?.ok === true ? formatJson(parsed.value) : text;
     throw new CliExit(22, `${tool}: HTTP ${status} from ${request.url}`, body);
   }
   return text;
@@ -174,7 +192,7 @@ function readSearchArgs(argv) {
   const args = { values: new Map, spelled: new Map, switches: new Set };
   for (let at = 0;at < argv.length; at += 1) {
     const arg = argv[at] ?? "";
-    const option = SEARCH_VALUES[arg];
+    const option = Object.hasOwn(SEARCH_VALUES, arg) ? SEARCH_VALUES[arg] : undefined;
     if (option !== undefined) {
       args.values.set(option, flagValue(TOOL, argv, at));
       args.spelled.set(option, arg);
@@ -313,8 +331,7 @@ async function main() {
     headers: { "x-api-key": key, "Content-Type": "application/json", Accept: "application/json" },
     body: call.body
   });
-  const response = parseJson(TOOL2, text);
-  await writeStdout(formatJson(call.lean ? leanResponse(response) : response));
+  await writeStdout(call.lean ? jsonOutput(TOOL2, text, leanResponse) : jsonOutput(TOOL2, text));
   return 0;
 }
 await runCli(main);
