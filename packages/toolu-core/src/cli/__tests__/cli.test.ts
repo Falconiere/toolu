@@ -42,7 +42,7 @@ test("numberValue accepts what jq --argjson accepts", () => {
 });
 
 test("numberValue exits 2, as jq --argjson did, on what jq rejects", () => {
-  for (const text of ["abc", "", " ", "5x", "0x10", "0b11", "Infinity"]) {
+  for (const text of ["abc", "", " ", "5x", "0x10", "0b11", "Infinity", "1e999", "\u00a05"]) {
     const exit = thrown(() => numberValue("tool", "-n", text));
     expect(exit.code).toBe(2);
     expect(exit.message).toBe("tool: -n must be a number");

@@ -20,16 +20,20 @@ export function flagValue(tool: string, argv: readonly string[], index: number):
   return value;
 }
 
-/** A JSON number as `jq --argjson` reads one: surrounding space, a leading `+` or `0`, a trailing `.`. */
-const JQ_NUMBER = /^\s*[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?\s*$/;
+/** A JSON number as `jq --argjson` reads one: ASCII space around it, a leading `+` or `0`, a trailing `.`. */
+const JQ_NUMBER = /^[ \t\n\r]*[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?[ \t\n\r]*$/;
 
 /**
  * `text` as a number, or exit 2 before any request is sent: the bash wrappers
  * fed it to `jq --argjson`, whose rejection ended the script with status 2.
  */
 export function numberValue(tool: string, flag: string, text: string): number {
-  if (!JQ_NUMBER.test(text)) throw new CliExit(2, `${tool}: ${flag} must be a number`);
-  return Number(text);
+  const value = Number(text);
+  // A finite check too: `1e999` is Infinity here, which JSON would send as null.
+  if (!JQ_NUMBER.test(text) || !Number.isFinite(value)) {
+    throw new CliExit(2, `${tool}: ${flag} must be a number`);
+  }
+  return value;
 }
 
 function isBrokenPipe(error: unknown): boolean {

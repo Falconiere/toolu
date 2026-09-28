@@ -18,4 +18,4 @@ Standalone, no dependencies.
 
 ## The Exa API
 
-The skill drives a TypeScript CLI over the Exa REST API, shipped as the executable Bun bundle `hooks/dist/search.js` (source `hooks/src/search.ts`) and published at `<config>/exa-search/search.sh` by a SessionStart hook. Set `EXA_API_KEY` in the environment for it to authenticate; it never reads a `.env` file. Exit status: `1` usage or missing key, `2` a non-numeric number flag, `22` HTTP error (body on stdout), `5` non-JSON response; redirects are not followed.
+The skill drives a TypeScript CLI over the Exa REST API, shipped as the executable Bun bundle `hooks/dist/search.js` (source `hooks/src/search.ts`) and published at `<config>/exa-search/search.sh` by a SessionStart hook. Set `EXA_API_KEY` in the environment for it to authenticate; it never reads a `.env` file. Exit status: `1` usage, missing key or a failed connection, `2` a number flag jq would reject, `22` HTTP error (the error body on stdout, also under `--lean`), `5` non-JSON response, `141` when the stdout reader closes early. Redirects are not followed, so the key never reaches another host.

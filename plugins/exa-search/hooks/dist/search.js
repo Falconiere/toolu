@@ -18,11 +18,13 @@ function flagValue(tool, argv, index) {
     throw new CliExit(1, `${tool}: ${argv[index] ?? ""} needs a value`);
   return value;
 }
-var JQ_NUMBER = /^\s*[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?\s*$/;
+var JQ_NUMBER = /^[ \t\n\r]*[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?[ \t\n\r]*$/;
 function numberValue(tool, flag, text) {
-  if (!JQ_NUMBER.test(text))
+  const value = Number(text);
+  if (!JQ_NUMBER.test(text) || !Number.isFinite(value)) {
     throw new CliExit(2, `${tool}: ${flag} must be a number`);
-  return Number(text);
+  }
+  return value;
 }
 function isBrokenPipe(error) {
   return error instanceof Error && "code" in error && error.code === "EPIPE";

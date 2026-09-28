@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, expect, test } from "bun:test";
-import { readdirSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { startHttpsFixture } from "../https-fixture.ts";
 
 const fixture = await startHttpsFixture(["api.example.test", "docs.example.test"]);
@@ -74,25 +75,31 @@ test("TLS verification stays on: without the fixture CA the client fails", async
   expect(fixture.requests).toHaveLength(0);
 });
 
-function leftovers(): number {
-  return readdirSync(tmpdir()).filter((name) => name.startsWith("toolu-https-fixture-")).length;
+function entries(dir: string): string[] {
+  return readdirSync(dir);
 }
 
 test("a failed start (no openssl on PATH) throws and leaves no temp dir behind", async () => {
-  const before = leftovers();
-  const path = process.env["PATH"];
+  // A private TMPDIR keeps the leftover check hermetic from other fixtures.
+  const privateTmp = mkdtempSync(join(tmpdir(), "https-fixture-test-"));
+  const saved = { PATH: process.env["PATH"], TMPDIR: process.env["TMPDIR"] };
   process.env["PATH"] = "/nonexistent";
+  process.env["TMPDIR"] = privateTmp;
+  // The fixture's temp dir must land in privateTmp, or the leftover check below
+  // would pass vacuously: prove tmpdir() follows the TMPDIR just set.
+  const followed = tmpdir();
+  let failure: unknown;
   try {
-    let failure: unknown;
-    try {
-      await startHttpsFixture(["api.example.test"]);
-    } catch (error) {
-      failure = error;
-    }
-    expect(failure).toBeInstanceOf(Error);
-    expect(String(failure)).toContain("openssl failed");
+    await startHttpsFixture(["api.example.test"]);
+  } catch (error) {
+    failure = error;
   } finally {
-    process.env["PATH"] = path;
+    process.env["PATH"] = saved.PATH;
+    process.env["TMPDIR"] = saved.TMPDIR;
   }
-  expect(leftovers()).toBe(before);
+  expect(followed).toBe(privateTmp);
+  expect(failure).toBeInstanceOf(Error);
+  expect(String(failure)).toContain("openssl failed");
+  expect(entries(privateTmp)).toEqual([]);
+  rmSync(privateTmp, { recursive: true, force: true });
 });

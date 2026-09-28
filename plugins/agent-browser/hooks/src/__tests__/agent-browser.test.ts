@@ -25,6 +25,7 @@ if (process.env.STUB_WAIT) {
     appendFileSync(process.env.AB_LOG, "got SIGTERM\\n");
     process.exit(7);
   });
+  appendFileSync(process.env.AB_LOG, "ready\\n");
   setInterval(() => {}, 1000);
 } else {
   process.exit(Number(process.env.STUB_EXIT ?? 0));
@@ -124,9 +125,9 @@ test("--raw still needs the binary", async () => {
 test("SIGTERM to the wrapper reaches the binary, whose status the wrapper returns", async () => {
   const env = { ...process.env, AB_LOG: LOG, AGENT_BROWSER_BIN: STUB, STUB_WAIT: "1" };
   const child = Bun.spawn([BUNDLE, "open", "https://example.test"], { env, stdout: "pipe" });
-  // Wait until the binary is up (it logs its argv first thing).
-  await until(() => readFileSync(LOG, "utf8").includes("open"));
+  // Wait until the binary's SIGTERM handler is installed (it logs "ready" after).
+  await until(() => readFileSync(LOG, "utf8").includes("ready"));
   child.kill("SIGTERM");
   expect(await child.exited).toBe(7);
-  expect(readFileSync(LOG, "utf8")).toBe("open https://example.test\ngot SIGTERM\n");
+  expect(readFileSync(LOG, "utf8")).toBe("open https://example.test\nready\ngot SIGTERM\n");
 });

@@ -18,4 +18,4 @@ Standalone, no dependencies.
 
 ## The Context7 API
 
-The skill drives a TypeScript CLI over the Context7 REST API, shipped as the executable Bun bundle `hooks/dist/search.js` (source `hooks/src/search.ts`) and published at `<config>/context7/search.sh` by a SessionStart hook. **No API key required** (rate-limited). For higher limits, export `CONTEXT7_API_KEY=ctx7sk...` in the environment — the script reads it from the environment only, never from a `.env` file.
+The skill drives a TypeScript CLI over the Context7 REST API, shipped as the executable Bun bundle `hooks/dist/search.js` (source `hooks/src/search.ts`) and published at `<config>/context7/search.sh` by a SessionStart hook. Exit status: `1` usage or a failed connection, `22` HTTP error (the error body on stdout, raw for `-t txt`), `5` non-JSON response, `141` when the stdout reader closes early. Redirects are not followed. **No API key required** (rate-limited). For higher limits, export `CONTEXT7_API_KEY=ctx7sk...` in the environment — the script reads it from the environment only, never from a `.env` file.
