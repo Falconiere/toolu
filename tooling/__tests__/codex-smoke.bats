@@ -11,6 +11,6 @@ SCRIPT="$ROOT/tooling/codex-smoke.sh"
   [ "$status" -eq 0 ]
   [[ "$output" == *"available=16"* ]]
   [[ "$output" == *"installed=16"* ]]
-  [[ "$output" == *"session-start=17"* ]]
+  [[ "$output" == *"session-start=18"* ]]
   [[ "$output" == *"removed=16"* ]]
 }

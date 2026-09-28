@@ -9,7 +9,8 @@
       "bridge",
       "policy",
       "config",
-      "runner"
+      "runner",
+      "launcher"
     ],
     "nested": {
       "decision": [
@@ -33,6 +34,9 @@
         "runner-read.ts",
         "runner-exec.ts",
         "runner-types.ts",
+        "__tests__"
+      ],
+      "launcher": [
         "__tests__"
       ]
     },

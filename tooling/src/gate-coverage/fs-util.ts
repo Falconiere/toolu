@@ -29,7 +29,12 @@ export function listShFiles(dir: string, pattern?: RegExp): string[] {
     .toSorted();
 }
 
+/** A launcher hook (#250) is a shell one-liner; its identity is the bundle it runs. */
+const LAUNCHER_BUNDLE = /hooks\/dist\/[a-z0-9-]+\.js/;
+
 export function normalizeCommand(command: string): string {
+  const bundle = LAUNCHER_BUNDLE.exec(command);
+  if (bundle) return bundle[0];
   let c = command.trim();
   if ((c.startsWith('"') && c.endsWith('"')) || (c.startsWith("'") && c.endsWith("'"))) {
     c = c.slice(1, -1);

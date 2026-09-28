@@ -16,6 +16,7 @@
     "check:opencode-surface": "bun run tools/toolu-opencode/scripts/check-surface-drift.ts",
     "build:plugins": "bun run tooling/src/build-plugins.ts",
     "check:plugin-bundles": "bun run tooling/src/build-plugins.ts --check",
+    "check:hooks-json": "bun run tooling/src/check-hooks-json.ts",
     "lint:shell": "bash tooling/shellcheck.sh",
     "test:shell": "bash tooling/bats-run.sh",
     "test:portable-core": "bash tooling/check-portable-core-doc.sh && PORTABLE_CORE_PROBE_MODE=fixture bun run tooling/src/opencode-capability-probe.ts && bats tooling/__tests__/check-portable-core-doc.bats tooling/__tests__/opencode-capability-probe.bats",
@@ -31,9 +32,9 @@
     "jscpd": "jscpd --config .jscpd.json",
     "test:conventions": "bun run format:check && bun run lint:ts && bun run typecheck && bun run guardrails && bun run knip && bun run jscpd && bats tooling/__tests__/conventions-guardrails.bats tooling/__tests__/workspace-skeleton.bats",
     "test:conformance": "bun run tools/toolu-conformance/src/cli/run.ts",
-    "test:unit": "bun test tooling/src packages tools plugins/epic-orchestrator",
+    "test:unit": "bun test tooling/src packages tools plugins/epic-orchestrator plugins/toolu/hooks/src",
     "test:workspace": "bash tooling/check-workspace.sh",
-    "test:ts": "bun run test:conventions && bun run test:unit && bun run check:plugin-bundles && bun run test:workspace && bun run test:pack && bun run test:conformance",
+    "test:ts": "bun run test:conventions && bun run test:unit && bun run check:plugin-bundles && bun run check:hooks-json && bun run test:workspace && bun run test:pack && bun run test:conformance",
     "test:pack": "bun run tooling/src/pack-inventory.ts && bats tooling/__tests__/npm-publish.bats"
   },
   "dependencies": {

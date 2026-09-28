@@ -96,9 +96,27 @@ for hook_file in "$ROOT"/plugins/*/hooks/hooks.json; do
         "$plugin_root/$hook_path" >/dev/null
     )
     session_start_count=$((session_start_count + 1))
-  done < <(jq -r '.hooks.SessionStart[]?.hooks[]? | select(.type == "command") | .command' "$hook_file")
+  done < <(jq -r '.hooks.SessionStart[]?.hooks[]? | select(.type == "command")
+    | select((.commandWindows == null) and ((.command | test("hooks/dist/|\\bbun\\b")) | not))
+    | .command' "$hook_file")
+  # Launcher hooks (#250) are generated shell one-liners: run them the way the
+  # host does, through sh -c. NUL-delimited so escapes inside survive intact.
+  while IFS= read -r -d '' hook_command; do
+    printf '%s\n' '{"hook_event_name":"SessionStart","source":"startup"}' | (
+      cd "$SMOKE_PROJECT"
+      env CODEX_HOME="$SMOKE_HOME" \
+        PLUGIN_ROOT="$plugin_root" \
+        CLAUDE_PLUGIN_ROOT="$plugin_root" \
+        TOOLU_HOST_OVERRIDE=codex \
+        TOOLU_PROJECT_DIR="$SMOKE_PROJECT" \
+        sh -c "$hook_command" >/dev/null
+    )
+    session_start_count=$((session_start_count + 1))
+  done < <(jq -j '.hooks.SessionStart[]?.hooks[]? | select(.type == "command")
+    | select((.commandWindows != null) or (.command | test("hooks/dist/|\\bbun\\b")))
+    | .command + "\u0000"' "$hook_file")
 done
-[ "$session_start_count" -eq 17 ] || fail "expected 17 SessionStart commands, ran $session_start_count"
+[ "$session_start_count" -eq 18 ] || fail "expected 18 SessionStart commands, ran $session_start_count"
 printf 'codex-smoke: session-start=%d\n' "$session_start_count"
 
 removed_count=0
