@@ -129,7 +129,20 @@ $snap as $snap | $prev as $prev
                 skippedOutdated: ($open and $t.isOutdated and $class == "ci_reviewer"),
                 replied: ($repliedKeys | index("thread:" + $t.id + "@" + (($lastNonAuthor.databaseId // 0) | tostring)) != null)} }
   )) as $threads
-| ($threads | map(select(.flags.actionable)) | map(del(.flags, .isResolved))) as $actionable
+# ---- an active fixer (dispatch-fix.sh; running, or blocked at a prompt) owns
+# its items until it settles: they move from actionable[] to fixing[] — full
+# objects, so the Step 4 reply ids are there when the fixer is done — and stay
+# in the audit count.
+| (if $prev == null then null else ($prev.fixer // null) end) as $fixer
+| ($fixer != null and (($fixer.status == "running") or ($fixer.status == "blocked"))) as $fixerActive
+# Ids compare as strings: jq `tostring` leaves a string id ("PRRT_…") as it
+# is and turns a numeric one (a conversation or review comment id) into its
+# digits, so both kinds match whichever form the items file used.
+| (if $fixerActive then ($fixer.items // [] | map(tostring)) else [] end) as $fixingIds
+| def owned: (.id | tostring) as $i | $fixingIds | index([$i]) != null;
+  ($threads | map(select(.flags.actionable)) | map(del(.flags, .isResolved))) as $allActionable
+| ($allActionable | map(select(owned | not))) as $actionable
+| ($allActionable | map(select(owned))) as $fixing
 | ($threads | map(select(.flags.audited))) as $audited
 | ($audited | map(select(.flags.actionable | not)) | map({id, path, line, repliedAt: .lastCommentAt, lastCommentAuthor})) as $staleUnresolved
 | ($threads | map(select(.flags.skippedOutdated)) | map(.id)) as $skippedOutdated
@@ -139,10 +152,14 @@ $snap as $snap | $prev as $prev
 | (($snap.comments // []) | map(select(.author != $author and .authorType != "Bot"))
     | map(. as $c | select(($snap.comments | map(select(.author == $author and .createdAt > $c.createdAt)) | length) == 0))
     | map(. as $c | select(($repliedKeys | index("conversation:" + ($c.id | tostring))) == null))
-    | map({id, author, body, createdAt, url})) as $convActionable
+    | map({id, author, body, createdAt, url})) as $allConvActionable
+| ($allConvActionable | map(select(owned | not))) as $convActionable
+| ($allConvActionable | map(select(owned))) as $convFixing
 | (($snap.reviews // []) | map(select(.author != $author and .authorType != "Bot" and .state != "APPROVED" and ((.body // "") | length) > 0))
     | map(. as $r | select(($repliedKeys | index("review:" + ($r.id | tostring))) == null))
-    | map({id, author, state, body, submittedAt, url})) as $reviewActionable
+    | map({id, author, state, body, submittedAt, url})) as $allReviewActionable
+| ($allReviewActionable | map(select(owned | not))) as $reviewActionable
+| ($allReviewActionable | map(select(owned))) as $reviewFixing
 # ---- recurrence (Step 4 gate) — only a NEW verdict run can recur
 | (if $prev == null then [] else ($prev.pr.lastRoundFindingKeys // []) end) as $lastRoundKeys
 | (if $prev == null then false else ($prev.pr.lastRoundHadRejection // false) end) as $lastRoundHadRejection
@@ -154,7 +171,10 @@ $snap as $snap | $prev as $prev
 | ({ciStatus: $ciStatus, reviewDecision: $pr.reviewDecision, mergeable: $pr.mergeable, unresolvedThreads: $unresolved,
     headSha: $head, botVerdict: $botVerdict, botState: $botState, botFindingKeys: $keys}) as $cmp
 | ($prev == null or ($prev.pr | {ciStatus, reviewDecision, mergeable, unresolvedThreads, headSha, botVerdict, botState, botFindingKeys}) != $cmp) as $changed
-| (if $changed then 0 else (($prev.idleStreak // 0) + 1) end) as $idleStreak
+# A running fixer changes nothing GitHub shows, yet each tick must still run
+# `dispatch-fix.sh wait`: hold backoff at its base while one runs. A blocked
+# fixer waits for a human, so it backs off like any unchanged tick.
+| (if $changed or ($fixerActive and $fixer.status == "running") then 0 else (($prev.idleStreak // 0) + 1) end) as $idleStreak
 | (if $idleStreak >= 9 then 15 elif $idleStreak >= 6 then 12 elif $idleStreak >= 3 then 6 elif $ciStatus == "fail" then 1 else 3 end) as $intervalMinutes
 | (if $idleStreak >= 6 then 60 elif $idleStreak >= 3 then 30 else 15 end) as $waitSeconds
 # ---- decision (Step 6)
@@ -180,10 +200,11 @@ $snap as $snap | $prev as $prev
       elif $degraded then {code:$degradedReason, detail:"bot verdict cannot be read"} else empty end),
      (if $degraded then {code:"manual_verify", detail:"verify review findings manually: \($botComment.url // "no bot comment")"} else empty end),
      (if $pr.mergeable == "UNKNOWN" and $pr.state == "OPEN" then {code:"mergeable_unknown", detail:"GitHub has not computed mergeability yet"} else empty end),
+     (if $fixerActive then {code:"fixer_running", detail:"fixer \($fixer.status): group \($fixer.current // 1) of \(($fixer.groups // []) | length); \($fixingIds | length) item(s) in flight"} else empty end),
      (if $changed then empty else {code:"unchanged", detail:"nothing changed since the last tick"} end)
    ]) as $signals
 | (($escalations | length) > 0) as $escalate
-| ($pr.state == "OPEN" and $ciStatus == "pass" and $unresolved == 0 and $pr.mergeable != "UNKNOWN"
+| ($pr.state == "OPEN" and $ciStatus == "pass" and $unresolved == 0 and $pr.mergeable != "UNKNOWN" and ($fixerActive | not)
    and ( ($botState == "complete" and $botVerdict == "approved" and $findingsCount == 0) or $degraded )) as $successReady
 | (if $escalate then "escalate" elif $successReady then "success" else "keep_going" end) as $decision
 | ($escalations + $signals) as $reasons
@@ -197,6 +218,9 @@ $snap as $snap | $prev as $prev
     idleStreak: $idleStreak, currentInterval: $intervalMinutes, waitSeconds: $waitSeconds,
     status: (if $prev == null then "active" else ($prev.status // "active") end),
     worktree: (if $prev == null then null else ($prev.worktree // null) end),
+    fixer: $fixer,
+    herdrWorktree: (if $prev == null then null else ($prev.herdrWorktree // null) end),
+    hostCooldowns: (if $prev == null then {} else ($prev.hostCooldowns // {}) end),
     pr: {
       key: $key, ciStatus: $ciStatus, reviewDecision: $pr.reviewDecision, mergeable: $pr.mergeable,
       unresolvedThreads: $unresolved, headSha: $head, fixAttempts: $fixAttempts,
@@ -217,10 +241,11 @@ $snap as $snap | $prev as $prev
               mustFix: ($v.must_fix // []), commentUrl: ($botComment.url // null), commentId: ($botComment.id // null),
               degraded: $degraded, degradedReason: $degradedReason, sameRunAsLastTick: $sameRun},
     threads: {total: ($snap.threads | length), unresolved: $unresolved,
-              actionable: $actionable, staleUnresolved: $staleUnresolved,
+              actionable: $actionable, fixing: $fixing, staleUnresolved: $staleUnresolved,
               skippedOutdated: $skippedOutdated, flaggedInjection: $flaggedInjection},
-    conversation: {actionable: $convActionable},
-    reviews: {actionable: $reviewActionable},
+    conversation: {actionable: $convActionable, fixing: $convFixing},
+    reviews: {actionable: $reviewActionable, fixing: $reviewFixing},
+    fixer: $fixer,
     recurrence: {streak: $streak, lastRoundHadRejection: $lastRoundHadRejection, recurringKeys: $recurringKeys, fixAttempts: $fixAttempts},
     backoff: {idleStreak: $idleStreak, intervalMinutes: $intervalMinutes, waitSeconds: $waitSeconds},
     errors: [], snapshotPath: $snapshotPath, statePath: $statePath

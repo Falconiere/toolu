@@ -47,6 +47,19 @@ teardown() {
   [ "$(jq -r .recurrence.fixAttempts <<<"$out")" = 5 ]
 }
 
+@test "AC-6: record round clears a finished fixer record and keeps a running or blocked one" {
+  for st in done failed; do
+    jq --arg st "$st" '.fixer = {round: 1, status: $st, items: ["PRRT_x"], groups: []}' "$STATE" >"$TMP/s.json" && mv "$TMP/s.json" "$STATE"
+    bash "$SCRIPTS/record.sh" round --state-file "$STATE" --had-rejection false --fix-pushed >/dev/null
+    [ "$(jq -r .fixer "$STATE")" = null ]
+  done
+  for st in running blocked; do
+    jq --arg st "$st" '.fixer = {round: 2, status: $st, items: ["PRRT_y"], groups: []}' "$STATE" >"$TMP/s.json" && mv "$TMP/s.json" "$STATE"
+    bash "$SCRIPTS/record.sh" round --state-file "$STATE" --had-rejection false >/dev/null
+    [ "$(jq -r .fixer.status "$STATE")" = "$st" ]
+  done
+}
+
 @test "record flag-injection: the reducer exempts the thread on the next tick" {
   id=$(jq -r '.threads[0].id' "$SNAP/toolu-165.json")
   bash "$SCRIPTS/record.sh" flag-injection --state-file "$STATE" --thread "$id" >/dev/null

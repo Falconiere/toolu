@@ -13,6 +13,9 @@
 #   usage 2 · gh_unavailable/jq_required/api_error/invalid_json/head_moved/
 #   state_malformed/slot_mismatch 3 · duplicate_reply 4 · resolve_unconfirmed 5
 #   locked 75 (EX_TEMPFAIL)
+#   Fixer dispatch (route-fix.sh, dispatch-fix.sh): config_invalid/plan_invalid/
+#   fixer_running/herdr_unavailable/herdr_error/git_error/worktree_dirty/
+#   stale_branch 3
 pb_exit_code() {
   case "$1" in
     usage) echo 2 ;;
@@ -20,6 +23,7 @@ pb_exit_code() {
     resolve_unconfirmed) echo 5 ;;
     locked) echo 75 ;;
     gh_unavailable|jq_required|api_error|invalid_json|head_moved|state_malformed|slot_mismatch) echo 3 ;;
+    config_invalid|plan_invalid|fixer_running|herdr_unavailable|herdr_error|git_error|worktree_dirty|stale_branch) echo 3 ;;
     *) echo 3 ;;
   esac
 }
@@ -59,6 +63,21 @@ pb_error() {
 pb_fail() {
   pb_error "$@"
   exit "$(pb_exit_code "$1")"
+}
+
+# pb_capture VAR CMD [ARGS...] -> run CMD and store its stdout in VAR. When CMD
+# fails (typically pb_fail inside the subshell), re-emit its stdout — the
+# structured error — and exit with its code, so an error raised under $(...)
+# is never swallowed into a variable.
+pb_capture() {
+  local __pb_var="$1" __pb_out __pb_rc=0
+  shift
+  __pb_out=$("$@") || __pb_rc=$?
+  if [ "$__pb_rc" -ne 0 ]; then
+    printf '%s\n' "$__pb_out"
+    exit "$__pb_rc"
+  fi
+  printf -v "$__pb_var" '%s' "$__pb_out"
 }
 
 # pb_now -> ISO-8601 UTC timestamp.

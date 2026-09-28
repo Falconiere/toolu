@@ -2,8 +2,9 @@
 
 Babysit a PR for the current branch until every review thread, the review-bot
 verdict, and CI are clear. Claude uses its cron controller; Codex uses an
-explicit durable goal with bounded continuation cycles and a native isolated
-git worktree.
+explicit durable goal with bounded continuation cycles. Fixes run as Claude
+Code, Codex or Cursor Agent sessions in a herdr worktree, each at the model and
+effort Jev picks for its complexity.
 
 ## Install
 
@@ -16,7 +17,10 @@ codex plugin add toolu@toolu
 codex plugin add pr-babysit@toolu
 ```
 
-Requires the `toolu` plugin.
+Requires the `toolu` plugin. Multi-host fixes need [herdr](https://herdr.dev)
+and the host CLIs you list (`claude`, `codex`, `cursor-agent`); without herdr,
+fixes run in-session as before. Jev routing needs `TYPESAFE_API_KEY` and the
+`jev` plugin; without it a task/severity heuristic picks the tier.
 
 ## Authorization and delivery handoff
 
@@ -34,5 +38,6 @@ repository default branch, or the optional `pr-babysit` plugin is unavailable.
 - **`stop` / `cancel`** — Claude cancels only the matching cron slot. Codex safely removes only the matching clean worktree, marks its native repo state cancelled, and leaves goal cancellation to the user/system goal control.
 - **Codex durability** — one goal per repository/PR, state below `<repo>/.codex/tmp/pr-babysit/`, wait cycles bounded to 60 seconds, and no false completion while CI is merely pending.
 - **Tick helper (bash, both hosts)** — `scripts/babysit-tick.sh` runs one tick: lock the slot, collect the PR (paginated threads, comments, reviews, CI rollup, bot verdict), reduce it against the slot state, persist atomically, and print a result with a `decision` (`keep_going` / `success` / `escalate`), reasons, and the precomputed actionable / stale-unresolved thread lists. Split into `collect-pr.sh` (network) and `reduce-state.sh` (pure) so every rule is tested against captured real PRs. The agent trusts the result and keeps only the judgment: triage, fixes, reply wording.
+- **Multi-host fixers** — after triage, `route-fix.sh` scores each Fix item with Jev (the same complexity tiers as epic-orchestrator), groups items by tier and routes each group to a host, model and effort from the `prBabysit` block of `toolu.config.json` ([docs/config.md](../../docs/config.md)): pool (`hosts`), per-tier preference (`prefer`), per-host table (`routing`), and `unattended`. `dispatch-fix.sh` runs the groups one at a time as herdr agents in the slot's herdr worktree (`pr-babysit/<slot>`); a fixer only edits, tests and commits, and the controller verifies, pushes, replies and resolves. A host that hits a usage limit cools down for an hour; re-routing the failed group sends it to another host.
 - **Write side** — `reply-thread.sh` (idempotent per reviewer comment), `resolve-thread.sh` (confirmed from the mutation response, retried), `record.sh` (round outcome, injection skip, terminal status). Contract: `skills/babysit/references/helper.md`.
 - **`parse-verdict.sh`** — extracts the structured verdict from the CI review-bot comment.

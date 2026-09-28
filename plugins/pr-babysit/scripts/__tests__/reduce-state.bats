@@ -72,6 +72,8 @@ reasons() { jq -r '[.reasons[].code] | join(",")' <<<"$1"; }
   [ "$(jq -r .waitSeconds "$s")" = 15 ]
   [ "$(jq -r .status "$s")" = active ]
   [ "$(jq -r .worktree "$s")" = null ]
+  [ "$(jq -c '[.fixer, .herdrWorktree, .hostCooldowns]' "$s")" = '[null,null,{}]' ]
+  [ "$(jq -c '[.fixer, .threads.fixing]' <<<"$out")" = '[null,[]]' ]
   for k in key ciStatus reviewDecision mergeable unresolvedThreads headSha fixAttempts botVerdict botState botCommentId botCommentUpdatedAt botFindingKeys lastRoundFindingKeys lastRoundHadRejection recurrenceStreak unresolvedAfterClearance lastError; do
     jq -e --arg k "$k" '.pr | has($k)' "$s" >/dev/null
   done
@@ -86,8 +88,8 @@ reasons() { jq -r '[.reasons[].code] | join(",")' <<<"$1"; }
 
 @test "result carries the documented top-level keys and only closed reason codes" {
   out=$(reduce "$SNAP/comemory-216.json" "$TMP/absent.json")
-  [ "$(jq -r 'keys | join(",")' <<<"$out")" = "backoff,changed,ci,conversation,decision,errors,pr,reasons,recurrence,reviews,slot,snapshotPath,statePath,threads,verdict,version" ]
-  closed='["ci_pending","ci_failed","ci_pass","threads_unresolved","threads_stale_unresolved","threads_clear","review_absent","review_in_progress","review_changes","review_approved","review_unknown_format","provider_error","provider_error_repeated","manual_verify","pr_closed","pr_merged","merge_conflict","mergeable_unknown","fix_attempts_exhausted","recurrence_after_rejection","recurrence_streak","unchanged"]'
+  [ "$(jq -r 'keys | join(",")' <<<"$out")" = "backoff,changed,ci,conversation,decision,errors,fixer,pr,reasons,recurrence,reviews,slot,snapshotPath,statePath,threads,verdict,version" ]
+  closed='["ci_pending","ci_failed","ci_pass","threads_unresolved","threads_stale_unresolved","threads_clear","review_absent","review_in_progress","review_changes","review_approved","review_unknown_format","provider_error","provider_error_repeated","manual_verify","pr_closed","pr_merged","merge_conflict","mergeable_unknown","fix_attempts_exhausted","recurrence_after_rejection","recurrence_streak","unchanged","fixer_running"]'
   [ "$(jq --argjson c "$closed" '[.reasons[].code] | all(. as $r | $c | index($r) != null)' <<<"$out")" = true ]
   [ "$(jq '.reasons | all(has("code") and has("detail"))' <<<"$out")" = true ]
 }
@@ -473,4 +475,101 @@ author_last_thread() { jq -r --arg a "$(jq -r .pr.author "$TMP/open.json")" '.th
   [ "$(jq -r .statePath "$TMP/r.json")" = /tmp/p.json ]
   [ "$(jq -r .snapshotPath "$TMP/r.json")" = /tmp/s.json ]
   [ -z "$(ls -A "$TMP" | grep -E '\.tmp\.')" ]
+}
+
+# ---------------------------------------------------------------------------
+# AC-6 — a running fixer (multi-host dispatch) is carried and never re-dispatched
+# ---------------------------------------------------------------------------
+
+# with_fixer STATE STATUS ITEMS_JSON -> STATE plus a fixer record, a herdr
+# worktree and a host cooldown, the shapes dispatch-fix.sh writes.
+with_fixer() {
+  jq --arg st "$2" --argjson items "$3" '
+    .fixer = {round: 1, status: $st, startedAt: "2026-09-19T12:00:30Z", current: 1, items: $items,
+              groups: [{seq: 1, tier: "standard", host: "codex", model: "gpt-6-sol", effort: "medium", items: $items,
+                        agent: "pb-3fa2c1-r1g1", status: $st, reason: null}]}
+    | .herdrWorktree = {path: "/tmp/pr-babysit-wt", workspaceId: "w9", paneId: "w9:p1",
+                        branch: "pr-babysit/falconiere-toolu-165", base: "origin/feat/python-quality"}
+    | .hostCooldowns = {cursor: {until: "2026-09-19T13:00:00Z", reason: "host_limited"}}' "$1"
+}
+
+@test "AC-6: a running fixer moves its thread, reply ids and all, to threads.fixing[] and carries every fixer field" {
+  id=$(ci_thread); [ -n "$id" ]
+  jq --arg id "$id" '(.threads[] | select(.id == $id) | .isResolved) = false' "$TMP/open.json" >"$TMP/s.json"
+  plain=$(reduce "$TMP/s.json" "$TMP/absent.json")
+  with_fixer "$TMP/next.json" running "[\"$id\"]" >"$TMP/prev.json"
+  out=$(reduce "$TMP/s.json" "$TMP/prev.json" "$LATER")
+  # The same object the actionable list would have held: Step 4 replies need its ids.
+  [ "$(jq -c '.threads.fixing' <<<"$out")" = "$(jq -c '.threads.actionable' <<<"$plain")" ]
+  [ "$(jq -r '.threads.fixing[0] | [.id, (.rootCommentId | type), (.inReplyTo | type)] | @csv' <<<"$out")" = "\"$id\",\"number\",\"number\"" ]
+  [ "$(jq '.threads.actionable | length' <<<"$out")" = 0 ]
+  [ "$(jq -r .threads.unresolved <<<"$out")" = 1 ]
+  [ "$(jq -r '.reasons[] | select(.code == "fixer_running") | .detail' <<<"$out")" = "fixer running: group 1 of 1; 1 item(s) in flight" ]
+  [ "$(jq -r .decision <<<"$out")" = keep_going ]
+  for f in fixer herdrWorktree hostCooldowns; do
+    [ "$(jq -S -c ".$f" "$TMP/next.json")" = "$(jq -S -c ".$f" "$TMP/prev.json")" ]
+  done
+  [ "$(jq -S -c .fixer <<<"$out")" = "$(jq -S -c .fixer "$TMP/prev.json")" ]
+}
+
+@test "AC-6: a blocked fixer still owns its items (its agent is alive at a prompt)" {
+  id=$(ci_thread)
+  jq --arg id "$id" '(.threads[] | select(.id == $id) | .isResolved) = false' "$TMP/open.json" >"$TMP/s.json"
+  reduce "$TMP/s.json" "$TMP/absent.json" >/dev/null
+  with_fixer "$TMP/next.json" blocked "[\"$id\"]" >"$TMP/prev.json"
+  out=$(reduce "$TMP/s.json" "$TMP/prev.json" "$LATER")
+  [ "$(jq -r '.threads.fixing[0].id' <<<"$out")" = "$id" ]
+  [ "$(jq -r '.reasons[] | select(.code == "fixer_running") | .detail' <<<"$out")" = "fixer blocked: group 1 of 1; 1 item(s) in flight" ]
+}
+
+@test "AC-6: while a fixer runs, unchanged ticks keep the base backoff so dispatch-fix.sh wait runs every tick" {
+  id=$(ci_thread)
+  jq --arg id "$id" '(.threads[] | select(.id == $id) | .isResolved) = false' "$TMP/open.json" >"$TMP/s.json"
+  reduce "$TMP/s.json" "$TMP/absent.json" >/dev/null
+  with_fixer "$TMP/next.json" running "[\"$id\"]" >"$TMP/prev.json"
+  for t in 2026-09-19T12:03:00Z 2026-09-19T12:06:00Z 2026-09-19T12:09:00Z 2026-09-19T12:12:00Z; do
+    out=$(reduce "$TMP/s.json" "$TMP/prev.json" "$t")
+    cp "$TMP/next.json" "$TMP/prev.json"
+    [ "$(jq -c '[.changed, .backoff.idleStreak, .backoff.intervalMinutes, .backoff.waitSeconds]' <<<"$out")" = '[false,0,3,15]' ]
+  done
+  # The same unchanged ticks without a fixer, or with one blocked waiting for a
+  # human, widen the interval.
+  for st in none blocked; do
+    if [ "$st" = none ]; then jq '.fixer = null' "$TMP/prev.json" >"$TMP/other.json"
+    else jq '.fixer.status = "blocked"' "$TMP/prev.json" >"$TMP/other.json"; fi
+    for t in 2026-09-19T12:15:00Z 2026-09-19T12:18:00Z 2026-09-19T12:21:00Z; do
+      out=$(reduce "$TMP/s.json" "$TMP/other.json" "$t"); cp "$TMP/next.json" "$TMP/other.json"
+    done
+    [ "$(jq -c '[.backoff.idleStreak, .backoff.intervalMinutes]' <<<"$out")" = '[3,6]' ] || { echo "no backoff with fixer=$st" >&2; return 1; }
+  done
+}
+
+@test "AC-6: a conversation comment in the fixer's items moves to conversation.fixing[]" {
+  author=$(jq -r .pr.author "$TMP/open.json")
+  jq --arg a "$author" '.comments = [{id: 9001, author: "a-reviewer", authorType: "User", body: "Please rename the helper.", createdAt: "2026-09-19T11:00:00Z", url: "https://github.com/Falconiere/toolu/pull/165#issuecomment-9001"}]' "$TMP/open.json" >"$TMP/s.json"
+  reduce "$TMP/s.json" "$TMP/absent.json" >/dev/null
+  with_fixer "$TMP/next.json" running '["9001"]' >"$TMP/prev.json"
+  out=$(reduce "$TMP/s.json" "$TMP/prev.json" "$LATER")
+  [ "$(jq -c '[(.conversation.actionable | length), (.conversation.fixing | map(.id))]' <<<"$out")" = '[0,[9001]]' ]
+  [ "$(jq -r .decision <<<"$out")" = keep_going ]
+}
+
+@test "AC-6 boundary: a done fixer no longer hides its thread and emits no fixer_running" {
+  id=$(ci_thread)
+  jq --arg id "$id" '(.threads[] | select(.id == $id) | .isResolved) = false' "$TMP/open.json" >"$TMP/s.json"
+  reduce "$TMP/s.json" "$TMP/absent.json" >/dev/null
+  with_fixer "$TMP/next.json" done "[\"$id\"]" >"$TMP/prev.json"
+  out=$(reduce "$TMP/s.json" "$TMP/prev.json" "$LATER")
+  [ "$(jq -c '[.threads.fixing, .conversation.fixing, .reviews.fixing]' <<<"$out")" = '[[],[],[]]' ]
+  [ "$(jq -r '.threads.actionable[0].id' <<<"$out")" = "$id" ]
+  [ "$(jq '[.reasons[] | select(.code == "fixer_running")] | length' <<<"$out")" = 0 ]
+}
+
+@test "AC-6 boundary: a running fixer blocks success even when CI, threads and the verdict are clear" {
+  reduce "$TMP/open.json" "$TMP/absent.json" >/dev/null
+  [ "$(jq -r .decision <<<"$(reduce "$TMP/open.json" "$TMP/absent.json")")" = success ]
+  with_fixer "$TMP/next.json" running '["ci:shellcheck"]' >"$TMP/prev.json"
+  out=$(reduce "$TMP/open.json" "$TMP/prev.json" "$LATER")
+  [ "$(jq -r .decision <<<"$out")" = keep_going ]
+  [ "$(jq -r '.reasons[] | select(.code == "fixer_running") | .detail' <<<"$out")" = "fixer running: group 1 of 1; 1 item(s) in flight" ]
 }

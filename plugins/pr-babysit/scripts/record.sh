@@ -11,6 +11,9 @@
 #                   become lastRoundFindingKeys, lastRoundHadRejection is set,
 #                   and --fix-pushed bumps fixAttempts (cap 5). Recurrence and
 #                   fix budgets therefore advance on real rounds, never polls.
+#                   A settled (done or failed) fixer record is cleared: the
+#                   round it belonged to is over. A running or blocked one has
+#                   a live agent and is kept.
 #   status          the workflow's terminal transition; the reducer only ever
 #                   recommends through `decision`.
 # Every subcommand takes the slot lock, validates the state, writes atomically
@@ -60,7 +63,8 @@ case "$sub" in
       '.pr.lastRoundFindingKeys = (.pr.botFindingKeys // [])
        | .pr.lastRoundHadRejection = $rej
        | .pr.fixAttempts = (if $fix then ([(.pr.fixAttempts // 0) + 1, 5] | min) else (.pr.fixAttempts // 0) end)
-       | .lastRound = {at:$now, hadRejection:$rej, fixPushed:$fix, headSha:(.pr.headSha // null)}' \
+       | .lastRound = {at:$now, hadRejection:$rej, fixPushed:$fix, headSha:(.pr.headSha // null)}
+       | .fixer = (if (.fixer // null) != null and (.fixer.status == "running" or .fixer.status == "blocked") then .fixer else null end)' \
       --argjson rej "$had_rejection" --argjson fix "$([ "$fix_pushed" -eq 1 ] && echo true || echo false)" --arg now "$now"
     jq -c '{ok:true, recorded:"round", lastRoundFindingKeys:.pr.lastRoundFindingKeys, lastRoundHadRejection:.pr.lastRoundHadRejection, fixAttempts:.pr.fixAttempts}' "$state_file" ;;
   status)
