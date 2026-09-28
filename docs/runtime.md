@@ -30,6 +30,30 @@ A hook launcher finds Bun in this order and uses the first that exists:
 | Enforcing (pre-action deny, quality gate) | Fail closed: exit 2 with a message naming the prerequisite. |
 | Context-only (session start, prompt hints) | Advisory: a one-line notice, no block. |
 
+## Launcher
+
+`hooks.json` never calls `bun` directly. Every TypeScript hook uses the command that `@toolu/core/launcher` generates (`packages/toolu-core/src/launcher/launcher.ts`), and `bun run check:hooks-json` (`tooling/src/check-hooks-json.ts`, part of `bun run test`) fails when a launcher entry differs from it. Print the entry to paste instead of writing it by hand:
+
+```bash
+bun run tooling/src/check-hooks-json.ts --print <plugin> <Event> <entry>   # entry = hooks/dist/<entry>.js
+```
+
+The printed hook has two strings:
+
+- **`command`** is a POSIX `sh -c` one-liner. It takes the first executable of `$TOOLU_BUN`, `command -v bun`, `$HOME/.bun/bin/bun` and `exec`s `"${CLAUDE_PLUGIN_ROOT}/hooks/dist/<entry>.js"`, so stdin, stdout and the bundle's exit code (a deny's `2`) pass straight through. `${CLAUDE_PLUGIN_ROOT}` is its only braced variable: Claude Code substitutes it as text, while Codex and Cursor export it.
+- **`commandWindows`** is Codex's `cmd.exe /C` override. It resolves `%TOOLU_BUN%`, `where bun`, `%USERPROFILE%\.bun\bin\bun.exe` in the same order and fails the same way. It is generated and gated but not exercised on Windows.
+
+Without Bun the launcher itself answers, with no bundle involved:
+
+| Event | stdout | stderr | exit |
+|-------|--------|--------|------|
+| `PreToolUse`, `PermissionRequest` (enforcing) | — | `blocked: <plugin> plugin: Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun. Install Bun 1.4.x …` | `2`: the host blocks the action |
+| every other event (context-only) | `{"systemMessage":"<plugin> plugin: Bun runtime not found, …"}` | — | `0`: nothing blocks |
+
+`systemMessage` is shown to the user and costs no model context. The payloads are checked against Codex's own output schemas (`tooling/fixtures/codex-hook-schemas/`).
+
+**Diagnostic.** On session start and resume, toolu's `hooks/dist/session-start.js` reports which runtime the hooks use: `{"systemMessage":"toolu runtime: bun <version> at <path>"}`.
+
 ## Bundles
 
 A TypeScript hook ships as a committed single-file ESM bundle. It is never installed or compiled on the user's machine. Each top-level `plugins/<name>/hooks/src/<entry>.ts` is built by `bun run build:plugins` into `plugins/<name>/hooks/dist/<entry>.js`, which inlines `@toolu/core` and its dependencies and runs with `bun` and no `node_modules`. The build pins its working directory to the repository root, so the output is byte-identical on every machine running the same Bun. `bun run check:plugin-bundles` rebuilds into a temp directory and fails CI when a committed bundle drifts from its source, is missing, or has no source. Published packages carry `hooks/dist`, never `hooks/src`.
