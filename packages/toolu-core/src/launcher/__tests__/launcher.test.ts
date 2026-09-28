@@ -206,7 +206,7 @@ test("the command carries no ${...} other than the literal plugin-root token", (
 });
 
 test("the missing-runtime message is safe inside sh single quotes, cmd echo and JSON", () => {
-  expect(missingRuntimeMessage("demo")).toMatch(/^toolu demo: Bun runtime not found/);
+  expect(missingRuntimeMessage("demo")).toMatch(/^demo plugin: Bun runtime not found/);
   expect(missingRuntimeMessage("demo")).not.toMatch(/[%&|<>^()'"\\]/);
 });
 

@@ -45,7 +45,7 @@ export function isEnforcingEvent(event: string): boolean {
 /** One line, free of characters that sh single quotes, cmd `echo` or JSON would reinterpret. */
 export function missingRuntimeMessage(plugin: string): string {
   return (
-    `toolu ${plugin}: Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun. ` +
+    `${plugin} plugin: Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun. ` +
     "Install Bun 1.4.x from https://bun.sh and restart the session. See docs/runtime.md."
   );
 }
