@@ -400,7 +400,7 @@ git_topology() {
   [ "$(jq -c '.errors[0] | [.code, .changes]' <<<"$output")" = '["worktree_dirty",[" M f.txt"]]' ]
   git -C "$wt" checkout --quiet -- f.txt
   # Rewrite the PR branch on origin: the slot branch can no longer fast-forward.
-  git -C "$ROOT" commit --quiet --amend -m rewritten
+  git -C "$ROOT" -c user.email=t@example.invalid -c user.name=t commit --quiet --amend -m rewritten
   git -C "$ROOT" push --quiet --force origin "$PR_BRANCH"
   printf 'z\n' >"$wt/g.txt"; git -C "$wt" add g.txt; git -C "$wt" -c user.email=t@example.invalid -c user.name=t commit --quiet -m fix
   run --separate-stderr with_dispatch "pb_d_worktree '$ROOT' '$PR_BRANCH' '$SLOT' 165"

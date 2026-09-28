@@ -7,6 +7,10 @@
 # and normalize failures, so callers branch on herdr's own error codes
 # (`timeout`, `agent_not_found`, …) instead of parsing text.
 
+# How long pr-babysit waits for a fixer agent to settle after a trust prompt
+# or an exit request, in seconds (polled once a second).
+PB_HERDR_WAIT_SECONDS=30
+
 # pb_herdr_try ARGS... -> 0 and the `.result` object on stdout; or 1 and a
 # normalized {"error":{"code","message"}} on stdout (non-JSON output becomes
 # code `invalid_output`).
@@ -71,17 +75,18 @@ pb_herdr_is_claude_trust_prompt() {
 # the agent become idle. Any other blocked screen returns 1 untouched: the
 # same rule as epic-orchestrator's recovery guide.
 pb_herdr_accept_claude_trust() {
-  local name="$1" worktree="$2" pane i st
+  local name="$1" worktree="$2" pane waited=0 st
   pane=$(herdr agent read "$name" --source recent-unwrapped --lines 40 2>/dev/null) || return 1
   pb_herdr_is_claude_trust_prompt "$pane" "$worktree" || return 1
   pb_herdr_try agent send-keys "$name" down >/dev/null || return 1
   pb_herdr_try agent send-keys "$name" enter >/dev/null || return 1
-  for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do
+  while [ "$waited" -lt "$PB_HERDR_WAIT_SECONDS" ]; do
     st=$(pb_herdr_try agent get "$name" | jq -r '.agent.agent_status // ""') || st=""
     [ "$st" = idle ] && return 0
     sleep 1
+    waited=$((waited + 1))
   done
-  echo "pr-babysit: $name was still not idle ${i}s after the trust prompt" >&2
+  echo "pr-babysit: $name was still not idle ${PB_HERDR_WAIT_SECONDS}s after the trust prompt" >&2
   return 1
 }
 
@@ -109,14 +114,15 @@ pb_herdr_agent_live() {
 # herdr no longer lists it. Local work stays in the worktree. Returns 1 when
 # it is still alive after the wait.
 pb_herdr_agent_stop() {
-  local name="$1" i
+  local name="$1" waited=0
   pb_herdr_agent_live "$name" || return 0
   pb_herdr_try agent send-keys "$name" esc >/dev/null || true
   pb_herdr_try agent prompt "$name" /exit >/dev/null || true
-  for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do
+  while [ "$waited" -lt "$PB_HERDR_WAIT_SECONDS" ]; do
     pb_herdr_agent_live "$name" || return 0
     sleep 1
+    waited=$((waited + 1))
   done
-  echo "pr-babysit: fixer agent $name did not exit after ${i}s" >&2
+  echo "pr-babysit: fixer agent $name did not exit after ${PB_HERDR_WAIT_SECONDS}s" >&2
   return 1
 }

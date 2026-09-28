@@ -191,12 +191,17 @@ pb_d_launch() {
   pb_d_record herdr agent start "$agent" --kind "$host" --pane "$pane" --timeout 90000 -- "${argv[@]}"
   pb_d_record herdr agent prompt "$agent" "You are a pr-babysit fixer. Read $brief and follow it exactly." \
     --wait --until working --until blocked --timeout 60000
+  # A Claude start that returns agent_not_ready is retried past its trust
+  # prompt only when the pane shows exactly the standard prompt for this
+  # worktree: pb_herdr_accept_claude_trust reads the screen first and returns
+  # at once, without sending a key or waiting, on any other screen. A crashed
+  # start or any other dialog therefore fails here with herdr's own message.
   if [ "$PB_D_DRY" -eq 0 ] && ! command -v "$(pb_host_cli "$host")" >/dev/null 2>&1; then
     err="$(pb_host_cli "$host") is not on PATH"
   elif ! err=$(pb_d_herdr agent start "$agent" --kind "$host" --pane "$pane" --timeout 90000 -- "${argv[@]}") \
        && ! { [ "$host" = claude ] && [ "$(jq -r '.error.code' <<<"$err")" = agent_not_ready ] \
               && pb_herdr_accept_claude_trust "$agent" "$(jq -r '.herdrWorktree.path' "$PB_D_STATE")"; }; then
-    err="herdr agent start: $(jq -r '"\(.error.code): \(.error.message)"' <<<"$err")"
+    err="herdr agent start: $(jq -r '"\(.error.code): \(.error.message)" + (if .error.code == "agent_not_ready" then " (the blocked screen is not the standard trust prompt for this worktree; left unanswered)" else "" end)' <<<"$err")"
   elif ! err=$(pb_d_herdr agent prompt "$agent" "You are a pr-babysit fixer. Read $brief and follow it exactly." \
                  --wait --until working --until blocked --timeout 60000); then
     err="herdr agent prompt: $(jq -r '"\(.error.code): \(.error.message)"' <<<"$err")"
