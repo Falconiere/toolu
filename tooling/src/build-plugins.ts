@@ -117,7 +117,10 @@ export function buildPlugins(root: string): BundleEntry[] {
         join(root, distPath(entry.plugin, entry.name)),
       );
     }
+    // Only a plugin with no entries left can end up with an empty dist/.
+    const withEntries = new Set(entries.map((entry) => entry.plugin));
     for (const plugin of childNames(join(root, "plugins"), true)) {
+      if (withEntries.has(plugin)) continue;
       const dist = join(root, "plugins", plugin, "hooks/dist");
       if (existsSync(dist) && readdirSync(dist).length === 0) rmSync(dist, { recursive: true });
     }
