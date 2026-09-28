@@ -32,7 +32,8 @@
     "./bridge": "./src/bridge/bridge.ts",
     "./policy": "./src/policy/policy.ts",
     "./config": "./src/config/config.ts",
-    "./runner": "./src/runner/runner.ts"
+    "./runner": "./src/runner/runner.ts",
+    "./launcher": "./src/launcher/launcher.ts"
   },
   "dependencies": {
     "zod": "4.1.5"
