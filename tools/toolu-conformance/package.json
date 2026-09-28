@@ -8,7 +8,8 @@
   },
   "exports": {
     "./run": "./src/cli/run.ts",
-    "./run-stub": "./src/cli/run-stub.ts"
+    "./run-stub": "./src/cli/run-stub.ts",
+    "./harness/*": "./src/harness/*.ts"
   },
   "scripts": {
     "start": "bun run src/cli/run.ts"

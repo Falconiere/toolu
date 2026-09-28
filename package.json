@@ -44,7 +44,7 @@
     "@toolu/conformance": "workspace:*"
   },
   "devDependencies": {
-    "@types/bun": "1.2.20",
+    "@types/bun": "1.4.2",
     "jscpd": "4.0.5",
     "knip": "5.63.1",
     "oxfmt": "^0.70.0",
