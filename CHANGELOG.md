@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.6.0](https://github.com/Falconiere/toolu/compare/v7.5.0...v7.6.0) (2026-09-28)
+
+
+### Features
+
+* **pr-babysit:** Jev-routed claude/codex/cursor fixers in herdr worktrees ([#292](https://github.com/Falconiere/toolu/issues/292)) ([1176519](https://github.com/Falconiere/toolu/commit/1176519f40e4abda48b47becb4e3e641c997569a))
+
 ## [7.5.0](https://github.com/Falconiere/toolu/compare/v7.4.1...v7.5.0) (2026-09-27)
 
 
