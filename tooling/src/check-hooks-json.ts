@@ -3,7 +3,7 @@
  * exactly the `command` / `commandWindows` pair `@toolu/core/launcher` generates,
  * so no plugin can hand-edit the fail-closed contract away.
  *
- * A hook counts as a launcher hook when its command names `hooks/dist/`, runs
+ * A hook is a launcher hook when its command names `hooks/dist/`, runs
  * `bun`, or carries `commandWindows`. Legacy script commands pass untouched until
  * their plugin is ported (epic #247).
  *
