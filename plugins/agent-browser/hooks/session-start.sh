@@ -40,4 +40,9 @@ if [ -L "$dst" ] || [ ! -e "$dst" ]; then
   ln -sf "$src" "$dst" 2>/dev/null || true
 fi
 
+# The published path is a Bun bundle run through its `#!/usr/bin/env bun`
+# shebang: without bun on PATH every call fails with a bare "env: bun: No
+# such file", so say what is missing now (advisory; the session continues).
+command -v bun >/dev/null 2>&1 || echo "agent-browser: bun not found on PATH — the agent-browser wrapper needs Bun 1.4.x (https://bun.sh; see docs/runtime.md)" >&2
+
 exit 0

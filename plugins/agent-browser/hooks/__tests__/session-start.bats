@@ -79,3 +79,18 @@ teardown() { rm -rf "$TMP"; }
   AGENT_BROWSER_BIN="$TMP/absent" run -127 "$dst" snapshot
   [[ "$output" == *"agent-browser not found"* ]]
 }
+
+@test "session-start: bun missing from PATH -> one-line advisory on stderr, still publishes, exits 0" {
+  bash_bin="$(command -v bash)"
+  run --separate-stderr env PATH=/usr/bin:/bin "$bash_bin" "$HOOK" <<<'{}'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ "$stderr" = "agent-browser: bun not found on PATH — the agent-browser wrapper needs Bun 1.4.x (https://bun.sh; see docs/runtime.md)" ]
+  [ -L "$CLAUDE_CONFIG_DIR/agent-browser/agent-browser.sh" ]
+}
+
+@test "session-start: bun on PATH -> no advisory" {
+  run --separate-stderr bash "$HOOK" <<<'{}'
+  [ "$status" -eq 0 ]
+  [ -z "$stderr" ]
+}

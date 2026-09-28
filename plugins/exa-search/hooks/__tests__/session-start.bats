@@ -2,6 +2,9 @@
 # session-start.sh publishes the exa-search wrapper at a stable path
 # the agent's Bash tool can reach without $CLAUDE_PLUGIN_ROOT.
 
+# `run --separate-stderr` is a 1.5.0+ flag.
+bats_require_minimum_version 1.5.0
+
 setup() {
   TMP=$(mktemp -d)
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
@@ -75,4 +78,19 @@ teardown() { rm -rf "$TMP"; }
   EXA_API_KEY=k run "$dst"
   [ "$status" -eq 1 ]
   [[ "$output" == *"Exa Search CLI"* ]]
+}
+
+@test "session-start: bun missing from PATH -> one-line advisory on stderr, still publishes, exits 0" {
+  bash_bin="$(command -v bash)"
+  run --separate-stderr env PATH=/usr/bin:/bin "$bash_bin" "$HOOK" <<<'{}'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ "$stderr" = "exa-search: bun not found on PATH — the exa-search search CLI needs Bun 1.4.x (https://bun.sh; see docs/runtime.md)" ]
+  [ -L "$CLAUDE_CONFIG_DIR/exa-search/search.sh" ]
+}
+
+@test "session-start: bun on PATH -> no advisory" {
+  run --separate-stderr bash "$HOOK" <<<'{}'
+  [ "$status" -eq 0 ]
+  [ -z "$stderr" ]
 }
