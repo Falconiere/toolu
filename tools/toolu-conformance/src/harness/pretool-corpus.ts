@@ -35,6 +35,10 @@ function settingsDir(sb: Sandbox, extra: Record<string, string>): string {
  * Returns the env additions the case needs.
  */
 export async function prepare(sb: Sandbox, host: PretoolHost, c: PretoolCase): Promise<EnvPatch> {
+  // No detached gc/maintenance after a case's own commits: it would write into
+  // `.git` while the sandbox is snapshotted and compared.
+  sb.git("config", "maintenance.auto", "false");
+  sb.git("config", "gc.auto", "0");
   installPlugins(sb, ...TOOL_REGISTRY_SPECS);
   await registerPlugin(sb, host, "ast-grep");
   if (c.config !== undefined) sb.writeConfig(host, "project", c.config);

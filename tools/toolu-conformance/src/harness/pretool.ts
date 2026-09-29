@@ -77,6 +77,26 @@ export function runBundle(call: PretoolRun): Promise<RunResult> {
   return run(["/bin/sh", "-c", command], call);
 }
 
+function isErrno(error: unknown, code: string): boolean {
+  return error instanceof Error && "code" in error && error.code === code;
+}
+
+/**
+ * Copy `from` to `to`, retrying when a file vanishes mid-copy: git's detached
+ * background maintenance (started by the sandbox's initial commit) holds a
+ * transient `.git/objects/maintenance.lock` that can disappear between the
+ * directory read and its stat. A lock is not repository state.
+ */
+function copyTree(from: string, to: string, attempts = 5): void {
+  try {
+    cpSync(from, to, { recursive: true, verbatimSymlinks: true });
+  } catch (error) {
+    if (!isErrno(error, "ENOENT") || attempts <= 1) throw error;
+    rmSync(to, { recursive: true, force: true });
+    copyTree(from, to, attempts - 1);
+  }
+}
+
 /** Run `first`, put the sandbox back exactly as it was, then run `second`. */
 export async function fromSameState<T>(
   sb: Sandbox,
@@ -84,11 +104,11 @@ export async function fromSameState<T>(
   second: () => Promise<T>,
 ): Promise<[T, T]> {
   const saved = `${sb.root}.snapshot`;
-  cpSync(sb.root, saved, { recursive: true, verbatimSymlinks: true });
+  copyTree(sb.root, saved);
   try {
     const a = await first();
     rmSync(sb.root, { recursive: true, force: true });
-    cpSync(saved, sb.root, { recursive: true, verbatimSymlinks: true });
+    copyTree(saved, sb.root);
     return [a, await second()];
   } finally {
     rmSync(saved, { recursive: true, force: true });
