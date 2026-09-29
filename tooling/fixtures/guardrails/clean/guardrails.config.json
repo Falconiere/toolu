@@ -1,0 +1,78 @@
+{
+  "$schema": "../../schema.json",
+  "version": 2,
+  "srcRoot": "src",
+  "src": {
+    "topLevel": [
+      "app",
+      "ui",
+      "domains",
+      "api",
+      "utilities"
+    ],
+    "nested": {
+      "domains/*": [
+        "screens",
+        "components",
+        "hooks",
+        "__tests__"
+      ],
+      "ui": [
+        "theme",
+        "__tests__"
+      ]
+    },
+    "requireReadme": [
+      "ui",
+      "domains",
+      "api",
+      "utilities"
+    ]
+  },
+  "fileSize": {
+    "max": 20,
+    "skipExtensions": [
+      ".md"
+    ]
+  },
+  "functionSize": {
+    "max": 50
+  },
+  "testDir": "__tests__",
+  "testGlob": "*.test.ts *.test.tsx",
+  "barrelNames": [
+    "index.ts",
+    "index.tsx"
+  ],
+  "barrelExempt": [
+    "src/app/**"
+  ],
+  "bannedDeps": [
+    "axios"
+  ],
+  "requiredFiles": [
+    {
+      "path": "wrangler.jsonc",
+      "why": "the Worker has no deploy config without it"
+    }
+  ],
+  "secrets": {
+    "neverTracked": [
+      ".dev.vars"
+    ]
+  },
+  "shadowConfigs": [
+    {
+      "found": "lefthook.yaml",
+      "use": "lefthook.yml",
+      "why": "lefthook 2.x installer shadows .yaml"
+    }
+  ],
+  "filenameCase": [
+    {
+      "glob": "*.ts",
+      "regex": "^[a-z0-9.-]+[.]ts$",
+      "describe": "kebab-case"
+    }
+  ]
+}

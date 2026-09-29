@@ -1,0 +1,43 @@
+{
+  "$schema": "../../../schema.json",
+  "version": 2,
+  "srcRoot": "src",
+  "src": {
+    "topLevel": [
+      "client",
+      "schema"
+    ],
+    "nested": {},
+    "requireReadme": [
+      "client",
+      "schema"
+    ]
+  },
+  "fileSize": {
+    "max": 20,
+    "skipExtensions": [
+      ".md"
+    ]
+  },
+  "functionSize": {
+    "max": 50
+  },
+  "testDir": "__tests__",
+  "testGlob": "*.test.ts",
+  "barrelNames": [
+    "index.ts"
+  ],
+  "bannedDeps": [
+    "axios"
+  ],
+  "requiredFiles": [],
+  "secrets": {
+    "neverTracked": [
+      ".dev.vars"
+    ]
+  },
+  "shadowConfigs": [],
+  "ownedByLinter": [
+    "folder-tree"
+  ]
+}

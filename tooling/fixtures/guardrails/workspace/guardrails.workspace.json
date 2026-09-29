@@ -1,0 +1,23 @@
+{
+  "$schema": "../../workspace.schema.json",
+  "version": 2,
+  "packages": [
+    "packages/api",
+    "packages/database"
+  ],
+  "bannedDeps": [
+    "axios"
+  ],
+  "secrets": {
+    "neverTracked": [
+      ".dev.vars"
+    ]
+  },
+  "shadowConfigs": [
+    {
+      "found": "lefthook.yaml",
+      "use": "lefthook.yml",
+      "why": "lefthook 2.x installer shadows .yaml"
+    }
+  ]
+}

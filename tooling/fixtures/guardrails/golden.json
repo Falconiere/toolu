@@ -1,0 +1,3446 @@
+{
+  "//": "Bash guardrails verdicts captured once for the TypeScript port's parity replay (#277). Regenerating requires the deleted bash runner; see golden-cases.ts.",
+  "bashSha": "62c4deb9653747ac22b1a5edf4ba3d9116ca462b",
+  "platform": "linux",
+  "tools": {
+    "bash": "GNU bash, version 5.2.37(1)-release (aarch64-unknown-linux-gnu)",
+    "grep": "grep (GNU grep) 3.11",
+    "git": "git version 2.47.3",
+    "astGrep": "ast-grep 0.45.3",
+    "jq": "jq-1.7"
+  },
+  "cases": [
+    {
+      "id": "clean repo",
+      "fixture": "clean",
+      "args": [],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --list",
+      "fixture": "clean",
+      "args": [
+        "--list"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [
+          "banned-deps",
+          "colocated-tests",
+          "file-size",
+          "filename-case",
+          "folder-readmes",
+          "folder-tree",
+          "lint-suppressions",
+          "no-barrels",
+          "patterns",
+          "required-files",
+          "secret-content",
+          "secrets",
+          "shadow-configs",
+          "test-tree"
+        ],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --file all",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        ".gitignore",
+        "guardrails.config.json",
+        "lefthook.yml",
+        "package.json",
+        "src/api/README.md",
+        "src/app/index.ts",
+        "src/domains/README.md",
+        "src/domains/shifts/README.md",
+        "src/domains/shifts/__tests__/shifts-screen.test.tsx",
+        "src/domains/shifts/screens/shifts-screen.tsx",
+        "src/ui/README.md",
+        "src/ui/theme/colors.ts",
+        "src/utilities/README.md",
+        "src/utilities/http.ts",
+        "wrangler.jsonc"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] guardrails.config.json: 78 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files"
+        ]
+      }
+    },
+    {
+      "id": "clean --hook empty payload",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --hook not json",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "not json",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --hook missing file",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/missing.ts\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean unknown flag",
+      "fixture": "clean",
+      "args": [
+        "--bogus"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 3,
+        "stdout": [],
+        "stderr": [
+          "guardrails: unknown flag: --bogus (try --list)"
+        ]
+      }
+    },
+    {
+      "id": "clean --only without value",
+      "fixture": "clean",
+      "args": [
+        "--only"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 3,
+        "stdout": [],
+        "stderr": [
+          "guardrails: --only needs a comma-separated check list"
+        ]
+      }
+    },
+    {
+      "id": "clean --file without paths",
+      "fixture": "clean",
+      "args": [
+        "--file"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 3,
+        "stdout": [],
+        "stderr": [
+          "guardrails: --file needs at least one path"
+        ]
+      }
+    },
+    {
+      "id": "clean --file .gitignore",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        ".gitignore"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --hook .gitignore",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/.gitignore\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --file guardrails.config.json",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        "guardrails.config.json"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] guardrails.config.json: 78 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files"
+        ]
+      }
+    },
+    {
+      "id": "clean --hook guardrails.config.json",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/guardrails.config.json\"}}",
+      "result": {
+        "exit": 2,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] guardrails.config.json: 78 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files"
+        ]
+      }
+    },
+    {
+      "id": "clean --file lefthook.yml",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        "lefthook.yml"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --hook lefthook.yml",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/lefthook.yml\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --file package.json",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        "package.json"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --hook package.json",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/package.json\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --file src/api/README.md",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        "src/api/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --hook src/api/README.md",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/api/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --file src/app/index.ts",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        "src/app/index.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --hook src/app/index.ts",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/app/index.ts\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --file src/domains/README.md",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        "src/domains/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --hook src/domains/README.md",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/domains/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --file src/domains/shifts/README.md",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        "src/domains/shifts/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --hook src/domains/shifts/README.md",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/domains/shifts/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --file src/domains/shifts/__tests__/shifts-screen.test.tsx",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        "src/domains/shifts/__tests__/shifts-screen.test.tsx"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --hook src/domains/shifts/__tests__/shifts-screen.test.tsx",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/domains/shifts/__tests__/shifts-screen.test.tsx\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --file src/domains/shifts/screens/shifts-screen.tsx",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        "src/domains/shifts/screens/shifts-screen.tsx"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --hook src/domains/shifts/screens/shifts-screen.tsx",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/domains/shifts/screens/shifts-screen.tsx\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --file src/ui/README.md",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        "src/ui/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --hook src/ui/README.md",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/ui/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --file src/ui/theme/colors.ts",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        "src/ui/theme/colors.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --hook src/ui/theme/colors.ts",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/ui/theme/colors.ts\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --file src/utilities/README.md",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        "src/utilities/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --hook src/utilities/README.md",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/utilities/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --file src/utilities/http.ts",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        "src/utilities/http.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --hook src/utilities/http.ts",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/utilities/http.ts\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --file wrangler.jsonc",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        "wrangler.jsonc"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --hook wrangler.jsonc",
+      "fixture": "clean",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/wrangler.jsonc\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --stop active",
+      "fixture": "clean",
+      "args": [
+        "--stop"
+      ],
+      "stdin": "{\"stop_hook_active\":true}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --stop unchanged",
+      "fixture": "clean",
+      "args": [
+        "--stop"
+      ],
+      "stdin": "{}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --stop dirty",
+      "fixture": "clean",
+      "args": [
+        "--stop"
+      ],
+      "stdin": "{}",
+      "mutate": {
+        "src/utilities/zz-new.ts": "export const fresh = 1;\n"
+      },
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --only folder-tree",
+      "fixture": "clean",
+      "args": [
+        "--only",
+        "folder-tree"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --only file-size",
+      "fixture": "clean",
+      "args": [
+        "--only",
+        "file-size"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --only colocated-tests",
+      "fixture": "clean",
+      "args": [
+        "--only",
+        "colocated-tests"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --only no-barrels",
+      "fixture": "clean",
+      "args": [
+        "--only",
+        "no-barrels"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --only filename-case",
+      "fixture": "clean",
+      "args": [
+        "--only",
+        "filename-case"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --only secret-content",
+      "fixture": "clean",
+      "args": [
+        "--only",
+        "secret-content"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --only lint-suppressions",
+      "fixture": "clean",
+      "args": [
+        "--only",
+        "lint-suppressions"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --only patterns",
+      "fixture": "clean",
+      "args": [
+        "--only",
+        "patterns"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --only folder-readmes",
+      "fixture": "clean",
+      "args": [
+        "--only",
+        "folder-readmes"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --only test-tree",
+      "fixture": "clean",
+      "args": [
+        "--only",
+        "test-tree"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --only banned-deps",
+      "fixture": "clean",
+      "args": [
+        "--only",
+        "banned-deps"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --only shadow-configs",
+      "fixture": "clean",
+      "args": [
+        "--only",
+        "shadow-configs"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --only required-files",
+      "fixture": "clean",
+      "args": [
+        "--only",
+        "required-files"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --only secrets",
+      "fixture": "clean",
+      "args": [
+        "--only",
+        "secrets"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "clean --file then --only",
+      "fixture": "clean",
+      "args": [
+        "--file",
+        ".gitignore",
+        "guardrails.config.json",
+        "lefthook.yml",
+        "package.json",
+        "src/api/README.md",
+        "src/app/index.ts",
+        "src/domains/README.md",
+        "src/domains/shifts/README.md",
+        "src/domains/shifts/__tests__/shifts-screen.test.tsx",
+        "src/domains/shifts/screens/shifts-screen.tsx",
+        "src/ui/README.md",
+        "src/ui/theme/colors.ts",
+        "src/utilities/README.md",
+        "src/utilities/http.ts",
+        "wrangler.jsonc",
+        "--only",
+        "file-size,secret-content,lint-suppressions"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] guardrails.config.json: 78 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files"
+        ]
+      }
+    },
+    {
+      "id": "violating repo",
+      "fixture": "violating",
+      "args": [],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[banned-deps] package.json: banned dependency: axios — remove it — one HTTP client (utilities/http.ts over fetch) and one validator (zod)",
+          "guardrails[colocated-tests] src/domains/shifts/stray.test.ts: test file outside a __tests__/ directory — move it to a sibling __tests__/ beside the file it covers",
+          "guardrails[file-size] src/utilities/big.ts: 21 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files",
+          "guardrails[filename-case] src/utilities/BadName.ts: filename is not kebab-case — rename it — the convention is what makes a grep for a symbol land on its file",
+          "guardrails[folder-readmes] src/domains/shifts: domain folder has no README.md — add one listing what belongs in this domain and what does not",
+          "guardrails[folder-tree] src/domains/shifts/utils: \"utils\" is not an allowed directory inside src/domains/shifts — use one of: screens components hooks __tests__",
+          "guardrails[lint-suppressions] src/utilities/suppressed-unused.ts: dead-code lint enforcement is disabled — delete the unused code or wire it into the program; do not suppress the lint",
+          "guardrails[no-barrels] src/ui/index.ts: barrel file — delete it and import the concrete file — a re-export layer hides dead code from knip",
+          "guardrails[patterns] src/utilities/env-probe.rs: no-direct-env-var — direct env read — go through the crate's config module so every variable is validated in one place and a missing one fails at startup, not mid-request",
+          "guardrails[required-files] wrangler.jsonc: required file is missing — create it — the Worker has no deploy config without it",
+          "guardrails[secret-content] src/utilities/leaked-key.ts: committed secret value (AWS access key id) — rotate the credential, remove it from this file, and load it from .dev.vars/env instead",
+          "guardrails[secrets] .dev.vars: tracked by git — it holds secrets — run: git rm --cached .dev.vars && echo .dev.vars >> .gitignore (and rotate anything already pushed)",
+          "guardrails[shadow-configs] lefthook.yaml: shadows lefthook.yml (lefthook 2.x installer shadows .yaml) — delete lefthook.yaml and keep the configuration in lefthook.yml",
+          "guardrails[test-tree] tests: centralized test directory — colocate each test in a sibling __tests__/ instead"
+        ]
+      }
+    },
+    {
+      "id": "violating --list",
+      "fixture": "violating",
+      "args": [
+        "--list"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [
+          "banned-deps",
+          "colocated-tests",
+          "file-size",
+          "filename-case",
+          "folder-readmes",
+          "folder-tree",
+          "lint-suppressions",
+          "no-barrels",
+          "patterns",
+          "required-files",
+          "secret-content",
+          "secrets",
+          "shadow-configs",
+          "test-tree"
+        ],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --file all",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        ".dev.vars",
+        "guardrails.config.json",
+        "lefthook.yaml",
+        "package.json",
+        "src/api/README.md",
+        "src/app/index.ts",
+        "src/domains/README.md",
+        "src/domains/shifts/__tests__/shifts-screen.test.tsx",
+        "src/domains/shifts/screens/shifts-screen.tsx",
+        "src/domains/shifts/stray.test.ts",
+        "src/domains/shifts/utils/helper.ts",
+        "src/ui/README.md",
+        "src/ui/index.ts",
+        "src/ui/theme/colors.ts",
+        "src/utilities/BadName.ts",
+        "src/utilities/README.md",
+        "src/utilities/big.ts",
+        "src/utilities/env-probe.rs",
+        "src/utilities/leaked-key.ts",
+        "src/utilities/plain.ts",
+        "src/utilities/suppressed-unused.ts",
+        "tests/central.test.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[colocated-tests] src/domains/shifts/stray.test.ts: test file outside a __tests__/ directory — move it to a sibling __tests__/ beside the file it covers",
+          "guardrails[file-size] guardrails.config.json: 78 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files",
+          "guardrails[file-size] src/utilities/big.ts: 21 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files",
+          "guardrails[filename-case] src/utilities/BadName.ts: filename is not kebab-case — rename it — the convention is what makes a grep for a symbol land on its file",
+          "guardrails[folder-tree] src/domains/shifts/utils: \"utils\" is not an allowed directory inside src/domains/shifts — use one of: screens components hooks __tests__",
+          "guardrails[lint-suppressions] src/utilities/suppressed-unused.ts: dead-code lint enforcement is disabled — delete the unused code or wire it into the program; do not suppress the lint",
+          "guardrails[no-barrels] src/ui/index.ts: barrel file — delete it and import the concrete file — a re-export layer hides dead code from knip",
+          "guardrails[patterns] src/utilities/env-probe.rs: no-direct-env-var — direct env read — go through the crate's config module so every variable is validated in one place and a missing one fails at startup, not mid-request",
+          "guardrails[secret-content] src/utilities/leaked-key.ts: committed secret value (AWS access key id) — rotate the credential, remove it from this file, and load it from .dev.vars/env instead"
+        ]
+      }
+    },
+    {
+      "id": "violating --hook empty payload",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --hook not json",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "not json",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --hook missing file",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/missing.ts\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating unknown flag",
+      "fixture": "violating",
+      "args": [
+        "--bogus"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 3,
+        "stdout": [],
+        "stderr": [
+          "guardrails: unknown flag: --bogus (try --list)"
+        ]
+      }
+    },
+    {
+      "id": "violating --only without value",
+      "fixture": "violating",
+      "args": [
+        "--only"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 3,
+        "stdout": [],
+        "stderr": [
+          "guardrails: --only needs a comma-separated check list"
+        ]
+      }
+    },
+    {
+      "id": "violating --file without paths",
+      "fixture": "violating",
+      "args": [
+        "--file"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 3,
+        "stdout": [],
+        "stderr": [
+          "guardrails: --file needs at least one path"
+        ]
+      }
+    },
+    {
+      "id": "violating --file .dev.vars",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        ".dev.vars"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --hook .dev.vars",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/.dev.vars\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --file guardrails.config.json",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "guardrails.config.json"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] guardrails.config.json: 78 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files"
+        ]
+      }
+    },
+    {
+      "id": "violating --hook guardrails.config.json",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/guardrails.config.json\"}}",
+      "result": {
+        "exit": 2,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] guardrails.config.json: 78 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files"
+        ]
+      }
+    },
+    {
+      "id": "violating --file lefthook.yaml",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "lefthook.yaml"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --hook lefthook.yaml",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/lefthook.yaml\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --file package.json",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "package.json"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --hook package.json",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/package.json\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --file src/api/README.md",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/api/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --hook src/api/README.md",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/api/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --file src/app/index.ts",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/app/index.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --hook src/app/index.ts",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/app/index.ts\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --file src/domains/README.md",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/domains/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --hook src/domains/README.md",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/domains/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --file src/domains/shifts/__tests__/shifts-screen.test.tsx",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/domains/shifts/__tests__/shifts-screen.test.tsx"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --hook src/domains/shifts/__tests__/shifts-screen.test.tsx",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/domains/shifts/__tests__/shifts-screen.test.tsx\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --file src/domains/shifts/screens/shifts-screen.tsx",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/domains/shifts/screens/shifts-screen.tsx"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --hook src/domains/shifts/screens/shifts-screen.tsx",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/domains/shifts/screens/shifts-screen.tsx\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --file src/domains/shifts/stray.test.ts",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/domains/shifts/stray.test.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[colocated-tests] src/domains/shifts/stray.test.ts: test file outside a __tests__/ directory — move it to a sibling __tests__/ beside the file it covers"
+        ]
+      }
+    },
+    {
+      "id": "violating --hook src/domains/shifts/stray.test.ts",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/domains/shifts/stray.test.ts\"}}",
+      "result": {
+        "exit": 2,
+        "stdout": [],
+        "stderr": [
+          "guardrails[colocated-tests] src/domains/shifts/stray.test.ts: test file outside a __tests__/ directory — move it to a sibling __tests__/ beside the file it covers"
+        ]
+      }
+    },
+    {
+      "id": "violating --file src/domains/shifts/utils/helper.ts",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/domains/shifts/utils/helper.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[folder-tree] src/domains/shifts/utils: \"utils\" is not an allowed directory inside src/domains/shifts — use one of: screens components hooks __tests__"
+        ]
+      }
+    },
+    {
+      "id": "violating --hook src/domains/shifts/utils/helper.ts",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/domains/shifts/utils/helper.ts\"}}",
+      "result": {
+        "exit": 2,
+        "stdout": [],
+        "stderr": [
+          "guardrails[folder-tree] src/domains/shifts/utils: \"utils\" is not an allowed directory inside src/domains/shifts — use one of: screens components hooks __tests__"
+        ]
+      }
+    },
+    {
+      "id": "violating --file src/ui/README.md",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/ui/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --hook src/ui/README.md",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/ui/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --file src/ui/index.ts",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/ui/index.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[no-barrels] src/ui/index.ts: barrel file — delete it and import the concrete file — a re-export layer hides dead code from knip"
+        ]
+      }
+    },
+    {
+      "id": "violating --hook src/ui/index.ts",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/ui/index.ts\"}}",
+      "result": {
+        "exit": 2,
+        "stdout": [],
+        "stderr": [
+          "guardrails[no-barrels] src/ui/index.ts: barrel file — delete it and import the concrete file — a re-export layer hides dead code from knip"
+        ]
+      }
+    },
+    {
+      "id": "violating --file src/ui/theme/colors.ts",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/ui/theme/colors.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --hook src/ui/theme/colors.ts",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/ui/theme/colors.ts\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --file src/utilities/BadName.ts",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/utilities/BadName.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[filename-case] src/utilities/BadName.ts: filename is not kebab-case — rename it — the convention is what makes a grep for a symbol land on its file"
+        ]
+      }
+    },
+    {
+      "id": "violating --hook src/utilities/BadName.ts",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/utilities/BadName.ts\"}}",
+      "result": {
+        "exit": 2,
+        "stdout": [],
+        "stderr": [
+          "guardrails[filename-case] src/utilities/BadName.ts: filename is not kebab-case — rename it — the convention is what makes a grep for a symbol land on its file"
+        ]
+      }
+    },
+    {
+      "id": "violating --file src/utilities/README.md",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/utilities/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --hook src/utilities/README.md",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/utilities/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --file src/utilities/big.ts",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/utilities/big.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] src/utilities/big.ts: 21 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files"
+        ]
+      }
+    },
+    {
+      "id": "violating --hook src/utilities/big.ts",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/utilities/big.ts\"}}",
+      "result": {
+        "exit": 2,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] src/utilities/big.ts: 21 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files"
+        ]
+      }
+    },
+    {
+      "id": "violating --file src/utilities/env-probe.rs",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/utilities/env-probe.rs"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[patterns] src/utilities/env-probe.rs: no-direct-env-var — direct env read — go through the crate's config module so every variable is validated in one place and a missing one fails at startup, not mid-request"
+        ]
+      }
+    },
+    {
+      "id": "violating --hook src/utilities/env-probe.rs",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/utilities/env-probe.rs\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --file src/utilities/leaked-key.ts",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/utilities/leaked-key.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[secret-content] src/utilities/leaked-key.ts: committed secret value (AWS access key id) — rotate the credential, remove it from this file, and load it from .dev.vars/env instead"
+        ]
+      }
+    },
+    {
+      "id": "violating --hook src/utilities/leaked-key.ts",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/utilities/leaked-key.ts\"}}",
+      "result": {
+        "exit": 2,
+        "stdout": [],
+        "stderr": [
+          "guardrails[secret-content] src/utilities/leaked-key.ts: committed secret value (AWS access key id) — rotate the credential, remove it from this file, and load it from .dev.vars/env instead"
+        ]
+      }
+    },
+    {
+      "id": "violating --file src/utilities/plain.ts",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/utilities/plain.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --hook src/utilities/plain.ts",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/utilities/plain.ts\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --file src/utilities/suppressed-unused.ts",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "src/utilities/suppressed-unused.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[lint-suppressions] src/utilities/suppressed-unused.ts: dead-code lint enforcement is disabled — delete the unused code or wire it into the program; do not suppress the lint"
+        ]
+      }
+    },
+    {
+      "id": "violating --hook src/utilities/suppressed-unused.ts",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/utilities/suppressed-unused.ts\"}}",
+      "result": {
+        "exit": 2,
+        "stdout": [],
+        "stderr": [
+          "guardrails[lint-suppressions] src/utilities/suppressed-unused.ts: dead-code lint enforcement is disabled — delete the unused code or wire it into the program; do not suppress the lint"
+        ]
+      }
+    },
+    {
+      "id": "violating --file tests/central.test.ts",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        "tests/central.test.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --hook tests/central.test.ts",
+      "fixture": "violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/tests/central.test.ts\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --stop active",
+      "fixture": "violating",
+      "args": [
+        "--stop"
+      ],
+      "stdin": "{\"stop_hook_active\":true}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --stop unchanged",
+      "fixture": "violating",
+      "args": [
+        "--stop"
+      ],
+      "stdin": "{}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "violating --stop dirty",
+      "fixture": "violating",
+      "args": [
+        "--stop"
+      ],
+      "stdin": "{}",
+      "mutate": {
+        "src/utilities/zz-new.ts": "export const fresh = 1;\n"
+      },
+      "result": {
+        "exit": 2,
+        "stdout": [],
+        "stderr": [
+          "guardrails[banned-deps] package.json: banned dependency: axios — remove it — one HTTP client (utilities/http.ts over fetch) and one validator (zod)",
+          "guardrails[colocated-tests] src/domains/shifts/stray.test.ts: test file outside a __tests__/ directory — move it to a sibling __tests__/ beside the file it covers",
+          "guardrails[file-size] src/utilities/big.ts: 21 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files",
+          "guardrails[filename-case] src/utilities/BadName.ts: filename is not kebab-case — rename it — the convention is what makes a grep for a symbol land on its file",
+          "guardrails[folder-readmes] src/domains/shifts: domain folder has no README.md — add one listing what belongs in this domain and what does not",
+          "guardrails[folder-tree] src/domains/shifts/utils: \"utils\" is not an allowed directory inside src/domains/shifts — use one of: screens components hooks __tests__",
+          "guardrails[lint-suppressions] src/utilities/suppressed-unused.ts: dead-code lint enforcement is disabled — delete the unused code or wire it into the program; do not suppress the lint",
+          "guardrails[no-barrels] src/ui/index.ts: barrel file — delete it and import the concrete file — a re-export layer hides dead code from knip",
+          "guardrails[patterns] src/utilities/env-probe.rs: no-direct-env-var — direct env read — go through the crate's config module so every variable is validated in one place and a missing one fails at startup, not mid-request",
+          "guardrails[required-files] wrangler.jsonc: required file is missing — create it — the Worker has no deploy config without it",
+          "guardrails[secret-content] src/utilities/leaked-key.ts: committed secret value (AWS access key id) — rotate the credential, remove it from this file, and load it from .dev.vars/env instead",
+          "guardrails[secrets] .dev.vars: tracked by git — it holds secrets — run: git rm --cached .dev.vars && echo .dev.vars >> .gitignore (and rotate anything already pushed)",
+          "guardrails[shadow-configs] lefthook.yaml: shadows lefthook.yml (lefthook 2.x installer shadows .yaml) — delete lefthook.yaml and keep the configuration in lefthook.yml",
+          "guardrails[test-tree] tests: centralized test directory — colocate each test in a sibling __tests__/ instead"
+        ]
+      }
+    },
+    {
+      "id": "violating --only folder-tree",
+      "fixture": "violating",
+      "args": [
+        "--only",
+        "folder-tree"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[folder-tree] src/domains/shifts/utils: \"utils\" is not an allowed directory inside src/domains/shifts — use one of: screens components hooks __tests__"
+        ]
+      }
+    },
+    {
+      "id": "violating --only file-size",
+      "fixture": "violating",
+      "args": [
+        "--only",
+        "file-size"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] src/utilities/big.ts: 21 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files"
+        ]
+      }
+    },
+    {
+      "id": "violating --only colocated-tests",
+      "fixture": "violating",
+      "args": [
+        "--only",
+        "colocated-tests"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[colocated-tests] src/domains/shifts/stray.test.ts: test file outside a __tests__/ directory — move it to a sibling __tests__/ beside the file it covers"
+        ]
+      }
+    },
+    {
+      "id": "violating --only no-barrels",
+      "fixture": "violating",
+      "args": [
+        "--only",
+        "no-barrels"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[no-barrels] src/ui/index.ts: barrel file — delete it and import the concrete file — a re-export layer hides dead code from knip"
+        ]
+      }
+    },
+    {
+      "id": "violating --only filename-case",
+      "fixture": "violating",
+      "args": [
+        "--only",
+        "filename-case"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": [
+          "guardrails[filename-case] src/utilities/BadName.ts: filename is not kebab-case — rename it — the convention is what makes a grep for a symbol land on its file"
+        ]
+      }
+    },
+    {
+      "id": "violating --only secret-content",
+      "fixture": "violating",
+      "args": [
+        "--only",
+        "secret-content"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[secret-content] src/utilities/leaked-key.ts: committed secret value (AWS access key id) — rotate the credential, remove it from this file, and load it from .dev.vars/env instead"
+        ]
+      }
+    },
+    {
+      "id": "violating --only lint-suppressions",
+      "fixture": "violating",
+      "args": [
+        "--only",
+        "lint-suppressions"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[lint-suppressions] src/utilities/suppressed-unused.ts: dead-code lint enforcement is disabled — delete the unused code or wire it into the program; do not suppress the lint"
+        ]
+      }
+    },
+    {
+      "id": "violating --only patterns",
+      "fixture": "violating",
+      "args": [
+        "--only",
+        "patterns"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[patterns] src/utilities/env-probe.rs: no-direct-env-var — direct env read — go through the crate's config module so every variable is validated in one place and a missing one fails at startup, not mid-request"
+        ]
+      }
+    },
+    {
+      "id": "violating --only folder-readmes",
+      "fixture": "violating",
+      "args": [
+        "--only",
+        "folder-readmes"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[folder-readmes] src/domains/shifts: domain folder has no README.md — add one listing what belongs in this domain and what does not"
+        ]
+      }
+    },
+    {
+      "id": "violating --only test-tree",
+      "fixture": "violating",
+      "args": [
+        "--only",
+        "test-tree"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[test-tree] tests: centralized test directory — colocate each test in a sibling __tests__/ instead"
+        ]
+      }
+    },
+    {
+      "id": "violating --only banned-deps",
+      "fixture": "violating",
+      "args": [
+        "--only",
+        "banned-deps"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[banned-deps] package.json: banned dependency: axios — remove it — one HTTP client (utilities/http.ts over fetch) and one validator (zod)"
+        ]
+      }
+    },
+    {
+      "id": "violating --only shadow-configs",
+      "fixture": "violating",
+      "args": [
+        "--only",
+        "shadow-configs"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[shadow-configs] lefthook.yaml: shadows lefthook.yml (lefthook 2.x installer shadows .yaml) — delete lefthook.yaml and keep the configuration in lefthook.yml"
+        ]
+      }
+    },
+    {
+      "id": "violating --only required-files",
+      "fixture": "violating",
+      "args": [
+        "--only",
+        "required-files"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[required-files] wrangler.jsonc: required file is missing — create it — the Worker has no deploy config without it"
+        ]
+      }
+    },
+    {
+      "id": "violating --only secrets",
+      "fixture": "violating",
+      "args": [
+        "--only",
+        "secrets"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[secrets] .dev.vars: tracked by git — it holds secrets — run: git rm --cached .dev.vars && echo .dev.vars >> .gitignore (and rotate anything already pushed)"
+        ]
+      }
+    },
+    {
+      "id": "violating --file then --only",
+      "fixture": "violating",
+      "args": [
+        "--file",
+        ".dev.vars",
+        "guardrails.config.json",
+        "lefthook.yaml",
+        "package.json",
+        "src/api/README.md",
+        "src/app/index.ts",
+        "src/domains/README.md",
+        "src/domains/shifts/__tests__/shifts-screen.test.tsx",
+        "src/domains/shifts/screens/shifts-screen.tsx",
+        "src/domains/shifts/stray.test.ts",
+        "src/domains/shifts/utils/helper.ts",
+        "src/ui/README.md",
+        "src/ui/index.ts",
+        "src/ui/theme/colors.ts",
+        "src/utilities/BadName.ts",
+        "src/utilities/README.md",
+        "src/utilities/big.ts",
+        "src/utilities/env-probe.rs",
+        "src/utilities/leaked-key.ts",
+        "src/utilities/plain.ts",
+        "src/utilities/suppressed-unused.ts",
+        "tests/central.test.ts",
+        "--only",
+        "file-size,secret-content,lint-suppressions"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] guardrails.config.json: 78 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files",
+          "guardrails[file-size] src/utilities/big.ts: 21 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files",
+          "guardrails[lint-suppressions] src/utilities/suppressed-unused.ts: dead-code lint enforcement is disabled — delete the unused code or wire it into the program; do not suppress the lint",
+          "guardrails[secret-content] src/utilities/leaked-key.ts: committed secret value (AWS access key id) — rotate the credential, remove it from this file, and load it from .dev.vars/env instead"
+        ]
+      }
+    },
+    {
+      "id": "workspace repo",
+      "fixture": "workspace",
+      "args": [],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --list",
+      "fixture": "workspace",
+      "args": [
+        "--list"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [
+          "banned-deps",
+          "colocated-tests",
+          "file-size",
+          "filename-case",
+          "folder-readmes",
+          "folder-tree",
+          "lint-suppressions",
+          "no-barrels",
+          "patterns",
+          "required-files",
+          "secret-content",
+          "secrets",
+          "shadow-configs",
+          "test-tree"
+        ],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --file all",
+      "fixture": "workspace",
+      "args": [
+        "--file",
+        ".gitignore",
+        "guardrails.workspace.json",
+        "package.json",
+        "packages/api/guardrails.config.json",
+        "packages/api/package.json",
+        "packages/api/src/domains/README.md",
+        "packages/api/src/domains/ping/README.md",
+        "packages/api/src/domains/ping/ping-service.ts",
+        "packages/api/src/utilities/README.md",
+        "packages/api/wrangler.jsonc",
+        "packages/database/guardrails.config.json",
+        "packages/database/package.json",
+        "packages/database/src/client/README.md",
+        "packages/database/src/client/create-database.ts",
+        "packages/database/src/schema/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] packages/database/guardrails.config.json: 43 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files"
+        ]
+      }
+    },
+    {
+      "id": "workspace --hook empty payload",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook not json",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "not json",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook missing file",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/missing.ts\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace unknown flag",
+      "fixture": "workspace",
+      "args": [
+        "--bogus"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 3,
+        "stdout": [],
+        "stderr": [
+          "guardrails: unknown flag: --bogus (try --list)"
+        ]
+      }
+    },
+    {
+      "id": "workspace --only without value",
+      "fixture": "workspace",
+      "args": [
+        "--only"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 3,
+        "stdout": [],
+        "stderr": [
+          "guardrails: --only needs a comma-separated check list"
+        ]
+      }
+    },
+    {
+      "id": "workspace --file without paths",
+      "fixture": "workspace",
+      "args": [
+        "--file"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 3,
+        "stdout": [],
+        "stderr": [
+          "guardrails: --file needs at least one path"
+        ]
+      }
+    },
+    {
+      "id": "workspace --file .gitignore",
+      "fixture": "workspace",
+      "args": [
+        "--file",
+        ".gitignore"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook .gitignore",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/.gitignore\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --file guardrails.workspace.json",
+      "fixture": "workspace",
+      "args": [
+        "--file",
+        "guardrails.workspace.json"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook guardrails.workspace.json",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/guardrails.workspace.json\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --file package.json",
+      "fixture": "workspace",
+      "args": [
+        "--file",
+        "package.json"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook package.json",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/package.json\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --file packages/api/guardrails.config.json",
+      "fixture": "workspace",
+      "args": [
+        "--file",
+        "packages/api/guardrails.config.json"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook packages/api/guardrails.config.json",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/api/guardrails.config.json\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --file packages/api/package.json",
+      "fixture": "workspace",
+      "args": [
+        "--file",
+        "packages/api/package.json"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook packages/api/package.json",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/api/package.json\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --file packages/api/src/domains/README.md",
+      "fixture": "workspace",
+      "args": [
+        "--file",
+        "packages/api/src/domains/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook packages/api/src/domains/README.md",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/api/src/domains/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --file packages/api/src/domains/ping/README.md",
+      "fixture": "workspace",
+      "args": [
+        "--file",
+        "packages/api/src/domains/ping/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook packages/api/src/domains/ping/README.md",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/api/src/domains/ping/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --file packages/api/src/domains/ping/ping-service.ts",
+      "fixture": "workspace",
+      "args": [
+        "--file",
+        "packages/api/src/domains/ping/ping-service.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook packages/api/src/domains/ping/ping-service.ts",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/api/src/domains/ping/ping-service.ts\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --file packages/api/src/utilities/README.md",
+      "fixture": "workspace",
+      "args": [
+        "--file",
+        "packages/api/src/utilities/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook packages/api/src/utilities/README.md",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/api/src/utilities/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --file packages/api/wrangler.jsonc",
+      "fixture": "workspace",
+      "args": [
+        "--file",
+        "packages/api/wrangler.jsonc"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook packages/api/wrangler.jsonc",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/api/wrangler.jsonc\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --file packages/database/guardrails.config.json",
+      "fixture": "workspace",
+      "args": [
+        "--file",
+        "packages/database/guardrails.config.json"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] packages/database/guardrails.config.json: 43 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files"
+        ]
+      }
+    },
+    {
+      "id": "workspace --hook packages/database/guardrails.config.json",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/database/guardrails.config.json\"}}",
+      "result": {
+        "exit": 2,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] packages/database/guardrails.config.json: 43 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files"
+        ]
+      }
+    },
+    {
+      "id": "workspace --file packages/database/package.json",
+      "fixture": "workspace",
+      "args": [
+        "--file",
+        "packages/database/package.json"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook packages/database/package.json",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/database/package.json\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --file packages/database/src/client/README.md",
+      "fixture": "workspace",
+      "args": [
+        "--file",
+        "packages/database/src/client/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook packages/database/src/client/README.md",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/database/src/client/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --file packages/database/src/client/create-database.ts",
+      "fixture": "workspace",
+      "args": [
+        "--file",
+        "packages/database/src/client/create-database.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook packages/database/src/client/create-database.ts",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/database/src/client/create-database.ts\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --file packages/database/src/schema/README.md",
+      "fixture": "workspace",
+      "args": [
+        "--file",
+        "packages/database/src/schema/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook packages/database/src/schema/README.md",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/database/src/schema/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --stop active",
+      "fixture": "workspace",
+      "args": [
+        "--stop"
+      ],
+      "stdin": "{\"stop_hook_active\":true}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --stop unchanged",
+      "fixture": "workspace",
+      "args": [
+        "--stop"
+      ],
+      "stdin": "{}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --stop dirty",
+      "fixture": "workspace",
+      "args": [
+        "--stop"
+      ],
+      "stdin": "{}",
+      "mutate": {
+        "packages/api/src/utilities/zz-new.ts": "export const fresh = 1;\n"
+      },
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --only banned-deps",
+      "fixture": "workspace",
+      "args": [
+        "--only",
+        "banned-deps"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --only secrets",
+      "fixture": "workspace",
+      "args": [
+        "--only",
+        "secrets"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace --hook outside root",
+      "fixture": "workspace",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"/etc/hosts\"}}",
+      "result": {
+        "exit": 3,
+        "stdout": [],
+        "stderr": [
+          "guardrails: \"/etc/hosts\" is outside the workspace root (<ROOT>) — guardrails cannot place it in a package"
+        ]
+      }
+    },
+    {
+      "id": "workspace-violating repo",
+      "fixture": "workspace-violating",
+      "args": [],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[banned-deps] package.json: banned dependency: axios — remove it — one HTTP client (utilities/http.ts over fetch) and one validator (zod)",
+          "guardrails[file-size] packages/database/src/schema/wide-table.ts: 40 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files",
+          "guardrails[folder-tree] packages/api/src/nope: \"nope\" is not an allowed top-level directory under src — move it under one of: domains utilities",
+          "guardrails[secrets] .dev.vars: tracked by git — it holds secrets — run: git rm --cached .dev.vars && echo .dev.vars >> .gitignore (and rotate anything already pushed)",
+          "guardrails[secrets] packages/database/.dev.vars: tracked by git — it holds secrets — run: git rm --cached .dev.vars && echo .dev.vars >> .gitignore (and rotate anything already pushed)"
+        ]
+      }
+    },
+    {
+      "id": "workspace-violating --list",
+      "fixture": "workspace-violating",
+      "args": [
+        "--list"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [
+          "banned-deps",
+          "colocated-tests",
+          "file-size",
+          "filename-case",
+          "folder-readmes",
+          "folder-tree",
+          "lint-suppressions",
+          "no-barrels",
+          "patterns",
+          "required-files",
+          "secret-content",
+          "secrets",
+          "shadow-configs",
+          "test-tree"
+        ],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file all",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        ".dev.vars",
+        "guardrails.workspace.json",
+        "package.json",
+        "packages/api/guardrails.config.json",
+        "packages/api/package.json",
+        "packages/api/src/domains/README.md",
+        "packages/api/src/domains/ping/README.md",
+        "packages/api/src/domains/ping/ping-service.ts",
+        "packages/api/src/domains/ping/wide-service.ts",
+        "packages/api/src/nope/README.md",
+        "packages/api/src/utilities/README.md",
+        "packages/api/wrangler.jsonc",
+        "packages/database/.dev.vars",
+        "packages/database/guardrails.config.json",
+        "packages/database/package.json",
+        "packages/database/src/client/README.md",
+        "packages/database/src/client/create-database.ts",
+        "packages/database/src/nope/README.md",
+        "packages/database/src/schema/README.md",
+        "packages/database/src/schema/wide-table.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] packages/database/guardrails.config.json: 43 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files",
+          "guardrails[file-size] packages/database/src/schema/wide-table.ts: 40 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files",
+          "guardrails[folder-tree] packages/api/src/nope: \"nope\" is not an allowed top-level directory under src — move it under one of: domains utilities"
+        ]
+      }
+    },
+    {
+      "id": "workspace-violating --hook empty payload",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook not json",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "not json",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook missing file",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/src/missing.ts\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating unknown flag",
+      "fixture": "workspace-violating",
+      "args": [
+        "--bogus"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 3,
+        "stdout": [],
+        "stderr": [
+          "guardrails: unknown flag: --bogus (try --list)"
+        ]
+      }
+    },
+    {
+      "id": "workspace-violating --only without value",
+      "fixture": "workspace-violating",
+      "args": [
+        "--only"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 3,
+        "stdout": [],
+        "stderr": [
+          "guardrails: --only needs a comma-separated check list"
+        ]
+      }
+    },
+    {
+      "id": "workspace-violating --file without paths",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 3,
+        "stdout": [],
+        "stderr": [
+          "guardrails: --file needs at least one path"
+        ]
+      }
+    },
+    {
+      "id": "workspace-violating --file .dev.vars",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        ".dev.vars"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook .dev.vars",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/.dev.vars\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file guardrails.workspace.json",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "guardrails.workspace.json"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook guardrails.workspace.json",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/guardrails.workspace.json\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file package.json",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "package.json"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook package.json",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/package.json\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/api/guardrails.config.json",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/api/guardrails.config.json"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/api/guardrails.config.json",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/api/guardrails.config.json\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/api/package.json",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/api/package.json"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/api/package.json",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/api/package.json\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/api/src/domains/README.md",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/api/src/domains/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/api/src/domains/README.md",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/api/src/domains/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/api/src/domains/ping/README.md",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/api/src/domains/ping/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/api/src/domains/ping/README.md",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/api/src/domains/ping/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/api/src/domains/ping/ping-service.ts",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/api/src/domains/ping/ping-service.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/api/src/domains/ping/ping-service.ts",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/api/src/domains/ping/ping-service.ts\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/api/src/domains/ping/wide-service.ts",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/api/src/domains/ping/wide-service.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/api/src/domains/ping/wide-service.ts",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/api/src/domains/ping/wide-service.ts\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/api/src/nope/README.md",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/api/src/nope/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[folder-tree] packages/api/src/nope: \"nope\" is not an allowed top-level directory under src — move it under one of: domains utilities"
+        ]
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/api/src/nope/README.md",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/api/src/nope/README.md\"}}",
+      "result": {
+        "exit": 2,
+        "stdout": [],
+        "stderr": [
+          "guardrails[folder-tree] packages/api/src/nope: \"nope\" is not an allowed top-level directory under src — move it under one of: domains utilities"
+        ]
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/api/src/utilities/README.md",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/api/src/utilities/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/api/src/utilities/README.md",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/api/src/utilities/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/api/wrangler.jsonc",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/api/wrangler.jsonc"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/api/wrangler.jsonc",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/api/wrangler.jsonc\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/database/.dev.vars",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/database/.dev.vars"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/database/.dev.vars",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/database/.dev.vars\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/database/guardrails.config.json",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/database/guardrails.config.json"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] packages/database/guardrails.config.json: 43 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files"
+        ]
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/database/guardrails.config.json",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/database/guardrails.config.json\"}}",
+      "result": {
+        "exit": 2,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] packages/database/guardrails.config.json: 43 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files"
+        ]
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/database/package.json",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/database/package.json"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/database/package.json",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/database/package.json\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/database/src/client/README.md",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/database/src/client/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/database/src/client/README.md",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/database/src/client/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/database/src/client/create-database.ts",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/database/src/client/create-database.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/database/src/client/create-database.ts",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/database/src/client/create-database.ts\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/database/src/nope/README.md",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/database/src/nope/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/database/src/nope/README.md",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/database/src/nope/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/database/src/schema/README.md",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/database/src/schema/README.md"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/database/src/schema/README.md",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/database/src/schema/README.md\"}}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --file packages/database/src/schema/wide-table.ts",
+      "fixture": "workspace-violating",
+      "args": [
+        "--file",
+        "packages/database/src/schema/wide-table.ts"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] packages/database/src/schema/wide-table.ts: 40 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files"
+        ]
+      }
+    },
+    {
+      "id": "workspace-violating --hook packages/database/src/schema/wide-table.ts",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"<ROOT>/packages/database/src/schema/wide-table.ts\"}}",
+      "result": {
+        "exit": 2,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] packages/database/src/schema/wide-table.ts: 40 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files"
+        ]
+      }
+    },
+    {
+      "id": "workspace-violating --stop active",
+      "fixture": "workspace-violating",
+      "args": [
+        "--stop"
+      ],
+      "stdin": "{\"stop_hook_active\":true}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --stop unchanged",
+      "fixture": "workspace-violating",
+      "args": [
+        "--stop"
+      ],
+      "stdin": "{}",
+      "result": {
+        "exit": 0,
+        "stdout": [],
+        "stderr": []
+      }
+    },
+    {
+      "id": "workspace-violating --stop dirty",
+      "fixture": "workspace-violating",
+      "args": [
+        "--stop"
+      ],
+      "stdin": "{}",
+      "mutate": {
+        "packages/api/src/utilities/zz-new.ts": "export const fresh = 1;\n"
+      },
+      "result": {
+        "exit": 2,
+        "stdout": [],
+        "stderr": [
+          "guardrails[banned-deps] package.json: banned dependency: axios — remove it — one HTTP client (utilities/http.ts over fetch) and one validator (zod)",
+          "guardrails[file-size] packages/database/src/schema/wide-table.ts: 40 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files",
+          "guardrails[folder-tree] packages/api/src/nope: \"nope\" is not an allowed top-level directory under src — move it under one of: domains utilities",
+          "guardrails[secrets] .dev.vars: tracked by git — it holds secrets — run: git rm --cached .dev.vars && echo .dev.vars >> .gitignore (and rotate anything already pushed)",
+          "guardrails[secrets] packages/database/.dev.vars: tracked by git — it holds secrets — run: git rm --cached .dev.vars && echo .dev.vars >> .gitignore (and rotate anything already pushed)"
+        ]
+      }
+    },
+    {
+      "id": "workspace-violating --only banned-deps",
+      "fixture": "workspace-violating",
+      "args": [
+        "--only",
+        "banned-deps"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[banned-deps] package.json: banned dependency: axios — remove it — one HTTP client (utilities/http.ts over fetch) and one validator (zod)",
+          "guardrails[file-size] packages/database/src/schema/wide-table.ts: 40 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files",
+          "guardrails[folder-tree] packages/api/src/nope: \"nope\" is not an allowed top-level directory under src — move it under one of: domains utilities",
+          "guardrails[secrets] packages/database/.dev.vars: tracked by git — it holds secrets — run: git rm --cached .dev.vars && echo .dev.vars >> .gitignore (and rotate anything already pushed)"
+        ]
+      }
+    },
+    {
+      "id": "workspace-violating --only secrets",
+      "fixture": "workspace-violating",
+      "args": [
+        "--only",
+        "secrets"
+      ],
+      "stdin": "",
+      "result": {
+        "exit": 1,
+        "stdout": [],
+        "stderr": [
+          "guardrails[file-size] packages/database/src/schema/wide-table.ts: 40 code lines exceeds the ceiling of 20 — split it — promote the file to a folder and move the sub-parts into their own files",
+          "guardrails[folder-tree] packages/api/src/nope: \"nope\" is not an allowed top-level directory under src — move it under one of: domains utilities",
+          "guardrails[secrets] .dev.vars: tracked by git — it holds secrets — run: git rm --cached .dev.vars && echo .dev.vars >> .gitignore (and rotate anything already pushed)",
+          "guardrails[secrets] packages/database/.dev.vars: tracked by git — it holds secrets — run: git rm --cached .dev.vars && echo .dev.vars >> .gitignore (and rotate anything already pushed)"
+        ]
+      }
+    },
+    {
+      "id": "workspace-violating --hook outside root",
+      "fixture": "workspace-violating",
+      "args": [
+        "--hook"
+      ],
+      "stdin": "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"/etc/hosts\"}}",
+      "result": {
+        "exit": 3,
+        "stdout": [],
+        "stderr": [
+          "guardrails: \"/etc/hosts\" is outside the workspace root (<ROOT>) — guardrails cannot place it in a package"
+        ]
+      }
+    }
+  ]
+}
