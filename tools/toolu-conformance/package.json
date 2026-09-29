@@ -17,6 +17,8 @@
     "./harness/startup": "./src/harness/startup.ts",
     "./harness/pretool": "./src/harness/pretool.ts",
     "./harness/pretool-corpus": "./src/harness/pretool-corpus.ts",
+    "./harness/posttool": "./src/harness/posttool.ts",
+    "./harness/posttool-corpus": "./src/harness/posttool-corpus.ts",
     "./https-fixture": "./src/https-fixture/https-fixture.ts"
   },
   "scripts": {

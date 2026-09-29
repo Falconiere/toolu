@@ -4,8 +4,8 @@
  * port under `dispatchPostTool`. Returns each side's stdout and the state it
  * left in the project, timestamps normalised, so a test can compare them.
  */
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { join, resolve } from "node:path";
+import { projectState as stateOf } from "@toolu/conformance/harness/posttool";
 import { fromSameState } from "@toolu/conformance/harness/pretool";
 import type { Sandbox } from "@toolu/conformance/harness/sandbox";
 import { dispatchPostTool, type ToolModule } from "../../dispatch/dispatch.ts";
@@ -19,29 +19,6 @@ import {
 const MODULES = resolve(import.meta.dir, "../../../../../plugins/toolu/hooks/post-tools/modules");
 
 export type Side = { stdout: string; exitCode: number; state: Record<string, string> };
-
-const STAMP = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z/g;
-
-function walk(dir: string): string[] {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir).flatMap((name) => {
-    const path = join(dir, name);
-    return statSync(path).isDirectory() ? walk(path) : [path];
-  });
-}
-
-/** Every file under the project's host state directories, timestamps as `<T>`. */
-export function stateOf(sb: Sandbox): Record<string, string> {
-  const files = [".claude", ".codex"].flatMap((d) => walk(join(sb.project, d)));
-  return Object.fromEntries(
-    files
-      .toSorted()
-      .map((file) => [
-        relative(sb.project, file),
-        readFileSync(file, "utf8").replace(STAMP, "<T>"),
-      ]),
-  );
-}
 
 export type Call = { stdin: string; env: Record<string, string> };
 
