@@ -1,6 +1,6 @@
 /**
- * Hook-output reading and merging for the PreToolUse dispatcher (#258), a port
- * of the `jq` calls in `dispatch.sh`. Module stdout is read the way
+ * Hook-output reading and merging for the PreToolUse (#258) and PostToolUse
+ * (#259) dispatchers, a port of the `jq` calls in `dispatch.sh`. Module stdout is read the way
  * `$(jq -r '<path> // empty' <<<"$result")` reads it, and the merged result is
  * printed the way `jq -n` prints it, so the TypeScript dispatcher's bytes match
  * the bash dispatcher's while modules still run on bash.
@@ -112,13 +112,13 @@ export function finalAsk(askResult: string, advisories: Advisories): string {
   return out === undefined ? printed(askResult) : jqPrint(out);
 }
 
-/** The merged advisory object, or "" when there is nothing to say. */
-export function finalAdvisory(advisories: Advisories): string {
+/** The merged advisory object for `hookEventName`, or "" when there is nothing to say. */
+export function finalAdvisory(advisories: Advisories, hookEventName: string): string {
   const ctx = joined(advisories.contexts);
   const msg = joined(advisories.messages);
   if (ctx === "" && msg === "") return "";
   const out: JsonObject = {};
-  if (ctx !== "") out.hookSpecificOutput = { hookEventName: "PreToolUse", additionalContext: ctx };
+  if (ctx !== "") out.hookSpecificOutput = { hookEventName, additionalContext: ctx };
   if (msg !== "") out.systemMessage = msg;
   return jqPrint(out);
 }

@@ -28,6 +28,8 @@ export interface RegistryContext {
   readonly env: HostEnv;
   readonly configRoot: string;
   readonly projectRoot: string;
+  /** The hook process's working directory, where a bash module would have run. */
+  readonly cwd?: string;
   /** The host's raw hook payload, for ports that must match bash byte for byte. */
   readonly raw: Readonly<Record<string, unknown>>;
   /** Set when the dispatcher split a multi-file patch into one payload per path. */

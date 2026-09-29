@@ -42,6 +42,7 @@
     "./ledger": "./src/ledger/ledger.ts",
     "./startup": "./src/startup/startup.ts",
     "./dispatch": "./src/dispatch/dispatch.ts",
+    "./gates": "./src/gates/gates.ts",
     "./shell": "./src/shell/shell.ts",
     "./shell/writes": "./src/shell/shell-writes.ts",
     "./detect": "./src/detect/detect.ts"

@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import type { Decision } from "../../decision/decision.ts";
 import { buildModule } from "../../registry/__tests__/module-bundles.ts";
-import type { PreToolModule } from "../dispatch.ts";
+import type { ToolModule } from "../dispatch.ts";
 import {
   hookEnv,
   install,
@@ -23,7 +23,7 @@ import {
 
 const BASH = JSON.stringify({ tool_name: "Bash", tool_input: { command: "git status" } });
 
-function native(name: string, run: () => Promise<Decision>): PreToolModule {
+function native(name: string, run: () => Promise<Decision>): ToolModule {
   return { kind: "native", name, run };
 }
 
@@ -48,7 +48,7 @@ test.concurrent("a native deny ends the walk before later bash modules run", asy
 test.concurrent("a native module sees the shell event and the raw payload", async () => {
   using sb = createSandbox({ git: true });
   const seen: string[] = [];
-  const probe: PreToolModule = {
+  const probe: ToolModule = {
     kind: "native",
     name: "probe",
     run: (event, ctx) => {

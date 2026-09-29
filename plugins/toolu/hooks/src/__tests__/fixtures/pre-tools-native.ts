@@ -8,13 +8,13 @@
  * defined, since the bundle runs from a temp directory.
  */
 import { join } from "node:path";
-import { dispatchPreTool, type PreToolModule } from "@toolu/core/dispatch";
+import { dispatchPreTool, type ToolModule } from "@toolu/core/dispatch";
 import { builtins } from "../../pre-tools/builtins.ts";
 import { hookMain } from "../../pre-tools/hook-main.ts";
 
 declare const HOOKS_DIR: string;
 
-const nativeMcpBlocker: PreToolModule = {
+const nativeMcpBlocker: ToolModule = {
   kind: "native",
   name: "mcp-blocker",
   run: () => Promise.resolve({ kind: "allow" }),

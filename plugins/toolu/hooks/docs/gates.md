@@ -118,8 +118,11 @@ typo mis-delivers nothing.
 
 1. The gate asks, and records a **pending** waiver naming the diff SHA it asked
    about (`.claude/tmp/push-review/<branch>.pending-waiver.json`).
-2. `post-tools/modules/push-waiver.sh` sees the push actually ran **and
-   succeeded**, and promotes the pending marker to
+2. The PostToolUse push-waiver module (`@toolu/core/gates`, the port of
+   `post-tools/modules/push-waiver.sh`) sees the push actually ran **and
+   succeeded** (the whole command line's reported exit status, so
+   `git push || true` counts as success, as it did in bash), and promotes the
+   pending marker to
    `<branch>.waiver.json`. A rejected push promotes nothing — the pending
    marker survives for the retry.
 3. The next push of that same diff passes silently.
@@ -135,6 +138,38 @@ it. Declining is not recorded as an answer — the gate will ask again.
 else. Reading, searching, editing, and running commands stay open while the
 gate is red: a failing gate is a reason not to ship, not a reason to be unable
 to work. `MY_CLAUDE_QUALITY=off` still disables it outright.
+
+## What turns the quality gate red or green
+
+After every Bash/Shell call, the PostToolUse gate-status module records the
+command channel of the gate (the `__global__` entry, source
+`gate-status-hook`). It only acts on a line that **runs** a quality command:
+`bun test`, `bun run check|lint|test|build|format|…`, `vitest`, `jest`, `tsc`,
+`cargo clippy|test|build|nextest`, `./scripts/ts-check.sh`, or a project
+wrapper `tools/<name>/{check,test,format}.sh`. Wrappers (`timeout`, `sudo`,
+`env`, …), package runners (`npx`, `bunx`, `bun x`, `pnpm exec`, `yarn`),
+`bash -c` and `bash <script>` are followed; `yarn run <tool>`, `npx -p pkg
+tool` and `bash -x script` are not. Text that only names one
+(`echo "run bun test later"`, a commit message) does nothing.
+
+A zero exit must prove every quality command in the line passed: each one runs
+last, or is joined to what follows by `&&`, and none is piped into another
+command. A non-zero exit records a failure when at least one quality command
+is in such a position. As in the bash module before it, this failure can
+belong to a later `&&` step (`bun test && ./deploy.sh` failing in the deploy
+turns the gate red):
+
+| Line | Exit 0 | Non-zero |
+|---|---|---|
+| `bun test`, `cd web && bun test`, `bun run lint && bun test` | clears the slot | records a failure |
+| `bun test 2>&1 \| tail -20` | nothing: `tail`'s status | nothing |
+| `bun test \|\| true`, `bun test; echo done` | nothing | nothing |
+| `bun test 2>&1 \| tail; bun run lint` | nothing: the tests are unproven | records `lint`'s failure |
+
+So pipe test output through `tail` if you like, but run the command bare (or
+last, joined by `&&`) when you want it to count. A file-level failure recorded
+by `ts-quality`, `python-quality` or `rust-quality` is a separate entry, and a
+passing command never clears it.
 
 ## Interaction with host permissions
 
@@ -154,4 +189,6 @@ bats plugins/toolu/hooks/lib/__tests__/push-waiver.bats
 bats plugins/toolu/hooks/post-tools/modules/__tests__/push-waiver.bats
 bats plugins/toolu/hooks/lib/__tests__/state-sweeper.bats
 bats plugins/toolu/hooks/lib/__tests__/permissions.bats
+bun test packages/toolu-core/src/gates
+bun test plugins/toolu/hooks/src/__tests__/post-tools-parity.test.ts
 ```

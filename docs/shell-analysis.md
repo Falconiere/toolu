@@ -78,6 +78,14 @@ Wrappers are unwrapped by their own option tables: `sudo`, `doas`, `env`, `comma
   - The contents of `source`d files and script files.
   - Writes by commands other than those `writeTargets` lists, such as `touch`, `truncate`, `ln`, `rsync`, `sponge` or an `awk` redirect inside its program. The bash implementation does not read these either.
 
+## Consumers
+
+- **gate-status** (PostToolUse, `@toolu/core/gates`, [#259](https://github.com/Falconiere/toolu/issues/259)):
+  - It recognises quality commands from each command's `argv`, so prose that names one does not count.
+  - It records a pass only when every recognised command has `exitProves`, and a failure only when at least one has it.
+  - Wrappers, package runners and `bash -c` are followed.
+- **push-waiver** (PostToolUse, #259): uses `isGitPush` and `pushTargetRoot` from `@toolu/core/detect` over the same analysis.
+
 ## Fixtures and the bash oracle
 
 `tooling/fixtures/shell/` holds real inputs (see its README):

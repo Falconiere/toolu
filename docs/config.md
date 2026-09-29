@@ -177,7 +177,7 @@ gate is red. `MY_CLAUDE_QUALITY=off` remains a full kill switch.
 #### Push waivers
 
 `pushReview` in `ask` mode (opt-in) remembers a "yes" for that exact diff:
-the gate writes a pending marker, `post-tools/modules/push-waiver.sh` promotes
+the gate writes a pending marker, the PostToolUse push-waiver module promotes
 it once the push actually succeeds, and the next push of the same code is
 silent. A new commit changes the diff SHA and the gate asks again. A refused
 prompt records nothing.

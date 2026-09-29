@@ -61,7 +61,7 @@ Classifications match [docs/portable-core.md](portable-core.md): `shell-out` · 
 | `toolu:builtin-module:PreToolUse:push-review.sh` | `plugins/toolu/hooks/pre-tools/modules/push-review.sh` | toolu | PreToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `toolu:builtin-module:PreToolUse:quality-gate.sh` | `plugins/toolu/hooks/pre-tools/modules/quality-gate.sh` | toolu | PreToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `toolu:entrypoint:PreToolUse:agent-tier.sh` | `plugins/toolu/hooks/pre-tools/agent-tier.sh` | toolu | PreToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `toolu:hooks.json:PostToolUse:mod.sh:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PostToolUse | shell-out | required | #210/todo | pending-opencode | yes | — |
+| `toolu:hooks.json:PostToolUse:post-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PostToolUse | shell-out | required | #210/todo | pending-opencode | yes | — |
 | `toolu:hooks.json:PreCompact:pre-compact.js:auto` | `plugins/toolu/hooks/hooks.json` | toolu | PreCompact | shell-out | required | #210/todo | pending-opencode | no | — |
 | `toolu:hooks.json:PreToolUse:agent-tier.sh:spawn_agent|Agent|Task` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `toolu:hooks.json:PreToolUse:mcp-blocker.sh:mcp__` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |

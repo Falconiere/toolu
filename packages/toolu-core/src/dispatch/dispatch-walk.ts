@@ -1,9 +1,11 @@
 /**
- * One module walk over one payload (#258), a port of `toolu_dispatch_modules`
- * under PreToolUse semantics: built-ins in table order, then every registry
- * module (#257). The first deny is emitted verbatim and ends the walk; a
- * module exit of 2 ends it with that module's stderr; any other non-zero exit is
- * reported and skipped; the first ask is held; advisories are merged.
+ * One module walk over one payload, a port of `toolu_dispatch_modules`:
+ * built-ins in table order, then every registry module (#257). A module exit
+ * of 2 ends the walk with that module's stderr; any other non-zero exit is
+ * reported and skipped; advisories are merged. PreToolUse (#258): the first
+ * deny is emitted verbatim and ends the walk, the first ask is held.
+ * PostToolUse (#259): the first `decision: "block"` is emitted verbatim and
+ * ends the walk; `permissionDecision` means nothing there.
  */
 import { DecisionSchema, type Decision } from "../decision/decision.ts";
 import { encodeDecision } from "../host/host-encode.ts";
@@ -11,8 +13,8 @@ import type { HostName } from "../host/host-name.ts";
 import { runRegistry, type BashFallback, type ModuleOutcome } from "../registry/registry-run.ts";
 import type { RegistryContext, RegistryHookEvent } from "../registry/registry-types.ts";
 import { childEnv, moduleStdin, runBash, type ModuleResult } from "./dispatch-bash.ts";
-import type { Payload, PreToolModule, Session } from "./dispatch-context.ts";
-import { preToolContext, preToolEvent } from "./dispatch-context.ts";
+import type { HookPhase, Payload, Session, ToolModule } from "./dispatch-context.ts";
+import { toolContext, toolEvent } from "./dispatch-context.ts";
 import {
   collectAdvisories,
   emptyAdvisories,
@@ -25,10 +27,15 @@ import {
   type Advisories,
 } from "./dispatch-output.ts";
 
-export type WalkState = { advisories: Advisories; ask: string | undefined; stderr: string[] };
+export type WalkState = {
+  readonly phase: HookPhase;
+  advisories: Advisories;
+  ask: string | undefined;
+  stderr: string[];
+};
 
-export function newWalkState(): WalkState {
-  return { advisories: emptyAdvisories(), ask: undefined, stderr: [] };
+export function newWalkState(phase: HookPhase): WalkState {
+  return { phase, advisories: emptyAdvisories(), ask: undefined, stderr: [] };
 }
 
 /** `.hookSpecificOutput.permissionDecision // empty` of a result. */
@@ -36,9 +43,14 @@ export function permissionOf(doc: unknown): string {
   return readField(doc, ["hookSpecificOutput", "permissionDecision"]);
 }
 
+/** Whether a module's parsed result ends the walk: a deny before the tool, a block after it. */
+function stopsWalk(phase: HookPhase, doc: unknown): boolean {
+  return phase === "pre" ? permissionOf(doc) === "deny" : readField(doc, ["decision"]) === "block";
+}
+
 /**
  * Fold one module's result into the walk. Returns the hook's final result when
- * this module ends the walk (deny or exit 2), otherwise undefined.
+ * this module ends the walk (deny, block or exit 2), otherwise undefined.
  */
 export function consume(
   state: WalkState,
@@ -56,11 +68,10 @@ export function consume(
   }
   if (result.stdout === "") return undefined;
   const doc = parseDocument(result.stdout);
-  const permission = permissionOf(doc);
-  if (permission === "deny") {
+  if (stopsWalk(state.phase, doc)) {
     return { stdout: printed(result.stdout), stderr: state.stderr.join(""), exitCode: 0 };
   }
-  if (permission === "ask") {
+  if (state.phase === "pre" && permissionOf(doc) === "ask") {
     state.ask ??= result.stdout;
     return undefined;
   }
@@ -70,9 +81,10 @@ export function consume(
 
 /** The walk's result once every module ran: the held ask, else the merged advisories. */
 export function settle(state: WalkState): ModuleResult {
+  const event = state.phase === "pre" ? "PreToolUse" : "PostToolUse";
   const stdout =
     state.ask === undefined
-      ? finalAdvisory(state.advisories)
+      ? finalAdvisory(state.advisories, event)
       : finalAsk(state.ask, state.advisories);
   return { stdout, stderr: state.stderr.join(""), exitCode: 0 };
 }
@@ -105,7 +117,7 @@ function encoded(
 }
 
 async function runNative(
-  module: Extract<PreToolModule, { kind: "native" }>,
+  module: Extract<ToolModule, { kind: "native" }>,
   event: RegistryHookEvent,
   ctx: RegistryContext,
 ): Promise<ModuleResult> {
@@ -121,7 +133,7 @@ async function runNative(
 
 type Walk = { payload: Payload; session: Session; event: RegistryHookEvent; ctx: RegistryContext };
 
-async function runBuiltin(module: PreToolModule, walk: Walk): Promise<ModuleResult> {
+async function runBuiltin(module: ToolModule, walk: Walk): Promise<ModuleResult> {
   if (module.kind === "native") return runNative(module, walk.event, walk.ctx);
   return runBash(
     module.path,
@@ -132,7 +144,7 @@ async function runBuiltin(module: PreToolModule, walk: Walk): Promise<ModuleResu
 
 /** Sequential by contract: a module must not run after a deny. */
 async function walkBuiltins(
-  builtins: readonly PreToolModule[],
+  builtins: readonly ToolModule[],
   at: number,
   walk: Walk,
   state: WalkState,
@@ -143,7 +155,10 @@ async function walkBuiltins(
   return done ?? walkBuiltins(builtins, at + 1, walk, state);
 }
 
-/** Registry `.sh` modules run on bash; their raw result is kept for the merge. */
+/**
+ * Registry `.sh` modules run on bash; their raw result is kept for the merge.
+ * The decision only tells the registry runner whether to stop.
+ */
 function bashFallback(walk: Walk, raw: Map<string, ModuleResult>): BashFallback {
   return (entry) => {
     const result = runBash(
@@ -152,12 +167,15 @@ function bashFallback(walk: Walk, raw: Map<string, ModuleResult>): BashFallback 
       moduleEnv(walk.payload, walk.session),
     );
     raw.set(entry.path, result);
+    const phase = walk.session.phase;
     const stops =
       result.exitCode === 2 ||
-      (result.exitCode === 0 && permissionOf(parseDocument(result.stdout)) === "deny");
-    const decision: Decision = stops
-      ? { kind: "deny", reason: "registry module denied" }
-      : { kind: "allow" };
+      (result.exitCode === 0 && stopsWalk(phase, parseDocument(result.stdout)));
+    const decision: Decision = !stops
+      ? { kind: "allow" }
+      : phase === "pre"
+        ? { kind: "deny", reason: "registry module denied" }
+        : { kind: "post_block", reason: "registry module blocked" };
     return Promise.resolve(decision);
   };
 }
@@ -187,20 +205,20 @@ async function walkRegistry(walk: Walk, state: WalkState): Promise<ModuleResult 
   return undefined;
 }
 
-/** `toolu_dispatch_modules <modules> PreToolUse <registry>` over one payload. */
+/** `toolu_dispatch_modules <modules> <PreToolUse|PostToolUse> <registry>` over one payload. */
 export async function dispatchModules(
   payload: Payload,
   session: Session,
-  builtins: readonly PreToolModule[],
+  builtins: readonly ToolModule[],
 ): Promise<ModuleResult> {
   const doc = parseDocument(payload.text);
   const walk: Walk = {
     payload,
     session,
-    event: preToolEvent(payload, doc, session),
-    ctx: preToolContext(payload, doc, session),
+    event: toolEvent(payload, doc, session),
+    ctx: toolContext(payload, doc, session),
   };
-  const state = newWalkState();
+  const state = newWalkState(session.phase);
   const done = (await walkBuiltins(builtins, 0, walk, state)) ?? (await walkRegistry(walk, state));
   return done ?? settle(state);
 }

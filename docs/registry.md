@@ -76,6 +76,26 @@ toolu's PreToolUse entry for edit, shell and search tools runs the Bun bundle `h
 
 `bun run tooling/src/benchmarks/pre-tools-latency.ts [--runs N] [--assert]` measures p50 for `bash mod.sh`, the bundle, and the bundle with one module native, against the epic budget of bash + 5 ms. On an Apple M2 Max with Bun 1.4.2, the bundle ran 40 to 182 ms faster than `bash mod.sh` on every fixture: it drops the dispatcher's own `jq` calls per module. With one module native, six of the seven fixtures ran a further 13 to 39 ms faster, and one was 11 ms slower.
 
+## PostToolUse dispatch
+
+toolu's PostToolUse entry for edit, shell and search tools runs the Bun bundle `hooks/dist/post-tools.js`, wired with the generated launcher. With no Bun it prints a `systemMessage` and exits 0, because PostToolUse is not an enforcing event. `dispatchPostTool` (`@toolu/core/dispatch`) ports `post-tools/mod.sh` and the PostToolUse half of `dispatch.sh`. It shares the PreToolUse walk, with these differences:
+
+- **Decisions.** The first `decision: "block"` is emitted exactly as its module wrote it, and the walk stops. `permissionDecision` means nothing after the tool ran: no ask is held and no deny stops the walk. Exit codes and advisory merging are as in PreToolUse, and the merged object names `hookEventName: "PostToolUse"`.
+- **Edits.** A block or exit 2 on any path of a patch wins for the whole patch. Unparseable `apply_patch` headers give `{"decision":"block","reason":"Unable to parse apply_patch file headers; per-file post-edit quality checks could not run."}`.
+- **Environment.** `.sh` modules also get `PROJECT_ROOT`, which is the git toplevel of the hook's working directory, else that directory. `$PROJECT_ROOT/node_modules/.bin` goes first on `PATH`. Native and `.js` modules receive the same values typed: `event.toolName`, `ctx.raw` (the payload), `ctx.projectRoot`, `ctx.cwd`, `ctx.edit` and `ctx.configRoot`.
+- **Built-ins.** `gate-status` and `push-waiver` are native (`@toolu/core/gates`), listed in `plugins/toolu/hooks/src/post-tools/builtins.ts`.
+  - gate-status reads the command with `@toolu/core/shell`. It counts only a quality command the line runs, and only when a zero exit of the line would prove that command passed (`exitProves`). A pass needs every such command proven, a failure at least one. This fixes #283 items 6 and 7. `plugins/toolu/hooks/docs/gates.md` has the rules.
+  - push-waiver detects pushes through the same layer (#283 item 8).
+  
+  Their bash scripts stay as the parity baseline.
+- **Registry.** `post-tools.d` runs after the built-ins. The language-quality modules (#265–#267) still run there on bash.
+- **Parity.**
+  - `plugins/toolu/hooks/src/__tests__/post-tools-parity.test.ts` runs the `@toolu/conformance` PostToolUse corpus as Claude Code and Codex deliver it. It compares stdout, the exit code and the project's gate, waiver and telemetry files between `bash mod.sh` and the bundle. The corpus includes the three language-quality plugins registered by their real `register.sh`.
+  - `post-tools-283.test.ts` pins the named #283 fixtures: there the bundle is right and bash is recorded as the known-wrong baseline.
+- **Failure.** An unexpected dispatcher error exits 2 with `toolu PostToolUse dispatcher failed: <message>`, so the model sees that the post-tool checks did not run.
+
+`bun run tooling/src/benchmarks/post-tools-latency.ts [--runs N] [--assert]` measures p50 for `bash mod.sh` against the bundle. Each variant runs in its own identically prepared sandbox, and the two alternate run by run, so a load change during a fixture hits both. On an Apple M2 Max with Bun 1.4.2 (9 runs, load average 5 to 8, other agents active), the bundle ran 50 to 184 ms faster on every fixture. The largest gain was a two-path patch through ts-quality and rust-quality: 891 ms against 708 ms. Before the runs were interleaved, one load spike put the bash block and the bundle block on different sides of it, and a fixture read 13 ms slower.
+
 ## Import cost
 
 Measured by `packages/toolu-core/src/registry/__tests__/registry-import-cost.test.ts` on an Apple M2 Max, macOS 26.6.2, Bun 1.4.2. The test runs 20 modules, each a separate 112.8 KB bundle that inlines the state layer and zod, through `runRegistry` in a fresh `bun` process, over 15 measured runs of the whole set.
