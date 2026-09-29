@@ -32,18 +32,27 @@ export type FixtureTree = {
   [Symbol.dispose](): void;
 };
 
-/** runtime-files.json → { "<fixture>/<rel>": body } decoded from base64. */
+/** The AWS docs example key id, assembled at runtime so no committed file holds it. */
+export const FAKE_AWS_KEY = ["AKIA", "IOSFODNN7", "EXAMPLE"].join("");
+
+function entries(doc: unknown, key: string): Array<[string, unknown]> {
+  const map: unknown = typeof doc === "object" && doc !== null ? Reflect.get(doc, key) : undefined;
+  if (typeof map !== "object" || map === null)
+    throw new Error(`runtime-files.json has no ${key} map`);
+  return Object.entries(map);
+}
+
+/** runtime-files.json → { "<fixture>/<rel>": body }: base64 `files`, then placeholder-filled `text`. */
 function runtimeFiles(): Map<string, string> {
   const doc: unknown = JSON.parse(readFileSync(join(FIXTURES, "runtime-files.json"), "utf8"));
-  const files: unknown =
-    typeof doc === "object" && doc !== null ? Reflect.get(doc, "files") : undefined;
-  if (typeof files !== "object" || files === null) {
-    throw new Error("runtime-files.json has no files map");
-  }
   const out = new Map<string, string>();
-  for (const [rel, encoded] of Object.entries(files)) {
+  for (const [rel, encoded] of entries(doc, "files")) {
     if (typeof encoded !== "string") throw new Error(`runtime-files.json: ${rel} is not base64`);
     out.set(rel, Buffer.from(encoded, "base64").toString("utf8"));
+  }
+  for (const [rel, body] of entries(doc, "text")) {
+    if (typeof body !== "string") throw new Error(`runtime-files.json: ${rel} is not text`);
+    out.set(rel, body.split("{{FAKE_AWS_KEY}}").join(FAKE_AWS_KEY));
   }
   return out;
 }

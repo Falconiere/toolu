@@ -8,6 +8,8 @@ import { run } from "@toolu/conformance/harness/spawn";
 import type { EnvPatch } from "@toolu/conformance/harness/spawn";
 import { z } from "zod";
 
+export { FAKE_AWS_KEY } from "./fixture-tree.ts";
+
 export const RUN_TS = resolve(import.meta.dir, "../run.ts");
 
 export type GrResult = { exit: number; out: string };
@@ -59,6 +61,3 @@ export function merge(
 ): void {
   doc[key] = { ...Json.parse(doc[key] ?? {}), ...patch };
 }
-
-/** A fake credential assembled at runtime, so no committed file holds one. */
-export const FAKE_AWS_KEY = ["AKIA", "IOSFODNN7", "EXAMPLE"].join("");
