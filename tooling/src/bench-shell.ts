@@ -269,27 +269,42 @@ function report(bench: ShellBench): string {
   ].join("\n");
 }
 
-function numberFlag(args: readonly string[], name: string, fallback: number): number {
-  const index = args.indexOf(name);
-  const value = index === -1 ? fallback : Number(args[index + 1]);
+/** A value-taking flag's positive integer; the next word must not be missing or another flag. */
+function positive(name: string, raw: string | undefined): number {
+  if (raw === undefined || raw.startsWith("--")) throw new Error(`${name} needs a value`);
+  const value = Number(raw);
   if (!Number.isInteger(value) || value < 1) throw new Error(`${name} needs a positive integer`);
   return value;
 }
 
+interface Cli {
+  runs: number;
+  rounds: number;
+  json: boolean;
+  assert: boolean;
+}
+
+/** Read the arguments in order, so a value is never mistaken for an option or the reverse. */
+function parseCli(args: readonly string[]): Cli {
+  const cli: Cli = { runs: 40, rounds: 20, json: false, assert: false };
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i] ?? "";
+    if (arg === "--json") cli.json = true;
+    else if (arg === "--assert") cli.assert = true;
+    else if (arg === "--runs") cli.runs = positive(arg, args[++i]);
+    else if (arg === "--rounds") cli.rounds = positive(arg, args[++i]);
+    else throw new Error(`unknown option ${arg}`);
+  }
+  return cli;
+}
+
 function runBench(args: readonly string[]): number {
-  const known = new Set(["--runs", "--rounds", "--json", "--assert"]);
-  const unknown = args.filter(
-    (arg, i) => arg.startsWith("--") && !known.has(arg) && !known.has(args[i - 1] ?? ""),
-  );
-  if (unknown.length > 0) throw new Error(`unknown option ${unknown.join(" ")}`);
-  const bench = benchShell({
-    runs: numberFlag(args, "--runs", 40),
-    rounds: numberFlag(args, "--rounds", 20),
-  });
-  process.stdout.write(`${args.includes("--json") ? JSON.stringify(bench) : report(bench)}\n`);
+  const cli = parseCli(args);
+  const bench = benchShell({ runs: cli.runs, rounds: cli.rounds });
+  process.stdout.write(`${cli.json ? JSON.stringify(bench) : report(bench)}\n`);
   const problems = overBudget(bench);
   for (const problem of problems) process.stderr.write(`OVER BUDGET  ${problem}\n`);
-  return args.includes("--assert") && problems.length > 0 ? 1 : 0;
+  return cli.assert && problems.length > 0 ? 1 : 0;
 }
 
 /** CLI entry: a bad argument or a failed build is reported on stderr with exit 1. */

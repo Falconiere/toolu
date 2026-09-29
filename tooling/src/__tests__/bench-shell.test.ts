@@ -102,4 +102,14 @@ test.concurrent("unknown options and bad counts are rejected", async () => {
   const bad = await run([process.execPath, SCRIPT, "--runs", "0"], { cwd: ROOT });
   expect(bad.exitCode).toBe(1);
   expect(bad.stderr).toContain("--runs needs a positive integer");
+  const missing = await run([process.execPath, SCRIPT, "--rounds"], { cwd: ROOT });
+  expect(missing.exitCode).toBe(1);
+  expect(missing.stderr).toContain("--rounds needs a value");
+  // A flag after a value-taking flag is never read for that flag's value.
+  const swallowed = await run([process.execPath, SCRIPT, "--runs", "--bogus"], { cwd: ROOT });
+  expect(swallowed.exitCode).toBe(1);
+  expect(swallowed.stderr).toContain("--runs needs a value");
+  const stray = await run([process.execPath, SCRIPT, "--json", "extra"], { cwd: ROOT });
+  expect(stray.exitCode).toBe(1);
+  expect(stray.stderr).toContain("unknown option extra");
 });
