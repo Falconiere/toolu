@@ -31,13 +31,6 @@ export function registryEventDir(event: RegistryEvent, options: HostOptions = {}
   return join(registryRoot(options), EVENT_DIRS[event]);
 }
 
-/** The event whose directory has this base name, if any. */
-export function eventOfDir(dir: string): RegistryEvent | undefined {
-  if (dir === EVENT_DIRS["tool/pre"]) return "tool/pre";
-  if (dir === EVENT_DIRS["tool/post"]) return "tool/post";
-  return undefined;
-}
-
 /** `<spec>__<name>.js`; throws on a spec or name that could not round-trip. */
 export function registryFileName(spec: string, name: string): string {
   if (spec === "" || /\s/u.test(spec) || spec.includes("/") || spec.includes(SEP)) {

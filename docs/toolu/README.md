@@ -52,7 +52,7 @@ The `deep-research` skill is a standalone knowledge workflow: it picks guiding q
 
 ### 4. Hook Engine & Registry
 
-The core dispatcher runs `PreToolUse`, `PostToolUse`, and `SessionStart` hooks. Domain plugins contribute check modules at `SessionStart` via `register.sh` scripts, and the core executes those modules only while the owning plugin is installed — **fail-closed**.
+The core dispatcher runs `PreToolUse`, `PostToolUse`, and `SessionStart` hooks. Domain plugins contribute check modules at `SessionStart` via `register.sh` scripts, and the core executes those modules only while the owning plugin is installed — **fail-closed**. Ported plugins register one bundled ESM module per event through `@toolu/core/registry`, which the core imports in-process; see [docs/registry.md](../registry.md).
 
 ```text
 # Every file edit triggers PostToolUse checks from rust-quality / ts-quality
