@@ -65,3 +65,10 @@ export {
   type GateName,
   type GatePreset,
 } from "./gate-mode.ts";
+export {
+  DEFAULT_PERMISSIONS,
+  PERMISSIONS_SENTINEL,
+  permissionsAutowrite,
+  type PermissionsOptions,
+  type PermissionsResult,
+} from "./permissions.ts";
