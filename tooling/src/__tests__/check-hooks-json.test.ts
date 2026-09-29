@@ -83,7 +83,10 @@ test("a hand-edited launcher command fails and names the expected string", () =>
 test("an edited or removed commandWindows fails", () => {
   const edited = copyOfRepo();
   edit(edited, TOOLU, (text) =>
-    text.replace("exit /b 2", "exit /b 0").replace("where /q bun", "where bun"),
+    text.replace(
+      JSON.stringify(sessionStart.commandWindows),
+      JSON.stringify(sessionStart.commandWindows.replace("where /q bun", "where bun")),
+    ),
   );
   expect(checkHooksJson(edited).map((p) => p.problem)).toEqual([
     "commandWindows differs from the generated launcher",
