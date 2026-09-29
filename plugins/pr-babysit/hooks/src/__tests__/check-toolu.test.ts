@@ -7,6 +7,7 @@
 import { expect, test } from "bun:test";
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { readHostOutcome } from "@toolu/conformance/harness/hosts";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { childEnv, run, type EnvPatch } from "@toolu/conformance/harness/spawn";
 import { hookCommand, runStartupHook } from "@toolu/conformance/harness/startup";
@@ -110,7 +111,10 @@ test.concurrent.skipIf(NO_CODEX)(
     const root = join(PLUGINS, "pr-babysit");
     const hookEnv = { ...env, CLAUDE_PLUGIN_ROOT: root, PLUGIN_ROOT: root };
     const before = await runStartupHook(root, "check-toolu", sb, hookEnv);
-    expect(before.stdout).toContain(WARNING);
+    expect(readHostOutcome("codex", "SessionStart", before)).toEqual({
+      effect: "allow",
+      context: WARNING,
+    });
     expect((await codex("add", "toolu@toolu")).exitCode).toBe(0);
     const after = await runStartupHook(root, "check-toolu", sb, hookEnv);
     expect(after).toMatchObject({ exitCode: 0, stdout: "" });

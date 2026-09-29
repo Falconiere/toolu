@@ -17,6 +17,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
+import { readHostOutcome } from "@toolu/conformance/harness/hosts";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch, type RunResult } from "@toolu/conformance/harness/spawn";
 import {
@@ -38,11 +39,16 @@ const OutputSchema = z.strictObject({
   }),
 });
 
+/** The context, after checking the output against both hosts' SessionStart contract. */
 function contextOf(res: RunResult): string {
   expect(res.exitCode).toBe(0);
   expect(res.stderr).toBe("");
   expect(res.stdout.endsWith("}\n")).toBe(true);
-  return OutputSchema.parse(JSON.parse(res.stdout)).hookSpecificOutput.additionalContext;
+  const context = OutputSchema.parse(JSON.parse(res.stdout)).hookSpecificOutput.additionalContext;
+  for (const host of ["claude", "codex"] as const) {
+    expect(readHostOutcome(host, "SessionStart", res)).toEqual({ effect: "allow", context });
+  }
+  return context;
 }
 
 /** The bash hook's mandate text for `wrapper` and plugin root `plugin`. */

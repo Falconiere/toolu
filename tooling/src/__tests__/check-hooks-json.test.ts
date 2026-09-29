@@ -113,8 +113,8 @@ test("commandWindows on a legacy script command fails", () => {
   const root = copyOfRepo();
   edit(root, "plugins/jev/hooks/hooks.json", (text) =>
     text.replace(
-      '"command": "\\"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh\\""',
-      '"command": "\\"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh\\"", "commandWindows": "x"',
+      '"command": "\\"${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit.sh\\""',
+      '"command": "\\"${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit.sh\\"", "commandWindows": "x"',
     ),
   );
   expect(checkHooksJson(root).map((p) => p.problem)).toEqual([
