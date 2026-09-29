@@ -21,7 +21,8 @@
       "dispatch",
       "shell",
       "detect",
-      "gates"
+      "gates",
+      "quality"
     ],
     "nested": {
       "decision": [
@@ -166,6 +167,13 @@
         "code-edit-rules.ts",
         "mcp-scope.ts",
         "mcp-hook.ts",
+        "__tests__"
+      ],
+      "quality": [
+        "quality-edit.ts",
+        "quality-gate.ts",
+        "quality-ast-grep.ts",
+        "quality-run.ts",
         "__tests__"
       ]
     },
