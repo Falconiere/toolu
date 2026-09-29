@@ -220,3 +220,27 @@ test.concurrent("an absent registry directory runs nothing", async () => {
   using sb = createSandbox();
   expect(await runRegistry(hookEvent(sb, "tool/post"), context(sb))).toEqual([]);
 });
+
+test.concurrent("run is called on the export itself, so a class instance keeps its methods", async () => {
+  using sb = createSandbox();
+  mkdirSync(sb.path(PRE), { recursive: true });
+  writeFileSync(
+    sb.path(`${PRE}/a@t__cls.js`),
+    [
+      "class Module {",
+      '  spec = "a@t";',
+      '  name = "cls";',
+      '  event = "tool/pre";',
+      '  decide() { return { kind: "advisory", message: "from the prototype" }; }',
+      "  run() { return Promise.resolve(this.decide()); }",
+      "}",
+      "export default new Module();",
+      "",
+    ].join("\n"),
+  );
+  const [outcome] = await runRegistry(hookEvent(sb, "tool/pre"), context(sb));
+  expect(outcome).toMatchObject({
+    status: "decision",
+    decision: { kind: "advisory", message: "from the prototype" },
+  });
+});

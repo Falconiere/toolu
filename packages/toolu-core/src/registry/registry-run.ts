@@ -69,7 +69,8 @@ function runContract(
       `contract mismatch: exports ${JSON.stringify({ spec, name, event: declared })}, file and directory want ${JSON.stringify(want)}`,
     );
   }
-  // Called on the export itself, so a module whose `run` reads `this` keeps working.
+  // Called on the export itself, not zod's copy: the copy keeps own properties
+  // only, so a class-instance module would lose its prototype methods on `this`.
   return parsed.data.run.call(exported, event, ctx);
 }
 

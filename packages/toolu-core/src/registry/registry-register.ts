@@ -19,7 +19,6 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { text } from "node:stream/consumers";
 import type { HostOptions } from "../host/host-roots.ts";
 import {
   REGISTRY_DIRS,
@@ -190,7 +189,7 @@ export async function runRegisterHook(
     process.stderr.write(`toolu-registry: register ${spec}: ${line}\n`);
   };
   try {
-    await text(process.stdin);
+    await Bun.stdin.text();
     const result = registerModules(spec, modules, options);
     for (const failure of result.failed) warn(`${failure.path}: ${failure.error}`);
   } catch (error) {
