@@ -35,6 +35,7 @@
     "test:unit": "bun test --timeout 60000 tooling/src packages tools plugins",
     "test:workspace": "bun run tooling/src/check-workspace.ts",
     "test:ts": "bun run test:conventions && bun run test:unit && bun run check:plugin-bundles && bun run check:hooks-json && bun run test:workspace && bun run test:pack && bun run test:conformance",
+    "benchmarks": "bun run tooling/src/benchmarks/run.ts",
     "test:pack": "bun run tooling/src/pack-inventory.ts && bun test --timeout 60000 tooling/src/__tests__/npm-publish.test.ts"
   },
   "dependencies": {

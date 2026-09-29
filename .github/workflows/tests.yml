@@ -166,9 +166,9 @@ jobs:
           # key in CI, so token counting is the offline heuristic — fully
           # hermetic. Guards the harness against regressions; the live tier
           # (whole-session) is run manually, never in CI.
-          bash benchmarks/run.sh --tier deterministic
+          bun run benchmarks --tier deterministic
           f=$(ls benchmarks/results/retrieval-deterministic-*.json | tail -1)
-          bash benchmarks/run.sh --validate "$f"
+          bun run benchmarks --validate "$f"
 
       - name: Context budget guard
         run: |

@@ -345,8 +345,6 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 - `feat` / `fix` / `feat!` (or `BREAKING CHANGE`) drive minor / patch / major bumps; `chore` / `docs` / `ci` / `refactor` ship no release.
 - Review the Release PR, then **merge it to cut the release** — the only manual step. It bumps root `package.json`, `@toolu/core` / `@toolu/opencode` / `@toolu/conformance`, and every Claude and Codex plugin manifest to the new version, updates `CHANGELOG.md`, tags `vX.Y.Z`, and publishes the GitHub Release. The marketplace re-extracts a plugin when its manifest version changes.
 
-`tooling/release.sh` is **deprecated**, kept only as a manual escape hatch for when the automation is unavailable.
-
 ## References
 
 - [Claude Code docs](https://docs.claude.com/en/docs/claude-code) ·
