@@ -1,0 +1,1 @@
+{ "version": 1, "docsSync": { "mode": "block" }, "agentTier": { "mode": "bogus" }, "gates": { "preset": "relaxed", "docsSync": { "mode": "ask" } } }

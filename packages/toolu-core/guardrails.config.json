@@ -31,6 +31,14 @@
         "__tests__"
       ],
       "config": [
+        "config-schema.ts",
+        "config-load.ts",
+        "config-read.ts",
+        "quality-config.ts",
+        "docs-sync-config.ts",
+        "gate-mode.ts",
+        "permissions.ts",
+        "settings.ts",
         "__tests__"
       ],
       "runner": [

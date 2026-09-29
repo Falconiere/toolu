@@ -1,0 +1,1 @@
+{ "version": 1, "gates": { "pushReview": { "mode": "ask" }, "qualityGate": { "mode": "ask" }, "commitGate": { "mode": "ask" }, "bashCommands": { "mode": "ask" }, "planLedger": { "mode": "ask" }, "docsSync": { "mode": "ask" }, "agentTier": { "mode": "ask" }, "protectedFiles": { "mode": "ask" }, "mcpBlocker": { "mode": "ask" } } }
