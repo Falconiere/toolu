@@ -119,15 +119,9 @@ write_module() {
   [ "$output" = modules-ran ]
 }
 
-@test "pre-tools entrypoint blocks a protected path hidden later in a Codex patch" {
-  patch=$'*** Begin Patch\n*** Update File: README.md\n@@\n-a\n+b\n*** Update File: plugins/toolu/hooks/lib/dispatch.sh\n@@\n-a\n+b\n*** End Patch'
-  payload=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command}}')
-  run env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$TMP/codex" TOOLU_PROJECT_DIR="$REPO_ROOT" \
-    MY_CLAUDE_QUALITY=off bash "$REPO_ROOT/hooks/pre-tools/mod.sh" <<<"$payload"
-  [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null
-  echo "$output" | grep -q 'plugins/toolu/hooks/lib/dispatch.sh'
-}
+# A protected path hidden later in a Codex patch is blocked by the native
+# protected-files gate (#260): "multi-file patch: protected second path" in the
+# @toolu/conformance corpus, replayed by pre-tool-modules-a-golden.test.ts.
 
 @test "pre-tools entrypoint lets an apply_patch through while the quality gate is failing" {
   project="$TMP/project"
@@ -144,7 +138,9 @@ write_module() {
   run bash -c 'cd "$1" && env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$2" TOOLU_PROJECT_DIR="$1" bash "$3" <<<"$4"' \
     _ "$project" "$TMP/codex" "$REPO_ROOT/hooks/pre-tools/mod.sh" "$payload"
   [ "$status" -eq 0 ]
-  [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // "none"')" = "none" ]
+  # Silent: no module decides an edit here, and code-edit-rules, whose
+  # advisory this output used to carry, is native since #260.
+  [ -z "$output" ]
 }
 
 @test "dispatcher: deny short-circuits later modules (no trailing advisory after deny)" {

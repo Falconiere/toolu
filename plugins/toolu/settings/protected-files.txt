@@ -7,7 +7,7 @@
 # Bare-basename patterns (no `/`) additionally match against the file basename.
 #
 # This list gates Edit/Write/MultiEdit AND Bash/Shell (a command's candidate
-# write targets, extracted by bash_write_targets in hooks/lib/detect.sh).
+# write targets, from writeTargets in @toolu/core/shell/writes).
 #
 # ⚠️  A match now PROMPTS YOU rather than denying outright: you approve or
 # refuse per call, and approving lets the write happen. Set

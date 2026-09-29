@@ -42,6 +42,13 @@ export function toolEvent(
   return { ...base(sb, toolName, toolInput), type: "tool/pre" };
 }
 
-export function gateCtx(sb: Sandbox, host: HostName, env: Record<string, string>): RegistryContext {
-  return { host, env, configRoot: join(sb.home, ".claude"), projectRoot: sb.project, raw: {} };
+/** `cwd`, when given, is the hook process's working directory (`ctx.cwd`). */
+export function gateCtx(
+  sb: Sandbox,
+  host: HostName,
+  env: Record<string, string>,
+  cwd?: string,
+): RegistryContext {
+  const ctx = { host, env, configRoot: join(sb.home, ".claude"), projectRoot: sb.project, raw: {} };
+  return cwd === undefined ? ctx : { ...ctx, cwd };
 }

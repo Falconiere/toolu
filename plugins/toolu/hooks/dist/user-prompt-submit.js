@@ -3613,7 +3613,10 @@ var TooluConfigSchema = object({
   comemory: record(string2(), unknown()).optional()
 }).strict();
 // packages/toolu-core/src/config/config-load.ts
-import { readFileSync, statSync } from "fs";
+import { readFileSync } from "fs";
+
+// packages/toolu-core/src/config/config-files.ts
+import { statSync } from "fs";
 import { join as join2 } from "path";
 
 // packages/toolu-core/src/host/host-name.ts
@@ -3786,6 +3789,25 @@ function projectConfigPath(options = {}) {
   return root === undefined ? undefined : join(root, projectDirname(o), "toolu.config.json");
 }
 
+// packages/toolu-core/src/config/config-files.ts
+function isFile(path) {
+  try {
+    return statSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+function configFiles(options) {
+  const env = options.env ?? process.env;
+  const host = options.host ?? detectHost({ env });
+  const scoped = options.cwd === undefined ? { env, host } : { env, host, cwd: options.cwd };
+  const files = {
+    user: join2(configRoot(scoped), "toolu.config.json"),
+    project: projectConfigPath(scoped)
+  };
+  return { files, host };
+}
+
 // packages/toolu-core/src/config/config-load.ts
 var KNOWN_KEYS = new Set(Object.keys(TooluConfigSchema.shape));
 function isJsonObject(value) {
@@ -3804,13 +3826,6 @@ function mergeObjects(user, project) {
 }
 function mergeConfig(user, project) {
   return isJsonObject(user) && isJsonObject(project) ? mergeObjects(user, project) : project;
-}
-function isFile(path) {
-  try {
-    return statSync(path).isFile();
-  } catch {
-    return false;
-  }
 }
 function readConfigFile(path) {
   if (!isFile(path)) {
@@ -3836,16 +3851,6 @@ function envelopeError(value) {
     return `unsupported version ${JSON.stringify(value.version)} (supported: 1)`;
   }
   return;
-}
-function configFiles(options) {
-  const env = options.env ?? process.env;
-  const host = options.host ?? detectHost({ env });
-  const scoped = options.cwd === undefined ? { env, host } : { env, host, cwd: options.cwd };
-  const files = {
-    user: join2(configRoot(scoped), "toolu.config.json"),
-    project: projectConfigPath(scoped)
-  };
-  return { files, host };
 }
 function readLayer(path, warn) {
   const read = path === undefined ? { kind: "absent" } : readConfigFile(path);

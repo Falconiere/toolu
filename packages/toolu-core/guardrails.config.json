@@ -47,6 +47,9 @@
         "gate-mode.ts",
         "permissions.ts",
         "settings.ts",
+        "config-files.ts",
+        "settings-dir.ts",
+        "settings-files.ts",
         "__tests__"
       ],
       "runner": [
@@ -156,6 +159,13 @@
         "bash-commands.ts",
         "commit-gate.ts",
         "quality-gate.ts",
+        "bash-pattern.ts",
+        "gate-paths.ts",
+        "protected-files.ts",
+        "mcp-blocker.ts",
+        "code-edit-rules.ts",
+        "mcp-scope.ts",
+        "mcp-hook.ts",
         "__tests__"
       ]
     },

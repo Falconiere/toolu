@@ -450,8 +450,12 @@ Unknown names are silently ignored (forward compatible).
     after the server prefix; when that server is denied the text is appended to
     the deny reason (e.g. to steer the user to a replacement skill). See
     `plugins/toolu/settings/README.md`.
+  - A config file whose envelope toolu cannot read (an unknown top-level key,
+    `version` other than 1) makes every gate block, and its `mcp.<name>: false`
+    keys still block: they are read from the file directly.
   - Matcher wiring lives in `plugins/toolu/hooks/hooks.json`, which routes
-    the `mcp__` prefix through `plugins/toolu/hooks/pre-tools/modules/mcp-blocker.sh`.
+    the `mcp__` prefix through the Bun launcher to `hooks/dist/mcp-tools.js`,
+    the native mcp-blocker from `@toolu/core/gates`.
 
 Skills, hooks, Claude agents, and Claude commands are loaded from plugin
 manifests at session start, so config does not remove those files from host

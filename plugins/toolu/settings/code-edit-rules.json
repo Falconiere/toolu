@@ -1,5 +1,5 @@
 {
-  "//": "code-edit-rules.sh data file. Each entry maps a file-glob pattern to a list of one-line rule reminders. The hook joins the strings and surfaces them before edits. Schema: {rules: [{ match: string (glob), docs: [string] (one-line rule texts), when_path_matches?: [string] (extra_docs added when the file path also matches one of these), extra_docs?: [string]}]}",
+  "//": "code-edit-rules gate data file (@toolu/core/gates). Each entry maps a file-glob pattern to a list of one-line rule reminders. The hook joins the strings and surfaces them before edits. Schema: {rules: [{ match: string (glob), docs: [string] (one-line rule texts), when_path_matches?: [string] (extra_docs added when the file path also matches one of these), extra_docs?: [string]}]}",
   "rules": [
     {
       "match": "*.rs",

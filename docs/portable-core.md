@@ -106,7 +106,7 @@ Normalized: `session/{start,resume,clear,unload}`, `prompt`, `pre_compact`/`comp
 
 `protocolVersion`: **1**
 
-Request (stdin JSON to assembled dispatcher) and response (stdout JSON) shapes match the design spec. Truncated/non-JSON stdout → `runtime_failure` (enabled pre-tool → deny). Incomplete assembled registry → bootstrap/`runtime_failure`, never silent allow. Invoke assembled registry modules and built-in dispatchers — not raw concern fragments. Exit 0 does not prove registry readiness. Not every plugin has `register.sh`.
+Request (stdin JSON to assembled dispatcher) and response (stdout JSON) shapes match the design spec. `runPreToolBridge` runs toolu's PreToolUse hook as Claude Code does: `hooks/dist/pre-tools.js` behind the generated launcher, with `CLAUDE_PLUGIN_ROOT` set to the package's `plugins/toolu`. Before #260 it ran `bash pre-tools/mod.sh`, which stopped running the modules #260 ported. A missing Bun exits 2, which maps to `runtime_failure` and a deny. Truncated/non-JSON stdout → `runtime_failure` (enabled pre-tool → deny). Incomplete assembled registry → bootstrap/`runtime_failure`, never silent allow. Invoke assembled registry modules and built-in dispatchers — not raw concern fragments. Exit 0 does not prove registry readiness. Not every plugin has `register.sh`.
 
 ## Policy split (shared with #209)
 
@@ -127,7 +127,7 @@ Exhaustive per-source rows: [docs/gate-coverage-matrix.md](gate-coverage-matrix.
 
 1. Host carries an edit (or Bash write) to a protected path.
 2. Normalize via edit records (`plugins/toolu/hooks/lib/edit-records.sh`).
-3. `plugins/toolu/hooks/pre-tools/modules/protected-files.sh` + `toolu_gate_mode protectedFiles` (`gate-mode.sh`).
+3. The native protected-files gate (`packages/toolu-core/src/gates/protected-files.ts`, #260; it replaced `protected-files.sh`) + `gateMode(config, "protectedFiles")`, the port of `toolu_gate_mode` in `gate-mode.sh`.
 4. Mode `block` → decision `deny`. OpenCode adapter **must** map that to `permission.effect = "deny"` (or `permission.rules`) **before** the write. Prompt text alone is not enforcement.
 5. Post-tool cannot un-write a completed edit.
 

@@ -1,31 +1,36 @@
 /**
- * PreToolUse hook latency (#258, AC-5; epic #247 budget: p50 no worse than the
- * bash baseline + 5 ms on the same machine). Over a representative slice of
- * the parity corpus, spawned the way Claude Code spawns hooks, measures in turn:
+ * PreToolUse hook latency (#258, #260; epic #247 budget: p50 no worse than the
+ * bash baseline + 5 ms on the same machine), spawned the way Claude Code
+ * spawns hooks:
  *
- *   bash      `bash pre-tools/mod.sh`, the pre-#258 hooks.json command
- *   bundle    the committed `hooks/dist/pre-tools.js` behind its launcher,
- *             every module on its bash fallback
- *   native    the same dispatcher with one module's fallback off
- *             (`hooks/src/__tests__/fixtures/pre-tools-native.ts`)
+ *   bash     `bash pre-tools/mod.sh` and `bash mcp-blocker.sh` from
+ *            `plugins/toolu` at 2386d4f3 (`git archive`), the last commit where
+ *            every module ran on bash
+ *   bundle   the committed `hooks/dist/pre-tools.js` and `hooks/dist/mcp-tools.js`
+ *            behind their launchers: protected-files, mcp-blocker and
+ *            code-edit-rules native (#260), the rest on their bash fallback
+ *
+ * Each sample pair runs bash then the bundle back to back, so load drift on a
+ * shared machine hits both sides alike.
  *
  * Usage: bun run tooling/src/benchmarks/pre-tools-latency.ts [--runs N] [--assert]
  */
-import { mkdtempSync, rmSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { toStdin } from "@toolu/conformance/harness/fixtures";
+import { mcpFixture, toStdin } from "@toolu/conformance/harness/fixtures";
+import { launcherCommand } from "@toolu/core/launcher";
 import {
   pretoolEnv,
+  REPO_ROOT,
   runBundle,
-  runModSh,
-  TOOLU_PLUGIN,
   type PretoolRun,
 } from "@toolu/conformance/harness/pretool";
 import { PRETOOL_CORPUS, prepare } from "@toolu/conformance/harness/pretool-corpus";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type RunResult } from "@toolu/conformance/harness/spawn";
-import { measureLatency, type Latency } from "@toolu/conformance/harness/timing";
+import { percentile } from "@toolu/conformance/harness/timing";
 
 const BUDGET_MS = 5;
 const SLICE = [
@@ -38,48 +43,104 @@ const SLICE = [
   "ast-grep registry: structural Grep nudge",
 ];
 
-type Variant = "bash" | "bundle" | "native";
-type Row = { name: string } & Record<Variant, Latency>;
+/** The last commit where protected-files, mcp-blocker and code-edit-rules ran on bash. */
+const BASE = "2386d4f3";
 
-async function buildNative(outDir: string): Promise<string> {
-  const source = join(TOOLU_PLUGIN, "hooks/src/__tests__/fixtures/pre-tools-native.ts");
-  const result = await Bun.build({
-    entrypoints: [source],
-    target: "bun",
-    format: "esm",
-    sourcemap: "none",
-    outdir: outDir,
-    define: { HOOKS_DIR: JSON.stringify(join(TOOLU_PLUGIN, "hooks")) },
-  });
-  const [output] = result.outputs;
-  if (!result.success || output === undefined) {
-    throw new Error(`bundling ${source} failed:\n${result.logs.map(String).join("\n")}`);
+const MCP_CASES = [
+  { name: "mcp: listed server asks", list: "exampleblocked\n", server: "exampleblocked" },
+  { name: "mcp: unlisted server", list: "exampleblocked\n", server: "other" },
+  { name: "mcp: no blocklist, no config", list: undefined, server: "other" },
+] as const;
+
+/** `plugins/toolu` at `BASE`, extracted into `dir`. */
+function baseTree(dir: string): string {
+  const known = spawnSync("git", ["cat-file", "-e", `${BASE}^{commit}`], { cwd: REPO_ROOT });
+  if (known.status !== 0) {
+    throw new Error(
+      `commit ${BASE} is not in this clone (shallow?); fetch it to measure the bash baseline`,
+    );
   }
-  return output.path;
+  const extract = spawnSync(
+    "sh",
+    ["-c", 'git archive "$1" plugins/toolu | tar -x -C "$2"', "sh", BASE, dir],
+    { cwd: REPO_ROOT, encoding: "utf8" },
+  );
+  if (extract.status !== 0) throw new Error(`extracting ${BASE} failed: ${extract.stderr}`);
+  return join(dir, "plugins/toolu/hooks");
 }
 
-function runners(native: string): Record<Variant, (call: PretoolRun) => Promise<RunResult>> {
-  return {
-    bash: (call) => runModSh(call),
-    bundle: (call) => runBundle(call),
-    native: (call) => run([process.execPath, native], call),
-  };
+type Row = { name: string; bash: number; candidate: number };
+
+type Side = () => Promise<RunResult>;
+
+/** Run `step` for each item strictly one after another: concurrent spawns would skew each other. */
+function inSequence<T, R>(items: readonly T[], step: (item: T) => Promise<R>): Promise<R[]> {
+  return items.reduce<Promise<R[]>>(
+    async (done, item) => [...(await done), await step(item)],
+    Promise.resolve([]),
+  );
 }
 
-async function measureCase(name: string, native: string, runs: number): Promise<Row> {
+/** p50 of each side over `runs` back-to-back pairs, after two warmup pairs. */
+async function paired(bash: Side, bundle: Side, runs: number): Promise<[number, number]> {
+  const pairs = await inSequence([...Array.from({ length: runs + 2 }).keys()], async () => {
+    const a = await bash();
+    const b = await bundle();
+    return [a.durationMs, b.durationMs] as const;
+  });
+  const measured = pairs.slice(2);
+  return [
+    percentile(
+      measured.map((p) => p[0]),
+      50,
+    ),
+    percentile(
+      measured.map((p) => p[1]),
+      50,
+    ),
+  ];
+}
+
+async function measureCorpus(hooks: string, name: string, runs: number): Promise<Row> {
   const c = PRETOOL_CORPUS.find((entry) => entry.name === name);
   if (c === undefined) throw new Error(`no corpus case named ${name}`);
   using sb = createSandbox({ git: true });
   const extra = await prepare(sb, "claude", c);
   const stdin = c.stdin ?? JSON.stringify(toStdin("claude", c.fixture(sb), { cwd: sb.project }));
-  const call = { cwd: sb.project, env: pretoolEnv(sb, "claude", extra), stdin };
-  const via = runners(native);
-  const opts = { runs, warmup: 2 };
-  // Sequential by design: concurrent spawns would contend and skew each other.
-  const bash = await measureLatency(() => via.bash(call), opts);
-  const bundle = await measureLatency(() => via.bundle(call), opts);
-  const nativeLatency = await measureLatency(() => via.native(call), opts);
-  return { name, bash, bundle, native: nativeLatency };
+  const call: PretoolRun = { cwd: sb.project, env: pretoolEnv(sb, "claude", extra), stdin };
+  const modSh = join(hooks, "pre-tools/mod.sh");
+  const [bash, bundle] = await paired(
+    () => run(["bash", modSh], call),
+    () => runBundle(call),
+    runs,
+  );
+  return { name, bash, candidate: bundle };
+}
+
+async function measureMcp(
+  hooks: string,
+  c: (typeof MCP_CASES)[number],
+  runs: number,
+): Promise<Row> {
+  using sb = createSandbox({ git: true });
+  const settings = join(sb.root, "settings");
+  mkdirSync(settings);
+  if (c.list !== undefined) writeFileSync(join(settings, "mcp-blocklist.txt"), c.list);
+  const fixture = mcpFixture(c.server, "search", {});
+  const stdin = JSON.stringify(toStdin("claude", fixture, { cwd: sb.project }));
+  const call = {
+    cwd: sb.project,
+    env: pretoolEnv(sb, "claude", { TOOLU_SETTINGS_DIR: settings }),
+    stdin,
+  };
+  const command = launcherCommand({ plugin: "toolu", event: "PreToolUse", entry: "mcp-tools" });
+  const script = join(hooks, "pre-tools/modules/mcp-blocker.sh");
+  const [bash, bundle] = await paired(
+    () => run(["bash", script], call),
+    () => run(["/bin/sh", "-c", command], call),
+    runs,
+  );
+  return { name: c.name, bash, candidate: bundle };
 }
 
 function ms(value: number): string {
@@ -88,43 +149,40 @@ function ms(value: number): string {
 
 function report(rows: readonly Row[]): string {
   const lines = [
-    "| Fixture | bash p50 | bundle p50 | native p50 | bundle − bash | native − bash |",
-    "|---|---|---|---|---|---|",
+    "| Fixture | bash p50 | bundle p50 | bundle − bash |",
+    "|---|---|---|---|",
     ...rows.map(
-      (r) =>
-        `| ${r.name} | ${ms(r.bash.p50)} | ${ms(r.bundle.p50)} | ${ms(r.native.p50)} | ${ms(r.bundle.p50 - r.bash.p50)} | ${ms(r.native.p50 - r.bash.p50)} |`,
+      (r) => `| ${r.name} | ${ms(r.bash)} | ${ms(r.candidate)} | ${ms(r.candidate - r.bash)} |`,
     ),
   ];
   return `${lines.join("\n")}\n`;
 }
 
 function overBudget(rows: readonly Row[]): string[] {
-  return rows.flatMap((r) =>
-    (["bundle", "native"] as const)
-      .filter((v) => r[v].p50 > r.bash.p50 + BUDGET_MS)
-      .map(
-        (v) =>
-          `${r.name}: ${v} p50 ${ms(r[v].p50)} ms > bash ${ms(r.bash.p50)} ms + ${String(BUDGET_MS)} ms`,
-      ),
-  );
+  return rows
+    .filter((r) => r.candidate > r.bash + BUDGET_MS)
+    .map(
+      (r) =>
+        `${r.name}: bundle p50 ${ms(r.candidate)} ms > bash ${ms(r.bash)} ms + ${String(BUDGET_MS)} ms`,
+    );
 }
 
 async function main(argv: readonly string[]): Promise<number> {
   const runsAt = argv.indexOf("--runs");
   const runs = runsAt === -1 ? 15 : Number(argv[runsAt + 1]);
-  const outDir = mkdtempSync(join(tmpdir(), "toolu-pretool-bench-"));
+  const dir = mkdtempSync(join(tmpdir(), "toolu-pretool-bench-"));
   try {
-    const native = await buildNative(outDir);
-    const rows = await SLICE.reduce<Promise<Row[]>>(
-      async (done, name) => [...(await done), await measureCase(name, native, runs)],
-      Promise.resolve([]),
-    );
+    const hooks = baseTree(dir);
+    const rows = [
+      ...(await inSequence(SLICE, (name) => measureCorpus(hooks, name, runs))),
+      ...(await inSequence(MCP_CASES, (c) => measureMcp(hooks, c, runs))),
+    ];
     process.stdout.write(report(rows));
     const over = overBudget(rows);
     for (const line of over) process.stderr.write(`pre-tools-latency: ${line}\n`);
     return argv.includes("--assert") && over.length > 0 ? 1 : 0;
   } finally {
-    rmSync(outDir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true });
   }
 }
 
