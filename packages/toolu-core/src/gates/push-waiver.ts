@@ -53,9 +53,10 @@ function pushRoot(analysis: ShellAnalysis, ctx: RegistryContext, cwd: string): s
 }
 
 function decide(event: RegistryHookEvent, ctx: RegistryContext): Decision {
-  if (!isShellTool(event) || !hasGit(ctx.env)) return ALLOW;
+  if (!isShellTool(event)) return ALLOW;
   const analysis = commandAnalysis(event, ctx);
-  if (runsGitSubcommand(analysis, "push") !== "yes") return ALLOW;
+  // Parse first: most calls are not pushes, and `hasGit` spawns a process.
+  if (runsGitSubcommand(analysis, "push") !== "yes" || !hasGit(ctx.env)) return ALLOW;
   if (pushFailed(toolExitStatus(ctx.raw)) || toolInterrupted(ctx.raw)) return ALLOW;
   const cwd = ctx.cwd ?? process.cwd();
   const root = pushRoot(analysis, ctx, cwd);

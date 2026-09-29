@@ -11781,10 +11781,10 @@ function pushRoot(analysis, ctx, cwd) {
   return viaChain ?? gitToplevel(ctx.env, cwd) ?? projectRoot({ env: ctx.env, host: ctx.host, cwd }) ?? cwd;
 }
 function decide2(event, ctx) {
-  if (!isShellTool(event) || !hasGit(ctx.env))
+  if (!isShellTool(event))
     return ALLOW2;
   const analysis = commandAnalysis(event, ctx);
-  if (runsGitSubcommand(analysis, "push") !== "yes")
+  if (runsGitSubcommand(analysis, "push") !== "yes" || !hasGit(ctx.env))
     return ALLOW2;
   if (pushFailed(toolExitStatus(ctx.raw)) || toolInterrupted(ctx.raw))
     return ALLOW2;
