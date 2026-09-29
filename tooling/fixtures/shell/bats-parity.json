@@ -1,0 +1,1802 @@
+{
+ "$comment": "Every input the shipped bash implementation received from a bats suite (#284): is_git_push, is_git_commit, bash_write_targets, bash_commands_decide, push_target_root and push_target_branch. `bash` is what the unmodified bash returns; bash-oracle.test.ts re-derives it on every run, and bats-parity.test.ts requires @toolu/core/shell to return it (or `expected`, where noted). See README.md.",
+ "cases": [
+  {
+   "fn": "is_git_push",
+   "command": "",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "(cd /tmp/wt && git push)",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "GIT_SSH_COMMAND=\"ssh -i k\" git push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "bun run check",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "bun run check && bun run build",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "cargo fmt",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "case x in a) git push;; esac",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "cat /tmp/git push notes.txt",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "cat <<EOF\nabout git push\nEOF",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "cat <<EOF > notes.txt\ngit push\nEOF",
+   "suites": [
+    "toolu/hooks/post-tools/modules/__tests__/push-waiver.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "cat tsconfig.json",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "deploy() { git push; }",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "echo \"$(echo \"$(git push)\")\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "echo \"$(echo \")\")\" ; git push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "echo \"$(echo ')')\" && git push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "echo \"$(git push)\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "echo \"a; b\" && git push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "echo \"first; git push\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "echo \"no git push rules remain\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "echo \"pre $(echo x) post\" && git push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "echo \"run it (git push) later\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "echo 'git push'",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "echo git push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "echo hi",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "echo hi | git push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "echo ok",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "echo one\ngit push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "foo; git push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "gi$(echo t) push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "gi`echo t` push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git \"push\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git --git-dir=/x/.git push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git --no-pager push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git -C",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git -C \"/tmp/my wt\" push origin HEAD",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git -C /tmp/bats-mktemp/repo push",
+   "suites": [
+    "toolu/hooks/post-tools/modules/__tests__/push-waiver.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git -C /tmp/bats-mktemp/wt push",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/push-review.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git -C /tmp/bats-mktemp/wt push origin HEAD:feat/example",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/push-review.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git -C /tmp/bats-mktemp/wt push origin HEAD:feature",
+   "suites": [
+    "toolu-review/skills/review/scripts/__tests__/state-writer.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git -C /tmp/wt push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git -C /tmp/wt status",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git -C; git push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git -c",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git -c push.default=simple push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git commit -m \"$(cat <<EOF\nabout git push\nEOF\n)\"",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/push-review.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git commit -m \"explain why git push is gated\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git commit -m \"feat: x\"",
+   "suites": [
+    "toolu/hooks/pre-tools/__tests__/dispatcher.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git commit -m \"push\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats",
+    "toolu/hooks/lib/__tests__/diff-sha.bats",
+    "toolu/hooks/post-tools/modules/__tests__/push-waiver.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/docs-sync-mode.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/docs-sync.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/plan-ledger-acblock.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/plan-ledger.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/push-review.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/telemetry-sites.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git push *.txt",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git push origin \"my branch\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git push origin feat/example",
+   "suites": [
+    "toolu/hooks/lib/__tests__/diff-sha.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/plan-ledger.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/telemetry-sites.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git push origin feat/x",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git push origin feature",
+   "suites": [
+    "toolu-review/skills/review/scripts/__tests__/state-writer.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git push origin main",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git pushup",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "git status",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats",
+    "toolu/hooks/post-tools/modules/__tests__/push-waiver.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/plan-ledger.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "gitpush",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "grep -qE \"^git push\" plugins/toolu/settings/bash-denylist.txt",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "if ! git push; then echo failed; fi",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "ls -la",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/docs-sync.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/push-review.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "out=$(git push origin HEAD)",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "out=`git push`",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_push",
+   "command": "rm -rf node_modules && bun run check",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "rm -rf src && cargo fmt",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_push",
+   "command": "x && git push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "bun run check",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "bun run check && bun run build",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "cargo fmt",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "case $x in ready) git commit -m \"feat: x\";; esac",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "cat <<EOF > notes.txt\ngit commit -m \"wip: nope\"\nEOF",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/commit-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "cat <<EOF > notes.txt\nremember to git commit later\nEOF",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "cat tsconfig.json",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "echo \"remember to git commit later\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "echo hi",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "echo ok",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git --no-pager commit",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git -C /tmp/bats-mktemp commit -m \"feat: x\"",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git -C /tmp/worktree commit -m \"fix: y\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git -C /tmp/wt commit -m \"wip: something\"",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/commit-gate.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git add -A && git commit -m \"chore: z\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git add -A && git commit -m \"wip\"",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git add -A && git commit -m \"wip: something\"",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/commit-gate.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git commit -m \"explain why git push is gated\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git commit -m \"feat(\\\"ui\\\"): add stuff\"",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/commit-gate.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git commit -m \"feat: add widget\"",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/commit-gate.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git commit -m \"feat: x\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats",
+    "toolu/hooks/pre-tools/__tests__/dispatcher.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git commit -m \"fix: handle \\\"quoted\\\" text\"",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/commit-gate.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git commit -m \"wibble(\\\"ui\\\"): add stuff\"",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/commit-gate.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git commit -m \"wibble: a \\\"b\\\" c\"",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/commit-gate.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git commit -m \"wibble: stuff\"",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/commit-gate.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git commit -m \"wip\"",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git commit -m \"wip: something\"",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/commit-gate.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git commit -m 'feat: single quoted'",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/commit-gate.bats"
+   ],
+   "bash": true
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git commit-tree abc123",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git push",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git push origin feat/x",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "git status",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "gitcommit",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "ls -la",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "rm -rf node_modules && bun run check",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "is_git_commit",
+   "command": "rm -rf src && cargo fmt",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/quality-gate.bats"
+   ],
+   "bash": false
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "cat .env.example",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/protected-files.bats"
+   ],
+   "bash": []
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "cat <<'EOF'\n$(echo hi > .env)\nEOF",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": []
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "cat <<EOF\n$(echo hi > .env)\nEOF",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/protected-files.bats"
+   ],
+   "bash": [
+    ".env"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "cat <<EOF\necho hi > .env\nEOF",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": []
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "cmd &> .env",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": [
+    ".env"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "cmd 2>&1",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": []
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "cp source.txt .env",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": [
+    ".env"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "dd if=/dev/zero of=.env",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": [
+    ".env"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "echo \"$(echo hi > .env)\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": [
+    ".env"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "echo hi > .env",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/protected-files.bats"
+   ],
+   "bash": [
+    ".env"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "echo hi > /tmp/scratch.txt",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/protected-files.bats"
+   ],
+   "bash": [
+    "/tmp/scratch.txt"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "echo hi >> .env.example",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": [
+    ".env.example"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "echo hi | tee -a .env",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": [
+    ".env"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "echo hi | tee .env",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/protected-files.bats"
+   ],
+   "bash": [
+    ".env"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "git commit -m \"clean up .env handling\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": []
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "git commit -m \"feat: x\"",
+   "suites": [
+    "toolu/hooks/pre-tools/__tests__/dispatcher.bats"
+   ],
+   "bash": []
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "install -m 644 source.txt .env",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": [
+    ".env"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "mv source.txt .env",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": [
+    ".env"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "perl -i -pe 's/a/b/' .env.example",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": [
+    "s/a/b/",
+    ".env.example"
+   ],
+   "expected": [
+    ".env.example"
+   ],
+   "note": "bash_write_targets over-includes the sed/perl script operand (documented in detect.sh); it is not a write target"
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "python -c \"open('.env.example', 'a').write(x)\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": [
+    ".env.example"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "python3 -c \"open('.env', 'w').write(x)\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/protected-files.bats"
+   ],
+   "bash": [
+    ".env"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "python3 -c \"open('.env','r+').write(y)\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": [
+    ".env"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "python3 -c \"open('.env','w'); open('.secrets','w')\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": [
+    ".env",
+    ".secrets"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "python3 -c \"open('.env','wb').write(y)\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": [
+    ".env"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "python3 -c \"open('.env','x').write(y)\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": [
+    ".env"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "python3 -c \"open('ok.txt','w'); open('.env','w')\"",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/protected-files.bats"
+   ],
+   "bash": [
+    "ok.txt",
+    ".env"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "python3 -c \"print(open('.env','r').read())\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": []
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "python3 -c \"print(open('.env','rb').read())\"",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": []
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "python3 -c 'open(\".env\", \"w\").write(x)'",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": [
+    ".env"
+   ]
+  },
+  {
+   "fn": "bash_write_targets",
+   "command": "sed -i 's/a/b/' .env.example",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/protected-files.bats"
+   ],
+   "bash": [
+    "s/a/b/",
+    ".env.example"
+   ],
+   "expected": [
+    ".env.example"
+   ],
+   "note": "bash_write_targets over-includes the sed/perl script operand (documented in detect.sh); it is not a write target"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "",
+   "allow": [],
+   "deny": [
+    "cargo test"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "allow"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "   ",
+   "allow": [],
+   "deny": [
+    "node -e"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "allow"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "biome check .",
+   "allow": [],
+   "deny": [
+    "biome"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "deny:biome"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "biome check .",
+   "allow": [
+    "biome"
+   ],
+   "deny": [
+    "biome"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "allow"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "cargo --verbose test",
+   "allow": [],
+   "deny": [
+    "cargo test"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "deny:cargo test"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "git commit -m \"feat: x\"",
+   "allow": [],
+   "deny": [
+    "node -e",
+    "node -p",
+    "node --eval",
+    "node --print",
+    "bun -e",
+    "bun --eval",
+    "cargo test"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/__tests__/dispatcher.bats"
+   ],
+   "bash": "allow"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "git commit -m \"fix cargo test failure\"",
+   "allow": [],
+   "deny": [
+    "cargo test"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "allow"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "git push --force origin feat/x",
+   "allow": [],
+   "deny": [
+    "git push --force"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "deny:git push --force"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "git status",
+   "allow": [
+    "biome"
+   ],
+   "deny": [
+    "node -e"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "allow"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "ls -la",
+   "allow": [],
+   "deny": [],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "allow"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "ls -la",
+   "allow": [
+    "ls"
+   ],
+   "deny": [],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "allow"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "mycargo test",
+   "allow": [],
+   "deny": [
+    "cargo test"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "allow"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "node -e \"console.log(1)\"",
+   "allow": [],
+   "deny": [
+    "node -e"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "deny:node -e"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "node -e \"console.log(1)\"",
+   "allow": [
+    "biome"
+   ],
+   "deny": [
+    "node -e"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "deny:node -e"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "node -e \"console.log(1)\"",
+   "allow": [
+    "node -e"
+   ],
+   "deny": [
+    "node -e"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "allow"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "node -e \"console.log(1)\"",
+   "allow": [
+    "node"
+   ],
+   "deny": [
+    "node -e"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "allow"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "node -e \"x\"",
+   "allow": [],
+   "deny": [
+    "node -e"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "deny:node -e"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "node -e 'rm -rf /'",
+   "allow": [],
+   "deny": [],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "allow"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "node script.js",
+   "allow": [],
+   "deny": [
+    "node -e"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "allow"
+  },
+  {
+   "fn": "bash_commands_decide",
+   "command": "node script.js",
+   "allow": [
+    "node"
+   ],
+   "deny": [
+    "node -e"
+   ],
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/bash-commands.bats"
+   ],
+   "bash": "allow"
+  },
+  {
+   "fn": "push_target_root",
+   "command": "git -C $MKTEMP status && git -C $TMP/wt push",
+   "repos": [
+    "tmp",
+    "tmp/wt",
+    "mk"
+   ],
+   "cwd": "tmp",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": "tmp/wt"
+  },
+  {
+   "fn": "push_target_root",
+   "command": "git -C $MKTEMP/repo push",
+   "repos": [
+    "tmp",
+    "mk/repo"
+   ],
+   "cwd": "tmp",
+   "suites": [
+    "toolu/hooks/post-tools/modules/__tests__/push-waiver.bats"
+   ],
+   "bash": "mk/repo"
+  },
+  {
+   "fn": "push_target_root",
+   "command": "git -C $MKTEMP/wt push",
+   "repos": [
+    "tmp",
+    "mk/wt"
+   ],
+   "cwd": "tmp",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/push-review.bats"
+   ],
+   "bash": "mk/wt"
+  },
+  {
+   "fn": "push_target_root",
+   "command": "git -C $MKTEMP/wt push origin HEAD:feat/example",
+   "repos": [
+    "tmp",
+    "mk/wt"
+   ],
+   "cwd": "tmp",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/push-review.bats"
+   ],
+   "bash": "mk/wt"
+  },
+  {
+   "fn": "push_target_root",
+   "command": "git -C $MKTEMP/wt push origin HEAD:feature",
+   "repos": [
+    "tmp",
+    "mk/wt"
+   ],
+   "cwd": "tmp",
+   "suites": [
+    "toolu-review/skills/review/scripts/__tests__/state-writer.bats"
+   ],
+   "bash": "mk/wt"
+  },
+  {
+   "fn": "push_target_root",
+   "command": "git -C $TMP/outer -C inner push",
+   "repos": [
+    "tmp",
+    "tmp/outer/inner"
+   ],
+   "cwd": "tmp",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": "tmp/outer/inner"
+  },
+  {
+   "fn": "push_target_root",
+   "command": "git -C $TMP/wt push",
+   "repos": [
+    "tmp",
+    "tmp/wt"
+   ],
+   "cwd": "tmp",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": "tmp/wt"
+  },
+  {
+   "fn": "push_target_root",
+   "command": "git -C /nonexistent/nope push",
+   "repos": [
+    "tmp"
+   ],
+   "cwd": "tmp",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": "tmp"
+  },
+  {
+   "fn": "push_target_root",
+   "command": "git push",
+   "repos": [
+    "tmp"
+   ],
+   "cwd": "tmp",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats",
+    "toolu/hooks/lib/__tests__/diff-sha.bats",
+    "toolu/hooks/post-tools/modules/__tests__/push-waiver.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/push-review.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/telemetry-sites.bats"
+   ],
+   "bash": "tmp"
+  },
+  {
+   "fn": "push_target_root",
+   "command": "git push origin feature",
+   "repos": [
+    "tmp"
+   ],
+   "cwd": "tmp",
+   "suites": [
+    "toolu-review/skills/review/scripts/__tests__/state-writer.bats"
+   ],
+   "bash": "tmp"
+  },
+  {
+   "fn": "push_target_root",
+   "command": "git push",
+   "repos": [],
+   "cwd": "outside",
+   "env": {
+    "TOOLU_HOST_OVERRIDE": "codex",
+    "TOOLU_PROJECT_DIR": "$ROOT/codex-project"
+   },
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats",
+    "toolu/hooks/lib/__tests__/diff-sha.bats",
+    "toolu/hooks/post-tools/modules/__tests__/push-waiver.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/push-review.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/telemetry-sites.bats"
+   ],
+   "bash": "codex-project"
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "cd /tmp && git push origin HEAD:feat/x",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": "feat/x"
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git -C $MKTEMP/wt push",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/push-review.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": ""
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git -C $MKTEMP/wt push origin HEAD:feat/example",
+   "suites": [
+    "toolu/hooks/pre-tools/modules/__tests__/push-review.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": "feat/example"
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git -C $MKTEMP/wt push origin HEAD:feature",
+   "suites": [
+    "toolu-review/skills/review/scripts/__tests__/state-writer.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": "feature"
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git -C $TMP push origin HEAD:feat/x",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": "feat/x"
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git -C $TMP/wt push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": ""
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git -C $TMP/wt push origin HEAD:feature",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": "feature"
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git push",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats",
+    "toolu/hooks/lib/__tests__/diff-sha.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/push-review.bats",
+    "toolu/hooks/pre-tools/modules/__tests__/telemetry-sites.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": ""
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git push --force origin",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": ""
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git push --push-option=ci.skip origin HEAD:feat/x",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": "feat/x"
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git push -o ci.skip origin HEAD:feat/x",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": "feat/x"
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git push -u origin feat/x",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": "feat/x"
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git push origin",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": ""
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git push origin +HEAD:refs/heads/feat/x",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": "feat/x"
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git push origin :feat/x",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": ""
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git push origin HEAD",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": ""
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git push origin HEAD:feat/x",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": "feat/x"
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git push origin HEAD:feat/x 2>&1 | tee log",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": "feat/x"
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git push origin HEAD:feat/x | cat",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": "feat/x"
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git push origin HEAD:feat/y",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": "feat/y"
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git push origin abc123:feat/x",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": "feat/x"
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git push origin feature",
+   "suites": [
+    "toolu-review/skills/review/scripts/__tests__/state-writer.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": "feature"
+   }
+  },
+  {
+   "fn": "push_target_branch",
+   "command": "git push origin refs/heads/*:refs/heads/*",
+   "suites": [
+    "toolu/hooks/lib/__tests__/detect.bats"
+   ],
+   "bash": {
+    "attached": "feat/x",
+    "detached": ""
+   }
+  }
+ ]
+}
