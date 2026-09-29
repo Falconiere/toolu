@@ -19,7 +19,7 @@ export interface GitInvocation {
 
 const GLOBALS = {
   valueShort: "Cc",
-  valueLong: ["git-dir", "work-tree", "namespace", "super-prefix", "config-env"],
+  valueLong: ["git-dir", "work-tree", "namespace", "super-prefix", "config-env", "attr-source"],
   stopAtOperand: true,
 };
 

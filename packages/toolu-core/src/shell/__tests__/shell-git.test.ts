@@ -15,6 +15,7 @@ test.concurrent("a push behind global options, a path or a line continuation is 
     "/usr/bin/git push",
     "git --git-dir .git push",
     "git --work-tree=. push",
+    "git --attr-source HEAD push",
     "git -c push.default=simple push",
     "git -C a -C b push",
     "git --no-pager -p push",

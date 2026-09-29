@@ -71,6 +71,7 @@ Wrappers are unwrapped by their own option tables: `sudo`, `doas`, `env`, `comma
   - zsh-only syntax.
   - `env -S` strings (reported as unknown).
   - The contents of `source`d files and script files.
+  - Writes by commands other than those `writeTargets` lists, such as `touch`, `truncate`, `ln`, `rsync`, `sponge` or an `awk` redirect inside its program. The bash implementation does not read these either.
 
 ## Fixtures and the bash oracle
 
