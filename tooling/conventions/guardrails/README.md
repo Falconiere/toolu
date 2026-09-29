@@ -9,6 +9,12 @@ that disable dead-code enforcement.
 Anything oxlint / oxfmt / clippy / rustfmt already enforces stays with them. Two enforcers
 of one rule is how ceilings drift apart.
 
+> **In toolu.** The runner, `lib/` and `checks/` are a TypeScript port on Bun at
+> [`tooling/src/guardrails/`](../../src/guardrails/) (#277); this directory keeps the data they
+> read (`patterns/`, the schemas) and the oxlint house plugin. `bun run guardrails` runs it with the
+> same flags and exit codes. Sections below that mention `run.sh`, a scaffold copy or
+> `__tests__/*.sh` describe the upstream kit; see `tooling/conventions/PROVENANCE.md`.
+
 ## Two paths, one module
 
 This is the single most common source of confusion, so it is worth stating plainly:
@@ -51,11 +57,10 @@ The project then gets its stack's `guardrails.config.json` (from
 ## Layout
 
 ```
-guardrails/
-├── run.sh              # entry point — repo · --file · --hook · --stop modes
-├── lib/                # config.sh (load + validate), report.sh (output, exit codes),
-│                       #   workspace.sh (monorepo dispatch)
-├── checks/             # 14 checks, one file each
+guardrails/            (upstream kit; in toolu the first three live in tooling/src/guardrails/)
+├── run.sh              # entry point — repo · --file · --hook · --stop modes   → run.ts
+├── lib/                # config, report, workspace dispatch                     → *.ts
+├── checks/             # 14 checks, one file each                               → checks/*.ts
 ├── oxlint-plugin/      # house rules that run inside oxlint, as the file is written
 ├── patterns/rust/      # ast-grep rules for what clippy doesn't cover
 ├── schema.json         # the guardrails.config.json contract
@@ -185,7 +190,8 @@ run.sh --list           print every check id, one per line
 ```
 
 `0` clean · `1` violations · `2` violations in a hook mode · `3` misconfigured, which covers
-a missing required tool (`jq` everywhere, ast-grep on rust) as well as a bad config.
+a missing required tool (ast-grep for the pattern rules; the bash kit also needed `jq`) as well
+as a bad config.
 
 The `2` is load-bearing, not stylistic: Claude Code ignores a `1` from a hook. Only `2`
 shows stderr to the agent on `PostToolUse`, and only `2` blocks on `Stop`. A `--stop` that
@@ -197,7 +203,14 @@ Edit it **here**. A generated project's `scripts/guardrails/` is copied verbatim
 hand-edited — change that project's `guardrails.config.json` instead. Stack differences are
 data, not code; the module is the same file everywhere on purpose.
 
-Then run the suites:
+In toolu, run the TypeScript suites (the upstream fixture assertions, ported, plus the bash
+golden replay):
+
+```bash
+bun test tooling/src/guardrails
+```
+
+Upstream, the kit runs:
 
 ```bash
 bash guardrails/__tests__/run-fixtures.sh    # bash checks, on real trees

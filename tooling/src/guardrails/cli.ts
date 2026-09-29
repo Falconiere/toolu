@@ -9,7 +9,7 @@
  */
 import { fatal } from "./report.ts";
 
-export type RunMode = "repo" | "file" | "hook" | "stop";
+type RunMode = "repo" | "file" | "hook" | "stop";
 export type Options = { mode: RunMode; paths: string[]; only: string; list: boolean };
 
 export function parseArgs(argv: readonly string[]): Options {

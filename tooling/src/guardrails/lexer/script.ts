@@ -14,7 +14,7 @@ type Cursor = { line: string; i: number; out: string; context: string };
 
 const JSX_KEYWORD_ENDINGS = ["return", "default", "yield", "await", "throw"];
 
-/** A `<name` token is JSX only at an expression boundary and not as a generic arrow. */
+/** A `<name` token is JSX only at an expression boundary, never when it opens a generic arrow. */
 function startsJsx(st: ScriptState, line: string, offset: number): boolean {
   if (!st.jsxEnabled) return false;
   const next = at(line, offset + 1);

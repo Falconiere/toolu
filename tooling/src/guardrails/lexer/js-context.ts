@@ -1,6 +1,6 @@
 /**
  * Context tests for the script lexer: where a `/` starts a regex literal, where
- * `(` opens a control-statement head, and how comments are skipped as trivia.
+ * `(` opens a control-statement head, and how comments are skipped (trivia).
  * Callers pass code-only context (strings, regexes and JSX collapse to a value
  * token), so a trailing `*\/` never turns a division into a regex.
  */
@@ -44,8 +44,8 @@ const REGEX_KEYWORDS = [
 ];
 const CONTROL_KEYWORDS = ["if", "while", "for", "with"];
 
-/** `prefix` ends with one of `keywords` as a whole token (not `x.if`, `#if`, `elif`). */
-export function afterKeyword(prefix: string, keywords: readonly string[]): boolean {
+/** `prefix` ends with one of `keywords`, a whole token (not `x.if`, `#if`, `elif`). */
+function afterKeyword(prefix: string, keywords: readonly string[]): boolean {
   const trimmed = trimEnd(prefix);
   for (const keyword of keywords) {
     if (!trimmed.endsWith(keyword)) continue;

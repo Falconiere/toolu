@@ -1,7 +1,7 @@
 /**
  * colocated-tests — a test FILE lives beside the code it exercises, in a
  * sibling __tests__/ (TS) or tests/ (Rust). testGlob is load-bearing: marketing
- * matches *.test.tsx as well, so a misplaced component test cannot slip by.
+ * matches *.test.tsx too, so a misplaced component test cannot slip by.
  * The centralized DIRECTORY half is the separate test-tree check.
  */
 import type { GuardrailsConfig } from "../config.ts";

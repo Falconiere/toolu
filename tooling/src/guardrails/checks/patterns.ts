@@ -48,7 +48,10 @@ export function patterns(
   const bin = astGrep(ctx.root);
   if (bin === null) {
     fatal(
-      "ast-grep not found — the pattern checks cannot run (add @ast-grep/cli as a devDependency, or: cargo install ast-grep --locked)",
+      [
+        "ast-grep not found — the pattern checks cannot run (add @ast-grep/cli",
+        "as a devDependency, or: cargo install ast-grep --locked)",
+      ].join(" "),
     );
   }
   let targets: readonly string[];

@@ -10,7 +10,8 @@ This repo is a **library/plugin Bun workspace**, not a Workers/web app. Upstream
 
 | Upstream | Disposition | Destination | Rationale / test |
 |----------|-------------|-------------|------------------|
-| `guardrails/run.sh` + `lib/` + `checks/` + `patterns/` + schemas | retain | `tooling/conventions/guardrails/` | Structural SoT; `bun run guardrails` |
+| `guardrails/run.sh` + `lib/` + `checks/` | port | `tooling/src/guardrails/` | TypeScript port on Bun ([#277](https://github.com/Falconiere/toolu/issues/277)); same checks, flags and exit codes, proven against the bash verdicts on the upstream fixtures; `bun run guardrails` |
+| `guardrails/patterns/` + schemas | retain | `tooling/conventions/guardrails/` | Data read by the TypeScript runner and by editors |
 | `guardrails/oxlint-plugin/` | retain | `tooling/conventions/guardrails/oxlint-plugin/` | Custom oxlint rules; `bun run lint:ts` |
 | `lint/base.oxlintrc.json` | adapt | `tooling/conventions/lint/base.oxlintrc.json` + root `.oxlintrc.json` | Fix plugin path; drop Workers-only rules; type-aware unsafe-value rules kept |
 | backend-ts `tsconfig.json` strict flags | adapt | `tsconfig.json` | Bun/`@types/bun`; no Vitest/Workers types; same strict set |
@@ -45,9 +46,9 @@ This repo is a **library/plugin Bun workspace**, not a Workers/web app. Upstream
 | Script | Gate |
 |--------|------|
 | `bun run format:check` | oxfmt |
-| `bun run lint:ts` | type-aware oxlint (every workspace package) |
+| `bun run lint:ts` | type-aware oxlint (every workspace package), via `tooling/src/lint-ts.ts` |
 | `bun run typecheck` | `tsc --noEmit` |
-| `bun run guardrails` | vendored `run.sh` |
+| `bun run guardrails` | `tooling/src/guardrails/run.ts` (TypeScript port of the upstream `run.sh`) |
 | `bun run knip` | dead code |
 | `bun run jscpd` | duplication |
 | `bun run test:unit` | `bun test` in `packages/` + `tools/` |

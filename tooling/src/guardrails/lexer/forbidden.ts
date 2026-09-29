@@ -31,7 +31,7 @@ export const SCRIPT_CANDIDATE = /(oxlint|eslint)-disable/;
 export const RUST_CANDIDATE = /(^|[^\p{L}\p{Nd}_])(allow|warn|expect)([^\p{L}\p{Nd}_]|$)/u;
 
 /** Physical lines as `read -r` sees them: a trailing newline adds no empty line. */
-export function physicalLines(text: string): string[] {
+function physicalLines(text: string): string[] {
   if (text === "") return [];
   const lines = text.split("\n");
   if (text.endsWith("\n")) lines.pop();

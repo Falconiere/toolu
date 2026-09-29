@@ -1,13 +1,13 @@
 /**
  * Typed reads over a parsed config document. Each reader names the file and
  * key on a type error and fails closed (exit 3); an absent optional key reads
- * as its default, exactly as the bash jq `// []` fallbacks did.
+ * to its default, exactly like the bash jq `// []` fallbacks.
  */
 import { fatal } from "./report.ts";
 
 export type Doc = ReadonlyMap<string, unknown>;
 
-/** A JSON scalar as `jq -r` prints it; objects and arrays as compact JSON. */
+/** A JSON scalar the way `jq -r` prints it; objects and arrays in compact JSON. */
 export function jqText(value: unknown): string {
   if (value === null || value === undefined) return "null";
   if (typeof value === "string") return value;
@@ -23,7 +23,7 @@ function typeError(file: string, key: string, want: string): never {
   fatal(`${file}: "${key}" must be ${want} — fix the value; the schema documents every key`);
 }
 
-/** An object-valued key as a Doc; absent or null reads as empty. */
+/** An object-valued key, wrapped in a Doc; absent or null reads empty. */
 export function objectOf(file: string, doc: Doc, key: string): Doc {
   const value = doc.get(key);
   if (value === undefined || value === null) return new Map();

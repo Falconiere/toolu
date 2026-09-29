@@ -1,7 +1,7 @@
 /**
  * Monorepo dispatch. A workspace root has a guardrails.workspace.json naming
  * its packages and no source tree of its own. The four repo-level checks run
- * at the root against the manifest; every listed package then runs as if it
+ * at the root against the manifest; every listed package then runs like
  * were a single-repo project, its paths prefixed so violations read
  * `packages/database/src/foo.ts`. Config is a value per package, so nothing
  * leaks between packages and no re-exec is needed.
@@ -132,7 +132,7 @@ function worst(a: number, b: number): number {
   return Math.max(normalized(a), normalized(b));
 }
 
-/** One package as the re-exec'd child used to run it: its own config, repo or --file mode. */
+/** One package, run the way the re-exec'd bash child ran it: its own config, repo or --file mode. */
 function runPackage(cwd: string, pkg: string, paths: readonly string[] | null): number {
   try {
     const ctx = packageContext(join(cwd, pkg), `${pkg}/`, "guardrails.config.json");
@@ -154,7 +154,7 @@ function runRepoMode(cwd: string, manifest: WorkspaceManifest, only: string): nu
   const ctx = { root: cwd, config: manifest, report: new Reporter("") };
   for (const [id, check] of ROOT_CHECKS) if (selected(id, [], only)) check(ctx, "repo");
   let status = ctx.report.failed ? 1 : 0;
-  // --only is not forwarded to packages, exactly as the bash dispatcher behaved.
+  // --only is not forwarded to packages: the bash dispatcher never forwarded it.
   for (const pkg of manifest.packages) status = worst(status, runPackage(cwd, pkg, null));
   return status;
 }

@@ -32,8 +32,8 @@ export const WORKSPACE_FILE = "guardrails.workspace.json";
 const WS_REQUIRED = "version packages";
 const WS_OPTIONAL = "$schema bannedDeps secrets shadowConfigs requiredFiles";
 
-export type ShadowConfig = { found: string; use: string; why: string };
-export type RequiredFile = { path: string; why: string };
+type ShadowConfig = { found: string; use: string; why: string };
+type RequiredFile = { path: string; why: string };
 export type FilenameRule = { glob: string; regex: string; describe: string };
 
 /** What the four repo-level checks read; a workspace manifest carries only these. */

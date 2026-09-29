@@ -271,3 +271,35 @@ test.concurrent("repo mode skips binary files and the pruned top-level trees", a
   });
   expect(await gr(tree.root, ["--only", "lint-suppressions"])).toEqual({ exit: 0, out: "" });
 });
+
+// Deliberate difference from bash: its lexer compared characters with '\\' (a
+// two-character string in single quotes), so a backslash never escaped anything.
+// An escaped quote then ended the string early, which could hide a real
+// directive (fail open) or expose one inside a string (false positive).
+const ESCAPE_CASES: readonly Case[] = [
+  [
+    "escaped-quote-then-directive.ts",
+    'const a = "x\\"y";// eslint-disable-line no-unused-vars\n',
+    true,
+  ],
+  ["escaped-quote-inside-string.ts", 'export const doc = "x\\" /* oxlint-disable */ y";\n', false],
+  [
+    "escaped-slash-regex-then-directive.ts",
+    "export const url = /https:\\/\\/x/;/* oxlint-disable */\n",
+    true,
+  ],
+  ["escaped-quote-rust.rs", 'pub const Q: &str = "x\\" #[allow(dead_code)] y";\n', false],
+];
+
+for (const [file, source, forbidden] of ESCAPE_CASES) {
+  test.concurrent(`backslash escapes: --file ${file}: ${forbidden ? "rejected" : "legal"}`, async () => {
+    using tree = buildFixture("clean", { [`src/utilities/${file}`]: source });
+    const res = await gr(tree.root, [
+      "--only",
+      "lint-suppressions",
+      "--file",
+      `src/utilities/${file}`,
+    ]);
+    expect([res.exit, count(res.out, "lint-suppressions")]).toEqual(forbidden ? [1, 1] : [0, 0]);
+  });
+}

@@ -15,7 +15,7 @@ import { findFiles, isDir, isFile } from "../walk.ts";
  * Code lines in `text`, or null for an empty file (awk sees no record and
  * prints nothing, so an empty file is never judged).
  */
-export function codeLines(text: string): number | null {
+function codeLines(text: string): number | null {
   if (text === "") return null;
   const records = text.split("\n");
   if (text.endsWith("\n")) records.pop();

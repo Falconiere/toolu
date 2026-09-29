@@ -27,7 +27,7 @@
     "format:check": "oxfmt --check tooling/src packages/*/src tools/*/src plugins/*/hooks/src plugins/epic-orchestrator/scripts/*.ts plugins/epic-orchestrator/scripts/trackers/*.ts plugins/epic-orchestrator/scripts/__tests__/*.ts",
     "lint:ts": "bash tooling/lint-ts.sh",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "guardrails": "bash tooling/conventions/guardrails/run.sh",
+    "guardrails": "bun run tooling/src/guardrails/run.ts",
     "knip": "knip",
     "jscpd": "jscpd --config .jscpd.json",
     "test:conventions": "bun run format:check && bun run lint:ts && bun run typecheck && bun run guardrails && bun run knip && bun run jscpd && bun test --timeout 60000 tooling/src/__tests__/conventions-guardrails.test.ts tooling/src/__tests__/workspace-skeleton.test.ts",

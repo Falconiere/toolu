@@ -1,5 +1,5 @@
 /**
- * Builds a guardrails fixture tree as a REAL git repository (the upstream
+ * Builds a guardrails fixture tree that is a REAL git repository (the upstream
  * kit's mkrepo.sh): copy tooling/fixtures/guardrails/<name>, write the
  * runtime-only files, then `git add -A` and commit. `.gitignore` decides what
  * gets tracked, which is what makes the clean and violating trees differ for
@@ -59,7 +59,7 @@ function git(root: string, args: string[]): void {
   if (res.status !== 0) throw new Error(`git ${args.join(" ")}: ${res.stderr.trim()}`);
 }
 
-/** A fresh copy of fixture `name` as a committed git repo; `using` removes it. */
+/** A fresh copy of fixture `name`, committed in its own git repo; `using` removes it. */
 export function buildFixture(name: FixtureName, extra: Record<string, string> = {}): FixtureTree {
   const root = realpathSync(mkdtempSync(join(tmpdir(), `gr-${name}-`)));
   cpSync(join(FIXTURES, name), root, { recursive: true });

@@ -4,7 +4,7 @@
  * container (GNU grep) and wrote tooling/fixtures/guardrails/golden.json;
  * golden-parity.test.ts replays every case against the TypeScript runner.
  *
- * Output is compared as a sorted multiset of lines with the tree root
+ * Output is compared in the form of a sorted multiset of lines, the tree root
  * replaced by <ROOT>: bash fanned workspace packages out in parallel, so its
  * line order was never part of the contract.
  */

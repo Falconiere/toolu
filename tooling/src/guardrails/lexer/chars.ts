@@ -1,6 +1,6 @@
 /**
  * Character helpers with bash substring semantics: an index past either end
- * reads as the empty string instead of undefined.
+ * reads the empty string instead of undefined.
  */
 
 export function at(text: string, index: number): string {

@@ -14,7 +14,7 @@ export function fatal(message: string): never {
   throw new GuardrailsFatal(message);
 }
 
-/** Collects one run's outcome; lines go to stderr as they are found. */
+/** Collects one run's outcome; each line goes to stderr the moment it is found. */
 export class Reporter {
   failed = false;
 

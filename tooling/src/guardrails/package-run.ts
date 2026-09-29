@@ -54,7 +54,7 @@ export function unchangedTree(root: string): boolean {
 }
 
 /**
- * The working directory as bash's $PWD: the inherited PWD when it names this
+ * The working directory in bash's $PWD sense: the inherited PWD when it names this
  * directory, else the physical path. Hook payloads carry absolute paths.
  */
 export function shellPwd(cwd: string): string {

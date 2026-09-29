@@ -1,7 +1,7 @@
 /** The few git calls the checks make, always run in the package directory. */
 import { spawnSync } from "node:child_process";
 
-export type GitResult = { status: number; stdout: string };
+type GitResult = { status: number; stdout: string };
 
 export function git(root: string, args: readonly string[]): GitResult {
   const res = spawnSync("git", args, { cwd: root, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });

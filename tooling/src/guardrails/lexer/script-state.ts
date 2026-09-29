@@ -4,7 +4,7 @@
  * the JSX nesting frames, and a 128-char code-only context window.
  */
 
-export type Frame = { state: string; depth: number };
+type Frame = { state: string; depth: number };
 
 export type ScriptState = {
   state: string;

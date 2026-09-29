@@ -1,6 +1,6 @@
 /**
  * required-files — files whose absence is silent rather than loud: a missing
- * 404 page is served as an empty 200, a missing wrangler.jsonc leaves the
+ * 404 page is served up empty with a 200, a missing wrangler.jsonc leaves the
  * Worker with no deploy config. Both fail in production, not at build time.
  */
 import type { RepoFacts } from "../config.ts";

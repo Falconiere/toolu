@@ -3,7 +3,7 @@
  * bash: `*` matches any run of characters INCLUDING `/`, `?` one character,
  * `[...]` / `[!...]` a bracket expression, `\x` a literal. Patterns come from
  * config (testGlob, barrelExempt, fileSize overrides, filenameCase,
- * secrets.scanExempt), so an unterminated bracket is read literally, as bash does.
+ * secrets.scanExempt), so an unterminated bracket is read literally, like bash.
  */
 
 const POSIX_CLASSES: Record<string, string> = {
@@ -67,7 +67,7 @@ function bracket(pattern: string, start: number): [string, number] | null {
 }
 
 /** Compile a shell pattern to an anchored RegExp. */
-export function globToRegExp(pattern: string): RegExp {
+function globToRegExp(pattern: string): RegExp {
   let out = "";
   let i = 0;
   while (i < pattern.length) {
@@ -108,7 +108,7 @@ export function matchAny(patterns: readonly string[], subject: string): boolean 
 }
 
 /**
- * A POSIX ERE from config (filenameCase `regex`, read by awk in bash) as a JS
+ * A POSIX ERE from config (filenameCase `regex`, read by awk in bash) compiled to a JS
  * RegExp: bracket classes such as `[[:lower:]]` are expanded, the rest of ERE
  * syntax is already JavaScript syntax.
  */

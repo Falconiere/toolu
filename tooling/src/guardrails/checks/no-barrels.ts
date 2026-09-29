@@ -36,7 +36,7 @@ export function noBarrels(ctx: CheckContext<GuardrailsConfig>, mode: Mode, path:
   const { srcRoot, barrelNames } = ctx.config;
   if (barrelNames.length === 0) return;
   if (mode === "file") {
-    // Scoped to srcRoot: unscoped, Expo's root-level app/index.tsx routes read as barrels.
+    // Scoped to srcRoot: unscoped, Expo's root-level app/index.tsx routes would look like barrels.
     if (path.startsWith(`${srcRoot}/`)) report(ctx, path);
     return;
   }

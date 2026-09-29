@@ -32,7 +32,7 @@ const Golden = z.object({
 
 /**
  * Named, deliberate differences from bash. Each is a bash defect the port does
- * not reproduce; the golden itself stays exactly as captured.
+ * not reproduce; the golden itself stays exactly the way it was captured.
  */
 const DEVIATIONS: Readonly<Record<string, { exit: number; why: string }>> = {
   "violating --only filename-case": {

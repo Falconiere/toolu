@@ -5,7 +5,7 @@
  */
 import { at, sub } from "./chars.ts";
 
-export type RustState = { state: string; commentDepth: number; rawClose: string };
+type RustState = { state: string; commentDepth: number; rawClose: string };
 
 export function newRustState(): RustState {
   return { state: "code", commentDepth: 0, rawClose: "" };

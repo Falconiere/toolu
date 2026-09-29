@@ -16,7 +16,7 @@ import { GuardrailsFatal, printFatal } from "./report.ts";
 import { runSingle } from "./single.ts";
 import { isWorkspace, runWorkspace } from "./workspace.ts";
 
-export function main(argv: readonly string[]): number {
+function main(argv: readonly string[]): number {
   try {
     const opts = parseArgs(argv);
     if (opts.list) {

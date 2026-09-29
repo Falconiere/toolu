@@ -8,7 +8,7 @@ import { z } from "zod";
 
 const ROOT = resolve(import.meta.dir, "../../..");
 const FIX = join(ROOT, "tooling/fixtures/conventions");
-const GR = join(ROOT, "tooling/conventions/guardrails/run.sh");
+const GR = join(ROOT, "tooling/src/guardrails/run.ts");
 const RootPackage = z.object({
   scripts: z.record(z.string(), z.string()),
   dependencies: z.record(z.string(), z.string()),
@@ -36,7 +36,7 @@ test.concurrent("package.json wires test:conventions and zod without yup", () =>
 });
 
 test.concurrent("root workspace passes banned-deps", async () => {
-  const res = await run(["bash", GR, "--only", "banned-deps"], { cwd: ROOT });
+  const res = await run([process.execPath, GR, "--only", "banned-deps"], { cwd: ROOT });
   expect({ exitCode: res.exitCode, output: res.stdout + res.stderr }).toEqual({
     exitCode: 0,
     output: res.stdout + res.stderr,
@@ -49,7 +49,7 @@ test.concurrent("violating fixture with valibot fails banned-deps in temp tree",
   copyFileSync(join(FIX, "violating/package.json"), sb.path("package.json"));
   copyFileSync(join(FIX, "violating/guardrails.config.json"), sb.path("guardrails.config.json"));
   copyFileSync(join(FIX, "clean/src/utilities/parse-id.ts"), sb.path("src/utilities/parse-id.ts"));
-  const res = await run(["bash", GR, "--only", "banned-deps"], { cwd: sb.project });
+  const res = await run([process.execPath, GR, "--only", "banned-deps"], { cwd: sb.project });
   expect(res.exitCode).not.toBe(0);
 });
 
@@ -105,7 +105,7 @@ test.concurrent("lint-suppressions --file fails on unused-vars disable", async (
     ].join("\n"),
   );
   const res = await run(
-    ["bash", GR, "--only", "lint-suppressions", "--file", "src/utilities/suppressed.ts"],
+    [process.execPath, GR, "--only", "lint-suppressions", "--file", "src/utilities/suppressed.ts"],
     { cwd: sb.project },
   );
   expect(res.exitCode).not.toBe(0);
