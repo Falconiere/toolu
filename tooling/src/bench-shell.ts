@@ -149,7 +149,7 @@ function parseTimes(rounds: number): ShellBench["parse"] {
 
 export function benchShell(options: { runs: number; rounds: number }): ShellBench {
   // Staged inside the repository (ignored node_modules/.cache) so the bundle's
-  // module-path comments are repo-relative, as in a committed plugin bundle.
+  // module-path comments are repo-relative, like those of a committed plugin bundle.
   const cache = join(ROOT, "node_modules/.cache");
   mkdirSync(cache, { recursive: true });
   const work = mkdtempSync(join(cache, "bench-shell-"));
