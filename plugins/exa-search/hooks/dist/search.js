@@ -30,7 +30,7 @@ function isBrokenPipe(error) {
   return error instanceof Error && "code" in error && error.code === "EPIPE";
 }
 async function writeStdout(text) {
-  if (text === "")
+  if (text.length === 0)
     return;
   try {
     await Bun.write(Bun.stdout, text);
@@ -100,23 +100,29 @@ function jsonOutput(tool, text, project = (value) => value) {
 function reason(error) {
   return error instanceof Error ? error.message : String(error);
 }
-async function send(tool, request) {
-  const init = {
-    method: request.method ?? "GET",
-    headers: { ...request.headers },
-    redirect: "manual"
-  };
-  if (request.body !== undefined)
-    init.body = JSON.stringify(request.body);
-  let status;
-  let text;
+async function exchange(tool, url, init) {
   try {
-    const response = await fetch(request.url, init);
-    status = response.status;
-    text = await response.text();
+    return await fetch(url, { ...init, redirect: "manual" });
   } catch (error) {
     throw new CliExit(1, `${tool}: request failed: ${reason(error)}`);
   }
+}
+async function readBody(tool, read) {
+  try {
+    return await read();
+  } catch (error) {
+    throw new CliExit(1, `${tool}: request failed: ${reason(error)}`);
+  }
+}
+async function send(tool, request) {
+  const init = { method: request.method ?? "GET", headers: { ...request.headers } };
+  if (request.payload !== undefined)
+    init.body = request.payload;
+  else if (request.body !== undefined)
+    init.body = JSON.stringify(request.body);
+  const response = await exchange(tool, request.url, init);
+  const { status } = response;
+  const text = await readBody(tool, () => response.text());
   if (status >= 400) {
     const parsed = request.json === false ? undefined : tryParse(text);
     const body = parsed?.ok === true ? formatJson(parsed.value) : text;
@@ -124,6 +130,7 @@ async function send(tool, request) {
   }
   return text;
 }
+var REDIRECTS = new Set([301, 302, 303, 307, 308]);
 
 // plugins/exa-search/hooks/src/exa/lean.ts
 var RESULT_FIELDS = ["title", "url", "publishedDate", "author", "highlights", "text", "summary"];

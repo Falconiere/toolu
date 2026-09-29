@@ -2,9 +2,11 @@
 
 **Type:** Workflow | **Version:** 6.5.0 | **Standalone** (no dependencies)
 
-Jira issue search and workflow from the session via a REST wrapper — a skill plus bash. Works with Jira Cloud and Server/Data Center, supporting both read and safe writes.
+Jira issue search and workflow from the session via a REST wrapper — a skill plus a TypeScript CLI on Bun. Works with Jira Cloud and Server/Data Center, supporting both read and safe writes.
 
 ## Install
+
+**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH` (see [runtime](../runtime.md)). The SessionStart hook publishes the CLI bundle at `<config>/jira/jira.sh`; every `jira.sh` below means that path.
 
 ```text
 /plugin install jira@toolu
@@ -264,3 +266,17 @@ Always know the target `KEY`/`ID` before running them.
 | Boards & sprints | Always hit `/rest/agile/1.0` regardless of `--api-version`. |
 | `-f field=val` | Sets string scalars only. Fields needing objects/arrays → use `jira raw`. |
 | Anything unwrapped | `jira raw <METHOD> <path> [body]` reaches every endpoint the families don't cover. |
+
+## Intentional differences from the bash version
+
+The CLI was a bash script over `curl` + `jq` until #272; it is now a TypeScript CLI on Bun with the same families, flags, output and exit statuses, except:
+
+- `--lean` with an HTTP error prints the real error body (exit 22) instead of a projection of it.
+- A transport failure (DNS, TLS, dropped connection) exits 1; curl used assorted codes.
+- `curl` and `jq` are no longer required by the CLI itself (plan checks you write may still use `jq`).
+- `attachment download` writes no output file when the download fails; curl wrote the error body into it.
+- `plan init` titles the doc from the issue summary even under `--lean`; bash fell back to the key.
+- A previous ledger that is not a JSON object is treated as absent instead of failing the run.
+- `raw GET <path> <body>` exits 1: `fetch` cannot send a body with GET, where curl did.
+- `attachment download` without `-o` saves under the metadata filename's base name only, so a name such as `../../x` cannot write outside the working directory.
+- JSON number literals are printed as JavaScript prints them (`1.0` becomes `1`).

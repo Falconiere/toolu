@@ -43,7 +43,7 @@ ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
 @test "published helpers and registry modules preserve Codex config-root precedence" {
   files=(
     "plugins/ast-grep/hooks/post-tools.d/byte-savings.sh"
-    "plugins/jira/skills/jira/scripts/lib/plan-run.sh"
+    "plugins/jira/hooks/src/jira/plan-run.ts"
   )
 
   for file in "${files[@]}"; do

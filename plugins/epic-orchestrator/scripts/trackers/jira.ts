@@ -1,4 +1,4 @@
-/** Jira epics through the toolu `jira.sh` REST wrapper, which owns auth
+/** Jira epics through the toolu jira CLI (published as `jira.sh`, a Bun bundle run by path), which owns auth
  * (env vars or the jira CLI login). Children are `parent = EPIC` (Cloud and
  * team-managed) or `"Epic Link" = EPIC` (Server/DC); blockers are issue links
  * whose wording from the child's side is "is blocked by" or "depends on". */
@@ -99,7 +99,7 @@ export class JiraTracker implements Tracker {
   }
 
   private async call(args: string[], write = false): Promise<unknown> {
-    const out = await withRetry(() => run(["bash", this.script, ...args]), {
+    const out = await withRetry(() => run([this.script, ...args]), {
       ...defaultPolicy(),
       retryTransient: !write,
     });

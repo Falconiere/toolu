@@ -30,7 +30,7 @@ nested plan checks and their state paths. Ordinary shell calls do not inherit
 plugin lifecycle variables, so never collapse these into one ambiguous
 fallback. Use the published path; plugin-root variables are lifecycle-only.
 
-Repo-checkout fallback (for tests/dev when the plugin is not installed): `plugins/jira/skills/jira/scripts/jira.sh`.
+Repo-checkout fallback (for tests/dev when the plugin is not installed): `plugins/jira/hooks/dist/jira.js` (a Bun bundle; needs Bun 1.4.x on `PATH`).
 
 ## Setup
 

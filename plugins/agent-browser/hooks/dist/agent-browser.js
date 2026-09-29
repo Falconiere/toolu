@@ -16,7 +16,7 @@ function isBrokenPipe(error) {
   return error instanceof Error && "code" in error && error.code === "EPIPE";
 }
 async function writeStdout(text) {
-  if (text === "")
+  if (text.length === 0)
     return;
   try {
     await Bun.write(Bun.stdout, text);
