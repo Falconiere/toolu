@@ -19,6 +19,7 @@ Each `ShellCommand` carries the following fields:
 
 - `words`: the name and arguments as written.
 - `argv`: what actually runs once wrappers are removed.
+- `patterns`: aligned with `argv`, the unexpanded text of each word bash globs.
 - `wrappers`
 - `redirects`
 - `pipeline`: `{ index, size }`
@@ -27,7 +28,7 @@ Each `ShellCommand` carries the following fields:
 - `depth`
 - `text`
 
-A `null` word is dynamic: it expands at run time and is never guessed.
+A `null` word is dynamic: it expands at run time and is never guessed. That includes a pathname pattern, whose text is in `patterns`.
 
 ## What the walk covers
 
@@ -59,6 +60,11 @@ Wrappers are unwrapped by their own option tables: `sudo`, `doas`, `env`, `comma
   - through subshells, groups, `bash -c` and `eval`.
   
   `bun test | tail` does not prove `bun test` passed.
+- **Pathname patterns:** bash globs an unquoted word that contains `*`, `?` or `[…]` and uses the one existing file it matches. It does this for a redirect target or argument too: `echo x > .en[v]` writes `.env`, which was verified with neutral names under bash 5.3 and `/bin/bash` 3.2. Such a word is therefore not a static value:
+  - its entry in `words`/`argv` is `null`, so `/usr/bin/g[i]t push` is `unknown`, and its pattern is kept in `patterns`;
+  - on a redirect it is in `ShellRedirect.pattern`, and on a write target in `WriteTarget.pattern`.
+  
+  A guardrail must treat a pattern as every path it matches. Quoted or backslash-escaped characters are literal.
 - **Size:** input over 1 MiB is not parsed and is `unknown`. Measured: 1 MiB of dense script parses in about 15 ms, and a 1 MiB heredoc in 0.3 ms.
 - **Out of scope:**
   - Shell state from earlier calls: aliases, functions, `cd`, `set -o pipefail`.

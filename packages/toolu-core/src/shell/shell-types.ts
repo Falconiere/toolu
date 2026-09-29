@@ -29,8 +29,10 @@ export interface ShellRedirect {
   readonly operator: RedirectOperator;
   /** The explicit descriptor (`2>`), or `null` when none was written. */
   readonly fd: number | null;
-  /** The target's static value; `null` when dynamic or absent (a heredoc). */
+  /** The target's static value; `null` when dynamic, a pathname pattern, or absent (a heredoc). */
   readonly target: string | null;
+  /** An unquoted pathname pattern target (`>.en[v]`): bash writes the one file it matches. */
+  readonly pattern: string | null;
   /** The target as written; empty for a heredoc. */
   readonly text: string;
   /** A `<<`/`<<-` body: its content when static (tabs stripped for `<<-`), else `null`. */
@@ -47,6 +49,8 @@ export interface ShellCommand {
   readonly words: readonly (string | null)[];
   /** The command that actually runs, after wrappers; xargs appends a trailing `null`. */
   readonly argv: readonly (string | null)[];
+  /** Aligned with `argv`: the unexpanded pattern of a word that bash globs (`argv` has `null` there). */
+  readonly patterns: readonly (string | null)[];
   /** Wrappers peeled off, outermost first (`sudo`, `timeout`, …). */
   readonly wrappers: readonly string[];
   readonly redirects: readonly ShellRedirect[];

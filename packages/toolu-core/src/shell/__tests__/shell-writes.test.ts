@@ -4,6 +4,8 @@
  * in place or copy. A descriptor duplication is not a file.
  */
 import { expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { analyzeShell } from "../shell-parse.ts";
 import { writeTargets } from "../shell-writes.ts";
 
@@ -106,4 +108,59 @@ test.concurrent("a write inside bash -c, eval or a substitution is found", () =>
   expect(paths('echo "$(echo hi > .env)"')).toEqual([".env"]);
   expect(paths("cat <<EOF\n$(echo hi > .env)\nEOF")).toEqual([".env"]);
   expect(paths("cat <<'EOF'\n$(echo hi > .env)\nEOF")).toEqual([]);
+});
+
+/**
+ * bash globs an unquoted redirect target or argument and writes the one existing
+ * file it matches (checked with neutral names under bash 5.3 and /bin/bash 3.2:
+ * `echo pwned > targ[e]t.txt` overwrote target.txt). So `> .en[v]` writes .env,
+ * and the target is reported as a pattern that matches the protected name.
+ */
+const PROTECTED = readFileSync(
+  join(import.meta.dir, "../../../../../plugins/toolu/settings/protected-files.txt"),
+  "utf8",
+)
+  .split("\n")
+  .filter((line) => line.trim() !== "" && !line.startsWith("#"));
+
+test.concurrent("an unquoted pathname pattern is reported as a pattern matching the protected .env", () => {
+  expect(PROTECTED).toContain(".env");
+  for (const source of [
+    "echo x > .en[v]",
+    "echo x >.e?v",
+    "printf k 1>.en*",
+    "echo x &>> .[e]nv",
+    "cp src .en[v]",
+    "mv src .e?v",
+    "echo x | tee .en[v]",
+    "sed -i s/a/b/ .en[v]",
+    "{ echo x; } > .e?v",
+  ]) {
+    const [target] = writeTargets(analyzeShell(source));
+    expect([source, target?.path, new Bun.Glob(target?.pattern ?? "").match(".env")]).toEqual([
+      source,
+      null,
+      true,
+    ]);
+  }
+});
+
+test.concurrent("a pattern inside a target directory keeps both parts", () => {
+  const [target] = writeTargets(analyzeShell("cp -t apps/api src/.en[v]"));
+  expect([target?.path, target?.pattern]).toEqual([null, "apps/api/.en[v]"]);
+  expect(new Bun.Glob(target?.pattern ?? "").match("apps/api/.env")).toBe(true);
+});
+
+test.concurrent("a quoted or escaped pattern character names the file literally", () => {
+  for (const source of [
+    "echo x > '.en[v]'",
+    'echo x > ".e?v"',
+    "echo x > .en\\[v\\]",
+    "echo x > .e\\?v",
+  ]) {
+    const [target] = writeTargets(analyzeShell(source));
+    expect([source, target?.pattern]).toEqual([source, null]);
+    expect(target?.path).toMatch(/^\.e/);
+  }
+  expect(paths("dd if=x of=.en[v]")).toEqual([".en[v]"]);
 });

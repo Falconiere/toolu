@@ -45,6 +45,9 @@ test.concurrent("a dynamic command name or subcommand is unknown, not 'not a pus
     "gi$(echo t) push",
     "git $SUB",
     "sudo $CMD",
+    // bash globs the name or subcommand against the file system: `/usr/bin/g[i]t` runs git.
+    "/usr/bin/g[i]t push",
+    "git pu?h",
   ]) {
     expect([source, push(source)]).toEqual([source, "unknown"]);
   }

@@ -87,6 +87,8 @@ const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
 
 export interface Unwrapped {
   readonly argv: readonly (string | null)[];
+  /** Aligned with `argv`: the pattern of each word bash globs. */
+  readonly patterns: readonly (string | null)[];
   readonly wrappers: readonly string[];
 }
 
@@ -108,22 +110,28 @@ function innerStart(words: Words, wrapper: Wrapper): number | "opaque" | null {
 }
 
 /** Peel wrapper commands off `words` until the command that actually runs. */
-export function unwrap(words: Words): Unwrapped {
-  let argv: Words = words;
+export function unwrap(words: Words, patterns: Words): Unwrapped {
+  let start = 0;
   let appendsDynamic = false;
   const wrappers: string[] = [];
-  for (let wrapper = wrapperOf(argv[0]); wrapper !== undefined; wrapper = wrapperOf(argv[0])) {
-    const start = innerStart(argv, wrapper);
-    if (start === null) break;
-    wrappers.push(basename(argv[0] ?? ""));
-    if (start === "opaque") {
-      argv = [null];
-      break;
-    }
+  for (
+    let wrapper = wrapperOf(words[0]);
+    wrapper !== undefined;
+    wrapper = wrapperOf(words[start])
+  ) {
+    const inner = innerStart(words.slice(start), wrapper);
+    if (inner === null) break;
+    wrappers.push(basename(words[start] ?? ""));
+    if (inner === "opaque") return { argv: [null], patterns: [null], wrappers };
     appendsDynamic ||= wrapper.appendsDynamic === true;
-    argv = argv.slice(start);
+    start += inner;
   }
-  return { argv: appendsDynamic ? [...argv, null] : argv, wrappers };
+  const tail = appendsDynamic ? [null] : [];
+  return {
+    argv: [...words.slice(start), ...tail],
+    patterns: [...patterns.slice(start), ...tail],
+    wrappers,
+  };
 }
 
 const SHELLS = new Set(["bash", "sh", "zsh", "dash", "ksh"]);

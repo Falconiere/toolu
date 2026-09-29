@@ -95,10 +95,23 @@ test.concurrent("pipeline position and exit observability follow bash semantics"
   ]);
 });
 
-test.concurrent("words keep static values and mark expansions dynamic", () => {
-  const { commands } = analyzeShell(`echo 'a b' "c\\"d" $'e\\tf' $HOME "$(date)" x*.ts`);
+test.concurrent("words keep static values and mark expansions and globs dynamic", () => {
+  const { commands } = analyzeShell(
+    `echo 'a b' "c\\"d" $'e\\tf' $HOME "$(date)" x*.ts 'y*.ts' z\\*.ts`,
+  );
   expect(commands.map((c) => c.argv[0])).toEqual(["date", "echo"]);
-  expect(commands[1]?.words).toEqual(["echo", "a b", 'c"d', "e\tf", null, null, "x*.ts"]);
+  expect(commands[1]?.words).toEqual([
+    "echo",
+    "a b",
+    'c"d',
+    "e\tf",
+    null,
+    null,
+    null,
+    "y*.ts",
+    "z*.ts",
+  ]);
+  expect(commands[1]?.patterns).toEqual([null, null, null, null, null, null, "x*.ts", null, null]);
 });
 
 test.concurrent("a heredoc piped through cat in double quotes resolves to its body", () => {

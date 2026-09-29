@@ -43,7 +43,7 @@ import {
   visitWord,
   type ScriptVisitor,
 } from "./shell-walk-words.ts";
-import { staticWord, toShellRedirect } from "./shell-words.ts";
+import { resolveWord, toShellRedirect } from "./shell-words.ts";
 
 /** How deep `bash -c` / `eval` strings are followed before the rest is unknown. */
 export const MAX_RUN_DEPTH = 4;
@@ -69,6 +69,7 @@ function unknownCommand(text: string, origin: CommandOrigin, depth: number, sink
   sink.commands.push({
     words: [null],
     argv: [null],
+    patterns: [null],
     wrappers: [],
     redirects: [],
     pipeline: ALONE,
@@ -135,14 +136,20 @@ function emitCommand(command: Command, ctx: WalkContext, sink: WalkSink): void {
   for (const word of command.suffix) visitWord(word, nested);
   for (const redirect of command.redirects) visitRedirect(redirect, nested);
 
-  const words = command.name === undefined ? [] : [command.name, ...command.suffix].map(staticWord);
-  const { argv, wrappers } = unwrap(words);
+  const resolved =
+    command.name === undefined ? [] : [command.name, ...command.suffix].map(resolveWord);
+  const words = resolved.map((word) => word.value);
+  const { argv, patterns, wrappers } = unwrap(
+    words,
+    resolved.map((word) => word.pattern),
+  );
   const redirects = command.redirects.map(toShellRedirect);
   const text = ctx.source.slice(command.pos, command.end);
   const exitProves = ctx.proves;
   sink.commands.push({
     words,
     argv,
+    patterns,
     wrappers,
     redirects,
     pipeline: ctx.pipeline,
