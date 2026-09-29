@@ -73,6 +73,8 @@ A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context b
 | `tools/toolu-cli/src/plugins/install.ts` | Dependency-ordered install; core failure stops dependents, others continue |
 | `tools/toolu-cli/src/host/` | Per-host adapters normalizing `plugin list --json` into one shape |
 | `tooling/src/pack-inventory.ts` | Published-tarball file-list gate |
+| `tooling/src/guardrails/run.ts` | Structural gate (`bun run guardrails`): TypeScript port of the vendored conventions runner; data in `tooling/conventions/guardrails/` |
+| `tooling/src/benchmarks/run.ts` | Benchmark harness (`bun run benchmarks`); inputs, fixtures and committed results in `benchmarks/` |
 | `packages/toolu-core/src/launcher/launcher.ts` | `@toolu/core/launcher`: the generated `hooks.json` command that runs a bundle with Bun and fails closed without it |
 | `packages/toolu-core/src/host/host.ts` | `@toolu/core/host`: host detection (Claude, Codex, Cursor, OpenCode, Hermes), roots, Codex plugin snapshot, event-name map, per-host output encoders and `ask` degradation |
 | `packages/toolu-core/src/config/config.ts` | `@toolu/core/config`: `toolu.config.json` loader (fail-closed envelope), thresholds, gate modes, permissions write, `settings/*` loaders; bash parity over `tooling/fixtures/config` |
