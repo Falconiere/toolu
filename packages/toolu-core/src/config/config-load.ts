@@ -25,6 +25,8 @@ export type LoadedConfig = {
   /** Why a file's envelope was rejected; set means fail closed. */
   invalid: string | undefined;
   files: { user: string; project: string | undefined };
+  /** The host the files were resolved for; gate modes degrade `ask` for it. */
+  host: HostName;
   warn: Warn;
 };
 
@@ -51,7 +53,8 @@ export function mergeConfig(user: unknown, project: unknown): unknown {
   return Object.fromEntries(merged);
 }
 
-function isFile(path: string): boolean {
+/** `[ -f PATH ]`: a regular file (or a symlink to one). */
+export function isFile(path: string): boolean {
   try {
     return statSync(path).isFile();
   } catch {
@@ -89,14 +92,15 @@ function envelopeError(value: unknown): string | undefined {
   return undefined;
 }
 
-function configFiles(options: ConfigOptions): LoadedConfig["files"] {
+function configFiles(options: ConfigOptions): Pick<LoadedConfig, "files" | "host"> {
   const env = options.env ?? process.env;
   const host = options.host ?? detectHost({ env });
   const scoped = options.cwd === undefined ? { env, host } : { env, host, cwd: options.cwd };
-  return {
+  const files = {
     user: join(configRoot(scoped), "toolu.config.json"),
     project: projectConfigPath(scoped),
   };
+  return { files, host };
 }
 
 type Layer = { value: JsonObject; invalid?: string };
@@ -122,17 +126,17 @@ function readLayer(path: string | undefined, warn: Warn): Layer {
 /** Load and merge the user and project config for the resolved host. */
 export function loadConfig(options: ConfigOptions = {}): LoadedConfig {
   const warn = options.warn ?? stderrWarn;
-  const files = configFiles(options);
+  const { files, host } = configFiles(options);
   const user = readLayer(files.user, warn);
   const project = readLayer(files.project, warn);
   const invalid = user.invalid ?? project.invalid;
   const merged = mergeConfig(user.value, project.value);
   const data = invalid === undefined && isJsonObject(merged) ? merged : {};
-  return { data, invalid, files, warn };
+  return { data, invalid, files, host, warn };
 }
 
 /** Is either config file on disk? Stat only: no read, no parse. */
 export function configExists(options: ConfigOptions = {}): boolean {
-  const files = configFiles(options);
+  const { files } = configFiles(options);
   return isFile(files.user) || (files.project !== undefined && isFile(files.project));
 }

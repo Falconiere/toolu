@@ -16,3 +16,52 @@ export {
   type LoadedConfig,
   type Warn,
 } from "./config-load.ts";
+export {
+  CODEX_REASONING_EFFORTS,
+  MODEL_ALIASES,
+  MODEL_CLASSES,
+  codexModel,
+  configString,
+  enabled,
+  enabledExplicit,
+  flagFalse,
+  flagTrue,
+  model,
+  section,
+  type CodexModel,
+  type ModelAlias,
+  type ModelClass,
+  type ReasoningEffort,
+} from "./config-read.ts";
+export {
+  QUALITY_DEFAULTS,
+  nativeMaxLines,
+  qualityFlag,
+  qualityThreshold,
+  tsMaxFileLinesResolved,
+  type QualityKey,
+  type QualityLang,
+  type QualityOptions,
+  type ThresholdSource,
+} from "./quality-config.ts";
+export {
+  DOCS_SYNC_DEFAULTS,
+  docsSyncCodeSurfaces,
+  docsSyncSurfaceExcludes,
+  docsSyncSurfaces,
+} from "./docs-sync-config.ts";
+export {
+  DEFAULT_GATE_PRESET,
+  GATE_GUARDRAILS,
+  GATE_MODES,
+  GATE_NAMES,
+  GATE_PRESETS,
+  gateDecision,
+  gateMode,
+  gatePreset,
+  guardrailWarning,
+  type GateMode,
+  type GateModeOptions,
+  type GateName,
+  type GatePreset,
+} from "./gate-mode.ts";

@@ -46,7 +46,8 @@ export function configRoot(options: HostOptions = {}): string {
   return envValue(env, "TOOLU_CONFIG_DIR") ?? NATIVE_CONFIG_ROOT[host](env);
 }
 
-function gitToplevel(env: HostEnv, cwd: string | undefined): string | undefined {
+/** `git rev-parse --show-toplevel` from `cwd` (default: the process cwd), or `undefined`. */
+export function gitToplevel(env: HostEnv, cwd: string | undefined): string | undefined {
   const res = spawnSync("git", ["rev-parse", "--show-toplevel"], {
     cwd: cwd ?? process.cwd(),
     env: childEnv(env),
