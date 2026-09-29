@@ -1,7 +1,7 @@
 /**
  * PreToolUse hook latency (#258, AC-5; epic #247 budget: p50 no worse than the
  * bash baseline + 5 ms on the same machine). Over a representative slice of
- * the parity corpus, as Claude Code spawns it, measures one after another:
+ * the parity corpus, spawned the way Claude Code spawns hooks, measures in turn:
  *
  *   bash      `bash pre-tools/mod.sh`, the pre-#258 hooks.json command
  *   bundle    the committed `hooks/dist/pre-tools.js` behind its launcher,
