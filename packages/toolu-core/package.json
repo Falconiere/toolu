@@ -44,6 +44,7 @@
     "./dispatch": "./src/dispatch/dispatch.ts"
   },
   "dependencies": {
+    "unbash": "4.0.11",
     "zod": "4.1.5"
   }
 }
