@@ -41,9 +41,12 @@
     "./registry": "./src/registry/registry.ts",
     "./ledger": "./src/ledger/ledger.ts",
     "./startup": "./src/startup/startup.ts",
-    "./dispatch": "./src/dispatch/dispatch.ts"
+    "./dispatch": "./src/dispatch/dispatch.ts",
+    "./shell": "./src/shell/shell.ts",
+    "./shell/writes": "./src/shell/shell-writes.ts"
   },
   "dependencies": {
+    "unbash": "4.0.11",
     "zod": "4.1.5"
   }
 }
