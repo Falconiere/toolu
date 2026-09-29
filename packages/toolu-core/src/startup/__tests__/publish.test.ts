@@ -1,11 +1,13 @@
 /** Stable-path publishing against real config roots, links and files (#269). */
 import { afterAll, expect, test } from "bun:test";
 import {
+  chmodSync,
   existsSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   readlinkSync,
   realpathSync,
   rmSync,
@@ -150,4 +152,19 @@ test.concurrent("bunAdvisory is the bash hooks' exact line", () => {
   expect(bunAdvisory("context7", "context7 search CLI")).toBe(
     "context7: bun not found on PATH — the context7 search CLI needs Bun 1.4.x (https://bun.sh; see docs/runtime.md)",
   );
+});
+
+test.concurrent("a directory that refuses the link reports link-failed and leaves no litter", () => {
+  const { root, source } = fixture();
+  const env = { HOME: root, TOOLU_CONFIG_DIR: join(root, "cfg") };
+  const dir = join(root, "cfg/context7");
+  mkdirSync(dir, { recursive: true });
+  chmodSync(dir, 0o555);
+  try {
+    const result = publishWrapper({ ...base, source, env });
+    expect(result).toEqual({ status: "link-failed", path: join(dir, "search.sh") });
+    expect(readdirSync(dir)).toEqual([]);
+  } finally {
+    chmodSync(dir, 0o755);
+  }
 });

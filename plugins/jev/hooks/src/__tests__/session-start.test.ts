@@ -168,3 +168,20 @@ test.concurrent("an uncreatable config dir reports once and emits no context", a
     stderr: `jev: cannot create ${join(blocker, "jev")} — wrapper not published\n`,
   });
 });
+
+test.concurrent("a config dir that refuses the link reports once and emits no context", async () => {
+  using sb = createSandbox();
+  const dir = join(sb.home, ".claude/jev");
+  mkdirSync(dir, { recursive: true });
+  chmodSync(dir, 0o555);
+  try {
+    const res = await hook(sb, "claude");
+    expect(res).toMatchObject({
+      exitCode: 0,
+      stdout: "",
+      stderr: `jev: cannot publish ${join(dir, "jev.sh")}\n`,
+    });
+  } finally {
+    chmodSync(dir, 0o755);
+  }
+});
