@@ -1,6 +1,6 @@
 // @bun
-// plugins/toolu/hooks/src/session-start.ts
-import { join as join15 } from "path";
+// plugins/toolu/hooks/src/user-prompt-submit.ts
+import { join as join4 } from "path";
 
 // node_modules/.bun/zod@4.1.5/node_modules/zod/v4/core/core.js
 var NEVER = Object.freeze({
@@ -2817,17 +2817,6 @@ function _array(Class, element, params) {
     ...normalizeParams(params)
   });
 }
-function _custom(Class, fn, _params) {
-  const norm = normalizeParams(_params);
-  norm.abort ?? (norm.abort = true);
-  const schema = new Class({
-    type: "custom",
-    check: "custom",
-    fn,
-    ...norm
-  });
-  return schema;
-}
 function _refine(Class, fn, _params) {
   const schema = new Class({
     type: "custom",
@@ -3532,9 +3521,6 @@ var ZodCustom = /* @__PURE__ */ $constructor("ZodCustom", (inst, def) => {
   $ZodCustom.init(inst, def);
   ZodType.init(inst, def);
 });
-function custom(fn, _params) {
-  return _custom(ZodCustom, fn ?? (() => true), _params);
-}
 function refine(fn, _params = {}) {
   return _refine(ZodCustom, fn, _params);
 }
@@ -3799,11 +3785,6 @@ function projectConfigPath(options = {}) {
   const root = projectRoot(o);
   return root === undefined ? undefined : join(root, projectDirname(o), "toolu.config.json");
 }
-function projectStateRoot(options = {}) {
-  const o = resolveHost(options);
-  const root = o.root ?? projectRoot(o);
-  return root === undefined ? undefined : join(root, projectDirname(o), "tmp");
-}
 
 // packages/toolu-core/src/config/config-load.ts
 var KNOWN_KEYS = new Set(Object.keys(TooluConfigSchema.shape));
@@ -3893,32 +3874,6 @@ function loadConfig(options = {}) {
   return { data, invalid, files, host, warn };
 }
 // packages/toolu-core/src/config/config-read.ts
-var MODEL_CLASSES = [
-  "mechanical",
-  "exploration",
-  "implementation",
-  "review",
-  "synthesis",
-  "architecture"
-];
-var MODEL_ALIASES = ["haiku", "sonnet", "opus", "fable", "inherit"];
-var CODEX_REASONING_EFFORTS = ["low", "medium", "high", "xhigh", "max", "ultra"];
-var MODEL_DEFAULTS = {
-  mechanical: "haiku",
-  exploration: "sonnet",
-  implementation: "sonnet",
-  review: "sonnet",
-  synthesis: "opus",
-  architecture: "opus"
-};
-var CODEX_DEFAULTS = {
-  mechanical: { model: "gpt-5.6-luna", reasoningEffort: "medium" },
-  exploration: { model: "gpt-5.6-terra", reasoningEffort: "medium" },
-  implementation: { model: "gpt-5.6-terra", reasoningEffort: "medium" },
-  review: { model: "gpt-5.6-terra", reasoningEffort: "high" },
-  synthesis: { model: "gpt-5.6-sol", reasoningEffort: "high" },
-  architecture: { model: "gpt-5.6-sol", reasoningEffort: "high" }
-};
 function section(config, key) {
   const value = config.data[key];
   return isJsonObject(value) ? value : undefined;
@@ -3929,65 +3884,6 @@ function member(config, category, name) {
 function enabled(config, category, name) {
   const value = member(config, category, name);
   return value !== false && value !== "false";
-}
-function flagFalse(config, category, name) {
-  return member(config, category, name) === false;
-}
-function isOneOf(value, allowed) {
-  return allowed.some((item) => item === value);
-}
-function requireClass(cls) {
-  if (!isOneOf(cls, MODEL_CLASSES)) {
-    throw new TypeError(`unknown model class '${cls}' (known: ${MODEL_CLASSES.join(" ")})`);
-  }
-  return cls;
-}
-function jqToString(value) {
-  return typeof value === "string" ? value : JSON.stringify(value);
-}
-function model(config, cls) {
-  const known = requireClass(cls);
-  const fallback = MODEL_DEFAULTS[known];
-  const value = section(config, "models")?.[known];
-  if (value === undefined || value === null || value === false || value === "") {
-    return fallback;
-  }
-  const text = jqToString(value);
-  if (isOneOf(text, MODEL_ALIASES)) {
-    return text;
-  }
-  config.warn(`models.${known}: '${text}' is not a model alias (${MODEL_ALIASES.join(" ")}); using ${fallback}`);
-  return fallback;
-}
-function codexField(config, cls, field) {
-  const codex = section(config, "models")?.codex;
-  const entry = isJsonObject(codex) ? codex[cls] : undefined;
-  const value = isJsonObject(entry) ? entry[field] : undefined;
-  return value === undefined || value === false ? null : value;
-}
-function codexModel(config, cls) {
-  const known = requireClass(cls);
-  const fallback = CODEX_DEFAULTS[known];
-  const prefix = `models.codex.${known}`;
-  let slug = fallback.model;
-  const rawModel = codexField(config, known, "model");
-  if (typeof rawModel === "string" && rawModel !== "") {
-    slug = rawModel;
-  } else if (rawModel !== null) {
-    config.warn(`${prefix}.model: value is not a non-empty string; using ${fallback.model}`);
-  }
-  let effort = fallback.reasoningEffort;
-  const rawEffort = codexField(config, known, "reasoningEffort");
-  if (typeof rawEffort === "string") {
-    if (isOneOf(rawEffort, CODEX_REASONING_EFFORTS)) {
-      effort = rawEffort;
-    } else {
-      config.warn(`${prefix}.reasoningEffort: '${rawEffort}' is not supported (${CODEX_REASONING_EFFORTS.join(" ")}); using ${fallback.reasoningEffort}`);
-    }
-  } else if (rawEffort !== null) {
-    config.warn(`${prefix}.reasoningEffort: value is not a string; using ${fallback.reasoningEffort}`);
-  }
-  return { model: slug, reasoningEffort: effort };
 }
 // packages/toolu-core/src/host/host-encode.ts
 var PRE_ACTION = new Set(["tool/pre", "shell/pre"]);
@@ -4011,126 +3907,6 @@ var ASK_EVENTS = {
   hermes: new Set,
   opencode: new Set(["tool/pre", "shell/pre", "permission/evaluate"])
 };
-// packages/toolu-core/src/config/permissions.ts
-import { spawnSync as spawnSync2 } from "child_process";
-import { randomUUID } from "crypto";
-import { existsSync, mkdirSync, readFileSync as readFileSync2, renameSync, rmSync, writeFileSync } from "fs";
-import { dirname, join as join3 } from "path";
-var DEFAULT_PERMISSIONS = ["Bash(*)", "Edit", "Write"];
-var PERMISSIONS_SENTINEL = ".permissions-written";
-function entries(config) {
-  const allow = section(config, "permissions")?.allow;
-  const configured = Array.isArray(allow) ? allow.filter((item) => typeof item === "string") : [];
-  return configured.length > 0 ? configured : DEFAULT_PERMISSIONS;
-}
-function isGitRepo(root, env) {
-  const res = spawnSync2("git", ["-C", root, "rev-parse", "--git-dir"], {
-    env: childEnv(env),
-    encoding: "utf8"
-  });
-  return res.error === undefined && res.status === 0;
-}
-function readSettings(file) {
-  if (!existsSync(file)) {
-    return { ok: true, settings: {} };
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(readFileSync2(file, "utf8"));
-  } catch {
-    return { ok: false, reason: `malformed JSON in ${file}; leaving it untouched` };
-  }
-  if (parsed === null || parsed === false) {
-    return { ok: false, reason: `malformed JSON in ${file}; leaving it untouched` };
-  }
-  return isJsonObject(parsed) ? { ok: true, settings: parsed } : { ok: false, reason: `could not merge permissions into ${file}` };
-}
-function existingAllow(settings) {
-  const permissions = settings.permissions;
-  if (permissions === undefined || permissions === null || permissions === false) {
-    return [];
-  }
-  if (!isJsonObject(permissions)) {
-    return;
-  }
-  const allow = permissions.allow;
-  if (allow === undefined || allow === null || allow === false) {
-    return [];
-  }
-  const items = Array.isArray(allow) ? allow : isJsonObject(allow) ? Object.values(allow) : undefined;
-  return items?.filter((item) => typeof item === "string");
-}
-function writeAtomic(file, body) {
-  const tmp = `${file}.${randomUUID()}.tmp`;
-  try {
-    mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(tmp, body, { flag: "wx" });
-    renameSync(tmp, file);
-    return true;
-  } catch {
-    rmSync(tmp, { force: true });
-    return false;
-  }
-}
-function target(config, root, options) {
-  const env = options.env ?? process.env;
-  const scoped = {
-    env,
-    host: config.host,
-    ...options.cwd === undefined ? {} : { cwd: options.cwd }
-  };
-  const resolved = root ?? projectRoot(scoped);
-  if (resolved === undefined || resolved === "")
-    return "no project root";
-  if (config.host !== "claude")
-    return "not claude";
-  if (config.invalid !== undefined)
-    return "config invalid";
-  if (flagFalse(config, "permissions", "autoAllow"))
-    return "autoAllow is false";
-  if (!isGitRepo(resolved, env))
-    return "not a git repository";
-  const stateRoot = projectStateRoot({ ...scoped, root: resolved });
-  if (stateRoot === undefined)
-    return "no state root";
-  const sentinel = join3(stateRoot, PERMISSIONS_SENTINEL);
-  if (existsSync(sentinel))
-    return "already written";
-  const settingsFile = join3(resolved, projectDirname(scoped), "settings.local.json");
-  return { settingsFile, sentinel };
-}
-function permissionsAutowrite(config, root, options = {}) {
-  const resolved = target(config, root, options);
-  if (typeof resolved === "string") {
-    return { written: false, reason: resolved };
-  }
-  const existing = readSettings(resolved.settingsFile);
-  const have = existing.ok ? existingAllow(existing.settings) : undefined;
-  if (!existing.ok || have === undefined) {
-    const reason = existing.ok ? `could not merge permissions into ${resolved.settingsFile}` : existing.reason;
-    config.warn(reason);
-    return { written: false, reason };
-  }
-  const added = entries(config).filter((entry) => !have.includes(entry));
-  const permissions = existing.settings.permissions;
-  const merged = {
-    ...existing.settings,
-    permissions: { ...isJsonObject(permissions) ? permissions : {}, allow: [...have, ...added] }
-  };
-  if (!writeAtomic(resolved.settingsFile, `${JSON.stringify(merged, null, 2)}
-`)) {
-    config.warn(`could not write ${resolved.settingsFile}`);
-    return { written: false, reason: `could not write ${resolved.settingsFile}` };
-  }
-  try {
-    mkdirSync(dirname(resolved.sentinel), { recursive: true });
-    writeFileSync(resolved.sentinel, "");
-  } catch (error) {
-    config.warn(`could not write ${resolved.sentinel}: ${String(error)}`);
-  }
-  const notice = added.length === 0 ? null : `toolu wrote ${added.join(", ")} to ${resolved.settingsFile} (one time only; delete a rule and it stays deleted). Add that file to .gitignore if it is not there already.`;
-  return { written: true, settingsFile: resolved.settingsFile, added, notice };
-}
 // packages/toolu-core/src/config/settings.ts
 var CodeEditRulesSchema = object({
   rules: array(object({
@@ -4141,10 +3917,6 @@ var CodeEditRulesSchema = object({
   }).strict())
 });
 // packages/toolu-core/src/host/host-snapshot.ts
-import { spawnSync as spawnSync3 } from "child_process";
-import { mkdirSync as mkdirSync2, readFileSync as readFileSync3, renameSync as renameSync2, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "fs";
-import { dirname as dirname2, join as join4 } from "path";
-var INDETERMINATE = { version: 1, status: "indeterminate", plugins: [] };
 var ListSchema = looseObject({ installed: array(unknown()) });
 var EntrySchema = looseObject({
   pluginId: unknown(),
@@ -4156,203 +3928,10 @@ var SnapshotFileSchema = looseObject({
   status: string2(),
   plugins: array(unknown())
 });
-function codexPluginSnapshotPath(options = {}) {
-  const o = resolveHost(options);
-  return envValue(o.env, "TOOLU_CODEX_PLUGIN_SNAPSHOT") ?? join4(configRoot(o), "toolu", "codex-plugins.json");
-}
-function readCodexList(env) {
-  const res = spawnSync3("codex", ["plugin", "list", "--json"], {
-    env: childEnv(env),
-    encoding: "utf8"
-  });
-  if (res.error !== undefined || res.status !== 0) {
-    return;
-  }
-  try {
-    const parsed = JSON.parse(res.stdout);
-    return parsed;
-  } catch {
-    return;
-  }
-}
-function flagOn(entry, key) {
-  return !Object.hasOwn(entry, key) || entry[key] === true;
-}
-function entryId(entry) {
-  const { pluginId, name, marketplaceName } = entry;
-  const id = pluginId !== null && pluginId !== false && pluginId !== undefined ? pluginId : typeof name === "string" && typeof marketplaceName === "string" ? `${name}@${marketplaceName}` : undefined;
-  return typeof id === "string" && id.length > 0 ? id : undefined;
-}
-function canonicalSnapshot(raw) {
-  const list = ListSchema.safeParse(raw);
-  if (!list.success) {
-    return INDETERMINATE;
-  }
-  const ids = new Set;
-  for (const item of list.data.installed) {
-    const entry = EntrySchema.safeParse(item);
-    if (!entry.success || Array.isArray(item)) {
-      return INDETERMINATE;
-    }
-    const id = flagOn(entry.data, "installed") && flagOn(entry.data, "enabled") ? entryId(entry.data) : undefined;
-    if (id !== undefined)
-      ids.add(id);
-  }
-  return { version: 1, status: "ready", plugins: [...ids].toSorted() };
-}
-function writeAtomically(path, body) {
-  const tmp = `${path}.tmp.${process.pid}`;
-  let created = false;
-  try {
-    mkdirSync2(dirname2(path), { recursive: true });
-    writeFileSync2(tmp, body);
-    created = true;
-    renameSync2(tmp, path);
-    return true;
-  } catch {
-    if (created)
-      rmSync2(tmp, { force: true });
-    return false;
-  }
-}
-function snapshotCodexPlugins(options = {}) {
-  const o = resolveHost(options);
-  if (o.host !== "codex") {
-    return;
-  }
-  const path = codexPluginSnapshotPath(o);
-  const snapshot = canonicalSnapshot(readCodexList(o.env));
-  const written = writeAtomically(path, `${JSON.stringify(snapshot)}
-`);
-  return { path, snapshot, written };
-}
-function readSnapshotFile(path) {
-  try {
-    const parsed = SnapshotFileSchema.safeParse(JSON.parse(readFileSync3(path, "utf8")));
-    return parsed.success ? parsed.data : undefined;
-  } catch {
-    return;
-  }
-}
-function codexPluginInstalled(spec, options = {}) {
-  if (spec === "") {
-    return "absent";
-  }
-  const snapshot = readSnapshotFile(codexPluginSnapshotPath(options));
-  if (snapshot?.status !== "ready") {
-    return "unknown";
-  }
-  return snapshot.plugins.includes(spec) ? "installed" : "absent";
-}
-// packages/toolu-core/src/launcher/launcher.ts
-var ENFORCING_EVENTS = new Set(["PreToolUse", "PermissionRequest"]);
-function runtimeDiagnostic(bunPath, bunVersion) {
-  return { systemMessage: `toolu runtime: bun ${bunVersion} at ${bunPath}` };
-}
-
 // packages/toolu-core/src/state/state-io.ts
-import { randomUUID as randomUUID2 } from "crypto";
-import { linkSync, readFileSync as readFileSync4, renameSync as renameSync3, rmSync as rmSync3, statSync as statSync2, writeFileSync as writeFileSync3 } from "fs";
-var stderrWarn2 = (message) => {
-  console.error(message);
-};
 function toJqJson(value, pretty) {
   const json = pretty ? JSON.stringify(value, null, 2) : JSON.stringify(value);
   return json.replaceAll("\x7F", "\\u007f");
-}
-function isoSeconds(date) {
-  return `${date.toISOString().slice(0, 19)}Z`;
-}
-function compareJqStrings(a, b) {
-  return Buffer.compare(Buffer.from(a, "utf8"), Buffer.from(b, "utf8"));
-}
-function isErrno(error, code) {
-  return error instanceof Error && "code" in error && error.code === code;
-}
-function writeAtomic2(file, body) {
-  const tmp = `${file}.${randomUUID2()}.tmp`;
-  try {
-    writeFileSync3(tmp, body, { flag: "wx", mode: 384 });
-    renameSync3(tmp, file);
-    return true;
-  } catch {
-    try {
-      rmSync3(tmp, { force: true });
-    } catch {}
-    return false;
-  }
-}
-var LOCK_POLL_MS = 10;
-var DEFAULT_LOCK_TIMEOUT_MS = 5000;
-var DEFAULT_LOCK_STALE_MS = 2000;
-function lockContent(lock) {
-  try {
-    return readFileSync4(lock, "utf8");
-  } catch {
-    return;
-  }
-}
-function holderDead(content) {
-  const pid = Number(content.split(" ")[0]);
-  if (!Number.isInteger(pid) || pid <= 0)
-    return false;
-  try {
-    process.kill(pid, 0);
-    return false;
-  } catch (error) {
-    return isErrno(error, "ESRCH");
-  }
-}
-function breakIfStale(lock, staleMs) {
-  const content = lockContent(lock);
-  const stat = statSync2(lock, { throwIfNoEntry: false });
-  if (content === undefined || stat === undefined)
-    return;
-  if (!holderDead(content) && Date.now() - stat.mtimeMs <= staleMs)
-    return;
-  const claimed = `${lock}.${randomUUID2()}.broken`;
-  try {
-    renameSync3(lock, claimed);
-  } catch {
-    return;
-  }
-  if (lockContent(claimed) !== content) {
-    try {
-      linkSync(claimed, lock);
-    } catch {}
-  }
-  rmSync3(claimed, { force: true });
-}
-function tryLock(lock, content) {
-  try {
-    writeFileSync3(lock, content, { flag: "wx", mode: 384 });
-    return "held";
-  } catch (error) {
-    return isErrno(error, "EEXIST") ? "busy" : "unavailable";
-  }
-}
-function withLock(file, fn, options = {}) {
-  const lock = `${file}.lock`;
-  const ours = `${String(process.pid)} ${randomUUID2()}
-`;
-  const deadline = Date.now() + (options.timeoutMs ?? DEFAULT_LOCK_TIMEOUT_MS);
-  let state = tryLock(lock, ours);
-  while (state === "busy") {
-    if (Date.now() >= deadline) {
-      (options.warn ?? stderrWarn2)(`state: lock ${lock} still held; writing without it`);
-      break;
-    }
-    breakIfStale(lock, options.staleMs ?? DEFAULT_LOCK_STALE_MS);
-    state = tryLock(lock, ours);
-    if (state === "busy")
-      Bun.sleepSync(LOCK_POLL_MS);
-  }
-  try {
-    return fn();
-  } finally {
-    if (state === "held" && lockContent(lock) === ours)
-      rmSync3(lock, { force: true });
-  }
 }
 
 // packages/toolu-core/src/startup/context.ts
@@ -4360,9 +3939,6 @@ function renderHookOutput(value, pretty) {
   return `${toJqJson(value, pretty)}
 `;
 }
-// packages/toolu-core/src/state/gate-file.ts
-import { appendFileSync, existsSync as existsSync2, readFileSync as readFileSync5, writeFileSync as writeFileSync4 } from "fs";
-
 // packages/toolu-core/src/state/state-schema.ts
 var GATE_FILE_VERSION = 1;
 var TELEMETRY_VERSION = 1;
@@ -4436,209 +4012,10 @@ var EditRecordSchema = strictObject({
   moved_to: string2().optional(),
   from: string2().optional()
 });
-
-// packages/toolu-core/src/state/state-git.ts
-import { spawnSync as spawnSync4 } from "child_process";
-function git(root, args, env) {
-  const res = spawnSync4("git", ["-C", root, ...args], { env: childEnv(env), encoding: "utf8" });
-  return res.error === undefined && res.status === 0 ? res.stdout : undefined;
-}
-function hasGit(env) {
-  const res = spawnSync4("git", ["--version"], { env: childEnv(env), encoding: "utf8" });
-  return res.error === undefined && res.status === 0;
-}
-function currentBranch(root, env) {
-  const res = spawnSync4("git", ["-C", root, "rev-parse", "--abbrev-ref", "HEAD"], {
-    env: childEnv(env),
-    encoding: "utf8"
-  });
-  return res.error === undefined ? res.stdout.replace(/\n+$/, "") : "";
-}
-function branchSlug(branch) {
-  const slug = branch.replaceAll("/", "_").replace(/[^A-Za-z0-9_-]/g, "");
-  return slug === "" ? "_default" : slug;
-}
-function baseBranch(root, env) {
-  const ref = git(root, ["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], env)?.trim();
-  return ref === undefined || ref === "" ? "main" : ref.replace(/^refs\/remotes\/origin\//, "");
-}
-function branchSlugs(root, env, mergedInto) {
-  const args = ["branch", "--format=%(refname:short)"];
-  if (mergedInto !== undefined)
-    args.push("--merged", mergedInto);
-  const out = git(root, args, env) ?? "";
-  return new Set(out.split(`
-`).filter((name) => name !== "").map(branchSlug));
-}
-
-// packages/toolu-core/src/state/gate-file.ts
-var GLOBAL_GATE_KEY = "__global__";
-function isGateFile(value) {
-  return GateFileSchema.safeParse(value).success;
-}
-function firstIssue(value) {
-  const parsed = GateFileSchema.safeParse(value);
-  const issue = parsed.success ? undefined : parsed.error.issues[0];
-  return issue === undefined ? "invalid" : `${issue.path.join(".") || "(root)"}: ${issue.message}`;
-}
-function readGateFile(gateFile) {
-  if (!existsSync2(gateFile))
-    return { kind: "missing" };
-  let value;
-  try {
-    value = JSON.parse(readFileSync5(gateFile, "utf8"));
-  } catch (error) {
-    return { kind: "malformed", reason: String(error) };
-  }
-  if (value === null || value === false)
-    return { kind: "malformed", reason: String(value) };
-  if (isGateFile(value))
-    return { kind: "ok", doc: value };
-  return { kind: "unrecognized", reason: firstIssue(value), value };
-}
 // packages/toolu-core/src/state/state-sweeper.ts
-import { existsSync as existsSync3, readdirSync, readFileSync as readFileSync6, rmSync as rmSync4, statSync as statSync3 } from "fs";
-import { basename, join as join5 } from "path";
-var SWEEP_DEFAULT_TTL_HOURS = 24;
-var SWEEP_DEFAULT_RETENTION_DAYS = 7;
-var SWEEP_BRANCH_DIRS = ["push-review", "plan-ledger", "docs-sync"];
 var HOUR_MS = 3600000;
 var DAY_MS = 24 * HOUR_MS;
-function positiveGate(config, key, fallback) {
-  const value = section(config, "gates")?.[key];
-  return typeof value === "number" && value > 0 ? Math.floor(value) : fallback;
-}
-function globFiles(dir, suffix) {
-  if (!existsSync3(dir) || !statSync3(dir).isDirectory())
-    return [];
-  return readdirSync(dir).filter((name) => name.endsWith(suffix) && !name.startsWith(".")).map((name) => join5(dir, name)).filter((file) => statSync3(file, { throwIfNoEntry: false })?.isFile() === true);
-}
-function slugOfStateFile(file) {
-  return basename(file).replace(/\.json$/, "").replace(/\.pending-waiver$/, "").replace(/\.waiver$/, "");
-}
-function remove(file, warn) {
-  try {
-    rmSync4(file);
-  } catch {
-    warn(`toolu-sweep: could not remove ${file}`);
-  }
-}
-function reclaimable(file, slug, branches, ttlHours, now) {
-  if (branches.merged.has(slug) || !branches.live.has(slug))
-    return true;
-  return now - statSync3(file).mtimeMs > ttlHours * HOUR_MS;
-}
-function sweepBranchState(root, stateRoot, ttlHours, o) {
-  const branches = {
-    current: branchSlug(currentBranch(root, o.env)),
-    live: branchSlugs(root, o.env),
-    merged: branchSlugs(root, o.env, baseBranch(root, o.env))
-  };
-  for (const dir of SWEEP_BRANCH_DIRS) {
-    for (const file of globFiles(join5(stateRoot, dir), ".json")) {
-      const slug = slugOfStateFile(file);
-      if (slug === branches.current)
-        continue;
-      try {
-        if (reclaimable(file, slug, branches, ttlHours, o.now.getTime()))
-          remove(file, o.warn);
-      } catch (error) {
-        o.warn(`toolu-sweep: could not judge ${file}: ${String(error)}`);
-      }
-    }
-  }
-}
-function hasLiveViolation(keys) {
-  return keys.some((key) => key === GLOBAL_GATE_KEY || key !== "" && existsSync3(key));
-}
-function sweepGateFile(gateFile, warn) {
-  if (!existsSync3(gateFile))
-    return;
-  withLock(gateFile, () => {
-    const read = readGateFile(gateFile);
-    if (read.kind !== "ok")
-      return;
-    const doc = read.doc;
-    if (doc.status === "passing") {
-      remove(gateFile, warn);
-    } else if (!hasLiveViolation(doc.entries === undefined ? [doc.file] : Object.keys(doc.entries))) {
-      remove(gateFile, warn);
-    }
-  }, { warn });
-}
-function keptTelemetryLines(content, cutoff) {
-  const kept = [];
-  for (const line of content.split(`
-`)) {
-    if (line.trim() === "")
-      continue;
-    let value;
-    try {
-      value = JSON.parse(line);
-    } catch {
-      return;
-    }
-    if (value === null)
-      continue;
-    if (!isJsonObject(value))
-      return;
-    const t = value.t;
-    const keep = typeof t === "string" ? compareJqStrings(t, cutoff) >= 0 : t !== null && typeof t === "object";
-    if (keep)
-      kept.push(toJqJson(value, false));
-  }
-  return kept;
-}
-function sweepTelemetry(dir, retentionDays, o) {
-  const cutoff = isoSeconds(new Date(o.now.getTime() - retentionDays * DAY_MS));
-  for (const file of globFiles(dir, ".jsonl")) {
-    let content;
-    try {
-      content = readFileSync6(file, "utf8");
-    } catch (error) {
-      o.warn(`toolu-sweep: could not read ${file}: ${String(error)}`);
-      continue;
-    }
-    const kept = keptTelemetryLines(content, cutoff);
-    if (kept === undefined)
-      continue;
-    if (kept.length === 0) {
-      remove(file, o.warn);
-    } else if (!writeAtomic2(file, `${kept.join(`
-`)}
-`)) {
-      o.warn(`toolu-sweep: could not trim ${file}`);
-    }
-  }
-}
-function sweep(rootArg, options, warn) {
-  const env = options.env ?? process.env;
-  const host = options.host ?? options.config?.host;
-  const scoped = host === undefined ? { env } : { env, host };
-  const root = rootArg === undefined || rootArg === "" ? projectRoot(scoped) : rootArg;
-  if (root === undefined || root === "")
-    return;
-  const config = options.config ?? loadConfig({ ...scoped, cwd: root, warn });
-  if (!enabled(config, "gates", "sweep") || !hasGit(env))
-    return;
-  const stateRoot = projectStateRoot({ ...scoped, host: config.host, root });
-  if (stateRoot === undefined || !existsSync3(stateRoot) || !statSync3(stateRoot).isDirectory())
-    return;
-  const context = { env, warn, now: options.now?.() ?? new Date };
-  sweepBranchState(root, stateRoot, positiveGate(config, "stateTtlHours", SWEEP_DEFAULT_TTL_HOURS), context);
-  sweepGateFile(join5(stateRoot, "quality-gate-status.json"), warn);
-  sweepTelemetry(join5(stateRoot, "telemetry"), positiveGate(config, "telemetryRetentionDays", SWEEP_DEFAULT_RETENTION_DAYS), context);
-}
-function sweepState(root, options = {}) {
-  const warn = options.warn ?? stderrWarn2;
-  try {
-    sweep(root, options, warn);
-  } catch (error) {
-    warn(`toolu-sweep: ${String(error)}`);
-  }
-}
 // plugins/toolu/hooks/src/lifecycle/bash-compat.ts
-import { accessSync, constants } from "fs";
 function stripTrailingNewlines(text) {
   return text.replace(/\n+$/, "");
 }
@@ -4648,16 +4025,11 @@ function jqRaw(value) {
 function jqAlt(value, fallback) {
   return value === undefined || value === null || value === false ? fallback : stripTrailingNewlines(jqRaw(value));
 }
+function asciiLower(text) {
+  return text.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
+}
 function onPath(name, path) {
   return Bun.which(name, { PATH: path }) !== null;
-}
-function isExecutable(path) {
-  try {
-    accessSync(path, constants.X_OK);
-    return true;
-  } catch {
-    return false;
-  }
 }
 function gitToplevel2(cwd, env) {
   const res = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], {
@@ -4679,496 +4051,148 @@ function member2(doc, key) {
   return isJsonObject(doc) ? doc[key] : undefined;
 }
 
-// plugins/toolu/hooks/src/lifecycle/dependency-warning.ts
-import { readFileSync as readFileSync8, statSync as statSync5 } from "fs";
-import { join as join9 } from "path";
-
-// packages/toolu-core/src/registry/registry-gate.ts
-import { readFileSync as readFileSync7, statSync as statSync4 } from "fs";
-import { homedir as homedir2 } from "os";
-import { join as join6 } from "path";
-function installedPluginsPath(env) {
-  const root = envValue(env, "TOOLU_CONFIG_DIR") ?? envValue(env, "CLAUDE_CONFIG_DIR") ?? join6(envValue(env, "HOME") ?? homedir2(), ".claude");
-  return envValue(env, "CLAUDE_PLUGINS_REGISTRY") ?? join6(root, "plugins", "installed_plugins.json");
-}
-function readInstalledPlugins(path) {
-  try {
-    if (!statSync4(path).isFile())
-      return;
-    const parsed = JSON.parse(readFileSync7(path, "utf8"));
-    return parsed;
-  } catch {
-    return;
-  }
-}
-function claudePresence(spec, env) {
-  const doc = readInstalledPlugins(installedPluginsPath(env));
-  if (!isJsonObject(doc) || !isJsonObject(doc.plugins))
-    return "unknown";
-  return Object.hasOwn(doc.plugins, spec) ? "installed" : "absent";
-}
-function pluginPresence(spec, options = {}) {
-  if (spec === "")
-    return "absent";
-  const o = resolveHost(options);
-  if (o.host === "codex")
-    return codexPluginInstalled(spec, o);
-  if (o.host !== "claude")
-    return "unknown";
-  return claudePresence(spec, o.env);
-}
-// packages/toolu-core/src/registry/registry-paths.ts
-import { join as join7 } from "path";
-var EVENT_DIRS = {
-  "tool/pre": "pre-tools.d",
-  "tool/post": "post-tools.d"
-};
-var REGISTRY_DIRS = Object.values(EVENT_DIRS);
-function registryRoot(options = {}) {
-  return join7(configRoot(options), "toolu");
-}
-// packages/toolu-core/src/registry/registry-prune.ts
-import { lstatSync, readdirSync as readdirSync2, rmSync as rmSync5 } from "fs";
-import { join as join8 } from "path";
-function specOf(file) {
-  if (file.startsWith(".") || !(file.endsWith(".sh") || file.endsWith(".js")))
-    return;
-  const at = file.indexOf("__");
-  return at > 0 ? file.slice(0, at) : undefined;
-}
-function isRegularFile(path) {
-  try {
-    return lstatSync(path).isFile();
-  } catch {
-    return false;
-  }
-}
-function readNames(dir) {
-  try {
-    return readdirSync2(dir);
-  } catch {
-    return [];
-  }
-}
-function pruneInactiveModules(options = {}) {
-  const o = resolveHost(options);
-  if (o.host !== "codex")
-    return [];
-  const absent = new Map;
-  const isAbsent = (spec) => {
-    const known = absent.get(spec);
-    if (known !== undefined)
-      return known;
-    const answer = codexPluginInstalled(spec, o) === "absent";
-    absent.set(spec, answer);
-    return answer;
-  };
-  const removed = [];
-  const root = registryRoot(o);
-  for (const dir of REGISTRY_DIRS) {
-    for (const file of readNames(join8(root, dir))) {
-      const spec = specOf(file);
-      const path = join8(root, dir, file);
-      if (spec === undefined || !isRegularFile(path) || !isAbsent(spec))
-        continue;
-      try {
-        rmSync5(path);
-        removed.push(path);
-      } catch {}
-    }
-  }
-  return removed;
-}
-// packages/toolu-core/src/decision/decision.ts
-var DecisionSchema = discriminatedUnion("kind", [
-  object({ kind: literal("allow") }),
-  object({ kind: literal("ask"), reason: string2().min(1) }),
-  object({ kind: literal("deny"), reason: string2().min(1) }),
-  object({ kind: literal("advisory"), message: string2().min(1) }),
-  object({ kind: literal("post_block"), reason: string2().min(1) }),
-  object({
-    kind: literal("runtime_failure"),
-    reason: string2().min(1),
-    code: _enum(["timeout", "spawn", "parse", "truncated", "cancelled", "nonzero"])
-  })
-]);
-
-// packages/toolu-core/src/registry/registry-types.ts
-var REGISTRY_EVENTS = ["tool/pre", "tool/post"];
-
-// packages/toolu-core/src/registry/registry-run.ts
-var ModuleSchema = looseObject({
-  spec: string2(),
-  name: string2(),
-  event: _enum(REGISTRY_EVENTS),
-  run: custom((value) => typeof value === "function")
-});
-// plugins/toolu/hooks/src/lifecycle/plugin-presence.ts
-function presence(spec, env, host) {
-  return pluginPresence(spec, { env, host: host === "codex" ? "codex" : "claude" });
-}
-function pluginActive2(spec, env, host) {
-  return presence(spec, env, host) !== "absent";
-}
-function installCommand(spec, host) {
-  return host === "codex" ? `codex plugin add ${spec}` : `/plugin install ${spec}`;
-}
-
-// plugins/toolu/hooks/src/lifecycle/dependency-warning.ts
+// plugins/toolu/hooks/src/lifecycle/project-context.ts
+import { existsSync, readFileSync as readFileSync2, statSync as statSync2 } from "fs";
+import { join as join3 } from "path";
 function isFile2(path) {
   try {
-    return statSync5(path).isFile();
+    return statSync2(path).isFile();
   } catch {
     return false;
   }
 }
-function readJson(path) {
+function failingGateHint(stateRoot) {
+  const file = join3(stateRoot, "quality-gate-status.json");
+  if (!isFile2(file))
+    return;
+  let doc;
   try {
-    return JSON.parse(readFileSync8(path, "utf8"));
+    doc = parseStdin(readFileSync2(file, "utf8"));
   } catch {
     return;
   }
-}
-function interpolate(value) {
-  return typeof value === "string" ? value : JSON.stringify(value);
-}
-function specOf2(entry) {
-  if (typeof entry === "string")
-    return entry;
-  if (!isJsonObject(entry) || typeof entry.name !== "string")
+  if (member2(doc, "status") !== "failing")
     return;
-  const market = entry.marketplace;
-  return market === undefined || market === null || market === false ? entry.name : `${entry.name}@${interpolate(market)}`;
+  const reason = jqAlt(member2(doc, "reason"), "Unknown quality failure");
+  return `Quality gate failing: ${reason}. Prefer fixing before unrelated work.`;
 }
-function dependencySpecs(manifest) {
-  const deps = isJsonObject(manifest) ? manifest.dependencies : undefined;
-  let entries = [];
-  if (Array.isArray(deps))
-    entries = deps;
-  else if (isJsonObject(deps))
-    entries = Object.values(deps);
-  return entries.map(specOf2).filter((spec) => spec !== undefined).flatMap((spec) => spec.split(`
-`)).filter((line) => line !== "");
-}
-function manifestPath(pluginRoot, projectRoot, host) {
-  const codex = join9(pluginRoot, ".codex-plugin", "plugin.json");
-  const claude = join9(pluginRoot, ".claude-plugin", "plugin.json");
-  if (host === "codex" && pluginRoot !== "" && isFile2(codex)) {
-    const doc = readJson(codex);
-    const hasDeps = isJsonObject(doc) && Array.isArray(doc.dependencies);
-    return hasDeps || !isFile2(claude) ? codex : claude;
-  }
-  if (pluginRoot !== "" && isFile2(claude))
-    return claude;
-  const checkout = join9(projectRoot, "plugins", "toolu", ".claude-plugin", "plugin.json");
-  return isFile2(checkout) ? checkout : undefined;
-}
-function dependencyWarning(input) {
-  const path = manifestPath(input.pluginRoot, input.projectRoot, input.host);
-  if (path === undefined)
-    return;
-  const missing = [];
-  for (const spec of dependencySpecs(readJson(path))) {
-    const state = presence(spec, input.env, input.host);
-    if (state === "unknown")
-      return;
-    if (state === "absent")
-      missing.push(installCommand(spec, input.host));
-  }
-  if (missing.length === 0)
-    return;
-  const lines = missing.map((command) => `
-  \u2022 ${command}`).join("");
-  return `WARN: required plugins missing \u2014 dependent workflows will fail. Install:${lines}`;
-}
-
-// plugins/toolu/hooks/src/lifecycle/project-detect.ts
-import { statSync as statSync6 } from "fs";
-import { basename as basename2, join as join10 } from "path";
-function isFile3(path) {
-  try {
-    return statSync6(path).isFile();
-  } catch {
-    return false;
-  }
-}
-function anyFile(root, names) {
-  return names.some((name) => isFile3(join10(root, name)));
-}
-var LOCKFILES = [
-  ["bun.lock", "bun"],
-  ["bun.lockb", "bun"],
-  ["pnpm-lock.yaml", "pnpm"],
-  ["yarn.lock", "yarn"],
-  ["package-lock.json", "npm"]
-];
-function tracksTsconfig(root, env) {
-  const res = Bun.spawnSync(["git", "-C", root, "ls-files", "**/tsconfig*.json", "tsconfig*.json"], { env, stdout: "pipe", stderr: "ignore" });
-  return res.exitCode === 0 && res.stdout.length > 0;
-}
-function projectFacts(root, env, withTs) {
-  if (root === "")
-    return { name: "", nodePm: "", rust: false, ts: false, python: false };
-  return {
-    name: basename2(root),
-    nodePm: LOCKFILES.find(([file]) => isFile3(join10(root, file)))?.[1] ?? "",
-    rust: isFile3(join10(root, "Cargo.toml")),
-    ts: withTs && tracksTsconfig(root, env),
-    python: anyFile(root, ["pyproject.toml", "setup.py", "setup.cfg", "requirements.txt"])
-  };
-}
-
-// plugins/toolu/hooks/src/lifecycle/session-docs.ts
-import { join as join11 } from "path";
-
-// plugins/toolu/hooks/src/lifecycle/render-doc.ts
-import { readFileSync as readFileSync9 } from "fs";
-function renderDoc(path, tokens) {
-  let content;
-  try {
-    content = stripTrailingNewlines(readFileSync9(path, "utf8"));
-  } catch {
+function projectContext(script, prompt, cwd, env) {
+  if (!existsSync(script) || !isFile2(script))
     return "";
-  }
-  for (const [token, value] of tokens) {
-    content = content.replaceAll(`{{${token}}}`, () => value);
-  }
-  return content;
-}
-
-// plugins/toolu/hooks/src/lifecycle/session-docs.ts
-var TITLES = {
-  startup: "Toolu is on!",
-  resume: "Session resumed",
-  clear: "Context cleared",
-  compact: "Context compacted"
-};
-function eventTitle(event) {
-  return TITLES[event] ?? "";
-}
-function routingTokens(config, host) {
-  const models = [];
-  const efforts = [];
-  for (const cls of MODEL_CLASSES) {
-    if (host === "codex") {
-      const picked = codexModel(config, cls);
-      models.push([`model_${cls}`, picked.model]);
-      efforts.push([`effort_${cls}`, `, effort \`${picked.reasoningEffort}\``]);
-    } else {
-      models.push([`model_${cls}`, model(config, cls)]);
-      efforts.push([`effort_${cls}`, ""]);
-    }
-  }
-  return [...models, ...efforts];
-}
-function docParts(input) {
-  const { docs, facts } = input;
-  const tokens = [
-    ["project_name", facts.name === "" ? "this project" : facts.name],
-    ["node_pm", facts.nodePm === "" ? "your package manager" : facts.nodePm],
-    ...routingTokens(input.config, input.host)
-  ];
-  const render = (file) => renderDoc(join11(docs, file), tokens);
-  const parts = [];
-  if (input.event === "compact")
-    parts.push(renderDoc(join11(docs, "post-compaction.md"), []));
-  if (eventTitle(input.event) !== "")
-    parts.push(render("session-start.md"));
-  if (enabled(input.config, "models", "enabled"))
-    parts.push(render("model-routing.md"));
-  if (input.verbose) {
-    if (facts.ts)
-      parts.push(render("session-start-ts.md"));
-    if (facts.rust)
-      parts.push(render("session-start-rust.md"));
-    if (facts.python)
-      parts.push(render("session-start-python.md"));
-  }
-  return parts.filter((part) => part !== "");
-}
-
-// plugins/toolu/hooks/src/lifecycle/session-housekeeping.ts
-import { lstatSync as lstatSync2, rmSync as rmSync6 } from "fs";
-import { join as join13 } from "path";
-
-// plugins/toolu/hooks/src/lifecycle/session-notices.ts
-import { existsSync as existsSync4, mkdirSync as mkdirSync3, writeFileSync as writeFileSync5 } from "fs";
-import { dirname as dirname3, join as join12 } from "path";
-function touch(file) {
-  try {
-    mkdirSync3(dirname3(file), { recursive: true });
-    writeFileSync5(file, "");
-  } catch {}
-}
-function once(sentinel, text, show) {
-  if (!show || existsSync4(sentinel))
-    return;
-  touch(sentinel);
-  return text;
-}
-function deliveryPinned(config) {
-  const gates = config.gates;
-  if (!isJsonObject(gates))
-    return false;
-  if (gates.preset !== undefined && gates.preset !== null)
-    return true;
-  return Object.values(gates).some((gate) => isJsonObject(gate) && Object.hasOwn(gate, "mode"));
-}
-function gatePresetNotice(configRoot, config) {
-  return once(join12(configRoot, "toolu", ".gate-preset-notice-v6"), 'toolu gates no longer prompt: the `balanced` preset advises on push-review and denylist hits, and the quality gate still blocks only `git commit`/`git push`. Pin a prompt with `gates.<name>.mode: ask`, or the old hard denies with `{"gates":{"preset":"strict"}}`.', !deliveryPinned(config));
-}
-function deliveryFlowNotice(configRoot, host) {
-  const install = host === "codex" ? "Install with `npx @toolu/plugins install delivery-flow --host codex`, then invoke `$delivery-flow:delivery-flow`." : "Install with `/plugin install delivery-flow@toolu`, then invoke `/delivery-flow:delivery-flow`.";
-  return once(join12(configRoot, "toolu", ".delivery-flow-migration-v7"), `WARN: toolu workflow skills moved to delivery-flow (brainstorm, spec, spec-review, plan, plan-review, execution, test). ${install}`, true);
-}
-
-// plugins/toolu/hooks/src/lifecycle/session-housekeeping.ts
-function isSymlink(path) {
-  try {
-    return lstatSync2(path).isSymbolicLink();
-  } catch {
-    return false;
-  }
-}
-function housekeeping(env, host, configRoot) {
-  if (host === "codex") {
-    snapshotCodexPlugins({ env, host });
-    pruneInactiveModules({ env, host });
-  }
-  const legacy = join13(configRoot, "toolu", "statusline.sh");
-  if (isSymlink(legacy)) {
-    try {
-      rmSync6(legacy, { force: true });
-    } catch {}
-  }
-  touch(join13(configRoot, "toolu", ".session-start-ready"));
-}
-
-// plugins/toolu/hooks/src/lifecycle/tool-mandates.ts
-import { join as join14 } from "path";
-function hasAstGrep(env) {
-  const path = env.PATH ?? "";
-  return onPath("sg", path) || onPath("ast-grep", path);
-}
-function missingToolsWarning(input) {
-  if (hasAstGrep(input.env) || !enabled(input.config, "skills", "ast-grep"))
-    return;
-  return `WARN: optional tools missing \u2014 features that depend on them are disabled:
-  \u2022 ast-grep (structural code search)`;
-}
-function wanted(input, skill) {
-  return enabled(input.config, "skills", skill) && pluginActive2(`${skill}@toolu`, input.env, input.host);
-}
-function mandates(input) {
-  const out = [];
-  if (hasAstGrep(input.env) && wanted(input, "ast-grep")) {
-    out.push("ast-grep (structural search) \u2014 for ANY search by code shape (signatures, call sites, impls, trait/interface usage, patterns) you MUST reach for `ast-grep run --pattern \u2026` FIRST. Grep/ripgrep/sed are a FALLBACK ONLY \u2014 use them for plain-text literals in non-code files, or when a query genuinely cannot be expressed structurally. Never reach for them first on code.");
-  }
-  const exa = join14(input.configRoot, "exa-search", "search.sh");
-  if ((input.env.EXA_API_KEY ?? "") !== "" && isExecutable(exa) && wanted(input, "exa-search")) {
-    out.push(`exa-search (web search) \u2014 for ANY web search, code-example hunt, URL crawl, or topic research you MUST reach for \`"${exa}"\` FIRST (commands: search / crawl / similar \u2014 see the exa-search skill). Native web tools are a FALLBACK ONLY \u2014 use them when the wrapper errors or a URL needs your logged-in session.`);
-  }
-  const ctx7 = join14(input.configRoot, "context7", "search.sh");
-  if (isExecutable(ctx7) && wanted(input, "context7")) {
-    out.push(`context7 (library docs) \u2014 for ANY third-party library/framework question (API usage, current docs, code examples, version behavior) you MUST query \`"${ctx7}"\` FIRST (\`search <library>\` to resolve the ID, then \`docs <id> <query>\`) BEFORE answering from memory or searching the web. Web search is a FALLBACK ONLY when context7 lacks coverage.`);
-  }
-  return out;
-}
-function mandateBlock(input) {
-  const found = mandates(input);
-  if (found.length === 0)
-    return;
-  const lines = found.map((mandate) => `
-  \u2022 ${mandate}`).join("");
-  return `MANDATORY \u2014 proactive plugin use (installed + available; NOT optional, do NOT ask permission):${lines}
-  \u2022 Propagation: these mandates bind EVERY agent in this session, not just the main thread. When you delegate via Task/subagents (nested ones too), carry the same requirement into the subagent's prompt \u2014 recall/save via comemory, ast-grep first with Grep/sed as fallback. Delegation never exempts the work.`;
-}
-
-// plugins/toolu/hooks/src/session-start.ts
-var DOCS = join15(import.meta.dir, "..", "docs");
-function sessionEvent(input) {
-  const doc = parseStdin(input);
-  const picked = ["source", "session_event", "event"].map((key) => member2(doc, key)).find((value) => value !== undefined && value !== null && value !== false);
-  const event = jqAlt(picked, "startup");
-  return event === "" || event === "null" ? "startup" : event;
-}
-function branchLine(cwd, env) {
-  if (Bun.which("git", { PATH: env.PATH ?? "" }) === null)
-    return;
-  const res = Bun.spawnSync(["git", "rev-parse", "--abbrev-ref", "HEAD"], {
+  const bash = Bun.which("bash", { PATH: env.PATH ?? "" });
+  if (bash === null)
+    return "";
+  const res = Bun.spawnSync([bash, script], {
     cwd,
-    env,
+    env: { ...env, PROMPT: prompt },
+    stdin: "ignore",
     stdout: "pipe",
     stderr: "ignore"
   });
-  const branch = stripTrailingNewlines(res.stdout.toString());
-  return branch === "" ? undefined : `Branch: ${branch}`;
+  return stripTrailingNewlines(res.stdout.toString());
 }
-function pluginRootOf(env, host) {
-  const codex = host === "codex" ? env.PLUGIN_ROOT ?? "" : "";
-  return codex !== "" ? codex : env.CLAUDE_PLUGIN_ROOT ?? "";
+
+// plugins/toolu/hooks/src/lifecycle/prompt-hints.ts
+var WB = "(^|[^a-z])";
+var WE = "([^a-z]|$)";
+function words(alternation) {
+  return new RegExp(`${WB}(${alternation})${WE}`);
 }
-function contextParts({ event, env, host, root, config }) {
-  const cwd = process.cwd();
-  const top = gitToplevel2(cwd, env);
-  const project = top === "" ? cwd : top;
-  const verbose = (env.TOOLU_VERBOSE ?? "") !== "" && env.TOOLU_VERBOSE !== "0";
-  const facts = projectFacts(top, env, verbose);
-  const parts = docParts({ docs: DOCS, event, config, host, facts, verbose });
-  if (facts.name !== "")
-    parts.push(`Project: ${facts.name}`);
-  sweepState(project, { env, host, config });
-  const quiet = { ...config, warn: () => {
-    return;
-  } };
-  const permissions = permissionsAutowrite(quiet, project, { env, cwd });
-  const mandates = { config, env, host, configRoot: root };
-  const extras = [
-    permissions.written ? permissions.notice : undefined,
-    gatePresetNotice(root, config.data),
-    deliveryFlowNotice(root, host),
-    missingToolsWarning(mandates),
-    mandateBlock(mandates),
-    dependencyWarning({ env, host, pluginRoot: pluginRootOf(env, host), projectRoot: project }),
-    branchLine(cwd, env)
+var TRIVIAL = /^(y|n|yes|no|ok|sure|thanks|thank you|go ahead|looks good|lgtm|correct|exactly|right|done|nah|nope|yep|yup|continue)[.!?]?$/;
+var VAGUE = /^(fix|help|debug|check|look|see|run|do|try)[ \t\n\v\f\r]*$/;
+var GATE_TOPIC = words("fix|resolve|error|warning|test|lint|check|type");
+var STRUCTURAL = words("pattern|struct|trait|interface|all functions|all methods|every function|every method|syntax|code structure|signature|return type|where clause|lifetime|closure|macro|decorator|annotation");
+var INTENTS = [
+  [
+    words("rename|move|extract|split"),
+    "Rename: find all refs (ast-grep + Grep on configs) before rewriting."
+  ],
+  [words("test|spec|coverage"), "Tests: real-world data only, NO mocks."],
+  [words("fix|debug|error|bug|issue"), "Fix in code. Never suppress with disable comments."],
+  [words("delete|remove|clean up"), "Verify no deps before removing."],
+  [words("review|audit"), "Review: forbidden syntax, quality gates, test coverage."]
+];
+var SCALE = words("migrate|codebase-wide|throughout|end-to-end");
+var BRAINSTORM = words("brainstorms?|designs?|scopes?|approach(es)?|architectures?|trade-?offs?|redesigns?|overhauls?");
+var NEW_THING = new RegExp(`${WB}new[ \\t\\n\\v\\f\\r]+(feature|workflow|system)${WE}`);
+var RESEARCH = words("latest|docs for|library docs|api reference|api docs|changelog|release notes|best practices?|look up|search the web|web search|how to use");
+var JIRA_WORD = words("jira|atlassian");
+var JIRA_LINK = /atlassian[.]net\/browse\/[A-Z][A-Z0-9]+-[0-9]+/;
+var ISSUE_KEY = /[A-Z][A-Z0-9]+-[0-9]+/;
+var JIRA_CONTEXT = words("ticket|issue|board|sprint|epic|backlog");
+function promptGate(lower) {
+  if (TRIVIAL.test(lower) || lower.startsWith("/"))
+    return "skip";
+  return VAGUE.test(lower) ? "block" : "hint";
+}
+function mentionsGateTopic(lower) {
+  return GATE_TOPIC.test(lower);
+}
+function intentHint(lower, astGrep) {
+  if (STRUCTURAL.test(lower)) {
+    return astGrep ? "Structural pattern: use `ast-grep run --pattern` (not Grep)." : "WARN: ast-grep not installed \u2014 install via brew/cargo for structural matching.";
+  }
+  return INTENTS.find(([pattern]) => pattern.test(lower))?.[1];
+}
+function promptHints(prompt, lower, options) {
+  const hints = [
+    intentHint(lower, options.astGrep),
+    SCALE.test(lower) ? "Possibly large task \u2014 if it splits into genuinely independent units, consider decomposing it; if it is really one thread of work, just do it. The orchestrator skill has the test for which." : undefined,
+    BRAINSTORM.test(lower) || NEW_THING.test(lower) ? "Scope may be unresolved \u2014 consider the `brainstorm` skill for material design choices; skip it when the request is already bounded or mechanical." : undefined,
+    options.research && RESEARCH.test(lower) ? "External research \u2014 delegate to the research-agent subagent (routes exa-search/context7, native fallback) to keep main context lean." : undefined,
+    JIRA_WORD.test(lower) || JIRA_LINK.test(prompt) || ISSUE_KEY.test(prompt) && JIRA_CONTEXT.test(lower) ? "Jira mentioned \u2014 use the `jira` skill (REST wrapper over jira.sh), NOT the Atlassian MCP." : undefined
   ];
-  for (const part of extras)
-    if (part !== undefined && part !== null && part !== "")
-      parts.push(part);
-  return parts;
+  return hints.filter((hint) => hint !== undefined);
 }
-function systemMessage(event) {
-  const title = eventTitle(event);
-  if (event !== "startup" && event !== "resume")
-    return title;
-  const runtime = runtimeDiagnostic(process.execPath, Bun.version).systemMessage;
-  return title === "" ? runtime : `${title}
-${runtime}`;
-}
+
+// plugins/toolu/hooks/src/user-prompt-submit.ts
+var BLOCK = {
+  decision: "block",
+  reason: "Prompt too vague - specify what file/feature/error needs attention"
+};
 async function main() {
   const env = process.env;
   const host = detectHost({ env });
-  const root = configRoot({ env, host });
-  housekeeping(env, host, root);
-  const event = sessionEvent(await Bun.stdin.text());
   const config = loadConfig({ env, host });
-  if (!enabled(config, "hooks", "session-start")) {
-    if (event === "startup" || event === "resume") {
-      process.stdout.write(renderHookOutput({ systemMessage: systemMessage(event) }, true));
-    }
+  const input = await Bun.stdin.text();
+  if (!enabled(config, "hooks", "user-prompt-submit"))
+    return;
+  const prompt = jqAlt(member2(parseStdin(input), "prompt"), "");
+  if (prompt === "")
+    return;
+  const lower = asciiLower(prompt);
+  const gate = promptGate(lower);
+  if (gate === "skip")
+    return;
+  if (gate === "block") {
+    process.stdout.write(renderHookOutput(BLOCK, true));
     return;
   }
-  const additionalContext = contextParts({ event, env, host, root, config }).join(`
-
-`);
+  const cwd = process.cwd();
+  const root = gitToplevel2(cwd, env) || cwd;
+  const hostDir = projectDirname({ env, host });
+  const gateHint = mentionsGateTopic(lower) ? undefined : failingGateHint(join4(root, hostDir, "tmp"));
+  const path = env.PATH ?? "";
+  const astGrep = (onPath("sg", path) || onPath("ast-grep", path)) && enabled(config, "skills", "ast-grep");
+  const parts = promptHints(prompt, lower, {
+    astGrep,
+    research: enabled(config, "agents", "research-agent")
+  });
+  const project = projectContext(join4(root, hostDir, "context.sh"), prompt, cwd, env);
+  if (project !== "")
+    parts.push(project);
+  if (gateHint !== undefined)
+    parts.push(gateHint);
   process.stdout.write(renderHookOutput({
-    hookSpecificOutput: { hookEventName: "SessionStart", additionalContext },
-    systemMessage: systemMessage(event)
+    hookSpecificOutput: {
+      hookEventName: "UserPromptSubmit",
+      additionalContext: parts.join(" | ")
+    }
   }, true));
 }
 try {
   await main();
 } catch (error) {
-  process.stderr.write(`toolu session-start: ${String(error)}
+  process.stderr.write(`toolu user-prompt-submit: ${String(error)}
 `);
 }
