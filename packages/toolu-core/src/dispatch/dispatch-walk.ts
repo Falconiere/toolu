@@ -94,9 +94,13 @@ function moduleEnv(payload: Payload, session: Session): Record<string, string> {
 }
 
 /** A native decision as the hook JSON a bash module would have printed. */
-function encoded(host: HostName, decision: Decision): ModuleResult {
+function encoded(
+  host: HostName,
+  type: RegistryHookEvent["type"],
+  decision: Decision,
+): ModuleResult {
   const target = host === "codex" ? "codex" : "claude";
-  const out = encodeDecision(target, "tool/pre", decision);
+  const out = encodeDecision(target, type, decision);
   return { stdout: out.kind === "command" ? substituted(out.stdout) : "", stderr: "", exitCode: 0 };
 }
 
@@ -106,8 +110,8 @@ async function runNative(
   ctx: RegistryContext,
 ): Promise<ModuleResult> {
   try {
-    const decision = DecisionSchema.safeParse(await module.run(event, ctx));
-    if (decision.success) return encoded(ctx.host, decision.data);
+    const parsed = DecisionSchema.safeParse(await module.run(event, ctx));
+    if (parsed.success) return encoded(ctx.host, event.type, parsed.data);
     return { stdout: "", stderr: "", exitCode: 1 };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -164,7 +168,8 @@ function outcomeResult(
   raw: Map<string, ModuleResult>,
 ): ModuleResult | undefined {
   if (outcome.status !== "decision") return undefined;
-  if (outcome.entry.kind === "esm") return encoded(walk.ctx.host, outcome.decision);
+  if (outcome.entry.kind === "esm")
+    return encoded(walk.ctx.host, walk.event.type, outcome.decision);
   return raw.get(outcome.entry.path);
 }
 

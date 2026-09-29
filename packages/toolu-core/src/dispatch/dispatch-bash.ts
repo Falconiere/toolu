@@ -34,7 +34,7 @@ function shellStatus(proc: { exitCode: number; signalCode?: string | undefined }
 export function runBash(script: string, stdin: string, env: Record<string, string>): ModuleResult {
   try {
     const proc = Bun.spawnSync(["bash", script], {
-      stdin: Buffer.from(stdin),
+      stdin: new TextEncoder().encode(stdin),
       stdout: "pipe",
       stderr: "pipe",
       env,

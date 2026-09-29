@@ -4162,7 +4162,7 @@ function shellStatus(proc) {
 function runBash(script, stdin, env) {
   try {
     const proc = Bun.spawnSync(["bash", script], {
-      stdin: Buffer.from(stdin),
+      stdin: new TextEncoder().encode(stdin),
       stdout: "pipe",
       stderr: "pipe",
       env
@@ -4668,16 +4668,16 @@ function moduleEnv(payload, session) {
   }
   return childEnv2(session.env, extra);
 }
-function encoded(host, decision) {
+function encoded(host, type, decision) {
   const target = host === "codex" ? "codex" : "claude";
-  const out = encodeDecision(target, "tool/pre", decision);
+  const out = encodeDecision(target, type, decision);
   return { stdout: out.kind === "command" ? substituted2(out.stdout) : "", stderr: "", exitCode: 0 };
 }
 async function runNative(module, event, ctx) {
   try {
-    const decision = DecisionSchema.safeParse(await module.run(event, ctx));
-    if (decision.success)
-      return encoded(ctx.host, decision.data);
+    const parsed = DecisionSchema.safeParse(await module.run(event, ctx));
+    if (parsed.success)
+      return encoded(ctx.host, event.type, parsed.data);
     return { stdout: "", stderr: "", exitCode: 1 };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -4710,7 +4710,7 @@ function outcomeResult(outcome, walk, raw) {
   if (outcome.status !== "decision")
     return;
   if (outcome.entry.kind === "esm")
-    return encoded(walk.ctx.host, outcome.decision);
+    return encoded(walk.ctx.host, walk.event.type, outcome.decision);
   return raw.get(outcome.entry.path);
 }
 async function walkRegistry(walk, state) {
