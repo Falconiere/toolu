@@ -34,6 +34,8 @@ tooling/src/benchmarks/           the harness, TypeScript on Bun
 bun run benchmarks --tier deterministic            # hermetic; writes results/retrieval-*.json
 bun run benchmarks --tier live --mechanism whole-session  # manual; needs the claude CLI
 bun run benchmarks --validate <result.json>        # schema check
+bun run tooling/src/benchmarks/cases/whole-session.ts --n 3 --model <id>  # case flags go to the case itself
+bun run tooling/src/benchmarks/cases/retrieval.ts --queries <tsv> --corpus <dir>
 ```
 
 ## Reuse, not reinvention

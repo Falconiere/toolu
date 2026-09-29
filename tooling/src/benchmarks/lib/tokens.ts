@@ -33,7 +33,7 @@ export async function countTokens(text: string, opts: CountOptions = {}): Promis
   const body = captured(text);
   if (opts.apiKey === undefined || opts.apiKey === "") {
     return {
-      tokens: Math.floor(Buffer.byteLength(body, "utf8") / 4),
+      tokens: Math.trunc(Buffer.byteLength(body, "utf8") / 4),
       mode: "heuristic",
       source: "bytes-div-4",
     };

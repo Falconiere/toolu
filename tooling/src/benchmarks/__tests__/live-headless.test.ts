@@ -34,13 +34,17 @@ const GOLDEN = z
   .record(z.string(), z.unknown())
   .parse(JSON.parse(readFileSync(join(FIX, "sub-session.rollup.json"), "utf8")));
 
+const GOLDEN_TOTALS = z
+  .looseObject({ tokens: z.number(), cache_read: z.number() })
+  .parse(GOLDEN["totals"]);
+
 test("the usage rollup reproduces the bash rollup on the real transcript set", () => {
   const { by_day: byDay, ...rest } = usageRollup(transcriptSet());
   const actual: Record<string, unknown> = rest;
   expect(actual).toEqual(GOLDEN);
   const days = Object.values(byDay);
-  expect(days.reduce((acc, d) => acc + d.tokens, 0)).toBe(rest.totals.tokens);
-  expect(days.reduce((acc, d) => acc + d.cache_read, 0)).toBe(rest.totals.cache_read);
+  expect(days.reduce((acc, d) => acc + d.tokens, 0)).toBe(GOLDEN_TOTALS.tokens);
+  expect(days.reduce((acc, d) => acc + d.cache_read, 0)).toBe(GOLDEN_TOTALS.cache_read);
 });
 
 test("the rollup keeps the final streamed frame per message.id and skips broken lines", () => {

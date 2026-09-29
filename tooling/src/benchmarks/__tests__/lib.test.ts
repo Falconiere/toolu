@@ -54,9 +54,12 @@ test("the bench root is the git toplevel; results default under benchmarks/resul
 });
 
 test("the token math is benchmarks' own: pricing id, rates, rollup exported", () => {
-  expect(PRICING_ID).toBe("2026-06-15");
-  expect(rates("claude-opus-4-8")).toEqual({ i: 5, o: 25 });
-  expect(rates("mystery-model")).toEqual({ i: 3, o: 15, unknown: true });
+  expect(PRICING_ID).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  // Family ordering and the flagged fallback, not today's exact prices.
+  expect(rates("claude-haiku-4-5").i).toBeLessThan(rates("claude-sonnet-4-6").i);
+  expect(rates("claude-sonnet-4-6").i).toBeLessThan(rates("claude-opus-4-8").i);
+  expect(rates("claude-sonnet-4-6").unknown).toBeUndefined();
+  expect(rates("mystery-model")).toEqual({ ...rates("claude-sonnet-4-6"), unknown: true });
   expect(typeof usageRollup).toBe("function");
 });
 

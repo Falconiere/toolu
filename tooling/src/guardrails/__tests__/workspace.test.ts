@@ -119,3 +119,26 @@ test.concurrent("--only is honoured at the root but not forwarded to packages (b
   expect(count(out, "banned-deps")).toBe(1);
   expect(count(out, "file-size")).toBe(1);
 });
+
+for (const order of ["outer first", "inner first"]) {
+  test.concurrent(`a package nested in another is owned by the innermost listing (${order})`, async () => {
+    using ws = buildFixture("workspace");
+    ws.write("packages/api/inner/src/utilities/README.md", "# utilities\n");
+    ws.write("packages/api/inner/wrangler.jsonc", "{}\n");
+    copyFileSync(
+      join(ws.root, "packages/api/package.json"),
+      join(ws.root, "packages/api/inner/package.json"),
+    );
+    copyFileSync(
+      join(ws.root, "packages/api/guardrails.config.json"),
+      join(ws.root, "packages/api/inner/guardrails.config.json"),
+    );
+    const packages = ["packages/api", "packages/api/inner", "packages/database"];
+    editJson(join(ws.root, "guardrails.workspace.json"), (doc) => {
+      doc["packages"] = order === "outer first" ? packages : [...packages].toReversed();
+    });
+    const res = await gr(ws.root, []);
+    expect(res.out).not.toContain("is not listed");
+    expect(res.exit).not.toBe(3);
+  });
+}
