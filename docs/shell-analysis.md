@@ -84,7 +84,7 @@ Wrappers are unwrapped by their own option tables: `sudo`, `doas`, `env`, `comma
   - It recognises quality commands from each command's `argv`, so prose that names one does not count.
   - It records a pass only when every recognised command has `exitProves`, and a failure only when at least one has it.
   - Wrappers, package runners and `bash -c` are followed.
-- **push-waiver** (PostToolUse, #259): `runsGitSubcommand(analysis, "push") === "yes"`, and the target root is replayed from the first push's `-C` chain.
+- **push-waiver** (PostToolUse, #259): uses `isGitPush` and `pushTargetRoot` from `@toolu/core/detect` over the same analysis.
 
 ## Fixtures and the bash oracle
 

@@ -5224,25 +5224,32 @@ import { appendFileSync, mkdirSync as mkdirSync2 } from "fs";
 import { join as join7 } from "path";
 
 // packages/toolu-core/src/state/state-git.ts
+import { spawnSync as spawnSync3 } from "child_process";
+
+// packages/toolu-core/src/detect/detect-branch.ts
 import { spawnSync as spawnSync2 } from "child_process";
-function git(root, args, env) {
-  const res = spawnSync2("git", ["-C", root, ...args], { env: childEnv(env), encoding: "utf8" });
-  return res.error === undefined && res.status === 0 ? res.stdout : undefined;
-}
-function currentBranch(root, env) {
-  const res = spawnSync2("git", ["-C", root, "rev-parse", "--abbrev-ref", "HEAD"], {
-    env: childEnv(env),
-    encoding: "utf8"
-  });
-  return res.error === undefined ? res.stdout.replace(/\n+$/, "") : "";
-}
 function branchSlug(branch) {
   const slug = branch.replaceAll("/", "_").replace(/[^A-Za-z0-9_-]/g, "");
   return slug === "" ? "_default" : slug;
 }
-function baseBranch(root, env) {
-  const ref = git(root, ["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], env)?.trim();
-  return ref === undefined || ref === "" ? "main" : ref.replace(/^refs\/remotes\/origin\//, "");
+function baseBranch(root, env = process.env, cwd) {
+  const top = root === undefined || root === "" ? gitToplevel(env, cwd) : root;
+  if (top === undefined)
+    return "main";
+  const res = spawnSync2("git", ["-C", top, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], {
+    env: childEnv(env),
+    encoding: "utf8"
+  });
+  const ref = res.error === undefined && res.status === 0 ? res.stdout.trim() : "";
+  return ref === "" ? "main" : ref.replace(/^refs\/remotes\/origin\//, "");
+}
+// packages/toolu-core/src/state/state-git.ts
+function currentBranch(root, env) {
+  const res = spawnSync3("git", ["-C", root, "rev-parse", "--abbrev-ref", "HEAD"], {
+    env: childEnv(env),
+    encoding: "utf8"
+  });
+  return res.error === undefined ? res.stdout.replace(/\n+$/, "") : "";
 }
 
 // packages/toolu-core/src/state/telemetry.ts
@@ -11605,9 +11612,6 @@ var gateStatusModule = {
   name: "gate-status.sh",
   run: (event, ctx) => Promise.resolve(decide(event, ctx))
 };
-// packages/toolu-core/src/gates/push-waiver.ts
-import { resolve } from "path";
-
 // packages/toolu-core/src/ledger/push-waiver.ts
 import { mkdirSync as mkdirSync4, readFileSync as readFileSync6, rmSync as rmSync3, statSync as statSync6 } from "fs";
 import { dirname as dirname3 } from "path";
@@ -11683,6 +11687,33 @@ function pushWaiverPromote(root, slug, sha, options = {}) {
   return true;
 }
 
+// packages/toolu-core/src/state/diff-sha.ts
+function diffSha(repoRoot, baseRef, options = {}) {
+  if (baseRef.startsWith("-"))
+    return;
+  const env = childEnv(options.env ?? process.env);
+  const diff = Bun.spawnSync(["git", "-C", repoRoot, "diff", "--no-color", `${baseRef}...HEAD`], {
+    env,
+    stdout: "pipe",
+    stderr: "ignore"
+  });
+  if (!diff.success)
+    return;
+  const hash = Bun.spawnSync(["git", "-C", repoRoot, "hash-object", "--stdin"], {
+    env,
+    stdin: diff.stdout,
+    stdout: "pipe",
+    stderr: "ignore"
+  });
+  if (!hash.success)
+    return;
+  const sha = hash.stdout.toString("utf8").trim();
+  return sha === "" ? undefined : sha;
+}
+
+// packages/toolu-core/src/detect/detect-git.ts
+import { spawnSync as spawnSync4 } from "child_process";
+
 // packages/toolu-core/src/shell/shell-git.ts
 import { basename as basename3 } from "path";
 var GLOBALS = {
@@ -11741,28 +11772,26 @@ function pushTargets(analysis) {
   });
 }
 
-// packages/toolu-core/src/state/diff-sha.ts
-function diffSha(repoRoot, baseRef, options = {}) {
-  if (baseRef.startsWith("-"))
-    return;
-  const env = childEnv(options.env ?? process.env);
-  const diff = Bun.spawnSync(["git", "-C", repoRoot, "diff", "--no-color", `${baseRef}...HEAD`], {
-    env,
-    stdout: "pipe",
-    stderr: "ignore"
+// packages/toolu-core/src/detect/detect-git.ts
+function isGitPush(analysis) {
+  return runsGitSubcommand(analysis, "push") === "yes";
+}
+function gitOut(cwd, args, env) {
+  const res = spawnSync4("git", [...args], {
+    cwd: cwd ?? process.cwd(),
+    env: childEnv(env),
+    encoding: "utf8"
   });
-  if (!diff.success)
-    return;
-  const hash = Bun.spawnSync(["git", "-C", repoRoot, "hash-object", "--stdin"], {
-    env,
-    stdin: diff.stdout,
-    stdout: "pipe",
-    stderr: "ignore"
-  });
-  if (!hash.success)
-    return;
-  const sha = hash.stdout.toString("utf8").trim();
-  return sha === "" ? undefined : sha;
+  const out = res.error === undefined && res.status === 0 ? res.stdout.trim() : "";
+  return out === "" ? undefined : out;
+}
+function pushTargetRoot(analysis, options = {}) {
+  const env = options.env ?? process.env;
+  const cwd = options.cwd ?? process.cwd();
+  const chain = pushTargets(analysis)[0]?.cChain ?? [];
+  const dirs = chain.filter((dir) => dir !== null);
+  const viaChain = chain.length > 0 && dirs.length === chain.length ? gitOut(cwd, [...dirs.flatMap((dir) => ["-C", dir]), "rev-parse", "--show-toplevel"], env) : undefined;
+  return viaChain ?? gitOut(cwd, ["rev-parse", "--show-toplevel"], env) ?? projectRoot({ env, cwd }) ?? cwd;
 }
 
 // packages/toolu-core/src/gates/push-waiver.ts
@@ -11770,22 +11799,16 @@ var ALLOW2 = { kind: "allow" };
 function pushFailed(status) {
   return status !== "" && status !== "null" && status !== "0";
 }
-function pushRoot(analysis, ctx, cwd) {
-  const chain = pushTargets(analysis)[0]?.cChain ?? [];
-  const dirs = chain.filter((dir) => dir !== null);
-  const viaChain = dirs.length > 0 && dirs.length === chain.length ? gitToplevel(ctx.env, resolve(cwd, ...dirs)) : undefined;
-  return viaChain ?? gitToplevel(ctx.env, cwd) ?? projectRoot({ env: ctx.env, host: ctx.host, cwd }) ?? cwd;
-}
 function decide2(event, ctx) {
   if (!isShellTool(event))
     return ALLOW2;
   const analysis = commandAnalysis(event, ctx);
-  if (runsGitSubcommand(analysis, "push") !== "yes")
+  if (!isGitPush(analysis))
     return ALLOW2;
   if (pushFailed(toolExitStatus(ctx.raw)) || toolInterrupted(ctx.raw))
     return ALLOW2;
   const cwd = ctx.cwd ?? process.cwd();
-  const root = pushRoot(analysis, ctx, cwd);
+  const root = pushTargetRoot(analysis, { env: ctx.env, cwd });
   const branch = currentBranch(root, ctx.env);
   if (branch === "" || branch === "HEAD")
     return ALLOW2;
