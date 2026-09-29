@@ -4,6 +4,8 @@
 
 ## API
 
+`writeTargets` lives in its own entry, `@toolu/core/shell/writes`. Only protected-files needs it, and a bundle that never asks what a command writes then does not carry it. Everything else below comes from `@toolu/core/shell`.
+
 | Export | Answers |
 |---|---|
 | `analyzeShell(source)` | `{ commands, compoundRedirects, errors, unknown }`. It never throws. |
@@ -12,7 +14,7 @@
 | `gitInvocation(command)` | The subcommand past git's global options, its arguments, and the `-C` chain |
 | `pushTargets(analysis)` | Each push's cumulative `-C` chain, refspec, and destination branch |
 | `commitMessages(invocation)` | Static `-m`/`--message` values, including `"$(cat <<'EOF' … EOF)"` |
-| `writeTargets(analysis)` | Paths written by redirects (every target, `/dev/null` included; a dynamic one is `path: null`), `tee`, `sed -i`, `perl -i`, `cp`/`mv`/`install` (the destination and each `DEST/basename(SRC)`, since `DEST` may be a directory), `dd of=`, `python -c open(…,'w')` |
+| `writeTargets(analysis)` from **`@toolu/core/shell/writes`** | Paths written by redirects (every target, `/dev/null` included; a dynamic one is `path: null`), `tee`, `sed -i`, `perl -i`, `cp`/`mv`/`install` (the destination and each `DEST/basename(SRC)`, since `DEST` may be a directory), `dd of=`, `python -c open(…,'w')` |
 | `matchesRule(command, "node -e")` | An argv rule tested against one simple command |
 
 Each `ShellCommand` carries the following fields:
@@ -87,31 +89,37 @@ Wrappers are unwrapped by their own option tables: `sudo`, `doas`, `env`, `comma
 
 ## Budget evidence
 
-`bun run bench:shell` builds three probe hook entries with the plugin bundle pipeline (`stageBundles`):
-- an empty one;
-- a representative one: `analyzeShell` plus push detection on `git push origin HEAD:feat/x`;
-- one that imports and calls the whole public surface.
+`bun run bench:shell` builds probe hook entries with the plugin bundle pipeline (`stageBundles`):
+- `empty`, the baseline;
+- `shell`, which imports and calls every runtime export of `@toolu/core/shell`;
+- `writes`, which is `analyzeShell` plus `@toolu/core/shell/writes`, the entry protected-files needs;
+- `together`, both entries in one bundle.
 
-It runs the empty probe and the full-surface probe interleaved from a directory with no `node_modules`, and times `analyzeShell` plus the git and write helpers over every fixture command. `--assert` exits 1 when a budget is exceeded.
+It runs `empty` and `together`, the heaviest, interleaved from a directory with no `node_modules`, and times `analyzeShell` plus the git and write helpers over every fixture command. `--assert` exits 1 when a budget is exceeded.
 
-CI asserts only the bundle sizes (`tooling/src/__tests__/bench-shell.test.ts`), because wall-clock numbers depend on the machine.
+CI asserts the bundle sizes (`tooling/src/__tests__/bench-shell.test.ts`), because wall-clock numbers depend on the machine.
 
 | Measure | Budget | Measured |
 |---|---|---|
-| Bundle size added, representative entry (unminified) | ≤ 200,000 B (#284) | 198,556 B |
-| Bundle size added, whole public surface (unminified) | ≤ 210,000 B (regression ceiling) | 205,347 B: **over #284's 200 KB**, see below |
-| Cold-start p50, full-surface probe minus empty probe (40 interleaved runs) | ≤ 5 ms | +4.02 ms (empty 18.48 ms, full 22.50 ms; p90 19.52 / 24.23 ms) |
-| Parse and walk over 235 fixture commands, 4,700 samples | p99 ≤ 0.1 ms | p50 3.8 µs, p99 19.9 µs, max 1.6 ms |
+| Bundle size added, every runtime export of `@toolu/core/shell` (unminified) | ≤ 200,000 B | 197,673 B |
+| Bundle size added, `analyzeShell` + `@toolu/core/shell/writes` (unminified) | ≤ 200,000 B | 198,173 B |
+| Bundle size added, both entries together (unminified) | reported | 202,152 B, see below |
+| Cold-start p50, `together` minus `empty` (40 interleaved runs) | ≤ 5 ms | +3.62 ms (empty 17.19 ms, together 20.81 ms; p90 19.10 / 22.71 ms) |
+| Parse and walk over 235 fixture commands, 4,700 samples | p99 ≤ 0.1 ms | p50 3.4 µs, p99 17.3 µs, max 2.2 ms |
 
-Measured on 2026-09-29 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple M2 Max), with other agent sessions on the same machine (load average about 5). Load raises both absolute cold-start numbers alike, and the budget is the difference between them. For comparison, the shipped `is_git_push` takes 0.23 s under bash 5.3 and 0.61 s under `/bin/bash` 3.2 on the 4.3 KB fixture `283-11a`.
+Measured on 2026-09-29 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple M2 Max), with other agent sessions on the same machine (load average about 4). Load raises both absolute cold-start numbers alike, and the budget is the difference between them. For comparison, the shipped `is_git_push` takes 0.23 s under bash 5.3 and 0.61 s under `/bin/bash` 3.2 on the 4.3 KB fixture `283-11a`.
 
-**Why the whole surface exceeds 200 KB.**
-- unbash alone is 174,729 B, and the issue's prototype analyzer added about 10 KB.
-- This analyzer is about 31 KB, because review found cases the prototype missed:
+**Where the bytes go.**
+- unbash alone is 174,613 B (lexer 107 KB, parser 46 KB, arithmetic 13 KB) and cannot be reduced.
+- The analyzer grew past the issue prototype's 10 KB because review found cases the prototype missed:
   - bash globs unquoted redirect targets and arguments (`> .en[v]` writes `.env`);
-  - dynamic targets must keep a matchable text (`dd of=$HOME/.env`);
+  - dynamic targets keep a matchable text;
   - `cp`/`mv`/`install` into a directory;
   - `env -` and `env -P`;
   - `xargs` running a command zero times.
-- Compacting the option tables saved about 0.9 KB. Reaching 200 KB for the whole surface would mean dropping those fixes.
-- A bundle that uses only part of the API (for example analysis plus push detection) stays under 200 KB.
+- Three structural changes brought it down without dropping any of those fixes:
+  - one-pass word scanning, which resolves a value and visits nested scripts in a single exhaustive switch;
+  - a single walk switch and a single-loop option parser;
+  - table-driven writers.
+- `writeTargets`, the largest single-consumer piece, moved to its own entry.
+- A bundle that imports both entries adds 202,152 B, over 200 KB. That only happens where one bundle needs protected-files and every other shell gate at once.
