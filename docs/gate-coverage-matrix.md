@@ -8,26 +8,19 @@ Classifications match [docs/portable-core.md](portable-core.md): `shell-out` · 
 
 | id | source | plugin | event | classification | support | impl | host mechanism | bash | limits |
 |----|--------|--------|-------|----------------|---------|------|----------------|------|--------|
-| `agent-browser:entrypoint:SessionStart:session-start.sh` | `plugins/agent-browser/hooks/session-start.sh` | agent-browser | SessionStart | shell-out | required | #211/todo | pending-opencode | yes | — |
-| `agent-browser:hooks.json:SessionStart:session-start.sh:startup|resume|clear|compact` | `plugins/agent-browser/hooks/hooks.json` | agent-browser | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
+| `agent-browser:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/agent-browser/hooks/hooks.json` | agent-browser | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
 | `ast-grep:entrypoint:SessionStart:register.sh` | `plugins/ast-grep/hooks/register.sh` | ast-grep | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
 | `ast-grep:hooks.json:SessionStart:register.sh:startup|resume|clear|compact` | `plugins/ast-grep/hooks/hooks.json` | ast-grep | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
 | `ast-grep:post-tools.d:PostToolUse:byte-savings.sh` | `plugins/ast-grep/hooks/post-tools.d/byte-savings.sh` | ast-grep | PostToolUse | shell-out | required | #210/todo | pending-opencode | yes | — |
 | `ast-grep:pre-tools.d:PreToolUse:search-nudge.sh` | `plugins/ast-grep/hooks/pre-tools.d/search-nudge.sh` | ast-grep | PreToolUse | shell-out | required | #210/todo | pending-opencode | yes | — |
-| `context7:entrypoint:SessionStart:session-start.sh` | `plugins/context7/hooks/session-start.sh` | context7 | SessionStart | shell-out | required | #211/todo | pending-opencode | yes | — |
-| `context7:hooks.json:SessionStart:session-start.sh:startup|resume|clear|compact` | `plugins/context7/hooks/hooks.json` | context7 | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
-| `epic-orchestrator:entrypoint:SessionStart:session-start.sh` | `plugins/epic-orchestrator/hooks/session-start.sh` | epic-orchestrator | SessionStart | shell-out | required | #211/todo | pending-opencode | yes | — |
-| `epic-orchestrator:hooks.json:SessionStart:check-deps.sh:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
-| `exa-search:entrypoint:SessionStart:session-start.sh` | `plugins/exa-search/hooks/session-start.sh` | exa-search | SessionStart | shell-out | required | #211/todo | pending-opencode | yes | — |
-| `exa-search:hooks.json:SessionStart:session-start.sh:startup|resume|clear|compact` | `plugins/exa-search/hooks/hooks.json` | exa-search | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
-| `jev:entrypoint:SessionStart:session-start.sh` | `plugins/jev/hooks/session-start.sh` | jev | SessionStart | shell-out | required | #211/todo | pending-opencode | yes | — |
+| `context7:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/context7/hooks/hooks.json` | context7 | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
+| `epic-orchestrator:hooks.json:SessionStart:check-deps.js:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
+| `exa-search:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/exa-search/hooks/hooks.json` | exa-search | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
 | `jev:entrypoint:UserPromptSubmit:user-prompt-submit.sh` | `plugins/jev/hooks/user-prompt-submit.sh` | jev | UserPromptSubmit | shell-out | required | #210/todo | pending-opencode | yes | — |
-| `jev:hooks.json:SessionStart:session-start.sh:startup|resume|clear|compact` | `plugins/jev/hooks/hooks.json` | jev | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
+| `jev:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/jev/hooks/hooks.json` | jev | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
 | `jev:hooks.json:UserPromptSubmit:user-prompt-submit.sh` | `plugins/jev/hooks/hooks.json` | jev | UserPromptSubmit | shell-out | required | #210/todo | pending-opencode | yes | — |
-| `jira:entrypoint:SessionStart:session-start.sh` | `plugins/jira/hooks/session-start.sh` | jira | SessionStart | shell-out | required | #211/todo | pending-opencode | yes | — |
-| `jira:hooks.json:SessionStart:session-start.sh:startup|resume|clear|compact` | `plugins/jira/hooks/hooks.json` | jira | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
-| `pr-babysit:entrypoint:SessionStart:check-toolu.sh` | `plugins/pr-babysit/hooks/check-toolu.sh` | pr-babysit | SessionStart | no-map | n/a | n/a | n/a | yes | Host-specific helper/surface; not an OpenCode enforcement target. |
-| `pr-babysit:hooks.json:SessionStart:check-toolu.sh:startup|resume|clear|compact` | `plugins/pr-babysit/hooks/hooks.json` | pr-babysit | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
+| `jira:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/jira/hooks/hooks.json` | jira | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
+| `pr-babysit:hooks.json:SessionStart:check-toolu.js:startup|resume|clear|compact` | `plugins/pr-babysit/hooks/hooks.json` | pr-babysit | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
 | `python-quality:concern:PostToolUse:00-preamble.sh` | `plugins/python-quality/hooks/concerns/00-preamble.sh` | python-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `python-quality:concern:PostToolUse:10-size-file.sh` | `plugins/python-quality/hooks/concerns/10-size-file.sh` | python-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `python-quality:concern:PostToolUse:20-tests.sh` | `plugins/python-quality/hooks/concerns/20-tests.sh` | python-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
@@ -36,9 +29,8 @@ Classifications match [docs/portable-core.md](portable-core.md): `shell-out` · 
 | `python-quality:concern:PostToolUse:70-no-mocks.sh` | `plugins/python-quality/hooks/concerns/70-no-mocks.sh` | python-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `python-quality:concern:PostToolUse:90-docs.sh` | `plugins/python-quality/hooks/concerns/90-docs.sh` | python-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `python-quality:concern:PostToolUse:99-finalize.sh` | `plugins/python-quality/hooks/concerns/99-finalize.sh` | python-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `python-quality:entrypoint:SessionStart:check-toolu.sh` | `plugins/python-quality/hooks/check-toolu.sh` | python-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `python-quality:entrypoint:SessionStart:register.sh` | `plugins/python-quality/hooks/register.sh` | python-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `python-quality:hooks.json:SessionStart:check-toolu.sh:startup|resume|clear|compact` | `plugins/python-quality/hooks/hooks.json` | python-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | yes | — |
+| `python-quality:hooks.json:SessionStart:check-toolu.js:startup|resume|clear|compact` | `plugins/python-quality/hooks/hooks.json` | python-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | no | — |
 | `python-quality:hooks.json:SessionStart:register.sh:startup|resume|clear|compact` | `plugins/python-quality/hooks/hooks.json` | python-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `rust-quality:concern:PostToolUse:00-preamble.sh` | `plugins/rust-quality/hooks/concerns/00-preamble.sh` | rust-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `rust-quality:concern:PostToolUse:10-size-file.sh` | `plugins/rust-quality/hooks/concerns/10-size-file.sh` | rust-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
@@ -51,14 +43,12 @@ Classifications match [docs/portable-core.md](portable-core.md): `shell-out` · 
 | `rust-quality:concern:PostToolUse:70-no-mocks.sh` | `plugins/rust-quality/hooks/concerns/70-no-mocks.sh` | rust-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `rust-quality:concern:PostToolUse:90-docs.sh` | `plugins/rust-quality/hooks/concerns/90-docs.sh` | rust-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `rust-quality:concern:PostToolUse:99-finalize.sh` | `plugins/rust-quality/hooks/concerns/99-finalize.sh` | rust-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `rust-quality:entrypoint:SessionStart:check-toolu.sh` | `plugins/rust-quality/hooks/check-toolu.sh` | rust-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `rust-quality:entrypoint:SessionStart:register.sh` | `plugins/rust-quality/hooks/register.sh` | rust-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `rust-quality:hooks.json:SessionStart:check-toolu.sh:startup|resume|clear|compact` | `plugins/rust-quality/hooks/hooks.json` | rust-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | yes | — |
+| `rust-quality:hooks.json:SessionStart:check-toolu.js:startup|resume|clear|compact` | `plugins/rust-quality/hooks/hooks.json` | rust-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | no | — |
 | `rust-quality:hooks.json:SessionStart:register.sh:startup|resume|clear|compact` | `plugins/rust-quality/hooks/hooks.json` | rust-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `statusline:entrypoint:SessionStart:session-start.sh` | `plugins/statusline/hooks/session-start.sh` | statusline | SessionStart | shell-out | required | #211/todo | pending-opencode | yes | — |
 | `statusline:hooks.json:SessionStart:session-start.sh:startup|resume|clear|compact` | `plugins/statusline/hooks/hooks.json` | statusline | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
-| `toolu-review:entrypoint:SessionStart:session-start.sh` | `plugins/toolu-review/hooks/session-start.sh` | toolu-review | SessionStart | shell-out | required | #211/todo | pending-opencode | yes | — |
-| `toolu-review:hooks.json:SessionStart:session-start.sh:startup|resume|clear|compact` | `plugins/toolu-review/hooks/hooks.json` | toolu-review | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
+| `toolu-review:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/toolu-review/hooks/hooks.json` | toolu-review | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
 | `toolu:builtin-module:PostToolUse:gate-status.sh` | `plugins/toolu/hooks/post-tools/modules/gate-status.sh` | toolu | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `toolu:builtin-module:PostToolUse:push-waiver.sh` | `plugins/toolu/hooks/post-tools/modules/push-waiver.sh` | toolu | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `toolu:builtin-module:PreToolUse:bash-commands.sh` | `plugins/toolu/hooks/pre-tools/modules/bash-commands.sh` | toolu | PreToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |

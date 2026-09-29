@@ -16,7 +16,8 @@
       "host",
       "state",
       "registry",
-      "ledger"
+      "ledger",
+      "startup"
     ],
     "nested": {
       "decision": [
@@ -104,6 +105,12 @@
         "verdict.ts",
         "glob.ts",
         "push-waiver.ts",
+        "__tests__"
+      ],
+      "startup": [
+        "context.ts",
+        "publish.ts",
+        "dependencies.ts",
         "__tests__"
       ]
     },

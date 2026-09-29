@@ -39,7 +39,8 @@
     "./host": "./src/host/host.ts",
     "./state": "./src/state/state.ts",
     "./registry": "./src/registry/registry.ts",
-    "./ledger": "./src/ledger/ledger.ts"
+    "./ledger": "./src/ledger/ledger.ts",
+    "./startup": "./src/startup/startup.ts"
   },
   "dependencies": {
     "zod": "4.1.5"

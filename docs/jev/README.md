@@ -110,7 +110,8 @@ search (rank + existence), debugging (hypotheses + new evidence), planning
 
 ```bash
 bats plugins/jev/skills/jev/scripts/__tests__/jev.bats   # offline, real curl + loopback HTTPS
-bats plugins/jev/hooks/__tests__                          # SessionStart publishing + per-prompt mandate
+bats plugins/jev/hooks/__tests__                          # per-prompt mandate
+bun test plugins/jev/hooks/src/__tests__                  # SessionStart publishing + mandate (Bun bundle)
 
 JEV_LIVE=1 TYPESAFE_API_KEY=… \
   bats plugins/jev/skills/jev/scripts/__tests__/jev-live.bats   # real API, opt-in
