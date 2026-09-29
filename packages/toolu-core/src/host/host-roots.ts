@@ -7,17 +7,23 @@ import { spawnSync } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { detectHost } from "./host-detect.ts";
-import { envValue, type HostEnv, type HostName } from "./host-name.ts";
+import { childEnv, envValue, type HostEnv, type HostName } from "./host-name.ts";
 
 export type HostOptions = { env?: HostEnv; host?: HostName };
 
 type ProjectOptions = HostOptions & { cwd?: string };
 type StateOptions = ProjectOptions & { root?: string };
 
-/** The env and host an options bag resolves to (host detected when absent). */
-export function resolveHost(options: HostOptions = {}): { env: HostEnv; host: HostName } {
+/**
+ * `options` with env and host filled in (host detected when absent). Functions
+ * that call siblings resolve once and pass the result down, so detection (and
+ * its invalid-override warning) runs once per call.
+ */
+export function resolveHost<T extends HostOptions>(
+  options: T,
+): T & { env: HostEnv; host: HostName } {
   const env = options.env ?? process.env;
-  return { env, host: options.host ?? detectHost({ env }) };
+  return { ...options, env, host: options.host ?? detectHost({ env }) };
 }
 
 function home(env: HostEnv): string {
@@ -40,9 +46,10 @@ export function configRoot(options: HostOptions = {}): string {
   return envValue(env, "TOOLU_CONFIG_DIR") ?? NATIVE_CONFIG_ROOT[host](env);
 }
 
-function gitToplevel(cwd: string | undefined): string | undefined {
+function gitToplevel(env: HostEnv, cwd: string | undefined): string | undefined {
   const res = spawnSync("git", ["rev-parse", "--show-toplevel"], {
     cwd: cwd ?? process.cwd(),
+    env: childEnv(env),
     encoding: "utf8",
   });
   if (res.error !== undefined || res.status !== 0) {
@@ -64,7 +71,7 @@ export function projectRoot(options: ProjectOptions = {}): string | undefined {
   return (
     envValue(env, "TOOLU_PROJECT_DIR") ??
     (hostVar === undefined ? undefined : envValue(env, hostVar)) ??
-    gitToplevel(options.cwd)
+    gitToplevel(env, options.cwd)
   );
 }
 
@@ -76,14 +83,16 @@ export function projectDirname(options: HostOptions = {}): string {
 
 /** `<project>/<dirname>/toolu.config.json`, or `undefined` outside a project. */
 export function projectConfigPath(options: ProjectOptions = {}): string | undefined {
-  const root = projectRoot(options);
-  return root === undefined ? undefined : join(root, projectDirname(options), "toolu.config.json");
+  const o = resolveHost(options);
+  const root = projectRoot(o);
+  return root === undefined ? undefined : join(root, projectDirname(o), "toolu.config.json");
 }
 
 /** `<root>/<dirname>/tmp`, with `root` defaulting to the project root. */
 export function projectStateRoot(options: StateOptions = {}): string | undefined {
-  const root = options.root ?? projectRoot(options);
-  return root === undefined ? undefined : join(root, projectDirname(options), "tmp");
+  const o = resolveHost(options);
+  const root = o.root ?? projectRoot(o);
+  return root === undefined ? undefined : join(root, projectDirname(o), "tmp");
 }
 
 /** `<state root>/<name>`; an empty name is a caller error. */
@@ -91,7 +100,7 @@ export function projectStateDir(name: string, options: StateOptions = {}): strin
   if (name === "") {
     throw new TypeError("projectStateDir: name must be non-empty");
   }
-  const base = projectStateRoot(options);
+  const base = projectStateRoot(resolveHost(options));
   return base === undefined ? undefined : join(base, name);
 }
 

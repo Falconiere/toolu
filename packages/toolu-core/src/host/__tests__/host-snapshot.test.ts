@@ -127,6 +127,25 @@ describe("snapshotCodexPlugins", () => {
     );
   });
 
+  test("concurrent writers leave one valid snapshot and no temp files", async () => {
+    const bin = codexBin(LISTED);
+    const path = join(temp(), "shared/plugins.json");
+    const module = JSON.stringify(join(import.meta.dir, "../host-snapshot.ts"));
+    const script = `import { snapshotCodexPlugins } from ${module}; if (!snapshotCodexPlugins()?.written) process.exit(1);`;
+    const env = codexEnv(`${bin}:${BASE_PATH}`, path);
+    const writers = Array.from({ length: 8 }, () =>
+      Bun.spawn([process.execPath, "-e", script], { env, stdout: "ignore", stderr: "pipe" }),
+    );
+    const codes = await Promise.all(writers.map((proc) => proc.exited));
+    expect(codes).toEqual(Array.from({ length: 8 }, () => 0));
+    expect(JSON.parse(readFileSync(path, "utf8"))).toEqual({
+      version: 1,
+      status: "ready",
+      plugins: ["fallback@toolu", "jev@toolu", "statusline@toolu", "toolu@toolu"],
+    });
+    expect(readdirSync(dirname(path))).toEqual(["plugins.json"]);
+  });
+
   test("does nothing on a host other than Codex", () => {
     const path = join(temp(), "plugins.json");
     const env = {

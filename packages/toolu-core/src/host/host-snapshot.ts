@@ -8,7 +8,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { z } from "zod";
-import { envValue, type HostEnv } from "./host-name.ts";
+import { childEnv, envValue, type HostEnv } from "./host-name.ts";
 import { configRoot, resolveHost, type HostOptions } from "./host-roots.ts";
 
 export type CodexPluginSnapshot = {
@@ -35,19 +35,11 @@ const SnapshotFileSchema = z.looseObject({
 
 /** `TOOLU_CODEX_PLUGIN_SNAPSHOT`, else `<config root>/toolu/codex-plugins.json`. */
 export function codexPluginSnapshotPath(options: HostOptions = {}): string {
-  const { env } = resolveHost(options);
+  const o = resolveHost(options);
   return (
-    envValue(env, "TOOLU_CODEX_PLUGIN_SNAPSHOT") ??
-    join(configRoot(options), "toolu", "codex-plugins.json")
+    envValue(o.env, "TOOLU_CODEX_PLUGIN_SNAPSHOT") ??
+    join(configRoot(o), "toolu", "codex-plugins.json")
   );
-}
-
-function childEnv(env: HostEnv): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [key, value] of Object.entries(env)) {
-    if (value !== undefined) out[key] = value;
-  }
-  return out;
 }
 
 function readCodexList(env: HostEnv): unknown {
@@ -122,12 +114,12 @@ function writeAtomically(path: string, body: string): boolean {
 
 /** Refresh the snapshot on Codex; `undefined` (nothing written) on any other host. */
 export function snapshotCodexPlugins(options: HostOptions = {}): SnapshotResult | undefined {
-  const { env, host } = resolveHost(options);
-  if (host !== "codex") {
+  const o = resolveHost(options);
+  if (o.host !== "codex") {
     return undefined;
   }
-  const path = codexPluginSnapshotPath({ env, host });
-  const snapshot = canonicalSnapshot(readCodexList(env));
+  const path = codexPluginSnapshotPath(o);
+  const snapshot = canonicalSnapshot(readCodexList(o.env));
   const written = writeAtomically(path, `${JSON.stringify(snapshot)}\n`);
   return { path, snapshot, written };
 }

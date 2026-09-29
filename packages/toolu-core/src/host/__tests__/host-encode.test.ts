@@ -232,14 +232,73 @@ describe("OpenCode encoding", () => {
 });
 
 describe("fail-closed invariants", () => {
-  test("a runtime failure denies every pre-action event on every host", () => {
+  test("a runtime failure encodes exactly as a deny on pre-action and permission events", () => {
+    const deny: Decision = { kind: "deny", reason: "gate crashed" };
     for (const host of HOST_NAMES) {
-      for (const event of ["tool/pre", "shell/pre"] as const) {
-        const text = JSON.stringify(encodeDecision(host, event, FAILURE));
-        expect(text).toMatch(/deny|block/);
-        expect(text).toContain("gate crashed");
+      for (const event of ["tool/pre", "shell/pre", "permission/evaluate"] as const) {
+        if (nativeEventName(host, event) === null) continue;
+        expect(encodeDecision(host, event, FAILURE)).toEqual(encodeDecision(host, event, deny));
       }
     }
+    expect(stdout("claude", "permission/evaluate", FAILURE)).toEqual({
+      hookSpecificOutput: {
+        hookEventName: "PermissionRequest",
+        decision: { behavior: "deny", message: "gate crashed" },
+      },
+    });
+    expect(stdout("cursor", "shell/pre", FAILURE)).toEqual({
+      permission: "deny",
+      user_message: "gate crashed",
+      agent_message: "gate crashed",
+    });
+    expect(stdout("hermes", "tool/pre", FAILURE)).toEqual({
+      action: "block",
+      message: "gate crashed",
+    });
+    expect(encodeDecision("opencode", "permission/evaluate", FAILURE)).toEqual({
+      kind: "effect",
+      effect: "deny",
+      message: "gate crashed",
+    });
+  });
+
+  test("a runtime failure on a non-blocking event is advice, never a block", () => {
+    const advice: Decision = { kind: "advisory", message: "gate crashed" };
+    for (const host of HOST_NAMES) {
+      for (const event of [
+        "tool/post",
+        "prompt",
+        "session/start",
+        "session/unload",
+        "pre_compact",
+      ] as const) {
+        if (nativeEventName(host, event) === null) continue;
+        expect(encodeDecision(host, event, FAILURE)).toEqual(encodeDecision(host, event, advice));
+      }
+    }
+    expect(stdout("claude", "tool/post", FAILURE)).toEqual({
+      hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: "gate crashed" },
+    });
+    expect(stdout("cursor", "tool/post", FAILURE)).toEqual({ additional_context: "gate crashed" });
+    expect(stdout("codex", "prompt", FAILURE)).toEqual({
+      hookSpecificOutput: { hookEventName: "UserPromptSubmit", additionalContext: "gate crashed" },
+    });
+  });
+
+  test("a post_block on a pre-action event is a deny", () => {
+    const deny: Decision = { kind: "deny", reason: "lint failed" };
+    for (const host of HOST_NAMES) {
+      for (const event of ["tool/pre", "shell/pre"] as const) {
+        expect(encodeDecision(host, event, POST_BLOCK)).toEqual(encodeDecision(host, event, deny));
+      }
+    }
+    expect(stdout("codex", "tool/pre", POST_BLOCK)).toEqual({
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        permissionDecision: "deny",
+        permissionDecisionReason: "lint failed",
+      },
+    });
   });
 
   test("ask never reaches a host or event that cannot prompt", () => {

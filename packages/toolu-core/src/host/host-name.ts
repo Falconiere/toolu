@@ -15,3 +15,12 @@ export function envValue(env: HostEnv, key: string): string | undefined {
 export function isHostName(value: string): value is HostName {
   return HOST_NAMES.some((host) => host === value);
 }
+
+/** `env` as a child-process environment: unset keys dropped. */
+export function childEnv(env: HostEnv): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(env)) {
+    if (value !== undefined) out[key] = value;
+  }
+  return out;
+}

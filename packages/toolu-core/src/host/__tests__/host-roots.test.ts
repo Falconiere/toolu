@@ -36,6 +36,7 @@ function gitRepo(): string {
 }
 
 const HOME = "/home/u";
+const PATH = process.env.PATH ?? "/usr/bin:/bin";
 
 describe("configRoot", () => {
   test("each host has its native user root", () => {
@@ -92,13 +93,20 @@ describe("project paths", () => {
 
   test("Codex ignores CLAUDE_PROJECT_DIR and falls back to the git toplevel of cwd", () => {
     const repo = gitRepo();
-    const env = { CLAUDE_PROJECT_DIR: "/c" };
+    const env = { PATH, CLAUDE_PROJECT_DIR: "/c" };
     expect(projectRoot({ env, host: "codex", cwd: join(repo, "src") })).toBe(repo);
+  });
+
+  test("git runs with the caller's env, not the ambient one", () => {
+    const repo = gitRepo();
+    expect(projectRoot({ env: { PATH }, host: "codex", cwd: repo })).toBe(repo);
+    const ceiling = { PATH, GIT_CEILING_DIRECTORIES: repo };
+    expect(projectRoot({ env: ceiling, host: "codex", cwd: join(repo, "src") })).toBeUndefined();
   });
 
   test("outside a git repository there is no project root and no project paths", () => {
     const cwd = temp();
-    const o = { env: {}, host: "claude" as const, cwd };
+    const o = { env: { PATH }, host: "claude" as const, cwd };
     expect(projectRoot(o)).toBeUndefined();
     expect(projectConfigPath(o)).toBeUndefined();
     expect(projectStateRoot(o)).toBeUndefined();
@@ -179,5 +187,20 @@ describe("invocation and install", () => {
       expect(pluginInstallCommand("toolu@toolu", { env: {}, host })).toBeNull();
     }
     expect(() => pluginInstallCommand("", { env: {} })).toThrow(TypeError);
+  });
+});
+
+describe("detection runs once per call", () => {
+  test("an invalid override warns once from composite path functions", () => {
+    const host = join(import.meta.dir, "../host.ts");
+    const script = `import { projectConfigPath, codexPluginSnapshotPath } from ${JSON.stringify(host)};
+projectConfigPath(); process.stderr.write("--\\n"); codexPluginSnapshotPath();`;
+    const res = spawnSync(process.execPath, ["-e", script], {
+      encoding: "utf8",
+      env: { PATH, HOME: temp(), TOOLU_HOST_OVERRIDE: "bogus", TOOLU_PROJECT_DIR: "/repo" },
+    });
+    expect(res.status).toBe(0);
+    const warning = "toolu-host: invalid TOOLU_HOST_OVERRIDE 'bogus' (using environment detection)";
+    expect(res.stderr).toBe(`${warning}\n--\n${warning}\n`);
   });
 });

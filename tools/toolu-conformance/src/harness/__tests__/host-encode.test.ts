@@ -66,6 +66,8 @@ const CASES: Case[] = HOST_NAMES.flatMap((host) =>
 );
 
 const PRE_ACTION = new Set<HostEvent>(["tool/pre", "shell/pre"]);
+const BLOCKING = new Set<HostEvent>(["tool/pre", "shell/pre", "permission/evaluate"]);
+const CONTEXT_ONLY = new Set<HostEvent>(["session/start", "session/unload", "pre_compact"]);
 
 describe("every encoded output satisfies its host's contract", () => {
   for (const host of HOST_NAMES) {
@@ -88,6 +90,11 @@ describe("every encoded output satisfies its host's contract", () => {
           if (c.name === "advisory") expect(got.effect, label).toBe("allow");
         }
         if (got.effect === "ask") expect(supportsAsk(c.host, c.event), label).toBe(true);
+        // Session and compaction hooks cannot block; failures elsewhere off the pre-action path advise.
+        if (CONTEXT_ONLY.has(c.event)) expect(got.effect, label).toBe("allow");
+        if (c.name === "runtime_failure" && !BLOCKING.has(c.event)) {
+          expect(got.effect, label).toBe("allow");
+        }
       });
     });
   }

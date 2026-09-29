@@ -3,7 +3,13 @@
  * `@toolu/core/events` vocabulary; each host names them its own way: Claude and
  * Codex PascalCase, Cursor camelCase, Hermes snake_case, OpenCode dotted plugin
  * hooks. `null` marks an event the host does not have.
+ *
+ * `HOST_EVENTS` is the subset of `BridgeEvent` toolu registers hooks for.
+ * `session/resume` and `session/clear` arrive as the host's session-start event
+ * (a `source` matcher on Claude/Codex), and `compaction` has no hook on most
+ * hosts, so none of the three has its own row.
  */
+import type { BridgeEvent } from "../events/events.ts";
 import { HOST_NAMES, type HostName } from "./host-name.ts";
 
 export const HOST_EVENTS = [
@@ -15,7 +21,7 @@ export const HOST_EVENTS = [
   "tool/pre",
   "shell/pre",
   "tool/post",
-] as const;
+] as const satisfies readonly BridgeEvent[];
 
 export type HostEvent = (typeof HOST_EVENTS)[number];
 

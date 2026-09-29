@@ -4,8 +4,9 @@
  * accepts. TypeScript port of `plugins/toolu/hooks/lib/host.sh`, extended from
  * Claude and Codex to Cursor, OpenCode and Hermes.
  *
- * Every function takes its environment explicitly (default `process.env`); an
- * empty variable counts as unset, like bash `${VAR:-}`.
+ * Every function that reads the environment takes it explicitly (default
+ * `process.env`); an empty variable counts as unset, like bash `${VAR:-}`. The
+ * event map and encoders are pure.
  */
 export { detectHost, type DetectOptions } from "./host-detect.ts";
 export {
