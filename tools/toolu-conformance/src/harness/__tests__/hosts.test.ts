@@ -1,6 +1,11 @@
 import { expect, test } from "bun:test";
 import { join, resolve } from "node:path";
-import { HostOutputError, readHostOutcome, readOpencodeOutcome } from "../hosts.ts";
+import {
+  HostOutputError,
+  readHermesOutcome,
+  readHostOutcome,
+  readOpencodeOutcome,
+} from "../hosts.ts";
 import { run, type RunResult } from "../spawn.ts";
 
 const ROOT = resolve(import.meta.dir, "../../../../..");
@@ -122,4 +127,60 @@ test.concurrent("opencode: the evaluated permission effect is the outcome", () =
   });
   expect(readOpencodeOutcome({ effect: "allow" })).toEqual({ effect: "allow" });
   expect(() => readOpencodeOutcome({ effect: "maybe" })).toThrow(HostOutputError);
+});
+
+test.concurrent("claude and codex: PermissionRequest decision.behavior deny is a deny", () => {
+  const out = result(
+    JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: "PermissionRequest",
+        decision: { behavior: "deny", message: "no" },
+      },
+    }),
+  );
+  for (const host of ["claude", "codex"] as const) {
+    expect(readHostOutcome(host, "PermissionRequest", out)).toEqual({
+      effect: "deny",
+      reason: "no",
+    });
+  }
+});
+
+test.concurrent("cursor: beforeSubmitPrompt answers continue and context events answer context", () => {
+  const stop = result(JSON.stringify({ continue: false, user_message: "stop" }));
+  expect(readHostOutcome("cursor", "beforeSubmitPrompt", stop)).toEqual({
+    effect: "deny",
+    reason: "stop",
+  });
+  const go = result(JSON.stringify({ continue: true }));
+  expect(readHostOutcome("cursor", "beforeSubmitPrompt", go)).toEqual({ effect: "allow" });
+  const ctx = result(JSON.stringify({ additional_context: "note" }));
+  expect(readHostOutcome("cursor", "postToolUse", ctx)).toEqual({
+    effect: "allow",
+    context: "note",
+  });
+  expect(readHostOutcome("cursor", "preCompact", result("{}"))).toEqual({ effect: "allow" });
+  expect(() => readHostOutcome("cursor", "beforeSubmitPrompt", result("{}"))).toThrow(
+    HostOutputError,
+  );
+});
+
+test.concurrent("hermes: action or decision block denies, context advises, empty allows", async () => {
+  expect(readHermesOutcome(result(JSON.stringify({ action: "block", message: "m" })))).toEqual({
+    effect: "deny",
+    reason: "m",
+  });
+  expect(readHermesOutcome(result(JSON.stringify({ decision: "block", reason: "r" })))).toEqual({
+    effect: "deny",
+    reason: "r",
+  });
+  expect(readHermesOutcome(result(JSON.stringify({ context: "c" })))).toEqual({
+    effect: "allow",
+    context: "c",
+  });
+  expect(readHermesOutcome(result(""))).toEqual({ effect: "allow" });
+  const blocked = await run(["sh", "-c", "echo 'no' >&2; exit 2"]);
+  expect(readHermesOutcome(blocked)).toEqual({ effect: "deny", reason: "no" });
+  expect(() => readHermesOutcome(result('{"action":"maybe"}'))).toThrow(HostOutputError);
+  expect(() => readHermesOutcome(result("", 1, "boom"))).toThrow("exited 1");
 });
