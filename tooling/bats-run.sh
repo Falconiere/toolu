@@ -12,7 +12,7 @@
 # per-file state on purpose — a throwaway comemory repo label, a cwd, a fixture
 # repo built in setup — and parallelising inside a file would race them.
 #
-# Usage: bash tooling/bats-run.sh [path...]     (default: plugins benchmarks tooling)
+# Usage: bash tooling/bats-run.sh [path...]     (default: plugins tooling packages tools)
 # Env:   BATS_JOBS=N              force the job count; 1 forces a serial run.
 #        BATS_RUN_PRINT_PLAN=1    print the command that would run, then exit.
 #                                 Lets the runner's decisions be tested without
@@ -21,9 +21,9 @@
 set -euo pipefail
 
 paths=("$@")
-# These three are the whole suite. benchmarks/ used to be missing from the local
-# default while CI ran it, so 40 tests only ever failed in CI.
-[ "${#paths[@]}" -gt 0 ] || paths=(plugins benchmarks tooling packages tools)
+# The local default must match what CI runs, or suites fail only in CI. The
+# benchmarks harness left bats for bun test in #277.
+[ "${#paths[@]}" -gt 0 ] || paths=(plugins tooling packages tools)
 
 command -v bats >/dev/null 2>&1 || {
   echo "bats-run: bats is not installed" >&2

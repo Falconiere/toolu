@@ -58,7 +58,9 @@ function sh(argv: string[], opts: { cwd?: string; env?: Record<string, string> }
     env: { ...process.env, ...opts.env },
     stdio: ["ignore", "pipe", "inherit"],
   });
-  if (res.error) throw res.error;
+  // The script never ran (missing binary, buffer overflow): stop the smoke with its own
+  // FAIL line, exactly where the shell runner's `set -e` stopped.
+  if (res.error) fail(`${argv[0] ?? ""} could not run: ${res.error.message}`);
   return { status: res.status ?? 1, stdout: res.stdout };
 }
 

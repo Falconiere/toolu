@@ -22,7 +22,7 @@
     "test:portable-core": "bun run tooling/src/check-portable-core-doc.ts && PORTABLE_CORE_PROBE_MODE=fixture bun run tooling/src/opencode-capability-probe.ts && bun test --timeout 60000 tooling/src/__tests__/check-portable-core-doc.test.ts tooling/src/__tests__/opencode-capability-probe.test.ts",
     "test:gate-coverage": "bun run tooling/src/gate-coverage-inventory.ts check && bun test --timeout 60000 tooling/src/__tests__/gate-coverage-inventory.test.ts",
     "test": "bun run lint:shell && bun run test:context-budget && bun run test:portable-core && bun run test:gate-coverage && bun run test:ts && bun run test:shell",
-    "test:shell:serial": "bats -r plugins benchmarks tooling",
+    "test:shell:serial": "bats -r plugins tooling packages tools",
     "test:context-budget": "bash plugins/toolu/scripts/context-budget.sh",
     "format:check": "oxfmt --check tooling/src packages/*/src tools/*/src plugins/*/hooks/src plugins/epic-orchestrator/scripts/*.ts plugins/epic-orchestrator/scripts/trackers/*.ts plugins/epic-orchestrator/scripts/__tests__/*.ts",
     "lint:ts": "bun run tooling/src/lint-ts.ts",
