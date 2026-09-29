@@ -103,3 +103,18 @@ export function bunOnPath(env: HostEnv = process.env): boolean {
 export function bunAdvisory(plugin: string, tool: string): string {
   return `${plugin}: bun not found on PATH — the ${tool} needs Bun 1.4.x (https://bun.sh; see docs/runtime.md)`;
 }
+
+/**
+ * Publish a Bun CLI bundle run through its `#!/usr/bin/env bun` shebang. Once
+ * the publish step ran (a source to link and a directory to link in), warn
+ * when `bun` is off PATH: every call through the published path would fail
+ * with a bare "env: bun: No such file". Advisory; the session continues.
+ */
+export function publishBunCli(options: PublishOptions & { tool: string }): PublishResult {
+  const result = publishWrapper(options);
+  const ran = result.status !== "source-missing" && result.status !== "unwritable";
+  if (ran && !bunOnPath(options.env ?? process.env)) {
+    (options.warn ?? stderrLine)(bunAdvisory(options.plugin, options.tool));
+  }
+  return result;
+}

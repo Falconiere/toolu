@@ -21,6 +21,7 @@ export {
 export {
   bunAdvisory,
   bunOnPath,
+  publishBunCli,
   publishWrapper,
   type PublishOptions,
   type PublishResult,
