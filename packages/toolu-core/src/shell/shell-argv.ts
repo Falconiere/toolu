@@ -8,88 +8,60 @@ import { hasOption, parseArgs, type OptionSpec } from "./shell-options.ts";
 
 type Words = readonly (string | null)[];
 
-interface Wrapper {
-  readonly options: OptionSpec;
+interface Wrapper extends OptionSpec {
   /** Options after which the wrapper runs no command (`command -v`, `sudo -l`). */
-  readonly inert?: readonly string[];
+  readonly inert?: string;
   /** Options that hide the command from static reading (`env -S STRING`). */
-  readonly opaque?: readonly string[];
+  readonly opaque?: string;
   /** `NAME=value` words may sit between the options and the command. */
   readonly assignments?: boolean;
   /** Operands before the command (`timeout DURATION`). */
   readonly operands?: number;
   /** Appends arguments read at run time (`xargs`). */
   readonly appendsDynamic?: boolean;
+  /** A bare `-` is an option, not the command (`env -` means `env -i`). */
+  readonly dashOption?: boolean;
 }
 
+/** Option tables; names are space-separated. Parsing stops at the command. */
 const WRAPPERS: Readonly<Record<string, Wrapper>> = {
   sudo: {
-    options: {
-      valueShort: "ugCDprtTU",
-      valueLong: ["user", "group", "close-from", "chdir", "prompt", "role", "type"],
-      stopAtOperand: true,
-    },
-    inert: [
-      "e",
-      "l",
-      "v",
-      "K",
-      "V",
-      "h",
-      "edit",
-      "list",
-      "validate",
-      "remove-timestamp",
-      "version",
-      "help",
-    ],
+    valueShort: "ugCDprtTU",
+    valueLong: "user group close-from chdir prompt role type",
+    inert: "e l v K V h edit list validate remove-timestamp version help",
     assignments: true,
   },
-  doas: { options: { valueShort: "uC", stopAtOperand: true }, inert: ["L"] },
+  doas: { valueShort: "uC", inert: "L" },
   env: {
-    options: { valueShort: "uC", valueLong: ["unset", "chdir"], stopAtOperand: true },
-    opaque: ["S", "split-string"],
+    valueShort: "uCPa",
+    valueLong: "unset chdir argv0",
+    opaque: "S split-string",
     assignments: true,
+    dashOption: true,
   },
-  command: { options: { stopAtOperand: true }, inert: ["v", "V"] },
-  builtin: { options: { stopAtOperand: true } },
-  exec: { options: { valueShort: "a", stopAtOperand: true } },
-  nohup: { options: { stopAtOperand: true } },
-  time: { options: { valueShort: "fo", valueLong: ["format", "output"], stopAtOperand: true } },
-  nice: {
-    options: { valueShort: "n", valueLong: ["adjustment"], numeric: true, stopAtOperand: true },
-  },
-  timeout: {
-    options: { valueShort: "sk", valueLong: ["signal", "kill-after"], stopAtOperand: true },
-    operands: 1,
-  },
+  command: { inert: "v V" },
+  builtin: {},
+  exec: { valueShort: "a" },
+  nohup: {},
+  time: { valueShort: "fo", valueLong: "format output" },
+  nice: { valueShort: "n", valueLong: "adjustment", numeric: true },
+  timeout: { valueShort: "sk", valueLong: "signal kill-after", operands: 1 },
   xargs: {
-    options: {
-      valueShort: "adEILnPs",
-      valueLong: [
-        "arg-file",
-        "delimiter",
-        "max-args",
-        "max-procs",
-        "max-chars",
-        "process-slot-var",
-      ],
-      stopAtOperand: true,
-    },
+    valueShort: "adEILnPs",
+    valueLong: "arg-file delimiter max-args max-procs max-chars process-slot-var",
     appendsDynamic: true,
   },
-  stdbuf: {
-    options: { valueShort: "ioe", valueLong: ["input", "output", "error"], stopAtOperand: true },
-  },
+  stdbuf: { valueShort: "ioe", valueLong: "input output error" },
 };
 
 const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
 
 export interface Unwrapped {
-  readonly argv: readonly (string | null)[];
-  /** Aligned with `argv`: the pattern of each word bash globs. */
-  readonly patterns: readonly (string | null)[];
   readonly wrappers: readonly string[];
+  /** Index in the words where the command that runs starts; `null` when it is hidden (`env -S`). */
+  readonly start: number | null;
+  /** The command gets arguments read at run time (`xargs`). */
+  readonly appendsDynamic: boolean;
 }
 
 /** The wrapper spec for `name`, matched on its basename (`/usr/bin/sudo`). */
@@ -100,17 +72,21 @@ function wrapperOf(name: string | null | undefined): Wrapper | undefined {
 
 /** Where the wrapped command starts, `"opaque"` when it cannot be read, `null` when none runs. */
 function innerStart(words: Words, wrapper: Wrapper): number | "opaque" | null {
-  const parsed = parseArgs(words, 1, wrapper.options);
-  if (parsed.missingValue || hasOption(parsed, wrapper.inert ?? [])) return null;
-  if (hasOption(parsed, wrapper.opaque ?? [])) return "opaque";
+  const parsed = parseArgs(words, 1, { ...wrapper, stopAtOperand: true });
+  if (parsed.missingValue || hasOption(parsed, wrapper.inert ?? "")) return null;
+  if (hasOption(parsed, wrapper.opaque ?? "")) return "opaque";
   let start = parsed.next;
-  while (wrapper.assignments === true && ASSIGNMENT.test(words[start] ?? "")) start += 1;
+  for (; start < words.length; start++) {
+    const word = words[start] ?? "";
+    const dash = wrapper.dashOption === true && word === "-";
+    if (!dash && !(wrapper.assignments === true && ASSIGNMENT.test(word))) break;
+  }
   start += wrapper.operands ?? 0;
   return start < words.length ? start : null;
 }
 
 /** Peel wrapper commands off `words` until the command that actually runs. */
-export function unwrap(words: Words, patterns: Words): Unwrapped {
+export function unwrap(words: Words): Unwrapped {
   let start = 0;
   let appendsDynamic = false;
   const wrappers: string[] = [];
@@ -122,16 +98,17 @@ export function unwrap(words: Words, patterns: Words): Unwrapped {
     const inner = innerStart(words.slice(start), wrapper);
     if (inner === null) break;
     wrappers.push(basename(words[start] ?? ""));
-    if (inner === "opaque") return { argv: [null], patterns: [null], wrappers };
+    if (inner === "opaque") return { wrappers, start: null, appendsDynamic };
     appendsDynamic ||= wrapper.appendsDynamic === true;
     start += inner;
   }
-  const tail = appendsDynamic ? [null] : [];
-  return {
-    argv: [...words.slice(start), ...tail],
-    patterns: [...patterns.slice(start), ...tail],
-    wrappers,
-  };
+  return { wrappers, start, appendsDynamic };
+}
+
+/** `list` (aligned with the words) cut to the command that runs; `fill` stands for unknown words. */
+export function alignUnwrapped<T>(list: readonly T[], unwrapped: Unwrapped, fill: T): T[] {
+  if (unwrapped.start === null) return [fill];
+  return [...list.slice(unwrapped.start), ...(unwrapped.appendsDynamic ? [fill] : [])];
 }
 
 const SHELLS = new Set(["bash", "sh", "zsh", "dash", "ksh"]);

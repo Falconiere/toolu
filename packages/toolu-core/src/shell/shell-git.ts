@@ -19,7 +19,7 @@ export interface GitInvocation {
 
 const GLOBALS = {
   valueShort: "Cc",
-  valueLong: ["git-dir", "work-tree", "namespace", "super-prefix", "config-env", "attr-source"],
+  valueLong: "git-dir work-tree namespace super-prefix config-env attr-source",
   stopAtOperand: true,
 };
 
@@ -29,7 +29,7 @@ export function gitInvocation(command: ShellCommand): GitInvocation | undefined 
   if (name === null || name === undefined || basename(name) !== "git") return undefined;
   const globals = parseArgs(command.argv, 1, GLOBALS);
   if (globals.missingValue || globals.next >= command.argv.length) return undefined;
-  const cChain = optionValues(globals, ["C"]).map((value) => value ?? null);
+  const cChain = optionValues(globals, "C").map((value) => value ?? null);
   const subcommand = command.argv[globals.next] ?? null;
   return { command, subcommand, args: command.argv.slice(globals.next + 1), cChain };
 }
@@ -63,7 +63,7 @@ export interface GitPush {
 
 const PUSH_OPTIONS = {
   valueShort: "o",
-  valueLong: ["push-option", "receive-pack", "exec", "repo"],
+  valueLong: "push-option receive-pack exec repo",
 };
 
 /** `HEAD:x`, `+HEAD:refs/heads/x`, `src:x` and bare `x` name `x`; a delete, bare `HEAD` or a wildcard names none. */
@@ -90,25 +90,13 @@ export function pushTargets(analysis: ShellAnalysis): GitPush[] {
 const COMMIT_OPTIONS = {
   valueShort: "mFCct",
   restShort: "Su",
-  valueLong: [
-    "message",
-    "file",
-    "reuse-message",
-    "reedit-message",
-    "template",
-    "author",
-    "date",
-    "cleanup",
-    "fixup",
-    "squash",
-    "trailer",
-    "pathspec-from-file",
-  ],
+  valueLong:
+    "message file reuse-message reedit-message template author date cleanup fixup squash trailer pathspec-from-file",
 };
 
 /** The `-m`/`--message` values of a commit, in order; `null` for a dynamic one. */
 export function commitMessages(invocation: GitInvocation): readonly (string | null)[] {
   if (invocation.subcommand !== "commit") return [];
   const parsed = parseArgs(invocation.args, 0, COMMIT_OPTIONS);
-  return optionValues(parsed, ["m", "message"]).map((value) => value ?? null);
+  return optionValues(parsed, "m message").map((value) => value ?? null);
 }

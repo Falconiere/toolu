@@ -3,7 +3,10 @@
  * built by the #249 pipeline (`stageBundles`): one that does nothing and one
  * that analyzes a command. The script reports:
  *
- * - bundle size: the shell probe adds at most 200,000 bytes unminified;
+ * - bundle size: a representative entry (analysis plus push detection) adds at
+ *   most 200,000 bytes unminified, the issue's budget; an entry importing the
+ *   whole public surface is reported too, against a 210,000-byte regression
+ *   ceiling (it is over 200 KB: see docs/shell-analysis.md);
  * - cold start: interleaved spawns of both bundles from a temp dir with no
  *   node_modules; p50 delta at most 5 ms;
  * - parse and walk: `analyzeShell` plus the git and write helpers over every
@@ -34,7 +37,12 @@ import { stageBundles } from "./build-plugins.ts";
 const ROOT = resolve(import.meta.dir, "../..");
 const SHELL_ENTRY = join(ROOT, "packages/toolu-core/src/shell/shell.ts");
 export const PROBE_COMMAND = "git push origin HEAD:feat/x";
-export const BUDGET = { bundleBytes: 200_000, coldStartMs: 5, parseP99Us: 100 };
+export const BUDGET = {
+  bundleBytes: 200_000,
+  fullBundleBytes: 210_000,
+  coldStartMs: 5,
+  parseP99Us: 100,
+};
 
 const EMPTY_PROBE = 'process.stdout.write("{}\\n");\n';
 const SHELL_PROBE = `import { analyzeShell, pushTargets, runsGitSubcommand } from ${JSON.stringify(SHELL_ENTRY)};
@@ -42,10 +50,28 @@ const analysis = analyzeShell(process.argv[2] ?? "");
 const destination = pushTargets(analysis)[0]?.destination ?? null;
 process.stdout.write(JSON.stringify({ push: runsGitSubcommand(analysis, "push"), destination }) + "\\n");
 `;
+const FULL_PROBE = `import * as shell from ${JSON.stringify(SHELL_ENTRY)};
+const analysis = shell.analyzeShell(process.argv[2] ?? "");
+const commit = analysis.commands.map(shell.gitInvocation).find((git) => git?.subcommand === "commit");
+process.stdout.write(JSON.stringify({
+  push: shell.runsGitSubcommand(analysis, "push"),
+  destination: shell.pushTargets(analysis)[0]?.destination ?? null,
+  writes: shell.writeTargets(analysis).length,
+  messages: commit === undefined ? [] : shell.commitMessages(commit),
+  rule: analysis.commands.some((c) => shell.matchesRule(c, "node -e")),
+  exports: Object.keys(shell).length,
+}) + "\\n");
+`;
 
 export interface ShellBench {
   readonly machine: { bun: string; platform: string; arch: string; cpu: string; date: string };
-  readonly bundle: { emptyBytes: number; shellBytes: number; deltaBytes: number };
+  readonly bundle: {
+    emptyBytes: number;
+    shellBytes: number;
+    deltaBytes: number;
+    fullBytes: number;
+    fullDeltaBytes: number;
+  };
   readonly coldStart: {
     runs: number;
     emptyP50: number;
@@ -64,15 +90,20 @@ export interface ShellBench {
   readonly probeOutput: string;
 }
 
-/** Build both probes with the plugin bundle pipeline; returns their paths in `out`. */
-function buildProbes(work: string): { empty: string; shell: string } {
+/** Build the probes with the plugin bundle pipeline; returns their paths in `out`. */
+function buildProbes(work: string): { empty: string; shell: string; full: string } {
   const src = join(work, "tree/plugins/probe/hooks/src");
   mkdirSync(src, { recursive: true });
   writeFileSync(join(src, "empty.ts"), EMPTY_PROBE);
   writeFileSync(join(src, "shell.ts"), SHELL_PROBE);
+  writeFileSync(join(src, "full.ts"), FULL_PROBE);
   const out = join(work, "out");
   stageBundles(join(work, "tree"), out);
-  return { empty: join(out, "probe/empty.js"), shell: join(out, "probe/shell.js") };
+  return {
+    empty: join(out, "probe/empty.js"),
+    shell: join(out, "probe/shell.js"),
+    full: join(out, "probe/full.js"),
+  };
 }
 
 function spawnMs(bundle: string, cwd: string): number {
@@ -158,11 +189,14 @@ export function benchShell(options: { runs: number; rounds: number }): ShellBenc
     const bundles = buildProbes(work);
     const emptyBytes = statSync(bundles.empty).size;
     const shellBytes = statSync(bundles.shell).size;
+    const fullBytes = statSync(bundles.full).size;
     // Run copies from outside the repository: no node_modules anywhere above them.
-    const standalone = { empty: join(runDir, "empty.js"), shell: join(runDir, "shell.js") };
+    // Cold start times the full-surface probe, the heavier of the two.
+    const standalone = { empty: join(runDir, "empty.js"), shell: join(runDir, "full.js") };
     copyFileSync(bundles.empty, standalone.empty);
-    copyFileSync(bundles.shell, standalone.shell);
-    const probe = spawnSync(process.execPath, [standalone.shell, PROBE_COMMAND], {
+    copyFileSync(bundles.full, standalone.shell);
+    copyFileSync(bundles.shell, join(runDir, "shell.js"));
+    const probe = spawnSync(process.execPath, [join(runDir, "shell.js"), PROBE_COMMAND], {
       cwd: runDir,
       encoding: "utf8",
     });
@@ -174,7 +208,13 @@ export function benchShell(options: { runs: number; rounds: number }): ShellBenc
         cpu: cpus()[0]?.model ?? "unknown",
         date: new Date().toISOString().slice(0, 10),
       },
-      bundle: { emptyBytes, shellBytes, deltaBytes: shellBytes - emptyBytes },
+      bundle: {
+        emptyBytes,
+        shellBytes,
+        deltaBytes: shellBytes - emptyBytes,
+        fullBytes,
+        fullDeltaBytes: fullBytes - emptyBytes,
+      },
       coldStart: coldStart(standalone, runDir, options.runs),
       parse: parseTimes(options.rounds),
       probeOutput: probe.stdout.trim(),
@@ -190,6 +230,8 @@ export function overBudget(bench: ShellBench): string[] {
   const problems: string[] = [];
   if (bench.bundle.deltaBytes > BUDGET.bundleBytes)
     problems.push(`bundle +${bench.bundle.deltaBytes} B > ${BUDGET.bundleBytes} B`);
+  if (bench.bundle.fullDeltaBytes > BUDGET.fullBundleBytes)
+    problems.push(`full bundle +${bench.bundle.fullDeltaBytes} B > ${BUDGET.fullBundleBytes} B`);
   if (bench.coldStart.deltaP50 > BUDGET.coldStartMs)
     problems.push(
       `cold start +${bench.coldStart.deltaP50.toFixed(2)} ms > ${BUDGET.coldStartMs} ms`,
@@ -205,8 +247,8 @@ function report(bench: ShellBench): string {
   const { machine: m, bundle: b, coldStart: c, parse: p } = bench;
   return [
     `bench:shell — bun ${m.bun}, ${m.platform} ${m.arch}, ${m.cpu}, ${m.date}`,
-    `bundle      empty ${b.emptyBytes} B, shell ${b.shellBytes} B, delta ${b.deltaBytes} B (budget ${BUDGET.bundleBytes} B)`,
-    `cold start  ${c.runs} interleaved runs: empty p50 ${ms(c.emptyP50)} p90 ${ms(c.emptyP90)}, shell p50 ${ms(c.shellP50)} p90 ${ms(c.shellP90)}, delta p50 ${ms(c.deltaP50)} (budget ${BUDGET.coldStartMs} ms)`,
+    `bundle      empty ${b.emptyBytes} B; representative +${b.deltaBytes} B (budget ${BUDGET.bundleBytes} B); full surface +${b.fullDeltaBytes} B (ceiling ${BUDGET.fullBundleBytes} B)`,
+    `cold start  ${c.runs} interleaved runs: empty p50 ${ms(c.emptyP50)} p90 ${ms(c.emptyP90)}, full-surface p50 ${ms(c.shellP50)} p90 ${ms(c.shellP90)}, delta p50 ${ms(c.deltaP50)} (budget ${BUDGET.coldStartMs} ms)`,
     `parse+walk  ${p.commands} commands, ${p.samples} samples: p50 ${p.p50Us.toFixed(1)} µs, p99 ${p.p99Us.toFixed(1)} µs, max ${p.maxUs.toFixed(1)} µs (budget p99 ${BUDGET.parseP99Us} µs)`,
     `probe       ${bench.probeOutput}`,
   ].join("\n");

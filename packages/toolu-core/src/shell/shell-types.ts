@@ -33,7 +33,7 @@ export interface ShellRedirect {
   readonly target: string | null;
   /** An unquoted pathname pattern target (`>.en[v]`): bash writes the one file it matches. */
   readonly pattern: string | null;
-  /** The target as written; empty for a heredoc. */
+  /** The target with quotes removed and expansions as written (`$HOME/.env`); empty for a heredoc. */
   readonly text: string;
   /** A `<<`/`<<-` body: its content when static (tabs stripped for `<<-`), else `null`. */
   readonly heredoc: { readonly content: string | null; readonly quoted: boolean } | null;
@@ -51,6 +51,8 @@ export interface ShellCommand {
   readonly argv: readonly (string | null)[];
   /** Aligned with `argv`: the unexpanded pattern of a word that bash globs (`argv` has `null` there). */
   readonly patterns: readonly (string | null)[];
+  /** Aligned with `argv`: each word with quotes removed and expansions as written (`$HOME/.env`). */
+  readonly texts: readonly string[];
   /** Wrappers peeled off, outermost first (`sudo`, `timeout`, …). */
   readonly wrappers: readonly string[];
   readonly redirects: readonly ShellRedirect[];

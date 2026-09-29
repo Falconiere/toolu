@@ -47,8 +47,13 @@ test.concurrent("descriptor duplication and input redirection write nothing", ()
 
 test.concurrent("a dynamic redirect target is reported as unknown, not dropped", () => {
   expect(writeTargets(analyzeShell('echo x > "$OUT"')).map((t) => [t.path, t.text])).toEqual([
-    [null, '"$OUT"'],
+    [null, "$OUT"],
   ]);
+  // The text keeps a dynamic path matchable by name, as the bash lexer's raw tokens were.
+  const texts = (source: string) => writeTargets(analyzeShell(source)).map((t) => [t.path, t.text]);
+  expect(texts("dd if=/dev/zero of=$HOME/.env")).toEqual([[null, "$HOME/.env"]]);
+  expect(texts('cp x "$DIR/.env"')).toEqual([[null, "$DIR/.env"]]);
+  expect(texts('echo x | tee "$ROOT"/.env')).toEqual([[null, "$ROOT/.env"]]);
   expect(paths("cmd > $(echo .env)")).toEqual([null]);
 });
 

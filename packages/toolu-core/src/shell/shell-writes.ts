@@ -6,7 +6,7 @@
  * bash writes whichever existing file the pattern matches.
  */
 import { basename } from "node:path";
-import { hasOption, optionValues, parseArgs, type OptionSpec } from "./shell-options.ts";
+import { hasOption, named, optionValues, parseArgs, type OptionSpec } from "./shell-options.ts";
 import type { ShellAnalysis, ShellCommand, ShellRedirect } from "./shell-types.ts";
 
 type Words = readonly (string | null)[];
@@ -31,7 +31,7 @@ export interface WriteTarget {
    * it matches.
    */
   readonly pattern: string | null;
-  /** A redirect target as written; for an argument, its path or pattern (empty when dynamic). */
+  /** The target with quotes removed and expansions as written (`$HOME/.env`), for display and name matching. */
   readonly text: string;
   readonly via: WriteVia;
   /** The command that writes; `null` for a redirect on a compound command. */
@@ -42,6 +42,8 @@ export interface WriteTarget {
 interface Target {
   readonly path: string | null;
   readonly pattern: string | null;
+  /** Quotes removed, expansions as written. */
+  readonly text: string;
 }
 
 const WRITE_OPERATORS: ReadonlySet<string> = new Set([">", ">>", ">|", "&>", "&>>", "<>"]);
@@ -67,7 +69,11 @@ function redirectTargets(
 }
 
 function argAt(command: ShellCommand, index: number): Target {
-  return { path: command.argv[index] ?? null, pattern: command.patterns[index] ?? null };
+  return {
+    path: command.argv[index] ?? null,
+    pattern: command.patterns[index] ?? null,
+    text: command.texts[index] ?? "",
+  };
 }
 
 function join(dir: string, source: string): string {
@@ -75,19 +81,21 @@ function join(dir: string, source: string): string {
 }
 
 function inDir(dir: Target, source: Target): Target {
+  const text = join(dir.text, source.text);
   if (dir.path !== null && source.path !== null)
-    return { path: join(dir.path, source.path), pattern: null };
+    return { path: join(dir.path, source.path), pattern: null, text };
   const d = dir.path ?? dir.pattern;
   const s = source.path ?? source.pattern;
-  return { path: null, pattern: d === null || s === null ? null : join(d, s) };
+  return { path: null, pattern: d === null || s === null ? null : join(d, s), text };
 }
 
+const MOVE: OptionSpec = { valueShort: "tS", valueLong: "target-directory suffix" };
 const COPY_OPTIONS: Readonly<Record<string, OptionSpec>> = {
-  cp: { valueShort: "tS", valueLong: ["target-directory", "suffix"] },
-  mv: { valueShort: "tS", valueLong: ["target-directory", "suffix"] },
+  cp: MOVE,
+  mv: MOVE,
   install: {
     valueShort: "tSmog",
-    valueLong: ["target-directory", "suffix", "mode", "owner", "group", "strip-program"],
+    valueLong: "target-directory suffix mode owner group strip-program",
   },
 };
 
@@ -95,12 +103,13 @@ const COPY_OPTIONS: Readonly<Record<string, OptionSpec>> = {
 function copyTargets(name: string, command: ShellCommand): Target[] {
   const parsed = parseArgs(command.argv, 1, COPY_OPTIONS[name] ?? {});
   const operands = parsed.operandAt.map((index) => argAt(command, index));
-  if (name === "install" && hasOption(parsed, ["d", "directory"])) return operands;
-  const dirOption = parsed.options.find((o) => o.name === "t" || o.name === "target-directory");
+  if (name === "install" && hasOption(parsed, "d directory")) return operands;
+  const dirOption = parsed.options.find((o) => named("t target-directory", o.name));
   if (dirOption !== undefined) {
-    const dir =
+    const value = dirOption.value ?? null;
+    const dir: Target =
       dirOption.at === null
-        ? { path: dirOption.value ?? null, pattern: null }
+        ? { path: value, pattern: null, text: value ?? "" }
         : argAt(command, dirOption.at);
     return operands.map((source) => inDir(dir, source));
   }
@@ -117,26 +126,22 @@ function copyTargets(name: string, command: ShellCommand): Target[] {
 interface InPlaceTool {
   readonly options: OptionSpec;
   /** Options that supply the script, so the first operand is already a file. */
-  readonly script: readonly string[];
+  readonly script: string;
 }
 
 const IN_PLACE: Readonly<Record<"sed" | "perl", InPlaceTool>> = {
   sed: {
-    options: {
-      valueShort: "efl",
-      restShort: "i",
-      valueLong: ["expression", "file", "line-length"],
-    },
-    script: ["e", "f", "expression", "file"],
+    options: { valueShort: "efl", restShort: "i", valueLong: "expression file line-length" },
+    script: "e f expression file",
   },
-  perl: { options: { valueShort: "eE", restShort: "iIMmlx0dDC" }, script: ["e", "E"] },
+  perl: { options: { valueShort: "eE", restShort: "iIMmlx0dDC" }, script: "e E" },
 };
 
 /** sed/perl edit files only in place; their first operand is the script unless an option gave one. */
 function inPlaceTargets(name: "sed" | "perl", command: ShellCommand): Target[] {
   const tool = IN_PLACE[name];
   const parsed = parseArgs(command.argv, 1, tool.options);
-  if (!hasOption(parsed, ["i", "in-place"])) return [];
+  if (!hasOption(parsed, "i in-place")) return [];
   // BSD `sed -i '' …`: the empty word is the backup suffix, not the script.
   const argv = command.argv;
   const bsd = argv.findIndex((word, i) => word === "-i" && argv[i + 1] === "");
@@ -149,18 +154,25 @@ const PYTHON_OPEN = /open\(\s*['"]([^'"]+)['"]\s*,\s*['"]([wax][^'"]*|r[^'"]*\+[
 
 function pythonTargets(argv: Words): Target[] {
   const parsed = parseArgs(argv, 1, { valueShort: "cmWX", stopAtOperand: true });
-  const [script] = optionValues(parsed, ["c"]);
+  const [script] = optionValues(parsed, "c");
   if (script === null || script === undefined) return [];
   return [...script.matchAll(PYTHON_OPEN)].flatMap((match) =>
-    match[1] === undefined ? [] : [{ path: match[1], pattern: null }],
+    match[1] === undefined ? [] : [{ path: match[1], pattern: null, text: match[1] }],
   );
 }
 
-/** `dd of=FILE`; the operand word as a whole never names an existing file, so it is not globbed. */
+/** `dd of=FILE`; the whole `of=…` word never names an existing file, so it is not globbed. */
 function ddTargets(command: ShellCommand): Target[] {
-  return command.argv.flatMap((word, index) => {
-    const text = word ?? command.patterns[index] ?? null;
-    return text?.startsWith("of=") === true ? [{ path: text.slice(3), pattern: null }] : [];
+  return command.texts.flatMap((text, index) => {
+    if (!text.startsWith("of=")) return [];
+    const word = command.argv[index] ?? command.patterns[index] ?? null;
+    return [
+      {
+        path: word?.startsWith("of=") === true ? word.slice(3) : null,
+        pattern: null,
+        text: text.slice(3),
+      },
+    ];
   });
 }
 
@@ -187,10 +199,10 @@ export function writeTargets(analysis: ShellAnalysis): WriteTarget[] {
     const fromArgs =
       found === null
         ? []
-        : found.targets.map(({ path, pattern }) => ({
+        : found.targets.map(({ path, pattern, text }) => ({
             path,
             pattern,
-            text: path ?? pattern ?? "",
+            text,
             via: found.via,
             command,
           }));

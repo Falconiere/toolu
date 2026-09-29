@@ -76,9 +76,9 @@ export interface ResolvedWord {
   readonly value: string | null;
   /** For a word whose only expansion is pathname globbing, its unexpanded pattern. */
   readonly pattern: string | null;
+  /** Quotes removed, expansions left as written (`"$HOME/.env"` is `$HOME/.env`). */
+  readonly text: string;
 }
-
-const DYNAMIC: ResolvedWord = { value: null, pattern: null };
 
 /**
  * Resolve a word statically. A pathname pattern (`.en[v]`, `*.log`) is not a
@@ -87,15 +87,16 @@ const DYNAMIC: ResolvedWord = { value: null, pattern: null };
  */
 export function resolveWord(word: Word): ResolvedWord {
   const parts = word.parts;
-  let value = parts === undefined ? word.value : "";
+  const text = word.value;
+  let value = parts === undefined ? text : "";
   let glob = parts === undefined && hasGlob(word.text);
   for (const part of parts ?? []) {
     glob ||= part.type === "ExtendedGlob" || (part.type === "Literal" && hasGlob(part.text));
     const piece = part.type === "ExtendedGlob" ? part.text : staticPart(part);
-    if (piece === null) return DYNAMIC;
+    if (piece === null) return { value: null, pattern: null, text };
     value += piece;
   }
-  return glob ? { value: null, pattern: value } : { value, pattern: null };
+  return glob ? { value: null, pattern: value, text } : { value, pattern: null, text };
 }
 
 /** The word's value when every part is literal and it is not a pathname pattern, else `null`. */
@@ -103,9 +104,14 @@ export function staticWord(word: Word): string | null {
   return resolveWord(word).value;
 }
 
-function targetOf(word: Word | undefined): { target: string | null; pattern: string | null } {
-  const { value, pattern } = word === undefined ? DYNAMIC : resolveWord(word);
-  return { target: value, pattern };
+function targetOf(word: Word | undefined): {
+  target: string | null;
+  pattern: string | null;
+  text: string;
+} {
+  if (word === undefined) return { target: null, pattern: null, text: "" };
+  const { value, pattern, text } = resolveWord(word);
+  return { target: value, pattern, text };
 }
 
 export function toShellRedirect(redirect: Redirect): ShellRedirect {
@@ -114,7 +120,6 @@ export function toShellRedirect(redirect: Redirect): ShellRedirect {
     operator: redirect.operator,
     fd: redirect.fileDescriptor ?? null,
     ...targetOf(heredoc ? undefined : redirect.target),
-    text: heredoc ? "" : (redirect.target?.text ?? ""),
     heredoc: heredoc
       ? { content: heredocContent(redirect), quoted: redirect.heredocQuoted === true }
       : null,

@@ -23,7 +23,13 @@ const Report = z.object({
     cpu: z.string(),
     date: z.string(),
   }),
-  bundle: z.object({ emptyBytes: Positive, shellBytes: Positive, deltaBytes: Positive }),
+  bundle: z.object({
+    emptyBytes: Positive,
+    shellBytes: Positive,
+    deltaBytes: Positive,
+    fullBytes: Positive,
+    fullDeltaBytes: Positive,
+  }),
   coldStart: z.object({
     runs: Positive,
     emptyP50: Positive,
@@ -50,6 +56,7 @@ test("the shell probe bundle fits the size budget and runs without node_modules"
   expect(res.exitCode).toBe(0);
   const report = Report.parse(JSON.parse(res.stdout));
   expect(report.bundle.deltaBytes).toBeLessThanOrEqual(BUDGET.bundleBytes);
+  expect(report.bundle.fullDeltaBytes).toBeLessThanOrEqual(BUDGET.fullBundleBytes);
   expect(JSON.parse(report.probeOutput)).toEqual({ push: "yes", destination: "feat/x" });
   expect(report.parse.commands).toBe(fixtureCommands().length);
   expect(report.coldStart.runs).toBe(3);
@@ -62,7 +69,13 @@ test.concurrent("the fixture set covers both fixture files", () => {
 test.concurrent("overBudget names every budget a report exceeds", () => {
   const within: ShellBench = {
     machine: { bun: "1.4.2", platform: "linux", arch: "x64", cpu: "cpu", date: "2026-09-28" },
-    bundle: { emptyBytes: 73, shellBytes: 197_570, deltaBytes: 197_497 },
+    bundle: {
+      emptyBytes: 73,
+      shellBytes: 197_570,
+      deltaBytes: 197_497,
+      fullBytes: 205_000,
+      fullDeltaBytes: 204_927,
+    },
     coldStart: { runs: 40, emptyP50: 5, shellP50: 8, deltaP50: 3, emptyP90: 6, shellP90: 9 },
     parse: { commands: 235, samples: 4700, p50Us: 3, p99Us: 40, maxUs: 900 },
     probeOutput: "{}",
@@ -70,12 +83,13 @@ test.concurrent("overBudget names every budget a report exceeds", () => {
   expect(overBudget(within)).toEqual([]);
   const over = {
     ...within,
-    bundle: { ...within.bundle, deltaBytes: 200_001 },
+    bundle: { ...within.bundle, deltaBytes: 200_001, fullDeltaBytes: 210_001 },
     coldStart: { ...within.coldStart, deltaP50: 5.5 },
     parse: { ...within.parse, p99Us: 120 },
   };
   expect(overBudget(over).map((problem) => problem.split(" ")[0])).toEqual([
     "bundle",
+    "full",
     "cold",
     "parse",
   ]);

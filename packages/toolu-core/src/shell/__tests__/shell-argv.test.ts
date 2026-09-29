@@ -22,6 +22,9 @@ const WRAPPED: readonly [string, readonly string[]][] = [
   ["doas -u me git push", ["doas"]],
   ["env -i PATH=/usr/bin git push", ["env"]],
   ["env -u HOME -C /tmp git push", ["env"]],
+  ["env -P /usr/bin git push", ["env"]],
+  ["env - git push", ["env"]],
+  ["env -i - A=1 git push", ["env"]],
   ["command git push", ["command"]],
   ["builtin git push", ["builtin"]],
   ["exec -a name git push", ["exec"]],
@@ -130,4 +133,21 @@ test.concurrent("the exit status of a shell string is its last command's", () =>
   expect(proves("bash -c 'bun test | tail'")).toBe(true);
   expect(analyzeShell("bash -c 'bun test | tail'").commands.at(-2)?.exitProves).toBe(false);
   expect(proves("bash -c 'bun test' || true")).toBe(false);
+});
+
+test.concurrent("a command under xargs proves nothing through the exit status", () => {
+  // `xargs -r` with empty input runs the command zero times and exits 0.
+  const proves = (source: string) =>
+    analyzeShell(source).commands.map((c) => [c.argv[0], c.exitProves]);
+  expect(proves('printf "" | xargs -r bun test')).toEqual([
+    ["printf", false],
+    ["bun", false],
+  ]);
+  expect(proves("xargs bash -c 'bun test'").at(-1)).toEqual(["bun", false]);
+});
+
+test.concurrent("argv words keep their dequoted text, expansions as written", () => {
+  const [command] = analyzeShell(`sudo cp "$HOME/a b" 'c d' e`).commands;
+  expect(command?.argv).toEqual(["cp", null, "c d", "e"]);
+  expect(command?.texts).toEqual(["cp", "$HOME/a b", "c d", "e"]);
 });

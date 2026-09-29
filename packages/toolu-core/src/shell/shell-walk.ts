@@ -26,7 +26,7 @@ import {
   type Statement,
   type While,
 } from "unbash";
-import { runTarget, unwrap, type RunTarget } from "./shell-argv.ts";
+import { alignUnwrapped, runTarget, unwrap, type RunTarget } from "./shell-argv.ts";
 import {
   unreachable,
   type CommandOrigin,
@@ -70,6 +70,7 @@ function unknownCommand(text: string, origin: CommandOrigin, depth: number, sink
     words: [null],
     argv: [null],
     patterns: [null],
+    texts: [text],
     wrappers: [],
     redirects: [],
     pipeline: ALONE,
@@ -139,28 +140,36 @@ function emitCommand(command: Command, ctx: WalkContext, sink: WalkSink): void {
   const resolved =
     command.name === undefined ? [] : [command.name, ...command.suffix].map(resolveWord);
   const words = resolved.map((word) => word.value);
-  const { argv, patterns, wrappers } = unwrap(
-    words,
-    resolved.map((word) => word.pattern),
-  );
+  const unwrapped = unwrap(words);
+  const argv = alignUnwrapped(words, unwrapped, null);
   const redirects = command.redirects.map(toShellRedirect);
   const text = ctx.source.slice(command.pos, command.end);
-  const exitProves = ctx.proves;
+  // xargs may run the command zero times and still exit 0.
+  const proves = ctx.proves && !unwrapped.wrappers.includes("xargs");
   sink.commands.push({
     words,
     argv,
-    patterns,
-    wrappers,
+    patterns: alignUnwrapped(
+      resolved.map((word) => word.pattern),
+      unwrapped,
+      null,
+    ),
+    texts: alignUnwrapped(
+      resolved.map((word) => word.text),
+      unwrapped,
+      "",
+    ),
+    wrappers: unwrapped.wrappers,
     redirects,
     pipeline: ctx.pipeline,
-    exitProves,
+    exitProves: proves,
     origin: ctx.origin,
     depth: ctx.depth,
     text,
   });
 
   const target = runTarget(argv);
-  if (target !== null) runString(target, redirects, text, ctx, sink);
+  if (target !== null) runString(target, redirects, text, { ...ctx, proves }, sink);
 }
 
 function walkPipeline(node: Pipeline, ctx: WalkContext, sink: WalkSink): void {

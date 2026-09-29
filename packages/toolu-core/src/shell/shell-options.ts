@@ -11,8 +11,8 @@ export interface OptionSpec {
   readonly valueShort?: string;
   /** Short letters whose value is only the rest of the cluster, possibly empty (`-i`, `-i.bak`). */
   readonly restShort?: string;
-  /** Long names (without `--`) that take the next word when written without `=`. */
-  readonly valueLong?: readonly string[];
+  /** Space-separated long names (without `--`) that take the next word when written without `=`. */
+  readonly valueLong?: string;
   /** `-<digits>` is one option (`nice -10`). */
   readonly numeric?: boolean;
   /** Stop at the first operand: the rest is a command (wrappers, git globals). */
@@ -86,7 +86,7 @@ function longOption(word: string, following: string | null | undefined, spec: Op
       missingValue: false,
     };
   }
-  if (spec.valueLong?.includes(body) === true) {
+  if (named(spec.valueLong ?? "", body)) {
     return {
       options: [{ name: body, value: following, at: null }],
       consumed: 2,
@@ -139,15 +139,20 @@ export function parseArgs(words: Words, start: number, spec: OptionSpec): Parsed
   return done(Math.min(i, words.length));
 }
 
-/** Values of every option named in `names`, in order. */
-export function optionValues(
-  parsed: ParsedArgs,
-  names: readonly string[],
-): readonly (string | null | undefined)[] {
-  return parsed.options.filter((option) => names.includes(option.name)).map((o) => o.value);
+/** Whether `name` is one of the space-separated `names`. */
+export function named(names: string, name: string): boolean {
+  return ` ${names} `.includes(` ${name} `);
 }
 
-/** Whether any option named in `names` was given. */
-export function hasOption(parsed: ParsedArgs, names: readonly string[]): boolean {
-  return parsed.options.some((option) => names.includes(option.name));
+/** Values of every option among the space-separated `names`, in order. */
+export function optionValues(
+  parsed: ParsedArgs,
+  names: string,
+): readonly (string | null | undefined)[] {
+  return parsed.options.filter((option) => named(names, option.name)).map((o) => o.value);
+}
+
+/** Whether any option among the space-separated `names` was given. */
+export function hasOption(parsed: ParsedArgs, names: string): boolean {
+  return parsed.options.some((option) => named(names, option.name));
 }
