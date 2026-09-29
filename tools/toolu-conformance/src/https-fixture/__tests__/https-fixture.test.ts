@@ -75,6 +75,16 @@ test("TLS verification stays on: without the fixture CA the client fails", async
   expect(fixture.requests).toHaveLength(0);
 });
 
+/**
+ * Puts a variable back as it was. Assigning `undefined` to process.env stores the
+ * string "undefined", which would leak into every later test in the process
+ * (CI runners leave TMPDIR unset).
+ */
+function restoreEnv(name: string, value: string | undefined): void {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}
+
 function entries(dir: string): string[] {
   return readdirSync(dir);
 }
@@ -94,8 +104,8 @@ test("a failed start (no openssl on PATH) throws and leaves no temp dir behind",
   } catch (error) {
     failure = error;
   } finally {
-    process.env["PATH"] = saved.PATH;
-    process.env["TMPDIR"] = saved.TMPDIR;
+    restoreEnv("PATH", saved.PATH);
+    restoreEnv("TMPDIR", saved.TMPDIR);
   }
   expect(followed).toBe(privateTmp);
   expect(failure).toBeInstanceOf(Error);
