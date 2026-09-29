@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "gates": {
+    "preset": "chaotic",
+    "pushReview": { "mode": "maybe" },
+    "commitGate": { "mode": "off" },
+    "sweep": false
+  },
+  "docsSync": { "mode": "block", "surfaces": [], "surfaceExcludes": "nope", "codeSurfaces": ["*.go", 7, "*.zig"] },
+  "agentTier": { "mode": "off" },
+  "lang": {
+    "ts": { "maxFileLines": "120", "maxFnLines": 0, "noMocks": "false" },
+    "rust": { "maxFileLines": -5, "maxFnLines": 45.9, "maxImplLines": 250, "noMocks": false },
+    "python": { "maxFileLines": "off", "maxFnLines": true }
+  },
+  "models": {
+    "enabled": "false",
+    "review": "gpt",
+    "synthesis": "fable",
+    "mechanical": 3,
+    "codex": {
+      "review": { "model": "", "reasoningEffort": "extreme" },
+      "mechanical": { "model": 5 },
+      "exploration": { "model": false, "reasoningEffort": false },
+      "synthesis": { "model": "gpt-x", "reasoningEffort": 3 },
+      "architecture": { "model": "gpt-arch", "reasoningEffort": "max" }
+    }
+  },
+  "telemetry": { "enabled": "false" },
+  "hooks": { "pre-tools": "false", "post-tools": false },
+  "planLedger": { "blockOnUncoveredAcs": "true" },
+  "permissions": { "autoAllow": false }
+}

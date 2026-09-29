@@ -1,0 +1,1 @@
+{ "gates": { "pushReview": { "mode": "block" } }, "lang": { "ts": { "maxFnLines": 42 } }, "docsSync": { "surfaces": ["only.md"] }, "models": { "codex": { "review": { "reasoningEffort": "low" } } }, "skills": { "ast-grep": true } }
