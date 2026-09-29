@@ -255,7 +255,7 @@ function helperOutput(env, command, args) {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"]
   });
-  return run.error === undefined ? run.stdout.replace(/\n+$/, "") : "";
+  return run.error === undefined && run.status === 0 ? run.stdout.replace(/\n+$/, "") : "";
 }
 function keyringToken(env, login) {
   const service = env["JIRA_KEYRING_SERVICE"] || "jira-cli";
@@ -1338,7 +1338,10 @@ async function create2(conn, argv) {
   if (board === "" || name === "") {
     throw new CliExit(1, "Usage: jira sprint create <BOARD_ID> -n <NAME>");
   }
-  const body = { originBoardId: numberValue(TOOL, "BOARD_ID", board), name };
+  const originBoardId = numberValue(TOOL, "BOARD_ID", board);
+  if (!Number.isInteger(originBoardId))
+    throw new CliExit(2, `${TOOL}: BOARD_ID must be an integer`);
+  const body = { originBoardId, name };
   await printLean(conn, await call(conn, "POST", SPRINT, body));
   return 0;
 }

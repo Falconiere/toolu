@@ -157,3 +157,10 @@ test("sprint create with a non-numeric board id exits 2 before any request", asy
   expect(run.status).toBe(2);
   expect(h.fixture.requests).toHaveLength(0);
 });
+
+test("sprint create with a non-integer board id exits 2 before any request", async () => {
+  const run = await h.jira(["sprint", "create", "123.45", "-n", "S"]);
+  expect(run.status).toBe(2);
+  expect(run.stderr).toBe("jira: BOARD_ID must be an integer\n");
+  expect(h.fixture.requests).toHaveLength(0);
+});

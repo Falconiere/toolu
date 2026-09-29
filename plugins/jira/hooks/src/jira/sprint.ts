@@ -38,8 +38,12 @@ async function create(conn: Conn, argv: readonly string[]): Promise<number> {
   if (board === "" || name === "") {
     throw new CliExit(1, "Usage: jira sprint create <BOARD_ID> -n <NAME>");
   }
-  // bash passed the id through `jq --argjson`, which exits 2 on a non-number.
-  const body = { originBoardId: numberValue(TOOL, "BOARD_ID", board), name };
+  // bash passed the id through `jq --argjson`, which exits 2 on a non-number;
+  // a board id is also never fractional, so that exits 2 before any request too.
+  const originBoardId = numberValue(TOOL, "BOARD_ID", board);
+  if (!Number.isInteger(originBoardId))
+    throw new CliExit(2, `${TOOL}: BOARD_ID must be an integer`);
+  const body = { originBoardId, name };
   await printLean(conn, await call(conn, "POST", SPRINT, body));
   return 0;
 }

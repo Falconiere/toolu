@@ -38,14 +38,14 @@ function netrcToken(env: Env, host: string): string {
   return "";
 }
 
-/** A keyring helper's stdout with trailing newlines trimmed, as `$(…)` kept it; empty on any miss. */
+/** A keyring helper's stdout with trailing newlines trimmed; empty unless it ran and exited 0. */
 function helperOutput(env: Env, command: string, args: readonly string[]): string {
   const run = spawnSync(command, args, {
     env,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
   });
-  return run.error === undefined ? run.stdout.replace(/\n+$/, "") : "";
+  return run.error === undefined && run.status === 0 ? run.stdout.replace(/\n+$/, "") : "";
 }
 
 /** Best-effort token from macOS `security`, then Linux `secret-tool`. */

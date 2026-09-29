@@ -112,6 +112,27 @@ test("creds: reads the API token from the OS keyring when env lacks it", async (
   expect(argv).toBe("find-generic-password\n-s\njira-cli\n-a\nkr@x.com\n-w\n");
 });
 
+test("creds: a keyring helper that fails is not a token, even with stdout", async () => {
+  const config = cliConfig({
+    server: "https://acme.atlassian.net",
+    login: "kr@x.com",
+    installation: "Cloud",
+  });
+  const bin = join(sandbox, "bin");
+  mkdirSync(bin);
+  // security prints something but fails; secret-tool finds nothing.
+  writeFileSync(join(bin, "security"), "#!/bin/sh\nprintf 'not-a-token\\n'\nexit 44\n");
+  writeFileSync(join(bin, "secret-tool"), "#!/bin/sh\nexit 1\n");
+  chmodSync(join(bin, "security"), 0o755);
+  chmodSync(join(bin, "secret-tool"), 0o755);
+  const run = await h.jira(["user", "whoami"], {
+    env: { ...NO_ENV_CREDS, JIRA_CLI_CONFIG: config, PATH: `${bin}:${process.env["PATH"] ?? ""}` },
+  });
+  expect(run.status).toBe(1);
+  expect(run.stderr).toContain("one-time setup step");
+  expect(h.fixture.requests).toHaveLength(0);
+});
+
 test("creds: installation Cloud selects api version 3", async () => {
   const config = cliConfig({
     server: "https://acme.atlassian.net",
