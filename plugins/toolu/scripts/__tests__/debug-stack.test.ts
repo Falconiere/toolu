@@ -93,3 +93,8 @@ test.concurrent("unreadable --file exits non-zero", async () => {
   const res = await debugStack(["--file", join(FX, "does-not-exist.txt")]);
   expect(res.exitCode).toBe(2);
 });
+
+test.concurrent("a trace of only runtime frames is recognized, with no app frames listed", async () => {
+  const res = await debugStack([], { stdin: "    at parse (node:internal/json.js:1:1)\n" });
+  expect(res.stdout).toBe("APP FRAMES ():\n(+1 framework/runtime frames collapsed)\n");
+});

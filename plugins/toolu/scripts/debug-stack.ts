@@ -86,6 +86,7 @@ const jsonClean = (s: string) => s.replaceAll("\t", " ");
 
 function summarizeStack(lines: string[], json: boolean, caps: StackCaps): string {
   const { app, noise } = parseFrames(lines);
+  // Noise frames count too: a trace of only runtime frames is still a trace (as in the bash version).
   const recognized = app.length + noise > 0;
   if (json) {
     return `{"app_frames":${jsonList(app, jsonClean)},"noise_frames":${noise},"recognized":${recognized}}\n`;
@@ -99,7 +100,8 @@ function summarizeStack(lines: string[], json: boolean, caps: StackCaps): string
     return out.map((line) => `${line}\n`).join("");
   }
   const over = app.length > caps.maxFrames;
-  // awk printed its uninitialized frame counter as "" — kept for byte parity with the bash version.
+  // With only noise frames, awk printed its uninitialized frame counter as "" (`APP FRAMES ():`);
+  // kept for byte parity with the bash version.
   out.push(`APP FRAMES (${app.length === 0 ? "" : app.length}${over ? "+" : ""}):`);
   for (const frame of app.slice(0, Math.max(Math.min(app.length, caps.maxFrames), 0))) {
     out.push(`  - ${frame}`);
