@@ -29,9 +29,10 @@ function readRegular(path: string): string | null {
   }
 }
 
-/** `wc -w`: runs of non-whitespace. */
+/** `wc -w` in a UTF-8 locale: runs of non-whitespace, where no-break and other
+ * Unicode spaces also separate words (as macOS and GNU wc count them). */
 function wordCount(text: string): number {
-  return text.split(/[ \t\n\v\f\r]+/).filter((word) => word !== "").length;
+  return text.split(/\s+/).filter((word) => word !== "").length;
 }
 
 /** Word count of a file, or null when the file is missing. */
@@ -118,11 +119,13 @@ export function runDocs(root: string): Line[] {
 export function runSkills(root: string): Line[] {
   return [
     // Trimmed skills: word ceiling + trigger phrases that MUST survive the trim.
-    ...checkSkill(root, "delivery-flow", "plugins/delivery-flow/skills/delivery-flow/SKILL.md", 50, [
-      "implement and deliver",
-      "real-data execution",
-      "PR",
-    ]),
+    ...checkSkill(
+      root,
+      "delivery-flow",
+      "plugins/delivery-flow/skills/delivery-flow/SKILL.md",
+      50,
+      ["implement and deliver", "real-data execution", "PR"],
+    ),
     ...checkSkill(root, "brainstorm", "plugins/brainstorm/skills/brainstorm/SKILL.md", 50, [
       "brainstorm",
       "trade-offs",

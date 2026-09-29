@@ -18,7 +18,10 @@ test.concurrent("extractDescription reads a single-line description", () => {
 
 test.concurrent("extractDescription joins a folded (>) block scalar", () => {
   using sb = createSandbox();
-  const file = sb.write("folded.md", "---\nname: x\ndescription: >\n  alpha beta\n  gamma delta\n---\n");
+  const file = sb.write(
+    "folded.md",
+    "---\nname: x\ndescription: >\n  alpha beta\n  gamma delta\n---\n",
+  );
   expect(extractDescription(file)).toBe("alpha beta gamma delta");
 });
 
@@ -63,7 +66,10 @@ test.concurrent("checkSkill flags a missing trigger phrase even when under budge
 
 test.concurrent("checkSkill passes when under budget and phrase present", () => {
   using sb = createSandbox();
-  sb.write("s/SKILL.md", "---\nname: s\ndescription: blurb that must keep this marker intact\n---\n");
+  sb.write(
+    "s/SKILL.md",
+    "---\nname: s\ndescription: blurb that must keep this marker intact\n---\n",
+  );
   expect(reds(checkSkill(sb.project, "s", "s/SKILL.md", 50, ["must keep this"]))).toBe(0);
 });
 
@@ -87,7 +93,9 @@ test.concurrent("the CLI fails closed on a root with none of the targets", async
   using sb = createSandbox();
   const res = await run(["bun", SCRIPT, "docs"], { env: { CONTEXT_BUDGET_ROOT: sb.project } });
   expect(res.exitCode).toBe(1);
-  expect(res.stderr).toContain("RED  session-start: MISSING plugins/toolu/hooks/docs/session-start.md\n");
+  expect(res.stderr).toContain(
+    "RED  session-start: MISSING plugins/toolu/hooks/docs/session-start.md\n",
+  );
   expect(res.stdout).toBe("");
 });
 
@@ -95,4 +103,10 @@ test.concurrent("the CLI rejects an unknown mode with exit 2", async () => {
   const res = await run(["bun", SCRIPT, "bogus"]);
   expect(res.exitCode).toBe(2);
   expect(res.stderr).toBe("usage: context-budget.ts [docs|skills]\n");
+});
+
+test.concurrent("no-break and other Unicode spaces separate words, as wc -w counts them", () => {
+  using sb = createSandbox();
+  const file = sb.write("u.md", "a b　c d\n");
+  expect(countWords(file)).toBe(4);
 });

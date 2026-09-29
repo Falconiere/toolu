@@ -62,7 +62,7 @@ export function summarizeLog(lines: string[], json: boolean, caps: LogCaps): str
     return `{"errors":${jsonList(errs.slice(0, eshow), jsonClean)},"tail":${jsonList(tail, jsonClean)},"total_lines":${total},"truncated":${truncated}}\n`;
   }
 
-  // awk prints its uninitialized counters as "" — kept for byte parity with debug-log.sh.
+  // awk prints its uninitialized counters as "" — kept for byte parity with the bash version.
   const eshowLabel = errs.length === 0 ? "" : String(eshow);
   const totalLabel = total === 0 ? "" : String(total);
   const out = [`ERRORS/WARNINGS (${eshowLabel}${eover > 0 ? "+" : ""}):`];

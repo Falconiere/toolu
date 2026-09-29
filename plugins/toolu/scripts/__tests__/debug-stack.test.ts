@@ -51,7 +51,11 @@ test.concurrent("language-agnostic: both fixtures produce an APP FRAMES section"
 test.concurrent("json mode emits recognized:true with a non-empty app_frames", async () => {
   const res = await debugStack(["--json", "--file", RUST]);
   expect(res.exitCode).toBe(0);
-  const out = JSON.parse(res.stdout) as { app_frames: string[]; noise_frames: number; recognized: boolean };
+  const out = JSON.parse(res.stdout) as {
+    app_frames: string[];
+    noise_frames: number;
+    recognized: boolean;
+  };
   expect(out.recognized).toBe(true);
   expect(out.app_frames[0]).toStartWith("panicker::level_three");
   expect(out.noise_frames).toBeGreaterThan(0);
@@ -60,7 +64,9 @@ test.concurrent("json mode emits recognized:true with a non-empty app_frames", a
 test.concurrent("DEBUG_MAX_FRAMES cap truncates and marks overflow", async () => {
   const res = await debugStack(["--file", RUST], { env: { DEBUG_MAX_FRAMES: "1" } });
   expect(res.exitCode).toBe(0);
-  expect(res.stdout).toMatch(/^APP FRAMES \(\d+\+\):\n {2}- panicker::level_three.*\n {2}\.\.\. \(\+\d+ more\)\n/);
+  expect(res.stdout).toMatch(
+    /^APP FRAMES \(\d+\+\):\n {2}- panicker::level_three.*\n {2}\.\.\. \(\+\d+ more\)\n/,
+  );
 });
 
 test.concurrent("unrecognized input falls back to capped raw passthrough, exit 0", async () => {

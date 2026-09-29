@@ -47,12 +47,16 @@ export type Summary = {
 
 export function collect(lines: string[], caps: TestfailCaps): Summary {
   const s: Summary = { failures: [], errors: [], locations: [], over: { f: 0, e: 0, l: 0 } };
-  const seen = { failures: new Set<string>(), errors: new Set<string>(), locations: new Set<string>() };
+  const seen = {
+    failures: new Set<string>(),
+    errors: new Set<string>(),
+    locations: new Set<string>(),
+  };
   const add = (list: "failures" | "errors" | "locations", max: number, raw: string) => {
     const val = trim(raw);
     if (val === "" || seen[list].has(val)) return;
     if (s[list].length >= max) {
-      // The overflow bucket is picked by comparing cap VALUES, as debug-testfail.sh did:
+      // The overflow bucket is picked by comparing cap VALUES, as the bash version did:
       // with equal caps (the defaults) every overflow lands in the failures bucket.
       const bucket: Bucket = max === caps.maxFailures ? "f" : max === caps.maxErrors ? "e" : "l";
       s.over[bucket]++;
@@ -65,7 +69,11 @@ export function collect(lines: string[], caps: TestfailCaps): Summary {
     const bun = BUN_FAIL.exec(line);
     const generic = GENERIC_FAIL.exec(line);
     if (bun !== null) {
-      add("failures", caps.maxFailures, line.slice(bun.index + bun[0].length).replace(BUN_DURATION, ""));
+      add(
+        "failures",
+        caps.maxFailures,
+        line.slice(bun.index + bun[0].length).replace(BUN_DURATION, ""),
+      );
     } else if (CARGO_FAIL.test(line)) {
       const name = line.replace(/^[ \t]*test[ \t]+/, "").replace(/[ \t]+\.\.\..*/s, "");
       add("failures", caps.maxFailures, name);
@@ -93,7 +101,8 @@ export function summarizeTestfail(lines: string[], json: boolean, caps: Testfail
   if (!recognized) {
     out.push(`debug-testfail: no recognizable test failures ${utf8Bytes("—")} raw input (capped):`);
     out.push(...lines.slice(0, Math.max(Math.min(lines.length, caps.maxRaw), 0)));
-    if (lines.length > caps.maxRaw) out.push(`... (+${Math.trunc(lines.length - caps.maxRaw)} more lines)`);
+    if (lines.length > caps.maxRaw)
+      out.push(`... (+${Math.trunc(lines.length - caps.maxRaw)} more lines)`);
     return out.map((line) => `${line}\n`).join("");
   }
   const section = (title: string, items: string[], bucket: Bucket, prefix: string) => {

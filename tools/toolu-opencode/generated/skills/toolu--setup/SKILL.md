@@ -5,12 +5,12 @@ name: toolu--setup
 
 # Set up toolu agents
 
-Use the bundled [installer](scripts/setup.sh). It manages `quick-task`,
+Use the bundled [installer](scripts/setup.ts); run it with `bun`. It manages `quick-task`,
 `deep-explore`, `research-agent`, `implementer`, and `architect` under
 `${CODEX_HOME:-$HOME/.codex}/agents`.
 
-1. Run `bash <installer-path> preview` and show the exact plan.
-2. For installs and managed upgrades, run `bash <installer-path> install`.
+1. Run `bun <installer-path> preview` and show the exact plan.
+2. For installs and managed upgrades, run `bun <installer-path> install`.
 3. If preview reports an unmanaged conflict, inspect only the named file and
    ask for explicit confirmation before `install --force`. The script creates a
    timestamped backup before replacement.

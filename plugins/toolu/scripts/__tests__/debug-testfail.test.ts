@@ -10,7 +10,8 @@ const FX = join(import.meta.dir, "fixtures", "debug");
 const BUN = join(FX, "bun-testfail.txt");
 const CARGO = join(FX, "cargo-testfail.txt");
 
-const debugTestfail = (args: string[], opts: RunOptions = {}) => run(["bun", SCRIPT, ...args], opts);
+const debugTestfail = (args: string[], opts: RunOptions = {}) =>
+  run(["bun", SCRIPT, ...args], opts);
 
 test.concurrent("bun: surfaces both failed test names", async () => {
   const res = await debugTestfail(["--file", BUN]);

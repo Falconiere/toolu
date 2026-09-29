@@ -94,11 +94,13 @@ export function summarizeStack(lines: string[], json: boolean, caps: StackCaps):
   if (!recognized) {
     out.push(`debug-stack: no recognizable stack frames ${utf8Bytes("—")} raw input (capped):`);
     out.push(...lines.slice(0, Math.max(Math.min(lines.length, caps.maxRaw), 0)));
-    if (lines.length > caps.maxRaw) out.push(`... (+${Math.trunc(lines.length - caps.maxRaw)} more lines)`);
+    if (lines.length > caps.maxRaw)
+      out.push(`... (+${Math.trunc(lines.length - caps.maxRaw)} more lines)`);
     return out.map((line) => `${line}\n`).join("");
   }
   const over = app.length > caps.maxFrames;
-  out.push(`APP FRAMES (${app.length}${over ? "+" : ""}):`);
+  // awk printed its uninitialized frame counter as "" — kept for byte parity with the bash version.
+  out.push(`APP FRAMES (${app.length === 0 ? "" : app.length}${over ? "+" : ""}):`);
   for (const frame of app.slice(0, Math.max(Math.min(app.length, caps.maxFrames), 0))) {
     out.push(`  - ${frame}`);
   }

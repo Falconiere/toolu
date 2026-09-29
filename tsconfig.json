@@ -6,6 +6,9 @@
     "tools/*/src/**/*.ts",
     "plugins/epic-orchestrator/scripts/**/*.ts",
     "plugins/delivery-flow/skills/__tests__/*.ts",
+    "plugins/toolu/scripts/**/*.ts",
+    "plugins/toolu/skills/setup/scripts/*.ts",
+    "plugins/toolu/skills/__tests__/*.ts",
     "plugins/*/hooks/src/**/*.ts"
   ],
   "exclude": ["node_modules", "**/fixtures/**", "tooling/conventions/**"]

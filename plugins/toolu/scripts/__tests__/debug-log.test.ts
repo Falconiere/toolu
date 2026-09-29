@@ -9,8 +9,7 @@ const SCRIPT = join(import.meta.dir, "..", "debug-log.ts");
 const FX = join(import.meta.dir, "fixtures", "debug");
 const BIG = join(FX, "big.log");
 
-const debugLog = (args: string[], opts: RunOptions = {}) =>
-  run(["bun", SCRIPT, ...args], opts);
+const debugLog = (args: string[], opts: RunOptions = {}) => run(["bun", SCRIPT, ...args], opts);
 const lineCount = (out: string) => out.split("\n").filter((line) => line !== "").length;
 
 test.concurrent("big.log: status 0 and output line count <= DEBUG_MAX_LINES (default 100)", async () => {
@@ -48,7 +47,11 @@ test.concurrent("DEBUG_MAX_BYTES=200 drops trailing lines and says so", async ()
 test.concurrent("json mode on big.log: truncated:true with a total_lines field", async () => {
   const res = await debugLog(["--json", "--file", BIG]);
   expect(res.exitCode).toBe(0);
-  const out = JSON.parse(res.stdout) as { truncated: boolean; total_lines: number; errors: string[] };
+  const out = JSON.parse(res.stdout) as {
+    truncated: boolean;
+    total_lines: number;
+    errors: string[];
+  };
   expect(out.truncated).toBe(true);
   expect(out.total_lines).toBeGreaterThanOrEqual(1000);
   expect(out.errors.length).toBeGreaterThan(0);
@@ -62,7 +65,8 @@ test.concurrent("dedup: identical ERROR lines collapse to one in the errors sect
 });
 
 test.concurrent("dedup: timestamped repeats collapse; json control bytes stay valid JSON", async () => {
-  const stdin = "2026-06-18T10:00:00Z error: x\n2026-06-18T10:00:01Z error: x\n\u001b[31mfail\tred\r\n";
+  const stdin =
+    "2026-06-18T10:00:00Z error: x\n2026-06-18T10:00:01Z error: x\n\u001b[31mfail\tred\r\n";
   const res = await debugLog(["--json"], { stdin });
   expect(JSON.parse(res.stdout)).toEqual({
     errors: ["2026-06-18T10:00:00Z error: x", "\u001b[31mfail red"],

@@ -49,7 +49,9 @@ test.concurrent("install writes all five profiles to an explicit CODEX_HOME", as
   expect(res.stdout).toContain("INSTALLED 5 UPDATED 0 UNCHANGED 0\n");
   expect(res.stdout).toEndWith("Restart Codex to reload custom agent profiles.\n");
   for (const { name } of PROFILES) {
-    expect(read(join(codexHome, "agents", `${name}.toml`))).toBe(read(join(TEMPLATES, `${name}.toml`)));
+    expect(read(join(codexHome, "agents", `${name}.toml`))).toBe(
+      read(join(TEMPLATES, `${name}.toml`)),
+    );
     // The installed profile is the TOML Codex loads.
     expect(Bun.TOML.parse(read(join(codexHome, "agents", `${name}.toml`)))).toMatchObject({ name });
   }
@@ -83,7 +85,9 @@ test.concurrent("a changed managed profile is updated after a timestamped backup
   expect(res.stdout).toContain("INSTALLED 0 UPDATED 1 UNCHANGED 4\n");
   const backup = join(env.CODEX_HOME, "agents", ".toolu-backups", stamp);
   expect(res.stdout).toContain(`BACKUP ${backup}\n`);
-  expect(read(join(backup, "quick-task.toml")).split("\n")).toContain('model_reasoning_effort = "low"');
+  expect(read(join(backup, "quick-task.toml")).split("\n")).toContain(
+    'model_reasoning_effort = "low"',
+  );
   expect(read(profile)).toBe(read(join(TEMPLATES, "quick-task.toml")));
 });
 
@@ -138,9 +142,9 @@ test.concurrent("remove requires explicit confirmation and then preserves recove
   expect(res.exitCode).toBe(0);
   expect(res.stdout).toContain("REMOVED 5 ABSENT 0\n");
   expect(existsSync(profile)).toBe(false);
-  expect(existsSync(join(env.CODEX_HOME, "agents", ".toolu-backups", stamp, "quick-task.toml"))).toBe(
-    true,
-  );
+  expect(
+    existsSync(join(env.CODEX_HOME, "agents", ".toolu-backups", stamp, "quick-task.toml")),
+  ).toBe(true);
 });
 
 test.concurrent("invalid template TOML fails before the destination is created", async () => {
@@ -154,9 +158,7 @@ test.concurrent("invalid template TOML fails before the destination is created",
     "install",
   );
   expect(res.exitCode).toBe(1);
-  expect(res.stderr).toBe(
-    `toolu setup: invalid agent template: ${templateDir}/architect.toml\n`,
-  );
+  expect(res.stderr).toBe(`toolu setup: invalid agent template: ${templateDir}/architect.toml\n`);
   expect(existsSync(join(codexHome, "agents"))).toBe(false);
 });
 
@@ -175,7 +177,9 @@ test.concurrent("an unknown command or flag prints usage and exits 2", async () 
   for (const args of [["deploy"], ["install", "--now"], []]) {
     const res = await setup({ CODEX_HOME: join(sb.root, "codex") }, ...args);
     expect(res.exitCode).toBe(2);
-    expect(res.stderr).toBe("Usage: setup.ts preview | install [--force] | remove --yes [--force]\n");
+    expect(res.stderr).toBe(
+      "Usage: setup.ts preview | install [--force] | remove --yes [--force]\n",
+    );
   }
 });
 
