@@ -49,4 +49,4 @@ export {
 } from "./push-waiver.ts";
 export { renderVerdictStatus, verdictMain, verdictReport, type VerdictReport } from "./verdict.ts";
 export type { Gate, GateState } from "./verdict-gates.ts";
-export { ACCEPTED_REVIEWERS } from "./verdict-review.ts";
+export { ACCEPTED_REVIEWERS } from "./review-state.ts";

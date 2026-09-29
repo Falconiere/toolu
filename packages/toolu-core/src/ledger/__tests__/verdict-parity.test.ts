@@ -12,7 +12,7 @@ import { join } from "node:path";
 import type { Sandbox } from "@toolu/conformance/harness/sandbox";
 import { diffSha } from "../../state/diff-sha.ts";
 import { verdictMain } from "../verdict.ts";
-import { ACCEPTED_REVIEWERS } from "../verdict-review.ts";
+import { ACCEPTED_REVIEWERS } from "../review-state.ts";
 import { LIB } from "./ledger-parity-helpers.ts";
 import { commit, planDoc, step, twin, type Action, type Scenario } from "./ledger-scenario.ts";
 
@@ -310,10 +310,8 @@ describe("verdictMain vs verdict.sh", () => {
   }
 });
 
-test("ACCEPTED_REVIEWERS equals push-review.sh's accepted_reviewers literal", () => {
-  const src = readFileSync(join(LIB, "../pre-tools/modules/push-review.sh"), "utf8");
-  const literal = /accepted_reviewers='(\[[^\]]*\])'/.exec(src)?.[1] ?? "";
-  expect(JSON.parse(literal)).toEqual([...ACCEPTED_REVIEWERS]);
+/** The native push-review gate imports ACCEPTED_REVIEWERS; verdict.sh keeps its own copy. */
+test("ACCEPTED_REVIEWERS equals verdict.sh's ACCEPTED_REVIEWERS literal", () => {
   const verdictSrc = readFileSync(join(LIB, "verdict.sh"), "utf8");
   expect(verdictSrc).toContain(`ACCEPTED_REVIEWERS='${JSON.stringify(ACCEPTED_REVIEWERS)}'`);
 });

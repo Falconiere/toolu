@@ -44,6 +44,7 @@
     "./dispatch": "./src/dispatch/dispatch.ts",
     "./gates": "./src/gates/gates.ts",
     "./gates/mcp-hook": "./src/gates/mcp-hook.ts",
+    "./gates/agent-tier": "./src/gates/agent-tier.ts",
     "./shell": "./src/shell/shell.ts",
     "./shell/writes": "./src/shell/shell-writes.ts",
     "./detect": "./src/detect/detect.ts"

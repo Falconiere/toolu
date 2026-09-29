@@ -117,7 +117,7 @@ function encoded(
 }
 
 async function runNative(
-  module: Extract<ToolModule, { kind: "native" }>,
+  module: ToolModule,
   event: RegistryHookEvent,
   ctx: RegistryContext,
 ): Promise<ModuleResult> {
@@ -133,15 +133,6 @@ async function runNative(
 
 type Walk = { payload: Payload; session: Session; event: RegistryHookEvent; ctx: RegistryContext };
 
-async function runBuiltin(module: ToolModule, walk: Walk): Promise<ModuleResult> {
-  if (module.kind === "native") return runNative(module, walk.event, walk.ctx);
-  return runBash(
-    module.path,
-    moduleStdin(walk.payload.text),
-    moduleEnv(walk.payload, walk.session),
-  );
-}
-
 /** Sequential by contract: a module must not run after a deny. */
 async function walkBuiltins(
   builtins: readonly ToolModule[],
@@ -151,7 +142,7 @@ async function walkBuiltins(
 ): Promise<ModuleResult | undefined> {
   const module = builtins[at];
   if (module === undefined) return undefined;
-  const done = consume(state, module.name, await runBuiltin(module, walk));
+  const done = consume(state, module.name, await runNative(module, walk.event, walk.ctx));
   return done ?? walkBuiltins(builtins, at + 1, walk, state);
 }
 

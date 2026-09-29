@@ -7,8 +7,17 @@
  * its golden is the known-wrong baseline and the bundle must differ.
  */
 import { expect, test } from "bun:test";
+import { MAX_SHELL_INPUT } from "@toolu/core/shell";
 import { decisionOf } from "./pre-tool-modules-b-cases.ts";
-import { comparable, runCase, type Captured, type GateCase } from "./pre-tool-modules-c-cases.ts";
+import {
+  commitFile,
+  comparable,
+  featureRepo,
+  group,
+  runCase,
+  type Captured,
+  type GateCase,
+} from "./pre-tool-modules-c-cases.ts";
 import { MODULE_CASES, readGolden } from "./pre-tool-modules-c-golden.ts";
 
 const golden = readGolden();
@@ -44,3 +53,30 @@ for (const c of MODULE_CASES) {
     CASE_TIMEOUT_MS,
   );
 }
+
+/**
+ * Beyond bash: a line over the shell parser's size cap cannot be analyzed, and
+ * none of these workflow gates treats it as a push (a large heredoc must not
+ * nag). Bash's lexer took minutes on such a line, so there is no golden.
+ */
+const oversize = group({})({
+  name: "workflow gates: an unanalyzable oversize push line is not judged",
+  config: { version: 1, gates: { preset: "strict" } },
+  setup: (sb) => {
+    featureRepo(sb);
+    commitFile(sb, "src/tool.ts", "export {};");
+  },
+  command: `git push # ${"x".repeat(MAX_SHELL_INPUT)}`,
+  expect: "silent",
+});
+
+test.concurrent(
+  oversize.name,
+  async () => {
+    const { text } = decisionOf((await runCase(oversize)).stdout);
+    for (const needle of ["Code review required", "docs-sync:", "plan-ledger:"]) {
+      expect(text).not.toContain(needle);
+    }
+  },
+  CASE_TIMEOUT_MS,
+);

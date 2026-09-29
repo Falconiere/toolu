@@ -1,6 +1,1014 @@
 {
   "base": "2912cd9d",
   "cases": {
+    "agent-tier: a running step is preferred over next (joins s1/haiku, not s2/opus)": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"plan step \\\"s1\\\" expects model tier \\\"haiku\\\" but this delegation used \\\"sonnet\\\"\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_x.jsonl": "{\"model\":\"sonnet\",\"subagent_type\":null,\"reasoning_effort\":null,\"step_id\":\"s1\",\"step_model\":\"haiku\",\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/x\",\"event\":\"delegation\"}\n"
+      }
+    },
+    "agent-tier: codex spawn_agent with a model mismatch under agentTier.mode=block": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan step \\\"s2\\\" expects model tier \\\"opus\\\" but this delegation used \\\"gpt-5.6-terra\\\"\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.codex/tmp/telemetry/feat_x.jsonl": "{\"model\":\"gpt-5.6-terra\",\"subagent_type\":\"reviewer\",\"reasoning_effort\":null,\"step_id\":\"s2\",\"step_model\":\"opus\",\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/x\",\"event\":\"delegation\"}\n"
+      }
+    },
+    "agent-tier: codex spawn_agent with task_name and a model mismatch, default advise": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"plan step \\\"s2\\\" expects model tier \\\"opus\\\" but this delegation used \\\"gpt-5.6-terra\\\"\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.codex/tmp/telemetry/feat_x.jsonl": "{\"model\":\"gpt-5.6-terra\",\"subagent_type\":\"implementer\",\"reasoning_effort\":\"medium\",\"step_id\":\"s2\",\"step_model\":\"opus\",\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/x\",\"event\":\"delegation\"}\n"
+      }
+    },
+    "agent-tier: malformed stdin JSON fails open with no output and no telemetry": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "agent-tier: matching model gives no advisory and no deny": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_x.jsonl": "{\"model\":\"opus\",\"subagent_type\":null,\"reasoning_effort\":null,\"step_id\":\"s2\",\"step_model\":\"opus\",\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/x\",\"event\":\"delegation\"}\n"
+      }
+    },
+    "agent-tier: model mismatch under agentTier.mode=block is denied": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan step \\\"s2\\\" expects model tier \\\"opus\\\" but this delegation used \\\"sonnet\\\"\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_x.jsonl": "{\"model\":\"sonnet\",\"subagent_type\":null,\"reasoning_effort\":null,\"step_id\":\"s2\",\"step_model\":\"opus\",\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/x\",\"event\":\"delegation\"}\n"
+      }
+    },
+    "agent-tier: model mismatch under agentTier.mode=off is silent but still recorded": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_x.jsonl": "{\"model\":\"sonnet\",\"subagent_type\":null,\"reasoning_effort\":null,\"step_id\":\"s2\",\"step_model\":\"opus\",\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/x\",\"event\":\"delegation\"}\n"
+      }
+    },
+    "agent-tier: model mismatch vs the next step's model, default advise, names both tiers": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"plan step \\\"s2\\\" expects model tier \\\"opus\\\" but this delegation used \\\"sonnet\\\"\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_x.jsonl": "{\"model\":\"sonnet\",\"subagent_type\":null,\"reasoning_effort\":null,\"step_id\":\"s2\",\"step_model\":\"opus\",\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/x\",\"event\":\"delegation\"}\n"
+      }
+    },
+    "agent-tier: no jq is a no-op in bash, the native hook records the delegation and decides normally": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "agent-tier: no ledger at all records step_id and step_model null, no advisory": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_x.jsonl": "{\"model\":\"opus\",\"subagent_type\":null,\"reasoning_effort\":null,\"step_id\":null,\"step_model\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/x\",\"event\":\"delegation\"}\n"
+      }
+    },
+    "agent-tier: no model param records model null and no advisory (inherit is legitimate)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_x.jsonl": "{\"model\":null,\"subagent_type\":\"fork\",\"reasoning_effort\":null,\"step_id\":\"s2\",\"step_model\":\"opus\",\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/x\",\"event\":\"delegation\"}\n"
+      }
+    },
+    "agent-tier: tool_name Agent appends a delegation event with model and subagent_type": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_x.jsonl": "{\"model\":\"sonnet\",\"subagent_type\":\"implementer\",\"reasoning_effort\":null,\"step_id\":null,\"step_model\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/x\",\"event\":\"delegation\"}\n"
+      }
+    },
+    "agent-tier: tool_name spawn_agent maps Codex task_name to subagent_type telemetry": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.codex/tmp/telemetry/feat_x.jsonl": "{\"model\":\"gpt-5.6-terra\",\"subagent_type\":\"implementer\",\"reasoning_effort\":\"medium\",\"step_id\":null,\"step_model\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/x\",\"event\":\"delegation\"}\n"
+      }
+    },
+    "agent-tier: tool_name Task appends a delegation event too (both client namings)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_x.jsonl": "{\"model\":\"haiku\",\"subagent_type\":\"quick-task\",\"reasoning_effort\":null,\"step_id\":null,\"step_model\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/x\",\"event\":\"delegation\"}\n"
+      }
+    },
+    "agent-tier: tool_name TaskCreate records no event and prints nothing": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "agent-tier: unreadable or corrupt ledger fails open, step_id and step_model null": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_x.jsonl": "{\"model\":\"opus\",\"subagent_type\":null,\"reasoning_effort\":null,\"step_id\":null,\"step_model\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/x\",\"event\":\"delegation\"}\n"
+      }
+    },
+    "docs-sync: #283 --git-dir with a separate value: a push is nudged": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: #283 -C with a space: the worktree's code change is nudged": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: #283 a backslash-newline continuation: a push is nudged": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: #283 an absolute git path: a push is nudged": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: #283 bash -c: a push is nudged": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: #283 env -i: a push is nudged": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: #283 eval: a push is nudged": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: #283 nice: a push is nudged": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: #283 sudo -u: a push is nudged": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: #283 timeout: a push is nudged": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: #283 xargs: a push is nudged": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: a corrupted attestation file falls safe (still fires)": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"docs-sync: this branch changes code but no documentation surface (README / docs/*.md / SKILL.md). Update the doc that describes this behavior, OR attest none is needed by writing $ROOT/project/.claude/tmp/docs-sync/feat_example.json with { \\\"version\\\": 1, \\\"diff_sha\\\": \\\"20975505f093b10cf623dc0e5f546fd05c0aa9a3\\\", \\\"decision\\\": \\\"not-needed\\\", \\\"note\\\": \\\"why\\\" }. Advisory only — this does not block the push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"docs_nudge\"}\n"
+      }
+    },
+    "docs-sync: a doc-only change (no code) is silent": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: a fresh diff-sha attestation silences the advisory": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"decision\":\"not-needed\",\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"docs_attested\"}\n"
+      }
+    },
+    "docs-sync: a project surfaces override is honored": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: a stale attestation (diff changed) does NOT silence it": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"docs-sync: this branch changes code but no documentation surface (README / docs/*.md / SKILL.md). Update the doc that describes this behavior, OR attest none is needed by writing $ROOT/project/.claude/tmp/docs-sync/feat_example.json with { \\\"version\\\": 1, \\\"diff_sha\\\": \\\"68ed3baa81781442f2fc7f2d40b7f872a4542ffc\\\", \\\"decision\\\": \\\"not-needed\\\", \\\"note\\\": \\\"why\\\" }. Advisory only — this does not block the push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"docs_nudge\"}\n"
+      }
+    },
+    "docs-sync: advisory is never a blocking decision (advisory-only invariant)": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"docs-sync: this branch changes code but no documentation surface (README / docs/*.md / SKILL.md). Update the doc that describes this behavior, OR attest none is needed by writing $ROOT/project/.claude/tmp/docs-sync/feat_example.json with { \\\"version\\\": 1, \\\"diff_sha\\\": \\\"20975505f093b10cf623dc0e5f546fd05c0aa9a3\\\", \\\"decision\\\": \\\"not-needed\\\", \\\"note\\\": \\\"why\\\" }. Advisory only — this does not block the push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"docs_nudge\"}\n"
+      }
+    },
+    "docs-sync: Bash but not git push exits silently": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: code change WITH a nested docs/ guide touch is silent": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: code change WITH a README touch is silent": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: code change WITH a SKILL.md trigger touch is silent": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: code change with no doc surface fires an advisory": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"docs-sync: this branch changes code but no documentation surface (README / docs/*.md / SKILL.md). Update the doc that describes this behavior, OR attest none is needed by writing $ROOT/project/.claude/tmp/docs-sync/feat_example.json with { \\\"version\\\": 1, \\\"diff_sha\\\": \\\"20975505f093b10cf623dc0e5f546fd05c0aa9a3\\\", \\\"decision\\\": \\\"not-needed\\\", \\\"note\\\": \\\"why\\\" }. Advisory only — this does not block the push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"docs_nudge\"}\n"
+      }
+    },
+    "docs-sync: code change with ONLY a release-note touch still fires": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"docs-sync: this branch changes code but no documentation surface (README / docs/*.md / SKILL.md). Update the doc that describes this behavior, OR attest none is needed by writing $ROOT/project/.claude/tmp/docs-sync/feat_example.json with { \\\"version\\\": 1, \\\"diff_sha\\\": \\\"b7a9f57c5ce67cfa818561a5f30e62cd32201a5c\\\", \\\"decision\\\": \\\"not-needed\\\", \\\"note\\\": \\\"why\\\" }. Advisory only — this does not block the push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"docs_nudge\"}\n"
+      }
+    },
+    "docs-sync: default mode (advise): allow + advisory context + docs_nudge telemetry": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"docs-sync: this branch changes code but no documentation surface (README / docs/*.md / SKILL.md). Update the doc that describes this behavior, OR attest none is needed by writing $ROOT/project/.claude/tmp/docs-sync/feat_example.json with { \\\"version\\\": 1, \\\"diff_sha\\\": \\\"20975505f093b10cf623dc0e5f546fd05c0aa9a3\\\", \\\"decision\\\": \\\"not-needed\\\", \\\"note\\\": \\\"why\\\" }. Advisory only — this does not block the push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"docs_nudge\"}\n"
+      }
+    },
+    "docs-sync: detached HEAD is a silent no-op": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: docs_attested: a matching attestation fires docs_attested with its decision": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"decision\":\"not-needed\",\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"docs_attested\"}\n"
+      }
+    },
+    "docs-sync: docs_nudge: code change without a doc surface fires the advisory event": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"docs-sync: this branch changes code but no documentation surface (README / docs/*.md / SKILL.md). Update the doc that describes this behavior, OR attest none is needed by writing $ROOT/project/.claude/tmp/docs-sync/feat_example.json with { \\\"version\\\": 1, \\\"diff_sha\\\": \\\"20975505f093b10cf623dc0e5f546fd05c0aa9a3\\\", \\\"decision\\\": \\\"not-needed\\\", \\\"note\\\": \\\"why\\\" }. Advisory only — this does not block the push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"docs_nudge\"}\n"
+      }
+    },
+    "docs-sync: empty diff against base is a silent no-op": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: missing base branch is a silent no-op": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: mode=block: code-without-doc, no attestation -> push denied, reason mentions docs": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"docs-sync: this branch changes code but no documentation surface (README / docs/*.md / SKILL.md). Update the doc that describes this behavior, OR attest none is needed by writing $ROOT/project/.claude/tmp/docs-sync/feat_example.json with { \\\"version\\\": 1, \\\"diff_sha\\\": \\\"20975505f093b10cf623dc0e5f546fd05c0aa9a3\\\", \\\"decision\\\": \\\"not-needed\\\", \\\"note\\\": \\\"why\\\" }. Push denied until a doc is updated or a valid attestation is written.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"docs_nudge\"}\n"
+      }
+    },
+    "docs-sync: mode=block: doc file present in diff -> allow, no output, no deny": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: mode=block: valid attestation (module's own path resolution) -> allow + docs_attested": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"decision\":\"not-needed\",\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"docs_attested\"}\n"
+      }
+    },
+    "docs-sync: mode=junk: warns on stderr and falls back to advise behavior": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"docs-sync: this branch changes code but no documentation surface (README / docs/*.md / SKILL.md). Update the doc that describes this behavior, OR attest none is needed by writing $ROOT/project/.claude/tmp/docs-sync/feat_example.json with { \\\"version\\\": 1, \\\"diff_sha\\\": \\\"20975505f093b10cf623dc0e5f546fd05c0aa9a3\\\", \\\"decision\\\": \\\"not-needed\\\", \\\"note\\\": \\\"why\\\" }. Advisory only — this does not block the push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"docs_nudge\"}\n"
+      }
+    },
+    "docs-sync: mode=off: allow, no advisory, no telemetry file": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: mode=off: valid attestation present still emits NO telemetry (off means off)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: non-Bash tool exits silently": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "docs-sync: parity (docs-sync.sh): attestation keyed to the raw-formula sha still silences the nudge": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"decision\":\"not-needed\",\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"docs_attested\"}\n"
+      }
+    },
+    "docs-sync: under a surfaces override, README no longer counts": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"docs-sync: this branch changes code but no documentation surface (README / docs/*.md / SKILL.md). Update the doc that describes this behavior, OR attest none is needed by writing $ROOT/project/.claude/tmp/docs-sync/feat_example.json with { \\\"version\\\": 1, \\\"diff_sha\\\": \\\"9391c935cf4a0904ddb8a4267d08ce7eb41502df\\\", \\\"decision\\\": \\\"not-needed\\\", \\\"note\\\": \\\"why\\\" }. Advisory only — this does not block the push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"docs_nudge\"}\n"
+      }
+    },
+    "plan-ledger: #283 --git-dir with a separate value: a push waits for the plan": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: #283 -C with a space: the worktree's red plan waits": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: #283 a backslash-newline continuation: a push waits for the plan": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: #283 an absolute git path: a push waits for the plan": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: #283 bash -c: a push waits for the plan": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: #283 env -i: a push waits for the plan": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: #283 eval: a push waits for the plan": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: #283 nice: a push waits for the plan": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: #283 sudo -u: a push waits for the plan": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: #283 timeout: a push waits for the plan": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: #283 xargs: a push waits for the plan": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: a legacy ledger without the key keeps the old contract": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: a red step is still reported before any verify talk": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: push blocked — steps not fresh-green:\\ns1: red — one\\n\\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run docs/toolu/plans/2026-06-14-planning-hardness.md\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: a running step denies and is named as a blocker": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: push blocked — steps not fresh-green:\\ns2: running — second\\n\\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run docs/toolu/plans/2026-06-14-planning-hardness.md\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: a verified ledger at the current diff allows": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: a verified ledger from an older diff asks again": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: every step is green, but not verified against the current diff.\\n\\nScoped runs judge a step on its own `paths`; the push gate judges it on the whole branch.\\n\\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run docs/toolu/plans/2026-06-14-planning-hardness.md --verify\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: ac_coverage records covered/uncovered counts from a plan+spec+ledger fixture": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"covered\":1,\"uncovered\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"ac_coverage\"}\n"
+      }
+    },
+    "plan-ledger: all fresh-green allows": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: all green but never verified asks for a verify run": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: every step is green, but not verified against the current diff.\\n\\nScoped runs judge a step on its own `paths`; the push gate judges it on the whole branch.\\n\\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run docs/toolu/plans/2026-06-14-planning-hardness.md --verify\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: blockOnUncoveredAcs default false allows push, ac_coverage still recorded": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"covered\":1,\"uncovered\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"ac_coverage\"}\n"
+      }
+    },
+    "plan-ledger: blockOnUncoveredAcs=true advises rather than denies under the shipped preset": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"plan-ledger: push blocked — uncovered spec AC id(s):\\nAC-2: UNCOVERED (no step references it)\\n\\ncover with a fresh-green step referencing it in ac_refs, or set planLedger.blockOnUncoveredAcs=false\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"covered\":1,\"uncovered\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"ac_coverage\"}\n"
+      }
+    },
+    "plan-ledger: blockOnUncoveredAcs=true denies push naming the uncovered AC id": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: push blocked — uncovered spec AC id(s):\\nAC-2: UNCOVERED (no step references it)\\n\\ncover with a fresh-green step referencing it in ac_refs, or set planLedger.blockOnUncoveredAcs=false\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"covered\":1,\"uncovered\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"ac_coverage\"}\n"
+      }
+    },
+    "plan-ledger: blockOnUncoveredAcs=true with every AC covered allows the push": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"covered\":2,\"uncovered\":0,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"ac_coverage\"}\n"
+      }
+    },
+    "plan-ledger: empty-steps ledger is a no-op allow": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: enriched v1 all-fresh-green ledger allows": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: enriched v1 ledger with a red step denies": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: push blocked — steps not fresh-green:\\ns2: red — second\\n\\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run docs/toolu/plans/2026-06-14-planning-hardness.md\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: gates.planLedger.mode off silences the ledger gate entirely": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: green-but-stale step denies and marks stale": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: push blocked — steps not fresh-green:\\ns1: stale — first\\n\\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run docs/toolu/plans/2026-06-14-planning-hardness.md\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: ledger with a red step denies and names it": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: push blocked — steps not fresh-green:\\ns1: red — first thing\\n\\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run docs/toolu/plans/2026-06-14-planning-hardness.md\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: no ledger + code file allows (stderr advisory dropped)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: no ledger + only .txt diff allows silently": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: non-Bash tool allows silently": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: non-push command (git status) allows silently": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: other-branch ledger does not affect current push": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: parity (plan-ledger.sh gate): ledger stamped with raw-formula sha is fresh-green": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: spec-less plan never blocks even with blockOnUncoveredAcs=true": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: unparseable ledger denies (fail closed)": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: unparseable ledger at $ROOT/project/.claude/tmp/plan-ledger/feat_example.json; delete and re-run `bash plugins/toolu/hooks/lib/plan-ledger.sh run <plan_doc>`\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: version-1 all-fresh-green ledger allows": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "plan-ledger: version!=1 denies (fail closed)": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: ledger schema mismatch at $ROOT/project/.claude/tmp/plan-ledger/feat_example.json (version=\\\"2\\\", expected 1); delete and re-run `bash plugins/toolu/hooks/lib/plan-ledger.sh run <plan_doc>`\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: #283 --git-dir with a separate value: a push is reviewed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: #283 -C with a space: a review only in the cwd repo does not count": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: #283 -C with a space: the worktree's clean review allows": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Code review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: #283 a -C chain is judged on the pushed repository": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Code review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: #283 a backslash-newline continuation: a push is reviewed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: #283 an absolute git path: a push is reviewed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: #283 bash -c: a push is reviewed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: #283 env -i: a push is reviewed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: #283 eval: a push is reviewed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: #283 nice: a push is reviewed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: #283 sudo -u: a push is reviewed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: #283 timeout on Codex: a push is reviewed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: #283 timeout: a push is reviewed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: #283 xargs: a push is reviewed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: $CLAUDE_PROJECT_DIR no longer decides where state is read": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "wt/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: a clean review still passes under the default preset": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: a new commit invalidates the waiver and asks again": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"No clean review is recorded for this diff. Approving pushes anyway, and the approval is remembered until the diff changes.\\n\\nCode review required before push (diff SHA 504ffe862edcadfcf5cd9ad4f06de3b6f69bceca, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/push-review/feat_example.pending-waiver.json": "{\"version\":1,\"branch\":\"feat_example\",\"diff_sha\":\"504ffe862edcadfcf5cd9ad4f06de3b6f69bceca\",\"base_branch\":\"main\",\"reason_code\":\"no-state\",\"asked_at\":\"<time>\"}\n",
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"ask\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: a promoted waiver lets the same diff through silently": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"waived\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: a reviewers string is searched as text, as jq index does": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: a state file in the main checkout does not authorize a worktree push": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Code review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/wt/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "wt/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: a string round of 010 is octal 8 in bash arithmetic and escalates": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"ESCALATE: review loop hit 010 rounds (max 5) on an unchanged diff at $ROOT/project/.claude/tmp/push-review/feat_example.json. Reviewers keep finding new issues after each fix — stop auto-looping and surface the current findings to the human. Babysit: treat as Escalation stop (Step 6).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"round-cap\",\"round\":10,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: a string round of 09 is not octal, so it never trips the cap": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":9,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: a waiver does not cover a different branch": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"No clean review is recorded for this diff. Approving pushes anyway, and the approval is remembered until the diff changes.\\n\\nCode review required before push (diff SHA 98e2cef9cf1d772001831f183f5927ace2cb6951, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.claude/tmp/push-review/feat_other.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/push-review/feat_other.pending-waiver.json": "{\"version\":1,\"branch\":\"feat_other\",\"diff_sha\":\"98e2cef9cf1d772001831f183f5927ace2cb6951\",\"base_branch\":\"main\",\"reason_code\":\"no-state\",\"asked_at\":\"<time>\"}\n",
+        "project/.claude/tmp/telemetry/feat_other.jsonl": "{\"result\":\"ask\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/other\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: advise mode reports without deciding": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Code review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"advise\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: an empty diff advises under the default preset": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Refusing to push: diff against main is empty. Either no commits diverged from base, or the branch was force-reset. Verify intent before pushing.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"advise\",\"reason_code\":\"empty-diff\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: ask degrades to advise on codex": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Code review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.codex/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.codex/tmp/telemetry/feat_example.jsonl": "{\"result\":\"advise\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: ask mode keeps the reviewer instructions": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"No clean review is recorded for this diff. Approving pushes anyway, and the approval is remembered until the diff changes.\\n\\nCode review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/push-review/feat_example.pending-waiver.json": "{\"version\":1,\"branch\":\"feat_example\",\"diff_sha\":\"54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf\",\"base_branch\":\"main\",\"reason_code\":\"no-state\",\"asked_at\":\"<time>\"}\n",
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"ask\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: asking records a pending waiver for the current diff": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"No clean review is recorded for this diff. Approving pushes anyway, and the approval is remembered until the diff changes.\\n\\nCode review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/push-review/feat_example.pending-waiver.json": "{\"version\":1,\"branch\":\"feat_example\",\"diff_sha\":\"54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf\",\"base_branch\":\"main\",\"reason_code\":\"no-state\",\"asked_at\":\"<time>\"}\n",
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"ask\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: Bash but not git push exits silently": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: branch slug strips slashes": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Code review required before push (diff SHA 3def3d025b91c39f03db7f2bbebf8b6fecb9b026, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.claude/tmp/push-review/feat_x_y.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_x_y.jsonl": "{\"result\":\"deny\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/x/y\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: corrupted state file is denied": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"state file corrupted at $ROOT/project/.claude/tmp/push-review/feat_example.json; delete and re-review\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"schema\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: default advise does not record a pending waiver": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Code review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"advise\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: default preset advises instead of denying": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Code review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"advise\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: denial reason instructs agent to use atomic write": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Code review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: detached HEAD is denied": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"detached HEAD — checkout a branch, or push an explicit `HEAD:<branch>` refspec so the review state can be keyed to that branch\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: detached worktree pushing HEAD:<branch> is judged as that branch and passes with a clean state": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: detached worktree pushing HEAD:<branch> WITHOUT a state file is denied for the missing review, not as detached": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Code review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/wt/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: detached worktree pushing with no refspec is still denied as detached, naming the fix": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"detached HEAD — checkout a branch, or push an explicit `HEAD:<branch>` refspec so the review state can be keyed to that branch\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: diff SHA changes when content changes": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Code review required: diff changed since review.\\nCurrent diff SHA: f2eb2e87f77d03bf2d5b1f5d2b9dd61b1e08b4cd\\nState file: $ROOT/project/.claude/tmp/push-review/feat_example.json (stale)\\nRe-run reviewers on the new diff and rewrite the state file.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"stale-diff\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: diff SHA is stable for unchanged content": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: diff SHA survives commit --amend with identical content": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: empty diff against base is denied with sentinel reason (even with matching state file)": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Refusing to push: diff against main is empty. Either no commits diverged from base, or the branch was force-reset. Verify intent before pushing.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_empty.jsonl": "{\"result\":\"deny\",\"reason_code\":\"empty-diff\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/empty\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: extra reviewers beyond the accepted set still pass (superset)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: full loop — state rewritten for the fixed diff is allowed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: git -C <worktree> push is gated on the worktree, not the cwd": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Code review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/wt/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "wt/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: git push inside heredoc body is ignored": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: git push with matching SHA and open findings is denied": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Code review has open findings (3).\\nState file: $ROOT/project/.claude/tmp/push-review/feat_example.json\\nAddress every finding (any finding blocks). Re-commit. Re-run reviewers. Rewrite state file with findings_count=0.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"findings\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: git push with matching SHA and zero findings is allowed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: git push with no state file is denied": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Code review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: git push with stale SHA is denied": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Code review required: diff changed since review.\\nCurrent diff SHA: 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf\\nState file: $ROOT/project/.claude/tmp/push-review/feat_example.json (stale)\\nRe-run reviewers on the new diff and rewrite the state file.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"stale-diff\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: missing base branch is denied with fetch hint": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"base branch 'main' not found locally; run `git fetch origin main:main`\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"base-missing\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: missing review_round defaults to 1 (backward compat)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
     "push-review: no state file advises at the shipped preset": {
       "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Code review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
       "stderr": "",
@@ -15,6 +1023,264 @@
       "exitCode": 0,
       "files": {
         "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: non-accepted reviewer alone is denied": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"state file lists no accepted reviewer at $ROOT/project/.claude/tmp/push-review/feat_example.json\\n`reviewers` must include at least one of: [\\\"code-review\\\",\\\"toolu-review:review\\\",\\\"code-review:xhigh\\\",\\\"review\\\",\\\"security-review\\\"]\\nRun a reviewer — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill) — then rewrite the state file.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"reviewer\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: non-Bash tool exits silently": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: non-empty diff with matching SHA + zero findings still ALLOWED": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: open findings advise rather than deny under the default preset": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Code review has open findings (2).\\nState file: $ROOT/project/.claude/tmp/push-review/feat_example.json\\nAddress every finding (any finding blocks). Re-commit. Re-run reviewers. Rewrite state file with findings_count=0.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"advise\",\"reason_code\":\"findings\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: parity (push-review.sh) empty diff against base still denied with sentinel reason": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Refusing to push: diff against main is empty. Either no commits diverged from base, or the branch was force-reset. Verify intent before pushing.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_empty.jsonl": "{\"result\":\"deny\",\"reason_code\":\"empty-diff\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/empty\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: per-gate off emits nothing at all": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: push_check base branch missing locally denies with reason_code=base-missing, round=null": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"base branch 'nonexistent-base' not found locally; run `git fetch origin nonexistent-base:nonexistent-base`\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"base-missing\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: push_check clean push allows with reason_code=pass and the state's round": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":3,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: push_check corrupted state file denies with reason_code=schema, round=null": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"state file corrupted at $ROOT/project/.claude/tmp/push-review/feat_example.json; delete and re-review\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"advise\",\"reason_code\":\"schema\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: push_check empty diff denies with reason_code=empty-diff, round=null": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Refusing to push: diff against main is empty. Either no commits diverged from base, or the branch was force-reset. Verify intent before pushing.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"advise\",\"reason_code\":\"empty-diff\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: push_check git diff failure (corrupted objects) allows with reason_code=diff-failed, round=null": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"diff-failed\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: push_check no accepted reviewer denies with reason_code=reviewer and the round": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"state file lists no accepted reviewer at $ROOT/project/.claude/tmp/push-review/feat_example.json\\n`reviewers` must include at least one of: [\\\"code-review\\\",\\\"toolu-review:review\\\",\\\"code-review:xhigh\\\",\\\"review\\\",\\\"security-review\\\"]\\nRun a reviewer — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill) — then rewrite the state file.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"advise\",\"reason_code\":\"reviewer\",\"round\":4,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: push_check no state file denies with reason_code=no-state, round=null": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Code review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: push_check open findings denies with reason_code=findings and the round": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Code review has open findings (2).\\nState file: $ROOT/project/.claude/tmp/push-review/feat_example.json\\nAddress every finding (any finding blocks). Re-commit. Re-run reviewers. Rewrite state file with findings_count=0.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"advise\",\"reason_code\":\"findings\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: push_check reviewed_files short of the diff denies with reason_code=file-coverage and the round": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"reviewed_files does not match the current diff at $ROOT/project/.claude/tmp/push-review/feat_example.json.\\nMissing from reviewed_files (changed but not reviewed): feature.txt\\nRe-review the full diff and rewrite reviewed_files to match `git diff main...HEAD --name-only` exactly.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"advise\",\"reason_code\":\"file-coverage\",\"round\":2,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: push_check round-cap escalation denies with reason_code=round-cap": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"ESCALATE: review loop hit 6 rounds (max 5) on an unchanged diff at $ROOT/project/.claude/tmp/push-review/feat_example.json. Reviewers keep finding new issues after each fix — stop auto-looping and surface the current findings to the human. Babysit: treat as Escalation stop (Step 6).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"advise\",\"reason_code\":\"round-cap\",\"round\":6,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: push_check stale diff denies with reason_code=stale-diff and the round": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Code review required: diff changed since review.\\nCurrent diff SHA: 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf\\nState file: $ROOT/project/.claude/tmp/push-review/feat_example.json (stale)\\nRe-run reviewers on the new diff and rewrite the state file.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"advise\",\"reason_code\":\"stale-diff\",\"round\":2,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: pushing the base branch itself is ALLOWED (no state file required)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {}
+    },
+    "push-review: review_round above MAX_ROUNDS triggers escalation deny": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"ESCALATE: review loop hit 6 rounds (max 5) on an unchanged diff at $ROOT/project/.claude/tmp/push-review/feat_example.json. Reviewers keep finding new issues after each fix — stop auto-looping and surface the current findings to the human. Babysit: treat as Escalation stop (Step 6).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"round-cap\",\"round\":6,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: review_round at MAX_ROUNDS still allowed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":5,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: reviewed_files missing one changed file is denied naming the path": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"reviewed_files does not match the current diff at $ROOT/project/.claude/tmp/push-review/feat_example.json.\\nMissing from reviewed_files (changed but not reviewed): second.txt\\nRe-review the full diff and rewrite reviewed_files to match `git diff main...HEAD --name-only` exactly.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"file-coverage\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: reviewed_files with an extra path not in the diff is denied naming it": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"reviewed_files does not match the current diff at $ROOT/project/.claude/tmp/push-review/feat_example.json.\\nIn reviewed_files but not in the current diff: nonexistent.txt\\nRe-review the full diff and rewrite reviewed_files to match `git diff main...HEAD --name-only` exactly.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"file-coverage\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: reviewed_files with the full changed-file list is allowed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: security-review reviewer alone satisfies the accepted set": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: state file missing required keys is denied": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"state file corrupted at $ROOT/project/.claude/tmp/push-review/feat_example.json; delete and re-review\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"schema\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: state file with no accepted reviewer is denied": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"state file lists no accepted reviewer at $ROOT/project/.claude/tmp/push-review/feat_example.json\\n`reviewers` must include at least one of: [\\\"code-review\\\",\\\"toolu-review:review\\\",\\\"code-review:xhigh\\\",\\\"review\\\",\\\"security-review\\\"]\\nRun a reviewer — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill) — then rewrite the state file.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"reviewer\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: state file with schema v1 is denied with the dedicated upgrade message": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"push-review state is schema v1; harness v2 requires reviewed_files — re-run the review to regenerate the state file\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"schema-v1\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: state file with wrong version is denied": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"state file corrupted at $ROOT/project/.claude/tmp/push-review/feat_example.json; delete and re-review\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"schema\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: telemetry records the waived push": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"waived\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: the built-in code-review reviewer alone is allowed (agnostic baseline)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: toolu-review:review reviewer alone satisfies the accepted set": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: worktree push allowed once the worktree's own state is clean": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "wt/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"allow\",\"reason_code\":\"pass\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: worktree push still denies on open findings": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Code review has open findings (2).\\nState file: $ROOT/wt/.claude/tmp/push-review/feat_example.json\\nAddress every finding (any finding blocks). Re-commit. Re-run reviewers. Rewrite state file with findings_count=0.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "wt/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"findings\",\"round\":1,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
       }
     }
   }

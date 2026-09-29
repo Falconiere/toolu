@@ -1,15 +1,16 @@
 /**
  * Runs one PreToolUse (#258) or PostToolUse (#259) call through both
- * dispatchers: bash, as `pre-tools/mod.sh` / `post-tools/mod.sh` do it but over
- * a test modules directory, and `dispatchPreTool` / `dispatchPostTool` over the
- * same directory as a table of `bashModule`s.
+ * dispatchers: bash, as `pre-tools/mod.sh` / `post-tools/mod.sh` did it, and
+ * `dispatchPreTool` / `dispatchPostTool`. Since #262 the TypeScript
+ * dispatcher runs no built-in bash, so a test's bash modules are registry
+ * modules of an installed `builtin@fixture` plugin on both sides
+ * (`writeBuiltin`), walked in the same order.
  */
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import type { Sandbox } from "@toolu/conformance/harness/sandbox";
 import {
-  bashModule,
   dispatchPostTool,
   dispatchPreTool,
   type HookPhase,
@@ -19,7 +20,7 @@ import {
 
 export const LIB = resolve(import.meta.dir, "../../../../../plugins/toolu/hooks/lib");
 
-/** `pre-tools/mod.sh`, with the modules directory as `$1` instead of fixed. */
+/** `pre-tools/mod.sh` as it last shipped, with the modules directory as `$1` instead of fixed. */
 const PRE_MOD_SH = `
 HOOK_LIB="${LIB}"
 . "$HOOK_LIB/config.sh"; . "$HOOK_LIB/dispatch.sh"; . "$HOOK_LIB/detect.sh"; . "$HOOK_LIB/registry.sh"
@@ -63,12 +64,40 @@ export function writeModule(dir: string, file: string, body: string): void {
   chmodSync(path, 0o755);
 }
 
-/** Record `spec` as installed in Claude's plugin registry. */
+function installedFile(sb: Sandbox): string {
+  return join(sb.home, ".claude", "plugins", "installed_plugins.json");
+}
+
+function installedSpecs(sb: Sandbox): string[] {
+  const file = installedFile(sb);
+  if (!existsSync(file)) return [];
+  const doc: unknown = JSON.parse(readFileSync(file, "utf8"));
+  const plugins = typeof doc === "object" && doc !== null ? Reflect.get(doc, "plugins") : undefined;
+  return typeof plugins === "object" && plugins !== null ? Object.keys(plugins) : [];
+}
+
+/** Record `specs` as installed in Claude's plugin registry, beside those already recorded. */
 export function install(sb: Sandbox, ...specs: string[]): void {
-  const file = join(sb.home, ".claude", "plugins", "installed_plugins.json");
+  const file = installedFile(sb);
   mkdirSync(dirname(file), { recursive: true });
-  const plugins = Object.fromEntries(specs.map((spec) => [spec, [{ scope: "user" }]]));
+  const all = [...new Set([...installedSpecs(sb), ...specs])];
+  const plugins = Object.fromEntries(all.map((spec) => [spec, [{ scope: "user" }]]));
   writeFileSync(file, JSON.stringify({ version: 2, plugins }));
+}
+
+/**
+ * A bash module that runs first in the walk: `builtin@fixture__<file>` in the
+ * registry, installed. Its own spec, so a test's `fixture@toolu` ESM module
+ * does not shadow it, and it sorts before every other test spec.
+ */
+export function writeBuiltin(
+  sb: Sandbox,
+  file: string,
+  body: string,
+  phase: HookPhase = "pre",
+): void {
+  writeModule(registryDir(sb, phase), `builtin@fixture__${file}`, body);
+  install(sb, "builtin@fixture");
 }
 
 export function hookEnv(sb: Sandbox, extra: Record<string, string> = {}): Record<string, string> {
@@ -78,19 +107,6 @@ export function hookEnv(sb: Sandbox, extra: Record<string, string> = {}): Record
     CLAUDE_PROJECT_DIR: sb.project,
     ...extra,
   };
-}
-
-/** Every `*.sh` in the modules directory, in the byte order bash globs them. */
-export function tableOf(dir: string): ToolModule[] {
-  let names: string[] = [];
-  try {
-    names = readdirSync(dir).filter((file) => file.endsWith(".sh"));
-  } catch {
-    names = [];
-  }
-  return names
-    .toSorted((a, b) => Buffer.compare(Buffer.from(a), Buffer.from(b)))
-    .map((file) => bashModule(dir, file.slice(0, -".sh".length)));
 }
 
 export function runBashDispatch(
@@ -111,10 +127,9 @@ export function runBashDispatch(
 }
 
 export function runTsDispatch(
-  sb: Sandbox,
   stdin: string,
   env: Record<string, string>,
-  builtins: readonly ToolModule[] = tableOf(modulesDir(sb)),
+  builtins: readonly ToolModule[] = [],
 ): Promise<ModuleResult> {
   return dispatchPreTool(stdin, { builtins, libDir: LIB, env });
 }
@@ -126,5 +141,5 @@ export function runTsPostDispatch(
   env: Record<string, string>,
   cwd: string = sb.project,
 ): Promise<ModuleResult> {
-  return dispatchPostTool(stdin, { builtins: tableOf(modulesDir(sb)), libDir: LIB, env, cwd });
+  return dispatchPostTool(stdin, { builtins: [], libDir: LIB, env, cwd });
 }

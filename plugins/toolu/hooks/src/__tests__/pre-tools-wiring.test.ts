@@ -1,14 +1,15 @@
 /**
- * AC-4 (#258), AC-5 (#260): the edit/shell/search PreToolUse entry runs the
- * dispatcher bundle and the `mcp__` entry the mcp-blocker bundle, both through
- * the generated launcher, which blocks when Bun is missing; the subagent entry
- * keeps its bash script until #262; the built-in table keeps `mod.sh`'s byte
- * order, ported modules are native and every other one runs its script; and a
- * dispatcher crash blocks the tool instead of allowing it.
+ * AC-4 (#258), AC-5 (#260), AC-4 and AC-7 (#262): the edit/shell/search
+ * PreToolUse entry runs the dispatcher bundle, the `mcp__` entry the
+ * mcp-blocker bundle and the subagent entry the agent-tier bundle, each through
+ * the generated launcher, which blocks when Bun is missing; the built-in table
+ * keeps `mod.sh`'s byte order and every module is native, so the dispatcher
+ * bundle carries no bash fallback; and a dispatcher crash blocks the tool
+ * instead of allowing it.
  */
 import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { launcherCommand } from "@toolu/core/launcher";
@@ -17,6 +18,11 @@ import { BUILTIN_MODULES, builtins, NATIVE_MODULES } from "../pre-tools/builtins
 const PLUGIN = resolve(import.meta.dir, "../../..");
 const LAUNCHER = launcherCommand({ plugin: "toolu", event: "PreToolUse", entry: "pre-tools" });
 const MCP_LAUNCHER = launcherCommand({ plugin: "toolu", event: "PreToolUse", entry: "mcp-tools" });
+const AGENT_LAUNCHER = launcherCommand({
+  plugin: "toolu",
+  event: "PreToolUse",
+  entry: "agent-tier",
+});
 
 function withTempDir<T>(work: (dir: string) => T): T {
   const dir = mkdtempSync(join(tmpdir(), "toolu-pretools-"));
@@ -27,52 +33,35 @@ function withTempDir<T>(work: (dir: string) => T): T {
   }
 }
 
-test("the built-in table keeps mod.sh's byte order; ported modules are native", () => {
+test("the built-in table keeps mod.sh's byte order; every module is native", () => {
   const sorted = [...BUILTIN_MODULES].toSorted((a, b) =>
     Buffer.compare(Buffer.from(a), Buffer.from(b)),
   );
   expect<string[]>([...BUILTIN_MODULES]).toEqual(sorted);
   const table = builtins(join(PLUGIN, "hooks"));
-  expect(table.map((m) => m.name.replace(/\.sh$/, ""))).toEqual([...BUILTIN_MODULES]);
-  for (const module of table) {
-    const native = Object.hasOwn(NATIVE_MODULES, module.name);
-    expect(module.kind).toBe(native ? "native" : "bash");
-    if (module.kind === "bash")
-      expect(readdirSync(join(PLUGIN, "hooks/pre-tools/modules"))).toContain(module.name);
-  }
-  const onDisk = readdirSync(join(PLUGIN, "hooks/pre-tools/modules"))
-    .filter((file) => file.endsWith(".sh"))
-    .toSorted();
-  const bashEntries = table.flatMap((m) => (m.kind === "bash" ? [m.name] : [])).toSorted();
-  expect(bashEntries).toEqual(onDisk);
-  expect(Object.keys(NATIVE_MODULES).toSorted()).toEqual([
-    "bash-commands",
-    "code-edit-rules",
-    "commit-gate",
-    "mcp-blocker",
-    "protected-files",
-    "quality-gate",
-  ]);
+  expect(table.map((m) => m.name)).toEqual([...BUILTIN_MODULES]);
+  expect(table.every((m) => m.kind === "native")).toBe(true);
+  expect([...BUILTIN_MODULES]).toEqual(Object.keys(NATIVE_MODULES));
+  expect(BUILTIN_MODULES).toHaveLength(9);
 });
 
-test("the ported modules' bash scripts and bats suites are gone from the index", () => {
-  const listed = spawnSync(
-    "git",
-    [
-      "ls-files",
-      "--",
-      ...["protected-files", "mcp-blocker", "code-edit-rules"].flatMap((name) => [
-        `hooks/pre-tools/modules/${name}.sh`,
-        `hooks/pre-tools/modules/__tests__/${name}.bats`,
-      ]),
-    ],
-    { cwd: PLUGIN, encoding: "utf8" },
-  );
+test("the dispatcher bundle has no built-in bash path and no bash bridge", () => {
+  const bundle = readFileSync(join(PLUGIN, "hooks/dist/pre-tools.js"), "utf8");
+  for (const needle of ["bashModule", "runPreToolBridge", "src/bridge/", "pre-tools/modules"]) {
+    expect(bundle).not.toContain(needle);
+  }
+});
+
+test("the ported modules' bats suites are gone from the index", () => {
+  const listed = spawnSync("git", ["ls-files", "--", "hooks/pre-tools/**/*.bats"], {
+    cwd: PLUGIN,
+    encoding: "utf8",
+  });
   expect(listed.status).toBe(0);
   expect(listed.stdout).toBe("");
 });
 
-test("hooks.json runs both PreToolUse bundles through the launcher and leaves agent-tier.sh", () => {
+test("hooks.json runs every PreToolUse bundle through the launcher", () => {
   const hooks: unknown = JSON.parse(readFileSync(join(PLUGIN, "hooks/hooks.json"), "utf8"));
   expect(hooks).toMatchObject({
     hooks: {
@@ -87,9 +76,7 @@ test("hooks.json runs both PreToolUse bundles through the launcher and leaves ag
         },
         {
           matcher: "spawn_agent|Agent|Task",
-          hooks: [
-            { type: "command", command: "${CLAUDE_PLUGIN_ROOT}/hooks/pre-tools/agent-tier.sh" },
-          ],
+          hooks: [expect.objectContaining({ type: "command", command: AGENT_LAUNCHER })],
         },
       ],
     },
@@ -99,6 +86,7 @@ test("hooks.json runs both PreToolUse bundles through the launcher and leaves ag
 for (const [entry, command, input] of [
   ["pre-tools", LAUNCHER, '{"tool_name":"Bash","tool_input":{"command":"ls"}}'],
   ["mcp-tools", MCP_LAUNCHER, '{"tool_name":"mcp__exampleblocked__search","tool_input":{}}'],
+  ["agent-tier", AGENT_LAUNCHER, '{"tool_name":"Agent","tool_input":{"model":"opus"}}'],
 ] as const) {
   test.concurrent(`the ${entry} launcher blocks with exit 2 when Bun is missing`, () => {
     withTempDir((home) => {

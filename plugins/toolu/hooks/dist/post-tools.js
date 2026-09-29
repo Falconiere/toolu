@@ -4816,16 +4816,11 @@ async function runNative(module, event, ctx) {
 `, exitCode: 1 };
   }
 }
-async function runBuiltin(module, walk) {
-  if (module.kind === "native")
-    return runNative(module, walk.event, walk.ctx);
-  return runBash(module.path, moduleStdin(walk.payload.text), moduleEnv(walk.payload, walk.session));
-}
 async function walkBuiltins(builtins, at, walk, state) {
   const module = builtins[at];
   if (module === undefined)
     return;
-  const done = consume(state, module.name, await runBuiltin(module, walk));
+  const done = consume(state, module.name, await runNative(module, walk.event, walk.ctx));
   return done ?? walkBuiltins(builtins, at + 1, walk, state);
 }
 function bashFallback(walk, raw) {
@@ -12082,6 +12077,23 @@ var DETAILS = [
     "This is toolu's own enforcement code \u2014 the hooks that run every other gate. Approving lets an agent edit the thing that is supposed to be watching it, which is how a guardrail gets quietly switched off."
   ]
 ];
+// packages/toolu-core/src/ledger/ledger-parse.ts
+var SPACE = "[ \\t\\n\\v\\f\\r]";
+var STEPS_HEADING = new RegExp(`^## Steps \\(machine-readable\\)${SPACE}*$`);
+var JSON_FENCE = new RegExp(`^\`\`\`json${SPACE}*$`);
+var CLOSE_FENCE = new RegExp(`^\`\`\`${SPACE}*$`);
+var AC_HEADING = new RegExp(`^## Acceptance criteria${SPACE}*$`);
+// packages/toolu-core/src/ledger/review-state.ts
+var ACCEPTED_REVIEWERS = [
+  "code-review",
+  "toolu-review:review",
+  "code-review:xhigh",
+  "review",
+  "security-review"
+];
+
+// packages/toolu-core/src/gates/push-review-state.ts
+var REVIEWER_LIST = JSON.stringify(ACCEPTED_REVIEWERS);
 // plugins/toolu/hooks/src/post-tools/builtins.ts
 function builtins() {
   return [gateStatusModule, pushWaiverModule];
