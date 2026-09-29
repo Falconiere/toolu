@@ -12,7 +12,7 @@
 | `gitInvocation(command)` | The subcommand past git's global options, its arguments, and the `-C` chain |
 | `pushTargets(analysis)` | Each push's cumulative `-C` chain, refspec, and destination branch |
 | `commitMessages(invocation)` | Static `-m`/`--message` values, including `"$(cat <<'EOF' … EOF)"` |
-| `writeTargets(analysis)` | Paths written by redirects, `tee`, `sed -i`, `perl -i`, `cp`/`mv`/`install`, `dd of=`, `python -c open(…,'w')` |
+| `writeTargets(analysis)` | Paths written by redirects (every target, `/dev/null` included; a dynamic one is `path: null`), `tee`, `sed -i`, `perl -i`, `cp`/`mv`/`install`, `dd of=`, `python -c open(…,'w')` |
 | `matchesRule(command, "node -e")` | An argv rule tested against one simple command |
 
 Each `ShellCommand` carries the following fields:

@@ -219,7 +219,7 @@ function numberFlag(args: readonly string[], name: string, fallback: number): nu
   return value;
 }
 
-export function main(args: readonly string[]): number {
+function runBench(args: readonly string[]): number {
   const known = new Set(["--runs", "--rounds", "--json", "--assert"]);
   const unknown = args.filter(
     (arg, i) => arg.startsWith("--") && !known.has(arg) && !known.has(args[i - 1] ?? ""),
@@ -235,11 +235,16 @@ export function main(args: readonly string[]): number {
   return args.includes("--assert") && problems.length > 0 ? 1 : 0;
 }
 
-if (import.meta.main) {
+/** CLI entry: a bad argument or a failed build is reported on stderr with exit 1. */
+export function main(args: readonly string[]): number {
   try {
-    process.exitCode = main(process.argv.slice(2));
+    return runBench(args);
   } catch (error: unknown) {
-    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-    process.exitCode = 1;
+    process.stderr.write(
+      `bench:shell: ${error instanceof Error ? error.message : String(error)}\n`,
+    );
+    return 1;
   }
 }
+
+if (import.meta.main) process.exitCode = main(process.argv.slice(2));
