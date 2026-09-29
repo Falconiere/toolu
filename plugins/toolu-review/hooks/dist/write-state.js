@@ -104,7 +104,7 @@ function parseArgs(argv) {
 }
 
 // plugins/toolu-review/hooks/src/write-state/review-state.ts
-import { spawnSync as spawnSync3 } from "child_process";
+import { spawnSync as spawnSync4 } from "child_process";
 import { mkdirSync, readFileSync as readFileSync2 } from "fs";
 import { join as join2 } from "path";
 
@@ -4040,29 +4040,36 @@ var EditRecordSchema = strictObject({
 });
 
 // packages/toolu-core/src/state/state-git.ts
+import { spawnSync as spawnSync3 } from "child_process";
+
+// packages/toolu-core/src/detect/detect-branch.ts
 import { spawnSync as spawnSync2 } from "child_process";
-function git(root, args, env) {
-  const res = spawnSync2("git", ["-C", root, ...args], { env: childEnv(env), encoding: "utf8" });
-  return res.error === undefined && res.status === 0 ? res.stdout : undefined;
-}
-function hasGit(env) {
-  const res = spawnSync2("git", ["--version"], { env: childEnv(env), encoding: "utf8" });
-  return res.error === undefined && res.status === 0;
-}
-function currentBranch(root, env) {
-  const res = spawnSync2("git", ["-C", root, "rev-parse", "--abbrev-ref", "HEAD"], {
-    env: childEnv(env),
-    encoding: "utf8"
-  });
-  return res.error === undefined ? res.stdout.replace(/\n+$/, "") : "";
-}
 function branchSlug(branch) {
   const slug = branch.replaceAll("/", "_").replace(/[^A-Za-z0-9_-]/g, "");
   return slug === "" ? "_default" : slug;
 }
-function baseBranch(root, env) {
-  const ref = git(root, ["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], env)?.trim();
-  return ref === undefined || ref === "" ? "main" : ref.replace(/^refs\/remotes\/origin\//, "");
+function baseBranch(root, env = process.env, cwd) {
+  const top = root === undefined || root === "" ? gitToplevel(env, cwd) : root;
+  if (top === undefined)
+    return "main";
+  const res = spawnSync2("git", ["-C", top, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], {
+    env: childEnv(env),
+    encoding: "utf8"
+  });
+  const ref = res.error === undefined && res.status === 0 ? res.stdout.trim() : "";
+  return ref === "" ? "main" : ref.replace(/^refs\/remotes\/origin\//, "");
+}
+// packages/toolu-core/src/state/state-git.ts
+function hasGit(env) {
+  const res = spawnSync3("git", ["--version"], { env: childEnv(env), encoding: "utf8" });
+  return res.error === undefined && res.status === 0;
+}
+function currentBranch(root, env) {
+  const res = spawnSync3("git", ["-C", root, "rev-parse", "--abbrev-ref", "HEAD"], {
+    env: childEnv(env),
+    encoding: "utf8"
+  });
+  return res.error === undefined ? res.stdout.replace(/\n+$/, "") : "";
 }
 // packages/toolu-core/src/state/state-sweeper.ts
 var HOUR_MS = 3600000;
@@ -4072,12 +4079,12 @@ var EMPTY_BLOB_SHA = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
 function fail(message) {
   throw new CliExit(1, `${TOOL}: ${message}`);
 }
-function git2(cwd, args, env) {
-  const res = spawnSync3("git", args, { cwd, env: { ...env }, encoding: "utf8" });
+function git(cwd, args, env) {
+  const res = spawnSync4("git", args, { cwd, env: { ...env }, encoding: "utf8" });
   return res.error === undefined && res.status === 0 ? res.stdout : undefined;
 }
 function repoRoot(repo, env, cwd) {
-  const top = git2(cwd, ["-C", repo ?? ".", "rev-parse", "--show-toplevel"], env)?.trim();
+  const top = git(cwd, ["-C", repo ?? ".", "rev-parse", "--show-toplevel"], env)?.trim();
   if (top === undefined || top === "")
     fail(`${repo ?? cwd} is not inside a git repo`);
   return top;
@@ -4093,10 +4100,10 @@ function targetBranch(root, requested, env) {
   if (requested === undefined) {
     fail("not on a branch (detached HEAD?) \u2014 pass --branch <name> naming the branch the push targets (git push origin HEAD:<name>)");
   }
-  if (git2(root, ["check-ref-format", "--branch", requested], env) === undefined) {
+  if (git(root, ["check-ref-format", "--branch", requested], env) === undefined) {
     fail(`--branch '${requested}' is not a valid branch name`);
   }
-  const known = ["refs/heads", "refs/remotes/origin"].some((prefix) => git2(root, ["show-ref", "--verify", "--quiet", `${prefix}/${requested}`], env) !== undefined);
+  const known = ["refs/heads", "refs/remotes/origin"].some((prefix) => git(root, ["show-ref", "--verify", "--quiet", `${prefix}/${requested}`], env) !== undefined);
   if (!known) {
     fail(`unknown branch '${requested}' (no refs/heads/${requested} or refs/remotes/origin/${requested})`);
   }
@@ -4108,7 +4115,7 @@ function sortedUnique(paths) {
 function reviewedFiles(root, base, override, env) {
   if (override !== undefined)
     return sortedUnique(override.split(","));
-  const names = git2(root, ["-C", root, "diff", "--no-color", `${base}...HEAD`, "--name-only"], env);
+  const names = git(root, ["-C", root, "diff", "--no-color", `${base}...HEAD`, "--name-only"], env);
   if (names === undefined)
     fail("failed to compute reviewed_files");
   return sortedUnique(names.split(`
