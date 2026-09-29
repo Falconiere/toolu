@@ -104,39 +104,41 @@ write_module() {
   echo "$output" | jq -e '.decision == "block" and (.reason | contains("parse apply_patch"))' >/dev/null
 }
 
-@test "post-tools entrypoint runs TypeScript and Rust concerns for every Codex patch path and clears deletions" {
+@test "post-tools entrypoint runs Python and Rust concerns for every Codex patch path and clears deletions" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  command -v python3 >/dev/null 2>&1 || skip "python3 not installed"
+  # ts-quality is a TypeScript registry module since #265, which bash mod.sh
+  # cannot run; python-quality still ships its bash module.
   project="$TMP/project"
   codex_home="$TMP/codex"
-  mkdir -p "$project/src" "$codex_home/toolu"
+  mkdir -p "$project/src" "$project/tests" "$codex_home/toolu"
   git -C "$project" init -q
-  printf '%s\n' '{}' > "$project/tsconfig.json"
-  : > "$project/bun.lock"
+  printf '%s\n' '[project]' 'name = "fixture"' > "$project/pyproject.toml"
   printf '%s\n' '[package]' 'name="fixture"' 'version="0.1.0"' > "$project/Cargo.toml"
-  git -C "$project" add tsconfig.json bun.lock Cargo.toml
+  git -C "$project" add pyproject.toml Cargo.toml
   git -C "$project" -c user.email=t@t -c user.name=t commit -qm setup
-  printf 'console.log("bad");\n' > "$project/src/bad.ts"
+  printf 'from unittest.mock import patch\n\n\ndef test_x():\n    assert patch\n' > "$project/tests/test_bad.py"
   printf '#[allow(dead_code)]\nfn bad() {}\n' > "$project/src/bad.rs"
 
   env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$codex_home" \
-    bash "$REPO_ROOT/../ts-quality/hooks/register.sh" </dev/null
+    bash "$REPO_ROOT/../python-quality/hooks/register.sh" </dev/null
   env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$codex_home" \
     bash "$REPO_ROOT/../rust-quality/hooks/register.sh" </dev/null
-  printf '%s\n' '{"version":1,"status":"ready","plugins":["rust-quality@toolu","ts-quality@toolu"]}' \
+  printf '%s\n' '{"version":1,"status":"ready","plugins":["python-quality@toolu","rust-quality@toolu"]}' \
     > "$codex_home/toolu/codex-plugins.json"
 
-  patch=$'*** Begin Patch\n*** Update File: src/bad.ts\n@@\n-a\n+b\n*** Update File: src/bad.rs\n@@\n-a\n+b\n*** End Patch'
+  patch=$'*** Begin Patch\n*** Update File: tests/test_bad.py\n@@\n-a\n+b\n*** Update File: src/bad.rs\n@@\n-a\n+b\n*** End Patch'
   payload=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command},tool_response:"Done"}')
   run bash -c 'cd "$1" && env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$2" TOOLU_PROJECT_DIR="$1" bash "$3" <<<"$4"' \
     _ "$project" "$codex_home" "$REPO_ROOT/hooks/post-tools/mod.sh" "$payload"
   [ "$status" -eq 0 ]
-  echo "$output" | grep -q 'Forbidden console.log'
+  echo "$output" | grep -q 'no-mocks: mock import'
   echo "$output" | grep -q 'Forbidden lint suppression'
   gate="$project/.codex/tmp/quality-gate-status.json"
-  jq -e '.status == "failing" and (.entries["src/bad.ts"] != null) and (.entries["src/bad.rs"] != null)' "$gate" >/dev/null
+  jq -e '.status == "failing" and (.entries["tests/test_bad.py"] != null) and (.entries["src/bad.rs"] != null)' "$gate" >/dev/null
 
-  rm "$project/src/bad.ts" "$project/src/bad.rs"
-  delete_patch=$'*** Begin Patch\n*** Delete File: src/bad.ts\n*** Delete File: src/bad.rs\n*** End Patch'
+  rm "$project/tests/test_bad.py" "$project/src/bad.rs"
+  delete_patch=$'*** Begin Patch\n*** Delete File: tests/test_bad.py\n*** Delete File: src/bad.rs\n*** End Patch'
   delete_payload=$(jq -cn --arg command "$delete_patch" '{tool_name:"apply_patch",tool_input:{command:$command},tool_response:"Done"}')
   run bash -c 'cd "$1" && env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$2" TOOLU_PROJECT_DIR="$1" bash "$3" <<<"$4"' \
     _ "$project" "$codex_home" "$REPO_ROOT/hooks/post-tools/mod.sh" "$delete_payload"

@@ -7,6 +7,8 @@
  * scripts only look at `post-tools.d`) our entries in `pre-tools.d`.
  * ast-grep left the list with its `register.sh` (#268); its register bundle
  * has its own suite in `plugins/ast-grep/hooks/src/__tests__`.
+ * ts-quality left the list with its `register.sh` (#265); its register bundle
+ * has its own suite in `plugins/ts-quality/hooks/src/__tests__`.
  */
 import { expect, test } from "bun:test";
 import {
@@ -34,7 +36,7 @@ type Plugin = {
 };
 
 const PLUGINS: Plugin[] = [
-  ...["python-quality", "rust-quality", "ts-quality"].map((plugin) => ({
+  ...["python-quality", "rust-quality"].map((plugin) => ({
     plugin,
     modules: [{ name: plugin, event: "tool/post" as const }],
     bashDirs: ["post-tools.d"] as const,

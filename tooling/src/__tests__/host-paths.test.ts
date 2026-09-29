@@ -23,7 +23,7 @@ const SESSION_START: readonly Publisher[] = [
 const REGISTRY: readonly Publisher[] = [
   { plugin: "ast-grep", published: "pre-tools.d/ast-grep@toolu__search-nudge.js" },
   { plugin: "rust-quality", published: "post-tools.d/rust-quality@toolu__rust-quality.sh" },
-  { plugin: "ts-quality", published: "post-tools.d/ts-quality@toolu__ts-quality.sh" },
+  { plugin: "ts-quality", published: "post-tools.d/ts-quality@toolu__ts-quality.js" },
 ];
 
 /** Run one plugin hook the way Codex does: HOME isolated, CODEX_HOME per plugin, no Claude root. */

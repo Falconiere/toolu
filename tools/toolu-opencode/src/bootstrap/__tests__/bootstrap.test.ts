@@ -91,8 +91,8 @@ test("AC-3: two project roots do not share bootstrap state", async () => {
   if (resultA.status !== "ready" || resultB.status !== "ready") {
     return;
   }
-  const postA = resultA.artifacts.find((a) => /\/post-tools\.d\/[^/]+\.sh$/.test(a));
-  const postB = resultB.artifacts.find((a) => /\/post-tools\.d\/[^/]+\.sh$/.test(a));
+  const postA = resultA.artifacts.find((a) => /\/post-tools\.d\/[^/]+\.js$/.test(a));
+  const postB = resultB.artifacts.find((a) => /\/post-tools\.d\/[^/]+\.js$/.test(a));
   expect(postA).toBeDefined();
   expect(postB).toBeDefined();
   if (!postA || !postB) {
@@ -151,7 +151,7 @@ test("AC-1: core-only session-start and core+quality register bootstrap", async 
   });
   expect(bothResult.status).toBe("ready");
   if (bothResult.status === "ready") {
-    expect(bothResult.artifacts.some((a) => /\/post-tools\.d\/[^/]+\.sh$/.test(a))).toBe(true);
+    expect(bothResult.artifacts.some((a) => /\/post-tools\.d\/[^/]+\.js$/.test(a))).toBe(true);
   }
 });
 
@@ -247,6 +247,15 @@ test("#268: bootstrapping ast-grep registers its bundled modules under the OpenC
   );
   expect(modules).toContain("pre-tools.d/ast-grep@toolu__search-nudge.js");
   expect(modules).toContain("post-tools.d/ast-grep@toolu__byte-savings.js");
+});
+
+test("#265: a plugin with a TypeScript register bundle bootstraps through its register launcher", () => {
+  const tsQuality = join(repoRoot(), "plugins", "ts-quality");
+  const script = pluginBootstrapScript(tsQuality);
+  expect(script).toBe(join(tsQuality, "hooks", "dist", "register.js"));
+  const command = bootstrapCommand(script ?? "", "ts-quality", tsQuality);
+  expect(command.argv[2]).toContain('"${CLAUDE_PLUGIN_ROOT}/hooks/dist/register.js"');
+  expect(command.env).toEqual({ CLAUDE_PLUGIN_ROOT: tsQuality });
 });
 
 test("#269: bootstrapping context7 publishes its search CLI under the OpenCode data root", async () => {
