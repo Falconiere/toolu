@@ -11,12 +11,12 @@
  */
 import { appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { loadConfig, type LoadedConfig } from "../config/config-load.ts";
+import { loadConfig } from "../config/config-load.ts";
 import { enabled } from "../config/config-read.ts";
-import { envValue, type HostEnv, type HostName } from "../host/host-name.ts";
+import { envValue } from "../host/host-name.ts";
 import { projectStateDir } from "../host/host-roots.ts";
 import { branchSlug, currentBranch } from "./state-git.ts";
-import { isoSeconds, stderrWarn, toJqJson, type Warn } from "./state-io.ts";
+import { isoSeconds, stderrWarn, toJqJson, type StateOptions } from "./state-io.ts";
 import {
   isTelemetryEvent,
   TELEMETRY_EXTRAS,
@@ -27,14 +27,6 @@ import {
 
 /** Headroom under the 4 KiB atomic-append floor: one `O_APPEND` write stays whole. */
 export const TELEMETRY_MAX_LINE_BYTES = 3900;
-
-export type StateOptions = {
-  env?: HostEnv;
-  host?: HostName;
-  config?: LoadedConfig;
-  now?: () => Date;
-  warn?: Warn;
-};
 
 export type TelemetryResult = { written: true; file: string } | { written: false; reason: string };
 

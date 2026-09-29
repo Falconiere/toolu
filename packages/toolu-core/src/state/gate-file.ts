@@ -22,10 +22,11 @@ import {
   toJqJson,
   withLock,
   writeAtomic,
+  type StateOptions,
   type Warn,
 } from "./state-io.ts";
 import { GateFileSchema, type GateEntries, type GateEntry, type GateFile } from "./state-schema.ts";
-import { telemetryAppend, type StateOptions } from "./telemetry.ts";
+import { telemetryAppend } from "./telemetry.ts";
 
 export const GLOBAL_GATE_KEY = "__global__";
 

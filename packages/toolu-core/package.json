@@ -36,7 +36,8 @@
     "./launcher": "./src/launcher/launcher.ts",
     "./cli": "./src/cli/cli.ts",
     "./rest": "./src/rest/rest.ts",
-    "./host": "./src/host/host.ts"
+    "./host": "./src/host/host.ts",
+    "./state": "./src/state/state.ts"
   },
   "dependencies": {
     "zod": "4.1.5"

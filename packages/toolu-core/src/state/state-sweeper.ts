@@ -28,9 +28,9 @@ import {
   toJqJson,
   withLock,
   writeAtomic,
+  type StateOptions,
   type Warn,
 } from "./state-io.ts";
-import type { StateOptions } from "./telemetry.ts";
 
 export const SWEEP_DEFAULT_TTL_HOURS = 24;
 export const SWEEP_DEFAULT_RETENTION_DAYS = 7;

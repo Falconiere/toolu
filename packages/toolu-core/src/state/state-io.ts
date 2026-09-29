@@ -14,8 +14,23 @@ import {
   writeFileSync,
   writeSync,
 } from "node:fs";
+import type { LoadedConfig } from "../config/config-load.ts";
+import type { HostEnv, HostName } from "../host/host-name.ts";
 
 export type Warn = (message: string) => void;
+
+/**
+ * What every state writer takes: the environment and host to resolve roots
+ * against, a preloaded config (loaded from the root otherwise), a clock, and
+ * a warning sink (stderr by default).
+ */
+export type StateOptions = {
+  env?: HostEnv;
+  host?: HostName;
+  config?: LoadedConfig;
+  now?: () => Date;
+  warn?: Warn;
+};
 
 /** Default warning sink: stderr, as the bash libs print their breadcrumbs. */
 export const stderrWarn: Warn = (message) => {
