@@ -20,6 +20,7 @@ Each `ShellCommand` carries the following fields:
 - `words`: the name and arguments as written.
 - `argv`: what actually runs once wrappers are removed.
 - `patterns`: aligned with `argv`, the unexpanded text of each word bash globs.
+- `texts`: aligned with `argv`, each word with quotes removed and expansions as written (`$HOME/.env`), so a dynamic path can still be matched by name.
 - `wrappers`
 - `redirects`
 - `pipeline`: `{ index, size }`
