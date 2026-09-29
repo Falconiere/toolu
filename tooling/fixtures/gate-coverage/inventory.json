@@ -1200,15 +1200,15 @@
     "bashRequired": true
   },
   {
-    "id": "toolu:hooks.json:PreToolUse:mod.sh:apply_patch|Edit|Write|MultiEdit|Bash|Sh",
+    "id": "toolu:hooks.json:PreToolUse:pre-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Sh",
     "sourcePath": "plugins/toolu/hooks/hooks.json",
     "plugin": "toolu",
     "kind": "hooks.json",
     "event": "PreToolUse",
     "matcher": "apply_patch|Edit|Write|MultiEdit|Bash|Shell|Grep",
-    "commandOrModule": "hooks/pre-tools/mod.sh",
+    "commandOrModule": "hooks/dist/pre-tools.js",
     "parentId": null,
-    "semantics": "Host routes PreToolUse (apply_patch|Edit|Write|MultiEdit|Bash|Shell|Grep) to hooks/pre-tools/mod.sh.",
+    "semantics": "Host routes PreToolUse (apply_patch|Edit|Write|MultiEdit|Bash|Shell|Grep) to hooks/dist/pre-tools.js, the TypeScript dispatcher (built-in modules then pre-tools.d; each module still on its bash fallback, #258).",
     "classification": "shell-out",
     "hostMechanism": "pending-opencode",
     "support": "required",

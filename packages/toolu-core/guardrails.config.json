@@ -17,7 +17,8 @@
       "state",
       "registry",
       "ledger",
-      "startup"
+      "startup",
+      "dispatch"
     ],
     "nested": {
       "decision": [
@@ -111,6 +112,13 @@
         "context.ts",
         "publish.ts",
         "dependencies.ts",
+        "__tests__"
+      ],
+      "dispatch": [
+        "dispatch-bash.ts",
+        "dispatch-context.ts",
+        "dispatch-output.ts",
+        "dispatch-walk.ts",
         "__tests__"
       ]
     },

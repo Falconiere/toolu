@@ -68,7 +68,7 @@ Classifications match [docs/portable-core.md](portable-core.md): `shell-out` · 
 | `toolu:hooks.json:PreCompact:pre-compact.sh:auto` | `plugins/toolu/hooks/hooks.json` | toolu | PreCompact | shell-out | required | #210/todo | pending-opencode | yes | — |
 | `toolu:hooks.json:PreToolUse:agent-tier.sh:spawn_agent|Agent|Task` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `toolu:hooks.json:PreToolUse:mcp-blocker.sh:mcp__` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `toolu:hooks.json:PreToolUse:mod.sh:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
+| `toolu:hooks.json:PreToolUse:pre-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `toolu:hooks.json:SessionStart:session-start.js:startup|resume` | `plugins/toolu/hooks/hooks.json` | toolu | SessionStart | no-map | n/a | n/a | n/a | no | Command-hook launcher diagnostic (#250); OpenCode runs TypeScript in-process and never spawns the launcher. |
 | `toolu:hooks.json:SessionStart:session-start.sh:startup|resume|clear|compact` | `plugins/toolu/hooks/hooks.json` | toolu | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
 | `toolu:hooks.json:UserPromptSubmit:user-prompt-submit.sh` | `plugins/toolu/hooks/hooks.json` | toolu | UserPromptSubmit | shell-out | required | #210/todo | pending-opencode | yes | — |

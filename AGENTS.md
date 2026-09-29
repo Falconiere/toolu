@@ -61,7 +61,8 @@ A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context b
 
 | File | Purpose |
 |------|---------|
-| `plugins/toolu/hooks/pre-tools/mod.sh` | Pre-tool dispatcher: protected files, bash, MCP, commit, quality |
+| `plugins/toolu/hooks/src/pre-tools.ts` | Pre-tool dispatcher, bundled to `hooks/dist/pre-tools.js`: built-in modules (protected files, bash, MCP, commit, quality) then `pre-tools.d`; each module runs on its bash script until ported. `pre-tools/mod.sh` stays as the parity baseline |
+| `packages/toolu-core/src/dispatch/dispatch.ts` | `@toolu/core/dispatch`: `dispatchPreTool` (port of `dispatch.sh`: deny over ask over advisory, per-path patch walk, byte-identical output), `bashModule` fallback for a module not yet ported |
 | `plugins/toolu/hooks/post-tools/mod.sh` | Quality checks on edited files |
 | `plugins/toolu/hooks/lib/quality-config.sh` | Thresholds: override, then linter config, then default |
 | `plugins/toolu/hooks/lib/detect.sh` | Line counts, tool availability, `is_git_push`, `push_target_root`, `push_target_branch` |
