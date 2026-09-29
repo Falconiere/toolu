@@ -36,10 +36,13 @@ async function run(bin: string, argv: readonly string[]): Promise<number> {
     child.kill(signal);
   };
   for (const signal of FORWARDED) process.on(signal, forward);
-  const code = await child.exited;
-  for (const signal of FORWARDED) process.off(signal, forward);
-  const signal = child.signalCode;
-  return signal === null ? code : 128 + constants.signals[signal];
+  try {
+    const code = await child.exited;
+    const signal = child.signalCode;
+    return signal === null ? code : 128 + constants.signals[signal];
+  } finally {
+    for (const signal of FORWARDED) process.off(signal, forward);
+  }
 }
 
 async function main(): Promise<number> {

@@ -85,6 +85,31 @@ test("runCli maps an unexpected error to exit 1 with its message", () => {
   expect(run.stderr).toContain("boom");
 });
 
+/** Runs `body` (a module importing runCli/CliExit/writeStdout) as `bun main.ts | head -c 10`. */
+function pipeToHead(body: string): { status: number | null; stderr: string } {
+  const dir = mkdtempSync(join(tmpdir(), "toolu-cli-"));
+  try {
+    const script = join(dir, "main.ts");
+    writeFileSync(
+      script,
+      `import { CliExit, runCli, writeStdout } from ${JSON.stringify(CLI)};\n${body}\n`,
+    );
+    const pipeline = `set -o pipefail; "$0" "$1" | head -c 10 >/dev/null`;
+    const run = spawnSync("bash", ["-c", pipeline, process.execPath, script], { encoding: "utf8" });
+    return { status: run.status, stderr: run.stderr };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test("a CliExit whose stdout hits a closed pipe still writes its message and exits 141", () => {
+  const run = pipeToHead(
+    `await runCli(async () => { throw new CliExit(22, "tool: HTTP 401", "x".repeat(1 << 22)); });`,
+  );
+  expect(run.status).toBe(141);
+  expect(run.stderr).toBe("tool: HTTP 401\n");
+});
+
 test("a reader that goes away ends the CLI quietly with 141, as SIGPIPE did", () => {
   const dir = mkdtempSync(join(tmpdir(), "toolu-cli-"));
   try {

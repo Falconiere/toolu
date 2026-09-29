@@ -42,21 +42,37 @@ function isBrokenPipe(error: unknown): boolean {
 
 /**
  * Writes `text` to stdout and waits until it is flushed, so a following exit
- * cannot truncate it. A reader that went away (`| head`) ends the CLI quietly
- * with 141, the status a shell script got from SIGPIPE.
+ * cannot truncate it. A reader that went away (`| head`) throws a silent
+ * CliExit(141), the status a shell script got from SIGPIPE.
  */
 export async function writeStdout(text: string): Promise<void> {
   if (text === "") return;
   try {
     await Bun.write(Bun.stdout, text);
   } catch (error) {
-    if (isBrokenPipe(error)) process.exit(141);
+    if (isBrokenPipe(error)) throw new CliExit(141);
     throw error;
   }
 }
 
 async function writeStderr(text: string): Promise<void> {
   if (text !== "") await Bun.write(Bun.stderr, text.endsWith("\n") ? text : `${text}\n`);
+}
+
+/**
+ * Writes a CliExit's stdout then its message and returns its code, or 141 when
+ * the stdout reader is gone: the message still reaches stderr either way.
+ */
+async function report(exit: CliExit): Promise<number> {
+  let code = exit.code;
+  try {
+    await writeStdout(exit.stdout);
+  } catch (error) {
+    if (!(error instanceof CliExit)) throw error;
+    code = error.code;
+  }
+  await writeStderr(exit.message);
+  return code;
 }
 
 /**
@@ -69,9 +85,7 @@ export async function runCli(main: () => Promise<number>): Promise<never> {
     code = await main();
   } catch (error) {
     if (error instanceof CliExit) {
-      await writeStdout(error.stdout);
-      await writeStderr(error.message);
-      code = error.code;
+      code = await report(error);
     } else {
       await writeStderr(error instanceof Error ? error.message : String(error));
       code = 1;

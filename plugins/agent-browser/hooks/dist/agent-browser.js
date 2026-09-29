@@ -22,7 +22,7 @@ async function writeStdout(text) {
     await Bun.write(Bun.stdout, text);
   } catch (error) {
     if (isBrokenPipe(error))
-      process.exit(141);
+      throw new CliExit(141);
     throw error;
   }
 }
@@ -32,15 +32,25 @@ async function writeStderr(text) {
 `) ? text : `${text}
 `);
 }
+async function report(exit) {
+  let code = exit.code;
+  try {
+    await writeStdout(exit.stdout);
+  } catch (error) {
+    if (!(error instanceof CliExit))
+      throw error;
+    code = error.code;
+  }
+  await writeStderr(exit.message);
+  return code;
+}
 async function runCli(main) {
   let code;
   try {
     code = await main();
   } catch (error) {
     if (error instanceof CliExit) {
-      await writeStdout(error.stdout);
-      await writeStderr(error.message);
-      code = error.code;
+      code = await report(error);
     } else {
       await writeStderr(error instanceof Error ? error.message : String(error));
       code = 1;
@@ -109,11 +119,14 @@ async function run(bin, argv) {
   };
   for (const signal of FORWARDED)
     process.on(signal, forward);
-  const code = await child.exited;
-  for (const signal of FORWARDED)
-    process.off(signal, forward);
-  const signal = child.signalCode;
-  return signal === null ? code : 128 + constants.signals[signal];
+  try {
+    const code = await child.exited;
+    const signal = child.signalCode;
+    return signal === null ? code : 128 + constants.signals[signal];
+  } finally {
+    for (const signal of FORWARDED)
+      process.off(signal, forward);
+  }
 }
 async function main() {
   const override = process.env["AGENT_BROWSER_BIN"] ?? "";
