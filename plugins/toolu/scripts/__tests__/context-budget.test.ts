@@ -2,10 +2,17 @@
  * independent of the live harness docs, plus the CLI on this repo. */
 
 import { expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
-import { checkDoc, checkSkill, countWords, extractDescription } from "../context-budget.ts";
+import {
+  DOC_BUDGETS,
+  checkDoc,
+  checkSkill,
+  countWords,
+  extractDescription,
+} from "../context-budget.ts";
 
 const SCRIPT = join(import.meta.dir, "..", "context-budget.ts");
 const reds = (lines: { red: boolean }[]) => lines.filter((line) => line.red).length;
@@ -109,4 +116,14 @@ test.concurrent("no-break and other Unicode spaces separate words, as wc -w coun
   using sb = createSandbox();
   const file = sb.write("u.md", "a b　c d\n");
   expect(countWords(file)).toBe(4);
+});
+
+test.concurrent("every doc the SessionStart hook renders has a word ceiling", () => {
+  const source = readFileSync(
+    join(import.meta.dir, "..", "..", "hooks", "src", "lifecycle", "session-docs.ts"),
+    "utf8",
+  );
+  const rendered = [...source.matchAll(/"([a-z-]+)\.md"/g)].map((m) => m[1]);
+  expect(rendered.length).toBeGreaterThan(0);
+  expect(new Set(rendered)).toEqual(new Set(DOC_BUDGETS.map(([name]) => name)));
 });

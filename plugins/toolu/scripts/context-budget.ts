@@ -100,20 +100,20 @@ export function checkSkill(
   return out;
 }
 
+/** Word ceilings for the `hooks/docs/*.md` the SessionStart hook injects, in check order. */
+export const DOC_BUDGETS: readonly (readonly [name: string, budget: number])[] = [
+  ["session-start", 110],
+  ["model-routing", 90],
+  ["post-compaction", 28],
+  ["session-start-ts", 30],
+  ["session-start-rust", 36],
+  ["session-start-python", 36],
+];
+
 export function runDocs(root: string): Line[] {
-  return [
-    ...checkDoc(root, "session-start", "plugins/toolu/hooks/docs/session-start.md", 110),
-    ...checkDoc(root, "model-routing", "plugins/toolu/hooks/docs/model-routing.md", 90),
-    ...checkDoc(root, "post-compaction", "plugins/toolu/hooks/docs/post-compaction.md", 28),
-    ...checkDoc(root, "session-start-ts", "plugins/toolu/hooks/docs/session-start-ts.md", 30),
-    ...checkDoc(root, "session-start-rust", "plugins/toolu/hooks/docs/session-start-rust.md", 36),
-    ...checkDoc(
-      root,
-      "session-start-python",
-      "plugins/toolu/hooks/docs/session-start-python.md",
-      36,
-    ),
-  ];
+  return DOC_BUDGETS.flatMap(([name, budget]) =>
+    checkDoc(root, name, `plugins/toolu/hooks/docs/${name}.md`, budget),
+  );
 }
 
 export function runSkills(root: string): Line[] {
