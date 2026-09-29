@@ -29,7 +29,7 @@ const LOCATION = /[A-Za-z0-9_./\\-]+\.[A-Za-z]+:[0-9]+(:[0-9]+)?/g;
 
 const trim = (s: string) => s.replace(/^[ \t]+/, "").replace(/[ \t]+$/, "");
 
-export type TestfailCaps = {
+type TestfailCaps = {
   maxFailures: number;
   maxErrors: number;
   maxLocations: number;
@@ -38,14 +38,14 @@ export type TestfailCaps = {
 
 type Bucket = "f" | "e" | "l";
 
-export type Summary = {
+type Summary = {
   failures: string[];
   errors: string[];
   locations: string[];
   over: Record<Bucket, number>;
 };
 
-export function collect(lines: string[], caps: TestfailCaps): Summary {
+function collect(lines: string[], caps: TestfailCaps): Summary {
   const s: Summary = { failures: [], errors: [], locations: [], over: { f: 0, e: 0, l: 0 } };
   const seen = {
     failures: new Set<string>(),
@@ -91,7 +91,7 @@ const jsonClean = (s: string) => s.replaceAll("\t", " ");
 /** A section header count; awk printed its uninitialized counter as "". */
 const count = (n: number) => (n === 0 ? "" : String(n));
 
-export function summarizeTestfail(lines: string[], json: boolean, caps: TestfailCaps): string {
+function summarizeTestfail(lines: string[], json: boolean, caps: TestfailCaps): string {
   const { failures, errors, locations, over } = collect(lines, caps);
   const recognized = failures.length + errors.length + locations.length > 0;
   if (json) {

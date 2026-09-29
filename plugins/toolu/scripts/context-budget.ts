@@ -110,13 +110,13 @@ export const DOC_BUDGETS: readonly (readonly [name: string, budget: number])[] =
   ["session-start-python", 36],
 ];
 
-export function runDocs(root: string): Line[] {
+function runDocs(root: string): Line[] {
   return DOC_BUDGETS.flatMap(([name, budget]) =>
     checkDoc(root, name, `plugins/toolu/hooks/docs/${name}.md`, budget),
   );
 }
 
-export function runSkills(root: string): Line[] {
+function runSkills(root: string): Line[] {
   return [
     // Trimmed skills: word ceiling + trigger phrases that MUST survive the trim.
     ...checkSkill(

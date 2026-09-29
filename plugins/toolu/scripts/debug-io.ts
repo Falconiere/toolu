@@ -8,9 +8,9 @@
 
 import { readFileSync } from "node:fs";
 
-export type Summarizer = (lines: string[], json: boolean) => string;
+type Summarizer = (lines: string[], json: boolean) => string;
 
-export type HelperSpec = {
+type HelperSpec = {
   /** Script name used in messages, e.g. `debug-log.ts`. */
   name: string;
   usage: string;
@@ -28,7 +28,7 @@ export function envCap(name: string, fallback: number): number {
 }
 
 /** awk records: split on "\n"; a trailing newline does not open an empty record. */
-export function records(text: string): string[] {
+function records(text: string): string[] {
   const lines = text.split("\n");
   if (lines.at(-1) === "") lines.pop();
   return lines;

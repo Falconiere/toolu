@@ -28,9 +28,9 @@ function dedupKey(line: string): string {
 
 const jsonClean = (s: string) => s.replaceAll("\t", " ").replaceAll("\r", "");
 
-export type LogCaps = { maxLines: number; maxBytes: number };
+type LogCaps = { maxLines: number; maxBytes: number };
 
-export function summarizeLog(lines: string[], json: boolean, caps: LogCaps): string {
+function summarizeLog(lines: string[], json: boolean, caps: LogCaps): string {
   const { maxLines, maxBytes } = caps;
   const total = lines.length;
   const errs: string[] = [];

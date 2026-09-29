@@ -28,11 +28,11 @@ const PAREN_LOC = /\(.*\)[ \t]*$/s;
 
 const trim = (s: string) => s.replace(/^[ \t]+/, "").replace(/[ \t]+$/, "");
 
-export type StackCaps = { maxFrames: number; maxRaw: number };
+type StackCaps = { maxFrames: number; maxRaw: number };
 
-export type Frames = { app: string[]; noise: number };
+type Frames = { app: string[]; noise: number };
 
-export function parseFrames(lines: string[]): Frames {
+function parseFrames(lines: string[]): Frames {
   const app: string[] = [];
   let noise = 0;
   const emit = (sym: string, loc: string) => {
@@ -84,7 +84,7 @@ export function parseFrames(lines: string[]): Frames {
 
 const jsonClean = (s: string) => s.replaceAll("\t", " ");
 
-export function summarizeStack(lines: string[], json: boolean, caps: StackCaps): string {
+function summarizeStack(lines: string[], json: boolean, caps: StackCaps): string {
   const { app, noise } = parseFrames(lines);
   const recognized = app.length + noise > 0;
   if (json) {

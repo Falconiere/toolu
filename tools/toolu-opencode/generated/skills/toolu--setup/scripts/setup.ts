@@ -76,7 +76,7 @@ function wellFormed(lines: string[]): boolean {
   return !block && assignments === 5 && starts === 1 && closes === 1;
 }
 
-export function validTemplate(file: string, profile: Profile): boolean {
+function validTemplate(file: string, profile: Profile): boolean {
   if (!isFile(file)) return false;
   const lines = fileLines(file);
   if (lines === null) return false;
@@ -258,7 +258,7 @@ function run(argv: string[]): number {
   return 0;
 }
 
-export function main(argv: string[]): number {
+function main(argv: string[]): number {
   try {
     return run(argv);
   } catch (err: unknown) {
