@@ -105,12 +105,22 @@ test.concurrent("without --abandon a record with no PR is refused and left uncha
   expect(readFileSync(l.record, "utf8")).toBe(before);
 });
 
-test.concurrent("a missing record or missing arguments fail without writing", async () => {
+test.concurrent("a missing or non-object record, or bad arguments, fail without writing", async () => {
   using sb = createSandbox();
-  const missing = await finish(join(sb.root, "state"), "k-9", "--abandon");
+  const state = join(sb.root, "state");
+  const missing = await finish(state, "k-9", "--abandon");
   expect(missing.exitCode).toBe(1);
-  expect(missing.stderr).toContain(`no record ${join(sb.root, "state", "issues", "k-9.json")}`);
-  const usage = await finish(join(sb.root, "state"));
-  expect(usage.exitCode).toBe(2);
-  expect(usage.stderr).toContain("usage: finish-issue.ts");
+  expect(missing.stderr).toContain(`no record ${join(state, "issues", "k-9.json")}`);
+  const arrayRecord = join(state, "issues", "k-8.json");
+  mkdirSync(dirname(arrayRecord), { recursive: true });
+  writeFileSync(arrayRecord, "[1]\n");
+  const notObject = await finish(state, "k-8", "--abandon");
+  expect(notObject.exitCode).toBe(1);
+  expect(notObject.stderr).toContain(`no record ${arrayRecord}`);
+  expect(readFileSync(arrayRecord, "utf8")).toBe("[1]\n");
+  for (const args of [[state], [state, "k-9", "--force"], [state, "k-9", "--abandon", "x"]]) {
+    const usage = await finish(...args);
+    expect(usage.exitCode).toBe(2);
+    expect(usage.stderr).toContain("usage: finish-issue.ts");
+  }
 });

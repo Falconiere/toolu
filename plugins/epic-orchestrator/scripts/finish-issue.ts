@@ -26,7 +26,7 @@ type IssueRecord = Record<string, unknown> & {
   agent?: string;
 };
 
-export type Finished = {
+type Finished = {
   key: string | null;
   stage: "merged" | "abandoned";
   worktree_removed: boolean;
@@ -35,10 +35,14 @@ export type Finished = {
   leftover_files: string[];
 };
 
-/** Run a command for its exit status and stdout; a missing binary counts as failure. */
-async function attempt(cmd: string[]): Promise<{ ok: boolean; out: string }> {
+/** Run a command for its exit status and stdout; a missing binary counts as failure.
+ * `stderr: "inherit"` surfaces the tool's own error where the operator sees it. */
+async function attempt(
+  cmd: string[],
+  stderr: "ignore" | "inherit" = "ignore",
+): Promise<{ ok: boolean; out: string }> {
   try {
-    const proc = Bun.spawn(cmd, { stdout: "pipe", stderr: "ignore" });
+    const proc = Bun.spawn(cmd, { stdout: "pipe", stderr });
     const [out, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
     return { ok: code === 0, out };
   } catch {
@@ -94,14 +98,12 @@ async function leftovers(worktree: string): Promise<string[]> {
     .slice(0, LEFTOVER_LINES);
 }
 
-export async function finishIssue(
-  stateDir: string,
-  key: string,
-  abandon: boolean,
-): Promise<Finished> {
+async function finishIssue(stateDir: string, key: string, abandon: boolean): Promise<Finished> {
   const path = join(stateDir, "issues", `${key}.json`);
   const rec = readJson<IssueRecord | null>(path, null);
-  if (rec === null || typeof rec !== "object") throw new Error(`no record ${path}`);
+  if (rec === null || typeof rec !== "object" || Array.isArray(rec)) {
+    throw new Error(`no record ${path}`);
+  }
   const worktree = str(rec.worktree);
   const workspace = str(rec.workspace_id);
 
@@ -120,8 +122,8 @@ export async function finishIssue(
     process.stderr.write(`WARN: no workspace_id on record ${key}; skipping worktree remove\n`);
   } else {
     const force = abandon ? [] : ["--force"];
-    removed = (await attempt(["herdr", "worktree", "remove", "--workspace", workspace, ...force]))
-      .ok;
+    const argv = ["herdr", "worktree", "remove", "--workspace", workspace, ...force];
+    removed = (await attempt(argv, "inherit")).ok;
   }
 
   // Squash merges leave the branch unmerged in git's eyes, hence -D.
