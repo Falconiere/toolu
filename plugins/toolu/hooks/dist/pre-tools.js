@@ -4131,14 +4131,14 @@ function finalAsk(askResult, advisories) {
   const out = isJsonObject(ask) ? enriched(ask, joined(advisories.contexts), joined(advisories.messages)) : undefined;
   return out === undefined ? printed(askResult) : jqPrint(out);
 }
-function finalAdvisory(advisories) {
+function finalAdvisory(advisories, hookEventName) {
   const ctx = joined(advisories.contexts);
   const msg = joined(advisories.messages);
   if (ctx === "" && msg === "")
     return "";
   const out = {};
   if (ctx !== "")
-    out.hookSpecificOutput = { hookEventName: "PreToolUse", additionalContext: ctx };
+    out.hookSpecificOutput = { hookEventName, additionalContext: ctx };
   if (msg !== "")
     out.systemMessage = msg;
   return jqPrint(out);
@@ -4589,7 +4589,7 @@ function bashModule(modulesDir, name) {
 function text2(value, fallback) {
   return typeof value === "string" && value !== "" ? value : fallback;
 }
-function preToolEvent(payload, doc, session) {
+function toolEvent(payload, doc, session) {
   const raw = isJsonObject(doc) ? doc : {};
   const input = isJsonObject(raw.tool_input) ? raw.tool_input : {};
   const cwd = text2(raw.cwd, session.projectRoot);
@@ -4602,13 +4602,17 @@ function preToolEvent(payload, doc, session) {
     toolName: text2(payload.toolName, "unknown"),
     toolInput: input
   };
+  if (session.phase === "post") {
+    const output = raw.tool_response ?? raw.tool_output;
+    return { ...base, type: "tool/post", ...output === undefined ? {} : { toolOutput: output } };
+  }
   const command = input.command;
   if ((payload.toolName === "Bash" || payload.toolName === "Shell") && typeof command === "string" && command !== "") {
     return { ...base, type: "shell/pre", command };
   }
   return { ...base, type: "tool/pre" };
 }
-function preToolContext(payload, doc, session) {
+function toolContext(payload, doc, session) {
   const edit = payload.edit;
   return {
     host: session.host,
@@ -4621,11 +4625,14 @@ function preToolContext(payload, doc, session) {
 }
 
 // packages/toolu-core/src/dispatch/dispatch-walk.ts
-function newWalkState() {
-  return { advisories: emptyAdvisories(), ask: undefined, stderr: [] };
+function newWalkState(phase) {
+  return { phase, advisories: emptyAdvisories(), ask: undefined, stderr: [] };
 }
 function permissionOf(doc) {
   return readField(doc, ["hookSpecificOutput", "permissionDecision"]);
+}
+function stopsWalk(phase, doc) {
+  return phase === "pre" ? permissionOf(doc) === "deny" : readField(doc, ["decision"]) === "block";
 }
 function consume(state, name, result) {
   if (result.exitCode === 2) {
@@ -4639,11 +4646,10 @@ function consume(state, name, result) {
   if (result.stdout === "")
     return;
   const doc = parseDocument(result.stdout);
-  const permission = permissionOf(doc);
-  if (permission === "deny") {
+  if (stopsWalk(state.phase, doc)) {
     return { stdout: printed(result.stdout), stderr: state.stderr.join(""), exitCode: 0 };
   }
-  if (permission === "ask") {
+  if (state.phase === "pre" && permissionOf(doc) === "ask") {
     state.ask ??= result.stdout;
     return;
   }
@@ -4651,7 +4657,8 @@ function consume(state, name, result) {
   return;
 }
 function settle(state) {
-  const stdout = state.ask === undefined ? finalAdvisory(state.advisories) : finalAsk(state.ask, state.advisories);
+  const event = state.phase === "pre" ? "PreToolUse" : "PostToolUse";
+  const stdout = state.ask === undefined ? finalAdvisory(state.advisories, event) : finalAsk(state.ask, state.advisories);
   return { stdout, stderr: state.stderr.join(""), exitCode: 0 };
 }
 function moduleEnv(payload, session) {
@@ -4701,8 +4708,9 @@ function bashFallback(walk, raw) {
   return (entry) => {
     const result = runBash(entry.path, moduleStdin(walk.payload.text), moduleEnv(walk.payload, walk.session));
     raw.set(entry.path, result);
-    const stops = result.exitCode === 2 || result.exitCode === 0 && permissionOf(parseDocument(result.stdout)) === "deny";
-    const decision = stops ? { kind: "deny", reason: "registry module denied" } : { kind: "allow" };
+    const phase = walk.session.phase;
+    const stops = result.exitCode === 2 || result.exitCode === 0 && stopsWalk(phase, parseDocument(result.stdout));
+    const decision = !stops ? { kind: "allow" } : phase === "pre" ? { kind: "deny", reason: "registry module denied" } : { kind: "post_block", reason: "registry module blocked" };
     return Promise.resolve(decision);
   };
 }
@@ -4733,16 +4741,18 @@ async function dispatchModules(payload, session, builtins) {
   const walk = {
     payload,
     session,
-    event: preToolEvent(payload, doc, session),
-    ctx: preToolContext(payload, doc, session)
+    event: toolEvent(payload, doc, session),
+    ctx: toolContext(payload, doc, session)
   };
-  const state = newWalkState();
+  const state = newWalkState(session.phase);
   const done = await walkBuiltins(builtins, 0, walk, state) ?? await walkRegistry(walk, state);
   return done ?? settle(state);
 }
 
 // packages/toolu-core/src/dispatch/dispatch.ts
 var MALFORMED_PATCH_DENY = `{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Unable to parse apply_patch file headers; patch blocked so protected-file and quality gates cannot be bypassed."}}
+`;
+var MALFORMED_PATCH_BLOCK = `{"decision":"block","reason":"Unable to parse apply_patch file headers; per-file post-edit quality checks could not run."}
 `;
 function syntheticEdit(doc, record) {
   const input = doc.tool_input;
@@ -4787,11 +4797,26 @@ async function dispatchInput(input, session, builtins) {
     return dispatchModules({ text: input, toolName }, session, builtins);
   }
   if (normalized.kind === "malformed" || normalized.records.length === 0 || !isJsonObject(doc)) {
-    return { stdout: MALFORMED_PATCH_DENY, stderr: "", exitCode: 0 };
+    const stdout = session.phase === "pre" ? MALFORMED_PATCH_DENY : MALFORMED_PATCH_BLOCK;
+    return { stdout, stderr: "", exitCode: 0 };
   }
-  return dispatchRecords(doc, normalized.records, 0, { session, builtins, state: newWalkState() });
+  const state = newWalkState(session.phase);
+  return dispatchRecords(doc, normalized.records, 0, { session, builtins, state });
 }
-async function dispatchPreTool(stdin, options) {
+function sessionFor(phase, env, host, options) {
+  const root = configRoot({ env, host });
+  const cwd = options.cwd ?? process.cwd();
+  const base = { phase, host, configRoot: root, libDir: options.libDir };
+  if (phase === "pre") {
+    const project = projectRoot({ env, host, cwd }) ?? cwd;
+    return { ...base, env: childEnv2(env, { TOOLU_CONFIG_DIR: root }), projectRoot: project };
+  }
+  const project = gitToplevel(env, cwd) ?? cwd;
+  const path = `${project}/node_modules/.bin:${env.PATH ?? ""}`;
+  const extra = { TOOLU_CONFIG_DIR: root, PROJECT_ROOT: project, PATH: path };
+  return { ...base, env: childEnv2(env, extra), projectRoot: project };
+}
+async function dispatchHook(phase, stdin, options) {
   const env = options.env ?? process.env;
   const host = detectHost({ env });
   const warnings = [];
@@ -4801,19 +4826,15 @@ async function dispatchPreTool(stdin, options) {
     warn: (line) => warnings.push(`toolu-config: ${line}
 `)
   });
-  if (!enabled(config, "hooks", "pre-tools")) {
+  if (!enabled(config, "hooks", phase === "pre" ? "pre-tools" : "post-tools")) {
     return { stdout: "", stderr: warnings.join(""), exitCode: 0 };
   }
-  const root = configRoot({ env, host });
-  const session = {
-    host,
-    env: childEnv2(env, { TOOLU_CONFIG_DIR: root }),
-    configRoot: root,
-    projectRoot: projectRoot({ env, host }) ?? process.cwd(),
-    libDir: options.libDir
-  };
+  const session = sessionFor(phase, env, host, options);
   const result = await dispatchInput(substituted2(stdin), session, options.builtins);
   return { ...result, stderr: warnings.join("") + result.stderr };
+}
+function dispatchPreTool(stdin, options) {
+  return dispatchHook("pre", stdin, options);
 }
 
 // plugins/toolu/hooks/src/pre-tools/builtins.ts
