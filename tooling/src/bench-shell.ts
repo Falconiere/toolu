@@ -50,16 +50,21 @@ const analysis = analyzeShell(process.argv[2] ?? "");
 const destination = pushTargets(analysis)[0]?.destination ?? null;
 process.stdout.write(JSON.stringify({ push: runsGitSubcommand(analysis, "push"), destination }) + "\\n");
 `;
-const FULL_PROBE = `import * as shell from ${JSON.stringify(SHELL_ENTRY)};
-const analysis = shell.analyzeShell(process.argv[2] ?? "");
-const commit = analysis.commands.map(shell.gitInvocation).find((git) => git?.subcommand === "commit");
+const FULL_PROBE = `import {
+  MAX_RUN_DEPTH, MAX_SHELL_INPUT, analyzeShell, commitMessages, gitInvocation, matchesRule,
+  pushTargets, runsGitSubcommand, shellAnalysisOf, writeTargets,
+} from ${JSON.stringify(SHELL_ENTRY)};
+const event = { type: "shell/pre", sessionId: "s", cwd: "/", projectRoot: "/", worktree: "/",
+  toolCallId: "c", toolName: "Bash", toolInput: {}, command: process.argv[2] ?? "" };
+const analysis = shellAnalysisOf(event);
+const commit = analysis.commands.map(gitInvocation).find((git) => git?.subcommand === "commit");
 process.stdout.write(JSON.stringify({
-  push: shell.runsGitSubcommand(analysis, "push"),
-  destination: shell.pushTargets(analysis)[0]?.destination ?? null,
-  writes: shell.writeTargets(analysis).length,
-  messages: commit === undefined ? [] : shell.commitMessages(commit),
-  rule: analysis.commands.some((c) => shell.matchesRule(c, "node -e")),
-  exports: Object.keys(shell).length,
+  push: runsGitSubcommand(analysis, "push"),
+  destination: pushTargets(analysis)[0]?.destination ?? null,
+  writes: writeTargets(analyzeShell(analysis.source)).length,
+  messages: commit === undefined ? [] : commitMessages(commit),
+  rule: analysis.commands.some((c) => matchesRule(c, "node -e")),
+  limits: [MAX_RUN_DEPTH, MAX_SHELL_INPUT],
 }) + "\\n");
 `;
 

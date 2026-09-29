@@ -99,9 +99,9 @@ CI asserts only the bundle sizes (`tooling/src/__tests__/bench-shell.test.ts`), 
 | Measure | Budget | Measured |
 |---|---|---|
 | Bundle size added, representative entry (unminified) | ≤ 200,000 B (#284) | 198,556 B |
-| Bundle size added, whole public surface (unminified) | ≤ 210,000 B (regression ceiling) | 206,019 B: **over #284's 200 KB**, see below |
-| Cold-start p50, full-surface probe minus empty probe (40 interleaved runs) | ≤ 5 ms | +3.79 ms (empty 18.44 ms, full 22.22 ms; p90 19.97 / 23.10 ms) |
-| Parse and walk over 235 fixture commands, 4,700 samples | p99 ≤ 0.1 ms | p50 3.8 µs, p99 20.9 µs, max 2.5 ms |
+| Bundle size added, whole public surface (unminified) | ≤ 210,000 B (regression ceiling) | 205,347 B: **over #284's 200 KB**, see below |
+| Cold-start p50, full-surface probe minus empty probe (40 interleaved runs) | ≤ 5 ms | +4.02 ms (empty 18.48 ms, full 22.50 ms; p90 19.52 / 24.23 ms) |
+| Parse and walk over 235 fixture commands, 4,700 samples | p99 ≤ 0.1 ms | p50 3.8 µs, p99 19.9 µs, max 1.6 ms |
 
 Measured on 2026-09-29 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple M2 Max), with other agent sessions on the same machine (load average about 5). Load raises both absolute cold-start numbers alike, and the budget is the difference between them. For comparison, the shipped `is_git_push` takes 0.23 s under bash 5.3 and 0.61 s under `/bin/bash` 3.2 on the 4.3 KB fixture `283-11a`.
 
