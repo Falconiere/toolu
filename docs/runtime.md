@@ -58,6 +58,8 @@ Without Bun the launcher itself answers, with no bundle involved:
 
 A TypeScript hook ships as a committed single-file ESM bundle. It is never installed or compiled on the user's machine. Each top-level `plugins/<name>/hooks/src/<entry>.ts` is built by `bun run build:plugins` into `plugins/<name>/hooks/dist/<entry>.js`, which inlines `@toolu/core` and its dependencies and runs with `bun` and no `node_modules`. The build pins its working directory to the repository root, so the output is byte-identical on every machine running the same Bun. `bun run check:plugin-bundles` rebuilds into a temp directory and fails CI when a committed bundle drifts from its source, is missing, or has no source. Published packages carry `hooks/dist`, never `hooks/src`.
 
+A skill CLI is a bundle too. An entry that starts with `#!/usr/bin/env bun` builds to an executable `hooks/dist/<entry>.js`, and the drift check fails if a committed one loses its exec bit. The plugin's SessionStart hook symlinks it to a stable path such as `<config>/exa-search/search.sh`, so agents run it by path and `bun` must be on `PATH`. exa-search, context7 and agent-browser ship this way (#270).
+
 ## Why not node
 
 There is no `node` fallback. Measured warm hook startup on macOS: bash plus jq 6.3 ms, bun 5.2 ms (12.3 ms with zod), bun single-file bundle 6.4–8.6 ms, **node 49.7 ms**, python3 23.5 ms. Node is roughly 10x slower per hook than Bun (49.7 ms versus 5.2 ms), so a fallback would silently slow every tool call.

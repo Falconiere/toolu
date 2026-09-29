@@ -13,7 +13,8 @@
     "./harness/spawn": "./src/harness/spawn.ts",
     "./harness/hosts": "./src/harness/hosts.ts",
     "./harness/fixtures": "./src/harness/fixtures.ts",
-    "./harness/timing": "./src/harness/timing.ts"
+    "./harness/timing": "./src/harness/timing.ts",
+    "./https-fixture": "./src/https-fixture/https-fixture.ts"
   },
   "scripts": {
     "start": "bun run src/cli/run.ts"

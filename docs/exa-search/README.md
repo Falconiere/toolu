@@ -2,7 +2,7 @@
 
 **Type:** Knowledge | **Version:** 6.5.0 | **Standalone** (no dependencies)
 
-Web search, code-example search, URL crawling, and deep research via the Exa REST API — a skill plus a bash REST wrapper.
+Web search, code-example search, URL crawling, and deep research via the Exa REST API — a skill plus a TypeScript REST CLI (an executable Bun bundle, published as `search.sh`).
 
 ## Install
 

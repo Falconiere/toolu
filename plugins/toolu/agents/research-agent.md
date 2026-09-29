@@ -50,8 +50,8 @@ Code. Ordinary shell calls do not inherit plugin lifecycle variables, so never
 collapse the two roots into one ambiguous fallback.
 
 Repo-checkout fallback paths (for tests/dev when the plugins are not installed):
-`plugins/context7/skills/context7/scripts/search.sh`,
-`plugins/exa-search/skills/exa-search/scripts/search.sh`.
+`plugins/context7/hooks/dist/search.js`,
+`plugins/exa-search/hooks/dist/search.js` (executable Bun bundles).
 
 ### Try-then-fallback protocol
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env bats
 # Tests for agents/research-agent.md and the exa fallback signal it relies on.
 # Asserts the REAL agent file's frontmatter/flags, and runs the REAL exa
-# search.sh keyless to confirm it exits 1 (the documented try-then-fallback
-# trigger — spec acceptance #4). No mocks.
+# search CLI bundle keyless to confirm it exits 1 (the documented
+# try-then-fallback trigger — spec acceptance #4). No mocks.
 
 AGENT="${BATS_TEST_DIRNAME}/../../agents/research-agent.md"
-EXA="${BATS_TEST_DIRNAME}/../../../exa-search/skills/exa-search/scripts/search.sh"
+EXA="${BATS_TEST_DIRNAME}/../../../exa-search/hooks/dist/search.js"
 
 @test "research-agent: file exists" {
   [ -f "$AGENT" ]
@@ -41,12 +41,11 @@ EXA="${BATS_TEST_DIRNAME}/../../../exa-search/skills/exa-search/scripts/search.s
   grep -qi 'stale' "$AGENT"
 }
 
-@test "research-agent: real exa search.sh exits 1 with no API key (fallback signal)" {
-  # Skip only if the script's own hard deps are missing — then exit 1 would be
-  # for the wrong reason and the test would not assert the key path.
-  command -v jq >/dev/null 2>&1   || skip "jq not installed"
-  command -v curl >/dev/null 2>&1 || skip "curl not installed"
-  run env -u EXA_API_KEY bash "$EXA" search -q "anything"
+@test "research-agent: real exa search CLI exits 1 with no API key (fallback signal)" {
+  # Skip only if the CLI's runtime is missing — then exit 1 would be for the
+  # wrong reason and the test would not assert the key path.
+  command -v bun >/dev/null 2>&1 || skip "bun not installed"
+  run env -u EXA_API_KEY "$EXA" search -q "anything"
   [ "$status" -eq 1 ]
   echo "$output" | grep -q 'EXA_API_KEY unset'
 }

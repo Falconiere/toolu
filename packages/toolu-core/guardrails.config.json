@@ -10,7 +10,9 @@
       "policy",
       "config",
       "runner",
-      "launcher"
+      "launcher",
+      "cli",
+      "rest"
     ],
     "nested": {
       "decision": [
@@ -34,6 +36,12 @@
         "runner-read.ts",
         "runner-exec.ts",
         "runner-types.ts",
+        "__tests__"
+      ],
+      "cli": [
+        "__tests__"
+      ],
+      "rest": [
         "__tests__"
       ],
       "launcher": [
