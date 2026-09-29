@@ -1,6 +1,6 @@
 /**
  * Deterministic tier: for each query, the full-file read (baseline) vs the
- * ast-grep targeted match (treatment), as tokens. No model in the loop —
+ * ast-grep targeted match (treatment), counted in tokens. No model in the loop —
  * hermetic and CI-safe. A missing or empty target is guarded (saved 0 + note).
  *
  *   bun run tooling/src/benchmarks/cases/retrieval.ts [--queries <tsv>] [--corpus <dir>]

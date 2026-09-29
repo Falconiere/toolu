@@ -80,7 +80,7 @@ function runSessionStart(smoke: Smoke, pluginRoot: string, argv: string[]): void
     fail(`SessionStart ${argv.join(" ")} exited ${String(res.status)}: ${res.stderr.trim()}`);
 }
 
-/** Script hooks run directly; launcher one-liners (#250) through sh -c, as the host does. */
+/** Script hooks run directly; launcher one-liners (#250) through sh -c, the way the host runs them. */
 function sessionStarts(smoke: Smoke): number {
   let count = 0;
   for (const dir of readdirSync(join(smoke.root, "plugins")).toSorted()) {

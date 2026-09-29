@@ -179,7 +179,7 @@ function main(): number {
     return 0;
   } catch (err: unknown) {
     if (!(err instanceof PackagingError)) throw err;
-    // stdout as well, so a test harness that only shows stdout still surfaces the reason.
+    // stdout too, so a test harness that only shows stdout still surfaces the reason.
     process.stdout.write(`validate-plugin-packaging: ${err.message}\n`);
     console.error(`validate-plugin-packaging: ${err.message}`);
     return 1;
