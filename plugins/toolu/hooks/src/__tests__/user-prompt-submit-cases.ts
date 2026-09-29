@@ -5,9 +5,15 @@
  */
 import type { LifecycleCase } from "./lifecycle-cases.ts";
 
-const FAILING = { ".claude/tmp/quality-gate-status.json": '{"status":"failing","reason":"lint errors in a.ts"}' };
+const FAILING = {
+  ".claude/tmp/quality-gate-status.json": '{"status":"failing","reason":"lint errors in a.ts"}',
+};
 
-function ups(name: string, prompt: unknown, extra: Omit<LifecycleCase, "name" | "hook" | "stdin"> = {}) {
+function ups(
+  name: string,
+  prompt: unknown,
+  extra: Omit<LifecycleCase, "name" | "hook" | "stdin"> = {},
+) {
   return {
     name: `user-prompt-submit: ${name}`,
     hook: "user-prompt-submit",
@@ -25,6 +31,10 @@ const SKIPS: readonly LifecycleCase[] = [
   ups("trivial with punctuation", "Thanks!"),
   ups("trivial go ahead", "go ahead"),
   ups("trivial needs the whole prompt", "yes please"),
+  ups("trivial with a backslash", "ok\\"),
+  ups("trivial takes one punctuation mark", "ok!!"),
+  ups("object prompt", { text: "fix it" }),
+  ups("non-ASCII capitals are not lowercased", "FİX the Äpp"),
   ups("slash command", "/delivery-flow:delivery-flow build it"),
   ups("vague fix is blocked", "fix"),
   ups("vague with trailing spaces is blocked", "help   "),
@@ -82,7 +92,10 @@ const NUDGES: readonly LifecycleCase[] = [
   ups("issue key with context word", "pick up ABC-42 from the sprint"),
   ups("key-shaped tokens without context", "UTF-8 and GPT-4 encoding"),
   ups("lowercase key does not count", "abc-42 is on the backlog list"),
-  ups("every nudge at once", "brainstorm how to migrate jira ticket ABC-1 docs for the latest api reference"),
+  ups(
+    "every nudge at once",
+    "brainstorm how to migrate jira ticket ABC-1 docs for the latest api reference",
+  ),
 ];
 
 const PROJECT: readonly LifecycleCase[] = [
@@ -96,7 +109,9 @@ const PROJECT: readonly LifecycleCase[] = [
     untracked: { ".claude/tmp/quality-gate-status.json": '{"status":"failing","reason":false}' },
   }),
   ups("gate reason object", "add a button", {
-    untracked: { ".claude/tmp/quality-gate-status.json": '{"status":"failing","reason":{"file":"a.ts"}}' },
+    untracked: {
+      ".claude/tmp/quality-gate-status.json": '{"status":"failing","reason":{"file":"a.ts"}}',
+    },
   }),
   ups("malformed gate file", "add a button", {
     untracked: { ".claude/tmp/quality-gate-status.json": "{broken" },
@@ -112,7 +127,9 @@ const PROJECT: readonly LifecycleCase[] = [
     untracked: { ".claude/context.sh": "echo partial; exit 3\n", ...FAILING },
   }),
   ups("outside a git repo", "rename the thing", { git: false }),
-  ups("disabled by config", "fix the bug", { userConfig: { hooks: { "user-prompt-submit": false } } }),
+  ups("disabled by config", "fix the bug", {
+    userConfig: { hooks: { "user-prompt-submit": false } },
+  }),
 ];
 
 export const USER_PROMPT_SUBMIT_CASES: readonly LifecycleCase[] = [

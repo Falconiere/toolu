@@ -595,6 +595,26 @@
       "stdout": "",
       "stderr": "",
       "exitCode": 0
+    },
+    "user-prompt-submit: trivial with a backslash": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"UserPromptSubmit\",\n    \"additionalContext\": \"\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "user-prompt-submit: trivial takes one punctuation mark": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"UserPromptSubmit\",\n    \"additionalContext\": \"\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "user-prompt-submit: object prompt": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"UserPromptSubmit\",\n    \"additionalContext\": \"Fix in code. Never suppress with disable comments.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "user-prompt-submit: non-ASCII capitals are not lowercased": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"UserPromptSubmit\",\n    \"additionalContext\": \"\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
     }
   }
 }

@@ -21,7 +21,10 @@ function expected(c: LifecycleCase): Captured {
 /** Split a SessionStart output into what bash owned: context and title. */
 function sessionParts(stdout: string): { context: unknown; title: string } {
   const parsed: unknown = JSON.parse(stdout);
-  const out = parsed as { hookSpecificOutput?: { additionalContext?: unknown }; systemMessage?: string };
+  const out = parsed as {
+    hookSpecificOutput?: { additionalContext?: unknown };
+    systemMessage?: string;
+  };
   return {
     context: out.hookSpecificOutput?.additionalContext,
     title: (out.systemMessage ?? "").split("\n")[0] ?? "",
@@ -29,20 +32,26 @@ function sessionParts(stdout: string): { context: unknown; title: string } {
 }
 
 describe("session-start", () => {
-  test.concurrent.each(SESSION_START_CASES.map((c) => [c.name, c] as const))("%s", async (_n, c) => {
-    const want = expected(c);
-    const got = await runCase(c, bundleArgv);
-    expect(got.exitCode).toBe(want.exitCode);
-    expect(got.stderr).toBe(want.stderr);
-    expect(sessionParts(got.stdout)).toEqual(sessionParts(want.stdout));
-    expect(got.stdout.endsWith("}\n")).toBe(true);
-  });
+  test.concurrent.each(SESSION_START_CASES.map((c) => [c.name, c] as const))(
+    "%s",
+    async (_n, c) => {
+      const want = expected(c);
+      const got = await runCase(c, bundleArgv);
+      expect(got.exitCode).toBe(want.exitCode);
+      expect(got.stderr).toBe(want.stderr);
+      expect(sessionParts(got.stdout)).toEqual(sessionParts(want.stdout));
+      expect(got.stdout.endsWith("}\n")).toBe(true);
+    },
+  );
 });
 
 describe("user-prompt-submit", () => {
-  test.concurrent.each(USER_PROMPT_SUBMIT_CASES.map((c) => [c.name, c] as const))("%s", async (_n, c) => {
-    const want = expected(c);
-    const got = await runCase(c, bundleArgv);
-    expect(got).toEqual(want);
-  });
+  test.concurrent.each(USER_PROMPT_SUBMIT_CASES.map((c) => [c.name, c] as const))(
+    "%s",
+    async (_n, c) => {
+      const want = expected(c);
+      const got = await runCase(c, bundleArgv);
+      expect(got).toEqual(want);
+    },
+  );
 });
