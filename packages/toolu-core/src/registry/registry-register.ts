@@ -4,8 +4,9 @@
  * copies them into the registry atomically, and removes every entry under the
  * plugin's own `<spec>__` prefix that is no longer a module, including the
  * `.sh` a plugin shipped before its port and crashed writers' tmp residue.
- * Other plugins' entries are never touched. Failures are reported, never
- * thrown: a failed sync leaves the registry copy stale, not broken.
+ * Other plugins' entries are never touched. Sync failures are reported, not
+ * thrown: a failed sync leaves the registry copy stale, not broken. Only an
+ * invalid spec or module name throws, before anything is written.
  */
 import {
   lstatSync,
@@ -47,6 +48,14 @@ function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function removeQuietly(path: string): void {
+  try {
+    rmSync(path, { force: true });
+  } catch {
+    // Litter at worst: a later run sweeps `<target>.tmp.*` residue by age.
+  }
+}
+
 function readOrUndefined(path: string): Buffer | undefined {
   try {
     return readFileSync(path);
@@ -72,11 +81,14 @@ function syncModule(bundle: string, target: string, result: RegisterResult): voi
   const tmp = `${target}.tmp.${String(process.pid)}`;
   try {
     mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(tmp, bytes);
+    // The tmp name is predictable: drop whatever holds it, then create it
+    // exclusively, so a planted symlink is replaced rather than written through.
+    removeQuietly(tmp);
+    writeFileSync(tmp, bytes, { flag: "wx" });
     renameSync(tmp, target);
     result.written.push(target);
   } catch (error) {
-    rmSync(tmp, { force: true });
+    removeQuietly(tmp);
     result.failed.push({ path: target, error: message(error) });
   }
 }

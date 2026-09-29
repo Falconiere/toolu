@@ -10,6 +10,8 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  readlinkSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
@@ -121,4 +123,39 @@ test.concurrent("the bundled SessionStart entry is silent on stdout and exits 0"
   expect(missing).toMatchObject({ exitCode: 0, stdout: "" });
   expect(missing.stderr).toContain("toolu-registry: register fixture@toolu:");
   expect(missing.stderr).toContain("bundle unreadable");
+});
+
+test.concurrent("a symlink planted at the tmp path is replaced, never written through", () => {
+  using sb = createSandbox();
+  const dir = sb.path("cfg/toolu/pre-tools.d");
+  mkdirSync(dir, { recursive: true });
+  const victim = sb.write("victim.txt", "untouched\n");
+  const tmp = join(dir, `a@t__m.js.tmp.${String(process.pid)}`);
+  symlinkSync(victim, tmp);
+  const result = registerModules("a@t", [{ name: "m", event: "tool/pre", bundle: BUNDLE }], {
+    env: { HOME: sb.home, TOOLU_CONFIG_DIR: sb.path("cfg") },
+  });
+  expect(result.written).toEqual([join(dir, "a@t__m.js")]);
+  expect(readFileSync(victim, "utf8")).toBe("untouched\n");
+  expect(readFileSync(join(dir, "a@t__m.js")).equals(readFileSync(BUNDLE))).toBe(true);
+  expect(() => readlinkSync(tmp)).toThrow();
+});
+
+test.concurrent("an invalid module name inside the hook is reported and still exits 0", async () => {
+  using sb = createSandbox();
+  const entry = await buildEntry(sb.path("dist"));
+  const res = await run([process.execPath, entry], {
+    env: {
+      HOME: sb.home,
+      TOOLU_CONFIG_DIR: sb.path("cfg"),
+      FIXTURE_BUNDLE: BUNDLE,
+      FIXTURE_NAME: "../escape",
+    },
+    stdin: "{}",
+  });
+  expect(res).toMatchObject({ exitCode: 0, stdout: "" });
+  expect(res.stderr).toBe(
+    'toolu-registry: register fixture@toolu: registry: invalid module name "../escape"\n',
+  );
+  expect(existsSync(sb.path("cfg/toolu"))).toBe(false);
 });

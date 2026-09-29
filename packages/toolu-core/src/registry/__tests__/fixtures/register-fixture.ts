@@ -6,5 +6,9 @@
 import { runRegisterHook } from "../../registry-register.ts";
 
 await runRegisterHook("fixture@toolu", [
-  { name: "fixture", event: "tool/post", bundle: process.env.FIXTURE_BUNDLE ?? "" },
+  {
+    name: process.env.FIXTURE_NAME ?? "fixture",
+    event: "tool/post",
+    bundle: process.env.FIXTURE_BUNDLE ?? "",
+  },
 ]);
