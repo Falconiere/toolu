@@ -4,16 +4,7 @@
  * serializes TypeScript writers.
  */
 import { randomUUID } from "node:crypto";
-import {
-  closeSync,
-  fsyncSync,
-  openSync,
-  renameSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-  writeSync,
-} from "node:fs";
+import { readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import type { LoadedConfig } from "../config/config-load.ts";
 import type { HostEnv, HostName } from "../host/host-name.ts";
 
@@ -62,25 +53,24 @@ function isErrno(error: unknown, code: string): boolean {
 }
 
 /**
- * Write `body` to a fresh temp file beside `file` (exclusive create, so a
- * planted symlink is refused), fsync it, then rename it over `file`. A reader
+ * Write `body` to a fresh temp file beside `file`, then rename it over `file`.
+ * The temp file is created exclusively, so a planted symlink is refused. It
+ * is created 0600, like bash's `mktemp` (and `mv` keeps that mode). A reader
  * sees either the old document or the new one, never a torn one. Returns
- * false, with the temp file removed, when any step fails.
+ * false, never throws, when any step fails.
  */
 export function writeAtomic(file: string, body: string): boolean {
   const tmp = `${file}.${randomUUID()}.tmp`;
-  let fd: number | undefined;
   try {
-    fd = openSync(tmp, "wx", 0o644);
-    writeSync(fd, body);
-    fsyncSync(fd);
-    closeSync(fd);
-    fd = undefined;
+    writeFileSync(tmp, body, { flag: "wx", mode: 0o600 });
     renameSync(tmp, file);
     return true;
   } catch {
-    if (fd !== undefined) closeSync(fd);
-    rmSync(tmp, { force: true });
+    try {
+      rmSync(tmp, { force: true });
+    } catch {
+      // The name is unique, so a leftover temp file is litter, never state.
+    }
     return false;
   }
 }
@@ -89,20 +79,46 @@ export type LockOptions = { timeoutMs?: number; staleMs?: number; warn?: Warn };
 
 const LOCK_POLL_MS = 10;
 const DEFAULT_LOCK_TIMEOUT_MS = 5000;
-const DEFAULT_LOCK_STALE_MS = 10_000;
+/** Well under the timeout: a critical section is one read and one rename, milliseconds long. */
+const DEFAULT_LOCK_STALE_MS = 2000;
 
-function isStale(lock: string, staleMs: number): boolean {
+function lockContent(lock: string): string | undefined {
   try {
-    return Date.now() - statSync(lock).mtimeMs > staleMs;
+    return readFileSync(lock, "utf8");
   } catch {
-    return false;
+    return undefined;
   }
 }
 
-/** Take `<file>.lock`: "held", "busy" (another holder), or "unavailable" (cannot create it). */
-function tryLock(lock: string): "held" | "busy" | "unavailable" {
+/** The lock names its holder's pid; a pid that no longer exists crashed. */
+function holderDead(content: string): boolean {
+  const pid = Number(content.split(" ")[0]);
+  if (!Number.isInteger(pid) || pid <= 0) return false;
   try {
-    writeFileSync(lock, `${process.pid} ${new Date().toISOString()}\n`, { flag: "wx" });
+    process.kill(pid, 0);
+    return false;
+  } catch (error) {
+    return isErrno(error, "ESRCH");
+  }
+}
+
+/**
+ * Remove the lock if its holder is dead, or if it is older than `staleMs`.
+ * The content is re-read just before removal, so only the holder judged
+ * stale is removed, never a fresh lock another waiter took in between.
+ */
+function breakIfStale(lock: string, staleMs: number): void {
+  const content = lockContent(lock);
+  const stat = statSync(lock, { throwIfNoEntry: false });
+  if (content === undefined || stat === undefined) return;
+  if (!holderDead(content) && Date.now() - stat.mtimeMs <= staleMs) return;
+  if (lockContent(lock) === content) rmSync(lock, { force: true });
+}
+
+/** Take `<file>.lock`: "held", "busy" (another holder), or "unavailable" (cannot create it). */
+function tryLock(lock: string, content: string): "held" | "busy" | "unavailable" {
+  try {
+    writeFileSync(lock, content, { flag: "wx", mode: 0o600 });
     return "held";
   } catch (error) {
     return isErrno(error, "EEXIST") ? "busy" : "unavailable";
@@ -111,29 +127,29 @@ function tryLock(lock: string): "held" | "busy" | "unavailable" {
 
 /**
  * Run `fn` holding `<file>.lock`, so TypeScript read-merge-write cycles on one
- * state file never interleave. A lock left by a crashed writer (older than
- * `staleMs`) is broken. When the lock cannot be taken in `timeoutMs`, or
- * cannot be created at all, `fn` runs unlocked: `writeAtomic` still keeps the
- * file whole, and a lost merge beats a lost failure record.
+ * state file never interleave. A lock is broken when its holder's pid is gone,
+ * or when it is older than `staleMs`. If the lock cannot be taken within
+ * `timeoutMs`, or cannot be created at all, `fn` runs unlocked: `writeAtomic`
+ * still keeps the file whole, and a lost merge beats a lost failure record.
+ * On release, the lock is removed only if it still carries this call's token.
  */
 export function withLock<T>(file: string, fn: () => T, options: LockOptions = {}): T {
   const lock = `${file}.lock`;
+  const ours = `${String(process.pid)} ${randomUUID()}\n`;
   const deadline = Date.now() + (options.timeoutMs ?? DEFAULT_LOCK_TIMEOUT_MS);
-  let state = tryLock(lock);
+  let state = tryLock(lock, ours);
   while (state === "busy") {
-    if (isStale(lock, options.staleMs ?? DEFAULT_LOCK_STALE_MS)) {
-      rmSync(lock, { force: true });
-    } else if (Date.now() >= deadline) {
+    if (Date.now() >= deadline) {
       (options.warn ?? stderrWarn)(`state: lock ${lock} still held; writing without it`);
       break;
-    } else {
-      Bun.sleepSync(LOCK_POLL_MS);
     }
-    state = tryLock(lock);
+    breakIfStale(lock, options.staleMs ?? DEFAULT_LOCK_STALE_MS);
+    state = tryLock(lock, ours);
+    if (state === "busy") Bun.sleepSync(LOCK_POLL_MS);
   }
   try {
     return fn();
   } finally {
-    if (state === "held") rmSync(lock, { force: true });
+    if (state === "held" && lockContent(lock) === ours) rmSync(lock, { force: true });
   }
 }

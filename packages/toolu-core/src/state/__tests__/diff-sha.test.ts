@@ -4,7 +4,8 @@
  * non-zero).
  */
 import { expect, test } from "bun:test";
-import { resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
 import { diffSha } from "../diff-sha.ts";
@@ -66,4 +67,11 @@ test("a bad base ref gives no hash; bash exits non-zero with empty stdout", asyn
 test("a directory that is not a repository gives no hash", () => {
   using sb = createSandbox();
   expect(diffSha(sb.project, "main")).toBeUndefined();
+});
+
+test("a dash-prefixed base ref is a revision, never a git option", () => {
+  using sb = createSandbox({ git: true });
+  const planted = join(sb.root, "planted.txt");
+  expect(diffSha(sb.project, `--output=${planted}`)).toBeUndefined();
+  expect(existsSync(planted)).toBe(false);
 });

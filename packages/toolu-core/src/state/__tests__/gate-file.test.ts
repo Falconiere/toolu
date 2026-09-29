@@ -5,7 +5,7 @@
  * Every other failure path never throws.
  */
 import { describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { clearGateFile, readGateFile, recordGateFailure } from "../gate-file.ts";
@@ -136,20 +136,16 @@ describe("failure paths never throw", () => {
     expect(warnings).toEqual([]);
   });
 
-  test("record into a read-only directory falls back, reports dropped entries, and does not throw", () => {
+  test("a clear with nothing to clear takes no lock, even behind a live one", () => {
     using sb = createSandbox();
-    const file = gate(sb, JSON.stringify(FAILING, null, 2));
-    const dir = join(sb.project, ".claude", "tmp");
+    const file = gate(sb, JSON.stringify({ status: "passing", source: "s", updatedAt: OLD }));
+    writeFileSync(`${file}.lock`, `${String(process.pid)} busy\n`);
     const warnings: string[] = [];
-    chmodSync(dir, 0o555);
-    try {
-      recordGateFailure(file, "/r/c.ts", "s", "r", "v", options(sb, warnings));
-    } finally {
-      chmodSync(dir, 0o755);
-    }
-    expect(warnings).toContain(
-      `gate-file: primary write failed at ${file}; single-slot fallback dropped 2 other entry(ies)`,
-    );
+    const started = Date.now();
+    expect(clearGateFile(file, "/r/a.ts", "s", options(sb, warnings))).toBe("noop");
+    expect(Date.now() - started).toBeLessThan(500);
+    expect(warnings).toEqual([]);
+    expect(readFileSync(`${file}.lock`, "utf8")).toBe(`${String(process.pid)} busy\n`);
   });
 
   test("record creates the telemetry line under the gate file's root", () => {
@@ -162,4 +158,18 @@ describe("failure paths never throw", () => {
       '{"file":"/r/a.ts","source":"ts-quality-hook","v":1,"t":"2026-09-28T10:00:00Z","branch":"feat/x","event":"gate_fail"}\n',
     );
   });
+});
+
+test("pinned divergence: an integer-like entry key is ordered first (jq keeps insertion order)", () => {
+  // Unreachable from real callers, which pass absolute paths or __global__; pinned so a change is deliberate.
+  using sb = createSandbox();
+  const file = gate(
+    sb,
+    JSON.stringify({ ...FAILING, entries: { b: ENTRY, "10": ENTRY } }, null, 2),
+  );
+  recordGateFailure(file, "/r/c.ts", "s", "r", "v", options(sb, []));
+  const read = readGateFile(file);
+  expect(
+    read.kind === "ok" && read.doc.status === "failing" && Object.keys(read.doc.entries ?? {}),
+  ).toEqual(["10", "b", "/r/c.ts"]);
 });

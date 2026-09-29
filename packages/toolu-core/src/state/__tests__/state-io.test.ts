@@ -4,7 +4,14 @@
  * files.
  */
 import { expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
@@ -101,4 +108,45 @@ test("withLock times out on a live lock, warns, and still runs unlocked", () => 
   expect(warnings).toEqual([`state: lock ${file}.lock still held; writing without it`]);
   // Someone else's lock is not ours to remove.
   expect(existsSync(`${file}.lock`)).toBe(true);
+});
+
+test("writeAtomic creates the file 0600, as bash's mktemp + mv does", () => {
+  using sb = createSandbox();
+  const file = sb.path("gate.json");
+  expect(writeAtomic(file, "x")).toBe(true);
+  expect(statSync(file).mode & 0o777).toBe(0o600);
+});
+
+test("withLock breaks a fresh lock whose holder pid is gone", async () => {
+  using sb = createSandbox();
+  const file = sb.path("gate.json");
+  const done = await run(["bash", "-c", "echo $$"]);
+  writeFileSync(`${file}.lock`, `${done.stdout.trim()} crashed-token\n`);
+  const warnings: string[] = [];
+  const started = Date.now();
+  expect(withLock(file, () => true, { warn: (m) => warnings.push(m) })).toBe(true);
+  expect(Date.now() - started).toBeLessThan(1000);
+  expect(warnings).toEqual([]);
+});
+
+test("withLock breaks a live holder's lock once it is older than staleMs (2 s default)", () => {
+  using sb = createSandbox();
+  const file = sb.path("gate.json");
+  writeFileSync(`${file}.lock`, `${String(process.pid)} hung-token\n`);
+  const old = new Date(Date.now() - 3000);
+  utimesSync(`${file}.lock`, old, old);
+  const warnings: string[] = [];
+  expect(withLock(file, () => true, { warn: (m) => warnings.push(m) })).toBe(true);
+  expect(warnings).toEqual([]);
+  expect(existsSync(`${file}.lock`)).toBe(false);
+});
+
+test("withLock never releases a lock another holder took over", () => {
+  using sb = createSandbox();
+  const file = sb.path("gate.json");
+  withLock(file, () => {
+    // Someone judged ours stale and took the lock while fn ran.
+    writeFileSync(`${file}.lock`, "4242 their-token\n");
+  });
+  expect(readFileSync(`${file}.lock`, "utf8")).toBe("4242 their-token\n");
 });

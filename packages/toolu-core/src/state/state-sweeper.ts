@@ -100,7 +100,12 @@ function sweepBranchState(
     for (const file of globFiles(join(stateRoot, dir), ".json")) {
       const slug = slugOfStateFile(file);
       if (slug === branches.current) continue;
-      if (reclaimable(file, slug, branches, ttlHours, o.now.getTime())) remove(file, o.warn);
+      // Per file, as in bash: one vanished or unreadable file never stops the sweep.
+      try {
+        if (reclaimable(file, slug, branches, ttlHours, o.now.getTime())) remove(file, o.warn);
+      } catch (error) {
+        o.warn(`toolu-sweep: could not judge ${file}: ${String(error)}`);
+      }
     }
   }
 }
@@ -111,6 +116,7 @@ function hasLiveViolation(keys: string[]): boolean {
 }
 
 function sweepGateFile(gateFile: string, warn: Warn): void {
+  if (!existsSync(gateFile)) return;
   withLock(
     gateFile,
     () => {
@@ -160,7 +166,14 @@ export function keptTelemetryLines(content: string, cutoff: string): string[] | 
 function sweepTelemetry(dir: string, retentionDays: number, o: SweepContext): void {
   const cutoff = isoSeconds(new Date(o.now.getTime() - retentionDays * DAY_MS));
   for (const file of globFiles(dir, ".jsonl")) {
-    const kept = keptTelemetryLines(readFileSync(file, "utf8"), cutoff);
+    let content: string;
+    try {
+      content = readFileSync(file, "utf8");
+    } catch (error) {
+      o.warn(`toolu-sweep: could not read ${file}: ${String(error)}`);
+      continue;
+    }
+    const kept = keptTelemetryLines(content, cutoff);
     if (kept === undefined) continue;
     if (kept.length === 0) {
       remove(file, o.warn);

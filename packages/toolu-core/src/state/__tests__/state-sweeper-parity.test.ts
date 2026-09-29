@@ -18,7 +18,6 @@ import {
 import { dirname, join, relative, resolve } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
-import { readGateFile } from "../gate-file.ts";
 import { isoSeconds } from "../state-io.ts";
 import { sweepState } from "../state-sweeper.ts";
 
@@ -258,7 +257,6 @@ test("an unrecognized gate file is kept, where bash would judge it (documented d
   const fixture = { ...DEFAULTS, gate: gate(doc) };
   const ts = viaTs(fixture);
   expect(ts["quality-gate-status.json"]).toBe(`${JSON.stringify(doc, null, 2)}\n`);
-  expect(readGateFile("/nonexistent").kind).toBe("missing");
 });
 
 test("a failure about a live file survives at any age; one about gone files is reclaimed", () => {

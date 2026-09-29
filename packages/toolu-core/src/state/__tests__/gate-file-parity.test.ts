@@ -9,7 +9,15 @@
  * TypeScript on one file.
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
@@ -25,7 +33,7 @@ type Op =
   | { op: "record"; file: string; source: string; reason: string; violations: string }
   | { op: "clear"; file: string; source: string };
 
-type Scenario = { seed?: string; ops: Op[] };
+type Scenario = { seed?: string; ops: Op[]; readonly?: boolean };
 
 const OLD = "2020-01-01T00:00:00Z";
 const ENTRY = (source: string, reason: string, violations: string, updatedAt = OLD) => ({
@@ -117,6 +125,11 @@ const SCENARIOS: Record<string, Scenario> = {
   "same-second failures tie-break by key": {
     ops: [rec("/r/1.ts"), rec("/r/2.ts"), rec("/r/3.ts"), rec("/r/4.ts"), clr("/r/4.ts")],
   },
+  "read-only state dir: the primary write fails and the single-slot fallback lands": {
+    seed: pretty(MULTI),
+    readonly: true,
+    ops: [rec("/r/x.py", "python-quality-hook")],
+  },
   'empty-string source clears a missing entry (jq `// ""` parity)': {
     seed: pretty(MULTI),
     ops: [clr("/r/none.ts", "")],
@@ -173,7 +186,9 @@ function snapshot(sb: Sandbox): Record<string, string> {
   const tmp = join(sb.project, ".claude", "tmp");
   for (const rel of ["quality-gate-status.json", "quality-gate-status.json.dropped.log"]) {
     const path = join(tmp, rel);
-    if (existsSync(path)) out[rel] = readFileSync(path, "utf8").replace(RUN_STAMP, "NOW");
+    if (!existsSync(path)) continue;
+    out[rel] = readFileSync(path, "utf8").replace(RUN_STAMP, "NOW");
+    out[`${rel} mode`] = (statSync(path).mode & 0o777).toString(8);
   }
   const telemetry = join(tmp, "telemetry");
   for (const name of existsSync(telemetry) ? readdirSync(telemetry) : []) {
@@ -196,9 +211,16 @@ async function play(
   using sb = repo();
   mkdirSync(join(sb.project, ".claude", "tmp"), { recursive: true });
   if (scenario.seed !== undefined) writeFileSync(gatePath(sb), scenario.seed);
-  for (const [index, op] of scenario.ops.entries()) {
-    await apply(sb, pick(index), op);
+  const tmp = join(sb.project, ".claude", "tmp");
+  if (scenario.readonly === true) chmodSync(tmp, 0o555);
+  try {
+    for (const [index, op] of scenario.ops.entries()) {
+      await apply(sb, pick(index), op);
+    }
+  } finally {
+    chmodSync(tmp, 0o755);
   }
+
   const bashWritten = readGateFile(gatePath(sb));
   const snap = snapshot(sb);
   // AC-9: whatever the writers leave behind is a valid v1 document.
@@ -208,7 +230,8 @@ async function play(
 
 describe("bash and TypeScript write the same bytes", () => {
   for (const [name, scenario] of Object.entries(SCENARIOS)) {
-    test(name, async () => {
+    // A read-only directory does not stop root, so that scenario proves nothing there.
+    test.skipIf(scenario.readonly === true && process.getuid?.() === 0)(name, async () => {
       const bash = await play(scenario, () => "bash");
       const ts = await play(scenario, () => "ts");
       expect(ts).toEqual(bash);
@@ -219,7 +242,8 @@ describe("bash and TypeScript write the same bytes", () => {
 
 describe("bash and TypeScript alternate on one file", () => {
   for (const [name, scenario] of Object.entries(SCENARIOS)) {
-    test(name, async () => {
+    // A read-only directory does not stop root, so that scenario proves nothing there.
+    test.skipIf(scenario.readonly === true && process.getuid?.() === 0)(name, async () => {
       const bash = await play(scenario, () => "bash");
       const mixed = await play(scenario, (index) => (index % 2 === 0 ? "ts" : "bash"));
       const flipped = await play(scenario, (index) => (index % 2 === 0 ? "bash" : "ts"));

@@ -3,7 +3,10 @@
  * failing file owns an entry under `entries`, keyed by its path. The top-level
  * fields mirror the most recent failure and concatenate every open
  * violation, so readers keep the `.status`/`.reason`/`.violations` contract.
- * Output bytes equal the jq programs' for the same inputs.
+ * Output bytes equal the jq programs' for the same inputs. The one known
+ * exception cannot arise from real callers, which key entries by absolute
+ * path or `__global__`: an integer-like key such as `"12"` is ordered first,
+ * as every JavaScript object orders it, where jq keeps insertion order.
  *
  * Where it goes past bash:
  * - Writes run under `<gate>.lock`, so concurrent TypeScript writers never
@@ -207,13 +210,14 @@ function clearedDoc(left: GateEntries, source: string, now: string): GateFile {
   };
 }
 
-function clearUnderLock(
+/** The document a clear would write, or undefined when there is nothing to clear (bash's early returns). */
+function plannedClear(
   gateFile: string,
   file: string,
   source: string,
   now: string,
   warn: Warn,
-): boolean {
+): string | undefined {
   const existing = readGateFile(gateFile);
   if (existing.kind === "malformed") {
     warn(
@@ -222,18 +226,22 @@ function clearUnderLock(
   } else if (existing.kind === "unrecognized") {
     warn(`gate-file: unrecognized gate file at ${gateFile} (${existing.reason}); ignoring clear`);
   }
-  if (existing.kind !== "ok") return false;
+  if (existing.kind !== "ok") return undefined;
   const doc = existing.doc;
-  if (doc.status !== "failing" || !owns(doc, file, source)) return false;
+  if (doc.status !== "failing" || !owns(doc, file, source)) return undefined;
   const left = { ...seedEntries(doc) };
   delete left[file];
-  return writeAtomic(gateFile, `${toJqJson(clearedDoc(left, source, now), true)}\n`);
+  return `${toJqJson(clearedDoc(left, source, now), true)}\n`;
 }
 
 /**
  * `gate_clear_file GATE_FILE FILE SOURCE`: drop FILE's entry if SOURCE owns it.
  * The latest remaining entry is promoted; the file reads "passing" only when
  * none remain. `gate_clear` telemetry fires only after a write lands.
+ *
+ * The common case (no file, passing, or another source's entry) is decided
+ * by an unlocked read and costs no lock. Only a real clear takes the lock and
+ * re-plans from a fresh read.
  */
 export function clearGateFile(
   gateFile: string,
@@ -243,9 +251,15 @@ export function clearGateFile(
 ): "cleared" | "noop" {
   const warn = options.warn ?? stderrWarn;
   const now = isoSeconds(options.now?.() ?? new Date());
-  const cleared = withLock(gateFile, () => clearUnderLock(gateFile, file, source, now, warn), {
-    warn,
-  });
+  if (plannedClear(gateFile, file, source, now, warn) === undefined) return "noop";
+  const cleared = withLock(
+    gateFile,
+    () => {
+      const body = plannedClear(gateFile, file, source, now, () => {});
+      return body !== undefined && writeAtomic(gateFile, body);
+    },
+    { warn },
+  );
   if (!cleared) return "noop";
   telemetryAppend(gateRoot(gateFile), "gate_clear", { file, source }, options);
   return "cleared";
