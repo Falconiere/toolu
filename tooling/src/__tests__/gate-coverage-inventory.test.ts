@@ -10,7 +10,7 @@ const ROOT = resolve(import.meta.dir, "../../..");
 const CLI = join(ROOT, "tooling/src/gate-coverage-inventory.ts");
 const INVENTORY = join(ROOT, "tooling/fixtures/gate-coverage/inventory.json");
 const MATRIX = join(ROOT, "docs/gate-coverage-matrix.md");
-/** A floor, not a count: rows leave the inventory as each bash hook is ported (epic #247). */
+/** A floor, not a count: rows leave the inventory whenever a bash hook is ported (epic #247). */
 const MIN_ROWS = 60;
 
 const Row = z.looseObject({ id: z.string() });

@@ -13,7 +13,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
-import { percentile, type Latency } from "@toolu/conformance/harness/timing";
+import { latencyOf, type Latency } from "@toolu/conformance/harness/timing";
 import { TS_CASES } from "../../../plugins/ts-quality/hooks/src/__tests__/cases.ts";
 import {
   BASH_BASE,
@@ -35,16 +35,6 @@ const SLICE = [
 
 type Row = { name: string; bash: Latency; ts: Latency };
 
-function latency(samples: readonly number[]): Latency {
-  return {
-    samples: [...samples],
-    p50: percentile(samples, 50),
-    p95: percentile(samples, 95),
-    min: Math.min(...samples),
-    max: Math.max(...samples),
-  };
-}
-
 async function row(name: string, runs: number, register: string): Promise<Row> {
   const c = TS_CASES.find((entry) => entry.name === name);
   const step = c?.steps.at(-1);
@@ -57,13 +47,15 @@ async function row(name: string, runs: number, register: string): Promise<Row> {
   ];
   await Promise.all(sides.map(([sb, reg]) => setupCase(sb, "claude", c, reg)));
   // Sequential by design: concurrent spawns would contend and skew each other.
-  for (let round = 0; round < WARMUP + runs; round += 1) {
-    for (const [sb, , samples] of sides) {
-      const result = await dispatchStep(sb, "claude", c, step);
-      if (round >= WARMUP) samples.push(result.durationMs);
-    }
-  }
-  return { name, bash: latency(sides[0]?.[2] ?? []), ts: latency(sides[1]?.[2] ?? []) };
+  const calls = [...Array(WARMUP + runs).keys()].flatMap((round) =>
+    sides.map(([sb, , samples]) => ({ round, sb, samples })),
+  );
+  await calls.reduce<Promise<void>>(async (previous, { round, sb, samples }) => {
+    await previous;
+    const result = await dispatchStep(sb, "claude", c, step);
+    if (round >= WARMUP) samples.push(result.durationMs);
+  }, Promise.resolve());
+  return { name, bash: latencyOf(sides[0]?.[2] ?? []), ts: latencyOf(sides[1]?.[2] ?? []) };
 }
 
 const ms = (value: number): string => value.toFixed(1);
@@ -83,8 +75,10 @@ async function main(argv: readonly string[]): Promise<number> {
   const dir = mkdtempSync(join(tmpdir(), "ts-quality-latency-"));
   try {
     const register = extractBaseRegister(BASH_BASE, dir);
-    const rows: Row[] = [];
-    for (const name of SLICE) rows.push(await row(name, runs, register));
+    const rows = await SLICE.reduce<Promise<Row[]>>(
+      async (done, name) => [...(await done), await row(name, runs, register)],
+      Promise.resolve([]),
+    );
     process.stdout.write(table(rows));
     const over = rows.filter((r) => r.ts.p50 > r.bash.p50 + BUDGET_MS);
     for (const r of over) {
