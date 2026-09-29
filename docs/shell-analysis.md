@@ -14,7 +14,7 @@
 | `gitInvocation(command)` | The subcommand past git's global options, its arguments, and the `-C` chain |
 | `pushTargets(analysis)` | Each push's cumulative `-C` chain, refspec, and destination branch |
 | `commitMessages(invocation)` | Static `-m`/`--message` values, including `"$(cat <<'EOF' … EOF)"` |
-| `writeTargets(analysis)` from **`@toolu/core/shell/writes`** | Paths written by redirects (every target, `/dev/null` included; a dynamic one is `path: null`), `tee`, `sed -i`, `perl -i`, `cp`/`mv`/`install` (the destination and each `DEST/basename(SRC)`, since `DEST` may be a directory), `dd of=`, `python -c open(…,'w')` |
+| `writeTargets(analysis)` from **`@toolu/core/shell/writes`** | Paths written by redirects (every target, `/dev/null` included; a dynamic one is `path: null`), `tee`, `sed -i`, `perl -i`, `cp`/`mv`/`install` (the destination and each `DEST/basename(SRC)`, since `DEST` may be a directory), `dd of=`, and python (`-c STRING` or a static heredoc on stdin): a static `open(<literal>, <write mode>)` in any literal form reports its path, while any other `open(`, `Path(…).open`, `write_text`/`write_bytes`/`touch`, `shutil.copy*`/`move` or `os.rename`/`replace`/`symlink`/`link` reports an unknown target |
 | `matchesRule(command, "node -e")` | An argv rule tested against one simple command |
 
 Each `ShellCommand` carries the following fields:
@@ -102,8 +102,8 @@ CI asserts the bundle sizes (`tooling/src/__tests__/bench-shell.test.ts`), becau
 | Measure | Budget | Measured |
 |---|---|---|
 | Bundle size added, every runtime export of `@toolu/core/shell` (unminified) | ≤ 200,000 B | 197,673 B |
-| Bundle size added, `analyzeShell` + `@toolu/core/shell/writes` (unminified) | ≤ 200,000 B | 198,173 B |
-| Bundle size added, both entries together (unminified) | reported | 202,152 B, see below |
+| Bundle size added, `analyzeShell` + `@toolu/core/shell/writes` (unminified) | ≤ 200,000 B | 199,419 B |
+| Bundle size added, both entries together (unminified) | reported | 203,398 B, see below |
 | Cold-start p50, `together` minus `empty` (40 interleaved runs) | ≤ 5 ms | +3.62 ms (empty 17.19 ms, together 20.81 ms; p90 19.10 / 22.71 ms) |
 | Parse and walk over 235 fixture commands, 4,700 samples | p99 ≤ 0.1 ms | p50 3.4 µs, p99 17.3 µs, max 2.2 ms |
 
@@ -122,4 +122,4 @@ Measured on 2026-09-29 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple M2 Ma
   - a single walk switch and a single-loop option parser;
   - table-driven writers.
 - `writeTargets`, the largest single-consumer piece, moved to its own entry.
-- A bundle that imports both entries adds 202,152 B, over 200 KB. That only happens where one bundle needs protected-files and every other shell gate at once.
+- A bundle that imports both entries adds 203,398 B, over 200 KB. That only happens where one bundle needs protected-files and every other shell gate at once.

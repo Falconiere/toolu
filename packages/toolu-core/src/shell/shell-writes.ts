@@ -17,6 +17,7 @@ import {
   type ParsedArgs,
 } from "./shell-options.ts";
 import type { ShellAnalysis, ShellCommand, ShellRedirect } from "./shell-types.ts";
+import { stdinScript } from "./shell-words.ts";
 
 export type WriteVia =
   | "redirect"
@@ -105,8 +106,56 @@ function inPlaceTargets(command: ShellCommand, spec: OptionSpec, script: string)
   return files.slice(hasOption(parsed, script) ? 0 : 1).map((index) => argAt(command, index));
 }
 
-/** `open('p', 'w')` and every mode that writes: w/a/x, or anything with `+`. */
-const PYTHON_OPEN = /open\(\s*['"]([^'"]+)['"]\s*,\s*['"]([wax][^'"]*|r[^'"]*\+[^'"]*)['"]/g;
+/** An `open(` argument list that starts with a Python string literal: prefix, quote, body. */
+const PY_PATH = /^\s*([rRbBuUfF]{0,2})('''|"""|'|")([\s\S]*?)\2\s*/;
+/** The literal mode that follows the path, positional or `mode=`. */
+const PY_MODE = /^,\s*(?:mode\s*=\s*)?[rRbBuUfF]{0,2}('''|"""|'|")([\s\S]*?)\1\s*[,)]/;
+/** Other calls that write files; their targets are not read statically. */
+const PY_WRITE_API =
+  /\b(?:write_text|write_bytes|touch|symlink_to|hardlink_to|shutil\.(?:copy\w*|move)|os\.(?:rename|replace|symlink|link))\s*\(/;
+
+/**
+ * What one `open(` call writes: its static path; `null` when the path or mode
+ * cannot be read statically (a variable, a concatenation, an f-string with a
+ * field, a later keyword, a method such as `Path(…).open`); `undefined` for a read.
+ */
+function pythonOpen(args: string, method: boolean): string | null | undefined {
+  const path = method ? null : PY_PATH.exec(args);
+  if (path === null) return null;
+  const rest = args.slice(path[0].length);
+  if (rest.startsWith(")")) return undefined;
+  const mode = PY_MODE.exec(rest)?.[2];
+  if (mode === undefined) return null;
+  if (!/[wax+]/.test(mode)) return undefined;
+  const body = path[3] ?? "";
+  return /[fF]/.test(path[1] ?? "") && body.includes("{") ? null : body;
+}
+
+/** The script python runs: `-c STRING`, or its stdin; `undefined` for a script file or module. */
+function pythonScript(command: ShellCommand): string | null | undefined {
+  const parsed = parseArgs(command.argv, 1, { valueShort: "cmWX", stopAtOperand: true });
+  const [inline] = optionValues(parsed, "c");
+  if (inline !== undefined) return inline;
+  if (hasOption(parsed, "m")) return undefined;
+  const operand = command.argv[parsed.next];
+  return operand === undefined || operand === "-" ? stdinScript(command.redirects) : undefined;
+}
+
+/** Every file a python script writes; an unreadable script or write is one unknown target. */
+function pythonTargets(command: ShellCommand): Target[] {
+  const script = pythonScript(command);
+  if (script === undefined) return [];
+  const paths =
+    script === null
+      ? [null]
+      : [...script.matchAll(/(\.?)\bopen\s*\(/g)].map((call) =>
+          pythonOpen(script.slice(call.index + call[0].length), call[1] === "."),
+        );
+  if (script !== null && PY_WRITE_API.test(script)) paths.push(null);
+  return paths.flatMap((path) =>
+    path === undefined ? [] : [{ path, pattern: null, text: path ?? "" }],
+  );
+}
 
 const MOVE: OptionSpec = { valueShort: "tS", valueLong: "target-directory suffix" };
 
@@ -152,20 +201,7 @@ const WRITERS: Readonly<
         return text.startsWith("of=") ? [{ path, pattern: null, text: text.slice(3) }] : [];
       }),
   },
-  python: {
-    via: "python",
-    targets: (c) => {
-      const [script] = optionValues(
-        parseArgs(c.argv, 1, { valueShort: "cmWX", stopAtOperand: true }),
-        "c",
-      );
-      return [...(script ?? "").matchAll(PYTHON_OPEN)].map(([, path = ""]) => ({
-        path,
-        pattern: null,
-        text: path,
-      }));
-    },
-  },
+  python: { via: "python", targets: pythonTargets },
 };
 
 function redirectTargets(

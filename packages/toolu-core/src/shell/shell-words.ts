@@ -211,3 +211,13 @@ export function toShellRedirect(redirect: Redirect, visit: ScriptVisitor): Shell
       : null,
   };
 }
+
+/** The script a command reads on stdin: a static heredoc or herestring, else `null`. */
+export function stdinScript(redirects: readonly ShellRedirect[]): string | null {
+  for (const redirect of redirects) {
+    if (redirect.fd !== null && redirect.fd !== 0) continue;
+    if (redirect.heredoc !== null) return redirect.heredoc.content;
+    if (redirect.operator === "<<<") return redirect.target;
+  }
+  return null;
+}

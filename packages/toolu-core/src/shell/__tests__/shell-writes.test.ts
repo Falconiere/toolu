@@ -173,3 +173,49 @@ test.concurrent("a quoted or escaped pattern character names the file literally"
   }
   expect(paths("dd if=x of=.en[v]")).toEqual([".en[v]"]);
 });
+
+/**
+ * `python -c` / a python heredoc (#284 review): a static `open(<literal>, <mode>)`
+ * reports its path in every literal form; any write the scan cannot read
+ * statically is an unknown target (`null`), never silence.
+ */
+test.concurrent("python writes through any string literal form are found", () => {
+  expect(paths(`python3 -c "open(r'.env', 'w')"`)).toEqual([".env"]);
+  expect(paths(`python3 -c "open(f'.env', 'w').write(x)"`)).toEqual([".env"]);
+  expect(paths(`python3 -c "open(b'.env', mode='wb')"`)).toEqual([".env"]);
+  expect(paths(`python3 -c "open('''.env''', 'a')"`)).toEqual([".env"]);
+  expect(paths(`python3 -c 'open("""x/.env""", "w")'`)).toEqual(["x/.env"]);
+});
+
+test.concurrent("python writes the scan cannot read statically are unknown targets", () => {
+  for (const script of [
+    "open('.' + 'env', 'w')",
+    "f = '.env'; open(f, 'w')",
+    "open(f'{d}/.env', 'w')",
+    "open('.env', encoding='utf8', mode='w')",
+    "open('.env', m)",
+    "from pathlib import Path; Path('.env').write_text('x')",
+    "from pathlib import Path; Path('.env').open('w')",
+    "import shutil; shutil.copy('a', '.env')",
+    "import os; os.rename('a', '.env')",
+  ]) {
+    expect([script, paths(`python3 -c ${JSON.stringify(script)}`)]).toEqual([script, [null]]);
+  }
+});
+
+test.concurrent("python reads stay out of the write targets", () => {
+  for (const script of [
+    "print(open('.env').read())",
+    "open('.env', 'r')",
+    "open(r'.env', mode='rb')",
+  ]) {
+    expect([script, paths(`python3 -c ${JSON.stringify(script)}`)]).toEqual([script, []]);
+  }
+});
+
+test.concurrent("a static heredoc or herestring fed to python is its script", () => {
+  expect(paths("python3 - <<'EOF'\nopen('.env', 'w').write('x')\nEOF")).toEqual([".env"]);
+  expect(paths("python3 <<< \"open('.env', 'a')\"")).toEqual([".env"]);
+  expect(paths("python3 - <<'EOF'\nprint(1)\nEOF")).toEqual([]);
+  expect(paths("python3 script.py <<'EOF'\nopen('.env','w')\nEOF")).toEqual([]);
+});

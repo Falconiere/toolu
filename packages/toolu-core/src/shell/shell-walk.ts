@@ -32,6 +32,7 @@ import {
 } from "./shell-types.ts";
 import {
   scanWord,
+  stdinScript,
   toShellRedirect,
   visitArithmetic,
   visitAssignment,
@@ -95,16 +96,6 @@ function compoundRedirects(redirects: readonly Redirect[], ctx: WalkContext, sin
   for (const redirect of redirects) {
     sink.compoundRedirects.push(toShellRedirect(redirect, nestedVisitor(ctx, sink)));
   }
-}
-
-/** The script a shell reads on stdin: a static heredoc or herestring, else unknown. */
-function stdinScript(redirects: readonly ShellRedirect[]): string | null {
-  for (const redirect of redirects) {
-    if (redirect.fd !== null && redirect.fd !== 0) continue;
-    if (redirect.heredoc !== null) return redirect.heredoc.content;
-    if (redirect.operator === "<<<") return redirect.target;
-  }
-  return null;
 }
 
 function runString(
