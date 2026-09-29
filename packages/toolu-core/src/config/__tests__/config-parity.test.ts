@@ -217,7 +217,7 @@ const PARITY_FIXTURES = [
   EXAMPLE,
 ];
 
-test("the parity set covers the docs examples, edge cases and the shipped example", () => {
+test.concurrent("the parity set covers the docs examples, edge cases and the shipped example", () => {
   const names = PARITY_FIXTURES.map((path) => path.split("/").pop());
   expect(names.filter((name) => name?.startsWith("docs-")).length).toBeGreaterThanOrEqual(6);
   expect(names).toContain("edge-values.json");

@@ -96,7 +96,7 @@ function writeAtomic(file: string, body: string): boolean {
   }
 }
 
-type Target = { root: string; settingsFile: string; sentinel: string; env: HostEnv };
+type Target = { settingsFile: string; sentinel: string };
 
 function target(
   config: LoadedConfig,
@@ -120,7 +120,7 @@ function target(
   const sentinel = join(stateRoot, PERMISSIONS_SENTINEL);
   if (existsSync(sentinel)) return "already written";
   const settingsFile = join(resolved, projectDirname(scoped), "settings.local.json");
-  return { root: resolved, settingsFile, sentinel, env };
+  return { settingsFile, sentinel };
 }
 
 /** `toolu_permissions_autowrite ROOT`. */

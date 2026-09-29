@@ -58,8 +58,19 @@ test.concurrent("the typed list loaders read the shipped files", () => {
     "cargo test",
   ]);
   expect(bashAllowlist(SETTINGS)).toEqual([]);
-  expect(commitPrefixes(SETTINGS)).toContain("feat");
-  expect(commitPrefixes(SETTINGS)).toHaveLength(11);
+  expect(commitPrefixes(SETTINGS)).toEqual([
+    "feat",
+    "fix",
+    "chore",
+    "docs",
+    "refactor",
+    "test",
+    "perf",
+    "build",
+    "ci",
+    "style",
+    "revert",
+  ]);
   expect(protectedFiles(SETTINGS)).toContain(".env");
   expect(rustUnsafeExemptions(SETTINGS)).toEqual([]);
   expect(mcpBlocklist(SETTINGS)).toEqual([]);
@@ -100,7 +111,7 @@ for (const [line, server] of MCP_LINES) {
 
 test.concurrent("mcpBlocklist drops an entry whose prefix is empty", () => {
   using sb = createSandbox();
-  const path = sb.write("s/mcp-blocklist.txt", "  -> hint only\nok\n");
+  const path = sb.write("s/mcp-blocklist.txt", "  -> hint only\n\tok \n");
   expect(mcpBlocklist(join(path, ".."))).toEqual([{ prefix: "ok", redirect: "" }]);
 });
 
