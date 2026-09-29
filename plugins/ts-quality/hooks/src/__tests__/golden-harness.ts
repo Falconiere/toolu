@@ -6,6 +6,7 @@
  * bash baseline (the pre-port `register.sh`, from git) and the TypeScript
  * module (`hooks/dist/register.js`), so the module is the one variable.
  */
+import { spawnSync } from "node:child_process";
 import { rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { isJsonObject } from "@toolu/core/config";
@@ -135,11 +136,16 @@ function stepEnv(sb: Sandbox, host: PretoolHost, c: TsCase, step: Step): EnvPatc
   return pretoolEnv(sb, host, deletion ? { ...extra, TOOLU_EDIT_OPERATION: "delete" } : extra);
 }
 
-async function runStep(sb: Sandbox, host: PretoolHost, c: TsCase, step: Step) {
+/** One step dispatched by the post-tools bundle: the raw result, with its duration. */
+export async function dispatchStep(sb: Sandbox, host: PretoolHost, c: TsCase, step: Step) {
   for (const [rel, body] of Object.entries(step.write ?? {})) sb.write(rel, body);
   for (const rel of step.remove ?? []) rmSync(sb.path(rel), { force: true });
   const stdin = JSON.stringify(toStdin(host, fixtureFor(sb, host, step), { cwd: sb.project }));
-  const res = await runPostBundle(sb, { cwd: sb.project, env: stepEnv(sb, host, c, step), stdin });
+  return runPostBundle(sb, { cwd: sb.project, env: stepEnv(sb, host, c, step), stdin });
+}
+
+async function runStep(sb: Sandbox, host: PretoolHost, c: TsCase, step: Step): Promise<StepResult> {
+  const res = await dispatchStep(sb, host, c, step);
   const state = Object.fromEntries(
     Object.entries(res.state).map(([k, v]) => [
       normalise(k, sb.root),
@@ -154,6 +160,13 @@ async function runStep(sb: Sandbox, host: PretoolHost, c: TsCase, step: Step) {
   };
 }
 
+/** Put `sb` in `c`'s starting state on `host`, with the given ts-quality module registered. */
+export async function setupCase(sb: Sandbox, host: PretoolHost, c: TsCase, reg: Registration) {
+  prepare(sb, host, c);
+  await registerTsQuality(sb, host, reg);
+  for (const plugin of c.register ?? []) await registerPlugin(sb, host, plugin);
+}
+
 /** Every step's result, in order, for `c` on `host` with the given module registered. */
 export async function runCase(
   c: TsCase,
@@ -161,13 +174,27 @@ export async function runCase(
   reg: Registration,
 ): Promise<StepResult[]> {
   using sb = createSandbox({ git: true });
-  prepare(sb, host, c);
-  await registerTsQuality(sb, host, reg);
-  for (const plugin of c.register ?? []) await registerPlugin(sb, host, plugin);
+  await setupCase(sb, host, c, reg);
   const results: StepResult[] = [];
   for (const step of c.steps) results.push(await runStep(sb, host, c, step));
   return results;
 }
+
+/**
+ * The bash module as it was at `base`: `plugins/ts-quality/hooks` extracted
+ * from git into `dir`, so it runs after the files are deleted. Returns its
+ * `register.sh`.
+ */
+export function extractBaseRegister(base: string, dir: string): string {
+  const tar = spawnSync("git", ["-C", REPO_ROOT, "archive", base, "plugins/ts-quality/hooks"]);
+  if (tar.status !== 0) throw new Error(`git archive ${base} failed`);
+  const untar = spawnSync("tar", ["-x", "-C", dir], { input: tar.stdout });
+  if (untar.status !== 0) throw new Error("tar -x failed");
+  return join(dir, "plugins/ts-quality/hooks/register.sh");
+}
+
+/** The commit the golden was captured at: the last with the bash module. */
+export const BASH_BASE = "a8b0c9c9";
 
 /** The golden key of `c` on `host`. */
 export function caseKey(c: TsCase, host: PretoolHost): string {
