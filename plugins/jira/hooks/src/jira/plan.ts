@@ -58,7 +58,15 @@ async function init(context: PlanContext, [key = ""]: readonly string[]): Promis
   const issue = await lookup(conn, `${api(conn)}/issue/${key}`);
   const summary = text(alt(get(issue, "fields", "summary"), "")) || key;
   mkdirSync(dirname(doc), { recursive: true });
-  writeFileSync(doc, template(key, summary, doc));
+  try {
+    // Exclusive create: a doc (or symlink) that appeared since the check is never written through.
+    writeFileSync(doc, template(key, summary, doc), { flag: "wx" });
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "EEXIST") {
+      throw new CliExit(1, `jira plan init: ${doc} already exists`);
+    }
+    throw error;
+  }
   await writeStdout(`${doc}\n`);
   return 0;
 }

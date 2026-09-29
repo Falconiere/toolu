@@ -4,7 +4,16 @@
  * credentials), and read (text as context, binary as a saved path).
  */
 import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BASE, fixtureBody, startJira } from "./harness.ts";
@@ -122,7 +131,8 @@ test("attachment: read reports binary content instead of dumping bytes", async (
   h.fixture.plan([{ body: fixtureBody("attachment-image.json") }, { body: NOTES }]);
   const run = await h.jira(["attachment", "read", "10011"]);
   expect(run.status).toBe(0);
-  const saved = /saved to (\S+)\n/.exec(run.stdout)?.[1] ?? "";
+  const saved = /saved to (\S+)\n/.exec(run.stdout)?.[1];
+  if (saved === undefined) throw new Error(`no saved path in: ${run.stdout}`);
   try {
     expect(run.stdout).toBe(
       `architecture.png — binary attachment (image/png, ${Buffer.byteLength(NOTES)} bytes) saved to ${saved}\n` +
@@ -130,6 +140,8 @@ test("attachment: read reports binary content instead of dumping bytes", async (
     );
     expect(run.stdout).not.toContain("Deploy steps:");
     expect(readFileSync(saved, "utf8")).toBe(NOTES);
+    // Owner-only, as mktemp created it: the temp dir may be shared.
+    expect(statSync(saved).mode & 0o777).toBe(0o600);
   } finally {
     rmSync(saved, { force: true });
   }
@@ -139,4 +151,36 @@ test("attachment: unknown action exits 1 with usage", async () => {
   const run = await h.jira(["attachment", "bogus"]);
   expect(run.status).toBe(1);
   expect(run.stderr).toContain("Usage: jira attachment");
+});
+
+test("attachment: a metadata filename cannot steer the download outside the working directory", async () => {
+  const meta = { id: "10010", filename: "../../escaped.txt", mimeType: "text/plain" };
+  h.fixture.plan([{ body: JSON.stringify(meta) }, { body: NOTES }]);
+  const work = join(sandbox, "a", "b");
+  mkdirSync(work, { recursive: true });
+  const run = await h.jira(["attachment", "download", "10010"], { cwd: work });
+  expect(run.status).toBe(0);
+  expect(run.stdout).toBe("downloaded attachment 10010 -> escaped.txt\n");
+  expect(readdirSync(work)).toEqual(["escaped.txt"]);
+  expect(existsSync(join(sandbox, "escaped.txt"))).toBe(false);
+});
+
+test("attachment: download without -o exits 22 when the metadata read fails", async () => {
+  h.fixture.plan([{ status: 404, body: '{"errorMessages":["gone"]}' }]);
+  const run = await h.jira(["attachment", "download", "10010"], { cwd: sandbox });
+  expect(run.status).toBe(22);
+  expect(run.stdout).toBe("");
+  expect(run.stderr).toBe(`jira: HTTP 404 from ${API3}/attachment/10010\n`);
+  expect(readdirSync(sandbox)).toEqual([]);
+});
+
+test("attachment: read exits 1 with no stdout when the content download fails", async () => {
+  h.fixture.plan([
+    { body: fixtureBody("attachment-text.json") },
+    { status: 403, body: '{"errorMessages":["denied"]}' },
+  ]);
+  const run = await h.jira(["attachment", "read", "10010"]);
+  expect(run.status).toBe(1);
+  expect(run.stdout).toBe("");
+  expect(run.stderr).toBe(`jira: HTTP 403 from ${API3}/attachment/content/10010\n`);
 });

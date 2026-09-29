@@ -30,8 +30,10 @@ const server = Bun.serve({
     if (url.pathname === "/bytes") return new Response(new Uint8Array([0, 1, 254, 255]));
     if (url.pathname === "/hop") {
       const to = url.searchParams.get("to") ?? "/bytes";
-      return new Response(null, { status: 302, headers: { location: to } });
+      const status = Number(url.searchParams.get("status") ?? "302");
+      return new Response(null, { status, headers: { location: to } });
     }
+    if (url.pathname === "/nolocation") return new Response("moved-body", { status: 302 });
     if (url.pathname === "/loop") {
       return new Response(null, { status: 302, headers: { location: "/loop" } });
     }
@@ -59,6 +61,9 @@ const mediaServer = Bun.serve({
       headers: request.headers.toJSON(),
       body: await request.text(),
     });
+    if (url.pathname === "/back") {
+      return new Response(null, { status: 302, headers: { location: `${base}/bytes` } });
+    }
     return new Response("media bytes");
   },
 });
@@ -228,4 +233,39 @@ test("download exits 47, as curl did, after too many redirects", async () => {
   const exit = await rejected(download("tool", { url: `${base}/loop` }));
   expect(exit.code).toBe(47);
   expect(exit.message).toStartWith("tool: too many redirects from ");
+});
+
+for (const status of [301, 303, 307, 308]) {
+  test(`download follows a ${status} redirect`, async () => {
+    const bytes = await download("tool", { url: `${base}/hop?status=${status}&to=/bytes` });
+    expect([...bytes]).toEqual([0, 1, 254, 255]);
+  });
+}
+
+test("download returns a 3xx without a Location as the body, as curl -L did", async () => {
+  const bytes = await download("tool", { url: `${base}/nolocation` });
+  expect(new TextDecoder().decode(bytes)).toBe("moved-body");
+});
+
+test("Authorization stays dropped after a cross-origin hop comes back to the origin", async () => {
+  seen.length = 0;
+  media.length = 0;
+  const to = encodeURIComponent(`${mediaBase}/back`);
+  const bytes = await download("tool", {
+    url: `${base}/hop?to=${to}`,
+    headers: { Authorization: "Bearer tok" },
+  });
+  expect(bytes.length).toBe(4);
+  expect(seen.map((request) => [request.path, request.headers["authorization"]])).toEqual([
+    [`/hop?to=${to}`, "Bearer tok"],
+    ["/bytes", undefined],
+  ]);
+  expect(media[0]?.headers["authorization"]).toBeUndefined();
+});
+
+test("download error messages leave out a hop's query (signed media tokens)", async () => {
+  const to = encodeURIComponent("/denied?token=secret-jwt");
+  const exit = await rejected(download("tool", { url: `${base}/hop?to=${to}` }));
+  expect(exit.code).toBe(22);
+  expect(exit.message).toBe(`tool: HTTP 401 from ${base}/denied`);
 });

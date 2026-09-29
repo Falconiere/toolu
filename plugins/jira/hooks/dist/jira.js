@@ -135,13 +135,17 @@ var MAX_REDIRECTS = 50;
 function withoutAuthorization(headers) {
   return Object.fromEntries(Object.entries(headers).filter(([name]) => name.toLowerCase() !== "authorization"));
 }
+function shown(url) {
+  const parsed = new URL(url);
+  return `${parsed.origin}${parsed.pathname}`;
+}
 async function follow(tool, hop) {
   const response = await exchange(tool, hop.url, { method: "GET", headers: hop.headers });
   const location = response.headers.get("location");
   if (REDIRECTS.has(response.status) && location !== null) {
     await response.body?.cancel();
     if (hop.count >= MAX_REDIRECTS)
-      throw new CliExit(47, `${tool}: too many redirects from ${hop.url}`);
+      throw new CliExit(47, `${tool}: too many redirects from ${shown(hop.url)}`);
     const url = new URL(location, hop.url).href;
     const headers = new URL(url).origin === hop.origin ? hop.headers : withoutAuthorization(hop.headers);
     return follow(tool, { ...hop, url, headers, count: hop.count + 1 });
@@ -149,7 +153,7 @@ async function follow(tool, hop) {
   const bytes = new Uint8Array(await readBody(tool, () => response.arrayBuffer()));
   if (response.status >= 400) {
     const body = new TextDecoder().decode(bytes);
-    throw new CliExit(22, `${tool}: HTTP ${response.status} from ${hop.url}`, body);
+    throw new CliExit(22, `${tool}: HTTP ${response.status} from ${shown(hop.url)}`, body);
   }
   return bytes;
 }
@@ -511,8 +515,8 @@ async function save(conn, argv) {
   let out = flags.values.get("out") ?? "";
   if (out === "") {
     const meta = await lookup2(conn, `${api(conn)}/attachment/${id}`, { code: 22 });
-    const name = text(alt(get(meta, "filename"), ""));
-    out = name === "" ? `attachment-${id}` : name;
+    const name = basename(text(alt(get(meta, "filename"), "")));
+    out = name === "" || name === "." || name === ".." ? `attachment-${id}` : name;
   }
   writeFileSync(out, await content(conn, id));
   await writeStdout(`downloaded attachment ${id} -> ${out}
@@ -531,7 +535,7 @@ function isTextLike(mime) {
 }
 function tempFile(bytes) {
   const path = join2(tmpdir(), `jira-attachment.${randomBytes(6).toString("hex")}`);
-  writeFileSync(path, bytes, { flag: "wx" });
+  writeFileSync(path, bytes, { flag: "wx", mode: 384 });
   return path;
 }
 async function read(conn, [id = ""]) {
@@ -1223,7 +1227,14 @@ async function init(context, [key = ""]) {
   const issue = await lookup2(conn, `${api(conn)}/issue/${key}`);
   const summary = text(alt(get(issue, "fields", "summary"), "")) || key;
   mkdirSync2(dirname2(doc), { recursive: true });
-  writeFileSync3(doc, template(key, summary, doc));
+  try {
+    writeFileSync3(doc, template(key, summary, doc), { flag: "wx" });
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "EEXIST") {
+      throw new CliExit(1, `jira plan init: ${doc} already exists`);
+    }
+    throw error;
+  }
   await writeStdout(`${doc}
 `);
   return 0;

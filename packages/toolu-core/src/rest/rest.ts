@@ -113,6 +113,12 @@ interface Hop {
   readonly count: number;
 }
 
+/** A hop's URL for messages: no query, which may carry a signed media token. */
+function shown(url: string): string {
+  const parsed = new URL(url);
+  return `${parsed.origin}${parsed.pathname}`;
+}
+
 /** One GET; a redirect recurses into the next hop, which is sequential by nature. */
 async function follow(tool: string, hop: Hop): Promise<Uint8Array> {
   const response = await exchange(tool, hop.url, { method: "GET", headers: hop.headers });
@@ -120,7 +126,7 @@ async function follow(tool: string, hop: Hop): Promise<Uint8Array> {
   if (REDIRECTS.has(response.status) && location !== null) {
     await response.body?.cancel();
     if (hop.count >= MAX_REDIRECTS)
-      throw new CliExit(47, `${tool}: too many redirects from ${hop.url}`);
+      throw new CliExit(47, `${tool}: too many redirects from ${shown(hop.url)}`);
     const url = new URL(location, hop.url).href;
     const headers =
       new URL(url).origin === hop.origin ? hop.headers : withoutAuthorization(hop.headers);
@@ -129,7 +135,7 @@ async function follow(tool: string, hop: Hop): Promise<Uint8Array> {
   const bytes = new Uint8Array(await readBody(tool, () => response.arrayBuffer()));
   if (response.status >= 400) {
     const body = new TextDecoder().decode(bytes);
-    throw new CliExit(22, `${tool}: HTTP ${response.status} from ${hop.url}`, body);
+    throw new CliExit(22, `${tool}: HTTP ${response.status} from ${shown(hop.url)}`, body);
   }
   return bytes;
 }
@@ -138,7 +144,8 @@ async function follow(tool: string, hop: Hop): Promise<Uint8Array> {
  * GETs `request.url` like `curl -sS --fail-with-body -L` and returns the body
  * bytes. Redirects are followed (Jira serves attachment content from a media
  * host), and Authorization is dropped once a hop leaves the original origin.
- * Too many redirects exits 47, curl's status for it.
+ * Too many redirects exits 47, curl's status for it. Error messages name the
+ * failing URL without its query string.
  */
 export function download(tool: string, request: RestRequest): Promise<Uint8Array> {
   const origin = new URL(request.url).origin;

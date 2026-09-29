@@ -65,8 +65,10 @@ async function save(conn: Conn, argv: readonly string[]): Promise<number> {
   if (out === "") {
     // bash's `fn=$(… | jq -r '.filename // empty')` failed the script with curl's status.
     const meta = await lookup(conn, `${api(conn)}/attachment/${id}`, { code: 22 });
-    const name = text(alt(get(meta, "filename"), ""));
-    out = name === "" ? `attachment-${id}` : name;
+    // Only the name part: a metadata filename such as ../../.bashrc must not
+    // steer the write outside the working directory.
+    const name = basename(text(alt(get(meta, "filename"), "")));
+    out = name === "" || name === "." || name === ".." ? `attachment-${id}` : name;
   }
   writeFileSync(out, await content(conn, id));
   await writeStdout(`downloaded attachment ${id} -> ${out}\n`);
@@ -90,10 +92,10 @@ function isTextLike(mime: string): boolean {
   );
 }
 
-/** A fresh file in the temp dir, named like `mktemp -t jira-attachment.XXXXXX`. */
+/** A fresh owner-only file in the temp dir, like `mktemp -t jira-attachment.XXXXXX`. */
 function tempFile(bytes: Uint8Array): string {
   const path = join(tmpdir(), `jira-attachment.${randomBytes(6).toString("hex")}`);
-  writeFileSync(path, bytes, { flag: "wx" });
+  writeFileSync(path, bytes, { flag: "wx", mode: 0o600 });
   return path;
 }
 

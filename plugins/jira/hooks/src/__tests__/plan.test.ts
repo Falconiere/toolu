@@ -15,6 +15,7 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -213,6 +214,17 @@ describe("plan init", () => {
     expect(run.status).toBe(1);
     expect(run.stderr).toBe(`jira plan init: ${DOC()} already exists\n`);
     expect(readFileSync(DOC(), "utf8")).toBe("hand-edited\n");
+  });
+
+  test("init: never writes through a symlink that sits at the doc path", async () => {
+    h.respond("issue.json");
+    mkdirSync(join(repo, ".claude/tmp/jira/plans"), { recursive: true });
+    const target = join(sandbox, "outside.md");
+    symlinkSync(target, DOC());
+    const run = await plan(["init", "ABC-123"]);
+    expect(run.status).toBe(1);
+    expect(run.stderr).toBe(`jira plan init: ${DOC()} already exists\n`);
+    expect(existsSync(target)).toBe(false);
   });
 
   test("init: needs an issue key", async () => {

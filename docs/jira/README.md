@@ -277,4 +277,6 @@ The CLI was a bash script over `curl` + `jq` until #272; it is now a TypeScript 
 - `attachment download` writes no output file when the download fails; curl wrote the error body into it.
 - `plan init` titles the doc from the issue summary even under `--lean`; bash fell back to the key.
 - A previous ledger that is not a JSON object is treated as absent instead of failing the run.
+- `raw GET <path> <body>` exits 1: `fetch` cannot send a body with GET, where curl did.
+- `attachment download` without `-o` saves under the metadata filename's base name only, so a name such as `../../x` cannot write outside the working directory.
 - JSON number literals are printed as JavaScript prints them (`1.0` becomes `1`).

@@ -135,6 +135,23 @@ test("raw: POST sends the body verbatim", async () => {
   expect(request.headers["content-type"]).toBe("application/json");
 });
 
+test("raw: PUT sends its method and body", async () => {
+  const run = await h.jira(["raw", "PUT", "/rest/api/3/issue/ABC-1", '{"fields":{}}']);
+  expect(run.status).toBe(0);
+  expect(h.only()).toMatchObject({
+    method: "PUT",
+    url: `${BASE}/rest/api/3/issue/ABC-1`,
+    body: '{"fields":{}}',
+  });
+});
+
+test("raw: a GET with a body is refused by fetch and exits 1 (a documented difference)", async () => {
+  const run = await h.jira(["raw", "GET", "/rest/api/3/myself", "{}"]);
+  expect(run.status).toBe(1);
+  expect(run.stderr).toStartWith("jira: request failed: ");
+  expect(h.fixture.requests).toHaveLength(0);
+});
+
 test("raw: an HTTP failure exits 22 with the error body on stdout", async () => {
   h.fixture.plan([{ status: 401, body: '{"errorMessages":["stub failure"]}' }]);
   const run = await h.jira(["raw", "GET", "/rest/api/3/myself"]);
