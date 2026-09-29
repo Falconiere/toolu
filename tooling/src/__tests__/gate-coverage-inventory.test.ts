@@ -109,3 +109,24 @@ test.concurrent("check fails when support=n/a pairs with shell-out", async () =>
   expect(res.exitCode).not.toBe(0);
   expect(res.stdout + res.stderr).toContain("support=n/a requires classification=no-map");
 });
+
+test.concurrent("a native built-in module is discovered from its gates source and inventoried port-native", async () => {
+  const res = await run([process.execPath, "run", CLI, "discover"], { cwd: ROOT });
+  expect(res.exitCode).toBe(0);
+  const Discovered = z.array(z.looseObject({ id: z.string(), sourcePath: z.string() }));
+  const found = Discovered.parse(JSON.parse(res.stdout)).find(
+    (row) => row.id === "toolu:builtin-module:PreToolUse:commit-gate",
+  );
+  expect(found?.sourcePath).toBe("packages/toolu-core/src/gates/commit-gate.ts");
+  const Classified = z.array(z.looseObject({ id: z.string(), classification: z.string() }));
+  const rows = Classified.parse(JSON.parse(await Bun.file(INVENTORY).text()));
+  const native = ["bash-commands", "commit-gate", "quality-gate"].map((name) =>
+    rows.find((row) => row.id === `toolu:builtin-module:PreToolUse:${name}`),
+  );
+  expect(native.map((row) => row?.classification)).toEqual([
+    "port-native",
+    "port-native",
+    "port-native",
+  ]);
+  expect(rows.some((row) => row.id.endsWith(":commit-gate.sh"))).toBe(false);
+});

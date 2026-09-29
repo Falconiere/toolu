@@ -20,10 +20,11 @@ Real command lines for `@toolu/core/shell` (#284). The tests live in
   shipped hook scripts (commit-gate, gate-status, search-nudge) or wall-clock
   numbers, and #283 reproduced them on v7.2.0.
 
-`bash-oracle.test.ts` sources `plugins/toolu/hooks/lib/detect.sh` and
-`pre-tools/modules/bash-commands.sh` unmodified and re-derives every live `bash`
-value. When the bash implementation is deleted (#279), delete that test. The
-fixtures stay as the record of what the TypeScript layer must keep answering.
+`bash-oracle.test.ts` sources `plugins/toolu/hooks/lib/detect.sh` unmodified and
+re-derives every live `bash` value except `bash_commands_decide`, whose module
+was deleted when the gate went native (#261); those baselines stay recorded.
+When the bash implementation is deleted (#279), delete that test. The fixtures
+stay as the record of what the TypeScript layer must keep answering.
 
 **How the inputs were harvested.** A `BASH_ENV` probe composed a DEBUG-trap
 snippet onto every bash process the suites started, including bats' own `run`

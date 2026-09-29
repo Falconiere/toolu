@@ -2,7 +2,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { z } from "zod";
-import { listDirNames, listShFiles, makeId, normalizeCommand, rel } from "./fs-util.ts";
+import { fail, listDirNames, listShFiles, makeId, normalizeCommand, rel } from "./fs-util.ts";
+import { NATIVE_MODULES } from "../../../plugins/toolu/hooks/src/pre-tools/builtins.ts";
 import { ROOT } from "./paths.ts";
 import type { Discovered, Kind } from "./types.ts";
 
@@ -127,7 +128,30 @@ function discoverEntrypoints(plugin: string, add: AddFn): void {
   }
 }
 
+/**
+ * Built-in PreToolUse modules ported to native TypeScript (#260–#262): their
+ * script is gone, so each is found in the plugin's native table and sourced
+ * from its `@toolu/core/gates` file.
+ */
+function discoverNativeBuiltins(add: AddFn): void {
+  for (const name of Object.keys(NATIVE_MODULES).toSorted()) {
+    const abs = join(ROOT, "packages/toolu-core/src/gates", `${name}.ts`);
+    if (!existsSync(abs)) fail(`native built-in module ${name} has no ${rel(abs)}`);
+    add({
+      id: makeId("toolu", "builtin-module", "PreToolUse", name),
+      sourcePath: rel(abs),
+      plugin: "toolu",
+      kind: "builtin-module",
+      event: "PreToolUse",
+      matcher: "",
+      commandOrModule: name,
+      parentId: "toolu:hooks.json:PreToolUse:mod.sh",
+    });
+  }
+}
+
 function discoverBuiltinModules(add: AddFn): void {
+  discoverNativeBuiltins(add);
   for (const sub of ["pre-tools/modules", "post-tools/modules"]) {
     const d = join(ROOT, "plugins/toolu/hooks", sub);
     const event = sub.startsWith("pre-") ? "PreToolUse" : "PostToolUse";

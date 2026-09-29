@@ -4956,515 +4956,15 @@ function dispatchPostTool(stdin, options) {
   return dispatchHook("post", stdin, options);
 }
 
-// packages/toolu-core/src/gates/quality-command.ts
-import { basename } from "path";
-var BUN_SCRIPTS = new Set([
-  "check",
-  "check:fix",
-  "check:duplication",
-  "ts:check",
-  "ts:check:fix",
-  "rust:check",
-  "rust:test",
-  "check-types",
-  "lint",
-  "lint:fix",
-  "format",
-  "format:check",
-  "format:fix",
-  "build",
-  "test"
-]);
-var CARGO = new Set(["clippy", "test", "build", "nextest"]);
-var JS_TOOLS = new Set(["vitest", "jest", "tsc"]);
-var TS_CHECK = new Set(["./scripts/ts-check.sh", "scripts/ts-check.sh"]);
-var WRAPPER_SCRIPT = /(?:^|\/)(tools\/[A-Za-z0-9_.-]+\/(?:check|test|format)\.sh)$/;
-var PACKAGE_RUNNERS = new Set(["npx", "bunx", "pnpx", "yarn"]);
-var SCRIPT_SHELLS = new Set(["bash", "sh"]);
-function bunLabel(argv) {
-  const [, verb, script] = argv;
-  if (verb === "test")
-    return "bun test";
-  return verb === "run" && typeof script === "string" && BUN_SCRIPTS.has(script) ? `bun run ${script}` : undefined;
-}
-function cargoLabel(argv) {
-  const toolchain = argv[1]?.startsWith("+") === true;
-  const sub = argv[toolchain ? 2 : 1];
-  return typeof sub === "string" && CARGO.has(sub) ? `cargo ${sub}` : undefined;
-}
-function directLabel(argv) {
-  const name = argv[0];
-  if (typeof name !== "string")
-    return;
-  const script = WRAPPER_SCRIPT.exec(name)?.[1];
-  if (script !== undefined)
-    return script;
-  if (TS_CHECK.has(name))
-    return name;
-  const base = basename(name);
-  if (JS_TOOLS.has(base))
-    return base;
-  if (base === "bun")
-    return bunLabel(argv);
-  return base === "cargo" ? cargoLabel(argv) : undefined;
-}
-function afterOptions(argv, from) {
-  const at = argv.findIndex((word, i) => i >= from && !(word?.startsWith("-") ?? false));
-  return at === -1 ? [] : argv.slice(at);
-}
-function runnerTarget(argv) {
-  const name = argv[0];
-  if (typeof name !== "string")
-    return;
-  const base = basename(name);
-  if (PACKAGE_RUNNERS.has(base))
-    return afterOptions(argv, 1);
-  if (base === "bun" && argv[1] === "x" || base === "pnpm" && argv[1] === "exec") {
-    return afterOptions(argv, 2);
-  }
-  const script = argv[1];
-  return SCRIPT_SHELLS.has(base) && typeof script === "string" && !script.startsWith("-") ? argv.slice(1) : undefined;
-}
-function labelOf(command) {
-  if (command.origin === "function")
-    return;
-  const direct = directLabel(command.argv);
-  if (direct !== undefined)
-    return direct;
-  const target = runnerTarget(command.argv);
-  return target === undefined ? undefined : directLabel(target);
-}
-function qualityCommands(analysis) {
-  return analysis.commands.flatMap((command) => {
-    const label = labelOf(command);
-    return label === undefined ? [] : [{ command, label }];
-  });
-}
-// packages/toolu-core/src/ledger/ledger-jq.ts
-class JqError extends Error {
-  name = "JqError";
-}
-function jqType(value) {
-  if (value === null)
-    return "null";
-  if (Array.isArray(value))
-    return "array";
-  return typeof value === "object" ? "object" : typeof value;
-}
-function isObject2(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function get(value, key) {
-  if (value === null)
-    return null;
-  if (isObject2(value) && typeof key === "string") {
-    return Object.hasOwn(value, key) ? value[key] ?? null : null;
-  }
-  throw new JqError(`Cannot index ${jqType(value)} with ${jqType(key)}`);
-}
-function alt(value, fallback) {
-  return value === undefined || value === null || value === false ? fallback : value;
-}
-function raw(value) {
-  return typeof value === "string" ? value : toJqJson(value, true);
-}
-function isJson(value) {
-  if (value === null || ["string", "number", "boolean"].includes(typeof value))
-    return true;
-  if (Array.isArray(value))
-    return value.every(isJson);
-  return typeof value === "object" && Object.values(value).every(isJson);
-}
-function parseJson(text) {
-  let value;
-  try {
-    value = JSON.parse(text);
-  } catch {
-    return;
-  }
-  return isJson(value) ? value : undefined;
-}
-
-// packages/toolu-core/src/gates/tool-exit.ts
-function asJson(payload) {
-  return parseJson(JSON.stringify(payload)) ?? null;
-}
-function firstOf(doc, paths, fallback) {
-  try {
-    for (const path of paths) {
-      const value = path.reduce((at, key) => get(at, key), doc);
-      if (alt(value, null) !== null)
-        return value;
-    }
-    return fallback;
-  } catch (error) {
-    if (error instanceof JqError)
-      return;
-    throw error;
-  }
-}
-function printed2(value, onError) {
-  if (value === undefined)
-    return onError;
-  if (value === null)
-    return "";
-  return raw(value).replace(/\n+$/, "");
-}
-function toolCommand(payload) {
-  return printed2(firstOf(asJson(payload), [["tool_input", "command"]], ""), "");
-}
-var EXIT_PATHS = [
-  ["tool_response", "metadata", "exit_code"],
-  ["tool_response", "exit_code"],
-  ["tool_output", "exit_code"]
-];
-function toolExitStatus(payload) {
-  const doc = asJson(payload);
-  const status = printed2(firstOf(doc, EXIT_PATHS, null), "");
-  if (status !== "" && status !== "null")
-    return status;
-  const output = printed2(firstOf(doc, [["tool_output"]], null), "");
-  if (output === "")
-    return status;
-  const inner = parseJson(output);
-  if (inner === undefined)
-    return "";
-  return printed2(firstOf(inner, [["exitCode"], ["exit_code"]], null), "");
-}
-function toolInterrupted(payload) {
-  return printed2(firstOf(asJson(payload), [["tool_response", "interrupted"]], false), "false") === "true";
-}
-// packages/toolu-core/src/gates/gate-status.ts
-import { existsSync as existsSync2, mkdirSync as mkdirSync3, writeFileSync as writeFileSync4 } from "fs";
-import { join as join8 } from "path";
-
-// packages/toolu-core/src/state/gate-file.ts
-import { appendFileSync as appendFileSync2, existsSync, readFileSync as readFileSync5, writeFileSync as writeFileSync3 } from "fs";
-import { dirname as dirname2 } from "path";
-
-// packages/toolu-core/src/state/state-schema.ts
-var GATE_FILE_VERSION = 1;
-var TELEMETRY_VERSION = 1;
-var Version = literal(GATE_FILE_VERSION).optional();
-var GateEntrySchema2 = strictObject({
-  source: string2(),
-  reason: string2(),
-  violations: string2(),
-  updatedAt: string2()
+// packages/toolu-core/src/config/settings.ts
+var CodeEditRulesSchema = object({
+  rules: array(object({
+    match: string2(),
+    docs: array(string2()),
+    when_path_matches: array(string2()).optional(),
+    extra_docs: array(string2()).optional()
+  }).strict())
 });
-var PassingSchema = strictObject({
-  version: Version,
-  status: literal("passing"),
-  source: string2(),
-  updatedAt: string2()
-});
-var FailingSchema = strictObject({
-  version: Version,
-  status: literal("failing"),
-  reason: string2(),
-  source: string2(),
-  file: string2(),
-  violations: string2(),
-  entries: record(string2(), GateEntrySchema2).optional(),
-  updatedAt: string2()
-});
-var GateFileSchema = discriminatedUnion("status", [PassingSchema, FailingSchema]);
-var text3 = string2();
-var maybeText = string2().nullable();
-var TELEMETRY_EXTRAS = {
-  gate_fail: strictObject({ file: text3, source: text3 }),
-  gate_clear: strictObject({ file: text3, source: text3 }),
-  step_run: strictObject({
-    step_id: text3,
-    status: text3,
-    exit_code: number2(),
-    duration_s: number2(),
-    attempt: number2()
-  }),
-  ac_coverage: strictObject({ covered: number2(), uncovered: number2() }),
-  docs_attested: strictObject({ decision: text3 }),
-  docs_nudge: strictObject({}),
-  push_check: strictObject({ result: text3, reason_code: text3, round: number2().nullable() }),
-  delegation: strictObject({
-    model: maybeText,
-    subagent_type: maybeText,
-    reasoning_effort: maybeText,
-    step_id: maybeText,
-    step_model: maybeText
-  })
-};
-function isTelemetryEvent(event) {
-  return Object.hasOwn(TELEMETRY_EXTRAS, event);
-}
-var Protocol = {
-  v: literal(TELEMETRY_VERSION),
-  t: text3,
-  branch: text3
-};
-var TelemetryLineSchema = discriminatedUnion("event", [
-  TELEMETRY_EXTRAS.gate_fail.extend({ ...Protocol, event: literal("gate_fail") }),
-  TELEMETRY_EXTRAS.gate_clear.extend({ ...Protocol, event: literal("gate_clear") }),
-  TELEMETRY_EXTRAS.step_run.extend({ ...Protocol, event: literal("step_run") }),
-  TELEMETRY_EXTRAS.ac_coverage.extend({ ...Protocol, event: literal("ac_coverage") }),
-  TELEMETRY_EXTRAS.docs_attested.extend({ ...Protocol, event: literal("docs_attested") }),
-  TELEMETRY_EXTRAS.docs_nudge.extend({ ...Protocol, event: literal("docs_nudge") }),
-  TELEMETRY_EXTRAS.push_check.extend({ ...Protocol, event: literal("push_check") }),
-  TELEMETRY_EXTRAS.delegation.extend({ ...Protocol, event: literal("delegation") })
-]);
-var EDIT_OPERATIONS = ["add", "update", "delete", "write", "move"];
-var EditRecordSchema = strictObject({
-  path: string2().min(1),
-  operation: _enum(EDIT_OPERATIONS),
-  moved_to: string2().optional(),
-  from: string2().optional()
-});
-
-// packages/toolu-core/src/state/telemetry.ts
-import { appendFileSync, mkdirSync as mkdirSync2 } from "fs";
-import { join as join7 } from "path";
-
-// packages/toolu-core/src/state/state-git.ts
-import { spawnSync as spawnSync3 } from "child_process";
-
-// packages/toolu-core/src/detect/detect-branch.ts
-import { spawnSync as spawnSync2 } from "child_process";
-function branchSlug(branch) {
-  const slug = branch.replaceAll("/", "_").replace(/[^A-Za-z0-9_-]/g, "");
-  return slug === "" ? "_default" : slug;
-}
-function baseBranch(root, env = process.env, cwd) {
-  const top = root === undefined || root === "" ? gitToplevel(env, cwd) : root;
-  if (top === undefined)
-    return "main";
-  const res = spawnSync2("git", ["-C", top, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], {
-    env: childEnv(env),
-    encoding: "utf8"
-  });
-  const ref = res.error === undefined && res.status === 0 ? res.stdout.trim() : "";
-  return ref === "" ? "main" : ref.replace(/^refs\/remotes\/origin\//, "");
-}
-// packages/toolu-core/src/state/state-git.ts
-function currentBranch(root, env) {
-  const res = spawnSync3("git", ["-C", root, "rev-parse", "--abbrev-ref", "HEAD"], {
-    env: childEnv(env),
-    encoding: "utf8"
-  });
-  return res.error === undefined ? res.stdout.replace(/\n+$/, "") : "";
-}
-
-// packages/toolu-core/src/state/telemetry.ts
-var TELEMETRY_MAX_LINE_BYTES = 3900;
-function skip(reason) {
-  return { written: false, reason };
-}
-function assemble(event, extras, branch, now) {
-  if (!isTelemetryEvent(event)) {
-    return new Error(`telemetry: unknown event "${event}"; skipping append`);
-  }
-  const checked = TELEMETRY_EXTRAS[event].safeParse(extras);
-  if (!checked.success) {
-    return new Error(`telemetry: invalid extras for event "${event}"; skipping append`);
-  }
-  const line = toJqJson({ ...checked.data, v: TELEMETRY_VERSION, t: isoSeconds(now), branch, event }, false);
-  const bytes = Buffer.byteLength(line, "utf8");
-  if (bytes > TELEMETRY_MAX_LINE_BYTES) {
-    return new Error(`telemetry: assembled line for event "${event}" is ${String(bytes)} bytes (>${String(TELEMETRY_MAX_LINE_BYTES)}); skipping append`);
-  }
-  return line;
-}
-function telemetryAppend(root, event, extras, options = {}) {
-  if (root === "")
-    return skip("no root");
-  const env = options.env ?? process.env;
-  const warn = options.warn ?? stderrWarn2;
-  const host = options.host ?? options.config?.host;
-  const scoped = host === undefined ? { env } : { env, host };
-  const config = options.config ?? loadConfig({ ...scoped, cwd: root, warn });
-  if (!enabled(config, "telemetry", "enabled"))
-    return skip("disabled");
-  const branch = currentBranch(root, env);
-  if (branch === "" || branch === "HEAD")
-    return skip("no branch");
-  const line = assemble(event, extras, branch, options.now?.() ?? new Date);
-  if (line instanceof Error) {
-    warn(line.message);
-    return skip(line.message);
-  }
-  const dir = envValue(env, "TELEMETRY_DIR") ?? projectStateDir("telemetry", { ...scoped, host: config.host, root });
-  if (dir === undefined)
-    return skip("no state dir");
-  const file = join7(dir, `${branchSlug(branch)}.jsonl`);
-  try {
-    mkdirSync2(dir, { recursive: true });
-    appendFileSync(file, `${line}
-`);
-  } catch (error) {
-    return skip(`could not append to ${file}: ${String(error)}`);
-  }
-  return { written: true, file };
-}
-
-// packages/toolu-core/src/state/gate-file.ts
-var GLOBAL_GATE_KEY = "__global__";
-function isGateFile(value) {
-  return GateFileSchema.safeParse(value).success;
-}
-function firstIssue(value) {
-  const parsed = GateFileSchema.safeParse(value);
-  const issue = parsed.success ? undefined : parsed.error.issues[0];
-  return issue === undefined ? "invalid" : `${issue.path.join(".") || "(root)"}: ${issue.message}`;
-}
-function readGateFile(gateFile) {
-  if (!existsSync(gateFile))
-    return { kind: "missing" };
-  let value;
-  try {
-    value = JSON.parse(readFileSync5(gateFile, "utf8"));
-  } catch (error) {
-    return { kind: "malformed", reason: String(error) };
-  }
-  if (value === null || value === false)
-    return { kind: "malformed", reason: String(value) };
-  if (isGateFile(value))
-    return { kind: "ok", doc: value };
-  return { kind: "unrecognized", reason: firstIssue(value), value };
-}
-function seedEntries(doc) {
-  if (doc.status !== "failing")
-    return {};
-  if (doc.entries !== undefined)
-    return doc.entries;
-  const { source, reason, violations, updatedAt } = doc;
-  return { [doc.file]: { source, reason, violations, updatedAt } };
-}
-function sortedEntries(entries) {
-  return Object.entries(entries).toSorted(([ka, a], [kb, b]) => compareJqStrings(a.updatedAt, b.updatedAt) || compareJqStrings(ka, kb));
-}
-function joinViolations(sorted) {
-  return sorted.map(([, entry]) => entry.violations).join("");
-}
-function gateRoot(gateFile) {
-  return dirname2(dirname2(dirname2(gateFile)));
-}
-function droppedCount(value, file) {
-  if (!isJsonObject(value))
-    return 0;
-  let keys = [];
-  if (isJsonObject(value.entries)) {
-    keys = Object.keys(value.entries);
-  } else if (value.status === "failing") {
-    keys = [typeof value.file === "string" ? value.file : GLOBAL_GATE_KEY];
-  }
-  return keys.filter((key) => key !== file).length;
-}
-function breadcrumb(gateFile, line) {
-  try {
-    appendFileSync2(`${gateFile}.dropped.log`, `${line}
-`);
-  } catch {}
-}
-function failingDoc(prev, f) {
-  const entry = { source: f.source, reason: f.reason, violations: f.violations, updatedAt: f.now };
-  const entries = { ...prev, [f.file]: entry };
-  return {
-    status: "failing",
-    reason: f.reason,
-    source: f.source,
-    file: f.file,
-    violations: joinViolations(sortedEntries(entries)),
-    entries,
-    updatedAt: f.now
-  };
-}
-function writeSingleSlot(gateFile, previous, f, warn) {
-  const dropped = droppedCount(previous, f.file);
-  if (dropped > 0) {
-    warn(`gate-file: primary write failed at ${gateFile}; single-slot fallback dropped ${String(dropped)} other entry(ies)`);
-    breadcrumb(gateFile, `${f.now} primary write failed; single-slot fallback dropped ${String(dropped)} entry(ies)`);
-  }
-  const { reason, source, file, violations, now } = f;
-  const doc = { status: "failing", reason, source, file, violations, updatedAt: now };
-  try {
-    writeFileSync3(gateFile, `${toJqJson(doc, true)}
-`);
-  } catch {}
-}
-function recordGateFailure(gateFile, file, source, reason, violations, options = {}) {
-  const warn = options.warn ?? stderrWarn2;
-  const f = { file, source, reason, violations, now: isoSeconds(options.now?.() ?? new Date) };
-  withLock(gateFile, () => {
-    const existing = readGateFile(gateFile);
-    let prev = {};
-    let previous = {};
-    if (existing.kind === "ok") {
-      prev = seedEntries(existing.doc);
-      previous = existing.doc;
-    } else if (existing.kind === "unrecognized") {
-      previous = existing.value;
-      const dropped = droppedCount(existing.value, file);
-      warn(`gate-file: unrecognized gate file at ${gateFile} (${existing.reason}); replacing it`);
-      breadcrumb(gateFile, `${f.now} unrecognized gate file replaced; dropped ${String(dropped)} entry(ies)`);
-    }
-    if (!writeAtomic(gateFile, `${toJqJson(failingDoc(prev, f), true)}
-`)) {
-      writeSingleSlot(gateFile, previous, f, warn);
-    }
-  }, { warn });
-  telemetryAppend(gateRoot(gateFile), "gate_fail", { file, source }, options);
-}
-function owns(doc, file, source) {
-  if (doc.entries === undefined)
-    return doc.source === source && doc.file === file;
-  const entry = Object.hasOwn(doc.entries, file) ? doc.entries[file] : undefined;
-  return (entry?.source ?? "") === source;
-}
-function clearedDoc(left, source, now) {
-  const sorted = sortedEntries(left);
-  const latest = sorted.at(-1);
-  if (latest === undefined)
-    return { status: "passing", source, updatedAt: now };
-  const [key, entry] = latest;
-  return {
-    status: "failing",
-    reason: entry.reason,
-    source: entry.source,
-    file: key,
-    violations: joinViolations(sorted),
-    entries: left,
-    updatedAt: now
-  };
-}
-function plannedClear(gateFile, file, source, now, warn) {
-  const existing = readGateFile(gateFile);
-  if (existing.kind === "malformed") {
-    warn(`gate-file: malformed JSON at ${gateFile}; ignoring clear (gate stays failing until next write)`);
-  } else if (existing.kind === "unrecognized") {
-    warn(`gate-file: unrecognized gate file at ${gateFile} (${existing.reason}); ignoring clear`);
-  }
-  if (existing.kind !== "ok")
-    return;
-  const doc = existing.doc;
-  if (doc.status !== "failing" || !owns(doc, file, source))
-    return;
-  const left = { ...seedEntries(doc) };
-  delete left[file];
-  return `${toJqJson(clearedDoc(left, source, now), true)}
-`;
-}
-function clearGateFile(gateFile, file, source, options = {}) {
-  const warn = options.warn ?? stderrWarn2;
-  const now = isoSeconds(options.now?.() ?? new Date);
-  if (plannedClear(gateFile, file, source, now, warn) === undefined)
-    return "noop";
-  const cleared = withLock(gateFile, () => {
-    const body = plannedClear(gateFile, file, source, now, () => {});
-    return body !== undefined && writeAtomic(gateFile, body);
-  }, { warn });
-  if (!cleared)
-    return "noop";
-  telemetryAppend(gateRoot(gateFile), "gate_clear", { file, source }, options);
-  return "cleared";
-}
 
 // node_modules/.bun/unbash@4.0.11/node_modules/unbash/dist/ansi-c.js
 function isOctal(code) {
@@ -11000,7 +10500,7 @@ class Parser {
 }
 
 // packages/toolu-core/src/shell/shell-argv.ts
-import { basename as basename2 } from "path";
+import { basename } from "path";
 
 // packages/toolu-core/src/shell/shell-options.ts
 function parseArgs(words, start, spec) {
@@ -11105,7 +10605,7 @@ var ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
 function wrapperOf(name) {
   if (name === null || name === undefined)
     return;
-  return Object.hasOwn(WRAPPERS, basename2(name)) ? WRAPPERS[basename2(name)] : undefined;
+  return Object.hasOwn(WRAPPERS, basename(name)) ? WRAPPERS[basename(name)] : undefined;
 }
 function innerStart(words, wrapper) {
   const parsed = parseArgs(words, 1, { ...wrapper, stopAtOperand: true });
@@ -11131,7 +10631,7 @@ function unwrap(words) {
     const inner = innerStart(words.slice(start), wrapper);
     if (inner === null)
       break;
-    wrappers.push(basename2(words[start] ?? ""));
+    wrappers.push(basename(words[start] ?? ""));
     if (inner === "opaque")
       return { wrappers, start: null, appendsDynamic };
     appendsDynamic ||= wrapper.appendsDynamic === true;
@@ -11165,7 +10665,7 @@ function runTarget(argv) {
   const name = argv[0];
   if (name === null || name === undefined)
     return null;
-  if (SHELLS.has(basename2(name)))
+  if (SHELLS.has(basename(name)))
     return shellTarget(argv);
   if (name !== "eval")
     return null;
@@ -11551,23 +11051,618 @@ function analyzeShell(source) {
   return { ...sink, source, commands, unknown: commands.length === 0 };
 }
 
-// packages/toolu-core/src/gates/command-analysis.ts
+// packages/toolu-core/src/shell/shell-event.ts
 var analyses = new WeakMap;
+// packages/toolu-core/src/detect/detect-branch.ts
+import { spawnSync as spawnSync2 } from "child_process";
+function branchSlug(branch) {
+  const slug = branch.replaceAll("/", "_").replace(/[^A-Za-z0-9_-]/g, "");
+  return slug === "" ? "_default" : slug;
+}
+function baseBranch(root, env = process.env, cwd) {
+  const top = root === undefined || root === "" ? gitToplevel(env, cwd) : root;
+  if (top === undefined)
+    return "main";
+  const res = spawnSync2("git", ["-C", top, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], {
+    env: childEnv(env),
+    encoding: "utf8"
+  });
+  const ref = res.error === undefined && res.status === 0 ? res.stdout.trim() : "";
+  return ref === "" ? "main" : ref.replace(/^refs\/remotes\/origin\//, "");
+}
+
+// packages/toolu-core/src/detect/detect-git.ts
+import { spawnSync as spawnSync3 } from "child_process";
+
+// packages/toolu-core/src/shell/shell-git.ts
+import { basename as basename2 } from "path";
+var GLOBALS = {
+  valueShort: "Cc",
+  valueLong: "git-dir work-tree namespace super-prefix config-env attr-source",
+  stopAtOperand: true
+};
+function gitInvocation(command) {
+  const name = command.argv[0];
+  if (name === null || name === undefined || basename2(name) !== "git")
+    return;
+  const globals = parseArgs(command.argv, 1, GLOBALS);
+  if (globals.missingValue || globals.next >= command.argv.length)
+    return;
+  const cChain = optionValues(globals, "C").map((value) => value ?? null);
+  const subcommand = command.argv[globals.next] ?? null;
+  return { command, subcommand, args: command.argv.slice(globals.next + 1), cChain };
+}
+function runsGitSubcommand(analysis, sub) {
+  let unknown = analysis.unknown;
+  for (const command of analysis.commands) {
+    if (command.argv[0] === null) {
+      unknown = true;
+      continue;
+    }
+    const git = gitInvocation(command);
+    if (git?.subcommand === sub)
+      return "yes";
+    if (git?.subcommand === null)
+      unknown = true;
+  }
+  return unknown ? "unknown" : "no";
+}
+var PUSH_OPTIONS = {
+  valueShort: "o",
+  valueLong: "push-option receive-pack exec repo"
+};
+function destinationOf(refspec) {
+  if (refspec === null || refspec === undefined)
+    return null;
+  const spec = refspec.startsWith("+") ? refspec.slice(1) : refspec;
+  if (spec.startsWith(":") || spec === "HEAD")
+    return null;
+  const colon = spec.indexOf(":");
+  const dst = (colon === -1 ? spec : spec.slice(colon + 1)).replace(/^refs\/heads\//, "");
+  return dst === "" || dst.includes("*") ? null : dst;
+}
+function pushTargets(analysis) {
+  return analysis.commands.flatMap((command) => {
+    const invocation = gitInvocation(command);
+    if (invocation?.subcommand !== "push")
+      return [];
+    const refspec = parseArgs(invocation.args, 0, PUSH_OPTIONS).operands[1];
+    const destination = destinationOf(refspec);
+    return [{ invocation, cChain: invocation.cChain, refspec, destination }];
+  });
+}
+
+// packages/toolu-core/src/detect/detect-git.ts
+function isGitPush(analysis) {
+  return runsGitSubcommand(analysis, "push") === "yes";
+}
+function gitOut(cwd, args, env) {
+  const res = spawnSync3("git", [...args], {
+    cwd: cwd ?? process.cwd(),
+    env: childEnv(env),
+    encoding: "utf8"
+  });
+  const out = res.error === undefined && res.status === 0 ? res.stdout.trim() : "";
+  return out === "" ? undefined : out;
+}
+function pushTargetRoot(analysis, options = {}) {
+  const env = options.env ?? process.env;
+  const cwd = options.cwd ?? process.cwd();
+  const chain = pushTargets(analysis)[0]?.cChain ?? [];
+  const dirs = chain.filter((dir) => dir !== null);
+  const viaChain = chain.length > 0 && dirs.length === chain.length ? gitOut(cwd, [...dirs.flatMap((dir) => ["-C", dir]), "rev-parse", "--show-toplevel"], env) : undefined;
+  return viaChain ?? gitOut(cwd, ["rev-parse", "--show-toplevel"], env) ?? projectRoot({ env, cwd }) ?? cwd;
+}
+// packages/toolu-core/src/detect/detect-tools.ts
+var cache = new Map;
+// packages/toolu-core/src/gates/quality-command.ts
+import { basename as basename3 } from "path";
+var BUN_SCRIPTS = new Set([
+  "check",
+  "check:fix",
+  "check:duplication",
+  "ts:check",
+  "ts:check:fix",
+  "rust:check",
+  "rust:test",
+  "check-types",
+  "lint",
+  "lint:fix",
+  "format",
+  "format:check",
+  "format:fix",
+  "build",
+  "test"
+]);
+var CARGO = new Set(["clippy", "test", "build", "nextest"]);
+var JS_TOOLS = new Set(["vitest", "jest", "tsc"]);
+var TS_CHECK = new Set(["./scripts/ts-check.sh", "scripts/ts-check.sh"]);
+var WRAPPER_SCRIPT = /(?:^|\/)(tools\/[A-Za-z0-9_.-]+\/(?:check|test|format)\.sh)$/;
+var PACKAGE_RUNNERS = new Set(["npx", "bunx", "pnpx", "yarn"]);
+var SCRIPT_SHELLS = new Set(["bash", "sh"]);
+function bunLabel(argv) {
+  const [, verb, script] = argv;
+  if (verb === "test")
+    return "bun test";
+  return verb === "run" && typeof script === "string" && BUN_SCRIPTS.has(script) ? `bun run ${script}` : undefined;
+}
+function cargoLabel(argv) {
+  const toolchain = argv[1]?.startsWith("+") === true;
+  const sub = argv[toolchain ? 2 : 1];
+  return typeof sub === "string" && CARGO.has(sub) ? `cargo ${sub}` : undefined;
+}
+function directLabel(argv) {
+  const name = argv[0];
+  if (typeof name !== "string")
+    return;
+  const script = WRAPPER_SCRIPT.exec(name)?.[1];
+  if (script !== undefined)
+    return script;
+  if (TS_CHECK.has(name))
+    return name;
+  const base = basename3(name);
+  if (JS_TOOLS.has(base))
+    return base;
+  if (base === "bun")
+    return bunLabel(argv);
+  return base === "cargo" ? cargoLabel(argv) : undefined;
+}
+function afterOptions(argv, from) {
+  const at = argv.findIndex((word, i) => i >= from && !(word?.startsWith("-") ?? false));
+  return at === -1 ? [] : argv.slice(at);
+}
+function runnerTarget(argv) {
+  const name = argv[0];
+  if (typeof name !== "string")
+    return;
+  const base = basename3(name);
+  if (PACKAGE_RUNNERS.has(base))
+    return afterOptions(argv, 1);
+  if (base === "bun" && argv[1] === "x" || base === "pnpm" && argv[1] === "exec") {
+    return afterOptions(argv, 2);
+  }
+  const script = argv[1];
+  return SCRIPT_SHELLS.has(base) && typeof script === "string" && !script.startsWith("-") ? argv.slice(1) : undefined;
+}
+function labelOf(command) {
+  if (command.origin === "function")
+    return;
+  const direct = directLabel(command.argv);
+  if (direct !== undefined)
+    return direct;
+  const target = runnerTarget(command.argv);
+  return target === undefined ? undefined : directLabel(target);
+}
+function qualityCommands(analysis) {
+  return analysis.commands.flatMap((command) => {
+    const label = labelOf(command);
+    return label === undefined ? [] : [{ command, label }];
+  });
+}
+// packages/toolu-core/src/ledger/ledger-jq.ts
+class JqError extends Error {
+  name = "JqError";
+}
+function jqType(value) {
+  if (value === null)
+    return "null";
+  if (Array.isArray(value))
+    return "array";
+  return typeof value === "object" ? "object" : typeof value;
+}
+function isObject2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function get(value, key) {
+  if (value === null)
+    return null;
+  if (isObject2(value) && typeof key === "string") {
+    return Object.hasOwn(value, key) ? value[key] ?? null : null;
+  }
+  throw new JqError(`Cannot index ${jqType(value)} with ${jqType(key)}`);
+}
+function alt(value, fallback) {
+  return value === undefined || value === null || value === false ? fallback : value;
+}
+function raw(value) {
+  return typeof value === "string" ? value : toJqJson(value, true);
+}
+function isJson(value) {
+  if (value === null || ["string", "number", "boolean"].includes(typeof value))
+    return true;
+  if (Array.isArray(value))
+    return value.every(isJson);
+  return typeof value === "object" && Object.values(value).every(isJson);
+}
+function parseJson(text) {
+  let value;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return;
+  }
+  return isJson(value) ? value : undefined;
+}
+
+// packages/toolu-core/src/gates/tool-exit.ts
+function asJson(payload) {
+  return parseJson(JSON.stringify(payload)) ?? null;
+}
+function firstOf(doc, paths, fallback) {
+  try {
+    for (const path of paths) {
+      const value = path.reduce((at, key) => get(at, key), doc);
+      if (alt(value, null) !== null)
+        return value;
+    }
+    return fallback;
+  } catch (error) {
+    if (error instanceof JqError)
+      return;
+    throw error;
+  }
+}
+function printed2(value, onError) {
+  if (value === undefined)
+    return onError;
+  if (value === null)
+    return "";
+  return raw(value).replace(/\n+$/, "");
+}
+function toolCommand(payload) {
+  return printed2(firstOf(asJson(payload), [["tool_input", "command"]], ""), "");
+}
+var EXIT_PATHS = [
+  ["tool_response", "metadata", "exit_code"],
+  ["tool_response", "exit_code"],
+  ["tool_output", "exit_code"]
+];
+function toolExitStatus(payload) {
+  const doc = asJson(payload);
+  const status = printed2(firstOf(doc, EXIT_PATHS, null), "");
+  if (status !== "" && status !== "null")
+    return status;
+  const output = printed2(firstOf(doc, [["tool_output"]], null), "");
+  if (output === "")
+    return status;
+  const inner = parseJson(output);
+  if (inner === undefined)
+    return "";
+  return printed2(firstOf(inner, [["exitCode"], ["exit_code"]], null), "");
+}
+function toolInterrupted(payload) {
+  return printed2(firstOf(asJson(payload), [["tool_response", "interrupted"]], false), "false") === "true";
+}
+// packages/toolu-core/src/gates/gate-status.ts
+import { existsSync as existsSync2, mkdirSync as mkdirSync3, writeFileSync as writeFileSync4 } from "fs";
+import { join as join8 } from "path";
+
+// packages/toolu-core/src/state/gate-file.ts
+import { appendFileSync as appendFileSync2, existsSync, readFileSync as readFileSync5, writeFileSync as writeFileSync3 } from "fs";
+import { dirname as dirname2 } from "path";
+
+// packages/toolu-core/src/state/state-schema.ts
+var GATE_FILE_VERSION = 1;
+var TELEMETRY_VERSION = 1;
+var Version = literal(GATE_FILE_VERSION).optional();
+var GateEntrySchema2 = strictObject({
+  source: string2(),
+  reason: string2(),
+  violations: string2(),
+  updatedAt: string2()
+});
+var PassingSchema = strictObject({
+  version: Version,
+  status: literal("passing"),
+  source: string2(),
+  updatedAt: string2()
+});
+var FailingSchema = strictObject({
+  version: Version,
+  status: literal("failing"),
+  reason: string2(),
+  source: string2(),
+  file: string2(),
+  violations: string2(),
+  entries: record(string2(), GateEntrySchema2).optional(),
+  updatedAt: string2()
+});
+var GateFileSchema = discriminatedUnion("status", [PassingSchema, FailingSchema]);
+var text3 = string2();
+var maybeText = string2().nullable();
+var TELEMETRY_EXTRAS = {
+  gate_fail: strictObject({ file: text3, source: text3 }),
+  gate_clear: strictObject({ file: text3, source: text3 }),
+  step_run: strictObject({
+    step_id: text3,
+    status: text3,
+    exit_code: number2(),
+    duration_s: number2(),
+    attempt: number2()
+  }),
+  ac_coverage: strictObject({ covered: number2(), uncovered: number2() }),
+  docs_attested: strictObject({ decision: text3 }),
+  docs_nudge: strictObject({}),
+  push_check: strictObject({ result: text3, reason_code: text3, round: number2().nullable() }),
+  delegation: strictObject({
+    model: maybeText,
+    subagent_type: maybeText,
+    reasoning_effort: maybeText,
+    step_id: maybeText,
+    step_model: maybeText
+  })
+};
+function isTelemetryEvent(event) {
+  return Object.hasOwn(TELEMETRY_EXTRAS, event);
+}
+var Protocol = {
+  v: literal(TELEMETRY_VERSION),
+  t: text3,
+  branch: text3
+};
+var TelemetryLineSchema = discriminatedUnion("event", [
+  TELEMETRY_EXTRAS.gate_fail.extend({ ...Protocol, event: literal("gate_fail") }),
+  TELEMETRY_EXTRAS.gate_clear.extend({ ...Protocol, event: literal("gate_clear") }),
+  TELEMETRY_EXTRAS.step_run.extend({ ...Protocol, event: literal("step_run") }),
+  TELEMETRY_EXTRAS.ac_coverage.extend({ ...Protocol, event: literal("ac_coverage") }),
+  TELEMETRY_EXTRAS.docs_attested.extend({ ...Protocol, event: literal("docs_attested") }),
+  TELEMETRY_EXTRAS.docs_nudge.extend({ ...Protocol, event: literal("docs_nudge") }),
+  TELEMETRY_EXTRAS.push_check.extend({ ...Protocol, event: literal("push_check") }),
+  TELEMETRY_EXTRAS.delegation.extend({ ...Protocol, event: literal("delegation") })
+]);
+var EDIT_OPERATIONS = ["add", "update", "delete", "write", "move"];
+var EditRecordSchema = strictObject({
+  path: string2().min(1),
+  operation: _enum(EDIT_OPERATIONS),
+  moved_to: string2().optional(),
+  from: string2().optional()
+});
+
+// packages/toolu-core/src/state/telemetry.ts
+import { appendFileSync, mkdirSync as mkdirSync2 } from "fs";
+import { join as join7 } from "path";
+
+// packages/toolu-core/src/state/state-git.ts
+import { spawnSync as spawnSync4 } from "child_process";
+function currentBranch(root, env) {
+  const res = spawnSync4("git", ["-C", root, "rev-parse", "--abbrev-ref", "HEAD"], {
+    env: childEnv(env),
+    encoding: "utf8"
+  });
+  return res.error === undefined ? res.stdout.replace(/\n+$/, "") : "";
+}
+
+// packages/toolu-core/src/state/telemetry.ts
+var TELEMETRY_MAX_LINE_BYTES = 3900;
+function skip(reason) {
+  return { written: false, reason };
+}
+function assemble(event, extras, branch, now) {
+  if (!isTelemetryEvent(event)) {
+    return new Error(`telemetry: unknown event "${event}"; skipping append`);
+  }
+  const checked = TELEMETRY_EXTRAS[event].safeParse(extras);
+  if (!checked.success) {
+    return new Error(`telemetry: invalid extras for event "${event}"; skipping append`);
+  }
+  const line = toJqJson({ ...checked.data, v: TELEMETRY_VERSION, t: isoSeconds(now), branch, event }, false);
+  const bytes = Buffer.byteLength(line, "utf8");
+  if (bytes > TELEMETRY_MAX_LINE_BYTES) {
+    return new Error(`telemetry: assembled line for event "${event}" is ${String(bytes)} bytes (>${String(TELEMETRY_MAX_LINE_BYTES)}); skipping append`);
+  }
+  return line;
+}
+function telemetryAppend(root, event, extras, options = {}) {
+  if (root === "")
+    return skip("no root");
+  const env = options.env ?? process.env;
+  const warn = options.warn ?? stderrWarn2;
+  const host = options.host ?? options.config?.host;
+  const scoped = host === undefined ? { env } : { env, host };
+  const config = options.config ?? loadConfig({ ...scoped, cwd: root, warn });
+  if (!enabled(config, "telemetry", "enabled"))
+    return skip("disabled");
+  const branch = currentBranch(root, env);
+  if (branch === "" || branch === "HEAD")
+    return skip("no branch");
+  const line = assemble(event, extras, branch, options.now?.() ?? new Date);
+  if (line instanceof Error) {
+    warn(line.message);
+    return skip(line.message);
+  }
+  const dir = envValue(env, "TELEMETRY_DIR") ?? projectStateDir("telemetry", { ...scoped, host: config.host, root });
+  if (dir === undefined)
+    return skip("no state dir");
+  const file = join7(dir, `${branchSlug(branch)}.jsonl`);
+  try {
+    mkdirSync2(dir, { recursive: true });
+    appendFileSync(file, `${line}
+`);
+  } catch (error) {
+    return skip(`could not append to ${file}: ${String(error)}`);
+  }
+  return { written: true, file };
+}
+
+// packages/toolu-core/src/state/gate-file.ts
+var GLOBAL_GATE_KEY = "__global__";
+function isGateFile(value) {
+  return GateFileSchema.safeParse(value).success;
+}
+function firstIssue(value) {
+  const parsed = GateFileSchema.safeParse(value);
+  const issue = parsed.success ? undefined : parsed.error.issues[0];
+  return issue === undefined ? "invalid" : `${issue.path.join(".") || "(root)"}: ${issue.message}`;
+}
+function readGateFile(gateFile) {
+  if (!existsSync(gateFile))
+    return { kind: "missing" };
+  let value;
+  try {
+    value = JSON.parse(readFileSync5(gateFile, "utf8"));
+  } catch (error) {
+    return { kind: "malformed", reason: String(error) };
+  }
+  if (value === null || value === false)
+    return { kind: "malformed", reason: String(value) };
+  if (isGateFile(value))
+    return { kind: "ok", doc: value };
+  return { kind: "unrecognized", reason: firstIssue(value), value };
+}
+function seedEntries(doc) {
+  if (doc.status !== "failing")
+    return {};
+  if (doc.entries !== undefined)
+    return doc.entries;
+  const { source, reason, violations, updatedAt } = doc;
+  return { [doc.file]: { source, reason, violations, updatedAt } };
+}
+function sortedEntries(entries) {
+  return Object.entries(entries).toSorted(([ka, a], [kb, b]) => compareJqStrings(a.updatedAt, b.updatedAt) || compareJqStrings(ka, kb));
+}
+function joinViolations(sorted) {
+  return sorted.map(([, entry]) => entry.violations).join("");
+}
+function gateRoot(gateFile) {
+  return dirname2(dirname2(dirname2(gateFile)));
+}
+function droppedCount(value, file) {
+  if (!isJsonObject(value))
+    return 0;
+  let keys = [];
+  if (isJsonObject(value.entries)) {
+    keys = Object.keys(value.entries);
+  } else if (value.status === "failing") {
+    keys = [typeof value.file === "string" ? value.file : GLOBAL_GATE_KEY];
+  }
+  return keys.filter((key) => key !== file).length;
+}
+function breadcrumb(gateFile, line) {
+  try {
+    appendFileSync2(`${gateFile}.dropped.log`, `${line}
+`);
+  } catch {}
+}
+function failingDoc(prev, f) {
+  const entry = { source: f.source, reason: f.reason, violations: f.violations, updatedAt: f.now };
+  const entries = { ...prev, [f.file]: entry };
+  return {
+    status: "failing",
+    reason: f.reason,
+    source: f.source,
+    file: f.file,
+    violations: joinViolations(sortedEntries(entries)),
+    entries,
+    updatedAt: f.now
+  };
+}
+function writeSingleSlot(gateFile, previous, f, warn) {
+  const dropped = droppedCount(previous, f.file);
+  if (dropped > 0) {
+    warn(`gate-file: primary write failed at ${gateFile}; single-slot fallback dropped ${String(dropped)} other entry(ies)`);
+    breadcrumb(gateFile, `${f.now} primary write failed; single-slot fallback dropped ${String(dropped)} entry(ies)`);
+  }
+  const { reason, source, file, violations, now } = f;
+  const doc = { status: "failing", reason, source, file, violations, updatedAt: now };
+  try {
+    writeFileSync3(gateFile, `${toJqJson(doc, true)}
+`);
+  } catch {}
+}
+function recordGateFailure(gateFile, file, source, reason, violations, options = {}) {
+  const warn = options.warn ?? stderrWarn2;
+  const f = { file, source, reason, violations, now: isoSeconds(options.now?.() ?? new Date) };
+  withLock(gateFile, () => {
+    const existing = readGateFile(gateFile);
+    let prev = {};
+    let previous = {};
+    if (existing.kind === "ok") {
+      prev = seedEntries(existing.doc);
+      previous = existing.doc;
+    } else if (existing.kind === "unrecognized") {
+      previous = existing.value;
+      const dropped = droppedCount(existing.value, file);
+      warn(`gate-file: unrecognized gate file at ${gateFile} (${existing.reason}); replacing it`);
+      breadcrumb(gateFile, `${f.now} unrecognized gate file replaced; dropped ${String(dropped)} entry(ies)`);
+    }
+    if (!writeAtomic(gateFile, `${toJqJson(failingDoc(prev, f), true)}
+`)) {
+      writeSingleSlot(gateFile, previous, f, warn);
+    }
+  }, { warn });
+  telemetryAppend(gateRoot(gateFile), "gate_fail", { file, source }, options);
+}
+function owns(doc, file, source) {
+  if (doc.entries === undefined)
+    return doc.source === source && doc.file === file;
+  const entry = Object.hasOwn(doc.entries, file) ? doc.entries[file] : undefined;
+  return (entry?.source ?? "") === source;
+}
+function clearedDoc(left, source, now) {
+  const sorted = sortedEntries(left);
+  const latest = sorted.at(-1);
+  if (latest === undefined)
+    return { status: "passing", source, updatedAt: now };
+  const [key, entry] = latest;
+  return {
+    status: "failing",
+    reason: entry.reason,
+    source: entry.source,
+    file: key,
+    violations: joinViolations(sorted),
+    entries: left,
+    updatedAt: now
+  };
+}
+function plannedClear(gateFile, file, source, now, warn) {
+  const existing = readGateFile(gateFile);
+  if (existing.kind === "malformed") {
+    warn(`gate-file: malformed JSON at ${gateFile}; ignoring clear (gate stays failing until next write)`);
+  } else if (existing.kind === "unrecognized") {
+    warn(`gate-file: unrecognized gate file at ${gateFile} (${existing.reason}); ignoring clear`);
+  }
+  if (existing.kind !== "ok")
+    return;
+  const doc = existing.doc;
+  if (doc.status !== "failing" || !owns(doc, file, source))
+    return;
+  const left = { ...seedEntries(doc) };
+  delete left[file];
+  return `${toJqJson(clearedDoc(left, source, now), true)}
+`;
+}
+function clearGateFile(gateFile, file, source, options = {}) {
+  const warn = options.warn ?? stderrWarn2;
+  const now = isoSeconds(options.now?.() ?? new Date);
+  if (plannedClear(gateFile, file, source, now, warn) === undefined)
+    return "noop";
+  const cleared = withLock(gateFile, () => {
+    const body = plannedClear(gateFile, file, source, now, () => {});
+    return body !== undefined && writeAtomic(gateFile, body);
+  }, { warn });
+  if (!cleared)
+    return "noop";
+  telemetryAppend(gateRoot(gateFile), "gate_clear", { file, source }, options);
+  return "cleared";
+}
+
+// packages/toolu-core/src/gates/command-analysis.ts
+var analyses2 = new WeakMap;
 function isShellTool(event) {
   return event.toolName === "Bash" || event.toolName === "Shell";
 }
 function commandAnalysis(event, ctx) {
-  const cached = analyses.get(event);
+  const cached = analyses2.get(event);
   if (cached !== undefined)
     return cached;
   const analysis = analyzeShell(toolCommand(ctx.raw));
-  analyses.set(event, analysis);
+  analyses2.set(event, analysis);
   return analysis;
 }
 
 // packages/toolu-core/src/gates/gate-status.ts
 var SOURCE = "gate-status-hook";
-var ALLOW = { kind: "allow" };
+var ALLOW2 = { kind: "allow" };
 function failingContext(command, status) {
   return `Global quality gate failing. Fix all errors/warnings/tests before new tasks.\\nFailed: ${command} (exit ${status})`;
 }
@@ -11585,17 +11680,17 @@ function writeFirstPass(gateFile, command) {
 }
 function decide(event, ctx) {
   if (!isShellTool(event))
-    return ALLOW;
+    return ALLOW2;
   const gateFile = join8(gateDir(ctx), "quality-gate-status.json");
   const quality = qualityCommands(commandAnalysis(event, ctx));
   if (quality.length === 0)
-    return ALLOW;
+    return ALLOW2;
   const command = toolCommand(ctx.raw);
   const status = toolExitStatus(ctx.raw);
   const state = { env: ctx.env, host: ctx.host };
   if (/^[0-9]+$/.test(status) && Number(status) !== 0) {
     if (!quality.some((q) => q.command.exitProves))
-      return ALLOW;
+      return ALLOW2;
     const reason = `Quality command failed: ${command} (exit ${status})`;
     recordGateFailure(gateFile, GLOBAL_GATE_KEY, SOURCE, reason, "", state);
     return { kind: "advisory", message: failingContext(command, status) };
@@ -11605,7 +11700,7 @@ function decide(event, ctx) {
     if (!existsSync2(gateFile))
       writeFirstPass(gateFile, command);
   }
-  return ALLOW;
+  return ALLOW2;
 }
 var gateStatusModule = {
   kind: "native",
@@ -11711,113 +11806,30 @@ function diffSha(repoRoot, baseRef, options = {}) {
   return sha === "" ? undefined : sha;
 }
 
-// packages/toolu-core/src/detect/detect-git.ts
-import { spawnSync as spawnSync4 } from "child_process";
-
-// packages/toolu-core/src/shell/shell-git.ts
-import { basename as basename3 } from "path";
-var GLOBALS = {
-  valueShort: "Cc",
-  valueLong: "git-dir work-tree namespace super-prefix config-env attr-source",
-  stopAtOperand: true
-};
-function gitInvocation(command) {
-  const name = command.argv[0];
-  if (name === null || name === undefined || basename3(name) !== "git")
-    return;
-  const globals = parseArgs(command.argv, 1, GLOBALS);
-  if (globals.missingValue || globals.next >= command.argv.length)
-    return;
-  const cChain = optionValues(globals, "C").map((value) => value ?? null);
-  const subcommand = command.argv[globals.next] ?? null;
-  return { command, subcommand, args: command.argv.slice(globals.next + 1), cChain };
-}
-function runsGitSubcommand(analysis, sub) {
-  let unknown = analysis.unknown;
-  for (const command of analysis.commands) {
-    if (command.argv[0] === null) {
-      unknown = true;
-      continue;
-    }
-    const git = gitInvocation(command);
-    if (git?.subcommand === sub)
-      return "yes";
-    if (git?.subcommand === null)
-      unknown = true;
-  }
-  return unknown ? "unknown" : "no";
-}
-var PUSH_OPTIONS = {
-  valueShort: "o",
-  valueLong: "push-option receive-pack exec repo"
-};
-function destinationOf(refspec) {
-  if (refspec === null || refspec === undefined)
-    return null;
-  const spec = refspec.startsWith("+") ? refspec.slice(1) : refspec;
-  if (spec.startsWith(":") || spec === "HEAD")
-    return null;
-  const colon = spec.indexOf(":");
-  const dst = (colon === -1 ? spec : spec.slice(colon + 1)).replace(/^refs\/heads\//, "");
-  return dst === "" || dst.includes("*") ? null : dst;
-}
-function pushTargets(analysis) {
-  return analysis.commands.flatMap((command) => {
-    const invocation = gitInvocation(command);
-    if (invocation?.subcommand !== "push")
-      return [];
-    const refspec = parseArgs(invocation.args, 0, PUSH_OPTIONS).operands[1];
-    const destination = destinationOf(refspec);
-    return [{ invocation, cChain: invocation.cChain, refspec, destination }];
-  });
-}
-
-// packages/toolu-core/src/detect/detect-git.ts
-function isGitPush(analysis) {
-  return runsGitSubcommand(analysis, "push") === "yes";
-}
-function gitOut(cwd, args, env) {
-  const res = spawnSync4("git", [...args], {
-    cwd: cwd ?? process.cwd(),
-    env: childEnv(env),
-    encoding: "utf8"
-  });
-  const out = res.error === undefined && res.status === 0 ? res.stdout.trim() : "";
-  return out === "" ? undefined : out;
-}
-function pushTargetRoot(analysis, options = {}) {
-  const env = options.env ?? process.env;
-  const cwd = options.cwd ?? process.cwd();
-  const chain = pushTargets(analysis)[0]?.cChain ?? [];
-  const dirs = chain.filter((dir) => dir !== null);
-  const viaChain = chain.length > 0 && dirs.length === chain.length ? gitOut(cwd, [...dirs.flatMap((dir) => ["-C", dir]), "rev-parse", "--show-toplevel"], env) : undefined;
-  return viaChain ?? gitOut(cwd, ["rev-parse", "--show-toplevel"], env) ?? projectRoot({ env, cwd }) ?? cwd;
-}
-
 // packages/toolu-core/src/gates/push-waiver.ts
-var ALLOW2 = { kind: "allow" };
+var ALLOW3 = { kind: "allow" };
 function pushFailed(status) {
   return status !== "" && status !== "null" && status !== "0";
 }
 function decide2(event, ctx) {
   if (!isShellTool(event))
-    return ALLOW2;
+    return ALLOW3;
   const analysis = commandAnalysis(event, ctx);
   if (!isGitPush(analysis))
-    return ALLOW2;
+    return ALLOW3;
   if (pushFailed(toolExitStatus(ctx.raw)) || toolInterrupted(ctx.raw))
-    return ALLOW2;
+    return ALLOW3;
   const cwd = ctx.cwd ?? process.cwd();
   const root = pushTargetRoot(analysis, { env: ctx.env, cwd });
   const branch = currentBranch(root, ctx.env);
   if (branch === "" || branch === "HEAD")
-    return ALLOW2;
+    return ALLOW3;
   const base = envValue(ctx.env, "PUSH_REVIEW_BASE") ?? baseBranch(root, ctx.env);
   const sha = diffSha(root, base, { env: ctx.env });
   if (sha === undefined)
-    return ALLOW2;
+    return ALLOW3;
   pushWaiverPromote(root, branchSlug(branch), sha, { env: ctx.env, host: ctx.host });
-  return ALLOW2;
+  return ALLOW3;
 }
 var pushWaiverModule = {
   kind: "native",

@@ -17,8 +17,12 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { launcherCommand } from "@toolu/core/launcher";
 
-const MOD = resolve(import.meta.dir, "../../plugins/toolu/hooks/pre-tools/mod.sh");
+const PLUGIN = resolve(import.meta.dir, "../../plugins/toolu");
+
+/** The PreToolUse command hooks.json runs: the dispatcher bundle behind its launcher. */
+const HOOK = launcherCommand({ plugin: "toolu", event: "PreToolUse", entry: "pre-tools" });
 
 function git(cwd: string, ...args: string[]): void {
   const res = spawnSync("git", args, { cwd, encoding: "utf8" });
@@ -72,13 +76,15 @@ function main(): number {
       tool_name: "Bash",
       tool_input: { command: 'node -e "console.log(1)"' },
     });
-    const res = spawnSync("bash", [MOD], {
+    const res = spawnSync("/bin/sh", ["-c", HOOK], {
       cwd: repo,
       input: payload,
       encoding: "utf8",
       env: {
         PATH: process.env["PATH"] ?? "",
         HOME: home,
+        CLAUDE_PLUGIN_ROOT: PLUGIN,
+        TOOLU_BUN: process.execPath,
         CLAUDE_PROJECT_DIR: repo,
         TOOLU_PROJECT_DIR: repo,
         TOOLU_SETTINGS_DIR: settings,

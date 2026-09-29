@@ -24,13 +24,16 @@ jq -s '.[0] * .[1]' ~/.claude/settings.json plugins/toolu/settings/permissions.f
 
 The settings.json deny matcher is substring-based and unreliable for argv
 shapes like `node -e`, `git push --force`, or `git push origin main`. The
-`hooks/pre-tools/modules/bash-commands.sh` hook performs argv-aware
+`bash-commands` PreToolUse gate (`@toolu/core/gates`) performs argv-aware
 enforcement using `bash-denylist.txt`. Both layers must be installed for
 the security model to hold:
 
 - Settings denies catch obvious cases at the matcher layer.
-- `bash-commands.sh` parses argv and reliably rejects the listed tokens
-  even when they are embedded mid-command-line.
+- `bash-commands` parses the command (no `python3` needed) and applies each
+  rule to every simple command on the line: after `&&`, `;` and pipes, in
+  subshells, behind env prefixes and wrappers such as `sudo`, and inside
+  `bash -c` / `eval`. A line it cannot parse (over the 1 MiB parser cap) is
+  treated as a hit, never as allowed.
 
 ## Data files (read by hooks)
 
@@ -40,10 +43,10 @@ when you run them.
 
 | File                          | Consumer                                          | Purpose                                                            |
 |-------------------------------|---------------------------------------------------|--------------------------------------------------------------------|
-| `bash-allowlist.txt`          | `hooks/pre-tools/modules/bash-commands.sh`        | Explicit overrides on top of the denylist (deny + allow → allowed). |
-| `bash-denylist.txt`           | `hooks/pre-tools/modules/bash-commands.sh`        | Tokens the bash guard rejects via argv-aware parsing.              |
+| `bash-allowlist.txt`          | `bash-commands` gate (`@toolu/core/gates`)        | Explicit overrides on top of the denylist (deny + allow → allowed). |
+| `bash-denylist.txt`           | `bash-commands` gate (`@toolu/core/gates`)        | Tokens the bash guard rejects via argv-aware parsing.              |
 | `code-edit-rules.json`        | `hooks/pre-tools/modules/code-edit-rules.sh`      | Pattern rules for Write/Edit gating on source files.               |
-| `commit-prefixes.txt`         | `hooks/pre-tools/modules/commit-gate.sh`          | Allowed Conventional Commits prefixes for `git commit` messages.   |
+| `commit-prefixes.txt`         | `commit-gate` gate (`@toolu/core/gates`)          | Allowed Conventional Commits prefixes for `git commit` messages.   |
 | `mcp-blocklist.txt`           | `hooks/pre-tools/modules/mcp-blocker.sh`          | MCP server prefixes blocked unconditionally (plain text).          |
 | `toolu.config.example.json` | (reference — copy to `~/.claude/toolu.config.json`) | Example runtime opt-out config (skills/hooks/mcp). See `docs/config.md`. |
 | `protected-files.txt`         | `hooks/pre-tools/modules/protected-files.sh`      | Paths the edit guard refuses to modify (lockfiles, secrets, etc.). |
@@ -70,14 +73,15 @@ The example is shown **commented**, so nothing is blocked out of the box — the
 `jira`/toolu prompt nudge handles discoverability without denying the MCP.
 Uncomment the line (in your own settings dir) only if you want a hard block too.
 
-Allow/deny semantics for the bash guard: the denylist is checked first; a
-command that matches a deny rule is still allowed if it also matches an
-allowlist rule (the allowlist is an explicit override, not a default gate).
+Allow/deny semantics for the bash guard: rules apply to each simple command
+on the line. A command that matches a deny rule is still allowed if that same
+command also matches an allowlist rule (the allowlist is an explicit override,
+not a default gate); an allow rule matching a *different* command on the line
+does not override it, so `ls && node -e …` with `ls` allowed is still denied.
 Commands that match no deny rule are allowed by default.
 
-> Allowlist caveat: single-token allowlist entries match anywhere in the
-> command string as **substrings** (only multi-token entries are argv-aware —
-> see `bash-commands.sh`). A broad single-token entry such as `node` therefore
+> Allowlist caveat: single-token allowlist entries match anywhere in a
+> command's text as **substrings** (only multi-token entries are argv-aware). A broad single-token entry such as `node` therefore
 > overrides far more than intended and quietly broadens the attack surface
 > (e.g. it would exempt `node -e '…'`). Prefer specific multi-token entries for
 > exemptions so the override stays argv-scoped to exactly the command you mean.
@@ -94,7 +98,7 @@ no per-project `.claude/settings/` lookup — to override per project, point
 | Variable                  | Effect                                  |
 |---------------------------|-----------------------------------------|
 | `TOOLU_SETTINGS_DIR`  | Directory the hooks read data files from |
-| `MY_CLAUDE_QUALITY`       | `off` to disable `quality-gate.sh`       |
+| `MY_CLAUDE_QUALITY`       | `off` to disable the `quality-gate` gate |
 | `MY_CLAUDE_COMEMORY_REPO` | Overrides the comemory `--repo` scope used by the comemory wrapper (the comemory plugin's `skills/agent-memory/scripts/comemory.sh`). Defaults to the git project name. Not read by any hook. |
 
 ## Statusline

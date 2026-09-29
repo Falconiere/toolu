@@ -152,6 +152,10 @@
         "push-waiver.ts",
         "quality-command.ts",
         "tool-exit.ts",
+        "gate-module.ts",
+        "bash-commands.ts",
+        "commit-gate.ts",
+        "quality-gate.ts",
         "__tests__"
       ]
     },

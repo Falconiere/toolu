@@ -1,19 +1,12 @@
 /**
  * Shared by the bash-parity suites (#284): run the unmodified shipped bash libs
  * over fixture commands, and compose the same answers from `@toolu/core/shell`.
- * The bash side only reads `plugins/toolu/hooks/lib/detect.sh` and
- * `pre-tools/modules/bash-commands.sh`; nothing under `plugins/` is written.
+ * The bash side only reads `plugins/toolu/hooks/lib/detect.sh`; nothing under
+ * `plugins/` is written. `bash_commands_decide` is answered by the native gate
+ * only (#261); its bash baselines stay recorded in the fixtures.
  */
 import { spawnSync } from "node:child_process";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { z } from "zod";
@@ -23,14 +16,13 @@ import {
   pushTargetBranch,
   pushTargetRoot,
 } from "../../detect/detect-git.ts";
+import { bashCommandsDecide } from "../../gates/bash-commands.ts";
 import { analyzeShell } from "../shell-parse.ts";
-import { matchesRule } from "../shell-rules.ts";
 import { writeTargets } from "../shell-writes.ts";
 
 export const REPO = resolve(import.meta.dir, "../../../../..");
 export const FIXTURES = join(REPO, "tooling/fixtures/shell");
 const DETECT_SH = join(REPO, "plugins/toolu/hooks/lib/detect.sh");
-const BASH_COMMANDS_SH = join(REPO, "plugins/toolu/hooks/pre-tools/modules/bash-commands.sh");
 
 export type Env = Record<string, string>;
 
@@ -39,44 +31,12 @@ export function cleanEnv(home: string, extra: Env = {}): Env {
   return { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: home, LC_ALL: "C", ...extra };
 }
 
-/** A PATH holding every tool the libs need except python3 (#283 item 4). */
-export function pathWithoutPython(dir: string): string {
-  const bin = join(dir, "bin-no-python");
-  mkdirSync(bin, { recursive: true });
-  for (const tool of [
-    "bash",
-    "jq",
-    "awk",
-    "grep",
-    "sed",
-    "tr",
-    "cat",
-    "head",
-    "tail",
-    "dirname",
-    "basename",
-    "mktemp",
-    "rm",
-    "mkdir",
-    "env",
-    "uname",
-    "cut",
-    "sort",
-    "wc",
-    "git",
-  ]) {
-    const found = Bun.which(tool);
-    if (found !== null) symlinkSync(found, join(bin, tool));
-  }
-  return bin;
-}
-
 /**
  * Source `lib`, then run `body` once per NUL-separated record on stdin. Each
  * record's fields are read into `$f1`, `$f2`, …; each result ends with a NUL.
  */
 export function bashBatch(
-  lib: "detect" | "bash-commands",
+  lib: "detect",
   body: string,
   records: readonly (readonly string[])[],
   env: Env,
@@ -87,8 +47,8 @@ export function bashBatch(
     { length: fields },
     (_, i) => `IFS= read -r -d '' f${i + 1} || break`,
   ).join("; ");
-  const source = lib === "detect" ? `. "${DETECT_SH}"` : `tool_name=Bash; . "${BASH_COMMANDS_SH}"`;
-  const script = `${source}\nwhile :; do ${reads}; ${body}; printf '\\0'; done`;
+  const source = { detect: DETECT_SH }[lib];
+  const script = `. "${source}"\nwhile :; do ${reads}; ${body}; printf '\\0'; done`;
   const stdin = records.map((record) => record.map((field) => `${field}\0`).join("")).join("");
   const res = spawnSync("bash", ["-c", script], {
     cwd,
@@ -108,23 +68,6 @@ export const DecideCase = z.object({
 });
 export type DecideCase = z.infer<typeof DecideCase>;
 
-/** `bash_commands_decide` for each case, with its own allow/deny lists on disk. */
-export function bashDecide(cases: readonly DecideCase[], dir: string, env: Env): string[] {
-  const records = cases.map((c, i) => {
-    const settings = join(dir, `settings-${i}`);
-    mkdirSync(settings, { recursive: true });
-    writeFileSync(join(settings, "bash-allowlist.txt"), `${c.allow.join("\n")}\n`);
-    writeFileSync(join(settings, "bash-denylist.txt"), `${c.deny.join("\n")}\n`);
-    return [settings, c.command];
-  });
-  return bashBatch(
-    "bash-commands",
-    'TOOLU_SETTINGS_DIR="$f1"; bash_commands_decide "$f2"',
-    records,
-    env,
-  ).map((out) => out.trim());
-}
-
 /** `is_git_push` / `is_git_commit` through the production detect layer (#254). */
 export function tsIsGit(command: string, sub: "push" | "commit"): boolean {
   const analysis = analyzeShell(command);
@@ -136,13 +79,11 @@ export function tsWriteTargets(command: string): string[] {
   return writeTargets(analyzeShell(command)).map((t) => t.path ?? t.text);
 }
 
-/** Deny first, then an allow match overrides, as `bash_commands_decide` composes them. */
+/** `bash_commands_decide`'s answer from the production gate (#261), in bash's `allow` / `deny:<rule>` form. */
 export function tsDecide(c: DecideCase): string {
-  const { commands } = analyzeShell(c.command);
-  const hits = (rule: string) => commands.some((command) => matchesRule(command, rule));
-  const denied = c.deny.find(hits);
-  if (denied === undefined) return "allow";
-  return c.allow.some(hits) ? "allow" : `deny:${denied}`;
+  const verdict = bashCommandsDecide(analyzeShell(c.command), c);
+  if (verdict.kind === "unknown") return `unknown:${verdict.why}`;
+  return verdict.kind === "allow" ? "allow" : `deny:${verdict.rule}`;
 }
 
 /** `push_target_root` through the production detect layer (#254). */

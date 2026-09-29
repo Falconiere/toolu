@@ -1,8 +1,10 @@
 /**
  * Live bash oracle (#284 AC-5): the `bash` value recorded in every `live`
  * fixture is what the unmodified shipped libs return today. The suite sources
- * plugins/toolu/hooks/lib/detect.sh and pre-tools/modules/bash-commands.sh and
- * writes nothing under plugins/. Delete it with the bash implementation (#279).
+ * plugins/toolu/hooks/lib/detect.sh and writes nothing under plugins/. The
+ * `bash_commands_decide` baselines are recorded only: bash-commands.sh was
+ * deleted when the gate went native (#261). Delete this suite with the bash
+ * implementation (#279).
  */
 import { expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
@@ -10,11 +12,9 @@ import { join } from "node:path";
 import { z } from "zod";
 import {
   bashBatch,
-  bashDecide,
   cleanEnv,
   DecideCase,
   initRepo,
-  pathWithoutPython,
   readFixture,
   relativeTo,
   scratch,
@@ -95,18 +95,6 @@ test.concurrent("bash_write_targets matches the recorded results", () => {
     expect(got.map((out) => out.split("\n").filter((line) => line !== ""))).toEqual(
       list.map((c) => c.bash),
     );
-  });
-});
-
-test.concurrent("bash_commands_decide matches the recorded results, with and without python3", () => {
-  withHome((dir, env) => {
-    const list = cases.filter((c) => c.fn === "bash_commands_decide");
-    const noPython = { ...env, PATH: pathWithoutPython(dir) };
-    const got = list.map(
-      (c, i) =>
-        bashDecide([c], join(dir, `decide-${i}`), c.env === "no-python3" ? noPython : env)[0],
-    );
-    expect(got).toEqual(list.map((c) => c.bash));
   });
 });
 
