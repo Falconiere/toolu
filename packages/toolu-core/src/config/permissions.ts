@@ -8,6 +8,7 @@
  * never broaden grants from a config toolu cannot read).
  */
 import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { childEnv, type HostEnv } from "../host/host-name.ts";
@@ -83,11 +84,12 @@ function existingAllow(settings: JsonObject): string[] | undefined {
   return items?.filter((item): item is string => typeof item === "string");
 }
 
+/** Temp file beside `file`, unguessable and created exclusively (`wx` refuses a planted symlink), then renamed. */
 function writeAtomic(file: string, body: string): boolean {
-  const tmp = `${file}.${String(process.pid)}.${String(Date.now())}`;
+  const tmp = `${file}.${randomUUID()}.tmp`;
   try {
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(tmp, body);
+    writeFileSync(tmp, body, { flag: "wx" });
     renameSync(tmp, file);
     return true;
   } catch {

@@ -96,11 +96,17 @@ test.concurrent("codexModel: model and effort fall back independently", () => {
         review: { model: "", reasoningEffort: "extreme" },
         synthesis: { model: "gpt-x", reasoningEffort: 3 },
         architecture: { model: "gpt-arch", reasoningEffort: "max" },
+        // jq `// null` reads false as unset: bash falls back without a warning.
+        exploration: { model: false, reasoningEffort: false },
       },
     },
   });
   expect(codexModel(c, "architecture")).toEqual({ model: "gpt-arch", reasoningEffort: "max" });
   expect(codexModel(c, "mechanical")).toEqual({ model: "gpt-5.6-luna", reasoningEffort: "medium" });
+  expect(codexModel(c, "exploration")).toEqual({
+    model: "gpt-5.6-terra",
+    reasoningEffort: "medium",
+  });
   expect(codexModel(c, "review")).toEqual({ model: "gpt-5.6-terra", reasoningEffort: "high" });
   expect(codexModel(c, "synthesis")).toEqual({ model: "gpt-x", reasoningEffort: "high" });
   expect(warnings).toEqual([

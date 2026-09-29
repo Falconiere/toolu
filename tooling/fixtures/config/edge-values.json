@@ -21,6 +21,7 @@
     "codex": {
       "review": { "model": "", "reasoningEffort": "extreme" },
       "mechanical": { "model": 5 },
+      "exploration": { "model": false, "reasoningEffort": false },
       "synthesis": { "model": "gpt-x", "reasoningEffort": 3 },
       "architecture": { "model": "gpt-arch", "reasoningEffort": "max" }
     }

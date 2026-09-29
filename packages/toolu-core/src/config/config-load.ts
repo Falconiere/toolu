@@ -40,17 +40,19 @@ function stderrWarn(message: string): void {
   process.stderr.write(`toolu-config: ${message}\n`);
 }
 
-/** jq `$u * $p`: objects merge recursively; anything else on the project side replaces. */
-export function mergeConfig(user: unknown, project: unknown): unknown {
-  if (!isJsonObject(user) || !isJsonObject(project)) {
-    return project;
-  }
+/** jq `$u * $p` for two objects: nested objects merge, anything else on the project side replaces. */
+function mergeObjects(user: JsonObject, project: JsonObject): JsonObject {
   const merged = new Map<string, unknown>(Object.entries(user));
   for (const [key, value] of Object.entries(project)) {
     merged.set(key, Object.hasOwn(user, key) ? mergeConfig(user[key], value) : value);
   }
   // fromEntries defines own properties, so a "__proto__" key stays data.
   return Object.fromEntries(merged);
+}
+
+/** jq `$u * $p`: objects merge recursively; anything else on the project side replaces. */
+export function mergeConfig(user: unknown, project: unknown): unknown {
+  return isJsonObject(user) && isJsonObject(project) ? mergeObjects(user, project) : project;
 }
 
 /** `[ -f PATH ]`: a regular file (or a symlink to one). */
@@ -86,7 +88,7 @@ function envelopeError(value: unknown): string | undefined {
     const names = unknown.map((key) => `'${key}'`).join(", ");
     return `unknown top-level key${unknown.length === 1 ? "" : "s"} ${names}`;
   }
-  if (Object.hasOwn(value, "version") && value.version !== 1) {
+  if (value.version !== undefined && value.version !== 1) {
     return `unsupported version ${JSON.stringify(value.version)} (supported: 1)`;
   }
   return undefined;
@@ -130,8 +132,7 @@ export function loadConfig(options: ConfigOptions = {}): LoadedConfig {
   const user = readLayer(files.user, warn);
   const project = readLayer(files.project, warn);
   const invalid = user.invalid ?? project.invalid;
-  const merged = mergeConfig(user.value, project.value);
-  const data = invalid === undefined && isJsonObject(merged) ? merged : {};
+  const data = invalid === undefined ? mergeObjects(user.value, project.value) : {};
   return { data, invalid, files, host, warn };
 }
 
