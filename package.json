@@ -17,6 +17,7 @@
     "build:plugins": "bun run tooling/src/build-plugins.ts",
     "check:plugin-bundles": "bun run tooling/src/build-plugins.ts --check",
     "check:hooks-json": "bun run tooling/src/check-hooks-json.ts",
+    "bench:shell": "bun run tooling/src/bench-shell.ts",
     "lint:shell": "bash tooling/shellcheck.sh",
     "test:shell": "bash tooling/bats-run.sh",
     "test:portable-core": "bun run tooling/src/check-portable-core-doc.ts && PORTABLE_CORE_PROBE_MODE=fixture bun run tooling/src/opencode-capability-probe.ts && bun test --timeout 60000 tooling/src/__tests__/check-portable-core-doc.test.ts tooling/src/__tests__/opencode-capability-probe.test.ts",
