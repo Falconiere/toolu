@@ -32,7 +32,10 @@ export function hookCommand(pluginRoot: string, event: string, entry: string): s
   const file = HooksFileSchema.parse(
     JSON.parse(readFileSync(join(pluginRoot, "hooks/hooks.json"), "utf8")),
   );
-  const bundle = `/hooks/dist/${entry}.js"`;
+  // The launcher quotes the whole bundle argument (launcherCommand in
+  // @toolu/core/launcher), so this exact quoted text appears literally in the
+  // command; the closing quote keeps `check` from matching `check-deps.js`.
+  const bundle = `"\${CLAUDE_PLUGIN_ROOT}/hooks/dist/${entry}.js"`;
   const commands = (file.hooks[event] ?? []).flatMap((group) => group.hooks);
   const found = commands.find((hook) => hook.command.includes(bundle));
   if (found === undefined) throw new Error(`no ${event} hook launches ${entry} in ${pluginRoot}`);
