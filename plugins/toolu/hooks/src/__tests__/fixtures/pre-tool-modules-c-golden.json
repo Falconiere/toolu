@@ -1,0 +1,21 @@
+{
+  "base": "2912cd9d",
+  "cases": {
+    "push-review: no state file advises at the shipped preset": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Code review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"advise\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    },
+    "push-review: no state file denies under strict": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Code review required before push (diff SHA 54ea5f9e4ebe5c98254fb537ee66dfb0c777f9cf, base main).\\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \\\"code-review\\\" (or the `toolu-review:review` skill). Then atomically write $ROOT/project/.claude/tmp/push-review/feat_example.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "files": {
+        "project/.claude/tmp/telemetry/feat_example.jsonl": "{\"result\":\"deny\",\"reason_code\":\"no-state\",\"round\":null,\"v\":1,\"t\":\"<time>\",\"branch\":\"feat/example\",\"event\":\"push_check\"}\n"
+      }
+    }
+  }
+}
