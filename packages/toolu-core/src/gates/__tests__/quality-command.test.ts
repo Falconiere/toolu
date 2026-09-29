@@ -128,3 +128,26 @@ test.concurrent("a function body is defined, not run", () => {
 test.concurrent("a dynamic command name is never a quality command", () => {
   expect(labels("$RUNNER test")).toEqual([]);
 });
+
+/**
+ * Where argv reading and the text regex part ways on a genuine invocation,
+ * pinned both ways (documented in quality-command.ts and gates.md).
+ */
+const DIVERGENT: Record<string, { bash: boolean; ts: string[] }> = {
+  // Broader: a path to the tool, a toolchain selector, a wrapper script by path.
+  "./node_modules/.bin/tsc --noEmit": { bash: false, ts: ["tsc"] },
+  "/usr/local/bin/cargo test": { bash: false, ts: ["cargo test"] },
+  "cargo +nightly test": { bash: false, ts: ["cargo test"] },
+  "/repo/tools/api/check.sh": { bash: false, ts: ["tools/api/check.sh"] },
+  // Narrower: a runner subcommand, a runner option with a value, a shell option.
+  "yarn run vitest": { bash: true, ts: [] },
+  "npx -p typescript tsc": { bash: true, ts: [] },
+  "bash -x ./scripts/ts-check.sh": { bash: true, ts: [] },
+};
+
+for (const [command, want] of Object.entries(DIVERGENT)) {
+  test.concurrent(`divergent form: ${command}`, () => {
+    expect(bashMatches(command)).toBe(want.bash);
+    expect(labels(command)).toEqual(want.ts);
+  });
+}

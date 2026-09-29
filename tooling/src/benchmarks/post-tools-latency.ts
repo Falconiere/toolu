@@ -67,6 +67,7 @@ function table(rows: readonly Row[]): string {
 async function main(argv: readonly string[]): Promise<number> {
   const at = argv.indexOf("--runs");
   const runs = at === -1 ? 15 : Number(argv[at + 1]);
+  if (!Number.isInteger(runs) || runs < 1) throw new Error("--runs takes a positive integer");
   const rows = await SLICE.reduce<Promise<Row[]>>(
     async (done, name) => [...(await done), await row(name, runs)],
     Promise.resolve([]),

@@ -5,6 +5,12 @@
  * read from each simple command's argv (wrappers already removed) instead of
  * from the line's text. The regex also caught them behind a package runner or
  * as a script given to `bash`/`sh`, so those stay recognised.
+ *
+ * Reading argv parts from the regex on a few genuine forms, each pinned in the
+ * tests. Broader: a tool by path (`./node_modules/.bin/tsc`, `/usr/bin/cargo
+ * test`), `cargo +toolchain`, a wrapper script by path (`/repo/tools/x/check.sh`).
+ * Narrower: `yarn run <tool>`, a runner option that takes a value
+ * (`npx -p typescript tsc`), and a script shell given options (`bash -x script`).
  */
 import { basename } from "node:path";
 import type { ShellAnalysis, ShellCommand } from "../shell/shell-types.ts";

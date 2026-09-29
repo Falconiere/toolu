@@ -6,6 +6,9 @@
  * AC-3).
  */
 import { expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { hookEnv } from "../../dispatch/__tests__/dispatch-harness.ts";
 import { pushWaiverPend } from "../../ledger/push-waiver.ts";
@@ -129,4 +132,71 @@ for (const [name, command] of Object.entries(MISSED_BY_BASH)) {
 test.concurrent("a dynamic git subcommand is not taken for a push", async () => {
   const { ts } = await run({ name: "", stdin: () => push("git $SUB") });
   expect(ts.state[WAIVER]).toBeUndefined();
+});
+
+/**
+ * `push_target_root`: the push's `-C` chain picks the repository, and so the
+ * branch and state the waiver is keyed to. A second worktree on `feat/wt`
+ * sits beside the project; each repository holds a pending marker for its own
+ * diff, in its own state directory (no `STATE_DIR`), and the default base
+ * branch is detected (no `PUSH_REVIEW_BASE`).
+ */
+function twoRepos(sb: Sandbox): { env: Record<string, string>; wt: string } {
+  const env = repo(sb);
+  delete env.STATE_DIR;
+  delete env.PUSH_REVIEW_BASE;
+  const wt = join(sb.root, "wt");
+  sb.git("worktree", "add", "-q", "-b", "feat/wt", wt, "main");
+  const git = (...args: string[]) => spawnSync("git", ["-C", wt, ...args], { encoding: "utf8" });
+  writeFileSync(join(wt, "wt.txt"), "wt\n");
+  git("add", "-A");
+  git("-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "wt");
+  for (const [root, slug] of [
+    [sb.project, "feat_example"],
+    [wt, "feat_wt"],
+  ] as const) {
+    const sha = diffSha(root, "main", { env }) ?? "";
+    pushWaiverPend(root, slug, sha, "main", "no-state", { env });
+  }
+  return { env, wt };
+}
+
+const WT_WAIVER = "../wt/.claude/tmp/push-review/feat_wt.waiver.json";
+const PROJECT_WAIVER = ".claude/tmp/push-review/feat_example.waiver.json";
+
+const CHAINS: Record<string, { command: string; promotes: string }> = {
+  "a relative -C": { command: "git -C ../wt push", promotes: WT_WAIVER },
+  "a cumulative -C chain": { command: "git -C .. -C wt push", promotes: WT_WAIVER },
+  "an absolute -C": { command: "git -C <WT> push", promotes: WT_WAIVER },
+  "no -C, with the base branch detected": { command: "git push", promotes: PROJECT_WAIVER },
+};
+
+for (const [name, { command, promotes }] of Object.entries(CHAINS)) {
+  test.concurrent(`${name} is judged on the repository it pushes`, async () => {
+    using sb = createSandbox({ git: true });
+    const { env, wt } = twoRepos(sb);
+    const stdin = push(command.replace("<WT>", wt));
+    const { bash, ts } = await bothSides(sb, "push-waiver", pushWaiverModule, [{ stdin, env }], {
+      also: [wt],
+    });
+    expect(ts).toEqual(bash);
+    const waivers = Object.keys(ts.state).filter((path) => path.endsWith(".waiver.json"));
+    expect(waivers).toEqual([promotes]);
+  });
+}
+
+test.concurrent("a dynamic -C value falls back to the working directory's repository", async () => {
+  using sb = createSandbox({ git: true });
+  const { env, wt } = twoRepos(sb);
+  const { bash, ts } = await bothSides(
+    sb,
+    "push-waiver",
+    pushWaiverModule,
+    [{ stdin: push('git -C "$WT" push'), env: { ...env, WT: wt } }],
+    { also: [wt] },
+  );
+  expect(ts).toEqual(bash);
+  // `$WT` is only known when the command runs, so the push is judged where the hook ran.
+  const waivers = Object.keys(ts.state).filter((path) => path.endsWith(".waiver.json"));
+  expect(waivers).toEqual([PROJECT_WAIVER]);
 });

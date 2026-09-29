@@ -93,7 +93,13 @@ test.concurrent("the committed bundle runs a failing quality command end to end"
       encoding: "utf8",
     });
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("Global quality gate failing");
+    expect(JSON.parse(result.stdout)).toEqual({
+      hookSpecificOutput: {
+        hookEventName: "PostToolUse",
+        additionalContext:
+          "Global quality gate failing. Fix all errors/warnings/tests before new tasks.\\nFailed: bun test (exit 1)",
+      },
+    });
     const gate: unknown = JSON.parse(
       readFileSync(join(dir, ".claude/tmp/quality-gate-status.json"), "utf8"),
     );

@@ -5229,10 +5229,6 @@ function git(root, args, env) {
   const res = spawnSync2("git", ["-C", root, ...args], { env: childEnv(env), encoding: "utf8" });
   return res.error === undefined && res.status === 0 ? res.stdout : undefined;
 }
-function hasGit(env) {
-  const res = spawnSync2("git", ["--version"], { env: childEnv(env), encoding: "utf8" });
-  return res.error === undefined && res.status === 0;
-}
 function currentBranch(root, env) {
   const res = spawnSync2("git", ["-C", root, "rev-parse", "--abbrev-ref", "HEAD"], {
     env: childEnv(env),
@@ -11784,7 +11780,7 @@ function decide2(event, ctx) {
   if (!isShellTool(event))
     return ALLOW2;
   const analysis = commandAnalysis(event, ctx);
-  if (runsGitSubcommand(analysis, "push") !== "yes" || !hasGit(ctx.env))
+  if (runsGitSubcommand(analysis, "push") !== "yes")
     return ALLOW2;
   if (pushFailed(toolExitStatus(ctx.raw)) || toolInterrupted(ctx.raw))
     return ALLOW2;

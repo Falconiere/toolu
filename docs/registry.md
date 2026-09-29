@@ -84,7 +84,7 @@ toolu's PostToolUse entry for edit, shell and search tools runs the Bun bundle `
 - **Edits.** A block or exit 2 on any path of a patch wins for the whole patch. Unparseable `apply_patch` headers give `{"decision":"block","reason":"Unable to parse apply_patch file headers; per-file post-edit quality checks could not run."}`.
 - **Environment.** `.sh` modules also get `PROJECT_ROOT`, which is the git toplevel of the hook's working directory, else that directory. `$PROJECT_ROOT/node_modules/.bin` goes first on `PATH`. Native and `.js` modules receive the same values typed: `event.toolName`, `ctx.raw` (the payload), `ctx.projectRoot`, `ctx.cwd`, `ctx.edit` and `ctx.configRoot`.
 - **Built-ins.** `gate-status` and `push-waiver` are native (`@toolu/core/gates`), listed in `plugins/toolu/hooks/src/post-tools/builtins.ts`.
-  - gate-status reads the command with `@toolu/core/shell`. It records only a quality command the line runs whose exit status is the line's (`exitProves`), which fixes #283 items 6 and 7. `plugins/toolu/hooks/docs/gates.md` has the rules.
+  - gate-status reads the command with `@toolu/core/shell`. It counts only a quality command the line runs, and only when a zero exit of the line would prove that command passed (`exitProves`). A pass needs every such command proven, a failure at least one. This fixes #283 items 6 and 7. `plugins/toolu/hooks/docs/gates.md` has the rules.
   - push-waiver detects pushes through the same layer (#283 item 8).
   
   Their bash scripts stay as the parity baseline.

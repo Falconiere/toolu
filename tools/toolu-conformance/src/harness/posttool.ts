@@ -28,9 +28,16 @@ function files(dir: string): string[] {
   });
 }
 
-/** Every file under the project's `.claude/` and `.codex/`, ISO timestamps as `<T>`. */
-export function projectState(sb: Sandbox): Record<string, string> {
-  const paths = [".claude", ".codex"].flatMap((dir) => files(join(sb.project, dir)));
+/**
+ * Every file under the project's `.claude/` and `.codex/` (and those of each
+ * directory in `also`, e.g. a second worktree), keyed relative to the project,
+ * ISO timestamps as `<T>`.
+ */
+export function projectState(sb: Sandbox, also: readonly string[] = []): Record<string, string> {
+  const roots = [sb.project, ...also];
+  const paths = roots.flatMap((root) =>
+    [".claude", ".codex"].flatMap((dir) => files(join(root, dir))),
+  );
   return Object.fromEntries(
     paths
       .toSorted()

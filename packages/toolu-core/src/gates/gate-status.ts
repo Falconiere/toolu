@@ -5,11 +5,12 @@
  * (`__global__`, source `gate-status-hook`) as failing or clear it.
  *
  * Where it goes past bash (#283 items 6 and 7): a quality command must be one
- * the line runs, not text that names it, and the line's exit status must be
- * that command's own (`exitProves`). A failure is recorded when some quality
- * command's status is the line's; a pass only when every quality command's
- * is, so `bun test | tail; bun run lint` exiting 0 never vouches for the
- * tests. Anything else leaves the slot as it was.
+ * the line runs, not text that names it, and a zero exit of the line must be
+ * able to prove it passed (`exitProves`: not piped, not behind `||`, not
+ * followed by `;`). A pass is recorded only when every quality command is
+ * proven, so `bun test | tail; bun run lint` exiting 0 never vouches for the
+ * tests; a failure when at least one is (as in bash, a later `&&` step's
+ * failure still counts). Anything else leaves the slot as it was.
  */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

@@ -5,7 +5,7 @@
  * left in the project, timestamps normalised, so a test can compare them.
  */
 import { join, resolve } from "node:path";
-import { projectState as stateOf } from "@toolu/conformance/harness/posttool";
+import { projectState } from "@toolu/conformance/harness/posttool";
 import { fromSameState } from "@toolu/conformance/harness/pretool";
 import type { Sandbox } from "@toolu/conformance/harness/sandbox";
 import { dispatchPostTool, type ToolModule } from "../../dispatch/dispatch.ts";
@@ -22,6 +22,9 @@ export type Side = { stdout: string; exitCode: number; state: Record<string, str
 
 export type Call = { stdin: string; env: Record<string, string> };
 
+/** Project state plus that of `also` (other repositories the calls may write to). */
+export type Watch = { also?: readonly string[] };
+
 /**
  * Run `calls` in order through bash (module `<name>.sh` from the shipped
  * modules directory) and, from the same starting state, through the native
@@ -32,7 +35,9 @@ export async function bothSides(
   name: string,
   module: ToolModule,
   calls: readonly Call[],
+  watch: Watch = {},
 ): Promise<{ bash: Side; ts: Side }> {
+  const stateOf = (s: Sandbox) => projectState(s, watch.also);
   writeModule(modulesDir(sb), `${name}.sh`, `exec bash "${join(MODULES, `${name}.sh`)}"`);
   const [bash, ts] = await fromSameState(
     sb,

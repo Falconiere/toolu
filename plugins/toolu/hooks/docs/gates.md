@@ -120,7 +120,9 @@ typo mis-delivers nothing.
    about (`.claude/tmp/push-review/<branch>.pending-waiver.json`).
 2. The PostToolUse push-waiver module (`@toolu/core/gates`, the port of
    `post-tools/modules/push-waiver.sh`) sees the push actually ran **and
-   succeeded**, and promotes the pending marker to
+   succeeded** (the whole command line's reported exit status, so
+   `git push || true` counts as success, as it did in bash), and promotes the
+   pending marker to
    `<branch>.waiver.json`. A rejected push promotes nothing — the pending
    marker survives for the retry.
 3. The next push of that same diff passes silently.
@@ -146,10 +148,16 @@ command channel of the gate (the `__global__` entry, source
 `cargo clippy|test|build|nextest`, `./scripts/ts-check.sh`, or a project
 wrapper `tools/<name>/{check,test,format}.sh`. Wrappers (`timeout`, `sudo`,
 `env`, …), package runners (`npx`, `bunx`, `bun x`, `pnpm exec`, `yarn`),
-`bash -c` and `bash <script>` are followed. Text that only names one
+`bash -c` and `bash <script>` are followed; `yarn run <tool>`, `npx -p pkg
+tool` and `bash -x script` are not. Text that only names one
 (`echo "run bun test later"`, a commit message) does nothing.
 
-The line's exit status must also be the quality command's own:
+A zero exit must prove every quality command in the line passed: each one runs
+last, or is joined to what follows by `&&`, and none is piped into another
+command. A non-zero exit records a failure when at least one quality command
+is in such a position. As in the bash module before it, this failure can
+belong to a later `&&` step (`bun test && ./deploy.sh` failing in the deploy
+turns the gate red):
 
 | Line | Exit 0 | Non-zero |
 |---|---|---|

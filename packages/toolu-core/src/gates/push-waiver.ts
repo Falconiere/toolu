@@ -20,7 +20,7 @@ import type { RegistryContext, RegistryHookEvent } from "../registry/registry-ty
 import { pushTargets, runsGitSubcommand } from "../shell/shell-git.ts";
 import type { ShellAnalysis } from "../shell/shell-types.ts";
 import { diffSha } from "../state/diff-sha.ts";
-import { baseBranch, branchSlug, currentBranch, hasGit } from "../state/state-git.ts";
+import { baseBranch, branchSlug, currentBranch } from "../state/state-git.ts";
 import { commandAnalysis, isShellTool } from "./command-analysis.ts";
 import { toolExitStatus, toolInterrupted } from "./tool-exit.ts";
 
@@ -55,11 +55,11 @@ function pushRoot(analysis: ShellAnalysis, ctx: RegistryContext, cwd: string): s
 function decide(event: RegistryHookEvent, ctx: RegistryContext): Decision {
   if (!isShellTool(event)) return ALLOW;
   const analysis = commandAnalysis(event, ctx);
-  // Parse first: most calls are not pushes, and `hasGit` spawns a process.
-  if (runsGitSubcommand(analysis, "push") !== "yes" || !hasGit(ctx.env)) return ALLOW;
+  if (runsGitSubcommand(analysis, "push") !== "yes") return ALLOW;
   if (pushFailed(toolExitStatus(ctx.raw)) || toolInterrupted(ctx.raw)) return ALLOW;
   const cwd = ctx.cwd ?? process.cwd();
   const root = pushRoot(analysis, ctx, cwd);
+  // Without git (bash: `command -v git || exit 0`) there is no branch either.
   const branch = currentBranch(root, ctx.env);
   if (branch === "" || branch === "HEAD") return ALLOW;
   const base = envValue(ctx.env, "PUSH_REVIEW_BASE") ?? baseBranch(root, ctx.env);
