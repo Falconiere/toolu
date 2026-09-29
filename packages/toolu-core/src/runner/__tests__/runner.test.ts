@@ -81,3 +81,19 @@ test("runner malformed handled at bridge not runner", async () => {
   });
   expect(result.ok).toBe(true);
 });
+
+test("runner child that exits without reading a large stdin still reports its exit code", async () => {
+  // Writing past a closed pipe raises EPIPE; that one error is expected, any other propagates.
+  const result = await runner.run({
+    argv: ["bash", "-c", "exit 4"],
+    cwd: process.cwd(),
+    env: {},
+    stdin: "x".repeat(4_000_000),
+    deadlineMs: 5000,
+    maxStdoutBytes: 65536,
+  });
+  expect(result.ok).toBe(true);
+  if (result.ok) {
+    expect(result.exitCode).toBe(4);
+  }
+});
