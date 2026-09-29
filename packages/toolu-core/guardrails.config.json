@@ -147,6 +147,9 @@
         "__tests__"
       ],
       "gates": [
+        "command-analysis.ts",
+        "gate-status.ts",
+        "push-waiver.ts",
         "quality-command.ts",
         "tool-exit.ts",
         "__tests__"

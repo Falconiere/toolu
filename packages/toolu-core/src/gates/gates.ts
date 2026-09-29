@@ -5,3 +5,5 @@
  */
 export { qualityCommands, type QualityCommand } from "./quality-command.ts";
 export { toolCommand, toolExitStatus, toolInterrupted } from "./tool-exit.ts";
+export { gateStatusModule } from "./gate-status.ts";
+export { pushWaiverModule } from "./push-waiver.ts";

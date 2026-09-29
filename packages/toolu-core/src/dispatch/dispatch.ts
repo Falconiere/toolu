@@ -123,7 +123,7 @@ function sessionFor(
 ): Session {
   const root = configRoot({ env, host });
   const cwd = options.cwd ?? process.cwd();
-  const base = { phase, host, configRoot: root, libDir: options.libDir };
+  const base = { phase, host, configRoot: root, libDir: options.libDir, cwd };
   if (phase === "pre") {
     const project = projectRoot({ env, host, cwd }) ?? cwd;
     return { ...base, env: childEnv(env, { TOOLU_CONFIG_DIR: root }), projectRoot: project };

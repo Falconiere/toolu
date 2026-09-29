@@ -4619,6 +4619,7 @@ function toolContext(payload, doc, session) {
     env: session.env,
     configRoot: session.configRoot,
     projectRoot: session.projectRoot,
+    cwd: session.cwd,
     raw: isJsonObject(doc) ? doc : {},
     ...edit === undefined ? {} : { edit }
   };
@@ -4806,7 +4807,7 @@ async function dispatchInput(input, session, builtins) {
 function sessionFor(phase, env, host, options) {
   const root = configRoot({ env, host });
   const cwd = options.cwd ?? process.cwd();
-  const base = { phase, host, configRoot: root, libDir: options.libDir };
+  const base = { phase, host, configRoot: root, libDir: options.libDir, cwd };
   if (phase === "pre") {
     const project = projectRoot({ env, host, cwd }) ?? cwd;
     return { ...base, env: childEnv2(env, { TOOLU_CONFIG_DIR: root }), projectRoot: project };

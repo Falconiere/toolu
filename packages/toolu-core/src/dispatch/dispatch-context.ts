@@ -46,6 +46,8 @@ export type Session = {
   readonly configRoot: string;
   readonly projectRoot: string;
   readonly libDir: string;
+  /** The hook process's working directory. */
+  readonly cwd: string;
 };
 
 function text(value: unknown, fallback: string): string {
@@ -92,6 +94,7 @@ export function toolContext(payload: Payload, doc: unknown, session: Session): R
     env: session.env,
     configRoot: session.configRoot,
     projectRoot: session.projectRoot,
+    cwd: session.cwd,
     raw: isJsonObject(doc) ? doc : {},
     ...(edit === undefined ? {} : { edit }),
   };
