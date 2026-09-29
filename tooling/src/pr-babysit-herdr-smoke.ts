@@ -50,7 +50,7 @@ function step(message: string): void {
 type Out = { status: number; stdout: string };
 
 function sh(argv: string[], opts: { cwd?: string; env?: Record<string, string> } = {}): Out {
-  // stderr passes straight through, as it did from the shell runner: a failing
+  // stderr passes straight through, like it did from the shell runner: a failing
   // script's own diagnostics are the first thing to read.
   const res = spawnSync(argv[0] ?? "", argv.slice(1), {
     cwd: opts.cwd,

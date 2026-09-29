@@ -194,7 +194,7 @@ test.concurrent("AC-22 barrelNames=[mod.rs] fires with the Rust-specific remedy"
 });
 
 test.concurrent("AC-19 an ast-grep killed by a signal exits 3, never a silent green", async () => {
-  // The package-local binary is resolved first, exactly as a devDependency would be.
+  // The package-local binary is resolved first, the way a devDependency would be.
   using tree = buildFixture("violating", {
     "node_modules/.bin/ast-grep": "#!/bin/sh\nkill -9 $$\n",
   });
