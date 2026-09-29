@@ -1,6 +1,6 @@
 # @toolu/core
 
-Internal library for [toolu](https://github.com/Falconiere/toolu). It holds the portable decision, policy, config and bridge types that host adapters share, plus the runner that executes the bash gate engine.
+Internal library for [toolu](https://github.com/Falconiere/toolu). It holds the portable decision, policy, config and bridge types that host adapters share, the host layer (detection, roots and per-host output encoders for Claude Code, Codex, Cursor, OpenCode and Hermes), plus the runner that executes the bash gate engine.
 
 **There is no standalone use for this package.** It is published because [`@toolu/opencode`](https://www.npmjs.com/package/@toolu/opencode) depends on it. If you are looking to install toolu, you want one of:
 

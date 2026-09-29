@@ -4,10 +4,13 @@
  * to one Outcome so a port's test can assert the same effect on every host.
  *
  * Claude Code and Codex share `hookSpecificOutput`, but Codex cannot prompt:
- * `permissionDecision: "ask"` is a contract violation there. Cursor answers
+ * `permissionDecision: "ask"` is a contract violation there. PermissionRequest
+ * answers with `hookSpecificOutput.decision.behavior`. Cursor answers
  * permission events with `{permission, user_message, agent_message}` and blocks
- * on an invalid response. OpenCode runs in process and mutates the effect of
- * its permission event.
+ * on an invalid response; `beforeSubmitPrompt` answers `{continue}` and other
+ * events `{additional_context}`. Hermes shell hooks block with
+ * `{action|decision: "block"}` and inject `{context}`. OpenCode runs in process
+ * and mutates the effect of its permission event.
  */
 import { z } from "zod";
 import type { RunResult } from "./spawn.ts";
@@ -28,6 +31,12 @@ function hookOutputSchema(decisions: readonly [Effect, ...Effect[]]) {
         permissionDecision: z.enum(decisions).optional(),
         permissionDecisionReason: z.string().optional(),
         additionalContext: z.string().optional(),
+        decision: z
+          .looseObject({
+            behavior: z.enum(["allow", "deny"]),
+            message: z.string().optional(),
+          })
+          .optional(),
       })
       .optional(),
     decision: z.enum(["approve", "block"]).optional(),
@@ -45,6 +54,20 @@ export const CursorPermissionSchema = z.looseObject({
   agent_message: z.string().optional(),
   updated_input: z.unknown().optional(),
   continue: z.boolean().optional(),
+});
+export const CursorPromptSchema = z.looseObject({
+  continue: z.boolean(),
+  user_message: z.string().optional(),
+});
+export const CursorContextSchema = z.looseObject({
+  additional_context: z.string().optional(),
+});
+export const HermesOutputSchema = z.looseObject({
+  action: z.enum(["block", "approve", "modify"]).optional(),
+  decision: z.enum(["block", "modify"]).optional(),
+  message: z.string().optional(),
+  reason: z.string().optional(),
+  context: z.string().optional(),
 });
 export const OpencodeEffectSchema = z.looseObject({
   effect: z.enum(["allow", "deny", "ask"]),
@@ -84,6 +107,9 @@ function hookOutcome(host: string, event: string, out: HookOutput): Outcome {
       `${host}: hookEventName ${hso.hookEventName} does not match event ${event}`,
     );
   }
+  if (hso?.decision?.behavior === "deny") {
+    return withText({ effect: "deny" }, "reason", hso.decision.message);
+  }
   if (hso?.permissionDecision === "deny" || hso?.permissionDecision === "ask") {
     return withText({ effect: hso.permissionDecision }, "reason", hso.permissionDecisionReason);
   }
@@ -97,11 +123,34 @@ function hookOutcome(host: string, event: string, out: HookOutput): Outcome {
   return withText({ effect: "allow" }, "context", context);
 }
 
-function cursorOutcome(stdout: string): Outcome {
+/** Cursor events that answer with something other than a `permission`. */
+const CURSOR_CONTEXT_EVENTS = new Set([
+  "sessionStart",
+  "sessionEnd",
+  "postToolUse",
+  "afterFileEdit",
+  "afterShellExecution",
+  "afterMCPExecution",
+  "preCompact",
+  "stop",
+]);
+
+function cursorOutcome(event: string, stdout: string): Outcome {
   if (stdout.trim() === "") {
     throw new HostOutputError("cursor: empty stdout (Cursor blocks on an invalid response)");
   }
-  const out = validate("cursor", CursorPermissionSchema, parseJson("cursor", stdout), stdout);
+  const value = parseJson("cursor", stdout);
+  if (event === "beforeSubmitPrompt") {
+    const out = validate("cursor", CursorPromptSchema, value, stdout);
+    return out.continue
+      ? { effect: "allow" }
+      : withText({ effect: "deny" }, "reason", out.user_message);
+  }
+  if (CURSOR_CONTEXT_EVENTS.has(event)) {
+    const out = validate("cursor", CursorContextSchema, value, stdout);
+    return withText({ effect: "allow" }, "context", out.additional_context);
+  }
+  const out = validate("cursor", CursorPermissionSchema, value, stdout);
   return withText({ effect: out.permission }, "reason", out.agent_message ?? out.user_message);
 }
 
@@ -114,7 +163,7 @@ export function readHostOutcome(host: CommandHost, event: string, result: RunRes
     throw new HostOutputError(`${host}: hook exited ${result.exitCode}: ${result.stderr.trim()}`);
   }
   if (host === "cursor") {
-    return cursorOutcome(result.stdout);
+    return cursorOutcome(event, result.stdout);
   }
   if (result.stdout.trim() === "") {
     return { effect: "allow" };
@@ -128,4 +177,27 @@ export function readHostOutcome(host: CommandHost, event: string, result: RunRes
 export function readOpencodeOutcome(event: { effect: unknown; message?: unknown }): Outcome {
   const out = validate("opencode", OpencodeEffectSchema, event, JSON.stringify(event));
   return withText({ effect: out.effect }, "reason", out.message);
+}
+
+/** Normalise a Hermes shell hook's result: exit 2 or `block` denies, `context` is advice. */
+export function readHermesOutcome(result: RunResult): Outcome {
+  if (result.exitCode === 2) {
+    return withText({ effect: "deny" }, "reason", result.stderr);
+  }
+  if (result.exitCode !== 0) {
+    throw new HostOutputError(`hermes: hook exited ${result.exitCode}: ${result.stderr.trim()}`);
+  }
+  if (result.stdout.trim() === "") {
+    return { effect: "allow" };
+  }
+  const out = validate(
+    "hermes",
+    HermesOutputSchema,
+    parseJson("hermes", result.stdout),
+    result.stdout,
+  );
+  if (out.action === "block" || out.decision === "block") {
+    return withText({ effect: "deny" }, "reason", out.message ?? out.reason);
+  }
+  return withText({ effect: "allow" }, "context", out.context);
 }

@@ -86,7 +86,9 @@ Derive types with `z.infer`. No `any`, unchecked casts, or non-null escapes to b
 | `post_block` | post-tool feedback | PostToolUse `decision: "block"` (`plugins/toolu/hooks/lib/dispatch.sh`) |
 | `runtime_failure` | fail closed | parse/bridge/timeout |
 
-**Ask degradation** (`plugins/toolu/hooks/lib/host.sh` `toolu_supports_ask`): Codex cannot prompt — judgement gates `ask→advise`, security guardrails `ask→block` (`gate-mode.sh`, `plugins/toolu/hooks/docs/gates.md`). OpenCode supports permission `ask`; hosts without prompt use the same class rules.
+**Ask degradation** (`plugins/toolu/hooks/lib/host.sh` `toolu_supports_ask`; TypeScript `@toolu/core/host` `supportsAsk` / `degradeAsk`): Codex cannot prompt — judgement gates `ask→advise`, security guardrails `ask→block` (`gate-mode.sh`, `plugins/toolu/hooks/docs/gates.md`). OpenCode supports permission `ask`; Cursor enforces `ask` only on `beforeShellExecution`; Hermes shell hooks cannot prompt. Hosts without prompt use the same class rules, and `encodeDecision` turns any `ask` that still reaches them on a pre-action event into a deny.
+
+**Host layer** (`@toolu/core/host`): detection order is `TOOLU_HOST_OVERRIDE`, the in-process OpenCode flag, a stdin `hook_event_name` only one host uses, Cursor's `CURSOR_VERSION` / `CURSOR_PROJECT_DIR`, Codex's `PLUGIN_ROOT`, then Claude. Cursor and Hermes are detected and encoded only; no Cursor manifest or Hermes shim ships yet.
 
 **Precedence:** deny beats ask beats advisory merge; multi-file patches hold ask while walking and emit the first deny immediately (`dispatch.sh`).
 

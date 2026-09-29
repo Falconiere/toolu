@@ -12,7 +12,8 @@
       "runner",
       "launcher",
       "cli",
-      "rest"
+      "rest",
+      "host"
     ],
     "nested": {
       "decision": [
@@ -45,6 +46,15 @@
         "__tests__"
       ],
       "launcher": [
+        "__tests__"
+      ],
+      "host": [
+        "host-name.ts",
+        "host-detect.ts",
+        "host-events.ts",
+        "host-roots.ts",
+        "host-snapshot.ts",
+        "host-encode.ts",
         "__tests__"
       ]
     },

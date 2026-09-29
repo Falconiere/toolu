@@ -21,6 +21,7 @@ jq -e '.workspaces | index("packages/toolu-core") and index("tools/toolu-opencod
 
 # Export smoke via bun module resolution (assert return values)
 bun -e 'import { parseDecision } from "@toolu/core/decision"; const d = parseDecision({ kind: "allow" }); if (d.kind !== "allow") throw new Error("decision");'
+bun -e 'import { detectHost } from "@toolu/core/host"; if (detectHost({ env: { PLUGIN_ROOT: "/p" } }) !== "codex") throw new Error("host");'
 bun -e 'import { classifyStub } from "@toolu/opencode/plugin-stub"; const r = classifyStub("shell-out"); if (r !== "shell-out") throw new Error("classify");'
 bun -e 'import plugin from "@toolu/opencode"; if (!plugin || plugin.id !== "toolu") throw new Error("default entry");'
 bun -e 'import { runProtectedFilesConformance } from "@toolu/conformance/run-stub"; const r = await runProtectedFilesConformance(); if (!r.pass) throw new Error(r.message);'
