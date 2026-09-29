@@ -79,12 +79,18 @@ test.concurrent("a post dispatcher that throws exits 2 with one stderr line", ()
   });
 });
 
-test.concurrent("the committed bundle runs a failing quality command end to end", () => {
+test.concurrent("the launcher runs a failing quality command end to end", () => {
   withTempDir((dir) => {
     spawnSync("git", ["init", "-q", dir]);
-    const result = spawnSync(process.execPath, [join(PLUGIN, "hooks/dist/post-tools.js")], {
+    const result = spawnSync("/bin/sh", ["-c", LAUNCHER], {
       cwd: dir,
-      env: { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: dir, TOOLU_HOST_OVERRIDE: "claude" },
+      env: {
+        PATH: process.env.PATH ?? "/usr/bin:/bin",
+        HOME: dir,
+        TOOLU_HOST_OVERRIDE: "claude",
+        TOOLU_BUN: process.execPath,
+        CLAUDE_PLUGIN_ROOT: PLUGIN,
+      },
       input: JSON.stringify({
         tool_name: "Bash",
         tool_input: { command: "bun test" },

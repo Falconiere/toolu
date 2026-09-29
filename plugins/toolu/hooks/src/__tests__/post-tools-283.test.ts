@@ -73,6 +73,8 @@ for (const [id, command] of Object.entries(STAYS_FAILING)) {
       [command, 0],
     ]);
     expect(gateStatus(bundle)).toBe("failing");
+    // Known-wrong bash baseline, #283 item 6 (prose) and item 7 (`| tail` exit status):
+    // gate-status.sh cleared the failing gate on these lines.
     expect(gateStatus(bash)).toBe("passing");
   });
 }
@@ -91,6 +93,8 @@ for (const [id, command] of Object.entries(PUSHES)) {
     await preparePost(sb, "claude", PROMOTE);
     const [bash, bundle] = await sides(sb, [[command, 0]]);
     expect(bundle.state[WAIVER]).toBeDefined();
+    // Known-wrong bash baseline, #283 item 8: is_git_push missed this push, so the
+    // pending waiver was never promoted.
     expect(bash.state[WAIVER]).toBeUndefined();
   });
 }
