@@ -1,8 +1,9 @@
-/** Launcher tests: brief rendering and a real read-only dry run against the #248 snapshot. */
+/** Launcher tests: brief rendering and a real read-only dry run against a sandboxed copy of the #248 snapshot. */
 
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
 import { findIssue, renderBrief } from "../launch-issue.ts";
 
@@ -62,13 +63,16 @@ test.concurrent("brief: find_issue by key or ref", () => {
   expect(() => findIssue(graph, "Falconiere/comemory#999")).toThrow();
 });
 
-async function runDry(issue: string, extra: string[] = []) {
+/** Dry-run the launcher against a copy of the #248 graph whose state_dir is the
+ * sandbox's, so no test reads a developer's real epic state (routes, records). */
+async function runDry(sb: Sandbox, issue: string, extra: string[] = []) {
+  const graph = sb.write("graph.json", { ...loadGraph(), state_dir: join(sb.root, "state") });
   const res = await run([
     "bun",
     "run",
     LAUNCH,
     "--graph",
-    FIXTURE,
+    graph,
     "--issue",
     issue,
     "--dry-run",
@@ -78,7 +82,8 @@ async function runDry(issue: string, extra: string[] = []) {
 }
 
 test.concurrent("dry run: ready issue prints the herdr sequence without state", async () => {
-  const out = await runDry("Falconiere/comemory#255");
+  using sb = createSandbox();
+  const out = await runDry(sb, "Falconiere/comemory#255");
   expect(out.code).toBe(0);
   const lines = out.stdout.split("\n");
   expect(lines.some((l) => l.startsWith("git -C ") && l.endsWith("fetch origin main"))).toBe(true);
@@ -92,16 +97,18 @@ test.concurrent("dry run: ready issue prints the herdr sequence without state", 
 });
 
 test.concurrent("dry run: missing checkout is cloned into clone_root", async () => {
+  using sb = createSandbox();
   const graph = loadGraph();
   expect(findIssue(graph, "Falconiere/homebrew-tap#1").checkout).toBeNull();
-  const out = await runDry("Falconiere/homebrew-tap#1", ["--force"]);
+  const out = await runDry(sb, "Falconiere/homebrew-tap#1", ["--force"]);
   expect(out.code).toBe(0);
   const cloneTo = `${graph.clone_root}/homebrew-tap`;
   expect(out.stdout).toContain(`gh repo clone Falconiere/homebrew-tap ${cloneTo}`);
 });
 
 test.concurrent("dry run: routed host: codex with bypass, model, and effort; codex skill syntax", async () => {
-  const out = await runDry("Falconiere/comemory#255", [
+  using sb = createSandbox();
+  const out = await runDry(sb, "Falconiere/comemory#255", [
     "--kind",
     "codex",
     "--model",
@@ -120,14 +127,16 @@ test.concurrent("dry run: routed host: codex with bypass, model, and effort; cod
 });
 
 test.concurrent("dry run: --safe keeps approval prompts on", async () => {
-  const out = await runDry("Falconiere/comemory#255", ["--kind", "cursor-agent", "--safe"]);
+  using sb = createSandbox();
+  const out = await runDry(sb, "Falconiere/comemory#255", ["--kind", "cursor-agent", "--safe"]);
   expect(out.code).toBe(0);
   expect(out.stdout).toContain("--kind cursor --pane '<root-pane>' --timeout 90000 -- --trust");
   expect(out.stdout).not.toContain("--yolo");
 });
 
 test.concurrent("dry run: blocked issue is refused", async () => {
-  const out = await runDry("Falconiere/comemory#257");
+  using sb = createSandbox();
+  const out = await runDry(sb, "Falconiere/comemory#257");
   expect(out.code).not.toBe(0);
   expect(out.stderr + out.stdout).toContain("blocked");
 });
