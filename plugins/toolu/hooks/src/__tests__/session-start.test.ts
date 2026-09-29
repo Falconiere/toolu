@@ -19,7 +19,7 @@ import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
 import { hookCommand } from "@toolu/conformance/harness/startup";
 import { z } from "zod";
-import { PLUGIN, bundleArgv, prepare, type LifecycleCase } from "./lifecycle-cases.ts";
+import { PLUGIN, bundleArgv, launchCount, prepare, type LifecycleCase } from "./lifecycle-cases.ts";
 
 const RUNTIME = runtimeDiagnostic(process.execPath, Bun.version).systemMessage;
 const COMMAND = hookCommand(PLUGIN, "SessionStart", "session-start");
@@ -67,14 +67,15 @@ test("hooks.json runs one launcher entry on every SessionStart source", async ()
   const hooks: unknown = await Bun.file(join(PLUGIN, "hooks", "hooks.json")).json();
   expect(hooks).toMatchObject({
     hooks: {
-      SessionStart: [
+      SessionStart: expect.arrayContaining([
         {
           matcher: "startup|resume|clear|compact",
           hooks: [launcherHook({ plugin: "toolu", event: "SessionStart", entry: "session-start" })],
         },
-      ],
+      ]),
     },
   });
+  expect(await launchCount("SessionStart", "session-start")).toBe(1);
 });
 
 test("the launcher reports the title and the Bun that runs it", async () => {

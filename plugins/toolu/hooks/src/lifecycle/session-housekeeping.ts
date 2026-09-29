@@ -1,7 +1,7 @@
 /**
  * What toolu's SessionStart does before any context is built (#263), in
- * session-start.sh's order: refresh Codex's plugin snapshot and prune the
- * registry against it (once per session start), drop the legacy statusline
+ * session-start.sh's order: on Codex, refresh the plugin snapshot and prune
+ * the registry against it (once per session start), drop the legacy statusline
  * symlink, and write the readiness marker the OpenCode bootstrap waits for.
  * These run even when the hook's context is disabled.
  */
@@ -22,8 +22,10 @@ function isSymlink(path: string): boolean {
 }
 
 export function housekeeping(env: Env, host: HostName, configRoot: string): void {
-  snapshotCodexPlugins({ env, host });
-  pruneInactiveModules({ env, host });
+  if (host === "codex") {
+    snapshotCodexPlugins({ env, host });
+    pruneInactiveModules({ env, host });
+  }
   const legacy = join(configRoot, "toolu", "statusline.sh");
   if (isSymlink(legacy)) {
     try {

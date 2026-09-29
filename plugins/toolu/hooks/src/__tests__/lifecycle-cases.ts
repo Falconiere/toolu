@@ -8,6 +8,7 @@
 import { chmodSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { PERMISSIONS_SENTINEL } from "@toolu/core/config";
+import { z } from "zod";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch, type RunResult } from "@toolu/conformance/harness/spawn";
 
@@ -158,7 +159,11 @@ export function prepare(c: LifecycleCase): Prepared {
   return { sb, cwd, env };
 }
 
-/** Replace per-run paths so outputs compare across sandboxes and machines. */
+/**
+ * Replace per-run paths so outputs compare across sandboxes and machines.
+ * `sb.root` is a fresh `mkdtemp` directory, so it can only appear in output
+ * that names the sandbox itself, which is exactly what should be masked.
+ */
 export function mask(text: string, sb: Sandbox): string {
   return text.replaceAll(sb.root, "<SANDBOX>").replaceAll(PLUGIN, "<PLUGIN>");
 }
@@ -175,6 +180,22 @@ export async function runCase(
   } finally {
     sb[Symbol.dispose]();
   }
+}
+
+const HooksFileSchema = z.object({
+  hooks: z.record(
+    z.string(),
+    z.array(z.object({ hooks: z.array(z.object({ command: z.string() })) })),
+  ),
+});
+
+/** How many of the plugin's `event` hooks launch `hooks/dist/<entry>.js`. */
+export async function launchCount(event: string, entry: string): Promise<number> {
+  const file = HooksFileSchema.parse(await Bun.file(join(PLUGIN, "hooks", "hooks.json")).json());
+  const bundle = `/hooks/dist/${entry}.js"`;
+  return (file.hooks[event] ?? [])
+    .flatMap((group) => group.hooks)
+    .filter((hook) => hook.command.includes(bundle)).length;
 }
 
 /** The committed bundle for `hook`, run by the Bun running the tests. */

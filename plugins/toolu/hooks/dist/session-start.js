@@ -5031,8 +5031,10 @@ function isSymlink(path) {
   }
 }
 function housekeeping(env, host, configRoot) {
-  snapshotCodexPlugins({ env, host });
-  pruneInactiveModules({ env, host });
+  if (host === "codex") {
+    snapshotCodexPlugins({ env, host });
+    pruneInactiveModules({ env, host });
+  }
   const legacy = join13(configRoot, "toolu", "statusline.sh");
   if (isSymlink(legacy)) {
     try {

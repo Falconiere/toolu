@@ -9,7 +9,7 @@ import { launcherHook, missingRuntimeMessage } from "@toolu/core/launcher";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
 import { hookCommand } from "@toolu/conformance/harness/startup";
-import { PLUGIN } from "./lifecycle-cases.ts";
+import { PLUGIN, launchCount } from "./lifecycle-cases.ts";
 
 const HOOKS = Bun.file(join(PLUGIN, "hooks", "hooks.json"));
 
@@ -17,7 +17,7 @@ test("hooks.json routes every prompt to the generated launcher", async () => {
   const hooks: unknown = await HOOKS.json();
   expect(hooks).toMatchObject({
     hooks: {
-      UserPromptSubmit: [
+      UserPromptSubmit: expect.arrayContaining([
         {
           hooks: [
             launcherHook({
@@ -27,9 +27,10 @@ test("hooks.json routes every prompt to the generated launcher", async () => {
             }),
           ],
         },
-      ],
+      ]),
     },
   });
+  expect(await launchCount("UserPromptSubmit", "user-prompt-submit")).toBe(1);
 });
 
 test("the launcher runs the bundle with the prompt on stdin", async () => {
