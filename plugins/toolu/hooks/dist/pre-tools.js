@@ -4858,7 +4858,7 @@ function builtins(hooksDir) {
 
 // plugins/toolu/hooks/src/pre-tools/hook-main.ts
 import { dirname as dirname2 } from "path";
-async function hookMain(entryDir, run) {
+async function hookMain(entryDir, run, event = "PreToolUse") {
   try {
     const result = await run(await Bun.stdin.text(), dirname2(entryDir));
     process.stdout.write(result.stdout);
@@ -4866,7 +4866,8 @@ async function hookMain(entryDir, run) {
     process.exitCode = result.exitCode;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`blocked: toolu PreToolUse dispatcher failed: ${message}
+    const prefix = event === "PreToolUse" ? "blocked: " : "";
+    process.stderr.write(`${prefix}toolu ${event} dispatcher failed: ${message}
 `);
     process.exitCode = 2;
   }
