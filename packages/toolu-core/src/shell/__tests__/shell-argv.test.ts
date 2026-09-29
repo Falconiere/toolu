@@ -90,6 +90,10 @@ test.concurrent("bash -c and friends are analyzed as their own command lines", (
     "zsh -o pipefail -c 'git push'",
     "/bin/dash -e -c 'git push'",
     "ksh -c 'git push' arg0",
+    // bash reads a `+` cluster like a `-` one: `bash +c STRING` runs STRING.
+    "bash +c 'git push'",
+    "bash +o posix -c 'git push'",
+    "bash --rcfile x -c 'git push'",
   ]) {
     const inner = analyzeShell(source).commands.at(-1);
     expect([inner?.argv, inner?.origin, inner?.depth]).toEqual([["git", "push"], "shell", 1]);

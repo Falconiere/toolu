@@ -17,6 +17,8 @@ export interface OptionSpec {
   readonly numeric?: boolean;
   /** Stop at the first operand: the rest is a command (wrappers, git globals). */
   readonly stopAtOperand?: boolean;
+  /** `+x` is an option cluster too, as a shell reads it (`bash +o posix`, `bash +c`). */
+  readonly plus?: boolean;
 }
 
 export interface ParsedOption {
@@ -47,6 +49,7 @@ export function parseArgs(words: Words, start: number, spec: OptionSpec): Parsed
   const operandAt: number[] = [];
   let missingValue = false;
   let i = start;
+  const option = spec.plus === true ? /^[-+]./ : /^-/;
   /** The option's value is the next word. */
   const takeNext = (name: string): void => {
     i += 1;
@@ -62,7 +65,7 @@ export function parseArgs(words: Words, start: number, spec: OptionSpec): Parsed
   });
   for (; i < words.length; i++) {
     const word = words[i] ?? null;
-    if (word === null || word === "-" || word === "--" || !word.startsWith("-")) {
+    if (word === null || word === "-" || word === "--" || !option.test(word)) {
       if (spec.stopAtOperand === true) return done(word === "--" ? i + 1 : i);
       if (word === "--") {
         for (let rest = i + 1; rest < words.length; rest++) operandAt.push(rest);

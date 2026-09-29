@@ -44,7 +44,7 @@ Wrappers are unwrapped by their own option tables: `sudo`, `doas`, `env`, `comma
 - `command -v` runs nothing, so it is not unwrapped.
 - `xargs` adds arguments at run time, so its argv ends with a `null`.
 
-`bash|sh|zsh|dash|ksh -c STRING` and `eval ARGS` are analyzed as command lines of their own, up to depth 4.
+`bash|sh|zsh|dash|ksh -c STRING` (bash reads `+c` the same way, and `+o`/`-o` take a value) and `eval ARGS` are analyzed as command lines of their own, up to depth 4.
 
 ## Policy
 
@@ -101,11 +101,11 @@ CI asserts the bundle sizes (`tooling/src/__tests__/bench-shell.test.ts`), becau
 
 | Measure | Budget | Measured |
 |---|---|---|
-| Bundle size added, every runtime export of `@toolu/core/shell` (unminified) | ≤ 200,000 B | 197,673 B |
-| Bundle size added, `analyzeShell` + `@toolu/core/shell/writes` (unminified) | ≤ 200,000 B | 199,419 B |
-| Bundle size added, both entries together (unminified) | reported | 203,398 B, see below |
-| Cold-start p50, `together` minus `empty` (40 interleaved runs) | ≤ 5 ms | +3.62 ms (empty 17.19 ms, together 20.81 ms; p90 19.10 / 22.71 ms) |
-| Parse and walk over 235 fixture commands, 4,700 samples | p99 ≤ 0.1 ms | p50 3.4 µs, p99 17.3 µs, max 2.2 ms |
+| Bundle size added, every runtime export of `@toolu/core/shell` (unminified) | ≤ 200,000 B | 197,434 B |
+| Bundle size added, `analyzeShell` + `@toolu/core/shell/writes` (unminified) | ≤ 200,000 B | 199,180 B |
+| Bundle size added, both entries together (unminified) | reported | 203,159 B, see below |
+| Cold-start p50, `together` minus `empty` (40 interleaved runs) | ≤ 5 ms | +3.80 ms (empty 19.68 ms, together 23.48 ms; p90 21.03 / 25.37 ms) |
+| Parse and walk over 235 fixture commands, 4,700 samples | p99 ≤ 0.1 ms | p50 3.6 µs, p99 19.7 µs, max 1.7 ms |
 
 Measured on 2026-09-29 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple M2 Max), with other agent sessions on the same machine (load average about 4). Load raises both absolute cold-start numbers alike, and the budget is the difference between them. For comparison, the shipped `is_git_push` takes 0.23 s under bash 5.3 and 0.61 s under `/bin/bash` 3.2 on the 4.3 KB fixture `283-11a`.
 
@@ -122,4 +122,4 @@ Measured on 2026-09-29 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple M2 Ma
   - a single walk switch and a single-loop option parser;
   - table-driven writers.
 - `writeTargets`, the largest single-consumer piece, moved to its own entry.
-- A bundle that imports both entries adds 203,398 B, over 200 KB. That only happens where one bundle needs protected-files and every other shell gate at once.
+- A bundle that imports both entries adds 203,159 B, over 200 KB. The PreToolUse dispatcher (#258) is such a bundle: it carries protected-files and the other shell gates. unbash is 174.6 KB of that and the analyzer 27.7 KB, so structural work cannot close the 3.2 KB gap; the budget for that bundle is an open decision.

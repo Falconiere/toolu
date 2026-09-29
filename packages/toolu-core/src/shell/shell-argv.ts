@@ -122,31 +122,25 @@ export interface RunTarget {
   readonly stdin: boolean;
 }
 
+const SHELL_OPTIONS: OptionSpec = {
+  valueShort: "oO",
+  valueLong: "rcfile init-file",
+  stopAtOperand: true,
+  plus: true,
+};
+
+/** `-c` runs the first operand (bash reads `+c` the same way); `-s` or no operand reads stdin. */
 function shellTarget(argv: Words): RunTarget | null {
-  let command = false;
-  let stdin = false;
-  let i = 1;
-  for (; i < argv.length; i++) {
-    const word = argv[i] ?? null;
-    if (word === null) return { origin: "shell", script: null, stdin: false };
-    if (word === "--" || word === "-") {
-      i += 1;
-      break;
-    }
-    if (word.startsWith("--")) {
-      if (word === "--rcfile" || word === "--init-file") i += 1;
-      continue;
-    }
-    if (!/^[-+]./.test(word)) break;
-    const letters = word.slice(1);
-    command ||= word.startsWith("-") && letters.includes("c");
-    stdin ||= word.startsWith("-") && letters.includes("s");
-    if (/[oO]/.test(letters)) i += 1;
-  }
-  if (command)
-    return i < argv.length ? { origin: "shell", script: argv[i] ?? null, stdin: false } : null;
-  if (stdin || i >= argv.length) return { origin: "shell", script: null, stdin: true };
-  return null;
+  const parsed = parseArgs(argv, 1, SHELL_OPTIONS);
+  // A lone `-` ends the options, like `--`.
+  const at = argv[parsed.next] === "-" ? parsed.next + 1 : parsed.next;
+  const operand = argv[at];
+  if (hasOption(parsed, "c"))
+    return at < argv.length ? { origin: "shell", script: operand ?? null, stdin: false } : null;
+  if (hasOption(parsed, "s") || at >= argv.length)
+    return { origin: "shell", script: null, stdin: true };
+  // A dynamic script operand may be anything.
+  return operand === null ? { origin: "shell", script: null, stdin: false } : null;
 }
 
 /** The shell code `argv` runs as a string (`bash -c`, a shell on stdin, `eval`), if any. */
