@@ -10,7 +10,8 @@ const ROOT = resolve(import.meta.dir, "../../..");
 const CLI = join(ROOT, "tooling/src/gate-coverage-inventory.ts");
 const INVENTORY = join(ROOT, "tooling/fixtures/gate-coverage/inventory.json");
 const MATRIX = join(ROOT, "docs/gate-coverage-matrix.md");
-const MIN_ROWS = 90;
+/** A floor, not a count: rows leave the inventory as each bash hook is ported (epic #247). */
+const MIN_ROWS = 60;
 
 const Row = z.looseObject({ id: z.string() });
 const Rows = z.array(Row);
@@ -38,14 +39,16 @@ function gateCli(env: Record<string, string>): ReturnType<typeof run> {
   return run([process.execPath, "run", CLI, "check"], { cwd: ROOT, env });
 }
 
-test.concurrent("discover emits >=90 rows including protected-files, gate-mode, and a ts-quality concern", async () => {
+test.concurrent("discover emits a real inventory including protected-files, gate-mode, and a Bun launcher entry", async () => {
   const res = await run([process.execPath, "run", CLI, "discover"], { cwd: ROOT });
   expect(res.exitCode).toBe(0);
   const ids = Rows.parse(JSON.parse(res.stdout)).map((row) => row.id);
   expect(ids.length).toBeGreaterThanOrEqual(MIN_ROWS);
   expect(ids.some((id) => id.includes("protected-files"))).toBe(true);
   expect(ids.some((id) => id.includes("gate-mode"))).toBe(true);
-  expect(ids.some((id) => id.startsWith("ts-quality:concern:"))).toBe(true);
+  expect(ids).toContain(
+    "ts-quality:hooks.json:SessionStart:register.js:startup|resume|clear|compact",
+  );
 });
 
 test.concurrent("check passes on the committed inventory and matrix", async () => {

@@ -15,6 +15,16 @@ import { TS_CASES } from "./cases.ts";
 import { GOLDEN_PATH, REPO_ROOT, caseKey, runCase, type StepResult } from "./golden-harness.ts";
 
 const DEFAULT_BASE = "a8b0c9c9";
+/** Cases run this many at a time: all at once starves each spawn past the harness timeout. */
+const BATCH = 8;
+
+async function inBatches<T>(jobs: readonly (() => Promise<T>)[], size: number): Promise<T[]> {
+  const out: T[] = [];
+  for (let at = 0; at < jobs.length; at += size) {
+    out.push(...(await Promise.all(jobs.slice(at, at + size).map((job) => job()))));
+  }
+  return out;
+}
 
 function git(args: string[]): string {
   const res = spawnSync("git", ["-C", REPO_ROOT, ...args], { encoding: "utf8" });
@@ -40,12 +50,12 @@ const dir = mkdtempSync(join(tmpdir(), "ts-quality-base-"));
 try {
   const register = extract(base, dir);
   const jobs = TS_CASES.flatMap((c) =>
-    (c.hosts ?? ["claude"]).map(async (host) => {
-      const steps = await runCase(c, host, { kind: "bash", register });
-      return [caseKey(c, host), steps] as [string, StepResult[]];
-    }),
+    (c.hosts ?? ["claude"]).map((host) => async (): Promise<[string, StepResult[]]> => [
+      caseKey(c, host),
+      await runCase(c, host, { kind: "bash", register }),
+    ]),
   );
-  const cases = Object.fromEntries(await Promise.all(jobs));
+  const cases = Object.fromEntries(await inBatches(jobs, BATCH));
   mkdirSync(dirname(GOLDEN_PATH), { recursive: true });
   writeFileSync(GOLDEN_PATH, `${JSON.stringify({ base, cases }, null, 2)}\n`);
   process.stdout.write(`captured ${String(Object.keys(cases).length)} cases at ${base}\n`);
