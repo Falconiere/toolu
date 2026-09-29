@@ -105,33 +105,44 @@ function withoutAuthorization(headers: Record<string, string>): Record<string, s
   );
 }
 
+interface Hop {
+  readonly url: string;
+  readonly headers: Record<string, string>;
+  readonly origin: string;
+  /** Redirects followed so far. */
+  readonly count: number;
+}
+
+/** One GET; a redirect recurses into the next hop, which is sequential by nature. */
+async function follow(tool: string, hop: Hop): Promise<Uint8Array> {
+  const response = await exchange(tool, hop.url, { method: "GET", headers: hop.headers });
+  const location = response.headers.get("location");
+  if (REDIRECTS.has(response.status) && location !== null) {
+    await response.body?.cancel();
+    if (hop.count >= MAX_REDIRECTS)
+      throw new CliExit(47, `${tool}: too many redirects from ${hop.url}`);
+    const url = new URL(location, hop.url).href;
+    const headers =
+      new URL(url).origin === hop.origin ? hop.headers : withoutAuthorization(hop.headers);
+    return follow(tool, { ...hop, url, headers, count: hop.count + 1 });
+  }
+  const bytes = new Uint8Array(await readBody(tool, () => response.arrayBuffer()));
+  if (response.status >= 400) {
+    const body = new TextDecoder().decode(bytes);
+    throw new CliExit(22, `${tool}: HTTP ${response.status} from ${hop.url}`, body);
+  }
+  return bytes;
+}
+
 /**
  * GETs `request.url` like `curl -sS --fail-with-body -L` and returns the body
  * bytes. Redirects are followed (Jira serves attachment content from a media
  * host), and Authorization is dropped once a hop leaves the original origin.
  * Too many redirects exits 47, curl's status for it.
  */
-export async function download(tool: string, request: RestRequest): Promise<Uint8Array> {
+export function download(tool: string, request: RestRequest): Promise<Uint8Array> {
   const origin = new URL(request.url).origin;
-  let url = request.url;
-  let headers: Record<string, string> = { ...request.headers };
-  for (let hop = 0; ; hop += 1) {
-    const response = await exchange(tool, url, { method: "GET", headers });
-    const location = response.headers.get("location");
-    if (REDIRECTS.has(response.status) && location !== null) {
-      await response.body?.cancel();
-      if (hop >= MAX_REDIRECTS) throw new CliExit(47, `${tool}: too many redirects from ${url}`);
-      url = new URL(location, url).href;
-      if (new URL(url).origin !== origin) headers = withoutAuthorization(headers);
-      continue;
-    }
-    const bytes = new Uint8Array(await readBody(tool, () => response.arrayBuffer()));
-    if (response.status >= 400) {
-      const body = new TextDecoder().decode(bytes);
-      throw new CliExit(22, `${tool}: HTTP ${response.status} from ${url}`, body);
-    }
-    return bytes;
-  }
+  return follow(tool, { url: request.url, headers: { ...request.headers }, origin, count: 0 });
 }
 
 /** Percent-encodes like python's `quote(value, safe="")`: only RFC 3986 unreserved characters stay. */

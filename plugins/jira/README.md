@@ -1,6 +1,6 @@
 # jira
 
-Jira issue search and workflow from the session via a REST wrapper — a skill plus bash. Cloud + Server/DC, read and safe writes.
+Jira issue search and workflow from the session via a REST wrapper — a skill plus a TypeScript CLI on Bun. Cloud + Server/DC, read and safe writes.
 
 ## Install
 
@@ -36,9 +36,21 @@ deliberately **not** the branch ledger: toolu's push gate only reads
 
 ## The Jira API
 
-The skill drives `scripts/jira.sh`, a bash wrapper over the Jira REST API (Cloud and Server/Data Center).
+The skill drives the jira CLI, a TypeScript CLI on Bun over the Jira REST API (Cloud and Server/Data Center). Its source is `hooks/src/jira.ts`; the committed bundle `hooks/dist/jira.js` is what the SessionStart hook publishes at `<config>/jira/jira.sh`, the path SKILL.md invokes.
 
 - **Easiest** — if the [`jira` CLI](https://github.com/ankitpokhrel/jira-cli) is configured (`jira init`), the plugin reuses its login automatically (server + login from `~/.config/.jira/.config.yml`, token from the OS keyring). No extra setup.
 - **Or set environment variables** (these always take precedence; never a `.env` file): `JIRA_BASE_URL` (required), then either `JIRA_PAT` (Bearer) or `JIRA_EMAIL` + `JIRA_API_TOKEN` (basic). Set `JIRA_API_VERSION=2` for Server/Data Center.
 
 When nothing is configured the plugin prints a short, friendly setup prompt and exits.
+
+## Intentional differences from the bash version
+
+The CLI was a bash script over `curl` + `jq` until #272; it is now a TypeScript CLI on Bun with the same families, flags, output and exit statuses, except:
+
+- `--lean` with an HTTP error prints the real error body (exit 22) instead of a projection of it.
+- A transport failure (DNS, TLS, dropped connection) exits 1; curl used assorted codes.
+- `curl` and `jq` are no longer required by the CLI itself (plan checks you write may still use `jq`).
+- `attachment download` writes no output file when the download fails; curl wrote the error body into it.
+- `plan init` titles the doc from the issue summary even under `--lean`; bash fell back to the key.
+- A previous ledger that is not a JSON object is treated as absent instead of failing the run.
+- JSON number literals are printed as JavaScript prints them (`1.0` becomes `1`).

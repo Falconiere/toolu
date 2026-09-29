@@ -135,29 +135,27 @@ var MAX_REDIRECTS = 50;
 function withoutAuthorization(headers) {
   return Object.fromEntries(Object.entries(headers).filter(([name]) => name.toLowerCase() !== "authorization"));
 }
-async function download(tool, request) {
-  const origin = new URL(request.url).origin;
-  let url = request.url;
-  let headers = { ...request.headers };
-  for (let hop = 0;; hop += 1) {
-    const response = await exchange(tool, url, { method: "GET", headers });
-    const location = response.headers.get("location");
-    if (REDIRECTS.has(response.status) && location !== null) {
-      await response.body?.cancel();
-      if (hop >= MAX_REDIRECTS)
-        throw new CliExit(47, `${tool}: too many redirects from ${url}`);
-      url = new URL(location, url).href;
-      if (new URL(url).origin !== origin)
-        headers = withoutAuthorization(headers);
-      continue;
-    }
-    const bytes = new Uint8Array(await readBody(tool, () => response.arrayBuffer()));
-    if (response.status >= 400) {
-      const body = new TextDecoder().decode(bytes);
-      throw new CliExit(22, `${tool}: HTTP ${response.status} from ${url}`, body);
-    }
-    return bytes;
+async function follow(tool, hop) {
+  const response = await exchange(tool, hop.url, { method: "GET", headers: hop.headers });
+  const location = response.headers.get("location");
+  if (REDIRECTS.has(response.status) && location !== null) {
+    await response.body?.cancel();
+    if (hop.count >= MAX_REDIRECTS)
+      throw new CliExit(47, `${tool}: too many redirects from ${hop.url}`);
+    const url = new URL(location, hop.url).href;
+    const headers = new URL(url).origin === hop.origin ? hop.headers : withoutAuthorization(hop.headers);
+    return follow(tool, { ...hop, url, headers, count: hop.count + 1 });
   }
+  const bytes = new Uint8Array(await readBody(tool, () => response.arrayBuffer()));
+  if (response.status >= 400) {
+    const body = new TextDecoder().decode(bytes);
+    throw new CliExit(22, `${tool}: HTTP ${response.status} from ${hop.url}`, body);
+  }
+  return bytes;
+}
+function download(tool, request) {
+  const origin = new URL(request.url).origin;
+  return follow(tool, { url: request.url, headers: { ...request.headers }, origin, count: 0 });
 }
 function quote(value) {
   return encodeURIComponent(value).replaceAll(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);

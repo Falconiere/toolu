@@ -2,10 +2,10 @@
 # SessionStart hook — publish the jira wrapper at a STABLE, env-independent
 # path. See context7's session-start.sh for the same fix rationale:
 # ${CLAUDE_PLUGIN_ROOT} is exported to hook subprocesses only — NOT to the
-# agent's Bash tool subshell — so a SKILL.md path of
-# "${CLAUDE_PLUGIN_ROOT}/skills/jira/scripts/jira.sh" expands to
-# "/skills/.../jira.sh: No such file" when an agent pastes it. Mirror the
-# statusline plugin: symlink the wrapper to
+# agent's Bash tool subshell — so any SKILL.md path built on it (e.g.
+# "${CLAUDE_PLUGIN_ROOT}/hooks/dist/jira.js") would expand to
+# "/hooks/dist/jira.js: No such file" when an agent pastes it. Mirror the
+# statusline plugin: symlink the CLI bundle (hooks/dist/jira.js) to
 #   ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/jira/jira.sh
 # Refreshed every session; silent on success; every step non-fatal.
 
@@ -13,7 +13,7 @@
 cat > /dev/null 2>&1 || true
 
 plugin_dir="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
-src="${plugin_dir:+$plugin_dir/skills/jira/scripts/jira.sh}"
+src="${plugin_dir:+$plugin_dir/hooks/dist/jira.js}"
 [ -n "$src" ] && [ -f "$src" ] || exit 0
 
 if [ -n "${TOOLU_CONFIG_DIR:-}" ]; then
@@ -30,5 +30,10 @@ dst="$reg_root/jira.sh"
 if [ -L "$dst" ] || [ ! -e "$dst" ]; then
   ln -sf "$src" "$dst" 2>/dev/null || true
 fi
+
+# The published path is a Bun bundle run through its `#!/usr/bin/env bun`
+# shebang: without bun on PATH every call fails with a bare "env: bun: No
+# such file", so say what is missing now (advisory; the session continues).
+command -v bun >/dev/null 2>&1 || echo "jira: bun not found on PATH — the jira CLI needs Bun 1.4.x (https://bun.sh; see docs/runtime.md)" >&2
 
 exit 0
