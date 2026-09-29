@@ -8,7 +8,8 @@
  * statement of a list (not backgrounded), on an and-or element with `&&` on both
  * sides, on the last element of a non-negated pipeline, and into subshell/group
  * bodies and `bash -c`/`eval` strings. Conditions, loops, case arms, function
- * bodies and substitutions never prove anything.
+ * bodies, substitutions and commands run by xargs (which may run them zero
+ * times and still exit 0) never prove anything.
  */
 import {
   parse,

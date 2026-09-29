@@ -60,6 +60,8 @@ Wrappers are unwrapped by their own option tables: `sudo`, `doas`, `env`, `comma
   - the last element of a pipeline that is not negated;
   - through subshells, groups, `bash -c` and `eval`.
   
+  A command run by `xargs` never proves anything, because `xargs -r` can run it zero times and still exit 0.
+  
   `bun test | tail` does not prove `bun test` passed.
 - **Pathname patterns:** bash globs an unquoted word that contains `*`, `?` or `[…]` and uses the one existing file it matches. It does this for a redirect target or argument too: `echo x > .en[v]` writes `.env`, which was verified with neutral names under bash 5.3 and `/bin/bash` 3.2. Such a word is therefore not a static value:
   - its entry in `words`/`argv` is `null`, so `/usr/bin/g[i]t push` is `unknown`, and its pattern is kept in `patterns`;
