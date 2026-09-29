@@ -14,6 +14,7 @@
  */
 import { spawnSync } from "node:child_process";
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -27,10 +28,13 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { z } from "zod";
 import { get, list, text } from "./json-path.ts";
+import { envOr } from "./env.ts";
 
 const ROOT = realpathSync(resolve(import.meta.dir, "../.."));
 const SCRIPTS = join(ROOT, "plugins/pr-babysit/scripts");
 const SNAPSHOT = join(SCRIPTS, "__tests__/fixtures/snapshots/toolu-165.json");
+/** Two Fix items in two tiers (standard, trivial), each a one-line edit to smoke.txt. */
+const ITEMS = join(ROOT, "tooling/fixtures/pr-babysit-herdr-smoke/items.json");
 const Snapshot = z.looseObject({ pr: z.looseObject({}) });
 
 class SmokeError extends Error {}
@@ -46,10 +50,13 @@ function step(message: string): void {
 type Out = { status: number; stdout: string };
 
 function sh(argv: string[], opts: { cwd?: string; env?: Record<string, string> } = {}): Out {
+  // stderr passes straight through, as it did from the shell runner: a failing
+  // script's own diagnostics are the first thing to read.
   const res = spawnSync(argv[0] ?? "", argv.slice(1), {
     cwd: opts.cwd,
     encoding: "utf8",
     env: { ...process.env, ...opts.env },
+    stdio: ["ignore", "pipe", "inherit"],
   });
   if (res.error) throw res.error;
   return { status: res.status ?? 1, stdout: res.stdout };
@@ -61,12 +68,17 @@ function must(argv: string[], opts: { cwd?: string; env?: Record<string, string>
   return out.stdout;
 }
 
-function json(raw: string): unknown {
+function parseOrNull(raw: string): unknown {
   try {
     return JSON.parse(raw);
   } catch {
-    return fail(`expected JSON, got: ${raw}`);
+    return null;
   }
+}
+
+function json(raw: string): unknown {
+  const doc = parseOrNull(raw);
+  return doc === null ? fail(`expected JSON, got: ${raw}`) : doc;
 }
 
 function babysit(script: string, args: string[], env: Record<string, string> = {}): Out {
@@ -89,26 +101,6 @@ function makeTopology(tmp: string, clone: string): void {
   g("commit", "--quiet", "-am", "feat: smoke change");
   g("push", "--quiet", "-u", "origin", "feat/smoke");
 }
-
-const ITEMS = {
-  round: 1,
-  items: [
-    {
-      id: "smoke-1",
-      kind: "conversation",
-      path: "smoke.txt",
-      severity: "medium",
-      task: "Append exactly one line reading: fixed by pr-babysit smoke — to the end of smoke.txt, then commit only that change with the message: fix(smoke): append line. Change nothing else and run no tests (this file has none).",
-    },
-    {
-      id: "smoke-2",
-      kind: "conversation",
-      path: "smoke.txt",
-      severity: "nit",
-      task: "Fix the typo on the first line of smoke.txt: it must read hello world instead of hello. Commit only that change with the message: fix(smoke): typo. Change nothing else and run no tests.",
-    },
-  ],
-};
 
 /** Slot state from a real tick, then two Fix items in two tiers routed to real Claude fixers. */
 function route(tmp: string, state: string): void {
@@ -133,10 +125,10 @@ function route(tmp: string, state: string): void {
   if (tick.status !== 0) fail(`babysit-tick failed: ${tick.stdout}`);
   const slot = get(json(readFileSync(state, "utf8")), "slot");
   if (slot !== "local-pb-smoke-1") fail(`unexpected slot ${String(slot)}`);
-  writeFileSync(join(tmp, "items.json"), JSON.stringify(ITEMS));
+  copyFileSync(ITEMS, join(tmp, "items.json"));
   const tier = {
-    model: process.env["PB_SMOKE_MODEL"] ?? "haiku",
-    effort: process.env["PB_SMOKE_EFFORT"] ?? "low",
+    model: envOr("PB_SMOKE_MODEL", "haiku"),
+    effort: envOr("PB_SMOKE_EFFORT", "low"),
   };
   mkdirSync(join(tmp, "cfg"), { recursive: true });
   const config = {
@@ -149,6 +141,7 @@ function route(tmp: string, state: string): void {
     ["--items", join(tmp, "items.json"), "--host", "claude", "--no-jev"],
     cfgEnv,
   );
+  if (routed.status !== 0) fail(`route-fix failed: ${routed.stdout}`);
   writeFileSync(join(tmp, "route.json"), routed.stdout);
   const plan = json(routed.stdout);
   if (get(plan, "dispatch") !== "herdr") fail(`route did not dispatch to herdr: ${routed.stdout}`);
@@ -211,10 +204,15 @@ function dispatch(
   step("second start: fixer_running (exit 3)");
   let out: unknown = null;
   for (let i = 0; i < 6; i += 1) {
-    out = json(
-      babysit("dispatch-fix.sh", ["wait", "--state-file", state, "--timeout-seconds", "150"])
-        .stdout,
-    );
+    const waited = babysit("dispatch-fix.sh", [
+      "wait",
+      "--state-file",
+      state,
+      "--timeout-seconds",
+      "150",
+    ]);
+    if (waited.status !== 0) fail(`wait failed: ${waited.stdout}`);
+    out = json(waited.stdout);
     step(
       `wait: ${JSON.stringify({ status: get(out, "status"), reason: get(out, "reason"), commits: get(out, "commits") })}`,
     );
@@ -283,21 +281,27 @@ function verifyCleanup(state: string, clone: string, worktree: string, agent: st
 }
 
 /** Best effort: cleanup a fixer we started, close the herdr workspace opened for the clone, drop the tree. */
+/** The state still records a herdr worktree object (jq `.herdrWorktree // null | type == "object"`). */
+function hasLiveWorktree(state: string): boolean {
+  const worktree = existsSync(state)
+    ? get(parseOrNull(readFileSync(state, "utf8")), "herdrWorktree")
+    : null;
+  return typeof worktree === "object" && worktree !== null;
+}
+
 function finish(tmp: string, state: string): void {
-  if (
-    existsSync(state) &&
-    typeof get(json(readFileSync(state, "utf8")), "herdrWorktree") === "object"
-  ) {
-    babysit("dispatch-fix.sh", ["cleanup", "--state-file", state]);
-  }
-  const listed = sh(["herdr", "workspace", "list"]);
-  if (listed.status === 0) {
-    for (const ws of list(get(json(listed.stdout), "result", "workspaces"))) {
-      if (text(get(ws, "worktree", "repo_root")).startsWith(tmp))
-        sh(["herdr", "workspace", "close", String(get(ws, "workspace_id"))]);
+  try {
+    if (hasLiveWorktree(state)) babysit("dispatch-fix.sh", ["cleanup", "--state-file", state]);
+    const listed = sh(["herdr", "workspace", "list"]);
+    const workspaces = listed.status === 0 ? parseOrNull(listed.stdout) : null;
+    for (const ws of list(get(workspaces, "result", "workspaces"))) {
+      if (text(get(ws, "worktree", "repo_root")).startsWith(tmp)) {
+        sh(["herdr", "workspace", "close", text(get(ws, "workspace_id"))]);
+      }
     }
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
   }
-  rmSync(tmp, { recursive: true, force: true });
 }
 
 function main(): number {

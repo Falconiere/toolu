@@ -8,6 +8,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { envOr } from "./env.ts";
 
 const SEARCH_ROOTS = ["tooling", "packages", "tools", "plugins"];
 
@@ -42,7 +43,7 @@ function lintDir(oxlint: string, dir: string): boolean {
 }
 
 function main(): number {
-  const root = process.env["LINT_TS_ROOT"] ?? resolve(import.meta.dir, "../..");
+  const root = envOr("LINT_TS_ROOT", resolve(import.meta.dir, "../.."));
   const oxlint = Bun.which("oxlint") ?? join(root, "node_modules/.bin/oxlint");
   const dirs = SEARCH_ROOTS.flatMap((top) => configs(root, join(root, top)))
     .toSorted()

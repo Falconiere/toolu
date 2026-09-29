@@ -8,6 +8,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
+import { envOr } from "./env.ts";
 
 const PACKAGES = [
   "packages/toolu-core",
@@ -27,6 +28,20 @@ const RootManifest = z.looseObject({ workspaces: z.array(z.string()) });
 const Versioned = z.looseObject({ version: z.string() });
 
 class WorkspaceError extends Error {}
+
+/** A manifest parsed against `schema`; unreadable or malformed ones name the file. */
+function readManifest<T>(root: string, rel: string, schema: z.ZodType<T>): T {
+  let doc: unknown;
+  try {
+    doc = JSON.parse(readFileSync(resolve(root, rel), "utf8"));
+  } catch {
+    throw new WorkspaceError(`${rel} is not readable JSON`);
+  }
+  const parsed = schema.safeParse(doc);
+  if (!parsed.success)
+    throw new WorkspaceError(`${rel} has an unexpected shape: ${parsed.error.message}`);
+  return parsed.data;
+}
 
 /** Each export resolves through the workspace and returns what it promises. */
 async function exportSmokes(): Promise<void> {
@@ -52,9 +67,7 @@ async function check(root: string): Promise<void> {
     if (!existsSync(resolve(root, pkg, "package.json")))
       throw new WorkspaceError(`missing ${pkg}/package.json`);
   }
-  const manifest = RootManifest.parse(
-    JSON.parse(readFileSync(resolve(root, "package.json"), "utf8")),
-  );
+  const manifest = readManifest(root, "package.json", RootManifest);
   if (!WORKSPACES.every((ws) => manifest.workspaces.includes(ws))) {
     throw new WorkspaceError("package.json workspaces must include tooling, packages/*, tools/*");
   }
@@ -63,15 +76,18 @@ async function check(root: string): Promise<void> {
     cwd: root,
     encoding: "utf8",
   });
+  if (res.error !== undefined || res.status !== 0) {
+    throw new WorkspaceError(
+      `toolu-cli --version failed: ${res.error?.message ?? res.stderr.trim()}`,
+    );
+  }
   const cli = res.stdout.trim();
-  const expected = Versioned.parse(
-    JSON.parse(readFileSync(resolve(root, "tools/toolu-cli/package.json"), "utf8")),
-  );
+  const expected = readManifest(root, "tools/toolu-cli/package.json", Versioned);
   if (cli !== expected.version) throw new WorkspaceError(`toolu-cli --version reported '${cli}'`);
 }
 
 async function main(): Promise<number> {
-  const root = process.env["CHECK_WORKSPACE_ROOT"] ?? resolve(import.meta.dir, "../..");
+  const root = envOr("CHECK_WORKSPACE_ROOT", resolve(import.meta.dir, "../.."));
   try {
     await check(root);
   } catch (err: unknown) {

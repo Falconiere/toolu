@@ -7,7 +7,10 @@
     },
     "tooling": {
       "entry": [
-        "src/*.ts",
+        "src/codex-smoke.ts",
+        "src/probe-ask.ts",
+        "src/pr-babysit-herdr-smoke.ts",
+        "src/validate-plugin-packaging.ts",
         "src/**/__tests__/**"
       ],
       "project": [

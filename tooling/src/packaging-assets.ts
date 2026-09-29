@@ -2,7 +2,7 @@
  * The asset half of validate-plugin-packaging: skill frontmatter, Codex agent
  * TOML and hook manifests, plus the Repo reader and failure type both halves share.
  */
-import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { get, isNullish, list } from "./json-path.ts";
 
@@ -159,7 +159,7 @@ function checkHookFile(repo: Repo, file: string): void {
     if (prefix === undefined) fail(`${file} has a non-plugin-relative hook command: ${command}`);
     const hookPath = command.slice(prefix.length);
     const abs = repo.path(`${pluginRoot}/${hookPath}`);
-    if (!existsSync(abs) || !lstatSync(abs).isFile() || (statSync(abs).mode & 0o111) === 0) {
+    if (!existsSync(abs) || !statSync(abs).isFile() || (statSync(abs).mode & 0o111) === 0) {
       fail(`${file} references a missing or non-executable hook: ${hookPath}`);
     }
   }

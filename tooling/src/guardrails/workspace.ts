@@ -1,8 +1,8 @@
 /**
  * Monorepo dispatch. A workspace root has a guardrails.workspace.json naming
  * its packages and no source tree of its own. The four repo-level checks run
- * at the root against the manifest; every listed package then runs like
- * were a single-repo project, its paths prefixed so violations read
+ * at the root against the manifest; every listed package then runs the way a
+ * single-repo project does, its paths prefixed so violations read
  * `packages/database/src/foo.ts`. Config is a value per package, so nothing
  * leaks between packages and no re-exec is needed.
  *

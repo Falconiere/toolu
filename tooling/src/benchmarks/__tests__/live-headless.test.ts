@@ -28,11 +28,38 @@ function transcriptSet(): string[] {
   ];
 }
 
-test("the usage rollup rolls up the real sub-session transcript set", () => {
-  const roll = usageRollup(transcriptSet());
-  expect(roll.messages).toBeGreaterThan(0);
-  expect(typeof roll.totals.tokens).toBe("number");
-  expect(roll.totals.tokens).toBe(roll.totals.input + roll.totals.output + roll.totals.cache_write);
+// sub-session.rollup.json is the bash `stats_usage_rollup` output on this
+// fixture set (deleted in #277), minus by_day, which depends on the local zone.
+const GOLDEN = z
+  .record(z.string(), z.unknown())
+  .parse(JSON.parse(readFileSync(join(FIX, "sub-session.rollup.json"), "utf8")));
+
+test("the usage rollup reproduces the bash rollup on the real transcript set", () => {
+  const { by_day: byDay, ...rest } = usageRollup(transcriptSet());
+  const actual: Record<string, unknown> = rest;
+  expect(actual).toEqual(GOLDEN);
+  const days = Object.values(byDay);
+  expect(days.reduce((acc, d) => acc + d.tokens, 0)).toBe(rest.totals.tokens);
+  expect(days.reduce((acc, d) => acc + d.cache_read, 0)).toBe(rest.totals.cache_read);
+});
+
+test("the rollup keeps the final streamed frame per message.id and skips broken lines", () => {
+  using sb = createSandbox();
+  const [first = ""] = readFileSync(join(FIX, "sub-session.jsonl"), "utf8").split("\n");
+  const frame = z
+    .looseObject({ message: z.looseObject({ usage: z.looseObject({}) }) })
+    .parse(JSON.parse(first));
+  const final = {
+    ...frame,
+    message: { ...frame.message, usage: { ...frame.message.usage, output_tokens: 9999 } },
+  };
+  const file = sb.write(
+    "t.jsonl",
+    [first, JSON.stringify(final), first.slice(0, 40), "", "not json"].join("\n"),
+  );
+  const roll = usageRollup([file]);
+  expect(roll.messages).toBe(1);
+  expect(roll.totals.output).toBe(9999);
 });
 
 test.concurrent("whole-session fails clearly when the claude CLI is absent", async () => {

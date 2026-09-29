@@ -12,7 +12,7 @@ of one rule is how ceilings drift apart.
 > **In toolu.** The runner, `lib/` and `checks/` are a TypeScript port on Bun at
 > [`tooling/src/guardrails/`](../../src/guardrails/) (#277); this directory keeps the data they
 > read (`patterns/`, the schemas) and the oxlint house plugin. `bun run guardrails` runs it with the
-> same flags and exit codes. Sections below that mention `run.sh`, a scaffold copy or
+> same flags and exit codes; the deliberate differences are listed in PROVENANCE. Sections below that mention `run.sh`, a scaffold copy or
 > `__tests__/*.sh` describe the upstream kit; see `tooling/conventions/PROVENANCE.md`.
 
 ## Two paths, one module

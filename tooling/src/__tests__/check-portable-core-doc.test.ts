@@ -18,8 +18,10 @@ test.concurrent("portable-core doc checker passes on the committed doc", async (
     cwd: ROOT,
     env: { PORTABLE_CORE_DOC: undefined },
   });
-  expect(res.exitCode).toBe(0);
-  expect(res.stdout + res.stderr).toContain("ok");
+  expect({ exitCode: res.exitCode, stdout: res.stdout }).toEqual({
+    exitCode: 0,
+    stdout: "check-portable-core-doc: ok\n",
+  });
 });
 
 test.concurrent("portable-core doc checker fails when a required heading is removed", async () => {
@@ -29,8 +31,10 @@ test.concurrent("portable-core doc checker fails when a required heading is remo
   const doc = sb.write("portable-core.md", kept.join("\n"));
 
   const res = await checkDoc(doc, ROOT);
-  expect(res.exitCode).not.toBe(0);
-  expect(res.stdout + res.stderr).toContain("missing heading");
+  expect({ exitCode: res.exitCode, stderr: res.stderr }).toEqual({
+    exitCode: 1,
+    stderr: "check-portable-core-doc: missing heading: ## Pins\n",
+  });
 });
 
 test.concurrent("portable-core doc checker fails on invalid classification token maybe-later", async () => {
@@ -42,6 +46,8 @@ test.concurrent("portable-core doc checker fails on invalid classification token
   const doc = sb.write("portable-core.md", lines.join("\n"));
 
   const res = await checkDoc(doc, ROOT);
-  expect(res.exitCode).not.toBe(0);
-  expect(res.stdout + res.stderr).toContain("maybe-later");
+  expect({ exitCode: res.exitCode, stderr: res.stderr }).toEqual({
+    exitCode: 1,
+    stderr: "check-portable-core-doc: invalid classification token maybe-later\n",
+  });
 });

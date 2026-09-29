@@ -56,9 +56,9 @@ test("the golden covers every fixture and mode", () => {
 });
 
 for (const c of golden.cases) {
-  test(`parity: ${c.id}`, () => {
+  test.concurrent(`parity: ${c.id}`, async () => {
     const deviation = DEVIATIONS[c.id];
     const expected = deviation === undefined ? c.result : { ...c.result, exit: deviation.exit };
-    expect(runCase(RUNNER, c)).toEqual(expected);
+    expect(await runCase(RUNNER, c)).toEqual(expected);
   }, 60_000);
 }

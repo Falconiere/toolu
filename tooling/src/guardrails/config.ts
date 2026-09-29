@@ -8,6 +8,7 @@
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { ereToRegExp } from "./glob.ts";
 import { fatal, warn } from "./report.ts";
 import {
   entriesOf,
@@ -34,7 +35,7 @@ const WS_OPTIONAL = "$schema bannedDeps secrets shadowConfigs requiredFiles";
 
 type ShadowConfig = { found: string; use: string; why: string };
 type RequiredFile = { path: string; why: string };
-export type FilenameRule = { glob: string; regex: string; describe: string };
+export type FilenameRule = { glob: string; regex: RegExp; describe: string };
 
 /** What the four repo-level checks read; a workspace manifest carries only these. */
 export type RepoFacts = {
@@ -140,11 +141,22 @@ function treeFacts(file: string, doc: Doc): Omit<GuardrailsConfig, keyof RepoFac
     secretScanExempt: optionalStrings(file, secrets, "scanExempt"),
     filenameCase: optionalArray(file, doc, "filenameCase", (entry) => ({
       glob: stringField(file, entry, "glob"),
-      regex: stringField(file, entry, "regex"),
+      regex: compileRegex(file, stringField(file, entry, "regex")),
       describe: stringField(file, entry, "describe"),
     })),
     ownedByLinter: optionalStrings(file, doc, "ownedByLinter"),
   };
+}
+
+/** A filenameCase regex compiled once; a malformed one names the key, not a stack trace. */
+function compileRegex(file: string, source: string): RegExp {
+  try {
+    return ereToRegExp(source);
+  } catch {
+    return fatal(
+      `${file}: filenameCase regex "${source}" is not a valid regular expression — fix the pattern`,
+    );
+  }
 }
 
 /** One package's config: `file` is GR_CONFIG or guardrails.config.json. */

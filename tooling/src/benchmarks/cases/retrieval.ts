@@ -44,6 +44,10 @@ function astGrep(pattern: string, lang: string, file: string): string {
   const res = spawnSync("ast-grep", ["run", "--lang", lang, "--pattern", pattern, file], {
     encoding: "utf8",
   });
+  // The shell harness hid a missing ast-grep behind 2>/dev/null and recorded a
+  // 100% saving; a measurement that did not happen must not produce a number.
+  if (res.error !== undefined)
+    throw new Error(`retrieval: ast-grep could not run: ${res.error.message}`);
   return res.stdout;
 }
 

@@ -19,6 +19,7 @@ import { benchRoot, headCommit, resultsDir, today } from "../lib/root.ts";
 import { DEFAULT_MODEL, captured, stats } from "../lib/tokens.ts";
 import { usageRollup } from "../lib/usage.ts";
 import { percent } from "./retrieval.ts";
+import { envOr } from "../../env.ts";
 
 const DEFAULT_TASKS = resolve(import.meta.dir, "../../../../benchmarks/cases/whole-session/tasks");
 
@@ -184,8 +185,7 @@ function liveResult(
 
 export function wholeSessionMain(argv: readonly string[]): number {
   const root = benchRoot();
-  const env = process.env;
-  const configDir = env["CLAUDE_CONFIG_DIR"] ?? join(env["HOME"] ?? "", ".claude");
+  const configDir = envOr("CLAUDE_CONFIG_DIR", join(envOr("HOME", ""), ".claude"));
   const opts: WholeSessionOptions = {
     n: 5,
     model: DEFAULT_MODEL,

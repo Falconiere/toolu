@@ -122,3 +122,13 @@ test.concurrent("filename-case alone fails the gate (bash exited 0 here: pipelin
   expect(res.exit).toBe(1);
   expect(count(res.out, "filename-case")).toBe(1);
 });
+
+test.concurrent("a malformed filenameCase regex exits 3 naming the key", async () => {
+  using tree = buildFixture("clean");
+  editConfig(tree.root, (doc) => {
+    doc["filenameCase"] = [{ glob: "*.ts", regex: "([a-z", describe: "kebab-case" }];
+  });
+  const res = await gr(tree.root, []);
+  expect(res.exit).toBe(3);
+  expect(res.out).toContain('filenameCase regex "([a-z" is not a valid regular expression');
+});

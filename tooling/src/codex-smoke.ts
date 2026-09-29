@@ -23,6 +23,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { get, isNullish, list } from "./json-path.ts";
+import { envOr } from "./env.ts";
 
 const EXPECTED = { plugins: 16, sessionStart: 18 };
 const LAUNCHER = /hooks\/dist\/|\bbun\b/;
@@ -165,7 +166,7 @@ function removeAll(smoke: Smoke, expected: string[]): void {
 }
 
 function smokeHome(): { tmpRoot: string; home: string } {
-  const tmpRoot = process.env["CODEX_SMOKE_TMP_ROOT"] ?? tmpdir();
+  const tmpRoot = envOr("CODEX_SMOKE_TMP_ROOT", tmpdir());
   if (!existsSync(tmpRoot)) fail(`temporary root does not exist: ${tmpRoot}`);
   if (lstatSync(tmpRoot).isSymbolicLink()) fail(`temporary root must not be a symlink: ${tmpRoot}`);
   const real = realpathSync(tmpRoot);
@@ -174,10 +175,7 @@ function smokeHome(): { tmpRoot: string; home: string } {
 
 /** Remove only what this run created: a toolu-codex-smoke.* directory directly under the temp root. */
 function cleanup(tmpRoot: string, home: string): void {
-  if (
-    process.env["CODEX_SMOKE_KEEP_HOME"] !== undefined &&
-    process.env["CODEX_SMOKE_KEEP_HOME"] !== "0"
-  ) {
+  if (envOr("CODEX_SMOKE_KEEP_HOME", "0") !== "0") {
     process.stdout.write(`codex-smoke: preserved ${home}\n`);
     return;
   }
@@ -189,7 +187,7 @@ function cleanup(tmpRoot: string, home: string): void {
 function main(): number {
   let created: { tmpRoot: string; home: string } | null = null;
   try {
-    const root = process.env["CODEX_SMOKE_REPO"] ?? resolve(import.meta.dir, "../..");
+    const root = envOr("CODEX_SMOKE_REPO", resolve(import.meta.dir, "../.."));
     if (Bun.which("codex") === null) fail("codex CLI is required");
     if (!existsSync(join(root, ".agents/plugins"))) fail(`not a Codex marketplace: ${root}`);
     created = smokeHome();

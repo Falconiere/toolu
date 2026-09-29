@@ -18,6 +18,7 @@ import {
   checkSkills,
   fail,
 } from "./packaging-assets.ts";
+import { envOr } from "./env.ts";
 
 const WORKSPACE_PACKAGES = [
   "packages/toolu-core/package.json",
@@ -165,7 +166,7 @@ function checkPlugins(repo: Repo, version: string): number {
 }
 
 function main(): number {
-  const repo = new Repo(process.env["PACKAGING_ROOT"] ?? resolve(import.meta.dir, "../.."));
+  const repo = new Repo(envOr("PACKAGING_ROOT", resolve(import.meta.dir, "../..")));
   try {
     const version = get(repo.json("package.json"), "version");
     if (typeof version !== "string") fail("package.json must contain a version");

@@ -6,6 +6,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { envOr } from "./env.ts";
 
 const ROOT = resolve(import.meta.dir, "../..");
 const FIXTURE = resolve(ROOT, "tooling/fixtures/portable-core/protected-files-pre.json");
@@ -81,7 +82,7 @@ function check(docPath: string): void {
 }
 
 function main(): number {
-  const docPath = process.env["PORTABLE_CORE_DOC"] ?? resolve(ROOT, "docs/portable-core.md");
+  const docPath = envOr("PORTABLE_CORE_DOC", resolve(ROOT, "docs/portable-core.md"));
   try {
     check(docPath);
   } catch (err: unknown) {

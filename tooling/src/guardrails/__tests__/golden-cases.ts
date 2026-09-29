@@ -8,7 +8,6 @@
  * replaced by <ROOT>: bash fanned workspace packages out in parallel, so its
  * line order was never part of the contract.
  */
-import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -152,24 +151,27 @@ function lines(text: string, root: string): string[] {
 }
 
 /** Run one case with `argv0` (the runner command) in a tree built for it. */
-export function runCase(argv0: readonly string[], c: GoldenCase): GoldenResult {
+export async function runCase(argv0: readonly string[], c: GoldenCase): Promise<GoldenResult> {
   using tree = buildFixture(c.fixture);
   for (const [rel, body] of Object.entries(c.mutate ?? {})) tree.write(rel, body);
   // HOME outside the tree: a runtime writing caches under $HOME (Bun on macOS
   // writes ~/Library) would otherwise make the tree look dirty to --stop.
   const home = mkdtempSync(join(tmpdir(), "gr-home-"));
-  const [cmd = "", ...rest] = argv0;
-  const res = spawnSync(cmd, [...rest, ...c.args], {
-    cwd: tree.root,
-    env: { PATH: process.env["PATH"] ?? "", HOME: home },
-    input: c.stdin.split("<ROOT>").join(tree.root),
-    encoding: "utf8",
-  });
-  rmSync(home, { recursive: true, force: true });
-  if (res.error) throw res.error;
-  return {
-    exit: res.status ?? -1,
-    stdout: lines(res.stdout, tree.root),
-    stderr: lines(res.stderr, tree.root),
-  };
+  try {
+    const proc = Bun.spawn([...argv0, ...c.args], {
+      cwd: tree.root,
+      env: { PATH: process.env["PATH"] ?? "", HOME: home },
+      stdin: Buffer.from(c.stdin.split("<ROOT>").join(tree.root)),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exit] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    return { exit, stdout: lines(stdout, tree.root), stderr: lines(stderr, tree.root) };
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
 }

@@ -69,7 +69,13 @@ export function patterns(
     { cwd: ctx.root, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 },
   );
   if (res.error) throw res.error;
-  const status = res.status ?? 1;
+  // A signal kill (OOM, SIGKILL) has no status: the scan did not happen.
+  if (res.status === null) {
+    fatal(
+      `ast-grep was killed by ${res.signal ?? "a signal"} scanning ${targets.join(" ")}; the pattern checks did NOT run`,
+    );
+  }
+  const status = res.status;
   if (status !== 0 && status !== 1) {
     fatal(
       `ast-grep exited ${String(status)} scanning ${targets.join(" ")} — a rule in ${rules} is malformed or unreadable; the pattern checks did NOT run`,

@@ -98,8 +98,16 @@ function globToRegExp(pattern: string): RegExp {
   return new RegExp(`^${out}$`, "u");
 }
 
+const compiled = new Map<string, RegExp>();
+
+/** Globs repeat across every file of a walk, so each is compiled once. */
 export function matchGlob(pattern: string, subject: string): boolean {
-  return globToRegExp(pattern).test(subject);
+  let regex = compiled.get(pattern);
+  if (regex === undefined) {
+    regex = globToRegExp(pattern);
+    compiled.set(pattern, regex);
+  }
+  return regex.test(subject);
 }
 
 /** True when any pattern in the list matches. */

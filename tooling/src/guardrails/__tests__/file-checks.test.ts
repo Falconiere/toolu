@@ -2,7 +2,7 @@
 // file-addressable checks (folder-tree, file-size, filename-case, patterns,
 // secret-content, no-barrels), each against a real fixture repo.
 import { expect, test } from "bun:test";
-import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { buildFixture } from "./fixture-tree.ts";
@@ -191,4 +191,15 @@ test.concurrent("AC-22 barrelNames=[mod.rs] fires with the Rust-specific remedy"
   const { out } = await gr(tree.root, ["--file", "src/store/mod.rs"]);
   expect(count(out, "no-barrels")).toBe(1);
   expect(out).toContain("sibling file");
+});
+
+test.concurrent("AC-19 an ast-grep killed by a signal exits 3, never a silent green", async () => {
+  // The package-local binary is resolved first, exactly as a devDependency would be.
+  using tree = buildFixture("violating", {
+    "node_modules/.bin/ast-grep": "#!/bin/sh\nkill -9 $$\n",
+  });
+  chmodSync(join(tree.root, "node_modules/.bin/ast-grep"), 0o755);
+  const res = await gr(tree.root, ["--only", "patterns"]);
+  expect(res.exit).toBe(3);
+  expect(res.out).toContain("ast-grep was killed by SIGKILL");
 });

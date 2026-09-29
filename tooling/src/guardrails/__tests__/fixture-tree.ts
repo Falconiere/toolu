@@ -5,7 +5,7 @@
  * gets tracked, which is what makes the clean and violating trees differ for
  * the secrets check.
  *
- * Node built-ins only: the golden capture runs this module inside a bare
+ * Node built-ins only: the one-time golden capture ran this module inside a bare
  * container to drive the bash baseline, with no node_modules available.
  */
 import { spawnSync } from "node:child_process";

@@ -5,12 +5,12 @@
  */
 import type { FilenameRule, GuardrailsConfig } from "../config.ts";
 import type { CheckContext, Mode } from "../context.ts";
-import { ereToRegExp, matchGlob } from "../glob.ts";
+import { matchGlob } from "../glob.ts";
 import { findFiles, isDir } from "../walk.ts";
 
 function report(ctx: CheckContext<GuardrailsConfig>, rule: FilenameRule, path: string): void {
   const base = path.slice(path.lastIndexOf("/") + 1);
-  if (!matchGlob(rule.glob, base) || ereToRegExp(rule.regex).test(base)) return;
+  if (!matchGlob(rule.glob, base) || rule.regex.test(base)) return;
   ctx.report.violation(
     "filename-case",
     path,

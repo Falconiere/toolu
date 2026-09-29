@@ -6,6 +6,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { envOr } from "../../env.ts";
 
 export function benchRoot(from: string = import.meta.dir): string {
   const res = spawnSync("git", ["-C", from, "rev-parse", "--show-toplevel"], { encoding: "utf8" });
@@ -20,8 +21,7 @@ export function resultsDir(
   root: string,
   env: Record<string, string | undefined> = process.env,
 ): string {
-  const override = env["BENCH_RESULTS_DIR"];
-  return override === undefined || override === "" ? join(root, "benchmarks/results") : override;
+  return envOr("BENCH_RESULTS_DIR", join(root, "benchmarks/results"), env);
 }
 
 /** HEAD of the repo, or "unknown" outside a work tree. */
