@@ -84,14 +84,31 @@ Wrappers are unwrapped by their own option tables: `sudo`, `doas`, `env`, `comma
 
 ## Budget evidence
 
-`bun run bench:shell` builds two probe hook entries with the plugin bundle pipeline (`stageBundles`): one empty, and one that analyzes `git push origin HEAD:feat/x`. It runs them interleaved from a directory with no `node_modules`, and times `analyzeShell` plus the git and write helpers over every fixture command. `--assert` exits 1 when a budget is exceeded.
+`bun run bench:shell` builds three probe hook entries with the plugin bundle pipeline (`stageBundles`):
+- an empty one;
+- a representative one: `analyzeShell` plus push detection on `git push origin HEAD:feat/x`;
+- one that imports and calls the whole public surface.
 
-CI asserts only the bundle size (`tooling/src/__tests__/bench-shell.test.ts`), because wall-clock numbers depend on the machine.
+It runs the empty probe and the full-surface probe interleaved from a directory with no `node_modules`, and times `analyzeShell` plus the git and write helpers over every fixture command. `--assert` exits 1 when a budget is exceeded.
+
+CI asserts only the bundle sizes (`tooling/src/__tests__/bench-shell.test.ts`), because wall-clock numbers depend on the machine.
 
 | Measure | Budget | Measured |
 |---|---|---|
-| Bundle size added (unminified) | ≤ 200,000 B | 197,497 B (empty probe 73 B, shell probe 197,570 B) |
-| Cold-start p50, shell probe minus empty probe (40 interleaved runs) | ≤ 5 ms | +3.50 ms (empty 16.75 ms, shell 20.25 ms; p90 17.51 / 21.68 ms) |
-| Parse and walk over 235 fixture commands, 4,700 samples | p99 ≤ 0.1 ms | p50 3.1 µs, p99 19.5 µs, max 1.1 ms |
+| Bundle size added, representative entry (unminified) | ≤ 200,000 B (#284) | 198,556 B |
+| Bundle size added, whole public surface (unminified) | ≤ 210,000 B (regression ceiling) | 206,019 B: **over #284's 200 KB**, see below |
+| Cold-start p50, full-surface probe minus empty probe (40 interleaved runs) | ≤ 5 ms | +3.79 ms (empty 18.44 ms, full 22.22 ms; p90 19.97 / 23.10 ms) |
+| Parse and walk over 235 fixture commands, 4,700 samples | p99 ≤ 0.1 ms | p50 3.8 µs, p99 20.9 µs, max 2.5 ms |
 
-Measured on 2026-09-29 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple M2 Max), with other agent sessions running on the same machine. Load raises both absolute cold-start numbers alike, and the budget is the difference between them. For comparison, the shipped `is_git_push` takes 0.23 s under bash 5.3 and 0.61 s under `/bin/bash` 3.2 on the 4.3 KB fixture `283-11a`.
+Measured on 2026-09-29 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple M2 Max), with other agent sessions on the same machine (load average about 5). Load raises both absolute cold-start numbers alike, and the budget is the difference between them. For comparison, the shipped `is_git_push` takes 0.23 s under bash 5.3 and 0.61 s under `/bin/bash` 3.2 on the 4.3 KB fixture `283-11a`.
+
+**Why the whole surface exceeds 200 KB.**
+- unbash alone is 174,729 B, and the issue's prototype analyzer added about 10 KB.
+- This analyzer is about 31 KB, because review found cases the prototype missed:
+  - bash globs unquoted redirect targets and arguments (`> .en[v]` writes `.env`);
+  - dynamic targets must keep a matchable text (`dd of=$HOME/.env`);
+  - `cp`/`mv`/`install` into a directory;
+  - `env -` and `env -P`;
+  - `xargs` running a command zero times.
+- Compacting the option tables saved about 0.9 KB. Reaching 200 KB for the whole surface would mean dropping those fixes.
+- A bundle that uses only part of the API (for example analysis plus push detection) stays under 200 KB.
