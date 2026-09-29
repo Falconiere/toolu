@@ -256,18 +256,18 @@ flowchart TD
     end
     subgraph plugins["domain plugins"]
         RQ["rust-quality<br/>register.sh"]
-        TQ["ts-quality<br/>register.sh"]
+        TQ["ts-quality<br/>register.js"]
         AG["ast-grep<br/>register.js"]
     end
     RQ -- "assemble concern fragments at SessionStart" --> R[("registry<br/>host config dir/toolu/")]
-    TQ -- "one assembled module per language" --> R
+    TQ -- "one bundled ESM module, run in process" --> R
     AG -- "bundled ESM modules, run in process" --> R
     CM -- "namespaced plugin__name.sh" --> R
     R --> D
     D -- "runs a module only while its plugin is installed" --> OUT([enforced edit])
 ```
 
-At `SessionStart`, each domain plugin's `register.sh` contributes to the registry as `<plugin-spec>__<name>.sh` — `rust-quality`/`ts-quality`/`python-quality` assemble their ordered `hooks/concerns/` fragments into a single module per language. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. As plugins move to TypeScript on Bun, each one instead registers a single bundled ESM module per event (`<plugin-spec>__<name>.js`), with no fragment assembly, and the core imports it in-process; `ast-grep` already does. See [docs/registry.md](docs/registry.md).
+At `SessionStart`, `rust-quality` and `python-quality` still assemble their ordered `hooks/concerns/` fragments through `register.sh` into one `<plugin-spec>__<name>.sh` registry module per language. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. `ts-quality` and `ast-grep` register bundled ESM modules (`<plugin-spec>__<name>.js`) that the core imports in-process. See [docs/registry.md](docs/registry.md).
 
 <details>
 <summary><b>Full repository layout</b></summary>
@@ -289,7 +289,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     ├── exa-search/             # exa-search skill + Exa REST wrapper
     ├── jev/                    # jev skill + TypeSafe System One REST wrapper
     ├── rust-quality/           # Rust PostToolUse quality fragments, assembled at SessionStart
-    ├── ts-quality/             # TypeScript PostToolUse quality fragments, assembled at SessionStart
+    ├── ts-quality/             # TypeScript PostToolUse quality checks, one bundled registry module
     ├── python-quality/         # Python PostToolUse quality fragments, assembled at SessionStart
     ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook
     ├── brainstorm/             # brainstorm skill + design question bank
