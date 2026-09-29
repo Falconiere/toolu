@@ -7,6 +7,7 @@
 import { closeSync, openSync, readSync, statSync } from "node:fs";
 
 const CHUNK = 64 * 1024;
+const NEWLINE = 0x0a;
 
 /** A regular file (symlinks followed), bash `[ -f ]`. */
 export function isRegularFile(path: string): boolean {
@@ -34,22 +35,33 @@ export function eachLine(path: string, visit: (line: string) => boolean | void):
     return "unreadable";
   }
   try {
-    const buf = Buffer.allocUnsafe(CHUNK);
-    let carry = "";
-    for (;;) {
-      const n = readSync(fd, buf, 0, CHUNK, null);
-      if (n === 0) break;
-      const lines = (carry + buf.toString("latin1", 0, n)).split("\n");
-      carry = lines.pop() ?? "";
-      for (const line of lines) {
-        if (visit(line) === true) return "stopped";
-      }
-    }
-    if (carry !== "" && visit(carry) === true) return "stopped";
-    return "done";
-  } catch {
-    return "unreadable";
+    return walkLines(fd, visit);
+  } catch (error) {
+    // awk reads a directory as an empty file.
+    return isErrno(error, "EISDIR") ? "done" : "unreadable";
   } finally {
     closeSync(fd);
   }
+}
+
+function isErrno(error: unknown, code: string): boolean {
+  return error instanceof Error && "code" in error && error.code === code;
+}
+
+/** Lines are sliced straight from the chunk; only a line spanning chunks is carried. */
+function walkLines(fd: number, visit: (line: string) => boolean | void): LineWalk {
+  const buf = Buffer.allocUnsafe(CHUNK);
+  let carry = "";
+  for (let n = readSync(fd, buf, 0, CHUNK, null); n > 0; n = readSync(fd, buf, 0, CHUNK, null)) {
+    let start = 0;
+    for (let nl = buf.indexOf(NEWLINE, 0); nl !== -1 && nl < n; nl = buf.indexOf(NEWLINE, start)) {
+      const line = carry + buf.toString("latin1", start, nl);
+      carry = "";
+      start = nl + 1;
+      if (visit(line) === true) return "stopped";
+    }
+    carry += buf.toString("latin1", start, n);
+  }
+  if (carry !== "" && visit(carry) === true) return "stopped";
+  return "done";
 }
