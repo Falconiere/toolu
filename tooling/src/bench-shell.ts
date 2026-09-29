@@ -6,12 +6,13 @@
  * - `shell`: imports and calls every runtime export of `@toolu/core/shell`;
  * - `writes`: `analyzeShell` plus `writeTargets` from `@toolu/core/shell/writes`,
  *   the entry protected-files needs;
- * - `together`: both entries in one bundle.
+ * - `together`: every public export of both entries in one bundle.
  *
- * Budgets: `shell` and `writes` each add at most 200,000 bytes unminified;
- * `together` is reported. Cold start runs `together` (the heaviest) against
- * `empty`, interleaved from a temp dir with no node_modules: p50 delta at most
- * 5 ms. Parse and walk time `analyzeShell` plus the git and write helpers over
+ * Budgets: `shell` and `writes` each add at most 200,000 bytes unminified, and
+ * `together`, the PreToolUse dispatcher's case (#258), at most 205,000 bytes by
+ * product-owner decision (unbash alone is about 175 KB). Cold start runs
+ * `together` (the heaviest) against `empty`, interleaved from a temp dir with
+ * no node_modules: p50 delta at most 5 ms. Parse and walk time `analyzeShell` plus the git and write helpers over
  * every fixture command: p99 at most 0.1 ms.
  *
  * Numbers are machine-bound, so CI asserts only the sizes (bench-shell.test.ts).
@@ -44,6 +45,7 @@ export const PROBE_COMMAND = "git push origin HEAD:feat/x";
 export const BUDGET = {
   bundleBytes: 200_000,
   writesBundleBytes: 200_000,
+  togetherBundleBytes: 205_000,
   coldStartMs: 5,
   parseP99Us: 100,
 };
@@ -84,7 +86,7 @@ export interface ShellBench {
     deltaBytes: number;
     /** `analyzeShell` plus `@toolu/core/shell/writes`. */
     writesDeltaBytes: number;
-    /** Both entries together (reported, not budgeted). */
+    /** Both entries together, every public export of each. */
     togetherDeltaBytes: number;
   };
   readonly coldStart: {
@@ -247,6 +249,10 @@ export function overBudget(bench: ShellBench): string[] {
     problems.push(
       `writes bundle +${bench.bundle.writesDeltaBytes} B > ${BUDGET.writesBundleBytes} B`,
     );
+  if (bench.bundle.togetherDeltaBytes > BUDGET.togetherBundleBytes)
+    problems.push(
+      `together bundle +${bench.bundle.togetherDeltaBytes} B > ${BUDGET.togetherBundleBytes} B`,
+    );
   if (bench.coldStart.deltaP50 > BUDGET.coldStartMs)
     problems.push(
       `cold start +${bench.coldStart.deltaP50.toFixed(2)} ms > ${BUDGET.coldStartMs} ms`,
@@ -262,7 +268,7 @@ function report(bench: ShellBench): string {
   const { machine: m, bundle: b, coldStart: c, parse: p } = bench;
   return [
     `bench:shell — bun ${m.bun}, ${m.platform} ${m.arch}, ${m.cpu}, ${m.date}`,
-    `bundle      empty ${b.emptyBytes} B; @toolu/core/shell +${b.deltaBytes} B (budget ${BUDGET.bundleBytes} B); analyzeShell + writes +${b.writesDeltaBytes} B (budget ${BUDGET.writesBundleBytes} B); both entries +${b.togetherDeltaBytes} B (reported)`,
+    `bundle      empty ${b.emptyBytes} B; @toolu/core/shell +${b.deltaBytes} B (budget ${BUDGET.bundleBytes} B); analyzeShell + writes +${b.writesDeltaBytes} B (budget ${BUDGET.writesBundleBytes} B); both entries +${b.togetherDeltaBytes} B (budget ${BUDGET.togetherBundleBytes} B)`,
     `cold start  ${c.runs} interleaved runs: empty p50 ${ms(c.emptyP50)} p90 ${ms(c.emptyP90)}, both-entries p50 ${ms(c.shellP50)} p90 ${ms(c.shellP90)}, delta p50 ${ms(c.deltaP50)} (budget ${BUDGET.coldStartMs} ms)`,
     `parse+walk  ${p.commands} commands, ${p.samples} samples: p50 ${p.p50Us.toFixed(1)} µs, p99 ${p.p99Us.toFixed(1)} µs, max ${p.maxUs.toFixed(1)} µs (budget p99 ${BUDGET.parseP99Us} µs)`,
     `probe       ${bench.probeOutput}`,

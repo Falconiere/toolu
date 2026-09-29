@@ -48,7 +48,7 @@ const Report = z.object({
   probeOutput: z.string(),
 });
 
-test("the shell and writes entries fit 200,000 bytes and run without node_modules", async () => {
+test("each entry fits 200,000 bytes, both together 205,000, and they run without node_modules", async () => {
   const res = await run([process.execPath, SCRIPT, "--json", "--runs", "3", "--rounds", "1"], {
     cwd: ROOT,
     timeoutMs: 120_000,
@@ -57,10 +57,19 @@ test("the shell and writes entries fit 200,000 bytes and run without node_module
   const report = Report.parse(JSON.parse(res.stdout));
   expect(report.bundle.deltaBytes).toBeLessThanOrEqual(BUDGET.bundleBytes);
   expect(report.bundle.writesDeltaBytes).toBeLessThanOrEqual(BUDGET.writesBundleBytes);
-  expect(report.bundle.togetherDeltaBytes).toBeGreaterThan(report.bundle.deltaBytes);
+  expect(report.bundle.togetherDeltaBytes).toBeLessThanOrEqual(BUDGET.togetherBundleBytes);
+  expect(report.bundle.togetherDeltaBytes).toBeGreaterThan(report.bundle.writesDeltaBytes);
   expect(JSON.parse(report.probeOutput)).toMatchObject({ push: "yes", destination: "feat/x" });
   expect(report.parse.commands).toBe(fixtureCommands().length);
   expect(report.coldStart.runs).toBe(3);
+});
+
+test.concurrent("the size budgets are the product owner's numbers", () => {
+  expect(BUDGET).toMatchObject({
+    bundleBytes: 200_000,
+    writesBundleBytes: 200_000,
+    togetherBundleBytes: 205_000,
+  });
 });
 
 test.concurrent("the fixture set covers both fixture files", () => {
@@ -72,9 +81,9 @@ test.concurrent("overBudget names every budget a report exceeds", () => {
     machine: { bun: "1.4.2", platform: "linux", arch: "x64", cpu: "cpu", date: "2026-09-28" },
     bundle: {
       emptyBytes: 73,
-      deltaBytes: 197_673,
-      writesDeltaBytes: 198_173,
-      togetherDeltaBytes: 202_152,
+      deltaBytes: 197_434,
+      writesDeltaBytes: 199_180,
+      togetherDeltaBytes: 203_159,
     },
     coldStart: { runs: 40, emptyP50: 5, shellP50: 8, deltaP50: 3, emptyP90: 6, shellP90: 9 },
     parse: { commands: 235, samples: 4700, p50Us: 3, p99Us: 40, maxUs: 900 },
@@ -83,13 +92,19 @@ test.concurrent("overBudget names every budget a report exceeds", () => {
   expect(overBudget(within)).toEqual([]);
   const over = {
     ...within,
-    bundle: { ...within.bundle, deltaBytes: 200_001, writesDeltaBytes: 200_001 },
+    bundle: {
+      ...within.bundle,
+      deltaBytes: 200_001,
+      writesDeltaBytes: 200_001,
+      togetherDeltaBytes: 205_001,
+    },
     coldStart: { ...within.coldStart, deltaP50: 5.5 },
     parse: { ...within.parse, p99Us: 120 },
   };
   expect(overBudget(over).map((problem) => problem.split(" ")[0])).toEqual([
     "bundle",
     "writes",
+    "together",
     "cold",
     "parse",
   ]);

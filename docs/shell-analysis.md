@@ -93,7 +93,7 @@ Wrappers are unwrapped by their own option tables: `sudo`, `doas`, `env`, `comma
 - `empty`, the baseline;
 - `shell`, which imports and calls every runtime export of `@toolu/core/shell`;
 - `writes`, which is `analyzeShell` plus `@toolu/core/shell/writes`, the entry protected-files needs;
-- `together`, both entries in one bundle.
+- `together`, every public export of both entries in one bundle, as the PreToolUse dispatcher (#258) carries them.
 
 It runs `empty` and `together`, the heaviest, interleaved from a directory with no `node_modules`, and times `analyzeShell` plus the git and write helpers over every fixture command. `--assert` exits 1 when a budget is exceeded.
 
@@ -103,14 +103,17 @@ CI asserts the bundle sizes (`tooling/src/__tests__/bench-shell.test.ts`), becau
 |---|---|---|
 | Bundle size added, every runtime export of `@toolu/core/shell` (unminified) | ≤ 200,000 B | 197,434 B |
 | Bundle size added, `analyzeShell` + `@toolu/core/shell/writes` (unminified) | ≤ 200,000 B | 199,180 B |
-| Bundle size added, both entries together (unminified) | reported | 203,159 B, see below |
-| Cold-start p50, `together` minus `empty` (40 interleaved runs) | ≤ 5 ms | +3.80 ms (empty 19.68 ms, together 23.48 ms; p90 21.03 / 25.37 ms) |
-| Parse and walk over 235 fixture commands, 4,700 samples | p99 ≤ 0.1 ms | p50 3.6 µs, p99 19.7 µs, max 1.7 ms |
+| Bundle size added, both entries together (unminified) | ≤ 205,000 B, by product-owner decision | 203,159 B |
+| Cold-start p50, `together` minus `empty` (40 interleaved runs) | ≤ 5 ms | +4.16 ms (empty 20.61 ms, together 24.78 ms; p90 22.96 / 26.55 ms) |
+| Parse and walk over 235 fixture commands, 4,700 samples | p99 ≤ 0.1 ms | p50 3.3 µs, p99 17.4 µs, max 2.1 ms |
 
-Measured on 2026-09-29 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple M2 Max), with other agent sessions on the same machine (load average about 4). Load raises both absolute cold-start numbers alike, and the budget is the difference between them. For comparison, the shipped `is_git_push` takes 0.23 s under bash 5.3 and 0.61 s under `/bin/bash` 3.2 on the 4.3 KB fixture `283-11a`.
+Measured on 2026-09-29 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple M2 Max), with other agent sessions on the same machine (load average about 2.6). Load raises both absolute cold-start numbers alike, and the budget is the difference between them. For comparison, the shipped `is_git_push` takes 0.23 s under bash 5.3 and 0.61 s under `/bin/bash` 3.2 on the 4.3 KB fixture `283-11a`.
 
 **Where the bytes go.**
-- unbash alone is 174,613 B (lexer 107 KB, parser 46 KB, arithmetic 13 KB) and cannot be reduced.
+- The combined bundle's 203,159 B, per module:
+  - unbash 174,613 B: lexer 107,086, parser 46,219, arithmetic 13,152, ansi-c 3,243, word 2,553, parts 1,550, chars 810. It is pinned, and its lexer is one class a bundler cannot trim.
+  - the analyzer 27,789 B: words 5,685, writes 5,676, walk 5,613, argv 3,770, git 2,483, options 2,285, parse 1,169, rules 625, event 309, types 174. No module appears twice, and Bun strips comments.
+  - the probe's own code, about 0.76 KB.
 - The analyzer grew past the issue prototype's 10 KB because review found cases the prototype missed:
   - bash globs unquoted redirect targets and arguments (`> .en[v]` writes `.env`);
   - dynamic targets keep a matchable text;
@@ -122,4 +125,5 @@ Measured on 2026-09-29 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple M2 Ma
   - a single walk switch and a single-loop option parser;
   - table-driven writers.
 - `writeTargets`, the largest single-consumer piece, moved to its own entry.
-- A bundle that imports both entries adds 203,159 B, over 200 KB. The PreToolUse dispatcher (#258) is such a bundle: it carries protected-files and the other shell gates. unbash is 174.6 KB of that and the analyzer 27.7 KB, so structural work cannot close the 3.2 KB gap; the budget for that bundle is an open decision.
+- The shell option reader now reuses `parseArgs` rather than duplicating it (−239 B), which also makes `bash +c` analyzed like `-c`.
+- Both entries together stay above 200 KB: unbash leaves the analyzer about 25 KB, and structural work cannot recover the rest without shortening names or dropping coverage. The product owner set that bundle's budget at 205,000 B; each entry alone stays within 200,000 B.
