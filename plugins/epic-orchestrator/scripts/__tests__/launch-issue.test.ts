@@ -25,7 +25,10 @@ describe("BriefTest", () => {
       "`gh issue view https://github.com/Falconiere/comemory/issues/255 --comments`",
     );
     expect(brief).toContain("Part of Falconiere/comemory#248");
-    expect(brief).toContain(join(HERE, "report.sh"));
+    expect(brief).toContain(
+      `| \`bun "${join(HERE, "report.ts")}" /state/status/comemory-255.json <phase>`,
+    );
+    expect(brief).not.toContain("report.sh");
     for (const phase of [
       "report brainstorm",
       "report spec",
