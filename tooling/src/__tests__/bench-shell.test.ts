@@ -1,9 +1,10 @@
 /**
  * `bench:shell` (#284 AC-1): the probe bundles are built by the plugin bundle
- * pipeline, the shell probe runs from a directory with no node_modules, and it
- * adds at most 200,000 bytes. Wall-clock numbers are machine-bound, so this suite
- * checks their presence, not their values; `bun run bench:shell --assert` checks
- * the timing budgets on a given machine.
+ * pipeline and run from a directory with no node_modules. The representative
+ * probe adds at most 200,000 bytes (#284's budget) and the whole-surface probe
+ * at most the 210,000-byte regression ceiling. Wall-clock numbers are
+ * machine-bound, so this suite checks their presence, not their values;
+ * `bun run bench:shell --assert` checks the timing budgets on a given machine.
  */
 import { expect, test } from "bun:test";
 import { resolve } from "node:path";
@@ -48,7 +49,7 @@ const Report = z.object({
   probeOutput: z.string(),
 });
 
-test("the shell probe bundle fits the size budget and runs without node_modules", async () => {
+test("both probe bundles fit their size budgets and run without node_modules", async () => {
   const res = await run([process.execPath, SCRIPT, "--json", "--runs", "3", "--rounds", "1"], {
     cwd: ROOT,
     timeoutMs: 120_000,
