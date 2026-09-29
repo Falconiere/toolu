@@ -1,9 +1,9 @@
 /**
  * Benchmark stand-in for a ported module (#258, AC-5): the `pre-tools` entry
- * with `mcp-blocker` switched from its bash fallback to a native module. The
- * pre-tools matcher never routes an `mcp__` tool here, and for every other
- * tool the bash module is silent, so on the benchmark corpus this native
- * module decides exactly what the bash one did. The real port is #260.
+ * with `mcp-blocker` switched from its bash fallback to a native module that
+ * always allows. The bash module is silent for every tool that is not
+ * `mcp__<server>__<tool>`, and the benchmark slice has none, so there the
+ * native module decides exactly what the bash one did. The real port is #260.
  * `tooling/src/benchmarks/pre-tools-latency.ts` bundles it with `HOOKS_DIR`
  * defined, since the bundle runs from a temp directory.
  */

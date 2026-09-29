@@ -91,6 +91,11 @@ const SCENARIOS: Scenario[] = [
     expect: /good-context/,
   },
   {
+    name: "a module killed by a signal is skipped",
+    modules: { a: "echo partial; kill -TERM $$", b: advise("survivor") },
+    expect: /survivor/,
+  },
+  {
     name: "non-JSON stdout is ignored",
     modules: { a: "echo not json", b: advise("kept") },
     expect: /kept/,
@@ -263,4 +268,19 @@ test.concurrent("exit 2 forwards the blocking module's stderr", async () => {
   writeModule(modulesDir(sb), "a.sh", "echo blocked-by-exit >&2; exit 2");
   const ts = await runTsDispatch(sb, BASH, hookEnv(sb));
   expect(ts.stderr).toContain("blocked-by-exit");
+});
+
+test.concurrent("a signalled module is reported with the status bash gives it", async () => {
+  using sb = createSandbox({ git: true });
+  writeModule(modulesDir(sb), "a.sh", "kill -TERM $$");
+  const ts = await runTsDispatch(sb, BASH, hookEnv(sb));
+  expect(ts.stderr).toContain("toolu-dispatch: module a.sh exited 143; output skipped");
+});
+
+test.concurrent("a module bash cannot start is reported as 127 and skipped", async () => {
+  using sb = createSandbox({ git: true });
+  writeModule(modulesDir(sb), "a.sh", "true");
+  const ts = await runTsDispatch(sb, BASH, { ...hookEnv(sb), PATH: sb.path("no-bin") });
+  expect(ts).toMatchObject({ stdout: "", exitCode: 0 });
+  expect(ts.stderr).toContain("toolu-dispatch: module a.sh exited 127; output skipped");
 });

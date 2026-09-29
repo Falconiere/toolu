@@ -65,7 +65,7 @@ Merging outcomes (deny over ask over advisory) and encoding them for the host be
 
 ## PreToolUse dispatch
 
-toolu's PreToolUse hooks are Bun bundles wired with the generated launcher: `hooks/dist/pre-tools.js` for edit, shell and search tools, and `pre-tools-mcp.js` and `pre-tools-agent.js`, which run `mcp-blocker.sh` and `agent-tier.sh` unchanged. `dispatchPreTool` (`@toolu/core/dispatch`) is a TypeScript port of `pre-tools/mod.sh` and `dispatch.sh`:
+toolu's PreToolUse entry for edit, shell and search tools runs the Bun bundle `hooks/dist/pre-tools.js`, wired with the generated launcher. The standalone `mcp__` and subagent entries keep running `mcp-blocker.sh` and `agent-tier.sh` directly: a Bun wrapper around an unported script would add Bun's startup, about 20 ms, to every call. #260 and #262 switch each entry when its module is ported. `dispatchPreTool` (`@toolu/core/dispatch`) is a TypeScript port of `pre-tools/mod.sh` and `dispatch.sh`:
 
 - **Order.** Built-in modules run in table order, which is the byte order `mod.sh` globbed. `runRegistry` then walks `pre-tools.d`. `.js` modules run in process. `.sh` modules run on bash with the environment `mod.sh` exported: `input`, `tool_name`, `TOOLU_LIB_DIR`, `TOOLU_CONFIG_DIR`, and `TOOLU_EDIT_*` during a patch walk.
 - **Decisions.** The first deny is emitted exactly as its module wrote it, and the walk stops. A module exit of 2 blocks with that module's stderr. Any other non-zero exit is reported on stderr and skipped. The first ask is held and receives every advisory. Advisories are deduped and merged into one `additionalContext` and one `systemMessage`.
@@ -74,7 +74,7 @@ toolu's PreToolUse hooks are Bun bundles wired with the generated launcher: `hoo
 - **Cutover.** A port replaces that module's `bashModule(...)` in `plugins/toolu/hooks/src/pre-tools/builtins.ts` with a native `{ kind: "native", name, run(event, ctx) }`, whose signature matches `RegistryModule.run`. Its `Decision` is encoded for the host with `encodeDecision`, so an `ask` on Codex becomes a deny.
 - **Failure.** An unexpected dispatcher error exits 2 and blocks the tool, as a missing Bun does.
 
-`bun run tooling/src/benchmarks/pre-tools-latency.ts [--runs N] [--assert]` measures p50 for `bash mod.sh`, the bundle, and the bundle with one module native, against the epic budget of bash + 5 ms. On an Apple M2 Max with Bun 1.4.2, the bundle ran 40 to 182 ms faster than `bash mod.sh` on every fixture: it drops the dispatcher's own `jq` calls per module. One native module took off a further 7 to 40 ms on most fixtures.
+`bun run tooling/src/benchmarks/pre-tools-latency.ts [--runs N] [--assert]` measures p50 for `bash mod.sh`, the bundle, and the bundle with one module native, against the epic budget of bash + 5 ms. On an Apple M2 Max with Bun 1.4.2, the bundle ran 40 to 182 ms faster than `bash mod.sh` on every fixture: it drops the dispatcher's own `jq` calls per module. With one module native, six of the seven fixtures ran a further 13 to 39 ms faster, and one was 11 ms slower.
 
 ## Import cost
 

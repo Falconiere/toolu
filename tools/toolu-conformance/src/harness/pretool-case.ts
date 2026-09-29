@@ -5,14 +5,13 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { Fixture } from "./fixtures.ts";
-import type { PretoolEntry, PretoolHost } from "./pretool.ts";
+import type { PretoolHost } from "./pretool.ts";
 import type { Sandbox } from "./sandbox.ts";
 
 export type Outcome = "deny" | "ask" | "advisory" | "silent" | "exit2";
 
 export type PretoolCase = {
   name: string;
-  entry: PretoolEntry;
   fixture: (sb: Sandbox) => Fixture;
   /** Raw stdin instead of the rendered fixture (malformed input). */
   stdin?: string;

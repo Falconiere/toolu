@@ -1,16 +1,16 @@
 /**
- * AC-1 / AC-3 (#258): every PreToolUse fixture, rendered as Claude Code and as
- * Codex deliver it, gives byte-identical stdout and the same exit code from the
- * bash hook command hooks.json used to run and from the committed bundle behind
- * its launcher, with every module still on bash fallback.
+ * AC-1 (#258): every PreToolUse fixture, rendered as Claude Code and as Codex
+ * deliver it, gives byte-identical stdout and the same exit code from
+ * `bash pre-tools/mod.sh` and from the committed bundle behind its launcher,
+ * with every module still on bash fallback.
  */
 import { expect, test } from "bun:test";
 import { toStdin } from "@toolu/conformance/harness/fixtures";
 import {
   fromSameState,
   pretoolEnv,
-  runBashEntry,
-  runBundleEntry,
+  runBundle,
+  runModSh,
   type PretoolHost,
 } from "@toolu/conformance/harness/pretool";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
@@ -38,8 +38,8 @@ for (const fixture of PRETOOL_CORPUS) {
       const call = { cwd: sb.project, env: pretoolEnv(sb, host, extra), stdin };
       const [bash, bundle] = await fromSameState(
         sb,
-        () => runBashEntry(fixture.entry, call),
-        () => runBundleEntry(fixture.entry, call),
+        () => runModSh(call),
+        () => runBundle(call),
       );
       expect({ stdout: bundle.stdout, exitCode: bundle.exitCode }).toEqual({
         stdout: bash.stdout,

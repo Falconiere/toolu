@@ -17,8 +17,8 @@ import { join } from "node:path";
 import { toStdin } from "@toolu/conformance/harness/fixtures";
 import {
   pretoolEnv,
-  runBashEntry,
-  runBundleEntry,
+  runBundle,
+  runModSh,
   TOOLU_PLUGIN,
   type PretoolRun,
 } from "@toolu/conformance/harness/pretool";
@@ -60,8 +60,8 @@ async function buildNative(outDir: string): Promise<string> {
 
 function runners(native: string): Record<Variant, (call: PretoolRun) => Promise<RunResult>> {
   return {
-    bash: (call) => runBashEntry("pre-tools", call),
-    bundle: (call) => runBundleEntry("pre-tools", call),
+    bash: (call) => runModSh(call),
+    bundle: (call) => runBundle(call),
     native: (call) => run([process.execPath, native], call),
   };
 }

@@ -20,7 +20,7 @@ export function childEnv(env: HostEnv, extra: Record<string, string>): Record<st
 }
 
 /** The status a shell reports: the exit code, or 128 + the signal number when signalled. */
-export function shellStatus(proc: { exitCode: number; signalCode?: string | undefined }): number {
+function shellStatus(proc: { exitCode: number; signalCode?: string | undefined }): number {
   if (proc.signalCode === undefined) return proc.exitCode;
   const signals: Record<string, number | undefined> = constants.signals;
   return 128 + (signals[proc.signalCode] ?? 0);

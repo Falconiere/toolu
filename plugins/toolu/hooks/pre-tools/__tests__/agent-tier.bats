@@ -225,11 +225,9 @@ EOF
   [ "$(jq -r 'select(.event=="delegation") | .step_model' "$TELEMETRY_FILE" | tail -1)" = "null" ]
 }
 
-@test "hooks.json routes spawn_agent|Agent|Task to the bundle that runs agent-tier.sh" {
+@test "hooks.json parses and contains the spawn_agent|Agent|Task entry pointing at agent-tier.sh" {
   HOOKS_JSON="${BATS_TEST_DIRNAME}/../../hooks.json"
   jq -e . "$HOOKS_JSON" >/dev/null
-  run jq -e '.hooks.PreToolUse[] | select(.matcher == "spawn_agent|Agent|Task") | .hooks[0].command | test("hooks/dist/pre-tools-agent\\.js")' "$HOOKS_JSON"
+  run jq -e '.hooks.PreToolUse[] | select(.matcher == "spawn_agent|Agent|Task") | .hooks[0].command | test("pre-tools/agent-tier\\.sh$")' "$HOOKS_JSON"
   [ "$status" -eq 0 ]
-  # The bundle (#258) runs this script unchanged until #262 ports it.
-  grep -q 'pre-tools", "agent-tier.sh"' "${BATS_TEST_DIRNAME}/../../src/pre-tools-agent.ts"
 }

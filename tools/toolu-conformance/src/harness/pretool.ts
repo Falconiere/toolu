@@ -1,6 +1,6 @@
 /**
  * PreToolUse parity harness (#258): runs one hook call through the bash
- * dispatcher (`pre-tools/mod.sh`, or a standalone script) and through the
+ * dispatcher (`pre-tools/mod.sh`) and through the
  * committed TypeScript bundle behind its generated launcher, as Claude Code or
  * Codex would spawn them, from the same sandbox state. Gates write state (gate
  * files, telemetry), so the sandbox is snapshotted before the first run and
@@ -17,14 +17,8 @@ export type PretoolHost = "claude" | "codex";
 export const REPO_ROOT = resolve(import.meta.dir, "../../../..");
 export const TOOLU_PLUGIN = join(REPO_ROOT, "plugins", "toolu");
 
-/** The hooks.json entry and the bash command it replaced. */
-export const PRETOOL_ENTRIES = {
-  "pre-tools": ["bash", join(TOOLU_PLUGIN, "hooks/pre-tools/mod.sh")],
-  "pre-tools-mcp": [join(TOOLU_PLUGIN, "hooks/pre-tools/modules/mcp-blocker.sh")],
-  "pre-tools-agent": [join(TOOLU_PLUGIN, "hooks/pre-tools/agent-tier.sh")],
-} as const;
-
-export type PretoolEntry = keyof typeof PRETOOL_ENTRIES;
+/** The bash command hooks.json ran before #258. */
+export const MOD_SH = join(TOOLU_PLUGIN, "hooks/pre-tools/mod.sh");
 
 /**
  * The host's hook environment, without the harness's host override so the
@@ -72,14 +66,14 @@ export async function registerPlugin(
 
 export type PretoolRun = { cwd: string; env: EnvPatch; stdin: string };
 
-/** The bash hook command hooks.json ran before #258. */
-export function runBashEntry(entry: PretoolEntry, call: PretoolRun): Promise<RunResult> {
-  return run([...PRETOOL_ENTRIES[entry]], call);
+/** `bash pre-tools/mod.sh`, the hooks.json command before #258. */
+export function runModSh(call: PretoolRun): Promise<RunResult> {
+  return run(["bash", MOD_SH], call);
 }
 
-/** The hooks.json launcher for `entry`, which execs the committed bundle. */
-export function runBundleEntry(entry: PretoolEntry, call: PretoolRun): Promise<RunResult> {
-  const command = launcherCommand({ plugin: "toolu", event: "PreToolUse", entry });
+/** The hooks.json launcher, which execs the committed `hooks/dist/pre-tools.js`. */
+export function runBundle(call: PretoolRun): Promise<RunResult> {
+  const command = launcherCommand({ plugin: "toolu", event: "PreToolUse", entry: "pre-tools" });
   return run(["/bin/sh", "-c", command], call);
 }
 

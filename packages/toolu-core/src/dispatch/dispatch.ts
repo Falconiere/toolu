@@ -14,7 +14,7 @@ import { configRoot, projectRoot } from "../host/host-roots.ts";
 import { normalizeEditRecords } from "../state/edit-records.ts";
 import type { EditRecord } from "../state/state-schema.ts";
 import { toJqJson } from "../state/state-io.ts";
-import { childEnv, shellStatus, type ModuleResult } from "./dispatch-bash.ts";
+import { childEnv, type ModuleResult } from "./dispatch-bash.ts";
 import type { PreToolModule, Session } from "./dispatch-context.ts";
 import { parseDocument, readField, substituted } from "./dispatch-output.ts";
 import { consume, dispatchModules, newWalkState, settle, type WalkState } from "./dispatch-walk.ts";
@@ -127,27 +127,4 @@ export async function dispatchPreTool(
   };
   const result = await dispatchInput(substituted(stdin), session, options.builtins);
   return { ...result, stderr: warnings.join("") + result.stderr };
-}
-
-/**
- * A standalone hook script run as the host would run it (#258): exec'd through
- * its shebang with the host's stdin and environment, its bytes relayed as is.
- */
-export function runScript(script: string, stdin: string, env: HostEnv = process.env): ModuleResult {
-  try {
-    const proc = Bun.spawnSync([script], {
-      stdin: Buffer.from(stdin),
-      stdout: "pipe",
-      stderr: "pipe",
-      env: childEnv(env, {}),
-    });
-    return {
-      stdout: proc.stdout.toString(),
-      stderr: proc.stderr.toString(),
-      exitCode: shellStatus(proc),
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { stdout: "", stderr: `toolu: cannot run ${script}: ${message}\n`, exitCode: 2 };
-  }
 }
