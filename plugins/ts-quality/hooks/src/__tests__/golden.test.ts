@@ -6,6 +6,7 @@
  * deviation must instead show what the TypeScript module does right.
  */
 import { expect, test } from "bun:test";
+import { isJsonObject } from "@toolu/core/config";
 import { DEVIATIONS, TS_CASES } from "./cases.ts";
 import type { TsCase } from "./cases-types.ts";
 import { caseKey, runCase, type StepResult } from "./golden-harness.ts";
@@ -16,15 +17,30 @@ const golden = readGolden();
 /** Each case spawns real git, bash and Bun processes, several times. */
 const CASE_TIMEOUT_MS = 60_000;
 
-/** Line order dropped, for output whose order bash never fixed. */
-function lineSet(text: string): string[] {
-  return text.split(/\\n|\n/).toSorted();
+/** Every string in `value` as its sorted lines: order dropped, content kept. */
+function linesSorted(value: unknown): unknown {
+  if (typeof value === "string") return value.split("\n").toSorted();
+  if (Array.isArray(value)) return value.map(linesSorted);
+  if (isJsonObject(value)) {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, linesSorted(v)]));
+  }
+  return value;
 }
 
+/** JSON text compared by content with line order dropped; other text by its sorted lines. */
+function unordered(text: string): unknown {
+  try {
+    return linesSorted(JSON.parse(text));
+  } catch {
+    return linesSorted(text);
+  }
+}
+
+/** A step as compared: exact, or with line order dropped for output whose order bash never fixed. */
 function comparable(c: TsCase, step: StepResult) {
   if (c.unordered !== true) return step;
-  const state = Object.fromEntries(Object.entries(step.state).map(([k, v]) => [k, lineSet(v)]));
-  return { ...step, stdout: lineSet(step.stdout), state };
+  const state = Object.fromEntries(Object.entries(step.state).map(([k, v]) => [k, unordered(v)]));
+  return { ...step, stdout: unordered(step.stdout), state };
 }
 
 for (const c of TS_CASES) {

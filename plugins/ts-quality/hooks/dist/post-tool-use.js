@@ -4957,7 +4957,17 @@ function kindOf(path) {
   }
 }
 function bre(text) {
-  return new RegExp(text.replaceAll(/[+?(){}|]/g, String.raw`\$&`), "s");
+  const chars = [...text];
+  const escaped = chars.map((char, at) => {
+    if ("+?(){}|".includes(char))
+      return `\\${char}`;
+    if (char === "^" && at > 0)
+      return String.raw`\^`;
+    if (char === "$" && at < chars.length - 1)
+      return String.raw`\$`;
+    return char;
+  });
+  return new RegExp(escaped.join(""), "s");
 }
 function jscpdOutput(f, runner, pkg, config) {
   const res = spawnSync5("timeout", ["10", ...runner, pkg, "--config", config], {
@@ -5655,13 +5665,12 @@ var post_tool_use_default = defineRegistryModule({
     const pm = nodePackageManager(where);
     if (pm === undefined || !toolAvailable(pm, ctx.env))
       return Promise.resolve(ALLOW2);
-    const limits = limitsFor(ctx);
     const decision = fileQuality(event, ctx, {
       source: "ts-quality-hook",
       reason: "Post-edit quality violation(s) detected",
       matches: /\.(ts|tsx)$/s,
       skipLinkedWorktrees: true,
-      check: (file) => checkTsFile({ file, lines: splitLines(read(file)), ctx, limits, pm })
+      check: (file) => checkTsFile({ file, lines: splitLines(read(file)), ctx, limits: limitsFor(ctx), pm })
     });
     return Promise.resolve(decision);
   }

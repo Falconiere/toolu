@@ -49,13 +49,14 @@ export default defineRegistryModule({
     if (!detectTs(where)) return Promise.resolve(ALLOW);
     const pm = nodePackageManager(where);
     if (pm === undefined || !toolAvailable(pm, ctx.env)) return Promise.resolve(ALLOW);
-    const limits = limitsFor(ctx);
     const decision = fileQuality(event, ctx, {
       source: "ts-quality-hook",
       reason: "Post-edit quality violation(s) detected",
       matches: /\.(ts|tsx)$/s,
       skipLinkedWorktrees: true,
-      check: (file) => checkTsFile({ file, lines: splitLines(read(file)), ctx, limits, pm }),
+      // Thresholds resolve only for a file the module owns, as bash resolved them in 25/30.
+      check: (file) =>
+        checkTsFile({ file, lines: splitLines(read(file)), ctx, limits: limitsFor(ctx), pm }),
     });
     return Promise.resolve(decision);
   },

@@ -101,6 +101,16 @@ test("non-JSON output is a parse failure; blank output is an empty scan", () => 
   });
 });
 
+test("ast-grep killed by a signal reports 128 + the signal number, as bash's $? does", () => {
+  using sb = createSandbox({ git: true });
+  expect(scan(sb, RULES, { PATH: stubBin(sb, "kill -TERM $$") })).toEqual({
+    kind: "failed",
+    stage: "ast-grep",
+    exitCode: 143,
+    stderrFirst: "",
+  });
+});
+
 test("ast-grep missing from PATH is reported as missing", () => {
   using sb = createSandbox({ git: true });
   expect(scan(sb, RULES, { PATH: join(sb.root, "empty-bin") })).toEqual({ kind: "missing" });

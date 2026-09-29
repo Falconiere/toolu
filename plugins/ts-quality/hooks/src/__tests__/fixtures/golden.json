@@ -350,11 +350,11 @@
     ],
     "no-mocks: one hit per mock rule [claude]": [
       {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nMocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:3:sinon.spy();\\n<ROOT>/project/src/__tests__/foo.test.ts:1:jest.mock(\\\"a\\\");\\n<ROOT>/project/src/__tests__/foo.test.ts:2:vi.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:4:jest.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:5:vi.mock(\\\"b\\\");\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nMocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:4:jest.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:2:vi.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:3:sinon.spy();\\n<ROOT>/project/src/__tests__/foo.test.ts:5:vi.mock(\\\"b\\\");\\n<ROOT>/project/src/__tests__/foo.test.ts:1:jest.mock(\\\"a\\\");\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {
-          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/__tests__/foo.test.ts\",\n  \"violations\": \"Mocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:3:sinon.spy();\\n<ROOT>/project/src/__tests__/foo.test.ts:1:jest.mock(\\\"a\\\");\\n<ROOT>/project/src/__tests__/foo.test.ts:2:vi.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:4:jest.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:5:vi.mock(\\\"b\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/__tests__/foo.test.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Mocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:3:sinon.spy();\\n<ROOT>/project/src/__tests__/foo.test.ts:1:jest.mock(\\\"a\\\");\\n<ROOT>/project/src/__tests__/foo.test.ts:2:vi.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:4:jest.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:5:vi.mock(\\\"b\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/__tests__/foo.test.ts\",\n  \"violations\": \"Mocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:4:jest.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:2:vi.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:3:sinon.spy();\\n<ROOT>/project/src/__tests__/foo.test.ts:5:vi.mock(\\\"b\\\");\\n<ROOT>/project/src/__tests__/foo.test.ts:1:jest.mock(\\\"a\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/__tests__/foo.test.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Mocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:4:jest.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:2:vi.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:3:sinon.spy();\\n<ROOT>/project/src/__tests__/foo.test.ts:5:vi.mock(\\\"b\\\");\\n<ROOT>/project/src/__tests__/foo.test.ts:1:jest.mock(\\\"a\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
           ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/__tests__/foo.test.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
         }
       }
@@ -473,6 +473,14 @@
     "duplication: jscpd finds a clone in the package [claude]": [
       {
         "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Code duplication detected involving <ROOT>/project/packages/core/src/two.ts — deduplicate or run 'bun run typecheck' before commit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "duplication: a file name holding $ still matches jscpd's report [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Code duplication detected involving <ROOT>/project/packages/core/src/$id.ts — deduplicate or run 'bun run typecheck' before commit\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0,
         "state": {}

@@ -34,9 +34,19 @@ function kindOf(path: string): "file" | "dir" | "none" {
   }
 }
 
-/** A basic regular expression (grep's default) as a JavaScript one. */
+/**
+ * A basic regular expression (grep's default) as a JavaScript one: `+?(){}|`
+ * are literals there, and `^`/`$` anchor only at the pattern's start/end.
+ */
 function bre(text: string): RegExp {
-  return new RegExp(text.replaceAll(/[+?(){}|]/g, String.raw`\$&`), "s");
+  const chars = [...text];
+  const escaped = chars.map((char, at) => {
+    if ("+?(){}|".includes(char)) return `\\${char}`;
+    if (char === "^" && at > 0) return String.raw`\^`;
+    if (char === "$" && at < chars.length - 1) return String.raw`\$`;
+    return char;
+  });
+  return new RegExp(escaped.join(""), "s");
 }
 
 /** `timeout 10 <runner> <pkg> --config .jscpd.json 2>&1`, both streams. */

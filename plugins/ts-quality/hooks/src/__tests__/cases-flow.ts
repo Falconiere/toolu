@@ -373,6 +373,18 @@ export const FLOW_CASES: readonly TsCase[] = [
     contains: ["Code duplication detected involving"],
   },
   {
+    name: "duplication: a file name holding $ still matches jscpd's report",
+    project: {
+      ...TS_PROJECT,
+      ".jscpd.json": '{"threshold":0,"minLines":5,"reporters":["console"]}\n',
+      "packages/core/src/one.ts": DUPLICATED,
+    },
+    setup: localJscpd,
+    steps: wrote("packages/core/src/$id.ts", DUPLICATED),
+    expect: "advisory",
+    contains: ["Code duplication detected involving"],
+  },
+  {
     name: "duplication: not under apps/ or packages/",
     project: {
       ...TS_PROJECT,
