@@ -9,7 +9,7 @@ import { z } from "zod";
 // Validates real plugin manifests and host marketplace catalogs together.
 
 const ROOT = resolve(import.meta.dir, "../../..");
-const SCRIPT = join(ROOT, "tooling/validate-plugin-packaging.sh");
+const SCRIPT = join(ROOT, "tooling/src/validate-plugin-packaging.ts");
 
 const ReleaseConfig = z.looseObject({
   packages: z.looseObject({
@@ -44,11 +44,14 @@ function packagingFixture(): Sandbox {
 }
 
 function validate(repo: string): ReturnType<typeof run> {
-  return run(["bash", SCRIPT], { cwd: repo, env: { PACKAGING_ROOT: repo } });
+  return run([process.execPath, SCRIPT], { cwd: repo, env: { PACKAGING_ROOT: repo } });
 }
 
 test.concurrent("plugin packaging validator accepts the checked-in dual-host catalog", async () => {
-  const res = await run(["bash", SCRIPT], { cwd: ROOT, env: { PACKAGING_ROOT: undefined } });
+  const res = await run([process.execPath, SCRIPT], {
+    cwd: ROOT,
+    env: { PACKAGING_ROOT: undefined },
+  });
   const output = res.stdout + res.stderr;
   if (res.exitCode !== 0) {
     console.error(`packaging validator failed:\n${output}`);

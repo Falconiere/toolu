@@ -16,7 +16,7 @@ startup behavior in both Codex and Claude Code.
 1. Recall relevant repo decisions. Compare the branch against its base, including
    untracked files, and inspect both manifests, marketplace entries, release
    configuration, hooks, skills, and docs.
-   Run `bash tooling/validate-plugin-packaging.sh` after manifest edits: Claude
+   Run `bun run tooling/src/validate-plugin-packaging.ts` after manifest edits: Claude
    marketplace descriptions must exactly match their plugin manifests.
 2. Read the service's live API documentation and the hosts' hook contracts.
    Distinguish installing a skill from injecting mandatory session instructions.

@@ -3,18 +3,21 @@ import { join, resolve } from "node:path";
 import { run } from "@toolu/conformance/harness/spawn";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 
-// Real-data checks for tooling/check-portable-core-doc.sh (#205).
+// Real-data checks for tooling/src/check-portable-core-doc.ts (#205).
 
 const ROOT = resolve(import.meta.dir, "../../..");
-const CHECK = join(ROOT, "tooling/check-portable-core-doc.sh");
+const CHECK = join(ROOT, "tooling/src/check-portable-core-doc.ts");
 const DOC = join(ROOT, "docs/portable-core.md");
 
 function checkDoc(doc: string, cwd: string): ReturnType<typeof run> {
-  return run(["bash", CHECK], { cwd, env: { PORTABLE_CORE_DOC: doc } });
+  return run([process.execPath, CHECK], { cwd, env: { PORTABLE_CORE_DOC: doc } });
 }
 
 test.concurrent("portable-core doc checker passes on the committed doc", async () => {
-  const res = await run(["bash", CHECK], { cwd: ROOT, env: { PORTABLE_CORE_DOC: undefined } });
+  const res = await run([process.execPath, CHECK], {
+    cwd: ROOT,
+    env: { PORTABLE_CORE_DOC: undefined },
+  });
   expect(res.exitCode).toBe(0);
   expect(res.stdout + res.stderr).toContain("ok");
 });
