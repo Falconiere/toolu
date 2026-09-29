@@ -41,12 +41,12 @@ function isBrokenPipe(error: unknown): boolean {
 }
 
 /**
- * Writes `text` to stdout and waits until it is flushed, so a following exit
+ * Writes `text` (or raw bytes) to stdout and waits until it is flushed, so a following exit
  * cannot truncate it. A reader that went away (`| head`) throws a silent
  * CliExit(141), the status a shell script got from SIGPIPE.
  */
-export async function writeStdout(text: string): Promise<void> {
-  if (text === "") return;
+export async function writeStdout(text: string | Uint8Array): Promise<void> {
+  if (text.length === 0) return;
   try {
     await Bun.write(Bun.stdout, text);
   } catch (error) {

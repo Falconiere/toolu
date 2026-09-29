@@ -127,3 +127,20 @@ test("a reader that goes away ends the CLI quietly with 141, as SIGPIPE did", ()
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("writeStdout writes raw bytes untouched", () => {
+  const dir = mkdtempSync(join(tmpdir(), "toolu-cli-"));
+  try {
+    const script = join(dir, "main.ts");
+    writeFileSync(
+      script,
+      `import { runCli, writeStdout } from ${JSON.stringify(CLI)};\n` +
+        `await runCli(async () => { await writeStdout(new Uint8Array([104, 105, 0, 255])); return 0; });\n`,
+    );
+    const run = spawnSync(process.execPath, [script]);
+    expect(run.status).toBe(0);
+    expect([...run.stdout]).toEqual([104, 105, 0, 255]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

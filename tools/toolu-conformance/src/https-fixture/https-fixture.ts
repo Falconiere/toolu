@@ -17,6 +17,8 @@ export interface PlannedResponse {
   readonly status?: number;
   readonly body?: string;
   readonly contentType?: string;
+  /** Extra response headers, e.g. a redirect's `location`. */
+  readonly headers?: Readonly<Record<string, string>>;
   /** Drop the tunnel instead of answering: the client sees a transport failure. */
   readonly close?: boolean;
 }
@@ -87,7 +89,10 @@ function serveTls(cert: string, key: string, recorder: Recorder): Server {
       const response = nextResponse(recorder);
       return new Response(response.body ?? "{}", {
         status: response.status ?? 200,
-        headers: { "content-type": response.contentType ?? "application/json" },
+        headers: {
+          "content-type": response.contentType ?? "application/json",
+          ...response.headers,
+        },
       });
     },
   });

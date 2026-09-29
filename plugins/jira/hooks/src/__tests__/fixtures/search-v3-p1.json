@@ -1,0 +1,8 @@
+{
+  "isLast": false,
+  "nextPageToken": "CAEaBjEwMDAy",
+  "issues": [
+    { "id": "10002", "key": "ABC-123", "fields": { "summary": "Login page throws 500 on empty password", "status": { "name": "In Progress" } } },
+    { "id": "10003", "key": "ABC-124", "fields": { "summary": "Logout redirect loop", "status": { "name": "To Do" } } }
+  ]
+}

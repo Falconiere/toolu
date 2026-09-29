@@ -54,6 +54,20 @@ test("the response plan advances and repeats its last entry", async () => {
   ]);
 });
 
+test("planned headers reach the client, so a redirect can be served", async () => {
+  fixture.plan([{ status: 302, body: "", headers: { location: "https://docs.example.test/x" } }]);
+  const client = `
+const response = await fetch(process.argv[1], { redirect: "manual" });
+process.stdout.write(response.status + " " + response.headers.get("location"));
+`;
+  const child = Bun.spawn([process.execPath, "-e", client, "https://api.example.test/"], {
+    env: { ...process.env, ...fixture.env },
+    stdout: "pipe",
+  });
+  const [stdout] = await Promise.all([new Response(child.stdout).text(), child.exited]);
+  expect(stdout).toBe("302 https://docs.example.test/x");
+});
+
 test("an unplanned request gets 200 {}", async () => {
   expect((await fetchVia("https://api.example.test/", fixture.env)).stdout).toBe("200 {}");
 });

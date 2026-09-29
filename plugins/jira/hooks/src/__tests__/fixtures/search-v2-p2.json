@@ -1,0 +1,8 @@
+{
+  "startAt": 2,
+  "maxResults": 2,
+  "total": 3,
+  "issues": [
+    { "id": "10005", "key": "ABC-130", "fields": { "summary": "Session cookie not cleared on logout", "status": { "name": "Done" } } }
+  ]
+}

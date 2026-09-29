@@ -1,0 +1,7 @@
+{
+  "expand": "transitions",
+  "transitions": [
+    { "id": "11", "name": "Done", "to": { "name": "Done", "id": "10001" } },
+    { "id": "41", "name": "Done", "to": { "name": "Closed", "id": "10002" } }
+  ]
+}
