@@ -3,7 +3,6 @@
  * selected checks in the documented order. Checks never chdir; every path is
  * relative to `root`, and `prefix` puts a workspace package back in the output.
  */
-import { spawnSync } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { patterns } from "./checks/patterns.ts";
 import { loadConfig } from "./config.ts";
@@ -49,8 +48,8 @@ export function runFiles(
 /** `git status --porcelain` is empty inside a work tree: nothing changed this turn. */
 export function unchangedTree(root: string): boolean {
   if (git(root, ["rev-parse", "--git-dir"]).status !== 0) return false;
-  const res = spawnSync("git", ["status", "--porcelain"], { cwd: root, encoding: "utf8" });
-  return res.stdout === "";
+  // Through git(): a signal-killed status fails closed instead of reading as "unchanged".
+  return git(root, ["status", "--porcelain"]).stdout === "";
 }
 
 /**
@@ -61,7 +60,8 @@ export function shellPwd(cwd: string): string {
   const inherited = process.env["PWD"];
   if (inherited !== undefined && inherited !== "") {
     try {
-      if (realpathSync(inherited) === realpathSync(cwd)) return inherited;
+      // Trailing slashes dropped, so `${pwd}/` is always a clean prefix.
+      if (realpathSync(inherited) === realpathSync(cwd)) return inherited.replace(/(.)\/+$/, "$1");
     } catch {
       return cwd;
     }

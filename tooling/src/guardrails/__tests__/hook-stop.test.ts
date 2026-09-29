@@ -67,3 +67,13 @@ test.concurrent("AC-5 --stop blocks a dirty violating workspace and passes a dir
   clean.write("dirty.txt", "");
   expect((await gr(clean.root, ["--stop"], { stdin: "{}" })).exit).toBe(0);
 });
+
+test.concurrent("--hook strips an inherited PWD that carries a trailing slash", async () => {
+  using tree = buildFixture("violating");
+  const res = await gr(tree.root, ["--hook"], {
+    stdin: postToolUse(`${tree.root}/src/domains/shifts/utils/helper.ts`),
+    env: { PWD: `${tree.root}/` },
+  });
+  expect(res.exit).toBe(2);
+  expect(res.out).toContain("guardrails[folder-tree] src/domains/shifts/utils");
+});

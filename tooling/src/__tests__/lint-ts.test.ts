@@ -40,5 +40,7 @@ test.concurrent("lint-ts skips node_modules and the OpenCode plugin mirror, and 
     env: { LINT_TS_ROOT: sb.project, PATH: OXLINT_PATH },
   });
   expect(res.exitCode).toBe(0);
-  expect(res.stdout.trim()).toBe(`lint:ts: ${sb.path("packages/a")}`);
+  // oxlint may add its own summary lines (it does when stdout is not a TTY).
+  const linted = res.stdout.split("\n").filter((line) => line.startsWith("lint:ts: "));
+  expect(linted).toEqual([`lint:ts: ${sb.path("packages/a")}`]);
 });
