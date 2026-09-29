@@ -13,7 +13,8 @@
       "launcher",
       "cli",
       "rest",
-      "host"
+      "host",
+      "state"
     ],
     "nested": {
       "decision": [
@@ -63,6 +64,17 @@
         "host-roots.ts",
         "host-snapshot.ts",
         "host-encode.ts",
+        "__tests__"
+      ],
+      "state": [
+        "state-schema.ts",
+        "state-io.ts",
+        "state-git.ts",
+        "gate-file.ts",
+        "telemetry.ts",
+        "state-sweeper.ts",
+        "diff-sha.ts",
+        "edit-records.ts",
         "__tests__"
       ]
     },
