@@ -49,10 +49,10 @@ test.skipIf(!HAS_AST_GREP)("every matched source line becomes a rule-tagged exce
     kind: "ok",
     empty: false,
     hits: [
-      { ruleId: "throw-string", excerpt: 'src/a.ts:2:  throw "boom";' },
-      { ruleId: "empty-catch", excerpt: "src/a.ts:5:  try {" },
-      { ruleId: "empty-catch", excerpt: "src/a.ts:6:    f();" },
-      { ruleId: "empty-catch", excerpt: "src/a.ts:7:  } catch (e) { }" },
+      { ruleId: "throw-string", line: 2, excerpt: 'src/a.ts:2:  throw "boom";' },
+      { ruleId: "empty-catch", line: 5, excerpt: "src/a.ts:5:  try {" },
+      { ruleId: "empty-catch", line: 6, excerpt: "src/a.ts:6:    f();" },
+      { ruleId: "empty-catch", line: 7, excerpt: "src/a.ts:7:  } catch (e) { }" },
     ],
   });
 });

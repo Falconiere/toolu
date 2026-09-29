@@ -11,7 +11,12 @@ import { isJsonObject } from "../config/config-load.ts";
 import type { RegistryContext } from "../registry/registry-types.ts";
 import type { EditedFile } from "./quality-edit.ts";
 
-export type AstGrepHit = { readonly ruleId: string; readonly excerpt: string };
+/** One matched source line: its rule, its 1-based line number and `<file>:<line>:<source line>`. */
+export type AstGrepHit = {
+  readonly ruleId: string;
+  readonly line: number;
+  readonly excerpt: string;
+};
 
 export type AstGrepScan =
   | { readonly kind: "missing" }
@@ -44,6 +49,7 @@ function matchHits(match: unknown): AstGrepHit[] | undefined {
   const file = interpolated(match.file);
   return texts.map((text, key) => ({
     ruleId,
+    line: start + 1 + key,
     excerpt: `${file}:${String(start + 1 + key)}:${text}`,
   }));
 }
