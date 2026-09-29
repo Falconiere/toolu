@@ -14,7 +14,8 @@ the host cannot prompt, `ask` degrades to `advise`.
 
 1. In `ask` mode the gate writes `<branch-slug>.pending-waiver.json` naming the
    diff SHA it asked about.
-2. `post-tools/modules/push-waiver.sh` promotes that marker to
+2. The PostToolUse push-waiver module (`@toolu/core/gates`, ported from
+   `post-tools/modules/push-waiver.sh`) promotes that marker to
    `<branch-slug>.waiver.json` once the push has actually run **and succeeded**
    — PostToolUse fires when a tool ran, not when it worked, and a rejected
    non-fast-forward push has been reviewed by nobody.

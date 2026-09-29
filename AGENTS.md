@@ -62,8 +62,9 @@ A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context b
 | File | Purpose |
 |------|---------|
 | `plugins/toolu/hooks/src/pre-tools.ts` | Pre-tool dispatcher, bundled to `hooks/dist/pre-tools.js`: built-in modules (protected files, bash, MCP, commit, quality) then `pre-tools.d`; each module runs on its bash script until ported. `pre-tools/mod.sh` stays as the parity baseline |
-| `packages/toolu-core/src/dispatch/dispatch.ts` | `@toolu/core/dispatch`: `dispatchPreTool` (port of `dispatch.sh`: deny over ask over advisory, per-path patch walk, byte-identical output), `bashModule` fallback for a module not yet ported |
-| `plugins/toolu/hooks/post-tools/mod.sh` | Quality checks on edited files |
+| `packages/toolu-core/src/dispatch/dispatch.ts` | `@toolu/core/dispatch`: `dispatchPreTool` and `dispatchPostTool` (port of `dispatch.sh`: deny over ask over advisory before a tool, block over advisory after it, per-path patch walk, byte-identical output), `bashModule` fallback for a module not yet ported |
+| `plugins/toolu/hooks/src/post-tools.ts` | Post-tool dispatcher, bundled to `hooks/dist/post-tools.js`: native gate-status and push-waiver, then `post-tools.d` (language-quality checks on edited files). `post-tools/mod.sh` stays as the parity baseline |
+| `packages/toolu-core/src/gates/gates.ts` | `@toolu/core/gates`: built-in gates as native modules (gate-status, push-waiver), the parsed-command quality-command recogniser, and the host exit-status reader |
 | `plugins/toolu/hooks/lib/quality-config.sh` | Thresholds: override, then linter config, then default |
 | `plugins/toolu/hooks/lib/detect.sh` | Line counts, tool availability, `is_git_push`, `push_target_root`, `push_target_branch`; TypeScript port in `@toolu/core/detect` |
 | `plugins/pr-babysit/scripts/babysit-tick.sh` | Babysit tick. Writes go through `reply-thread.sh`, `resolve-thread.sh`, `record.sh` |
