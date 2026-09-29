@@ -43,18 +43,26 @@ function scan(sb: Sandbox, rules: string, env: Record<string, string> = {}) {
   return astGrepScan(file, rules, postContext(sb, { env }));
 }
 
+/** A scan's hits for one rule, in the order ast-grep reported them. */
+function ofRule(result: ReturnType<typeof scan>, rule: string) {
+  return result.kind === "ok" ? result.hits.filter((hit) => hit.ruleId === rule) : [];
+}
+
 test.skipIf(!HAS_AST_GREP)("every matched source line becomes a rule-tagged excerpt", () => {
   using sb = createSandbox({ git: true });
-  expect(scan(sb, RULES)).toEqual({
-    kind: "ok",
-    empty: false,
-    hits: [
-      { ruleId: "throw-string", line: 2, excerpt: 'src/a.ts:2:  throw "boom";' },
-      { ruleId: "empty-catch", line: 5, excerpt: "src/a.ts:5:  try {" },
-      { ruleId: "empty-catch", line: 6, excerpt: "src/a.ts:6:    f();" },
-      { ruleId: "empty-catch", line: 7, excerpt: "src/a.ts:7:  } catch (e) { }" },
-    ],
-  });
+  const result = scan(sb, RULES);
+  expect(result).toMatchObject({ kind: "ok", empty: false });
+  // ast-grep interleaves rules in an order that varies run to run; within a
+  // rule, matches come in source order.
+  expect(ofRule(result, "throw-string")).toEqual([
+    { ruleId: "throw-string", line: 2, excerpt: 'src/a.ts:2:  throw "boom";' },
+  ]);
+  expect(ofRule(result, "empty-catch")).toEqual([
+    { ruleId: "empty-catch", line: 5, excerpt: "src/a.ts:5:  try {" },
+    { ruleId: "empty-catch", line: 6, excerpt: "src/a.ts:6:    f();" },
+    { ruleId: "empty-catch", line: 7, excerpt: "src/a.ts:7:  } catch (e) { }" },
+  ]);
+  expect(result.kind === "ok" ? result.hits.length : 0).toBe(4);
 });
 
 test.skipIf(!HAS_AST_GREP)(

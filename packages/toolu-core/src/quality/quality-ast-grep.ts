@@ -4,6 +4,8 @@
  * `jq` did: one `<file>:<line>:<source line>` excerpt per matched source line,
  * tagged with its rule. A crash, stderr output or output that is not the
  * documented JSON array is reported with its stage, never read as "no hits".
+ * Hits of one rule come in source order; ast-grep interleaves different rules
+ * in an order that varies from run to run, so callers group by rule or sort.
  */
 import { constants } from "node:os";
 import { childEnv, envValue } from "../host/host-name.ts";
