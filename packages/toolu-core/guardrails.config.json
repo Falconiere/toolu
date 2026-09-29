@@ -19,7 +19,8 @@
       "ledger",
       "startup",
       "dispatch",
-      "shell"
+      "shell",
+      "detect"
     ],
     "nested": {
       "decision": [
@@ -133,6 +134,15 @@
         "shell-writes.ts",
         "shell-rules.ts",
         "shell-event.ts",
+        "__tests__"
+      ],
+      "detect": [
+        "detect-read.ts",
+        "detect-branch.ts",
+        "detect-project.ts",
+        "detect-tools.ts",
+        "detect-lines.ts",
+        "detect-git.ts",
         "__tests__"
       ]
     },

@@ -65,7 +65,7 @@ A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context b
 | `packages/toolu-core/src/dispatch/dispatch.ts` | `@toolu/core/dispatch`: `dispatchPreTool` (port of `dispatch.sh`: deny over ask over advisory, per-path patch walk, byte-identical output), `bashModule` fallback for a module not yet ported |
 | `plugins/toolu/hooks/post-tools/mod.sh` | Quality checks on edited files |
 | `plugins/toolu/hooks/lib/quality-config.sh` | Thresholds: override, then linter config, then default |
-| `plugins/toolu/hooks/lib/detect.sh` | Line counts, tool availability, `is_git_push`, `push_target_root`, `push_target_branch` |
+| `plugins/toolu/hooks/lib/detect.sh` | Line counts, tool availability, `is_git_push`, `push_target_root`, `push_target_branch`; TypeScript port in `@toolu/core/detect` |
 | `plugins/pr-babysit/scripts/babysit-tick.sh` | Babysit tick. Writes go through `reply-thread.sh`, `resolve-thread.sh`, `record.sh` |
 | `plugins/pr-babysit/scripts/dispatch-fix.sh` | Babysit fixers: `route-fix.sh` Jev-routes Fix items to claude/codex/cursor; this runs them in a herdr worktree |
 | `plugins/*/hooks/register.sh` | SessionStart registry sync |
@@ -84,6 +84,7 @@ A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context b
 | `packages/toolu-core/src/ledger/ledger.ts` | `@toolu/core/ledger`: plan ledger (`plan-ledger.sh` CLI, parse, preflight), verdict gates and push waivers; bash parity on twin repos |
 | `packages/toolu-core/src/startup/startup.ts` | `@toolu/core/startup`: what leaf-plugin SessionStart hooks share: stable-path publishing, Bun-on-PATH advisory, bounded context output, Codex dependency warnings |
 | `packages/toolu-core/src/shell/shell.ts` | `@toolu/core/shell`: parses a Bash/Shell command once with unbash (pinned) into simple commands (wrappers unwrapped, `bash -c`/`eval` followed), git subcommand/`-C` chain/push destination and exit observability; write targets in `@toolu/core/shell/writes`; parity fixtures in `tooling/fixtures/shell`, budgets via `bun run bench:shell` (`docs/shell-analysis.md`) |
+| `packages/toolu-core/src/detect/detect.ts` | `@toolu/core/detect`: port of `detect.sh`: project markers and linters, tool availability (PATH scan, cached), chunked code-line counts, branch slug/base, and push/commit, push root and branch from a `ShellAnalysis`; loads neither unbash nor zod; bash parity on real repos (`docs/detect.md`) |
 | `tooling/src/check-hooks-json.ts` | `hooks.json` launcher gate (`bun run check:hooks-json`); `--print <plugin> <Event> <entry>` emits the entry to paste |
 | `tooling/src/build-plugins.ts` | Builds `plugins/*/hooks/src` entries into committed `hooks/dist` bundles; `--check` is the drift gate |
 | `tooling/shellcheck.sh` | shellcheck gate |

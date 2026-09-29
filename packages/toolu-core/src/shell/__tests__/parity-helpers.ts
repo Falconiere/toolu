@@ -17,8 +17,12 @@ import {
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { z } from "zod";
-import { projectRoot } from "../../host/host-roots.ts";
-import { pushTargets, runsGitSubcommand } from "../shell-git.ts";
+import {
+  isGitCommit,
+  isGitPush,
+  pushTargetBranch,
+  pushTargetRoot,
+} from "../../detect/detect-git.ts";
 import { analyzeShell } from "../shell-parse.ts";
 import { matchesRule } from "../shell-rules.ts";
 import { writeTargets } from "../shell-writes.ts";
@@ -121,8 +125,10 @@ export function bashDecide(cases: readonly DecideCase[], dir: string, env: Env):
   ).map((out) => out.trim());
 }
 
+/** `is_git_push` / `is_git_commit` through the production detect layer (#254). */
 export function tsIsGit(command: string, sub: "push" | "commit"): boolean {
-  return runsGitSubcommand(analyzeShell(command), sub) === "yes";
+  const analysis = analyzeShell(command);
+  return sub === "push" ? isGitPush(analysis) : isGitCommit(analysis);
 }
 
 /** Write targets as `bash_write_targets` prints them: static paths, else the text as written. */
@@ -139,33 +145,14 @@ export function tsDecide(c: DecideCase): string {
   return c.allow.some(hits) ? "allow" : `deny:${denied}`;
 }
 
-function gitOut(cwd: string, args: readonly string[], env: Env): string | undefined {
-  const res = spawnSync("git", [...args], { cwd, env, encoding: "utf8" });
-  const out = res.stdout.trim();
-  return res.status === 0 && out !== "" ? out : undefined;
-}
-
-/** `push_target_root`'s contract composed from `pushTargets`: the -C chain, then cwd, then the project root. */
+/** `push_target_root` through the production detect layer (#254). */
 export function tsPushRoot(command: string, cwd: string, env: Env): string {
-  const chain = pushTargets(analyzeShell(command))[0]?.cChain ?? [];
-  const static_ = chain.filter((dir) => dir !== null);
-  const viaChain =
-    chain.length > 0 && static_.length === chain.length
-      ? gitOut(cwd, [...static_.flatMap((dir) => ["-C", dir]), "rev-parse", "--show-toplevel"], env)
-      : undefined;
-  return (
-    viaChain ??
-    gitOut(cwd, ["rev-parse", "--show-toplevel"], env) ??
-    projectRoot({ env, cwd }) ??
-    cwd
-  );
+  return pushTargetRoot(analyzeShell(command), { env, cwd });
 }
 
-/** `push_target_branch`: the attached branch, else the refspec destination on a detached HEAD. */
+/** `push_target_branch` through the production detect layer (#254). */
 export function tsPushBranch(command: string, root: string, env: Env): string {
-  const branch = gitOut(root, ["rev-parse", "--abbrev-ref", "HEAD"], env);
-  if (branch !== undefined && branch !== "HEAD") return branch;
-  return pushTargets(analyzeShell(command))[0]?.destination ?? "";
+  return pushTargetBranch(analyzeShell(command), root, env);
 }
 
 /** A disposable directory tree, removed by `using`. */

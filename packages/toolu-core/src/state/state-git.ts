@@ -1,10 +1,13 @@
 /**
- * The git questions the state layer asks (#255). These are private ports of
- * `branch_slug`, `detect_base_branch` and the `rev-parse`/`branch` calls in
- * the bash state libs. #254 owns the public detect layer.
+ * The git questions the state layer asks (#255): the `rev-parse`/`branch`
+ * calls in the bash state libs. `branchSlug` and `baseBranch` live in the
+ * detect layer (#254) and are re-exported here for the state callers.
  */
 import { spawnSync } from "node:child_process";
+import { branchSlug } from "../detect/detect-branch.ts";
 import { childEnv, type HostEnv } from "../host/host-name.ts";
+
+export { baseBranch, branchSlug } from "../detect/detect-branch.ts";
 
 /** Stdout of `git -C root args`, or undefined when git cannot run or exits non-zero. */
 function git(root: string, args: readonly string[], env: HostEnv): string | undefined {
@@ -29,18 +32,6 @@ export function currentBranch(root: string, env: HostEnv): string {
     encoding: "utf8",
   });
   return res.error === undefined ? res.stdout.replace(/\n+$/, "") : "";
-}
-
-/** `branch_slug`: `/` becomes `_`, then everything outside `[A-Za-z0-9_-]` is dropped; empty is `_default`. */
-export function branchSlug(branch: string): string {
-  const slug = branch.replaceAll("/", "_").replace(/[^A-Za-z0-9_-]/g, "");
-  return slug === "" ? "_default" : slug;
-}
-
-/** `detect_base_branch`: origin's HEAD branch, else `main`. */
-export function baseBranch(root: string, env: HostEnv): string {
-  const ref = git(root, ["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], env)?.trim();
-  return ref === undefined || ref === "" ? "main" : ref.replace(/^refs\/remotes\/origin\//, "");
 }
 
 /** Slugs of local branches, optionally only those merged into `mergedInto`. */

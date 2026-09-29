@@ -4438,29 +4438,41 @@ var EditRecordSchema = strictObject({
 });
 
 // packages/toolu-core/src/state/state-git.ts
+import { spawnSync as spawnSync5 } from "child_process";
+
+// packages/toolu-core/src/detect/detect-branch.ts
 import { spawnSync as spawnSync4 } from "child_process";
-function git(root, args, env) {
-  const res = spawnSync4("git", ["-C", root, ...args], { env: childEnv(env), encoding: "utf8" });
-  return res.error === undefined && res.status === 0 ? res.stdout : undefined;
-}
-function hasGit(env) {
-  const res = spawnSync4("git", ["--version"], { env: childEnv(env), encoding: "utf8" });
-  return res.error === undefined && res.status === 0;
-}
-function currentBranch(root, env) {
-  const res = spawnSync4("git", ["-C", root, "rev-parse", "--abbrev-ref", "HEAD"], {
-    env: childEnv(env),
-    encoding: "utf8"
-  });
-  return res.error === undefined ? res.stdout.replace(/\n+$/, "") : "";
-}
 function branchSlug(branch) {
   const slug = branch.replaceAll("/", "_").replace(/[^A-Za-z0-9_-]/g, "");
   return slug === "" ? "_default" : slug;
 }
-function baseBranch(root, env) {
-  const ref = git(root, ["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], env)?.trim();
-  return ref === undefined || ref === "" ? "main" : ref.replace(/^refs\/remotes\/origin\//, "");
+function baseBranch(root, env = process.env, cwd) {
+  const top = root === undefined || root === "" ? gitToplevel(env, cwd) : root;
+  if (top === undefined)
+    return "main";
+  const res = spawnSync4("git", ["-C", top, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], {
+    env: childEnv(env),
+    encoding: "utf8"
+  });
+  const ref = res.error === undefined && res.status === 0 ? res.stdout.trim() : "";
+  return ref === "" ? "main" : ref.replace(/^refs\/remotes\/origin\//, "");
+}
+
+// packages/toolu-core/src/state/state-git.ts
+function git(root, args, env) {
+  const res = spawnSync5("git", ["-C", root, ...args], { env: childEnv(env), encoding: "utf8" });
+  return res.error === undefined && res.status === 0 ? res.stdout : undefined;
+}
+function hasGit(env) {
+  const res = spawnSync5("git", ["--version"], { env: childEnv(env), encoding: "utf8" });
+  return res.error === undefined && res.status === 0;
+}
+function currentBranch(root, env) {
+  const res = spawnSync5("git", ["-C", root, "rev-parse", "--abbrev-ref", "HEAD"], {
+    env: childEnv(env),
+    encoding: "utf8"
+  });
+  return res.error === undefined ? res.stdout.replace(/\n+$/, "") : "";
 }
 function branchSlugs(root, env, mergedInto) {
   const args = ["branch", "--format=%(refname:short)"];
