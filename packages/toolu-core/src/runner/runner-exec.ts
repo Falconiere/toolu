@@ -113,13 +113,21 @@ async function settleMaybePromise(value: number | Promise<number> | undefined): 
   await value;
 }
 
+function isEpipe(err: unknown): boolean {
+  return err instanceof Error && "code" in err && err.code === "EPIPE";
+}
+
 async function feedStdin(proc: Subprocess<"pipe", "pipe", "pipe">, stdin: string): Promise<void> {
   try {
-    proc.stdin.write(stdin);
+    await settleMaybePromise(proc.stdin.write(stdin));
     await settleMaybePromise(proc.stdin.flush());
     await settleMaybePromise(proc.stdin.end());
-  } catch {
-    // Child already closed stdin / exited — runner still collects exit.
+  } catch (err: unknown) {
+    // EPIPE: the child closed stdin or exited first — the runner still collects
+    // its exit. Any other write failure is real and propagates.
+    if (!isEpipe(err)) {
+      throw err;
+    }
   }
 }
 

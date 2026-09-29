@@ -1,0 +1,79 @@
+/**
+ * Latency helpers for the epic's hook budget (#251, #247): a port's p50 may be
+ * no worse than the bash baseline plus 5 ms on the same machine. Both sides are
+ * measured in the same run, one process at a time, so machine speed cancels out.
+ */
+import type { RunResult } from "./spawn.ts";
+
+export type Latency = { samples: number[]; p50: number; p95: number; min: number; max: number };
+
+export class LatencyBudgetError extends Error {
+  override name = "LatencyBudgetError";
+}
+
+/** Nearest-rank percentile of `values`, `p` in 0..100. */
+export function percentile(values: readonly number[], p: number): number {
+  if (values.length === 0) {
+    throw new RangeError("percentile: no samples");
+  }
+  if (p < 0 || p > 100) {
+    throw new RangeError(`percentile: p must be in 0..100, got ${p}`);
+  }
+  const sorted = values.toSorted((a, b) => a - b);
+  const rank = Math.max(1, Math.ceil((p / 100) * sorted.length));
+  return sorted[rank - 1] ?? Number.NaN;
+}
+
+function sampleOf(reading: RunResult | number): number {
+  if (typeof reading === "number") {
+    return reading;
+  }
+  if (reading.timedOut) {
+    throw new LatencyBudgetError(
+      `measured run timed out after ${reading.durationMs.toFixed(0)} ms`,
+    );
+  }
+  return reading.durationMs;
+}
+
+/** Take `count` readings strictly one after another: concurrent spawns would contend and skew each other. */
+function sequential(once: () => Promise<RunResult | number>, count: number): Promise<number[]> {
+  const samples: number[] = [];
+  return Array.from({ length: count })
+    .reduce<Promise<void>>(async (previous) => {
+      await previous;
+      samples.push(sampleOf(await once()));
+    }, Promise.resolve())
+    .then(() => samples);
+}
+
+/**
+ * Run `once` `warmup` times (discarded) then `runs` times, sequentially. A
+ * reading is a RunResult (its durationMs) or a millisecond number.
+ */
+export async function measureLatency(
+  once: () => Promise<RunResult | number>,
+  opts: { runs: number; warmup?: number },
+): Promise<Latency> {
+  if (opts.runs < 1) {
+    throw new RangeError(`measureLatency: runs must be >= 1, got ${opts.runs}`);
+  }
+  await sequential(once, opts.warmup ?? 0);
+  const samples = await sequential(once, opts.runs);
+  return {
+    samples,
+    p50: percentile(samples, 50),
+    p95: percentile(samples, 95),
+    min: Math.min(...samples),
+    max: Math.max(...samples),
+  };
+}
+
+/** Throw unless `candidate` p50 is within `budgetMs` of `baseline` p50. */
+export function assertLatencyBudget(candidate: Latency, baseline: Latency, budgetMs: number): void {
+  if (candidate.p50 > baseline.p50 + budgetMs) {
+    throw new LatencyBudgetError(
+      `p50 ${candidate.p50.toFixed(2)} ms exceeds baseline ${baseline.p50.toFixed(2)} ms + ${budgetMs} ms`,
+    );
+  }
+}

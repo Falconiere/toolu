@@ -3,8 +3,8 @@
   "version": 2,
   "srcRoot": "src",
   "src": {
-    "topLevel": ["cli"],
-    "nested": { "cli": ["__tests__", "suites"] },
+    "topLevel": ["cli", "harness"],
+    "nested": { "cli": ["__tests__", "suites"], "harness": ["__tests__"] },
     "requireReadme": []
   },
   "fileSize": { "max": 300, "skipExtensions": [".ts"] },

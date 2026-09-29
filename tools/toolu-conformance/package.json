@@ -8,7 +8,12 @@
   },
   "exports": {
     "./run": "./src/cli/run.ts",
-    "./run-stub": "./src/cli/run-stub.ts"
+    "./run-stub": "./src/cli/run-stub.ts",
+    "./harness/sandbox": "./src/harness/sandbox.ts",
+    "./harness/spawn": "./src/harness/spawn.ts",
+    "./harness/hosts": "./src/harness/hosts.ts",
+    "./harness/fixtures": "./src/harness/fixtures.ts",
+    "./harness/timing": "./src/harness/timing.ts"
   },
   "scripts": {
     "start": "bun run src/cli/run.ts"

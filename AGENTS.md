@@ -12,6 +12,7 @@ This file is the source of truth. Codex, Cursor, and Claude Code read it directl
 
 - **bash** — hooks, gates, registry. `set -euo pipefail`, shellcheck-clean.
 - **bats** — colocated `__tests__/`. `bash tooling/bats-run.sh` runs `plugins`, `benchmarks`, `tooling`, `packages`, and `tools` (files in parallel, tests in a file serial). `bun run test:shell:serial` is the serial path.
+- **bun test** — TypeScript suites in colocated `__tests__/*.test.ts` spawn real bundles, scripts and repos through `@toolu/conformance/harness/*`: files in parallel, tests concurrent, each test owns its sandbox. See `docs/testing.md`.
 - **Bun** — the runtime for every host and plugin (1.4.x prerequisite; see `docs/runtime.md`). `bun.lock`. `bun run test` is `lint:shell`, then `test:context-budget`, then `test:shell`.
 - **`toolu` CLI** — `tools/toolu-cli`, a Node bundle published to npm as `@toolu/plugins` from its `npm/` folder; the workspace itself is private, so npx never mistakes it for the published package. Installs plugins across hosts by shelling out to each host's own plugin CLI. See `docs/cli.md`.
 - **shellcheck** — `bun run lint:shell` lints standalone scripts and each `hooks/concerns/` directory as the assembled module.

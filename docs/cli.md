@@ -40,7 +40,7 @@ the name `@toolu/plugins`, npx would treat it as installed inside any toolu
 checkout and fail with `sh: toolu: command not found`, which is what the old
 `@toolu/cli` did. So the dev workspace at `tools/toolu-cli` is private and named
 `toolu-cli`, and the published manifest lives in its `npm/` folder, which no
-workspace declares. `tooling/__tests__/npx-invocation.bats` runs npm's own
+workspace declares. `tooling/src/__tests__/npx-invocation.test.ts` runs npm's own
 lookup to prove no local package matches, and fails if a documented command
 adds a tag, a version, or the old name. The one folder where npx still fails is
 `tools/toolu-cli/npm` itself. npm treats a folder with its own `package.json` as
