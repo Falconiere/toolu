@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { summaryTable } from "../epic-close.ts";
 
-test("summary lists every sub-issue with its merged PR and admin merges", () => {
+test.concurrent("summary lists every sub-issue with its merged PR and admin merges", () => {
   const graph = JSON.parse(
     readFileSync(join(import.meta.dir, "..", "fixtures", "epic248-graph.json"), "utf8"),
   ) as Parameters<typeof summaryTable>[0];

@@ -15,6 +15,6 @@ Read `$ROOT/skills/epic-orchestrator/SKILL.md` completely and execute it. Pass
 (`--dry-run`, `--max N`, `--hosts claude:2,codex:2`, `--repo owner/name`,
 `--tracker`, `--safe`, `--no-jev`, `status`, `stop`).
 
-Scripts live under `$ROOT/scripts` and are invoked with `bun` (for `*.ts`) or
-`bash` (for `finish_issue.sh` / `report.sh`). Trust script output — do not
-re-fetch with ad-hoc `gh` what the graph, gate, or watcher already reported.
+Scripts live under `$ROOT/scripts` and are all invoked with `bun`. Trust
+script output — do not re-fetch with ad-hoc `gh` what the graph, gate, or
+watcher already reported.
