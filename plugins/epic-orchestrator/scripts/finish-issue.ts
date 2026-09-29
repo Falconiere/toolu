@@ -56,6 +56,9 @@ const str = (v: unknown): string =>
 const isDir = (path: string): boolean =>
   path !== "" && existsSync(path) && statSync(path).isDirectory();
 
+/** The PR number lives in the worker's status file (`status/<key>.json`), the
+ * only place anything records it: `report.ts --pr N` writes it there, while the
+ * issue record written by launch-issue.ts and merge-gate.ts carries no `pr`. */
 async function requireMerged(stateDir: string, key: string, repo: string): Promise<void> {
   const pr = str(readJson<Record<string, unknown>>(join(stateDir, "status", `${key}.json`), {}).pr);
   if (pr === "") throw new Error(`no PR recorded for ${key}; use --abandon to tear down anyway`);
