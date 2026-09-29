@@ -4,8 +4,16 @@
   "self": "https://acme.atlassian.net/rest/api/3/issue/10002",
   "fields": {
     "summary": "Login page throws 500 on empty password",
-    "status": { "name": "In Progress", "id": "3", "statusCategory": { "key": "indeterminate", "name": "In Progress" } },
-    "assignee": { "accountId": "5b10a2844c20165700ede21g", "displayName": "Mia Krystof", "emailAddress": "mia@acme.com" },
+    "status": {
+      "name": "In Progress",
+      "id": "3",
+      "statusCategory": { "key": "indeterminate", "name": "In Progress" }
+    },
+    "assignee": {
+      "accountId": "5b10a2844c20165700ede21g",
+      "displayName": "Mia Krystof",
+      "emailAddress": "mia@acme.com"
+    },
     "reporter": { "accountId": "5b10a2844c20165700ede22h", "displayName": "Cory Booker" },
     "priority": { "name": "High", "id": "2" },
     "issuetype": { "name": "Bug", "id": "10004" },

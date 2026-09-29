@@ -1,6 +1,6 @@
 # ABC-123 — ship the release notes
 
-**Date:** 2026-07-09   **Issue:** ABC-123   **Topic:** move the ticket to Done and record the PR link
+**Date:** 2026-07-09 **Issue:** ABC-123 **Topic:** move the ticket to Done and record the PR link
 
 ## Steps (machine-readable)
 

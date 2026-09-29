@@ -42,7 +42,11 @@ function basic(user: string, token: string): string {
 }
 
 test("creds: reuses jira-cli server+login, token from JIRA_API_TOKEN env", async () => {
-  const config = cliConfig({ server: "https://acme.atlassian.net", login: "cli@x.com", installation: "Cloud" });
+  const config = cliConfig({
+    server: "https://acme.atlassian.net",
+    login: "cli@x.com",
+    installation: "Cloud",
+  });
   const run = await h.jira(["user", "whoami"], {
     env: { ...NO_ENV_CREDS, JIRA_CLI_CONFIG: config, JIRA_API_TOKEN: "envtok" },
   });
@@ -59,13 +63,19 @@ test("creds: reuses api_token from the jira-cli config file", async () => {
     installation: "Cloud",
     api_token: "cfgtok",
   });
-  const run = await h.jira(["user", "whoami"], { env: { ...NO_ENV_CREDS, JIRA_CLI_CONFIG: config } });
+  const run = await h.jira(["user", "whoami"], {
+    env: { ...NO_ENV_CREDS, JIRA_CLI_CONFIG: config },
+  });
   expect(run.status).toBe(0);
   expect(h.only().headers["authorization"]).toBe(basic("cfg@x.com", "cfgtok"));
 });
 
 test("creds: reads the API token from ~/.netrc when config/env lack it", async () => {
-  const config = cliConfig({ server: "https://acme.atlassian.net", login: "nr@x.com", installation: "Cloud" });
+  const config = cliConfig({
+    server: "https://acme.atlassian.net",
+    login: "nr@x.com",
+    installation: "Cloud",
+  });
   const netrc = join(sandbox, "netrc");
   writeFileSync(
     netrc,
@@ -79,12 +89,19 @@ test("creds: reads the API token from ~/.netrc when config/env lack it", async (
 });
 
 test("creds: reads the API token from the OS keyring when env lacks it", async () => {
-  const config = cliConfig({ server: "https://acme.atlassian.net", login: "kr@x.com", installation: "Cloud" });
+  const config = cliConfig({
+    server: "https://acme.atlassian.net",
+    login: "kr@x.com",
+    installation: "Cloud",
+  });
   // A `security` on PATH standing in for the macOS keyring; it records its argv.
   const bin = join(sandbox, "bin");
   mkdirSync(bin);
   const security = join(bin, "security");
-  writeFileSync(security, `#!/bin/sh\nprintf '%s\\n' "$@" > "${sandbox}/security.argv"\nprintf 'keyringtok\\n'\n`);
+  writeFileSync(
+    security,
+    `#!/bin/sh\nprintf '%s\\n' "$@" > "${sandbox}/security.argv"\nprintf 'keyringtok\\n'\n`,
+  );
   chmodSync(security, 0o755);
   const run = await h.jira(["user", "whoami"], {
     env: { ...NO_ENV_CREDS, JIRA_CLI_CONFIG: config, PATH: `${bin}:${process.env["PATH"] ?? ""}` },
@@ -96,7 +113,11 @@ test("creds: reads the API token from the OS keyring when env lacks it", async (
 });
 
 test("creds: installation Cloud selects api version 3", async () => {
-  const config = cliConfig({ server: "https://acme.atlassian.net", login: "c@x.com", installation: "Cloud" });
+  const config = cliConfig({
+    server: "https://acme.atlassian.net",
+    login: "c@x.com",
+    installation: "Cloud",
+  });
   const run = await h.jira(["project", "list"], {
     env: { ...NO_ENV_CREDS, JIRA_CLI_CONFIG: config, JIRA_API_TOKEN: "t" },
   });
@@ -105,7 +126,11 @@ test("creds: installation Cloud selects api version 3", async () => {
 });
 
 test("creds: installation Local selects api version 2", async () => {
-  const config = cliConfig({ server: "https://acme.atlassian.net", login: "c@x.com", installation: "Local" });
+  const config = cliConfig({
+    server: "https://acme.atlassian.net",
+    login: "c@x.com",
+    installation: "Local",
+  });
   const run = await h.jira(["project", "list"], {
     env: { ...NO_ENV_CREDS, JIRA_CLI_CONFIG: config, JIRA_PAT: "p" },
   });
@@ -114,9 +139,17 @@ test("creds: installation Local selects api version 2", async () => {
 });
 
 test("creds: explicit env overrides the jira-cli config", async () => {
-  const config = cliConfig({ server: "https://media.example.net", login: "cli@x.com", installation: "Local" });
+  const config = cliConfig({
+    server: "https://media.example.net",
+    login: "cli@x.com",
+    installation: "Local",
+  });
   const run = await h.jira(["user", "whoami"], {
-    env: { JIRA_CLI_CONFIG: config, JIRA_BASE_URL: "https://acme.atlassian.net", JIRA_PAT: "envpat" },
+    env: {
+      JIRA_CLI_CONFIG: config,
+      JIRA_BASE_URL: "https://acme.atlassian.net",
+      JIRA_PAT: "envpat",
+    },
   });
   expect(run.status).toBe(0);
   const request = h.only();
