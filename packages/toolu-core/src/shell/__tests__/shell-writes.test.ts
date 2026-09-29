@@ -98,6 +98,7 @@ test.concurrent("cp, mv and install write their destination", () => {
   expect(paths("cp a/.env b/.npmrc dest")).toEqual(["dest", "dest/.env", "dest/.npmrc"]);
   expect(paths("cp .env dest/")).toEqual(["dest/", "dest/.env"]);
   expect(paths("install -d .env conf")).toEqual([".env", "conf"]);
+  expect(paths("/usr/bin/install -d .env")).toEqual([".env"]);
   expect(paths("cp onlyone")).toEqual([]);
 });
 

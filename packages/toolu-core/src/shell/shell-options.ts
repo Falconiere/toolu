@@ -41,102 +41,59 @@ export interface ParsedArgs {
 
 type Words = readonly (string | null)[];
 
-interface Step {
-  readonly options: readonly ParsedOption[];
-  readonly consumed: number;
-  readonly missingValue: boolean;
-}
-
-function shortCluster(word: string, following: string | null | undefined, spec: OptionSpec): Step {
-  if (spec.numeric === true && /^-\d+$/.test(word)) {
-    return {
-      options: [{ name: word.slice(1), value: undefined, at: null }],
-      consumed: 1,
-      missingValue: false,
-    };
-  }
-  const options: ParsedOption[] = [];
-  for (let i = 1; i < word.length; i++) {
-    const letter = word.charAt(i);
-    const rest = word.slice(i + 1);
-    if (spec.restShort?.includes(letter) === true) {
-      options.push({ name: letter, value: rest, at: null });
-      return { options, consumed: 1, missingValue: false };
-    }
-    if (spec.valueShort?.includes(letter) === true) {
-      if (rest !== "") {
-        options.push({ name: letter, value: rest, at: null });
-        return { options, consumed: 1, missingValue: false };
-      }
-      options.push({ name: letter, value: following, at: null });
-      return { options, consumed: 2, missingValue: following === undefined };
-    }
-    options.push({ name: letter, value: undefined, at: null });
-  }
-  return { options, consumed: 1, missingValue: false };
-}
-
-function longOption(word: string, following: string | null | undefined, spec: OptionSpec): Step {
-  const body = word.slice(2);
-  const eq = body.indexOf("=");
-  if (eq !== -1) {
-    return {
-      options: [{ name: body.slice(0, eq), value: body.slice(eq + 1), at: null }],
-      consumed: 1,
-      missingValue: false,
-    };
-  }
-  if (named(spec.valueLong ?? "", body)) {
-    return {
-      options: [{ name: body, value: following, at: null }],
-      consumed: 2,
-      missingValue: following === undefined,
-    };
-  }
-  return {
-    options: [{ name: body, value: undefined, at: null }],
-    consumed: 1,
-    missingValue: false,
-  };
-}
-
 /** Split `words[start..]` into options and operands under `spec`. */
 export function parseArgs(words: Words, start: number, spec: OptionSpec): ParsedArgs {
   const options: ParsedOption[] = [];
-  const operands: (string | null)[] = [];
   const operandAt: number[] = [];
-  const done = (next: number) => ({ options, operands, operandAt, next, missingValue });
-  let i = start;
   let missingValue = false;
-  while (i < words.length) {
+  let i = start;
+  /** The option's value is the next word. */
+  const takeNext = (name: string): void => {
+    i += 1;
+    missingValue ||= i >= words.length;
+    options.push({ name, value: words[i], at: i });
+  };
+  const done = (next: number): ParsedArgs => ({
+    options,
+    operands: operandAt.map((at) => words[at] ?? null),
+    operandAt,
+    next,
+    missingValue,
+  });
+  for (; i < words.length; i++) {
     const word = words[i] ?? null;
-    if (word === "--") {
-      if (spec.stopAtOperand === true) return done(i + 1);
-      for (let rest = i + 1; rest < words.length; rest++) {
-        operands.push(words[rest] ?? null);
-        operandAt.push(rest);
+    if (word === null || word === "-" || word === "--" || !word.startsWith("-")) {
+      if (spec.stopAtOperand === true) return done(word === "--" ? i + 1 : i);
+      if (word === "--") {
+        for (let rest = i + 1; rest < words.length; rest++) operandAt.push(rest);
+        return done(words.length);
       }
-      return done(words.length);
-    }
-    if (word === null || word === "-" || !word.startsWith("-")) {
-      if (spec.stopAtOperand === true) return done(i);
-      operands.push(word);
       operandAt.push(i);
-      i += 1;
-      continue;
+    } else if (word.startsWith("--")) {
+      const [name = "", value] = word.slice(2).split(/=(.*)/s);
+      if (value !== undefined) options.push({ name, value, at: null });
+      else if (named(spec.valueLong ?? "", name)) takeNext(name);
+      else options.push({ name, value: undefined, at: null });
+    } else if (spec.numeric === true && /^-\d+$/.test(word)) {
+      options.push({ name: word.slice(1), value: undefined, at: null });
+    } else {
+      for (let j = 1; j < word.length; j++) {
+        const name = word.charAt(j);
+        const rest = word.slice(j + 1);
+        const valued = spec.valueShort?.includes(name) === true;
+        if (spec.restShort?.includes(name) === true || (valued && rest !== "")) {
+          options.push({ name, value: rest, at: null });
+          break;
+        }
+        if (valued) {
+          takeNext(name);
+          break;
+        }
+        options.push({ name, value: undefined, at: null });
+      }
     }
-    const step = word.startsWith("--")
-      ? longOption(word, words[i + 1], spec)
-      : shortCluster(word, words[i + 1], spec);
-    const last = step.options.at(-1);
-    const separate = step.consumed === 2 && last !== undefined;
-    options.push(
-      ...(separate ? [...step.options.slice(0, -1), { ...last, at: i + 1 }] : step.options),
-    );
-    missingValue ||= step.missingValue;
-    i += step.consumed;
   }
-  return done(Math.min(i, words.length));
+  return done(words.length);
 }
 
 /** Whether `name` is one of the space-separated `names`. */

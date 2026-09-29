@@ -14,18 +14,12 @@
 import {
   parse,
   type AndOr,
-  type ArithmeticFor,
-  type Case,
   type Command,
-  type For,
-  type If,
   type Node,
   type ParsedScript,
   type Pipeline,
   type Redirect,
-  type Select,
   type Statement,
-  type While,
 } from "unbash";
 import { alignUnwrapped, runTarget, unwrap, type RunTarget } from "./shell-argv.ts";
 import {
@@ -134,12 +128,10 @@ function runString(
 function emitCommand(command: Command, ctx: WalkContext, sink: WalkSink): void {
   const nested = nestedVisitor(ctx, sink);
   for (const assignment of command.prefix) visitAssignment(assignment, nested);
-  visitWord(command.name, nested);
-  for (const word of command.suffix) visitWord(word, nested);
+  const named = command.name === undefined ? [] : [command.name, ...command.suffix];
+  for (const word of named) visitWord(word, nested);
   for (const redirect of command.redirects) visitRedirect(redirect, nested);
-
-  const resolved =
-    command.name === undefined ? [] : [command.name, ...command.suffix].map(resolveWord);
+  const resolved = named.map(resolveWord);
   const words = resolved.map((word) => word.value);
   const unwrapped = unwrap(words);
   const argv = alignUnwrapped(words, unwrapped, null);
@@ -194,12 +186,6 @@ function walkAndOr(node: AndOr, ctx: WalkContext, sink: WalkSink): void {
   });
 }
 
-function walkIf(node: If, ctx: WalkContext, sink: WalkSink): void {
-  walkList(node.clause.commands, ctx, sink);
-  walkList(node.then.commands, ctx, sink);
-  if (node.else !== undefined) walkNode(node.else, ctx, sink);
-}
-
 export function walkList(statements: readonly Statement[], ctx: WalkContext, sink: WalkSink): void {
   const last = statements.length - 1;
   statements.forEach((statement, index) => {
@@ -209,44 +195,14 @@ export function walkList(statements: readonly Statement[], ctx: WalkContext, sin
   });
 }
 
-/** Conditions, loops and case arms: they run, but never prove the line's status. */
-function walkOff(
-  node: If | For | Select | ArithmeticFor | While | Case,
-  ctx: WalkContext,
-  sink: WalkSink,
-): void {
-  const off = { ...ctx, proves: false };
-  const nested = nestedVisitor(ctx, sink);
-  switch (node.type) {
-    case "If":
-      walkIf(node, off, sink);
-      break;
-    case "For":
-    case "Select":
-      for (const word of node.wordlist) visitWord(word, nested);
-      walkList(node.body.commands, off, sink);
-      break;
-    case "ArithmeticFor":
-      for (const part of [node.initialize, node.test, node.update]) visitArithmetic(part, nested);
-      walkList(node.body.commands, off, sink);
-      break;
-    case "While":
-      walkList(node.clause.commands, off, sink);
-      walkList(node.body.commands, off, sink);
-      break;
-    case "Case":
-      visitWord(node.word, nested);
-      for (const item of node.items) {
-        for (const pattern of item.pattern) visitWord(pattern, nested);
-        walkList(item.body.commands, off, sink);
-      }
-      break;
-    default:
-      unreachable(node);
-  }
-}
-
+/**
+ * One case per unbash node kind. Conditions, loops, case arms, function bodies
+ * and coprocs run under `off`: they never prove the line's status.
+ */
 export function walkNode(node: Node, ctx: WalkContext, sink: WalkSink): void {
+  const nested = nestedVisitor(ctx, sink);
+  const off = { ...ctx, proves: false };
+  const list = (statements: readonly Statement[], at = off) => walkList(statements, at, sink);
   switch (node.type) {
     case "Command":
       emitCommand(node, ctx, sink);
@@ -258,36 +214,46 @@ export function walkNode(node: Node, ctx: WalkContext, sink: WalkSink): void {
       walkAndOr(node, ctx, sink);
       break;
     case "If":
+      for (const part of [node.clause, node.then]) list(part.commands);
+      if (node.else !== undefined) walkNode(node.else, off, sink);
+      break;
     case "For":
     case "Select":
+      for (const word of node.wordlist) visitWord(word, nested);
+      list(node.body.commands);
+      break;
     case "ArithmeticFor":
+      for (const part of [node.initialize, node.test, node.update]) visitArithmetic(part, nested);
+      list(node.body.commands);
+      break;
     case "While":
+      for (const part of [node.clause, node.body]) list(part.commands);
+      break;
     case "Case":
-      walkOff(node, ctx, sink);
+      visitWord(node.word, nested);
+      for (const item of node.items) {
+        for (const pattern of item.pattern) visitWord(pattern, nested);
+        list(item.body.commands);
+      }
       break;
     case "Function":
-      compoundRedirects(node.redirects, ctx, sink);
-      walkNode(node.body, { ...ctx, proves: false, origin: "function" }, sink);
-      break;
     case "Coproc":
       compoundRedirects(node.redirects, ctx, sink);
-      walkNode(node.body, { ...ctx, proves: false }, sink);
+      walkNode(node.body, node.type === "Function" ? { ...off, origin: "function" } : off, sink);
       break;
     case "Subshell":
     case "BraceGroup":
-      walkList(node.body.commands, ctx, sink);
-      break;
     case "CompoundList":
-      walkList(node.commands, ctx, sink);
+      list(node.type === "CompoundList" ? node.commands : node.body.commands, ctx);
       break;
     case "TestCommand":
-      visitTest(node.expression, nestedVisitor(ctx, sink));
+      visitTest(node.expression, nested);
       break;
     case "ArithmeticCommand":
-      visitArithmetic(node.expression, nestedVisitor(ctx, sink));
+      visitArithmetic(node.expression, nested);
       break;
     case "Statement":
-      walkList([node], ctx, sink);
+      list([node], ctx);
       break;
     default:
       unreachable(node);
