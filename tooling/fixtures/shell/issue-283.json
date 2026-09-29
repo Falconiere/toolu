@@ -1,0 +1,703 @@
+{
+ "$comment": "One named fixture per example in #283 (#284 AC-6). `expected` is the correct result from @toolu/core/shell; `bash` is the known-wrong baseline. `oracle: live` baselines are re-derived from the unmodified bash libs by bash-oracle.test.ts; `oracle: recorded` baselines come from the shipped hook scripts or wall-clock timings. See README.md.",
+ "cases": [
+  {
+   "id": "283-1a",
+   "item": 1,
+   "title": "redirect without a space",
+   "kind": "bash_write_targets",
+   "command": "echo SECRET=1 >.env",
+   "expected": [
+    ".env"
+   ],
+   "oracle": "live",
+   "bash": []
+  },
+  {
+   "id": "283-1b",
+   "item": 1,
+   "title": "redirect glued to the word",
+   "kind": "bash_write_targets",
+   "command": "echo SECRET=1>.env",
+   "expected": [
+    ".env"
+   ],
+   "oracle": "live",
+   "bash": []
+  },
+  {
+   "id": "283-1c",
+   "item": 1,
+   "title": "fd-qualified redirect without a space",
+   "kind": "bash_write_targets",
+   "command": "printf k=v 1>.env",
+   "expected": [
+    ".env"
+   ],
+   "oracle": "live",
+   "bash": []
+  },
+  {
+   "id": "283-1d",
+   "item": 1,
+   "title": "&> without a space",
+   "kind": "bash_write_targets",
+   "command": "echo x &>.env",
+   "expected": [
+    ".env"
+   ],
+   "oracle": "live",
+   "bash": []
+  },
+  {
+   "id": "283-1e",
+   "item": 1,
+   "title": "clobber operator",
+   "kind": "bash_write_targets",
+   "command": "echo x >| .env",
+   "expected": [
+    ".env"
+   ],
+   "oracle": "live",
+   "bash": []
+  },
+  {
+   "id": "283-1f",
+   "item": 1,
+   "title": "redirect on a brace group",
+   "kind": "bash_write_targets",
+   "command": "{ echo x; } >.env",
+   "expected": [
+    ".env"
+   ],
+   "oracle": "live",
+   "bash": []
+  },
+  {
+   "id": "283-1g",
+   "item": 1,
+   "title": "exec opening a descriptor on the file",
+   "kind": "bash_write_targets",
+   "command": "exec 3>.env",
+   "expected": [
+    ".env"
+   ],
+   "oracle": "live",
+   "bash": []
+  },
+  {
+   "id": "283-2a",
+   "item": 2,
+   "title": "trailing 2>&1 is not the cp destination",
+   "kind": "bash_write_targets",
+   "command": "cp src/.env apps/api/.env 2>&1",
+   "expected": [
+    "apps/api/.env"
+   ],
+   "oracle": "live",
+   "bash": [
+    "2>"
+   ]
+  },
+  {
+   "id": "283-2b",
+   "item": 2,
+   "title": "cp -t DIR SRC writes into DIR",
+   "kind": "bash_write_targets",
+   "command": "cp -t apps/api src/.env",
+   "expected": [
+    "apps/api/.env"
+   ],
+   "oracle": "live",
+   "bash": [
+    "src/.env"
+   ]
+  },
+  {
+   "id": "283-2c",
+   "item": 2,
+   "title": "trailing 2>/dev/null is not the mv destination",
+   "kind": "bash_write_targets",
+   "command": "mv .env.new .env 2>/dev/null",
+   "expected": [
+    ".env",
+    "/dev/null"
+   ],
+   "oracle": "live",
+   "bash": [
+    "2>/dev/null"
+   ]
+  },
+  {
+   "id": "283-3a",
+   "item": 3,
+   "title": "write inside bash -c",
+   "kind": "bash_write_targets",
+   "command": "bash -c 'echo x > .env'",
+   "expected": [
+    ".env"
+   ],
+   "oracle": "live",
+   "bash": []
+  },
+  {
+   "id": "283-3b",
+   "item": 3,
+   "title": "write inside sh -c",
+   "kind": "bash_write_targets",
+   "command": "sh -c \"cp a .env\"",
+   "expected": [
+    ".env"
+   ],
+   "oracle": "live",
+   "bash": []
+  },
+  {
+   "id": "283-3c",
+   "item": 3,
+   "title": "deny rule inside bash -lc",
+   "kind": "bash_commands_decide",
+   "command": "bash -lc 'node -e 1'",
+   "allow": [],
+   "deny": [
+    "node -e",
+    "node -p",
+    "node --eval",
+    "node --print",
+    "bun -e",
+    "bun --eval",
+    "cargo test"
+   ],
+   "expected": "deny:node -e",
+   "oracle": "live",
+   "bash": "allow"
+  },
+  {
+   "id": "283-3d",
+   "item": 3,
+   "title": "deny rule inside eval",
+   "kind": "bash_commands_decide",
+   "command": "eval \"node -e 1\"",
+   "allow": [],
+   "deny": [
+    "node -e",
+    "node -p",
+    "node --eval",
+    "node --print",
+    "bun -e",
+    "bun --eval",
+    "cargo test"
+   ],
+   "expected": "deny:node -e",
+   "oracle": "live",
+   "bash": "allow"
+  },
+  {
+   "id": "283-3e",
+   "item": 3,
+   "title": "write inside eval",
+   "kind": "bash_write_targets",
+   "command": "eval 'echo x > .env'",
+   "expected": [
+    ".env"
+   ],
+   "oracle": "live",
+   "bash": []
+  },
+  {
+   "id": "283-4a",
+   "item": 4,
+   "title": "rule on the second command",
+   "kind": "bash_commands_decide",
+   "command": "cd /tmp && node -e 1",
+   "allow": [],
+   "deny": [
+    "node -e",
+    "node -p",
+    "node --eval",
+    "node --print",
+    "bun -e",
+    "bun --eval",
+    "cargo test"
+   ],
+   "expected": "deny:node -e",
+   "oracle": "live",
+   "bash": "allow"
+  },
+  {
+   "id": "283-4b",
+   "item": 4,
+   "title": "rule after an assignment prefix",
+   "kind": "bash_commands_decide",
+   "command": "FOO=1 node -e 1",
+   "allow": [],
+   "deny": [
+    "node -e",
+    "node -p",
+    "node --eval",
+    "node --print",
+    "bun -e",
+    "bun --eval",
+    "cargo test"
+   ],
+   "expected": "deny:node -e",
+   "oracle": "live",
+   "bash": "allow"
+  },
+  {
+   "id": "283-4c",
+   "item": 4,
+   "title": "rule inside a subshell",
+   "kind": "bash_commands_decide",
+   "command": "(node -e 1)",
+   "allow": [],
+   "deny": [
+    "node -e",
+    "node -p",
+    "node --eval",
+    "node --print",
+    "bun -e",
+    "bun --eval",
+    "cargo test"
+   ],
+   "expected": "deny:node -e",
+   "oracle": "live",
+   "bash": "allow"
+  },
+  {
+   "id": "283-4d",
+   "item": 4,
+   "title": "rule behind sudo",
+   "kind": "bash_commands_decide",
+   "command": "sudo node -e 1",
+   "allow": [],
+   "deny": [
+    "node -e",
+    "node -p",
+    "node --eval",
+    "node --print",
+    "bun -e",
+    "bun --eval",
+    "cargo test"
+   ],
+   "expected": "deny:node -e",
+   "oracle": "live",
+   "bash": "allow"
+  },
+  {
+   "id": "283-4e",
+   "item": 4,
+   "title": "cargo test after cd",
+   "kind": "bash_commands_decide",
+   "command": "cd crate && cargo test",
+   "allow": [],
+   "deny": [
+    "node -e",
+    "node -p",
+    "node --eval",
+    "node --print",
+    "bun -e",
+    "bun --eval",
+    "cargo test"
+   ],
+   "expected": "deny:cargo test",
+   "oracle": "live",
+   "bash": "allow"
+  },
+  {
+   "id": "283-4f",
+   "item": 4,
+   "title": "a rule never spans two commands",
+   "kind": "bash_commands_decide",
+   "command": "bun install && node -e \"1\"",
+   "allow": [],
+   "deny": [
+    "node -e",
+    "node -p",
+    "node --eval",
+    "node --print",
+    "bun -e",
+    "bun --eval",
+    "cargo test"
+   ],
+   "expected": "deny:node -e",
+   "oracle": "live",
+   "bash": "deny:bun -e"
+  },
+  {
+   "id": "283-4g",
+   "item": 4,
+   "title": "rules do not depend on python3",
+   "kind": "bash_commands_decide",
+   "command": "node -e 1",
+   "allow": [],
+   "deny": [
+    "node -e",
+    "node -p",
+    "node --eval",
+    "node --print",
+    "bun -e",
+    "bun --eval",
+    "cargo test"
+   ],
+   "expected": "deny:node -e",
+   "oracle": "live",
+   "env": "no-python3",
+   "bash": "allow"
+  },
+  {
+   "id": "283-5a",
+   "item": 5,
+   "title": "canonical heredoc commit message",
+   "kind": "commit_messages",
+   "command": "git commit -m \"$(cat <<'EOF'\nwibble: x\n\nbody\nEOF\n)\"",
+   "expected": [
+    "wibble: x\n\nbody"
+   ],
+   "oracle": "recorded",
+   "bash": "commit-gate.sh (block mode) extracted no message, so the Conventional Commits prefix check was skipped and nothing was denied; the same prefix in plain `-m \"wibble: x\"` is denied (verified against the shipped hook on 2026-09-28)"
+  },
+  {
+   "id": "283-5b",
+   "item": 5,
+   "title": "-am cluster",
+   "kind": "commit_messages",
+   "command": "git commit -am \"wibble: x\"",
+   "expected": [
+    "wibble: x"
+   ],
+   "oracle": "recorded",
+   "bash": "commit-gate.sh (block mode) extracted no message, so the Conventional Commits prefix check was skipped and nothing was denied; the same prefix in plain `-m \"wibble: x\"` is denied (verified against the shipped hook on 2026-09-28)"
+  },
+  {
+   "id": "283-5c",
+   "item": 5,
+   "title": "attached -m'…'",
+   "kind": "commit_messages",
+   "command": "git commit -m'wibble: x'",
+   "expected": [
+    "wibble: x"
+   ],
+   "oracle": "recorded",
+   "bash": "commit-gate.sh (block mode) extracted no message, so the Conventional Commits prefix check was skipped and nothing was denied; the same prefix in plain `-m \"wibble: x\"` is denied (verified against the shipped hook on 2026-09-28)"
+  },
+  {
+   "id": "283-5d",
+   "item": 5,
+   "title": "--message=",
+   "kind": "commit_messages",
+   "command": "git commit --message=\"wibble: x\"",
+   "expected": [
+    "wibble: x"
+   ],
+   "oracle": "recorded",
+   "bash": "commit-gate.sh (block mode) extracted no message, so the Conventional Commits prefix check was skipped and nothing was denied; the same prefix in plain `-m \"wibble: x\"` is denied (verified against the shipped hook on 2026-09-28)"
+  },
+  {
+   "id": "283-6a",
+   "item": 6,
+   "title": "prose naming a quality command",
+   "kind": "commands",
+   "command": "echo \"remember to run bun test later\"",
+   "expected": [
+    {
+     "argv": [
+      "echo",
+      "remember to run bun test later"
+     ],
+     "pipeline": 0
+    }
+   ],
+   "oracle": "recorded",
+   "bash": "gate-status.sh matched `bun test` in the text; with exit 0 it flipped a failing gate to passing (verified against the shipped hook on 2026-09-28)"
+  },
+  {
+   "id": "283-7a",
+   "item": 7,
+   "title": "quality command piped into tail",
+   "kind": "exit_proves",
+   "command": "bun test 2>&1 | tail -20",
+   "expected": [
+    [
+     "bun",
+     false
+    ],
+    [
+     "tail",
+     true
+    ]
+   ],
+   "oracle": "recorded",
+   "bash": "gate-status.sh took tail's exit 0 as a passing bun test and cleared the failing gate (verified against the shipped hook on 2026-09-28)"
+  },
+  {
+   "id": "283-8a",
+   "item": 8,
+   "title": "push behind timeout",
+   "kind": "is_git_push",
+   "command": "timeout 120 git push",
+   "expected": true,
+   "oracle": "live",
+   "bash": false
+  },
+  {
+   "id": "283-8b",
+   "item": 8,
+   "title": "push behind nice",
+   "kind": "is_git_push",
+   "command": "nice -n 10 git push",
+   "expected": true,
+   "oracle": "live",
+   "bash": false
+  },
+  {
+   "id": "283-8c",
+   "item": 8,
+   "title": "push behind sudo -u",
+   "kind": "is_git_push",
+   "command": "sudo -u me git push",
+   "expected": true,
+   "oracle": "live",
+   "bash": false
+  },
+  {
+   "id": "283-8d",
+   "item": 8,
+   "title": "push behind env with assignments",
+   "kind": "is_git_push",
+   "command": "env -i PATH=/usr/bin git push",
+   "expected": true,
+   "oracle": "live",
+   "bash": false
+  },
+  {
+   "id": "283-8e",
+   "item": 8,
+   "title": "push behind xargs",
+   "kind": "is_git_push",
+   "command": "echo main | xargs git push origin",
+   "expected": true,
+   "oracle": "live",
+   "bash": false
+  },
+  {
+   "id": "283-8f",
+   "item": 8,
+   "title": "git by path",
+   "kind": "is_git_push",
+   "command": "/usr/bin/git push",
+   "expected": true,
+   "oracle": "live",
+   "bash": false
+  },
+  {
+   "id": "283-8g",
+   "item": 8,
+   "title": "global option with a separate value",
+   "kind": "is_git_push",
+   "command": "git --git-dir .git push",
+   "expected": true,
+   "oracle": "live",
+   "bash": false
+  },
+  {
+   "id": "283-8h",
+   "item": 8,
+   "title": "push inside bash -c",
+   "kind": "is_git_push",
+   "command": "bash -c \"git push\"",
+   "expected": true,
+   "oracle": "live",
+   "bash": false
+  },
+  {
+   "id": "283-8i",
+   "item": 8,
+   "title": "push inside eval",
+   "kind": "is_git_push",
+   "command": "eval git push",
+   "expected": true,
+   "oracle": "live",
+   "bash": false
+  },
+  {
+   "id": "283-8j",
+   "item": 8,
+   "title": "push after a backslash-newline continuation",
+   "kind": "is_git_push",
+   "command": "cd repo && \\\n  git push",
+   "expected": true,
+   "oracle": "live",
+   "bash": false
+  },
+  {
+   "id": "283-8k",
+   "item": 8,
+   "title": "push in an unquoted heredoc body",
+   "kind": "is_git_push",
+   "command": "cat <<EOF\n$(git push)\nEOF",
+   "expected": true,
+   "oracle": "live",
+   "bash": false
+  },
+  {
+   "id": "283-8l",
+   "item": 8,
+   "title": "commit behind sudo",
+   "kind": "is_git_commit",
+   "command": "sudo -u me git commit -m \"feat: x\"",
+   "expected": true,
+   "oracle": "live",
+   "bash": false
+  },
+  {
+   "id": "283-8m",
+   "item": 8,
+   "title": "commit by path",
+   "kind": "is_git_commit",
+   "command": "/usr/bin/git commit -m \"feat: x\"",
+   "expected": true,
+   "oracle": "live",
+   "bash": false
+  },
+  {
+   "id": "283-8n",
+   "item": 8,
+   "title": "commit inside bash -c",
+   "kind": "is_git_commit",
+   "command": "bash -c 'git commit -m \"feat: x\"'",
+   "expected": true,
+   "oracle": "live",
+   "bash": false
+  },
+  {
+   "id": "283-9a",
+   "item": 9,
+   "title": "a -C path with a space",
+   "command": "git -C \"$TMP/with space/wt\" push",
+   "repos": [
+    "tmp",
+    "tmp/with space/wt"
+   ],
+   "cwd": "tmp",
+   "expected": "tmp/with space/wt",
+   "kind": "push_target_root",
+   "oracle": "live",
+   "bash": "tmp"
+  },
+  {
+   "id": "283-9b",
+   "item": 9,
+   "title": "-C of an earlier command whose argument says push",
+   "command": "git -C $TMP/a log --grep push; git -C $TMP/b push",
+   "repos": [
+    "tmp",
+    "tmp/a",
+    "tmp/b"
+   ],
+   "cwd": "tmp",
+   "expected": "tmp/b",
+   "kind": "push_target_root",
+   "oracle": "live",
+   "bash": "tmp/a"
+  },
+  {
+   "id": "283-10a",
+   "item": 10,
+   "title": "grep filtering a pipe",
+   "kind": "commands",
+   "command": "git log | grep fix",
+   "expected": [
+    {
+     "argv": [
+      "git",
+      "log"
+     ],
+     "pipeline": 0
+    },
+    {
+     "argv": [
+      "grep",
+      "fix"
+     ],
+     "pipeline": 1
+    }
+   ],
+   "oracle": "recorded",
+   "bash": "search-nudge.sh nudged toward ast-grep, although a grep that filters a pipe is the use its own message recommends (verified against the shipped hook on 2026-09-28)"
+  },
+  {
+   "id": "283-10b",
+   "item": 10,
+   "title": "grep and rg inside a commit message",
+   "kind": "commands",
+   "command": "git commit -m \"use grep and rg to find it\"",
+   "expected": [
+    {
+     "argv": [
+      "git",
+      "commit",
+      "-m",
+      "use grep and rg to find it"
+     ],
+     "pipeline": 0
+    }
+   ],
+   "oracle": "recorded",
+   "bash": "search-nudge.sh nudged on words inside the commit message (verified against the shipped hook on 2026-09-28)"
+  },
+  {
+   "id": "283-10c",
+   "item": 10,
+   "title": "a shell for-in loop",
+   "kind": "commands",
+   "command": "for f in src/*.ts; do grep -n TODO \"$f\"; done",
+   "expected": [
+    {
+     "argv": [
+      "grep",
+      "-n",
+      "TODO",
+      null
+     ],
+     "pipeline": 0
+    }
+   ],
+   "oracle": "recorded",
+   "bash": "search-nudge.sh printed \"STOP: grep/rg for structural code search\" because its pattern list contains `for .*in` (verified against the shipped hook on 2026-09-28)"
+  },
+  {
+   "id": "283-10d",
+   "item": 10,
+   "title": "structural pattern as one argument",
+   "kind": "commands",
+   "command": "rg -n \"fn main\" src/",
+   "expected": [
+    {
+     "argv": [
+      "rg",
+      "-n",
+      "fn main",
+      "src/"
+     ],
+     "pipeline": 0
+    }
+   ],
+   "oracle": "recorded",
+   "bash": "search-nudge.sh gave only the generic nudge: its structural pattern needs whitespace before `fn` (verified against the shipped hook on 2026-09-28)"
+  },
+  {
+   "id": "283-11a",
+   "item": 11,
+   "title": "4.3 KB command",
+   "kind": "latency",
+   "command": "gh api repos/Falconiere/toolu/pulls -X POST --input - <<< '{\"title\": \"feat(core): shell analysis\", \"body\": \"The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule. The gate reads the command as text, so every quoted operator, heredoc and substitution needs its own hand-written rule.\", \"labels\": [\"enhancement\", \"epic-247\"], \"draft\": false}' && git push origin HEAD:feat/284-shell-command-analysis-in-toolu",
+   "expected": {
+    "maxMs": 50,
+    "push": true
+   },
+   "oracle": "recorded",
+   "bash": "is_git_push took 0.23 s under bash 5.3.20 and 0.61 s under /bin/bash 3.2 on this 4,310-character command (Apple M-series, 2026-09-28); #283 measured 2.3 s for is_git_push on its own 4.2 KB command and 2.7 s for the whole PreToolUse dispatcher"
+  }
+ ]
+}
