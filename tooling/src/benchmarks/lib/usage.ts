@@ -149,7 +149,12 @@ export function usageRollup(files: readonly string[]): Rollup {
   const text = files.map((file) => {
     try {
       return `${readFileSync(file, "utf8")}\n`;
-    } catch {
+    } catch (err: unknown) {
+      // Skipped like the shell harness did, but said out loud: a missing transcript
+      // makes the rollup incomplete.
+      console.warn(
+        `usage: could not read ${file}: ${err instanceof Error ? err.message : String(err)}`,
+      );
       return "\n";
     }
   });

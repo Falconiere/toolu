@@ -282,7 +282,6 @@ function verifyCleanup(state: string, clone: string, worktree: string, agent: st
     fail("state still records the worktree or fixer");
 }
 
-/** Best effort: cleanup a fixer we started, close the herdr workspace opened for the clone, drop the tree. */
 /** The state still records a herdr worktree object (jq `.herdrWorktree // null | type == "object"`). */
 function hasLiveWorktree(state: string): boolean {
   const worktree = existsSync(state)
@@ -291,6 +290,7 @@ function hasLiveWorktree(state: string): boolean {
   return typeof worktree === "object" && worktree !== null;
 }
 
+/** Best effort: cleanup a fixer we started, close the herdr workspace opened for the clone, drop the tree. */
 function finish(tmp: string, state: string): void {
   try {
     if (hasLiveWorktree(state)) babysit("dispatch-fix.sh", ["cleanup", "--state-file", state]);

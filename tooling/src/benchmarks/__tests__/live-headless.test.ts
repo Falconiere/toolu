@@ -149,3 +149,10 @@ test("a hand-built whole-session result passes validation", () => {
   });
   expect(() => validateResult(file)).not.toThrow();
 });
+
+test("an unreadable transcript is skipped without disturbing the rest of the rollup", () => {
+  using sb = createSandbox();
+  expect(usageRollup([sb.path("missing.jsonl"), ...transcriptSet()])).toEqual(
+    usageRollup(transcriptSet()),
+  );
+});
