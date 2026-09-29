@@ -23,7 +23,16 @@ import { GuardrailsFatal, Reporter, fatal, printFatal } from "./report.ts";
 import { editedPath, readStdin, stopHookActive } from "./stdin.ts";
 import { exists, isDir, isFile } from "./walk.ts";
 
-const SCAN_PRUNED = new Set(["node_modules", ".git", "dist", "build", "out", "coverage", ".wrangler", ".next"]);
+const SCAN_PRUNED = new Set([
+  "node_modules",
+  ".git",
+  "dist",
+  "build",
+  "out",
+  "coverage",
+  ".wrangler",
+  ".next",
+]);
 
 export function isWorkspace(cwd: string): boolean {
   const env = process.env;
@@ -41,17 +50,25 @@ export function isWorkspace(cwd: string): boolean {
 function loadWorkspace(cwd: string): WorkspaceManifest {
   const manifest = loadManifest(cwd);
   if (manifest.packages.length === 0) {
-    fatal(`${WORKSPACE_FILE} lists no packages — a workspace that governs nothing passes every check while enforcing none`);
+    fatal(
+      `${WORKSPACE_FILE} lists no packages — a workspace that governs nothing passes every check while enforcing none`,
+    );
   }
   for (const pkg of manifest.packages) {
     if (pkg.startsWith("/") || pkg.includes("..")) {
-      fatal(`${WORKSPACE_FILE} lists package "${pkg}" — package paths must be repo-relative with no ".." segment`);
+      fatal(
+        `${WORKSPACE_FILE} lists package "${pkg}" — package paths must be repo-relative with no ".." segment`,
+      );
     }
     if (!isDir(cwd, pkg)) {
-      fatal(`${WORKSPACE_FILE} lists package "${pkg}" but no such directory exists — fix the path or drop the entry`);
+      fatal(
+        `${WORKSPACE_FILE} lists package "${pkg}" but no such directory exists — fix the path or drop the entry`,
+      );
     }
     if (!isFile(cwd, `${pkg}/guardrails.config.json`)) {
-      fatal(`package "${pkg}" has no guardrails.config.json — every workspace package carries its own; copy one from the stack kit`);
+      fatal(
+        `package "${pkg}" has no guardrails.config.json — every workspace package carries its own; copy one from the stack kit`,
+      );
     }
   }
   return manifest;
@@ -59,7 +76,9 @@ function loadWorkspace(cwd: string): WorkspaceManifest {
 
 /** The listed package containing `path`; the longest match wins. */
 function ownerOf(packages: readonly string[], path: string): string {
-  return packages.filter((pkg) => path.startsWith(`${pkg}/`)).reduce((a, b) => (b.length > a.length ? b : a), "");
+  return packages
+    .filter((pkg) => path.startsWith(`${pkg}/`))
+    .reduce((a, b) => (b.length > a.length ? b : a), "");
 }
 
 function unlisted(dir: string): never {
@@ -122,7 +141,10 @@ function runPackage(cwd: string, pkg: string, paths: readonly string[] | null): 
     return ctx.report.failed ? 1 : 0;
   } catch (err: unknown) {
     if (err instanceof GuardrailsFatal) printFatal(err.message);
-    else printFatal(`package "${pkg}" failed unexpectedly: ${err instanceof Error ? err.message : String(err)}`);
+    else
+      printFatal(
+        `package "${pkg}" failed unexpectedly: ${err instanceof Error ? err.message : String(err)}`,
+      );
     return 3;
   }
 }
@@ -141,7 +163,9 @@ function runRepoMode(cwd: string, manifest: WorkspaceManifest, only: string): nu
 function runPaths(cwd: string, manifest: WorkspaceManifest, paths: readonly string[]): number {
   let status = 0;
   for (const pkg of manifest.packages) {
-    const bucket = paths.filter((p) => ownerOf(manifest.packages, p) === pkg).map((p) => p.slice(pkg.length + 1));
+    const bucket = paths
+      .filter((p) => ownerOf(manifest.packages, p) === pkg)
+      .map((p) => p.slice(pkg.length + 1));
     if (bucket.length > 0) status = worst(status, runPackage(cwd, pkg, bucket));
   }
   return status;
@@ -153,7 +177,9 @@ function hookMode(cwd: string, manifest: WorkspaceManifest): number {
   const pwd = shellPwd(cwd);
   if (edited.startsWith(`${pwd}/`)) edited = edited.slice(pwd.length + 1);
   else if (edited.startsWith("/")) {
-    fatal(`"${edited}" is outside the workspace root (${pwd}) — guardrails cannot place it in a package`);
+    fatal(
+      `"${edited}" is outside the workspace root (${pwd}) — guardrails cannot place it in a package`,
+    );
   }
   if (!exists(cwd, edited)) return 0;
   requireOwned(cwd, manifest.packages, [edited]);

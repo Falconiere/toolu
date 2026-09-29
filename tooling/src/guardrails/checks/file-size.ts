@@ -52,8 +52,19 @@ function eligible(config: GuardrailsConfig, path: string): boolean {
   return !path.includes(`/${config.testDir}/`) && !path.startsWith(`${config.testDir}/`);
 }
 
+/** File text, or null when unreadable: awk reported it on stderr and counted nothing. */
+function readable(root: string, path: string): string | null {
+  try {
+    return readFileSync(resolve(root, path), "latin1");
+  } catch {
+    return null;
+  }
+}
+
 function judge(ctx: CheckContext<GuardrailsConfig>, path: string): void {
-  const lines = codeLines(readFileSync(resolve(ctx.root, path), "latin1"));
+  const text = readable(ctx.root, path);
+  if (text === null) return;
+  const lines = codeLines(text);
   if (lines === null) return;
   const ceiling = ceilingFor(ctx.config, path);
   if (lines > ceiling) {

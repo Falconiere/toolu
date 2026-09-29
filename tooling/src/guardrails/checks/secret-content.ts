@@ -51,7 +51,12 @@ function firstSecretLine(root: string, path: string): string | null {
   }
   if (bytes.includes(0)) return null;
   // latin1 maps every byte to one char, so ASCII patterns match byte for byte.
-  return bytes.toString("latin1").split("\n").find((line) => PATTERN.test(line)) ?? null;
+  return (
+    bytes
+      .toString("latin1")
+      .split("\n")
+      .find((line) => PATTERN.test(line)) ?? null
+  );
 }
 
 function scan(ctx: CheckContext<GuardrailsConfig>, path: string): void {

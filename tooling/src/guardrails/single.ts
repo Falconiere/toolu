@@ -6,7 +6,10 @@ import { exists } from "./walk.ts";
 
 export function runSingle(cwd: string, opts: Options): number {
   const env = process.env;
-  const configFile = env["GR_CONFIG"] === undefined || env["GR_CONFIG"] === "" ? "guardrails.config.json" : env["GR_CONFIG"];
+  const configFile =
+    env["GR_CONFIG"] === undefined || env["GR_CONFIG"] === ""
+      ? "guardrails.config.json"
+      : env["GR_CONFIG"];
   const ctx = packageContext(cwd, env["GR_PATH_PREFIX"] ?? "", configFile);
 
   if (opts.mode === "repo") {

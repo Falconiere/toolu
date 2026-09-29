@@ -21,7 +21,11 @@ function report(ctx: CheckContext<GuardrailsConfig>, path: string): void {
   );
 }
 
-export function colocatedTests(ctx: CheckContext<GuardrailsConfig>, mode: Mode, path: string): void {
+export function colocatedTests(
+  ctx: CheckContext<GuardrailsConfig>,
+  mode: Mode,
+  path: string,
+): void {
   const { srcRoot } = ctx.config;
   if (mode === "file") {
     // Scoped to srcRoot like the repo walk: root-level files are never looked at.

@@ -25,7 +25,8 @@ function field(value: unknown, key: string): unknown {
 /** `jq -r '.tool_input.file_path // empty'`: "" when absent, null, false or unparseable. */
 export function editedPath(payload: string): string {
   const value = field(field(parse(payload), "tool_input"), "file_path");
-  if (typeof value === "string" || typeof value === "number" || value === true) return String(value);
+  if (typeof value === "string" || typeof value === "number" || value === true)
+    return String(value);
   return "";
 }
 

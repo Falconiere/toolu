@@ -23,7 +23,19 @@ import { isFile } from "../walk.ts";
 const SCRIPT = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs|astro)$/;
 const RUST = /\.rs$/;
 /** Pruned only at the package root, exactly like the `find . -path './x' -prune` list. */
-const PRUNED = new Set([".git", "node_modules", "dist", "build", "out", "coverage", ".wrangler", ".next", ".expo", "target", "vendor"]);
+const PRUNED = new Set([
+  ".git",
+  "node_modules",
+  "dist",
+  "build",
+  "out",
+  "coverage",
+  ".wrangler",
+  ".next",
+  ".expo",
+  "target",
+  "vendor",
+]);
 const PRUNED_SCRIPTS = new Set(["src/route-tree.gen.ts", "worker-configuration.d.ts"]);
 
 function read(root: string, path: string): Buffer {
@@ -69,14 +81,21 @@ function sources(root: string, rel = ""): string[] {
     const path = rel === "" ? entry.name : `${rel}/${entry.name}`;
     if (rel === "" && PRUNED.has(entry.name)) continue;
     if (entry.isDirectory()) out.push(...sources(root, path));
-    else if (entry.isFile() && (RUST.test(path) || (SCRIPT.test(path) && !PRUNED_SCRIPTS.has(path)))) {
+    else if (
+      entry.isFile() &&
+      (RUST.test(path) || (SCRIPT.test(path) && !PRUNED_SCRIPTS.has(path)))
+    ) {
       out.push(path);
     }
   }
   return out;
 }
 
-export function lintSuppressions(ctx: CheckContext<GuardrailsConfig>, mode: Mode, path: string): void {
+export function lintSuppressions(
+  ctx: CheckContext<GuardrailsConfig>,
+  mode: Mode,
+  path: string,
+): void {
   if (mode === "file") {
     scan(ctx, path, false);
     return;

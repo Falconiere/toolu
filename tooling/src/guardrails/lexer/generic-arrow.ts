@@ -73,7 +73,10 @@ function paramCode(line: string, s: ParamScan): void {
   const next = at(line, s.i + 1);
   if (char + next === "//") s.mode = "line_comment";
   else if (char + next === "/*") s.mode = "block_comment";
-  else if (char === "/" && (s.afterControl || startsRegex(`${s.context}/${next}`, s.context.length))) {
+  else if (
+    char === "/" &&
+    (s.afterControl || startsRegex(`${s.context}/${next}`, s.context.length))
+  ) {
     s.mode = "regex";
     s.regexClass = false;
     s.context += "v";

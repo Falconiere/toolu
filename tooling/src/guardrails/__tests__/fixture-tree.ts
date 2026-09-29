@@ -35,7 +35,8 @@ export type FixtureTree = {
 /** runtime-files.json → { "<fixture>/<rel>": body } decoded from base64. */
 function runtimeFiles(): Map<string, string> {
   const doc: unknown = JSON.parse(readFileSync(join(FIXTURES, "runtime-files.json"), "utf8"));
-  const files: unknown = typeof doc === "object" && doc !== null ? Reflect.get(doc, "files") : undefined;
+  const files: unknown =
+    typeof doc === "object" && doc !== null ? Reflect.get(doc, "files") : undefined;
   if (typeof files !== "object" || files === null) {
     throw new Error("runtime-files.json has no files map");
   }

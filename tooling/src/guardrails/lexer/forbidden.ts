@@ -13,12 +13,18 @@ const DIRECTIVE = "(oxlint|eslint)-disable(-next-line|-line)?";
 const UNUSED = "((eslint|typescript|@typescript-eslint)/)?no-unused-vars";
 
 const LINE_BLANKET = new RegExp(`//${S}*${DIRECTIVE}${S}*(--[^\\x00-\\x1f\\x7f]*)?$`);
-const LINE_UNUSED = new RegExp(`//${S}*${DIRECTIVE}${S}+([^,${S.slice(1, -1)}]+${S}*,${S}*)*${UNUSED}([${S.slice(1, -1)},]|$)`);
+const LINE_UNUSED = new RegExp(
+  `//${S}*${DIRECTIVE}${S}+([^,${S.slice(1, -1)}]+${S}*,${S}*)*${UNUSED}([${S.slice(1, -1)},]|$)`,
+);
 const BLOCK_START = new RegExp(`/\\*${S}*(oxlint|eslint)-disable`);
 const BLOCK_BLANKET = new RegExp(`/\\*${S}*${DIRECTIVE}${S}*(--[^*]*)?\\*/`);
-const BLOCK_UNUSED = new RegExp(`/\\*${S}*${DIRECTIVE}${S}+([^,${S.slice(1, -1)}*]+${S}*,${S}*)*${UNUSED}([${S.slice(1, -1)},*]|$)`);
-const RUST_DIRECT = /^#!?\[(r#)?(allow|warn|expect)\(([^,)]*,)*(r#)?(dead_code|unused)(,[^)]*)?\)\]/;
-const RUST_CFG_ATTR = /^#!?\[(r#)?cfg_attr\(.*,(r#)?(allow|warn|expect)\(([^,)]*,)*(r#)?(dead_code|unused)(,[^)]*)?\).*\)\]/;
+const BLOCK_UNUSED = new RegExp(
+  `/\\*${S}*${DIRECTIVE}${S}+([^,${S.slice(1, -1)}*]+${S}*,${S}*)*${UNUSED}([${S.slice(1, -1)},*]|$)`,
+);
+const RUST_DIRECT =
+  /^#!?\[(r#)?(allow|warn|expect)\(([^,)]*,)*(r#)?(dead_code|unused)(,[^)]*)?\)\]/;
+const RUST_CFG_ATTR =
+  /^#!?\[(r#)?cfg_attr\(.*,(r#)?(allow|warn|expect)\(([^,)]*,)*(r#)?(dead_code|unused)(,[^)]*)?\).*\)\]/;
 
 /** Cheap whole-file prefilters: no candidate text, no lexing. */
 export const SCRIPT_CANDIDATE = /(oxlint|eslint)-disable/;

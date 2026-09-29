@@ -39,7 +39,7 @@ export type GoldenCase = {
   /** Hook payload; `<ROOT>` is replaced by the tree root before the run. */
   readonly stdin: string;
   /** Files written after the commit, making the tree dirty. */
-  readonly mutate?: Readonly<Record<string, string>>;
+  readonly mutate?: Readonly<Record<string, string>> | undefined;
 };
 
 export type GoldenResult = { exit: number; stdout: string[]; stderr: string[] };
@@ -55,15 +55,31 @@ function hookPayload(path: string): string {
 function perFileCases(fixture: FixtureName, files: readonly string[]): GoldenCase[] {
   return files.flatMap((file) => [
     { id: `${fixture} --file ${file}`, fixture, args: ["--file", file], stdin: "" },
-    { id: `${fixture} --hook ${file}`, fixture, args: ["--hook"], stdin: hookPayload(`<ROOT>/${file}`) },
+    {
+      id: `${fixture} --hook ${file}`,
+      fixture,
+      args: ["--hook"],
+      stdin: hookPayload(`<ROOT>/${file}`),
+    },
   ]);
 }
 
 function stopCases(fixture: FixtureName, newFile: string): GoldenCase[] {
   return [
-    { id: `${fixture} --stop active`, fixture, args: ["--stop"], stdin: '{"stop_hook_active":true}' },
+    {
+      id: `${fixture} --stop active`,
+      fixture,
+      args: ["--stop"],
+      stdin: '{"stop_hook_active":true}',
+    },
     { id: `${fixture} --stop unchanged`, fixture, args: ["--stop"], stdin: "{}" },
-    { id: `${fixture} --stop dirty`, fixture, args: ["--stop"], stdin: "{}", mutate: { [newFile]: NEW_FILE } },
+    {
+      id: `${fixture} --stop dirty`,
+      fixture,
+      args: ["--stop"],
+      stdin: "{}",
+      mutate: { [newFile]: NEW_FILE },
+    },
   ];
 }
 
@@ -74,7 +90,12 @@ function commonCases(fixture: FixtureName, files: readonly string[]): GoldenCase
     { id: `${fixture} --file all`, fixture, args: ["--file", ...files], stdin: "" },
     { id: `${fixture} --hook empty payload`, fixture, args: ["--hook"], stdin: "{}" },
     { id: `${fixture} --hook not json`, fixture, args: ["--hook"], stdin: "not json" },
-    { id: `${fixture} --hook missing file`, fixture, args: ["--hook"], stdin: hookPayload("<ROOT>/src/missing.ts") },
+    {
+      id: `${fixture} --hook missing file`,
+      fixture,
+      args: ["--hook"],
+      stdin: hookPayload("<ROOT>/src/missing.ts"),
+    },
     { id: `${fixture} unknown flag`, fixture, args: ["--bogus"], stdin: "" },
     { id: `${fixture} --only without value`, fixture, args: ["--only"], stdin: "" },
     { id: `${fixture} --file without paths`, fixture, args: ["--file"], stdin: "" },
@@ -105,7 +126,12 @@ export function goldenCases(filesOf: (fixture: FixtureName) => readonly string[]
     cases.push(
       { id: `${fixture} --only banned-deps`, fixture, args: ["--only", "banned-deps"], stdin: "" },
       { id: `${fixture} --only secrets`, fixture, args: ["--only", "secrets"], stdin: "" },
-      { id: `${fixture} --hook outside root`, fixture, args: ["--hook"], stdin: hookPayload("/etc/hosts") },
+      {
+        id: `${fixture} --hook outside root`,
+        fixture,
+        args: ["--hook"],
+        stdin: hookPayload("/etc/hosts"),
+      },
     );
   }
   return cases;

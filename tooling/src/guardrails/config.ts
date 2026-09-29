@@ -92,7 +92,8 @@ function validateKeys(file: string, doc: Doc, required: string, optional: string
     }
   }
   const version = doc.get("version");
-  const text = version === null || version === false || version === undefined ? "0" : jqText(version);
+  const text =
+    version === null || version === false || version === undefined ? "0" : jqText(version);
   if (/^-?\d+$/.test(text) && Number(text) < SCRIPTS_VERSION) {
     warn(
       `${file} is version ${text} but these scripts are version ${String(SCRIPTS_VERSION)} — re-copy scripts/guardrails/ and the config from the kit`,
@@ -149,7 +150,9 @@ function treeFacts(file: string, doc: Doc): Omit<GuardrailsConfig, keyof RepoFac
 /** One package's config: `file` is GR_CONFIG or guardrails.config.json. */
 export function loadConfig(cwd: string, file: string, exists: boolean): GuardrailsConfig {
   if (!exists) {
-    fatal(`no config at ${file} — copy guardrails.config.json from the stack kit, or set GR_CONFIG`);
+    fatal(
+      `no config at ${file} — copy guardrails.config.json from the stack kit, or set GR_CONFIG`,
+    );
   }
   const doc = readDoc(cwd, file);
   validateKeys(file, doc, REQUIRED, OPTIONAL);

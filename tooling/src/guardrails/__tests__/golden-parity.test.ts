@@ -10,7 +10,11 @@ import { runCase } from "./golden-cases.ts";
 
 const RUNNER = ["bun", resolve(import.meta.dir, "../run.ts")];
 
-const Result = z.object({ exit: z.number(), stdout: z.array(z.string()), stderr: z.array(z.string()) });
+const Result = z.object({
+  exit: z.number(),
+  stdout: z.array(z.string()),
+  stderr: z.array(z.string()),
+});
 const Golden = z.object({
   bashSha: z.string().min(7),
   platform: z.literal("linux"),
@@ -42,8 +46,13 @@ const golden = Golden.parse(JSON.parse(readFileSync(join(FIXTURES, "golden.json"
 test("the golden covers every fixture and mode", () => {
   expect(golden.cases.length).toBeGreaterThanOrEqual(200);
   const fixtures = new Set(golden.cases.map((c) => c.fixture));
-  expect([...fixtures].toSorted()).toEqual(["clean", "violating", "workspace", "workspace-violating"]);
-  expect(golden.cases.map((c) => c.result.exit).toSorted()).toContain(3);
+  expect([...fixtures].toSorted()).toEqual([
+    "clean",
+    "violating",
+    "workspace",
+    "workspace-violating",
+  ]);
+  expect(golden.cases.map((c) => c.result.exit).toSorted((a, b) => a - b)).toContain(3);
 });
 
 for (const c of golden.cases) {

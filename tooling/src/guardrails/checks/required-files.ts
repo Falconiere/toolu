@@ -11,7 +11,12 @@ export function requiredFiles(ctx: CheckContext<RepoFacts>, mode: Mode): void {
   if (mode !== "repo") return;
   for (const { path, why } of ctx.config.requiredFiles) {
     if (!exists(ctx.root, path)) {
-      ctx.report.violation("required-files", path, "required file is missing", `create it — ${why}`);
+      ctx.report.violation(
+        "required-files",
+        path,
+        "required file is missing",
+        `create it — ${why}`,
+      );
     }
   }
 }

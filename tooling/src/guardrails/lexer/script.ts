@@ -68,7 +68,10 @@ function code(st: ScriptState, c: Cursor): void {
     c.out += "/*";
     st.state = "block";
     c.i += 2;
-  } else if (char === "/" && (st.afterControl || startsRegex(`${c.context}/${next}`, c.context.length))) {
+  } else if (
+    char === "/" &&
+    (st.afterControl || startsRegex(`${c.context}/${next}`, c.context.length))
+  ) {
     c.out += " ";
     st.state = "regex";
     st.regexClass = false;

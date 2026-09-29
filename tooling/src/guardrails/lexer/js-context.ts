@@ -7,11 +7,40 @@
 import { at, isMemberChar, isIdent, isSpace, sub, trimEnd } from "./chars.ts";
 
 const OPERATOR_ENDINGS = [
-  "=>", "=", "(", "[", "{", ",", ":", "?", ";", "!", "~", "+", "-", "*", "/", "%", "&", "|", "^",
+  "=>",
+  "=",
+  "(",
+  "[",
+  "{",
+  ",",
+  ":",
+  "?",
+  ";",
+  "!",
+  "~",
+  "+",
+  "-",
+  "*",
+  "/",
+  "%",
+  "&",
+  "|",
+  "^",
 ];
 const REGEX_KEYWORDS = [
-  "return", "case", "delete", "void", "typeof", "yield", "await", "throw", "else", "do",
-  "instanceof", "in", "of",
+  "return",
+  "case",
+  "delete",
+  "void",
+  "typeof",
+  "yield",
+  "await",
+  "throw",
+  "else",
+  "do",
+  "instanceof",
+  "in",
+  "of",
 ];
 const CONTROL_KEYWORDS = ["if", "while", "for", "with"];
 
