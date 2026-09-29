@@ -78,6 +78,7 @@ A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context b
 | `packages/toolu-core/src/launcher/launcher.ts` | `@toolu/core/launcher`: the generated `hooks.json` command that runs a bundle with Bun and fails closed without it |
 | `packages/toolu-core/src/host/host.ts` | `@toolu/core/host`: host detection (Claude, Codex, Cursor, OpenCode, Hermes), roots, Codex plugin snapshot, event-name map, per-host output encoders and `ask` degradation |
 | `packages/toolu-core/src/config/config.ts` | `@toolu/core/config`: `toolu.config.json` loader (fail-closed envelope), thresholds, gate modes, permissions write, `settings/*` loaders; bash parity over `tooling/fixtures/config` |
+| `packages/toolu-core/src/registry/registry.ts` | `@toolu/core/registry`: bundled ESM hook modules in `<config>/toolu/<dir>.d/`; module contract, in-process runner (gating, isolation, stop after deny), SessionStart register and Codex prune. See `docs/registry.md` |
 | `packages/toolu-core/src/state/state.ts` | `@toolu/core/state`: multi-slot gate file (locked atomic writes, strict v1 Zod), state sweeper, `diffSha`, closed-schema telemetry, edit-record normalization; byte parity with the bash libs |
 | `tooling/src/check-hooks-json.ts` | `hooks.json` launcher gate (`bun run check:hooks-json`); `--print <plugin> <Event> <entry>` emits the entry to paste |
 | `tooling/src/build-plugins.ts` | Builds `plugins/*/hooks/src` entries into committed `hooks/dist` bundles; `--check` is the drift gate |

@@ -267,7 +267,7 @@ flowchart TD
     D -- "runs a module only while its plugin is installed" --> OUT([enforced edit])
 ```
 
-At `SessionStart`, each domain plugin's `register.sh` contributes to the registry as `<plugin-spec>__<name>.sh` — `ast-grep` mirrors its `hooks/<event>.d/*.sh` one-to-one, while `rust-quality`/`ts-quality`/`python-quality` assemble their ordered `hooks/concerns/` fragments into a single module per language. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed.
+At `SessionStart`, each domain plugin's `register.sh` contributes to the registry as `<plugin-spec>__<name>.sh` — `ast-grep` mirrors its `hooks/<event>.d/*.sh` one-to-one, while `rust-quality`/`ts-quality`/`python-quality` assemble their ordered `hooks/concerns/` fragments into a single module per language. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. As plugins move to TypeScript on Bun, each one instead registers a single bundled ESM module per event (`<plugin-spec>__<name>.js`), with no fragment assembly, and the core imports it in-process. See [docs/registry.md](docs/registry.md).
 
 <details>
 <summary><b>Full repository layout</b></summary>
