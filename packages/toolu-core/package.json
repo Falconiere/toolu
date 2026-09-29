@@ -41,7 +41,8 @@
     "./registry": "./src/registry/registry.ts",
     "./ledger": "./src/ledger/ledger.ts",
     "./startup": "./src/startup/startup.ts",
-    "./dispatch": "./src/dispatch/dispatch.ts"
+    "./dispatch": "./src/dispatch/dispatch.ts",
+    "./shell": "./src/shell/shell.ts"
   },
   "dependencies": {
     "unbash": "4.0.11",

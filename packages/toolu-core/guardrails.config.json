@@ -18,7 +18,8 @@
       "registry",
       "ledger",
       "startup",
-      "dispatch"
+      "dispatch",
+      "shell"
     ],
     "nested": {
       "decision": [
@@ -119,6 +120,20 @@
         "dispatch-context.ts",
         "dispatch-output.ts",
         "dispatch-walk.ts",
+        "__tests__"
+      ],
+      "shell": [
+        "shell-types.ts",
+        "shell-options.ts",
+        "shell-words.ts",
+        "shell-walk-words.ts",
+        "shell-argv.ts",
+        "shell-walk.ts",
+        "shell-parse.ts",
+        "shell-git.ts",
+        "shell-writes.ts",
+        "shell-rules.ts",
+        "shell-event.ts",
         "__tests__"
       ]
     },
