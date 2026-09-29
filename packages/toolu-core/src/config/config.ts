@@ -72,3 +72,18 @@ export {
   type PermissionsOptions,
   type PermissionsResult,
 } from "./permissions.ts";
+export {
+  SETTINGS_FILES,
+  bashAllowlist,
+  bashDenylist,
+  codeEditRules,
+  commitPrefixes,
+  mcpBlocklist,
+  protectedFiles,
+  readList,
+  rustUnsafeExemptions,
+  settingsDir,
+  type CodeEditRule,
+  type CodeEditRules,
+  type McpBlockEntry,
+} from "./settings.ts";

@@ -65,6 +65,30 @@ back to "all enabled".
 `version` is reserved for future schema bumps; v1 is the current value.
 See `plugins/toolu/settings/toolu.config.example.json` for a fully-populated example.
 
+### TypeScript loader (`@toolu/core/config`)
+
+`packages/toolu-core/src/config/` ports the bash config libs to TypeScript
+([#253](https://github.com/Falconiere/toolu/issues/253)). It reads the same two
+files, merges them the same way, and resolves every threshold, gate mode, model
+tier, docs-sync list and flag to the value bash resolves
+(`config-parity.test.ts` runs both over `tooling/fixtures/config/`). Hooks
+still run the bash libs until the TypeScript dispatchers land.
+
+The TypeScript loader validates each file's envelope, and bash never did:
+
+- `version` may be omitted. A missing `version` is read as `1`.
+- A top-level key outside the schema above (for example a typo like `gate`), a
+  `version` other than `1`, or a file whose top level is not a JSON object
+  **fails closed**. The loader warns once, naming the file and the key, and every
+  gate resolves to `block` until the file is fixed. Other settings take their
+  defaults, and the one-time permission write is skipped. `comemory`, a key left
+  by an older toolu, is accepted and ignored.
+- Malformed JSON is still ignored with a warning, as in bash: a half-typed
+  file does not lock you out.
+- An invalid value under a known key (a mode that is not a mode, a
+  non-numeric threshold) still warns, where bash warns, and falls back for that
+  key only.
+
 ### Gate modes (`gates`)
 
 How firmly a gate says no is configuration, not a constant. Full reference:

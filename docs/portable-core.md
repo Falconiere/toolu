@@ -35,7 +35,7 @@ TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, 
 | `./events` | Normalized event schemas + parsers |
 | `./bridge` | Bash bridge request/response schemas |
 | `./policy` | Classification enum + precedence helpers |
-| `./config` | `toolu.config.json` Zod (`version: 1`) |
+| `./config` | `toolu.config.json` Zod (`version: 1`); loader and resolvers ported from the bash config libs: `loadConfig` (jq `*` merge, fail-closed envelope), `enabled`/`model`/`codexModel`/`configString`, `qualityThreshold`, `docsSync*`, `gateMode`/`gateDecision`, `permissionsAutowrite`, and typed `settings/*` loaders ([#253](https://github.com/Falconiere/toolu/issues/253)) |
 | `./runner` | `BashRunner` + `createBunBashRunner` (argv-only `Bun.spawn`) |
 
 ### OpenCode export map ([#211](https://github.com/Falconiere/toolu/issues/211))

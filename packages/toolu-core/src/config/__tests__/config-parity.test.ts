@@ -158,7 +158,8 @@ function gateValues(c: LoadedConfig): Values {
 function tsValues(c: LoadedConfig, sb: Sandbox): Values {
   const values = gateValues(c);
   const at = { cwd: sb.project };
-  for (const [key, , threshold] of THRESHOLDS) values[`threshold.${key}`] = String(threshold(c, at));
+  for (const [key, , threshold] of THRESHOLDS)
+    values[`threshold.${key}`] = String(threshold(c, at));
   const resolved = tsMaxFileLinesResolved(c, at);
   values["ts.resolved"] = `${String(resolved.value)} ${resolved.source}`;
   for (const lang of LANGS)
