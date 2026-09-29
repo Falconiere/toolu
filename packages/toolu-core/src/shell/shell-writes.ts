@@ -1,9 +1,11 @@
 /**
- * Files a command line writes (#284): output redirections on any command or
- * compound command, and the file operands of commands that write in place or
- * copy. A dynamic target is reported with `path: null` rather than dropped, and
- * an unquoted pathname pattern (`> .en[v]`, `cp x .e?v`) with its `pattern`:
- * bash writes whichever existing file the pattern matches.
+ * `@toolu/core/shell/writes` (#284): the files a command line writes. That is
+ * output redirections on any command or compound command, and the file operands
+ * of commands that write in place or copy. A dynamic target is reported with
+ * `path: null` rather than dropped, and an unquoted pathname pattern
+ * (`> .en[v]`, `cp x .e?v`) with its `pattern`: bash writes whichever existing
+ * file the pattern matches. It is a separate entry from `@toolu/core/shell`, so
+ * a bundle that never asks what a command writes does not carry it.
  */
 import { basename } from "node:path";
 import {

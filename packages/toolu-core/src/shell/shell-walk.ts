@@ -31,14 +31,13 @@ import {
   type ShellRedirect,
 } from "./shell-types.ts";
 import {
+  scanWord,
+  toShellRedirect,
   visitArithmetic,
   visitAssignment,
-  visitRedirect,
   visitTest,
-  visitWord,
   type ScriptVisitor,
-} from "./shell-walk-words.ts";
-import { resolveWord, toShellRedirect } from "./shell-words.ts";
+} from "./shell-words.ts";
 
 /** How deep `bash -c` / `eval` strings are followed before the rest is unknown. */
 export const MAX_RUN_DEPTH = 4;
@@ -94,8 +93,7 @@ function nestedVisitor(ctx: WalkContext, sink: WalkSink): ScriptVisitor {
 
 function compoundRedirects(redirects: readonly Redirect[], ctx: WalkContext, sink: WalkSink): void {
   for (const redirect of redirects) {
-    visitRedirect(redirect, nestedVisitor(ctx, sink));
-    sink.compoundRedirects.push(toShellRedirect(redirect));
+    sink.compoundRedirects.push(toShellRedirect(redirect, nestedVisitor(ctx, sink)));
   }
 }
 
@@ -129,13 +127,11 @@ function emitCommand(command: Command, ctx: WalkContext, sink: WalkSink): void {
   const nested = nestedVisitor(ctx, sink);
   for (const assignment of command.prefix) visitAssignment(assignment, nested);
   const named = command.name === undefined ? [] : [command.name, ...command.suffix];
-  for (const word of named) visitWord(word, nested);
-  for (const redirect of command.redirects) visitRedirect(redirect, nested);
-  const resolved = named.map(resolveWord);
+  const resolved = named.map((word) => scanWord(word, nested));
+  const redirects = command.redirects.map((redirect) => toShellRedirect(redirect, nested));
   const words = resolved.map((word) => word.value);
   const unwrapped = unwrap(words);
   const argv = alignUnwrapped(words, unwrapped, null);
-  const redirects = command.redirects.map(toShellRedirect);
   const text = ctx.source.slice(command.pos, command.end);
   // xargs may run the command zero times and still exit 0.
   const proves = ctx.proves && !unwrapped.wrappers.includes("xargs");
@@ -219,7 +215,7 @@ export function walkNode(node: Node, ctx: WalkContext, sink: WalkSink): void {
       break;
     case "For":
     case "Select":
-      for (const word of node.wordlist) visitWord(word, nested);
+      for (const word of node.wordlist) scanWord(word, nested);
       list(node.body.commands);
       break;
     case "ArithmeticFor":
@@ -230,9 +226,9 @@ export function walkNode(node: Node, ctx: WalkContext, sink: WalkSink): void {
       for (const part of [node.clause, node.body]) list(part.commands);
       break;
     case "Case":
-      visitWord(node.word, nested);
+      scanWord(node.word, nested);
       for (const item of node.items) {
-        for (const pattern of item.pattern) visitWord(pattern, nested);
+        for (const pattern of item.pattern) scanWord(pattern, nested);
         list(item.body.commands);
       }
       break;

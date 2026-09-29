@@ -126,7 +126,6 @@
         "shell-types.ts",
         "shell-options.ts",
         "shell-words.ts",
-        "shell-walk-words.ts",
         "shell-argv.ts",
         "shell-walk.ts",
         "shell-parse.ts",

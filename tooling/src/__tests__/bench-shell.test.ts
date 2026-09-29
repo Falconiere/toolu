@@ -1,10 +1,10 @@
 /**
  * `bench:shell` (#284 AC-1): the probe bundles are built by the plugin bundle
- * pipeline and run from a directory with no node_modules. The representative
- * probe adds at most 200,000 bytes (#284's budget) and the whole-surface probe
- * at most the 210,000-byte regression ceiling. Wall-clock numbers are
- * machine-bound, so this suite checks their presence, not their values;
- * `bun run bench:shell --assert` checks the timing budgets on a given machine.
+ * pipeline and run from a directory with no node_modules. Every runtime export
+ * of `@toolu/core/shell` adds at most 200,000 bytes, and so does `analyzeShell`
+ * plus `@toolu/core/shell/writes`. Wall-clock numbers are machine-bound, so this
+ * suite checks their presence, not their values; `bun run bench:shell --assert`
+ * checks the timing budgets on a given machine.
  */
 import { expect, test } from "bun:test";
 import { resolve } from "node:path";
@@ -26,10 +26,9 @@ const Report = z.object({
   }),
   bundle: z.object({
     emptyBytes: Positive,
-    shellBytes: Positive,
     deltaBytes: Positive,
-    fullBytes: Positive,
-    fullDeltaBytes: Positive,
+    writesDeltaBytes: Positive,
+    togetherDeltaBytes: Positive,
   }),
   coldStart: z.object({
     runs: Positive,
@@ -49,7 +48,7 @@ const Report = z.object({
   probeOutput: z.string(),
 });
 
-test("both probe bundles fit their size budgets and run without node_modules", async () => {
+test("the shell and writes entries fit 200,000 bytes and run without node_modules", async () => {
   const res = await run([process.execPath, SCRIPT, "--json", "--runs", "3", "--rounds", "1"], {
     cwd: ROOT,
     timeoutMs: 120_000,
@@ -57,8 +56,9 @@ test("both probe bundles fit their size budgets and run without node_modules", a
   expect(res.exitCode).toBe(0);
   const report = Report.parse(JSON.parse(res.stdout));
   expect(report.bundle.deltaBytes).toBeLessThanOrEqual(BUDGET.bundleBytes);
-  expect(report.bundle.fullDeltaBytes).toBeLessThanOrEqual(BUDGET.fullBundleBytes);
-  expect(JSON.parse(report.probeOutput)).toEqual({ push: "yes", destination: "feat/x" });
+  expect(report.bundle.writesDeltaBytes).toBeLessThanOrEqual(BUDGET.writesBundleBytes);
+  expect(report.bundle.togetherDeltaBytes).toBeGreaterThan(report.bundle.deltaBytes);
+  expect(JSON.parse(report.probeOutput)).toMatchObject({ push: "yes", destination: "feat/x" });
   expect(report.parse.commands).toBe(fixtureCommands().length);
   expect(report.coldStart.runs).toBe(3);
 });
@@ -72,10 +72,9 @@ test.concurrent("overBudget names every budget a report exceeds", () => {
     machine: { bun: "1.4.2", platform: "linux", arch: "x64", cpu: "cpu", date: "2026-09-28" },
     bundle: {
       emptyBytes: 73,
-      shellBytes: 197_570,
-      deltaBytes: 197_497,
-      fullBytes: 205_000,
-      fullDeltaBytes: 204_927,
+      deltaBytes: 197_673,
+      writesDeltaBytes: 198_173,
+      togetherDeltaBytes: 202_152,
     },
     coldStart: { runs: 40, emptyP50: 5, shellP50: 8, deltaP50: 3, emptyP90: 6, shellP90: 9 },
     parse: { commands: 235, samples: 4700, p50Us: 3, p99Us: 40, maxUs: 900 },
@@ -84,13 +83,13 @@ test.concurrent("overBudget names every budget a report exceeds", () => {
   expect(overBudget(within)).toEqual([]);
   const over = {
     ...within,
-    bundle: { ...within.bundle, deltaBytes: 200_001, fullDeltaBytes: 210_001 },
+    bundle: { ...within.bundle, deltaBytes: 200_001, writesDeltaBytes: 200_001 },
     coldStart: { ...within.coldStart, deltaP50: 5.5 },
     parse: { ...within.parse, p99Us: 120 },
   };
   expect(overBudget(over).map((problem) => problem.split(" ")[0])).toEqual([
     "bundle",
-    "full",
+    "writes",
     "cold",
     "parse",
   ]);

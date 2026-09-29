@@ -42,7 +42,8 @@
     "./ledger": "./src/ledger/ledger.ts",
     "./startup": "./src/startup/startup.ts",
     "./dispatch": "./src/dispatch/dispatch.ts",
-    "./shell": "./src/shell/shell.ts"
+    "./shell": "./src/shell/shell.ts",
+    "./shell/writes": "./src/shell/shell-writes.ts"
   },
   "dependencies": {
     "unbash": "4.0.11",
