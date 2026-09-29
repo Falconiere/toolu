@@ -79,23 +79,23 @@ test.concurrent.each(HEREDOC_CASES.map((c) => [c.name, c] as const))(
   },
 );
 
-test("a dynamic subcommand is unknown to the shell layer and false here, as bash answers", async () => {
+test.each([
+  ["$g push", "push"],
+  ["git $(echo push)", "push"],
+  ['"$GIT" commit -m x', "commit"],
+] as const)("%s: unknown to the shell layer, false here, as bash answers", async (command, sub) => {
   using sb = createSandbox();
-  for (const command of ["$g push", "git $(echo push)", '"$GIT" commit -m x']) {
-    const analysis = analyzeShell(command);
-    expect(
-      runsGitSubcommand(analysis, "push") === "unknown" ||
-        runsGitSubcommand(analysis, "commit") === "unknown",
-    ).toBe(true);
-    const bash = await bashDetect(
-      'if is_git_push "$1" || is_git_commit "$1"; then printf yes; else printf no; fi',
-      [command],
-      sb.project,
-      detectEnv(sb.home),
-    );
-    expect(bash).toBe("no");
-    expect(isGitPush(analysis) || isGitCommit(analysis)).toBe(false);
-  }
+  const analysis = analyzeShell(command);
+  expect(runsGitSubcommand(analysis, sub)).toBe("unknown");
+  const fn = sub === "push" ? "is_git_push" : "is_git_commit";
+  const bash = await bashDetect(
+    `if ${fn} "$1"; then printf yes; else printf no; fi`,
+    [command],
+    sb.project,
+    detectEnv(sb.home),
+  );
+  expect(bash).toBe("no");
+  expect(sub === "push" ? isGitPush(analysis) : isGitCommit(analysis)).toBe(false);
 });
 
 test("pushTargetRoot resolves a -C path with spaces; pushTargetBranch reads a detached refspec", () => {

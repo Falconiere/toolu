@@ -13,6 +13,7 @@ import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
 import { z } from "zod";
 import { countCodeLines, countPythonCodeLines, hasUnterminatedBlock } from "../detect-lines.ts";
+import { eachLine } from "../detect-read.ts";
 import { bashDetect, detectEnv } from "./detect-bash.ts";
 
 const REPO = resolve(import.meta.dir, "../../../../..");
@@ -186,3 +187,16 @@ console.log(JSON.stringify({ lines, grew: process.memoryUsage().rss - before }))
   expect(huge - small).toBeLessThan(16 << 20);
   expect(huge).toBeLessThan(64 << 20);
 }, 240_000);
+
+test("a throwing visitor propagates instead of reading as unreadable", () => {
+  using sb = createSandbox();
+  const path = sb.path("a.ts");
+  writeFileSync(path, "a\nb\n");
+  expect(() =>
+    eachLine(path, () => {
+      throw new Error("visitor bug");
+    }),
+  ).toThrow("visitor bug");
+  expect(eachLine(sb.path("missing.ts"), () => undefined)).toBe("unreadable");
+  expect(eachLine(sb.root, () => undefined)).toBe("done");
+});

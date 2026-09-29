@@ -37,15 +37,20 @@ export function eachLine(path: string, visit: (line: string) => boolean | void):
   try {
     return walkLines(fd, visit);
   } catch (error) {
+    // Only a read failure is converted; a throwing visitor is a bug and propagates.
+    const code = errnoCode(error);
+    if (code === undefined) throw error;
     // awk reads a directory as an empty file.
-    return isErrno(error, "EISDIR") ? "done" : "unreadable";
+    return code === "EISDIR" ? "done" : "unreadable";
   } finally {
     closeSync(fd);
   }
 }
 
-function isErrno(error: unknown, code: string): boolean {
-  return error instanceof Error && "code" in error && error.code === code;
+function errnoCode(error: unknown): string | undefined {
+  return error instanceof Error && "code" in error && typeof error.code === "string"
+    ? error.code
+    : undefined;
 }
 
 /** Lines are sliced straight from the chunk; only a line spanning chunks is carried. */
