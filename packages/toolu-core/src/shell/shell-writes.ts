@@ -76,19 +76,33 @@ function copyTargets(name: string, argv: Words): (string | null)[] {
   return [dest, ...(intoDir ? sources.map((src) => inDir(dest, src)) : [])];
 }
 
-/** sed/perl edit files only in place; their first operand is the script unless one was given as an option. */
+interface InPlaceTool {
+  readonly options: OptionSpec;
+  /** Options that supply the script, so the first operand is already a file. */
+  readonly script: readonly string[];
+}
+
+const IN_PLACE: Readonly<Record<"sed" | "perl", InPlaceTool>> = {
+  sed: {
+    options: {
+      valueShort: "efl",
+      restShort: "i",
+      valueLong: ["expression", "file", "line-length"],
+    },
+    script: ["e", "f", "expression", "file"],
+  },
+  perl: { options: { valueShort: "eE", restShort: "iIMmlx0dDC" }, script: ["e", "E"] },
+};
+
+/** sed/perl edit files only in place; their first operand is the script unless an option gave one. */
 function inPlaceTargets(name: "sed" | "perl", argv: Words): (string | null)[] {
   // BSD `sed -i '' …`: the empty word is the backup suffix, not the script.
   const bsd = argv.findIndex((word, i) => word === "-i" && argv[i + 1] === "");
   const words = bsd === -1 ? argv : [...argv.slice(0, bsd + 1), ...argv.slice(bsd + 2)];
-  const spec: OptionSpec =
-    name === "sed"
-      ? { valueShort: "efl", restShort: "i", valueLong: ["expression", "file", "line-length"] }
-      : { valueShort: "eE", restShort: "iIMmlx0dDC" };
-  const parsed = parseArgs(words, 1, spec);
+  const tool = IN_PLACE[name];
+  const parsed = parseArgs(words, 1, tool.options);
   if (!hasOption(parsed, ["i", "in-place"])) return [];
-  const scripted = hasOption(parsed, ["e", "E", "f", "expression", "file"]);
-  return parsed.operands.slice(scripted ? 0 : 1);
+  return parsed.operands.slice(hasOption(parsed, tool.script) ? 0 : 1);
 }
 
 /** `open('p', 'w')` and every mode that writes: w/a/x, or anything with `+`. */
