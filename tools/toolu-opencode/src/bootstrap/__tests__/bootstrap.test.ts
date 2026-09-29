@@ -1,8 +1,16 @@
 import { expect, test } from "bun:test";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  readlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { bootstrapRuntime } from "../runtime.ts";
+import { bootstrapCommand, pluginBootstrapScript } from "../entrypoint.ts";
 import { bootstrapWithNoOpRunner } from "../test-helpers.ts";
 import { listPluginManifests } from "../../inventory/scan.ts";
 import { selectPluginsWithDependencies } from "../../select/resolve.ts";
@@ -182,4 +190,47 @@ test("AC-1b: core-only bootstrap is ready even when the gate notice is pinned", 
     expect(result.artifacts.some((a) => a.endsWith(".session-start-ready"))).toBe(true);
     expect(result.artifacts.some((a) => a.endsWith(".gate-preset-notice-v6"))).toBe(false);
   }
+});
+
+test("#269: a plugin with only a TypeScript startup bundle bootstraps through its launcher", () => {
+  const context7 = join(repoRoot(), "plugins", "context7");
+  const script = pluginBootstrapScript(context7);
+  expect(script).toBe(join(context7, "hooks", "dist", "session-start.js"));
+  const command = bootstrapCommand(script ?? "", "context7", context7);
+  expect(command.argv.slice(0, 2)).toEqual(["sh", "-c"]);
+  expect(command.argv[2]).toContain('"${CLAUDE_PLUGIN_ROOT}/hooks/dist/session-start.js"');
+  expect(command.env).toEqual({ CLAUDE_PLUGIN_ROOT: context7 });
+  expect(bootstrapCommand("/p/hooks/register.sh", "p", "/p")).toEqual({
+    argv: ["bash", "/p/hooks/register.sh"],
+    env: {},
+  });
+  expect(pluginBootstrapScript(mkdtempSync(join(tmpBase, "toolu-bs-empty-")))).toBeNull();
+});
+
+test("#269: bootstrapping context7 publishes its search CLI under the OpenCode data root", async () => {
+  const root = repoRoot();
+  const pluginsRoot = join(root, "plugins");
+  const project = mkdtempSync(join(tmpBase, "toolu-bs-c7-"));
+  mkdirSync(join(project, ".opencode", "toolu"), { recursive: true });
+  writeFileSync(
+    opencodePluginSelectionPath(project),
+    JSON.stringify({ version: 1, enabled: ["toolu", "context7"] }),
+  );
+  const select = selectPluginsWithDependencies(pluginsRoot, project);
+  expect(select.ok).toBe(true);
+  if (!select.ok) {
+    return;
+  }
+  const dataRoot = join(project, ".opencode", "toolu", "state");
+  const result = await bootstrapRuntime({
+    repoRoot: root,
+    projectRoot: project,
+    dataRoot,
+    plugins: select.plugins,
+    isolatedHome: isolatedHome(),
+  });
+  expect(result).toMatchObject({ status: "ready" });
+  expect(readlinkSync(join(dataRoot, "context7", "search.sh"))).toBe(
+    join(pluginsRoot, "context7", "hooks", "dist", "search.js"),
+  );
 });

@@ -4,7 +4,7 @@ import { createBunBashRunner, type BashRunner } from "@toolu/core/runner";
 import { opencodeDataRoot } from "../host/roots.ts";
 import type { PluginManifest } from "../inventory/types.ts";
 import { notReady, ready, type BootstrapResult } from "./result.ts";
-import { pluginBootstrapScript } from "./entrypoint.ts";
+import { bootstrapCommand, pluginBootstrapScript, type BootstrapCommand } from "./entrypoint.ts";
 import { evaluateBootstrapReadiness } from "./readiness.ts";
 
 export type BootstrapRuntimeOptions = {
@@ -37,14 +37,15 @@ function bootstrapEnv(options: BootstrapRuntimeOptions, dataRoot: string): Recor
 async function runEntrypoint(
   runner: BashRunner,
   scriptPath: string,
+  command: BootstrapCommand,
   cwd: string,
   env: Record<string, string>,
   deadlineMs: number,
 ): Promise<BootstrapResult | null> {
   const result = await runner.run({
-    argv: ["bash", scriptPath],
+    argv: command.argv,
     cwd,
-    env,
+    env: { ...env, ...command.env },
     stdin: "{}",
     deadlineMs,
     maxStdoutBytes: 512_000,
@@ -60,7 +61,7 @@ async function runEntrypoint(
   return null;
 }
 
-/** Run plugin register/session-start scripts and verify output artifacts. */
+/** Run plugin register/session-start entrypoints and verify output artifacts. */
 export async function bootstrapRuntime(options: BootstrapRuntimeOptions): Promise<BootstrapResult> {
   const dataRoot = options.dataRoot ?? opencodeDataRoot({ projectRoot: options.projectRoot });
   mkdirSync(dataRoot, { recursive: true });
@@ -75,11 +76,19 @@ export async function bootstrapRuntime(options: BootstrapRuntimeOptions): Promis
       return null;
     }
     const script = pluginBootstrapScript(plugin.pluginDir);
-    // Not every plugin has register.sh / session-start.sh — skip, don't abort.
+    // Not every plugin has a register or session-start entrypoint — skip, don't abort.
     if (!script) {
       return runChain(index + 1);
     }
-    const failure = await runEntrypoint(runner, script, options.projectRoot, env, deadlineMs);
+    const command = bootstrapCommand(script, plugin.name, plugin.pluginDir);
+    const failure = await runEntrypoint(
+      runner,
+      script,
+      command,
+      options.projectRoot,
+      env,
+      deadlineMs,
+    );
     if (failure) {
       return failure;
     }
