@@ -52,7 +52,9 @@ test.concurrent("orders and rejects registry modules exactly as dispatch.sh does
   });
   expect(res.exitCode).toBe(0);
   const bashOrder = readFileSync(log, "utf8").trim().split("\n");
-  const bashRejected = [...res.stderr.matchAll(/registry module (.+) lacks/gu)].map((m) => m[1]);
+  const bashRejected = [...res.stderr.matchAll(/registry module (.+) lacks/gu)].map(
+    (m) => m[1] ?? "",
+  );
 
   const listing = listRegistryDir(dir);
   const tsBash = listing.entries.filter((e) => e.kind === "bash");

@@ -21,6 +21,11 @@ export function registryRoot(options: HostOptions = {}): string {
   return join(configRoot(options), "toolu");
 }
 
+/** `pre-tools.d` or `post-tools.d`. */
+export function registryDirName(event: RegistryEvent): string {
+  return EVENT_DIRS[event];
+}
+
 /** `<root>/pre-tools.d` or `<root>/post-tools.d` (not created). */
 export function registryEventDir(event: RegistryEvent, options: HostOptions = {}): string {
   return join(registryRoot(options), EVENT_DIRS[event]);
