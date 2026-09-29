@@ -91,7 +91,7 @@ const COPY_OPTIONS: Readonly<Record<string, OptionSpec>> = {
   },
 };
 
-/** cp/mv/install: the destination, or each source inside a target directory. */
+/** cp/mv/install: the destination and each source inside it, or each source inside `-t DIR`. */
 function copyTargets(name: string, command: ShellCommand): Target[] {
   const parsed = parseArgs(command.argv, 1, COPY_OPTIONS[name] ?? {});
   const operands = parsed.operandAt.map((index) => argAt(command, index));
@@ -107,10 +107,11 @@ function copyTargets(name: string, command: ShellCommand): Target[] {
   const sources = operands.slice(0, -1);
   const dest = operands.at(-1);
   if (dest === undefined || sources.length === 0) return [];
-  const destText = dest.path ?? dest.pattern;
-  if (destText === null) return [dest];
-  const intoDir = sources.length > 1 || destText.endsWith("/");
-  return [dest, ...(intoDir ? sources.map((source) => inDir(dest, source)) : [])];
+  if (dest.path === null && dest.pattern === null) return [dest];
+  // DEST may be an existing directory (only known at run time), so each
+  // DEST/basename(SRC) is a candidate too: `cp .env.example apps/web` writes
+  // apps/web/.env.example.
+  return [dest, ...sources.map((source) => inDir(dest, source))];
 }
 
 interface InPlaceTool {

@@ -79,9 +79,12 @@ test.concurrent("sed and perl write their files only in place, never their scrip
 });
 
 test.concurrent("cp, mv and install write their destination", () => {
-  expect(paths("cp src/.env apps/api/.env 2>&1")).toEqual(["apps/api/.env"]);
-  expect(paths("mv source.txt .env")).toEqual([".env"]);
-  expect(paths("install -m 644 source.txt .env")).toEqual([".env"]);
+  expect(paths("cp src/.env apps/api/.env 2>&1")).toEqual(["apps/api/.env", "apps/api/.env/.env"]);
+  expect(paths("mv source.txt .env")).toEqual([".env", ".env/source.txt"]);
+  expect(paths("install -m 644 source.txt .env")).toEqual([".env", ".env/source.txt"]);
+  // DEST may be an existing directory: `cp x/.env .` writes ./.env.
+  expect(paths("cp /tmp/x/.env .")).toEqual([".", "./.env"]);
+  expect(paths("cp .env.example apps/web")).toEqual(["apps/web", "apps/web/.env.example"]);
   expect(paths("cp -t apps/api src/.env")).toEqual(["apps/api/.env"]);
   expect(paths("cp --target-directory=apps/api/ src/.env b")).toEqual([
     "apps/api/.env",
@@ -104,7 +107,7 @@ test.concurrent("dd writes of=, python writes every open() in a write mode", () 
 
 test.concurrent("a write inside bash -c, eval or a substitution is found", () => {
   expect(paths("bash -c 'echo x > .env'")).toEqual([".env"]);
-  expect(paths('eval "cp a .env"')).toEqual([".env"]);
+  expect(paths('eval "cp a .env"')).toEqual([".env", ".env/a"]);
   expect(paths('echo "$(echo hi > .env)"')).toEqual([".env"]);
   expect(paths("cat <<EOF\n$(echo hi > .env)\nEOF")).toEqual([".env"]);
   expect(paths("cat <<'EOF'\n$(echo hi > .env)\nEOF")).toEqual([]);

@@ -897,7 +897,12 @@
    ],
    "bash": [
     ".env"
-   ]
+   ],
+   "expected": [
+    ".env",
+    ".env/source.txt"
+   ],
+   "note": "cp/mv/install also report DEST/basename(SRC): DEST may be an existing directory, which is only known at run time"
   },
   {
    "fn": "bash_write_targets",
@@ -996,7 +1001,12 @@
    ],
    "bash": [
     ".env"
-   ]
+   ],
+   "expected": [
+    ".env",
+    ".env/source.txt"
+   ],
+   "note": "cp/mv/install also report DEST/basename(SRC): DEST may be an existing directory, which is only known at run time"
   },
   {
    "fn": "bash_write_targets",
@@ -1006,7 +1016,12 @@
    ],
    "bash": [
     ".env"
-   ]
+   ],
+   "expected": [
+    ".env",
+    ".env/source.txt"
+   ],
+   "note": "cp/mv/install also report DEST/basename(SRC): DEST may be an existing directory, which is only known at run time"
   },
   {
    "fn": "bash_write_targets",

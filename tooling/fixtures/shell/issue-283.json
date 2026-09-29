@@ -92,7 +92,8 @@
    "kind": "bash_write_targets",
    "command": "cp src/.env apps/api/.env 2>&1",
    "expected": [
-    "apps/api/.env"
+    "apps/api/.env",
+    "apps/api/.env/.env"
    ],
    "oracle": "live",
    "bash": [
@@ -121,6 +122,7 @@
    "command": "mv .env.new .env 2>/dev/null",
    "expected": [
     ".env",
+    ".env/.env.new",
     "/dev/null"
    ],
    "oracle": "live",
@@ -147,7 +149,8 @@
    "kind": "bash_write_targets",
    "command": "sh -c \"cp a .env\"",
    "expected": [
-    ".env"
+    ".env",
+    ".env/a"
    ],
    "oracle": "live",
    "bash": []

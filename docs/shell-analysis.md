@@ -12,7 +12,7 @@
 | `gitInvocation(command)` | The subcommand past git's global options, its arguments, and the `-C` chain |
 | `pushTargets(analysis)` | Each push's cumulative `-C` chain, refspec, and destination branch |
 | `commitMessages(invocation)` | Static `-m`/`--message` values, including `"$(cat <<'EOF' … EOF)"` |
-| `writeTargets(analysis)` | Paths written by redirects (every target, `/dev/null` included; a dynamic one is `path: null`), `tee`, `sed -i`, `perl -i`, `cp`/`mv`/`install`, `dd of=`, `python -c open(…,'w')` |
+| `writeTargets(analysis)` | Paths written by redirects (every target, `/dev/null` included; a dynamic one is `path: null`), `tee`, `sed -i`, `perl -i`, `cp`/`mv`/`install` (the destination and each `DEST/basename(SRC)`, since `DEST` may be a directory), `dd of=`, `python -c open(…,'w')` |
 | `matchesRule(command, "node -e")` | An argv rule tested against one simple command |
 
 Each `ShellCommand` carries the following fields:
@@ -77,7 +77,7 @@ Wrappers are unwrapped by their own option tables: `sudo`, `doas`, `env`, `comma
 
 `tooling/fixtures/shell/` holds real inputs (see its README):
 
-- `bats-parity.json`: 186 inputs the six shipped bash functions received from 15 bats suites (`is_git_push`, `is_git_commit`, `bash_write_targets`, `bash_commands_decide`, `push_target_root`, `push_target_branch`). The TypeScript layer returns the same answer for all of them. Push roots and branches are checked against real git repositories. The one exception is the sed/perl script operand that `bash_write_targets` over-includes by design.
+- `bats-parity.json`: 186 inputs the six shipped bash functions received from 15 bats suites (`is_git_push`, `is_git_commit`, `bash_write_targets`, `bash_commands_decide`, `push_target_root`, `push_target_branch`). The TypeScript layer returns the same answer for all of them. Push roots and branches are checked against real git repositories. There are two documented differences. `bash_write_targets` over-includes the sed/perl script operand, and `cp`/`mv`/`install` also report `DEST/basename(SRC)`, because `DEST` may be an existing directory.
 - `issue-283.json`: 49 named fixtures, at least one per #283 item. Each records the correct result and the bash result as the known-wrong baseline.
 
 `packages/toolu-core/src/shell/__tests__/bash-oracle.test.ts` sources the unmodified `detect.sh` and `bash-commands.sh` and re-derives every live baseline on each run. It is deleted with the bash implementation (#279).

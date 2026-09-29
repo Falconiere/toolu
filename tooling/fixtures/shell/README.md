@@ -9,7 +9,8 @@ Real command lines for `@toolu/core/shell` (#284). The tests live in
   `push_target_root` and `push_target_branch`, and each case lists the suites it
   came from. `bash` is the unmodified bash result. `bats-parity.test.ts`
   requires the TypeScript result to equal it, or `expected` where a case notes a
-  documented bash over-inclusion. `push_target_root` cases name the git repos to
+  documented difference. There are two: bash over-includes the sed/perl script
+  operand, and `cp`/`mv`/`install` also report `DEST/basename(SRC)`. `push_target_root` cases name the git repos to
   create (`repos`), the working directory and any environment. `$TMP` and
   `$MKTEMP` stand for directories in a fresh temp layout.
 - `issue-283.json` holds one named fixture per example in
