@@ -143,10 +143,9 @@ toolu core
 │   │   ├── modules/plan-ledger.sh
 │   │   └── modules/code-edit-rules.sh
 │   ├── post-tools/modules/gate-status.sh
-│   ├── session-start.sh
 │   ├── session-end.sh
-│   ├── user-prompt-submit.sh
-│   └── pre-compact.sh
+│   ├── src/                    ← TypeScript entries: session-start, user-prompt-submit, pre-compact
+│   └── dist/                   ← committed Bun bundles hooks.json launches
 ├── skills/                     ← orchestrator, debug, research, command skills
 ├── agents/                     ← deep-explore, research-agent
 ├── commands/                   ← commit, review-and-commit

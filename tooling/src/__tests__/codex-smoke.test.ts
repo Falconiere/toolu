@@ -16,7 +16,7 @@ test.concurrent.skipIf(NO_CODEX)(
     expect(res.exitCode).toBe(0);
     expect(output).toContain("available=16");
     expect(output).toContain("installed=16");
-    expect(output).toContain("session-start=18");
+    expect(output).toContain("session-start=17");
     expect(output).toContain("removed=16");
   },
   300_000,

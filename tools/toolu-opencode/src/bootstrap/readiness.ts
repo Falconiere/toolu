@@ -5,7 +5,7 @@ import { opencodeRegistryRoot } from "../host/roots.ts";
 
 const REGISTRY_EVENT_DIRS = ["pre-tools.d", "post-tools.d"] as const;
 
-// `.session-start-ready` is written unconditionally by toolu's session-start.sh
+// `.session-start-ready` is written unconditionally by toolu's SessionStart bundle
 // the moment it runs, so a core-only bootstrap (no register.sh, therefore no
 // registry modules) has a deterministic success artifact. `.gate-preset-notice-v6`
 // is kept for installs bootstrapped by older releases, where it was the only
