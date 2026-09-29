@@ -15,7 +15,8 @@
       "rest",
       "host",
       "state",
-      "registry"
+      "registry",
+      "ledger"
     ],
     "nested": {
       "decision": [
@@ -86,6 +87,23 @@
         "registry-run.ts",
         "registry-register.ts",
         "registry-prune.ts",
+        "__tests__"
+      ],
+      "ledger": [
+        "ledger-jq.ts",
+        "ledger-parse.ts",
+        "ledger-io.ts",
+        "ledger-model.ts",
+        "ledger-scope.ts",
+        "ledger-check.ts",
+        "ledger-run-context.ts",
+        "ledger-run.ts",
+        "ledger-commands.ts",
+        "verdict-gates.ts",
+        "verdict-review.ts",
+        "verdict.ts",
+        "glob.ts",
+        "push-waiver.ts",
         "__tests__"
       ]
     },
