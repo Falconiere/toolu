@@ -14,7 +14,8 @@
       "cli",
       "rest",
       "host",
-      "state"
+      "state",
+      "registry"
     ],
     "nested": {
       "decision": [
@@ -75,6 +76,16 @@
         "state-sweeper.ts",
         "diff-sha.ts",
         "edit-records.ts",
+        "__tests__"
+      ],
+      "registry": [
+        "registry-types.ts",
+        "registry-paths.ts",
+        "registry-gate.ts",
+        "registry-list.ts",
+        "registry-run.ts",
+        "registry-register.ts",
+        "registry-prune.ts",
         "__tests__"
       ]
     },
