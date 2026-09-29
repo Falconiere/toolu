@@ -134,14 +134,12 @@ toolu core
 ├── hooks/
 │   ├── pre-tools/mod.sh        ← bash PreToolUse dispatcher (parity baseline)
 │   │   ├── modules/push-review.sh
-│   │   ├── modules/protected-files.sh
 │   │   ├── modules/docs-sync.sh
-│   │   ├── modules/mcp-blocker.sh
-│   │   ├── modules/plan-ledger.sh
-│   │   └── modules/code-edit-rules.sh
+│   │   └── modules/plan-ledger.sh
 │   ├── post-tools/modules/gate-status.sh
 │   ├── session-end.sh
-│   ├── src/                    ← TypeScript entries: session-start, user-prompt-submit, pre-compact
+│   ├── src/                    ← TypeScript entries: session-start, user-prompt-submit, pre-compact,
+│   │                              pre-tools (ported modules native from @toolu/core/gates), mcp-tools (mcp__)
 │   └── dist/                   ← committed Bun bundles hooks.json launches
 ├── skills/                     ← orchestrator, debug, research, command skills
 ├── agents/                     ← deep-explore, research-agent

@@ -1,0 +1,662 @@
+{
+  "base": "2386d4f3",
+  "cases": {
+    "protected-files: asks on .env, a secrets file, with the loud banner": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is trying to edit .env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: asks on hooks/lib/detect.sh as enforcement code": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is trying to edit hooks/lib/detect.sh, a protected path (matches \\\"hooks/lib/**\\\").\\n\\nWHY THIS IS GUARDED\\nThis is toolu's own enforcement code — the hooks that run every other gate. Approving lets an agent edit the thing that is supposed to be watching it, which is how a guardrail gets quietly switched off.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: asks on MultiEdit of hooks/lib/detect.sh": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is trying to edit hooks/lib/detect.sh, a protected path (matches \\\"hooks/lib/**\\\").\\n\\nWHY THIS IS GUARDED\\nThis is toolu's own enforcement code — the hooks that run every other gate. Approving lets an agent edit the thing that is supposed to be watching it, which is how a guardrail gets quietly switched off.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: allows src/foo.ts": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: asks on an absolute path under hooks/lib/**": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is trying to edit $ROOT/project/hooks/lib/detect.sh, a protected path (matches \\\"hooks/lib/**\\\").\\n\\nWHY THIS IS GUARDED\\nThis is toolu's own enforcement code — the hooks that run every other gate. Approving lets an agent edit the thing that is supposed to be watching it, which is how a guardrail gets quietly switched off.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: asks on an absolute path under hooks/**/*.sh": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is trying to edit $ROOT/project/hooks/post-tools/modules/rust-quality.sh, a protected path (matches \\\"hooks/**/*.sh\\\").\\n\\nWHY THIS IS GUARDED\\nThis is toolu's own enforcement code — the hooks that run every other gate. Approving lets an agent edit the thing that is supposed to be watching it, which is how a guardrail gets quietly switched off.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: allows an absolute path outside the globs": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: .env.example is a template, not a secrets file": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is trying to edit .env.example, a protected path (matches \\\".env.*\\\").\\n\\nWHY THIS IS GUARDED\\nThis is an example/template env file. It is committed on purpose, so it should carry placeholders and never live values — it is guarded because a real credential pasted here is a credential published to the repo.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: mode block restores the hard deny": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Claude is trying to edit .env, a protected path (matches \\\".env\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: mode off disables the check": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: mode advise warns without stopping": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Protected path .env (matches \\\".env\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. The write was NOT stopped — gates.protectedFiles.mode is 'advise'.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: on Codex the guardrail blocks": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Claude is trying to edit .env, a protected path (matches \\\".env\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: an invalid config envelope fails closed": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is trying to edit .env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: Bash redirect onto .env says WRITE and names it": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to .env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: Bash sed -i on .env.example asks": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to .env.example, a protected path (matches \\\".env.*\\\").\\n\\nWHY THIS IS GUARDED\\nThis is an example/template env file. It is committed on purpose, so it should carry placeholders and never live values — it is guarded because a real credential pasted here is a credential published to the repo.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: Bash python3 -c open(.env, w) asks": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to .env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: Bash tee onto .env asks": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to .env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: Bash write in an unquoted heredoc substitution asks": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to .env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: Bash second open() names .env, not ok.txt": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to .env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: Bash write to an unprotected path is allowed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: Bash read of .env.example is allowed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: the Shell tool is covered like Bash": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to .env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: .git internals get their own reason": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is trying to edit $ROOT/project/.git/config, a protected path (matches \\\".git/**\\\").\\n\\nWHY THIS IS GUARDED\\nThis is git's internal state. Approving lets an agent rewrite refs, hooks, or config — including hooks that run on your machine at every commit.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: a path under secrets/ reads as a secrets file": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is trying to edit config/secrets/key.txt, a protected path (matches \\\"**/secrets/**\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: a lint config gets the generic reason": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is trying to edit .oxlintrc.json, a protected path (matches \\\"*.oxlintrc.json\\\").\\n\\nWHY THIS IS GUARDED\\nThis path is listed in settings/protected-files.txt because edits to it are hard to notice and expensive to get wrong.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: an extglob pattern matches": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is trying to edit deep/bar.cfg, a protected path (matches \\\"@(foo|bar).cfg\\\").\\n\\nWHY THIS IS GUARDED\\nThis path is listed in settings/protected-files.txt because edits to it are hard to notice and expensive to get wrong.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: a non-string file_path is a malformed edit": {
+      "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Unable to parse apply_patch file headers; patch blocked so protected-file and quality gates cannot be bypassed.\"}}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: an empty Bash command is ignored": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: no protected-files.txt means no check": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: a dynamic target is matched by its text": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to $HOME/.env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis path is listed in settings/protected-files.txt because edits to it are hard to notice and expensive to get wrong.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: a quoted variable target is not a protected path": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: the protected write in a chain is found": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to .env.local, a protected path (matches \\\".env.*\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: 2>&1 is not a write target": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: echo SECRET=1 >.env": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: echo SECRET=1 >.env": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: echo SECRET=1>.env": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: echo SECRET=1>.env": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: printf k=v 1>.env": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: printf k=v 1>.env": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: echo x &>.env": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: echo x &>.env": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: echo x >| .env": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: echo x >| .env": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: { echo x; } >.env": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: { echo x; } >.env": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: exec 3>.env": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: exec 3>.env": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: echo x 2>.env": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: echo x 2>.env": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: cp src/.env apps/api/.env 2>&1": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: cp src/.env apps/api/.env 2>&1": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: cp -t apps/api src/.env": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to src/.env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis path is listed in settings/protected-files.txt because edits to it are hard to notice and expensive to get wrong.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: cp -t apps/api src/.env": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"This command would WRITE to src/.env, a protected path (matches \\\".env\\\"). This path is listed in settings/protected-files.txt because edits to it are hard to notice and expensive to get wrong. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: mv .env.new .env 2>/dev/null": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: mv .env.new .env 2>/dev/null": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: bash -c 'echo x > .env'": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: bash -c 'echo x > .env'": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: sh -c \"cp a .env\"": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: sh -c \"cp a .env\"": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: eval 'echo x > .env'": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: eval 'echo x > .env'": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: echo x | tee -a .env": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to .env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: echo x | tee -a .env": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"This command would WRITE to .env, a protected path (matches \\\".env\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: sed -i 's/a/b/' .env.local": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to .env.local, a protected path (matches \\\".env.*\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: sed -i 's/a/b/' .env.local": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"This command would WRITE to .env.local, a protected path (matches \\\".env.*\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: perl -i -pe 's/a/b/' .env": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to .env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: perl -i -pe 's/a/b/' .env": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"This command would WRITE to .env, a protected path (matches \\\".env\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: mv x .env": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to .env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: mv x .env": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"This command would WRITE to .env, a protected path (matches \\\".env\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: install -m 644 x .env": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to .env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: install -m 644 x .env": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"This command would WRITE to .env, a protected path (matches \\\".env\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: dd if=/dev/zero of=.env": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to .env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: dd if=/dev/zero of=.env": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"This command would WRITE to .env, a protected path (matches \\\".env\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: python3 -c \"open('.env','w')\"": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to .env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: python3 -c \"open('.env','w')\"": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"This command would WRITE to .env, a protected path (matches \\\".env\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [claude]: echo x > .en[v]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files [codex]: echo x > .en[v]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "code-edit-rules: empty rules are a no-op": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "code-edit-rules: a missing file is a no-op": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "code-edit-rules: a matching glob surfaces docs": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"File: /abs/src/foo.rs\\nApply these rules: rust.md\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "code-edit-rules: MultiEdit on a .rs file surfaces docs": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"File: /abs/src/foo.rs\\nApply these rules: Rust: zero compiler/clippy warnings\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "code-edit-rules: an absolute path in the repo matches a repo-relative glob": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"File: src/foo/bar.rs\\nApply these rules: rust.md\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "code-edit-rules: shipped rules add feature docs": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"File: src/features/x.ts\\nApply these rules: TS: zero typecheck/lint errors and warnings + no `any`, @ts-ignore, or non-null assertions + keep it simple — no speculative abstractions + frontend: colocate by feature (components/hooks/routes per feature dir)\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "code-edit-rules: shipped rules without a feature path": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"File: lib/x.ts\\nApply these rules: TS: zero typecheck/lint errors and warnings + no `any`, @ts-ignore, or non-null assertions + keep it simple — no speculative abstractions\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "code-edit-rules: the first matching rule wins even without docs": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "code-edit-rules: extra keys and missing docs do not disable other rules": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"File: a.rs\\nApply these rules: rs\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "code-edit-rules: malformed JSON is a no-op": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "code-edit-rules: non-string docs are joined as JSON text": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"File: a.rs\\nApply these rules: a + 5 + true\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "code-edit-rules: Bash is not an edit": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: asks on a listed server, pointing at the blocklist file": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is calling MCP tool \\\"mcp__exampleblocked__search\\\", on the blocked server \\\"exampleblocked\\\" (listed in settings/mcp-blocklist.txt).\\n\\nWHY THIS IS GUARDED\\nBlocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: allows an unlisted server": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: a prefix entry blocks a longer server name": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is calling MCP tool \\\"mcp__claude_ai_Canva__search\\\", on the blocked server \\\"claude_ai_Canva\\\" (listed in settings/mcp-blocklist.txt).\\n\\nWHY THIS IS GUARDED\\nBlocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: a prefix entry does not block a different prefix": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: an exact server name blocks": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is calling MCP tool \\\"mcp__exampleblocked__save\\\", on the blocked server \\\"exampleblocked\\\" (listed in settings/mcp-blocklist.txt).\\n\\nWHY THIS IS GUARDED\\nBlocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: on Codex a listed server is blocked": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"MCP server \\\"exampleblocked\\\" is blocked (listed in settings/mcp-blocklist.txt). Blocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: config mcp.<server>=false blocks without the file": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is calling MCP tool \\\"mcp__someserver__do\\\", on the blocked server \\\"someserver\\\" (disabled in your toolu config (mcp.someserver=false)).\\n\\nWHY THIS IS GUARDED\\nBlocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: a non-object config mcp neither blocks nor crashes": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: a redirect hint is appended to the reason": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is calling MCP tool \\\"mcp__someserver__do\\\", on the blocked server \\\"someserver\\\" (listed in settings/mcp-blocklist.txt).\\n\\nWHY THIS IS GUARDED\\nBlocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither. Use instead: use the jira skill instead\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: a commented entry does not block": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: empty stdin": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: non-JSON stdin": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: a tool name without a server segment": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: mode block denies": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"MCP server \\\"exampleblocked\\\" is blocked (listed in settings/mcp-blocklist.txt). Blocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: mode advise warns without stopping": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"MCP server \\\"exampleblocked\\\" is blocked (listed in settings/mcp-blocklist.txt). Blocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither. The call was NOT stopped — gates.mcpBlocker.mode is 'advise'.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: mode off is silent": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: an invalid config envelope still blocks a listed server": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is calling MCP tool \\\"mcp__exampleblocked__search\\\", on the blocked server \\\"exampleblocked\\\" (listed in settings/mcp-blocklist.txt).\\n\\nWHY THIS IS GUARDED\\nBlocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: a whitespace-padded entry still matches": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is calling MCP tool \\\"mcp__exampleblocked__search\\\", on the blocked server \\\"exampleblocked\\\" (listed in settings/mcp-blocklist.txt).\\n\\nWHY THIS IS GUARDED\\nBlocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: config mcp value 'false' as a string does not block": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: no blocklist and no config is silent": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    }
+  },
+  "corpus": {
+    "protected-files: .env edit asks [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is trying to edit $ROOT/project/.env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: .env edit asks [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Claude is trying to edit .env, a protected path (matches \\\".env\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: block mode denies [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Claude is trying to edit $ROOT/project/.env, a protected path (matches \\\".env\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: block mode denies [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Claude is trying to edit .env, a protected path (matches \\\".env\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: advise mode advises [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Protected path $ROOT/project/.env.local (matches \\\".env.*\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. The write was NOT stopped — gates.protectedFiles.mode is 'advise'.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: advise mode advises [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Protected path .env.local (matches \\\".env.*\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. The write was NOT stopped — gates.protectedFiles.mode is 'advise'.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: shell write to .env asks [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nThis command would WRITE to .env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "protected-files: shell write to .env asks [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"This command would WRITE to .env, a protected path (matches \\\".env\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "code-edit-rules: rust rules [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"File: src/a.rs\\nApply these rules: Rust: zero compiler/clippy warnings + no unwrap()/expect()/panic! outside tests + keep it simple — no speculative abstractions\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "code-edit-rules: rust rules [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"File: src/a.rs\\nApply these rules: Rust: zero compiler/clippy warnings + no unwrap()/expect()/panic! outside tests + keep it simple — no speculative abstractions\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "code-edit-rules: feature docs [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"File: src/features/x.ts\\nApply these rules: TS: zero typecheck/lint errors and warnings + no `any`, @ts-ignore, or non-null assertions + keep it simple — no speculative abstractions + frontend: colocate by feature (components/hooks/routes per feature dir)\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "code-edit-rules: feature docs [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"File: src/features/x.ts\\nApply these rules: TS: zero typecheck/lint errors and warnings + no `any`, @ts-ignore, or non-null assertions + keep it simple — no speculative abstractions + frontend: colocate by feature (components/hooks/routes per feature dir)\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "multi-file patch: protected second path [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is trying to edit .env, a protected path (matches \\\".env\\\").\\n\\nWHY THIS IS GUARDED\\nThis is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\\n\\nFile: src/a.ts\\nApply these rules: TS: zero typecheck/lint errors and warnings + no `any`, @ts-ignore, or non-null assertions + keep it simple — no speculative abstractions\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "multi-file patch: protected second path [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Claude is trying to edit .env, a protected path (matches \\\".env\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "multi-file patch: blocked second path [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Claude is trying to edit .env, a protected path (matches \\\".env\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "multi-file patch: blocked second path [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Claude is trying to edit .env, a protected path (matches \\\".env\\\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "multi-file patch: advisories only [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"File: src/b.rs\\nApply these rules: Rust: zero compiler/clippy warnings + no unwrap()/expect()/panic! outside tests + keep it simple — no speculative abstractions\\n\\nFile: src/c.ts\\nApply these rules: TS: zero typecheck/lint errors and warnings + no `any`, @ts-ignore, or non-null assertions + keep it simple — no speculative abstractions\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "multi-file patch: advisories only [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"File: src/b.rs\\nApply these rules: Rust: zero compiler/clippy warnings + no unwrap()/expect()/panic! outside tests + keep it simple — no speculative abstractions\\n\\nFile: src/c.ts\\nApply these rules: TS: zero typecheck/lint errors and warnings + no `any`, @ts-ignore, or non-null assertions + keep it simple — no speculative abstractions\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: blocklisted server with redirect, block mode [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"MCP server \\\"exampleblocked\\\" is blocked (listed in settings/mcp-blocklist.txt). Blocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither. Use instead: use the CLI\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: blocklisted server with redirect, block mode [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"MCP server \\\"exampleblocked\\\" is blocked (listed in settings/mcp-blocklist.txt). Blocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither. Use instead: use the CLI\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: also runs inside the dispatcher [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude is calling MCP tool \\\"mcp__exampleblocked__search\\\", on the blocked server \\\"exampleblocked\\\" (disabled in your toolu config (mcp.exampleblocked=false)).\\n\\nWHY THIS IS GUARDED\\nBlocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "mcp-blocker: also runs inside the dispatcher [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"MCP server \\\"exampleblocked\\\" is blocked (disabled in your toolu config (mcp.exampleblocked=false)). Blocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    }
+  }
+}

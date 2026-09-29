@@ -56,6 +56,12 @@ Wrappers are unwrapped by their own option tables: `sudo`, `doas`, `env`, `comma
   - `$g push`, `git $(echo push)` and `sudo $CMD` make `runsGitSubcommand` return `unknown`, never `no`.
   - A shell string that cannot be read statically (`bash -c "$CMD"`, `curl … | bash`, recursion past depth 4) becomes an unknown command (`argv: [null]`).
   - Each gate decides what unknown means for it. Security guardrails ask (block on Codex), and workflow gates keep today's behaviour.
+  - protected-files (#260) checks every write target it can name:
+    - a static path;
+    - every existing file a pathname pattern matches, plus the pattern itself;
+    - a dynamic target by its text (`> $HOME/.env` matches `.env`).
+
+    A write it cannot name, such as `bash -c "$CMD"` or a python write whose path is computed, is not prompted. The bash gate did not prompt for it either, and asking on every `> "$OUT"` would be a behaviour change, which is out of scope for #247.
 - **Exit status:** `exitProves` holds only when a zero exit of the whole line proves that the command ran and exited zero:
   - the last statement, not backgrounded;
   - an and-or element with `&&` on both sides;

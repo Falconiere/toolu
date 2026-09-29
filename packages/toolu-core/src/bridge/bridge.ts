@@ -1,7 +1,13 @@
-/** Bash bridge protocol v1 (#210). */
+/**
+ * Bridge protocol v1 (#210). The request runs toolu's PreToolUse hook as a
+ * host would: the committed `hooks/dist/pre-tools.js` behind its generated
+ * launcher (#260; it ran `bash pre-tools/mod.sh` before the modules were
+ * ported), so a missing Bun blocks with exit 2 and maps to a runtime failure.
+ */
 import { z } from "zod";
 import { type Decision, DecisionSchema } from "../decision/decision.ts";
 import { BridgeEventSchema } from "../events/events.ts";
+import { launcherCommand } from "../launcher/launcher.ts";
 import { createBunBashRunner, type BashRunner, type RawProcessResult } from "../runner/runner.ts";
 import { decisionFromHookResult, decisionFromRunnerFailure, toHookStdin } from "./hook-map.ts";
 
@@ -82,12 +88,12 @@ export type PreToolBridgeOptions = {
   signal?: AbortSignal;
 };
 
-/** Resolve pre-tools/mod.sh under a toolu checkout. */
-export function resolvePreToolsModSh(repoRoot: string): string {
-  return `${repoRoot.replace(/\/$/, "")}/plugins/toolu/hooks/pre-tools/mod.sh`;
+/** The toolu plugin under a toolu checkout or package: the launcher's `CLAUDE_PLUGIN_ROOT`. */
+export function resolveTooluPlugin(repoRoot: string): string {
+  return `${repoRoot.replace(/\/$/, "")}/plugins/toolu`;
 }
 
-/** Run the real pre-tools dispatcher and map to BridgeResponse. */
+/** Run the real PreToolUse hook and map its result to a BridgeResponse. */
 export async function runPreToolBridge(
   requestInput: unknown,
   opts: PreToolBridgeOptions,
@@ -106,18 +112,19 @@ export async function runPreToolBridge(
     };
   }
 
-  const modSh = resolvePreToolsModSh(opts.repoRoot);
+  const command = launcherCommand({ plugin: "toolu", event: "PreToolUse", entry: "pre-tools" });
   const runner = opts.runner ?? createBunBashRunner();
   const stdin = toHookStdin({ toolName: request.toolName, toolInput: request.toolInput });
 
   const env: Record<string, string> = {
     ...opts.env,
+    CLAUDE_PLUGIN_ROOT: resolveTooluPlugin(opts.repoRoot),
     TOOLU_PROJECT_DIR: request.projectRoot,
     CLAUDE_PROJECT_DIR: request.projectRoot,
   };
 
   const raw = await runner.run({
-    argv: ["bash", modSh],
+    argv: ["sh", "-c", command],
     cwd: request.cwd,
     env,
     stdin,

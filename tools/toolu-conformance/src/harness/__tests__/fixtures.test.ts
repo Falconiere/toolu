@@ -19,7 +19,8 @@ import { runHook } from "../spawn.ts";
 
 const ROOT = resolve(import.meta.dir, "../../../../..");
 const PLUGIN_ROOT = join(ROOT, "plugins/toolu");
-const PRE_TOOLS = join(PLUGIN_ROOT, "hooks/pre-tools/mod.sh");
+/** toolu's PreToolUse hook: the protected-files gate is native in it since #260. */
+const PRE_TOOLS = join(PLUGIN_ROOT, "hooks/dist/pre-tools.js");
 const BLOCK = { version: 1, gates: { protectedFiles: { mode: "block" } } };
 
 function protectedProject(): Sandbox {
@@ -35,7 +36,7 @@ async function preToolEffect(sb: Sandbox, host: "claude" | "codex", file: string
     host,
     sandbox: sb,
     pluginRoot: PLUGIN_ROOT,
-    argv: ["bash", PRE_TOOLS],
+    bundle: PRE_TOOLS,
     stdin,
   });
   return readHostOutcome(host, "PreToolUse", res).effect;

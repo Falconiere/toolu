@@ -130,3 +130,27 @@ test.concurrent("a native built-in module is discovered from its gates source an
   ]);
   expect(rows.some((row) => row.id.endsWith(":commit-gate.sh"))).toBe(false);
 });
+
+test.concurrent("the #260 native built-ins and the mcp__ bundle entry are port-native", async () => {
+  const rows = z
+    .array(z.looseObject({ id: z.string(), classification: z.string(), bashRequired: z.boolean() }))
+    .parse(JSON.parse(await Bun.file(INVENTORY).text()));
+  const ported = rows.filter((row) =>
+    [
+      "toolu:builtin-module:PreToolUse:code-edit-rules",
+      "toolu:builtin-module:PreToolUse:mcp-blocker",
+      "toolu:builtin-module:PreToolUse:protected-files",
+      "toolu:hooks.json:PreToolUse:mcp-tools.js:mcp__",
+    ].includes(row.id),
+  );
+  expect(ported.map((row) => [row.classification, row.bashRequired])).toEqual([
+    ["port-native", false],
+    ["port-native", false],
+    ["port-native", false],
+    ["port-native", false],
+  ]);
+  const ids = rows.map((row) => row.id);
+  expect(
+    ids.some((id) => /PreToolUse:(protected-files|mcp-blocker|code-edit-rules)\.sh/.test(id)),
+  ).toBe(false);
+});

@@ -45,11 +45,11 @@ when you run them.
 |-------------------------------|---------------------------------------------------|--------------------------------------------------------------------|
 | `bash-allowlist.txt`          | `bash-commands` gate (`@toolu/core/gates`)        | Explicit overrides on top of the denylist (deny + allow → allowed). |
 | `bash-denylist.txt`           | `bash-commands` gate (`@toolu/core/gates`)        | Tokens the bash guard rejects via argv-aware parsing.              |
-| `code-edit-rules.json`        | `hooks/pre-tools/modules/code-edit-rules.sh`      | Pattern rules for Write/Edit gating on source files.               |
+| `code-edit-rules.json`        | `code-edit-rules` gate (`@toolu/core/gates`)      | Pattern rules for Write/Edit gating on source files.               |
 | `commit-prefixes.txt`         | `commit-gate` gate (`@toolu/core/gates`)          | Allowed Conventional Commits prefixes for `git commit` messages.   |
-| `mcp-blocklist.txt`           | `hooks/pre-tools/modules/mcp-blocker.sh`          | MCP server prefixes blocked unconditionally (plain text).          |
+| `mcp-blocklist.txt`           | `mcp-blocker` gate (`@toolu/core/gates`)          | MCP server prefixes blocked unconditionally (plain text).          |
 | `toolu.config.example.json` | (reference — copy to `~/.claude/toolu.config.json`) | Example runtime opt-out config (skills/hooks/mcp). See `docs/config.md`. |
-| `protected-files.txt`         | `hooks/pre-tools/modules/protected-files.sh`      | Paths the edit guard refuses to modify (lockfiles, secrets, etc.). |
+| `protected-files.txt`         | `protected-files` gate (`@toolu/core/gates`)      | Paths the edit guard refuses to modify (lockfiles, secrets, etc.). |
 | `rust-unsafe-exemptions.txt`  | `hooks/post-tools/modules/rust-quality.sh`        | Files/paths exempt from the `unsafe` Rust check.                   |
 
 Each plain-text file is one entry per line, `#` for comments. JSON files

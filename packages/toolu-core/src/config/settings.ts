@@ -4,48 +4,15 @@
  * (`plugins/toolu/hooks/lib/detect.sh`) plus each consumer's parse. Matching
  * (argv, globs, prefixes) stays with the gate ports.
  */
-import { readFileSync, statSync } from "node:fs";
-import { homedir } from "node:os";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
-import { envValue, type HostEnv } from "../host/host-name.ts";
-import { pluginRoot } from "../host/host-roots.ts";
-import { isFile } from "./config-load.ts";
+import { isFile } from "./config-files.ts";
 
-export const SETTINGS_FILES = {
-  bashAllowlist: "bash-allowlist.txt",
-  bashDenylist: "bash-denylist.txt",
-  commitPrefixes: "commit-prefixes.txt",
-  mcpBlocklist: "mcp-blocklist.txt",
-  protectedFiles: "protected-files.txt",
-  rustUnsafeExemptions: "rust-unsafe-exemptions.txt",
-  codeEditRules: "code-edit-rules.json",
-} as const;
+import { SETTINGS_FILES } from "./settings-files.ts";
 
-function isDirectory(path: string): boolean {
-  try {
-    return statSync(path).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
-/** `toolu_settings_dir`: `TOOLU_SETTINGS_DIR`, then `~/.claude/settings`, then `<plugin root>/settings`. */
-export function settingsDir(
-  options: { env?: HostEnv; pluginRoot?: string } = {},
-): string | undefined {
-  const env = options.env ?? process.env;
-  const explicit = envValue(env, "TOOLU_SETTINGS_DIR");
-  if (explicit !== undefined) {
-    return explicit;
-  }
-  const legacy = join(envValue(env, "HOME") ?? homedir(), ".claude", "settings");
-  if (isDirectory(legacy)) {
-    return legacy;
-  }
-  const root = options.pluginRoot ?? pluginRoot({ env });
-  return root === undefined ? undefined : join(root, "settings");
-}
+export { settingsDir } from "./settings-dir.ts";
+export { SETTINGS_FILES } from "./settings-files.ts";
 
 const COMMENT_OR_BLANK = /^\s*(#|$)/;
 

@@ -8,7 +8,10 @@ import { dirname, join } from "node:path";
 import { bashModule, type ToolModule } from "@toolu/core/dispatch";
 import {
   bashCommandsModule,
+  codeEditRulesModule,
   commitGateModule,
+  mcpBlockerModule,
+  protectedFilesModule,
   qualityGateModule,
   type GateModuleOptions,
 } from "@toolu/core/gates";
@@ -32,7 +35,10 @@ export const NATIVE_MODULES: Readonly<
   Partial<Record<BuiltinName, (options: GateModuleOptions) => ToolModule>>
 > = {
   "bash-commands": bashCommandsModule,
+  "code-edit-rules": codeEditRulesModule,
   "commit-gate": commitGateModule,
+  "mcp-blocker": mcpBlockerModule,
+  "protected-files": protectedFilesModule,
   "quality-gate": qualityGateModule,
 };
 

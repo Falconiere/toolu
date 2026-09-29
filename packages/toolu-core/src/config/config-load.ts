@@ -8,12 +8,12 @@
  * understand (unknown top-level key, `version` other than 1, a non-object) marks
  * the config invalid: `data` is empty and the gate layer fails closed.
  */
-import { readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
-import { detectHost } from "../host/host-detect.ts";
+import { readFileSync } from "node:fs";
 import type { HostEnv, HostName } from "../host/host-name.ts";
-import { configRoot, projectConfigPath } from "../host/host-roots.ts";
+import { configFiles, isFile } from "./config-files.ts";
 import { TooluConfigSchema } from "./config-schema.ts";
+
+export { configExists, isFile } from "./config-files.ts";
 
 export type Warn = (message: string) => void;
 export type JsonObject = { [key: string]: unknown };
@@ -55,15 +55,6 @@ export function mergeConfig(user: unknown, project: unknown): unknown {
   return isJsonObject(user) && isJsonObject(project) ? mergeObjects(user, project) : project;
 }
 
-/** `[ -f PATH ]`: a regular file (or a symlink to one). */
-export function isFile(path: string): boolean {
-  try {
-    return statSync(path).isFile();
-  } catch {
-    return false;
-  }
-}
-
 type FileRead = { kind: "absent" } | { kind: "malformed" } | { kind: "json"; value: unknown };
 
 /** `[ -f ]` then `jq -e .`: null and false count as malformed, as `-e` rejects them. */
@@ -92,17 +83,6 @@ function envelopeError(value: unknown): string | undefined {
     return `unsupported version ${JSON.stringify(value.version)} (supported: 1)`;
   }
   return undefined;
-}
-
-function configFiles(options: ConfigOptions): Pick<LoadedConfig, "files" | "host"> {
-  const env = options.env ?? process.env;
-  const host = options.host ?? detectHost({ env });
-  const scoped = options.cwd === undefined ? { env, host } : { env, host, cwd: options.cwd };
-  const files = {
-    user: join(configRoot(scoped), "toolu.config.json"),
-    project: projectConfigPath(scoped),
-  };
-  return { files, host };
 }
 
 type Layer = { value: JsonObject; invalid?: string };
@@ -134,10 +114,4 @@ export function loadConfig(options: ConfigOptions = {}): LoadedConfig {
   const invalid = user.invalid ?? project.invalid;
   const data = invalid === undefined ? mergeObjects(user.value, project.value) : {};
   return { data, invalid, files, host, warn };
-}
-
-/** Is either config file on disk? Stat only: no read, no parse. */
-export function configExists(options: ConfigOptions = {}): boolean {
-  const { files } = configFiles(options);
-  return isFile(files.user) || (files.project !== undefined && isFile(files.project));
 }

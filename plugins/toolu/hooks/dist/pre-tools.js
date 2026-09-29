@@ -1,9 +1,12 @@
 // @bun
 // plugins/toolu/hooks/src/pre-tools.ts
-import { join as join12 } from "path";
+import { join as join18 } from "path";
 
 // packages/toolu-core/src/config/config-load.ts
-import { readFileSync, statSync } from "fs";
+import { readFileSync } from "fs";
+
+// packages/toolu-core/src/config/config-files.ts
+import { statSync } from "fs";
 import { join as join2 } from "path";
 
 // packages/toolu-core/src/host/host-name.ts
@@ -193,6 +196,29 @@ function pluginRoot(options = {}) {
   const hostVar = PLUGIN_ROOT_VAR[host];
   const own = hostVar === undefined ? undefined : envValue(env, hostVar);
   return own ?? envValue(env, "CLAUDE_PLUGIN_ROOT");
+}
+
+// packages/toolu-core/src/config/config-files.ts
+function isFile(path) {
+  try {
+    return statSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+function configFiles(options) {
+  const env = options.env ?? process.env;
+  const host = options.host ?? detectHost({ env });
+  const scoped = options.cwd === undefined ? { env, host } : { env, host, cwd: options.cwd };
+  const files = {
+    user: join2(configRoot(scoped), "toolu.config.json"),
+    project: projectConfigPath(scoped)
+  };
+  return { files, host };
+}
+function configExists(options = {}) {
+  const { files } = configFiles(options);
+  return isFile(files.user) || files.project !== undefined && isFile(files.project);
 }
 
 // node_modules/.bun/zod@4.1.5/node_modules/zod/v4/core/core.js
@@ -3839,13 +3865,6 @@ function mergeObjects(user, project) {
 function mergeConfig(user, project) {
   return isJsonObject(user) && isJsonObject(project) ? mergeObjects(user, project) : project;
 }
-function isFile(path) {
-  try {
-    return statSync(path).isFile();
-  } catch {
-    return false;
-  }
-}
 function readConfigFile(path) {
   if (!isFile(path)) {
     return { kind: "absent" };
@@ -3870,16 +3889,6 @@ function envelopeError(value) {
     return `unsupported version ${JSON.stringify(value.version)} (supported: 1)`;
   }
   return;
-}
-function configFiles(options) {
-  const env = options.env ?? process.env;
-  const host = options.host ?? detectHost({ env });
-  const scoped = options.cwd === undefined ? { env, host } : { env, host, cwd: options.cwd };
-  const files = {
-    user: join2(configRoot(scoped), "toolu.config.json"),
-    project: projectConfigPath(scoped)
-  };
-  return { files, host };
 }
 function readLayer(path, warn) {
   const read = path === undefined ? { kind: "absent" } : readConfigFile(path);
@@ -4894,7 +4903,7 @@ function dispatchPreTool(stdin, options) {
 }
 
 // plugins/toolu/hooks/src/pre-tools/builtins.ts
-import { dirname as dirname2, join as join11 } from "path";
+import { dirname as dirname3, join as join17 } from "path";
 
 // packages/toolu-core/src/config/gate-mode.ts
 var GATE_MODES = ["block", "ask", "advise", "off"];
@@ -4975,9 +4984,10 @@ asks again. If you did not just ask for this, the answer is no.`;
 }
 
 // packages/toolu-core/src/config/settings.ts
-import { readFileSync as readFileSync4, statSync as statSync5 } from "fs";
-import { homedir as homedir3 } from "os";
-import { join as join8 } from "path";
+import { readFileSync as readFileSync4 } from "fs";
+import { join as join9 } from "path";
+
+// packages/toolu-core/src/config/settings-files.ts
 var SETTINGS_FILES = {
   bashAllowlist: "bash-allowlist.txt",
   bashDenylist: "bash-denylist.txt",
@@ -4987,6 +4997,11 @@ var SETTINGS_FILES = {
   rustUnsafeExemptions: "rust-unsafe-exemptions.txt",
   codeEditRules: "code-edit-rules.json"
 };
+
+// packages/toolu-core/src/config/settings-dir.ts
+import { statSync as statSync5 } from "fs";
+import { homedir as homedir3 } from "os";
+import { join as join8 } from "path";
 function isDirectory(path) {
   try {
     return statSync5(path).isDirectory();
@@ -5007,6 +5022,8 @@ function settingsDir(options = {}) {
   const root = options.pluginRoot ?? pluginRoot({ env });
   return root === undefined ? undefined : join8(root, "settings");
 }
+
+// packages/toolu-core/src/config/settings.ts
 var COMMENT_OR_BLANK = /^\s*(#|$)/;
 function readList(path) {
   if (!isFile(path)) {
@@ -5022,13 +5039,24 @@ function readList(path) {
   return lines.filter((line) => !COMMENT_OR_BLANK.test(line));
 }
 function bashAllowlist(dir) {
-  return readList(join8(dir, SETTINGS_FILES.bashAllowlist));
+  return readList(join9(dir, SETTINGS_FILES.bashAllowlist));
 }
 function bashDenylist(dir) {
-  return readList(join8(dir, SETTINGS_FILES.bashDenylist));
+  return readList(join9(dir, SETTINGS_FILES.bashDenylist));
 }
 function commitPrefixes(dir) {
-  return readList(join8(dir, SETTINGS_FILES.commitPrefixes));
+  return readList(join9(dir, SETTINGS_FILES.commitPrefixes));
+}
+function mcpBlocklist(dir) {
+  const entries = [];
+  for (const line of readList(join9(dir, SETTINGS_FILES.mcpBlocklist))) {
+    const arrow = line.indexOf(" -> ");
+    const prefix = (arrow === -1 ? line : line.slice(0, arrow)).trim();
+    if (prefix !== "") {
+      entries.push({ prefix, redirect: arrow === -1 ? "" : line.slice(arrow + 4) });
+    }
+  }
+  return entries;
 }
 var CodeEditRulesSchema = object({
   rules: array(object({
@@ -11167,6 +11195,10 @@ function preToolHostEvent(event) {
   return event.type === "shell/pre" ? "shell/pre" : "tool/pre";
 }
 var ALLOW = { kind: "allow" };
+function inputString(event, key) {
+  const value = event.toolInput[key];
+  return typeof value === "string" ? value : "";
+}
 
 // packages/toolu-core/src/gates/bash-commands.ts
 function matches(command, rule) {
@@ -11354,11 +11386,11 @@ function commitGateModule(options = {}) {
 // packages/toolu-core/src/gates/quality-gate.ts
 import { spawnSync as spawnSync3 } from "child_process";
 import { existsSync, readFileSync as readFileSync5 } from "fs";
-import { join as join10 } from "path";
+import { join as join11 } from "path";
 
 // packages/toolu-core/src/detect/detect-tools.ts
 import { accessSync, constants as constants2, statSync as statSync6 } from "fs";
-import { join as join9 } from "path";
+import { join as join10 } from "path";
 var cache = new Map;
 function isCommandFile(path) {
   try {
@@ -11376,7 +11408,7 @@ function isExecutable(path) {
   }
 }
 function scan(name, dirs) {
-  return dirs.some((dir) => isCommandFile(join9(dir === "" ? "." : dir, name)));
+  return dirs.some((dir) => isCommandFile(join10(dir === "" ? "." : dir, name)));
 }
 function toolAvailable(name, env = process.env) {
   if (name === "")
@@ -11451,7 +11483,7 @@ function decide3(event, ctx, options) {
   const stateRoot = projectStateRoot({ root, env: ctx.env, host: ctx.host });
   if (stateRoot === undefined)
     return ALLOW;
-  const doc = readGate(join10(stateRoot, "quality-gate-status.json"));
+  const doc = readGate(join11(stateRoot, "quality-gate-status.json"));
   if (!isJsonObject(doc) || field(doc, "status", "") !== "failing")
     return ALLOW;
   if (linkedWorktree(root, ctx.env))
@@ -11567,6 +11599,676 @@ var EditRecordSchema = strictObject({
 });
 // packages/toolu-core/src/gates/command-analysis.ts
 var analyses2 = new WeakMap;
+// packages/toolu-core/src/gates/bash-pattern.ts
+var CLASSES = {
+  alnum: /[\p{L}\p{N}]/u,
+  alpha: /\p{L}/u,
+  blank: /[ \t]/,
+  cntrl: /\p{Cc}/u,
+  digit: /[0-9]/,
+  graph: /[^\s\p{Cc}]/u,
+  lower: /\p{Ll}/u,
+  print: /[^\p{Cc}]/u,
+  punct: /[!-/:-@[-`{-~]/,
+  space: /\s/,
+  upper: /\p{Lu}/u,
+  word: /[\p{L}\p{N}_]/u,
+  xdigit: /[0-9A-Fa-f]/
+};
+function bracketMember(chars, at) {
+  const open = chars[at];
+  const kind = chars[at + 1];
+  if (open === "[" && (kind === ":" || kind === "=" || kind === ".")) {
+    const close = chars.indexOf(kind, at + 2);
+    if (close !== -1 && chars[close + 1] === "]") {
+      const name = chars.slice(at + 2, close).join("");
+      const next = close + 2;
+      if (kind === ":") {
+        const cls = CLASSES[name];
+        if (name === "ascii")
+          return { next, test: (c) => (c.codePointAt(0) ?? 128) < 128 };
+        return cls === undefined ? { next, test: () => false } : { next, test: (c) => cls.test(c) };
+      }
+      return { next, test: (c) => c === name, char: name };
+    }
+  }
+  if (open === "\\" && at + 1 < chars.length) {
+    const char = chars[at + 1] ?? "";
+    return { next: at + 2, test: (c) => c === char, char };
+  }
+  if (open === undefined)
+    return;
+  return { next: at + 1, test: (c) => c === open, char: open };
+}
+function parseBracket(chars, start) {
+  let at = start + 1;
+  const negated = chars[at] === "!" || chars[at] === "^";
+  if (negated)
+    at += 1;
+  const tests = [];
+  let first = true;
+  while (at < chars.length) {
+    if (chars[at] === "]" && !first) {
+      const bracket = { negated, test: (c) => tests.some((t) => t(c)) };
+      return { next: at + 1, bracket };
+    }
+    first = false;
+    const member = bracketMember(chars, at);
+    if (member === undefined)
+      return;
+    const low = member.char;
+    if (low !== undefined && chars[member.next] === "-" && chars[member.next + 1] !== "]") {
+      const high = bracketMember(chars, member.next + 1);
+      if (high?.char !== undefined) {
+        const lo = low.codePointAt(0) ?? 0;
+        const hi = high.char.codePointAt(0) ?? 0;
+        tests.push((c) => {
+          const code = c.codePointAt(0) ?? -1;
+          return code >= lo && code <= hi;
+        });
+        at = high.next;
+        continue;
+      }
+    }
+    tests.push(member.test);
+    at = member.next;
+  }
+  return;
+}
+function extglobEnd(chars, start) {
+  let depth = 0;
+  const bars = [];
+  let at = start;
+  while (at < chars.length) {
+    const c = chars[at];
+    if (c === "\\") {
+      at += 2;
+      continue;
+    }
+    if (c === "[") {
+      const bracket = parseBracket(chars, at);
+      if (bracket !== undefined) {
+        at = bracket.next;
+        continue;
+      }
+    }
+    if (c === "(")
+      depth += 1;
+    if (c === ")") {
+      if (depth === 0)
+        return { end: at, bars };
+      depth -= 1;
+    }
+    if (c === "|" && depth === 0)
+      bars.push(at);
+    at += 1;
+  }
+  return;
+}
+var EXT_OPS = new Set(["?", "*", "+", "@", "!"]);
+function isExtOp(c) {
+  return c !== undefined && EXT_OPS.has(c);
+}
+function parse5(chars, from, to) {
+  const nodes = [];
+  let at = from;
+  while (at < to) {
+    const c = chars[at] ?? "";
+    if (isExtOp(c) && chars[at + 1] === "(") {
+      const close = extglobEnd(chars, at + 2);
+      if (close !== undefined && close.end < to) {
+        const bounds = [at + 1, ...close.bars, close.end];
+        const alternatives = bounds.slice(1).map((end, i) => parse5(chars, (bounds[i] ?? 0) + 1, end));
+        nodes.push({ kind: "ext", op: c, alternatives });
+        at = close.end + 1;
+        continue;
+      }
+    }
+    if (c === "*") {
+      nodes.push({ kind: "star" });
+    } else if (c === "?") {
+      nodes.push({ kind: "any" });
+    } else if (c === "[") {
+      const bracket = parseBracket(chars, at);
+      if (bracket !== undefined && bracket.next <= to) {
+        nodes.push({ kind: "bracket", bracket: bracket.bracket });
+        at = bracket.next;
+        continue;
+      }
+      nodes.push({ kind: "literal", char: c });
+    } else if (c === "\\" && at + 1 < to) {
+      nodes.push({ kind: "literal", char: chars[at + 1] ?? "" });
+      at += 2;
+      continue;
+    } else {
+      nodes.push({ kind: "literal", char: c });
+    }
+    at += 1;
+  }
+  return nodes;
+}
+function anyAlt(alternatives, span, start, end) {
+  return alternatives.some((alt) => matchSeq(alt, span.text, start, end));
+}
+function matchExt(node, span, pos, rest) {
+  const { op, alternatives } = node;
+  if (op === "!") {
+    for (let end = pos;end <= span.to; end += 1) {
+      if (!anyAlt(alternatives, span, pos, end) && rest(end))
+        return true;
+    }
+    return false;
+  }
+  if ((op === "?" || op === "*") && rest(pos))
+    return true;
+  for (let end = pos + (op === "@" || op === "?" ? 0 : 1);end <= span.to; end += 1) {
+    if (!anyAlt(alternatives, span, pos, end))
+      continue;
+    if (rest(end))
+      return true;
+    const again = (op === "*" || op === "+") && end > pos;
+    if (again && matchExt({ ...node, op: "*" }, span, end, rest))
+      return true;
+  }
+  return false;
+}
+function matchSeq(nodes, text, from, to) {
+  const span = { text, to };
+  const memo = new Map;
+  const step = (i, pos) => {
+    const key = i * (to + 1) + pos;
+    const cached = memo.get(key);
+    if (cached !== undefined)
+      return cached;
+    const result = stepAt(i, pos);
+    memo.set(key, result);
+    return result;
+  };
+  const stepAt = (i, pos) => {
+    const node = nodes[i];
+    if (node === undefined)
+      return pos === to;
+    const char = text[pos];
+    switch (node.kind) {
+      case "literal":
+        return char === node.char && step(i + 1, pos + 1);
+      case "any":
+        return pos < to && step(i + 1, pos + 1);
+      case "bracket":
+        return char !== undefined && pos < to && node.bracket.test(char) !== node.bracket.negated && step(i + 1, pos + 1);
+      case "star":
+        for (let end = pos;end <= to; end += 1)
+          if (step(i + 1, end))
+            return true;
+        return false;
+      case "ext":
+        return matchExt(node, span, pos, (end) => step(i + 1, end));
+      default: {
+        const never = node;
+        return never;
+      }
+    }
+  };
+  return step(0, from);
+}
+function compileBashPattern(pattern) {
+  const chars = Array.from(pattern);
+  const nodes = parse5(chars, 0, chars.length);
+  return (text) => {
+    const units = Array.from(text);
+    return matchSeq(nodes, units, 0, units.length);
+  };
+}
+function bashPatternMatch(pattern, text) {
+  return compileBashPattern(pattern)(text);
+}
+// packages/toolu-core/src/gates/code-edit-rules.ts
+import { readFileSync as readFileSync6 } from "fs";
+import { join as join13 } from "path";
+
+// packages/toolu-core/src/gates/gate-paths.ts
+import { readdirSync as readdirSync2 } from "fs";
+import { join as join12 } from "path";
+function repoRelative(path, root) {
+  if (root === undefined || root === "")
+    return path;
+  return path.startsWith(`${root}/`) ? path.slice(root.length + 1) : path;
+}
+function globs(segment) {
+  const unescaped = segment.replace(/\\./gs, "");
+  return /[*?]/.test(unescaped) || /\[[^\]]*\]/.test(unescaped) || /[@!+]\(/.test(unescaped);
+}
+function unescape(segment) {
+  return segment.replace(/\\(.)/gs, "$1");
+}
+function entries(dir) {
+  try {
+    return readdirSync2(dir).toSorted();
+  } catch {
+    return [];
+  }
+}
+function expandPattern(pattern, cwd) {
+  const absolute = pattern.startsWith("/");
+  const segments = (absolute ? pattern.slice(1) : pattern).split("/");
+  let found = [{ shown: [], onDisk: absolute ? "/" : cwd }];
+  for (const segment of segments) {
+    if (!globs(segment)) {
+      const name = unescape(segment);
+      found = found.map((f) => ({ shown: [...f.shown, name], onDisk: join12(f.onDisk, name) }));
+      continue;
+    }
+    const match = compileBashPattern(segment);
+    const dotted = segment.startsWith(".");
+    found = found.flatMap((f) => entries(f.onDisk).filter((name) => (dotted || !name.startsWith(".")) && match(name)).map((name) => ({ shown: [...f.shown, name], onDisk: join12(f.onDisk, name) })));
+  }
+  const paths = found.map((f) => `${absolute ? "/" : ""}${f.shown.join("/")}`);
+  return [...new Set([...paths, pattern])];
+}
+
+// packages/toolu-core/src/gates/code-edit-rules.ts
+var EDIT_TOOLS2 = new Set(["Edit", "Write", "MultiEdit"]);
+function scalarText(value) {
+  if (typeof value === "string")
+    return value;
+  if (typeof value === "number" || typeof value === "boolean")
+    return JSON.stringify(value);
+  return;
+}
+function joined2(value) {
+  if (!Array.isArray(value))
+    return "";
+  const parts = value.map((item) => item === null ? "" : scalarText(item));
+  return parts.every((part) => part !== undefined) ? parts.join(" + ") : "";
+}
+function patterns(value) {
+  if (!Array.isArray(value))
+    return [];
+  return value.flatMap((item) => {
+    const text = item === null ? "null" : scalarText(item);
+    return text === undefined ? [] : [text];
+  });
+}
+function readRules(path) {
+  try {
+    const parsed = JSON.parse(readFileSync6(path, "utf8"));
+    const rules = isJsonObject(parsed) ? parsed.rules : undefined;
+    return Array.isArray(rules) ? rules : [];
+  } catch {
+    return [];
+  }
+}
+function docsFor(rules, rel) {
+  for (const rule of rules) {
+    if (!isJsonObject(rule))
+      continue;
+    const match = rule.match === false ? undefined : scalarText(rule.match);
+    if (match === undefined || match === "" || !bashPatternMatch(match, rel))
+      continue;
+    const docs = [joined2(rule.docs)];
+    if (patterns(rule.when_path_matches).some((cond) => bashPatternMatch(cond, rel))) {
+      docs.push(joined2(rule.extra_docs));
+    }
+    return docs.filter((d) => d !== "" && d !== "null").join(" + ");
+  }
+  return "";
+}
+function decide4(event, ctx, options) {
+  if (event.type !== "tool/pre" || !EDIT_TOOLS2.has(event.toolName))
+    return ALLOW;
+  const dir = gateSettingsDir(ctx, options);
+  const file = dir === undefined ? undefined : join13(dir, SETTINGS_FILES.codeEditRules);
+  if (file === undefined || !isFile(file))
+    return ALLOW;
+  const path = inputString(event, "file_path");
+  if (path === "")
+    return ALLOW;
+  const root = path.startsWith("/") ? gitToplevel(ctx.env, process.cwd()) : undefined;
+  const rel = repoRelative(path, root);
+  const docs = docsFor(readRules(file), rel);
+  if (docs === "")
+    return ALLOW;
+  return { kind: "advisory", message: `File: ${rel}
+Apply these rules: ${docs}` };
+}
+function codeEditRulesModule(options = {}) {
+  return {
+    kind: "native",
+    name: "code-edit-rules",
+    run: (event, ctx) => Promise.resolve(decide4(event, ctx, options))
+  };
+}
+// packages/toolu-core/src/gates/mcp-blocker.ts
+import { readFileSync as readFileSync7 } from "fs";
+import { dirname as dirname2 } from "path";
+
+// packages/toolu-core/src/gates/mcp-scope.ts
+import { join as join14 } from "path";
+function mcpServer(toolName) {
+  if (!toolName.startsWith("mcp__"))
+    return;
+  const rest = toolName.slice("mcp__".length);
+  const end = rest.indexOf("__");
+  return end === -1 ? undefined : rest.slice(0, end);
+}
+function mcpBlocklistFile(scope) {
+  const dir = settingsDir({
+    env: scope.env,
+    ...scope.pluginRoot === undefined ? {} : { pluginRoot: scope.pluginRoot }
+  });
+  return dir === undefined ? undefined : join14(dir, SETTINGS_FILES.mcpBlocklist);
+}
+function mcpHasSources(scope) {
+  const list = mcpBlocklistFile(scope);
+  return list !== undefined && isFile(list) || configExists({ env: scope.env, host: scope.host });
+}
+
+// packages/toolu-core/src/gates/mcp-blocker.ts
+function configEntry(key) {
+  const arrow = key.indexOf(" -> ");
+  return {
+    prefix: (arrow === -1 ? key : key.slice(0, arrow)).trim(),
+    redirect: arrow === -1 ? "" : key.slice(arrow + 4)
+  };
+}
+function mcpSection(config) {
+  if (config.invalid === undefined)
+    return section(config, "mcp") ?? {};
+  const merged = {};
+  for (const path of [config.files.user, config.files.project]) {
+    if (path === undefined || !isFile(path))
+      continue;
+    try {
+      const raw = JSON.parse(readFileSync7(path, "utf8"));
+      const mcp = isJsonObject(raw) ? raw.mcp : undefined;
+      if (isJsonObject(mcp))
+        Object.assign(merged, mcp);
+    } catch {}
+  }
+  return merged;
+}
+function matchEntry(entries, server) {
+  return entries.find((entry) => entry.prefix !== "" && server.startsWith(entry.prefix));
+}
+function reason(mode, block) {
+  const { tool, server, origin } = block;
+  const headline = `Claude is calling MCP tool "${tool}", on the blocked server "${server}" (${origin}).`;
+  let detail = "Blocked MCP servers are ones this project has decided not to reach through an MCP bridge \u2014 usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.";
+  if (block.redirect !== "")
+    detail = `${detail} Use instead: ${block.redirect}`;
+  if (mode === "ask")
+    return guardrailWarning(headline, detail);
+  if (mode === "advise") {
+    return `MCP server "${server}" is blocked (${origin}). ${detail} The call was NOT stopped \u2014 gates.mcpBlocker.mode is 'advise'.`;
+  }
+  return `MCP server "${server}" is blocked (${origin}). ${detail}`;
+}
+function decide5(event, ctx, options) {
+  const tool = event.toolName;
+  const server = mcpServer(tool);
+  if (server === undefined)
+    return ALLOW;
+  const scope = { env: ctx.env, host: ctx.host, pluginRoot: options.pluginRoot };
+  if (!mcpHasSources(scope))
+    return ALLOW;
+  const list = mcpBlocklistFile(scope);
+  const fromFile = list === undefined ? undefined : matchEntry(mcpBlocklist(dirname2(list)), server);
+  const config = gateConfig(ctx, options);
+  const disabled = Object.entries(mcpSection(config)).filter(([, value]) => value === false).map(([key]) => configEntry(key));
+  const fromConfig = fromFile === undefined ? matchEntry(disabled, server) : undefined;
+  const match = fromFile ?? fromConfig;
+  if (match === undefined)
+    return ALLOW;
+  const origin = fromFile === undefined ? `disabled in your toolu config (mcp.${server}=false)` : "listed in settings/mcp-blocklist.txt";
+  const mode = gateMode(config, "mcpBlocker", { host: ctx.host, event: "tool/pre" });
+  const block = { tool, server, origin, redirect: match.redirect };
+  return gateDecision(mode, reason(mode, block)) ?? ALLOW;
+}
+function mcpBlockerModule(options = {}) {
+  return {
+    kind: "native",
+    name: "mcp-blocker",
+    run: (event, ctx) => Promise.resolve(decide5(event, ctx, options))
+  };
+}
+// packages/toolu-core/src/gates/protected-files.ts
+import { basename as basename5, join as join16 } from "path";
+
+// packages/toolu-core/src/shell/shell-writes.ts
+import { basename as basename4 } from "path";
+function writesFile(redirect) {
+  if (redirect.operator === ">&")
+    return !/^(\d+|-)$/.test(redirect.target ?? "");
+  return /^(>>?|>\||&>>?|<>)$/.test(redirect.operator);
+}
+function argAt(command, index) {
+  const text = command.texts[index] ?? "";
+  return { path: command.argv[index] ?? null, pattern: command.patterns[index] ?? null, text };
+}
+function operands(command, parsed) {
+  return parsed.operandAt.map((index) => argAt(command, index));
+}
+function join15(dir, source) {
+  return dir === null || source === null ? null : `${dir.replace(/\/+$/, "")}/${basename4(source)}`;
+}
+function inDir(dir, source) {
+  const path = join15(dir.path, source.path);
+  const pattern = path === null ? join15(dir.path ?? dir.pattern, source.path ?? source.pattern) : null;
+  return { path, pattern, text: join15(dir.text, source.text) ?? "" };
+}
+function copyTargets(command, spec, installDirs = false) {
+  const parsed = parseArgs(command.argv, 1, spec);
+  const files = operands(command, parsed);
+  if (installDirs && hasOption(parsed, "d directory"))
+    return files;
+  const dir = parsed.options.find((option) => named("t target-directory", option.name));
+  if (dir !== undefined) {
+    const value = dir.value ?? null;
+    const into = dir.at === null ? { path: value, pattern: null, text: value ?? "" } : argAt(command, dir.at);
+    return files.map((source) => inDir(into, source));
+  }
+  const dest = files.pop();
+  if (dest === undefined || files.length === 0)
+    return [];
+  if (dest.path === null && dest.pattern === null)
+    return [dest];
+  return [dest, ...files.map((source) => inDir(dest, source))];
+}
+function inPlaceTargets(command, spec, script) {
+  const parsed = parseArgs(command.argv, 1, spec);
+  if (!hasOption(parsed, "i in-place"))
+    return [];
+  const bsd = command.argv.findIndex((word, i) => word === "-i" && command.argv[i + 1] === "");
+  const files = parsed.operandAt.filter((index) => bsd === -1 || index !== bsd + 1);
+  return files.slice(hasOption(parsed, script) ? 0 : 1).map((index) => argAt(command, index));
+}
+var PY_PATH = /^\s*([rRbBuUfF]{0,2})('''|"""|'|")([\s\S]*?)\2\s*/;
+var PY_MODE = /^,\s*(?:mode\s*=\s*)?[rRbBuUfF]{0,2}('''|"""|'|")([\s\S]*?)\1\s*[,)]/;
+var PY_WRITE_API = /\b(?:write_text|write_bytes|touch|symlink_to|hardlink_to|shutil\.(?:copy\w*|move)|os\.(?:rename|replace|symlink|link))\s*\(/;
+function pythonOpen(args, method) {
+  const path = method ? null : PY_PATH.exec(args);
+  if (path === null)
+    return null;
+  const rest = args.slice(path[0].length);
+  if (rest.startsWith(")"))
+    return;
+  const mode = PY_MODE.exec(rest)?.[2];
+  if (mode === undefined)
+    return null;
+  if (!/[wax+]/.test(mode))
+    return;
+  const body = path[3] ?? "";
+  return /[fF]/.test(path[1] ?? "") && body.includes("{") ? null : body;
+}
+function pythonScript(command) {
+  const parsed = parseArgs(command.argv, 1, { valueShort: "cmWX", stopAtOperand: true });
+  const [inline] = optionValues(parsed, "c");
+  if (inline !== undefined)
+    return inline;
+  if (hasOption(parsed, "m"))
+    return;
+  const operand = command.argv[parsed.next];
+  return operand === undefined || operand === "-" ? stdinScript(command.redirects) : undefined;
+}
+function pythonTargets(command) {
+  const script = pythonScript(command);
+  if (script === undefined)
+    return [];
+  const paths = script === null ? [null] : [...script.matchAll(/(\.?)\bopen\s*\(/g)].map((call) => pythonOpen(script.slice(call.index + call[0].length), call[1] === "."));
+  if (script !== null && PY_WRITE_API.test(script))
+    paths.push(null);
+  return paths.flatMap((path) => path === undefined ? [] : [{ path, pattern: null, text: path ?? "" }]);
+}
+var MOVE = { valueShort: "tS", valueLong: "target-directory suffix" };
+var WRITERS = {
+  tee: { via: "tee", targets: (c) => operands(c, parseArgs(c.argv, 1, {})) },
+  sed: {
+    via: "sed",
+    targets: (c) => inPlaceTargets(c, { valueShort: "efl", restShort: "i", valueLong: "expression file line-length" }, "e f expression file")
+  },
+  perl: {
+    via: "perl",
+    targets: (c) => inPlaceTargets(c, { valueShort: "eE", restShort: "iIMmlx0dDC" }, "e E")
+  },
+  cp: { via: "cp", targets: (c) => copyTargets(c, MOVE) },
+  mv: { via: "mv", targets: (c) => copyTargets(c, MOVE) },
+  install: {
+    via: "install",
+    targets: (c) => copyTargets(c, {
+      valueShort: "tSmog",
+      valueLong: "target-directory suffix mode owner group strip-program"
+    }, true)
+  },
+  dd: {
+    via: "dd",
+    targets: (c) => c.texts.flatMap((text, index) => {
+      const word = c.argv[index] ?? c.patterns[index];
+      const path = word?.startsWith("of=") === true ? word.slice(3) : null;
+      return text.startsWith("of=") ? [{ path, pattern: null, text: text.slice(3) }] : [];
+    })
+  },
+  python: { via: "python", targets: pythonTargets }
+};
+function redirectTargets(redirects, command) {
+  return redirects.filter(writesFile).map(({ target, pattern, text }) => ({
+    path: target,
+    pattern,
+    text,
+    via: "redirect",
+    command
+  }));
+}
+function writeTargets(analysis) {
+  const targets = analysis.commands.flatMap((command) => {
+    const name = basename4(command.argv[0] ?? "").replace(/^python[0-9.]*$/, "python");
+    const writer = Object.hasOwn(WRITERS, name) ? WRITERS[name] : undefined;
+    const fromArgs = writer === undefined ? [] : writer.targets(command).map(({ path, pattern, text }) => ({ path, pattern, text, via: writer.via, command }));
+    return [...redirectTargets(command.redirects, command), ...fromArgs];
+  });
+  return [...targets, ...redirectTargets(analysis.compoundRedirects, null)];
+}
+
+// packages/toolu-core/src/gates/protected-files.ts
+var EDIT_TOOLS3 = new Set(["Edit", "Write", "MultiEdit"]);
+function shellCandidates(event) {
+  const out = writeTargets(shellAnalysisOf(event)).flatMap((target) => {
+    if (target.path !== null)
+      return [target.path];
+    if (target.pattern !== null)
+      return expandPattern(target.pattern, event.cwd);
+    return target.text === "" ? [] : [target.text];
+  });
+  return [...new Set(out.filter((path) => path !== ""))];
+}
+function candidates(event) {
+  if (event.type === "shell/pre")
+    return shellCandidates(event);
+  if (!EDIT_TOOLS3.has(event.toolName))
+    return [];
+  const path = inputString(event, "file_path");
+  return path === "" ? [] : [path];
+}
+function rule(pattern) {
+  const tests = [compileBashPattern(pattern)];
+  if (!pattern.startsWith("**/"))
+    tests.push(compileBashPattern(`**/${pattern}`));
+  const byName = pattern.includes("/") ? undefined : compileBashPattern(pattern);
+  return { pattern, tests, byName };
+}
+function firstMatch(rules, rel) {
+  return rules.find((r) => r.tests.some((t) => t(rel)) || r.byName?.(basename5(rel)) === true)?.pattern;
+}
+var DETAILS = [
+  [
+    compileBashPattern("@(*.env.example|*.env.template|*.env.sample)"),
+    "This is an example/template env file. It is committed on purpose, so it should carry placeholders and never live values \u2014 it is guarded because a real credential pasted here is a credential published to the repo."
+  ],
+  [
+    compileBashPattern("@(.env|.env.*|*secrets*)"),
+    "This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push."
+  ],
+  [
+    compileBashPattern("@(.git/*|*/.git/*)"),
+    "This is git's internal state. Approving lets an agent rewrite refs, hooks, or config \u2014 including hooks that run on your machine at every commit."
+  ],
+  [
+    compileBashPattern("@(*hooks/*|*skills/*)"),
+    "This is toolu's own enforcement code \u2014 the hooks that run every other gate. Approving lets an agent edit the thing that is supposed to be watching it, which is how a guardrail gets quietly switched off."
+  ]
+];
+var DEFAULT_DETAIL = "This path is listed in settings/protected-files.txt because edits to it are hard to notice and expensive to get wrong.";
+function detailFor(rel) {
+  return DETAILS.find(([test]) => test(rel))?.[1] ?? DEFAULT_DETAIL;
+}
+function reason2(mode, hit) {
+  const { candidate, matched } = hit;
+  const detail = detailFor(hit.rel);
+  const headline = hit.shell ? `This command would WRITE to ${candidate}, a protected path (matches "${matched}").` : `Claude is trying to edit ${candidate}, a protected path (matches "${matched}").`;
+  if (mode === "ask")
+    return guardrailWarning(headline, detail);
+  if (mode === "advise") {
+    return `Protected path ${candidate} (matches "${matched}"). ${detail} The write was NOT stopped \u2014 gates.protectedFiles.mode is 'advise'.`;
+  }
+  return `${headline} ${detail} Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).`;
+}
+function findHit(paths, rules, ctx, shell) {
+  let root;
+  for (const candidate of paths) {
+    if (candidate.startsWith("/"))
+      root ??= gitToplevel(ctx.env, process.cwd()) ?? "";
+    const rel = repoRelative(candidate, root);
+    const matched = firstMatch(rules, rel);
+    if (matched !== undefined)
+      return { candidate, rel, matched, shell };
+  }
+  return;
+}
+function decide6(event, ctx, options) {
+  const dir = gateSettingsDir(ctx, options);
+  if (dir === undefined)
+    return ALLOW;
+  const rules = readList(join16(dir, SETTINGS_FILES.protectedFiles)).map(rule);
+  if (rules.length === 0)
+    return ALLOW;
+  const paths = candidates(event);
+  if (paths.length === 0)
+    return ALLOW;
+  const hit = findHit(paths, rules, ctx, event.type === "shell/pre");
+  if (hit === undefined)
+    return ALLOW;
+  const mode = gateMode(gateConfig(ctx, options), "protectedFiles", {
+    host: ctx.host,
+    event: preToolHostEvent(event)
+  });
+  return gateDecision(mode, reason2(mode, hit)) ?? ALLOW;
+}
+function protectedFilesModule(options = {}) {
+  return {
+    kind: "native",
+    name: "protected-files",
+    run: (event, ctx) => Promise.resolve(decide6(event, ctx, options))
+  };
+}
 // plugins/toolu/hooks/src/pre-tools/builtins.ts
 var BUILTIN_MODULES = [
   "bash-commands",
@@ -11581,20 +12283,23 @@ var BUILTIN_MODULES = [
 ];
 var NATIVE_MODULES = {
   "bash-commands": bashCommandsModule,
+  "code-edit-rules": codeEditRulesModule,
   "commit-gate": commitGateModule,
+  "mcp-blocker": mcpBlockerModule,
+  "protected-files": protectedFilesModule,
   "quality-gate": qualityGateModule
 };
 function builtins(hooksDir) {
-  const modules = join11(hooksDir, "pre-tools", "modules");
-  const options = { pluginRoot: dirname2(hooksDir) };
+  const modules = join17(hooksDir, "pre-tools", "modules");
+  const options = { pluginRoot: dirname3(hooksDir) };
   return BUILTIN_MODULES.map((name) => NATIVE_MODULES[name]?.(options) ?? bashModule(modules, name));
 }
 
 // plugins/toolu/hooks/src/pre-tools/hook-main.ts
-import { dirname as dirname3 } from "path";
+import { dirname as dirname4 } from "path";
 async function hookMain(entryDir, run, event = "PreToolUse") {
   try {
-    const result = await run(await Bun.stdin.text(), dirname3(entryDir));
+    const result = await run(await Bun.stdin.text(), dirname4(entryDir));
     process.stdout.write(result.stdout);
     process.stderr.write(result.stderr);
     process.exitCode = result.exitCode;
@@ -11608,4 +12313,4 @@ async function hookMain(entryDir, run, event = "PreToolUse") {
 }
 
 // plugins/toolu/hooks/src/pre-tools.ts
-await hookMain(import.meta.dir, (stdin, hooks) => dispatchPreTool(stdin, { builtins: builtins(hooks), libDir: join12(hooks, "lib") }));
+await hookMain(import.meta.dir, (stdin, hooks) => dispatchPreTool(stdin, { builtins: builtins(hooks), libDir: join18(hooks, "lib") }));

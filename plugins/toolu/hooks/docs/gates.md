@@ -93,8 +93,12 @@ Or `{"gates": {"preset": "strict"}}`, which blocks everything.
 `sed -i`/`perl -i`, `cp`/`mv`/`install`, `dd of=`, `python -c open(..., "w")`
 write targets, and command substitutions inside unquoted heredocs — so a
 protected path cannot be written through Bash to dodge the prompt
-(github.com/Falconiere/toolu/issues/176). Best-effort, not a full shell
-grammar — see `bash_write_targets` in `hooks/lib/detect.sh`.
+(github.com/Falconiere/toolu/issues/176). The command is parsed once by
+`@toolu/core/shell`, so a redirect without a space or on any descriptor
+(`>.env`, `2>.env`), `cp -t DIR`, and writes inside `bash -c` or `eval` are
+seen too (#283). A pathname pattern (`> .en[v]`) is checked as every existing
+file it matches, and a target built from a variable (`> $HOME/.env`) by its
+text. See `writeTargets` in `docs/shell-analysis.md`.
 
 ## Per-gate overrides
 

@@ -29,7 +29,7 @@ const CITATIONS: ReadonlyArray<readonly [string, string]> = [
   ["v2.0.12", "missing CLI pin v2.0.12"],
   ["@opencode/plugin@2.0.12", "missing SDK pin"],
   ["protocolVersion", "missing protocolVersion"],
-  ["protected-files.sh", "missing protected-files.sh citation"],
+  ["gates/protected-files.ts", "missing protected-files gate citation"],
   ["gate-mode.sh", "missing gate-mode.sh citation"],
   ["dispatch.sh", "missing dispatch.sh citation"],
   ["tooling/fixtures/portable-core/protected-files-pre.json", "missing fixture citation"],

@@ -65,16 +65,32 @@ Merging outcomes (deny over ask over advisory) and encoding them for the host be
 
 ## PreToolUse dispatch
 
-toolu's PreToolUse entry for edit, shell and search tools runs the Bun bundle `hooks/dist/pre-tools.js`, wired with the generated launcher. The standalone `mcp__` and subagent entries keep running `mcp-blocker.sh` and `agent-tier.sh` directly: a Bun wrapper around an unported script would add Bun's startup, about 20 ms, to every call. #260 and #262 switch each entry when its module is ported. `dispatchPreTool` (`@toolu/core/dispatch`) is a TypeScript port of `pre-tools/mod.sh` and `dispatch.sh`:
+toolu's PreToolUse entry for edit, shell and search tools runs the Bun bundle `hooks/dist/pre-tools.js`, wired with the generated launcher. The `mcp__` entry runs `hooks/dist/mcp-tools.js` the same way (#260). That bundle is `@toolu/core/gates/mcp-hook`: mcp-blocker alone, without the other built-ins or `pre-tools.d`, and it loads the gate only when a blocklist file or a toolu config exists. The subagent entry keeps running `agent-tier.sh` directly until #262 ports it, because a Bun wrapper around an unported script would add Bun's startup, about 20 ms, to every call. `dispatchPreTool` (`@toolu/core/dispatch`) is a TypeScript port of `pre-tools/mod.sh` and `dispatch.sh`:
 
 - **Order.** Built-in modules run in table order, which is the byte order `mod.sh` globbed. `runRegistry` then walks `pre-tools.d`. `.js` modules run in process. `.sh` modules run on bash with the environment `mod.sh` exported: `input`, `tool_name`, `TOOLU_LIB_DIR`, `TOOLU_CONFIG_DIR`, and `TOOLU_EDIT_*` during a patch walk.
 - **Decisions.** The first deny is emitted exactly as its module wrote it, and the walk stops. A module exit of 2 blocks with that module's stderr. Any other non-zero exit is reported on stderr and skipped. The first ask is held and receives every advisory. Advisories are deduped and merged into one `additionalContext` and one `systemMessage`.
 - **Edits.** Edit, Write, MultiEdit and `apply_patch` are walked once per affected path as a synthetic `Edit`. A deny or exit 2 on any path wins for the whole patch. Unparseable patch headers are denied.
 - **Output.** Module results stay raw hook text, and the merged object is printed the way `jq -n` prints it. While a module runs on bash, the bundle's stdout and exit code match `bash mod.sh` byte for byte. `plugins/toolu/hooks/src/__tests__/pre-tools-parity.test.ts` checks this over the `@toolu/conformance` PreToolUse corpus, as Claude Code and Codex deliver it.
-- **Cutover.** A port replaces that module's `bashModule(...)` in `plugins/toolu/hooks/src/pre-tools/builtins.ts` with a native `{ kind: "native", name, run(event, ctx) }`, whose signature matches `RegistryModule.run`. Its `Decision` is encoded for the host with `encodeDecision`, so an `ask` on Codex becomes a deny.
+- **Cutover.** A port adds its gate to `NATIVE_MODULES` in `plugins/toolu/hooks/src/pre-tools/builtins.ts`, in place of the `bashModule(...)` fallback. The gate is a native `{ kind: "native", name, run(event, ctx) }` from `@toolu/core/gates`, whose signature matches `RegistryModule.run`. Its `Decision` is encoded for the host with `encodeDecision`, so an `ask` on Codex becomes a deny.
+  - Native so far (#260): protected-files, mcp-blocker and code-edit-rules.
+  - Their parity with bash is proven by the bash captures in `hooks/src/__tests__/fixtures/pre-tool-modules-a-golden.json`, replayed by `pre-tool-modules-a.test.ts` and `pre-tool-modules-a-golden.test.ts`. The comparison is on the parsed decision, exit code and stderr, because `jq -n` pretty-printed where the encoder prints compact JSON.
+  - `pre-tools-parity.test.ts` keeps the byte-for-byte check against live `mod.sh` for every other corpus case.
 - **Failure.** An unexpected dispatcher error exits 2 and blocks the tool, as a missing Bun does.
 
-`bun run tooling/src/benchmarks/pre-tools-latency.ts [--runs N] [--assert]` measures p50 for `bash mod.sh`, the bundle, and the bundle with one module native, against the epic budget of bash + 5 ms. On an Apple M2 Max with Bun 1.4.2, the bundle ran 40 to 182 ms faster than `bash mod.sh` on every fixture: it drops the dispatcher's own `jq` calls per module. With one module native, six of the seven fixtures ran a further 13 to 39 ms faster, and one was 11 ms slower.
+`bun run tooling/src/benchmarks/pre-tools-latency.ts [--runs N] [--assert]` measures p50 against the epic budget of bash + 5 ms. It compares `bash mod.sh` and `bash mcp-blocker.sh`, extracted with `git archive 2386d4f3 plugins/toolu` (the last commit where every module ran on bash), with the two committed bundles. Samples run in back-to-back pairs.
+
+On an Apple M2 Max with Bun 1.4.2, measured on 2026-09-29 with 40 pairs:
+
+| Hook | bash p50 | bundle p50 | bundle − bash |
+|---|---|---|---|
+| Dispatcher, 7 fixtures | 265 to 979 ms | 149 to 860 ms | −97 to −430 ms |
+| `mcp__`, blocked server | 47.6 ms | 32.6 ms | −15.0 ms |
+| `mcp__`, unlisted server | 34.1 ms | 32.9 ms | −1.2 ms |
+| `mcp__`, no blocklist and no config | 24.3 ms | 28.8 ms | +4.5 ms |
+
+The machine was shared with other agent sessions (load average 7 to 11).
+
+The last row is the tightest. That call only needs two file checks, and bash sources three libs to make them, while Bun pays its startup plus parsing the whole bundle. Parsing the lazily loaded gate code costs about 6 ms. Under heavier load (load average 12 and up), the two allowed `mcp__` rows measured 12 to 13 ms over bash, so re-measure on a quiet machine for the epic's latency evidence (#279).
 
 ## PostToolUse dispatch
 

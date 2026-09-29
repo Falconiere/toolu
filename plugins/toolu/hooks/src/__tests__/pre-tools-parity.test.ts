@@ -5,7 +5,9 @@
  * with every module still on bash fallback. A fixture decided by a module
  * whose bash script is deleted (#261) is compared with what `mod.sh` printed
  * for it before the deletion, as parsed JSON: the native encoder prints
- * compact JSON where jq printed it pretty.
+ * compact JSON where jq printed it pretty. Fixtures protected-files,
+ * mcp-blocker and code-edit-rules decide (#260) are replayed against their
+ * own capture in `pre-tool-modules-a-golden.test.ts`.
  */
 import { expect, test } from "bun:test";
 import { toStdin } from "@toolu/conformance/harness/fixtures";
@@ -20,10 +22,12 @@ import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { PRETOOL_CORPUS, prepare, type Outcome } from "@toolu/conformance/harness/pretool-corpus";
 import { comparable } from "./pre-tool-modules-b-cases.ts";
 import { corpusKey, decidedByModulesB, readGolden } from "./pre-tool-modules-b-golden.ts";
+import { readGolden as readGoldenA } from "./pre-tool-modules-a-golden.ts";
 
 const HOSTS: PretoolHost[] = ["claude", "codex"];
 
 const golden = readGolden().corpus;
+const PORTED_A = readGoldenA().corpus;
 
 function outcomeOf(stdout: string, exitCode: number): Outcome {
   if (exitCode === 2) return "exit2";
@@ -36,7 +40,7 @@ function outcomeOf(stdout: string, exitCode: number): Outcome {
 }
 
 for (const fixture of PRETOOL_CORPUS) {
-  for (const host of HOSTS) {
+  for (const host of HOSTS.filter((h) => PORTED_A[corpusKey(fixture.name, h)] === undefined)) {
     test.concurrent(`${fixture.name} [${host}]`, async () => {
       using sb = createSandbox({ git: true });
       const extra = await prepare(sb, host, fixture);

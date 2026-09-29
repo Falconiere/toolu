@@ -18,7 +18,6 @@ import {
 const REPO = resolve(import.meta.dir, "../../../../..");
 const SETTINGS = join(REPO, "plugins/toolu/settings");
 const LIB = join(REPO, "plugins/toolu/hooks/lib");
-const MCP_BLOCKER = join(REPO, "plugins/toolu/hooks/pre-tools/modules/mcp-blocker.sh");
 
 async function bashReadList(path: string): Promise<string[]> {
   const res = await run(["bash", "-c", '. "$1/detect.sh"; read_list "$2"', "_", LIB, path]);
@@ -76,36 +75,24 @@ test.concurrent("the typed list loaders read the shipped files", () => {
   expect(mcpBlocklist(SETTINGS)).toEqual([]);
 });
 
-const MCP_LINES: readonly (readonly [string, string])[] = [
-  ["claude_ai_Atlassian -> use the `jira` skill instead", "claude_ai_AtlassianCloud"],
-  ["  figma  ", "figmaDesktop"],
-  ["canva -> a -> b", "canva"],
+/** Lines and the prefix/redirect `mcp-blocker.sh` split them into (verified against it before #260 deleted it). */
+const MCP_LINES: readonly (readonly [string, string, string])[] = [
+  [
+    "claude_ai_Atlassian -> use the `jira` skill instead",
+    "claude_ai_Atlassian",
+    "use the `jira` skill instead",
+  ],
+  ["  figma  ", "figma", ""],
+  ["canva -> a -> b", "canva", "a -> b"],
 ];
 
-for (const [line, server] of MCP_LINES) {
-  test.concurrent(`mcpBlocklist splits "${line}" like mcp-blocker.sh`, async () => {
+for (const [line, prefix, redirect] of MCP_LINES) {
+  test.concurrent(`mcpBlocklist splits "${line}" as mcp-blocker.sh did`, () => {
     using sb = createSandbox();
     const dir = join(sb.root, "settings");
     mkdirSync(dir);
     writeFileSync(join(dir, "mcp-blocklist.txt"), `# header\n${line}\n`);
-    const [entry] = mcpBlocklist(dir);
-    expect(entry).toBeDefined();
-    if (entry === undefined) return;
-    expect(server.startsWith(entry.prefix)).toBe(true);
-    sb.writeConfig("claude", "project", { gates: { mcpBlocker: { mode: "block" } } });
-    const res = await run(["bash", MCP_BLOCKER], {
-      env: {
-        HOME: sb.home,
-        TOOLU_PROJECT_DIR: sb.project,
-        TOOLU_SETTINGS_DIR: dir,
-        TOOLU_HOST_OVERRIDE: "claude",
-        tool_name: `mcp__${server}__call`,
-      },
-    });
-    const reason = String(JSON.parse(res.stdout).hookSpecificOutput.permissionDecisionReason);
-    expect(reason).toContain(`MCP server "${server}" is blocked`);
-    const hint = reason.split(" Use instead: ")[1] ?? "";
-    expect(hint).toBe(entry.redirect);
+    expect(mcpBlocklist(dir)).toEqual([{ prefix, redirect }]);
   });
 }
 
