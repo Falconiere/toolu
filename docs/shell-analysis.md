@@ -1,0 +1,90 @@
+# Shell command analysis
+
+`@toolu/core/shell` gives every TypeScript gate one answer to the question "what does this Bash/Shell command run, and what does it write?" It parses the command once with **unbash 4.0.11** (pinned exactly, zero dependencies, inlined into each bundle) and returns flat records. No gate reads a command as text. Issue: [#284](https://github.com/Falconiere/toolu/issues/284). Defects it fixes: [#283](https://github.com/Falconiere/toolu/issues/283). Epic: [#247](https://github.com/Falconiere/toolu/issues/247).
+
+## API
+
+| Export | Answers |
+|---|---|
+| `analyzeShell(source)` | `{ commands, compoundRedirects, errors, unknown }`. It never throws. |
+| `shellAnalysisOf(event)` | The same analysis for a `shell/pre` event, parsed on first use and shared by every module |
+| `runsGitSubcommand(analysis, "push")` | `yes`, `no`, or `unknown` |
+| `gitInvocation(command)` | The subcommand past git's global options, its arguments, and the `-C` chain |
+| `pushTargets(analysis)` | Each push's cumulative `-C` chain, refspec, and destination branch |
+| `commitMessages(invocation)` | Static `-m`/`--message` values, including `"$(cat <<'EOF' … EOF)"` |
+| `writeTargets(analysis)` | Paths written by redirects, `tee`, `sed -i`, `perl -i`, `cp`/`mv`/`install`, `dd of=`, `python -c open(…,'w')` |
+| `matchesRule(command, "node -e")` | An argv rule tested against one simple command |
+
+Each `ShellCommand` carries the following fields:
+
+- `words`: the name and arguments as written.
+- `argv`: what actually runs once wrappers are removed.
+- `wrappers`
+- `redirects`
+- `pipeline`: `{ index, size }`
+- `exitProves`
+- `origin`: `line`, `substitution`, `shell`, `eval`, or `function`
+- `depth`
+- `text`
+
+A `null` word is dynamic: it expands at run time and is never guessed.
+
+## What the walk covers
+
+The walk covers every simple command in the line: inside `$(…)`, backticks, `<(…)`/`>(…)`, subshells, brace groups, `if`/`while`/`for`/`case` bodies, function bodies, `[[ ]]`, `(( ))`, `$(( ))`, parameter operands (`${X:-$(…)}`), assignment values, redirect targets, and unquoted heredoc bodies. A quoted heredoc body is data. The exception is a static heredoc or herestring fed to a shell (`bash <<'EOF'`), which is code.
+
+The walk is a `switch` over every unbash node and word-part type, with a `never` default, so upgrading unbash to a version with a new node kind fails `tsc`.
+
+Wrappers are unwrapped by their own option tables: `sudo`, `doas`, `env`, `command`, `builtin`, `exec`, `nohup`, `time`, `nice`, `timeout`, `xargs` and `stdbuf`. Two special cases:
+
+- `command -v` runs nothing, so it is not unwrapped.
+- `xargs` adds arguments at run time, so its argv ends with a `null`.
+
+`bash|sh|zsh|dash|ksh -c STRING` and `eval ARGS` are analyzed as command lines of their own, up to depth 4.
+
+## Policy
+
+- **Syntax errors:**
+  - Commands unbash could read are reported, and errors come from the line and every nested script. `git push; echo "unterminated` is still a push.
+  - A line with errors and no command at all (`)`, `if`) is `unknown`.
+  - A line with errors exits non-zero in bash, so none of its commands has `exitProves`.
+- **Dynamic names:**
+  - `$g push`, `git $(echo push)` and `sudo $CMD` make `runsGitSubcommand` return `unknown`, never `no`.
+  - A shell string that cannot be read statically (`bash -c "$CMD"`, `curl … | bash`, recursion past depth 4) becomes an unknown command (`argv: [null]`).
+  - Each gate decides what unknown means for it. Security guardrails ask (block on Codex), and workflow gates keep today's behaviour.
+- **Exit status:** `exitProves` holds only when a zero exit of the whole line proves that the command ran and exited zero:
+  - the last statement, not backgrounded;
+  - an and-or element with `&&` on both sides;
+  - the last element of a pipeline that is not negated;
+  - through subshells, groups, `bash -c` and `eval`.
+  
+  `bun test | tail` does not prove `bun test` passed.
+- **Size:** input over 1 MiB is not parsed and is `unknown`. Measured: 1 MiB of dense script parses in about 15 ms, and a 1 MiB heredoc in 0.3 ms.
+- **Out of scope:**
+  - Shell state from earlier calls: aliases, functions, `cd`, `set -o pipefail`.
+  - zsh-only syntax.
+  - `env -S` strings (reported as unknown).
+  - The contents of `source`d files and script files.
+
+## Fixtures and the bash oracle
+
+`tooling/fixtures/shell/` holds real inputs (see its README):
+
+- `bats-parity.json`: 186 inputs the six shipped bash functions received from 15 bats suites (`is_git_push`, `is_git_commit`, `bash_write_targets`, `bash_commands_decide`, `push_target_root`, `push_target_branch`). The TypeScript layer returns the same answer for all of them. Push roots and branches are checked against real git repositories. The one exception is the sed/perl script operand that `bash_write_targets` over-includes by design.
+- `issue-283.json`: 49 named fixtures, at least one per #283 item. Each records the correct result and the bash result as the known-wrong baseline.
+
+`packages/toolu-core/src/shell/__tests__/bash-oracle.test.ts` sources the unmodified `detect.sh` and `bash-commands.sh` and re-derives every live baseline on each run. It is deleted with the bash implementation (#279).
+
+## Budget evidence
+
+`bun run bench:shell` builds two probe hook entries with the plugin bundle pipeline (`stageBundles`): one empty, and one that analyzes `git push origin HEAD:feat/x`. It runs them interleaved from a directory with no `node_modules`, and times `analyzeShell` plus the git and write helpers over every fixture command. `--assert` exits 1 when a budget is exceeded.
+
+CI asserts only the bundle size (`tooling/src/__tests__/bench-shell.test.ts`), because wall-clock numbers depend on the machine.
+
+| Measure | Budget | Measured |
+|---|---|---|
+| Bundle size added (unminified) | ≤ 200,000 B | 197,497 B (empty probe 73 B, shell probe 197,570 B) |
+| Cold-start p50, shell probe minus empty probe (40 interleaved runs) | ≤ 5 ms | +3.50 ms (empty 16.75 ms, shell 20.25 ms; p90 17.51 / 21.68 ms) |
+| Parse and walk over 235 fixture commands, 4,700 samples | p99 ≤ 0.1 ms | p50 3.1 µs, p99 19.5 µs, max 1.1 ms |
+
+Measured on 2026-09-29 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple M2 Max), with other agent sessions running on the same machine. Load raises both absolute cold-start numbers alike, and the budget is the difference between them. For comparison, the shipped `is_git_push` takes 0.23 s under bash 5.3 and 0.61 s under `/bin/bash` 3.2 on the 4.3 KB fixture `283-11a`.
