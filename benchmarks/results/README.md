@@ -23,7 +23,7 @@ baseline.
 
 The deterministic tier counts static text either **exactly** (Anthropic
 `count_tokens`, when a key is present) or by a **heuristic** (`bytes/4`, offline).
-A single delta must use one mode for both sides — `bench_result_write` refuses to
+A single delta must use one mode for both sides — the result writer (`tooling/src/benchmarks/lib/result.ts`) refuses to
 write a result whose two sides were counted differently. If a key is set but the
 API errors, the runner aborts rather than silently downgrading to the heuristic.
 

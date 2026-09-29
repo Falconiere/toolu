@@ -17,33 +17,39 @@ fabricated counterfactual.
 ## Layout
 
 ```
-benchmarks/
-  run.sh                 entry point
-  lib/                   common.sh (bootstrap), tokens.sh, result.sh
-  cases/<mechanism>/     per-mechanism runner + inputs
-  results/               committed result JSON + methodology (results/README.md)
-  __tests__/             bats suites + fixtures
+benchmarks/                       data only
+  cases/<mechanism>/              per-mechanism inputs (queries.tsv, tasks/)
+  fixtures/                       stable test corpus + a real transcript set
+  results/                        committed result JSON + methodology (results/README.md)
+tooling/src/benchmarks/           the harness, TypeScript on Bun
+  run.ts                          entry point (`bun run benchmarks`)
+  lib/                            root, tokens, result, pricing, usage
+  cases/                          retrieval.ts, whole-session.ts (each also runnable directly)
+  __tests__/                      bun tests
 ```
 
 ## Usage
 
 ```sh
-benchmarks/run.sh --tier deterministic            # hermetic; writes results/retrieval-*.json
-benchmarks/run.sh --tier live --mechanism whole-session  # manual; needs ANTHROPIC_API_KEY
-benchmarks/run.sh --validate <result.json>        # schema check
+bun run benchmarks --tier deterministic            # hermetic; writes results/retrieval-*.json
+bun run benchmarks --tier live --mechanism whole-session  # manual; needs the claude CLI
+bun run benchmarks --validate <result.json>        # schema check
+bun run tooling/src/benchmarks/cases/whole-session.ts --n 3 --model <id>  # case flags go to the case itself
+bun run tooling/src/benchmarks/cases/retrieval.ts --queries <tsv> --corpus <dir>
 ```
 
 ## Reuse, not reinvention
 
-Token math is benchmarks' own, sourced not reimplemented per-case:
-`stats_usage_rollup` and `stats_pricing_jq` from `benchmarks/lib/` (`usage.sh` +
-`pricing.sh`; originally written for the now-removed `stats` plugin's report,
+Token math is benchmarks' own, imported not reimplemented per-case:
+`usageRollup` and the pricing in `tooling/src/benchmarks/lib/` (`usage.ts` +
+`pricing.ts`; originally written for the now-removed `stats` plugin's report,
 kept here as benchmarks' single source of truth for token/cost accounting). The
 deterministic tier reuses the byte-savings comparison shape from
 `plugins/ast-grep`.
 
 ## Conventions
 
-Bash, `set -u`, shellcheck-clean; one responsibility per file; tests colocated in
-`__tests__/` against real data (no mocks). Design lives in the (gitignored) spec
+TypeScript on Bun; one responsibility per file; bun tests colocated in
+`tooling/src/benchmarks/__tests__/` against real data (no mocks; the paid `claude`
+CLI is the only substituted boundary, in the live-tier contract test). Design lives in the (gitignored) spec
 and plan under `docs/toolu/`. Methodology contract: [`results/README.md`](results/README.md).

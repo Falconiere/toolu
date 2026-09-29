@@ -1,0 +1,19 @@
+{
+  "round": 1,
+  "items": [
+    {
+      "id": "smoke-1",
+      "kind": "conversation",
+      "path": "smoke.txt",
+      "severity": "medium",
+      "task": "Append exactly one line reading: fixed by pr-babysit smoke — to the end of smoke.txt, then commit only that change with the message: fix(smoke): append line. Change nothing else and run no tests (this file has none)."
+    },
+    {
+      "id": "smoke-2",
+      "kind": "conversation",
+      "path": "smoke.txt",
+      "severity": "nit",
+      "task": "Fix the typo on the first line of smoke.txt: it must read hello world instead of hello. Commit only that change with the message: fix(smoke): typo. Change nothing else and run no tests."
+    }
+  ]
+}

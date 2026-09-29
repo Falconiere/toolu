@@ -3,9 +3,11 @@
   "version": 2,
   "srcRoot": "src",
   "src": {
-    "topLevel": ["gate-coverage", "__tests__"],
+    "topLevel": ["benchmarks", "gate-coverage", "guardrails", "__tests__"],
     "nested": {
-      "gate-coverage": ["__tests__"]
+      "benchmarks": ["__tests__", "cases", "lib"],
+      "gate-coverage": ["__tests__"],
+      "guardrails": ["__tests__", "checks", "lexer"]
     },
     "requireReadme": []
   },

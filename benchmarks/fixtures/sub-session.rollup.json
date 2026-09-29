@@ -1,0 +1,33 @@
+{
+  "messages": 102,
+  "cwd": null,
+  "totals": {
+    "tokens": 274741,
+    "input": 7554,
+    "output": 23970,
+    "cache_read": 4550314,
+    "cache_write": 243217,
+    "cost": 1.483457349999999
+  },
+  "by_model": {
+    "claude-haiku-4-5-20251001": {
+      "tokens": 218711,
+      "input": 396,
+      "output": 15036,
+      "cache_read": 4449736,
+      "cache_write": 203279,
+      "cost": 0.7746483500000003
+    },
+    "claude-opus-4-8": {
+      "tokens": 56030,
+      "input": 7158,
+      "output": 8934,
+      "cache_read": 100578,
+      "cache_write": 39938,
+      "cost": 0.708809
+    }
+  },
+  "tools": {},
+  "phases": {},
+  "unknown_models": []
+}

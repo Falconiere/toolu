@@ -1,0 +1,13 @@
+{
+  "//": "Fixture files written at test time. Committed as-is they would trip this repo's own gates (secret-content, lint-suppressions) or be discovered by bun test path filters. `files` holds them base64-encoded; `text` holds plain-text files whose {{FAKE_AWS_KEY}} placeholder is filled at build time, so no credential-shaped value is committed in any encoding.",
+  "files": {
+    "clean/src/domains/shifts/__tests__/shifts-screen.test.tsx": "Ly8gQ29sb2NhdGVkIHRlc3QsIHJlYWwgZGF0YS4KZXhwb3J0IGNvbnN0IHQgPSAxOwo=",
+    "violating/src/domains/shifts/__tests__/shifts-screen.test.tsx": "ZXhwb3J0IGNvbnN0IHQgPSAxOwo=",
+    "violating/src/domains/shifts/stray.test.ts": "ZXhwb3J0IGNvbnN0IHN0cmF5ID0gMTsK",
+    "violating/src/utilities/suppressed-unused.ts": "Ly8gb3hsaW50LWRpc2FibGUtbmV4dC1saW5lIGVzbGludC9uby11bnVzZWQtdmFycwpjb25zdCBzdXBwcmVzc2VkID0gMTsK",
+    "violating/tests/central.test.ts": "ZXhwb3J0IGNvbnN0IGNlbnRyYWwgPSAxOwo="
+  },
+  "text": {
+    "violating/src/utilities/leaked-key.ts": "// Recognized fake — the AWS docs example access key id, never a real credential.\nexport const leaked = '{{FAKE_AWS_KEY}}';\n"
+  }
+}

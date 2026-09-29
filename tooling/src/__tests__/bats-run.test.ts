@@ -151,7 +151,7 @@ test.concurrent(
   "defaults to the repo suite paths when none are given",
   async () => {
     const res = await plan({ BATS_JOBS: "1" });
-    expect(res.output).toContain("bats -r plugins benchmarks tooling");
+    expect(res.output).toContain("bats -r plugins tooling packages tools");
   },
   TIMEOUT_MS,
 );
@@ -161,7 +161,7 @@ test.concurrent(
   async () => {
     // A suite directory missing from the default is a suite nobody runs locally.
     const res = await plan({ BATS_JOBS: "1" });
-    for (const dir of ["plugins", "benchmarks", "tooling"]) {
+    for (const dir of ["plugins", "tooling", "packages", "tools"]) {
       expect(res.output).toContain(dir);
     }
   },

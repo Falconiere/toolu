@@ -6,7 +6,7 @@
 # worktrees) and a trust prompt captured from Claude Code 2.1.283. herdr is
 # absent from PATH here; the paths that need a live herdr run in the
 # live-if-available tests below and end to end in
-# tooling/pr-babysit-herdr-smoke.sh. No mocks.
+# tooling/src/pr-babysit-herdr-smoke.ts. No mocks.
 
 bats_require_minimum_version 1.5.0   # run --separate-stderr
 

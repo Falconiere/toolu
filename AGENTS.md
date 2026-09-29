@@ -11,7 +11,7 @@ This file is the source of truth. Codex, Cursor, and Claude Code read it directl
 ## Tech stack
 
 - **bash** — hooks, gates, registry. `set -euo pipefail`, shellcheck-clean.
-- **bats** — colocated `__tests__/`. `bash tooling/bats-run.sh` runs `plugins`, `benchmarks`, `tooling`, `packages`, and `tools` (files in parallel, tests in a file serial). `bun run test:shell:serial` is the serial path.
+- **bats** — colocated `__tests__/`. `bash tooling/bats-run.sh` runs `plugins`, `tooling`, `packages`, and `tools` (files in parallel, tests in a file serial). `bun run test:shell:serial` is the serial path.
 - **bun test** — TypeScript suites in colocated `__tests__/*.test.ts` spawn real bundles, scripts and repos through `@toolu/conformance/harness/*`: files in parallel, tests concurrent, each test owns its sandbox. See `docs/testing.md`.
 - **Bun** — the runtime for every host and plugin (1.4.x prerequisite; see `docs/runtime.md`). `bun.lock`. `bun run test` is `lint:shell`, then `test:context-budget`, then `test:shell`.
 - **`toolu` CLI** — `tools/toolu-cli`, a Node bundle published to npm as `@toolu/plugins` from its `npm/` folder; the workspace itself is private, so npx never mistakes it for the published package. Installs plugins across hosts by shelling out to each host's own plugin CLI. See `docs/cli.md`.
@@ -43,7 +43,7 @@ Root `package.json`, Bun workspace packages (`packages/toolu-core`, `tools/toolu
 
 release-please (`.github/workflows/release-please.yml`). No manual bumps or tags.
 
-Any Conventional Commit on `main` counts, any path. `feat` / `fix` / `feat!` bump minor / patch / major. `chore` / `docs` / `ci` / `refactor` bump nothing. Merge the Release PR to publish: it bumps root `package.json`, Bun workspace packages under `packages/` and `tools/`, and every `plugin.json`, updates `CHANGELOG.md`, tags `vX.Y.Z` with no component prefix, and opens the GitHub Release. `tooling/release.sh` is a deprecated escape hatch. OpenCode install: `docs/opencode.md`.
+Any Conventional Commit on `main` counts, any path. `feat` / `fix` / `feat!` bump minor / patch / major. `chore` / `docs` / `ci` / `refactor` bump nothing. Merge the Release PR to publish: it bumps root `package.json`, Bun workspace packages under `packages/` and `tools/`, and every `plugin.json`, updates `CHANGELOG.md`, tags `vX.Y.Z` with no component prefix, and opens the GitHub Release. OpenCode install: `docs/opencode.md`.
 
 **npm.** `release-please.yml` calls `npm-publish.yml` after the Release, which publishes `@toolu/core`, `@toolu/opencode`, then `@toolu/plugins` with provenance via OIDC and `secrets.NPM_TOKEN`, and does not go green until each one resolves on the registry (a first publish can take minutes to stop answering 404). `@toolu/conformance` stays `private`; it is an internal harness. The tarball's file list is gated by `bun run test:pack`.
 
@@ -73,6 +73,8 @@ A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context b
 | `tools/toolu-cli/src/plugins/install.ts` | Dependency-ordered install; core failure stops dependents, others continue |
 | `tools/toolu-cli/src/host/` | Per-host adapters normalizing `plugin list --json` into one shape |
 | `tooling/src/pack-inventory.ts` | Published-tarball file-list gate |
+| `tooling/src/guardrails/run.ts` | Structural gate (`bun run guardrails`): TypeScript port of the vendored conventions runner; data in `tooling/conventions/guardrails/` |
+| `tooling/src/benchmarks/run.ts` | Benchmark harness (`bun run benchmarks`); inputs, fixtures and committed results in `benchmarks/` |
 | `packages/toolu-core/src/launcher/launcher.ts` | `@toolu/core/launcher`: the generated `hooks.json` command that runs a bundle with Bun and fails closed without it |
 | `packages/toolu-core/src/host/host.ts` | `@toolu/core/host`: host detection (Claude, Codex, Cursor, OpenCode, Hermes), roots, Codex plugin snapshot, event-name map, per-host output encoders and `ask` degradation |
 | `packages/toolu-core/src/config/config.ts` | `@toolu/core/config`: `toolu.config.json` loader (fail-closed envelope), thresholds, gate modes, permissions write, `settings/*` loaders; bash parity over `tooling/fixtures/config` |
