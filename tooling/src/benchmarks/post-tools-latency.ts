@@ -5,7 +5,8 @@
  * `bash post-tools/mod.sh` (the pre-#259 hooks.json command) against the
  * committed `hooks/dist/post-tools.js` behind its launcher. Post-tool modules
  * write state, so each variant runs in its own identically prepared sandbox
- * and reaches the same steady state during warm-up.
+ * and reaches the same steady state during warm-up. The two alternate run by
+ * run, so a change in machine load while a fixture is measured hits both.
  *
  * Usage: bun run tooling/src/benchmarks/post-tools-latency.ts [--runs N] [--assert]
  */
@@ -14,11 +15,10 @@ import {
   POSTTOOL_CORPUS,
   postStdin,
   preparePost,
-  type PosttoolCase,
 } from "@toolu/conformance/harness/posttool-corpus";
 import { pretoolEnv } from "@toolu/conformance/harness/pretool";
-import { createSandbox } from "@toolu/conformance/harness/sandbox";
-import { measureLatency, type Latency } from "@toolu/conformance/harness/timing";
+import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
+import { percentile, type Latency } from "@toolu/conformance/harness/timing";
 
 const BUDGET_MS = 5;
 const SLICE = [
@@ -33,25 +33,46 @@ const SLICE = [
 type Runner = typeof runPostModSh;
 type Row = { name: string; bash: Latency; bundle: Latency };
 
-async function measure(c: PosttoolCase, runner: Runner, runs: number): Promise<Latency> {
-  using sb = createSandbox({ git: true });
-  await preparePost(sb, "claude", c);
-  const call = {
-    cwd: sb.project,
-    env: pretoolEnv(sb, "claude"),
-    stdin: postStdin(sb, "claude", c),
+const WARMUP = 2;
+
+function latency(samples: readonly number[]): Latency {
+  return {
+    samples: [...samples],
+    p50: percentile(samples, 50),
+    p95: percentile(samples, 95),
+    min: Math.min(...samples),
+    max: Math.max(...samples),
   };
-  // Awaited here: `using` removes the sandbox when this function returns.
-  return await measureLatency(() => runner(sb, call), { runs, warmup: 2 });
 }
 
 async function row(name: string, runs: number): Promise<Row> {
   const c = POSTTOOL_CORPUS.find((entry) => entry.name === name);
   if (c === undefined) throw new Error(`no corpus case named ${name}`);
+  using bashBox = createSandbox({ git: true });
+  using bundleBox = createSandbox({ git: true });
+  const sides: [Runner, Sandbox, number[]][] = [
+    [runPostModSh, bashBox, []],
+    [runPostBundle, bundleBox, []],
+  ];
+  await Promise.all(sides.map(([, sb]) => preparePost(sb, "claude", c)));
+  const calls = sides.map(([runner, sb]) => {
+    const call = {
+      cwd: sb.project,
+      env: pretoolEnv(sb, "claude"),
+      stdin: postStdin(sb, "claude", c),
+    };
+    return () => runner(sb, call);
+  });
   // Sequential by design: concurrent spawns would contend and skew each other.
-  const bash = await measure(c, runPostModSh, runs);
-  const bundle = await measure(c, runPostBundle, runs);
-  return { name, bash, bundle };
+  const steps = [...Array(WARMUP + runs).keys()].flatMap((round) =>
+    calls.map((call, at) => ({ round, at, call })),
+  );
+  await steps.reduce<Promise<void>>(async (previous, { round, at, call }) => {
+    await previous;
+    const result = await call();
+    if (round >= WARMUP) sides[at]?.[2].push(result.durationMs);
+  }, Promise.resolve());
+  return { name, bash: latency(sides[0]?.[2] ?? []), bundle: latency(sides[1]?.[2] ?? []) };
 }
 
 const ms = (value: number): string => value.toFixed(1);
