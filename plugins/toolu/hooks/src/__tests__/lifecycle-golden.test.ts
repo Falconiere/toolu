@@ -5,6 +5,7 @@
  * bash title, so only its first line is compared.
  */
 import { describe, expect, test } from "bun:test";
+import { z } from "zod";
 import { bundleArgv, runCase, type Captured, type LifecycleCase } from "./lifecycle-cases.ts";
 import { readGolden } from "./lifecycle-golden.ts";
 import { SESSION_START_CASES } from "./session-start-cases.ts";
@@ -18,13 +19,14 @@ function expected(c: LifecycleCase): Captured {
   return found;
 }
 
+const SessionOutputSchema = z.object({
+  hookSpecificOutput: z.object({ additionalContext: z.string() }).optional(),
+  systemMessage: z.string().optional(),
+});
+
 /** Split a SessionStart output into what bash owned: context and title. */
-function sessionParts(stdout: string): { context: unknown; title: string } {
-  const parsed: unknown = JSON.parse(stdout);
-  const out = parsed as {
-    hookSpecificOutput?: { additionalContext?: unknown };
-    systemMessage?: string;
-  };
+function sessionParts(stdout: string): { context: string | undefined; title: string } {
+  const out = SessionOutputSchema.parse(JSON.parse(stdout));
   return {
     context: out.hookSpecificOutput?.additionalContext,
     title: (out.systemMessage ?? "").split("\n")[0] ?? "",
