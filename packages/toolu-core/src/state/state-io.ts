@@ -4,7 +4,7 @@
  * serializes TypeScript writers.
  */
 import { randomUUID } from "node:crypto";
-import { readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { linkSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import type { LoadedConfig } from "../config/config-load.ts";
 import type { HostEnv, HostName } from "../host/host-name.ts";
 
@@ -103,16 +103,30 @@ function holderDead(content: string): boolean {
 }
 
 /**
- * Remove the lock if its holder is dead, or if it is older than `staleMs`.
- * The content is re-read just before removal, so only the holder judged
- * stale is removed, never a fresh lock another waiter took in between.
+ * Break the lock if its holder is dead, or if it is older than `staleMs`. The
+ * lock is claimed by an atomic rename, so exactly one waiter wins. If the
+ * claimed file is not the holder that was judged stale (a fresh lock was
+ * taken in between), it is linked back, so a live holder never loses its lock.
  */
 function breakIfStale(lock: string, staleMs: number): void {
   const content = lockContent(lock);
   const stat = statSync(lock, { throwIfNoEntry: false });
   if (content === undefined || stat === undefined) return;
   if (!holderDead(content) && Date.now() - stat.mtimeMs <= staleMs) return;
-  if (lockContent(lock) === content) rmSync(lock, { force: true });
+  const claimed = `${lock}.${randomUUID()}.broken`;
+  try {
+    renameSync(lock, claimed);
+  } catch {
+    return; // Another waiter claimed it first.
+  }
+  if (lockContent(claimed) !== content) {
+    try {
+      linkSync(claimed, lock);
+    } catch {
+      // A newer holder already exists; the claimed one's release check will simply not match.
+    }
+  }
+  rmSync(claimed, { force: true });
 }
 
 /** Take `<file>.lock`: "held", "busy" (another holder), or "unavailable" (cannot create it). */

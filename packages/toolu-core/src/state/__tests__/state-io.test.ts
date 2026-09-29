@@ -150,3 +150,13 @@ test("withLock never releases a lock another holder took over", () => {
   });
   expect(readFileSync(`${file}.lock`, "utf8")).toBe("4242 their-token\n");
 });
+
+test("breaking a stale lock leaves no claimed .broken file behind", () => {
+  using sb = createSandbox();
+  const file = sb.path("gate.json");
+  writeFileSync(`${file}.lock`, "99999 crashed\n");
+  const old = new Date(Date.now() - 60_000);
+  utimesSync(`${file}.lock`, old, old);
+  withLock(file, () => true);
+  expect(readdirSync(sb.project).filter((name) => name.includes(".lock"))).toEqual([]);
+});

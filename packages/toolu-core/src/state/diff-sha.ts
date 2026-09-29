@@ -14,17 +14,16 @@ export function diffSha(
   baseRef: string,
   options: DiffShaOptions = {},
 ): string | undefined {
+  // A ref starting with `-` would reach git as an option (`--output=...`), never a revision.
+  // Checked here rather than with `--end-of-options`, which git before 2.24 rejects.
+  if (baseRef.startsWith("-")) return undefined;
   const env = childEnv(options.env ?? process.env);
-  // `--end-of-options`: a ref starting with `-` stays a revision, never an option such as `--output=`.
   // Bun.spawnSync has no output cap, unlike node's spawnSync `maxBuffer`: a large diff must still hash.
-  const diff = Bun.spawnSync(
-    ["git", "-C", repoRoot, "diff", "--no-color", "--end-of-options", `${baseRef}...HEAD`],
-    {
-      env,
-      stdout: "pipe",
-      stderr: "ignore",
-    },
-  );
+  const diff = Bun.spawnSync(["git", "-C", repoRoot, "diff", "--no-color", `${baseRef}...HEAD`], {
+    env,
+    stdout: "pipe",
+    stderr: "ignore",
+  });
   if (!diff.success) return undefined;
   // Hash in the repo, so its object format (sha1 or sha256) decides the id.
   const hash = Bun.spawnSync(["git", "-C", repoRoot, "hash-object", "--stdin"], {
