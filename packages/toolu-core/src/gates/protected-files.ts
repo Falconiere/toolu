@@ -112,7 +112,7 @@ function findHit(
   let root: string | undefined;
   for (const candidate of paths) {
     // Only an absolute path can carry the repo root; skip the git spawn otherwise.
-    if (candidate.startsWith("/")) root ??= gitToplevel(ctx.env, process.cwd()) ?? "";
+    if (candidate.startsWith("/")) root ??= gitToplevel(ctx.env, ctx.cwd ?? process.cwd()) ?? "";
     const rel = repoRelative(candidate, root);
     const matched = firstMatch(rules, rel);
     if (matched !== undefined) return { candidate, rel, matched, shell };

@@ -167,3 +167,11 @@ test.concurrent("a pattern that matches hundreds of files still finds the protec
   expect(decision.kind).toBe("ask");
   expect(reasonOf(decision)).toContain("would WRITE to zz.oxlintrc.json,");
 });
+
+test.concurrent("an absolute path is made repo-relative from the hook's cwd", async () => {
+  using sb = createSandbox({ git: true });
+  const event = toolEvent(sb, "Edit", { file_path: sb.path(".env") });
+  const env = gateEnv(sb, SHIPPED_SETTINGS);
+  const decision = await gate.run(event, gateCtx(sb, "claude", env, sb.project));
+  expect(reasonOf(decision)).toContain("This is a secrets file");
+});

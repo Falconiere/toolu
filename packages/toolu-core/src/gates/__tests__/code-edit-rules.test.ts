@@ -2,8 +2,6 @@
  * #260: the native code-edit-rules over real rule files: first match wins,
  * extra docs on a path match, repo-relative paths, and the lenient reading the
  * bash `jq` calls had (extra keys, missing or odd fields, malformed files).
- * Absolute paths inside a repo are covered by the bundle replay, whose cwd is
- * the sandbox repo (`pre-tool-modules-a.test.ts`).
  */
 import { expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -83,4 +81,15 @@ test.concurrent("a shell command is not an edit", async () => {
     gateCtx(sb, "claude", gateEnv(sb, dir)),
   );
   expect(decision).toEqual({ kind: "allow" });
+});
+
+test.concurrent("an absolute path inside the repo matches repo-relative globs from the hook's cwd", async () => {
+  using sb = createSandbox({ git: true });
+  const dir = rules(sb, '{"rules":[{"match":"src/**/*.rs","docs":["rust.md"]}]}');
+  const event = toolEvent(sb, "Edit", { file_path: sb.path("src/foo/bar.rs") });
+  const decision = await gate.run(event, gateCtx(sb, "claude", gateEnv(sb, dir), sb.project));
+  expect(decision).toEqual({
+    kind: "advisory",
+    message: "File: src/foo/bar.rs\nApply these rules: rust.md",
+  });
 });

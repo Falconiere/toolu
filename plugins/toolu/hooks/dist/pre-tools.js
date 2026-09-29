@@ -11923,7 +11923,7 @@ function decide4(event, ctx, options) {
   const path = inputString(event, "file_path");
   if (path === "")
     return ALLOW;
-  const root = path.startsWith("/") ? gitToplevel(ctx.env, process.cwd()) : undefined;
+  const root = path.startsWith("/") ? gitToplevel(ctx.env, ctx.cwd ?? process.cwd()) : undefined;
   const rel = repoRelative(path, root);
   const docs = docsFor(readRules(file), rel);
   if (docs === "")
@@ -12235,7 +12235,7 @@ function findHit(paths, rules, ctx, shell) {
   let root;
   for (const candidate of paths) {
     if (candidate.startsWith("/"))
-      root ??= gitToplevel(ctx.env, process.cwd()) ?? "";
+      root ??= gitToplevel(ctx.env, ctx.cwd ?? process.cwd()) ?? "";
     const rel = repoRelative(candidate, root);
     const matched = firstMatch(rules, rel);
     if (matched !== undefined)

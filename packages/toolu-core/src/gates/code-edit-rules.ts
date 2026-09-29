@@ -84,7 +84,7 @@ function decide(
   if (file === undefined || !isFile(file)) return ALLOW;
   const path = inputString(event, "file_path");
   if (path === "") return ALLOW;
-  const root = path.startsWith("/") ? gitToplevel(ctx.env, process.cwd()) : undefined;
+  const root = path.startsWith("/") ? gitToplevel(ctx.env, ctx.cwd ?? process.cwd()) : undefined;
   const rel = repoRelative(path, root);
   const docs = docsFor(readRules(file), rel);
   if (docs === "") return ALLOW;
