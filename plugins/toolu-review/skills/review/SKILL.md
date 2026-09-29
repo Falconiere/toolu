@@ -46,12 +46,12 @@ the pre-fix tree, so committing staleifies it and the push denies.
 
    ```bash
    # Codex
-   TOOLU_HOST_OVERRIDE=codex bash \
+   TOOLU_HOST_OVERRIDE=codex \
      "${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/toolu-review/write-state.sh" \
      --findings-count 0 --reviewers '["toolu-review:review"]'
 
    # Claude Code
-   TOOLU_HOST_OVERRIDE=claude bash \
+   TOOLU_HOST_OVERRIDE=claude \
      "${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu-review/write-state.sh" \
      --findings-count 0 --reviewers '["toolu-review:review"]'
    ```
@@ -69,9 +69,10 @@ the pre-fix tree, so committing staleifies it and the push denies.
    the writer and the gate alike.
 
    `write-state.sh` is published below the active host's explicit config root,
-   as shown above, by the plugin's SessionStart hook. Always pass the matching
-   host override in the same command: plugin-root variables are lifecycle
-   context and are not reliable in ordinary shell calls.
+   as shown above, by the plugin's SessionStart hook. It is an executable Bun
+   CLI: run the path itself (it needs `bun` on PATH), never `bash write-state.sh`.
+   Always pass the matching host override in the same command: plugin-root
+   variables are lifecycle context and are not reliable in ordinary shell calls.
 
    It computes the gate's exact `diff_sha`/`base`/`slug`, sets `review_round`
    (1 for a new `diff_sha`, +1 only when rewriting at the same one — the gate

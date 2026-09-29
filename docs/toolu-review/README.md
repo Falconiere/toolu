@@ -54,12 +54,12 @@ git diff --no-color main...HEAD
 
 # Record the clean state on Codex (lifecycle variables are not exported to
 # ordinary shell calls, so the host and default root are explicit).
-TOOLU_HOST_OVERRIDE=codex bash \
+TOOLU_HOST_OVERRIDE=codex \
   "${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/toolu-review/write-state.sh" \
   --findings-count 0 --reviewers '["toolu-review:review"]'
 
 # Claude Code equivalent.
-TOOLU_HOST_OVERRIDE=claude bash \
+TOOLU_HOST_OVERRIDE=claude \
   "${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu-review/write-state.sh" \
   --findings-count 0 --reviewers '["toolu-review:review"]'
 ```
@@ -68,7 +68,10 @@ When reviewing a worktree from a session rooted elsewhere, append
 `--repo /path/to/worktree` to the active-host command; the gate only reads the
 state file under the pushed repository's own root.
 
-`write-state.sh` computes the gate's exact `diff_sha`/`base`/`slug`, sets
+`write-state.sh` is an executable Bun CLI (`hooks/src/write-state.ts`, bundled to
+`hooks/dist/write-state.js`) that the SessionStart hook publishes at the paths
+above; run the path itself with `bun` on PATH, not through `bash`. It needs `git`,
+not `jq`. It computes the gate's exact `diff_sha`/`base`/`slug`, sets
 `review_round`, and writes the host-native `<repo root>/.claude/tmp/push-review/`
 or `<repo root>/.codex/tmp/push-review/` state atomically as schema version 2.
 `--repo` defaults to the cwd's repo root; `$STATE_DIR` overrides the directory
@@ -81,7 +84,7 @@ for tests and explicit integrations.
 If findings remain that need a human decision:
 
 ```bash
-TOOLU_HOST_OVERRIDE=codex bash \
+TOOLU_HOST_OVERRIDE=codex \
   "${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/toolu-review/write-state.sh" \
   --findings-count 3 --findings '[{"path":"src/auth.ts","severity":"blocker","text":"Needs product decision on session timeout"}]'
 ```

@@ -85,8 +85,9 @@ for backward compatibility and denies with an escalation message once the round
 exceeds 5 (`MAX_ROUNDS`), so a fix→re-review loop on an unchanged diff cannot
 run unbounded.
 
-The canonical writer, `plugins/toolu-review/skills/review/scripts/write-state.sh`,
-emits this v2 schema and auto-computes `reviewed_files` from `git diff
+The canonical writer, toolu-review's `write-state.sh` (the Bun CLI
+`plugins/toolu-review/hooks/src/write-state.ts`, published at
+`<config root>/toolu-review/write-state.sh`), emits this v2 schema and auto-computes `reviewed_files` from `git diff
 --name-only` (override with `--reviewed-files <comma-list>` for a partial or
 adjusted review scope).
 

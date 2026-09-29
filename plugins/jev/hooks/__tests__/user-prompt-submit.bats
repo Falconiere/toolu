@@ -8,7 +8,7 @@ setup() {
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
   unset TOOLU_HOST_OVERRIDE PLUGIN_ROOT TOOLU_CONFIG_DIR CODEX_HOME TYPESAFE_API_KEY
   HOOK="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/user-prompt-submit.sh"
-  START="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/session-start.sh"
+  START="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/dist/session-start.js"
   PLUGIN_DIR="${HOOK%/hooks/user-prompt-submit.sh}"
 }
 
@@ -23,7 +23,7 @@ payload() {
 
 # The wrapper is published by SessionStart; a real session always runs it first.
 publish() {
-  bash "$START" <<<'{"source":"startup"}' >/dev/null
+  bun "$START" <<<'{"source":"startup"}' >/dev/null
 }
 
 @test "user-prompt-submit: every task gets the mandate with the published wrapper path" {
@@ -131,7 +131,7 @@ publish() {
   cp -R "$PLUGIN_DIR/." "$installed/"
   export TOOLU_CONFIG_DIR="$TMP/"$'profile "quoted"\nfolder'
   export TYPESAFE_API_KEY=local-test-key
-  bash "$installed/hooks/session-start.sh" <<<'{}' >/dev/null
+  bun "$installed/hooks/dist/session-start.js" <<<'{}' >/dev/null
   run bash "$installed/hooks/user-prompt-submit.sh" <<<"$(payload 'rank these approaches')"
   [ "$status" -eq 0 ]
   jq -e --arg wrapper "$TOOLU_CONFIG_DIR/jev/jev.sh" --arg skill_path "$installed/skills/jev/SKILL.md" '

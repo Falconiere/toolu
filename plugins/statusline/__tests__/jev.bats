@@ -5,7 +5,7 @@
 # and only reads the active profile; it never loads the sibling plugin.
 
 ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
-JEV_HOOK="$ROOT/../jev/hooks/session-start.sh"
+JEV_HOOK="$ROOT/../jev/hooks/dist/session-start.js"
 
 setup() {
   TMP=$(mktemp -d)
@@ -20,7 +20,7 @@ teardown() {
 }
 
 publish_jev() {
-  TOOLU_HOST_OVERRIDE="$1" bash "$JEV_HOOK" </dev/null >/dev/null
+  TOOLU_HOST_OVERRIDE="$1" bun "$JEV_HOOK" </dev/null >/dev/null
 }
 
 render_claude() {

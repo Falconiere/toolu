@@ -34,7 +34,12 @@ async function codexHook(
 ): Promise<{ exitCode: number; codexHome: string }> {
   const codexHome = join(sb.root, `codex-${item.plugin}`);
   const pluginRoot = join(ROOT, "plugins", item.plugin);
-  const res = await run(["bash", join(pluginRoot, "hooks", script)], {
+  // A ported hook ships as hooks/dist/<name>.js (#269); the rest are still bash.
+  const bundle = join(pluginRoot, "hooks/dist", script.replace(/\.sh$/, ".js"));
+  const argv = exists(bundle)
+    ? [process.execPath, bundle]
+    : ["bash", join(pluginRoot, "hooks", script)];
+  const res = await run(argv, {
     cwd: sb.project,
     env: {
       CLAUDE_CONFIG_DIR: undefined,
