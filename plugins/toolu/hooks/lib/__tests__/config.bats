@@ -152,7 +152,7 @@ teardown() {
 }
 
 @test "toolu_flag_true: success with the real comemory/setup_done key" {
-  # Same category/name session-start.sh actually queries.
+  # Same category/name the SessionStart bundle actually queries.
   echo '{"version":1,"comemory":{"setup_done":true}}' > "$CLAUDE_PROJECT_DIR/.claude/toolu.config.json"
   run toolu_flag_true comemory setup_done
   [ "$status" -eq 0 ]

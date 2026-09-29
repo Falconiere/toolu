@@ -105,8 +105,8 @@ function syntheticPlugin(c: LifecycleCase, sb: Sandbox): string | undefined {
   return root;
 }
 
-/** Tools the hooks may spawn (jq for the bash capture); `extraPath` adds coreutils there. */
-const LINKED = ["git", "bash", "jq"];
+/** The only tools on a case's PATH besides its stubs: what the bundles spawn. */
+const LINKED = ["git", "bash"];
 
 function binDir(c: LifecycleCase, sb: Sandbox): string {
   const bin = join(sb.root, "bin");
@@ -124,8 +124,8 @@ function binDir(c: LifecycleCase, sb: Sandbox): string {
 
 export type Prepared = { sb: Sandbox; cwd: string; env: EnvPatch };
 
-/** Build `c`'s sandbox; `extraPath` is appended to the stub-only PATH. */
-export function prepare(c: LifecycleCase, extraPath = ""): Prepared {
+/** Build `c`'s sandbox. */
+export function prepare(c: LifecycleCase): Prepared {
   const sb = createSandbox();
   const cwd = workdir(c, sb);
   mkdirSync(cwd, { recursive: true });
@@ -143,7 +143,7 @@ export function prepare(c: LifecycleCase, extraPath = ""): Prepared {
   const plugin = syntheticPlugin(c, sb) ?? PLUGIN;
   const bin = binDir(c, sb);
   const env: EnvPatch = {
-    PATH: extraPath === "" ? bin : `${bin}:${extraPath}`,
+    PATH: bin,
     HOME: sb.home,
     LANG: "C",
     LC_ALL: "C",
@@ -167,9 +167,8 @@ export function mask(text: string, sb: Sandbox): string {
 export async function runCase(
   c: LifecycleCase,
   argv: (hook: LifecycleHook) => string[],
-  extraPath = "",
 ): Promise<Captured> {
-  const { sb, cwd, env } = prepare(c, extraPath);
+  const { sb, cwd, env } = prepare(c);
   try {
     const res: RunResult = await run(argv(c.hook), { cwd, env, stdin: c.stdin });
     return { stdout: mask(res.stdout, sb), stderr: mask(res.stderr, sb), exitCode: res.exitCode };

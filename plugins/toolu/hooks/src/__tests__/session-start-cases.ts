@@ -27,6 +27,7 @@ const EVENTS: readonly LifecycleCase[] = [
   ss("an unknown source gets no title and no main doc", {}, '{"source":"reboot"}'),
   ss("a numeric source is an unknown event", {}, '{"source":7}'),
   ss("legacy session_event field", {}, '{"session_event":"resume"}'),
+  ss("a false source falls through like jq //", {}, '{"source":false,"event":"resume"}'),
   ss("empty stdin is startup", {}, ""),
   ss("invalid JSON stdin is startup", {}, "{not json"),
   ss("outside a git repo", { git: false }),

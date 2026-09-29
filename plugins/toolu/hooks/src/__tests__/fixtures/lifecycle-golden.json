@@ -615,6 +615,11 @@
       "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"UserPromptSubmit\",\n    \"additionalContext\": \"\"\n  }\n}\n",
       "stderr": "",
       "exitCode": 0
+    },
+    "session-start: a false source falls through like jq //": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"SessionStart\",\n    \"additionalContext\": \"# Session Protocol — project\\n\\n## Behaviour\\n- Evidence before claims: verify (tests/logs/runtime).\\n- Failed twice? STOP — change hypothesis; exhaust tools first.\\n- Only what's asked: no drive-by refactors or unsolicited files (gate excepted).\\n- Match effort to task: low + thinking off for routine work; full for hard.\\n\\n## Delegation\\nInline by default. Delegate only to isolate a large read or run truly independent\\nunits — never for small work. One question and one return shape per agent. Quiet\\nagent? Take it back inline.\\n\\n## Mandatory\\n- Quality gate: never advance while any error/warning/test failure stands, even unrelated.\\n- Tests use real data; no mocks hiding integration.\\n\\n## Model routing (mandatory)\\n\\nPass `model:` on EVERY Agent call; never leave it default. Tier by work class:\\n\\n- mechanical (`haiku`) — lookups, listings, renames, formatting.\\n- exploration (`sonnet`) — read-only search across files.\\n- implementation (`sonnet`) — bounded edits plus tests.\\n- review (`sonnet`) — diff review, audits.\\n- synthesis (`opus`) — many findings into one answer.\\n- architecture (`opus`) — design, trade-offs, hard-to-reverse calls.\\n\\nEscalate a tier when irreversible, cross-cutting, or undecided; drop one when\\nbounded and mechanical. Deciding and doing are different classes. Rubric:\\n`orchestrator` skill.\\n\\nProject: project\\n\\nWARN: optional tools missing — features that depend on them are disabled:\\n  • ast-grep (structural code search)\\n\\nBranch: main\"\n  },\n  \"systemMessage\": \"Session resumed\"\n}\n",
+      "stderr": "",
+      "exitCode": 0
     }
   }
 }

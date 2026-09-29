@@ -223,17 +223,37 @@ test("state of a deleted branch is swept, the live branch's is kept", async () =
   expect(existsSync(join(dir, "feat_live.json"))).toBe(true);
 });
 
-test("an unreadable state dir does not stop the session", async () => {
-  const dir = { path: "" };
-  const { outputs, prepared } = await runTimes(START, 1, ({ cwd }) => {
-    dir.path = join(cwd, ".claude", "tmp", "push-review");
-    mkdirSync(dir.path, { recursive: true });
-    writeFileSync(join(dir.path, "gone_branch.json"), '{"version":2}');
-    chmodSync(dir.path, 0o000);
-  });
-  chmodSync(dir.path, 0o755);
-  using _sb = prepared.sb;
-  expect(OutputSchema.parse(JSON.parse(outputs[0] ?? "")).systemMessage).toStartWith(
-    "Toolu is on!",
-  );
-});
+test.skipIf(process.getuid?.() === 0)(
+  "an unreadable state dir does not stop the session",
+  async () => {
+    const dir = { path: "" };
+    const { outputs, prepared } = await runTimes(START, 1, ({ cwd }) => {
+      dir.path = join(cwd, ".claude", "tmp", "push-review");
+      mkdirSync(dir.path, { recursive: true });
+      writeFileSync(join(dir.path, "gone_branch.json"), '{"version":2}');
+      chmodSync(dir.path, 0o000);
+    });
+    chmodSync(dir.path, 0o755);
+    using _sb = prepared.sb;
+    expect(OutputSchema.parse(JSON.parse(outputs[0] ?? "")).systemMessage).toStartWith(
+      "Toolu is on!",
+    );
+  },
+);
+
+test.skipIf(process.getuid?.() === 0)(
+  "an unremovable legacy symlink does not stop the session",
+  async () => {
+    const dir = { path: "" };
+    const { outputs, prepared } = await runTimes(START, 1, ({ sb }) => {
+      dir.path = join(sb.home, ".claude", "toolu");
+      mkdirSync(dir.path, { recursive: true });
+      symlinkSync(join(sb.home, "gone.sh"), join(dir.path, "statusline.sh"));
+      chmodSync(dir.path, 0o555);
+    });
+    chmodSync(dir.path, 0o755);
+    using _sb = prepared.sb;
+    const out = OutputSchema.parse(JSON.parse(outputs[0] ?? ""));
+    expect(out.hookSpecificOutput.additionalContext).toContain("Session Protocol — project");
+  },
+);

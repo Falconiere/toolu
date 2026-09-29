@@ -25,6 +25,12 @@ export function housekeeping(env: Env, host: HostName, configRoot: string): void
   snapshotCodexPlugins({ env, host });
   pruneInactiveModules({ env, host });
   const legacy = join(configRoot, "toolu", "statusline.sh");
-  if (isSymlink(legacy)) rmSync(legacy, { force: true });
+  if (isSymlink(legacy)) {
+    try {
+      rmSync(legacy, { force: true });
+    } catch {
+      // `rm -f` parity: an unremovable link must not cost the readiness marker below.
+    }
+  }
   touch(join(configRoot, "toolu", ".session-start-ready"));
 }

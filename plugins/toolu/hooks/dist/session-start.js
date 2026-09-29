@@ -4906,14 +4906,14 @@ function tracksTsconfig(root, env) {
   const res = Bun.spawnSync(["git", "-C", root, "ls-files", "**/tsconfig*.json", "tsconfig*.json"], { env, stdout: "pipe", stderr: "ignore" });
   return res.exitCode === 0 && res.stdout.length > 0;
 }
-function projectFacts(root, env) {
+function projectFacts(root, env, withTs) {
   if (root === "")
     return { name: "", nodePm: "", rust: false, ts: false, python: false };
   return {
     name: basename2(root),
     nodePm: LOCKFILES.find(([file]) => isFile3(join10(root, file)))?.[1] ?? "",
     rust: isFile3(join10(root, "Cargo.toml")),
-    ts: tracksTsconfig(root, env),
+    ts: withTs && tracksTsconfig(root, env),
     python: anyFile(root, ["pyproject.toml", "setup.py", "setup.cfg", "requirements.txt"])
   };
 }
@@ -5034,8 +5034,11 @@ function housekeeping(env, host, configRoot) {
   snapshotCodexPlugins({ env, host });
   pruneInactiveModules({ env, host });
   const legacy = join13(configRoot, "toolu", "statusline.sh");
-  if (isSymlink(legacy))
-    rmSync6(legacy, { force: true });
+  if (isSymlink(legacy)) {
+    try {
+      rmSync6(legacy, { force: true });
+    } catch {}
+  }
   touch(join13(configRoot, "toolu", ".session-start-ready"));
 }
 
@@ -5083,7 +5086,8 @@ function mandateBlock(input) {
 var DOCS = join15(import.meta.dir, "..", "docs");
 function sessionEvent(input) {
   const doc = parseStdin(input);
-  const event = jqAlt(member2(doc, "source") ?? member2(doc, "session_event") ?? member2(doc, "event"), "startup");
+  const picked = ["source", "session_event", "event"].map((key) => member2(doc, key)).find((value) => value !== undefined && value !== null && value !== false);
+  const event = jqAlt(picked, "startup");
   return event === "" || event === "null" ? "startup" : event;
 }
 function branchLine(cwd, env) {
@@ -5106,8 +5110,8 @@ function contextParts({ event, env, host, root, config }) {
   const cwd = process.cwd();
   const top = gitToplevel2(cwd, env);
   const project = top === "" ? cwd : top;
-  const facts = projectFacts(top, env);
   const verbose = (env.TOOLU_VERBOSE ?? "") !== "" && env.TOOLU_VERBOSE !== "0";
+  const facts = projectFacts(top, env, verbose);
   const parts = docParts({ docs: DOCS, event, config, host, facts, verbose });
   if (facts.name !== "")
     parts.push(`Project: ${facts.name}`);

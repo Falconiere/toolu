@@ -13,6 +13,9 @@ import { USER_PROMPT_SUBMIT_CASES } from "./user-prompt-submit-cases.ts";
 
 const golden = readGolden().cases;
 
+/** Each case spawns real git and Bun processes; 5 s is too tight on a loaded machine. */
+const CASE_TIMEOUT_MS = 30_000;
+
 function expected(c: LifecycleCase): Captured {
   const found = golden[c.name];
   if (found === undefined) throw new Error(`no golden capture for ${c.name}`);
@@ -44,6 +47,7 @@ describe("session-start", () => {
       expect(sessionParts(got.stdout)).toEqual(sessionParts(want.stdout));
       expect(got.stdout.endsWith("}\n")).toBe(true);
     },
+    CASE_TIMEOUT_MS,
   );
 });
 
@@ -55,5 +59,6 @@ describe("user-prompt-submit", () => {
       const got = await runCase(c, bundleArgv);
       expect(got).toEqual(want);
     },
+    CASE_TIMEOUT_MS,
   );
 });

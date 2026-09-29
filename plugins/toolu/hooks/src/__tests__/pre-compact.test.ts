@@ -64,7 +64,7 @@ test("silent with empty stdin", async () => {
   expect(res).toMatchObject({ exitCode: 0, stdout: "", stderr: "" });
 });
 
-test("silent when disabled by config", async () => {
+test("stays silent with the hook disabled in config", async () => {
   using sb = createSandbox();
   const config = join(sb.root, "config");
   mkdirSync(config, { recursive: true });

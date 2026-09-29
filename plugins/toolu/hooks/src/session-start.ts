@@ -33,10 +33,10 @@ const DOCS = join(import.meta.dir, "..", "docs");
 /** `.source // .session_event // .event // "startup"`; unparseable input is startup. */
 function sessionEvent(input: string): string {
   const doc = parseStdin(input);
-  const event = jqAlt(
-    member(doc, "source") ?? member(doc, "session_event") ?? member(doc, "event"),
-    "startup",
-  );
+  const picked = ["source", "session_event", "event"]
+    .map((key) => member(doc, key))
+    .find((value) => value !== undefined && value !== null && value !== false);
+  const event = jqAlt(picked, "startup");
   return event === "" || event === "null" ? "startup" : event;
 }
 
@@ -65,8 +65,8 @@ function contextParts({ event, env, host, root, config }: Session): string[] {
   const cwd = process.cwd();
   const top = gitToplevel(cwd, env);
   const project = top === "" ? cwd : top;
-  const facts = projectFacts(top, env);
   const verbose = (env.TOOLU_VERBOSE ?? "") !== "" && env.TOOLU_VERBOSE !== "0";
+  const facts = projectFacts(top, env, verbose);
   const parts = docParts({ docs: DOCS, event, config, host, facts, verbose });
   if (facts.name !== "") parts.push(`Project: ${facts.name}`);
   sweepState(project, { env, host, config });

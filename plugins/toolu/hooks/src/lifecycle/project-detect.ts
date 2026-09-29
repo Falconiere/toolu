@@ -45,14 +45,17 @@ function tracksTsconfig(root: string, env: Env): boolean {
   return res.exitCode === 0 && res.stdout.length > 0;
 }
 
-/** Facts for git toplevel `root`; all empty outside a repository (`root` is ""). */
-export function projectFacts(root: string, env: Env): ProjectFacts {
+/**
+ * Facts for git toplevel `root`; all empty outside a repository (`root` is "").
+ * `ts` costs a `git ls-files`, so it is only looked up when `withTs` asks.
+ */
+export function projectFacts(root: string, env: Env, withTs: boolean): ProjectFacts {
   if (root === "") return { name: "", nodePm: "", rust: false, ts: false, python: false };
   return {
     name: basename(root),
     nodePm: LOCKFILES.find(([file]) => isFile(join(root, file)))?.[1] ?? "",
     rust: isFile(join(root, "Cargo.toml")),
-    ts: tracksTsconfig(root, env),
+    ts: withTs && tracksTsconfig(root, env),
     python: anyFile(root, ["pyproject.toml", "setup.py", "setup.cfg", "requirements.txt"]),
   };
 }

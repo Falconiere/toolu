@@ -34,9 +34,6 @@ async function main(): Promise<void> {
   const prompt = jqAlt(member(parseStdin(input), "prompt"), "");
   if (prompt === "") return;
 
-  const cwd = process.cwd();
-  const root = gitToplevel(cwd, env) || cwd;
-  const hostDir = projectDirname({ env, host });
   const lower = asciiLower(prompt);
   const gate = promptGate(lower);
   if (gate === "skip") return;
@@ -45,6 +42,9 @@ async function main(): Promise<void> {
     return;
   }
 
+  const cwd = process.cwd();
+  const root = gitToplevel(cwd, env) || cwd;
+  const hostDir = projectDirname({ env, host });
   const gateHint = mentionsGateTopic(lower)
     ? undefined
     : failingGateHint(join(root, hostDir, "tmp"));

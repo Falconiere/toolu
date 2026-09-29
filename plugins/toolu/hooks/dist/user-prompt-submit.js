@@ -4160,9 +4160,6 @@ async function main() {
   const prompt = jqAlt(member2(parseStdin(input), "prompt"), "");
   if (prompt === "")
     return;
-  const cwd = process.cwd();
-  const root = gitToplevel2(cwd, env) || cwd;
-  const hostDir = projectDirname({ env, host });
   const lower = asciiLower(prompt);
   const gate = promptGate(lower);
   if (gate === "skip")
@@ -4171,6 +4168,9 @@ async function main() {
     process.stdout.write(renderHookOutput(BLOCK, true));
     return;
   }
+  const cwd = process.cwd();
+  const root = gitToplevel2(cwd, env) || cwd;
+  const hostDir = projectDirname({ env, host });
   const gateHint = mentionsGateTopic(lower) ? undefined : failingGateHint(join4(root, hostDir, "tmp"));
   const path = env.PATH ?? "";
   const astGrep = (onPath("sg", path) || onPath("ast-grep", path)) && enabled(config, "skills", "ast-grep");
