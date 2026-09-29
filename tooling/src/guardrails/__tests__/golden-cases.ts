@@ -9,6 +9,9 @@
  * line order was never part of the contract.
  */
 import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { buildFixture, listFiles } from "./fixture-tree.ts";
 import type { FixtureName } from "./fixture-tree.ts";
 
@@ -126,14 +129,17 @@ function lines(text: string, root: string): string[] {
 export function runCase(argv0: readonly string[], c: GoldenCase): GoldenResult {
   using tree = buildFixture(c.fixture);
   for (const [rel, body] of Object.entries(c.mutate ?? {})) tree.write(rel, body);
-  const env: Record<string, string> = { PATH: process.env["PATH"] ?? "", HOME: tree.root };
+  // HOME outside the tree: a runtime writing caches under $HOME (Bun on macOS
+  // writes ~/Library) would otherwise make the tree look dirty to --stop.
+  const home = mkdtempSync(join(tmpdir(), "gr-home-"));
   const [cmd = "", ...rest] = argv0;
   const res = spawnSync(cmd, [...rest, ...c.args], {
     cwd: tree.root,
-    env,
+    env: { PATH: process.env["PATH"] ?? "", HOME: home },
     input: c.stdin.split("<ROOT>").join(tree.root),
     encoding: "utf8",
   });
+  rmSync(home, { recursive: true, force: true });
   if (res.error) throw res.error;
   return {
     exit: res.status ?? -1,
