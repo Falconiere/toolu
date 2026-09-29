@@ -23,8 +23,10 @@ export {
   recordGateFailure,
   type GateRead,
 } from "./gate-file.ts";
-export { branchSlug } from "./state-git.ts";
+export { baseBranch, branchSlug, currentBranch, hasGit } from "./state-git.ts";
 export {
+  compareJqStrings,
+  isoSeconds,
   toJqJson,
   withLock,
   writeAtomic,
