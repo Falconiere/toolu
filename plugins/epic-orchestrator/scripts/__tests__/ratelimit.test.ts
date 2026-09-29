@@ -1,6 +1,6 @@
 /** Retry, backoff, and rate-limit reset handling. Timings are real but tiny. */
 
-import { describe, expect, test } from "bun:test";
+import { expect, test } from "bun:test";
 import {
   RateLimitError,
   budgetLow,
@@ -11,111 +11,105 @@ import {
   withRetry,
 } from "../ratelimit.ts";
 
+const now = 1_700_000_000_000;
 const FAST = { attempts: 4, baseMs: 1, maxSleepMs: 2000 };
 
-describe("classifyFailure", () => {
-  test("gh, curl, and Linear rate-limit texts", () => {
-    expect(classifyFailure("gh: API rate limit exceeded for user ID 1. (HTTP 403)")).toBe(
-      "rate-limit",
-    );
-    expect(classifyFailure("You have exceeded a secondary rate limit")).toBe("rate-limit");
-    expect(classifyFailure("curl: (22) The requested URL returned error: 429")).toBe("rate-limit");
-    expect(classifyFailure("RATELIMITED https://api.linear.app/graphql")).toBe("rate-limit");
-  });
-
-  test("5xx and network errors are transient; 404 is permanent", () => {
-    expect(classifyFailure("HTTP 502: Bad Gateway")).toBe("transient");
-    expect(classifyFailure("read tcp: connection reset by peer")).toBe("transient");
-    expect(classifyFailure("HTTP 404: Not Found")).toBe("permanent");
-  });
+test.concurrent("classifyFailure: gh, curl, and Linear rate-limit texts", () => {
+  expect(classifyFailure("gh: API rate limit exceeded for user ID 1. (HTTP 403)")).toBe(
+    "rate-limit",
+  );
+  expect(classifyFailure("You have exceeded a secondary rate limit")).toBe("rate-limit");
+  expect(classifyFailure("curl: (22) The requested URL returned error: 429")).toBe("rate-limit");
+  expect(classifyFailure("RATELIMITED https://api.linear.app/graphql")).toBe("rate-limit");
 });
 
-describe("withRetry", () => {
-  test("retries transient failures then succeeds", async () => {
-    let calls = 0;
-    const out = await withRetry(() => {
+test.concurrent("classifyFailure: 5xx and network errors are transient; 404 is permanent", () => {
+  expect(classifyFailure("HTTP 502: Bad Gateway")).toBe("transient");
+  expect(classifyFailure("read tcp: connection reset by peer")).toBe("transient");
+  expect(classifyFailure("HTTP 404: Not Found")).toBe("permanent");
+});
+
+test.concurrent("withRetry: retries transient failures then succeeds", async () => {
+  let calls = 0;
+  const out = await withRetry(() => {
+    calls++;
+    return calls < 3 ? Promise.reject(new Error("HTTP 503")) : Promise.resolve("ok");
+  }, FAST);
+  expect(out).toBe("ok");
+  expect(calls).toBe(3);
+});
+
+test.concurrent("withRetry: permanent failure is not retried", async () => {
+  let calls = 0;
+  const run = withRetry(() => {
+    calls++;
+    return Promise.reject(new Error("HTTP 404"));
+  }, FAST);
+  await expect(run).rejects.toThrow("HTTP 404");
+  await run.catch(() => undefined);
+  expect(calls).toBe(1);
+});
+
+test.concurrent("withRetry: writes do not retry a 5xx that may have applied", async () => {
+  let calls = 0;
+  const run = withRetry(
+    () => {
       calls++;
-      return calls < 3 ? Promise.reject(new Error("HTTP 503")) : Promise.resolve("ok");
-    }, FAST);
-    expect(out).toBe("ok");
-    expect(calls).toBe(3);
-  });
+      return Promise.reject(new Error("HTTP 502"));
+    },
+    { ...FAST, retryTransient: false },
+  );
+  await run.catch(() => undefined);
+  expect(calls).toBe(1);
+});
 
-  test("permanent failure is not retried", async () => {
-    let calls = 0;
-    const run = withRetry(() => {
+test.concurrent("withRetry: rate limit waits for the reset it is given", async () => {
+  let calls = 0;
+  const started = Date.now();
+  const out = await withRetry(
+    () => {
       calls++;
-      return Promise.reject(new Error("HTTP 404"));
-    }, FAST);
-    expect(run).rejects.toThrow("HTTP 404");
-    await run.catch(() => undefined);
-    expect(calls).toBe(1);
-  });
-
-  test("writes do not retry a 5xx that may have applied", async () => {
-    let calls = 0;
-    const run = withRetry(
-      () => {
-        calls++;
-        return Promise.reject(new Error("HTTP 502"));
-      },
-      { ...FAST, retryTransient: false },
-    );
-    await run.catch(() => undefined);
-    expect(calls).toBe(1);
-  });
-
-  test("rate limit waits for the reset it is given", async () => {
-    let calls = 0;
-    const started = Date.now();
-    const out = await withRetry(
-      () => {
-        calls++;
-        return calls === 1 ? Promise.reject(new Error("rate limit")) : Promise.resolve(calls);
-      },
-      { ...FAST, resetAt: () => Promise.resolve(Date.now() - 900) },
-    );
-    expect(out).toBe(2);
-    expect(Date.now() - started).toBeGreaterThanOrEqual(90);
-  });
-
-  test("a reset beyond the cap raises RateLimitError instead of sleeping", async () => {
-    const far = Date.now() + 3_600_000;
-    const run = withRetry(() => Promise.reject(new Error("API rate limit exceeded")), {
-      ...FAST,
-      resetAt: () => Promise.resolve(far),
-    });
-    const err = await run.catch((e: unknown) => e);
-    expect(err).toBeInstanceOf(RateLimitError);
-    expect((err as RateLimitError).resetAt).toBe(far);
-  });
+      return calls === 1 ? Promise.reject(new Error("rate limit")) : Promise.resolve(calls);
+    },
+    { ...FAST, resetAt: () => Promise.resolve(Date.now() - 900) },
+  );
+  expect(out).toBe(2);
+  expect(Date.now() - started).toBeGreaterThanOrEqual(90);
 });
 
-describe("resetFromHeaders", () => {
-  const now = 1_700_000_000_000;
-  test("Retry-After HTTP-date (always GMT)", () => {
-    const h = new Headers({ "retry-after": "Wed, 21 Oct 2015 07:28:00 GMT" });
-    expect(resetFromHeaders(h, now)).toBe(Date.UTC(2015, 9, 21, 7, 28, 0));
+test.concurrent("withRetry: a reset beyond the cap raises RateLimitError instead of sleeping", async () => {
+  const far = Date.now() + 3_600_000;
+  const run = withRetry(() => Promise.reject(new Error("API rate limit exceeded")), {
+    ...FAST,
+    resetAt: () => Promise.resolve(far),
   });
-  test("Retry-After seconds", () => {
-    expect(resetFromHeaders(new Headers({ "retry-after": "30" }), now)).toBe(now + 30_000);
-  });
-  test("Linear epoch-ms reset only when exhausted", () => {
-    const h = new Headers({
-      "x-ratelimit-requests-remaining": "0",
-      "x-ratelimit-requests-reset": String(now + 5000),
-    });
-    expect(resetFromHeaders(h, now)).toBe(now + 5000);
-    h.set("x-ratelimit-requests-remaining", "10");
-    expect(resetFromHeaders(h, now)).toBeNull();
-  });
-  test("GitHub epoch-seconds reset", () => {
-    const h = new Headers({ "x-ratelimit-remaining": "0", "x-ratelimit-reset": "1700000100" });
-    expect(resetFromHeaders(h, now)).toBe(1_700_000_100_000);
-  });
+  const err = await run.catch((e: unknown) => e);
+  expect(err).toBeInstanceOf(RateLimitError);
+  expect((err as RateLimitError).resetAt).toBe(far);
 });
 
-test("mapLimit keeps order and caps concurrency", async () => {
+test.concurrent("resetFromHeaders: Retry-After HTTP-date (always GMT)", () => {
+  const h = new Headers({ "retry-after": "Wed, 21 Oct 2015 07:28:00 GMT" });
+  expect(resetFromHeaders(h, now)).toBe(Date.UTC(2015, 9, 21, 7, 28, 0));
+});
+test.concurrent("resetFromHeaders: Retry-After seconds", () => {
+  expect(resetFromHeaders(new Headers({ "retry-after": "30" }), now)).toBe(now + 30_000);
+});
+test.concurrent("resetFromHeaders: Linear epoch-ms reset only when exhausted", () => {
+  const h = new Headers({
+    "x-ratelimit-requests-remaining": "0",
+    "x-ratelimit-requests-reset": String(now + 5000),
+  });
+  expect(resetFromHeaders(h, now)).toBe(now + 5000);
+  h.set("x-ratelimit-requests-remaining", "10");
+  expect(resetFromHeaders(h, now)).toBeNull();
+});
+test.concurrent("resetFromHeaders: GitHub epoch-seconds reset", () => {
+  const h = new Headers({ "x-ratelimit-remaining": "0", "x-ratelimit-reset": "1700000100" });
+  expect(resetFromHeaders(h, now)).toBe(1_700_000_100_000);
+});
+
+test.concurrent("mapLimit keeps order and caps concurrency", async () => {
   let live = 0;
   let peak = 0;
   const out = await mapLimit([5, 1, 4, 2, 3], 2, async (n) => {
@@ -129,7 +123,7 @@ test("mapLimit keeps order and caps concurrency", async () => {
   expect(peak).toBe(2);
 });
 
-test("budgetLow names the exhausted resource", () => {
+test.concurrent("budgetLow names the exhausted resource", () => {
   const b = {
     core: { remaining: 400, limit: 5000, reset: 0 },
     graphql: { remaining: 4000, limit: 5000, reset: 0 },
@@ -138,7 +132,7 @@ test("budgetLow names the exhausted resource", () => {
   expect(budgetLow(b, { core: 100, graphql: 500 })).toBeNull();
 });
 
-test("fetchJson waits out a real 429 with Retry-After, then succeeds", async () => {
+test.concurrent("fetchJson waits out a real 429 with Retry-After, then succeeds", async () => {
   let hits = 0;
   const server = Bun.serve({
     port: 0,
@@ -166,7 +160,7 @@ test("fetchJson waits out a real 429 with Retry-After, then succeeds", async () 
   }
 });
 
-test("fetchJson does not retry a 404", async () => {
+test.concurrent("fetchJson does not retry a 404", async () => {
   let hits = 0;
   const server = Bun.serve({
     port: 0,
@@ -186,14 +180,14 @@ test("fetchJson does not retry a 404", async () => {
   }
 });
 
-test("mapLimit rejects on the first failure, including a synchronous throw", async () => {
+test.concurrent("mapLimit rejects on the first failure, including a synchronous throw", async () => {
   const seen: number[] = [];
   const run = mapLimit([1, 2, 3, 4], 2, (n) => {
     seen.push(n);
     if (n === 2) throw new Error("bad item 2");
     return Promise.resolve(n);
   });
-  expect(run).rejects.toThrow("bad item 2");
+  await expect(run).rejects.toThrow("bad item 2");
   await run.catch(() => undefined);
   expect(seen).toContain(2);
 });

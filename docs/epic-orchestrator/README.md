@@ -42,7 +42,7 @@ Scripts (invoked by the skill via `${CLAUDE_PLUGIN_ROOT}/scripts`):
 | `merge-gate.ts` | Assess/merge PR; `--auto` arms GitHub auto-merge; `--admin` only for protection-only blocks |
 | `checkpoint.ts` | Snapshot a worktree to `refs/epic-wip/<key>` |
 | `epic-close.ts` | Post the summary and close the epic in its tracker |
-| `finish_issue.sh` | Snapshot, then tear down agent/worktree after merge |
-| `report.sh` | Worker phase reporter |
+| `finish-issue.ts` | Snapshot, then tear down agent/worktree after merge |
+| `report.ts` | Worker phase reporter |
 
 Full procedure: `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`.

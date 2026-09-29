@@ -65,7 +65,7 @@ generated skill.
   orchestrator merges and advances the graph.
 - **Bun CLIs** under `scripts/` — `epic-graph.ts`, `route.ts`,
   `launch-issue.ts`, `epic-watch.ts`, `merge-gate.ts`, `checkpoint.ts`,
-  `epic-close.ts`, plus `finish_issue.sh` / `report.sh`. Tracker adapters live
+  `epic-close.ts`, `finish-issue.ts`, `report.ts`. Tracker adapters live
   in `scripts/trackers/`.
 - **Codex SessionStart** — warns when `delivery-flow` or its dependencies are missing.
 

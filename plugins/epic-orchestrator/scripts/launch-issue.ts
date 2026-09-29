@@ -16,7 +16,8 @@ const RESUME_PROMPT =
   "{status}, `git log origin/{base}..HEAD`, `git status`, and any open PR for this branch, then " +
   "continue from the last reported phase instead of starting over.";
 
-const REPORT_PATH = join(SCRIPTS_DIR, "report.sh");
+// Run through bun, like every other script: no host cache has to keep an exec bit.
+const REPORT_COMMAND = `bun "${join(SCRIPTS_DIR, "report.ts")}"`;
 const BRIEF_TEMPLATE = join(REF_DIR, "worker-brief.md");
 
 type Graph = {
@@ -134,7 +135,7 @@ export function renderBrief(
     WORKTREE: paths.worktree,
     BRANCH: issue.branch,
     BASE: base,
-    REPORT: REPORT_PATH,
+    REPORT: REPORT_COMMAND,
     STATUS_FILE: paths.status,
     BLOCKERS: closed.join(", ") || "none",
   };

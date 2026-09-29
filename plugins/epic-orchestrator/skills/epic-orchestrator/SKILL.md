@@ -182,7 +182,7 @@ Launch issues one at a time. For each issue the launcher:
 
 Re-running the launcher is safe: it reuses an open worktree and a live agent.
 Workers report their phase to `<state_dir>/status/<key>.json` through
-`report.sh`.
+`report.ts`.
 
 Tell the user which agents are running, on which host, model, and effort, and
 that each one has a herdr workspace named after its key (`comemory-255`, …),
@@ -248,7 +248,7 @@ main before merge" holds for all of them without extra bookkeeping.
 ## 5. After each merge
 
 ```bash
-bash "$S/finish_issue.sh" <state_dir> <key>
+bun "$S/finish-issue.ts" <state_dir> <key>
 ```
 
 This exits the agent (babysit's cron ends with its session), snapshots the
@@ -281,7 +281,7 @@ The epic is complete when every sub-issue is closed (`complete: true`). Then:
   phase, PR and agent state). This consumes no events.
 - **Stop.** Stop the watcher task only. Agents finish their current step and
   go idle. To tear down one issue, run
-  `finish_issue.sh <state_dir> <key> --abandon`, which keeps the branch.
+  `bun "$S/finish-issue.ts" <state_dir> <key> --abandon`, which keeps the branch.
 
 ## Guardrails
 
@@ -290,7 +290,7 @@ The epic is complete when every sub-issue is closed (`complete: true`). Then:
   it) and report each phase before starting it.
 - The watcher snapshots every active worktree, including uncommitted and
   untracked files, to `refs/epic-wip/<key>` in the shared repo, every 15
-  minutes and whenever an agent vanishes. `finish_issue.sh` snapshots before
+  minutes and whenever an agent vanishes. `finish-issue.ts` snapshots before
   removal and refuses `--abandon` over dirty work it could not snapshot.
   Restore: `git -C <checkout> checkout -b recover/<key> refs/epic-wip/<key>`
   (`git reflog refs/epic-wip/<key>` lists older snapshots).
