@@ -93,7 +93,7 @@ Wrappers are unwrapped by their own option tables: `sudo`, `doas`, `env`, `comma
 - `bats-parity.json`: 186 inputs the six shipped bash functions received from 15 bats suites (`is_git_push`, `is_git_commit`, `bash_write_targets`, `bash_commands_decide`, `push_target_root`, `push_target_branch`). The TypeScript layer returns the same answer for all of them. Push roots and branches are checked against real git repositories. There are two documented differences. `bash_write_targets` over-includes the sed/perl script operand, and `cp`/`mv`/`install` also report `DEST/basename(SRC)`, because `DEST` may be an existing directory.
 - `issue-283.json`: 49 named fixtures, at least one per #283 item. Each records the correct result and the bash result as the known-wrong baseline.
 
-`packages/toolu-core/src/shell/__tests__/bash-oracle.test.ts` sources the unmodified `detect.sh` and `bash-commands.sh` and re-derives every live baseline on each run. It is deleted with the bash implementation (#279).
+`packages/toolu-core/src/shell/__tests__/bash-oracle.test.ts` sources the unmodified `detect.sh` and re-derives every live baseline on each run. The `bash_commands_decide` baselines are recorded only: `bash-commands.sh` was deleted when the gate went native (#261), and the fixtures run through its `bashCommandsDecide`. The oracle is deleted with the bash implementation (#279).
 
 ## Budget evidence
 

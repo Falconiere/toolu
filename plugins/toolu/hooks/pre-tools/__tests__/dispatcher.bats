@@ -137,20 +137,14 @@ write_module() {
   printf '%s\n' '{"status":"failing","reason":"tests failed","violations":"fix tests"}' \
     > "$project/.codex/tmp/quality-gate-status.json"
   # A failing gate stops SHIPPING, not working: edits stay open so the
-  # violation can be fixed. Committing is what it denies — asserted below and
-  # in quality-gate.bats.
+  # violation can be fixed. That the commit is then denied is asserted by the
+  # native quality-gate cases (hooks/src/__tests__/pre-tool-modules-b-quality-gate.ts).
   patch=$'*** Begin Patch\n*** Update File: src/fix.ts\n@@\n-a\n+b\n*** Update File: README.md\n@@\n-a\n+b\n*** End Patch'
   payload=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command}}')
   run bash -c 'cd "$1" && env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$2" TOOLU_PROJECT_DIR="$1" bash "$3" <<<"$4"' \
     _ "$project" "$TMP/codex" "$REPO_ROOT/hooks/pre-tools/mod.sh" "$payload"
   [ "$status" -eq 0 ]
   [ "$(echo "$output" | jq -r '.hookSpecificOutput.permissionDecision // "none"')" = "none" ]
-
-  commit_payload=$(jq -cn '{tool_name:"Bash",tool_input:{command:"git commit -m \"feat: x\""}}')
-  run bash -c 'cd "$1" && env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$2" TOOLU_PROJECT_DIR="$1" bash "$3" <<<"$4"' \
-    _ "$project" "$TMP/codex" "$REPO_ROOT/hooks/pre-tools/mod.sh" "$commit_payload"
-  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null
-  echo "$output" | grep -q 'quality gate failing'
 }
 
 @test "dispatcher: deny short-circuits later modules (no trailing advisory after deny)" {

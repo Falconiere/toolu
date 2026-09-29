@@ -132,12 +132,9 @@ A specialized subagent for structural codebase exploration via ast-grep:
 ```
 toolu core
 ├── hooks/
-│   ├── pre-tools/mod.sh        ← PreToolUse dispatcher
-│   │   ├── modules/quality-gate.sh
+│   ├── pre-tools/mod.sh        ← bash PreToolUse dispatcher (parity baseline)
 │   │   ├── modules/push-review.sh
-│   │   ├── modules/bash-commands.sh
 │   │   ├── modules/protected-files.sh
-│   │   ├── modules/commit-gate.sh
 │   │   ├── modules/docs-sync.sh
 │   │   ├── modules/mcp-blocker.sh
 │   │   ├── modules/plan-ledger.sh

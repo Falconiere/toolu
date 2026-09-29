@@ -1,0 +1,627 @@
+{
+  "base": "c5d8e42b",
+  "cases": {
+    "bash-commands: accepts an allowed command": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: rejects a denied command (substring match)": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Command blocked by deny rule: biome\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: rejects node -e argv-aware": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Command blocked by deny rule: node -e\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: rejects git push --force origin feat/x": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Command blocked by deny rule: git push --force\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: no-op when data files are missing": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: bare node script.js does not trip node -e": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: deny+allow, the allowlist entry overrides the deny": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: deny+allow, argv-aware allow override of node -e": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: an allow rule that does not match does not override": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Command blocked by deny rule: node -e\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: allow-only, an allowlisted command passes": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: neither list matches, default allow": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: a broad node allow entry overrides the node -e deny": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: empty command is allowed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: whitespace-only command is allowed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: node script.js with node allowed and node -e denied": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: a commit message mentioning cargo test is not denied": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: cargo --verbose test is denied via the argv rule": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Command blocked by deny rule: cargo test\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: mycargo test is allowed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: the shipped default asks": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude wants to run a command matching the deny rule \\\"node -e\\\".\\n\\nWHY THIS IS GUARDED\\nRules in settings/bash-denylist.txt cover commands that execute arbitrary code from a string (node -e, bun -e) or that this project has ruled out. The command runs with your full shell privileges if you approve.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: advise mode only warns": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Command matches deny rule \\\"node -e\\\" (plugins/toolu/settings/bash-denylist.txt). The command was not stopped — gates.bashCommands.mode is 'advise'.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: ask mode prompts with the guardrail banner": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude wants to run a command matching the deny rule \\\"node -e\\\".\\n\\nWHY THIS IS GUARDED\\nRules in settings/bash-denylist.txt cover commands that execute arbitrary code from a string (node -e, bun -e) or that this project has ruled out. The command runs with your full shell privileges if you approve.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: strict preset restores the hard deny": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Command blocked by deny rule: node -e\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: off turns the denylist into a no-op": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: an allowlisted command is silent whatever the mode": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: ask degrades to block on codex": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Command blocked by deny rule: node -e\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: bash -lc (#283 item 3)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: eval (#283 item 3)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: after && (#283 item 4)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: behind an env prefix (#283 item 4)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: in a subshell (#283 item 4)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: behind sudo (#283 item 4)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: cargo test after cd (#283 item 4)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: after a pipe (#283 item 4)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: after ; (#283 item 4)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: a rule does not match across two commands (#283 item 4)": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Command blocked by deny rule: bun -e\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: allow on another command does not override (#283 item 4)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: node -e without python3 on PATH (#283 item 4)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: a heredoc body is not a command": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: a commit message naming node -e is not denied": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: the Shell tool is checked too": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Command blocked by deny rule: node -e\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: an Edit tool call is out of scope": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: a single-token rule matches a redirect target": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Command blocked by deny rule: biome\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: accepts a feat: prefix": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: rejects an unknown prefix": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Unknown Conventional Commits prefix: \\\"wibble\\\". Allowed prefixes are in settings/commit-prefixes.txt. Base branch: main\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: accepts fix: with escaped quotes": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: rejects an unknown prefix with escaped quotes": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Unknown Conventional Commits prefix: \\\"wibble\\\". Allowed prefixes are in settings/commit-prefixes.txt. Base branch: main\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: rejects an unknown prefix whose scope has escaped quotes": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Unknown Conventional Commits prefix: \\\"wibble\\\". Allowed prefixes are in settings/commit-prefixes.txt. Base branch: main\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: accepts a known prefix whose scope has escaped quotes": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: accepts a single-quoted -m message": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: the shipped default advises on a bad prefix": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Unknown Conventional Commits prefix: \\\"wip\\\". Allowed prefixes are in settings/commit-prefixes.txt. Base branch: main\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: off emits nothing": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: git -C <path> commit is gated": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Unknown Conventional Commits prefix: \\\"wip\\\". Allowed prefixes are in settings/commit-prefixes.txt. Base branch: main\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: a commit reached through && is gated": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Unknown Conventional Commits prefix: \\\"wip\\\". Allowed prefixes are in settings/commit-prefixes.txt. Base branch: main\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: a commit-shaped heredoc body is not a commit": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: the $(cat <<'EOF') message form (#283 item 5)": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: -am (#283 item 5)": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: -m'…' (#283 item 5)": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: --message= (#283 item 5)": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: the subject is the first -m (#283 item 5)": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: behind sudo (#283 item 8)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: /usr/bin/git (#283 item 8)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: inside bash -c (#283 item 8)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: no prefix file skips the prefix check": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: a message without a type is not checked": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: a breaking-change bang is not parsed as a type": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: a dynamic message is not checked": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: an editor-driven commit only gets the reminder": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: ask mode prompts on claude": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"Unknown Conventional Commits prefix: \\\"wibble\\\". Allowed prefixes are in settings/commit-prefixes.txt. Base branch: main\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: ask degrades to advice on codex": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Unknown Conventional Commits prefix: \\\"wibble\\\". Allowed prefixes are in settings/commit-prefixes.txt. Base branch: main\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: a relaxed preset turns the gate off": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: the Shell tool is not a commit-gate tool": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: the base branch comes from origin/HEAD": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against develop)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: an invalid config envelope blocks": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Unknown Conventional Commits prefix: \\\"wibble\\\". Allowed prefixes are in settings/commit-prefixes.txt. Base branch: main\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: MY_CLAUDE_QUALITY=off switches it off": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: no state file blocks nothing": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: reading a file is untouched": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: a destructive command is not this gate's business": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: git commit is denied during a failing gate": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"BLOCKED: quality gate failing — fix the violations before committing or pushing.\\nforced\\n\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: bun run check alone is allowed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: git status is allowed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: a destructive command in a bun+rust repo is out of scope": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: cargo fmt alone is allowed in a bun+rust repo": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: bun run check && bun run build is allowed": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: git push is denied during a failing gate": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"BLOCKED: quality gate failing — fix the violations before committing or pushing.\\nforced\\n\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: git -C <path> commit is denied": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"BLOCKED: quality gate failing — fix the violations before committing or pushing.\\nforced\\n\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: a commit reached through && is denied": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"BLOCKED: quality gate failing — fix the violations before committing or pushing.\\nforced\\n\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: a passing gate stops nothing": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: an Edit tool call is untouched": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: relaxed preset advises instead of denying": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Heads up: the quality gate is failing (commit and push are not blocked at this setting).\\nforced\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: ask mode phrases the reason as a question": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"The quality gate is failing. Commit/push anyway?\\nforced\\n\\n\\nBEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: a non-commit command never needs the config": {
+      "stdout": "",
+      "stderr": "toolu-config: malformed JSON in $ROOT/project/.claude/toolu.config.json; ignoring\n",
+      "exitCode": 0
+    },
+    "quality-gate: per-gate off emits nothing": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: the failure reason and violations reach the user": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"BLOCKED: quality gate failing — fix the violations before committing or pushing.\\noxlint: 2 errors\\nsrc/a.ts:1 no-explicit-any\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: a commit behind sudo (#283 item 8)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: /usr/bin/git commit (#283 item 8)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: a commit inside bash -c (#283 item 8)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: a push behind timeout (#283 item 8)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: a push through xargs (#283 item 8)": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: non-string reason and violations print as jq -r does": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"BLOCKED: quality gate failing — fix the violations before committing or pushing.\\n{\\n  \\\"tool\\\": \\\"oxlint\\\",\\n  \\\"errors\\\": 2\\n}\\n[\\n  \\\"a.ts\\\",\\n  \\\"b.ts\\\"\\n]\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: outside a git repository the working directory is the root": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"BLOCKED: quality gate failing — fix the violations before committing or pushing.\\nforced\\n\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: a codex apply_patch is untouched while the gate fails": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: codex blocks a commit": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"BLOCKED: quality gate failing — fix the violations before committing or pushing.\\nforced\\n\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: codex degrades ask to advice": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\\n\\nHeads up: the quality gate is failing (commit and push are not blocked at this setting).\\nforced\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: a malformed gate file is not failing": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: a gate file that is not an object is not failing": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: a multi-slot gate file blocks with its joined violations": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"BLOCKED: quality gate failing — fix the violations before committing or pushing.\\nr2\\nv1\\nv2\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: a null reason falls back to the default": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"BLOCKED: quality gate failing — fix the violations before committing or pushing.\\nQuality gate failing\\n\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: the Shell tool's commit is denied": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"BLOCKED: quality gate failing — fix the violations before committing or pushing.\\nforced\\n\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: a commit-shaped heredoc body is not a commit": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: a linked worktree is skipped": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    }
+  },
+  "corpus": {
+    "bash-commands: denylisted command asks [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"############################################################\\n##  ⚠️  SECURITY GUARDRAIL — OVERRIDE REQUESTED  ⚠️        ##\\n############################################################\\n\\nClaude wants to run a command matching the deny rule \\\"bun -e\\\".\\n\\nWHY THIS IS GUARDED\\nRules in settings/bash-denylist.txt cover commands that execute arbitrary code from a string (node -e, bun -e) or that this project has ruled out. The command runs with your full shell privileges if you approve.\\n\\nApproving covers THIS ONE CALL. Nothing is remembered and the next attempt\\nasks again. If you did not just ask for this, the answer is no.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: denylisted command asks [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Command blocked by deny rule: bun -e\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: block mode denies [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Command blocked by deny rule: cargo test\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: block mode denies [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Command blocked by deny rule: cargo test\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: advise mode advises [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Command matches deny rule \\\"cargo test\\\" (plugins/toolu/settings/bash-denylist.txt). The command was not stopped — gates.bashCommands.mode is 'advise'.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bash-commands: advise mode advises [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Command matches deny rule \\\"cargo test\\\" (plugins/toolu/settings/bash-denylist.txt). The command was not stopped — gates.bashCommands.mode is 'advise'.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: commit advice [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: commit advice [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: unknown prefix denied in block mode [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Unknown Conventional Commits prefix: \\\"wibble\\\". Allowed prefixes are in settings/commit-prefixes.txt. Base branch: main\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "commit-gate: unknown prefix denied in block mode [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"Unknown Conventional Commits prefix: \\\"wibble\\\". Allowed prefixes are in settings/commit-prefixes.txt. Base branch: main\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: failing gate blocks a commit [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"BLOCKED: quality gate failing — fix the violations before committing or pushing.\\nforced\\n\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: failing gate blocks a commit [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"BLOCKED: quality gate failing — fix the violations before committing or pushing.\\nforced\\n\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: ask mode [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"The quality gate is failing. Commit/push anyway?\\nforced\\n\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "quality-gate: ask mode [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"Heads up: the quality gate is failing (commit and push are not blocked at this setting).\\nforced\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    }
+  }
+}

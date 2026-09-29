@@ -2,7 +2,10 @@
  * AC-1 (#258): every PreToolUse fixture, rendered as Claude Code and as Codex
  * deliver it, gives byte-identical stdout and the same exit code from
  * `bash pre-tools/mod.sh` and from the committed bundle behind its launcher,
- * with every module still on bash fallback.
+ * with every module still on bash fallback. A fixture decided by a module
+ * whose bash script is deleted (#261) is compared with what `mod.sh` printed
+ * for it before the deletion, as parsed JSON: the native encoder prints
+ * compact JSON where jq printed it pretty.
  */
 import { expect, test } from "bun:test";
 import { toStdin } from "@toolu/conformance/harness/fixtures";
@@ -15,8 +18,12 @@ import {
 } from "@toolu/conformance/harness/pretool";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { PRETOOL_CORPUS, prepare, type Outcome } from "@toolu/conformance/harness/pretool-corpus";
+import { comparable } from "./pre-tool-modules-b-cases.ts";
+import { corpusKey, decidedByModulesB, readGolden } from "./pre-tool-modules-b-golden.ts";
 
 const HOSTS: PretoolHost[] = ["claude", "codex"];
+
+const golden = readGolden().corpus;
 
 function outcomeOf(stdout: string, exitCode: number): Outcome {
   if (exitCode === 2) return "exit2";
@@ -36,6 +43,22 @@ for (const fixture of PRETOOL_CORPUS) {
       const stdin =
         fixture.stdin ?? JSON.stringify(toStdin(host, fixture.fixture(sb), { cwd: sb.project }));
       const call = { cwd: sb.project, env: pretoolEnv(sb, host, extra), stdin };
+      if (decidedByModulesB(fixture.name)) {
+        const want = golden[corpusKey(fixture.name, host)];
+        if (want === undefined) throw new Error(`no golden capture for ${fixture.name} [${host}]`);
+        const got = await runBundle(call);
+        const norm = (text: string) => text.split(sb.root).join("$ROOT");
+        const captured = {
+          stdout: norm(got.stdout),
+          stderr: norm(got.stderr),
+          exitCode: got.exitCode,
+        };
+        expect(comparable(captured)).toEqual(comparable(want));
+        expect(outcomeOf(got.stdout, got.exitCode)).toBe(
+          fixture.expect[host] ?? fixture.expect.claude,
+        );
+        return;
+      }
       const [bash, bundle] = await fromSameState(
         sb,
         () => runModSh(call),
