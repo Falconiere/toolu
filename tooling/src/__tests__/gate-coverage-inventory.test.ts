@@ -62,7 +62,7 @@ test.concurrent("check fails when inventory drops a discovered hooks.json id", a
       row.kind === "hooks.json" &&
       row.plugin === "toolu" &&
       row.event === "PreToolUse" &&
-      row.commandOrModule?.endsWith("mod.sh") === true,
+      row.commandOrModule?.endsWith("dist/pre-tools.js") === true,
   )?.id;
   expect(drop).toBeDefined();
   const kept = rows.filter((row) => row.id !== drop);
