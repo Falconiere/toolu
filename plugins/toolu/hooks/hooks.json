@@ -48,7 +48,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-tools/mod.sh"
+            "command": "b=; for c in \"$TOOLU_BUN\" \"$(command -v bun 2>/dev/null)\" \"$HOME/.bun/bin/bun\"; do if [ -n \"$c\" ] && [ -f \"$c\" ] && [ -x \"$c\" ]; then b=$c; break; fi; done; if [ -n \"$b\" ]; then exec \"$b\" \"${CLAUDE_PLUGIN_ROOT}/hooks/dist/pre-tools.js\"; fi; printf '%s\\n' 'blocked: toolu plugin: Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun. Install Bun 1.4.x from https://bun.sh and restart the session. See docs/runtime.md.' >&2; exit 2",
+            "commandWindows": "if exist \"%TOOLU_BUN%\" (\"%TOOLU_BUN%\" \"%PLUGIN_ROOT%\\hooks\\dist\\pre-tools.js\") else (where /q bun& if not errorlevel 1 (bun \"%PLUGIN_ROOT%\\hooks\\dist\\pre-tools.js\") else if exist \"%USERPROFILE%\\.bun\\bin\\bun.exe\" (\"%USERPROFILE%\\.bun\\bin\\bun.exe\" \"%PLUGIN_ROOT%\\hooks\\dist\\pre-tools.js\") else (1>&2 echo blocked: toolu plugin: Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun. Install Bun 1.4.x from https://bun.sh and restart the session. See docs/runtime.md.& exit /b 2))"
           }
         ]
       },
@@ -57,7 +58,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-tools/modules/mcp-blocker.sh"
+            "command": "b=; for c in \"$TOOLU_BUN\" \"$(command -v bun 2>/dev/null)\" \"$HOME/.bun/bin/bun\"; do if [ -n \"$c\" ] && [ -f \"$c\" ] && [ -x \"$c\" ]; then b=$c; break; fi; done; if [ -n \"$b\" ]; then exec \"$b\" \"${CLAUDE_PLUGIN_ROOT}/hooks/dist/pre-tools-mcp.js\"; fi; printf '%s\\n' 'blocked: toolu plugin: Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun. Install Bun 1.4.x from https://bun.sh and restart the session. See docs/runtime.md.' >&2; exit 2",
+            "commandWindows": "if exist \"%TOOLU_BUN%\" (\"%TOOLU_BUN%\" \"%PLUGIN_ROOT%\\hooks\\dist\\pre-tools-mcp.js\") else (where /q bun& if not errorlevel 1 (bun \"%PLUGIN_ROOT%\\hooks\\dist\\pre-tools-mcp.js\") else if exist \"%USERPROFILE%\\.bun\\bin\\bun.exe\" (\"%USERPROFILE%\\.bun\\bin\\bun.exe\" \"%PLUGIN_ROOT%\\hooks\\dist\\pre-tools-mcp.js\") else (1>&2 echo blocked: toolu plugin: Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun. Install Bun 1.4.x from https://bun.sh and restart the session. See docs/runtime.md.& exit /b 2))"
           }
         ]
       },
@@ -66,7 +68,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-tools/agent-tier.sh"
+            "command": "b=; for c in \"$TOOLU_BUN\" \"$(command -v bun 2>/dev/null)\" \"$HOME/.bun/bin/bun\"; do if [ -n \"$c\" ] && [ -f \"$c\" ] && [ -x \"$c\" ]; then b=$c; break; fi; done; if [ -n \"$b\" ]; then exec \"$b\" \"${CLAUDE_PLUGIN_ROOT}/hooks/dist/pre-tools-agent.js\"; fi; printf '%s\\n' 'blocked: toolu plugin: Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun. Install Bun 1.4.x from https://bun.sh and restart the session. See docs/runtime.md.' >&2; exit 2",
+            "commandWindows": "if exist \"%TOOLU_BUN%\" (\"%TOOLU_BUN%\" \"%PLUGIN_ROOT%\\hooks\\dist\\pre-tools-agent.js\") else (where /q bun& if not errorlevel 1 (bun \"%PLUGIN_ROOT%\\hooks\\dist\\pre-tools-agent.js\") else if exist \"%USERPROFILE%\\.bun\\bin\\bun.exe\" (\"%USERPROFILE%\\.bun\\bin\\bun.exe\" \"%PLUGIN_ROOT%\\hooks\\dist\\pre-tools-agent.js\") else (1>&2 echo blocked: toolu plugin: Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun. Install Bun 1.4.x from https://bun.sh and restart the session. See docs/runtime.md.& exit /b 2))"
           }
         ]
       }
