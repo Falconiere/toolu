@@ -29,12 +29,14 @@ test.concurrent.each([
   ["both", ["sg", "ast-grep"]],
 ] as const)("%s: detectAstGrep equals bash detect_ast_grep", async (label, names) => {
   using sb = createSandbox();
-  const path = `${binDir(sb.root, label.replaceAll(" ", "-"), names)}:${SYSTEM}`;
-  const env = detectEnv(sb.home, { PATH: path });
+  const bin = binDir(sb.root, label.replaceAll(" ", "-"), names);
+  const env = detectEnv(sb.home, { PATH: `${bin}:${SYSTEM}` });
   const bash =
     (await bashDetect("detect_ast_grep; printf .", [], sb.project, env)) === "ast-grep\n.";
   expect(detectAstGrep(env)).toBe(bash);
-  expect(detectAstGrep(env)).toBe(names.length > 0);
+  // The system dirs may hold an unrelated `sg` (shadow-utils on Linux), so the
+  // absolute answer is checked against the probe dir alone.
+  expect(detectAstGrep({ PATH: bin })).toBe(names.length > 0);
 });
 
 test("toolAvailable matches command -v for executables, non-executables, directories and missing names", async () => {
