@@ -40,7 +40,8 @@
     "./state": "./src/state/state.ts",
     "./registry": "./src/registry/registry.ts",
     "./ledger": "./src/ledger/ledger.ts",
-    "./startup": "./src/startup/startup.ts"
+    "./startup": "./src/startup/startup.ts",
+    "./dispatch": "./src/dispatch/dispatch.ts"
   },
   "dependencies": {
     "zod": "4.1.5"
