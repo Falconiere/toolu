@@ -1021,7 +1021,7 @@
   },
   {
     "id": "toolu:entrypoint:PreToolUse:agent-tier",
-    "sourcePath": "packages/toolu-core/src/gates/agent-tier.ts",
+    "sourcePath": "plugins/toolu/hooks/src/agent-tier.ts",
     "plugin": "toolu",
     "kind": "entrypoint",
     "event": "PreToolUse",

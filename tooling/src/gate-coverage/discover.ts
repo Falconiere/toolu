@@ -169,7 +169,7 @@ function discoverBuiltinModules(add: AddFn): void {
       });
     }
   }
-  const agentTier = join(ROOT, "packages/toolu-core/src/gates/agent-tier.ts");
+  const agentTier = join(ROOT, "plugins/toolu/hooks/src/agent-tier.ts");
   if (existsSync(agentTier)) {
     add({
       id: makeId("toolu", "entrypoint", "PreToolUse", "agent-tier"),

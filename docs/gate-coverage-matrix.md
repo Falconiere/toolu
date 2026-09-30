@@ -59,7 +59,7 @@ Classifications match [docs/portable-core.md](portable-core.md): `shell-out` · 
 | `toolu:builtin-module:PreToolUse:protected-files` | `packages/toolu-core/src/gates/protected-files.ts` | toolu | PreToolUse | port-native | required | #260/done | bun-bundle | no | — |
 | `toolu:builtin-module:PreToolUse:push-review` | `packages/toolu-core/src/gates/push-review.ts` | toolu | PreToolUse | port-native | required | #262/done | bun-bundle | no | — |
 | `toolu:builtin-module:PreToolUse:quality-gate` | `packages/toolu-core/src/gates/quality-gate.ts` | toolu | PreToolUse | port-native | required | #261/done | pending-opencode | no | — |
-| `toolu:entrypoint:PreToolUse:agent-tier` | `packages/toolu-core/src/gates/agent-tier.ts` | toolu | PreToolUse | port-native | required | #262/done | bun-bundle | no | — |
+| `toolu:entrypoint:PreToolUse:agent-tier` | `plugins/toolu/hooks/src/agent-tier.ts` | toolu | PreToolUse | port-native | required | #262/done | bun-bundle | no | — |
 | `toolu:hooks.json:PostToolUse:post-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PostToolUse | shell-out | required | #210/todo | pending-opencode | yes | — |
 | `toolu:hooks.json:PreCompact:pre-compact.js:auto` | `plugins/toolu/hooks/hooks.json` | toolu | PreCompact | shell-out | required | #210/todo | pending-opencode | no | — |
 | `toolu:hooks.json:PreToolUse:agent-tier.js:spawn_agent|Agent|Task` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #262/done | bun-bundle | no | — |
