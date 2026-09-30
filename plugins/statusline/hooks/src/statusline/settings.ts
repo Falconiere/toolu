@@ -27,11 +27,13 @@ export function desiredCommand(env: HostEnv): string {
  * as a program, which still works, so it is not legacy.
  */
 export function isLegacyCommand(command: unknown): boolean {
+  if (typeof command !== "string") return false;
+  const words = command.trim().split(/\s+/);
+  const shell = /(?:^|\/)env$/.test(words[0] ?? "") ? 1 : 0;
+  const marker = words.findIndex((word) => word.includes(MARKER));
   return (
-    typeof command === "string" &&
-    /^\s*(?:\S*\/)?(?:env\s+)?(?:\S*\/)?(?:ba|z)?sh(?:\s+-(?![a-zA-Z]*c)\S*)*\s+(?![-\s])/.test(
-      command,
-    ) &&
-    command.includes(MARKER)
+    /^(?:\S*\/)?(?:ba|z)?sh$/.test(words[shell] ?? "") &&
+    marker > shell &&
+    !words.slice(shell + 1, marker + 1).some((word) => /^-[a-zA-Z]*c/.test(word))
   );
 }

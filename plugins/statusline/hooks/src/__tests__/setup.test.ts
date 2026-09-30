@@ -177,6 +177,8 @@ test.concurrent("setup: a shell -c pipeline around the path is already wired, no
     'bash  -c "~/.claude/statusline/statusline.sh | cat"',
     'bash -e -c "~/.claude/statusline/statusline.sh"',
     'bash --norc -c "~/.claude/statusline/statusline.sh"',
+    'bash -o pipefail -c "~/.claude/statusline/statusline.sh | cat"',
+    "sh -lc'~/.claude/statusline/statusline.sh'",
   ]) {
     const body = JSON.stringify({ statusLine: { command: custom } });
     writeFileSync(settings, body);
