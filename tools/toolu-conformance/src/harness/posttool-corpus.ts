@@ -1,9 +1,9 @@
 /**
  * The PostToolUse fixture corpus (#259): the dispatcher's decision paths, the
  * gate-status and push-waiver modules, and the bash language-quality registry
- * modules (python- and rust-quality until #266/#267) registered by their real
- * `register.sh`. ts-quality is a TypeScript module since #265, which bash
- * `mod.sh` cannot run; its parity is its own golden suite. Triggers come
+ * module (rust-quality until #267) registered by its real `register.sh`.
+ * ts-quality (#265) and python-quality (#266) are TypeScript modules, which
+ * bash `mod.sh` cannot run; their parity is their own golden suites. Triggers come
  * from the `post-tools` bats suites. `expect` is the decision class on each
  * host; post-tool decisions are the same on Claude Code and Codex.
  */
@@ -94,14 +94,12 @@ function project(files: Record<string, string>): (sb: Sandbox) => void {
 }
 
 const rustProject = project({ "Cargo.toml": '[package]\nname = "fixture"\nversion = "0.1.0"\n' });
-const pyProject = project({ "pyproject.toml": '[project]\nname = "fixture"\n' });
 
 function registryModule(sb: Sandbox, host: PretoolHost, file: string, body: string): void {
   const path = join(hostConfigRoot(sb, host), "toolu", "post-tools.d", file);
   put(path, `#!/usr/bin/env bash\n${body}\n`);
 }
 
-const BAD_PY = "from unittest.mock import patch\n\n\ndef test_x():\n    assert patch\n";
 const BAD_RS = "#[allow(dead_code)]\nfn bad() {}\n";
 
 export const POSTTOOL_CORPUS: readonly PosttoolCase[] = [
@@ -157,13 +155,6 @@ export const POSTTOOL_CORPUS: readonly PosttoolCase[] = [
   { name: "empty stdin is silent", stdin: "", expect: "silent" },
   { name: "non-JSON stdin is silent", stdin: "not json\n", expect: "silent" },
   {
-    name: "python-quality registry: mock import in a test file",
-    register: ["python-quality"],
-    setup: pyProject,
-    fixture: wrote("tests/test_bad.py", BAD_PY),
-    expect: "advisory",
-  },
-  {
     name: "rust-quality registry: lint suppression in a written file",
     register: ["rust-quality"],
     setup: rustProject,
@@ -171,19 +162,18 @@ export const POSTTOOL_CORPUS: readonly PosttoolCase[] = [
     expect: "advisory",
   },
   {
-    name: "multi-path patch through python-quality and rust-quality",
-    register: ["python-quality", "rust-quality"],
+    name: "multi-path patch through rust-quality",
+    register: ["rust-quality"],
     setup: (sb) => {
-      pyProject(sb);
       rustProject(sb);
-      put(sb.path("tests/test_bad.py"), BAD_PY);
       put(sb.path("src/bad.rs"), BAD_RS);
+      put(sb.path("src/worse.rs"), BAD_RS);
     },
     fixture: () =>
       postToolFixture(
         patchFixture([
-          { op: "update", path: "tests/test_bad.py", lines: ["-a", "+b"] },
           { op: "update", path: "src/bad.rs", lines: ["-a", "+b"] },
+          { op: "update", path: "src/worse.rs", lines: ["-a", "+b"] },
         ]),
         "Done",
       ),
@@ -224,13 +214,7 @@ export const POSTTOOL_CORPUS: readonly PosttoolCase[] = [
   },
 ];
 
-const SPECS = [
-  "toolu@toolu",
-  "fixture@toolu",
-  "ts-quality@toolu",
-  "python-quality@toolu",
-  "rust-quality@toolu",
-];
+const SPECS = ["toolu@toolu", "fixture@toolu", "ts-quality@toolu", "rust-quality@toolu"];
 
 /** Put the sandbox in `c`'s state for `host`: plugins installed and registered, config, setup. */
 export async function preparePost(sb: Sandbox, host: PretoolHost, c: PosttoolCase): Promise<void> {

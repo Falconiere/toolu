@@ -9,6 +9,8 @@
  * has its own suite in `plugins/ast-grep/hooks/src/__tests__`.
  * ts-quality left the list with its `register.sh` (#265); its register bundle
  * has its own suite in `plugins/ts-quality/hooks/src/__tests__`.
+ * python-quality left the list with its `register.sh` (#266); its register
+ * bundle has its own suite in `plugins/python-quality/hooks/src/__tests__`.
  */
 import { expect, test } from "bun:test";
 import {
@@ -36,11 +38,11 @@ type Plugin = {
 };
 
 const PLUGINS: Plugin[] = [
-  ...["python-quality", "rust-quality"].map((plugin) => ({
-    plugin,
-    modules: [{ name: plugin, event: "tool/post" as const }],
-    bashDirs: ["post-tools.d"] as const,
-  })),
+  {
+    plugin: "rust-quality",
+    modules: [{ name: "rust-quality", event: "tool/post" }],
+    bashDirs: ["post-tools.d"],
+  },
 ];
 
 function seed(root: string, spec: string): void {
