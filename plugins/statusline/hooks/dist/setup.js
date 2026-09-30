@@ -3061,7 +3061,7 @@ function desiredCommand(env) {
   return dir === undefined ? `~/.claude/${MARKER}` : `"${dir}/${MARKER}"`;
 }
 function isLegacyCommand(command) {
-  return typeof command === "string" && /^\s*(?:\S*\/)?(?:env\s+)?(?:\S*\/)?(?:ba|z)?sh\s+(?!-[a-zA-Z]*c)/.test(command) && command.includes(MARKER);
+  return typeof command === "string" && /^\s*(?:\S*\/)?(?:env\s+)?(?:\S*\/)?(?:ba|z)?sh(?:\s+-(?![a-zA-Z]*c)\S*)*\s+(?![-\s])/.test(command) && command.includes(MARKER);
 }
 
 // plugins/statusline/hooks/src/setup.ts

@@ -29,7 +29,9 @@ export function desiredCommand(env: HostEnv): string {
 export function isLegacyCommand(command: unknown): boolean {
   return (
     typeof command === "string" &&
-    /^\s*(?:\S*\/)?(?:env\s+)?(?:\S*\/)?(?:ba|z)?sh\s+(?!-[a-zA-Z]*c)/.test(command) &&
+    /^\s*(?:\S*\/)?(?:env\s+)?(?:\S*\/)?(?:ba|z)?sh(?:\s+-(?![a-zA-Z]*c)\S*)*\s+(?![-\s])/.test(
+      command,
+    ) &&
     command.includes(MARKER)
   );
 }

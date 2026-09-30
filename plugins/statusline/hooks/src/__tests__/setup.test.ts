@@ -159,7 +159,7 @@ test.concurrent("setup: upgrades any shell-prefixed form of the published path",
   using sb = createSandbox();
   const { cfg, settings } = config(sb);
   const path = `"${cfg}/statusline/statusline.sh"`;
-  for (const shell of ["/bin/bash", "/usr/bin/env bash", "sh", "zsh"]) {
+  for (const shell of ["/bin/bash", "/usr/bin/env bash", "sh", "zsh", "bash -e", "bash  --norc"]) {
     writeFileSync(settings, JSON.stringify({ statusLine: { command: `${shell} ${path}` } }));
     const res = await setup(sb);
     expect(res.exitCode).toBe(0);
@@ -174,6 +174,9 @@ test.concurrent("setup: a shell -c pipeline around the path is already wired, no
   for (const custom of [
     'bash -c "~/.claude/statusline/statusline.sh | cat"',
     "sh -lc '~/.claude/statusline/statusline.sh'",
+    'bash  -c "~/.claude/statusline/statusline.sh | cat"',
+    'bash -e -c "~/.claude/statusline/statusline.sh"',
+    'bash --norc -c "~/.claude/statusline/statusline.sh"',
   ]) {
     const body = JSON.stringify({ statusLine: { command: custom } });
     writeFileSync(settings, body);
