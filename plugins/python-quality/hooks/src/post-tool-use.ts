@@ -41,6 +41,7 @@ export default defineRegistryModule({
   run(event, ctx) {
     const where = { env: ctx.env, ...(ctx.cwd === undefined ? {} : { cwd: ctx.cwd }) };
     if (!detectPython(where) || !toolAvailable("python3", ctx.env)) return Promise.resolve(ALLOW);
+    let limits: PyLimits | undefined;
     const decision = fileQuality(event, ctx, {
       source: "python-quality-hook",
       reason: "Post-edit Python quality violation(s) detected",
@@ -49,7 +50,8 @@ export default defineRegistryModule({
       check: (file) => {
         const source = read(file);
         if (source.error !== undefined) return { errors: [source.error], advisories: [] };
-        return checkPyFile({ file, lines: splitLines(source.text), ctx, limits: limitsFor(ctx) });
+        limits ??= limitsFor(ctx);
+        return checkPyFile({ file, lines: splitLines(source.text), ctx, limits });
       },
     });
     return Promise.resolve(decision);
