@@ -18,6 +18,10 @@ export type AstGrepHit = {
   readonly ruleId: string;
   readonly line: number;
   readonly excerpt: string;
+  /** The source line alone. */
+  readonly text: string;
+  /** Whether this is the first line of its match: matches of one rule can be adjacent or nested. */
+  readonly first: boolean;
 };
 
 export type AstGrepScan =
@@ -53,6 +57,8 @@ function matchHits(match: unknown): AstGrepHit[] | undefined {
     ruleId,
     line: start + 1 + key,
     excerpt: `${file}:${String(start + 1 + key)}:${text}`,
+    text,
+    first: key === 0,
   }));
 }
 
