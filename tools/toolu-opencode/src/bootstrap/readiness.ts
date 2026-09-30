@@ -12,7 +12,8 @@ const REGISTRY_EVENT_DIRS = ["pre-tools.d", "post-tools.d"] as const;
 // session artifact.
 const SESSION_ARTIFACT_NAMES = [".session-start-ready", ".gate-preset-notice-v6"] as const;
 
-function listShModules(dir: string): string[] {
+/** Registry modules: bash `.sh` and, since #265, bundled `.js`. */
+function listModules(dir: string): string[] {
   if (!existsSync(dir)) {
     return [];
   }
@@ -20,7 +21,7 @@ function listShModules(dir: string): string[] {
   for (const entry of readdirSync(dir)) {
     const path = join(dir, entry);
     try {
-      if (statSync(path).isFile() && entry.endsWith(".sh")) {
+      if (statSync(path).isFile() && (entry.endsWith(".sh") || entry.endsWith(".js"))) {
         out.push(path);
       }
     } catch {
@@ -35,7 +36,7 @@ export function collectBootstrapArtifacts(dataRoot: string): string[] {
   const regRoot = opencodeRegistryRoot(dataRoot);
   const artifacts: string[] = [];
   for (const sub of REGISTRY_EVENT_DIRS) {
-    artifacts.push(...listShModules(join(regRoot, sub)));
+    artifacts.push(...listModules(join(regRoot, sub)));
   }
   for (const name of SESSION_ARTIFACT_NAMES) {
     const path = join(regRoot, name);

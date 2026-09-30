@@ -9,10 +9,7 @@ Classifications match [docs/portable-core.md](portable-core.md): `shell-out` · 
 | id | source | plugin | event | classification | support | impl | host mechanism | bash | limits |
 |----|--------|--------|-------|----------------|---------|------|----------------|------|--------|
 | `agent-browser:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/agent-browser/hooks/hooks.json` | agent-browser | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
-| `ast-grep:entrypoint:SessionStart:register.sh` | `plugins/ast-grep/hooks/register.sh` | ast-grep | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
-| `ast-grep:hooks.json:SessionStart:register.sh:startup|resume|clear|compact` | `plugins/ast-grep/hooks/hooks.json` | ast-grep | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
-| `ast-grep:post-tools.d:PostToolUse:byte-savings.sh` | `plugins/ast-grep/hooks/post-tools.d/byte-savings.sh` | ast-grep | PostToolUse | shell-out | required | #210/todo | pending-opencode | yes | — |
-| `ast-grep:pre-tools.d:PreToolUse:search-nudge.sh` | `plugins/ast-grep/hooks/pre-tools.d/search-nudge.sh` | ast-grep | PreToolUse | shell-out | required | #210/todo | pending-opencode | yes | — |
+| `ast-grep:hooks.json:SessionStart:register.js:startup|resume|clear|compact` | `plugins/ast-grep/hooks/hooks.json` | ast-grep | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
 | `context7:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/context7/hooks/hooks.json` | context7 | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
 | `epic-orchestrator:hooks.json:SessionStart:check-deps.js:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
 | `exa-search:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/exa-search/hooks/hooks.json` | exa-search | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |

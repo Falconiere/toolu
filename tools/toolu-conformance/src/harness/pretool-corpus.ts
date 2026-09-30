@@ -30,8 +30,8 @@ function settingsDir(sb: Sandbox, extra: Record<string, string>): string {
 }
 
 /**
- * Put the sandbox in `c`'s state for `host`: the ast-grep module registered by
- * its real `register.sh`, plugins installed, config, settings and extra files.
+ * Put the sandbox in `c`'s state for `host`: the ast-grep modules registered by
+ * its real register hook, plugins installed, config, settings and extra files.
  * Returns the env additions the case needs.
  */
 export async function prepare(sb: Sandbox, host: PretoolHost, c: PretoolCase): Promise<EnvPatch> {

@@ -207,6 +207,48 @@ test("#269: a plugin with only a TypeScript startup bundle bootstraps through it
   expect(pluginBootstrapScript(mkdtempSync(join(tmpBase, "toolu-bs-empty-")))).toBeNull();
 });
 
+test("#268: a plugin with a TypeScript register bundle bootstraps through its register launcher", () => {
+  const astGrep = join(repoRoot(), "plugins", "ast-grep");
+  const script = pluginBootstrapScript(astGrep);
+  expect(script).toBe(join(astGrep, "hooks", "dist", "register.js"));
+  const command = bootstrapCommand(script ?? "", "ast-grep", astGrep);
+  expect(command.argv[2]).toContain('"${CLAUDE_PLUGIN_ROOT}/hooks/dist/register.js"');
+  expect(command.env).toEqual({ CLAUDE_PLUGIN_ROOT: astGrep });
+});
+
+test("#268: bootstrapping ast-grep registers its bundled modules under the OpenCode data root", async () => {
+  const root = repoRoot();
+  const pluginsRoot = join(root, "plugins");
+  const project = mkdtempSync(join(tmpBase, "toolu-bs-ag-"));
+  mkdirSync(join(project, ".opencode", "toolu"), { recursive: true });
+  writeFileSync(
+    opencodePluginSelectionPath(project),
+    JSON.stringify({ version: 1, enabled: ["toolu", "ast-grep"] }),
+  );
+  const select = selectPluginsWithDependencies(pluginsRoot, project);
+  expect(select.ok).toBe(true);
+  if (!select.ok) {
+    return;
+  }
+  const dataRoot = join(project, ".opencode", "toolu", "state");
+  const result = await bootstrapRuntime({
+    repoRoot: root,
+    projectRoot: project,
+    dataRoot,
+    plugins: select.plugins,
+    isolatedHome: isolatedHome(),
+  });
+  expect(result.status).toBe("ready");
+  if (result.status !== "ready") {
+    return;
+  }
+  const modules = result.artifacts.map((a) =>
+    a.slice(a.lastIndexOf("/", a.lastIndexOf("/") - 1) + 1),
+  );
+  expect(modules).toContain("pre-tools.d/ast-grep@toolu__search-nudge.js");
+  expect(modules).toContain("post-tools.d/ast-grep@toolu__byte-savings.js");
+});
+
 test("#269: bootstrapping context7 publishes its search CLI under the OpenCode data root", async () => {
   const root = repoRoot();
   const pluginsRoot = join(root, "plugins");

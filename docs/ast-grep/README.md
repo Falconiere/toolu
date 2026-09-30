@@ -152,7 +152,16 @@ ast-grep scan          # run all configured rules
 
 | Hook | Event | Purpose |
 |------|-------|--------|
-| `search-nudge` | PreToolUse | Steers `grep`/`rg` on code files toward ast-grep |
-| `byte-savings` | PostToolUse | Tracks tokens saved by structural vs. text search |
+| `search-nudge` | PreToolUse | Steers a structural Grep pattern, and `grep`/`rg` run in Bash to search files, toward ast-grep |
+| `byte-savings` | PostToolUse | Records the bytes Read, Grep, Glob and ast-grep return into context |
 
-Hooks register into the core toolu dispatcher at `SessionStart` — they run only while this plugin is installed.
+Both are TypeScript modules on Bun. `hooks/dist/register.js` publishes them into the core toolu dispatcher's registry at `SessionStart`, and they run in process only while this plugin is installed. search-nudge reads a Bash command through toolu's shell parser, so a grep that filters a pipe, words in a commit message, or a `for … in` loop is not taken for a file search.
+
+Two command-line helpers ship as executable bundles:
+
+```bash
+plugins/ast-grep/hooks/dist/ast-grep.js search 'console.log($A)' src/app.ts   # --lang inferred, --color never
+plugins/ast-grep/hooks/dist/byte-savings-report.js ~/.claude/toolu/byte-savings/<session>.jsonl
+```
+
+The wrapper prefers `sg`, falls back to `ast-grep`, and does nothing when neither is installed. Subcommands: `search`, `files`, `scan`, `debug`.

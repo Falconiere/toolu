@@ -59,9 +59,13 @@ export async function measureLatency(
     throw new RangeError(`measureLatency: runs must be >= 1, got ${opts.runs}`);
   }
   await sequential(once, opts.warmup ?? 0);
-  const samples = await sequential(once, opts.runs);
+  return latencyOf(await sequential(once, opts.runs));
+}
+
+/** The summary of `samples` (milliseconds), taken however the caller interleaved them. */
+export function latencyOf(samples: readonly number[]): Latency {
   return {
-    samples,
+    samples: [...samples],
     p50: percentile(samples, 50),
     p95: percentile(samples, 95),
     min: Math.min(...samples),
