@@ -1,8 +1,7 @@
 /**
  * Host-neutral project status shared by the Claude renderer and the Codex
  * report: repository, branch, ahead/behind, working-tree counts, the quality
- * gate, the comemory memory count and Jev readiness. Port of
- * `collect-status.sh`, called in-process instead of through a subprocess.
+ * gate, the comemory memory count and Jev readiness, collected in-process.
  *
  * Jev readiness is local configuration only: the wrapper is never executed and
  * no request is sent on the statusline's per-prompt hot path.

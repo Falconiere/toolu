@@ -760,35 +760,15 @@
     "bashRequired": true
   },
   {
-    "id": "statusline:entrypoint:SessionStart:session-start.sh",
-    "sourcePath": "plugins/statusline/hooks/session-start.sh",
-    "plugin": "statusline",
-    "kind": "entrypoint",
-    "event": "SessionStart",
-    "matcher": "",
-    "commandOrModule": "session-start.sh",
-    "parentId": null,
-    "semantics": "Hook entrypoint script session-start.sh for SessionStart.",
-    "classification": "shell-out",
-    "hostMechanism": "pending-opencode",
-    "support": "required",
-    "implementationIssue": 211,
-    "implementationStatus": "todo",
-    "verificationBaseline": "none",
-    "verificationConformance": "pending-#212",
-    "limits": "",
-    "bashRequired": true
-  },
-  {
-    "id": "statusline:hooks.json:SessionStart:session-start.sh:startup|resume|clear|compact",
+    "id": "statusline:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact",
     "sourcePath": "plugins/statusline/hooks/hooks.json",
     "plugin": "statusline",
     "kind": "hooks.json",
     "event": "SessionStart",
     "matcher": "startup|resume|clear|compact",
-    "commandOrModule": "hooks/session-start.sh",
+    "commandOrModule": "hooks/dist/session-start.js",
     "parentId": null,
-    "semantics": "Host routes SessionStart (startup|resume|clear|compact) to hooks/session-start.sh.",
+    "semantics": "Host routes SessionStart (startup|resume|clear|compact) through the Bun launcher to hooks/dist/session-start.js; without Bun the launcher prints an advisory systemMessage (#269).",
     "classification": "shell-out",
     "hostMechanism": "pending-opencode",
     "support": "required",
@@ -797,7 +777,7 @@
     "verificationBaseline": "none",
     "verificationConformance": "pending-#212",
     "limits": "",
-    "bashRequired": true
+    "bashRequired": false
   },
   {
     "id": "toolu-review:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact",
