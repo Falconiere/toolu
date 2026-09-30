@@ -39,6 +39,20 @@ function git(args: string[]): string {
   return res.stdout.trim();
 }
 
+const SUITES = "plugins/rust-quality/hooks/concerns/__tests__";
+
+/** Every `@test` at `base` in the concern suites, as `<suite>.bats: <title>`. */
+function batsTests(base: string): string[] {
+  return git(["ls-tree", "--name-only", `${base}:${SUITES}`])
+    .split("\n")
+    .filter((name) => name.endsWith(".bats"))
+    .flatMap((name) =>
+      [
+        ...git(["show", `${base}:${SUITES}/${name}`]).matchAll(/^@test "((?:[^"\\]|\\.)*)" \{$/gm),
+      ].map((m) => `${name}: ${(m[1] ?? "").replaceAll('\\"', '"')}`),
+    );
+}
+
 const at = process.argv.indexOf("--base");
 const baseArg = at === -1 ? BASH_BASE : process.argv[at + 1];
 if (baseArg === undefined || baseArg.trim() === "") {
@@ -60,7 +74,8 @@ try {
   );
   const cases = Object.fromEntries(await inBatches(jobs, BATCH));
   mkdirSync(dirname(GOLDEN_PATH), { recursive: true });
-  writeFileSync(GOLDEN_PATH, `${JSON.stringify({ base, cases }, null, 2)}\n`);
+  const golden = { base, batsTests: batsTests(base), cases };
+  writeFileSync(GOLDEN_PATH, `${JSON.stringify(golden, null, 2)}\n`);
   process.stdout.write(`captured ${String(Object.keys(cases).length)} cases at ${base}\n`);
 } finally {
   rmSync(dir, { recursive: true, force: true });

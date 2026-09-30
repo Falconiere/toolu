@@ -12,6 +12,8 @@ const StepSchema = z.strictObject({
 
 export const GoldenSchema = z.strictObject({
   base: z.string().regex(/^[0-9a-f]{40}$/),
+  /** Every bats test at `base`, as `<suite>.bats: <title>`: CI checks out one commit, not the base. */
+  batsTests: z.array(z.string()).min(1),
   cases: z.record(z.string(), z.array(StepSchema)),
 });
 

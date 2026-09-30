@@ -8,34 +8,10 @@
 import { expect, test } from "bun:test";
 import { outcomeOf } from "./golden-outcome.ts";
 import { NOT_GOLDEN, RS_CASES } from "./cases.ts";
-import { BASH_BASE, REPO_ROOT, caseKey } from "./golden-harness.ts";
+import { caseKey } from "./golden-harness.ts";
 import { readGolden } from "./golden-io.ts";
 
 const golden = readGolden();
-
-const SUITES = [
-  "assembled",
-  "dispatch",
-  "docs",
-  "error-handling",
-  "no-mocks",
-  "size",
-  "suppression",
-  "tests",
-  "unsafe",
-];
-
-function batsTitles(suite: string): string[] {
-  const shown = Bun.spawnSync(
-    ["git", "show", `${BASH_BASE}:plugins/rust-quality/hooks/concerns/__tests__/${suite}.bats`],
-    { cwd: REPO_ROOT },
-  );
-  if (shown.exitCode !== 0)
-    throw new Error(`git show ${suite}.bats failed: ${shown.stderr.toString()}`);
-  return [...shown.stdout.toString().matchAll(/^@test "((?:[^"\\]|\\.)*)" \{$/gm)].map(
-    (m) => `${suite}.bats: ${(m[1] ?? "").replaceAll('\\"', '"')}`,
-  );
-}
 
 test("the golden holds exactly the corpus's cases", () => {
   const keys = RS_CASES.flatMap((c) => (c.hosts ?? ["claude"]).map((host) => caseKey(c, host)));
@@ -44,7 +20,7 @@ test("the golden holds exactly the corpus's cases", () => {
 });
 
 test("every bats test at the base is ported by a case or named as not golden", () => {
-  const titles = SUITES.flatMap(batsTitles);
+  const titles = golden.batsTests;
   expect(titles.length).toBeGreaterThan(80);
   const ported = new Set([...RS_CASES.flatMap((c) => c.from ?? []), ...NOT_GOLDEN]);
   expect(titles.filter((t) => !ported.has(t))).toEqual([]);
