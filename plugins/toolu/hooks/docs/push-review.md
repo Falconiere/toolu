@@ -115,11 +115,11 @@ or nothing — is the mode's business, not this list's.
 
 ## Tests
 
-`hooks/pre-tools/modules/__tests__/push-review.bats` covers the gate;
+`hooks/src/__tests__/pre-tool-modules-c.test.ts` covers the gate;
 `hooks/lib/__tests__/detect.bats` covers `is_git_push` and `push_target_root`.
 Run from the repo root with:
 
 ```bash
-bats plugins/toolu/hooks/pre-tools/modules/__tests__/push-review.bats
+bun test plugins/toolu/hooks/src/__tests__/pre-tool-modules-c.test.ts
 bats plugins/toolu/hooks/lib/__tests__/detect.bats
 ```

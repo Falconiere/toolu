@@ -131,6 +131,41 @@ test.concurrent("a native built-in module is discovered from its gates source an
   expect(rows.some((row) => row.id.endsWith(":commit-gate.sh"))).toBe(false);
 });
 
+test.concurrent("the #262 gates and launchers use native Bun inventory entries", async () => {
+  const Classified = z.array(
+    z.looseObject({
+      id: z.string(),
+      classification: z.string(),
+      hostMechanism: z.string(),
+      bashRequired: z.boolean(),
+    }),
+  );
+  const rows = Classified.parse(JSON.parse(await Bun.file(INVENTORY).text()));
+  const ids = [
+    "toolu:builtin-module:PreToolUse:push-review",
+    "toolu:builtin-module:PreToolUse:plan-ledger",
+    "toolu:builtin-module:PreToolUse:docs-sync",
+    "toolu:entrypoint:PreToolUse:agent-tier",
+  ];
+  for (const id of ids) {
+    expect(rows.find((row) => row.id === id)).toMatchObject({
+      classification: "port-native",
+      hostMechanism: "bun-bundle",
+      bashRequired: false,
+    });
+  }
+  for (const prefix of [
+    "toolu:hooks.json:PreToolUse:pre-tools.js:",
+    "toolu:hooks.json:PreToolUse:agent-tier.js:",
+  ]) {
+    expect(rows.find((row) => row.id.startsWith(prefix))).toMatchObject({
+      classification: "port-native",
+      hostMechanism: "bun-bundle",
+      bashRequired: false,
+    });
+  }
+});
+
 test.concurrent("the #260 native built-ins and the mcp__ bundle entry are port-native", async () => {
   const rows = z
     .array(z.looseObject({ id: z.string(), classification: z.string(), bashRequired: z.boolean() }))

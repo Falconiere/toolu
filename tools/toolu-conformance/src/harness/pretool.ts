@@ -1,10 +1,7 @@
 /**
- * PreToolUse parity harness (#258): runs one hook call through the bash
- * dispatcher (`pre-tools/mod.sh`) and through the
- * committed TypeScript bundle behind its generated launcher, as Claude Code or
- * Codex would spawn them, from the same sandbox state. Gates write state (gate
- * files, telemetry), so the sandbox is snapshotted before the first run and
- * restored, at the same paths, before the second.
+ * PreToolUse harness: runs the committed TypeScript bundle behind its
+ * generated launcher as Claude Code or Codex would spawn it. The shared
+ * fromSameState helper lets PostToolUse parity compare stateful hooks.
  */
 import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -16,9 +13,6 @@ export type PretoolHost = "claude" | "codex";
 
 export const REPO_ROOT = resolve(import.meta.dir, "../../../..");
 export const TOOLU_PLUGIN = join(REPO_ROOT, "plugins", "toolu");
-
-/** The bash command hooks.json ran before #258. */
-export const MOD_SH = join(TOOLU_PLUGIN, "hooks/pre-tools/mod.sh");
 
 /**
  * The host's hook environment, without the harness's host override so the
@@ -65,11 +59,6 @@ export async function registerPlugin(
 }
 
 export type PretoolRun = { cwd: string; env: EnvPatch; stdin: string };
-
-/** `bash pre-tools/mod.sh`, the hooks.json command before #258. */
-export function runModSh(call: PretoolRun): Promise<RunResult> {
-  return run(["bash", MOD_SH], call);
-}
 
 /** The hooks.json launcher, which execs the committed `hooks/dist/pre-tools.js`. */
 export function runBundle(call: PretoolRun): Promise<RunResult> {

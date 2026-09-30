@@ -145,10 +145,14 @@ function bashAnswers(pairs: readonly [string, string][]): boolean[] {
   const res = spawnSync("bash", ["-O", "extglob", "-c", script], {
     input,
     encoding: "utf8",
-    env: { ...process.env, LC_ALL: "en_US.UTF-8" },
+    // The native range matcher uses code-point ordering. Bash's en_US
+    // collation also places uppercase letters inside lowercase ranges on
+    // macOS, so use C.UTF-8's code-point ordering for this parity oracle.
+    env: { ...process.env, LC_ALL: "C.UTF-8" },
     maxBuffer: 64 * 1024 * 1024,
   });
-  if (res.status !== 0) throw new Error(`bash exited ${String(res.status)}: ${res.stderr}`);
+  if (res.status !== 0)
+    throw new Error(`bash exited ${String(res.status)} (${String(res.signal)}): ${res.stderr}`);
   return res.stdout
     .trimEnd()
     .split("\n")

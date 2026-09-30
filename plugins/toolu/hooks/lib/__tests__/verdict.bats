@@ -69,24 +69,6 @@ write_review_state() {
 
 # --- parity ---------------------------------------------------------------
 
-@test "parity: verdict's ACCEPTED_REVIEWERS matches push-review.sh's accepted_reviewers literal" {
-  # verdict.sh implements the review gate's schema independently of
-  # pre-tools/modules/push-review.sh (see the file header) — the reviewer
-  # allow-list is duplicated, not shared, so this is what keeps the two lists
-  # from drifting apart silently (mirrors plan-ledger-model.bats's alias-list
-  # parity test).
-  local push_review="$LIB_DIR/../pre-tools/modules/push-review.sh"
-  [ -f "$push_review" ]
-  local from_verdict from_gate
-  from_verdict=$(grep -o "ACCEPTED_REVIEWERS='\[[^]]*\]'" "$SCRIPT" \
-    | sed -E "s/^ACCEPTED_REVIEWERS='(.*)'\$/\1/")
-  from_gate=$(grep -o "accepted_reviewers='\[[^]]*\]'" "$push_review" \
-    | sed -E "s/^accepted_reviewers='(.*)'\$/\1/")
-  [ -n "$from_verdict" ]
-  [ -n "$from_gate" ]
-  [ "$from_verdict" = "$from_gate" ]
-}
-
 # --- AC-1: quality gate failure -----------------------------------------
 
 @test "AC-1: recorded quality-gate failure -> blocked, exit 1, status renders" {
