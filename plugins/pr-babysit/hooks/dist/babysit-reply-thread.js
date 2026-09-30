@@ -130,35 +130,40 @@ class SlotLock {
     this.path = `${statePath}.lock`;
   }
   acquire() {
-    mkdirSync(dirname(this.path), { recursive: true });
-    for (let attempt = 0;attempt < 2; attempt += 1) {
-      try {
-        mkdirSync(this.path);
-        this.held = true;
-        writeFileSync(join(this.path, "pid"), `${process.pid}
+    process.on("SIGTERM", this.onTerm);
+    process.on("SIGINT", this.onInt);
+    try {
+      mkdirSync(dirname(this.path), { recursive: true });
+      for (let attempt = 0;attempt < 2; attempt += 1) {
+        try {
+          mkdirSync(this.path);
+          this.held = true;
+          writeFileSync(join(this.path, "pid"), `${process.pid}
 `);
-        writeFileSync(join(this.path, "since"), `${Math.floor(Date.now() / 1000)}
+          writeFileSync(join(this.path, "since"), `${Math.floor(Date.now() / 1000)}
 `);
-        process.on("SIGTERM", this.onTerm);
-        process.on("SIGINT", this.onInt);
-        return;
-      } catch (error) {
-        if (!existsSync(this.path))
-          throw error;
+          return;
+        } catch (error) {
+          if (!existsSync(this.path))
+            throw error;
+        }
+        const pidText = readTextOrEmpty(join(this.path, "pid"));
+        const sinceText = readTextOrEmpty(join(this.path, "since"));
+        const pid = /^\d+$/.test(pidText) ? Number(pidText) : null;
+        const since = /^\d+$/.test(sinceText) ? Number(sinceText) : null;
+        const staleAfter = Number(process.env.PB_LOCK_STALE_SECONDS ?? "600");
+        const stale = pid === null || since === null || !pidAlive(pid) || Math.floor(Date.now() / 1000) - since > staleAfter;
+        if (attempt === 0 && stale) {
+          process.stderr.write(`pr-babysit: reclaiming stale lock ${this.path} (pid ${pidText || "?"}, since ${sinceText || "?"})
+`);
+          rmSync(this.path, { recursive: true, force: true });
+          continue;
+        }
+        fail("locked", "slot is held by another controller", { pid, since });
       }
-      const pidText = readTextOrEmpty(join(this.path, "pid"));
-      const sinceText = readTextOrEmpty(join(this.path, "since"));
-      const pid = /^\d+$/.test(pidText) ? Number(pidText) : null;
-      const since = /^\d+$/.test(sinceText) ? Number(sinceText) : null;
-      const staleAfter = Number(process.env.PB_LOCK_STALE_SECONDS ?? "600");
-      const stale = pid === null || since === null || !pidAlive(pid) || Math.floor(Date.now() / 1000) - since > staleAfter;
-      if (attempt === 0 && stale) {
-        process.stderr.write(`pr-babysit: reclaiming stale lock ${this.path} (pid ${pidText || "?"}, since ${sinceText || "?"})
-`);
-        rmSync(this.path, { recursive: true, force: true });
-        continue;
-      }
-      fail("locked", "slot is held by another controller", { pid, since });
+    } catch (error) {
+      this.release();
+      throw error;
     }
   }
   release() {

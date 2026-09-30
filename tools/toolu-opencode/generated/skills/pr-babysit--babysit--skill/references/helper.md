@@ -1,9 +1,9 @@
 # pr-babysit helper contract
 
-The tick helper is the deterministic half of babysitting. It lives under the
-plugin's `scripts/` directory, is plain bash (`gh` and `jq` only; bash 3.2 — `git`
-is used by the workflow's worktree steps, not by these scripts), and
-is the same on Claude Code and Codex — only `--state-file` differs by host.
+The tick helper is the deterministic half of babysitting. Its Bun bundle lives
+under the plugin's `hooks/dist/` directory and runs the same way on Claude Code
+and Codex — only `--state-file` differs by host. The fixer scripts remain in
+`scripts/` until their separate port.
 Read this file instead of the script sources: every field the agent may act
 on is listed here. Fields not listed are not part of the contract.
 
@@ -17,7 +17,7 @@ on is listed here. Fields not listed are not part of the contract.
 | `babysit-reply-thread.js` | Write side: post one reply (thread / conversation / review-level), idempotent per reviewer comment. | `0` · `2` · `3` · `4` duplicate_reply · `75` |
 | `babysit-resolve-thread.js` | Write side: `resolveReviewThread`, confirmed from the response, retried, recorded. | `0` · `2` · `3` · `5` resolve_unconfirmed · `75` |
 | `babysit-record.js` | Hand agent decisions to the reducer: `round`, `flag-injection`, `status`. | `0` · `2` · `3` · `75` |
-| `babysit-parse-verdict.js` | Existing verdict parser; unchanged. | — |
+| `babysit-parse-verdict.js` | Parse the CI review-bot comment from stdin. | `0` |
 | `route-fix.sh` | Fix routing: Jev-scores the round's items file, tiers and groups it, picks host/model/effort per group from `prBabysit` config. Reads no GitHub. | `0` · `2` · `3` |
 | `dispatch-fix.sh` | Herdr fixer dispatch: `start` / `wait` / `cleanup` of the slot's herdr worktree and fixer agents. | `0` · `2` · `3` · `75` |
 | `fixer-report.sh` | Run by a fixer agent, never by the controller: writes its done/failed report. | `0` · `2` |
