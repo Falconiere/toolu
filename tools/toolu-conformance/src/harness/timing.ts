@@ -73,12 +73,14 @@ export async function measureAlternatingLatency<T>(
   }
   const samples: [number[], number[]] = [[], []];
   const warmup = opts.warmup ?? 0;
-  for (let round = 0; round < warmup + opts.runs; round += 1) {
-    for (const index of [0, 1] as const) {
-      const reading = sampleOf(await once(sides[index]));
-      if (round >= warmup) samples[index].push(reading);
-    }
-  }
+  const calls = [...Array(warmup + opts.runs).keys()].flatMap((round) =>
+    ([0, 1] as const).map((index) => ({ round, index })),
+  );
+  await calls.reduce<Promise<void>>(async (previous, { round, index }) => {
+    await previous;
+    const reading = sampleOf(await once(sides[index]));
+    if (round >= warmup) samples[index].push(reading);
+  }, Promise.resolve());
   return [latencyOf(samples[0]), latencyOf(samples[1])];
 }
 
@@ -93,14 +95,15 @@ export function latencyOf(samples: readonly number[]): Latency {
   };
 }
 
+const formatMs = (value: number): string => value.toFixed(1);
+
 /** Shared Markdown comparison used by the language and structural hook benchmarks. */
 export function latencyComparisonTable(
   rows: readonly { name: string; bash: Latency; ts: Latency }[],
 ): string {
-  const ms = (value: number): string => value.toFixed(1);
   const body = rows.map(
     (row) =>
-      `| ${row.name} | ${ms(row.bash.p50)} | ${ms(row.ts.p50)} | ${ms(row.ts.p50 - row.bash.p50)} |`,
+      `| ${row.name} | ${formatMs(row.bash.p50)} | ${formatMs(row.ts.p50)} | ${formatMs(row.ts.p50 - row.bash.p50)} |`,
   );
   const head = ["| Fixture | bash module p50 | TS module p50 | TS − bash |", "|---|---|---|---|"];
   return `${[...head, ...body].join("\n")}\n`;

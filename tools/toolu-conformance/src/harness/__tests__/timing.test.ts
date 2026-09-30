@@ -87,7 +87,9 @@ test.concurrent("alternating latency samples each side in order and discards war
   expect(ts.samples).toEqual([4, 6]);
   expect(bash.p50).toBe(3);
   expect(ts.p50).toBe(4);
-  const err = await rejection(measureAlternatingLatency([0, 1], async () => 1, { runs: 0 }));
+  const err = await rejection(
+    measureAlternatingLatency([0, 1], () => Promise.resolve(1), { runs: 0 }),
+  );
   expect(err).toBeInstanceOf(RangeError);
 });
 
