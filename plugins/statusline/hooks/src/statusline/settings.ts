@@ -7,7 +7,11 @@
 import { homedir } from "node:os";
 import { envValue, type HostEnv } from "@toolu/core/host";
 
-/** Substring every command pointing at the published statusline contains. */
+/**
+ * Substring every command pointing at the published statusline contains. The
+ * published link keeps its `.sh` name while it points at `hooks/dist/statusline.js`,
+ * so every `settings.json` wired before the port still names a live path.
+ */
 export const MARKER = "statusline/statusline.sh";
 
 export function settingsPath(env: HostEnv): string {
