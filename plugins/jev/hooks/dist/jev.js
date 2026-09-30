@@ -149,7 +149,12 @@ ${USAGE}`);
       const key = split < 0 ? value : value.slice(0, split);
       if (!key)
         fail("--option needs a KEY (KEY=DESCRIPTION)");
-      criteria[key] = split < 0 ? null : value.slice(split + 1);
+      Object.defineProperty(criteria, key, {
+        value: split < 0 ? null : value.slice(split + 1),
+        enumerable: true,
+        writable: true,
+        configurable: true
+      });
       i++;
     } else if (command === "score" && (arg === "-l" || arg === "--level")) {
       levels.push(required(args, i, "--level"));

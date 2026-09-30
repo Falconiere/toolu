@@ -23,6 +23,7 @@ async function jev(
 ) {
   const env: Record<string, string | undefined> = { ...process.env, ...fixture.env, ...extraEnv };
   delete env.TYPESAFE_API_KEY;
+  if (!("JEV_TIMEOUT" in extraEnv)) delete env.JEV_TIMEOUT;
   if (key !== null) env.TYPESAFE_API_KEY = key;
   const child = Bun.spawn([bundle, ...args], {
     env,
@@ -143,6 +144,35 @@ test("choice, score and ask keep their criteria shapes and answer projections", 
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("a Choice option named __proto__ remains a data key", async () => {
+  const response = {
+    ...answer,
+    answers: {
+      q: {
+        type: "choice",
+        choice: "__proto__",
+        probabilities: { ["__proto__"]: 0.6, other: 0.4 },
+        confidence: 0.6,
+      },
+    },
+  };
+  fixture.plan([{ body: JSON.stringify(response) }]);
+  const run = await jev([
+    "choice",
+    "-s",
+    "ticket",
+    "Which?",
+    "-o",
+    "__proto__=prototype",
+    "-o",
+    "other",
+  ]);
+  expect(run.status).toBe(0);
+  const body = JSON.parse(fixture.requests[0]?.body ?? "");
+  expect(Object.keys(body.questions.q.criteria)).toEqual(["__proto__", "other"]);
+  expect(body.questions.q.criteria["__proto__"]).toBe("prototype");
 });
 
 test("ask reads a question map from stdin and pins the model", async () => {
