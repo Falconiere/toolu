@@ -26,7 +26,7 @@ const REGISTRY: readonly Publisher[] = [
     plugin: "python-quality",
     published: "post-tools.d/python-quality@toolu__python-quality.js",
   },
-  { plugin: "rust-quality", published: "post-tools.d/rust-quality@toolu__rust-quality.sh" },
+  { plugin: "rust-quality", published: "post-tools.d/rust-quality@toolu__rust-quality.js" },
   { plugin: "ts-quality", published: "post-tools.d/ts-quality@toolu__ts-quality.js" },
 ];
 

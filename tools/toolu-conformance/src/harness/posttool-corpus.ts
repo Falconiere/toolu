@@ -1,9 +1,9 @@
 /**
  * The PostToolUse fixture corpus (#259): the dispatcher's decision paths, the
- * gate-status and push-waiver modules, and the bash language-quality registry
- * module (rust-quality until #267) registered by its real `register.sh`.
- * ts-quality (#265) and python-quality (#266) are TypeScript modules, which
- * bash `mod.sh` cannot run; their parity is their own golden suites. Triggers come
+ * gate-status and push-waiver modules, and registry `.sh` modules. The
+ * language-quality plugins are TypeScript modules (#265 to #267), which bash
+ * `mod.sh` cannot run; their parity is their own golden suites, and a fixture
+ * module stands in for them on the per-path walk. Triggers come
  * from the `post-tools` bats suites. `expect` is the decision class on each
  * host; post-tool decisions are the same on Claude Code and Codex.
  */
@@ -20,7 +20,7 @@ import {
   type Fixture,
 } from "./fixtures.ts";
 import { featureBranch, stateDir } from "./pretool-case.ts";
-import { hostConfigRoot, installPlugins, registerPlugin, type PretoolHost } from "./pretool.ts";
+import { hostConfigRoot, installPlugins, type PretoolHost } from "./pretool.ts";
 import type { Sandbox } from "./sandbox.ts";
 
 export type PostOutcome = "block" | "advisory" | "silent" | "exit2";
@@ -32,8 +32,6 @@ export type PosttoolCase = {
   stdin?: string;
   /** Project `toolu.config.json`. */
   config?: object;
-  /** Plugins whose real register hook syncs their modules into the registry. */
-  register?: readonly string[];
   setup?: (sb: Sandbox, host: PretoolHost) => void;
   expect: PostOutcome;
 };
@@ -83,24 +81,22 @@ function pendingWaiver(sb: Sandbox, host: PretoolHost): void {
   const sha = diffSha(sb.project, "main", { env }) ?? "";
   pushWaiverPend(sb.project, "feat_example", sha, "main", "no-state", { env, host });
 }
-
-/** Project marker files, committed: detection reads the repository, as in the bats setup. */
-function project(files: Record<string, string>): (sb: Sandbox) => void {
-  return (sb) => {
-    for (const [rel, body] of Object.entries(files)) put(sb.path(rel), body);
-    sb.git("add", ...Object.keys(files));
-    sb.git("commit", "-q", "-m", "project markers");
-  };
-}
-
-const rustProject = project({ "Cargo.toml": '[package]\nname = "fixture"\nversion = "0.1.0"\n' });
-
 function registryModule(sb: Sandbox, host: PretoolHost, file: string, body: string): void {
   const path = join(hostConfigRoot(sb, host), "toolu", "post-tools.d", file);
   put(path, `#!/usr/bin/env bash\n${body}\n`);
 }
 
-const BAD_RS = "#[allow(dead_code)]\nfn bad() {}\n";
+/** Fails each edited path in the gate through toolu's hooks lib, as the bash quality modules did. */
+const GATE_MODULE = [
+  '. "$TOOLU_LIB_DIR/detect.sh"',
+  '. "$TOOLU_LIB_DIR/gate-file.sh"',
+  `file=$(jq -r '.tool_input.file_path // empty' <<<"$input")`,
+  '[ -n "$file" ] || exit 0',
+  'gate="$(toolu_project_state_root "$PROJECT_ROOT")/quality-gate-status.json"',
+  'mkdir -p "${gate%/*}"',
+  'gate_record_failure "$gate" "$file" fixture-hook "fixture violation" "fixture violation in $file"',
+  `jq -n --arg f "$file" '{hookSpecificOutput:{hookEventName:"PostToolUse",additionalContext:("fixture violation in " + $f)}}'`,
+].join("\n");
 
 export const POSTTOOL_CORPUS: readonly PosttoolCase[] = [
   {
@@ -155,25 +151,23 @@ export const POSTTOOL_CORPUS: readonly PosttoolCase[] = [
   { name: "empty stdin is silent", stdin: "", expect: "silent" },
   { name: "non-JSON stdin is silent", stdin: "not json\n", expect: "silent" },
   {
-    name: "rust-quality registry: lint suppression in a written file",
-    register: ["rust-quality"],
-    setup: rustProject,
-    fixture: wrote("src/bad.rs", BAD_RS),
+    name: "registry: a written file reaches a module with its path",
+    setup: (sb, host) => registryModule(sb, host, "fixture@toolu__gate.sh", GATE_MODULE),
+    fixture: wrote("src/bad.txt", "bad\n"),
     expect: "advisory",
   },
   {
-    name: "multi-path patch through rust-quality",
-    register: ["rust-quality"],
-    setup: (sb) => {
-      rustProject(sb);
-      put(sb.path("src/bad.rs"), BAD_RS);
-      put(sb.path("src/worse.rs"), BAD_RS);
+    name: "registry: a multi-path patch records a gate entry per path",
+    setup: (sb, host) => {
+      registryModule(sb, host, "fixture@toolu__gate.sh", GATE_MODULE);
+      put(sb.path("src/bad.txt"), "bad\n");
+      put(sb.path("src/worse.txt"), "worse\n");
     },
     fixture: () =>
       postToolFixture(
         patchFixture([
-          { op: "update", path: "src/bad.rs", lines: ["-a", "+b"] },
-          { op: "update", path: "src/worse.rs", lines: ["-a", "+b"] },
+          { op: "update", path: "src/bad.txt", lines: ["-a", "+b"] },
+          { op: "update", path: "src/worse.txt", lines: ["-a", "+b"] },
         ]),
         "Done",
       ),
@@ -214,16 +208,14 @@ export const POSTTOOL_CORPUS: readonly PosttoolCase[] = [
   },
 ];
 
-const SPECS = ["toolu@toolu", "fixture@toolu", "ts-quality@toolu", "rust-quality@toolu"];
+const SPECS = ["toolu@toolu", "fixture@toolu", "ts-quality@toolu"];
 
-/** Put the sandbox in `c`'s state for `host`: plugins installed and registered, config, setup. */
-export async function preparePost(sb: Sandbox, host: PretoolHost, c: PosttoolCase): Promise<void> {
+/** Put the sandbox in `c`'s state for `host`: plugins installed, config, setup. */
+export function preparePost(sb: Sandbox, host: PretoolHost, c: PosttoolCase): void {
   // No detached gc/maintenance: it would write into `.git` between the two runs.
   sb.git("config", "maintenance.auto", "false");
   sb.git("config", "gc.auto", "0");
   installPlugins(sb, ...SPECS);
-  // Each plugin's register.sh writes only its own `<spec>__*` files.
-  await Promise.all((c.register ?? []).map((plugin) => registerPlugin(sb, host, plugin)));
   if (c.config !== undefined) sb.writeConfig(host, "project", c.config);
   c.setup?.(sb, host);
 }

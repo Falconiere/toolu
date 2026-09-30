@@ -1,7 +1,7 @@
 // Cross-plugin register.sh invariants.
 //
-// The ts-quality/rust-quality byte-parity drift guard already lives in
-// plugins/rust-quality/hooks/__tests__/register-sync.bats -- this suite covers the
+// The ts-quality and rust-quality register bundles have their own suites in
+// plugins/<plugin>/hooks/src/__tests__/register.test.ts -- this suite covers the
 // invariant that applies to EVERY plugin's register.sh instead.
 import { expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
