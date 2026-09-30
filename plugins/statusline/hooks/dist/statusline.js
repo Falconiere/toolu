@@ -3322,8 +3322,8 @@ function jevReadiness(env, root) {
   const reasons = [];
   if (!executableFile(wrapper))
     reasons.push("missing executable wrapper");
-  if (Bun.which("curl", { PATH: envValue(env, "PATH") ?? "" }) === null) {
-    reasons.push("missing curl");
+  if (Bun.which("bun", { PATH: envValue(env, "PATH") ?? "" }) === null) {
+    reasons.push("missing bun");
   }
   const key = envValue(env, "TYPESAFE_API_KEY");
   if (key === undefined)

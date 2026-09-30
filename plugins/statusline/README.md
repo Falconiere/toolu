@@ -16,7 +16,7 @@ model | effort:high | ctx:45k/200k (22%) | example.com | ✗ gate:failing | my-f
 | `✗ gate:failing` | host-native `.claude/tmp/quality-gate-status.json` at the git root | a **gate writer** (e.g. the `rust-quality` / `ts-quality` / `python-quality` / `toolu` plugins) marks the gate failing |
 | folder + branch + status | git, from the workspace dir | inside a git repo — `↑N↓M` shows ahead/behind of the tracked remote, `[+N ~N ?N]` shows staged/unstaged/untracked file counts (both omitted when clean and up-to-date) |
 | `[COMEMORY:N]` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory-status/<repo>.json` | the **comemory** plugin published a memory count this session |
-| `[JEV:READY]` / `[JEV:UNAVAILABLE: reason]` | `<config-dir>/jev/jev.sh`, curl, and `TYPESAFE_API_KEY` in the environment | Jev published a wrapper; green when locally ready, yellow with the reason when unavailable |
+| `[JEV:READY]` / `[JEV:UNAVAILABLE: reason]` | `<config-dir>/jev/jev.sh`, Bun, and `TYPESAFE_API_KEY` in the environment | Jev published a wrapper; green when locally ready, yellow with the reason when unavailable |
 
 Codex exposes `$statusline:status` instead of a persistent bar. It reports the
 repository, branch/ahead/behind state, working-tree counts, quality gate from
@@ -27,11 +27,11 @@ available to the skill.
 
 Jev readiness uses the active host's config directory (`CLAUDE_CONFIG_DIR` or
 `CODEX_HOME`, with `TOOLU_CONFIG_DIR` taking priority). It checks for an executable
-wrapper, curl, and a nonempty API key without line breaks. It never prints the
+wrapper, Bun, and a nonempty API key without line breaks. It never prints the
 key, reads `.env`, executes the wrapper, or makes an API call. **Ready means local
 prerequisites are present**; it does not verify authentication or service health.
 An unpublished wrapper hides the segment; a broken published wrapper shows
-`missing executable wrapper`. Other reasons include `missing curl`,
+`missing executable wrapper`. Other reasons include `missing bun`,
 `missing TYPESAFE_API_KEY`, and `invalid TYPESAFE_API_KEY`. Multiple reasons are
 separated by semicolons.
 

@@ -151,8 +151,8 @@ function jevReadiness(env: HostEnv, root: string): ProjectStatus["jev"] {
   if (probe(() => lstatSync(wrapper)) === undefined) return { status: "", reason: "" };
   const reasons: string[] = [];
   if (!executableFile(wrapper)) reasons.push("missing executable wrapper");
-  if (Bun.which("curl", { PATH: envValue(env, "PATH") ?? "" }) === null) {
-    reasons.push("missing curl");
+  if (Bun.which("bun", { PATH: envValue(env, "PATH") ?? "" }) === null) {
+    reasons.push("missing bun");
   }
   const key = envValue(env, "TYPESAFE_API_KEY");
   if (key === undefined) reasons.push("missing TYPESAFE_API_KEY");

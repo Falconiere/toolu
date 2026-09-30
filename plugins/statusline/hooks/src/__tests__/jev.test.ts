@@ -8,7 +8,7 @@ import { chmodSync, copyFileSync, mkdirSync, rmSync, symlinkSync } from "node:fs
 import { join } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import {
-  JEV_SH,
+  JEV_BUNDLE,
   KEY,
   cfgOf,
   payload,
@@ -89,7 +89,7 @@ test.concurrent("Jev readiness: a non-executable wrapper or directory cannot be 
   using sb = createSandbox();
   const wrapper = join(cfgOf(sb), "jev/jev.sh");
   mkdirSync(join(cfgOf(sb), "jev"), { recursive: true });
-  copyFileSync(JEV_SH, wrapper);
+  copyFileSync(JEV_BUNDLE, wrapper);
   chmodSync(wrapper, 0o644);
   expect(await renderWorkspace(sb)).toEndWith(unavailable("missing executable wrapper"));
   rmSync(wrapper);
@@ -124,16 +124,14 @@ test.concurrent("Jev readiness: a workspace path under a regular file keeps read
   );
 });
 
-test.concurrent("Jev readiness: the report names missing curl using only local prerequisites", async () => {
+test.concurrent("Jev readiness: the report names missing Bun using only local prerequisites", async () => {
   using sb = createSandbox();
   await publishJev(sb.codexHome, "codex");
   const bin = sb.path("bin");
   mkdirSync(bin);
   const found = Bun.which("git");
   if (found !== null) symlinkSync(found, join(bin, "git"));
-  expect(await report(sb, sb.project, { PATH: bin })).toContain(
-    "Jev: unavailable — missing curl\n",
-  );
+  expect(await report(sb, sb.project, { PATH: bin })).toContain("Jev: unavailable — missing bun\n");
 });
 
 test.concurrent("Jev readiness: hosts never fall back to another profile's wrapper", async () => {

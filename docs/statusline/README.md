@@ -70,15 +70,15 @@ model | effort:high | ctx:45k/200k (22%) | example.com | ✗ gate:failing | my-f
 | `✗ gate:failing` | `.claude/tmp/quality-gate-status.json` at git root | Quality gate is failing |
 | `folder` + `branch` + `↑↓` + `[+~?]` | git, from workspace dir | Inside a git repo — `↑N↓M` shows ahead/behind of the tracked remote, `[+N ~N ?N]` shows staged/unstaged/untracked file counts (both omitted when clean and up-to-date) |
 | `[COMEMORY:N]` | `${CLAUDE_CONFIG_DIR}/comemory-status/<repo>.json` | Comemory plugin published a memory count |
-| `[JEV:READY]` / `[JEV:UNAVAILABLE: reason]` | Published Jev wrapper, curl, and environment API key | Wrapper is published; green when locally ready, yellow with the reason when unavailable |
+| `[JEV:READY]` / `[JEV:UNAVAILABLE: reason]` | Published Jev wrapper, Bun, and environment API key | Wrapper is published; green when locally ready, yellow with the reason when unavailable |
 
-Jev readiness checks `<config-dir>/jev/jev.sh`, curl, and a nonempty
+Jev readiness checks `<config-dir>/jev/jev.sh`, Bun, and a nonempty
 `TYPESAFE_API_KEY` without line breaks. Config resolution honors
 `TOOLU_CONFIG_DIR`, then the active host's `CLAUDE_CONFIG_DIR` or `CODEX_HOME`,
 then its default directory. It never prints the key, reads `.env`, runs the
 wrapper, or calls the API. **Ready means locally configured**, not verified
 authentication or service health. Missing prerequisites show a reason such as
-`missing TYPESAFE_API_KEY`, `invalid TYPESAFE_API_KEY`, `missing curl`, or
+`missing TYPESAFE_API_KEY`, `invalid TYPESAFE_API_KEY`, `missing bun`, or
 `missing executable wrapper`; multiple reasons are separated by semicolons.
 No published wrapper means no Jev segment. Codex reports the same information
 as `Jev: ready` or `Jev: unavailable — reason`.

@@ -9,7 +9,7 @@ export const PLUGIN = resolve(import.meta.dir, "../../..");
 export const RENDER = join(PLUGIN, "hooks/dist/statusline.js");
 export const STATUS = join(PLUGIN, "hooks/dist/status.js");
 export const SETUP = join(PLUGIN, "hooks/dist/setup.js");
-export const JEV_SH = resolve(PLUGIN, "../jev/skills/jev/scripts/jev.sh");
+export const JEV_BUNDLE = resolve(PLUGIN, "../jev/hooks/dist/jev.js");
 const JEV_HOOK = resolve(PLUGIN, "../jev/hooks/dist/session-start.js");
 
 export const KEY = "statusline-test-key";
