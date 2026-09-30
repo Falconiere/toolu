@@ -68,11 +68,15 @@ const SIZE: readonly PyCase[] = [
 ];
 
 const DOCS: readonly PyCase[] = [
-  pyCase("docs: top-level def without a docstring", wrote("m.py", "def undocumented():\n    return 1\n"), {
-    expect: "advisory",
-    contains: [DOC, "undocumented"],
-    absent: ["QUALITY VIOLATION"],
-  }),
+  pyCase(
+    "docs: top-level def without a docstring",
+    wrote("m.py", "def undocumented():\n    return 1\n"),
+    {
+      expect: "advisory",
+      contains: [DOC, "undocumented"],
+      absent: ["QUALITY VIOLATION"],
+    },
+  ),
   pyCase(
     "docs: top-level def with a docstring",
     wrote("m.py", 'def documented():\n    """Does a thing."""\n    return 1\n'),
@@ -98,7 +102,10 @@ const DOCS: readonly PyCase[] = [
   ),
   pyCase(
     "docs: a multi-line signature is tracked to its colon",
-    wrote("m.py", 'def multi_line(\n    a,\n    b,\n):\n    """Adds two numbers."""\n    return a + b\n'),
+    wrote(
+      "m.py",
+      'def multi_line(\n    a,\n    b,\n):\n    """Adds two numbers."""\n    return a + b\n',
+    ),
     { expect: "silent" },
   ),
   pyCase(
@@ -113,10 +120,14 @@ const SUPPRESSION: readonly PyCase[] = [
     expect: "advisory",
     contains: [SUPPRESSED, "bare except:"],
   }),
-  pyCase("suppression: one-line except ...: pass", wrote("m.py", "try:\n    pass\nexcept ValueError: pass\n"), {
-    expect: "advisory",
-    contains: ["one-line except"],
-  }),
+  pyCase(
+    "suppression: one-line except ...: pass",
+    wrote("m.py", "try:\n    pass\nexcept ValueError: pass\n"),
+    {
+      expect: "advisory",
+      contains: ["one-line except"],
+    },
+  ),
   pyCase("suppression: blanket # noqa", wrote("m.py", "x = 1  # noqa\n"), {
     expect: "advisory",
     contains: ["blanket # noqa"],
@@ -176,7 +187,10 @@ const TESTS: readonly PyCase[] = [
     "tests: test_*.py next to its module",
     [
       {
-        write: { "pkg/calc.py": "def add(a, b):\n    return a + b\n", "pkg/test_calc.py": "def test_add():\n    assert True\n" },
+        write: {
+          "pkg/calc.py": "def add(a, b):\n    return a + b\n",
+          "pkg/test_calc.py": "def test_add():\n    assert True\n",
+        },
         file: "pkg/test_calc.py",
       },
     ],

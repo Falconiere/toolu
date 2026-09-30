@@ -65,7 +65,13 @@ test.skipIf(!HAS_AST_GREP)("every matched source line becomes a rule-tagged exce
   ]);
   expect(ofRule(result, "empty-catch")).toEqual([
     { ruleId: "empty-catch", line: 5, excerpt: "src/a.ts:5:  try {", text: "  try {", first: true },
-    { ruleId: "empty-catch", line: 6, excerpt: "src/a.ts:6:    f();", text: "    f();", first: false },
+    {
+      ruleId: "empty-catch",
+      line: 6,
+      excerpt: "src/a.ts:6:    f();",
+      text: "    f();",
+      first: false,
+    },
     {
       ruleId: "empty-catch",
       line: 7,

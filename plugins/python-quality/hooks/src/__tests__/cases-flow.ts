@@ -57,7 +57,12 @@ const DISPATCH: readonly PyCase[] = [
   ),
   pyCase(
     "dispatch: clearing one file keeps another's failure",
-    [...edit("a.py", BARE), ...edit("b.py", BARE), ...edit("b.py", SCOPED), ...edit("a.py", SCOPED)],
+    [
+      ...edit("a.py", BARE),
+      ...edit("b.py", BARE),
+      ...edit("b.py", SCOPED),
+      ...edit("a.py", SCOPED),
+    ],
     { expect: "silent" },
   ),
   pyCase(
@@ -78,7 +83,10 @@ const ASSEMBLED: readonly PyCase[] = [
   pyCase(
     "assembled: fixing one of two keeps the gate failing",
     [
-      ...wrote("bad.py", `def big():\n    except_marker = 1\n${assignments(1, 6, "    ")}    # noqa\n`),
+      ...wrote(
+        "bad.py",
+        `def big():\n    except_marker = 1\n${assignments(1, 6, "    ")}    # noqa\n`,
+      ),
       ...wrote("bad.py", `def big():\n    except_marker = 1\n${assignments(1, 6, "    ")}`),
     ],
     { expect: "advisory", contains: ["exceeds 5-line limit"], absent: ["blanket # noqa"] },
@@ -129,12 +137,22 @@ const FLOW: readonly PyCase[] = [
     [{ write: { "src/a.py": BARE }, tool: "Bash", file: "src/a.py", input: { command: "true" } }],
     { expect: "silent" },
   ),
-  pyCase("flow: python3 not on PATH", wrote("bad.py", BARE), { expect: "silent" }, {
-    env: pathWithout("python3"),
-  }),
-  pyCase("DEV-1: no jq on PATH", wrote("bad.py", BARE), { expect: "silent" }, {
-    env: pathWithout("jq"),
-  }),
+  pyCase(
+    "flow: python3 not on PATH",
+    wrote("bad.py", BARE),
+    { expect: "silent" },
+    {
+      env: pathWithout("python3"),
+    },
+  ),
+  pyCase(
+    "DEV-1: no jq on PATH",
+    wrote("bad.py", BARE),
+    { expect: "silent" },
+    {
+      env: pathWithout("jq"),
+    },
+  ),
   pyCase(
     "flow: malformed thresholds fall back to the defaults",
     wrote("big.py", assignments(1, 401)),
@@ -153,10 +171,15 @@ const FLOW: readonly PyCase[] = [
     { expect: "advisory", contains: [SUPPRESSED] },
     { setup: (sb) => sb.git("worktree", "add", "-q", "-b", "side", "wt") },
   ),
-  pyCase("codex: a written file with a violation", wrote("bad.py", BARE), {
-    expect: "advisory",
-    contains: [SUPPRESSED],
-  }, { hosts: ["codex"] }),
+  pyCase(
+    "codex: a written file with a violation",
+    wrote("bad.py", BARE),
+    {
+      expect: "advisory",
+      contains: [SUPPRESSED],
+    },
+    { hosts: ["codex"] },
+  ),
   pyCase(
     "codex: a moved file clears its source entry and checks its target",
     [
@@ -179,7 +202,8 @@ const FLOW: readonly PyCase[] = [
     steps: [
       {
         write: {
-          "tests/test_bad.py": "from unittest.mock import patch\n\n\ndef test_x():\n    assert patch\n",
+          "tests/test_bad.py":
+            "from unittest.mock import patch\n\n\ndef test_x():\n    assert patch\n",
           "src/bad.rs": "#[allow(dead_code)]\nfn bad() {}\n",
         },
         patch: [

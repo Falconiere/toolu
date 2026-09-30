@@ -13,24 +13,40 @@ const repeat = (n: number, line: (i: number) => string) =>
 const limits = (python: object): Partial<PyCase> => ({ config: { lang: { python } } });
 
 const CAPS: readonly PyCase[] = [
-  pyCase("edges: more than five suppressions list the first five", wrote("m.py", repeat(7, (i) => `x${String(i)} = 1  # noqa\n`)), {
-    expect: "advisory",
-    contains: ["5: blanket # noqa"],
-    absent: ["6: blanket"],
-  }),
+  pyCase(
+    "edges: more than five suppressions list the first five",
+    wrote(
+      "m.py",
+      repeat(7, (i) => `x${String(i)} = 1  # noqa\n`),
+    ),
+    {
+      expect: "advisory",
+      contains: ["5: blanket # noqa"],
+      absent: ["6: blanket"],
+    },
+  ),
   pyCase(
     "edges: more than five mock imports list the first five",
-    wrote("test_a.py", `${repeat(7, () => "import mock\n")}\n\ndef test_it():\n    """T."""\n    assert mock\n`),
+    wrote(
+      "test_a.py",
+      `${repeat(7, () => "import mock\n")}\n\ndef test_it():\n    """T."""\n    assert mock\n`,
+    ),
     { expect: "advisory", contains: ["5: import mock"], absent: ["6: import mock"] },
   ),
   pyCase(
     "edges: more than three undocumented defs list the first three",
-    wrote("m.py", repeat(5, (i) => `def f${String(i)}():\n    return ${String(i)}\n\n\n`)),
+    wrote(
+      "m.py",
+      repeat(5, (i) => `def f${String(i)}():\n    return ${String(i)}\n\n\n`),
+    ),
     { expect: "advisory", contains: ["f3"], absent: ["f4"] },
   ),
   pyCase(
     "edges: every long function is listed",
-    wrote("m.py", repeat(3, (i) => `def g${String(i)}():\n    """D."""\n    a = 1\n    return a\n\n\n`)),
+    wrote(
+      "m.py",
+      repeat(3, (i) => `def g${String(i)}():\n    """D."""\n    a = 1\n    return a\n\n\n`),
+    ),
     { expect: "advisory", contains: ["g1:1", "g2:7", "g3:13"] },
     limits({ maxFnLines: 2 }),
   ),
@@ -63,7 +79,16 @@ const LINES: readonly PyCase[] = [
       "m.py",
       "a = 1  # noqa:E501\nb = 2  # noqa : x\nc = 3  #noqa\nd = 4  # NOQA\ne = 5  # type:ignore\nf = 6  # type: ignore [x]\ng = 7\t#\tnoqa\n",
     ),
-    { expect: "advisory", contains: ["3: blanket # noqa", "5: blanket # type", "6: blanket # type", "7: blanket # noqa"], absent: ["1: ", "2: ", "4: "] },
+    {
+      expect: "advisory",
+      contains: [
+        "3: blanket # noqa",
+        "5: blanket # type",
+        "6: blanket # type",
+        "7: blanket # noqa",
+      ],
+      absent: ["1: ", "2: ", "4: "],
+    },
   ),
   pyCase("edges: tab-indented except", wrote("m.py", "try:\n\tpass\n\texcept\t:\t# x\n"), {
     expect: "advisory",
@@ -87,7 +112,12 @@ const MOCK_SHAPES: readonly PyCase[] = [
   ),
   pyCase(
     "edges: conftest.py with a mock import is not scanned",
-    [{ write: { "pkg/mod.py": '"""M."""\n', "pkg/conftest.py": "from unittest import mock\n" }, file: "pkg/conftest.py" }],
+    [
+      {
+        write: { "pkg/mod.py": '"""M."""\n', "pkg/conftest.py": "from unittest import mock\n" },
+        file: "pkg/conftest.py",
+      },
+    ],
     { expect: "silent" },
   ),
 ];
@@ -95,7 +125,10 @@ const MOCK_SHAPES: readonly PyCase[] = [
 const DOC_SHAPES: readonly PyCase[] = [
   pyCase(
     "edges: docstring prefixes",
-    wrote("m.py", 'def f():\n    r"""Raw."""\n\n\ndef g():\n    b"""Bytes."""\n\n\ndef h():\n    F\'\'\'Fmt.\'\'\'\n'),
+    wrote(
+      "m.py",
+      'def f():\n    r"""Raw."""\n\n\ndef g():\n    b"""Bytes."""\n\n\ndef h():\n    F\'\'\'Fmt.\'\'\'\n',
+    ),
     { expect: "advisory", contains: ["5: g"], absent: ["1: f", "9: h"] },
   ),
   pyCase(
@@ -113,7 +146,10 @@ const DOC_SHAPES: readonly PyCase[] = [
 const SPANS: readonly PyCase[] = [
   pyCase(
     "edges: a nested def counts toward its outer",
-    wrote("m.py", 'def outer():\n    """Doc."""\n    def inner():\n        return 1\n    return inner\n'),
+    wrote(
+      "m.py",
+      'def outer():\n    """Doc."""\n    def inner():\n        return 1\n    return inner\n',
+    ),
     { expect: "advisory", contains: ["outer:1 (5 lines)"], absent: ["inner:"] },
     limits({ maxFnLines: 4 }),
   ),
