@@ -1,6 +1,6 @@
 # Hook module registry
 
-Domain plugins (ast-grep and the language-quality plugins) add rules to toolu's core `PreToolUse` and `PostToolUse` dispatchers through a runtime registry in the host's config directory. `@toolu/core/registry` ([#257](https://github.com/Falconiere/toolu/issues/257)) imports bundled ESM contributions in-process and runs remaining registry `.sh` modules through Bash. Both dispatchers and all toolu built-in gates are native TypeScript. ts-quality (#265), python-quality (#266) and ast-grep (#268) are bundled registry modules; rust-quality retains its `.sh` module until its port (#267).
+Domain plugins (ast-grep and the language-quality plugins) add rules to toolu's core `PreToolUse` and `PostToolUse` dispatchers through a runtime registry in the host's config directory. `@toolu/core/registry` ([#257](https://github.com/Falconiere/toolu/issues/257)) imports bundled ESM contributions in-process and runs registry `.sh` modules through Bash. Both dispatchers and all toolu built-in gates are native TypeScript. ts-quality (#265), python-quality (#266), rust-quality (#267) and ast-grep (#268) are bundled registry modules.
 
 ## Layout
 
@@ -101,13 +101,13 @@ toolu's PostToolUse entry for edit, shell and search tools runs the Bun bundle `
   - push-waiver detects pushes through the same layer (#283 item 8).
   
   Their bash scripts stay as the parity baseline.
-- **Registry.** `post-tools.d` runs after the built-ins. ts-quality (#265) and python-quality (#266) run there in process; rust-quality still runs on bash (#267).
+- **Registry.** `post-tools.d` runs after the built-ins. ts-quality (#265), python-quality (#266) and rust-quality (#267) run there in process.
 - **Parity.**
-  - `plugins/toolu/hooks/src/__tests__/post-tools-parity.test.ts` runs the `@toolu/conformance` PostToolUse corpus as Claude Code and Codex deliver it. It compares stdout, the exit code and the project's gate, waiver and telemetry files between `bash mod.sh` and the bundle. The corpus includes the bash language-quality plugins registered by their real `register.sh`. A TypeScript module cannot run under `bash mod.sh`, so a ported plugin leaves this corpus for its own golden suite (see below).
+  - `plugins/toolu/hooks/src/__tests__/post-tools-parity.test.ts` runs the `@toolu/conformance` PostToolUse corpus as Claude Code and Codex deliver it. It compares stdout, the exit code and the project's gate, waiver and telemetry files between `bash mod.sh` and the bundle. A TypeScript module cannot run under `bash mod.sh`, so each language-quality plugin has its own golden suite (see below); in the corpus, a fixture `.sh` registry module records a gate entry per patched path.
   - `post-tools-283.test.ts` pins the named #283 fixtures: there the bundle is right and bash is recorded as the known-wrong baseline.
 - **Failure.** An unexpected dispatcher error exits 2 with `toolu PostToolUse dispatcher failed: <message>`, so the model sees that the post-tool checks did not run.
 
-`bun run tooling/src/benchmarks/post-tools-latency.ts [--runs N] [--assert]` measures p50 for `bash mod.sh` against the bundle. Each variant runs in its own identically prepared sandbox, and the two alternate run by run, so a load change during a fixture hits both. On an Apple M2 Max with Bun 1.4.2 (9 runs, load average 5 to 8, other agents active), the bundle ran 50 to 184 ms faster on every fixture. The largest gain was a two-path patch through ts-quality and rust-quality: 891 ms against 708 ms. That fixture now patches two Rust files through rust-quality, because a ported module cannot run under `bash mod.sh` (#265, #266). Before the runs were interleaved, one load spike put the bash block and the bundle block on different sides of it, and a fixture read 13 ms slower.
+`bun run tooling/src/benchmarks/post-tools-latency.ts [--runs N] [--assert]` measures p50 for `bash mod.sh` against the bundle. Each variant runs in its own identically prepared sandbox, and the two alternate run by run, so a load change during a fixture hits both. On an Apple M2 Max with Bun 1.4.2 (9 runs, load average 5 to 8, other agents active), the bundle ran 50 to 184 ms faster on every fixture. The largest gain was a two-path patch through ts-quality and rust-quality: 891 ms against 708 ms. That fixture now patches two paths through the fixture registry module, because no language-quality module runs under `bash mod.sh` any more (#265 to #267). Before the runs were interleaved, one load spike put the bash block and the bundle block on different sides of it, and a fixture read 13 ms slower.
 
 ## Language-quality modules
 
@@ -142,7 +142,7 @@ python-quality (#266) is the second: `plugins/python-quality/hooks/src/post-tool
 - With no `jq` on `PATH`, bash exited silently. The TypeScript module needs neither `jq` nor `TOOLU_LIB_DIR`, and checks the file (`DEV-1`).
 - If a regular file cannot be read, the module records a quality violation instead of treating the file as empty and clearing its gate entry (`read-failure.test.ts`).
 
-The shared PostToolUse corpus and `dispatcher.bats` exercised python-quality's bash module; their multi-path patch now goes through two Rust files.
+The shared PostToolUse corpus and `dispatcher.bats` exercised python-quality's bash module, then rust-quality's; with no bash language-quality module left (#267), their multi-path patch goes through a fixture `.sh` registry module.
 
 **Latency.** `bun run tooling/src/benchmarks/python-quality-latency.ts [--runs N] [--assert]` times the bash module (from `c50c6bd9`) against the TypeScript module, as ts-quality's benchmark does (both use `tooling/src/benchmarks/quality-latency.ts`). On an Apple M2 Max with Bun 1.4.2 (7 runs, load average 14 to 24, other agents active), the TypeScript module was 53 to 160 ms faster on every fixture:
 
@@ -153,6 +153,20 @@ The shared PostToolUse corpus and `dispatcher.bats` exercised python-quality's b
 | mock import in a test file (ast-grep) | 264.7 ms | 111.3 ms |
 | def at the fn-length limit | 146.0 ms | 88.4 ms |
 | clean file | 144.3 ms | 90.7 ms |
+
+rust-quality (#267) is the third: `plugins/rust-quality/hooks/src/post-tool-use.ts`, with its rules under `hooks/src/rules/` in the order of the bash fragments. It runs in a project with `Cargo.toml` at the toplevel and `cargo` on `PATH`, checks `.rs` files including those in linked worktrees, and reads `rust-unsafe-exemptions.txt` from the settings directory through `@toolu/core/config`.
+
+**Parity.** `plugins/rust-quality/hooks/src/__tests__/fixtures/golden.json` holds 120 captures from the bash module at `c50c6bd9`: every fixture of the nine concern bats suites, plus gating, Codex patches, deletes and moves, `CLAUDE_FILE_PATHS`, linked worktrees, the clippy hint, the exemption list, and ast-grep crash, non-JSON, empty and absent. `golden-corpus.test.ts` requires every bats test at the base to map to a case, and `golden.test.ts` replays each case with the TypeScript module and requires identical stdout, stderr, exit code and gate and telemetry files. Hits are filtered per rule, which keeps ast-grep's order stable, so no case needs reordering. Two things differ, each with a test: with no `jq` on `PATH` the module still checks the file (`DEV-1`), and an unreadable file is a violation (`read-failure.test.ts`).
+
+**Latency.** `bun run tooling/src/benchmarks/rust-quality-latency.ts [--runs N] [--assert]` makes the same comparison against the bash module from `c50c6bd9`. On an Apple M2 Max with Bun 1.4.2 (7 runs, load average 14 to 16), the TypeScript module was 169 to 226 ms faster on every fixture:
+
+| Fixture | bash module p50 | TS module p50 |
+|---|---|---|
+| two violations in rule order | 361.4 ms | 139.6 ms |
+| `.unwrap()` in `src/` (ast-grep) | 347.4 ms | 131.2 ms |
+| `#[automock]` in `src/` (ast-grep) | 354.4 ms | 128.5 ms |
+| long method inside an impl | 315.3 ms | 135.2 ms |
+| clean file | 288.0 ms | 119.1 ms |
 
 ## Import cost
 

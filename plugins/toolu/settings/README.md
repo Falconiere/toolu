@@ -50,7 +50,7 @@ when you run them.
 | `mcp-blocklist.txt`           | `mcp-blocker` gate (`@toolu/core/gates`)          | MCP server prefixes blocked unconditionally (plain text).          |
 | `toolu.config.example.json` | (reference — copy to `~/.claude/toolu.config.json`) | Example runtime opt-out config (skills/hooks/mcp). See `docs/config.md`. |
 | `protected-files.txt`         | `protected-files` gate (`@toolu/core/gates`)      | Paths the edit guard refuses to modify (lockfiles, secrets, etc.). |
-| `rust-unsafe-exemptions.txt`  | `hooks/post-tools/modules/rust-quality.sh`        | Files/paths exempt from the `unsafe` Rust check.                   |
+| `rust-unsafe-exemptions.txt`  | `rust-quality/hooks/src/post-tool-use.ts`         | Files/paths exempt from the `unsafe` Rust check.                   |
 
 Each plain-text file is one entry per line, `#` for comments. JSON files
 follow whatever schema the consuming script documents.

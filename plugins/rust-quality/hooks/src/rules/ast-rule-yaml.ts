@@ -1,7 +1,7 @@
 /**
- * The inline ast-grep rules (#267), verbatim from 60-error-handling.sh and
- * 70-no-mocks.sh. Severity is `warning` on purpose: `scan` exits non-zero on an
- * error-level match, which would be indistinguishable from a crashed tool.
+ * The inline ast-grep rules (#267). Severity is `warning` on purpose: `scan`
+ * exits non-zero on an error-level match, which would be indistinguishable
+ * from a crashed tool.
  */
 
 /** Panic-on-error rules for production code. */

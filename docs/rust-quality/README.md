@@ -14,7 +14,7 @@ Rust `PostToolUse` quality checks registered into the toolu hook engine. Every R
 
 ### Post-Edit Quality Checks
 
-Every Rust file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are assembled from ordered `hooks/concerns/` fragments into one module at `SessionStart` and run only while this plugin is installed — **uninstall it and the Rust rules vanish, fail-closed.**
+Every Rust file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are one bundled registry module that `SessionStart` publishes to the registry, and they run only while this plugin is installed — **uninstall it and the Rust rules vanish, fail-closed.**
 
 ## Checks Enforced
 
@@ -117,7 +117,7 @@ Every public item must carry a concise doc line.
 ## How the Gate Works
 
 1. **Agent edits a `.rs` file** — `Write` or `Edit` tool call
-2. **PostToolUse hook fires** — the assembled module checks the file
+2. **PostToolUse hook fires** — the registry module checks the file
 3. **Violation found** → gate goes **failing**, new task blocked until fixed
 4. **Fix the violation** → gate clears, continue working
 
@@ -167,7 +167,7 @@ Agent: *writes the function*
 
 ## Hooks
 
-The fragments register into the core toolu dispatcher and run only while this plugin is installed. Uninstalling immediately removes the Rust rules:
+The module runs in the core toolu dispatcher only while this plugin is installed. Uninstalling immediately removes the Rust rules:
 
 ```text
 /plugin uninstall rust-quality@toolu

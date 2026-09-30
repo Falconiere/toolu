@@ -1,5 +1,5 @@
 # Rust crates allowed to use `unsafe` blocks/functions.
-# rust-quality.sh skips the unsafe check for files whose path contains
+# rust-quality skips the unsafe check for files whose path contains
 # one of these crate names. Add one crate name per line; '#' starts a comment.
 #
 # Default: empty — projects opt in by editing this file.

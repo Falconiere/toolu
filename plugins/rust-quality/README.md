@@ -14,7 +14,7 @@ Requires the `toolu` plugin.
 
 ## What it provides
 
-Every Rust file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks (assembled from ordered `hooks/concerns/` fragments into one module at `SessionStart`):
+Every Rust file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks run as one bundled registry module, `hooks/dist/post-tool-use.js`, that `SessionStart` publishes to the registry:
 
 - File / function / `impl` line limits (config-driven).
 - No `.unwrap()` / `.expect()` — use `?` or `match`.
@@ -23,4 +23,4 @@ Every Rust file the agent edits is checked on the spot, contributing to toolu's 
 - Unit tests in a module-sibling `tests/` (wired by a bodyless `#[cfg(test)] mod tests;`, `#[path]`-attributed or not); crate-root `tests/` for integration. No inline test bodies in `src/`.
 - Doc-comment checks on public items.
 
-The fragments register into the core toolu dispatcher and run only while this plugin is installed — uninstall it and the Rust rules vanish, fail-closed.
+The module runs in the core toolu dispatcher only while this plugin is installed — uninstall it and the Rust rules vanish, fail-closed.

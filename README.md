@@ -255,11 +255,11 @@ flowchart TD
         D["hook dispatcher<br/>PreToolUse · PostToolUse · SessionStart …"]
     end
     subgraph plugins["domain plugins"]
-        RQ["rust-quality<br/>register.sh"]
+        RQ["rust-quality<br/>register.js"]
         TQ["ts-quality<br/>register.js"]
         AG["ast-grep<br/>register.js"]
     end
-    RQ -- "assemble concern fragments at SessionStart" --> R[("registry<br/>host config dir/toolu/")]
+    RQ -- "one bundled ESM module, run in process" --> R[("registry<br/>host config dir/toolu/")]
     TQ -- "one bundled ESM module, run in process" --> R
     AG -- "bundled ESM modules, run in process" --> R
     CM -- "namespaced plugin__name.sh" --> R
@@ -267,7 +267,7 @@ flowchart TD
     D -- "runs a module only while its plugin is installed" --> OUT([enforced edit])
 ```
 
-At `SessionStart`, `rust-quality` still assembles its ordered `hooks/concerns/` fragments through `register.sh` into one `<plugin-spec>__<name>.sh` registry module. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. `ts-quality`, `python-quality` and `ast-grep` register bundled ESM modules (`<plugin-spec>__<name>.js`) that the core imports in-process. See [docs/registry.md](docs/registry.md).
+At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality` and `ast-grep` register bundled ESM modules (`<plugin-spec>__<name>.js`) that the core imports in-process. The core runs a module **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. See [docs/registry.md](docs/registry.md).
 
 <details>
 <summary><b>Full repository layout</b></summary>
@@ -288,7 +288,7 @@ At `SessionStart`, `rust-quality` still assembles its ordered `hooks/concerns/` 
     ├── context7/               # context7 skill + Context7 REST wrapper
     ├── exa-search/             # exa-search skill + Exa REST wrapper
     ├── jev/                    # jev skill + TypeSafe System One REST wrapper
-    ├── rust-quality/           # Rust PostToolUse quality fragments, assembled at SessionStart
+    ├── rust-quality/           # Rust PostToolUse quality checks, one bundled registry module
     ├── ts-quality/             # TypeScript PostToolUse quality checks, one bundled registry module
     ├── python-quality/         # Python PostToolUse quality checks, one bundled registry module
     ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook
