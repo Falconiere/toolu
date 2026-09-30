@@ -17,7 +17,7 @@ import {
 export type FileQualitySpec = QualityGate & {
   /** The files this module owns, tested against the path as given (bash `=~`). */
   readonly matches: RegExp;
-  /** Leave files in a git linked worktree alone (the TypeScript and Rust modules do). */
+  /** Leave files in a git linked worktree alone (the TypeScript module does). */
   readonly skipLinkedWorktrees: boolean;
   check(file: EditedFile): QualityFindings;
 };
