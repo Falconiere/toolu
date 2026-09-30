@@ -139,11 +139,11 @@ Both bundles inline unbash and zod, about 310 KB each; the latency numbers below
 
 The skill wrapper `hooks/dist/ast-grep.js` is checked against the live ast-grep CLI given the argv the bash wrapper built (`ast-grep-cli.test.ts`), because ast-grep's output changes between versions.
 
-**Latency.** `bun run tooling/src/benchmarks/ast-grep-latency.ts [--runs N] [--assert]` times toolu's bundles running the bash modules (from `2912cd9d`) against the same bundles running the TypeScript modules, in two identical sandboxes with alternating runs. On an Apple M2 Max with Bun 1.4.2 (15 runs, load average 17 to 26, other agents active), the TypeScript modules were within budget on every fixture:
+**Latency.** `bun run tooling/src/benchmarks/ast-grep-latency.ts [--runs N] [--assert]` times toolu's bundles running the bash modules (from `2912cd9d`) against the same bundles running the TypeScript modules, in two identical sandboxes with alternating runs. On an Apple M2 Max with Bun 1.4.2 (25 runs, load average 12 to 15, other agents active), the TypeScript modules were faster on every fixture. With 9 runs at that load, single spikes of several hundred milliseconds moved the Bash structural grep p50 either way, so measure with at least 25:
 
 | Fixture | bash module p50 | TS module p50 |
 |---|---|---|
-| Bash structural grep | 799.3 ms | 698.6 ms |
-| Grep tool, structural pattern | 250.2 ms | 136.5 ms |
-| Bash `ls -la` (silent) | 142.0 ms | 142.5 ms |
-| PostToolUse, Bash `ast-grep run` | 108.2 ms | 96.0 ms |
+| Bash structural grep | 154.5 ms | 123.8 ms |
+| Grep tool, structural pattern | 133.8 ms | 93.7 ms |
+| Bash `ls -la` (silent) | 132.2 ms | 123.9 ms |
+| PostToolUse, Bash `ast-grep run` | 89.5 ms | 75.9 ms |
