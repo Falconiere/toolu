@@ -11,7 +11,7 @@ import {
   normalizeThreads,
   type GhTransport,
 } from "../babysit/collect";
-import { ghClassify, ghRun } from "../babysit/gh";
+import { GhError, ghClassify, ghRun } from "../babysit/gh";
 import { BabysitError } from "../babysit/common";
 
 const ROOT = resolve(import.meta.dir, "../../../scripts/__tests__/fixtures");
@@ -112,6 +112,88 @@ test("overflowed review-thread comments are fetched through node(id:) and append
   ).toEqual(["github-actions", "Falconiere", "github-actions"]);
   expect(actual.pages.threadComments).toBe(2);
   expect(actual.threads[0]).not.toHaveProperty("commentsHasNextPage");
+});
+
+test("independent overflow pages start together and preserve the recorded thread order", async () => {
+  const threadPages = structuredClone(JSON.parse(pages.threads));
+  const [first, second] = threadPages[0].data.repository.pullRequest.reviewThreads.nodes;
+  first.comments.pageInfo = { hasNextPage: true, endCursor: "cursor-1" };
+  second.comments.pageInfo = { hasNextPage: true, endCursor: "cursor-2" };
+  const extra = fixture("gh/pages-165-thread-comments-p2.json");
+  const base = fakeGh();
+  const overflowCalls: string[] = [];
+  let signalFirst!: () => void;
+  const firstStarted = new Promise<void>((resolve) => {
+    signalFirst = resolve;
+  });
+  let releaseFirst!: (value: string) => void;
+  const gh: GhTransport = async (args, options) => {
+    if (args[1] === "graphql" && args.includes(`id=${first.id}`)) {
+      overflowCalls.push(first.id);
+      return new Promise<string>((resolve) => {
+        releaseFirst = resolve;
+        signalFirst();
+      });
+    }
+    if (args[1] === "graphql" && args.includes(`id=${second.id}`)) {
+      overflowCalls.push(second.id);
+      return JSON.stringify([extra[1]]);
+    }
+    if (args[1] === "graphql") return JSON.stringify(threadPages);
+    return base.gh(args, options);
+  };
+
+  const collected = collectPr({
+    repo: "Falconiere/toolu",
+    pr: 115,
+    pageSize: 2,
+    gh,
+    now: () => captured.collectedAt,
+  });
+  await firstStarted;
+  const startedBeforeFirstCompleted = [...overflowCalls];
+  releaseFirst(JSON.stringify([extra[0]]));
+  const actual = await collected;
+
+  expect(startedBeforeFirstCompleted).toEqual([first.id, second.id]);
+  const expected = structuredClone(captured);
+  expected.threads[0].comments.push(...normalizeThreadComments([extra[0]]));
+  expected.threads[1].comments.push(...normalizeThreadComments([extra[1]]));
+  expected.pages.threadComments = 2;
+  expect(actual).toEqual(expected);
+});
+
+test("parallel overflow failures retain the first thread's structured error", async () => {
+  const threadPages = structuredClone(JSON.parse(pages.threads));
+  const [first, second] = threadPages[0].data.repository.pullRequest.reviewThreads.nodes;
+  first.comments.pageInfo = { hasNextPage: true, endCursor: "cursor-1" };
+  second.comments.pageInfo = { hasNextPage: true, endCursor: "cursor-2" };
+  const base = fakeGh();
+  const attempted: string[] = [];
+  const gh: GhTransport = async (args, options) => {
+    if (args[1] === "graphql" && args.some((arg) => arg.startsWith("id="))) {
+      const id = args.find((arg) => arg.startsWith("id="))!.slice(3);
+      attempted.push(id);
+      throw new GhError(2, "permanent", `failed ${id}`, 1);
+    }
+    if (args[1] === "graphql") return JSON.stringify(threadPages);
+    return base.gh(args, options);
+  };
+
+  try {
+    await collectPr({ repo: "Falconiere/toolu", pr: 115, pageSize: 2, gh });
+    throw new Error("expected rejection");
+  } catch (error) {
+    expect(error).toBeInstanceOf(BabysitError);
+    expect((error as BabysitError).code).toBe("api_error");
+    expect((error as BabysitError).extra).toEqual({
+      source: "threadComments",
+      attempts: 2,
+      class: "permanent",
+      lastMessage: `failed ${first.id}`,
+    });
+  }
+  expect(attempted).toEqual([first.id, second.id]);
 });
 
 test("a moving head twice fails with a structured code", async () => {

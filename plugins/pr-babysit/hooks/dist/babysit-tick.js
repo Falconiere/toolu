@@ -564,24 +564,29 @@ async function collectPr(options) {
     }
     const [prRaw, threadPages, commentPages, reviewPages] = settled.map((outcome) => outcome.value);
     const threads = normalizeThreads(threadPages);
+    const overflowingThreads = threads.filter((thread) => thread.commentsHasNextPage === true);
+    const commentReads = await Promise.allSettled(overflowingThreads.map((thread) => read("threadComments", [
+      "api",
+      "graphql",
+      "--paginate",
+      "--slurp",
+      "-f",
+      `id=${thread.id}`,
+      "-F",
+      `pageSize=${pageSize}`,
+      "-f",
+      `endCursor=${thread.commentsEndCursor}`,
+      "-f",
+      `query=${COMMENTS_QUERY}`
+    ])));
+    for (const outcome of commentReads) {
+      if (outcome.status === "rejected")
+        throw outcome.reason;
+    }
     let threadCommentPages = 0;
-    for (const thread of threads) {
-      if (thread.commentsHasNextPage !== true)
-        continue;
-      const pages = await read("threadComments", [
-        "api",
-        "graphql",
-        "--paginate",
-        "--slurp",
-        "-f",
-        `id=${thread.id}`,
-        "-F",
-        `pageSize=${pageSize}`,
-        "-f",
-        `endCursor=${thread.commentsEndCursor}`,
-        "-f",
-        `query=${COMMENTS_QUERY}`
-      ]);
+    for (let i = 0;i < overflowingThreads.length; i += 1) {
+      const thread = overflowingThreads[i];
+      const pages = commentReads[i].value;
       threadCommentPages += arr(pages).length;
       thread.comments.push(...normalizeThreadComments(pages));
       thread.commentsHasNextPage = false;
