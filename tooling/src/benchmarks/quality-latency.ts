@@ -23,7 +23,7 @@ type Registration =
   | { readonly kind: "bash"; readonly register: string }
   | { readonly kind: "bundle" };
 
-/** One plugin's golden harness, as its latency benchmark needs it. */
+/** The parts of one plugin's golden harness its latency benchmark uses. */
 type QualityLatency<S, C extends { readonly name: string; readonly steps: readonly S[] }> = {
   /** The benchmark's name in messages and its temp directory. */
   readonly label: string;
