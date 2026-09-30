@@ -92,7 +92,7 @@ const RENDER_CASES: Record<string, Setup> = {
     return {};
   },
   "clean repo": (sb) => (repo(sb.project), {}),
-  "staged": (sb) => {
+  staged: (sb) => {
     repo(sb.project);
     sb.write("s.txt", "");
     git(sb.project, "add", "s.txt");
@@ -116,7 +116,7 @@ const RENDER_CASES: Record<string, Setup> = {
     put(join(dir, "new.txt"), "");
     return { cwd: dir };
   },
-  "behind": (sb) => {
+  behind: (sb) => {
     const dir = withRemote(sb);
     git(dir, "commit", "-q", "--allow-empty", "-m", "behind");
     git(dir, "push", "-q", "origin", "main");
@@ -293,7 +293,7 @@ const RENDER_CASES: Record<string, Setup> = {
   }),
   "workspace is string": () => ({ payload: '{"model":{"display_name":"M"},"workspace":"x"}' }),
   "nonexistent cwd": (sb) => ({ cwd: join(sb.root, "missing") }),
-  "everything": async (sb, cfg) => {
+  everything: async (sb, cfg) => {
     const dir = withRemote(sb);
     git(dir, "commit", "-q", "--allow-empty", "-m", "ahead");
     put(join(dir, "u.txt"), "");
@@ -347,7 +347,7 @@ const REPORT_CASES: Record<string, Setup> = {
     git(dir, "commit", "-q", "--allow-empty", "-m", "l");
     return { cwd: dir };
   },
-  "detached": (sb) => {
+  detached: (sb) => {
     repo(sb.project);
     git(sb.project, "checkout", "-q", "--detach");
     return {};
@@ -371,7 +371,7 @@ const REPORT_CASES: Record<string, Setup> = {
     sb.write(".codex/tmp/quality-gate-status.json", '{"status":"stale"}');
     return {};
   },
-  "comemory": (sb) => {
+  comemory: (sb) => {
     repo(sb.project);
     put(join(sb.codexHome, "comemory-status", "project.json"), '{"count":7}');
     return {};
@@ -413,7 +413,7 @@ type SetupCase = { before?: string; args?: string[]; defaultDir?: boolean; twice
 const SETUP_CASES: Record<string, SetupCase> = {
   "absent settings": {},
   "existing keys": { before: '{\n  "theme": "dark"\n}\n' },
-  "idempotent": { twice: true },
+  idempotent: { twice: true },
   "custom refused": {
     before: '{\n  "statusLine": { "type": "command", "command": "my-custom-bar" }\n}\n',
   },
@@ -425,7 +425,7 @@ const SETUP_CASES: Record<string, SetupCase> = {
     before: '{\n  "statusLine": { "type": "command", "command": "my-custom-bar" }\n}\n',
     args: ["-f"],
   },
-  "unparseable": { before: "not json {{{" },
+  unparseable: { before: "not json {{{" },
   "non-object": { before: "[1]" },
   "empty file": { before: "" },
   "null statusLine": { before: '{"statusLine": null, "a": 1}' },
@@ -465,7 +465,9 @@ for (const [name, c] of Object.entries(SETUP_CASES)) {
       c,
     );
     const expected = JSON.parse(
-      JSON.stringify(bash.doc).replaceAll(bash.cfg, bun.cfg).replace(/"bash /g, '"'),
+      JSON.stringify(bash.doc)
+        .replaceAll(bash.cfg, bun.cfg)
+        .replace(/"bash /g, '"'),
     );
     expect({ exit: bun.exit, token: bun.token, bak: bun.bak, doc: bun.doc }).toEqual({
       exit: bash.exit,
