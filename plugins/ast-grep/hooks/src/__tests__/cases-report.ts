@@ -44,3 +44,10 @@ export const REPORT_CASES: readonly ReportCase[] = [
     ),
   },
 ];
+
+/** The usage line names the Bun CLI that replaced the bash script: the stderr it prints instead. */
+export const REPORT_DEVIATIONS: Readonly<Record<string, string>> = {
+  "bats: missing ledger argument fails with usage":
+    "usage: byte-savings-report.js <ledger.jsonl>\n",
+  "a ledger path that does not exist": "usage: byte-savings-report.js <ledger.jsonl>\n",
+};
