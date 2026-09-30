@@ -1,0 +1,1312 @@
+{
+  "base": "c50c6bd9bd2d132192e86638c65bef9c3065e18a",
+  "cases": {
+    "gating: outside a Rust project [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "gating: cargo not on PATH [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "DEV-1: no jq on PATH [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "flow: a non-Rust file is ignored [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "flow: a missing file is ignored [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "flow: Edit names the file [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "flow: MultiEdit names the file [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "flow: a relative path resolves against the hook's cwd [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"src/bad.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "flow: CLAUDE_FILE_PATHS names the file for any tool [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"src/bad.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "flow: a file in a linked worktree is still checked [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/wt/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/wt/src/bad.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/wt/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"<ROOT>/project/wt/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/wt/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/wt/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "gate: re-editing a failing file clean clears it [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/x.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/x.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/x.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/x.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/x.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/x.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"rust-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/x.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/x.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      }
+    ],
+    "gate: deleting a failing file clears its entry [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "gate: deleting a failing file clears its entry [codex]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"src/bad.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"rust-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      }
+    ],
+    "gate: clearing one file keeps another's failure [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/b.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/b.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/b.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    },\n    \"<ROOT>/project/src/b.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/b.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/b.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/b.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/b.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"rust-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/b.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/b.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n{\"file\":\"<ROOT>/project/src/a.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      }
+    ],
+    "gate: clearing one file keeps another's failure (midway) [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/b.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/b.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/b.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    },\n    \"<ROOT>/project/src/b.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/b.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/b.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/b.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/b.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      }
+    ],
+    "gate: another hook's failure survives a rust fail and clear [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.rs\",\n  \"violations\": \"bad ts\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"/p/x.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"TS violation\",\n      \"violations\": \"bad ts\\n\",\n      \"updatedAt\": \"<T>\"\n    },\n    \"<ROOT>/project/src/a.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"TS violation\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/p/x.ts\",\n  \"violations\": \"bad ts\\n\",\n  \"entries\": {\n    \"/p/x.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"TS violation\",\n      \"violations\": \"bad ts\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/a.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      }
+    ],
+    "gate: a moved file clears its source entry and checks its target [codex]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/old.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"src/old.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/old.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"src/old.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/old.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/old.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"rust-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/old.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"src/old.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      }
+    ],
+    "codex: a written file with a violation [codex]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"src/bad.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "codex: one patch over two Rust files [codex]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\\nQUALITY VIOLATION — fix before proceeding:\\nForbidden unsafe code in src/b.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"src/b.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\nForbidden unsafe code in src/b.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\n\",\n  \"entries\": {\n    \"src/a.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    },\n    \"src/b.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden unsafe code in src/b.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/a.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"src/b.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "assembled: two violations in rule order [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 5-line limit: <ROOT>/project/src/bad.rs (13 code lines, blanks/comments excluded) — split into submodules\\n.unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \"File exceeds 5-line limit: <ROOT>/project/src/bad.rs (13 code lines, blanks/comments excluded) — split into submodules\\n.unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"File exceeds 5-line limit: <ROOT>/project/src/bad.rs (13 code lines, blanks/comments excluded) — split into submodules\\n.unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFileLines\": 5\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "assembled: fixing one of two keeps the gate failing [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 5-line limit: <ROOT>/project/src/bad.rs (13 code lines, blanks/comments excluded) — split into submodules\\n.unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \"File exceeds 5-line limit: <ROOT>/project/src/bad.rs (13 code lines, blanks/comments excluded) — split into submodules\\n.unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"File exceeds 5-line limit: <ROOT>/project/src/bad.rs (13 code lines, blanks/comments excluded) — split into submodules\\n.unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = thing().unwrap();\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFileLines\": 5\n    }\n  }\n}\n"
+        }
+      },
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 5-line limit: <ROOT>/project/src/bad.rs (12 code lines, blanks/comments excluded) — split into submodules\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \"File exceeds 5-line limit: <ROOT>/project/src/bad.rs (12 code lines, blanks/comments excluded) — split into submodules\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"File exceeds 5-line limit: <ROOT>/project/src/bad.rs (12 code lines, blanks/comments excluded) — split into submodules\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFileLines\": 5\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "assembled: inline cfg(test) mod raises no placement violation [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nInline #[cfg(test)] in <ROOT>/project/src/lib.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/lib.rs\",\n  \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/lib.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/lib.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/lib.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/lib.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "assembled: clean file writes no failure [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "assembled: every rule family in order [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 5-line limit: <ROOT>/project/src/all.rs (15 code lines, blanks/comments excluded) — split into submodules\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/all.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\nForbidden unsafe code in <ROOT>/project/src/all.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\nFunction too long in <ROOT>/project/src/all.rs (>3 lines) — extract helpers.\\nImpl block too large in <ROOT>/project/src/all.rs (>4 lines) — split into trait impls or modules.\\n.unwrap() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:9:        let a = thing().unwrap();\\n.expect() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:10:        let b = other().expect(\\\"b\\\");\\npanic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/all.rs — return a Result instead\\n<ROOT>/project/src/all.rs:12:        if a > b { panic!(\\\"x\\\") }\\n<ROOT>/project/src/all.rs:13:        todo!()\\nno-mocks: #[automock] mock definition in <ROOT>/project/src/all.rs — write against real data/fixtures instead\\n<ROOT>/project/src/all.rs:2:#[cfg_attr(test, automock)]\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/all.rs\",\n  \"violations\": \"File exceeds 5-line limit: <ROOT>/project/src/all.rs (15 code lines, blanks/comments excluded) — split into submodules\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/all.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\nForbidden unsafe code in <ROOT>/project/src/all.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\nFunction too long in <ROOT>/project/src/all.rs (>3 lines) — extract helpers.\\nImpl block too large in <ROOT>/project/src/all.rs (>4 lines) — split into trait impls or modules.\\n.unwrap() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:9:        let a = thing().unwrap();\\n.expect() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:10:        let b = other().expect(\\\"b\\\");\\npanic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/all.rs — return a Result instead\\n<ROOT>/project/src/all.rs:12:        if a > b { panic!(\\\"x\\\") }\\n<ROOT>/project/src/all.rs:13:        todo!()\\nno-mocks: #[automock] mock definition in <ROOT>/project/src/all.rs — write against real data/fixtures instead\\n<ROOT>/project/src/all.rs:2:#[cfg_attr(test, automock)]\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/all.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"File exceeds 5-line limit: <ROOT>/project/src/all.rs (15 code lines, blanks/comments excluded) — split into submodules\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/all.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\nForbidden unsafe code in <ROOT>/project/src/all.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\nFunction too long in <ROOT>/project/src/all.rs (>3 lines) — extract helpers.\\nImpl block too large in <ROOT>/project/src/all.rs (>4 lines) — split into trait impls or modules.\\n.unwrap() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:9:        let a = thing().unwrap();\\n.expect() in <ROOT>/project/src/all.rs — use ? or match on Result/Option\\n<ROOT>/project/src/all.rs:10:        let b = other().expect(\\\"b\\\");\\npanic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/all.rs — return a Result instead\\n<ROOT>/project/src/all.rs:12:        if a > b { panic!(\\\"x\\\") }\\n<ROOT>/project/src/all.rs:13:        todo!()\\nno-mocks: #[automock] mock definition in <ROOT>/project/src/all.rs — write against real data/fixtures instead\\n<ROOT>/project/src/all.rs:2:#[cfg_attr(test, automock)]\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/all.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFileLines\": 5,\n      \"maxFnLines\": 3,\n      \"maxImplLines\": 4\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: a clippy config names clippy in the hint [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 3-line limit: <ROOT>/project/src/big.rs (4 code lines, blanks/comments excluded) — split into submodules (clippy enforces complexity here)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/big.rs\",\n  \"violations\": \"File exceeds 3-line limit: <ROOT>/project/src/big.rs (4 code lines, blanks/comments excluded) — split into submodules (clippy enforces complexity here)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/big.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"File exceeds 3-line limit: <ROOT>/project/src/big.rs (4 code lines, blanks/comments excluded) — split into submodules (clippy enforces complexity here)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/big.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFileLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "unsafe: a crate on the exemption list is not flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/ffi_sys/lib.rs — add a concise one-line doc:\\n1: pub fn f() {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "unsafe: a crate missing from the exemption list is flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden unsafe code in <ROOT>/project/src/ffi_sys/lib.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/ffi_sys/lib.rs\",\n  \"violations\": \"Forbidden unsafe code in <ROOT>/project/src/ffi_sys/lib.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/ffi_sys/lib.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden unsafe code in <ROOT>/project/src/ffi_sys/lib.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/ffi_sys/lib.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: test file (#[test]) outside tests/ is flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nRust test file outside tests/: <ROOT>/project/src/foo.rs — move to a sibling tests/ directory\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/foo.rs\",\n  \"violations\": \"Rust test file outside tests/: <ROOT>/project/src/foo.rs — move to a sibling tests/ directory\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/foo.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Rust test file outside tests/: <ROOT>/project/src/foo.rs — move to a sibling tests/ directory\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/foo.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: integration test under tests/ is accepted [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: bare #[rstest] test attribute outside tests/ is flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nRust test file outside tests/: <ROOT>/project/src/foo.rs — move to a sibling tests/ directory\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/foo.rs\",\n  \"violations\": \"Rust test file outside tests/: <ROOT>/project/src/foo.rs — move to a sibling tests/ directory\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/foo.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Rust test file outside tests/: <ROOT>/project/src/foo.rs — move to a sibling tests/ directory\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/foo.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: #[test_log::test] attribute outside tests/ is flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nRust test file outside tests/: <ROOT>/project/src/foo.rs — move to a sibling tests/ directory\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/foo.rs\",\n  \"violations\": \"Rust test file outside tests/: <ROOT>/project/src/foo.rs — move to a sibling tests/ directory\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/foo.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Rust test file outside tests/: <ROOT>/project/src/foo.rs — move to a sibling tests/ directory\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/foo.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: #[test_case(...)] attribute outside tests/ is flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nRust test file outside tests/: <ROOT>/project/src/foo.rs — move to a sibling tests/ directory\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/foo.rs\",\n  \"violations\": \"Rust test file outside tests/: <ROOT>/project/src/foo.rs — move to a sibling tests/ directory\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/foo.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Rust test file outside tests/: <ROOT>/project/src/foo.rs — move to a sibling tests/ directory\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/foo.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: #[cfg(test)] is not caught by the widened test-attr rule [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nInline #[cfg(test)] in <ROOT>/project/src/lib.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/lib.rs\",\n  \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/lib.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/lib.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/lib.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/lib.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: inline #[cfg(all(test, ...))] is flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nInline #[cfg(test)] in <ROOT>/project/src/lib.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/lib.rs\",\n  \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/lib.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/lib.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/lib.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/lib.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: cfg(not(test)) and a test- feature string are not inline cfg(test) [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/m.rs — add a concise one-line doc:\\n2: pub fn prod_only() -> u8 {\\n7: pub fn helper() -> u8 {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: canonical inline cfg(test) mod, one violation (lib.rs) [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nInline #[cfg(test)] in <ROOT>/project/src/lib.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/lib.rs\",\n  \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/lib.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/lib.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/lib.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/lib.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: #[bench] does not trigger tests/ placement [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: #[wasm_bindgen_test] does not trigger tests/ placement [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: single-line bodyless #[cfg(test)] mod tests; passes [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/foo.rs — add a concise one-line doc:\\n1: pub fn add(a: u8, b: u8) -> u8 {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: rustfmt two-line bodyless #[cfg(test)] / mod tests; passes [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/foo.rs — add a concise one-line doc:\\n1: pub fn add(a: u8, b: u8) -> u8 {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: two-line bodyless #[cfg(test)] / pub mod foo_tests; passes [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/foo.rs — add a concise one-line doc:\\n1: pub fn add(a: u8, b: u8) -> u8 {\\n6: pub mod foo_tests;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: #[path]-wired bodyless #[cfg(test)] mod tests; passes [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/api/stats.rs — add a concise one-line doc:\\n1: pub fn add(a: u8, b: u8) -> u8 {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: a run of attributes before the bodyless mod decl still passes [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/foo.rs — add a concise one-line doc:\\n1: pub fn add(a: u8, b: u8) -> u8 {\\n8: pub mod foo_tests;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: a decl behind the full attribute bound is exempt [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/foo.rs — add a concise one-line doc:\\n1: pub fn add(a: u8, b: u8) -> u8 {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: a decl behind more attributes than the bound is still flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nInline #[cfg(test)] in <ROOT>/project/src/foo.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/foo.rs\",\n  \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/foo.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/foo.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/foo.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/foo.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: #[path]-wired #[cfg(test)] mod tests { with a body still fails [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nInline #[cfg(test)] in <ROOT>/project/src/foo.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/foo.rs\",\n  \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/foo.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/foo.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/foo.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/foo.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: single-line #[cfg(test)] mod tests { with a body still fails [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nInline #[cfg(test)] in <ROOT>/project/src/foo.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/foo.rs\",\n  \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/foo.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/foo.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/foo.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/foo.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: two-line #[cfg(test)] / mod tests { with a body still fails [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nInline #[cfg(test)] in <ROOT>/project/src/foo.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/foo.rs\",\n  \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/foo.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/foo.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/foo.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/foo.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: #[cfg(all(test, ...))] followed by bodyless mod tests; still fails [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nInline #[cfg(test)] in <ROOT>/project/src/foo.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/foo.rs\",\n  \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/foo.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/foo.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/foo.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/foo.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: #[cfg(test)] only in a doc comment does NOT suppress placement enforcement [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nRust test file outside tests/: <ROOT>/project/src/foo.rs — move to a sibling tests/ directory\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/foo.rs\",\n  \"violations\": \"Rust test file outside tests/: <ROOT>/project/src/foo.rs — move to a sibling tests/ directory\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/foo.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Rust test file outside tests/: <ROOT>/project/src/foo.rs — move to a sibling tests/ directory\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/foo.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: cfg(all(test)) with no comma is still flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nInline #[cfg(test)] in <ROOT>/project/src/allnocomma.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/allnocomma.rs\",\n  \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/allnocomma.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/allnocomma.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/allnocomma.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/allnocomma.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: cfg(all(test , feature)) with space before comma is still flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nInline #[cfg(test)] in <ROOT>/project/src/allspace.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/allspace.rs\",\n  \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/allspace.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/allspace.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/allspace.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/allspace.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: bodyless decl with trailing // comment is exempt [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: cfg(test) as the last line fails closed [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nInline #[cfg(test)] in <ROOT>/project/src/tail.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/tail.rs\",\n  \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/tail.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/tail.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Inline #[cfg(test)] in <ROOT>/project/src/tail.rs — unit tests belong in a module-sibling tests/ dir wired by a bodyless #[cfg(test)] mod tests; decl; crate-root tests/ is for integration tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/tail.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: a nested tests/ subdirectory is flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nRust test nested in tests/ subdirectory: <ROOT>/project/tests/deep/it_test.rs — keep tests/ flat (only fixtures/helpers/common subdirs allowed)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/tests/deep/it_test.rs\",\n  \"violations\": \"Rust test nested in tests/ subdirectory: <ROOT>/project/tests/deep/it_test.rs — keep tests/ flat (only fixtures/helpers/common subdirs allowed)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/tests/deep/it_test.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Rust test nested in tests/ subdirectory: <ROOT>/project/tests/deep/it_test.rs — keep tests/ flat (only fixtures/helpers/common subdirs allowed)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/tests/deep/it_test.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: tests/common is an allowed subdirectory [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: a _test.rs name outside tests/ is flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nRust test file outside tests/: <ROOT>/project/src/parse_test.rs — move to a sibling tests/ directory\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/parse_test.rs\",\n  \"violations\": \"Rust test file outside tests/: <ROOT>/project/src/parse_test.rs — move to a sibling tests/ directory\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/parse_test.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Rust test file outside tests/: <ROOT>/project/src/parse_test.rs — move to a sibling tests/ directory\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/parse_test.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "size: project config lowers maxFileLines, flags a file the default would not [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 10-line limit: <ROOT>/project/src/big.rs (15 code lines, blanks/comments excluded) — split into submodules\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/big.rs\",\n  \"violations\": \"File exceeds 10-line limit: <ROOT>/project/src/big.rs (15 code lines, blanks/comments excluded) — split into submodules\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/big.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"File exceeds 10-line limit: <ROOT>/project/src/big.rs (15 code lines, blanks/comments excluded) — split into submodules\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/big.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFileLines\": 10\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: over-limit message flags approximate size on unterminated /* [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 2-line limit: <ROOT>/project/src/m.rs (4 code lines, blanks/comments excluded) (size approximated — an unterminated /* or a string containing /* may be affecting the count) — split into submodules\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/m.rs\",\n  \"violations\": \"File exceeds 2-line limit: <ROOT>/project/src/m.rs (4 code lines, blanks/comments excluded) (size approximated — an unterminated /* or a string containing /* may be affecting the count) — split into submodules\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/m.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"File exceeds 2-line limit: <ROOT>/project/src/m.rs (4 code lines, blanks/comments excluded) (size approximated — an unterminated /* or a string containing /* may be affecting the count) — split into submodules\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/m.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFileLines\": 2\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: pub(crate) const fn is subject to the fn-length limit [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/m.rs (>3 lines) — extract helpers.\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/m.rs\",\n  \"violations\": \"Function too long in <ROOT>/project/src/m.rs (>3 lines) — extract helpers.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/m.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/m.rs (>3 lines) — extract helpers.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/m.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: long fn with inner if/else is measured to its real close (regression) [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/long.rs (>5 lines) — extract helpers.\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/long.rs\",\n  \"violations\": \"Function too long in <ROOT>/project/src/long.rs (>5 lines) — extract helpers.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/long.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/long.rs (>5 lines) — extract helpers.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/long.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFnLines\": 5\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: short impl method followed by other items is NOT flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/m.rs — add a concise one-line doc:\\n1: pub struct Foo;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFnLines\": 5\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: long method inside an impl IS flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/m.rs (>5 lines) — extract helpers.\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/m.rs\",\n  \"violations\": \"Function too long in <ROOT>/project/src/m.rs (>5 lines) — extract helpers.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/m.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/m.rs (>5 lines) — extract helpers.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/m.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFnLines\": 5\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: long fn with unbalanced brace in a string is still measured [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/m.rs (>5 lines) — extract helpers.\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/m.rs\",\n  \"violations\": \"Function too long in <ROOT>/project/src/m.rs (>5 lines) — extract helpers.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/m.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/m.rs (>5 lines) — extract helpers.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/m.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFnLines\": 5\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: pub(in path) fn is subject to the fn-length limit [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/m.rs (>3 lines) — extract helpers.\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/m.rs\",\n  \"violations\": \"Function too long in <ROOT>/project/src/m.rs (>3 lines) — extract helpers.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/m.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/m.rs (>3 lines) — extract helpers.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/m.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: oversized impl block is flagged (brace-depth) [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nImpl block too large in <ROOT>/project/src/m.rs (>6 lines) — split into trait impls or modules.\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/m.rs\",\n  \"violations\": \"Impl block too large in <ROOT>/project/src/m.rs (>6 lines) — split into trait impls or modules.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/m.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Impl block too large in <ROOT>/project/src/m.rs (>6 lines) — split into trait impls or modules.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/m.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxImplLines\": 6\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: small impl with an inner-control-flow method is NOT flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/m.rs — add a concise one-line doc:\\n1: pub struct Foo;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxImplLines\": 20\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: long fn in a COLOCATED test under src/ is NOT flagged [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: oversized impl in a COLOCATED test under src/ is NOT flagged [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxImplLines\": 6\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: default limits leave a small file alone [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "size: a trait fn declaration ends at its semicolon [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: async unsafe extern fn heads are measured [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/x.rs (>2 lines) — extract helpers.\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/x.rs\",\n  \"violations\": \"Function too long in <ROOT>/project/src/x.rs (>2 lines) — extract helpers.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/x.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/x.rs (>2 lines) — extract helpers.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/x.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxFnLines\": 2\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: an unsafe impl block is measured [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nImpl block too large in <ROOT>/project/src/x.rs (>2 lines) — split into trait impls or modules.\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/x.rs\",\n  \"violations\": \"Impl block too large in <ROOT>/project/src/x.rs (>2 lines) — split into trait impls or modules.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/x.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Impl block too large in <ROOT>/project/src/x.rs (>2 lines) — split into trait impls or modules.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/x.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"maxImplLines\": 2\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "suppression: cfg_attr(allow) lint suppression is flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "suppression: #[allow] mentioned in a line comment is NOT flagged [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "suppression: file-level #![allow] header in a module-sibling test is NOT flagged [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "suppression: file-level #![allow] header in a crate-root integration test is NOT flagged [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "suppression: inner #![cfg_attr(..., allow(...))] in a test file is NOT flagged [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "suppression: per-item #[allow] inside a test file IS still flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/api/tests/stats.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust]. In a test file only the file-level #![allow(...)] header is accepted.\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/api/tests/stats.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/api/tests/stats.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust]. In a test file only the file-level #![allow(...)] header is accepted.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/api/tests/stats.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/api/tests/stats.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust]. In a test file only the file-level #![allow(...)] header is accepted.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/api/tests/stats.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "suppression: file-level #![allow] header outside tests/ IS still flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/lib.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/lib.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/lib.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/lib.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/lib.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/lib.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "suppression: #[expect] is flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/e.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/e.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/e.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/e.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in <ROOT>/project/src/e.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/e.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "unsafe: unsafe block in src/ is flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden unsafe code in <ROOT>/project/src/u.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/u.rs\",\n  \"violations\": \"Forbidden unsafe code in <ROOT>/project/src/u.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/u.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden unsafe code in <ROOT>/project/src/u.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/u.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "unsafe: unsafe mentioned only in a comment is NOT flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/ok.rs — add a concise one-line doc:\\n2: pub fn f() -> u8 {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "unsafe: unsafe inside a multi-line block comment is NOT flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/ok.rs — add a concise one-line doc:\\n7: pub fn f() -> u8 {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "unsafe: an unsafe fn and an inline block comment [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden unsafe code in <ROOT>/project/src/u.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/u.rs\",\n  \"violations\": \"Forbidden unsafe code in <ROOT>/project/src/u.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/u.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden unsafe code in <ROOT>/project/src/u.rs — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing).\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/u.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "unsafe: an identifier ending in unsafe is not flagged [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: pub(crate) fn without /// doc emits a docs advisory [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/api.rs — add a concise one-line doc:\\n1: pub(crate) fn do_thing() -> u32 {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: pub fn without /// doc emits a non-blocking docs advisory [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/api.rs — add a concise one-line doc:\\n1: pub fn do_thing() -> u32 {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: attributes and blank lines sit between the doc and the item [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/api.rs — add a concise one-line doc:\\n7: pub enum C {}\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: more than three undocumented items show the first three [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/api.rs — add a concise one-line doc:\\n1: pub fn a() {}\\n2: pub fn b() {}\\n3: pub const C: u8 = 1;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: a long doc block is verbose [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Verbose doc comment in <ROOT>/project/src/api.rs — docs must be present but concise:\\n1: doc block is 13 lines — trim to the essentials\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: undocumented and verbose together [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public items missing a /// doc comment in <ROOT>/project/src/api.rs — add a concise one-line doc:\\n1: pub fn bare() {}\\nVerbose doc comment in <ROOT>/project/src/api.rs — docs must be present but concise:\\n2: doc block is 13 lines — trim to the essentials\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: a doc block at the end of the file [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Verbose doc comment in <ROOT>/project/src/api.rs — docs must be present but concise:\\n2: doc block is 13 lines — trim to the essentials\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: outside src/ there is no advisory [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "error-handling: .unwrap() in src/ is flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\n.unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = some_result().unwrap();\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \".unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = some_result().unwrap();\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \".unwrap() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let x = some_result().unwrap();\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "error-handling: .expect() in src/ is flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\n.expect() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let y = thing.expect(\\\"nope\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \".expect() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let y = thing.expect(\\\"nope\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \".expect() in <ROOT>/project/src/bad.rs — use ? or match on Result/Option\\n<ROOT>/project/src/bad.rs:2:    let y = thing.expect(\\\"nope\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "error-handling: panic!/todo!/unimplemented! in src/ is flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\npanic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/bad.rs — return a Result instead\\n<ROOT>/project/src/bad.rs:2:    panic!(\\\"explode\\\");\\n<ROOT>/project/src/bad.rs:3:    todo!();\\n<ROOT>/project/src/bad.rs:4:    unimplemented!();\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \"panic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/bad.rs — return a Result instead\\n<ROOT>/project/src/bad.rs:2:    panic!(\\\"explode\\\");\\n<ROOT>/project/src/bad.rs:3:    todo!();\\n<ROOT>/project/src/bad.rs:4:    unimplemented!();\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"panic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/bad.rs — return a Result instead\\n<ROOT>/project/src/bad.rs:2:    panic!(\\\"explode\\\");\\n<ROOT>/project/src/bad.rs:3:    todo!();\\n<ROOT>/project/src/bad.rs:4:    unimplemented!();\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "error-handling: clean Result-based code produces no error output [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "error-handling: ast-grep crash is surfaced as a violation, not silent pass [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nast-grep failed while scanning <ROOT>/project/src/good.rs — ast-grep exit 2: boom; error-handling rules could not be verified. Fix the tool/file and re-edit\\nast-grep failed while scanning <ROOT>/project/src/good.rs — ast-grep exit 2: boom; no-mocks rules could not be verified. Fix the tool/file and re-edit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/good.rs\",\n  \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/good.rs — ast-grep exit 2: boom; error-handling rules could not be verified. Fix the tool/file and re-edit\\nast-grep failed while scanning <ROOT>/project/src/good.rs — ast-grep exit 2: boom; no-mocks rules could not be verified. Fix the tool/file and re-edit\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/good.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/good.rs — ast-grep exit 2: boom; error-handling rules could not be verified. Fix the tool/file and re-edit\\nast-grep failed while scanning <ROOT>/project/src/good.rs — ast-grep exit 2: boom; no-mocks rules could not be verified. Fix the tool/file and re-edit\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/good.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "error-handling: gate-status file is written on violation [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\npanic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/bad.rs — return a Result instead\\n<ROOT>/project/src/bad.rs:1:fn main() { panic!(); }\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \"panic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/bad.rs — return a Result instead\\n<ROOT>/project/src/bad.rs:1:fn main() { panic!(); }\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"panic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/bad.rs — return a Result instead\\n<ROOT>/project/src/bad.rs:1:fn main() { panic!(); }\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "error-handling: unreachable! in src/ is flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\npanic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/bad.rs — return a Result instead\\n<ROOT>/project/src/bad.rs:4:        _ => unreachable!(\\\"never\\\"),\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.rs\",\n  \"violations\": \"panic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/bad.rs — return a Result instead\\n<ROOT>/project/src/bad.rs:4:        _ => unreachable!(\\\"never\\\"),\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"panic!/todo!/unimplemented!/unreachable! in <ROOT>/project/src/bad.rs — return a Result instead\\n<ROOT>/project/src/bad.rs:4:        _ => unreachable!(\\\"never\\\"),\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "error-handling: .unwrap() in a COLOCATED test under src/ is not flagged [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "error-handling: .unwrap() in a NON-test file under a src/.../tests/ path is still flagged [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\n.unwrap() in <ROOT>/project/src/store/tests/helper.rs — use ? or match on Result/Option\\n<ROOT>/project/src/store/tests/helper.rs:2:    connect().unwrap()\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/store/tests/helper.rs\",\n  \"violations\": \".unwrap() in <ROOT>/project/src/store/tests/helper.rs — use ? or match on Result/Option\\n<ROOT>/project/src/store/tests/helper.rs:2:    connect().unwrap()\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/store/tests/helper.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \".unwrap() in <ROOT>/project/src/store/tests/helper.rs — use ? or match on Result/Option\\n<ROOT>/project/src/store/tests/helper.rs:2:    connect().unwrap()\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/store/tests/helper.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "error-handling: ast-grep absent skips the rule sets [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "error-handling: unparsable ast-grep output is a failure [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nast-grep failed while scanning <ROOT>/project/src/good.rs — ast-grep exited 0 but its output did not parse as the documented JSON array; error-handling rules could not be verified. Fix the tool/file and re-edit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/good.rs\",\n  \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/good.rs — ast-grep exited 0 but its output did not parse as the documented JSON array; error-handling rules could not be verified. Fix the tool/file and re-edit\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/good.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/good.rs — ast-grep exited 0 but its output did not parse as the documented JSON array; error-handling rules could not be verified. Fix the tool/file and re-edit\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/good.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"noMocks\": false\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "error-handling: empty ast-grep output is no hits [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"noMocks\": false\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "error-handling: excerpts stop at five per rule [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\n.unwrap() in <ROOT>/project/src/many.rs — use ? or match on Result/Option\\n<ROOT>/project/src/many.rs:2:\\tlet v1 = r1().unwrap();\\n<ROOT>/project/src/many.rs:3:\\tlet v2 = r2().unwrap();\\n<ROOT>/project/src/many.rs:4:\\tlet v3 = r3().unwrap();\\n<ROOT>/project/src/many.rs:5:\\tlet v4 = r4().unwrap();\\n<ROOT>/project/src/many.rs:6:\\tlet v5 = r5().unwrap();\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/many.rs\",\n  \"violations\": \".unwrap() in <ROOT>/project/src/many.rs — use ? or match on Result/Option\\n<ROOT>/project/src/many.rs:2:\\tlet v1 = r1().unwrap();\\n<ROOT>/project/src/many.rs:3:\\tlet v2 = r2().unwrap();\\n<ROOT>/project/src/many.rs:4:\\tlet v3 = r3().unwrap();\\n<ROOT>/project/src/many.rs:5:\\tlet v4 = r4().unwrap();\\n<ROOT>/project/src/many.rs:6:\\tlet v5 = r5().unwrap();\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/many.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \".unwrap() in <ROOT>/project/src/many.rs — use ? or match on Result/Option\\n<ROOT>/project/src/many.rs:2:\\tlet v1 = r1().unwrap();\\n<ROOT>/project/src/many.rs:3:\\tlet v2 = r2().unwrap();\\n<ROOT>/project/src/many.rs:4:\\tlet v3 = r3().unwrap();\\n<ROOT>/project/src/many.rs:5:\\tlet v4 = r4().unwrap();\\n<ROOT>/project/src/many.rs:6:\\tlet v5 = r5().unwrap();\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/many.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: src/ fixture with #[cfg_attr(test, automock)] fails the gate [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nno-mocks: #[automock] mock definition in <ROOT>/project/src/service.rs — write against real data/fixtures instead\\n<ROOT>/project/src/service.rs:1:#[cfg_attr(test, automock)]\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/service.rs\",\n  \"violations\": \"no-mocks: #[automock] mock definition in <ROOT>/project/src/service.rs — write against real data/fixtures instead\\n<ROOT>/project/src/service.rs:1:#[cfg_attr(test, automock)]\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/service.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"no-mocks: #[automock] mock definition in <ROOT>/project/src/service.rs — write against real data/fixtures instead\\n<ROOT>/project/src/service.rs:1:#[cfg_attr(test, automock)]\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/service.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: src/lib.rs with mock! { ... } fails the gate [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nno-mocks: mock! { ... } mock definition in <ROOT>/project/src/lib.rs — write against real data/fixtures instead\\n<ROOT>/project/src/lib.rs:5:mock! {\\n<ROOT>/project/src/lib.rs:6:    pub MyMock {}\\n<ROOT>/project/src/lib.rs:7:    impl Foo for MyMock {\\n<ROOT>/project/src/lib.rs:8:        fn bar(&self) -> u8;\\n<ROOT>/project/src/lib.rs:9:    }\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/lib.rs\",\n  \"violations\": \"no-mocks: mock! { ... } mock definition in <ROOT>/project/src/lib.rs — write against real data/fixtures instead\\n<ROOT>/project/src/lib.rs:5:mock! {\\n<ROOT>/project/src/lib.rs:6:    pub MyMock {}\\n<ROOT>/project/src/lib.rs:7:    impl Foo for MyMock {\\n<ROOT>/project/src/lib.rs:8:        fn bar(&self) -> u8;\\n<ROOT>/project/src/lib.rs:9:    }\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/lib.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"no-mocks: mock! { ... } mock definition in <ROOT>/project/src/lib.rs — write against real data/fixtures instead\\n<ROOT>/project/src/lib.rs:5:mock! {\\n<ROOT>/project/src/lib.rs:6:    pub MyMock {}\\n<ROOT>/project/src/lib.rs:7:    impl Foo for MyMock {\\n<ROOT>/project/src/lib.rs:8:        fn bar(&self) -> u8;\\n<ROOT>/project/src/lib.rs:9:    }\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/lib.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: src/lib.rs with mock!(...) paren-delimiter form fails the gate [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nno-mocks: mock! { ... } mock definition in <ROOT>/project/src/lib.rs — write against real data/fixtures instead\\n<ROOT>/project/src/lib.rs:5:mock!(\\n<ROOT>/project/src/lib.rs:6:    pub MyMock {}\\n<ROOT>/project/src/lib.rs:7:    impl Foo for MyMock {\\n<ROOT>/project/src/lib.rs:8:        fn bar(&self) -> u8;\\n<ROOT>/project/src/lib.rs:9:    }\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/lib.rs\",\n  \"violations\": \"no-mocks: mock! { ... } mock definition in <ROOT>/project/src/lib.rs — write against real data/fixtures instead\\n<ROOT>/project/src/lib.rs:5:mock!(\\n<ROOT>/project/src/lib.rs:6:    pub MyMock {}\\n<ROOT>/project/src/lib.rs:7:    impl Foo for MyMock {\\n<ROOT>/project/src/lib.rs:8:        fn bar(&self) -> u8;\\n<ROOT>/project/src/lib.rs:9:    }\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/lib.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"no-mocks: mock! { ... } mock definition in <ROOT>/project/src/lib.rs — write against real data/fixtures instead\\n<ROOT>/project/src/lib.rs:5:mock!(\\n<ROOT>/project/src/lib.rs:6:    pub MyMock {}\\n<ROOT>/project/src/lib.rs:7:    impl Foo for MyMock {\\n<ROOT>/project/src/lib.rs:8:        fn bar(&self) -> u8;\\n<ROOT>/project/src/lib.rs:9:    }\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/lib.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: tests/integration_test.rs with use mockall::predicate::*; fails the gate [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nno-mocks: mockall/faux import in <ROOT>/project/tests/integration_test.rs — write against real data/fixtures instead\\n<ROOT>/project/tests/integration_test.rs:1:use mockall::predicate::*;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/tests/integration_test.rs\",\n  \"violations\": \"no-mocks: mockall/faux import in <ROOT>/project/tests/integration_test.rs — write against real data/fixtures instead\\n<ROOT>/project/tests/integration_test.rs:1:use mockall::predicate::*;\\n\",\n  \"entries\": {\n    \"<ROOT>/project/tests/integration_test.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"no-mocks: mockall/faux import in <ROOT>/project/tests/integration_test.rs — write against real data/fixtures instead\\n<ROOT>/project/tests/integration_test.rs:1:use mockall::predicate::*;\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/tests/integration_test.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: tests/ fixture with use faux::...; fails the gate [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nno-mocks: mockall/faux import in <ROOT>/project/tests/faux_test.rs — write against real data/fixtures instead\\n<ROOT>/project/tests/faux_test.rs:1:use faux::create;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/tests/faux_test.rs\",\n  \"violations\": \"no-mocks: mockall/faux import in <ROOT>/project/tests/faux_test.rs — write against real data/fixtures instead\\n<ROOT>/project/tests/faux_test.rs:1:use faux::create;\\n\",\n  \"entries\": {\n    \"<ROOT>/project/tests/faux_test.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"no-mocks: mockall/faux import in <ROOT>/project/tests/faux_test.rs — write against real data/fixtures instead\\n<ROOT>/project/tests/faux_test.rs:1:use faux::create;\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/tests/faux_test.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: *_tests.rs basename outside tests/ is still scoped for mock imports [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nRust test file outside tests/: <ROOT>/project/integration_tests.rs — move to a sibling tests/ directory\\nno-mocks: mockall/faux import in <ROOT>/project/integration_tests.rs — write against real data/fixtures instead\\n<ROOT>/project/integration_tests.rs:1:use mockall::automock;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/integration_tests.rs\",\n  \"violations\": \"Rust test file outside tests/: <ROOT>/project/integration_tests.rs — move to a sibling tests/ directory\\nno-mocks: mockall/faux import in <ROOT>/project/integration_tests.rs — write against real data/fixtures instead\\n<ROOT>/project/integration_tests.rs:1:use mockall::automock;\\n\",\n  \"entries\": {\n    \"<ROOT>/project/integration_tests.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Rust test file outside tests/: <ROOT>/project/integration_tests.rs — move to a sibling tests/ directory\\nno-mocks: mockall/faux import in <ROOT>/project/integration_tests.rs — write against real data/fixtures instead\\n<ROOT>/project/integration_tests.rs:1:use mockall::automock;\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/integration_tests.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: real-data test fixture (reads a real fixture file from tests/data/) passes [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "no-mocks: lang.rust.noMocks=false lets a src/ automock fixture pass [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"noMocks\": false\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "no-mocks: lang.rust.noMocks=false lets a tests/ mockall-import fixture pass [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"rust\": {\n      \"noMocks\": false\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "no-mocks: ast-grep crash while scanning for mocks is surfaced, not silent [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nast-grep failed while scanning <ROOT>/project/src/service.rs — ast-grep exit 2: boom; error-handling rules could not be verified. Fix the tool/file and re-edit\\nast-grep failed while scanning <ROOT>/project/src/service.rs — ast-grep exit 2: boom; no-mocks rules could not be verified. Fix the tool/file and re-edit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/service.rs\",\n  \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/service.rs — ast-grep exit 2: boom; error-handling rules could not be verified. Fix the tool/file and re-edit\\nast-grep failed while scanning <ROOT>/project/src/service.rs — ast-grep exit 2: boom; no-mocks rules could not be verified. Fix the tool/file and re-edit\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/service.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/service.rs — ast-grep exit 2: boom; error-handling rules could not be verified. Fix the tool/file and re-edit\\nast-grep failed while scanning <ROOT>/project/src/service.rs — ast-grep exit 2: boom; no-mocks rules could not be verified. Fix the tool/file and re-edit\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/service.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: ast-grep exit 0 with empty stdout is surfaced, not silent [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nast-grep failed while scanning <ROOT>/project/src/service.rs — ast-grep exited 0 with empty output (expected at least the JSON array \\\"[]\\\"); no-mocks rules could not be verified. Fix the tool/file and re-edit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/service.rs\",\n  \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/service.rs — ast-grep exited 0 with empty output (expected at least the JSON array \\\"[]\\\"); no-mocks rules could not be verified. Fix the tool/file and re-edit\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/service.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/service.rs — ast-grep exited 0 with empty output (expected at least the JSON array \\\"[]\\\"); no-mocks rules could not be verified. Fix the tool/file and re-edit\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/service.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: a bare #[automock] in src/ fails the gate [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nno-mocks: #[automock] mock definition in <ROOT>/project/src/service.rs — write against real data/fixtures instead\\n<ROOT>/project/src/service.rs:1:#[automock]\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"<ROOT>/project/src/service.rs\",\n  \"violations\": \"no-mocks: #[automock] mock definition in <ROOT>/project/src/service.rs — write against real data/fixtures instead\\n<ROOT>/project/src/service.rs:1:#[automock]\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/service.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"no-mocks: #[automock] mock definition in <ROOT>/project/src/service.rs — write against real data/fixtures instead\\n<ROOT>/project/src/service.rs:1:#[automock]\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/service.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: a mock import in a non-test src/ file is not scanned [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ]
+  }
+}
