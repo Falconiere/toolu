@@ -168,6 +168,22 @@ test.concurrent("setup: upgrades any shell-prefixed form of the published path",
   }
 });
 
+test.concurrent("setup: a shell -c pipeline around the path is already wired, not legacy", async () => {
+  using sb = createSandbox();
+  const { settings } = config(sb);
+  for (const custom of [
+    'bash -c "~/.claude/statusline/statusline.sh | cat"',
+    "sh -lc '~/.claude/statusline/statusline.sh'",
+  ]) {
+    const body = JSON.stringify({ statusLine: { command: custom } });
+    writeFileSync(settings, body);
+    const res = await setup(sb);
+    expect(res).toMatchObject({ exitCode: 0 });
+    expect(res.stdout).toStartWith("ALREADY ");
+    expect(readFileSync(settings, "utf8")).toBe(body);
+  }
+});
+
 test.concurrent("setup: an empty settings.json is treated as absent", async () => {
   using sb = createSandbox();
   const { settings } = config(sb);

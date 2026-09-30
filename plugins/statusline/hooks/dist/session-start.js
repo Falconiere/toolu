@@ -3245,7 +3245,7 @@ function settingsPath(env) {
   return `${dir}/settings.json`;
 }
 function isLegacyCommand(command) {
-  return typeof command === "string" && /^\s*(?:\S*\/)?(?:env\s+)?(?:\S*\/)?(?:ba|z)?sh\s/.test(command) && command.includes(MARKER);
+  return typeof command === "string" && /^\s*(?:\S*\/)?(?:env\s+)?(?:\S*\/)?(?:ba|z)?sh\s+(?!-[a-zA-Z]*c)/.test(command) && command.includes(MARKER);
 }
 
 // plugins/statusline/hooks/src/session-start.ts

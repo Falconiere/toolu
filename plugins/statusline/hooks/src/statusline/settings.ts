@@ -21,11 +21,15 @@ export function desiredCommand(env: HostEnv): string {
   return dir === undefined ? `~/.claude/${MARKER}` : `"${dir}/${MARKER}"`;
 }
 
-/** A `statusLine` command that runs the published statusline through a shell: `bash`, `/bin/sh`, `/usr/bin/env zsh`… */
+/**
+ * A `statusLine` command that hands the published statusline to a shell as a
+ * script: `bash`, `/bin/sh`, `/usr/bin/env zsh`… A `-c` command string runs it
+ * as a program, which still works, so it is not legacy.
+ */
 export function isLegacyCommand(command: unknown): boolean {
   return (
     typeof command === "string" &&
-    /^\s*(?:\S*\/)?(?:env\s+)?(?:\S*\/)?(?:ba|z)?sh\s/.test(command) &&
+    /^\s*(?:\S*\/)?(?:env\s+)?(?:\S*\/)?(?:ba|z)?sh\s+(?!-[a-zA-Z]*c)/.test(command) &&
     command.includes(MARKER)
   );
 }

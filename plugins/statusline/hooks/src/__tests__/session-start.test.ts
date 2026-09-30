@@ -53,6 +53,9 @@ test.concurrent("statusline session-start: a Bun statusLine on Claude is silent"
 
 test.concurrent("statusline session-start: a custom statusLine on Claude is silent", async () => {
   expect(await startupWith("claude", "bash my-custom-bar.sh")).toBe("");
+  expect(await startupWith("claude", 'bash -c "~/.claude/statusline/statusline.sh | cat"')).toBe(
+    "",
+  );
 });
 
 test.concurrent("statusline session-start: Codex never reads Claude's settings", async () => {
