@@ -90,7 +90,7 @@ A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context b
 | `tooling/src/build-plugins.ts` | Builds `plugins/*/hooks/src` entries into committed `hooks/dist` bundles; `--check` is the drift gate |
 | `tooling/shellcheck.sh` | shellcheck gate |
 | `docs/config.md` | Config schema |
-| `plugins/toolu/scripts/context-budget.sh` | Injected-context word ceilings |
+| `plugins/toolu/scripts/context-budget.ts` | Injected-context word ceilings (`bun run test:context-budget`) |
 
 ## Contributing
 

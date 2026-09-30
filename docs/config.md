@@ -514,7 +514,7 @@ usable context window. To reclaim it:
   block a noisy one entirely.
 
 The harness caps its *own* injected footprint with
-`plugins/toolu/scripts/context-budget.sh` (run in CI): word ceilings on the
+`plugins/toolu/scripts/context-budget.ts` (`bun run test:context-budget`, run in CI): word ceilings on the
 Session Protocol + per-language docs and on every skill `description`, so the
 baseline cannot silently regrow.
 

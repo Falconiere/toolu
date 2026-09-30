@@ -33,11 +33,11 @@ Reproduction/tests establish causes.
 
 ## Evidence helpers (the Observe step)
 
-Three language-agnostic collectors turn raw failure output into a compact, capped summary so Observe doesn't flood context. Each reads stdin or `--file <path>`, takes `--json`, and degrades to a capped raw passthrough on input it doesn't recognize. Caps are env-overridable (`DEBUG_MAX_*`).
+Three language-agnostic collectors turn raw failure output into a compact, capped summary so Observe doesn't flood context. Run each with `bun`; each reads stdin or `--file <path>`, takes `--json`, and degrades to a capped raw passthrough on input it doesn't recognize. Caps are env-overridable (`DEBUG_MAX_*`).
 
-- `plugins/toolu/scripts/debug-testfail.sh` — failing-test transcript → failed test names, error/assertion lines, code `file:line` locations. `bun test out.txt | debug-testfail.sh` or `cargo test 2>&1 | debug-testfail.sh`.
-- `plugins/toolu/scripts/debug-stack.sh` — stack trace / backtrace → app frames first, framework/runtime frames collapsed.
-- `plugins/toolu/scripts/debug-log.sh` — large log → deduped error/warn lines + a tail, hard-capped in lines and bytes.
+- `plugins/toolu/scripts/debug-testfail.ts` — failing-test transcript → failed test names, error/assertion lines, code `file:line` locations. `bun test 2>&1 | bun plugins/toolu/scripts/debug-testfail.ts` or `cargo test 2>&1 | bun plugins/toolu/scripts/debug-testfail.ts`.
+- `plugins/toolu/scripts/debug-stack.ts` — stack trace / backtrace → app frames first, framework/runtime frames collapsed.
+- `plugins/toolu/scripts/debug-log.ts` — large log → deduped error/warn lines + a tail, hard-capped in lines and bytes.
 
 Use them to *seed* the investigation; they observe, they don't diagnose.
 
@@ -46,7 +46,7 @@ Use them to *seed* the investigation; they observe, they don't diagnose.
 When the bug originates from a Sentry issue and the Sentry MCP is authenticated, you can pull the event to seed Reproduce + Observe:
 
 1. The Sentry MCP's fetch tools only appear **after** OAuth — discover them at runtime with `ToolSearch` (e.g. query `+Sentry issue event`); do not assume tool names. If only `mcp__claude_ai_Sentry__authenticate` is present, the user hasn't connected it.
-2. Fetch the issue/event the user names (URL or short-id), extract the exception + stack + breadcrumbs, pipe the stack through `debug-stack.sh`, then proceed from Observe.
+2. Fetch the issue/event the user names (URL or short-id), extract the exception + stack + breadcrumbs, pipe the stack through `bun plugins/toolu/scripts/debug-stack.ts`, then proceed from Observe.
 3. **If Sentry is unavailable, unauthed, or exposes no fetch tool:** say so in one line ("Sentry unavailable, proceeding manually") and continue — ask the user to paste the stack/error. The loop never depends on Sentry.
 
 ## Return to the chain
