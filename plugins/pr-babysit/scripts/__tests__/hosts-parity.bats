@@ -18,7 +18,7 @@ teardown() {
 }
 
 with_hosts() {
-  bash -c "set -euo pipefail; . '$LIB/common.sh'; . '$LIB/hosts.sh'; $1"
+  bash -c "set -euo pipefail; . '$LIB/fixer-compat.sh'; . '$LIB/hosts.sh'; $1"
 }
 
 # pb_args_json KIND MODEL EFFORT BYPASS -> the babysit argv as a JSON array

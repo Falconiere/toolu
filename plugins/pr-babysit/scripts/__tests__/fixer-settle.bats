@@ -17,7 +17,7 @@ teardown() {
 }
 
 with_fixer() {
-  bash -c "set -euo pipefail; . '$LIB/common.sh'; . '$LIB/hosts.sh'; . '$LIB/fixer.sh'; $1"
+  bash -c "set -euo pipefail; . '$LIB/fixer-compat.sh'; . '$LIB/hosts.sh'; . '$LIB/fixer.sh'; $1"
 }
 
 # settle REPORT_FILE OUTPUT_TEXT -> the settle outcome

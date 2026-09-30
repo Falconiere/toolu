@@ -24,8 +24,8 @@
 set -euo pipefail
 
 PB_SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
-# shellcheck source=lib/common.sh
-. "$PB_SCRIPT_DIR/lib/common.sh"
+# shellcheck source=lib/fixer-compat.sh
+. "$PB_SCRIPT_DIR/lib/fixer-compat.sh"
 # shellcheck source=lib/hosts.sh
 . "$PB_SCRIPT_DIR/lib/hosts.sh"
 # shellcheck source=lib/config.sh

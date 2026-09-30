@@ -21,7 +21,7 @@ setup() {
   TMP=$(mktemp -d)
   STATE="$TMP/pr-babysit-$SLOT.json"
   ROOT="$TMP/repo"
-  bash "$SCRIPTS/babysit-tick.sh" --repo Falconiere/toolu --pr 165 --state-file "$STATE" \
+  bun "$SCRIPTS/../hooks/dist/babysit-tick.js" --repo Falconiere/toolu --pr 165 --state-file "$STATE" \
     --snapshot-in "$SNAP/toolu-165.json" --now "$NOW" >/dev/null
   # Controlled PATH: jq, git and the host CLIs as present executables — and no herdr.
   mkdir -p "$TMP/bin" "$TMP/cfg"
@@ -180,7 +180,7 @@ start_dry() {
   printf 'a\n' >"$TMP/wt/f.txt"
   git -C "$TMP/wt" add f.txt
   git -C "$TMP/wt" -c user.email=t@example.invalid -c user.name=t commit --quiet -m init
-  dirt() { bash -c ". '$SCRIPTS/lib/common.sh'; PB_D_DRY=0; . '$SCRIPTS/lib/dispatch.sh'; pb_d_dirt '$TMP/wt'"; }
+  dirt() { bash -c ". '$SCRIPTS/lib/fixer-compat.sh'; PB_D_DRY=0; . '$SCRIPTS/lib/dispatch.sh'; pb_d_dirt '$TMP/wt'"; }
   # What a real fixer's Claude session leaves behind (toolu SessionStart hook, push-review state).
   mkdir -p "$TMP/wt/.claude/tmp/push-review" "$TMP/wt/.codex/tmp" "$TMP/wt/.cursor"
   printf '{"permissions":{"allow":["Bash(*)"]}}\n' >"$TMP/wt/.claude/settings.local.json"
@@ -199,7 +199,7 @@ start_dry() {
 # with_dispatch CODE -> run CODE with the dispatcher libs sourced against $STATE
 with_dispatch() {
   PATH="$TMP/bin:/usr/bin:/bin" bash -c "set -euo pipefail
-    . '$SCRIPTS/lib/common.sh'; . '$SCRIPTS/lib/lock.sh'; . '$SCRIPTS/lib/state.sh'; . '$SCRIPTS/lib/hosts.sh'
+    . '$SCRIPTS/lib/fixer-compat.sh'; . '$SCRIPTS/lib/hosts.sh'
     . '$SCRIPTS/lib/fixer.sh'; . '$SCRIPTS/lib/herdr.sh'
     PB_D_STATE='$STATE'; PB_D_DRY=0; PB_D_ROUND=1; PB_D_PLAN=\$(cat '$TMP/plan.json')
     . '$SCRIPTS/lib/dispatch.sh'
@@ -305,9 +305,9 @@ git_topology() {
 
 @test "pb_herdr_try keeps herdr's own error code (live herdr only)" {
   command -v herdr >/dev/null 2>&1 && herdr workspace list >/dev/null 2>&1 || skip "no live herdr on this machine"
-  out=$(bash -c ". '$SCRIPTS/lib/common.sh'; . '$SCRIPTS/lib/herdr.sh'; pb_herdr_try agent wait pb-nosuch-r9g9 --timeout 1000" || true)
+  out=$(bash -c ". '$SCRIPTS/lib/fixer-compat.sh'; . '$SCRIPTS/lib/herdr.sh'; pb_herdr_try agent wait pb-nosuch-r9g9 --timeout 1000" || true)
   [ "$(jq -r '.error.code' <<<"$out")" = agent_not_found ]
-  [ "$(bash -c ". '$SCRIPTS/lib/common.sh'; . '$SCRIPTS/lib/herdr.sh'; pb_herdr_agent_status pb-nosuch-r9g9")" = gone ]
+  [ "$(bash -c ". '$SCRIPTS/lib/fixer-compat.sh'; . '$SCRIPTS/lib/herdr.sh'; pb_herdr_agent_status pb-nosuch-r9g9")" = gone ]
 }
 
 # --- settle and launch transitions on real state files ------------------------

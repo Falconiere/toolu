@@ -11,13 +11,13 @@ on is listed here. Fields not listed are not part of the contract.
 
 | Script | Role | Exit codes |
 |---|---|---|
-| `babysit-tick.sh` | **The tick.** Lock the slot → collect → reduce → persist → print the result. The only read-side command the workflow runs. | `0` result · `2` usage · `3` structured error (state preserved, `pr.lastError` stamped) · `75` slot locked |
-| `collect-pr.sh` | Read side: PR metadata, review threads (paginated, nested comment pages), issue comments, reviews; head re-checked after the fan-out; bot verdict via `parse-verdict.sh`. Writes one snapshot. | `0` · `2` · `3` |
-| `reduce-state.sh` | Pure decision layer: snapshot + prior state + `--now` → next state + result. No network, no clock. | `0` · `2` · `3` |
-| `reply-thread.sh` | Write side: post one reply (thread / conversation / review-level), idempotent per reviewer comment. | `0` · `2` · `3` · `4` duplicate_reply · `75` |
-| `resolve-thread.sh` | Write side: `resolveReviewThread`, confirmed from the response, retried, recorded. | `0` · `2` · `3` · `5` resolve_unconfirmed · `75` |
-| `record.sh` | Hand agent decisions to the reducer: `round`, `flag-injection`, `status`. | `0` · `2` · `3` · `75` |
-| `parse-verdict.sh` | Existing verdict parser; unchanged. | — |
+| `babysit-tick.js` | **The tick.** Lock the slot → collect → reduce → persist → print the result. The only read-side command the workflow runs. | `0` result · `2` usage · `3` structured error (state preserved, `pr.lastError` stamped) · `75` slot locked |
+| `babysit-collect-pr.js` | Read side: PR metadata, review threads (paginated, nested comment pages), issue comments, reviews; head re-checked after the fan-out; bot verdict via `babysit-parse-verdict.js`. Writes one snapshot. | `0` · `2` · `3` |
+| `babysit-reduce-state.js` | Pure decision layer: snapshot + prior state + `--now` → next state + result. No network, no clock. | `0` · `2` · `3` |
+| `babysit-reply-thread.js` | Write side: post one reply (thread / conversation / review-level), idempotent per reviewer comment. | `0` · `2` · `3` · `4` duplicate_reply · `75` |
+| `babysit-resolve-thread.js` | Write side: `resolveReviewThread`, confirmed from the response, retried, recorded. | `0` · `2` · `3` · `5` resolve_unconfirmed · `75` |
+| `babysit-record.js` | Hand agent decisions to the reducer: `round`, `flag-injection`, `status`. | `0` · `2` · `3` · `75` |
+| `babysit-parse-verdict.js` | Existing verdict parser; unchanged. | — |
 | `route-fix.sh` | Fix routing: Jev-scores the round's items file, tiers and groups it, picks host/model/effort per group from `prBabysit` config. Reads no GitHub. | `0` · `2` · `3` |
 | `dispatch-fix.sh` | Herdr fixer dispatch: `start` / `wait` / `cleanup` of the slot's herdr worktree and fixer agents. | `0` · `2` · `3` · `75` |
 | `fixer-report.sh` | Run by a fixer agent, never by the controller: writes its done/failed report. | `0` · `2` |
@@ -30,10 +30,10 @@ Structured errors are one JSON document on stdout:
 `config_invalid`, `plan_invalid`, `fixer_running`, `herdr_unavailable`,
 `herdr_error`, `git_error`, `worktree_dirty`, `stale_branch`.
 
-## `babysit-tick.sh`
+## `babysit-tick.js`
 
 ```
-babysit-tick.sh --repo <owner/repo> --pr <n> --state-file <path>
+babysit-tick.js --repo <owner/repo> --pr <n> --state-file <path>
                 [--snapshot-out <path>] [--snapshot-in <path>]
                 [--page-size N] [--timeout SECONDS] [--now <iso8601>]
 ```
@@ -57,7 +57,7 @@ crash leaves the previous state and no temp file.
 
 ## Result (`version: 1`)
 
-What the agent acts on. Printed on stdout by `babysit-tick.sh`.
+What the agent acts on. Printed on stdout by `babysit-tick.js`.
 
 | Field | Meaning |
 |---|---|
@@ -68,7 +68,7 @@ What the agent acts on. Printed on stdout by `babysit-tick.sh`.
 | `pr` | `number, url, head, branch, base, author, state, mergeable, reviewDecision`. |
 | `ci.status` | `pass` · `pending` · `fail` over `statusCheckRollup` (`CheckRun` and legacy `StatusContext`); an empty rollup is `pending`. |
 | `ci.checks[]` | `{name, status, url}` per check. |
-| `verdict.state` | `absent` · `unknown` · `in_progress` · `complete` · `provider_error` (parse-verdict.sh states, plus `absent` when no CI-reviewer comment exists). |
+| `verdict.state` | `absent` · `unknown` · `in_progress` · `complete` · `provider_error` (babysit-parse-verdict.js states, plus `absent` when no CI-reviewer comment exists). |
 | `verdict.verdict` | `approved` · `changes` · `none`. |
 | `verdict.findingsCount`, `findingKeys[]` | Round-level recurrence keys (`path:line:hash`). Never the finding source — the inline threads are. |
 | `verdict.mustFix[]` | Top-N must-fix prose lines. Surface to the human; not resolvable threads. |
@@ -79,7 +79,7 @@ What the agent acts on. Printed on stdout by `babysit-tick.sh`.
 | `threads.actionable[]` | Threads needing a NEW disposition this tick: `{id, path, line, isOutdated, rootCommentId, inReplyTo, authorClass, lastCommentAuthor, lastCommentAt, injectionSuspect, injectionPattern, comments[]}`. `authorClass` ∈ `ci_reviewer` (exact login set `github-actions`, `github-actions[bot]`, `claude`, `claude[bot]` — current Toolu Code Review `@v8` posts as `github-actions[bot]`; `claude` kept for legacy), `human`. Non-CI bots are excluded. `comments[]` is the full chain, bodies untruncated. |
 | `threads.staleUnresolved[]` | Audit members that are NOT actionable: the PR author replied but no resolve landed. Resolve them without a new reply. |
 | `threads.skippedOutdated[]` | Outdated CI-reviewer threads: skipped silently. |
-| `threads.flaggedInjection[]` | Threads the agent recorded with `record.sh flag-injection`. |
+| `threads.flaggedInjection[]` | Threads the agent recorded with `babysit-record.js flag-injection`. |
 | `threads.fixing[]` | Threads an **active** herdr fixer (running or blocked) owns: the same objects `actionable[]` would hold, reply ids included, moved out of it (never dispatched twice) and still counted in `unresolved`. Reply to them from here when `dispatch-fix.sh wait` says `done`. |
 | `fixer` | The slot's fixer record (see State), or `null`. |
 | `conversation.actionable[]` | Human issue comments with no later author comment and no recorded reply. |
@@ -113,44 +113,44 @@ What the agent acts on. Printed on stdout by `babysit-tick.sh`.
   an unchanged tick, and `mergeable == UNKNOWN`.
 
 Recurrence only advances on a NEW verdict run (`sameRunAsLastTick: false`) and
-only against the keys the agent rotated with `record.sh round`.
+only against the keys the agent rotated with `babysit-record.js round`.
 
 ## State (`version: 2`)
 
 Persisted at `--state-file`; owned by the helper. The agent reads it only
-through the result, and writes it only through `record.sh`, `reply-thread.sh`
-and `resolve-thread.sh`.
+through the result, and writes it only through `babysit-record.js`, `babysit-reply-thread.js`
+and `babysit-resolve-thread.js`.
 
 | Field | Meaning |
 |---|---|
 | `slot`, `repo`, `number`, `cronName` | Slot identity; a state for another PR is refused (`slot_mismatch`). |
 | `lastUpdate`, `totalTicks`, `idleStreak`, `currentInterval`, `waitSeconds` | Tick bookkeeping and backoff. |
-| `status` | `active` · `complete` · `escalated` · `cancelled` — set only by `record.sh status`. |
+| `status` | `active` · `complete` · `escalated` · `cancelled` — set only by `babysit-record.js status`. |
 | `worktree` | Codex's exact worktree path for this slot, or `null`. |
 | `pr.key`, `ciStatus`, `reviewDecision`, `mergeable`, `unresolvedThreads`, `headSha` | Last observed values (change detection). |
-| `pr.fixAttempts` | Bumped by `record.sh round --fix-pushed`, cap 5. |
+| `pr.fixAttempts` | Bumped by `babysit-record.js round --fix-pushed`, cap 5. |
 | `pr.botVerdict`, `botState`, `botCommentId`, `botCommentUpdatedAt`, `botFindingKeys` | Last verdict and its run identity. |
-| `pr.lastRoundFindingKeys`, `lastRoundHadRejection`, `recurrenceStreak` | Step 4 gate memory; rotated by `record.sh round`. |
+| `pr.lastRoundFindingKeys`, `lastRoundHadRejection`, `recurrenceStreak` | Step 4 gate memory; rotated by `babysit-record.js round`. |
 | `pr.unresolvedAfterClearance` | Audit count at the last tick; non-zero on a completed tick is a bug. |
 | `pr.lastError` | `{code, message, at}` of the last failed tick, or `null`. |
 | `actions.replied` | `key → {commentId, url, at, headSha, kind}`; keys `thread:<id>@<inReplyTo>`, `conversation:<id>`, `review:<id>`. |
 | `actions.resolved` | `threadId → {confirmed, at, attempts, headSha}`. |
 | `actions.flagged` | `threadId → {reason, at}`. |
 | `lastGoodSnapshot` | Path of the last snapshot that produced a result. |
-| `fixer` | Written by `dispatch-fix.sh`: `{round, status (running·done·failed·blocked), reason, startedAt, finishedAt, current, unattended, context, itemsFile, items[], groups[{seq, tier, host, model, effort, items[], agent, status (pending·launching·running·done·failed·blocked), reason, error?, brief, report, startedAt, finishedAt, head}]}`, or `null`. `record.sh round` clears a done or failed record; a running or blocked one has a live agent and is kept. |
+| `fixer` | Written by `dispatch-fix.sh`: `{round, status (running·done·failed·blocked), reason, startedAt, finishedAt, current, unattended, context, itemsFile, items[], groups[{seq, tier, host, model, effort, items[], agent, status (pending·launching·running·done·failed·blocked), reason, error?, brief, report, startedAt, finishedAt, head}]}`, or `null`. `babysit-record.js round` clears a done or failed record; a running or blocked one has a live agent and is kept. |
 | `herdrWorktree` | `{path, workspaceId, paneId, branch: "pr-babysit/<slot>", prBranch, repoRoot, base}` of the slot's herdr worktree, or `null`. |
 | `hostCooldowns` | `{<host>: {until, reason: "host_limited"}}` — a host that hit a provider usage limit is skipped by `route-fix.sh` for 60 min. |
 
 ## Write side
 
 ```
-reply-thread.sh --state-file <path> --kind thread --thread <id> --root-comment <databaseId> --in-reply-to <databaseId> --body-file <file>
-reply-thread.sh --state-file <path> --kind conversation --comment-id <id> --body-file <file>
-reply-thread.sh --state-file <path> --kind review --review-id <id> --body-file <file>
-resolve-thread.sh --state-file <path> --thread <id>
-record.sh round --state-file <path> --had-rejection true|false [--fix-pushed]
-record.sh flag-injection --state-file <path> --thread <id>
-record.sh status --state-file <path> --status complete|escalated|cancelled
+babysit-reply-thread.js --state-file <path> --kind thread --thread <id> --root-comment <databaseId> --in-reply-to <databaseId> --body-file <file>
+babysit-reply-thread.js --state-file <path> --kind conversation --comment-id <id> --body-file <file>
+babysit-reply-thread.js --state-file <path> --kind review --review-id <id> --body-file <file>
+babysit-resolve-thread.js --state-file <path> --thread <id>
+babysit-record.js round --state-file <path> --had-rejection true|false [--fix-pushed]
+babysit-record.js flag-injection --state-file <path> --thread <id>
+babysit-record.js status --state-file <path> --status complete|escalated|cancelled
 ```
 
 - `--thread`, `--root-comment`, `--in-reply-to` come straight from
@@ -158,11 +158,11 @@ record.sh status --state-file <path> --status complete|escalated|cancelled
 - The body comes from a file so untrusted text never enters argv.
 - A reply is idempotent per reviewer comment: the same `--in-reply-to` twice is
   exit `4` and nothing is posted; a reviewer follow-up has a new `inReplyTo`.
-- `resolve-thread.sh` returns `0` only after the mutation response shows
+- `babysit-resolve-thread.js` returns `0` only after the mutation response shows
   `isResolved: true`; three false responses → exit `5`, nothing recorded, and
   the thread stays in `staleUnresolved` next tick. A confirmed thread is not
   re-requested.
-- `record.sh round` runs once per round, after this round's replies and before
+- `babysit-record.js round` runs once per round, after this round's replies and before
   the push: it rotates `botFindingKeys → lastRoundFindingKeys`, sets
   `lastRoundHadRejection`, with `--fix-pushed` bumps `fixAttempts`, and clears
   a done or failed `fixer` record.

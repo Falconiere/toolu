@@ -1,5 +1,12 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { basename, dirname, join } from "node:path";
 
 export type Json = Record<string, unknown>;
@@ -42,13 +49,20 @@ export function runCli(action: () => Promise<unknown> | unknown): void {
         process.exitCode = exitCode(error.code);
       } else {
         const message = error instanceof Error ? error.message : String(error);
-        process.stdout.write(`${JSON.stringify(errorDocument(new BabysitError("api_error", message)))}\n`);
+        process.stdout.write(
+          `${JSON.stringify(errorDocument(new BabysitError("api_error", message)))}\n`,
+        );
         process.exitCode = 3;
       }
     });
 }
 
-export function parseFlags(argv: string[], command: string, valued: readonly string[], bare: readonly string[] = []): Record<string, string | boolean> {
+export function parseFlags(
+  argv: string[],
+  command: string,
+  valued: readonly string[],
+  bare: readonly string[] = [],
+): Record<string, string | boolean> {
   const flags: Record<string, string | boolean> = {};
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i] ?? "";
@@ -144,9 +158,15 @@ export class SlotLock {
       const pid = /^\d+$/.test(pidText) ? Number(pidText) : null;
       const since = /^\d+$/.test(sinceText) ? Number(sinceText) : null;
       const staleAfter = Number(process.env.PB_LOCK_STALE_SECONDS ?? "600");
-      const stale = pid === null || since === null || !pidAlive(pid) || Math.floor(Date.now() / 1000) - since > staleAfter;
+      const stale =
+        pid === null ||
+        since === null ||
+        !pidAlive(pid) ||
+        Math.floor(Date.now() / 1000) - since > staleAfter;
       if (attempt === 0 && stale) {
-        process.stderr.write(`pr-babysit: reclaiming stale lock ${this.path} (pid ${pidText || "?"}, since ${sinceText || "?"})\n`);
+        process.stderr.write(
+          `pr-babysit: reclaiming stale lock ${this.path} (pid ${pidText || "?"}, since ${sinceText || "?"})\n`,
+        );
         rmSync(this.path, { recursive: true, force: true });
         continue;
       }
@@ -165,7 +185,10 @@ export class SlotLock {
 }
 
 export function loadState(path: string): Json {
-  if (!existsSync(path)) fail("state_malformed", `state file not found: ${path} (run babysit-tick.sh first)`, { source: "state" });
+  if (!existsSync(path))
+    fail("state_malformed", `state file not found: ${path} (run babysit-tick.sh first)`, {
+      source: "state",
+    });
   let value: unknown;
   try {
     value = readJson(path);
@@ -173,17 +196,27 @@ export function loadState(path: string): Json {
     fail("state_malformed", `state file is not valid JSON: ${path}`, { source: "state" });
   }
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    fail("state_malformed", `state file is not a version-2 pr-babysit state: ${path}`, { source: "state", version: null });
+    fail("state_malformed", `state file is not a version-2 pr-babysit state: ${path}`, {
+      source: "state",
+      version: null,
+    });
   }
   const state = value as Json;
   if (state.version !== 2 || typeof state.repo !== "string" || typeof state.number !== "number") {
-    fail("state_malformed", `state file is not a version-2 pr-babysit state: ${path}`, { source: "state", version: state.version ?? null });
+    fail("state_malformed", `state file is not a version-2 pr-babysit state: ${path}`, {
+      source: "state",
+      version: state.version ?? null,
+    });
   }
   if (!/^[A-Za-z0-9][A-Za-z0-9_-]*\/[A-Za-z0-9_][A-Za-z0-9._-]*$/.test(state.repo as string)) {
-    fail("state_malformed", `state file repo is not owner/name: ${state.repo}`, { source: "state" });
+    fail("state_malformed", `state file repo is not owner/name: ${state.repo}`, {
+      source: "state",
+    });
   }
   if (!/^\d+$/.test(String(state.number))) {
-    fail("state_malformed", `state file number is not an integer: ${state.number}`, { source: "state" });
+    fail("state_malformed", `state file number is not an integer: ${state.number}`, {
+      source: "state",
+    });
   }
   return state;
 }
