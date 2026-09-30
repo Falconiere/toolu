@@ -33,7 +33,7 @@ prerequisites are present**; it does not verify authentication or service health
 An unpublished wrapper hides the segment; a broken published wrapper shows
 `missing executable wrapper`. Other reasons include `missing curl`,
 `missing TYPESAFE_API_KEY`, and `invalid TYPESAFE_API_KEY`. Multiple reasons are
-separated by semicolons. As with the rest of the status display, jq is required.
+separated by semicolons.
 
 The account, gate, comemory, and git status segments degrade gracefully — if the file
 they read is absent, the segment simply doesn't render. So statusline is
@@ -57,11 +57,15 @@ persistent renderer is required.
 ## Claude Code install & wire up
 
 Claude Code does not let a plugin declare `statusLine` in its manifest, so the
-SessionStart hook symlinks the script to a stable, version-independent path:
+SessionStart hook symlinks the Bun renderer to a stable, version-independent
+path:
 
 ```
-~/.claude/statusline/statusline.sh   (→ the installed plugin's statusline.sh)
+~/.claude/statusline/statusline.sh   (→ the installed plugin's hooks/dist/statusline.js)
 ```
+
+The link keeps its `.sh` name so existing `settings.json` entries stay valid,
+but it is a Bun program: run it by path, never through `bash`.
 
 1. Install the plugin:
 
@@ -86,15 +90,24 @@ SessionStart hook symlinks the script to a stable, version-independent path:
    {
      "statusLine": {
        "type": "command",
-       "command": "bash ~/.claude/statusline/statusline.sh"
+       "command": "~/.claude/statusline/statusline.sh"
      }
    }
    ```
 
-   (Use `$CLAUDE_CONFIG_DIR/statusline/statusline.sh` if you run with a custom
+   (Use `"$CLAUDE_CONFIG_DIR/statusline/statusline.sh"` if you run with a custom
    config dir.) The symlink is refreshed every session, so plugin updates are
    picked up automatically with no settings change. The hook never clobbers a
    real file you place at that path — it only owns its own symlink.
+
+## Migrating from the bash statusline
+
+Before the Bun port, the wired command was `bash ~/.claude/statusline/statusline.sh`.
+`bash` cannot run the Bun renderer, so the SessionStart hook prints a one-line
+notice while `settings.json` still holds that value. Run `/statusline:setup`
+once: it recognises the old command, backs `settings.json` up and rewrites it
+to the path form above (no `--force` needed). jq and python3 are no longer
+used.
 
 ## Migrating from toolu ≤ 1.5.0
 

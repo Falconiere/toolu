@@ -5,7 +5,7 @@ description: Use when the user asks for current repository, branch, working-tree
 
 # Status
 
-Run `TOOLU_HOST_OVERRIDE=codex bash ../../scripts/status.sh` resolved from this
+Run `TOOLU_HOST_OVERRIDE=codex bun ../../hooks/dist/status.js` resolved from this
 skill directory and return its output verbatim. The explicit override is
 required because lifecycle-only plugin variables are not exported to ordinary
 skill shell calls. The report includes only fields available from local

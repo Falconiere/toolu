@@ -115,7 +115,7 @@ the rust-quality / ts-quality / python-quality hooks write. Install it and wire 
 
 ```json
 { "statusLine": { "type": "command",
-                  "command": "bash ~/.claude/statusline/statusline.sh" } }
+                  "command": "~/.claude/statusline/statusline.sh" } }
 ```
 
 Toolu no longer ships or symlinks the statusline; on upgrade it sweeps the

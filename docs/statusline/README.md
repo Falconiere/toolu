@@ -33,6 +33,7 @@ Then wire it once — easiest with the bundled setup command:
 This adds the `statusLine` key to your `settings.json` idempotently:
 - Backs the file up first
 - Never clobbers an existing custom `statusLine` (re-run with `--force` to override)
+- Updates the older `bash ~/.claude/statusline/statusline.sh` value, which cannot run the Bun renderer
 - No-op once wired
 
 Restart the session afterwards for the bar to appear.
@@ -43,12 +44,12 @@ Restart the session afterwards for the bar to appear.
 {
   "statusLine": {
     "type": "command",
-    "command": "bash ~/.claude/statusline/statusline.sh"
+    "command": "~/.claude/statusline/statusline.sh"
   }
 }
 ```
 
-Use `$CLAUDE_CONFIG_DIR/statusline/statusline.sh` if you run with a custom config dir. The symlink is refreshed every session, so plugin updates are picked up automatically.
+Use `"$CLAUDE_CONFIG_DIR/statusline/statusline.sh"` if you run with a custom config dir. The path is a symlink to the plugin's Bun renderer (`hooks/dist/statusline.js`), refreshed every session, so plugin updates are picked up automatically. Run it by path, never through `bash`; while `settings.json` still holds the old `bash` form, SessionStart prints a notice to run `/statusline:setup`.
 
 ## What It Provides
 
@@ -80,8 +81,7 @@ authentication or service health. Missing prerequisites show a reason such as
 `missing TYPESAFE_API_KEY`, `invalid TYPESAFE_API_KEY`, `missing curl`, or
 `missing executable wrapper`; multiple reasons are separated by semicolons.
 No published wrapper means no Jev segment. Codex reports the same information
-as `Jev: ready` or `Jev: unavailable — reason`. jq remains required by the status
-display.
+as `Jev: ready` or `Jev: unavailable — reason`.
 
 ### Degradation
 
@@ -101,8 +101,8 @@ Then re-point `settings.json` from `~/.claude/toolu/statusline.sh` to `~/.claude
 
 | Hook | Event | Purpose |
 |------|-------|--------|
-| `session-start` | SessionStart | Symlinks `statusline.sh` to stable path |
+| `session-start` | SessionStart | Symlinks the Bun renderer to `statusline/statusline.sh`; notices a `bash` statusLine that needs `/statusline:setup` |
 
 ## Testing
 
-`bats -r plugins/statusline` — real statusline JSON payloads and published Jev wrappers, no mocks or API calls.
+`bun test plugins/statusline` — real statusline JSON payloads, real git repos and published Jev wrappers, no mocks or API calls.

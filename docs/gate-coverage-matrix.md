@@ -46,8 +46,7 @@ Classifications match [docs/portable-core.md](portable-core.md): `shell-out` · 
 | `rust-quality:entrypoint:SessionStart:register.sh` | `plugins/rust-quality/hooks/register.sh` | rust-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `rust-quality:hooks.json:SessionStart:check-toolu.js:startup|resume|clear|compact` | `plugins/rust-quality/hooks/hooks.json` | rust-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | no | — |
 | `rust-quality:hooks.json:SessionStart:register.sh:startup|resume|clear|compact` | `plugins/rust-quality/hooks/hooks.json` | rust-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `statusline:entrypoint:SessionStart:session-start.sh` | `plugins/statusline/hooks/session-start.sh` | statusline | SessionStart | shell-out | required | #211/todo | pending-opencode | yes | — |
-| `statusline:hooks.json:SessionStart:session-start.sh:startup|resume|clear|compact` | `plugins/statusline/hooks/hooks.json` | statusline | SessionStart | shell-out | required | #210/todo | pending-opencode | yes | — |
+| `statusline:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/statusline/hooks/hooks.json` | statusline | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
 | `toolu-review:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/toolu-review/hooks/hooks.json` | toolu-review | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
 | `toolu:builtin-module:PostToolUse:gate-status.sh` | `plugins/toolu/hooks/post-tools/modules/gate-status.sh` | toolu | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
 | `toolu:builtin-module:PostToolUse:push-waiver.sh` | `plugins/toolu/hooks/post-tools/modules/push-waiver.sh` | toolu | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
