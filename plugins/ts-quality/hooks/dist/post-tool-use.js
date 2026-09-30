@@ -5680,7 +5680,13 @@ var post_tool_use_default = defineRegistryModule({
         const source = read(file);
         if (source.error !== undefined)
           return { errors: [source.error], advisories: [] };
-        return checkTsFile({ file, lines: splitLines(source.text), ctx, limits: limitsFor(ctx), pm });
+        return checkTsFile({
+          file,
+          lines: splitLines(source.text),
+          ctx,
+          limits: limitsFor(ctx),
+          pm
+        });
       }
     });
     return Promise.resolve(decision);
