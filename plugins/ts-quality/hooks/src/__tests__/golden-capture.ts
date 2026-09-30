@@ -40,7 +40,15 @@ function git(args: string[]): string {
 }
 
 const at = process.argv.indexOf("--base");
-const base = git(["rev-parse", `${at === -1 ? BASH_BASE : (process.argv[at + 1] ?? "")}^{commit}`]);
+const baseArg = at === -1 ? BASH_BASE : process.argv[at + 1];
+if (baseArg === undefined || baseArg.trim() === "") {
+  process.stderr.write("--base requires a non-empty commit\n");
+  process.stderr.write(
+    "Usage: bun run plugins/ts-quality/hooks/src/__tests__/golden-capture.ts [--base <sha>]\n",
+  );
+  process.exit(2);
+}
+const base = git(["rev-parse", `${baseArg}^{commit}`]);
 const dir = mkdtempSync(join(tmpdir(), "ts-quality-base-"));
 try {
   const register = extractBaseRegister(base, dir);
