@@ -87,15 +87,15 @@ After they are installed, review and trust the hooks in `/hooks` before they run
 
 #### OpenCode
 
-OpenCode has no marketplace — paste this prompt so the agent installs the npm bridge from [docs/opencode.md](../opencode.md). Phase-1 enables the `toolu` bash plugin only.
+OpenCode has no marketplace — paste this prompt so the agent installs the npm adapter from [docs/opencode.md](../opencode.md). It enables the `toolu` core plugin.
 
 <!-- install-everything:opencode -->
 ```text
-Install toolu for OpenCode in this project (npm bridge; no marketplace, no clone). Skip steps already done.
+Install toolu for OpenCode in this project (npm adapter; no marketplace, no clone). Skip steps already done.
 
 1. Run: opencode plugin add @toolu/opencode
 2. In THIS project create .opencode/toolu/plugins.json containing: { "version": 1, "enabled": ["toolu"] }
-   Add rust-quality, ts-quality, or python-quality to "enabled" only if this project wants that language's gates and has its linters installed.
+   Keep the initial selection to toolu; OpenCode currently wires permission.evaluate, not post-tool quality events.
 3. Optional: .opencode/toolu.config.json for gate modes (same schema as other hosts), e.g. { "version": 1, "gates": { "protectedFiles": { "mode": "block" } } }
 4. Restart OpenCode. Smoke-check: attempt a protected .env edit with protectedFiles mode block and confirm it is denied before bytes change.
 

@@ -20,11 +20,11 @@ export async function runPermissionEvaluateSuite(): Promise<SuiteOutcome> {
 
   const handler = createPermissionEvaluateHandler({
     repoRoot: root,
-    bridgeContext: {
+    configRoot: `${projectRoot}/.opencode/toolu/state`,
+    permissionContext: {
       cwd: projectRoot,
       projectRoot,
       worktree: projectRoot,
-      host: "opencode",
     },
     env: bridgeEnvOpencode(root),
   });

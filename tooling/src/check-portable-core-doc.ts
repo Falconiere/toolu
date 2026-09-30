@@ -17,7 +17,7 @@ const HEADINGS = [
   "## Zod boundary rules",
   "## Decision contract",
   "## Event vocabulary",
-  "## Bash bridge protocol",
+  "## OpenCode dispatch contract",
   "## Policy split",
   "## Protected-files gate trace",
   "## OpenCode interception",
@@ -28,7 +28,7 @@ const HEADINGS = [
 const CITATIONS: ReadonlyArray<readonly [string, string]> = [
   ["v2.0.12", "missing CLI pin v2.0.12"],
   ["@opencode/plugin@2.0.12", "missing SDK pin"],
-  ["protocolVersion", "missing protocolVersion"],
+  ["dispatchPreTool", "missing native dispatch contract"],
   ["gates/protected-files.ts", "missing protected-files gate citation"],
   ["gate-mode.sh", "missing gate-mode.sh citation"],
   ["dispatch.sh", "missing dispatch.sh citation"],

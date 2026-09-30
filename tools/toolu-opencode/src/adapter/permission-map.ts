@@ -1,5 +1,4 @@
-/** OpenCode permission.evaluate ↔ portable bridge (#204). */
-import type { BridgeRequest } from "@toolu/core/bridge";
+/** OpenCode permission.evaluate → core PreToolUse payload. */
 import type { Decision } from "@toolu/core/decision";
 
 export type PermissionEffect = "allow" | "ask" | "deny";
@@ -15,18 +14,15 @@ export type PermissionEvaluationEvent = {
   message?: string;
 };
 
-export type PermissionBridgeContext = {
+export type PermissionContext = {
   cwd: string;
   projectRoot: string;
   worktree: string;
-  host: string;
-  deadlineMs?: number;
-  maxStdoutBytes?: number;
 };
 
-export type PermissionBridgeMapping =
+export type PermissionMapping =
   | { kind: "skip" }
-  | { kind: "request"; request: BridgeRequest }
+  | { kind: "request"; request: Record<string, unknown> }
   | { kind: "deny"; reason: string };
 
 type GatedAction = {
@@ -40,9 +36,6 @@ const GATED: Record<string, GatedAction> = {
   bash: { toolName: "Bash", inputKind: "shell" },
   shell: { toolName: "Shell", inputKind: "shell" },
 };
-
-const DEFAULT_DEADLINE_MS = 15_000;
-const DEFAULT_MAX_STDOUT_BYTES = 1_048_576;
 
 function normalizeAction(action: string): string {
   return action.trim().toLowerCase();
@@ -94,11 +87,11 @@ function toolCallId(event: PermissionEvaluationEvent): string {
   return `perm_${event.sessionID}`;
 }
 
-/** Map a permission.evaluate payload to a bridge tool/pre request, or skip/deny when incomplete. */
-export function mapPermissionEventToBridge(
+/** Map a permission.evaluate payload to the core dispatcher's hook input. */
+export function mapPermissionEventToTool(
   event: PermissionEvaluationEvent,
-  ctx: PermissionBridgeContext,
-): PermissionBridgeMapping {
+  ctx: PermissionContext,
+): PermissionMapping {
   const gated = GATED[normalizeAction(event.action)];
   if (!gated) {
     return { kind: "skip" };
@@ -125,19 +118,12 @@ export function mapPermissionEventToBridge(
     toolInput = { command };
   }
 
-  const request: BridgeRequest = {
-    protocolVersion: 1,
-    event: "tool/pre",
-    sessionId: event.sessionID,
-    toolCallId: toolCallId(event),
+  const request = {
+    session_id: event.sessionID,
+    tool_use_id: toolCallId(event),
     cwd: ctx.cwd,
-    projectRoot: ctx.projectRoot,
-    worktree: ctx.worktree,
-    toolName: gated.toolName,
-    toolInput,
-    host: ctx.host,
-    deadlineMs: ctx.deadlineMs ?? DEFAULT_DEADLINE_MS,
-    maxStdoutBytes: ctx.maxStdoutBytes ?? DEFAULT_MAX_STDOUT_BYTES,
+    tool_name: gated.toolName,
+    tool_input: toolInput,
   };
 
   return { kind: "request", request };

@@ -6,10 +6,8 @@
  * which Claude Code and Codex users never read from npm. It packs from
  * tools/toolu-cli/npm, not the workspace, so no local package shares its name.
  *
- * `@toolu/opencode` is the one package that DOES carry that tree, because its
- * OpenCode bridge enforces the bash gates and npm cannot reach outside a package
- * directory. Its prepack stages the copy, which must carry every committed
- * hooks/dist bundle and none of the hooks/src sources they are built from.
+ * `@toolu/opencode` stages manifests, settings and committed hook bundles, but
+ * never the repository's bash source tree.
  */
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
@@ -48,7 +46,7 @@ export function expectations(root: string): readonly Expectation[] {
         "README.md",
         "LICENSE",
         "src/decision/decision.ts",
-        "src/runner/runner.ts",
+        "src/dispatch/dispatch.ts",
       ],
       forbidden: ["plugins/", "dist/", "node_modules/", ".env"],
       exact: false,
@@ -63,10 +61,11 @@ export function expectations(root: string): readonly Expectation[] {
         "src/plugin/toolu.ts",
         "plugins/toolu/hooks/hooks.json",
         "plugins/rust-quality/.claude-plugin/plugin.json",
+        "plugins/toolu/settings/protected-files.txt",
         ...committedBundles(root),
       ],
       forbidden: ["node_modules/", ".env"],
-      forbiddenPatterns: [HOOK_SOURCES],
+      forbiddenPatterns: [HOOK_SOURCES, /\.(?:sh|bash|bats)$/],
       exact: false,
     },
   ];

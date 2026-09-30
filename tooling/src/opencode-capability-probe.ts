@@ -81,11 +81,11 @@ function writeDocResults(results: ProbeResults): void {
 
 function resolveCli(): string {
   if (process.env.OPENCODE_BIN) return process.env.OPENCODE_BIN;
-  const which = spawnSync("bash", ["-c", "command -v opencode"], { encoding: "utf8" });
-  if (which.status !== 0 || !which.stdout.trim()) {
+  const found = Bun.which("opencode");
+  if (!found) {
     fail("OpenCode CLI not found (set OPENCODE_BIN or install opencode)");
   }
-  return which.stdout.trim();
+  return found;
 }
 
 function cliVersion(bin: string): string {

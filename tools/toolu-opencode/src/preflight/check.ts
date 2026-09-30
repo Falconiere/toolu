@@ -2,7 +2,7 @@
 import { statSync } from "node:fs";
 import { join } from "node:path";
 
-export type PreflightTool = "bash" | "jq" | "git" | "bun" | "opencode";
+export type PreflightTool = "git" | "bun" | "opencode";
 
 export type PreflightEntry = {
   tool: PreflightTool;
@@ -16,7 +16,7 @@ export type PreflightReport = {
   reasons: string[];
 };
 
-const REQUIRED_FOR_BOOTSTRAP: PreflightTool[] = ["bash", "jq"];
+const REQUIRED_FOR_BOOTSTRAP: PreflightTool[] = ["git", "bun"];
 
 const ALLOWED_BINARY = /^[A-Za-z0-9._+-]+$/;
 
@@ -42,7 +42,7 @@ function commandPresent(binary: string, env: Record<string, string>): boolean {
   return false;
 }
 
-/** Structured prerequisite report; missing bash/jq fail closed for bootstrap. */
+/** Structured prerequisite report; missing git or Bun fails closed. */
 function stringEnv(source: NodeJS.ProcessEnv): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(source)) {
@@ -55,7 +55,7 @@ function stringEnv(source: NodeJS.ProcessEnv): Record<string, string> {
 
 export function runPreflight(options?: { env?: Record<string, string> }): PreflightReport {
   const env = { ...stringEnv(process.env), ...options?.env };
-  const tools: PreflightTool[] = ["bash", "jq", "git", "bun", "opencode"];
+  const tools: PreflightTool[] = ["git", "bun", "opencode"];
   const entries: PreflightEntry[] = tools.map((tool) => ({
     tool,
     present: commandPresent(tool, env),

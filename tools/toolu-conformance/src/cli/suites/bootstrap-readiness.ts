@@ -1,7 +1,6 @@
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { bootstrapWithNoOpRunner } from "@toolu/opencode/bootstrap";
-import { listPluginManifests } from "@toolu/opencode/inventory";
+import { bootstrapRuntime } from "@toolu/opencode/bootstrap";
 import type { SuiteOutcome } from "../types.ts";
 import { isolatedHome, repoRoot, tmpBase } from "./helpers.ts";
 
@@ -10,21 +9,24 @@ export async function runBootstrapReadinessSuite(): Promise<SuiteOutcome> {
   const root = repoRoot();
   const project = mkdtempSync(join(tmpBase(), "toolu-conformance-bs-"));
   const dataRoot = mkdtempSync(join(tmpBase(), "toolu-conformance-bs-data-"));
-  const pluginsRoot = join(root, "plugins");
-  const manifests = listPluginManifests(pluginsRoot);
-  if (manifests === null) {
-    return { status: "fail", message: `cannot read plugins root: ${pluginsRoot}` };
-  }
-  const toolu = manifests.find((m) => m.name === "toolu");
-  if (!toolu) {
-    return { status: "fail", message: "toolu plugin manifest missing under plugins/" };
-  }
+  const pluginDir = mkdtempSync(join(tmpBase(), "toolu-conformance-empty-plugin-"));
+  mkdirSync(join(pluginDir, "hooks", "dist"), { recursive: true });
+  writeFileSync(join(pluginDir, "hooks", "dist", "register.js"), "process.exit(0);\n");
 
-  const result = await bootstrapWithNoOpRunner({
+  const result = await bootstrapRuntime({
     repoRoot: root,
     projectRoot: project,
     dataRoot,
-    plugins: [toolu],
+    plugins: [
+      {
+        name: "empty",
+        spec: "empty@toolu",
+        marketplace: "toolu",
+        version: "1",
+        pluginDir,
+        dependencies: [],
+      },
+    ],
     isolatedHome: isolatedHome("toolu-conf-home-bs-"),
   });
 
@@ -34,6 +36,6 @@ export async function runBootstrapReadinessSuite(): Promise<SuiteOutcome> {
 
   return {
     status: "fail",
-    message: `expected not-ready from no-op bootstrap runner, got ${result.status}`,
+    message: `expected not-ready from successful bundle without artifacts, got ${result.status}`,
   };
 }

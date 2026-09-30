@@ -1,4 +1,4 @@
-/** OpenCode plugin entry — bootstrap + permission.evaluate bridge (#204). */
+/** OpenCode plugin entry — bootstrap + native permission dispatch. */
 import { Plugin } from "@opencode/plugin";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -16,7 +16,7 @@ function readNonEmptyString(value: unknown): string | undefined {
 }
 
 /**
- * The published package carries the bash plugins/ tree beside its sources, so an
+ * The published package carries the bundled plugins/ catalog beside its sources, so an
  * npm install needs no environment variable. Absent that copy — a contributor
  * running from a clone — this returns undefined and the explicit sources win.
  */
@@ -90,16 +90,16 @@ export async function setupTooluPermissionHook(
     return;
   }
 
-  const bridgeContext = {
+  const permissionContext = {
     cwd: ctx.location.directory,
     projectRoot: setupOpts.projectRoot,
     worktree: ctx.location.directory,
-    host: "opencode",
   };
 
   const handler = createPermissionEvaluateHandler({
     repoRoot: setupOpts.repoRoot,
-    bridgeContext,
+    configRoot: dataRoot,
+    permissionContext,
     env: {
       ...env,
       TOOLU_SETTINGS_DIR: join(setupOpts.repoRoot, "plugins/toolu/settings"),

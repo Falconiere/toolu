@@ -1,20 +1,29 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { runPreflight } from "../check.ts";
 
 const tmpBase = process.env.TMPDIR ?? "/tmp";
 
-test("preflight reports bash and jq when PATH is normal", () => {
+test("preflight reports git and Bun when PATH is normal", () => {
   const report = runPreflight();
-  expect(report.entries.find((e) => e.tool === "bash")?.present).toBe(true);
-  expect(report.entries.find((e) => e.tool === "jq")?.present).toBe(true);
+  expect(report.entries.find((e) => e.tool === "git")?.present).toBe(true);
+  expect(report.entries.find((e) => e.tool === "bun")?.present).toBe(true);
   expect(report.bootstrapAllowed).toBe(true);
 });
 
-test("preflight fail closed when jq is not on PATH", () => {
+test("preflight permits a PATH with git and Bun but no bash or jq", () => {
+  const bin = mkdtempSync(join(tmpBase, "toolu-pf-path-"));
+  symlinkSync(Bun.which("git") ?? "/usr/bin/git", join(bin, "git"));
+  symlinkSync(process.execPath, join(bin, "bun"));
+  const report = runPreflight({ env: { PATH: bin } });
+  expect(report.bootstrapAllowed).toBe(true);
+  expect(report.entries.map((entry) => entry.tool)).toEqual(["git", "bun", "opencode"]);
+});
+
+test("preflight fails closed when git and Bun are absent", () => {
   const emptyPath = mkdtempSync(join(tmpBase, "toolu-pf-path-"));
   const report = runPreflight({ env: { PATH: emptyPath } });
   expect(report.bootstrapAllowed).toBe(false);
-  expect(report.reasons.some((r) => r.includes("jq"))).toBe(true);
+  expect(report.reasons).toEqual(["missing required tool: git", "missing required tool: bun"]);
 });

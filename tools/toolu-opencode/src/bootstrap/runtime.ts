@@ -1,10 +1,9 @@
-/** Assemble registry via argv-only bash runner (#211). */
+/** Bootstrap selected plugins from committed Bun bundles. */
 import { mkdirSync } from "node:fs";
-import { createBunBashRunner, type BashRunner } from "@toolu/core/runner";
 import { opencodeDataRoot } from "../host/roots.ts";
 import type { PluginManifest } from "../inventory/types.ts";
 import { notReady, ready, type BootstrapResult } from "./result.ts";
-import { bootstrapCommand, pluginBootstrapScript, type BootstrapCommand } from "./entrypoint.ts";
+import { pluginBootstrapScript, requiresNativeRegistration } from "./entrypoint.ts";
 import { evaluateBootstrapReadiness } from "./readiness.ts";
 
 export type BootstrapRuntimeOptions = {
@@ -13,96 +12,131 @@ export type BootstrapRuntimeOptions = {
   projectRoot: string;
   plugins: PluginManifest[];
   env?: Record<string, string>;
-  runner?: BashRunner;
   isolatedHome?: string;
   deadlineMs?: number;
 };
 
+const MAX_OUTPUT_BYTES = 512_000;
+
+async function readBoundedOutput(stream: ReadableStream<Uint8Array>): Promise<string> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let output = "";
+  async function readNext(): Promise<string> {
+    const { done, value } = await reader.read();
+    if (done) return output + decoder.decode();
+    bytes += value.byteLength;
+    if (bytes > MAX_OUTPUT_BYTES) throw new Error("startup output exceeded 512000 bytes");
+    output += decoder.decode(value, { stream: true });
+    return readNext();
+  }
+  try {
+    return await readNext();
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 function bootstrapEnv(options: BootstrapRuntimeOptions, dataRoot: string): Record<string, string> {
-  const base: Record<string, string> = {
+  const inherited: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined) inherited[key] = value;
+  }
+  return {
+    ...inherited,
+    ...options.env,
     TOOLU_CONFIG_DIR: dataRoot,
     TOOLU_PROJECT_DIR: options.projectRoot,
     TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",
     TOOLU_HOST_OVERRIDE: "opencode",
     HOME: options.isolatedHome ?? dataRoot,
   };
-  if (options.env) {
-    for (const [key, value] of Object.entries(options.env)) {
-      base[key] = value;
-    }
-  }
-  return base;
 }
 
 async function runEntrypoint(
-  runner: BashRunner,
-  scriptPath: string,
-  command: BootstrapCommand,
+  script: string,
+  pluginDir: string,
   cwd: string,
   env: Record<string, string>,
   deadlineMs: number,
 ): Promise<BootstrapResult | null> {
-  const result = await runner.run({
-    argv: command.argv,
-    cwd,
-    env: { ...env, ...command.env },
-    stdin: "{}",
-    deadlineMs,
-    maxStdoutBytes: 512_000,
-  });
-  if (!result.ok) {
-    return notReady(`bootstrap script failed (${scriptPath}): ${result.message}`);
+  try {
+    const proc = Bun.spawn([process.execPath, script], {
+      cwd,
+      env: { ...env, CLAUDE_PLUGIN_ROOT: pluginDir },
+      stdin: new Blob(["{}"]),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const timeoutState = { hit: false };
+    const timer = setTimeout(() => {
+      timeoutState.hit = true;
+      proc.kill();
+    }, deadlineMs);
+    try {
+      const [stdout, stderr, exitCode] = await Promise.all([
+        readBoundedOutput(proc.stdout),
+        readBoundedOutput(proc.stderr),
+        proc.exited,
+      ]);
+      if (timeoutState.hit) return notReady(`bootstrap bundle timed out (${script})`);
+      if (exitCode !== 0) {
+        return notReady(`bootstrap bundle ${script} exited ${exitCode}: ${stderr || stdout}`);
+      }
+      return null;
+    } catch (error) {
+      proc.kill();
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return notReady(`bootstrap bundle failed (${script}): ${reason}`);
   }
-  if (result.exitCode !== 0) {
-    return notReady(
-      `bootstrap script ${scriptPath} exited ${result.exitCode}: ${result.stderr || result.stdout}`,
-    );
-  }
-  return null;
 }
 
-/** Run plugin register/session-start entrypoints and verify output artifacts. */
-export async function bootstrapRuntime(options: BootstrapRuntimeOptions): Promise<BootstrapResult> {
+/** Run each selected plugin's bundle and verify tangible registry/session output. */
+async function bootstrapRuntimeInternal(
+  options: BootstrapRuntimeOptions,
+): Promise<BootstrapResult> {
   const dataRoot = options.dataRoot ?? opencodeDataRoot({ projectRoot: options.projectRoot });
   mkdirSync(dataRoot, { recursive: true });
-
-  const runner = options.runner ?? createBunBashRunner();
   const env = bootstrapEnv(options, dataRoot);
   const deadlineMs = options.deadlineMs ?? 120_000;
-
-  const runChain = async (index: number): Promise<BootstrapResult | null> => {
+  const runFrom = async (index: number): Promise<BootstrapResult | null> => {
     const plugin = options.plugins[index];
-    if (!plugin) {
-      return null;
+    if (!plugin) return null;
+    if (requiresNativeRegistration(plugin.pluginDir)) {
+      return notReady(`selected plugin ${plugin.name} has no native startup bundle`);
     }
     const script = pluginBootstrapScript(plugin.pluginDir);
-    // Not every plugin has a register or session-start entrypoint — skip, don't abort.
-    if (!script) {
-      return runChain(index + 1);
-    }
-    const command = bootstrapCommand(script, plugin.name, plugin.pluginDir);
+    if (!script) return runFrom(index + 1);
     const failure = await runEntrypoint(
-      runner,
       script,
-      command,
+      plugin.pluginDir,
       options.projectRoot,
       env,
       deadlineMs,
     );
-    if (failure) {
-      return failure;
-    }
-    return runChain(index + 1);
+    if (failure) return failure;
+    return runFrom(index + 1);
   };
-
-  const chainFailure = await runChain(0);
-  if (chainFailure) {
-    return chainFailure;
-  }
-
+  const failure = await runFrom(0);
+  if (failure) return failure;
   const proof = evaluateBootstrapReadiness(dataRoot);
-  if (!proof.ready) {
-    return notReady(proof.reason ?? "bootstrap artifacts missing");
+  return proof.ready
+    ? ready(proof.artifacts)
+    : notReady(proof.reason ?? "bootstrap artifacts missing");
+}
+
+/** All startup failures become NotReady so permission.evaluate can deny. */
+export async function bootstrapRuntime(options: BootstrapRuntimeOptions): Promise<BootstrapResult> {
+  try {
+    return await bootstrapRuntimeInternal(options);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return notReady(`bootstrap failed: ${reason}`);
   }
-  return ready(proof.artifacts);
 }
