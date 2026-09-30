@@ -5056,8 +5056,7 @@ function errorHandling(f, isTest) {
   ];
 }
 function mockRules(f) {
-  const path = f.file.path;
-  const inTests = path.includes("/tests/") || testFileName(path);
+  const inTests = pathHas(f, "/tests/") || testFileName(f.file.path);
   const rules = [pathHas(f, "/src/") ? MOCK_SRC_RULES : "", inTests ? MOCK_TEST_RULES : ""];
   return rules.filter((yaml) => yaml !== "").join(`
 ---
@@ -5361,6 +5360,7 @@ var post_tool_use_default = defineRegistryModule({
     const where = { env: ctx.env, ...ctx.cwd === undefined ? {} : { cwd: ctx.cwd } };
     if (!detectRust(where) || !toolAvailable("cargo", ctx.env))
       return Promise.resolve(ALLOW2);
+    let limits;
     const decision = fileQuality(event, ctx, {
       source: "rust-quality-hook",
       reason: "Post-edit Rust quality violation(s) detected",
@@ -5370,7 +5370,8 @@ var post_tool_use_default = defineRegistryModule({
         const source = read(file);
         if (source.error !== undefined)
           return { errors: [source.error], advisories: [] };
-        return checkRsFile({ file, lines: splitLines(source.text), ctx, limits: limitsFor(ctx) });
+        limits ??= limitsFor(ctx);
+        return checkRsFile({ file, lines: splitLines(source.text), ctx, limits });
       }
     });
     return Promise.resolve(decision);

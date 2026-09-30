@@ -50,6 +50,7 @@ export default defineRegistryModule({
   run(event, ctx) {
     const where = { env: ctx.env, ...(ctx.cwd === undefined ? {} : { cwd: ctx.cwd }) };
     if (!detectRust(where) || !toolAvailable("cargo", ctx.env)) return Promise.resolve(ALLOW);
+    let limits: RsLimits | undefined;
     const decision = fileQuality(event, ctx, {
       source: "rust-quality-hook",
       reason: "Post-edit Rust quality violation(s) detected",
@@ -58,7 +59,8 @@ export default defineRegistryModule({
       check: (file) => {
         const source = read(file);
         if (source.error !== undefined) return { errors: [source.error], advisories: [] };
-        return checkRsFile({ file, lines: splitLines(source.text), ctx, limits: limitsFor(ctx) });
+        limits ??= limitsFor(ctx);
+        return checkRsFile({ file, lines: splitLines(source.text), ctx, limits });
       },
     });
     return Promise.resolve(decision);

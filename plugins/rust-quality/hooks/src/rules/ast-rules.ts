@@ -63,8 +63,7 @@ export function errorHandling(f: RsFile, isTest: boolean): string[] {
 }
 
 function mockRules(f: RsFile): string {
-  const path = f.file.path;
-  const inTests = path.includes("/tests/") || testFileName(path);
+  const inTests = pathHas(f, "/tests/") || testFileName(f.file.path);
   const rules = [pathHas(f, "/src/") ? MOCK_SRC_RULES : "", inTests ? MOCK_TEST_RULES : ""];
   return rules.filter((yaml) => yaml !== "").join("\n---\n");
 }
