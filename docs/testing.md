@@ -46,6 +46,8 @@ bats ran files in parallel and tests within a file serially, because suites shar
 
 The suites pass under `bun test --parallel --concurrent --timeout 60000`. Every `bun test` in the package scripts passes `--timeout 60000`, because real subprocesses under concurrency outrun bun's 5 s default on a loaded CI runner. Pass it too when you run several suite files by hand.
 
+On macOS, put Homebrew OpenSSL 3 before `/usr/bin` on `PATH` when running the HTTPS fixture or the full TypeScript gate: `PATH=/opt/homebrew/bin:$PATH bun run test:ts`. Apple's `/usr/bin/openssl` is LibreSSL and its generated EC key fails to load in Bun 1.4.2.
+
 ## Porting a bats file
 
 Put `tooling/__tests__/<name>.bats` in the sibling `src/__tests__/<name>.test.ts`, with one bun test per `@test`. Replace `run … ; [ "$status" … ]` with `const res = await run([...])` and assertions on `res.exitCode`. Remember that bats `$output` is stdout and stderr combined. Read JSON with `JSON.parse` and zod rather than `jq`. Keep shelling out to the script under test. Delete the `.bats` file in the same change. The tooling suites in `tooling/src/__tests__/` are the first ports ([#251](https://github.com/Falconiere/toolu/issues/251)).
