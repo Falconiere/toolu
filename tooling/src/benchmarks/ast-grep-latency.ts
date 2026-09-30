@@ -17,7 +17,11 @@ import { runPostBundle } from "@toolu/conformance/harness/posttool";
 import { pretoolEnv, runBundle } from "@toolu/conformance/harness/pretool";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import type { RunResult } from "@toolu/conformance/harness/spawn";
-import { latencyOf, type Latency } from "@toolu/conformance/harness/timing";
+import {
+  latencyComparisonTable,
+  measureAlternatingLatency,
+  type Latency,
+} from "@toolu/conformance/harness/timing";
 import { NUDGE_CASES } from "../../../plugins/ast-grep/hooks/src/__tests__/cases-nudge.ts";
 import { SAVINGS_CASES } from "../../../plugins/ast-grep/hooks/src/__tests__/cases-savings.ts";
 import {
@@ -74,9 +78,9 @@ function savingsCall(name: string): Call {
 async function row(name: string, call: Call, runs: number, pluginRoot: string): Promise<Row> {
   using bashBox = createSandbox({ git: true });
   using tsBox = createSandbox({ git: true });
-  const sides: [Sandbox, Registration, number[]][] = [
-    [bashBox, { kind: "bash", pluginRoot }, []],
-    [tsBox, { kind: "bundle" }, []],
+  const sides: [Sandbox, Registration][] = [
+    [bashBox, { kind: "bash", pluginRoot }],
+    [tsBox, { kind: "bundle" }],
   ];
   await Promise.all(
     sides.map(([sb, reg]) => {
@@ -84,27 +88,14 @@ async function row(name: string, call: Call, runs: number, pluginRoot: string): 
       return registerAstGrep(sb, "claude", reg);
     }),
   );
-  // Sequential by design: concurrent spawns would contend and skew each other.
-  const calls = [...Array(WARMUP + runs).keys()].flatMap((round) =>
-    sides.map(([sb, , samples]) => ({ round, sb, samples })),
-  );
-  await calls.reduce<Promise<void>>(async (previous, { round, sb, samples }) => {
-    await previous;
-    const result = await call(sb);
-    if (round >= WARMUP) samples.push(result.durationMs);
-  }, Promise.resolve());
-  return { name, bash: latencyOf(sides[0]?.[2] ?? []), ts: latencyOf(sides[1]?.[2] ?? []) };
+  const [bash, ts] = await measureAlternatingLatency([bashBox, tsBox], call, {
+    runs,
+    warmup: WARMUP,
+  });
+  return { name, bash, ts };
 }
 
 const ms = (value: number): string => value.toFixed(1);
-
-function table(rows: readonly Row[]): string {
-  const body = rows.map(
-    (r) => `| ${r.name} | ${ms(r.bash.p50)} | ${ms(r.ts.p50)} | ${ms(r.ts.p50 - r.bash.p50)} |`,
-  );
-  const head = ["| Fixture | bash module p50 | TS module p50 | TS − bash |", "|---|---|---|---|"];
-  return `${[...head, ...body].join("\n")}\n`;
-}
 
 async function main(argv: readonly string[]): Promise<number> {
   const at = argv.indexOf("--runs");
@@ -121,7 +112,7 @@ async function main(argv: readonly string[]): Promise<number> {
       async (done, [name, call]) => [...(await done), await row(name, call, runs, pluginRoot)],
       Promise.resolve([]),
     );
-    process.stdout.write(table(rows));
+    process.stdout.write(latencyComparisonTable(rows));
     const over = rows.filter((r) => r.ts.p50 > r.bash.p50 + BUDGET_MS);
     for (const r of over) {
       process.stderr.write(

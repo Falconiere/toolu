@@ -262,7 +262,7 @@ advisory wording. Resolver: `plugins/toolu/hooks/lib/quality-config.sh`.
 
 `lang.ts.noMocks` / `lang.rust.noMocks` / `lang.python.noMocks` (default `true`
 — blocking) control the mechanical no-mock-test concerns:
-`ts-quality/hooks/concerns/85-no-mocks.sh`
+`ts-quality/hooks/src/rules/ast-rules.ts`
 (TS/TSX test files — `jest.mock`/`vi.mock`/`jest.fn`/`vi.fn`/`sinon.*` calls and
 `ts-mockito` imports), `rust-quality/hooks/concerns/70-no-mocks.sh` (`src/`
 mock *definitions* — `#[automock]`, `#[cfg_attr(..., automock)]`, `mock! {...}`

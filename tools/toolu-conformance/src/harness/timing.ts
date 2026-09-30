@@ -62,6 +62,28 @@ export async function measureLatency(
   return latencyOf(await sequential(once, opts.runs));
 }
 
+/** Alternate two prepared sides, one spawn at a time, so changing load affects both. */
+export async function measureAlternatingLatency<T>(
+  sides: readonly [T, T],
+  once: (side: T) => Promise<RunResult | number>,
+  opts: { runs: number; warmup?: number },
+): Promise<readonly [Latency, Latency]> {
+  if (opts.runs < 1) {
+    throw new RangeError(`measureAlternatingLatency: runs must be >= 1, got ${opts.runs}`);
+  }
+  const samples: [number[], number[]] = [[], []];
+  const warmup = opts.warmup ?? 0;
+  const calls = [...Array(warmup + opts.runs).keys()].flatMap((round) =>
+    ([0, 1] as const).map((index) => ({ round, index })),
+  );
+  await calls.reduce<Promise<void>>(async (previous, { round, index }) => {
+    await previous;
+    const reading = sampleOf(await once(sides[index]));
+    if (round >= warmup) samples[index].push(reading);
+  }, Promise.resolve());
+  return [latencyOf(samples[0]), latencyOf(samples[1])];
+}
+
 /** The summary of `samples` (milliseconds), taken however the caller interleaved them. */
 export function latencyOf(samples: readonly number[]): Latency {
   return {
@@ -71,6 +93,20 @@ export function latencyOf(samples: readonly number[]): Latency {
     min: Math.min(...samples),
     max: Math.max(...samples),
   };
+}
+
+const formatMs = (value: number): string => value.toFixed(1);
+
+/** Shared Markdown comparison used by the language and structural hook benchmarks. */
+export function latencyComparisonTable(
+  rows: readonly { name: string; bash: Latency; ts: Latency }[],
+): string {
+  const body = rows.map(
+    (row) =>
+      `| ${row.name} | ${formatMs(row.bash.p50)} | ${formatMs(row.ts.p50)} | ${formatMs(row.ts.p50 - row.bash.p50)} |`,
+  );
+  const head = ["| Fixture | bash module p50 | TS module p50 | TS − bash |", "|---|---|---|---|"];
+  return `${[...head, ...body].join("\n")}\n`;
 }
 
 /** Throw unless `candidate` p50 is within `budgetMs` of `baseline` p50. */

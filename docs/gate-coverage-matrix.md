@@ -83,34 +83,8 @@ Classifications match [docs/portable-core.md](portable-core.md): `shell-out` · 
 | `toolu:lib:dependency:state-sweeper.sh` | `plugins/toolu/hooks/lib/state-sweeper.sh` | toolu | dependency | shell-out | supported | #210/todo | native-bash | yes | — |
 | `toolu:lib:dependency:telemetry.sh` | `plugins/toolu/hooks/lib/telemetry.sh` | toolu | dependency | shell-out | supported | #210/todo | native-bash | yes | — |
 | `toolu:lib:dependency:verdict.sh` | `plugins/toolu/hooks/lib/verdict.sh` | toolu | dependency | shell-out | supported | #210/todo | native-bash | yes | — |
-| `ts-quality:concern:PostToolUse:00-preamble.sh` | `plugins/ts-quality/hooks/concerns/00-preamble.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:10-imports.sh` | `plugins/ts-quality/hooks/concerns/10-imports.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:15-type-as.sh` | `plugins/ts-quality/hooks/concerns/15-type-as.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:20-tests.sh` | `plugins/ts-quality/hooks/concerns/20-tests.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:25-size-file.sh` | `plugins/ts-quality/hooks/concerns/25-size-file.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:30-size-fn.sh` | `plugins/ts-quality/hooks/concerns/30-size-fn.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:35-react-hooks.sh` | `plugins/ts-quality/hooks/concerns/35-react-hooks.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:40-factory.sh` | `plugins/ts-quality/hooks/concerns/40-factory.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:45-typeguard.sh` | `plugins/ts-quality/hooks/concerns/45-typeguard.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:50-type-dup.sh` | `plugins/ts-quality/hooks/concerns/50-type-dup.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:55-naming.sh` | `plugins/ts-quality/hooks/concerns/55-naming.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:60-console.sh` | `plugins/ts-quality/hooks/concerns/60-console.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:65-suppression.sh` | `plugins/ts-quality/hooks/concerns/65-suppression.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:70-ui-confirm.sh` | `plugins/ts-quality/hooks/concerns/70-ui-confirm.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:72-ui-radix.sh` | `plugins/ts-quality/hooks/concerns/72-ui-radix.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:74-react-props.sh` | `plugins/ts-quality/hooks/concerns/74-react-props.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:76-toast.sh` | `plugins/ts-quality/hooks/concerns/76-toast.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:78-error-ast.sh` | `plugins/ts-quality/hooks/concerns/78-error-ast.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:80-throw-literal.sh` | `plugins/ts-quality/hooks/concerns/80-throw-literal.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:85-no-mocks.sh` | `plugins/ts-quality/hooks/concerns/85-no-mocks.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:90-duplication.sh` | `plugins/ts-quality/hooks/concerns/90-duplication.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:92-docs.sh` | `plugins/ts-quality/hooks/concerns/92-docs.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:94-handler.sh` | `plugins/ts-quality/hooks/concerns/94-handler.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:concern:PostToolUse:99-finalize.sh` | `plugins/ts-quality/hooks/concerns/99-finalize.sh` | ts-quality | PostToolUse | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:entrypoint:SessionStart:check-toolu.sh` | `plugins/ts-quality/hooks/check-toolu.sh` | ts-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:entrypoint:SessionStart:register.sh` | `plugins/ts-quality/hooks/register.sh` | ts-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:hooks.json:SessionStart:check-toolu.sh:startup|resume|clear|compact` | `plugins/ts-quality/hooks/hooks.json` | ts-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | yes | — |
-| `ts-quality:hooks.json:SessionStart:register.sh:startup|resume|clear|compact` | `plugins/ts-quality/hooks/hooks.json` | ts-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | yes | — |
+| `ts-quality:hooks.json:SessionStart:check-toolu.js:startup|resume|clear|compact` | `plugins/ts-quality/hooks/hooks.json` | ts-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | no | — |
+| `ts-quality:hooks.json:SessionStart:register.js:startup|resume|clear|compact` | `plugins/ts-quality/hooks/hooks.json` | ts-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | no | — |
 
 ## Notes
 

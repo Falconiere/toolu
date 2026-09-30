@@ -26,8 +26,7 @@ const SLICE = [
   "gate-status: first passing quality command",
   "plain command is silent",
   "push-waiver: a successful push promotes the waiver",
-  "ts-quality registry: console.log in a written file",
-  "multi-path patch through ts-quality and rust-quality",
+  "multi-path patch through python-quality and rust-quality",
 ];
 
 type Runner = typeof runPostModSh;

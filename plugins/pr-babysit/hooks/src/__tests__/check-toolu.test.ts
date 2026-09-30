@@ -1,8 +1,8 @@
 /**
- * The core-dependency check of pr-babysit, python-quality and rust-quality,
- * each run through its own hooks.json launcher (#269, ported from
- * dependency.bats). ts-quality still ships the bash `check-toolu.sh` (#265),
- * so every case is judged against it byte for byte, on the same `codex`.
+ * The core-dependency check of pr-babysit, python-quality, rust-quality and
+ * ts-quality, each run through its own hooks.json launcher (#269, #265,
+ * ported from dependency.bats). Each case states the expected output: the
+ * warning, byte for byte as the bash `check-toolu.sh` printed it, or silence.
  */
 import { expect, test } from "bun:test";
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
@@ -14,11 +14,19 @@ import { hookCommand, runStartupHook } from "@toolu/conformance/harness/startup"
 
 const PLUGINS = resolve(import.meta.dir, "../../../..");
 const REPO = resolve(PLUGINS, "..");
-const BASH_REFERENCE = join(PLUGINS, "ts-quality/hooks/check-toolu.sh");
-const PORTED = ["pr-babysit", "python-quality", "rust-quality"];
+const PORTED = ["pr-babysit", "python-quality", "rust-quality", "ts-quality"];
 const NO_CODEX = Bun.which("codex") === null;
 const WARNING =
   "WARN: this plugin requires the toolu core. Install it first with: codex plugin add toolu@toolu";
+
+/** The warning as bash's `jq -n` printed it. */
+const WARNING_OUTPUT = `{
+  "hookSpecificOutput": {
+    "hookEventName": "SessionStart",
+    "additionalContext": "${WARNING}"
+  }
+}
+`;
 
 /** A bin dir whose `codex` prints `stdout` and exits `code`. */
 function codexBin(sb: Sandbox, stdout: string, code = 0): string {
@@ -32,46 +40,44 @@ function codexBin(sb: Sandbox, stdout: string, code = 0): string {
 const core = (flags: object): string =>
   JSON.stringify({ installed: [{ pluginId: "toolu@toolu", ...flags }] });
 
-const LISTINGS: Array<[string, string, number]> = [
-  ["installed and enabled", core({ installed: true, enabled: true }), 0],
-  ["flags absent", core({}), 0],
-  ["missing", '{"installed":[]}', 0],
-  ["disabled", core({ installed: true, enabled: false }), 0],
-  ["not installed", core({ installed: false, enabled: true }), 0],
-  ["list fails", '{"installed":[]}', 1],
-  ["malformed JSON", "not json", 0],
-  ["unindexable entry", JSON.stringify({ installed: ["x", { pluginId: "toolu@toolu" }] }), 0],
+/** Listing, `codex plugin list --json` stdout, its exit code, and whether toolu counts as missing. */
+const LISTINGS: Array<[string, string, number, boolean]> = [
+  ["installed and enabled", core({ installed: true, enabled: true }), 0, false],
+  ["flags absent", core({}), 0, false],
+  ["missing", '{"installed":[]}', 0, true],
+  ["disabled", core({ installed: true, enabled: false }), 0, true],
+  ["not installed", core({ installed: false, enabled: true }), 0, true],
+  ["list fails", '{"installed":[]}', 1, false],
+  ["malformed JSON", "not json", 0, true],
+  ["unindexable entry", JSON.stringify({ installed: ["x", { pluginId: "toolu@toolu" }] }), 0, true],
 ];
 
-const HOSTS: Array<[string, (plugin: string) => EnvPatch]> = [
-  ["native Codex", (plugin) => ({ PLUGIN_ROOT: plugin })],
-  ["Codex override without PLUGIN_ROOT", () => ({ TOOLU_HOST_OVERRIDE: "codex" })],
-  ["Claude", () => ({})],
+/** Host, its environment, and whether the check runs there (native Codex only). */
+const HOSTS: Array<[string, (plugin: string) => EnvPatch, boolean]> = [
+  ["native Codex", (plugin) => ({ PLUGIN_ROOT: plugin }), true],
+  ["Codex override without PLUGIN_ROOT", () => ({ TOOLU_HOST_OVERRIDE: "codex" }), false],
+  ["Claude", () => ({}), false],
   [
     "Claude override with PLUGIN_ROOT",
     (plugin) => ({ PLUGIN_ROOT: plugin, TOOLU_HOST_OVERRIDE: "claude" }),
+    false,
   ],
 ];
 
-for (const [listing, stdout, code] of LISTINGS) {
-  for (const [host, hostEnv] of HOSTS) {
-    test.concurrent(`matches bash check-toolu.sh: ${listing}, ${host}`, async () => {
+for (const [listing, stdout, code, missing] of LISTINGS) {
+  for (const [host, hostEnv, checks] of HOSTS) {
+    test.concurrent(`check-toolu: ${listing}, ${host}`, async () => {
       using sb = createSandbox();
       const path = `${codexBin(sb, stdout, code)}:${process.env["PATH"] ?? ""}`;
       const base = { HOME: sb.home, PATH: path };
-      const reference = await run(["bash", BASH_REFERENCE], {
-        cwd: sb.project,
-        env: { ...base, ...hostEnv(join(PLUGINS, "ts-quality")) },
-      });
-      expect(reference.exitCode).toBe(0);
+      const expected = missing && checks ? WARNING_OUTPUT : "";
       for (const plugin of PORTED) {
         const root = join(PLUGINS, plugin);
         const env = { ...base, CLAUDE_PLUGIN_ROOT: root, ...hostEnv(root) };
         const res = await runStartupHook(root, "check-toolu", sb, env);
         expect(res.exitCode).toBe(0);
-        expect(res.stdout).toBe(reference.stdout);
+        expect(res.stdout).toBe(expected);
       }
-      if (reference.stdout !== "") expect(reference.stdout).toContain(WARNING);
     });
   }
 }

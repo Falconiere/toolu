@@ -1,0 +1,1295 @@
+{
+  "base": "a8b0c9c9680d6d54cde867c042a96cf2776c1b94",
+  "cases": {
+    "gating: outside a TS project [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "gating: TS project with no lock file [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "gating: tsconfig present but untracked [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "gating: package manager not on PATH [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "DEV-1: no jq on PATH [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "flow: a non-TS file is ignored [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "flow: a missing file is ignored [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "flow: a relative path resolves against the hook's cwd [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden console.log in src/a.ts — use console.error/warn/info\\n1:console.log(\\\"x\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"src/a.ts\",\n  \"violations\": \"Forbidden console.log in src/a.ts — use console.error/warn/info\\n1:console.log(\\\"x\\\");\\n\",\n  \"entries\": {\n    \"src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in src/a.ts — use console.error/warn/info\\n1:console.log(\\\"x\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "flow: CLAUDE_FILE_PATHS names the file for any tool [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden console.log in src/a.ts — use console.error/warn/info\\n1:console.log(\\\"x\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"src/a.ts\",\n  \"violations\": \"Forbidden console.log in src/a.ts — use console.error/warn/info\\n1:console.log(\\\"x\\\");\\n\",\n  \"entries\": {\n    \"src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in src/a.ts — use console.error/warn/info\\n1:console.log(\\\"x\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "flow: a file in a linked worktree is skipped [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "assembled: three violations in fragment order [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden ../ import in <ROOT>/project/src/bad.ts — use @/ alias\\nForbidden 'as' type assertion in <ROOT>/project/src/bad.ts — use type guards or Zod\\n2:export const x = thing as Bar;\\nForbidden console.log in <ROOT>/project/src/bad.ts — use console.error/warn/info\\n4:  console.log(\\\"debug\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Forbidden ../ import in <ROOT>/project/src/bad.ts — use @/ alias\\nForbidden 'as' type assertion in <ROOT>/project/src/bad.ts — use type guards or Zod\\n2:export const x = thing as Bar;\\nForbidden console.log in <ROOT>/project/src/bad.ts — use console.error/warn/info\\n4:  console.log(\\\"debug\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden ../ import in <ROOT>/project/src/bad.ts — use @/ alias\\nForbidden 'as' type assertion in <ROOT>/project/src/bad.ts — use type guards or Zod\\n2:export const x = thing as Bar;\\nForbidden console.log in <ROOT>/project/src/bad.ts — use console.error/warn/info\\n4:  console.log(\\\"debug\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "assembled: fixing one of three keeps the gate failing [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden ../ import in <ROOT>/project/src/bad.ts — use @/ alias\\nForbidden 'as' type assertion in <ROOT>/project/src/bad.ts — use type guards or Zod\\n2:export const x = thing as Bar;\\nForbidden console.log in <ROOT>/project/src/bad.ts — use console.error/warn/info\\n4:  console.log(\\\"debug\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Forbidden ../ import in <ROOT>/project/src/bad.ts — use @/ alias\\nForbidden 'as' type assertion in <ROOT>/project/src/bad.ts — use type guards or Zod\\n2:export const x = thing as Bar;\\nForbidden console.log in <ROOT>/project/src/bad.ts — use console.error/warn/info\\n4:  console.log(\\\"debug\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden ../ import in <ROOT>/project/src/bad.ts — use @/ alias\\nForbidden 'as' type assertion in <ROOT>/project/src/bad.ts — use type guards or Zod\\n2:export const x = thing as Bar;\\nForbidden console.log in <ROOT>/project/src/bad.ts — use console.error/warn/info\\n4:  console.log(\\\"debug\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden ../ import in <ROOT>/project/src/bad.ts — use @/ alias\\nForbidden 'as' type assertion in <ROOT>/project/src/bad.ts — use type guards or Zod\\n2:export const x = thing as Bar;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Forbidden ../ import in <ROOT>/project/src/bad.ts — use @/ alias\\nForbidden 'as' type assertion in <ROOT>/project/src/bad.ts — use type guards or Zod\\n2:export const x = thing as Bar;\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden ../ import in <ROOT>/project/src/bad.ts — use @/ alias\\nForbidden 'as' type assertion in <ROOT>/project/src/bad.ts — use type guards or Zod\\n2:export const x = thing as Bar;\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "assembled: ../ import without a @/ alias [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden 'as' type assertion in <ROOT>/project/src/bad.ts — use type guards or Zod\\n2:export const x = thing as Bar;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Forbidden 'as' type assertion in <ROOT>/project/src/bad.ts — use type guards or Zod\\n2:export const x = thing as Bar;\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden 'as' type assertion in <ROOT>/project/src/bad.ts — use type guards or Zod\\n2:export const x = thing as Bar;\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "assembled: @ts-expect-error in src [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression comment in <ROOT>/project/src/bad.ts — fix the underlying issue in code, never silence it\\n1:// @ts-expect-error legacy boundary\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Forbidden suppression comment in <ROOT>/project/src/bad.ts — fix the underlying issue in code, never silence it\\n1:// @ts-expect-error legacy boundary\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression comment in <ROOT>/project/src/bad.ts — fix the underlying issue in code, never silence it\\n1:// @ts-expect-error legacy boundary\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "assembled: clean file [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "assembled: re-editing a failing file clean flips the gate [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nthrow of non-Error literal in <ROOT>/project/src/x.ts — throw an Error (or subclass) instead\\n1: export function b(){ throw 42; }\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/x.ts\",\n  \"violations\": \"throw of non-Error literal in <ROOT>/project/src/x.ts — throw an Error (or subclass) instead\\n1: export function b(){ throw 42; }\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/x.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"throw of non-Error literal in <ROOT>/project/src/x.ts — throw an Error (or subclass) instead\\n1: export function b(){ throw 42; }\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/x.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Exported API missing a JSDoc in <ROOT>/project/src/x.ts — add a concise /** */ doc:\\n1: export function b(){ throw new Error(\\\"boom\\\"); }\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"ts-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/x.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/x.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      }
+    ],
+    "gate: clearing one file keeps another's failure [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden console.log in <ROOT>/project/src/a.ts — use console.error/warn/info\\n1:console.log(\\\"a\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.ts\",\n  \"violations\": \"Forbidden console.log in <ROOT>/project/src/a.ts — use console.error/warn/info\\n1:console.log(\\\"a\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in <ROOT>/project/src/a.ts — use console.error/warn/info\\n1:console.log(\\\"a\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden console.log in <ROOT>/project/src/b.ts — use console.error/warn/info\\n1:console.log(\\\"b\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/b.ts\",\n  \"violations\": \"Forbidden console.log in <ROOT>/project/src/a.ts — use console.error/warn/info\\n1:console.log(\\\"a\\\");\\nForbidden console.log in <ROOT>/project/src/b.ts — use console.error/warn/info\\n1:console.log(\\\"b\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in <ROOT>/project/src/a.ts — use console.error/warn/info\\n1:console.log(\\\"a\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    },\n    \"<ROOT>/project/src/b.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in <ROOT>/project/src/b.ts — use console.error/warn/info\\n1:console.log(\\\"b\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/b.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.ts\",\n  \"violations\": \"Forbidden console.log in <ROOT>/project/src/a.ts — use console.error/warn/info\\n1:console.log(\\\"a\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in <ROOT>/project/src/a.ts — use console.error/warn/info\\n1:console.log(\\\"a\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/b.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/b.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"ts-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/b.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/src/b.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      }
+    ],
+    "gate: deleting a failing file clears its entry [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden console.log in <ROOT>/project/src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Forbidden console.log in <ROOT>/project/src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in <ROOT>/project/src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Forbidden console.log in <ROOT>/project/src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in <ROOT>/project/src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "gate: deleting a failing file clears its entry [codex]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden console.log in src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"src/bad.ts\",\n  \"violations\": \"Forbidden console.log in src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n  \"entries\": {\n    \"src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"ts-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      }
+    ],
+    "gate: a moved file clears its source entry and checks its target [codex]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden console.log in src/old.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"src/old.ts\",\n  \"violations\": \"Forbidden console.log in src/old.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n  \"entries\": {\n    \"src/old.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in src/old.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/old.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"ts-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/old.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"src/old.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      }
+    ],
+    "codex: a written file with a violation [codex]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden console.log in src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"src/bad.ts\",\n  \"violations\": \"Forbidden console.log in src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n  \"entries\": {\n    \"src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "codex: one patch through ts-quality and rust-quality [codex]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden console.log in src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\\nQUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"src/bad.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\nForbidden console.log in src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n  \"entries\": {\n    \"src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in src/bad.ts — use console.error/warn/info\\n1:console.log(\\\"bad\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    },\n    \"src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: a test outside __tests__ [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest file outside __tests__/: <ROOT>/project/src/foo.test.ts — move to sibling __tests__/ directory\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/foo.test.ts\",\n  \"violations\": \"Test file outside __tests__/: <ROOT>/project/src/foo.test.ts — move to sibling __tests__/ directory\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/foo.test.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Test file outside __tests__/: <ROOT>/project/src/foo.test.ts — move to sibling __tests__/ directory\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/foo.test.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: e2e specs keep their own layout [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: __tests__ nested in __tests__ is not co-located [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest not co-located with source: <ROOT>/project/src/__tests__/__tests__/a.test.ts — __tests__/ must be at the same level as the code it tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/__tests__/__tests__/a.test.ts\",\n  \"violations\": \"Test not co-located with source: <ROOT>/project/src/__tests__/__tests__/a.test.ts — __tests__/ must be at the same level as the code it tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/__tests__/__tests__/a.test.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Test not co-located with source: <ROOT>/project/src/__tests__/__tests__/a.test.ts — __tests__/ must be at the same level as the code it tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/__tests__/__tests__/a.test.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: helpers and utils subdirectories are allowed [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "no-mocks: vi.mock [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nMocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:2:vi.mock(\\\"../dep\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/__tests__/foo.test.ts\",\n  \"violations\": \"Mocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:2:vi.mock(\\\"../dep\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/__tests__/foo.test.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Mocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:2:vi.mock(\\\"../dep\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/__tests__/foo.test.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: jest.fn [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nMocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:1:const handler = jest.fn();\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/__tests__/foo.test.ts\",\n  \"violations\": \"Mocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:1:const handler = jest.fn();\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/__tests__/foo.test.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Mocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:1:const handler = jest.fn();\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/__tests__/foo.test.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: one hit per mock rule [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nMocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:4:jest.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:2:vi.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:3:sinon.spy();\\n<ROOT>/project/src/__tests__/foo.test.ts:5:vi.mock(\\\"b\\\");\\n<ROOT>/project/src/__tests__/foo.test.ts:1:jest.mock(\\\"a\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/__tests__/foo.test.ts\",\n  \"violations\": \"Mocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:4:jest.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:2:vi.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:3:sinon.spy();\\n<ROOT>/project/src/__tests__/foo.test.ts:5:vi.mock(\\\"b\\\");\\n<ROOT>/project/src/__tests__/foo.test.ts:1:jest.mock(\\\"a\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/__tests__/foo.test.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Mocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:4:jest.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:2:vi.fn();\\n<ROOT>/project/src/__tests__/foo.test.ts:3:sinon.spy();\\n<ROOT>/project/src/__tests__/foo.test.ts:5:vi.mock(\\\"b\\\");\\n<ROOT>/project/src/__tests__/foo.test.ts:1:jest.mock(\\\"a\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/__tests__/foo.test.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: a real JSON fixture passes [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "no-mocks: ts-mockito import [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nImport from ts-mockito in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/__tests__/foo.test.ts\",\n  \"violations\": \"Import from ts-mockito in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/__tests__/foo.test.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Import from ts-mockito in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/__tests__/foo.test.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: lang.ts.noMocks=false [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"noMocks\": false\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "no-mocks: __tests__/mocks is a nested test dir [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest nested in __tests__/ subdirectory: <ROOT>/project/src/__tests__/mocks/handlers.test.ts — keep __tests__/ flat (only fixtures/helpers/utils subdirs allowed; no mocks/ — tests must exercise real data)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/__tests__/mocks/handlers.test.ts\",\n  \"violations\": \"Test nested in __tests__/ subdirectory: <ROOT>/project/src/__tests__/mocks/handlers.test.ts — keep __tests__/ flat (only fixtures/helpers/utils subdirs allowed; no mocks/ — tests must exercise real data)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/__tests__/mocks/handlers.test.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Test nested in __tests__/ subdirectory: <ROOT>/project/src/__tests__/mocks/handlers.test.ts — keep __tests__/ flat (only fixtures/helpers/utils subdirs allowed; no mocks/ — tests must exercise real data)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/__tests__/mocks/handlers.test.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: __tests__/fixtures is allowed [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "no-mocks: e2e specs are exempt [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "no-mocks: sinon.stub [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nMocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:2:const stub = sinon.stub(dep, \\\"toString\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/__tests__/foo.test.ts\",\n  \"violations\": \"Mocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:2:const stub = sinon.stub(dep, \\\"toString\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/__tests__/foo.test.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Mocked test double in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)\\n<ROOT>/project/src/__tests__/foo.test.ts:2:const stub = sinon.stub(dep, \\\"toString\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/__tests__/foo.test.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: ast-grep crash [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nast-grep failed while scanning <ROOT>/project/src/__tests__/foo.test.ts — ast-grep exit 2: boom; error-handling rules could not be verified. Fix the tool/file and re-edit\\nast-grep failed while scanning <ROOT>/project/src/__tests__/foo.test.ts for mocks — exit 2: boom; no-mocks rule could not be verified. Fix the tool/file and re-edit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/__tests__/foo.test.ts\",\n  \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/__tests__/foo.test.ts — ast-grep exit 2: boom; error-handling rules could not be verified. Fix the tool/file and re-edit\\nast-grep failed while scanning <ROOT>/project/src/__tests__/foo.test.ts for mocks — exit 2: boom; no-mocks rule could not be verified. Fix the tool/file and re-edit\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/__tests__/foo.test.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/__tests__/foo.test.ts — ast-grep exit 2: boom; error-handling rules could not be verified. Fix the tool/file and re-edit\\nast-grep failed while scanning <ROOT>/project/src/__tests__/foo.test.ts for mocks — exit 2: boom; no-mocks rule could not be verified. Fix the tool/file and re-edit\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/__tests__/foo.test.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: ast-grep exit 0 with empty output [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nast-grep failed while scanning <ROOT>/project/src/__tests__/foo.test.ts for mocks — exited 0 with empty output (expected at least the JSON array \\\"[]\\\"); no-mocks rule could not be verified. Fix the tool/file and re-edit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/__tests__/foo.test.ts\",\n  \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/__tests__/foo.test.ts for mocks — exited 0 with empty output (expected at least the JSON array \\\"[]\\\"); no-mocks rule could not be verified. Fix the tool/file and re-edit\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/__tests__/foo.test.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/__tests__/foo.test.ts for mocks — exited 0 with empty output (expected at least the JSON array \\\"[]\\\"); no-mocks rule could not be verified. Fix the tool/file and re-edit\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/__tests__/foo.test.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: ast-grep exit 0 with non-JSON output [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nast-grep failed while scanning <ROOT>/project/src/__tests__/foo.test.ts — ast-grep exited 0 but its output did not parse as the documented JSON array; error-handling rules could not be verified. Fix the tool/file and re-edit\\nast-grep failed while scanning <ROOT>/project/src/__tests__/foo.test.ts for mocks — its output did not parse as the documented JSON array; no-mocks rule could not be verified. Fix the tool/file and re-edit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/__tests__/foo.test.ts\",\n  \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/__tests__/foo.test.ts — ast-grep exited 0 but its output did not parse as the documented JSON array; error-handling rules could not be verified. Fix the tool/file and re-edit\\nast-grep failed while scanning <ROOT>/project/src/__tests__/foo.test.ts for mocks — its output did not parse as the documented JSON array; no-mocks rule could not be verified. Fix the tool/file and re-edit\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/__tests__/foo.test.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/__tests__/foo.test.ts — ast-grep exited 0 but its output did not parse as the documented JSON array; error-handling rules could not be verified. Fix the tool/file and re-edit\\nast-grep failed while scanning <ROOT>/project/src/__tests__/foo.test.ts for mocks — its output did not parse as the documented JSON array; no-mocks rule could not be verified. Fix the tool/file and re-edit\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/__tests__/foo.test.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: ast-grep absent still checks ts-mockito [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nImport from ts-mockito in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/__tests__/foo.test.ts\",\n  \"violations\": \"Import from ts-mockito in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/__tests__/foo.test.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Import from ts-mockito in <ROOT>/project/src/__tests__/foo.test.ts — tests must exercise real data/services, not mocks/stubs\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/__tests__/foo.test.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "duplication: jscpd finds a clone in the package [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Code duplication detected involving <ROOT>/project/packages/core/src/two.ts — deduplicate or run 'bun run typecheck' before commit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "duplication: a file name holding $ still matches jscpd's report [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Code duplication detected involving <ROOT>/project/packages/core/src/$id.ts — deduplicate or run 'bun run typecheck' before commit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "duplication: not under apps/ or packages/ [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "size: project config lowers maxFileLines [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/big.ts\",\n  \"violations\": \"TS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/big.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"TS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/big.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFileLines\": 10\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: comments and blank lines do not count [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFileLines\": 10\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: eslint JSON max-lines is credited [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules (eslint enforces this max-lines limit)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/big.ts\",\n  \"violations\": \"TS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules (eslint enforces this max-lines limit)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/big.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"TS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules (eslint enforces this max-lines limit)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/big.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "size: oxlint max-lines object form is credited [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTS file exceeds 12-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules (oxc enforces this max-lines limit)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/big.ts\",\n  \"violations\": \"TS file exceeds 12-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules (oxc enforces this max-lines limit)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/big.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"TS file exceeds 12-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules (oxc enforces this max-lines limit)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/big.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "size: unparsed .eslintrc.cjs falls to the default with a hint [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (eslint is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the 300-line default; align them)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/huge.ts\",\n  \"violations\": \"TS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (eslint is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the 300-line default; align them)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/huge.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"TS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (eslint is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the 300-line default; align them)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/huge.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "size: eslint.config.js is not machine-readable either [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (eslint is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the 300-line default; align them)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/huge.ts\",\n  \"violations\": \"TS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (eslint is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the 300-line default; align them)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/huge.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"TS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (eslint is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the 300-line default; align them)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/huge.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "size: biome has no max-lines equivalent [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (biome has no max-lines equivalent — gate uses the 300-line default)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/huge.ts\",\n  \"violations\": \"TS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (biome has no max-lines equivalent — gate uses the 300-line default)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/huge.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"TS file exceeds 300-line limit: <ROOT>/project/src/huge.ts (301 code lines, blanks/comments excluded) — split into smaller modules (biome has no max-lines equivalent — gate uses the 300-line default)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/huge.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "size: a toolu.config override beats the linter's limit [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/big.ts\",\n  \"violations\": \"TS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/big.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"TS file exceeds 10-line limit: <ROOT>/project/src/big.ts (15 code lines, blanks/comments excluded) — split into smaller modules\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/big.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFileLines\": 10\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: an unterminated block comment marks the count approximate [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTS file exceeds 5-line limit: <ROOT>/project/src/open.ts (9 code lines, blanks/comments excluded) (size approximated — an unterminated /* or a string containing /* may be affecting the count) — split into smaller modules\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/open.ts\",\n  \"violations\": \"TS file exceeds 5-line limit: <ROOT>/project/src/open.ts (9 code lines, blanks/comments excluded) (size approximated — an unterminated /* or a string containing /* may be affecting the count) — split into smaller modules\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/open.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"TS file exceeds 5-line limit: <ROOT>/project/src/open.ts (9 code lines, blanks/comments excluded) (size approximated — an unterminated /* or a string containing /* may be affecting the count) — split into smaller modules\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/open.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFileLines\": 5\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: long exported arrow const [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.ts\",\n  \"violations\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: one-line arrows before a function are not misattributed [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Exported API missing a JSDoc in <ROOT>/project/src/a.ts — add a concise /** */ doc:\\n1: export const noop = () => undefined;\\n2: export const square = (x: number) => x * x;\\n3: export const upper = (s: string) => s.trim();\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 5\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: long function after one-line arrows [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.ts\",\n  \"violations\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: long class method [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/svc.ts (>3 lines) — simplify or split\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/svc.ts\",\n  \"violations\": \"Function too long in <ROOT>/project/src/svc.ts (>3 lines) — simplify or split\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/svc.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/svc.ts (>3 lines) — simplify or split\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/svc.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: short method before other members [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Exported API missing a JSDoc in <ROOT>/project/src/svc.ts — add a concise /** */ doc:\\n1: export class Service {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: arrow with a multi-line param list [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.ts\",\n  \"violations\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: column-0 } in a template literal [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/tmpl.ts (>5 lines) — simplify or split\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/tmpl.ts\",\n  \"violations\": \"Function too long in <ROOT>/project/src/tmpl.ts (>5 lines) — simplify or split\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/tmpl.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/tmpl.ts (>5 lines) — simplify or split\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/tmpl.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 5\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: long const function expression [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.ts\",\n  \"violations\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/a.ts (>3 lines) — simplify or split\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: method with a defaulted generic [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/svc.ts (>3 lines) — simplify or split\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/svc.ts\",\n  \"violations\": \"Function too long in <ROOT>/project/src/svc.ts (>3 lines) — simplify or split\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/svc.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/svc.ts (>3 lines) — simplify or split\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/svc.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: strings and control flow do not start or end a function [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/src/flow.ts (>3 lines) — simplify or split\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/flow.ts\",\n  \"violations\": \"Function too long in <ROOT>/project/src/flow.ts (>3 lines) — simplify or split\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/flow.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/src/flow.ts (>3 lines) — simplify or split\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/flow.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"ts\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "as: export { foo as Bar } is a re-export [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "as: export const x = foo as Bar [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden 'as' type assertion in <ROOT>/project/src/a.ts — use type guards or Zod\\n1:export const x = foo as Bar;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.ts\",\n  \"violations\": \"Forbidden 'as' type assertion in <ROOT>/project/src/a.ts — use type guards or Zod\\n1:export const x = foo as Bar;\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden 'as' type assertion in <ROOT>/project/src/a.ts — use type guards or Zod\\n1:export const x = foo as Bar;\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "as: as null / as void [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden 'as' type assertion in <ROOT>/project/src/a.ts — use type guards or Zod\\n1:const a = something as null;\\n2:const b = other as void;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.ts\",\n  \"violations\": \"Forbidden 'as' type assertion in <ROOT>/project/src/a.ts — use type guards or Zod\\n1:const a = something as null;\\n2:const b = other as void;\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden 'as' type assertion in <ROOT>/project/src/a.ts — use type guards or Zod\\n1:const a = something as null;\\n2:const b = other as void;\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "as: const, commented and import lines are exempt; the rest capped at five [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden 'as' type assertion in <ROOT>/project/src/a.ts — use type guards or Zod\\n4:const a1 = v as A;\\n5:const a2 = v as B;\\n6:const a3 = (v) as C;\\n7:const a4 = v as any;\\n8:const a5 = v as unknown;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.ts\",\n  \"violations\": \"Forbidden 'as' type assertion in <ROOT>/project/src/a.ts — use type guards or Zod\\n4:const a1 = v as A;\\n5:const a2 = v as B;\\n6:const a3 = (v) as C;\\n7:const a4 = v as any;\\n8:const a5 = v as unknown;\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden 'as' type assertion in <ROOT>/project/src/a.ts — use type guards or Zod\\n4:const a1 = v as A;\\n5:const a2 = v as B;\\n6:const a3 = (v) as C;\\n7:const a4 = v as any;\\n8:const a5 = v as unknown;\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "type-dup: an exported type already in another package [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nType 'Widget' in <ROOT>/project/packages/b/src/widget2.ts already defined in packages/a/src/widget.ts — import instead of redefining\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/packages/b/src/widget2.ts\",\n  \"violations\": \"Type 'Widget' in <ROOT>/project/packages/b/src/widget2.ts already defined in packages/a/src/widget.ts — import instead of redefining\\n\",\n  \"entries\": {\n    \"<ROOT>/project/packages/b/src/widget2.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Type 'Widget' in <ROOT>/project/packages/b/src/widget2.ts already defined in packages/a/src/widget.ts — import instead of redefining\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/packages/b/src/widget2.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "suppression: eslint-disable [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression comment in <ROOT>/project/src/bad.ts — fix the underlying issue in code, never silence it\\n1:// eslint-disable-next-line\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Forbidden suppression comment in <ROOT>/project/src/bad.ts — fix the underlying issue in code, never silence it\\n1:// eslint-disable-next-line\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression comment in <ROOT>/project/src/bad.ts — fix the underlying issue in code, never silence it\\n1:// eslint-disable-next-line\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "suppression: @ts-expect-error outside tests [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression comment in <ROOT>/project/src/bad.ts — fix the underlying issue in code, never silence it\\n1:// @ts-expect-error legacy boundary\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Forbidden suppression comment in <ROOT>/project/src/bad.ts — fix the underlying issue in code, never silence it\\n1:// @ts-expect-error legacy boundary\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression comment in <ROOT>/project/src/bad.ts — fix the underlying issue in code, never silence it\\n1:// @ts-expect-error legacy boundary\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "suppression: @ts-expect-error allowed in a test file [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "suppression: @ts-ignore in a /** */ block [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression comment in <ROOT>/project/src/bad.ts — fix the underlying issue in code, never silence it\\n1:/** @ts-ignore */\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Forbidden suppression comment in <ROOT>/project/src/bad.ts — fix the underlying issue in code, never silence it\\n1:/** @ts-ignore */\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression comment in <ROOT>/project/src/bad.ts — fix the underlying issue in code, never silence it\\n1:/** @ts-ignore */\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "suppression: biome-ignore and @ts-nocheck, capped at three [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression comment in <ROOT>/project/src/bad.ts — fix the underlying issue in code, never silence it\\n1:// @ts-nocheck\\n2:/* biome-ignore lint: x */\\n3:// @ts-ignore\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Forbidden suppression comment in <ROOT>/project/src/bad.ts — fix the underlying issue in code, never silence it\\n1:// @ts-nocheck\\n2:/* biome-ignore lint: x */\\n3:// @ts-ignore\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression comment in <ROOT>/project/src/bad.ts — fix the underlying issue in code, never silence it\\n1:// @ts-nocheck\\n2:/* biome-ignore lint: x */\\n3:// @ts-ignore\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "radix: raw import [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nRaw radix import in <ROOT>/project/src/a.ts — use shared components from @/components/ui/\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/a.ts\",\n  \"violations\": \"Raw radix import in <ROOT>/project/src/a.ts — use shared components from @/components/ui/\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Raw radix import in <ROOT>/project/src/a.ts — use shared components from @/components/ui/\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "radix: only in a comment [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "radix: allowed under packages/ui [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: verbose JSDoc with /** in prose [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Verbose JSDoc in <ROOT>/project/src/api.ts — docs must be present but concise:\\n1: JSDoc block is 14 lines — trim to the essentials\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: exported function without JSDoc [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Exported API missing a JSDoc in <ROOT>/project/src/api.ts — add a concise /** */ doc:\\n1: export function doThing() {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: pragma between JSDoc and export [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression comment in <ROOT>/project/src/api.ts — fix the underlying issue in code, never silence it\\n2:// eslint-disable-next-line @typescript-eslint/no-explicit-any\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/api.ts\",\n  \"violations\": \"Forbidden suppression comment in <ROOT>/project/src/api.ts — fix the underlying issue in code, never silence it\\n2:// eslint-disable-next-line @typescript-eslint/no-explicit-any\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/api.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression comment in <ROOT>/project/src/api.ts — fix the underlying issue in code, never silence it\\n2:// eslint-disable-next-line @typescript-eslint/no-explicit-any\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/api.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "docs: documented export [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: camelCase exported arrow [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Exported API missing a JSDoc in <ROOT>/project/src/a.ts — add a concise /** */ doc:\\n1: export const myApi = () => {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: index.ts and .d.ts are exempt [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: class, enum, default and interface exports [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Exported API missing a JSDoc in <ROOT>/project/src/kinds.ts — add a concise /** */ doc:\\n1: export class A {}\\n2: export enum B { X }\\n3: export default 1;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "hooks: a hook file doing too many things [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nHook does too many things in <ROOT>/project/src/use-thing.ts (4 useState/useRef/useEffect) — split into focused hooks\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/use-thing.ts\",\n  \"violations\": \"Hook does too many things in <ROOT>/project/src/use-thing.ts (4 useState/useRef/useEffect) — split into focused hooks\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/use-thing.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Hook does too many things in <ROOT>/project/src/use-thing.ts (4 useState/useRef/useEffect) — split into focused hooks\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/use-thing.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "factory: more than two create functions [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nToo many factory functions in <ROOT>/project/src/make.ts (3) — simplify construction\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/make.ts\",\n  \"violations\": \"Too many factory functions in <ROOT>/project/src/make.ts (3) — simplify construction\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/make.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Too many factory functions in <ROOT>/project/src/make.ts (3) — simplify construction\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/make.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "typeguard: manual guard in a zod project [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nManual type guard in <ROOT>/project/src/guard.ts — use Zod schema instead\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/guard.ts\",\n  \"violations\": \"Manual type guard in <ROOT>/project/src/guard.ts — use Zod schema instead\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/guard.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Manual type guard in <ROOT>/project/src/guard.ts — use Zod schema instead\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/guard.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "typeguard: no zod, no rule [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "naming: parts.tsx [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden component filename 'parts.tsx' in <ROOT>/project/src/components/parts.tsx — name file after its exported function (e.g. api-key-create-button.tsx)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/components/parts.tsx\",\n  \"violations\": \"Forbidden component filename 'parts.tsx' in <ROOT>/project/src/components/parts.tsx — name file after its exported function (e.g. api-key-create-button.tsx)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/components/parts.tsx\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden component filename 'parts.tsx' in <ROOT>/project/src/components/parts.tsx — name file after its exported function (e.g. api-key-create-button.tsx)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/components/parts.tsx\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "naming: card-sections.tsx [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden component filename 'card-sections.tsx' in <ROOT>/project/src/card-sections.tsx — name file after its exported function (e.g. api-key-create-button.tsx)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/card-sections.tsx\",\n  \"violations\": \"Forbidden component filename 'card-sections.tsx' in <ROOT>/project/src/card-sections.tsx — name file after its exported function (e.g. api-key-create-button.tsx)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/card-sections.tsx\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden component filename 'card-sections.tsx' in <ROOT>/project/src/card-sections.tsx — name file after its exported function (e.g. api-key-create-button.tsx)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/card-sections.tsx\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "console: console.log, capped at three [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden console.log in <ROOT>/project/src/log.ts — use console.error/warn/info\\n1:console.log(\\\"a\\\");\\n2:  console.log(\\\"b\\\");\\n4:console.log(\\\"d\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/log.ts\",\n  \"violations\": \"Forbidden console.log in <ROOT>/project/src/log.ts — use console.error/warn/info\\n1:console.log(\\\"a\\\");\\n2:  console.log(\\\"b\\\");\\n4:console.log(\\\"d\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/log.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden console.log in <ROOT>/project/src/log.ts — use console.error/warn/info\\n1:console.log(\\\"a\\\");\\n2:  console.log(\\\"b\\\");\\n4:console.log(\\\"d\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/log.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "confirm: confirm()/alert() in a component [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden confirm()/alert() in <ROOT>/project/src/components/del.tsx — use AlertDialog component\\n3:  if (confirm(\\\"sure?\\\")) alert(\\\"gone\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/components/del.tsx\",\n  \"violations\": \"Forbidden confirm()/alert() in <ROOT>/project/src/components/del.tsx — use AlertDialog component\\n3:  if (confirm(\\\"sure?\\\")) alert(\\\"gone\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/components/del.tsx\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden confirm()/alert() in <ROOT>/project/src/components/del.tsx — use AlertDialog component\\n3:  if (confirm(\\\"sure?\\\")) alert(\\\"gone\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/components/del.tsx\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "confirm: only under components/ or routes/ [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "props: mutable props [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nMutable props in <ROOT>/project/src/card.tsx — wrap in Readonly<Props>\\n2:export function Card(props: CardProps) {\\n5:function Row(rowProps: RowProps) {}\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/card.tsx\",\n  \"violations\": \"Mutable props in <ROOT>/project/src/card.tsx — wrap in Readonly<Props>\\n2:export function Card(props: CardProps) {\\n5:function Row(rowProps: RowProps) {}\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/card.tsx\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Mutable props in <ROOT>/project/src/card.tsx — wrap in Readonly<Props>\\n2:export function Card(props: CardProps) {\\n5:function Row(rowProps: RowProps) {}\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/card.tsx\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "imports: ../ import with a @/ alias [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden ../ import in <ROOT>/project/src/deep/a.ts — use @/ alias\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/deep/a.ts\",\n  \"violations\": \"Forbidden ../ import in <ROOT>/project/src/deep/a.ts — use @/ alias\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/deep/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Forbidden ../ import in <ROOT>/project/src/deep/a.ts — use @/ alias\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/deep/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "errors: empty catch block [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nEmpty catch block in <ROOT>/project/src/bad.ts — handle the error or rethrow; do not swallow\\n<ROOT>/project/src/bad.ts:2:  try {\\n<ROOT>/project/src/bad.ts:3:    foo();\\n<ROOT>/project/src/bad.ts:4:  } catch (e) {}\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Empty catch block in <ROOT>/project/src/bad.ts — handle the error or rethrow; do not swallow\\n<ROOT>/project/src/bad.ts:2:  try {\\n<ROOT>/project/src/bad.ts:3:    foo();\\n<ROOT>/project/src/bad.ts:4:  } catch (e) {}\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Empty catch block in <ROOT>/project/src/bad.ts — handle the error or rethrow; do not swallow\\n<ROOT>/project/src/bad.ts:2:  try {\\n<ROOT>/project/src/bad.ts:3:    foo();\\n<ROOT>/project/src/bad.ts:4:  } catch (e) {}\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "errors: empty catch without a binding [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nEmpty catch block in <ROOT>/project/src/bad.ts — handle the error or rethrow; do not swallow\\n<ROOT>/project/src/bad.ts:2:  try { foo(); } catch { }\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Empty catch block in <ROOT>/project/src/bad.ts — handle the error or rethrow; do not swallow\\n<ROOT>/project/src/bad.ts:2:  try { foo(); } catch { }\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Empty catch block in <ROOT>/project/src/bad.ts — handle the error or rethrow; do not swallow\\n<ROOT>/project/src/bad.ts:2:  try { foo(); } catch { }\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "errors: silent .catch(() => {}) [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nSilent promise rejection in <ROOT>/project/src/bad.ts — log or rethrow the error\\n<ROOT>/project/src/bad.ts:2:  foo().catch(() => {});\\n<ROOT>/project/src/bad.ts:3:  bar().catch(() => null);\\n<ROOT>/project/src/bad.ts:4:  baz().catch(() => undefined);\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Silent promise rejection in <ROOT>/project/src/bad.ts — log or rethrow the error\\n<ROOT>/project/src/bad.ts:2:  foo().catch(() => {});\\n<ROOT>/project/src/bad.ts:3:  bar().catch(() => null);\\n<ROOT>/project/src/bad.ts:4:  baz().catch(() => undefined);\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Silent promise rejection in <ROOT>/project/src/bad.ts — log or rethrow the error\\n<ROOT>/project/src/bad.ts:2:  foo().catch(() => {});\\n<ROOT>/project/src/bad.ts:3:  bar().catch(() => null);\\n<ROOT>/project/src/bad.ts:4:  baz().catch(() => undefined);\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "errors: clean error handling [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Exported API missing a JSDoc in <ROOT>/project/src/good.ts — add a concise /** */ doc:\\n1: export function good() {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "errors: try/catch+toast in a component [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nManual try/catch+toast in <ROOT>/project/src/components/save-button.tsx — use shared error handling\\n5:     toast(\\\"save failed\\\");\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/components/save-button.tsx\",\n  \"violations\": \"Manual try/catch+toast in <ROOT>/project/src/components/save-button.tsx — use shared error handling\\n5:     toast(\\\"save failed\\\");\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/components/save-button.tsx\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Manual try/catch+toast in <ROOT>/project/src/components/save-button.tsx — use shared error handling\\n5:     toast(\\\"save failed\\\");\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/components/save-button.tsx\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "errors: commented-out await [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "errors: try only in a comment [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Exported API missing a JSDoc in <ROOT>/project/src/a.ts — add a concise /** */ doc:\\n2: export async function fetchIt(): Promise<number> {\\nAsync code in <ROOT>/project/src/a.ts uses await with no try/catch or .catch in the file — ensure rejections are handled here or by every caller.\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "errors: catch returns null [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nCatch swallows the error by returning a nullish value in <ROOT>/project/src/bad.ts — handle, log, or rethrow it\\n<ROOT>/project/src/bad.ts:2:  try {\\n<ROOT>/project/src/bad.ts:3:    risky();\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Catch swallows the error by returning a nullish value in <ROOT>/project/src/bad.ts — handle, log, or rethrow it\\n<ROOT>/project/src/bad.ts:2:  try {\\n<ROOT>/project/src/bad.ts:3:    risky();\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Catch swallows the error by returning a nullish value in <ROOT>/project/src/bad.ts — handle, log, or rethrow it\\n<ROOT>/project/src/bad.ts:2:  try {\\n<ROOT>/project/src/bad.ts:3:    risky();\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "errors: catch returns undefined, both bindings [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nCatch swallows the error by returning a nullish value in <ROOT>/project/src/bad.ts — handle, log, or rethrow it\\n<ROOT>/project/src/bad.ts:2:  try { a(); } catch (e) { return undefined }\\n<ROOT>/project/src/bad.ts:4:  try { c(); } catch { return null }\\n<ROOT>/project/src/bad.ts:3:  try { b(); } catch { return undefined }\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Catch swallows the error by returning a nullish value in <ROOT>/project/src/bad.ts — handle, log, or rethrow it\\n<ROOT>/project/src/bad.ts:2:  try { a(); } catch (e) { return undefined }\\n<ROOT>/project/src/bad.ts:4:  try { c(); } catch { return null }\\n<ROOT>/project/src/bad.ts:3:  try { b(); } catch { return undefined }\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Catch swallows the error by returning a nullish value in <ROOT>/project/src/bad.ts — handle, log, or rethrow it\\n<ROOT>/project/src/bad.ts:2:  try { a(); } catch (e) { return undefined }\\n<ROOT>/project/src/bad.ts:4:  try { c(); } catch { return null }\\n<ROOT>/project/src/bad.ts:3:  try { b(); } catch { return undefined }\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "errors: bare return in catch [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nCatch swallows the error by returning a nullish value in <ROOT>/project/src/bad.ts — handle, log, or rethrow it\\n<ROOT>/project/src/bad.ts:4:  } catch {\\n<ROOT>/project/src/bad.ts:5:    return;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Catch swallows the error by returning a nullish value in <ROOT>/project/src/bad.ts — handle, log, or rethrow it\\n<ROOT>/project/src/bad.ts:4:  } catch {\\n<ROOT>/project/src/bad.ts:5:    return;\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Catch swallows the error by returning a nullish value in <ROOT>/project/src/bad.ts — handle, log, or rethrow it\\n<ROOT>/project/src/bad.ts:4:  } catch {\\n<ROOT>/project/src/bad.ts:5:    return;\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "errors: catch returning a non-nullish value [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "errors: excerpts on real newlines [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nEmpty catch block in <ROOT>/project/src/bad.ts — handle the error or rethrow; do not swallow\\n<ROOT>/project/src/bad.ts:2:  try {\\n<ROOT>/project/src/bad.ts:3:    foo();\\n<ROOT>/project/src/bad.ts:4:  } catch (e) {}\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"Empty catch block in <ROOT>/project/src/bad.ts — handle the error or rethrow; do not swallow\\n<ROOT>/project/src/bad.ts:2:  try {\\n<ROOT>/project/src/bad.ts:3:    foo();\\n<ROOT>/project/src/bad.ts:4:  } catch (e) {}\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"Empty catch block in <ROOT>/project/src/bad.ts — handle the error or rethrow; do not swallow\\n<ROOT>/project/src/bad.ts:2:  try {\\n<ROOT>/project/src/bad.ts:3:    foo();\\n<ROOT>/project/src/bad.ts:4:  } catch (e) {}\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "errors: await with no handler is an advisory [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Async code in <ROOT>/project/src/a.ts uses await with no try/catch or .catch in the file — ensure rejections are handled here or by every caller.\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "errors: await inside try/catch [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "errors: ast-grep crash is a violation [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nast-grep failed while scanning <ROOT>/project/src/good.ts — ast-grep exit 2: boom; error-handling rules could not be verified. Fix the tool/file and re-edit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/good.ts\",\n  \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/good.ts — ast-grep exit 2: boom; error-handling rules could not be verified. Fix the tool/file and re-edit\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/good.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/good.ts — ast-grep exit 2: boom; error-handling rules could not be verified. Fix the tool/file and re-edit\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/good.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "errors: ast-grep exit 0 with non-JSON output [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nast-grep failed while scanning <ROOT>/project/src/good.ts — ast-grep exited 0 but its output did not parse as the documented JSON array; error-handling rules could not be verified. Fix the tool/file and re-edit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/good.ts\",\n  \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/good.ts — ast-grep exited 0 but its output did not parse as the documented JSON array; error-handling rules could not be verified. Fix the tool/file and re-edit\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/good.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"ast-grep failed while scanning <ROOT>/project/src/good.ts — ast-grep exited 0 but its output did not parse as the documented JSON array; error-handling rules could not be verified. Fix the tool/file and re-edit\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/good.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "errors: ast-grep exit 0 with empty output passes [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "errors: ast-grep absent skips the structural rules [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Exported API missing a JSDoc in <ROOT>/project/src/bad.ts — add a concise /** */ doc:\\n1: export function bad() {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "throw: new Error() with no message [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nthrow new Error() with no message in <ROOT>/project/src/bad.ts — include a descriptive message\\n<ROOT>/project/src/bad.ts:2:  throw new Error();\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"throw new Error() with no message in <ROOT>/project/src/bad.ts — include a descriptive message\\n<ROOT>/project/src/bad.ts:2:  throw new Error();\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"throw new Error() with no message in <ROOT>/project/src/bad.ts — include a descriptive message\\n<ROOT>/project/src/bad.ts:2:  throw new Error();\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "throw: string literal [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nthrow of string literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n<ROOT>/project/src/bad.ts:2:  throw \\\"bad\\\";\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"throw of string literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n<ROOT>/project/src/bad.ts:2:  throw \\\"bad\\\";\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"throw of string literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n<ROOT>/project/src/bad.ts:2:  throw \\\"bad\\\";\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "throw: template literal [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nthrow of string literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n<ROOT>/project/src/bad.ts:2:  throw `bad`;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"throw of string literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n<ROOT>/project/src/bad.ts:2:  throw `bad`;\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"throw of string literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n<ROOT>/project/src/bad.ts:2:  throw `bad`;\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "throw: numeric literal [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nthrow of non-Error literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n2:   throw 42;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"throw of non-Error literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n2:   throw 42;\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"throw of non-Error literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n2:   throw 42;\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "throw: null [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nthrow of non-Error literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n2:   throw null;\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"throw of non-Error literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n2:   throw null;\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"throw of non-Error literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n2:   throw null;\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "throw: negative float, booleans and undefined, capped at three [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nthrow of non-Error literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n1: function a() { throw -1.5; }\\n2: function b() { throw true }\\n3: function c() {throw false;}\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"throw of non-Error literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n1: function a() { throw -1.5; }\\n2: function b() { throw true }\\n3: function c() {throw false;}\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"throw of non-Error literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n1: function a() { throw -1.5; }\\n2: function b() { throw true }\\n3: function c() {throw false;}\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "throw: MultiEdit names the file [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nthrow of non-Error literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n1: export function bad() { throw 42; }\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit quality violation(s) detected\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"<ROOT>/project/src/bad.ts\",\n  \"violations\": \"throw of non-Error literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n1: export function bad() { throw 42; }\\n\",\n  \"entries\": {\n    \"<ROOT>/project/src/bad.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"Post-edit quality violation(s) detected\",\n      \"violations\": \"throw of non-Error literal in <ROOT>/project/src/bad.ts — throw an Error (or subclass) instead\\n1: export function bad() { throw 42; }\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/src/bad.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "throw: inside a // comment [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Exported API missing a JSDoc in <ROOT>/project/src/good.ts — add a concise /** */ doc:\\n1: export function good() {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "throw: inside a /* */ comment [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Exported API missing a JSDoc in <ROOT>/project/src/good.ts — add a concise /** */ doc:\\n1: export function good() {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "throw: part of a longer identifier [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Exported API missing a JSDoc in <ROOT>/project/src/good.ts — add a concise /** */ doc:\\n1: export function good() {\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ]
+  }
+}

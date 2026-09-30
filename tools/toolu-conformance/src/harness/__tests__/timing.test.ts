@@ -3,7 +3,9 @@ import { join, resolve } from "node:path";
 import { run } from "../spawn.ts";
 import {
   assertLatencyBudget,
+  latencyComparisonTable,
   LatencyBudgetError,
+  measureAlternatingLatency,
   measureLatency,
   percentile,
   type Latency,
@@ -67,6 +69,36 @@ test.concurrent("measureLatency accepts plain millisecond readings and rejects r
   const err = await rejection(measureLatency(() => Promise.resolve(1), { runs: 0 }));
   expect(err).toBeInstanceOf(RangeError);
   expect(String(err)).toContain("runs must be >= 1");
+});
+
+test.concurrent("alternating latency samples each side in order and discards warmup", async () => {
+  const order: string[] = [];
+  let reading = 0;
+  const [bash, ts] = await measureAlternatingLatency(
+    ["bash", "ts"],
+    (side) => {
+      order.push(side);
+      return Promise.resolve(++reading);
+    },
+    { runs: 2, warmup: 1 },
+  );
+  expect(order).toEqual(["bash", "ts", "bash", "ts", "bash", "ts"]);
+  expect(bash.samples).toEqual([3, 5]);
+  expect(ts.samples).toEqual([4, 6]);
+  expect(bash.p50).toBe(3);
+  expect(ts.p50).toBe(4);
+  const err = await rejection(
+    measureAlternatingLatency([0, 1], () => Promise.resolve(1), { runs: 0 }),
+  );
+  expect(err).toBeInstanceOf(RangeError);
+});
+
+test.concurrent("latency comparison table includes both medians and their delta", () => {
+  expect(latencyComparisonTable([{ name: "clean", bash: latency(300), ts: latency(145) }])).toBe(
+    "| Fixture | bash module p50 | TS module p50 | TS − bash |\n" +
+      "|---|---|---|---|\n" +
+      "| clean | 300.0 | 145.0 | -155.0 |\n",
+  );
 });
 
 test.concurrent("a timed-out run is reported rather than timed; a deny (exit 2) is still a latency", async () => {

@@ -14,7 +14,7 @@ TypeScript `PostToolUse` quality checks registered into the toolu hook engine. E
 
 ### Post-Edit Quality Checks
 
-Every TypeScript file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are assembled from ordered `hooks/concerns/` fragments into one module at `SessionStart` and run only while this plugin is installed — **uninstall it and the TypeScript rules vanish, fail-closed.**
+Every TypeScript file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks run as one bundled TypeScript module (`hooks/dist/post-tool-use.js`, built from `hooks/src/post-tool-use.ts` and `hooks/src/rules/`). The `SessionStart` register hook publishes it into toolu's registry, and the core dispatcher imports it in process, only while this plugin is installed — **uninstall it and the TypeScript rules vanish, fail-closed.** Bun 1.4.x must be on `PATH` ([docs/runtime.md](../runtime.md)).
 
 ## Checks Enforced
 
@@ -82,7 +82,7 @@ import { login } from '../login';
 describe('login', () => { ... });
 ```
 
-Tests must live in a sibling `__tests__/` directory, kept flat (only `fixtures/`, `helpers/`, `mocks/`, `utils/` subdirs).
+Tests must live in a sibling `__tests__/` directory, kept flat (only `fixtures/`, `helpers/`, `utils/` subdirs).
 
 ### 5. No Lint Suppression
 
@@ -138,7 +138,7 @@ Scans across the tree for duplicate type definitions. A type already defined els
 ## How the Gate Works
 
 1. **Agent edits a `.ts`/`.tsx` file** — `Write` or `Edit` tool call
-2. **PostToolUse hook fires** — the assembled module checks the file
+2. **PostToolUse hook fires** — the ts-quality registry module checks the file
 3. **Violation found** → gate goes **failing**, new task blocked until fixed
 4. **Fix the violation** → gate clears, continue working
 
@@ -189,7 +189,7 @@ Agent: *writes the middleware*
 
 ## Hooks
 
-The fragments register into the core toolu dispatcher and run only while this plugin is installed. Uninstalling immediately removes the TypeScript rules:
+The module registers into the core toolu dispatcher and runs only while this plugin is installed. Uninstalling immediately removes the TypeScript rules:
 
 ```text
 /plugin uninstall ts-quality@toolu

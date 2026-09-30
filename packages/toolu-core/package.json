@@ -47,7 +47,8 @@
     "./gates/agent-tier": "./src/gates/agent-tier.ts",
     "./shell": "./src/shell/shell.ts",
     "./shell/writes": "./src/shell/shell-writes.ts",
-    "./detect": "./src/detect/detect.ts"
+    "./detect": "./src/detect/detect.ts",
+    "./quality": "./src/quality/quality.ts"
   },
   "dependencies": {
     "unbash": "4.0.11",
