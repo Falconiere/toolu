@@ -338,7 +338,10 @@ for (let index = 0;index < args.length; index += 2) {
   const flag = args[index];
   if (!recognized.has(flag))
     failure("usage", `reduce-state.sh: unknown argument: ${flag}`);
-  options[flag] = args[index + 1] ?? "";
+  const value = args[index + 1];
+  if (!value || recognized.has(value))
+    failure("usage", `reduce-state.sh: ${flag} requires a value`);
+  options[flag] = value;
 }
 var snapshotPath = options["--snapshot"] ?? "";
 var statePath = options["--state"] ?? "";

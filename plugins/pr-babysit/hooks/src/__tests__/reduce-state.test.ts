@@ -1,6 +1,6 @@
 /** Recorded outputs from the Bash reducer over captured PR snapshots. */
 import { expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { reduceState } from "../babysit/reduce";
@@ -209,3 +209,49 @@ test("CLI writes next state and result with the recorded paths", async () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+for (const [name, trailingArgs, unintendedFile] of [
+  [
+    "missing final value",
+    (dir: string) => ["--state-out", join(dir, "next.json"), "--result-out"],
+    "next.json",
+  ],
+  [
+    "flag in value position",
+    () => ["--state-out", "--result-out", "--state-path", paths[0]],
+    "--result-out",
+  ],
+] as const) {
+  test(`CLI rejects ${name} before writing output`, async () => {
+    const dir = mkdtempSync(join(tmpdir(), "pb-reduce-cli-"));
+    try {
+      const proc = Bun.spawn(
+        [
+          "bun",
+          resolve(import.meta.dir, "../babysit-reduce-state.ts"),
+          "--snapshot",
+          join(snapshots, "toolu-165.json"),
+          "--state",
+          join(dir, "absent.json"),
+          "--now",
+          now,
+          ...trailingArgs(dir),
+        ],
+        { cwd: dir, stdout: "pipe", stderr: "pipe" },
+      );
+      const [stdout, stderr, code] = await Promise.all([
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text(),
+        proc.exited,
+      ]);
+      expect(code, stderr).toBe(2);
+      expect(JSON.parse(stdout)).toEqual({
+        version: 1,
+        errors: [{ code: "usage", message: expect.stringContaining("requires a value") }],
+      });
+      expect(existsSync(join(dir, unintendedFile))).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+}
