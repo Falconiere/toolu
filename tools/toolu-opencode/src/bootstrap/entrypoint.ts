@@ -1,17 +1,19 @@
-/** Discover SessionStart / register entrypoints per plugin (#211, #269).
- * Prefer hooks/register.sh, then hooks/session-start.sh, then the committed
- * hooks/dist/session-start.js bundle of a plugin whose startup hook is
- * TypeScript. Missing all three → null (caller skips; not every plugin registers).
+/** Discover SessionStart / register entrypoints per plugin (#211, #269, #265).
+ * A register entrypoint wins over a session-start one; within each, the
+ * committed TypeScript bundle (hooks/dist/<entry>.js) wins over the bash
+ * script it replaced. Missing all four → null (caller skips; not every
+ * plugin registers).
  */
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { launcherCommand } from "@toolu/core/launcher";
 
 export function pluginBootstrapScript(pluginDir: string): string | null {
   const candidates = [
+    join(pluginDir, "hooks", "dist", "register.js"),
     join(pluginDir, "hooks", "register.sh"),
-    join(pluginDir, "hooks", "session-start.sh"),
     join(pluginDir, "hooks", "dist", "session-start.js"),
+    join(pluginDir, "hooks", "session-start.sh"),
   ];
   return candidates.find((path) => existsSync(path)) ?? null;
 }
@@ -30,6 +32,7 @@ export function bootstrapCommand(
   pluginDir: string,
 ): BootstrapCommand {
   if (!script.endsWith(".js")) return { argv: ["bash", script], env: {} };
-  const command = launcherCommand({ plugin, event: "SessionStart", entry: "session-start" });
+  const entry = basename(script, ".js");
+  const command = launcherCommand({ plugin, event: "SessionStart", entry });
   return { argv: ["sh", "-c", command], env: { CLAUDE_PLUGIN_ROOT: pluginDir } };
 }

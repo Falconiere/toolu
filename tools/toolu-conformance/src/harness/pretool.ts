@@ -3,7 +3,7 @@
  * generated launcher as Claude Code or Codex would spawn it. The shared
  * fromSameState helper lets PostToolUse parity compare stateful hooks.
  */
-import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { launcherCommand } from "@toolu/core/launcher";
 import type { Sandbox } from "./sandbox.ts";
@@ -42,17 +42,28 @@ export function installPlugins(sb: Sandbox, ...specs: string[]): void {
   writeFileSync(file, `${JSON.stringify({ version: 2, plugins })}\n`);
 }
 
-/** Run a plugin's real SessionStart `register.sh`, syncing its modules into the registry. */
+/**
+ * Run a plugin's real SessionStart register hook, syncing its modules into the
+ * registry: the `hooks/dist/register.js` bundle behind its hooks.json launcher
+ * once the plugin is ported (#265), else its bash `register.sh`.
+ */
 export async function registerPlugin(
   sb: Sandbox,
   host: PretoolHost,
   plugin: string,
 ): Promise<void> {
-  const result = await run(["bash", join(REPO_ROOT, "plugins", plugin, "hooks/register.sh")], {
-    cwd: sb.project,
-    env: pretoolEnv(sb, host),
-    stdin: "{}",
-  });
+  const root = join(REPO_ROOT, "plugins", plugin);
+  const ported = existsSync(join(root, "hooks/dist/register.js"));
+  const argv = ported
+    ? ["/bin/sh", "-c", launcherCommand({ plugin, event: "SessionStart", entry: "register" })]
+    : ["bash", join(root, "hooks/register.sh")];
+  const env = ported
+    ? pretoolEnv(sb, host, {
+        CLAUDE_PLUGIN_ROOT: root,
+        ...(host === "codex" ? { PLUGIN_ROOT: root } : {}),
+      })
+    : pretoolEnv(sb, host);
+  const result = await run(argv, { cwd: sb.project, env, stdin: "{}" });
   if (result.exitCode !== 0) {
     throw new Error(`register ${plugin} exited ${String(result.exitCode)}: ${result.stderr}`);
   }
