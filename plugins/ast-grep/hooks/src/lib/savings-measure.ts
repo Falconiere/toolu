@@ -4,9 +4,10 @@
  * context, and for a single-file Read the full size of that file.
  */
 import { statSync } from "node:fs";
-import { basename, resolve } from "node:path";
+import { resolve } from "node:path";
 import { analyzeShell } from "@toolu/core/shell";
 import { jqOr, jqRaw, jqToString } from "./jq-text.ts";
+import { programAt, programIndexes } from "./launched.ts";
 
 export type SavingsKind = "read" | "grep" | "glob" | "ast-grep";
 
@@ -18,12 +19,12 @@ const TOOL_KINDS: Readonly<Record<string, SavingsKind>> = {
 
 const AST_GREP_BINARIES = new Set(["ast-grep", "sg"]);
 
-/** True when some command the shell would run is `ast-grep` or `sg`, wrappers and `bash -c` included. */
+/** True when some command the shell would run is `ast-grep` or `sg`, wrappers, launchers and `bash -c` included. */
 function runsAstGrep(command: string): boolean {
-  return analyzeShell(command).commands.some((cmd) => {
-    const program = cmd.argv?.[0];
-    return typeof program === "string" && AST_GREP_BINARIES.has(basename(program));
-  });
+  if (!command.includes("sg") && !command.includes("ast-grep")) return false;
+  return analyzeShell(command).commands.some((cmd) =>
+    programIndexes(cmd).some((i) => AST_GREP_BINARIES.has(programAt(cmd, i) ?? "")),
+  );
 }
 
 export function savingsKind(toolName: string, command: unknown): SavingsKind | undefined {

@@ -178,6 +178,8 @@ const DETECT: SavingsCase[] = [
   { name: "Shell tool running sg", payload: shell("d1", "sg run -p x .", "hit", "Shell") },
   { name: "ast-grep after cd", payload: shell("d2", "cd src && ast-grep run -p x", "hit") },
   { name: "sg under timeout", payload: shell("d3", "timeout 60 sg run -p x .", "hit") },
+  { name: "ast-grep run by npx", payload: shell("d5", "npx ast-grep run -p x .", "hit") },
+  { name: "ast-grep run by pnpm exec", payload: shell("d6", "pnpm exec ast-grep run -p x", "hit") },
   {
     name: "ast-grep as a word to echo",
     payload: shell("d4", 'echo "run ast-grep later"', "run ast-grep later"),

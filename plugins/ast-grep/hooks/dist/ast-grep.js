@@ -42,7 +42,8 @@ function inferredLang(args) {
   const firstPath = args.find((arg) => existsSync(arg));
   if (hasLang || firstPath === undefined || !isFile(firstPath))
     return [];
-  const lang = LANGS[firstPath.slice(firstPath.lastIndexOf(".") + 1)];
+  const ext = firstPath.slice(firstPath.lastIndexOf(".") + 1);
+  const lang = Object.hasOwn(LANGS, ext) ? LANGS[ext] : undefined;
   return lang === undefined ? [] : ["--lang", lang];
 }
 function astGrepArgs(subcommand, args) {

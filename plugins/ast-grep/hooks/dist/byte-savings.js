@@ -3667,7 +3667,7 @@ var ModuleSchema = looseObject({
 });
 // plugins/ast-grep/hooks/src/lib/savings-measure.ts
 import { statSync } from "fs";
-import { basename as basename2, resolve } from "path";
+import { resolve } from "path";
 
 // node_modules/.bun/unbash@4.0.11/node_modules/unbash/dist/ansi-c.js
 function isOctal(code) {
@@ -9764,6 +9764,40 @@ function jqOr(value, fallback) {
   return value === undefined || value === null || value === false ? fallback : value;
 }
 
+// plugins/ast-grep/hooks/src/lib/launched.ts
+import { basename as basename2 } from "path";
+var EXEC_FLAGS = new Set(["-exec", "-execdir", "-ok", "-okdir"]);
+var RUNNERS = new Set(["npx", "bunx", "pnpx", "watch"]);
+var RUNNER_VERBS = new Map([
+  ["pnpm", new Set(["exec", "dlx"])],
+  ["yarn", new Set(["exec", "dlx"])],
+  ["npm", new Set(["exec"])],
+  ["bun", new Set(["x"])]
+]);
+function firstOperand(argv, from) {
+  const at = argv.findIndex((arg, i) => i >= from && !(arg ?? "").startsWith("-"));
+  return at < 0 ? undefined : at;
+}
+function launchedIndex(argv) {
+  const name = basename2(argv[0] ?? "");
+  if (name === "find") {
+    const flag = argv.findIndex((arg) => arg !== null && EXEC_FLAGS.has(arg));
+    return flag < 0 ? undefined : flag + 1;
+  }
+  if (RUNNERS.has(name))
+    return firstOperand(argv, 1);
+  const verb = argv[1];
+  return verb !== null && verb !== undefined && RUNNER_VERBS.get(name)?.has(verb) ? firstOperand(argv, 2) : undefined;
+}
+function programIndexes(command) {
+  const launched = launchedIndex(command.argv);
+  return launched === undefined || launched >= command.argv.length ? [0] : [0, launched];
+}
+function programAt(command, index) {
+  const word = command.argv[index];
+  return typeof word === "string" ? basename2(word) : undefined;
+}
+
 // plugins/ast-grep/hooks/src/lib/savings-measure.ts
 var TOOL_KINDS = {
   Read: "read",
@@ -9772,10 +9806,9 @@ var TOOL_KINDS = {
 };
 var AST_GREP_BINARIES = new Set(["ast-grep", "sg"]);
 function runsAstGrep(command) {
-  return analyzeShell(command).commands.some((cmd) => {
-    const program = cmd.argv?.[0];
-    return typeof program === "string" && AST_GREP_BINARIES.has(basename2(program));
-  });
+  if (!command.includes("sg") && !command.includes("ast-grep"))
+    return false;
+  return analyzeShell(command).commands.some((cmd) => programIndexes(cmd).some((i) => AST_GREP_BINARIES.has(programAt(cmd, i) ?? "")));
 }
 function savingsKind(toolName, command) {
   const kind = TOOL_KINDS[toolName];

@@ -4,9 +4,9 @@
  * command line (#283 item 10): only a grep/rg that searches files counts, never
  * one that filters a pipe, and only its own arguments can make it structural.
  */
-import { basename } from "node:path";
 import { gitInvocation, type ShellAnalysis, type ShellCommand } from "@toolu/core/shell";
 import { jqOr, jqRaw } from "./jq-text.ts";
+import { programAt, programIndexes } from "./launched.ts";
 
 /** What ast-grep is for this call: installed, not on PATH, or opted out in config. */
 export type AstGrepState = "available" | "missing" | "opt-out";
@@ -42,12 +42,10 @@ export function grepToolNudge(input: Readonly<Record<string, unknown>>): NudgeKi
   return STRUCT_RE.test(field(input, "pattern")) ? "grep-structural" : undefined;
 }
 
-/** A grep, rg or ripgrep, or `git grep`: a command that searches text. */
-function isSearch(command: ShellCommand): boolean {
-  const name = command.argv[0];
-  if (name === null || name === undefined) return false;
-  if (SEARCH_TOOLS.has(basename(name))) return true;
-  return gitInvocation(command)?.subcommand === "grep";
+/** Where the grep, rg or ripgrep `command` runs sits in its argv, launched ones included; `git grep` at 0. */
+function searchIndex(command: ShellCommand): number | undefined {
+  if (gitInvocation(command)?.subcommand === "grep") return 0;
+  return programIndexes(command).find((i) => SEARCH_TOOLS.has(programAt(command, i) ?? ""));
 }
 
 /** Reading a pipe filters another command's output; `xargs` hands it file names to search. */
@@ -58,9 +56,12 @@ function filtersPipe(command: ShellCommand): boolean {
 /** A Bash/Shell command line: grep/rg searching files goes to the proper tool. */
 export function shellNudge(analysis: ShellAnalysis): NudgeKind | undefined {
   if (analysis.unknown) return undefined;
-  const searches = analysis.commands.filter((c) => isSearch(c) && !filtersPipe(c));
-  if (searches.length === 0) return undefined;
-  const structural = searches.some((c) => c.texts.slice(1).some((arg) => STRUCT_RE.test(arg)));
+  const searchArgs = analysis.commands.flatMap((c) => {
+    const at = filtersPipe(c) ? undefined : searchIndex(c);
+    return at === undefined ? [] : [c.texts.slice(at + 1)];
+  });
+  if (searchArgs.length === 0) return undefined;
+  const structural = searchArgs.some((args) => args.some((arg) => STRUCT_RE.test(arg)));
   return structural ? "bash-structural" : "bash-generic";
 }
 

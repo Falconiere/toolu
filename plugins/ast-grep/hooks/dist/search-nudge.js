@@ -10122,9 +10122,6 @@ function shellAnalysisOf(event) {
   analyses.set(event, analysis);
   return analysis;
 }
-// plugins/ast-grep/hooks/src/lib/nudge-rules.ts
-import { basename as basename3 } from "path";
-
 // plugins/ast-grep/hooks/src/lib/jq-text.ts
 function jqRaw(value) {
   const text = typeof value === "string" ? value : JSON.stringify(value, null, 2) ?? "null";
@@ -10132,6 +10129,40 @@ function jqRaw(value) {
 }
 function jqOr(value, fallback) {
   return value === undefined || value === null || value === false ? fallback : value;
+}
+
+// plugins/ast-grep/hooks/src/lib/launched.ts
+import { basename as basename3 } from "path";
+var EXEC_FLAGS = new Set(["-exec", "-execdir", "-ok", "-okdir"]);
+var RUNNERS = new Set(["npx", "bunx", "pnpx", "watch"]);
+var RUNNER_VERBS = new Map([
+  ["pnpm", new Set(["exec", "dlx"])],
+  ["yarn", new Set(["exec", "dlx"])],
+  ["npm", new Set(["exec"])],
+  ["bun", new Set(["x"])]
+]);
+function firstOperand(argv, from) {
+  const at = argv.findIndex((arg, i) => i >= from && !(arg ?? "").startsWith("-"));
+  return at < 0 ? undefined : at;
+}
+function launchedIndex(argv) {
+  const name = basename3(argv[0] ?? "");
+  if (name === "find") {
+    const flag = argv.findIndex((arg) => arg !== null && EXEC_FLAGS.has(arg));
+    return flag < 0 ? undefined : flag + 1;
+  }
+  if (RUNNERS.has(name))
+    return firstOperand(argv, 1);
+  const verb = argv[1];
+  return verb !== null && verb !== undefined && RUNNER_VERBS.get(name)?.has(verb) ? firstOperand(argv, 2) : undefined;
+}
+function programIndexes(command) {
+  const launched = launchedIndex(command.argv);
+  return launched === undefined || launched >= command.argv.length ? [0] : [0, launched];
+}
+function programAt(command, index) {
+  const word = command.argv[index];
+  return typeof word === "string" ? basename3(word) : undefined;
 }
 
 // plugins/ast-grep/hooks/src/lib/nudge-rules.ts
@@ -10155,13 +10186,10 @@ function grepToolNudge(input) {
     return;
   return STRUCT_RE.test(field(input, "pattern")) ? "grep-structural" : undefined;
 }
-function isSearch(command) {
-  const name = command.argv[0];
-  if (name === null || name === undefined)
-    return false;
-  if (SEARCH_TOOLS.has(basename3(name)))
-    return true;
-  return gitInvocation(command)?.subcommand === "grep";
+function searchIndex(command) {
+  if (gitInvocation(command)?.subcommand === "grep")
+    return 0;
+  return programIndexes(command).find((i) => SEARCH_TOOLS.has(programAt(command, i) ?? ""));
 }
 function filtersPipe(command) {
   return command.pipeline.index > 0 && !command.wrappers.includes("xargs");
@@ -10169,10 +10197,13 @@ function filtersPipe(command) {
 function shellNudge(analysis) {
   if (analysis.unknown)
     return;
-  const searches = analysis.commands.filter((c) => isSearch(c) && !filtersPipe(c));
-  if (searches.length === 0)
+  const searchArgs = analysis.commands.flatMap((c) => {
+    const at = filtersPipe(c) ? undefined : searchIndex(c);
+    return at === undefined ? [] : [c.texts.slice(at + 1)];
+  });
+  if (searchArgs.length === 0)
     return;
-  const structural = searches.some((c) => c.texts.slice(1).some((arg) => STRUCT_RE.test(arg)));
+  const structural = searchArgs.some((args) => args.some((arg) => STRUCT_RE.test(arg)));
   return structural ? "bash-structural" : "bash-generic";
 }
 var MESSAGES = {

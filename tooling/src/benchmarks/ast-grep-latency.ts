@@ -35,7 +35,10 @@ const NUDGE_SLICE = [
   "bats: Grep with structural pattern nudges to ast-grep",
   "bats: Bash without grep is silent",
 ];
-const SAVINGS_SLICE = ["bats: ast-grep Bash result bytes, full 0"];
+const SAVINGS_SLICE = [
+  "bats: ast-grep Bash result bytes, full 0",
+  "bats: a plain Bash command is ignored",
+];
 
 type Row = { name: string; bash: Latency; ts: Latency };
 type Call = (sb: Sandbox) => Promise<RunResult>;

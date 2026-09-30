@@ -168,6 +168,24 @@ for (const c of CASES) {
   });
 }
 
+test.concurrent("an extension naming an Object.prototype member infers nothing", async () => {
+  using sb = createSandbox();
+  const bin = project(sb).bin(["sg"]);
+  sb.write("src/x.constructor", 'console.log("x");\n');
+  const [actual, expected] = await Promise.all([
+    wrapper(sb, bin, ["search", PATTERN, "src/x.constructor"]),
+    cli(sb, join(bin, "sg"), [
+      "run",
+      "--pattern",
+      PATTERN,
+      "--color",
+      "never",
+      "src/x.constructor",
+    ]),
+  ]);
+  expect(actual).toEqual(expected);
+});
+
 // `--lang tsx` would skip the .ts path and print nothing.
 test.concurrent("a pattern naming an existing file never feeds --lang inference", async () => {
   using sb = createSandbox();

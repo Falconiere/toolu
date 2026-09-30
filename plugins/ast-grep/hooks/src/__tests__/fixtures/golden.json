@@ -151,6 +151,16 @@
       "stderr": "",
       "exitCode": 0
     },
+    "Bash structural grep run by find -exec [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash grep run by watch [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
     "Bash structural grep in a substitution [claude]": {
       "stdout": "",
       "stderr": "",
@@ -449,6 +459,22 @@
       "stderr": "",
       "exitCode": 0,
       "ledgers": {}
+    },
+    "ast-grep run by npx [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/d5.jsonl": "{\"kind\":\"ast-grep\",\"returned\":3,\"full\":0}\n"
+      }
+    },
+    "ast-grep run by pnpm exec [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/d6.jsonl": "{\"kind\":\"ast-grep\",\"returned\":3,\"full\":0}\n"
+      }
     },
     "ast-grep as a word to echo [claude]": {
       "stdout": "",
