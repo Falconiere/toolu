@@ -168,6 +168,29 @@ for (const c of CASES) {
   });
 }
 
+// `--lang tsx` would skip the .ts path and print nothing.
+test.concurrent("a pattern naming an existing file never feeds --lang inference", async () => {
+  using sb = createSandbox();
+  const bin = project(sb).bin(["sg"]);
+  sb.write("src/c.ts", "export const c = row.tsx;\n");
+  sb.write("$A.tsx", "export const d = 1;\n");
+  const [actual, expected] = await Promise.all([
+    wrapper(sb, bin, ["search", "$A.tsx", "src/c.ts"]),
+    cli(sb, join(bin, "sg"), [
+      "run",
+      "--pattern",
+      "$A.tsx",
+      "--color",
+      "never",
+      "--lang",
+      "typescript",
+      "src/c.ts",
+    ]),
+  ]);
+  expect(actual).toEqual(expected);
+  expect(expected.stdout).toContain("row.tsx");
+});
+
 test.concurrent("falls back to ast-grep when sg is absent", async () => {
   using sb = createSandbox();
   const bin = project(sb).bin(["ast-grep"]);
