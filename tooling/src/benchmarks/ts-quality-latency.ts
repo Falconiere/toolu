@@ -13,7 +13,11 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
-import { latencyOf, type Latency } from "@toolu/conformance/harness/timing";
+import {
+  latencyComparisonTable,
+  measureAlternatingLatency,
+  type Latency,
+} from "@toolu/conformance/harness/timing";
 import { TS_CASES } from "../../../plugins/ts-quality/hooks/src/__tests__/cases.ts";
 import {
   BASH_BASE,
@@ -41,32 +45,20 @@ async function row(name: string, runs: number, register: string): Promise<Row> {
   if (c === undefined || step === undefined) throw new Error(`no golden case named ${name}`);
   using bashBox = createSandbox({ git: true });
   using tsBox = createSandbox({ git: true });
-  const sides: [Sandbox, Registration, number[]][] = [
-    [bashBox, { kind: "bash", register }, []],
-    [tsBox, { kind: "bundle" }, []],
+  const sides: [Sandbox, Registration][] = [
+    [bashBox, { kind: "bash", register }],
+    [tsBox, { kind: "bundle" }],
   ];
   await Promise.all(sides.map(([sb, reg]) => setupCase(sb, "claude", c, reg)));
-  // Sequential by design: concurrent spawns would contend and skew each other.
-  const calls = [...Array(WARMUP + runs).keys()].flatMap((round) =>
-    sides.map(([sb, , samples]) => ({ round, sb, samples })),
+  const [bash, ts] = await measureAlternatingLatency(
+    [bashBox, tsBox],
+    (sb) => dispatchStep(sb, "claude", c, step),
+    { runs, warmup: WARMUP },
   );
-  await calls.reduce<Promise<void>>(async (previous, { round, sb, samples }) => {
-    await previous;
-    const result = await dispatchStep(sb, "claude", c, step);
-    if (round >= WARMUP) samples.push(result.durationMs);
-  }, Promise.resolve());
-  return { name, bash: latencyOf(sides[0]?.[2] ?? []), ts: latencyOf(sides[1]?.[2] ?? []) };
+  return { name, bash, ts };
 }
 
 const ms = (value: number): string => value.toFixed(1);
-
-function table(rows: readonly Row[]): string {
-  const body = rows.map(
-    (r) => `| ${r.name} | ${ms(r.bash.p50)} | ${ms(r.ts.p50)} | ${ms(r.ts.p50 - r.bash.p50)} |`,
-  );
-  const head = ["| Fixture | bash module p50 | TS module p50 | TS − bash |", "|---|---|---|---|"];
-  return `${[...head, ...body].join("\n")}\n`;
-}
 
 async function main(argv: readonly string[]): Promise<number> {
   const at = argv.indexOf("--runs");
@@ -79,7 +71,7 @@ async function main(argv: readonly string[]): Promise<number> {
       async (done, name) => [...(await done), await row(name, runs, register)],
       Promise.resolve([]),
     );
-    process.stdout.write(table(rows));
+    process.stdout.write(latencyComparisonTable(rows));
     const over = rows.filter((r) => r.ts.p50 > r.bash.p50 + BUDGET_MS);
     for (const r of over) {
       process.stderr.write(
