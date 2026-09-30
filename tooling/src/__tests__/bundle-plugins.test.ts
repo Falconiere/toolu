@@ -66,7 +66,7 @@ test.concurrent("the staged tree carries the hook engine the bridge actually run
   const { dest, bundle } = stage(sb);
   expect((await bundle()).exitCode).toBe(0);
   expect(isFile(join(dest, "toolu/hooks/hooks.json"))).toBe(true);
-  expect(isFile(join(dest, "toolu/hooks/pre-tools/mod.sh"))).toBe(true);
+  expect(isFile(join(dest, "toolu/hooks/dist/pre-tools.js"))).toBe(true);
   expect(statSync(join(dest, "toolu/settings")).isDirectory()).toBe(true);
 });
 

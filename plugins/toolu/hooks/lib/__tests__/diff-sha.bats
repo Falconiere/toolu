@@ -2,15 +2,8 @@
 # Tests for hooks/lib/diff-sha.sh — the shared toolu_diff_sha helper.
 # Real temp git repos, no mocked commands.
 #
-# (a)/(b)/(c) exercise toolu_diff_sha directly. (d) drives the migrated call
-# sites' own scripts as subprocesses (same technique as their existing bats
-# suites in pre-tools/modules/__tests__/) to prove each site's observable
-# behavior is unchanged post-migration. Only ONE shared fixture file
-# (helpers.bash, used by both push-review.bats and plan-ledger.bats today) is
-# `load`ed — docs-sync-helpers.bash defines same-named functions
-# (setup_sandbox/build_input/run_hook/...) that would silently clobber it if
-# both were loaded into one file, so the docs-sync parity case is self-
-# contained inline instead.
+# Push-review, plan-ledger and docs-sync call-site behavior is covered by
+# the native gate golden replay in pre-tool-modules-c.test.ts.
 
 source_lib() {
   # shellcheck disable=SC1091
@@ -94,99 +87,6 @@ teardown() {
   run toolu_diff_sha "$REPO" does-not-exist
   [ "$status" -ne 0 ]
   [ -z "$output" ]
-}
-
-# --- (d) per-call-site parity ------------------------------------------------
-
-# Shared push-review/plan-ledger-module fixture (both existing suites `load`
-# this same file) — gives setup_sandbox/teardown_sandbox/build_input/run_hook/
-# REPO_ROOT/HOOK_SCRIPT (push-review.sh).
-. "${BATS_TEST_DIRNAME}/../../pre-tools/modules/__tests__/helpers.bash"
-
-@test "parity (push-review.sh): empty diff against base still denied with sentinel reason" {
-  setup_sandbox
-  # This suite is about the SHA formula, not delivery: pin the blocking mode so
-  # the assertion stays about the sentinel reason.
-  use_strict_preset
-  git checkout -q development
-  git checkout -q -b feat/empty
-  payload=$(build_input "git push")
-  run_hook "Bash" "$payload"
-  [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
-  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("empty")'
-  teardown_sandbox
-}
-
-# plan-ledger.sh (pre-tools gate): a ledger stamped with the RAW-formula sha is
-# still recognized fresh-green post-migration (proves current_diff_sha inside
-# the migrated gate equals the raw formula).
-GATE_SCRIPT="$REPO_ROOT/hooks/pre-tools/modules/plan-ledger.sh"
-
-run_gate() {
-  local tool_name="$1" payload="$2"
-  tool_name="$tool_name" input="$payload" PUSH_REVIEW_BASE=development \
-    run bash "$GATE_SCRIPT" <<<"$payload"
-}
-
-@test "parity (plan-ledger.sh gate): ledger stamped with raw-formula sha is fresh-green" {
-  setup_sandbox
-  LEDGER_DIR="$SANDBOX/.claude/tmp/plan-ledger"
-  mkdir -p "$LEDGER_DIR"
-  echo "echo hi" > script.sh && git add script.sh && git commit -q -m script
-  sha=$(raw_diff_sha "$SANDBOX" development)
-  branch=$(git rev-parse --abbrev-ref HEAD)
-  steps=$(jq -n --arg sha "$sha" '[
-    { id: "s1", title: "first", check: "true", status: "green",
-      exit_code: 0, diff_sha: $sha }
-  ]')
-  jq -n --arg branch "$branch" --argjson steps "$steps" '{
-    version: 1, branch: $branch, base_branch: "development",
-    plan_doc: "docs/plan.md", updated_at: "2026-07-30T00:00:00Z",
-    summary: { total: 1 }, steps: $steps
-  }' > "$LEDGER_DIR/feat_example.json"
-  payload=$(build_input "git push origin feat/example")
-  LEDGER_DIR="$LEDGER_DIR" run_gate "Bash" "$payload"
-  [ "$status" -eq 0 ]
-  [ -z "$output" ]
-  teardown_sandbox
-}
-
-# docs-sync.sh: a fresh raw-formula-keyed attestation still silences the
-# nudge. Self-contained (no `load docs-sync-helpers` — see file header).
-@test "parity (docs-sync.sh): attestation keyed to the raw-formula sha still silences the nudge" {
-  local sandbox cfg_dir hook_script state_dir sha payload
-  sandbox=$(mktemp -d)
-  cfg_dir="$sandbox/agent"
-  hook_script="${BATS_TEST_DIRNAME}/../../pre-tools/modules/docs-sync.sh"
-  state_dir="$sandbox/.claude/tmp/docs-sync"
-  mkdir -p "$state_dir" "$cfg_dir"
-
-  cd "$sandbox"
-  git init -q -b development .
-  git config user.email "t@example.com"
-  git config user.name "Test"
-  echo base > base.txt && git add base.txt && git commit -q -m base
-  git checkout -q -b feat/example
-  mkdir -p lib && echo "echo hi" > lib/foo.sh
-  git add lib/foo.sh && git commit -q -m "add lib/foo.sh"
-
-  sha=$(raw_diff_sha "$sandbox" development)
-  jq -n --arg sha "$sha" '{
-    version: 1, branch: "feat/example", diff_sha: $sha, base_branch: "development",
-    decision: "not-needed", note: "covered by test",
-    attested_at: "2026-07-30T00:00:00Z"
-  }' > "$state_dir/feat_example.json"
-
-  payload=$(jq -n --arg cmd "git push" '{tool_name:"Bash", tool_input:{command:$cmd}}')
-  tool_name="Bash" input="$payload" \
-    DOCS_SYNC_BASE=development DOCS_SYNC_STATE_DIR="$state_dir" \
-    TOOLU_CONFIG_DIR="$cfg_dir" TOOLU_PROJECT_DIR="$sandbox" \
-    run bash "$hook_script" <<<"$payload"
-
-  [ "$status" -eq 0 ]
-  [ -z "$output" ]
-  rm -rf "$sandbox"
 }
 
 # plan-ledger.sh (lib CLI, pl_diff_sha): a full run/status round trip stamps

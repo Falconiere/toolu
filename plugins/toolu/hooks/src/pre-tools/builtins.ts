@@ -1,52 +1,40 @@
 /**
- * The toolu plugin's built-in PreToolUse modules (#258), in the byte order
- * `pre-tools/mod.sh` globbed `modules/*.sh`. A ported module (#260–#262) is
- * its native gate from `@toolu/core/gates`; the rest still run their bash
- * script.
+ * The toolu plugin's built-in PreToolUse modules, in the byte order
+ * `pre-tools/mod.sh` globbed `modules/*.sh`. Every one is a native gate from
+ * `@toolu/core/gates` (#260, #261, #262); the dispatcher runs no built-in bash.
  */
-import { dirname, join } from "node:path";
-import { bashModule, type ToolModule } from "@toolu/core/dispatch";
+import { dirname } from "node:path";
+import type { ToolModule } from "@toolu/core/dispatch";
 import {
   bashCommandsModule,
   codeEditRulesModule,
   commitGateModule,
+  docsSyncModule,
   mcpBlockerModule,
+  planLedgerModule,
   protectedFilesModule,
+  pushReviewModule,
   qualityGateModule,
   type GateModuleOptions,
 } from "@toolu/core/gates";
 
-export const BUILTIN_MODULES = [
-  "bash-commands",
-  "code-edit-rules",
-  "commit-gate",
-  "docs-sync",
-  "mcp-blocker",
-  "plan-ledger",
-  "protected-files",
-  "push-review",
-  "quality-gate",
-] as const;
-
-type BuiltinName = (typeof BUILTIN_MODULES)[number];
-
-/** The ported modules; every other name runs `modules/<name>.sh`. */
-export const NATIVE_MODULES: Readonly<
-  Partial<Record<BuiltinName, (options: GateModuleOptions) => ToolModule>>
-> = {
+/** Each built-in by name, in dispatch order. */
+export const NATIVE_MODULES = {
   "bash-commands": bashCommandsModule,
   "code-edit-rules": codeEditRulesModule,
   "commit-gate": commitGateModule,
+  "docs-sync": docsSyncModule,
   "mcp-blocker": mcpBlockerModule,
+  "plan-ledger": planLedgerModule,
   "protected-files": protectedFilesModule,
+  "push-review": pushReviewModule,
   "quality-gate": qualityGateModule,
-};
+} as const satisfies Record<string, (options: GateModuleOptions) => ToolModule>;
+
+export const BUILTIN_MODULES = Object.keys(NATIVE_MODULES);
 
 /** The dispatch table for the plugin whose `hooks/` directory is `hooksDir`. */
 export function builtins(hooksDir: string): ToolModule[] {
-  const modules = join(hooksDir, "pre-tools", "modules");
   const options = { pluginRoot: dirname(hooksDir) };
-  return BUILTIN_MODULES.map(
-    (name) => NATIVE_MODULES[name]?.(options) ?? bashModule(modules, name),
-  );
+  return Object.values(NATIVE_MODULES).map((module) => module(options));
 }

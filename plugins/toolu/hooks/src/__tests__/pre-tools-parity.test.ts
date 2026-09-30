@@ -1,23 +1,12 @@
 /**
  * AC-1 (#258): every PreToolUse fixture, rendered as Claude Code and as Codex
- * deliver it, gives byte-identical stdout and the same exit code from
- * `bash pre-tools/mod.sh` and from the committed bundle behind its launcher,
- * with every module still on bash fallback. A fixture decided by a module
- * whose bash script is deleted (#261) is compared with what `mod.sh` printed
- * for it before the deletion, as parsed JSON: the native encoder prints
- * compact JSON where jq printed it pretty. Fixtures protected-files,
- * mcp-blocker and code-edit-rules decide (#260) are replayed against their
- * own capture in `pre-tool-modules-a-golden.test.ts`.
+ * deliver it, receives the expected decision from the committed bundle.
+ * Captured Bash output for ported gates is replayed by the A, B and C golden
+ * suites; this corpus also exercises registry and dispatcher-only cases.
  */
 import { expect, test } from "bun:test";
 import { toStdin } from "@toolu/conformance/harness/fixtures";
-import {
-  fromSameState,
-  pretoolEnv,
-  runBundle,
-  runModSh,
-  type PretoolHost,
-} from "@toolu/conformance/harness/pretool";
+import { pretoolEnv, runBundle, type PretoolHost } from "@toolu/conformance/harness/pretool";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { PRETOOL_CORPUS, prepare, type Outcome } from "@toolu/conformance/harness/pretool-corpus";
 import { comparable } from "./pre-tool-modules-b-cases.ts";
@@ -63,15 +52,7 @@ for (const fixture of PRETOOL_CORPUS) {
         );
         return;
       }
-      const [bash, bundle] = await fromSameState(
-        sb,
-        () => runModSh(call),
-        () => runBundle(call),
-      );
-      expect({ stdout: bundle.stdout, exitCode: bundle.exitCode }).toEqual({
-        stdout: bash.stdout,
-        exitCode: bash.exitCode,
-      });
+      const bundle = await runBundle(call);
       expect(outcomeOf(bundle.stdout, bundle.exitCode)).toBe(
         fixture.expect[host] ?? fixture.expect.claude,
       );

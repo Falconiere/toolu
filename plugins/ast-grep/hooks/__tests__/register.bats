@@ -118,23 +118,25 @@ teardown() { rm -rf "$TMP"; }
 }
 
 @test "register e2e: synced modules execute through the core dispatcher when installed" {
-  CORE_MOD="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../toolu/hooks/pre-tools" && pwd)/mod.sh"
+  CORE_HOOKS="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../toolu/hooks" && pwd)"
   bash "$REGISTER" <<<'{}'
   mkdir -p "$CLAUDE_CONFIG_DIR/plugins"
   printf '%s' '{"plugins":{"ast-grep@toolu":{}}}' > "$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json"
   run env -u CLAUDE_PLUGINS_REGISTRY CLAUDE_CONFIG_DIR="$CLAUDE_CONFIG_DIR" HOME="$TMP" \
-    bash "$CORE_MOD" <<<'{"tool_name":"Grep","tool_input":{"pattern":"fn handle_request","glob":"*.rs"}}'
+    CLAUDE_PLUGIN_ROOT="$(dirname "$CORE_HOOKS")" bun "$CORE_HOOKS/dist/pre-tools.js" \
+    <<<'{"tool_name":"Grep","tool_input":{"pattern":"fn handle_request","glob":"*.rs"}}'
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.additionalContext | contains("ast-grep")' >/dev/null
 }
 
 @test "register e2e: synced modules are gated off when the plugin is definitively absent" {
-  CORE_MOD="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../toolu/hooks/pre-tools" && pwd)/mod.sh"
+  CORE_HOOKS="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../toolu/hooks" && pwd)"
   bash "$REGISTER" <<<'{}'
   mkdir -p "$CLAUDE_CONFIG_DIR/plugins"
   printf '%s' '{"plugins":{}}' > "$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json"
   run env -u CLAUDE_PLUGINS_REGISTRY CLAUDE_CONFIG_DIR="$CLAUDE_CONFIG_DIR" HOME="$TMP" \
-    bash "$CORE_MOD" <<<'{"tool_name":"Grep","tool_input":{"pattern":"fn handle_request","glob":"*.rs"}}'
+    CLAUDE_PLUGIN_ROOT="$(dirname "$CORE_HOOKS")" bun "$CORE_HOOKS/dist/pre-tools.js" \
+    <<<'{"tool_name":"Grep","tool_input":{"pattern":"fn handle_request","glob":"*.rs"}}'
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }

@@ -15,10 +15,10 @@ import { envValue } from "../host/host-name.ts";
 import { projectStateDir, resolveHost } from "../host/host-roots.ts";
 import { diffSha } from "../state/diff-sha.ts";
 import { baseBranch, branchSlug } from "../state/state-git.ts";
-import { compareJqStrings } from "../state/state-io.ts";
 import { matchesAny } from "./glob.ts";
-import { JqError, alt, eachOptional, get, jqIndex, raw, toStr, type Json } from "./ledger-jq.ts";
+import { JqError, alt, get, toStr, type Json } from "./ledger-jq.ts";
 import { isFile } from "./ledger-parse.ts";
+import { hasAcceptedReviewer, outputLines, reviewedFiles, sortedUnique } from "./review-state.ts";
 import {
   gate,
   git,
@@ -28,15 +28,6 @@ import {
   type Gate,
   type GateContext,
 } from "./verdict-gates.ts";
-
-/** Reviewer allow-list: the same literal as `pre-tools/modules/push-review.sh`'s `accepted_reviewers`. */
-export const ACCEPTED_REVIEWERS: readonly string[] = [
-  "code-review",
-  "toolu-review:review",
-  "code-review:xhigh",
-  "review",
-  "security-review",
-];
 
 const EMPTY_BLOB_SHA = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
 const NO_ROUND = { reason_code: null, round: null };
@@ -48,39 +39,6 @@ function roundOf(state: Json): Json {
     return typeof round === "number" ? round : null;
   } catch (error) {
     if (error instanceof JqError) return null;
-    throw error;
-  }
-}
-
-/** `any($acc[]; . as $x | $r | index($x) != null)` over `(.reviewers // [])`; a jq error is "no". */
-function hasAcceptedReviewer(state: Json): boolean {
-  try {
-    const reviewers = alt(get(state, "reviewers"), []);
-    return ACCEPTED_REVIEWERS.some((name) => jqIndex(reviewers, name) !== null);
-  } catch (error) {
-    if (error instanceof JqError) return false;
-    throw error;
-  }
-}
-
-/** `$(... | sort -u)`: unique lines in byte order, trailing newlines stripped. Empty lines count. */
-function sortedUnique(lines: string[]): string {
-  return [...new Set(lines)].toSorted(compareJqStrings).join("\n").replace(/\n+$/, "");
-}
-
-/** Command output as the lines `sort` reads: the final newline ends the last line. */
-function outputLines(text: string): string[] {
-  return text === "" ? [] : text.replace(/\n$/, "").split("\n");
-}
-
-/** `jq -r '.reviewed_files[]'` lines; a jq error yields what was printed before it (nothing). */
-function reviewedFiles(state: Json): string[] {
-  try {
-    const files = get(state, "reviewed_files");
-    if (files === null) throw new JqError("Cannot iterate over null");
-    return eachOptional(files).flatMap((file) => raw(file).split("\n"));
-  } catch (error) {
-    if (error instanceof JqError) return [];
     throw error;
   }
 }

@@ -9,10 +9,10 @@ import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import {
   hookEnv,
   install,
-  modulesDir,
   registryDir,
   runBashDispatch,
   runTsPostDispatch,
+  writeBuiltin,
   writeModule,
 } from "./dispatch-harness.ts";
 
@@ -197,7 +197,7 @@ for (const s of SCENARIOS) {
   test.concurrent(s.name, async () => {
     using sb = createSandbox({ git: true });
     for (const [name, body] of Object.entries(s.modules ?? {}))
-      writeModule(modulesDir(sb), `${name}.sh`, body);
+      writeBuiltin(sb, `${name}.sh`, body, "post");
     for (const [file, body] of Object.entries(s.registry ?? {}))
       writeModule(registryDir(sb, "post"), file, body);
     if (s.installed !== undefined) install(sb, ...s.installed);
@@ -219,15 +219,15 @@ for (const s of SCENARIOS) {
 
 test.concurrent("a block leaves later modules unrun", async () => {
   using sb = createSandbox({ git: true });
-  writeModule(modulesDir(sb), "a.sh", block("stop"));
-  writeModule(modulesDir(sb), "b.sh", 'touch "$HOME/ran"');
+  writeBuiltin(sb, "a.sh", block("stop"), "post");
+  writeBuiltin(sb, "b.sh", 'touch "$HOME/ran"', "post");
   await runTsPostDispatch(sb, BASH, hookEnv(sb));
   expect(await Bun.file(`${sb.home}/ran`).exists()).toBe(false);
 });
 
 test.concurrent("exit 2 forwards the blocking module's stderr", async () => {
   using sb = createSandbox({ git: true });
-  writeModule(modulesDir(sb), "a.sh", "echo post-blocked >&2; exit 2");
+  writeBuiltin(sb, "a.sh", "echo post-blocked >&2; exit 2", "post");
   const ts = await runTsPostDispatch(sb, BASH, hookEnv(sb));
   expect(ts).toMatchObject({ stdout: "", exitCode: 2 });
   expect(ts.stderr).toContain("post-blocked");

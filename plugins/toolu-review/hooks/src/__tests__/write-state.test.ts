@@ -1,7 +1,7 @@
 /**
  * The write-state CLI bundle against real temp git repos (#269, ported from
  * state-writer.bats). The contract: its diff_sha, base, slug and
- * reviewed_files match the push-review gate's recipe, so the real bash gate
+ * reviewed_files match the push-review gate's recipe, so the real bundle
  * accepts a clean state and denies an incomplete one.
  */
 import { expect, test } from "bun:test";
@@ -11,11 +11,13 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch, type RunResult } from "@toolu/conformance/harness/spawn";
+import { launcherCommand } from "@toolu/core/launcher";
 import { z } from "zod";
 
 const PLUGIN = resolve(import.meta.dir, "../../..");
 const BUNDLE = join(PLUGIN, "hooks/dist/write-state.js");
-const GATE = resolve(PLUGIN, "../toolu/hooks/pre-tools/modules/push-review.sh");
+const TOOLU_PLUGIN = resolve(PLUGIN, "../toolu");
+const GATE = launcherCommand({ plugin: "toolu", event: "PreToolUse", entry: "pre-tools" });
 
 const StateSchema = z.strictObject({
   version: z.literal(2),
@@ -61,12 +63,17 @@ function feature(sb: Sandbox, branch = "feature"): void {
   commit(sb, "f.txt", "a\n");
 }
 
-/** The real bash push-review gate judging `command` from `sb.project`. */
+/** The real PreToolUse bundle judging `command` from `sb.project`. */
 async function gate(sb: Sandbox, command: string) {
   const payload = JSON.stringify({ tool_name: "Bash", tool_input: { command } });
-  const res = await run(["bash", GATE], {
+  const res = await run(["/bin/sh", "-c", GATE], {
     cwd: sb.project,
-    env: { HOME: sb.home, tool_name: "Bash", input: payload, PUSH_REVIEW_BASE: "main" },
+    env: {
+      HOME: sb.home,
+      CLAUDE_PLUGIN_ROOT: TOOLU_PLUGIN,
+      TOOLU_BUN: process.execPath,
+      PUSH_REVIEW_BASE: "main",
+    },
     stdin: payload,
   });
   expect(res.exitCode).toBe(0);

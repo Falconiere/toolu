@@ -145,14 +145,15 @@ function discoverNativeBuiltins(add: AddFn): void {
       event: "PreToolUse",
       matcher: "",
       commandOrModule: name,
-      parentId: "toolu:hooks.json:PreToolUse:mod.sh",
+      parentId:
+        "toolu:hooks.json:PreToolUse:pre-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Shell|Grep",
     });
   }
 }
 
 function discoverBuiltinModules(add: AddFn): void {
   discoverNativeBuiltins(add);
-  for (const sub of ["pre-tools/modules", "post-tools/modules"]) {
+  for (const sub of ["post-tools/modules"]) {
     const d = join(ROOT, "plugins/toolu/hooks", sub);
     const event = sub.startsWith("pre-") ? "PreToolUse" : "PostToolUse";
     for (const abs of listShFiles(d)) {
@@ -168,17 +169,17 @@ function discoverBuiltinModules(add: AddFn): void {
       });
     }
   }
-  const agentTier = join(ROOT, "plugins/toolu/hooks/pre-tools/agent-tier.sh");
+  const agentTier = join(ROOT, "plugins/toolu/hooks/src/agent-tier.ts");
   if (existsSync(agentTier)) {
     add({
-      id: makeId("toolu", "entrypoint", "PreToolUse", "agent-tier.sh"),
+      id: makeId("toolu", "entrypoint", "PreToolUse", "agent-tier"),
       sourcePath: rel(agentTier),
       plugin: "toolu",
       kind: "entrypoint",
       event: "PreToolUse",
       matcher: "",
-      commandOrModule: "agent-tier.sh",
-      parentId: null,
+      commandOrModule: "agent-tier",
+      parentId: "toolu:hooks.json:PreToolUse:agent-tier.js:spawn_agent|Agent|Task",
     });
   }
   for (const abs of listShFiles(join(ROOT, "plugins/toolu/hooks/lib"))) {

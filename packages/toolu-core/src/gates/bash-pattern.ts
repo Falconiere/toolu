@@ -4,6 +4,7 @@
  * `*` and `?` cross `/`, a leading `.` is not special, and backslash escapes
  * the next character. Brackets take `!`/`^` negation, ranges and `[:class:]`.
  * `?( ) *( ) +( ) @( ) !( )` take `|`-separated pattern lists. Matching
+ * uses code-point order for bracket ranges (the C.UTF-8 ordering), and
  * backtracks over the parsed pattern, which is exact for `!( )`: bash accepts
  * a split whose prefix matches none of the listed patterns.
  */

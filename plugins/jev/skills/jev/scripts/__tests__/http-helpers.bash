@@ -7,7 +7,7 @@ setup_http() {
   TOOL_DIR="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
   export TOOL_DIR
   CURL_LOG="$SANDBOX/requests.jsonl"
-  openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes \
+  openssl req -x509 -newkey rsa:2048 -nodes \
     -keyout "$SANDBOX/key.pem" -out "$SANDBOX/cert.pem" -days 1 \
     -subj /CN=api.typesafe.ai >/dev/null 2>&1
   python3 "$BATS_TEST_DIRNAME/http-server.py" "$SANDBOX" >"$SANDBOX/server.log" 2>&1 &

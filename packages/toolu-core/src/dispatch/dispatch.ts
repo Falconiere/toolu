@@ -3,9 +3,9 @@
  * dispatchers, TypeScript ports of `pre-tools/mod.sh`, `post-tools/mod.sh` and
  * `toolu_dispatch_hook`. An edit tool is walked once per affected path (a deny,
  * block or exit 2 on any path wins for the whole patch); everything else is
- * walked once. Module results stay raw hook text, so the output matches the
- * bash dispatcher byte for byte while modules still run on bash, and each
- * module cuts over to native TypeScript on its own.
+ * walked once. Built-in modules are native gates (#260–#262); registry `.sh`
+ * modules still run on bash, and their raw hook text is merged byte for byte
+ * as the bash dispatcher merged it.
  */
 import { isJsonObject, loadConfig } from "../config/config-load.ts";
 import { enabled } from "../config/config-read.ts";
@@ -20,13 +20,13 @@ import type { HookPhase, Session, ToolModule } from "./dispatch-context.ts";
 import { parseDocument, readField, substituted } from "./dispatch-output.ts";
 import { consume, dispatchModules, newWalkState, settle, type WalkState } from "./dispatch-walk.ts";
 
-export { bashModule, type HookPhase, type ToolModule } from "./dispatch-context.ts";
+export type { HookPhase, ToolModule } from "./dispatch-context.ts";
 export type { ModuleResult } from "./dispatch-bash.ts";
 
 export type DispatchOptions = {
   /** Built-in modules in the order `mod.sh` globbed them. */
   readonly builtins: readonly ToolModule[];
-  /** `plugins/toolu/hooks/lib`, exported to bash modules as `TOOLU_LIB_DIR`. */
+  /** `plugins/toolu/hooks/lib`, exported to registry bash modules as `TOOLU_LIB_DIR`. */
   readonly libDir: string;
   /** Default `process.env`. */
   readonly env?: HostEnv;

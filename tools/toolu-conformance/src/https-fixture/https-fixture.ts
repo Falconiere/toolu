@@ -52,7 +52,7 @@ function selfSigned(dir: string, hosts: readonly string[]): { cert: string; key:
   const cert = join(dir, "cert.pem");
   const key = join(dir, "key.pem");
   const san = hosts.map((host) => `DNS:${host}`).join(",");
-  const args = ["req", "-x509", "-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:prime256v1"];
+  const args = ["req", "-x509", "-newkey", "rsa:2048"];
   args.push("-nodes", "-keyout", key, "-out", cert, "-days", "1");
   args.push("-subj", `/CN=${hosts[0] ?? "localhost"}`, "-addext", `subjectAltName=${san}`);
   const run = spawnSync("openssl", args, { encoding: "utf8" });

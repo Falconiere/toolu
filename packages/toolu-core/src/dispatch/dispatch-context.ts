@@ -1,10 +1,9 @@
 /**
  * Module contract and per-payload context for the PreToolUse (#258) and
  * PostToolUse (#259) dispatchers. Built-in modules share `run(event, ctx)` with
- * #257's `RegistryModule`, so a port swaps one `bashModule(...)` for a native
- * module without touching the walk. Every context comes from `toolContext`.
+ * #257's `RegistryModule`. Every one is native since #262 dropped the bash
+ * fallback; every context comes from `toolContext`.
  */
-import { join } from "node:path";
 import { isJsonObject } from "../config/config-load.ts";
 import type { Decision } from "../decision/decision.ts";
 import type { HostEnv, HostName } from "../host/host-name.ts";
@@ -14,21 +13,14 @@ import type { EditRecord } from "../state/state-schema.ts";
 /** Which hook a walk serves: `PreToolUse` or `PostToolUse`. */
 export type HookPhase = "pre" | "post";
 
-/** A built-in module: a bash script until its port lands, then native TypeScript. */
-export type ToolModule =
-  | { readonly kind: "bash"; readonly name: string; readonly path: string }
-  | {
-      readonly kind: "native";
-      readonly name: string;
-      run(event: RegistryHookEvent, ctx: RegistryContext): Promise<Decision>;
-    };
+/** A built-in module: a native gate, run in-process. */
+export type ToolModule = {
+  readonly kind: "native";
+  readonly name: string;
+  run(event: RegistryHookEvent, ctx: RegistryContext): Promise<Decision>;
+};
 
-/** `modules/<name>.sh` run through bash; the fallback for a module not yet ported. */
-export function bashModule(modulesDir: string, name: string): ToolModule {
-  return { kind: "bash", name: `${name}.sh`, path: join(modulesDir, `${name}.sh`) };
-}
-
-/** An edit split out of a multi-file patch: the `TOOLU_EDIT_*` a bash module sees. */
+/** An edit split out of a multi-file patch: the `TOOLU_EDIT_*` a registry bash module sees. */
 export type EditSplit = { operation: EditRecord["operation"]; from: string; movedTo: string };
 
 /** One walk's inputs: the payload text every module reads, plus what it was built from. */

@@ -33,9 +33,8 @@ _toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}}"
 # shellcheck source=./plan-ledger-parse.sh
 . "$_toolu_lib/plan-ledger-parse.sh"
 
-# Reviewer allow-list — keep in sync with pre-tools/modules/push-review.sh's
-# accepted_reviewers; parity is asserted by the parity test in
-# __tests__/verdict.bats.
+# Reviewer allow-list — keep in sync with @toolu/core/ledger's
+# ACCEPTED_REVIEWERS; parity is asserted by verdict-parity.test.ts.
 ACCEPTED_REVIEWERS='["code-review","toolu-review:review","code-review:xhigh","review","security-review"]'
 
 # vd_gate STATE REASON [EXTRA_JSON]
@@ -94,7 +93,7 @@ vd_gate_quality() {
 }
 
 # vd_gate_plan REPO_ROOT BRANCH BASE CUR
-# Mirrors pre-tools/modules/plan-ledger.sh's fresh-green push check: absent
+# Mirrors @toolu/core/gates/plan-ledger's fresh-green push check: absent
 # ledger + code files in the diff -> advise; absent ledger + no code files, or
 # an empty (no-op) ledger -> skip; unparseable/schema-mismatched ledger -> fail
 # (fail closed, matching the real gate); else fail iff any step isn't
@@ -204,7 +203,7 @@ vd_gate_plan() {
 # vd_gate_review REPO_ROOT BRANCH BASE CUR
 # Implements the push-review v2 schema directly (version normalizes to "2",
 # reviewed_files must equal the sorted current diff) against the same state
-# file pre-tools/modules/push-review.sh reads — independent of that gate's own
+# file @toolu/core/gates/push-review reads — independent of that gate's own
 # v1-vs-v2 migration (spec component 3 + 7). reason_code is a closed set:
 # empty-diff | stale-diff | schema-v1 | file-coverage | no-state | round-cap |
 # findings | reviewer | pass.
@@ -318,7 +317,7 @@ vd_gate_review() {
 }
 
 # vd_gate_docs REPO_ROOT BRANCH
-# Mirrors pre-tools/modules/docs-sync.sh's has_code/has_doc classification
+# Mirrors @toolu/core/gates/docs-sync's has_code/has_doc classification
 # (via docs-sync-config.sh's glob readers) and attestation check, reading the
 # attestation dir via docs-sync's OWN path resolution — NOT REPO_ROOT — so a
 # worktree + CLAUDE_PROJECT_DIR setup is found the same way the real writer

@@ -320,7 +320,7 @@ block may carry `"model": "<alias>"`, validated at parse time and surfaced by
 
 ### Docs-sync surfaces (`docsSync`)
 
-The docs-sync backstop (`plugins/toolu/hooks/pre-tools/modules/docs-sync.sh`)
+The docs-sync backstop (`packages/toolu-core/src/gates/docs-sync.ts`)
 fires on `git push` when the branch diff changes code but no documentation
 surface — a nudge to keep user-facing docs in sync with behavior. It is
 silenced by a diff-`sha`-keyed attestation the agent writes to the host-native
@@ -341,8 +341,8 @@ telemetry), `docsSync.mode=off` is fully silent — the advisory nudge is this
 module's only artifact, so turning it off turns off everything.
 
 Three glob sets tune the code/doc classification; each resolves *project/user
-override → built-in default* (resolver
-`plugins/toolu/hooks/lib/docs-sync-config.sh`):
+override → built-in default* (native resolver
+`packages/toolu-core/src/config/docs-sync-config.ts`):
 
 | Key | Default | Meaning |
 |-----|---------|---------|
@@ -373,7 +373,7 @@ caller's real work), it just writes nothing.
 
 ### Agent-tier advisory (`agentTier`)
 
-`agentTier.mode` (default `advise`) controls `plugins/toolu/hooks/pre-tools/agent-tier.sh`,
+`agentTier.mode` (default `advise`) controls `hooks/dist/agent-tier.js`,
 a standalone `PreToolUse` hook on Claude `Agent`/`Task` and Codex `spawn_agent`
 calls. It always records a
 `delegation` telemetry event (model, subagent_type, and — when a plan ledger
@@ -391,7 +391,7 @@ feature produces (model-routing analytics), not a side effect of the nudge.
 ### AC-coverage promotion (`planLedger`)
 
 `planLedger.blockOnUncoveredAcs` (default `false`) promotes spec AC coverage
-from advisory to blocking in `plugins/toolu/hooks/pre-tools/modules/plan-ledger.sh`.
+from advisory to blocking in `packages/toolu-core/src/gates/plan-ledger.ts`.
 Either way, every push check appends an `ac_coverage` telemetry event with
 `covered`/`uncovered` counts (reusing `pl_ac_coverage_lines`). With the default
 `false`, an uncovered AC only shows up in that count and in `plan-ledger.sh

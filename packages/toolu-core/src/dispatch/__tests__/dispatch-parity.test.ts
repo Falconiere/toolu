@@ -8,10 +8,10 @@ import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import {
   hookEnv,
   install,
-  modulesDir,
   registryDir,
   runBashDispatch,
   runTsDispatch,
+  writeBuiltin,
   writeModule,
 } from "./dispatch-harness.ts";
 
@@ -244,7 +244,7 @@ for (const s of SCENARIOS) {
   test.concurrent(s.name, async () => {
     using sb = createSandbox({ git: true });
     for (const [name, body] of Object.entries(s.modules ?? {}))
-      writeModule(modulesDir(sb), `${name}.sh`, body);
+      writeBuiltin(sb, `${name}.sh`, body);
     for (const [file, body] of Object.entries(s.registry ?? {}))
       writeModule(registryDir(sb), file, body);
     if (s.installed !== undefined) install(sb, ...s.installed);
@@ -252,7 +252,7 @@ for (const s of SCENARIOS) {
     const env = hookEnv(sb);
     const stdin = s.stdin ?? BASH;
     const bash = runBashDispatch(sb, stdin, env);
-    const ts = await runTsDispatch(sb, stdin, env);
+    const ts = await runTsDispatch(stdin, env);
     expect({ stdout: ts.stdout, exitCode: ts.exitCode }).toEqual({
       stdout: bash.stdout,
       exitCode: bash.exitCode,
@@ -265,22 +265,26 @@ for (const s of SCENARIOS) {
 
 test.concurrent("exit 2 forwards the blocking module's stderr", async () => {
   using sb = createSandbox({ git: true });
-  writeModule(modulesDir(sb), "a.sh", "echo blocked-by-exit >&2; exit 2");
-  const ts = await runTsDispatch(sb, BASH, hookEnv(sb));
+  writeBuiltin(sb, "a.sh", "echo blocked-by-exit >&2; exit 2");
+  const ts = await runTsDispatch(BASH, hookEnv(sb));
   expect(ts.stderr).toContain("blocked-by-exit");
 });
 
 test.concurrent("a signalled module is reported with the status bash gives it", async () => {
   using sb = createSandbox({ git: true });
-  writeModule(modulesDir(sb), "a.sh", "kill -TERM $$");
-  const ts = await runTsDispatch(sb, BASH, hookEnv(sb));
-  expect(ts.stderr).toContain("toolu-dispatch: module a.sh exited 143; output skipped");
+  writeBuiltin(sb, "a.sh", "kill -TERM $$");
+  const ts = await runTsDispatch(BASH, hookEnv(sb));
+  expect(ts.stderr).toContain(
+    "toolu-dispatch: module builtin@fixture__a.sh exited 143; output skipped",
+  );
 });
 
 test.concurrent("a module bash cannot start is reported as 127 and skipped", async () => {
   using sb = createSandbox({ git: true });
-  writeModule(modulesDir(sb), "a.sh", "true");
-  const ts = await runTsDispatch(sb, BASH, { ...hookEnv(sb), PATH: sb.path("no-bin") });
+  writeBuiltin(sb, "a.sh", "true");
+  const ts = await runTsDispatch(BASH, { ...hookEnv(sb), PATH: sb.path("no-bin") });
   expect(ts).toMatchObject({ stdout: "", exitCode: 0 });
-  expect(ts.stderr).toContain("toolu-dispatch: module a.sh exited 127; output skipped");
+  expect(ts.stderr).toContain(
+    "toolu-dispatch: module builtin@fixture__a.sh exited 127; output skipped",
+  );
 });

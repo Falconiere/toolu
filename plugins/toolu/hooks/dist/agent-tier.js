@@ -1,7 +1,4 @@
 // @bun
-// plugins/toolu/hooks/src/pre-tools.ts
-import { join as join18 } from "path";
-
 // packages/toolu-core/src/config/config-load.ts
 import { readFileSync } from "fs";
 
@@ -193,17 +190,6 @@ function projectStateDir(name, options = {}) {
   const base = projectStateRoot(resolveHost(options));
   return base === undefined ? undefined : join(base, name);
 }
-var PLUGIN_ROOT_VAR = {
-  codex: "PLUGIN_ROOT",
-  cursor: "CURSOR_PLUGIN_ROOT",
-  opencode: "TOOLU_PLUGIN_ROOT"
-};
-function pluginRoot(options = {}) {
-  const { env, host } = resolveHost(options);
-  const hostVar = PLUGIN_ROOT_VAR[host];
-  const own = hostVar === undefined ? undefined : envValue(env, hostVar);
-  return own ?? envValue(env, "CLAUDE_PLUGIN_ROOT");
-}
 
 // packages/toolu-core/src/config/config-files.ts
 function isFile(path) {
@@ -222,10 +208,6 @@ function configFiles(options) {
     project: projectConfigPath(scoped)
   };
   return { files, host };
-}
-function configExists(options = {}) {
-  const { files } = configFiles(options);
-  return isFile(files.user) || files.project !== undefined && isFile(files.project);
 }
 
 // node_modules/.bun/zod@4.1.5/node_modules/zod/v4/core/core.js
@@ -3043,17 +3025,6 @@ function _array(Class, element, params) {
     ...normalizeParams(params)
   });
 }
-function _custom(Class, fn, _params) {
-  const norm = normalizeParams(_params);
-  norm.abort ?? (norm.abort = true);
-  const schema = new Class({
-    type: "custom",
-    check: "custom",
-    fn,
-    ...norm
-  });
-  return schema;
-}
 function _refine(Class, fn, _params) {
   const schema = new Class({
     type: "custom",
@@ -3492,17 +3463,6 @@ function strictObject(shape, params) {
     ...normalizeParams(params)
   });
 }
-function looseObject(shape, params) {
-  return new ZodObject({
-    type: "object",
-    get shape() {
-      assignProp(this, "shape", objectClone(shape));
-      return this.shape;
-    },
-    catchall: unknown(),
-    ...normalizeParams(params)
-  });
-}
 var ZodUnion = /* @__PURE__ */ $constructor("ZodUnion", (inst, def) => {
   $ZodUnion.init(inst, def);
   ZodType.init(inst, def);
@@ -3758,9 +3718,6 @@ var ZodCustom = /* @__PURE__ */ $constructor("ZodCustom", (inst, def) => {
   $ZodCustom.init(inst, def);
   ZodType.init(inst, def);
 });
-function custom(fn, _params) {
-  return _custom(ZodCustom, fn ?? (() => true), _params);
-}
 function refine(fn, _params = {}) {
   return _refine(ZodCustom, fn, _params);
 }
@@ -3924,377 +3881,6 @@ function loadConfig(options = {}) {
   return { data, invalid, files, host, warn };
 }
 
-// packages/toolu-core/src/config/config-read.ts
-function section(config, key) {
-  const value = config.data[key];
-  return isJsonObject(value) ? value : undefined;
-}
-function member(config, category, name) {
-  return section(config, category)?.[name];
-}
-function enabled(config, category, name) {
-  const value = member(config, category, name);
-  return value !== false && value !== "false";
-}
-function flagTrue(config, category, name) {
-  return member(config, category, name) === true;
-}
-function readPath(data, path) {
-  let current = data;
-  for (const key of path.split(".")) {
-    if (!isJsonObject(current)) {
-      return { found: false };
-    }
-    current = current[key];
-  }
-  return current === undefined || current === null ? { found: false } : { found: true, value: current };
-}
-function isOneOf(value, allowed) {
-  return allowed.some((item) => item === value);
-}
-function configString(config, path, fallback, allowed) {
-  const read = readPath(config.data, path);
-  if (!read.found) {
-    return fallback;
-  }
-  if (typeof read.value !== "string") {
-    config.warn(`${path}: value is not a string; using ${fallback}`);
-    return fallback;
-  }
-  if (isOneOf(read.value, allowed)) {
-    return read.value;
-  }
-  config.warn(`${path}: '${read.value}' is not an allowed value (${allowed.join(" ")}); using ${fallback}`);
-  return fallback;
-}
-
-// packages/toolu-core/src/state/state-io.ts
-import { randomUUID } from "crypto";
-import { linkSync, readFileSync as readFileSync2, renameSync, rmSync, statSync as statSync2, writeFileSync } from "fs";
-var stderrWarn2 = (message) => {
-  console.error(message);
-};
-function toJqJson(value, pretty) {
-  const json = pretty ? JSON.stringify(value, null, 2) : JSON.stringify(value);
-  return json.replaceAll("\x7F", "\\u007f");
-}
-function isoSeconds(date) {
-  return `${date.toISOString().slice(0, 19)}Z`;
-}
-function compareJqStrings(a, b) {
-  return Buffer.compare(Buffer.from(a, "utf8"), Buffer.from(b, "utf8"));
-}
-function writeAtomic(file, body) {
-  const tmp = `${file}.${randomUUID()}.tmp`;
-  try {
-    writeFileSync(tmp, body, { flag: "wx", mode: 384 });
-    renameSync(tmp, file);
-    return true;
-  } catch {
-    try {
-      rmSync(tmp, { force: true });
-    } catch {}
-    return false;
-  }
-}
-
-// packages/toolu-core/src/state/edit-records.ts
-var EDIT_TOOLS = ["Edit", "Write", "MultiEdit", "apply_patch"];
-function isEditTool(tool) {
-  return EDIT_TOOLS.some((name) => name === tool);
-}
-function pathValid(path) {
-  return path !== "" && !/[\n\r\t]/.test(path);
-}
-function substituted(value) {
-  return value.replace(/\n+$/, "");
-}
-function toolInput(payload) {
-  if (payload === null)
-    return null;
-  if (!isJsonObject(payload))
-    return;
-  const input = payload.tool_input;
-  if (input === undefined || input === null)
-    return null;
-  return isJsonObject(input) ? input : undefined;
-}
-function truthy(value) {
-  return value !== undefined && value !== null && value !== false;
-}
-function editPath(input) {
-  const value = [input?.file_path, input?.path].find(truthy) ?? input?.target_file;
-  return typeof value === "string" ? substituted(value) : undefined;
-}
-function flushPending(s) {
-  if (s.pending !== "")
-    s.records.push({ path: s.pending, operation: "update" });
-  s.pending = "";
-}
-function headerPath(line, prefix) {
-  const raw = line.slice(prefix.length);
-  if (!raw.startsWith(" "))
-    return;
-  const path = raw.slice(1);
-  return pathValid(path) ? path : undefined;
-}
-function fileHeader(s, line, prefix, operation) {
-  if (!s.begun) {
-    s.invalid = true;
-    return;
-  }
-  flushPending(s);
-  const path = headerPath(line, prefix);
-  if (path === undefined) {
-    s.invalid = true;
-    return;
-  }
-  s.records.push({ path, operation });
-  s.headers += 1;
-}
-function updateHeader(s, line) {
-  if (!s.begun) {
-    s.invalid = true;
-    return;
-  }
-  flushPending(s);
-  const path = headerPath(line, "*** Update File:");
-  if (path === undefined) {
-    s.invalid = true;
-    return;
-  }
-  s.pending = path;
-  s.headers += 1;
-}
-function moveHeader(s, line) {
-  const target = s.begun && s.pending !== "" ? headerPath(line, "*** Move to:") : undefined;
-  if (target === undefined) {
-    s.invalid = true;
-    return;
-  }
-  s.records.push({ path: s.pending, operation: "update", moved_to: target });
-  s.records.push({ path: target, operation: "move", from: s.pending });
-  s.pending = "";
-  s.headers += 1;
-}
-function patchLine(s, line) {
-  if (s.ended) {
-    if (line !== "")
-      s.invalid = true;
-  } else if (line === "*** Begin Patch") {
-    if (s.begun)
-      s.invalid = true;
-    s.begun = true;
-  } else if (line === "*** End Patch") {
-    if (s.begun) {
-      flushPending(s);
-      s.ended = true;
-    } else {
-      s.invalid = true;
-    }
-  } else if (line.startsWith("*** Add File:")) {
-    fileHeader(s, line, "*** Add File:", "add");
-  } else if (line.startsWith("*** Update File:")) {
-    updateHeader(s, line);
-  } else if (line.startsWith("*** Delete File:")) {
-    fileHeader(s, line, "*** Delete File:", "delete");
-  } else if (line.startsWith("*** Move to:")) {
-    moveHeader(s, line);
-  } else if (line === "*** End of File") {
-    if (!s.begun || s.headers === 0)
-      s.invalid = true;
-  } else if (line.startsWith("*** ")) {
-    s.invalid = true;
-  }
-}
-function applyPatchRecords(patch) {
-  const s = {
-    records: [],
-    pending: "",
-    begun: false,
-    ended: false,
-    headers: 0,
-    invalid: false
-  };
-  for (const line of patch.split(`
-`)) {
-    patchLine(s, line.replace(/\r$/, ""));
-  }
-  return s.invalid || !s.begun || !s.ended || s.headers === 0 ? undefined : s.records;
-}
-function normalizeEditRecords(payload, tool) {
-  if (!isEditTool(tool))
-    return { kind: "not-edit" };
-  const input = toolInput(payload);
-  if (input === undefined)
-    return { kind: "malformed" };
-  if (tool === "apply_patch") {
-    const command = input?.command;
-    const records = typeof command === "string" ? applyPatchRecords(substituted(command)) : undefined;
-    return records === undefined ? { kind: "malformed" } : { kind: "records", records };
-  }
-  const path = editPath(input);
-  if (path === undefined || !pathValid(path))
-    return { kind: "malformed" };
-  return { kind: "records", records: [{ path, operation: tool === "Write" ? "write" : "update" }] };
-}
-
-// packages/toolu-core/src/dispatch/dispatch-bash.ts
-import { constants } from "os";
-
-// packages/toolu-core/src/dispatch/dispatch-output.ts
-function substituted2(text) {
-  return text.replace(/\n+$/, "");
-}
-function parseDocument(text) {
-  try {
-    const parsed = JSON.parse(text);
-    return parsed;
-  } catch {
-    return;
-  }
-}
-function jqRaw(value) {
-  return typeof value === "string" ? value : toJqJson(value, true);
-}
-function readField(doc, path) {
-  let value = doc;
-  for (const key of path) {
-    if (value === null)
-      return "";
-    if (!isJsonObject(value))
-      return "";
-    value = value[key];
-  }
-  if (value === undefined || value === null || value === false)
-    return "";
-  return substituted2(jqRaw(value));
-}
-function emptyAdvisories() {
-  return { contexts: [], messages: [] };
-}
-function addOnce(list, text) {
-  if (text !== "" && !list.includes(text))
-    list.push(text);
-}
-function collectAdvisories(into, doc) {
-  addOnce(into.contexts, readField(doc, ["hookSpecificOutput", "additionalContext"]));
-  addOnce(into.messages, readField(doc, ["systemMessage"]));
-}
-function jqPrint(value) {
-  return `${toJqJson(value, true)}
-`;
-}
-function printed(result) {
-  return `${result}
-`;
-}
-function joined(list) {
-  return list.join(`
-
-`);
-}
-function concat(left, right) {
-  return typeof left === "string" ? left + right : undefined;
-}
-function enriched(ask, ctx, msg) {
-  const hso = ask.hookSpecificOutput;
-  if (!isJsonObject(hso))
-    return;
-  const current = hso.permissionDecisionReason;
-  const reason = current === undefined || current === null || current === false ? "" : current;
-  const nextReason = ctx === "" ? reason : concat(reason, `
-
-${ctx}`);
-  if (nextReason === undefined)
-    return;
-  const out = {
-    ...ask,
-    hookSpecificOutput: { ...hso, permissionDecisionReason: nextReason }
-  };
-  if (msg === "")
-    return out;
-  const sys = ask.systemMessage;
-  const base = sys === undefined || sys === null || sys === false ? "" : sys;
-  const nextMsg = base === "" ? msg : concat(base, `
-
-${msg}`);
-  if (nextMsg === undefined)
-    return;
-  out.systemMessage = nextMsg;
-  return out;
-}
-function finalAsk(askResult, advisories) {
-  const ask = parseDocument(askResult);
-  const out = isJsonObject(ask) ? enriched(ask, joined(advisories.contexts), joined(advisories.messages)) : undefined;
-  return out === undefined ? printed(askResult) : jqPrint(out);
-}
-function finalAdvisory(advisories, hookEventName) {
-  const ctx = joined(advisories.contexts);
-  const msg = joined(advisories.messages);
-  if (ctx === "" && msg === "")
-    return "";
-  const out = {};
-  if (ctx !== "")
-    out.hookSpecificOutput = { hookEventName, additionalContext: ctx };
-  if (msg !== "")
-    out.systemMessage = msg;
-  return jqPrint(out);
-}
-
-// packages/toolu-core/src/dispatch/dispatch-bash.ts
-function childEnv2(env, extra) {
-  const out = {};
-  for (const [key, value] of Object.entries(env)) {
-    if (value !== undefined)
-      out[key] = value;
-  }
-  return { ...out, ...extra };
-}
-function shellStatus(proc) {
-  if (proc.signalCode === undefined)
-    return proc.exitCode;
-  const signals = constants.signals;
-  return 128 + (signals[proc.signalCode] ?? 0);
-}
-function runBash(script, stdin, env) {
-  try {
-    const proc = Bun.spawnSync(["bash", script], {
-      stdin: new TextEncoder().encode(stdin),
-      stdout: "pipe",
-      stderr: "pipe",
-      env
-    });
-    return {
-      stdout: substituted2(proc.stdout.toString()),
-      stderr: proc.stderr.toString(),
-      exitCode: shellStatus(proc)
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { stdout: "", stderr: `${message}
-`, exitCode: 127 };
-  }
-}
-function moduleStdin(input) {
-  return `${input}
-`;
-}
-
-// packages/toolu-core/src/decision/decision.ts
-var DecisionSchema = discriminatedUnion("kind", [
-  object({ kind: literal("allow") }),
-  object({ kind: literal("ask"), reason: string2().min(1) }),
-  object({ kind: literal("deny"), reason: string2().min(1) }),
-  object({ kind: literal("advisory"), message: string2().min(1) }),
-  object({ kind: literal("post_block"), reason: string2().min(1) }),
-  object({
-    kind: literal("runtime_failure"),
-    reason: string2().min(1),
-    code: _enum(["timeout", "spawn", "parse", "truncated", "cancelled", "nonzero"])
-  })
-]);
-
 // packages/toolu-core/src/host/host-encode.ts
 var PRE_ACTION = new Set(["tool/pre", "shell/pre"]);
 var BLOCKING = new Set(["tool/pre", "shell/pre", "permission/evaluate"]);
@@ -4420,515 +4006,46 @@ function encodeDecision(host, event, decision) {
   return { kind: "command", stdout, stderr: "", exitCode: 0 };
 }
 
-// packages/toolu-core/src/registry/registry-run.ts
-import { statSync as statSync5 } from "fs";
-import { join as join6 } from "path";
-import { inspect } from "util";
-
-// packages/toolu-core/src/registry/registry-list.ts
-import { readdirSync, statSync as statSync3 } from "fs";
-import { join as join3 } from "path";
-
-// packages/toolu-core/src/registry/registry-paths.ts
-var EVENT_DIRS = {
-  "tool/pre": "pre-tools.d",
-  "tool/post": "post-tools.d"
-};
-var REGISTRY_DIRS = Object.values(EVENT_DIRS);
-var SEP = "__";
-function registryDirName(event) {
-  return EVENT_DIRS[event];
+// packages/toolu-core/src/config/config-read.ts
+function section(config, key) {
+  const value = config.data[key];
+  return isJsonObject(value) ? value : undefined;
 }
-function parseRegistryName(base) {
-  let kind;
-  if (base.endsWith(".js"))
-    kind = "esm";
-  else if (base.endsWith(".sh"))
-    kind = "bash";
-  else
-    return;
-  const stem = base.slice(0, -3);
-  const at = stem.indexOf(SEP);
-  if (at <= 0)
-    return null;
-  const spec = stem.slice(0, at);
-  if (/\s/u.test(spec))
-    return null;
-  return { spec, name: stem.slice(at + SEP.length), kind };
+function member(config, category, name) {
+  return section(config, category)?.[name];
 }
-
-// packages/toolu-core/src/registry/registry-list.ts
-function isFile2(path) {
-  try {
-    return statSync3(path).isFile();
-  } catch {
-    return false;
-  }
+function enabled(config, category, name) {
+  const value = member(config, category, name);
+  return value !== false && value !== "false";
 }
-function readNames(dir) {
-  try {
-    return readdirSync(dir);
-  } catch {
-    return [];
-  }
-}
-function listRegistryDir(dir) {
-  const listing = { entries: [], rejected: [] };
-  const names = readNames(dir).toSorted((a, b) => Buffer.compare(Buffer.from(a), Buffer.from(b)));
-  for (const file of names) {
-    if (file.startsWith("."))
-      continue;
-    const parsed = parseRegistryName(file);
-    const path = join3(dir, file);
-    if (parsed === undefined || !isFile2(path))
-      continue;
-    if (parsed === null)
-      listing.rejected.push(file);
-    else
-      listing.entries.push({ ...parsed, path, file });
-  }
-  return listing;
-}
-
-// packages/toolu-core/src/registry/registry-gate.ts
-import { readFileSync as readFileSync4, statSync as statSync4 } from "fs";
-import { homedir as homedir2 } from "os";
-import { join as join5 } from "path";
-
-// packages/toolu-core/src/host/host-snapshot.ts
-import { mkdirSync, readFileSync as readFileSync3, renameSync as renameSync2, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "fs";
-import { dirname, join as join4 } from "path";
-var ListSchema = looseObject({ installed: array(unknown()) });
-var EntrySchema = looseObject({
-  pluginId: unknown(),
-  name: unknown(),
-  marketplaceName: unknown()
-});
-var SnapshotFileSchema = looseObject({
-  version: literal(1),
-  status: string2(),
-  plugins: array(unknown())
-});
-function codexPluginSnapshotPath(options = {}) {
-  const o = resolveHost(options);
-  return envValue(o.env, "TOOLU_CODEX_PLUGIN_SNAPSHOT") ?? join4(configRoot(o), "toolu", "codex-plugins.json");
-}
-function readSnapshotFile(path) {
-  try {
-    const parsed = SnapshotFileSchema.safeParse(JSON.parse(readFileSync3(path, "utf8")));
-    return parsed.success ? parsed.data : undefined;
-  } catch {
-    return;
-  }
-}
-function codexPluginInstalled(spec, options = {}) {
-  if (spec === "") {
-    return "absent";
-  }
-  const snapshot = readSnapshotFile(codexPluginSnapshotPath(options));
-  if (snapshot?.status !== "ready") {
-    return "unknown";
-  }
-  return snapshot.plugins.includes(spec) ? "installed" : "absent";
-}
-
-// packages/toolu-core/src/registry/registry-gate.ts
-function installedPluginsPath(env) {
-  const root = envValue(env, "TOOLU_CONFIG_DIR") ?? envValue(env, "CLAUDE_CONFIG_DIR") ?? join5(envValue(env, "HOME") ?? homedir2(), ".claude");
-  return envValue(env, "CLAUDE_PLUGINS_REGISTRY") ?? join5(root, "plugins", "installed_plugins.json");
-}
-function readInstalledPlugins(path) {
-  try {
-    if (!statSync4(path).isFile())
-      return;
-    const parsed = JSON.parse(readFileSync4(path, "utf8"));
-    return parsed;
-  } catch {
-    return;
-  }
-}
-function claudePresence(spec, env) {
-  const doc = readInstalledPlugins(installedPluginsPath(env));
-  if (!isJsonObject(doc) || !isJsonObject(doc.plugins))
-    return "unknown";
-  return Object.hasOwn(doc.plugins, spec) ? "installed" : "absent";
-}
-function pluginPresence(spec, options = {}) {
-  if (spec === "")
-    return "absent";
-  const o = resolveHost(options);
-  if (o.host === "codex")
-    return codexPluginInstalled(spec, o);
-  if (o.host !== "claude")
-    return "unknown";
-  return claudePresence(spec, o.env);
-}
-function pluginActive(spec, options = {}) {
-  return pluginPresence(spec, options) !== "absent";
-}
-
-// packages/toolu-core/src/registry/registry-types.ts
-var REGISTRY_EVENTS = ["tool/pre", "tool/post"];
-function registryEventFor(type) {
-  return type === "tool/post" ? "tool/post" : "tool/pre";
-}
-
-// packages/toolu-core/src/registry/registry-run.ts
-function stderrLine2(line) {
-  process.stderr.write(`${line}
-`);
-}
-function message(error) {
-  return error instanceof Error ? error.message : String(error);
-}
-var ModuleSchema = looseObject({
-  spec: string2(),
-  name: string2(),
-  event: _enum(REGISTRY_EVENTS),
-  run: custom((value) => typeof value === "function")
-});
-function runContract(loaded, entry, event, ctx) {
-  const exported = isJsonObject(loaded) ? loaded.default : undefined;
-  const parsed = ModuleSchema.safeParse(exported);
-  if (!parsed.success)
-    throw new Error("default export is not a registry module");
-  const { spec, name, event: declared } = parsed.data;
-  const want = { spec: entry.spec, name: entry.name, event: registryEventFor(event.type) };
-  if (spec !== want.spec || name !== want.name || declared !== want.event) {
-    throw new Error(`contract mismatch: exports ${JSON.stringify({ spec, name, event: declared })}, file and directory want ${JSON.stringify(want)}`);
-  }
-  return parsed.data.run.call(exported, event, ctx);
-}
-async function importModule(entry) {
-  const stat = statSync5(entry.path);
-  const loaded = await import(`${entry.path}?v=${String(stat.mtimeMs)}-${String(stat.size)}`);
-  return loaded;
-}
-async function runEsm(entry, event, ctx) {
-  const result = await runContract(await importModule(entry), entry, event, ctx);
-  const decision = DecisionSchema.safeParse(result);
-  if (!decision.success) {
-    throw new Error(`invalid decision: ${inspect(result)}`);
-  }
-  return decision.data;
-}
-async function timed(entry, work) {
-  const start = performance.now();
-  try {
-    const decision = await work();
-    return { entry, status: "decision", decision, ms: performance.now() - start };
-  } catch (error) {
-    return { entry, status: "error", error: message(error), ms: performance.now() - start };
-  }
-}
-function stops(event, outcome) {
-  if (outcome.status !== "decision")
-    return false;
-  const kind = event.type === "tool/post" ? "post_block" : "deny";
-  return outcome.decision.kind === kind;
-}
-async function outcomeOf(entry, walk) {
-  const { event, ctx, fallback } = walk;
-  if (!walk.active(entry.spec))
-    return { entry, status: "skipped", reason: "inactive" };
-  if (entry.kind === "esm")
-    return timed(entry, () => runEsm(entry, event, ctx));
-  if (walk.esmSpecs.has(entry.spec))
-    return { entry, status: "skipped", reason: "shadowed" };
-  if (fallback === undefined)
-    return { entry, status: "skipped", reason: "bash" };
-  return timed(entry, () => fallback(entry, event, ctx));
-}
-function memoActive(ctx) {
-  const memo = new Map;
-  return (spec) => {
-    const known = memo.get(spec);
-    if (known !== undefined)
-      return known;
-    const active = pluginActive(spec, { env: ctx.env, host: ctx.host });
-    memo.set(spec, active);
-    return active;
-  };
-}
-async function walkFrom(entries, at, walk, outcomes) {
-  const entry = entries[at];
-  if (entry === undefined)
-    return outcomes;
-  const outcome = await outcomeOf(entry, walk);
-  outcomes.push(outcome);
-  if (outcome.status === "error") {
-    walk.warn(`toolu-registry: module ${entry.file} failed: ${outcome.error}; output skipped`);
-  }
-  return stops(walk.event, outcome) ? outcomes : walkFrom(entries, at + 1, walk, outcomes);
-}
-async function runRegistry(event, ctx, options = {}) {
-  const warn = options.warn ?? stderrLine2;
-  const dir = join6(ctx.configRoot, "toolu", registryDirName(registryEventFor(event.type)));
-  const { entries, rejected } = listRegistryDir(dir);
-  for (const file of rejected) {
-    warn(`toolu-registry: registry module ${file} lacks <plugin-spec>__<name> namespace; skipped`);
-  }
-  const walk = {
-    warn,
-    event,
-    ctx,
-    fallback: options.fallback,
-    esmSpecs: new Set(entries.filter((e) => e.kind === "esm").map((e) => e.spec)),
-    active: memoActive(ctx)
-  };
-  return walkFrom(entries, 0, walk, []);
-}
-
-// packages/toolu-core/src/dispatch/dispatch-context.ts
-function text2(value, fallback) {
-  return typeof value === "string" && value !== "" ? value : fallback;
-}
-function toolEvent(payload, doc, session) {
-  const raw = isJsonObject(doc) ? doc : {};
-  const input = isJsonObject(raw.tool_input) ? raw.tool_input : {};
-  const cwd = text2(raw.cwd, session.projectRoot);
-  const base = {
-    sessionId: text2(raw.session_id, "unknown"),
-    cwd,
-    projectRoot: session.projectRoot,
-    worktree: session.projectRoot,
-    toolCallId: text2(raw.tool_use_id, "unknown"),
-    toolName: text2(payload.toolName, "unknown"),
-    toolInput: input
-  };
-  if (session.phase === "post") {
-    const output = raw.tool_response ?? raw.tool_output;
-    return { ...base, type: "tool/post", ...output === undefined ? {} : { toolOutput: output } };
-  }
-  const command = input.command;
-  if ((payload.toolName === "Bash" || payload.toolName === "Shell") && typeof command === "string" && command !== "") {
-    return { ...base, type: "shell/pre", command };
-  }
-  return { ...base, type: "tool/pre" };
-}
-function toolContext(payload, doc, session) {
-  const edit = payload.edit;
-  return {
-    host: session.host,
-    env: session.env,
-    configRoot: session.configRoot,
-    projectRoot: session.projectRoot,
-    cwd: session.cwd,
-    raw: isJsonObject(doc) ? doc : {},
-    ...edit === undefined ? {} : { edit }
-  };
-}
-
-// packages/toolu-core/src/dispatch/dispatch-walk.ts
-function newWalkState(phase) {
-  return { phase, advisories: emptyAdvisories(), ask: undefined, stderr: [] };
-}
-function permissionOf(doc) {
-  return readField(doc, ["hookSpecificOutput", "permissionDecision"]);
-}
-function stopsWalk(phase, doc) {
-  return phase === "pre" ? permissionOf(doc) === "deny" : readField(doc, ["decision"]) === "block";
-}
-function consume(state, name, result) {
-  if (result.exitCode === 2) {
-    return { stdout: "", stderr: state.stderr.join("") + result.stderr, exitCode: 2 };
-  }
-  if (result.exitCode !== 0) {
-    state.stderr.push(`toolu-dispatch: module ${name} exited ${String(result.exitCode)}; output skipped
-`);
-    return;
-  }
-  if (result.stdout === "")
-    return;
-  const doc = parseDocument(result.stdout);
-  if (stopsWalk(state.phase, doc)) {
-    return { stdout: printed(result.stdout), stderr: state.stderr.join(""), exitCode: 0 };
-  }
-  if (state.phase === "pre" && permissionOf(doc) === "ask") {
-    state.ask ??= result.stdout;
-    return;
-  }
-  collectAdvisories(state.advisories, doc);
-  return;
-}
-function settle(state) {
-  const event = state.phase === "pre" ? "PreToolUse" : "PostToolUse";
-  const stdout = state.ask === undefined ? finalAdvisory(state.advisories, event) : finalAsk(state.ask, state.advisories);
-  return { stdout, stderr: state.stderr.join(""), exitCode: 0 };
-}
-function moduleEnv(payload, session) {
-  const extra = {
-    input: payload.text,
-    tool_name: payload.toolName,
-    TOOLU_LIB_DIR: session.libDir,
-    TOOLU_CONFIG_DIR: session.configRoot
-  };
-  if (payload.edit !== undefined) {
-    extra.TOOLU_EDIT_OPERATION = payload.edit.operation;
-    extra.TOOLU_EDIT_FROM = payload.edit.from;
-    extra.TOOLU_EDIT_MOVED_TO = payload.edit.movedTo;
-  }
-  return childEnv2(session.env, extra);
-}
-function encoded(host, type, decision) {
-  const target = host === "codex" ? "codex" : "claude";
-  const out = encodeDecision(target, type, decision);
-  return { stdout: out.kind === "command" ? substituted2(out.stdout) : "", stderr: "", exitCode: 0 };
-}
-async function runNative(module, event, ctx) {
-  try {
-    const parsed = DecisionSchema.safeParse(await module.run(event, ctx));
-    if (parsed.success)
-      return encoded(ctx.host, event.type, parsed.data);
-    return { stdout: "", stderr: "", exitCode: 1 };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { stdout: "", stderr: `${message}
-`, exitCode: 1 };
-  }
-}
-async function walkBuiltins(builtins, at, walk, state) {
-  const module = builtins[at];
-  if (module === undefined)
-    return;
-  const done = consume(state, module.name, await runNative(module, walk.event, walk.ctx));
-  return done ?? walkBuiltins(builtins, at + 1, walk, state);
-}
-function bashFallback(walk, raw) {
-  return (entry) => {
-    const result = runBash(entry.path, moduleStdin(walk.payload.text), moduleEnv(walk.payload, walk.session));
-    raw.set(entry.path, result);
-    const phase = walk.session.phase;
-    const stops = result.exitCode === 2 || result.exitCode === 0 && stopsWalk(phase, parseDocument(result.stdout));
-    const decision = !stops ? { kind: "allow" } : phase === "pre" ? { kind: "deny", reason: "registry module denied" } : { kind: "post_block", reason: "registry module blocked" };
-    return Promise.resolve(decision);
-  };
-}
-function outcomeResult(outcome, walk, raw) {
-  if (outcome.status !== "decision")
-    return;
-  if (outcome.entry.kind === "esm")
-    return encoded(walk.ctx.host, walk.event.type, outcome.decision);
-  return raw.get(outcome.entry.path);
-}
-async function walkRegistry(walk, state) {
-  const raw = new Map;
-  const outcomes = await runRegistry(walk.event, walk.ctx, {
-    fallback: bashFallback(walk, raw),
-    warn: (line) => state.stderr.push(`${line}
-`)
-  });
-  for (const outcome of outcomes) {
-    const result = outcomeResult(outcome, walk, raw);
-    const done = result === undefined ? undefined : consume(state, outcome.entry.file, result);
-    if (done !== undefined)
-      return done;
-  }
-  return;
-}
-async function dispatchModules(payload, session, builtins) {
-  const doc = parseDocument(payload.text);
-  const walk = {
-    payload,
-    session,
-    event: toolEvent(payload, doc, session),
-    ctx: toolContext(payload, doc, session)
-  };
-  const state = newWalkState(session.phase);
-  const done = await walkBuiltins(builtins, 0, walk, state) ?? await walkRegistry(walk, state);
-  return done ?? settle(state);
-}
-
-// packages/toolu-core/src/dispatch/dispatch.ts
-var MALFORMED_PATCH_DENY = `{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Unable to parse apply_patch file headers; patch blocked so protected-file and quality gates cannot be bypassed."}}
-`;
-var MALFORMED_PATCH_BLOCK = `{"decision":"block","reason":"Unable to parse apply_patch file headers; per-file post-edit quality checks could not run."}
-`;
-function syntheticEdit(doc, record) {
-  const input = doc.tool_input;
-  const base = input === undefined || input === null || input === false ? {} : input;
-  return toJqJson({
-    ...doc,
-    tool_name: "Edit",
-    tool_input: {
-      ...isJsonObject(base) ? base : {},
-      file_path: record.path,
-      path: record.path,
-      toolu_edit_operation: record.operation,
-      toolu_edit_from: record.from ?? "",
-      toolu_edit_moved_to: record.moved_to ?? ""
+function readPath(data, path) {
+  let current = data;
+  for (const key of path.split(".")) {
+    if (!isJsonObject(current)) {
+      return { found: false };
     }
-  }, false);
-}
-async function dispatchRecords(doc, records, at, walk) {
-  const record = records[at];
-  if (record === undefined)
-    return settle(walk.state);
-  const edit = {
-    operation: record.operation,
-    from: record.from ?? "",
-    movedTo: record.moved_to ?? ""
-  };
-  const payload = { text: syntheticEdit(doc, record), toolName: "Edit", edit };
-  const result = await dispatchModules(payload, walk.session, walk.builtins);
-  walk.state.stderr.push(result.stderr);
-  const done = consume(walk.state, "", {
-    ...result,
-    stderr: "",
-    stdout: substituted2(result.stdout)
-  });
-  return done ?? dispatchRecords(doc, records, at + 1, walk);
-}
-async function dispatchInput(input, session, builtins) {
-  const doc = parseDocument(input);
-  const toolName = readField(doc, ["tool_name"]);
-  const normalized = normalizeEditRecords(doc, toolName);
-  if (normalized.kind === "not-edit") {
-    return dispatchModules({ text: input, toolName }, session, builtins);
+    current = current[key];
   }
-  if (normalized.kind === "malformed" || normalized.records.length === 0 || !isJsonObject(doc)) {
-    const stdout = session.phase === "pre" ? MALFORMED_PATCH_DENY : MALFORMED_PATCH_BLOCK;
-    return { stdout, stderr: "", exitCode: 0 };
+  return current === undefined || current === null ? { found: false } : { found: true, value: current };
+}
+function isOneOf(value, allowed) {
+  return allowed.some((item) => item === value);
+}
+function configString(config, path, fallback, allowed) {
+  const read = readPath(config.data, path);
+  if (!read.found) {
+    return fallback;
   }
-  const state = newWalkState(session.phase);
-  return dispatchRecords(doc, normalized.records, 0, { session, builtins, state });
-}
-function sessionFor(phase, env, host, options) {
-  const root = configRoot({ env, host });
-  const cwd = options.cwd ?? process.cwd();
-  const base = { phase, host, configRoot: root, libDir: options.libDir, cwd };
-  if (phase === "pre") {
-    const project = projectRoot({ env, host, cwd }) ?? cwd;
-    return { ...base, env: childEnv2(env, { TOOLU_CONFIG_DIR: root }), projectRoot: project };
+  if (typeof read.value !== "string") {
+    config.warn(`${path}: value is not a string; using ${fallback}`);
+    return fallback;
   }
-  const project = gitToplevel(env, cwd) ?? cwd;
-  const path = `${project}/node_modules/.bin:${env.PATH ?? ""}`;
-  const extra = { TOOLU_CONFIG_DIR: root, PROJECT_ROOT: project, PATH: path };
-  return { ...base, env: childEnv2(env, extra), projectRoot: project };
-}
-async function dispatchHook(phase, stdin, options) {
-  const env = options.env ?? process.env;
-  const host = detectHost({ env });
-  const warnings = [];
-  const config = loadConfig({
-    env,
-    host,
-    warn: (line) => warnings.push(`toolu-config: ${line}
-`)
-  });
-  if (!enabled(config, "hooks", phase === "pre" ? "pre-tools" : "post-tools")) {
-    return { stdout: "", stderr: warnings.join(""), exitCode: 0 };
+  if (isOneOf(read.value, allowed)) {
+    return read.value;
   }
-  const session = sessionFor(phase, env, host, options);
-  const result = await dispatchInput(substituted2(stdin), session, options.builtins);
-  return { ...result, stderr: warnings.join("") + result.stderr };
+  config.warn(`${path}: '${read.value}' is not an allowed value (${allowed.join(" ")}); using ${fallback}`);
+  return fallback;
 }
-function dispatchPreTool(stdin, options) {
-  return dispatchHook("pre", stdin, options);
-}
-
-// plugins/toolu/hooks/src/pre-tools/builtins.ts
-import { dirname as dirname4 } from "path";
 
 // packages/toolu-core/src/config/gate-mode.ts
 var GATE_MODES = ["block", "ask", "advise", "off"];
@@ -4994,103 +4111,304 @@ function gateDecision(mode, reason) {
   }
   return mode === "ask" ? { kind: "ask", reason } : { kind: "deny", reason };
 }
-function guardrailWarning(headline, detail) {
-  return `############################################################
-##  \u26A0\uFE0F  SECURITY GUARDRAIL \u2014 OVERRIDE REQUESTED  \u26A0\uFE0F        ##
-############################################################
 
-${headline}
-
-WHY THIS IS GUARDED
-${detail}
-
-Approving covers THIS ONE CALL. Nothing is remembered and the next attempt
-asks again. If you did not just ask for this, the answer is no.`;
+// packages/toolu-core/src/detect/detect-branch.ts
+function branchSlug(branch) {
+  const slug = branch.replaceAll("/", "_").replace(/[^A-Za-z0-9_-]/g, "");
+  return slug === "" ? "_default" : slug;
 }
 
-// packages/toolu-core/src/config/settings.ts
-import { readFileSync as readFileSync5 } from "fs";
-import { join as join8 } from "path";
-
-// packages/toolu-core/src/config/settings-files.ts
-var SETTINGS_FILES = {
-  bashAllowlist: "bash-allowlist.txt",
-  bashDenylist: "bash-denylist.txt",
-  commitPrefixes: "commit-prefixes.txt",
-  mcpBlocklist: "mcp-blocklist.txt",
-  protectedFiles: "protected-files.txt",
-  rustUnsafeExemptions: "rust-unsafe-exemptions.txt",
-  codeEditRules: "code-edit-rules.json"
-};
-
-// packages/toolu-core/src/config/settings-dir.ts
-import { statSync as statSync6 } from "fs";
-import { homedir as homedir3 } from "os";
-import { join as join7 } from "path";
-function isDirectory(path) {
+// packages/toolu-core/src/detect/detect-tools.ts
+import { accessSync, constants, statSync as statSync2 } from "fs";
+import { join as join3 } from "path";
+var cache = new Map;
+function isCommandFile(path) {
   try {
-    return statSync6(path).isDirectory();
+    return !statSync2(path).isDirectory();
   } catch {
     return false;
   }
 }
-function settingsDir(options = {}) {
-  const env = options.env ?? process.env;
-  const explicit = envValue(env, "TOOLU_SETTINGS_DIR");
-  if (explicit !== undefined) {
-    return explicit;
+function isExecutable(path) {
+  try {
+    accessSync(path, constants.X_OK);
+    return !statSync2(path).isDirectory();
+  } catch {
+    return false;
   }
-  const legacy = join7(envValue(env, "HOME") ?? homedir3(), ".claude", "settings");
-  if (isDirectory(legacy)) {
-    return legacy;
-  }
-  const root = options.pluginRoot ?? pluginRoot({ env });
-  return root === undefined ? undefined : join7(root, "settings");
+}
+function scan(name, dirs) {
+  return dirs.some((dir) => isCommandFile(join3(dir === "" ? "." : dir, name)));
+}
+function toolAvailable(name, env = process.env) {
+  if (name === "")
+    return false;
+  if (name.includes("/"))
+    return isExecutable(name);
+  const path = envValue(env, "PATH") ?? "";
+  const dirs = path.split(":");
+  if (dirs.some((dir) => !dir.startsWith("/")))
+    return scan(name, dirs);
+  const key = `${path}\x00${name}`;
+  const hit = cache.get(key);
+  if (hit !== undefined)
+    return hit;
+  const found = scan(name, dirs);
+  cache.set(key, found);
+  return found;
 }
 
-// packages/toolu-core/src/config/settings.ts
-var COMMENT_OR_BLANK = /^\s*(#|$)/;
-function readList(path) {
-  if (!isFile(path)) {
-    return [];
+// packages/toolu-core/src/state/state-io.ts
+var stderrWarn2 = (message) => {
+  console.error(message);
+};
+function toJqJson(value, pretty) {
+  const json = pretty ? JSON.stringify(value, null, 2) : JSON.stringify(value);
+  return json.replaceAll("\x7F", "\\u007f");
+}
+function isoSeconds(date) {
+  return `${date.toISOString().slice(0, 19)}Z`;
+}
+
+// packages/toolu-core/src/ledger/ledger-jq.ts
+class JqError extends Error {
+  name = "JqError";
+}
+function jqType(value) {
+  if (value === null)
+    return "null";
+  if (Array.isArray(value))
+    return "array";
+  return typeof value === "object" ? "object" : typeof value;
+}
+function isObject2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function get(value, key) {
+  if (value === null)
+    return null;
+  if (isObject2(value) && typeof key === "string") {
+    return Object.hasOwn(value, key) ? value[key] ?? null : null;
   }
-  const text = readFileSync5(path, "utf8");
-  const lines = text.split(`
-`);
-  if (text.endsWith(`
-`)) {
-    lines.pop();
+  throw new JqError(`Cannot index ${jqType(value)} with ${jqType(key)}`);
+}
+function each(value) {
+  if (Array.isArray(value))
+    return value;
+  if (isObject2(value))
+    return Object.values(value);
+  throw new JqError(`Cannot iterate over ${jqType(value)}`);
+}
+function eachOptional(value) {
+  return Array.isArray(value) || isObject2(value) ? each(value) : [];
+}
+function alt(value, fallback) {
+  return value === undefined || value === null || value === false ? fallback : value;
+}
+function jqEquals(a, b) {
+  if (a === b)
+    return true;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((item, i) => jqEquals(item, b[i] ?? null));
   }
-  return lines.filter((line) => !COMMENT_OR_BLANK.test(line));
-}
-function bashAllowlist(dir) {
-  return readList(join8(dir, SETTINGS_FILES.bashAllowlist));
-}
-function bashDenylist(dir) {
-  return readList(join8(dir, SETTINGS_FILES.bashDenylist));
-}
-function commitPrefixes(dir) {
-  return readList(join8(dir, SETTINGS_FILES.commitPrefixes));
-}
-function mcpBlocklist(dir) {
-  const entries = [];
-  for (const line of readList(join8(dir, SETTINGS_FILES.mcpBlocklist))) {
-    const arrow = line.indexOf(" -> ");
-    const prefix = (arrow === -1 ? line : line.slice(0, arrow)).trim();
-    if (prefix !== "") {
-      entries.push({ prefix, redirect: arrow === -1 ? "" : line.slice(arrow + 4) });
-    }
+  if (isObject2(a) && isObject2(b)) {
+    const keys = Object.keys(a);
+    return keys.length === Object.keys(b).length && keys.every((key) => Object.hasOwn(b, key) && jqEquals(a[key] ?? null, b[key] ?? null));
   }
-  return entries;
+  return false;
 }
-var CodeEditRulesSchema = object({
-  rules: array(object({
-    match: string2(),
-    docs: array(string2()),
-    when_path_matches: array(string2()).optional(),
-    extra_docs: array(string2()).optional()
-  }).strict())
+function raw(value) {
+  return typeof value === "string" ? value : toJqJson(value, true);
+}
+function isJson(value) {
+  if (value === null || ["string", "number", "boolean"].includes(typeof value))
+    return true;
+  if (Array.isArray(value))
+    return value.every(isJson);
+  return typeof value === "object" && Object.values(value).every(isJson);
+}
+function parseJson(text) {
+  let value;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return;
+  }
+  return isJson(value) ? value : undefined;
+}
+
+// packages/toolu-core/src/ledger/ledger-parse.ts
+import { readFileSync as readFileSync2, statSync as statSync3 } from "fs";
+var SPACE = "[ \\t\\n\\v\\f\\r]";
+var STEPS_HEADING = new RegExp(`^## Steps \\(machine-readable\\)${SPACE}*$`);
+var JSON_FENCE = new RegExp(`^\`\`\`json${SPACE}*$`);
+var CLOSE_FENCE = new RegExp(`^\`\`\`${SPACE}*$`);
+var AC_HEADING = new RegExp(`^## Acceptance criteria${SPACE}*$`);
+function isFile2(path) {
+  try {
+    return statSync3(path).isFile();
+  } catch {
+    return false;
+  }
+}
+
+// packages/toolu-core/src/ledger/verdict-gates.ts
+import { readFileSync as readFileSync3 } from "fs";
+
+// packages/toolu-core/src/state/state-git.ts
+import { spawnSync as spawnSync2 } from "child_process";
+function currentBranch(root, env) {
+  const res = spawnSync2("git", ["-C", root, "rev-parse", "--abbrev-ref", "HEAD"], {
+    env: childEnv(env),
+    encoding: "utf8"
+  });
+  return res.error === undefined ? res.stdout.replace(/\n+$/, "") : "";
+}
+
+// packages/toolu-core/src/ledger/verdict-gates.ts
+function readJson(file) {
+  try {
+    return parseJson(readFileSync3(file, "utf8"));
+  } catch {
+    return;
+  }
+}
+
+// packages/toolu-core/src/state/telemetry.ts
+import { appendFileSync, mkdirSync } from "fs";
+import { join as join4 } from "path";
+
+// packages/toolu-core/src/state/state-schema.ts
+var GATE_FILE_VERSION = 1;
+var TELEMETRY_VERSION = 1;
+var Version = literal(GATE_FILE_VERSION).optional();
+var GateEntrySchema2 = strictObject({
+  source: string2(),
+  reason: string2(),
+  violations: string2(),
+  updatedAt: string2()
 });
+var PassingSchema = strictObject({
+  version: Version,
+  status: literal("passing"),
+  source: string2(),
+  updatedAt: string2()
+});
+var FailingSchema = strictObject({
+  version: Version,
+  status: literal("failing"),
+  reason: string2(),
+  source: string2(),
+  file: string2(),
+  violations: string2(),
+  entries: record(string2(), GateEntrySchema2).optional(),
+  updatedAt: string2()
+});
+var GateFileSchema = discriminatedUnion("status", [PassingSchema, FailingSchema]);
+var text2 = string2();
+var maybeText = string2().nullable();
+var TELEMETRY_EXTRAS = {
+  gate_fail: strictObject({ file: text2, source: text2 }),
+  gate_clear: strictObject({ file: text2, source: text2 }),
+  step_run: strictObject({
+    step_id: text2,
+    status: text2,
+    exit_code: number2(),
+    duration_s: number2(),
+    attempt: number2()
+  }),
+  ac_coverage: strictObject({ covered: number2(), uncovered: number2() }),
+  docs_attested: strictObject({ decision: text2 }),
+  docs_nudge: strictObject({}),
+  push_check: strictObject({ result: text2, reason_code: text2, round: number2().nullable() }),
+  delegation: strictObject({
+    model: maybeText,
+    subagent_type: maybeText,
+    reasoning_effort: maybeText,
+    step_id: maybeText,
+    step_model: maybeText
+  })
+};
+function isTelemetryEvent(event) {
+  return Object.hasOwn(TELEMETRY_EXTRAS, event);
+}
+var Protocol = {
+  v: literal(TELEMETRY_VERSION),
+  t: text2,
+  branch: text2
+};
+var TelemetryLineSchema = discriminatedUnion("event", [
+  TELEMETRY_EXTRAS.gate_fail.extend({ ...Protocol, event: literal("gate_fail") }),
+  TELEMETRY_EXTRAS.gate_clear.extend({ ...Protocol, event: literal("gate_clear") }),
+  TELEMETRY_EXTRAS.step_run.extend({ ...Protocol, event: literal("step_run") }),
+  TELEMETRY_EXTRAS.ac_coverage.extend({ ...Protocol, event: literal("ac_coverage") }),
+  TELEMETRY_EXTRAS.docs_attested.extend({ ...Protocol, event: literal("docs_attested") }),
+  TELEMETRY_EXTRAS.docs_nudge.extend({ ...Protocol, event: literal("docs_nudge") }),
+  TELEMETRY_EXTRAS.push_check.extend({ ...Protocol, event: literal("push_check") }),
+  TELEMETRY_EXTRAS.delegation.extend({ ...Protocol, event: literal("delegation") })
+]);
+var EDIT_OPERATIONS = ["add", "update", "delete", "write", "move"];
+var EditRecordSchema = strictObject({
+  path: string2().min(1),
+  operation: _enum(EDIT_OPERATIONS),
+  moved_to: string2().optional(),
+  from: string2().optional()
+});
+
+// packages/toolu-core/src/state/telemetry.ts
+var TELEMETRY_MAX_LINE_BYTES = 3900;
+function skip(reason) {
+  return { written: false, reason };
+}
+function assemble(event, extras, branch, now) {
+  if (!isTelemetryEvent(event)) {
+    return new Error(`telemetry: unknown event "${event}"; skipping append`);
+  }
+  const checked = TELEMETRY_EXTRAS[event].safeParse(extras);
+  if (!checked.success) {
+    return new Error(`telemetry: invalid extras for event "${event}"; skipping append`);
+  }
+  const line = toJqJson({ ...checked.data, v: TELEMETRY_VERSION, t: isoSeconds(now), branch, event }, false);
+  const bytes = Buffer.byteLength(line, "utf8");
+  if (bytes > TELEMETRY_MAX_LINE_BYTES) {
+    return new Error(`telemetry: assembled line for event "${event}" is ${String(bytes)} bytes (>${String(TELEMETRY_MAX_LINE_BYTES)}); skipping append`);
+  }
+  return line;
+}
+function telemetryAppend(root, event, extras, options = {}) {
+  if (root === "")
+    return skip("no root");
+  const env = options.env ?? process.env;
+  const warn = options.warn ?? stderrWarn2;
+  const host = options.host ?? options.config?.host;
+  const scoped = host === undefined ? { env } : { env, host };
+  const config = options.config ?? loadConfig({ ...scoped, cwd: root, warn });
+  if (!enabled(config, "telemetry", "enabled"))
+    return skip("disabled");
+  const branch = currentBranch(root, env);
+  if (branch === "" || branch === "HEAD")
+    return skip("no branch");
+  const line = assemble(event, extras, branch, options.now?.() ?? new Date);
+  if (line instanceof Error) {
+    warn(line.message);
+    return skip(line.message);
+  }
+  const dir = envValue(env, "TELEMETRY_DIR") ?? projectStateDir("telemetry", { ...scoped, host: config.host, root });
+  if (dir === undefined)
+    return skip("no state dir");
+  const file = join4(dir, `${branchSlug(branch)}.jsonl`);
+  try {
+    mkdirSync(dir, { recursive: true });
+    appendFileSync(file, `${line}
+`);
+  } catch (error) {
+    return skip(`could not append to ${file}: ${String(error)}`);
+  }
+  return { written: true, file };
+}
+
+// packages/toolu-core/src/gates/push-target.ts
+import { spawnSync as spawnSync3 } from "child_process";
 
 // node_modules/.bun/unbash@4.0.11/node_modules/unbash/dist/ansi-c.js
 function isOctal(code) {
@@ -10626,2726 +9944,124 @@ class Parser {
 }
 
 // packages/toolu-core/src/shell/shell-argv.ts
-import { basename } from "path";
-
-// packages/toolu-core/src/shell/shell-options.ts
-function parseArgs(words, start, spec) {
-  const options = [];
-  const operandAt = [];
-  let missingValue = false;
-  let i = start;
-  const option = spec.plus === true ? /^[-+]./ : /^-/;
-  const takeNext = (name) => {
-    i += 1;
-    missingValue ||= i >= words.length;
-    options.push({ name, value: words[i], at: i });
-  };
-  const done = (next) => ({
-    options,
-    operands: operandAt.map((at) => words[at] ?? null),
-    operandAt,
-    next,
-    missingValue
-  });
-  for (;i < words.length; i++) {
-    const word = words[i] ?? null;
-    if (word === null || word === "-" || word === "--" || !option.test(word)) {
-      if (spec.stopAtOperand === true)
-        return done(word === "--" ? i + 1 : i);
-      if (word === "--") {
-        for (let rest = i + 1;rest < words.length; rest++)
-          operandAt.push(rest);
-        return done(words.length);
-      }
-      operandAt.push(i);
-    } else if (word.startsWith("--")) {
-      const [name = "", value] = word.slice(2).split(/=(.*)/s);
-      if (value !== undefined)
-        options.push({ name, value, at: null });
-      else if (named(spec.valueLong ?? "", name))
-        takeNext(name);
-      else
-        options.push({ name, value: undefined, at: null });
-    } else if (spec.numeric === true && /^-\d+$/.test(word)) {
-      options.push({ name: word.slice(1), value: undefined, at: null });
-    } else {
-      for (let j = 1;j < word.length; j++) {
-        const name = word.charAt(j);
-        const rest = word.slice(j + 1);
-        const valued = spec.valueShort?.includes(name) === true;
-        if (spec.restShort?.includes(name) === true || valued && rest !== "") {
-          options.push({ name, value: rest, at: null });
-          break;
-        }
-        if (valued) {
-          takeNext(name);
-          break;
-        }
-        options.push({ name, value: undefined, at: null });
-      }
-    }
-  }
-  return done(words.length);
-}
-function named(names, name) {
-  return ` ${names} `.includes(` ${name} `);
-}
-function optionValues(parsed, names) {
-  return parsed.options.filter((option) => named(names, option.name)).map((o) => o.value);
-}
-function hasOption(parsed, names) {
-  return parsed.options.some((option) => named(names, option.name));
-}
-
-// packages/toolu-core/src/shell/shell-argv.ts
-var WRAPPERS = {
-  sudo: {
-    valueShort: "ugCDprtTU",
-    valueLong: "user group close-from chdir prompt role type",
-    inert: "e l v K V h edit list validate remove-timestamp version help",
-    assignments: true
-  },
-  doas: { valueShort: "uC", inert: "L" },
-  env: {
-    valueShort: "uCPa",
-    valueLong: "unset chdir argv0",
-    opaque: "S split-string",
-    assignments: true,
-    dashOption: true
-  },
-  command: { inert: "v V" },
-  builtin: {},
-  exec: { valueShort: "a" },
-  nohup: {},
-  time: { valueShort: "fo", valueLong: "format output" },
-  nice: { valueShort: "n", valueLong: "adjustment", numeric: true },
-  timeout: { valueShort: "sk", valueLong: "signal kill-after", operands: 1 },
-  xargs: {
-    valueShort: "adEILnPs",
-    valueLong: "arg-file delimiter max-args max-procs max-chars process-slot-var",
-    appendsDynamic: true
-  },
-  stdbuf: { valueShort: "ioe", valueLong: "input output error" }
-};
-var ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
-function wrapperOf(name) {
-  if (name === null || name === undefined)
-    return;
-  return Object.hasOwn(WRAPPERS, basename(name)) ? WRAPPERS[basename(name)] : undefined;
-}
-function innerStart(words, wrapper) {
-  const parsed = parseArgs(words, 1, { ...wrapper, stopAtOperand: true });
-  if (parsed.missingValue || hasOption(parsed, wrapper.inert ?? ""))
-    return null;
-  if (hasOption(parsed, wrapper.opaque ?? ""))
-    return "opaque";
-  let start = parsed.next;
-  for (;start < words.length; start++) {
-    const word = words[start] ?? "";
-    const dash = wrapper.dashOption === true && word === "-";
-    if (!dash && !(wrapper.assignments === true && ASSIGNMENT.test(word)))
-      break;
-  }
-  start += wrapper.operands ?? 0;
-  return start < words.length ? start : null;
-}
-function unwrap(words) {
-  let start = 0;
-  let appendsDynamic = false;
-  const wrappers = [];
-  for (let wrapper = wrapperOf(words[0]);wrapper !== undefined; wrapper = wrapperOf(words[start])) {
-    const inner = innerStart(words.slice(start), wrapper);
-    if (inner === null)
-      break;
-    wrappers.push(basename(words[start] ?? ""));
-    if (inner === "opaque")
-      return { wrappers, start: null, appendsDynamic };
-    appendsDynamic ||= wrapper.appendsDynamic === true;
-    start += inner;
-  }
-  return { wrappers, start, appendsDynamic };
-}
-function alignUnwrapped(list, unwrapped, fill) {
-  if (unwrapped.start === null)
-    return [fill];
-  return [...list.slice(unwrapped.start), ...unwrapped.appendsDynamic ? [fill] : []];
-}
 var SHELLS = new Set(["bash", "sh", "zsh", "dash", "ksh"]);
-var SHELL_OPTIONS = {
-  valueShort: "oO",
-  valueLong: "rcfile init-file",
-  stopAtOperand: true,
-  plus: true
-};
-function shellTarget(argv) {
-  const parsed = parseArgs(argv, 1, SHELL_OPTIONS);
-  const at = argv[parsed.next] === "-" ? parsed.next + 1 : parsed.next;
-  const operand = argv[at];
-  if (hasOption(parsed, "c"))
-    return at < argv.length ? { origin: "shell", script: operand ?? null, stdin: false } : null;
-  if (hasOption(parsed, "s") || at >= argv.length)
-    return { origin: "shell", script: null, stdin: true };
-  return operand === null ? { origin: "shell", script: null, stdin: false } : null;
-}
-function runTarget(argv) {
-  const name = argv[0];
-  if (name === null || name === undefined)
-    return null;
-  if (SHELLS.has(basename(name)))
-    return shellTarget(argv);
-  if (name !== "eval")
-    return null;
-  const args = argv[1] === "--" ? argv.slice(2) : argv.slice(1);
-  if (args.length === 0)
-    return null;
-  const script = args.some((arg) => arg === null) ? null : args.join(" ");
-  return { origin: "eval", script, stdin: false };
-}
-
-// packages/toolu-core/src/shell/shell-types.ts
-function unreachable(value) {
-  throw new Error(`@toolu/core/shell: unhandled node ${JSON.stringify(value)}`);
-}
-
-// packages/toolu-core/src/shell/shell-words.ts
-var IGNORE = () => {
-  return;
-};
-function heredocContent(redirect) {
-  const content = redirect.content ?? "";
-  if (redirect.heredocQuoted !== true && /[$`\\]/.test(content))
-    return null;
-  return redirect.operator === "<<-" ? content.replace(/^\t+/gm, "") : content;
-}
-function isHeredoc(redirect) {
-  return redirect.operator === "<<" || redirect.operator === "<<-";
-}
-function heredocCat(script) {
-  if (script === undefined || (script.errors?.length ?? 0) > 0)
-    return null;
-  const [statement, ...others] = script.commands;
-  if (statement === undefined || others.length > 0 || statement.background === true)
-    return null;
-  const command = statement.command;
-  if (command.type !== "Command" || statement.redirects.length > 0)
-    return null;
-  if (command.prefix.length > 0 || command.suffix.length > 0)
-    return null;
-  if (scanWord(command.name, IGNORE).value !== "cat")
-    return null;
-  const [redirect, ...more] = command.redirects;
-  if (redirect === undefined || more.length > 0 || !isHeredoc(redirect))
-    return null;
-  return heredocContent(redirect)?.replace(/\n+$/, "") ?? null;
-}
-function scanPart(part, visit, quoted) {
-  switch (part.type) {
-    case "Literal":
-    case "SingleQuoted":
-    case "AnsiCQuoted":
-      return part.value;
-    case "DoubleQuoted":
-    case "LocaleString":
-      return scanParts(part.parts, visit, true);
-    case "SimpleExpansion":
-      return null;
-    case "ParameterExpansion":
-      scanParts(part.indexParts, visit, false);
-      for (const word of [part.operand, part.slice?.offset, part.slice?.length])
-        scanWord(word, visit);
-      for (const word of [part.replace?.pattern, part.replace?.replacement])
-        scanWord(word, visit);
-      return null;
-    case "CommandExpansion":
-      visit(part.script, part.text);
-      return quoted ? heredocCat(part.script) : null;
-    case "ProcessSubstitution":
-      visit(part.script, part.text);
-      return null;
-    case "ArithmeticExpansion":
-      visitArithmetic(part.expression, visit);
-      return null;
-    case "ExtendedGlob":
-    case "BraceExpansion":
-      scanParts(part.parts, visit, false);
-      return part.type === "ExtendedGlob" ? part.text : null;
-    default:
-      return unreachable(part);
-  }
-}
-function scanParts(parts, visit, quoted) {
-  let value = "";
-  for (const part of parts ?? []) {
-    const piece = scanPart(part, visit, quoted);
-    value = value === null || piece === null ? null : value + piece;
-  }
-  return value;
-}
-function hasGlob(raw) {
-  const unescaped = raw.replace(/\\./gs, "");
-  return /[*?]/.test(unescaped) || /\[[^\]]*\]/.test(unescaped);
-}
-function scanWord(word, visit) {
-  if (word === undefined)
-    return { value: null, pattern: null, text: "" };
-  const { parts, value: text } = word;
-  const value = parts === undefined ? text : scanParts(parts, visit, false);
-  const glob = parts === undefined ? hasGlob(word.text) : parts.some((p) => p.type === "ExtendedGlob" || p.type === "Literal" && hasGlob(p.text));
-  return glob && value !== null ? { value: null, pattern: value, text } : { value, pattern: null, text };
-}
-function visitArithmetic(expression, visit) {
-  if (expression === undefined)
-    return;
-  switch (expression.type) {
-    case "ArithmeticBinary":
-      visitArithmetic(expression.left, visit);
-      visitArithmetic(expression.right, visit);
-      break;
-    case "ArithmeticUnary":
-      visitArithmetic(expression.operand, visit);
-      break;
-    case "ArithmeticTernary":
-      visitArithmetic(expression.test, visit);
-      visitArithmetic(expression.consequent, visit);
-      visitArithmetic(expression.alternate, visit);
-      break;
-    case "ArithmeticGroup":
-      visitArithmetic(expression.expression, visit);
-      break;
-    case "ArithmeticWord":
-      scanParts(expression.parts, visit, false);
-      break;
-    case "ArithmeticCommandExpansion":
-      visit(expression.script, expression.text);
-      break;
-    default:
-      unreachable(expression);
-  }
-}
-function visitTest(expression, visit) {
-  switch (expression.type) {
-    case "TestUnary":
-      scanWord(expression.operand, visit);
-      break;
-    case "TestBinary":
-      scanWord(expression.left, visit);
-      scanWord(expression.right, visit);
-      break;
-    case "TestLogical":
-      visitTest(expression.left, visit);
-      visitTest(expression.right, visit);
-      break;
-    case "TestNot":
-      visitTest(expression.operand, visit);
-      break;
-    case "TestGroup":
-      visitTest(expression.expression, visit);
-      break;
-    default:
-      unreachable(expression);
-  }
-}
-function visitAssignment(assignment, visit) {
-  scanParts(assignment.indexParts, visit, false);
-  scanWord(assignment.value, visit);
-  for (const word of assignment.array ?? [])
-    scanWord(word, visit);
-}
-function toShellRedirect(redirect, visit) {
-  const heredoc = isHeredoc(redirect);
-  const target = scanWord(redirect.target, visit);
-  if (redirect.heredocQuoted !== true)
-    scanWord(redirect.body, visit);
-  return {
-    operator: redirect.operator,
-    fd: redirect.fileDescriptor ?? null,
-    target: heredoc ? null : target.value,
-    pattern: heredoc ? null : target.pattern,
-    text: heredoc ? "" : target.text,
-    heredoc: heredoc ? { content: heredocContent(redirect), quoted: redirect.heredocQuoted === true } : null
-  };
-}
-function stdinScript(redirects) {
-  for (const redirect of redirects) {
-    if (redirect.fd !== null && redirect.fd !== 0)
-      continue;
-    if (redirect.heredoc !== null)
-      return redirect.heredoc.content;
-    if (redirect.operator === "<<<")
-      return redirect.target;
-  }
-  return null;
-}
-
-// packages/toolu-core/src/shell/shell-walk.ts
-var MAX_RUN_DEPTH = 4;
-var ALONE = { index: 0, size: 1 };
-function unknownCommand(text, origin, depth, sink) {
-  sink.commands.push({
-    words: [null],
-    argv: [null],
-    patterns: [null],
-    texts: [text],
-    wrappers: [],
-    redirects: [],
-    pipeline: ALONE,
-    exitProves: false,
-    origin,
-    depth,
-    text
-  });
-}
-function nestedVisitor(ctx, sink) {
-  return (script, text) => {
-    if (script === undefined) {
-      unknownCommand(text, "substitution", ctx.depth, sink);
-      return;
-    }
-    const source = script.source ?? ctx.source;
-    walkScript(script, { source, origin: "substitution", depth: ctx.depth, proves: false, pipeline: ALONE }, sink);
-  };
-}
-function compoundRedirects(redirects, ctx, sink) {
-  for (const redirect of redirects) {
-    sink.compoundRedirects.push(toShellRedirect(redirect, nestedVisitor(ctx, sink)));
-  }
-}
-function runString(target, redirects, text, ctx, sink) {
-  const script = target.stdin ? stdinScript(redirects) : target.script;
-  if (script === null || ctx.depth + 1 > MAX_RUN_DEPTH) {
-    unknownCommand(text, target.origin, ctx.depth + 1, sink);
-    return;
-  }
-  const inner = { ...ctx, source: script, origin: target.origin, depth: ctx.depth + 1 };
-  walkScript(parse4(script), inner, sink);
-}
-function emitCommand(command, ctx, sink) {
-  const nested = nestedVisitor(ctx, sink);
-  for (const assignment of command.prefix)
-    visitAssignment(assignment, nested);
-  const named = command.name === undefined ? [] : [command.name, ...command.suffix];
-  const resolved = named.map((word) => scanWord(word, nested));
-  const redirects = command.redirects.map((redirect) => toShellRedirect(redirect, nested));
-  const words = resolved.map((word) => word.value);
-  const unwrapped = unwrap(words);
-  const argv = alignUnwrapped(words, unwrapped, null);
-  const text = ctx.source.slice(command.pos, command.end);
-  const proves = ctx.proves && !unwrapped.wrappers.includes("xargs");
-  sink.commands.push({
-    words,
-    argv,
-    patterns: alignUnwrapped(resolved.map((word) => word.pattern), unwrapped, null),
-    texts: alignUnwrapped(resolved.map((word) => word.text), unwrapped, ""),
-    wrappers: unwrapped.wrappers,
-    redirects,
-    pipeline: ctx.pipeline,
-    exitProves: proves,
-    origin: ctx.origin,
-    depth: ctx.depth,
-    text
-  });
-  const target = runTarget(argv);
-  if (target !== null)
-    runString(target, redirects, text, { ...ctx, proves }, sink);
-}
-function walkPipeline(node, ctx, sink) {
-  const size = node.commands.length;
-  node.commands.forEach((command, index) => {
-    const proves = ctx.proves && node.negated !== true && index === size - 1;
-    walkNode(command, { ...ctx, proves, pipeline: size > 1 ? { index, size } : ctx.pipeline }, sink);
-  });
-}
-function walkAndOr(node, ctx, sink) {
-  node.commands.forEach((command, index) => {
-    const before = index === 0 ? "&&" : node.operators[index - 1];
-    const after = node.operators.slice(index);
-    const proves = ctx.proves && before === "&&" && after.every((op) => op === "&&");
-    walkNode(command, { ...ctx, proves }, sink);
-  });
-}
-function walkList(statements, ctx, sink) {
-  const last = statements.length - 1;
-  statements.forEach((statement, index) => {
-    const proves = ctx.proves && index === last && statement.background !== true;
-    compoundRedirects(statement.redirects, ctx, sink);
-    walkNode(statement.command, { ...ctx, proves }, sink);
-  });
-}
-function walkNode(node, ctx, sink) {
-  const nested = nestedVisitor(ctx, sink);
-  const off = { ...ctx, proves: false };
-  const list = (statements, at = off) => walkList(statements, at, sink);
-  switch (node.type) {
-    case "Command":
-      emitCommand(node, ctx, sink);
-      break;
-    case "Pipeline":
-      walkPipeline(node, ctx, sink);
-      break;
-    case "AndOr":
-      walkAndOr(node, ctx, sink);
-      break;
-    case "If":
-      for (const part of [node.clause, node.then])
-        list(part.commands);
-      if (node.else !== undefined)
-        walkNode(node.else, off, sink);
-      break;
-    case "For":
-    case "Select":
-      for (const word of node.wordlist)
-        scanWord(word, nested);
-      list(node.body.commands);
-      break;
-    case "ArithmeticFor":
-      for (const part of [node.initialize, node.test, node.update])
-        visitArithmetic(part, nested);
-      list(node.body.commands);
-      break;
-    case "While":
-      for (const part of [node.clause, node.body])
-        list(part.commands);
-      break;
-    case "Case":
-      scanWord(node.word, nested);
-      for (const item of node.items) {
-        for (const pattern of item.pattern)
-          scanWord(pattern, nested);
-        list(item.body.commands);
-      }
-      break;
-    case "Function":
-    case "Coproc":
-      compoundRedirects(node.redirects, ctx, sink);
-      walkNode(node.body, node.type === "Function" ? { ...off, origin: "function" } : off, sink);
-      break;
-    case "Subshell":
-    case "BraceGroup":
-    case "CompoundList":
-      list(node.type === "CompoundList" ? node.commands : node.body.commands, ctx);
-      break;
-    case "TestCommand":
-      visitTest(node.expression, nested);
-      break;
-    case "ArithmeticCommand":
-      visitArithmetic(node.expression, nested);
-      break;
-    case "Statement":
-      list([node], ctx);
-      break;
-    default:
-      unreachable(node);
-  }
-}
-function walkScript(script, ctx, sink) {
-  for (const error of script.errors ?? []) {
-    sink.errors.push({ message: error.message, pos: error.pos, origin: ctx.origin });
-  }
-  walkList(script.commands, ctx, sink);
-}
 
 // packages/toolu-core/src/shell/shell-parse.ts
 var MAX_SHELL_INPUT = 1024 * 1024;
-function unknownAnalysis(source, error) {
-  return { source, commands: [], compoundRedirects: [], errors: [error], unknown: true };
-}
-function analyzeShell(source) {
-  if (source.length > MAX_SHELL_INPUT) {
-    return unknownAnalysis(source, {
-      message: `oversize: ${source.length} characters exceeds the ${MAX_SHELL_INPUT} cap`,
-      pos: MAX_SHELL_INPUT,
-      origin: "line"
-    });
-  }
-  const sink = { commands: [], compoundRedirects: [], errors: [] };
-  const root = {
-    source,
-    origin: "line",
-    depth: 0,
-    proves: true,
-    pipeline: { index: 0, size: 1 }
-  };
-  try {
-    walkScript(parse4(source), root, sink);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return unknownAnalysis(source, { message: `parser: ${message}`, pos: 0, origin: "line" });
-  }
-  if (sink.errors.length === 0)
-    return { source, ...sink, unknown: false };
-  const commands = sink.commands.map((command) => ({ ...command, exitProves: false }));
-  return { ...sink, source, commands, unknown: commands.length === 0 };
-}
 
 // packages/toolu-core/src/shell/shell-event.ts
 var analyses = new WeakMap;
-function shellAnalysisOf(event) {
-  const cached = analyses.get(event);
-  if (cached !== undefined)
-    return cached;
-  const analysis = analyzeShell(event.command);
-  analyses.set(event, analysis);
-  return analysis;
-}
-
-// packages/toolu-core/src/shell/shell-rules.ts
-import { basename as basename2 } from "path";
-function argvMatches(argv, head, tail) {
-  const [name, ...rest] = argv;
-  if (name === null || name === undefined)
-    return false;
-  const named = head.includes("/") ? name === head : basename2(name) === head;
-  return named && tail.every((token) => rest.includes(token));
-}
-function matchesRule(command, rule) {
-  const [head, ...tail] = rule.trim().split(/\s+/);
-  if (head === undefined || head === "")
-    return false;
-  return argvMatches(command.words, head, tail) || argvMatches(command.argv, head, tail);
-}
-
-// packages/toolu-core/src/gates/gate-module.ts
-function gateSettingsDir(ctx, options) {
-  return settingsDir({
-    env: ctx.env,
-    ...options.pluginRoot === undefined ? {} : { pluginRoot: options.pluginRoot }
-  });
-}
-function gateConfig(ctx, options) {
-  return loadConfig({ env: ctx.env, host: ctx.host, warn: options.warn ?? (() => {
-    return;
-  }) });
-}
-function preToolHostEvent(event) {
-  return event.type === "shell/pre" ? "shell/pre" : "tool/pre";
-}
-var ALLOW = { kind: "allow" };
-function inputString(event, key) {
-  const value = event.toolInput[key];
-  return typeof value === "string" ? value : "";
-}
-
-// packages/toolu-core/src/gates/bash-commands.ts
-function matches(command, rule) {
-  if (!rule.includes(" "))
-    return command.text.includes(rule);
-  return matchesRule(command, rule);
-}
-function bashCommandsDecide(analysis, lists) {
-  if (analysis.unknown) {
-    return { kind: "unknown", why: analysis.errors[0]?.message ?? "no command could be read" };
-  }
-  const deniedBy = (rule) => analysis.commands.some((command) => matches(command, rule) && !lists.allow.some((allow) => matches(command, allow)));
-  const rule = lists.deny.find(deniedBy);
-  return rule === undefined ? { kind: "allow" } : { kind: "deny", rule };
-}
-var WHY_GUARDED = "Rules in settings/bash-denylist.txt cover commands that execute arbitrary code from a string (node -e, bun -e) or that this project has ruled out.";
-function ruleReason(mode, rule) {
-  if (mode === "ask") {
-    return guardrailWarning(`Claude wants to run a command matching the deny rule "${rule}".`, `${WHY_GUARDED} The command runs with your full shell privileges if you approve.`);
-  }
-  if (mode === "advise") {
-    return `Command matches deny rule "${rule}" (plugins/toolu/settings/bash-denylist.txt). The command was not stopped \u2014 gates.bashCommands.mode is 'advise'.`;
-  }
-  return `Command blocked by deny rule: ${rule}`;
-}
-function unknownReason(mode, why) {
-  if (mode === "ask") {
-    return guardrailWarning(`Claude wants to run a command toolu could not analyze (${why}).`, `${WHY_GUARDED} A command that cannot be parsed cannot be checked against them. It runs with your full shell privileges if you approve.`);
-  }
-  if (mode === "advise") {
-    return `Command could not be analyzed (${why}), so plugins/toolu/settings/bash-denylist.txt was not checked. The command was not stopped \u2014 gates.bashCommands.mode is 'advise'.`;
-  }
-  return `Command blocked: it could not be analyzed against the deny rules (${why})`;
-}
-function decide(event, ctx, options) {
-  if (event.type !== "shell/pre")
-    return ALLOW;
-  const dir = gateSettingsDir(ctx, options);
-  if (dir === undefined)
-    return ALLOW;
-  const deny = bashDenylist(dir);
-  if (deny.length === 0)
-    return ALLOW;
-  const verdict = bashCommandsDecide(shellAnalysisOf(event), { allow: bashAllowlist(dir), deny });
-  if (verdict.kind === "allow")
-    return ALLOW;
-  const mode = gateMode(gateConfig(ctx, options), "bashCommands", {
-    host: ctx.host,
-    event: preToolHostEvent(event)
-  });
-  const text = verdict.kind === "deny" ? ruleReason(mode, verdict.rule) : unknownReason(mode, verdict.why);
-  return gateDecision(mode, text) ?? ALLOW;
-}
-function bashCommandsModule(options = {}) {
-  return {
-    kind: "native",
-    name: "bash-commands",
-    run: (event, ctx) => Promise.resolve(decide(event, ctx, options))
-  };
-}
-// packages/toolu-core/src/detect/detect-branch.ts
-import { spawnSync as spawnSync2 } from "child_process";
-function branchSlug(branch) {
-  const slug = branch.replaceAll("/", "_").replace(/[^A-Za-z0-9_-]/g, "");
-  return slug === "" ? "_default" : slug;
-}
-function baseBranch(root, env = process.env, cwd) {
-  const top = root === undefined || root === "" ? gitToplevel(env, cwd) : root;
-  if (top === undefined)
-    return "main";
-  const res = spawnSync2("git", ["-C", top, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], {
-    env: childEnv(env),
-    encoding: "utf8"
-  });
-  const ref = res.error === undefined && res.status === 0 ? res.stdout.trim() : "";
-  return ref === "" ? "main" : ref.replace(/^refs\/remotes\/origin\//, "");
-}
-
-// packages/toolu-core/src/detect/detect-git.ts
-import { spawnSync as spawnSync3 } from "child_process";
-
-// packages/toolu-core/src/shell/shell-git.ts
-import { basename as basename3 } from "path";
-var GLOBALS = {
-  valueShort: "Cc",
-  valueLong: "git-dir work-tree namespace super-prefix config-env attr-source",
-  stopAtOperand: true
-};
-function gitInvocation(command) {
-  const name = command.argv[0];
-  if (name === null || name === undefined || basename3(name) !== "git")
-    return;
-  const globals = parseArgs(command.argv, 1, GLOBALS);
-  if (globals.missingValue || globals.next >= command.argv.length)
-    return;
-  const cChain = optionValues(globals, "C").map((value) => value ?? null);
-  const subcommand = command.argv[globals.next] ?? null;
-  return { command, subcommand, args: command.argv.slice(globals.next + 1), cChain };
-}
-function runsGitSubcommand(analysis, sub) {
-  let unknown = analysis.unknown;
-  for (const command of analysis.commands) {
-    if (command.argv[0] === null) {
-      unknown = true;
-      continue;
-    }
-    const git = gitInvocation(command);
-    if (git?.subcommand === sub)
-      return "yes";
-    if (git?.subcommand === null)
-      unknown = true;
-  }
-  return unknown ? "unknown" : "no";
-}
-var PUSH_OPTIONS = {
-  valueShort: "o",
-  valueLong: "push-option receive-pack exec repo"
-};
-function destinationOf(refspec) {
-  if (refspec === null || refspec === undefined)
-    return null;
-  const spec = refspec.startsWith("+") ? refspec.slice(1) : refspec;
-  if (spec.startsWith(":") || spec === "HEAD")
-    return null;
-  const colon = spec.indexOf(":");
-  const dst = (colon === -1 ? spec : spec.slice(colon + 1)).replace(/^refs\/heads\//, "");
-  return dst === "" || dst.includes("*") ? null : dst;
-}
-function pushTargets(analysis) {
-  return analysis.commands.flatMap((command) => {
-    const invocation = gitInvocation(command);
-    if (invocation?.subcommand !== "push")
-      return [];
-    const refspec = parseArgs(invocation.args, 0, PUSH_OPTIONS).operands[1];
-    const destination = destinationOf(refspec);
-    return [{ invocation, cChain: invocation.cChain, refspec, destination }];
-  });
-}
-var COMMIT_OPTIONS = {
-  valueShort: "mFCct",
-  restShort: "Su",
-  valueLong: "message file reuse-message reedit-message template author date cleanup fixup squash trailer pathspec-from-file"
-};
-function commitMessages(invocation) {
-  if (invocation.subcommand !== "commit")
-    return [];
-  const parsed = parseArgs(invocation.args, 0, COMMIT_OPTIONS);
-  return optionValues(parsed, "m message").map((value) => value ?? null);
-}
-
-// packages/toolu-core/src/detect/detect-git.ts
-function isGitPush(analysis) {
-  return runsGitSubcommand(analysis, "push") === "yes";
-}
-function isGitCommit(analysis) {
-  return runsGitSubcommand(analysis, "commit") === "yes";
-}
-function gitOut(cwd, args, env) {
-  const res = spawnSync3("git", [...args], {
-    cwd: cwd ?? process.cwd(),
-    env: childEnv(env),
-    encoding: "utf8"
-  });
-  const out = res.error === undefined && res.status === 0 ? res.stdout.trim() : "";
-  return out === "" ? undefined : out;
-}
-function pushTargetRoot(analysis, options = {}) {
-  const env = options.env ?? process.env;
-  const cwd = options.cwd ?? process.cwd();
-  const chain = pushTargets(analysis)[0]?.cChain ?? [];
-  const dirs = chain.filter((dir) => dir !== null);
-  const viaChain = chain.length > 0 && dirs.length === chain.length ? gitOut(cwd, [...dirs.flatMap((dir) => ["-C", dir]), "rev-parse", "--show-toplevel"], env) : undefined;
-  return viaChain ?? gitOut(cwd, ["rev-parse", "--show-toplevel"], env) ?? projectRoot({ env, cwd }) ?? cwd;
-}
-function pushTargetBranch(analysis, root, env = process.env) {
-  const branch = gitOut(root, ["rev-parse", "--abbrev-ref", "HEAD"], env);
-  if (branch !== undefined && branch !== "HEAD")
-    return branch;
-  return pushTargets(analysis)[0]?.destination ?? "";
-}
-
-// packages/toolu-core/src/gates/commit-gate.ts
-function commitPrefix(message) {
-  const subject = message.split(`
-`, 1)[0] ?? "";
-  return /^([a-z]+)(\(.*\))?:/s.exec(subject)?.[1];
-}
-function unknownPrefix(analysis, prefixes) {
-  for (const command of analysis.commands) {
-    const git = gitInvocation(command);
-    if (git?.subcommand !== "commit")
-      continue;
-    const subject = commitMessages(git)[0];
-    const prefix = typeof subject === "string" ? commitPrefix(subject) : undefined;
-    if (prefix !== undefined && !prefixes.includes(prefix))
-      return prefix;
-  }
-  return;
-}
-function commits(analysis) {
-  if (!analysis.unknown)
-    return isGitCommit(analysis);
-  return /\bgit\b/.test(analysis.source) && /\bcommit\b/.test(analysis.source);
-}
-function reminder(base) {
-  return `BEFORE COMMITTING:
-1. Verify diff covers only expected scope (git diff --stat against ${base})
-2. Save memory of significant decisions before committing.
-Skip only if already done this task.`;
-}
-function decide2(event, ctx, options) {
-  if (event.type !== "shell/pre" || event.toolName !== "Bash")
-    return ALLOW;
-  const analysis = shellAnalysisOf(event);
-  if (!commits(analysis))
-    return ALLOW;
-  const mode = gateMode(gateConfig(ctx, options), "commitGate", {
-    host: ctx.host,
-    event: preToolHostEvent(event)
-  });
-  if (mode === "off")
-    return ALLOW;
-  const base = baseBranch(undefined, ctx.env, ctx.cwd);
-  const dir = gateSettingsDir(ctx, options);
-  const prefixes = dir === undefined ? [] : commitPrefixes(dir);
-  const bad = prefixes.length === 0 ? undefined : unknownPrefix(analysis, prefixes);
-  if (bad === undefined)
-    return { kind: "advisory", message: reminder(base) };
-  const reason = `Unknown Conventional Commits prefix: "${bad}". Allowed prefixes are in settings/commit-prefixes.txt. Base branch: ${base}`;
-  return gateDecision(mode, reason) ?? ALLOW;
-}
-function commitGateModule(options = {}) {
-  return {
-    kind: "native",
-    name: "commit-gate",
-    run: (event, ctx) => Promise.resolve(decide2(event, ctx, options))
-  };
-}
-// packages/toolu-core/src/gates/quality-gate.ts
-import { spawnSync as spawnSync4 } from "child_process";
-import { existsSync, readFileSync as readFileSync6 } from "fs";
-import { join as join10 } from "path";
-
-// packages/toolu-core/src/detect/detect-tools.ts
-import { accessSync, constants as constants2, statSync as statSync7 } from "fs";
-import { join as join9 } from "path";
-var cache = new Map;
-function isCommandFile(path) {
-  try {
-    return !statSync7(path).isDirectory();
-  } catch {
-    return false;
-  }
-}
-function isExecutable(path) {
-  try {
-    accessSync(path, constants2.X_OK);
-    return !statSync7(path).isDirectory();
-  } catch {
-    return false;
-  }
-}
-function scan(name, dirs) {
-  return dirs.some((dir) => isCommandFile(join9(dir === "" ? "." : dir, name)));
-}
-function toolAvailable(name, env = process.env) {
-  if (name === "")
-    return false;
-  if (name.includes("/"))
-    return isExecutable(name);
-  const path = envValue(env, "PATH") ?? "";
-  const dirs = path.split(":");
-  if (dirs.some((dir) => !dir.startsWith("/")))
-    return scan(name, dirs);
-  const key = `${path}\x00${name}`;
-  const hit = cache.get(key);
-  if (hit !== undefined)
-    return hit;
-  const found = scan(name, dirs);
-  cache.set(key, found);
-  return found;
-}
-
-// packages/toolu-core/src/gates/quality-gate.ts
-function readGate(file) {
-  if (!existsSync(file))
-    return;
-  try {
-    const doc = JSON.parse(readFileSync6(file, "utf8"));
-    return doc;
-  } catch {
-    return;
-  }
-}
-function field(doc, key, fallback) {
-  const value = doc[key];
-  if (value === undefined || value === null || value === false)
-    return fallback;
-  const text = typeof value === "string" ? value : toJqJson(value, true);
-  return text.replace(/\n+$/, "");
-}
-function gitDir(root, flag, env) {
-  const res = spawnSync4("git", ["-C", root, "rev-parse", "--path-format=absolute", flag], {
-    env: childEnv(env),
-    encoding: "utf8"
-  });
-  const out = res.error === undefined && res.status === 0 ? res.stdout.trim() : "";
-  return out.replace(/\/$/, "");
-}
-function linkedWorktree(root, env) {
-  const dir = gitDir(root, "--git-dir", env);
-  const common = gitDir(root, "--git-common-dir", env);
-  return dir !== "" && common !== "" && dir !== common;
-}
-function mayShip(analysis) {
-  return analysis.unknown || isGitCommit(analysis) || isGitPush(analysis);
-}
-var LEADS = {
-  block: "BLOCKED: quality gate failing \u2014 fix the violations before committing or pushing.",
-  ask: "The quality gate is failing. Commit/push anyway?",
-  advise: "Heads up: the quality gate is failing (commit and push are not blocked at this setting)."
-};
-function decide3(event, ctx, options) {
-  if (event.type !== "shell/pre" || envValue(ctx.env, "MY_CLAUDE_QUALITY") === "off")
-    return ALLOW;
-  if (!mayShip(shellAnalysisOf(event)) || !toolAvailable("git", ctx.env))
-    return ALLOW;
-  const mode = gateMode(gateConfig(ctx, options), "qualityGate", {
-    host: ctx.host,
-    event: preToolHostEvent(event)
-  });
-  if (mode === "off")
-    return ALLOW;
-  const cwd = ctx.cwd ?? process.cwd();
-  const root = gitToplevel(ctx.env, cwd) ?? cwd;
-  const stateRoot = projectStateRoot({ root, env: ctx.env, host: ctx.host });
-  if (stateRoot === undefined)
-    return ALLOW;
-  const doc = readGate(join10(stateRoot, "quality-gate-status.json"));
-  if (!isJsonObject(doc) || field(doc, "status", "") !== "failing")
-    return ALLOW;
-  if (linkedWorktree(root, ctx.env))
-    return ALLOW;
-  const reason = field(doc, "reason", "Quality gate failing");
-  const violations = field(doc, "violations", "");
-  return gateDecision(mode, `${LEADS[mode]}
-${reason}
-${violations}`) ?? ALLOW;
-}
-function qualityGateModule(options = {}) {
-  return {
-    kind: "native",
-    name: "quality-gate",
-    run: (event, ctx) => Promise.resolve(decide3(event, ctx, options))
-  };
-}
-// packages/toolu-core/src/gates/quality-command.ts
-var BUN_SCRIPTS = new Set([
-  "check",
-  "check:fix",
-  "check:duplication",
-  "ts:check",
-  "ts:check:fix",
-  "rust:check",
-  "rust:test",
-  "check-types",
-  "lint",
-  "lint:fix",
-  "format",
-  "format:check",
-  "format:fix",
-  "build",
-  "test"
-]);
-var CARGO = new Set(["clippy", "test", "build", "nextest"]);
-var JS_TOOLS = new Set(["vitest", "jest", "tsc"]);
-var TS_CHECK = new Set(["./scripts/ts-check.sh", "scripts/ts-check.sh"]);
-var PACKAGE_RUNNERS = new Set(["npx", "bunx", "pnpx", "yarn"]);
-var SCRIPT_SHELLS = new Set(["bash", "sh"]);
-// packages/toolu-core/src/ledger/ledger-jq.ts
-class JqError extends Error {
-  name = "JqError";
-}
-function jqType(value) {
-  if (value === null)
-    return "null";
-  if (Array.isArray(value))
-    return "array";
-  return typeof value === "object" ? "object" : typeof value;
-}
-function isObject2(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function get(value, key) {
-  if (value === null)
-    return null;
-  if (isObject2(value) && typeof key === "string") {
-    return Object.hasOwn(value, key) ? value[key] ?? null : null;
-  }
-  throw new JqError(`Cannot index ${jqType(value)} with ${jqType(key)}`);
-}
-function each(value) {
-  if (Array.isArray(value))
-    return value;
-  if (isObject2(value))
-    return Object.values(value);
-  throw new JqError(`Cannot iterate over ${jqType(value)}`);
-}
-function eachOptional(value) {
-  return Array.isArray(value) || isObject2(value) ? each(value) : [];
-}
-function alt(value, fallback) {
-  return value === undefined || value === null || value === false ? fallback : value;
-}
-function truthy2(value) {
-  return value !== undefined && value !== null && value !== false;
-}
-function jqEquals(a, b) {
-  if (a === b)
-    return true;
-  if (Array.isArray(a) || Array.isArray(b)) {
-    return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((item, i) => jqEquals(item, b[i] ?? null));
-  }
-  if (isObject2(a) && isObject2(b)) {
-    const keys = Object.keys(a);
-    return keys.length === Object.keys(b).length && keys.every((key) => Object.hasOwn(b, key) && jqEquals(a[key] ?? null, b[key] ?? null));
-  }
-  return false;
-}
-function length(value) {
-  if (value === null)
-    return 0;
-  if (typeof value === "boolean")
-    throw new JqError("boolean has no length");
-  if (typeof value === "number")
-    return Math.abs(value);
-  if (typeof value === "string")
-    return value.match(/[\s\S]/gu)?.length ?? 0;
-  return Array.isArray(value) ? value.length : Object.keys(value).length;
-}
-function jqIndex(container, needle) {
-  if (container === null)
-    return null;
-  if (Array.isArray(container)) {
-    const at = container.findIndex((item) => jqEquals(item, needle));
-    return at === -1 ? null : at;
-  }
-  if (typeof container === "string") {
-    const at = container.indexOf(needle);
-    return at === -1 ? null : at;
-  }
-  const found = get(container, needle);
-  if (found === null)
-    return null;
-  if (Array.isArray(found))
-    return found[0] ?? null;
-  throw new JqError(`Cannot index ${jqType(found)} with number`);
-}
-function holds(container, needle) {
-  return truthy2(jqIndex(container, needle));
-}
-function raw(value) {
-  return typeof value === "string" ? value : toJqJson(value, true);
-}
-function concat2(...parts) {
-  let out = "";
-  for (const part of parts) {
-    if (part === null)
-      continue;
-    if (typeof part !== "string")
-      throw new JqError(`string and ${jqType(part)} cannot be added`);
-    out += part;
-  }
-  return out;
-}
-function isJson(value) {
-  if (value === null || ["string", "number", "boolean"].includes(typeof value))
-    return true;
-  if (Array.isArray(value))
-    return value.every(isJson);
-  return typeof value === "object" && Object.values(value).every(isJson);
-}
-function parseJson(text) {
-  let value;
-  try {
-    value = JSON.parse(text);
-  } catch {
-    return;
-  }
-  return isJson(value) ? value : undefined;
-}
-// packages/toolu-core/src/state/state-schema.ts
-var GATE_FILE_VERSION = 1;
-var TELEMETRY_VERSION = 1;
-var Version = literal(GATE_FILE_VERSION).optional();
-var GateEntrySchema2 = strictObject({
-  source: string2(),
-  reason: string2(),
-  violations: string2(),
-  updatedAt: string2()
-});
-var PassingSchema = strictObject({
-  version: Version,
-  status: literal("passing"),
-  source: string2(),
-  updatedAt: string2()
-});
-var FailingSchema = strictObject({
-  version: Version,
-  status: literal("failing"),
-  reason: string2(),
-  source: string2(),
-  file: string2(),
-  violations: string2(),
-  entries: record(string2(), GateEntrySchema2).optional(),
-  updatedAt: string2()
-});
-var GateFileSchema = discriminatedUnion("status", [PassingSchema, FailingSchema]);
-var text3 = string2();
-var maybeText = string2().nullable();
-var TELEMETRY_EXTRAS = {
-  gate_fail: strictObject({ file: text3, source: text3 }),
-  gate_clear: strictObject({ file: text3, source: text3 }),
-  step_run: strictObject({
-    step_id: text3,
-    status: text3,
-    exit_code: number2(),
-    duration_s: number2(),
-    attempt: number2()
-  }),
-  ac_coverage: strictObject({ covered: number2(), uncovered: number2() }),
-  docs_attested: strictObject({ decision: text3 }),
-  docs_nudge: strictObject({}),
-  push_check: strictObject({ result: text3, reason_code: text3, round: number2().nullable() }),
-  delegation: strictObject({
-    model: maybeText,
-    subagent_type: maybeText,
-    reasoning_effort: maybeText,
-    step_id: maybeText,
-    step_model: maybeText
-  })
-};
-function isTelemetryEvent(event) {
-  return Object.hasOwn(TELEMETRY_EXTRAS, event);
-}
-var Protocol = {
-  v: literal(TELEMETRY_VERSION),
-  t: text3,
-  branch: text3
-};
-var TelemetryLineSchema = discriminatedUnion("event", [
-  TELEMETRY_EXTRAS.gate_fail.extend({ ...Protocol, event: literal("gate_fail") }),
-  TELEMETRY_EXTRAS.gate_clear.extend({ ...Protocol, event: literal("gate_clear") }),
-  TELEMETRY_EXTRAS.step_run.extend({ ...Protocol, event: literal("step_run") }),
-  TELEMETRY_EXTRAS.ac_coverage.extend({ ...Protocol, event: literal("ac_coverage") }),
-  TELEMETRY_EXTRAS.docs_attested.extend({ ...Protocol, event: literal("docs_attested") }),
-  TELEMETRY_EXTRAS.docs_nudge.extend({ ...Protocol, event: literal("docs_nudge") }),
-  TELEMETRY_EXTRAS.push_check.extend({ ...Protocol, event: literal("push_check") }),
-  TELEMETRY_EXTRAS.delegation.extend({ ...Protocol, event: literal("delegation") })
-]);
-var EDIT_OPERATIONS = ["add", "update", "delete", "write", "move"];
-var EditRecordSchema = strictObject({
-  path: string2().min(1),
-  operation: _enum(EDIT_OPERATIONS),
-  moved_to: string2().optional(),
-  from: string2().optional()
-});
-
-// packages/toolu-core/src/state/telemetry.ts
-import { appendFileSync, mkdirSync as mkdirSync2 } from "fs";
-import { join as join11 } from "path";
-
-// packages/toolu-core/src/state/state-git.ts
-import { spawnSync as spawnSync5 } from "child_process";
-function currentBranch(root, env) {
-  const res = spawnSync5("git", ["-C", root, "rev-parse", "--abbrev-ref", "HEAD"], {
-    env: childEnv(env),
-    encoding: "utf8"
-  });
-  return res.error === undefined ? res.stdout.replace(/\n+$/, "") : "";
-}
-
-// packages/toolu-core/src/state/telemetry.ts
-var TELEMETRY_MAX_LINE_BYTES = 3900;
-function skip(reason) {
-  return { written: false, reason };
-}
-function assemble(event, extras, branch, now) {
-  if (!isTelemetryEvent(event)) {
-    return new Error(`telemetry: unknown event "${event}"; skipping append`);
-  }
-  const checked = TELEMETRY_EXTRAS[event].safeParse(extras);
-  if (!checked.success) {
-    return new Error(`telemetry: invalid extras for event "${event}"; skipping append`);
-  }
-  const line = toJqJson({ ...checked.data, v: TELEMETRY_VERSION, t: isoSeconds(now), branch, event }, false);
-  const bytes = Buffer.byteLength(line, "utf8");
-  if (bytes > TELEMETRY_MAX_LINE_BYTES) {
-    return new Error(`telemetry: assembled line for event "${event}" is ${String(bytes)} bytes (>${String(TELEMETRY_MAX_LINE_BYTES)}); skipping append`);
-  }
-  return line;
-}
-function telemetryAppend(root, event, extras, options = {}) {
-  if (root === "")
-    return skip("no root");
-  const env = options.env ?? process.env;
-  const warn = options.warn ?? stderrWarn2;
-  const host = options.host ?? options.config?.host;
-  const scoped = host === undefined ? { env } : { env, host };
-  const config = options.config ?? loadConfig({ ...scoped, cwd: root, warn });
-  if (!enabled(config, "telemetry", "enabled"))
-    return skip("disabled");
-  const branch = currentBranch(root, env);
-  if (branch === "" || branch === "HEAD")
-    return skip("no branch");
-  const line = assemble(event, extras, branch, options.now?.() ?? new Date);
-  if (line instanceof Error) {
-    warn(line.message);
-    return skip(line.message);
-  }
-  const dir = envValue(env, "TELEMETRY_DIR") ?? projectStateDir("telemetry", { ...scoped, host: config.host, root });
-  if (dir === undefined)
-    return skip("no state dir");
-  const file = join11(dir, `${branchSlug(branch)}.jsonl`);
-  try {
-    mkdirSync2(dir, { recursive: true });
-    appendFileSync(file, `${line}
-`);
-  } catch (error) {
-    return skip(`could not append to ${file}: ${String(error)}`);
-  }
-  return { written: true, file };
-}
-
-// packages/toolu-core/src/gates/command-analysis.ts
-var analyses2 = new WeakMap;
-// packages/toolu-core/src/ledger/push-waiver.ts
-import { mkdirSync as mkdirSync3, readFileSync as readFileSync7, rmSync as rmSync3, statSync as statSync8 } from "fs";
-import { dirname as dirname2 } from "path";
-var PUSH_WAIVER_VERSION = 1;
-function pushWaiverDir(root, options = {}) {
-  const o = resolveHost({
-    env: options.env ?? process.env,
-    ...options.host === undefined ? {} : { host: options.host }
-  });
-  const override = envValue(o.env, "STATE_DIR");
-  if (override !== undefined)
-    return override;
-  return projectStateDir("push-review", root === "" ? o : { ...o, root }) ?? "";
-}
-function pushWaiverPath(root, slug, options = {}) {
-  return `${pushWaiverDir(root, options)}/${slug}.waiver.json`;
-}
-function pushWaiverPendingPath(root, slug, options = {}) {
-  return `${pushWaiverDir(root, options)}/${slug}.pending-waiver.json`;
-}
-function readObject(file) {
-  try {
-    if (!statSync8(file).isFile())
-      return;
-    const value = parseJson(readFileSync7(file, "utf8"));
-    return isObject2(value) ? value : undefined;
-  } catch {
-    return;
-  }
-}
-function waiverSha(file) {
-  const doc = readObject(file);
-  if (doc === undefined)
-    return;
-  try {
-    if (raw(alt(get(doc, "version"), "")) !== String(PUSH_WAIVER_VERSION))
-      return;
-    const sha = raw(alt(get(doc, "diff_sha"), ""));
-    return sha === "" ? undefined : sha;
-  } catch (error) {
-    if (error instanceof JqError)
-      return;
-    throw error;
-  }
-}
-function write(file, doc) {
-  try {
-    mkdirSync3(dirname2(file), { recursive: true });
-  } catch {
-    return false;
-  }
-  return writeAtomic(file, `${toJqJson(doc, false)}
-`);
-}
-function now(options) {
-  return isoSeconds(options.now?.() ?? new Date);
-}
-function pushWaiverMatches(root, slug, sha, options = {}) {
-  return sha !== "" && waiverSha(pushWaiverPath(root, slug, options)) === sha;
-}
-function pushWaiverPend(root, slug, sha, base, reasonCode, options = {}) {
-  if (sha === "")
-    return false;
-  const doc = {
-    version: 1,
-    branch: slug,
-    diff_sha: sha,
-    base_branch: base,
-    reason_code: reasonCode,
-    asked_at: now(options)
-  };
-  return write(pushWaiverPendingPath(root, slug, options), doc);
-}
-
-// packages/toolu-core/src/state/diff-sha.ts
-function diffSha(repoRoot, baseRef, options = {}) {
-  if (baseRef.startsWith("-"))
-    return;
-  const env = childEnv(options.env ?? process.env);
-  const diff = Bun.spawnSync(["git", "-C", repoRoot, "diff", "--no-color", `${baseRef}...HEAD`], {
-    env,
-    stdout: "pipe",
-    stderr: "ignore"
-  });
-  if (!diff.success)
-    return;
-  const hash = Bun.spawnSync(["git", "-C", repoRoot, "hash-object", "--stdin"], {
-    env,
-    stdin: diff.stdout,
-    stdout: "pipe",
-    stderr: "ignore"
-  });
-  if (!hash.success)
-    return;
-  const sha = hash.stdout.toString("utf8").trim();
-  return sha === "" ? undefined : sha;
-}
-// packages/toolu-core/src/gates/bash-pattern.ts
-var CLASSES = {
-  alnum: /[\p{L}\p{N}]/u,
-  alpha: /\p{L}/u,
-  blank: /[ \t]/,
-  cntrl: /\p{Cc}/u,
-  digit: /[0-9]/,
-  graph: /[^\s\p{Cc}]/u,
-  lower: /\p{Ll}/u,
-  print: /[^\p{Cc}]/u,
-  punct: /[!-/:-@[-`{-~]/,
-  space: /\s/,
-  upper: /\p{Lu}/u,
-  word: /[\p{L}\p{N}_]/u,
-  xdigit: /[0-9A-Fa-f]/
-};
-function bracketMember(chars, at) {
-  const open = chars[at];
-  const kind = chars[at + 1];
-  if (open === "[" && (kind === ":" || kind === "=" || kind === ".")) {
-    const close = chars.indexOf(kind, at + 2);
-    if (close !== -1 && chars[close + 1] === "]") {
-      const name = chars.slice(at + 2, close).join("");
-      const next = close + 2;
-      if (kind === ":") {
-        const cls = CLASSES[name];
-        if (name === "ascii")
-          return { next, test: (c) => (c.codePointAt(0) ?? 128) < 128 };
-        return cls === undefined ? { next, test: () => false } : { next, test: (c) => cls.test(c) };
-      }
-      return { next, test: (c) => c === name, char: name };
-    }
-  }
-  if (open === "\\" && at + 1 < chars.length) {
-    const char = chars[at + 1] ?? "";
-    return { next: at + 2, test: (c) => c === char, char };
-  }
-  if (open === undefined)
-    return;
-  return { next: at + 1, test: (c) => c === open, char: open };
-}
-function parseBracket(chars, start) {
-  let at = start + 1;
-  const negated = chars[at] === "!" || chars[at] === "^";
-  if (negated)
-    at += 1;
-  const tests = [];
-  let first = true;
-  while (at < chars.length) {
-    if (chars[at] === "]" && !first) {
-      const bracket = { negated, test: (c) => tests.some((t) => t(c)) };
-      return { next: at + 1, bracket };
-    }
-    first = false;
-    const member = bracketMember(chars, at);
-    if (member === undefined)
-      return;
-    const low = member.char;
-    if (low !== undefined && chars[member.next] === "-" && chars[member.next + 1] !== "]") {
-      const high = bracketMember(chars, member.next + 1);
-      if (high?.char !== undefined) {
-        const lo = low.codePointAt(0) ?? 0;
-        const hi = high.char.codePointAt(0) ?? 0;
-        tests.push((c) => {
-          const code = c.codePointAt(0) ?? -1;
-          return code >= lo && code <= hi;
-        });
-        at = high.next;
-        continue;
-      }
-    }
-    tests.push(member.test);
-    at = member.next;
-  }
-  return;
-}
-function extglobEnd(chars, start) {
-  let depth = 0;
-  const bars = [];
-  let at = start;
-  while (at < chars.length) {
-    const c = chars[at];
-    if (c === "\\") {
-      at += 2;
-      continue;
-    }
-    if (c === "[") {
-      const bracket = parseBracket(chars, at);
-      if (bracket !== undefined) {
-        at = bracket.next;
-        continue;
-      }
-    }
-    if (c === "(")
-      depth += 1;
-    if (c === ")") {
-      if (depth === 0)
-        return { end: at, bars };
-      depth -= 1;
-    }
-    if (c === "|" && depth === 0)
-      bars.push(at);
-    at += 1;
-  }
-  return;
-}
-var EXT_OPS = new Set(["?", "*", "+", "@", "!"]);
-function isExtOp(c) {
-  return c !== undefined && EXT_OPS.has(c);
-}
-function parse5(chars, from, to) {
-  const nodes = [];
-  let at = from;
-  while (at < to) {
-    const c = chars[at] ?? "";
-    if (isExtOp(c) && chars[at + 1] === "(") {
-      const close = extglobEnd(chars, at + 2);
-      if (close !== undefined && close.end < to) {
-        const bounds = [at + 1, ...close.bars, close.end];
-        const alternatives = bounds.slice(1).map((end, i) => parse5(chars, (bounds[i] ?? 0) + 1, end));
-        nodes.push({ kind: "ext", op: c, alternatives });
-        at = close.end + 1;
-        continue;
-      }
-    }
-    if (c === "*") {
-      nodes.push({ kind: "star" });
-    } else if (c === "?") {
-      nodes.push({ kind: "any" });
-    } else if (c === "[") {
-      const bracket = parseBracket(chars, at);
-      if (bracket !== undefined && bracket.next <= to) {
-        nodes.push({ kind: "bracket", bracket: bracket.bracket });
-        at = bracket.next;
-        continue;
-      }
-      nodes.push({ kind: "literal", char: c });
-    } else if (c === "\\" && at + 1 < to) {
-      nodes.push({ kind: "literal", char: chars[at + 1] ?? "" });
-      at += 2;
-      continue;
-    } else {
-      nodes.push({ kind: "literal", char: c });
-    }
-    at += 1;
-  }
-  return nodes;
-}
-function anyAlt(alternatives, span, start, end) {
-  return alternatives.some((alt) => matchSeq(alt, span.text, start, end));
-}
-function matchExt(node, span, pos, rest) {
-  const { op, alternatives } = node;
-  if (op === "!") {
-    for (let end = pos;end <= span.to; end += 1) {
-      if (!anyAlt(alternatives, span, pos, end) && rest(end))
-        return true;
-    }
-    return false;
-  }
-  if ((op === "?" || op === "*") && rest(pos))
-    return true;
-  for (let end = pos + (op === "@" || op === "?" ? 0 : 1);end <= span.to; end += 1) {
-    if (!anyAlt(alternatives, span, pos, end))
-      continue;
-    if (rest(end))
-      return true;
-    const again = (op === "*" || op === "+") && end > pos;
-    if (again && matchExt({ ...node, op: "*" }, span, end, rest))
-      return true;
-  }
-  return false;
-}
-function matchSeq(nodes, text, from, to) {
-  const span = { text, to };
-  const memo = new Map;
-  const step = (i, pos) => {
-    const key = i * (to + 1) + pos;
-    const cached = memo.get(key);
-    if (cached !== undefined)
-      return cached;
-    const result = stepAt(i, pos);
-    memo.set(key, result);
-    return result;
-  };
-  const stepAt = (i, pos) => {
-    const node = nodes[i];
-    if (node === undefined)
-      return pos === to;
-    const char = text[pos];
-    switch (node.kind) {
-      case "literal":
-        return char === node.char && step(i + 1, pos + 1);
-      case "any":
-        return pos < to && step(i + 1, pos + 1);
-      case "bracket":
-        return char !== undefined && pos < to && node.bracket.test(char) !== node.bracket.negated && step(i + 1, pos + 1);
-      case "star":
-        for (let end = pos;end <= to; end += 1)
-          if (step(i + 1, end))
-            return true;
-        return false;
-      case "ext":
-        return matchExt(node, span, pos, (end) => step(i + 1, end));
-      default: {
-        const never = node;
-        return never;
-      }
-    }
-  };
-  return step(0, from);
-}
-function compileBashPattern(pattern) {
-  const chars = Array.from(pattern);
-  const nodes = parse5(chars, 0, chars.length);
-  return (text) => {
-    const units = Array.from(text);
-    return matchSeq(nodes, units, 0, units.length);
-  };
-}
-function bashPatternMatch(pattern, text) {
-  return compileBashPattern(pattern)(text);
-}
-// packages/toolu-core/src/gates/code-edit-rules.ts
-import { readFileSync as readFileSync8 } from "fs";
-import { join as join13 } from "path";
-
-// packages/toolu-core/src/gates/gate-paths.ts
-import { readdirSync as readdirSync2 } from "fs";
-import { join as join12 } from "path";
-function repoRelative(path, root) {
-  if (root === undefined || root === "")
-    return path;
-  return path.startsWith(`${root}/`) ? path.slice(root.length + 1) : path;
-}
-function globs(segment) {
-  const unescaped = segment.replace(/\\./gs, "");
-  return /[*?]/.test(unescaped) || /\[[^\]]*\]/.test(unescaped) || /[@!+]\(/.test(unescaped);
-}
-function unescape(segment) {
-  return segment.replace(/\\(.)/gs, "$1");
-}
-function entries(dir) {
-  try {
-    return readdirSync2(dir).toSorted();
-  } catch {
-    return [];
-  }
-}
-function expandPattern(pattern, cwd) {
-  const absolute = pattern.startsWith("/");
-  const segments = (absolute ? pattern.slice(1) : pattern).split("/");
-  let found = [{ shown: [], onDisk: absolute ? "/" : cwd }];
-  for (const segment of segments) {
-    if (!globs(segment)) {
-      const name = unescape(segment);
-      found = found.map((f) => ({ shown: [...f.shown, name], onDisk: join12(f.onDisk, name) }));
-      continue;
-    }
-    const match = compileBashPattern(segment);
-    const dotted = segment.startsWith(".");
-    found = found.flatMap((f) => entries(f.onDisk).filter((name) => (dotted || !name.startsWith(".")) && match(name)).map((name) => ({ shown: [...f.shown, name], onDisk: join12(f.onDisk, name) })));
-  }
-  const paths = found.map((f) => `${absolute ? "/" : ""}${f.shown.join("/")}`);
-  return [...new Set([...paths, pattern])];
-}
-
-// packages/toolu-core/src/gates/code-edit-rules.ts
-var EDIT_TOOLS2 = new Set(["Edit", "Write", "MultiEdit"]);
-function scalarText(value) {
-  if (typeof value === "string")
-    return value;
-  if (typeof value === "number" || typeof value === "boolean")
-    return JSON.stringify(value);
-  return;
-}
-function joined2(value) {
-  if (!Array.isArray(value))
-    return "";
-  const parts = value.map((item) => item === null ? "" : scalarText(item));
-  return parts.every((part) => part !== undefined) ? parts.join(" + ") : "";
-}
-function patterns(value) {
-  if (!Array.isArray(value))
-    return [];
-  return value.flatMap((item) => {
-    const text = item === null ? "null" : scalarText(item);
-    return text === undefined ? [] : [text];
-  });
-}
-function readRules(path) {
-  try {
-    const parsed = JSON.parse(readFileSync8(path, "utf8"));
-    const rules = isJsonObject(parsed) ? parsed.rules : undefined;
-    return Array.isArray(rules) ? rules : [];
-  } catch {
-    return [];
-  }
-}
-function docsFor(rules, rel) {
-  for (const rule of rules) {
-    if (!isJsonObject(rule))
-      continue;
-    const match = rule.match === false ? undefined : scalarText(rule.match);
-    if (match === undefined || match === "" || !bashPatternMatch(match, rel))
-      continue;
-    const docs = [joined2(rule.docs)];
-    if (patterns(rule.when_path_matches).some((cond) => bashPatternMatch(cond, rel))) {
-      docs.push(joined2(rule.extra_docs));
-    }
-    return docs.filter((d) => d !== "" && d !== "null").join(" + ");
-  }
-  return "";
-}
-function decide4(event, ctx, options) {
-  if (event.type !== "tool/pre" || !EDIT_TOOLS2.has(event.toolName))
-    return ALLOW;
-  const dir = gateSettingsDir(ctx, options);
-  const file = dir === undefined ? undefined : join13(dir, SETTINGS_FILES.codeEditRules);
-  if (file === undefined || !isFile(file))
-    return ALLOW;
-  const path = inputString(event, "file_path");
-  if (path === "")
-    return ALLOW;
-  const root = path.startsWith("/") ? gitToplevel(ctx.env, ctx.cwd ?? process.cwd()) : undefined;
-  const rel = repoRelative(path, root);
-  const docs = docsFor(readRules(file), rel);
-  if (docs === "")
-    return ALLOW;
-  return { kind: "advisory", message: `File: ${rel}
-Apply these rules: ${docs}` };
-}
-function codeEditRulesModule(options = {}) {
-  return {
-    kind: "native",
-    name: "code-edit-rules",
-    run: (event, ctx) => Promise.resolve(decide4(event, ctx, options))
-  };
-}
-// packages/toolu-core/src/gates/mcp-blocker.ts
-import { readFileSync as readFileSync9 } from "fs";
-import { dirname as dirname3 } from "path";
-
-// packages/toolu-core/src/gates/mcp-scope.ts
-import { join as join14 } from "path";
-function mcpServer(toolName) {
-  if (!toolName.startsWith("mcp__"))
-    return;
-  const rest = toolName.slice("mcp__".length);
-  const end = rest.indexOf("__");
-  return end === -1 ? undefined : rest.slice(0, end);
-}
-function mcpBlocklistFile(scope) {
-  const dir = settingsDir({
-    env: scope.env,
-    ...scope.pluginRoot === undefined ? {} : { pluginRoot: scope.pluginRoot }
-  });
-  return dir === undefined ? undefined : join14(dir, SETTINGS_FILES.mcpBlocklist);
-}
-function mcpHasSources(scope) {
-  const list = mcpBlocklistFile(scope);
-  return list !== undefined && isFile(list) || configExists({ env: scope.env, host: scope.host });
-}
-
-// packages/toolu-core/src/gates/mcp-blocker.ts
-function configEntry(key) {
-  const arrow = key.indexOf(" -> ");
-  return {
-    prefix: (arrow === -1 ? key : key.slice(0, arrow)).trim(),
-    redirect: arrow === -1 ? "" : key.slice(arrow + 4)
-  };
-}
-function mcpSection(config) {
-  if (config.invalid === undefined)
-    return section(config, "mcp") ?? {};
-  const merged = {};
-  for (const path of [config.files.user, config.files.project]) {
-    if (path === undefined || !isFile(path))
-      continue;
-    try {
-      const raw = JSON.parse(readFileSync9(path, "utf8"));
-      const mcp = isJsonObject(raw) ? raw.mcp : undefined;
-      if (isJsonObject(mcp))
-        Object.assign(merged, mcp);
-    } catch {}
-  }
-  return merged;
-}
-function matchEntry(entries, server) {
-  return entries.find((entry) => entry.prefix !== "" && server.startsWith(entry.prefix));
-}
-function reason(mode, block) {
-  const { tool, server, origin } = block;
-  const headline = `Claude is calling MCP tool "${tool}", on the blocked server "${server}" (${origin}).`;
-  let detail = "Blocked MCP servers are ones this project has decided not to reach through an MCP bridge \u2014 usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither.";
-  if (block.redirect !== "")
-    detail = `${detail} Use instead: ${block.redirect}`;
-  if (mode === "ask")
-    return guardrailWarning(headline, detail);
-  if (mode === "advise") {
-    return `MCP server "${server}" is blocked (${origin}). ${detail} The call was NOT stopped \u2014 gates.mcpBlocker.mode is 'advise'.`;
-  }
-  return `MCP server "${server}" is blocked (${origin}). ${detail}`;
-}
-function decide5(event, ctx, options) {
-  const tool = event.toolName;
-  const server = mcpServer(tool);
-  if (server === undefined)
-    return ALLOW;
-  const scope = { env: ctx.env, host: ctx.host, pluginRoot: options.pluginRoot };
-  if (!mcpHasSources(scope))
-    return ALLOW;
-  const list = mcpBlocklistFile(scope);
-  const fromFile = list === undefined ? undefined : matchEntry(mcpBlocklist(dirname3(list)), server);
-  const config = gateConfig(ctx, options);
-  const disabled = Object.entries(mcpSection(config)).filter(([, value]) => value === false).map(([key]) => configEntry(key));
-  const fromConfig = fromFile === undefined ? matchEntry(disabled, server) : undefined;
-  const match = fromFile ?? fromConfig;
-  if (match === undefined)
-    return ALLOW;
-  const origin = fromFile === undefined ? `disabled in your toolu config (mcp.${server}=false)` : "listed in settings/mcp-blocklist.txt";
-  const mode = gateMode(config, "mcpBlocker", { host: ctx.host, event: "tool/pre" });
-  const block = { tool, server, origin, redirect: match.redirect };
-  return gateDecision(mode, reason(mode, block)) ?? ALLOW;
-}
-function mcpBlockerModule(options = {}) {
-  return {
-    kind: "native",
-    name: "mcp-blocker",
-    run: (event, ctx) => Promise.resolve(decide5(event, ctx, options))
-  };
-}
-// packages/toolu-core/src/gates/protected-files.ts
-import { basename as basename5, join as join16 } from "path";
-
-// packages/toolu-core/src/shell/shell-writes.ts
-import { basename as basename4 } from "path";
-function writesFile(redirect) {
-  if (redirect.operator === ">&")
-    return !/^(\d+|-)$/.test(redirect.target ?? "");
-  return /^(>>?|>\||&>>?|<>)$/.test(redirect.operator);
-}
-function argAt(command, index) {
-  const text = command.texts[index] ?? "";
-  return { path: command.argv[index] ?? null, pattern: command.patterns[index] ?? null, text };
-}
-function operands(command, parsed) {
-  return parsed.operandAt.map((index) => argAt(command, index));
-}
-function join15(dir, source) {
-  return dir === null || source === null ? null : `${dir.replace(/\/+$/, "")}/${basename4(source)}`;
-}
-function inDir(dir, source) {
-  const path = join15(dir.path, source.path);
-  const pattern = path === null ? join15(dir.path ?? dir.pattern, source.path ?? source.pattern) : null;
-  return { path, pattern, text: join15(dir.text, source.text) ?? "" };
-}
-function copyTargets(command, spec, installDirs = false) {
-  const parsed = parseArgs(command.argv, 1, spec);
-  const files = operands(command, parsed);
-  if (installDirs && hasOption(parsed, "d directory"))
-    return files;
-  const dir = parsed.options.find((option) => named("t target-directory", option.name));
-  if (dir !== undefined) {
-    const value = dir.value ?? null;
-    const into = dir.at === null ? { path: value, pattern: null, text: value ?? "" } : argAt(command, dir.at);
-    return files.map((source) => inDir(into, source));
-  }
-  const dest = files.pop();
-  if (dest === undefined || files.length === 0)
-    return [];
-  if (dest.path === null && dest.pattern === null)
-    return [dest];
-  return [dest, ...files.map((source) => inDir(dest, source))];
-}
-function inPlaceTargets(command, spec, script) {
-  const parsed = parseArgs(command.argv, 1, spec);
-  if (!hasOption(parsed, "i in-place"))
-    return [];
-  const bsd = command.argv.findIndex((word, i) => word === "-i" && command.argv[i + 1] === "");
-  const files = parsed.operandAt.filter((index) => bsd === -1 || index !== bsd + 1);
-  return files.slice(hasOption(parsed, script) ? 0 : 1).map((index) => argAt(command, index));
-}
-var PY_PATH = /^\s*([rRbBuUfF]{0,2})('''|"""|'|")([\s\S]*?)\2\s*/;
-var PY_MODE = /^,\s*(?:mode\s*=\s*)?[rRbBuUfF]{0,2}('''|"""|'|")([\s\S]*?)\1\s*[,)]/;
-var PY_WRITE_API = /\b(?:write_text|write_bytes|touch|symlink_to|hardlink_to|shutil\.(?:copy\w*|move)|os\.(?:rename|replace|symlink|link))\s*\(/;
-function pythonOpen(args, method) {
-  const path = method ? null : PY_PATH.exec(args);
-  if (path === null)
-    return null;
-  const rest = args.slice(path[0].length);
-  if (rest.startsWith(")"))
-    return;
-  const mode = PY_MODE.exec(rest)?.[2];
-  if (mode === undefined)
-    return null;
-  if (!/[wax+]/.test(mode))
-    return;
-  const body = path[3] ?? "";
-  return /[fF]/.test(path[1] ?? "") && body.includes("{") ? null : body;
-}
-function pythonScript(command) {
-  const parsed = parseArgs(command.argv, 1, { valueShort: "cmWX", stopAtOperand: true });
-  const [inline] = optionValues(parsed, "c");
-  if (inline !== undefined)
-    return inline;
-  if (hasOption(parsed, "m"))
-    return;
-  const operand = command.argv[parsed.next];
-  return operand === undefined || operand === "-" ? stdinScript(command.redirects) : undefined;
-}
-function pythonTargets(command) {
-  const script = pythonScript(command);
-  if (script === undefined)
-    return [];
-  const paths = script === null ? [null] : [...script.matchAll(/(\.?)\bopen\s*\(/g)].map((call) => pythonOpen(script.slice(call.index + call[0].length), call[1] === "."));
-  if (script !== null && PY_WRITE_API.test(script))
-    paths.push(null);
-  return paths.flatMap((path) => path === undefined ? [] : [{ path, pattern: null, text: path ?? "" }]);
-}
-var MOVE = { valueShort: "tS", valueLong: "target-directory suffix" };
-var WRITERS = {
-  tee: { via: "tee", targets: (c) => operands(c, parseArgs(c.argv, 1, {})) },
-  sed: {
-    via: "sed",
-    targets: (c) => inPlaceTargets(c, { valueShort: "efl", restShort: "i", valueLong: "expression file line-length" }, "e f expression file")
-  },
-  perl: {
-    via: "perl",
-    targets: (c) => inPlaceTargets(c, { valueShort: "eE", restShort: "iIMmlx0dDC" }, "e E")
-  },
-  cp: { via: "cp", targets: (c) => copyTargets(c, MOVE) },
-  mv: { via: "mv", targets: (c) => copyTargets(c, MOVE) },
-  install: {
-    via: "install",
-    targets: (c) => copyTargets(c, {
-      valueShort: "tSmog",
-      valueLong: "target-directory suffix mode owner group strip-program"
-    }, true)
-  },
-  dd: {
-    via: "dd",
-    targets: (c) => c.texts.flatMap((text, index) => {
-      const word = c.argv[index] ?? c.patterns[index];
-      const path = word?.startsWith("of=") === true ? word.slice(3) : null;
-      return text.startsWith("of=") ? [{ path, pattern: null, text: text.slice(3) }] : [];
-    })
-  },
-  python: { via: "python", targets: pythonTargets }
-};
-function redirectTargets(redirects, command) {
-  return redirects.filter(writesFile).map(({ target, pattern, text }) => ({
-    path: target,
-    pattern,
-    text,
-    via: "redirect",
-    command
-  }));
-}
-function writeTargets(analysis) {
-  const targets = analysis.commands.flatMap((command) => {
-    const name = basename4(command.argv[0] ?? "").replace(/^python[0-9.]*$/, "python");
-    const writer = Object.hasOwn(WRITERS, name) ? WRITERS[name] : undefined;
-    const fromArgs = writer === undefined ? [] : writer.targets(command).map(({ path, pattern, text }) => ({ path, pattern, text, via: writer.via, command }));
-    return [...redirectTargets(command.redirects, command), ...fromArgs];
-  });
-  return [...targets, ...redirectTargets(analysis.compoundRedirects, null)];
-}
-
-// packages/toolu-core/src/gates/protected-files.ts
-var EDIT_TOOLS3 = new Set(["Edit", "Write", "MultiEdit"]);
-function shellCandidates(event) {
-  const out = writeTargets(shellAnalysisOf(event)).flatMap((target) => {
-    if (target.path !== null)
-      return [target.path];
-    if (target.pattern !== null)
-      return expandPattern(target.pattern, event.cwd);
-    return target.text === "" ? [] : [target.text];
-  });
-  return [...new Set(out.filter((path) => path !== ""))];
-}
-function candidates(event) {
-  if (event.type === "shell/pre")
-    return shellCandidates(event);
-  if (!EDIT_TOOLS3.has(event.toolName))
-    return [];
-  const path = inputString(event, "file_path");
-  return path === "" ? [] : [path];
-}
-function rule(pattern) {
-  const tests = [compileBashPattern(pattern)];
-  if (!pattern.startsWith("**/"))
-    tests.push(compileBashPattern(`**/${pattern}`));
-  const byName = pattern.includes("/") ? undefined : compileBashPattern(pattern);
-  return { pattern, tests, byName };
-}
-function firstMatch(rules, rel) {
-  return rules.find((r) => r.tests.some((t) => t(rel)) || r.byName?.(basename5(rel)) === true)?.pattern;
-}
-var DETAILS = [
-  [
-    compileBashPattern("@(*.env.example|*.env.template|*.env.sample)"),
-    "This is an example/template env file. It is committed on purpose, so it should carry placeholders and never live values \u2014 it is guarded because a real credential pasted here is a credential published to the repo."
-  ],
-  [
-    compileBashPattern("@(.env|.env.*|*secrets*)"),
-    "This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push."
-  ],
-  [
-    compileBashPattern("@(.git/*|*/.git/*)"),
-    "This is git's internal state. Approving lets an agent rewrite refs, hooks, or config \u2014 including hooks that run on your machine at every commit."
-  ],
-  [
-    compileBashPattern("@(*hooks/*|*skills/*)"),
-    "This is toolu's own enforcement code \u2014 the hooks that run every other gate. Approving lets an agent edit the thing that is supposed to be watching it, which is how a guardrail gets quietly switched off."
-  ]
-];
-var DEFAULT_DETAIL = "This path is listed in settings/protected-files.txt because edits to it are hard to notice and expensive to get wrong.";
-function detailFor(rel) {
-  return DETAILS.find(([test]) => test(rel))?.[1] ?? DEFAULT_DETAIL;
-}
-function reason2(mode, hit) {
-  const { candidate, matched } = hit;
-  const detail = detailFor(hit.rel);
-  const headline = hit.shell ? `This command would WRITE to ${candidate}, a protected path (matches "${matched}").` : `Claude is trying to edit ${candidate}, a protected path (matches "${matched}").`;
-  if (mode === "ask")
-    return guardrailWarning(headline, detail);
-  if (mode === "advise") {
-    return `Protected path ${candidate} (matches "${matched}"). ${detail} The write was NOT stopped \u2014 gates.protectedFiles.mode is 'advise'.`;
-  }
-  return `${headline} ${detail} Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).`;
-}
-function findHit(paths, rules, ctx, shell) {
-  let root;
-  for (const candidate of paths) {
-    if (candidate.startsWith("/"))
-      root ??= gitToplevel(ctx.env, ctx.cwd ?? process.cwd()) ?? "";
-    const rel = repoRelative(candidate, root);
-    const matched = firstMatch(rules, rel);
-    if (matched !== undefined)
-      return { candidate, rel, matched, shell };
-  }
-  return;
-}
-function decide6(event, ctx, options) {
-  const dir = gateSettingsDir(ctx, options);
-  if (dir === undefined)
-    return ALLOW;
-  const rules = readList(join16(dir, SETTINGS_FILES.protectedFiles)).map(rule);
-  if (rules.length === 0)
-    return ALLOW;
-  const paths = candidates(event);
-  if (paths.length === 0)
-    return ALLOW;
-  const hit = findHit(paths, rules, ctx, event.type === "shell/pre");
-  if (hit === undefined)
-    return ALLOW;
-  const mode = gateMode(gateConfig(ctx, options), "protectedFiles", {
-    host: ctx.host,
-    event: preToolHostEvent(event)
-  });
-  return gateDecision(mode, reason2(mode, hit)) ?? ALLOW;
-}
-function protectedFilesModule(options = {}) {
-  return {
-    kind: "native",
-    name: "protected-files",
-    run: (event, ctx) => Promise.resolve(decide6(event, ctx, options))
-  };
-}
-// packages/toolu-core/src/config/docs-sync-config.ts
-var DOCS_SYNC_DEFAULTS = {
-  surfaces: [
-    "README.md",
-    "*/README.md",
-    "docs/*.md",
-    "*/SKILL.md",
-    "AGENTS.md",
-    "*/AGENTS.md",
-    "CLAUDE.md",
-    "*/CLAUDE.md",
-    "*/workflows/*.md"
-  ],
-  surfaceExcludes: ["docs/releases/*", "*/docs/releases/*"],
-  codeSurfaces: ["*.ts", "*.rs", "*.sh", "*/commands/*", "*plugin.json", "*.config.json"]
-};
-function jqRawLines(items) {
-  const text = items.map((item) => typeof item === "string" ? item : JSON.stringify(item, null, 2)).join(`
-`).replace(/\n+$/, "");
-  return text === "" ? [] : text.split(`
-`);
-}
-function globs2(config, key) {
-  const value = section(config, "docsSync")?.[key];
-  const lines = Array.isArray(value) ? jqRawLines(value) : [];
-  return lines.length > 0 ? lines : [...DOCS_SYNC_DEFAULTS[key]];
-}
-function docsSyncSurfaces(config) {
-  return globs2(config, "surfaces");
-}
-function docsSyncSurfaceExcludes(config) {
-  return globs2(config, "surfaceExcludes");
-}
-function docsSyncCodeSurfaces(config) {
-  return globs2(config, "codeSurfaces");
-}
-
-// packages/toolu-core/src/ledger/glob.ts
-var CLASSES2 = {
-  alnum: "\\p{L}\\p{N}",
-  alpha: "\\p{L}",
-  blank: " \\t",
-  cntrl: "\\p{Cc}",
-  digit: "0-9",
-  graph: "\\p{L}\\p{N}\\p{P}\\p{S}",
-  lower: "\\p{Ll}",
-  print: "\\p{L}\\p{N}\\p{P}\\p{S} ",
-  punct: "\\p{P}\\p{S}",
-  space: "\\s",
-  upper: "\\p{Lu}",
-  xdigit: "0-9A-Fa-f"
-};
-var escapeChar = (c) => c.replace(/[\\^$.*+?()[\]{}|/]/g, "\\$&");
-var escapeClassChar = (c) => c.replace(/[\\^[\]-]/g, "\\$&");
-function bracket(chars, start) {
-  let i = start + 1;
-  let negate = false;
-  if (chars[i] === "!" || chars[i] === "^") {
-    negate = true;
-    i += 1;
-  }
-  let body = "";
-  let first = true;
-  while (i < chars.length) {
-    const c = chars[i] ?? "";
-    if (c === "]" && !first)
-      return { source: `[${negate ? "^" : ""}${body}]`, end: i };
-    first = false;
-    if (c === "[" && chars[i + 1] === ":") {
-      const close = chars.indexOf(":", i + 2);
-      const name = close === -1 ? "" : chars.slice(i + 2, close).join("");
-      if (close !== -1 && chars[close + 1] === "]" && CLASSES2[name] !== undefined) {
-        body += CLASSES2[name];
-        i = close + 2;
-        continue;
-      }
-    }
-    if (c === "\\" && i + 1 < chars.length) {
-      body += escapeClassChar(chars[i + 1] ?? "");
-      i += 2;
-      continue;
-    }
-    if (c === "-" && body !== "" && chars[i + 1] !== "]" && i + 1 < chars.length) {
-      body += "-";
-      i += 1;
-      continue;
-    }
-    body += escapeClassChar(c);
-    i += 1;
-  }
-  return;
-}
-function globToRegExp(pattern) {
-  const chars = Array.from(pattern);
-  let source = "";
-  for (let i = 0;i < chars.length; i += 1) {
-    const c = chars[i] ?? "";
-    if (c === "*")
-      source += "[\\s\\S]*";
-    else if (c === "?")
-      source += "[\\s\\S]";
-    else if (c === "\\" && i + 1 < chars.length) {
-      source += escapeChar(chars[i + 1] ?? "");
-      i += 1;
-    } else if (c === "[") {
-      const expr = bracket(chars, i);
-      if (expr === undefined)
-        source += "\\[";
-      else {
-        source += expr.source;
-        i = expr.end;
-      }
-    } else
-      source += escapeChar(c);
-  }
-  return new RegExp(`^${source}$`, "u");
-}
-function matchesAny(path, globs) {
-  return globs.some((glob) => glob !== "" && globToRegExp(glob).test(path));
-}
-
-// packages/toolu-core/src/ledger/ledger-parse.ts
-import { readFileSync as readFileSync10, statSync as statSync9 } from "fs";
-var SPACE = "[ \\t\\n\\v\\f\\r]";
-var STEPS_HEADING = new RegExp(`^## Steps \\(machine-readable\\)${SPACE}*$`);
-var JSON_FENCE = new RegExp(`^\`\`\`json${SPACE}*$`);
-var CLOSE_FENCE = new RegExp(`^\`\`\`${SPACE}*$`);
-var AC_HEADING = new RegExp(`^## Acceptance criteria${SPACE}*$`);
-var AC_ID = /\*\*(AC-[0-9]+):\*\*/;
-function isFile3(path) {
-  try {
-    return statSync9(path).isFile();
-  } catch {
-    return false;
-  }
-}
-function lines(path) {
-  let text;
-  try {
-    text = readFileSync10(path, "utf8");
-  } catch {
-    return [];
-  }
-  const out = text.split(`
-`);
-  if (out.at(-1) === "")
-    out.pop();
-  return out;
-}
-function escapeRegExp(text) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-function docField(doc, field) {
-  if (doc === "" || field === "" || !isFile3(doc))
-    return "";
-  const key = `**${field}:**`;
-  const line = lines(doc).find((l) => l.includes(key));
-  if (line === undefined)
-    return "";
-  return line.replace(new RegExp(`^[\\s\\S]*${escapeRegExp(key)}${SPACE}*`), "").replace(new RegExp(`${SPACE}+\\*\\*[^*]+:\\*\\*[\\s\\S]*$`), "").replace(new RegExp(`^${SPACE}+`), "").replace(new RegExp(`${SPACE}+$`), "");
-}
-function parseAcs(doc) {
-  if (doc === "" || !isFile3(doc))
-    return [];
-  const ids = [];
-  let inAc = false;
-  for (const line of lines(doc)) {
-    if (AC_HEADING.test(line)) {
-      inAc = true;
-      continue;
-    }
-    if (inAc && line.startsWith("## "))
-      inAc = false;
-    const id = inAc ? AC_ID.exec(line)?.[1] : undefined;
-    if (id !== undefined && !ids.includes(id))
-      ids.push(id);
-  }
-  return ids;
-}
-function isSpecless(spec) {
-  const lower = spec.replace(/[A-Z]/g, (c) => c.toLowerCase());
-  return lower === "" || lower === "none";
-}
-
-// packages/toolu-core/src/ledger/verdict-gates.ts
-import { readFileSync as readFileSync12 } from "fs";
-
-// packages/toolu-core/src/ledger/ledger-io.ts
-import { mkdirSync as mkdirSync4, readFileSync as readFileSync11, renameSync as renameSync3, rmSync as rmSync4, statSync as statSync10, writeFileSync as writeFileSync3 } from "fs";
-function readLedger(file) {
-  let text;
-  try {
-    if (statSync10(file).size === 0)
-      return;
-    text = readFileSync11(file, "utf8");
-  } catch {
-    return;
-  }
-  const value = parseJson(text);
-  if (value === undefined || value === null || value === false)
-    return;
-  return { value, text: text.replace(/\n+$/, "") };
-}
-
-// packages/toolu-core/src/ledger/verdict-gates.ts
-function readJson(file) {
-  try {
-    return parseJson(readFileSync12(file, "utf8"));
-  } catch {
-    return;
-  }
-}
-function rawOr(fn, fallback = "") {
-  try {
-    return raw(fn());
-  } catch (error) {
-    if (error instanceof JqError)
-      return fallback;
-    throw error;
-  }
-}
 
 // packages/toolu-core/src/gates/push-target.ts
-import { spawnSync as spawnSync6 } from "child_process";
-function pushTarget(event, ctx) {
-  if (event.type !== "shell/pre")
-    return;
-  const analysis = shellAnalysisOf(event);
-  if (!isGitPush(analysis) || !toolAvailable("git", ctx.env))
-    return;
-  const root = pushTargetRoot(analysis, { env: ctx.env, cwd: ctx.cwd ?? process.cwd() });
-  return { root, branch: pushTargetBranch(analysis, root, ctx.env) };
-}
 function gitAt(root, args, env) {
-  const res = spawnSync6("git", ["-C", root, ...args], { env: childEnv(env), encoding: "utf8" });
+  const res = spawnSync3("git", ["-C", root, ...args], { env: childEnv(env), encoding: "utf8" });
   return res.error === undefined && res.status === 0 ? res.stdout : undefined;
 }
-function refExists(root, ref, env) {
-  return gitAt(root, ["rev-parse", "--verify", "--quiet", ref], env) !== undefined;
-}
-function changedNames(root, base, env) {
-  return gitAt(root, ["diff", "--no-color", `${base}...HEAD`, "--name-only"], env) ?? "";
-}
 
-// packages/toolu-core/src/gates/docs-sync.ts
-var CONSEQUENCE = {
-  block: "Push denied until a doc is updated or a valid attestation is written.",
-  ask: "Approve to push anyway, or update the doc first.",
-  advise: "Advisory only \u2014 this does not block the push."
-};
-function evaluate(event, ctx, options) {
-  const target = pushTarget(event, ctx);
-  if (target === undefined)
-    return ALLOW;
-  const { root, branch } = target;
-  if (branch === "" || branch === "HEAD")
-    return ALLOW;
-  const base = envValue(ctx.env, "DOCS_SYNC_BASE") ?? baseBranch(root, ctx.env);
-  if (!refExists(root, base, ctx.env) || branch === base)
-    return ALLOW;
-  const changed = (gitAt(root, ["diff", "--name-only", `${base}...HEAD`], ctx.env) ?? "").split(`
-`).filter((path) => path !== "");
-  if (changed.length === 0)
-    return ALLOW;
-  const sha = diffSha(root, base, { env: ctx.env }) ?? "";
-  const config = gateConfig(ctx, options);
-  const surfaces = docsSyncSurfaces(config);
-  const excludes = docsSyncSurfaceExcludes(config);
-  const code = docsSyncCodeSurfaces(config);
-  const hasDoc = changed.some((p) => matchesAny(p, surfaces) && !matchesAny(p, excludes));
-  const hasCode = changed.some((p) => matchesAny(p, code));
-  if (!hasCode || hasDoc)
-    return ALLOW;
-  const mode = gateMode(config, "docsSync", { host: ctx.host, event: preToolHostEvent(event) });
-  if (mode === "off")
-    return ALLOW;
-  const host = { env: ctx.env, host: ctx.host };
-  const dir = envValue(ctx.env, "DOCS_SYNC_STATE_DIR") ?? projectStateDir("docs-sync", { ...host, root });
-  const file = `${dir ?? ""}/${branchSlug(branch)}.json`;
-  if (isFile3(file) && sha !== "") {
-    const doc = readJson(file) ?? null;
-    if (rawOr(() => alt(get(doc, "diff_sha"), "")) === sha) {
-      const decision = rawOr(() => alt(get(doc, "decision"), ""));
-      telemetryAppend(root, "docs_attested", { decision }, host);
-      return ALLOW;
-    }
-  }
-  telemetryAppend(root, "docs_nudge", {}, host);
-  const reason = `docs-sync: this branch changes code but no documentation surface (README / docs/*.md / SKILL.md). Update the doc that describes this behavior, OR attest none is needed by writing ${file} with { "version": 1, "diff_sha": "${sha}", "decision": "not-needed", "note": "why" }. ${CONSEQUENCE[mode]}`;
-  return gateDecision(mode, reason) ?? ALLOW;
-}
-function docsSyncModule(options = {}) {
-  return {
-    kind: "native",
-    name: "docs-sync",
-    run: (event, ctx) => Promise.resolve(evaluate(event, ctx, options))
-  };
-}
-// packages/toolu-core/src/gates/plan-ledger-ac.ts
-import { join as join17, resolve } from "path";
-
-// packages/toolu-core/src/ledger/ledger-model.ts
-var statusIs = (step, status) => jqEquals(get(step, "status"), status);
-function joinIds(ids) {
-  return ids.map((id) => {
-    if (id === null)
-      return "";
-    if (typeof id === "object")
-      throw new JqError(`Cannot join with ${jqType(id)}`);
-    return typeof id === "string" ? id : toJqJson(id, false);
-  }).join(", ");
-}
-function acCoverageLine(ledger, cur, ac) {
-  const covering = each(get(ledger, "steps")).filter((step) => holds(alt(get(step, "ac_refs"), []), ac));
-  const ids = joinIds(covering.map((step) => get(step, "id")));
-  const fresh = covering.some((step) => statusIs(step, "green") && jqEquals(get(step, "diff_sha"), cur));
-  if (covering.length === 0)
-    return `  ${ac}: UNCOVERED (no step references it)`;
-  return fresh ? `  ${ac}: covered by ${ids}` : `  ${ac}: UNCOVERED (${ids} not fresh-green)`;
-}
-function acCoverage(ledger, cur, spec) {
-  if (isSpecless(spec))
-    return { stdout: "", stderr: [] };
-  const acs = parseAcs(spec);
-  if (acs.length === 0)
-    return { stdout: "", stderr: [] };
-  let stdout = `AC coverage (report-only):
-`;
-  for (const ac of acs) {
-    try {
-      stdout += `${acCoverageLine(ledger, cur, ac)}
-`;
-    } catch (error) {
-      if (!(error instanceof JqError))
-        throw error;
-      return { stdout, stderr: [`plan-ledger: failed to compute AC coverage for ${ac}`] };
-    }
-  }
-  return { stdout, stderr: [] };
-}
-
-// packages/toolu-core/src/gates/plan-ledger-ac.ts
-function locate(cwd, root, path) {
-  const here = resolve(cwd, path);
-  if (isFile3(here))
-    return here;
-  const there = join17(root, path);
-  return root !== "" && isFile3(there) ? there : here;
-}
-var AC_LINE = /^ {2}AC-/;
-var UNCOVERED = /^ {2}AC-[^:]+: UNCOVERED/;
-function acBlockers(ledger, cur, root, ctx, config) {
-  const planField = rawOr(() => alt(get(ledger, "plan_doc"), ""));
-  if (planField === "")
-    return;
-  const cwd = ctx.cwd ?? process.cwd();
-  const plan = locate(cwd, root, planField);
-  if (!isFile3(plan))
-    return;
-  const specField = docField(plan, "Spec");
-  const spec = isSpecless(specField) ? specField : locate(cwd, root, specField);
-  const report = acCoverage(ledger, cur, spec).stdout.replace(/\n+$/, "");
-  if (report === "")
-    return;
-  const lines = report.split(`
-`);
-  const uncovered = lines.filter((line) => UNCOVERED.test(line));
-  const covered = lines.filter((line) => AC_LINE.test(line)).length - uncovered.length;
-  const options = { env: ctx.env, host: ctx.host };
-  telemetryAppend(root, "ac_coverage", { covered, uncovered: uncovered.length }, options);
-  if (uncovered.length === 0 || !flagTrue(config, "planLedger", "blockOnUncoveredAcs")) {
-    return;
-  }
-  return uncovered.map((line) => line.slice(2)).join(`
-`);
-}
-
-// packages/toolu-core/src/gates/plan-ledger.ts
-var RUN = "bash plugins/toolu/hooks/lib/plan-ledger.sh run";
-function blockers(ledger, cur) {
-  const lines = [];
+// packages/toolu-core/src/gates/agent-tier.ts
+var SILENT = { stdout: "", stderr: "", exitCode: 0 };
+var DELEGATING_TOOLS = new Set(["Agent", "Task", "spawn_agent"]);
+function text3(fn) {
   try {
-    for (const step of each(get(ledger, "steps"))) {
-      const status = get(step, "status");
-      const green = jqEquals(status, "green");
-      const eff = green && jqEquals(get(step, "diff_sha"), cur) ? "green" : green ? "stale" : alt(status, "pending");
-      if (jqEquals(eff, "green"))
-        continue;
-      lines.push(concat2(alt(get(step, "id"), "?"), ": ", eff, " \u2014 ", alt(get(step, "title"), "")));
-    }
-  } catch (error) {
-    if (!(error instanceof JqError))
-      throw error;
-  }
-  return lines.join(`
-`).replace(/\n+$/, "");
-}
-function stepsDecision({ mode, ledger, cur, hint }) {
-  const blocked = blockers(ledger, cur);
-  const verified = rawOr(() => alt(get(ledger, "verified_sha"), ""));
-  if (blocked === "" && isObject2(ledger) && Object.hasOwn(ledger, "verified_sha") && verified !== cur) {
-    const reason = `plan-ledger: every step is green, but not verified against the current diff.
-
-Scoped runs judge a step on its own \`paths\`; the push gate judges it on the whole branch.
-
-run: ${RUN} ${hint} --verify`;
-    return gateDecision(mode, reason) ?? ALLOW;
-  }
-  if (blocked === "")
-    return ALLOW;
-  const reason = `plan-ledger: push blocked \u2014 steps not fresh-green:
-${blocked}
-
-run: ${RUN} ${hint}`;
-  return gateDecision(mode, reason) ?? ALLOW;
-}
-function evaluate2(event, ctx, options) {
-  const target = pushTarget(event, ctx);
-  if (target === undefined)
-    return ALLOW;
-  const config = gateConfig(ctx, options);
-  const mode = gateMode(config, "planLedger", { host: ctx.host, event: preToolHostEvent(event) });
-  if (mode === "off")
-    return ALLOW;
-  const { root } = target;
-  const base = envValue(ctx.env, "PUSH_REVIEW_BASE") ?? baseBranch(root, ctx.env);
-  const branch = target.branch !== "" ? target.branch : (gitAt(root, ["rev-parse", "--abbrev-ref", "HEAD"], ctx.env) ?? "").trim();
-  const dir = envValue(ctx.env, "LEDGER_DIR") ?? projectStateDir("plan-ledger", { env: ctx.env, host: ctx.host, root });
-  const file = `${dir ?? ""}/${branchSlug(branch)}.json`;
-  if (!isFile3(file))
-    return ALLOW;
-  const read = readLedger(file);
-  if (read === undefined) {
-    return {
-      kind: "deny",
-      reason: `plan-ledger: unparseable ledger at ${file}; delete and re-run \`${RUN} <plan_doc>\``
-    };
-  }
-  const ledger = read.value;
-  const version = rawOr(() => alt(get(ledger, "version"), ""));
-  if (version !== "1") {
-    const reason = `plan-ledger: ledger schema mismatch at ${file} (version="${version}", expected 1); delete and re-run \`${RUN} <plan_doc>\``;
-    return gateDecision(mode, reason) ?? ALLOW;
-  }
-  const total = rawOr(() => alt(get(get(ledger, "summary"), "total"), 0), "0");
-  const count = rawOr(() => length(get(ledger, "steps")), "0");
-  if (total === "0" || count === "0")
-    return ALLOW;
-  const cur = diffSha(root, base, { env: ctx.env });
-  if (cur === undefined)
-    return ALLOW;
-  const uncovered = acBlockers(ledger, cur, root, ctx, config);
-  if (uncovered !== undefined) {
-    const reason = `plan-ledger: push blocked \u2014 uncovered spec AC id(s):
-${uncovered}
-
-cover with a fresh-green step referencing it in ac_refs, or set planLedger.blockOnUncoveredAcs=false`;
-    return gateDecision(mode, reason) ?? ALLOW;
-  }
-  const hint = rawOr(() => alt(get(ledger, "plan_doc"), "<plan_doc>"), "<plan_doc>");
-  return stepsDecision({ mode, ledger, cur, hint });
-}
-function planLedgerModule(options = {}) {
-  return {
-    kind: "native",
-    name: "plan-ledger",
-    run: (event, ctx) => Promise.resolve(evaluate2(event, ctx, options))
-  };
-}
-// packages/toolu-core/src/gates/push-review.ts
-import { existsSync as existsSync2, statSync as statSync11 } from "fs";
-
-// packages/toolu-core/src/ledger/review-state.ts
-var ACCEPTED_REVIEWERS = [
-  "code-review",
-  "toolu-review:review",
-  "code-review:xhigh",
-  "review",
-  "security-review"
-];
-function hasAcceptedReviewer(state) {
-  try {
-    const reviewers = alt(get(state, "reviewers"), []);
-    return ACCEPTED_REVIEWERS.some((name) => jqIndex(reviewers, name) !== null);
+    const value = fn();
+    return value === null || value === false ? "" : raw(value).replace(/\n+$/, "");
   } catch (error) {
     if (error instanceof JqError)
-      return false;
+      return "";
     throw error;
   }
 }
-function sortedUnique(lines) {
-  return [...new Set(lines)].toSorted(compareJqStrings).join(`
-`).replace(/\n+$/, "");
+function inputField(doc, keys) {
+  return text3(() => {
+    const input = get(doc, "tool_input");
+    return keys.reduce((found, key) => alt(found, get(input, key)), null);
+  });
 }
-function outputLines(text) {
-  return text === "" ? [] : text.replace(/\n$/, "").split(`
-`);
-}
-function reviewedFiles(state) {
+function stepsOf(ledger) {
   try {
-    const files = get(state, "reviewed_files");
-    if (files === null)
-      throw new JqError("Cannot iterate over null");
-    return eachOptional(files).flatMap((file) => raw(file).split(`
-`));
+    return eachOptional(get(ledger, "steps"));
   } catch (error) {
     if (error instanceof JqError)
       return [];
     throw error;
   }
 }
-
-// packages/toolu-core/src/gates/push-review-state.ts
-function field2(doc, key, dflt, fallback) {
-  try {
-    return raw(alt(get(doc, key), dflt)).replace(/\n+$/, "");
-  } catch (error) {
-    if (error instanceof JqError)
-      return fallback;
-    throw error;
-  }
-}
-function overCap(round) {
-  if (!/^[0-9]+$/.test(round))
-    return false;
-  const octal = round.length > 1 && round.startsWith("0");
-  if (octal && /[89]/.test(round))
-    return false;
-  return BigInt.asIntN(64, BigInt(octal ? `0o${round}` : round)) > 5n;
-}
-function only(a, b) {
-  const other = new Set(b.split(`
-`));
-  return a.split(`
-`).filter((line) => !other.has(line)).join(`
-`).replace(/\n+$/, "");
-}
-function stateRound(doc) {
-  return field2(doc, "review_round", 1, "1");
-}
-var REVIEWER_LIST = JSON.stringify(ACCEPTED_REVIEWERS);
-var HINT = 'the built-in `/code-review xhigh --fix` skill, recorded as "code-review" (or the `toolu-review:review` skill)';
-function fail(code, reason, round = "") {
-  return { code, reason, round };
-}
-function coverageFailure(doc, file, base, changed, round) {
-  const changedSorted = sortedUnique(outputLines(changed));
-  const reviewedSorted = sortedUnique(reviewedFiles(doc));
-  if (changedSorted === reviewedSorted)
-    return;
-  const missing = only(changedSorted, reviewedSorted);
-  const extra = only(reviewedSorted, changedSorted);
-  let reason = `reviewed_files does not match the current diff at ${file}.`;
-  if (missing !== "")
-    reason += `
-Missing from reviewed_files (changed but not reviewed): ${missing}`;
-  if (extra !== "")
-    reason += `
-In reviewed_files but not in the current diff: ${extra}`;
-  reason += `
-Re-review the full diff and rewrite reviewed_files to match \`git diff ${base}...HEAD --name-only\` exactly.`;
-  return fail("file-coverage", reason, round);
-}
-function stateFailure(doc, file, cur, base, changed) {
-  const version = field2(doc, "version", "", "");
-  const sha = field2(doc, "diff_sha", "", "");
-  const findings = field2(doc, "findings_count", "", "");
-  if (version === "1") {
-    return fail("schema-v1", "push-review state is schema v1; harness v2 requires reviewed_files \u2014 re-run the review to regenerate the state file");
-  }
-  if (version !== "2" || sha === "" || findings === "") {
-    return fail("schema", `state file corrupted at ${file}; delete and re-review`);
-  }
-  const round = stateRound(doc);
-  if (!hasAcceptedReviewer(doc)) {
-    return fail("reviewer", `state file lists no accepted reviewer at ${file}
-\`reviewers\` must include at least one of: ${REVIEWER_LIST}
-Run a reviewer \u2014 use ${HINT} \u2014 then rewrite the state file.`, round);
-  }
-  if (overCap(round)) {
-    return fail("round-cap", `ESCALATE: review loop hit ${round} rounds (max 5) on an unchanged diff at ${file}. Reviewers keep finding new issues after each fix \u2014 stop auto-looping and surface the current findings to the human. Babysit: treat as Escalation stop (Step 6).`, round);
-  }
-  if (sha !== cur) {
-    return fail("stale-diff", `Code review required: diff changed since review.
-Current diff SHA: ${cur}
-State file: ${file} (stale)
-Re-run reviewers on the new diff and rewrite the state file.`, round);
-  }
-  if (findings !== "0") {
-    return fail("findings", `Code review has open findings (${findings}).
-State file: ${file}
-Address every finding (any finding blocks). Re-commit. Re-run reviewers. Rewrite state file with findings_count=0.`, round);
-  }
-  return coverageFailure(doc, file, base, changed, round);
-}
-
-// packages/toolu-core/src/gates/push-review.ts
-var EMPTY_BLOB_SHA = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
-var ASK_LEAD = "No clean review is recorded for this diff. Approving pushes anyway, and the approval is remembered until the diff changes.";
-function record2(push, result, code, round = "") {
-  const value = /^[0-9]+$/.test(round) ? Number(round) : null;
-  const options = { env: push.ctx.env, host: push.ctx.host };
-  telemetryAppend(push.root, "push_check", { result, reason_code: code, round: value }, options);
-}
-function decide7(push, code, reason, round = "", sha = "") {
-  const { ctx, mode } = push;
-  let text = reason;
-  if (mode === "ask") {
-    text = `${ASK_LEAD}
-
-${reason}`;
-    if (sha !== "") {
-      const options = { env: ctx.env, host: ctx.host };
-      pushWaiverPend(push.root, push.slug, sha, push.base, code, options);
-    }
-  }
-  record2(push, mode === "block" ? "deny" : mode, code, round);
-  return gateDecision(mode, text) ?? ALLOW;
-}
-var HINT2 = 'the built-in `/code-review xhigh --fix` skill, recorded as "code-review" (or the `toolu-review:review` skill)';
-function noStateReason(sha, base, file) {
-  return `Code review required before push (diff SHA ${sha}, base ${base}).
-Run a code reviewer on \`git diff ${base}...HEAD\` and apply its findings \u2014 use ${HINT2}. Then atomically write ${file} (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. \`reviewers\` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), \`findings_count\` must be 0, \`review_round\` starts at 1 for a new \`diff_sha\` and bumps by 1 only when rewriting at the same \`diff_sha\`. \`reviewed_files\` must list every path from \`git diff ${base}...HEAD --name-only\` (sorted, unique) \u2014 the actual reviewer file coverage. Retry push.`;
-}
-function isFile4(path) {
-  return existsSync2(path) && statSync11(path).isFile();
-}
-function reviewed(push, branch, file) {
-  const { ctx, root, base } = push;
-  if (!refExists(root, base, ctx.env)) {
-    return decide7(push, "base-missing", `base branch '${base}' not found locally; run \`git fetch origin ${base}:${base}\``);
-  }
-  if (branch === "HEAD" || branch === "") {
-    return decide7(push, "detached-head", "detached HEAD \u2014 checkout a branch, or push an explicit `HEAD:<branch>` refspec so the review state can be keyed to that branch");
-  }
-  if (branch === base)
-    return ALLOW;
-  const computed = diffSha(root, base, { env: ctx.env });
-  if (computed === undefined) {
-    record2(push, "allow", "diff-failed");
-    return ALLOW;
-  }
-  if (computed === EMPTY_BLOB_SHA) {
-    const reason = `Refusing to push: diff against ${base} is empty. Either no commits diverged from base, or the branch was force-reset. Verify intent before pushing.`;
-    return decide7(push, "empty-diff", reason, "", "empty-diff");
-  }
-  const waiverOptions = { env: ctx.env, host: ctx.host };
-  if (pushWaiverMatches(root, push.slug, computed, waiverOptions)) {
-    record2(push, "allow", "waived");
-    return ALLOW;
-  }
-  if (!isFile4(file)) {
-    return decide7(push, "no-state", noStateReason(computed, base, file), "", computed);
-  }
-  const doc = readJson(file) ?? null;
-  const failure = stateFailure(doc, file, computed, base, changedNames(root, base, ctx.env));
-  if (failure !== undefined) {
-    return decide7(push, failure.code, failure.reason, failure.round, computed);
-  }
-  record2(push, "allow", "pass", stateRound(doc));
-  return ALLOW;
-}
-function evaluate3(event, ctx, options) {
-  const target = pushTarget(event, ctx);
-  if (target === undefined)
-    return ALLOW;
-  const mode = gateMode(gateConfig(ctx, options), "pushReview", {
-    host: ctx.host,
-    event: preToolHostEvent(event)
+function joinStep(ledger) {
+  const stepId = text3(() => {
+    const running = stepsOf(ledger).find((step) => jqEquals(get(step, "status"), "running"));
+    return alt(running === undefined ? null : get(running, "id"), get(ledger, "next"));
   });
-  if (mode === "off")
-    return ALLOW;
-  const { root, branch } = target;
-  const slug = branchSlug(branch);
-  const dir = envValue(ctx.env, "STATE_DIR") ?? projectStateDir("push-review", { env: ctx.env, host: ctx.host, root });
-  const base = envValue(ctx.env, "PUSH_REVIEW_BASE") ?? baseBranch(root, ctx.env);
-  return reviewed({ ctx, mode, root, slug, base }, branch, `${dir ?? ""}/${slug}.json`);
+  if (stepId === "")
+    return { stepId, stepModel: "" };
+  const stepModel = text3(() => {
+    const step = stepsOf(ledger).find((s) => jqEquals(get(s, "id"), stepId));
+    return step === undefined ? null : get(step, "model");
+  });
+  return { stepId, stepModel };
 }
-function pushReviewModule(options = {}) {
-  return {
-    kind: "native",
-    name: "push-review",
-    run: (event, ctx) => Promise.resolve(evaluate3(event, ctx, options))
-  };
+function ledgerJoin(root, env, host) {
+  const none = { stepId: "", stepModel: "" };
+  const branch = (gitAt(root, ["rev-parse", "--abbrev-ref", "HEAD"], env) ?? "").trim();
+  if (branch === "" || branch === "HEAD")
+    return none;
+  const dir = envValue(env, "LEDGER_DIR") ?? projectStateDir("plan-ledger", { env, host, root });
+  const file = `${dir ?? ""}/${branchSlug(branch)}.json`;
+  if (!isFile2(file))
+    return none;
+  const ledger = readJson(file);
+  if (ledger === undefined || ledger === null || ledger === false)
+    return none;
+  return joinStep(ledger);
 }
-// plugins/toolu/hooks/src/pre-tools/builtins.ts
-var NATIVE_MODULES = {
-  "bash-commands": bashCommandsModule,
-  "code-edit-rules": codeEditRulesModule,
-  "commit-gate": commitGateModule,
-  "docs-sync": docsSyncModule,
-  "mcp-blocker": mcpBlockerModule,
-  "plan-ledger": planLedgerModule,
-  "protected-files": protectedFilesModule,
-  "push-review": pushReviewModule,
-  "quality-gate": qualityGateModule
-};
-var BUILTIN_MODULES = Object.keys(NATIVE_MODULES);
-function builtins(hooksDir) {
-  const options = { pluginRoot: dirname4(hooksDir) };
-  return Object.values(NATIVE_MODULES).map((module) => module(options));
-}
-
-// plugins/toolu/hooks/src/pre-tools/hook-main.ts
-import { dirname as dirname5 } from "path";
-async function hookMain(entryDir, run, event = "PreToolUse") {
-  try {
-    const result = await run(await Bun.stdin.text(), dirname5(entryDir));
-    process.stdout.write(result.stdout);
-    process.stderr.write(result.stderr);
-    process.exitCode = result.exitCode;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const prefix = event === "PreToolUse" ? "blocked: " : "";
-    process.stderr.write(`${prefix}toolu ${event} dispatcher failed: ${message}
+var orNull = (value) => value === "" ? null : value;
+function run(stdin, env, cwd) {
+  const doc = parseJson(stdin) ?? null;
+  const toolName = text3(() => get(doc, "tool_name"));
+  if (!DELEGATING_TOOLS.has(toolName) || !toolAvailable("git", env))
+    return SILENT;
+  const root = gitToplevel(env, cwd);
+  if (root === undefined)
+    return SILENT;
+  const model = inputField(doc, ["model"]);
+  const subagent = inputField(doc, ["subagent_type", "task_name", "agent_type"]);
+  const effort = inputField(doc, ["reasoning_effort", "reasoningEffort"]);
+  const host = detectHost({ env });
+  const { stepId, stepModel } = ledgerJoin(root, env, host);
+  const warnings = [];
+  const warn = (line) => warnings.push(`toolu-config: ${line}
 `);
-    process.exitCode = 2;
+  const extras = {
+    model: orNull(model),
+    subagent_type: orNull(subagent),
+    reasoning_effort: orNull(effort),
+    step_id: orNull(stepId),
+    step_model: orNull(stepModel)
+  };
+  telemetryAppend(root, "delegation", extras, { env, host, warn });
+  if (stepModel === "" || model === "" || stepModel === model) {
+    return { ...SILENT, stderr: warnings.join("") };
+  }
+  const mode = gateMode(loadConfig({ env, host, cwd, warn }), "agentTier", { host });
+  const reason = `plan step "${stepId}" expects model tier "${stepModel}" but this delegation used "${model}"`;
+  const decision = gateDecision(mode, reason);
+  const out = decision === null ? undefined : encodeDecision(host === "codex" ? "codex" : "claude", "tool/pre", decision);
+  const stdout = out?.kind === "command" ? out.stdout : "";
+  return { stdout, stderr: warnings.join(""), exitCode: 0 };
+}
+function agentTierHook(stdin, options = {}) {
+  try {
+    return run(stdin, options.env ?? process.env, options.cwd ?? process.cwd());
+  } catch {
+    return SILENT;
   }
 }
 
-// plugins/toolu/hooks/src/pre-tools.ts
-await hookMain(import.meta.dir, (stdin, hooks) => dispatchPreTool(stdin, { builtins: builtins(hooks), libDir: join18(hooks, "lib") }));
+// plugins/toolu/hooks/src/agent-tier.ts
+try {
+  const result = agentTierHook(await Bun.stdin.text());
+  process.stdout.write(result.stdout);
+  process.stderr.write(result.stderr);
+  process.exitCode = result.exitCode;
+} catch {
+  process.exitCode = 0;
+}
