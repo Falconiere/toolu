@@ -47,7 +47,7 @@ function fileLines(path: string): string[] | null {
 const isFile = (path: string) => existsSync(path) && statSync(path).isFile();
 
 const ASSIGNMENT =
-  /^(name|description|model|model_reasoning_effort|sandbox_mode) = "[^"\\]*(\\.[^"\\]*)*"$/s;
+  /^(name|description|model|model_reasoning_effort|sandbox_mode) = "[^"\\]*(\\.[^"\\]*)*"$/;
 
 /** Only comments, blanks, the five string assignments and one developer_instructions block. */
 function wellFormed(lines: string[]): boolean {
