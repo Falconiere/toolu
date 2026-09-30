@@ -120,3 +120,30 @@ Measured by `packages/toolu-core/src/registry/__tests__/registry-import-cost.tes
 | One bash registry module under the bash dispatcher (one `bash` spawn), same run | 4.8 ms | — |
 
 A bundled module costs about what the bash module it replaces cost. Most of it is parsing that bundle's own copies of `@toolu/core` and zod, so each registry module should import only the core entries it uses.
+
+## ast-grep modules
+
+ast-grep (#268) registers two bundled modules from `plugins/ast-grep/hooks/src`, published by `hooks/dist/register.js` behind its hooks.json launcher:
+
+- **search-nudge** (`tool/pre`). A Grep whose pattern looks structural (`fn `, `class `, `=>`, …) gets the STOP nudge unless its glob, type or path names non-code files. A Bash or Shell command is read with `@toolu/core/shell`: only a `grep`, `rg` or `git grep` the line actually runs counts, and a grep that filters a pipe (`… | grep x`, but not `… | xargs grep x`) is left alone. ast-grep's state (the `skills.ast-grep` opt-out, then `sg`/`ast-grep` on `PATH`) is looked up only once a nudge is due.
+- **byte-savings** (`tool/post`). Appends `{"kind","returned","full"}` to `<config>/toolu/byte-savings/<session>.jsonl` for Read, Grep, Glob and a Bash or Shell line that runs `ast-grep` or `sg`, parsed the same way (wrappers such as `timeout` included). `returned` is measured exactly as the bash module's jq did.
+
+Both bundles inline unbash and zod, about 310 KB each; the latency numbers below include parsing them.
+
+**Parity.** `hooks/src/__tests__/fixtures/golden.json` holds captures of the bash plugin at `2912cd9d`, run through toolu's committed pre-tools and post-tools bundles: 39 search-nudge case/host pairs, 34 byte-savings cases with their ledgers, 6 report runs, and the 4 #258 corpus fixtures search-nudge decides. `golden-capture.ts` rebuilds the bash plugin from git objects, so the capture still runs now that its files are gone. `golden-nudge.test.ts`, `golden-savings.test.ts`, `golden-corpus.test.ts` and `byte-savings-report.test.ts` replay every case with the TypeScript modules registered and require the same stdout, stderr, exit code and ledgers. The corpus fixtures left `pre-tools-parity.test.ts`, because `bash mod.sh` cannot run a `.js` module. The named deviations are the #283 item 10 defects of the bash text match:
+
+- a grep filtering a pipe, and grep or rg inside a commit message, no longer nudge;
+- a `for … in` loop gets the generic nudge, not STOP;
+- a structural pattern passed as one quoted argument (`rg -n "fn main" src/`, `grep -r "impl Foo" src`) gets STOP, not the generic nudge;
+- `echo grep me` and `echo "run ast-grep later"` are not searches; `timeout 60 sg run …` is recorded.
+
+The skill wrapper `hooks/dist/ast-grep.js` is checked against the live ast-grep CLI given the argv the bash wrapper built (`ast-grep-cli.test.ts`), because ast-grep's output changes between versions.
+
+**Latency.** `bun run tooling/src/benchmarks/ast-grep-latency.ts [--runs N] [--assert]` times toolu's bundles running the bash modules (from `2912cd9d`) against the same bundles running the TypeScript modules, in two identical sandboxes with alternating runs. On an Apple M2 Max with Bun 1.4.2 (15 runs, load average 17 to 26, other agents active), the TypeScript modules were within budget on every fixture:
+
+| Fixture | bash module p50 | TS module p50 |
+|---|---|---|
+| Bash structural grep | 799.3 ms | 698.6 ms |
+| Grep tool, structural pattern | 250.2 ms | 136.5 ms |
+| Bash `ls -la` (silent) | 142.0 ms | 142.5 ms |
+| PostToolUse, Bash `ast-grep run` | 108.2 ms | 96.0 ms |

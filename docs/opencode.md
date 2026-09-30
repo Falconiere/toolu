@@ -96,7 +96,7 @@ In **your application repo** (not inside the toolu clone):
    export { default } from "@toolu/opencode/plugin";
    ```
 
-   The default export registers `permission.evaluate` and runs preflight + bootstrap ([#204](https://github.com/Falconiere/toolu/issues/204), [#211](https://github.com/Falconiere/toolu/issues/211)). Bootstrap runs each enabled plugin's `hooks/register.sh`, else `hooks/session-start.sh`, else its TypeScript `hooks/dist/session-start.js` through the same generated launcher Claude Code and Codex use ([#269](https://github.com/Falconiere/toolu/issues/269)), so, for example, context7 publishes `context7/search.sh` under the bootstrap data root, and toolu's bundle writes the `toolu/.session-start-ready` readiness marker ([#263](https://github.com/Falconiere/toolu/issues/263)).
+   The default export registers `permission.evaluate` and runs preflight + bootstrap ([#204](https://github.com/Falconiere/toolu/issues/204), [#211](https://github.com/Falconiere/toolu/issues/211)). Bootstrap runs each enabled plugin's register entrypoint, else its session-start one, preferring the committed TypeScript bundle (`hooks/dist/register.js`, `hooks/dist/session-start.js`) over the bash script it replaced and running it through the same generated launcher Claude Code and Codex use ([#269](https://github.com/Falconiere/toolu/issues/269), [#265](https://github.com/Falconiere/toolu/issues/265)), so, for example, context7 publishes `context7/search.sh` under the bootstrap data root, and toolu's bundle writes the `toolu/.session-start-ready` readiness marker ([#263](https://github.com/Falconiere/toolu/issues/263)).
 
 4. **Enabled bash plugins** — project file `.opencode/toolu/plugins.json`:
 

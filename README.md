@@ -257,17 +257,17 @@ flowchart TD
     subgraph plugins["domain plugins"]
         RQ["rust-quality<br/>register.sh"]
         TQ["ts-quality<br/>register.sh"]
-        AG["ast-grep<br/>register.sh"]
+        AG["ast-grep<br/>register.js"]
     end
     RQ -- "assemble concern fragments at SessionStart" --> R[("registry<br/>host config dir/toolu/")]
     TQ -- "one assembled module per language" --> R
-    AG -- "namespaced plugin__name.sh" --> R
+    AG -- "bundled ESM modules, run in process" --> R
     CM -- "namespaced plugin__name.sh" --> R
     R --> D
     D -- "runs a module only while its plugin is installed" --> OUT([enforced edit])
 ```
 
-At `SessionStart`, each domain plugin's `register.sh` contributes to the registry as `<plugin-spec>__<name>.sh` — `ast-grep` mirrors its `hooks/<event>.d/*.sh` one-to-one, while `rust-quality`/`ts-quality`/`python-quality` assemble their ordered `hooks/concerns/` fragments into a single module per language. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. As plugins move to TypeScript on Bun, each one instead registers a single bundled ESM module per event (`<plugin-spec>__<name>.js`), with no fragment assembly, and the core imports it in-process. See [docs/registry.md](docs/registry.md).
+At `SessionStart`, each domain plugin's `register.sh` contributes to the registry as `<plugin-spec>__<name>.sh` — `rust-quality`/`ts-quality`/`python-quality` assemble their ordered `hooks/concerns/` fragments into a single module per language. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. As plugins move to TypeScript on Bun, each one instead registers a single bundled ESM module per event (`<plugin-spec>__<name>.js`), with no fragment assembly, and the core imports it in-process; `ast-grep` already does. See [docs/registry.md](docs/registry.md).
 
 <details>
 <summary><b>Full repository layout</b></summary>
@@ -284,7 +284,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     │   ├── commands/           # commit, review-and-commit
     │   ├── hooks/              # PreToolUse / PostToolUse / SessionStart … + lib/
     │   └── settings/           # reusable settings fragments
-    ├── ast-grep/               # ast-grep skill + Grep→ast-grep nudge registry module
+    ├── ast-grep/               # ast-grep skill + nudge and byte-savings registry modules (Bun)
     ├── context7/               # context7 skill + Context7 REST wrapper
     ├── exa-search/             # exa-search skill + Exa REST wrapper
     ├── jev/                    # jev skill + TypeSafe System One REST wrapper
