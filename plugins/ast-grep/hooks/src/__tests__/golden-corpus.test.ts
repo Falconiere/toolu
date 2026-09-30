@@ -1,6 +1,6 @@
 /**
- * The #258 PreToolUse corpus fixtures search-nudge decides (#268), which left
- * `pre-tools-parity.test.ts` with the bash module: each, with ast-grep's
+ * The #258 PreToolUse corpus fixtures search-nudge decides (#268), which
+ * `pre-tools-parity.test.ts` checks only by decision class: each, with ast-grep's
  * bundled modules registered, gives what the bash module gave through the same
  * pre-tools bundle at the golden's base commit, and the decision class the
  * corpus expects. A named deviation (#283 item 10) must instead show the
