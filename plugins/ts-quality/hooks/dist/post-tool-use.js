@@ -5654,9 +5654,10 @@ function limitsFor(ctx) {
 }
 function read(file) {
   try {
-    return readFileSync7(file.absolute, "utf8");
-  } catch {
-    return "";
+    return { text: readFileSync7(file.absolute, "utf8") };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return { error: `Cannot read ${file.path} for TypeScript quality checks: ${detail}` };
   }
 }
 var post_tool_use_default = defineRegistryModule({
@@ -5675,7 +5676,12 @@ var post_tool_use_default = defineRegistryModule({
       reason: "Post-edit quality violation(s) detected",
       matches: /\.(ts|tsx)$/s,
       skipLinkedWorktrees: true,
-      check: (file) => checkTsFile({ file, lines: splitLines(read(file)), ctx, limits: limitsFor(ctx), pm })
+      check: (file) => {
+        const source = read(file);
+        if (source.error !== undefined)
+          return { errors: [source.error], advisories: [] };
+        return checkTsFile({ file, lines: splitLines(source.text), ctx, limits: limitsFor(ctx), pm });
+      }
     });
     return Promise.resolve(decision);
   }

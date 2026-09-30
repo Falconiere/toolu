@@ -32,11 +32,12 @@ function limitsFor(ctx: RegistryContext): TsLimits {
   };
 }
 
-function read(file: EditedFile): string {
+function read(file: EditedFile): { text: string; error?: never } | { text?: never; error: string } {
   try {
-    return readFileSync(file.absolute, "utf8");
-  } catch {
-    return "";
+    return { text: readFileSync(file.absolute, "utf8") };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return { error: `Cannot read ${file.path} for TypeScript quality checks: ${detail}` };
   }
 }
 
@@ -55,8 +56,17 @@ export default defineRegistryModule({
       matches: /\.(ts|tsx)$/s,
       skipLinkedWorktrees: true,
       // Thresholds resolve only for a file the module owns, as bash resolved them in 25/30.
-      check: (file) =>
-        checkTsFile({ file, lines: splitLines(read(file)), ctx, limits: limitsFor(ctx), pm }),
+      check: (file) => {
+        const source = read(file);
+        if (source.error !== undefined) return { errors: [source.error], advisories: [] };
+        return checkTsFile({
+          file,
+          lines: splitLines(source.text),
+          ctx,
+          limits: limitsFor(ctx),
+          pm,
+        });
+      },
     });
     return Promise.resolve(decision);
   },
