@@ -90,5 +90,6 @@ test("missing state fails without creating a file", () => {
   );
   expect(result.status).toBe(3);
   expect(JSON.parse(result.stdout).errors[0].code).toBe("state_malformed");
+  expect(JSON.parse(result.stdout).errors[0].message).toContain("run babysit-tick.js first");
   expect(existsSync(path)).toBe(false);
 });

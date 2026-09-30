@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# common.sh — shared plumbing for the pr-babysit helper scripts.
+# Shared Bash plumbing retained for the fixer scripts.
 #
-# Sourced, never run. Provides: plugin-root resolution from this file's own
-# location (no environment variable names the root), dependency checks, a
-# structured-error emitter with the closed exit-code map, an atomic JSON
-# writer, and the single EXIT handler every entrypoint installs via pb_init.
+# Sourced, never run. Provides common errors, atomic writes, slot locks, and
+# state updates for dispatch-fix.sh, route-fix.sh, and fixer-report.sh. The
+# babysit controller and GitHub write commands use their Bun bundles.
 #
 # Portability contract (see docs/toolu/specs/2026-09-19-pr-babysit-helper-design.md):
 # bash 3.2 — no mapfile/readarray, no declare -A, no wait -n, no ${var,,}.
@@ -163,15 +162,14 @@ pb_init() {
   trap 'exit 143' TERM
   trap 'exit 130' INT
 }
-#!/usr/bin/env bash
-# lock.sh — one-writer lock per slot state file.
+# One-writer lock per slot state file.
 #
-# Sourced after common.sh. `mkdir` is atomic on every POSIX filesystem, so the
+# `mkdir` is atomic on every POSIX filesystem, so the
 # lock is a directory beside the state file: <state-file>.lock/ holding `pid`
 # and `since` (epoch seconds). Atomic rename alone does not stop two
 # controllers from losing each other's updates — this does. A lock whose pid is
 # dead or older than PB_LOCK_STALE_SECONDS is stale and reclaimed with a stderr
-# note. Release is wired through pb_on_exit (common.sh) so a crash or signal
+# note. Release is wired through pb_on_exit above so a crash or signal
 # never leaves a live lock behind.
 
 PB_LOCK_STALE_SECONDS="${PB_LOCK_STALE_SECONDS:-600}"
@@ -247,20 +245,17 @@ pb_lock_fail() {
     "$(jq -nc --arg pid "$PB_LOCK_HOLDER_PID" --arg since "$PB_LOCK_HOLDER_SINCE" \
         '{pid:($pid|tonumber? // null), since:($since|tonumber? // null)}')"
 }
-#!/usr/bin/env bash
-# state.sh — load and update one slot's state file for the write-side scripts.
+# Load and update one slot's state file for the fixer scripts.
 #
-# Sourced after common.sh and lock.sh. The write side (reply-thread.sh,
-# resolve-thread.sh, record.sh) always: takes the slot lock, validates the
-# state, performs its action, and records the outcome atomically. This file
-# holds the shared load/update so each script carries only its own action.
+# dispatch-fix.sh and its helper take the slot lock, validate state, and
+# persist fixer results atomically. These functions share that path.
 
 # pb_state_load STATE_FILE — validate (version 2) and export the slot
 # identity: PB_STATE_REPO, PB_STATE_NUMBER, PB_STATE_HEAD. Exits through
 # pb_fail on a missing or malformed file.
 pb_state_load() {
   local state_file="$1"
-  [ -f "$state_file" ] || pb_fail state_malformed "state file not found: $state_file (run babysit-tick.sh first)" '{"source":"state"}'
+  [ -f "$state_file" ] || pb_fail state_malformed "state file not found: $state_file (run babysit-tick.js first)" '{"source":"state"}'
   pb_json_valid "$state_file" || pb_fail state_malformed "state file is not valid JSON: $state_file" '{"source":"state"}'
   jq -e '.version == 2 and (.repo | type == "string") and (.number | type == "number")' "$state_file" >/dev/null 2>&1 \
     || pb_fail state_malformed "state file is not a version-2 pr-babysit state: $state_file" "$(jq -c '{source:"state", version:(.version // null)}' "$state_file")"

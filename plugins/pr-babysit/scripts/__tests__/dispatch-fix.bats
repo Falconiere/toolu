@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 # Real-data tests for scripts/dispatch-fix.sh and lib/dispatch.sh (AC-5,
-# AC-7): slot state from a real babysit-tick.sh tick on the captured
+# AC-7): slot state from a real babysit-tick.js tick on the captured
 # Falconiere/toolu#165 snapshot, a real route-fix.sh plan over the real review
 # items, the shipped brief template, real git repositories (a bare origin and
 # worktrees) and a trust prompt captured from Claude Code 2.1.283. herdr is

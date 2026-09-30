@@ -177,7 +177,7 @@ class SlotLock {
 }
 function loadState(path) {
   if (!existsSync(path))
-    fail("state_malformed", `state file not found: ${path} (run babysit-tick.sh first)`, {
+    fail("state_malformed", `state file not found: ${path} (run babysit-tick.js first)`, {
       source: "state"
     });
   let value;
