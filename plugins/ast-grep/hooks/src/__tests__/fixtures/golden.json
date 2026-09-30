@@ -1,0 +1,516 @@
+{
+  "base": "2912cd9d05fa43097e0fcbd0681fd9986638417b",
+  "nudge": {
+    "bats: no-op on unrelated tool [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bats: Grep with non-code glob allowed silently [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bats: Grep with structural pattern nudges to ast-grep [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"STOP: Structural code pattern detected. Use ast-grep: `ast-grep run --pattern \\\"your pattern\\\" --lang rust/typescript .` AST-aware matching is far more accurate. Grep is for exact literals on non-code files, or after ast-grep returned nothing.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bats: Grep with structural pattern nudges to ast-grep [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"STOP: Structural code pattern detected. Use ast-grep: `ast-grep run --pattern \\\"your pattern\\\" --lang rust/typescript .` AST-aware matching is far more accurate. Grep is for exact literals on non-code files, or after ast-grep returned nothing.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bats: Bash grep on structural pattern nudges to ast-grep [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bats: Bash grep on structural pattern nudges to ast-grep [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bats: Bash without grep is silent [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bats: output does not leak source-repo names [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"STOP: Structural code pattern detected. Use ast-grep: `ast-grep run --pattern \\\"your pattern\\\" --lang rust/typescript .` AST-aware matching is far more accurate. Grep is for exact literals on non-code files, or after ast-grep returned nothing.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Grep structural, ast-grep missing [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"WARN: structural code pattern detected but ast-grep is not installed. Falling back to Grep — expect false positives. Install ast-grep (`cargo install ast-grep` or `brew install ast-grep`) for AST-aware matching.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Grep structural, ast-grep opted out [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Grep plain identifier is silent [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Grep non-code type is silent [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Grep code type still nudges [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"STOP: Structural code pattern detected. Use ast-grep: `ast-grep run --pattern \\\"your pattern\\\" --lang rust/typescript .` AST-aware matching is far more accurate. Grep is for exact literals on non-code files, or after ast-grep returned nothing.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Grep non-code path is silent [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Grep code glob still nudges [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"STOP: Structural code pattern detected. Use ast-grep: `ast-grep run --pattern \\\"your pattern\\\" --lang rust/typescript .` AST-aware matching is far more accurate. Grep is for exact literals on non-code files, or after ast-grep returned nothing.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Grep non-code glob is case-insensitive [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Grep multi-line pattern [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"STOP: Structural code pattern detected. Use ast-grep: `ast-grep run --pattern \\\"your pattern\\\" --lang rust/typescript .` AST-aware matching is far more accurate. Grep is for exact literals on non-code files, or after ast-grep returned nothing.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Grep arrow pattern [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"STOP: Structural code pattern detected. Use ast-grep: `ast-grep run --pattern \\\"your pattern\\\" --lang rust/typescript .` AST-aware matching is far more accurate. Grep is for exact literals on non-code files, or after ast-grep returned nothing.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash generic grep [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash generic grep [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash generic grep, ast-grep missing [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output. (ast-grep not installed — structural matching unavailable.)\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash generic grep, ast-grep opted out [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash structural grep [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"STOP: grep/rg for structural code search. Use ast-grep: `ast-grep run --pattern \\\"your pattern\\\" --lang rust/typescript .` grep/rg is for piping command output or non-code files.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash structural grep, ast-grep missing [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"WARN: structural grep/rg detected but ast-grep is not installed. Proceeding with grep/rg — expect false positives. Install ast-grep (`cargo install ast-grep` or `brew install ast-grep`) for AST-aware matching.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash structural grep, ast-grep opted out [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash rg without a path [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash grep piped onward [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash grep under sudo [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash xargs grep searches files [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash git grep [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Bash structural grep in a substitution [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "Shell tool grep [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "283-10a: grep filtering a pipe [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "283-10b: grep and rg inside a commit message [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"BEFORE COMMITTING:\\n1. Verify diff covers only expected scope (git diff --stat against main)\\n2. Save memory of significant decisions before committing.\\nSkip only if already done this task.\\n\\ngrep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "283-10c: a shell for-in loop [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"STOP: grep/rg for structural code search. Use ast-grep: `ast-grep run --pattern \\\"your pattern\\\" --lang rust/typescript .` grep/rg is for piping command output or non-code files.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "283-10d: structural pattern as one argument [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "structural grep filtering a pipe [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"STOP: grep/rg for structural code search. Use ast-grep: `ast-grep run --pattern \\\"your pattern\\\" --lang rust/typescript .` grep/rg is for piping command output or non-code files.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "grep as a word to echo [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "grep in a heredoc run by bash [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    }
+  },
+  "savings": {
+    "bats: single-file Read records returned and full bytes [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/s1.jsonl": "{\"kind\":\"read\",\"returned\":5,\"full\":4000}\n"
+      }
+    },
+    "bats: ast-grep Bash result bytes, full 0 [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/s2.jsonl": "{\"kind\":\"ast-grep\",\"returned\":10,\"full\":0}\n"
+      }
+    },
+    "bats: ast-grep Bash result bytes, full 0 [codex]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.codex/toolu/byte-savings/s2.jsonl": "{\"kind\":\"ast-grep\",\"returned\":10,\"full\":0}\n"
+      }
+    },
+    "bats: unrelated tools write no ledger [claude]": {
+      "stdout": "{\"decision\":\"block\",\"reason\":\"Unable to parse apply_patch file headers; per-file post-edit quality checks could not run.\"}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {}
+    },
+    "bats: a plain Bash command is ignored [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {}
+    },
+    "bats: Read of a missing file records full 0 [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/s5.jsonl": "{\"kind\":\"read\",\"returned\":3,\"full\":0}\n"
+      }
+    },
+    "Grep string response [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/m1.jsonl": "{\"kind\":\"grep\",\"returned\":17,\"full\":0}\n"
+      }
+    },
+    "Grep object response is compact JSON [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/m2.jsonl": "{\"kind\":\"grep\",\"returned\":51,\"full\":0}\n"
+      }
+    },
+    "Glob array response is compact JSON [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/m3.jsonl": "{\"kind\":\"glob\",\"returned\":23,\"full\":0}\n"
+      }
+    },
+    "content wins over stdout [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/m4.jsonl": "{\"kind\":\"ast-grep\",\"returned\":1,\"full\":0}\n"
+      }
+    },
+    "empty stdout records nothing [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {}
+    },
+    "false stdout falls through to output [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/m6.jsonl": "{\"kind\":\"ast-grep\",\"returned\":3,\"full\":0}\n"
+      }
+    },
+    "array content prints as pretty JSON [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/m7.jsonl": "{\"kind\":\"ast-grep\",\"returned\":16,\"full\":0}\n"
+      }
+    },
+    "object content prints as pretty JSON [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/m8.jsonl": "{\"kind\":\"ast-grep\",\"returned\":35,\"full\":0}\n"
+      }
+    },
+    "number content [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/m9.jsonl": "{\"kind\":\"ast-grep\",\"returned\":2,\"full\":0}\n"
+      }
+    },
+    "object without known fields is compact JSON [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/m10.jsonl": "{\"kind\":\"ast-grep\",\"returned\":22,\"full\":0}\n"
+      }
+    },
+    "trailing newlines are not counted [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/m11.jsonl": "{\"kind\":\"grep\",\"returned\":3,\"full\":0}\n"
+      }
+    },
+    "UTF-8 bytes are counted [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/m12.jsonl": "{\"kind\":\"grep\",\"returned\":10,\"full\":0}\n"
+      }
+    },
+    "missing response counts as null [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/m13.jsonl": "{\"kind\":\"grep\",\"returned\":4,\"full\":0}\n"
+      }
+    },
+    "number response [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/m14.jsonl": "{\"kind\":\"grep\",\"returned\":1,\"full\":0}\n"
+      }
+    },
+    "empty string response records nothing [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {}
+    },
+    "relative Read path resolves against cwd [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/r1.jsonl": "{\"kind\":\"read\",\"returned\":2,\"full\":4000}\n"
+      }
+    },
+    "Read of a directory records full 0 [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/r2.jsonl": "{\"kind\":\"read\",\"returned\":2,\"full\":0}\n"
+      }
+    },
+    "Read through a symlink counts the target [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/r3.jsonl": "{\"kind\":\"read\",\"returned\":2,\"full\":4000}\n"
+      }
+    },
+    "session id keeps only letters, digits and dashes [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/abcd-1.jsonl": "{\"kind\":\"grep\",\"returned\":1,\"full\":0}\n"
+      }
+    },
+    "session id with nothing left is unknown [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/unknown.jsonl": "{\"kind\":\"grep\",\"returned\":1,\"full\":0}\n"
+      }
+    },
+    "missing session id is unknown [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/unknown.jsonl": "{\"kind\":\"grep\",\"returned\":1,\"full\":0}\n"
+      }
+    },
+    "numeric session id [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/42.jsonl": "{\"kind\":\"grep\",\"returned\":1,\"full\":0}\n"
+      }
+    },
+    "TOOLU_CONFIG_DIR holds the ledger [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "project/cfg/toolu/byte-savings/c1.jsonl": "{\"kind\":\"grep\",\"returned\":1,\"full\":0}\n"
+      }
+    },
+    "an unwritable ledger dir records nothing [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {}
+    },
+    "Shell tool running sg [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/d1.jsonl": "{\"kind\":\"ast-grep\",\"returned\":3,\"full\":0}\n"
+      }
+    },
+    "ast-grep after cd [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/d2.jsonl": "{\"kind\":\"ast-grep\",\"returned\":3,\"full\":0}\n"
+      }
+    },
+    "sg under timeout [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {}
+    },
+    "ast-grep as a word to echo [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "ledgers": {
+        "home/.claude/toolu/byte-savings/d4.jsonl": "{\"kind\":\"ast-grep\",\"returned\":18,\"full\":0}\n"
+      }
+    }
+  },
+  "report": {
+    "bats: per-kind summary with Read saving% and totals": {
+      "stdout": "ast-grep: returned=80 (n=1)\ngrep: returned=300 (n=1)\nread: returned=120 full=4000 saved=97% (n=1)\nTOTAL returned: 500 bytes (~125 tok)\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bats: sums repeated kinds across a session": {
+      "stdout": "read: returned=200 full=2000 saved=90% (n=2)\nTOTAL returned: 200 bytes (~50 tok)\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "bats: missing ledger argument fails with usage": {
+      "stdout": "",
+      "stderr": "usage: byte-savings-report.sh <ledger.jsonl>\n",
+      "exitCode": 1
+    },
+    "a ledger path that does not exist": {
+      "stdout": "",
+      "stderr": "usage: byte-savings-report.sh <ledger.jsonl>\n",
+      "exitCode": 1
+    },
+    "kinds sort by name; a Read with no full size has no saving": {
+      "stdout": "ast-grep: returned=3 (n=1)\nglob: returned=9 (n=1)\ngrep: returned=2 (n=1)\nread: returned=7 (n=1)\nTOTAL returned: 21 bytes (~5 tok)\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "a Read that returned more than the file saves a negative share": {
+      "stdout": "read: returned=151 full=107 saved=-42% (n=2)\nTOTAL returned: 151 bytes (~37 tok)\n",
+      "stderr": "",
+      "exitCode": 0
+    }
+  },
+  "corpus": {
+    "ast-grep registry: structural Grep nudge [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"STOP: Structural code pattern detected. Use ast-grep: `ast-grep run --pattern \\\"your pattern\\\" --lang rust/typescript .` AST-aware matching is far more accurate. Grep is for exact literals on non-code files, or after ast-grep returned nothing.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "ast-grep registry: structural Grep nudge [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"STOP: Structural code pattern detected. Use ast-grep: `ast-grep run --pattern \\\"your pattern\\\" --lang rust/typescript .` AST-aware matching is far more accurate. Grep is for exact literals on non-code files, or after ast-grep returned nothing.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "ast-grep registry: grep in Bash nudge [claude]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "ast-grep registry: grep in Bash nudge [codex]": {
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    }
+  }
+}
