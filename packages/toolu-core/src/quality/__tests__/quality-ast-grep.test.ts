@@ -55,15 +55,52 @@ test.skipIf(!HAS_AST_GREP)("every matched source line becomes a rule-tagged exce
   // ast-grep interleaves rules in an order that varies run to run; within a
   // rule, matches come in source order.
   expect(ofRule(result, "throw-string")).toEqual([
-    { ruleId: "throw-string", line: 2, excerpt: 'src/a.ts:2:  throw "boom";' },
+    {
+      ruleId: "throw-string",
+      line: 2,
+      excerpt: 'src/a.ts:2:  throw "boom";',
+      text: '  throw "boom";',
+      first: true,
+    },
   ]);
   expect(ofRule(result, "empty-catch")).toEqual([
-    { ruleId: "empty-catch", line: 5, excerpt: "src/a.ts:5:  try {" },
-    { ruleId: "empty-catch", line: 6, excerpt: "src/a.ts:6:    f();" },
-    { ruleId: "empty-catch", line: 7, excerpt: "src/a.ts:7:  } catch (e) { }" },
+    { ruleId: "empty-catch", line: 5, excerpt: "src/a.ts:5:  try {", text: "  try {", first: true },
+    {
+      ruleId: "empty-catch",
+      line: 6,
+      excerpt: "src/a.ts:6:    f();",
+      text: "    f();",
+      first: false,
+    },
+    {
+      ruleId: "empty-catch",
+      line: 7,
+      excerpt: "src/a.ts:7:  } catch (e) { }",
+      text: "  } catch (e) { }",
+      first: false,
+    },
   ]);
   expect(result.kind === "ok" ? result.hits.length : 0).toBe(4);
 });
+
+test.skipIf(!HAS_AST_GREP)(
+  "adjacent multi-line matches each start with a first line; tabs stay in the text",
+  () => {
+    using sb = createSandbox({ git: true });
+    sb.write("m.py", "def a(mocker):\n\treturn 1\ndef b(mocker):\n\treturn 2\n");
+    const file = { path: "m.py", absolute: sb.path("m.py"), removed: false };
+    const rules =
+      "id: mocker-param\nlanguage: python\nseverity: warning\nmessage: m\nrule:\n  kind: function_definition\n  has:\n    field: parameters\n    has: {kind: identifier, regex: '^mocker$'}";
+    const result = astGrepScan(file, rules, postContext(sb, {}));
+    const hits = result.kind === "ok" ? result.hits : [];
+    expect(hits.map(({ line, text, first }) => ({ line, text, first }))).toEqual([
+      { line: 1, text: "def a(mocker):", first: true },
+      { line: 2, text: "\treturn 1", first: false },
+      { line: 3, text: "def b(mocker):", first: true },
+      { line: 4, text: "\treturn 2", first: false },
+    ]);
+  },
+);
 
 test.skipIf(!HAS_AST_GREP)(
   "an invalid rule is an ast-grep failure with its exit code and stderr",

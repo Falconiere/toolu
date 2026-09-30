@@ -1,0 +1,1063 @@
+{
+  "base": "c50c6bd9bd2d132192e86638c65bef9c3065e18a",
+  "cases": {
+    "dispatch: no-op outside a Python project [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "dispatch: Edit extracts the file path [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/bad.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "dispatch: MultiEdit extracts the file path [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/bad.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "dispatch: re-editing a failing file clean clears its entry [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/bad.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"python-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      }
+    ],
+    "dispatch: deleting a failing file clears its entry [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/bad.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/bad.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "dispatch: deleting a failing file clears its entry [codex]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"bad.py\",\n  \"violations\": \"Forbidden suppression in bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"python-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      }
+    ],
+    "dispatch: clearing one file keeps another's failure [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/a.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/a.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/a.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/a.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/b.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/b.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/a.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\nForbidden suppression in <ROOT>/project/b.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/a.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    },\n    \"<ROOT>/project/b.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/b.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/b.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/a.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/a.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/a.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/b.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/b.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"python-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/b.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/b.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n{\"file\":\"<ROOT>/project/a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      }
+    ],
+    "dispatch: another hook's failure survives a python fail and clear [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/a.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/a.py\",\n  \"violations\": \"bad rust\\nForbidden suppression in <ROOT>/project/a.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"/p/x.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Rust violation\",\n      \"violations\": \"bad rust\\n\",\n      \"updatedAt\": \"<T>\"\n    },\n    \"<ROOT>/project/a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/a.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Rust violation\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"/p/x.rs\",\n  \"violations\": \"bad rust\\n\",\n  \"entries\": {\n    \"/p/x.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Rust violation\",\n      \"violations\": \"bad rust\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      }
+    ],
+    "assembled: two violations in fragment order [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 5-line limit: <ROOT>/project/bad.py (10 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n4: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/bad.py\",\n  \"violations\": \"File exceeds 5-line limit: <ROOT>/project/bad.py (10 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n4: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"File exceeds 5-line limit: <ROOT>/project/bad.py (10 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n4: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFileLines\": 5\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "assembled: fixing one of two keeps the gate failing [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 5-line limit: <ROOT>/project/bad.py (8 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n9: blanket # noqa (no :CODE suffix)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/bad.py\",\n  \"violations\": \"File exceeds 5-line limit: <ROOT>/project/bad.py (8 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n9: blanket # noqa (no :CODE suffix)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"File exceeds 5-line limit: <ROOT>/project/bad.py (8 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\nForbidden suppression in <ROOT>/project/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n9: blanket # noqa (no :CODE suffix)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFileLines\": 5\n    }\n  }\n}\n"
+        }
+      },
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 5-line limit: <ROOT>/project/bad.py (8 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/bad.py\",\n  \"violations\": \"File exceeds 5-line limit: <ROOT>/project/bad.py (8 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"File exceeds 5-line limit: <ROOT>/project/bad.py (8 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFileLines\": 5\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "assembled: clean file [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "assembled: re-editing a failing file clean flips the gate [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/x.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n8: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/x.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/x.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n8: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/x.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/x.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n8: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/x.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"python-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/x.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"<ROOT>/project/x.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      }
+    ],
+    "flow: a non-.py file is ignored [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "flow: a missing file is ignored [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "flow: a relative path resolves against the hook's cwd [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in src/a.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"src/a.py\",\n  \"violations\": \"Forbidden suppression in src/a.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"src/a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in src/a.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"src/a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "flow: CLAUDE_FILE_PATHS names the file for any tool [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in src/a.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"src/a.py\",\n  \"violations\": \"Forbidden suppression in src/a.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"src/a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in src/a.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"src/a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "flow: a Bash call without CLAUDE_FILE_PATHS is ignored [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "flow: python3 not on PATH [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "DEV-1: no jq on PATH [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "flow: malformed thresholds fall back to the defaults [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 400-line limit: <ROOT>/project/big.py (401 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/big.py\",\n  \"violations\": \"File exceeds 400-line limit: <ROOT>/project/big.py (401 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/big.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"File exceeds 400-line limit: <ROOT>/project/big.py (401 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/big.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFileLines\": \"abc\",\n      \"maxFnLines\": 0\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "flow: a numeric-string threshold is honoured [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 10-line limit: <ROOT>/project/big.py (11 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/big.py\",\n  \"violations\": \"File exceeds 10-line limit: <ROOT>/project/big.py (11 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/big.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"File exceeds 10-line limit: <ROOT>/project/big.py (11 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/big.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFileLines\": \"10\"\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "flow: a file in a linked worktree is checked [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/wt/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/wt/bad.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/wt/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/wt/bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/wt/bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/wt/bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "codex: a written file with a violation [codex]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"bad.py\",\n  \"violations\": \"Forbidden suppression in bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in bad.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "codex: a moved file clears its source entry and checks its target [codex]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in old.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"old.py\",\n  \"violations\": \"Forbidden suppression in old.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"old.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in old.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"old.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      },
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"passing\",\n  \"source\": \"python-quality-hook\",\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"old.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"old.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_clear\"}\n"
+        }
+      }
+    ],
+    "codex: one patch through python-quality and rust-quality [codex]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest not co-located with a module: tests/test_bad.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in tests/test_bad.py — write against real data/fixtures instead\\n1: from unittest.mock import patch\\n\\nQUALITY VIOLATION — fix before proceeding:\\nForbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".codex/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Rust quality violation(s) detected\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"src/bad.rs\",\n  \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\nTest not co-located with a module: tests/test_bad.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in tests/test_bad.py — write against real data/fixtures instead\\n1: from unittest.mock import patch\\n\",\n  \"entries\": {\n    \"tests/test_bad.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test not co-located with a module: tests/test_bad.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in tests/test_bad.py — write against real data/fixtures instead\\n1: from unittest.mock import patch\\n\",\n      \"updatedAt\": \"<T>\"\n    },\n    \"src/bad.rs\": {\n      \"source\": \"rust-quality-hook\",\n      \"reason\": \"Post-edit Rust quality violation(s) detected\",\n      \"violations\": \"Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".codex/tmp/telemetry/main.jsonl": "{\"file\":\"tests/test_bad.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n{\"file\":\"src/bad.rs\",\"source\":\"rust-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "size: file at the default limit [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "size: file one line over the default limit [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 400-line limit: <ROOT>/project/big.py (401 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/big.py\",\n  \"violations\": \"File exceeds 400-line limit: <ROOT>/project/big.py (401 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/big.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"File exceeds 400-line limit: <ROOT>/project/big.py (401 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/big.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "size: project config lowers maxFileLines [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFile exceeds 10-line limit: <ROOT>/project/big.py (15 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/big.py\",\n  \"violations\": \"File exceeds 10-line limit: <ROOT>/project/big.py (15 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n  \"entries\": {\n    \"<ROOT>/project/big.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"File exceeds 10-line limit: <ROOT>/project/big.py (15 code lines, blanks/comments excluded) — split into submodules. Override via lang.python.maxFileLines.\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/big.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFileLines\": 10\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: comments and blanks do not count [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFileLines\": 5\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: def at the default fn-length limit [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public def/class missing a docstring in <ROOT>/project/ok.py — add a concise one:\\n1: ok\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "size: project config lowers maxFnLines [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nbig:1 (5 lines)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Function too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nbig:1 (5 lines)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nbig:1 (5 lines)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: a decorator is not counted [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public def/class missing a docstring in <ROOT>/project/m.py — add a concise one:\\n2: ok\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFnLines\": 4\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: a method is measured to its own close [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nlong_method:5 (5 lines)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Function too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nlong_method:5 (5 lines)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nlong_method:5 (5 lines)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "size: async def is measured [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nbig:1 (5 lines)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Function too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nbig:1 (5 lines)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/m.py (>3 lines) — extract helpers.\\nbig:1 (5 lines)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "docs: top-level def without a docstring [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public def/class missing a docstring in <ROOT>/project/m.py — add a concise one:\\n1: undocumented\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: top-level def with a docstring [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: single-quoted docstring [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: a _private def is exempt [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: an indented method is exempt [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: a class without a docstring [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public def/class missing a docstring in <ROOT>/project/m.py — add a concise one:\\n1: Foo\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: a multi-line signature is tracked to its colon [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "docs: a multi-line signature missing its docstring [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public def/class missing a docstring in <ROOT>/project/m.py — add a concise one:\\n1: multi_line\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "suppression: bare except: [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "suppression: one-line except ...: pass [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: one-line except ...: pass (silently discarded)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: one-line except ...: pass (silently discarded)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: one-line except ...: pass (silently discarded)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "suppression: blanket # noqa [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n1: blanket # noqa (no :CODE suffix)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n1: blanket # noqa (no :CODE suffix)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n1: blanket # noqa (no :CODE suffix)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "suppression: blanket # type: ignore [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n1: blanket # type: ignore (no [code] suffix)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n1: blanket # type: ignore (no [code] suffix)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n1: blanket # type: ignore (no [code] suffix)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "suppression: except SpecificError: with a body [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "suppression: scoped # noqa: E501 [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "suppression: scoped # type: ignore[assignment] [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: def test_ in a misnamed file [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest-bearing file not named test_*.py or *_test.py: <ROOT>/project/checks.py — rename to follow the colocated test convention\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/checks.py\",\n  \"violations\": \"Test-bearing file not named test_*.py or *_test.py: <ROOT>/project/checks.py — rename to follow the colocated test convention\\n\",\n  \"entries\": {\n    \"<ROOT>/project/checks.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test-bearing file not named test_*.py or *_test.py: <ROOT>/project/checks.py — rename to follow the colocated test convention\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/checks.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: a pytest import in a misnamed file [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest-bearing file not named test_*.py or *_test.py: <ROOT>/project/checks.py — rename to follow the colocated test convention\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/checks.py\",\n  \"violations\": \"Test-bearing file not named test_*.py or *_test.py: <ROOT>/project/checks.py — rename to follow the colocated test convention\\n\",\n  \"entries\": {\n    \"<ROOT>/project/checks.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test-bearing file not named test_*.py or *_test.py: <ROOT>/project/checks.py — rename to follow the colocated test convention\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/checks.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: a unittest import in a misnamed file [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest-bearing file not named test_*.py or *_test.py: <ROOT>/project/checks.py — rename to follow the colocated test convention\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/checks.py\",\n  \"violations\": \"Test-bearing file not named test_*.py or *_test.py: <ROOT>/project/checks.py — rename to follow the colocated test convention\\n\",\n  \"entries\": {\n    \"<ROOT>/project/checks.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test-bearing file not named test_*.py or *_test.py: <ROOT>/project/checks.py — rename to follow the colocated test convention\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/checks.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: test_foo.py naming is accepted [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public def/class missing a docstring in <ROOT>/project/test_foo.py — add a concise one:\\n1: test_something\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: foo_test.py naming is accepted [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public def/class missing a docstring in <ROOT>/project/foo_test.py — add a concise one:\\n1: test_something\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: test_*.py alone in its directory [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest not co-located with a module: <ROOT>/project/lonely/test_orphan.py — colocate test_*.py next to the module it tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/lonely/test_orphan.py\",\n  \"violations\": \"Test not co-located with a module: <ROOT>/project/lonely/test_orphan.py — colocate test_*.py next to the module it tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/lonely/test_orphan.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test not co-located with a module: <ROOT>/project/lonely/test_orphan.py — colocate test_*.py next to the module it tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/lonely/test_orphan.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "tests: test_*.py next to its module [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public def/class missing a docstring in <ROOT>/project/pkg/test_calc.py — add a concise one:\\n1: test_add\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: conftest.py importing pytest is exempt [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "tests: __init__.py is exempt [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "no-mocks: from unittest import mock [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: from unittest import mock\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/test_a.py\",\n  \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: from unittest import mock\\n\",\n  \"entries\": {\n    \"<ROOT>/project/test_a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: from unittest import mock\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/test_a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: import unittest.mock [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: import unittest.mock\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/test_a.py\",\n  \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: import unittest.mock\\n\",\n  \"entries\": {\n    \"<ROOT>/project/test_a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: import unittest.mock\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/test_a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: from mock import Mock [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: from mock import Mock\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/test_a.py\",\n  \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: from mock import Mock\\n\",\n  \"entries\": {\n    \"<ROOT>/project/test_a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: from mock import Mock\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/test_a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: import pytest_mock [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: import pytest_mock\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/test_a.py\",\n  \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: import pytest_mock\\n\",\n  \"entries\": {\n    \"<ROOT>/project/test_a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: import pytest_mock\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/test_a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: from unittest.mock import MagicMock, patch [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: from unittest.mock import MagicMock, patch\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/test_a.py\",\n  \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: from unittest.mock import MagicMock, patch\\n\",\n  \"entries\": {\n    \"<ROOT>/project/test_a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: from unittest.mock import MagicMock, patch\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/test_a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: mocker fixture parameter [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mocker/monkeypatch fixture parameter in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: def test_it(mocker):\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/test_a.py\",\n  \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mocker/monkeypatch fixture parameter in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: def test_it(mocker):\\n\",\n  \"entries\": {\n    \"<ROOT>/project/test_a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mocker/monkeypatch fixture parameter in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: def test_it(mocker):\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/test_a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: monkeypatch fixture parameter [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mocker/monkeypatch fixture parameter in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: def test_it(monkeypatch):\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/test_a.py\",\n  \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mocker/monkeypatch fixture parameter in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: def test_it(monkeypatch):\\n\",\n  \"entries\": {\n    \"<ROOT>/project/test_a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mocker/monkeypatch fixture parameter in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: def test_it(monkeypatch):\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/test_a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: a mock import in a non-test file [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "no-mocks: lang.python.noMocks false [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/test_a.py\",\n  \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/test_a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/test_a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"noMocks\": false\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "no-mocks: a real-fixture test passes [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/test_a.py\",\n  \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/test_a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/test_a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: ast-grep absent skips the rule [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "no-mocks: ast-grep exit 2 with stderr [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nast-grep failed while scanning <ROOT>/project/pkg/test_mod.py — ast-grep exit 2: boom; no-mocks rules could not be verified. Fix the tool/file and re-edit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/pkg/test_mod.py\",\n  \"violations\": \"ast-grep failed while scanning <ROOT>/project/pkg/test_mod.py — ast-grep exit 2: boom; no-mocks rules could not be verified. Fix the tool/file and re-edit\\n\",\n  \"entries\": {\n    \"<ROOT>/project/pkg/test_mod.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"ast-grep failed while scanning <ROOT>/project/pkg/test_mod.py — ast-grep exit 2: boom; no-mocks rules could not be verified. Fix the tool/file and re-edit\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/pkg/test_mod.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: ast-grep stderr with exit 0 [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nast-grep failed while scanning <ROOT>/project/pkg/test_mod.py — ast-grep exit 0: warn; no-mocks rules could not be verified. Fix the tool/file and re-edit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/pkg/test_mod.py\",\n  \"violations\": \"ast-grep failed while scanning <ROOT>/project/pkg/test_mod.py — ast-grep exit 0: warn; no-mocks rules could not be verified. Fix the tool/file and re-edit\\n\",\n  \"entries\": {\n    \"<ROOT>/project/pkg/test_mod.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"ast-grep failed while scanning <ROOT>/project/pkg/test_mod.py — ast-grep exit 0: warn; no-mocks rules could not be verified. Fix the tool/file and re-edit\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/pkg/test_mod.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: ast-grep exit 0 with empty output [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nast-grep failed while scanning <ROOT>/project/pkg/test_mod.py — ast-grep exited 0 with empty output (expected at least the JSON array \\\"[]\\\"); no-mocks rules could not be verified. Fix the tool/file and re-edit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/pkg/test_mod.py\",\n  \"violations\": \"ast-grep failed while scanning <ROOT>/project/pkg/test_mod.py — ast-grep exited 0 with empty output (expected at least the JSON array \\\"[]\\\"); no-mocks rules could not be verified. Fix the tool/file and re-edit\\n\",\n  \"entries\": {\n    \"<ROOT>/project/pkg/test_mod.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"ast-grep failed while scanning <ROOT>/project/pkg/test_mod.py — ast-grep exited 0 with empty output (expected at least the JSON array \\\"[]\\\"); no-mocks rules could not be verified. Fix the tool/file and re-edit\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/pkg/test_mod.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: ast-grep exit 0 with non-JSON output [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nast-grep failed while scanning <ROOT>/project/pkg/test_mod.py — ast-grep exited 0 but its output did not parse as the documented JSON array; no-mocks rules could not be verified. Fix the tool/file and re-edit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/pkg/test_mod.py\",\n  \"violations\": \"ast-grep failed while scanning <ROOT>/project/pkg/test_mod.py — ast-grep exited 0 but its output did not parse as the documented JSON array; no-mocks rules could not be verified. Fix the tool/file and re-edit\\n\",\n  \"entries\": {\n    \"<ROOT>/project/pkg/test_mod.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"ast-grep failed while scanning <ROOT>/project/pkg/test_mod.py — ast-grep exited 0 but its output did not parse as the documented JSON array; no-mocks rules could not be verified. Fix the tool/file and re-edit\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/pkg/test_mod.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "no-mocks: ast-grep JSON that is not an array of matches [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nast-grep failed while scanning <ROOT>/project/pkg/test_mod.py — ast-grep exited 0 but its output did not parse as the documented JSON array; no-mocks rules could not be verified. Fix the tool/file and re-edit\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/pkg/test_mod.py\",\n  \"violations\": \"ast-grep failed while scanning <ROOT>/project/pkg/test_mod.py — ast-grep exited 0 but its output did not parse as the documented JSON array; no-mocks rules could not be verified. Fix the tool/file and re-edit\\n\",\n  \"entries\": {\n    \"<ROOT>/project/pkg/test_mod.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"ast-grep failed while scanning <ROOT>/project/pkg/test_mod.py — ast-grep exited 0 but its output did not parse as the documented JSON array; no-mocks rules could not be verified. Fix the tool/file and re-edit\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/pkg/test_mod.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "edges: more than five suppressions list the first five [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n1: blanket # noqa (no :CODE suffix)\\n2: blanket # noqa (no :CODE suffix)\\n3: blanket # noqa (no :CODE suffix)\\n4: blanket # noqa (no :CODE suffix)\\n5: blanket # noqa (no :CODE suffix)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n1: blanket # noqa (no :CODE suffix)\\n2: blanket # noqa (no :CODE suffix)\\n3: blanket # noqa (no :CODE suffix)\\n4: blanket # noqa (no :CODE suffix)\\n5: blanket # noqa (no :CODE suffix)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n1: blanket # noqa (no :CODE suffix)\\n2: blanket # noqa (no :CODE suffix)\\n3: blanket # noqa (no :CODE suffix)\\n4: blanket # noqa (no :CODE suffix)\\n5: blanket # noqa (no :CODE suffix)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "edges: more than five mock imports list the first five [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: import mock\\n2: import mock\\n3: import mock\\n4: import mock\\n5: import mock\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/test_a.py\",\n  \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: import mock\\n2: import mock\\n3: import mock\\n4: import mock\\n5: import mock\\n\",\n  \"entries\": {\n    \"<ROOT>/project/test_a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mock import in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: import mock\\n2: import mock\\n3: import mock\\n4: import mock\\n5: import mock\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/test_a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "edges: more than three undocumented defs list the first three [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public def/class missing a docstring in <ROOT>/project/m.py — add a concise one:\\n1: f1\\n5: f2\\n9: f3\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "edges: every long function is listed [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/m.py (>2 lines) — extract helpers.\\ng1:1 (4 lines)\\ng2:7 (4 lines)\\ng3:13 (4 lines)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Function too long in <ROOT>/project/m.py (>2 lines) — extract helpers.\\ng1:1 (4 lines)\\ng2:7 (4 lines)\\ng3:13 (4 lines)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/m.py (>2 lines) — extract helpers.\\ng1:1 (4 lines)\\ng2:7 (4 lines)\\ng3:13 (4 lines)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFnLines\": 2\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "edges: CRLF bare except [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "edges: CRLF docstring and signature [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "edges: no final newline [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "edges: empty file [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "edges: one-line except pass with a comment [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: one-line except ...: pass (silently discarded)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: one-line except ...: pass (silently discarded)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: one-line except ...: pass (silently discarded)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "edges: noqa and type-ignore spellings [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: blanket # noqa (no :CODE suffix)\\n5: blanket # type: ignore (no [code] suffix)\\n6: blanket # type: ignore (no [code] suffix)\\n7: blanket # noqa (no :CODE suffix)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: blanket # noqa (no :CODE suffix)\\n5: blanket # type: ignore (no [code] suffix)\\n6: blanket # type: ignore (no [code] suffix)\\n7: blanket # noqa (no :CODE suffix)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: blanket # noqa (no :CODE suffix)\\n5: blanket # type: ignore (no [code] suffix)\\n6: blanket # type: ignore (no [code] suffix)\\n7: blanket # noqa (no :CODE suffix)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "edges: tab-indented except [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nForbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Forbidden suppression in <ROOT>/project/m.py — remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:\\n3: bare except: (swallows everything)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "edges: mocker in a multi-line and a nested def [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mocker/monkeypatch fixture parameter in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: def test_outer(\\n5:     def inner(monkeypatch):\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/test_a.py\",\n  \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mocker/monkeypatch fixture parameter in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: def test_outer(\\n5:     def inner(monkeypatch):\\n\",\n  \"entries\": {\n    \"<ROOT>/project/test_a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mocker/monkeypatch fixture parameter in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: def test_outer(\\n5:     def inner(monkeypatch):\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/test_a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "edges: a tab in a mock hit line [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mocker/monkeypatch fixture parameter in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: def test_it(mocker):\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/test_a.py\",\n  \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mocker/monkeypatch fixture parameter in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: def test_it(mocker):\\n\",\n  \"entries\": {\n    \"<ROOT>/project/test_a.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test not co-located with a module: <ROOT>/project/test_a.py — colocate test_*.py next to the module it tests\\nno-mocks: mocker/monkeypatch fixture parameter in <ROOT>/project/test_a.py — write against real data/fixtures instead\\n1: def test_it(mocker):\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/test_a.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "edges: conftest.py with a mock import is not scanned [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "edges: docstring prefixes [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public def/class missing a docstring in <ROOT>/project/m.py — add a concise one:\\n5: g\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "edges: a one-line def swallows the next def [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public def/class missing a docstring in <ROOT>/project/m.py — add a concise one:\\n1: one\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "edges: a comment after the signature is not a docstring [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public def/class missing a docstring in <ROOT>/project/m.py — add a concise one:\\n1: a\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "edges: a nested def counts toward its outer [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nFunction too long in <ROOT>/project/m.py (>4 lines) — extract helpers.\\nouter:1 (5 lines)\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/m.py\",\n  \"violations\": \"Function too long in <ROOT>/project/m.py (>4 lines) — extract helpers.\\nouter:1 (5 lines)\\n\",\n  \"entries\": {\n    \"<ROOT>/project/m.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Function too long in <ROOT>/project/m.py (>4 lines) — extract helpers.\\nouter:1 (5 lines)\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/m.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n",
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFnLines\": 4\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "edges: comments inside a def are not counted [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/toolu.config.json": "{\n  \"lang\": {\n    \"python\": {\n      \"maxFnLines\": 3\n    }\n  }\n}\n"
+        }
+      }
+    ],
+    "edges: a symlinked sibling is not a module [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest not co-located with a module: <ROOT>/project/lonely/test_x.py — colocate test_*.py next to the module it tests\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/lonely/test_x.py\",\n  \"violations\": \"Test not co-located with a module: <ROOT>/project/lonely/test_x.py — colocate test_*.py next to the module it tests\\n\",\n  \"entries\": {\n    \"<ROOT>/project/lonely/test_x.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test not co-located with a module: <ROOT>/project/lonely/test_x.py — colocate test_*.py next to the module it tests\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/lonely/test_x.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "edges: pytest-prefixed import names are not test markers [claude]": [
+      {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ],
+    "edges: test marker variants in a misnamed file [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"QUALITY VIOLATION — fix before proceeding:\\nTest-bearing file not named test_*.py or *_test.py: <ROOT>/project/checks.py — rename to follow the colocated test convention\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {
+          ".claude/tmp/quality-gate-status.json": "{\n  \"status\": \"failing\",\n  \"reason\": \"Post-edit Python quality violation(s) detected\",\n  \"source\": \"python-quality-hook\",\n  \"file\": \"<ROOT>/project/checks.py\",\n  \"violations\": \"Test-bearing file not named test_*.py or *_test.py: <ROOT>/project/checks.py — rename to follow the colocated test convention\\n\",\n  \"entries\": {\n    \"<ROOT>/project/checks.py\": {\n      \"source\": \"python-quality-hook\",\n      \"reason\": \"Post-edit Python quality violation(s) detected\",\n      \"violations\": \"Test-bearing file not named test_*.py or *_test.py: <ROOT>/project/checks.py — rename to follow the colocated test convention\\n\",\n      \"updatedAt\": \"<T>\"\n    }\n  },\n  \"updatedAt\": \"<T>\"\n}\n",
+          ".claude/tmp/telemetry/main.jsonl": "{\"file\":\"<ROOT>/project/checks.py\",\"source\":\"python-quality-hook\",\"v\":1,\"t\":\"<T>\",\"branch\":\"main\",\"event\":\"gate_fail\"}\n"
+        }
+      }
+    ],
+    "edges: an indented test method is not a marker [claude]": [
+      {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"Public def/class missing a docstring in <ROOT>/project/checks.py — add a concise one:\\n1: TestA\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "state": {}
+      }
+    ]
+  }
+}

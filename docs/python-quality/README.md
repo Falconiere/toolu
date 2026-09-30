@@ -14,7 +14,7 @@ Python `PostToolUse` quality checks registered into the toolu hook engine. Every
 
 ### Post-Edit Quality Checks
 
-Every Python file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are assembled from ordered `hooks/concerns/` fragments into one module at `SessionStart` and run only while this plugin is installed — **uninstall it and the Python rules vanish, fail-closed.**
+Every Python file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are one bundled TypeScript module, published into toolu's registry at `SessionStart`, and run only while this plugin is installed — **uninstall it and the Python rules vanish, fail-closed.**
 
 ## Checks Enforced
 
@@ -112,7 +112,7 @@ Top-level, non-underscore-prefixed `def`/`class` should open with a docstring. T
 ## How the Gate Works
 
 1. **Agent edits a `.py` file** — `Write` or `Edit` tool call
-2. **PostToolUse hook fires** — the assembled module checks the file
+2. **PostToolUse hook fires** — the registry module checks the file
 3. **Violation found** (size, suppression, test layout, mocks) → gate goes **failing**, new task blocked until fixed
 4. **Fix the violation** → gate clears, continue working
 
@@ -160,7 +160,7 @@ Agent: *writes the function*
 
 ## Hooks
 
-The fragments register into the core toolu dispatcher and run only while this plugin is installed. Uninstalling immediately removes the Python rules:
+The module registers into the core toolu dispatcher and runs only while this plugin is installed. Uninstalling immediately removes the Python rules:
 
 ```text
 /plugin uninstall python-quality@toolu

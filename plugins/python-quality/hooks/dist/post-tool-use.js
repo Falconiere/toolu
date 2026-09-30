@@ -1,6 +1,6 @@
 // @bun
-// plugins/ts-quality/hooks/src/post-tool-use.ts
-import { readFileSync as readFileSync7 } from "fs";
+// plugins/python-quality/hooks/src/post-tool-use.ts
+import { readFileSync as readFileSync5 } from "fs";
 
 // node_modules/.bun/zod@4.1.5/node_modules/zod/v4/core/core.js
 var NEVER = Object.freeze({
@@ -3993,14 +3993,6 @@ function qualityThreshold(config, lang, key, options = {}) {
   const defaults = QUALITY_DEFAULTS[lang];
   return defaults[key] ?? 0;
 }
-function tsMaxFileLinesResolved(config, options = {}) {
-  const override = positiveFloor(langMember(config, "ts", "maxFileLines"));
-  if (override !== undefined) {
-    return { value: override, source: "override" };
-  }
-  const native = nativeTsMaxLines(options);
-  return native === undefined ? { value: QUALITY_DEFAULTS.ts.maxFileLines, source: "default" } : { value: native, source: "native" };
-}
 function qualityFlag(config, lang, key, fallback) {
   const value = langMember(config, lang, key);
   return typeof value === "boolean" ? value : fallback;
@@ -4096,61 +4088,16 @@ function walkLines(fd, visit) {
 function trimBlanks(line) {
   return line.replace(/^[ \t]+|[ \t]+$/g, "");
 }
-function stripBlocks(line, inBlock) {
-  let rest = line;
-  if (inBlock) {
-    const close = rest.indexOf("*/");
-    if (close === -1)
-      return;
-    rest = rest.slice(close + 2);
-  }
-  for (;; ) {
-    const open = rest.indexOf("/*");
-    if (open === -1)
-      return { code: rest, inBlock: false };
-    const after = rest.slice(open + 2);
-    const close = after.indexOf("*/");
-    if (close === -1)
-      return { code: rest.slice(0, open), inBlock: true };
-    rest = rest.slice(0, open) + after.slice(close + 2);
-  }
-}
-function countCodeLines(path) {
-  const count = { inBlock: false, records: 0, code: 0 };
+function countPythonCodeLines(path) {
+  let code = 0;
   const walk = eachLine(path, (line) => {
-    count.records += 1;
-    const stripped = stripBlocks(line, count.inBlock);
-    if (stripped === undefined)
-      return;
-    count.inBlock = stripped.inBlock;
-    const comment = stripped.code.indexOf("//");
-    const kept = comment === -1 ? stripped.code : stripped.code.slice(0, comment);
-    if (trimBlanks(kept) !== "")
-      count.code += 1;
+    const trimmed = trimBlanks(line);
+    if (trimmed !== "" && !trimmed.startsWith("#"))
+      code += 1;
   });
-  if (walk === "unreadable")
-    return;
-  return count.inBlock ? count.records : count.code;
-}
-function occurrences(line, token) {
-  let count = 0;
-  for (let at = line.indexOf(token);at !== -1; at = line.indexOf(token, at + token.length)) {
-    count += 1;
-  }
-  return count;
-}
-function hasUnterminatedBlock(path) {
-  if (!isRegularFile(path))
-    return false;
-  let balance = 0;
-  eachLine(path, (line) => {
-    balance += occurrences(line, "/*") - occurrences(line, "*/");
-  });
-  return balance > 0;
+  return walk === "unreadable" ? undefined : code;
 }
 // packages/toolu-core/src/detect/detect-project.ts
-import { spawnSync as spawnSync2 } from "child_process";
-import { readdirSync as readdirSync2 } from "fs";
 import { basename, join as join4 } from "path";
 function projectToplevel(options = {}) {
   return gitToplevel(options.env ?? process.env, options.cwd);
@@ -4158,47 +4105,9 @@ function projectToplevel(options = {}) {
 function hasAny(root, names) {
   return names.some((name) => isRegularFile(join4(root, name)));
 }
-var LOCK_FILES = [
-  ["bun.lock", "bun"],
-  ["bun.lockb", "bun"],
-  ["pnpm-lock.yaml", "pnpm"],
-  ["yarn.lock", "yarn"],
-  ["package-lock.json", "npm"]
-];
-function nodePackageManager(options = {}) {
+function detectPython(options = {}) {
   const root = projectToplevel(options);
-  if (root === undefined)
-    return;
-  return LOCK_FILES.find(([file]) => isRegularFile(join4(root, file)))?.[1];
-}
-function detectTs(options = {}) {
-  const env = options.env ?? process.env;
-  const root = gitToplevel(env, options.cwd);
-  if (root === undefined)
-    return false;
-  const res = spawnSync2("git", ["-C", root, "ls-files", "**/tsconfig*.json", "tsconfig*.json"], {
-    env: childEnv(env),
-    encoding: "utf8"
-  });
-  return res.error === undefined && /[^\n]/.test(res.stdout);
-}
-function entries(root) {
-  try {
-    return readdirSync2(root);
-  } catch {
-    return [];
-  }
-}
-function tsLinter(options = {}) {
-  const root = projectToplevel(options);
-  if (root === undefined)
-    return;
-  if (hasAny(root, ["biome.json", "biome.jsonc"]))
-    return "biome";
-  if (hasAny(root, [".oxlintrc.json"]))
-    return "oxc";
-  const eslint = entries(root).some((name) => name.startsWith(".eslintrc") || name.startsWith("eslint.config."));
-  return eslint ? "eslint" : undefined;
+  return root !== undefined && hasAny(root, ["pyproject.toml", "setup.py", "setup.cfg", "requirements.txt"]);
 }
 // packages/toolu-core/src/detect/detect-tools.ts
 import { accessSync, constants, statSync as statSync3 } from "fs";
@@ -4315,7 +4224,7 @@ function astGrepScan(file, rules, ctx) {
   return { kind: "ok", hits, empty: false };
 }
 // packages/toolu-core/src/quality/quality-edit.ts
-import { spawnSync as spawnSync3 } from "child_process";
+import { spawnSync as spawnSync2 } from "child_process";
 import { statSync as statSync5 } from "fs";
 import { dirname, resolve } from "path";
 
@@ -4469,7 +4378,7 @@ function withoutSlash(dir) {
   return dir.replace(/\/$/, "");
 }
 function inLinkedWorktree(file, ctx) {
-  const res = spawnSync3("git", [
+  const res = spawnSync2("git", [
     "-C",
     dirname(file.absolute),
     "rev-parse",
@@ -4571,9 +4480,9 @@ import { appendFileSync, mkdirSync } from "fs";
 import { join as join6 } from "path";
 
 // packages/toolu-core/src/state/state-git.ts
-import { spawnSync as spawnSync4 } from "child_process";
+import { spawnSync as spawnSync3 } from "child_process";
 function currentBranch(root, env) {
-  const res = spawnSync4("git", ["-C", root, "rev-parse", "--abbrev-ref", "HEAD"], {
+  const res = spawnSync3("git", ["-C", root, "rev-parse", "--abbrev-ref", "HEAD"], {
     env: childEnv(env),
     encoding: "utf8"
   });
@@ -4885,12 +4794,10 @@ var ModuleSchema = looseObject({
   event: _enum(REGISTRY_EVENTS),
   run: custom((value) => typeof value === "function")
 });
-// plugins/ts-quality/hooks/src/rules/advisories.ts
-import { spawnSync as spawnSync5 } from "child_process";
-import { statSync as statSync6 } from "fs";
-import { basename as basename2, join as join8 } from "path";
+// plugins/python-quality/hooks/src/rules/check.ts
+import { basename as basename3 } from "path";
 
-// plugins/ts-quality/hooks/src/rules/ts-file.ts
+// plugins/python-quality/hooks/src/rules/py-file.ts
 var SP = "[ \\t\\n\\v\\f\\r]";
 function ere(source) {
   return new RegExp(source.replaceAll("[[:space:]]", SP), "s");
@@ -4905,790 +4812,303 @@ function splitLines(text) {
     lines.pop();
   return lines;
 }
-function numbered(lines, pattern) {
-  return lines.flatMap((line, i) => pattern.test(line) ? [`${String(i + 1)}:${line}`] : []);
-}
-function countMatches(lines, pattern) {
-  return lines.filter((line) => pattern.test(line)).length;
-}
 function head(items, n) {
   return items.slice(0, n).join(`
 `);
 }
-function withoutCommentLines(rows) {
-  const comment = ere("^[0-9]+:[[:space:]]*//");
-  return rows.filter((row) => !comment.test(row));
-}
-function withExcerpt(header, excerpt) {
-  return excerpt === "" ? undefined : `${header}
-${excerpt}`;
-}
-function pathHas(f, part) {
-  return f.file.path.includes(part);
-}
-function isTestPath(path) {
-  return /\.(test|spec)\.(ts|tsx)$/s.test(path);
-}
-function spawnEnv(f) {
-  const env = {};
-  for (const [key, value] of Object.entries(f.ctx.env))
-    if (value !== undefined)
-      env[key] = value;
-  return env;
+function isPythonTestName(base) {
+  return base.startsWith("test_") && base.endsWith(".py") || base.endsWith("_test.py");
 }
 
-// plugins/ts-quality/hooks/src/rules/advisories.ts
-function typecheckCommand(pm) {
-  if (pm === "bun")
-    return "bun run typecheck";
-  if (pm === "pnpm")
-    return "pnpm -w typecheck";
-  if (pm === "yarn")
-    return "yarn typecheck";
-  if (pm === "npm")
-    return "npm run typecheck";
-  return `${pm} run typecheck`;
+// plugins/python-quality/hooks/src/rules/docs.ts
+var DEFINITION = /^(async[ \t]+def|def|class)[ \t]+[A-Za-z_][A-Za-z0-9_]*/;
+function isBlank(line) {
+  return line.replace(/^[ \t]+|[ \t]+$/g, "") === "";
 }
-var RUNNERS = {
-  bun: ["bunx", ["bunx", "jscpd"]],
-  pnpm: ["pnpm", ["pnpm", "dlx", "jscpd"]],
-  yarn: ["yarn", ["yarn", "dlx", "jscpd"]],
-  npm: ["npx", ["npx", "jscpd"]]
-};
-function kindOf(path) {
-  try {
-    const stat = statSync6(path);
-    return stat.isFile() ? "file" : stat.isDirectory() ? "dir" : "none";
-  } catch {
-    return "none";
-  }
+function endsWithColon(line) {
+  const code = line.replace(/[ \t]#.*$/s, "").replace(/[ \t]+$/, "");
+  return code.endsWith(":");
 }
-function bre(text) {
-  const chars = [...text];
-  const escaped = chars.map((char, at) => {
-    if ("+?(){}|".includes(char))
-      return `\\${char}`;
-    if (char === "^" && at > 0)
-      return String.raw`\^`;
-    if (char === "$" && at < chars.length - 1)
-      return String.raw`\$`;
-    return char;
-  });
-  return new RegExp(escaped.join(""), "s");
+function opensDocstring(line) {
+  const text = line.replace(/^[ \t]+/, "");
+  const at = /^[rRfF]/.test(text) ? 1 : 0;
+  const quote = text.slice(at, at + 3);
+  return quote === '"""' || quote === "'''";
 }
-function jscpdOutput(f, runner, pkg, config) {
-  const res = spawnSync5("timeout", ["10", ...runner, pkg, "--config", config], {
-    cwd: f.ctx.cwd,
-    env: spawnEnv(f),
-    encoding: "utf8"
-  });
-  const out = res.stdout ?? "";
-  return `${out}${out === "" || out.endsWith(`
-`) ? "" : `
-`}${res.stderr ?? ""}`;
-}
-function duplication(f) {
-  const path = f.file.path;
-  if (/\.(test|spec)\./s.test(path))
-    return "";
-  const root = f.ctx.projectRoot;
-  const relative = path.startsWith(`${root}/`) ? path.slice(root.length + 1) : path;
-  if (!relative.startsWith("apps/") && !relative.startsWith("packages/"))
-    return "";
-  const pkg = `${root}/${relative.split("/").slice(0, 2).join("/")}`;
-  const runner = RUNNERS[f.pm];
-  const config = join8(root, ".jscpd.json");
-  if (runner === undefined || !toolAvailable(runner[0], f.ctx.env))
-    return "";
-  if (kindOf(pkg) !== "dir" || kindOf(config) !== "file")
-    return "";
-  const lines = jscpdOutput(f, runner[1], pkg, config).split(`
-`);
-  const cloned = lines.some((line) => /found.*clone|duplicat/is.test(line));
-  const named = lines.some((line) => bre(basename2(path)).test(line));
-  if (!cloned || !named)
-    return "";
-  return `Code duplication detected involving ${path} \u2014 deduplicate or run '${typecheckCommand(f.pm)}' before commit`;
-}
-var EXPORTS = [
-  /^export (async )?function /s,
-  /^export (abstract )?class /s,
-  /^export default /s,
-  /^export (const|interface|type|enum) [A-Z]/s,
-  /^export const [a-z_][A-Za-z0-9_]* = (async )?(\(|function)/s
-];
-function undocumented(lines) {
-  const rows = [];
-  const blank = ere("^[[:space:]]*$");
-  const lineComment = ere("^[[:space:]]*//");
-  let prev = "";
-  lines.forEach((line, i) => {
-    if (blank.test(line) || lineComment.test(line))
-      return;
-    const documented = ere(String.raw`\*/[[:space:]]*$`).test(prev) || ere(String.raw`^[[:space:]]*/\*\*`).test(prev);
-    if (EXPORTS.some((pattern) => pattern.test(line)) && !documented)
-      rows.push(`${String(i + 1)}: ${line}`);
-    prev = line;
-  });
-  return rows;
-}
-function verbose(lines) {
-  const rows = [];
-  let block;
-  lines.forEach((line, i) => {
-    if (block === undefined && line.includes("/**"))
-      block = { start: i + 1, count: 0 };
-    if (block === undefined)
-      return;
-    block.count += 1;
-    if (!line.includes("*/"))
-      return;
-    if (block.count > 12)
-      rows.push(`${String(block.start)}: JSDoc block is ${String(block.count)} lines \u2014 trim to the essentials`);
-    block = undefined;
-  });
-  return rows;
+function definitionName(line) {
+  const rest = line.replace(/^(async[ \t]+def|def|class)[ \t]+/, "");
+  return /^[A-Za-z_][A-Za-z0-9_]*/.exec(rest)?.[0] ?? "";
 }
 function docs(f) {
+  const missing = [];
+  let state = "scan";
+  let at = { line: 0, name: "" };
+  for (const [index, line] of f.lines.entries()) {
+    if (state === "body") {
+      if (isBlank(line))
+        continue;
+      if (!opensDocstring(line))
+        missing.push(`${String(at.line)}: ${at.name}`);
+      state = "scan";
+      continue;
+    }
+    if (state === "signature") {
+      if (endsWithColon(line))
+        state = "body";
+      continue;
+    }
+    if (!DEFINITION.test(line))
+      continue;
+    const name = definitionName(line);
+    if (name.startsWith("_"))
+      continue;
+    at = { line: index + 1, name };
+    state = endsWithColon(line) ? "body" : "signature";
+  }
+  if (missing.length === 0)
+    return "";
+  return `Public def/class missing a docstring in ${f.file.path} \u2014 add a concise one:
+${head(missing, 3)}`;
+}
+
+// plugins/python-quality/hooks/src/rules/layout-rules.ts
+import { lstatSync, readdirSync as readdirSync2 } from "fs";
+import { basename as basename2, dirname as dirname4, join as join8 } from "path";
+var TEST_DEF = ere("^(async[[:space:]]+)?def[[:space:]]+test_[A-Za-z0-9_]*[[:space:]]*\\(");
+var TEST_IMPORT = ere("^(import|from)[[:space:]]+(pytest|unittest)(?![A-Za-z0-9_])");
+function isModuleName(name) {
+  return name.endsWith(".py") && !isPythonTestName(name) && name !== "conftest.py" && name !== "__init__.py";
+}
+function isRegular(path) {
+  try {
+    return lstatSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+function hasModuleSibling(dir) {
+  let names;
+  try {
+    names = readdirSync2(dir);
+  } catch {
+    return false;
+  }
+  return names.some((name) => isModuleName(name) && isRegular(join8(dir, name)));
+}
+function testLayout(f) {
   const path = f.file.path;
-  const name = basename2(path);
-  if (isTestPath(path) || /\.d\.ts$/s.test(path) || name === "index.ts" || name === "index.tsx")
-    return "";
-  const missing = head(undocumented(f.lines), 3);
-  const long = head(verbose(f.lines), 2);
-  const parts = [];
-  if (missing !== "")
-    parts.push(`Exported API missing a JSDoc in ${path} \u2014 add a concise /** */ doc:
-${missing}`);
-  if (long !== "")
-    parts.push(`Verbose JSDoc in ${path} \u2014 docs must be present but concise:
-${long}`);
-  return parts.join(`
-`);
-}
-function unhandledAwait(f) {
-  const comment = ere(String.raw`^[[:space:]]*(//|/\*|\*)`);
-  const code = f.lines.filter((line) => !comment.test(line));
-  const awaits = code.some((line) => ere(String.raw`\bawait[[:space:]]`).test(line));
-  const handled = code.some((line) => /\btry\b|\.catch\(/s.test(line));
-  if (!awaits || handled)
-    return "";
-  return `Async code in ${f.file.path} uses await with no try/catch or .catch in the file \u2014 ensure rejections are handled here or by every caller.`;
+  const base = basename2(path);
+  if (base === "conftest.py" || base === "__init__.py")
+    return [];
+  const errors = [];
+  const marker = f.lines.some((line) => TEST_DEF.test(line) || TEST_IMPORT.test(line));
+  if (marker && !isPythonTestName(base)) {
+    errors.push(`Test-bearing file not named test_*.py or *_test.py: ${path} \u2014 rename to follow the colocated test convention`);
+  }
+  if (base.startsWith("test_") && base.endsWith(".py") && !hasModuleSibling(dirname4(f.file.absolute))) {
+    errors.push(`Test not co-located with a module: ${path} \u2014 colocate test_*.py next to the module it tests`);
+  }
+  return errors;
 }
 
-// plugins/ts-quality/hooks/src/rules/ast-rule-yaml.ts
-var ERROR_RULES = `id: empty-catch
-language: ts
+// plugins/python-quality/hooks/src/rules/no-mocks.ts
+var RULES = `id: mock-import
+language: python
 severity: warning
-message: empty catch
+message: 'mock import'
 rule:
-  pattern: 'try { $$$ } catch ($_) { }'
+  any:
+    - kind: import_statement
+      has: {kind: dotted_name, regex: '^(unittest\\.mock|mock|pytest_mock)$'}
+    - kind: import_from_statement
+      has: {field: module_name, kind: dotted_name, regex: '^(unittest\\.mock|mock)$'}
+    - kind: import_from_statement
+      all:
+        - has: {field: module_name, kind: dotted_name, regex: '^unittest$'}
+        - has: {field: name, kind: dotted_name, regex: '^mock$'}
 ---
-id: empty-catch-noarg
-language: ts
+id: mocker-param
+language: python
 severity: warning
-message: empty catch (no binding)
+message: 'mocker/monkeypatch fixture parameter'
 rule:
-  pattern: 'try { $$$ } catch { }'
----
-id: empty-catch-handler
-language: ts
-severity: warning
-message: empty promise catch handler
-rule:
-  pattern: '$_.catch(() => { })'
----
-id: null-catch-handler
-language: ts
-severity: warning
-message: promise catch handler returning null
-rule:
-  pattern: '$_.catch(() => null)'
----
-id: undef-catch-handler
-language: ts
-severity: warning
-message: promise catch handler returning undefined
-rule:
-  pattern: '$_.catch(() => undefined)'
----
-id: swallow-null-arg
-language: ts
-severity: warning
-message: catch returns null
-rule:
-  pattern: 'try { $$$ } catch ($_) { return null }'
----
-id: swallow-undef-arg
-language: ts
-severity: warning
-message: catch returns undefined
-rule:
-  pattern: 'try { $$$ } catch ($_) { return undefined }'
----
-id: swallow-null
-language: ts
-severity: warning
-message: catch returns null (no binding)
-rule:
-  pattern: 'try { $$$ } catch { return null }'
----
-id: swallow-undef
-language: ts
-severity: warning
-message: catch returns undefined (no binding)
-rule:
-  pattern: 'try { $$$ } catch { return undefined }'
----
-# A bare \`return\` in an ast-grep pattern acts as a WILDCARD over the optional
-# argument: \`catch { return }\` also matched \`return []\`, \`return 42\` and
-# \`return null\`, i.e. every non-nullish fallback got reported as "returns a
-# nullish value". Match the catch clause itself, then require that its single
-# return statement carries no argument at all.
-id: swallow-bare
-language: ts
-severity: warning
-message: catch returns nothing
-rule:
-  all:
-    - any:
-        - pattern:
-            context: 'try {} catch { return }'
-            selector: catch_clause
-        - pattern:
-            context: 'try {} catch ($_) { return }'
-            selector: catch_clause
-    - not:
-        has:
-          stopBy: end
-          kind: return_statement
-          has:
-            stopBy: neighbor
-            pattern: $X
----
-id: throw-empty-error
-language: ts
-severity: warning
-message: throw new Error() with no message
-rule:
-  pattern: 'throw new Error()'
----
-id: throw-string
-language: ts
-severity: warning
-message: throw of a string literal
-rule:
-  pattern: 'throw "$S"'
----
-id: throw-template
-language: ts
-severity: warning
-message: throw of a template literal
-rule:
-  pattern: 'throw \`$S\`'`;
-var MOCK_RULES = `id: jest-mock
-language: ts
-severity: warning
-message: jest.mock() call
-rule:
-  pattern: jest.mock($$$)
----
-id: vi-mock
-language: ts
-severity: warning
-message: vi.mock() call
-rule:
-  pattern: vi.mock($$$)
----
-id: jest-fn
-language: ts
-severity: warning
-message: jest.fn() call
-rule:
-  pattern: jest.fn($$$)
----
-id: vi-fn
-language: ts
-severity: warning
-message: vi.fn() call
-rule:
-  pattern: vi.fn($$$)
----
-id: sinon-method
-language: ts
-severity: warning
-message: sinon mock method call
-rule:
-  pattern: sinon.$M($$$)`;
-
-// plugins/ts-quality/hooks/src/rules/ast-rules.ts
-function hits(all, rule, limit) {
-  return all.filter((hit) => hit.ruleId === rule).slice(0, limit).map((hit) => hit.excerpt.replace(/\t+$/, ""));
+  kind: function_definition
+  has:
+    field: parameters
+    has: {kind: identifier, regex: '^(mocker|monkeypatch)$'}`;
+function matches(hits, rule) {
+  const shown = hits.filter((hit) => hit.ruleId === rule && hit.first).map((hit) => `${String(hit.line)}: ${hit.text.split("\t")[0] ?? ""}`);
+  return head(shown, 5);
 }
-function group(f, all, header, rules) {
-  const lines = rules.flatMap(([rule, limit]) => hits(all, rule, limit));
-  return lines.length === 0 ? [] : [`${header.replace("$F", f.file.path)}
-${lines.join(`
-`)}`];
-}
-function scanFailure(scan) {
+function failure(scan) {
+  if (scan.kind === "ok") {
+    return scan.empty ? 'ast-grep exited 0 with empty output (expected at least the JSON array "[]")' : undefined;
+  }
   if (scan.kind !== "failed")
     return;
-  if (scan.stage === "parse")
+  if (scan.stage === "parse") {
     return "ast-grep exited 0 but its output did not parse as the documented JSON array";
+  }
   const first = scan.stderrFirst === "" ? "" : `: ${scan.stderrFirst}`;
   return `ast-grep exit ${String(scan.exitCode)}${first}`;
 }
-function errorHandling(f) {
-  const scan = astGrepScan(f.file, ERROR_RULES, f.ctx);
+function noMocks(f, isTest) {
+  if (!isTest || !f.limits.noMocks)
+    return [];
+  const scan = astGrepScan(f.file, RULES, f.ctx);
   if (scan.kind === "missing")
     return [];
-  const all = scan.kind === "ok" ? scan.hits : [];
-  const errors = [
-    ...group(f, all, "Empty catch block in $F \u2014 handle the error or rethrow; do not swallow", [
-      ["empty-catch", 3],
-      ["empty-catch-noarg", 3]
-    ]),
-    ...group(f, all, "Silent promise rejection in $F \u2014 log or rethrow the error", [
-      ["empty-catch-handler", 3],
-      ["null-catch-handler", 3],
-      ["undef-catch-handler", 3]
-    ]),
-    ...group(f, all, "Catch swallows the error by returning a nullish value in $F \u2014 handle, log, or rethrow it", [
-      ["swallow-null-arg", 2],
-      ["swallow-undef-arg", 2],
-      ["swallow-null", 2],
-      ["swallow-undef", 2],
-      ["swallow-bare", 2]
-    ]),
-    ...group(f, all, "throw new Error() with no message in $F \u2014 include a descriptive message", [
-      ["throw-empty-error", 3]
-    ]),
-    ...group(f, all, "throw of string literal in $F \u2014 throw an Error (or subclass) instead", [
-      ["throw-string", 3],
-      ["throw-template", 3]
-    ])
-  ];
-  const failure = scanFailure(scan);
-  if (failure !== undefined) {
-    errors.push(`ast-grep failed while scanning ${f.file.path} \u2014 ${failure}; error-handling rules could not be verified. Fix the tool/file and re-edit`);
-  }
-  return errors;
-}
-function mockScanFailure(f, scan) {
-  const at = `ast-grep failed while scanning ${f.file.path} for mocks \u2014`;
-  const tail = "no-mocks rule could not be verified. Fix the tool/file and re-edit";
-  if (scan.kind === "ok" && scan.empty) {
-    return `${at} exited 0 with empty output (expected at least the JSON array "[]"); ${tail}`;
-  }
-  if (scan.kind !== "failed")
-    return;
-  if (scan.stage === "parse")
-    return `${at} its output did not parse as the documented JSON array; ${tail}`;
-  const first = scan.stderrFirst === "" ? "" : `: ${scan.stderrFirst}`;
-  return `${at} exit ${String(scan.exitCode)}${first}; ${tail}`;
-}
-function mockDoubles(f) {
   const path = f.file.path;
-  const inTests = isTestPath(path) || path.includes("/__tests__/");
-  if (path.includes("/e2e/") || !inTests || !f.limits.noMocks)
-    return [];
+  const hits = scan.kind === "ok" ? scan.hits : [];
   const errors = [];
-  const scan = astGrepScan(f.file, MOCK_RULES, f.ctx);
-  const failure = scan.kind === "missing" ? undefined : mockScanFailure(f, scan);
-  if (failure !== undefined)
-    errors.push(failure);
-  const found = scan.kind === "ok" ? scan.hits.toSorted((a, b) => a.line - b.line) : [];
-  if (found.length > 0) {
-    const excerpt = found.slice(0, 5).map((hit) => hit.excerpt).join(`
-`);
-    errors.push(`Mocked test double in ${path} \u2014 tests must exercise real data/services, not mocks/stubs (jest.mock/vi.mock/jest.fn/vi.fn/sinon)
-${excerpt}`);
+  const imports = matches(hits, "mock-import");
+  if (imports !== "") {
+    errors.push(`no-mocks: mock import in ${path} \u2014 write against real data/fixtures instead
+${imports}`);
   }
-  if (f.lines.some((line) => ere(`from[[:space:]]+["']ts-mockito["']`).test(line))) {
-    errors.push(`Import from ts-mockito in ${path} \u2014 tests must exercise real data/services, not mocks/stubs`);
+  const params = matches(hits, "mocker-param");
+  if (params !== "") {
+    errors.push(`no-mocks: mocker/monkeypatch fixture parameter in ${path} \u2014 write against real data/fixtures instead
+${params}`);
+  }
+  const broken = failure(scan);
+  if (broken !== undefined) {
+    errors.push(`ast-grep failed while scanning ${path} \u2014 ${broken}; no-mocks rules could not be verified. Fix the tool/file and re-edit`);
   }
   return errors;
 }
 
-// plugins/ts-quality/hooks/src/rules/layout-rules.ts
-import { lstatSync, readdirSync as readdirSync3, readFileSync as readFileSync5, statSync as statSync7 } from "fs";
-import { basename as basename3, dirname as dirname4, join as join9, resolve as resolve2 } from "path";
-function declaresAtAlias(config) {
-  let doc;
-  try {
-    doc = JSON.parse(readFileSync5(config, "utf8"));
-  } catch {
-    return false;
-  }
-  if (doc !== null && !isJsonObject(doc))
-    return false;
-  const options = doc === null ? null : doc.compilerOptions ?? null;
-  if (options !== null && !isJsonObject(options))
-    return false;
-  const paths = options === null ? null : options.paths ?? null;
-  if (paths === null || paths === false)
-    return false;
-  return isJsonObject(paths) && Object.keys(paths).some((key) => key.startsWith("@/"));
-}
-function isFile2(path) {
-  try {
-    return statSync7(path).isFile();
-  } catch {
-    return false;
-  }
-}
-function hasAtAlias(f) {
-  const root = resolve2(f.ctx.projectRoot);
-  let dir = dirname4(f.file.absolute);
-  for (;; ) {
-    for (const name of ["tsconfig.json", "tsconfig.base.json"]) {
-      const config = join9(dir, name);
-      if (isFile2(config) && declaresAtAlias(config))
-        return true;
-    }
-    if (dir === root || dir === "/")
-      return false;
-    dir = dirname4(dir);
-  }
-}
-function parentImport(f) {
-  if (!f.lines.some((line) => /from ["']\.\.\//s.test(line)))
-    return;
-  if (!hasAtAlias(f))
-    return;
-  return `Forbidden ../ import in ${f.file.path} \u2014 use @/ alias`;
-}
-function entries2(dir) {
-  try {
-    return readdirSync3(dir);
-  } catch {
-    return [];
-  }
-}
-function kind(path) {
-  try {
-    const stat = lstatSync(path);
-    return stat.isFile() ? "file" : stat.isDirectory() ? "dir" : "other";
-  } catch {
-    return "other";
-  }
-}
-function hasSource(dir) {
-  return entries2(dir).some((name) => /\.tsx?$/s.test(name) && !name.includes(".test.") && !name.includes(".spec.") && !name.endsWith(".d.ts") && kind(join9(dir, name)) === "file");
-}
-function hasOtherDir(dir, absolute) {
-  const own = dir === "/" ? "/" : basename3(dir);
-  if (kind(absolute) === "dir" && own !== "__tests__" && own !== ".")
-    return true;
-  return entries2(absolute).some((name) => name !== "__tests__" && kind(join9(absolute, name)) === "dir");
-}
-function testPlacement(f) {
-  const path = f.file.path;
-  if (!isTestPath(path) || path.includes("/e2e/"))
-    return [];
-  if (!path.includes("/__tests__/")) {
-    return [`Test file outside __tests__/: ${path} \u2014 move to sibling __tests__/ directory`];
-  }
-  const errors = [];
-  const cut = path.lastIndexOf("__tests__/");
-  const after = path.slice(cut + "__tests__/".length);
-  const sub = after.includes("/") ? after.slice(0, after.indexOf("/")) : undefined;
-  if (sub !== undefined && sub !== "fixtures" && sub !== "helpers" && sub !== "utils") {
-    errors.push(`Test nested in __tests__/ subdirectory: ${path} \u2014 keep __tests__/ flat (only fixtures/helpers/utils subdirs allowed; no mocks/ \u2014 tests must exercise real data)`);
-  }
-  const parent = dirname4(`${path.slice(0, cut)}__tests__`);
-  const absolute = resolve2(f.ctx.cwd ?? process.cwd(), parent);
-  if (!hasSource(absolute) && !hasOtherDir(parent, absolute)) {
-    errors.push(`Test not co-located with source: ${path} \u2014 __tests__/ must be at the same level as the code it tests`);
-  }
-  return errors;
-}
-
-// plugins/ts-quality/hooks/src/rules/line-rules.ts
-import { readFileSync as readFileSync6, statSync as statSync8 } from "fs";
-import { basename as basename4, join as join10 } from "path";
-var AS_PATTERN = ere(String.raw`\)[[:space:]]+as[[:space:]]+[a-zA-Z]|\bas[[:space:]]+any\b|\bas[[:space:]]+unknown\b|[a-zA-Z>][[:space:]]+as[[:space:]]+[A-Z]|[a-zA-Z>][[:space:]]+as[[:space:]]+(string|number|boolean|object|symbol|bigint|never|undefined|null|void)\b`);
-var AS_CONST = ere(String.raw`\bas[[:space:]]+const\b`);
-var AS_IMPORT_OR_REEXPORT = ere(String.raw`\bimport\b|^[0-9]+:[[:space:]]*export[[:space:]]*(type[[:space:]]+)?\{`);
-function typeAssertion(f) {
-  const rows = withoutCommentLines(numbered(f.lines, AS_PATTERN)).filter((row) => !AS_CONST.test(row) && !AS_IMPORT_OR_REEXPORT.test(row));
-  const header = `Forbidden 'as' type assertion in ${f.file.path} \u2014 use type guards or Zod`;
-  return withExcerpt(header, head(rows, 5));
-}
-function reactHooks(f) {
-  if (!/use-.*\.ts$/s.test(f.file.path) && !/use[A-Z].*\.ts$/s.test(f.file.path))
-    return;
-  const count = countMatches(f.lines, ere(String.raw`^[[:space:]]*(const \[|useRef\(|useEffect\()`));
-  if (count <= 3)
-    return;
-  return `Hook does too many things in ${f.file.path} (${String(count)} useState/useRef/useEffect) \u2014 split into focused hooks`;
-}
-function factories(f) {
-  const count = countMatches(f.lines, /^export (async )?function create/s);
-  if (count <= 2)
-    return;
-  return `Too many factory functions in ${f.file.path} (${String(count)}) \u2014 simplify construction`;
-}
-function projectUsesZod(f) {
-  const manifest = join10(f.ctx.projectRoot, "package.json");
-  try {
-    return statSync8(manifest).isFile() && readFileSync6(manifest, "utf8").includes('"zod"');
-  } catch {
-    return false;
-  }
-}
-function manualTypeGuard(f) {
-  if (countMatches(f.lines, /function is[A-Z].*\): .* is [A-Z]/s) === 0)
-    return;
-  if (!projectUsesZod(f))
-    return;
-  return `Manual type guard in ${f.file.path} \u2014 use Zod schema instead`;
-}
-function componentFileName(f) {
-  if (!/\.(tsx)$/s.test(f.file.path))
-    return;
-  const name = basename4(f.file.path).replace(/\.tsx$/s, "").replace(/\.ts$/s, "");
-  const grabBag = /^(parts|components|helpers|items|sections|elements)$|-(parts|sections|items|elements)$/s;
-  if (!grabBag.test(name))
-    return;
-  return `Forbidden component filename '${name}.tsx' in ${f.file.path} \u2014 name file after its exported function (e.g. api-key-create-button.tsx)`;
-}
-function consoleLog(f) {
-  const rows = withoutCommentLines(numbered(f.lines, ere(String.raw`^[[:space:]]*console\.log\(`)));
-  const header = `Forbidden console.log in ${f.file.path} \u2014 use console.error/warn/info`;
-  return withExcerpt(header, head(rows, 3));
-}
-function suppressionComment(f) {
-  const tokens = isTestPath(f.file.path) ? "@ts-ignore|@ts-nocheck|eslint-disable|biome-ignore" : "@ts-ignore|@ts-nocheck|eslint-disable|biome-ignore|@ts-expect-error";
-  const rows = numbered(f.lines, ere(String.raw`(//|/\*+)[[:space:]]*(${tokens})`));
-  const header = `Forbidden suppression comment in ${f.file.path} \u2014 fix the underlying issue in code, never silence it`;
-  return withExcerpt(header, head(rows, 3));
-}
-function isFrontend(f) {
-  return pathHas(f, "/components/") || pathHas(f, "/routes/");
-}
-function confirmAlert(f) {
-  if (!isFrontend(f))
-    return;
-  const shared = /(ConfirmDeleteAlert|AlertDialog|customAlert|customConfirm)/s;
-  const rows = withoutCommentLines(numbered(f.lines, ere(String.raw`\b(confirm|alert)[[:space:]]*\(`))).filter((row) => !shared.test(row));
-  const header = `Forbidden confirm()/alert() in ${f.file.path} \u2014 use AlertDialog component`;
-  return withExcerpt(header, head(rows, 3));
-}
-function rawRadixImport(f) {
-  const imports = numbered(f.lines, /from ['"]@radix-ui\/react-(alert-dialog|dialog)['"]/s);
-  if (withoutCommentLines(imports).length === 0 || pathHas(f, "/packages/ui/"))
-    return;
-  return `Raw radix import in ${f.file.path} \u2014 use shared components from @/components/ui/`;
-}
-function mutableProps(f) {
-  const rows = numbered(f.lines, ere(String.raw`\((props|[a-z]+Props):[[:space:]]+[A-Z][a-zA-Z]+Props\)`)).filter((row) => !row.includes("Readonly"));
-  return withExcerpt(`Mutable props in ${f.file.path} \u2014 wrap in Readonly<Props>`, head(rows, 3));
-}
-function catchToast(f) {
-  if (!isFrontend(f))
-    return;
-  const opens = ere(String.raw`catch[[:space:]]*\(`);
-  const rows = [];
-  let found = false;
-  f.lines.forEach((line, i) => {
-    if (opens.test(line))
-      found = true;
-    if (found && line.includes("toast(")) {
-      rows.push(`${String(i + 1)}: ${line}`);
-      found = false;
-    }
-  });
-  const header = `Manual try/catch+toast in ${f.file.path} \u2014 use shared error handling`;
-  return withExcerpt(header, head(rows, 3));
-}
-
-// plugins/ts-quality/hooks/src/rules/size-rules.ts
+// plugins/python-quality/hooks/src/rules/size-rules.ts
 function fileTooLong(f) {
   const max = f.limits.fileLines;
-  const count = countCodeLines(f.file.absolute) ?? 0;
+  const count = countPythonCodeLines(f.file.absolute) ?? 0;
   if (count <= max)
     return;
-  let hint = "split into smaller modules";
-  const linter = tsLinter({
-    env: f.ctx.env,
-    ...f.ctx.cwd === undefined ? {} : { cwd: f.ctx.cwd }
-  });
-  if (linter !== undefined && f.limits.fileSource === "native") {
-    hint += ` (${linter} enforces this max-lines limit)`;
-  } else if (linter === "biome" && f.limits.fileSource === "default") {
-    hint += ` (biome has no max-lines equivalent \u2014 gate uses the ${String(max)}-line default)`;
-  } else if (linter !== undefined && f.limits.fileSource === "default") {
-    hint += ` (${linter} is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) \u2014 gate uses the ${String(max)}-line default; align them)`;
-  }
-  const approx = hasUnterminatedBlock(f.file.absolute) ? " (size approximated \u2014 an unterminated /* or a string containing /* may be affecting the count)" : "";
-  return `TS file exceeds ${String(max)}-line limit: ${f.file.path} (${String(count)} code lines, blanks/comments excluded)${approx} \u2014 ${hint}`;
+  return `File exceeds ${String(max)}-line limit: ${f.file.path} (${String(count)} code lines, blanks/comments excluded) \u2014 split into submodules. Override via lang.python.maxFileLines.`;
 }
-function strip(line) {
-  return line.replaceAll("\\\"", "").replaceAll(/"[^"]*"/g, "").replaceAll(/'[^']*'/g, "").replaceAll(/`[^`]*`/g, "");
+function lead(line) {
+  let n = 0;
+  while (n < line.length && (line[n] === " " || line[n] === "\t"))
+    n += 1;
+  return n;
 }
-var FUNCTION_DECL = ere(String.raw`^[[:space:]]*(export[[:space:]]+)?(default[[:space:]]+)?(async[[:space:]]+)?function[ \t*]`);
-var CONST_FN = ere(String.raw`^[[:space:]]*(export[[:space:]]+)?(default[[:space:]]+)?const[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*=[[:space:]]*(async[[:space:]]+)?(\(|function[ \t(*])`);
-var METHOD_HEAD = ere(String.raw`^[[:space:]]+(public[[:space:]]+|private[[:space:]]+|protected[[:space:]]+|static[[:space:]]+|async[[:space:]]+|override[[:space:]]+|readonly[[:space:]]+|get[[:space:]]+|set[[:space:]]+|\*[[:space:]]*)*[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*(<[^(){}]*>)?[[:space:]]*\(`);
-var KEYWORD_HEAD = ere(String.raw`^[[:space:]]*(if|for|while|switch|catch|return|do|else|function|await|with|yield|throw|new|typeof|delete|void|in|of|case)[^A-Za-z0-9_$]`);
-var METHOD_BODY = ere(String.raw`\)([[:space:]]*:[^={]*)?[[:space:]]*\{[[:space:]]*$`);
-var ENDS_STATEMENT = ere(String.raw`;[[:space:]]*$`);
-function startsFunction(line) {
-  const s = strip(line);
-  if (FUNCTION_DECL.test(s) || CONST_FN.test(s))
-    return true;
-  return METHOD_HEAD.test(s) && !KEYWORD_HEAD.test(s) && !s.includes("=>") && !ENDS_STATEMENT.test(s) && METHOD_BODY.test(s);
-}
-function count(text, char) {
-  return text.split(char).length - 1;
-}
-function anyLongFunction(lines, max) {
-  let open;
-  let long = false;
-  lines.forEach((line, i) => {
-    if (open === undefined && startsFunction(line))
-      open = { start: i, depth: 0, opened: false };
-    if (open === undefined)
-      return;
-    const s = strip(line);
-    const opens = count(s, "{");
-    open.depth += opens - count(s, "}");
-    if (opens > 0)
-      open.opened = true;
-    if (open.opened && open.depth <= 0) {
-      if (i - open.start > max)
-        long = true;
-      open = undefined;
-      return;
-    }
-    if (!open.opened && ENDS_STATEMENT.test(line))
-      open = undefined;
-  });
-  return long;
+var DEF = /^[ \t]*(async[ \t]+)?def[ \t]/;
+var NAME = /def[ \t]+[A-Za-z_][A-Za-z0-9_]*/;
+function spanReport(span) {
+  return `${span.name}:${String(span.start)} (${String(span.count)} lines)`;
 }
 function functionTooLong(f) {
-  if (!anyLongFunction(f.lines, f.limits.fnLines))
+  const max = f.limits.fnLines;
+  const long = [];
+  let open;
+  f.lines.forEach((raw, index) => {
+    const trimmed = raw.replace(/^[ \t]+/, "");
+    const blank = trimmed === "";
+    if (open !== undefined && !blank && lead(raw) <= open.indent) {
+      if (open.count > max)
+        long.push(spanReport(open));
+      open = undefined;
+    }
+    if (open === undefined && DEF.test(raw)) {
+      const name = NAME.exec(trimmed)?.[0].replace(/^def[ \t]+/, "") ?? "";
+      open = { name, start: index + 1, indent: lead(raw), count: 0 };
+    }
+    if (open !== undefined && !blank && !trimmed.startsWith("#"))
+      open.count += 1;
+  });
+  if (open !== undefined && open.count > max)
+    long.push(spanReport(open));
+  if (long.length === 0)
     return;
-  return `Function too long in ${f.file.path} (>${String(f.limits.fnLines)} lines) \u2014 simplify or split`;
+  return `Function too long in ${f.file.path} (>${String(max)} lines) \u2014 extract helpers.
+${long.join(`
+`)}`;
 }
 
-// plugins/ts-quality/hooks/src/rules/type-rules.ts
-import { spawnSync as spawnSync6 } from "child_process";
-var PATHSPECS = ["packages/*.ts", "packages/*.tsx", "apps/*.ts", "apps/*.tsx"];
-function definedElsewhere(f, name, relative) {
-  const pattern = `^export (interface|type) ${name}[ <{]`;
-  const res = spawnSync6("git", ["-C", f.ctx.projectRoot, "grep", "-l", "--untracked", "-E", pattern, "--", ...PATHSPECS], { cwd: f.ctx.cwd, env: spawnEnv(f), encoding: "utf8" });
-  const files = (res.stdout ?? "").split(`
-`).filter((line) => line !== "" && line !== relative);
-  return files[0] ?? "";
+// plugins/python-quality/hooks/src/rules/suppression.ts
+var BARE = ere("^[[:space:]]*except[[:space:]]*:[[:space:]]*(#.*)?$");
+var PASS = ere("^[[:space:]]*except[^:]*:[[:space:]]*pass[[:space:]]*(#.*)?$");
+var NOQA = /#[ \t]*noqa/;
+var SCOPED_NOQA = /#[ \t]*noqa[ \t]*:[ \t]*[A-Za-z0-9]/;
+var IGNORE = /#[ \t]*type:[ \t]*ignore/;
+var SCOPED_IGNORE = /#[ \t]*type:[ \t]*ignore\[/;
+function form(line) {
+  if (BARE.test(line))
+    return "bare except: (swallows everything)";
+  if (PASS.test(line))
+    return "one-line except ...: pass (silently discarded)";
+  if (NOQA.test(line) && !SCOPED_NOQA.test(line))
+    return "blanket # noqa (no :CODE suffix)";
+  if (IGNORE.test(line) && !SCOPED_IGNORE.test(line)) {
+    return "blanket # type: ignore (no [code] suffix)";
+  }
+  return;
 }
-function duplicateTypes(f) {
-  const names = f.lines.flatMap((line) => {
-    const match = /^export (?:interface|type) ([A-Z][a-zA-Z]+)/s.exec(line);
-    return match?.[1] === undefined ? [] : [match[1]];
+function suppression(f) {
+  const hits = f.lines.flatMap((line, index) => {
+    const found = form(line);
+    return found === undefined ? [] : [`${String(index + 1)}: ${found}`];
   });
-  if (names.length === 0)
-    return [];
-  const prefix = `${f.ctx.projectRoot}/`;
-  const path = f.file.path;
-  const relative = path.startsWith(prefix) ? path.slice(prefix.length) : path;
-  return names.flatMap((name) => {
-    const other = definedElsewhere(f, name, relative);
-    return other === "" ? [] : [`Type '${name}' in ${path} already defined in ${other} \u2014 import instead of redefining`];
-  });
-}
-var THROW_LITERAL = /(^|[^a-zA-Z_$])throw[ \t]+(-?[0-9]+(\.[0-9]+)?|null|undefined|true|false)([ \t]|;|}|$)/s;
-function throwLiteral(f) {
-  const rows = f.lines.flatMap((line, i) => {
-    const code = line.replaceAll(/\/\*.*\*\//gs, "").replace(/\/\/.*$/s, "");
-    return THROW_LITERAL.test(code) ? [`${String(i + 1)}: ${line}`] : [];
-  });
-  const excerpt = head(rows, 3);
-  if (excerpt === "")
+  if (hits.length === 0)
     return;
-  return `throw of non-Error literal in ${f.file.path} \u2014 throw an Error (or subclass) instead
-${excerpt}`;
+  return `Forbidden suppression in ${f.file.path} \u2014 remove it and fix the underlying issue. Scoped forms (except SpecificError:, # noqa: E501, # type: ignore[arg-type]) are fine; blanket ones are not:
+${head(hits, 5)}`;
 }
 
-// plugins/ts-quality/hooks/src/rules/check.ts
-var RULES = [
-  parentImport,
-  typeAssertion,
-  testPlacement,
-  fileTooLong,
-  functionTooLong,
-  reactHooks,
-  factories,
-  manualTypeGuard,
-  duplicateTypes,
-  componentFileName,
-  consoleLog,
-  suppressionComment,
-  confirmAlert,
-  rawRadixImport,
-  mutableProps,
-  catchToast,
-  errorHandling,
-  throwLiteral,
-  mockDoubles
-];
-function checkTsFile(f) {
-  const errors = RULES.flatMap((rule) => rule(f) ?? []);
-  const duplicated = errors.length === 0 ? duplication(f) : "";
-  return { errors, advisories: [duplicated, docs(f), unhandledAwait(f)] };
+// plugins/python-quality/hooks/src/rules/check.ts
+function checkPyFile(f) {
+  const isTest = isPythonTestName(basename3(f.file.path));
+  const errors = [
+    fileTooLong(f),
+    ...testLayout(f),
+    suppression(f),
+    functionTooLong(f),
+    ...noMocks(f, isTest)
+  ].filter((error) => error !== undefined);
+  return { errors, advisories: [docs(f)] };
 }
 
-// plugins/ts-quality/hooks/src/post-tool-use.ts
+// plugins/python-quality/hooks/src/post-tool-use.ts
 var ALLOW2 = { kind: "allow" };
 function limitsFor(ctx) {
   const where = { env: ctx.env, ...ctx.cwd === undefined ? {} : { cwd: ctx.cwd } };
   const config = loadConfig({ ...where, host: ctx.host, warn: () => {
     return;
   } });
-  const file = tsMaxFileLinesResolved(config, where);
   return {
-    fileLines: file.value,
-    fileSource: file.source,
-    fnLines: qualityThreshold(config, "ts", "maxFnLines", where),
-    noMocks: qualityFlag(config, "ts", "noMocks", true)
+    fileLines: qualityThreshold(config, "python", "maxFileLines", where),
+    fnLines: qualityThreshold(config, "python", "maxFnLines", where),
+    noMocks: qualityFlag(config, "python", "noMocks", true)
   };
 }
 function read(file) {
   try {
-    return { text: readFileSync7(file.absolute, "utf8") };
+    return { text: readFileSync5(file.absolute, "utf8") };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    return { error: `Cannot read ${file.path} for TypeScript quality checks: ${detail}` };
+    return { error: `Cannot read ${file.path} for Python quality checks: ${detail}` };
   }
 }
 var post_tool_use_default = defineRegistryModule({
-  spec: "ts-quality@toolu",
-  name: "ts-quality",
+  spec: "python-quality@toolu",
+  name: "python-quality",
   event: "tool/post",
   run(event, ctx) {
     const where = { env: ctx.env, ...ctx.cwd === undefined ? {} : { cwd: ctx.cwd } };
-    if (!detectTs(where))
+    if (!detectPython(where) || !toolAvailable("python3", ctx.env))
       return Promise.resolve(ALLOW2);
-    const pm = nodePackageManager(where);
-    if (pm === undefined || !toolAvailable(pm, ctx.env))
-      return Promise.resolve(ALLOW2);
+    let limits;
     const decision = fileQuality(event, ctx, {
-      source: "ts-quality-hook",
-      reason: "Post-edit quality violation(s) detected",
-      matches: /\.(ts|tsx)$/s,
-      skipLinkedWorktrees: true,
+      source: "python-quality-hook",
+      reason: "Post-edit Python quality violation(s) detected",
+      matches: /\.py$/,
+      skipLinkedWorktrees: false,
       check: (file) => {
         const source = read(file);
         if (source.error !== undefined)
           return { errors: [source.error], advisories: [] };
-        return checkTsFile({
-          file,
-          lines: splitLines(source.text),
-          ctx,
-          limits: limitsFor(ctx),
-          pm
-        });
+        limits ??= limitsFor(ctx);
+        return checkPyFile({ file, lines: splitLines(source.text), ctx, limits });
       }
     });
     return Promise.resolve(decision);
