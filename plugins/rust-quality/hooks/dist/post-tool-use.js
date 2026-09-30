@@ -4283,7 +4283,9 @@ function matchHits(match) {
   return texts.map((text, key) => ({
     ruleId,
     line: start + 1 + key,
-    excerpt: `${file}:${String(start + 1 + key)}:${text}`
+    excerpt: `${file}:${String(start + 1 + key)}:${text}`,
+    text,
+    first: key === 0
   }));
 }
 function parseHits(stdout) {

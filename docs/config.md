@@ -273,10 +273,7 @@ and `python-quality/hooks/src/rules/no-mocks.ts` (Python test files —
 All three run one `ast-grep scan --inline-rules`; a real ast-grep failure
 (non-zero exit or unparseable JSON) is reported as a gate error, never a
 silent pass. Set to `false` to opt out — read via `qualityFlag` in
-`@toolu/core/config` by the TypeScript modules, and by the boolean
-`quality_flag` reader in `plugins/toolu/hooks/lib/quality-config.sh` for
-python-quality (`_qc_project_override` cannot carry a boolean, hence the
-separate reader).
+`@toolu/core/config`.
 
 ### Model routing (`models`)
 
