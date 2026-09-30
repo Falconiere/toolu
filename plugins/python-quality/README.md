@@ -14,7 +14,7 @@ Requires the `toolu` plugin.
 
 ## What it provides
 
-Every Python file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks (assembled from ordered `hooks/concerns/` fragments into one module at `SessionStart`) are static-only — the gate never invokes `ruff`, `pylint`, or any other linter:
+Every Python file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks (one bundled TypeScript module, published into toolu's registry at `SessionStart`) are static-only — the gate never invokes `ruff`, `pylint`, or any other linter:
 
 - File / function line limits (config-driven).
 - No suppression: bare `except:`, one-line `except ...: pass`, blanket `# noqa`, bare `# type: ignore`.
@@ -22,4 +22,4 @@ Every Python file the agent edits is checked on the spot, contributing to toolu'
 - No mocks in tests (`unittest.mock`/`mock`/`pytest_mock` imports — covering `MagicMock` — plus `mocker`/`monkeypatch` fixtures).
 - Docstring checks on public functions and classes.
 
-The fragments register into the core toolu dispatcher and run only while this plugin is installed — uninstall it and the Python rules vanish, fail-closed.
+The module registers into the core toolu dispatcher and runs only while this plugin is installed — uninstall it and the Python rules vanish, fail-closed.

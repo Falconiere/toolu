@@ -267,7 +267,7 @@ flowchart TD
     D -- "runs a module only while its plugin is installed" --> OUT([enforced edit])
 ```
 
-At `SessionStart`, `rust-quality` and `python-quality` still assemble their ordered `hooks/concerns/` fragments through `register.sh` into one `<plugin-spec>__<name>.sh` registry module per language. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. `ts-quality` and `ast-grep` register bundled ESM modules (`<plugin-spec>__<name>.js`) that the core imports in-process. See [docs/registry.md](docs/registry.md).
+At `SessionStart`, `rust-quality` still assembles its ordered `hooks/concerns/` fragments through `register.sh` into one `<plugin-spec>__<name>.sh` registry module. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. `ts-quality`, `python-quality` and `ast-grep` register bundled ESM modules (`<plugin-spec>__<name>.js`) that the core imports in-process. See [docs/registry.md](docs/registry.md).
 
 <details>
 <summary><b>Full repository layout</b></summary>
@@ -290,7 +290,7 @@ At `SessionStart`, `rust-quality` and `python-quality` still assemble their orde
     ├── jev/                    # jev skill + TypeSafe System One REST wrapper
     ├── rust-quality/           # Rust PostToolUse quality fragments, assembled at SessionStart
     ├── ts-quality/             # TypeScript PostToolUse quality checks, one bundled registry module
-    ├── python-quality/         # Python PostToolUse quality fragments, assembled at SessionStart
+    ├── python-quality/         # Python PostToolUse quality checks, one bundled registry module
     ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook
     ├── brainstorm/             # brainstorm skill + design question bank
     ├── delivery-flow/          # one public skill, private phase references

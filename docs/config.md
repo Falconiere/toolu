@@ -267,7 +267,7 @@ advisory wording. Resolver: `plugins/toolu/hooks/lib/quality-config.sh`.
 `ts-mockito` imports), `rust-quality/hooks/concerns/70-no-mocks.sh` (`src/`
 mock *definitions* — `#[automock]`, `#[cfg_attr(..., automock)]`, `mock! {...}`
 — and `tests/`/`*_test.rs`/`*_tests.rs` mock *imports* — `mockall::`/`faux::`),
-and `python-quality/hooks/concerns/70-no-mocks.sh` (Python test files —
+and `python-quality/hooks/src/rules/no-mocks.ts` (Python test files —
 `unittest.mock`/`mock`/`pytest_mock` imports, which cover `MagicMock`, and
 `mocker`/`monkeypatch` fixture parameters).
 Both reuse the `ast-grep scan --inline-rules` pattern from

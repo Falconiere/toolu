@@ -185,11 +185,12 @@ export async function runCase(
  * Returns its `register.sh`.
  */
 export function extractBaseRegister(base: string, dir: string): string {
-  const tar = spawnSync("git", ["-C", REPO_ROOT, "archive", base, "plugins/python-quality/hooks"]);
+  const hooks = "plugins/python-quality/hooks";
+  const tar = spawnSync("git", ["-C", REPO_ROOT, "archive", base, hooks]);
   if (tar.status !== 0) throw new Error(`git archive ${base} failed`);
   const untar = spawnSync("tar", ["-x", "-C", dir], { input: tar.stdout });
   if (untar.status !== 0) throw new Error("tar -x failed");
-  return join(dir, "plugins/python-quality/hooks/register.sh");
+  return join(dir, hooks, "register.sh");
 }
 
 /** The commit the golden was captured at: the last with the bash module. */
