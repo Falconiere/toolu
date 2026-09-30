@@ -92,7 +92,7 @@ export function inLinkedWorktree(file: EditedFile, ctx: RegistryContext): boolea
     "git",
     [
       "-C",
-      dirname(file.path),
+      dirname(file.absolute),
       "rev-parse",
       "--path-format=absolute",
       "--git-dir",

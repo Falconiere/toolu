@@ -4469,7 +4469,7 @@ function withoutSlash(dir) {
 function inLinkedWorktree(file, ctx) {
   const res = spawnSync3("git", [
     "-C",
-    dirname(file.path),
+    dirname(file.absolute),
     "rev-parse",
     "--path-format=absolute",
     "--git-dir",

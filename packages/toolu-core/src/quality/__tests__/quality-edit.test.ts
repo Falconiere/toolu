@@ -3,7 +3,7 @@
  * removed, and the linked-worktree skip, over real sandbox repositories.
  */
 import { expect, test } from "bun:test";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { editedFile, inLinkedWorktree, isRegularFile } from "../quality-edit.ts";
 import { postContext, postEvent, type Call } from "./quality-harness.ts";
@@ -69,15 +69,21 @@ test("a regular file counts; a directory or a missing path does not", () => {
   expect(isRegularFile(at("src/none.ts"))).toBe(false);
 });
 
-test("only a file inside a linked worktree is skipped", () => {
+test("edited file paths inside a linked worktree are skipped", () => {
   using sb = createSandbox({ git: true });
   const linked = join(sb.root, "linked");
   sb.git("worktree", "add", "-q", "-b", "side", linked);
   sb.write("src/a.ts", "x\n");
-  const ctx = postContext(sb, {});
-  const at = (path: string) => ({ path, absolute: path, removed: false });
-  expect(inLinkedWorktree(at(join(linked, "a.ts")), ctx)).toBe(true);
-  expect(inLinkedWorktree(at(sb.path("src/a.ts")), ctx)).toBe(false);
-  expect(inLinkedWorktree(at("src/a.ts"), ctx)).toBe(false);
-  expect(inLinkedWorktree(at(join(sb.home, "a.ts")), ctx)).toBe(false);
+  const check = (path: string) => {
+    const call = { input: { file_path: path } };
+    const ctx = postContext(sb, call);
+    const file = editedFile(postEvent(sb, call), ctx);
+    expect(file).toBeDefined();
+    return file === undefined ? false : inLinkedWorktree(file, ctx);
+  };
+  expect(check(join(linked, "a.ts"))).toBe(true);
+  expect(check(relative(sb.project, join(linked, "a.ts")))).toBe(true);
+  expect(check(sb.path("src/a.ts"))).toBe(false);
+  expect(check("src/a.ts")).toBe(false);
+  expect(check(join(sb.home, "a.ts"))).toBe(false);
 });
