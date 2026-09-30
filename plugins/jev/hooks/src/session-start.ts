@@ -8,8 +8,7 @@
  */
 import { accessSync, constants } from "node:fs";
 import { resolve } from "node:path";
-import { envValue } from "@toolu/core/host";
-import { publishWrapper, renderHookOutput, sessionContext } from "@toolu/core/startup";
+import { bunOnPath, publishBunCli, renderHookOutput, sessionContext } from "@toolu/core/startup";
 
 const PLUGIN = resolve(import.meta.dir, "../..");
 
@@ -24,9 +23,9 @@ function executable(path: string): boolean {
 
 /** What stops the wrapper from working, space-prefixed, in the bash order; "" when nothing. */
 function missingPrereqs(wrapper: string): string {
-  const path = envValue(process.env, "PATH") ?? "";
-  const missing = ["jq", "curl"].filter((tool) => Bun.which(tool, { PATH: path }) === null);
-  if (envValue(process.env, "TYPESAFE_API_KEY") === undefined) missing.push("TYPESAFE_API_KEY");
+  const missing: string[] = [];
+  if (!bunOnPath()) missing.push("bun");
+  if (!process.env.TYPESAFE_API_KEY) missing.push("TYPESAFE_API_KEY");
   if (!executable(wrapper)) missing.push("executable-wrapper");
   return missing.map((item) => ` ${item}`).join("");
 }
@@ -34,16 +33,17 @@ function missingPrereqs(wrapper: string): string {
 function mandate(wrapper: string): string {
   const missing = missingPrereqs(wrapper);
   if (missing !== "") {
-    return `Jev unavailable (missing:${missing}). Set TYPESAFE_API_KEY in the agent's launch environment and install curl/jq. Jev is mandatory on every task once available; until then, state the limitation once per task and use an explicit reasoning/evidence fallback; never invent a Jev result. Do not read credentials from .env.`;
+    return `Jev unavailable (missing:${missing}). Set TYPESAFE_API_KEY in the agent's launch environment and install Bun 1.4.x. Jev is mandatory on every task once available; until then, state the limitation once per task and use an explicit reasoning/evidence fallback; never invent a Jev result. Do not read credentials from .env.`;
   }
   return `Jev is mandatory on every task containing semantic decisions. After initial exploration, identify useful judgments over supplied evidence; you MUST call "${wrapper}" before the decision it informs. Reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions in one ask call. Reuse unchanged evidence and questions rather than repeating calls. If a task has no semantic decision, say so in one sentence rather than skipping silently. Syntax and linked examples: ${PLUGIN}/skills/jev/SKILL.md. Keep exact rules, tests, and code verification deterministic. On service failure, state the limitation and use an explicit evidence fallback. Jev never replaces tests or authorization.`;
 }
 
-const result = publishWrapper({
+const result = publishBunCli({
   plugin: "jev",
-  source: resolve(PLUGIN, "skills/jev/scripts/jev.sh"),
+  source: resolve(PLUGIN, "hooks/dist/jev.js"),
   dir: "jev",
   name: "jev.sh",
+  tool: "jev CLI",
 });
 if (result.status === "link-failed") {
   process.stderr.write(`jev: cannot publish ${result.path}\n`);

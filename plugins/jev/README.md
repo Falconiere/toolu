@@ -22,7 +22,7 @@ codex plugin add jev@toolu
 
 Restart the host after installation. In Codex, review and trust the installed
 hook through `/hooks`; installation alone does not trust hooks. Both hosts
-need `curl`, `jq`, and `TYPESAFE_API_KEY` in their launch environment.
+need `TYPESAFE_API_KEY` in their launch environment.
 
 Standalone, no plugin dependencies.
 
@@ -36,7 +36,7 @@ Standalone, no plugin dependencies.
 ## Wiring
 
 The wrapper calls TypeSafe's single evaluation endpoint,
-`POST https://api.typesafe.ai/v1/systemone`, with `curl` and `jq` — no SDK.
+`POST https://api.typesafe.ai/v1/systemone`, through the bundled Bun CLI.
 
 Set `TYPESAFE_API_KEY` in your environment (keys: `https://console.typesafe.ai/settings/keys`);
 it is never read from a `.env` file. `JEV_TIMEOUT` overrides the 60-second timeout

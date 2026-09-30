@@ -13,9 +13,8 @@ Classifications match [docs/portable-core.md](portable-core.md): `shell-out` · 
 | `context7:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/context7/hooks/hooks.json` | context7 | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
 | `epic-orchestrator:hooks.json:SessionStart:check-deps.js:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
 | `exa-search:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/exa-search/hooks/hooks.json` | exa-search | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
-| `jev:entrypoint:UserPromptSubmit:user-prompt-submit.sh` | `plugins/jev/hooks/user-prompt-submit.sh` | jev | UserPromptSubmit | shell-out | required | #210/todo | pending-opencode | yes | — |
 | `jev:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/jev/hooks/hooks.json` | jev | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
-| `jev:hooks.json:UserPromptSubmit:user-prompt-submit.sh` | `plugins/jev/hooks/hooks.json` | jev | UserPromptSubmit | shell-out | required | #210/todo | pending-opencode | yes | — |
+| `jev:hooks.json:UserPromptSubmit:user-prompt-submit.js` | `plugins/jev/hooks/hooks.json` | jev | UserPromptSubmit | shell-out | required | #210/todo | pending-opencode | no | — |
 | `jira:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/jira/hooks/hooks.json` | jira | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
 | `pr-babysit:hooks.json:SessionStart:check-toolu.js:startup|resume|clear|compact` | `plugins/pr-babysit/hooks/hooks.json` | pr-babysit | SessionStart | shell-out | required | #210/todo | pending-opencode | no | — |
 | `python-quality:hooks.json:SessionStart:check-toolu.js:startup|resume|clear|compact` | `plugins/python-quality/hooks/hooks.json` | python-quality | SessionStart | shell-out | required | #204/todo | pending-opencode | no | — |

@@ -20,7 +20,7 @@ tests, correctness, and authorization stay with the agent/tools.
 
 ## CLI
 
-Requires `curl`, `jq`, environment `TYPESAFE_API_KEY`; never read `.env`.
+Requires Bun 1.4.x on `PATH` and environment `TYPESAFE_API_KEY`; never read `.env`.
 Use the active host's published wrapper; plugin lifecycle variables are unavailable
 in ordinary shells:
 
@@ -31,7 +31,7 @@ JEV="${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/jev/jev.sh"
 # JEV="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/jev/jev.sh"
 ```
 
-Repository fallback, when not installed: `plugins/jev/skills/jev/scripts/jev.sh`.
+Repository fallback, when not installed: `plugins/jev/hooks/dist/jev.js`.
 
 ```text
 "$JEV" noul   "question" -s STATE [--true DESC] [--false DESC]

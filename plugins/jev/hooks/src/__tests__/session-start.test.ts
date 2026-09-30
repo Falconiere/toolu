@@ -10,10 +10,10 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
-  mkdtempSync,
   readFileSync,
   readlinkSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
@@ -29,7 +29,7 @@ import {
 import { z } from "zod";
 
 const PLUGIN = resolve(import.meta.dir, "../../..");
-const WRAPPER = "skills/jev/scripts/jev.sh";
+const WRAPPER = "hooks/dist/jev.js";
 const KEY = "local-test-key";
 
 const OutputSchema = z.strictObject({
@@ -58,7 +58,7 @@ function mandate(wrapper: string, plugin: string): string {
 
 /** The bash hook's fallback text for the space-prefixed `missing` list. */
 function fallback(missing: string): string {
-  return `Jev unavailable (missing:${missing}). Set TYPESAFE_API_KEY in the agent's launch environment and install curl/jq. Jev is mandatory on every task once available; until then, state the limitation once per task and use an explicit reasoning/evidence fallback; never invent a Jev result. Do not read credentials from .env.`;
+  return `Jev unavailable (missing:${missing}). Set TYPESAFE_API_KEY in the agent's launch environment and install Bun 1.4.x. Jev is mandatory on every task once available; until then, state the limitation once per task and use an explicit reasoning/evidence fallback; never invent a Jev result. Do not read credentials from .env.`;
 }
 
 function hook(sb: Sandbox, host: StartupHost, env: EnvPatch = {}, plugin = PLUGIN) {
@@ -106,13 +106,26 @@ test.concurrent("without the key: the actionable fallback, never a MUST call", a
   expect(context).toBe(fallback(" TYPESAFE_API_KEY"));
 });
 
-test.concurrent("missing tools are listed in the bash order", async () => {
+test.concurrent("missing key is reported even without jq and curl", async () => {
   using sb = createSandbox();
   const bundle = join(PLUGIN, "hooks/dist/session-start.js");
-  const empty = mkdtempSync(join(sb.root, "empty-path-"));
-  const env = { ...startupEnv("claude", sb, PLUGIN), PATH: empty, TYPESAFE_API_KEY: undefined };
+  const env = { ...startupEnv("claude", sb, PLUGIN), TYPESAFE_API_KEY: undefined };
   const res = await run([process.execPath, bundle], { cwd: sb.project, env, stdin: "{}" });
-  expect(contextOf(res)).toBe(fallback(" jq curl TYPESAFE_API_KEY"));
+  expect(contextOf(res)).toBe(fallback(" TYPESAFE_API_KEY"));
+});
+
+test.concurrent("Bun absent from PATH gives an advisory and an unavailable mandate", async () => {
+  using sb = createSandbox();
+  const bundle = join(PLUGIN, "hooks/dist/session-start.js");
+  const empty = join(sb.root, "empty-bin");
+  mkdirSync(empty);
+  const env = { ...startupEnv("claude", sb, PLUGIN), PATH: empty, TYPESAFE_API_KEY: KEY };
+  const res = await run([process.execPath, bundle], { cwd: sb.project, env, stdin: "{}" });
+  expect(res.exitCode).toBe(0);
+  expect(res.stderr).toContain("bun not found on PATH");
+  expect(OutputSchema.parse(JSON.parse(res.stdout)).hookSpecificOutput.additionalContext).toBe(
+    fallback(" bun"),
+  );
 });
 
 test.concurrent("paths with quotes, spaces and newlines stay JSON string data", async () => {
@@ -152,6 +165,7 @@ test.concurrent("a missing wrapper source is silent and publishes nothing", asyn
   using sb = createSandbox();
   const plugin = join(sb.root, "fake-plugin");
   cpSync(join(PLUGIN, "hooks"), join(plugin, "hooks"), { recursive: true });
+  unlinkSync(join(plugin, WRAPPER));
   const res = await hook(sb, "claude", {}, plugin);
   expect(res).toMatchObject({ exitCode: 0, stdout: "", stderr: "" });
   expect(existsSync(join(sb.home, ".claude/jev"))).toBe(false);
