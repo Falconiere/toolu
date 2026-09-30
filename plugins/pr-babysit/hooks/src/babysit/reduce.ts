@@ -43,7 +43,8 @@ function ciStatus(checks: Doc[]): string {
 function classifiedThread(thread: Doc, author: string, actions: Doc): Doc {
   const comments = asArray(thread.comments);
   const lastComment = comments.at(-1) ?? null;
-  const lastNonAuthor = comments.filter((comment) => comment.author !== author).at(-1) ?? null;
+  const nonAuthorComments = comments.filter((comment) => comment.author !== author);
+  const lastNonAuthor = nonAuthorComments.at(-1) ?? null;
   const flagged = Object.keys(actions.flagged).includes(thread.id);
   const authorClass =
     lastNonAuthor === null
@@ -63,7 +64,9 @@ function classifiedThread(thread: Doc, author: string, actions: Doc): Doc {
   const actionable = thread.isOutdated ? answerable && authorClass === "human" : answerable;
   const audited = open && !thread.isOutdated && !flagged;
   const injectionPattern =
-    injectionPatterns.find((pattern) => pattern.test(nil(lastNonAuthor?.body, "")))?.source ?? null;
+    injectionPatterns.find((pattern) =>
+      nonAuthorComments.some((comment) => pattern.test(nil(comment.body, ""))),
+    )?.source ?? null;
   return {
     id: thread.id,
     path: thread.path,

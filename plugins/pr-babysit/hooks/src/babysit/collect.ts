@@ -112,8 +112,9 @@ function botComment(comments: Obj[]): Obj {
   }
   if (!chosen) {
     chosen = candidates[0];
-    verdict = parseVerdict(String(chosen?.body ?? "")) as unknown as Obj;
-    if (!chosen) verdict.state = "absent";
+    verdict = chosen
+      ? (parseVerdict(String(chosen.body ?? "")) as unknown as Obj)
+      : { ...parseVerdict(""), state: "absent" };
   }
   return {
     comment: chosen

@@ -41,14 +41,15 @@ function ciStatus(checks) {
 function classifiedThread(thread, author, actions) {
   const comments = asArray(thread.comments);
   const lastComment = comments.at(-1) ?? null;
-  const lastNonAuthor = comments.filter((comment) => comment.author !== author).at(-1) ?? null;
+  const nonAuthorComments = comments.filter((comment) => comment.author !== author);
+  const lastNonAuthor = nonAuthorComments.at(-1) ?? null;
   const flagged = Object.keys(actions.flagged).includes(thread.id);
   const authorClass = lastNonAuthor === null ? "none" : ciReviewers.has(lastNonAuthor.author) ? "ci_reviewer" : lastNonAuthor.authorType === "Bot" ? "bot" : "human";
   const open = thread.isResolved === false;
   const answerable = open && !flagged && lastComment !== null && lastComment.author !== author && (authorClass === "human" || authorClass === "ci_reviewer");
   const actionable = thread.isOutdated ? answerable && authorClass === "human" : answerable;
   const audited = open && !thread.isOutdated && !flagged;
-  const injectionPattern = injectionPatterns.find((pattern) => pattern.test(nil(lastNonAuthor?.body, "")))?.source ?? null;
+  const injectionPattern = injectionPatterns.find((pattern) => nonAuthorComments.some((comment) => pattern.test(nil(comment.body, ""))))?.source ?? null;
   return {
     id: thread.id,
     path: thread.path,

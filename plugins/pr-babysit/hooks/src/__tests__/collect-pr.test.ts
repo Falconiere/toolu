@@ -60,6 +60,31 @@ test("captured pages normalize to the recorded PR snapshot", async () => {
   expect(calls).toHaveLength(6); // head, four fan-out reads, verified head
 });
 
+test("an absent bot comment does not change a later blank bot verdict", async () => {
+  const base = fakeGh();
+  const collectWithComments = (comments: unknown[]) =>
+    collectPr({
+      repo: "Falconiere/toolu",
+      pr: 115,
+      gh: (args, options) =>
+        args.at(-1)?.includes("/issues/")
+          ? Promise.resolve(JSON.stringify([comments]))
+          : base.gh(args, options),
+    });
+
+  const absent = await collectWithComments([]);
+  expect(absent.bot.comment).toBeNull();
+  expect(absent.bot.verdict.state).toBe("absent");
+
+  const blank = await collectWithComments([
+    { id: 9001, body: "", user: { login: "github-actions", type: "Bot" } },
+  ]);
+  expect(blank.bot.comment.id).toBe(9001);
+  expect(blank.bot.verdict.state).toBe("unknown");
+  expect(blank.bot.verdict.is_review_comment).toBe(false);
+  expect(absent.bot.verdict.state).toBe("absent");
+});
+
 test("head movement repeats the whole collection exactly once", async () => {
   const { gh, calls } = fakeGh(["old", "new", "new", "new"]);
   const actual = await collectPr({ repo: "Falconiere/toolu", pr: 115, pageSize: 2, gh });

@@ -375,9 +375,7 @@ function botComment(comments) {
   }
   if (!chosen) {
     chosen = candidates[0];
-    verdict = parseVerdict(String(chosen?.body ?? ""));
-    if (!chosen)
-      verdict.state = "absent";
+    verdict = chosen ? parseVerdict(String(chosen.body ?? "")) : { ...parseVerdict(""), state: "absent" };
   }
   return {
     comment: chosen ? {
