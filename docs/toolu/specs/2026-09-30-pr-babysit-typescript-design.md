@@ -8,13 +8,13 @@ The babysit controller still depends on twelve bash files and jq. Epic #247 requ
 
 ## Non-Goals
 
-1. Do not change the fixer dispatch, routing, or host selection owned by other issues.
+1. Do not change fixer dispatch, routing, or host selection behavior. The still-bash fixer commands need their shared shell functions moved into a fixer-specific compatibility helper when the named libs are deleted.
 2. Do not change decision thresholds, reason codes, snapshot/state versions, or GitHub endpoints.
 3. Do not mutate a live PR in tests; use recorded GitHub responses and a stub `gh` on `PATH` or loopback only.
 
 ## Architecture
 
-Keep seven public command boundaries: `babysit-tick`, `collect-pr`, `reduce-state`, `parse-verdict`, `reply-thread`, `resolve-thread`, and `record`. Each gets a TypeScript source entry and committed self-contained executable Bun bundle. Shared TypeScript helpers replace `lib/{common,gh,normalize,lock,state}.sh`. Update the command, skill, workflow, docs, smoke tests, and fixer callers to bundle paths, while leaving unrelated fixer scripts alone. The existing directory lock remains the cross-process write guard. Atomic JSON writes use a temporary sibling and rename. Collection fans out four reads, completes nested pagination, and verifies the head after the fan-out. The reducer is pure over snapshot, previous state, paths and supplied timestamp. This preserves the current observable command contract and makes every write path independently testable. Jev favored separate entries over a router (0.65 relative probability); repository call sites and failure boundaries support that choice.
+Keep seven public command boundaries: `babysit-tick`, `collect-pr`, `reduce-state`, `parse-verdict`, `reply-thread`, `resolve-thread`, and `record`. Each gets a TypeScript source entry and committed self-contained executable Bun bundle. Shared TypeScript helpers replace `lib/{common,gh,normalize,lock,state}.sh` for these commands. The fixer scripts still source common/lock/state; move their required shell functions into a fixer-specific compatibility helper and update only their source statements, preserving fixer behavior until its later port. Update the command, skill, workflow, docs, and smoke tests to bundle paths. The existing directory lock remains the cross-process write guard. Atomic JSON writes use a temporary sibling and rename. Collection fans out four reads, completes nested pagination, and verifies the head after the fan-out. The reducer is pure over snapshot, previous state, paths and supplied timestamp. This preserves the current observable command contract and makes every write path independently testable. Jev favored separate entries over a router (0.65 relative probability) and a fixer-specific compatibility bridge over expanding issue scope (0.72); repository call sites support both choices.
 
 ## Interfaces / Schema
 
@@ -41,11 +41,11 @@ Absent or malformed prior state and mismatched repo/PR fail before network acces
 
 | AC | Input and expected result | Boundary | Check |
 |---|---|---|---|
-| AC-1 | `fixtures/pr{31,120,122,157}-verdict*.txt`, `provider-error.txt`, `in-progress.txt`: byte-equivalent JSON fields to bash | Missing checkbox, conflicting prose/label | `bun test plugins/pr-babysit/scripts/src/__tests__/parse-verdict.test.ts` |
-| AC-2 | `fixtures/gh/pages-*.json` and recorded snapshots: equal normalized fields | 404, connection refused, nested pages, moving head | `bun test plugins/pr-babysit/scripts/src/__tests__/collect-pr.test.ts` |
-| AC-3 | `fixtures/snapshots/{toolu-115,toolu-165,comemory-216}.json`: equal state/result JSON | Outdated, flagged, fixer-owned, recurrence, unknown verdict | `bun test plugins/pr-babysit/scripts/src/__tests__/reduce-state.test.ts` |
-| AC-4 | Captured `toolu-165.json` with temporary state path: equal exit and state/result bytes | Malformed/foreign/locked state, failed collect | `bun test plugins/pr-babysit/scripts/src/__tests__/babysit-tick.test.ts` |
-| AC-5 | Existing `write-side.bats` scenarios migrated to Bun with a stub `gh` on `PATH`: same payloads and state | Duplicate, false resolve, retry, stale lock | `bun test plugins/pr-babysit/scripts/src/__tests__/write-side.test.ts` |
+| AC-1 | `fixtures/pr{31,120,122,157}-verdict*.txt`, `provider-error.txt`, `in-progress.txt`: byte-equivalent JSON fields to bash | Missing checkbox, conflicting prose/label | `bun test plugins/pr-babysit/hooks/src/__tests__/parse-verdict.test.ts` |
+| AC-2 | `fixtures/gh/pages-*.json` and recorded snapshots: equal normalized fields | 404, connection refused, nested pages, moving head | `bun test plugins/pr-babysit/hooks/src/__tests__/collect-pr.test.ts` |
+| AC-3 | `fixtures/snapshots/{toolu-115,toolu-165,comemory-216}.json`: equal state/result JSON | Outdated, flagged, fixer-owned, recurrence, unknown verdict | `bun test plugins/pr-babysit/hooks/src/__tests__/reduce-state.test.ts` |
+| AC-4 | Captured `toolu-165.json` with temporary state path: equal exit and state/result bytes | Malformed/foreign/locked state, failed collect | `bun test plugins/pr-babysit/hooks/src/__tests__/babysit-tick.test.ts` |
+| AC-5 | Existing `write-side.bats` scenarios migrated to Bun with a stub `gh` on `PATH`: same payloads and state | Duplicate, false resolve, retry, stale lock | `bun test plugins/pr-babysit/hooks/src/__tests__/write-side.test.ts` |
 | AC-6 | Bundled plugin in isolated Codex/Claude config dirs; no scoped `.sh`; generated bundles current | Spaces in profile path and missing dependency | `bun run check:plugin-bundles && bun run test` plus temporary-profile install smoke |
 
 ## Documentation impact
