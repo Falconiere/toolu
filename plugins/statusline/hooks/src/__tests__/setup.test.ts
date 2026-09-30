@@ -155,6 +155,19 @@ test.concurrent("setup: upgrades the quoted pre-Bun command of an explicit confi
   expect(command(settings)).toBe(`"${cfg}/statusline/statusline.sh"`);
 });
 
+test.concurrent("setup: upgrades any shell-prefixed form of the published path", async () => {
+  using sb = createSandbox();
+  const { cfg, settings } = config(sb);
+  const path = `"${cfg}/statusline/statusline.sh"`;
+  for (const shell of ["/bin/bash", "/usr/bin/env bash", "sh", "zsh"]) {
+    writeFileSync(settings, JSON.stringify({ statusLine: { command: `${shell} ${path}` } }));
+    const res = await setup(sb);
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toStartWith(`WIRED updated statusLine in ${settings}`);
+    expect(command(settings)).toBe(path);
+  }
+});
+
 test.concurrent("setup: an empty settings.json is treated as absent", async () => {
   using sb = createSandbox();
   const { settings } = config(sb);

@@ -2,8 +2,8 @@
  * `/statusline:setup`: idempotently wire the statusline into Claude Code's
  * `settings.json`. It never clobbers a custom statusLine (`--force` replaces
  * one), backs the file up to `settings.json.bak` before any write, is a no-op
- * once wired, and upgrades the pre-Bun `bash …/statusline.sh` command, which
- * can no longer run the published Bun program. The first word of the output is
+ * once wired, and upgrades a command that runs `…/statusline.sh` through a
+ * shell (the pre-Bun `bash …` form), which cannot run the published Bun program. The first word of the output is
  * the STATUS token the command reads: CREATED, WIRED, ALREADY, REFUSED or ERROR.
  */
 import {

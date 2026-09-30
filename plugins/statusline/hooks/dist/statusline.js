@@ -3250,11 +3250,18 @@ function git(cwd, env, args) {
     return;
   }
 }
+function probe(read) {
+  try {
+    return read();
+  } catch {
+    return;
+  }
+}
 function isDirectory(path) {
-  return path !== "" && (statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false);
+  return path !== "" && (probe(() => statSync(path))?.isDirectory() ?? false);
 }
 function isFile(path) {
-  return statSync(path, { throwIfNoEntry: false })?.isFile() ?? false;
+  return probe(() => statSync(path))?.isFile() ?? false;
 }
 function folderName(cwd) {
   const name = basename(cwd);
@@ -3310,7 +3317,7 @@ function executableFile(path) {
 }
 function jevReadiness(env, root) {
   const wrapper = join2(root, "jev", "jev.sh");
-  if (lstatSync(wrapper, { throwIfNoEntry: false }) === undefined)
+  if (probe(() => lstatSync(wrapper)) === undefined)
     return { status: "", reason: "" };
   const reasons = [];
   if (!executableFile(wrapper))

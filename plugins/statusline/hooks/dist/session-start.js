@@ -3245,7 +3245,7 @@ function settingsPath(env) {
   return `${dir}/settings.json`;
 }
 function isLegacyCommand(command) {
-  return typeof command === "string" && /^\s*bash\s/.test(command) && command.includes(MARKER);
+  return typeof command === "string" && /^\s*(?:\S*\/)?(?:env\s+)?(?:\S*\/)?(?:ba|z)?sh\s/.test(command) && command.includes(MARKER);
 }
 
 // plugins/statusline/hooks/src/session-start.ts
@@ -3259,7 +3259,7 @@ publishBunCli({
 if (detectHost({ warn: () => {} }) === "claude") {
   const statusLine = asObject(readObject(settingsPath(process.env))?.["statusLine"]);
   if (isLegacyCommand(statusLine?.["command"])) {
-    const systemMessage = "statusline: settings.json still runs the statusline through bash, which cannot run the Bun statusline \u2014 run /statusline:setup to update it";
+    const systemMessage = "statusline: settings.json still runs the statusline through a shell, which cannot run the Bun statusline \u2014 run /statusline:setup to update it";
     process.stdout.write(`${JSON.stringify({ systemMessage })}
 `);
   }

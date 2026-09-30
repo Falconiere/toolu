@@ -6,7 +6,7 @@
  * Jev readiness is local configuration only: the wrapper is never executed and
  * no request is sent on the statusline's per-prompt hot path.
  */
-import { accessSync, constants, lstatSync, statSync } from "node:fs";
+import { accessSync, constants, lstatSync, statSync, type Stats } from "node:fs";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { configRoot, envValue, projectStateRoot, type HostEnv } from "@toolu/core/host";
 import { readObject } from "./json.ts";
@@ -71,12 +71,21 @@ function git(cwd: string, env: HostEnv, args: readonly string[]): string | undef
   }
 }
 
+/** A stat that answers undefined on any failure (ENOENT, ENOTDIR, ELOOP…), as `test -d/-f/-L` answers false. */
+function probe(read: () => Stats): Stats | undefined {
+  try {
+    return read();
+  } catch {
+    return undefined;
+  }
+}
+
 function isDirectory(path: string): boolean {
-  return path !== "" && (statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false);
+  return path !== "" && (probe(() => statSync(path))?.isDirectory() ?? false);
 }
 
 function isFile(path: string): boolean {
-  return statSync(path, { throwIfNoEntry: false })?.isFile() ?? false;
+  return probe(() => statSync(path))?.isFile() ?? false;
 }
 
 /** `basename` as coreutils prints it: `/` stays `/`. */
@@ -139,8 +148,7 @@ function executableFile(path: string): boolean {
 
 function jevReadiness(env: HostEnv, root: string): ProjectStatus["jev"] {
   const wrapper = join(root, "jev", "jev.sh");
-  if (lstatSync(wrapper, { throwIfNoEntry: false }) === undefined)
-    return { status: "", reason: "" };
+  if (probe(() => lstatSync(wrapper)) === undefined) return { status: "", reason: "" };
   const reasons: string[] = [];
   if (!executableFile(wrapper)) reasons.push("missing executable wrapper");
   if (Bun.which("curl", { PATH: envValue(env, "PATH") ?? "" }) === null) {

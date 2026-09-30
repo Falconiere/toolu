@@ -3,7 +3,7 @@
  * a stable, version-independent path `settings.json` can name (a plugin cannot
  * declare `statusLine` itself). The link is refreshed every session, so plugin
  * updates need no settings change. On Claude, a `statusLine` command that still
- * runs that path through `bash` gets a one-line notice to run
+ * runs that path through a shell gets a one-line notice to run
  * `/statusline:setup`; this hook never writes `settings.json`.
  */
 import { resolve } from "node:path";
@@ -25,7 +25,7 @@ if (detectHost({ warn: () => {} }) === "claude") {
   const statusLine = asObject(readObject(settingsPath(process.env))?.["statusLine"]);
   if (isLegacyCommand(statusLine?.["command"])) {
     const systemMessage =
-      "statusline: settings.json still runs the statusline through bash, which cannot run the Bun statusline — run /statusline:setup to update it";
+      "statusline: settings.json still runs the statusline through a shell, which cannot run the Bun statusline — run /statusline:setup to update it";
     process.stdout.write(`${JSON.stringify({ systemMessage })}\n`);
   }
 }

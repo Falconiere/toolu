@@ -13,7 +13,7 @@ import { put } from "./harness.ts";
 
 const PLUGIN = resolve(import.meta.dir, "../../..");
 const ADVISORY =
-  '{"systemMessage":"statusline: settings.json still runs the statusline through bash, which cannot run the Bun statusline — run /statusline:setup to update it"}\n';
+  '{"systemMessage":"statusline: settings.json still runs the statusline through a shell, which cannot run the Bun statusline — run /statusline:setup to update it"}\n';
 
 publishedCliSuite({
   plugin: "statusline",
@@ -39,6 +39,12 @@ async function startupWith(host: StartupHost, command: string): Promise<string> 
 
 test.concurrent("statusline session-start: a bash statusLine on Claude gets one notice", async () => {
   expect(await startupWith("claude", "bash ~/.claude/statusline/statusline.sh")).toBe(ADVISORY);
+});
+
+test.concurrent("statusline session-start: an interpreter path counts as a shell", async () => {
+  expect(await startupWith("claude", "/usr/bin/env bash ~/.claude/statusline/statusline.sh")).toBe(
+    ADVISORY,
+  );
 });
 
 test.concurrent("statusline session-start: a Bun statusLine on Claude is silent", async () => {

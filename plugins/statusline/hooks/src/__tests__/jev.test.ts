@@ -7,7 +7,18 @@ import { expect, test } from "bun:test";
 import { chmodSync, copyFileSync, mkdirSync, rmSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
-import { JEV_SH, KEY, cfgOf, payload, publishJev, put, render, report, repo } from "./harness.ts";
+import {
+  JEV_SH,
+  KEY,
+  cfgOf,
+  payload,
+  plain,
+  publishJev,
+  put,
+  render,
+  report,
+  repo,
+} from "./harness.ts";
 
 const SEP = "\x1b[2m | \x1b[0m";
 const READY = "\x1b[1m\x1b[32m[JEV:READY]\x1b[0m";
@@ -84,6 +95,33 @@ test.concurrent("Jev readiness: a non-executable wrapper or directory cannot be 
   rmSync(wrapper);
   mkdirSync(wrapper);
   expect(await renderWorkspace(sb)).toEndWith(unavailable("missing executable wrapper"));
+});
+
+test.concurrent("Jev readiness: a self-looping wrapper symlink is unavailable", async () => {
+  using sb = createSandbox();
+  for (const root of [cfgOf(sb), sb.codexHome]) {
+    mkdirSync(join(root, "jev"), { recursive: true });
+    symlinkSync(join(root, "jev/jev.sh"), join(root, "jev/jev.sh"));
+  }
+  expect(await renderWorkspace(sb)).toEndWith(unavailable("missing executable wrapper"));
+  expect(await report(sb, sb.project)).toContain("Jev: unavailable — missing executable wrapper\n");
+});
+
+test.concurrent("Jev readiness: a file where the jev directory belongs is unpublished", async () => {
+  using sb = createSandbox();
+  put(join(cfgOf(sb), "jev"), "");
+  put(join(sb.codexHome, "jev"), "");
+  expect(await renderWorkspace(sb)).not.toContain("[JEV:");
+  expect(await report(sb, sb.project)).not.toContain("Jev:");
+});
+
+test.concurrent("Jev readiness: a workspace path under a regular file keeps readiness", async () => {
+  using sb = createSandbox();
+  await publishJev(cfgOf(sb), "claude");
+  sb.write("file", "");
+  expect(plain(await render(sb, { payload: payload(sb.path("file/x")) }))).toBe(
+    "Opus | ctx:1k/200k | [JEV:READY]",
+  );
 });
 
 test.concurrent("Jev readiness: the report names missing curl using only local prerequisites", async () => {
