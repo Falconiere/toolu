@@ -5,6 +5,8 @@
  * the survivors match, except where TypeScript deliberately removes more:
  * our own stale `.js` and `.js` residue, and (for the quality plugins, whose
  * scripts only look at `post-tools.d`) our entries in `pre-tools.d`.
+ * ast-grep left the list with its `register.sh` (#268); its register bundle
+ * has its own suite in `plugins/ast-grep/hooks/src/__tests__`.
  */
 import { expect, test } from "bun:test";
 import {
@@ -32,14 +34,6 @@ type Plugin = {
 };
 
 const PLUGINS: Plugin[] = [
-  {
-    plugin: "ast-grep",
-    modules: [
-      { name: "search-nudge", event: "tool/pre" },
-      { name: "byte-savings", event: "tool/post" },
-    ],
-    bashDirs: DIRS,
-  },
   ...["python-quality", "rust-quality", "ts-quality"].map((plugin) => ({
     plugin,
     modules: [{ name: plugin, event: "tool/post" as const }],
