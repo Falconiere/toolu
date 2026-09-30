@@ -18,7 +18,7 @@ import {
 } from "@toolu/conformance/harness/posttool-corpus";
 import { pretoolEnv } from "@toolu/conformance/harness/pretool";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
-import { percentile, type Latency } from "@toolu/conformance/harness/timing";
+import { latencyOf, type Latency } from "@toolu/conformance/harness/timing";
 
 const BUDGET_MS = 5;
 const SLICE = [
@@ -34,16 +34,6 @@ type Runner = typeof runPostModSh;
 type Row = { name: string; bash: Latency; bundle: Latency };
 
 const WARMUP = 2;
-
-function latency(samples: readonly number[]): Latency {
-  return {
-    samples: [...samples],
-    p50: percentile(samples, 50),
-    p95: percentile(samples, 95),
-    min: Math.min(...samples),
-    max: Math.max(...samples),
-  };
-}
 
 async function row(name: string, runs: number): Promise<Row> {
   const c = POSTTOOL_CORPUS.find((entry) => entry.name === name);
@@ -72,7 +62,7 @@ async function row(name: string, runs: number): Promise<Row> {
     const result = await call();
     if (round >= WARMUP) sides[at]?.[2].push(result.durationMs);
   }, Promise.resolve());
-  return { name, bash: latency(sides[0]?.[2] ?? []), bundle: latency(sides[1]?.[2] ?? []) };
+  return { name, bash: latencyOf(sides[0]?.[2] ?? []), bundle: latencyOf(sides[1]?.[2] ?? []) };
 }
 
 const ms = (value: number): string => value.toFixed(1);

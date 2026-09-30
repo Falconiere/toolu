@@ -7,6 +7,7 @@
     },
     "tooling": {
       "entry": [
+        "src/benchmarks/ast-grep-latency.ts",
         "src/benchmarks/pre-tools-latency.ts",
         "src/benchmarks/post-tools-latency.ts",
         "src/codex-smoke.ts",

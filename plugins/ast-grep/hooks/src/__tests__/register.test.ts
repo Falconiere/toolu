@@ -5,6 +5,12 @@
  * stale entries and aged tmp residue; refreshes a drifted copy; is byte- and
  * mtime-stable when re-run; and both modules fire through toolu's dispatcher
  * bundles only while ast-grep is installed.
+ *
+ * register.bats, all 13: pre- and post-tools sync, the Codex root, no tmp
+ * leftovers and an empty stdout are "publishes exactly the two bundles";
+ * stale-entry pruning and aged tmp residue are "prunes only its own"; drift is
+ * "refreshes"; idempotence is "a second run"; the four dispatcher end-to-end
+ * tests are the installed/absent pairs at the bottom, on both hosts.
  */
 import { expect, test } from "bun:test";
 import {
@@ -66,6 +72,7 @@ for (const root of ROOTS) {
     expect(readdirSync(postDir(base))).toEqual([SAVINGS]);
     expect(readFileSync(join(preDir(base), NUDGE))).toEqual(readFileSync(dist("search-nudge")));
     expect(readFileSync(join(postDir(base), SAVINGS))).toEqual(readFileSync(dist("byte-savings")));
+    if (root.name !== "Claude") expect(existsSync(join(sb.home, ".claude", "toolu"))).toBe(false);
   });
 }
 

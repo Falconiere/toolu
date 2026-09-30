@@ -40,7 +40,6 @@ const SLICE = [
   "plain command is silent",
   "commit-gate: commit advice",
   "push-review + docs-sync: unreviewed push advises",
-  "ast-grep registry: structural Grep nudge",
 ];
 
 /** The last commit where protected-files, mcp-blocker and code-edit-rules ran on bash. */
