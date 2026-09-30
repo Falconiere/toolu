@@ -24,7 +24,7 @@ JEV_EXAMPLES=$(mktemp -d)
 
 judge() {
   local name="$1"
-  if "$JEV" ask "$JEV_EXAMPLES/$name.questions.json" \
+  if bun "$JEV" ask "$JEV_EXAMPLES/$name.questions.json" \
       -s "@$JEV_EXAMPLES/$name.state.json" --raw >"$JEV_EXAMPLES/$name.result.json"; then
     jq '.answers' "$JEV_EXAMPLES/$name.result.json"
   else

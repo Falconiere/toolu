@@ -34,10 +34,10 @@ JEV="${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/jev/jev.sh"
 Repository fallback, when not installed: `plugins/jev/hooks/dist/jev.js`.
 
 ```text
-"$JEV" noul   "question" -s STATE [--true DESC] [--false DESC]
-"$JEV" choice "question" -s STATE -o KEY=DESC -o KEY=DESC
-"$JEV" score  "question" -s STATE -l "lowest situation" -l "highest situation"
-"$JEV" ask questions.json -s STATE
+bun "$JEV" noul   "question" -s STATE [--true DESC] [--false DESC]
+bun "$JEV" choice "question" -s STATE -o KEY=DESC -o KEY=DESC
+bun "$JEV" score  "question" -s STATE -l "lowest situation" -l "highest situation"
+bun "$JEV" ask questions.json -s STATE
 ```
 
 - `-s/--state`: literal text, `@FILE`, or `-` (stdin). Required.
