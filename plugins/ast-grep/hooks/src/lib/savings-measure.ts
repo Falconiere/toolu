@@ -39,11 +39,8 @@ function responseValue(response: unknown): unknown {
   if (typeof response !== "object" || response === null || Array.isArray(response)) {
     return jqToString(response ?? null);
   }
-  const fields = response as Record<string, unknown>;
-  return jqOr(
-    fields["content"],
-    jqOr(fields["stdout"], jqOr(fields["output"], jqToString(fields))),
-  );
+  const field = (key: string): unknown => Reflect.get(response, key);
+  return jqOr(field("content"), jqOr(field("stdout"), jqOr(field("output"), jqToString(response))));
 }
 
 /** UTF-8 byte length of the response text, trailing newlines excluded; undefined when there is no text. */

@@ -75,10 +75,12 @@ async function row(name: string, call: Call, runs: number, pluginRoot: string): 
     [bashBox, { kind: "bash", pluginRoot }, []],
     [tsBox, { kind: "bundle" }, []],
   ];
-  for (const [sb, reg] of sides) {
-    baseSandbox(sb);
-    await registerAstGrep(sb, "claude", reg);
-  }
+  await Promise.all(
+    sides.map(([sb, reg]) => {
+      baseSandbox(sb);
+      return registerAstGrep(sb, "claude", reg);
+    }),
+  );
   // Sequential by design: concurrent spawns would contend and skew each other.
   const calls = [...Array(WARMUP + runs).keys()].flatMap((round) =>
     sides.map(([sb, , samples]) => ({ round, sb, samples })),

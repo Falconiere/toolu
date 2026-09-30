@@ -11,12 +11,15 @@ type LedgerRecord = { kind: string; returned: number; full: number };
 type KindTotal = LedgerRecord & { n: number };
 
 function isRecord(value: unknown): value is LedgerRecord {
-  if (typeof value !== "object" || value === null) return false;
-  const r = value as Record<string, unknown>;
   return (
-    typeof r["kind"] === "string" &&
-    typeof r["returned"] === "number" &&
-    typeof r["full"] === "number"
+    typeof value === "object" &&
+    value !== null &&
+    "kind" in value &&
+    typeof value.kind === "string" &&
+    "returned" in value &&
+    typeof value.returned === "number" &&
+    "full" in value &&
+    typeof value.full === "number"
   );
 }
 

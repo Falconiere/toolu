@@ -4,10 +4,7 @@
 // plugins/ast-grep/hooks/src/byte-savings-report.ts
 import { existsSync, readFileSync, statSync } from "fs";
 function isRecord(value) {
-  if (typeof value !== "object" || value === null)
-    return false;
-  const r = value;
-  return typeof r["kind"] === "string" && typeof r["returned"] === "number" && typeof r["full"] === "number";
+  return typeof value === "object" && value !== null && "kind" in value && typeof value.kind === "string" && "returned" in value && typeof value.returned === "number" && "full" in value && typeof value.full === "number";
 }
 function parseLine(line) {
   try {

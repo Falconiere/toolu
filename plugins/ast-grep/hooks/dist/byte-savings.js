@@ -9791,8 +9791,8 @@ function responseValue(response) {
   if (typeof response !== "object" || response === null || Array.isArray(response)) {
     return jqToString(response ?? null);
   }
-  const fields = response;
-  return jqOr(fields["content"], jqOr(fields["stdout"], jqOr(fields["output"], jqToString(fields))));
+  const field = (key) => Reflect.get(response, key);
+  return jqOr(field("content"), jqOr(field("stdout"), jqOr(field("output"), jqToString(response))));
 }
 function returnedBytes(response) {
   const text = jqRaw(responseValue(response));
@@ -9819,15 +9819,14 @@ function ledgerDir(env) {
   const root = env["TOOLU_CONFIG_DIR"] || env["CODEX_HOME"] || env["CLAUDE_CONFIG_DIR"] || `${env["HOME"] ?? ""}/.claude`;
   return join(root, "toolu", "byte-savings");
 }
-function record2(toolName, ctx) {
-  const input = ctx.raw["tool_input"];
-  const kind = savingsKind(toolName, input?.["command"]);
+function record2(event, ctx) {
+  const kind = savingsKind(event.toolName, event.toolInput["command"]);
   if (kind === undefined)
     return;
   const returned = returnedBytes(ctx.raw["tool_response"]);
   if (returned === undefined)
     return;
-  const full = kind === "read" ? readFullBytes(input?.["file_path"], ctx.cwd ?? process.cwd()) : 0;
+  const full = kind === "read" ? readFullBytes(event.toolInput["file_path"], ctx.cwd ?? process.cwd()) : 0;
   const dir = ledgerDir(ctx.env);
   try {
     mkdirSync(dir, { recursive: true });
@@ -9840,7 +9839,7 @@ var byte_savings_default = defineRegistryModule({
   name: "byte-savings",
   event: "tool/post",
   run(event, ctx) {
-    record2(event.toolName, ctx);
+    record2(event, ctx);
     return Promise.resolve({ kind: "allow" });
   }
 });

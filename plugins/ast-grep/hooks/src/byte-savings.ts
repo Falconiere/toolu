@@ -7,7 +7,11 @@
  */
 import { appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { defineRegistryModule, type RegistryContext } from "@toolu/core/registry";
+import {
+  defineRegistryModule,
+  type RegistryContext,
+  type RegistryHookEvent,
+} from "@toolu/core/registry";
 import {
   ledgerSessionId,
   readFullBytes,
@@ -25,13 +29,13 @@ function ledgerDir(env: RegistryContext["env"]): string {
   return join(root, "toolu", "byte-savings");
 }
 
-function record(toolName: string, ctx: RegistryContext): void {
-  const input = ctx.raw["tool_input"] as Record<string, unknown> | undefined;
-  const kind = savingsKind(toolName, input?.["command"]);
+function record(event: RegistryHookEvent, ctx: RegistryContext): void {
+  const kind = savingsKind(event.toolName, event.toolInput["command"]);
   if (kind === undefined) return;
   const returned = returnedBytes(ctx.raw["tool_response"]);
   if (returned === undefined) return;
-  const full = kind === "read" ? readFullBytes(input?.["file_path"], ctx.cwd ?? process.cwd()) : 0;
+  const full =
+    kind === "read" ? readFullBytes(event.toolInput["file_path"], ctx.cwd ?? process.cwd()) : 0;
   const dir = ledgerDir(ctx.env);
   try {
     mkdirSync(dir, { recursive: true });
@@ -49,7 +53,7 @@ export default defineRegistryModule({
   name: "byte-savings",
   event: "tool/post",
   run(event, ctx) {
-    record(event.toolName, ctx);
+    record(event, ctx);
     return Promise.resolve({ kind: "allow" });
   },
 });
