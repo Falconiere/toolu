@@ -75,7 +75,7 @@ What the agent acts on. Printed on stdout by `babysit-tick.js`.
 | `verdict.commentUrl`, `commentId` | The bot comment read. |
 | `verdict.degraded`, `degradedReason` | `true` with `review_absent` or `review_unknown_format` when the verdict cannot be read; success is then the documented manual-verify fallback, never silent. |
 | `verdict.sameRunAsLastTick` | The same bot comment id and `updatedAt` as last tick — a sticky verdict, not a new rejection. |
-| `threads.total`, `unresolved` | All threads; the Resolution-audit set (`!isResolved && !isOutdated && !flagged`). `unresolved` must be `0` for success. |
+| `threads.total`, `unresolved` | All threads; the Resolution-audit set (`!isResolved && !flagged && (!isOutdated || authorClass == human)`). Open outdated human threads remain counted after an author reply until confirmed resolution; outdated CI-reviewer threads are skipped. `unresolved` must be `0` for success. |
 | `threads.actionable[]` | Threads needing a NEW disposition this tick: `{id, path, line, isOutdated, rootCommentId, inReplyTo, authorClass, lastCommentAuthor, lastCommentAt, injectionSuspect, injectionPattern, comments[]}`. `authorClass` ∈ `ci_reviewer` (exact login set `github-actions`, `github-actions[bot]`, `claude`, `claude[bot]` — current Toolu Code Review `@v8` posts as `github-actions[bot]`; `claude` kept for legacy), `human`. Non-CI bots are excluded. `comments[]` is the full chain, bodies untruncated. |
 | `threads.staleUnresolved[]` | Audit members that are NOT actionable: the PR author replied but no resolve landed. Resolve them without a new reply. |
 | `threads.skippedOutdated[]` | Outdated CI-reviewer threads: skipped silently. |
