@@ -111,7 +111,7 @@ Wrappers are unwrapped by their own option tables: `sudo`, `doas`, `env`, `comma
 
 It runs `empty` and `together`, the heaviest, interleaved from a directory with no `node_modules`, and times `analyzeShell` plus the git and write helpers over every fixture command. `--assert` exits 1 when a budget is exceeded.
 
-CI asserts the bundle sizes (`tooling/src/__tests__/bench-shell.test.ts`), because wall-clock numbers depend on the machine.
+The Bun unit test asserts bundle sizes (`tooling/src/__tests__/bench-shell.test.ts`). The CI `typescript` job also runs `bun run bench:shell --assert`, measuring the latency and parse budgets on that runner; each cold-start comparison interleaves baseline and candidate samples to reduce load drift.
 
 | Measure | Budget | Measured |
 |---|---|---|

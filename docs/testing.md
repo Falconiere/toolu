@@ -1,6 +1,10 @@
 # Testing with bun test
 
-toolu is moving from bats to `bun test` ([epic #247](https://github.com/Falconiere/toolu/issues/247)). A test spawns the real thing: a hook bundle, a bash script, `git`, `npm`, `codex`. It runs against real temp repositories and config roots. There are no mocks (AGENTS.md).
+toolu is moving from bats to `bun test` ([epic #247](https://github.com/Falconiere/toolu/issues/247)). `bun run test` runs the TypeScript gate: conventions, real-subprocess unit and conformance tests, portable-core and gate-coverage checks, bundle and launcher drift, package/workspace checks, context budget, deterministic benchmarks, and the shell-analysis latency budget.
+
+Until #279 deletes the remaining shell scripts and Bats suites, run `bun run lint:shell` and `bun run test:shell` too; CI keeps their existing required check names. Some Bun parity tests still invoke real legacy tools, so the CI `typescript` job installs those tools until #279.
+
+A test spawns the real thing: a hook bundle, a bash script, `git`, `npm`, `codex`. It runs against real temp repositories and config roots. There are no mocks (AGENTS.md).
 
 Shared helpers live in `@toolu/conformance/harness/*` (`tools/toolu-conformance/src/harness/`):
 

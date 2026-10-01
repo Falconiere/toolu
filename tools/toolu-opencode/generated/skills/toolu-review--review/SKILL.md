@@ -20,8 +20,8 @@ Review `git diff <base>...HEAD` against these dimensions. Every finding blocks
 2. **Security** — input validation, injection, secrets, unsafe file/symlink ops.
 3. **Performance** — hot paths (e.g. per-render/per-hook work), needless spawns.
 4. **Test coverage for every NEW behavior** — a new code path without a colocated
-   real-data test is a finding. (The bot flagged a missing bats for an orphan
-   sweep on a prior PR — catch that class here.)
+   real-data test is a finding. Use a Bun test for TypeScript behavior; retain
+   Bats coverage for legacy scripts until #279 removes them.
 5. **Doc/comment accuracy** — comments must match behavior; e.g. no "one-time" on
    a block that runs every invocation; no stale paths after a move.
 6. **Tight test assertions** — assert the full identity, not a loose suffix

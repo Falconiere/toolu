@@ -3,8 +3,8 @@
  * pipeline and run from a directory with no node_modules. Every runtime export
  * of `@toolu/core/shell` adds at most 200,000 bytes, and so does `analyzeShell`
  * plus `@toolu/core/shell/writes`. Wall-clock numbers are machine-bound, so this
- * suite checks their presence, not their values; `bun run bench:shell --assert`
- * checks the timing budgets on a given machine.
+ * suite checks their presence, not their values; CI also runs
+ * `bun run bench:shell --assert` to check timing on that runner.
  */
 import { expect, test } from "bun:test";
 import { resolve } from "node:path";

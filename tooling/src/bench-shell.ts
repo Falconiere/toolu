@@ -15,8 +15,8 @@
  * no node_modules: p50 delta at most 5 ms. Parse and walk time `analyzeShell` plus the git and write helpers over
  * every fixture command: p99 at most 0.1 ms.
  *
- * Numbers are machine-bound, so CI asserts only the sizes (bench-shell.test.ts).
- * `--assert` exits 1 when any budget is exceeded on this machine.
+ * Numbers are machine-bound. The unit test checks sizes; the CI TypeScript gate
+ * also runs `--assert` for cold-start and parse budgets on that runner.
  *
  * Usage: bun run tooling/src/bench-shell.ts [--runs N] [--rounds N] [--json] [--assert]
  */

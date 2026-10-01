@@ -52,9 +52,63 @@ test.concurrent("CI workflow defines a typescript job running test:ts", () => {
   expect({ foundJob, foundRun }).toEqual({ foundJob: true, foundRun: true });
 });
 
-test.concurrent("root test script includes test:ts", () => {
-  expect(rootPackage.scripts["test:ts"]).toBeTruthy();
-  expect(rootPackage.scripts["test"]).toContain("test:ts");
+test.concurrent("root test delegates to the complete Bun lane and keeps explicit legacy commands", () => {
+  const scripts = rootPackage.scripts;
+  expect(scripts["test"]).toBe("bun run test:ts");
+  for (const gate of [
+    "test:conventions",
+    "test:unit",
+    "test:portable-core",
+    "test:gate-coverage",
+    "check:plugin-bundles",
+    "check:hooks-json",
+    "test:workspace",
+    "test:pack",
+    "test:conformance",
+    "test:context-budget",
+    "benchmarks --tier deterministic",
+    "bench:shell --assert",
+  ]) {
+    expect(scripts["test:ts"]).toContain(gate);
+  }
+  expect(scripts["lint:shell"]).toBe("bash tooling/shellcheck.sh");
+  expect(scripts["test:shell"]).toBe("bash tooling/bats-run.sh");
+});
+
+test.concurrent("CI keeps functional required check names and runs the Bun lane", () => {
+  const workflow = readText(".github/workflows/tests.yml");
+  expect(workflow).toMatch(/  shellcheck:\n    name: shellcheck[\s\S]*?run: bun run lint:shell/);
+  expect(workflow).toMatch(/  typescript:\n    name: typescript[\s\S]*?bun run test:ts/);
+  expect(workflow).toMatch(
+    /  bats:\n    name: bats \(plugins\)[\s\S]*?bash tooling\/bats-run\.sh plugins tooling packages tools/,
+  );
+  expect(readText(".github/workflows/toolu-review.yml")).toContain("  review:");
+});
+
+test.concurrent("release-only path filters still run bundle-only changes", () => {
+  const workflow = readText(".github/workflows/tests.yml");
+  const releaseOnly = workflow
+    .split("    paths-ignore: &release-only\n")[1]
+    ?.split("  pull_request:")[0];
+  expect(releaseOnly).toBeDefined();
+  const ignored = releaseOnly?.match(/^      - .+$/gm) ?? [];
+  expect(ignored).toEqual([
+    '      - "CHANGELOG.md"',
+    '      - ".release-please-manifest.json"',
+    '      - "package.json"',
+    '      - "packages/*/package.json"',
+    '      - "tools/*/package.json"',
+    '      - "plugins/*/.claude-plugin/plugin.json"',
+    '      - "plugins/*/.codex-plugin/plugin.json"',
+  ]);
+  expect(workflow).toContain("    paths-ignore: *release-only");
+  expect(ignored.join("\n")).not.toContain("hooks/dist");
+});
+
+test.concurrent("contributor guidance names the new default and active legacy checks", () => {
+  expect(readText("AGENTS.md")).toContain("`bun run test` runs the TypeScript gate");
+  expect(readText("docs/testing.md")).toContain("`bun run test` runs the TypeScript gate");
+  expect(readText("plugins/toolu-review/skills/review/SKILL.md")).not.toContain("missing bats");
 });
 
 test.concurrent("portable-core documents tools/toolu-conformance", () => {

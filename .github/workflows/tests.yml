@@ -7,6 +7,7 @@ on:
     # A release-please bump is exactly these files (root + workspace package.json
     # version lines + plugin manifests). Any other path still runs
     # the suite, including a release-please branch that also touches code.
+    # hooks/dist/** is deliberately absent: a bundle-only change still tests.
     # Branch name and commit author are not consulted: both can be forged.
     # workflow_dispatch ignores path filters, so a manual run always tests.
     # Release Please itself still runs on the merge so the tag publishes.
@@ -45,6 +46,8 @@ jobs:
 
       - name: Install bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -61,7 +64,7 @@ jobs:
   typescript:
     name: typescript
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -71,9 +74,8 @@ jobs:
         with:
           bun-version: "1.4.2"
 
-      # The tooling suites run here under bun test (#251). Several drive real
-      # tools and skip when one is missing, so install every one of them: a
-      # skipped suite in CI is a suite nobody runs.
+      # The Bun suites still compare with legacy scripts and tools before #279
+      # removes them. Install each real tool: a skipped suite is untested code.
       - name: Install test tools
         run: |
           set -euo pipefail
@@ -90,12 +92,12 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: TS workspace gates
+      - name: TypeScript quality gate
         run: |
           set -euo pipefail
-          # Mandatory Bun/TS lane (#208): format, type-aware lint, tsc, guardrails,
-          # knip, jscpd, package and tooling unit tests (bun test), workspace smoke.
-          # Failures here block merges even when shell bats are green.
+          # Local `bun run test` delegates here. Includes format, lint, typecheck,
+          # guardrails, unit and conformance, bundle/launcher drift, context and
+          # latency budgets, and deterministic benchmarks.
           bun run test:ts
 
   bats:
@@ -120,6 +122,8 @@ jobs:
 
       - name: Install bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
 
       - name: Install JS deps
         run: bun install --frozen-lockfile
@@ -162,23 +166,3 @@ jobs:
           # nothing-found guard. Roots include packages/ and tools/ so new
           # workspace Bats cannot be silently skipped (#208).
           bash tooling/bats-run.sh plugins tooling packages tools
-
-      - name: Deterministic benchmarks (hermetic)
-        run: |
-          set -euo pipefail
-          # Regenerate + validate the deterministic retrieval benchmark. No API
-          # key in CI, so token counting is the offline heuristic — fully
-          # hermetic. Guards the harness against regressions; the live tier
-          # (whole-session) is run manually, never in CI.
-          bun run benchmarks --tier deterministic
-          f=$(ls benchmarks/results/retrieval-deterministic-*.json | tail -1)
-          bun run benchmarks --validate "$f"
-
-      - name: Context budget guard
-        run: |
-          set -euo pipefail
-          # Cap the harness's own injected-context footprint: word ceilings on the
-          # Session Protocol + per-language docs and on every skill `description`.
-          # Fails the build if any surface exceeds budget or drops a required
-          # trigger phrase, so the baseline cannot silently regrow.
-          bun run test:context-budget
