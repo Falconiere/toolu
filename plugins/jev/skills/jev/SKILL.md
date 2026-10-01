@@ -20,7 +20,11 @@ tests, correctness, and authorization stay with the agent/tools.
 
 ## CLI
 
-Requires Bun 1.4.x on `PATH` and environment `TYPESAFE_API_KEY`; never read `.env`.
+Requires Bun 1.4.x and environment `TYPESAFE_API_KEY`; never read `.env`.
+Use the resolved Bun command injected by the hooks, even when `bun` is absent
+from `PATH`. A missing key in a hook is not proof it is absent from the command
+environment: check presence there without printing its value before reporting
+unavailability. For manual setup, resolve Bun as below.
 Use the active host's published wrapper; plugin lifecycle variables are unavailable
 in ordinary shells:
 
@@ -29,15 +33,24 @@ in ordinary shells:
 JEV="${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/jev/jev.sh"
 # Claude Code: use this assignment instead
 # JEV="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/jev/jev.sh"
+JEV_BUN=
+for candidate in "${TOOLU_BUN:-}" "$(command -v bun 2>/dev/null)" "$HOME/.bun/bin/bun"; do
+  if [ -n "$candidate" ] && [ -f "$candidate" ] && [ -x "$candidate" ]; then JEV_BUN="$candidate"; break; fi
+done
 ```
 
 Repository fallback, when not installed: `plugins/jev/hooks/dist/jev.js`.
 
+User-provided executable overrides at `jev.sh` are preserved and invoked
+directly with their own shebang/interpreter, including shell scripts and
+JavaScript executables. They must provide an executable shebang; the resolved
+Bun prefix applies to the published bundle symlink.
+
 ```text
-bun "$JEV" noul   "question" -s STATE [--true DESC] [--false DESC]
-bun "$JEV" choice "question" -s STATE -o KEY=DESC -o KEY=DESC
-bun "$JEV" score  "question" -s STATE -l "lowest situation" -l "highest situation"
-bun "$JEV" ask questions.json -s STATE
+"$JEV_BUN" "$JEV" noul   "question" -s STATE [--true DESC] [--false DESC]
+"$JEV_BUN" "$JEV" choice "question" -s STATE -o KEY=DESC -o KEY=DESC
+"$JEV_BUN" "$JEV" score  "question" -s STATE -l "lowest situation" -l "highest situation"
+"$JEV_BUN" "$JEV" ask questions.json -s STATE
 ```
 
 - `-s/--state`: literal text, `@FILE`, or `-` (stdin). Required.

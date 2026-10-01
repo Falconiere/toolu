@@ -8,7 +8,8 @@
  */
 import { accessSync, constants } from "node:fs";
 import { resolve } from "node:path";
-import { bunOnPath, publishBunCli, renderHookOutput, sessionContext } from "@toolu/core/startup";
+import { publishWrapper, renderHookOutput, sessionContext } from "@toolu/core/startup";
+import { invocation, credentialNotice } from "./jev/availability.ts";
 
 const PLUGIN = resolve(import.meta.dir, "../..");
 
@@ -21,29 +22,18 @@ function executable(path: string): boolean {
   }
 }
 
-/** What stops the wrapper from working, space-prefixed, in the bash order; "" when nothing. */
-function missingPrereqs(wrapper: string): string {
-  const missing: string[] = [];
-  if (!bunOnPath()) missing.push("bun");
-  if (!process.env.TYPESAFE_API_KEY) missing.push("TYPESAFE_API_KEY");
-  if (!executable(wrapper)) missing.push("executable-wrapper");
-  return missing.map((item) => ` ${item}`).join("");
-}
-
 function mandate(wrapper: string): string {
-  const missing = missingPrereqs(wrapper);
-  if (missing !== "") {
-    return `Jev unavailable (missing:${missing}). Set TYPESAFE_API_KEY in the agent's launch environment and install Bun 1.4.x. Jev is mandatory on every task once available; until then, state the limitation once per task and use an explicit reasoning/evidence fallback; never invent a Jev result. Do not read credentials from .env.`;
+  if (!executable(wrapper)) {
+    return "Jev unavailable: published wrapper is not executable. Repair the Jev plugin installation. Until then, state the limitation once per task and use an explicit reasoning/evidence fallback; never invent a Jev result. Do not read credentials from .env.";
   }
-  return `Jev is mandatory on every task containing semantic decisions. After initial exploration, identify useful judgments over supplied evidence; you MUST call "${wrapper}" before the decision it informs. Reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions in one ask call. Reuse unchanged evidence and questions rather than repeating calls. If a task has no semantic decision, say so in one sentence rather than skipping silently. Syntax and linked examples: ${PLUGIN}/skills/jev/SKILL.md. Keep exact rules, tests, and code verification deterministic. On service failure, state the limitation and use an explicit evidence fallback. Jev never replaces tests or authorization.`;
+  return `${credentialNotice()}Jev is mandatory on every task containing semantic decisions. After initial exploration, identify useful judgments over supplied evidence; you MUST call ${invocation(wrapper)} before the decision it informs. Published bundles use the hook's resolved Bun executable and do not require bun on PATH. Reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions in one ask call. Reuse unchanged evidence and questions rather than repeating calls. If a task has no semantic decision, say so in one sentence rather than skipping silently. Syntax and linked examples: ${PLUGIN}/skills/jev/SKILL.md. Keep exact rules, tests, and code verification deterministic. On service failure, state the limitation and use an explicit evidence fallback. Jev never replaces tests or authorization.`;
 }
 
-const result = publishBunCli({
+const result = publishWrapper({
   plugin: "jev",
   source: resolve(PLUGIN, "hooks/dist/jev.js"),
   dir: "jev",
   name: "jev.sh",
-  tool: "jev CLI",
 });
 if (result.status === "link-failed") {
   process.stderr.write(`jev: cannot publish ${result.path}\n`);
