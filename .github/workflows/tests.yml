@@ -36,31 +36,6 @@ permissions:
   contents: read
 
 jobs:
-  shellcheck:
-    name: shellcheck
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Install shellcheck
-        run: |
-          set -euo pipefail
-          sudo apt-get update -y
-          sudo apt-get install -y shellcheck
-
-      - name: Shellcheck (standalone scripts + assembled concern modules)
-        run: bun run lint:shell
-
   typescript:
     name: typescript
     runs-on: ubuntu-latest
@@ -74,13 +49,12 @@ jobs:
         with:
           bun-version: "1.4.2"
 
-      # The Bun suites still compare with legacy scripts and tools before #279
-      # removes them. Install each real tool: a skipped suite is untested code.
+      # The suites exercise real host and analysis tools.
       - name: Install test tools
         run: |
           set -euo pipefail
           sudo apt-get update -y
-          sudo apt-get install -y bats jq shellcheck parallel
+          sudo apt-get install -y jq
 
       - name: Install Codex CLI
         run: npm install -g @openai/codex
@@ -107,70 +81,3 @@ jobs:
           # latency measurement, hard size/parser budgets, and deterministic
           # benchmarks. bench:shell appends its measured table to the job summary.
           bun run test:ts
-
-  bats:
-    name: bats (plugins)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install bats
-        run: |
-          set -euo pipefail
-          sudo apt-get update -y
-          sudo apt-get install -y bats jq parallel
-
-      - name: Install ast-grep
-        run: npm install -g @ast-grep/cli
-
-      - name: Install Codex CLI
-        run: npm install -g @openai/codex
-
-      - name: Install bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
-
-      - name: Install JS deps
-        run: bun install --frozen-lockfile
-
-      - name: Confirm tooling
-        run: |
-          bats --version
-          jq --version
-          ast-grep --version
-          codex --version
-          python3 --version
-          bun --version
-          bunx oxlint --version
-
-      - name: Enforce colocated __tests__ layout
-        run: |
-          set -euo pipefail
-          # Every .bats suite must live in a colocated __tests__/ dir next to the
-          # code it exercises. Fail the build (with the offending paths) if any
-          # test file sits outside a __tests__ directory.
-          stray=$(find plugins benchmarks tooling packages tools -name "*.bats" -not -path "*/__tests__/*" 2>/dev/null || true)
-          if [ -n "$stray" ]; then
-            echo "Test files outside a __tests__/ dir:" >&2
-            echo "$stray" >&2
-            echo "Move each into a colocated __tests__/ folder." >&2
-            exit 1
-          fi
-
-      - name: Run bats suite
-        run: |
-          set -euo pipefail
-          # Run every bats suite in every plugin (hook and skill tests live under
-          # their owning plugin; discovery is dynamic, so new plugins are picked
-          # up automatically). The benchmarks harness is bun-tested since #277. Skill tests that wrap a
-          # REST API stub curl on PATH, so they never hit real APIs.
-          #
-          # Through tooling/bats-run.sh so CI runs the suite the same way a
-          # developer does, and gets the same parallelism: files in parallel,
-          # tests within a file serial. It owns discovery and the
-          # nothing-found guard. Roots include packages/ and tools/ so new
-          # workspace Bats cannot be silently skipped (#208).
-          bash tooling/bats-run.sh plugins tooling packages tools

@@ -1,9 +1,5 @@
 /**
- * Shared by the bash-parity suites (#284): run the unmodified shipped bash libs
- * over fixture commands, and compose the same answers from `@toolu/core/shell`.
- * The bash side only reads `plugins/toolu/hooks/lib/detect.sh`; nothing under
- * `plugins/` is written. `bash_commands_decide` is answered by the native gate
- * only (#261); its bash baselines stay recorded in the fixtures.
+ * Fixture helpers for the native shell analyzer and its gate consumers.
  */
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
@@ -22,43 +18,12 @@ import { writeTargets } from "../shell-writes.ts";
 
 export const REPO = resolve(import.meta.dir, "../../../../..");
 export const FIXTURES = join(REPO, "tooling/fixtures/shell");
-const DETECT_SH = join(REPO, "plugins/toolu/hooks/lib/detect.sh");
 
 export type Env = Record<string, string>;
 
-/** A clean environment: no host-session variable leaks into the bash side. */
+/** A clean environment with no host-session variable leaks. */
 export function cleanEnv(home: string, extra: Env = {}): Env {
   return { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: home, LC_ALL: "C", ...extra };
-}
-
-/**
- * Source `lib`, then run `body` once per NUL-separated record on stdin. Each
- * record's fields are read into `$f1`, `$f2`, …; each result ends with a NUL.
- */
-export function bashBatch(
-  lib: "detect",
-  body: string,
-  records: readonly (readonly string[])[],
-  env: Env,
-  cwd = REPO,
-): string[] {
-  const fields = records[0]?.length ?? 1;
-  const reads = Array.from(
-    { length: fields },
-    (_, i) => `IFS= read -r -d '' f${i + 1} || break`,
-  ).join("; ");
-  const source = { detect: DETECT_SH }[lib];
-  const script = `. "${source}"\nwhile :; do ${reads}; ${body}; printf '\\0'; done`;
-  const stdin = records.map((record) => record.map((field) => `${field}\0`).join("")).join("");
-  const res = spawnSync("bash", ["-c", script], {
-    cwd,
-    input: stdin,
-    env,
-    encoding: "utf8",
-    maxBuffer: 64 << 20,
-  });
-  if (res.status !== 0) throw new Error(`bash exited ${String(res.status)}: ${res.stderr}`);
-  return res.stdout.split("\0").slice(0, records.length);
 }
 
 export const DecideCase = z.object({

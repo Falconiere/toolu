@@ -27,9 +27,9 @@ has no OpenCode adapter. Until it does, run the two steps above.
 The git-clone flow below remains the contributor path, and is still how you work
 against an unreleased checkout.
 
-**Previous status:** Git-clone install only (no npm publish). Enforcement scope matches [#212](https://github.com/Falconiere/toolu/issues/212) fixture evidence — not every bash gate is wired yet.
+Enforcement scope matches the [conformance report](conformance-report.md): OpenCode evaluates pre-tool permissions through the native dispatcher. Host events without an OpenCode hook remain outside that scope.
 
-Bun 1.4.x is a prerequisite on every host, Claude Code and Codex included; see the [runtime contract](runtime.md). Claude Code and Codex keep their marketplace installs. OpenCode calls the TypeScript core dispatcher in process. Its npm package ships committed bundles and their runtime data. A selected plugin whose registration has not yet been ported fails bootstrap with a clear NotReady reason.
+Bun 1.4.x is a prerequisite on every host, Claude Code and Codex included; see the [runtime contract](runtime.md). Claude Code and Codex keep their marketplace installs. OpenCode calls the TypeScript core dispatcher in process. Its npm package ships committed bundles and their runtime data. Bootstrap reports NotReady when a selected plugin lacks a required Bun registration bundle.
 
 ## Prerequisites
 
@@ -94,7 +94,7 @@ In **your application repo** (not inside the toolu clone):
    export { default } from "@toolu/opencode/plugin";
    ```
 
-   The default export registers `permission.evaluate` and runs preflight + bootstrap ([#204](https://github.com/Falconiere/toolu/issues/204), [#211](https://github.com/Falconiere/toolu/issues/211)). Bootstrap runs each enabled plugin's committed `hooks/dist/register.js` bundle, else its `hooks/dist/session-start.js` bundle, with Bun. A selected legacy-only registration hook fails NotReady. For example, context7 publishes `context7/search.sh` under the bootstrap data root, and toolu's bundle writes the `toolu/.session-start-ready` readiness marker ([#263](https://github.com/Falconiere/toolu/issues/263)).
+   The default export registers `permission.evaluate` and runs preflight + bootstrap ([#204](https://github.com/Falconiere/toolu/issues/204), [#211](https://github.com/Falconiere/toolu/issues/211)). Bootstrap runs each enabled plugin's committed `hooks/dist/register.js` bundle, else its `hooks/dist/session-start.js` bundle, with Bun. For example, context7 publishes the executable Bun bundle at the stable `context7/search.sh` path under the bootstrap data root, and toolu's bundle writes the `toolu/.session-start-ready` readiness marker ([#263](https://github.com/Falconiere/toolu/issues/263)).
 
 4. **Enabled plugins** — project file `.opencode/toolu/plugins.json`:
 
@@ -103,7 +103,7 @@ In **your application repo** (not inside the toolu clone):
 
    ```
 
-   Add names (for example `ts-quality`, `ast-grep`, `delivery-flow`, `pr-babysit`, `epic-orchestrator`) only when those directories exist under `$TOOLU_REPO_ROOT/plugins/` (or the npm package catalog) and you accept their extra prerequisites. Manifest dependencies are closed automatically (`@toolu/opencode/select`). A plugin with only a legacy shell registration hook is NotReady until its Bun bundle lands.
+   Add names (for example `ts-quality`, `ast-grep`, `delivery-flow`, `pr-babysit`, `epic-orchestrator`) only when those directories exist under `$TOOLU_REPO_ROOT/plugins/` (or the npm package catalog) and you accept their extra prerequisites. Manifest dependencies are closed automatically (`@toolu/opencode/select`).
 
 5. **Generated surface** — skills, agents, and commands for OpenCode live under `tools/toolu-opencode/generated/` (catalog: `opencode.toolu.json`). Regenerate after changing upstream skills with `bun run generate:opencode-surface` in the toolu clone. Wire OpenCode to those paths using your OpenCode project config; the committed tree is the canonical mirror from [#206](https://github.com/Falconiere/toolu/issues/206).
 

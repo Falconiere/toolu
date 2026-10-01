@@ -66,7 +66,7 @@ bun install --frozen-lockfile
 bun run test
 ```
 
-CI job `typescript` in `.github/workflows/tests.yml` runs the same gate on every non-release-only PR/push. Until #279 removes the remaining legacy files, `shellcheck` and `bats (plugins)` remain functional required checks; run `bun run lint:shell` and `bun run test:shell` locally too. Bun parity tests still use some legacy binaries, which CI installs for the TypeScript job.
+CI job `typescript` in `.github/workflows/tests.yml` runs the same gate on every non-release-only PR/push. The retired `shellcheck` and `bats (plugins)` jobs no longer report, so branch protection must require `typescript` in their place. The repo-admin branch-protection setting is tracked separately from this change.
 
 ## Related contracts
 

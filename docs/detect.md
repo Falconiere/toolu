@@ -1,6 +1,6 @@
 # Detect layer
 
-`@toolu/core/detect` gives the TypeScript gates the answers that `plugins/toolu/hooks/lib/detect.sh` gives the bash ones, with the same results on the same inputs. Those answers are:
+`@toolu/core/detect` gives the TypeScript gates the answers formerly supplied by `detect.sh`, with parity against the historical Bash version on the same inputs. Those answers are:
 
 - which project markers and linters a repository has;
 - whether a tool is on PATH;
@@ -51,13 +51,13 @@ Function-size counting is not in `detect.sh`. Each language plugin's `50-size-fn
 
 ## Parity
 
-Every function is tested against the unmodified `detect.sh`, in real git repositories:
+The native functions are tested in real git repositories. The former `detect.sh` is available at tag `v7.2.0` for historical comparison:
 
 - **Project probes** (`detect-project.test.ts`): 35 repository layouts, from the root and from a subdirectory, plus outside a repository.
 - **Line counters** (`detect-lines.test.ts`): every tracked `*.ts`, `*.rs`, `*.py` and `*.sh` file in this repository, plus edge snippets and a file over 1 MiB.
-- **Git questions**: the 136 git cases harvested from the bats suites (`tooling/fixtures/shell/bats-parity.json`) run through these functions in `shell/__tests__/bats-parity.test.ts`.
+- **Git questions**: `detect-git.test.ts` and `detect-branch.test.ts` cover push, commit, branch, and worktree behavior. The shell parser cases live in `shell/__tests__/shell-git.test.ts` and `shell-rules.test.ts`.
 
-`bats-map.ts` maps every `detect.bats` and `detect-plugin-active.bats` case to its bun-test home, and `bats-map.test.ts` fails on a gap.
+The former Bats coverage has been replaced by colocated Bun tests for each native function.
 
 Allowed differences:
 

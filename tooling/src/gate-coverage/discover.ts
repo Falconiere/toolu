@@ -1,11 +1,11 @@
 /** Discover hook/behavior sources from the live plugins tree. */
 import { existsSync, readFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { z } from "zod";
-import { fail, listDirNames, listShFiles, makeId, normalizeCommand, rel } from "./fs-util.ts";
+import { fail, listDirNames, makeId, normalizeCommand, rel } from "./fs-util.ts";
 import { NATIVE_MODULES } from "../../../plugins/toolu/hooks/src/pre-tools/builtins.ts";
 import { ROOT } from "./paths.ts";
-import type { Discovered, Kind } from "./types.ts";
+import type { Discovered } from "./types.ts";
 
 const HookCommandSchema = z.object({ command: z.string().optional() }).passthrough();
 const HookEntrySchema = z
@@ -55,79 +55,6 @@ function discoverHooksJson(plugin: string, add: AddFn): void {
   }
 }
 
-function discoverConcerns(plugin: string, add: AddFn): void {
-  const concernsDir = join(ROOT, "plugins", plugin, "hooks", "concerns");
-  const parentId = `${plugin}:entrypoint:SessionStart:register.sh`;
-  const hasRegister = existsSync(join(ROOT, "plugins", plugin, "hooks", "register.sh"));
-  for (const abs of listShFiles(concernsDir, /^[0-9]{2}-.*\.sh$/)) {
-    const name = basename(abs);
-    add({
-      id: makeId(plugin, "concern", "PostToolUse", name),
-      sourcePath: rel(abs),
-      plugin,
-      kind: "concern",
-      event: "PostToolUse",
-      matcher: "",
-      commandOrModule: name,
-      parentId: hasRegister ? parentId : null,
-    });
-  }
-}
-
-function discoverEventDirs(plugin: string, add: AddFn): void {
-  for (const dname of ["pre-tools.d", "post-tools.d", "session-start.d"] as const) {
-    const d = join(ROOT, "plugins", plugin, "hooks", dname);
-    const kind: Kind = dname;
-    const event =
-      dname === "pre-tools.d"
-        ? "PreToolUse"
-        : dname === "post-tools.d"
-          ? "PostToolUse"
-          : "SessionStart";
-    for (const abs of listShFiles(d)) {
-      add({
-        id: makeId(plugin, kind, event, basename(abs)),
-        sourcePath: rel(abs),
-        plugin,
-        kind,
-        event,
-        matcher: "",
-        commandOrModule: basename(abs),
-        parentId: null,
-      });
-    }
-  }
-}
-
-function discoverEntrypoints(plugin: string, add: AddFn): void {
-  for (const name of [
-    "register.sh",
-    "session-start.sh",
-    "check-toolu.sh",
-    "user-prompt-submit.sh",
-    "pre-compact.sh",
-  ]) {
-    const abs = join(ROOT, "plugins", plugin, "hooks", name);
-    if (!existsSync(abs)) continue;
-    const event =
-      name === "user-prompt-submit.sh"
-        ? "UserPromptSubmit"
-        : name === "pre-compact.sh"
-          ? "PreCompact"
-          : "SessionStart";
-    add({
-      id: makeId(plugin, "entrypoint", event, name),
-      sourcePath: rel(abs),
-      plugin,
-      kind: "entrypoint",
-      event,
-      matcher: "",
-      commandOrModule: name,
-      parentId: null,
-    });
-  }
-}
-
 /**
  * Built-in PreToolUse modules ported to native TypeScript (#260–#262): their
  * script is gone, so each is found in the plugin's native table and sourced
@@ -153,21 +80,20 @@ function discoverNativeBuiltins(add: AddFn): void {
 
 function discoverBuiltinModules(add: AddFn): void {
   discoverNativeBuiltins(add);
-  for (const sub of ["post-tools/modules"]) {
-    const d = join(ROOT, "plugins/toolu/hooks", sub);
-    const event = sub.startsWith("pre-") ? "PreToolUse" : "PostToolUse";
-    for (const abs of listShFiles(d)) {
-      add({
-        id: makeId("toolu", "builtin-module", event, basename(abs)),
-        sourcePath: rel(abs),
-        plugin: "toolu",
-        kind: "builtin-module",
-        event,
-        matcher: "",
-        commandOrModule: basename(abs),
-        parentId: `toolu:hooks.json:${event}:mod.sh`,
-      });
-    }
+  for (const name of ["gate-status", "push-waiver"]) {
+    const abs = join(ROOT, "packages/toolu-core/src/gates", `${name}.ts`);
+    if (!existsSync(abs)) fail(`native built-in module ${name} has no ${rel(abs)}`);
+    add({
+      id: makeId("toolu", "builtin-module", "PostToolUse", name),
+      sourcePath: rel(abs),
+      plugin: "toolu",
+      kind: "builtin-module",
+      event: "PostToolUse",
+      matcher: "",
+      commandOrModule: name,
+      parentId:
+        "toolu:hooks.json:PostToolUse:post-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Sh",
+    });
   }
   const agentTier = join(ROOT, "plugins/toolu/hooks/src/agent-tier.ts");
   if (existsSync(agentTier)) {
@@ -180,18 +106,6 @@ function discoverBuiltinModules(add: AddFn): void {
       matcher: "",
       commandOrModule: "agent-tier",
       parentId: "toolu:hooks.json:PreToolUse:agent-tier.js:spawn_agent|Agent|Task",
-    });
-  }
-  for (const abs of listShFiles(join(ROOT, "plugins/toolu/hooks/lib"))) {
-    add({
-      id: makeId("toolu", "lib", "dependency", basename(abs)),
-      sourcePath: rel(abs),
-      plugin: "toolu",
-      kind: "lib",
-      event: "dependency",
-      matcher: "",
-      commandOrModule: basename(abs),
-      parentId: null,
     });
   }
 }
@@ -208,9 +122,6 @@ export function discover(): Discovered[] {
   };
   for (const plugin of listDirNames(join(ROOT, "plugins"))) {
     discoverHooksJson(plugin, add);
-    discoverConcerns(plugin, add);
-    discoverEventDirs(plugin, add);
-    discoverEntrypoints(plugin, add);
   }
   discoverBuiltinModules(add);
   return out.toSorted((a, b) => a.id.localeCompare(b.id));

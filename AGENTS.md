@@ -2,7 +2,7 @@
 
 ## Overview
 
-**toolu** — plugin marketplace that enforces code-quality rules through hooks, skills, and a runtime registry. Runs on Claude Code.
+**toolu** — plugin marketplace that enforces code-quality rules through hooks, skills, and a runtime registry. Runs on Claude Code, Codex, and OpenCode.
 
 ## Agent instructions
 
@@ -10,12 +10,9 @@ This file is the source of truth. Codex, Cursor, and Claude Code read it directl
 
 ## Tech stack
 
-- **bash** — remaining legacy scripts until #279. Keep them shellcheck-clean with `set -euo pipefail`.
-- **bats** — remaining legacy suites until #279, colocated in `__tests__/`. `bun run test:shell` runs `plugins`, `tooling`, `packages`, and `tools` (files in parallel, tests in a file serial). `bun run test:shell:serial` is the serial path.
 - **bun test** — TypeScript suites in colocated `__tests__/*.test.ts` spawn real bundles, scripts and repos through `@toolu/conformance/harness/*`: files in parallel, tests concurrent, each test owns its sandbox. See `docs/testing.md`.
-- **Bun** — the runtime for every host and plugin (1.4.x prerequisite; see `docs/runtime.md`). `bun.lock`. `bun run test` runs the TypeScript gate, including bundle drift, context budget, deterministic benchmarks, and the shell-analysis latency budget. Run `bun run lint:shell` and `bun run test:shell` for legacy files until #279 removes them; CI runs both as required checks.
+- **Bun** — the runtime for every host and plugin (1.4.x prerequisite; see `docs/runtime.md`). `bun.lock`. `bun run test` runs the TypeScript gate, including bundle drift, context budget, deterministic benchmarks, and the shell-analysis latency budget.
 - **`toolu` CLI** — `tools/toolu-cli`, a Node bundle published to npm as `@toolu/plugins` from its `npm/` folder; the workspace itself is private, so npx never mistakes it for the published package. Installs plugins across hosts by shelling out to each host's own plugin CLI. See `docs/cli.md`.
-- **shellcheck** — `bun run lint:shell` lints standalone scripts and each `hooks/concerns/` directory as the assembled module.
 
 ## Plugin layout
 
@@ -26,10 +23,11 @@ plugins/<name>/
   .claude-plugin/plugin.json   # name, version, description, dependencies
   README.md                    # tooling/templates/plugin-README.md
   hooks/hooks.json             # Claude Code event routing
+  hooks/src/<entry>.ts         # Bun hook or registry module source
   hooks/src/register.ts        # SessionStart: publish registry modules (hooks/dist/*.js)
   hooks/src/rules/             # a quality plugin's rules, run by its registry module
-  hooks/<event>.d/             # standalone (pre-tools.d, post-tools.d, session-start.d)
-  hooks/__tests__/             # colocated bats
+  hooks/src/__tests__/         # colocated Bun tests
+  hooks/dist/*.js             # committed executable bundles
   skills/<skill>/SKILL.md
   commands/<name>.md
   agents/<name>.md
@@ -51,24 +49,22 @@ Any Conventional Commit on `main` counts, any path. `feat` / `fix` / `feat!` bum
 
 | Workflow | When | What |
 |----------|------|------|
-| `tests.yml` | push/PR to `main`, or a manual run. Skipped when the diff is only release version files and `CHANGELOG.md`; bundle-only changes still run | `typescript`: format, lint, typecheck, guardrails, unit, conformance, bundle/launcher drift, context and latency budgets, deterministic benchmarks; `shellcheck` and `bats (plugins)` remain functional until #279 |
+| `tests.yml` | push/PR to `main`, or a manual run. Skipped when the diff is only release version files and `CHANGELOG.md`; bundle-only changes still run | `typescript`: format, lint, typecheck, guardrails, unit, conformance, bundle/launcher drift, context and latency budgets, deterministic benchmarks |
 | `release-please.yml` | push to `main` | Release PR; on merge, tag and GitHub Release |
 | `toolu-review.yml` | PR opened/synchronize, except a release-version-and-changelog-only diff | `falconiere/toolu-ghactions/code-review@v8` (Jev on: `JEV_ENABLED` + `JEV_MODEL_ID: typesafe/jev-1.13`) |
 
-A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context budget caps the Session Protocol, per-language docs, and skill descriptions.
+Benchmarks are hermetic. Context budget caps the Session Protocol, per-language docs, and skill descriptions.
 
 ## Key files
 
 | File | Purpose |
 |------|---------|
 | `plugins/toolu/hooks/src/pre-tools.ts` | Pre-tool dispatcher, bundled to `hooks/dist/pre-tools.js`: all nine built-in modules are native (`NATIVE_MODULES` in `pre-tools/builtins.ts`), then `pre-tools.d`. Golden captures replay the former Bash gates. `hooks/src/mcp-tools.ts` is the `mcp__` hook; `hooks/src/agent-tier.ts` handles delegated agents. |
-| `packages/toolu-core/src/dispatch/dispatch.ts` | `@toolu/core/dispatch`: `dispatchPreTool` and `dispatchPostTool` (port of `dispatch.sh`: deny over ask over advisory before a tool, block over advisory after it, per-path patch walk). Registry `.sh` modules still run through the shared shell runner. |
-| `plugins/toolu/hooks/src/post-tools.ts` | Post-tool dispatcher, bundled to `hooks/dist/post-tools.js`: native gate-status and push-waiver, then `post-tools.d` (language-quality checks on edited files). `post-tools/mod.sh` stays as the parity baseline |
+| `packages/toolu-core/src/dispatch/dispatch.ts` | `@toolu/core/dispatch`: `dispatchPreTool` and `dispatchPostTool` (deny over ask over advisory before a tool, block over advisory after it, per-path patch walk). Registry ESM modules run in process. |
+| `plugins/toolu/hooks/src/post-tools.ts` | Post-tool dispatcher, bundled to `hooks/dist/post-tools.js`: native gate-status and push-waiver, then `post-tools.d` (language-quality checks on edited files). |
 | `packages/toolu-core/src/gates/gates.ts` | `@toolu/core/gates`: native pre-tool gates (bash-commands, commit-gate, quality-gate, protected-files, mcp-blocker, code-edit-rules, push-review, plan-ledger, docs-sync) and post-tool gates (gate-status, push-waiver), plus parsed-command helpers. `@toolu/core/gates/mcp-hook` and `@toolu/core/gates/agent-tier` are standalone entries. |
-| `plugins/toolu/hooks/lib/quality-config.sh` | Thresholds: override, then linter config, then default |
-| `plugins/toolu/hooks/lib/detect.sh` | Line counts, tool availability, `is_git_push`, `push_target_root`, `push_target_branch`; TypeScript port in `@toolu/core/detect` |
 | `plugins/pr-babysit/hooks/src/babysit-tick.ts` | Babysit tick, bundled to `hooks/dist/babysit-tick.js`. Writes go through the bundled reply, resolve and record entries |
-| `plugins/pr-babysit/scripts/dispatch-fix.sh` | Babysit fixers: `route-fix.sh` Jev-routes Fix items to claude/codex/cursor; this runs them in a herdr worktree |
+| `plugins/pr-babysit/hooks/src/babysit-route-fix.ts` | Bun fixer routing bundle; scores Fix items with Jev and groups them by host, model and effort. `babysit-dispatch-fix.ts` starts and waits for herdr fixer agents. |
 | `plugins/*/hooks/src/register.ts` | SessionStart registry sync |
 | `plugins/*/hooks/hooks.json` | Claude Code hook routing |
 | `tools/toolu-cli/src/cli.ts` | CLI entry (`npx @toolu/plugins install`, or `toolu install` once installed): parses argv, resolves the host, dispatches a verb |
@@ -82,23 +78,22 @@ A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context b
 | `packages/toolu-core/src/config/config.ts` | `@toolu/core/config`: `toolu.config.json` loader (fail-closed envelope), thresholds, gate modes, permissions write, `settings/*` loaders; bash parity over `tooling/fixtures/config` |
 | `packages/toolu-core/src/registry/registry.ts` | `@toolu/core/registry`: bundled ESM hook modules in `<config>/toolu/<dir>.d/`; module contract, in-process runner (gating, isolation, stop after deny), SessionStart register and Codex prune. See `docs/registry.md` |
 | `packages/toolu-core/src/state/state.ts` | `@toolu/core/state`: multi-slot gate file (locked atomic writes, strict v1 Zod), state sweeper, `diffSha`, closed-schema telemetry, edit-record normalization; byte parity with the bash libs |
-| `packages/toolu-core/src/ledger/ledger.ts` | `@toolu/core/ledger`: plan ledger (`plan-ledger.sh` CLI, parse, preflight), verdict gates and push waivers; bash parity on twin repos |
+| `packages/toolu-core/src/ledger/ledger.ts` | `@toolu/core/ledger`: plan ledger CLI, parse, preflight, verdict gates and push waivers |
 | `packages/toolu-core/src/startup/startup.ts` | `@toolu/core/startup`: what leaf-plugin SessionStart hooks share: stable-path publishing, Bun-on-PATH advisory, bounded context output, Codex dependency warnings |
 | `packages/toolu-core/src/shell/shell.ts` | `@toolu/core/shell`: parses a Bash/Shell command once with unbash (pinned) into simple commands (wrappers unwrapped, `bash -c`/`eval` followed), git subcommand/`-C` chain/push destination and exit observability; write targets in `@toolu/core/shell/writes`; parity fixtures in `tooling/fixtures/shell`, budgets via `bun run bench:shell` (`docs/shell-analysis.md`) |
 | `packages/toolu-core/src/detect/detect.ts` | `@toolu/core/detect`: port of `detect.sh`: project markers and linters, tool availability (PATH scan, cached), chunked code-line counts, branch slug/base, and push/commit, push root and branch from a `ShellAnalysis`; loads neither unbash nor zod; bash parity on real repos (`docs/detect.md`) |
 | `packages/toolu-core/src/quality/quality-edit.ts` | Post-edit quality helpers: identify the edited file and delete/move status, check whether it is a regular file, and detect linked worktrees |
 | `tooling/src/check-hooks-json.ts` | `hooks.json` launcher gate (`bun run check:hooks-json`); `--print <plugin> <Event> <entry>` emits the entry to paste |
 | `tooling/src/build-plugins.ts` | Builds `plugins/*/hooks/src` entries into committed `hooks/dist` bundles; `--check` is the drift gate |
-| `tooling/shellcheck.sh` | shellcheck gate |
 | `docs/config.md` | Config schema |
 | `plugins/toolu/scripts/context-budget.ts` | Injected-context word ceilings (`bun run test:context-budget`) |
 
 ## Contributing
 
 1. Match an existing skill, agent, command, or hook.
-2. Colocate `__tests__/*.test.ts` for Bun tests; retain colocated `__tests__/*.bats` for legacy code until #279. No mocks.
+2. Colocate `__tests__/*.test.ts` for Bun tests. No mocks.
 3. Verify in a real session, then commit with `feat(scope):` or `fix(scope):`.
-4. `bun run test`, `bun run lint:shell`, and `bun run test:shell` before pushing while legacy files remain.
+4. `bun run test` before pushing.
 
 - Skill: `plugins/<name>/skills/<skill>/SKILL.md`
 - Quality rule: `plugins/<quality>/hooks/src/rules/` plus a colocated `bun test` case.
@@ -106,6 +101,6 @@ A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context b
 - TypeScript hook: `plugins/<name>/hooks/src/<entry>.ts` (a top-level file is an entry; helpers go in subdirectories). `bun run build:plugins` writes the self-contained `hooks/dist/<entry>.js`; commit both. Wire it in `hooks.json` with the generated launcher (`bun run tooling/src/check-hooks-json.ts --print <plugin> <Event> <entry>`), never a hand-written `bun` call; `bun run check:hooks-json` gates it. `bun run check:plugin-bundles` (in `test:ts`) fails when a bundle drifts from its source, is missing, or is orphaned. Build with the pinned Bun (CI: 1.4.2).
 - Skill CLI: an entry starting `#!/usr/bin/env bun` builds to an executable bundle (the drift check covers the exec bit) that a SessionStart hook symlinks to a stable path, e.g. `hooks/src/search.ts` for exa-search and context7. HTTP goes through `@toolu/core/rest`; tests run the bundle against `@toolu/conformance/https-fixture`, a loopback HTTPS server reached through `HTTPS_PROXY`.
 - Plugin: `plugins/<name>/.claude-plugin/plugin.json` and a README from `tooling/templates/plugin-README.md`
-- Subset: `bats plugins/<plugin>/hooks/__tests__/`
+- Subset: `bun test plugins/<plugin>/hooks/src/__tests__/`
 
 Version is `package.json` and every `plugin.json`. License: MIT.

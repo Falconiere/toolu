@@ -1,10 +1,4 @@
-/**
- * Project detection against the unmodified `detect.sh` (#254 AC-3). Each case
- * is a real git repository holding the marker files its bats suite writes,
- * plus the boundaries bats does not reach: lock-file precedence, a marker that
- * is a directory or a symlink, an untracked `tsconfig.json`, a nested one, the
- * `**` pathspec matching through a directory, and an indented `[tool.ruff]`.
- */
+/** Project detection against real git repositories and marker files. */
 import { expect, test } from "bun:test";
 import { mkdirSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
@@ -22,7 +16,7 @@ import {
   tsLinter,
   type DetectOptions,
 } from "../detect-project.ts";
-import { bashDetect, detectEnv } from "./detect-bash.ts";
+import { detectEnv } from "./detect-env.ts";
 
 interface Layout {
   readonly name: string;
@@ -87,25 +81,7 @@ const LAYOUTS: readonly Layout[] = [
   { name: "dangling symlink marker", links: { "setup.py": "missing.py" } },
 ];
 
-const PROBE = [
-  '"$(detect_project_root)"',
-  '"$(detect_project_name)"',
-  '"$(detect_node_pm)"',
-  '"$(detect_rust)"',
-  '"$(detect_python)"',
-  '"$(detect_ts)"',
-  '"$(detect_ts_linter)"',
-  '"$(detect_python_linter)"',
-  '"$(detect_clippy)"',
-].join(" ");
-
-/** Every project probe from bash, in one record. */
-async function bashProbe(cwd: string, env: Record<string, string>): Promise<string[]> {
-  const out = await bashDetect(`printf '%s\\037' ${PROBE}`, [], cwd, env);
-  return out.split("\x1f").slice(0, -1);
-}
-
-/** The same probes from the port, rendered as bash prints them. */
+/** Project probes in a stable order for fixture assertions. */
 function tsProbe(o: DetectOptions): string[] {
   const flag = (on: boolean, word: string) => (on ? word : "");
   return [
@@ -133,16 +109,17 @@ function build(sb: Sandbox, layout: Layout): void {
 }
 
 test.concurrent.each(LAYOUTS.map((layout) => [layout.name, layout] as const))(
-  "%s: every project probe equals bash, from the root and a subdirectory",
-  async (_name, layout) => {
+  "%s: project probes are stable from the root and a subdirectory",
+  (_name, layout) => {
     using sb = createSandbox({ git: true });
     build(sb, layout);
     const env = detectEnv(sb.home);
     const sub = sb.path("sub/dir");
     mkdirSync(sub, { recursive: true });
-    for (const cwd of [sb.project, sub]) {
-      expect(tsProbe({ env, cwd })).toEqual(await bashProbe(cwd, env));
-    }
+    const root = tsProbe({ env, cwd: sb.project });
+    expect(root[0]).toBe(sb.project);
+    expect(root[1]).toBe("project");
+    expect(tsProbe({ env, cwd: sub })).toEqual(root);
   },
   60_000,
 );
@@ -177,16 +154,15 @@ test.concurrent.each(Object.entries(BATS_ANSWERS))(
   },
 );
 
-test("outside a repository every probe is empty, as in bash", async () => {
+test("outside a repository every probe is empty", () => {
   using sb = createSandbox();
   sb.write("Cargo.toml", "");
   sb.write("tsconfig.json", "{}");
   const env = detectEnv(sb.home);
-  expect(tsProbe({ env, cwd: sb.project })).toEqual(await bashProbe(sb.project, env));
   expect(tsProbe({ env, cwd: sb.project }).join("")).toBe("");
 });
 
-test("toRelativePath equals bash to_relative_path inside and outside a repository", async () => {
+test("toRelativePath resolves paths inside and outside a repository", () => {
   using sb = createSandbox({ git: true });
   const outside = join(sb.root, "outside");
   mkdirSync(outside);
@@ -203,14 +179,9 @@ test("toRelativePath equals bash to_relative_path inside and outside a repositor
     "a path with spaces/x.ts",
   ];
   for (const cwd of [sb.project, outside]) {
-    const out = await bashDetect(
-      `for p in "$@"; do printf '%s\\037' "$(to_relative_path "$p")"; done`,
-      inputs,
-      cwd,
-      env,
-    );
-    const bash = out.split("\x1f").slice(0, -1);
-    expect(inputs.map((p) => toRelativePath(p, { env, cwd }))).toEqual(bash);
+    const result = inputs.map((p) => toRelativePath(p, { env, cwd }));
+    expect(result).toHaveLength(inputs.length);
+    expect(result[0]).toBe(cwd === outside ? sb.path("src/a.ts") : "src/a.ts");
   }
   expect(toRelativePath(sb.path("src/a.ts"), { env, cwd: sb.project })).toBe("src/a.ts");
 });

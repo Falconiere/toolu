@@ -46,7 +46,7 @@ the `/epic-orchestrator:epic` command.
 opencode plugin add @toolu/opencode
 ```
 
-Enable the bash plugins in `<project>/.opencode/toolu/plugins.json`:
+Enable the workflow plugins in `<project>/.opencode/toolu/plugins.json`:
 
 ```json
 { "version": 1, "enabled": ["delivery-flow", "epic-orchestrator"] }

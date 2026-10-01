@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const EXECUTION = join(import.meta.dir, "..", "delivery-flow", "references", "execution.md");
-const VERIFY = 'plan-ledger.sh" run <plan_doc> --verify';
+const VERIFY = 'plan-ledger.js" run <plan_doc> --verify';
 const text = () => readFileSync(EXECUTION, "utf8");
 
 /** 1-based number of the first line matching `pattern`, or 0 when none does. */
@@ -25,7 +25,7 @@ test.concurrent("execution requires per-step real-data evidence and documentatio
 
 test.concurrent("execution owns the v2 review state and ready unified verdict", () => {
   expect(text()).toMatch(/toolu-review.*version: 2|version: 2.*toolu-review/i);
-  expect(text()).toContain('verdict.sh" status');
+  expect(text()).toContain('verdict.js" status');
   expect(text()).toMatch(/overall: ready/i);
 });
 
@@ -34,9 +34,9 @@ test.concurrent("execution attests the committed branch before delivery", () => 
   expect(body.split(VERIFY).length - 1).toBe(1);
   const order = [
     lineOf(body, /commit the scoped changes/i),
-    lineOf(body, /plan-ledger\.sh" run <plan_doc> --verify/),
+    lineOf(body, /plan-ledger\.js" run <plan_doc> --verify/),
     lineOf(body, /toolu-review:review/),
-    lineOf(body, /verdict\.sh" status/),
+    lineOf(body, /verdict\.js" status/),
     lineOf(body, /push the non-default feature branch/i),
   ];
   expect(order.every((line) => line > 0)).toBe(true);

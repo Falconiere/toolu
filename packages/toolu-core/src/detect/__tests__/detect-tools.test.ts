@@ -1,14 +1,10 @@
-/**
- * Tool availability against bash `command -v` (#254 AC-5): `detect_ast_grep`
- * under a PATH of real executables linked in as `sg` only, `ast-grep` only,
- * both, and neither, plus the probe cache following a PATH change.
- */
+/** Tool availability under isolated PATH entries and a PATH change. */
 import { expect, test } from "bun:test";
 import { chmodSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { detectAstGrep, toolAvailable } from "../detect-tools.ts";
-import { bashDetect, detectEnv } from "./detect-bash.ts";
+import { detectEnv } from "./detect-env.ts";
 
 const TRUE = Bun.which("true") ?? "/usr/bin/true";
 
@@ -27,19 +23,15 @@ test.concurrent.each([
   ["sg only", ["sg"]],
   ["ast-grep only", ["ast-grep"]],
   ["both", ["sg", "ast-grep"]],
-] as const)("%s: detectAstGrep equals bash detect_ast_grep", async (label, names) => {
+] as const)("%s: detectAstGrep sees the available binary", (label, names) => {
   using sb = createSandbox();
   const bin = binDir(sb.root, label.replaceAll(" ", "-"), names);
-  const env = detectEnv(sb.home, { PATH: `${bin}:${SYSTEM}` });
-  const bash =
-    (await bashDetect("detect_ast_grep; printf .", [], sb.project, env)) === "ast-grep\n.";
-  expect(detectAstGrep(env)).toBe(bash);
   // The system dirs may hold an unrelated `sg` (shadow-utils on Linux), so the
   // absolute answer is checked against the probe dir alone.
   expect(detectAstGrep({ PATH: bin })).toBe(names.length > 0);
 });
 
-test("toolAvailable matches command -v for executables, non-executables, directories and missing names", async () => {
+test("toolAvailable checks executables, non-executables, directories and missing names", () => {
   using sb = createSandbox();
   const bin = binDir(sb.root, "bin", ["exe"]);
   writeFileSync(join(bin, "plain"), "#!/bin/sh\n");
@@ -59,14 +51,18 @@ test("toolAvailable matches command -v for executables, non-executables, directo
     join(bin, "plain"),
     join(bin, "adir"),
   ];
-  const out = await bashDetect(
-    `for n in "$@"; do if [ -n "$n" ] && command -v "$n" >/dev/null 2>&1; then printf 1; else printf 0; fi; done`,
-    names,
-    sb.project,
-    env,
-  );
-  expect(names.map((n) => (toolAvailable(n, env) ? "1" : "0")).join("")).toBe(out);
-  expect(toolAvailable("exe", env)).toBe(true);
+  expect(names.map((n) => toolAvailable(n, env))).toEqual([
+    true,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+  ]);
 });
 
 test("the probe cache is keyed by PATH, so a new PATH re-probes", () => {

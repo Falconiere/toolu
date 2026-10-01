@@ -1,8 +1,8 @@
-<!-- Template, rendered per fixer group by scripts/dispatch-fix.sh, which strips
+<!-- Template, rendered per fixer group by hooks/dist/babysit-dispatch-fix.js, which strips
 this comment. The body below uses {{NAME}} placeholders. This comment lists
 the names bare, without braces, so the renderer never rewrites the comment
 itself: PR, ROUND, GROUP, GROUPS, TIER, WORKTREE, SLOT_BRANCH, BRANCH, BASE,
-ITEMS, REPORT_DONE, REPORT_FAILED. dispatch-fix.bats checks that each one is
+ITEMS, REPORT_DONE, REPORT_FAILED. The native fixer test checks that each one is
 filled with its expected value. -->
 
 # pr-babysit fixer brief — {{PR}}, round {{ROUND}}, group {{GROUP}} of {{GROUPS}}

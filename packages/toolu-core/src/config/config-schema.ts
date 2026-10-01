@@ -33,7 +33,7 @@ const CodexModelEntrySchema = z
 
 /**
  * `prBabysit` belongs to the pr-babysit plugin, which validates the values
- * (`plugins/pr-babysit/scripts/lib/config.sh`); core only knows its keys.
+ * (`plugins/pr-babysit/hooks/src/babysit/fixer-route.ts`); core only knows its keys.
  */
 const PrBabysitSchema = z
   .object({

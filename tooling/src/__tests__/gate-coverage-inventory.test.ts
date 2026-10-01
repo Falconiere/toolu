@@ -10,8 +10,8 @@ const ROOT = resolve(import.meta.dir, "../../..");
 const CLI = join(ROOT, "tooling/src/gate-coverage-inventory.ts");
 const INVENTORY = join(ROOT, "tooling/fixtures/gate-coverage/inventory.json");
 const MATRIX = join(ROOT, "docs/gate-coverage-matrix.md");
-/** A floor, not a count: rows leave the inventory whenever a bash hook is ported (epic #247). */
-const MIN_ROWS = 50;
+/** A floor, not a count: future bundled hooks should extend this native inventory. */
+const MIN_ROWS = 35;
 
 const Row = z.looseObject({ id: z.string() });
 const Rows = z.array(Row);
@@ -39,16 +39,45 @@ function gateCli(env: Record<string, string>): ReturnType<typeof run> {
   return run([process.execPath, "run", CLI, "check"], { cwd: ROOT, env });
 }
 
-test.concurrent("discover emits a real inventory including protected-files, gate-mode, and a Bun launcher entry", async () => {
+test.concurrent("discover emits native built-ins and a Bun launcher entry", async () => {
   const res = await run([process.execPath, "run", CLI, "discover"], { cwd: ROOT });
   expect(res.exitCode).toBe(0);
   const ids = Rows.parse(JSON.parse(res.stdout)).map((row) => row.id);
   expect(ids.length).toBeGreaterThanOrEqual(MIN_ROWS);
   expect(ids.some((id) => id.includes("protected-files"))).toBe(true);
-  expect(ids.some((id) => id.includes("gate-mode"))).toBe(true);
+  expect(ids).toContain("toolu:builtin-module:PostToolUse:gate-status");
   expect(ids).toContain(
     "ts-quality:hooks.json:SessionStart:register.js:startup|resume|clear|compact",
   );
+});
+
+test.concurrent("final inventory and matrix contain only native Bun hooks", async () => {
+  const rows = z
+    .array(
+      z.looseObject({
+        id: z.string(),
+        sourcePath: z.string(),
+        classification: z.string(),
+        hostMechanism: z.string(),
+        implementationStatus: z.string(),
+        bashRequired: z.boolean(),
+      }),
+    )
+    .parse(JSON.parse(await Bun.file(INVENTORY).text()));
+  expect(rows.length).toBeGreaterThanOrEqual(MIN_ROWS);
+  for (const row of rows) {
+    expect(row).toMatchObject({
+      classification: "port-native",
+      hostMechanism: "bun-bundle",
+      implementationStatus: "done",
+      bashRequired: false,
+    });
+    expect(row.sourcePath.endsWith(".sh")).toBe(false);
+  }
+  const matrix = await Bun.file(MATRIX).text();
+  const tableRows = matrix.split("\n").filter((line) => line.startsWith("| `"));
+  expect(tableRows).toHaveLength(rows.length);
+  expect(tableRows.every((line) => line.includes(" | port-native | "))).toBe(true);
 });
 
 test.concurrent("check passes on the committed inventory and matrix", async () => {

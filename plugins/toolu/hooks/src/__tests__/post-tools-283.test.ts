@@ -1,7 +1,6 @@
 /**
  * AC-3 (#259): the named #283 fixtures through the committed bundle behind its
- * launcher. The bundle gets them right; `bash post-tools/mod.sh`, run from the
- * same sandbox state, is recorded as the known-wrong baseline.
+ * launcher against real project state.
  * Commands come from `tooling/fixtures/shell/issue-283.json`.
  */
 import { expect, test } from "bun:test";
@@ -9,13 +8,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { isJsonObject } from "@toolu/core/config";
 import { toStdin } from "@toolu/conformance/harness/fixtures";
-import {
-  runPostBundle,
-  runPostModSh,
-  type PosttoolResult,
-} from "@toolu/conformance/harness/posttool";
+import { runPostBundle, type PosttoolResult } from "@toolu/conformance/harness/posttool";
 import { POSTTOOL_CORPUS, preparePost, ran } from "@toolu/conformance/harness/posttool-corpus";
-import { fromSameState, pretoolEnv, type PretoolRun } from "@toolu/conformance/harness/pretool";
+import { pretoolEnv, type PretoolRun } from "@toolu/conformance/harness/pretool";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 
 const FIXTURES = resolve(import.meta.dir, "../../../../../tooling/fixtures/shell/issue-283.json");
@@ -37,27 +32,20 @@ function gateStatus(r: PosttoolResult): unknown {
   return isJsonObject(doc) ? doc.status : undefined;
 }
 
-/** Each side runs `commands` (command, exit status) in order from the same start. */
-async function sides(
+/** Run `commands` (command, exit status) in order through the bundle. */
+async function bundleAfter(
   sb: Sandbox,
   commands: readonly (readonly [string, number])[],
-): Promise<[PosttoolResult, PosttoolResult]> {
+): Promise<PosttoolResult> {
   const calls: PretoolRun[] = commands.map(([command, code]) => ({
     cwd: sb.project,
     env: pretoolEnv(sb, "claude"),
     stdin: JSON.stringify(toStdin("claude", ran(command, code)(sb), { cwd: sb.project })),
   }));
-  const runAll = async (one: (s: Sandbox, c: PretoolRun) => Promise<PosttoolResult>) => {
-    let last: PosttoolResult | undefined;
-    for (const call of calls) last = await one(sb, call);
-    if (last === undefined) throw new Error("no calls");
-    return last;
-  };
-  return fromSameState(
-    sb,
-    () => runAll(runPostModSh),
-    () => runAll(runPostBundle),
-  );
+  let last: PosttoolResult | undefined;
+  for (const call of calls) last = await runPostBundle(sb, call);
+  if (last === undefined) throw new Error("no calls");
+  return last;
 }
 
 const STAYS_FAILING: Record<string, string> = {
@@ -68,14 +56,11 @@ const STAYS_FAILING: Record<string, string> = {
 for (const [id, command] of Object.entries(STAYS_FAILING)) {
   test.concurrent(`${id}: ${command} exiting 0 leaves a failing gate failing`, async () => {
     using sb = createSandbox({ git: true });
-    const [bash, bundle] = await sides(sb, [
+    const bundle = await bundleAfter(sb, [
       ["bun test", 1],
       [command, 0],
     ]);
     expect(gateStatus(bundle)).toBe("failing");
-    // Known-wrong bash baseline, #283 item 6 (prose) and item 7 (`| tail` exit status):
-    // gate-status.sh cleared the failing gate on these lines.
-    expect(gateStatus(bash)).toBe("passing");
   });
 }
 
@@ -91,10 +76,7 @@ for (const [id, command] of Object.entries(PUSHES)) {
     if (PROMOTE === undefined) throw new Error("no push-waiver corpus case");
     using sb = createSandbox({ git: true });
     preparePost(sb, "claude", PROMOTE);
-    const [bash, bundle] = await sides(sb, [[command, 0]]);
+    const bundle = await bundleAfter(sb, [[command, 0]]);
     expect(bundle.state[WAIVER]).toBeDefined();
-    // Known-wrong bash baseline, #283 item 8: is_git_push missed this push, so the
-    // pending waiver was never promoted.
-    expect(bash.state[WAIVER]).toBeUndefined();
   });
 }

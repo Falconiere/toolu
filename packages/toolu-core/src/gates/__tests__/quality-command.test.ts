@@ -1,38 +1,17 @@
 /**
  * AC-5 (#259): quality commands are recognised from the parsed command line.
- * Every TRIGGER and NO-TRIGGER case of `gate-status.bats` keeps its answer
- * (checked against the shipped regex, run by the real `grep -E`), the runner
- * and shell forms the regex caught by accident stay recognised, and prose or a
- * function body no longer counts (#283 item 6).
+ * Quality invocations through runners and shell forms are recognized, while
+ * prose and function definitions do not count (#283 item 6).
  */
 import { expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { analyzeShell } from "../../shell/shell-parse.ts";
 import { qualityCommands } from "../quality-command.ts";
-
-const GATE_STATUS = readFileSync(
-  resolve(import.meta.dir, "../../../../../plugins/toolu/hooks/post-tools/modules/gate-status.sh"),
-  "utf8",
-);
-const REGEX_LINES = GATE_STATUS.split("\n").filter((line) => line.startsWith("GATE_TRIGGER_"));
-
-/** The shipped text match: `echo "$command" | grep -qE "${PREFIX}(${ALTERNATION})${SUFFIX}"`. */
-function bashMatches(command: string): boolean {
-  const script = `${REGEX_LINES.join("\n")}\necho "$1" | grep -qE "\${GATE_TRIGGER_PREFIX}(\${GATE_TRIGGER_ALTERNATION})\${GATE_TRIGGER_SUFFIX}"`;
-  return spawnSync("bash", ["-c", script, "gate", command]).status === 0;
-}
 
 function labels(command: string): string[] {
   return qualityCommands(analyzeShell(command)).map((q) => q.label);
 }
 
-test("the shipped regex is read from gate-status.sh", () => {
-  expect(REGEX_LINES).toHaveLength(3);
-});
-
-/** From gate-status.bats TRIGGER cases, then forms the regex matched through a runner or shell. */
+/** Trigger cases, including commands reached through runners or shells. */
 const TRIGGERS: Record<string, string> = {
   "cargo test": "cargo test",
   "  cargo clippy": "cargo clippy",
@@ -63,12 +42,11 @@ const TRIGGERS: Record<string, string> = {
 
 for (const [command, label] of Object.entries(TRIGGERS)) {
   test.concurrent(`TRIGGER ${command}`, () => {
-    expect(bashMatches(command)).toBe(true);
     expect(labels(command)).toEqual([label]);
   });
 }
 
-/** Forms the regex missed that the parsed command reaches (wrappers, paths, nested shells). */
+/** Parsed commands reached through wrappers, paths and nested shells. */
 const PARSED_ONLY: Record<string, string> = {
   "./tools/api/check.sh": "tools/api/check.sh",
   "timeout 600 bun test": "bun test",
@@ -91,17 +69,16 @@ test.concurrent("every quality command in the line is reported, in order", () =>
   expect(labels("bun run lint && bun test 2>&1 | tail -5")).toEqual(["bun run lint", "bun test"]);
 });
 
-/** gate-status.bats NO-TRIGGER cases: neither side matches. */
+/** Commands that must not trigger the gate. */
 const NO_TRIGGERS = ["cat tsconfig.json", "ls tooling/foo/test.sh", "vitests-helper", "cattsc"];
 
 for (const command of NO_TRIGGERS) {
   test.concurrent(`NO-TRIGGER ${command}`, () => {
-    expect(bashMatches(command)).toBe(false);
     expect(labels(command)).toEqual([]);
   });
 }
 
-/** Text that names a quality command without running one: the regex matched these (#283 item 6). */
+/** Text that names a quality command without running one (#283 item 6). */
 const PROSE = [
   'echo "remember to run bun test later"',
   'git commit -m "fix: make cargo test pass"',
@@ -110,7 +87,6 @@ const PROSE = [
 
 for (const command of PROSE) {
   test.concurrent(`prose is not a run: ${command}`, () => {
-    expect(bashMatches(command)).toBe(true);
     expect(labels(command)).toEqual([]);
   });
 }
@@ -129,25 +105,21 @@ test.concurrent("a dynamic command name is never a quality command", () => {
   expect(labels("$RUNNER test")).toEqual([]);
 });
 
-/**
- * Where argv reading and the text regex part ways on a genuine invocation,
- * pinned both ways (documented in quality-command.ts and gates.md).
- */
-const DIVERGENT: Record<string, { bash: boolean; ts: string[] }> = {
+/** Path, toolchain and option boundaries in native argv reading. */
+const BOUNDARIES: Record<string, string[]> = {
   // Broader: a path to the tool, a toolchain selector, a wrapper script by path.
-  "./node_modules/.bin/tsc --noEmit": { bash: false, ts: ["tsc"] },
-  "/usr/local/bin/cargo test": { bash: false, ts: ["cargo test"] },
-  "cargo +nightly test": { bash: false, ts: ["cargo test"] },
-  "/repo/tools/api/check.sh": { bash: false, ts: ["tools/api/check.sh"] },
+  "./node_modules/.bin/tsc --noEmit": ["tsc"],
+  "/usr/local/bin/cargo test": ["cargo test"],
+  "cargo +nightly test": ["cargo test"],
+  "/repo/tools/api/check.sh": ["tools/api/check.sh"],
   // Narrower: a runner subcommand, a runner option with a value, a shell option.
-  "yarn run vitest": { bash: true, ts: [] },
-  "npx -p typescript tsc": { bash: true, ts: [] },
-  "bash -x ./scripts/ts-check.sh": { bash: true, ts: [] },
+  "yarn run vitest": [],
+  "npx -p typescript tsc": [],
+  "bash -x ./scripts/ts-check.sh": [],
 };
 
-for (const [command, want] of Object.entries(DIVERGENT)) {
-  test.concurrent(`divergent form: ${command}`, () => {
-    expect(bashMatches(command)).toBe(want.bash);
-    expect(labels(command)).toEqual(want.ts);
+for (const [command, want] of Object.entries(BOUNDARIES)) {
+  test.concurrent(`argv boundary: ${command}`, () => {
+    expect(labels(command)).toEqual(want);
   });
 }

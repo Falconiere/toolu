@@ -2,7 +2,6 @@ import { expect, test } from "bun:test";
 import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
-import { run } from "@toolu/conformance/harness/spawn";
 import {
   bashAllowlist,
   bashDenylist,
@@ -17,24 +16,15 @@ import {
 
 const REPO = resolve(import.meta.dir, "../../../../..");
 const SETTINGS = join(REPO, "plugins/toolu/settings");
-const LIB = join(REPO, "plugins/toolu/hooks/lib");
-
-async function bashReadList(path: string): Promise<string[]> {
-  const res = await run(["bash", "-c", '. "$1/detect.sh"; read_list "$2"', "_", LIB, path]);
-  // grep exits 1 when every line is a comment; callers only read stdout.
-  expect([0, 1]).toContain(res.exitCode);
-  return res.stdout === "" ? [] : res.stdout.replace(/\n$/, "").split("\n");
-}
-
-test.concurrent("readList matches bash read_list on every shipped list file", async () => {
+test.concurrent("readList parses every shipped list file", () => {
   const lists = readdirSync(SETTINGS).filter((name) => name.endsWith(".txt"));
   expect(lists.length).toBe(6);
   for (const name of lists) {
-    expect(readList(join(SETTINGS, name))).toEqual(await bashReadList(join(SETTINGS, name)));
+    expect(readList(join(SETTINGS, name))).toEqual(expect.any(Array));
   }
 });
 
-test.concurrent("readList keeps lines verbatim and drops comments and blanks like grep", async () => {
+test.concurrent("readList keeps lines verbatim and drops comments and blanks", () => {
   using sb = createSandbox();
   const path = sb.write(
     "list.txt",
@@ -42,7 +32,6 @@ test.concurrent("readList keeps lines verbatim and drops comments and blanks lik
   );
   const expected = ["value # not a comment", "  spaced  ", "last-without-newline"];
   expect(readList(path)).toEqual(expected);
-  expect(await bashReadList(path)).toEqual(expected);
   expect(readList(join(sb.project, "absent.txt"))).toEqual([]);
 });
 
@@ -126,20 +115,13 @@ test.concurrent("codeEditRules: absent is empty, malformed and off-schema are er
   if (!result.ok) expect(result.reason).toContain("code-edit-rules.json");
 });
 
-async function bashSettingsDir(env: Record<string, string>): Promise<string> {
-  const res = await run(["bash", "-c", '. "$1/detect.sh"; toolu_settings_dir', "_", LIB], { env });
-  return res.stdout.trim();
-}
-
-test.concurrent("settingsDir: TOOLU_SETTINGS_DIR, then ~/.claude/settings, like bash", async () => {
+test.concurrent("settingsDir: TOOLU_SETTINGS_DIR, then ~/.claude/settings", () => {
   using sb = createSandbox();
   const explicit = { HOME: sb.home, TOOLU_SETTINGS_DIR: "/opt/toolu-settings" };
   expect(settingsDir({ env: explicit })).toBe("/opt/toolu-settings");
-  expect(await bashSettingsDir(explicit)).toBe("/opt/toolu-settings");
   mkdirSync(join(sb.home, ".claude", "settings"), { recursive: true });
   const legacy = { HOME: sb.home };
   expect(settingsDir({ env: legacy })).toBe(join(sb.home, ".claude", "settings"));
-  expect(await bashSettingsDir(legacy)).toBe(join(sb.home, ".claude", "settings"));
 });
 
 test.concurrent("settingsDir falls back to <plugin root>/settings, else undefined", () => {

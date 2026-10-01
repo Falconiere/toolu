@@ -1,4 +1,0 @@
-# Resolve dynamic source paths like "$SCRIPT_DIR/lib/common.sh" against each script's directory.
-source-path=SCRIPTDIR
-# Allow following sourced files that are not passed as explicit shellcheck arguments.
-external-sources=true

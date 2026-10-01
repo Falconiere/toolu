@@ -240,9 +240,9 @@ threshold resolves with this precedence (first hit wins, always a positive integ
    `maxFileLines` 400 / `maxFnLines` 50 (no native-linter layer — ruff is
    detected presence-only for advisory wording, never parsed or invoked).
 
-The file-size limit counts real code only: `count_code_lines`
-(`plugins/toolu/hooks/lib/detect.sh`) excludes blank lines and `//` + `/* */`
-comments; Python uses `count_python_code_lines` (same file), which excludes
+The file-size limit counts real code only: `countCodeLines`
+(`packages/toolu-core/src/detect/detect-lines.ts`) excludes blank lines and `//` + `/* */`
+comments; Python uses `countPythonCodeLines` (same file), which excludes
 blank lines and full-line `#` comments — trailing comments and docstrings count
 as code, deliberately failing toward flagging. It is a lexical heuristic, not a parser — a `//` inside a string literal
 (e.g. a `"https://…"` URL) is treated as a line-ending comment, so a file dense in
@@ -256,7 +256,7 @@ through to the next layer — it does not mean a limit of zero. A stringified
 positive integer (`"maxFileLines": "120"`) is accepted and coerced to a number,
 so configs copy-pasted from sources that quote numbers still work. The gate never
 invokes biome/oxc/eslint/prettier/clippy/rustfmt; detecting them only tunes
-advisory wording. Resolver: `plugins/toolu/hooks/lib/quality-config.sh`.
+advisory wording. Resolver: `qualityThreshold` in `packages/toolu-core/src/config/quality-config.ts`.
 
 ### No-mock test gate (`lang.<ts|rust|python>.noMocks`)
 
@@ -303,8 +303,8 @@ compatible. Codex reads `models.codex.<class>.model` and
 invalid effort warns and falls back to the class default.
 
 `models.enabled = false` suppresses the SessionStart injection; the tiers still
-resolve for anything that reads them (`toolu_model` in
-`plugins/toolu/hooks/lib/config.sh`).
+resolve for anything that reads them (`model` in
+`packages/toolu-core/src/config/config-read.ts`).
 
 Config remaps the **rubric** and the tiers passed on delegated work. It does not
 rewrite installed agent definitions. Claude reads the plugin's agent
@@ -314,7 +314,7 @@ you need a fixed tier that differs from the routing table.
 
 Plan steps can pin their own tier: a step in a `## Steps (machine-readable)`
 block may carry `"model": "<alias>"`, validated at parse time and surfaced by
-`plan-ledger.sh status` as `model=<alias>` on the summary line for the next step.
+`bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" status` as `model=<alias>` on the summary line for the next step.
 
 ### Docs-sync surfaces (`docsSync`)
 
@@ -348,7 +348,7 @@ override → built-in default* (native resolver
 | `docsSync.surfaceExcludes` | `docs/releases/*`, `*/docs/releases/*` | doc paths carved back out (release notes are per-release, not per-task) |
 | `docsSync.codeSurfaces` | `*.ts`, `*.rs`, `*.sh`, `*/commands/*`, `*plugin.json`, `*.config.json` | code files whose change **demands** a doc touch |
 
-Globs are matched with bash `case` fnmatch where a single `*` **crosses `/`** —
+Globs retain Bash `case` fnmatch semantics where a single `*` **crosses `/`** —
 so `docs/*.md` already covers nested paths (which is *why* `surfaceExcludes`
 exists: without it, `docs/*.md` would swallow `docs/releases/*.md`). A diff path
 counts as a doc touch when it matches `surfaces` **and not** `surfaceExcludes`.
@@ -356,7 +356,7 @@ Setting any key replaces (does not merge with) that list's default.
 
 ### Workflow telemetry (`telemetry`)
 
-`telemetry.enabled` (default `true`) gates `plugins/toolu/hooks/lib/telemetry.sh`,
+`telemetry.enabled` (default `true`) gates `telemetryAppend` in `packages/toolu-core/src/state/telemetry.ts`,
 the one append path every gate/lib event funnels through. When enabled it writes
 one JSONL line per event to the host-native
 `.claude/tmp/telemetry/<branch_slug>.jsonl` or
@@ -392,13 +392,12 @@ feature produces (model-routing analytics), not a side effect of the nudge.
 from advisory to blocking in `packages/toolu-core/src/gates/plan-ledger.ts`.
 Either way, every push check appends an `ac_coverage` telemetry event with
 `covered`/`uncovered` counts (reusing `pl_ac_coverage_lines`). With the default
-`false`, an uncovered AC only shows up in that count and in `plan-ledger.sh
-status`'s AC-coverage report. With `true`, `git push` is denied naming the
+`false`, an uncovered AC only shows up in that count and in `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" status`'s AC-coverage report. With `true`, `git push` is denied naming the
 uncovered spec `AC-<n>` id(s) until a fresh-green step's `ac_refs` covers them.
 
 ### PR babysit fixers (`prBabysit`)
 
-Read by the `pr-babysit` plugin's `route-fix.sh` (see
+Read by the `pr-babysit` plugin's Bun bundle `hooks/dist/babysit-route-fix.js` (see
 `plugins/pr-babysit/skills/babysit/references/helper.md`). After triage,
 babysit scores each Fix item with Jev into a tier (`trivial`, `standard`,
 `complex`, `critical`), groups the items by tier, and runs each group as a

@@ -116,10 +116,10 @@ or nothing — is the mode's business, not this list's.
 ## Tests
 
 `hooks/src/__tests__/pre-tool-modules-c.test.ts` covers the gate;
-`hooks/lib/__tests__/detect.bats` covers `is_git_push` and `push_target_root`.
+`packages/toolu-core/src/detect/__tests__/detect-git.test.ts` covers push detection and destination resolution.
 Run from the repo root with:
 
 ```bash
 bun test plugins/toolu/hooks/src/__tests__/pre-tool-modules-c.test.ts
-bats plugins/toolu/hooks/lib/__tests__/detect.bats
+bun test packages/toolu-core/src/detect/__tests__/detect-git.test.ts
 ```

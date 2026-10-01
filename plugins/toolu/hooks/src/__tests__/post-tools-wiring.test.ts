@@ -2,12 +2,12 @@
  * AC-6 (#259): the edit/shell/search PostToolUse entry runs the dispatcher
  * bundle through the generated launcher, which advises and exits 0 when Bun is
  * missing (PostToolUse is not an enforcing event); the built-in table names
- * exactly the bash modules `mod.sh` globs; and a dispatcher crash exits 2 with
+ * runs the native built-ins in order; and a dispatcher crash exits 2 with
  * one stderr line instead of passing silently.
  */
 import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { launcherCommand } from "@toolu/core/launcher";
@@ -25,13 +25,9 @@ function withTempDir<T>(work: (dir: string) => T): T {
   }
 }
 
-test("the built-in table is modules/*.sh in the byte order mod.sh globs", () => {
-  const onDisk = readdirSync(join(PLUGIN, "hooks/post-tools/modules"))
-    .filter((file) => file.endsWith(".sh"))
-    .toSorted((a, b) => Buffer.compare(Buffer.from(a), Buffer.from(b)))
-    .map((file) => file.slice(0, -".sh".length));
-  expect<string[]>([...BUILTIN_MODULES]).toEqual(onDisk);
-  expect(builtins().map((m) => m.name)).toEqual(onDisk.map((name) => `${name}.sh`));
+test("the built-in table runs gate status before push waiver", () => {
+  expect<string[]>([...BUILTIN_MODULES]).toEqual(["gate-status", "push-waiver"]);
+  expect(builtins().map((m) => m.name)).toEqual(["gate-status.sh", "push-waiver.sh"]);
   expect(builtins().every((m) => m.kind === "native")).toBe(true);
 });
 

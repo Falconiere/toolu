@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { join, resolve } from "node:path";
+import { gateDecision } from "@toolu/core/config";
+import { encodeDecision } from "@toolu/core/host";
 import {
   HostOutputError,
   readHermesOutcome,
@@ -8,46 +9,40 @@ import {
 } from "../hosts.ts";
 import { run, type RunResult } from "../spawn.ts";
 
-const ROOT = resolve(import.meta.dir, "../../../../..");
-const GATE_MODE = join(ROOT, "plugins/toolu/hooks/lib/gate-mode.sh");
-
-/** The real PreToolUse JSON toolu's bash gates emit for a mode. */
-function gateEmit(mode: "block" | "ask" | "advise" | "off"): Promise<RunResult> {
-  return run([
-    "bash",
-    "-c",
-    '. "$1" && toolu_gate_emit "$2" "why it matters"',
-    "_",
-    GATE_MODE,
-    mode,
-  ]);
+/** The native gate decision encoded for Claude's PreToolUse contract. */
+function gateEmit(mode: "block" | "ask" | "advise" | "off"): RunResult {
+  const decision = gateDecision(mode, "why it matters");
+  if (decision === null) return result("");
+  const encoded = encodeDecision("claude", "tool/pre", decision);
+  if (encoded.kind !== "command") throw new Error("expected command output");
+  return result(encoded.stdout, encoded.exitCode, encoded.stderr);
 }
 
 function result(stdout: string, exitCode = 0, stderr = ""): RunResult {
   return { exitCode, stdout, stderr, durationMs: 1, timedOut: false };
 }
 
-test.concurrent("claude: real gate output maps block/ask/advise/off to deny/ask/allow", async () => {
-  expect(readHostOutcome("claude", "PreToolUse", await gateEmit("block"))).toEqual({
+test.concurrent("claude: native gate output maps block/ask/advise/off to deny/ask/allow", () => {
+  expect(readHostOutcome("claude", "PreToolUse", gateEmit("block"))).toEqual({
     effect: "deny",
     reason: "why it matters",
   });
-  expect(readHostOutcome("claude", "PreToolUse", await gateEmit("ask"))).toEqual({
+  expect(readHostOutcome("claude", "PreToolUse", gateEmit("ask"))).toEqual({
     effect: "ask",
     reason: "why it matters",
   });
-  expect(readHostOutcome("claude", "PreToolUse", await gateEmit("advise"))).toEqual({
+  expect(readHostOutcome("claude", "PreToolUse", gateEmit("advise"))).toEqual({
     effect: "allow",
     context: "why it matters",
   });
-  expect(readHostOutcome("claude", "PreToolUse", await gateEmit("off"))).toEqual({
+  expect(readHostOutcome("claude", "PreToolUse", gateEmit("off"))).toEqual({
     effect: "allow",
   });
 });
 
-test.concurrent("codex: accepts deny and rejects ask, which Codex cannot prompt for", async () => {
-  expect(readHostOutcome("codex", "PreToolUse", await gateEmit("block")).effect).toBe("deny");
-  const ask = await gateEmit("ask");
+test.concurrent("codex: accepts deny and rejects ask, which Codex cannot prompt for", () => {
+  expect(readHostOutcome("codex", "PreToolUse", gateEmit("block")).effect).toBe("deny");
+  const ask = gateEmit("ask");
   expect(() => readHostOutcome("codex", "PreToolUse", ask)).toThrow(HostOutputError);
 });
 
@@ -86,8 +81,8 @@ test.concurrent("systemMessage and additionalContext both surface as context", (
   });
 });
 
-test.concurrent("a hookEventName that disagrees with the event is a contract violation", async () => {
-  const out = await gateEmit("block");
+test.concurrent("a hookEventName that disagrees with the event is a contract violation", () => {
+  const out = gateEmit("block");
   expect(() => readHostOutcome("claude", "PostToolUse", out)).toThrow("hookEventName");
 });
 

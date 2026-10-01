@@ -10,7 +10,7 @@ import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { analyzeShell, runsGitSubcommand } from "../../shell/shell.ts";
 import { writeTargets } from "../../shell/shell-writes.ts";
 import { isGitCommit, isGitPush, pushTargetBranch, pushTargetRoot } from "../detect-git.ts";
-import { bashDetect, detectEnv } from "./detect-bash.ts";
+import { detectEnv } from "./detect-env.ts";
 
 const lines = (...parts: string[]) => parts.join("\n");
 
@@ -61,16 +61,8 @@ const HEREDOC_CASES = [
 
 test.concurrent.each(HEREDOC_CASES.map((c) => [c.name, c] as const))(
   "strip_heredocs %s: the body runs nothing, the lines around it do",
-  async (_name, c) => {
-    using sb = createSandbox();
+  (_name, c) => {
     const analysis = analyzeShell(c.command);
-    const bash = await bashDetect(
-      'if is_git_push "$1"; then printf yes; else printf no; fi',
-      [c.command],
-      sb.project,
-      detectEnv(sb.home),
-    );
-    expect(isGitPush(analysis)).toBe(bash === "yes");
     expect(isGitPush(analysis)).toBe(c.push);
     expect(writeTargets(analysis).map((t) => t.path)).toEqual([...c.targets]);
     const names = analysis.commands.map((cmd) => cmd.argv[0]);
@@ -83,18 +75,9 @@ test.each([
   ["$g push", "push"],
   ["git $(echo push)", "push"],
   ['"$GIT" commit -m x', "commit"],
-] as const)("%s: unknown to the shell layer, false here, as bash answers", async (command, sub) => {
-  using sb = createSandbox();
+] as const)("%s: unknown to the shell layer maps to false", (command, sub) => {
   const analysis = analyzeShell(command);
   expect(runsGitSubcommand(analysis, sub)).toBe("unknown");
-  const fn = sub === "push" ? "is_git_push" : "is_git_commit";
-  const bash = await bashDetect(
-    `if ${fn} "$1"; then printf yes; else printf no; fi`,
-    [command],
-    sb.project,
-    detectEnv(sb.home),
-  );
-  expect(bash).toBe("no");
   expect(sub === "push" ? isGitPush(analysis) : isGitCommit(analysis)).toBe(false);
 });
 

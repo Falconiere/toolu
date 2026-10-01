@@ -7,29 +7,19 @@ import { fail, rel } from "./fs-util.ts";
 import { INVENTORY, MATRIX, ROOT } from "./paths.ts";
 import {
   CLASSIFICATIONS,
-  type Classification,
   type Discovered,
   type InventoryRow,
   InventoryRowSchema,
-  type Support,
 } from "./types.ts";
 
 function semanticsNote(d: Discovered): string {
   switch (d.kind) {
     case "hooks.json":
       return `Host routes ${d.event} (${d.matcher || "no matcher"}) to ${d.commandOrModule}.`;
-    case "concern":
-      return `Assembled quality concern fragment ${d.commandOrModule}; not independently executable.`;
     case "builtin-module":
       return `Built-in dispatcher module ${d.commandOrModule} under ${d.event}.`;
-    case "lib":
-      return `Shared library sourced by hooks/modules: ${d.commandOrModule}.`;
     case "entrypoint":
-      return `Hook entrypoint script ${d.commandOrModule} for ${d.event}.`;
-    case "pre-tools.d":
-    case "post-tools.d":
-    case "session-start.d":
-      return `Registry ${d.kind} module ${d.commandOrModule}.`;
+      return `Hook entrypoint ${d.commandOrModule} for ${d.event}.`;
     default: {
       throw new Error("unexpected inventory kind: " + d.kind);
     }
@@ -38,56 +28,18 @@ function semanticsNote(d: Discovered): string {
 
 /** Default classification metadata for a newly discovered row. */
 function defaultMeta(d: Discovered): InventoryRow {
-  const isLib = d.kind === "lib";
-  const isHostOnly =
-    d.commandOrModule === "permissions.sh" ||
-    (d.plugin === "pr-babysit" && d.commandOrModule === "check-toolu.sh");
-
-  let classification: Classification = "shell-out";
-  let support: Support = "required";
-  let implementationIssue: number | null = 210;
-  let implementationStatus: InventoryRow["implementationStatus"] = "todo";
-  let hostMechanism = "pending-opencode";
-  let limits = "";
-
-  if (isLib) {
-    support = "supported";
-    hostMechanism = "native-bash";
-  }
-  if (isHostOnly) {
-    classification = "no-map";
-    support = "n/a";
-    implementationIssue = null;
-    implementationStatus = "n/a";
-    hostMechanism = "n/a";
-    limits = "Host-specific helper/surface; not an OpenCode enforcement target.";
-  }
-  if (d.kind === "concern" || d.plugin.endsWith("-quality")) {
-    implementationIssue = 204;
-  }
-  if (d.plugin === "toolu" && (d.kind === "builtin-module" || d.event === "PreToolUse")) {
-    implementationIssue = 204;
-  }
-  if (
-    d.kind === "entrypoint" &&
-    d.event === "SessionStart" &&
-    d.commandOrModule === "session-start.sh"
-  ) {
-    implementationIssue = 211;
-  }
-
   return {
     ...d,
     semantics: semanticsNote(d),
-    classification,
-    hostMechanism,
-    support,
-    implementationIssue,
-    implementationStatus,
+    classification: "port-native",
+    hostMechanism: "bun-bundle",
+    support: "required",
+    implementationIssue: d.kind === "builtin-module" && d.event === "PostToolUse" ? 259 : 279,
+    implementationStatus: "done",
     verificationBaseline: "none",
-    verificationConformance: "pending-#212",
-    limits,
-    bashRequired: true,
+    verificationConformance: "bun run test:conformance",
+    limits: "",
+    bashRequired: false,
   };
 }
 
@@ -98,6 +50,13 @@ function validateRow(row: InventoryRow, errors: string[]): void {
   }
   if (!CLASSIFICATIONS.has(row.classification)) {
     errors.push(`${row.id}: invalid classification ${row.classification}`);
+  }
+  if (row.classification !== "port-native") {
+    errors.push(`${row.id}: final inventory requires classification=port-native`);
+  }
+  if (row.bashRequired) errors.push(`${row.id}: final inventory requires bashRequired=false`);
+  if (row.implementationStatus !== "done") {
+    errors.push(`${row.id}: final inventory requires implementationStatus=done`);
   }
   if (row.classification === "no-map" && !row.limits.trim()) {
     errors.push(`${row.id}: no-map requires limits rationale`);
@@ -135,6 +94,22 @@ export function check(): void {
   for (const id of invIds) {
     if (!discIds.has(id)) errors.push(`orphan inventory id: ${id}`);
   }
+  const discoveredById = new Map(discovered.map((row) => [row.id, row]));
+  for (const row of inventory) {
+    const live = discoveredById.get(row.id);
+    if (!live) continue;
+    for (const key of [
+      "sourcePath",
+      "plugin",
+      "kind",
+      "event",
+      "matcher",
+      "commandOrModule",
+      "parentId",
+    ] as const) {
+      if (row[key] !== live[key]) errors.push(`${row.id}: ${key} differs from discovery`);
+    }
+  }
   for (const row of inventory) validateRow(row, errors);
   if (!existsSync(MATRIX)) fail(`missing matrix ${MATRIX}`);
   const matrix = readFileSync(MATRIX, "utf8");
@@ -153,10 +128,11 @@ export function render(rows: InventoryRow[]): void {
   const header = `# Gate coverage matrix
 
 **Issue:** [#209](https://github.com/Falconiere/toolu/issues/209) (epic [#203](https://github.com/Falconiere/toolu/issues/203))  
+**Final removal:** [#279](https://github.com/Falconiere/toolu/issues/279) (epic [#247](https://github.com/Falconiere/toolu/issues/247))
 **Inventory:** \`tooling/fixtures/gate-coverage/inventory.json\`  
 **Check:** \`bun run tooling/src/gate-coverage-inventory.ts check\`
 
-Classifications match [docs/portable-core.md](portable-core.md): \`shell-out\` · \`port-native\` · \`port-new\` · \`no-map\`.
+Every live hook and built-in gate in this inventory is \`port-native\` and runs through a Bun bundle. The final-removal check also rejects tracked shell and Bats files.
 
 | id | source | plugin | event | classification | support | impl | host mechanism | bash | limits |
 |----|--------|--------|-------|----------------|---------|------|----------------|------|--------|
@@ -173,14 +149,51 @@ Classifications match [docs/portable-core.md](portable-core.md): \`shell-out\` �
   const body =
     header +
     lines.join("\n") +
-    "\n\n## Notes\n\n- Concern fragments are inventoried with `parentId` pointing at `register.sh` when present; they are not independently executable.\n- `hostMechanism=pending-opencode` is resolved against OpenCode pins during #204/#212.\n- Verification conformance links are filled by #212.\n";
+    "\n\n## Notes\n\n- Native built-in gate rows point to their TypeScript source and the dispatcher hook that invokes them.\n- OpenCode supports the host events documented in [conformance-report.md](conformance-report.md); this inventory records the implementation of each listed hook rather than claiming every host exposes every event.\n";
   writeFileSync(MATRIX, body);
   process.stdout.write(`gate-coverage-inventory: wrote ${rel(MATRIX)} (${rows.length} rows)\n`);
 }
 
 /** Seed inventory JSON + matrix from live discovery (dev helper). */
 export function seed(): void {
-  const rows = discover().map(defaultMeta);
+  const PreviousRow = z.object({
+    id: z.string(),
+    semantics: z.string(),
+    implementationIssue: z.number().nullable(),
+    implementationStatus: z.string(),
+    verificationBaseline: z.string(),
+    verificationConformance: z.string(),
+  });
+  const previous = existsSync(INVENTORY)
+    ? new Map(
+        z
+          .array(PreviousRow)
+          .parse(JSON.parse(readFileSync(INVENTORY, "utf8")))
+          .map((row) => [row.id, row]),
+      )
+    : new Map<string, z.infer<typeof PreviousRow>>();
+  const rows = discover().map((d) => {
+    const old = previous.get(d.id);
+    const row = defaultMeta(d);
+    if (!old) return row;
+    const citedIssue = [...old.semantics.matchAll(/#(\d+)/gu)].at(-1)?.[1];
+    return Object.assign(row, {
+      semantics: /bash fallback|shell-out|legacy/i.test(old.semantics)
+        ? row.semantics
+        : old.semantics,
+      implementationIssue:
+        old.implementationStatus === "done" && old.implementationIssue !== 279
+          ? old.implementationIssue
+          : citedIssue === undefined
+            ? row.implementationIssue
+            : Number(citedIssue),
+      verificationBaseline: old.verificationBaseline,
+      verificationConformance:
+        old.verificationConformance === "pending-#212"
+          ? "bun run test:conformance"
+          : old.verificationConformance,
+    });
+  });
   mkdirSync(join(ROOT, "tooling/fixtures/gate-coverage"), { recursive: true });
   writeFileSync(INVENTORY, `${JSON.stringify(rows, null, 2)}\n`);
   process.stdout.write(`gate-coverage-inventory: seeded ${rel(INVENTORY)} (${rows.length} rows)\n`);
