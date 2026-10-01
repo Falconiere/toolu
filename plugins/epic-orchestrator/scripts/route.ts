@@ -5,7 +5,7 @@
  * skipping any host cooling down after a usage limit. Routes persist in
  * `<state>/routes/<key>.json`, so relaunches keep their host and model. */
 
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { EPICS_HOME, readJson, writeJson } from "./common.ts";
@@ -105,6 +105,17 @@ export function jevScript(env: NodeJS.ProcessEnv = process.env): string | null {
   return candidates.find((p): p is string => !!p && existsSync(p)) ?? null;
 }
 
+/** argv prefix that runs `jev.sh`. The installed `jev.sh` is a symlink to a
+ * Bun-run `.js` bundle, which bash would parse as shell; run it with Bun. Any
+ * other file (a user override) runs directly, under its own shebang. */
+export function jevCommand(script: string): string[] {
+  let real = script;
+  try {
+    real = realpathSync(script);
+  } catch {}
+  return real.endsWith(".js") ? [process.execPath, script] : [script];
+}
+
 export function jevQuestions(issues: IssueEvidence[]): Record<string, unknown> {
   return Object.fromEntries(
     issues.map((i) => [
@@ -138,7 +149,7 @@ async function jevScores(issues: IssueEvidence[]): Promise<Record<string, Score>
       ]),
     ),
   };
-  const proc = Bun.spawn(["bash", jev, "ask", "-", "-s", JSON.stringify(state)], {
+  const proc = Bun.spawn([...jevCommand(jev), "ask", "-", "-s", JSON.stringify(state)], {
     stdin: new Blob([JSON.stringify(jevQuestions(issues))]),
     stdout: "pipe",
     stderr: "pipe",
