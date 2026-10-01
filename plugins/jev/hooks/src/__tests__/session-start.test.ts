@@ -35,6 +35,7 @@ const runtimeCommand = (wrapper: string) =>
 const PLUGIN = resolve(import.meta.dir, "../../..");
 const WRAPPER = "hooks/dist/jev.js";
 const KEY = "local-test-key";
+const NODE = Bun.which("node");
 
 const OutputSchema = z.strictObject({
   hookSpecificOutput: z.strictObject({
@@ -195,7 +196,7 @@ test.concurrent("refreshes a stale link and is idempotent", async () => {
   expect(lstatSync(join(dir, "jev.sh")).ino).toBe(inode);
 });
 
-test.concurrent("a user's own file is kept and still named in the context", async () => {
+test.concurrent("a user's executable shell override keeps its own interpreter", async () => {
   using sb = createSandbox();
   const dst = join(sb.home, ".claude/jev/jev.sh");
   mkdirSync(join(sb.home, ".claude/jev"), { recursive: true });
@@ -210,6 +211,33 @@ test.concurrent("a user's own file is kept and still named in the context", asyn
   expect(probe.exitCode).toBe(0);
   expect(probe.stdout).toBe("user-override\n");
 });
+
+test.concurrent.skipIf(NODE === null)(
+  "a user's executable JavaScript override keeps its interpreter without Bun on PATH",
+  async () => {
+    using sb = createSandbox();
+    const dst = join(sb.home, ".claude/jev/jev.sh");
+    mkdirSync(join(sb.home, ".claude/jev"), { recursive: true });
+    const source = `#!${NODE}\nconsole.log("javascript-override");\n`;
+    writeFileSync(dst, source, { mode: 0o755 });
+    const env = { PATH: "/nonexistent", TYPESAFE_API_KEY: KEY };
+    const res = await run([process.execPath, join(PLUGIN, "hooks/dist/session-start.js")], {
+      cwd: sb.project,
+      env: { ...startupEnv("claude", sb, PLUGIN), ...env },
+      stdin: "{}",
+    });
+    const context = contextOf(res);
+    expect(lstatSync(dst).isSymbolicLink()).toBe(false);
+    expect(readFileSync(dst, "utf8")).toBe(source);
+    expect(context).toBe(mandate(dst, PLUGIN, `'${dst}'`));
+    const command = context.split("you MUST call ")[1]?.split(" before the decision")[0];
+    expect(command).toBe(`'${dst}'`);
+    const probe = await run(["/bin/sh", "-c", command ?? ""], { cwd: sb.project, env });
+    expect(probe.exitCode).toBe(0);
+    expect(probe.stdout).toBe("javascript-override\n");
+    expect(probe.stderr).toBe("");
+  },
+);
 
 test.concurrent("a missing wrapper source is silent and publishes nothing", async () => {
   using sb = createSandbox();

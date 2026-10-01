@@ -48,6 +48,12 @@ Full CLI reference and usage guidance: [`skills/jev/SKILL.md`](skills/jev/SKILL.
 Executable [problem-solving examples](skills/jev/references/problem-solving.md) cover search, debugging, planning, and review with uncertainty and no-match handling.
 Plugin page: [`docs/jev/README.md`](../../docs/jev/README.md).
 
+A regular file already at `jev.sh` is a user-provided executable override. It is
+preserved and invoked directly using its own shebang/interpreter; this supports
+both shell scripts and JavaScript executables. Raw JavaScript without an
+executable shebang is not an executable override. The published bundle symlink
+uses the resolved Bun command supplied by the hooks.
+
 ## Wrapper reference
 
 Text input only; preprocess other formats. Context: 64k tokens/request, 32k for

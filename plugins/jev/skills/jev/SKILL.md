@@ -41,6 +41,11 @@ done
 
 Repository fallback, when not installed: `plugins/jev/hooks/dist/jev.js`.
 
+User-provided executable overrides at `jev.sh` are preserved and invoked
+directly with their own shebang/interpreter, including shell scripts and
+JavaScript executables. They must provide an executable shebang; the resolved
+Bun prefix applies to the published bundle symlink.
+
 ```text
 "$JEV_BUN" "$JEV" noul   "question" -s STATE [--true DESC] [--false DESC]
 "$JEV_BUN" "$JEV" choice "question" -s STATE -o KEY=DESC -o KEY=DESC

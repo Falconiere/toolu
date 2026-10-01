@@ -3,7 +3,8 @@ import { lstatSync } from "node:fs";
 /** The hook already runs under the launcher's resolved Bun; PATH is not required. */
 export function invocation(wrapper: string): string {
   const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
-  // A preserved user executable may be a shell script with its own interpreter.
+  // Preserved user executables supply their own shebang/interpreter, whether shell
+  // or JavaScript. Forcing Bun here would break existing shell-script overrides.
   return lstatSync(wrapper).isSymbolicLink()
     ? `${quote(process.execPath)} ${quote(wrapper)}`
     : quote(wrapper);
