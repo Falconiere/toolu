@@ -90,12 +90,12 @@ function registryModule(sb: Sandbox, host: PretoolHost, file: string, body: stri
 const GATE_MODULE = [
   '. "$TOOLU_LIB_DIR/detect.sh"',
   '. "$TOOLU_LIB_DIR/gate-file.sh"',
-  `file=$(jq -r '.tool_input.file_path // empty' <<<"$input")`,
+  "file=$(jq -r '.tool_input.file_path // empty' <<<\"$input\")",
   '[ -n "$file" ] || exit 0',
   'gate="$(toolu_project_state_root "$PROJECT_ROOT")/quality-gate-status.json"',
   'mkdir -p "${gate%/*}"',
   'gate_record_failure "$gate" "$file" fixture-hook "fixture violation" "fixture violation in $file"',
-  `jq -n --arg f "$file" '{hookSpecificOutput:{hookEventName:"PostToolUse",additionalContext:("fixture violation in " + $f)}}'`,
+  "jq -n --arg e PostToolUse --arg ctx \"fixture violation in $file\" '{hookSpecificOutput:{hookEventName:$e,additionalContext:$ctx}}'",
 ].join("\n");
 
 export const POSTTOOL_CORPUS: readonly PosttoolCase[] = [
