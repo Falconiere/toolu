@@ -112,6 +112,9 @@ function pidAlive(pid) {
     return false;
   }
 }
+function errorCode(error) {
+  return error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : undefined;
+}
 
 class SlotLock {
   path;
@@ -134,20 +137,32 @@ class SlotLock {
     try {
       mkdirSync(dirname(this.path), { recursive: true });
       for (let attempt = 0;attempt < 2; attempt += 1) {
+        let created = false;
         try {
           mkdirSync(this.path);
-          this.held = true;
-          const { dev, ino } = statSync(this.path);
-          this.identity = { dev, ino };
-          writeFileSync(join(this.path, "pid"), `${process.pid}
-`);
-          writeFileSync(join(this.path, "since"), `${Math.floor(Date.now() / 1000)}
-`);
-          return;
+          created = true;
         } catch (error) {
+          if (errorCode(error) !== "EEXIST")
+            throw error;
           if (!existsSync(this.path)) {
             if (attempt === 0)
               continue;
+            fail("locked", "slot is held by another controller", { pid: null, since: null });
+          }
+        }
+        if (created) {
+          this.held = true;
+          try {
+            const { dev, ino } = statSync(this.path);
+            this.identity = { dev, ino };
+            writeFileSync(join(this.path, "pid"), `${process.pid}
+`);
+            writeFileSync(join(this.path, "since"), `${Math.floor(Date.now() / 1000)}
+`);
+            return;
+          } catch (error) {
+            if (errorCode(error) === "ENOENT")
+              fail("locked", "slot is held by another controller", { pid: null, since: null });
             throw error;
           }
         }
@@ -176,7 +191,10 @@ class SlotLock {
       }
     } catch (error) {
       this.release();
-      throw error;
+      if (error instanceof BabysitError)
+        throw error;
+      const message = error instanceof Error ? error.message : String(error);
+      fail("api_error", `slot lock failed: ${message}`, { source: "lock" });
     }
   }
   release() {
@@ -281,23 +299,39 @@ async function ghRun(args, options = {}) {
   const backoffSeconds = options.backoffSeconds ?? (process.env.PB_GH_BACKOFF ?? "2 4 8").split(/\s+/).map(Number);
   for (let attempt = 1;attempt <= attempts; attempt += 1) {
     const proc = Bun.spawn(["gh", ...args], { stdout: "pipe", stderr: "pipe", env: process.env });
-    let timer;
-    const timedOut = await Promise.race([
-      proc.exited.then(() => false),
-      new Promise((resolve) => {
-        timer = setTimeout(() => {
-          proc.kill();
-          resolve(true);
-        }, timeoutSeconds * 1000);
-      })
-    ]);
-    if (timer)
-      clearTimeout(timer);
-    const [stdout, stderr] = await Promise.all([
+    const completed = Promise.all([
+      proc.exited,
       new Response(proc.stdout).text(),
       new Response(proc.stderr).text()
-    ]);
-    const rc = timedOut ? 124 : await proc.exited;
+    ]).then(([rc, stdout, stderr]) => ({ rc, stdout, stderr }));
+    let timedOut = false;
+    let deadline;
+    let escalation;
+    const timeout = new Promise((resolve) => {
+      deadline = setTimeout(() => {
+        timedOut = true;
+        try {
+          proc.kill();
+        } catch {}
+        escalation = setTimeout(() => {
+          try {
+            proc.kill(9);
+          } catch {}
+          resolve({ rc: 124, stdout: "", stderr: "" });
+        }, 250);
+      }, timeoutSeconds * 1000);
+    });
+    let result;
+    try {
+      result = await Promise.race([completed, timeout]);
+    } finally {
+      if (deadline)
+        clearTimeout(deadline);
+      if (escalation)
+        clearTimeout(escalation);
+    }
+    const { stdout, stderr } = result;
+    const rc = timedOut ? 124 : result.rc;
     const classification = ghClassify(rc, stderr, stdout);
     if (classification === "ok")
       return stdout;

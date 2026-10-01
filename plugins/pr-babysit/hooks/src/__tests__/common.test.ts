@@ -7,6 +7,7 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  symlinkSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
@@ -78,6 +79,34 @@ test("slot lock does not reclaim a freshly created directory before its metadata
   expect(() => contender.acquire()).toThrow(BabysitError);
   expect(existsSync(lockPath)).toBe(true);
   expect(existsSync(join(lockPath, "pid"))).toBe(false);
+});
+
+test("slot lock reports a vanished EEXIST contender as locked", () => {
+  const path = join(fixtureDir(), "state.json");
+  // mkdir sees EEXIST, while existsSync follows the dangling link and sees no holder.
+  symlinkSync(join(fixtureDir(), "gone"), `${path}.lock`);
+  const contender = new SlotLock(path);
+  let error: unknown;
+  try {
+    contender.acquire();
+  } catch (caught) {
+    error = caught;
+  }
+  expect(error).toBeInstanceOf(BabysitError);
+  expect((error as BabysitError).code).toBe("locked");
+  expect(exitCode((error as BabysitError).code)).toBe(75);
+});
+
+test("slot lock does not classify a non-EEXIST mkdir failure as contention", () => {
+  const path = join(fixtureDir(), "x".repeat(256));
+  try {
+    new SlotLock(path).acquire();
+    throw new Error("expected lock creation to fail");
+  } catch (error) {
+    expect(error).toBeInstanceOf(BabysitError);
+    expect((error as BabysitError).code).toBe("api_error");
+    expect((error as BabysitError).message).toContain("ENAMETOOLONG");
+  }
 });
 
 test("slot lock cleans its incomplete directory but leaves a replacement alone", () => {

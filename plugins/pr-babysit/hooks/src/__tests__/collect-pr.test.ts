@@ -249,6 +249,56 @@ test("ghRun retries a stub gh on PATH and never invokes a live PR", async () => 
   }
 });
 
+test("ghRun bounds a stub gh that ignores SIGTERM", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "pb-gh-timeout-"));
+  const oldPath = process.env.PATH;
+  try {
+    const command = join(dir, "gh");
+    const termMarker = join(dir, "term");
+    const pidFile = join(dir, "pid");
+    writeFileSync(
+      command,
+      `#!/bin/sh
+trap 'printf received > "$PB_STUB_TERM"' TERM
+printf '%s' "$$" > "$PB_STUB_PID"
+while :; do :; done
+`,
+    );
+    chmodSync(command, 0o755);
+    process.env.PATH = `${dir}:${oldPath ?? ""}`;
+    process.env.PB_STUB_TERM = termMarker;
+    process.env.PB_STUB_PID = pidFile;
+    const started = Date.now();
+    try {
+      await ghRun(["pr", "view", "1"], { attempts: 1, timeoutSeconds: 0.4 });
+      throw new Error("expected gh timeout");
+    } catch (error) {
+      expect(error).toBeInstanceOf(GhError);
+      expect((error as GhError).lastRc).toBe(124);
+      expect((error as GhError).classification).toBe("transient");
+    }
+    expect(readFileSync(termMarker, "utf8")).toBe("received");
+    expect(Date.now() - started).toBeLessThan(3000);
+    const pid = Number(readFileSync(pidFile, "utf8"));
+    let alive = true;
+    for (let check = 0; check < 25; check += 1) {
+      try {
+        process.kill(pid, 0);
+        await Bun.sleep(20);
+      } catch {
+        alive = false;
+        break;
+      }
+    }
+    expect(alive).toBe(false);
+  } finally {
+    process.env.PATH = oldPath;
+    delete process.env.PB_STUB_TERM;
+    delete process.env.PB_STUB_PID;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("the Bun CLI matches the Bash golden snapshot from stubbed recorded gh pages", async () => {
   const dir = mkdtempSync(join(tmpdir(), "pb-collect-parity-"));
   try {

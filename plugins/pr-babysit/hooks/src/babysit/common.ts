@@ -124,6 +124,12 @@ function pidAlive(pid: number): boolean {
   }
 }
 
+function errorCode(error: unknown): string | undefined {
+  return error && typeof error === "object" && "code" in error && typeof error.code === "string"
+    ? error.code
+    : undefined;
+}
+
 export class SlotLock {
   readonly path: string;
   private held = false;
@@ -147,18 +153,30 @@ export class SlotLock {
     try {
       mkdirSync(dirname(this.path), { recursive: true });
       for (let attempt = 0; attempt < 2; attempt += 1) {
+        let created = false;
         try {
           mkdirSync(this.path);
-          this.held = true;
-          const { dev, ino } = statSync(this.path);
-          this.identity = { dev, ino };
-          writeFileSync(join(this.path, "pid"), `${process.pid}\n`);
-          writeFileSync(join(this.path, "since"), `${Math.floor(Date.now() / 1000)}\n`);
-          return;
+          created = true;
         } catch (error) {
+          if (errorCode(error) !== "EEXIST") throw error;
           // The holder can release between EEXIST and inspection.
           if (!existsSync(this.path)) {
             if (attempt === 0) continue;
+            fail("locked", "slot is held by another controller", { pid: null, since: null });
+          }
+        }
+        if (created) {
+          this.held = true;
+          try {
+            const { dev, ino } = statSync(this.path);
+            this.identity = { dev, ino };
+            writeFileSync(join(this.path, "pid"), `${process.pid}\n`);
+            writeFileSync(join(this.path, "since"), `${Math.floor(Date.now() / 1000)}\n`);
+            return;
+          } catch (error) {
+            // A removed or replaced directory is contention, never a lock we can delete blindly.
+            if (errorCode(error) === "ENOENT")
+              fail("locked", "slot is held by another controller", { pid: null, since: null });
             throw error;
           }
         }
@@ -191,7 +209,9 @@ export class SlotLock {
       }
     } catch (error) {
       this.release();
-      throw error;
+      if (error instanceof BabysitError) throw error;
+      const message = error instanceof Error ? error.message : String(error);
+      fail("api_error", `slot lock failed: ${message}`, { source: "lock" });
     }
   }
 
