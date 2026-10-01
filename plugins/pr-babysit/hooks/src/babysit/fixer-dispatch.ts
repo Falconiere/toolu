@@ -375,6 +375,8 @@ class Dispatcher {
       )
     )
       fail("plan_invalid", "every plan group needs a host and string item ids");
+    if (plan.groups.some((group, index) => group.seq !== index + 1))
+      fail("plan_invalid", "plan groups need contiguous 1-based seq values");
     if (!Number.isInteger(items.round ?? 1) || (items.round ?? 1) < 1)
       fail("plan_invalid", "round must be a positive integer");
     if (plan.groups.flatMap((g) => g.items).some((id) => !ids.has(id)))
@@ -740,7 +742,7 @@ class Dispatcher {
     });
     const brief = this.launch(
       1,
-      itemsFile,
+      this.dry ? itemsFile : itemsCopy,
       context,
       wt.paneId,
       plan.unattended !== false,

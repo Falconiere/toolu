@@ -561,6 +561,8 @@ class Dispatcher {
       fail("plan_invalid", "the plan has no groups");
     if (plan.groups.some((g) => !g || typeof g !== "object" || g.host == null || !Array.isArray(g.items) || g.items.some((id) => typeof id !== "string")))
       fail("plan_invalid", "every plan group needs a host and string item ids");
+    if (plan.groups.some((group, index) => group.seq !== index + 1))
+      fail("plan_invalid", "plan groups need contiguous 1-based seq values");
     if (!Number.isInteger(items.round ?? 1) || (items.round ?? 1) < 1)
       fail("plan_invalid", "round must be a positive integer");
     if (plan.groups.flatMap((g) => g.items).some((id) => !ids.has(id)))
@@ -848,7 +850,7 @@ class Dispatcher {
         }))
       };
     });
-    const brief = this.launch(1, itemsFile, context, wt.paneId, plan.unattended !== false, this.dry ? plan.groups[0] : undefined);
+    const brief = this.launch(1, this.dry ? itemsFile : itemsCopy, context, wt.paneId, plan.unattended !== false, this.dry ? plan.groups[0] : undefined);
     return this.dry ? { dryRun: true, commands: this.commands, brief } : this.status();
   }
   settleGroup(seq) {

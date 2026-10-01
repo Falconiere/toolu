@@ -295,6 +295,45 @@ test("dispatch rejects a malformed plan group before touching a worktree", () =>
     }),
   ).toThrow("every plan group needs a host and string item ids");
   expect(existsSync(join(dir, "repo"))).toBe(false);
+
+  const id = JSON.parse(readFileSync(fixture, "utf8")).items[0].id;
+  writeFileSync(
+    planFile,
+    JSON.stringify({
+      dispatch: "herdr",
+      groups: [
+        {
+          seq: 1,
+          tier: "standard",
+          host: "codex",
+          model: "gpt-6-sol",
+          effort: "medium",
+          items: [id],
+        },
+        {
+          seq: 3,
+          tier: "standard",
+          host: "codex",
+          model: "gpt-6-sol",
+          effort: "medium",
+          items: [id],
+        },
+      ],
+    }),
+  );
+  expect(() =>
+    dispatchFix({
+      sub: "start",
+      stateFile,
+      planFile,
+      itemsFile: fixture,
+      repoRoot: join(dir, "repo"),
+      branch: "feat/fix",
+      base: "main",
+      dryRun: true,
+    }),
+  ).toThrow("plan groups need contiguous 1-based seq values");
+  expect(existsSync(join(dir, "repo"))).toBe(false);
 });
 
 test("report outcome and trust detection use real captured text", () => {
