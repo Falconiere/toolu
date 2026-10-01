@@ -228,6 +228,7 @@ export function reduceState(
   const waitSeconds = idleStreak >= 6 ? 60 : idleStreak >= 3 ? 30 : 15;
   const providerErrorRepeated =
     prev !== null &&
+    !sameRun &&
     botState === "provider_error" &&
     nil(prev.pr?.botState, "") === "provider_error" &&
     nil(prev.pr?.headSha, "") === head;

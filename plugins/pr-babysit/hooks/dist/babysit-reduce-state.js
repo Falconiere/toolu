@@ -163,7 +163,7 @@ function reduceState(snapshot, previous, now, statePath, snapshotPath) {
   const idleStreak = changed || fixerActive && fixer.status === "running" ? 0 : nil(prev?.idleStreak, 0) + 1;
   const intervalMinutes = idleStreak >= 9 ? 15 : idleStreak >= 6 ? 12 : idleStreak >= 3 ? 6 : ci === "fail" ? 1 : 3;
   const waitSeconds = idleStreak >= 6 ? 60 : idleStreak >= 3 ? 30 : 15;
-  const providerErrorRepeated = prev !== null && botState === "provider_error" && nil(prev.pr?.botState, "") === "provider_error" && nil(prev.pr?.headSha, "") === head;
+  const providerErrorRepeated = prev !== null && !sameRun && botState === "provider_error" && nil(prev.pr?.botState, "") === "provider_error" && nil(prev.pr?.headSha, "") === head;
   const escalations = [];
   if (pr.state === "MERGED")
     escalations.push(reason("pr_merged", "PR is merged"));

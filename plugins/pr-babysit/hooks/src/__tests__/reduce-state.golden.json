@@ -175,12 +175,12 @@
       "decision": "escalate",
       "reasons": [
         { "code": "pr_merged", "detail": "PR is merged" },
-        {
-          "code": "provider_error_repeated",
-          "detail": "review provider error twice on head c44875df"
-        },
         { "code": "ci_pass", "detail": "5 check(s) passed" },
         { "code": "threads_clear", "detail": "no unresolved review threads" },
+        {
+          "code": "provider_error",
+          "detail": "review bot reported a provider error; rerun the review job once"
+        },
         { "code": "unchanged", "detail": "nothing changed since the last tick" }
       ],
       "pr": {

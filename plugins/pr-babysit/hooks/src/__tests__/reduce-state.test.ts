@@ -32,6 +32,26 @@ function open165(): any {
   return input;
 }
 
+test("provider error escalates only after a new verdict run on the same head", () => {
+  const input = open165();
+  input.bot.verdict.state = "provider_error";
+  const first = reduceState(input, null, now, ...paths);
+  expect(first.result.decision).toBe("keep_going");
+
+  const sticky = reduceState(input, first.state, later, ...paths);
+  expect(sticky.result.verdict.sameRunAsLastTick).toBe(true);
+  expect(sticky.result.decision).toBe("keep_going");
+  expect(sticky.result.reasons.map((item: any) => item.code)).not.toContain(
+    "provider_error_repeated",
+  );
+
+  input.bot.comment.updatedAt = "2026-08-31T19:45:12Z";
+  const nextRun = reduceState(input, sticky.state, "2026-09-19T12:06:00Z", ...paths);
+  expect(nextRun.result.verdict.sameRunAsLastTick).toBe(false);
+  expect(nextRun.result.decision).toBe("escalate");
+  expect(nextRun.result.reasons.map((item: any) => item.code)).toContain("provider_error_repeated");
+});
+
 test("an open CI thread stays actionable, then moves to a running fixer", () => {
   const input = open165();
   const thread = input.threads.find(
