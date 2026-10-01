@@ -378,6 +378,9 @@ function cksum(text) {
   }
   return ~crc >>> 0;
 }
+function shellQuote(value) {
+  return `'${value.replaceAll("'", "'\\''")}'`;
+}
 function fixerAgentName(slot, round, seq) {
   return `pb-${(cksum(slot) % 16777216).toString(16).padStart(6, "0")}-r${round}g${seq}`;
 }
@@ -713,7 +716,7 @@ class Dispatcher {
     const agent = fixerAgentName(this.state.slot, this.state.fixer?.round ?? context.round, seq);
     const brief = fixerBriefPath(this.stateFile, this.state.fixer?.round ?? context.round, seq);
     const report = fixerReportPath(this.stateFile, this.state.fixer?.round ?? context.round, seq);
-    const reportCommand = `bun '${this.pluginRoot}/hooks/dist/babysit-fixer-report.js' '${report}'`;
+    const reportCommand = `bun ${shellQuote(join2(this.pluginRoot, "hooks/dist/babysit-fixer-report.js"))} ${shellQuote(report)}`;
     const ctx = {
       ...context,
       reportDone: `${reportCommand} done --note "<one-line summary>"`,

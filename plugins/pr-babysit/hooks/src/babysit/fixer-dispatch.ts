@@ -158,6 +158,10 @@ function cksum(text: string): number {
   return ~crc >>> 0;
 }
 
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
 export function fixerAgentName(slot: string, round: number, seq: number): string {
   return `pb-${(cksum(slot) % 16777216).toString(16).padStart(6, "0")}-r${round}g${seq}`;
 }
@@ -573,7 +577,7 @@ class Dispatcher {
       this.state.fixer?.round ?? (context.round as number),
       seq,
     );
-    const reportCommand = `bun '${this.pluginRoot}/hooks/dist/babysit-fixer-report.js' '${report}'`;
+    const reportCommand = `bun ${shellQuote(join(this.pluginRoot, "hooks/dist/babysit-fixer-report.js"))} ${shellQuote(report)}`;
     const ctx = {
       ...context,
       reportDone: `${reportCommand} done --note "<one-line summary>"`,

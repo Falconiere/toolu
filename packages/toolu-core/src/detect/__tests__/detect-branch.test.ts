@@ -15,7 +15,7 @@ test("branchSlug normalizes separators and strips punctuation", () => {
     "_default",
     "feat_255-state",
     "ncode_x",
-    "a b".replace(" ", ""),
+    "ab",
     "____",
   ]);
 });

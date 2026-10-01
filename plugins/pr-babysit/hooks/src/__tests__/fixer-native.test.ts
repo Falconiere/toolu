@@ -7,6 +7,7 @@ import {
   dispatchFix,
   fixerAgentName,
   fixerOutcome,
+  fixerReportPath,
   isClaudeTrustPrompt,
 } from "../babysit/fixer-dispatch.ts";
 import { loadFixerConfig, routeFix } from "../babysit/fixer-route.ts";
@@ -39,6 +40,24 @@ function sandbox(): string {
   process.env.TOOLU_PROJECT_DIR = dir;
   return dir;
 }
+
+test("config path discovery tolerates a missing git executable", () => {
+  const dir = mkdtempSync(join(tmpdir(), "pr-babysit-no-git-"));
+  temps.push(dir);
+  const routeModule = join(root, "plugins/pr-babysit/hooks/src/babysit/fixer-route.ts");
+  const script = join(dir, "config-paths.ts");
+  writeFileSync(
+    script,
+    `import { configPaths } from ${JSON.stringify(routeModule)}; console.log(JSON.stringify(configPaths("codex")));`,
+  );
+  const result = spawnSync(process.execPath, [script], {
+    cwd: dir,
+    encoding: "utf8",
+    env: { ...process.env, PATH: dir, TOOLU_PROJECT_DIR: "", TOOLU_CONFIG_DIR: dir },
+  });
+  expect(result.status, result.stderr).toBe(0);
+  expect(JSON.parse(result.stdout).project).toBe("");
+});
 
 test("route groups captured review items and Jev answers in priority order", () => {
   sandbox();
@@ -194,6 +213,59 @@ test("dispatch dry run uses the captured items and keeps state byte identical", 
   expect(result.brief as string).toContain(id);
   expect(readFileSync(stateFile, "utf8")).toBe(before);
   expect(existsSync(`${stateFile}.lock`)).toBe(false);
+});
+
+test("fixer brief report commands handle an apostrophe in the state path", () => {
+  const dir = join(sandbox(), "owner's run");
+  mkdirSync(dir);
+  const stateFile = join(dir, "state.json");
+  const planFile = join(dir, "plan.json");
+  writeFileSync(
+    stateFile,
+    JSON.stringify({
+      version: 2,
+      repo: "Falconiere/toolu",
+      number: 165,
+      slot: "falconiere-toolu-165",
+    }),
+  );
+  const id = JSON.parse(readFileSync(fixture, "utf8")).items[0].id;
+  writeFileSync(
+    planFile,
+    JSON.stringify({
+      dispatch: "herdr",
+      groups: [
+        { seq: 1, tier: "critical", host: "claude", model: "opus", effort: "xhigh", items: [id] },
+      ],
+    }),
+  );
+  const result = dispatchFix({
+    sub: "start",
+    stateFile,
+    planFile,
+    itemsFile: fixture,
+    repoRoot: join(dir, "repo"),
+    branch: "feat/fix",
+    base: "main",
+    dryRun: true,
+  });
+  const brief = result.brief as string;
+  const done = brief.match(/^  `(bun .* done --note "<one-line summary>")`$/m)?.[1];
+  const failed = brief.match(/^  `(bun .* failed --note "<the reason>")`$/m)?.[1];
+  expect(done).toBeDefined();
+  expect(failed).toBeDefined();
+  if (done === undefined || failed === undefined) throw new Error("brief lacks report commands");
+  const reportFile = fixerReportPath(stateFile, 1, 1);
+  for (const [command, placeholder, status] of [
+    [done, '"<one-line summary>"', "done"],
+    [failed, '"<the reason>"', "failed"],
+  ] as const) {
+    const run = spawnSync("sh", ["-c", command.replace(placeholder, "'fixed'")], {
+      encoding: "utf8",
+    });
+    expect(run.status, `${run.stdout}\n${run.stderr}`).toBe(0);
+    expect(JSON.parse(readFileSync(reportFile, "utf8"))).toMatchObject({ status, note: "fixed" });
+  }
 });
 
 test("dispatch rejects a malformed plan group before touching a worktree", () => {

@@ -1,4 +1,9 @@
-/** Reproduce the final hook comparison in a disposable Linux Bun container. */
+/**
+ * Reproduce the final hook comparison in a disposable Linux Bun container.
+ * The checkout includes committed files and tracked working-tree changes only.
+ * Add new source files to Git before running this diagnostic; untracked files
+ * are absent from both the clone and `git diff HEAD`.
+ */
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -29,6 +34,7 @@ function main(argv: string[]): void {
   const clone = join(temp, "checkout");
   try {
     run(["git", "clone", "--quiet", "--no-hardlinks", ROOT, clone], ROOT);
+    // `git diff HEAD` includes staged and unstaged edits, but never untracked files.
     const patch = run(["git", "diff", "--binary", "HEAD"], ROOT);
     if (patch !== "") run(["git", "apply", "--binary", "-"], clone, patch);
     run(

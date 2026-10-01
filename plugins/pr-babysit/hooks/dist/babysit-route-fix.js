@@ -140,7 +140,7 @@ function merge(a, b) {
 function configPaths(host) {
   const home = host === "codex" ? process.env.CODEX_HOME || join(process.env.HOME || homedir(), ".codex") : process.env.CLAUDE_CONFIG_DIR || join(process.env.HOME || homedir(), ".claude");
   const user = join(process.env.TOOLU_CONFIG_DIR || home, "toolu.config.json");
-  const root = process.env.TOOLU_PROJECT_DIR || spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).stdout.trim();
+  const root = process.env.TOOLU_PROJECT_DIR || (spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).stdout ?? "").trim();
   const dir = process.env.TOOLU_PROJECT_CONFIG_DIRNAME || (host === "codex" ? ".codex" : ".claude");
   return { user, project: root ? join(root, dir, "toolu.config.json") : "" };
 }
