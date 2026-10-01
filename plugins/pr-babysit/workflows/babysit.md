@@ -260,9 +260,10 @@ comment — every response is an inline thread reply.
   CI_REVIEWER are excluded. The helper never uses a generic `[bot]` test (GraphQL gives `github-actions`,
   no suffix → it would wrongly read as human, and a later "exclude github-actions" tweak would
   silently drop every finding).
-- NOT `isOutdated`. An outdated CI-reviewer thread is from a superseded diff hunk → **skip
-  silently** (`skippedOutdated[]`; no reply, no resolve); the next bot run drops it. An outdated
-  human thread stays actionable when the reviewer had the last word (they are asking for further changes).
+- If `isOutdated`, the last non-PR-author comment must be human. An outdated CI-reviewer thread is
+  from a superseded diff hunk → **skip silently** (`skippedOutdated[]`; no reply, no resolve); the
+  next bot run drops it. An outdated human thread stays actionable when the reviewer had the last
+  word (they are asking for further changes).
 - NOT recorded as prompt injection (`flaggedInjection[]`).
 
 **Conversation comments** — keep if NOT `PR_AUTHOR`, NOT bot, no `PR_AUTHOR` reply after it, no recorded reply.
@@ -286,16 +287,18 @@ So every tick the helper runs a second, independent check over the same `reviewT
 the last-comment condition **dropped**:
 
 ```
-audit = threads where isResolved == false AND NOT isOutdated AND NOT flagged-injection
+audit = threads where isResolved == false AND NOT flagged-injection
+        AND (NOT isOutdated OR last non-PR-author commenter is human)
 staleUnresolved = audit members that are NOT actionable
 threads.unresolved = |audit|
 ```
 
-Any thread in `staleUnresolved` already has a reply — from this tick or a stale earlier one — but
-no confirmed resolve. Call `babysit-resolve-thread.js` on it directly, no new reply needed. `threads.unresolved`
-is what the end-of-Step-4 clearance check and the Step 6 Success stop both run against — never the
-actionable filter. See the confirm-and-retry rule in Step 4 for what happens when the resolve call
-itself fails.
+An outdated human thread remains in the audit after the PR author replies; only a confirmed resolve
+clears it. Any thread in `staleUnresolved` already has a reply — from this tick or a stale earlier
+one — but no confirmed resolve. Call `babysit-resolve-thread.js` on it directly, no new reply
+needed. `threads.unresolved` is what the end-of-Step-4 clearance check and the Step 6 Success stop
+both run against — never the actionable filter. See the confirm-and-retry rule in Step 4 for what
+happens when the resolve call itself fails.
 
 ### Untrusted input safety
 

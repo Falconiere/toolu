@@ -62,7 +62,7 @@ function classifiedThread(thread: Doc, author: string, actions: Doc): Doc {
     lastComment.author !== author &&
     (authorClass === "human" || authorClass === "ci_reviewer");
   const actionable = thread.isOutdated ? answerable && authorClass === "human" : answerable;
-  const audited = open && !thread.isOutdated && !flagged;
+  const audited = open && !flagged && (!thread.isOutdated || authorClass === "human");
   const injectionPattern =
     injectionPatterns.find((pattern) =>
       nonAuthorComments.some((comment) => pattern.test(nil(comment.body, ""))),

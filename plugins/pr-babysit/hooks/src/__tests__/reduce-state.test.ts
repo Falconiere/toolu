@@ -98,6 +98,71 @@ test("injection advisory scans earlier non-author comments after a benign reply"
   expect(actionable.inReplyTo).toBe(latest.databaseId);
 });
 
+test("an outdated human thread remains unresolved after a reply until confirmed resolution", () => {
+  const input = open165();
+  const thread = input.threads.find((item: any) => item.isOutdated);
+  thread.isResolved = false;
+  thread.comments.at(-1).author = "human-reviewer";
+  thread.comments.at(-1).authorType = "User";
+
+  const first = reduceState(input, null, now, ...paths);
+  expect(first.result.threads.actionable.map((item: any) => item.id)).toContain(thread.id);
+  expect(first.result.threads.unresolved).toBe(1);
+  expect(first.state.pr.unresolvedThreads).toBe(1);
+  expect(first.state.pr.unresolvedAfterClearance).toBe(1);
+  expect(first.result.reasons.map((item: any) => item.code)).not.toContain("threads_clear");
+  expect(first.result.decision).toBe("keep_going");
+
+  thread.comments.push({
+    id: "author-reply",
+    databaseId: 9001,
+    author: input.pr.author,
+    authorType: "User",
+    body: "Addressed",
+    createdAt: later,
+    url: "https://example.test/reply",
+  });
+  const replied = reduceState(input, first.state, later, ...paths);
+  expect(replied.result.threads.actionable).toEqual([]);
+  expect(replied.result.threads.staleUnresolved.map((item: any) => item.id)).toContain(thread.id);
+  expect(replied.result.threads.unresolved).toBe(1);
+  expect(replied.state.pr.unresolvedThreads).toBe(1);
+  expect(replied.state.pr.unresolvedAfterClearance).toBe(1);
+  expect(replied.result.decision).toBe("keep_going");
+
+  thread.isResolved = true;
+  const resolved = reduceState(input, replied.state, "2026-09-19T12:06:00Z", ...paths);
+  expect(resolved.result.threads.unresolved).toBe(0);
+  expect(resolved.result.threads.staleUnresolved).toEqual([]);
+  expect(resolved.state.pr.unresolvedThreads).toBe(0);
+  expect(resolved.result.decision).toBe("success");
+});
+
+test("an outdated CI-reviewer thread stays outside the resolution audit after an author reply", () => {
+  const input = open165();
+  const thread = input.threads.find((item: any) => item.isOutdated);
+  thread.isResolved = false;
+  const first = reduceState(input, null, now, ...paths);
+  expect(first.result.threads.skippedOutdated).toContain(thread.id);
+  expect(first.result.threads.unresolved).toBe(0);
+  expect(first.result.decision).toBe("success");
+
+  thread.comments.push({
+    id: "author-reply",
+    databaseId: 9001,
+    author: input.pr.author,
+    authorType: "User",
+    body: "Addressed",
+    createdAt: later,
+    url: "https://example.test/reply",
+  });
+  const replied = reduceState(input, first.state, later, ...paths);
+  expect(replied.result.threads.skippedOutdated).toContain(thread.id);
+  expect(replied.result.threads.unresolved).toBe(0);
+  expect(replied.result.threads.staleUnresolved).toEqual([]);
+  expect(replied.result.decision).toBe("success");
+});
+
 const variants: Array<[string, (input: any) => void]> = [
   [
     "empty-ci",

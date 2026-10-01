@@ -1807,7 +1807,7 @@
         "ciStatus": "pass",
         "reviewDecision": "REVIEW_REQUIRED",
         "mergeable": "MERGEABLE",
-        "unresolvedThreads": 0,
+        "unresolvedThreads": 1,
         "headSha": "a29e6c97379674323292578f9f0cfbffa00e375a",
         "fixAttempts": 0,
         "botVerdict": "approved",
@@ -1818,7 +1818,7 @@
         "lastRoundFindingKeys": [],
         "lastRoundHadRejection": false,
         "recurrenceStreak": 0,
-        "unresolvedAfterClearance": 0,
+        "unresolvedAfterClearance": 1,
         "lastError": null
       },
       "actions": { "replied": {}, "resolved": {}, "flagged": {} },
@@ -1828,10 +1828,9 @@
       "version": 1,
       "slot": "falconiere-toolu-165",
       "changed": true,
-      "decision": "success",
+      "decision": "keep_going",
       "reasons": [
         { "code": "ci_pass", "detail": "5 check(s) passed" },
-        { "code": "threads_clear", "detail": "no unresolved review threads" },
         { "code": "threads_unresolved", "detail": "1 actionable thread(s)" },
         { "code": "review_approved", "detail": "bot verdict approved with zero findings" }
       ],
@@ -1890,7 +1889,7 @@
       },
       "threads": {
         "total": 6,
-        "unresolved": 0,
+        "unresolved": 1,
         "actionable": [
           {
             "id": "PRRT_kwDOSzUwAc6d2S5E",
