@@ -71,7 +71,14 @@ test("Codex path, slash command, multiline task and missing key match the prompt
     expect(JSON.parse(multiline.stdout).hookSpecificOutput.hookEventName).toBe("UserPromptSubmit");
     expect((await run(prompt, env, JSON.stringify({ prompt: "\n\ty\t\n" }))).stdout).toBe("");
     delete env.TYPESAFE_API_KEY;
-    expect((await run(prompt, env, JSON.stringify({ prompt: "rank these" }))).stdout).toBe("");
+    env.PATH = "/nonexistent";
+    const check = await run(prompt, env, JSON.stringify({ prompt: "rank these" }));
+    expect(check.stderr).toBe("");
+    const context = JSON.parse(check.stdout).hookSpecificOutput.additionalContext;
+    expect(context).toContain(process.execPath);
+    expect(context).toContain("The Jev hook did not receive TYPESAFE_API_KEY");
+    expect(context).toContain("command environment without printing its value");
+    expect(context).not.toContain("Jev unavailable (missing:");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

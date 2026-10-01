@@ -22,7 +22,9 @@ codex plugin add jev@toolu
 
 Restart the host after installation. In Codex, review and trust the installed
 hook through `/hooks`; installation alone does not trust hooks. Both hosts
-need Bun 1.4.x on `PATH` and `TYPESAFE_API_KEY` in their launch environment.
+need Bun 1.4.x (resolved from `TOOLU_BUN`, `PATH`, or `~/.bun/bin/bun`) and
+`TYPESAFE_API_KEY` in the environment executing Jev. Hooks can receive a different
+environment from agent commands.
 
 Set `TYPESAFE_API_KEY` in the environment for the wrapper to authenticate
 (keys: `https://console.typesafe.ai/settings/keys`). It is never read from a
@@ -51,8 +53,10 @@ next actions, including no-match and uncertain outcomes.
 
 The SessionStart hook injects the full rule on startup, resume, clear, and
 compaction; the UserPromptSubmit hook restates a short form on every prompt so
-the rule survives long sessions. Neither calls the API. Missing prerequisites
-produce one actionable fallback message at session start and silence per prompt.
+the rule survives long sessions. Neither calls the API. Both provide a command
+using the Bun executable already running the hook, so Bun need not be on `PATH`.
+If a hook lacks the key, its notice requires checking the command environment
+without printing the key before reporting unavailability.
 Enforcement is through workflow instructions; it does not block edits or commits.
 See the [workflow guidance](../../plugins/toolu/workflows/semantic-judgments.md).
 

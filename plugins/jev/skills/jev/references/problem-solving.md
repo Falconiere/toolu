@@ -20,11 +20,15 @@ JEV="${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/jev/jev.sh"
 # JEV="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/jev/jev.sh"
 # Repository development, from the repository root, if not installed:
 if [ ! -x "$JEV" ]; then JEV="$PWD/plugins/jev/hooks/dist/jev.js"; fi
+JEV_BUN=
+for candidate in "${TOOLU_BUN:-}" "$(command -v bun 2>/dev/null)" "$HOME/.bun/bin/bun"; do
+  if [ -n "$candidate" ] && [ -f "$candidate" ] && [ -x "$candidate" ]; then JEV_BUN="$candidate"; break; fi
+done
 JEV_EXAMPLES=$(mktemp -d)
 
 judge() {
   local name="$1"
-  if bun "$JEV" ask "$JEV_EXAMPLES/$name.questions.json" \
+  if "$JEV_BUN" "$JEV" ask "$JEV_EXAMPLES/$name.questions.json" \
       -s "@$JEV_EXAMPLES/$name.state.json" --raw >"$JEV_EXAMPLES/$name.result.json"; then
     jq '.answers' "$JEV_EXAMPLES/$name.result.json"
   else

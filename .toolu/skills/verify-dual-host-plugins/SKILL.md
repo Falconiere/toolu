@@ -42,6 +42,10 @@ startup behavior in both Codex and Claude Code.
   Prefer silent success when a hook has no portable output or decision to emit.
 - Offline fixtures prove transport behavior, not live inference quality. Report
   unavailable credentials explicitly; do not read keys from `.env`.
+- Hook and command environments can differ. Check credentials by presence in the
+  command environment before reporting them missing, and never print their value.
+  Exercise published Bun commands with an empty `PATH`: a launcher can resolve
+  Bun through `TOOLU_BUN` or `~/.bun/bin/bun` even when an env shebang cannot.
 - Packaging and Codex smoke assertions contain explicit plugin/skill/hook counts.
   Update relevant counts together when adding a plugin.
 - Keep host overrides scoped to the operation being verified. A Codex override

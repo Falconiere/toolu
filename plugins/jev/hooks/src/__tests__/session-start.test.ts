@@ -1,7 +1,6 @@
 /**
  * jev's SessionStart bundle through its real hooks.json launcher (#269,
- * ported from session-start.bats). The context strings are asserted whole:
- * they are the bash hook's text for the same environment.
+ * ported from session-start.bats), including command execution without Bun on PATH.
  */
 import { expect, test } from "bun:test";
 import {
@@ -22,11 +21,16 @@ import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox"
 import { run, type EnvPatch, type RunResult } from "@toolu/conformance/harness/spawn";
 import {
   runStartupHook,
+  hookCommand,
   startupEnv,
   startupRoot,
   type StartupHost,
 } from "@toolu/conformance/harness/startup";
 import { z } from "zod";
+import { startHttpsFixture } from "@toolu/conformance/https-fixture";
+
+const runtimeCommand = (wrapper: string) =>
+  `'${process.execPath.replaceAll("'", "'\\''")}' '${wrapper.replaceAll("'", "'\\''")}'`;
 
 const PLUGIN = resolve(import.meta.dir, "../../..");
 const WRAPPER = "hooks/dist/jev.js";
@@ -51,14 +55,17 @@ function contextOf(res: RunResult): string {
   return context;
 }
 
-/** The bash hook's mandate text for `wrapper` and plugin root `plugin`. */
-function mandate(wrapper: string, plugin: string): string {
-  return `Jev is mandatory on every task containing semantic decisions. After initial exploration, identify useful judgments over supplied evidence; you MUST call "${wrapper}" before the decision it informs. Reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions in one ask call. Reuse unchanged evidence and questions rather than repeating calls. If a task has no semantic decision, say so in one sentence rather than skipping silently. Syntax and linked examples: ${plugin}/skills/jev/SKILL.md. Keep exact rules, tests, and code verification deterministic. On service failure, state the limitation and use an explicit evidence fallback. Jev never replaces tests or authorization.`;
+/** The expected mandate for `wrapper` and plugin root `plugin`. */
+function mandate(wrapper: string, plugin: string, command = runtimeCommand(wrapper)): string {
+  return `Jev is mandatory on every task containing semantic decisions. After initial exploration, identify useful judgments over supplied evidence; you MUST call ${command} before the decision it informs. Published bundles use the hook's resolved Bun executable and do not require bun on PATH. Reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions in one ask call. Reuse unchanged evidence and questions rather than repeating calls. If a task has no semantic decision, say so in one sentence rather than skipping silently. Syntax and linked examples: ${plugin}/skills/jev/SKILL.md. Keep exact rules, tests, and code verification deterministic. On service failure, state the limitation and use an explicit evidence fallback. Jev never replaces tests or authorization.`;
 }
 
-/** The bash hook's fallback text for the space-prefixed `missing` list. */
-function fallback(missing: string): string {
-  return `Jev unavailable (missing:${missing}). Set TYPESAFE_API_KEY in the agent's launch environment and install Bun 1.4.x. Jev is mandatory on every task once available; until then, state the limitation once per task and use an explicit reasoning/evidence fallback; never invent a Jev result. Do not read credentials from .env.`;
+function expectCredentialCheck(context: string): void {
+  expect(context).toContain("The Jev hook did not receive TYPESAFE_API_KEY");
+  expect(context).toContain(
+    "check whether TYPESAFE_API_KEY is set in the command environment without printing its value",
+  );
+  expect(context).not.toContain("Jev unavailable (missing:");
 }
 
 function hook(sb: Sandbox, host: StartupHost, env: EnvPatch = {}, plugin = PLUGIN) {
@@ -100,10 +107,10 @@ test.concurrent("TOOLU_CONFIG_DIR takes precedence over the Codex root", async (
   expect(existsSync(join(startupRoot("codex", sb), "jev"))).toBe(false);
 });
 
-test.concurrent("without the key: the actionable fallback, never a MUST call", async () => {
+test.concurrent("without the hook key: verify the command environment before declaring unavailable", async () => {
   using sb = createSandbox();
   const context = contextOf(await hook(sb, "claude", { TYPESAFE_API_KEY: undefined }));
-  expect(context).toBe(fallback(" TYPESAFE_API_KEY"));
+  expectCredentialCheck(context);
 });
 
 test.concurrent("missing key is reported even without jq and curl", async () => {
@@ -111,21 +118,60 @@ test.concurrent("missing key is reported even without jq and curl", async () => 
   const bundle = join(PLUGIN, "hooks/dist/session-start.js");
   const env = { ...startupEnv("claude", sb, PLUGIN), TYPESAFE_API_KEY: undefined };
   const res = await run([process.execPath, bundle], { cwd: sb.project, env, stdin: "{}" });
-  expect(contextOf(res)).toBe(fallback(" TYPESAFE_API_KEY"));
+  expectCredentialCheck(contextOf(res));
 });
 
-test.concurrent("Bun absent from PATH gives an advisory and an unavailable mandate", async () => {
+test.concurrent("Bun off PATH and hook key absent still allow Jev in the command environment on both hosts", async () => {
   using sb = createSandbox();
-  const bundle = join(PLUGIN, "hooks/dist/session-start.js");
+  const fixture = await startHttpsFixture(["api.typesafe.ai"]);
   const empty = join(sb.root, "empty-bin");
   mkdirSync(empty);
-  const env = { ...startupEnv("claude", sb, PLUGIN), PATH: empty, TYPESAFE_API_KEY: KEY };
-  const res = await run([process.execPath, bundle], { cwd: sb.project, env, stdin: "{}" });
-  expect(res.exitCode).toBe(0);
-  expect(res.stderr).toContain("bun not found on PATH");
-  expect(OutputSchema.parse(JSON.parse(res.stdout)).hookSpecificOutput.additionalContext).toBe(
-    fallback(" bun"),
-  );
+  try {
+    for (const host of ["claude", "codex"] as const) {
+      const env = {
+        ...startupEnv(host, sb, PLUGIN),
+        PATH: empty,
+        TOOLU_BUN: process.execPath,
+        TYPESAFE_API_KEY: undefined,
+        TOOLU_CONFIG_DIR: join(sb.root, `${host} 'quoted' $(no-command) profile`),
+      };
+      // Absolute sh starts the real launcher even with an empty PATH.
+      const res = await run(
+        ["/bin/sh", "-c", hookCommand(PLUGIN, "SessionStart", "session-start")],
+        {
+          cwd: sb.project,
+          env,
+          stdin: "{}",
+        },
+      );
+      const wrapper = join(env.TOOLU_CONFIG_DIR, "jev/jev.sh");
+      const context = contextOf(res);
+      expect(context).toContain(runtimeCommand(wrapper));
+      expectCredentialCheck(context);
+      const command = context.split("you MUST call ")[1]?.split(" before the decision")[0];
+      expect(command).toBe(runtimeCommand(wrapper));
+      fixture.plan([
+        {
+          body: JSON.stringify({
+            model: "jev-1.13.0",
+            usage: { input_tokens: 3, output_tokens: 2 },
+            answers: { q: { type: "noul", noul: 0.92 } },
+          }),
+        },
+      ]);
+      const probe = await run(["/bin/sh", "-c", `${command} noul probe -s evidence`], {
+        cwd: sb.project,
+        env: { ...env, ...fixture.env, TYPESAFE_API_KEY: KEY },
+      });
+      expect(probe.exitCode).toBe(0);
+      expect(JSON.parse(probe.stdout)).toEqual({ q: { type: "noul", noul: 0.92 } });
+      expect(probe.stderr).toBe("");
+      expect(context).not.toContain(KEY);
+      expect(fixture.requests[0]?.headers.authorization).toBe(`Bearer ${KEY}`);
+    }
+  } finally {
+    await fixture.stop();
+  }
 });
 
 test.concurrent("paths with quotes, spaces and newlines stay JSON string data", async () => {
@@ -158,7 +204,11 @@ test.concurrent("a user's own file is kept and still named in the context", asyn
   const context = contextOf(await hook(sb, "claude"));
   expect(lstatSync(dst).isSymbolicLink()).toBe(false);
   expect(readFileSync(dst, "utf8")).toBe("#!/usr/bin/env bash\necho user-override\n");
-  expect(context).toBe(mandate(dst, PLUGIN));
+  expect(context).toBe(mandate(dst, PLUGIN, `'${dst}'`));
+  const command = context.split("you MUST call ")[1]?.split(" before the decision")[0];
+  const probe = await run(["/bin/sh", "-c", command ?? ""], { cwd: sb.project });
+  expect(probe.exitCode).toBe(0);
+  expect(probe.stdout).toBe("user-override\n");
 });
 
 test.concurrent("a missing wrapper source is silent and publishes nothing", async () => {
@@ -169,6 +219,18 @@ test.concurrent("a missing wrapper source is silent and publishes nothing", asyn
   const res = await hook(sb, "claude", {}, plugin);
   expect(res).toMatchObject({ exitCode: 0, stdout: "", stderr: "" });
   expect(existsSync(join(sb.home, ".claude/jev"))).toBe(false);
+});
+
+test.concurrent("a non-executable user wrapper reports the installation problem", async () => {
+  using sb = createSandbox();
+  const dst = join(sb.home, ".claude/jev/jev.sh");
+  mkdirSync(join(sb.home, ".claude/jev"), { recursive: true });
+  writeFileSync(dst, "user wrapper\n", { mode: 0o644 });
+  const context = contextOf(await hook(sb, "claude"));
+  expect(context).toBe(
+    "Jev unavailable: published wrapper is not executable. Repair the Jev plugin installation. Until then, state the limitation once per task and use an explicit reasoning/evidence fallback; never invent a Jev result. Do not read credentials from .env.",
+  );
+  expect(readFileSync(dst, "utf8")).toBe("user wrapper\n");
 });
 
 test.concurrent("an uncreatable config dir reports once and emits no context", async () => {
