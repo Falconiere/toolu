@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.7.1](https://github.com/Falconiere/toolu/compare/v7.7.0...v7.7.1) (2026-10-01)
+
+
+### Bug Fixes
+
+* **release:** give each npm package a full propagation window ([#330](https://github.com/Falconiere/toolu/issues/330)) ([89ecc1a](https://github.com/Falconiere/toolu/commit/89ecc1a1038f3ab9bc95a3349eaa1199e588c749))
+
 ## [7.7.0](https://github.com/Falconiere/toolu/compare/v7.6.0...v7.7.0) (2026-10-01)
 
 
