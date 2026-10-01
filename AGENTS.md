@@ -67,7 +67,7 @@ A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context b
 | `packages/toolu-core/src/gates/gates.ts` | `@toolu/core/gates`: native pre-tool gates (bash-commands, commit-gate, quality-gate, protected-files, mcp-blocker, code-edit-rules, push-review, plan-ledger, docs-sync) and post-tool gates (gate-status, push-waiver), plus parsed-command helpers. `@toolu/core/gates/mcp-hook` and `@toolu/core/gates/agent-tier` are standalone entries. |
 | `plugins/toolu/hooks/lib/quality-config.sh` | Thresholds: override, then linter config, then default |
 | `plugins/toolu/hooks/lib/detect.sh` | Line counts, tool availability, `is_git_push`, `push_target_root`, `push_target_branch`; TypeScript port in `@toolu/core/detect` |
-| `plugins/pr-babysit/scripts/babysit-tick.sh` | Babysit tick. Writes go through `reply-thread.sh`, `resolve-thread.sh`, `record.sh` |
+| `plugins/pr-babysit/hooks/src/babysit-tick.ts` | Babysit tick, bundled to `hooks/dist/babysit-tick.js`. Writes go through the bundled reply, resolve and record entries |
 | `plugins/pr-babysit/scripts/dispatch-fix.sh` | Babysit fixers: `route-fix.sh` Jev-routes Fix items to claude/codex/cursor; this runs them in a herdr worktree |
 | `plugins/*/hooks/src/register.ts` | SessionStart registry sync |
 | `plugins/*/hooks/hooks.json` | Claude Code hook routing |

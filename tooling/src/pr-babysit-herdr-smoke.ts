@@ -84,6 +84,8 @@ function json(raw: string): unknown {
 }
 
 function babysit(script: string, args: string[], env: Record<string, string> = {}): Out {
+  if (script === "babysit-tick.js")
+    return sh(["bun", join(ROOT, "plugins/pr-babysit/hooks/dist", script), ...args], { env });
   return sh(["bash", join(SCRIPTS, script), ...args], { env });
 }
 
@@ -114,7 +116,7 @@ function route(tmp: string, state: string): void {
     pr: { ...snap.pr, state: "OPEN" },
   };
   writeFileSync(join(tmp, "snap.json"), JSON.stringify(reidentified));
-  const tick = babysit("babysit-tick.sh", [
+  const tick = babysit("babysit-tick.js", [
     "--repo",
     "local/pb-smoke",
     "--pr",

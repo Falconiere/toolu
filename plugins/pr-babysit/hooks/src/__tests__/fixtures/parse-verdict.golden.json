@@ -1,0 +1,235 @@
+{
+  "recorded": {
+    "pr31-verdict.txt": {
+      "is_review_comment": true,
+      "state": "complete",
+      "complete": true,
+      "verdict": "approved",
+      "verdict_label": "agent-merge-approved",
+      "findings": [
+        {
+          "path": "plugins/toolu/hooks/session-start.sh",
+          "line": 17,
+          "severity": "low",
+          "text": "Comment calls the sweep \"Transitional one-time\" but the block runs on every SessionStart forever (it just no-ops once the symlink is gone). Reword to \"Transitional orphan sweep\" or add a \"remove after vX.Y\" marker so a future maintainer doesn't assume it can be dropped without a deprecation window.",
+          "key": "plugins/toolu/hooks/session-start.sh:17:7c0fdf60"
+        },
+        {
+          "path": "plugins/toolu/hooks/session-start.sh",
+          "line": 23,
+          "severity": "low",
+          "text": "The sweep silently removes a working symlink for users upgrading mid-session. Their `settings.json` (still pointing at the old path) will start erroring on next render with no actionable hint. Consider appending a one-shot WARN into `parts` whenever the sweep fires (e.g. `parts+=(\"WARN: statusline moved to the 'statusliner' plugin — install /plugin install statusliner@toolu and re-point settings.json to bash ~/.claude/statusliner/statusline.sh\")`) so the user sees what happened in-session. [Fix this →](https://claude.ai/code?q=In%20plugins%2Ftoolu%2Fhooks%2Fsession-start.sh%20on%20the%20feat%2Fstatusliner-plugin%20branch%2C%20when%20the%20orphan%20sweep%20at%20line%2024%20removes%20the%20legacy%20statusline%20symlink%2C%20append%20a%20one-shot%20WARN%20to%20%24parts%20telling%20the%20user%20to%20install%20statusliner%40falconiere%20and%20re-point%20settings.json%20to%20bash%20~%2F.claude%2Fstatusliner%2Fstatusline.sh.%20Set%20a%20flag%20before%20the%20config-load%20block%20and%20push%20the%20WARN%20later%20where%20other%20parts%20are%20appended.%20Add%20a%20bats%20test%20in%20plugins%2Ftoolu%2Fhooks%2F__tests__%2Fsession-start.bats%20asserting%20the%20WARN%20appears%20when%20a%20legacy%20symlink%20existed.&repo=Falconiere/toolu)",
+          "key": "plugins/toolu/hooks/session-start.sh:23:994de119"
+        },
+        {
+          "path": "plugins/toolu/hooks/__tests__/session-start.bats",
+          "line": null,
+          "severity": "low",
+          "text": "PR description claims \"orphan-sweep smoke (dangling symlink removed, real file preserved)\" was verified, but no bats test codifies the new sweep behavior at `session-start.sh:23-24`. Add two cases: (i) a pre-existing `-L` symlink at `$CFG/toolu/statusline.sh` is removed; (ii) a real (non-symlink) file at that same path survives. The setup mirrors the new `plugins/statusliner/hooks/__tests__/session-start.bats` pattern. [Fix this →](https://claude.ai/code?q=Add%20two%20bats%20test%20cases%20to%20plugins%2Ftoolu%2Fhooks%2F__tests__%2Fsession-start.bats%20on%20the%20feat%2Fstatusliner-plugin%20branch%20to%20cover%20the%20orphan%20sweep%20introduced%20in%20session-start.sh%3A23-24.%20Case%201%3A%20pre-create%20a%20symlink%20at%20%24TMP%2Fcfg%2Ftoolu%2Fstatusline.sh%20pointing%20at%20a%20fake%20target%2C%20run%20the%20hook%20with%20CLAUDE_CONFIG_DIR%3D%24TMP%2Fcfg%2C%20assert%20the%20symlink%20is%20gone.%20Case%202%3A%20pre-create%20a%20REAL%20file%20at%20the%20same%20path%2C%20run%20the%20hook%2C%20assert%20the%20file%20survives%20unchanged.%20Follow%20the%20existing%20setup%2Fteardown%20conventions%20in%20the%20file.&repo=Falconiere/toolu)",
+          "key": "plugins/toolu/hooks/__tests__/session-start.bats::ff2c8937"
+        },
+        {
+          "path": "plugins/statusliner/hooks/__tests__/session-start.bats",
+          "line": 22,
+          "severity": "low",
+          "text": "`[[ \"$target\" == *\"/statusline.sh\" ]]` only asserts the target ends in `statusline.sh`, so a misrouted symlink (pointing to, say, toolu's leftover script if both plugins were installed) would still pass. Tighten to also assert the target lives under the statusliner plugin dir, e.g. `[[ \"$target\" == *\"/statusliner/statusline.sh\" ]]`.",
+          "key": "plugins/statusliner/hooks/__tests__/session-start.bats:22:98564dd2"
+        },
+        {
+          "path": "plugins/statusliner/hooks/session-start.sh",
+          "line": 24,
+          "severity": "low",
+          "text": "`mkdir -p ... || exit 0` swallows the failure cause; if a user has a real file (not a dir) at `$CLAUDE_CONFIG_DIR/statusliner`, the hook silently no-ops every session. Acceptable for a non-fatal hook but a stderr breadcrumb (`>&2 echo \"statusliner: cannot create $reg_root\"`) would shorten the eventual debug. Skip if you prefer the current strict-silence model.",
+          "key": "plugins/statusliner/hooks/session-start.sh:24:9931b974"
+        },
+        {
+          "path": "plugins/statusliner/statusline.sh",
+          "line": 71,
+          "severity": "low",
+          "text": "Pre-existing, not new in this PR — gate-root resolution runs `git -C \"$cwd\" rev-parse --show-toplevel` plus `symbolic-ref --short HEAD` on every render. Hot path: two git invocations per prompt. Not a regression, just flagging it for the file's new owner.",
+          "key": "plugins/statusliner/statusline.sh:71:9721a472"
+        }
+      ],
+      "must_fix": []
+    },
+    "pr120-verdict-changes.txt": {
+      "is_review_comment": true,
+      "state": "complete",
+      "complete": true,
+      "verdict": "changes",
+      "verdict_label": "request-changes",
+      "findings": [
+        {
+          "path": "plugins/toolu/dashboard/__tests__/server.test.ts",
+          "line": 240,
+          "severity": "medium",
+          "text": "The test spawns a subprocess that calls `startServer().stop()`, but `startServer` returns `{ port, stop }`, not a server object with a `.stop()` method. The returned `stop` is a function, so `startServer().stop()` is correct (calls the function). However, the test expects `proc.exitCode` to be 0, but if the config is malformed, `loadConfig()` will throw or return a warning, and the subprocess may exit with a non-zero code. The test does not verify that the warning is actually printed to stderr before the process exits. The `console.error` in `index.ts` runs synchronously, so it should be captured, but the test's `expect(proc.stderr.toString()).toContain(...)` is correct. No issue here — the test is fine. _(correctness · high)_",
+          "key": "plugins/toolu/dashboard/__tests__/server.test.ts:240:6fed629d"
+        },
+        {
+          "path": "plugins/toolu/dashboard/index.ts",
+          "line": 47,
+          "severity": "medium",
+          "text": "The warning is printed to stderr, but the test expects the string \"config json is malformed\" to appear in stderr. The `loaded.warning` message from `loadConfig()` must contain that exact substring. If `loadConfig()` returns a different warning message (e.g., \"malformed config\"), the test will fail. This is a tight coupling between the test and the implementation. However, this is acceptable for a regression test. No change needed. _(correctness · high)_",
+          "key": "plugins/toolu/dashboard/index.ts:47:70f1cdd8"
+        },
+        {
+          "path": "plugins/toolu/dashboard/public/sidebar.js",
+          "line": 55,
+          "severity": "low",
+          "text": "The sidebar message references `toolu-claude dashboard config add-root ~/Projects` but the project conventions mention `dashboard-config` as a command. The message now says \"Add scan roots\" instead of \"Add roots\" — this is a documentation improvement and is accurate. No issue. _(doc/comment accuracy · high)_",
+          "key": "plugins/toolu/dashboard/public/sidebar.js:55:99da980f"
+        }
+      ],
+      "must_fix": [
+        "Remove hardcoded API key from plugins/context7/skills/context7/scripts/__tests__/context7.bats",
+        "Remove hardcoded API key from plugins/toolu/dashboard/config-cli.ts"
+      ]
+    },
+    "pr122-verdict-approved.txt": {
+      "is_review_comment": true,
+      "state": "complete",
+      "complete": true,
+      "verdict": "approved",
+      "verdict_label": "merge-approved",
+      "findings": [],
+      "must_fix": []
+    },
+    "pr157-must-fix.txt": {
+      "is_review_comment": true,
+      "state": "complete",
+      "complete": true,
+      "verdict": "changes",
+      "verdict_label": "request-changes",
+      "findings": [],
+      "must_fix": [
+        "Fix pl_scope_sha to handle git diff failures explicitly",
+        "Ensure scope freshness invalidates when a step's paths change between runs",
+        "Guard against path injection with leading dashes in git diff"
+      ]
+    },
+    "provider-error.txt": {
+      "is_review_comment": true,
+      "state": "provider_error",
+      "complete": false,
+      "verdict": "changes",
+      "verdict_label": "request-changes",
+      "findings": [],
+      "must_fix": []
+    },
+    "in-progress.txt": {
+      "is_review_comment": true,
+      "state": "in_progress",
+      "complete": false,
+      "verdict": "none",
+      "verdict_label": "",
+      "findings": [],
+      "must_fix": []
+    },
+    "no-checkbox.txt": {
+      "is_review_comment": true,
+      "state": "unknown",
+      "complete": false,
+      "verdict": "none",
+      "verdict_label": "",
+      "findings": [
+        {
+          "path": "plugins/foo/bar.sh",
+          "line": 10,
+          "severity": "low",
+          "text": "A finding that exists even though there is no checklist.",
+          "key": "plugins/foo/bar.sh:10:f9067c84"
+        }
+      ],
+      "must_fix": []
+    }
+  },
+  "boundary": {
+    "empty": {
+      "is_review_comment": false,
+      "state": "unknown",
+      "complete": false,
+      "verdict": "none",
+      "verdict_label": "",
+      "findings": []
+    },
+    "unrelated": {
+      "is_review_comment": false,
+      "state": "unknown",
+      "complete": false,
+      "verdict": "none",
+      "verdict_label": "",
+      "findings": []
+    },
+    "checklist label wins over finding prose": {
+      "is_review_comment": true,
+      "state": "complete",
+      "complete": true,
+      "verdict": "approved",
+      "verdict_label": "merge-approved",
+      "findings": [
+        {
+          "path": "a/b.sh",
+          "line": 9,
+          "severity": "low",
+          "text": "the label should be `request-changes` here.",
+          "key": "a/b.sh:9:747b2b9e"
+        }
+      ],
+      "must_fix": []
+    },
+    "standalone chip identifies a review": {
+      "is_review_comment": true,
+      "state": "complete",
+      "complete": true,
+      "verdict": "changes",
+      "verdict_label": "request-changes",
+      "findings": [],
+      "must_fix": []
+    },
+    "prose verdict fallback": {
+      "is_review_comment": true,
+      "state": "complete",
+      "complete": true,
+      "verdict": "changes",
+      "verdict_label": "",
+      "findings": [],
+      "must_fix": []
+    },
+    "finding quotes provider error": {
+      "is_review_comment": true,
+      "state": "unknown",
+      "complete": false,
+      "verdict": "changes",
+      "verdict_label": "request-changes",
+      "findings": [
+        {
+          "path": "a.sh",
+          "line": 1,
+          "severity": "medium",
+          "text": "**Provider error:** is shown on failure",
+          "key": "a.sh:1:d645ac73"
+        }
+      ],
+      "must_fix": []
+    },
+    "Top-N bare and marked sentences": {
+      "is_review_comment": true,
+      "state": "unknown",
+      "complete": false,
+      "verdict": "changes",
+      "verdict_label": "request-changes",
+      "findings": [],
+      "must_fix": ["Fix bare line.", "Fix dash item.", "Fix star item.", "Fix numbered item."]
+    },
+    "approved with Top-N": {
+      "is_review_comment": true,
+      "state": "unknown",
+      "complete": false,
+      "verdict": "approved",
+      "verdict_label": "merge-approved",
+      "findings": [],
+      "must_fix": ["Something the bot still wants."]
+    }
+  }
+}

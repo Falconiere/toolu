@@ -22,17 +22,17 @@ codex plugin add pr-babysit@toolu
 
 ## Helper Scripts
 
-One bash helper set, called the same way on Claude Code and Codex (only the
+One Bun helper set, called the same way on Claude Code and Codex (only the
 `--state-file` path differs). Contract: `plugins/pr-babysit/skills/babysit/references/helper.md`.
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/babysit-tick.sh` | The tick: lock → collect → reduce → persist → print a result with `decision`, `reasons[]`, `threads.actionable[]`, `threads.staleUnresolved[]`, `verdict`, `ci`, `backoff`. |
-| `scripts/collect-pr.sh` | Read side: concurrent, paginated GitHub reads with bounded retry; head re-checked after the fan-out; one versioned snapshot. |
-| `scripts/reduce-state.sh` | Pure decision layer (no network, no clock): the workflow's filters, audit, recurrence gate and stop rules as code. |
-| `scripts/reply-thread.sh` / `scripts/resolve-thread.sh` | Write side: idempotent replies; resolves confirmed from the mutation response. |
-| `scripts/record.sh` | Agent decisions back to the reducer: round outcome, injection skip, terminal status. |
-| `scripts/parse-verdict.sh` | Verdict parser for the CI review-bot comment. |
+| `hooks/dist/babysit-tick.js` | The tick: lock → collect → reduce → persist → print a result with `decision`, `reasons[]`, `threads.actionable[]`, `threads.staleUnresolved[]`, `verdict`, `ci`, `backoff`. |
+| `hooks/dist/babysit-collect-pr.js` | Read side: concurrent, paginated GitHub reads with bounded retry; head re-checked after the fan-out; one versioned snapshot. |
+| `hooks/dist/babysit-reduce-state.js` | Pure decision layer (no network, no clock): the workflow's filters, audit, recurrence gate and stop rules as code. |
+| `hooks/dist/babysit-reply-thread.js` / `hooks/dist/babysit-resolve-thread.js` | Write side: idempotent replies; resolves confirmed from the mutation response. |
+| `hooks/dist/babysit-record.js` | Agent decisions back to the reducer: round outcome, injection skip, terminal status. |
+| `hooks/dist/babysit-parse-verdict.js` | Verdict parser for the CI review-bot comment. |
 
 The agent never writes a controller of its own and never re-fetches what the
 result reports; it triages, fixes, writes the replies, and decides escalations.
@@ -57,7 +57,7 @@ branch, or the optional `pr-babysit` plugin.
 
 Cancels this slot's cron and clears its state. One slot per agent — multiple babysit sessions can run in parallel without interfering.
 
-### `parse-verdict.sh`
+### `babysit-parse-verdict.js`
 
 Extracts the structured verdict from the CI review-bot comment — determines whether the bot's verdict is complete, approved, and has zero findings.
 

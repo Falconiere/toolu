@@ -10,8 +10,8 @@
 set -euo pipefail
 
 PB_SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
-# shellcheck source=lib/common.sh
-. "$PB_SCRIPT_DIR/lib/common.sh"
+# shellcheck source=lib/fixer-compat.sh
+. "$PB_SCRIPT_DIR/lib/fixer-compat.sh"
 
 report="${1:-}"; status="${2:-}"
 if [ $# -ge 2 ]; then

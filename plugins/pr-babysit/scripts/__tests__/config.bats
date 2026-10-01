@@ -18,7 +18,7 @@ teardown() {
 }
 
 with_config() {
-  bash -c "set -euo pipefail; . '$LIB/common.sh'; . '$LIB/hosts.sh'; . '$LIB/config.sh'; $1"
+  bash -c "set -euo pipefail; . '$LIB/fixer-compat.sh'; . '$LIB/hosts.sh'; . '$LIB/config.sh'; $1"
 }
 
 # toolu_paths HOST -> "<user>|<project>" from toolu's own host adapter
