@@ -52,8 +52,10 @@ const BATCHES = Array.from({ length: Math.ceil(SOURCES.length / CHUNK) }, (_, i)
   SOURCES.slice(i * CHUNK, (i + 1) * CHUNK),
 );
 
-test("the repository holds real sources of every language counted", () => {
-  for (const ext of [".ts", ".rs", ".py", ".sh"]) {
+test("the repository holds tracked sources; Python cases use snippets", () => {
+  // The Jev port removed the last tracked Python fixture. The Python counter
+  // still runs against the .py snippets below.
+  for (const ext of [".ts", ".rs", ".sh"]) {
     expect(SOURCES.some((f) => f.endsWith(ext))).toBe(true);
   }
   expect(SOURCES.length).toBeGreaterThan(500);

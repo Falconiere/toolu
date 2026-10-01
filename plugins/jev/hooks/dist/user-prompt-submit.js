@@ -1,5 +1,7 @@
-#!/usr/bin/env bun
 // @bun
+// plugins/jev/hooks/src/user-prompt-submit.ts
+import { accessSync, constants } from "fs";
+import { resolve, join as join2 } from "path";
 
 // packages/toolu-core/src/host/host-name.ts
 var HOST_NAMES = ["claude", "codex", "cursor", "opencode", "hermes"];
@@ -9,14 +11,6 @@ function envValue(env, key) {
 }
 function isHostName(value) {
   return HOST_NAMES.some((host) => host === value);
-}
-function childEnv(env) {
-  const out = {};
-  for (const [key, value] of Object.entries(env)) {
-    if (value !== undefined)
-      out[key] = value;
-  }
-  return out;
 }
 
 // packages/toolu-core/src/host/host-events.ts
@@ -118,7 +112,6 @@ function detectHost(options = {}) {
   return envValue(env, "PLUGIN_ROOT") ? "codex" : "claude";
 }
 // packages/toolu-core/src/host/host-roots.ts
-import { spawnSync } from "child_process";
 import { homedir } from "os";
 import { join } from "path";
 function resolveHost(options) {
@@ -138,36 +131,6 @@ var NATIVE_CONFIG_ROOT = {
 function configRoot(options = {}) {
   const { env, host } = resolveHost(options);
   return envValue(env, "TOOLU_CONFIG_DIR") ?? NATIVE_CONFIG_ROOT[host](env);
-}
-function gitToplevel(env, cwd) {
-  const res = spawnSync("git", ["rev-parse", "--show-toplevel"], {
-    cwd: cwd ?? process.cwd(),
-    env: childEnv(env),
-    encoding: "utf8"
-  });
-  if (res.error !== undefined || res.status !== 0) {
-    return;
-  }
-  const top = res.stdout.trim();
-  return top === "" ? undefined : top;
-}
-var PROJECT_DIR_VAR = {
-  claude: "CLAUDE_PROJECT_DIR",
-  cursor: "CURSOR_PROJECT_DIR"
-};
-function projectRoot(options = {}) {
-  const { env, host } = resolveHost(options);
-  const hostVar = PROJECT_DIR_VAR[host];
-  return envValue(env, "TOOLU_PROJECT_DIR") ?? (hostVar === undefined ? undefined : envValue(env, hostVar)) ?? gitToplevel(env, options.cwd);
-}
-function projectDirname(options = {}) {
-  const { env, host } = resolveHost(options);
-  return envValue(env, "TOOLU_PROJECT_CONFIG_DIRNAME") ?? `.${host}`;
-}
-function projectStateRoot(options = {}) {
-  const o = resolveHost(options);
-  const root = o.root ?? projectRoot(o);
-  return root === undefined ? undefined : join(root, projectDirname(o), "tmp");
 }
 // node_modules/.bun/zod@4.1.5/node_modules/zod/v4/core/core.js
 var NEVER = Object.freeze({
@@ -3196,118 +3159,44 @@ var ASK_EVENTS = {
   hermes: new Set,
   opencode: new Set(["tool/pre", "shell/pre", "permission/evaluate"])
 };
-// plugins/statusline/hooks/src/statusline/collect.ts
-import { accessSync, constants, lstatSync, statSync } from "fs";
-import { basename, dirname, isAbsolute, join as join2, resolve } from "path";
-
-// plugins/statusline/hooks/src/statusline/json.ts
-import { readFileSync } from "fs";
-function asObject(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value) ? Object.fromEntries(Object.entries(value)) : undefined;
+// packages/toolu-core/src/state/state-io.ts
+function toJqJson(value, pretty) {
+  const json = pretty ? JSON.stringify(value, null, 2) : JSON.stringify(value);
+  return json.replaceAll("\x7F", "\\u007f");
 }
-function readObject(path) {
-  try {
-    return asObject(JSON.parse(readFileSync(path, "utf8")));
-  } catch {
+
+// packages/toolu-core/src/startup/context.ts
+var MAX_CONTEXT_CHARS = 1e4;
+function bounded(text, max) {
+  if (text.length <= max)
+    return text;
+  const code = text.charCodeAt(max - 1);
+  const end = code >= 55296 && code <= 56319 ? max - 1 : max;
+  return text.slice(0, end);
+}
+function sessionContext(event, text) {
+  if (text === "")
     return;
-  }
-}
-
-// plugins/statusline/hooks/src/statusline/collect.ts
-function statusHost(env) {
-  const override = envValue(env, "TOOLU_HOST_OVERRIDE");
-  if (override === "codex")
-    return "codex";
-  return override === undefined && envValue(env, "PLUGIN_ROOT") !== undefined ? "codex" : "claude";
-}
-function emptyStatus(host, cwd) {
   return {
-    host,
-    cwd,
-    repo_root: "",
-    folder: "",
-    branch: "",
-    ahead: 0,
-    behind: 0,
-    working_tree: { staged: 0, unstaged: 0, untracked: 0 },
-    gate: { status: "", reason: "" },
-    jev: { status: "", reason: "" },
-    comemory_count: null
+    hookSpecificOutput: {
+      hookEventName: event,
+      additionalContext: bounded(text, MAX_CONTEXT_CHARS)
+    }
   };
 }
-function childEnv2(env) {
-  return Object.fromEntries(Object.entries(env).filter((entry) => entry[1] !== undefined));
+function renderHookOutput(value, pretty) {
+  return `${toJqJson(value, pretty)}
+`;
 }
-function git(cwd, env, args) {
-  try {
-    const res = Bun.spawnSync(["git", "-C", cwd, "--no-optional-locks", ...args], {
-      env: childEnv2(env),
-      stdout: "pipe",
-      stderr: "ignore"
-    });
-    return res.exitCode === 0 ? res.stdout.toString().replace(/\n+$/, "") : undefined;
-  } catch {
-    return;
-  }
+// packages/toolu-core/src/startup/publish.ts
+function bunOnPath(env = process.env) {
+  return Bun.which("bun", { PATH: envValue(env, "PATH") ?? "" }) !== null;
 }
-function probe(read) {
-  try {
-    return read();
-  } catch {
-    return;
-  }
-}
-function isDirectory(path) {
-  return path !== "" && (probe(() => statSync(path))?.isDirectory() ?? false);
-}
-function isFile(path) {
-  return probe(() => statSync(path))?.isFile() ?? false;
-}
-function folderName(cwd) {
-  const name = basename(cwd);
-  return name === "" && cwd.startsWith("/") ? "/" : name;
-}
-function stringMember(doc, key) {
-  const value = doc?.[key];
-  return typeof value === "string" ? value : "";
-}
-function aheadBehind(header) {
-  const bracket = /\[([^\]]*)\]$/.exec(header)?.[1] ?? "";
-  const count = (word) => Number(new RegExp(`(?:^|, )${word} (\\d+)`).exec(bracket)?.[1] ?? 0);
-  return { ahead: count("ahead"), behind: count("behind") };
-}
-function treeCounts(cwd, env) {
-  const lines = (git(cwd, env, ["status", "--porcelain", "--branch"]) ?? "").split(`
-`);
-  const [header = "", ...entries] = lines;
-  const counts = { staged: 0, unstaged: 0, untracked: 0 };
-  for (const line of entries) {
-    if (line.length < 2)
-      continue;
-    const xy = line.slice(0, 2);
-    if (xy === "??")
-      counts.untracked += 1;
-    else if (xy !== "!!") {
-      if (xy[0] !== " ")
-        counts.staged += 1;
-      if (xy[1] !== " ")
-        counts.unstaged += 1;
-    }
-  }
-  const ab = header.startsWith("## ") ? aheadBehind(header) : { ahead: 0, behind: 0 };
-  return { ...ab, working_tree: counts };
-}
-function comemoryCount(cwd, commonDir, root) {
-  if (commonDir === "")
-    return null;
-  const abs = isAbsolute(commonDir) ? commonDir : resolve(cwd, commonDir);
-  const marker = readObject(join2(root, "comemory-status", `${basename(dirname(abs))}.json`));
-  const count = marker?.["count"];
-  return typeof count === "number" ? count : null;
-}
-function executableFile(path) {
-  if (!isFile(path))
-    return false;
+// plugins/jev/hooks/src/user-prompt-submit.ts
+var trivial = /^\s*(?:y|n|yes|no|ok|okay|sure|thanks|thank you|go ahead|looks good|lgtm|correct|exactly|right|done|nah|nope|yep|yup|continue)[.!?]?\s*$/i;
+var plugin = resolve(import.meta.dir, "../..");
+var wrapper = join2(configRoot({ env: process.env }), "jev/jev.sh");
+function executable(path) {
   try {
     accessSync(path, constants.X_OK);
     return true;
@@ -3315,193 +3204,21 @@ function executableFile(path) {
     return false;
   }
 }
-function jevReadiness(env, root) {
-  const wrapper = join2(root, "jev", "jev.sh");
-  if (probe(() => lstatSync(wrapper)) === undefined)
-    return { status: "", reason: "" };
-  const reasons = [];
-  if (!executableFile(wrapper))
-    reasons.push("missing executable wrapper");
-  if (Bun.which("bun", { PATH: envValue(env, "PATH") ?? "" }) === null) {
-    reasons.push("missing bun");
-  }
-  const key = envValue(env, "TYPESAFE_API_KEY");
-  if (key === undefined)
-    reasons.push("missing TYPESAFE_API_KEY");
-  else if (/[\r\n]/.test(key))
-    reasons.push("invalid TYPESAFE_API_KEY");
-  return reasons.length === 0 ? { status: "ready", reason: "" } : { status: "unavailable", reason: reasons.join("; ") };
-}
-function collectStatus(cwd, env, host) {
-  const status = emptyStatus(host, cwd);
-  const root = configRoot({ env, host });
-  let commonDir = "";
-  if (isDirectory(cwd)) {
-    status.folder = folderName(cwd);
-    const [top = "", common = ""] = (git(cwd, env, ["rev-parse", "--show-toplevel", "--git-common-dir"]) ?? "").split(`
-`);
-    status.repo_root = top;
-    commonDir = common;
-  }
-  if (status.repo_root !== "") {
-    status.branch = git(cwd, env, ["symbolic-ref", "--short", "HEAD"]) ?? "";
-    Object.assign(status, treeCounts(cwd, env));
-    status.comemory_count = comemoryCount(cwd, commonDir, root);
-  }
-  if (cwd !== "") {
-    const stateRoot = projectStateRoot({ env, host, root: status.repo_root || cwd });
-    const gate = stateRoot === undefined ? undefined : readObject(join2(stateRoot, "quality-gate-status.json"));
-    status.gate = { status: stringMember(gate, "status"), reason: stringMember(gate, "reason") };
-  }
-  status.jev = jevReadiness(env, root);
-  return status;
-}
-
-// plugins/statusline/hooks/src/statusline/payload.ts
-class JqIndexError extends Error {
-}
-function index(value, key) {
-  if (value === null || value === undefined)
-    return null;
-  const members = asObject(value);
-  if (members === undefined)
-    throw new JqIndexError(key);
-  return Object.hasOwn(members, key) ? members[key] : null;
-}
-function rawText(value) {
-  if (typeof value === "string")
-    return value;
-  if (typeof value === "number" || typeof value === "boolean")
-    return String(value);
-  return JSON.stringify(value);
-}
-var FIELDS = [
-  { key: "model", paths: [["model", "display_name"]], fallback: "Claude" },
-  { key: "effort", paths: [["effort", "level"]], fallback: "" },
-  { key: "cwd", paths: [["workspace", "current_dir"], ["cwd"]], fallback: "" },
-  { key: "ctxSize", paths: [["context_window", "context_window_size"]], fallback: "0" },
-  { key: "ctxUsed", paths: [["context_window", "total_input_tokens"]], fallback: "0" },
-  { key: "ctxPct", paths: [["context_window", "used_percentage"]], fallback: "" }
-];
-function evaluate(doc, field) {
-  for (const path of field.paths) {
-    const value = path.reduce(index, doc);
-    if (value !== null && value !== false)
-      return rawText(value);
-  }
-  return field.fallback;
-}
-function parse4(text) {
+async function main() {
+  let input;
   try {
-    return { ok: true, doc: JSON.parse(text) };
+    input = JSON.parse(await Bun.stdin.text());
   } catch {
-    return { ok: false };
+    return;
   }
+  if (input === null || typeof input !== "object" || Array.isArray(input))
+    return;
+  const prompt = input.prompt;
+  if (typeof prompt !== "string" || !prompt || trivial.test(prompt))
+    return;
+  if (!bunOnPath() || !process.env.TYPESAFE_API_KEY || !executable(wrapper))
+    return;
+  const context = `Jev is mandatory for this task when it contains semantic decisions. After initial exploration, identify useful judgments over supplied evidence; you MUST call "${wrapper}" before the decision it informs. Reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions in one ask call. Reuse unchanged evidence and questions rather than repeating calls. If a task has no semantic decision, say so in one sentence rather than skipping silently. Syntax and linked examples: ${plugin}/skills/jev/SKILL.md. On failure, state the limitation and use an evidence fallback; Jev never replaces tests or authorization.`;
+  process.stdout.write(renderHookOutput(sessionContext("UserPromptSubmit", context), false));
 }
-function readPayload(stdin) {
-  const out = { model: "", effort: "", cwd: "", ctxSize: "", ctxUsed: "", ctxPct: "" };
-  const parsed = parse4(stdin);
-  if (parsed.ok) {
-    try {
-      for (const field of FIELDS)
-        out[field.key] = evaluate(parsed.doc, field);
-    } catch (error) {
-      if (!(error instanceof JqIndexError))
-        throw error;
-    }
-  }
-  return {
-    ...out,
-    model: out.model === "" ? "Claude" : out.model,
-    ctxSize: out.ctxSize === "" ? "0" : out.ctxSize,
-    ctxUsed: out.ctxUsed === "" ? "0" : out.ctxUsed
-  };
-}
-
-// plugins/statusline/hooks/src/statusline/render.ts
-var CYAN = "\x1B[36m";
-var GREEN = "\x1B[32m";
-var YELLOW = "\x1B[33m";
-var MAGENTA = "\x1B[35m";
-var BLUE = "\x1B[34m";
-var RED = "\x1B[31m";
-var DIM = "\x1B[2m";
-var BOLD = "\x1B[1m";
-var RESET = "\x1B[0m";
-var SEP = `${DIM} | ${RESET}`;
-function formatTokens(text) {
-  if (!/^[0-9]+$/.test(text))
-    return "0";
-  const n = Number(text);
-  if (n >= 1e6) {
-    return `${Math.floor(n / 1e6)}.${Math.floor(n % 1e6 / 1e5)}M`;
-  }
-  return n >= 1000 ? `${Math.floor(n / 1000)}k` : String(n);
-}
-function roundHalfEven(x) {
-  const floor = Math.floor(x);
-  const diff = x - floor;
-  if (diff !== 0.5)
-    return Math.round(x);
-  return floor % 2 === 0 ? floor : floor + 1;
-}
-function contextSegment(payload) {
-  const tokens = `${formatTokens(payload.ctxUsed)}/${formatTokens(payload.ctxSize)}`;
-  return /^[0-9]+(\.[0-9]+)?$/.test(payload.ctxPct) ? `${tokens} (${roundHalfEven(Number(payload.ctxPct))}%)` : tokens;
-}
-function treeSuffix(status) {
-  const ab = `${status.ahead > 0 ? `\u2191${status.ahead}` : ""}${status.behind > 0 ? `\u2193${status.behind}` : ""}`;
-  const { staged, unstaged, untracked } = status.working_tree;
-  const parts = [
-    staged > 0 ? `+${staged}` : "",
-    unstaged > 0 ? `~${unstaged}` : "",
-    untracked > 0 ? `?${untracked}` : ""
-  ].filter((part) => part !== "");
-  return (ab === "" ? "" : `${DIM}${ab}${RESET}`) + (parts.length === 0 ? "" : `${YELLOW}[${parts.join(" ")}]${RESET}`);
-}
-function jevSegment(jev) {
-  if (jev.status === "ready")
-    return `${BOLD}${GREEN}[JEV:READY]${RESET}`;
-  if (jev.status === "unavailable") {
-    return `${BOLD}${YELLOW}[JEV:UNAVAILABLE: ${jev.reason}]${RESET}`;
-  }
-  return "";
-}
-function renderLine(payload, status, domain) {
-  let line = `${CYAN}${payload.model}${RESET}`;
-  const add = (segment) => {
-    if (segment !== "")
-      line += `${SEP}${segment}`;
-  };
-  if (payload.effort !== "" && payload.effort !== "null") {
-    add(`${YELLOW}effort:${payload.effort}${RESET}`);
-  }
-  add(`${MAGENTA}ctx:${contextSegment(payload)}${RESET}`);
-  add(domain === "" ? "" : `${GREEN}${domain}${RESET}`);
-  add(status.gate.status === "failing" ? `${BOLD}${RED}\u2717 gate:failing${RESET}` : "");
-  add(status.folder === "" ? "" : `${BOLD}${status.folder}${RESET}`);
-  add(status.branch === "" ? "" : `${BLUE}${status.branch}${RESET}`);
-  if (status.repo_root !== "")
-    line += treeSuffix(status);
-  add(status.comemory_count === null ? "" : `${BOLD}${GREEN}[COMEMORY:${status.comemory_count}]${RESET}`);
-  add(jevSegment(status.jev));
-  return line;
-}
-
-// plugins/statusline/hooks/src/statusline.ts
-function accountDomain(env) {
-  const dir = envValue(env, "CLAUDE_CONFIG_DIR") ?? env["HOME"] ?? "";
-  const account = asObject(readObject(`${dir}/.claude.json`)?.["oauthAccount"]);
-  const email = account?.["emailAddress"];
-  return typeof email === "string" && email.includes("@") ? email.slice(email.indexOf("@") + 1) : "";
-}
-function projectStatus(cwd, env) {
-  const host = statusHost(env);
-  try {
-    return collectStatus(cwd, env, host);
-  } catch {
-    return emptyStatus(host, cwd);
-  }
-}
-var payload = readPayload(await Bun.stdin.text());
-process.stdout.write(renderLine(payload, projectStatus(payload.cwd, process.env), accountDomain(process.env)));
+await main();

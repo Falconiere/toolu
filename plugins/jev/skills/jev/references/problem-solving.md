@@ -11,7 +11,7 @@ Sources: TypeSafe [semantic search](https://docs.typesafe.ai/cookbooks/semantic_
 
 ## Setup and failure handling
 
-Run setup + selected example in one Bash shell. Requires `curl`, `jq`, environment
+Run setup + selected example in one Bash shell. Requires Bun 1.4.x, `jq` for the example processing, environment
 `TYPESAFE_API_KEY`; never read `.env`.
 
 ```bash
@@ -19,12 +19,12 @@ Run setup + selected example in one Bash shell. Requires `curl`, `jq`, environme
 JEV="${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/jev/jev.sh"
 # JEV="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/jev/jev.sh"
 # Repository development, from the repository root, if not installed:
-if [ ! -x "$JEV" ]; then JEV="$PWD/plugins/jev/skills/jev/scripts/jev.sh"; fi
+if [ ! -x "$JEV" ]; then JEV="$PWD/plugins/jev/hooks/dist/jev.js"; fi
 JEV_EXAMPLES=$(mktemp -d)
 
 judge() {
   local name="$1"
-  if "$JEV" ask "$JEV_EXAMPLES/$name.questions.json" \
+  if bun "$JEV" ask "$JEV_EXAMPLES/$name.questions.json" \
       -s "@$JEV_EXAMPLES/$name.state.json" --raw >"$JEV_EXAMPLES/$name.result.json"; then
     jq '.answers' "$JEV_EXAMPLES/$name.result.json"
   else

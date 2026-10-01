@@ -1,8 +1,8 @@
 # jev — Typed Judgments from TypeSafe
 
-**Type:** Knowledge | **Version:** 6.5.0 | **Standalone** (no dependencies)
+**Type:** Knowledge | **Standalone** (no plugin dependencies)
 
-Ask TypeSafe's Jev model a **typed** question about some state and get an answer code can branch on — a probability, a chosen option, or a score on your own levels — through a skill plus a bash REST wrapper.
+Ask TypeSafe's Jev model a **typed** question about some state and get an answer code can branch on — a probability, a chosen option, or a score on your own levels — through a skill plus a Bun CLI.
 
 ## Install
 
@@ -22,7 +22,7 @@ codex plugin add jev@toolu
 
 Restart the host after installation. In Codex, review and trust the installed
 hook through `/hooks`; installation alone does not trust hooks. Both hosts
-need `curl`, `jq`, and `TYPESAFE_API_KEY` in their launch environment.
+need Bun 1.4.x on `PATH` and `TYPESAFE_API_KEY` in their launch environment.
 
 Set `TYPESAFE_API_KEY` in the environment for the wrapper to authenticate
 (keys: `https://console.typesafe.ai/settings/keys`). It is never read from a
@@ -58,7 +58,7 @@ See the [workflow guidance](../../plugins/toolu/workflows/semantic-judgments.md)
 
 ### `jev.sh` Wrapper
 
-`POST https://api.typesafe.ai/v1/systemone` with `curl` and `jq` — no SDK. The
+`POST https://api.typesafe.ai/v1/systemone` through a self-contained Bun bundle. The
 SessionStart hook republishes it at `<config-dir>/jev/jev.sh` every session, so
 the agent's shell can reach it without plugin lifecycle variables.
 
@@ -109,12 +109,7 @@ search (rank + existence), debugging (hypotheses + new evidence), planning
 ## Tests
 
 ```bash
-bats plugins/jev/skills/jev/scripts/__tests__/jev.bats   # offline, real curl + loopback HTTPS
-bats plugins/jev/hooks/__tests__                          # per-prompt mandate
-bun test plugins/jev/hooks/src/__tests__                  # SessionStart publishing + mandate (Bun bundle)
-
-JEV_LIVE=1 TYPESAFE_API_KEY=… \
-  bats plugins/jev/skills/jev/scripts/__tests__/jev-live.bats   # real API, opt-in
+bun test plugins/jev   # loopback HTTPS; no paid API calls
 ```
 
 Live docs: `https://docs.typesafe.ai/llms.txt` (append `.md` to any page path).

@@ -100,26 +100,6 @@
     "bashRequired": false
   },
   {
-    "id": "jev:entrypoint:UserPromptSubmit:user-prompt-submit.sh",
-    "sourcePath": "plugins/jev/hooks/user-prompt-submit.sh",
-    "plugin": "jev",
-    "kind": "entrypoint",
-    "event": "UserPromptSubmit",
-    "matcher": "",
-    "commandOrModule": "user-prompt-submit.sh",
-    "parentId": null,
-    "semantics": "Hook entrypoint script user-prompt-submit.sh for UserPromptSubmit.",
-    "classification": "shell-out",
-    "hostMechanism": "pending-opencode",
-    "support": "required",
-    "implementationIssue": 210,
-    "implementationStatus": "todo",
-    "verificationBaseline": "none",
-    "verificationConformance": "pending-#212",
-    "limits": "",
-    "bashRequired": true
-  },
-  {
     "id": "jev:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact",
     "sourcePath": "plugins/jev/hooks/hooks.json",
     "plugin": "jev",
@@ -140,15 +120,15 @@
     "bashRequired": false
   },
   {
-    "id": "jev:hooks.json:UserPromptSubmit:user-prompt-submit.sh",
+    "id": "jev:hooks.json:UserPromptSubmit:user-prompt-submit.js",
     "sourcePath": "plugins/jev/hooks/hooks.json",
     "plugin": "jev",
     "kind": "hooks.json",
     "event": "UserPromptSubmit",
     "matcher": "",
-    "commandOrModule": "hooks/user-prompt-submit.sh",
+    "commandOrModule": "hooks/dist/user-prompt-submit.js",
     "parentId": null,
-    "semantics": "Host routes UserPromptSubmit (no matcher) to hooks/user-prompt-submit.sh.",
+    "semantics": "Host routes UserPromptSubmit (no matcher) through the Bun launcher to hooks/dist/user-prompt-submit.js; without Bun the launcher prints an advisory systemMessage (#271).",
     "classification": "shell-out",
     "hostMechanism": "pending-opencode",
     "support": "required",
@@ -157,7 +137,7 @@
     "verificationBaseline": "none",
     "verificationConformance": "pending-#212",
     "limits": "",
-    "bashRequired": true
+    "bashRequired": false
   },
   {
     "id": "jira:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact",
