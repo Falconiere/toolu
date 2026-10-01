@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.7.2](https://github.com/Falconiere/toolu/compare/v7.7.1...v7.7.2) (2026-10-01)
+
+
+### Bug Fixes
+
+* **epic-orchestrator:** run jev.sh with Bun, not bash ([#332](https://github.com/Falconiere/toolu/issues/332)) ([0d4b912](https://github.com/Falconiere/toolu/commit/0d4b912316e06513b7f0e44a6e03c08e63d9d132))
+
 ## [7.7.1](https://github.com/Falconiere/toolu/compare/v7.7.0...v7.7.1) (2026-10-01)
 
 
