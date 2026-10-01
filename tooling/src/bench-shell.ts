@@ -10,10 +10,12 @@
  *
  * Budgets: `shell` and `writes` each add at most 200,000 bytes unminified, and
  * `together`, the PreToolUse dispatcher's case (#258), at most 205,000 bytes by
- * product-owner decision (unbash alone is about 175 KB). Cold start runs
- * `together` (the heaviest) against `empty`, interleaved from a temp dir with
- * no node_modules: p50 delta at most 5 ms. Parse and walk time `analyzeShell` plus the git and write helpers over
- * every fixture command: p99 at most 0.1 ms.
+ * product-owner decision (unbash alone is about 175 KB). The size probe uses
+ * unminified bundles; cold start times the minified bundles we actually ship.
+ * It runs `together` (the heaviest) against `empty`, interleaved from a temp
+ * dir with no node_modules: p50 delta at most 5 ms. Parse and walk time
+ * `analyzeShell` plus the git and write helpers over every fixture command:
+ * p99 at most 0.1 ms.
  *
  * Numbers are machine-bound. The unit test checks sizes; the CI TypeScript gate
  * also runs `--assert` for cold-start and parse budgets on that runner.
@@ -108,19 +110,29 @@ export interface ShellBench {
 }
 
 /** Build the probes with the plugin bundle pipeline; returns each bundle's path. */
-function buildProbes(work: string): Record<Probe, string> {
+function probePaths(out: string): Record<Probe, string> {
+  return {
+    empty: join(out, "probe/empty.js"),
+    shell: join(out, "probe/shell.js"),
+    writes: join(out, "probe/writes.js"),
+    together: join(out, "probe/together.js"),
+  };
+}
+
+function buildProbes(work: string): {
+  shipped: Record<Probe, string>;
+  unminified: Record<Probe, string>;
+} {
   const src = join(work, "tree/plugins/probe/hooks/src");
   mkdirSync(src, { recursive: true });
   for (const [name, source] of Object.entries(PROBES))
     writeFileSync(join(src, `${name}.ts`), source);
-  const out = join(work, "out/probe");
-  stageBundles(join(work, "tree"), join(work, "out"));
-  return {
-    empty: join(out, "empty.js"),
-    shell: join(out, "shell.js"),
-    writes: join(out, "writes.js"),
-    together: join(out, "together.js"),
-  };
+  const tree = join(work, "tree");
+  const shippedOut = join(work, "shipped");
+  const unminifiedOut = join(work, "unminified");
+  stageBundles(tree, shippedOut);
+  stageBundles(tree, unminifiedOut, { minify: false });
+  return { shipped: probePaths(shippedOut), unminified: probePaths(unminifiedOut) };
 }
 
 function spawnMs(bundle: string, cwd: string): number {
@@ -204,14 +216,14 @@ export function benchShell(options: { runs: number; rounds: number }): ShellBenc
   const runDir = mkdtempSync(join(tmpdir(), "bench-shell-run-"));
   try {
     const bundles = buildProbes(work);
-    const size = (probe: Probe) => statSync(bundles[probe]).size;
+    const size = (probe: Probe) => statSync(bundles.unminified[probe]).size;
     const emptyBytes = size("empty");
     // Run copies from outside the repository: no node_modules anywhere above them.
     // Cold start times the `together` probe, the heaviest.
     const standalone = { empty: join(runDir, "empty.js"), shell: join(runDir, "together.js") };
-    copyFileSync(bundles.empty, standalone.empty);
-    copyFileSync(bundles.together, standalone.shell);
-    copyFileSync(bundles.shell, join(runDir, "shell.js"));
+    copyFileSync(bundles.shipped.empty, standalone.empty);
+    copyFileSync(bundles.shipped.together, standalone.shell);
+    copyFileSync(bundles.shipped.shell, join(runDir, "shell.js"));
     const probe = spawnSync(process.execPath, [join(runDir, "shell.js"), PROBE_COMMAND], {
       cwd: runDir,
       encoding: "utf8",
@@ -268,8 +280,8 @@ function report(bench: ShellBench): string {
   const { machine: m, bundle: b, coldStart: c, parse: p } = bench;
   return [
     `bench:shell — bun ${m.bun}, ${m.platform} ${m.arch}, ${m.cpu}, ${m.date}`,
-    `bundle      empty ${b.emptyBytes} B; @toolu/core/shell +${b.deltaBytes} B (budget ${BUDGET.bundleBytes} B); analyzeShell + writes +${b.writesDeltaBytes} B (budget ${BUDGET.writesBundleBytes} B); both entries +${b.togetherDeltaBytes} B (budget ${BUDGET.togetherBundleBytes} B)`,
-    `cold start  ${c.runs} interleaved runs: empty p50 ${ms(c.emptyP50)} p90 ${ms(c.emptyP90)}, both-entries p50 ${ms(c.shellP50)} p90 ${ms(c.shellP90)}, delta p50 ${ms(c.deltaP50)} (budget ${BUDGET.coldStartMs} ms)`,
+    `bundle      unminified: empty ${b.emptyBytes} B; @toolu/core/shell +${b.deltaBytes} B (budget ${BUDGET.bundleBytes} B); analyzeShell + writes +${b.writesDeltaBytes} B (budget ${BUDGET.writesBundleBytes} B); both entries +${b.togetherDeltaBytes} B (budget ${BUDGET.togetherBundleBytes} B)`,
+    `cold start  shipped minified, ${c.runs} interleaved runs: empty p50 ${ms(c.emptyP50)} p90 ${ms(c.emptyP90)}, both-entries p50 ${ms(c.shellP50)} p90 ${ms(c.shellP90)}, delta p50 ${ms(c.deltaP50)} (budget ${BUDGET.coldStartMs} ms)`,
     `parse+walk  ${p.commands} commands, ${p.samples} samples: p50 ${p.p50Us.toFixed(1)} µs, p99 ${p.p99Us.toFixed(1)} µs, max ${p.maxUs.toFixed(1)} µs (budget p99 ${BUDGET.parseP99Us} µs)`,
     `probe       ${bench.probeOutput}`,
   ].join("\n");

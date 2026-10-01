@@ -159,6 +159,29 @@ test("a shebang bundle that lost its exec bit is drift", () => {
   ]);
 });
 
+test("shipped bundles are minified while the size probe can build unminified", () => {
+  const root = demoTree();
+  write(
+    root,
+    "plugins/demo/hooks/src/entry.ts",
+    'const message = "repeated text for the minifier";\nprocess.stdout.write(message + message + message + "\\n");\n',
+  );
+  const shipped = temp();
+  const unminified = temp();
+  stageBundles(root, shipped);
+  stageBundles(root, unminified, { minify: false });
+  const file = "demo/entry.js";
+  expect(statSync(join(shipped, file)).size).toBeLessThan(statSync(join(unminified, file)).size);
+  const run = (dir: string) => spawnSync(process.execPath, [join(dir, file)], { encoding: "utf8" });
+  const expected = `${"repeated text for the minifier".repeat(3)}\n`;
+  for (const dir of [shipped, unminified]) {
+    const result = run(dir);
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(result.stdout).toBe(expected);
+  }
+});
+
 test("the CLI exits non-zero on drift and names the stale bundle", () => {
   const root = demoTree();
   buildPlugins(root);

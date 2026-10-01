@@ -1,59 +1,8 @@
 #!/usr/bin/env bun
 // @bun
-
-// plugins/ast-grep/hooks/src/byte-savings-report.ts
-import { existsSync, readFileSync, statSync } from "fs";
-function isRecord(value) {
-  return typeof value === "object" && value !== null && "kind" in value && typeof value.kind === "string" && "returned" in value && typeof value.returned === "number" && "full" in value && typeof value.full === "number";
-}
-function parseLine(line) {
-  try {
-    const value = JSON.parse(line);
-    return isRecord(value) ? value : undefined;
-  } catch {
-    return;
-  }
-}
-function report(records) {
-  const byKind = new Map;
-  for (const r of records) {
-    const t = byKind.get(r.kind) ?? { kind: r.kind, returned: 0, full: 0, n: 0 };
-    byKind.set(r.kind, {
-      ...t,
-      returned: t.returned + r.returned,
-      full: t.full + r.full,
-      n: t.n + 1
-    });
-  }
-  const kinds = [...byKind.keys()].toSorted().flatMap((kind) => byKind.get(kind) ?? []);
-  const lines = kinds.map((t) => t.kind === "read" && t.full > 0 ? `${t.kind}: returned=${t.returned} full=${t.full} saved=${Math.floor((t.full - t.returned) * 100 / t.full)}% (n=${t.n})` : `${t.kind}: returned=${t.returned} (n=${t.n})`);
-  const total = kinds.reduce((sum, t) => sum + t.returned, 0);
-  return [...lines, `TOTAL returned: ${total} bytes (~${Math.floor(total / 4)} tok)`].join(`
-`);
-}
-function main(argv) {
-  const ledger = argv[0] ?? "";
-  if (ledger === "" || !existsSync(ledger) || !statSync(ledger).isFile()) {
-    process.stderr.write(`usage: byte-savings-report.js <ledger.jsonl>
-`);
-    return 1;
-  }
-  const records = [];
-  const lines = readFileSync(ledger, "utf8").split(`
-`);
-  for (const [index, line] of lines.entries()) {
-    if (line.trim() === "")
-      continue;
-    const record = parseLine(line);
-    if (record === undefined) {
-      process.stderr.write(`byte-savings-report: ${ledger}:${index + 1}: invalid ledger line
-`);
-      return 1;
-    }
-    records.push(record);
-  }
-  process.stdout.write(`${report(records)}
-`);
-  return 0;
-}
-process.exitCode = main(process.argv.slice(2));
+import{existsSync as s,readFileSync as u,statSync as l}from"fs";function c(n){return typeof n==="object"&&n!==null&&"kind"in n&&typeof n.kind==="string"&&"returned"in n&&typeof n.returned==="number"&&"full"in n&&typeof n.full==="number"}function f(n){try{let r=JSON.parse(n);return c(r)?r:void 0}catch{return}}function p(n){let r=new Map;for(let e of n){let t=r.get(e.kind)??{kind:e.kind,returned:0,full:0,n:0};r.set(e.kind,{...t,returned:t.returned+e.returned,full:t.full+e.full,n:t.n+1})}let d=[...r.keys()].toSorted().flatMap((e)=>r.get(e)??[]),o=d.map((e)=>e.kind==="read"&&e.full>0?`${e.kind}: returned=${e.returned} full=${e.full} saved=${Math.floor((e.full-e.returned)*100/e.full)}% (n=${e.n})`:`${e.kind}: returned=${e.returned} (n=${e.n})`),i=d.reduce((e,t)=>e+t.returned,0);return[...o,`TOTAL returned: ${i} bytes (~${Math.floor(i/4)} tok)`].join(`
+`)}function g(n){let r=n[0]??"";if(r===""||!s(r)||!l(r).isFile())return process.stderr.write(`usage: byte-savings-report.js <ledger.jsonl>
+`),1;let d=[],o=u(r,"utf8").split(`
+`);for(let[i,e]of o.entries()){if(e.trim()==="")continue;let t=f(e);if(t===void 0)return process.stderr.write(`byte-savings-report: ${r}:${i+1}: invalid ledger line
+`),1;d.push(t)}return process.stdout.write(`${p(d)}
+`),0}process.exitCode=g(process.argv.slice(2));

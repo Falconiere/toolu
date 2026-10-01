@@ -1,9 +1,10 @@
 /**
  * `bench:shell` (#284 AC-1): the probe bundles are built by the plugin bundle
  * pipeline and run from a directory with no node_modules. Every runtime export
- * of `@toolu/core/shell` adds at most 200,000 bytes, and so does `analyzeShell`
- * plus `@toolu/core/shell/writes`. Wall-clock numbers are machine-bound, so this
- * suite checks their presence, not their values; CI also runs
+ * of `@toolu/core/shell` adds at most 200,000 bytes unminified, and so does
+ * `analyzeShell` plus `@toolu/core/shell/writes`. Cold start uses the minified
+ * production format. Wall-clock numbers are machine-bound, so this suite
+ * checks their presence, not their values; CI also runs
  * `bun run bench:shell --assert` to check timing on that runner.
  */
 import { expect, test } from "bun:test";

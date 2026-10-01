@@ -1,139 +1,9 @@
 #!/usr/bin/env bun
 // @bun
-
-// packages/toolu-core/src/cli/cli.ts
-class CliExit extends Error {
-  code;
-  stdout;
-  constructor(code, message = "", stdout = "") {
-    super(message);
-    this.name = "CliExit";
-    this.code = code;
-    this.stdout = stdout;
-  }
-}
-function flagValue(tool, argv, index) {
-  const value = argv[index + 1];
-  if (value === undefined)
-    throw new CliExit(1, `${tool}: ${argv[index] ?? ""} needs a value`);
-  return value;
-}
-function isBrokenPipe(error) {
-  return error instanceof Error && "code" in error && error.code === "EPIPE";
-}
-async function writeStdout(text) {
-  if (text.length === 0)
-    return;
-  try {
-    await Bun.write(Bun.stdout, text);
-  } catch (error) {
-    if (isBrokenPipe(error))
-      throw new CliExit(141);
-    throw error;
-  }
-}
-async function writeStderr(text) {
-  if (text !== "")
-    await Bun.write(Bun.stderr, text.endsWith(`
-`) ? text : `${text}
-`);
-}
-async function report(exit) {
-  let code = exit.code;
-  try {
-    await writeStdout(exit.stdout);
-  } catch (error) {
-    if (!(error instanceof CliExit))
-      throw error;
-    code = error.code;
-  }
-  await writeStderr(exit.message);
-  return code;
-}
-async function runCli(main) {
-  let code;
-  try {
-    code = await main();
-  } catch (error) {
-    if (error instanceof CliExit) {
-      code = await report(error);
-    } else {
-      await writeStderr(error instanceof Error ? error.message : String(error));
-      code = 1;
-    }
-  }
-  process.exit(code);
-}
-
-// packages/toolu-core/src/rest/rest.ts
-function formatJson(value) {
-  return `${JSON.stringify(value, null, 2)}
-`;
-}
-function tryParse(text) {
-  try {
-    const value = JSON.parse(text);
-    return { ok: true, value };
-  } catch {
-    return { ok: false };
-  }
-}
-function parseJson(tool, text) {
-  const parsed = tryParse(text);
-  if (!parsed.ok)
-    throw new CliExit(5, `${tool}: response is not JSON`);
-  return parsed.value;
-}
-function jsonOutput(tool, text, project = (value) => value) {
-  if (text.trim() === "")
-    return "";
-  return formatJson(project(parseJson(tool, text)));
-}
-function reason(error) {
-  return error instanceof Error ? error.message : String(error);
-}
-async function exchange(tool, url, init) {
-  try {
-    return await fetch(url, { ...init, redirect: "manual" });
-  } catch (error) {
-    throw new CliExit(1, `${tool}: request failed: ${reason(error)}`);
-  }
-}
-async function readBody(tool, read) {
-  try {
-    return await read();
-  } catch (error) {
-    throw new CliExit(1, `${tool}: request failed: ${reason(error)}`);
-  }
-}
-async function send(tool, request) {
-  const init = { method: request.method ?? "GET", headers: { ...request.headers } };
-  if (request.payload !== undefined)
-    init.body = request.payload;
-  else if (request.body !== undefined)
-    init.body = JSON.stringify(request.body);
-  const response = await exchange(tool, request.url, init);
-  const { status } = response;
-  const text = await readBody(tool, () => response.text());
-  if (status >= 400) {
-    const parsed = request.json === false ? undefined : tryParse(text);
-    const body = parsed?.ok === true ? formatJson(parsed.value) : text;
-    throw new CliExit(22, `${tool}: HTTP ${status} from ${request.url}`, body);
-  }
-  return text;
-}
-var REDIRECTS = new Set([301, 302, 303, 307, 308]);
-function quote(value) {
-  return encodeURIComponent(value).replaceAll(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
-}
-function encodeQuery(params) {
-  if (params.length === 0)
-    return "";
-  return `?${params.map(([key, value]) => `${key}=${quote(value)}`).join("&")}`;
-}
-
-// plugins/context7/hooks/src/context7/usage.ts
-var MAIN_USAGE = `Context7 CLI \u2014 Library Documentation Lookup
+class o extends Error{code;stdout;constructor(r,n="",e=""){super(n);this.name="CliExit",this.code=r,this.stdout=e}}function u(r,n,e){let t=n[e+1];if(t===void 0)throw new o(1,`${r}: ${n[e]??""} needs a value`);return t}function P(r){return r instanceof Error&&"code"in r&&r.code==="EPIPE"}async function d(r){if(r.length===0)return;try{await Bun.write(Bun.stdout,r)}catch(n){if(P(n))throw new o(141);throw n}}async function f(r){if(r!=="")await Bun.write(Bun.stderr,r.endsWith(`
+`)?r:`${r}
+`)}async function U(r){let n=r.code;try{await d(r.stdout)}catch(e){if(!(e instanceof o))throw e;n=e.code}return await f(r.message),n}async function y(r){let n;try{n=await r()}catch(e){if(e instanceof o)n=await U(e);else await f(e instanceof Error?e.message:String(e)),n=1}process.exit(n)}function h(r){return`${JSON.stringify(r,null,2)}
+`}function m(r){try{return{ok:!0,value:JSON.parse(r)}}catch{return{ok:!1}}}function j(r,n){let e=m(n);if(!e.ok)throw new o(5,`${r}: response is not JSON`);return e.value}function g(r,n,e=(t)=>t){if(n.trim()==="")return"";return h(e(j(r,n)))}function p(r){return r instanceof Error?r.message:String(r)}async function O(r,n,e){try{return await fetch(n,{...e,redirect:"manual"})}catch(t){throw new o(1,`${r}: request failed: ${p(t)}`)}}async function v(r,n){try{return await n()}catch(e){throw new o(1,`${r}: request failed: ${p(e)}`)}}async function w(r,n){let e={method:n.method??"GET",headers:{...n.headers}};if(n.payload!==void 0)e.body=n.payload;else if(n.body!==void 0)e.body=JSON.stringify(n.body);let t=await O(r,n.url,e),{status:i}=t,s=await v(r,()=>t.text());if(i>=400){let a=n.json===!1?void 0:m(s),c=a?.ok===!0?h(a.value):s;throw new o(22,`${r}: HTTP ${i} from ${n.url}`,c)}return s}function T(r){return encodeURIComponent(r).replaceAll(/[!'()*]/g,(n)=>`%${n.charCodeAt(0).toString(16).toUpperCase()}`)}function b(r){if(r.length===0)return"";return`?${r.map(([n,e])=>`${n}=${T(e)}`).join("&")}`}var x=`Context7 CLI \u2014 Library Documentation Lookup
 
 Usage: search.sh <command> [options]
 
@@ -148,8 +18,7 @@ Workflow:
   1. search.sh search <library>    # find the library ID
   2. search.sh docs <id> <query>   # query its docs
 
-Run 'search.sh <command>' with no args for command-specific help.`;
-var SEARCH_USAGE = `Usage: search.sh search <library> [query]
+Run 'search.sh <command>' with no args for command-specific help.`,C=`Usage: search.sh search <library> [query]
   Searches for libraries matching the name
 
   -l, --library  Library name (required)
@@ -157,8 +26,7 @@ var SEARCH_USAGE = `Usage: search.sh search <library> [query]
 
 Examples:
   search.sh search react
-  search.sh search tokio "async runtime for Rust"`;
-var DOCS_USAGE = `Usage: search.sh docs <library_id> <query>
+  search.sh search tokio "async runtime for Rust"`,R=`Usage: search.sh docs <library_id> <query>
   Retrieves documentation context for a library
 
   -l, --library-id  Context7 library ID, e.g. /vercel/next.js (required)
@@ -170,94 +38,4 @@ Examples:
   search.sh docs /vercel/next.js "app router file conventions"
   search.sh docs /tokio-rs/tokio "spawn async tasks" -t txt
 
-Tip: Run 'search.sh search <name>' first to find the library ID.`;
-
-// plugins/context7/hooks/src/context7/requests.ts
-var TOOL = "context7";
-function readArgs(argv, slotFlags, docs) {
-  const parsed = { first: "", second: "", type: "json", fast: false };
-  for (let at = 0;at < argv.length; at += 1) {
-    const arg = argv[at] ?? "";
-    const slot = Object.hasOwn(slotFlags, arg) ? slotFlags[arg] : undefined;
-    if (slot !== undefined) {
-      const value = flagValue(TOOL, argv, at);
-      if (slot === 1)
-        parsed.first = value;
-      else
-        parsed.second = value;
-      at += 1;
-    } else if (docs && (arg === "-t" || arg === "--type")) {
-      parsed.type = flagValue(TOOL, argv, at);
-      at += 1;
-    } else if (docs && arg === "--fast") {
-      parsed.fast = true;
-    } else if (parsed.first === "") {
-      parsed.first = arg;
-    } else if (parsed.second === "") {
-      parsed.second = arg;
-    } else {
-      throw new CliExit(1, `Unknown option: ${arg}`);
-    }
-  }
-  return parsed;
-}
-function searchCall(argv) {
-  const { first: library, second: query } = readArgs(argv, { "-l": 1, "--library": 1, "-q": 2, "--query": 2 }, false);
-  if (library === "")
-    throw new CliExit(1, SEARCH_USAGE);
-  return {
-    endpoint: "libs/search",
-    params: [
-      ["libraryName", library],
-      ["query", query === "" ? library : query]
-    ],
-    json: true
-  };
-}
-function docsCall(argv) {
-  const parsed = readArgs(argv, { "-l": 1, "--library-id": 1, "-q": 2, "--query": 2 }, true);
-  if (parsed.first === "" || parsed.second === "")
-    throw new CliExit(1, DOCS_USAGE);
-  const params = [
-    ["libraryId", parsed.first],
-    ["query", parsed.second],
-    ["type", parsed.type]
-  ];
-  if (parsed.fast)
-    params.push(["fast", "true"]);
-  return { endpoint: "context", params, json: parsed.type === "json" };
-}
-
-// plugins/context7/hooks/src/search.ts
-var TOOL2 = "context7";
-var C7_URL = "https://context7.com/api/v2";
-function callFor(argv) {
-  const [command = "", ...rest] = argv;
-  switch (command) {
-    case "":
-    case "-h":
-    case "--help":
-      throw new CliExit(1, MAIN_USAGE);
-    case "search":
-      return searchCall(rest);
-    case "docs":
-      return docsCall(rest);
-    default:
-      return searchCall(argv);
-  }
-}
-async function main() {
-  const call = callFor(process.argv.slice(2));
-  const headers = { Accept: "application/json" };
-  const key = process.env["CONTEXT7_API_KEY"] ?? "";
-  if (key.startsWith("ctx7sk"))
-    headers["Authorization"] = `Bearer ${key}`;
-  const text = await send(TOOL2, {
-    url: `${C7_URL}/${call.endpoint}${encodeQuery(call.params)}`,
-    headers,
-    json: call.json
-  });
-  await writeStdout(call.json ? jsonOutput(TOOL2, text) : text);
-  return 0;
-}
-await runCli(main);
+Tip: Run 'search.sh search <name>' first to find the library ID.`;var E="context7";function k(r,n,e){let t={first:"",second:"",type:"json",fast:!1};for(let i=0;i<r.length;i+=1){let s=r[i]??"",a=Object.hasOwn(n,s)?n[s]:void 0;if(a!==void 0){let c=u(E,r,i);if(a===1)t.first=c;else t.second=c;i+=1}else if(e&&(s==="-t"||s==="--type"))t.type=u(E,r,i),i+=1;else if(e&&s==="--fast")t.fast=!0;else if(t.first==="")t.first=s;else if(t.second==="")t.second=s;else throw new o(1,`Unknown option: ${s}`)}return t}function l(r){let{first:n,second:e}=k(r,{"-l":1,"--library":1,"-q":2,"--query":2},!1);if(n==="")throw new o(1,C);return{endpoint:"libs/search",params:[["libraryName",n],["query",e===""?n:e]],json:!0}}function A(r){let n=k(r,{"-l":1,"--library-id":1,"-q":2,"--query":2},!0);if(n.first===""||n.second==="")throw new o(1,R);let e=[["libraryId",n.first],["query",n.second],["type",n.type]];if(n.fast)e.push(["fast","true"]);return{endpoint:"context",params:e,json:n.type==="json"}}var S="context7",q="https://context7.com/api/v2";function I(r){let[n="",...e]=r;switch(n){case"":case"-h":case"--help":throw new o(1,x);case"search":return l(e);case"docs":return A(e);default:return l(r)}}async function L(){let r=I(process.argv.slice(2)),n={Accept:"application/json"},e=process.env.CONTEXT7_API_KEY??"";if(e.startsWith("ctx7sk"))n.Authorization=`Bearer ${e}`;let t=await w(S,{url:`${q}/${r.endpoint}${b(r.params)}`,headers:n,json:r.json});return await d(r.json?g(S,t):t),0}await y(L);
