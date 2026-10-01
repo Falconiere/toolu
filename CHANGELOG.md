@@ -1,5 +1,47 @@
 # Changelog
 
+## [7.7.0](https://github.com/Falconiere/toolu/compare/v7.6.0...v7.7.0) (2026-10-01)
+
+
+### Features
+
+* **ast-grep:** port the plugin to TypeScript on Bun ([#321](https://github.com/Falconiere/toolu/issues/321)) ([3e45d06](https://github.com/Falconiere/toolu/commit/3e45d06ad750e55d0b4f4c7340c9e814c2fe87e7))
+* **conformance:** real-subprocess test harness for bun test; port tooling bats ([#299](https://github.com/Falconiere/toolu/issues/299)) ([5797342](https://github.com/Falconiere/toolu/commit/579734223f584ae945c93879781155bf04b7ddd4))
+* **core,toolu:** native protected-files, mcp-blocker and code-edit-rules gates ([#316](https://github.com/Falconiere/toolu/issues/316)) ([2912cd9](https://github.com/Falconiere/toolu/commit/2912cd9d05fa43097e0fcbd0681fd9986638417b))
+* **core:** config layer: loader, resolvers, gate modes, permissions and settings loaders ([#303](https://github.com/Falconiere/toolu/issues/303)) ([a3d4076](https://github.com/Falconiere/toolu/commit/a3d407687e8a373b5c663f9cce468a97c7ee351e))
+* **core:** detect layer, port detect.sh to @toolu/core/detect ([#313](https://github.com/Falconiere/toolu/issues/313)) ([c5d8e42](https://github.com/Falconiere/toolu/commit/c5d8e42bea9dae272fd64e3a49419f158e402c93))
+* **core:** hook launcher contract with fail-closed missing-runtime behaviour and hooks.json gate ([#298](https://github.com/Falconiere/toolu/issues/298)) ([9223f13](https://github.com/Falconiere/toolu/commit/9223f13b230e6e53bdece8cc352fda66f905300e))
+* **core:** host layer in TypeScript: detection, roots and per-host encoders ([#301](https://github.com/Falconiere/toolu/issues/301)) ([33013b6](https://github.com/Falconiere/toolu/commit/33013b62dc9a404c7bfcbcf22940374616721e29))
+* **core:** plan ledger, verdict and push-waiver layer in TypeScript ([#308](https://github.com/Falconiere/toolu/issues/308)) ([55cf1d8](https://github.com/Falconiere/toolu/commit/55cf1d8e467c14a01057afca1167253046f04e44))
+* **core:** registry v2 with bundled ESM hook modules ([#306](https://github.com/Falconiere/toolu/issues/306)) ([d452212](https://github.com/Falconiere/toolu/commit/d452212c7af628a9351ebf8d8c5b8fc8891341c3))
+* **core:** shell command analysis in @toolu/core with unbash ([#307](https://github.com/Falconiere/toolu/issues/307)) ([108e9d2](https://github.com/Falconiere/toolu/commit/108e9d27540471b786ebd27b82747a5dee64c9a2))
+* **core:** state layer: gate file, sweeper, diff sha, telemetry and edit records ([#305](https://github.com/Falconiere/toolu/issues/305)) ([1d5b113](https://github.com/Falconiere/toolu/commit/1d5b1134913619853ef3faa50ba07fb52cf7e4d3))
+* **epic-orchestrator,delivery-flow:** port report, finish-issue and bats suites to Bun ([#312](https://github.com/Falconiere/toolu/issues/312)) ([83ea0c8](https://github.com/Falconiere/toolu/commit/83ea0c8230d425c3fdef1e0062ff6476cb6397a8))
+* **exa-search,context7,agent-browser:** TypeScript skill CLIs on Bun ([#300](https://github.com/Falconiere/toolu/issues/300)) ([62c4deb](https://github.com/Falconiere/toolu/commit/62c4deb9653747ac22b1a5edf4ba3d9116ca462b))
+* **jev:** port CLI and prompt hook to Bun ([#325](https://github.com/Falconiere/toolu/issues/325)) ([d3f70ac](https://github.com/Falconiere/toolu/commit/d3f70accc9cd842d38df6b1a5859b2b987fff25e))
+* **jira:** TypeScript CLI on Bun for the Jira skill and plan store ([#302](https://github.com/Falconiere/toolu/issues/302)) ([30e67a8](https://github.com/Falconiere/toolu/commit/30e67a8932a2de4dc6859bfbcb19e40ac4592cde))
+* **opencode:** dispatch permissions through native core ([#326](https://github.com/Falconiere/toolu/issues/326)) ([d5d5cbe](https://github.com/Falconiere/toolu/commit/d5d5cbe1d51b72c2c59aad81570af0a54800ee53))
+* **plugins:** startup-context and dependency-check hooks on Bun ([#309](https://github.com/Falconiere/toolu/issues/309)) ([107e566](https://github.com/Falconiere/toolu/commit/107e566f607162c21e8d76d2e5ba1c65ce2de20d))
+* **pr-babysit:** port tick and GitHub helpers to Bun ([#324](https://github.com/Falconiere/toolu/issues/324)) ([29ef89a](https://github.com/Falconiere/toolu/commit/29ef89a07282411705a8a4c398583c6dda2c6e74))
+* **python-quality:** port concerns to one TypeScript registry module ([#322](https://github.com/Falconiere/toolu/issues/322)) ([01b8bd6](https://github.com/Falconiere/toolu/commit/01b8bd6b7379f4f995fe870eed1b529dfea99362))
+* **rust-quality:** port concerns to one TypeScript registry module ([#323](https://github.com/Falconiere/toolu/issues/323)) ([70c446a](https://github.com/Falconiere/toolu/commit/70c446a29be00e70a4f5abdacaa058fd0688fc5f))
+* **statusline:** port statusline, collect-status, setup and status to Bun ([#319](https://github.com/Falconiere/toolu/issues/319)) ([f876c14](https://github.com/Falconiere/toolu/commit/f876c1435bf7a3eacb3942ab48b536a5d315a52a))
+* **tooling:** plugin bundle pipeline with committed hooks/dist and drift check ([#296](https://github.com/Falconiere/toolu/issues/296)) ([f8b1779](https://github.com/Falconiere/toolu/commit/f8b1779c9c845c799c3b16f55bd778e6c8bdc57d))
+* **tooling:** port guardrails, tooling scripts and benchmarks to TypeScript ([#304](https://github.com/Falconiere/toolu/issues/304)) ([fcda8ea](https://github.com/Falconiere/toolu/commit/fcda8ea46e6160cce32e26c7d30dcfee035bec6c))
+* **toolu:** complete Bun-only hook migration ([#328](https://github.com/Falconiere/toolu/issues/328)) ([845c61d](https://github.com/Falconiere/toolu/commit/845c61d7ad884c6fe39bf6cf76a62464d4f5b6d6))
+* **toolu:** native bash-commands, commit-gate and quality-gate PreToolUse gates ([#315](https://github.com/Falconiere/toolu/issues/315)) ([1ca4dcc](https://github.com/Falconiere/toolu/commit/1ca4dcc3fd05280f8441e0d6df346dcb7cd8d7ef))
+* **toolu:** port context-budget, debug helpers and setup script to Bun ([#317](https://github.com/Falconiere/toolu/issues/317)) ([bda81dd](https://github.com/Falconiere/toolu/commit/bda81dd268b5e90e9a7edefcb447ceb2dfe7bf53))
+* **toolu:** port pre-tool workflow gates to TypeScript ([#320](https://github.com/Falconiere/toolu/issues/320)) ([d135c04](https://github.com/Falconiere/toolu/commit/d135c0445ac32ec3ea2adf9a96375855dc490b2c))
+* **toolu:** PostToolUse dispatcher in TypeScript with native gate-status and push-waiver ([#314](https://github.com/Falconiere/toolu/issues/314)) ([a8b0c9c](https://github.com/Falconiere/toolu/commit/a8b0c9c9680d6d54cde867c042a96cf2776c1b94))
+* **toolu:** PreToolUse dispatcher in TypeScript with per-module bash fallback ([#310](https://github.com/Falconiere/toolu/issues/310)) ([12148ab](https://github.com/Falconiere/toolu/commit/12148ab66aabe5ab3c6ae6c0a2fd4be05efe4351))
+* **toolu:** session lifecycle hooks on Bun ([#311](https://github.com/Falconiere/toolu/issues/311)) ([2386d4f](https://github.com/Falconiere/toolu/commit/2386d4f362066f7042f9e11bc1c9d1fc705108eb))
+* **ts-quality:** port concerns to registry module ([#318](https://github.com/Falconiere/toolu/issues/318)) ([c50c6bd](https://github.com/Falconiere/toolu/commit/c50c6bd9bd2d132192e86638c65bef9c3065e18a))
+
+
+### Bug Fixes
+
+* **jev:** avoid false Codex availability reports ([#329](https://github.com/Falconiere/toolu/issues/329)) ([a6d5c5a](https://github.com/Falconiere/toolu/commit/a6d5c5a98f53f1dc54346bdd7077731623573d5b))
+
 ## [7.6.0](https://github.com/Falconiere/toolu/compare/v7.5.0...v7.6.0) (2026-09-28)
 
 
