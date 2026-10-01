@@ -2,7 +2,7 @@
 // @bun
 
 // plugins/pr-babysit/hooks/src/babysit-reply-thread.ts
-import { existsSync as existsSync2, statSync } from "fs";
+import { existsSync as existsSync2, statSync as statSync2 } from "fs";
 
 // plugins/pr-babysit/hooks/src/babysit/common.ts
 import {
@@ -12,6 +12,7 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync
 } from "fs";
 import { basename, dirname, join } from "path";
@@ -118,6 +119,7 @@ function pidAlive(pid) {
 class SlotLock {
   path;
   held = false;
+  identity = null;
   onTerm = () => {
     this.release();
     process.exit(143);
@@ -138,21 +140,35 @@ class SlotLock {
         try {
           mkdirSync(this.path);
           this.held = true;
+          const { dev, ino } = statSync(this.path);
+          this.identity = { dev, ino };
           writeFileSync(join(this.path, "pid"), `${process.pid}
 `);
           writeFileSync(join(this.path, "since"), `${Math.floor(Date.now() / 1000)}
 `);
           return;
         } catch (error) {
-          if (!existsSync(this.path))
+          if (!existsSync(this.path)) {
+            if (attempt === 0)
+              continue;
             throw error;
+          }
         }
         const pidText = readTextOrEmpty(join(this.path, "pid"));
         const sinceText = readTextOrEmpty(join(this.path, "since"));
         const pid = /^\d+$/.test(pidText) ? Number(pidText) : null;
         const since = /^\d+$/.test(sinceText) ? Number(sinceText) : null;
         const staleAfter = Number(process.env.PB_LOCK_STALE_SECONDS ?? "600");
-        const stale = pid === null || since === null || !pidAlive(pid) || Math.floor(Date.now() / 1000) - since > staleAfter;
+        let incompleteAgeMs = 0;
+        if (pid === null || since === null) {
+          try {
+            incompleteAgeMs = Date.now() - statSync(this.path).mtimeMs;
+          } catch {
+            if (attempt === 0)
+              continue;
+          }
+        }
+        const stale = pid === null || since === null ? incompleteAgeMs >= 1000 : !pidAlive(pid) || Math.floor(Date.now() / 1000) - since > staleAfter;
         if (attempt === 0 && stale) {
           process.stderr.write(`pr-babysit: reclaiming stale lock ${this.path} (pid ${pidText || "?"}, since ${sinceText || "?"})
 `);
@@ -167,12 +183,20 @@ class SlotLock {
     }
   }
   release() {
-    process.off("SIGTERM", this.onTerm);
-    process.off("SIGINT", this.onInt);
-    if (this.held && readTextOrEmpty(join(this.path, "pid")) === String(process.pid)) {
+    let owned = false;
+    if (this.held && this.identity) {
+      try {
+        const { dev, ino } = statSync(this.path);
+        owned = dev === this.identity.dev && ino === this.identity.ino;
+      } catch {}
+    }
+    if (owned) {
       rmSync(this.path, { recursive: true, force: true });
     }
     this.held = false;
+    this.identity = null;
+    process.off("SIGTERM", this.onTerm);
+    process.off("SIGINT", this.onInt);
   }
 }
 function loadState(path) {
@@ -393,7 +417,7 @@ runCli(async () => {
     fail("usage", "reply-thread.sh: --state-file required");
   if (!bodyPath || !existsSync2(bodyPath))
     fail("usage", "reply-thread.sh: --body-file <existing file> required");
-  const bodySize = statSync(bodyPath).size;
+  const bodySize = statSync2(bodyPath).size;
   if (bodySize === 0)
     fail("usage", "reply-thread.sh: reply body is empty");
   if (bodySize > 65536)

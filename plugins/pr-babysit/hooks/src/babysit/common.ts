@@ -5,6 +5,7 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
@@ -126,6 +127,7 @@ function pidAlive(pid: number): boolean {
 export class SlotLock {
   readonly path: string;
   private held = false;
+  private identity: { dev: number; ino: number } | null = null;
   private onTerm = (): void => {
     this.release();
     process.exit(143);
@@ -148,22 +150,36 @@ export class SlotLock {
         try {
           mkdirSync(this.path);
           this.held = true;
+          const { dev, ino } = statSync(this.path);
+          this.identity = { dev, ino };
           writeFileSync(join(this.path, "pid"), `${process.pid}\n`);
           writeFileSync(join(this.path, "since"), `${Math.floor(Date.now() / 1000)}\n`);
           return;
         } catch (error) {
-          if (!existsSync(this.path)) throw error;
+          // The holder can release between EEXIST and inspection.
+          if (!existsSync(this.path)) {
+            if (attempt === 0) continue;
+            throw error;
+          }
         }
         const pidText = readTextOrEmpty(join(this.path, "pid"));
         const sinceText = readTextOrEmpty(join(this.path, "since"));
         const pid = /^\d+$/.test(pidText) ? Number(pidText) : null;
         const since = /^\d+$/.test(sinceText) ? Number(sinceText) : null;
         const staleAfter = Number(process.env.PB_LOCK_STALE_SECONDS ?? "600");
+        let incompleteAgeMs = 0;
+        if (pid === null || since === null) {
+          try {
+            incompleteAgeMs = Date.now() - statSync(this.path).mtimeMs;
+          } catch {
+            if (attempt === 0) continue;
+          }
+        }
         const stale =
-          pid === null ||
-          since === null ||
-          !pidAlive(pid) ||
-          Math.floor(Date.now() / 1000) - since > staleAfter;
+          pid === null || since === null
+            ? // A new holder needs a moment to write pid and since after atomic mkdir.
+              incompleteAgeMs >= 1000
+            : !pidAlive(pid) || Math.floor(Date.now() / 1000) - since > staleAfter;
         if (attempt === 0 && stale) {
           process.stderr.write(
             `pr-babysit: reclaiming stale lock ${this.path} (pid ${pidText || "?"}, since ${sinceText || "?"})\n`,
@@ -180,12 +196,22 @@ export class SlotLock {
   }
 
   release(): void {
-    process.off("SIGTERM", this.onTerm);
-    process.off("SIGINT", this.onInt);
-    if (this.held && readTextOrEmpty(join(this.path, "pid")) === String(process.pid)) {
+    let owned = false;
+    if (this.held && this.identity) {
+      try {
+        const { dev, ino } = statSync(this.path);
+        owned = dev === this.identity.dev && ino === this.identity.ino;
+      } catch {
+        // The directory was already removed; never delete a replacement.
+      }
+    }
+    if (owned) {
       rmSync(this.path, { recursive: true, force: true });
     }
     this.held = false;
+    this.identity = null;
+    process.off("SIGTERM", this.onTerm);
+    process.off("SIGINT", this.onInt);
   }
 }
 

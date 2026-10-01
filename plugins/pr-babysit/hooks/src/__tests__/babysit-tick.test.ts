@@ -111,7 +111,10 @@ test("racing ticks count only completed writers and leave a valid slot", async (
     })),
   );
   for (const result of results) {
-    expect([0, 75]).toContain(result.status);
+    if (![0, 75].includes(result.status))
+      throw new Error(
+        `unexpected racing tick exit ${result.status}: ${JSON.stringify(result.output)}`,
+      );
     if (result.status === 75) expect(result.output.errors[0].code).toBe("locked");
   }
   const winners = results.filter((result) => result.status === 0).length;
