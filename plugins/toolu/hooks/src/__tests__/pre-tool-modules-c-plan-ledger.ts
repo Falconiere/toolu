@@ -14,7 +14,7 @@ import { cfg, LEDGER, put, seed, step } from "./pre-tool-modules-c-plan-ledger-k
 import { PLAN_LEDGER_AC_CASES } from "./pre-tool-modules-c-plan-ledger-2.ts";
 
 const PUSH = "git push origin feat/example";
-const RUN = "run: bash";
+const RUN = 'run: bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" run';
 
 const enriched = {
   last_run: "2026-06-17T12:00:00Z",

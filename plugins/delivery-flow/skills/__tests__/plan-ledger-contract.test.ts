@@ -27,7 +27,7 @@ test.concurrent("plan-review asserts every step has a runnable check and rejects
 
 test.concurrent("execution reads status and records each step via run <plan_doc> --step <id>", () => {
   // The engine requires the plan-doc positional arg, so the doc must show it.
-  expectAll(ref("execution"), ['plan-ledger.sh" status', "run <plan_doc>", "--step <id>"]);
+  expectAll(ref("execution"), ['plan-ledger.js" status', "run <plan_doc>", "--step <id>"]);
 });
 
 test.concurrent("spec documents the **AC-<n>:** id convention", () => {
@@ -57,7 +57,7 @@ test.concurrent("shared plan reference documents optional ac_refs/depends_on/inp
 });
 
 test.concurrent("shared plan reference uses the supported final verification command", () => {
-  expect(ref("ledger")).toContain("plan-ledger.sh run <plan_doc> --verify");
+  expect(ref("ledger")).toContain('plan-ledger.js" run <plan_doc> --verify');
 });
 
 test.concurrent("plan is evidence-first and keeps detailed steps only in the ledger", () => {

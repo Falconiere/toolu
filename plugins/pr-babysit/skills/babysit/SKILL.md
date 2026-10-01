@@ -17,8 +17,8 @@ relative to this file), with `--state-file` set to the Codex slot path; its outp
 Trust that result: never write a polling script or controller of your own,
 never re-fetch with ad-hoc `gh` calls what the result already reports, and act
 through `babysit-reply-thread.js`, `babysit-resolve-thread.js` and `babysit-record.js`. Fix items go
-through `route-fix.sh --host codex` and, when it dispatches to herdr,
-`dispatch-fix.sh start` then `dispatch-fix.sh wait --timeout-seconds 45` — one
+through `babysit-route-fix.js --host codex` and, when it dispatches to herdr,
+`babysit-dispatch-fix.js start` then `babysit-dispatch-fix.js wait --timeout-seconds 45` — one
 bounded wait per continuation. A fixer launch that is due runs first in the
 call; it normally takes seconds and is bounded when an agent fails to start.
 

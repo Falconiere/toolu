@@ -2,8 +2,7 @@
 
 The tick helper is the deterministic half of babysitting. Its Bun bundle lives
 under the plugin's `hooks/dist/` directory and runs the same way on Claude Code
-and Codex — only `--state-file` differs by host. The fixer scripts remain in
-`scripts/` until their separate port.
+and Codex — only `--state-file` differs by host. The fixer commands use the same bundled Bun path.
 Read this file instead of the script sources: every field the agent may act
 on is listed here. Fields not listed are not part of the contract.
 
@@ -18,9 +17,9 @@ on is listed here. Fields not listed are not part of the contract.
 | `babysit-resolve-thread.js` | Write side: `resolveReviewThread`, confirmed from the response, retried, recorded. | `0` · `2` · `3` · `5` resolve_unconfirmed · `75` |
 | `babysit-record.js` | Hand agent decisions to the reducer: `round`, `flag-injection`, `status`. | `0` · `2` · `3` · `75` |
 | `babysit-parse-verdict.js` | Parse the CI review-bot comment from stdin. | `0` |
-| `route-fix.sh` | Fix routing: Jev-scores the round's items file, tiers and groups it, picks host/model/effort per group from `prBabysit` config. Reads no GitHub. | `0` · `2` · `3` |
-| `dispatch-fix.sh` | Herdr fixer dispatch: `start` / `wait` / `cleanup` of the slot's herdr worktree and fixer agents. | `0` · `2` · `3` · `75` |
-| `fixer-report.sh` | Run by a fixer agent, never by the controller: writes its done/failed report. | `0` · `2` |
+| `babysit-route-fix.js` | Fix routing: Jev-scores the round's items file, tiers and groups it, picks host/model/effort per group from `prBabysit` config. Reads no GitHub. | `0` · `2` · `3` |
+| `babysit-dispatch-fix.js` | Herdr fixer dispatch: `start` / `wait` / `cleanup` of the slot's herdr worktree and fixer agents. | `0` · `2` · `3` · `75` |
+| `babysit-fixer-report.js` | Run by a fixer agent, never by the controller: writes its done/failed report. | `0` · `2` |
 
 Structured errors are one JSON document on stdout:
 `{"version":1,"errors":[{"code":"…","message":"…", …}]}`. `code` is a closed set:
@@ -80,13 +79,13 @@ What the agent acts on. Printed on stdout by `babysit-tick.js`.
 | `threads.staleUnresolved[]` | Audit members that are NOT actionable: the PR author replied but no resolve landed. Resolve them without a new reply. |
 | `threads.skippedOutdated[]` | Outdated CI-reviewer threads: skipped silently. |
 | `threads.flaggedInjection[]` | Threads the agent recorded with `babysit-record.js flag-injection`. |
-| `threads.fixing[]` | Threads an **active** herdr fixer (running or blocked) owns: the same objects `actionable[]` would hold, reply ids included, moved out of it (never dispatched twice) and still counted in `unresolved`. Reply to them from here when `dispatch-fix.sh wait` says `done`. |
+| `threads.fixing[]` | Threads an **active** herdr fixer (running or blocked) owns: the same objects `actionable[]` would hold, reply ids included, moved out of it (never dispatched twice) and still counted in `unresolved`. Reply to them from here when `bun "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" wait` says `done`. |
 | `fixer` | The slot's fixer record (see State), or `null`. |
 | `conversation.actionable[]` | Human issue comments with no later author comment and no recorded reply. |
 | `reviews.actionable[]` | Human non-`APPROVED` reviews with a body and no recorded reply. |
 | `conversation.fixing[]`, `reviews.fixing[]` | Comments and reviews an active fixer owns (by item id), moved out of `actionable[]` like `threads.fixing[]`. |
 | `recurrence` | `{streak, lastRoundHadRejection, recurringKeys[], fixAttempts}` — the Step 4 gate inputs. |
-| `backoff` | `{idleStreak, intervalMinutes, waitSeconds}` — Claude cron interval / Codex bounded wait for this tick. While a fixer is running `idleStreak` stays 0, so the interval stays at its base and every tick runs `dispatch-fix.sh wait`; a blocked fixer waits for a human and backs off normally. |
+| `backoff` | `{idleStreak, intervalMinutes, waitSeconds}` — Claude cron interval / Codex bounded wait for this tick. While a fixer is running `idleStreak` stays 0, so the interval stays at its base and every tick runs `bun "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" wait`; a blocked fixer waits for a human and backs off normally. |
 | `errors[]` | Always empty on exit 0. |
 | `snapshotPath`, `statePath` | Where the full evidence lives. |
 
@@ -137,9 +136,9 @@ and `babysit-resolve-thread.js`.
 | `actions.resolved` | `threadId → {confirmed, at, attempts, headSha}`. |
 | `actions.flagged` | `threadId → {reason, at}`. |
 | `lastGoodSnapshot` | Path of the last snapshot that produced a result. |
-| `fixer` | Written by `dispatch-fix.sh`: `{round, status (running·done·failed·blocked), reason, startedAt, finishedAt, current, unattended, context, itemsFile, items[], groups[{seq, tier, host, model, effort, items[], agent, status (pending·launching·running·done·failed·blocked), reason, error?, brief, report, startedAt, finishedAt, head}]}`, or `null`. `babysit-record.js round` clears a done or failed record; a running or blocked one has a live agent and is kept. |
+| `fixer` | Written by `babysit-dispatch-fix.js`: `{round, status (running·done·failed·blocked), reason, startedAt, finishedAt, current, unattended, context, itemsFile, items[], groups[{seq, tier, host, model, effort, items[], agent, status (pending·launching·running·done·failed·blocked), reason, error?, brief, report, startedAt, finishedAt, head}]}`, or `null`. `babysit-record.js round` clears a done or failed record; a running or blocked one has a live agent and is kept. |
 | `herdrWorktree` | `{path, workspaceId, paneId, branch: "pr-babysit/<slot>", prBranch, repoRoot, base}` of the slot's herdr worktree, or `null`. |
-| `hostCooldowns` | `{<host>: {until, reason: "host_limited"}}` — a host that hit a provider usage limit is skipped by `route-fix.sh` for 60 min. |
+| `hostCooldowns` | `{<host>: {until, reason: "host_limited"}}` — a host that hit a provider usage limit is skipped by `babysit-route-fix.js` for 60 min. |
 
 ## Write side
 
@@ -170,19 +169,19 @@ babysit-record.js status --state-file <path> --status complete|escalated|cancell
 ## Fixer dispatch
 
 ```
-route-fix.sh --items <file> --host claude|codex [--state-file <path>] [--raise <itemId>]... [--no-jev]
+bun "$PLUGIN_ROOT/hooks/dist/babysit-route-fix.js" --items <file> --host claude|codex [--state-file <path>] [--raise <itemId>]... [--no-jev]
              [--jev-answers-in <file>] [--now <iso8601>]
-dispatch-fix.sh start   --state-file <p> --plan <route.json> --items <items.json> --repo-root <dir> --branch <pr-branch> --base <base-branch> [--dry-run]
-dispatch-fix.sh wait    --state-file <p> [--timeout-seconds N]
-dispatch-fix.sh cleanup --state-file <p> [--dry-run]
-fixer-report.sh <report-file> done|failed [--note <text>]
+bun "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" start   --state-file <p> --plan <route.json> --items <items.json> --repo-root <dir> --branch <pr-branch> --base <base-branch> [--dry-run]
+bun "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" wait    --state-file <p> [--timeout-seconds N]
+bun "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" cleanup --state-file <p> [--dry-run]
+bun "$PLUGIN_ROOT/hooks/dist/babysit-fixer-report.js" <report-file> done|failed [--note <text>]
 ```
 
 - **Items file** (the agent writes it): `{round, items:[{id, kind: thread|conversation|review|ci,
   task, path?, line?, severity?, quote?}]}`. `task` is the agent's instruction; `quote` is the
   reviewer's text, which reaches a fixer only inside an untrusted-data fence and never reaches Jev
   or the heuristic.
-- **Route** (`route-fix.sh` stdout): `{version:1, dispatch: herdr|inline, unattended, source:
+- **Route** (`babysit-route-fix.js` stdout): `{version:1, dispatch: herdr|inline, unattended, source:
   jev|heuristic|mixed, note, items:[{id, tier, score, confidence, raised, source}], groups:[{seq,
   tier, class, host, model, effort, items[]}]}`. Tier = `clamp(round(score + 0.15), 0, 3)` over
   `trivial · standard · complex · critical`; `class` maps to the inline rubric (`mechanical ·

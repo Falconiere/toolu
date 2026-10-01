@@ -1,7 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
-import { resolve } from "node:path";
-import { childEnv } from "@toolu/conformance/harness/spawn";
 import { registryEventFor } from "../registry-types.ts";
 import {
   parseRegistryName,
@@ -10,31 +7,21 @@ import {
   registryRoot,
 } from "../registry-paths.ts";
 
-const REGISTRY_SH = resolve(import.meta.dir, "../../../../../plugins/toolu/hooks/lib/registry.sh");
-
-/** `toolu_registry_event_dir EVENT` from the real bash lib under `env`. */
-function bashEventDir(event: string, env: Record<string, string | undefined>): string {
-  const res = spawnSync(
-    "bash",
-    ["-c", '. "$1"; toolu_registry_event_dir "$2"', "_", REGISTRY_SH, event],
-    { env: childEnv(env), encoding: "utf8" },
-  );
-  expect(res.stderr).toBe("");
-  return res.stdout;
-}
-
-const ENVS: Record<string, Record<string, string | undefined>> = {
-  claude: { HOME: "/home/u" },
-  claudeConfigDir: { HOME: "/home/u", CLAUDE_CONFIG_DIR: "/cc" },
-  codex: { HOME: "/home/u", PLUGIN_ROOT: "/p", CODEX_HOME: "/cx" },
-  override: { HOME: "/home/u", TOOLU_CONFIG_DIR: "/t", CLAUDE_CONFIG_DIR: "/cc" },
+const ENVS: Record<string, { env: Record<string, string>; root: string }> = {
+  claude: { env: { HOME: "/home/u" }, root: "/home/u/.claude/toolu" },
+  claudeConfigDir: { env: { HOME: "/home/u", CLAUDE_CONFIG_DIR: "/cc" }, root: "/cc/toolu" },
+  codex: { env: { HOME: "/home/u", PLUGIN_ROOT: "/p", CODEX_HOME: "/cx" }, root: "/cx/toolu" },
+  override: {
+    env: { HOME: "/home/u", TOOLU_CONFIG_DIR: "/t", CLAUDE_CONFIG_DIR: "/cc" },
+    root: "/t/toolu",
+  },
 };
 
 describe("registryEventDir", () => {
-  for (const [label, env] of Object.entries(ENVS)) {
-    test.concurrent(`matches bash toolu_registry_event_dir (${label})`, () => {
-      expect(registryEventDir("tool/pre", { env })).toBe(bashEventDir("PreToolUse", env));
-      expect(registryEventDir("tool/post", { env })).toBe(bashEventDir("PostToolUse", env));
+  for (const [label, { env, root }] of Object.entries(ENVS)) {
+    test.concurrent(`resolves event directories (${label})`, () => {
+      expect(registryEventDir("tool/pre", { env })).toBe(`${root}/pre-tools.d`);
+      expect(registryEventDir("tool/post", { env })).toBe(`${root}/post-tools.d`);
     });
   }
 

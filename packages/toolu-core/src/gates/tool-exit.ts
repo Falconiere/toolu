@@ -2,7 +2,7 @@
  * What the post-tool gates read from the host's payload (#259), exactly as
  * `gate-status.sh` and `push-waiver.sh` read it with `jq -r`: the command, the
  * reported exit status and the interrupt flag. Each value is the text bash
- * would hold in its variable, so every caller keeps the bash tests on it.
+ * would hold in its variable; the native payload tests pin these cases.
  */
 import { JqError, alt, get, parseJson, raw, type Json } from "../ledger/ledger-jq.ts";
 

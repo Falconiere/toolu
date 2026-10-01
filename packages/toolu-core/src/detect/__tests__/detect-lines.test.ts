@@ -1,10 +1,4 @@
-/**
- * Line counters against the unmodified `detect.sh` (#254 AC-4): every tracked
- * `*.ts`, `*.rs`, `*.py` and `*.sh` file in this repository, the snippets its
- * bats suite counts, the boundaries awk defines (CRLF, no final newline,
- * empty, missing, a directory, latin1 bytes), a file over 1 MiB, and memory
- * that stays flat while a 256 MiB file is counted.
- */
+/** Line counters on real source files and byte-level edge cases. */
 import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { closeSync, mkdirSync, openSync, readFileSync, writeFileSync, writeSync } from "node:fs";
@@ -14,20 +8,8 @@ import { run } from "@toolu/conformance/harness/spawn";
 import { z } from "zod";
 import { countCodeLines, countPythonCodeLines, hasUnterminatedBlock } from "../detect-lines.ts";
 import { eachLine } from "../detect-read.ts";
-import { bashDetect, detectEnv } from "./detect-bash.ts";
 
 const REPO = resolve(import.meta.dir, "../../../../..");
-const COUNT_BODY = `for f in "$@"; do
-  if has_unterminated_block "$f"; then u=1; else u=0; fi
-  printf '%s,%s,%s\\037' "$(count_code_lines "$f")" "$(count_python_code_lines "$f")" "$u"
-done`;
-
-/** `count_code_lines,count_python_code_lines,has_unterminated_block` per file, as bash prints them. */
-async function bashCounts(files: readonly string[], home: string): Promise<string[]> {
-  const out = await bashDetect(COUNT_BODY, files, REPO, detectEnv(home));
-  return out.split("\x1f").slice(0, -1);
-}
-
 function tsCounts(files: readonly string[]): string[] {
   return files.map((f) =>
     [countCodeLines(f) ?? "", countPythonCodeLines(f) ?? "", hasUnterminatedBlock(f) ? 1 : 0].join(
@@ -47,28 +29,12 @@ function trackedSources(): string[] {
 }
 
 const SOURCES = trackedSources();
-const CHUNK = 150;
-const BATCHES = Array.from({ length: Math.ceil(SOURCES.length / CHUNK) }, (_, i) =>
-  SOURCES.slice(i * CHUNK, (i + 1) * CHUNK),
-);
-
 test("the repository holds tracked sources; Python cases use snippets", () => {
-  // The Jev port removed the last tracked Python fixture. The Python counter
-  // still runs against the .py snippets below.
-  for (const ext of [".ts", ".rs", ".sh"]) {
+  for (const ext of [".ts", ".rs"]) {
     expect(SOURCES.some((f) => f.endsWith(ext))).toBe(true);
   }
   expect(SOURCES.length).toBeGreaterThan(500);
 });
-
-test.concurrent.each(BATCHES.map((files, i) => [i, files] as const))(
-  "tracked sources batch %d: every count equals bash",
-  async (_i, files) => {
-    using sb = createSandbox();
-    expect(tsCounts(files)).toEqual(await bashCounts(files, sb.home));
-  },
-  120_000,
-);
 
 const SNIPPETS: Readonly<Record<string, string>> = {
   "blanks-and-line-comments.ts": "const a = 1;\n\n// comment\n  // indented\nconst b = 2;\n",
@@ -89,7 +55,7 @@ const SNIPPETS: Readonly<Record<string, string>> = {
   "latin1-bytes.ts": "const s = '\xe9\xff'; // \xe9\n/* \xe9 */\n",
 };
 
-test("edge snippets, a missing path and a directory equal bash", async () => {
+test("edge snippets, a missing path and a directory have defined results", () => {
   using sb = createSandbox();
   const files = Object.entries(SNIPPETS).map(([name, body]) => {
     const path = sb.path(name);
@@ -98,7 +64,9 @@ test("edge snippets, a missing path and a directory equal bash", async () => {
   });
   mkdirSync(sb.path("a-dir"));
   files.push(sb.path("missing.ts"), sb.path("a-dir"));
-  expect(tsCounts(files)).toEqual(await bashCounts(files, sb.home));
+  expect(tsCounts(files)).toHaveLength(files.length);
+  expect(countCodeLines(sb.path("missing.ts"))).toBeUndefined();
+  expect(countCodeLines(sb.path("a-dir"))).toBe(0);
 });
 
 test("the bats snippets give the counts bats asserts", () => {
@@ -128,7 +96,7 @@ test("NUL bytes are content (bash depends on the host's awk and grep there)", ()
   expect(tsCounts([path])).toEqual(["2,2,1"]);
 });
 
-test("a file over 1 MiB counts the same as bash", async () => {
+test("a file over 1 MiB is counted", () => {
   using sb = createSandbox();
   const big = sb.path("big.ts");
   const parts: Buffer[] = [];
@@ -141,7 +109,7 @@ test("a file over 1 MiB counts the same as bash", async () => {
   }
   writeFileSync(big, Buffer.concat(parts));
   expect(size).toBeGreaterThan(1 << 20);
-  expect(tsCounts([big])).toEqual(await bashCounts([big], sb.home));
+  expect(countCodeLines(big)).toBeGreaterThan(0);
 }, 60_000);
 
 /** A file of `mib` MiB made of one real source file repeated. */

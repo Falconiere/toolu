@@ -1,6 +1,6 @@
 # Hook module registry
 
-Domain plugins (ast-grep and the language-quality plugins) add rules to toolu's core `PreToolUse` and `PostToolUse` dispatchers through a runtime registry in the host's config directory. `@toolu/core/registry` ([#257](https://github.com/Falconiere/toolu/issues/257)) imports bundled ESM contributions in-process and runs registry `.sh` modules through Bash. Both dispatchers and all toolu built-in gates are native TypeScript. ts-quality (#265), python-quality (#266), rust-quality (#267) and ast-grep (#268) are bundled registry modules.
+Domain plugins (ast-grep and the language-quality plugins) add rules to toolu's core `PreToolUse` and `PostToolUse` dispatchers through a runtime registry in the host's config directory. `@toolu/core/registry` ([#257](https://github.com/Falconiere/toolu/issues/257)) imports the bundled ESM contributions in process. Both dispatchers and all shipped built-in gates are native TypeScript. ts-quality (#265), python-quality (#266), rust-quality (#267) and ast-grep (#268) are bundled registry modules.
 
 ## Layout
 
@@ -9,7 +9,7 @@ Domain plugins (ast-grep and the language-quality plugins) add rules to toolu's 
 <config root>/toolu/post-tools.d/<spec>__<name>.js   # tool/post
 ```
 
-`<config root>` is `TOOLU_CONFIG_DIR`, else the host's own root (`CLAUDE_CONFIG_DIR` or `~/.claude`, `CODEX_HOME` or `~/.codex`, …). `<spec>` is the owning plugin's `name@marketplace`. It may contain `.` but never `__`, `/` or whitespace. The directories are the same ones the bash `*.sh` modules use.
+`<config root>` is `TOOLU_CONFIG_DIR`, else the host's own root (`CLAUDE_CONFIG_DIR` or `~/.claude`, `CODEX_HOME` or `~/.codex`, …). `<spec>` is the owning plugin's `name@marketplace`. It may contain `.` but never `__`, `/` or whitespace.
 
 ## Module contract
 
@@ -45,21 +45,19 @@ await runRegisterHook("ts-quality@toolu", [
 
 `registerModules` copies each bundle to its target through `<target>.tmp.<pid>` and `rename`, and only when the bytes differ. It then removes every other `<spec>__*.js` and `<spec>__*.sh` in both directories: a plugin's pre-port `.sh` disappears the first time its TypeScript version registers. It also removes `<spec>__*.{js,sh}.tmp.*` residue older than a minute. Other plugins' entries are never touched. A missing bundle keeps the existing registry copy (stale enforcement beats none). The hook drains stdin, prints nothing on stdout, reports each failure on one stderr line and always exits 0.
 
-On Codex, `pruneInactiveModules` removes `.js` and `.sh` modules of plugins that the ready plugin snapshot lists as absent. It never removes a symlink, and a missing or stale snapshot prunes nothing. The core SessionStart hook runs it once per session once #263 lands; until then the bash prune covers `.sh` modules, and dispatch-time gating skips an absent plugin's `.js` modules.
+On Codex, `pruneInactiveModules` removes modules of plugins that the ready plugin snapshot lists as absent. It never removes a symlink, and a missing or stale snapshot prunes nothing. The core SessionStart hook runs it once per session; dispatch-time gating also skips an absent plugin's modules.
 
 ## Dispatching
 
-`runRegistry(event, ctx, { fallback?, warn? })` reads `<ctx.configRoot>/toolu/<dir>.d` and returns one outcome per module it reached, in byte order of file names (bash glob order under `LC_ALL=C`):
+`runRegistry(event, ctx, options)` reads `<ctx.configRoot>/toolu/<dir>.d` and returns one outcome per module it reached, in byte order of file names. Shipped plugins register only `.js` modules:
 
 | Situation | Outcome |
 |---|---|
 | Plugin definitively not installed (Claude `installed_plugins.json`, Codex snapshot) | `skipped: inactive`. An unreadable record fails open, and Cursor, Hermes and OpenCode count as installed |
-| `.sh` module whose spec also has a `.js` module | `skipped: shadowed`, so one plugin never writes the gate twice per event |
-| Other `.sh` module | passed to `fallback` (the bash bridge, #258), else `skipped: bash` |
 | `.js` module | imported (fresh when its bytes change), checked against its file name, `run`, decision validated: `decision` |
 | Import error, throw, rejection, contract mismatch, non-decision | `error`, plus `toolu-registry: module <file> failed: …; output skipped` on stderr; the walk continues |
-| `deny` on a pre-tool event, `post_block` on a post-tool event | recorded, then the walk stops, as in `dispatch.sh` |
-| File not named `<spec>__<name>.{js,sh}` | never run; one stderr warning |
+| `deny` on a pre-tool event, `post_block` on a post-tool event | recorded, then the walk stops |
+| Invalid module file name | never run; one stderr warning |
 
 Merging outcomes (deny over ask over advisory) and encoding them for the host belong to the dispatcher.
 
@@ -67,14 +65,14 @@ Merging outcomes (deny over ask over advisory) and encoding them for the host be
 
 toolu's PreToolUse entry for edit, shell and search tools runs the Bun bundle `hooks/dist/pre-tools.js`, wired with the generated launcher. The `mcp__` entry runs `hooks/dist/mcp-tools.js` the same way (#260). That bundle is `@toolu/core/gates/mcp-hook`: mcp-blocker alone, without the other built-ins or `pre-tools.d`, and it loads the gate only when a blocklist file or a toolu config exists. The subagent entry runs `hooks/dist/agent-tier.js` through its generated launcher (#262). `dispatchPreTool` (`@toolu/core/dispatch`) ports `pre-tools/mod.sh` and the PreToolUse half of `dispatch.sh`:
 
-- **Order.** Built-in modules run in table order, which is the byte order `mod.sh` globbed. `runRegistry` then walks `pre-tools.d`. `.js` modules run in process. `.sh` modules run on bash with the environment `mod.sh` exported: `input`, `tool_name`, `TOOLU_LIB_DIR`, `TOOLU_CONFIG_DIR`, and `TOOLU_EDIT_*` during a patch walk.
+- **Order.** Built-in modules run in table order, then `runRegistry` walks `pre-tools.d` in file-name order. Bundled `.js` modules run in process.
 - **Decisions.** The first deny is emitted exactly as its module wrote it, and the walk stops. A module exit of 2 blocks with that module's stderr. Any other non-zero exit is reported on stderr and skipped. The first ask is held and receives every advisory. Advisories are deduped and merged into one `additionalContext` and one `systemMessage`.
 - **Edits.** Edit, Write, MultiEdit and `apply_patch` are walked once per affected path as a synthetic `Edit`. A deny or exit 2 on any path wins for the whole patch. Unparseable patch headers are denied.
 - **Output.** Registry module results retain raw hook text. Native gates use the host encoder, which can print compact JSON where Bash's `jq -n` printed it pretty. Golden replay compares parsed decisions, exit codes, stderr and written state.
 - **Built-ins.** All nine entries in `NATIVE_MODULES` (`plugins/toolu/hooks/src/pre-tools/builtins.ts`) are native `{ kind: "native", name, run(event, ctx) }` gates from `@toolu/core/gates`. `encodeDecision` degrades an `ask` on Codex to a deny where appropriate. The A, B and C golden suites replay captures of their Bash predecessors. `pre-tools-parity.test.ts` exercises the full conformance corpus on Claude and Codex, including registry and dispatcher cases.
 - **Failure.** An unexpected dispatcher error exits 2 and blocks the tool, as a missing Bun does.
 
-`bun run tooling/src/benchmarks/pre-tools-latency.ts [--runs N] [--assert]` measures p50 against the epic budget of bash + 5 ms. It compares `bash mod.sh` and `bash mcp-blocker.sh`, extracted with `git archive 2386d4f3 plugins/toolu` (the last commit where every module ran on bash), with the two committed bundles. Samples run in back-to-back pairs.
+`bun run tooling/src/benchmarks/final-hook-latency.ts --runs N` compares the committed pre-tool and MCP bundles with the Bash versions extracted from tag `v7.2.0`. Samples run in back-to-back pairs. The 5 ms incremental cold-start budget is enforced by `bun run bench:shell --assert` on macOS arm64 (or with `TOOLU_LATENCY_ENFORCE=1`); Linux reports that result without failing the gate. See [the final conformance report](conformance-report.md) for current macOS and Linux measurements.
 
 On an Apple M2 Max with Bun 1.4.2, measured on 2026-09-29 with 40 pairs:
 
@@ -95,19 +93,19 @@ toolu's PostToolUse entry for edit, shell and search tools runs the Bun bundle `
 
 - **Decisions.** The first `decision: "block"` is emitted exactly as its module wrote it, and the walk stops. `permissionDecision` means nothing after the tool ran: no ask is held and no deny stops the walk. Exit codes and advisory merging are as in PreToolUse, and the merged object names `hookEventName: "PostToolUse"`.
 - **Edits.** A block or exit 2 on any path of a patch wins for the whole patch. Unparseable `apply_patch` headers give `{"decision":"block","reason":"Unable to parse apply_patch file headers; per-file post-edit quality checks could not run."}`.
-- **Environment.** `.sh` modules also get `PROJECT_ROOT`, which is the git toplevel of the hook's working directory, else that directory. `$PROJECT_ROOT/node_modules/.bin` goes first on `PATH`. Native and `.js` modules receive the same values typed: `event.toolName`, `ctx.raw` (the payload), `ctx.projectRoot`, `ctx.cwd`, `ctx.edit` and `ctx.configRoot`.
+- **Environment.** Native and registry modules receive typed values: `event.toolName`, `ctx.raw` (the payload), `ctx.projectRoot`, `ctx.cwd`, `ctx.edit` and `ctx.configRoot`. The project root is the git toplevel of the hook's working directory, else that directory.
 - **Built-ins.** `gate-status` and `push-waiver` are native (`@toolu/core/gates`), listed in `plugins/toolu/hooks/src/post-tools/builtins.ts`.
   - gate-status reads the command with `@toolu/core/shell`. It counts only a quality command the line runs, and only when a zero exit of the line would prove that command passed (`exitProves`). A pass needs every such command proven, a failure at least one. This fixes #283 items 6 and 7. `plugins/toolu/hooks/docs/gates.md` has the rules.
   - push-waiver detects pushes through the same layer (#283 item 8).
   
-  Their bash scripts stay as the parity baseline.
+  Historical Bash versions are available at tag `v7.2.0` for parity checks.
 - **Registry.** `post-tools.d` runs after the built-ins. ts-quality (#265), python-quality (#266) and rust-quality (#267) run there in process.
 - **Parity.**
-  - `plugins/toolu/hooks/src/__tests__/post-tools-parity.test.ts` runs the `@toolu/conformance` PostToolUse corpus as Claude Code and Codex deliver it. It compares stdout, the exit code and the project's gate, waiver and telemetry files between `bash mod.sh` and the bundle. A TypeScript module cannot run under `bash mod.sh`, so each language-quality plugin has its own golden suite (see below); in the corpus, a fixture `.sh` registry module records a gate entry per patched path.
+  - `plugins/toolu/hooks/src/__tests__/post-tools-283.test.ts` and the colocated native tests exercise the PostToolUse corpus on Claude Code and Codex. Historical Bash behavior remains available from tag `v7.2.0`; each language-quality plugin retains its captured golden suite (see below).
   - `post-tools-283.test.ts` pins the named #283 fixtures: there the bundle is right and bash is recorded as the known-wrong baseline.
 - **Failure.** An unexpected dispatcher error exits 2 with `toolu PostToolUse dispatcher failed: <message>`, so the model sees that the post-tool checks did not run.
 
-`bun run tooling/src/benchmarks/post-tools-latency.ts [--runs N] [--assert]` measures p50 for `bash mod.sh` against the bundle. Each variant runs in its own identically prepared sandbox, and the two alternate run by run, so a load change during a fixture hits both. On an Apple M2 Max with Bun 1.4.2 (9 runs, load average 5 to 8, other agents active), the bundle ran 50 to 184 ms faster on every fixture. The largest gain was a two-path patch through ts-quality and rust-quality: 891 ms against 708 ms. That fixture now patches two paths through the fixture registry module, because no language-quality module runs under `bash mod.sh` any more (#265 to #267). Before the runs were interleaved, one load spike put the bash block and the bundle block on different sides of it, and a fixture read 13 ms slower.
+`bun run tooling/src/benchmarks/post-tools-latency.ts --runs N` measures the committed bundle against `bash mod.sh` from tag `v7.2.0`. Each variant runs in its own identically prepared sandbox, alternating runs to reduce load bias. The current figures are in [the final conformance report](conformance-report.md).
 
 ## Language-quality modules
 
@@ -142,7 +140,7 @@ python-quality (#266) is the second: `plugins/python-quality/hooks/src/post-tool
 - With no `jq` on `PATH`, bash exited silently. The TypeScript module needs neither `jq` nor `TOOLU_LIB_DIR`, and checks the file (`DEV-1`).
 - If a regular file cannot be read, the module records a quality violation instead of treating the file as empty and clearing its gate entry (`read-failure.test.ts`).
 
-The shared PostToolUse corpus and `dispatcher.bats` exercised python-quality's bash module, then rust-quality's; with no bash language-quality module left (#267), their multi-path patch goes through a fixture `.sh` registry module.
+The shared PostToolUse corpus and the language-quality golden suites cover multi-path patches using bundled registry modules.
 
 **Latency.** `bun run tooling/src/benchmarks/python-quality-latency.ts [--runs N] [--assert]` times the bash module (from `c50c6bd9`) against the TypeScript module, as ts-quality's benchmark does (both use `tooling/src/benchmarks/quality-latency.ts`). On an Apple M2 Max with Bun 1.4.2 (7 runs, load average 14 to 24, other agents active), the TypeScript module was 53 to 160 ms faster on every fixture:
 

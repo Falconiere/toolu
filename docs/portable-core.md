@@ -37,7 +37,7 @@ TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, 
 | `./config` | `toolu.config.json` Zod (`version: 1`); loader and resolvers ported from the bash config libs: `loadConfig` (jq `*` merge, fail-closed envelope), `enabled`/`model`/`codexModel`/`configString`, `qualityThreshold`, `docsSync*`, `gateMode`/`gateDecision`, `permissionsAutowrite`, and typed `settings/*` loaders ([#253](https://github.com/Falconiere/toolu/issues/253)) |
 | `./state` | Persisted state ported from the bash libs, byte-compatible for v1: `recordGateFailure`/`clearGateFile`/`readGateFile` (multi-slot gate file, atomic temp-and-rename writes under `<gate>.lock`, strict `GateFileSchema` with implicit version 1), `sweepState` (same TTL, merge and retention rules), `diffSha`, `telemetryAppend` (closed per-event `TELEMETRY_EXTRAS`, so no free-form payload is ever logged) and `normalizeEditRecords` (Edit, Write, MultiEdit, `apply_patch`) ([#255](https://github.com/Falconiere/toolu/issues/255)) |
 | `./registry` | Cross-plugin hook modules as bundled ESM (`<config>/toolu/<dir>.d/<spec>__<name>.js`): `RegistryModule` contract, `runRegistry` (byte-order walk, installed-plugin gating, per-module error isolation, stop after deny/block), `registerModules`/`runRegisterHook` (atomic sync, same-prefix prune) and `pruneInactiveModules` (Codex snapshot); parity with `registry.sh`, `dispatch.sh` and the plugins' `register.sh` ([#257](https://github.com/Falconiere/toolu/issues/257), [docs/registry.md](registry.md)) |
-| `./ledger` | The delivery-flow plan ledger, the push verdict and push-review waivers, ported from `plan-ledger*.sh`, `verdict.sh` and `push-waiver.sh`. For v1 files they make the same decisions and write the same bytes and messages as bash. `ledgerMain`/`ledgerRun`/`ledgerStatus`/`ledgerPreflight` (the `plan-ledger.sh` CLI; each step check runs in its own process group under a native `PLAN_LEDGER_STEP_TIMEOUT`), `parseSteps`/`docField`/`parseAcs`/`checkAcRefs`, `verdictMain`/`verdictReport` (quality, plan, review v2, docs), and `pushWaiverPend`/`pushWaiverPromote`/`pushWaiverMatches` ([#256](https://github.com/Falconiere/toolu/issues/256)) |
+| `./ledger` | The delivery-flow plan ledger, the push verdict and push-review waivers. For v1 files they retain parity with the historical Bash implementation. `ledgerMain`/`ledgerRun`/`ledgerStatus`/`ledgerPreflight` (bundled CLI `plugins/toolu/hooks/dist/plan-ledger.js`; each step check runs in its own process group under a native `PLAN_LEDGER_STEP_TIMEOUT`), `parseSteps`/`docField`/`parseAcs`/`checkAcRefs`, `verdictMain`/`verdictReport` (bundled CLI `plugins/toolu/hooks/dist/verdict.js`; quality, plan, review v2, docs), and `pushWaiverPend`/`pushWaiverPromote`/`pushWaiverMatches` ([#256](https://github.com/Falconiere/toolu/issues/256)) |
 | `./startup` | What the leaf plugins' SessionStart hooks share: `publishWrapper` (symlink a plugin file at `<config root>/<dir>/<name>`, never over a user's file), `bunOnPath`/`bunAdvisory`, `sessionContext` (bounded to `MAX_CONTEXT_CHARS`) and `renderHookOutput`, and the Codex dependency check `codexMissingPlugins`/`codexDependencyNotice` with host-native install commands. Ported from `session-start.sh`, `check-toolu.sh` and `check-deps.sh` ([#269](https://github.com/Falconiere/toolu/issues/269)) |
 | `./dispatch` | PreToolUse and PostToolUse dispatchers: `dispatchPreTool` and `dispatchPostTool` walk native built-in modules then `pre-tools.d`/`post-tools.d` with `dispatch.sh` semantics. The OpenCode package contains only `.js` registry modules ([#258](https://github.com/Falconiere/toolu/issues/258), [#259](https://github.com/Falconiere/toolu/issues/259), [docs/registry.md](registry.md#pretooluse-dispatch)) |
 | `./gates` | Built-in gates as native `ToolModule`s: `gateStatusModule` and `pushWaiverModule` (PostToolUse), plus `qualityCommands` over a parsed command and `toolExitStatus`/`toolInterrupted`/`toolCommand`, which read a payload as the bash modules' jq did ([#259](https://github.com/Falconiere/toolu/issues/259)) |
@@ -81,20 +81,20 @@ Derive types with `z.infer`. No `any`, unchecked casts, or non-null escapes to b
 
 ## Decision contract
 
-| Outcome | Effect | Mapping from Bash today |
+| Outcome | Effect | Native host encoding |
 |---------|--------|-------------------------|
 | `allow` | proceed | silent success |
-| `ask` | host prompt | `permissionDecision: "ask"` (`plugins/toolu/hooks/lib/gate-mode.sh`) |
+| `ask` | host prompt | `permissionDecision: "ask"` (`packages/toolu-core/src/config/gate-mode.ts`) |
 | `deny` | hard block | `permissionDecision: "deny"` |
 | `advisory` | context only | `additionalContext` / `systemMessage` |
-| `post_block` | post-tool feedback | PostToolUse `decision: "block"` (`plugins/toolu/hooks/lib/dispatch.sh`) |
+| `post_block` | post-tool feedback | PostToolUse `decision: "block"` (`packages/toolu-core/src/dispatch/dispatch.ts`) |
 | `runtime_failure` | fail closed | malformed output or dispatcher error |
 
-**Ask degradation** (`plugins/toolu/hooks/lib/host.sh` `toolu_supports_ask`; TypeScript `@toolu/core/host` `supportsAsk` / `degradeAsk`): Codex cannot prompt — judgement gates `ask→advise`, security guardrails `ask→block` (`gate-mode.sh`, `plugins/toolu/hooks/docs/gates.md`). OpenCode supports permission `ask`; Cursor enforces `ask` only on `beforeShellExecution`; Hermes shell hooks cannot prompt. Hosts without prompt use the same class rules, and `encodeDecision` turns any `ask` that still reaches them on a pre-action event into a deny.
+**Ask degradation** (`@toolu/core/host` `supportsAsk` / `degradeAsk`): Codex cannot prompt — judgement gates `ask→advise`, security guardrails `ask→block` (`packages/toolu-core/src/config/gate-mode.ts`, `plugins/toolu/hooks/docs/gates.md`). OpenCode supports permission `ask`; Cursor enforces `ask` only on `beforeShellExecution`; Hermes shell hooks cannot prompt. Hosts without prompt use the same class rules, and `encodeDecision` turns any `ask` that still reaches them on a pre-action event into a deny.
 
 **Host layer** (`@toolu/core/host`): detection order is `TOOLU_HOST_OVERRIDE`, the in-process OpenCode flag, a stdin `hook_event_name` only one host uses, Cursor's `CURSOR_VERSION` / `CURSOR_PROJECT_DIR`, Codex's `PLUGIN_ROOT`, then Claude. Cursor and Hermes are detected and encoded only; no Cursor manifest or Hermes shim ships yet.
 
-**Precedence:** deny beats ask beats advisory merge; multi-file patches hold ask while walking and emit the first deny immediately (`dispatch.sh`).
+**Precedence:** deny beats ask beats advisory merge; multi-file patches hold ask while walking and emit the first deny immediately (`@toolu/core/dispatch`).
 
 ## Event vocabulary
 
@@ -122,7 +122,7 @@ Exhaustive per-source rows: [docs/gate-coverage-matrix.md](gate-coverage-matrix.
 **Fixture:** `tooling/fixtures/portable-core/protected-files-pre.json` (Edit targeting `/repo/.env`).
 
 1. Host carries an edit (or Bash write) to a protected path.
-2. Normalize via edit records (`plugins/toolu/hooks/lib/edit-records.sh`).
+2. Normalize via edit records (`packages/toolu-core/src/state/edit-records.ts`).
 3. The native protected-files gate (`packages/toolu-core/src/gates/protected-files.ts`, #260; it replaced `protected-files.sh`) + `gateMode(config, "protectedFiles")`, the port of `toolu_gate_mode` in `gate-mode.sh`.
 4. Mode `block` → decision `deny`. OpenCode adapter **must** map that to `permission.effect = "deny"` (or `permission.rules`) **before** the write. Prompt text alone is not enforcement.
 5. Post-tool cannot un-write a completed edit.

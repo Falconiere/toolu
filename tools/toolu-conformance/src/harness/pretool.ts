@@ -1,9 +1,9 @@
 /**
  * PreToolUse harness: runs the committed TypeScript bundle behind its
  * generated launcher as Claude Code or Codex would spawn it. The shared
- * fromSameState helper lets PostToolUse parity compare stateful hooks.
+ * fromSameState helper lets tests compare stateful hook runs.
  */
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { launcherCommand } from "@toolu/core/launcher";
 import type { Sandbox } from "./sandbox.ts";
@@ -44,8 +44,7 @@ export function installPlugins(sb: Sandbox, ...specs: string[]): void {
 
 /**
  * Run a plugin's real SessionStart register hook, syncing its modules into the
- * registry: the `hooks/dist/register.js` bundle behind its hooks.json launcher
- * once the plugin is ported (#265), else its bash `register.sh`.
+ * registry through the `hooks/dist/register.js` bundle behind its launcher.
  */
 export async function registerPlugin(
   sb: Sandbox,
@@ -53,16 +52,15 @@ export async function registerPlugin(
   plugin: string,
 ): Promise<void> {
   const root = join(REPO_ROOT, "plugins", plugin);
-  const ported = existsSync(join(root, "hooks/dist/register.js"));
-  const argv = ported
-    ? ["/bin/sh", "-c", launcherCommand({ plugin, event: "SessionStart", entry: "register" })]
-    : ["bash", join(root, "hooks/register.sh")];
-  const env = ported
-    ? pretoolEnv(sb, host, {
-        CLAUDE_PLUGIN_ROOT: root,
-        ...(host === "codex" ? { PLUGIN_ROOT: root } : {}),
-      })
-    : pretoolEnv(sb, host);
+  const argv = [
+    "/bin/sh",
+    "-c",
+    launcherCommand({ plugin, event: "SessionStart", entry: "register" }),
+  ];
+  const env = pretoolEnv(sb, host, {
+    CLAUDE_PLUGIN_ROOT: root,
+    ...(host === "codex" ? { PLUGIN_ROOT: root } : {}),
+  });
   const result = await run(argv, { cwd: sb.project, env, stdin: "{}" });
   if (result.exitCode !== 0) {
     throw new Error(`register ${plugin} exited ${String(result.exitCode)}: ${result.stderr}`);

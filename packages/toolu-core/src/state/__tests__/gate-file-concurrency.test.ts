@@ -2,8 +2,7 @@
  * Concurrent writers never corrupt a gate file (#255, AC-2). The writers are
  * real OS processes racing on one real file, and a reader polls it for the
  * whole race. TypeScript writers serialize on `<gate>.lock`, so no entry is
- * lost either. Bash writers take no lock and can drop a merge, but the file
- * is still always one whole, valid document.
+ * lost either.
  */
 import { expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, utimesSync, writeFileSync } from "node:fs";
@@ -13,10 +12,6 @@ import { run, type RunResult } from "@toolu/conformance/harness/spawn";
 import { readGateFile } from "../gate-file.ts";
 
 const WRITER = resolve(import.meta.dir, "gate-writer.ts");
-const GATE_FILE_SH = resolve(
-  import.meta.dir,
-  "../../../../../plugins/toolu/hooks/lib/gate-file.sh",
-);
 
 function setup(): { sb: Sandbox; gate: string; env: Record<string, string> } {
   const sb = createSandbox({ git: true, branch: "feat/race" });
@@ -81,45 +76,6 @@ test("16 concurrent TypeScript writers: valid file, every entry kept, no temp or
   expect(
     readdirSync(join(sb.project, ".claude", "tmp")).filter((n) => /\.(tmp|lock)$/.test(n)),
   ).toEqual([]);
-}, 120_000);
-
-test("8 bash and 8 TypeScript writers racing: the file is never torn and always valid", async () => {
-  const { sb, gate, env } = setup();
-  using _sb = sb;
-  const ts = Array.from({ length: 8 }, (_, id) =>
-    run(["bun", WRITER, gate, `ts${String(id)}`, "3", "lenient"], {
-      cwd: sb.project,
-      env,
-      timeoutMs: 60_000,
-    }),
-  );
-  const bash = Array.from({ length: 8 }, (_, id) =>
-    run(
-      [
-        "bash",
-        "-c",
-        '. "$1"; for n in 0 1 2; do gate_record_failure "$2" "/w/sh$3/$n" "writer-sh$3" "reason" "sh$3/$n"; done',
-        "_",
-        GATE_FILE_SH,
-        gate,
-        String(id),
-      ],
-      { cwd: sb.project, env, timeoutMs: 60_000 },
-    ),
-  );
-  const all = Promise.all([...ts, ...bash]);
-  const bad = await watch(gate, all);
-  expectAllOk(await all);
-  expect(bad).toEqual([]);
-
-  const read = readGateFile(gate);
-  expect(read.kind).toBe("ok");
-  // An unlocked bash merge may drop an entry, or restore one a TypeScript writer
-  // just cleared from its stale read. Every survivor still came from these writers.
-  const keys =
-    read.kind === "ok" && read.doc.status === "failing" ? Object.keys(read.doc.entries ?? {}) : [];
-  expect(keys.length).toBeGreaterThan(0);
-  for (const key of keys) expect(key).toMatch(/^\/w\/(ts|sh)[0-7]\/[0-2]$/);
 }, 120_000);
 
 test("a stale lock from a crashed writer does not block the next one", async () => {

@@ -59,7 +59,7 @@ Skip this step if invocation is a cron tick (`--tick` marker, see below). Else:
 5. Tell user:
    > "Babysitting PR #N on branch `<branch>` every 3 min. Auto-stops when CI is green and all comments are addressed. Say `/pr-babysit:babysit stop` to cancel."
 
-First arg **`stop`**: resolve `SLOT` from current branch's PR → `CronDelete pr-babysit:${SLOT}` (exact name only — never pattern/glob) → `dispatch-fix.sh cleanup --state-file "$STATE_FILE"` (exits a live fixer, removes the clean herdr worktree) → `babysit-record.js status --status cancelled` → remove `/tmp/pr-babysit-${SLOT}.json` and its `.snapshot.json` → confirm. Other slots untouched. Exit.
+First arg **`stop`**: resolve `SLOT` from current branch's PR → `CronDelete pr-babysit:${SLOT}` (exact name only — never pattern/glob) → `babysit-dispatch-fix.js cleanup --state-file "$STATE_FILE"` (exits a live fixer, removes the clean herdr worktree) → `babysit-record.js status --status cancelled` → remove `/tmp/pr-babysit-${SLOT}.json` and its `.snapshot.json` → confirm. Other slots untouched. Exit.
 
 `--tick` = internal marker added by cron prompt so callback doesn't re-create itself. Users never type it. On tick: re-derive `OWNER`/`REPO`/`NUMBER` from `--tick <OWNER>/<REPO>#<NUMBER>`, recompute `SLOT` locally → Steps 1–6 against that slot's state file only.
 
@@ -95,7 +95,7 @@ On `stop` or `cancel`, resolve only the current branch's slot. Validate that the
 state path is exactly below `$REPO_ROOT/.codex/tmp/pr-babysit/` and that any
 worktree recorded in it belongs to this exact slot. Remove that worktree with
 native `git worktree remove <exact-path>` only when clean, and run
-`dispatch-fix.sh cleanup --state-file "$STATE_FILE"` for a herdr worktree; a
+`babysit-dispatch-fix.js cleanup --state-file "$STATE_FILE"` for a herdr worktree; a
 failure stops cleanup and is reported. Mark the state `cancelled` with `babysit-record.js status` and
 tell the user to cancel the active goal with Codex's goal control (goal
 cancellation is user/system controlled, not an `update_goal` status). Never
@@ -143,7 +143,7 @@ It is a Bun bundle on both hosts.
 | Change detection, idle streak, backoff interval, recurrence counters | Escalation wording and the user-facing report |
 | The stop recommendation (`decision` + `reasons[]`) | Confirming an escalation is genuinely human-only |
 | Reply and resolve calls, confirmed against the API, idempotent, recorded | Writing each fix's task, and raising a tier when warranted (Step 3) |
-| Fix routing (Jev tier → host, model, effort) and herdr fixer dispatch: `route-fix.sh`, `dispatch-fix.sh` | Verifying fixer commits before the push; re-routing a failed group |
+| Fix routing (Jev tier → host, model, effort) and herdr fixer dispatch: `babysit-route-fix.js`, `babysit-dispatch-fix.js` | Verifying fixer commits before the push; re-routing a failed group |
 
 Rules:
 
@@ -367,11 +367,11 @@ instruction a fixer follows) and `quote` holding the reviewer's text verbatim
 Route it (`--host` is this controller: `claude` or `codex`):
 
 ```bash
-bash "$PLUGIN_ROOT/scripts/route-fix.sh" --items "$PB_TMP/items.json" --host claude \
+bun "$PLUGIN_ROOT/hooks/dist/babysit-route-fix.js" --items "$PB_TMP/items.json" --host claude \
   --state-file "$STATE_FILE" >"$PB_TMP/route.json"
 ```
 
-`route-fix.sh` scores every item with Jev from its task, path, severity and kind
+`babysit-route-fix.js` scores every item with Jev from its task, path, severity and kind
 (never the quote), maps the score to a tier (`trivial | standard | complex |
 critical`, the epic-orchestrator mapping), groups items by tier (highest first)
 and gives each group a host, model and effort from the `prBabysit` block of
@@ -382,7 +382,7 @@ item one tier: route again with `--raise <id>` and say so in the report. Never
 lower a tier. `dispatch: "herdr"` → **Multi-host dispatch**; `dispatch:
 "inline"` (the config says so, or every pool host is cooling or has no CLI on
 `PATH`) → **Inline delegation**, using each group's `class`. herdr itself is
-probed by `dispatch-fix.sh start`: `herdr_unavailable` also means inline.
+probed by `babysit-dispatch-fix.js start`: `herdr_unavailable` also means inline.
 
 ### Multi-host dispatch (herdr)
 
@@ -392,9 +392,9 @@ fast-forwarded from the PR branch. One group runs at a time; the fixer edits,
 tests and commits only. You keep verification, push, replies and resolves.
 
 ```bash
-bash "$PLUGIN_ROOT/scripts/dispatch-fix.sh" start --state-file "$STATE_FILE" --plan "$PB_TMP/route.json" \
+bun "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" start --state-file "$STATE_FILE" --plan "$PB_TMP/route.json" \
   --items "$PB_TMP/items.json" --repo-root "$REPO_ROOT" --branch "$BRANCH" --base "$BASE"   # BASE = pr.base
-bash "$PLUGIN_ROOT/scripts/dispatch-fix.sh" wait --state-file "$STATE_FILE"   # Codex: --timeout-seconds 45
+bun "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" wait --state-file "$STATE_FILE"   # Codex: --timeout-seconds 45
 ```
 
 `wait` waits for the fixer at most `--timeout-seconds` (480 by default). A
@@ -404,7 +404,7 @@ Starting an agent normally takes seconds and up to about 4 minutes only when
 it fails. On Claude, run `wait` with the Bash tool's `timeout: 600000`; on
 Codex pass `--timeout-seconds 45`.
 
-`dispatch-fix.sh wait` is the one fixer command per tick — including a tick
+`babysit-dispatch-fix.js wait` is the one fixer command per tick — including a tick
 where nothing changed: it waits for the running group, records it when it
 settles, exits its agent and starts the next group. While a fixer is active
 (running or blocked), the result moves its items from `actionable[]` to
@@ -459,7 +459,7 @@ tier, then implement at the lower one. Trivial fixes may be done inline when
 the delegation round trip would cost more than the edit.
 
 Babysit is autonomous and never edits the user's main checkout. Herdr dispatch
-works only in the slot's herdr worktree (`dispatch-fix.sh` owns it). Inline,
+works only in the slot's herdr worktree (`babysit-dispatch-fix.js` owns it). Inline,
 Claude uses `EnterWorktree`/`ExitWorktree`. Codex creates one native isolated worktree at
 `${CODEX_HOME:-$HOME/.codex}/toolu/pr-babysit/worktrees/$SLOT`: validate the
 exact path, then run `git worktree add --detach "$WORKTREE" "$HEAD_SHA"`
@@ -660,7 +660,7 @@ of these held in the same snapshot:
 
 Any false (even 1 check / 1 comment / 1 finding) → DON'T stop → next tick (maybe longer backoff).
 
-On success stop: `dispatch-fix.sh cleanup --state-file "$STATE_FILE"` (the herdr worktree and
+On success stop: `babysit-dispatch-fix.js cleanup --state-file "$STATE_FILE"` (the herdr worktree and
 `pr-babysit/<slot>` branch, when present), `babysit-record.js status --status complete`, then Claude deletes
 `pr-babysit:${SLOT}` and its `/tmp` state + snapshot; Codex cleans the exact clean worktree and calls
 `update_goal(status="complete")`.
@@ -692,7 +692,7 @@ Anything else, incl. indefinite waits — `decision: keep_going`:
 - Bot findings remain after this round's fix-push (re-read next tick)
 - New comments landed after this tick's clearance check (they get disposed next tick — a tick never *ends* with an actionable thread it already saw still open)
 - `mergeable_unknown` — GitHub has not computed mergeability yet
-- Nothing changed since last tick (`changed: false`, reason `unchanged`): silent no-op; the helper bumped `idleStreak` and widened backoff; never terminate. **Exception — an active fixer** (`fixer_running`): run Step 3's `dispatch-fix.sh wait` and act on its status; the helper holds backoff at its base while a fixer is running (a blocked one waits for a human and backs off)
+- Nothing changed since last tick (`changed: false`, reason `unchanged`): silent no-op; the helper bumped `idleStreak` and widened backoff; never terminate. **Exception — an active fixer** (`fixer_running`): run Step 3's `babysit-dispatch-fix.js wait` and act on its status; the helper holds backoff at its base while a fixer is running (a blocked one waits for a human and backs off)
 
 ---
 
@@ -757,7 +757,7 @@ idempotency ledger. `lastError` is the last failed tick's structured error, or `
 
 Per tick the helper diffs current vs saved. All reads/writes → slot-scoped path from Step 0 only.
 
-- **Nothing changed** (same `ciStatus`/`reviewDecision`/`mergeable`/`unresolvedThreads`/`headSha`/`botVerdict`/`botState`/`botFindingKeys`) → `changed: false`; the helper bumped `idleStreak` and widened backoff. **Zero output.** Exit — unless `fixer` is running or blocked (reason `fixer_running`): a fixer changes nothing GitHub shows, so run Step 3's `dispatch-fix.sh wait` first and act on its status. The helper keeps `idleStreak` at 0 while a fixer is running; a blocked fixer backs off like any unchanged tick.
+- **Nothing changed** (same `ciStatus`/`reviewDecision`/`mergeable`/`unresolvedThreads`/`headSha`/`botVerdict`/`botState`/`botFindingKeys`) → `changed: false`; the helper bumped `idleStreak` and widened backoff. **Zero output.** Exit — unless `fixer` is running or blocked (reason `fixer_running`): a fixer changes nothing GitHub shows, so run Step 3's `babysit-dispatch-fix.js wait` first and act on its status. The helper keeps `idleStreak` at 0 while a fixer is running; a blocked fixer backs off like any unchanged tick.
 - **Something changed** → `changed: true`, `idleStreak` reset to 0, run Steps 2–6.
 
 ### Adaptive backoff
@@ -813,6 +813,6 @@ Fixed + resolved: 2 | Won't fix + resolved: 1 | Left open: 0 | Commits pushed: 1
 `Left open` is 0 on every completed tick. Non-zero means the clearance check failed — say which
 thread and why in the report. If you overrode the helper's `decision`, name the field and why.
 
-Tick where nothing changed: silent — exit (after `dispatch-fix.sh wait` when a fixer is active).
+Tick where nothing changed: silent — exit (after `babysit-dispatch-fix.js wait` when a fixer is active).
 
 On stop: print Step 6 terminal message.

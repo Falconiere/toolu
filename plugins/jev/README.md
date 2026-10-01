@@ -29,8 +29,8 @@ Standalone, no plugin dependencies.
 ## What it provides
 
 - **`jev` skill** — mandatory when semantic decisions exist: gather evidence, call before the decision it informs, and reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions and reuse unchanged results.
-- **`jev.sh` wrapper** — `noul` (probability of yes), `choice` (pick one, with the full distribution), `score` (rate on your own ordered levels), and `ask` (many questions in one call).
-- **SessionStart hook** — publishes `jev.sh` at `<config-dir>/jev/jev.sh` and injects the full mandate on startup, resume, clear, and compaction. It checks local prerequisites and makes no API call.
+- **Jev CLI** — the executable Bun bundle published at the stable `jev.sh` path provides `noul` (probability of yes), `choice` (pick one, with the full distribution), `score` (rate on your own ordered levels), and `ask` (many questions in one call).
+- **SessionStart hook** — publishes the bundle at `<config-dir>/jev/jev.sh` and injects the full mandate on startup, resume, clear, and compaction. It checks local prerequisites and makes no API call.
 - **UserPromptSubmit hook** — restates the mandate on every prompt so it survives long sessions; silent for trivial confirmations and when prerequisites are missing (SessionStart already reported them). No API call.
 
 ## Wiring

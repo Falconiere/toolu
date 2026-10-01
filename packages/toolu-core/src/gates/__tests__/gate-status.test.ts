@@ -1,17 +1,11 @@
-/**
- * gate-status (#259): the native module against the shipped `gate-status.sh`,
- * both under their dispatcher, from the same sandbox state. Every
- * `gate-status.bats` scenario gives the same stdout and the same gate state
- * (AC-1). The #283 item 6 and 7 fixtures give the correct state where the bash
- * baseline is recorded wrong (AC-3).
- */
+/** Native gate-status behavior against real project state. */
 import { expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { hookEnv } from "../../dispatch/__tests__/dispatch-harness.ts";
 import { gateStatusModule } from "../gate-status.ts";
-import { bashPayload, bothSides, type Call } from "./gates-harness.ts";
+import { bashPayload, runNative, type Call, type Side } from "./gates-harness.ts";
 
 const GATE = ".claude/tmp/quality-gate-status.json";
 
@@ -50,11 +44,10 @@ type Scenario = {
   payloads: string[];
   setup?: (sb: Sandbox) => void;
   env?: Record<string, string>;
-  /** State files only the TypeScript side writes, by a documented #255 deviation. */
-  tsOnly?: string[];
+  status?: "passing" | "failing";
 };
 
-const PARITY: Scenario[] = [
+const CASES: Scenario[] = [
   {
     name: "non-Bash tool is a no-op",
     payloads: [JSON.stringify({ tool_name: "Write", tool_input: { file_path: "a.ts" } })],
@@ -63,8 +56,13 @@ const PARITY: Scenario[] = [
   {
     name: "first passing quality command writes a passing gate",
     payloads: [exit("cargo clippy", 0)],
+    status: "passing",
   },
-  { name: "failing quality command records and advises", payloads: [exit("bun test", 1)] },
+  {
+    name: "failing quality command records and advises",
+    payloads: [exit("bun test", 1)],
+    status: "failing",
+  },
   {
     name: "Codex host writes the Codex state path",
     payloads: [
@@ -78,42 +76,47 @@ const PARITY: Scenario[] = [
       }),
     ],
     env: { TOOLU_HOST_OVERRIDE: "codex" },
+    status: "failing",
   },
   {
     name: "a failing rust-quality-hook gate survives a passing quality command",
     setup: legacy("rust-quality-hook", "failing"),
     payloads: [exit("cargo clippy", 0)],
+    status: "failing",
   },
   {
     name: "a failing ts-quality-hook gate survives a passing quality command",
     setup: legacy("ts-quality-hook", "failing"),
     payloads: [exit("bun run check", 0)],
+    status: "failing",
   },
   {
     name: "a failing command slot flips to passing on a passing command",
     payloads: [exit("bun test", 1), exit("cargo test", 0)],
+    status: "passing",
   },
   {
     name: "a failure is recorded beside a file hook's entry",
     setup: tsEntry,
     payloads: [exit("bun test", 1)],
+    status: "failing",
   },
   {
     name: "a pass clears only the command slot",
     setup: tsEntry,
     payloads: [exit("cargo test", 0)],
+    status: "failing",
   },
   {
     name: "a passing quality-hook gate is overwritten by a failing command",
     setup: legacy("ts-quality-hook", "passing"),
     payloads: [exit("bun test", 1)],
-    // A passing record with a `reason` fails the strict v1 schema: `recordGateFailure`
-    // replaces it and leaves a breadcrumb (gate-file.ts, "Where it goes past bash").
-    tsOnly: [`${GATE}.dropped.log`],
+    status: "failing",
   },
   {
     name: "an existing passing gate is left as it is by another pass",
     payloads: [exit("tsc", 0), exit("bun test", 0)],
+    status: "passing",
   },
   ...[
     "cargo test",
@@ -124,7 +127,11 @@ const PARITY: Scenario[] = [
     "find . | cargo test",
     "foo | tsc",
     "tsc --noEmit",
-  ].map((command) => ({ name: `TRIGGER ${command}`, payloads: [exit(command, 0)] })),
+  ].map((command) => ({
+    name: `TRIGGER ${command}`,
+    payloads: [exit(command, 0)],
+    status: "passing" as const,
+  })),
   ...["cat tsconfig.json", "ls tooling/foo/test.sh", "vitests-helper", "cattsc"].map((command) => ({
     name: `NO-TRIGGER ${command}`,
     payloads: [exit(command, 0)],
@@ -136,6 +143,7 @@ const PARITY: Scenario[] = [
   },
   {
     name: "Cursor's tool_output exit status is read",
+    status: "failing",
     payloads: [
       JSON.stringify({
         tool_name: "Shell",
@@ -146,28 +154,29 @@ const PARITY: Scenario[] = [
   },
 ];
 
-async function run(s: Scenario): Promise<Awaited<ReturnType<typeof bothSides>>> {
+async function run(s: Scenario): Promise<Side> {
   using sb = createSandbox({ git: true });
   s.setup?.(sb);
   const env = { ...hookEnv(sb), ...s.env };
   const calls: Call[] = s.payloads.map((stdin) => ({ stdin, env }));
-  return bothSides(sb, "gate-status", gateStatusModule, calls);
+  return await runNative(sb, gateStatusModule, calls);
 }
 
-for (const s of PARITY) {
+for (const s of CASES) {
   test.concurrent(s.name, async () => {
-    const { bash, ts } = await run(s);
-    const state = { ...ts.state };
-    for (const file of s.tsOnly ?? []) {
-      expect(state[file]).toBeDefined();
-      delete state[file];
-    }
-    expect({ ...ts, state }).toEqual(bash);
+    const result = await run(s);
+    expect(result.exitCode).toBe(0);
+    const gate =
+      result.state[
+        s.env?.TOOLU_HOST_OVERRIDE === "codex" ? ".codex/tmp/quality-gate-status.json" : GATE
+      ];
+    if (s.status === undefined) expect(gate).toBeUndefined();
+    else expect(JSON.parse(gate ?? "null")).toMatchObject({ status: s.status });
   });
 }
 
 test.concurrent("the failure advisory names the command and its exit status", async () => {
-  const { ts } = await run({ name: "", payloads: [exit("bun test", 1)] });
+  const ts = await run({ name: "", payloads: [exit("bun test", 1)] });
   expect(JSON.parse(ts.stdout)).toEqual({
     hookSpecificOutput: {
       hookEventName: "PostToolUse",
@@ -192,22 +201,18 @@ const MUST_STAY_FAILING: Record<string, string> = {
 
 for (const [name, command] of Object.entries(MUST_STAY_FAILING)) {
   test.concurrent(`#283: ${name} leaves a failing gate failing`, async () => {
-    const { bash, ts } = await run({ name, payloads: [exit("bun test", 1), exit(command, 0)] });
+    const ts = await run({ name, payloads: [exit("bun test", 1), exit(command, 0)] });
     expect(JSON.parse(ts.state[GATE] ?? "{}")).toMatchObject({ status: "failing" });
-    // The bash baseline is the known-wrong one: it cleared the gate.
-    expect(JSON.parse(bash.state[GATE] ?? "{}")).toMatchObject({ status: "passing" });
   });
 }
 
 test.concurrent("a failing tail after a quality command records nothing", async () => {
-  const { bash, ts } = await run({ name: "", payloads: [exit("bun test 2>&1 | tail -5", 1)] });
+  const ts = await run({ name: "", payloads: [exit("bun test 2>&1 | tail -5", 1)] });
   expect(ts.state[GATE]).toBeUndefined();
   expect(ts.stdout).toBe("");
-  expect(JSON.parse(bash.state[GATE] ?? "{}")).toMatchObject({ status: "failing" });
 });
 
 test.concurrent("a failing line of proven quality commands records the failure", async () => {
-  const { bash, ts } = await run({ name: "", payloads: [exit("bun run lint && bun test", 1)] });
-  expect(ts).toEqual(bash);
+  const ts = await run({ name: "", payloads: [exit("bun run lint && bun test", 1)] });
   expect(JSON.parse(ts.state[GATE] ?? "{}")).toMatchObject({ status: "failing" });
 });

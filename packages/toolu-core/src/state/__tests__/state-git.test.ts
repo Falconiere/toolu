@@ -1,42 +1,26 @@
-/**
- * state-git (#255) against the bash it ports: `branch_slug` and
- * `detect_base_branch` from detect.sh, plus the unborn/detached HEAD shapes
- * the state libs read through `rev-parse --abbrev-ref HEAD`.
- */
+/** Branch state in real repositories, including detached and unborn HEAD. */
 import { expect, test } from "bun:test";
-import { resolve } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
-import { run } from "@toolu/conformance/harness/spawn";
 import { baseBranch, branchSlug, branchSlugs, currentBranch } from "../state-git.ts";
 
-const DETECT_SH = resolve(import.meta.dir, "../../../../../plugins/toolu/hooks/lib/detect.sh");
-
-async function bash(script: string, ...args: string[]): Promise<string> {
-  const res = await run(["bash", "-c", `. "$1"; shift; ${script}`, "_", DETECT_SH, ...args]);
-  expect(res.exitCode).toBe(0);
-  return res.stdout.replace(/\n$/, "");
-}
-
 test.each([
-  "feat/255-state",
-  "release-please--branches--main",
-  "fix/a.b@c",
-  "////",
-  "",
-  "ünïcode/x",
-  "a b",
-])("branchSlug(%j) equals bash branch_slug", async (branch) => {
-  expect(branchSlug(branch)).toBe(await bash('branch_slug "$1"', branch));
+  ["feat/255-state", "feat_255-state"],
+  ["release-please--branches--main", "release-please--branches--main"],
+  ["fix/a.b@c", "fix_abc"],
+  ["////", "____"],
+  ["", "_default"],
+  ["ünïcode/x", "ncode_x"],
+  ["a b", "ab"],
+])("branchSlug(%j) returns %j", (branch, expected) => {
+  expect(branchSlug(branch)).toBe(expected);
 });
 
-test("baseBranch follows origin/HEAD, else main, like detect_base_branch", async () => {
+test("baseBranch follows origin/HEAD, else main", () => {
   using sb = createSandbox({ git: true, branch: "trunk" });
   expect(baseBranch(sb.project, process.env)).toBe("main");
-  expect(await bash('detect_base_branch "$1"', sb.project)).toBe("main");
   sb.git("update-ref", "refs/remotes/origin/trunk", "HEAD");
   sb.git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk");
   expect(baseBranch(sb.project, process.env)).toBe("trunk");
-  expect(await bash('detect_base_branch "$1"', sb.project)).toBe("trunk");
 });
 
 test("currentBranch: branch name, HEAD when detached or unborn, empty outside a repo", () => {

@@ -2,21 +2,7 @@
 import { z } from "zod";
 
 const ClassificationSchema = z.enum(["shell-out", "port-native", "port-new", "no-map"]);
-export type Classification = z.infer<typeof ClassificationSchema>;
-
-const SupportSchema = z.enum(["required", "supported", "blocked", "n/a"]);
-export type Support = z.infer<typeof SupportSchema>;
-
-const KindSchema = z.enum([
-  "hooks.json",
-  "concern",
-  "pre-tools.d",
-  "post-tools.d",
-  "session-start.d",
-  "builtin-module",
-  "entrypoint",
-  "lib",
-]);
+const KindSchema = z.enum(["hooks.json", "builtin-module", "entrypoint"]);
 export type Kind = z.infer<typeof KindSchema>;
 
 const DiscoveredSchema = z.object({

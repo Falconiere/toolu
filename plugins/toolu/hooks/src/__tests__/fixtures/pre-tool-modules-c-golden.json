@@ -452,13 +452,13 @@
       "files": {}
     },
     "plan-ledger: a red step is still reported before any verify talk": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: push blocked — steps not fresh-green:\\ns1: red — one\\n\\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run docs/toolu/plans/2026-06-14-planning-hardness.md\"\n  }\n}\n",
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: push blocked — steps not fresh-green:\\ns1: red — one\\n\\nrun: bun \\\"$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\\\" run docs/toolu/plans/2026-06-14-planning-hardness.md\"\n  }\n}\n",
       "stderr": "",
       "exitCode": 0,
       "files": {}
     },
     "plan-ledger: a running step denies and is named as a blocker": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: push blocked — steps not fresh-green:\\ns2: running — second\\n\\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run docs/toolu/plans/2026-06-14-planning-hardness.md\"\n  }\n}\n",
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: push blocked — steps not fresh-green:\\ns2: running — second\\n\\nrun: bun \\\"$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\\\" run docs/toolu/plans/2026-06-14-planning-hardness.md\"\n  }\n}\n",
       "stderr": "",
       "exitCode": 0,
       "files": {}
@@ -470,7 +470,7 @@
       "files": {}
     },
     "plan-ledger: a verified ledger from an older diff asks again": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: every step is green, but not verified against the current diff.\\n\\nScoped runs judge a step on its own `paths`; the push gate judges it on the whole branch.\\n\\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run docs/toolu/plans/2026-06-14-planning-hardness.md --verify\"\n  }\n}\n",
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: every step is green, but not verified against the current diff.\\n\\nScoped runs judge a step on its own `paths`; the push gate judges it on the whole branch.\\n\\nrun: bun \\\"$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\\\" run docs/toolu/plans/2026-06-14-planning-hardness.md --verify\"\n  }\n}\n",
       "stderr": "",
       "exitCode": 0,
       "files": {}
@@ -490,7 +490,7 @@
       "files": {}
     },
     "plan-ledger: all green but never verified asks for a verify run": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: every step is green, but not verified against the current diff.\\n\\nScoped runs judge a step on its own `paths`; the push gate judges it on the whole branch.\\n\\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run docs/toolu/plans/2026-06-14-planning-hardness.md --verify\"\n  }\n}\n",
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: every step is green, but not verified against the current diff.\\n\\nScoped runs judge a step on its own `paths`; the push gate judges it on the whole branch.\\n\\nrun: bun \\\"$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\\\" run docs/toolu/plans/2026-06-14-planning-hardness.md --verify\"\n  }\n}\n",
       "stderr": "",
       "exitCode": 0,
       "files": {}
@@ -540,7 +540,7 @@
       "files": {}
     },
     "plan-ledger: enriched v1 ledger with a red step denies": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: push blocked — steps not fresh-green:\\ns2: red — second\\n\\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run docs/toolu/plans/2026-06-14-planning-hardness.md\"\n  }\n}\n",
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: push blocked — steps not fresh-green:\\ns2: red — second\\n\\nrun: bun \\\"$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\\\" run docs/toolu/plans/2026-06-14-planning-hardness.md\"\n  }\n}\n",
       "stderr": "",
       "exitCode": 0,
       "files": {}
@@ -552,13 +552,13 @@
       "files": {}
     },
     "plan-ledger: green-but-stale step denies and marks stale": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: push blocked — steps not fresh-green:\\ns1: stale — first\\n\\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run docs/toolu/plans/2026-06-14-planning-hardness.md\"\n  }\n}\n",
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: push blocked — steps not fresh-green:\\ns1: stale — first\\n\\nrun: bun \\\"$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\\\" run docs/toolu/plans/2026-06-14-planning-hardness.md\"\n  }\n}\n",
       "stderr": "",
       "exitCode": 0,
       "files": {}
     },
     "plan-ledger: ledger with a red step denies and names it": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: push blocked — steps not fresh-green:\\ns1: red — first thing\\n\\nrun: bash plugins/toolu/hooks/lib/plan-ledger.sh run docs/toolu/plans/2026-06-14-planning-hardness.md\"\n  }\n}\n",
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: push blocked — steps not fresh-green:\\ns1: red — first thing\\n\\nrun: bun \\\"$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\\\" run docs/toolu/plans/2026-06-14-planning-hardness.md\"\n  }\n}\n",
       "stderr": "",
       "exitCode": 0,
       "files": {}
@@ -606,7 +606,7 @@
       "files": {}
     },
     "plan-ledger: unparseable ledger denies (fail closed)": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: unparseable ledger at $ROOT/project/.claude/tmp/plan-ledger/feat_example.json; delete and re-run `bash plugins/toolu/hooks/lib/plan-ledger.sh run <plan_doc>`\"\n  }\n}\n",
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: unparseable ledger at $ROOT/project/.claude/tmp/plan-ledger/feat_example.json; delete and re-run `bun \\\"$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\\\" run <plan_doc>`\"\n  }\n}\n",
       "stderr": "",
       "exitCode": 0,
       "files": {}
@@ -618,7 +618,7 @@
       "files": {}
     },
     "plan-ledger: version!=1 denies (fail closed)": {
-      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: ledger schema mismatch at $ROOT/project/.claude/tmp/plan-ledger/feat_example.json (version=\\\"2\\\", expected 1); delete and re-run `bash plugins/toolu/hooks/lib/plan-ledger.sh run <plan_doc>`\"\n  }\n}\n",
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"deny\",\n    \"permissionDecisionReason\": \"plan-ledger: ledger schema mismatch at $ROOT/project/.claude/tmp/plan-ledger/feat_example.json (version=\\\"2\\\", expected 1); delete and re-run `bun \\\"$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\\\" run <plan_doc>`\"\n  }\n}\n",
       "stderr": "",
       "exitCode": 0,
       "files": {}

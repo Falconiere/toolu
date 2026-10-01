@@ -36,7 +36,7 @@ import {
 import { acBlockers } from "./plan-ledger-ac.ts";
 import { gitAt, pushTarget } from "./push-target.ts";
 
-const RUN = "bash plugins/toolu/hooks/lib/plan-ledger.sh run";
+const RUN = 'bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" run';
 
 /** `id: effective — title` for each step that is not fresh-green; a jq error keeps the lines before it. */
 function blockers(ledger: Json, cur: string): string {

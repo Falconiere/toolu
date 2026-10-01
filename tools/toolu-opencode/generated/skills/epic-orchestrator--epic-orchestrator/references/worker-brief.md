@@ -10,7 +10,7 @@ tracker-specific placeholders (written here without braces so they survive):
 - CLOSES: the PR body's closing line: `Closes OWNER/REPO#N` (GitHub),
   `Resolves KEY-12` (Jira), `Fixes ENG-12` (Linear).
 - HOST: the worker's host kind.
-scripts/__tests__/skill-contract.bats fails if any placeholder goes unfilled. -->
+scripts/__tests__/skill-contract.test.ts fails if any placeholder goes unfilled. -->
 
 # Epic worker brief — {{ISSUE_REF}}
 

@@ -1,7 +1,7 @@
 /**
  * Real-session smoke for pr-babysit's herdr fixer dispatch (spec AC-10).
  *
- * Runs the shipped route-fix.sh and dispatch-fix.sh against a live herdr server
+ * Runs the shipped babysit-route-fix.js and babysit-dispatch-fix.js against a live herdr server
  * and a real Claude Code fixer, inside a throwaway local git topology (a bare
  * "origin" plus a clone). Nothing is pushed to GitHub. Proves: start creates the
  * pr-babysit/<slot> herdr worktree and starts the fixer; a second start is
@@ -9,7 +9,7 @@
  * exactly two commits touching only the smoke file; cleanup leaves no worktree,
  * branch or agent behind.
  *
- * Manual runner (needs herdr, claude, jq, git) — like tooling/src/codex-smoke.ts.
+ * Manual runner (needs herdr, claude, git) — like tooling/src/codex-smoke.ts.
  * PB_SMOKE_MODEL / PB_SMOKE_EFFORT pick the fixer model (default haiku / low).
  */
 import { spawnSync } from "node:child_process";
@@ -32,6 +32,7 @@ import { envOr } from "./env.ts";
 
 const ROOT = realpathSync(resolve(import.meta.dir, "../.."));
 const SCRIPTS = join(ROOT, "plugins/pr-babysit/scripts");
+const DIST = join(ROOT, "plugins/pr-babysit/hooks/dist");
 const SNAPSHOT = join(SCRIPTS, "__tests__/fixtures/snapshots/toolu-165.json");
 /** Two Fix items in two tiers (standard, trivial), each a one-line edit to smoke.txt. */
 const ITEMS = join(ROOT, "tooling/fixtures/pr-babysit-herdr-smoke/items.json");
@@ -84,9 +85,7 @@ function json(raw: string): unknown {
 }
 
 function babysit(script: string, args: string[], env: Record<string, string> = {}): Out {
-  if (script === "babysit-tick.js")
-    return sh(["bun", join(ROOT, "plugins/pr-babysit/hooks/dist", script), ...args], { env });
-  return sh(["bash", join(SCRIPTS, script), ...args], { env });
+  return sh(["bun", join(DIST, script), ...args], { env });
 }
 
 /** A throwaway "PR": bare origin, main + feat/smoke, a clone on the PR branch. */
@@ -141,7 +140,7 @@ function route(tmp: string, state: string): void {
   writeFileSync(join(tmp, "cfg/toolu.config.json"), JSON.stringify(config));
   const cfgEnv = { TOOLU_CONFIG_DIR: join(tmp, "cfg"), TOOLU_PROJECT_DIR: join(tmp, "cfg") };
   const routed = babysit(
-    "route-fix.sh",
+    "babysit-route-fix.js",
     ["--items", join(tmp, "items.json"), "--host", "claude", "--no-jev"],
     cfgEnv,
   );
@@ -185,7 +184,7 @@ function dispatch(
   state: string,
   clone: string,
 ): { worktree: string; agent: string; out: unknown } {
-  const started = babysit("dispatch-fix.sh", startArgs(tmp, state, clone));
+  const started = babysit("babysit-dispatch-fix.js", startArgs(tmp, state, clone));
   const start = json(started.stdout);
   if (started.status !== 0 || get(start, "status") !== "running")
     fail(`start status is not running: ${started.stdout}`);
@@ -201,14 +200,14 @@ function dispatch(
   ) {
     fail("worktree is not on pr-babysit/local-pb-smoke-1");
   }
-  const again = babysit("dispatch-fix.sh", startArgs(tmp, state, clone));
+  const again = babysit("babysit-dispatch-fix.js", startArgs(tmp, state, clone));
   if (again.status !== 3 || get(json(again.stdout), "errors", 0, "code") !== "fixer_running") {
     fail(`second start was not refused: rc=${String(again.status)} ${again.stdout}`);
   }
   step("second start: fixer_running (exit 3)");
   let out: unknown = null;
   for (let i = 0; i < 6; i += 1) {
-    const waited = babysit("dispatch-fix.sh", [
+    const waited = babysit("babysit-dispatch-fix.js", [
       "wait",
       "--state-file",
       state,
@@ -256,7 +255,7 @@ function verifyFixes(worktree: string, out: unknown): void {
 
 function verifyCleanup(state: string, clone: string, worktree: string, agent: string): void {
   must(["git", "-C", worktree, "push", "--quiet", "origin", "HEAD:feat/smoke"]);
-  const cleaned = babysit("dispatch-fix.sh", ["cleanup", "--state-file", state]);
+  const cleaned = babysit("babysit-dispatch-fix.js", ["cleanup", "--state-file", state]);
   if (cleaned.status !== 0) fail(`cleanup failed: ${cleaned.stdout}`);
   step(`cleanup: ${cleaned.stdout.trim()}`);
   const result = json(cleaned.stdout);
@@ -295,7 +294,8 @@ function hasLiveWorktree(state: string): boolean {
 /** Best effort: cleanup a fixer we started, close the herdr workspace opened for the clone, drop the tree. */
 function finish(tmp: string, state: string): void {
   try {
-    if (hasLiveWorktree(state)) babysit("dispatch-fix.sh", ["cleanup", "--state-file", state]);
+    if (hasLiveWorktree(state))
+      babysit("babysit-dispatch-fix.js", ["cleanup", "--state-file", state]);
     const listed = sh(["herdr", "workspace", "list"]);
     const workspaces = listed.status === 0 ? parseOrNull(listed.stdout) : null;
     for (const ws of list(get(workspaces, "result", "workspaces"))) {
@@ -309,7 +309,7 @@ function finish(tmp: string, state: string): void {
 }
 
 function main(): number {
-  for (const tool of ["herdr", "claude", "jq", "git"]) {
+  for (const tool of ["herdr", "claude", "git"]) {
     if (Bun.which(tool) === null) {
       console.error(`pr-babysit-herdr-smoke: FAIL: ${tool} is required`);
       return 1;

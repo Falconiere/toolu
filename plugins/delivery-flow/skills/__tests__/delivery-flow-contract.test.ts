@@ -41,11 +41,13 @@ test.concurrent("delivery stops at failed reviews and resumes from the failed ph
   for (const phrase of [
     "Status: Needs changes",
     "resume from that phase",
-    'plan-ledger.sh" preflight',
+    'plan-ledger.js" preflight',
     "real-data",
   ]) {
     expect(text).toContain(phrase);
   }
+  expect(text).toContain('bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" preflight');
+  expect(text).not.toContain("TOOLU_LIB");
 });
 
 test.concurrent("invocation authorizes checked delivery and prerequisite failures block it", () => {
@@ -55,7 +57,7 @@ test.concurrent("invocation authorizes checked delivery and prerequisite failure
     "gh api user",
     "non-default branch",
     "toolu-review:review",
-    'verdict.sh" status',
+    'verdict.js" status',
     "overall: ready",
     "PR",
     "pr-babysit:babysit",

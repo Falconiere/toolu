@@ -13005,7 +13005,7 @@ function acBlockers(ledger, cur, root, ctx, config) {
 }
 
 // packages/toolu-core/src/gates/plan-ledger.ts
-var RUN = "bash plugins/toolu/hooks/lib/plan-ledger.sh run";
+var RUN = 'bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" run';
 function blockers(ledger, cur) {
   const lines = [];
   try {

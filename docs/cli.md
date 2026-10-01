@@ -1,15 +1,12 @@
 # `toolu` CLI
 
-**Status:** in progress. The commands below work against Claude Code and Codex
-today, and the [README](../README.md#install) install snippets use them.
-Interactive host and plugin prompts are live on a TTY. OpenCode wiring is not
-built yet.
+The commands below work against Claude Code and Codex, and the
+[README](../README.md#install) install snippets use them. Interactive host and
+plugin prompts are live on a TTY. OpenCode uses its own npm plugin CLI.
 
-`--host opencode` exits `2`. OpenCode has its own plugin CLI, but it installs npm
-packages rather than marketplace entries, so the fifteen bash plugins are not
-addressable through it — what it installs is the `@toolu/opencode` bridge. Until
-the adapter lands, run `opencode plugin add @toolu/opencode` and write
-`.opencode/toolu/plugins.json` yourself; see [docs/opencode.md](opencode.md).
+`--host opencode` exits `2`. OpenCode installs npm packages rather than
+marketplace entries. Run `opencode plugin add @toolu/opencode` and select
+enabled plugins in `.opencode/toolu/plugins.json`; see [docs/opencode.md](opencode.md).
 
 Design: `docs/toolu/specs/2026-09-22-npx-toolu-cli-design.md` (untracked; `docs/toolu/` is gitignored).
 
@@ -58,7 +55,7 @@ the same release. `@toolu/conformance` stays private — it is an internal
 harness.
 
 The `@toolu/plugins` tarball is five files: `package.json`, `README.md`,
-`LICENSE`, `dist/cli.js`, and `assets/marketplace.json`. The bash `plugins/` tree is
+`LICENSE`, `dist/cli.js`, and `assets/marketplace.json`. The `plugins/` tree is
 deliberately excluded, because Claude Code and Codex fetch plugin content
 through their own host CLIs — it ships inside `@toolu/opencode` instead, which
 is the one runtime that reads it. `bun run test:pack` fails if anything else

@@ -1,20 +1,20 @@
 # Testing with bun test
 
-toolu is moving from bats to `bun test` ([epic #247](https://github.com/Falconiere/toolu/issues/247)). `bun run test` runs the TypeScript gate: conventions, real-subprocess unit and conformance tests, portable-core and gate-coverage checks, bundle and launcher drift, package/workspace checks, context budget, deterministic benchmarks, and the shell-analysis latency budget.
+toolu uses `bun test` for its hook, tooling, and conformance suites ([epic #247](https://github.com/Falconiere/toolu/issues/247)). `bun run test` runs the TypeScript gate: conventions, real-subprocess unit and conformance tests, portable-core and gate-coverage checks, final-removal checks, bundle and launcher drift, package/workspace checks, context budget, deterministic benchmarks, and the shell-analysis latency measurement.
 
-Until #279 deletes the remaining shell scripts and Bats suites, run `bun run lint:shell` and `bun run test:shell` too; CI keeps their existing required check names. Some Bun parity tests still invoke real legacy tools, so the CI `typescript` job installs those tools until #279.
+The CI job is `typescript`. Its shell-analysis cold-start budget is hard on macOS arm64 or with `TOOLU_LATENCY_ENFORCE=1`, and report-only on Linux. See [conformance-report.md](conformance-report.md) for measurements against the `v7.2.0` Bash baseline.
 
-A test spawns the real thing: a hook bundle, a bash script, `git`, `npm`, `codex`. It runs against real temp repositories and config roots. There are no mocks (AGENTS.md).
+A test spawns the real thing: a hook bundle, `git`, `npm`, or a host CLI. It runs against real temp repositories and config roots. There are no mocks (AGENTS.md).
 
 Shared helpers live in `@toolu/conformance/harness/*` (`tools/toolu-conformance/src/harness/`):
 
 | Module | What it gives you |
 |---|---|
 | `sandbox` | `using sb = createSandbox({ git: true })`: a temp `project` (optionally a git repo with one commit), `home`, and `codexHome`. Helpers are `path`/`write`/`read`/`git`, plus `writeConfig(host, "project" \| "user", config)` for `toolu.config.json`. The tree is removed when the scope ends, even if the test throws. |
-| `spawn` | `run(argv, { cwd, env, stdin, timeoutMs })` captures stdout, stderr, exit code, `durationMs` and `timedOut`. A timeout kills the whole process group. A missing binary resolves with exit 127. Host-session variables (`CLAUDE_*`, `CODEX_*`, `TOOLU_*`, `PLUGIN_ROOT`, …) never leak in, and an `env` value of `undefined` unsets a key. `runHook({ host, sandbox, pluginRoot, bundle \| argv, stdin })` spawns `bun <bundle>` (or a bash hook) the way the host would. It sets `CLAUDE_PLUGIN_ROOT` / `PLUGIN_ROOT` / `CODEX_HOME` / `TOOLU_HOST_OVERRIDE` and runs with cwd at the project. |
+| `spawn` | `run(argv, { cwd, env, stdin, timeoutMs })` captures stdout, stderr, exit code, `durationMs` and `timedOut`. A timeout kills the whole process group. A missing binary resolves with exit 127. Host-session variables (`CLAUDE_*`, `CODEX_*`, `TOOLU_*`, `PLUGIN_ROOT`, …) never leak in, and an `env` value of `undefined` unsets a key. `runHook({ host, sandbox, pluginRoot, bundle \| argv, stdin })` spawns the real bundle as the host would. It sets `CLAUDE_PLUGIN_ROOT` / `PLUGIN_ROOT` / `CODEX_HOME` / `TOOLU_HOST_OVERRIDE` and runs with cwd at the project. |
 | `hosts` | `readHostOutcome(host, event, result)` validates a hook's output against that host's contract and returns `{ effect: allow \| deny \| ask, reason?, context? }`. Claude and Codex use `hookSpecificOutput`, and Codex has no `ask`. Cursor answers with `permission` and an empty reply is invalid. `readOpencodeOutcome` reads the effect of an OpenCode permission event. A violation throws `HostOutputError`. |
 | `fixtures` | Builders: `editFixture`, `writeFixture`, `patchFixture` (multi-file `apply_patch`), `bashFixture`, `mcpFixture`, `sessionFixture`, `promptFixture`, `postToolFixture`. `toStdin(host, fixture, { cwd })` renders the host's stdin: Codex receives edits as `apply_patch`, and Cursor gets `beforeShellExecution` / `beforeMCPExecution` / `preToolUse`. `toOpencodePermission` builds the in-process event. |
-| `timing` | `measureLatency(once, { runs, warmup })` samples sequentially and reports p50/p95. `assertLatencyBudget(candidate, baseline, 5)` enforces the epic budget: p50 no worse than the baseline plus 5 ms, both measured in the same run. |
+| `timing` | `measureLatency(once, { runs, warmup })` samples sequentially and reports p50/p95. `assertLatencyBudget(candidate, baseline, 5)` checks the cold-start delta measured in the same run when enforcement is enabled. |
 | `startup` | SessionStart startup hooks run the way a host runs them: `runStartupHook(pluginRoot, entry, sb, env)` executes the plugin's real `hooks.json` launcher under `sh -c`; `startupEnv(host, sb, pluginRoot)` / `startupRoot` give the Claude or Codex environment and config root. `publishedCliSuite(spec)` registers the shared cases for a plugin that publishes a Bun CLI at a stable config-root path (both hosts with and without credentials, stale link, user file, Bun off `PATH`, no Bun, missing bundle). |
 
 A port test reads like this:
@@ -52,6 +52,6 @@ The suites pass under `bun test --parallel --concurrent --timeout 60000`. Every 
 
 On macOS, put Homebrew OpenSSL 3 before `/usr/bin` on `PATH` when running the HTTPS fixture or the full TypeScript gate: `PATH=/opt/homebrew/bin:$PATH bun run test:ts`. Apple's `/usr/bin/openssl` is LibreSSL and its generated EC key fails to load in Bun 1.4.2.
 
-## Porting a bats file
+## Adding coverage
 
-Put `tooling/__tests__/<name>.bats` in the sibling `src/__tests__/<name>.test.ts`, with one bun test per `@test`. Replace `run … ; [ "$status" … ]` with `const res = await run([...])` and assertions on `res.exitCode`. Remember that bats `$output` is stdout and stderr combined. Read JSON with `JSON.parse` and zod rather than `jq`. Keep shelling out to the script under test. Delete the `.bats` file in the same change. The tooling suites in `tooling/src/__tests__/` are the first ports ([#251](https://github.com/Falconiere/toolu/issues/251)).
+Put a hook test beside its source in `hooks/src/__tests__/<name>.test.ts`, spawn the committed bundle, and assert its host output and state. Use `createSandbox` for every test. For a new hook surface, add cases to the conformance harness and update the [coverage inventory](gate-coverage-matrix.md).

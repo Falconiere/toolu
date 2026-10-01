@@ -8,7 +8,7 @@ AI writes code fast — then skips the parts that keep a codebase alive: oversiz
 
 [![Release](https://img.shields.io/github/v/release/Falconiere/toolu?sort=semver&color=d97757)](https://github.com/Falconiere/toolu/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-1700%2B%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-Bun%20suite-brightgreen)](#testing)
 [![Hosts](https://img.shields.io/badge/hosts-Claude%20Code%20%7C%20Codex-d97757)](#install)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
@@ -85,7 +85,7 @@ OpenCode installs the npm adapter through its own plugin CLI — no clone, no
 opencode plugin add @toolu/opencode
 ```
 
-It wires `permission.evaluate` to the same bash gate engine for the coverage
+It wires `permission.evaluate` to the same native TypeScript gate engine for the coverage
 proven in [#212](https://github.com/Falconiere/toolu/issues/212) — not the full
 Claude/Codex hook surface. Paste the **OpenCode** prompt under
 [Install everything](#install-everything), or follow
@@ -243,7 +243,7 @@ To think a change through without starting delivery, invoke `/brainstorm:brainst
 
 Spec and plan reviews must approve before the next phase. The execution phase verifies ledger steps, real-data tests, documentation, local review, and the green verdict. A rejection or failed check stops the flow at that phase; resume there and refresh stale evidence. Missing GitHub auth, a non-default branch, a dependency, or a gate is reported as a specific delivery blocker.
 
-The workflow skills, plus `ast-grep`, `context7`, and `exa-search`, all run off the same shell hook engine. The standalone `deep-research` skill combines `exa-search` and `context7` fan-out into cited reports under `docs/research/`.
+The workflow skills, plus `ast-grep`, `context7`, and `exa-search`, all run on Bun hook bundles. The standalone `deep-research` skill combines `exa-search` and `context7` fan-out into cited reports under `docs/research/`.
 
 ## Architecture
 
@@ -262,7 +262,6 @@ flowchart TD
     RQ -- "one bundled ESM module, run in process" --> R[("registry<br/>host config dir/toolu/")]
     TQ -- "one bundled ESM module, run in process" --> R
     AG -- "bundled ESM modules, run in process" --> R
-    CM -- "namespaced plugin__name.sh" --> R
     R --> D
     D -- "runs a module only while its plugin is installed" --> OUT([enforced edit])
 ```
@@ -282,7 +281,7 @@ At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality` and `ast-grep`
     │   ├── skills/             # core orchestration, debug, research, and command skills
     │   ├── agents/             # quick-task, deep-explore, research-agent, implementer, architect
     │   ├── commands/           # commit, review-and-commit
-    │   ├── hooks/              # PreToolUse / PostToolUse / SessionStart … + lib/
+    │   ├── hooks/              # PreToolUse / PostToolUse / SessionStart bundles
     │   └── settings/           # reusable settings fragments
     ├── ast-grep/               # ast-grep skill + nudge and byte-savings registry modules (Bun)
     ├── context7/               # context7 skill + Context7 REST wrapper
@@ -320,12 +319,12 @@ Quality-gate thresholds (file/function/impl line limits) are configurable per pr
 
 ## Testing
 
-The hook engine and language gates are covered by **1700+ [bats](https://github.com/bats-core/bats-core) tests**, all run in CI on every push, including real temporary-home Codex install/remove smoke coverage:
+The hook engine and language gates are covered by Bun tests and conformance suites, all run in CI on every push. Install smoke tests use temporary host configuration roots:
 
 ```sh
-bun run test              # runs lint:shell → test:shell
-bats -r plugins tooling   # shell-only, fast feedback
-bun run lint:shell        # shellcheck: standalone scripts + assembled concern modules
+bun run test              # full TypeScript quality gate
+bun run test:unit         # focused Bun tests
+bun run test:conformance  # host and gate conformance
 ```
 
 ## Contributing
@@ -333,7 +332,7 @@ bun run lint:shell        # shellcheck: standalone scripts + assembled concern m
 PRs and issues welcome.
 
 1. Pick the right home — skill vs. agent vs. command vs. hook — and use the existing siblings as templates.
-2. Add tests (`*.bats`, colocated in a `__tests__/`) for any hook logic.
+2. Add Bun tests (`*.test.ts`, colocated in a `__tests__/`) for hook logic.
 3. Verify in a real session before committing.
 4. Use a [Conventional Commits](https://www.conventionalcommits.org/) subject (`feat(skills): add foo`).
 

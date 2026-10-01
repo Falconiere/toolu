@@ -188,11 +188,7 @@ outrank them.
 ## Tests
 
 ```bash
-bats plugins/toolu/hooks/lib/__tests__/gate-mode.bats
-bats plugins/toolu/hooks/lib/__tests__/push-waiver.bats
-bats plugins/toolu/hooks/post-tools/modules/__tests__/push-waiver.bats
-bats plugins/toolu/hooks/lib/__tests__/state-sweeper.bats
-bats plugins/toolu/hooks/lib/__tests__/permissions.bats
 bun test packages/toolu-core/src/gates
-bun test plugins/toolu/hooks/src/__tests__/post-tools-parity.test.ts
+bun test plugins/toolu/hooks/src/__tests__/post-tools-283.test.ts
+bun run test:final-removal
 ```

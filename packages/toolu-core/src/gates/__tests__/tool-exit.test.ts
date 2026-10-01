@@ -1,46 +1,9 @@
-/**
- * AC-4 (#259): the host's exit status and interrupt flag read exactly as the
- * shipped `gate-status.sh` and `push-waiver.sh` read them with jq. The bash
- * side runs the modules' own lines (asserted verbatim below) under the real jq.
- */
+/** Host command, exit-status and interrupt extraction across real payload shapes. */
 import { expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { isJsonObject } from "../../config/config-load.ts";
 import { toolCommand, toolExitStatus, toolInterrupted } from "../tool-exit.ts";
 
-const MODULES = resolve(import.meta.dir, "../../../../../plugins/toolu/hooks/post-tools/modules");
-const GATE_STATUS = readFileSync(`${MODULES}/gate-status.sh`, "utf8");
-const PUSH_WAIVER = readFileSync(`${MODULES}/push-waiver.sh`, "utf8");
-
-const COMMAND = `command=$(echo "$input" | jq -r '.tool_input.command // ""' 2>/dev/null || echo "")`;
-const EXIT = `exit_code=$(echo "$input" | jq -r '.tool_response.metadata.exit_code // .tool_response.exit_code // .tool_output.exit_code // empty' 2>/dev/null || echo "")
-if [[ -z "$exit_code" || "$exit_code" == "null" ]]; then
-  tool_output_raw=$(echo "$input" | jq -r '.tool_output // empty' 2>/dev/null || echo "")
-  if [[ -n "$tool_output_raw" ]]; then
-    exit_code=$(echo "$tool_output_raw" | jq -r '.exitCode // .exit_code // empty' 2>/dev/null || echo "")
-  fi
-fi`;
-const INTERRUPTED = `interrupted=$(echo "$input" | jq -r '.tool_response.interrupted // false' 2>/dev/null || echo "false")`;
-
-test("the bash lines are the shipped modules' own", () => {
-  for (const line of [COMMAND, EXIT]) {
-    expect(GATE_STATUS).toContain(line);
-    expect(PUSH_WAIVER).toContain(line);
-  }
-  expect(PUSH_WAIVER).toContain(INTERRUPTED);
-});
-
 type Read = { command: string; exit: string; interrupted: string };
-
-function bashRead(payload: string): Read {
-  const script = `input=$(cat)\n${COMMAND}\n${EXIT}\n${INTERRUPTED}\nprintf '%s\\0%s\\0%s' "$command" "$exit_code" "$interrupted"`;
-  const res = spawnSync("bash", ["-c", script], { input: payload, encoding: "utf8" });
-  const [command = "", exit = "", interrupted = ""] = res.stdout.split("\0");
-  // push-waiver.sh only asks `[[ "$interrupted" == "true" ]]`; empty stdin prints nothing.
-  return { command, exit, interrupted: interrupted === "true" ? "true" : "false" };
-}
 
 function tsRead(payload: string): Read {
   let doc: unknown;
@@ -99,10 +62,41 @@ const PAYLOADS: Record<string, unknown> = {
   "tool_input is a string": { tool_input: "ls", tool_response: { exit_code: 0 } },
 };
 
+const EXPECTED: Record<string, Read> = {
+  "Claude metadata exit 1": { command: "bun test", exit: "1", interrupted: "false" },
+  "Claude metadata exit 0": { command: "bun test", exit: "0", interrupted: "false" },
+  "tool_response.exit_code": { command: "bun test", exit: "3", interrupted: "false" },
+  "Codex response": { command: "bun test", exit: "1", interrupted: "false" },
+  "metadata false falls through": { command: "bun test", exit: "2", interrupted: "false" },
+  "tool_output.exit_code": { command: "bun test", exit: "4", interrupted: "false" },
+  "Cursor tool_output JSON string": { command: "bun test", exit: "1", interrupted: "false" },
+  "Cursor tool_output object exitCode": { command: "bun test", exit: "0", interrupted: "false" },
+  "tool_output non-JSON string": { command: "bun test", exit: "", interrupted: "false" },
+  "string tool_response is a jq error": { command: "bun test", exit: "5", interrupted: "false" },
+  "string exit_code": { command: "bun test", exit: "x y", interrupted: "false" },
+  "string null exit_code": { command: "bun test", exit: "null", interrupted: "false" },
+  "string null with tool_output": { command: "bun test", exit: "0", interrupted: "false" },
+  "fractional exit_code": { command: "bun test", exit: "1.5", interrupted: "false" },
+  "array exit_code": { command: "bun test", exit: "[\n  1\n]", interrupted: "false" },
+  "no exit code at all": { command: "bun test", exit: "", interrupted: "false" },
+  "interrupted true": { command: "bun test", exit: "", interrupted: "true" },
+  "interrupted string true": { command: "bun test", exit: "", interrupted: "true" },
+  "interrupted false": { command: "bun test", exit: "0", interrupted: "false" },
+  "numeric command": { command: "7", exit: "", interrupted: "false" },
+  "missing tool_input": { command: "", exit: "0", interrupted: "false" },
+  "tool_input is a string": { command: "", exit: "0", interrupted: "false" },
+};
+
+test("every host payload has an explicit expected result", () => {
+  expect(Object.keys(EXPECTED)).toEqual(Object.keys(PAYLOADS));
+});
+
 for (const [name, payload] of Object.entries(PAYLOADS)) {
   test.concurrent(name, () => {
     const text = JSON.stringify(payload);
-    expect(tsRead(text)).toEqual(bashRead(text));
+    const expected = EXPECTED[name];
+    if (expected === undefined) throw new Error(`missing expected result for ${name}`);
+    expect(tsRead(text)).toEqual(expected);
   });
 }
 
@@ -112,6 +106,6 @@ for (const [name, text] of Object.entries({
   array: "[1]",
 })) {
   test.concurrent(`raw input: ${name}`, () => {
-    expect(tsRead(text)).toEqual(bashRead(text));
+    expect(tsRead(text)).toEqual({ command: "", exit: "", interrupted: "false" });
   });
 }

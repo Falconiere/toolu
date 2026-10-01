@@ -52,7 +52,7 @@ test.concurrent("CI workflow defines a typescript job running test:ts", () => {
   expect({ foundJob, foundRun }).toEqual({ foundJob: true, foundRun: true });
 });
 
-test.concurrent("root test delegates to the complete Bun lane and keeps explicit legacy commands", () => {
+test.concurrent("root test delegates to the complete Bun-only lane", () => {
   const scripts = rootPackage.scripts;
   expect(scripts["test"]).toBe("bun run test:ts");
   for (const gate of [
@@ -60,6 +60,7 @@ test.concurrent("root test delegates to the complete Bun lane and keeps explicit
     "test:unit",
     "test:portable-core",
     "test:gate-coverage",
+    "test:final-removal",
     "check:plugin-bundles",
     "check:hooks-json",
     "test:workspace",
@@ -71,17 +72,16 @@ test.concurrent("root test delegates to the complete Bun lane and keeps explicit
   ]) {
     expect(scripts["test:ts"]).toContain(gate);
   }
-  expect(scripts["lint:shell"]).toBe("bash tooling/shellcheck.sh");
-  expect(scripts["test:shell"]).toBe("bash tooling/bats-run.sh");
+  expect(scripts["lint:shell"]).toBeUndefined();
+  expect(scripts["test:shell"]).toBeUndefined();
+  expect(scripts["test:shell:serial"]).toBeUndefined();
 });
 
-test.concurrent("CI keeps functional required check names and runs the Bun lane", () => {
+test.concurrent("CI runs the Bun lane without retired shell jobs", () => {
   const workflow = readText(".github/workflows/tests.yml");
-  expect(workflow).toMatch(/  shellcheck:\n    name: shellcheck[\s\S]*?run: bun run lint:shell/);
   expect(workflow).toMatch(/  typescript:\n    name: typescript[\s\S]*?bun run test:ts/);
-  expect(workflow).toMatch(
-    /  bats:\n    name: bats \(plugins\)[\s\S]*?bash tooling\/bats-run\.sh plugins tooling packages tools/,
-  );
+  expect(workflow).not.toMatch(/^  shellcheck:/m);
+  expect(workflow).not.toMatch(/^  bats:/m);
   expect(readText(".github/workflows/toolu-review.yml")).toContain("  review:");
 });
 
@@ -105,7 +105,7 @@ test.concurrent("release-only path filters still run bundle-only changes", () =>
   expect(ignored.join("\n")).not.toContain("hooks/dist");
 });
 
-test.concurrent("contributor guidance names the new default and active legacy checks", () => {
+test.concurrent("contributor guidance names the Bun default", () => {
   expect(readText("AGENTS.md")).toContain("`bun run test` runs the TypeScript gate");
   expect(readText("docs/testing.md")).toContain("`bun run test` runs the TypeScript gate");
   expect(readText("plugins/toolu-review/skills/review/SKILL.md")).not.toContain("missing bats");

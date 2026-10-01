@@ -1,6 +1,4 @@
 import { expect, test } from "bun:test";
-import { resolve } from "node:path";
-import { run } from "@toolu/conformance/harness/spawn";
 import { encodeDecision } from "../../host/host-encode.ts";
 import type { JsonObject, LoadedConfig } from "../config-load.ts";
 import {
@@ -12,19 +10,6 @@ import {
   guardrailWarning,
   type GateMode,
 } from "../gate-mode.ts";
-
-const GATE_MODE_SH = resolve(
-  import.meta.dir,
-  "../../../../../plugins/toolu/hooks/lib/gate-mode.sh",
-);
-
-async function bash(script: string, args: string[]): Promise<string> {
-  const res = await run(["bash", "-c", `. "$1"; shift; ${script}`, "_", GATE_MODE_SH, ...args], {
-    env: { HOME: "/nonexistent-home", TOOLU_CONFIG_DIR: "/nonexistent-config" },
-  });
-  expect(res.exitCode).toBe(0);
-  return res.stdout;
-}
 
 function config(data: JsonObject, extra: Partial<LoadedConfig> = {}) {
   const warnings: string[] = [];
@@ -46,28 +31,34 @@ const REASONS = [
 ];
 
 for (const mode of ["block", "ask", "advise"] as const) {
-  test.concurrent(`gateDecision(${mode}) encodes like toolu_gate_emit`, async () => {
+  test.concurrent(`gateDecision(${mode}) encodes a Claude decision`, () => {
     for (const reason of REASONS) {
-      const expected: unknown = JSON.parse(await bash('toolu_gate_emit "$1" "$2"', [mode, reason]));
       const decision = gateDecision(mode, reason);
       expect(decision).not.toBeNull();
       if (decision === null) return;
       const encoded = encodeDecision("claude", "tool/pre", decision);
-      expect(encoded.kind === "command" ? JSON.parse(encoded.stdout) : encoded).toEqual(expected);
+      expect(encoded.kind).toBe("command");
+      if (encoded.kind !== "command") continue;
+      const output = JSON.parse(encoded.stdout);
+      expect(output.hookSpecificOutput.hookEventName).toBe("PreToolUse");
+      expect(
+        mode === "advise"
+          ? output.hookSpecificOutput.additionalContext
+          : output.hookSpecificOutput.permissionDecisionReason,
+      ).toBe(reason);
     }
   });
 }
 
-test.concurrent("off emits nothing in bash and no decision in TS", async () => {
-  expect(await bash('toolu_gate_emit off "$1"', ["x"])).toBe("");
+test.concurrent("off produces no decision", () => {
   expect(gateDecision("off", "x")).toBeNull();
 });
 
-test.concurrent("guardrailWarning is byte-identical to toolu_gate_guardrail_warning", async () => {
+test.concurrent("guardrailWarning preserves headline and detail", () => {
   const headline = 'Claude wants to write ".env".';
   const detail = "Secrets live here.\nSecond line.";
-  const expected = await bash('toolu_gate_guardrail_warning "$1" "$2"', [headline, detail]);
-  expect(guardrailWarning(headline, detail)).toBe(expected);
+  expect(guardrailWarning(headline, detail)).toContain(headline);
+  expect(guardrailWarning(headline, detail)).toContain(detail);
 });
 
 test.concurrent("balanced defaults: qualityGate blocks, guardrails ask, the rest advise", () => {

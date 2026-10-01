@@ -1,54 +1,47 @@
-/**
- * `branchSlug` and `baseBranch` against the unmodified `detect.sh` (#254 AC-3):
- * every `branch_slug` input its bats suite uses, and `detect_base_branch` with
- * and without `origin/HEAD`, with no argument, and outside a repository.
- */
+/** Branch naming and base discovery in real git repositories. */
 import { expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
-import { bashBatch, cleanEnv } from "../../shell/__tests__/parity-helpers.ts";
 import { baseBranch, branchSlug } from "../detect-branch.ts";
 
 const SLUGS = ["feat/foo", "a/b/c", "feat#$%", "", "feat/255-state", "ünïcode/x", "a b", "////"];
 
-test("branchSlug equals bash branch_slug on every bats input", () => {
-  using sb = createSandbox();
-  const env = cleanEnv(sb.home);
-  const bash = bashBatch(
-    "detect",
-    'branch_slug "$f1"',
-    SLUGS.map((s) => [s]),
-    env,
-  );
-  expect(SLUGS.map(branchSlug)).toEqual(bash.map((out) => out.replace(/\n$/, "")));
-  expect(branchSlug("")).toBe("_default");
+test("branchSlug normalizes separators and strips punctuation", () => {
+  expect(SLUGS.map(branchSlug)).toEqual([
+    "feat_foo",
+    "a_b_c",
+    "feat",
+    "_default",
+    "feat_255-state",
+    "ncode_x",
+    "a b".replace(" ", ""),
+    "____",
+  ]);
 });
 
-test("baseBranch equals bash detect_base_branch with a root, no root, and outside git", () => {
+test("baseBranch uses origin/HEAD when present and main otherwise", () => {
   using sb = createSandbox({ git: true, branch: "trunk" });
   const outside = join(sb.root, "outside");
   mkdirSync(outside);
-  const env = cleanEnv(sb.home);
-  const ask = (cwd: string, root: string) =>
-    (bashBatch("detect", 'detect_base_branch "$f1"', [[root]], env, cwd)[0] ?? "").trim();
+  const env = { HOME: sb.home, PATH: process.env.PATH ?? "/usr/bin:/bin" };
 
-  const check = (label: string) => {
+  const check = (expected: string) => {
     for (const [cwd, root] of [
       [sb.project, sb.project],
       [sb.project, ""],
       [outside, ""],
       [outside, sb.project],
     ] as const) {
-      const ts = baseBranch(root === "" ? undefined : root, env, cwd);
-      expect({ label, cwd, root, ts }).toEqual({ label, cwd, root, ts: ask(cwd, root) });
-      expect(baseBranch(root, env, cwd)).toBe(ts);
+      expect(baseBranch(root === "" ? undefined : root, env, cwd)).toBe(
+        root === "" && cwd === outside ? "main" : expected,
+      );
     }
   };
-  check("no origin/HEAD");
+  check("main");
   sb.git("update-ref", "refs/remotes/origin/trunk", "HEAD");
   sb.git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk");
-  check("origin/HEAD -> trunk");
+  check("trunk");
   expect(baseBranch(sb.project, env)).toBe("trunk");
   expect(baseBranch(undefined, env, outside)).toBe("main");
 });

@@ -1,6 +1,6 @@
 /** Small filesystem helpers for inventory discovery. */
 import { existsSync, readdirSync } from "node:fs";
-import { basename, join, relative } from "node:path";
+import { basename, relative } from "node:path";
 import type { Kind } from "./types.ts";
 import { ROOT } from "./paths.ts";
 
@@ -18,14 +18,6 @@ export function listDirNames(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => e.name)
-    .toSorted();
-}
-
-export function listShFiles(dir: string, pattern?: RegExp): string[] {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir, { withFileTypes: true })
-    .filter((e) => e.isFile() && e.name.endsWith(".sh") && (!pattern || pattern.test(e.name)))
-    .map((e) => join(dir, e.name))
     .toSorted();
 }
 
