@@ -1,13 +1,14 @@
 /** Routing: tiers, host capacity and cooldown, persisted routes, on the #248 snapshot. */
 
 import { expect, test } from "bun:test";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import {
   DEFAULT_TABLE,
   coolingHosts,
   heuristicTier,
+  jevCommand,
   parseHosts,
   pickHost,
   routeIssues,
@@ -161,4 +162,34 @@ test.concurrent("routeIssues: issues resolve by ref or by key; unknown ones are 
   await expect(routeIssues(g, ["nope-1"], pool, OPTS)).rejects.toThrow(
     "nope-1 is not in the graph",
   );
+});
+
+async function runJev(argv: string[]): Promise<{ code: number; out: string }> {
+  const proc = Bun.spawn([...argv, "ask"], { stdout: "pipe", stderr: "pipe" });
+  const [out, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
+  return { code, out };
+}
+
+test.concurrent("jevCommand: a jev.sh symlinked to a JS bundle runs under Bun, not bash", async () => {
+  using sb = createSandbox();
+  const bundle = join(sb.root, "jev.js");
+  writeFileSync(bundle, '#!/usr/bin/env bun\nclass A {}\nconsole.log("bundle-ok");\n');
+  chmodSync(bundle, 0o755);
+  const link = join(sb.root, "jev.sh");
+  symlinkSync(bundle, link);
+  const argv = jevCommand(link);
+  expect(argv).toEqual([process.execPath, link]);
+  expect(await runJev(argv)).toEqual({ code: 0, out: "bundle-ok\n" });
+  // The former invocation: bash parses the JS and fails.
+  expect((await runJev(["bash", link])).code).not.toBe(0);
+});
+
+test.concurrent("jevCommand: a regular user override runs directly under its own shebang", async () => {
+  using sb = createSandbox();
+  const script = join(sb.root, "jev.sh");
+  writeFileSync(script, "#!/bin/sh\necho override-ok\n");
+  chmodSync(script, 0o755);
+  const argv = jevCommand(script);
+  expect(argv).toEqual([script]);
+  expect(await runJev(argv)).toEqual({ code: 0, out: "override-ok\n" });
 });
