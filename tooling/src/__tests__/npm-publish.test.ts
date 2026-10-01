@@ -215,9 +215,18 @@ test.concurrent("the workflow waits until every published package resolves befor
   );
   expect(publishLine).toBeGreaterThanOrEqual(0);
   expect(waitLine).toBeGreaterThan(publishLine);
-  // The wait is bounded and the job timeout leaves room for it.
-  expect(WF).toContain("deadline=$(( $(date +%s) + 8 * 60 ))");
-  expect(WF).toContain("timeout-minutes: 20");
+  // Each package gets its full propagation window. In the 7.7.0 release,
+  // core took almost eight minutes and a shared deadline gave opencode only
+  // thirty seconds before falsely failing the deployment.
+  const waitLines = lines.slice(waitLine);
+  const packageLoop = waitLines.findIndex((line) => line.trim().startsWith("for dir in "));
+  const deadline = waitLines.findIndex((line) => line.includes("deadline=$(("));
+  const poll = waitLines.findIndex((line) => line.trim().startsWith("until npm view "));
+  expect(deadline).toBeGreaterThan(packageLoop);
+  expect(deadline).toBeLessThan(poll);
+  expect(waitLines[deadline]).toBe("            deadline=$(( $(date +%s) + 8 * 60 ))");
+  // Three eight-minute waits plus setup and publishing must fit in the job.
+  expect(WF).toContain("timeout-minutes: 30");
   // setup-node's .npmrc reads NODE_AUTH_TOKEN on every npm call, so the wait
   // step needs the token too, not only the publish step.
   expect(countLines(WF, TOKEN_LINE)).toBe(2);

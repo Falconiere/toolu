@@ -50,7 +50,7 @@ jobs:
   publish:
     name: publish npm packages
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout the released tag
         uses: actions/checkout@v4
@@ -133,7 +133,6 @@ jobs:
       - name: Wait until every package resolves on the registry
         run: |
           set -euo pipefail
-          deadline=$(( $(date +%s) + 8 * 60 ))
           for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm; do
             if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
               echo "$dir is private; nothing to wait for"
@@ -141,6 +140,9 @@ jobs:
             fi
             name=$(node -p "require('./$dir/package.json').name")
             pkg=$(node -p "require('./$dir/package.json').version")
+            # Each package gets a full window, even when earlier packages
+            # take most of theirs to propagate.
+            deadline=$(( $(date +%s) + 8 * 60 ))
             until npm view "$name@$pkg" version >/dev/null 2>&1; do
               if [ "$(date +%s)" -ge "$deadline" ]; then
                 echo "$name@$pkg is still not fetchable from the registry: the publish was accepted but has not propagated" >&2
