@@ -1,6 +1,6 @@
 {
   "name": "@toolu/core",
-  "version": "7.7.0",
+  "version": "7.7.1",
   "description": "Portable decisions, gates and dispatch shared by toolu's host adapters.",
   "keywords": [
     "toolu",
