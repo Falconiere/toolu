@@ -1,5 +1,13 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { PluginManifest } from "../../inventory/types.ts";
@@ -21,6 +29,64 @@ function plugin(name: string, pluginDir: string): PluginManifest {
 function repoRoot(): string {
   return join(dirname(fileURLToPath(import.meta.url)), "../../../../..");
 }
+
+function readyPlugin(): PluginManifest {
+  const pluginDir = mkdtempSync(join(tmpBase, "toolu-bs-bun-plugin-"));
+  mkdirSync(join(pluginDir, "hooks", "dist"), { recursive: true });
+  writeFileSync(
+    join(pluginDir, "hooks", "dist", "register.js"),
+    'const fs = require("node:fs"); const path = require("node:path");\n' +
+      'const root = path.join(process.env.TOOLU_CONFIG_DIR, "toolu");\n' +
+      "fs.mkdirSync(root, { recursive: true });\n" +
+      'fs.writeFileSync(path.join(root, ".session-start-ready"), "ready\\n");\n',
+  );
+  return plugin("ready", pluginDir);
+}
+
+test("#326: bootstrap runs the TOOLU_BUN executable with a restricted PATH", async () => {
+  const root = mkdtempSync(join(tmpBase, "toolu-bs-bun-"));
+  const marker = join(root, "selected-bun");
+  const wrapper = join(root, "bun wrapper");
+  writeFileSync(
+    wrapper,
+    '#!/bin/sh\nprintf "selected\\n" > "$TOOLU_BUN_MARKER"\nexec "$TOOLU_REAL_BUN" "$@"\n',
+  );
+  chmodSync(wrapper, 0o755);
+  const result = await bootstrapRuntime({
+    repoRoot: repoRoot(),
+    projectRoot: root,
+    dataRoot: join(root, "data"),
+    plugins: [readyPlugin()],
+    env: {
+      PATH: root,
+      HOME: root,
+      TOOLU_BUN: wrapper,
+      TOOLU_BUN_MARKER: marker,
+      TOOLU_REAL_BUN: process.execPath,
+    },
+    isolatedHome: join(root, "isolated-home"),
+  });
+  expect(result.status).toBe("ready");
+  expect(readFileSync(marker, "utf8")).toBe("selected\n");
+});
+
+test("#326: bootstrap finds Bun in the host HOME before isolating child HOME", async () => {
+  const root = mkdtempSync(join(tmpBase, "toolu-bs-bun-home-"));
+  const hostHome = join(root, "host-home");
+  const bunDir = join(hostHome, ".bun", "bin");
+  mkdirSync(bunDir, { recursive: true });
+  symlinkSync(process.execPath, join(bunDir, "bun"));
+  const result = await bootstrapRuntime({
+    repoRoot: repoRoot(),
+    projectRoot: root,
+    dataRoot: join(root, "data"),
+    plugins: [readyPlugin()],
+    env: { PATH: root, HOME: hostHome, TOOLU_BUN: "" },
+    isolatedHome: join(root, "isolated-home"),
+  });
+  expect(result.status).toBe("ready");
+  expect(existsSync(join(root, "data", "toolu", ".session-start-ready"))).toBe(true);
+});
 
 test("#276: a bundle that cannot start leaves bootstrap NotReady", async () => {
   const project = mkdtempSync(join(tmpBase, "toolu-bs-spawn-"));

@@ -1,6 +1,6 @@
 /** Prerequisite probe for OpenCode bootstrap (#211). */
-import { statSync } from "node:fs";
-import { join } from "node:path";
+import { accessSync, constants, statSync } from "node:fs";
+import { delimiter, join, resolve } from "node:path";
 
 export type PreflightTool = "git" | "bun" | "opencode";
 
@@ -20,26 +20,36 @@ const REQUIRED_FOR_BOOTSTRAP: PreflightTool[] = ["git", "bun"];
 
 const ALLOWED_BINARY = /^[A-Za-z0-9._+-]+$/;
 
-/** PATH lookup without shell — binary must be a simple tool name. */
-function commandPresent(binary: string, env: Record<string, string>): boolean {
-  if (!ALLOWED_BINARY.test(binary)) {
+function executableFile(path: string): boolean {
+  try {
+    if (!statSync(path).isFile()) return false;
+    accessSync(path, constants.X_OK);
+    return true;
+  } catch {
     return false;
   }
-  const pathEnv = env.PATH ?? process.env.PATH ?? "";
-  for (const dir of pathEnv.split(":")) {
+}
+
+/** PATH lookup without shell — binary must be a simple tool name. */
+function commandPath(binary: string, env: Record<string, string>): string | null {
+  if (!ALLOWED_BINARY.test(binary)) return null;
+  for (const dir of (env.PATH ?? "").split(delimiter)) {
     if (dir.length === 0) {
       continue;
     }
-    const candidate = join(dir, binary);
-    try {
-      if (statSync(candidate).isFile()) {
-        return true;
-      }
-    } catch {
-      continue;
-    }
+    const candidate = resolve(dir, binary);
+    if (executableFile(candidate)) return candidate;
   }
-  return false;
+  return null;
+}
+
+/** Match the hook launcher's TOOLU_BUN, PATH, then ~/.bun/bin/bun order. */
+export function resolveBunExecutable(env: Record<string, string>): string | null {
+  if (env.TOOLU_BUN && executableFile(env.TOOLU_BUN)) return resolve(env.TOOLU_BUN);
+  const fromPath = commandPath("bun", env);
+  if (fromPath) return fromPath;
+  const fromHome = env.HOME ? join(env.HOME, ".bun", "bin", "bun") : null;
+  return fromHome && executableFile(fromHome) ? resolve(fromHome) : null;
 }
 
 /** Structured prerequisite report; missing git or Bun fails closed. */
@@ -58,7 +68,7 @@ export function runPreflight(options?: { env?: Record<string, string> }): Prefli
   const tools: PreflightTool[] = ["git", "bun", "opencode"];
   const entries: PreflightEntry[] = tools.map((tool) => ({
     tool,
-    present: commandPresent(tool, env),
+    present: tool === "bun" ? resolveBunExecutable(env) !== null : commandPath(tool, env) !== null,
   }));
   const reasons: string[] = [];
   for (const required of REQUIRED_FOR_BOOTSTRAP) {

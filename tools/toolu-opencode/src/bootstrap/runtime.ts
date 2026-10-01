@@ -2,6 +2,7 @@
 import { mkdirSync } from "node:fs";
 import { opencodeDataRoot } from "../host/roots.ts";
 import type { PluginManifest } from "../inventory/types.ts";
+import { resolveBunExecutable } from "../preflight/check.ts";
 import { notReady, ready, type BootstrapResult } from "./result.ts";
 import { pluginBootstrapScript, requiresNativeRegistration } from "./entrypoint.ts";
 import { evaluateBootstrapReadiness } from "./readiness.ts";
@@ -55,6 +56,7 @@ function bootstrapEnv(options: BootstrapRuntimeOptions, dataRoot: string): Recor
 }
 
 async function runEntrypoint(
+  bun: string,
   script: string,
   pluginDir: string,
   cwd: string,
@@ -62,7 +64,7 @@ async function runEntrypoint(
   deadlineMs: number,
 ): Promise<BootstrapResult | null> {
   try {
-    const proc = Bun.spawn([process.execPath, script], {
+    const proc = Bun.spawn([bun, script], {
       cwd,
       env: { ...env, CLAUDE_PLUGIN_ROOT: pluginDir },
       stdin: new Blob(["{}"]),
@@ -104,6 +106,9 @@ async function bootstrapRuntimeInternal(
   const dataRoot = options.dataRoot ?? opencodeDataRoot({ projectRoot: options.projectRoot });
   mkdirSync(dataRoot, { recursive: true });
   const env = bootstrapEnv(options, dataRoot);
+  // The child HOME is isolated; the runtime must come from the original host HOME.
+  const bun = resolveBunExecutable({ ...env, HOME: options.env?.HOME ?? process.env.HOME ?? "" });
+  if (!bun) return notReady("Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun");
   const deadlineMs = options.deadlineMs ?? 120_000;
   const runFrom = async (index: number): Promise<BootstrapResult | null> => {
     const plugin = options.plugins[index];
@@ -114,6 +119,7 @@ async function bootstrapRuntimeInternal(
     const script = pluginBootstrapScript(plugin.pluginDir);
     if (!script) return runFrom(index + 1);
     const failure = await runEntrypoint(
+      bun,
       script,
       plugin.pluginDir,
       options.projectRoot,
