@@ -1,7 +1,7 @@
 # Cross-host conformance report
 
 **Issue:** [#212](https://github.com/Falconiere/toolu/issues/212)  
-**Depth:** fixture-suite (hermetic temp projects; real bash bridge and bootstrap)  
+**Depth:** fixture-suite (hermetic temp projects; native dispatcher and Bun bootstrap)
 **Runner:** `bun run test:conformance` → `tools/toolu-conformance/src/cli/run.ts`
 
 ## Pins (from [portable-core.md](./portable-core.md))
@@ -16,16 +16,16 @@
 
 | OS | Status |
 |----|--------|
-| macOS | Supported (Bash ≥5, `jq`, Bun 1.4.x) |
-| Linux | Supported (same prerequisites) |
+| macOS | Supported (Bun 1.4.x and git for OpenCode) |
+| Linux | Supported (same OpenCode prerequisites) |
 | Windows | **N/A** — not probed for this port |
 
 ## Fixture suites
 
 | Suite | What it proves |
 |-------|----------------|
-| `protected-files` | Pre-tool bridge blocks `.env` edit (`deny` or `ask`); **file bytes unchanged on `deny`** |
-| `bootstrap-readiness` | No-op bootstrap exit 0 without registry artifacts → `NotReady` |
+| `protected-files` | Native PreToolUse bundle blocks `.env` edit (`deny` or `ask`); **file bytes unchanged on `deny`** |
+| `bootstrap-readiness` | A Bun registration bundle exits 0 without registry artifacts → `NotReady` |
 | `permission-evaluate` | `permission.evaluate` handler + block mode → `deny` on protected `.env` |
 | `surface-drift` | `bun run check:opencode-surface` clean |
 | `spaces-cwd` | Project path with spaces still blocks protected edit |
@@ -44,6 +44,8 @@ bun run test:conformance
 ```
 
 When `TOOLU_LIVE_OPENCODE=1`, the runner executes `opencode --version` (or `$OPENCODE_BIN --version`) and fails the matrix if that command is missing or non-zero.
+
+For #276, the full fixture matrix passed with a temporary `@opencode/cli@2.0.12` binary, `TOOLU_LIVE_OPENCODE=1`, and a PATH containing only Bun and git. The live lane verifies the pinned CLI version; the separate OpenCode adapter test stages the npm catalog, bootstraps `ast-grep` into an isolated config root, and checks its in-process advisory with the same bash-free PATH.
 
 ## Isolation
 

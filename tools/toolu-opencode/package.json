@@ -1,7 +1,7 @@
 {
   "name": "@toolu/opencode",
   "version": "7.6.0",
-  "description": "OpenCode plugin bridging toolu's bash quality gates into permission.evaluate.",
+  "description": "OpenCode plugin running toolu's native TypeScript gates in permission.evaluate.",
   "keywords": [
     "toolu",
     "opencode",
@@ -28,7 +28,7 @@
     "plugins"
   ],
   "scripts": {
-    "prepack": "bash scripts/bundle-plugins.sh"
+    "prepack": "bun scripts/bundle-plugins.ts"
   },
   "type": "module",
   "main": "./src/plugin/toolu.ts",

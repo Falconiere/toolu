@@ -271,10 +271,14 @@ describe("ledgerRun vs plan-ledger.sh run", () => {
   // overrun twin would diverge by design (D1), so it runs where bash can bound too.
   const noTimeout = Bun.which("timeout") === null;
   for (const [name, scenario] of Object.entries(SCENARIOS)) {
+    // This case measures a one-second wall-clock timeout. Running it beside
+    // dozens of subprocess-heavy twins can time out its later `true` check.
     const runs =
       noTimeout && name === "an overrunning check is killed and marked red"
         ? test.skip
-        : test.concurrent;
+        : name === "an overrunning check is killed and marked red"
+          ? test.serial
+          : test.concurrent;
     runs(
       name,
       async () => {

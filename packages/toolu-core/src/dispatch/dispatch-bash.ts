@@ -1,7 +1,7 @@
 /**
  * Running a not-yet-ported bash module (#258). `dispatch.sh` runs each module as
  * `result=$(bash "$script" <<<"$input" 2>"$err_file")` with no deadline, so this
- * does the same with one synchronous spawn: the runner in `@toolu/core/runner`
+ * does the same with one synchronous spawn: the former bridge runner
  * would add a `setsid`/`python3` process per module on macOS.
  */
 import { constants } from "node:os";

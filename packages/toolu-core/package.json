@@ -1,7 +1,7 @@
 {
   "name": "@toolu/core",
   "version": "7.6.0",
-  "description": "Portable decision, policy and bridge core shared by toolu's host adapters.",
+  "description": "Portable decisions, gates and dispatch shared by toolu's host adapters.",
   "keywords": [
     "toolu",
     "opencode",
@@ -29,10 +29,8 @@
   "exports": {
     "./decision": "./src/decision/decision.ts",
     "./events": "./src/events/events.ts",
-    "./bridge": "./src/bridge/bridge.ts",
     "./policy": "./src/policy/policy.ts",
     "./config": "./src/config/config.ts",
-    "./runner": "./src/runner/runner.ts",
     "./launcher": "./src/launcher/launcher.ts",
     "./cli": "./src/cli/cli.ts",
     "./rest": "./src/rest/rest.ts",

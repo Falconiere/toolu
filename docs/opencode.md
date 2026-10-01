@@ -7,10 +7,10 @@
 opencode plugin add @toolu/opencode
 ```
 
-The package carries the bash `plugins/` tree, so the bridge resolves its plugin
-root to its own package directory, and it ships a resolvable default entry
+The package carries plugin manifests, settings, and committed Bun bundles, so the
+adapter resolves its plugin root to its own package directory. It ships a default entry
 (`exports["."]` / `main` → `./src/plugin/toolu.ts`), so `opencode plugin add`
-loads it with no local shim. Choose which bash plugins are active with
+loads it with no local shim. Choose which plugins are active with
 `<project>/.opencode/toolu/plugins.json`:
 
 ```json
@@ -29,7 +29,7 @@ against an unreleased checkout.
 
 **Previous status:** Git-clone install only (no npm publish). Enforcement scope matches [#212](https://github.com/Falconiere/toolu/issues/212) fixture evidence — not every bash gate is wired yet.
 
-Bun 1.4.x is a prerequisite on every host, Claude Code and Codex included; see the [runtime contract](runtime.md). Claude Code and Codex keep their marketplace installs. OpenCode uses the Bun/TS packages in this repo plus the bash hook tree under `plugins/` until each plugin's TypeScript port lands.
+Bun 1.4.x is a prerequisite on every host, Claude Code and Codex included; see the [runtime contract](runtime.md). Claude Code and Codex keep their marketplace installs. OpenCode calls the TypeScript core dispatcher in process. Its npm package ships committed bundles and their runtime data. A selected plugin whose registration has not yet been ported fails bootstrap with a clear NotReady reason.
 
 ## Prerequisites
 
@@ -38,18 +38,16 @@ Bun 1.4.x is a prerequisite on every host, Claude Code and Codex included; see t
 | OpenCode CLI | `v2.0.12` — `$OPENCODE_BIN` or `command -v opencode`; `opencode --version` |
 | Plugin SDK | `@opencode/plugin@2.0.12` (resolved via the clone’s `bun.lock`) |
 | Bun | `1.4.x` (workspace `>=1.4.0 <1.5.0`; CI/docs baseline `1.4.2`) |
-| Bash | ≥ 5 (bridge and assembled hooks) |
-| jq | Required for config merge and hook scripts |
-| git | Bootstrap and bridge context |
+| git | Project and gate context |
 | Platform | macOS and Linux ([#212](./conformance-report.md)); Windows **N/A** |
 
 Do **not** target the legacy `opencode-ai@1.18.31` (V1) line. Pins and contracts: [`docs/portable-core.md`](portable-core.md).
 
-Per-gate tool dependencies (Rust, TypeScript, Python linters, etc.) are unchanged from the bash plugins you enable — see each plugin’s README and [`docs/config.md`](config.md).
+Per-gate tool dependencies remain specific to the plugins you enable; see each plugin’s README and [`docs/config.md`](config.md).
 
 ## First install (git clone)
 
-The pasteable prompt in the root [README § Install everything → OpenCode](../README.md#install-everything) (`<!-- install-everything:opencode -->`, mirrored in [`docs/plugins/index.md`](plugins/index.md)) uses the npm package above. The steps below are the contributor path: they run the bridge against a checkout instead of the bundled tree.
+The pasteable prompt in the root [README § Install everything → OpenCode](../README.md#install-everything) (`<!-- install-everything:opencode -->`, mirrored in [`docs/plugins/index.md`](plugins/index.md)) uses the npm package above. The steps below are the contributor path against a checkout.
 
 Install from a **release tag**, not `main`, unless you are developing toolu itself.
 
@@ -62,7 +60,7 @@ bun install --frozen-lockfile
 bun run check:opencode-surface   # optional sanity: generated mirror matches sources
 ```
 
-Record the clone path — the OpenCode plugin must reach the full repo (bash `plugins/`, `plugins/toolu/settings/`, and `tools/toolu-opencode/generated/`).
+Record the clone path — the OpenCode plugin must reach `plugins/` for manifests, bundles and settings, plus `tools/toolu-opencode/generated/`.
 
 ### Project wiring
 
@@ -96,16 +94,16 @@ In **your application repo** (not inside the toolu clone):
    export { default } from "@toolu/opencode/plugin";
    ```
 
-   The default export registers `permission.evaluate` and runs preflight + bootstrap ([#204](https://github.com/Falconiere/toolu/issues/204), [#211](https://github.com/Falconiere/toolu/issues/211)). Bootstrap runs each enabled plugin's register entrypoint, else its session-start one, preferring the committed TypeScript bundle (`hooks/dist/register.js`, `hooks/dist/session-start.js`) over the bash script it replaced and running it through the same generated launcher Claude Code and Codex use ([#269](https://github.com/Falconiere/toolu/issues/269), [#265](https://github.com/Falconiere/toolu/issues/265)), so, for example, context7 publishes `context7/search.sh` under the bootstrap data root, and toolu's bundle writes the `toolu/.session-start-ready` readiness marker ([#263](https://github.com/Falconiere/toolu/issues/263)).
+   The default export registers `permission.evaluate` and runs preflight + bootstrap ([#204](https://github.com/Falconiere/toolu/issues/204), [#211](https://github.com/Falconiere/toolu/issues/211)). Bootstrap runs each enabled plugin's committed `hooks/dist/register.js` bundle, else its `hooks/dist/session-start.js` bundle, with Bun. A selected legacy-only registration hook fails NotReady. For example, context7 publishes `context7/search.sh` under the bootstrap data root, and toolu's bundle writes the `toolu/.session-start-ready` readiness marker ([#263](https://github.com/Falconiere/toolu/issues/263)).
 
-4. **Enabled bash plugins** — project file `.opencode/toolu/plugins.json`:
+4. **Enabled plugins** — project file `.opencode/toolu/plugins.json`:
 
    ```json
    { "version": 1, "enabled": ["toolu"] }
 
    ```
 
-   Add names (for example `ts-quality`, `delivery-flow`, `pr-babysit`, `epic-orchestrator`) only when those directories exist under `$TOOLU_REPO_ROOT/plugins/` (or the npm package tree) and you accept their extra prerequisites. Manifest dependencies are closed automatically (`@toolu/opencode/select`).
+   Add names (for example `ts-quality`, `ast-grep`, `delivery-flow`, `pr-babysit`, `epic-orchestrator`) only when those directories exist under `$TOOLU_REPO_ROOT/plugins/` (or the npm package catalog) and you accept their extra prerequisites. Manifest dependencies are closed automatically (`@toolu/opencode/select`). A plugin with only a legacy shell registration hook is NotReady until its Bun bundle lands.
 
 5. **Generated surface** — skills, agents, and commands for OpenCode live under `tools/toolu-opencode/generated/` (catalog: `opencode.toolu.json`). Regenerate after changing upstream skills with `bun run generate:opencode-surface` in the toolu clone. Wire OpenCode to those paths using your OpenCode project config; the committed tree is the canonical mirror from [#206](https://github.com/Falconiere/toolu/issues/206).
 
@@ -172,9 +170,9 @@ Check out the last known-good tag in the toolu clone and run `bun install --froz
 
 | Host | Install doc | Runtime |
 |------|-------------|---------|
-| Claude Code | [README § Install](../README.md#install) | Bash hooks only |
-| Codex | [README § Install](../README.md#install) | Bash hooks only |
-| OpenCode | This file | Bun plugin + bash bridge |
+| Claude Code | [README § Install](../README.md#install) | Bun hook bundles |
+| Codex | [README § Install](../README.md#install) | Bun hook bundles |
+| OpenCode | This file | In-process TypeScript dispatcher |
 
 ## Related
 

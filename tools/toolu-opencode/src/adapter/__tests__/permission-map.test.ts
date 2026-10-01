@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import type { Decision } from "@toolu/core/decision";
 import {
   applyDecisionToPermission,
-  mapPermissionEventToBridge,
+  mapPermissionEventToTool,
   type PermissionEvaluationEvent,
 } from "../permission-map.ts";
 
@@ -23,30 +23,28 @@ function event(overrides: Partial<PermissionEvaluationEvent> = {}): PermissionEv
   };
 }
 
-test("AC-4: mapPermissionEventToBridge maps edit to Edit tool/pre", () => {
-  const mapping = mapPermissionEventToBridge(event(), ctx);
+test("AC-4: mapPermissionEventToTool maps edit to PreToolUse payload", () => {
+  const mapping = mapPermissionEventToTool(event(), ctx);
   expect(mapping.kind).toBe("request");
   if (mapping.kind !== "request") {
     return;
   }
-  expect(mapping.request.protocolVersion).toBe(1);
-  expect(mapping.request.event).toBe("tool/pre");
-  expect(mapping.request.toolName).toBe("Edit");
-  expect(mapping.request.toolInput).toEqual({ file_path: "/proj/.env" });
-  expect(mapping.request.host).toBe("opencode");
+  expect(mapping.request.tool_name).toBe("Edit");
+  expect(mapping.request.tool_input).toEqual({ file_path: "/proj/.env" });
+  expect(mapping.request.session_id).toBe("sess_1");
 });
 
-test("AC-4: mapPermissionEventToBridge skips unknown actions", () => {
-  expect(mapPermissionEventToBridge(event({ action: "read" }), ctx).kind).toBe("skip");
+test("AC-4: mapPermissionEventToTool skips unknown actions", () => {
+  expect(mapPermissionEventToTool(event({ action: "read" }), ctx).kind).toBe("skip");
 });
 
 test("AC-4: gated write without path fails closed in mapper", () => {
-  const mapping = mapPermissionEventToBridge(event({ action: "write", resources: [] }), ctx);
+  const mapping = mapPermissionEventToTool(event({ action: "write", resources: [] }), ctx);
   expect(mapping.kind).toBe("deny");
 });
 
 test("AC-4: bash maps command from metadata", () => {
-  const mapping = mapPermissionEventToBridge(
+  const mapping = mapPermissionEventToTool(
     event({
       action: "bash",
       resources: [],
@@ -58,8 +56,8 @@ test("AC-4: bash maps command from metadata", () => {
   if (mapping.kind !== "request") {
     return;
   }
-  expect(mapping.request.toolName).toBe("Bash");
-  expect(mapping.request.toolInput).toEqual({ command: "rm -rf /" });
+  expect(mapping.request.tool_name).toBe("Bash");
+  expect(mapping.request.tool_input).toEqual({ command: "rm -rf /" });
 });
 
 const decisionCases: Array<{

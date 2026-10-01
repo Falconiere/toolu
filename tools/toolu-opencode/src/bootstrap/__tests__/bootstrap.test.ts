@@ -10,9 +10,7 @@ import {
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { bootstrapRuntime } from "../runtime.ts";
-import { bootstrapCommand, pluginBootstrapScript } from "../entrypoint.ts";
-import { bootstrapWithNoOpRunner } from "../test-helpers.ts";
-import { listPluginManifests } from "../../inventory/scan.ts";
+import { pluginBootstrapScript } from "../entrypoint.ts";
 import { selectPluginsWithDependencies } from "../../select/resolve.ts";
 import { opencodePluginSelectionPath } from "../../host/roots.ts";
 const tmpBase = process.env.TMPDIR ?? "/tmp";
@@ -28,18 +26,23 @@ function isolatedHome(): string {
 test("AC-4: exit 0 without output artifacts is NotReady", async () => {
   const project = mkdtempSync(join(tmpBase, "toolu-bs-nr-"));
   const dataRoot = mkdtempSync(join(tmpBase, "toolu-bs-nr-data-"));
-  const pluginsRoot = join(repoRoot(), "plugins");
-  const manifests = listPluginManifests(pluginsRoot);
-  const toolu = manifests?.find((m) => m.name === "toolu");
-  expect(toolu).toBeDefined();
-  if (!toolu) {
-    return;
-  }
-  const result = await bootstrapWithNoOpRunner({
+  const pluginDir = mkdtempSync(join(tmpBase, "toolu-bs-nr-plugin-"));
+  mkdirSync(join(pluginDir, "hooks", "dist"), { recursive: true });
+  writeFileSync(join(pluginDir, "hooks", "dist", "register.js"), "process.exit(0);\n");
+  const result = await bootstrapRuntime({
     repoRoot: repoRoot(),
     projectRoot: project,
     dataRoot,
-    plugins: [toolu],
+    plugins: [
+      {
+        name: "empty",
+        spec: "empty@toolu",
+        marketplace: "toolu",
+        version: "1",
+        pluginDir,
+        dependencies: [],
+      },
+    ],
     isolatedHome: isolatedHome(),
   });
   expect(result.status).toBe("not-ready");
@@ -192,28 +195,17 @@ test("AC-1b: core-only bootstrap is ready even when the gate notice is pinned", 
   }
 });
 
-test("#269: a plugin with only a TypeScript startup bundle bootstraps through its launcher", () => {
+test("#269: a plugin with only a TypeScript startup bundle selects its bundle", () => {
   const context7 = join(repoRoot(), "plugins", "context7");
   const script = pluginBootstrapScript(context7);
   expect(script).toBe(join(context7, "hooks", "dist", "session-start.js"));
-  const command = bootstrapCommand(script ?? "", "context7", context7);
-  expect(command.argv.slice(0, 2)).toEqual(["sh", "-c"]);
-  expect(command.argv[2]).toContain('"${CLAUDE_PLUGIN_ROOT}/hooks/dist/session-start.js"');
-  expect(command.env).toEqual({ CLAUDE_PLUGIN_ROOT: context7 });
-  expect(bootstrapCommand("/p/hooks/register.sh", "p", "/p")).toEqual({
-    argv: ["bash", "/p/hooks/register.sh"],
-    env: {},
-  });
   expect(pluginBootstrapScript(mkdtempSync(join(tmpBase, "toolu-bs-empty-")))).toBeNull();
 });
 
-test("#268: a plugin with a TypeScript register bundle bootstraps through its register launcher", () => {
+test("#268: a plugin with a TypeScript register bundle selects its bundle", () => {
   const astGrep = join(repoRoot(), "plugins", "ast-grep");
   const script = pluginBootstrapScript(astGrep);
   expect(script).toBe(join(astGrep, "hooks", "dist", "register.js"));
-  const command = bootstrapCommand(script ?? "", "ast-grep", astGrep);
-  expect(command.argv[2]).toContain('"${CLAUDE_PLUGIN_ROOT}/hooks/dist/register.js"');
-  expect(command.env).toEqual({ CLAUDE_PLUGIN_ROOT: astGrep });
 });
 
 test("#268: bootstrapping ast-grep registers its bundled modules under the OpenCode data root", async () => {
@@ -249,13 +241,10 @@ test("#268: bootstrapping ast-grep registers its bundled modules under the OpenC
   expect(modules).toContain("post-tools.d/ast-grep@toolu__byte-savings.js");
 });
 
-test("#265: a plugin with a TypeScript register bundle bootstraps through its register launcher", () => {
+test("#265: a plugin with a TypeScript register bundle selects its bundle", () => {
   const tsQuality = join(repoRoot(), "plugins", "ts-quality");
   const script = pluginBootstrapScript(tsQuality);
   expect(script).toBe(join(tsQuality, "hooks", "dist", "register.js"));
-  const command = bootstrapCommand(script ?? "", "ts-quality", tsQuality);
-  expect(command.argv[2]).toContain('"${CLAUDE_PLUGIN_ROOT}/hooks/dist/register.js"');
-  expect(command.env).toEqual({ CLAUDE_PLUGIN_ROOT: tsQuality });
 });
 
 test("#269: bootstrapping context7 publishes its search CLI under the OpenCode data root", async () => {

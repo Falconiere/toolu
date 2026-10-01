@@ -1,7 +1,7 @@
 # Portable Bun/TS core contracts
 
 **Issue:** [#205](https://github.com/Falconiere/toolu/issues/205) (epic [#203](https://github.com/Falconiere/toolu/issues/203))  
-**Status:** Zod contracts and argv bash bridge are **implemented** in `@toolu/core` ([#210](https://github.com/Falconiere/toolu/issues/210)). OpenCode **filesystem bootstrap** (host roots, inventory, selection, register/session-start assembly, preflight, lifecycle) is **implemented** in `@toolu/opencode` ([#211](https://github.com/Falconiere/toolu/issues/211)). OpenCode **`permission.evaluate` wiring** (Plugin.define + real `runPreToolBridge`) is **implemented** in `@toolu/opencode` ([#204](https://github.com/Falconiere/toolu/issues/204)). Fixture-suite conformance evidence is **implemented** in `@toolu/conformance` ([#212](https://github.com/Falconiere/toolu/issues/212)); see [`conformance-report.md`](conformance-report.md).
+**Status:** `@toolu/core` provides Zod contracts, native gates and dispatchers. `@toolu/opencode` provides filesystem bootstrap and calls `dispatchPreTool` in process from `permission.evaluate` ([#276](https://github.com/Falconiere/toolu/issues/276)). Fixture-suite conformance evidence lives in `@toolu/conformance`; see [`conformance-report.md`](conformance-report.md).
 
 ## Pins
 
@@ -13,35 +13,33 @@
 | Docs baseline | OpenCode V2 plugin hooks | https://opencode.ai/v2/docs/build/plugins |
 | Unsupported | `opencode-ai@1.18.31` (V1 line) | Do not target for this port |
 
-Runtime contract: [`runtime.md`](runtime.md). Platforms for #212: macOS and Linux with Bash ≥5, `jq`, Bun 1.4.x. Windows out of scope until probed.
+Runtime contract: [`runtime.md`](runtime.md). OpenCode requires Bun 1.4.x and git; bash and jq are not prerequisites. Windows is out of scope until probed.
 
 ## Package boundaries
 
 | Path | Owns | Must not own |
 |------|------|--------------|
-| `packages/toolu-core/` | Zod schemas, normalization, decisions, policy, bash-bridge protocol | `@opencode/plugin`, host SDKs, generated skills |
+| `packages/toolu-core/` | Zod schemas, normalization, decisions, policy and dispatch | `@opencode/plugin`, host SDKs, generated skills |
 | `tools/toolu-opencode/` | OpenCode `setup`, hooks, generators, host config | Duplicated Zod contracts |
 | Conformance CLI (`tools/toolu-conformance/`) | Second real consumer of core exports | Host SDK |
 
-Root: one `bun.lock`, Bun-only scripts/tests, frozen installs. Unified release `vX.Y.Z` across root, packages, and every `plugin.json`. Bun 1.4.x is the documented prerequisite for every host, including Claude Code and Codex (epic [#247](https://github.com/Falconiere/toolu/issues/247) retires the #203 no-Bun constraint); see [`runtime.md`](runtime.md). It is a workspace prerequisite today (`engines` in `package.json`); the OpenCode preflight still gates bootstrap only on `bash` and `jq`, and Bash hooks remain until each plugin's TypeScript port merges.
+Root: one `bun.lock`, Bun-only scripts/tests, frozen installs. Unified release `vX.Y.Z` across root, packages, and every `plugin.json`. Bun 1.4.x is the documented prerequisite for every host, including Claude Code and Codex (epic [#247](https://github.com/Falconiere/toolu/issues/247) retires the #203 no-Bun constraint); see [`runtime.md`](runtime.md). OpenCode preflight requires git and Bun. Its package contains manifests, settings and committed bundles; selected plugins without a native registration bundle remain NotReady.
 
 TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, jscpd, Zod-only validators) is adopted in [#213](https://github.com/Falconiere/toolu/issues/213) — see [`docs/conventions-adoption.md`](conventions-adoption.md). Bun workspaces (`packages/toolu-core`, `tools/toolu-opencode`, `tools/toolu-conformance`) and the mandatory CI `typescript` job land in [#208](https://github.com/Falconiere/toolu/issues/208): `bun run test:ts` must pass before runtime implementation merges. Missing Bun/lockfile/tooling fails closed (no successful skip).
 
-### Core export map (frozen for #210)
+### Core export map
 
 | Export | Responsibility |
 |--------|----------------|
 | `./decision` | Discriminated decision union |
 | `./events` | Normalized event schemas + parsers |
-| `./bridge` | Bash bridge request/response schemas |
 | `./policy` | Classification enum + precedence helpers |
 | `./config` | `toolu.config.json` Zod (`version: 1`); loader and resolvers ported from the bash config libs: `loadConfig` (jq `*` merge, fail-closed envelope), `enabled`/`model`/`codexModel`/`configString`, `qualityThreshold`, `docsSync*`, `gateMode`/`gateDecision`, `permissionsAutowrite`, and typed `settings/*` loaders ([#253](https://github.com/Falconiere/toolu/issues/253)) |
 | `./state` | Persisted state ported from the bash libs, byte-compatible for v1: `recordGateFailure`/`clearGateFile`/`readGateFile` (multi-slot gate file, atomic temp-and-rename writes under `<gate>.lock`, strict `GateFileSchema` with implicit version 1), `sweepState` (same TTL, merge and retention rules), `diffSha`, `telemetryAppend` (closed per-event `TELEMETRY_EXTRAS`, so no free-form payload is ever logged) and `normalizeEditRecords` (Edit, Write, MultiEdit, `apply_patch`) ([#255](https://github.com/Falconiere/toolu/issues/255)) |
 | `./registry` | Cross-plugin hook modules as bundled ESM (`<config>/toolu/<dir>.d/<spec>__<name>.js`): `RegistryModule` contract, `runRegistry` (byte-order walk, installed-plugin gating, per-module error isolation, stop after deny/block), `registerModules`/`runRegisterHook` (atomic sync, same-prefix prune) and `pruneInactiveModules` (Codex snapshot); parity with `registry.sh`, `dispatch.sh` and the plugins' `register.sh` ([#257](https://github.com/Falconiere/toolu/issues/257), [docs/registry.md](registry.md)) |
 | `./ledger` | The delivery-flow plan ledger, the push verdict and push-review waivers, ported from `plan-ledger*.sh`, `verdict.sh` and `push-waiver.sh`. For v1 files they make the same decisions and write the same bytes and messages as bash. `ledgerMain`/`ledgerRun`/`ledgerStatus`/`ledgerPreflight` (the `plan-ledger.sh` CLI; each step check runs in its own process group under a native `PLAN_LEDGER_STEP_TIMEOUT`), `parseSteps`/`docField`/`parseAcs`/`checkAcRefs`, `verdictMain`/`verdictReport` (quality, plan, review v2, docs), and `pushWaiverPend`/`pushWaiverPromote`/`pushWaiverMatches` ([#256](https://github.com/Falconiere/toolu/issues/256)) |
 | `./startup` | What the leaf plugins' SessionStart hooks share: `publishWrapper` (symlink a plugin file at `<config root>/<dir>/<name>`, never over a user's file), `bunOnPath`/`bunAdvisory`, `sessionContext` (bounded to `MAX_CONTEXT_CHARS`) and `renderHookOutput`, and the Codex dependency check `codexMissingPlugins`/`codexDependencyNotice` with host-native install commands. Ported from `session-start.sh`, `check-toolu.sh` and `check-deps.sh` ([#269](https://github.com/Falconiere/toolu/issues/269)) |
-| `./runner` | `BashRunner` + `createBunBashRunner` (argv-only `Bun.spawn`) |
-| `./dispatch` | PreToolUse and PostToolUse dispatchers: `dispatchPreTool` and `dispatchPostTool` walk native built-in modules then `pre-tools.d`/`post-tools.d` with `dispatch.sh` semantics. Registry `.sh` modules still run through the shared shell runner ([#258](https://github.com/Falconiere/toolu/issues/258), [#259](https://github.com/Falconiere/toolu/issues/259), [docs/registry.md](registry.md#pretooluse-dispatch)) |
+| `./dispatch` | PreToolUse and PostToolUse dispatchers: `dispatchPreTool` and `dispatchPostTool` walk native built-in modules then `pre-tools.d`/`post-tools.d` with `dispatch.sh` semantics. The OpenCode package contains only `.js` registry modules ([#258](https://github.com/Falconiere/toolu/issues/258), [#259](https://github.com/Falconiere/toolu/issues/259), [docs/registry.md](registry.md#pretooluse-dispatch)) |
 | `./gates` | Built-in gates as native `ToolModule`s: `gateStatusModule` and `pushWaiverModule` (PostToolUse), plus `qualityCommands` over a parsed command and `toolExitStatus`/`toolInterrupted`/`toolCommand`, which read a payload as the bash modules' jq did ([#259](https://github.com/Falconiere/toolu/issues/259)) |
 
 ### OpenCode export map ([#211](https://github.com/Falconiere/toolu/issues/211))
@@ -52,11 +50,11 @@ TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, 
 | `@toolu/opencode/inventory` | Installed/enabled/absent/unknown; selection via `.opencode/toolu/plugins.json` + `toolu.config` skills |
 | `@toolu/opencode/select` | Enabled set + manifest dependency closure |
 | `@toolu/opencode/bootstrap` | `bootstrapRuntime` → Ready \| NotReady with registry/session artifacts |
-| `@toolu/opencode/preflight` | bash/jq/git/bun/opencode probe; missing bash/jq fail closed |
+| `@toolu/opencode/preflight` | git/bun/opencode probe; missing git or Bun fails closed |
 | `@toolu/opencode/lifecycle` | Event → supported \| deferred \| unsupported (evaluate wired in #204; other events may stay deferred) |
 | `@toolu/opencode/plugin` | Default `Plugin.define` entry: preflight, bootstrap, `permission.hook("evaluate")` |
-| `@toolu/opencode/adapter/permission-map` | OpenCode permission event ↔ bridge request; decision → effect |
-| `@toolu/opencode/adapter/evaluate` | `createPermissionEvaluateHandler` (real `runPreToolBridge`) |
+| `@toolu/opencode/adapter/permission-map` | OpenCode permission event → PreToolUse payload; decision → effect |
+| `@toolu/opencode/adapter/evaluate` | `createPermissionEvaluateHandler` (in-process `dispatchPreTool`) |
 
 ### OpenCode surface generator ([#206](https://github.com/Falconiere/toolu/issues/206))
 
@@ -76,8 +74,8 @@ Phase 1 enables the `toolu` plugin only (override with `--enabled`); `${CLAUDE_P
 | Persisted gate/state JSON | reject (`strict`) | `runtime_failure` | fail closed |
 | `toolu.config.json` | reject unknown top-level keys | optional keys may default | unsupported major → fail closed |
 | Host event envelope | passthrough extras; re-encode known fields only | fail closed for decide fields | N/A |
-| Bash bridge stdout | reject non-object / unknown discriminant | `runtime_failure` | N/A |
-| Bridge stderr | free text | ignored | N/A |
+| Dispatcher output | reject non-object or invalid JSON | `runtime_failure` | N/A |
+| Dispatcher stderr | free text | failure reason on nonzero exit | N/A |
 
 Derive types with `z.infer`. No `any`, unchecked casts, or non-null escapes to bypass validation.
 
@@ -90,7 +88,7 @@ Derive types with `z.infer`. No `any`, unchecked casts, or non-null escapes to b
 | `deny` | hard block | `permissionDecision: "deny"` |
 | `advisory` | context only | `additionalContext` / `systemMessage` |
 | `post_block` | post-tool feedback | PostToolUse `decision: "block"` (`plugins/toolu/hooks/lib/dispatch.sh`) |
-| `runtime_failure` | fail closed | parse/bridge/timeout |
+| `runtime_failure` | fail closed | malformed output or dispatcher error |
 
 **Ask degradation** (`plugins/toolu/hooks/lib/host.sh` `toolu_supports_ask`; TypeScript `@toolu/core/host` `supportsAsk` / `degradeAsk`): Codex cannot prompt — judgement gates `ask→advise`, security guardrails `ask→block` (`gate-mode.sh`, `plugins/toolu/hooks/docs/gates.md`). OpenCode supports permission `ask`; Cursor enforces `ask` only on `beforeShellExecution`; Hermes shell hooks cannot prompt. Hosts without prompt use the same class rules, and `encodeDecision` turns any `ask` that still reaches them on a pre-action event into a deny.
 
@@ -102,11 +100,9 @@ Derive types with `z.infer`. No `any`, unchecked casts, or non-null escapes to b
 
 Normalized: `session/{start,resume,clear,unload}`, `prompt`, `pre_compact`/`compaction`, `permission/evaluate`, `tool/{pre,post}`, `shell/pre`, with `sessionId`, `toolCallId`, `cwd`, `projectRoot`, `worktree`, multi-file edit records, cancellation, state scope.
 
-## Bash bridge protocol
+## OpenCode dispatch contract
 
-`protocolVersion`: **1**
-
-Request (stdin JSON to assembled dispatcher) and response (stdout JSON) shapes match the design spec. `runPreToolBridge` runs toolu's PreToolUse hook as Claude Code does: `hooks/dist/pre-tools.js` behind the generated launcher, with `CLAUDE_PLUGIN_ROOT` set to the package's `plugins/toolu`. Before #260 it ran `bash pre-tools/mod.sh`, which stopped running the modules #260 ported. A missing Bun exits 2, which maps to `runtime_failure` and a deny. Truncated/non-JSON stdout → `runtime_failure` (enabled pre-tool → deny). Incomplete assembled registry → bootstrap/`runtime_failure`, never silent allow. Invoke assembled registry modules and built-in dispatchers — not raw concern fragments. Exit 0 does not prove registry readiness. Not every plugin has `register.sh`.
+The adapter maps `sessionID`, tool-call metadata, action and resources to a Claude-shaped PreToolUse payload, then calls `dispatchPreTool` with the native core gates. `TOOLU_CONFIG_DIR` points to the OpenCode data root, where selected Bun registration bundles publish registry modules. The dispatcher result maps deny, ask and advisory to OpenCode effects. Missing gated fields, malformed output or failed bootstrap denies. A startup bundle exit 0 does not prove registry readiness; the bootstrap verifies tangible artifacts.
 
 ## Policy split (shared with #209)
 

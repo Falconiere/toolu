@@ -1,14 +1,14 @@
 import { expect, test } from "bun:test";
-import { existsSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { run } from "@toolu/conformance/harness/spawn";
 import type { RunResult } from "@toolu/conformance/harness/spawn";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import type { Sandbox } from "@toolu/conformance/harness/sandbox";
 import { z } from "zod";
+import { stagePlugins } from "../../../tools/toolu-opencode/scripts/bundle-plugins.ts";
 
-// The published @toolu/opencode carries the bash plugins/ tree, because npm
-// cannot reach outside a package directory and the bridge enforces those gates.
+// The published @toolu/opencode carries manifests, runtime data and bundles.
 //
 // Lives in tooling/, not beside the script it tests: Bun symlinks workspace
 // packages into each other's node_modules, so a test file inside
@@ -17,7 +17,7 @@ import { z } from "zod";
 // walk up to the repo root lands inside node_modules and the script is absent.
 
 const ROOT = resolve(import.meta.dir, "../../..");
-const SCRIPT = join(ROOT, "tools/toolu-opencode/scripts/bundle-plugins.sh");
+const SCRIPT = join(ROOT, "tools/toolu-opencode/scripts/bundle-plugins.ts");
 const Catalog = z.object({ plugins: z.array(z.unknown()) });
 
 /**
@@ -28,7 +28,7 @@ function stage(sb: Sandbox): { dest: string; bundle: () => Promise<RunResult> } 
   const dest = join(sb.root, "staged");
   return {
     dest,
-    bundle: () => run(["bash", SCRIPT], { cwd: ROOT, env: { BUNDLE_PLUGINS_DEST: dest } }),
+    bundle: () => run(["bun", SCRIPT], { cwd: ROOT, env: { BUNDLE_PLUGINS_DEST: dest } }),
   };
 }
 
@@ -61,7 +61,7 @@ test.concurrent("bundles every marketplace plugin", async () => {
   expect(staged.length).toBe(catalog.plugins.length);
 });
 
-test.concurrent("the staged tree carries the hook engine the bridge actually runs", async () => {
+test.concurrent("the staged tree carries native bundles and required settings", async () => {
   using sb = createSandbox();
   const { dest, bundle } = stage(sb);
   expect((await bundle()).exitCode).toBe(0);
@@ -87,6 +87,38 @@ test.concurrent("hook sources are excluded while their built bundles ship", asyn
   expect(isFile(join(dest, "toolu/hooks/dist/sample.js"))).toBe(true);
   // The source tree really does have them, so the exclusion is doing work.
   expect(isFile(join(ROOT, "plugins/toolu/hooks/src/sample.ts"))).toBe(true);
+});
+
+test.concurrent("no bash, bats or shell files enter the staged catalog", async () => {
+  using sb = createSandbox();
+  const { dest, bundle } = stage(sb);
+  expect((await bundle()).exitCode).toBe(0);
+  const staged = readdirSync(dest, { recursive: true, encoding: "utf8" });
+  expect(staged.filter((file) => /\.(sh|bash|bats)$/.test(file))).toEqual([]);
+});
+
+test.concurrent("a legacy-only plugin stages a native-registration marker without its shell hook", () => {
+  using sb = createSandbox();
+  const source = join(sb.root, "source");
+  const plugin = join(source, "legacy-only");
+  const dest = join(sb.root, "staged");
+  mkdirSync(join(plugin, ".claude-plugin"), { recursive: true });
+  mkdirSync(join(plugin, "hooks"), { recursive: true });
+  writeFileSync(join(plugin, ".claude-plugin", "plugin.json"), "{}\n");
+  writeFileSync(join(plugin, "hooks", "register.sh"), "#!/usr/bin/env bash\nexit 0\n");
+  expect(stagePlugins(source, dest)).toBe(1);
+  expect(isFile(join(dest, "legacy-only/hooks/.requires-native-register"))).toBe(true);
+  expect(existsSync(join(dest, "legacy-only/hooks/register.sh"))).toBe(false);
+});
+
+test.concurrent("staging refuses a destination inside the source catalog", () => {
+  using sb = createSandbox();
+  const source = join(sb.root, "source");
+  const dest = join(source, "occupied");
+  mkdirSync(dest, { recursive: true });
+  writeFileSync(join(dest, "keep.txt"), "keep\n");
+  expect(() => stagePlugins(source, dest)).toThrow("unsafe bundle destination");
+  expect(readFileSync(join(dest, "keep.txt"), "utf8")).toBe("keep\n");
 });
 
 test.concurrent("a re-run replaces the copy rather than accumulating stale files", async () => {
