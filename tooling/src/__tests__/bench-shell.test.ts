@@ -129,6 +129,7 @@ test.concurrent("overBudget names every budget a report exceeds", () => {
     "cold",
     "parse",
   ]);
+  expect(overBudget(over)).toContain("cold start +5.50 ms > 5 ms");
   expect(overBudget(over, false).map((problem) => problem.split(" ")[0])).toEqual([
     "bundle",
     "writes",

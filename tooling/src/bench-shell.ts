@@ -253,7 +253,7 @@ export function coldStartIsHard(
 }
 
 /** Hard budget violations; size and parse are hard on every platform. */
-export function overBudget(bench: ShellBench, hardColdStart: boolean): string[] {
+export function overBudget(bench: ShellBench, hardColdStart = true): string[] {
   const problems: string[] = [];
   if (bench.bundle.deltaBytes > BUDGET.bundleBytes)
     problems.push(`bundle +${bench.bundle.deltaBytes} B > ${BUDGET.bundleBytes} B`);
