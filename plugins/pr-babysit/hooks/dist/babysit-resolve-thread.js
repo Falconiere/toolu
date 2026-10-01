@@ -1,13 +1,454 @@
 #!/usr/bin/env bun
 // @bun
-import{existsSync as E,mkdirSync as T,mkdtempSync as H,readFileSync as M,renameSync as K,rmSync as _,statSync as x,writeFileSync as N}from"fs";import{basename as W,dirname as O,join as m}from"path";class h extends Error{code;extra;constructor(e,t,n={}){super(t);this.code=e;this.extra=n}}function Q(e){if(e==="usage")return 2;if(e==="duplicate_reply")return 4;if(e==="resolve_unconfirmed")return 5;if(e==="locked")return 75;return 3}function A(e){return{version:1,errors:[{code:e.code,message:e.message,...e.extra}]}}function o(e,t,n={}){throw new h(e,t,n)}function F(e){Promise.resolve().then(e).then((t)=>{if(t!==void 0)process.stdout.write(`${JSON.stringify(t)}
-`)}).catch((t)=>{if(t instanceof h)process.stdout.write(`${JSON.stringify(A(t))}
-`),process.exitCode=Q(t.code);else{let n=t instanceof Error?t.message:String(t);process.stdout.write(`${JSON.stringify(A(new h("api_error",n)))}
-`),process.exitCode=3}})}function G(e,t,n,i=[]){let a={};for(let r=0;r<e.length;r+=1){let s=e[r]??"";if(i.includes(s))a[s]=!0;else if(n.includes(s))a[s]=e[r+1]??"",r+=1;else o("usage",`${t}: unknown argument: ${s}`)}return a}function y(e,t){let n=e[t];return typeof n==="string"?n:""}function C(){return new Date().toISOString().slice(0,19)+"Z"}function U(e){return JSON.parse(M(e,"utf8"))}function q(e,t,n){let i=n??`${JSON.stringify(t)}
-`;JSON.parse(i),T(O(e),{recursive:!0});let a=H(m(O(e),`.${W(e)}.tmp.${process.pid}.`)),r=m(a,"value");try{N(r,i),K(r,e)}finally{_(a,{recursive:!0,force:!0})}}function P(e){try{return M(e,"utf8").trim()}catch{return""}}function X(e){try{return process.kill(e,0),!0}catch{return!1}}function j(e){return e&&typeof e==="object"&&"code"in e&&typeof e.code==="string"?e.code:void 0}class I{path;held=!1;identity=null;onTerm=()=>{this.release(),process.exit(143)};onInt=()=>{this.release(),process.exit(130)};constructor(e){this.path=`${e}.lock`}acquire(){process.on("SIGTERM",this.onTerm),process.on("SIGINT",this.onInt);try{T(O(this.path),{recursive:!0});for(let e=0;e<2;e+=1){let t=!1;try{T(this.path),t=!0}catch(c){if(j(c)!=="EEXIST")throw c;if(!E(this.path)){if(e===0)continue;o("locked","slot is held by another controller",{pid:null,since:null})}}if(t){this.held=!0;try{let{dev:c,ino:d}=x(this.path);this.identity={dev:c,ino:d},N(m(this.path,"pid"),`${process.pid}
-`),N(m(this.path,"since"),`${Math.floor(Date.now()/1000)}
-`);return}catch(c){if(j(c)==="ENOENT")o("locked","slot is held by another controller",{pid:null,since:null});throw c}}let n=P(m(this.path,"pid")),i=P(m(this.path,"since")),a=/^\d+$/.test(n)?Number(n):null,r=/^\d+$/.test(i)?Number(i):null,s=Number(process.env.PB_LOCK_STALE_SECONDS??"600"),u=0;if(a===null||r===null)try{u=Date.now()-x(this.path).mtimeMs}catch{if(e===0)continue}let l=a===null||r===null?u>=1000:!X(a)||Math.floor(Date.now()/1000)-r>s;if(e===0&&l){process.stderr.write(`pr-babysit: reclaiming stale lock ${this.path} (pid ${n||"?"}, since ${i||"?"})
-`),_(this.path,{recursive:!0,force:!0});continue}o("locked","slot is held by another controller",{pid:a,since:r})}}catch(e){if(this.release(),e instanceof h)throw e;let t=e instanceof Error?e.message:String(e);o("api_error",`slot lock failed: ${t}`,{source:"lock"})}}release(){let e=!1;if(this.held&&this.identity)try{let{dev:t,ino:n}=x(this.path);e=t===this.identity.dev&&n===this.identity.ino}catch{}if(e)_(this.path,{recursive:!0,force:!0});this.held=!1,this.identity=null,process.off("SIGTERM",this.onTerm),process.off("SIGINT",this.onInt)}}function B(e){if(!E(e))o("state_malformed",`state file not found: ${e} (run babysit-tick.js first)`,{source:"state"});let t;try{t=U(e)}catch{o("state_malformed",`state file is not valid JSON: ${e}`,{source:"state"})}if(typeof t!=="object"||t===null||Array.isArray(t))o("state_malformed",`state file is not a version-2 pr-babysit state: ${e}`,{source:"state",version:null});let n=t;if(n.version!==2||typeof n.repo!=="string"||typeof n.number!=="number")o("state_malformed",`state file is not a version-2 pr-babysit state: ${e}`,{source:"state",version:n.version??null});if(!/^[A-Za-z0-9][A-Za-z0-9_-]*\/[A-Za-z0-9_][A-Za-z0-9._-]*$/.test(n.repo))o("state_malformed",`state file repo is not owner/name: ${n.repo}`,{source:"state"});if(!/^\d+$/.test(String(n.number)))o("state_malformed",`state file number is not an integer: ${n.number}`,{source:"state"});return n}class g extends Error{attempts;classification;lastMessage;lastRc;constructor(e,t,n,i){super(n||`rc ${i}`);this.attempts=e;this.classification=t;this.lastMessage=n;this.lastRc=i}}function V(e,t,n){if(e===0)return"ok";if(e===124)return"transient";let i=`${t}
-${n}`,a=/\(HTTP (\d{3})\)/.exec(i)?.[1],r;try{let u=JSON.parse(n);if(u&&typeof u==="object"&&!Array.isArray(u)){let l=u.status;if(typeof l==="string"||typeof l==="number")r=String(l)}}catch{}let s=a??r;if(s?.startsWith("5")||s==="429")return"transient";if(s==="403")return/rate limit/i.test(i)?"transient":"permanent";if(s?.startsWith("4"))return"permanent";if(/connection refused|connection reset|no such host|i\/o timeout|TLS handshake|unexpected EOF|EOF$|network is unreachable|temporary failure|timed out/i.test(i))return"transient";return"permanent"}async function D(e,t={}){let n=t.timeoutSeconds??Number(process.env.PB_GH_TIMEOUT??60),i=t.attempts??Number(process.env.PB_GH_ATTEMPTS??3),a=t.backoffSeconds??(process.env.PB_GH_BACKOFF??"2 4 8").split(/\s+/).map(Number);for(let r=1;r<=i;r+=1){let s=Bun.spawn(["gh",...e],{stdout:"pipe",stderr:"pipe",env:process.env}),u=Promise.all([s.exited,new Response(s.stdout).text(),new Response(s.stderr).text()]).then(([R,Z,z])=>({rc:R,stdout:Z,stderr:z})),l=!1,c,d,p=new Promise((R)=>{c=setTimeout(()=>{l=!0;try{s.kill()}catch{}d=setTimeout(()=>{try{s.kill(9)}catch{}R({rc:124,stdout:"",stderr:""})},250)},n*1000)}),v;try{v=await Promise.race([u,p])}finally{if(c)clearTimeout(c);if(d)clearTimeout(d)}let{stdout:b,stderr:f}=v,S=l?124:v.rc,w=V(S,f,b);if(w==="ok")return b;let J=f.split(/\r?\n/)[0]??"";if(w==="permanent"||r===i)throw new g(r,w,J,S);let k=a[r-1]??2;if(process.stderr.write(`pr-babysit: gh ${e[0]} attempt ${r} failed (${w}: ${J||`rc ${S}`}); retrying in ${k}s
-`),k>0)await Bun.sleep(k*1000)}throw new g(0,"permanent","gh was not attempted",1)}function Y(e){let t=e.pr;return{repo:String(e.repo),number:Number(e.number),head:String(t.headSha??"")}}function ee(e,t){if(e instanceof g)o("api_error",`gh ${t} failed after ${e.attempts} attempt(s): ${e.lastMessage||`rc ${e.lastRc}`}`,{source:t,attempts:e.attempts,class:e.classification,lastMessage:e.lastMessage});throw e}function te(e,t){let n;try{n=JSON.parse(e)}catch{o("invalid_json",`${t}: response is not valid JSON`,{source:t})}if(n===null||typeof n!=="object"||Array.isArray(n))o("invalid_json",`${t}: response is not an object`,{source:t});return n}async function L(e){let{statePath:t,thread:n}=e,i=new I(t);i.acquire();try{let a=B(t),r=a.actions,s=r.resolved[n];if(s?.confirmed===!0)return{ok:!0,thread:n,confirmed:!0,attempts:0,alreadyResolved:!0,at:s.at??null};let u="mutation($threadId:ID!){ resolveReviewThread(input:{threadId:$threadId}){ thread{ id isResolved } } }",l=null;for(let c=1;c<=3;c+=1){let d;try{d=await D(["api","graphql","-f",`threadId=${n}`,"-f",`query=${u}`],e.timeoutSeconds===void 0?{}:{timeoutSeconds:e.timeoutSeconds})}catch(f){ee(f,"resolve")}let p=te(d,"resolve");if(Array.isArray(p.errors)&&p.errors.length>0)o("invalid_json","resolve-thread.sh: mutation response carried errors[]",{source:"resolve",errors:p.errors});if(l=p.data?.resolveReviewThread?.thread??null,l!==null&&typeof l==="object"&&l.isResolved===!0){let{head:f}=Y(a);return r.resolved[n]={confirmed:!0,at:C(),attempts:c,headSha:f},q(t,a),{ok:!0,thread:n,confirmed:!0,attempts:c}}process.stderr.write(`resolve-thread.sh: attempt ${c} returned isResolved=false for ${n}; retrying
-`),await Bun.sleep(1000)}o("resolve_unconfirmed",`resolve-thread.sh: ${n} still unresolved after 3 attempt(s)`,{thread:n,attempts:3,lastResponse:l})}finally{i.release()}}F(async()=>{let e=G(process.argv.slice(2),"resolve-thread.sh",["--state-file","--thread","--timeout"]),t=y(e,"--state-file"),n=y(e,"--thread");if(!t)o("usage","resolve-thread.sh: --state-file required");if(!/^[A-Za-z0-9_=-]+$/.test(n))o("usage",`resolve-thread.sh: --thread <graphqlId> required (got '${n}')`);if(!Bun.which("gh"))o("gh_unavailable","gh is required");return L({statePath:t,thread:n,...y(e,"--timeout")?{timeoutSeconds:Number(y(e,"--timeout"))}:{}})});
+
+// plugins/pr-babysit/hooks/src/babysit/common.ts
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync
+} from "fs";
+import { basename, dirname, join } from "path";
+
+class BabysitError extends Error {
+  code;
+  extra;
+  constructor(code, message, extra = {}) {
+    super(message);
+    this.code = code;
+    this.extra = extra;
+  }
+}
+function exitCode(code) {
+  if (code === "usage")
+    return 2;
+  if (code === "duplicate_reply")
+    return 4;
+  if (code === "resolve_unconfirmed")
+    return 5;
+  if (code === "locked")
+    return 75;
+  return 3;
+}
+function errorDocument(error) {
+  return { version: 1, errors: [{ code: error.code, message: error.message, ...error.extra }] };
+}
+function fail(code, message, extra = {}) {
+  throw new BabysitError(code, message, extra);
+}
+function runCli(action) {
+  Promise.resolve().then(action).then((result) => {
+    if (result !== undefined)
+      process.stdout.write(`${JSON.stringify(result)}
+`);
+  }).catch((error) => {
+    if (error instanceof BabysitError) {
+      process.stdout.write(`${JSON.stringify(errorDocument(error))}
+`);
+      process.exitCode = exitCode(error.code);
+    } else {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stdout.write(`${JSON.stringify(errorDocument(new BabysitError("api_error", message)))}
+`);
+      process.exitCode = 3;
+    }
+  });
+}
+function parseFlags(argv, command, valued, bare = []) {
+  const flags = {};
+  for (let i = 0;i < argv.length; i += 1) {
+    const arg = argv[i] ?? "";
+    if (bare.includes(arg)) {
+      flags[arg] = true;
+    } else if (valued.includes(arg)) {
+      flags[arg] = argv[i + 1] ?? "";
+      i += 1;
+    } else {
+      fail("usage", `${command}: unknown argument: ${arg}`);
+    }
+  }
+  return flags;
+}
+function flag(flags, key) {
+  const value = flags[key];
+  return typeof value === "string" ? value : "";
+}
+function utcNow() {
+  return new Date().toISOString().slice(0, 19) + "Z";
+}
+function readJson(path) {
+  return JSON.parse(readFileSync(path, "utf8"));
+}
+function atomicWriteJson(path, value, raw) {
+  const content = raw ?? `${JSON.stringify(value)}
+`;
+  JSON.parse(content);
+  mkdirSync(dirname(path), { recursive: true });
+  const dir = mkdtempSync(join(dirname(path), `.${basename(path)}.tmp.${process.pid}.`));
+  const temp = join(dir, "value");
+  try {
+    writeFileSync(temp, content);
+    renameSync(temp, path);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+function readTextOrEmpty(path) {
+  try {
+    return readFileSync(path, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+function pidAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function errorCode(error) {
+  return error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : undefined;
+}
+
+class SlotLock {
+  path;
+  held = false;
+  identity = null;
+  onTerm = () => {
+    this.release();
+    process.exit(143);
+  };
+  onInt = () => {
+    this.release();
+    process.exit(130);
+  };
+  constructor(statePath) {
+    this.path = `${statePath}.lock`;
+  }
+  acquire() {
+    process.on("SIGTERM", this.onTerm);
+    process.on("SIGINT", this.onInt);
+    try {
+      mkdirSync(dirname(this.path), { recursive: true });
+      for (let attempt = 0;attempt < 2; attempt += 1) {
+        let created = false;
+        try {
+          mkdirSync(this.path);
+          created = true;
+        } catch (error) {
+          if (errorCode(error) !== "EEXIST")
+            throw error;
+          if (!existsSync(this.path)) {
+            if (attempt === 0)
+              continue;
+            fail("locked", "slot is held by another controller", { pid: null, since: null });
+          }
+        }
+        if (created) {
+          this.held = true;
+          try {
+            const { dev, ino } = statSync(this.path);
+            this.identity = { dev, ino };
+            writeFileSync(join(this.path, "pid"), `${process.pid}
+`);
+            writeFileSync(join(this.path, "since"), `${Math.floor(Date.now() / 1000)}
+`);
+            return;
+          } catch (error) {
+            if (errorCode(error) === "ENOENT")
+              fail("locked", "slot is held by another controller", { pid: null, since: null });
+            throw error;
+          }
+        }
+        const pidText = readTextOrEmpty(join(this.path, "pid"));
+        const sinceText = readTextOrEmpty(join(this.path, "since"));
+        const pid = /^\d+$/.test(pidText) ? Number(pidText) : null;
+        const since = /^\d+$/.test(sinceText) ? Number(sinceText) : null;
+        const staleAfter = Number(process.env.PB_LOCK_STALE_SECONDS ?? "600");
+        let incompleteAgeMs = 0;
+        if (pid === null || since === null) {
+          try {
+            incompleteAgeMs = Date.now() - statSync(this.path).mtimeMs;
+          } catch {
+            if (attempt === 0)
+              continue;
+          }
+        }
+        const stale = pid === null || since === null ? incompleteAgeMs >= 1000 : !pidAlive(pid) || Math.floor(Date.now() / 1000) - since > staleAfter;
+        if (attempt === 0 && stale) {
+          process.stderr.write(`pr-babysit: reclaiming stale lock ${this.path} (pid ${pidText || "?"}, since ${sinceText || "?"})
+`);
+          rmSync(this.path, { recursive: true, force: true });
+          continue;
+        }
+        fail("locked", "slot is held by another controller", { pid, since });
+      }
+    } catch (error) {
+      this.release();
+      if (error instanceof BabysitError)
+        throw error;
+      const message = error instanceof Error ? error.message : String(error);
+      fail("api_error", `slot lock failed: ${message}`, { source: "lock" });
+    }
+  }
+  release() {
+    let owned = false;
+    if (this.held && this.identity) {
+      try {
+        const { dev, ino } = statSync(this.path);
+        owned = dev === this.identity.dev && ino === this.identity.ino;
+      } catch {}
+    }
+    if (owned) {
+      rmSync(this.path, { recursive: true, force: true });
+    }
+    this.held = false;
+    this.identity = null;
+    process.off("SIGTERM", this.onTerm);
+    process.off("SIGINT", this.onInt);
+  }
+}
+function loadState(path) {
+  if (!existsSync(path))
+    fail("state_malformed", `state file not found: ${path} (run babysit-tick.js first)`, {
+      source: "state"
+    });
+  let value;
+  try {
+    value = readJson(path);
+  } catch {
+    fail("state_malformed", `state file is not valid JSON: ${path}`, { source: "state" });
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    fail("state_malformed", `state file is not a version-2 pr-babysit state: ${path}`, {
+      source: "state",
+      version: null
+    });
+  }
+  const state = value;
+  if (state.version !== 2 || typeof state.repo !== "string" || typeof state.number !== "number") {
+    fail("state_malformed", `state file is not a version-2 pr-babysit state: ${path}`, {
+      source: "state",
+      version: state.version ?? null
+    });
+  }
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]*\/[A-Za-z0-9_][A-Za-z0-9._-]*$/.test(state.repo)) {
+    fail("state_malformed", `state file repo is not owner/name: ${state.repo}`, {
+      source: "state"
+    });
+  }
+  if (!/^\d+$/.test(String(state.number))) {
+    fail("state_malformed", `state file number is not an integer: ${state.number}`, {
+      source: "state"
+    });
+  }
+  return state;
+}
+
+// plugins/pr-babysit/hooks/src/babysit/gh.ts
+class GhError extends Error {
+  attempts;
+  classification;
+  lastMessage;
+  lastRc;
+  constructor(attempts, classification, lastMessage, lastRc) {
+    super(lastMessage || `rc ${lastRc}`);
+    this.attempts = attempts;
+    this.classification = classification;
+    this.lastMessage = lastMessage;
+    this.lastRc = lastRc;
+  }
+}
+function ghClassify(rc, stderr, stdout) {
+  if (rc === 0)
+    return "ok";
+  if (rc === 124)
+    return "transient";
+  const combined = `${stderr}
+${stdout}`;
+  const fromStderr = /\(HTTP (\d{3})\)/.exec(combined)?.[1];
+  let fromBody;
+  try {
+    const body = JSON.parse(stdout);
+    if (body && typeof body === "object" && !Array.isArray(body)) {
+      const status = body.status;
+      if (typeof status === "string" || typeof status === "number")
+        fromBody = String(status);
+    }
+  } catch {}
+  const status = fromStderr ?? fromBody;
+  if (status?.startsWith("5") || status === "429")
+    return "transient";
+  if (status === "403")
+    return /rate limit/i.test(combined) ? "transient" : "permanent";
+  if (status?.startsWith("4"))
+    return "permanent";
+  if (/connection refused|connection reset|no such host|i\/o timeout|TLS handshake|unexpected EOF|EOF$|network is unreachable|temporary failure|timed out/i.test(combined))
+    return "transient";
+  return "permanent";
+}
+async function ghRun(args, options = {}) {
+  const timeoutSeconds = options.timeoutSeconds ?? Number(process.env.PB_GH_TIMEOUT ?? 60);
+  const attempts = options.attempts ?? Number(process.env.PB_GH_ATTEMPTS ?? 3);
+  const backoffSeconds = options.backoffSeconds ?? (process.env.PB_GH_BACKOFF ?? "2 4 8").split(/\s+/).map(Number);
+  for (let attempt = 1;attempt <= attempts; attempt += 1) {
+    const proc = Bun.spawn(["gh", ...args], { stdout: "pipe", stderr: "pipe", env: process.env });
+    const completed = Promise.all([
+      proc.exited,
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text()
+    ]).then(([rc, stdout, stderr]) => ({ rc, stdout, stderr }));
+    let timedOut = false;
+    let deadline;
+    let escalation;
+    const timeout = new Promise((resolve) => {
+      deadline = setTimeout(() => {
+        timedOut = true;
+        try {
+          proc.kill();
+        } catch {}
+        escalation = setTimeout(() => {
+          try {
+            proc.kill(9);
+          } catch {}
+          resolve({ rc: 124, stdout: "", stderr: "" });
+        }, 250);
+      }, timeoutSeconds * 1000);
+    });
+    let result;
+    try {
+      result = await Promise.race([completed, timeout]);
+    } finally {
+      if (deadline)
+        clearTimeout(deadline);
+      if (escalation)
+        clearTimeout(escalation);
+    }
+    const { stdout, stderr } = result;
+    const rc = timedOut ? 124 : result.rc;
+    const classification = ghClassify(rc, stderr, stdout);
+    if (classification === "ok")
+      return stdout;
+    const lastMessage = stderr.split(/\r?\n/)[0] ?? "";
+    if (classification === "permanent" || attempt === attempts)
+      throw new GhError(attempt, classification, lastMessage, rc);
+    const delay = backoffSeconds[attempt - 1] ?? 2;
+    process.stderr.write(`pr-babysit: gh ${args[0]} attempt ${attempt} failed (${classification}: ${lastMessage || `rc ${rc}`}); retrying in ${delay}s
+`);
+    if (delay > 0)
+      await Bun.sleep(delay * 1000);
+  }
+  throw new GhError(0, "permanent", "gh was not attempted", 1);
+}
+
+// plugins/pr-babysit/hooks/src/babysit/writes.ts
+function statePr(state) {
+  const pr = state.pr;
+  return { repo: String(state.repo), number: Number(state.number), head: String(pr.headSha ?? "") };
+}
+function ghFailure(error, source) {
+  if (error instanceof GhError) {
+    fail("api_error", `gh ${source} failed after ${error.attempts} attempt(s): ${error.lastMessage || `rc ${error.lastRc}`}`, {
+      source,
+      attempts: error.attempts,
+      class: error.classification,
+      lastMessage: error.lastMessage
+    });
+  }
+  throw error;
+}
+function parseGhJson(text, source) {
+  let value;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    fail("invalid_json", `${source}: response is not valid JSON`, { source });
+  }
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    fail("invalid_json", `${source}: response is not an object`, { source });
+  return value;
+}
+async function resolveThread(options) {
+  const { statePath, thread } = options;
+  const lock = new SlotLock(statePath);
+  lock.acquire();
+  try {
+    const state = loadState(statePath);
+    const actions = state.actions;
+    const prior = actions.resolved[thread];
+    if (prior?.confirmed === true)
+      return {
+        ok: true,
+        thread,
+        confirmed: true,
+        attempts: 0,
+        alreadyResolved: true,
+        at: prior.at ?? null
+      };
+    const mutation = "mutation($threadId:ID!){ resolveReviewThread(input:{threadId:$threadId}){ thread{ id isResolved } } }";
+    let last = null;
+    for (let attempt = 1;attempt <= 3; attempt += 1) {
+      let response;
+      try {
+        response = await ghRun(["api", "graphql", "-f", `threadId=${thread}`, "-f", `query=${mutation}`], options.timeoutSeconds === undefined ? {} : { timeoutSeconds: options.timeoutSeconds });
+      } catch (error) {
+        ghFailure(error, "resolve");
+      }
+      const payload = parseGhJson(response, "resolve");
+      if (Array.isArray(payload.errors) && payload.errors.length > 0) {
+        fail("invalid_json", "resolve-thread.sh: mutation response carried errors[]", {
+          source: "resolve",
+          errors: payload.errors
+        });
+      }
+      const data = payload.data;
+      const resolved = data?.resolveReviewThread;
+      last = resolved?.thread ?? null;
+      if (last !== null && typeof last === "object" && last.isResolved === true) {
+        const { head } = statePr(state);
+        actions.resolved[thread] = {
+          confirmed: true,
+          at: utcNow(),
+          attempts: attempt,
+          headSha: head
+        };
+        atomicWriteJson(statePath, state);
+        return { ok: true, thread, confirmed: true, attempts: attempt };
+      }
+      process.stderr.write(`resolve-thread.sh: attempt ${attempt} returned isResolved=false for ${thread}; retrying
+`);
+      await Bun.sleep(1000);
+    }
+    fail("resolve_unconfirmed", `resolve-thread.sh: ${thread} still unresolved after 3 attempt(s)`, { thread, attempts: 3, lastResponse: last });
+  } finally {
+    lock.release();
+  }
+}
+
+// plugins/pr-babysit/hooks/src/babysit-resolve-thread.ts
+runCli(async () => {
+  const flags = parseFlags(process.argv.slice(2), "resolve-thread.sh", [
+    "--state-file",
+    "--thread",
+    "--timeout"
+  ]);
+  const statePath = flag(flags, "--state-file");
+  const thread = flag(flags, "--thread");
+  if (!statePath)
+    fail("usage", "resolve-thread.sh: --state-file required");
+  if (!/^[A-Za-z0-9_=-]+$/.test(thread))
+    fail("usage", `resolve-thread.sh: --thread <graphqlId> required (got '${thread}')`);
+  if (!Bun.which("gh"))
+    fail("gh_unavailable", "gh is required");
+  return resolveThread({
+    statePath,
+    thread,
+    ...flag(flags, "--timeout") ? { timeoutSeconds: Number(flag(flags, "--timeout")) } : {}
+  });
+});

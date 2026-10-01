@@ -1,22 +1,1119 @@
 #!/usr/bin/env bun
 // @bun
-import{existsSync as $t,readFileSync as Fe}from"fs";import{existsSync as Ye,mkdirSync as de,mkdtempSync as Ze,readFileSync as Qe,renameSync as Xe,rmSync as pe,statSync as ue,writeFileSync as me}from"fs";import{basename as et,dirname as fe,join as B}from"path";class N extends Error{code;extra;constructor(e,t,r={}){super(t);this.code=e;this.extra=r}}function tt(e){if(e==="usage")return 2;if(e==="duplicate_reply")return 4;if(e==="resolve_unconfirmed")return 5;if(e==="locked")return 75;return 3}function xe(e){return{version:1,errors:[{code:e.code,message:e.message,...e.extra}]}}function _(e,t,r={}){throw new N(e,t,r)}function Ae(e){Promise.resolve().then(e).then((t)=>{if(t!==void 0)process.stdout.write(`${JSON.stringify(t)}
-`)}).catch((t)=>{if(t instanceof N)process.stdout.write(`${JSON.stringify(xe(t))}
-`),process.exitCode=tt(t.code);else{let r=t instanceof Error?t.message:String(t);process.stdout.write(`${JSON.stringify(xe(new N("api_error",r)))}
-`),process.exitCode=3}})}function Te(e,t,r,i=[]){let u={};for(let o=0;o<e.length;o+=1){let n=e[o]??"";if(i.includes(n))u[n]=!0;else if(r.includes(n))u[n]=e[o+1]??"",o+=1;else _("usage",`${t}: unknown argument: ${n}`)}return u}function M(e,t){let r=e[t];return typeof r==="string"?r:""}function ne(){return new Date().toISOString().slice(0,19)+"Z"}function se(e,t,r){let i=r??`${JSON.stringify(t)}
-`;JSON.parse(i),de(fe(e),{recursive:!0});let u=Ze(B(fe(e),`.${et(e)}.tmp.${process.pid}.`)),o=B(u,"value");try{me(o,i),Xe(o,e)}finally{pe(u,{recursive:!0,force:!0})}}function Ne(e){try{return Qe(e,"utf8").trim()}catch{return""}}function nt(e){try{return process.kill(e,0),!0}catch{return!1}}function Ce(e){return e&&typeof e==="object"&&"code"in e&&typeof e.code==="string"?e.code:void 0}class he{path;held=!1;identity=null;onTerm=()=>{this.release(),process.exit(143)};onInt=()=>{this.release(),process.exit(130)};constructor(e){this.path=`${e}.lock`}acquire(){process.on("SIGTERM",this.onTerm),process.on("SIGINT",this.onInt);try{de(fe(this.path),{recursive:!0});for(let e=0;e<2;e+=1){let t=!1;try{de(this.path),t=!0}catch(h){if(Ce(h)!=="EEXIST")throw h;if(!Ye(this.path)){if(e===0)continue;_("locked","slot is held by another controller",{pid:null,since:null})}}if(t){this.held=!0;try{let{dev:h,ino:S}=ue(this.path);this.identity={dev:h,ino:S},me(B(this.path,"pid"),`${process.pid}
-`),me(B(this.path,"since"),`${Math.floor(Date.now()/1000)}
-`);return}catch(h){if(Ce(h)==="ENOENT")_("locked","slot is held by another controller",{pid:null,since:null});throw h}}let r=Ne(B(this.path,"pid")),i=Ne(B(this.path,"since")),u=/^\d+$/.test(r)?Number(r):null,o=/^\d+$/.test(i)?Number(i):null,n=Number(process.env.PB_LOCK_STALE_SECONDS??"600"),a=0;if(u===null||o===null)try{a=Date.now()-ue(this.path).mtimeMs}catch{if(e===0)continue}let p=u===null||o===null?a>=1000:!nt(u)||Math.floor(Date.now()/1000)-o>n;if(e===0&&p){process.stderr.write(`pr-babysit: reclaiming stale lock ${this.path} (pid ${r||"?"}, since ${i||"?"})
-`),pe(this.path,{recursive:!0,force:!0});continue}_("locked","slot is held by another controller",{pid:u,since:o})}}catch(e){if(this.release(),e instanceof N)throw e;let t=e instanceof Error?e.message:String(e);_("api_error",`slot lock failed: ${t}`,{source:"lock"})}}release(){let e=!1;if(this.held&&this.identity)try{let{dev:t,ino:r}=ue(this.path);e=t===this.identity.dev&&r===this.identity.ino}catch{}if(e)pe(this.path,{recursive:!0,force:!0});this.held=!1,this.identity=null,process.off("SIGTERM",this.onTerm),process.off("SIGINT",this.onInt)}}class W extends Error{attempts;classification;lastMessage;lastRc;constructor(e,t,r,i){super(r||`rc ${i}`);this.attempts=e;this.classification=t;this.lastMessage=r;this.lastRc=i}}function st(e,t,r){if(e===0)return"ok";if(e===124)return"transient";let i=`${t}
-${r}`,u=/\(HTTP (\d{3})\)/.exec(i)?.[1],o;try{let a=JSON.parse(r);if(a&&typeof a==="object"&&!Array.isArray(a)){let p=a.status;if(typeof p==="string"||typeof p==="number")o=String(p)}}catch{}let n=u??o;if(n?.startsWith("5")||n==="429")return"transient";if(n==="403")return/rate limit/i.test(i)?"transient":"permanent";if(n?.startsWith("4"))return"permanent";if(/connection refused|connection reset|no such host|i\/o timeout|TLS handshake|unexpected EOF|EOF$|network is unreachable|temporary failure|timed out/i.test(i))return"transient";return"permanent"}async function je(e,t={}){let r=t.timeoutSeconds??Number(process.env.PB_GH_TIMEOUT??60),i=t.attempts??Number(process.env.PB_GH_ATTEMPTS??3),u=t.backoffSeconds??(process.env.PB_GH_BACKOFF??"2 4 8").split(/\s+/).map(Number);for(let o=1;o<=i;o+=1){let n=Bun.spawn(["gh",...e],{stdout:"pipe",stderr:"pipe",env:process.env}),a=Promise.all([n.exited,new Response(n.stdout).text(),new Response(n.stderr).text()]).then(([R,I,P])=>({rc:R,stdout:I,stderr:P})),p=!1,h,S,y=new Promise((R)=>{h=setTimeout(()=>{p=!0;try{n.kill()}catch{}S=setTimeout(()=>{try{n.kill(9)}catch{}R({rc:124,stdout:"",stderr:""})},250)},r*1000)}),x;try{x=await Promise.race([a,y])}finally{if(h)clearTimeout(h);if(S)clearTimeout(S)}let{stdout:d,stderr:c}=x,f=p?124:x.rc,g=st(f,c,d);if(g==="ok")return d;let k=c.split(/\r?\n/)[0]??"";if(g==="permanent"||o===i)throw new W(o,g,k,f);let v=u[o-1]??2;if(process.stderr.write(`pr-babysit: gh ${e[0]} attempt ${o} failed (${g}: ${k||`rc ${f}`}); retrying in ${v}s
-`),v>0)await Bun.sleep(v*1000)}throw new W(0,"permanent","gh was not attempted",1)}function ge(e){let t=JSON.parse(e);if(t&&typeof t==="object"&&!Array.isArray(t)){let r=t.errors;if(Array.isArray(r)&&r.length>0)throw Error("response is not valid JSON or carries GraphQL errors[]")}return t}import{createHash as rt}from"crypto";var Ee={is_review_comment:!1,state:"unknown",complete:!1,verdict:"none",verdict_label:"",findings:[]};function re(e){if(!e.trim())return{...Ee,findings:[]};let t=e.split(/\n/);if(!t.some((c)=>/^### Code Review|^### PR Review in Progress|\[View job\]\([^)]*actions\/runs\/[0-9]+|`agent-merge-[a-z]|^`(?:merge-approved|request-changes)`$/.test(c)))return{...Ee,findings:[]};let i=t.some((c)=>/^\s*-\s*\[\s*\]/.test(c)),o=!t.some((c)=>/^\s*-\s*\[[xX]\]/.test(c))&&!i?"unknown":i?"in_progress":"complete",n=o==="complete",a=e.match(/Set verdict label \(`([^`]+)`\)/)?.[1]??"";if(!a)a=t.flatMap((c)=>{let f=c.match(/^`(agent-merge-[a-z-]+|merge-approved|request-changes)`$/);return f?[f[1]]:[]}).at(-1)??"";if(!a)a=e.match(/agent-merge-[a-z-]+/)?.[0]??"";let p;if(a.includes("approved"))p="approved";else if(a.includes("blocked")||a.includes("changes"))p="changes";else{let c=t.find((f)=>/^\*\*Verdict:\*\*/.test(f))??"";if(/changes requested/i.test(c))p="changes";else if(/approved/i.test(c))p="approved";else if(/\*\*Changes requested\*\*|changes-requested/i.test(e))p="changes";else if(/\*\*Approved\*\*/i.test(e))p="approved";else p="none"}let h=t.find((c)=>/^\*\*Verdict:\*\*/.test(c))??"";if(/review incomplete|provider error/i.test(h))o="provider_error",n=!1;let S=[],y=!1;for(let c of t){if(/^### Findings(?:\s|$)/.test(c)){y=!0;continue}if(/^### /.test(c))y=!1;if(!y)continue;let f=c.match(/^`([^`]+)`: (blocker|high|medium|low|nit): (.*)$/);if(!f)continue;let[,g,k,v]=f,R=g.match(/^(.+):([0-9]+)$/),I=R?.[1]??g,P=R?Number(R[2]):null,D=rt("sha1").update(v).digest("hex").slice(0,8);S.push({path:I,line:P,severity:k,text:v,key:`${I}:${R?.[2]??""}:${D}`})}let x=[],d=!1;for(let c of t){if(/^###\s+Top-N\s+must-fix(?:\s|$)/i.test(c)){d=!0;continue}if(/^### |^<details>/.test(c))d=!1;if(!d)continue;let f=c.trim();if(!f)continue;if(f=f.replace(/^[-*] /,"").replace(/^[0-9]+\.\s+/,""),f)x.push(f)}return{is_review_comment:!0,state:o,complete:n,verdict:p,verdict_label:a,findings:S,must_fix:x}}var ot="number,title,url,author,state,baseRefName,headRefName,headRefOid,statusCheckRollup,mergeable,reviewDecision",it=`query($owner:String!,$repo:String!,$number:Int!,$pageSize:Int!,$endCursor:String){
+
+// plugins/pr-babysit/hooks/src/babysit-tick.ts
+import { existsSync as existsSync2, readFileSync as readFileSync2 } from "fs";
+
+// plugins/pr-babysit/hooks/src/babysit/common.ts
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync
+} from "fs";
+import { basename, dirname, join } from "path";
+
+class BabysitError extends Error {
+  code;
+  extra;
+  constructor(code, message, extra = {}) {
+    super(message);
+    this.code = code;
+    this.extra = extra;
+  }
+}
+function exitCode(code) {
+  if (code === "usage")
+    return 2;
+  if (code === "duplicate_reply")
+    return 4;
+  if (code === "resolve_unconfirmed")
+    return 5;
+  if (code === "locked")
+    return 75;
+  return 3;
+}
+function errorDocument(error) {
+  return { version: 1, errors: [{ code: error.code, message: error.message, ...error.extra }] };
+}
+function fail(code, message, extra = {}) {
+  throw new BabysitError(code, message, extra);
+}
+function runCli(action) {
+  Promise.resolve().then(action).then((result) => {
+    if (result !== undefined)
+      process.stdout.write(`${JSON.stringify(result)}
+`);
+  }).catch((error) => {
+    if (error instanceof BabysitError) {
+      process.stdout.write(`${JSON.stringify(errorDocument(error))}
+`);
+      process.exitCode = exitCode(error.code);
+    } else {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stdout.write(`${JSON.stringify(errorDocument(new BabysitError("api_error", message)))}
+`);
+      process.exitCode = 3;
+    }
+  });
+}
+function parseFlags(argv, command, valued, bare = []) {
+  const flags = {};
+  for (let i = 0;i < argv.length; i += 1) {
+    const arg = argv[i] ?? "";
+    if (bare.includes(arg)) {
+      flags[arg] = true;
+    } else if (valued.includes(arg)) {
+      flags[arg] = argv[i + 1] ?? "";
+      i += 1;
+    } else {
+      fail("usage", `${command}: unknown argument: ${arg}`);
+    }
+  }
+  return flags;
+}
+function flag(flags, key) {
+  const value = flags[key];
+  return typeof value === "string" ? value : "";
+}
+function utcNow() {
+  return new Date().toISOString().slice(0, 19) + "Z";
+}
+function atomicWriteJson(path, value, raw) {
+  const content = raw ?? `${JSON.stringify(value)}
+`;
+  JSON.parse(content);
+  mkdirSync(dirname(path), { recursive: true });
+  const dir = mkdtempSync(join(dirname(path), `.${basename(path)}.tmp.${process.pid}.`));
+  const temp = join(dir, "value");
+  try {
+    writeFileSync(temp, content);
+    renameSync(temp, path);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+function readTextOrEmpty(path) {
+  try {
+    return readFileSync(path, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+function pidAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function errorCode(error) {
+  return error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : undefined;
+}
+
+class SlotLock {
+  path;
+  held = false;
+  identity = null;
+  onTerm = () => {
+    this.release();
+    process.exit(143);
+  };
+  onInt = () => {
+    this.release();
+    process.exit(130);
+  };
+  constructor(statePath) {
+    this.path = `${statePath}.lock`;
+  }
+  acquire() {
+    process.on("SIGTERM", this.onTerm);
+    process.on("SIGINT", this.onInt);
+    try {
+      mkdirSync(dirname(this.path), { recursive: true });
+      for (let attempt = 0;attempt < 2; attempt += 1) {
+        let created = false;
+        try {
+          mkdirSync(this.path);
+          created = true;
+        } catch (error) {
+          if (errorCode(error) !== "EEXIST")
+            throw error;
+          if (!existsSync(this.path)) {
+            if (attempt === 0)
+              continue;
+            fail("locked", "slot is held by another controller", { pid: null, since: null });
+          }
+        }
+        if (created) {
+          this.held = true;
+          try {
+            const { dev, ino } = statSync(this.path);
+            this.identity = { dev, ino };
+            writeFileSync(join(this.path, "pid"), `${process.pid}
+`);
+            writeFileSync(join(this.path, "since"), `${Math.floor(Date.now() / 1000)}
+`);
+            return;
+          } catch (error) {
+            if (errorCode(error) === "ENOENT")
+              fail("locked", "slot is held by another controller", { pid: null, since: null });
+            throw error;
+          }
+        }
+        const pidText = readTextOrEmpty(join(this.path, "pid"));
+        const sinceText = readTextOrEmpty(join(this.path, "since"));
+        const pid = /^\d+$/.test(pidText) ? Number(pidText) : null;
+        const since = /^\d+$/.test(sinceText) ? Number(sinceText) : null;
+        const staleAfter = Number(process.env.PB_LOCK_STALE_SECONDS ?? "600");
+        let incompleteAgeMs = 0;
+        if (pid === null || since === null) {
+          try {
+            incompleteAgeMs = Date.now() - statSync(this.path).mtimeMs;
+          } catch {
+            if (attempt === 0)
+              continue;
+          }
+        }
+        const stale = pid === null || since === null ? incompleteAgeMs >= 1000 : !pidAlive(pid) || Math.floor(Date.now() / 1000) - since > staleAfter;
+        if (attempt === 0 && stale) {
+          process.stderr.write(`pr-babysit: reclaiming stale lock ${this.path} (pid ${pidText || "?"}, since ${sinceText || "?"})
+`);
+          rmSync(this.path, { recursive: true, force: true });
+          continue;
+        }
+        fail("locked", "slot is held by another controller", { pid, since });
+      }
+    } catch (error) {
+      this.release();
+      if (error instanceof BabysitError)
+        throw error;
+      const message = error instanceof Error ? error.message : String(error);
+      fail("api_error", `slot lock failed: ${message}`, { source: "lock" });
+    }
+  }
+  release() {
+    let owned = false;
+    if (this.held && this.identity) {
+      try {
+        const { dev, ino } = statSync(this.path);
+        owned = dev === this.identity.dev && ino === this.identity.ino;
+      } catch {}
+    }
+    if (owned) {
+      rmSync(this.path, { recursive: true, force: true });
+    }
+    this.held = false;
+    this.identity = null;
+    process.off("SIGTERM", this.onTerm);
+    process.off("SIGINT", this.onInt);
+  }
+}
+
+// plugins/pr-babysit/hooks/src/babysit/gh.ts
+class GhError extends Error {
+  attempts;
+  classification;
+  lastMessage;
+  lastRc;
+  constructor(attempts, classification, lastMessage, lastRc) {
+    super(lastMessage || `rc ${lastRc}`);
+    this.attempts = attempts;
+    this.classification = classification;
+    this.lastMessage = lastMessage;
+    this.lastRc = lastRc;
+  }
+}
+function ghClassify(rc, stderr, stdout) {
+  if (rc === 0)
+    return "ok";
+  if (rc === 124)
+    return "transient";
+  const combined = `${stderr}
+${stdout}`;
+  const fromStderr = /\(HTTP (\d{3})\)/.exec(combined)?.[1];
+  let fromBody;
+  try {
+    const body = JSON.parse(stdout);
+    if (body && typeof body === "object" && !Array.isArray(body)) {
+      const status = body.status;
+      if (typeof status === "string" || typeof status === "number")
+        fromBody = String(status);
+    }
+  } catch {}
+  const status = fromStderr ?? fromBody;
+  if (status?.startsWith("5") || status === "429")
+    return "transient";
+  if (status === "403")
+    return /rate limit/i.test(combined) ? "transient" : "permanent";
+  if (status?.startsWith("4"))
+    return "permanent";
+  if (/connection refused|connection reset|no such host|i\/o timeout|TLS handshake|unexpected EOF|EOF$|network is unreachable|temporary failure|timed out/i.test(combined))
+    return "transient";
+  return "permanent";
+}
+async function ghRun(args, options = {}) {
+  const timeoutSeconds = options.timeoutSeconds ?? Number(process.env.PB_GH_TIMEOUT ?? 60);
+  const attempts = options.attempts ?? Number(process.env.PB_GH_ATTEMPTS ?? 3);
+  const backoffSeconds = options.backoffSeconds ?? (process.env.PB_GH_BACKOFF ?? "2 4 8").split(/\s+/).map(Number);
+  for (let attempt = 1;attempt <= attempts; attempt += 1) {
+    const proc = Bun.spawn(["gh", ...args], { stdout: "pipe", stderr: "pipe", env: process.env });
+    const completed = Promise.all([
+      proc.exited,
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text()
+    ]).then(([rc, stdout, stderr]) => ({ rc, stdout, stderr }));
+    let timedOut = false;
+    let deadline;
+    let escalation;
+    const timeout = new Promise((resolve) => {
+      deadline = setTimeout(() => {
+        timedOut = true;
+        try {
+          proc.kill();
+        } catch {}
+        escalation = setTimeout(() => {
+          try {
+            proc.kill(9);
+          } catch {}
+          resolve({ rc: 124, stdout: "", stderr: "" });
+        }, 250);
+      }, timeoutSeconds * 1000);
+    });
+    let result;
+    try {
+      result = await Promise.race([completed, timeout]);
+    } finally {
+      if (deadline)
+        clearTimeout(deadline);
+      if (escalation)
+        clearTimeout(escalation);
+    }
+    const { stdout, stderr } = result;
+    const rc = timedOut ? 124 : result.rc;
+    const classification = ghClassify(rc, stderr, stdout);
+    if (classification === "ok")
+      return stdout;
+    const lastMessage = stderr.split(/\r?\n/)[0] ?? "";
+    if (classification === "permanent" || attempt === attempts)
+      throw new GhError(attempt, classification, lastMessage, rc);
+    const delay = backoffSeconds[attempt - 1] ?? 2;
+    process.stderr.write(`pr-babysit: gh ${args[0]} attempt ${attempt} failed (${classification}: ${lastMessage || `rc ${rc}`}); retrying in ${delay}s
+`);
+    if (delay > 0)
+      await Bun.sleep(delay * 1000);
+  }
+  throw new GhError(0, "permanent", "gh was not attempted", 1);
+}
+function ghJson(stdout) {
+  const parsed = JSON.parse(stdout);
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const errors = parsed.errors;
+    if (Array.isArray(errors) && errors.length > 0)
+      throw new Error("response is not valid JSON or carries GraphQL errors[]");
+  }
+  return parsed;
+}
+
+// plugins/pr-babysit/hooks/src/babysit/verdict.ts
+import { createHash } from "crypto";
+var EMPTY = {
+  is_review_comment: false,
+  state: "unknown",
+  complete: false,
+  verdict: "none",
+  verdict_label: "",
+  findings: []
+};
+function parseVerdict(input) {
+  if (!input.trim())
+    return { ...EMPTY, findings: [] };
+  const lines = input.split(/\n/);
+  const reviewMarker = lines.some((line) => /^### Code Review|^### PR Review in Progress|\[View job\]\([^)]*actions\/runs\/[0-9]+|`agent-merge-[a-z]|^`(?:merge-approved|request-changes)`$/.test(line));
+  if (!reviewMarker)
+    return { ...EMPTY, findings: [] };
+  const unchecked = lines.some((line) => /^\s*-\s*\[\s*\]/.test(line));
+  const checked = lines.some((line) => /^\s*-\s*\[[xX]\]/.test(line));
+  let state = !checked && !unchecked ? "unknown" : unchecked ? "in_progress" : "complete";
+  let complete = state === "complete";
+  let verdictLabel = input.match(/Set verdict label \(`([^`]+)`\)/)?.[1] ?? "";
+  if (!verdictLabel) {
+    verdictLabel = lines.flatMap((line) => {
+      const match = line.match(/^`(agent-merge-[a-z-]+|merge-approved|request-changes)`$/);
+      return match ? [match[1]] : [];
+    }).at(-1) ?? "";
+  }
+  if (!verdictLabel)
+    verdictLabel = input.match(/agent-merge-[a-z-]+/)?.[0] ?? "";
+  let verdict;
+  if (verdictLabel.includes("approved"))
+    verdict = "approved";
+  else if (verdictLabel.includes("blocked") || verdictLabel.includes("changes"))
+    verdict = "changes";
+  else {
+    const summary = lines.find((line) => /^\*\*Verdict:\*\*/.test(line)) ?? "";
+    if (/changes requested/i.test(summary))
+      verdict = "changes";
+    else if (/approved/i.test(summary))
+      verdict = "approved";
+    else if (/\*\*Changes requested\*\*|changes-requested/i.test(input))
+      verdict = "changes";
+    else if (/\*\*Approved\*\*/i.test(input))
+      verdict = "approved";
+    else
+      verdict = "none";
+  }
+  const verdictLine = lines.find((line) => /^\*\*Verdict:\*\*/.test(line)) ?? "";
+  if (/review incomplete|provider error/i.test(verdictLine)) {
+    state = "provider_error";
+    complete = false;
+  }
+  const findings = [];
+  let inFindings = false;
+  for (const line of lines) {
+    if (/^### Findings(?:\s|$)/.test(line)) {
+      inFindings = true;
+      continue;
+    }
+    if (/^### /.test(line))
+      inFindings = false;
+    if (!inFindings)
+      continue;
+    const match = line.match(/^`([^`]+)`: (blocker|high|medium|low|nit): (.*)$/);
+    if (!match)
+      continue;
+    const [, rawPath, severity, text] = match;
+    const pathLine = rawPath.match(/^(.+):([0-9]+)$/);
+    const path = pathLine?.[1] ?? rawPath;
+    const lineNumber = pathLine ? Number(pathLine[2]) : null;
+    const hash = createHash("sha1").update(text).digest("hex").slice(0, 8);
+    findings.push({
+      path,
+      line: lineNumber,
+      severity,
+      text,
+      key: `${path}:${pathLine?.[2] ?? ""}:${hash}`
+    });
+  }
+  const mustFix = [];
+  let inTopN = false;
+  for (const line of lines) {
+    if (/^###\s+Top-N\s+must-fix(?:\s|$)/i.test(line)) {
+      inTopN = true;
+      continue;
+    }
+    if (/^### |^<details>/.test(line))
+      inTopN = false;
+    if (!inTopN)
+      continue;
+    let item = line.trim();
+    if (!item)
+      continue;
+    item = item.replace(/^[-*] /, "").replace(/^[0-9]+\.\s+/, "");
+    if (item)
+      mustFix.push(item);
+  }
+  return {
+    is_review_comment: true,
+    state,
+    complete,
+    verdict,
+    verdict_label: verdictLabel,
+    findings,
+    must_fix: mustFix
+  };
+}
+
+// plugins/pr-babysit/hooks/src/babysit/collect.ts
+var PR_FIELDS = "number,title,url,author,state,baseRefName,headRefName,headRefOid,statusCheckRollup,mergeable,reviewDecision";
+var THREADS_QUERY = `query($owner:String!,$repo:String!,$number:Int!,$pageSize:Int!,$endCursor:String){
   repository(owner:$owner,name:$repo){ pullRequest(number:$number){
     reviewThreads(first:$pageSize,after:$endCursor){
       pageInfo{hasNextPage endCursor}
       nodes{ id isResolved isOutdated path line
         comments(first:$pageSize){ pageInfo{hasNextPage endCursor}
-          nodes{ id databaseId body author{login __typename} createdAt url } } } } } } }`,at=`query($id:ID!,$pageSize:Int!,$endCursor:String){
+          nodes{ id databaseId body author{login __typename} createdAt url } } } } } } }`;
+var COMMENTS_QUERY = `query($id:ID!,$pageSize:Int!,$endCursor:String){
   node(id:$id){ ... on PullRequestReviewThread {
     comments(first:$pageSize,after:$endCursor){ pageInfo{hasNextPage endCursor}
-      nodes{ id databaseId body author{login __typename} createdAt url } } } } }`,O=(e)=>e&&typeof e==="object"?e:{},T=(e)=>Array.isArray(e)?e:[],l=(e)=>e??null;function Pe(e){return{id:l(e.id),databaseId:l(e.databaseId),body:l(e.body),author:l(O(e.author).login),authorType:l(O(e.author).__typename),createdAt:l(e.createdAt),url:l(e.url)}}function ct(e){return T(e).flatMap((t)=>T(O(O(O(t).data).repository).pullRequest?.reviewThreads?.nodes)).map((t)=>({id:l(t.id),isResolved:l(t.isResolved),isOutdated:l(t.isOutdated),path:l(t.path),line:l(t.line),comments:T(O(t.comments).nodes).map(Pe),commentsHasNextPage:l(O(O(t.comments).pageInfo).hasNextPage),commentsEndCursor:l(O(O(t.comments).pageInfo).endCursor)}))}function lt(e){return T(e).flatMap((t)=>T(O(O(t).data).node?.comments?.nodes)).map(Pe)}function ut(e){return T(e).flatMap((t)=>T(t)).map((t)=>({id:l(t.id),body:l(t.body),author:l(O(t.user).login),authorType:l(O(t.user).type),createdAt:l(t.created_at),updatedAt:l(t.updated_at),url:l(t.html_url)}))}function dt(e){return T(e).flatMap((t)=>T(t)).map((t)=>({id:l(t.id),state:l(t.state),body:l(t.body),author:l(O(t.user).login),authorType:l(O(t.user).type),submittedAt:l(t.submitted_at),url:l(t.html_url),commitId:l(t.commit_id)}))}var pt=new Set(["github-actions","github-actions[bot]","claude","claude[bot]"]);function mt(e){return typeof e==="string"&&pt.has(e)}function ft(e){let t=e.filter((u)=>mt(u.author)).reverse(),r,i;for(let u of t){let o=re(String(u.body??""));if(o.is_review_comment===!0){r=u,i=o;break}}if(!r)r=t[0],i=r?re(String(r.body??"")):{...re(""),state:"absent"};return{comment:r?{id:r.id,url:r.url,createdAt:r.createdAt,updatedAt:r.updatedAt,author:r.author}:null,verdict:i}}function ht(e,t,r="collect-pr.sh: read"){if(t instanceof N)throw t;if(t instanceof W)throw new N("api_error",`${r} '${e}' failed: ${t.lastMessage}`,{source:e,attempts:t.attempts,class:t.classification,lastMessage:t.lastMessage});throw new N("invalid_json",`${r} '${e}' failed: response is not valid JSON or carries GraphQL errors[]`,{source:e,attempts:1,class:"invalid_json",lastMessage:"response is not valid JSON or carries GraphQL errors[]"})}async function Ie(e){let{repo:t,pr:r,pageSize:i=100,timeoutSeconds:u,gh:o=je,now:n=ne}=e,[a,p]=t.split("/"),h=(d)=>o(d,u===void 0?{}:{timeoutSeconds:u}),S=async(d,c)=>{try{return ge(await h(c))}catch(f){return ht(d,f)}},y=async()=>{let d;try{d=O(ge(await h(["pr","view",String(r),"--repo",t,"--json","headRefOid"])))}catch(c){if(c instanceof W)throw new N("api_error",`gh head failed after ${c.attempts} attempt(s): ${c.lastMessage||`rc ${c.lastRc}`}`,{source:"head",attempts:c.attempts,class:c.classification,lastMessage:c.lastMessage});throw new N("invalid_json","collect-pr.sh: head read returned no headRefOid",{source:"head"})}if(typeof d.headRefOid!=="string"||d.headRefOid==="")throw new N("invalid_json","collect-pr.sh: head read returned no headRefOid",{source:"head"});return d.headRefOid},x=!1;for(let d=0;d<2;d+=1){let c=await y(),f=[["pr",["pr","view",String(r),"--repo",t,"--json",ot]],["threads",["api","graphql","--paginate","--slurp","-f",`owner=${a}`,"-f",`repo=${p}`,"-F",`number=${r}`,"-F",`pageSize=${i}`,"-f",`query=${it}`]],["comments",["api","--paginate","--slurp",`repos/${t}/issues/${r}/comments?per_page=${i}`]],["reviews",["api","--paginate","--slurp",`repos/${t}/pulls/${r}/reviews?per_page=${i}`]]],g=await Promise.allSettled(f.map(([b,E])=>S(b,E)));for(let b=0;b<g.length;b+=1){let E=g[b];if(E.status==="rejected")throw E.reason}let[k,v,R,I]=g.map((b)=>b.value),P=ct(v),D=P.filter((b)=>b.commentsHasNextPage===!0),z=await Promise.allSettled(D.map((b)=>S("threadComments",["api","graphql","--paginate","--slurp","-f",`id=${b.id}`,"-F",`pageSize=${i}`,"-f",`endCursor=${b.commentsEndCursor}`,"-f",`query=${at}`])));for(let b of z)if(b.status==="rejected")throw b.reason;let Y=0;for(let b=0;b<D.length;b+=1){let E=D[b],q=z[b].value;Y+=T(q).length,E.comments.push(...lt(q)),E.commentsHasNextPage=!1,E.commentsEndCursor=null}let G=ut(R),U=dt(I),j=ft(G),L=await y();if(c!==L){x=!0;continue}let A=O(k);return{version:1,collectedAt:n(),repo:t,number:r,head:{sha:L,verifiedAfterFanout:!0,recollected:x},pageSize:i,pr:{number:l(A.number),title:l(A.title),url:l(A.url),author:l(O(A.author).login),state:l(A.state),baseRefName:l(A.baseRefName),headRefName:l(A.headRefName),headRefOid:l(A.headRefOid),mergeable:l(A.mergeable),reviewDecision:l(A.reviewDecision),statusCheckRollup:A.statusCheckRollup??[]},threads:P.map(({commentsHasNextPage:b,commentsEndCursor:E,...q})=>q),comments:G,reviews:U,bot:j,pages:{threads:T(v).length,threadComments:Y,comments:T(R).length,reviews:T(I).length}}}throw new N("head_moved","collect-pr.sh: PR head moved twice during collection",{source:"head"})}var gt=new Set(["github-actions","github-actions[bot]","claude","claude[bot]"]),bt=["ignore (all |any |the )?(previous|prior|above|earlier) (instructions|prompts?|rules)","disregard (all |any |the |your )?(previous|prior|system|above) ","you are (now )?(an? )?(ai|assistant|llm|language model|claude|codex|copilot)","(^|\\n)\\s*(system|assistant)\\s*:","<(system|instructions?)>","(run|execute) (the following|this|these) (command|shell|script)"].map((e)=>new RegExp(e,"i")),m=(e,t)=>e===null||e===void 0||e===!1?t:e,J=(e)=>Array.isArray(e)?e:[],X=(e)=>typeof e==="string"?e:JSON.stringify(e),w=(e,t)=>({code:e,detail:t});function yt(e){if(e.__typename==="StatusContext")return e.state==="SUCCESS"?"pass":e.state==="PENDING"||e.state==="EXPECTED"?"pending":"fail";return e.status!=="COMPLETED"?"pending":["SUCCESS","NEUTRAL","SKIPPED"].includes(e.conclusion)?"pass":"fail"}function vt(e){if(e.length===0)return"pending";let t=e.map((r)=>r.status);return t.includes("fail")?"fail":t.includes("pending")?"pending":"pass"}function wt(e,t,r){let i=J(e.comments),u=i.at(-1)??null,o=i.filter((c)=>c.author!==t),n=o.at(-1)??null,a=Object.keys(r.flagged).includes(e.id),p=n===null?"none":gt.has(n.author)?"ci_reviewer":n.authorType==="Bot"?"bot":"human",h=e.isResolved===!1,S=h&&!a&&u!==null&&u.author!==t&&(p==="human"||p==="ci_reviewer"),y=e.isOutdated?S&&p==="human":S,x=h&&!a&&(!e.isOutdated||p==="human"),d=bt.find((c)=>o.some((f)=>c.test(m(f.body,""))))?.source??null;return{id:e.id,path:e.path,line:e.line,isOutdated:e.isOutdated,isResolved:e.isResolved,rootCommentId:m(i[0]?.databaseId,null),inReplyTo:m(n?.databaseId,null),authorClass:p,lastCommentAuthor:m(u?.author,null),lastCommentAt:m(u?.createdAt,null),injectionSuspect:d!==null,injectionPattern:d,comments:i,flags:{actionable:y,audited:x,flagged:a,skippedOutdated:h&&e.isOutdated&&p==="ci_reviewer",replied:Object.keys(r.replied).includes(`thread:${e.id}@${X(m(n?.databaseId,0))}`)}}}function De(e,t,r,i,u){let o=e,n=t,a=o.pr,p=o.head.sha,h=a.author,S=`${o.repo.toLowerCase().replaceAll("/","-")}-${o.number}`,y=`${o.repo}#${o.number}`,x=n===null?{replied:{},resolved:{},flagged:{}}:m(n.actions,{replied:{},resolved:{},flagged:{}}),c=J(a.statusCheckRollup).map((s)=>({name:m(s.name,m(s.context,"unknown")),status:yt(s),url:m(s.detailsUrl,m(s.targetUrl,null))})),f=vt(c),g=m(o.bot?.verdict,{}),k=o.bot?.comment??null,v=m(g.state,"absent"),R=m(g.verdict,"none"),I=J(g.findings),P=I.map((s)=>s.key),D=I.length,z=v==="absent"||v==="unknown"||g.is_review_comment===!1,Y=v==="absent"?"review_absent":z?"review_unknown_format":null,G=n!==null&&k!==null&&m(n.pr?.botCommentId,null)===k.id&&m(n.pr?.botCommentUpdatedAt,null)===k.updatedAt,U=J(o.threads).map((s)=>wt(s,h,x)),j=n===null?null:m(n.fixer,null),L=j!==null&&(j.status==="running"||j.status==="blocked"),A=L?J(j.items).map(X):[],b=(s)=>A.includes(X(s.id)),E=U.filter((s)=>s.flags.actionable).map(({flags:s,isResolved:K,...Q})=>Q),q=E.filter((s)=>!b(s)),Me=E.filter(b),be=U.filter((s)=>s.flags.audited),oe=be.filter((s)=>!s.flags.actionable).map((s)=>({id:s.id,path:s.path,line:s.line,repliedAt:s.lastCommentAt,lastCommentAuthor:s.lastCommentAuthor})),Je=U.filter((s)=>s.flags.skippedOutdated).map((s)=>s.id),ze=U.filter((s)=>s.flags.flagged).map((s)=>s.id),V=be.length,ye=J(o.comments),ve=Object.keys(x.replied),we=ye.filter((s)=>s.author!==h&&s.authorType!=="Bot").filter((s)=>!ye.some((K)=>K.author===h&&K.createdAt>s.createdAt)).filter((s)=>!ve.includes(`conversation:${X(s.id)}`)).map(({id:s,author:K,body:Q,createdAt:ce,url:le})=>({id:s,author:K,body:Q,createdAt:ce,url:le})),qe=we.filter((s)=>!b(s)),Ge=we.filter(b),$e=J(o.reviews).filter((s)=>s.author!==h&&s.authorType!=="Bot"&&s.state!=="APPROVED"&&m(s.body,"").length>0).filter((s)=>!ve.includes(`review:${X(s.id)}`)).map(({id:s,author:K,state:Q,body:ce,submittedAt:le,url:We})=>({id:s,author:K,state:Q,body:ce,submittedAt:le,url:We})),Le=$e.filter((s)=>!b(s)),He=$e.filter(b),Se=n===null?[]:J(n.pr?.lastRoundFindingKeys),ie=n===null?!1:m(n.pr?.lastRoundHadRejection,!1),_e=n===null?0:m(n.pr?.recurrenceStreak,0),ee=n===null?0:m(n.pr?.fixAttempts,0),Z=G||n===null?[]:P.filter((s)=>Se.includes(s)),te=G?_e:Z.length>0?_e+1:0,Ke={ciStatus:f,reviewDecision:a.reviewDecision,mergeable:a.mergeable,unresolvedThreads:V,headSha:p,botVerdict:R,botState:v,botFindingKeys:P},Ue=n?.pr&&{ciStatus:n.pr.ciStatus,reviewDecision:n.pr.reviewDecision,mergeable:n.pr.mergeable,unresolvedThreads:n.pr.unresolvedThreads,headSha:n.pr.headSha,botVerdict:n.pr.botVerdict,botState:n.pr.botState,botFindingKeys:n.pr.botFindingKeys},ae=n===null||JSON.stringify(Ue)!==JSON.stringify(Ke),H=ae||L&&j.status==="running"?0:m(n?.idleStreak,0)+1,ke=H>=9?15:H>=6?12:H>=3?6:f==="fail"?1:3,Re=H>=6?60:H>=3?30:15,Oe=n!==null&&!G&&v==="provider_error"&&m(n.pr?.botState,"")==="provider_error"&&m(n.pr?.headSha,"")===p,F=[];if(a.state==="MERGED")F.push(w("pr_merged","PR is merged"));if(a.state==="CLOSED")F.push(w("pr_closed","PR is closed"));if(a.mergeable==="CONFLICTING")F.push(w("merge_conflict","mergeable is CONFLICTING"));if(ee>=5)F.push(w("fix_attempts_exhausted",`${ee} fix attempts recorded`));if(Z.length>0&&ie)F.push(w("recurrence_after_rejection",`${Z.length} finding key(s) recurred after a Won't-fix round`));if(Z.length>0&&te>=2)F.push(w("recurrence_streak",`finding keys recurred on ${te} consecutive rounds`));if(Oe)F.push(w("provider_error_repeated",`review provider error twice on head ${p.slice(0,8)}`));let C=[];if(f==="pass")C.push(w("ci_pass",`${c.length} check(s) passed`));else if(f==="fail")C.push(w("ci_failed",c.filter((s)=>s.status==="fail").map((s)=>s.name).join(", ")));else C.push(w("ci_pending",c.length===0?"no checks reported yet":c.filter((s)=>s.status==="pending").map((s)=>s.name).join(", ")));if(V===0)C.push(w("threads_clear","no unresolved review threads"));if(q.length>0)C.push(w("threads_unresolved",`${q.length} actionable thread(s)`));if(oe.length>0)C.push(w("threads_stale_unresolved",`${oe.length} replied-but-unresolved thread(s)`));if(v==="in_progress")C.push(w("review_in_progress","review bot still running"));else if(v==="provider_error"&&!Oe)C.push(w("provider_error","review bot reported a provider error; rerun the review job once"));else if(v==="complete"&&R==="approved"&&D===0)C.push(w("review_approved","bot verdict approved with zero findings"));else if(v==="complete")C.push(w("review_changes",`bot verdict ${R} with ${D} finding(s)`));else if(z)C.push(w(Y,"bot verdict cannot be read"));if(z)C.push(w("manual_verify",`verify review findings manually: ${m(k?.url,"no bot comment")}`));if(a.mergeable==="UNKNOWN"&&a.state==="OPEN")C.push(w("mergeable_unknown","GitHub has not computed mergeability yet"));if(L)C.push(w("fixer_running",`fixer ${j.status}: group ${m(j.current,1)} of ${J(j.groups).length}; ${A.length} item(s) in flight`));if(!ae)C.push(w("unchanged","nothing changed since the last tick"));let Ve=a.state==="OPEN"&&f==="pass"&&V===0&&a.mergeable!=="UNKNOWN"&&!L&&(v==="complete"&&R==="approved"&&D===0||z),Be=F.length>0?"escalate":Ve?"success":"keep_going";return{state:{version:2,slot:S,repo:o.repo,number:o.number,cronName:`pr-babysit:${S}`,lastUpdate:r,totalTicks:m(n?.totalTicks,0)+1,idleStreak:H,currentInterval:ke,waitSeconds:Re,status:m(n?.status,"active"),worktree:m(n?.worktree,null),fixer:j,herdrWorktree:m(n?.herdrWorktree,null),hostCooldowns:m(n?.hostCooldowns,{}),pr:{key:y,ciStatus:f,reviewDecision:a.reviewDecision,mergeable:a.mergeable,unresolvedThreads:V,headSha:p,fixAttempts:ee,botVerdict:R,botState:v,botCommentId:m(k?.id,null),botCommentUpdatedAt:m(k?.updatedAt,null),botFindingKeys:P,lastRoundFindingKeys:Se,lastRoundHadRejection:ie,recurrenceStreak:te,unresolvedAfterClearance:V,lastError:null},actions:x,lastGoodSnapshot:u},result:{version:1,slot:S,changed:ae,decision:Be,reasons:[...F,...C],pr:{number:a.number,url:a.url,head:p,branch:a.headRefName,base:a.baseRefName,author:h,state:a.state,mergeable:a.mergeable,reviewDecision:a.reviewDecision},ci:{status:f,checks:c},verdict:{state:v,verdict:R,findingsCount:D,findingKeys:P,mustFix:m(g.must_fix,[]),commentUrl:m(k?.url,null),commentId:m(k?.id,null),degraded:z,degradedReason:Y,sameRunAsLastTick:G},threads:{total:o.threads.length,unresolved:V,actionable:q,fixing:Me,staleUnresolved:oe,skippedOutdated:Je,flaggedInjection:ze},conversation:{actionable:qe,fixing:Ge},reviews:{actionable:Le,fixing:He},fixer:j,recurrence:{streak:te,lastRoundHadRejection:ie,recurringKeys:Z,fixAttempts:ee},backoff:{idleStreak:H,intervalMinutes:ke,waitSeconds:Re},errors:[],snapshotPath:u,statePath:i}}}Ae(async()=>{let e=Te(process.argv.slice(2),"babysit-tick.sh",["--repo","--pr","--state-file","--snapshot-out","--snapshot-in","--page-size","--timeout","--now"]),t=M(e,"--repo"),r=M(e,"--pr"),i=M(e,"--state-file"),u=M(e,"--snapshot-in"),o=M(e,"--snapshot-out")||`${i.replace(/\.json$/,"")}.snapshot.json`,n=M(e,"--page-size"),a=M(e,"--timeout"),p=M(e,"--now")||ne();if(!/^[^/\s]+\/[^/\s]+$/.test(t))_("usage","babysit-tick.sh: --repo <owner/repo> required");if(!/^\d+$/.test(r))_("usage","babysit-tick.sh: --pr <n> required");if(!i)_("usage","babysit-tick.sh: --state-file <path> required");if(n&&!/^\d+$/.test(n))_("usage","babysit-tick.sh: --page-size must be an integer");if(a&&!/^\d+$/.test(a))_("usage","babysit-tick.sh: --timeout must be an integer");if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(p))_("usage","babysit-tick.sh: --now must be YYYY-MM-DDTHH:MM:SSZ");if(!u&&!Bun.which("gh"))_("gh_unavailable","gh is required");let h=Number(r),S=new he(i);S.acquire();try{let y=null;if($t(i)){try{y=JSON.parse(Fe(i,"utf8"))}catch{_("state_malformed",`babysit-tick.sh: state file is not valid JSON: ${i}`,{source:"state"})}if(y?.version!==2)_("state_malformed",`babysit-tick.sh: state file is not version 2: ${i}`,{source:"state",version:y?.version??null});if(y.repo!==t||y.number!==h)_("slot_mismatch",`babysit-tick.sh: state file belongs to ${y.repo}#${y.number}, asked for ${t}#${h}`,{source:"state",state:{repo:y.repo,number:y.number},requested:{repo:t,number:h}})}let x=(g)=>{if(y===null)return;let k=g instanceof N?g.code:"api_error",v=g instanceof Error?g.message:String(g),R=y.pr;R.lastError={code:k,message:v,at:p};try{se(i,y)}catch{process.stderr.write(`babysit-tick.sh: could not record lastError in ${i}
-`)}},d,c;if(u){try{c=Fe(u,"utf8"),d=JSON.parse(c)}catch{_("invalid_json",`babysit-tick.sh: --snapshot-in is not a JSON file: ${u}`,{source:"snapshot"})}if(d.repo!==t||d.number!==h)_("slot_mismatch",`babysit-tick.sh: --snapshot-in is for ${d.repo}#${d.number}, asked for ${t}#${h}`,{source:"snapshot"})}else try{d=await Ie({repo:t,pr:h,...n?{pageSize:Number(n)}:{},...a?{timeoutSeconds:Number(a)}:{}})}catch(g){throw x(g),g}let f;try{if(d.version!==1||typeof d.repo!=="string"||typeof d.number!=="number"||typeof d.head?.sha!=="string"||!d.pr||typeof d.pr!=="object"||!Array.isArray(d.threads))_("invalid_json","reduce-state.sh: snapshot is not a version-1 pr-babysit snapshot",{source:"snapshot"});f=De(d,y,p,i,o)}catch(g){let k=g instanceof N?g:new N("invalid_json",`reduce-state.sh: reducer failed on ${u||o}`,{source:"reduce"});throw x(k),k}try{se(o,d,c)}catch{_("invalid_json",`babysit-tick.sh: could not write ${o}`,{source:"snapshot_out"})}try{se(i,f.state)}catch{_("invalid_json",`babysit-tick.sh: could not write ${i}`,{source:"state"})}return f.result}finally{S.release()}});
+      nodes{ id databaseId body author{login __typename} createdAt url } } } } }`;
+var obj = (value) => value && typeof value === "object" ? value : {};
+var arr = (value) => Array.isArray(value) ? value : [];
+var n = (value) => value ?? null;
+function threadComment(raw) {
+  return {
+    id: n(raw.id),
+    databaseId: n(raw.databaseId),
+    body: n(raw.body),
+    author: n(obj(raw.author).login),
+    authorType: n(obj(raw.author).__typename),
+    createdAt: n(raw.createdAt),
+    url: n(raw.url)
+  };
+}
+function normalizeThreads(pages) {
+  return arr(pages).flatMap((page) => arr(obj(obj(obj(page).data).repository).pullRequest?.reviewThreads?.nodes)).map((raw) => ({
+    id: n(raw.id),
+    isResolved: n(raw.isResolved),
+    isOutdated: n(raw.isOutdated),
+    path: n(raw.path),
+    line: n(raw.line),
+    comments: arr(obj(raw.comments).nodes).map(threadComment),
+    commentsHasNextPage: n(obj(obj(raw.comments).pageInfo).hasNextPage),
+    commentsEndCursor: n(obj(obj(raw.comments).pageInfo).endCursor)
+  }));
+}
+function normalizeThreadComments(pages) {
+  return arr(pages).flatMap((page) => arr(obj(obj(page).data).node?.comments?.nodes)).map(threadComment);
+}
+function normalizeComments(pages) {
+  return arr(pages).flatMap((page) => arr(page)).map((raw) => ({
+    id: n(raw.id),
+    body: n(raw.body),
+    author: n(obj(raw.user).login),
+    authorType: n(obj(raw.user).type),
+    createdAt: n(raw.created_at),
+    updatedAt: n(raw.updated_at),
+    url: n(raw.html_url)
+  }));
+}
+function normalizeReviews(pages) {
+  return arr(pages).flatMap((page) => arr(page)).map((raw) => ({
+    id: n(raw.id),
+    state: n(raw.state),
+    body: n(raw.body),
+    author: n(obj(raw.user).login),
+    authorType: n(obj(raw.user).type),
+    submittedAt: n(raw.submitted_at),
+    url: n(raw.html_url),
+    commitId: n(raw.commit_id)
+  }));
+}
+var CI_REVIEWERS = new Set(["github-actions", "github-actions[bot]", "claude", "claude[bot]"]);
+function isCiReviewer(login) {
+  return typeof login === "string" && CI_REVIEWERS.has(login);
+}
+function botComment(comments) {
+  const candidates = comments.filter((comment) => isCiReviewer(comment.author)).reverse();
+  let chosen;
+  let verdict;
+  for (const comment of candidates) {
+    const parsed = parseVerdict(String(comment.body ?? ""));
+    if (parsed.is_review_comment === true) {
+      chosen = comment;
+      verdict = parsed;
+      break;
+    }
+  }
+  if (!chosen) {
+    chosen = candidates[0];
+    verdict = chosen ? parseVerdict(String(chosen.body ?? "")) : { ...parseVerdict(""), state: "absent" };
+  }
+  return {
+    comment: chosen ? {
+      id: chosen.id,
+      url: chosen.url,
+      createdAt: chosen.createdAt,
+      updatedAt: chosen.updatedAt,
+      author: chosen.author
+    } : null,
+    verdict
+  };
+}
+function readError(source, error, prefix = "collect-pr.sh: read") {
+  if (error instanceof BabysitError)
+    throw error;
+  if (error instanceof GhError) {
+    throw new BabysitError("api_error", `${prefix} '${source}' failed: ${error.lastMessage}`, {
+      source,
+      attempts: error.attempts,
+      class: error.classification,
+      lastMessage: error.lastMessage
+    });
+  }
+  throw new BabysitError("invalid_json", `${prefix} '${source}' failed: response is not valid JSON or carries GraphQL errors[]`, {
+    source,
+    attempts: 1,
+    class: "invalid_json",
+    lastMessage: "response is not valid JSON or carries GraphQL errors[]"
+  });
+}
+async function collectPr(options) {
+  const { repo, pr, pageSize = 100, timeoutSeconds, gh = ghRun, now = utcNow } = options;
+  const [owner, name] = repo.split("/");
+  const transport = (args) => gh(args, timeoutSeconds === undefined ? {} : { timeoutSeconds });
+  const read = async (source, args) => {
+    try {
+      return ghJson(await transport(args));
+    } catch (error) {
+      return readError(source, error);
+    }
+  };
+  const head = async () => {
+    let doc;
+    try {
+      doc = obj(ghJson(await transport(["pr", "view", String(pr), "--repo", repo, "--json", "headRefOid"])));
+    } catch (error) {
+      if (error instanceof GhError)
+        throw new BabysitError("api_error", `gh head failed after ${error.attempts} attempt(s): ${error.lastMessage || `rc ${error.lastRc}`}`, {
+          source: "head",
+          attempts: error.attempts,
+          class: error.classification,
+          lastMessage: error.lastMessage
+        });
+      throw new BabysitError("invalid_json", "collect-pr.sh: head read returned no headRefOid", {
+        source: "head"
+      });
+    }
+    if (typeof doc.headRefOid !== "string" || doc.headRefOid === "")
+      throw new BabysitError("invalid_json", "collect-pr.sh: head read returned no headRefOid", {
+        source: "head"
+      });
+    return doc.headRefOid;
+  };
+  let recollected = false;
+  for (let round = 0;round < 2; round += 1) {
+    const before = await head();
+    const reads = [
+      ["pr", ["pr", "view", String(pr), "--repo", repo, "--json", PR_FIELDS]],
+      [
+        "threads",
+        [
+          "api",
+          "graphql",
+          "--paginate",
+          "--slurp",
+          "-f",
+          `owner=${owner}`,
+          "-f",
+          `repo=${name}`,
+          "-F",
+          `number=${pr}`,
+          "-F",
+          `pageSize=${pageSize}`,
+          "-f",
+          `query=${THREADS_QUERY}`
+        ]
+      ],
+      [
+        "comments",
+        [
+          "api",
+          "--paginate",
+          "--slurp",
+          `repos/${repo}/issues/${pr}/comments?per_page=${pageSize}`
+        ]
+      ],
+      [
+        "reviews",
+        ["api", "--paginate", "--slurp", `repos/${repo}/pulls/${pr}/reviews?per_page=${pageSize}`]
+      ]
+    ];
+    const settled = await Promise.allSettled(reads.map(([source, args]) => read(source, args)));
+    for (let i = 0;i < settled.length; i += 1) {
+      const outcome = settled[i];
+      if (outcome.status === "rejected")
+        throw outcome.reason;
+    }
+    const [prRaw, threadPages, commentPages, reviewPages] = settled.map((outcome) => outcome.value);
+    const threads = normalizeThreads(threadPages);
+    const overflowingThreads = threads.filter((thread) => thread.commentsHasNextPage === true);
+    const commentReads = await Promise.allSettled(overflowingThreads.map((thread) => read("threadComments", [
+      "api",
+      "graphql",
+      "--paginate",
+      "--slurp",
+      "-f",
+      `id=${thread.id}`,
+      "-F",
+      `pageSize=${pageSize}`,
+      "-f",
+      `endCursor=${thread.commentsEndCursor}`,
+      "-f",
+      `query=${COMMENTS_QUERY}`
+    ])));
+    for (const outcome of commentReads) {
+      if (outcome.status === "rejected")
+        throw outcome.reason;
+    }
+    let threadCommentPages = 0;
+    for (let i = 0;i < overflowingThreads.length; i += 1) {
+      const thread = overflowingThreads[i];
+      const pages = commentReads[i].value;
+      threadCommentPages += arr(pages).length;
+      thread.comments.push(...normalizeThreadComments(pages));
+      thread.commentsHasNextPage = false;
+      thread.commentsEndCursor = null;
+    }
+    const comments = normalizeComments(commentPages);
+    const reviews = normalizeReviews(reviewPages);
+    const bot = botComment(comments);
+    const after = await head();
+    if (before !== after) {
+      recollected = true;
+      continue;
+    }
+    const raw = obj(prRaw);
+    return {
+      version: 1,
+      collectedAt: now(),
+      repo,
+      number: pr,
+      head: { sha: after, verifiedAfterFanout: true, recollected },
+      pageSize,
+      pr: {
+        number: n(raw.number),
+        title: n(raw.title),
+        url: n(raw.url),
+        author: n(obj(raw.author).login),
+        state: n(raw.state),
+        baseRefName: n(raw.baseRefName),
+        headRefName: n(raw.headRefName),
+        headRefOid: n(raw.headRefOid),
+        mergeable: n(raw.mergeable),
+        reviewDecision: n(raw.reviewDecision),
+        statusCheckRollup: raw.statusCheckRollup ?? []
+      },
+      threads: threads.map(({ commentsHasNextPage: _hasNext, commentsEndCursor: _cursor, ...thread }) => thread),
+      comments,
+      reviews,
+      bot,
+      pages: {
+        threads: arr(threadPages).length,
+        threadComments: threadCommentPages,
+        comments: arr(commentPages).length,
+        reviews: arr(reviewPages).length
+      }
+    };
+  }
+  throw new BabysitError("head_moved", "collect-pr.sh: PR head moved twice during collection", {
+    source: "head"
+  });
+}
+
+// plugins/pr-babysit/hooks/src/babysit/reduce.ts
+var ciReviewers = new Set(["github-actions", "github-actions[bot]", "claude", "claude[bot]"]);
+var injectionPatterns = [
+  "ignore (all |any |the )?(previous|prior|above|earlier) (instructions|prompts?|rules)",
+  "disregard (all |any |the |your )?(previous|prior|system|above) ",
+  "you are (now )?(an? )?(ai|assistant|llm|language model|claude|codex|copilot)",
+  "(^|\\n)\\s*(system|assistant)\\s*:",
+  "<(system|instructions?)>",
+  "(run|execute) (the following|this|these) (command|shell|script)"
+].map((pattern) => new RegExp(pattern, "i"));
+var nil = (value, fallback) => value === null || value === undefined || value === false ? fallback : value;
+var asArray = (value) => Array.isArray(value) ? value : [];
+var jqString = (value) => typeof value === "string" ? value : JSON.stringify(value);
+var reason = (code, detail) => ({ code, detail });
+function checkState(check) {
+  if (check.__typename === "StatusContext") {
+    return check.state === "SUCCESS" ? "pass" : check.state === "PENDING" || check.state === "EXPECTED" ? "pending" : "fail";
+  }
+  return check.status !== "COMPLETED" ? "pending" : ["SUCCESS", "NEUTRAL", "SKIPPED"].includes(check.conclusion) ? "pass" : "fail";
+}
+function ciStatus(checks) {
+  if (checks.length === 0)
+    return "pending";
+  const states = checks.map((check) => check.status);
+  return states.includes("fail") ? "fail" : states.includes("pending") ? "pending" : "pass";
+}
+function classifiedThread(thread, author, actions) {
+  const comments = asArray(thread.comments);
+  const lastComment = comments.at(-1) ?? null;
+  const nonAuthorComments = comments.filter((comment) => comment.author !== author);
+  const lastNonAuthor = nonAuthorComments.at(-1) ?? null;
+  const flagged = Object.keys(actions.flagged).includes(thread.id);
+  const authorClass = lastNonAuthor === null ? "none" : ciReviewers.has(lastNonAuthor.author) ? "ci_reviewer" : lastNonAuthor.authorType === "Bot" ? "bot" : "human";
+  const open = thread.isResolved === false;
+  const answerable = open && !flagged && lastComment !== null && lastComment.author !== author && (authorClass === "human" || authorClass === "ci_reviewer");
+  const actionable = thread.isOutdated ? answerable && authorClass === "human" : answerable;
+  const audited = open && !flagged && (!thread.isOutdated || authorClass === "human");
+  const injectionPattern = injectionPatterns.find((pattern) => nonAuthorComments.some((comment) => pattern.test(nil(comment.body, ""))))?.source ?? null;
+  return {
+    id: thread.id,
+    path: thread.path,
+    line: thread.line,
+    isOutdated: thread.isOutdated,
+    isResolved: thread.isResolved,
+    rootCommentId: nil(comments[0]?.databaseId, null),
+    inReplyTo: nil(lastNonAuthor?.databaseId, null),
+    authorClass,
+    lastCommentAuthor: nil(lastComment?.author, null),
+    lastCommentAt: nil(lastComment?.createdAt, null),
+    injectionSuspect: injectionPattern !== null,
+    injectionPattern,
+    comments,
+    flags: {
+      actionable,
+      audited,
+      flagged,
+      skippedOutdated: open && thread.isOutdated && authorClass === "ci_reviewer",
+      replied: Object.keys(actions.replied).includes(`thread:${thread.id}@${jqString(nil(lastNonAuthor?.databaseId, 0))}`)
+    }
+  };
+}
+function reduceState(snapshot, previous, now, statePath, snapshotPath) {
+  const snap = snapshot;
+  const prev = previous;
+  const pr = snap.pr;
+  const head = snap.head.sha;
+  const author = pr.author;
+  const slot = `${snap.repo.toLowerCase().replaceAll("/", "-")}-${snap.number}`;
+  const key = `${snap.repo}#${snap.number}`;
+  const actions = prev === null ? { replied: {}, resolved: {}, flagged: {} } : nil(prev.actions, { replied: {}, resolved: {}, flagged: {} });
+  const rollup = asArray(pr.statusCheckRollup);
+  const checks = rollup.map((check) => ({
+    name: nil(check.name, nil(check.context, "unknown")),
+    status: checkState(check),
+    url: nil(check.detailsUrl, nil(check.targetUrl, null))
+  }));
+  const ci = ciStatus(checks);
+  const verdict = nil(snap.bot?.verdict, {});
+  const botComment = snap.bot?.comment ?? null;
+  const botState = nil(verdict.state, "absent");
+  const botVerdict = nil(verdict.verdict, "none");
+  const findings = asArray(verdict.findings);
+  const keys = findings.map((finding) => finding.key);
+  const findingsCount = findings.length;
+  const degraded = botState === "absent" || botState === "unknown" || verdict.is_review_comment === false;
+  const degradedReason = botState === "absent" ? "review_absent" : degraded ? "review_unknown_format" : null;
+  const sameRun = prev !== null && botComment !== null && nil(prev.pr?.botCommentId, null) === botComment.id && nil(prev.pr?.botCommentUpdatedAt, null) === botComment.updatedAt;
+  const threads = asArray(snap.threads).map((thread) => classifiedThread(thread, author, actions));
+  const fixer = prev === null ? null : nil(prev.fixer, null);
+  const fixerActive = fixer !== null && (fixer.status === "running" || fixer.status === "blocked");
+  const fixingIds = fixerActive ? asArray(fixer.items).map(jqString) : [];
+  const owned = (item) => fixingIds.includes(jqString(item.id));
+  const allActionable = threads.filter((thread) => thread.flags.actionable).map(({ flags: _flags, isResolved: _resolved, ...rest }) => rest);
+  const actionable = allActionable.filter((item) => !owned(item));
+  const fixing = allActionable.filter(owned);
+  const audited = threads.filter((thread) => thread.flags.audited);
+  const staleUnresolved = audited.filter((thread) => !thread.flags.actionable).map((thread) => ({
+    id: thread.id,
+    path: thread.path,
+    line: thread.line,
+    repliedAt: thread.lastCommentAt,
+    lastCommentAuthor: thread.lastCommentAuthor
+  }));
+  const skippedOutdated = threads.filter((thread) => thread.flags.skippedOutdated).map((thread) => thread.id);
+  const flaggedInjection = threads.filter((thread) => thread.flags.flagged).map((thread) => thread.id);
+  const unresolved = audited.length;
+  const comments = asArray(snap.comments);
+  const repliedKeys = Object.keys(actions.replied);
+  const allConvActionable = comments.filter((comment) => comment.author !== author && comment.authorType !== "Bot").filter((comment) => !comments.some((later) => later.author === author && later.createdAt > comment.createdAt)).filter((comment) => !repliedKeys.includes(`conversation:${jqString(comment.id)}`)).map(({ id, author, body, createdAt, url }) => ({ id, author, body, createdAt, url }));
+  const convActionable = allConvActionable.filter((item) => !owned(item));
+  const convFixing = allConvActionable.filter(owned);
+  const allReviewActionable = asArray(snap.reviews).filter((review) => review.author !== author && review.authorType !== "Bot" && review.state !== "APPROVED" && nil(review.body, "").length > 0).filter((review) => !repliedKeys.includes(`review:${jqString(review.id)}`)).map(({ id, author, state, body, submittedAt, url }) => ({
+    id,
+    author,
+    state,
+    body,
+    submittedAt,
+    url
+  }));
+  const reviewActionable = allReviewActionable.filter((item) => !owned(item));
+  const reviewFixing = allReviewActionable.filter(owned);
+  const lastRoundKeys = prev === null ? [] : asArray(prev.pr?.lastRoundFindingKeys);
+  const lastRoundHadRejection = prev === null ? false : nil(prev.pr?.lastRoundHadRejection, false);
+  const prevStreak = prev === null ? 0 : nil(prev.pr?.recurrenceStreak, 0);
+  const fixAttempts = prev === null ? 0 : nil(prev.pr?.fixAttempts, 0);
+  const recurringKeys = sameRun || prev === null ? [] : keys.filter((findingKey) => lastRoundKeys.includes(findingKey));
+  const streak = sameRun ? prevStreak : recurringKeys.length > 0 ? prevStreak + 1 : 0;
+  const comparison = {
+    ciStatus: ci,
+    reviewDecision: pr.reviewDecision,
+    mergeable: pr.mergeable,
+    unresolvedThreads: unresolved,
+    headSha: head,
+    botVerdict,
+    botState,
+    botFindingKeys: keys
+  };
+  const previousComparison = prev?.pr && {
+    ciStatus: prev.pr.ciStatus,
+    reviewDecision: prev.pr.reviewDecision,
+    mergeable: prev.pr.mergeable,
+    unresolvedThreads: prev.pr.unresolvedThreads,
+    headSha: prev.pr.headSha,
+    botVerdict: prev.pr.botVerdict,
+    botState: prev.pr.botState,
+    botFindingKeys: prev.pr.botFindingKeys
+  };
+  const changed = prev === null || JSON.stringify(previousComparison) !== JSON.stringify(comparison);
+  const idleStreak = changed || fixerActive && fixer.status === "running" ? 0 : nil(prev?.idleStreak, 0) + 1;
+  const intervalMinutes = idleStreak >= 9 ? 15 : idleStreak >= 6 ? 12 : idleStreak >= 3 ? 6 : ci === "fail" ? 1 : 3;
+  const waitSeconds = idleStreak >= 6 ? 60 : idleStreak >= 3 ? 30 : 15;
+  const providerErrorRepeated = prev !== null && !sameRun && botState === "provider_error" && nil(prev.pr?.botState, "") === "provider_error" && nil(prev.pr?.headSha, "") === head;
+  const escalations = [];
+  if (pr.state === "MERGED")
+    escalations.push(reason("pr_merged", "PR is merged"));
+  if (pr.state === "CLOSED")
+    escalations.push(reason("pr_closed", "PR is closed"));
+  if (pr.mergeable === "CONFLICTING")
+    escalations.push(reason("merge_conflict", "mergeable is CONFLICTING"));
+  if (fixAttempts >= 5)
+    escalations.push(reason("fix_attempts_exhausted", `${fixAttempts} fix attempts recorded`));
+  if (recurringKeys.length > 0 && lastRoundHadRejection)
+    escalations.push(reason("recurrence_after_rejection", `${recurringKeys.length} finding key(s) recurred after a Won't-fix round`));
+  if (recurringKeys.length > 0 && streak >= 2)
+    escalations.push(reason("recurrence_streak", `finding keys recurred on ${streak} consecutive rounds`));
+  if (providerErrorRepeated)
+    escalations.push(reason("provider_error_repeated", `review provider error twice on head ${head.slice(0, 8)}`));
+  const signals = [];
+  if (ci === "pass")
+    signals.push(reason("ci_pass", `${checks.length} check(s) passed`));
+  else if (ci === "fail")
+    signals.push(reason("ci_failed", checks.filter((check) => check.status === "fail").map((check) => check.name).join(", ")));
+  else
+    signals.push(reason("ci_pending", checks.length === 0 ? "no checks reported yet" : checks.filter((check) => check.status === "pending").map((check) => check.name).join(", ")));
+  if (unresolved === 0)
+    signals.push(reason("threads_clear", "no unresolved review threads"));
+  if (actionable.length > 0)
+    signals.push(reason("threads_unresolved", `${actionable.length} actionable thread(s)`));
+  if (staleUnresolved.length > 0)
+    signals.push(reason("threads_stale_unresolved", `${staleUnresolved.length} replied-but-unresolved thread(s)`));
+  if (botState === "in_progress")
+    signals.push(reason("review_in_progress", "review bot still running"));
+  else if (botState === "provider_error" && !providerErrorRepeated)
+    signals.push(reason("provider_error", "review bot reported a provider error; rerun the review job once"));
+  else if (botState === "complete" && botVerdict === "approved" && findingsCount === 0)
+    signals.push(reason("review_approved", "bot verdict approved with zero findings"));
+  else if (botState === "complete")
+    signals.push(reason("review_changes", `bot verdict ${botVerdict} with ${findingsCount} finding(s)`));
+  else if (degraded)
+    signals.push(reason(degradedReason, "bot verdict cannot be read"));
+  if (degraded)
+    signals.push(reason("manual_verify", `verify review findings manually: ${nil(botComment?.url, "no bot comment")}`));
+  if (pr.mergeable === "UNKNOWN" && pr.state === "OPEN")
+    signals.push(reason("mergeable_unknown", "GitHub has not computed mergeability yet"));
+  if (fixerActive)
+    signals.push(reason("fixer_running", `fixer ${fixer.status}: group ${nil(fixer.current, 1)} of ${asArray(fixer.groups).length}; ${fixingIds.length} item(s) in flight`));
+  if (!changed)
+    signals.push(reason("unchanged", "nothing changed since the last tick"));
+  const successReady = pr.state === "OPEN" && ci === "pass" && unresolved === 0 && pr.mergeable !== "UNKNOWN" && !fixerActive && (botState === "complete" && botVerdict === "approved" && findingsCount === 0 || degraded);
+  const decision = escalations.length > 0 ? "escalate" : successReady ? "success" : "keep_going";
+  return {
+    state: {
+      version: 2,
+      slot,
+      repo: snap.repo,
+      number: snap.number,
+      cronName: `pr-babysit:${slot}`,
+      lastUpdate: now,
+      totalTicks: nil(prev?.totalTicks, 0) + 1,
+      idleStreak,
+      currentInterval: intervalMinutes,
+      waitSeconds,
+      status: nil(prev?.status, "active"),
+      worktree: nil(prev?.worktree, null),
+      fixer,
+      herdrWorktree: nil(prev?.herdrWorktree, null),
+      hostCooldowns: nil(prev?.hostCooldowns, {}),
+      pr: {
+        key,
+        ciStatus: ci,
+        reviewDecision: pr.reviewDecision,
+        mergeable: pr.mergeable,
+        unresolvedThreads: unresolved,
+        headSha: head,
+        fixAttempts,
+        botVerdict,
+        botState,
+        botCommentId: nil(botComment?.id, null),
+        botCommentUpdatedAt: nil(botComment?.updatedAt, null),
+        botFindingKeys: keys,
+        lastRoundFindingKeys: lastRoundKeys,
+        lastRoundHadRejection,
+        recurrenceStreak: streak,
+        unresolvedAfterClearance: unresolved,
+        lastError: null
+      },
+      actions,
+      lastGoodSnapshot: snapshotPath
+    },
+    result: {
+      version: 1,
+      slot,
+      changed,
+      decision,
+      reasons: [...escalations, ...signals],
+      pr: {
+        number: pr.number,
+        url: pr.url,
+        head,
+        branch: pr.headRefName,
+        base: pr.baseRefName,
+        author,
+        state: pr.state,
+        mergeable: pr.mergeable,
+        reviewDecision: pr.reviewDecision
+      },
+      ci: { status: ci, checks },
+      verdict: {
+        state: botState,
+        verdict: botVerdict,
+        findingsCount,
+        findingKeys: keys,
+        mustFix: nil(verdict.must_fix, []),
+        commentUrl: nil(botComment?.url, null),
+        commentId: nil(botComment?.id, null),
+        degraded,
+        degradedReason,
+        sameRunAsLastTick: sameRun
+      },
+      threads: {
+        total: snap.threads.length,
+        unresolved,
+        actionable,
+        fixing,
+        staleUnresolved,
+        skippedOutdated,
+        flaggedInjection
+      },
+      conversation: { actionable: convActionable, fixing: convFixing },
+      reviews: { actionable: reviewActionable, fixing: reviewFixing },
+      fixer,
+      recurrence: { streak, lastRoundHadRejection, recurringKeys, fixAttempts },
+      backoff: { idleStreak, intervalMinutes, waitSeconds },
+      errors: [],
+      snapshotPath,
+      statePath
+    }
+  };
+}
+
+// plugins/pr-babysit/hooks/src/babysit-tick.ts
+runCli(async () => {
+  const flags = parseFlags(process.argv.slice(2), "babysit-tick.sh", [
+    "--repo",
+    "--pr",
+    "--state-file",
+    "--snapshot-out",
+    "--snapshot-in",
+    "--page-size",
+    "--timeout",
+    "--now"
+  ]);
+  const repo = flag(flags, "--repo");
+  const numberText = flag(flags, "--pr");
+  const stateFile = flag(flags, "--state-file");
+  const snapshotIn = flag(flags, "--snapshot-in");
+  const snapshotOut = flag(flags, "--snapshot-out") || `${stateFile.replace(/\.json$/, "")}.snapshot.json`;
+  const pageText = flag(flags, "--page-size");
+  const timeoutText = flag(flags, "--timeout");
+  const now = flag(flags, "--now") || utcNow();
+  if (!/^[^/\s]+\/[^/\s]+$/.test(repo))
+    fail("usage", "babysit-tick.sh: --repo <owner/repo> required");
+  if (!/^\d+$/.test(numberText))
+    fail("usage", "babysit-tick.sh: --pr <n> required");
+  if (!stateFile)
+    fail("usage", "babysit-tick.sh: --state-file <path> required");
+  if (pageText && !/^\d+$/.test(pageText))
+    fail("usage", "babysit-tick.sh: --page-size must be an integer");
+  if (timeoutText && !/^\d+$/.test(timeoutText))
+    fail("usage", "babysit-tick.sh: --timeout must be an integer");
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(now))
+    fail("usage", "babysit-tick.sh: --now must be YYYY-MM-DDTHH:MM:SSZ");
+  if (!snapshotIn && !Bun.which("gh"))
+    fail("gh_unavailable", "gh is required");
+  const number = Number(numberText);
+  const lock = new SlotLock(stateFile);
+  lock.acquire();
+  try {
+    let previous = null;
+    if (existsSync2(stateFile)) {
+      try {
+        previous = JSON.parse(readFileSync2(stateFile, "utf8"));
+      } catch {
+        fail("state_malformed", `babysit-tick.sh: state file is not valid JSON: ${stateFile}`, {
+          source: "state"
+        });
+      }
+      if (previous?.version !== 2)
+        fail("state_malformed", `babysit-tick.sh: state file is not version 2: ${stateFile}`, {
+          source: "state",
+          version: previous?.version ?? null
+        });
+      if (previous.repo !== repo || previous.number !== number) {
+        fail("slot_mismatch", `babysit-tick.sh: state file belongs to ${previous.repo}#${previous.number}, asked for ${repo}#${number}`, {
+          source: "state",
+          state: { repo: previous.repo, number: previous.number },
+          requested: { repo, number }
+        });
+      }
+    }
+    const stampFailure = (error) => {
+      if (previous === null)
+        return;
+      const code = error instanceof BabysitError ? error.code : "api_error";
+      const message = error instanceof Error ? error.message : String(error);
+      const pr = previous.pr;
+      pr.lastError = { code, message, at: now };
+      try {
+        atomicWriteJson(stateFile, previous);
+      } catch {
+        process.stderr.write(`babysit-tick.sh: could not record lastError in ${stateFile}
+`);
+      }
+    };
+    let snapshot;
+    let rawSnapshot;
+    if (snapshotIn) {
+      try {
+        rawSnapshot = readFileSync2(snapshotIn, "utf8");
+        snapshot = JSON.parse(rawSnapshot);
+      } catch {
+        fail("invalid_json", `babysit-tick.sh: --snapshot-in is not a JSON file: ${snapshotIn}`, {
+          source: "snapshot"
+        });
+      }
+      if (snapshot.repo !== repo || snapshot.number !== number) {
+        fail("slot_mismatch", `babysit-tick.sh: --snapshot-in is for ${snapshot.repo}#${snapshot.number}, asked for ${repo}#${number}`, { source: "snapshot" });
+      }
+    } else {
+      try {
+        snapshot = await collectPr({
+          repo,
+          pr: number,
+          ...pageText ? { pageSize: Number(pageText) } : {},
+          ...timeoutText ? { timeoutSeconds: Number(timeoutText) } : {}
+        });
+      } catch (error) {
+        stampFailure(error);
+        throw error;
+      }
+    }
+    let reduced;
+    try {
+      if (snapshot.version !== 1 || typeof snapshot.repo !== "string" || typeof snapshot.number !== "number" || typeof snapshot.head?.sha !== "string" || !snapshot.pr || typeof snapshot.pr !== "object" || !Array.isArray(snapshot.threads)) {
+        fail("invalid_json", "reduce-state.sh: snapshot is not a version-1 pr-babysit snapshot", {
+          source: "snapshot"
+        });
+      }
+      reduced = reduceState(snapshot, previous, now, stateFile, snapshotOut);
+    } catch (error) {
+      const failure = error instanceof BabysitError ? error : new BabysitError("invalid_json", `reduce-state.sh: reducer failed on ${snapshotIn || snapshotOut}`, { source: "reduce" });
+      stampFailure(failure);
+      throw failure;
+    }
+    try {
+      atomicWriteJson(snapshotOut, snapshot, rawSnapshot);
+    } catch {
+      fail("invalid_json", `babysit-tick.sh: could not write ${snapshotOut}`, {
+        source: "snapshot_out"
+      });
+    }
+    try {
+      atomicWriteJson(stateFile, reduced.state);
+    } catch {
+      fail("invalid_json", `babysit-tick.sh: could not write ${stateFile}`, { source: "state" });
+    }
+    return reduced.result;
+  } finally {
+    lock.release();
+  }
+});

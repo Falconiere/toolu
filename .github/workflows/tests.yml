@@ -93,11 +93,19 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: TypeScript quality gate
+        # This Ubuntu runner records the measured cold-start delta in its log
+        # and GITHUB_STEP_SUMMARY. The 5 ms cold-start budget is report-only on
+        # Linux; bench:shell --assert still fails for all bundle-size and parser
+        # p99 budgets. macOS Apple Silicon and TOOLU_LATENCY_ENFORCE=1 enforce
+        # the 5 ms budget as a hard assertion.
+        env:
+          TOOLU_LATENCY_ENFORCE: "0"
         run: |
           set -euo pipefail
           # Local `bun run test` delegates here. Includes format, lint, typecheck,
           # guardrails, unit and conformance, bundle/launcher drift, context and
-          # latency budgets, and deterministic benchmarks.
+          # latency measurement, hard size/parser budgets, and deterministic
+          # benchmarks. bench:shell appends its measured table to the job summary.
           bun run test:ts
 
   bats:

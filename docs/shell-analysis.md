@@ -109,19 +109,21 @@ Wrappers are unwrapped by their own option tables: `sudo`, `doas`, `env`, `comma
 - `writes`, which is `analyzeShell` plus `@toolu/core/shell/writes`, the entry protected-files needs;
 - `together`, every public export of both entries in one bundle, as the PreToolUse dispatcher (#258) carries them.
 
-It builds an unminified set for the bundle-size budget and a minified set matching the committed production bundles for cold-start timing. It runs the minified `empty` and `together`, the heaviest, interleaved from a directory with no `node_modules`, and times `analyzeShell` plus the git and write helpers over every fixture command. `--assert` exits 1 when a budget is exceeded.
+It builds the readable, unminified bundles committed by the #249 pipeline for both the bundle-size budget and cold-start timing. It runs `empty` and `together`, the heaviest, interleaved from a directory with no `node_modules`, and times `analyzeShell` plus the git and write helpers over every fixture command. The product owner chose to keep committed bundles readable; minification was not adopted.
 
-The Bun unit test asserts bundle sizes (`tooling/src/__tests__/bench-shell.test.ts`). The CI `typescript` job also runs `bun run bench:shell --assert`, measuring the latency and parse budgets on that runner; each cold-start comparison interleaves baseline and candidate samples to reduce load drift.
+The product owner's cold-start acceptance machine class is **macOS on Apple Silicon**. `bun run bench:shell --assert` enforces the unchanged **+5 ms** cold-start p50 budget there, or on any machine when `TOOLU_LATENCY_ENFORCE=1`. Linux CI measures and logs the delta and writes it to the `typescript` job summary, but a cold-start result above 5 ms is report-only on Linux. The unminified bundle-size budgets and parser p99 budget remain hard assertions on **every** platform; `--assert` exits 1 if any of those budgets is exceeded. Each cold-start comparison interleaves baseline and candidate samples to reduce load drift.
+
+This platform split follows the measured machine differences on the unminified bundles: the owner's macOS Apple Silicon run passed at **+3.82 ms**, while two Linux CI runners measured **+5.26 ms on AMD** and **+6.84 ms on Intel**. Keep this distinction and the decision to retain readable committed bundles in #279's final evidence; Linux numbers are diagnostic rather than owner-machine acceptance evidence.
 
 | Measure | Budget | Measured |
 |---|---|---|
 | Bundle size added, every runtime export of `@toolu/core/shell` (unminified) | ≤ 200,000 B | 197,434 B |
 | Bundle size added, `analyzeShell` + `@toolu/core/shell/writes` (unminified) | ≤ 200,000 B | 199,180 B |
 | Bundle size added, both entries together (unminified) | ≤ 205,000 B, by product-owner decision | 203,159 B |
-| Cold-start p50, shipped minified `together` minus `empty` (40 interleaved runs) | ≤ 5 ms | +3.08 ms (empty 26.96 ms, together 30.04 ms; p90 27.30 / 30.28 ms) |
-| Parse and walk over 235 fixture commands, 4,700 samples | p99 ≤ 0.1 ms | p50 3.5 µs, p99 18.4 µs, max 1.1 ms |
+| Cold-start p50, shipped unminified `together` minus `empty` (40 interleaved runs) | ≤ 5 ms on macOS Apple Silicon | +4.16 ms (empty 20.61 ms, together 24.78 ms; p90 22.96 / 26.55 ms) |
+| Parse and walk over 235 fixture commands, 4,700 samples | p99 ≤ 0.1 ms | p50 3.3 µs, p99 17.4 µs, max 2.1 ms |
 
-Measured on 2026-10-01 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple M2 Max). Load raises both absolute cold-start numbers alike, and the budget is the difference between them. The previous unminified production format measured +4.16 ms on this machine on 2026-09-29. For comparison, the shipped `is_git_push` takes 0.23 s under bash 5.3 and 0.61 s under `/bin/bash` 3.2 on the 4.3 KB fixture `283-11a`.
+Table measured on 2026-09-29 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple M2 Max), with other agent sessions on the same machine (load average about 2.6). The product owner also measured +3.82 ms on this machine class. Load raises both absolute cold-start numbers alike, and the budget is the difference between them. For comparison, the shipped `is_git_push` takes 0.23 s under bash 5.3 and 0.61 s under `/bin/bash` 3.2 on the 4.3 KB fixture `283-11a`.
 
 **Where the bytes go.**
 - The combined bundle's 203,159 B, per module:

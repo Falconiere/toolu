@@ -6,10 +6,10 @@
  * import. Output lands in `plugins/<name>/hooks/dist/<entry>.js`, inlines
  * `@toolu/core` and its dependencies, and runs under `bun` with no node_modules.
  *
- * Production bundles are minified for hook startup. Every build runs with cwd
- * pinned to the repository root so output remains byte-identical across
- * machines, checkouts and callers. Budget probes may request an unminified
- * build to check the source-size contract separately.
+ * `bun build` writes each bundled module's path into a comment relative to the
+ * process cwd (the `root` option does not change that), so every build runs with
+ * cwd pinned to the repository root: that is what makes output byte-identical
+ * across machines, checkouts and callers.
  *
  * Usage: bun run tooling/src/build-plugins.ts [--check] [--root <dir>]
  */
@@ -70,9 +70,8 @@ export function discoverEntries(root: string): BundleEntry[] {
   );
 }
 
-function bundle(root: string, entry: BundleEntry, outfile: string, minify: boolean): void {
+function bundle(root: string, entry: BundleEntry, outfile: string): void {
   const args = ["build", entry.source, "--target", "bun", "--format", "esm"];
-  if (minify) args.push("--minify");
   args.push("--sourcemap=none", "--outfile", outfile);
   const result = spawnSync(process.execPath, args, { cwd: root, encoding: "utf8" });
   if (result.status !== 0) {
@@ -81,14 +80,9 @@ function bundle(root: string, entry: BundleEntry, outfile: string, minify: boole
 }
 
 /** Bundles every entry into `<outDir>/<plugin>/<entry>.js`; throws on the first failure. */
-export function stageBundles(
-  root: string,
-  outDir: string,
-  options: { minify?: boolean } = {},
-): BundleEntry[] {
+export function stageBundles(root: string, outDir: string): BundleEntry[] {
   const entries = discoverEntries(root);
-  for (const entry of entries)
-    bundle(root, entry, join(outDir, entry.plugin, `${entry.name}.js`), options.minify ?? true);
+  for (const entry of entries) bundle(root, entry, join(outDir, entry.plugin, `${entry.name}.js`));
   return entries;
 }
 

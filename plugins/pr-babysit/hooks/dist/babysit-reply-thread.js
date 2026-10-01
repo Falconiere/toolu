@@ -1,12 +1,488 @@
 #!/usr/bin/env bun
 // @bun
-import{existsSync as ce,statSync as de}from"fs";import{existsSync as E,mkdirSync as _,mkdtempSync as K,readFileSync as q,renameSync as W,rmSync as I,statSync as T,writeFileSync as N}from"fs";import{basename as Q,dirname as O,join as y}from"path";class w extends Error{code;extra;constructor(e,t,r={}){super(t);this.code=e;this.extra=r}}function U(e){if(e==="usage")return 2;if(e==="duplicate_reply")return 4;if(e==="resolve_unconfirmed")return 5;if(e==="locked")return 75;return 3}function P(e){return{version:1,errors:[{code:e.code,message:e.message,...e.extra}]}}function n(e,t,r={}){throw new w(e,t,r)}function G(e){Promise.resolve().then(e).then((t)=>{if(t!==void 0)process.stdout.write(`${JSON.stringify(t)}
-`)}).catch((t)=>{if(t instanceof w)process.stdout.write(`${JSON.stringify(P(t))}
-`),process.exitCode=U(t.code);else{let r=t instanceof Error?t.message:String(t);process.stdout.write(`${JSON.stringify(P(new w("api_error",r)))}
-`),process.exitCode=3}})}function M(e,t,r,o=[]){let i={};for(let s=0;s<e.length;s+=1){let a=e[s]??"";if(o.includes(a))i[a]=!0;else if(r.includes(a))i[a]=e[s+1]??"",s+=1;else n("usage",`${t}: unknown argument: ${a}`)}return i}function u(e,t){let r=e[t];return typeof r==="string"?r:""}function F(){return new Date().toISOString().slice(0,19)+"Z"}function X(e){return JSON.parse(q(e,"utf8"))}function C(e,t,r){let o=r??`${JSON.stringify(t)}
-`;JSON.parse(o),_(O(e),{recursive:!0});let i=K(y(O(e),`.${Q(e)}.tmp.${process.pid}.`)),s=y(i,"value");try{N(s,o),W(s,e)}finally{I(i,{recursive:!0,force:!0})}}function A(e){try{return q(e,"utf8").trim()}catch{return""}}function V(e){try{return process.kill(e,0),!0}catch{return!1}}function j(e){return e&&typeof e==="object"&&"code"in e&&typeof e.code==="string"?e.code:void 0}class J{path;held=!1;identity=null;onTerm=()=>{this.release(),process.exit(143)};onInt=()=>{this.release(),process.exit(130)};constructor(e){this.path=`${e}.lock`}acquire(){process.on("SIGTERM",this.onTerm),process.on("SIGINT",this.onInt);try{_(O(this.path),{recursive:!0});for(let e=0;e<2;e+=1){let t=!1;try{_(this.path),t=!0}catch(c){if(j(c)!=="EEXIST")throw c;if(!E(this.path)){if(e===0)continue;n("locked","slot is held by another controller",{pid:null,since:null})}}if(t){this.held=!0;try{let{dev:c,ino:f}=T(this.path);this.identity={dev:c,ino:f},N(y(this.path,"pid"),`${process.pid}
-`),N(y(this.path,"since"),`${Math.floor(Date.now()/1000)}
-`);return}catch(c){if(j(c)==="ENOENT")n("locked","slot is held by another controller",{pid:null,since:null});throw c}}let r=A(y(this.path,"pid")),o=A(y(this.path,"since")),i=/^\d+$/.test(r)?Number(r):null,s=/^\d+$/.test(o)?Number(o):null,a=Number(process.env.PB_LOCK_STALE_SECONDS??"600"),d=0;if(i===null||s===null)try{d=Date.now()-T(this.path).mtimeMs}catch{if(e===0)continue}let l=i===null||s===null?d>=1000:!V(i)||Math.floor(Date.now()/1000)-s>a;if(e===0&&l){process.stderr.write(`pr-babysit: reclaiming stale lock ${this.path} (pid ${r||"?"}, since ${o||"?"})
-`),I(this.path,{recursive:!0,force:!0});continue}n("locked","slot is held by another controller",{pid:i,since:s})}}catch(e){if(this.release(),e instanceof w)throw e;let t=e instanceof Error?e.message:String(e);n("api_error",`slot lock failed: ${t}`,{source:"lock"})}}release(){let e=!1;if(this.held&&this.identity)try{let{dev:t,ino:r}=T(this.path);e=t===this.identity.dev&&r===this.identity.ino}catch{}if(e)I(this.path,{recursive:!0,force:!0});this.held=!1,this.identity=null,process.off("SIGTERM",this.onTerm),process.off("SIGINT",this.onInt)}}function B(e){if(!E(e))n("state_malformed",`state file not found: ${e} (run babysit-tick.js first)`,{source:"state"});let t;try{t=X(e)}catch{n("state_malformed",`state file is not valid JSON: ${e}`,{source:"state"})}if(typeof t!=="object"||t===null||Array.isArray(t))n("state_malformed",`state file is not a version-2 pr-babysit state: ${e}`,{source:"state",version:null});let r=t;if(r.version!==2||typeof r.repo!=="string"||typeof r.number!=="number")n("state_malformed",`state file is not a version-2 pr-babysit state: ${e}`,{source:"state",version:r.version??null});if(!/^[A-Za-z0-9][A-Za-z0-9_-]*\/[A-Za-z0-9_][A-Za-z0-9._-]*$/.test(r.repo))n("state_malformed",`state file repo is not owner/name: ${r.repo}`,{source:"state"});if(!/^\d+$/.test(String(r.number)))n("state_malformed",`state file number is not an integer: ${r.number}`,{source:"state"});return r}import{mkdtempSync as ee,readFileSync as te,rmSync as re,writeFileSync as ne}from"fs";import{tmpdir as se}from"os";import{join as D}from"path";class b extends Error{attempts;classification;lastMessage;lastRc;constructor(e,t,r,o){super(r||`rc ${o}`);this.attempts=e;this.classification=t;this.lastMessage=r;this.lastRc=o}}function Y(e,t,r){if(e===0)return"ok";if(e===124)return"transient";let o=`${t}
-${r}`,i=/\(HTTP (\d{3})\)/.exec(o)?.[1],s;try{let d=JSON.parse(r);if(d&&typeof d==="object"&&!Array.isArray(d)){let l=d.status;if(typeof l==="string"||typeof l==="number")s=String(l)}}catch{}let a=i??s;if(a?.startsWith("5")||a==="429")return"transient";if(a==="403")return/rate limit/i.test(o)?"transient":"permanent";if(a?.startsWith("4"))return"permanent";if(/connection refused|connection reset|no such host|i\/o timeout|TLS handshake|unexpected EOF|EOF$|network is unreachable|temporary failure|timed out/i.test(o))return"transient";return"permanent"}async function z(e,t={}){let r=t.timeoutSeconds??Number(process.env.PB_GH_TIMEOUT??60),o=t.attempts??Number(process.env.PB_GH_ATTEMPTS??3),i=t.backoffSeconds??(process.env.PB_GH_BACKOFF??"2 4 8").split(/\s+/).map(Number);for(let s=1;s<=o;s+=1){let a=Bun.spawn(["gh",...e],{stdout:"pipe",stderr:"pipe",env:process.env}),d=Promise.all([a.exited,new Response(a.stdout).text(),new Response(a.stderr).text()]).then(([x,Z,H])=>({rc:x,stdout:Z,stderr:H})),l=!1,c,f,k=new Promise((x)=>{c=setTimeout(()=>{l=!0;try{a.kill()}catch{}f=setTimeout(()=>{try{a.kill(9)}catch{}x({rc:124,stdout:"",stderr:""})},250)},r*1000)}),g;try{g=await Promise.race([d,k])}finally{if(c)clearTimeout(c);if(f)clearTimeout(f)}let{stdout:S,stderr:v}=g,h=l?124:g.rc,p=Y(h,v,S);if(p==="ok")return S;let m=v.split(/\r?\n/)[0]??"";if(p==="permanent"||s===o)throw new b(s,p,m,h);let R=i[s-1]??2;if(process.stderr.write(`pr-babysit: gh ${e[0]} attempt ${s} failed (${p}: ${m||`rc ${h}`}); retrying in ${R}s
-`),R>0)await Bun.sleep(R*1000)}throw new b(0,"permanent","gh was not attempted",1)}function oe(e){let t=e.pr;return{repo:String(e.repo),number:Number(e.number),head:String(t.headSha??"")}}function ie(e,t){if(e instanceof b)n("api_error",`gh ${t} failed after ${e.attempts} attempt(s): ${e.lastMessage||`rc ${e.lastRc}`}`,{source:t,attempts:e.attempts,class:e.classification,lastMessage:e.lastMessage});throw e}function ae(e,t){let r;try{r=JSON.parse(e)}catch{n("invalid_json",`${t}: response is not valid JSON`,{source:t})}if(r===null||typeof r!=="object"||Array.isArray(r))n("invalid_json",`${t}: response is not an object`,{source:t});return r}async function L(e){let{statePath:t,kind:r,bodyPath:o}=e,i=r==="thread"?`thread:${e.thread}@${e.inReplyTo}`:r==="conversation"?`conversation:${e.commentId}`:`review:${e.reviewId}`,s=te(o,"utf8"),a=new J(t);a.acquire();try{let d=B(t),l=d.actions,c=l.replied[i];if(c!==void 0&&c!==null)n("duplicate_reply",`reply-thread.sh: a reply to ${i} is already recorded; not posting again`,{key:i,recorded:c});let{repo:f,number:k,head:g}=oe(d),S=r==="thread"?`repos/${f}/pulls/${k}/comments/${e.root}/replies`:`repos/${f}/issues/${k}/comments`,v=ee(D(se(),"pr-babysit-reply-")),h;try{let m=D(v,"payload.json");ne(m,JSON.stringify({body:s})),h=await z(["api","--method","POST",S,"--input",m],e.timeoutSeconds===void 0?{}:{timeoutSeconds:e.timeoutSeconds})}catch(m){ie(m,"reply")}finally{re(v,{recursive:!0,force:!0})}let p=ae(h,"reply");if(typeof p.id!=="number")n("invalid_json","reply-thread.sh: reply response carried no comment id",{source:"reply"});return l.replied[i]={commentId:p.id,url:p.html_url??null,at:F(),headSha:g,kind:r},C(t,d),{ok:!0,key:i,commentId:p.id,url:p.html_url??null}}finally{a.release()}}G(async()=>{let e=M(process.argv.slice(2),"reply-thread.sh",["--state-file","--kind","--thread","--root-comment","--in-reply-to","--comment-id","--review-id","--body-file","--timeout"]),t=u(e,"--state-file"),r=u(e,"--kind"),o=u(e,"--body-file"),i=u(e,"--thread"),s=u(e,"--root-comment"),a=u(e,"--in-reply-to"),d=u(e,"--comment-id"),l=u(e,"--review-id");if(!t)n("usage","reply-thread.sh: --state-file required");if(!o||!ce(o))n("usage","reply-thread.sh: --body-file <existing file> required");let c=de(o).size;if(c===0)n("usage","reply-thread.sh: reply body is empty");if(c>65536)n("usage","reply-thread.sh: reply body exceeds GitHub's 65536-character limit");if(r==="thread"){if(!/^[A-Za-z0-9_=-]+$/.test(i))n("usage","reply-thread.sh: --thread <graphqlId> required for --kind thread");if(!/^\d+$/.test(s))n("usage","reply-thread.sh: --root-comment <databaseId> required for --kind thread");if(!/^\d+$/.test(a))n("usage","reply-thread.sh: --in-reply-to <databaseId> required for --kind thread")}else if(r==="conversation"){if(!/^\d+$/.test(d))n("usage","reply-thread.sh: --comment-id <id> required for --kind conversation")}else if(r==="review"){if(!/^\d+$/.test(l))n("usage","reply-thread.sh: --review-id <id> required for --kind review")}else n("usage","reply-thread.sh: --kind must be thread, conversation or review");if(!Bun.which("gh"))n("gh_unavailable","gh is required");return L({statePath:t,kind:r,thread:i,root:s,inReplyTo:a,commentId:d,reviewId:l,bodyPath:o,...u(e,"--timeout")?{timeoutSeconds:Number(u(e,"--timeout"))}:{}})});
+
+// plugins/pr-babysit/hooks/src/babysit-reply-thread.ts
+import { existsSync as existsSync2, statSync as statSync2 } from "fs";
+
+// plugins/pr-babysit/hooks/src/babysit/common.ts
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync
+} from "fs";
+import { basename, dirname, join } from "path";
+
+class BabysitError extends Error {
+  code;
+  extra;
+  constructor(code, message, extra = {}) {
+    super(message);
+    this.code = code;
+    this.extra = extra;
+  }
+}
+function exitCode(code) {
+  if (code === "usage")
+    return 2;
+  if (code === "duplicate_reply")
+    return 4;
+  if (code === "resolve_unconfirmed")
+    return 5;
+  if (code === "locked")
+    return 75;
+  return 3;
+}
+function errorDocument(error) {
+  return { version: 1, errors: [{ code: error.code, message: error.message, ...error.extra }] };
+}
+function fail(code, message, extra = {}) {
+  throw new BabysitError(code, message, extra);
+}
+function runCli(action) {
+  Promise.resolve().then(action).then((result) => {
+    if (result !== undefined)
+      process.stdout.write(`${JSON.stringify(result)}
+`);
+  }).catch((error) => {
+    if (error instanceof BabysitError) {
+      process.stdout.write(`${JSON.stringify(errorDocument(error))}
+`);
+      process.exitCode = exitCode(error.code);
+    } else {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stdout.write(`${JSON.stringify(errorDocument(new BabysitError("api_error", message)))}
+`);
+      process.exitCode = 3;
+    }
+  });
+}
+function parseFlags(argv, command, valued, bare = []) {
+  const flags = {};
+  for (let i = 0;i < argv.length; i += 1) {
+    const arg = argv[i] ?? "";
+    if (bare.includes(arg)) {
+      flags[arg] = true;
+    } else if (valued.includes(arg)) {
+      flags[arg] = argv[i + 1] ?? "";
+      i += 1;
+    } else {
+      fail("usage", `${command}: unknown argument: ${arg}`);
+    }
+  }
+  return flags;
+}
+function flag(flags, key) {
+  const value = flags[key];
+  return typeof value === "string" ? value : "";
+}
+function utcNow() {
+  return new Date().toISOString().slice(0, 19) + "Z";
+}
+function readJson(path) {
+  return JSON.parse(readFileSync(path, "utf8"));
+}
+function atomicWriteJson(path, value, raw) {
+  const content = raw ?? `${JSON.stringify(value)}
+`;
+  JSON.parse(content);
+  mkdirSync(dirname(path), { recursive: true });
+  const dir = mkdtempSync(join(dirname(path), `.${basename(path)}.tmp.${process.pid}.`));
+  const temp = join(dir, "value");
+  try {
+    writeFileSync(temp, content);
+    renameSync(temp, path);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+function readTextOrEmpty(path) {
+  try {
+    return readFileSync(path, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+function pidAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function errorCode(error) {
+  return error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : undefined;
+}
+
+class SlotLock {
+  path;
+  held = false;
+  identity = null;
+  onTerm = () => {
+    this.release();
+    process.exit(143);
+  };
+  onInt = () => {
+    this.release();
+    process.exit(130);
+  };
+  constructor(statePath) {
+    this.path = `${statePath}.lock`;
+  }
+  acquire() {
+    process.on("SIGTERM", this.onTerm);
+    process.on("SIGINT", this.onInt);
+    try {
+      mkdirSync(dirname(this.path), { recursive: true });
+      for (let attempt = 0;attempt < 2; attempt += 1) {
+        let created = false;
+        try {
+          mkdirSync(this.path);
+          created = true;
+        } catch (error) {
+          if (errorCode(error) !== "EEXIST")
+            throw error;
+          if (!existsSync(this.path)) {
+            if (attempt === 0)
+              continue;
+            fail("locked", "slot is held by another controller", { pid: null, since: null });
+          }
+        }
+        if (created) {
+          this.held = true;
+          try {
+            const { dev, ino } = statSync(this.path);
+            this.identity = { dev, ino };
+            writeFileSync(join(this.path, "pid"), `${process.pid}
+`);
+            writeFileSync(join(this.path, "since"), `${Math.floor(Date.now() / 1000)}
+`);
+            return;
+          } catch (error) {
+            if (errorCode(error) === "ENOENT")
+              fail("locked", "slot is held by another controller", { pid: null, since: null });
+            throw error;
+          }
+        }
+        const pidText = readTextOrEmpty(join(this.path, "pid"));
+        const sinceText = readTextOrEmpty(join(this.path, "since"));
+        const pid = /^\d+$/.test(pidText) ? Number(pidText) : null;
+        const since = /^\d+$/.test(sinceText) ? Number(sinceText) : null;
+        const staleAfter = Number(process.env.PB_LOCK_STALE_SECONDS ?? "600");
+        let incompleteAgeMs = 0;
+        if (pid === null || since === null) {
+          try {
+            incompleteAgeMs = Date.now() - statSync(this.path).mtimeMs;
+          } catch {
+            if (attempt === 0)
+              continue;
+          }
+        }
+        const stale = pid === null || since === null ? incompleteAgeMs >= 1000 : !pidAlive(pid) || Math.floor(Date.now() / 1000) - since > staleAfter;
+        if (attempt === 0 && stale) {
+          process.stderr.write(`pr-babysit: reclaiming stale lock ${this.path} (pid ${pidText || "?"}, since ${sinceText || "?"})
+`);
+          rmSync(this.path, { recursive: true, force: true });
+          continue;
+        }
+        fail("locked", "slot is held by another controller", { pid, since });
+      }
+    } catch (error) {
+      this.release();
+      if (error instanceof BabysitError)
+        throw error;
+      const message = error instanceof Error ? error.message : String(error);
+      fail("api_error", `slot lock failed: ${message}`, { source: "lock" });
+    }
+  }
+  release() {
+    let owned = false;
+    if (this.held && this.identity) {
+      try {
+        const { dev, ino } = statSync(this.path);
+        owned = dev === this.identity.dev && ino === this.identity.ino;
+      } catch {}
+    }
+    if (owned) {
+      rmSync(this.path, { recursive: true, force: true });
+    }
+    this.held = false;
+    this.identity = null;
+    process.off("SIGTERM", this.onTerm);
+    process.off("SIGINT", this.onInt);
+  }
+}
+function loadState(path) {
+  if (!existsSync(path))
+    fail("state_malformed", `state file not found: ${path} (run babysit-tick.js first)`, {
+      source: "state"
+    });
+  let value;
+  try {
+    value = readJson(path);
+  } catch {
+    fail("state_malformed", `state file is not valid JSON: ${path}`, { source: "state" });
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    fail("state_malformed", `state file is not a version-2 pr-babysit state: ${path}`, {
+      source: "state",
+      version: null
+    });
+  }
+  const state = value;
+  if (state.version !== 2 || typeof state.repo !== "string" || typeof state.number !== "number") {
+    fail("state_malformed", `state file is not a version-2 pr-babysit state: ${path}`, {
+      source: "state",
+      version: state.version ?? null
+    });
+  }
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]*\/[A-Za-z0-9_][A-Za-z0-9._-]*$/.test(state.repo)) {
+    fail("state_malformed", `state file repo is not owner/name: ${state.repo}`, {
+      source: "state"
+    });
+  }
+  if (!/^\d+$/.test(String(state.number))) {
+    fail("state_malformed", `state file number is not an integer: ${state.number}`, {
+      source: "state"
+    });
+  }
+  return state;
+}
+
+// plugins/pr-babysit/hooks/src/babysit/writes.ts
+import { mkdtempSync as mkdtempSync2, readFileSync as readFileSync2, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "fs";
+import { tmpdir } from "os";
+import { join as join2 } from "path";
+
+// plugins/pr-babysit/hooks/src/babysit/gh.ts
+class GhError extends Error {
+  attempts;
+  classification;
+  lastMessage;
+  lastRc;
+  constructor(attempts, classification, lastMessage, lastRc) {
+    super(lastMessage || `rc ${lastRc}`);
+    this.attempts = attempts;
+    this.classification = classification;
+    this.lastMessage = lastMessage;
+    this.lastRc = lastRc;
+  }
+}
+function ghClassify(rc, stderr, stdout) {
+  if (rc === 0)
+    return "ok";
+  if (rc === 124)
+    return "transient";
+  const combined = `${stderr}
+${stdout}`;
+  const fromStderr = /\(HTTP (\d{3})\)/.exec(combined)?.[1];
+  let fromBody;
+  try {
+    const body = JSON.parse(stdout);
+    if (body && typeof body === "object" && !Array.isArray(body)) {
+      const status = body.status;
+      if (typeof status === "string" || typeof status === "number")
+        fromBody = String(status);
+    }
+  } catch {}
+  const status = fromStderr ?? fromBody;
+  if (status?.startsWith("5") || status === "429")
+    return "transient";
+  if (status === "403")
+    return /rate limit/i.test(combined) ? "transient" : "permanent";
+  if (status?.startsWith("4"))
+    return "permanent";
+  if (/connection refused|connection reset|no such host|i\/o timeout|TLS handshake|unexpected EOF|EOF$|network is unreachable|temporary failure|timed out/i.test(combined))
+    return "transient";
+  return "permanent";
+}
+async function ghRun(args, options = {}) {
+  const timeoutSeconds = options.timeoutSeconds ?? Number(process.env.PB_GH_TIMEOUT ?? 60);
+  const attempts = options.attempts ?? Number(process.env.PB_GH_ATTEMPTS ?? 3);
+  const backoffSeconds = options.backoffSeconds ?? (process.env.PB_GH_BACKOFF ?? "2 4 8").split(/\s+/).map(Number);
+  for (let attempt = 1;attempt <= attempts; attempt += 1) {
+    const proc = Bun.spawn(["gh", ...args], { stdout: "pipe", stderr: "pipe", env: process.env });
+    const completed = Promise.all([
+      proc.exited,
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text()
+    ]).then(([rc, stdout, stderr]) => ({ rc, stdout, stderr }));
+    let timedOut = false;
+    let deadline;
+    let escalation;
+    const timeout = new Promise((resolve) => {
+      deadline = setTimeout(() => {
+        timedOut = true;
+        try {
+          proc.kill();
+        } catch {}
+        escalation = setTimeout(() => {
+          try {
+            proc.kill(9);
+          } catch {}
+          resolve({ rc: 124, stdout: "", stderr: "" });
+        }, 250);
+      }, timeoutSeconds * 1000);
+    });
+    let result;
+    try {
+      result = await Promise.race([completed, timeout]);
+    } finally {
+      if (deadline)
+        clearTimeout(deadline);
+      if (escalation)
+        clearTimeout(escalation);
+    }
+    const { stdout, stderr } = result;
+    const rc = timedOut ? 124 : result.rc;
+    const classification = ghClassify(rc, stderr, stdout);
+    if (classification === "ok")
+      return stdout;
+    const lastMessage = stderr.split(/\r?\n/)[0] ?? "";
+    if (classification === "permanent" || attempt === attempts)
+      throw new GhError(attempt, classification, lastMessage, rc);
+    const delay = backoffSeconds[attempt - 1] ?? 2;
+    process.stderr.write(`pr-babysit: gh ${args[0]} attempt ${attempt} failed (${classification}: ${lastMessage || `rc ${rc}`}); retrying in ${delay}s
+`);
+    if (delay > 0)
+      await Bun.sleep(delay * 1000);
+  }
+  throw new GhError(0, "permanent", "gh was not attempted", 1);
+}
+
+// plugins/pr-babysit/hooks/src/babysit/writes.ts
+function statePr(state) {
+  const pr = state.pr;
+  return { repo: String(state.repo), number: Number(state.number), head: String(pr.headSha ?? "") };
+}
+function ghFailure(error, source) {
+  if (error instanceof GhError) {
+    fail("api_error", `gh ${source} failed after ${error.attempts} attempt(s): ${error.lastMessage || `rc ${error.lastRc}`}`, {
+      source,
+      attempts: error.attempts,
+      class: error.classification,
+      lastMessage: error.lastMessage
+    });
+  }
+  throw error;
+}
+function parseGhJson(text, source) {
+  let value;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    fail("invalid_json", `${source}: response is not valid JSON`, { source });
+  }
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    fail("invalid_json", `${source}: response is not an object`, { source });
+  return value;
+}
+async function replyThread(options) {
+  const { statePath, kind, bodyPath } = options;
+  const key = kind === "thread" ? `thread:${options.thread}@${options.inReplyTo}` : kind === "conversation" ? `conversation:${options.commentId}` : `review:${options.reviewId}`;
+  const body = readFileSync2(bodyPath, "utf8");
+  const lock = new SlotLock(statePath);
+  lock.acquire();
+  try {
+    const state = loadState(statePath);
+    const actions = state.actions;
+    const recorded = actions.replied[key];
+    if (recorded !== undefined && recorded !== null)
+      fail("duplicate_reply", `reply-thread.sh: a reply to ${key} is already recorded; not posting again`, { key, recorded });
+    const { repo, number, head } = statePr(state);
+    const endpoint = kind === "thread" ? `repos/${repo}/pulls/${number}/comments/${options.root}/replies` : `repos/${repo}/issues/${number}/comments`;
+    const dir = mkdtempSync2(join2(tmpdir(), "pr-babysit-reply-"));
+    let response;
+    try {
+      const payload = join2(dir, "payload.json");
+      writeFileSync2(payload, JSON.stringify({ body }));
+      response = await ghRun(["api", "--method", "POST", endpoint, "--input", payload], options.timeoutSeconds === undefined ? {} : { timeoutSeconds: options.timeoutSeconds });
+    } catch (error) {
+      ghFailure(error, "reply");
+    } finally {
+      rmSync2(dir, { recursive: true, force: true });
+    }
+    const reply = parseGhJson(response, "reply");
+    if (typeof reply.id !== "number")
+      fail("invalid_json", "reply-thread.sh: reply response carried no comment id", {
+        source: "reply"
+      });
+    actions.replied[key] = {
+      commentId: reply.id,
+      url: reply.html_url ?? null,
+      at: utcNow(),
+      headSha: head,
+      kind
+    };
+    atomicWriteJson(statePath, state);
+    return { ok: true, key, commentId: reply.id, url: reply.html_url ?? null };
+  } finally {
+    lock.release();
+  }
+}
+
+// plugins/pr-babysit/hooks/src/babysit-reply-thread.ts
+runCli(async () => {
+  const flags = parseFlags(process.argv.slice(2), "reply-thread.sh", [
+    "--state-file",
+    "--kind",
+    "--thread",
+    "--root-comment",
+    "--in-reply-to",
+    "--comment-id",
+    "--review-id",
+    "--body-file",
+    "--timeout"
+  ]);
+  const statePath = flag(flags, "--state-file");
+  const kind = flag(flags, "--kind");
+  const bodyPath = flag(flags, "--body-file");
+  const thread = flag(flags, "--thread");
+  const root = flag(flags, "--root-comment");
+  const inReplyTo = flag(flags, "--in-reply-to");
+  const commentId = flag(flags, "--comment-id");
+  const reviewId = flag(flags, "--review-id");
+  if (!statePath)
+    fail("usage", "reply-thread.sh: --state-file required");
+  if (!bodyPath || !existsSync2(bodyPath))
+    fail("usage", "reply-thread.sh: --body-file <existing file> required");
+  const bodySize = statSync2(bodyPath).size;
+  if (bodySize === 0)
+    fail("usage", "reply-thread.sh: reply body is empty");
+  if (bodySize > 65536)
+    fail("usage", "reply-thread.sh: reply body exceeds GitHub's 65536-character limit");
+  if (kind === "thread") {
+    if (!/^[A-Za-z0-9_=-]+$/.test(thread))
+      fail("usage", "reply-thread.sh: --thread <graphqlId> required for --kind thread");
+    if (!/^\d+$/.test(root))
+      fail("usage", "reply-thread.sh: --root-comment <databaseId> required for --kind thread");
+    if (!/^\d+$/.test(inReplyTo))
+      fail("usage", "reply-thread.sh: --in-reply-to <databaseId> required for --kind thread");
+  } else if (kind === "conversation") {
+    if (!/^\d+$/.test(commentId))
+      fail("usage", "reply-thread.sh: --comment-id <id> required for --kind conversation");
+  } else if (kind === "review") {
+    if (!/^\d+$/.test(reviewId))
+      fail("usage", "reply-thread.sh: --review-id <id> required for --kind review");
+  } else {
+    fail("usage", "reply-thread.sh: --kind must be thread, conversation or review");
+  }
+  if (!Bun.which("gh"))
+    fail("gh_unavailable", "gh is required");
+  return replyThread({
+    statePath,
+    kind,
+    thread,
+    root,
+    inReplyTo,
+    commentId,
+    reviewId,
+    bodyPath,
+    ...flag(flags, "--timeout") ? { timeoutSeconds: Number(flag(flags, "--timeout")) } : {}
+  });
+});
