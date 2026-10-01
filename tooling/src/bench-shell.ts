@@ -8,15 +8,18 @@
  *   the entry protected-files needs;
  * - `together`: every public export of both entries in one bundle.
  *
- * Budgets: `shell` and `writes` each add at most 200,000 bytes unminified, and
+ * Budgets: `shell` and `writes` each add at most 200,000 bytes, and
  * `together`, the PreToolUse dispatcher's case (#258), at most 205,000 bytes by
- * product-owner decision (unbash alone is about 175 KB). Cold start runs
- * `together` (the heaviest) against `empty`, interleaved from a temp dir with
- * no node_modules: p50 delta at most 5 ms. Parse and walk time `analyzeShell` plus the git and write helpers over
- * every fixture command: p99 at most 0.1 ms.
+ * product-owner decision (unbash alone is about 175 KB). All probes use the
+ * readable unminified bundles shipped by #249. It runs `together` against `empty`, interleaved from a temp
+ * dir with no node_modules: p50 delta at most 5 ms. Parse and walk time
+ * `analyzeShell` plus the git and write helpers over every fixture command:
+ * p99 at most 0.1 ms.
  *
- * Numbers are machine-bound, so CI asserts only the sizes (bench-shell.test.ts).
- * `--assert` exits 1 when any budget is exceeded on this machine.
+ * Numbers are machine-bound. `--assert` always enforces bundle and parse
+ * budgets. The 5 ms cold-start budget is hard on macOS Apple Silicon (or with
+ * TOOLU_LATENCY_ENFORCE=1); other machines measure and report it without
+ * failing the gate. GitHub Actions also receives a job-summary table.
  *
  * Usage: bun run tooling/src/bench-shell.ts [--runs N] [--rounds N] [--json] [--assert]
  */
@@ -37,6 +40,7 @@ import { writeTargets } from "@toolu/core/shell/writes";
 import { percentile } from "@toolu/conformance/harness/timing";
 import { z } from "zod";
 import { stageBundles } from "./build-plugins.ts";
+import { appendJobSummary } from "./bench-shell-summary.ts";
 
 const ROOT = resolve(import.meta.dir, "../..");
 const SHELL_ENTRY = JSON.stringify(join(ROOT, "packages/toolu-core/src/shell/shell.ts"));
@@ -240,8 +244,16 @@ export function benchShell(options: { runs: number; rounds: number }): ShellBenc
   }
 }
 
-/** Budget violations, empty when every budget holds. */
-export function overBudget(bench: ShellBench): string[] {
+/** Owner's macOS Apple Silicon class is the cold-start acceptance machine. */
+export function coldStartIsHard(
+  machine: Pick<ShellBench["machine"], "platform" | "arch">,
+  override: string | undefined,
+): boolean {
+  return (machine.platform === "darwin" && machine.arch === "arm64") || override === "1";
+}
+
+/** Hard budget violations; size and parse are hard on every platform. */
+export function overBudget(bench: ShellBench, hardColdStart = true): string[] {
   const problems: string[] = [];
   if (bench.bundle.deltaBytes > BUDGET.bundleBytes)
     problems.push(`bundle +${bench.bundle.deltaBytes} B > ${BUDGET.bundleBytes} B`);
@@ -253,7 +265,7 @@ export function overBudget(bench: ShellBench): string[] {
     problems.push(
       `together bundle +${bench.bundle.togetherDeltaBytes} B > ${BUDGET.togetherBundleBytes} B`,
     );
-  if (bench.coldStart.deltaP50 > BUDGET.coldStartMs)
+  if (hardColdStart && bench.coldStart.deltaP50 > BUDGET.coldStartMs)
     problems.push(
       `cold start +${bench.coldStart.deltaP50.toFixed(2)} ms > ${BUDGET.coldStartMs} ms`,
     );
@@ -264,12 +276,12 @@ export function overBudget(bench: ShellBench): string[] {
 
 const ms = (value: number) => `${value.toFixed(2)} ms`;
 
-function report(bench: ShellBench): string {
+function report(bench: ShellBench, hardColdStart: boolean): string {
   const { machine: m, bundle: b, coldStart: c, parse: p } = bench;
   return [
     `bench:shell — bun ${m.bun}, ${m.platform} ${m.arch}, ${m.cpu}, ${m.date}`,
-    `bundle      empty ${b.emptyBytes} B; @toolu/core/shell +${b.deltaBytes} B (budget ${BUDGET.bundleBytes} B); analyzeShell + writes +${b.writesDeltaBytes} B (budget ${BUDGET.writesBundleBytes} B); both entries +${b.togetherDeltaBytes} B (budget ${BUDGET.togetherBundleBytes} B)`,
-    `cold start  ${c.runs} interleaved runs: empty p50 ${ms(c.emptyP50)} p90 ${ms(c.emptyP90)}, both-entries p50 ${ms(c.shellP50)} p90 ${ms(c.shellP90)}, delta p50 ${ms(c.deltaP50)} (budget ${BUDGET.coldStartMs} ms)`,
+    `bundle      shipped unminified: empty ${b.emptyBytes} B; @toolu/core/shell +${b.deltaBytes} B (budget ${BUDGET.bundleBytes} B); analyzeShell + writes +${b.writesDeltaBytes} B (budget ${BUDGET.writesBundleBytes} B); both entries +${b.togetherDeltaBytes} B (budget ${BUDGET.togetherBundleBytes} B)`,
+    `cold start  shipped unminified, ${c.runs} interleaved runs: empty p50 ${ms(c.emptyP50)} p90 ${ms(c.emptyP90)}, both-entries p50 ${ms(c.shellP50)} p90 ${ms(c.shellP90)}, delta p50 ${ms(c.deltaP50)} (budget ${BUDGET.coldStartMs} ms; ${hardColdStart ? "hard assertion" : "report-only on this machine"})`,
     `parse+walk  ${p.commands} commands, ${p.samples} samples: p50 ${p.p50Us.toFixed(1)} µs, p99 ${p.p99Us.toFixed(1)} µs, max ${p.maxUs.toFixed(1)} µs (budget p99 ${BUDGET.parseP99Us} µs)`,
     `probe       ${bench.probeOutput}`,
   ].join("\n");
@@ -307,8 +319,10 @@ function parseCli(args: readonly string[]): Cli {
 function runBench(args: readonly string[]): number {
   const cli = parseCli(args);
   const bench = benchShell({ runs: cli.runs, rounds: cli.rounds });
-  process.stdout.write(`${cli.json ? JSON.stringify(bench) : report(bench)}\n`);
-  const problems = overBudget(bench);
+  const hardColdStart = coldStartIsHard(bench.machine, process.env.TOOLU_LATENCY_ENFORCE);
+  process.stdout.write(`${cli.json ? JSON.stringify(bench) : report(bench, hardColdStart)}\n`);
+  appendJobSummary(bench, BUDGET, hardColdStart);
+  const problems = overBudget(bench, hardColdStart);
   for (const problem of problems) process.stderr.write(`OVER BUDGET  ${problem}\n`);
   return cli.assert && problems.length > 0 ? 1 : 0;
 }

@@ -1,16 +1,25 @@
 /**
  * `bench:shell` (#284 AC-1): the probe bundles are built by the plugin bundle
  * pipeline and run from a directory with no node_modules. Every runtime export
- * of `@toolu/core/shell` adds at most 200,000 bytes, and so does `analyzeShell`
- * plus `@toolu/core/shell/writes`. Wall-clock numbers are machine-bound, so this
- * suite checks their presence, not their values; `bun run bench:shell --assert`
- * checks the timing budgets on a given machine.
+ * of `@toolu/core/shell` adds at most 200,000 bytes, and so does
+ * `analyzeShell` plus `@toolu/core/shell/writes`. Both size and cold start use
+ * the readable, unminified production format. Wall-clock numbers are machine-bound, so this suite
+ * checks their presence, not their values; CI runs `bun run bench:shell
+ * --assert` with cold-start hard only on macOS Apple Silicon.
  */
 import { expect, test } from "bun:test";
-import { resolve } from "node:path";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { run } from "@toolu/conformance/harness/spawn";
 import { z } from "zod";
-import { BUDGET, fixtureCommands, overBudget, type ShellBench } from "../bench-shell.ts";
+import {
+  BUDGET,
+  coldStartIsHard,
+  fixtureCommands,
+  overBudget,
+  type ShellBench,
+} from "../bench-shell.ts";
 
 const ROOT = resolve(import.meta.dir, "../../..");
 const SCRIPT = resolve(ROOT, "tooling/src/bench-shell.ts");
@@ -49,19 +58,31 @@ const Report = z.object({
 });
 
 test("each entry fits 200,000 bytes, both together 205,000, and they run without node_modules", async () => {
-  const res = await run([process.execPath, SCRIPT, "--json", "--runs", "3", "--rounds", "1"], {
-    cwd: ROOT,
-    timeoutMs: 120_000,
-  });
-  expect(res.exitCode).toBe(0);
-  const report = Report.parse(JSON.parse(res.stdout));
-  expect(report.bundle.deltaBytes).toBeLessThanOrEqual(BUDGET.bundleBytes);
-  expect(report.bundle.writesDeltaBytes).toBeLessThanOrEqual(BUDGET.writesBundleBytes);
-  expect(report.bundle.togetherDeltaBytes).toBeLessThanOrEqual(BUDGET.togetherBundleBytes);
-  expect(report.bundle.togetherDeltaBytes).toBeGreaterThan(report.bundle.writesDeltaBytes);
-  expect(JSON.parse(report.probeOutput)).toMatchObject({ push: "yes", destination: "feat/x" });
-  expect(report.parse.commands).toBe(fixtureCommands().length);
-  expect(report.coldStart.runs).toBe(3);
+  const dir = mkdtempSync(join(tmpdir(), "toolu-bench-summary-"));
+  try {
+    const summary = join(dir, "summary.md");
+    const res = await run([process.execPath, SCRIPT, "--json", "--runs", "3", "--rounds", "1"], {
+      cwd: ROOT,
+      env: { GITHUB_STEP_SUMMARY: summary },
+      timeoutMs: 120_000,
+    });
+    expect(res.exitCode).toBe(0);
+    const report = Report.parse(JSON.parse(res.stdout));
+    expect(report.bundle.deltaBytes).toBeLessThanOrEqual(BUDGET.bundleBytes);
+    expect(report.bundle.writesDeltaBytes).toBeLessThanOrEqual(BUDGET.writesBundleBytes);
+    expect(report.bundle.togetherDeltaBytes).toBeLessThanOrEqual(BUDGET.togetherBundleBytes);
+    expect(report.bundle.togetherDeltaBytes).toBeGreaterThan(report.bundle.writesDeltaBytes);
+    expect(JSON.parse(report.probeOutput)).toMatchObject({ push: "yes", destination: "feat/x" });
+    expect(report.parse.commands).toBe(fixtureCommands().length);
+    expect(report.coldStart.runs).toBe(3);
+    const markdown = readFileSync(summary, "utf8");
+    expect(markdown).toContain(`+${report.coldStart.deltaP50.toFixed(2)} ms`);
+    expect(markdown).toContain("Cold-start p50 delta");
+    expect(markdown).toContain("Parse and walk p99");
+    expect(markdown).toContain("hard everywhere");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test.concurrent("the size budgets are the product owner's numbers", () => {
@@ -89,7 +110,7 @@ test.concurrent("overBudget names every budget a report exceeds", () => {
     parse: { commands: 235, samples: 4700, p50Us: 3, p99Us: 40, maxUs: 900 },
     probeOutput: "{}",
   };
-  expect(overBudget(within)).toEqual([]);
+  expect(overBudget(within, false)).toEqual([]);
   const over = {
     ...within,
     bundle: {
@@ -101,13 +122,28 @@ test.concurrent("overBudget names every budget a report exceeds", () => {
     coldStart: { ...within.coldStart, deltaP50: 5.5 },
     parse: { ...within.parse, p99Us: 120 },
   };
-  expect(overBudget(over).map((problem) => problem.split(" ")[0])).toEqual([
+  expect(overBudget(over, true).map((problem) => problem.split(" ")[0])).toEqual([
     "bundle",
     "writes",
     "together",
     "cold",
     "parse",
   ]);
+  expect(overBudget(over)).toContain("cold start +5.50 ms > 5 ms");
+  expect(overBudget(over, false).map((problem) => problem.split(" ")[0])).toEqual([
+    "bundle",
+    "writes",
+    "together",
+    "parse",
+  ]);
+});
+
+test.concurrent("cold-start is hard on Apple Silicon macOS or with an explicit override", () => {
+  expect(coldStartIsHard({ platform: "darwin", arch: "arm64" }, undefined)).toBe(true);
+  expect(coldStartIsHard({ platform: "darwin", arch: "x64" }, undefined)).toBe(false);
+  expect(coldStartIsHard({ platform: "linux", arch: "x64" }, undefined)).toBe(false);
+  expect(coldStartIsHard({ platform: "linux", arch: "arm64" }, "0")).toBe(false);
+  expect(coldStartIsHard({ platform: "linux", arch: "x64" }, "1")).toBe(true);
 });
 
 test.concurrent("unknown options and bad counts are rejected", async () => {

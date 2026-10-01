@@ -10,10 +10,10 @@ This file is the source of truth. Codex, Cursor, and Claude Code read it directl
 
 ## Tech stack
 
-- **bash** — hooks, gates, registry. `set -euo pipefail`, shellcheck-clean.
-- **bats** — colocated `__tests__/`. `bash tooling/bats-run.sh` runs `plugins`, `tooling`, `packages`, and `tools` (files in parallel, tests in a file serial). `bun run test:shell:serial` is the serial path.
+- **bash** — remaining legacy scripts until #279. Keep them shellcheck-clean with `set -euo pipefail`.
+- **bats** — remaining legacy suites until #279, colocated in `__tests__/`. `bun run test:shell` runs `plugins`, `tooling`, `packages`, and `tools` (files in parallel, tests in a file serial). `bun run test:shell:serial` is the serial path.
 - **bun test** — TypeScript suites in colocated `__tests__/*.test.ts` spawn real bundles, scripts and repos through `@toolu/conformance/harness/*`: files in parallel, tests concurrent, each test owns its sandbox. See `docs/testing.md`.
-- **Bun** — the runtime for every host and plugin (1.4.x prerequisite; see `docs/runtime.md`). `bun.lock`. `bun run test` is `lint:shell`, then `test:context-budget`, then `test:shell`.
+- **Bun** — the runtime for every host and plugin (1.4.x prerequisite; see `docs/runtime.md`). `bun.lock`. `bun run test` runs the TypeScript gate, including bundle drift, context budget, deterministic benchmarks, and the shell-analysis latency budget. Run `bun run lint:shell` and `bun run test:shell` for legacy files until #279 removes them; CI runs both as required checks.
 - **`toolu` CLI** — `tools/toolu-cli`, a Node bundle published to npm as `@toolu/plugins` from its `npm/` folder; the workspace itself is private, so npx never mistakes it for the published package. Installs plugins across hosts by shelling out to each host's own plugin CLI. See `docs/cli.md`.
 - **shellcheck** — `bun run lint:shell` lints standalone scripts and each `hooks/concerns/` directory as the assembled module.
 
@@ -51,7 +51,7 @@ Any Conventional Commit on `main` counts, any path. `feat` / `fix` / `feat!` bum
 
 | Workflow | When | What |
 |----------|------|------|
-| `tests.yml` | push/PR to `main`, or a manual run. Skipped when the diff is only release version files and `CHANGELOG.md` | shellcheck, bats, colocated-test layout, deterministic benchmarks, context budget |
+| `tests.yml` | push/PR to `main`, or a manual run. Skipped when the diff is only release version files and `CHANGELOG.md`; bundle-only changes still run | `typescript`: format, lint, typecheck, guardrails, unit, conformance, bundle/launcher drift, context and latency budgets, deterministic benchmarks; `shellcheck` and `bats (plugins)` remain functional until #279 |
 | `release-please.yml` | push to `main` | Release PR; on merge, tag and GitHub Release |
 | `toolu-review.yml` | PR opened/synchronize, except a release-version-and-changelog-only diff | `falconiere/toolu-ghactions/code-review@v8` (Jev on: `JEV_ENABLED` + `JEV_MODEL_ID: typesafe/jev-1.13`) |
 
@@ -96,9 +96,9 @@ A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context b
 ## Contributing
 
 1. Match an existing skill, agent, command, or hook.
-2. Colocate `__tests__/*.bats`. No mocks.
+2. Colocate `__tests__/*.test.ts` for Bun tests; retain colocated `__tests__/*.bats` for legacy code until #279. No mocks.
 3. Verify in a real session, then commit with `feat(scope):` or `fix(scope):`.
-4. `bun run test` before pushing.
+4. `bun run test`, `bun run lint:shell`, and `bun run test:shell` before pushing while legacy files remain.
 
 - Skill: `plugins/<name>/skills/<skill>/SKILL.md`
 - Quality rule: `plugins/<quality>/hooks/src/rules/` plus a colocated `bun test` case.

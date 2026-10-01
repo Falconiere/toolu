@@ -51,10 +51,11 @@ This repo is a **library/plugin Bun workspace**, not a Workers/web app. Upstream
 | `bun run guardrails` | `tooling/src/guardrails/run.ts` (TypeScript port of the upstream `run.sh`) |
 | `bun run knip` | dead code |
 | `bun run jscpd` | duplication |
-| `bun run test:unit` | `bun test` in `packages/` + `tools/` |
+| `bun run test:unit` | `bun test` in `tooling/`, `packages/`, `tools/`, and `plugins/` |
 | `bun run test:workspace` | Bun 1.4.x pin + export smoke |
-| `bun run test:conventions` | format/lint/tsc/guardrails/knip/jscpd + conventions bats |
-| `bun run test:ts` | conventions + unit + workspace (CI `typescript` job) |
+| `bun run test:conventions` | format/lint/tsc/guardrails/knip/jscpd + Bun convention tests |
+| `bun run test:ts` | complete Bun gate: conventions, unit, portable-core, gate coverage, bundle/launcher drift, workspace/package, conformance, context budget, deterministic benchmarks, and shell-analysis latency budget (CI `typescript` job) |
+| `bun run test` | delegates to `test:ts` |
 
 `bun install --frozen-lockfile` is required before these scripts in CI and locally after dependency changes. Missing required workspace config or tooling is an error, not a successful skip.
 
@@ -62,10 +63,10 @@ This repo is a **library/plugin Bun workspace**, not a Workers/web app. Upstream
 
 ```bash
 bun install --frozen-lockfile
-bun run test:ts
+bun run test
 ```
 
-CI job `typescript` in `.github/workflows/tests.yml` runs the same gate on every non-release-only PR/push, independent of the shellcheck/bats jobs.
+CI job `typescript` in `.github/workflows/tests.yml` runs the same gate on every non-release-only PR/push. Until #279 removes the remaining legacy files, `shellcheck` and `bats (plugins)` remain functional required checks; run `bun run lint:shell` and `bun run test:shell` locally too. Bun parity tests still use some legacy binaries, which CI installs for the TypeScript job.
 
 ## Related contracts
 
