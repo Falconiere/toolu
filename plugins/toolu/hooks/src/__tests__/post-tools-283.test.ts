@@ -90,7 +90,7 @@ for (const [id, command] of Object.entries(PUSHES)) {
   test.concurrent(`${id}: ${command} promotes the pending waiver`, async () => {
     if (PROMOTE === undefined) throw new Error("no push-waiver corpus case");
     using sb = createSandbox({ git: true });
-    await preparePost(sb, "claude", PROMOTE);
+    preparePost(sb, "claude", PROMOTE);
     const [bash, bundle] = await sides(sb, [[command, 0]]);
     expect(bundle.state[WAIVER]).toBeDefined();
     // Known-wrong bash baseline, #283 item 8: is_git_push missed this push, so the

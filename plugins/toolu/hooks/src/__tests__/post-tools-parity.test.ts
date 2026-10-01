@@ -3,8 +3,8 @@
  * as Codex deliver it, gives byte-identical stdout, the same exit code and the
  * same project state (gate file, waivers, telemetry) from `bash
  * post-tools/mod.sh` and from the committed bundle behind its launcher, both
- * started from the same sandbox. The language-quality modules registered by
- * their real `register.sh` run through the bundle on bash.
+ * started from the same sandbox. Registry `.sh` fixture modules run through
+ * the bundle on bash.
  */
 import { expect, test } from "bun:test";
 import { isJsonObject } from "@toolu/core/config";
@@ -61,7 +61,7 @@ for (const c of POSTTOOL_CORPUS) {
   for (const host of HOSTS) {
     test.concurrent(`${c.name} [${host}]`, async () => {
       using sb = createSandbox({ git: true });
-      await preparePost(sb, host, c);
+      preparePost(sb, host, c);
       const call = { cwd: sb.project, env: pretoolEnv(sb, host), stdin: postStdin(sb, host, c) };
       const [bash, bundle] = await fromSameState(
         sb,

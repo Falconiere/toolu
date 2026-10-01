@@ -104,38 +104,49 @@ write_module() {
   echo "$output" | jq -e '.decision == "block" and (.reason | contains("parse apply_patch"))' >/dev/null
 }
 
-@test "post-tools entrypoint runs Rust concerns for every Codex patch path and clears deletions" {
-  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
-  # ts-quality (#265) and python-quality (#266) are TypeScript registry
-  # modules, which bash mod.sh cannot run; rust-quality still ships bash.
+@test "post-tools entrypoint runs a registry module for every Codex patch path and clears deletions" {
+  # The language-quality plugins are TypeScript registry modules (#265 to
+  # #267), which bash mod.sh cannot run; this module keeps a path's gate entry
+  # the way their bash modules did.
   project="$TMP/project"
   codex_home="$TMP/codex"
-  mkdir -p "$project/src" "$codex_home/toolu"
+  mkdir -p "$project/src" "$codex_home/toolu/post-tools.d"
   git -C "$project" init -q
-  printf '%s\n' '[package]' 'name="fixture"' 'version="0.1.0"' > "$project/Cargo.toml"
-  git -C "$project" add Cargo.toml
-  git -C "$project" -c user.email=t@t -c user.name=t commit -qm setup
-  printf '#[allow(dead_code)]\nfn bad() {}\n' > "$project/src/bad.rs"
-  printf '#[allow(unused)]\nfn worse() {}\n' > "$project/src/worse.rs"
+  git -C "$project" -c user.email=t@t -c user.name=t commit -q --allow-empty -m setup
+  printf 'bad\n' > "$project/src/bad.txt"
+  printf 'worse\n' > "$project/src/worse.txt"
 
-  env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$codex_home" \
-    bash "$REPO_ROOT/../rust-quality/hooks/register.sh" </dev/null
-  printf '%s\n' '{"version":1,"status":"ready","plugins":["rust-quality@toolu"]}' \
+  module="$codex_home/toolu/post-tools.d/fixture@toolu__gate.sh"
+  cat > "$module" <<'MODULE'
+#!/usr/bin/env bash
+. "$TOOLU_LIB_DIR/detect.sh"
+. "$TOOLU_LIB_DIR/gate-file.sh"
+file=$(jq -r '.tool_input.file_path // empty' <<<"$input")
+gate="$(toolu_project_state_root "$PROJECT_ROOT")/quality-gate-status.json"
+if [ "${TOOLU_EDIT_OPERATION:-}" = delete ]; then
+  gate_clear_file "$gate" "$file" fixture-hook
+  exit 0
+fi
+mkdir -p "${gate%/*}"
+gate_record_failure "$gate" "$file" fixture-hook "fixture violation" "fixture violation in $file"
+jq -n --arg f "$file" '{hookSpecificOutput:{hookEventName:"PostToolUse",additionalContext:("fixture violation in " + $f)}}'
+MODULE
+  chmod +x "$module"
+  printf '%s\n' '{"version":1,"status":"ready","plugins":["fixture@toolu"]}' \
     > "$codex_home/toolu/codex-plugins.json"
 
-  patch=$'*** Begin Patch\n*** Update File: src/bad.rs\n@@\n-a\n+b\n*** Update File: src/worse.rs\n@@\n-a\n+b\n*** End Patch'
+  patch=$'*** Begin Patch\n*** Update File: src/bad.txt\n@@\n-a\n+b\n*** Update File: src/worse.txt\n@@\n-a\n+b\n*** End Patch'
   payload=$(jq -cn --arg command "$patch" '{tool_name:"apply_patch",tool_input:{command:$command},tool_response:"Done"}')
   run bash -c 'cd "$1" && env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$2" TOOLU_PROJECT_DIR="$1" bash "$3" <<<"$4"' \
     _ "$project" "$codex_home" "$REPO_ROOT/hooks/post-tools/mod.sh" "$payload"
   [ "$status" -eq 0 ]
-  echo "$output" | grep -q 'src/bad.rs'
-  echo "$output" | grep -q 'src/worse.rs'
-  echo "$output" | grep -q 'Forbidden lint suppression'
+  echo "$output" | grep -q 'fixture violation in src/bad.txt'
+  echo "$output" | grep -q 'fixture violation in src/worse.txt'
   gate="$project/.codex/tmp/quality-gate-status.json"
-  jq -e '.status == "failing" and (.entries["src/bad.rs"] != null) and (.entries["src/worse.rs"] != null)' "$gate" >/dev/null
+  jq -e '.status == "failing" and (.entries["src/bad.txt"] != null) and (.entries["src/worse.txt"] != null)' "$gate" >/dev/null
 
-  rm "$project/src/bad.rs" "$project/src/worse.rs"
-  delete_patch=$'*** Begin Patch\n*** Delete File: src/bad.rs\n*** Delete File: src/worse.rs\n*** End Patch'
+  rm "$project/src/bad.txt" "$project/src/worse.txt"
+  delete_patch=$'*** Begin Patch\n*** Delete File: src/bad.txt\n*** Delete File: src/worse.txt\n*** End Patch'
   delete_payload=$(jq -cn --arg command "$delete_patch" '{tool_name:"apply_patch",tool_input:{command:$command},tool_response:"Done"}')
   run bash -c 'cd "$1" && env TOOLU_HOST_OVERRIDE=codex CODEX_HOME="$2" TOOLU_PROJECT_DIR="$1" bash "$3" <<<"$4"' \
     _ "$project" "$codex_home" "$REPO_ROOT/hooks/post-tools/mod.sh" "$delete_payload"

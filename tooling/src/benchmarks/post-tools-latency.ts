@@ -26,7 +26,7 @@ const SLICE = [
   "gate-status: first passing quality command",
   "plain command is silent",
   "push-waiver: a successful push promotes the waiver",
-  "multi-path patch through rust-quality",
+  "registry: a multi-path patch records a gate entry per path",
 ];
 
 type Runner = typeof runPostModSh;
@@ -43,7 +43,7 @@ async function row(name: string, runs: number): Promise<Row> {
     [runPostModSh, bashBox, []],
     [runPostBundle, bundleBox, []],
   ];
-  await Promise.all(sides.map(([, sb]) => preparePost(sb, "claude", c)));
+  for (const [, sb] of sides) preparePost(sb, "claude", c);
   const calls = sides.map(([runner, sb]) => {
     const call = {
       cwd: sb.project,

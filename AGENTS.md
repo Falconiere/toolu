@@ -26,8 +26,8 @@ plugins/<name>/
   .claude-plugin/plugin.json   # name, version, description, dependencies
   README.md                    # tooling/templates/plugin-README.md
   hooks/hooks.json             # Claude Code event routing
-  hooks/register.sh            # SessionStart: sync modules into the registry
-  hooks/concerns/              # NN-description.sh fragments, assembled at SessionStart
+  hooks/src/register.ts        # SessionStart: publish registry modules (hooks/dist/*.js)
+  hooks/src/rules/             # a quality plugin's rules, run by its registry module
   hooks/<event>.d/             # standalone (pre-tools.d, post-tools.d, session-start.d)
   hooks/__tests__/             # colocated bats
   skills/<skill>/SKILL.md
@@ -69,7 +69,7 @@ A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context b
 | `plugins/toolu/hooks/lib/detect.sh` | Line counts, tool availability, `is_git_push`, `push_target_root`, `push_target_branch`; TypeScript port in `@toolu/core/detect` |
 | `plugins/pr-babysit/scripts/babysit-tick.sh` | Babysit tick. Writes go through `reply-thread.sh`, `resolve-thread.sh`, `record.sh` |
 | `plugins/pr-babysit/scripts/dispatch-fix.sh` | Babysit fixers: `route-fix.sh` Jev-routes Fix items to claude/codex/cursor; this runs them in a herdr worktree |
-| `plugins/*/hooks/register.sh` | SessionStart registry sync |
+| `plugins/*/hooks/src/register.ts` | SessionStart registry sync |
 | `plugins/*/hooks/hooks.json` | Claude Code hook routing |
 | `tools/toolu-cli/src/cli.ts` | CLI entry (`npx @toolu/plugins install`, or `toolu install` once installed): parses argv, resolves the host, dispatches a verb |
 | `tools/toolu-cli/src/plugins/install.ts` | Dependency-ordered install; core failure stops dependents, others continue |
@@ -101,8 +101,8 @@ A `.bats` file outside `__tests__/` fails CI. Benchmarks are hermetic. Context b
 4. `bun run test` before pushing.
 
 - Skill: `plugins/<name>/skills/<skill>/SKILL.md`
-- Concern: `plugins/<quality>/hooks/concerns/NN-concern.sh` plus a bats test. `NN` is assembly order.
-- Hook module: `plugins/<plugin>/hooks/<event>.d/module.sh` and `register.sh`
+- Quality rule: `plugins/<quality>/hooks/src/rules/` plus a colocated `bun test` case.
+- Hook module: a `defineRegistryModule` entry in `plugins/<plugin>/hooks/src/`, listed in its `hooks/src/register.ts`
 - TypeScript hook: `plugins/<name>/hooks/src/<entry>.ts` (a top-level file is an entry; helpers go in subdirectories). `bun run build:plugins` writes the self-contained `hooks/dist/<entry>.js`; commit both. Wire it in `hooks.json` with the generated launcher (`bun run tooling/src/check-hooks-json.ts --print <plugin> <Event> <entry>`), never a hand-written `bun` call; `bun run check:hooks-json` gates it. `bun run check:plugin-bundles` (in `test:ts`) fails when a bundle drifts from its source, is missing, or is orphaned. Build with the pinned Bun (CI: 1.4.2).
 - Skill CLI: an entry starting `#!/usr/bin/env bun` builds to an executable bundle (the drift check covers the exec bit) that a SessionStart hook symlinks to a stable path, e.g. `hooks/src/search.ts` for exa-search and context7. HTTP goes through `@toolu/core/rest`; tests run the bundle against `@toolu/conformance/https-fixture`, a loopback HTTPS server reached through `HTTPS_PROXY`.
 - Plugin: `plugins/<name>/.claude-plugin/plugin.json` and a README from `tooling/templates/plugin-README.md`

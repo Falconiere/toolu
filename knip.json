@@ -11,6 +11,7 @@
         "src/benchmarks/pre-tools-latency.ts",
         "src/benchmarks/post-tools-latency.ts",
         "src/benchmarks/python-quality-latency.ts",
+        "src/benchmarks/rust-quality-latency.ts",
         "src/benchmarks/ts-quality-latency.ts",
         "src/codex-smoke.ts",
         "src/probe-ask.ts",

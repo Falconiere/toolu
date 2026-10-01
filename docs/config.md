@@ -264,18 +264,16 @@ advisory wording. Resolver: `plugins/toolu/hooks/lib/quality-config.sh`.
 — blocking) control the mechanical no-mock-test concerns:
 `ts-quality/hooks/src/rules/ast-rules.ts`
 (TS/TSX test files — `jest.mock`/`vi.mock`/`jest.fn`/`vi.fn`/`sinon.*` calls and
-`ts-mockito` imports), `rust-quality/hooks/concerns/70-no-mocks.sh` (`src/`
+`ts-mockito` imports), `rust-quality/hooks/src/rules/ast-rules.ts` (`src/`
 mock *definitions* — `#[automock]`, `#[cfg_attr(..., automock)]`, `mock! {...}`
 — and `tests/`/`*_test.rs`/`*_tests.rs` mock *imports* — `mockall::`/`faux::`),
 and `python-quality/hooks/src/rules/no-mocks.ts` (Python test files —
 `unittest.mock`/`mock`/`pytest_mock` imports, which cover `MagicMock`, and
 `mocker`/`monkeypatch` fixture parameters).
-Both reuse the `ast-grep scan --inline-rules` pattern from
-`60-error-handling.sh`; a real ast-grep failure (non-zero exit or unparseable
-JSON) is reported as a gate error, never a silent pass. Set to `false` to
-opt out — read via the boolean `quality_flag` reader in
-`plugins/toolu/hooks/lib/quality-config.sh` (`_qc_project_override` cannot
-carry a boolean, hence the separate reader).
+All three run one `ast-grep scan --inline-rules`; a real ast-grep failure
+(non-zero exit or unparseable JSON) is reported as a gate error, never a
+silent pass. Set to `false` to opt out — read via `qualityFlag` in
+`@toolu/core/config`.
 
 ### Model routing (`models`)
 
