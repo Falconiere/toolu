@@ -4,7 +4,8 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { selectPluginsByEnabledNames } from "../src/select/resolve.ts";
-import { DEFAULT_ENABLED, GENERATED_SEGMENT } from "./lib/constants.ts";
+import { listPluginManifests } from "../src/inventory/scan.ts";
+import { GENERATED_SEGMENT } from "./lib/constants.ts";
 import { planSurface, readTree, treesEqual, writeSurface } from "./lib/emit.ts";
 
 const CliSchema = z.object({
@@ -50,17 +51,18 @@ function parseArgs(argv: string[]): z.infer<typeof CliSchema> {
 export function runGenerateSurface(argv: string[] = process.argv.slice(2)): number {
   const cli = parseArgs(argv);
   const repoRoot = resolve(cli.repoRoot ?? defaultRepoRoot());
-  const enabled = cli.enabled ?? [...DEFAULT_ENABLED];
   const outDir = resolve(cli.outDir ?? join(repoRoot, GENERATED_SEGMENT));
   const pluginsRoot = join(repoRoot, "plugins");
 
-  const selected = selectPluginsByEnabledNames(pluginsRoot, enabled);
-  if (!selected.ok) {
-    console.error(selected.reason);
+  const plugins = cli.enabled
+    ? selectPluginsByEnabledNames(pluginsRoot, cli.enabled)
+    : { ok: true as const, plugins: listPluginManifests(pluginsRoot) };
+  if (!plugins.ok || !plugins.plugins) {
+    console.error(plugins.ok ? `cannot read plugins root: ${pluginsRoot}` : plugins.reason);
     return 1;
   }
 
-  const plan = planSurface({ repoRoot, outDir, plugins: selected.plugins });
+  const plan = planSurface({ repoRoot, outDir, plugins: plugins.plugins });
 
   if (cli.check) {
     if (!existsSync(outDir)) {

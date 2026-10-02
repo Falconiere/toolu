@@ -1,9 +1,14 @@
 /** Write generated OpenCode surface tree (#206). */
 import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import type { PluginManifest } from "../../src/inventory/types.ts";
-import { GENERATED_SEGMENT, TOOLU_PLUGIN_ROOT } from "./constants.ts";
-import { buildSurfaceForPlugin, planSkillResources } from "./scan-surface.ts";
+import { EXCLUDED_SURFACES, GENERATED_SEGMENT, TOOLU_PLUGIN_ROOT } from "./constants.ts";
+import {
+  buildSurfaceForPlugin,
+  collectSurfaceSources,
+  planSkillResources,
+} from "./scan-surface.ts";
+import { assignSurfaceIds, candidateKey, type ArtifactCandidate } from "./ids.ts";
 
 export type GenerateSurfaceOptions = {
   repoRoot: string;
@@ -16,6 +21,9 @@ export type GeneratedCatalog = {
   surfaceRoot: string;
   plugins: Array<{
     name: string;
+    classification: "generated" | "no-surface";
+    reason?: string;
+    excluded?: Array<{ source: string; reason: string; owner: string }>;
     skills: Array<{ id: string; path: string; source: string }>;
     agents: Array<{ id: string; path: string; source: string }>;
     commands: Array<{ id: string; path: string; source: string }>;
@@ -31,7 +39,7 @@ export type GenerateSurfaceResult = {
 function catalogHeader(): Record<string, string> {
   return {
     $comment:
-      "OpenCode toolu surface catalog. version=1; surfaceRoot=repo-relative; plugins[].skills|agents|commands[]={id,path,source}; path is relative to surfaceRoot.",
+      "OpenCode surface catalog. version=1; surfaceRoot=repo-relative; every plugin is classified; skills|agents|commands[]={id,path,source}; path is relative to surfaceRoot.",
   };
 }
 
@@ -46,13 +54,85 @@ export function planSurface(options: GenerateSurfaceOptions): GenerateSurfaceRes
   const catalogPlugins: GeneratedCatalog["plugins"] = [];
 
   let totalRewrites = 0;
+  let explicitRewrites = 0;
+  let sourcePathRewrites = 0;
+  let claudeConfigRewrites = 0;
   const dotClaude = new Set<string>();
   const stripped = new Set<string>();
 
+  const sourceEntries = plugins.flatMap((manifest) =>
+    collectSurfaceSources(manifest.pluginDir).map((source) => ({ manifest, source })),
+  );
+  const candidates: ArtifactCandidate[] = sourceEntries.map(({ manifest, source }) => ({
+    kind: source.kind,
+    plugin: manifest.name,
+    localId: source.localId,
+  }));
+  const idMap = assignSurfaceIds(candidates);
+  const invocations = new Map<string, string>();
+  const paths = new Map<string, string>();
+  for (const candidate of [...candidates].sort((a, b) =>
+    a.kind === b.kind ? 0 : a.kind === "skill" ? -1 : 1,
+  )) {
+    const reference = `${candidate.plugin}:${candidate.localId}`;
+    const id = idMap.get(candidateKey(candidate));
+    if (id && !invocations.has(reference)) invocations.set(reference, id);
+  }
+  for (const { manifest, source } of sourceEntries) {
+    const id = idMap.get(
+      candidateKey({
+        kind: source.kind,
+        plugin: manifest.name,
+        localId: source.localId,
+      }),
+    );
+    if (!id) throw new Error(`missing id for ${source.path}`);
+    const sourcePath = relative(repoRoot, source.path).split("\\").join("/");
+    const generatedPath =
+      source.kind === "skill"
+        ? `generated/skills/${id}/SKILL.md`
+        : `generated/${source.kind}s/${id}.md`;
+    paths.set(sourcePath, `${TOOLU_PLUGIN_ROOT}/${generatedPath}`);
+    if (source.kind === "skill") {
+      const sourceDir = `plugins/${manifest.name}/skills/${basename(dirname(source.path))}/`;
+      paths.set(sourceDir, `${TOOLU_PLUGIN_ROOT}/generated/skills/${id}/`);
+    }
+  }
+  const references = { invocations, paths };
+
+  const artifactsByPlugin = new Map(
+    plugins.map((manifest) => [
+      manifest.name,
+      buildSurfaceForPlugin(manifest, repoRoot, idMap, references),
+    ]),
+  );
+  const sourceToGenerated = new Map<string, string>();
+  for (const artifacts of artifactsByPlugin.values()) {
+    for (const artifact of artifacts) {
+      const path =
+        artifact.kind === "skill"
+          ? join(outDir, "skills", artifact.surfaceId, "SKILL.md")
+          : join(
+              outDir,
+              artifact.kind === "agent" ? "agents" : "commands",
+              `${artifact.surfaceId}.md`,
+            );
+      sourceToGenerated.set(artifact.sourcePath, path);
+    }
+  }
+  const processedResources = new Set<string>();
+
   for (const manifest of plugins) {
-    const artifacts = buildSurfaceForPlugin(manifest, repoRoot);
+    const artifacts = artifactsByPlugin.get(manifest.name) ?? [];
     const entry: GeneratedCatalog["plugins"][number] = {
       name: manifest.name,
+      classification: artifacts.length ? "generated" : "no-surface",
+      ...(artifacts.length
+        ? {}
+        : { reason: "Plugin provides hooks only; no skill, agent, or command source." }),
+      excluded: Object.entries(EXCLUDED_SURFACES)
+        .filter(([path]) => path.startsWith(`${manifest.name}/`))
+        .map(([path, details]) => ({ source: `plugins/${path}`, ...details })),
       skills: [],
       agents: [],
       commands: [],
@@ -60,6 +140,9 @@ export function planSurface(options: GenerateSurfaceOptions): GenerateSurfaceRes
 
     for (const artifact of artifacts) {
       totalRewrites += artifact.rewriteNotes.claudePluginRootRewrites;
+      explicitRewrites += artifact.rewriteNotes.explicitReferenceRewrites;
+      sourcePathRewrites += artifact.rewriteNotes.sourcePathRewrites;
+      claudeConfigRewrites += artifact.rewriteNotes.claudeConfigRewrites;
       for (const line of artifact.rewriteNotes.dotClaudeRefs) {
         dotClaude.add(line);
       }
@@ -78,7 +161,15 @@ export function planSurface(options: GenerateSurfaceOptions): GenerateSurfaceRes
         const skillFile = join(skillDir, "SKILL.md");
         ref.path = relativeOut(skillFile, outDir);
         files.set(skillFile, artifact.content);
-        planSkillResources(artifact, skillDir, files);
+        planSkillResources(
+          artifact,
+          skillDir,
+          outDir,
+          repoRoot,
+          sourceToGenerated,
+          processedResources,
+          files,
+        );
         entry.skills.push(ref);
       } else if (artifact.kind === "agent") {
         const agentFile = join(outDir, "agents", `${artifact.surfaceId}.md`);
@@ -106,10 +197,30 @@ export function planSurface(options: GenerateSurfaceOptions): GenerateSurfaceRes
     "",
     "Do not edit by hand. Regenerate with `bun run generate:opencode-surface`.",
     "",
+    `The catalog covers all ${catalogPlugins.length} plugin manifests. Runtime installation and enabled-plugin selection are handled separately by OP-11.`,
+    "",
+    "## Catalog coverage",
+    "",
+    ...catalogPlugins.map(
+      (plugin) =>
+        `- \`${plugin.name}\`: ${plugin.classification}; ${plugin.skills.length} skill(s), ${plugin.agents.length} agent(s), ${plugin.commands.length} command(s)${plugin.reason ? ` — ${plugin.reason}` : ""}`,
+    ),
+    "",
+    "## Excluded host-specific surfaces",
+    "",
+    ...catalogPlugins.flatMap((plugin) =>
+      (plugin.excluded ?? []).map(
+        (item) => `- \`${item.source}\`: ${item.reason} Owner: ${item.owner}.`,
+      ),
+    ),
+    "",
     "## Path rewrites",
     "",
-    `- \`${TOOLU_PLUGIN_ROOT}\` replaces Claude \`\${CLAUDE_PLUGIN_ROOT}\` (${totalRewrites} substitution(s) in phase-1 \`toolu\` set).`,
-    "- Bootstrap must set `TOOLU_PLUGIN_ROOT` to the installed plugin directory (workflows, hooks).",
+    `- Claude plugin-root tokens → \`${TOOLU_PLUGIN_ROOT}\`: ${totalRewrites}.`,
+    `- Claude config-root tokens → OpenCode config root: ${claudeConfigRewrites}.`,
+    `- Typed source paths → generated paths: ${sourcePathRewrites}.`,
+    `- Explicit skill invocations → generated skill IDs: ${explicitRewrites}.`,
+    "- The OpenCode adapter must set `TOOLU_PLUGIN_ROOT` to the installed `@toolu/opencode` package root.",
     "",
     "## Stripped frontmatter",
     "",

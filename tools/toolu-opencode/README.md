@@ -4,6 +4,12 @@ The [toolu](https://github.com/Falconiere/toolu) adapter for [OpenCode](https://
 
 This release targets the superseded OpenCode V2 plugin API. The documented plugin API (`opencode-ai@1.18.34`, `@opencode-ai/plugin@1.18.34`) is pinned in [docs/opencode-host-contract.md](https://github.com/Falconiere/toolu/blob/main/docs/opencode-host-contract.md), and [#336](https://github.com/Falconiere/toolu/issues/336) moves this adapter onto it.
 
+## Generated OpenCode surface
+
+`bun run generate:opencode-surface` builds `generated/` from all 16 plugin manifests. The catalog records 18 skills, five subagents, four commands, three plugins with no Markdown surface, and the Claude-only statusline setup command excluded for [OP-25](https://github.com/Falconiere/toolu/issues/359). `bun run check:opencode-surface` detects drift. `bun run probe:opencode-surface` loads the generated Markdown in an isolated pinned OpenCode 1.18.34 profile and checks discovery and parsed agent/command configuration.
+
+Skill names are unique, at most 64 characters, and use lowercase letters, digits, and single hyphens. The generator preserves YAML metadata and agent permissions, maps Claude tool lists to restrictive OpenCode permissions, and lets agents inherit the configured host model instead of emitting Claude model aliases. Local linked resources are copied into `generated/`; known skill references and source paths point to generated IDs and files. The generated catalog is package content. Native installation and enabled-plugin selection are handled by [OP-11](https://github.com/Falconiere/toolu/issues/345).
+
 ## Install
 
 ```bash

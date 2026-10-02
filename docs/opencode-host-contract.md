@@ -137,6 +137,8 @@ Recorded 2026-10-02 on `opencode-ai@1.18.34` (linux-x64, Bun 1.4.2); the host pr
 
 The matrix covers all 16 catalog plugins across nine axes. Each needed axis has an owner work package. `check:opencode-host` derives the minimum axes from each plugin's own manifests (`hooks/hooks.json` events and matchers, `hooks/src/register.ts` registry modules), checks surface counts against `skills/`, `commands/` and `agents/`, and requires every status to agree with the probe verdicts it cites. Source: `tools/toolu-opencode/contract/capability-matrix.json`.
 
+The matrix counts source Markdown. The generated OpenCode catalog excludes the Claude-only statusline setup command with an explicit OP-25 owner; `bun run probe:opencode-surface` separately proves the generated 18 skills, five agents and four commands load on this pinned host.
+
 <!-- opencode-host-matrix:start -->
 ✅ supported · 🟡 partial · ❌ unsupported · — not needed · 🔒 enforcement (decides whether a tool call runs)
 

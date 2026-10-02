@@ -1,0 +1,54 @@
+{
+  "skill_name": "epic-orchestrator",
+  "evals": [
+    {
+      "id": 0,
+      "name": "epic-248-dry-run-plan",
+      "prompt": "i want to start pushing the realtime replication epic to done \u2014 https://github.com/Falconiere/comemory/issues/248. before anything gets launched, give me a dry run: which sub-issues can run in parallel right now, what's blocked on what, what order the rest will go in, and the exact herdr worktree/agent commands you'd run for the first batch. don't create any worktrees, agents, branches or PRs yet.",
+      "expected_output": "Ready now: comemory#255, comemory#254, comemory.io#183 (255 first: unblocks 5). Blocked: 256(254,255), 257(255), 258(257), comemory.io#184(183), comemory.io#185(183,184,254,255,257), homebrew-tap#1(257,258). 5/14 done. Per-issue herdr worktree create from fresh origin/main + herdr agent start --kind claude + brief with spec->spec-review->plan->plan-review->execution->PR->babysit. homebrew-tap needs a clone. Nothing mutated.",
+      "files": [],
+      "assertions": [
+        "Ready-now set is exactly comemory#254, comemory#255 and comemory.io#183",
+        "Every blocked issue is listed with its open blockers (256<-254,255; 257<-255; 258<-257; comemory.io#184<-183; comemory.io#185<-183,184,254,255,257; homebrew-tap#1<-257,258)",
+        "Reports that 5 of 14 sub-issues (249-253) are already closed",
+        "Gives an order for the rest: 256/257/comemory.io#184 next, then 258/comemory.io#185, then homebrew-tap#1",
+        "First-batch commands create one herdr worktree per issue (herdr worktree create) based on a freshly fetched origin/main",
+        "First-batch commands start a Claude agent in each worktree (herdr agent start ... --kind claude)",
+        "Describes the per-issue pipeline spec -> spec-review -> plan -> plan-review -> execution+tests -> PR -> pr-babysit",
+        "Flags that Falconiere/homebrew-tap has no local checkout and must be cloned",
+        "Made no mutations (no new herdr workspaces, worktrees or branches; no GitHub writes)"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "epic-248-two-slots-priority",
+      "prompt": "Plan-only for Falconiere/comemory#248: I only want 2 agents running at once. Which two sub-issues go first and why those two? Also walk me through exactly what happens when the first PR is ready \u2014 rebase, CI, merge, --admin, closing the issue, all of it. Don't launch anything.",
+      "expected_output": "First two: comemory#255 (critical path, unblocks 256/257/258/185/tap#1) plus one of comemory#254 / comemory.io#183 (each unblocks 2). Merge flow: gate checks behind_by==0 / checks green / 0 unresolved threads; behind -> worker rebases + force-with-lease + babysit again; merge squash pinned to head SHA; --admin only when protection (required review) is the only blocker, never over failing CI; issue closed + epic checklist ticked; worktree cleaned; newly unblocked issues launched.",
+      "files": [],
+      "assertions": [
+        "Picks comemory#255 as one of the first two issues",
+        "Justifies #255 by the downstream work it unblocks (257 -> 258 -> homebrew-tap#1 critical path, plus 256/185)",
+        "Second pick is comemory#254 or comemory.io#183, with a stated reason",
+        "Plans exactly two concurrent agents for the first batch (respects the cap of 2)",
+        "Merge flow rebases the PR onto the latest main before merging and waits for CI to go green again after the rebase",
+        "States --admin is used only when branch protection (e.g. the required approving review) is the sole blocker, never to bypass failing or pending checks",
+        "Explains sub-issue closure (Closes keyword or explicit close) and updating the epic's tracking",
+        "Describes cleanup (worktree/agent teardown) and launching the next unblocked issue into the freed slot",
+        "Made no mutations (no new herdr workspaces, worktrees or branches; no GitHub writes)"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "closed-epic-203-status",
+      "prompt": "can you pick up the toolu epic Falconiere/toolu#203 and finish whatever's left? dry run first, I just want to see what you'd do \u2014 don't change anything on github or create worktrees.",
+      "expected_output": "All 10 sub-issues (204-213) are closed and the epic itself is already closed: nothing to launch, no worktrees/agents; at most note that the epic is complete.",
+      "files": [],
+      "assertions": [
+        "States all 10 sub-issues (#204-#213) are closed",
+        "Recognizes epic #203 itself is already closed / complete",
+        "Proposes no new launches (no worktree or agent commands for new work)",
+        "Made no mutations (no new herdr workspaces, worktrees or branches; no GitHub writes)"
+      ]
+    }
+  ]
+}

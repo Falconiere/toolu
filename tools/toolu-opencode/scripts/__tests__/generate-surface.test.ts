@@ -1,12 +1,15 @@
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { expect, test } from "bun:test";
-import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { TOOLU_PLUGIN_ROOT } from "../lib/constants.ts";
+import { createHash } from "node:crypto";
+import { assignSurfaceIds, candidateKey, type ArtifactCandidate } from "../lib/ids.ts";
+import { parseFrontmatter, serializeFrontmatter } from "../lib/frontmatter.ts";
 import { planSurface, readTree, treesEqual, writeSurface } from "../lib/emit.ts";
 import { selectPluginsByEnabledNames } from "../../src/select/resolve.ts";
 import { runGenerateSurface } from "../generate-surface.ts";
+import { listPluginManifests } from "../../src/inventory/scan.ts";
+import { TOOLU_PLUGIN_ROOT } from "../lib/constants.ts";
 
 const tmpBase = process.env.TMPDIR ?? "/tmp";
 
@@ -37,6 +40,12 @@ test("drift check fails when a source skill changes", () => {
   const root = repoRoot();
   const copyRoot = mkdtempSync(join(tmpBase, "toolu-surface-src-"));
   cpSync(join(root, "plugins"), join(copyRoot, "plugins"), { recursive: true });
+  cpSync(join(root, "docs"), join(copyRoot, "docs"), { recursive: true });
+  cpSync(join(root, "README.md"), join(copyRoot, "README.md"));
+  cpSync(join(root, "LICENSE"), join(copyRoot, "LICENSE"));
+  cpSync(join(root, "tooling/conventions"), join(copyRoot, "tooling/conventions"), {
+    recursive: true,
+  });
   const outDir = mkdtempSync(join(tmpBase, "toolu-surface-out-"));
   const code = runGenerateSurface(["--repo", copyRoot, "--out", outDir]);
   expect(code).toBe(0);
@@ -70,13 +79,19 @@ test("generated skill resources exclude colocated test files", () => {
   expect([...plan.files.keys()].some((path) => path.includes("/__tests__/"))).toBe(false);
 });
 
-test("commands rewrite CLAUDE_PLUGIN_ROOT to TOOLU_PLUGIN_ROOT", () => {
+test("commands with matching skills load the generated skill", () => {
   const out = mkdtempSync(join(tmpBase, "toolu-surface-rewrite-"));
   const plan = planDefault(out);
-  const command = plan.files.get(join(out, "commands", "toolu--commit.md"));
+  const commandRef = plan.catalog.plugins
+    .find((plugin) => plugin.name === "toolu")
+    ?.commands.find((item) => item.source.endsWith("/commit.md"));
+  const skillRef = plan.catalog.plugins
+    .find((plugin) => plugin.name === "toolu")
+    ?.skills.find((item) => item.source.endsWith("/commit/SKILL.md"));
+  const command = commandRef && plan.files.get(join(out, commandRef.path));
   expect(command).toBeDefined();
-  expect(command?.includes(TOOLU_PLUGIN_ROOT)).toBe(true);
-  expect(command?.includes("${CLAUDE_PLUGIN_ROOT}")).toBe(false);
+  expect(command).toContain(`\`${skillRef?.id}\` skill`);
+  expect(command).not.toContain("${CLAUDE_PLUGIN_ROOT}");
 });
 
 test("committed generated tree passes drift check", () => {
@@ -85,4 +100,142 @@ test("committed generated tree passes drift check", () => {
   expect(existsSync(generated)).toBe(true);
   const code = runGenerateSurface(["--repo", root, "--check"]);
   expect(code).toBe(0);
+});
+
+test("surface ids obey skill naming rules and remain stable across collisions and length limits", () => {
+  const candidates: ArtifactCandidate[] = [
+    { kind: "skill", plugin: "a-b", localId: "c" },
+    { kind: "skill", plugin: "a", localId: "b-c" },
+    { kind: "command", plugin: "a-b", localId: "c" },
+    { kind: "skill", plugin: "a-b", localId: "X".repeat(100) },
+  ];
+  const forward = assignSurfaceIds(candidates);
+  const reverse = assignSurfaceIds([...candidates].reverse());
+  expect([...forward]).toEqual([...reverse]);
+  const ids = [...forward.values()];
+  expect(new Set(ids).size).toBe(ids.length);
+  for (const id of ids) {
+    expect(id).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+    expect(id.length).toBeLessThanOrEqual(64);
+  }
+  expect(forward.get(candidateKey(candidates[0]))).not.toBe(
+    forward.get(candidateKey(candidates[1])),
+  );
+  expect(() => assignSurfaceIds([candidates[0], candidates[0]])).toThrow();
+  const hashed: ArtifactCandidate = { kind: "command", plugin: "a", localId: "b" };
+  const sameBase: ArtifactCandidate = { kind: "skill", plugin: "a", localId: "b" };
+  const suffix = createHash("sha256").update(candidateKey(hashed)).digest("hex").slice(0, 8);
+  const reserved: ArtifactCandidate = { kind: "skill", plugin: "a", localId: `b-${suffix}` };
+  const reservedIds = assignSurfaceIds([hashed, sameBase, reserved]);
+  expect(new Set(reservedIds.values()).size).toBe(3);
+  expect(reservedIds.get(candidateKey(reserved))).toBe(`a-b-${suffix}`);
+});
+
+test("frontmatter round trip preserves folded text and structured permission maps", () => {
+  const source = `---\nname: example\ndescription: >-\n  First line\n  second line\npermission:\n  bash:\n    "*": ask\n    "git diff": allow\nmetadata:\n  audience: maintainers\n---\nBody`;
+  const parsed = parseFrontmatter(source);
+  expect(parsed.frontmatter.description).toBe("First line second line");
+  expect(parsed.frontmatter.permission).toEqual({ bash: { "*": "ask", "git diff": "allow" } });
+  expect(
+    parseFrontmatter(`${serializeFrontmatter(parsed.frontmatter)}${parsed.body}`).frontmatter,
+  ).toEqual(parsed.frontmatter);
+  expect(() => parseFrontmatter("---\nname: [broken\n---\nBody")).toThrow();
+});
+
+test("full catalog includes all plugins and explicitly classifies empty surfaces", () => {
+  const root = repoRoot();
+  const out = mkdtempSync(join(tmpBase, "toolu-surface-all-"));
+  const manifests = listPluginManifests(join(root, "plugins"));
+  if (!manifests) throw new Error("plugin manifests missing");
+  const plan = planSurface({ repoRoot: root, outDir: out, plugins: manifests });
+  expect(plan.catalog.plugins).toHaveLength(16);
+  expect(
+    plan.catalog.plugins.filter((plugin) => plugin.classification === "no-surface"),
+  ).toHaveLength(3);
+  expect(plan.catalog.plugins.flatMap((plugin) => plugin.skills)).toHaveLength(18);
+  expect(plan.catalog.plugins.flatMap((plugin) => plugin.agents)).toHaveLength(5);
+  expect(plan.catalog.plugins.flatMap((plugin) => plugin.commands)).toHaveLength(4);
+  expect(plan.catalog.plugins.find((plugin) => plugin.name === "statusline")?.excluded).toEqual([
+    expect.objectContaining({ source: "plugins/statusline/commands/setup.md" }),
+  ]);
+  const epicCommand = plan.catalog.plugins.find((plugin) => plugin.name === "epic-orchestrator")
+    ?.commands[0];
+  const epicSkill = plan.catalog.plugins.find((plugin) => plugin.name === "epic-orchestrator")
+    ?.skills[0];
+  expect(plan.files.get(join(out, epicCommand?.path ?? ""))).toContain(
+    `\`${epicSkill?.id}\` skill`,
+  );
+  for (const skill of plan.catalog.plugins.flatMap((plugin) => plugin.skills)) {
+    const parsed = parseFrontmatter(plan.files.get(join(out, skill.path)) ?? "");
+    expect(skill.id).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+    expect(skill.id.length).toBeLessThanOrEqual(64);
+    expect(dirname(skill.path).split("/").at(-1)).toBe(skill.id);
+    expect(parsed.frontmatter.name).toBe(skill.id);
+    const description = parsed.frontmatter.description;
+    if (typeof description !== "string") throw new Error(`missing description: ${skill.id}`);
+    expect(description.length).toBeGreaterThan(0);
+  }
+  for (const agent of plan.catalog.plugins.flatMap((plugin) => plugin.agents)) {
+    const parsed = parseFrontmatter(plan.files.get(join(out, agent.path)) ?? "");
+    expect(parsed.frontmatter.mode).toBe("subagent");
+    expect(parsed.frontmatter.model).toBeUndefined();
+    expect(parsed.frontmatter.tools).toBeUndefined();
+    expect(parsed.frontmatter.permission).toEqual(expect.objectContaining({ "*": "deny" }));
+  }
+  for (const command of plan.catalog.plugins.flatMap((plugin) => plugin.commands)) {
+    const parsed = parseFrontmatter(plan.files.get(join(out, command.path)) ?? "");
+    expect(typeof parsed.frontmatter.description).toBe("string");
+  }
+  const brainstorm = plan.catalog.plugins.find((plugin) => plugin.name === "brainstorm")?.skills[0];
+  expect(plan.files.get(join(out, brainstorm?.path ?? ""))).toContain(
+    "delivery-flow-delivery-flow",
+  );
+  const orchestratorSkill = plan.catalog.plugins
+    .find((plugin) => plugin.name === "toolu")
+    ?.skills.find((skill) => skill.source.endsWith("/orchestrator/SKILL.md"));
+  const deepExplore = plan.catalog.plugins
+    .find((plugin) => plugin.name === "toolu")
+    ?.agents.find((agent) => agent.source.endsWith("/deep-explore.md"));
+  expect(plan.files.get(join(out, deepExplore?.path ?? ""))).toContain(
+    `${TOOLU_PLUGIN_ROOT}/generated/skills/${orchestratorSkill?.id}/references/model-routing.md`,
+  );
+  const context7 = plan.catalog.plugins.find((plugin) => plugin.name === "context7")?.skills[0];
+  expect(plan.files.get(join(out, context7?.path ?? ""))).not.toContain("CLAUDE_CONFIG_DIR");
+});
+
+test("resource links in generated skills resolve inside the output tree", () => {
+  const root = repoRoot();
+  const out = mkdtempSync(join(tmpBase, "toolu-surface-links-"));
+  const manifests = listPluginManifests(join(root, "plugins"));
+  if (!manifests) throw new Error("plugin manifests missing");
+  const plan = planSurface({ repoRoot: root, outDir: out, plugins: manifests });
+  for (const [file, content] of plan.files) {
+    if (!file.endsWith(".md")) continue;
+    for (const match of content.matchAll(/\]\(([^)]+)\)/g)) {
+      const target = match[1].split("#", 1)[0];
+      if (!target || target.includes("://")) continue;
+      expect(plan.files.has(resolve(dirname(file), target))).toBe(true);
+    }
+  }
+  expect([...plan.files.keys()].some((path) => path.endsWith("resources/jev/README.md"))).toBe(
+    true,
+  );
+});
+
+test("missing real skill resource fails generation with its source path", () => {
+  const root = repoRoot();
+  const copyRoot = mkdtempSync(join(tmpBase, "toolu-surface-missing-"));
+  const pluginDir = join(copyRoot, "plugins/jev");
+  cpSync(join(root, "plugins/jev"), pluginDir, { recursive: true });
+  rmSync(join(pluginDir, "README.md"));
+  const manifest = listPluginManifests(join(root, "plugins"))?.find((item) => item.name === "jev");
+  if (!manifest) throw new Error("jev manifest missing");
+  expect(() =>
+    planSurface({
+      repoRoot: copyRoot,
+      outDir: join(copyRoot, "generated"),
+      plugins: [{ ...manifest, pluginDir }],
+    }),
+  ).toThrow("missing linked resource ../../README.md");
+  rmSync(copyRoot, { recursive: true, force: true });
 });
