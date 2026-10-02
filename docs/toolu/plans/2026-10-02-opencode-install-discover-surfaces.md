@@ -151,6 +151,7 @@ selection (global file, fail closed) → catalog and plan (validated generated s
       "tooling/src/opencode-host/scenarios-install.ts",
       "tooling/src/opencode-host/scenarios-precedence.ts",
       "tooling/src/opencode-host/install-host.ts",
+      "tooling/src/opencode-host/install.ts",
       "tooling/src/opencode-host/scenarios-entry.ts",
       "tooling/src/opencode-entry-smoke.ts",
       "tooling/src/__tests__/opencode-entry-smoke.test.ts",
@@ -237,6 +238,7 @@ selection (global file, fail closed) → catalog and plan (validated generated s
   - A dangling or unreadable selection file is now invalid rather than absent, so selection no longer fails open.
 
   Tests cover each case.
+- **Live harness under load:** after the second rebase, the shared runner sat at load average 20–40 from other projects and epic workers. The pinned `opencode --version` then took 34 s, and over 60 s, to exit, so the harness's 15 s version check SIGKILLed it (exit 137) before any scenario ran. The gate's 60 s `build-plugins` test also timed out. `install.ts`'s version check is now a 120 s hang guard, like `RUN_TIMEOUT_MS`; the code under test is unchanged.
 - **AC-1 skill listing (live):** the first `surfaces.npm-clean` run failed only on `described`. On `opencode-ai@1.18.34`, the `skill` tool description is static ("skills listed in the system prompt"), and `session/system.ts` lists the available skills in the system prompt instead. The scenario now checks the recorded system prompt, and the spec's AC-1 wording now says where the host lists them. Every other AC-1 observation passed on the first run.
 
 ## Plan review
