@@ -187,6 +187,7 @@ async function walkRegistry(walk: Walk, state: WalkState): Promise<ModuleResult 
   const outcomes = await runRegistry(walk.event, walk.ctx, {
     fallback: bashFallback(walk, raw),
     warn: (line) => state.stderr.push(`${line}\n`),
+    selectedSpecs: walk.session.selectedRegistrySpecs,
   });
   for (const outcome of outcomes) {
     const result = outcomeResult(outcome, walk, raw);

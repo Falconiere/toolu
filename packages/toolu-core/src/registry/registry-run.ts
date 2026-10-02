@@ -35,7 +35,12 @@ export type BashFallback = (
   ctx: RegistryContext,
 ) => Promise<Decision>;
 
-export type RunRegistryOptions = { fallback?: BashFallback; warn?: (line: string) => void };
+export type RunRegistryOptions = {
+  fallback?: BashFallback;
+  warn?: (line: string) => void;
+  /** Host-resolved selection; absent preserves installed-plugin gating alone. */
+  selectedSpecs?: ReadonlySet<string>;
+};
 
 function stderrLine(line: string): void {
   process.stderr.write(`${line}\n`);
@@ -135,12 +140,17 @@ async function outcomeOf(entry: RegistryEntry, walk: Walk): Promise<ModuleOutcom
   return timed(entry, () => fallback(entry, event, ctx));
 }
 
-function memoActive(ctx: RegistryContext): (spec: string) => boolean {
+function memoActive(
+  ctx: RegistryContext,
+  selectedSpecs: ReadonlySet<string> | undefined,
+): (spec: string) => boolean {
   const memo = new Map<string, boolean>();
   return (spec) => {
     const known = memo.get(spec);
     if (known !== undefined) return known;
-    const active = pluginActive(spec, { env: ctx.env, host: ctx.host });
+    const active =
+      (selectedSpecs === undefined || selectedSpecs.has(spec)) &&
+      pluginActive(spec, { env: ctx.env, host: ctx.host });
     memo.set(spec, active);
     return active;
   };
@@ -184,7 +194,7 @@ export async function runRegistry(
     ctx,
     fallback: options.fallback,
     esmSpecs: new Set(entries.filter((e) => e.kind === "esm").map((e) => e.spec)),
-    active: memoActive(ctx),
+    active: memoActive(ctx, options.selectedSpecs),
   };
   return walkFrom(entries, 0, walk, []);
 }

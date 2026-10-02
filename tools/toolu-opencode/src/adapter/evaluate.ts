@@ -27,9 +27,10 @@ export type PermissionEvaluateHandlerOptions = {
   configRoot: string;
   permissionContext: PermissionContext;
   env?: Record<string, string>;
+  selectedPluginSpecs?: ReadonlySet<string>;
 };
 
-function nativeGates(pluginRoot: string): ToolModule[] {
+export function nativeGates(pluginRoot: string): ToolModule[] {
   const options = { pluginRoot };
   return [
     bashCommandsModule(options),
@@ -75,6 +76,7 @@ export function createGateDecider(opts: PermissionEvaluateHandlerOptions): GateD
         libDir: join(pluginRoot, "hooks", "lib"),
         cwd: opts.permissionContext.cwd,
         env,
+        selectedRegistrySpecs: opts.selectedPluginSpecs,
       });
       return decisionFromDispatch(result);
     } catch (error) {

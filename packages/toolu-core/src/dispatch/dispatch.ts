@@ -32,6 +32,8 @@ export type DispatchOptions = {
   readonly env?: HostEnv;
   /** The hook process's working directory. Default `process.cwd()`. */
   readonly cwd?: string;
+  /** Absent for hosts that use the registry's installed-plugin check alone. */
+  readonly selectedRegistrySpecs?: ReadonlySet<string>;
 };
 
 /** `toolu_dispatch_hook`'s fixed reply when `apply_patch` headers do not parse. */
@@ -123,7 +125,14 @@ function sessionFor(
 ): Session {
   const root = configRoot({ env, host });
   const cwd = options.cwd ?? process.cwd();
-  const base = { phase, host, configRoot: root, libDir: options.libDir, cwd };
+  const base = {
+    phase,
+    host,
+    configRoot: root,
+    libDir: options.libDir,
+    cwd,
+    selectedRegistrySpecs: options.selectedRegistrySpecs,
+  };
   if (phase === "pre") {
     const project = projectRoot({ env, host, cwd }) ?? cwd;
     return { ...base, env: childEnv(env, { TOOLU_CONFIG_DIR: root }), projectRoot: project };
