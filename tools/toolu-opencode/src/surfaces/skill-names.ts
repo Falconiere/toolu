@@ -113,7 +113,12 @@ function configuredRoots(scope: SkillScanScope, home: string): Root[] {
   });
 }
 
-/** Every `SKILL.md` below `dir`, depth first in name order. */
+/**
+ * Every `SKILL.md` below `dir`, depth first in name order. An entry that cannot
+ * be read, a broken link and a link loop (ELOOP) are skipped and the walk goes
+ * on, exactly as the host's `glob` (path-scurry treats a directory it cannot read
+ * as empty) keeps scanning; throwing here would drop every toolu surface instead.
+ */
 function skillFiles(dir: string, dot: boolean, visited: Set<string>, out: string[]): void {
   let real: string;
   let names: string[];

@@ -169,3 +169,14 @@ test("an empty XDG_CONFIG_HOME falls back to ~/.config, as the host's xdg-basedi
   expect(names(scope(t, { XDG_CONFIG_HOME: "" }))).toContain("home-config");
   expect(names(scope(t))).not.toContain("home-config");
 });
+
+test("a link loop (ELOOP) and a broken link are skipped, like the host's glob, and siblings still count", () => {
+  const t = tree();
+  const skills = join(t.project, ".opencode/skills");
+  symlinkSync("loop2", join(skills, "loop1"));
+  symlinkSync("loop1", join(skills, "loop2"));
+  symlinkSync(join(t.base, "nowhere"), join(skills, "broken"));
+  const found = names(scope(t));
+  expect(found).toContain("project-opencode");
+  expect(found).toEqual(ALL_SCANNED);
+});
