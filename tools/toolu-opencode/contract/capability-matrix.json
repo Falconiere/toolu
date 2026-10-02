@@ -1,0 +1,971 @@
+{
+  "version": 1,
+  "host": [
+    {
+      "need": "Never throw from plugin init: the host logs 'failed to load plugin' and keeps running tools unguarded, so setup failures must become deny-all hooks",
+      "evidence": ["load.init-throw"],
+      "owner": ["OP-02", "OP-08"]
+    },
+    {
+      "need": "Export only plugin functions or one default PluginModule: every exported function is invoked as a plugin, and a non-hooks return breaks every prompt",
+      "evidence": ["load.helper-export", "load.module-default"],
+      "owner": ["OP-02"]
+    },
+    {
+      "need": "Install through opencode.json plugin (with options) or .opencode/plugins/; both routes load the documented plugin function",
+      "evidence": ["load.config-file", "load.local-file"],
+      "owner": ["OP-11", "OP-26"]
+    },
+    {
+      "need": "Generated skill names must validate themselves (lowercase, single hyphens): the host loads invalid names without complaint",
+      "evidence": ["surface.names"],
+      "owner": ["OP-10"]
+    },
+    {
+      "need": "Surfaces can be registered from the plugin config hook (commands, agents, skills.paths, instructions) instead of writing into user directories",
+      "evidence": ["surface.config-hook", "surface.files"],
+      "owner": ["OP-11"]
+    },
+    {
+      "need": "Helper environment (TOOLU_* paths, resolved Bun) reaches bash through shell.env",
+      "evidence": ["env.shell"],
+      "owner": ["OP-09"]
+    },
+    {
+      "need": "Project commands keep their arguments; command.execute.before sees them",
+      "evidence": ["command.hook"],
+      "owner": ["OP-10", "OP-24"]
+    }
+  ],
+  "plugins": {
+    "agent-browser": {
+      "owner": ["OP-12"],
+      "axes": {
+        "tools": {
+          "use": "agent-browser CLI runs through bash from the published helper path",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "bash tool + shell.env (helper path and environment)",
+          "kind": "tool",
+          "status": "supported",
+          "evidence": ["env.shell"],
+          "owner": ["OP-12", "OP-09"]
+        },
+        "permission": {
+          "use": "none"
+        },
+        "startup": {
+          "use": "SessionStart publishes the agent-browser helper and bounded browser instructions",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "plugin init + experimental.chat.system.transform",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["load.local-file", "context.system"],
+          "owner": ["OP-12", "OP-07", "OP-08"]
+        },
+        "prompt": {
+          "use": "none"
+        },
+        "compaction": {
+          "use": "none"
+        },
+        "postTool": {
+          "use": "none"
+        },
+        "mcp": {
+          "use": "none"
+        },
+        "task": {
+          "use": "none"
+        },
+        "ui": {
+          "use": "none"
+        }
+      },
+      "surfaces": {
+        "skills": 1,
+        "commands": 0,
+        "agents": 0,
+        "owner": ["OP-10", "OP-11", "OP-12"]
+      }
+    },
+    "ast-grep": {
+      "owner": ["OP-13"],
+      "axes": {
+        "tools": {
+          "use": "search-nudge advises ast-grep before Grep or bash text search, without blocking",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "tool.execute.before (no advisory channel)",
+          "kind": "hook",
+          "status": "unsupported",
+          "evidence": ["pre.advisory"],
+          "owner": ["OP-13", "OP-05"],
+          "alternative": "Deliver the nudge with the tool result through tool.execute.after",
+          "alternativeEvidence": ["post.feedback"]
+        },
+        "permission": {
+          "use": "none"
+        },
+        "startup": {
+          "use": "SessionStart registers the search-nudge (pre) and byte-savings (post) registry modules",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "plugin init (bootstrap registry)",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["load.local-file"],
+          "owner": ["OP-13", "OP-08"]
+        },
+        "prompt": {
+          "use": "none"
+        },
+        "compaction": {
+          "use": "none"
+        },
+        "postTool": {
+          "use": "byte-savings reports search output savings after the tool runs",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "tool.execute.after (append to output)",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["post.feedback"],
+          "owner": ["OP-13", "OP-06"]
+        },
+        "mcp": {
+          "use": "none"
+        },
+        "task": {
+          "use": "none"
+        },
+        "ui": {
+          "use": "none"
+        }
+      },
+      "surfaces": {
+        "skills": 1,
+        "commands": 0,
+        "agents": 0,
+        "owner": ["OP-10", "OP-11", "OP-13"]
+      }
+    },
+    "brainstorm": {
+      "owner": ["OP-21"],
+      "axes": {
+        "tools": {
+          "use": "none"
+        },
+        "permission": {
+          "use": "none"
+        },
+        "startup": {
+          "use": "none"
+        },
+        "prompt": {
+          "use": "none"
+        },
+        "compaction": {
+          "use": "none"
+        },
+        "postTool": {
+          "use": "none"
+        },
+        "mcp": {
+          "use": "none"
+        },
+        "task": {
+          "use": "none"
+        },
+        "ui": {
+          "use": "none"
+        }
+      },
+      "surfaces": {
+        "skills": 1,
+        "commands": 0,
+        "agents": 0,
+        "owner": ["OP-10", "OP-11", "OP-21"]
+      }
+    },
+    "context7": {
+      "owner": ["OP-14"],
+      "axes": {
+        "tools": {
+          "use": "context7 search helper runs through bash",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "bash tool + shell.env (helper path and environment)",
+          "kind": "tool",
+          "status": "supported",
+          "evidence": ["env.shell"],
+          "owner": ["OP-14", "OP-09"]
+        },
+        "permission": {
+          "use": "none"
+        },
+        "startup": {
+          "use": "SessionStart publishes the context7 search helper and the documentation-first instructions",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "plugin init + experimental.chat.system.transform",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["load.local-file", "context.system"],
+          "owner": ["OP-14", "OP-07", "OP-08"]
+        },
+        "prompt": {
+          "use": "none"
+        },
+        "compaction": {
+          "use": "none"
+        },
+        "postTool": {
+          "use": "none"
+        },
+        "mcp": {
+          "use": "none"
+        },
+        "task": {
+          "use": "none"
+        },
+        "ui": {
+          "use": "none"
+        }
+      },
+      "surfaces": {
+        "skills": 1,
+        "commands": 0,
+        "agents": 0,
+        "owner": ["OP-10", "OP-11", "OP-14"]
+      }
+    },
+    "delivery-flow": {
+      "owner": ["OP-21"],
+      "axes": {
+        "tools": {
+          "use": "plan-ledger and verdict CLIs run through bash with TOOLU_PLUGIN_ROOT",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "bash tool + shell.env (helper path and environment)",
+          "kind": "tool",
+          "status": "supported",
+          "evidence": ["env.shell"],
+          "owner": ["OP-21", "OP-09"]
+        },
+        "permission": {
+          "use": "none"
+        },
+        "startup": {
+          "use": "none"
+        },
+        "prompt": {
+          "use": "none"
+        },
+        "compaction": {
+          "use": "none"
+        },
+        "postTool": {
+          "use": "none"
+        },
+        "mcp": {
+          "use": "none"
+        },
+        "task": {
+          "use": "Phases delegate bounded work to subagents",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "task tool + child sessions",
+          "kind": "tool",
+          "status": "supported",
+          "evidence": ["deny.task-child"],
+          "owner": ["OP-21"]
+        },
+        "ui": {
+          "use": "none"
+        }
+      },
+      "surfaces": {
+        "skills": 1,
+        "commands": 0,
+        "agents": 0,
+        "owner": ["OP-10", "OP-11", "OP-21"]
+      }
+    },
+    "epic-orchestrator": {
+      "owner": ["OP-22"],
+      "axes": {
+        "tools": {
+          "use": "Report, watch and tracker scripts run through bash",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "bash tool + shell.env (helper path and environment)",
+          "kind": "tool",
+          "status": "supported",
+          "evidence": ["env.shell"],
+          "owner": ["OP-22", "OP-09"]
+        },
+        "permission": {
+          "use": "none"
+        },
+        "startup": {
+          "use": "SessionStart reports missing dependency plugins",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "plugin init + experimental.chat.system.transform",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["load.local-file", "context.system"],
+          "owner": ["OP-22", "OP-08"]
+        },
+        "prompt": {
+          "use": "none"
+        },
+        "compaction": {
+          "use": "none"
+        },
+        "postTool": {
+          "use": "none"
+        },
+        "mcp": {
+          "use": "none"
+        },
+        "task": {
+          "use": "Workers are routed to OpenCode agents per sub-issue",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "agents (.opencode/agents) + task tool",
+          "kind": "tool",
+          "status": "supported",
+          "evidence": ["surface.files", "deny.task-child"],
+          "owner": ["OP-22"]
+        },
+        "ui": {
+          "use": "none"
+        }
+      },
+      "surfaces": {
+        "skills": 1,
+        "commands": 1,
+        "agents": 0,
+        "owner": ["OP-10", "OP-11", "OP-22"]
+      }
+    },
+    "exa-search": {
+      "owner": ["OP-15"],
+      "axes": {
+        "tools": {
+          "use": "exa-search helper runs through bash",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "bash tool + shell.env (helper path and environment)",
+          "kind": "tool",
+          "status": "supported",
+          "evidence": ["env.shell"],
+          "owner": ["OP-15", "OP-09"]
+        },
+        "permission": {
+          "use": "none"
+        },
+        "startup": {
+          "use": "SessionStart publishes the exa-search helper and the web-research instructions",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "plugin init + experimental.chat.system.transform",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["load.local-file", "context.system"],
+          "owner": ["OP-15", "OP-07", "OP-08"]
+        },
+        "prompt": {
+          "use": "none"
+        },
+        "compaction": {
+          "use": "none"
+        },
+        "postTool": {
+          "use": "none"
+        },
+        "mcp": {
+          "use": "none"
+        },
+        "task": {
+          "use": "none"
+        },
+        "ui": {
+          "use": "none"
+        }
+      },
+      "surfaces": {
+        "skills": 1,
+        "commands": 0,
+        "agents": 0,
+        "owner": ["OP-10", "OP-11", "OP-15"]
+      }
+    },
+    "jev": {
+      "owner": ["OP-16"],
+      "axes": {
+        "tools": {
+          "use": "jev.sh runs through bash with the resolved Bun",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "bash tool + shell.env (helper path and environment)",
+          "kind": "tool",
+          "status": "supported",
+          "evidence": ["env.shell"],
+          "owner": ["OP-16", "OP-09"]
+        },
+        "permission": {
+          "use": "none"
+        },
+        "startup": {
+          "use": "SessionStart publishes jev.sh and the mandatory-judgment instructions",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "plugin init + experimental.chat.system.transform",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["load.local-file", "context.system"],
+          "owner": ["OP-16", "OP-07", "OP-08"]
+        },
+        "prompt": {
+          "use": "UserPromptSubmit reminds the agent to call Jev before semantic decisions",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "chat.message (output.parts)",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["context.prompt"],
+          "owner": ["OP-16", "OP-07"]
+        },
+        "compaction": {
+          "use": "none"
+        },
+        "postTool": {
+          "use": "none"
+        },
+        "mcp": {
+          "use": "none"
+        },
+        "task": {
+          "use": "none"
+        },
+        "ui": {
+          "use": "none"
+        }
+      },
+      "surfaces": {
+        "skills": 1,
+        "commands": 0,
+        "agents": 0,
+        "owner": ["OP-10", "OP-11", "OP-16"]
+      }
+    },
+    "jira": {
+      "owner": ["OP-17"],
+      "axes": {
+        "tools": {
+          "use": "jira helper runs through bash",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "bash tool + shell.env (helper path and environment)",
+          "kind": "tool",
+          "status": "supported",
+          "evidence": ["env.shell"],
+          "owner": ["OP-17", "OP-09"]
+        },
+        "permission": {
+          "use": "none"
+        },
+        "startup": {
+          "use": "SessionStart publishes the jira helper and issue-workflow instructions",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "plugin init + experimental.chat.system.transform",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["load.local-file", "context.system"],
+          "owner": ["OP-17", "OP-07", "OP-08"]
+        },
+        "prompt": {
+          "use": "none"
+        },
+        "compaction": {
+          "use": "none"
+        },
+        "postTool": {
+          "use": "none"
+        },
+        "mcp": {
+          "use": "none"
+        },
+        "task": {
+          "use": "none"
+        },
+        "ui": {
+          "use": "none"
+        }
+      },
+      "surfaces": {
+        "skills": 1,
+        "commands": 0,
+        "agents": 0,
+        "owner": ["OP-10", "OP-11", "OP-17"]
+      }
+    },
+    "pr-babysit": {
+      "owner": ["OP-23"],
+      "axes": {
+        "tools": {
+          "use": "Tick, collect, reply, resolve and record bundles run through bash",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "bash tool + shell.env (helper path and environment)",
+          "kind": "tool",
+          "status": "supported",
+          "evidence": ["env.shell"],
+          "owner": ["OP-23", "OP-09"]
+        },
+        "permission": {
+          "use": "none"
+        },
+        "startup": {
+          "use": "SessionStart checks that toolu is installed",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "plugin init + experimental.chat.system.transform",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["load.local-file", "context.system"],
+          "owner": ["OP-23", "OP-08"]
+        },
+        "prompt": {
+          "use": "none"
+        },
+        "compaction": {
+          "use": "none"
+        },
+        "postTool": {
+          "use": "none"
+        },
+        "mcp": {
+          "use": "none"
+        },
+        "task": {
+          "use": "Fixes are dispatched to fixer agents",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "task tool + child sessions",
+          "kind": "tool",
+          "status": "supported",
+          "evidence": ["deny.task-child"],
+          "owner": ["OP-23"]
+        },
+        "ui": {
+          "use": "none"
+        }
+      },
+      "surfaces": {
+        "skills": 1,
+        "commands": 1,
+        "agents": 0,
+        "owner": ["OP-10", "OP-11", "OP-23"]
+      },
+      "notes": [
+        {
+          "need": "Tick scheduling: the documented plugin API has no cron or loop primitive, so babysit ticks need a host-native scheduler or an external loop",
+          "owner": "OP-23"
+        }
+      ]
+    },
+    "python-quality": {
+      "owner": ["OP-19"],
+      "axes": {
+        "tools": {
+          "use": "none"
+        },
+        "permission": {
+          "use": "none"
+        },
+        "startup": {
+          "use": "SessionStart registers the Python post-tools.d module",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "plugin init (bootstrap registry)",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["load.local-file"],
+          "owner": ["OP-19", "OP-08"]
+        },
+        "prompt": {
+          "use": "none"
+        },
+        "compaction": {
+          "use": "none"
+        },
+        "postTool": {
+          "use": "Post-edit Python quality checks reach the model and gate later commit/push",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "tool.execute.after (append to output)",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["post.feedback", "post.bash-exit"],
+          "owner": ["OP-19", "OP-06"]
+        },
+        "mcp": {
+          "use": "none"
+        },
+        "task": {
+          "use": "none"
+        },
+        "ui": {
+          "use": "none"
+        }
+      },
+      "surfaces": {
+        "skills": 0,
+        "commands": 0,
+        "agents": 0,
+        "owner": ["OP-10", "OP-11"]
+      }
+    },
+    "rust-quality": {
+      "owner": ["OP-20"],
+      "axes": {
+        "tools": {
+          "use": "none"
+        },
+        "permission": {
+          "use": "none"
+        },
+        "startup": {
+          "use": "SessionStart registers the Rust post-tools.d module",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "plugin init (bootstrap registry)",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["load.local-file"],
+          "owner": ["OP-20", "OP-08"]
+        },
+        "prompt": {
+          "use": "none"
+        },
+        "compaction": {
+          "use": "none"
+        },
+        "postTool": {
+          "use": "Post-edit Rust quality checks reach the model and gate later commit/push",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "tool.execute.after (append to output)",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["post.feedback", "post.bash-exit"],
+          "owner": ["OP-20", "OP-06"]
+        },
+        "mcp": {
+          "use": "none"
+        },
+        "task": {
+          "use": "none"
+        },
+        "ui": {
+          "use": "none"
+        }
+      },
+      "surfaces": {
+        "skills": 0,
+        "commands": 0,
+        "agents": 0,
+        "owner": ["OP-10", "OP-11"]
+      }
+    },
+    "statusline": {
+      "owner": ["OP-25"],
+      "axes": {
+        "tools": {
+          "use": "status skill and setup command read helper output through bash",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "bash tool + shell.env (helper path and environment)",
+          "kind": "tool",
+          "status": "supported",
+          "evidence": ["env.shell"],
+          "owner": ["OP-25", "OP-09"]
+        },
+        "permission": {
+          "use": "none"
+        },
+        "startup": {
+          "use": "SessionStart publishes the status helper",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "plugin init (bootstrap)",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["load.local-file"],
+          "owner": ["OP-25", "OP-08"]
+        },
+        "prompt": {
+          "use": "none"
+        },
+        "compaction": {
+          "use": "none"
+        },
+        "postTool": {
+          "use": "none"
+        },
+        "mcp": {
+          "use": "none"
+        },
+        "task": {
+          "use": "none"
+        },
+        "ui": {
+          "use": "Show toolu session and gate status in the host UI",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "client.tui.showToast → tui.toast.show",
+          "kind": "tui",
+          "status": "supported",
+          "evidence": ["ui.toast"],
+          "owner": ["OP-25"]
+        }
+      },
+      "surfaces": {
+        "skills": 1,
+        "commands": 1,
+        "agents": 0,
+        "owner": ["OP-10", "OP-11", "OP-25"]
+      },
+      "notes": [
+        {
+          "need": "A persistent statusline needs a TUI plugin (@opencode-ai/plugin/tui slots); headless probes cannot verify TUI rendering",
+          "owner": "OP-25"
+        }
+      ]
+    },
+    "toolu": {
+      "owner": [
+        "OP-02",
+        "OP-03",
+        "OP-04",
+        "OP-05",
+        "OP-06",
+        "OP-07",
+        "OP-08",
+        "OP-09",
+        "OP-10",
+        "OP-11",
+        "OP-24"
+      ],
+      "axes": {
+        "tools": {
+          "use": "Core pre-tool gates (bash-commands, commit-gate, quality-gate, protected-files, code-edit-rules, push-review, plan-ledger, docs-sync) allow or deny bash, edit, write, apply_patch and grep before they run",
+          "required": true,
+          "enforcement": true,
+          "mechanism": "tool.execute.before (throw to deny)",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["deny.bash", "deny.write", "deny.apply-patch"],
+          "owner": ["OP-03", "OP-04"]
+        },
+        "permission": {
+          "use": "Gate ask decisions open a native prompt, and the user's permission rules stay authoritative",
+          "required": true,
+          "enforcement": true,
+          "mechanism": "permission.ask (declared, never invoked) + opencode.json permission",
+          "kind": "hook",
+          "status": "partial",
+          "evidence": ["permission.ask-hook", "permission.config-deny", "permission.order"],
+          "owner": ["OP-05"],
+          "alternative": "Degrade ask with the @toolu/core/host class rules: security guardrails ask becomes a tool.execute.before deny, judgement gates ask becomes advice appended by tool.execute.after; the user's own ask/deny rules still apply after toolu allows",
+          "alternativeEvidence": [
+            "deny.bash",
+            "post.feedback",
+            "permission.config-deny",
+            "permission.order"
+          ]
+        },
+        "startup": {
+          "use": "SessionStart bootstraps selected plugins (registry, readiness) and injects the session protocol",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "plugin init + experimental.chat.system.transform",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["load.local-file", "context.system", "events.bus"],
+          "owner": ["OP-07", "OP-08", "OP-09"]
+        },
+        "prompt": {
+          "use": "UserPromptSubmit reminders",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "chat.message (output.parts)",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["context.prompt"],
+          "owner": ["OP-07"]
+        },
+        "compaction": {
+          "use": "PreCompact preserves gate and plan state through compaction",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "experimental.session.compacting",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["context.compaction"],
+          "owner": ["OP-07"]
+        },
+        "postTool": {
+          "use": "gate-status, push-waiver and post-tools.d quality feedback after edits and bash",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "tool.execute.after (append to output)",
+          "kind": "hook",
+          "status": "partial",
+          "evidence": ["post.feedback", "post.bash-exit", "post.tool-error"],
+          "owner": ["OP-06"],
+          "alternative": "A thrown tool error has no side effect to check; it reaches the model as the tool error and the event bus as message.part.updated"
+        },
+        "mcp": {
+          "use": "mcp-blocker denies blocklisted MCP servers before the call",
+          "required": true,
+          "enforcement": true,
+          "mechanism": "tool.execute.before on <server>_<tool>",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["deny.mcp"],
+          "owner": ["OP-03", "OP-04"]
+        },
+        "task": {
+          "use": "agent-tier gates delegated agents, and gates also apply inside child sessions",
+          "required": true,
+          "enforcement": true,
+          "mechanism": "tool.execute.before on task + child sessions",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["deny.task-child"],
+          "owner": ["OP-03", "OP-04"]
+        },
+        "ui": {
+          "use": "none"
+        }
+      },
+      "surfaces": {
+        "skills": 6,
+        "commands": 2,
+        "agents": 5,
+        "owner": ["OP-10", "OP-11"]
+      }
+    },
+    "toolu-review": {
+      "owner": ["OP-24"],
+      "axes": {
+        "tools": {
+          "use": "review skill writes push-review state through the helper",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "bash tool + shell.env (helper path and environment)",
+          "kind": "tool",
+          "status": "supported",
+          "evidence": ["env.shell"],
+          "owner": ["OP-24", "OP-09"]
+        },
+        "permission": {
+          "use": "none"
+        },
+        "startup": {
+          "use": "SessionStart publishes the push-review state writer",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "plugin init (bootstrap)",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["load.local-file"],
+          "owner": ["OP-24", "OP-08"]
+        },
+        "prompt": {
+          "use": "none"
+        },
+        "compaction": {
+          "use": "none"
+        },
+        "postTool": {
+          "use": "none"
+        },
+        "mcp": {
+          "use": "none"
+        },
+        "task": {
+          "use": "none"
+        },
+        "ui": {
+          "use": "none"
+        }
+      },
+      "surfaces": {
+        "skills": 1,
+        "commands": 0,
+        "agents": 0,
+        "owner": ["OP-10", "OP-11", "OP-24"]
+      }
+    },
+    "ts-quality": {
+      "owner": ["OP-18"],
+      "axes": {
+        "tools": {
+          "use": "none"
+        },
+        "permission": {
+          "use": "none"
+        },
+        "startup": {
+          "use": "SessionStart registers the TypeScript post-tools.d module",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "plugin init (bootstrap registry)",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["load.local-file"],
+          "owner": ["OP-18", "OP-08"]
+        },
+        "prompt": {
+          "use": "none"
+        },
+        "compaction": {
+          "use": "none"
+        },
+        "postTool": {
+          "use": "Post-edit TypeScript quality checks reach the model and gate later commit/push",
+          "required": true,
+          "enforcement": false,
+          "mechanism": "tool.execute.after (append to output)",
+          "kind": "hook",
+          "status": "supported",
+          "evidence": ["post.feedback", "post.bash-exit"],
+          "owner": ["OP-18", "OP-06"]
+        },
+        "mcp": {
+          "use": "none"
+        },
+        "task": {
+          "use": "none"
+        },
+        "ui": {
+          "use": "none"
+        }
+      },
+      "surfaces": {
+        "skills": 0,
+        "commands": 0,
+        "agents": 0,
+        "owner": ["OP-10", "OP-11"]
+      }
+    }
+  }
+}

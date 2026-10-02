@@ -14,7 +14,7 @@ import { z } from "zod";
 export type ScriptStep = { tool: string; args: Record<string, unknown> };
 export type Scripts = Readonly<Record<string, readonly ScriptStep[]>>;
 export type RecordedRequest = { path: string; body: unknown };
-export type ScriptedProvider = {
+type ScriptedProvider = {
   url: string;
   requests(): RecordedRequest[];
   stop(): void;
@@ -62,7 +62,7 @@ function toolReply(step: ScriptStep, callId: string): Response {
 }
 
 /** The scenario named by the first user message, and how many tool results follow the last one. */
-export function scriptPosition(messages: readonly ChatMessage[]): {
+function scriptPosition(messages: readonly ChatMessage[]): {
   scenario: string | null;
   done: number;
 } {

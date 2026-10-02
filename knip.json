@@ -12,6 +12,7 @@
         "src/benchmarks/rust-quality-latency.ts",
         "src/benchmarks/ts-quality-latency.ts",
         "src/codex-smoke.ts",
+        "src/opencode-host/mcp-server.ts",
         "src/probe-ask.ts",
         "src/pr-babysit-herdr-smoke.ts",
         "src/validate-plugin-packaging.ts",

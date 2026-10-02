@@ -2,6 +2,8 @@
 
 The [toolu](https://github.com/Falconiere/toolu) adapter for [OpenCode](https://opencode.ai) runs toolu's TypeScript dispatcher in `permission.evaluate`, so an edit that violates a gate is denied before bytes change.
 
+This release targets the superseded OpenCode V2 plugin API. The documented plugin API (`opencode-ai@1.18.34`, `@opencode-ai/plugin@1.18.34`) is pinned in [docs/opencode-host-contract.md](https://github.com/Falconiere/toolu/blob/main/docs/opencode-host-contract.md), and [#336](https://github.com/Falconiere/toolu/issues/336) moves this adapter onto it.
+
 ## Install
 
 ```bash

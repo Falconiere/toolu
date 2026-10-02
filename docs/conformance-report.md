@@ -4,7 +4,9 @@
 **Depth:** fixture-suite (hermetic temp projects; native dispatcher and Bun bootstrap)
 **Runner:** `bun run test:conformance` → `tools/toolu-conformance/src/cli/run.ts`
 
-## Pins (from [portable-core.md](./portable-core.md))
+## Pins (V2 adapter suites)
+
+These suites exercise the shipped V2 adapter. The documented-host contract (`opencode-ai@1.18.34`, `@opencode-ai/plugin@1.18.34`) and its live probes are in [opencode-host-contract.md](opencode-host-contract.md). OP-28 ([#362](https://github.com/Falconiere/toolu/issues/362)) replaces this lane with real-host acceptance.
 
 | Component | Pin |
 |-----------|-----|

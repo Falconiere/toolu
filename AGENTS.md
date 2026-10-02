@@ -72,6 +72,8 @@ Benchmarks are hermetic. Context budget caps the Session Protocol, per-language 
 | `tools/toolu-cli/src/host/` | Per-host adapters normalizing `plugin list --json` into one shape |
 | `tooling/src/pack-inventory.ts` | Published-tarball file-list gate |
 | `tooling/src/guardrails/run.ts` | Structural gate (`bun run guardrails`): TypeScript port of the vendored conventions runner; data in `tooling/conventions/guardrails/` |
+| `tooling/src/opencode-host-probe.ts` | Live OpenCode host probes (`bun run probe:opencode-host`): the pinned `opencode-ai` CLI in isolated profiles against a scripted loopback provider. Evidence lives in `tools/toolu-opencode/contract/probe-results.json`; contract in `docs/opencode-host-contract.md` |
+| `tooling/src/opencode-host-contract.ts` | Hermetic OpenCode host-contract check (`bun run check:opencode-host`, in `test:portable-core`): the pin, the probe evidence, the 16-plugin capability matrix, the plugin manifests, the pinned SDK declarations and the contract doc must agree |
 | `tooling/src/benchmarks/run.ts` | Benchmark harness (`bun run benchmarks`); inputs, fixtures and committed results in `benchmarks/` |
 | `packages/toolu-core/src/launcher/launcher.ts` | `@toolu/core/launcher`: the generated `hooks.json` command that runs a bundle with Bun and fails closed without it |
 | `packages/toolu-core/src/host/host.ts` | `@toolu/core/host`: host detection (Claude, Codex, Cursor, OpenCode, Hermes), roots, Codex plugin snapshot, event-name map, per-host output encoders and `ask` degradation |

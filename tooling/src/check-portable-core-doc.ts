@@ -1,8 +1,9 @@
 /**
  * Verifies docs/portable-core.md against the #205 contract checklist: required
- * headings, pins, citations, the four classification tokens in the Policy
- * split section (and no invalid `maybe-later`), and the capability-results
- * markers. `PORTABLE_CORE_DOC` points it at another copy.
+ * headings, the documented OpenCode pins and contract link (#335), citations,
+ * the four classification tokens in the Policy split section (and no invalid
+ * `maybe-later`), and no citation of the superseded V2 plugin docs.
+ * `PORTABLE_CORE_DOC` points it at another copy.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -26,8 +27,9 @@ const HEADINGS = [
 ];
 
 const CITATIONS: ReadonlyArray<readonly [string, string]> = [
-  ["v2.0.12", "missing CLI pin v2.0.12"],
-  ["@opencode/plugin@2.0.12", "missing SDK pin"],
+  ["opencode-ai@1.18.34", "missing CLI pin opencode-ai@1.18.34"],
+  ["@opencode-ai/plugin@1.18.34", "missing SDK pin"],
+  ["opencode-host-contract.md", "missing host contract link"],
   ["dispatchPreTool", "missing native dispatch contract"],
   ["gates/protected-files.ts", "missing protected-files gate citation"],
   ["gate-mode.sh", "missing gate-mode.sh citation"],
@@ -37,6 +39,9 @@ const CITATIONS: ReadonlyArray<readonly [string, string]> = [
 ];
 
 const TOKENS = ["shell-out", "port-native", "port-new", "no-map"];
+
+/** The superseded V2 plugin docs; the documented contract is opencode.ai/docs/plugins/. */
+const V2_DOCS = "opencode.ai/v2/";
 
 class DocError extends Error {}
 
@@ -74,11 +79,7 @@ function check(docPath: string): void {
   ) {
     throw new DocError("invalid classification token maybe-later");
   }
-  for (const marker of ["start", "end"]) {
-    if (!doc.includes(`portable-core-capability-results:${marker}`)) {
-      throw new DocError(`missing capability-results ${marker} marker`);
-    }
-  }
+  if (doc.includes(V2_DOCS)) throw new DocError(`cites the V2 contract (${V2_DOCS})`);
 }
 
 function main(): number {

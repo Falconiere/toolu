@@ -228,6 +228,13 @@ Pin and SDK dependency → typed probe plugins → scripted provider and MCP fix
 ## Deviations
 
 - `plugins`: the probe directory is `tools/toolu-opencode/contract/probes/`, not `contract/plugins/`. The adapter's `.gitignore` ignores every `plugins/` directory (the bundled catalog), so the planned path would never have been committed. Paths and the spec evidence table are updated to match.
+- `live`:
+  - **Project root.** The pinned host takes its project directory from `PWD`, not from the process cwd. The first harness run therefore loaded the worktree's config and reached a real provider, which answered `Unauthorized`. Every session now sets `PWD`, and `opencode.json` sets `enabled_providers: ["probe"]` so only the scripted provider can be called.
+  - **Feedback count.** `post.feedback` first counted feedback markers across all requests, and later requests repeat earlier tool results. It now counts tool results in the final request.
+  - **Duration.** A full live run takes about 16 minutes on a loaded host.
+- `checker`:
+  - **Unknown evidence.** An evidence id that is not a probe now fails matrix schema validation (`ProbeId` enum). Together with "each probe exactly once in the results", this makes a separate unknown-evidence rule unreachable, so it was dropped.
+  - **Host constraints.** The matrix gained a `host` list (loader and surface constraints with owners). The checker now requires every `unsupported` probe verdict to be cited by a cell or a host constraint, so each unsupported requirement has an owner work package.
 
 ## Review log
 
