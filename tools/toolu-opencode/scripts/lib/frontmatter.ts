@@ -15,10 +15,38 @@ function isRecord(value: unknown): value is FrontmatterRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function preserveQuotedHashInDescription(yaml: string): string {
+  return yaml.replace(
+    /^description:([ \t]+)([^\r\n]*)$/gm,
+    (line, spacing: string, value: string) => {
+      const plain = value.trim();
+      if (!plain || /^["'|>{\[]/.test(plain)) return line;
+
+      let quoted = false;
+      let embeddedHash = false;
+      let commentAt = value.length;
+      for (let i = 0; i < value.length; i += 1) {
+        if (value[i] === '"' && value[i - 1] !== "\\") quoted = !quoted;
+        if (value[i] === "#" && /\s/.test(value[i - 1] ?? "")) {
+          if (quoted) embeddedHash = true;
+          else {
+            commentAt = i;
+            break;
+          }
+        }
+      }
+      if (!embeddedHash) return line;
+      return `description:${spacing}${JSON.stringify(value.slice(0, commentAt).trim())}${
+        commentAt < value.length ? ` ${value.slice(commentAt)}` : ""
+      }`;
+    },
+  );
+}
+
 export function parseFrontmatter(source: string): ParsedMarkdown {
   const hit = FRONTMATTER_RE.exec(source);
   if (!hit) return { frontmatter: {}, body: source, strippedKeys: [] };
-  const value: unknown = Bun.YAML.parse(hit[1] ?? "");
+  const value: unknown = Bun.YAML.parse(preserveQuotedHashInDescription(hit[1] ?? ""));
   if (!isRecord(value)) throw new Error("frontmatter must be a YAML mapping");
   const frontmatter = { ...value };
   const strippedKeys: string[] = [];
@@ -50,7 +78,12 @@ export function serializeFrontmatter(frontmatter: FrontmatterRecord): string {
     .sort()
     .map((key) => {
       if (!/^[A-Za-z0-9_-]+$/.test(key)) throw new Error(`invalid frontmatter key: ${key}`);
-      const value = JSON.stringify(ordered(frontmatter[key]));
+      let value: string | undefined;
+      try {
+        value = JSON.stringify(ordered(frontmatter[key]));
+      } catch (error) {
+        throw new Error(`unsupported frontmatter value: ${key}`, { cause: error });
+      }
       if (value === undefined) throw new Error(`unsupported frontmatter value: ${key}`);
       return `${key}: ${value}`;
     });

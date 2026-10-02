@@ -42,6 +42,12 @@ export function rewriteBody(
     (a, b) => b[0].length - a[0].length,
   )) {
     const escaped = reference.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const paired = new RegExp(`\x60([$/])${escaped}\x60\\s+or\\s+\x60([$/])${escaped}\x60`, "g");
+    rewritten = rewritten.replace(paired, (match, first: string, second: string) => {
+      if (first === second) return match;
+      explicitReferenceRewrites += 2;
+      return `\x60skill({ name: "${id}" })\x60`;
+    });
     const token = new RegExp(`([$/])${escaped}(?![A-Za-z0-9-])`, "g");
     rewritten = rewritten.replace(token, () => {
       explicitReferenceRewrites += 1;

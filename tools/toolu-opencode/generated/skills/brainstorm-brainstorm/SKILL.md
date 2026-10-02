@@ -12,7 +12,7 @@ Default-and-proceed is the baseline: do not turn routine work into an interview.
 
 - **Standalone** — the user invoked this skill directly. Work through the
   procedure, post the capsule, and suggest the next step (for example
-  `skill({ name: "delivery-flow-delivery-flow" })` or `skill({ name: "delivery-flow-delivery-flow" })` to build it).
+  `skill({ name: "delivery-flow-delivery-flow" })` to build it).
   Standalone brainstorm never edits code, commits, or starts delivery; the user
   decides what happens next.
 - **Delivery** — delivery-flow invoked this skill as its first phase. Record the

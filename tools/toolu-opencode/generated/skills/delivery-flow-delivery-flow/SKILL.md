@@ -5,7 +5,7 @@ name: "delivery-flow-delivery-flow"
 
 # Delivery flow
 
-Invoking this skill authorizes commit, push, PR creation, and the `pr-babysit:babysit` handoff once the checks below pass. Run the complete sequence for every task, including small fixes: brainstorm → spec → spec review → plan → plan review → execution with real-data tests → PR → `pr-babysit:babysit`. This skill is the only public entry point; the phase files in `references/` are private procedures. Read each one when entering its phase. Use the active host's `skill({ name: "delivery-flow-delivery-flow" })` or `skill({ name: "delivery-flow-delivery-flow" })` invocation as appropriate.
+Invoking this skill authorizes commit, push, PR creation, and the `pr-babysit:babysit` handoff once the checks below pass. Run the complete sequence for every task, including small fixes: brainstorm → spec → spec review → plan → plan review → execution with real-data tests → PR → `pr-babysit:babysit`. This skill is the only public entry point; the phase files in `references/` are private procedures. Read each one when entering its phase. Use the active host's `skill({ name: "delivery-flow-delivery-flow" })` invocation as appropriate.
 
 Before running ledger or verdict commands, locate the enabled, installed
 `toolu@toolu` plugin and set `TOOLU_PLUGIN_ROOT` to its plugin root. Claude
@@ -18,7 +18,7 @@ not contain toolu's source tree.
 
 ## Sequence
 
-1. **Brainstorm:** Invoke the active host's `brainstorm:brainstorm` (`skill({ name: "brainstorm-brainstorm" })` or `skill({ name: "brainstorm-brainstorm" })`) in its Delivery mode and record the outcome, repository evidence, risks, and decisions. Use its compact path for bounded work, but never skip the phase. Resolve material uncertainty before drafting the spec.
+1. **Brainstorm:** Invoke the active host's `brainstorm:brainstorm` (`skill({ name: "brainstorm-brainstorm" })`) in its Delivery mode and record the outcome, repository evidence, risks, and decisions. Use its compact path for bounded work, but never skip the phase. Resolve material uncertainty before drafting the spec.
 2. **Spec:** Read [spec.md](references/spec.md). Write the design with observable acceptance criteria, real-input evidence, failure behavior, and documentation impact. A small fix still gets a concise spec.
 3. **Spec review:** Read [spec-review.md](references/spec-review.md). Review against the authored contract. If `Status: Needs changes`, fix the findings and repeat this phase until `Status: Approved`. Do not plan against a rejected spec.
 4. **Plan:** Read [plan.md](references/plan.md) and [ledger.md](references/ledger.md). Write a machine-readable plan with runnable checks, paths, dependencies, and AC references. A small fix still gets a compact ledger plan.

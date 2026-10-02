@@ -3,6 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { expect, test } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { assignSurfaceIds, candidateKey, type ArtifactCandidate } from "../lib/ids.ts";
 import { parseFrontmatter, serializeFrontmatter } from "../lib/frontmatter.ts";
 import { planSurface, readTree, treesEqual, writeSurface } from "../lib/emit.ts";
@@ -11,6 +12,7 @@ import { runGenerateSurface } from "../generate-surface.ts";
 import { listPluginManifests } from "../../src/inventory/scan.ts";
 import { TOOLU_PLUGIN_ROOT } from "../lib/constants.ts";
 import { renderMarkdown } from "../lib/render.ts";
+import { rewriteBody } from "../lib/rewrite.ts";
 
 const tmpBase = process.env.TMPDIR ?? "/tmp";
 
@@ -101,6 +103,18 @@ test("committed generated tree passes drift check", () => {
   expect(existsSync(generated)).toBe(true);
   const code = runGenerateSurface(["--repo", root, "--check"]);
   expect(code).toBe(0);
+  const manifests = listPluginManifests(join(root, "plugins"));
+  if (!manifests) throw new Error("plugin manifests missing");
+  const plan = planSurface({ repoRoot: root, outDir: generated, plugins: manifests });
+  const git = spawnSync("git", ["ls-files", "-z", "--", "tools/toolu-opencode/generated"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  if (git.status !== 0) throw new Error(`git ls-files failed: ${git.stderr}`);
+  const tracked = new Set(git.stdout.split("\0").filter(Boolean));
+  for (const path of plan.files.keys()) {
+    expect(tracked.has(path.slice(root.length + 1))).toBe(true);
+  }
 });
 
 test("surface ids obey skill naming rules and remain stable across collisions and length limits", () => {
@@ -143,6 +157,33 @@ test("frontmatter round trip preserves folded text and structured permission map
   expect(() => parseFrontmatter("---\nname: [broken\n---\nBody")).toThrow();
 });
 
+test("real epic skill description keeps its embedded issue number", () => {
+  const source = readFileSync(
+    join(repoRoot(), "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md"),
+    "utf8",
+  );
+  const description = parseFrontmatter(source).frontmatter.description;
+  expect(description).toContain("work epic #248");
+  expect(description).toContain("Not for a single standalone issue or PR.");
+});
+
+test("serializer reports the key for values JSON cannot encode", () => {
+  expect(() => serializeFrontmatter({ metadata: { id: 1n } })).toThrow(
+    "unsupported frontmatter value: metadata",
+  );
+});
+
+test("paired host spellings become one OpenCode skill invocation", () => {
+  const references = {
+    invocations: new Map([["delivery-flow:delivery-flow", "delivery-flow-delivery-flow"]]),
+    paths: new Map<string, string>(),
+  };
+  const source = "Use `/delivery-flow:delivery-flow` or `$delivery-flow:delivery-flow` here.";
+  const result = rewriteBody(source, references);
+  expect(result.body).toBe('Use `skill({ name: "delivery-flow-delivery-flow" })` here.');
+  expect(result.notes.explicitReferenceRewrites).toBe(2);
+});
+
 test("real agent tools map to exact OpenCode permissions and reject unknown tools", () => {
   const sourcePath = join(repoRoot(), "plugins/toolu/agents/architect.md");
   const source = readFileSync(sourcePath, "utf8");
@@ -161,9 +202,9 @@ test("real agent tools map to exact OpenCode permissions and reject unknown tool
 
   const invalid = source.replace("tools: Read, Grep, Glob, Bash", "tools: Read, UnknownTool");
   expect(invalid).not.toBe(source);
-  expect(() =>
-    renderMarkdown("agent", "toolu-architect", sourcePath, invalid, references),
-  ).toThrow("unsupported Claude agent tool: UnknownTool");
+  expect(() => renderMarkdown("agent", "toolu-architect", sourcePath, invalid, references)).toThrow(
+    "unsupported Claude agent tool: UnknownTool",
+  );
 });
 
 test("full catalog includes all plugins and explicitly classifies empty surfaces", () => {
