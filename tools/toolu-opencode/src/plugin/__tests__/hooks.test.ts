@@ -94,6 +94,24 @@ test("ready: a protected .env edit is refused and startup notices are logged", a
   await hooks.dispose?.();
 });
 
+test("a completed failing quality command records state and reports its post-tool failure", async () => {
+  const { root } = await project();
+  const hooks = await createTooluHooks(binding(root, []));
+  const before = hooks["tool.execute.before"];
+  const after = hooks["tool.execute.after"];
+  if (before === undefined || after === undefined) throw new Error("tool hooks are missing");
+  const input = { tool: "bash", ...CALL, args: { command: "bun run test" } };
+  await before(input, { args: input.args });
+  const output = { title: "bash", output: "test failed", metadata: { exit: 3 } };
+  await after(input, output);
+  const gate: unknown = JSON.parse(
+    await readFile(join(root, ".opencode/tmp/quality-gate-status.json"), "utf8"),
+  );
+  expect(gate).toMatchObject({ status: "failing" });
+  expect(output.output).toContain("Global quality gate failing");
+  await hooks.dispose?.();
+});
+
 test("ready: shell.env adds toolu's roots to a bash call's env and keeps what is there", async () => {
   const { root } = await project();
   const hooks = await createTooluHooks(binding(root, []));

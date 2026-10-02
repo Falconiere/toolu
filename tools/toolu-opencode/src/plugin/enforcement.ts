@@ -3,6 +3,8 @@ import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createToolAdviceStore } from "../adapter/tool-advice.ts";
 import { createToolBeforeHandler, type ToolBefore } from "../adapter/tool-before.ts";
+import { createToolPostHandler } from "../adapter/tool-post.ts";
+import type { PermissionEvaluateHandlerOptions } from "../adapter/evaluate.ts";
 import type { PluginStartup } from "../bootstrap/result.ts";
 import type { PluginManifest } from "../inventory/types.ts";
 import { bootstrapRuntime } from "../bootstrap/runtime.ts";
@@ -116,6 +118,26 @@ function rootsFor(binding: HostBinding, repoRoot: string): OpencodeRoots {
   };
 }
 
+function gateOptionsFor(
+  binding: HostBinding,
+  roots: OpencodeRoots,
+  plugins: readonly PluginManifest[],
+): PermissionEvaluateHandlerOptions {
+  const { env, projectRoot } = binding;
+  return {
+    repoRoot: roots.repoRoot,
+    configRoot: roots.dataRoot,
+    userConfigRoot: roots.userConfigRoot,
+    permissionContext: { cwd: binding.directory, projectRoot, worktree: projectRoot },
+    env: {
+      ...env,
+      TOOLU_SETTINGS_DIR: join(roots.repoRoot, "plugins/toolu/settings"),
+      TOOLU_HOST_OVERRIDE: "opencode",
+    },
+    selectedPluginSpecs: new Set(plugins.map((plugin) => plugin.spec)),
+  };
+}
+
 export async function prepareEnforcement(
   binding: HostBinding,
   findBundled: () => string | undefined = bundledRepoRoot,
@@ -147,29 +169,20 @@ export async function prepareEnforcement(
   });
   if (bootstrap.status !== "ready") return notReady(`bootstrap: ${bootstrap.reason}`);
   const advice = createToolAdviceStore();
-  const before = createToolBeforeHandler(
-    {
-      repoRoot,
-      configRoot: roots.dataRoot,
-      userConfigRoot: roots.userConfigRoot,
-      permissionContext: { cwd: binding.directory, projectRoot, worktree: projectRoot },
-      env: {
-        ...env,
-        TOOLU_SETTINGS_DIR: join(repoRoot, "plugins/toolu/settings"),
-        TOOLU_HOST_OVERRIDE: "opencode",
-      },
-      selectedPluginSpecs: new Set(selected.plugins.map((plugin) => plugin.spec)),
-    },
-    advice,
-  );
+  const gateOptions = gateOptionsFor(binding, roots, selected.plugins);
+  const post = createToolPostHandler(gateOptions, advice);
+  const before = createToolBeforeHandler(gateOptions, advice, (call) => post.begin(call));
   const shellEnv = shellEnvFor({ roots, plugins: selected.plugins, bun, host: env });
   const context = deliveryPlan(bootstrap.plugins, selected.plugins, bun, projectRoot, env, roots);
   if (typeof context === "string") return notReady(`context: ${context}`);
   return {
     status: "ready",
     before,
-    after: advice.after,
-    clearAdvice: advice.clear,
+    after: post.after,
+    clearAdvice: () => {
+      advice.clear();
+      post.clear();
+    },
     artifacts: bootstrap.artifacts,
     plugins: bootstrap.plugins,
     diagnostics: bootstrap.diagnostics,

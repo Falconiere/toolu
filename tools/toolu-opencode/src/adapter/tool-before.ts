@@ -302,12 +302,14 @@ export function createDenyAllToolBefore(reason: string): ToolBefore {
 export function createToolBeforeHandler(
   opts: PermissionEvaluateHandlerOptions,
   advice?: ToolAdviceStore,
+  onBegin?: (call: ToolCall) => void,
 ): ToolBefore {
   const decider = createGateDecider(opts);
   if (!decider.ok) return createDenyAllToolBefore(decider.reason);
   const servers = mcpServerNames(opts.permissionContext.projectRoot);
   return async (input, output) => {
     advice?.begin(input);
+    onBegin?.(input);
     const args: unknown = output.args;
     const mapping = mapToolCall(input, args, opts.permissionContext, servers);
     if (mapping.kind === "skip") return;

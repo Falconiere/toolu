@@ -1,6 +1,6 @@
 # OpenCode post-tool checks — Brainstorm
 
-**Date:** 2026-10-02  
+**Date:** 2026-10-02
 **Mode:** Delivery, full
 
 ## Capsule
