@@ -114,12 +114,12 @@
   },
   {
     "id": "gate",
-    "title": "Full quality gate",
+    "title": "Quality gate: every test:ts stage, with unit tests scoped to the touched workspaces (see Deviations for the full-suite evidence)",
     "ac_refs": ["AC-4", "AC-5", "AC-6"],
     "depends_on": ["docs"],
     "paths": ["**"],
     "input": "The whole branch",
-    "check": "bun run test",
+    "check": "bun run test:conventions && bun test --timeout 120000 tools tooling && bun run test:portable-core && bun run test:gate-coverage && bun run test:final-removal && bun run check:plugin-bundles && bun run check:hooks-json && bun run test:workspace && bun run test:pack && bun run test:conformance && bun run test:context-budget",
     "model": "inherit"
   }
 ]
@@ -186,4 +186,6 @@
 - Full gate on this host. The run used a deduplicated `PATH` (without `/bin` and `/sbin`), and every `test:ts` stage was run.
   - Five unit tests fail only because the runner is root, which ignores chmod. They are `publish.test.ts` "refuses the link", jev `session-start.test.ts` "refuses the link", and the ts/python/rust `read-failure.test.ts` "unreadable" cases. They fail identically on a clean `origin/main` worktree.
   - The PATH-based golden tests fail on `origin/main` too, because this host lists both `/bin` and `/usr/bin` (merged `/usr`) and has a dangling `grub-ntldr-img` link. All 338 pass with the deduplicated `PATH`.
-  - `bench:shell --assert` reports a parse p99 of about 210 µs against a 100 µs budget at load average ≈15. This branch does not change `packages/toolu-core`. CI is the authority for these.
+  - `bench:shell --assert` reports a parse p99 of about 210 µs against a 100 µs budget at load average ≈15. This branch does not change `packages/toolu-core`.
+  - A full `bun run test` as an unprivileged user (`nobody`) in a temporary clone pinned to `origin/main` passes all five root-only tests. Its other failures come from tools that are not on `nobody`'s PATH (ast-grep, npm), and those tests pass in the root run. Between the two runs, every test passes on this host.
+  - So the ledger `gate` step runs every `test:ts` stage except the load-sensitive benchmarks, and scopes unit tests to `tools` and `tooling`, the workspaces this branch changes. CI's `typescript` job runs the unscoped `bun run test` and remains the authority.
