@@ -158,14 +158,21 @@ function search(
   return request(call, ctx, toolName, input);
 }
 
+/** Undefined when the patch is malformed or the parser throws. */
+function readablePatch(patchText: string): boolean {
+  try {
+    return applyPatchRecords(patchText) !== undefined;
+  } catch {
+    return false;
+  }
+}
+
 function patch(call: ToolCall, args: Args, ctx: PermissionContext): PermissionMapping {
   const patchText = stringField(args, "patchText");
   if (patchText === undefined || patchText.length === 0) {
     return deny(call.tool, "missing a string patchText");
   }
-  if (applyPatchRecords(patchText) === undefined) {
-    return deny(call.tool, "has unreadable patch headers");
-  }
+  if (!readablePatch(patchText)) return deny(call.tool, "has unreadable patch headers");
   return request(call, ctx, "apply_patch", { command: patchText, patchText });
 }
 
