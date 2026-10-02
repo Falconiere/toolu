@@ -1,9 +1,10 @@
 /**
  * `@toolu/core/startup` (#269): what the small SessionStart hooks share —
  * publishing a plugin file at a stable config-root path, the Bun-on-PATH
- * advisory, bounded context output, and Codex plugin-dependency warnings with
- * host-native install commands. Ports the `session-start.sh`,
- * `check-toolu.sh` and `check-deps.sh` scripts of the leaf plugins.
+ * advisory, bounded context output, Codex plugin-dependency warnings with
+ * host-native install commands, and the startup report a self-hosting
+ * bootstrap reads (#342). Ports the `session-start.sh`, `check-toolu.sh` and
+ * `check-deps.sh` scripts of the leaf plugins.
  */
 export {
   MAX_CONTEXT_CHARS,
@@ -26,3 +27,11 @@ export {
   type PublishOptions,
   type PublishResult,
 } from "./publish.ts";
+export {
+  STARTUP_REPORT_ENV,
+  reportStartup,
+  type ErrorStartupRecord,
+  type HelperStartupRecord,
+  type RegistryStartupRecord,
+  type StartupRecord,
+} from "./report.ts";

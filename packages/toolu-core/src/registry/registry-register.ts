@@ -20,6 +20,7 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import type { HostOptions } from "../host/host-roots.ts";
+import { reportStartup } from "../startup/report.ts";
 import {
   REGISTRY_DIRS,
   registryDirName,
@@ -175,10 +176,38 @@ export function registerModules(
   return result;
 }
 
+/** One startup record per declared module, plus an `error` record for every other failure (#342). */
+function reportResult(
+  spec: string,
+  modules: readonly RegisterModuleSpec[],
+  result: RegisterResult,
+  options: RegisterOptions,
+): void {
+  const env = options.env ?? process.env;
+  const root = registryRoot(options);
+  const failures = new Map(result.failed.map((f) => [f.path, f.error]));
+  for (const m of modules) {
+    const target = join(root, registryDirName(m.event), registryFileName(spec, m.name));
+    const error = failures.get(target);
+    failures.delete(target);
+    const record = { kind: "registry" as const, spec, name: m.name, event: m.event, target };
+    const source = m.bundle;
+    if (error !== undefined) reportStartup({ ...record, source, status: "failed", error }, env);
+    else {
+      const status = result.written.includes(target) ? "written" : "unchanged";
+      reportStartup({ ...record, source, status }, env);
+    }
+  }
+  for (const [path, error] of failures) {
+    reportStartup({ kind: "error", origin: spec, message: `${path}: ${error}` }, env);
+  }
+}
+
 /**
  * A plugin's SessionStart entry: drain stdin so the host never stalls on the
  * pipe, sync, and stay silent on stdout (SessionStart stdout becomes context).
- * Each failure is one stderr line. Never rejects: the hook always exits 0.
+ * Each failure is one stderr line. Never rejects: the hook always exits 0,
+ * unless a startup report it was asked to write cannot be written.
  */
 export async function runRegisterHook(
   spec: string,
@@ -192,7 +221,9 @@ export async function runRegisterHook(
     await Bun.stdin.text();
     const result = registerModules(spec, modules, options);
     for (const failure of result.failed) warn(`${failure.path}: ${failure.error}`);
+    reportResult(spec, modules, result, options);
   } catch (error) {
     warn(message(error));
+    reportStartup({ kind: "error", origin: spec, message: message(error) }, options.env);
   }
 }

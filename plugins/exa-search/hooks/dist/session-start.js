@@ -143,6 +143,26 @@ import {
   symlinkSync
 } from "fs";
 import { join as join2 } from "path";
+
+// packages/toolu-core/src/startup/report.ts
+import { appendFileSync } from "fs";
+var STARTUP_REPORT_ENV = "TOOLU_STARTUP_REPORT";
+function reportStartup(record, env = process.env) {
+  const path = envValue(env, STARTUP_REPORT_ENV);
+  if (path === undefined)
+    return;
+  try {
+    appendFileSync(path, `${JSON.stringify(record)}
+`);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`toolu-startup: cannot write startup report ${path}: ${reason}
+`);
+    process.exitCode = 1;
+  }
+}
+
+// packages/toolu-core/src/startup/publish.ts
 function stderrLine2(line) {
   process.stderr.write(`${line}
 `);
@@ -161,7 +181,18 @@ function relink(source, dst) {
     return false;
   }
 }
+function helperRecord(options, result) {
+  const record = { kind: "helper", plugin: options.plugin, source: options.source };
+  if (result.status === "source-missing")
+    return { ...record, status: result.status };
+  return { ...record, path: result.path, status: result.status };
+}
 function publishWrapper(options) {
+  const result = publish(options);
+  reportStartup(helperRecord(options, result), options.env ?? process.env);
+  return result;
+}
+function publish(options) {
   if (!isFile(options.source)) {
     return { status: "source-missing" };
   }
