@@ -261,7 +261,7 @@ None. Every required capability is supported on the pinned host or has an altern
 - Export only plugin functions or one default PluginModule: every exported function is invoked as a plugin, and a non-hooks return breaks every prompt. Evidence: `load.helper-export`, `load.module-default`. Owner: OP-02 (#336).
 - Install through opencode.json plugin (with options) or .opencode/plugins/; both routes load the documented plugin function. Evidence: `load.config-file`, `load.local-file`. Owner: OP-11 (#345), OP-26 (#360).
 - Generated skill names must validate themselves (lowercase, single hyphens): the host loads invalid names without complaint. Evidence: `surface.names`. Owner: OP-10 (#344).
-- Surfaces can be registered from the plugin config hook (commands, agents, skills.paths, instructions) instead of writing into user directories. Evidence: `surface.config-hook`, `surface.files`. Owner: OP-11 (#345).
+- Surfaces are registered from the plugin config hook (the selected plugins' commands, agents and skills.paths; user definitions win) instead of writing into user directories. Evidence: `surface.config-hook`, `surface.files`. Owner: OP-11 (#345).
 - Helper environment (TOOLU_* paths, resolved Bun) reaches bash through shell.env. Evidence: `env.shell`. Owner: OP-09 (#343).
 - Project commands keep their arguments; command.execute.before sees them. Evidence: `command.hook`. Owner: OP-10 (#344), OP-24 (#358).
 

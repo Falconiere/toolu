@@ -8,7 +8,17 @@ The adapter uses the documented plugin API (`opencode-ai@1.18.34`, `@opencode-ai
 
 `bun run generate:opencode-surface` builds `generated/` from all 16 plugin manifests. The catalog records 18 skills, five subagents, four commands, three plugins with no Markdown surface, and the Claude-only statusline setup command excluded for [OP-25](https://github.com/Falconiere/toolu/issues/359). `bun run check:opencode-surface` detects drift. `bun run probe:opencode-surface` loads the generated Markdown in an isolated pinned OpenCode 1.18.34 profile and checks discovery and parsed agent/command configuration.
 
-Skill names are unique, at most 64 characters, and use lowercase letters, digits, and single hyphens. The generator preserves YAML metadata and agent permissions, maps Claude tool lists to restrictive OpenCode permissions, and lets agents inherit the configured host model instead of emitting Claude model aliases. Local linked resources are copied into `generated/`; known skill references and source paths point to generated IDs and files. The generated catalog is package content. Native installation and enabled-plugin selection are handled by [OP-11](https://github.com/Falconiere/toolu/issues/345).
+Skill names are unique, at most 64 characters, and use lowercase letters, digits, and single hyphens. The generator preserves YAML metadata and agent permissions, maps Claude tool lists to restrictive OpenCode permissions, and lets agents inherit the configured host model instead of emitting Claude model aliases. Local linked resources are copied into `generated/`; known skill references and source paths point to generated IDs and files.
+
+The generated catalog stays inside the package. When toolu is ready, its config hook (the plugin's `config` callback, [#345](https://github.com/Falconiere/toolu/issues/345)) adds the selected plugins' surfaces to the host's config. OpenCode then discovers them natively, and nothing is copied into `.opencode/` or `~/.config/opencode/`:
+
+- each skill's directory goes into `skills.paths`, so the native `skill` tool lists and loads it;
+- agents and commands go in as config entries.
+
+Your own definitions win:
+
+- a skill with the same name anywhere OpenCode looks keeps your copy;
+- your `agent.<id>` or `command.<id>` keys override toolu's, key by key.
 
 ## Install
 
@@ -22,6 +32,14 @@ Then choose which toolu plugins are active, in your project:
 // .opencode/toolu/plugins.json
 { "version": 1, "enabled": ["toolu"] }
 ```
+
+Selection works in three tiers:
+
+- **Project:** the file above. When present, it alone decides.
+- **Global:** without a project file, `~/.config/opencode/toolu/plugins.json` (same schema) applies to every project.
+- **Default:** with neither file, every bundled plugin is enabled.
+
+Dependencies are added automatically. An invalid selection file stops toolu: every tool call is refused until you fix it.
 
 Restart OpenCode. The package carries plugin manifests, settings and committed Bun bundles, so there is no clone and no `TOOLU_REPO_ROOT` to export.
 

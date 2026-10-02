@@ -149,6 +149,8 @@ selection (global file, fail closed) → catalog and plan (validated generated s
     "depends_on": ["docs"],
     "paths": [
       "tooling/src/opencode-host/scenarios-install.ts",
+      "tooling/src/opencode-host/scenarios-precedence.ts",
+      "tooling/src/opencode-host/install-host.ts",
       "tooling/src/opencode-host/scenarios-entry.ts",
       "tooling/src/opencode-entry-smoke.ts",
       "tooling/src/__tests__/opencode-entry-smoke.test.ts",
@@ -227,6 +229,9 @@ selection (global file, fail closed) → catalog and plan (validated generated s
   - the load-sensitive "import cost" timings.
 
   The `gate` check uses the same host-portable form. If `bun run test` passes verbatim here, it is recorded instead. `bench:shell --assert` is load-sensitive and still runs in CI as part of `bun run test`.
+
+- **Live scenario files:** the 300-line lint cap split `scenarios-install.ts` into three files, now declared in the `live` step's paths: the host helpers in `install-host.ts`, precedence and skill roots in `scenarios-precedence.ts`, and npm-clean, lifecycle, both-routes and selection in `scenarios-install.ts`. Only `INSTALL_SCENARIOS` is registered.
+- **AC-1 skill listing (live):** the first `surfaces.npm-clean` run failed only on `described`. On `opencode-ai@1.18.34`, the `skill` tool description is static ("skills listed in the system prompt"), and `session/system.ts` lists the available skills in the system prompt instead. The scenario now checks the recorded system prompt, and the spec's AC-1 wording now says where the host lists them. Every other AC-1 observation passed on the first run.
 
 ## Plan review
 

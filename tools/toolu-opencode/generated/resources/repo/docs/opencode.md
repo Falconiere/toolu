@@ -13,15 +13,13 @@ The package carries plugin manifests, settings, and committed Bun bundles, so th
 adapter resolves its plugin root to its own package directory. Its default entry
 (`exports["."]` / `main` → `./src/plugin/toolu.ts`) is a `PluginModule` `{ id: "toolu", server }`, so the host loads it
 through an `opencode.json` `plugin` entry with no local shim. Choose which plugins are active with
-`<project>/.opencode/toolu/plugins.json`:
+`<project>/.opencode/toolu/plugins.json`, or for every project with the global selection file (see step 4):
 
 ```json
 { "version": 1, "enabled": ["toolu"] }
 ```
 
-`delivery-flow`, `brainstorm`, `pr-babysit`, and `epic-orchestrator` ship in the committed OpenCode surface —
-add them to `enabled` when you want those workflows (dependencies close
-automatically).
+Every plugin ships its skills, agents and commands in the package. OpenCode discovers the ones you enable automatically (step 5). For example, add `delivery-flow`, `brainstorm`, `pr-babysit` or `epic-orchestrator` to `enabled` when you want those workflows. Dependencies close automatically.
 
 `npx @toolu/plugins install --host opencode` does not drive this yet — the CLI
 has no OpenCode adapter. Until it does, run the two steps above.
@@ -119,12 +117,51 @@ In **your application repo** (not inside the toolu clone):
 
    ```json
    { "version": 1, "enabled": ["toolu"] }
-
    ```
 
    Add names (for example `ts-quality`, `ast-grep`, `delivery-flow`, `pr-babysit`, `epic-orchestrator`) only when those directories exist under `$TOOLU_REPO_ROOT/plugins/` (or the npm package catalog) and you accept their extra prerequisites. Manifest dependencies are closed automatically (`@toolu/opencode/select`).
 
-5. **Generated surface** — skills, agents, and commands for OpenCode live under `tools/toolu-opencode/generated/` (catalog: `opencode.toolu.json`). Regenerate after changing upstream skills with `bun run generate:opencode-surface` in the toolu clone. Wire OpenCode to those paths using your OpenCode project config; the committed tree is the canonical mirror from [#206](https://github.com/Falconiere/toolu/issues/206).
+   **Global selection** ([#345](https://github.com/Falconiere/toolu/issues/345)):
+
+   - The first source that exists decides:
+     1. the project file;
+     2. the global file `<global config root>/toolu/plugins.json`, which is `~/.config/opencode/toolu/plugins.json` by default (see [Roots](#roots-and-helper-environment)), with the same schema;
+     3. otherwise, every bundled plugin.
+   - A project file, even `"enabled": []`, replaces the global one. The two are never merged.
+   - `skills.<plugin>: false` in the project `toolu.config.json` still turns a plugin off.
+   - **An invalid selection file stops toolu.** That covers a file that is unreadable, not JSON, a version other than `1`, an unknown key, or a non-string name. Every tool call is then refused with `toolu: not ready: plugin selection: invalid <path>: …` until you fix it. toolu does not guess a selection you did not write.
+   - A name that is not installed is skipped and reported in the `toolu: startup notes:` log line.
+
+5. **Generated surface (automatic)** — skills, agents and commands for OpenCode live in the package's `generated/` directory (catalog `opencode.toolu.json`). In a clone that is `tools/toolu-opencode/generated/`, which `bun run generate:opencode-surface` regenerates. You wire nothing by hand.
+
+   **How they get in.** When toolu is ready, its `config` hook ([#345](https://github.com/Falconiere/toolu/issues/345)) adds the enabled plugins' surfaces, dependencies included, to OpenCode's merged config:
+
+   - each skill's directory goes into `skills.paths`, so the native `skill` tool lists it in the system prompt and loads it;
+   - agents and commands become `agent.<id>` and `command.<id>` entries, which OpenCode lists like its own.
+
+   **No files.** toolu writes nothing into `.opencode/`, `~/.config/opencode/` or any other discovery directory. Its contributions are recomputed at every start from the current package and selection.
+
+   **Enable, disable, update and remove** take effect at the next start and touch only toolu's entries:
+
+   - removing a plugin from the selection drops its surfaces;
+   - updating the package replaces them;
+   - removing the package leaves nothing behind.
+
+   **Your definitions win:**
+
+   - **Skills:** if a `SKILL.md` with the same `name` exists anywhere OpenCode looks, toolu does not add its own, and your copy is the only one OpenCode sees. The locations are `.opencode/skills/`, `.claude/skills/`, `.agents/skills/`, the global equivalents, `OPENCODE_CONFIG_DIR` and your own `skills.paths`. Without this, OpenCode would load two same-name skills in an unpredictable order. Remote `skills.urls` and paths that other plugins add after toolu cannot be checked.
+   - **Agents and commands:** your `agent.<id>` or `command.<id>` keys, from `opencode.json` or a Markdown file, override toolu's key by key, the way your config overrides OpenCode's built-in agents. Setting only `agent.toolu-quick-task.model` keeps toolu's prompt.
+   - **Complete Markdown agents:** a full agent file with a toolu ID still inherits any key it leaves out, such as `mode` or toolu's permission rules. Set `disable: true` to drop a toolu agent.
+
+   **Shared procedures.** Some generated skills link files under `generated/resources/`, such as the commit workflow. Those files sit outside the skill's own directory, so OpenCode would ask for `external_directory` permission to read them.
+
+   - When your `permission` config has no `external_directory` rule and no wildcard key, toolu adds `external_directory: { "<generated>/resources/*": "allow" }`. That is the same allowance OpenCode itself gives every skill directory.
+   - When you do have such a rule, toolu adds nothing and your rule decides.
+   - Like OpenCode's skill-directory allowance, this rule also lets edit tools touch that package directory without the directory prompt; your `edit` permission still applies.
+
+   **Log.** Each ready start logs `toolu: surfaces (<project selection | global selection | all installed plugins>, <n> ms): skills …; agents …; commands …`. When any applies, it adds a `toolu: surface notes:` line naming each kept user skill, merged entry and permission decision.
+
+   **Migrating from manual wiring.** If you followed the old instructions and pointed `skills.paths` at `generated/skills`, or copied generated files into `.opencode/`, remove them. A user copy always wins, so a stale copy would hide the current one. The surface notes list every skill kept from your files.
 
 6. **Gate config** — optional `toolu.config.json` at `<project>/.opencode/toolu.config.json` and, for every project, in the global config root (`${XDG_CONFIG_HOME:-~/.config}/opencode/toolu.config.json`); the project file wins on conflict. Same schema as other hosts; OpenCode uses `.opencode` instead of `.claude` / `.codex`. Gate modes and presets: [`docs/config.md`](config.md#gate-modes-gates) and [`docs/portable-core.md`](portable-core.md). Example for a smoke test:
 
@@ -176,6 +213,19 @@ Live entry smoke on the pinned host: the npm route, a local shim, both at once, 
 cd /path/to/toolu
 bun run smoke:opencode-entry                       # every scenario
 bun run smoke:opencode-entry entry.helper-env entry.worktree-state
+```
+
+The same runner proves surface install and discovery ([#345](https://github.com/Falconiere/toolu/issues/345)):
+
+- `surfaces.npm-clean`: a clean npm install exposes the selection's skills, agents and commands. The native `skill` tool loads one, and its linked shared procedure is readable.
+- `surfaces.lifecycle`: reselect, update and remove.
+- `surfaces.precedence`: user skills, agents, commands and permission rules win.
+- `surfaces.skill-roots`: a user skill in each OpenCode skill root leaves one copy.
+- `surfaces.both-routes`: the npm route and a local shim together add each surface once.
+- `surfaces.selection`: global, then project selection; an invalid file fails closed.
+
+```bash
+bun run smoke:opencode-entry surfaces.npm-clean surfaces.lifecycle surfaces.precedence surfaces.skill-roots surfaces.both-routes surfaces.selection
 ```
 
 Live pre-tool smoke on the pinned host checks protected edits, writes and patches, unsafe shell, commit and push gates, MCP and task denials, plus an allowed shell call:
@@ -234,7 +284,7 @@ Check out the last known-good tag in the toolu clone and run `bun install --froz
 
 ## Disable / uninstall
 
-- **Disable enforcement** — remove or rename `.opencode/plugins/toolu.ts`, then restart OpenCode. User config under `.opencode/toolu.config.json` is left intact. Clearing `enabled` in `.opencode/toolu/plugins.json` only removes the plugins' startup contributions at the next start; the core gates still run.
+- **Disable enforcement** — remove or rename `.opencode/plugins/toolu.ts`, then restart OpenCode. User config under `.opencode/toolu.config.json` is left intact. Clearing `enabled` in `.opencode/toolu/plugins.json` only removes the plugins' startup contributions and their skills, agents and commands at the next start; the core gates still run.
 - **Remove toolu** — npm install: `opencode plugin remove @toolu/opencode`, then delete `.opencode/toolu/` and optional `.opencode/toolu.config.json`. Contributor clone: delete `.opencode/plugins/toolu.ts`, `.opencode/package.json` (if only used for toolu), `.opencode/toolu/`, and optional `.opencode/toolu.config.json`, remove `TOOLU_REPO_ROOT` from your environment, and delete the clone separately.
 - **Scoped cleanup** — registry, helpers, startup ledger and state under the project's data root (`.opencode/toolu/state/`, or `<override>/toolu/opencode/projects/<name>-<hash>/`) can be deleted to force a fresh bootstrap; it does not remove Claude/Codex settings.
 

@@ -180,7 +180,7 @@ The global selection file is `<config root>/toolu/plugins.json` with `{ "version
 - **AC-1:** Setup: a clean isolated profile with the packed tarball through the npm route, the project selection `["pr-babysit"]`, and default permissions. Expected:
   - Of all catalog skill IDs, `debug skill` lists exactly the 7 of the closure {pr-babysit, toolu}, each under the package's `generated/skills/<id>/`.
   - `GET /agent` lists the 5 toolu agents, and `GET /command` lists the 3 `source: "command"` toolu commands of the closure. Nothing from an unselected plugin appears (for example `jev-jev`).
-  - In a scripted `opencode run`, the native `skill` tool loads `toolu-commit-e11d9d00` and its output contains the skill body. The recorded model request's `skill` tool description names it. A `read` of the skill's linked `resources/toolu/workflows/commit.md` completes without a permission ask.
+  - In a scripted `opencode run`, the native `skill` tool loads `toolu-commit-e11d9d00` and its output contains the skill body. The recorded model request's system prompt, where the pinned host lists available skills, names it. A `read` of the skill's linked `resources/toolu/workflows/commit.md` completes without a permission ask.
   - The project's `.opencode/` gains no `skills`, `agents` or `commands` directory.
 - **AC-2:** The AC-1 project also holds the unrelated user skill `.opencode/skills/my-skill/SKILL.md`. Expected:
   - Re-selected to `["jev"]`: the host lists `jev-jev` and no surface from AC-1, and `my-skill` survives unchanged.
@@ -216,7 +216,7 @@ AC-1 to AC-6 are live scenarios in the new `tooling/src/opencode-host/scenarios-
 
 | AC | Real input | Observable result | Boundary | Check |
 |---|---|---|---|---|
-| AC-1 | Packed tarball, isolated pinned host, `["pr-babysit"]`, default permissions | `debug skill` names and locations; `/agent`; `/command` (`source: "command"`); skill-tool output and recorded tool description; completed `read` of `commit.md`; `.opencode` listing | An unselected plugin's surfaces are absent | `bun run smoke:opencode-entry surfaces.npm-clean` |
+| AC-1 | Packed tarball, isolated pinned host, `["pr-babysit"]`, default permissions | `debug skill` names and locations; `/agent`; `/command` (`source: "command"`); skill-tool output and recorded system prompt; completed `read` of `commit.md`; `.opencode` listing | An unselected plugin's surfaces are absent | `bun run smoke:opencode-entry surfaces.npm-clean` |
 | AC-2 | Same project, reselected; a second tarball with a changed description; then the plugin removed | New set only; new description; user skill intact; nothing toolu-written | Update and removal | `bun run smoke:opencode-entry surfaces.lifecycle` |
 | AC-3 | User skill, user Markdown agent, `opencode.json` agent, command and permission overrides | One `toolu-debug` at the user's path; merged agent; user prompt and template; identical bytes; notes; read rejected under the user's ask | Partial and complete overrides; a user permission rule | `bun run smoke:opencode-entry surfaces.precedence` |
 | AC-4 | `toolu-debug` placed in each host root in turn | Exactly one `toolu-debug`, at that root | Up-walk from a subdirectory; env-selected roots | `bun run smoke:opencode-entry surfaces.skill-roots` |

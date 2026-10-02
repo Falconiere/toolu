@@ -200,7 +200,7 @@ export function planSurface(options: GenerateSurfaceOptions): GenerateSurfaceRes
     "",
     "Do not edit by hand. Regenerate with `bun run generate:opencode-surface`.",
     "",
-    `The catalog covers all ${catalogPlugins.length} plugin manifests. Runtime installation and enabled-plugin selection are handled separately by OP-11.`,
+    `The catalog covers all ${catalogPlugins.length} plugin manifests. At runtime the plugin's \`config\` hook contributes the selected plugins' skills, agents and commands from this directory; nothing is copied into OpenCode's discovery directories (see \`docs/opencode.md\`).`,
     "",
     "## Catalog coverage",
     "",
