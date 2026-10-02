@@ -3366,7 +3366,7 @@ function gateLine(gate) {
 }
 function reportText(status) {
   const lines = [
-    `Host: ${status.host === "codex" ? "Codex" : "Claude Code"}`,
+    `Host: ${status.host === "codex" ? "Codex" : status.host === "opencode" ? "OpenCode" : "Claude Code"}`,
     ...repositoryLines(status),
     gateLine(status.gate)
   ];
@@ -3383,4 +3383,5 @@ function reportText(status) {
 
 // plugins/statusline/hooks/src/status.ts
 var dir = process.argv[2] || process.cwd();
-process.stdout.write(reportText(collectStatus(dir, process.env, "codex")));
+var host = process.env.TOOLU_HOST_OVERRIDE === "opencode" ? "opencode" : "codex";
+process.stdout.write(reportText(collectStatus(dir, process.env, host)));

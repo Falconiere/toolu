@@ -1,5 +1,5 @@
 /**
- * The explicit status report behind Codex's `$statusline:status`. Only fields
+ * The explicit status report for Codex and OpenCode skills. Only fields
  * available from local repository and toolu state: no account, model, effort
  * or context window.
  */
@@ -29,7 +29,7 @@ function gateLine(gate: ProjectStatus["gate"]): string {
 /** The report, one field per line, newline-terminated. */
 export function reportText(status: ProjectStatus): string {
   const lines = [
-    `Host: ${status.host === "codex" ? "Codex" : "Claude Code"}`,
+    `Host: ${status.host === "codex" ? "Codex" : status.host === "opencode" ? "OpenCode" : "Claude Code"}`,
     ...repositoryLines(status),
     gateLine(status.gate),
   ];

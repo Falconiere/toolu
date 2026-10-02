@@ -100,7 +100,7 @@ Tests must live in a sibling `__tests__/` directory, kept flat (only `fixtures/`
 
 ```typescript
 // ❌ BANNED in production code
-console.log('debug info')`;
+console.log('debug info');
 console.error('something broke');
 
 // ✅ CORRECT — use a proper logger

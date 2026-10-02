@@ -28,6 +28,19 @@ test.concurrent("status: reads Codex gate state and repository status without Cl
   );
 });
 
+test.concurrent("status: OpenCode report reads its own gate state", async () => {
+  using sb = createSandbox();
+  repo(sb.project);
+  sb.write(
+    ".opencode/tmp/quality-gate-status.json",
+    '{"status":"failing","reason":"opencode failure"}\n',
+  );
+  sb.write(".codex/tmp/quality-gate-status.json", '{"status":"passing"}\n');
+  const out = await report(sb, sb.project, { TOOLU_HOST_OVERRIDE: "opencode" });
+  expect(out).toContain("Host: OpenCode\n");
+  expect(out).toContain("Quality gate: failing — opencode failure\n");
+});
+
 test.concurrent("status: reads the host-native comemory marker when present", async () => {
   using sb = createSandbox();
   repo(sb.project);

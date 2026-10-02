@@ -1,4 +1,12 @@
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { expect, test } from "bun:test";
 import { fileURLToPath } from "node:url";
@@ -37,6 +45,19 @@ test("generate twice yields identical tree", () => {
   writeSurface(plan, out);
   const second = readTree(out);
   expect(treesEqual(first, second, out)).toEqual([]);
+});
+
+test("generated resource links are independent of plugin directory order", () => {
+  const root = repoRoot();
+  const out = mkdtempSync(join(tmpBase, "toolu-surface-order-"));
+  const manifests = listPluginManifests(join(root, "plugins"));
+  if (!manifests) throw new Error("plugin manifests missing");
+  const forward = planSurface({ repoRoot: root, outDir: out, plugins: manifests });
+  const reverse = planSurface({ repoRoot: root, outDir: out, plugins: [...manifests].reverse() });
+  expect(treesEqual(forward.files, reverse.files, out)).toEqual([]);
+  const jevDoc = forward.files.get(join(out, "resources/repo/docs/jev/README.md"));
+  expect(jevDoc).toContain("../../../../skills/jev-jev/references/problem-solving.md");
+  expect(jevDoc).toContain("../../../../skills/jev-jev/evals/README.md");
 });
 
 test("drift check fails when a source skill changes", () => {
@@ -200,7 +221,10 @@ test("generated research agent labels the OpenCode config root correctly", () =>
 test("generated delivery skill uses the generated ID for a bare brainstorm reference", () => {
   const root = repoRoot();
   const out = mkdtempSync(join(tmpBase, "toolu-surface-delivery-"));
-  const selected = selectPluginsByEnabledNames(join(root, "plugins"), ["delivery-flow", "brainstorm"]);
+  const selected = selectPluginsByEnabledNames(join(root, "plugins"), [
+    "delivery-flow",
+    "brainstorm",
+  ]);
   if (!selected.ok) throw new Error(selected.reason);
   const plan = planSurface({ repoRoot: root, outDir: out, plugins: selected.plugins });
   const skill = plan.files.get(join(out, "skills/delivery-flow-delivery-flow/SKILL.md"));
@@ -221,6 +245,20 @@ test("generated review skill labels its OpenCode config example", () => {
   expect(skill).not.toContain("${CLAUDE_CONFIG_DIR:-$HOME/.claude}");
 });
 
+test("generated status skill runs the packaged OpenCode hook", () => {
+  const root = repoRoot();
+  const out = mkdtempSync(join(tmpBase, "toolu-surface-status-"));
+  const selected = selectPluginsByEnabledNames(join(root, "plugins"), ["statusline"]);
+  if (!selected.ok) throw new Error(selected.reason);
+  const plan = planSurface({ repoRoot: root, outDir: out, plugins: selected.plugins });
+  const skill = plan.files.get(join(out, "skills/statusline-status/SKILL.md"));
+  expect(skill).toContain(
+    "TOOLU_HOST_OVERRIDE=opencode bun ../../../plugins/statusline/hooks/dist/status.js",
+  );
+  expect(skill).not.toContain("../../hooks/dist/status.js");
+  expect(existsSync(join(root, "plugins/statusline/hooks/dist/status.js"))).toBe(true);
+});
+
 test("generated model-routing references resolve relative to each skill", () => {
   const out = mkdtempSync(join(tmpBase, "toolu-surface-routing-"));
   const plan = planDefault(out);
@@ -231,7 +269,9 @@ test("generated model-routing references resolve relative to each skill", () => 
   for (const [id, relativePath] of references) {
     const skill = plan.files.get(join(out, "skills", id, "SKILL.md"));
     expect(skill).toContain(`\`${relativePath}\``);
-    expect(skill).not.toContain("${TOOLU_PLUGIN_ROOT}/generated/skills/toolu-orchestrator/references/model-routing.md");
+    expect(skill).not.toContain(
+      "${TOOLU_PLUGIN_ROOT}/generated/skills/toolu-orchestrator/references/model-routing.md",
+    );
     expect(plan.files.has(resolve(out, "skills", id, relativePath))).toBe(true);
   }
 });
@@ -337,6 +377,10 @@ test("resource links in generated skills resolve inside the output tree", () => 
   expect([...plan.files.keys()].some((path) => path.endsWith("resources/jev/README.md"))).toBe(
     true,
   );
+  const jevReference = plan.files.get(join(out, "skills/jev-jev/references/problem-solving.md"));
+  expect(jevReference).toContain("for OpenCode use the second line instead");
+  expect(jevReference).toContain("${XDG_CONFIG_HOME:-$HOME/.config}/opencode");
+  expect(jevReference).not.toContain("${CLAUDE_CONFIG_DIR:-$HOME/.claude}");
 });
 
 test("missing real skill resource fails generation with its source path", () => {

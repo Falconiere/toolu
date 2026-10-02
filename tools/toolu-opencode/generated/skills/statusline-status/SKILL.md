@@ -5,7 +5,7 @@ name: "statusline-status"
 
 # Status
 
-Run `TOOLU_HOST_OVERRIDE=codex bun ../../hooks/dist/status.js` resolved from this
+Run `TOOLU_HOST_OVERRIDE=opencode bun ../../../plugins/statusline/hooks/dist/status.js` resolved from this
 skill directory and return its output verbatim. The explicit override is
 required because lifecycle-only plugin variables are not exported to ordinary
 skill shell calls. The report includes only fields available from local

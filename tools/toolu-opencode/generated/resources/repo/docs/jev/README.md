@@ -47,7 +47,7 @@ reuse results while evidence and question meanings stay unchanged. A task with n
 semantic decision is stated as such in one sentence. Keep architecture, code
 correctness, tests, and exact rules with the agent and deterministic tools.
 
-The [problem-solving reference](../../../jev/skills/jev/references/problem-solving.md)
+The [problem-solving reference](../../../../skills/jev-jev/references/problem-solving.md)
 contains executable examples with named evidence, rubrics, interpretation, and
 next actions, including no-match and uncertain outcomes.
 
@@ -92,10 +92,10 @@ commands take strings.
 
 ## Problem-solving examples
 
-Load only Setup + the needed [example](../../../jev/skills/jev/references/problem-solving.md):
+Load only Setup + the needed [example](../../../../skills/jev-jev/references/problem-solving.md):
 search (rank + existence), debugging (hypotheses + new evidence), planning
 (separate preferences), or review (support/contradiction/unsupported).
-[Live evaluation record](../../../jev/skills/jev/evals/README.md).
+[Live evaluation record](../../../../skills/jev-jev/evals/README.md).
 
 ## Behavior and Limits
 

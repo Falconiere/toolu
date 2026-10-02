@@ -48,7 +48,10 @@ function relativeOut(path: string, outDir: string): string {
 }
 
 export function planSurface(options: GenerateSurfaceOptions): GenerateSurfaceResult {
-  const { repoRoot, outDir, plugins } = options;
+  const { repoRoot, outDir } = options;
+  const plugins = [...options.plugins].sort((a, b) =>
+    a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
+  );
   const files = new Map<string, string>();
   const notes: string[] = [];
   const catalogPlugins: GeneratedCatalog["plugins"] = [];

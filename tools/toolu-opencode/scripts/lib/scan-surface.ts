@@ -207,7 +207,7 @@ function within(root: string, target: string): boolean {
 }
 
 function copiedMarkdown(source: string): string {
-  return source.replace(
+  const copied = source.replace(
     /[ \t]+(?=\r?$)/gm,
     (spaces: string, offset: number) => {
       const lineStart = source.lastIndexOf("\n", offset - 1) + 1;
@@ -215,6 +215,10 @@ function copiedMarkdown(source: string): string {
         ? "\\"
         : "";
     },
+  );
+  return copied.replace(
+    '# Codex (for Claude Code use the second line instead):\nJEV="${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/jev/jev.sh"\n# JEV="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/jev/jev.sh"',
+    '# Codex (for OpenCode use the second line instead):\nJEV="${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/jev/jev.sh"\n# JEV="${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/jev/jev.sh"',
   );
 }
 

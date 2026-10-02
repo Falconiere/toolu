@@ -3218,6 +3218,8 @@ function statusHost(env) {
   const override = envValue(env, "TOOLU_HOST_OVERRIDE");
   if (override === "codex")
     return "codex";
+  if (override === "opencode")
+    return "opencode";
   return override === undefined && envValue(env, "PLUGIN_ROOT") !== undefined ? "codex" : "claude";
 }
 function emptyStatus(host, cwd) {

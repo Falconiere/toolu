@@ -15,9 +15,9 @@ Run setup + selected example in one Bash shell. Requires Bun 1.4.x, `jq` for the
 `TYPESAFE_API_KEY`; never read `.env`.
 
 ```bash
-# Codex (for Claude Code use the second line instead):
+# Codex (for OpenCode use the second line instead):
 JEV="${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/jev/jev.sh"
-# JEV="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/jev/jev.sh"
+# JEV="${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/jev/jev.sh"
 # Repository development, from the repository root, if not installed:
 if [ ! -x "$JEV" ]; then JEV="$PWD/plugins/jev/hooks/dist/jev.js"; fi
 JEV_BUN=
