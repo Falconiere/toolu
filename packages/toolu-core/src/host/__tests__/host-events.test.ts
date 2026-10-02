@@ -42,6 +42,9 @@ describe("nativeEventName", () => {
     expect(nativeEventName("opencode", "tool/pre")).toBe("tool.execute.before");
     expect(nativeEventName("opencode", "permission/evaluate")).toBeNull();
     expect(nativeEventName("opencode", "session/start")).toBe("session.created");
+    expect(nativeEventName("opencode", "session/unload")).toBe("session.deleted");
+    expect(nativeEventName("opencode", "prompt")).toBe("chat.message");
+    expect(nativeEventName("opencode", "pre_compact")).toBe("experimental.session.compacting");
   });
 });
 

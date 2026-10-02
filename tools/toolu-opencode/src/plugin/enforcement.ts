@@ -4,11 +4,18 @@ import { join, resolve } from "node:path";
 import { createToolAdviceStore } from "../adapter/tool-advice.ts";
 import { createToolBeforeHandler, type ToolBefore } from "../adapter/tool-before.ts";
 import type { PluginStartup } from "../bootstrap/result.ts";
+import type { PluginManifest } from "../inventory/types.ts";
 import { bootstrapRuntime } from "../bootstrap/runtime.ts";
 import { opencodeConfigRoot, opencodeDataRoot } from "../host/roots.ts";
-import { shellEnvFor, type OpencodeRoots, type ShellEnv } from "../host/runtime-env.ts";
+import {
+  shellEnvFor,
+  tooluProcessEnv,
+  type OpencodeRoots,
+  type ShellEnv,
+} from "../host/runtime-env.ts";
 import { resolveBunExecutable, runPreflight } from "../preflight/check.ts";
 import { selectPluginsWithDependencies } from "../select/resolve.ts";
+import { contextJobs, type ContextPlan } from "./context-delivery.ts";
 import type { HostBinding } from "./context.ts";
 
 export type Enforcement =
@@ -23,6 +30,8 @@ export type Enforcement =
       diagnostics: string[];
       /** What `shell.env` adds to every bash call (#343). */
       shellEnv: ShellEnv;
+      /** Startup lines and the bundles that produce prompt and compaction text (#341). */
+      context: ContextPlan;
     }
   | { status: "not-ready"; reason: string };
 
@@ -47,6 +56,41 @@ function bundledRepoRoot(): string | undefined {
 
 function nonEmpty(value: string | undefined): string | undefined {
   return value !== undefined && value.length > 0 ? value : undefined;
+}
+
+function deliveryPlan(
+  started: readonly PluginStartup[],
+  plugins: readonly PluginManifest[],
+  bun: string,
+  projectRoot: string,
+  env: Record<string, string>,
+  roots: OpencodeRoots,
+): ContextPlan | string {
+  const ordered = started.flatMap((entry) => {
+    const plugin = plugins.find((candidate) => candidate.name === entry.plugin);
+    return plugin === undefined ? [] : [{ name: plugin.name, pluginDir: plugin.pluginDir }];
+  });
+  const jobs = contextJobs(ordered);
+  if (!jobs.ok) return jobs.reason;
+  const startupLines: string[] = [];
+  const notices: string[] = [];
+  for (const plugin of started) {
+    for (const entry of plugin.entries) {
+      if (entry.additionalContext !== undefined) startupLines.push(entry.additionalContext);
+      if (entry.systemMessage !== undefined) {
+        notices.push(`toolu: ${plugin.plugin}/${entry.entry}: ${entry.systemMessage}`);
+      }
+    }
+  }
+  return {
+    startupLines,
+    notices,
+    prompt: jobs.prompt,
+    compact: jobs.compact,
+    bun,
+    projectRoot,
+    env: { ...tooluProcessEnv(env, roots), TOOLU_BUN: bun, TOOLU_HOST_OVERRIDE: "opencode" },
+  };
 }
 
 /** Plugin option, then `TOOLU_REPO_ROOT` / `TOOLU_ROOT`, then the catalog bundled in the package. */
@@ -119,15 +163,17 @@ export async function prepareEnforcement(
     advice,
   );
   const shellEnv = shellEnvFor({ roots, plugins: selected.plugins, bun, host: env });
-  const { artifacts, plugins, diagnostics } = bootstrap;
+  const context = deliveryPlan(bootstrap.plugins, selected.plugins, bun, projectRoot, env, roots);
+  if (typeof context === "string") return notReady(`context: ${context}`);
   return {
     status: "ready",
     before,
     after: advice.after,
     clearAdvice: advice.clear,
-    artifacts,
-    plugins,
-    diagnostics,
+    artifacts: bootstrap.artifacts,
+    plugins: bootstrap.plugins,
+    diagnostics: bootstrap.diagnostics,
     shellEnv,
+    context,
   };
 }

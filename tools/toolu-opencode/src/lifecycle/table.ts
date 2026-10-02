@@ -1,7 +1,8 @@
 /**
  * OpenCode lifecycle handler map.
- * permission/evaluate hard-deny path is wired in #204; remaining session/tool
- * hooks stay deferred until fuller host coverage / #212 evidence.
+ * Prompt and compaction context are delivered on the pinned hooks (#341).
+ * Resume, clear and load have no event on this pin. Tool and shell hooks
+ * stay deferred for their own work package.
  */
 
 export type LifecycleSupport = "supported" | "deferred" | "unsupported";
@@ -21,12 +22,12 @@ export type LifecycleEvent =
 
 const TABLE: Record<LifecycleEvent, LifecycleSupport> = {
   "session/start": "supported",
-  "session/resume": "deferred",
-  "session/clear": "deferred",
-  "session/unload": "deferred",
-  "session/load": "deferred",
-  prompt: "unsupported",
-  pre_compact: "unsupported",
+  "session/resume": "unsupported",
+  "session/clear": "unsupported",
+  "session/unload": "supported",
+  "session/load": "unsupported",
+  prompt: "supported",
+  pre_compact: "supported",
   "permission/evaluate": "supported",
   "tool/pre": "deferred",
   "tool/post": "deferred",

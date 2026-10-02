@@ -12,6 +12,7 @@ import type { Hooks } from "@opencode-ai/plugin";
 import { createDenyAllToolBefore } from "../adapter/tool-before.ts";
 import { applyShellEnv, type ShellEnv } from "../host/runtime-env.ts";
 import type { HostBinding, LogLevel } from "./context.ts";
+import { createContextHooks } from "./context-delivery.ts";
 import { prepareEnforcement, type Enforcement } from "./enforcement.ts";
 import { claimInstance, releaseInstance } from "./once.ts";
 
@@ -83,11 +84,22 @@ export async function createTooluHooks(
     );
     const notes = startupNotes(diagnostics);
     if (notes !== undefined) await report(binding, "info", notes);
+    await Promise.all(enforcement.context.notices.map((notice) => report(binding, "info", notice)));
+    const context = createContextHooks(enforcement.context, (level, message) =>
+      report(binding, level, message),
+    );
     return {
       "tool.execute.before": enforcement.before,
       "shell.env": shellEnvHook(enforcement.shellEnv),
       "tool.execute.after": enforcement.after,
-      dispose,
+      "experimental.chat.system.transform": context.system,
+      "chat.message": context.prompt,
+      "experimental.session.compacting": context.compacting,
+      event: context.event,
+      dispose: async () => {
+        await context.dispose();
+        await dispose();
+      },
     };
   }
   const message = `toolu: not ready: ${enforcement.reason}`;
