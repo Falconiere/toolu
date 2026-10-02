@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -61,25 +62,39 @@ test("maps the host's bash, edit and write args to core requests", () => {
   expect(edit.kind === "request" && edit.request.tool_name).toBe("Edit");
   expect(edit.kind === "request" && edit.request.tool_input).toEqual({
     file_path: "/work/app/a.ts",
+    old_string: "a",
+    new_string: "b",
   });
   const write = mapToolCall(
     { tool: "write", ...CALL },
     { filePath: "/work/app/b.ts", content: "x" },
     CTX,
   );
-  expect(write.kind === "request" && write.request.tool_name).toBe("Write");
+  expect(write.kind === "request" && write.request.tool_input).toEqual({
+    file_path: "/work/app/b.ts",
+    content: "x",
+  });
 });
 
-test("skips tools outside today's coverage and denies gated tools with invalid args", () => {
-  expect(mapToolCall({ tool: "read", ...CALL }, { filePath: "/a" }, CTX)).toEqual({
+test("skips unrelated tools and denies gated tools with invalid args", () => {
+  expect(mapToolCall({ tool: "webfetch", ...CALL }, { url: "https://example.com" }, CTX)).toEqual({
     kind: "skip",
   });
   expect(mapToolCall({ tool: "fixture_echo", ...CALL }, {}, CTX)).toEqual({ kind: "skip" });
+  expect(mapToolCall({ tool: "probe_touch", ...CALL }, { name: "x" }, CTX)).toEqual({
+    kind: "skip",
+  });
   const noCommand = mapToolCall({ tool: "bash", ...CALL }, { description: "x" }, CTX);
   expect(noCommand.kind).toBe("deny");
   const badPath = mapToolCall({ tool: "edit", ...CALL }, { filePath: 5 }, CTX);
   expect(badPath.kind).toBe("deny");
   expect(mapToolCall({ tool: "write", ...CALL }, null, CTX).kind).toBe("deny");
+  expect(
+    mapToolCall({ tool: "apply_patch", ...CALL }, { patchText: "not a patch" }, CTX).kind,
+  ).toBe("deny");
+  expect(
+    mapToolCall({ tool: "bash", sessionID: "", callID: "c" }, { command: "ls" }, CTX).kind,
+  ).toBe("deny");
 });
 
 test("a protected .env edit or write throws the gate reason before the file changes", async () => {
@@ -95,11 +110,13 @@ test("a protected .env edit or write throws the gate reason before the file chan
   expect(await readFile(envPath, "utf8")).toBe("SECRET=1\n");
 });
 
-test("an allowed bash call and an uncovered tool pass through", async () => {
+test("an allowed bash call, a read, and an unrelated tool pass through", async () => {
   const { root } = await project("block");
   const before = handlerFor(root);
   await before({ tool: "bash", ...CALL }, { args: { command: "echo ok", description: "x" } });
   await before({ tool: "read", ...CALL }, { args: { filePath: join(root, ".env") } });
+  await before({ tool: "webfetch", ...CALL }, { args: { url: "https://example.com" } });
+  await before({ tool: "probe_touch", ...CALL }, { args: null });
 });
 
 test("a gate ask decision fails closed: the host has no ask channel", async () => {
@@ -152,4 +169,63 @@ test("the deny-all handler refuses every tool with its reason", async () => {
   expect(await rejection(before({ tool: "bash", ...CALL }, { args: { command: "ls" } }))).toMatch(
     "toolu: not ready: probe",
   );
+});
+
+test("the longest MCP server prefix wins", () => {
+  const mapped = mapToolCall({ tool: "probe_extra_touch", ...CALL }, { name: "x" }, CTX, [
+    "probe",
+    "probe_extra",
+  ]);
+  expect(mapped.kind === "request" && mapped.request.tool_name).toBe("mcp__probe_extra__touch");
+});
+
+test("a protected .env patch throws and writes nothing", async () => {
+  const { root, envPath } = await project("block");
+  const added = join(root, "added.txt");
+  const patch = [
+    "*** Begin Patch",
+    `*** Add File: ${added}`,
+    "+x",
+    `*** Update File: ${envPath}`,
+    "*** End Patch",
+    "",
+  ].join("\n");
+  const call = handlerFor(root)({ tool: "apply_patch", ...CALL }, { args: { patchText: patch } });
+  expect(await rejection(call)).toMatch(/protected/i);
+  expect(await readFile(envPath, "utf8")).toBe("SECRET=1\n");
+  expect(existsSync(added)).toBe(false);
+});
+
+test("opencode.json mcp keys gate probe_touch and a missing mcp object does not", async () => {
+  const listed = await mkdtemp(join(tmpBase, "toolu-oc-mcp-"));
+  await writeFile(
+    join(listed, "opencode.json"),
+    JSON.stringify({ mcp: { probe: { type: "local", command: ["true"] } } }),
+  );
+  const denied = createToolBeforeHandler({
+    repoRoot: REPO_ROOT,
+    configRoot: join(listed, "state"),
+    permissionContext: { cwd: listed, projectRoot: listed, worktree: listed },
+  });
+  expect(await rejection(denied({ tool: "probe_touch", ...CALL }, { args: null }))).toMatch(
+    /^toolu:/,
+  );
+
+  const open = await mkdtemp(join(tmpBase, "toolu-oc-nomcp-"));
+  await writeFile(join(open, "opencode.json"), "{}\n");
+  const passed = createToolBeforeHandler({
+    repoRoot: REPO_ROOT,
+    configRoot: join(open, "state"),
+    permissionContext: { cwd: open, projectRoot: open, worktree: open },
+  });
+  await passed({ tool: "probe_touch", ...CALL }, { args: null });
+
+  const broken = await mkdtemp(join(tmpBase, "toolu-oc-badmcp-"));
+  await writeFile(join(broken, "opencode.json"), "{", "utf8");
+  const skipped = createToolBeforeHandler({
+    repoRoot: REPO_ROOT,
+    configRoot: join(broken, "state"),
+    permissionContext: { cwd: broken, projectRoot: broken, worktree: broken },
+  });
+  await skipped({ tool: "probe_touch", ...CALL }, { args: null });
 });
