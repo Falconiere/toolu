@@ -98,7 +98,7 @@ test("global selection file decides when the project has none", () => {
   const result = resolveEnabledPluginNames(pluginsRoot, project, global);
   expect(enabledOf(result)).toEqual(["jev"]);
   expect(result.ok && result.source).toBe("global");
-  expect(result.ok && result.path).toBe(globalPath);
+  expect(result.ok && result.source !== "default" && result.path).toBe(globalPath);
 });
 
 test("the project file replaces the global one, even an empty project list", () => {
@@ -184,7 +184,7 @@ test("names that are not installed are dropped and reported, in file order", () 
   );
   const result = resolveEnabledPluginNames(pluginsRoot, project, global);
   expect(enabledOf(result)).toEqual(["jev"]);
-  expect(result.ok && result.unknown).toEqual(["zeta", "alpha"]);
+  expect(result.ok && result.source !== "default" && result.unknown).toEqual(["zeta", "alpha"]);
 });
 
 test("no selection file enables every installed plugin; no global root reads no global file", () => {

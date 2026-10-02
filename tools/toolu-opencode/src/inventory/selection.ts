@@ -32,8 +32,19 @@ const SelectionFileSchema = z
 
 export type SelectionSource = "project" | "global" | "default";
 
+/**
+ * An explicit file names its path and the listed names that are not installed;
+ * the default (every installed plugin) has neither, so no note can lack a path.
+ */
 export type EnabledSelection =
-  | { ok: true; enabled: Set<string>; source: SelectionSource; path?: string; unknown: string[] }
+  | { ok: true; enabled: Set<string>; source: "default" }
+  | {
+      ok: true;
+      enabled: Set<string>;
+      source: "project" | "global";
+      path: string;
+      unknown: string[];
+    }
   | { ok: false; reason: string };
 
 type SelectionFile =
@@ -66,7 +77,10 @@ function readSelectionFile(path: string): SelectionFile {
   return { kind: "valid", enabled: parsed.data.enabled };
 }
 
-type ChosenSelection = { source: SelectionSource; path?: string; file: SelectionFile };
+type ReadSelection = Exclude<SelectionFile, { kind: "absent" }>;
+type ChosenSelection =
+  | { source: "default" }
+  | { source: "project" | "global"; path: string; file: ReadSelection };
 
 /** The project file when present, else the global file when a global root is given, else none. */
 function chooseSelection(
@@ -76,11 +90,11 @@ function chooseSelection(
   const projectPath = opencodePluginSelectionPath(projectRoot);
   const project = readSelectionFile(projectPath);
   if (project.kind !== "absent") return { source: "project", path: projectPath, file: project };
-  if (globalConfigRoot === undefined) return { source: "default", file: { kind: "absent" } };
+  if (globalConfigRoot === undefined) return { source: "default" };
   const globalPath = opencodeGlobalPluginSelectionPath(globalConfigRoot);
   const global = readSelectionFile(globalPath);
   if (global.kind !== "absent") return { source: "global", path: globalPath, file: global };
-  return { source: "default", file: { kind: "absent" } };
+  return { source: "default" };
 }
 
 function readSkillsDisabled(projectRoot: string): Set<string> {
@@ -121,14 +135,14 @@ export function resolveEnabledPluginNames(
     return { ok: false, reason: `cannot read plugins root: ${pluginsRoot}` };
   }
   const installed = new Set(manifests.map((m) => m.name));
-  const { source, path, file } = chooseSelection(projectRoot, globalConfigRoot);
+  const disabled = readSkillsDisabled(projectRoot);
+  const keep = (name: string): boolean => installed.has(name) && !disabled.has(name);
+  const chosen = chooseSelection(projectRoot, globalConfigRoot);
+  if (chosen.source === "default")
+    return { ok: true, enabled: new Set([...installed].filter(keep)), source: "default" };
+  const { source, path, file } = chosen;
   if (file.kind === "invalid") return { ok: false, reason: file.reason };
-
-  const listed = file.kind === "valid" ? file.enabled : [...installed];
-  const enabled = new Set(listed.filter((name) => installed.has(name)));
-  const unknown = [...new Set(listed.filter((name) => !installed.has(name)))];
-  for (const name of readSkillsDisabled(projectRoot)) {
-    enabled.delete(name);
-  }
-  return { ok: true, enabled, source, ...(path === undefined ? {} : { path }), unknown };
+  const enabled = new Set(file.enabled.filter(keep));
+  const unknown = [...new Set(file.enabled.filter((name) => !installed.has(name)))];
+  return { ok: true, enabled, source, path, unknown };
 }
