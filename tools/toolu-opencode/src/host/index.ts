@@ -5,6 +5,7 @@ export {
   opencodePluginSelectionPath,
   opencodeProjectConfigPath,
   opencodeProjectDir,
+  opencodeProjectKey,
   opencodeRegistryRoot,
 } from "./roots.ts";
 export type { HostDetectOptions, OpencodeRootsOptions, TooluHost } from "./types.ts";

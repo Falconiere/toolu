@@ -3,12 +3,14 @@
  * SessionStart entry of its `hooks.json`, dependencies first; each entry
  * reports its registry and helper contributions, which are verified on disk
  * before they count. Plugins that are no longer selected lose what toolu
- * published for them. Readiness is this run's verdict only.
+ * published for them. Readiness is this run's verdict only. Entries run with
+ * the user's HOME and toolu's roots, never another host's (#343).
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { opencodeDataRoot } from "../host/roots.ts";
+import { opencodeConfigRoot, opencodeDataRoot } from "../host/roots.ts";
+import { tooluProcessEnv } from "../host/runtime-env.ts";
 import { listPluginManifests } from "../inventory/scan.ts";
 import type { PluginManifest } from "../inventory/types.ts";
 import { resolveBunExecutable } from "../preflight/check.ts";
@@ -26,7 +28,11 @@ export type BootstrapRuntimeOptions = {
   dataRoot?: string;
   projectRoot: string;
   plugins: PluginManifest[];
+  /** Host env, over `process.env`; its HOME and overrides decide the roots. */
   env?: Record<string, string>;
+  /** Global `toolu.config.json` directory; default `opencodeConfigRoot` of the env. */
+  userConfigRoot?: string;
+  /** Tests only: a HOME for the entries instead of the user's own. */
   isolatedHome?: string;
   /** Per entry; default 120 s. */
   deadlineMs?: number;
@@ -58,20 +64,28 @@ function excerpt(text: string): string {
   return trimmed.length > EXCERPT_CHARS ? `${trimmed.slice(0, EXCERPT_CHARS)}…` : trimmed;
 }
 
-function bootstrapEnv(options: BootstrapRuntimeOptions, dataRoot: string): Record<string, string> {
+function hostEnv(options: BootstrapRuntimeOptions): Record<string, string> {
   const inherited: Record<string, string> = {};
   for (const [key, value] of Object.entries(process.env)) {
     if (value !== undefined) inherited[key] = value;
   }
-  return {
-    ...inherited,
-    ...options.env,
-    TOOLU_CONFIG_DIR: dataRoot,
-    TOOLU_PROJECT_DIR: options.projectRoot,
-    TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",
-    TOOLU_HOST_OVERRIDE: "opencode",
-    HOME: options.isolatedHome ?? dataRoot,
+  return { ...inherited, ...options.env };
+}
+
+function bootstrapEnv(
+  options: BootstrapRuntimeOptions,
+  host: Record<string, string>,
+  dataRoot: string,
+  bun: string,
+): Record<string, string> {
+  const roots = {
+    projectRoot: options.projectRoot,
+    dataRoot,
+    userConfigRoot: options.userConfigRoot ?? opencodeConfigRoot({ env: host }),
+    repoRoot: options.repoRoot,
   };
+  const env = { ...tooluProcessEnv(host, roots), TOOLU_BUN: bun };
+  return options.isolatedHome === undefined ? env : { ...env, HOME: options.isolatedHome };
 }
 
 /** An empty report file in a new temp directory, or why there cannot be one. */
@@ -103,7 +117,12 @@ async function runEntry(
   if (!fresh.ok) return fresh.reason;
   const { dir, report } = fresh;
   try {
-    const env = { ...run.env, CLAUDE_PLUGIN_ROOT: plugin.pluginDir, [STARTUP_REPORT_VAR]: report };
+    const env = {
+      ...run.env,
+      CLAUDE_PLUGIN_ROOT: plugin.pluginDir,
+      TOOLU_PLUGIN_ROOT: plugin.pluginDir,
+      [STARTUP_REPORT_VAR]: report,
+    };
     const stdin = JSON.stringify({
       hook_event_name: "SessionStart",
       source: "startup",
@@ -201,12 +220,13 @@ async function startAll(
 async function bootstrapRuntimeInternal(
   options: BootstrapRuntimeOptions,
 ): Promise<BootstrapResult> {
-  const dataRoot = options.dataRoot ?? opencodeDataRoot({ projectRoot: options.projectRoot });
+  const host = hostEnv(options);
+  const dataRoot =
+    options.dataRoot ?? opencodeDataRoot({ projectRoot: options.projectRoot, env: host });
   mkdirSync(dataRoot, { recursive: true });
-  const env = bootstrapEnv(options, dataRoot);
-  // The child HOME is isolated; the runtime must come from the original host HOME.
-  const bun = resolveBunExecutable({ ...env, HOME: options.env?.HOME ?? process.env.HOME ?? "" });
+  const bun = resolveBunExecutable(host);
   if (!bun) return notReady("Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun");
+  const env = bootstrapEnv(options, host, dataRoot, bun);
   const order = startupOrder(options.plugins);
   if (!order.ok) return notReady(order.reason);
   const cleanup: Cleanup = { failures: [], diagnostics: [] };
