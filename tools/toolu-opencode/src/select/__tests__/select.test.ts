@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { selectPluginsWithDependencies } from "../resolve.ts";
+import { selectPluginsByEnabledNames, selectPluginsWithDependencies } from "../resolve.ts";
 import {
   opencodeGlobalPluginSelectionPath,
   opencodePluginSelectionPath,
@@ -80,4 +80,14 @@ test("an invalid explicit selection makes the closure fail with the file's reaso
   expect(result.ok).toBe(false);
   if (!result.ok)
     expect(result.reason).toStartWith(`invalid ${opencodePluginSelectionPath(project)}: `);
+});
+
+test("an explicit name list reports the default source and no notes (#345)", () => {
+  const pluginsRoot = mkdtempSync(join(tmpBase, "toolu-sel-names-pl-"));
+  writeManifest(pluginsRoot, "toolu");
+  writeManifest(pluginsRoot, "ts-quality", [{ name: "toolu", marketplace: "toolu" }]);
+  const result = selectPluginsByEnabledNames(pluginsRoot, ["ts-quality"]);
+  if (!result.ok) throw new Error(result.reason);
+  expect({ source: result.source, notes: result.notes }).toEqual({ source: "default", notes: [] });
+  expect(result.plugins.map((p) => p.name)).toEqual(["ts-quality", "toolu"]);
 });

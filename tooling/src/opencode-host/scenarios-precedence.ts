@@ -160,7 +160,8 @@ async function rootCase(ctx: EntryContext, c: RootCase): Promise<string> {
   const { rows } = await skills(ctx, s, cwd);
   const found = rows.filter((r) => r.name === "toolu-debug");
   const location = found[0]?.location ?? "";
-  const tooluCopy = location.endsWith("/generated/skills/toolu-debug/SKILL.md");
+  const generated = generatedRoot(rows, "toolu-commit-e11d9d00");
+  const tooluCopy = location === join(generated, "skills/toolu-debug/SKILL.md");
   const ok = found.length === 1 && (userCopy === undefined ? tooluCopy : location === userCopy);
   return ok ? "ok" : `${found.length}@${location}`;
 }

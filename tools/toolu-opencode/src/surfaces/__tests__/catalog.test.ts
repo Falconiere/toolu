@@ -1,8 +1,16 @@
 import { expect, test } from "bun:test";
-import { cpSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
-import { CATALOG_FILE, readSurfaceCatalog } from "../catalog.ts";
+import { CATALOG_FILE, readSurfaceCatalog, realGeneratedDir } from "../catalog.ts";
 
 const GENERATED = realpathSync(join(import.meta.dir, "../../../generated"));
 const tmpBase = process.env.TMPDIR ?? "/tmp";
@@ -124,4 +132,14 @@ test("every catalog corruption is a reason naming the problem", () => {
     corrupt(dir);
     expect({ label, reason: reasonOf(dir).includes(expected) }).toEqual({ label, reason: true });
   }
+});
+
+test("the generated directory resolves to its real path, or undefined when absent", () => {
+  expect(realGeneratedDir(join(import.meta.dir, "../../.."))).toBe(GENERATED);
+  const linked = join(realpathSync(mkdtempSync(join(tmpBase, "toolu-catalog-link-"))), "pkg");
+  symlinkSync(join(import.meta.dir, "../../.."), linked);
+  expect(realGeneratedDir(linked)).toBe(GENERATED);
+  expect(realGeneratedDir(realpathSync(mkdtempSync(join(tmpBase, "toolu-catalog-none-"))))).toBe(
+    undefined,
+  );
 });

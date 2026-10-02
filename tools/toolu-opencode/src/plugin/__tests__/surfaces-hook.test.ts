@@ -87,8 +87,12 @@ test("ready: the config hook adds the selection's skills, agents and commands an
     external_directory: { [`${GENERATED}/resources/*`]: "allow" },
   });
   const surfaces = logged.find((l) => l.message.startsWith("toolu: surfaces ("));
-  expect(surfaces?.message).toMatch(
-    /^toolu: surfaces \(project selection, \d+ ms\): skills toolu-commit-e11d9d00, toolu-debug, .*; agents toolu-architect, .*; commands toolu-commit-1e9b92d5, toolu-review-and-commit-db159d0c$/,
+  expect(surfaces?.message.replace(/, \d+ ms\)/, ", <ms> ms)")).toBe(
+    "toolu: surfaces (project selection, <ms> ms): " +
+      "skills toolu-commit-e11d9d00, toolu-debug, toolu-deep-research, toolu-orchestrator, " +
+      "toolu-review-and-commit-1a591621, toolu-setup; " +
+      "agents toolu-architect, toolu-deep-explore, toolu-implementer, toolu-quick-task, " +
+      "toolu-research-agent; commands toolu-commit-1e9b92d5, toolu-review-and-commit-db159d0c",
   );
   expect(logged.some((l) => l.message.startsWith("toolu: surface notes"))).toBe(false);
   await hooks.dispose?.();
