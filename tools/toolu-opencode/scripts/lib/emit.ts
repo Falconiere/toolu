@@ -2,7 +2,7 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
 import type { PluginManifest } from "../../src/inventory/types.ts";
-import { EXCLUDED_SURFACES, GENERATED_SEGMENT, TOOLU_PLUGIN_ROOT } from "./constants.ts";
+import { EXCLUDED_SURFACES, GENERATED_SEGMENT, TOOLU_OPENCODE_ROOT } from "./constants.ts";
 import {
   buildSurfaceForPlugin,
   collectSurfaceSources,
@@ -95,10 +95,10 @@ export function planSurface(options: GenerateSurfaceOptions): GenerateSurfaceRes
       source.kind === "skill"
         ? `generated/skills/${id}/SKILL.md`
         : `generated/${source.kind}s/${id}.md`;
-    paths.set(sourcePath, `${TOOLU_PLUGIN_ROOT}/${generatedPath}`);
+    paths.set(sourcePath, `${TOOLU_OPENCODE_ROOT}/${generatedPath}`);
     if (source.kind === "skill") {
       const sourceDir = `plugins/${manifest.name}/skills/${basename(dirname(source.path))}/`;
-      paths.set(sourceDir, `${TOOLU_PLUGIN_ROOT}/generated/skills/${id}/`);
+      paths.set(sourceDir, `${TOOLU_OPENCODE_ROOT}/generated/skills/${id}/`);
     }
   }
   const references = { invocations, paths };
@@ -219,11 +219,20 @@ export function planSurface(options: GenerateSurfaceOptions): GenerateSurfaceRes
     "",
     "## Path rewrites",
     "",
-    `- Claude plugin-root tokens → \`${TOOLU_PLUGIN_ROOT}\`: ${totalRewrites}.`,
+    `- Claude plugin-root tokens → the owning plugin's \`\${TOOLU_PLUGIN_ROOT_<PLUGIN>}\`: ${totalRewrites}.`,
     `- Claude config-root tokens → OpenCode config root: ${claudeConfigRewrites}.`,
-    `- Typed source paths → generated paths: ${sourcePathRewrites}.`,
+    `- Typed source paths → \`\${TOOLU_OPENCODE_ROOT}/generated/…\` paths: ${sourcePathRewrites}.`,
     `- Explicit skill invocations → generated skill IDs: ${explicitRewrites}.`,
-    "- The OpenCode adapter must set `TOOLU_PLUGIN_ROOT` to the installed `@toolu/opencode` package root.",
+    "",
+    "## Runtime environment",
+    "",
+    "The OpenCode adapter's `shell.env` hook gives every bash call these variables (see `docs/opencode.md`):",
+    "",
+    "- `TOOLU_PLUGIN_ROOT_<PLUGIN>`: each enabled plugin's directory, the name upper-cased with `-` as `_`.",
+    "- `TOOLU_PLUGIN_ROOT`: the toolu core plugin's directory.",
+    "- `TOOLU_OPENCODE_ROOT`: the `@toolu/opencode` package directory, which holds `generated/`.",
+    "- `TOOLU_CONFIG_DIR`: the project's data root, where helpers such as `context7/search.sh` are published.",
+    "- `TOOLU_USER_CONFIG_DIR`, `TOOLU_HOST_OVERRIDE`, `TOOLU_PROJECT_CONFIG_DIRNAME`, `TOOLU_SETTINGS_DIR` and `TOOLU_BUN`; `PATH` gains Bun's directory only when it has no `bun`.",
     "",
     "## Stripped frontmatter",
     "",

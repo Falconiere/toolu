@@ -29,11 +29,20 @@ The catalog covers all 16 plugin manifests. Runtime installation and enabled-plu
 
 ## Path rewrites
 
-- Claude plugin-root tokens → `${TOOLU_PLUGIN_ROOT}`: 1.
+- Claude plugin-root tokens → the owning plugin's `${TOOLU_PLUGIN_ROOT_<PLUGIN>}`: 1.
 - Claude config-root tokens → OpenCode config root: 7.
-- Typed source paths → generated paths: 3.
+- Typed source paths → `${TOOLU_OPENCODE_ROOT}/generated/…` paths: 3.
 - Explicit skill invocations → generated skill IDs: 6.
-- The OpenCode adapter must set `TOOLU_PLUGIN_ROOT` to the installed `@toolu/opencode` package root.
+
+## Runtime environment
+
+The OpenCode adapter's `shell.env` hook gives every bash call these variables (see `docs/opencode.md`):
+
+- `TOOLU_PLUGIN_ROOT_<PLUGIN>`: each enabled plugin's directory, the name upper-cased with `-` as `_`.
+- `TOOLU_PLUGIN_ROOT`: the toolu core plugin's directory.
+- `TOOLU_OPENCODE_ROOT`: the `@toolu/opencode` package directory, which holds `generated/`.
+- `TOOLU_CONFIG_DIR`: the project's data root, where helpers such as `context7/search.sh` are published.
+- `TOOLU_USER_CONFIG_DIR`, `TOOLU_HOST_OVERRIDE`, `TOOLU_PROJECT_CONFIG_DIRNAME`, `TOOLU_SETTINGS_DIR` and `TOOLU_BUN`; `PATH` gains Bun's directory only when it has no `bun`.
 
 ## Stripped frontmatter
 

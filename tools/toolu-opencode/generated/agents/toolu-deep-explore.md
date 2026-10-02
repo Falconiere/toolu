@@ -10,7 +10,7 @@ You are a specialized code exploration agent. Do the exploration yourself with t
 
 ### Model tier
 
-This agent runs on **Sonnet**, not the session's frontier model. Read-only structural exploration is a bounded subtask where a mid-tier model keeps ~full quality at a fraction of the cost — routing the bulk of exploration here reserves the expensive tier for hard reasoning and synthesis. The toolu ladder: **Haiku** mechanical (`quick-task`) → **Sonnet** exploration / implementation / review (`deep-explore`, `research-agent`, `implementer`) → **Opus** synthesis / architecture (`architect`). Rubric: `${TOOLU_PLUGIN_ROOT}/generated/skills/toolu-orchestrator/references/model-routing.md`.
+This agent runs on **Sonnet**, not the session's frontier model. Read-only structural exploration is a bounded subtask where a mid-tier model keeps ~full quality at a fraction of the cost — routing the bulk of exploration here reserves the expensive tier for hard reasoning and synthesis. The toolu ladder: **Haiku** mechanical (`quick-task`) → **Sonnet** exploration / implementation / review (`deep-explore`, `research-agent`, `implementer`) → **Opus** synthesis / architecture (`architect`). Rubric: `${TOOLU_OPENCODE_ROOT}/generated/skills/toolu-orchestrator/references/model-routing.md`.
 
 ### Search hierarchy
 

@@ -125,6 +125,7 @@ export function renderMarkdown(
   sourcePath: string,
   text: string,
   references: SurfaceReferences,
+  plugin: string,
   commandSkillId?: string,
 ): {
   content: string;
@@ -140,7 +141,11 @@ export function renderMarkdown(
   const body = commandSkillId
     ? `Load the \`${commandSkillId}\` skill with the native skill tool and follow its instructions. Pass $ARGUMENTS as task context.\n`
     : parsed.body;
-  const rewritten = rewriteBody(body, references, kind === "skill" ? surfaceId : undefined);
+  const rewritten = rewriteBody(
+    body,
+    references,
+    kind === "skill" ? { plugin, skillId: surfaceId } : { plugin },
+  );
   const frontmatter = mappedFrontmatter(
     kind,
     surfaceId,

@@ -1,6 +1,7 @@
 /** Body rewrites and reference cataloging (#206). */
-import { CLAUDE_PLUGIN_ROOT, TOOLU_PLUGIN_ROOT } from "./constants.ts";
 import { posix } from "node:path";
+import { pluginRootVar } from "../../src/host/runtime-env.ts";
+import { CLAUDE_PLUGIN_ROOT, TOOLU_OPENCODE_ROOT } from "./constants.ts";
 
 export type RewriteNotes = {
   claudePluginRootRewrites: number;
@@ -18,14 +19,19 @@ export type SurfaceReferences = {
 /** Match remaining host path tokens after CLAUDE_PLUGIN_ROOT rewrite. */
 const DOT_CLAUDE_PATH = /(?:^|[\s"'`(/=])\.claude(?:\/|["'`)\s]|$)/;
 
+/** Whose surface is being rewritten: its plugin, and its id when it is a skill. */
+export type RewriteOwner = { plugin: string; skillId?: string };
+
 export function rewriteBody(
   body: string,
   references: SurfaceReferences,
-  skillId?: string,
+  owner: RewriteOwner,
 ): { body: string; notes: RewriteNotes } {
+  const { skillId } = owner;
+  // Each plugin's own root, as `${CLAUDE_PLUGIN_ROOT}` is on Claude: shell.env sets one per enabled plugin.
   const parts = body.split(CLAUDE_PLUGIN_ROOT);
   const claudePluginRootRewrites = parts.length - 1;
-  let rewritten = parts.join(TOOLU_PLUGIN_ROOT);
+  let rewritten = parts.join(`\${${pluginRootVar(owner.plugin)}}`);
   const claudeConfig = "${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}";
   const openCodeConfig = "${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}";
   const configParts = rewritten.split(claudeConfig);
@@ -52,7 +58,7 @@ export function rewriteBody(
         "TOOLU_HOST_OVERRIDE=opencode bun ../../../plugins/statusline/hooks/dist/status.js",
       );
     }
-    const modelRouting = `${TOOLU_PLUGIN_ROOT}/generated/skills/toolu-orchestrator/references/model-routing.md`;
+    const modelRouting = `${TOOLU_OPENCODE_ROOT}/generated/skills/toolu-orchestrator/references/model-routing.md`;
     const relativeRouting = posix.relative(
       `skills/${skillId}`,
       "skills/toolu-orchestrator/references/model-routing.md",

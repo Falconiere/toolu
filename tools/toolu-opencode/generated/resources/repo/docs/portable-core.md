@@ -50,7 +50,7 @@ TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, 
 
 | Export | Responsibility |
 |--------|----------------|
-| `@toolu/opencode/host` | `detectHost`, OpenCode data/config roots (`TOOLU_OPENCODE_HOME`, `TOOLU_CONFIG_DIR`, `.opencode/`) |
+| `@toolu/opencode/host` | `detectHost`; the global config root (`TOOLU_CONFIG_DIR`, `TOOLU_OPENCODE_HOME`, `$XDG_CONFIG_HOME/opencode`) and per-project data roots (`.opencode/toolu/state/`, or keyed under an override); the `shell.env` helper environment |
 | `@toolu/opencode/inventory` | Installed/enabled/absent/unknown; selection via `.opencode/toolu/plugins.json` + `toolu.config` skills |
 | `@toolu/opencode/select` | Enabled set + manifest dependency closure |
 | `@toolu/opencode/bootstrap` | `bootstrapRuntime` → Ready \| NotReady with registry/session artifacts |
@@ -70,7 +70,7 @@ TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, 
 | `bun run generate:opencode-surface` | Regenerate committed tree |
 | `bun run check:opencode-surface` | Fail if sources drift without regen |
 
-Phase 1 enables the `toolu` plugin only (override with `--enabled`); `${CLAUDE_PLUGIN_ROOT}` becomes `${TOOLU_PLUGIN_ROOT}` in bodies.
+Phase 1 enables the `toolu` plugin only (override with `--enabled`); `${CLAUDE_PLUGIN_ROOT}` becomes the owning plugin's `${TOOLU_PLUGIN_ROOT_<PLUGIN>}` in bodies.
 
 ## Zod boundary rules
 
