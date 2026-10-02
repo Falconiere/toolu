@@ -1,16 +1,24 @@
 /**
- * Enabled plugin selection (#211).
+ * Enabled plugin selection (#211, #345).
  *
- * Sources (in order):
+ * Sources, first present wins:
  * 1. `<project>/.opencode/toolu/plugins.json` — `{ "version": 1, "enabled": ["toolu", ...] }`
- * 2. `<project>/.opencode/toolu.config.json` or repo `.opencode/toolu.config.json` —
- *    `skills.<pluginName> === false` disables an otherwise-installed plugin.
+ * 2. `<global config root>/toolu/plugins.json`, same schema, when a global root is given.
  * 3. Default: every installed plugin is enabled.
+ *
+ * An explicit file that cannot be read or fails its schema is an error, never a
+ * silent fallback: the user chose a set, and toolu cannot tell which. Names that
+ * are not installed are dropped and reported. Then `skills.<pluginName> === false`
+ * in `<project>/.opencode/toolu.config.json` disables an otherwise-enabled plugin.
  *
  * Never reads Claude `installed_plugins.json` or Codex install snapshots.
  */
 import { existsSync, readFileSync } from "node:fs";
-import { opencodePluginSelectionPath, opencodeProjectConfigPath } from "../host/roots.ts";
+import {
+  opencodeGlobalPluginSelectionPath,
+  opencodePluginSelectionPath,
+  opencodeProjectConfigPath,
+} from "../host/roots.ts";
 import { listPluginManifests } from "./scan.ts";
 import { z } from "zod";
 import { TooluConfigSchema } from "@toolu/core/config";
@@ -22,20 +30,47 @@ const SelectionFileSchema = z
   })
   .strict();
 
-function readSelectionFile(path: string): string[] | null {
-  if (!existsSync(path)) {
-    return null;
-  }
+export type SelectionSource = "project" | "global" | "default";
+
+export type EnabledSelection =
+  | { ok: true; enabled: Set<string>; source: SelectionSource; path?: string; unknown: string[] }
+  | { ok: false; reason: string };
+
+type SelectionFile =
+  | { kind: "absent" }
+  | { kind: "invalid"; reason: string }
+  | { kind: "valid"; enabled: string[] };
+
+function readSelectionFile(path: string): SelectionFile {
+  if (!existsSync(path)) return { kind: "absent" };
+  let raw: unknown;
   try {
-    const raw: unknown = JSON.parse(readFileSync(path, "utf8"));
-    const parsed = SelectionFileSchema.safeParse(raw);
-    if (!parsed.success) {
-      return null;
-    }
-    return parsed.data.enabled;
-  } catch {
-    return null;
+    raw = JSON.parse(readFileSync(path, "utf8"));
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return { kind: "invalid", reason: `invalid ${path}: ${detail}` };
   }
+  const parsed = SelectionFileSchema.safeParse(raw);
+  if (!parsed.success)
+    return { kind: "invalid", reason: `invalid ${path}: ${z.prettifyError(parsed.error)}` };
+  return { kind: "valid", enabled: parsed.data.enabled };
+}
+
+type ChosenSelection = { source: SelectionSource; path?: string; file: SelectionFile };
+
+/** The project file when present, else the global file when a global root is given, else none. */
+function chooseSelection(
+  projectRoot: string,
+  globalConfigRoot: string | undefined,
+): ChosenSelection {
+  const projectPath = opencodePluginSelectionPath(projectRoot);
+  const project = readSelectionFile(projectPath);
+  if (project.kind !== "absent") return { source: "project", path: projectPath, file: project };
+  if (globalConfigRoot === undefined) return { source: "default", file: project };
+  const globalPath = opencodeGlobalPluginSelectionPath(globalConfigRoot);
+  const global = readSelectionFile(globalPath);
+  if (global.kind !== "absent") return { source: "global", path: globalPath, file: global };
+  return { source: "default", file: global };
 }
 
 function readSkillsDisabled(projectRoot: string): Set<string> {
@@ -65,28 +100,25 @@ function readSkillsDisabled(projectRoot: string): Set<string> {
   return disabled;
 }
 
-/** Resolve enabled plugin names for a project + plugins root. */
+/** Resolve enabled plugin names for a project + plugins root; `globalConfigRoot` adds the global file. */
 export function resolveEnabledPluginNames(
   pluginsRoot: string,
   projectRoot: string,
-): { ok: true; enabled: Set<string> } | { ok: false; reason: string } {
+  globalConfigRoot?: string,
+): EnabledSelection {
   const manifests = listPluginManifests(pluginsRoot);
   if (manifests === null) {
     return { ok: false, reason: `cannot read plugins root: ${pluginsRoot}` };
   }
   const installed = new Set(manifests.map((m) => m.name));
+  const { source, path, file } = chooseSelection(projectRoot, globalConfigRoot);
+  if (file.kind === "invalid") return { ok: false, reason: file.reason };
 
-  const fromFile = readSelectionFile(opencodePluginSelectionPath(projectRoot));
-  let enabled: Set<string>;
-  if (fromFile !== null) {
-    enabled = new Set(fromFile.filter((name) => installed.has(name)));
-  } else {
-    enabled = new Set(installed);
-  }
-
+  const listed = file.kind === "valid" ? file.enabled : [...installed];
+  const enabled = new Set(listed.filter((name) => installed.has(name)));
+  const unknown = [...new Set(listed.filter((name) => !installed.has(name)))];
   for (const name of readSkillsDisabled(projectRoot)) {
     enabled.delete(name);
   }
-
-  return { ok: true, enabled };
+  return { ok: true, enabled, source, ...(path === undefined ? {} : { path }), unknown };
 }
