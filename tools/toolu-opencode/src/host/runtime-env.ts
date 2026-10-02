@@ -121,7 +121,7 @@ export function shellEnvFor(input: ShellEnvInput): ShellEnv {
     TOOLU_BUN: bun,
     TOOLU_OPENCODE_ROOT: roots.packageRoot,
   };
-  // An exported project dir would point every helper at one project; blank is unset to core.
+  // An exported project dir would point every helper at one project; core reads a blank as unset.
   if ((host.TOOLU_PROJECT_DIR ?? "") !== "") vars.TOOLU_PROJECT_DIR = "";
   const core = plugins.find((plugin) => plugin.name === "toolu");
   if (core !== undefined) vars.TOOLU_PLUGIN_ROOT = core.pluginDir;
