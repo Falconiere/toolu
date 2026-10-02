@@ -42,14 +42,19 @@ test("frontmatterName reads skill names the way the pinned host does", () => {
     ["---\nname: 'toolu-debug'\n---\n", "toolu-debug"],
     ['---\nname: "toolu-debug"\n---\n', "toolu-debug"],
     ["---\nname: toolu-debug # mine\n---\n", "toolu-debug"],
-    ["﻿---\r\nname: toolu-debug\r\ndescription: d\r\n---\r\nbody\r\n", "toolu-debug"],
+    ["\uFEFF---\r\nname: toolu-debug\r\ndescription: d\r\n---\r\nbody\r\n", "toolu-debug"],
     ["---\nname: toolu-debug\ndescription: Use: when broken\n---\n", "toolu-debug"],
+    ["---\nname: toolu-debug\nhooks:\n- matcher: a\n- matcher: b\n---\n", "toolu-debug"],
+    ["---\nname: toolu-debug\n", "toolu-debug"],
+    ["--- \nname: toolu-debug\n---\n", "toolu-debug"],
+    ["---\nname: toolu-debug\n---extra\nbody\n", "toolu-debug"],
     ["---\nname: toolu-debug\nname: other\n---\n", undefined],
+    ["---\nname: toolu-debug\nmetadata:\n  a: 1\n  a: 2\n---\n", undefined],
+    ["---\nname: toolu-debug\ndescription: 123\n---\n", undefined],
     ["---\nname: 123\n---\n", undefined],
     ["---\ndescription: no name\n---\n", undefined],
     ["---\nname: [unclosed\n---\n", undefined],
     ["no frontmatter at all\n", undefined],
-    ["---\nname: toolu-debug\n", undefined],
   ];
   for (const [text, name] of named)
     expect({ text, name: frontmatterName(text) }).toEqual({ text, name });

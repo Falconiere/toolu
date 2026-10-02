@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildInventory, lookupPluginInstallState } from "../scan.ts";
@@ -158,11 +158,22 @@ test("an invalid explicit selection fails closed and names its path", () => {
   }
 });
 
-test("an unreadable selection path (a directory) fails closed", () => {
+test("an unreadable selection path (a directory, a dangling link) fails closed", () => {
   const { pluginsRoot, project, global } = selectionFixture();
   mkdirSync(opencodePluginSelectionPath(project), { recursive: true });
-  const result = resolveEnabledPluginNames(pluginsRoot, project, global);
-  expect(result.ok).toBe(false);
+  expect(resolveEnabledPluginNames(pluginsRoot, project, global).ok).toBe(false);
+
+  const linked = selectionFixture();
+  const path = opencodePluginSelectionPath(linked.project);
+  mkdirSync(dirname(path), { recursive: true });
+  symlinkSync(join(linked.project, "removed-target.json"), path);
+  writeSelection(
+    opencodeGlobalPluginSelectionPath(linked.global),
+    JSON.stringify({ version: 1, enabled: ["jev"] }),
+  );
+  const dangling = resolveEnabledPluginNames(linked.pluginsRoot, linked.project, linked.global);
+  expect(dangling.ok).toBe(false);
+  if (!dangling.ok) expect(dangling.reason).toStartWith(`invalid ${path}: `);
 });
 
 test("names that are not installed are dropped and reported, in file order", () => {

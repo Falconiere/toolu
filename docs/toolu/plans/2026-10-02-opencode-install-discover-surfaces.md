@@ -231,6 +231,12 @@ selection (global file, fail closed) → catalog and plan (validated generated s
   The `gate` check uses the same host-portable form. If `bun run test` passes verbatim here, it is recorded instead. `bench:shell --assert` is load-sensitive and still runs in CI as part of `bun run test`.
 
 - **Live scenario files:** the 300-line lint cap split `scenarios-install.ts` into three files, now declared in the `live` step's paths: the host helpers in `install-host.ts`, precedence and skill roots in `scenarios-precedence.ts`, and npm-clean, lifecycle, both-routes and selection in `scenarios-install.ts`. Only `INSTALL_SCENARIOS` is registered.
+- **Pre-review fixes** (an independent reviewer ran the pinned host binary on the same files):
+  - `frontmatterName` now uses `gray-matter@4.0.3`, the host's own parser and version. It is a new dependency of `@toolu/opencode`; js-yaml resolves to 3.15.2 under gray-matter's `^3.13.1`, against the host lock's 3.14.2. It also applies `isSkillFrontmatter`. The Bun.YAML-plus-regex approximation diverged on lists of maps, nested duplicate keys, lenient fences and non-string descriptions (Jev 1.0 for the exact dependency).
+  - An empty `XDG_CONFIG_HOME` now counts as unset, as with the host's xdg-basedir.
+  - A dangling or unreadable selection file is now invalid rather than absent, so selection no longer fails open.
+
+  Tests cover each case.
 - **AC-1 skill listing (live):** the first `surfaces.npm-clean` run failed only on `described`. On `opencode-ai@1.18.34`, the `skill` tool description is static ("skills listed in the system prompt"), and `session/system.ts` lists the available skills in the system prompt instead. The scenario now checks the recorded system prompt, and the spec's AC-1 wording now says where the host lists them. Every other AC-1 observation passed on the first run.
 
 ## Plan review

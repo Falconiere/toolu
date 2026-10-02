@@ -5,14 +5,15 @@
  * one `key: <JSON>` line per key, keys sorted. Anything else is a packaging
  * error, so it fails instead of guessing.
  *
- * `frontmatterName` reads a user's `SKILL.md` the way the pinned host does
- * (`gray-matter` over js-yaml, retried after the host's colon sanitizer): a BOM
- * is ignored, CRLF works, and a parse failure, including a duplicated key that
- * js-yaml rejects, yields no name, because the host then skips that file.
+ * `frontmatterName` reads a user's `SKILL.md` the way the pinned host does: with
+ * the host's own `gray-matter@4.0.3` (js-yaml 3), retried after the host's colon
+ * sanitizer. A file the host would skip, such as a duplicated key or a
+ * non-string description, yields no name.
  */
+import matter from "gray-matter";
+
 const FENCE = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)([\s\S]*)$/;
 const CANONICAL_LINE = /^([A-Za-z0-9_-]+): (.+)$/;
-const TOP_LEVEL_KEY = /^(?:"([^"]*)"|'([^']*)'|([^\s#'"][^:]*?))\s*:(?:\s|$)/;
 
 export type Canonical =
   | { ok: true; data: Record<string, unknown>; body: string }
@@ -46,54 +47,49 @@ export function parseCanonical(text: string): Canonical {
   return { ok: true, data, body };
 }
 
-/** The host's retry: an unquoted value containing `:` becomes a block scalar. */
-function sanitize(head: string): string {
-  return head
-    .split(/\r?\n/)
-    .flatMap((line) => {
-      if (line.trim().startsWith("#") || line.trim() === "" || /^\s+/.test(line)) return [line];
-      const entry = /^([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*(.*)$/.exec(line);
-      const value = entry?.[2]?.trim() ?? "";
-      if (entry === null || value === "" || value === ">" || value === "|") return [line];
-      if (value.startsWith('"') || value.startsWith("'") || !value.includes(":")) return [line];
-      return [`${entry[1]}: |-`, `  ${value}`];
-    })
-    .join("\n");
+/**
+ * The host's retry (`ConfigMarkdown.sanitize`, opencode-ai@1.18.34): an unquoted
+ * top-level value containing `:` becomes a block scalar.
+ */
+function sanitize(content: string): string {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(content);
+  const head = match?.[1];
+  if (head === undefined) return content;
+  const result = head.split(/\r?\n/).flatMap((line) => {
+    if (line.trim().startsWith("#") || line.trim() === "" || /^\s+/.test(line)) return [line];
+    const entry = /^([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*(.*)$/.exec(line);
+    const value = entry?.[2]?.trim() ?? "";
+    if (entry === null || value === "" || value === ">" || value === "|") return [line];
+    if (value.startsWith('"') || value.startsWith("'") || !value.includes(":")) return [line];
+    return [`${entry[1]}: |-`, `  ${value}`];
+  });
+  return content.replace(head, () => result.join("\n"));
 }
 
-function hasDuplicateKey(head: string): boolean {
-  const seen = new Set<string>();
-  for (const line of head.split(/\r?\n/)) {
-    const hit = TOP_LEVEL_KEY.exec(line);
-    if (hit === null) continue;
-    const key = hit[1] ?? hit[2] ?? hit[3] ?? "";
-    if (seen.has(key)) return true;
-    seen.add(key);
-  }
-  return false;
-}
-
-function parseYaml(head: string): unknown {
+/** `gray-matter` data, retried after the host's sanitizer, as `ConfigMarkdown.parse` does. */
+function matterData(text: string): unknown {
   try {
-    return Bun.YAML.parse(head);
+    return matter(text).data;
   } catch {
-    return Bun.YAML.parse(sanitize(head));
+    return matter(sanitize(text)).data;
   }
 }
 
-/** A skill file's frontmatter `name`, as the host would read it; undefined when it would not. */
+/**
+ * A skill file's frontmatter `name`, as the host would register it: parsed by the
+ * host's own library and accepted only with a string `name` and a string or
+ * absent `description` (`isSkillFrontmatter`). Undefined when the host would skip it.
+ */
 export function frontmatterName(text: string): string | undefined {
-  const hit = FENCE.exec(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text);
-  if (hit === null) return undefined;
-  const head = hit[1] ?? "";
-  if (hasDuplicateKey(head)) return undefined;
   let data: unknown;
   try {
-    data = parseYaml(head);
+    data = matterData(text);
   } catch {
     return undefined;
   }
   if (typeof data !== "object" || data === null || Array.isArray(data)) return undefined;
   const name: unknown = Reflect.get(data, "name");
+  const description: unknown = Reflect.get(data, "description");
+  if (description !== undefined && typeof description !== "string") return undefined;
   return typeof name === "string" ? name : undefined;
 }

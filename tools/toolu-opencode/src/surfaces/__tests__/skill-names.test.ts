@@ -162,3 +162,10 @@ test("missing roots and an unreadable configured path are skipped", () => {
   };
   expect(existingSkillNames(empty).size).toBe(0);
 });
+
+test("an empty XDG_CONFIG_HOME falls back to ~/.config, as the host's xdg-basedir does", () => {
+  const t = tree();
+  put(join(t.home, ".config/opencode/skills/r/SKILL.md"), skill("home-config"));
+  expect(names(scope(t, { XDG_CONFIG_HOME: "" }))).toContain("home-config");
+  expect(names(scope(t))).not.toContain("home-config");
+});

@@ -46,6 +46,10 @@ function truthyFlag(env: Record<string, string>, key: string): boolean {
   return value === "true" || value === "1";
 }
 
+function nonEmpty(value: string | undefined): string | undefined {
+  return value === undefined || value === "" ? undefined : value;
+}
+
 function isDir(path: string): boolean {
   try {
     return statSync(path).isDirectory();
@@ -88,7 +92,8 @@ function externalRoots(scope: SkillScanScope, home: string): Root[] {
 
 function configRoots(scope: SkillScanScope, home: string): Root[] {
   const { env } = scope;
-  const xdg = env.XDG_CONFIG_HOME ?? join(home, ".config");
+  // xdg-basedir, as the host uses it: an empty value counts as unset.
+  const xdg = nonEmpty(env.XDG_CONFIG_HOME) ?? join(home, ".config");
   const project = truthyFlag(env, "OPENCODE_DISABLE_PROJECT_CONFIG")
     ? []
     : upwardTargets(scope.directory, scope.worktree, [".opencode"]);
@@ -138,7 +143,7 @@ function readName(path: string): string | undefined {
 
 /** Each skill name the host would load, mapped to the first file that defines it. */
 export function existingSkillNames(scope: SkillScanScope): Map<string, string> {
-  const home = scope.env.OPENCODE_TEST_HOME ?? scope.env.HOME ?? homedir();
+  const home = scope.env.OPENCODE_TEST_HOME ?? nonEmpty(scope.env.HOME) ?? homedir();
   const roots = [
     ...externalRoots(scope, home),
     ...configRoots(scope, home),

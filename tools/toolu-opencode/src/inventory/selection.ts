@@ -13,7 +13,7 @@
  *
  * Never reads Claude `installed_plugins.json` or Codex install snapshots.
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
 import {
   opencodeGlobalPluginSelectionPath,
   opencodePluginSelectionPath,
@@ -41,12 +41,22 @@ type SelectionFile =
   | { kind: "invalid"; reason: string }
   | { kind: "valid"; enabled: string[] };
 
+/** Only a path that does not exist at all is absent; a dangling link or unreadable path is not. */
+function missing(path: string): boolean {
+  try {
+    lstatSync(path);
+    return false;
+  } catch (error) {
+    return error instanceof Error && "code" in error && error.code === "ENOENT";
+  }
+}
+
 function readSelectionFile(path: string): SelectionFile {
-  if (!existsSync(path)) return { kind: "absent" };
   let raw: unknown;
   try {
     raw = JSON.parse(readFileSync(path, "utf8"));
   } catch (error) {
+    if (missing(path)) return { kind: "absent" };
     const detail = error instanceof Error ? error.message : String(error);
     return { kind: "invalid", reason: `invalid ${path}: ${detail}` };
   }
