@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { existsSync } from "node:fs";
 import type { Decision } from "@toolu/core/decision";
 import { dispatchPreTool, type ToolModule } from "@toolu/core/dispatch";
+import { agentTierHook } from "@toolu/core/gates/agent-tier";
+import { mcpHook } from "@toolu/core/gates/mcp-hook";
 import {
   bashCommandsModule,
   codeEditRulesModule,
@@ -27,9 +29,10 @@ export type PermissionEvaluateHandlerOptions = {
   configRoot: string;
   permissionContext: PermissionContext;
   env?: Record<string, string>;
+  selectedPluginSpecs?: ReadonlySet<string>;
 };
 
-function nativeGates(pluginRoot: string): ToolModule[] {
+export function nativeGates(pluginRoot: string): ToolModule[] {
   const options = { pluginRoot };
   return [
     bashCommandsModule(options),
@@ -52,6 +55,27 @@ export type GateDecider =
   | { ok: true; decide: (request: Record<string, unknown>) => Promise<Decision> }
   | { ok: false; reason: string };
 
+function priority(decision: Decision): number {
+  switch (decision.kind) {
+    case "runtime_failure":
+      return 5;
+    case "deny":
+    case "post_block":
+      return 4;
+    case "ask":
+      return 3;
+    case "advisory":
+      return 2;
+    case "allow":
+      return 1;
+  }
+  throw new Error("unknown toolu decision");
+}
+
+function strongerDecision(first: Decision, second: Decision): Decision {
+  return priority(second) > priority(first) ? second : first;
+}
+
 /** The nine native gates in toolu's PreToolUse order, run in process for one core request. */
 export function createGateDecider(opts: PermissionEvaluateHandlerOptions): GateDecider {
   const pluginRoot = join(opts.repoRoot, "plugins", "toolu");
@@ -70,13 +94,25 @@ export function createGateDecider(opts: PermissionEvaluateHandlerOptions): GateD
   };
   const decide = async (request: Record<string, unknown>): Promise<Decision> => {
     try {
+      const payload = JSON.stringify(request);
+      if (typeof request.tool_name === "string" && request.tool_name.startsWith("mcp__")) {
+        return decisionFromDispatch(await mcpHook(payload, { pluginRoot, env }));
+      }
       const result = await dispatchPreTool(JSON.stringify(request), {
         builtins: gates,
         libDir: join(pluginRoot, "hooks", "lib"),
         cwd: opts.permissionContext.cwd,
         env,
+        ...(opts.selectedPluginSpecs === undefined
+          ? {}
+          : { selectedRegistrySpecs: opts.selectedPluginSpecs }),
       });
-      return decisionFromDispatch(result);
+      const core = decisionFromDispatch(result);
+      if (request.tool_name !== "Task") return core;
+      const tier = decisionFromDispatch(
+        agentTierHook(payload, { env, cwd: opts.permissionContext.cwd }),
+      );
+      return strongerDecision(core, tier);
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       return { kind: "runtime_failure", reason: `toolu dispatch: ${reason}`, code: "parse" };

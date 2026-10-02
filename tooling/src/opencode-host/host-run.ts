@@ -44,15 +44,18 @@ export async function runHost(
   bin: string,
   session: ProbeSession,
   args: string[],
+  timeoutMs = RUN_TIMEOUT_MS,
 ): Promise<HostRun> {
   const res = await run([bin, "run", "--format", "json", ...args], {
     cwd: session.sb.project,
     env: session.env,
     stdin: "",
-    timeoutMs: RUN_TIMEOUT_MS,
+    timeoutMs,
   });
   if (res.timedOut)
-    throw new ContractError(`opencode run ${args.join(" ")} timed out after ${RUN_TIMEOUT_MS} ms`);
+    throw new ContractError(
+      `opencode run ${args.join(" ")} timed out after ${timeoutMs} ms; stderr: ${res.stderr.slice(-2000)}; stdout: ${res.stdout.slice(-2000)}`,
+    );
   return { exitCode: res.exitCode, events: jsonLines(res.stdout), stderr: res.stderr };
 }
 

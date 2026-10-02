@@ -87,6 +87,7 @@ export async function prepareEnforcement(
       TOOLU_SETTINGS_DIR: join(repoRoot, "plugins/toolu/settings"),
       TOOLU_HOST_OVERRIDE: "opencode",
     },
+    selectedPluginSpecs: new Set(selected.plugins.map((plugin) => plugin.spec)),
   });
   const { artifacts, plugins, diagnostics } = bootstrap;
   return { status: "ready", before, artifacts, plugins, diagnostics };

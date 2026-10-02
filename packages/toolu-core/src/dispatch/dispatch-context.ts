@@ -38,6 +38,8 @@ export type Session = {
   readonly configRoot: string;
   readonly projectRoot: string;
   readonly libDir: string;
+  /** Optional host-resolved selection for this call's registry walk. */
+  readonly selectedRegistrySpecs?: ReadonlySet<string>;
   /** The hook process's working directory. */
   readonly cwd: string;
 };

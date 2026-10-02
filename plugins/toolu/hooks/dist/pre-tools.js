@@ -4639,13 +4639,13 @@ async function outcomeOf(entry, walk) {
     return { entry, status: "skipped", reason: "bash" };
   return timed(entry, () => fallback(entry, event, ctx));
 }
-function memoActive(ctx) {
+function memoActive(ctx, selectedSpecs) {
   const memo = new Map;
   return (spec) => {
     const known = memo.get(spec);
     if (known !== undefined)
       return known;
-    const active = pluginActive(spec, { env: ctx.env, host: ctx.host });
+    const active = (selectedSpecs === undefined || selectedSpecs.has(spec)) && pluginActive(spec, { env: ctx.env, host: ctx.host });
     memo.set(spec, active);
     return active;
   };
@@ -4674,7 +4674,7 @@ async function runRegistry(event, ctx, options = {}) {
     ctx,
     fallback: options.fallback,
     esmSpecs: new Set(entries.filter((e) => e.kind === "esm").map((e) => e.spec)),
-    active: memoActive(ctx)
+    active: memoActive(ctx, options.selectedSpecs)
   };
   return walkFrom(entries, 0, walk, []);
 }
@@ -4816,7 +4816,8 @@ async function walkRegistry(walk, state) {
   const outcomes = await runRegistry(walk.event, walk.ctx, {
     fallback: bashFallback(walk, raw),
     warn: (line) => state.stderr.push(`${line}
-`)
+`),
+    ...walk.session.selectedRegistrySpecs === undefined ? {} : { selectedSpecs: walk.session.selectedRegistrySpecs }
   });
   for (const outcome of outcomes) {
     const result = outcomeResult(outcome, walk, raw);
@@ -4896,7 +4897,14 @@ async function dispatchInput(input, session, builtins) {
 function sessionFor(phase, env, host, options) {
   const root = configRoot({ env, host });
   const cwd = options.cwd ?? process.cwd();
-  const base = { phase, host, configRoot: root, libDir: options.libDir, cwd };
+  const base = {
+    phase,
+    host,
+    configRoot: root,
+    libDir: options.libDir,
+    cwd,
+    ...options.selectedRegistrySpecs === undefined ? {} : { selectedRegistrySpecs: options.selectedRegistrySpecs }
+  };
   if (phase === "pre") {
     const project = projectRoot({ env, host, cwd }) ?? cwd;
     return { ...base, env: childEnv2(env, { TOOLU_CONFIG_DIR: root }), projectRoot: project };

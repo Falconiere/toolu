@@ -150,6 +150,27 @@ test.concurrent("modules of a plugin that is not installed are skipped", async (
   expect(ran(sb)).toEqual(["kept"]);
 });
 
+test.concurrent("an explicit selected-spec set leaves stale disabled modules inert", async () => {
+  using sb = createSandbox();
+  await install(sb, PRE, [
+    ["a@t__selected.js", "advisory"],
+    ["b@t__disabled.js", "deny"],
+  ]);
+  const event = hookEvent(sb, "tool/pre");
+  const ctx = { ...context(sb), host: "opencode" as const };
+  const selected = await runRegistry(event, ctx, { selectedSpecs: new Set(["a@t"]) });
+  expect(summary(selected)).toEqual(["a@t__selected.js:advisory", "b@t__disabled.js:inactive"]);
+  expect(ran(sb)).toEqual(["selected"]);
+
+  const none = await runRegistry(event, ctx, { selectedSpecs: new Set() });
+  expect(summary(none)).toEqual(["a@t__selected.js:inactive", "b@t__disabled.js:inactive"]);
+  expect(ran(sb)).toEqual(["selected"]);
+
+  const unchangedDefault = await runRegistry(event, ctx);
+  expect(summary(unchangedDefault)).toEqual(["a@t__selected.js:advisory", "b@t__disabled.js:deny"]);
+  expect(ran(sb)).toEqual(["selected", "selected", "disabled"]);
+});
+
 test.concurrent("a bash entry goes to the fallback, or is skipped without one", async () => {
   using sb = createSandbox();
   mkdirSync(sb.path(PRE), { recursive: true });

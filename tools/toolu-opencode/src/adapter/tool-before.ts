@@ -199,10 +199,18 @@ function task(call: ToolCall, args: Args, ctx: PermissionContext): PermissionMap
   if (presentWrong(args, "background", typeof args.background === "boolean")) {
     return deny(call.tool, "background must be a boolean");
   }
+  if (presentWrong(args, "model", typeof args.model === "string")) {
+    return deny(call.tool, "model must be a string");
+  }
+  if (presentWrong(args, "reasoning_effort", typeof args.reasoning_effort === "string")) {
+    return deny(call.tool, "reasoning_effort must be a string");
+  }
   const input: Args = { description, prompt, subagent_type: subagent };
   if (typeof args.task_id === "string") input.task_id = args.task_id;
   if (typeof args.command === "string") input.command = args.command;
   if (typeof args.background === "boolean") input.background = args.background;
+  if (typeof args.model === "string") input.model = args.model;
+  if (typeof args.reasoning_effort === "string") input.reasoning_effort = args.reasoning_effort;
   return request(call, ctx, "Task", input);
 }
 

@@ -1,15 +1,23 @@
 import { expect, test } from "bun:test";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createGateDecider } from "../evaluate.ts";
+import { BUILTIN_MODULES } from "../../../../../plugins/toolu/hooks/src/pre-tools/builtins.ts";
+import { createGateDecider, nativeGates } from "../evaluate.ts";
 import { createDenyAllToolBefore, createToolBeforeHandler, mapToolCall } from "../tool-before.ts";
 
 const tmpBase = process.env.TMPDIR ?? "/tmp";
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../../../..");
 const CTX = { cwd: "/work/app", projectRoot: "/work/app", worktree: "/work/app" };
 const CALL = { sessionID: "ses_1", callID: "call_1" };
+
+test("OpenCode uses the same ordered nine native gates as the core hook", () => {
+  expect(nativeGates(join(REPO_ROOT, "plugins/toolu")).map((gate) => gate.name)).toEqual(
+    BUILTIN_MODULES,
+  );
+  expect(BUILTIN_MODULES).toHaveLength(9);
+});
 
 async function project(mode: "block" | "ask"): Promise<{ root: string; envPath: string }> {
   const root = await mkdtemp(join(tmpBase, "toolu-oc-before-"));
@@ -228,4 +236,38 @@ test("opencode.json mcp keys gate probe_touch and a missing mcp object does not"
     permissionContext: { cwd: broken, projectRoot: broken, worktree: broken },
   });
   await skipped({ tool: "probe_touch", ...CALL }, { args: null });
+});
+
+test("OpenCode dispatch runs a selected real registry bundle but skips its stale disabled copy", async () => {
+  const root = await mkdtemp(join(tmpBase, "toolu-oc-registry-"));
+  const configRoot = join(root, "state");
+  const registry = join(configRoot, "toolu/pre-tools.d");
+  await mkdir(registry, { recursive: true });
+  await copyFile(
+    join(REPO_ROOT, "plugins/ast-grep/hooks/dist/search-nudge.js"),
+    join(registry, "ast-grep@toolu__search-nudge.js"),
+  );
+  const options = {
+    repoRoot: REPO_ROOT,
+    configRoot,
+    permissionContext: { cwd: root, projectRoot: root, worktree: root },
+  };
+  const request = {
+    tool_name: "Grep",
+    tool_input: { pattern: "class Foo" },
+    session_id: "session-registry",
+    tool_use_id: "call-registry",
+    cwd: root,
+  };
+  const selected = createGateDecider({
+    ...options,
+    selectedPluginSpecs: new Set(["toolu@toolu", "ast-grep@toolu"]),
+  });
+  const disabled = createGateDecider({
+    ...options,
+    selectedPluginSpecs: new Set(["toolu@toolu"]),
+  });
+  if (!selected.ok || !disabled.ok) throw new Error("core decider was not ready");
+  expect((await selected.decide(request)).kind).toBe("advisory");
+  expect(await disabled.decide(request)).toEqual({ kind: "allow" });
 });
