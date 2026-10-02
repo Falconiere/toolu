@@ -53,6 +53,18 @@ function unsupported(command: string, plugin: string): string {
   );
 }
 
+test.concurrent("a bundle path that cannot be stat'ed is a missing bundle, not a throw", () => {
+  using root = tempRoot("toolu-entries-notdir-");
+  const plugin = fixturePlugin(root.path, "blocked", { entries: { boot: "process.exit(0);\n" } });
+  const dist = join(plugin.pluginDir, "hooks", "dist");
+  rmSync(dist, { recursive: true });
+  writeFileSync(dist, "not a directory\n");
+  expect(pluginStartupEntries(plugin.pluginDir)).toEqual({
+    ok: false,
+    reason: "boot: missing startup bundle",
+  });
+});
+
 test.concurrent("a hand-written or legacy SessionStart command is unsupported", () => {
   using root = tempRoot("toolu-entries-legacy-");
   const shell = 'bash "${CLAUDE_PLUGIN_ROOT}/hooks/register.sh"';

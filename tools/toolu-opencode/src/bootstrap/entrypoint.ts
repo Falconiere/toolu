@@ -47,8 +47,13 @@ function readHooksFile(path: string): unknown {
   }
 }
 
+/** A bundle that cannot even be stat'ed (EACCES, ENOTDIR) is as missing as an absent one. */
 function isFile(path: string): boolean {
-  return statSync(path, { throwIfNoEntry: false })?.isFile() ?? false;
+  try {
+    return statSync(path, { throwIfNoEntry: false })?.isFile() ?? false;
+  } catch {
+    return false;
+  }
 }
 
 /** The entry a hook launches, or why it is not a launcher this host can run. */

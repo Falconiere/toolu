@@ -128,6 +128,28 @@ function underDataRoot(path: string, dataRoot: string): string | undefined {
   return parent === undefined ? undefined : join(parent, basename(path));
 }
 
+function errorCode(error: unknown): string | undefined {
+  return error instanceof Error && "code" in error && typeof error.code === "string"
+    ? error.code
+    : undefined;
+}
+
+/**
+ * Whether `path` is still the symlink to `source` toolu published. A path that
+ * cannot exist (ENOENT, or ENOTDIR from a crafted ledger) is gone; any other
+ * error is reported rather than guessed.
+ */
+function stillOwned(path: string, source: string): "owned" | "other" | "gone" | { error: string } {
+  try {
+    const stat = lstatSync(path, { throwIfNoEntry: false });
+    if (stat === undefined) return "gone";
+    return stat.isSymbolicLink() && readlinkSync(path) === source ? "owned" : "other";
+  } catch (error) {
+    const code = errorCode(error);
+    return code === "ENOENT" || code === "ENOTDIR" ? "gone" : { error: String(error) };
+  }
+}
+
 /** Remove `helper` while it is still the symlink toolu published; anything else there is the user's. */
 function retireHelper(owner: string, helper: OwnedHelper, dataRoot: string, out: Cleanup): boolean {
   if (realpathOrUndefined(dirname(helper.path)) === undefined) return true;
@@ -136,11 +158,15 @@ function retireHelper(owner: string, helper: OwnedHelper, dataRoot: string, out:
     out.diagnostics.push(`${owner}: ignored ledger path ${helper.path} outside the data root`);
     return true;
   }
-  const stat = lstatSync(path, { throwIfNoEntry: false });
-  if (stat === undefined) return true;
-  if (!stat.isSymbolicLink() || readlinkSync(path) !== helper.source) {
+  const owned = stillOwned(path, helper.source);
+  if (owned === "gone") return true;
+  if (owned === "other") {
     out.diagnostics.push(`${owner}: kept ${helper.path}, no longer toolu's`);
     return true;
+  }
+  if (owned !== "owned") {
+    out.failures.push(`${owner}: cannot inspect helper ${helper.path}: ${owned.error}`);
+    return false;
   }
   try {
     rmSync(path);
@@ -163,7 +189,11 @@ export function retireHelpers(
 }
 
 function isRegularFile(path: string): boolean {
-  return lstatSync(path, { throwIfNoEntry: false })?.isFile() ?? false;
+  try {
+    return lstatSync(path, { throwIfNoEntry: false })?.isFile() ?? false;
+  } catch {
+    return false;
+  }
 }
 
 function moduleFiles(dir: string, spec: string): string[] {

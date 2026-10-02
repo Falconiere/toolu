@@ -106,13 +106,45 @@ test.concurrent("an entry that cannot start, exits non-zero or stalls is NotRead
 
 test.concurrent("a grandchild holding the output pipes cannot outlast the deadline", async () => {
   using root = tempRoot("toolu-bs-grandchild-");
+  const pidFile = join(root.path, "grandchild.pid");
+  // stdio "inherit" hands the grandchild the entry's own stdout/stderr: the bootstrap's pipes.
   const holder =
-    'require("node:child_process").spawn("sleep", ["30"], { stdio: "inherit", detached: true }).unref();\n' +
+    'const c = require("node:child_process").spawn("sleep", ["30"], { stdio: "inherit", detached: true });\n' +
+    `require("node:fs").writeFileSync(${JSON.stringify(pidFile)}, String(c.pid));\n` +
+    "c.unref();\n" +
     STALL;
   const started = performance.now();
   const reason = await reasonOf(root.path, { plugins: [one(root.path, holder)], deadlineMs: 300 });
   expect(reason).toBe("probe/boot: timed out after 300 ms");
   expect(performance.now() - started).toBeLessThan(CUT_SHORT_MS);
+  // The pipe holder is still alive: the call returned without waiting for its EOF.
+  const pid = Number(readFileSync(pidFile, "utf8"));
+  expect(process.kill(pid, 0)).toBe(true);
+  process.kill(pid);
+});
+
+test.concurrent("an entry whose plugin directory vanishes mid-run is NotReady, not a crash", async () => {
+  using root = tempRoot("toolu-bs-vanish-");
+  const vanishing = one(
+    root.path,
+    'require("node:fs").rmSync(process.env.CLAUDE_PLUGIN_ROOT, { recursive: true, force: true });\n',
+  );
+  expect(await reasonOf(root.path, { plugins: [vanishing] })).toStartWith(
+    `probe/boot: plugin directory ${vanishing.pluginDir} is gone: `,
+  );
+});
+
+test.concurrent("an unreadable plugin catalog is a startup note, not silence", async () => {
+  using root = tempRoot("toolu-bs-catalog-");
+  const missing = join(root.path, "no-repo");
+  const result = await boot(root.path, {
+    plugins: [one(root.path, "process.exit(0);\n")],
+    repoRoot: missing,
+  });
+  if (result.status !== "ready") throw new Error(result.reason);
+  expect(result.diagnostics).toEqual([
+    `plugin catalog ${join(missing, "plugins")} unreadable; only plugins in the startup ledger were pruned`,
+  ]);
 });
 
 test.concurrent("an abort kills the running entry, and an aborted signal runs nothing", async () => {

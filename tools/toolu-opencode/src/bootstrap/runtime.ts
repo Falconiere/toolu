@@ -74,6 +74,24 @@ function bootstrapEnv(options: BootstrapRuntimeOptions, dataRoot: string): Recor
   };
 }
 
+/** An empty report file in a new temp directory, or why there cannot be one. */
+function freshReport(): { ok: true; dir: string; report: string } | { ok: false; reason: string } {
+  let dir: string;
+  try {
+    dir = mkdtempSync(join(tmpdir(), "toolu-startup-"));
+  } catch (error) {
+    return { ok: false, reason: `cannot create a startup report directory: ${String(error)}` };
+  }
+  const report = join(dir, "report.jsonl");
+  try {
+    writeFileSync(report, "");
+    return { ok: true, dir, report };
+  } catch (error) {
+    rmSync(dir, { recursive: true, force: true });
+    return { ok: false, reason: `cannot create startup report ${report}: ${String(error)}` };
+  }
+}
+
 /** Run one entry against a fresh report file; returns its outcome or why it failed. */
 async function runEntry(
   entry: StartupEntry,
@@ -81,10 +99,10 @@ async function runEntry(
   run: Run,
   verified: Verified,
 ): Promise<EntryOutcome | string> {
-  const dir = mkdtempSync(join(tmpdir(), "toolu-startup-"));
+  const fresh = freshReport();
+  if (!fresh.ok) return fresh.reason;
+  const { dir, report } = fresh;
   try {
-    const report = join(dir, "report.jsonl");
-    writeFileSync(report, "");
     const env = { ...run.env, CLAUDE_PLUGIN_ROOT: plugin.pluginDir, [STARTUP_REPORT_VAR]: report };
     const stdin = JSON.stringify({
       hook_event_name: "SessionStart",
@@ -195,15 +213,16 @@ async function bootstrapRuntimeInternal(
   const read = readLedger(dataRoot);
   if (read.diagnostic !== undefined) cleanup.diagnostics.push(read.diagnostic);
   const ledger: Ledger = read.ledger;
-  const retained = pruneUnselected(
-    {
-      dataRoot,
-      selected: new Set(order.plugins.map((p) => p.name)),
-      catalog: listPluginManifests(join(options.repoRoot, "plugins")) ?? [],
-      ledger,
-    },
-    cleanup,
-  );
+  const pluginsRoot = join(options.repoRoot, "plugins");
+  const catalog = listPluginManifests(pluginsRoot);
+  if (catalog === null) {
+    cleanup.diagnostics.push(
+      `plugin catalog ${pluginsRoot} unreadable; only plugins in the startup ledger were pruned`,
+    );
+  }
+  const selected = new Set(order.plugins.map((p) => p.name));
+  const prune = { dataRoot, selected, catalog: catalog ?? [], ledger };
+  const retained = pruneUnselected(prune, cleanup);
   const run: Run = {
     bun,
     env,

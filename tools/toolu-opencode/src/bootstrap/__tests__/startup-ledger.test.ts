@@ -290,3 +290,15 @@ test.concurrent("a helper an entry published before it crashed stays owned", asy
     },
   });
 });
+
+test.concurrent("a ledger path that cannot exist is treated as gone, never a lasting failure", async () => {
+  using root = tempRoot("toolu-ledger-enotdir-");
+  const file = join(root.path, "data/not-a-dir");
+  mkdirSync(join(root.path, "data"), { recursive: true });
+  writeFileSync(file, "plain file\n");
+  const source = join(PLUGINS_ROOT, "jira/hooks/dist/jira.js");
+  writeLedger(root.path, { jira: { helpers: [{ path: join(file, "jira.sh"), source }] } });
+  await start(root.path, ["toolu"]);
+  expect(readFileSync(file, "utf8")).toBe("plain file\n");
+  expect(ledger(root.path)).toEqual({ version: 1, plugins: {} });
+});

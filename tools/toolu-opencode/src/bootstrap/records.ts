@@ -158,7 +158,14 @@ export function verifyRecords(
   dataRoot: string,
 ): Verified {
   const out: Verified = { artifacts: [], helpers: [], diagnostics: [], failures: [] };
-  const scope: Scope = { plugin, dataRoot, pluginReal: realpathSync(plugin.pluginDir) };
+  let pluginReal: string;
+  try {
+    pluginReal = realpathSync(plugin.pluginDir);
+  } catch (error) {
+    out.failures.push(`plugin directory ${plugin.pluginDir} is gone: ${String(error)}`);
+    return out;
+  }
+  const scope: Scope = { plugin, dataRoot, pluginReal };
   for (const record of records) {
     if (record.kind === "registry") verifyRegistry(record, scope, out);
     else if (record.kind === "helper") verifyHelper(record, scope, out);
