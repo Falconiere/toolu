@@ -77,7 +77,7 @@ export function install(
   });
 }
 
-/** Rewrite the project's `opencode.json` (the provider stays as the session wrote it). */
+/** Rewrite the project's `opencode.json`, keeping the session's provider entry. */
 export function editConfig(s: ProbeSession, edit: (config: Record<string, unknown>) => void): void {
   const path = join(s.sb.project, "opencode.json");
   const config = z.record(z.string(), z.unknown()).parse(JSON.parse(readFileSync(path, "utf8")));
