@@ -18,7 +18,7 @@ not contain toolu's source tree.
 
 ## Sequence
 
-1. **Brainstorm:** Invoke the active host's `brainstorm:brainstorm` (`skill({ name: "brainstorm-brainstorm" })`) in its Delivery mode and record the outcome, repository evidence, risks, and decisions. Use its compact path for bounded work, but never skip the phase. Resolve material uncertainty before drafting the spec.
+1. **Brainstorm:** Invoke the active host's `brainstorm-brainstorm` (`skill({ name: "brainstorm-brainstorm" })`) in its Delivery mode and record the outcome, repository evidence, risks, and decisions. Use its compact path for bounded work, but never skip the phase. Resolve material uncertainty before drafting the spec.
 2. **Spec:** Read [spec.md](references/spec.md). Write the design with observable acceptance criteria, real-input evidence, failure behavior, and documentation impact. A small fix still gets a concise spec.
 3. **Spec review:** Read [spec-review.md](references/spec-review.md). Review against the authored contract. If `Status: Needs changes`, fix the findings and repeat this phase until `Status: Approved`. Do not plan against a rejected spec.
 4. **Plan:** Read [plan.md](references/plan.md) and [ledger.md](references/ledger.md). Write a machine-readable plan with runnable checks, paths, dependencies, and AC references. A small fix still gets a compact ledger plan.

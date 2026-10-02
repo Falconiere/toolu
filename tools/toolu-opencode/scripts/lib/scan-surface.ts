@@ -260,8 +260,11 @@ export function planSkillResources(
         const [path, fragment] = link.split("#", 2);
         if (!path) return whole;
         const target = join(dirname(item.source), path);
-        if (!existsSync(target) || !statSync(target).isFile()) {
+        if (!existsSync(target)) {
           throw new Error(`${item.source}: missing linked resource ${link}`);
+        }
+        if (!statSync(target).isFile()) {
+          throw new Error(`${item.source}: linked resource is not a file: ${link}`);
         }
         const real = realpathSync(target);
         if (!within(repoRoot, real))

@@ -1,5 +1,6 @@
 /** Body rewrites and reference cataloging (#206). */
 import { CLAUDE_PLUGIN_ROOT, TOOLU_PLUGIN_ROOT } from "./constants.ts";
+import { posix } from "node:path";
 
 export type RewriteNotes = {
   claudePluginRootRewrites: number;
@@ -20,6 +21,7 @@ const DOT_CLAUDE_PATH = /(?:^|[\s"'`(/=])\.claude(?:\/|["'`)\s]|$)/;
 export function rewriteBody(
   body: string,
   references: SurfaceReferences,
+  skillId?: string,
 ): { body: string; notes: RewriteNotes } {
   const parts = body.split(CLAUDE_PLUGIN_ROOT);
   const claudePluginRootRewrites = parts.length - 1;
@@ -29,6 +31,7 @@ export function rewriteBody(
   const configParts = rewritten.split(claudeConfig);
   const claudeConfigRewrites = configParts.length - 1;
   rewritten = configParts.join(openCodeConfig);
+  rewritten = rewritten.replace("on Claude\nCode. Ordinary", "on OpenCode.\nOrdinary");
   let sourcePathRewrites = 0;
   for (const [source, destination] of [...references.paths].sort(
     (a, b) => b[0].length - a[0].length,
@@ -36,6 +39,18 @@ export function rewriteBody(
     const pathParts = rewritten.split(source);
     sourcePathRewrites += pathParts.length - 1;
     rewritten = pathParts.join(destination);
+  }
+  if (skillId) {
+    if (skillId === "toolu-review-review") {
+      rewritten = rewritten.replace("# Claude Code\n", "# OpenCode\n");
+      rewritten = rewritten.replace("TOOLU_HOST_OVERRIDE=claude", "TOOLU_HOST_OVERRIDE=opencode");
+    }
+    const modelRouting = `${TOOLU_PLUGIN_ROOT}/generated/skills/toolu-orchestrator/references/model-routing.md`;
+    const relativeRouting = posix.relative(
+      `skills/${skillId}`,
+      "skills/toolu-orchestrator/references/model-routing.md",
+    );
+    rewritten = rewritten.replaceAll(`\`${modelRouting}\``, `\`${relativeRouting}\``);
   }
   let explicitReferenceRewrites = 0;
   for (const [reference, id] of [...references.invocations].sort(
@@ -53,6 +68,9 @@ export function rewriteBody(
       explicitReferenceRewrites += 1;
       return `skill({ name: "${id}" })`;
     });
+    if (reference === "brainstorm:brainstorm") {
+      rewritten = rewritten.replaceAll(`\`${reference}\``, `\`${id}\``);
+    }
   }
 
   const dotClaudeRefs: string[] = [];

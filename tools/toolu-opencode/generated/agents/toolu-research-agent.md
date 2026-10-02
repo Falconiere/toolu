@@ -38,8 +38,8 @@ research, **inherit** (frontier) only for deep-reasoning agents.
 
 The stable paths above are published by each plugin's SessionStart hook. Resolve
 their root explicitly: `${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}` on
-Codex or `${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}` on Claude
-Code. Ordinary shell calls do not inherit plugin lifecycle variables, so never
+Codex or `${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}` on OpenCode.
+Ordinary shell calls do not inherit plugin lifecycle variables, so never
 collapse the two roots into one ambiguous fallback.
 
 Repo-checkout fallback paths (for tests/dev when the plugins are not installed):

@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { expect, test } from "bun:test";
 import { fileURLToPath } from "node:url";
@@ -189,6 +189,53 @@ test("paired host spellings become one OpenCode skill invocation", () => {
   expect(result.notes.explicitReferenceRewrites).toBe(2);
 });
 
+test("generated research agent labels the OpenCode config root correctly", () => {
+  const out = mkdtempSync(join(tmpBase, "toolu-surface-agent-"));
+  const agent = planDefault(out).files.get(join(out, "agents/toolu-research-agent.md"));
+  expect(agent).toContain("/opencode}` on OpenCode");
+  expect(agent).not.toContain("/opencode}` on Claude");
+  expect(agent).not.toContain("OpenCode\nCode.");
+});
+
+test("generated delivery skill uses the generated ID for a bare brainstorm reference", () => {
+  const root = repoRoot();
+  const out = mkdtempSync(join(tmpBase, "toolu-surface-delivery-"));
+  const selected = selectPluginsByEnabledNames(join(root, "plugins"), ["delivery-flow", "brainstorm"]);
+  if (!selected.ok) throw new Error(selected.reason);
+  const plan = planSurface({ repoRoot: root, outDir: out, plugins: selected.plugins });
+  const skill = plan.files.get(join(out, "skills/delivery-flow-delivery-flow/SKILL.md"));
+  expect(skill).toContain("`brainstorm-brainstorm`");
+  expect(skill).not.toContain("`brainstorm:brainstorm`");
+});
+
+test("generated review skill labels its OpenCode config example", () => {
+  const root = repoRoot();
+  const out = mkdtempSync(join(tmpBase, "toolu-surface-review-"));
+  const selected = selectPluginsByEnabledNames(join(root, "plugins"), ["toolu-review"]);
+  if (!selected.ok) throw new Error(selected.reason);
+  const plan = planSurface({ repoRoot: root, outDir: out, plugins: selected.plugins });
+  const skill = plan.files.get(join(out, "skills/toolu-review-review/SKILL.md"));
+  expect(skill).toContain("# OpenCode\n");
+  expect(skill).toContain("/opencode}/toolu-review/write-state.sh");
+  expect(skill).toContain("TOOLU_HOST_OVERRIDE=opencode");
+  expect(skill).not.toContain("${CLAUDE_CONFIG_DIR:-$HOME/.claude}");
+});
+
+test("generated model-routing references resolve relative to each skill", () => {
+  const out = mkdtempSync(join(tmpBase, "toolu-surface-routing-"));
+  const plan = planDefault(out);
+  const references = [
+    ["toolu-deep-research", "../toolu-orchestrator/references/model-routing.md"],
+    ["toolu-orchestrator", "references/model-routing.md"],
+  ];
+  for (const [id, relativePath] of references) {
+    const skill = plan.files.get(join(out, "skills", id, "SKILL.md"));
+    expect(skill).toContain(`\`${relativePath}\``);
+    expect(skill).not.toContain("${TOOLU_PLUGIN_ROOT}/generated/skills/toolu-orchestrator/references/model-routing.md");
+    expect(plan.files.has(resolve(out, "skills", id, relativePath))).toBe(true);
+  }
+});
+
 test("real agent tools map to exact OpenCode permissions and reject unknown tools", () => {
   const sourcePath = join(repoRoot(), "plugins/toolu/agents/architect.md");
   const source = readFileSync(sourcePath, "utf8");
@@ -307,5 +354,24 @@ test("missing real skill resource fails generation with its source path", () => 
       plugins: [{ ...manifest, pluginDir }],
     }),
   ).toThrow("missing linked resource ../../README.md");
+  rmSync(copyRoot, { recursive: true, force: true });
+});
+
+test("present directory linked as a skill resource reports a non-file error", () => {
+  const root = repoRoot();
+  const copyRoot = mkdtempSync(join(tmpBase, "toolu-surface-directory-"));
+  const pluginDir = join(copyRoot, "plugins/jev");
+  cpSync(join(root, "plugins/jev"), pluginDir, { recursive: true });
+  rmSync(join(pluginDir, "README.md"));
+  mkdirSync(join(pluginDir, "README.md"));
+  const manifest = listPluginManifests(join(root, "plugins"))?.find((item) => item.name === "jev");
+  if (!manifest) throw new Error("jev manifest missing");
+  expect(() =>
+    planSurface({
+      repoRoot: copyRoot,
+      outDir: join(copyRoot, "generated"),
+      plugins: [{ ...manifest, pluginDir }],
+    }),
+  ).toThrow("linked resource is not a file: ../../README.md");
   rmSync(copyRoot, { recursive: true, force: true });
 });

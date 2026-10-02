@@ -50,8 +50,8 @@ the pre-fix tree, so committing staleifies it and the push denies.
      "${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/toolu-review/write-state.sh" \
      --findings-count 0 --reviewers '["toolu-review:review"]'
 
-   # Claude Code
-   TOOLU_HOST_OVERRIDE=claude \
+   # OpenCode
+   TOOLU_HOST_OVERRIDE=opencode \
      "${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/toolu-review/write-state.sh" \
      --findings-count 0 --reviewers '["toolu-review:review"]'
    ```

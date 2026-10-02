@@ -138,7 +138,7 @@ Escalate one tier on any of: **hard to reverse**, **cross-cutting**, **the how i
 
 A subagent that returns `ESCALATE: <reason>` should be re-run one tier up with that reason in the prompt; never re-run the same tier hoping for a better roll.
 
-Full rubric (signals, worked examples, per-step plan tiers, config remap): `${TOOLU_PLUGIN_ROOT}/generated/skills/toolu-orchestrator/references/model-routing.md`. Remap any class in `toolu.config.json` under `models`.
+Full rubric (signals, worked examples, per-step plan tiers, config remap): `references/model-routing.md`. Remap any class in `toolu.config.json` under `models`.
 
 ## Fan-out budget guardrail
 

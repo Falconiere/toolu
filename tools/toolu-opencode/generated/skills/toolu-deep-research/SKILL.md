@@ -16,7 +16,7 @@ The user wants a real research deliverable: multi-source, verified, cited. Not a
 
 ## How to run it
 
-Four phases, driven from the main thread. Workers run on sonnet, synthesis stays on the frontier tier — rubric: `${TOOLU_PLUGIN_ROOT}/generated/skills/toolu-orchestrator/references/model-routing.md`.
+Four phases, driven from the main thread. Workers run on sonnet, synthesis stays on the frontier tier — rubric: `../toolu-orchestrator/references/model-routing.md`.
 
 1. **Target (main thread).** Restate the topic in one sentence. Decompose it into guiding questions with sub-questions — 5 is the typical fan-out, 7 the hard cap (the orchestrator skill's parallel-agent guardrail is the reason). Name the assumptions and what is out of scope. Print the numbered question set, then run it immediately without waiting for approval. Do not open the host mapping's user-choice interface ([host-mapping.md](../../resources/toolu/workflows/host-mapping.md)).
 2. **Research fan-out.** One `research-agent` (sonnet) per question, launched in parallel. Each researcher combines both engines per its routing table — `context7` for library/API/docs-shaped questions, `exa-search` for general web, topics, and URL crawls — with native fallback inherited. Override the agent's default depth per call: ask for a 10–15 sentence synthesis, up to 8 sources, and `Claim → source URL` pairs for the 2–3 load-bearing claims.
