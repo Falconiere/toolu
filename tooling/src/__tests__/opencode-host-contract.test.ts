@@ -145,7 +145,7 @@ test.concurrent("evidence naming a probe that does not exist fails schema valida
   expect(res.stderr).toStartWith(
     `opencode-host-contract: ${sb.path("contract/capability-matrix.json")}: `,
   );
-  expect(res.stderr).toContain("evidence");
+  expect(res.stderr).toContain("at plugins.toolu.axes.tools");
 });
 
 test.concurrent("a status the evidence contradicts fails", () =>

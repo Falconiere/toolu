@@ -196,9 +196,9 @@
       "kind": "hook",
       "mechanism": "tool.execute.after (output append)",
       "claim": "tool.execute.after can append feedback that reaches the model",
-      "verdict": "unsupported",
+      "verdict": "supported",
       "observed": {
-        "feedbackCount": 3,
+        "feedbackCount": 2,
         "fileContent": "two"
       }
     },

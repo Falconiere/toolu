@@ -122,7 +122,7 @@ export function renderLimitations(matrix: Matrix): string {
     "",
     ...limited.map(
       ({ ref, cell }) =>
-        `- \`${ref}\` (${cell.status}) — ${cell.use}. Alternative: ${cell.alternative ?? ""} Evidence: ${(cell.alternativeEvidence ?? cell.evidence).map((id) => `\`${id}\``).join(", ")}. Owner: ${owners(cell.owner)}.`,
+        `- \`${ref}\` (${cell.status}) — ${cell.use}. Alternative: ${cell.alternative ?? ""}. Evidence: ${(cell.alternativeEvidence ?? cell.evidence).map((id) => `\`${id}\``).join(", ")}. Owner: ${owners(cell.owner)}.`,
     ),
     "",
     "### Host constraints",
