@@ -43,7 +43,8 @@ export async function createTooluHooks(
 ): Promise<Hooks> {
   if (!claimInstance(binding.directory)) {
     await report(binding, "info", `toolu: duplicate load skipped for ${binding.directory}`);
-    return {};
+    // No hooks: the admitted instance enforces. Its dispose, not this one, releases the claim.
+    return { dispose: () => Promise.resolve() };
   }
   const enforcement = await settle(prepare, binding);
   const dispose = (): Promise<void> => {

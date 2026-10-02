@@ -141,7 +141,11 @@ test("a second load for the same directory is skipped until the first is dispose
   const logged: Logged[] = [];
   const first = await createTooluHooks(binding(root, logged), failing);
   const second = await createTooluHooks(binding(root, logged), failing);
-  expect(second).toEqual({});
+  expect(second["tool.execute.before"]).toBeUndefined();
+  await second.dispose?.();
+  expect(await createTooluHooks(binding(root, logged), failing)).not.toHaveProperty(
+    "tool.execute.before",
+  );
   expect(logged.at(-1)).toEqual({
     level: "info",
     message: `toolu: duplicate load skipped for ${root}`,

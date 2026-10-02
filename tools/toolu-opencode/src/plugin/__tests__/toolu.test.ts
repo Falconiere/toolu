@@ -127,6 +127,7 @@ test("server: a binding failure still returns a hook that denies every call", as
   };
   const hooks = await entry.default.server(input, undefined);
   expect(await refusal(hooks)).toBe("toolu: not ready: client unavailable");
+  expect(await hooks.dispose?.()).toBeUndefined();
 });
 
 function bundled(): string {

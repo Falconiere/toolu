@@ -17,7 +17,10 @@ const server: Plugin = async (input, options) => {
     return await createTooluHooks(bindHostContext(input, options, process.env));
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    return { "tool.execute.before": createDenyAllToolBefore(`toolu: not ready: ${reason}`) };
+    return {
+      "tool.execute.before": createDenyAllToolBefore(`toolu: not ready: ${reason}`),
+      dispose: () => Promise.resolve(),
+    };
   }
 };
 
