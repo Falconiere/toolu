@@ -86,7 +86,11 @@ export function selectPluginsWithDependencies(
   );
   if (!closed.ok) return closed;
   const { source, path, unknown } = enabledResult;
-  const notes = unknown.map((name) => `enabled plugin "${name}" in ${path} is not installed`);
+  // Unknown names come only from an explicit selection file, which always has a path.
+  const notes =
+    path === undefined
+      ? []
+      : unknown.map((name) => `enabled plugin "${name}" in ${path} is not installed`);
   return { ...closed, source, notes };
 }
 
