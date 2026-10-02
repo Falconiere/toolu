@@ -7,6 +7,8 @@
 opencode plugin add @toolu/opencode
 ```
 
+> **Documented contract.** The plugin API at <https://opencode.ai/docs/plugins/> is pinned and probed in [opencode-host-contract.md](opencode-host-contract.md): `opencode-ai@1.18.34` with `@opencode-ai/plugin@1.18.34` ([#335](https://github.com/Falconiere/toolu/issues/335)). This page still describes the V2 adapter until [#336](https://github.com/Falconiere/toolu/issues/336) and [#363](https://github.com/Falconiere/toolu/issues/363).
+
 The package carries plugin manifests, settings, and committed Bun bundles, so the
 adapter resolves its plugin root to its own package directory. It ships a default entry
 (`exports["."]` / `main` → `./src/plugin/toolu.ts`), so `opencode plugin add`

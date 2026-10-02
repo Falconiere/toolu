@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "cli": { "package": "opencode-ai", "version": "1.18.34" },
+  "sdk": { "package": "@opencode-ai/plugin", "version": "1.18.34" },
+  "docs": "https://opencode.ai/docs/plugins/"
+}

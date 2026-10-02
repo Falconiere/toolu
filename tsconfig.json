@@ -4,6 +4,7 @@
     "tooling/src/**/*.ts",
     "packages/*/src/**/*.ts",
     "tools/*/src/**/*.ts",
+    "tools/toolu-opencode/contract/**/*.ts",
     "plugins/epic-orchestrator/scripts/**/*.ts",
     "plugins/delivery-flow/skills/__tests__/*.ts",
     "plugins/toolu/scripts/**/*.ts",

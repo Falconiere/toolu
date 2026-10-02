@@ -4,6 +4,8 @@ toolu uses `bun test` for its hook, tooling, and conformance suites ([epic #247]
 
 The CI job is `typescript`. Its shell-analysis cold-start budget is hard on macOS arm64 or with `TOOLU_LATENCY_ENFORCE=1`, and report-only on Linux. See [conformance-report.md](conformance-report.md) for measurements against the `v7.2.0` Bash baseline.
 
+Live OpenCode host probes (`bun run probe:opencode-host`) install the pinned `opencode-ai` CLI and drive it in isolated profiles against a scripted loopback provider. They stay opt-in until OP-28 ([#362](https://github.com/Falconiere/toolu/issues/362)). Every `bun run test` runs `bun run check:opencode-host`, which checks the committed evidence; see [opencode-host-contract.md](opencode-host-contract.md).
+
 A test spawns the real thing: a hook bundle, `git`, `npm`, or a host CLI. It runs against real temp repositories and config roots. There are no mocks (AGENTS.md).
 
 Shared helpers live in `@toolu/conformance/harness/*` (`tools/toolu-conformance/src/harness/`):

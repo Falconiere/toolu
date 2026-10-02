@@ -51,3 +51,33 @@ test.concurrent("portable-core doc checker fails on invalid classification token
     stderr: "check-portable-core-doc: invalid classification token maybe-later\n",
   });
 });
+
+test.concurrent("portable-core doc checker rejects a citation of the superseded V2 plugin docs", async () => {
+  using sb = createSandbox();
+  const original = await Bun.file(DOC).text();
+  const doc = sb.write(
+    "portable-core.md",
+    `${original}\nSource: https://opencode.ai/v2/docs/build/plugins\n`,
+  );
+
+  const res = await checkDoc(doc, ROOT);
+  expect({ exitCode: res.exitCode, stderr: res.stderr }).toEqual({
+    exitCode: 1,
+    stderr: "check-portable-core-doc: cites the V2 contract (opencode.ai/v2/)\n",
+  });
+});
+
+test.concurrent("portable-core doc checker requires the documented SDK pin", async () => {
+  using sb = createSandbox();
+  const original = await Bun.file(DOC).text();
+  const doc = sb.write(
+    "portable-core.md",
+    original.replaceAll("@opencode-ai/plugin@1.18.34", "@opencode-ai/plugin"),
+  );
+
+  const res = await checkDoc(doc, ROOT);
+  expect({ exitCode: res.exitCode, stderr: res.stderr }).toEqual({
+    exitCode: 1,
+    stderr: "check-portable-core-doc: missing SDK pin\n",
+  });
+});
