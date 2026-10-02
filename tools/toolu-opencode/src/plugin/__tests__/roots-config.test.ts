@@ -29,6 +29,7 @@ function hostEnv(extra: Record<string, string>): Record<string, string> {
 function binding(dir: string, env: Record<string, string>): HostBinding {
   return {
     directory: dir,
+    worktree: dir,
     projectRoot: dir,
     repoRootOption: REPO_ROOT,
     optionsError: undefined,
