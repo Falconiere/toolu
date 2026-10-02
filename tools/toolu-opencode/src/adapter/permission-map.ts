@@ -129,35 +129,33 @@ export function mapPermissionEventToTool(
   return { kind: "request", request };
 }
 
-/** Apply a portable Decision onto an OpenCode permission evaluation (mutates event). */
+/** Compatibility helper: never weaken a native or another plugin's decision. */
 export function applyDecisionToPermission(
   decision: Decision,
   event: PermissionEvaluationEvent,
 ): void {
   switch (decision.kind) {
     case "deny":
-      event.effect = "deny";
-      event.message = decision.reason;
+      if (event.effect !== "deny") {
+        event.effect = "deny";
+        event.message = decision.reason;
+      }
       return;
     case "ask":
-      event.effect = "ask";
-      event.message = decision.reason;
+      if (event.effect === "allow") {
+        event.effect = "deny";
+        event.message = decision.reason;
+      }
       return;
     case "allow":
-      event.effect = "allow";
-      delete event.message;
-      return;
     case "advisory":
-      event.effect = "allow";
-      event.message = decision.message;
       return;
     case "post_block":
-      event.effect = "deny";
-      event.message = decision.reason;
-      return;
     case "runtime_failure":
-      event.effect = "deny";
-      event.message = decision.reason;
+      if (event.effect !== "deny") {
+        event.effect = "deny";
+        event.message = decision.reason;
+      }
       return;
   }
 }

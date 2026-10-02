@@ -94,7 +94,7 @@ test.concurrent("gates.<name>.mode beats the legacy key, which beats the preset"
 
 test.concurrent("ask degrades by class where the host cannot prompt", () => {
   const gates = Object.fromEntries(GATE_NAMES.map((name) => [name, { mode: "ask" }]));
-  for (const host of ["codex", "hermes"] as const) {
+  for (const host of ["codex", "hermes", "opencode"] as const) {
     const { config: c } = config({ gates }, { host });
     for (const name of GATE_NAMES) {
       const expected: GateMode = GATE_GUARDRAILS.includes(name) ? "block" : "advise";

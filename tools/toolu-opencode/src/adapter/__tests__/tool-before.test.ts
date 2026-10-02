@@ -127,7 +127,7 @@ test("an allowed bash call, a read, and an unrelated tool pass through", async (
   await before({ tool: "probe_touch", ...CALL }, { args: null });
 });
 
-test("a gate ask decision fails closed: the host has no ask channel", async () => {
+test("a guardrail ask degrades to deny before the file changes", async () => {
   const { root, envPath } = await project("ask");
   const decider = createGateDecider({
     repoRoot: REPO_ROOT,
@@ -142,8 +142,8 @@ test("a gate ask decision fails closed: the host has no ask channel", async () =
   );
   if (editRequest.kind !== "request") throw new Error("edit was not mapped");
   const decision = await decider.decide(editRequest.request);
-  expect(decision.kind).toBe("ask");
-  if (decision.kind !== "ask") return;
+  expect(decision.kind).toBe("deny");
+  if (decision.kind !== "deny") return;
   const edit = handlerFor(root)(
     { tool: "edit", ...CALL },
     { args: { filePath: envPath, oldString: "1", newString: "2" } },

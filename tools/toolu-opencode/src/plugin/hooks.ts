@@ -70,6 +70,7 @@ export async function createTooluHooks(
   }
   const enforcement = await settle(prepare, binding);
   const dispose = (): Promise<void> => {
+    if (enforcement.status === "ready") enforcement.clearAdvice();
     releaseInstance(binding.directory);
     return Promise.resolve();
   };
@@ -85,6 +86,7 @@ export async function createTooluHooks(
     return {
       "tool.execute.before": enforcement.before,
       "shell.env": shellEnvHook(enforcement.shellEnv),
+      "tool.execute.after": enforcement.after,
       dispose,
     };
   }

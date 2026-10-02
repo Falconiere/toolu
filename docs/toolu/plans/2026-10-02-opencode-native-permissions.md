@@ -21,11 +21,13 @@ Capability translation → per-call advice lifecycle → pinned-host composition
     "paths": [
       "packages/toolu-core/src/host/**",
       "packages/toolu-core/src/config/**",
+      "plugins/*/hooks/dist/**",
+      "tools/toolu-conformance/src/harness/**",
       "tools/toolu-opencode/src/adapter/permission-map.ts",
       "tools/toolu-opencode/src/adapter/__tests__/permission-map.test.ts"
     ],
     "input": "Existing native deny and ask effects, toolu allow/advisory/deny/ask decisions, and real temp-project gate config with protectedFiles and judgement modes set to ask",
-    "check": "bun test --timeout 60000 packages/toolu-core/src/host/__tests__ packages/toolu-core/src/config/__tests__/gate-mode.test.ts tools/toolu-opencode/src/adapter/__tests__/permission-map.test.ts",
+    "check": "bun test --timeout 60000 packages/toolu-core/src/host/__tests__ packages/toolu-core/src/config/__tests__/gate-mode.test.ts tools/toolu-opencode/src/adapter/__tests__/permission-map.test.ts tools/toolu-conformance/src/harness/__tests__/host-encode.test.ts tools/toolu-conformance/src/harness/__tests__/hosts.test.ts && bun run check:plugin-bundles",
     "model": "inherit"
   },
   {
@@ -87,7 +89,11 @@ Capability translation → per-call advice lifecycle → pinned-host composition
 
 ## Critical files
 
-Modify `packages/toolu-core/src/host/{host-encode,host-events}.ts`, `tools/toolu-opencode/src/adapter/{permission-map,tool-before}.ts`, and `tools/toolu-opencode/src/plugin/{hooks,enforcement}.ts`. Add a small per-instance advice helper only if it keeps the adapter focused. Extend colocated host, adapter and plugin tests. Add `tooling/src/opencode-permissions-smoke.ts` and focused scenarios under `tooling/src/opencode-host/`; reuse its provider, session and pinned CLI helpers. Update root `package.json`, `docs/opencode.md`, `docs/portable-core.md`, the host contract and generated resource mirrors.
+Modify `packages/toolu-core/src/host/{host-encode,host-events}.ts`, `tools/toolu-opencode/src/adapter/{permission-map,tool-before}.ts`, and `tools/toolu-opencode/src/plugin/{hooks,enforcement}.ts`. Add a small per-instance advice helper only if it keeps the adapter focused. Extend colocated host, adapter, plugin and conformance tests. Rebuild committed hook bundles that inline the changed shared host code. Add `tooling/src/opencode-permissions-smoke.ts` and focused scenarios under `tooling/src/opencode-host/`; reuse its provider, session and pinned CLI helpers. Update root `package.json`, `docs/opencode.md`, `docs/portable-core.md`, the host contract and generated resource mirrors.
+
+## Deviations
+
+The full gate found that 34 existing hook bundles inline the shared host code, so they must be rebuilt and drift checked. The conformance harness also still asserted the superseded mutable-effect encoder, so its callback contract tests were added to the capability step. The direct full run additionally exposed a duplicate smoke runner and an unused re-export; those were fixed in the smoke helper before repeating the live step.
 
 ## Verification
 

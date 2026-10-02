@@ -3,7 +3,7 @@
 **Issue:** [#335](https://github.com/Falconiere/toolu/issues/335) (OP-01, epic [#334](https://github.com/Falconiere/toolu/issues/334))
 **Status:** Documented contract pinned and probed on a real host.
 
-The shipped entry (`tools/toolu-opencode/src/plugin/toolu.ts`) follows this contract since OP-02 ([#336](https://github.com/Falconiere/toolu/issues/336)). It is a default `PluginModule` whose `server` returns `tool.execute.before`. Every setup failure becomes a hook that refuses all tool calls, never an init throw. `bun run smoke:opencode-entry` proves the npm, local-shim and config routes on the pinned host. The work packages in the [capability matrix](#capability-matrix) own the remaining axes.
+The shipped entry (`tools/toolu-opencode/src/plugin/toolu.ts`) follows this contract since OP-02 ([#336](https://github.com/Falconiere/toolu/issues/336)). It is a default `PluginModule` whose `server` returns `tool.execute.before` and `tool.execute.after`. Every setup failure becomes a hook that refuses all tool calls, never an init throw. `bun run smoke:opencode-entry` proves the npm, local-shim and config routes on the pinned host. The work packages in the [capability matrix](#capability-matrix) own the remaining axes.
 
 This contract is the plugin API documented at <https://opencode.ai/docs/plugins/>: a module exports a function that receives the plugin input and returns `Hooks`.
 
@@ -86,7 +86,7 @@ Hook callbacks run inline during the host's own flow and can mutate their `outpu
   - `ask` prompts in the TUI. `opencode run` rejects the ask unless `--auto` is passed.
   - `deny` removes the tool from the model's tool list. A plugin cannot override it (`permission.config-deny`).
 - `tool.execute.before` runs before the native prompt (`permission.order`). A toolu deny therefore stops the call before the user is ever asked. A toolu allow adds no permission, so it can never bypass the user's rules.
-- A plugin cannot open a native prompt, because the declared `permission.ask` hook is never invoked. Gate `ask` decisions degrade under the `@toolu/core/host` class rules: security guardrails deny, and judgement gates advise through `tool.execute.after`. OP-05 ([#339](https://github.com/Falconiere/toolu/issues/339)) owns this.
+- A plugin cannot open a native prompt, because the declared `permission.ask` hook is never invoked. Gate `ask` decisions degrade under the `@toolu/core/host` class rules: security guardrails deny, and judgement gates advise through `tool.execute.after`. The advice belongs to the matching successful call and does not grant approval. `bun run smoke:opencode-permissions` verifies these paths, repeated native rejection and composition with another denying plugin on the pinned host (OP-05, [#339](https://github.com/Falconiere/toolu/issues/339)).
 
 ## Probe results
 

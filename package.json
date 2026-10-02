@@ -19,6 +19,7 @@
     "check:opencode-host": "bun run tooling/src/opencode-host-contract.ts",
     "smoke:opencode-entry": "bun run tooling/src/opencode-entry-smoke.ts",
     "smoke:opencode-pretool": "bun run tooling/src/opencode-pretool-smoke.ts",
+    "smoke:opencode-permissions": "bun run tooling/src/opencode-permissions-smoke.ts",
     "build:plugins": "bun run tooling/src/build-plugins.ts",
     "check:plugin-bundles": "bun run tooling/src/build-plugins.ts --check",
     "check:hooks-json": "bun run tooling/src/check-hooks-json.ts",

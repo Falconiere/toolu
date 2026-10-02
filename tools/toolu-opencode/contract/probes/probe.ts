@@ -164,7 +164,14 @@ function configHook(cfg: ProbeConfig): Hooks {
 function eventHook(cfg: ProbeConfig, client: PluginInput["client"]): Hooks {
   return {
     event: async ({ event }) => {
-      record({ kind: "event", type: event.type });
+      const eventType: unknown = Reflect.get(event, "type");
+      record({
+        kind: "event",
+        type: event.type,
+        ...(eventType === "permission.asked"
+          ? { permission: Reflect.get(event, "properties") }
+          : {}),
+      });
       if (event.type !== "session.created" || cfg.toast === undefined) return;
       // A rejected toast is an observation for ui.toast, not a harness failure.
       const shown = await client.tui

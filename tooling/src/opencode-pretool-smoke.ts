@@ -4,8 +4,9 @@ import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { run } from "@toolu/conformance/harness/spawn";
 import { hostCacheDir, resolveHostBinary } from "./opencode-host/install.ts";
+import { runPretoolScenarios } from "./opencode-host/pretool-shared.ts";
 import { contractPaths } from "./opencode-host/results.ts";
-import { PRETOOL_SCENARIOS, type PretoolScenario } from "./opencode-host/scenarios-pretool.ts";
+import { PRETOOL_SCENARIOS } from "./opencode-host/scenarios-pretool.ts";
 import { ContractError, PinSchema, readJson, type Pin } from "./opencode-host/schema.ts";
 
 /** The live-only smoke tolerates shared-host startup load while still checking the real CLI pin. */
@@ -24,19 +25,6 @@ async function smokeHost(pin: Pin): Promise<{ bin: string; version: string }> {
   return { bin, version };
 }
 
-async function runAll(
-  ctx: { bin: string; cacheRoot: string },
-  remaining: readonly PretoolScenario[],
-): Promise<number> {
-  const [scenario, ...rest] = remaining;
-  if (scenario === undefined) return 0;
-  const result = await scenario.run(ctx);
-  process.stdout.write(
-    `${scenario.id} ${result.pass ? "pass" : "FAIL"} ${JSON.stringify(result.observed)}\n`,
-  );
-  return (result.pass ? 0 : 1) + (await runAll(ctx, rest));
-}
-
 async function main(): Promise<number> {
   const pin = readJson(contractPaths().pin, PinSchema);
   const host = await smokeHost(pin);
@@ -48,7 +36,7 @@ async function main(): Promise<number> {
       : PRETOOL_SCENARIOS.filter((scenario) => scenario.id === process.argv[2]);
   if (selected.length === 0)
     throw new ContractError(`unknown pre-tool scenario: ${process.argv[2]}`);
-  const failed = await runAll({ bin: host.bin, cacheRoot }, selected);
+  const failed = await runPretoolScenarios({ bin: host.bin, cacheRoot }, selected);
   process.stdout.write(
     `opencode-pretool-smoke: ${selected.length - failed}/${selected.length} pass on opencode-ai@${host.version}\n`,
   );

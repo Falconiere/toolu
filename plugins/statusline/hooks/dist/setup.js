@@ -3048,7 +3048,7 @@ var ASK_EVENTS = {
   codex: new Set(["permission/evaluate"]),
   cursor: new Set(["shell/pre"]),
   hermes: new Set,
-  opencode: new Set(["tool/pre", "shell/pre", "permission/evaluate"])
+  opencode: new Set
 };
 // plugins/statusline/hooks/src/statusline/settings.ts
 var MARKER = "statusline/statusline.sh";

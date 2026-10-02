@@ -29,7 +29,7 @@ has no OpenCode adapter. Until it does, run the two steps above.
 The git-clone flow below remains the contributor path, and is still how you work
 against an unreleased checkout.
 
-Enforcement runs in `tool.execute.before`. Covered calls are `bash`, `read`, `grep`, `glob`, `edit`, `write`, `apply_patch`, `task`, and MCP tools named `<server>_<tool>` for servers listed in `opencode.json`. The nine native core gates run before selected `pre-tools.d` registry modules; files left by disabled plugins stay inert. MCP calls use the standalone `mcp__` blocker policy. Task calls run the native and registry gates plus the standalone agent-tier policy, which checks a supplied task model against the active plan step and records delegation telemetry. A task with no model inherits the step's tier. Any other tool is left to the host. A toolu refusal stops the call before it runs, and a toolu allow never overrides your own `permission` rules. Gate `ask` decisions deny for now, because the host has no ask channel ([#339](https://github.com/Falconiere/toolu/issues/339)). Host events without an OpenCode hook remain outside that scope; see the [host contract](opencode-host-contract.md).
+Enforcement runs in `tool.execute.before`. Covered calls are `bash`, `read`, `grep`, `glob`, `edit`, `write`, `apply_patch`, `task`, and MCP tools named `<server>_<tool>` for servers listed in `opencode.json`. The nine native core gates run before selected `pre-tools.d` registry modules; files left by disabled plugins stay inert. MCP calls use the standalone `mcp__` blocker policy. Task calls run the native and registry gates plus the standalone agent-tier policy, which checks a supplied task model against the active plan step and records delegation telemetry. A task with no model inherits the step's tier. Any other tool is left to the host. A toolu refusal stops the call before it runs, and a toolu allow never overrides your own `permission` rules. OpenCode still applies its native `deny` and `ask` rules after toolu allows; a rejected prompt gives no approval to a retry. The host cannot open a native prompt for a toolu gate. A security guardrail's `ask` therefore blocks, while a judgement gate's `ask` allows the call and appends advice to that call's successful tool result through `tool.execute.after` ([#339](https://github.com/Falconiere/toolu/issues/339)). Host events without an OpenCode hook remain outside that scope; see the [host contract](opencode-host-contract.md).
 
 Bun 1.4.x is a prerequisite on every host, Claude Code and Codex included; see the [runtime contract](runtime.md). Claude Code and Codex keep their marketplace installs. OpenCode calls the TypeScript core dispatcher in process. Its npm package ships committed bundles and their runtime data. Bootstrap reports NotReady when a selected plugin lacks a required Bun registration bundle.
 
@@ -95,7 +95,7 @@ In **your application repo** (not inside the toolu clone):
    export { default } from "@toolu/opencode/plugin";
    ```
 
-   The default export is the documented `PluginModule` ([#336](https://github.com/Falconiere/toolu/issues/336)). Its `server` runs preflight and bootstrap ([#211](https://github.com/Falconiere/toolu/issues/211)), then returns a `tool.execute.before` hook.
+   The default export is the documented `PluginModule` ([#336](https://github.com/Falconiere/toolu/issues/336)). Its `server` runs preflight and bootstrap ([#211](https://github.com/Falconiere/toolu/issues/211)), then returns `tool.execute.before` and `tool.execute.after` hooks.
 
    - **Setup fails** (no repo root, missing git or Bun, bootstrap NotReady): every tool call is refused with `toolu: not ready: <reason>`, and the same line reaches the host log (`opencode --print-logs`).
    - **Healthy start:** logs `toolu: ready (<p> plugins, <n> startup artifacts)`, then one `toolu: startup notes:` line listing up to 20 notes, such as a kept user file or a removed contribution.
@@ -178,6 +178,12 @@ Live pre-tool smoke on the pinned host checks protected edits, writes and patche
 
 ```bash
 bun run smoke:opencode-pretool
+```
+
+Live permission smoke checks native deny, repeated native ask rejection, guardrail and judgement gate fallback, model-visible registry advice, and denial by a second plugin in both load orders:
+
+```bash
+bun run smoke:opencode-permissions
 ```
 
 Optional live CLI probe:

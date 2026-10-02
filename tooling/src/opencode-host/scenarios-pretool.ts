@@ -12,7 +12,6 @@ import {
   SMOKE_RUN_TIMEOUT_MS,
   type PretoolScenario,
 } from "./pretool-shared.ts";
-export type { PretoolScenario } from "./pretool-shared.ts";
 
 /** A host-only control: failure here occurs before toolu is present. */
 async function baseline(ctx: ScenarioContext) {

@@ -96,6 +96,7 @@ const LogEntry = z.looseObject({
   ok: z.boolean().optional(),
   command: z.string().optional(),
   arguments: z.string().optional(),
+  permission: z.unknown().optional(),
 });
 export type LogEntry = z.infer<typeof LogEntry>;
 

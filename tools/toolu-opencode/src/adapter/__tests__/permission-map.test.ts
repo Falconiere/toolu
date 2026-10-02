@@ -66,9 +66,9 @@ const decisionCases: Array<{
   message?: string;
 }> = [
   { decision: { kind: "deny", reason: "blocked" }, effect: "deny", message: "blocked" },
-  { decision: { kind: "ask", reason: "confirm" }, effect: "ask", message: "confirm" },
+  { decision: { kind: "ask", reason: "confirm" }, effect: "deny", message: "confirm" },
   { decision: { kind: "allow" }, effect: "allow" },
-  { decision: { kind: "advisory", message: "hint" }, effect: "allow", message: "hint" },
+  { decision: { kind: "advisory", message: "hint" }, effect: "allow" },
   { decision: { kind: "post_block", reason: "post" }, effect: "deny", message: "post" },
   {
     decision: { kind: "runtime_failure", reason: "fail", code: "parse" },
@@ -87,3 +87,24 @@ for (const { decision, effect, message } of decisionCases) {
     }
   });
 }
+
+test("toolu allow or advisory preserves a stricter native deny or ask", () => {
+  const decisions: Decision[] = [{ kind: "allow" }, { kind: "advisory", message: "hint" }];
+  for (const effect of ["deny", "ask"] as const) {
+    for (const decision of decisions) {
+      const ev = event({ effect, message: "native reason" });
+      applyDecisionToPermission(decision, ev);
+      expect(ev.effect).toBe(effect);
+      expect(ev.message).toBe("native reason");
+    }
+  }
+});
+
+test("a generated ask never weakens a native deny or replaces an existing native ask", () => {
+  for (const effect of ["deny", "ask"] as const) {
+    const ev = event({ effect, message: "native reason" });
+    applyDecisionToPermission({ kind: "ask", reason: "toolu ask" }, ev);
+    expect(ev.effect).toBe(effect);
+    expect(ev.message).toBe("native reason");
+  }
+});
