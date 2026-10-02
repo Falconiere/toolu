@@ -24,7 +24,8 @@ export type SessionOptions = {
   probeConfig?: (root: string) => Record<string, string>;
   /** Merged into the generated opencode.json (plugin, permission, mcp, …), given the sandbox root. */
   config?: (root: string) => Record<string, unknown>;
-  scripts?: Scripts;
+  /** Scripted model replies; a function receives the project path, for absolute tool args. */
+  scripts?: Scripts | ((project: string) => Scripts);
   /** Model id under the scripted provider; `gpt-*` ids get `apply_patch`. */
   model?: string;
   files?: Record<string, string>;
@@ -108,7 +109,8 @@ function readLog(path: string): LogEntry[] {
 
 export function openSession(cacheRoot: string, opts: SessionOptions = {}): ProbeSession {
   const sb = createSandbox({ git: true, files: opts.files ?? {} });
-  const provider = startScriptedProvider(opts.scripts ?? {});
+  const scripts = typeof opts.scripts === "function" ? opts.scripts(sb.project) : opts.scripts;
+  const provider = startScriptedProvider(scripts ?? {});
   const logPath = join(sb.root, "probe-log.jsonl");
   const configPath = join(sb.root, "probe-config.json");
   writeFileSync(configPath, JSON.stringify(opts.probeConfig?.(sb.root) ?? {}));
