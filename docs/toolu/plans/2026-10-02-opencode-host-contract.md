@@ -55,7 +55,7 @@ Pin and SDK dependency → typed probe plugins → scripted provider and MCP fix
       "pin"
     ],
     "paths": [
-      "tools/toolu-opencode/contract/plugins/**",
+      "tools/toolu-opencode/contract/probes/**",
       "tsconfig.json",
       "package.json"
     ],
@@ -187,7 +187,7 @@ Pin and SDK dependency → typed probe plugins → scripted provider and MCP fix
 
 - **Create:**
   - `tools/toolu-opencode/contract/{pin.json,probe-results.json,capability-matrix.json}`
-  - `tools/toolu-opencode/contract/plugins/{probe,init-throw,helper-export,module-default}.ts`
+  - `tools/toolu-opencode/contract/probes/{probe,init-throw,helper-export,module-default}.ts`
   - `tooling/src/opencode-host/{provider,mcp-server,install,profile,host-run,scenarios,results,matrix,declarations,doc-blocks,schema}.ts` and its `__tests__/`
   - `tooling/src/opencode-host-probe.ts`, `tooling/src/opencode-host-contract.ts`, `tooling/src/__tests__/opencode-host-contract.test.ts`
   - `docs/opencode-host-contract.md`
@@ -224,6 +224,10 @@ Pin and SDK dependency → typed probe plugins → scripted provider and MCP fix
 - An authenticated `gh api user`.
 - A non-default branch.
 - The `brainstorm`, `toolu`, `toolu-review` and `pr-babysit` skills installed.
+
+## Deviations
+
+- `plugins`: the probe directory is `tools/toolu-opencode/contract/probes/`, not `contract/plugins/`. The adapter's `.gitignore` ignores every `plugins/` directory (the bundled catalog), so the planned path would never have been committed. Paths and the spec evidence table are updated to match.
 
 ## Review log
 

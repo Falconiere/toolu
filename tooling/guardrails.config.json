@@ -3,11 +3,12 @@
   "version": 2,
   "srcRoot": "src",
   "src": {
-    "topLevel": ["benchmarks", "gate-coverage", "guardrails", "__tests__"],
+    "topLevel": ["benchmarks", "gate-coverage", "guardrails", "opencode-host", "__tests__"],
     "nested": {
       "benchmarks": ["__tests__", "cases", "lib"],
       "gate-coverage": ["__tests__"],
-      "guardrails": ["__tests__", "checks", "lexer"]
+      "guardrails": ["__tests__", "checks", "lexer"],
+      "opencode-host": ["__tests__"]
     },
     "requireReadme": []
   },

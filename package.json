@@ -26,7 +26,7 @@
     "test:final-removal": "bun run tooling/src/final-removal-check.ts",
     "test": "bun run test:ts",
     "test:context-budget": "bun plugins/toolu/scripts/context-budget.ts",
-    "format:check": "oxfmt --check tooling/src packages/*/src tools/*/src plugins/*/hooks/src plugins/epic-orchestrator/scripts/*.ts plugins/epic-orchestrator/scripts/trackers/*.ts plugins/epic-orchestrator/scripts/__tests__/*.ts plugins/delivery-flow/skills/__tests__/*.ts plugins/toolu/scripts/*.ts plugins/toolu/scripts/__tests__/*.ts plugins/toolu/skills/setup/scripts/*.ts plugins/toolu/skills/__tests__/*.ts",
+    "format:check": "oxfmt --check tooling/src packages/*/src tools/*/src tools/toolu-opencode/contract plugins/*/hooks/src plugins/epic-orchestrator/scripts/*.ts plugins/epic-orchestrator/scripts/trackers/*.ts plugins/epic-orchestrator/scripts/__tests__/*.ts plugins/delivery-flow/skills/__tests__/*.ts plugins/toolu/scripts/*.ts plugins/toolu/scripts/__tests__/*.ts plugins/toolu/skills/setup/scripts/*.ts plugins/toolu/skills/__tests__/*.ts",
     "lint:ts": "bun run tooling/src/lint-ts.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "guardrails": "bun run tooling/src/guardrails/run.ts",

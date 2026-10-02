@@ -28,7 +28,7 @@
             "message": "Core must not import adapter/conformance packages"
           },
           {
-            "group": ["@opencode/plugin", "@opencode/plugin/*"],
+            "group": ["@opencode/plugin", "@opencode/plugin/*", "@opencode-ai/plugin", "@opencode-ai/plugin/*", "@opencode-ai/sdk", "@opencode-ai/sdk/*"],
             "message": "Host SDK stays out of shared packages until #211 scopes it to tools/toolu-opencode"
           }
         ]

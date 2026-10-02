@@ -38,10 +38,12 @@
     "tools/toolu-opencode": {
       "entry": [
         "src/**/*.ts!",
-        "src/**/__tests__/**"
+        "src/**/__tests__/**",
+        "contract/**/*.ts"
       ],
       "project": [
-        "src/**/*.ts"
+        "src/**/*.ts",
+        "contract/**/*.ts"
       ]
     },
     "tools/toolu-conformance": {
