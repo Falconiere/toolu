@@ -1,6 +1,6 @@
 # OpenCode documented host contract (OP-01) — Design
 
-**Date:** 2026-10-02   **Status:** Draft   **Author:** Claude (epic worker, #335)   **Topic:** Pin the docs-matching OpenCode host and SDK, probe it for real, and check a 16-plugin capability matrix against that evidence.
+**Date:** 2026-10-02   **Status:** Approved   **Author:** Claude (epic worker, #335)   **Topic:** Pin the docs-matching OpenCode host and SDK, probe it for real, and check a 16-plugin capability matrix against that evidence.
 
 ## Problem
 
@@ -8,7 +8,7 @@ The adapter and its contract docs target `@opencode/plugin@2.0.12`. That V2 API 
 
 ## Non-Goals
 
-1. No adapter change. `tools/toolu-opencode/src/**` keeps its V2 entry until OP-02 (#336). Bootstrap, normalization, gates, post-tool, context delivery, surfaces and the CLI belong to their own work packages.
+1. No adapter runtime change. `tools/toolu-opencode/src/**` keeps its V2 entry until OP-02 (#336). The adapter only gains the pinned SDK as a devDependency, plus the unshipped `contract/` directory. Bootstrap, normalization, gates, post-tool, context delivery, surfaces and the CLI belong to their own work packages.
 2. No mandatory live OpenCode run in `bun run test` or CI. OP-28 (#362) owns that. This issue ships the live harness and checks its committed evidence hermetically.
 3. No rewrite of install or migration docs (OP-29, #363). `docs/opencode.md`, `docs/conformance-report.md` and `tools/toolu-opencode/README.md` only gain a one-line pointer saying the documented contract lives in `docs/opencode-host-contract.md`.
 4. `tooling/src/clean-install-smoke.ts`, which smoke-tests the current V2 adapter and is not part of `bun run test`, stays unchanged until OP-27/OP-28.
@@ -30,6 +30,16 @@ The adapter and its contract docs target `@opencode/plugin@2.0.12`. That V2 API 
 It replaces `opencode-capability-probe.ts`, its test, and `tooling/fixtures/portable-core/capability-probe-results.json`.
 
 **Doc.** A new `docs/opencode-host-contract.md` records the pin, install source, platform, the host surface (hook callbacks vs event notifications vs config surfaces), loader behavior, and the experimental-hook strategy. It has three generated blocks — probe results, the 16-plugin matrix, and release blockers/limitations — that the checker keeps in sync. `docs/portable-core.md` replaces its V2 pins, interception table, capability-results block and release-blocker list with the documented contract and a link. Lint `no-restricted-imports` in core, tooling and conformance adds `@opencode-ai/plugin` and `@opencode-ai/sdk`.
+
+**Repository gates touched:**
+
+- Root `tsconfig.json` and `format:check` include `tools/toolu-opencode/contract/**/*.ts`.
+- `knip.json`'s `tools/toolu-opencode` workspace adds `contract/**/*.ts` as entry and project, so the SDK devDependency counts as used.
+- `tooling/guardrails.config.json` adds `opencode-host` to `topLevel`, with nested `["__tests__"]`.
+- Root `package.json` gains `probe:opencode-host` and `check:opencode-host`. `test:portable-core` runs `check:opencode-host` plus the new tests in place of the removed probe.
+- `check-portable-core-doc.ts` changes its citations: it requires `opencode-ai@1.18.34`, `@opencode-ai/plugin@1.18.34` and `opencode-host-contract.md`, drops the old capability-results markers, and rejects `opencode.ai/v2/`.
+
+**Profile warm-up.** The live CLI warms one profile template per run with a first host start, which performs the host's config-dir SDK install. It then copies that template into each scenario's sandbox, so a run makes one npm install instead of one per scenario.
 
 **Reuse.** Tests use `@toolu/conformance/harness/{spawn,sandbox}` for real subprocesses and temp trees. Docs-block handling follows the existing marker pattern in `check-portable-core-doc.ts` and `opencode-capability-probe.ts`.
 
@@ -71,9 +81,10 @@ type Matrix = { version: 1; plugins: Record<PluginName, {
   notes?: Array<{ need: string; owner: WorkPackage }>;
 }> };
 type Cell = { use: "none" } | {
-  use: string; required: boolean; mechanism: string; kind: "hook"|"event"|"config"|"tool"|"tui";
+  use: string; required: boolean; enforcement: boolean;  // enforcement: decides whether a tool call runs
+  mechanism: string; kind: "hook"|"event"|"config"|"tool"|"tui";
   status: "supported" | "partial" | "unsupported"; evidence: ProbeId[]; owner: WorkPackage[];
-  alternative?: string; releaseBlocker?: boolean };
+  alternative?: string; alternativeEvidence?: ProbeId[]; releaseBlocker?: boolean };
 type WorkPackage = "OP-02" | … | "OP-29";   // OP-n ↔ issue #(334+n)
 ```
 
@@ -93,8 +104,17 @@ type WorkPackage = "OP-02" | … | "OP-29";   // OP-n ↔ issue #(334+n)
    - `supported` ⇒ every evidence verdict is supported.
    - `unsupported` ⇒ every evidence verdict is unsupported.
    - `partial` ⇒ both verdicts occur.
-8. A required cell that is not `supported` has a non-empty `alternative`, or has `releaseBlocker: true`.
-9. The three doc blocks equal their rendering.
+8. Release blocking: a required cell that is not `supported` must have one of the following, otherwise the check fails:
+   - `releaseBlocker: true`; or
+   - a non-empty `alternative`. When the cell is an enforcement cell, the alternative also needs non-empty `alternativeEvidence` whose probes all have `supported` verdicts.
+
+   A `releaseBlocker` cell must name an owner.
+9. Every `Hooks` member declared in the installed pinned SDK (`@opencode-ai/plugin/dist/index.d.ts`, read with the TypeScript compiler API) appears as a code span in the doc's `## Host surface` section. `package.json` in the resolved SDK must report `pin.sdk.version`.
+10. The doc blocks `probes`, `matrix` and `limitations` equal their rendering. `limitations` lists:
+    - release blockers;
+    - required non-supported cells with their alternatives and owner issues;
+    - the `experimental.*` mechanisms named by any required cell.
+11. Neither `docs/opencode-host-contract.md` nor `docs/portable-core.md` contains `opencode.ai/v2/`.
 
 `check --write-doc` rewrites the doc blocks. Path overrides for tests: `TOOLU_OPENCODE_CONTRACT_DIR`, `TOOLU_OPENCODE_CONTRACT_DOC`, `TOOLU_PLUGINS_DIR`, `TOOLU_OPENCODE_ADAPTER_PKG`.
 
@@ -120,6 +140,10 @@ MCP fixture (`tooling/src/opencode-host/mcp-server.ts`): a stdio JSON-RPC server
   - An evidence id absent from the results fails `unknown evidence <id> in <plugin>.<axis>`.
   - A status contradicting the verdicts fails `status <s> contradicts evidence for <plugin>.<axis>`.
   - A required non-supported cell with no alternative or blocker fails `required <plugin>.<axis> is <s> without alternative or releaseBlocker`.
+  - A required enforcement cell whose alternative lacks supported evidence fails `enforcement <plugin>.<axis> needs supported alternativeEvidence or releaseBlocker`.
+  - A declared hook missing from the host-surface section fails `host surface misses hook <name>`.
+  - An unresolvable pinned SDK fails `pinned SDK not installed: run bun install`.
+  - A V2 docs citation fails `<doc> cites the V2 contract (opencode.ai/v2/)`.
   - Doc drift fails `doc block <name> is stale; run check --write-doc`.
   - A pin mismatch fails `pin mismatch: <what>`.
 - **User profile safety:** probes never read or write the real `~/.config/opencode` or `~/.cache/opencode`. Every host process gets temp `HOME`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME` and `XDG_STATE_HOME`. The real `opencode` on `PATH` is ignored.
@@ -136,9 +160,21 @@ MCP fixture (`tooling/src/opencode-host/mcp-server.ts`): a stdio JSON-RPC server
 
   Each item has a committed verdict.
 - **AC-3:** The pinned host's loader constraints are recorded as `unsupported` claims with owner OP-02. On a plugin init throw it fails open: the tool runs unguarded. It invokes every exported function as a plugin, and that breaks prompts.
-- **AC-4:** `bun run check:opencode-host` passes on the repository. It fails with the named messages when the matrix misses a `plugins/*` directory, cites an unknown probe id, states a status the evidence contradicts, leaves a required non-supported cell without an alternative or blocker, or drifts from the doc, or when the pin and adapter devDependency disagree.
+- **AC-4:** `bun run check:opencode-host` passes on the repository. It fails with the named messages when the matrix:
+  - misses a `plugins/*` directory;
+  - cites an unknown probe id;
+  - states a status the evidence contradicts;
+  - leaves a required non-supported cell without an alternative or blocker;
+  - marks a required enforcement cell non-supported with only prose, without supported `alternativeEvidence` or `releaseBlocker`;
+  - omits a declared `Hooks` member from the doc's host surface;
+  - drifts from the doc;
+
+  It also fails when the pin and the adapter devDependency disagree.
 - **AC-5:** All 16 plugins have a matrix row with an epic owner. Every manifest-derived axis is filled, and surface counts match disk. Every required cell has an owner, evidence and a status. The doc renders the matrix and a release-blocker/limitation list in which each entry names an owner issue.
-- **AC-6:** The chosen contract keeps no V2-only assumption. `docs/portable-core.md` cites `opencode-ai@1.18.34` and `@opencode-ai/plugin@1.18.34`, and the V2 pin, `Plugin.define` and `permission.hook("evaluate")` appear there only as the superseded current-adapter state. The hardcoded V2 capability probe and its fixture are gone. The doc lists each `experimental.*` hook the matrix relies on under the exact-pin strategy.
+- **AC-6:** The chosen contract keeps no V2-only assumption:
+  - `docs/portable-core.md` cites `opencode-ai@1.18.34`, `@opencode-ai/plugin@1.18.34` and `opencode-host-contract.md`, and neither contract doc contains `opencode.ai/v2/`. A doc that reintroduces it fails `test:portable-core`.
+  - The hardcoded V2 capability probe and its fixture are deleted.
+  - The generated `limitations` block lists each `experimental.*` mechanism used by a required cell under the exact-pin strategy.
 - **AC-7:** The scripted provider and MCP fixture behave as specified over real loopback HTTP and real stdio subprocesses.
 
 ## Acceptance evidence
@@ -148,9 +184,9 @@ MCP fixture (`tooling/src/opencode-host/mcp-server.ts`): a stdio JSON-RPC server
 | AC-1 | Pinned host from npm; `contract/plugins/probe.ts`; isolated profile | `load.local-file` and `load.config-file` supported; `observed.optionsDelivered` is false locally and true via config | Version mismatch through `TOOLU_OPENCODE_HOST_BIN` → exit 1 | `bun run probe:opencode-host` (live) and `bun run typecheck` |
 | AC-2 | Same host; scripted bash/write/apply_patch/MCP/task scenarios; config `bash: ask` / `deny` | No marker files; error text in the recorded provider request; verdicts as stated | Child session; multi-file patch; `--auto` approval | `bun run probe:opencode-host` (live, compares with the committed results) |
 | AC-3 | `contract/plugins/init-throw.ts`, `contract/plugins/helper-export.ts` | Marker present after init throw; prompt error with the helper export; both `unsupported` | Throwing plugin plus a healthy plugin: the healthy one still enforces | `bun run probe:opencode-host` |
-| AC-4 | Committed contract files; mutated copies in a sandbox | Exit 0 on the repo; exit 1 with each named message on each mutation | Each listed checker failure | `bun test tooling/src/__tests__/opencode-host-contract.test.ts` |
+| AC-4 | Committed contract files, installed pinned SDK declarations; mutated copies in a sandbox | Exit 0 on the repo; exit 1 with each named message on each mutation, including a prose-only enforcement cell and a doc missing `tool.execute.before` | Each listed checker failure | `bun test tooling/src/__tests__/opencode-host-contract.test.ts` |
 | AC-5 | Real `plugins/*` manifests and committed matrix | Check passes; doc matrix lists 16 rows | Removing a row, or adding a `plugins/x` with a manifest → named failure | `bun run check:opencode-host` and the test above |
-| AC-6 | `docs/portable-core.md`, repo tree | Doc checker passes with the new citations; deleted files absent | Restoring the V2 pin row as the contract → doc check failure | `bun run test:portable-core` |
+| AC-6 | `docs/portable-core.md`, `docs/opencode-host-contract.md`, repo tree | Doc checker passes with the new citations; deleted files absent; `limitations` block lists `experimental.chat.system.transform` and `experimental.session.compacting` | A doc copy containing `https://opencode.ai/v2/docs/build/plugins` → exit 1 `cites the V2 contract`; a copy missing `@opencode-ai/plugin@1.18.34` → exit 1 `missing SDK pin` | `bun run test:portable-core` (includes `check-portable-core-doc.test.ts`) |
 | AC-7 | `Bun.serve` provider; `bun mcp-server.ts` subprocess | SSE tool call for a scripted step, `Probe title` without tools, `PROBE-DONE` when exhausted; MCP initialize/list/call appends the marker | Unknown scenario → `PROBE-DONE`; malformed JSON line → error response, no crash | `bun test tooling/src/opencode-host/__tests__/` |
 
 ## Documentation impact
@@ -166,3 +202,29 @@ MCP fixture (`tooling/src/opencode-host/mcp-server.ts`): a stdio JSON-RPC server
 
 1. Should OP-28 run the live probe on macOS too? Owner: OP-28. Non-blocking; this issue records linux-x64 evidence and states its platform.
 2. Is `permission.ask` wired only in the TUI/server path of a later host? Owner: OP-05. Non-blocking: the contract records it as not invoked on the pin and requires the ask degradation alternative.
+
+## Review log
+
+### Round 1 — Needs changes
+
+Jev, over the issue ACs and this spec: Scope A coverage 0.88, Scope B 0.85, AC-2 blocking 0.39, AC-3 checkability 0.76.
+
+```
+Interfaces / Schema: 🔴 blocker: checker rule 8 lets a required enforcement cell the host cannot support pass on free-text `alternative` alone, contradicting "required unsupported enforcement blocks release". Add `enforcement: boolean`; a required enforcement cell that is not `supported` must set `releaseBlocker: true` or cite `alternativeEvidence` whose probes are all `supported`.
+Acceptance criteria (AC-6): 🟡 should-fix: "no V2-only assumption" is prose, not a check. Make check-portable-core-doc require the new pins and contract link and reject `opencode.ai/v2/`; have the contract checker render the experimental hooks used by required cells into a doc block.
+Architecture (Scope A): 🟡 should-fix: nothing verifies the doc against the pinned declarations. Add a checker rule: every `Hooks` member declared in the installed `@opencode-ai/plugin` `dist/index.d.ts` appears in the doc's host-surface section.
+Architecture: 🟡 should-fix: repository gates the new paths touch are unnamed (knip project for `contract/`, guardrails `topLevel`/`nested` for `tooling/src/opencode-host`, tsconfig include, `format:check` paths). Name them.
+Failure modes: 🔵 consider: a fresh profile per scenario reinstalls the config-dir SDK from npm each run. Warm one profile template per run and copy it per scenario.
+```
+
+### Round 2 — Approved
+
+Jev reassessment on revision 2: Scope A 0.87, AC-2 blocking 0.95, AC-3 checkability 0.95. The blocker and all should-fix findings are addressed:
+
+- The `enforcement` and `alternativeEvidence` rules are defined.
+- Hook-declaration coverage is checked.
+- V2 citations are rejected.
+- The `limitations` block lists experimental hooks.
+- The touched gates are named, and profile warm-up is specified.
+
+Every AC has real-input evidence and a runnable check. Both open questions are owned and non-blocking.
