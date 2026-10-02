@@ -62,6 +62,16 @@ export function resolveRepoRoot(
   );
 }
 
+function rootsFor(binding: HostBinding, repoRoot: string): OpencodeRoots {
+  return {
+    projectRoot: binding.projectRoot,
+    dataRoot: opencodeDataRoot({ projectRoot: binding.projectRoot, env: binding.env }),
+    userConfigRoot: opencodeConfigRoot({ env: binding.env }),
+    repoRoot,
+    packageRoot: PACKAGE_ROOT,
+  };
+}
+
 export async function prepareEnforcement(
   binding: HostBinding,
   findBundled: () => string | undefined = bundledRepoRoot,
@@ -81,13 +91,7 @@ export async function prepareEnforcement(
   const bun = resolveBunExecutable(env);
   if (bun === null)
     return notReady("Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun");
-  const roots: OpencodeRoots = {
-    projectRoot,
-    dataRoot: opencodeDataRoot({ projectRoot, env }),
-    userConfigRoot: opencodeConfigRoot({ env }),
-    repoRoot,
-    packageRoot: PACKAGE_ROOT,
-  };
+  const roots = rootsFor(binding, repoRoot);
   const bootstrap = await bootstrapRuntime({
     repoRoot,
     projectRoot,

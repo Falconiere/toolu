@@ -78,7 +78,21 @@ async function registryAdvice(ctx: ScenarioContext) {
       messages[0].includes("ast-grep"),
     secondLacksAdvice: messages[1] !== undefined && !messages[1].includes("toolu advisory"),
   };
-  return { pass: Object.values(observed).every(Boolean), observed };
+  const pass = Object.values(observed).every(Boolean);
+  if (pass) return { pass, observed };
+  return {
+    pass,
+    observed: {
+      ...observed,
+      diagnostic: JSON.stringify({
+        exitCode: run.exitCode,
+        states: toolStates(run),
+        messages,
+        stderr: run.stderr,
+        log: s.log(),
+      }).slice(0, 8000),
+    },
+  };
 }
 
 const OTHER_PLUGIN = `
