@@ -3,7 +3,7 @@
 **Issue:** [#335](https://github.com/Falconiere/toolu/issues/335) (OP-01, epic [#334](https://github.com/Falconiere/toolu/issues/334))
 **Status:** Documented contract pinned and probed on a real host.
 
-The shipped adapter (`tools/toolu-opencode/src/plugin/toolu.ts`) still targets the superseded `@opencode/plugin@2.0.12` API. It does not conform to this contract. OP-02 ([#336](https://github.com/Falconiere/toolu/issues/336)) replaces it.
+The shipped entry (`tools/toolu-opencode/src/plugin/toolu.ts`) follows this contract since OP-02 ([#336](https://github.com/Falconiere/toolu/issues/336)). It is a default `PluginModule` whose `server` returns `tool.execute.before`. Every setup failure becomes a hook that refuses all tool calls, never an init throw. `bun run smoke:opencode-entry` proves the npm, local-shim and config routes on the pinned host. The work packages in the [capability matrix](#capability-matrix) own the remaining axes.
 
 This contract is the plugin API documented at <https://opencode.ai/docs/plugins/>: a module exports a function that receives the plugin input and returns `Hooks`.
 

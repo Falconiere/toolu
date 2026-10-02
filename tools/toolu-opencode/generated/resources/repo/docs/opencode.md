@@ -7,12 +7,12 @@
 opencode plugin add @toolu/opencode
 ```
 
-> **Documented contract.** The plugin API at <https://opencode.ai/docs/plugins/> is pinned and probed in [opencode-host-contract.md](opencode-host-contract.md): `opencode-ai@1.18.34` with `@opencode-ai/plugin@1.18.34` ([#335](https://github.com/Falconiere/toolu/issues/335)). This page still describes the V2 adapter until [#336](https://github.com/Falconiere/toolu/issues/336) and [#363](https://github.com/Falconiere/toolu/issues/363).
+> **Documented contract.** The plugin API at <https://opencode.ai/docs/plugins/> is pinned and probed in [opencode-host-contract.md](opencode-host-contract.md): `opencode-ai@1.18.34` with `@opencode-ai/plugin@1.18.34` ([#335](https://github.com/Falconiere/toolu/issues/335)). Since [#336](https://github.com/Falconiere/toolu/issues/336) the package entry is the documented plugin function. [#363](https://github.com/Falconiere/toolu/issues/363) replaces this install guide.
 
 The package carries plugin manifests, settings, and committed Bun bundles, so the
-adapter resolves its plugin root to its own package directory. It ships a default entry
-(`exports["."]` / `main` → `./src/plugin/toolu.ts`), so `opencode plugin add`
-loads it with no local shim. Choose which plugins are active with
+adapter resolves its plugin root to its own package directory. Its default entry
+(`exports["."]` / `main` → `./src/plugin/toolu.ts`) is a `PluginModule` `{ id: "toolu", server }`, so the host loads it
+through an `opencode.json` `plugin` entry with no local shim. Choose which plugins are active with
 `<project>/.opencode/toolu/plugins.json`:
 
 ```json
@@ -29,7 +29,7 @@ has no OpenCode adapter. Until it does, run the two steps above.
 The git-clone flow below remains the contributor path, and is still how you work
 against an unreleased checkout.
 
-Enforcement scope matches the [conformance report](conformance-report.md): OpenCode evaluates pre-tool permissions through the native dispatcher. Host events without an OpenCode hook remain outside that scope.
+Enforcement runs in `tool.execute.before` through the native dispatcher. Covered calls are `bash`, `edit` and `write`; [#337](https://github.com/Falconiere/toolu/issues/337) extends that to every tool. A toolu refusal stops the call before it runs, and a toolu allow never overrides your own `permission` rules. Gate `ask` decisions deny for now, because the host has no ask channel ([#339](https://github.com/Falconiere/toolu/issues/339)). Host events without an OpenCode hook remain outside that scope; see the [host contract](opencode-host-contract.md).
 
 Bun 1.4.x is a prerequisite on every host, Claude Code and Codex included; see the [runtime contract](runtime.md). Claude Code and Codex keep their marketplace installs. OpenCode calls the TypeScript core dispatcher in process. Its npm package ships committed bundles and their runtime data. Bootstrap reports NotReady when a selected plugin lacks a required Bun registration bundle.
 
@@ -37,8 +37,8 @@ Bun 1.4.x is a prerequisite on every host, Claude Code and Codex included; see t
 
 | Requirement | Pin / note |
 |-------------|------------|
-| OpenCode CLI | `v2.0.12` — `$OPENCODE_BIN` or `command -v opencode`; `opencode --version` |
-| Plugin SDK | `@opencode/plugin@2.0.12` (resolved via the clone’s `bun.lock`) |
+| OpenCode CLI | `opencode-ai@1.18.34` ([host contract](opencode-host-contract.md)); `opencode --version` |
+| Plugin SDK | `@opencode-ai/plugin@1.18.34`. The host provisions it into each config directory; toolu imports its types only |
 | Bun | `1.4.x` (workspace `>=1.4.0 <1.5.0`; CI/docs baseline `1.4.2`) |
 | git | Project and gate context |
 | Platform | macOS and Linux ([#212](conformance-report.md)); Windows **N/A** |
@@ -76,14 +76,13 @@ In **your application repo** (not inside the toolu clone):
 
    `TOOLU_ROOT` is an alias. You can set the same variable in your shell profile or OpenCode’s environment so every session sees it.
 
-2. **OpenCode plugin loader** — local plugin under `.opencode/plugins/` (see [OpenCode plugins](https://opencode.ai/v2/docs/build/plugins)). Example `.opencode/package.json` using **file** dependencies into the clone (no global TS install):
+2. **OpenCode plugin loader** — local plugin under `.opencode/plugins/` (see [OpenCode plugins](https://opencode.ai/docs/plugins/)). Example `.opencode/package.json` using **file** dependencies into the clone (no global TS install):
 
    ```json
    {
      "dependencies": {
        "@toolu/opencode": "file:../toolu/tools/toolu-opencode",
-       "@toolu/core": "file:../toolu/packages/toolu-core",
-       "@opencode/plugin": "2.0.12"
+       "@toolu/core": "file:../toolu/packages/toolu-core"
      }
    }
    ```
@@ -96,7 +95,7 @@ In **your application repo** (not inside the toolu clone):
    export { default } from "@toolu/opencode/plugin";
    ```
 
-   The default export registers `permission.evaluate` and runs preflight + bootstrap ([#204](https://github.com/Falconiere/toolu/issues/204), [#211](https://github.com/Falconiere/toolu/issues/211)). Bootstrap runs each enabled plugin's committed `hooks/dist/register.js` bundle, else its `hooks/dist/session-start.js` bundle, with Bun. For example, context7 publishes the executable Bun bundle at the stable `context7/search.sh` path under the bootstrap data root, and toolu's bundle writes the `toolu/.session-start-ready` readiness marker ([#263](https://github.com/Falconiere/toolu/issues/263)).
+   The default export is the documented `PluginModule` ([#336](https://github.com/Falconiere/toolu/issues/336)). Its `server` runs preflight and bootstrap ([#211](https://github.com/Falconiere/toolu/issues/211)), then returns a `tool.execute.before` hook. When setup fails (no repo root, missing git or Bun, bootstrap NotReady), every tool call is refused with `toolu: not ready: <reason>`, and the same line reaches the host log (`opencode --print-logs`). A healthy start logs `toolu: ready (<n> bootstrap artifacts)`. If the npm package and this shim are both configured, only the first load enforces and the other logs `toolu: duplicate load skipped`. Bootstrap runs each enabled plugin's committed `hooks/dist/register.js` bundle, else its `hooks/dist/session-start.js` bundle, with Bun. For example, context7 publishes the executable Bun bundle at the stable `context7/search.sh` path under the bootstrap data root, and toolu's bundle writes the `toolu/.session-start-ready` readiness marker ([#263](https://github.com/Falconiere/toolu/issues/263)).
 
 4. **Enabled plugins** — project file `.opencode/toolu/plugins.json`:
 
@@ -124,6 +123,13 @@ Hermetic proof (matches CI):
 ```bash
 cd /path/to/toolu
 bun run test:conformance
+```
+
+Live entry smoke on the pinned host (npm route, local shim, both at once, and a failing config entry; the first run needs the network):
+
+```bash
+cd /path/to/toolu
+bun run smoke:opencode-entry
 ```
 
 Optional live CLI probe:

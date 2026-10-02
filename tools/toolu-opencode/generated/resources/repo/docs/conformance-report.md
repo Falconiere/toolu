@@ -6,13 +6,13 @@
 
 ## Pins (V2 adapter suites)
 
-These suites exercise the shipped V2 adapter. The documented-host contract (`opencode-ai@1.18.34`, `@opencode-ai/plugin@1.18.34`) and its live probes are in [opencode-host-contract.md](opencode-host-contract.md). OP-28 ([#362](https://github.com/Falconiere/toolu/issues/362)) replaces this lane with real-host acceptance.
+These suites drive the retained `permission.evaluate`-shaped adapter (`createPermissionEvaluateHandler`), not the host entry. Since [#336](https://github.com/Falconiere/toolu/issues/336), the entry is the documented plugin function, proven on the pinned host by `bun run smoke:opencode-entry`. The documented-host contract (`opencode-ai@1.18.34`, `@opencode-ai/plugin@1.18.34`) and its live probes are in [opencode-host-contract.md](opencode-host-contract.md). OP-28 ([#362](https://github.com/Falconiere/toolu/issues/362)) replaces this lane with real-host acceptance.
 
 | Component | Pin |
 |-----------|-----|
 | Bun | `1.4.x` (workspace engines `>=1.4.0 <1.5.0`; CI/docs baseline `1.4.2`) |
 | OpenCode CLI | `v2.0.12` (`$OPENCODE_BIN` or `command -v opencode`) |
-| Plugin SDK | `@opencode/plugin@2.0.12` |
+| Plugin SDK | none: the suites import the adapter directly (the package no longer depends on `@opencode/plugin`) |
 
 ## Platforms
 

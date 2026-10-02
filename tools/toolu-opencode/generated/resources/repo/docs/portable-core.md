@@ -5,7 +5,7 @@
 
 The OpenCode target is the documented plugin API. [`opencode-host-contract.md`](opencode-host-contract.md) pins it and records a live probe of every claim ([#335](https://github.com/Falconiere/toolu/issues/335), epic [#334](https://github.com/Falconiere/toolu/issues/334)).
 
-The shipped `@toolu/opencode` predates that contract. It still calls `dispatchPreTool` from the superseded `Plugin.define` / `permission.hook("evaluate")` entry of `@opencode/plugin@2.0.12` ([#276](https://github.com/Falconiere/toolu/issues/276)). OP-02 ([#336](https://github.com/Falconiere/toolu/issues/336)) replaces that entry.
+`@toolu/opencode` implements that contract ([#336](https://github.com/Falconiere/toolu/issues/336)). Its root export is a default `PluginModule` whose `server` runs preflight, plugin selection and bootstrap, then returns `tool.execute.before`. That hook runs the native gates through `dispatchPreTool`. The plugin never throws from init, because the host would then run tools unguarded. Instead, a setup failure returns a hook that refuses every tool call and logs `toolu: not ready: <reason>` to the host log.
 
 ## Pins
 
@@ -56,9 +56,10 @@ TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, 
 | `@toolu/opencode/bootstrap` | `bootstrapRuntime` → Ready \| NotReady with registry/session artifacts |
 | `@toolu/opencode/preflight` | git/bun/opencode probe; missing git or Bun fails closed |
 | `@toolu/opencode/lifecycle` | Event → supported \| deferred \| unsupported (evaluate wired in #204; other events may stay deferred) |
-| `@toolu/opencode/plugin` | Current default entry (superseded `Plugin.define`): preflight, bootstrap, `permission.hook("evaluate")`. OP-02 ([#336](https://github.com/Falconiere/toolu/issues/336)) replaces it with the documented plugin function |
-| `@toolu/opencode/adapter/permission-map` | OpenCode permission event → PreToolUse payload; decision → effect |
-| `@toolu/opencode/adapter/evaluate` | `createPermissionEvaluateHandler` (in-process `dispatchPreTool`) |
+| `@toolu/opencode` (`./plugin`) | Default `PluginModule` `{ id: "toolu", server }` ([#336](https://github.com/Falconiere/toolu/issues/336)). `server` binds `directory`, `worktree` and `client`, then runs preflight, selection and bootstrap, and returns `tool.execute.before` plus `dispose`. A failed setup returns a deny-all hook. One instance per directory enforces; a duplicate load (npm spec plus local shim) returns no hooks. `toolu: ready` / `not ready` / `duplicate load skipped` go to the host log |
+| `@toolu/opencode/adapter/tool-before` | `mapToolCall` (`bash`, `edit`, `write` args → PreToolUse payload; other tools pass until OP-03 [#337](https://github.com/Falconiere/toolu/issues/337)), `createToolBeforeHandler` (any decision other than allow or advisory throws, so `ask` denies until OP-05 [#339](https://github.com/Falconiere/toolu/issues/339)), `createDenyAllToolBefore` |
+| `@toolu/opencode/adapter/evaluate` | `createGateDecider`: the nine native gates over in-process `dispatchPreTool`, shared by both handlers. It also exports the retained `permission.evaluate`-shaped `createPermissionEvaluateHandler`, which only the conformance suite and clean-install smoke drive |
+| `@toolu/opencode/adapter/permission-map` | Retained `permission.evaluate`-shaped event → PreToolUse payload; decision → effect |
 
 ### OpenCode surface generator ([#206](https://github.com/Falconiere/toolu/issues/206))
 
