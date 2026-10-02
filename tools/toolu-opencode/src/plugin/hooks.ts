@@ -42,7 +42,7 @@ async function report(binding: HostBinding, level: LogLevel, message: string): P
 }
 
 /** `shell.env`: add toolu's variables to the env the host builds for one bash call. */
-export function shellEnvHook(
+function shellEnvHook(
   additions: Readonly<Record<string, string>>,
 ): NonNullable<Hooks["shell.env"]> {
   return (...[, output]) => {

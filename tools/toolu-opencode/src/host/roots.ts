@@ -48,12 +48,13 @@ function realOrResolved(path: string): string {
 /** `<slug>-<16 hex>`: the project's basename, readable, plus a hash of its real path. */
 export function opencodeProjectKey(projectRoot: string): string {
   const real = realOrResolved(projectRoot);
+  // Runs collapse to one `-` first, so trimming needs no repetition.
   const slug = basename(real)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .replace(/^-|-$/g, "")
     .slice(0, SLUG_CHARS)
-    .replace(/-+$/, "");
+    .replace(/-$/, "");
   const hash = createHash("sha256").update(real).digest("hex").slice(0, HASH_CHARS);
   return `${slug === "" ? "project" : slug}-${hash}`;
 }
