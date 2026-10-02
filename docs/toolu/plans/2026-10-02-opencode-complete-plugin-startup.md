@@ -271,3 +271,8 @@
   - Assertions are tightened.
   - Two items are skipped, after Jev triage: layer-parallel startup (startup takes about 1 s; sequential is the spec decision) and a test of the 180 s budget constant.
 - **Timing bounds out of the ledger checks:** `registry-import-cost` (in-process p50 under 50 ms) and `detect-import-cost` (under 2 ms) are filtered from the `core-report` and `gate` checks. On this 8-CPU host other epic workers pushed the load average to 39. Even the empty-process baseline of the registry test went from 89 ms to 278 ms, and the import p50 read 59.7, 63.4 and 81.7 ms. On a quieter host the same branch measured 19.3 ms and 1.7 ms. The measured registry bundle is 112.8 KB before and after this change, and `detect` is untouched. CI runs both unfiltered.
+- **Live harness timeout:** `RUN_TIMEOUT_MS` in `tooling/src/opencode-host/host-run.ts` goes from 120 s to 300 s; it is a hang guard, not a budget.
+  - strace showed each fresh isolated profile installing the pinned host's SDK into its config directories before plugins load, and that took 60–130 s per run here.
+  - That is the same with `origin/main`'s adapter: the plugin loaded after 89 s, and the whole run took 115.6 s.
+  - The full smoke had passed 7/7 twice earlier on the same day. Three ledger retries at 120 s then timed out on whichever run came second.
+  - The choice was made with Jev after the retries failed: it first favored retrying (0.60), then raising the timeout (0.43).
