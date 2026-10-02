@@ -46,14 +46,14 @@ export function definedEnv(env: NodeJS.ProcessEnv): Record<string, string> {
 }
 
 /** Send one entry to the host log; a failed or slow call is dropped, never thrown. */
-function hostLog(client: PluginInput["client"]): HostBinding["log"] {
+function hostLog(client: PluginInput["client"], timeoutMs: number): HostBinding["log"] {
   return async (level, message) => {
     const sent = client.app.log({ body: { service: "toolu", level, message } }).then(
       () => undefined,
       () => undefined,
     );
     const timeout = new Promise<void>((resolve) => {
-      setTimeout(resolve, LOG_TIMEOUT_MS).unref();
+      setTimeout(resolve, timeoutMs).unref();
     });
     await Promise.race([sent, timeout]);
   };
@@ -63,12 +63,13 @@ export function bindHostContext(
   input: Pick<PluginInput, "client" | "directory" | "worktree">,
   options: PluginOptions | undefined,
   env: NodeJS.ProcessEnv,
+  logTimeoutMs = LOG_TIMEOUT_MS,
 ): HostBinding {
   return {
     directory: input.directory,
     projectRoot: projectRootOf(input.worktree, input.directory),
     ...parseOptions(options),
     env: definedEnv(env),
-    log: hostLog(input.client),
+    log: hostLog(input.client, logTimeoutMs),
   };
 }

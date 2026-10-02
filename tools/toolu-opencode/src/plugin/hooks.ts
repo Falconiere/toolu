@@ -8,7 +8,7 @@
  */
 import type { Hooks } from "@opencode-ai/plugin";
 import { createDenyAllToolBefore } from "../adapter/tool-before.ts";
-import type { HostBinding } from "./context.ts";
+import type { HostBinding, LogLevel } from "./context.ts";
 import { prepareEnforcement, type Enforcement } from "./enforcement.ts";
 import { claimInstance, releaseInstance } from "./once.ts";
 
@@ -23,13 +23,26 @@ async function settle(prepare: PrepareEnforcement, binding: HostBinding): Promis
   }
 }
 
+/**
+ * The diagnostic is advisory: enforcement is already decided when it is sent, so a
+ * log that throws or rejects is dropped rather than allowed to abort init after the
+ * directory was claimed (which would leave the claim held with no `dispose`).
+ */
+async function report(binding: HostBinding, level: LogLevel, message: string): Promise<void> {
+  try {
+    await binding.log(level, message);
+  } catch {
+    return;
+  }
+}
+
 /** Never rejects: a failure to prepare enforcement yields a hook that denies every tool call. */
 export async function createTooluHooks(
   binding: HostBinding,
   prepare: PrepareEnforcement = prepareEnforcement,
 ): Promise<Hooks> {
   if (!claimInstance(binding.directory)) {
-    await binding.log("info", `toolu: duplicate load skipped for ${binding.directory}`);
+    await report(binding, "info", `toolu: duplicate load skipped for ${binding.directory}`);
     return {};
   }
   const enforcement = await settle(prepare, binding);
@@ -38,10 +51,14 @@ export async function createTooluHooks(
     return Promise.resolve();
   };
   if (enforcement.status === "ready") {
-    await binding.log("info", `toolu: ready (${enforcement.artifacts.length} bootstrap artifacts)`);
+    await report(
+      binding,
+      "info",
+      `toolu: ready (${enforcement.artifacts.length} bootstrap artifacts)`,
+    );
     return { "tool.execute.before": enforcement.before, dispose };
   }
   const message = `toolu: not ready: ${enforcement.reason}`;
-  await binding.log("error", `${message}; every tool call is denied`);
+  await report(binding, "error", `${message}; every tool call is denied`);
   return { "tool.execute.before": createDenyAllToolBefore(message), dispose };
 }

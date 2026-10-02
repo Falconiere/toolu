@@ -181,6 +181,12 @@
 
 ## Deviations
 
+- Review follow-up:
+  - `createTooluHooks` reports diagnostics through a `report` that never rejects, so a failing host log cannot strand the directory claim.
+  - `bindHostContext` takes an optional log timeout.
+  - `@opencode-ai/sdk@1.18.34`, the same pin as the plugin SDK, is a devDependency. With it, `src/plugin/__tests__/context.test.ts` and the `server()` tests run a real SDK client against a loopback host API.
+  - The `ask` test asserts that the decider really returns `ask` before the handler throws its reason.
+
 - `prepareEnforcement` and `resolveRepoRoot` take an optional `findBundled` lookup, which defaults to the package's own `plugins/`. A dev tree can carry a prepack-staged `tools/toolu-opencode/plugins/`, which made the "no repo root" test depend on the environment; the test now passes `() => undefined`.
 - The scenario harness's `SessionOptions.scripts` also accepts a function of the project path, so the live smoke scripts absolute `filePath` args the way a real model sends them.
 - Full gate on this host. The run used a deduplicated `PATH` (without `/bin` and `/sbin`), and every `test:ts` stage was run.

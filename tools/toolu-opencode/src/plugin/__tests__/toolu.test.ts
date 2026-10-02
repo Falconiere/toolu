@@ -1,8 +1,12 @@
-import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { afterEach, expect, test } from "bun:test";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { Hooks, PluginInput } from "@opencode-ai/plugin";
+import { createOpencodeClient } from "@opencode-ai/sdk";
 import * as entry from "../toolu.ts";
-import { parseOptions, projectRootOf } from "../context.ts";
+import { parseOptions, projectRootOf, type HostBinding } from "../context.ts";
+import { resolveRepoRoot } from "../enforcement.ts";
 
 const SRC = join(import.meta.dir, "../..");
 const TYPED_SOURCES = [
@@ -55,4 +59,99 @@ test("plugin options: absent and valid pass, a non-string repoRoot is an error",
   const bad = parseOptions({ repoRoot: "" });
   expect(bad.repoRootOption).toBeUndefined();
   expect(bad.optionsError).toMatch(/^invalid plugin options: /);
+});
+
+const servers: Array<{ stop: (force?: boolean) => unknown }> = [];
+afterEach(() => {
+  for (const server of servers.splice(0)) server.stop(true);
+});
+
+/** Loopback host API recording each log body. */
+function hostApi(): { url: string; bodies: unknown[] } {
+  const bodies: unknown[] = [];
+  const server = Bun.serve({
+    port: 0,
+    hostname: "127.0.0.1",
+    fetch: async (request) => {
+      bodies.push(await request.json());
+      return Response.json(true);
+    },
+  });
+  servers.push(server);
+  return { url: server.url.href, bodies };
+}
+
+function pluginInput(client: PluginInput["client"], directory: string): PluginInput {
+  return {
+    client,
+    directory,
+    worktree: directory,
+    project: { id: "proj_toolu_test", worktree: directory, time: { created: 0 } },
+    experimental_workspace: { register: () => undefined },
+    serverUrl: new URL("http://127.0.0.1:9"),
+    $: Bun.$,
+  };
+}
+
+async function refusal(hooks: Hooks): Promise<string> {
+  const before = hooks["tool.execute.before"];
+  if (before === undefined) throw new Error("no tool.execute.before hook");
+  try {
+    await before({ tool: "bash", sessionID: "s", callID: "c" }, { args: { command: "ls" } });
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  return "allowed";
+}
+
+test("server: invalid options deny every call and the reason reaches the host log", async () => {
+  const api = hostApi();
+  const directory = mkdtempSync(join(tmpdir(), "toolu-oc-server-"));
+  const hooks = await entry.default.server(
+    pluginInput(createOpencodeClient({ baseUrl: api.url }), directory),
+    { repoRoot: 42 },
+  );
+  expect(await refusal(hooks)).toMatch(/^toolu: not ready: invalid plugin options: /);
+  expect(api.bodies).toHaveLength(1);
+  expect(JSON.stringify(api.bodies[0])).toContain('"level":"error"');
+  await hooks.dispose?.();
+});
+
+test("server: a binding failure still returns a hook that denies every call", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "toolu-oc-server-"));
+  const input: PluginInput = {
+    ...pluginInput(createOpencodeClient({ baseUrl: "http://127.0.0.1:9" }), directory),
+    get client(): never {
+      throw new Error("client unavailable");
+    },
+  };
+  const hooks = await entry.default.server(input, undefined);
+  expect(await refusal(hooks)).toBe("toolu: not ready: client unavailable");
+});
+
+function bundled(): string {
+  return "/bundled";
+}
+
+function rootBinding(repoRootOption: string | undefined, env: Record<string, string>): HostBinding {
+  return {
+    directory: "/w",
+    projectRoot: "/w",
+    repoRootOption,
+    optionsError: undefined,
+    env,
+    log: () => Promise.resolve(),
+  };
+}
+
+test("repo root precedence: option, TOOLU_REPO_ROOT, TOOLU_ROOT, then the bundled catalog", () => {
+  const env = { TOOLU_REPO_ROOT: "/env-repo", TOOLU_ROOT: "/env-root" };
+  expect(resolveRepoRoot(rootBinding("/option", env), bundled)).toBe("/option");
+  expect(resolveRepoRoot(rootBinding(undefined, env), bundled)).toBe("/env-repo");
+  expect(resolveRepoRoot(rootBinding(undefined, { TOOLU_ROOT: "/env-root" }), bundled)).toBe(
+    "/env-root",
+  );
+  const empty = { TOOLU_REPO_ROOT: "", TOOLU_ROOT: "" };
+  expect(resolveRepoRoot(rootBinding(undefined, empty), bundled)).toBe("/bundled");
+  expect(resolveRepoRoot(rootBinding(undefined, empty), () => undefined)).toBeUndefined();
 });

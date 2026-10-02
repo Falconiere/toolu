@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createGateDecider } from "../evaluate.ts";
 import { createDenyAllToolBefore, createToolBeforeHandler, mapToolCall } from "../tool-before.ts";
 
 const tmpBase = process.env.TMPDIR ?? "/tmp";
@@ -103,11 +104,27 @@ test("an allowed bash call and an uncovered tool pass through", async () => {
 
 test("a gate ask decision fails closed: the host has no ask channel", async () => {
   const { root, envPath } = await project("ask");
+  const decider = createGateDecider({
+    repoRoot: REPO_ROOT,
+    configRoot: join(root, ".opencode/toolu/state"),
+    permissionContext: { cwd: root, projectRoot: root, worktree: root },
+  });
+  if (!decider.ok) throw new Error(decider.reason);
+  const editRequest = mapToolCall(
+    { tool: "edit", ...CALL },
+    { filePath: envPath, oldString: "1", newString: "2" },
+    { cwd: root, projectRoot: root, worktree: root },
+  );
+  if (editRequest.kind !== "request") throw new Error("edit was not mapped");
+  const decision = await decider.decide(editRequest.request);
+  expect(decision.kind).toBe("ask");
+  if (decision.kind !== "ask") return;
   const edit = handlerFor(root)(
     { tool: "edit", ...CALL },
     { args: { filePath: envPath, oldString: "1", newString: "2" } },
   );
-  expect(await rejection(edit)).toMatch(/protected/i);
+  expect(await rejection(edit)).toBe(decision.reason);
+  expect(await readFile(envPath, "utf8")).toBe("SECRET=1\n");
 });
 
 test("invalid args for a gated tool throw before any gate runs", async () => {

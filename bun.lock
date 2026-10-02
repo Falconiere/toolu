@@ -63,6 +63,7 @@
       },
       "devDependencies": {
         "@opencode-ai/plugin": "1.18.34",
+        "@opencode-ai/sdk": "1.18.34",
       },
     },
   },

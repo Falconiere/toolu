@@ -58,6 +58,10 @@ function failing(): never {
   throw new Error("first");
 }
 
+function throwing(): Promise<void> {
+  throw new Error("log transport down");
+}
+
 async function refusal(hooks: Hooks, tool: string, args: unknown): Promise<string> {
   const before = hooks["tool.execute.before"];
   if (before === undefined) throw new Error("no tool.execute.before hook");
@@ -146,4 +150,16 @@ test("a second load for the same directory is skipped until the first is dispose
   const third = await createTooluHooks(binding(root, logged), failing);
   expect(third["tool.execute.before"]).toBeDefined();
   await third.dispose?.();
+});
+
+test("a host log that throws cannot abort init or strand the directory claim", async () => {
+  const { root } = await project();
+  const first = await createTooluHooks(binding(root, [], { log: throwing }), failing);
+  expect(await refusal(first, "read", { filePath: "/x" })).toBe(
+    "toolu: not ready: setup failed: first",
+  );
+  await first.dispose?.();
+  const again = await createTooluHooks(binding(root, [], { log: throwing }), failing);
+  expect(again["tool.execute.before"]).toBeDefined();
+  await again.dispose?.();
 });
