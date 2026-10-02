@@ -84,3 +84,21 @@ test.concurrent("malformed lines, unknown methods and bad arguments return error
   ]);
   expect(await Bun.file(marker).exists()).toBe(false);
 });
+
+test.concurrent("a call without MCP_MARKER is a JSON-RPC error, not a tool result", async () => {
+  const res = await run([process.execPath, SERVER], {
+    env: { MCP_MARKER: undefined },
+    stdin: lines({
+      jsonrpc: "2.0",
+      id: 7,
+      method: "tools/call",
+      params: { name: "touch", arguments: { name: "x" } },
+    }),
+  });
+  expect(res.exitCode).toBe(0);
+  expect(JSON.parse(res.stdout.trim())).toEqual({
+    jsonrpc: "2.0",
+    id: 7,
+    error: { code: -32603, message: "MCP_MARKER is not set" },
+  });
+});

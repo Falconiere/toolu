@@ -4,6 +4,12 @@
  * file named by `TOOLU_PROBE_CONFIG`. Every hook appends one JSON line to
  * `TOOLU_PROBE_LOG`, so the harness reads what the pinned host actually
  * invoked. Dependency-free at runtime: the SDK import is type-only.
+ *
+ * Deliberately strict: hooks do not guard the outputs the SDK declares, and
+ * logging and config errors are not swallowed. A probe must surface a host
+ * change or a broken harness — the harness preconditions turn a missing log
+ * entry into a hard failure — never hide it. Logging is synchronous so the log
+ * order matches hook order (`permission.order` compares positions).
  */
 import type { Hooks, Plugin, PluginInput } from "@opencode-ai/plugin";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
@@ -154,8 +160,16 @@ function eventHook(cfg: ProbeConfig, client: PluginInput["client"]): Hooks {
     event: async ({ event }) => {
       record({ kind: "event", type: event.type });
       if (event.type !== "session.created" || cfg.toast === undefined) return;
-      const shown = await client.tui.showToast({ body: { message: cfg.toast, variant: "info" } });
-      record({ kind: "toast", ok: shown.data === true });
+      // A rejected toast is an observation for ui.toast, not a harness failure.
+      const shown = await client.tui
+        .showToast({ body: { message: cfg.toast, variant: "info" } })
+        .then((res) => res.data === true)
+        .catch((err: unknown) => (err instanceof Error ? err.message : String(err)));
+      record({
+        kind: "toast",
+        ok: shown === true,
+        ...(shown === true || shown === false ? {} : { error: shown }),
+      });
     },
   };
 }

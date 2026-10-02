@@ -67,9 +67,12 @@ async function serveRequest(url: string, init: RequestInit = {}): Promise<Respon
   }
 }
 
-async function summarize(url: string, directory: string): Promise<boolean> {
+/** Compact the session in `directory` through the probe's own `opencode serve`. */
+export async function summarize(url: string, directory: string): Promise<boolean> {
   const query = `directory=${encodeURIComponent(directory)}`;
-  const sessions = SessionList.parse(await (await serveRequest(`${url}/session?${query}`)).json());
+  const listed = await serveRequest(`${url}/session?${query}`);
+  if (!listed.ok) throw new ContractError(`opencode serve GET /session failed (${listed.status})`);
+  const sessions = SessionList.parse(await listed.json());
   const id = sessions[0]?.id;
   if (id === undefined) return false;
   const res = await serveRequest(`${url}/session/${id}/summarize?${query}`, {

@@ -142,3 +142,14 @@ test.concurrent("malformed bodies are rejected with 400 and other paths with 404
     provider.stop();
   }
 });
+
+test.concurrent("a first user message without content finishes instead of failing", async () => {
+  const provider = startScriptedProvider(SCRIPTS);
+  try {
+    const res = await post(provider.url, { messages: [{ role: "user" }], tools: TOOLS });
+    expect(res.status).toBe(200);
+    expect(events(res.text)).toEqual(textChunks(DONE_TEXT));
+  } finally {
+    provider.stop();
+  }
+});

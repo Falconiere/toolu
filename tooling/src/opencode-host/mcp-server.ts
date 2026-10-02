@@ -39,12 +39,8 @@ function callTool(req: Request, marker: string | undefined): object {
     return failure(req.id, -32602, "unknown tool");
   const args = TouchArgs.safeParse(params.data.arguments);
   if (!args.success) return failure(req.id, -32602, args.error.message);
-  if (marker === undefined || marker === "") {
-    return result(req.id, {
-      isError: true,
-      content: [{ type: "text", text: "MCP_MARKER is not set" }],
-    });
-  }
+  if (marker === undefined || marker === "")
+    return failure(req.id, -32603, "MCP_MARKER is not set");
   appendFileSync(marker, `${args.data.name}\n`);
   return result(req.id, { content: [{ type: "text", text: `touched ${args.data.name}` }] });
 }

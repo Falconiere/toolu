@@ -67,8 +67,9 @@ function scriptPosition(messages: readonly ChatMessage[]): {
   done: number;
 } {
   const firstUser = messages.find((m) => m.role === "user");
-  const token =
-    firstUser === undefined ? null : JSON.stringify(firstUser.content).match(/PROBE:([a-z0-9.-]+)/);
+  // `content` may be absent; stringify null so the token search never sees undefined.
+  const text = firstUser === undefined ? "" : JSON.stringify(firstUser.content ?? null);
+  const token = text.match(/PROBE:([a-z0-9.-]+)/);
   const lastUser = messages.map((m) => m.role).lastIndexOf("user");
   const done = messages.slice(Math.max(lastUser, 0)).filter((m) => m.role === "tool").length;
   return { scenario: token?.[1] ?? null, done };
