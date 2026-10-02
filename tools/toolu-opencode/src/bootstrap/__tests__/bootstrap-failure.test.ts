@@ -40,6 +40,10 @@ async function reasonOf(root: string, options: Boot): Promise<string> {
   return result.reason;
 }
 
+/** An entry that would run for 30 s; a call cut short by a deadline or abort ends far sooner, even on a loaded host. */
+const STALL = "await Bun.sleep(30_000);\n";
+const CUT_SHORT_MS = 15_000;
+
 const REPORT = 'const fs = require("node:fs"); const report = process.env.TOOLU_STARTUP_REPORT;\n';
 
 test.concurrent("the bootstrap names the report file in the variable core's writers read", () => {
@@ -94,7 +98,7 @@ test.concurrent("an entry that cannot start, exits non-zero or stalls is NotRead
     "probe/boot: cannot start: ",
   );
   using slow = tempRoot("toolu-bs-timeout-");
-  const stalled = one(slow.path, "await Bun.sleep(5000);\n");
+  const stalled = one(slow.path, STALL);
   expect(await reasonOf(slow.path, { plugins: [stalled], deadlineMs: 300 })).toBe(
     "probe/boot: timed out after 300 ms",
   );
@@ -103,24 +107,24 @@ test.concurrent("an entry that cannot start, exits non-zero or stalls is NotRead
 test.concurrent("a grandchild holding the output pipes cannot outlast the deadline", async () => {
   using root = tempRoot("toolu-bs-grandchild-");
   const holder =
-    'require("node:child_process").spawn("sleep", ["8"], { stdio: "inherit", detached: true }).unref();\n' +
-    "await Bun.sleep(5000);\n";
+    'require("node:child_process").spawn("sleep", ["30"], { stdio: "inherit", detached: true }).unref();\n' +
+    STALL;
   const started = performance.now();
   const reason = await reasonOf(root.path, { plugins: [one(root.path, holder)], deadlineMs: 300 });
   expect(reason).toBe("probe/boot: timed out after 300 ms");
-  expect(performance.now() - started).toBeLessThan(4_000);
+  expect(performance.now() - started).toBeLessThan(CUT_SHORT_MS);
 });
 
 test.concurrent("an abort kills the running entry, and an aborted signal runs nothing", async () => {
   using root = tempRoot("toolu-bs-abort-");
-  const stalled = one(root.path, "await Bun.sleep(5000);\n");
+  const stalled = one(root.path, STALL);
   const started = performance.now();
   const reason = await reasonOf(root.path, {
     plugins: [stalled],
     signal: AbortSignal.timeout(200),
   });
   expect(reason).toBe("probe/boot: startup cancelled");
-  expect(performance.now() - started).toBeLessThan(4_000);
+  expect(performance.now() - started).toBeLessThan(CUT_SHORT_MS);
   using idle = tempRoot("toolu-bs-aborted-");
   const marker = join(idle.path, "ran");
   const writes = one(
