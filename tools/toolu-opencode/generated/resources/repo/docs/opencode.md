@@ -108,7 +108,7 @@ In **your application repo** (not inside the toolu clone):
    - **Contributions:** each entry reports its registry modules and helpers to the bootstrap (`TOOLU_STARTUP_REPORT`). Each one is checked on disk: a module must be byte-equal to the plugin's bundle, and a helper must be a symlink to it. For example, context7 publishes its Bun bundle at the stable `context7/search.sh` path under the bootstrap data root.
    - **Readiness:** comes from this run only. A failed or partial registration, a missing helper source, non-JSON startup output, or an entry that exits non-zero or outlives its 120 s deadline names the plugin and entry in the reason. Files left on disk from an earlier session never make toolu ready, whoever wrote them. The whole startup has a 180 s budget.
    - **Disabled plugins:** when a plugin is no longer enabled, the next startup removes its `<name>@toolu__*` registry modules. It also removes the helper symlinks recorded in `.opencode/toolu/state/toolu/startup-ledger.json`, but only while each one is still that symlink and inside the data root. A file you put at a helper path is kept and reported, never deleted.
-   - **Shared data root:** with `TOOLU_CONFIG_DIR` or `TOOLU_OPENCODE_HOME` pointing several projects at one data root, the last project to start decides which plugins' modules and helpers are present. Keep the default per-project root (`.opencode/toolu/state/`) when projects enable different plugins. Isolating shared roots is tracked in [#343](https://github.com/Falconiere/toolu/issues/343).
+   - **Environment:** entries run with your own `HOME` and toolu's roots (see [Roots and helper environment](#roots-and-helper-environment)). Inherited Claude Code, Codex, Cursor and Hermes root variables (`CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `PLUGIN_ROOT`, `CLAUDE_PLUGIN_DATA`, …) are removed first, so no other host's home is read or written ([#343](https://github.com/Falconiere/toolu/issues/343)).
    - **Context:** each entry's SessionStart context (toolu's session protocol, Jev's mandate) is collected for delivery to the model.
 
 4. **Enabled plugins** — project file `.opencode/toolu/plugins.json`:
@@ -122,13 +122,40 @@ In **your application repo** (not inside the toolu clone):
 
 5. **Generated surface** — skills, agents, and commands for OpenCode live under `tools/toolu-opencode/generated/` (catalog: `opencode.toolu.json`). Regenerate after changing upstream skills with `bun run generate:opencode-surface` in the toolu clone. Wire OpenCode to those paths using your OpenCode project config; the committed tree is the canonical mirror from [#206](https://github.com/Falconiere/toolu/issues/206).
 
-6. **Gate config** — optional `toolu.config.json` at `<project>/.opencode/toolu.config.json` (same schema as other hosts; OpenCode uses `.opencode` instead of `.claude` / `.codex`). Gate modes and presets: [`docs/config.md`](config.md#gate-modes-gates) and [`docs/portable-core.md`](portable-core.md). Example for a smoke test:
+6. **Gate config** — optional `toolu.config.json` at `<project>/.opencode/toolu.config.json` and, for every project, in the global config root (`${XDG_CONFIG_HOME:-~/.config}/opencode/toolu.config.json`); the project file wins on conflict. Same schema as other hosts; OpenCode uses `.opencode` instead of `.claude` / `.codex`. Gate modes and presets: [`docs/config.md`](config.md#gate-modes-gates) and [`docs/portable-core.md`](portable-core.md). Example for a smoke test:
 
    ```json
    { "version": 1, "gates": { "protectedFiles": { "mode": "block" } } }
    ```
 
-State and registry artifacts write under `<project>/.opencode/toolu/state/` unless overridden by `TOOLU_CONFIG_DIR` or `TOOLU_OPENCODE_HOME` (see `@toolu/opencode/host` in [`portable-core.md`](portable-core.md)).
+### Roots and helper environment
+
+[#343](https://github.com/Falconiere/toolu/issues/343) fixes three roots. None of them is a Claude Code or Codex home, and toolu never changes `HOME`.
+
+| Root | Where | Holds |
+|---|---|---|
+| Project | The OpenCode instance's worktree. A linked git worktree is its own project. A `TOOLU_PROJECT_DIR` in your environment does not replace it | `.opencode/toolu.config.json`, `.opencode/toolu/plugins.json`, gate state in `.opencode/tmp/` |
+| Global config | `TOOLU_CONFIG_DIR`, else `TOOLU_OPENCODE_HOME`, else `$XDG_CONFIG_HOME/opencode`, else `~/.config/opencode` | The global `toolu.config.json`; toolu only reads it |
+| Data | `<project>/.opencode/toolu/state/`. With `TOOLU_CONFIG_DIR` or `TOOLU_OPENCODE_HOME` set: `<override>/toolu/opencode/projects/<name>-<hash>/`, one directory per project | Registry modules, published helpers, startup ledger |
+
+Projects and worktrees never share a data root, even under one override, so one project's startup cannot remove or relink another's modules and helpers. Before #343 an override was itself the shared data root. Those old files (`<override>/toolu/{pre,post}-tools.d/*@toolu__*`, `<override>/<plugin>/<helper>.sh`, `<override>/toolu/startup-ledger.json`) are no longer used. While that old ledger remains, each startup logs a `toolu: startup notes:` line naming it. Deleting the ledger, which only OpenCode writes, silences the note. Delete the old modules and helpers too when no Claude Code or Codex install shares that override.
+
+Every bash call the agent makes gets these variables through the plugin's `shell.env` hook. They are added only when toolu is ready, and nothing secret is copied:
+
+| Variable | Value |
+|---|---|
+| `TOOLU_CONFIG_DIR` | The project's data root, where helpers such as `context7/search.sh` are published (the generated skills name `"${TOOLU_CONFIG_DIR:-…}/<plugin>/<helper>"`) |
+| `TOOLU_OPENCODE_DATA_ROOT` | The same path. An OpenCode started from this bash sees `TOOLU_CONFIG_DIR` equal to it and does not treat it as an override, so it keeps its own roots |
+| `TOOLU_USER_CONFIG_DIR` | The global config root |
+| `TOOLU_HOST_OVERRIDE`, `TOOLU_PROJECT_CONFIG_DIRNAME`, `TOOLU_SETTINGS_DIR` | `opencode`, `.opencode`, the toolu settings directory, so helpers resolve OpenCode state |
+| `TOOLU_PLUGIN_ROOT_<PLUGIN>` | Each enabled plugin's directory, the name upper-cased with `-` as `_` (`TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR`). Generated surfaces use it wherever the source says `${CLAUDE_PLUGIN_ROOT}` |
+| `TOOLU_PLUGIN_ROOT` | The toolu core plugin, for `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js"` and `verdict.js` |
+| `TOOLU_OPENCODE_ROOT` | The `@toolu/opencode` package, which holds `generated/` |
+| `TOOLU_BUN` | The Bun that startup resolved (`TOOLU_BUN`, `PATH`, then `~/.bun/bin/bun`) |
+| `PATH` | Gains that Bun's directory at the end, only when `PATH` has no `bun`, so `#!/usr/bin/env bun` helpers run. This works when that executable is named `bun`, as the default `~/.bun/bin/bun` is |
+| `TOOLU_PROJECT_DIR` | Set to empty when your environment exports one, so it cannot point every helper at a single project |
+
+Because `TOOLU_PROJECT_DIR` stays empty, a helper run inside another repository uses that repository's state. Every process the agent starts from bash inherits these variables. A nested `opencode` keeps its own roots through `TOOLU_OPENCODE_DATA_ROOT`. Unset the `TOOLU_*` variables before starting `claude` or `codex` from an OpenCode session.
 
 ## Verify a real gate
 
@@ -139,11 +166,12 @@ cd /path/to/toolu
 bun run test:conformance
 ```
 
-Live entry smoke on the pinned host (npm route, local shim, both at once, and a failing config entry; the first run needs the network):
+Live entry smoke on the pinned host: the npm route, a local shim, both at once, and a failing config entry. It also covers full startup and paths: helpers resolve from paths with spaces with no `bun` on `PATH`, and a linked worktree keeps its own data root. The first run needs the network. Pass scenario ids to run only some of them:
 
 ```bash
 cd /path/to/toolu
-bun run smoke:opencode-entry
+bun run smoke:opencode-entry                       # every scenario
+bun run smoke:opencode-entry entry.helper-env entry.worktree-state
 ```
 
 Live pre-tool smoke on the pinned host checks protected edits, writes and patches, unsafe shell, commit and push gates, MCP and task denials, plus an allowed shell call:
@@ -192,7 +220,7 @@ Check out the last known-good tag in the toolu clone and run `bun install --froz
 
 - **Disable enforcement** — remove or rename `.opencode/plugins/toolu.ts`, then restart OpenCode. User config under `.opencode/toolu.config.json` is left intact. Clearing `enabled` in `.opencode/toolu/plugins.json` only removes the plugins' startup contributions at the next start; the core gates still run.
 - **Remove toolu** — npm install: `opencode plugin remove @toolu/opencode`, then delete `.opencode/toolu/` and optional `.opencode/toolu.config.json`. Contributor clone: delete `.opencode/plugins/toolu.ts`, `.opencode/package.json` (if only used for toolu), `.opencode/toolu/`, and optional `.opencode/toolu.config.json`, remove `TOOLU_REPO_ROOT` from your environment, and delete the clone separately.
-- **Scoped cleanup** — registry, helpers, startup ledger and state under `.opencode/toolu/state/` can be deleted to force a fresh bootstrap; it does not remove Claude/Codex settings.
+- **Scoped cleanup** — registry, helpers, startup ledger and state under the project's data root (`.opencode/toolu/state/`, or `<override>/toolu/opencode/projects/<name>-<hash>/`) can be deleted to force a fresh bootstrap; it does not remove Claude/Codex settings.
 
 ## Host comparison
 

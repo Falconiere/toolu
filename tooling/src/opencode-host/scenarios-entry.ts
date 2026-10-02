@@ -8,7 +8,7 @@
  * in the host log (`--print-logs`); enforcement is read from the tool states and
  * from the files on disk.
  */
-import { cpSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
+import { cpSync, mkdirSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { run } from "@toolu/conformance/harness/spawn";
@@ -66,10 +66,14 @@ function npmSpec(tarball: string): string {
 }
 
 /** `.opencode/plugins/toolu.ts` re-exporting the package root, resolved through `node_modules`. */
-export function installShim(session: ProbeSession): void {
-  session.sb.write(".opencode/plugins/toolu.ts", 'export { default } from "@toolu/opencode";\n');
-  mkdirSync(join(session.sb.project, "node_modules/@toolu"), { recursive: true });
-  symlinkSync(PACKAGE_DIR, join(session.sb.project, "node_modules/@toolu/opencode"));
+export function installShim(session: ProbeSession, dir = session.sb.project): void {
+  mkdirSync(join(dir, ".opencode/plugins"), { recursive: true });
+  writeFileSync(
+    join(dir, ".opencode/plugins/toolu.ts"),
+    'export { default } from "@toolu/opencode";\n',
+  );
+  mkdirSync(join(dir, "node_modules/@toolu"), { recursive: true });
+  symlinkSync(PACKAGE_DIR, join(dir, "node_modules/@toolu/opencode"));
 }
 
 function writeEnvScript(project: string): Scripts {

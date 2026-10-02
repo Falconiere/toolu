@@ -1,8 +1,20 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { detectHost } from "../detect.ts";
-import { opencodeConfigRoot, opencodeDataRoot, opencodePluginSelectionPath } from "../roots.ts";
+import {
+  opencodeConfigRoot,
+  opencodeDataRoot,
+  opencodePluginSelectionPath,
+  opencodeProjectKey,
+} from "../roots.ts";
+
+function git(cwd: string, args: string[]): void {
+  const res = spawnSync("git", ["-C", cwd, ...args], { encoding: "utf8" });
+  if (res.status !== 0) throw new Error(`git ${args.join(" ")}: ${res.stderr}`);
+}
 
 const tmpBase = process.env.TMPDIR ?? "/tmp";
 
@@ -17,14 +29,87 @@ test("detectHost uses OPENCODE_* env and .opencode project marker", () => {
   expect(detectHost({ env: {}, projectRoot: project })).toBe("opencode");
 });
 
-test("opencode roots honor TOOLU_CONFIG_DIR and TOOLU_OPENCODE_HOME", () => {
-  const project = mkdtempSync(join(tmpBase, "toolu-oc-roots-"));
-  const explicit = join(project, "data");
-  expect(opencodeDataRoot({ dataRoot: explicit })).toBe(explicit);
-  expect(opencodeConfigRoot({ env: { TOOLU_CONFIG_DIR: "/cfg" } })).toBe("/cfg");
-  expect(opencodeConfigRoot({ env: { TOOLU_OPENCODE_HOME: "/oc-home" } })).toBe("/oc-home");
-  const derived = opencodeDataRoot({ projectRoot: project });
-  expect(derived).toBe(join(project, ".opencode", "toolu", "state"));
+test("the global config root follows TOOLU_CONFIG_DIR, TOOLU_OPENCODE_HOME, then XDG", () => {
+  const home = "/home/u";
+  expect(opencodeConfigRoot({ env: { HOME: home, TOOLU_CONFIG_DIR: "/cfg" } })).toBe("/cfg");
+  expect(opencodeConfigRoot({ env: { HOME: home, TOOLU_OPENCODE_HOME: "/oc-home" } })).toBe(
+    "/oc-home",
+  );
+  expect(opencodeConfigRoot({ env: { HOME: home, XDG_CONFIG_HOME: "/xdg" } })).toBe(
+    "/xdg/opencode",
+  );
+  expect(opencodeConfigRoot({ env: { HOME: home } })).toBe("/home/u/.config/opencode");
+  expect(opencodeConfigRoot({ env: { HOME: home, TOOLU_CONFIG_DIR: "" } })).toBe(
+    "/home/u/.config/opencode",
+  );
+});
+
+test("without an override the data root is the project's own .opencode/toolu/state", () => {
+  using sb = createSandbox();
+  expect(opencodeDataRoot({ dataRoot: join(sb.root, "data") })).toBe(join(sb.root, "data"));
+  expect(opencodeDataRoot({ projectRoot: sb.project, env: {} })).toBe(
+    join(sb.project, ".opencode", "toolu", "state"),
+  );
+  expect(() => opencodeDataRoot({ env: { TOOLU_CONFIG_DIR: "/cfg" } })).toThrow(/projectRoot/);
+});
+
+test("under one override, two projects and a linked worktree get distinct keyed data roots", () => {
+  using a = createSandbox({ git: true });
+  using b = createSandbox({ git: true });
+  const worktree = join(a.root, "linked wt");
+  git(a.project, ["worktree", "add", "-q", worktree, "-b", "wt"]);
+  const shared = join(a.root, "shared root");
+  const env = { TOOLU_CONFIG_DIR: shared, TOOLU_OPENCODE_HOME: "/ignored" };
+  const projects = [a.project, b.project, worktree];
+  const roots = projects.map((projectRoot) => opencodeDataRoot({ projectRoot, env }));
+  expect(new Set(roots).size).toBe(3);
+  expect(roots).toEqual(
+    projects.map((project) =>
+      join(shared, "toolu", "opencode", "projects", opencodeProjectKey(project)),
+    ),
+  );
+  const viaHome = opencodeDataRoot({
+    projectRoot: a.project,
+    env: { TOOLU_OPENCODE_HOME: shared },
+  });
+  expect(viaHome).toBe(opencodeDataRoot({ projectRoot: a.project, env }));
+});
+
+test("a TOOLU_CONFIG_DIR inherited from an enclosing session's bash is not an override", () => {
+  using sb = createSandbox();
+  const outer = join(sb.root, "outer", ".opencode", "toolu", "state");
+  const inherited = { HOME: "/home/u", TOOLU_CONFIG_DIR: outer, TOOLU_OPENCODE_DATA_ROOT: outer };
+  expect(opencodeConfigRoot({ env: inherited })).toBe("/home/u/.config/opencode");
+  expect(opencodeDataRoot({ projectRoot: sb.project, env: inherited })).toBe(
+    join(sb.project, ".opencode", "toolu", "state"),
+  );
+  const own = { ...inherited, TOOLU_OPENCODE_HOME: "/oc" };
+  expect(opencodeConfigRoot({ env: own })).toBe("/oc");
+  const user = { ...inherited, TOOLU_CONFIG_DIR: "/user/override" };
+  expect(opencodeConfigRoot({ env: user })).toBe("/user/override");
+});
+
+test("relative overrides resolve to absolute roots", () => {
+  expect(opencodeConfigRoot({ env: { TOOLU_CONFIG_DIR: "rel/cfg" } })).toBe(resolve("rel/cfg"));
+  expect(opencodeConfigRoot({ env: { HOME: "/h", XDG_CONFIG_HOME: "rel-xdg" } })).toBe(
+    resolve("rel-xdg", "opencode"),
+  );
+});
+
+test("the project key is a readable slug plus a hash of the real path", () => {
+  using sb = createSandbox({ git: true });
+  const project = join(sb.root, "My Project!");
+  mkdirSync(project);
+  const link = join(sb.root, "link");
+  symlinkSync(project, link);
+  const key = opencodeProjectKey(project);
+  expect(key).toMatch(/^my-project-[0-9a-f]{16}$/);
+  expect(opencodeProjectKey(link)).toBe(key);
+  expect(opencodeProjectKey(sb.project)).not.toBe(key);
+  const missing = join(sb.root, "not yet", "here");
+  expect(opencodeProjectKey(missing)).toMatch(/^here-[0-9a-f]{16}$/);
+  expect(opencodeProjectKey(join(sb.root, "x".repeat(80)))).toMatch(/^x{32}-[0-9a-f]{16}$/);
+  expect(opencodeProjectKey(join(sb.root, "日本"))).toMatch(/^project-[0-9a-f]{16}$/);
 });
 
 test("selection path lives under project .opencode", () => {

@@ -159,6 +159,7 @@ export function buildSurfaceForPlugin(
       source.path,
       source.text,
       references,
+      plugin,
       commandSkillId,
     );
     artifacts.push({

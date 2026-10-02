@@ -39,16 +39,17 @@ function jsonLines(text: string): Array<Record<string, unknown>> {
   });
 }
 
-/** `opencode run --format json <args>` in the session project. */
+/** `opencode run --format json <args>` in the session project, or in `cwd` (PWD follows it). */
 export async function runHost(
   bin: string,
   session: ProbeSession,
   args: string[],
   timeoutMs = RUN_TIMEOUT_MS,
+  cwd = session.sb.project,
 ): Promise<HostRun> {
   const res = await run([bin, "run", "--format", "json", ...args], {
-    cwd: session.sb.project,
-    env: session.env,
+    cwd,
+    env: { ...session.env, PWD: cwd },
     stdin: "",
     timeoutMs,
   });

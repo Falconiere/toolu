@@ -18,7 +18,7 @@ import { planSurface, readTree, treesEqual, writeSurface } from "../lib/emit.ts"
 import { selectPluginsByEnabledNames } from "../../src/select/resolve.ts";
 import { runGenerateSurface } from "../generate-surface.ts";
 import { listPluginManifests } from "../../src/inventory/scan.ts";
-import { TOOLU_PLUGIN_ROOT } from "../lib/constants.ts";
+import { TOOLU_OPENCODE_ROOT } from "../lib/constants.ts";
 import { renderMarkdown } from "../lib/render.ts";
 import { rewriteBody } from "../lib/rewrite.ts";
 
@@ -205,9 +205,35 @@ test("paired host spellings become one OpenCode skill invocation", () => {
     paths: new Map<string, string>(),
   };
   const source = "Use `/delivery-flow:delivery-flow` or `$delivery-flow:delivery-flow` here.";
-  const result = rewriteBody(source, references);
+  const result = rewriteBody(source, references, { plugin: "brainstorm" });
   expect(result.body).toBe('Use `skill({ name: "delivery-flow-delivery-flow" })` here.');
   expect(result.notes.explicitReferenceRewrites).toBe(2);
+});
+
+test("each plugin's root token becomes that plugin's own root variable", () => {
+  const references = { invocations: new Map<string, string>(), paths: new Map<string, string>() };
+  const source = 'ROOT="${CLAUDE_PLUGIN_ROOT}"\nS="${CLAUDE_PLUGIN_ROOT}/scripts"';
+  const result = rewriteBody(source, references, { plugin: "epic-orchestrator" });
+  expect(result.body).toBe(
+    'ROOT="${TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR}"\nS="${TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR}/scripts"',
+  );
+  expect(result.notes.claudePluginRootRewrites).toBe(2);
+});
+
+test("no generated file names the ambiguous braced TOOLU_PLUGIN_ROOT, and the notes state the env contract", () => {
+  const out = mkdtempSync(join(tmpBase, "toolu-surface-roots-"));
+  const root = repoRoot();
+  const plugins = listPluginManifests(join(root, "plugins")) ?? [];
+  const plan = planSurface({ repoRoot: root, outDir: out, plugins });
+  const braced = [...plan.files].filter(([, text]) => text.includes("${TOOLU_PLUGIN_ROOT}"));
+  expect(braced.map(([path]) => path)).toEqual([]);
+  const epic = plan.files.get(join(out, "skills/epic-orchestrator-epic-orchestrator/SKILL.md"));
+  expect(epic).toContain('ROOT="${TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR}"');
+  expect(epic).toContain("${PLUGIN_ROOT:-${TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR}}");
+  const notes = plan.files.get(join(out, "GENERATED-NOTES.md")) ?? "";
+  expect(notes).toContain("`TOOLU_PLUGIN_ROOT_<PLUGIN>`");
+  expect(notes).toContain("`TOOLU_OPENCODE_ROOT`");
+  expect(notes).not.toContain("package root.\n- The OpenCode adapter must set `TOOLU_PLUGIN_ROOT`");
 });
 
 test("generated research agent labels the OpenCode config root correctly", () => {
@@ -270,7 +296,7 @@ test("generated model-routing references resolve relative to each skill", () => 
     const skill = plan.files.get(join(out, "skills", id, "SKILL.md"));
     expect(skill).toContain(`\`${relativePath}\``);
     expect(skill).not.toContain(
-      "${TOOLU_PLUGIN_ROOT}/generated/skills/toolu-orchestrator/references/model-routing.md",
+      "${TOOLU_OPENCODE_ROOT}/generated/skills/toolu-orchestrator/references/model-routing.md",
     );
     expect(plan.files.has(resolve(out, "skills", id, relativePath))).toBe(true);
   }
@@ -280,7 +306,14 @@ test("real agent tools map to exact OpenCode permissions and reject unknown tool
   const sourcePath = join(repoRoot(), "plugins/toolu/agents/architect.md");
   const source = readFileSync(sourcePath, "utf8");
   const references = { invocations: new Map<string, string>(), paths: new Map<string, string>() };
-  const rendered = renderMarkdown("agent", "toolu-architect", sourcePath, source, references);
+  const rendered = renderMarkdown(
+    "agent",
+    "toolu-architect",
+    sourcePath,
+    source,
+    references,
+    "toolu",
+  );
   const parsed = parseFrontmatter(rendered.content);
   expect(parsed.frontmatter.mode).toBe("subagent");
   expect(parsed.frontmatter.model).toBeUndefined();
@@ -294,9 +327,9 @@ test("real agent tools map to exact OpenCode permissions and reject unknown tool
 
   const invalid = source.replace("tools: Read, Grep, Glob, Bash", "tools: Read, UnknownTool");
   expect(invalid).not.toBe(source);
-  expect(() => renderMarkdown("agent", "toolu-architect", sourcePath, invalid, references)).toThrow(
-    "unsupported Claude agent tool: UnknownTool",
-  );
+  expect(() =>
+    renderMarkdown("agent", "toolu-architect", sourcePath, invalid, references, "toolu"),
+  ).toThrow("unsupported Claude agent tool: UnknownTool");
 });
 
 test("full catalog includes all plugins and explicitly classifies empty surfaces", () => {
@@ -354,7 +387,7 @@ test("full catalog includes all plugins and explicitly classifies empty surfaces
     .find((plugin) => plugin.name === "toolu")
     ?.agents.find((agent) => agent.source.endsWith("/deep-explore.md"));
   expect(plan.files.get(join(out, deepExplore?.path ?? ""))).toContain(
-    `${TOOLU_PLUGIN_ROOT}/generated/skills/${orchestratorSkill?.id}/references/model-routing.md`,
+    `${TOOLU_OPENCODE_ROOT}/generated/skills/${orchestratorSkill?.id}/references/model-routing.md`,
   );
   const context7 = plan.catalog.plugins.find((plugin) => plugin.name === "context7")?.skills[0];
   expect(plan.files.get(join(out, context7?.path ?? ""))).not.toContain("CLAUDE_CONFIG_DIR");

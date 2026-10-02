@@ -16,9 +16,9 @@ decision is needed.
 
 ```bash
 # Claude / Cursor Agent: CLAUDE_PLUGIN_ROOT. Codex: PLUGIN_ROOT.
-# OpenCode generated surface rewrites CLAUDE_PLUGIN_ROOT → TOOLU_PLUGIN_ROOT.
+# OpenCode: TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR (its generated surface rewrites CLAUDE_PLUGIN_ROOT to it).
 ROOT="${CLAUDE_PLUGIN_ROOT}"
-ROOT="${ROOT:-${PLUGIN_ROOT:-${TOOLU_PLUGIN_ROOT}}}"
+ROOT="${ROOT:-${PLUGIN_ROOT:-${TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR}}}"
 S="${ROOT}/scripts"
 ```
 

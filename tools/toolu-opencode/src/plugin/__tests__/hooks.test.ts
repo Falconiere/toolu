@@ -3,7 +3,8 @@ import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Hooks } from "@opencode-ai/plugin";
-import { definedEnv, parseOptions, type HostBinding, type LogLevel } from "../context.ts";
+import { definedEnv } from "../../host/runtime-env.ts";
+import { parseOptions, type HostBinding, type LogLevel } from "../context.ts";
 import { prepareEnforcement } from "../enforcement.ts";
 import { createTooluHooks, startupNotes } from "../hooks.ts";
 
@@ -40,6 +41,9 @@ function binding(
   delete env.TOOLU_ROOT;
   delete env.TOOLU_CONFIG_DIR;
   delete env.TOOLU_OPENCODE_HOME;
+  // Never the developer's own global config: an empty XDG config dir inside the project.
+  env.XDG_CONFIG_HOME = join(root, ".xdg");
+  env.TOOLU_BUN = process.execPath;
   return {
     directory: root,
     projectRoot: root,
@@ -87,6 +91,32 @@ test("ready: a protected .env edit is refused, an allowed bash call runs, one re
   await hooks.dispose?.();
 });
 
+test("ready: shell.env adds toolu's roots to a bash call's env and keeps what is there", async () => {
+  const { root } = await project();
+  const hooks = await createTooluHooks(binding(root, []));
+  const shellEnv = hooks["shell.env"];
+  if (shellEnv === undefined) throw new Error("no shell.env hook");
+  const output: { env: Record<string, string> } = { env: { KEEP: "1", PATH: "/usr/bin" } };
+  await shellEnv({ cwd: root, sessionID: CALL.sessionID, callID: CALL.callID }, output);
+  expect(output.env).toMatchObject({
+    KEEP: "1",
+    TOOLU_HOST_OVERRIDE: "opencode",
+    TOOLU_CONFIG_DIR: join(root, ".opencode/toolu/state"),
+    TOOLU_USER_CONFIG_DIR: join(root, ".xdg/opencode"),
+    TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",
+    TOOLU_SETTINGS_DIR: join(REPO_ROOT, "plugins/toolu/settings"),
+    TOOLU_OPENCODE_ROOT: join(REPO_ROOT, "tools/toolu-opencode"),
+    TOOLU_PLUGIN_ROOT: join(REPO_ROOT, "plugins/toolu"),
+    TOOLU_PLUGIN_ROOT_TOOLU: join(REPO_ROOT, "plugins/toolu"),
+  });
+  expect(output.env.TOOLU_BUN).toBe(process.execPath);
+  expect(output.env.TOOLU_OPENCODE_DATA_ROOT).toBe(join(root, ".opencode/toolu/state"));
+  expect(output.env.PATH).toBe(`/usr/bin:${dirname(process.execPath)}`);
+  expect(output.env.TOOLU_PROJECT_DIR).toBeUndefined();
+  expect(output.env.HOME).toBeUndefined();
+  await hooks.dispose?.();
+});
+
 test("a selected plugin whose startup fails refuses every tool with its plugin and cause", async () => {
   const { root } = await project();
   const catalog = await mkdtemp(join(tmpBase, "toolu-oc-hooks-catalog-"));
@@ -115,6 +145,7 @@ test("a preparation that throws yields a hook that refuses every tool", async ()
   expect(await refusal(hooks, "read", { filePath: "/x" })).toBe(
     "toolu: not ready: setup failed: boom",
   );
+  expect(hooks["shell.env"]).toBeUndefined();
   expect(logged).toEqual([
     { level: "error", message: "toolu: not ready: setup failed: boom; every tool call is denied" },
   ]);

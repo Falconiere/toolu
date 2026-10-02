@@ -22,6 +22,7 @@ import {
   type PermissionContext,
   type PermissionEvaluationEvent,
 } from "./permission-map.ts";
+import { definedEnv, withoutForeignHostVars } from "../host/runtime-env.ts";
 import { decisionFromDispatch } from "./result.ts";
 
 export type PermissionEvaluateHandlerOptions = {
@@ -30,6 +31,8 @@ export type PermissionEvaluateHandlerOptions = {
   permissionContext: PermissionContext;
   env?: Record<string, string>;
   selectedPluginSpecs?: ReadonlySet<string>;
+  /** Global `toolu.config.json` directory (#343); absent, the config root holds it, as before. */
+  userConfigRoot?: string;
 };
 
 export function nativeGates(pluginRoot: string): ToolModule[] {
@@ -76,6 +79,25 @@ function strongerDecision(first: Decision, second: Decision): Decision {
   return priority(second) > priority(first) ? second : first;
 }
 
+/**
+ * The env every gate sees: the process env under `opts.env`, minus every other
+ * host's root variables (#343: dropped, not overridden), plus toolu's roots.
+ */
+export function gateEnv(
+  opts: PermissionEvaluateHandlerOptions,
+  pluginRoot: string,
+): Record<string, string> {
+  return {
+    ...withoutForeignHostVars({ ...definedEnv(process.env), ...opts.env }),
+    ...(opts.userConfigRoot === undefined ? {} : { TOOLU_USER_CONFIG_DIR: opts.userConfigRoot }),
+    TOOLU_CONFIG_DIR: opts.configRoot,
+    TOOLU_PROJECT_DIR: opts.permissionContext.projectRoot,
+    TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",
+    TOOLU_HOST_OVERRIDE: "opencode",
+    TOOLU_SETTINGS_DIR: join(pluginRoot, "settings"),
+  };
+}
+
 /** The nine native gates in toolu's PreToolUse order, run in process for one core request. */
 export function createGateDecider(opts: PermissionEvaluateHandlerOptions): GateDecider {
   const pluginRoot = join(opts.repoRoot, "plugins", "toolu");
@@ -83,15 +105,7 @@ export function createGateDecider(opts: PermissionEvaluateHandlerOptions): GateD
     return { ok: false, reason: `toolu: core plugin manifest missing under ${pluginRoot}` };
   }
   const gates = nativeGates(pluginRoot);
-  const env = {
-    ...process.env,
-    ...opts.env,
-    TOOLU_CONFIG_DIR: opts.configRoot,
-    TOOLU_PROJECT_DIR: opts.permissionContext.projectRoot,
-    TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",
-    TOOLU_HOST_OVERRIDE: "opencode",
-    TOOLU_SETTINGS_DIR: join(pluginRoot, "settings"),
-  };
+  const env = gateEnv(opts, pluginRoot);
   const decide = async (request: Record<string, unknown>): Promise<Decision> => {
     try {
       const payload = JSON.stringify(request);

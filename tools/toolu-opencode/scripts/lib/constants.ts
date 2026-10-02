@@ -3,7 +3,8 @@ export const GENERATED_SEGMENT = "tools/toolu-opencode/generated";
 
 export const CLAUDE_PLUGIN_ROOT = "${CLAUDE_PLUGIN_ROOT}";
 
-export const TOOLU_PLUGIN_ROOT = "${TOOLU_PLUGIN_ROOT}";
+/** The `@toolu/opencode` package directory, which holds `generated/` (#343). */
+export const TOOLU_OPENCODE_ROOT = "${TOOLU_OPENCODE_ROOT}";
 
 export const STRIPPED_FRONTMATTER_KEYS = new Set(["disable-model-invocation"]);
 

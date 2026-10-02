@@ -1,6 +1,7 @@
 /** Bind the documented `PluginInput` and plugin options to what toolu needs (#336). */
 import type { PluginInput, PluginOptions } from "@opencode-ai/plugin";
 import { z } from "zod";
+import { definedEnv } from "../host/runtime-env.ts";
 
 export type LogLevel = "info" | "error";
 
@@ -35,14 +36,6 @@ export function parseOptions(
     repoRootOption: undefined,
     optionsError: `invalid plugin options: ${z.prettifyError(parsed.error)}`,
   };
-}
-
-export function definedEnv(env: NodeJS.ProcessEnv): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [key, value] of Object.entries(env)) {
-    if (value !== undefined) out[key] = value;
-  }
-  return out;
 }
 
 /** Send one entry to the host log; a failed or slow call is dropped, never thrown. */

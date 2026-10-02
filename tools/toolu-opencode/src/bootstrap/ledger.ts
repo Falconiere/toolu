@@ -26,7 +26,7 @@ import {
 import { basename, dirname, join, sep } from "node:path";
 import { REGISTRY_DIRS } from "@toolu/core/registry";
 import { z } from "zod";
-import { opencodeRegistryRoot } from "../host/roots.ts";
+import { OPENCODE_STARTUP_LEDGER, opencodeRegistryRoot } from "../host/roots.ts";
 import type { PluginManifest } from "../inventory/types.ts";
 import type { OwnedHelper } from "./records.ts";
 
@@ -47,7 +47,7 @@ export type LedgerEntry = Ledger["plugins"][string];
 export type Cleanup = { failures: string[]; diagnostics: string[] };
 
 function ledgerPath(dataRoot: string): string {
-  return join(opencodeRegistryRoot(dataRoot), "startup-ledger.json");
+  return join(opencodeRegistryRoot(dataRoot), OPENCODE_STARTUP_LEDGER);
 }
 
 export function emptyLedger(): Ledger {
