@@ -26,7 +26,7 @@ function preserveQuotedHashInDescription(yaml: string): string {
       let embeddedHash = false;
       let commentAt = value.length;
       for (let i = 0; i < value.length; i += 1) {
-        if (value[i] === '"' && value[i - 1] !== "\\") quoted = !quoted;
+        if (value[i] === '"') quoted = !quoted;
         if (value[i] === "#" && /\s/.test(value[i - 1] ?? "")) {
           if (quoted) embeddedHash = true;
           else {

@@ -167,6 +167,11 @@ test("real epic skill description keeps its embedded issue number", () => {
   expect(description).toContain("Not for a single standalone issue or PR.");
 });
 
+test("plain YAML descriptions keep a hash after a literal backslash and quote", () => {
+  const source = '---\ndescription: Work \\"issue #248\\" today\n---\nBody';
+  expect(parseFrontmatter(source).frontmatter.description).toBe('Work \\"issue #248\\" today');
+});
+
 test("serializer reports the key for values JSON cannot encode", () => {
   expect(() => serializeFrontmatter({ metadata: { id: 1n } })).toThrow(
     "unsupported frontmatter value: metadata",
