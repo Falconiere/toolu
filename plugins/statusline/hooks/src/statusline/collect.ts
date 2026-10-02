@@ -30,9 +30,11 @@ export type ProjectStatus = {
 /** Explicit host override, then Codex's `PLUGIN_ROOT` fallback, then Claude. */
 export function statusHost(env: HostEnv): StatusHost {
   const override = envValue(env, "TOOLU_HOST_OVERRIDE");
+  if (override === "claude") return "claude";
   if (override === "codex") return "codex";
   if (override === "opencode") return "opencode";
-  return override === undefined && envValue(env, "PLUGIN_ROOT") !== undefined ? "codex" : "claude";
+  if (override !== undefined) throw new Error(`unsupported statusline host override: ${override}`);
+  return envValue(env, "PLUGIN_ROOT") !== undefined ? "codex" : "claude";
 }
 
 /** The status with no project and no Jev: what a renderer shows when collection fails. */

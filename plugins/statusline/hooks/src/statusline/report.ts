@@ -5,6 +5,12 @@
  */
 import type { ProjectStatus } from "./collect.ts";
 
+const HOST_LABEL: Record<ProjectStatus["host"], string> = {
+  claude: "Claude Code",
+  codex: "Codex",
+  opencode: "OpenCode",
+};
+
 function repositoryLines(status: ProjectStatus): string[] {
   if (status.repo_root === "") return [`Folder: ${status.folder} (not a git repository)`];
   const branch =
@@ -28,11 +34,10 @@ function gateLine(gate: ProjectStatus["gate"]): string {
 
 /** The report, one field per line, newline-terminated. */
 export function reportText(status: ProjectStatus): string {
-  const lines = [
-    `Host: ${status.host === "codex" ? "Codex" : status.host === "opencode" ? "OpenCode" : "Claude Code"}`,
-    ...repositoryLines(status),
-    gateLine(status.gate),
-  ];
+  const hostLabel = HOST_LABEL[status.host];
+  if (hostLabel === undefined)
+    throw new Error(`unsupported statusline report host: ${status.host}`);
+  const lines = [`Host: ${hostLabel}`, ...repositoryLines(status), gateLine(status.gate)];
   if (status.comemory_count !== null) lines.push(`Comemory: ${status.comemory_count} memories`);
   if (status.jev.status === "ready") lines.push("Jev: ready");
   if (status.jev.status === "unavailable") lines.push(`Jev: unavailable — ${status.jev.reason}`);
