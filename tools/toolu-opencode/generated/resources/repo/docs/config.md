@@ -10,8 +10,14 @@ disable what you do not want.
   `<repo>/.claude/toolu.config.json` (`CLAUDE_CONFIG_DIR` remains supported).
 - Codex: `${CODEX_HOME:-~/.codex}/toolu.config.json` and
   `<repo>/.codex/toolu.config.json`.
+- OpenCode: `${XDG_CONFIG_HOME:-~/.config}/opencode/toolu.config.json` (or
+  `TOOLU_CONFIG_DIR` / `TOOLU_OPENCODE_HOME`) and
+  `<repo>/.opencode/toolu.config.json`; see [opencode.md](opencode.md#roots-and-helper-environment).
 - `TOOLU_CONFIG_DIR`, `TOOLU_PROJECT_DIR`, and
   `TOOLU_PROJECT_CONFIG_DIRNAME` are explicit cross-host overrides.
+- `TOOLU_USER_CONFIG_DIR` names the directory of the user-level file when it
+  is not the config root. The OpenCode adapter sets it, because its config
+  root is a per-project data root; no other host does.
 
 Both are optional. When both exist they are deep-merged via `jq '. * .'`;
 project values win on conflict. Missing keys default to **enabled**.
