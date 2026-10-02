@@ -22,23 +22,21 @@ const DOCUMENTED_INPUT = ["$", "client", "directory", "project", "worktree"];
 async function localFile(ctx: ScenarioContext): Promise<Observation> {
   using session = openSession(ctx.cacheRoot, { localPlugins: [PROBE_PLUGIN] });
   await runHost(ctx.bin, session, ["PROBE:load.local-file"]);
-  const loads = entries(session, "load");
   precondition(
     "load.local-file",
     toolRequestCount(session) > 0,
     "the session never reached the model",
   );
-  const keys = loads[0]?.inputKeys;
-  const inputKeys = Array.isArray(keys) ? keys.join(",") : "";
+  const loads = entries(session, "load");
+  const first = loads[0];
+  const inputKeys = (first?.inputKeys ?? []).join(",");
   const observed = {
     loaded: loads.length === 1,
-    optionsDelivered: loads[0]?.options !== null,
+    optionsDelivered: first !== undefined && first.options !== null,
     inputKeys,
   };
-  return verdict(
-    loads.length === 1 && DOCUMENTED_INPUT.every((key) => inputKeys.split(",").includes(key)),
-    observed,
-  );
+  const documented = DOCUMENTED_INPUT.every((key) => first?.inputKeys?.includes(key) === true);
+  return verdict(loads.length === 1 && documented, observed);
 }
 
 async function configFile(ctx: ScenarioContext): Promise<Observation> {
@@ -58,10 +56,13 @@ async function configFile(ctx: ScenarioContext): Promise<Observation> {
     },
   });
   const run = await runHost(ctx.bin, session, ["PROBE:load.config-file"]);
+  precondition(
+    "load.config-file",
+    toolRequestCount(session) > 0,
+    "the session never reached the model",
+  );
   const loads = entries(session, "load");
-  const options = loads[0]?.options;
-  const optionsDelivered =
-    typeof options === "object" && options !== null && Reflect.get(options, "probe") === "config";
+  const optionsDelivered = loads[0]?.options?.probe === "config";
   const denied = toolStates(run).some((t) => t.tool === "bash" && t.error === DENY_MESSAGE);
   const hooksActive = denied && !session.exists(`${DENY_MARKER}-config.txt`);
   return verdict(loads.length === 1 && optionsDelivered && hooksActive, {

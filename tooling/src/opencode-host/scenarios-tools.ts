@@ -23,12 +23,23 @@ import {
   DENY_MESSAGE,
   openSession,
   PROBE_PLUGIN,
+  type ProbeSession,
   type SessionOptions,
 } from "./session.ts";
 
 const MCP_SERVER = join(import.meta.dir, "mcp-server.ts");
 
-type DenyCase = { tool: string; step: ScriptStep[]; created: string[]; options?: SessionOptions };
+type DenyCase = {
+  tool: string;
+  step: ScriptStep[];
+  /** Whether the denied call left any trace: a file, changed bytes, or output the model saw. */
+  sideEffect: (session: ProbeSession) => boolean;
+  options?: SessionOptions;
+};
+
+function created(...rels: string[]): (session: ProbeSession) => boolean {
+  return (session) => rels.some((rel) => session.exists(rel));
+}
 
 async function denyCase(ctx: ScenarioContext, id: string, c: DenyCase): Promise<Observation> {
   using session = openSession(ctx.cacheRoot, {
@@ -41,7 +52,7 @@ async function denyCase(ctx: ScenarioContext, id: string, c: DenyCase): Promise<
   const run = await runHost(ctx.bin, session, [`PROBE:${id}`]);
   const beforeInvoked = hookedTools(session, "before").includes(c.tool);
   precondition(id, beforeInvoked, `tool.execute.before never saw ${c.tool}`);
-  const sideEffect = c.created.some((rel) => session.exists(rel));
+  const sideEffect = c.sideEffect(session);
   const errorReachedModel = messagesText(session, "tool").includes(DENY_MESSAGE);
   const afterInvoked = hookedTools(session, "after").includes(c.tool);
   const blocked = toolStates(run).some((t) => t.tool === c.tool && t.status === "error");
@@ -180,7 +191,7 @@ export const TOOL_SCENARIOS: Scenario[] = [
       step: [
         { tool: "bash", args: { command: `touch ${DENY_MARKER}-bash.txt`, description: "probe" } },
       ],
-      created: [`${DENY_MARKER}-bash.txt`],
+      sideEffect: created(`${DENY_MARKER}-bash.txt`),
     },
     "tool.execute.before (throw)",
     "A tool.execute.before throw blocks a bash call before it runs and the model sees the reason",
@@ -190,17 +201,48 @@ export const TOOL_SCENARIOS: Scenario[] = [
     "write",
     {
       step: [{ tool: "write", args: { filePath: `${DENY_MARKER}-write.txt`, content: "secret" } }],
-      created: [`${DENY_MARKER}-write.txt`],
+      sideEffect: created(`${DENY_MARKER}-write.txt`),
     },
     "tool.execute.before (throw)",
     "A tool.execute.before throw blocks a write before the file changes",
+  ),
+  deny(
+    "deny.edit",
+    "edit",
+    {
+      step: [
+        {
+          tool: "edit",
+          args: {
+            filePath: "edit-target.txt",
+            oldString: "before",
+            newString: `${DENY_MARKER}-after`,
+          },
+        },
+      ],
+      sideEffect: (session) => session.sb.read("edit-target.txt") !== "before\n",
+      options: { files: { "edit-target.txt": "before\n" } },
+    },
+    "tool.execute.before (throw)",
+    "A tool.execute.before throw blocks an edit before the file's bytes change",
+  ),
+  deny(
+    "deny.grep",
+    "grep",
+    {
+      step: [{ tool: "grep", args: { pattern: DENY_MARKER, path: "." } }],
+      sideEffect: (session) => messagesText(session, "tool").includes("grep-needle.txt"),
+      options: { files: { "grep-needle.txt": `needle-${DENY_MARKER}\n` } },
+    },
+    "tool.execute.before (throw)",
+    "A tool.execute.before throw blocks a grep before its results reach the model",
   ),
   deny(
     "deny.apply-patch",
     "apply_patch",
     {
       step: [{ tool: "apply_patch", args: { patchText: PATCH } }],
-      created: ["ok-patch.txt", `${DENY_MARKER}-patch.txt`],
+      sideEffect: created("ok-patch.txt", `${DENY_MARKER}-patch.txt`),
       options: { model: "gpt-5-probe" },
     },
     "tool.execute.before (throw)",

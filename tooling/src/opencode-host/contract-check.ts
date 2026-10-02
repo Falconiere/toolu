@@ -132,7 +132,8 @@ export function checkMatrix(matrix: Matrix, verdicts: Verdicts, pluginsDir: stri
     throw new ContractError(`unsupported probe ${orphan} has no owner in the matrix`);
 }
 
-const V2_DOCS = "opencode.ai/v2/";
+/** The superseded V2 plugin docs; the documented contract is opencode.ai/docs/plugins/. */
+export const V2_DOCS = "opencode.ai/v2/";
 
 export function checkDocText(name: string, doc: string): void {
   if (doc.includes(V2_DOCS)) throw new ContractError(`${name} cites the V2 contract (${V2_DOCS})`);

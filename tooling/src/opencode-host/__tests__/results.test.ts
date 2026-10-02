@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { contractPaths, resultDrift } from "../results.ts";
+import { createSandbox } from "@toolu/conformance/harness/sandbox";
+import { contractPaths, provisionedSdkVersion, resultDrift } from "../results.ts";
 import { ProbeResultsSchema, readJson, type ProbeResults } from "../schema.ts";
 
 // Real data: the committed live evidence from `bun run probe:opencode-host` (#335).
@@ -72,6 +73,12 @@ test("AC-3: the loader fails open on init errors and invokes exported helpers", 
   });
 });
 
+test("AC-1: the plugin receives exactly the documented PluginInput keys", () => {
+  expect(probe("load.local-file").observed.inputKeys).toBe(
+    "$,client,directory,experimental_workspace,project,serverUrl,worktree",
+  );
+});
+
 test("live results that match the committed file report no drift; a changed verdict is named", () => {
   expect(resultDrift(committed, committed)).toEqual([]);
   const live: ProbeResults = structuredClone(committed);
@@ -79,8 +86,32 @@ test("live results that match the committed file report no drift; a changed verd
   if (changed === undefined) throw new Error("deny.bash missing");
   changed.verdict = "unsupported";
   changed.observed = { ...changed.observed, sideEffect: true };
-  const drift = resultDrift(committed, live);
-  expect(drift).toHaveLength(1);
-  expect(drift[0]).toStartWith("deny.bash: supported ");
-  expect(drift[0]).toContain("-> unsupported");
+  const before = committed.probes.find((p) => p.id === "deny.bash");
+  expect(resultDrift(committed, live)).toEqual([
+    `deny.bash: supported ${JSON.stringify(before?.observed)} -> unsupported ${JSON.stringify(changed.observed)}`,
+  ]);
+});
+
+test("drift names host version changes, probes missing from the committed file, and count changes", () => {
+  const live: ProbeResults = structuredClone(committed);
+  live.host.cliVersion = "9.9.9";
+  const stale: ProbeResults = {
+    ...structuredClone(committed),
+    probes: committed.probes.filter((p) => p.id !== "ui.toast"),
+  };
+  expect(resultDrift(stale, live)).toEqual([
+    `host.cliVersion: ${committed.host.cliVersion} -> 9.9.9`,
+    "ui.toast: missing from committed results",
+    `probe count: ${committed.probes.length - 1} -> ${committed.probes.length}`,
+  ]);
+});
+
+test("the host-provisioned SDK version is read from the project's .opencode install, or null", () => {
+  using sb = createSandbox();
+  expect(provisionedSdkVersion(sb.project)).toBeNull();
+  sb.write(".opencode/node_modules/@opencode-ai/plugin/package.json", {
+    name: "@opencode-ai/plugin",
+    version: "1.18.34",
+  });
+  expect(provisionedSdkVersion(sb.project)).toBe("1.18.34");
 });

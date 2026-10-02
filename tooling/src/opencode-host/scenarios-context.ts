@@ -4,7 +4,8 @@
  * hooks see, and which notifications arrive on the event bus.
  */
 import { z } from "zod";
-import { runHost, withServe } from "./host-run.ts";
+import { RUN_TIMEOUT_MS, runHost, withServe } from "./host-run.ts";
+import { ContractError } from "./schema.ts";
 import {
   allRequestText,
   entries,
@@ -55,12 +56,23 @@ async function prompt(ctx: ScenarioContext): Promise<Observation> {
 
 const SessionList = z.array(z.looseObject({ id: z.string() }));
 
+/** One request to the probe's own `opencode serve`, bounded like every host run. */
+async function serveRequest(url: string, init: RequestInit = {}): Promise<Response> {
+  try {
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(RUN_TIMEOUT_MS) });
+  } catch (err: unknown) {
+    throw new ContractError(
+      `opencode serve request ${url} failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+}
+
 async function summarize(url: string, directory: string): Promise<boolean> {
   const query = `directory=${encodeURIComponent(directory)}`;
-  const sessions = SessionList.parse(await (await fetch(`${url}/session?${query}`)).json());
+  const sessions = SessionList.parse(await (await serveRequest(`${url}/session?${query}`)).json());
   const id = sessions[0]?.id;
   if (id === undefined) return false;
-  const res = await fetch(`${url}/session/${id}/summarize?${query}`, {
+  const res = await serveRequest(`${url}/session/${id}/summarize?${query}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ providerID: "probe", modelID: "scripted" }),
@@ -108,6 +120,11 @@ async function command(ctx: ScenarioContext): Promise<Observation> {
     files: { ".opencode/commands/toolu-probe.md": COMMAND_FILE },
   });
   await runHost(ctx.bin, session, ["--command", "toolu-probe", "argone"]);
+  precondition(
+    "command.hook",
+    toolRequestCount(session) > 0,
+    "the command never reached the model",
+  );
   const hook = entries(session, "command.before").find((e) => e.command === "toolu-probe");
   const hookInvoked = hook?.arguments === "argone";
   const eventSeen = eventTypes(session).includes("command.executed");
@@ -142,6 +159,7 @@ async function bus(ctx: ScenarioContext): Promise<Observation> {
   const observed = {
     sessionCreated: types.has("session.created"),
     messageUpdated: types.has("message.updated"),
+    messagePartUpdated: types.has("message.part.updated"),
     sessionIdle: types.has("session.idle"),
   };
   return verdict(Object.values(observed).every(Boolean), observed);
@@ -202,7 +220,7 @@ export const CONTEXT_SCENARIOS: Scenario[] = [
     kind: "event",
     mechanism: "event hook",
     claim:
-      "The event hook receives bus notifications (session.created, message.updated, session.idle)",
+      "The event hook receives bus notifications (session.created, message.updated, message.part.updated, session.idle)",
     run: bus,
   },
 ];

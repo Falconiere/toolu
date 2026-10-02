@@ -128,16 +128,16 @@ Exhaustive per-source rows: [docs/gate-coverage-matrix.md](gate-coverage-matrix.
 1. Host carries an edit (or Bash write) to a protected path.
 2. Normalize via edit records (`packages/toolu-core/src/state/edit-records.ts`).
 3. The native protected-files gate (`packages/toolu-core/src/gates/protected-files.ts`, #260; it replaced `protected-files.sh`) + `gateMode(config, "protectedFiles")`, the port of `toolu_gate_mode` in `gate-mode.sh`.
-4. Mode `block` → decision `deny`. The OpenCode adapter **must** throw from `tool.execute.before` **before** the write. A throw blocks `write`, `edit` and multi-file `apply_patch` with no bytes changed (probes `deny.write`, `deny.apply-patch`). Prompt text alone is not enforcement.
+4. Mode `block` → decision `deny`. The OpenCode adapter **must** throw from `tool.execute.before` **before** the write. A throw blocks `write`, `edit` and multi-file `apply_patch` with no bytes changed (probes `deny.write`, `deny.edit`, `deny.apply-patch`). Prompt text alone is not enforcement.
 5. Post-tool cannot un-write a completed edit.
 
 ## OpenCode interception (capability table)
 
-Every row is a live probe on the pinned host; [`opencode-host-contract.md`](opencode-host-contract.md#probe-results) has the full results.
+Every row is backed by live probes on the pinned host; [`opencode-host-contract.md`](opencode-host-contract.md#probe-results) has the full results.
 
 | Mechanism | Hard-block? | Role for toolu |
 |-----------|-------------|----------------|
-| `tool.execute.before` (throw) | **Yes** — no side effect, the reason reaches the model | Primary deny path for bash, edit, write, `apply_patch`, MCP (`<server>_<tool>`) and `task`/child-session tools |
+| `tool.execute.before` (throw) | **Yes** — no side effect, the reason reaches the model | Primary deny path for bash, edit, write, `apply_patch`, grep, MCP (`<server>_<tool>`) and `task`/child-session tools |
 | `opencode.json` `permission` rules | **Yes** (the user's rules) | Authoritative user choice. `deny` removes the tool and a plugin cannot override it. `tool.execute.before` runs before the native prompt |
 | `permission.ask` | Declared, never invoked | Not usable; gate `ask` degrades by class rules (OP-05) |
 | `tool.execute.after` | No (post) | Feedback appended to the tool output; not called for a thrown tool error |

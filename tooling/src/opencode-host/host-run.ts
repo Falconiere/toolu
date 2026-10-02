@@ -10,7 +10,7 @@ import { childEnv, run } from "@toolu/conformance/harness/spawn";
 import type { ProbeSession } from "./session.ts";
 import { ContractError } from "./schema.ts";
 
-const RUN_TIMEOUT_MS = 120_000;
+export const RUN_TIMEOUT_MS = 120_000;
 const SERVE_READY_TIMEOUT_MS = 60_000;
 
 type HostRun = { exitCode: number; events: Array<Record<string, unknown>>; stderr: string };
@@ -132,8 +132,7 @@ function killGroup(proc: Bun.Subprocess): void {
   try {
     process.kill(-proc.pid, "SIGKILL");
   } catch (err: unknown) {
-    // The group is already gone (ESRCH); fall back to the direct child.
-    if (proc.exitCode === null) proc.kill("SIGKILL");
-    if (!(err instanceof Error)) throw err;
+    // ESRCH: the group already exited. Anything else is a real failure to clean up.
+    if (!(err instanceof Error && "code" in err && err.code === "ESRCH")) throw err;
   }
 }

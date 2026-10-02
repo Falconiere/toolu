@@ -16,7 +16,7 @@ const Request = z.looseObject({
 });
 type Request = z.infer<typeof Request>;
 
-const TouchArgs = z.object({ name: z.string().min(1) });
+export const TouchArgs = z.object({ name: z.string().min(1) });
 const InitializeParams = z.looseObject({ protocolVersion: z.string() });
 
 export const TOUCH_TOOL = {

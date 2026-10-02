@@ -34,7 +34,7 @@ export type ProbeSession = {
   readonly sb: Sandbox;
   readonly env: Record<string, string>;
   readonly logPath: string;
-  log(): Array<Record<string, unknown>>;
+  log(): LogEntry[];
   requests(): RecordedRequest[];
   /** Whether `rel` exists in the project. */
   exists(rel: string): boolean;
@@ -83,9 +83,22 @@ function profileEnv(
   };
 }
 
-const LogEntry = z.record(z.string(), z.unknown());
+/** One line the probe plugins append to TOOLU_PROBE_LOG; extra fields pass through. */
+const LogEntry = z.looseObject({
+  kind: z.string(),
+  tool: z.string().optional(),
+  sessionID: z.string().optional(),
+  type: z.string().optional(),
+  options: z.record(z.string(), z.unknown()).nullable().optional(),
+  inputKeys: z.array(z.string()).optional(),
+  exit: z.number().optional(),
+  ok: z.boolean().optional(),
+  command: z.string().optional(),
+  arguments: z.string().optional(),
+});
+export type LogEntry = z.infer<typeof LogEntry>;
 
-function readLog(path: string): Array<Record<string, unknown>> {
+function readLog(path: string): LogEntry[] {
   if (!existsSync(path)) return [];
   return readFileSync(path, "utf8")
     .split("\n")

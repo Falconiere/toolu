@@ -20,6 +20,24 @@ async function post(url: string, body: unknown): Promise<{ status: number; text:
   return { status: res.status, text: await res.text() };
 }
 
+const USAGE = { usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } };
+
+/** The exact chunk shape the scripted provider streams. */
+function chunk(delta: object, finish: string | null): object {
+  return {
+    id: "chatcmpl-probe",
+    object: "chat.completion.chunk",
+    created: 0,
+    model: "scripted",
+    choices: [{ index: 0, delta, finish_reason: finish }],
+    ...(finish === null ? {} : USAGE),
+  };
+}
+
+function textChunks(content: string): object[] {
+  return [chunk({ role: "assistant", content }, null), chunk({}, "stop")];
+}
+
 /** The `data:` JSON payloads of an SSE body, without the `[DONE]` terminator. */
 function events(text: string): unknown[] {
   return text
@@ -37,25 +55,25 @@ test.concurrent("scripted step streams the tool call named by the scenario token
       tools: TOOLS,
     });
     expect(res.status).toBe(200);
-    expect(events(res.text)).toMatchObject([
-      {
-        choices: [
-          {
-            delta: {
-              tool_calls: [
-                {
-                  id: "call_1",
-                  function: {
-                    name: "bash",
-                    arguments: '{"command":"touch DENYME.txt","description":"deny"}',
-                  },
-                },
-              ],
+    expect(events(res.text)).toEqual([
+      chunk(
+        {
+          role: "assistant",
+          tool_calls: [
+            {
+              index: 0,
+              id: "call_1",
+              type: "function",
+              function: {
+                name: "bash",
+                arguments: '{"command":"touch DENYME.txt","description":"deny"}',
+              },
             },
-          },
-        ],
-      },
-      { choices: [{ finish_reason: "tool_calls" }] },
+          ],
+        },
+        null,
+      ),
+      chunk({}, "tool_calls"),
     ]);
     expect(provider.requests()).toHaveLength(1);
   } finally {
@@ -72,15 +90,25 @@ test.concurrent("tool results since the last user message advance the script, th
       messages: [user, { role: "assistant", content: "" }, tool],
       tools: TOOLS,
     });
-    expect(events(second.text)).toMatchObject([
-      { choices: [{ delta: { tool_calls: [{ function: { name: "read" } }] } }] },
-      {},
+    expect(events(second.text)).toEqual([
+      chunk(
+        {
+          role: "assistant",
+          tool_calls: [
+            {
+              index: 0,
+              id: "call_1",
+              type: "function",
+              function: { name: "read", arguments: '{"filePath":"a.txt"}' },
+            },
+          ],
+        },
+        null,
+      ),
+      chunk({}, "tool_calls"),
     ]);
     const done = await post(provider.url, { messages: [user, tool, tool], tools: TOOLS });
-    expect(events(done.text)).toMatchObject([
-      { choices: [{ delta: { content: DONE_TEXT } }] },
-      { choices: [{ finish_reason: "stop" }] },
-    ]);
+    expect(events(done.text)).toEqual(textChunks(DONE_TEXT));
   } finally {
     provider.stop();
   }
@@ -92,18 +120,12 @@ test.concurrent("requests without tools get the title text; unknown scenarios fi
     const title = await post(provider.url, {
       messages: [{ role: "user", content: "PROBE:deny.bash" }],
     });
-    expect(events(title.text)).toMatchObject([
-      { choices: [{ delta: { content: TITLE_TEXT } }] },
-      {},
-    ]);
+    expect(events(title.text)).toEqual(textChunks(TITLE_TEXT));
     const unknown = await post(provider.url, {
       messages: [{ role: "user", content: "PROBE:no.such" }],
       tools: TOOLS,
     });
-    expect(events(unknown.text)).toMatchObject([
-      { choices: [{ delta: { content: DONE_TEXT } }] },
-      {},
-    ]);
+    expect(events(unknown.text)).toEqual(textChunks(DONE_TEXT));
   } finally {
     provider.stop();
   }

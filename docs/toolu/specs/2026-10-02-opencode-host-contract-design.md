@@ -69,7 +69,7 @@ type Axis = "load" | "tools" | "permission" | "startup" | "prompt" | "compaction
           | "mcp" | "task" | "ui" | "surfaces" | "env";
 ```
 
-`ProbeId` is the closed list exported by `tooling/src/opencode-host/scenarios.ts`: `load.local-file`, `load.config-file`, `load.module-default`, `load.init-throw`, `load.helper-export`, `deny.bash`, `deny.write`, `deny.apply-patch`, `deny.mcp`, `deny.task-child`, `pre.advisory`, `permission.ask-hook`, `permission.config-deny`, `permission.order`, `post.feedback`, `post.bash-exit`, `post.tool-error`, `context.system`, `context.prompt`, `context.compaction`, `env.shell`, `command.hook`, `surface.files`, `surface.names`, `surface.config-hook`, `ui.toast`, `events.bus`. `observed` holds only deterministic values: booleans, tool names, exit codes, counts. It never holds session ids, paths or timestamps.
+`ProbeId` is the closed list exported by `tooling/src/opencode-host/scenarios.ts`: `load.local-file`, `load.config-file`, `load.module-default`, `load.init-throw`, `load.helper-export`, `deny.bash`, `deny.write`, `deny.edit`, `deny.grep`, `deny.apply-patch`, `deny.mcp`, `deny.task-child`, `pre.advisory`, `permission.ask-hook`, `permission.config-deny`, `permission.order`, `post.feedback`, `post.bash-exit`, `post.tool-error`, `context.system`, `context.prompt`, `context.compaction`, `env.shell`, `command.hook`, `surface.files`, `surface.names`, `surface.config-hook`, `ui.toast`, `events.bus`. `observed` holds only deterministic values: booleans, tool names, exit codes, counts. It never holds session ids, paths or timestamps.
 
 `tools/toolu-opencode/contract/capability-matrix.json` (Zod, strict):
 

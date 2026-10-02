@@ -771,7 +771,7 @@
           "mechanism": "tool.execute.before (throw to deny)",
           "kind": "hook",
           "status": "supported",
-          "evidence": ["deny.bash", "deny.write", "deny.apply-patch"],
+          "evidence": ["deny.bash", "deny.write", "deny.edit", "deny.apply-patch", "deny.grep"],
           "owner": ["OP-03", "OP-04"]
         },
         "permission": {
@@ -830,7 +830,8 @@
           "status": "partial",
           "evidence": ["post.feedback", "post.bash-exit", "post.tool-error"],
           "owner": ["OP-06"],
-          "alternative": "A thrown tool error has no side effect to check; it reaches the model as the tool error and the event bus as message.part.updated"
+          "alternative": "A thrown tool error has no side effect to check; it reaches the model as the tool error and the event bus as message.part.updated",
+          "alternativeEvidence": ["events.bus"]
         },
         "mcp": {
           "use": "mcp-blocker denies blocklisted MCP servers before the call",

@@ -81,7 +81,9 @@ function main(argv: string[]): void {
   }
   for (const name of BLOCKS) {
     if (readBlock(doc, name) !== rendered[name])
-      throw new ContractError(`doc block ${name} is stale; run check --write-doc`);
+      throw new ContractError(
+        `doc block ${name} is stale; run bun run check:opencode-host --write-doc`,
+      );
   }
   checkHostSurface(doc, declaredHooks(sdk));
   checkDocText("docs/opencode-host-contract.md", doc);
@@ -90,7 +92,7 @@ function main(argv: string[]): void {
 
 if (import.meta.main) {
   try {
-    main(process.argv.slice(2).filter((arg) => arg !== "check"));
+    main(process.argv.slice(2));
     process.stdout.write("opencode-host-contract: ok\n");
   } catch (err: unknown) {
     if (!(err instanceof ContractError)) throw err;

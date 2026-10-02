@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { join } from "node:path";
 import { run } from "@toolu/conformance/harness/spawn";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
+import { TOUCH_TOOL, TouchArgs } from "../mcp-server.ts";
 
 // Real stdio subprocess for the MCP fixture the live OpenCode probes use (#335).
 
@@ -33,10 +34,18 @@ test.concurrent("initialize, list and call append the marker and answer each req
     .trim()
     .split("\n")
     .map((l): unknown => JSON.parse(l));
-  expect(replies).toMatchObject([
-    { id: 1, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} } } },
-    { id: 2, result: { tools: [{ name: "touch" }] } },
-    { id: 3, result: { content: [{ type: "text", text: "touched allowed" }] } },
+  expect(replies).toEqual([
+    {
+      jsonrpc: "2.0",
+      id: 1,
+      result: {
+        protocolVersion: "2025-06-18",
+        capabilities: { tools: {} },
+        serverInfo: { name: "toolu-probe", version: "1.0.0" },
+      },
+    },
+    { jsonrpc: "2.0", id: 2, result: { tools: [TOUCH_TOOL] } },
+    { jsonrpc: "2.0", id: 3, result: { content: [{ type: "text", text: "touched allowed" }] } },
   ]);
   expect(await Bun.file(marker).text()).toBe("allowed\n");
 });
@@ -63,11 +72,15 @@ test.concurrent("malformed lines, unknown methods and bad arguments return error
     .trim()
     .split("\n")
     .map((l): unknown => JSON.parse(l));
-  expect(replies).toMatchObject([
-    { id: null, error: { code: -32700 } },
-    { id: 4, error: { code: -32601 } },
-    { id: 5, error: { code: -32602 } },
-    { id: 6, error: { code: -32602, message: "unknown tool" } },
+  expect(replies).toEqual([
+    { jsonrpc: "2.0", id: null, error: { code: -32700, message: "parse error" } },
+    { jsonrpc: "2.0", id: 4, error: { code: -32601, message: "method not found: resources/list" } },
+    {
+      jsonrpc: "2.0",
+      id: 5,
+      error: { code: -32602, message: TouchArgs.safeParse({}).error?.message },
+    },
+    { jsonrpc: "2.0", id: 6, error: { code: -32602, message: "unknown tool" } },
   ]);
   expect(await Bun.file(marker).exists()).toBe(false);
 });

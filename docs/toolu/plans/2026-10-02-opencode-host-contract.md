@@ -235,6 +235,17 @@ Pin and SDK dependency → typed probe plugins → scripted provider and MCP fix
 - `checker`:
   - **Unknown evidence.** An evidence id that is not a probe now fails matrix schema validation (`ProbeId` enum). Together with "each probe exactly once in the results", this makes a separate unknown-evidence rule unreachable, so it was dropped.
   - **Host constraints.** The matrix gained a `host` list (loader and surface constraints with owners). The checker now requires every `unsupported` probe verdict to be cited by a cell or a host constraint, so each unsupported requirement has an owner work package.
+- **Review round.** An independent pre-push review produced findings, triaged with Jev; F10 was declined. The changes:
+  - `deny.edit` and `deny.grep` probes, because the `toolu.tools` claim covers both.
+  - `events.bus` records `message.part.updated`.
+  - Preconditions on `load.config-file` and `command.hook`.
+  - Bounded `opencode serve` requests, and an `ESRCH`-only group-kill fallback.
+  - Typed Zod probe-log entries.
+  - A stable `limitations` rendering when a section is empty.
+  - Pins read from `pin.json` in `check-portable-core-doc`.
+  - Contract-doc labels for statements that are not probed.
+  - Session, host-run, install-path, drift and pin-branch tests, with exact assertions.
+- **Declined: F10.** The suggestion was to replace the TypeScript compiler API in `declarations.ts` with a regex. The compiler API reads the pinned declarations robustly, at about 0.25 s per checker run.
 
 ## Review log
 

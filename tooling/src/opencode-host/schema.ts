@@ -14,6 +14,8 @@ export const PROBE_IDS = [
   "load.helper-export",
   "deny.bash",
   "deny.write",
+  "deny.edit",
+  "deny.grep",
   "deny.apply-patch",
   "deny.mcp",
   "deny.task-child",

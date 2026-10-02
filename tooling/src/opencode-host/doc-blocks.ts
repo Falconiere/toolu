@@ -95,6 +95,15 @@ function requiredCells(matrix: Matrix): Array<{ ref: string; cell: UsedCell }> {
   );
 }
 
+/** A section's bullet lines, or one `None.` line so an empty section still renders stably. */
+function section(title: string, lines: string[], none = "None."): string[] {
+  return [`### ${title}`, "", ...(lines.length === 0 ? [none] : lines), ""];
+}
+
+function evidenceList(ids: readonly string[]): string {
+  return ids.map((id) => `\`${id}\``).join(", ");
+}
+
 export function renderLimitations(matrix: Matrix): string {
   const required = requiredCells(matrix);
   const blockers = required.filter(({ cell }) => cell.releaseBlocker === true);
@@ -107,41 +116,37 @@ export function renderLimitations(matrix: Matrix): string {
     ),
   ].toSorted();
   return [
-    "### Release blockers",
-    "",
-    ...(blockers.length === 0
-      ? [
-          "None. Every required capability is supported on the pinned host or has an alternative backed by supported probes.",
-        ]
-      : blockers.map(
-          ({ ref, cell }) =>
-            `- \`${ref}\` (${cell.status}) — ${cell.use}. Owner: ${owners(cell.owner)}.`,
-        )),
-    "",
-    "### Limitations and alternatives",
-    "",
-    ...limited.map(
-      ({ ref, cell }) =>
-        `- \`${ref}\` (${cell.status}) — ${cell.use}. Alternative: ${cell.alternative ?? ""}. Evidence: ${(cell.alternativeEvidence ?? cell.evidence).map((id) => `\`${id}\``).join(", ")}. Owner: ${owners(cell.owner)}.`,
+    ...section(
+      "Release blockers",
+      blockers.map(
+        ({ ref, cell }) =>
+          `- \`${ref}\` (${cell.status}) — ${cell.use}. Owner: ${owners(cell.owner)}.`,
+      ),
+      "None. Every required capability is supported on the pinned host or has an alternative backed by supported probes.",
     ),
-    "",
-    "### Host constraints",
-    "",
-    ...matrix.host.map(
-      (c) =>
-        `- ${c.need}. Evidence: ${c.evidence.map((id) => `\`${id}\``).join(", ")}. Owner: ${owners(c.owner)}.`,
+    ...section(
+      "Limitations and alternatives",
+      limited.map(
+        ({ ref, cell }) =>
+          `- \`${ref}\` (${cell.status}) — ${cell.use}. Alternative: ${cell.alternative ?? ""}. Evidence: ${evidenceList(cell.alternativeEvidence ?? cell.evidence)}. Owner: ${owners(cell.owner)}.`,
+      ),
     ),
-    "",
-    "### Experimental hooks under the exact pin",
-    "",
-    ...experimental.map(
-      (hook) =>
-        `- \`${hook}\`: ${required
-          .filter(({ cell }) => cell.mechanism.includes(hook))
-          .map(({ ref }) => `\`${ref}\``)
-          .join(", ")}`,
+    ...section(
+      "Host constraints",
+      matrix.host.map(
+        (c) => `- ${c.need}. Evidence: ${evidenceList(c.evidence)}. Owner: ${owners(c.owner)}.`,
+      ),
     ),
-  ].join("\n");
+    ...section(
+      "Experimental hooks under the exact pin",
+      experimental.map(
+        (hook) =>
+          `- \`${hook}\`: ${evidenceList(required.filter(({ cell }) => cell.mechanism.includes(hook)).map(({ ref }) => ref))}`,
+      ),
+    ),
+  ]
+    .join("\n")
+    .trim();
 }
 
 /** The current text between a block's markers. */

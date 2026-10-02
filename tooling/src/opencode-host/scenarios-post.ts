@@ -67,7 +67,7 @@ async function bashExit(ctx: ScenarioContext): Promise<Observation> {
     "bash never reached tool.execute.before",
   );
   const after = entries(session, "after").find((e) => e.tool === "bash");
-  const exit = typeof after?.exit === "number" ? after.exit : -1;
+  const exit = after?.exit ?? -1;
   return verdict(after !== undefined && exit === 3, { afterInvoked: after !== undefined, exit });
 }
 

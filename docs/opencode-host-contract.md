@@ -5,7 +5,13 @@
 
 The shipped adapter (`tools/toolu-opencode/src/plugin/toolu.ts`) still targets the superseded `@opencode/plugin@2.0.12` API. It does not conform to this contract. OP-02 ([#336](https://github.com/Falconiere/toolu/issues/336)) replaces it.
 
-This contract is the plugin API documented at <https://opencode.ai/docs/plugins/>: a module exports a function that receives the plugin input and returns `Hooks`. Every statement below is backed by a live probe of the pinned host (see [Probe results](#probe-results)) or by the pinned SDK declarations. `bun run check:opencode-host` keeps the generated sections in sync with that evidence.
+This contract is the plugin API documented at <https://opencode.ai/docs/plugins/>: a module exports a function that receives the plugin input and returns `Hooks`.
+
+- Statements that name a probe id are backed by a live probe of the pinned host (see [Probe results](#probe-results)).
+- The host-surface table follows the pinned SDK declarations.
+- Statements marked *not probed* come from the official docs or the CLI help.
+
+`bun run check:opencode-host` keeps the generated sections in sync with that evidence.
 
 ## Pin
 
@@ -33,18 +39,23 @@ export const TooluPlugin: Plugin = async ({ client, project, directory, worktree
 
 - The function receives `$`, `client`, `directory`, `experimental_workspace`, `project`, `serverUrl` and `worktree`.
 - `options` is the second element of a config tuple `["spec", { … }]`. It is `undefined` for files discovered in `.opencode/plugins/`.
-- A module may instead export one default `PluginModule` (`{ id, server }`). The host then calls only `server` and ignores named exports.
-- Without a default `PluginModule`, the host calls every exported function as a plugin, with the plugin input. A helper function that returns no hooks breaks every prompt in the session. A non-function named export makes the whole module fail to load.
+- A module may instead export one default `PluginModule` (`{ id, server }`). The host then calls only `server` and ignores named exports (`load.module-default`).
+- Without a default `PluginModule`, the host calls every exported function as a plugin, with the plugin input. A helper function that returns no hooks breaks every prompt in the session (`load.helper-export`).
+- Avoid non-function named exports too: the host's loader rejects them with `Plugin export is not a function` (*not probed*).
 
 ## Loader behavior
 
-- **Discovery.** The host loads `.opencode/plugins/*.{ts,js}`, `~/.config/opencode/plugins/`, and `opencode.json` `plugin` entries. An entry is an npm spec, a path relative to the declaring config, a `file://` URL, or a `[spec, options]` tuple. Load order follows the official docs: global config, project config, global plugin directory, then project plugin directory.
+- **Discovery.** Two routes are probed:
+  - `.opencode/plugins/*.{ts,js}` (`load.local-file`);
+  - an `opencode.json` `plugin` entry with a `file://` URL and an options tuple (`load.config-file`).
+
+  Not probed: the global `~/.config/opencode/plugins/` directory, npm specs, config-relative paths, and the official load order (global config, project config, global plugin directory, project plugin directory).
 - **SDK provisioning.** At startup the host writes `package.json` (`@opencode-ai/plugin` at its own version) and a `.gitignore` into each config directory, such as `.opencode/` and `~/.config/opencode/`, then installs it. The first start in a fresh profile needs registry access.
-- **Fail-open init.** If a plugin's initialization throws, the host logs `failed to load plugin`, keeps the session running, and runs tools without that plugin. A gate plugin must therefore never throw from init: setup failures have to become deny-all hooks.
+- **Fail-open init.** If a plugin's initialization throws, the host logs `failed to load plugin`, keeps the session running, and runs tools without that plugin (`load.init-throw`). A gate plugin must therefore never throw from init: setup failures have to become deny-all hooks.
 - **Project root.** The host takes its project directory from `PWD`, not from the process working directory.
 - **Non-interactive runs.** `opencode run` reads a non-TTY stdin as extra input and blocks on it, so automation must close stdin.
-- **Opting out.** `--pure` and `OPENCODE_PURE=1` skip external plugins entirely. A user can always run without toolu; that is the user's choice and outside enforcement.
-- **Skill name validation.** The host loads skill names that break the documented rule (lowercase, single hyphens, matching the folder) without complaint, so generated names must validate themselves.
+- **Opting out.** Per `opencode --help`, `--pure` (and `OPENCODE_PURE=1`) runs without external plugins (*not probed*). A user can always run without toolu; that is the user's choice and outside enforcement.
+- **Skill name validation.** The host loads skill names that break the documented rule (lowercase, single hyphens, matching the folder) without complaint, so generated names must validate themselves (`surface.names`).
 
 ## Host surface
 
@@ -52,8 +63,8 @@ Hook callbacks run inline during the host's own flow and can mutate their `outpu
 
 | Hook | Kind | Blocks? | Reaches the model | Probe / note |
 |---|---|---|---|---|
-| `tool.execute.before` | hook callback (mutate `args`, throw to refuse) | **Yes**: a throw stops the call before any side effect, and the message becomes the tool error | The throw message | `deny.bash`, `deny.write`, `deny.apply-patch`, `deny.mcp`, `deny.task-child`. Adding output fields gives no advisory channel (`pre.advisory`) |
-| `tool.execute.after` | hook callback (mutate `title`, `output`, `metadata`) | No; it runs after the tool | Appended output | `post.feedback`, `post.bash-exit`. It does not run when a tool throws (`post.tool-error`). MCP output is `{ content }` |
+| `tool.execute.before` | hook callback (mutate `args`, throw to refuse) | **Yes**: a throw stops the call before any side effect, and the message becomes the tool error | The throw message | `deny.bash`, `deny.write`, `deny.edit`, `deny.apply-patch`, `deny.grep`, `deny.mcp`, `deny.task-child`. Adding output fields gives no advisory channel (`pre.advisory`) |
+| `tool.execute.after` | hook callback (mutate `title`, `output`, `metadata`) | No; it runs after the tool | Appended output | `post.feedback`, `post.bash-exit`. It does not run when a tool throws (`post.tool-error`) |
 | `permission.ask` | hook callback (declared) | — | — | Never invoked on the pin (`permission.ask-hook`) |
 | `chat.message` | hook callback (mutate `message`, `parts`) | No | Added parts | `context.prompt` |
 | `experimental.chat.system.transform` | hook callback (experimental) | No | System prompt lines | `context.system` |
@@ -61,7 +72,7 @@ Hook callbacks run inline during the host's own flow and can mutate their `outpu
 | `shell.env` | hook callback (mutate `env`) | No | Indirectly, through bash | `env.shell` |
 | `command.execute.before` | hook callback (mutate `parts`) | Not probed | Command parts | `command.hook` |
 | `config` | callback with the merged config at init | No | Commands, agents, `skills.paths`, `instructions` | `surface.config-hook`. `skills` is accepted by the host but absent from the SDK `Config` type |
-| `event` | event notifications (`session.*`, `message.*`, `permission.asked`/`replied`, `command.executed`, `session.compacted`, `tui.toast.show`, …) | No | No | `events.bus`, `ui.toast` |
+| `event` | event notifications (`session.*`, `message.*`, `permission.asked`/`replied`, `command.executed`, `session.compacted`, `tui.toast.show`, …) | No | No | `events.bus`, `ui.toast`, `permission.order`, `command.hook`, `context.compaction` |
 | `tool` | object of custom tool definitions | — | Adds tools | Not used by toolu yet |
 | `auth`, `provider` | provider and auth registration | — | — | Not used by toolu |
 | `chat.params`, `chat.headers` | hook callbacks (LLM parameters and headers) | No | — | Not used by toolu |
@@ -98,6 +109,8 @@ Recorded 2026-10-02 on `opencode-ai@1.18.34` (linux-x64, Bun 1.4.2); the host pr
 | `load.helper-export` | load | loader | module exports a plugin and a helper function | The loader ignores exported functions that are not plugins | ❌ unsupported |
 | `deny.bash` | tools | hook | tool.execute.before (throw) | A tool.execute.before throw blocks a bash call before it runs and the model sees the reason | ✅ supported |
 | `deny.write` | tools | hook | tool.execute.before (throw) | A tool.execute.before throw blocks a write before the file changes | ✅ supported |
+| `deny.edit` | tools | hook | tool.execute.before (throw) | A tool.execute.before throw blocks an edit before the file's bytes change | ✅ supported |
+| `deny.grep` | tools | hook | tool.execute.before (throw) | A tool.execute.before throw blocks a grep before its results reach the model | ✅ supported |
 | `deny.apply-patch` | tools | hook | tool.execute.before (throw) | A tool.execute.before throw blocks a whole multi-file apply_patch (gpt-* models) before any file changes | ✅ supported |
 | `deny.mcp` | mcp | hook | tool.execute.before on <server>_<tool> | A tool.execute.before throw blocks an MCP tool call before the server receives it | ✅ supported |
 | `deny.task-child` | task | hook | tool.execute.before on task + child session | tool.execute.before sees the task tool and child-session tools, and its throw blocks them | ✅ supported |
@@ -117,7 +130,7 @@ Recorded 2026-10-02 on `opencode-ai@1.18.34` (linux-x64, Bun 1.4.2); the host pr
 | `surface.names` | surfaces | surface | skill name validation | The host rejects skill names that violate the documented naming rule | ❌ unsupported |
 | `surface.config-hook` | surfaces | config | config hook | A plugin config hook can inject commands, agents, skill paths and instructions | ✅ supported |
 | `ui.toast` | ui | event | client.tui.showToast → tui.toast.show | A server plugin can publish a TUI toast through client.tui.showToast | ✅ supported |
-| `events.bus` | startup | event | event hook | The event hook receives bus notifications (session.created, message.updated, session.idle) | ✅ supported |
+| `events.bus` | startup | event | event hook | The event hook receives bus notifications (session.created, message.updated, message.part.updated, session.idle) | ✅ supported |
 <!-- opencode-host-probes:end -->
 
 ## Capability matrix
@@ -204,7 +217,7 @@ The matrix covers all 16 catalog plugins across nine axes. Each needed axis has 
   - **surfaces** — 1 skills, 1 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345), OP-25 (#359).
   - **note** — A persistent statusline needs a TUI plugin (@opencode-ai/plugin/tui slots); headless probes cannot verify TUI rendering. Owner: OP-25 (#359).
 - **toolu** (owner OP-02 (#336), OP-03 (#337), OP-04 (#338), OP-05 (#339), OP-06 (#340), OP-07 (#341), OP-08 (#342), OP-09 (#343), OP-10 (#344), OP-11 (#345), OP-24 (#358))
-  - **tools** — Core pre-tool gates (bash-commands, commit-gate, quality-gate, protected-files, code-edit-rules, push-review, plan-ledger, docs-sync) allow or deny bash, edit, write, apply_patch and grep before they run. `tool.execute.before (throw to deny)` (hook): supported; evidence `deny.bash`, `deny.write`, `deny.apply-patch`. Owner: OP-03 (#337), OP-04 (#338).
+  - **tools** — Core pre-tool gates (bash-commands, commit-gate, quality-gate, protected-files, code-edit-rules, push-review, plan-ledger, docs-sync) allow or deny bash, edit, write, apply_patch and grep before they run. `tool.execute.before (throw to deny)` (hook): supported; evidence `deny.bash`, `deny.write`, `deny.edit`, `deny.apply-patch`, `deny.grep`. Owner: OP-03 (#337), OP-04 (#338).
   - **permission** — Gate ask decisions open a native prompt, and the user's permission rules stay authoritative. `permission.ask (declared, never invoked) + opencode.json permission` (hook): partial; evidence `permission.ask-hook`, `permission.config-deny`, `permission.order`. Alternative: Degrade ask with the @toolu/core/host class rules: security guardrails ask becomes a tool.execute.before deny, judgement gates ask becomes advice appended by tool.execute.after; the user's own ask/deny rules still apply after toolu allows. Owner: OP-05 (#339).
   - **startup** — SessionStart bootstraps selected plugins (registry, readiness) and injects the session protocol. `plugin init + experimental.chat.system.transform` (hook): supported; evidence `load.local-file`, `context.system`, `events.bus`. Owner: OP-07 (#341), OP-08 (#342), OP-09 (#343).
   - **prompt** — UserPromptSubmit reminders. `chat.message (output.parts)` (hook): supported; evidence `context.prompt`. Owner: OP-07 (#341).
@@ -236,7 +249,7 @@ None. Every required capability is supported on the pinned host or has an altern
 
 - `ast-grep.tools` (unsupported) — search-nudge advises ast-grep before Grep or bash text search, without blocking. Alternative: Deliver the nudge with the tool result through tool.execute.after. Evidence: `post.feedback`. Owner: OP-13 (#347), OP-05 (#339).
 - `toolu.permission` (partial) — Gate ask decisions open a native prompt, and the user's permission rules stay authoritative. Alternative: Degrade ask with the @toolu/core/host class rules: security guardrails ask becomes a tool.execute.before deny, judgement gates ask becomes advice appended by tool.execute.after; the user's own ask/deny rules still apply after toolu allows. Evidence: `deny.bash`, `post.feedback`, `permission.config-deny`, `permission.order`. Owner: OP-05 (#339).
-- `toolu.postTool` (partial) — gate-status, push-waiver and post-tools.d quality feedback after edits and bash. Alternative: A thrown tool error has no side effect to check; it reaches the model as the tool error and the event bus as message.part.updated. Evidence: `post.feedback`, `post.bash-exit`, `post.tool-error`. Owner: OP-06 (#340).
+- `toolu.postTool` (partial) — gate-status, push-waiver and post-tools.d quality feedback after edits and bash. Alternative: A thrown tool error has no side effect to check; it reaches the model as the tool error and the event bus as message.part.updated. Evidence: `events.bus`. Owner: OP-06 (#340).
 
 ### Host constraints
 
@@ -260,7 +273,7 @@ The CLI and SDK are pinned exactly and move together, because the host provision
 
 - **Allowed use.** `experimental.*` hooks may deliver context: session protocol, compaction state. They are never used for enforcement, which relies only on `tool.execute.before` and `tool.execute.after`.
 - **Pin bump.**
-  1. Change `pin.json` and the adapter devDependency.
+  1. Change `pin.json` and the adapter devDependency. The portable-core doc check and the tests read the pin from `pin.json`.
   2. Run `bun install` and `bun run probe:opencode-host`. Any verdict or observation drift fails.
   3. Review each drift and refresh the evidence with `--write`.
   4. Run `bun run check:opencode-host --write-doc`.

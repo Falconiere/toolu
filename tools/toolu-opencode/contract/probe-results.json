@@ -102,6 +102,34 @@
       }
     },
     {
+      "id": "deny.edit",
+      "axis": "tools",
+      "kind": "hook",
+      "mechanism": "tool.execute.before (throw)",
+      "claim": "A tool.execute.before throw blocks an edit before the file's bytes change",
+      "verdict": "supported",
+      "observed": {
+        "beforeInvoked": true,
+        "sideEffect": false,
+        "errorReachedModel": true,
+        "afterInvoked": false
+      }
+    },
+    {
+      "id": "deny.grep",
+      "axis": "tools",
+      "kind": "hook",
+      "mechanism": "tool.execute.before (throw)",
+      "claim": "A tool.execute.before throw blocks a grep before its results reach the model",
+      "verdict": "supported",
+      "observed": {
+        "beforeInvoked": true,
+        "sideEffect": false,
+        "errorReachedModel": true,
+        "afterInvoked": false
+      }
+    },
+    {
       "id": "deny.apply-patch",
       "axis": "tools",
       "kind": "hook",
@@ -343,11 +371,12 @@
       "axis": "startup",
       "kind": "event",
       "mechanism": "event hook",
-      "claim": "The event hook receives bus notifications (session.created, message.updated, session.idle)",
+      "claim": "The event hook receives bus notifications (session.created, message.updated, message.part.updated, session.idle)",
       "verdict": "supported",
       "observed": {
         "sessionCreated": true,
         "messageUpdated": true,
+        "messagePartUpdated": true,
         "sessionIdle": true
       }
     }

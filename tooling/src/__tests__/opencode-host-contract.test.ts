@@ -14,6 +14,7 @@ import {
   isUsed,
   MatrixSchema,
   ProbeResultsSchema,
+  PinSchema,
   readJson,
   type Cell,
   type Matrix,
@@ -28,6 +29,7 @@ const ROOT = resolve(import.meta.dir, "../../..");
 const CHECK = join(ROOT, "tooling/src/opencode-host-contract.ts");
 const CONTRACT = join(ROOT, "tools/toolu-opencode/contract");
 const DOC = join(ROOT, "docs/opencode-host-contract.md");
+const pin = readJson(join(CONTRACT, "pin.json"), PinSchema);
 
 type Mutations = {
   matrix?: (m: Matrix) => void;
@@ -199,13 +201,13 @@ test.concurrent("results must hold every probe exactly once", () =>
 test.concurrent("the adapter devDependency must equal the SDK pin", () =>
   expectFailure(
     { adapterSdk: "1.18.33" },
-    "pin mismatch: @toolu/opencode devDependency @opencode-ai/plugin is 1.18.33, pin is 1.18.34",
+    `pin mismatch: @toolu/opencode devDependency @opencode-ai/plugin is 1.18.33, pin is ${pin.sdk.version}`,
   ));
 
 test.concurrent("a hand-edited generated block is stale", () =>
   expectFailure(
     { doc: (d) => d.replace("| toolu |", "| toolu (edited) |") },
-    "doc block matrix is stale; run check --write-doc",
+    "doc block matrix is stale; run bun run check:opencode-host --write-doc",
   ));
 
 test.concurrent("every declared Hooks member must appear in the host surface section", () =>
@@ -242,4 +244,44 @@ test.concurrent("--write-doc regenerates stale blocks and lists release blockers
   const doc = sb.read("contract.md");
   expect(doc).toContain("| toolu |");
   expect(doc).toContain("- `ast-grep.tools` (unsupported) — search-nudge");
+});
+
+test.concurrent("results recorded on another CLI version fail the pin check", () =>
+  expectFailure(
+    { results: (r) => void (r.host.cliVersion = "1.18.33") },
+    `pin mismatch: probe results recorded opencode-ai 1.18.33, pin is ${pin.cli.version}`,
+  ));
+
+test.concurrent("results whose host provisioned another SDK fail the pin check", () =>
+  expectFailure(
+    { results: (r) => void (r.host.provisionedSdkVersion = "1.18.33") },
+    `pin mismatch: probe results recorded @opencode-ai/plugin 1.18.33, pin is ${pin.sdk.version}`,
+  ));
+
+/** Replace every experimental mechanism, leaving the matrix with no experimental hooks. */
+function withoutExperimental(m: Matrix): void {
+  for (const plugin of Object.values(m.plugins)) {
+    for (const cell of Object.values(plugin.axes)) {
+      if (isUsed(cell) && cell.mechanism.includes("experimental.")) cell.mechanism = "plugin init";
+    }
+  }
+}
+
+test.concurrent("a matrix without experimental hooks renders a stable limitations block", async () => {
+  using sb = createSandbox();
+  const written = await check(sb, { matrix: withoutExperimental }, ["--write-doc"]);
+  expect(written.exitCode).toBe(0);
+  expect(sb.read("contract.md")).toContain("### Experimental hooks under the exact pin\n\nNone.\n");
+  const again = await run([process.execPath, CHECK], {
+    cwd: ROOT,
+    env: {
+      TOOLU_OPENCODE_CONTRACT_DIR: sb.path("contract"),
+      TOOLU_OPENCODE_CONTRACT_DOC: sb.path("contract.md"),
+    },
+  });
+  expect({ exitCode: again.exitCode, stdout: again.stdout, stderr: again.stderr }).toEqual({
+    exitCode: 0,
+    stdout: "opencode-host-contract: ok\n",
+    stderr: "",
+  });
 });

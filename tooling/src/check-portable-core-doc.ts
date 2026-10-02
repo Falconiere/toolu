@@ -8,6 +8,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { envOr } from "./env.ts";
+import { V2_DOCS } from "./opencode-host/contract-check.ts";
+import { contractPaths } from "./opencode-host/results.ts";
+import { ContractError, PinSchema, readJson } from "./opencode-host/schema.ts";
 
 const ROOT = resolve(import.meta.dir, "../..");
 const FIXTURE = resolve(ROOT, "tooling/fixtures/portable-core/protected-files-pre.json");
@@ -27,8 +30,6 @@ const HEADINGS = [
 ];
 
 const CITATIONS: ReadonlyArray<readonly [string, string]> = [
-  ["opencode-ai@1.18.34", "missing CLI pin opencode-ai@1.18.34"],
-  ["@opencode-ai/plugin@1.18.34", "missing SDK pin"],
   ["opencode-host-contract.md", "missing host contract link"],
   ["dispatchPreTool", "missing native dispatch contract"],
   ["gates/protected-files.ts", "missing protected-files gate citation"],
@@ -39,9 +40,6 @@ const CITATIONS: ReadonlyArray<readonly [string, string]> = [
 ];
 
 const TOKENS = ["shell-out", "port-native", "port-new", "no-map"];
-
-/** The superseded V2 plugin docs; the documented contract is opencode.ai/docs/plugins/. */
-const V2_DOCS = "opencode.ai/v2/";
 
 class DocError extends Error {}
 
@@ -64,7 +62,15 @@ function check(docPath: string): void {
   for (const heading of HEADINGS) {
     if (!doc.includes(heading)) throw new DocError(`missing heading: ${heading}`);
   }
-  for (const [needle, message] of CITATIONS) {
+  const pin = readJson(contractPaths().pin, PinSchema);
+  const pins: ReadonlyArray<readonly [string, string]> = [
+    [
+      `${pin.cli.package}@${pin.cli.version}`,
+      `missing CLI pin ${pin.cli.package}@${pin.cli.version}`,
+    ],
+    [`${pin.sdk.package}@${pin.sdk.version}`, "missing SDK pin"],
+  ];
+  for (const [needle, message] of [...pins, ...CITATIONS]) {
     if (!doc.includes(needle)) throw new DocError(message);
   }
   const policy = policySection(doc);
@@ -87,7 +93,7 @@ function main(): number {
   try {
     check(docPath);
   } catch (err: unknown) {
-    if (!(err instanceof DocError)) throw err;
+    if (!(err instanceof DocError || err instanceof ContractError)) throw err;
     console.error(`check-portable-core-doc: ${err.message}`);
     return 1;
   }

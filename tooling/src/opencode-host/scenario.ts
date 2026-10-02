@@ -7,7 +7,7 @@
 import { z } from "zod";
 import type { RecordedRequest } from "./provider.ts";
 import { ContractError, type ProbeResult, type Verdict } from "./schema.ts";
-import type { ProbeSession } from "./session.ts";
+import type { LogEntry, ProbeSession } from "./session.ts";
 
 type Observed = Record<string, boolean | string | number>;
 export type Observation = { verdict: Verdict; observed: Observed };
@@ -25,20 +25,16 @@ export function precondition(id: string, holds: boolean, what: string): void {
   if (!holds) throw new ContractError(`scenario ${id} invalid: ${what}`);
 }
 
-export function entries(session: ProbeSession, kind: string): Array<Record<string, unknown>> {
+export function entries(session: ProbeSession, kind: string): LogEntry[] {
   return session.log().filter((entry) => entry.kind === kind);
 }
 
 export function eventTypes(session: ProbeSession): string[] {
-  return entries(session, "event").flatMap((entry) =>
-    typeof entry.type === "string" ? [entry.type] : [],
-  );
+  return entries(session, "event").flatMap((entry) => entry.type ?? []);
 }
 
 export function hookedTools(session: ProbeSession, kind: "before" | "after"): string[] {
-  return entries(session, kind).flatMap((entry) =>
-    typeof entry.tool === "string" ? [entry.tool] : [],
-  );
+  return entries(session, kind).flatMap((entry) => entry.tool ?? []);
 }
 
 const Message = z.looseObject({ role: z.string(), content: z.unknown() });
