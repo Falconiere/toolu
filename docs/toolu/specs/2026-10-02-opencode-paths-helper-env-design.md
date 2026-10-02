@@ -1,6 +1,6 @@
 # OpenCode paths, helper environment and concurrent state — Design
 
-**Date:** 2026-10-02   **Status:** Draft   **Author:** Claude (epic worker, #343)   **Topic:** Resolve OpenCode's global config root and per-project data roots, keep HOME and foreign host homes out of toolu's runtime, and give bash helpers a resolvable environment through `shell.env` (OP-09)
+**Date:** 2026-10-02   **Status:** Approved   **Author:** Claude (epic worker, #343)   **Topic:** Resolve OpenCode's global config root and per-project data roots, keep HOME and foreign host homes out of toolu's runtime, and give bash helpers a resolvable environment through `shell.env` (OP-09)
 
 ## Problem
 
@@ -39,6 +39,7 @@ Live evidence on the pinned host (`opencode-ai@1.18.34`, scratch plugin under th
 
 Where:
 
+- The project root is always the host's instance root. A `TOOLU_PROJECT_DIR` in the host environment does not replace it: one exported value would collapse every OpenCode project into one gate state, which is exactly what the acceptance criteria forbid. The adapter sets `TOOLU_PROJECT_DIR` for its own processes from the instance root.
 - `<override>` is the first non-empty value of `TOOLU_CONFIG_DIR` or `TOOLU_OPENCODE_HOME`.
 - `<key>` is `<slug>-<sha256(realpath(project))[0..16]>`, with `slug` = the lowercased project basename, non-`[a-z0-9]` runs turned into `-`, trimmed to 32 characters.
 - `toolu/opencode/projects/` sits beside Claude/Codex's `toolu/{pre,post}-tools.d` when one `TOOLU_CONFIG_DIR` is shared across hosts. No host's prune touches it.
@@ -116,6 +117,8 @@ Hooks shape on a ready instance: `{ "tool.execute.before", "shell.env": (input, 
 | Global config absent or malformed | Absent: defaults. Malformed: core's existing fail-closed envelope. Unchanged |
 | Two projects or worktrees share an override | Distinct keyed data roots, so neither prunes or relinks the other's contributions |
 | The same project from a symlinked path | The key hashes the real path, so both paths map to one data root |
+| Project path does not exist (yet) | The key hashes `resolve(path)` instead of the real path |
+| `TOOLU_PROJECT_DIR` exported in the host env | Ignored for the instance; the host's worktree wins |
 | Two sessions start at once in one project | Same data root and selection. Writes are atomic renames (OP-08), so both are ready and the ledger stays valid |
 | `bun` already on PATH | `PATH` is not added. A PATH bun that differs from `TOOLU_BUN` is used by `env bun` helpers, as on other hosts |
 | No Bun resolvable | Preflight not-ready (unchanged); bash is denied, so `shell.env` is never installed |
@@ -125,7 +128,7 @@ Hooks shape on a ready instance: `{ "tool.execute.before", "shell.env": (input, 
 
 ## Acceptance criteria
 
-- **AC-1:** Given env and project inputs, `opencodeConfigRoot` resolves `TOOLU_CONFIG_DIR`, then `TOOLU_OPENCODE_HOME`, then `$XDG_CONFIG_HOME/opencode`, then `$HOME/.config/opencode`. `opencodeDataRoot` gives a project without an override `<project>/.opencode/toolu/state`. Two different projects, and a linked worktree of one of them, under one `TOOLU_CONFIG_DIR` get three distinct `<override>/toolu/opencode/projects/<key>` roots. The same project via a symlink gets the same root.
+- **AC-1:** Given env and project inputs, `opencodeConfigRoot` resolves `TOOLU_CONFIG_DIR`, then `TOOLU_OPENCODE_HOME`, then `$XDG_CONFIG_HOME/opencode`, then `$HOME/.config/opencode`. `opencodeDataRoot` gives a project without an override `<project>/.opencode/toolu/state`. Two different projects, and a linked worktree of one of them, under one `TOOLU_CONFIG_DIR` get three distinct `<override>/toolu/opencode/projects/<key>` roots. The same project via a symlink gets the same root. A host env with `TOOLU_PROJECT_DIR=/elsewhere` leaves `bindHostContext`'s project root at the host worktree, and the bootstrap and gate env carry `TOOLU_PROJECT_DIR` = that worktree.
 - **AC-2:** With `TOOLU_USER_CONFIG_DIR=/g` and `TOOLU_CONFIG_DIR=/d`, core `configFiles` returns user `/g/toolu.config.json`. With it unset, the user path stays `<configRoot>/toolu.config.json` on Claude, Codex and OpenCode.
 - **AC-3:** Through real `prepareEnforcement` (toolu selected, real bootstrap) on a project with a protected `.env`:
   - a global `$XDG_CONFIG_HOME/opencode/toolu.config.json` setting `protectedFiles` to `block` denies a write to `.env`;
@@ -143,7 +146,13 @@ Hooks shape on a ready instance: `{ "tool.execute.before", "shell.env": (input, 
   - `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" --help` exits 0;
   - `test -f "$TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR/scripts/report.ts"` succeeds;
   - `printf %s "$HOME"` equals the profile HOME.
-- **AC-7:** On the pinned live host, a repository with a linked worktree is set up with a failing quality gate recorded only in the main checkout's `.opencode/tmp/quality-gate-status.json`. A scripted `git commit` is denied by the quality gate in the main checkout session and runs in the linked worktree session. The main checkout's gate file is byte-identical afterwards.
+- **AC-7:** On the pinned live host, the setup is a repository whose main checkout M enables {toolu, ast-grep} and has a failing quality gate in `M/.opencode/tmp/quality-gate-status.json`, plus a linked worktree W (space in its path) that enables {toolu}. An M session runs, then a W session. Then:
+  - M's scripted `git commit` is denied with the quality-gate reason;
+  - M's gate file is byte-identical afterwards;
+  - after W's startup, M's data root still holds both ast-grep modules;
+  - W's own data root `W/.opencode/toolu/state` exists and holds no ast-grep module.
+
+  The quality gate deliberately exempts linked worktrees, so the worktree half is proven on the data root, not on a commit.
 - **AC-8:** Real bootstraps:
   - Projects A (toolu, ast-grep) and B (toolu) share one `TOOLU_CONFIG_DIR` and start A, then B. Both are ready, and A's keyed data root still holds both ast-grep modules byte-equal to the bundles.
   - Two bootstraps of one project started concurrently both return ready, and the resulting ledger parses.
@@ -155,21 +164,23 @@ Hooks shape on a ready instance: `{ "tool.execute.before", "shell.env": (input, 
 
   `bun run check:opencode-surface` passes.
 - **AC-10:** Claude Code and Codex are unchanged: `bun run test` passes with no fixture or golden capture changed for those hosts.
+- **AC-11:** Separate git repositories A and B each have one commit, and only A has a failing `.opencode/tmp/quality-gate-status.json`. The real `prepareEnforcement` hook for A refuses `git commit -m x` with the quality-gate reason, and B's hook lets the same command through. A's gate file is byte-identical afterwards. Concurrent writers on one project's gate file keep every entry: core's real-process `gate-file-concurrency.test.ts`, which the OpenCode adapter reuses unchanged.
 
 ## Acceptance evidence
 
 | AC | Real input / fixture | Expected result | Check |
 |---|---|---|---|
-| AC-1 | Temp dirs: two git projects, a linked worktree, a symlink | Exact paths; distinct keys; stable for the symlink | `bun test tools/toolu-opencode/src/host/__tests__/host.test.ts` |
+| AC-1 | Temp dirs: two git projects, a linked worktree, a symlink; host env with a stray `TOOLU_PROJECT_DIR` | Exact paths; distinct keys; stable for the symlink; instance root kept | `bun test tools/toolu-opencode/src/host/__tests__/host.test.ts tools/toolu-opencode/src/host/__tests__/runtime-env.test.ts` |
 | AC-2 | Temp config dirs and `configFiles` | User path per variable; unchanged when unset | `bun test packages/toolu-core/src/config/__tests__/config-files.test.ts` |
 | AC-3 | Temp git project with `.env`, real toolu bootstrap, global/project config files | deny / allow / deny | `bun test tools/toolu-opencode/src/plugin/__tests__/roots-config.test.ts` |
 | AC-4 | Full catalog plus fixture env-reporting plugin; poisoned fake HOME and env dirs | Ready; env as specified; snapshots equal | `bun test tools/toolu-opencode/src/bootstrap/__tests__/startup-environment.test.ts` |
 | AC-5 | Real catalog manifests; host env with a secret | Exact key set; `PATH` rule; hook wiring | `bun test tools/toolu-opencode/src/host/__tests__/runtime-env.test.ts tools/toolu-opencode/src/plugin/__tests__/hooks.test.ts` |
 | AC-6 | Pinned `opencode-ai@1.18.34`, isolated profile, scripted provider | Marker files with the expected contents | `bun run smoke:opencode-entry` (`entry.helper-env`) |
-| AC-7 | Pinned host, repository with a linked worktree, failing gate in main | main: commit denied; worktree: commit made; gate file unchanged | `bun run smoke:opencode-entry` (`entry.worktree-state`) |
+| AC-7 | Pinned host, repository M with linked worktree W, different selections, failing gate in M | M commit denied; M gate file and M modules unchanged after W starts; W data root separate | `bun run smoke:opencode-entry` (`entry.worktree-state`) |
 | AC-8 | Repo catalog bundles, temp projects and a shared override | Ready; modules intact; ledger valid | `bun test tools/toolu-opencode/src/bootstrap/__tests__/startup-isolation.test.ts` |
 | AC-9 | Repo plugin sources | Rewritten tokens; drift check clean | `bun test tools/toolu-opencode/scripts/__tests__/generate-surface.test.ts && bun run check:opencode-surface` |
 | AC-10 | Whole repo | Green | `bun run test` |
+| AC-11 | Two temp git repositories, one failing gate file, real toolu bootstrap | A denied; B allowed; A's file unchanged; concurrent writers keep all entries | `bun test tools/toolu-opencode/src/plugin/__tests__/roots-config.test.ts packages/toolu-core/src/state/__tests__/gate-file-concurrency.test.ts` |
 
 ## Documentation impact
 
@@ -191,3 +202,14 @@ None blocking.
 
 - Whether OP-05 (#339) turns the default `ask` into an advisory does not affect AC-3, which uses `block` and `off`.
 - Whether leaf ports adopt `TOOLU_PLUGIN_ROOT_<NAME>` for their own scripts belongs to their owners. This change makes the variables available.
+
+## Spec review
+
+Round 1, **Status:** Needs changes. Jev checked requirement/evidence alignment (`noul`, does each issue AC have discriminating spec evidence): IA1 0.84, IA2 0.44, IA3 0.84.
+
+- Acceptance criteria: 🔴 blocker (fixed): the quality gate allows commits in linked worktrees by design, so AC-7's "worktree commit runs" did not discriminate worktree isolation. AC-7 now proves it on the data root: W's startup leaves M's modules, and W has its own root.
+- Acceptance criteria: 🔴 blocker (fixed): there was no gate-level two-project check. Added AC-11 (real hooks for A and B), which cites core's real-process concurrent-writer test for same-project sessions.
+- Architecture: 🟡 should-fix (fixed): a host-exported `TOOLU_PROJECT_DIR` was undecided. The instance root now wins, with a failure-mode row and AC-1 evidence.
+- Failure modes: 🔵 consider (fixed): a project key for a path that does not exist yet. Added a row.
+
+Round 2, **Status:** Approved. Jev IA2 rose to 0.73 after the revision. Every section is filled, every AC has a real input and a runnable check, and nothing open blocks.
