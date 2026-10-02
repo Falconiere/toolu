@@ -202,7 +202,7 @@ function plan(spawnJobs: ContextPlan["prompt"]): ContextPlan {
 const JOB = {
   plugin: "toolu",
   name: "user-prompt-submit",
-  bundle: "/tmp/user-prompt-submit.js",
+  bundle: "/tmp/toolu/hooks/dist/user-prompt-submit.js",
   pluginDir: "/tmp/toolu",
   event: "UserPromptSubmit" as const,
 };

@@ -3,6 +3,8 @@
  * once per directory. Prompt and compaction text come from the selected
  * plugins' existing bundles. These hooks append; they never refuse a turn.
  */
+import { realpathSync } from "node:fs";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 import type { Hooks } from "@opencode-ai/plugin";
 import type { Part, TextPart } from "@opencode-ai/sdk";
 import { matcherCovers, pluginHookEntries, type HookEventName } from "../bootstrap/entrypoint.ts";
@@ -47,6 +49,21 @@ type Runner = (
   stdin: string,
   signal: AbortSignal,
 ) => Promise<HookContextBody | undefined>;
+
+function pathInside(root: string, file: string): boolean {
+  const rel = relative(resolve(root), resolve(file));
+  return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+}
+
+/** The bundle must stay inside the scanned plugin directory, including through symlinks. */
+function bundleInsidePlugin(pluginDir: string, bundle: string): boolean {
+  if (!pathInside(pluginDir, bundle)) return false;
+  try {
+    return pathInside(realpathSync(pluginDir), realpathSync(bundle));
+  } catch (error) {
+    return error instanceof Error && "code" in error && error.code === "ENOENT";
+  }
+}
 
 function appendMissing(target: string[], lines: readonly string[]): void {
   for (const line of lines) {
@@ -113,6 +130,10 @@ async function deliverJob(
   stdin: string,
   signal: AbortSignal,
 ): Promise<HookContextBody | undefined> {
+  if (!bundleInsidePlugin(job.pluginDir, job.bundle)) {
+    await log("error", `toolu: ${job.plugin}/${job.name}: bundle is outside ${job.pluginDir}`);
+    return undefined;
+  }
   const env = {
     ...plan.env,
     CLAUDE_PLUGIN_ROOT: job.pluginDir,
@@ -178,7 +199,7 @@ async function appendReminders(
   signal: AbortSignal,
   nextPart: (text: string) => TextPart,
   run: Runner,
-): Promise<void> {
+): Promise<Part[]> {
   await runInOrder(jobs, 0, signal, async (job) => {
     const body = await run(job, stdin, signal);
     const reminder = body === undefined ? undefined : reminderText(body);
@@ -186,6 +207,7 @@ async function appendReminders(
     if (parts.some((part) => part.type === "text" && part.text === reminder)) return;
     parts.push(nextPart(reminder));
   });
+  return parts;
 }
 
 function compactStdin(plan: ContextPlan, job: HookJob, sessionID: string): string {
@@ -231,7 +253,7 @@ async function deliverPrompt(
     if (claimed.has(claim)) return;
     claimed.add(claim);
   }
-  await appendReminders(
+  output.parts = await appendReminders(
     plan.prompt,
     output.parts,
     JSON.stringify({
