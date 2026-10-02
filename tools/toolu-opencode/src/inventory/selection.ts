@@ -76,11 +76,11 @@ function chooseSelection(
   const projectPath = opencodePluginSelectionPath(projectRoot);
   const project = readSelectionFile(projectPath);
   if (project.kind !== "absent") return { source: "project", path: projectPath, file: project };
-  if (globalConfigRoot === undefined) return { source: "default", file: project };
+  if (globalConfigRoot === undefined) return { source: "default", file: { kind: "absent" } };
   const globalPath = opencodeGlobalPluginSelectionPath(globalConfigRoot);
   const global = readSelectionFile(globalPath);
   if (global.kind !== "absent") return { source: "global", path: globalPath, file: global };
-  return { source: "default", file: global };
+  return { source: "default", file: { kind: "absent" } };
 }
 
 function readSkillsDisabled(projectRoot: string): Set<string> {

@@ -41,21 +41,26 @@ const CatalogSchema = z.looseObject({
 });
 type RawEntry = z.infer<typeof Entry>;
 
-/** The file an entry names, inside `generatedDir`; throws the reason when it is not usable. */
+/**
+ * The file an entry names, inside `generatedDir`; throws the reason when it is not
+ * usable. IDs already match the ID rule; a path is quoted (JSON-escaped), so no
+ * catalog string can put control characters into the host log or a refusal.
+ */
 function entryFile(generatedDir: string, kind: SurfaceKind, entry: RawEntry): string {
   const file = join(generatedDir, entry.path);
   const rel = relative(generatedDir, file);
+  const shown = JSON.stringify(entry.path);
   if (rel === "" || rel.startsWith("..") || isAbsolute(rel))
-    throw new Error(`${kind} ${entry.id}: path escapes the generated directory: ${entry.path}`);
+    throw new Error(`${kind} ${entry.id}: path escapes the generated directory: ${shown}`);
   if (kind === "skills" && entry.path !== `skills/${entry.id}/SKILL.md`)
-    throw new Error(`skills ${entry.id}: expected skills/${entry.id}/SKILL.md, got ${entry.path}`);
+    throw new Error(`skills ${entry.id}: expected skills/${entry.id}/SKILL.md, got ${shown}`);
   let regular = false;
   try {
     regular = statSync(file).isFile();
   } catch {
     regular = false;
   }
-  if (!regular) throw new Error(`${kind} ${entry.id}: missing file ${entry.path}`);
+  if (!regular) throw new Error(`${kind} ${entry.id}: missing file ${shown}`);
   if (kind === "skills" && frontmatterName(readFileSync(file, "utf8")) !== entry.id)
     throw new Error(`skills ${entry.id}: SKILL.md name is not ${entry.id}`);
   return file;

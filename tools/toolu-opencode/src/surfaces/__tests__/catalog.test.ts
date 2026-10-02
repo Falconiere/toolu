@@ -143,3 +143,13 @@ test("the generated directory resolves to its real path, or undefined when absen
     undefined,
   );
 });
+
+test("a catalog path with control characters is quoted in the reason, never echoed raw", () => {
+  const dir = copy();
+  editFirstSkill(dir, (first) => {
+    first.path = "skills/toolu-debug/SKILL.md\nINJECTED\u001b[2J";
+  });
+  const reason = reasonOf(dir);
+  expect(reason).toContain(String.raw`"skills/toolu-debug/SKILL.md\nINJECTED\u001b[2J"`);
+  expect(reason.includes("\n") || reason.includes("\u001b")).toBe(false);
+});
