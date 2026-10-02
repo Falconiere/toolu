@@ -30,18 +30,25 @@ function nonEmpty(value: string | undefined): string | undefined {
   return value !== undefined && value.length > 0 ? value : undefined;
 }
 
-export function resolveRepoRoot(binding: HostBinding): string | undefined {
+/** Plugin option, then `TOOLU_REPO_ROOT` / `TOOLU_ROOT`, then the catalog bundled in the package. */
+export function resolveRepoRoot(
+  binding: HostBinding,
+  findBundled: () => string | undefined = bundledRepoRoot,
+): string | undefined {
   return (
     binding.repoRootOption ??
     nonEmpty(binding.env.TOOLU_REPO_ROOT) ??
     nonEmpty(binding.env.TOOLU_ROOT) ??
-    bundledRepoRoot()
+    findBundled()
   );
 }
 
-export async function prepareEnforcement(binding: HostBinding): Promise<Enforcement> {
+export async function prepareEnforcement(
+  binding: HostBinding,
+  findBundled: () => string | undefined = bundledRepoRoot,
+): Promise<Enforcement> {
   if (binding.optionsError !== undefined) return notReady(binding.optionsError);
-  const repoRoot = resolveRepoRoot(binding);
+  const repoRoot = resolveRepoRoot(binding, findBundled);
   if (repoRoot === undefined)
     return notReady("no bundled plugins/ tree; set plugin option repoRoot or TOOLU_REPO_ROOT");
   const { env, projectRoot } = binding;

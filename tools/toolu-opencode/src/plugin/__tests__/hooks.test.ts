@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Hooks } from "@opencode-ai/plugin";
 import { definedEnv, parseOptions, type HostBinding, type LogLevel } from "../context.ts";
+import { prepareEnforcement } from "../enforcement.ts";
 import { createTooluHooks } from "../hooks.ts";
 
 const tmpBase = process.env.TMPDIR ?? "/tmp";
@@ -111,7 +112,10 @@ test("invalid plugin options are reported, never silently ignored", async () => 
 test("no repo root from options, env or a bundled catalog refuses every tool", async () => {
   const { root } = await project();
   const logged: Logged[] = [];
-  const hooks = await createTooluHooks(binding(root, logged, { repoRootOption: undefined }));
+  // A packed or prepacked checkout carries tools/toolu-opencode/plugins; this case has none.
+  const hooks = await createTooluHooks(binding(root, logged, { repoRootOption: undefined }), (b) =>
+    prepareEnforcement(b, () => undefined),
+  );
   expect(await refusal(hooks, "bash", { command: "echo ok" })).toBe(
     "toolu: not ready: no bundled plugins/ tree; set plugin option repoRoot or TOOLU_REPO_ROOT",
   );

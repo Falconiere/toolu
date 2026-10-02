@@ -44,7 +44,7 @@ const PROJECT_FILES = {
   ".opencode/toolu/plugins.json": JSON.stringify({ version: 1, enabled: ["toolu"] }),
 };
 
-/** Pack the package as npm would publish it: sources plus the staged plugin catalog. */
+/** Pack the package the way npm publishes it: sources plus the staged plugin catalog. */
 export async function packTarball(workDir: string): Promise<string> {
   const stage = join(workDir, "package");
   mkdirSync(stage, { recursive: true });

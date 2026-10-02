@@ -178,3 +178,12 @@
 - Docs step: 🟡 should-fix (resolved): it claimed ACs its check cannot prove. Its `ac_refs` were dropped, and the check keeps the doc-sync and V2-claim scan.
 - Critical files: 🟡 should-fix (resolved): the conditional "only if needed" edits were ambiguous. The files are now named as read-only, with the reason, and the scratch directory deletion is explicit. Jev's order question then scored 0.36 because of unnamed read files, which are now named.
 - Dependency order: linear (adapter → entry → package → live → docs → gate), each depending only on earlier steps (checked by script).
+
+## Deviations
+
+- `prepareEnforcement` and `resolveRepoRoot` take an optional `findBundled` lookup, which defaults to the package's own `plugins/`. A dev tree can carry a prepack-staged `tools/toolu-opencode/plugins/`, which made the "no repo root" test depend on the environment; the test now passes `() => undefined`.
+- The scenario harness's `SessionOptions.scripts` also accepts a function of the project path, so the live smoke scripts absolute `filePath` args the way a real model sends them.
+- Full gate on this host. The run used a deduplicated `PATH` (without `/bin` and `/sbin`), and every `test:ts` stage was run.
+  - Five unit tests fail only because the runner is root, which ignores chmod. They are `publish.test.ts` "refuses the link", jev `session-start.test.ts` "refuses the link", and the ts/python/rust `read-failure.test.ts` "unreadable" cases. They fail identically on a clean `origin/main` worktree.
+  - The PATH-based golden tests fail on `origin/main` too, because this host lists both `/bin` and `/usr/bin` (merged `/usr`) and has a dangling `grub-ntldr-img` link. All 338 pass with the deduplicated `PATH`.
+  - `bench:shell --assert` reports a parse p99 of about 210 µs against a 100 µs budget at load average ≈15. This branch does not change `packages/toolu-core`. CI is the authority for these.
