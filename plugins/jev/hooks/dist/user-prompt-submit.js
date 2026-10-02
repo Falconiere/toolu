@@ -62,7 +62,7 @@ var TABLES = {
     "session/unload": "session.deleted",
     prompt: "chat.message",
     pre_compact: "experimental.session.compacting",
-    "permission/evaluate": "permission.evaluate",
+    "permission/evaluate": null,
     "tool/pre": "tool.execute.before",
     "shell/pre": "tool.execute.before",
     "tool/post": "tool.execute.after"
@@ -3157,7 +3157,7 @@ var ASK_EVENTS = {
   codex: new Set(["permission/evaluate"]),
   cursor: new Set(["shell/pre"]),
   hermes: new Set,
-  opencode: new Set(["tool/pre", "shell/pre", "permission/evaluate"])
+  opencode: new Set
 };
 // packages/toolu-core/src/state/state-io.ts
 function toJqJson(value, pretty) {

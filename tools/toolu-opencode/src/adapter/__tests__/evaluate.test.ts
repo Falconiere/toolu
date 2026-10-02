@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { FOREIGN_HOST_VARS } from "../../host/runtime-env.ts";
-import { createPermissionEvaluateHandler, gateEnv } from "../evaluate.ts";
+import { createGateDecider, createPermissionEvaluateHandler, gateEnv } from "../evaluate.ts";
 import type { PermissionEvaluationEvent } from "../permission-map.ts";
 import { bootstrapRuntime } from "../../bootstrap/runtime.ts";
 import { selectPluginsByEnabledNames } from "../../select/resolve.ts";
@@ -38,6 +38,23 @@ function editEvent(envPath: string): PermissionEvaluationEvent {
     effect: "allow",
     metadata: { toolCallId: "call_eval_1" },
   };
+}
+
+async function expectRegistryAdvisory(
+  options: Parameters<typeof createGateDecider>[0],
+  sessionID: string,
+): Promise<void> {
+  const decider = createGateDecider(options);
+  if (!decider.ok) throw new Error(decider.reason);
+  const decision = await decider.decide({
+    session_id: sessionID,
+    tool_use_id: "call_registry_1",
+    cwd: options.permissionContext.cwd,
+    tool_name: "Bash",
+    tool_input: { command: "rg TODO src" },
+  });
+  expect(decision.kind).toBe("advisory");
+  if (decision.kind === "advisory") expect(decision.message).toContain("grep/rg in Bash detected");
 }
 
 test("AC-2: evaluate handler + core dispatcher on protected .env yields deny", async () => {
@@ -121,12 +138,13 @@ test("#276: bundled ast-grep registry runs from isolated OpenCode root without b
   expect(boot.artifacts.some((path) => path.endsWith("ast-grep@toolu__search-nudge.js"))).toBe(
     true,
   );
-  const handler = createPermissionEvaluateHandler({
+  const options = {
     repoRoot: packageRoot,
     configRoot,
     permissionContext: { cwd: projectRoot, projectRoot, worktree: projectRoot },
     env,
-  });
+  };
+  const handler = createPermissionEvaluateHandler(options);
   const event: PermissionEvaluationEvent = {
     sessionID: "sess_registry_1",
     action: "bash",
@@ -134,9 +152,10 @@ test("#276: bundled ast-grep registry runs from isolated OpenCode root without b
     metadata: { command: "rg TODO src" },
     effect: "allow",
   };
+  await expectRegistryAdvisory(options, event.sessionID);
   await handler(event);
   expect(event.effect).toBe("allow");
-  expect(event.message).toContain("grep/rg in Bash detected");
+  expect(event.message).toBeUndefined();
 });
 
 test("AC-3: runtime_failure from bad repoRoot maps to deny", async () => {

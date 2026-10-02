@@ -16,6 +16,20 @@ export type PretoolScenario = {
   run: (ctx: ScenarioContext) => Promise<{ pass: boolean; observed: Observed }>;
 };
 
+/** Keep pinned-host smoke scenarios serial so isolated profiles share the CLI cache safely. */
+export async function runPretoolScenarios(
+  ctx: ScenarioContext,
+  remaining: readonly PretoolScenario[],
+): Promise<number> {
+  const [scenario, ...rest] = remaining;
+  if (scenario === undefined) return 0;
+  const result = await scenario.run(ctx);
+  process.stdout.write(
+    `${scenario.id} ${result.pass ? "pass" : "FAIL"} ${JSON.stringify(result.observed)}\n`,
+  );
+  return (result.pass ? 0 : 1) + (await runPretoolScenarios(ctx, rest));
+}
+
 export function session(ctx: ScenarioContext, options: SessionOptions): ProbeSession {
   const { files: extraFiles, config: extraConfig, ...rest } = options;
   const opened = openSession(ctx.cacheRoot, {

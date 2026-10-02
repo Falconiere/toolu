@@ -2,9 +2,9 @@
  * OpenCode `tool.execute.before` → toolu's native pre-tool gates (#336, #337).
  *
  * A throw is the host's only refusal (probes `deny.*`): it stops the call before
- * any side effect and becomes the tool error the model sees. The host has no ask
- * channel (`permission.ask-hook`), so every non-allow decision throws until OP-05
- * (#339) degrades `ask` by gate class. Tools this module does not recognize pass
+ * any side effect and becomes the tool error the model sees. The pinned host has
+ * no proven gate-generated ask channel, so gateMode degrades asks by class and
+ * a remaining registry ask throws. Tools this module does not recognize pass
  * through; the user's own permission rules still apply.
  */
 import { readFileSync } from "node:fs";
@@ -13,6 +13,7 @@ import type { Hooks } from "@opencode-ai/plugin";
 import { applyPatchRecords } from "@toolu/core/state";
 import { createGateDecider, type PermissionEvaluateHandlerOptions } from "./evaluate.ts";
 import type { PermissionContext, PermissionMapping } from "./permission-map.ts";
+import type { ToolAdviceStore } from "./tool-advice.ts";
 
 export type ToolBefore = NonNullable<Hooks["tool.execute.before"]>;
 export type ToolCall = { tool: string; sessionID: string; callID: string };
@@ -297,12 +298,16 @@ export function createDenyAllToolBefore(reason: string): ToolBefore {
   return () => Promise.reject(new Error(reason));
 }
 
-/** Run the native gates for each covered tool call; throw on any decision but allow/advisory. */
-export function createToolBeforeHandler(opts: PermissionEvaluateHandlerOptions): ToolBefore {
+/** Run the native gates for each covered tool call; preserve native permission checks. */
+export function createToolBeforeHandler(
+  opts: PermissionEvaluateHandlerOptions,
+  advice?: ToolAdviceStore,
+): ToolBefore {
   const decider = createGateDecider(opts);
   if (!decider.ok) return createDenyAllToolBefore(decider.reason);
   const servers = mcpServerNames(opts.permissionContext.projectRoot);
   return async (input, output) => {
+    advice?.begin(input);
     const args: unknown = output.args;
     const mapping = mapToolCall(input, args, opts.permissionContext, servers);
     if (mapping.kind === "skip") return;
@@ -310,7 +315,9 @@ export function createToolBeforeHandler(opts: PermissionEvaluateHandlerOptions):
     const decision = await decider.decide(mapping.request);
     switch (decision.kind) {
       case "allow":
+        return;
       case "advisory":
+        advice?.record(input, decision.message);
         return;
       case "deny":
       case "ask":

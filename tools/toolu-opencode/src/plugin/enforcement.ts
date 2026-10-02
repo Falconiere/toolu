@@ -1,6 +1,7 @@
 /** Preflight, plugin selection and bootstrap, then the gate hook — or the reason toolu is not ready (#336). */
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { createToolAdviceStore } from "../adapter/tool-advice.ts";
 import { createToolBeforeHandler, type ToolBefore } from "../adapter/tool-before.ts";
 import type { PluginStartup } from "../bootstrap/result.ts";
 import { bootstrapRuntime } from "../bootstrap/runtime.ts";
@@ -14,6 +15,8 @@ export type Enforcement =
   | {
       status: "ready";
       before: ToolBefore;
+      after: ReturnType<typeof createToolAdviceStore>["after"];
+      clearAdvice: () => void;
       artifacts: string[];
       /** Each selected plugin's startup, with the context OP-07 delivers. */
       plugins: PluginStartup[];
@@ -59,6 +62,16 @@ export function resolveRepoRoot(
   );
 }
 
+function rootsFor(binding: HostBinding, repoRoot: string): OpencodeRoots {
+  return {
+    projectRoot: binding.projectRoot,
+    dataRoot: opencodeDataRoot({ projectRoot: binding.projectRoot, env: binding.env }),
+    userConfigRoot: opencodeConfigRoot({ env: binding.env }),
+    repoRoot,
+    packageRoot: PACKAGE_ROOT,
+  };
+}
+
 export async function prepareEnforcement(
   binding: HostBinding,
   findBundled: () => string | undefined = bundledRepoRoot,
@@ -78,13 +91,7 @@ export async function prepareEnforcement(
   const bun = resolveBunExecutable(env);
   if (bun === null)
     return notReady("Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun");
-  const roots: OpencodeRoots = {
-    projectRoot,
-    dataRoot: opencodeDataRoot({ projectRoot, env }),
-    userConfigRoot: opencodeConfigRoot({ env }),
-    repoRoot,
-    packageRoot: PACKAGE_ROOT,
-  };
+  const roots = rootsFor(binding, repoRoot);
   const bootstrap = await bootstrapRuntime({
     repoRoot,
     projectRoot,
@@ -95,19 +102,32 @@ export async function prepareEnforcement(
     signal: AbortSignal.timeout(STARTUP_BUDGET_MS),
   });
   if (bootstrap.status !== "ready") return notReady(`bootstrap: ${bootstrap.reason}`);
-  const before = createToolBeforeHandler({
-    repoRoot,
-    configRoot: roots.dataRoot,
-    userConfigRoot: roots.userConfigRoot,
-    permissionContext: { cwd: binding.directory, projectRoot, worktree: projectRoot },
-    env: {
-      ...env,
-      TOOLU_SETTINGS_DIR: join(repoRoot, "plugins/toolu/settings"),
-      TOOLU_HOST_OVERRIDE: "opencode",
+  const advice = createToolAdviceStore();
+  const before = createToolBeforeHandler(
+    {
+      repoRoot,
+      configRoot: roots.dataRoot,
+      userConfigRoot: roots.userConfigRoot,
+      permissionContext: { cwd: binding.directory, projectRoot, worktree: projectRoot },
+      env: {
+        ...env,
+        TOOLU_SETTINGS_DIR: join(repoRoot, "plugins/toolu/settings"),
+        TOOLU_HOST_OVERRIDE: "opencode",
+      },
+      selectedPluginSpecs: new Set(selected.plugins.map((plugin) => plugin.spec)),
     },
-    selectedPluginSpecs: new Set(selected.plugins.map((plugin) => plugin.spec)),
-  });
+    advice,
+  );
   const shellEnv = shellEnvFor({ roots, plugins: selected.plugins, bun, host: env });
   const { artifacts, plugins, diagnostics } = bootstrap;
-  return { status: "ready", before, artifacts, plugins, diagnostics, shellEnv };
+  return {
+    status: "ready",
+    before,
+    after: advice.after,
+    clearAdvice: advice.clear,
+    artifacts,
+    plugins,
+    diagnostics,
+    shellEnv,
+  };
 }

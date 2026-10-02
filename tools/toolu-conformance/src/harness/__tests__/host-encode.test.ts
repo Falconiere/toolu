@@ -15,10 +15,9 @@ import {
   type HostName,
 } from "@toolu/core/host";
 import {
-  OpencodeEffectSchema,
   readHermesOutcome,
   readHostOutcome,
-  readOpencodeOutcome,
+  readOpencodeCallbackOutcome,
   type Outcome,
 } from "../hosts.ts";
 import { run } from "../spawn.ts";
@@ -27,7 +26,7 @@ const HOOK = `
 import { encodeDecision } from "@toolu/core/host";
 const [host, event, decision] = JSON.parse(process.argv[1]);
 const out = encodeDecision(host, event, decision);
-if (out.kind === "effect") {
+if (out.kind === "callback") {
   process.stdout.write(JSON.stringify(out));
 } else {
   process.stdout.write(out.stdout);
@@ -52,8 +51,8 @@ async function outcome(host: HostName, event: HostEvent, decision: Decision): Pr
   const native = nativeEventName(host, event) ?? "";
   if (host === "opencode") {
     expect(res.exitCode).toBe(0);
-    const effect: unknown = JSON.parse(res.stdout);
-    return readOpencodeOutcome(OpencodeEffectSchema.parse(effect));
+    const callback: unknown = JSON.parse(res.stdout);
+    return readOpencodeCallbackOutcome(callback);
   }
   return host === "hermes" ? readHermesOutcome(res) : readHostOutcome(host, native, res);
 }

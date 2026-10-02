@@ -14,7 +14,7 @@ export type GateClass = "guardrail" | "judgement";
 
 export type EncodedOutput =
   | { kind: "command"; stdout: string; stderr: string; exitCode: 0 }
-  | { kind: "effect"; effect: "allow" | "deny" | "ask"; message?: string };
+  | { kind: "callback"; action: "continue" | "throw"; message?: string };
 
 /** A decision after normalisation: no runtime failures, and only what the event can carry. */
 type Normalized = Exclude<Decision, { kind: "runtime_failure" }>;
@@ -42,7 +42,7 @@ const ASK_EVENTS: Readonly<Record<HostName, ReadonlySet<HostEvent>>> = {
   // Cursor accepts but does not enforce ask on preToolUse.
   cursor: new Set(["shell/pre"]),
   hermes: new Set(),
-  opencode: new Set(["tool/pre", "shell/pre", "permission/evaluate"]),
+  opencode: new Set(),
 };
 
 /** Can `host` put an `ask` for `event` in front of a human? Default event: PreToolUse. */
@@ -162,15 +162,15 @@ function hermesOutput(event: HostEvent, decision: Normalized): string {
   return "";
 }
 
-/** OpenCode runs in process: the permission effect it mutates. */
-function opencodeEffect(decision: Normalized): EncodedOutput {
+/** OpenCode's before hook can continue or throw; neither grants native permission. */
+function opencodeCallback(decision: Normalized): EncodedOutput {
   if (decision.kind === "deny" || decision.kind === "ask") {
-    return { kind: "effect", effect: decision.kind, message: decision.reason };
+    return { kind: "callback", action: "throw", message: decision.reason };
   }
   if (decision.kind === "advisory" || decision.kind === "post_block") {
-    return { kind: "effect", effect: "allow", message: text(decision) };
+    return { kind: "callback", action: "continue", message: text(decision) };
   }
-  return { kind: "effect", effect: "allow" };
+  return { kind: "callback", action: "continue" };
 }
 
 /** Encode `decision` for `event` in `host`'s native hook output. */
@@ -185,7 +185,7 @@ export function encodeDecision(
   }
   const normalized = normalize(host, event, decision);
   if (host === "opencode") {
-    return opencodeEffect(normalized);
+    return opencodeCallback(normalized);
   }
   const stdout =
     host === "cursor"

@@ -81,6 +81,7 @@ test("ready: a protected .env edit is refused, an allowed bash call runs, one re
   const { root, envPath } = await project();
   const logged: Logged[] = [];
   const hooks = await createTooluHooks(binding(root, logged));
+  expect(hooks["tool.execute.after"]).toBeDefined();
   const edit = { filePath: envPath, oldString: "1", newString: "2" };
   expect(await refusal(hooks, "edit", edit)).toMatch(/protected/i);
   expect(await refusal(hooks, "bash", { command: "echo ok", description: "x" })).toBe("allowed");

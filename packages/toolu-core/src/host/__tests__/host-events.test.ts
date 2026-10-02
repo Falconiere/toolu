@@ -40,7 +40,7 @@ describe("nativeEventName", () => {
 
   test("OpenCode uses dotted plugin hook names", () => {
     expect(nativeEventName("opencode", "tool/pre")).toBe("tool.execute.before");
-    expect(nativeEventName("opencode", "permission/evaluate")).toBe("permission.evaluate");
+    expect(nativeEventName("opencode", "permission/evaluate")).toBeNull();
     expect(nativeEventName("opencode", "session/start")).toBe("session.created");
   });
 });

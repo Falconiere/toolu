@@ -94,7 +94,7 @@ var init_host_events = __esm(() => {
       "session/unload": "session.deleted",
       prompt: "chat.message",
       pre_compact: "experimental.session.compacting",
-      "permission/evaluate": "permission.evaluate",
+      "permission/evaluate": null,
       "tool/pre": "tool.execute.before",
       "shell/pre": "tool.execute.before",
       "tool/post": "tool.execute.after"
@@ -192,14 +192,14 @@ function hermesOutput(event, decision) {
   }
   return "";
 }
-function opencodeEffect(decision) {
+function opencodeCallback(decision) {
   if (decision.kind === "deny" || decision.kind === "ask") {
-    return { kind: "effect", effect: decision.kind, message: decision.reason };
+    return { kind: "callback", action: "throw", message: decision.reason };
   }
   if (decision.kind === "advisory" || decision.kind === "post_block") {
-    return { kind: "effect", effect: "allow", message: text(decision) };
+    return { kind: "callback", action: "continue", message: text(decision) };
   }
-  return { kind: "effect", effect: "allow" };
+  return { kind: "callback", action: "continue" };
 }
 function encodeDecision(host, event, decision) {
   const native = nativeEventName(host, event);
@@ -208,7 +208,7 @@ function encodeDecision(host, event, decision) {
   }
   const normalized = normalize(host, event, decision);
   if (host === "opencode") {
-    return opencodeEffect(normalized);
+    return opencodeCallback(normalized);
   }
   const stdout = host === "cursor" ? cursorOutput(event, normalized) : host === "hermes" ? hermesOutput(event, normalized) : hookOutput(native, event, normalized);
   return { kind: "command", stdout, stderr: "", exitCode: 0 };
@@ -235,7 +235,7 @@ var init_host_encode = __esm(() => {
     codex: new Set(["permission/evaluate"]),
     cursor: new Set(["shell/pre"]),
     hermes: new Set,
-    opencode: new Set(["tool/pre", "shell/pre", "permission/evaluate"])
+    opencode: new Set
   };
 });
 
