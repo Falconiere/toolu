@@ -69,6 +69,18 @@ test.concurrent("a hand-written or legacy SessionStart command is unsupported", 
   });
 });
 
+test.concurrent("a SessionStart hook that is not a command is a named reason", () => {
+  using root = tempRoot("toolu-entries-prompt-");
+  const prompt = JSON.stringify({
+    hooks: { SessionStart: [{ hooks: [{ type: "prompt", prompt: "Say hi" }] }] },
+  });
+  const plugin = fixturePlugin(root.path, "prompter", { hooksJson: prompt });
+  expect(pluginStartupEntries(plugin.pluginDir)).toEqual({
+    ok: false,
+    reason: 'unsupported SessionStart hook type "prompt"',
+  });
+});
+
 test.concurrent("a matcher without startup is not run at plugin init", () => {
   using root = tempRoot("toolu-entries-matcher-");
   const compactOnly = fixturePlugin(root.path, "compact-only", {

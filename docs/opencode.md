@@ -98,7 +98,7 @@ In **your application repo** (not inside the toolu clone):
    The default export is the documented `PluginModule` ([#336](https://github.com/Falconiere/toolu/issues/336)). Its `server` runs preflight and bootstrap ([#211](https://github.com/Falconiere/toolu/issues/211)), then returns a `tool.execute.before` hook.
 
    - **Setup fails** (no repo root, missing git or Bun, bootstrap NotReady): every tool call is refused with `toolu: not ready: <reason>`, and the same line reaches the host log (`opencode --print-logs`).
-   - **Healthy start:** logs `toolu: ready (<p> plugins, <n> startup artifacts)`, then up to 20 startup notes, such as a kept user file or a removed contribution.
+   - **Healthy start:** logs `toolu: ready (<p> plugins, <n> startup artifacts)`, then one `toolu: startup notes:` line listing up to 20 notes, such as a kept user file or a removed contribution.
    - **Both routes configured** (the npm package and this shim): only the first load enforces, and the other logs `toolu: duplicate load skipped`.
 
    **Bootstrap** ([#342](https://github.com/Falconiere/toolu/issues/342)):

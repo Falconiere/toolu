@@ -16,7 +16,7 @@ export type StartupEntry = { name: string; bundle: string };
 export type EntryPlan = { ok: true; entries: StartupEntry[] } | { ok: false; reason: string };
 
 /** Keys a host adds beside these (a timeout, a status message) do not change what runs. */
-const SessionStartHook = z.looseObject({ type: z.string(), command: z.string() });
+const SessionStartHook = z.looseObject({ type: z.string(), command: z.string().optional() });
 
 const SessionStartGroup = z.looseObject({
   matcher: z.string().optional(),
@@ -56,19 +56,21 @@ function entryOf(
   hook: z.infer<typeof SessionStartHook>,
   plugin: string,
 ): { ok: true; name: string } | { ok: false; reason: string } {
-  const name = LAUNCHED_BUNDLE.exec(hook.command)?.[1];
+  if (hook.type !== "command") {
+    return { ok: false, reason: `unsupported SessionStart hook type ${JSON.stringify(hook.type)}` };
+  }
+  const command = hook.command ?? "";
+  const name = LAUNCHED_BUNDLE.exec(command)?.[1];
   const quoted =
-    hook.command.length > COMMAND_EXCERPT
-      ? `${hook.command.slice(0, COMMAND_EXCERPT)}…`
-      : hook.command;
+    command.length > COMMAND_EXCERPT ? `${command.slice(0, COMMAND_EXCERPT)}…` : command;
   const unsupported = {
     ok: false as const,
     reason: `unsupported SessionStart command ${JSON.stringify(quoted)}; regenerate it with \`bun run tooling/src/check-hooks-json.ts --print ${plugin} SessionStart <entry>\``,
   };
-  if (hook.type !== "command" || name === undefined) return unsupported;
+  if (name === undefined) return unsupported;
   try {
     const expected = launcherCommand({ plugin, event: "SessionStart", entry: name });
-    return hook.command === expected ? { ok: true, name } : unsupported;
+    return command === expected ? { ok: true, name } : unsupported;
   } catch (error) {
     return { ok: false, reason: error instanceof Error ? error.message : String(error) };
   }

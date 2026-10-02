@@ -17,7 +17,14 @@ import {
 import { join } from "node:path";
 import { bootstrapRuntime } from "../runtime.ts";
 import type { ReadyResult } from "../result.ts";
-import { PLUGINS_ROOT, REPO_ROOT, catalogPlugin, copiedPlugin, tempRoot } from "./fixtures.ts";
+import {
+  PLUGINS_ROOT,
+  REPO_ROOT,
+  catalogPlugin,
+  copiedPlugin,
+  fixturePlugin,
+  tempRoot,
+} from "./fixtures.ts";
 
 async function start(root: string, names: string[]): Promise<ReadyResult> {
   mkdirSync(join(root, "project"), { recursive: true });
@@ -244,4 +251,42 @@ test.concurrent("a ledger path that is a directory leaves startup NotReady", asy
   });
   if (result.status === "ready") throw new Error("expected not-ready");
   expect(result.reason).toStartWith(`cannot write startup ledger ${path}: `);
+});
+
+test.concurrent("a helper an entry published before it crashed stays owned", async () => {
+  using root = tempRoot("toolu-ledger-crash-");
+  const bundle =
+    'const fs = require("node:fs"); const path = require("node:path");\n' +
+    'const source = path.join(process.env.CLAUDE_PLUGIN_ROOT, "hooks/dist/boot.js");\n' +
+    'const helper = path.join(process.env.TOOLU_CONFIG_DIR, "crasher/crasher.sh");\n' +
+    "fs.mkdirSync(path.dirname(helper), { recursive: true });\n" +
+    "fs.symlinkSync(source, helper);\n" +
+    'const record = { kind: "helper", plugin: "crasher", source, path: helper, status: "published" };\n' +
+    'fs.appendFileSync(process.env.TOOLU_STARTUP_REPORT, JSON.stringify(record) + "\\n");\n' +
+    "process.exit(7);\n";
+  const crasher = fixturePlugin(join(root.path, "copies"), "crasher", {
+    entries: { boot: bundle },
+  });
+  mkdirSync(join(root.path, "project"), { recursive: true });
+  const result = await bootstrapRuntime({
+    repoRoot: REPO_ROOT,
+    projectRoot: join(root.path, "project"),
+    dataRoot: join(root.path, "data"),
+    plugins: [crasher],
+    isolatedHome: join(root.path, "home"),
+  });
+  expect(result).toEqual({ status: "not-ready", reason: "crasher/boot: exited 7" });
+  expect(ledger(root.path)).toEqual({
+    version: 1,
+    plugins: {
+      crasher: {
+        helpers: [
+          {
+            path: join(root.path, "data/crasher/crasher.sh"),
+            source: join(crasher.pluginDir, "hooks/dist/boot.js"),
+          },
+        ],
+      },
+    },
+  });
 });
