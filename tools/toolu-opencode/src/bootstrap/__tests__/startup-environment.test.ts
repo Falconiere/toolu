@@ -35,19 +35,25 @@ process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "Sess
 /** Disables toolu's session context: if it were read, toolu's startup context would vanish. */
 const POISON_CONFIG = JSON.stringify({ version: 1, hooks: { "session-start": false } });
 
-/** Every path under `dir` with its kind, bytes hash and mtime. */
-function snapshot(dir: string, prefix = ""): string[] {
-  return readdirSync(join(dir, prefix), { withFileTypes: true })
-    .toSorted((a, b) => a.name.localeCompare(b.name))
-    .flatMap((entry) => {
-      const rel = join(prefix, entry.name);
-      const stat = lstatSync(join(dir, rel));
-      if (entry.isDirectory()) return [`${rel}/ ${stat.mtimeMs}`, ...snapshot(dir, rel)];
+/** Every path under `dir` with its bytes hash (files) and mtime, depth first. */
+function snapshot(dir: string, prefix = "", out: string[] = []): string[] {
+  const entries = readdirSync(join(dir, prefix), { withFileTypes: true }).toSorted((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+  for (const entry of entries) {
+    const rel = join(prefix, entry.name);
+    const stat = lstatSync(join(dir, rel));
+    if (entry.isDirectory()) {
+      out.push(`${rel}/ ${stat.mtimeMs}`);
+      snapshot(dir, rel, out);
+    } else {
       const hash = createHash("sha256")
         .update(readFileSync(join(dir, rel)))
         .digest("hex");
-      return [`${rel} ${hash} ${stat.mtimeMs}`];
-    });
+      out.push(`${rel} ${hash} ${stat.mtimeMs}`);
+    }
+  }
+  return out;
 }
 
 function poisonedTree(dir: string): string {

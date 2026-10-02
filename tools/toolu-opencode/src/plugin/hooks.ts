@@ -4,7 +4,9 @@
  * The host fails open when plugin init throws (probe `load.init-throw`): it logs
  * the failure and runs every tool unguarded. So nothing here rejects. Any setup
  * failure becomes a `tool.execute.before` that refuses every call, and the reason
- * goes to the host log, which `opencode --print-logs` shows.
+ * goes to the host log, which `opencode --print-logs` shows. A ready instance
+ * also gives every bash call toolu's helper environment through `shell.env`
+ * (#343); a not-ready one refuses bash, so it adds none.
  */
 import type { Hooks } from "@opencode-ai/plugin";
 import { createDenyAllToolBefore } from "../adapter/tool-before.ts";
@@ -39,6 +41,16 @@ async function report(binding: HostBinding, level: LogLevel, message: string): P
   }
 }
 
+/** `shell.env`: add toolu's variables to the env the host builds for one bash call. */
+export function shellEnvHook(
+  additions: Readonly<Record<string, string>>,
+): NonNullable<Hooks["shell.env"]> {
+  return (...[, output]) => {
+    Object.assign(output.env, additions);
+    return Promise.resolve();
+  };
+}
+
 /** Startup notes as one log line, so a slow host log costs one bounded call, not one per note. */
 export function startupNotes(diagnostics: readonly string[]): string | undefined {
   if (diagnostics.length === 0) return undefined;
@@ -71,7 +83,11 @@ export async function createTooluHooks(
     );
     const notes = startupNotes(diagnostics);
     if (notes !== undefined) await report(binding, "info", notes);
-    return { "tool.execute.before": enforcement.before, dispose };
+    return {
+      "tool.execute.before": enforcement.before,
+      "shell.env": shellEnvHook(enforcement.shellEnv),
+      dispose,
+    };
   }
   const message = `toolu: not ready: ${enforcement.reason}`;
   await report(binding, "error", `${message}; every tool call is denied`);

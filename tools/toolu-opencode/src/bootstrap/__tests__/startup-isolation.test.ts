@@ -74,8 +74,8 @@ test("two sessions starting at once in one project are both ready with a valid l
   const project = join(root.path, "project");
   const names = ["toolu", "ast-grep", "context7"];
   const [one, two] = await Promise.all([start(project, names, env), start(project, names, env)]);
-  expect(one?.status).toBe("ready");
-  expect(two?.status).toBe("ready");
+  expect(one.status).toBe("ready");
+  expect(two.status).toBe("ready");
   const data = opencodeDataRoot({ projectRoot: project, env });
   const ledger: unknown = JSON.parse(
     readFileSync(join(data, "toolu", "startup-ledger.json"), "utf8"),

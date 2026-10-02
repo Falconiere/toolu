@@ -22,6 +22,7 @@ import {
   type PermissionContext,
   type PermissionEvaluationEvent,
 } from "./permission-map.ts";
+import { withoutForeignHostVars } from "../host/runtime-env.ts";
 import { decisionFromDispatch } from "./result.ts";
 
 export type PermissionEvaluateHandlerOptions = {
@@ -30,7 +31,17 @@ export type PermissionEvaluateHandlerOptions = {
   permissionContext: PermissionContext;
   env?: Record<string, string>;
   selectedPluginSpecs?: ReadonlySet<string>;
+  /** Global `toolu.config.json` directory (#343); absent, the config root holds it, as before. */
+  userConfigRoot?: string;
 };
+
+function definedProcessEnv(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined) out[key] = value;
+  }
+  return out;
+}
 
 export function nativeGates(pluginRoot: string): ToolModule[] {
   const options = { pluginRoot };
@@ -83,9 +94,10 @@ export function createGateDecider(opts: PermissionEvaluateHandlerOptions): GateD
     return { ok: false, reason: `toolu: core plugin manifest missing under ${pluginRoot}` };
   }
   const gates = nativeGates(pluginRoot);
+  // No other host's root may steer a gate (#343): their variables are dropped, not overridden.
   const env = {
-    ...process.env,
-    ...opts.env,
+    ...withoutForeignHostVars({ ...definedProcessEnv(), ...opts.env }),
+    ...(opts.userConfigRoot === undefined ? {} : { TOOLU_USER_CONFIG_DIR: opts.userConfigRoot }),
     TOOLU_CONFIG_DIR: opts.configRoot,
     TOOLU_PROJECT_DIR: opts.permissionContext.projectRoot,
     TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",

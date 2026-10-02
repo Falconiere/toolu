@@ -60,19 +60,19 @@ test("under one override, two projects and a linked worktree get distinct keyed 
   git(a.project, ["worktree", "add", "-q", worktree, "-b", "wt"]);
   const shared = join(a.root, "shared root");
   const env = { TOOLU_CONFIG_DIR: shared, TOOLU_OPENCODE_HOME: "/ignored" };
-  const roots = [a.project, b.project, worktree].map((projectRoot) =>
-    opencodeDataRoot({ projectRoot, env }),
-  );
+  const projects = [a.project, b.project, worktree];
+  const roots = projects.map((projectRoot) => opencodeDataRoot({ projectRoot, env }));
   expect(new Set(roots).size).toBe(3);
-  for (const [i, root] of roots.entries()) {
-    const project = [a.project, b.project, worktree][i] ?? "";
-    expect(root).toBe(join(shared, "toolu", "opencode", "projects", opencodeProjectKey(project)));
-  }
+  expect(roots).toEqual(
+    projects.map((project) =>
+      join(shared, "toolu", "opencode", "projects", opencodeProjectKey(project)),
+    ),
+  );
   const viaHome = opencodeDataRoot({
     projectRoot: a.project,
     env: { TOOLU_OPENCODE_HOME: shared },
   });
-  expect(viaHome).toBe(roots[0]);
+  expect(viaHome).toBe(opencodeDataRoot({ projectRoot: a.project, env }));
 });
 
 test("the project key is a readable slug plus a hash of the real path", () => {
