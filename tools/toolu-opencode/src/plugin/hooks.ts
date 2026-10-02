@@ -79,11 +79,7 @@ function idList(list: readonly string[]): string {
 }
 
 /** The owned contribution, by ID, and every overlap with the user's own definitions. */
-export function surfaceLines(
-  applied: SurfaceReport,
-  source: SelectionSource,
-  ms: number,
-): string[] {
+function surfaceLines(applied: SurfaceReport, source: SelectionSource, ms: number): string[] {
   const { skills, agents, commands } = applied;
   const owned = `skills ${idList(skills)}; agents ${idList(agents)}; commands ${idList(commands)}`;
   const notes = notesLine("surface notes", [

@@ -7,7 +7,15 @@ test("no ids runs every scenario; ids narrow it in catalog order", () => {
   const all = chosen([]).map((scenario) => scenario.id);
   expect(all).toContain("entry.npm-root");
   expect(all).toContain("entry.full-startup");
-  expect(all.slice(-2)).toEqual(["entry.helper-env", "entry.worktree-state"]);
+  expect(all).toContain("entry.worktree-state");
+  expect(all.slice(-6)).toEqual([
+    "surfaces.npm-clean",
+    "surfaces.lifecycle",
+    "surfaces.precedence",
+    "surfaces.skill-roots",
+    "surfaces.both-routes",
+    "surfaces.selection",
+  ]);
   const picked = chosen(["entry.worktree-state", "entry.helper-env"]).map((s) => s.id);
   expect(picked).toEqual(["entry.helper-env", "entry.worktree-state"]);
 });

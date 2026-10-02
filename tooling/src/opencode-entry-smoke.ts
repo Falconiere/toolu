@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
 /**
- * Live OpenCode entry smoke (#336), plugin startup (#342) and paths and helper
- * environment (#343): `bun run smoke:opencode-entry [<scenario id>…]`; ids narrow the run.
+ * Live OpenCode entry smoke (#336), plugin startup (#342), paths and helper
+ * environment (#343), and surface install and discovery (#345):
+ * `bun run smoke:opencode-entry [<scenario id>…]`; ids narrow the run.
  *
  * Resolves the pinned CLI the same way as `probe:opencode-host`, packs
  * `@toolu/opencode` into a temp directory, and runs every entry scenario in an
@@ -21,10 +22,16 @@ import {
   type EntryScenario,
 } from "./opencode-host/scenarios-entry.ts";
 import { ContractError, PinSchema, readJson } from "./opencode-host/schema.ts";
+import { INSTALL_SCENARIOS } from "./opencode-host/scenarios-install.ts";
 import { PATH_SCENARIOS } from "./opencode-host/scenarios-paths.ts";
 import { STARTUP_SCENARIOS } from "./opencode-host/scenarios-startup.ts";
 
-const ALL_SCENARIOS = [...ENTRY_SCENARIOS, ...STARTUP_SCENARIOS, ...PATH_SCENARIOS];
+const ALL_SCENARIOS = [
+  ...ENTRY_SCENARIOS,
+  ...STARTUP_SCENARIOS,
+  ...PATH_SCENARIOS,
+  ...INSTALL_SCENARIOS,
+];
 
 /** The scenarios named in `ids`, or every one; an unknown id is an error, not an empty run. */
 export function chosen(ids: readonly string[]): EntryScenario[] {
