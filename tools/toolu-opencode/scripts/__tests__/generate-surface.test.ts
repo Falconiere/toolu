@@ -10,6 +10,7 @@ import { selectPluginsByEnabledNames } from "../../src/select/resolve.ts";
 import { runGenerateSurface } from "../generate-surface.ts";
 import { listPluginManifests } from "../../src/inventory/scan.ts";
 import { TOOLU_PLUGIN_ROOT } from "../lib/constants.ts";
+import { renderMarkdown } from "../lib/render.ts";
 
 const tmpBase = process.env.TMPDIR ?? "/tmp";
 
@@ -140,6 +141,29 @@ test("frontmatter round trip preserves folded text and structured permission map
     parseFrontmatter(`${serializeFrontmatter(parsed.frontmatter)}${parsed.body}`).frontmatter,
   ).toEqual(parsed.frontmatter);
   expect(() => parseFrontmatter("---\nname: [broken\n---\nBody")).toThrow();
+});
+
+test("real agent tools map to exact OpenCode permissions and reject unknown tools", () => {
+  const sourcePath = join(repoRoot(), "plugins/toolu/agents/architect.md");
+  const source = readFileSync(sourcePath, "utf8");
+  const references = { invocations: new Map<string, string>(), paths: new Map<string, string>() };
+  const rendered = renderMarkdown("agent", "toolu-architect", sourcePath, source, references);
+  const parsed = parseFrontmatter(rendered.content);
+  expect(parsed.frontmatter.mode).toBe("subagent");
+  expect(parsed.frontmatter.model).toBeUndefined();
+  expect(parsed.frontmatter.permission).toEqual({
+    "*": "deny",
+    read: "allow",
+    grep: "allow",
+    glob: "allow",
+    bash: "allow",
+  });
+
+  const invalid = source.replace("tools: Read, Grep, Glob, Bash", "tools: Read, UnknownTool");
+  expect(invalid).not.toBe(source);
+  expect(() =>
+    renderMarkdown("agent", "toolu-architect", sourcePath, invalid, references),
+  ).toThrow("unsupported Claude agent tool: UnknownTool");
 });
 
 test("full catalog includes all plugins and explicitly classifies empty surfaces", () => {
