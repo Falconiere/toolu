@@ -142,7 +142,7 @@ Hooks shape on a ready instance: `{ "tool.execute.before", "shell.env": (input, 
 
   A ready `createTooluHooks` exposes `shell.env`, which fills `output.env` with those additions. A not-ready one has no `shell.env`.
 - **AC-6:** On the pinned live host, with project and catalog paths containing spaces, `PATH` without Bun (`TOOLU_BUN` set), and toolu, context7 and epic-orchestrator enabled, scripted bash calls succeed:
-  - the generated context7 skill's own helper command, run with `--help`, prints the Context7 usage;
+  - the generated context7 skill's own helper command, run with `--help`, prints the Context7 usage with the CLI's documented exit 1 for `--help` (127 would mean `bun` or the helper was not found);
   - `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" --help` exits 0;
   - `test -f "$TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR/scripts/report.ts"` succeeds;
   - `printf %s "$HOME"` equals the profile HOME.
