@@ -3801,8 +3801,9 @@ function configFiles(options) {
   const env = options.env ?? process.env;
   const host = options.host ?? detectHost({ env });
   const scoped = options.cwd === undefined ? { env, host } : { env, host, cwd: options.cwd };
+  const userDir = envValue(env, "TOOLU_USER_CONFIG_DIR") ?? configRoot(scoped);
   const files = {
-    user: join2(configRoot(scoped), "toolu.config.json"),
+    user: join2(userDir, "toolu.config.json"),
     project: projectConfigPath(scoped)
   };
   return { files, host };
