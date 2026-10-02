@@ -29,7 +29,7 @@ has no OpenCode adapter. Until it does, run the two steps above.
 The git-clone flow below remains the contributor path, and is still how you work
 against an unreleased checkout.
 
-Enforcement runs in `tool.execute.before` through the native dispatcher. Covered calls are `bash`, `edit` and `write`; [#337](https://github.com/Falconiere/toolu/issues/337) extends that to every tool. A toolu refusal stops the call before it runs, and a toolu allow never overrides your own `permission` rules. Gate `ask` decisions deny for now, because the host has no ask channel ([#339](https://github.com/Falconiere/toolu/issues/339)). Host events without an OpenCode hook remain outside that scope; see the [host contract](opencode-host-contract.md).
+Enforcement runs in `tool.execute.before` through the native dispatcher. Covered calls are `bash`, `read`, `grep`, `glob`, `edit`, `write`, `apply_patch`, `task`, and MCP tools named `<server>_<tool>` for servers listed in `opencode.json`. Any other tool is left to the host. A toolu refusal stops the call before it runs, and a toolu allow never overrides your own `permission` rules. Gate `ask` decisions deny for now, because the host has no ask channel ([#339](https://github.com/Falconiere/toolu/issues/339)). Host events without an OpenCode hook remain outside that scope; see the [host contract](opencode-host-contract.md).
 
 Bun 1.4.x is a prerequisite on every host, Claude Code and Codex included; see the [runtime contract](runtime.md). Claude Code and Codex keep their marketplace installs. OpenCode calls the TypeScript core dispatcher in process. Its npm package ships committed bundles and their runtime data. Bootstrap reports NotReady when a selected plugin lacks a required Bun registration bundle.
 

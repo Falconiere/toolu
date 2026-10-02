@@ -66,7 +66,13 @@ function toolHooks(cfg: ProbeConfig): Hooks {
   return {
     "tool.execute.before": async (input, output) => {
       const args: unknown = output.args;
-      record({ kind: "before", tool: input.tool, sessionID: input.sessionID, args });
+      record({
+        kind: "before",
+        tool: input.tool,
+        sessionID: input.sessionID,
+        callID: input.callID,
+        args,
+      });
       if (cfg.preAdvisory !== undefined)
         Object.assign(output, { additionalContext: cfg.preAdvisory });
       if (cfg.denyMarker !== undefined && JSON.stringify(args).includes(cfg.denyMarker)) {
