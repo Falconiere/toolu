@@ -1,8 +1,8 @@
 /**
  * OpenCode lifecycle handler map.
  * Prompt and compaction context are delivered on the pinned hooks (#341).
- * Resume, clear and load have no event on this pin. Tool and shell hooks
- * stay deferred for their own work package.
+ * Resume, clear and load have no event on this pin. Post-tool checks use
+ * tool.execute.after; the remaining deferred entries keep their own scope.
  */
 
 export type LifecycleSupport = "supported" | "deferred" | "unsupported";
@@ -30,7 +30,7 @@ const TABLE: Record<LifecycleEvent, LifecycleSupport> = {
   pre_compact: "supported",
   "permission/evaluate": "supported",
   "tool/pre": "deferred",
-  "tool/post": "deferred",
+  "tool/post": "supported",
   "shell/pre": "deferred",
 };
 

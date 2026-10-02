@@ -1,23 +1,16 @@
 {
   "name": "toolu-workspace",
-  "version": "7.7.2",
   "private": true,
+  "version": "7.7.2",
   "description": "Engineering discipline for coding agents.",
+  "type": "module",
+  "license": "MIT",
   "keywords": [
     "claude-code",
+    "skills",
     "hooks",
-    "quality-gate",
-    "skills"
+    "quality-gate"
   ],
-  "license": "MIT",
-  "workspaces": [
-    "tooling",
-    "packages/toolu-core",
-    "tools/toolu-opencode",
-    "tools/toolu-conformance",
-    "tools/toolu-cli"
-  ],
-  "type": "module",
   "scripts": {
     "generate:opencode-surface": "bun run tools/toolu-opencode/scripts/generate-surface.ts",
     "check:opencode-surface": "bun run tools/toolu-opencode/scripts/check-surface-drift.ts",
@@ -55,10 +48,10 @@
     "test:pack": "bun run tooling/src/pack-inventory.ts && bun test --timeout 60000 tooling/src/__tests__/npm-publish.test.ts"
   },
   "dependencies": {
-    "@toolu/conformance": "workspace:*",
+    "zod": "4.1.5",
     "@toolu/core": "workspace:*",
     "@toolu/opencode": "workspace:*",
-    "zod": "4.1.5"
+    "@toolu/conformance": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "1.4.2",
@@ -69,6 +62,13 @@
     "oxlint-tsgolint": "^7.0.2002",
     "typescript": "5.9.3"
   },
+  "workspaces": [
+    "tooling",
+    "packages/toolu-core",
+    "tools/toolu-opencode",
+    "tools/toolu-conformance",
+    "tools/toolu-cli"
+  ],
   "engines": {
     "bun": ">=1.4.0 <1.5.0"
   }

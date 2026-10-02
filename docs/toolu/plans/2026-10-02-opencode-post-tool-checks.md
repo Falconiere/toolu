@@ -80,6 +80,10 @@ Add `tools/toolu-opencode/src/adapter/tool-post.ts` and a colocated test. Modify
 
 The direct bridge test must observe real gate file bytes after shell exit 3/0 and per-file quality checks after edits, patch moves, and deletes. It must prove no pass or waiver from unknown/interrupted results and one diagnostic for a duplicate after. The pinned host smoke must observe model-visible diagnostics and real later commit/push denial with target side effects absent. Run the full gate, final ledger `--verify`, committed-diff review, verdict readiness, and delivery preflight before the final push and PR handoff. Re-run affected checks after a rebase.
 
+## Execution variance
+
+The orchestrator authorized a PR handoff if the pinned host stalls before a provider request even without toolu. On this worker, a host-only isolated baseline timed out after 600 seconds with zero provider requests or hook events. The OP-06 smoke also timed out after 300 seconds at the same config-loading point after the exact pinned SDK was installed in both isolated config directories. This leaves the live step unverified here. The smoke remains in the branch for CI and OP-28's mandatory live acceptance; run the docs and full repository gates directly and disclose both host results in the PR. Do not mark the live ledger step green from these attempts.
+
 ## Plan review
 
 Status: Approved. `checkAcRefs` found no dangling references; each AC has a runnable step and the dependency order is acyclic. The bridge step includes boundary inputs for partial and repeated calls, the live step inspects host-visible output and persisted state, and the final gate covers the whole repository. Jev's semantic alignment rating was uncertain (0.52), so the review checked each AC and input against the approved spec rather than treating the rating as approval.
