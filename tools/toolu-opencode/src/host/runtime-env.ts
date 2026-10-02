@@ -6,9 +6,9 @@
  * other host's root variables (so no Claude or Codex home is ever resolved),
  * and get toolu's roots. The agent's bash keeps its env as the host builds it;
  * `shell.env` only adds toolu's non-secret roots, one root per selected plugin,
- * and Bun's directory when the host PATH has no `bun` for `#!/usr/bin/env bun`
- * helpers. It adds no `TOOLU_PROJECT_DIR`: a helper run in another repository
- * resolves that repository's state from its own git toplevel.
+ * and Bun's directory when PATH has no `bun` for `#!/usr/bin/env bun` helpers.
+ * It sets no `TOOLU_PROJECT_DIR` (and blanks an exported one): a helper run in
+ * another repository resolves that repository's state from its own toplevel.
  */
 import { delimiter, dirname, join } from "node:path";
 import type { PluginManifest } from "../inventory/types.ts";
@@ -48,6 +48,15 @@ export const FOREIGN_HOST_VARS = [
 
 const FOREIGN = new Set<string>(FOREIGN_HOST_VARS);
 
+/** `env` without its unset keys. */
+export function definedEnv(env: NodeJS.ProcessEnv): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(env)) {
+    if (value !== undefined) out[key] = value;
+  }
+  return out;
+}
+
 export function withoutForeignHostVars(env: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(env).filter(([key]) => !FOREIGN.has(key)));
 }
@@ -80,29 +89,55 @@ export function pluginRootVar(name: string): string {
   return `TOOLU_PLUGIN_ROOT_${name.toUpperCase().replaceAll("-", "_")}`;
 }
 
+/**
+ * Marks `TOOLU_CONFIG_DIR` in bash as the session's own data root, so an
+ * OpenCode started from that bash treats it as inherited, not as an override.
+ */
+export const DATA_ROOT_MARKER = "TOOLU_OPENCODE_DATA_ROOT";
+
 export type ShellEnvInput = {
   roots: OpencodeRoots;
   /** The selected plugins, dependencies included. */
   plugins: readonly PluginManifest[];
   /** The resolved Bun executable. */
   bun: string;
-  /** The PATH the host gives bash. */
+  /** The host env bash starts from. */
+  host: Readonly<Record<string, string>>;
+};
+
+/** What `shell.env` gives every bash call: fixed variables, and Bun for PATH when it lacks one. */
+export type ShellEnv = {
+  vars: Record<string, string>;
+  bun: string;
   hostPath: string | undefined;
 };
 
-/** What `shell.env` adds to every bash call. Never a value copied from the host env. */
-export function shellEnvAdditions(input: ShellEnvInput): Record<string, string> {
-  const { roots, plugins, bun, hostPath } = input;
-  const env: Record<string, string> = {
+/** `shell.env`'s contribution. Never a value copied from the host env. */
+export function shellEnvFor(input: ShellEnvInput): ShellEnv {
+  const { roots, plugins, bun, host } = input;
+  const vars: Record<string, string> = {
     ...rootVars(roots),
+    [DATA_ROOT_MARKER]: roots.dataRoot,
     TOOLU_BUN: bun,
     TOOLU_OPENCODE_ROOT: roots.packageRoot,
   };
+  // An exported project dir would point every helper at one project; blank is unset to core.
+  if ((host.TOOLU_PROJECT_DIR ?? "") !== "") vars.TOOLU_PROJECT_DIR = "";
   const core = plugins.find((plugin) => plugin.name === "toolu");
-  if (core !== undefined) env.TOOLU_PLUGIN_ROOT = core.pluginDir;
-  for (const plugin of plugins) env[pluginRootVar(plugin.name)] = plugin.pluginDir;
-  if (resolveBunExecutable({ PATH: hostPath ?? "" }) === null) {
-    env.PATH = hostPath ? `${hostPath}${delimiter}${dirname(bun)}` : dirname(bun);
-  }
-  return env;
+  if (core !== undefined) vars.TOOLU_PLUGIN_ROOT = core.pluginDir;
+  for (const plugin of plugins) vars[pluginRootVar(plugin.name)] = plugin.pluginDir;
+  return { vars, bun, hostPath: host.PATH };
+}
+
+/**
+ * Apply `shell` to the env one bash call is being built with. PATH gains Bun's
+ * directory, last, only when the PATH bash will see (an earlier plugin's, else
+ * the host's) has no `bun`, so `#!/usr/bin/env bun` helpers run.
+ */
+export function applyShellEnv(shell: ShellEnv, env: Record<string, string>): void {
+  Object.assign(env, shell.vars);
+  const path = env.PATH ?? shell.hostPath;
+  if (resolveBunExecutable({ PATH: path ?? "" }) !== null) return;
+  const bunDir = dirname(shell.bun);
+  env.PATH = path ? `${path}${delimiter}${bunDir}` : bunDir;
 }

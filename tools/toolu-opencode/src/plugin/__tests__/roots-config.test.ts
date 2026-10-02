@@ -9,8 +9,9 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Hooks } from "@opencode-ai/plugin";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
-import { opencodeDataRoot } from "../../host/roots.ts";
-import { definedEnv, type HostBinding } from "../context.ts";
+import { opencodeDataRoot, opencodeProjectKey } from "../../host/roots.ts";
+import { definedEnv } from "../../host/runtime-env.ts";
+import type { HostBinding } from "../context.ts";
 import { createTooluHooks } from "../hooks.ts";
 
 const REPO_ROOT = join(import.meta.dir, "../../../../..");
@@ -115,8 +116,13 @@ test("the global config comes from OpenCode's config dir, the project config win
   expect(await decide(sb.project, overridden, "edit", edit)).toMatch(refused);
 
   const keyed = opencodeDataRoot({ projectRoot: sb.project, env: overridden });
-  expect(keyed.startsWith(join(override, "toolu", "opencode", "projects"))).toBe(true);
-  expect(readFileSync(join(keyed, "toolu", "startup-ledger.json"), "utf8")).toContain('"version"');
+  expect(keyed).toBe(
+    join(override, "toolu", "opencode", "projects", opencodeProjectKey(sb.project)),
+  );
+  const ledger: unknown = JSON.parse(
+    readFileSync(join(keyed, "toolu", "startup-ledger.json"), "utf8"),
+  );
+  expect(ledger).toEqual({ version: 1, plugins: {} });
   expect(sb.read(".env")).toBe(ENV_BYTES);
 }, 180_000);
 

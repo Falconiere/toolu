@@ -10,6 +10,7 @@
  */
 import type { Hooks } from "@opencode-ai/plugin";
 import { createDenyAllToolBefore } from "../adapter/tool-before.ts";
+import { applyShellEnv, type ShellEnv } from "../host/runtime-env.ts";
 import type { HostBinding, LogLevel } from "./context.ts";
 import { prepareEnforcement, type Enforcement } from "./enforcement.ts";
 import { claimInstance, releaseInstance } from "./once.ts";
@@ -42,11 +43,9 @@ async function report(binding: HostBinding, level: LogLevel, message: string): P
 }
 
 /** `shell.env`: add toolu's variables to the env the host builds for one bash call. */
-function shellEnvHook(
-  additions: Readonly<Record<string, string>>,
-): NonNullable<Hooks["shell.env"]> {
+function shellEnvHook(shell: ShellEnv): NonNullable<Hooks["shell.env"]> {
   return (...[, output]) => {
-    Object.assign(output.env, additions);
+    applyShellEnv(shell, output.env);
     return Promise.resolve();
   };
 }

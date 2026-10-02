@@ -54,9 +54,10 @@ Enable the workflow plugins in `<project>/.opencode/toolu/plugins.json`:
 
 Wire OpenCode to the generated surface under
 `tools/toolu-opencode/generated/` (shipped in `@toolu/opencode`); see
-[docs/opencode.md](../../docs/opencode.md). Set `TOOLU_PLUGIN_ROOT` to the
-installed `plugins/epic-orchestrator` directory when running scripts from the
-generated skill.
+[docs/opencode.md](../../docs/opencode.md). The generated skill runs its
+scripts from `$TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR`, which the OpenCode
+plugin's `shell.env` sets to the installed `plugins/epic-orchestrator`
+directory while the plugin is enabled.
 
 ## What it provides
 

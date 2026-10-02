@@ -110,7 +110,7 @@ test("a shared root left by an earlier release is reported once at startup, neve
   const result = await start(join(root.path, "project"), ["toolu"], env);
   if (result.status !== "ready") throw new Error(result.reason);
   expect(result.diagnostics).toContain(
-    `shared data root ${join(shared, "toolu")} from before #343 is no longer used; each project now starts in ${join(shared, "toolu", "opencode", "projects")} (see docs/opencode.md, Roots and helper environment)`,
+    `shared data root ${join(shared, "toolu")} from before #343 is no longer used; each project now starts in ${join(shared, "toolu", "opencode", "projects")}. Delete ${legacy} (OpenCode's own) to silence this note; see docs/opencode.md, Roots and helper environment`,
   );
   expect(readFileSync(legacy, "utf8")).toBe('{"version":1,"plugins":{}}\n');
   const quiet = await start(join(root.path, "other"), ["toolu"], {
@@ -119,4 +119,27 @@ test("a shared root left by an earlier release is reported once at startup, neve
   });
   if (quiet.status !== "ready") throw new Error(quiet.reason);
   expect(quiet.diagnostics.filter((note) => note.includes("#343"))).toEqual([]);
+}, 120_000);
+
+test("a session started from another session's bash keeps its own roots and gets no legacy note", async () => {
+  using root = tempRoot("toolu-nested-session-");
+  const outer = join(root.path, "outer", ".opencode", "toolu", "state");
+  mkdirSync(join(outer, "toolu"), { recursive: true });
+  writeFileSync(join(outer, "toolu", "startup-ledger.json"), '{"version":1,"plugins":{}}\n');
+  const env = {
+    HOME: join(root.path, "home"),
+    TOOLU_BUN: process.execPath,
+    TOOLU_CONFIG_DIR: outer,
+    TOOLU_OPENCODE_DATA_ROOT: outer,
+  };
+  const project = join(root.path, "inner");
+  const result = await start(project, ["toolu"], env);
+  if (result.status !== "ready") throw new Error(result.reason);
+  expect(result.diagnostics.filter((note) => note.includes("#343"))).toEqual([]);
+  expect(opencodeDataRoot({ projectRoot: project, env })).toBe(
+    join(project, ".opencode", "toolu", "state"),
+  );
+  expect(
+    readFileSync(join(project, ".opencode/toolu/state/toolu/startup-ledger.json"), "utf8"),
+  ).toContain('"version": 1');
 }, 120_000);

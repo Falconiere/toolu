@@ -25,16 +25,26 @@ function nonEmpty(value: string | undefined): string | undefined {
   return value !== undefined && value.length > 0 ? value : undefined;
 }
 
-/** The explicit cross-project override, if any: `TOOLU_CONFIG_DIR`, then `TOOLU_OPENCODE_HOME`. */
+/** The ownership ledger's file name under `<data root>/toolu/`. */
+export const OPENCODE_STARTUP_LEDGER = "startup-ledger.json";
+
+/**
+ * The explicit cross-project override, if any: `TOOLU_CONFIG_DIR`, then
+ * `TOOLU_OPENCODE_HOME`. A `TOOLU_CONFIG_DIR` equal to the data-root marker came
+ * from an enclosing OpenCode session's bash, not from the user, so it is ignored.
+ */
 function override(env: NodeJS.ProcessEnv): string | undefined {
-  return nonEmpty(env.TOOLU_CONFIG_DIR) ?? nonEmpty(env.TOOLU_OPENCODE_HOME);
+  const configDir = nonEmpty(env.TOOLU_CONFIG_DIR);
+  const inherited = configDir !== undefined && configDir === nonEmpty(env.TOOLU_OPENCODE_DATA_ROOT);
+  const chosen = (inherited ? undefined : configDir) ?? nonEmpty(env.TOOLU_OPENCODE_HOME);
+  return chosen === undefined ? undefined : resolve(chosen);
 }
 
 /** Global config root: the override, else OpenCode's XDG config directory. Never throws. */
 export function opencodeConfigRoot(options: OpencodeRootsOptions = {}): string {
   const env = options.env ?? process.env;
   const xdg = nonEmpty(env.XDG_CONFIG_HOME) ?? join(nonEmpty(env.HOME) ?? homedir(), ".config");
-  return override(env) ?? join(xdg, "opencode");
+  return override(env) ?? resolve(xdg, "opencode");
 }
 
 function realOrResolved(path: string): string {
@@ -111,5 +121,5 @@ export function opencodeLegacySharedRoot(options: OpencodeRootsOptions = {}): st
   const shared = override(options.env ?? process.env);
   if (shared === undefined) return undefined;
   const root = opencodeRegistryRoot(shared);
-  return existsSync(join(root, "startup-ledger.json")) ? root : undefined;
+  return existsSync(join(root, OPENCODE_STARTUP_LEDGER)) ? root : undefined;
 }

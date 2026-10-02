@@ -3,7 +3,8 @@ import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Hooks } from "@opencode-ai/plugin";
-import { definedEnv, parseOptions, type HostBinding, type LogLevel } from "../context.ts";
+import { definedEnv } from "../../host/runtime-env.ts";
+import { parseOptions, type HostBinding, type LogLevel } from "../context.ts";
 import { prepareEnforcement } from "../enforcement.ts";
 import { createTooluHooks, startupNotes } from "../hooks.ts";
 
@@ -42,6 +43,7 @@ function binding(
   delete env.TOOLU_OPENCODE_HOME;
   // Never the developer's own global config: an empty XDG config dir inside the project.
   env.XDG_CONFIG_HOME = join(root, ".xdg");
+  env.TOOLU_BUN = process.execPath;
   return {
     directory: root,
     projectRoot: root,
@@ -94,7 +96,7 @@ test("ready: shell.env adds toolu's roots to a bash call's env and keeps what is
   const hooks = await createTooluHooks(binding(root, []));
   const shellEnv = hooks["shell.env"];
   if (shellEnv === undefined) throw new Error("no shell.env hook");
-  const output: { env: Record<string, string> } = { env: { KEEP: "1" } };
+  const output: { env: Record<string, string> } = { env: { KEEP: "1", PATH: "/usr/bin" } };
   await shellEnv({ cwd: root, sessionID: CALL.sessionID, callID: CALL.callID }, output);
   expect(output.env).toMatchObject({
     KEEP: "1",
@@ -107,7 +109,9 @@ test("ready: shell.env adds toolu's roots to a bash call's env and keeps what is
     TOOLU_PLUGIN_ROOT: join(REPO_ROOT, "plugins/toolu"),
     TOOLU_PLUGIN_ROOT_TOOLU: join(REPO_ROOT, "plugins/toolu"),
   });
-  expect(output.env.TOOLU_BUN).toBeString();
+  expect(output.env.TOOLU_BUN).toBe(process.execPath);
+  expect(output.env.TOOLU_OPENCODE_DATA_ROOT).toBe(join(root, ".opencode/toolu/state"));
+  expect(output.env.PATH).toBe(`/usr/bin:${dirname(process.execPath)}`);
   expect(output.env.TOOLU_PROJECT_DIR).toBeUndefined();
   expect(output.env.HOME).toBeUndefined();
   await hooks.dispose?.();

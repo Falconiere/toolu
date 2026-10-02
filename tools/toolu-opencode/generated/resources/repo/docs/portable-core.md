@@ -50,7 +50,7 @@ TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, 
 
 | Export | Responsibility |
 |--------|----------------|
-| `@toolu/opencode/host` | `detectHost`; the global config root (`TOOLU_CONFIG_DIR`, `TOOLU_OPENCODE_HOME`, `$XDG_CONFIG_HOME/opencode`) and per-project data roots (`.opencode/toolu/state/`, or keyed under an override); the `shell.env` helper environment |
+| `@toolu/opencode/host` | `detectHost`; the global config root (`TOOLU_CONFIG_DIR`, `TOOLU_OPENCODE_HOME`, `$XDG_CONFIG_HOME/opencode`) and per-project data roots (`.opencode/toolu/state/`, or keyed under an override) |
 | `@toolu/opencode/inventory` | Installed/enabled/absent/unknown; selection via `.opencode/toolu/plugins.json` + `toolu.config` skills |
 | `@toolu/opencode/select` | Enabled set + manifest dependency closure |
 | `@toolu/opencode/bootstrap` | `bootstrapRuntime` → Ready \| NotReady with registry/session artifacts |

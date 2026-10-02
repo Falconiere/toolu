@@ -195,10 +195,11 @@
       "tooling/src/opencode-entry-smoke.ts",
       "tools/toolu-opencode/src/**",
       "tools/toolu-opencode/generated/skills/context7-context7/SKILL.md",
-      "plugins/**"
+      "plugins/**",
+      "tooling/src/__tests__/opencode-entry-smoke.test.ts"
     ],
     "input": "Pinned opencode-ai@1.18.34 from ~/.cache/toolu/opencode-host, isolated profiles, scripted loopback provider. entry.helper-env: project dir and catalog copy (TOOLU_REPO_ROOT) both under paths with spaces, PATH=/usr/bin:/bin without bun and TOOLU_BUN set, toolu+context7+epic-orchestrator enabled; scripted bash runs the generated context7 SKILL.md OpenCode helper line with --help, bun \"$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\" --help, test -f \"$TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR/scripts/report.ts\", printf %s \"$HOME\"; each writes a marker file checked on disk. entry.worktree-state: repo M (toolu+ast-grep, failing .opencode/tmp/quality-gate-status.json) and linked worktree W at a path with a space (toolu only); M session scripts git commit, W session starts; checks: M commit tool state is error with the quality-gate reason, M gate file bytes equal before/after, both M ast-grep modules still present after W's startup, W/.opencode/toolu/state exists without ast-grep modules",
-    "check": "bun run smoke:opencode-entry entry.helper-env entry.worktree-state && bun test --timeout 60000 tooling/src/opencode-host/__tests__",
+    "check": "bun run smoke:opencode-entry entry.helper-env entry.worktree-state && bun test --timeout 60000 tooling/src/opencode-host/__tests__ tooling/src/__tests__/opencode-entry-smoke.test.ts",
     "model": "inherit"
   },
   {
@@ -215,7 +216,9 @@
       "docs/config.md",
       "docs/portable-core.md",
       "tools/toolu-opencode/generated/**",
-      "tooling/src/check-portable-core-doc.ts"
+      "tooling/src/check-portable-core-doc.ts",
+      "docs/portable-frontmatter.md",
+      "plugins/epic-orchestrator/README.md"
     ],
     "input": "The documents and the regenerated mirror",
     "check": "bun run generate:opencode-surface && bun run check:opencode-surface && bun run test:portable-core",
@@ -292,6 +295,20 @@
   On this branch the golden files pass with `/bin` and `/sbin` removed from `PATH` (338 pass). The five chmod tests pass as `nobody` from a clone under `/tmp` (28 pass). The gate check therefore excludes the chmod cases by name, runs the unit tests with the deduplicated `PATH`, and excludes the load-sensitive "import cost" timings, as the OP-08 plan did.
 - **`bench:shell --assert`** is load-sensitive (load average 11–27 with other epic workers). It went over once (p99 134.7 µs, then 116.5 µs). Back to back, `origin/main` measured 88.7 µs and this branch 66.3 µs, both within the 100 µs budget. The shell analyzer is unchanged on this branch. CI runs it as part of `bun run test`.
 - **AC-6 helper check:** context7's `--help` exits 1 by design, after printing its usage. Its bare `help` is a real network search. The scenario keeps `--help` and asserts the usage and exit 1. Exit 127 would mean `bun` or the helper was not found, which is what the same run gives without `shell.env`. The spec wording was updated.
+
+- **Local review (toolu-review, plus an independent reviewer):** two medium and seven low findings. Jev triaged the three borderline ones.
+  - Fixed, medium: `docs/portable-frontmatter.md` and the epic-orchestrator README still described `TOOLU_PLUGIN_ROOT` as the plugin's own root.
+  - Fixed, medium: a host-exported `TOOLU_PROJECT_DIR` leaked into bash. `shell.env` now blanks it.
+  - Fixed, low: an earlier plugin's `shell.env` PATH was replaced. `applyShellEnv` now extends the PATH bash will see.
+  - Fixed, low: the legacy-root note now says to delete the OpenCode-only ledger, and the ledger name is one shared constant.
+  - Fixed, low: a session nested in another's bash took the injected `TOOLU_CONFIG_DIR` as an override. The new `TOOLU_OPENCODE_DATA_ROOT` marker prevents it. Jev 0.72 to fix.
+  - Fixed, low: the portable-core row overstated the export.
+  - Fixed, low: test gaps. Added `gateEnv` and smoke-filter tests.
+  - Fixed, low: loose assertions. Exact keyed path, parsed ledger, exact `TOOLU_BUN`.
+  - Fixed, low: the repo root and override roots are now absolute.
+  - Fixed, low: a fourth copy of the defined-env helper. `definedEnv` now lives in `host/runtime-env.ts`.
+  - Kept: the Bun null guard in `enforcement.ts`, a narrowing guard with an accurate message (Jev 0.34 that it is a defect).
+  - Documented instead of handled: a `TOOLU_BUN` not named `bun` (Jev 0.47).
 
 ## Plan review
 

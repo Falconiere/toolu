@@ -10,12 +10,13 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  OPENCODE_STARTUP_LEDGER,
   opencodeConfigRoot,
   opencodeDataRoot,
   opencodeLegacySharedRoot,
   opencodeRegistryRoot,
 } from "../host/roots.ts";
-import { tooluProcessEnv } from "../host/runtime-env.ts";
+import { definedEnv, tooluProcessEnv } from "../host/runtime-env.ts";
 import { listPluginManifests } from "../inventory/scan.ts";
 import type { PluginManifest } from "../inventory/types.ts";
 import { resolveBunExecutable } from "../preflight/check.ts";
@@ -70,11 +71,7 @@ function excerpt(text: string): string {
 }
 
 function hostEnv(options: BootstrapRuntimeOptions): Record<string, string> {
-  const inherited: Record<string, string> = {};
-  for (const [key, value] of Object.entries(process.env)) {
-    if (value !== undefined) inherited[key] = value;
-  }
-  return { ...inherited, ...options.env };
+  return { ...definedEnv(process.env), ...options.env };
 }
 
 function bootstrapEnv(
@@ -98,7 +95,8 @@ function legacySharedNote(host: Record<string, string>, dataRoot: string): strin
   const legacy = opencodeLegacySharedRoot({ env: host });
   if (legacy === undefined || legacy === opencodeRegistryRoot(dataRoot)) return undefined;
   const projects = join(legacy, "opencode", "projects");
-  return `shared data root ${legacy} from before #343 is no longer used; each project now starts in ${projects} (see docs/opencode.md, Roots and helper environment)`;
+  const ledger = join(legacy, OPENCODE_STARTUP_LEDGER);
+  return `shared data root ${legacy} from before #343 is no longer used; each project now starts in ${projects}. Delete ${ledger} (OpenCode's own) to silence this note; see docs/opencode.md, Roots and helper environment`;
 }
 
 /** An empty report file in a new temp directory, or why there cannot be one. */

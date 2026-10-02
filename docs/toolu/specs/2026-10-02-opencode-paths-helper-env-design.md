@@ -194,7 +194,7 @@ Hooks shape on a ready instance: `{ "tool.execute.before", "shell.env": (input, 
 - `docs/portable-core.md`: the `@toolu/opencode/host` row and the `${CLAUDE_PLUGIN_ROOT}` rewrite sentence.
 - `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`: comment line.
 - `tools/toolu-opencode/generated/**`: regenerated, including `GENERATED-NOTES.md` and the mirrored docs.
-- No README change: the install flow does not change.
+- `plugins/epic-orchestrator/README.md` and `docs/portable-frontmatter.md`: they described `TOOLU_PLUGIN_ROOT` as the plugin's own root. They now name `TOOLU_PLUGIN_ROOT_<PLUGIN>`.
 
 ## Open Questions
 

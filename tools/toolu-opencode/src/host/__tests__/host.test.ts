@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { detectHost } from "../detect.ts";
 import {
@@ -73,6 +73,27 @@ test("under one override, two projects and a linked worktree get distinct keyed 
     env: { TOOLU_OPENCODE_HOME: shared },
   });
   expect(viaHome).toBe(opencodeDataRoot({ projectRoot: a.project, env }));
+});
+
+test("a TOOLU_CONFIG_DIR inherited from an enclosing session's bash is not an override", () => {
+  using sb = createSandbox();
+  const outer = join(sb.root, "outer", ".opencode", "toolu", "state");
+  const inherited = { HOME: "/home/u", TOOLU_CONFIG_DIR: outer, TOOLU_OPENCODE_DATA_ROOT: outer };
+  expect(opencodeConfigRoot({ env: inherited })).toBe("/home/u/.config/opencode");
+  expect(opencodeDataRoot({ projectRoot: sb.project, env: inherited })).toBe(
+    join(sb.project, ".opencode", "toolu", "state"),
+  );
+  const own = { ...inherited, TOOLU_OPENCODE_HOME: "/oc" };
+  expect(opencodeConfigRoot({ env: own })).toBe("/oc");
+  const user = { ...inherited, TOOLU_CONFIG_DIR: "/user/override" };
+  expect(opencodeConfigRoot({ env: user })).toBe("/user/override");
+});
+
+test("relative overrides resolve to absolute roots", () => {
+  expect(opencodeConfigRoot({ env: { TOOLU_CONFIG_DIR: "rel/cfg" } })).toBe(resolve("rel/cfg"));
+  expect(opencodeConfigRoot({ env: { HOME: "/h", XDG_CONFIG_HOME: "rel-xdg" } })).toBe(
+    resolve("rel-xdg", "opencode"),
+  );
 });
 
 test("the project key is a readable slug plus a hash of the real path", () => {

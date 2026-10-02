@@ -2,7 +2,8 @@ import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createPermissionEvaluateHandler } from "../evaluate.ts";
+import { FOREIGN_HOST_VARS } from "../../host/runtime-env.ts";
+import { createPermissionEvaluateHandler, gateEnv } from "../evaluate.ts";
 import type { PermissionEvaluationEvent } from "../permission-map.ts";
 import { bootstrapRuntime } from "../../bootstrap/runtime.ts";
 import { selectPluginsByEnabledNames } from "../../select/resolve.ts";
@@ -156,4 +157,30 @@ test("AC-3: runtime_failure from bad repoRoot maps to deny", async () => {
   expect(event.effect).toBe("deny");
   expect(typeof event.message).toBe("string");
   expect(event.message && event.message.length > 0).toBe(true);
+});
+
+test("#343: gates see no other host's root and read the global config from userConfigRoot", () => {
+  const poisoned = Object.fromEntries(FOREIGN_HOST_VARS.map((key) => [key, `/poison/${key}`]));
+  const base = {
+    repoRoot: "/repo",
+    configRoot: "/data",
+    permissionContext: { cwd: "/p/sub", projectRoot: "/p", worktree: "/p" },
+    env: { ...poisoned, KEEP: "1", TOOLU_PROJECT_DIR: "/elsewhere" },
+  };
+  const opts = { ...base, userConfigRoot: "/global" };
+  const env = gateEnv(opts, "/repo/plugins/toolu");
+  for (const key of FOREIGN_HOST_VARS) expect(env[key]).toBeUndefined();
+  expect(env).toMatchObject({
+    KEEP: "1",
+    TOOLU_USER_CONFIG_DIR: "/global",
+    TOOLU_CONFIG_DIR: "/data",
+    TOOLU_PROJECT_DIR: "/p",
+    TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",
+    TOOLU_HOST_OVERRIDE: "opencode",
+    TOOLU_SETTINGS_DIR: "/repo/plugins/toolu/settings",
+  });
+  // Without userConfigRoot (the legacy permission.evaluate route) nothing is added.
+  expect(gateEnv(base, "/repo/plugins/toolu").TOOLU_USER_CONFIG_DIR).toBe(
+    process.env.TOOLU_USER_CONFIG_DIR,
+  );
 });

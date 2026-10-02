@@ -21,7 +21,7 @@ OpenCode discovery uses generated Markdown under `tools/toolu-opencode/generated
 
 | Pattern | Treatment |
 |---------|-----------|
-| `` `${CLAUDE_PLUGIN_ROOT}` `` | **Map** → `` `${TOOLU_PLUGIN_ROOT}` `` | Lifecycle-only plugin root; OpenCode bootstrap must set `TOOLU_PLUGIN_ROOT` to the installed `plugins/<name>/` tree (workflows, hooks), not the generated skill mirror. |
+| `` `${CLAUDE_PLUGIN_ROOT}` `` | **Map** → the owning plugin's `` `${TOOLU_PLUGIN_ROOT_<PLUGIN>}` `` | Each plugin's own root, as on Claude Code. The OpenCode adapter's `shell.env` sets one per enabled plugin to its installed `plugins/<name>/` tree (workflows, hooks), not the generated skill mirror ([opencode.md](opencode.md#roots-and-helper-environment)). |
 | `` `${CODEX_HOME}` `` / `` `${CLAUDE_CONFIG_DIR}` `` | **Preserve** | Documented host paths; cataloged when `.claude` appears literally. |
 | Literal `.claude/` or `.claude` path segments | **Catalog** | Not rewritten automatically; see `generated/GENERATED-NOTES.md`. |
 

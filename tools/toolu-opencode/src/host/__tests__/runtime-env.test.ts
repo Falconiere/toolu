@@ -12,9 +12,11 @@ import { delimiter, dirname, join, resolve } from "node:path";
 import { bindHostContext } from "../../plugin/context.ts";
 import { selectPluginsByEnabledNames } from "../../select/resolve.ts";
 import {
+  applyShellEnv,
+  DATA_ROOT_MARKER,
   FOREIGN_HOST_VARS,
   pluginRootVar,
-  shellEnvAdditions,
+  shellEnvFor,
   tooluProcessEnv,
   type OpencodeRoots,
 } from "../runtime-env.ts";
@@ -79,40 +81,63 @@ test("bash gets toolu's roots, one root per selected plugin, and nothing copied 
   const names = plugins.map((plugin) => plugin.name);
   expect(names).toContain("toolu");
   expect(names).not.toContain("jira");
-  const env = shellEnvAdditions({ roots: ROOTS, plugins, bun: BUN, hostPath: dirname(BUN) });
+  const shell = shellEnvFor({ roots: ROOTS, plugins, bun: BUN, host: HOST_ENV });
   const perPlugin = Object.fromEntries(
     names.map((name) => [pluginRootVar(name), join(REPO_ROOT, "plugins", name)]),
   );
-  expect(env).toEqual({
-    TOOLU_HOST_OVERRIDE: "opencode",
-    TOOLU_CONFIG_DIR: ROOTS.dataRoot,
-    TOOLU_USER_CONFIG_DIR: ROOTS.userConfigRoot,
-    TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",
-    TOOLU_SETTINGS_DIR: join(REPO_ROOT, "plugins/toolu/settings"),
-    TOOLU_BUN: BUN,
-    TOOLU_OPENCODE_ROOT: ROOTS.packageRoot,
-    TOOLU_PLUGIN_ROOT: join(REPO_ROOT, "plugins/toolu"),
-    ...perPlugin,
+  expect(shell).toEqual({
+    vars: {
+      TOOLU_HOST_OVERRIDE: "opencode",
+      TOOLU_CONFIG_DIR: ROOTS.dataRoot,
+      [DATA_ROOT_MARKER]: ROOTS.dataRoot,
+      TOOLU_USER_CONFIG_DIR: ROOTS.userConfigRoot,
+      TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",
+      TOOLU_SETTINGS_DIR: join(REPO_ROOT, "plugins/toolu/settings"),
+      TOOLU_PROJECT_DIR: "",
+      TOOLU_BUN: BUN,
+      TOOLU_OPENCODE_ROOT: ROOTS.packageRoot,
+      TOOLU_PLUGIN_ROOT: join(REPO_ROOT, "plugins/toolu"),
+      ...perPlugin,
+    },
+    bun: BUN,
+    hostPath: "/usr/bin:/bin",
   });
-  expect(env.TOOLU_PLUGIN_ROOT_CONTEXT7).toBe(join(REPO_ROOT, "plugins/context7"));
-  expect(env.TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR).toBe(
+  expect(shell.vars.TOOLU_PLUGIN_ROOT_CONTEXT7).toBe(join(REPO_ROOT, "plugins/context7"));
+  expect(shell.vars.TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR).toBe(
     join(REPO_ROOT, "plugins/epic-orchestrator"),
   );
-  expect(env.TOOLU_PLUGIN_ROOT_JIRA).toBeUndefined();
-  expect(Object.values(env)).not.toContain("secret-exa");
+  expect(shell.vars.TOOLU_PLUGIN_ROOT_JIRA).toBeUndefined();
+  expect(Object.values(shell.vars)).not.toContain("secret-exa");
 });
 
-test("Bun's directory is appended to PATH only when the host PATH has no bun", () => {
+test("TOOLU_PROJECT_DIR is blanked in bash only when the host exports one", () => {
+  const { plugins } = selected(["toolu"]);
+  const exported = shellEnvFor({ roots: ROOTS, plugins, bun: BUN, host: HOST_ENV });
+  expect(exported.vars.TOOLU_PROJECT_DIR).toBe("");
+  const quiet = shellEnvFor({ roots: ROOTS, plugins, bun: BUN, host: { PATH: "/usr/bin" } });
+  expect("TOOLU_PROJECT_DIR" in quiet.vars).toBe(false);
+});
+
+test("Bun's directory is appended to the PATH bash will see, only when it has no bun", () => {
   const { plugins } = selected(["toolu"]);
   const empty = mkdtempSync(join(tmpdir(), "toolu-no-bun-"));
-  const without = shellEnvAdditions({ roots: ROOTS, plugins, bun: BUN, hostPath: empty });
-  expect(without.PATH).toBe(`${empty}${delimiter}${dirname(BUN)}`);
-  const unset = shellEnvAdditions({ roots: ROOTS, plugins, bun: BUN, hostPath: undefined });
-  expect(unset.PATH).toBe(dirname(BUN));
-  const present = `${empty}${delimiter}${dirname(BUN)}`;
-  expect(shellEnvAdditions({ roots: ROOTS, plugins, bun: BUN, hostPath: present }).PATH).toBe(
-    undefined,
+  const withBun = `${empty}${delimiter}${dirname(BUN)}`;
+  const apply = (hostPath: string | undefined, env: Record<string, string>) => {
+    const host: Record<string, string> = hostPath === undefined ? {} : { PATH: hostPath };
+    applyShellEnv(shellEnvFor({ roots: ROOTS, plugins, bun: BUN, host }), env);
+    return env;
+  };
+  expect(apply(empty, { KEEP: "1" })).toMatchObject({
+    KEEP: "1",
+    PATH: `${empty}${delimiter}${dirname(BUN)}`,
+  });
+  expect(apply(undefined, {}).PATH).toBe(dirname(BUN));
+  expect(apply(withBun, {}).PATH).toBeUndefined();
+  // An earlier plugin's PATH is kept and extended, never replaced by the host's.
+  expect(apply(withBun, { PATH: `${empty}${delimiter}/opt/x` }).PATH).toBe(
+    `${empty}${delimiter}/opt/x${delimiter}${dirname(BUN)}`,
   );
+  expect(apply(empty, { PATH: withBun }).PATH).toBe(withBun);
 });
 
 test("plugin root variable names are the plugin name in upper snake case", () => {

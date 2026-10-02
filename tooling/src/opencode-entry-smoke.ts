@@ -27,7 +27,7 @@ import { STARTUP_SCENARIOS } from "./opencode-host/scenarios-startup.ts";
 const ALL_SCENARIOS = [...ENTRY_SCENARIOS, ...STARTUP_SCENARIOS, ...PATH_SCENARIOS];
 
 /** The scenarios named in `ids`, or every one; an unknown id is an error, not an empty run. */
-function chosen(ids: readonly string[]): EntryScenario[] {
+export function chosen(ids: readonly string[]): EntryScenario[] {
   const unknown = ids.filter((id) => !ALL_SCENARIOS.some((scenario) => scenario.id === id));
   if (unknown.length > 0) throw new ContractError(`unknown scenario: ${unknown.join(", ")}`);
   return ids.length === 0 ? ALL_SCENARIOS : ALL_SCENARIOS.filter((s) => ids.includes(s.id));

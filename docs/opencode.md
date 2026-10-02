@@ -138,22 +138,24 @@ In **your application repo** (not inside the toolu clone):
 | Global config | `TOOLU_CONFIG_DIR`, else `TOOLU_OPENCODE_HOME`, else `$XDG_CONFIG_HOME/opencode`, else `~/.config/opencode` | The global `toolu.config.json`; toolu only reads it |
 | Data | `<project>/.opencode/toolu/state/`. With `TOOLU_CONFIG_DIR` or `TOOLU_OPENCODE_HOME` set: `<override>/toolu/opencode/projects/<name>-<hash>/`, one directory per project | Registry modules, published helpers, startup ledger |
 
-Projects and worktrees never share a data root, even under one override, so one project's startup cannot remove or relink another's modules and helpers. Before #343 an override was itself the shared data root. Those old files (`<override>/toolu/{pre,post}-tools.d/*@toolu__*`, `<override>/<plugin>/<helper>.sh`, `<override>/toolu/startup-ledger.json`) are no longer used. While that old ledger remains, each startup logs a `toolu: startup notes:` line naming it. Delete those files when no Claude Code or Codex install shares that override.
+Projects and worktrees never share a data root, even under one override, so one project's startup cannot remove or relink another's modules and helpers. Before #343 an override was itself the shared data root. Those old files (`<override>/toolu/{pre,post}-tools.d/*@toolu__*`, `<override>/<plugin>/<helper>.sh`, `<override>/toolu/startup-ledger.json`) are no longer used. While that old ledger remains, each startup logs a `toolu: startup notes:` line naming it. Deleting the ledger, which only OpenCode writes, silences the note. Delete the old modules and helpers too when no Claude Code or Codex install shares that override.
 
 Every bash call the agent makes gets these variables through the plugin's `shell.env` hook. They are added only when toolu is ready, and nothing secret is copied:
 
 | Variable | Value |
 |---|---|
 | `TOOLU_CONFIG_DIR` | The project's data root, where helpers such as `context7/search.sh` are published (the generated skills name `"${TOOLU_CONFIG_DIR:-…}/<plugin>/<helper>"`) |
+| `TOOLU_OPENCODE_DATA_ROOT` | The same path. An OpenCode started from this bash sees `TOOLU_CONFIG_DIR` equal to it and does not treat it as an override, so it keeps its own roots |
 | `TOOLU_USER_CONFIG_DIR` | The global config root |
 | `TOOLU_HOST_OVERRIDE`, `TOOLU_PROJECT_CONFIG_DIRNAME`, `TOOLU_SETTINGS_DIR` | `opencode`, `.opencode`, the toolu settings directory, so helpers resolve OpenCode state |
 | `TOOLU_PLUGIN_ROOT_<PLUGIN>` | Each enabled plugin's directory, the name upper-cased with `-` as `_` (`TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR`). Generated surfaces use it wherever the source says `${CLAUDE_PLUGIN_ROOT}` |
 | `TOOLU_PLUGIN_ROOT` | The toolu core plugin, for `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js"` and `verdict.js` |
 | `TOOLU_OPENCODE_ROOT` | The `@toolu/opencode` package, which holds `generated/` |
 | `TOOLU_BUN` | The Bun that startup resolved (`TOOLU_BUN`, `PATH`, then `~/.bun/bin/bun`) |
-| `PATH` | Gains that Bun's directory at the end, only when `PATH` has no `bun`, so `#!/usr/bin/env bun` helpers run |
+| `PATH` | Gains that Bun's directory at the end, only when `PATH` has no `bun`, so `#!/usr/bin/env bun` helpers run. This works when that executable is named `bun`, as the default `~/.bun/bin/bun` is |
+| `TOOLU_PROJECT_DIR` | Set to empty when your environment exports one, so it cannot point every helper at a single project |
 
-`TOOLU_PROJECT_DIR` is not set in bash, so a helper run inside another repository uses that repository's state. Every process the agent starts from bash inherits these variables, including another `opencode`, `claude` or `codex`. Unset the `TOOLU_*` variables before starting a different host from an OpenCode session.
+Because `TOOLU_PROJECT_DIR` stays empty, a helper run inside another repository uses that repository's state. Every process the agent starts from bash inherits these variables. A nested `opencode` keeps its own roots through `TOOLU_OPENCODE_DATA_ROOT`. Unset the `TOOLU_*` variables before starting `claude` or `codex` from an OpenCode session.
 
 ## Verify a real gate
 

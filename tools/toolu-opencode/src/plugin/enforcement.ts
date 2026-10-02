@@ -1,11 +1,11 @@
 /** Preflight, plugin selection and bootstrap, then the gate hook — or the reason toolu is not ready (#336). */
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { createToolBeforeHandler, type ToolBefore } from "../adapter/tool-before.ts";
 import type { PluginStartup } from "../bootstrap/result.ts";
 import { bootstrapRuntime } from "../bootstrap/runtime.ts";
 import { opencodeConfigRoot, opencodeDataRoot } from "../host/roots.ts";
-import { shellEnvAdditions, type OpencodeRoots } from "../host/runtime-env.ts";
+import { shellEnvFor, type OpencodeRoots, type ShellEnv } from "../host/runtime-env.ts";
 import { resolveBunExecutable, runPreflight } from "../preflight/check.ts";
 import { selectPluginsWithDependencies } from "../select/resolve.ts";
 import type { HostBinding } from "./context.ts";
@@ -19,7 +19,7 @@ export type Enforcement =
       plugins: PluginStartup[];
       diagnostics: string[];
       /** What `shell.env` adds to every bash call (#343). */
-      shellEnv: Record<string, string>;
+      shellEnv: ShellEnv;
     }
   | { status: "not-ready"; reason: string };
 
@@ -64,9 +64,11 @@ export async function prepareEnforcement(
   findBundled: () => string | undefined = bundledRepoRoot,
 ): Promise<Enforcement> {
   if (binding.optionsError !== undefined) return notReady(binding.optionsError);
-  const repoRoot = resolveRepoRoot(binding, findBundled);
-  if (repoRoot === undefined)
+  const found = resolveRepoRoot(binding, findBundled);
+  if (found === undefined)
     return notReady("no bundled plugins/ tree; set plugin option repoRoot or TOOLU_REPO_ROOT");
+  // Absolute, so every path handed to bash still resolves after the agent changes directory.
+  const repoRoot = resolve(found);
   const { env, projectRoot } = binding;
   const preflight = runPreflight({ env });
   if (!preflight.bootstrapAllowed)
@@ -105,7 +107,7 @@ export async function prepareEnforcement(
     },
     selectedPluginSpecs: new Set(selected.plugins.map((plugin) => plugin.spec)),
   });
-  const shellEnv = shellEnvAdditions({ roots, plugins: selected.plugins, bun, hostPath: env.PATH });
+  const shellEnv = shellEnvFor({ roots, plugins: selected.plugins, bun, host: env });
   const { artifacts, plugins, diagnostics } = bootstrap;
   return { status: "ready", before, artifacts, plugins, diagnostics, shellEnv };
 }
