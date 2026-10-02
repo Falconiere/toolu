@@ -8,6 +8,5 @@ import { collectStatus, statusHost } from "./statusline/collect.ts";
 import { reportText } from "./statusline/report.ts";
 
 const dir = process.argv[2] || process.cwd();
-const override = process.env.TOOLU_HOST_OVERRIDE;
-const host = override === undefined || override === "" ? "codex" : statusHost(process.env);
+const host = statusHost({ TOOLU_HOST_OVERRIDE: process.env.TOOLU_HOST_OVERRIDE ?? "codex" });
 process.stdout.write(reportText(collectStatus(dir, process.env, host)));

@@ -29,7 +29,7 @@ export type ProjectStatus = {
 
 /** Explicit host override, then Codex's `PLUGIN_ROOT` fallback, then Claude. */
 export function statusHost(env: HostEnv): StatusHost {
-  const override = envValue(env, "TOOLU_HOST_OVERRIDE");
+  const override = env["TOOLU_HOST_OVERRIDE"];
   if (override === "claude") return "claude";
   if (override === "codex") return "codex";
   if (override === "opencode") return "opencode";
