@@ -70,7 +70,7 @@ test("a host that never answers cannot hold the diagnostic past its timeout", as
     50,
   );
   const started = performance.now();
-  await binding.log("info", "toolu: ready (1 bootstrap artifacts)");
+  await binding.log("info", "toolu: ready (1 plugins, 0 startup artifacts)");
   expect(performance.now() - started).toBeLessThan(2_000);
   // The request may land after the 50 ms bound on a loaded runner; the host still answers nothing.
   await api.received;

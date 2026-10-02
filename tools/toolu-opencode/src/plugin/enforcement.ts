@@ -2,6 +2,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { createToolBeforeHandler, type ToolBefore } from "../adapter/tool-before.ts";
+import type { PluginStartup } from "../bootstrap/result.ts";
 import { bootstrapRuntime } from "../bootstrap/runtime.ts";
 import { opencodeDataRoot } from "../host/roots.ts";
 import { runPreflight } from "../preflight/check.ts";
@@ -9,8 +10,18 @@ import { selectPluginsWithDependencies } from "../select/resolve.ts";
 import type { HostBinding } from "./context.ts";
 
 export type Enforcement =
-  | { status: "ready"; before: ToolBefore; artifacts: string[] }
+  | {
+      status: "ready";
+      before: ToolBefore;
+      artifacts: string[];
+      /** Each selected plugin's startup, with the context OP-07 delivers. */
+      plugins: PluginStartup[];
+      diagnostics: string[];
+    }
   | { status: "not-ready"; reason: string };
+
+/** The whole startup, every plugin and entry together, never blocks plugin init for longer. */
+const STARTUP_BUDGET_MS = 180_000;
 
 function notReady(reason: string): Enforcement {
   return { status: "not-ready", reason };
@@ -64,6 +75,7 @@ export async function prepareEnforcement(
     dataRoot,
     plugins: selected.plugins,
     env,
+    signal: AbortSignal.timeout(STARTUP_BUDGET_MS),
   });
   if (bootstrap.status !== "ready") return notReady(`bootstrap: ${bootstrap.reason}`);
   const before = createToolBeforeHandler({
@@ -76,5 +88,6 @@ export async function prepareEnforcement(
       TOOLU_HOST_OVERRIDE: "opencode",
     },
   });
-  return { status: "ready", before, artifacts: bootstrap.artifacts };
+  const { artifacts, plugins, diagnostics } = bootstrap;
+  return { status: "ready", before, artifacts, plugins, diagnostics };
 }

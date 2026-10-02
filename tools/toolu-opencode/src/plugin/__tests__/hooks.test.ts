@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Hooks } from "@opencode-ai/plugin";
@@ -81,10 +81,28 @@ test("ready: a protected .env edit is refused, an allowed bash call runs, one re
   expect(await refusal(hooks, "edit", edit)).toMatch(/protected/i);
   expect(await refusal(hooks, "bash", { command: "echo ok", description: "x" })).toBe("allowed");
   expect(await readFile(envPath, "utf8")).toBe("SECRET=1\n");
-  expect(logged).toHaveLength(1);
-  expect(logged[0]?.level).toBe("info");
-  expect(logged[0]?.message).toMatch(/^toolu: ready \(\d+ bootstrap artifacts\)$/);
+  expect(logged.every((entry) => entry.level === "info")).toBe(true);
+  expect(logged[0]?.message).toMatch(/^toolu: ready \(1 plugins, \d+ startup artifacts\)$/);
   await hooks.dispose?.();
+});
+
+test("a selected plugin whose startup fails refuses every tool with its plugin and cause", async () => {
+  const { root } = await project();
+  const catalog = await mkdtemp(join(tmpBase, "toolu-oc-hooks-catalog-"));
+  await cp(join(REPO_ROOT, "plugins"), join(catalog, "plugins"), { recursive: true });
+  await rm(join(catalog, "plugins/ts-quality/hooks/dist/post-tool-use.js"));
+  await writeFile(
+    join(root, ".opencode/toolu/plugins.json"),
+    JSON.stringify({ version: 1, enabled: ["toolu", "ts-quality"] }),
+  );
+  const logged: Logged[] = [];
+  const hooks = await createTooluHooks(binding(root, logged, { repoRootOption: catalog }));
+  const reason = await refusal(hooks, "bash", { command: "touch never.txt" });
+  expect(reason).toStartWith("toolu: not ready: bootstrap: ts-quality/register: ");
+  expect(reason).toContain("ts-quality@toolu__ts-quality.js: bundle unreadable");
+  expect(logged).toEqual([{ level: "error", message: `${reason}; every tool call is denied` }]);
+  await hooks.dispose?.();
+  await rm(catalog, { recursive: true, force: true });
 });
 
 test("a preparation that throws yields a hook that refuses every tool", async () => {

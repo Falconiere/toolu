@@ -24,7 +24,7 @@ export type RegistryStartupRecord = {
   source: string;
   target: string;
   status: "written" | "unchanged" | "failed";
-  error?: string;
+  error?: string | undefined;
 };
 
 /** One stable-path helper, as `publishWrapper` left it; `path` is absent when there was no source. */
@@ -32,7 +32,7 @@ export type HelperStartupRecord = {
   kind: "helper";
   plugin: string;
   source: string;
-  path?: string;
+  path?: string | undefined;
   status: "published" | "kept-user-file" | "link-failed" | "unwritable" | "source-missing";
 };
 

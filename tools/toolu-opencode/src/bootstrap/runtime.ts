@@ -1,11 +1,26 @@
-/** Bootstrap selected plugins from committed Bun bundles. */
-import { mkdirSync } from "node:fs";
+/**
+ * Complete plugin startup on OpenCode (#342). Every selected plugin runs every
+ * SessionStart entry of its `hooks.json`, dependencies first; each entry
+ * reports its registry and helper contributions, which are verified on disk
+ * before they count. Plugins that are no longer selected lose what toolu
+ * published for them. Readiness is this run's verdict only.
+ */
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { STARTUP_REPORT_ENV } from "@toolu/core/startup";
 import { opencodeDataRoot } from "../host/roots.ts";
+import { listPluginManifests } from "../inventory/scan.ts";
 import type { PluginManifest } from "../inventory/types.ts";
 import { resolveBunExecutable } from "../preflight/check.ts";
-import { notReady, ready, type BootstrapResult } from "./result.ts";
-import { pluginBootstrapScript, requiresNativeRegistration } from "./entrypoint.ts";
-import { evaluateBootstrapReadiness } from "./readiness.ts";
+import { pluginStartupEntries, type StartupEntry } from "./entrypoint.ts";
+import { emptyLedger, pruneUnselected, readLedger, type Cleanup, type Ledger } from "./ledger.ts";
+import { startupOrder } from "./order.ts";
+import { parseStartupOutput } from "./output.ts";
+import { settle, type PluginRun } from "./readiness.ts";
+import { readStartupReport, verifyRecords, type Verified } from "./records.ts";
+import { notReady, type BootstrapResult, type EntryOutcome } from "./result.ts";
+import { spawnEntry } from "./spawn.ts";
 
 export type BootstrapRuntimeOptions = {
   repoRoot: string;
@@ -14,29 +29,27 @@ export type BootstrapRuntimeOptions = {
   plugins: PluginManifest[];
   env?: Record<string, string>;
   isolatedHome?: string;
+  /** Per entry; default 120 s. */
   deadlineMs?: number;
+  /** Cancels the whole startup: the running entry is killed and startup is NotReady. */
+  signal?: AbortSignal;
 };
 
-const MAX_OUTPUT_BYTES = 512_000;
+type Run = {
+  bun: string;
+  env: Record<string, string>;
+  projectRoot: string;
+  dataRoot: string;
+  deadlineMs: number;
+  signal: AbortSignal | undefined;
+};
 
-async function readBoundedOutput(stream: ReadableStream<Uint8Array>): Promise<string> {
-  const reader = stream.getReader();
-  const decoder = new TextDecoder();
-  let bytes = 0;
-  let output = "";
-  async function readNext(): Promise<string> {
-    const { done, value } = await reader.read();
-    if (done) return output + decoder.decode();
-    bytes += value.byteLength;
-    if (bytes > MAX_OUTPUT_BYTES) throw new Error("startup output exceeded 512000 bytes");
-    output += decoder.decode(value, { stream: true });
-    return readNext();
-  }
-  try {
-    return await readNext();
-  } finally {
-    reader.releaseLock();
-  }
+/** At most this much of a failing entry's output goes into the reason. */
+const EXCERPT_CHARS = 500;
+
+function excerpt(text: string): string {
+  const trimmed = text.trim();
+  return trimmed.length > EXCERPT_CHARS ? `${trimmed.slice(0, EXCERPT_CHARS)}…` : trimmed;
 }
 
 function bootstrapEnv(options: BootstrapRuntimeOptions, dataRoot: string): Record<string, string> {
@@ -55,51 +68,107 @@ function bootstrapEnv(options: BootstrapRuntimeOptions, dataRoot: string): Recor
   };
 }
 
-async function runEntrypoint(
-  bun: string,
-  script: string,
-  pluginDir: string,
-  cwd: string,
-  env: Record<string, string>,
-  deadlineMs: number,
-): Promise<BootstrapResult | null> {
+/** Run one entry against a fresh report file; returns its outcome or why it failed. */
+async function runEntry(
+  entry: StartupEntry,
+  plugin: PluginManifest,
+  run: Run,
+  verified: Verified,
+): Promise<EntryOutcome | string> {
+  const dir = mkdtempSync(join(tmpdir(), "toolu-startup-"));
   try {
-    const proc = Bun.spawn([bun, script], {
-      cwd,
-      env: { ...env, CLAUDE_PLUGIN_ROOT: pluginDir },
-      stdin: new Blob(["{}"]),
-      stdout: "pipe",
-      stderr: "pipe",
+    const report = join(dir, "report.jsonl");
+    writeFileSync(report, "");
+    const env = { ...run.env, CLAUDE_PLUGIN_ROOT: plugin.pluginDir, [STARTUP_REPORT_ENV]: report };
+    const stdin = JSON.stringify({
+      hook_event_name: "SessionStart",
+      source: "startup",
+      cwd: run.projectRoot,
     });
-    const timeoutState = { hit: false };
-    const timer = setTimeout(() => {
-      timeoutState.hit = true;
-      proc.kill();
-    }, deadlineMs);
-    try {
-      const [stdout, stderr, exitCode] = await Promise.all([
-        readBoundedOutput(proc.stdout),
-        readBoundedOutput(proc.stderr),
-        proc.exited,
-      ]);
-      if (timeoutState.hit) return notReady(`bootstrap bundle timed out (${script})`);
-      if (exitCode !== 0) {
-        return notReady(`bootstrap bundle ${script} exited ${exitCode}: ${stderr || stdout}`);
-      }
-      return null;
-    } catch (error) {
-      proc.kill();
-      throw error;
-    } finally {
-      clearTimeout(timer);
+    const spawned = await spawnEntry({
+      bun: run.bun,
+      bundle: entry.bundle,
+      cwd: run.projectRoot,
+      env,
+      stdin,
+      deadlineMs: run.deadlineMs,
+      signal: run.signal,
+    });
+    if (spawned.status === "failed") return spawned.reason;
+    if (spawned.exitCode !== 0) {
+      const said = excerpt(spawned.stderr || spawned.stdout);
+      return said === "" ? `exited ${spawned.exitCode}` : `exited ${spawned.exitCode}: ${said}`;
     }
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return notReady(`bootstrap bundle failed (${script}): ${reason}`);
+    const output = parseStartupOutput(spawned.stdout);
+    if (!output.ok) return output.reason;
+    const read = readStartupReport(report);
+    if (!read.ok) return read.reason;
+    const found = verifyRecords(read.records, plugin, run.dataRoot);
+    verified.artifacts.push(...found.artifacts);
+    verified.helpers.push(...found.helpers);
+    verified.diagnostics.push(...found.diagnostics);
+    if (found.failures.length > 0) return found.failures.join("; ");
+    const stderr = excerpt(spawned.stderr);
+    if (stderr !== "") verified.diagnostics.push(`${plugin.name}/${entry.name}: ${stderr}`);
+    return { entry: entry.name, ...output.context };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 }
 
-/** Run each selected plugin's bundle and verify tangible registry/session output. */
+/** Entries run one after another: a later entry may rely on an earlier one's effects. */
+async function runEntries(
+  entries: readonly StartupEntry[],
+  plugin: PluginManifest,
+  run: Run,
+  done: { verified: Verified; outcomes: EntryOutcome[] },
+): Promise<string | undefined> {
+  const [entry, ...rest] = entries;
+  if (entry === undefined) return undefined;
+  const outcome = await runEntry(entry, plugin, run, done.verified);
+  if (typeof outcome === "string") return `${plugin.name}/${entry.name}: ${outcome}`;
+  done.outcomes.push(outcome);
+  return runEntries(rest, plugin, run, done);
+}
+
+function noContributions(): Verified {
+  return { artifacts: [], helpers: [], diagnostics: [], failures: [] };
+}
+
+async function startPlugin(plugin: PluginManifest, run: Run): Promise<PluginRun> {
+  const verified = noContributions();
+  const plan = pluginStartupEntries(plugin.pluginDir);
+  if (!plan.ok)
+    return { status: "failed", plugin, verified, failure: `${plugin.name}: ${plan.reason}` };
+  const done = { verified, outcomes: [] };
+  const failure = await runEntries(plan.entries, plugin, run, done);
+  if (failure !== undefined) return { status: "failed", plugin, verified, failure };
+  return { status: "ready", plugin, verified, entries: done.outcomes };
+}
+
+/** Plugins in startup order; a plugin whose dependency failed is skipped as failed. */
+async function startAll(
+  plugins: readonly PluginManifest[],
+  run: Run,
+  runs: PluginRun[] = [],
+): Promise<PluginRun[]> {
+  const [plugin, ...rest] = plugins;
+  if (plugin === undefined) return runs;
+  const failed = new Set(runs.filter((r) => r.status === "failed").map((r) => r.plugin.name));
+  const dep = plugin.dependencies.find((d) => failed.has(d.name));
+  runs.push(
+    dep === undefined
+      ? await startPlugin(plugin, run)
+      : {
+          status: "failed",
+          plugin,
+          verified: noContributions(),
+          failure: `${plugin.name}: skipped, dependency ${dep.name} failed`,
+        },
+  );
+  return startAll(rest, run, runs);
+}
+
 async function bootstrapRuntimeInternal(
   options: BootstrapRuntimeOptions,
 ): Promise<BootstrapResult> {
@@ -109,35 +178,40 @@ async function bootstrapRuntimeInternal(
   // The child HOME is isolated; the runtime must come from the original host HOME.
   const bun = resolveBunExecutable({ ...env, HOME: options.env?.HOME ?? process.env.HOME ?? "" });
   if (!bun) return notReady("Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun");
-  const deadlineMs = options.deadlineMs ?? 120_000;
-  const runFrom = async (index: number): Promise<BootstrapResult | null> => {
-    const plugin = options.plugins[index];
-    if (!plugin) return null;
-    if (requiresNativeRegistration(plugin.pluginDir)) {
-      return notReady(`selected plugin ${plugin.name} has no native startup bundle`);
-    }
-    const script = pluginBootstrapScript(plugin.pluginDir);
-    if (!script) return runFrom(index + 1);
-    const failure = await runEntrypoint(
-      bun,
-      script,
-      plugin.pluginDir,
-      options.projectRoot,
-      env,
-      deadlineMs,
-    );
-    if (failure) return failure;
-    return runFrom(index + 1);
+  const order = startupOrder(options.plugins);
+  if (!order.ok) return notReady(order.reason);
+  const cleanup: Cleanup = { failures: [], diagnostics: [] };
+  const read = readLedger(dataRoot);
+  if (read.diagnostic !== undefined) cleanup.diagnostics.push(read.diagnostic);
+  const ledger: Ledger = read.ledger;
+  const retained = pruneUnselected(
+    {
+      dataRoot,
+      selected: new Set(order.plugins.map((p) => p.name)),
+      catalog: listPluginManifests(join(options.repoRoot, "plugins")) ?? [],
+      ledger,
+    },
+    cleanup,
+  );
+  const run: Run = {
+    bun,
+    env,
+    projectRoot: options.projectRoot,
+    dataRoot,
+    deadlineMs: options.deadlineMs ?? 120_000,
+    signal: options.signal,
   };
-  const failure = await runFrom(0);
-  if (failure) return failure;
-  const proof = evaluateBootstrapReadiness(dataRoot);
-  return proof.ready
-    ? ready(proof.artifacts)
-    : notReady(proof.reason ?? "bootstrap artifacts missing");
+  const runs = await startAll(order.plugins, run);
+  return settle({
+    dataRoot,
+    runs,
+    previous: ledger,
+    next: { ...emptyLedger(), plugins: retained },
+    cleanup,
+  });
 }
 
-/** All startup failures become NotReady so permission.evaluate can deny. */
+/** All startup failures become NotReady so the plugin can deny every tool call. */
 export async function bootstrapRuntime(options: BootstrapRuntimeOptions): Promise<BootstrapResult> {
   try {
     return await bootstrapRuntimeInternal(options);
