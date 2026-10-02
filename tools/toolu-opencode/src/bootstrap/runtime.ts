@@ -9,7 +9,12 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { opencodeConfigRoot, opencodeDataRoot } from "../host/roots.ts";
+import {
+  opencodeConfigRoot,
+  opencodeDataRoot,
+  opencodeLegacySharedRoot,
+  opencodeRegistryRoot,
+} from "../host/roots.ts";
 import { tooluProcessEnv } from "../host/runtime-env.ts";
 import { listPluginManifests } from "../inventory/scan.ts";
 import type { PluginManifest } from "../inventory/types.ts";
@@ -86,6 +91,14 @@ function bootstrapEnv(
   };
   const env = { ...tooluProcessEnv(host, roots), TOOLU_BUN: bun };
   return options.isolatedHome === undefined ? env : { ...env, HOME: options.isolatedHome };
+}
+
+/** The in-session hint for an override still laid out as the pre-#343 shared root. */
+function legacySharedNote(host: Record<string, string>, dataRoot: string): string | undefined {
+  const legacy = opencodeLegacySharedRoot({ env: host });
+  if (legacy === undefined || legacy === opencodeRegistryRoot(dataRoot)) return undefined;
+  const projects = join(legacy, "opencode", "projects");
+  return `shared data root ${legacy} from before #343 is no longer used; each project now starts in ${projects} (see docs/opencode.md, Roots and helper environment)`;
 }
 
 /** An empty report file in a new temp directory, or why there cannot be one. */
@@ -232,6 +245,8 @@ async function bootstrapRuntimeInternal(
   const cleanup: Cleanup = { failures: [], diagnostics: [] };
   const read = readLedger(dataRoot);
   if (read.diagnostic !== undefined) cleanup.diagnostics.push(read.diagnostic);
+  const legacy = legacySharedNote(host, dataRoot);
+  if (legacy !== undefined) cleanup.diagnostics.push(legacy);
   const ledger: Ledger = read.ledger;
   const pluginsRoot = join(options.repoRoot, "plugins");
   const catalog = listPluginManifests(pluginsRoot);

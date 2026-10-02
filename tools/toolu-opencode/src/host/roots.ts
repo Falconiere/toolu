@@ -10,7 +10,7 @@
  *   keyed directory under it and none can prune or relink another's files.
  */
 import { createHash } from "node:crypto";
-import { realpathSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import type { OpencodeRootsOptions } from "./types.ts";
@@ -101,4 +101,15 @@ export function opencodePluginSelectionPath(projectRoot: string): string {
 /** Registry root under the OpenCode data root. */
 export function opencodeRegistryRoot(dataRoot: string): string {
   return join(dataRoot, "toolu");
+}
+
+/**
+ * `<override>/toolu` when it still holds the startup ledger that releases
+ * before #343 shared across every project under an override; else undefined.
+ */
+export function opencodeLegacySharedRoot(options: OpencodeRootsOptions = {}): string | undefined {
+  const shared = override(options.env ?? process.env);
+  if (shared === undefined) return undefined;
+  const root = opencodeRegistryRoot(shared);
+  return existsSync(join(root, "startup-ledger.json")) ? root : undefined;
 }

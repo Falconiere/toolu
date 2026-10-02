@@ -5,7 +5,7 @@
  * in one project both end ready with a valid ledger.
  */
 import { expect, test } from "bun:test";
-import { mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { opencodeDataRoot } from "../../host/roots.ts";
 import { selectPluginsByEnabledNames } from "../../select/resolve.ts";
@@ -94,4 +94,29 @@ test("two sessions starting at once in one project are both ready with a valid l
     },
   });
   expect(modules(data).toSorted()).toEqual(Object.keys(AST_GREP_MODULES).toSorted());
+}, 120_000);
+
+test("a shared root left by an earlier release is reported once at startup, never touched", async () => {
+  using root = tempRoot("toolu-legacy-shared-");
+  const shared = join(root.path, "shared");
+  const legacy = join(shared, "toolu", "startup-ledger.json");
+  mkdirSync(join(shared, "toolu"), { recursive: true });
+  writeFileSync(legacy, '{"version":1,"plugins":{}}\n');
+  const env = {
+    HOME: join(root.path, "home"),
+    TOOLU_BUN: process.execPath,
+    TOOLU_CONFIG_DIR: shared,
+  };
+  const result = await start(join(root.path, "project"), ["toolu"], env);
+  if (result.status !== "ready") throw new Error(result.reason);
+  expect(result.diagnostics).toContain(
+    `shared data root ${join(shared, "toolu")} from before #343 is no longer used; each project now starts in ${join(shared, "toolu", "opencode", "projects")} (see docs/opencode.md, Roots and helper environment)`,
+  );
+  expect(readFileSync(legacy, "utf8")).toBe('{"version":1,"plugins":{}}\n');
+  const quiet = await start(join(root.path, "other"), ["toolu"], {
+    ...env,
+    TOOLU_CONFIG_DIR: join(root.path, "fresh"),
+  });
+  if (quiet.status !== "ready") throw new Error(quiet.reason);
+  expect(quiet.diagnostics.filter((note) => note.includes("#343"))).toEqual([]);
 }, 120_000);
