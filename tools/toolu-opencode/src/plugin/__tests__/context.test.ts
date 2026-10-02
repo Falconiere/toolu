@@ -9,19 +9,23 @@ afterEach(() => {
   for (const server of servers.splice(0)) server.stop(true);
 });
 
+type HostApi = { url: string; recorded: Recorded[]; received: Promise<void> };
+
 /** A loopback stand-in for the host's HTTP API: records each request, then replies. */
-function hostApi(reply: () => Promise<Response>): { url: string; recorded: Recorded[] } {
+function hostApi(reply: () => Promise<Response>): HostApi {
   const recorded: Recorded[] = [];
+  const { promise: received, resolve } = Promise.withResolvers<void>();
   const server = Bun.serve({
     port: 0,
     hostname: "127.0.0.1",
     fetch: async (request) => {
       recorded.push({ path: new URL(request.url).pathname, body: await request.json() });
+      resolve();
       return reply();
     },
   });
   servers.push(server);
-  return { url: server.url.href, recorded };
+  return { url: server.url.href, recorded, received };
 }
 
 function client(baseUrl: string): ReturnType<typeof createOpencodeClient> {
@@ -68,6 +72,8 @@ test("a host that never answers cannot hold the diagnostic past its timeout", as
   const started = performance.now();
   await binding.log("info", "toolu: ready (1 bootstrap artifacts)");
   expect(performance.now() - started).toBeLessThan(2_000);
+  // The request may land after the 50 ms bound on a loaded runner; the host still answers nothing.
+  await api.received;
   expect(api.recorded).toHaveLength(1);
 });
 
