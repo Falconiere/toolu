@@ -118,12 +118,14 @@ test("without Bun the session still starts with an advisory", async () => {
   expect(JSON.parse(res.stdout)).toEqual({ systemMessage: missingRuntimeMessage("toolu") });
 });
 
-test("disabled context still marks readiness and reports the runtime on startup only", async () => {
+test("disabled context reports the runtime on startup only and writes no readiness marker", async () => {
   const off: LifecycleCase = { ...START, userConfig: { hooks: { "session-start": false } } };
   const { outputs, prepared } = await runTimes(off, 1);
   using _sb = prepared.sb;
   expect(JSON.parse(outputs[0] ?? "")).toEqual({ systemMessage: `Toolu is on!\n${RUNTIME}` });
-  expect(existsSync(join(prepared.sb.home, ".claude", "toolu", ".session-start-ready"))).toBe(true);
+  expect(existsSync(join(prepared.sb.home, ".claude", "toolu", ".session-start-ready"))).toBe(
+    false,
+  );
   const compact = await run(bundleArgv("session-start"), {
     cwd: prepared.cwd,
     env: prepared.env,

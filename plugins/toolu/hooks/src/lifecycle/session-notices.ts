@@ -9,7 +9,7 @@ import { isJsonObject, type JsonObject } from "@toolu/core/config";
 import type { HostName } from "@toolu/core/host";
 
 /** `mkdir -p dir && : > file`, best effort. */
-export function touch(file: string): void {
+function touch(file: string): void {
   try {
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, "");

@@ -5006,11 +5006,30 @@ function docParts(input) {
 
 // plugins/toolu/hooks/src/lifecycle/session-housekeeping.ts
 import { lstatSync as lstatSync2, rmSync as rmSync6 } from "fs";
-import { join as join13 } from "path";
+import { join as join12 } from "path";
+function isSymlink(path) {
+  try {
+    return lstatSync2(path).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+function housekeeping(env, host, configRoot) {
+  if (host === "codex") {
+    snapshotCodexPlugins({ env, host });
+    pruneInactiveModules({ env, host });
+  }
+  const legacy = join12(configRoot, "toolu", "statusline.sh");
+  if (isSymlink(legacy)) {
+    try {
+      rmSync6(legacy, { force: true });
+    } catch {}
+  }
+}
 
 // plugins/toolu/hooks/src/lifecycle/session-notices.ts
 import { existsSync as existsSync4, mkdirSync as mkdirSync3, writeFileSync as writeFileSync5 } from "fs";
-import { dirname as dirname3, join as join12 } from "path";
+import { dirname as dirname3, join as join13 } from "path";
 function touch(file) {
   try {
     mkdirSync3(dirname3(file), { recursive: true });
@@ -5032,33 +5051,11 @@ function deliveryPinned(config) {
   return Object.values(gates).some((gate) => isJsonObject(gate) && Object.hasOwn(gate, "mode"));
 }
 function gatePresetNotice(configRoot, config) {
-  return once(join12(configRoot, "toolu", ".gate-preset-notice-v6"), 'toolu gates no longer prompt: the `balanced` preset advises on push-review and denylist hits, and the quality gate still blocks only `git commit`/`git push`. Pin a prompt with `gates.<name>.mode: ask`, or the old hard denies with `{"gates":{"preset":"strict"}}`.', !deliveryPinned(config));
+  return once(join13(configRoot, "toolu", ".gate-preset-notice-v6"), 'toolu gates no longer prompt: the `balanced` preset advises on push-review and denylist hits, and the quality gate still blocks only `git commit`/`git push`. Pin a prompt with `gates.<name>.mode: ask`, or the old hard denies with `{"gates":{"preset":"strict"}}`.', !deliveryPinned(config));
 }
 function deliveryFlowNotice(configRoot, host) {
   const install = host === "codex" ? "Install with `npx @toolu/plugins install delivery-flow --host codex`, then invoke `$delivery-flow:delivery-flow`." : "Install with `/plugin install delivery-flow@toolu`, then invoke `/delivery-flow:delivery-flow`.";
-  return once(join12(configRoot, "toolu", ".delivery-flow-migration-v7"), `WARN: toolu workflow skills moved to delivery-flow (brainstorm, spec, spec-review, plan, plan-review, execution, test). ${install}`, true);
-}
-
-// plugins/toolu/hooks/src/lifecycle/session-housekeeping.ts
-function isSymlink(path) {
-  try {
-    return lstatSync2(path).isSymbolicLink();
-  } catch {
-    return false;
-  }
-}
-function housekeeping(env, host, configRoot) {
-  if (host === "codex") {
-    snapshotCodexPlugins({ env, host });
-    pruneInactiveModules({ env, host });
-  }
-  const legacy = join13(configRoot, "toolu", "statusline.sh");
-  if (isSymlink(legacy)) {
-    try {
-      rmSync6(legacy, { force: true });
-    } catch {}
-  }
-  touch(join13(configRoot, "toolu", ".session-start-ready"));
+  return once(join13(configRoot, "toolu", ".delivery-flow-migration-v7"), `WARN: toolu workflow skills moved to delivery-flow (brainstorm, spec, spec-review, plan, plan-review, execution, test). ${install}`, true);
 }
 
 // plugins/toolu/hooks/src/lifecycle/tool-mandates.ts

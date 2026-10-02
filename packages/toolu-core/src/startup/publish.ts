@@ -18,6 +18,7 @@ import {
 import { join } from "node:path";
 import { envValue, type HostEnv } from "../host/host-name.ts";
 import { configRoot } from "../host/host-roots.ts";
+import { reportStartup, type StartupRecord } from "./report.ts";
 
 export type PublishOptions = {
   /** Plugin name, the prefix of every stderr line. */
@@ -62,14 +63,27 @@ function relink(source: string, dst: string): boolean {
   }
 }
 
+/** The startup record of one publish (#342); the path is absent only when there was nothing to publish. */
+function helperRecord(options: PublishOptions, result: PublishResult): StartupRecord {
+  const record = { kind: "helper" as const, plugin: options.plugin, source: options.source };
+  if (result.status === "source-missing") return { ...record, status: result.status };
+  return { ...record, path: result.path, status: result.status };
+}
+
 /**
  * Symlink `source` at `<config root>/<dir>/<name>`. The path is owned only
  * when it is absent or already a symlink (stale or broken ones are replaced);
  * a regular file or directory there is the user's and is never touched.
  * Never throws: a missing source is a corrupted install and publishes
- * nothing, silently.
+ * nothing, silently. Every outcome goes to the startup report, when one is named.
  */
 export function publishWrapper(options: PublishOptions): PublishResult {
+  const result = publish(options);
+  reportStartup(helperRecord(options, result), options.env ?? process.env);
+  return result;
+}
+
+function publish(options: PublishOptions): PublishResult {
   if (!isFile(options.source)) {
     return { status: "source-missing" };
   }

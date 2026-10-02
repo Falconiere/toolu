@@ -10,7 +10,13 @@ import { childEnv, run } from "@toolu/conformance/harness/spawn";
 import type { ProbeSession } from "./session.ts";
 import { ContractError } from "./schema.ts";
 
-export const RUN_TIMEOUT_MS = 120_000;
+/**
+ * A hang guard, not a budget. A fresh isolated profile makes the host install
+ * its SDK into the profile's config directories before any plugin loads. On a
+ * busy host that alone took 60-130 s per run (#342), so 120 s cut off runs that
+ * were still working.
+ */
+export const RUN_TIMEOUT_MS = 300_000;
 const SERVE_READY_TIMEOUT_MS = 60_000;
 
 type HostRun = { exitCode: number; events: Array<Record<string, unknown>>; stderr: string };

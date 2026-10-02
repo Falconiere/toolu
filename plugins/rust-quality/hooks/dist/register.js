@@ -3797,6 +3797,26 @@ import {
   writeFileSync
 } from "fs";
 import { dirname, join as join3 } from "path";
+
+// packages/toolu-core/src/startup/report.ts
+import { appendFileSync } from "fs";
+var STARTUP_REPORT_ENV = "TOOLU_STARTUP_REPORT";
+function reportStartup(record, env = process.env) {
+  const path = envValue(env, STARTUP_REPORT_ENV);
+  if (path === undefined)
+    return;
+  try {
+    appendFileSync(path, `${JSON.stringify(record)}
+`);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`toolu-startup: cannot write startup report ${path}: ${reason}
+`);
+    process.exitCode = 1;
+  }
+}
+
+// packages/toolu-core/src/registry/registry-register.ts
 var RESIDUE_AGE_MS = 60000;
 function message(error) {
   return error instanceof Error ? error.message : String(error);
@@ -3900,6 +3920,27 @@ function registerModules(spec, modules, options = {}) {
     pruneDir(join3(root, dir), `${spec}__`, keep, now, result);
   return result;
 }
+function reportResult(spec, modules, result, options) {
+  const env = options.env ?? process.env;
+  const root = registryRoot(options);
+  const failures = new Map(result.failed.map((f) => [f.path, f.error]));
+  for (const m of modules) {
+    const target = join3(root, registryDirName(m.event), registryFileName(spec, m.name));
+    const error = failures.get(target);
+    failures.delete(target);
+    const record = { kind: "registry", spec, name: m.name, event: m.event, target };
+    const source = m.bundle;
+    if (error !== undefined)
+      reportStartup({ ...record, source, status: "failed", error }, env);
+    else {
+      const status = result.written.includes(target) ? "written" : "unchanged";
+      reportStartup({ ...record, source, status }, env);
+    }
+  }
+  for (const [path, error] of failures) {
+    reportStartup({ kind: "error", origin: spec, message: `${path}: ${error}` }, env);
+  }
+}
 async function runRegisterHook(spec, modules, options = {}) {
   const warn = (line) => {
     process.stderr.write(`toolu-registry: register ${spec}: ${line}
@@ -3910,8 +3951,10 @@ async function runRegisterHook(spec, modules, options = {}) {
     const result = registerModules(spec, modules, options);
     for (const failure of result.failed)
       warn(`${failure.path}: ${failure.error}`);
+    reportResult(spec, modules, result, options);
   } catch (error) {
     warn(message(error));
+    reportStartup({ kind: "error", origin: spec, message: message(error) }, options.env);
   }
 }
 // packages/toolu-core/src/decision/decision.ts

@@ -14,6 +14,9 @@ import { claimInstance, releaseInstance } from "./once.ts";
 
 export type PrepareEnforcement = (binding: HostBinding) => Promise<Enforcement>;
 
+/** Startup notes reach the host log, bounded so a noisy cleanup cannot flood it. */
+const MAX_DIAGNOSTICS = 20;
+
 async function settle(prepare: PrepareEnforcement, binding: HostBinding): Promise<Enforcement> {
   try {
     return await prepare(binding);
@@ -36,6 +39,14 @@ async function report(binding: HostBinding, level: LogLevel, message: string): P
   }
 }
 
+/** Startup notes as one log line, so a slow host log costs one bounded call, not one per note. */
+export function startupNotes(diagnostics: readonly string[]): string | undefined {
+  if (diagnostics.length === 0) return undefined;
+  const shown = diagnostics.slice(0, MAX_DIAGNOSTICS).join("; ");
+  const more = diagnostics.length - MAX_DIAGNOSTICS;
+  return `toolu: startup notes: ${shown}${more > 0 ? ` (${more} more)` : ""}`;
+}
+
 /** Never rejects: a failure to prepare enforcement yields a hook that denies every tool call. */
 export async function createTooluHooks(
   binding: HostBinding,
@@ -52,11 +63,14 @@ export async function createTooluHooks(
     return Promise.resolve();
   };
   if (enforcement.status === "ready") {
+    const { plugins, artifacts, diagnostics } = enforcement;
     await report(
       binding,
       "info",
-      `toolu: ready (${enforcement.artifacts.length} bootstrap artifacts)`,
+      `toolu: ready (${plugins.length} plugins, ${artifacts.length} startup artifacts)`,
     );
+    const notes = startupNotes(diagnostics);
+    if (notes !== undefined) await report(binding, "info", notes);
     return { "tool.execute.before": enforcement.before, dispose };
   }
   const message = `toolu: not ready: ${enforcement.reason}`;
