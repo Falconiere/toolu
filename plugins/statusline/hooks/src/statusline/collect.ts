@@ -1,6 +1,6 @@
 /**
- * Host-neutral project status shared by the Claude renderer and the Codex
- * report: repository, branch, ahead/behind, working-tree counts, the quality
+ * Host-neutral project status shared by the Claude renderer and explicit
+ * Codex/OpenCode reports: repository, branch, ahead/behind, working-tree counts, the quality
  * gate, the comemory memory count and Jev readiness, collected in-process.
  *
  * Jev readiness is local configuration only: the wrapper is never executed and
@@ -11,7 +11,7 @@ import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { configRoot, envValue, projectStateRoot, type HostEnv } from "@toolu/core/host";
 import { readObject } from "./json.ts";
 
-export type StatusHost = "claude" | "codex";
+export type StatusHost = "claude" | "codex" | "opencode";
 
 export type ProjectStatus = {
   host: StatusHost;
@@ -27,11 +27,14 @@ export type ProjectStatus = {
   comemory_count: number | null;
 };
 
-/** Codex when forced, or when unforced and Codex's `PLUGIN_ROOT` is set; otherwise Claude. */
+/** Explicit host override, then Codex's `PLUGIN_ROOT` fallback, then Claude. */
 export function statusHost(env: HostEnv): StatusHost {
-  const override = envValue(env, "TOOLU_HOST_OVERRIDE");
+  const override = env["TOOLU_HOST_OVERRIDE"];
+  if (override === "claude") return "claude";
   if (override === "codex") return "codex";
-  return override === undefined && envValue(env, "PLUGIN_ROOT") !== undefined ? "codex" : "claude";
+  if (override === "opencode") return "opencode";
+  if (override !== undefined) throw new Error(`unsupported statusline host override: ${override}`);
+  return envValue(env, "PLUGIN_ROOT") !== undefined ? "codex" : "claude";
 }
 
 /** The status with no project and no Jev: what a renderer shows when collection fails. */

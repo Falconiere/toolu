@@ -85,7 +85,7 @@ export async function render(sb: Sandbox, opts: RenderOpts = {}): Promise<string
   return res.stdout;
 }
 
-/** Run the Codex report for `dir` (the process cwd when omitted). */
+/** Run the explicit status report for `dir` (the process cwd when omitted). */
 export async function report(
   sb: Sandbox,
   dir: string | undefined,

@@ -3215,10 +3215,16 @@ function readObject(path) {
 
 // plugins/statusline/hooks/src/statusline/collect.ts
 function statusHost(env) {
-  const override = envValue(env, "TOOLU_HOST_OVERRIDE");
+  const override = env["TOOLU_HOST_OVERRIDE"];
+  if (override === "claude")
+    return "claude";
   if (override === "codex")
     return "codex";
-  return override === undefined && envValue(env, "PLUGIN_ROOT") !== undefined ? "codex" : "claude";
+  if (override === "opencode")
+    return "opencode";
+  if (override !== undefined)
+    throw new Error(`unsupported statusline host override: ${override}`);
+  return envValue(env, "PLUGIN_ROOT") !== undefined ? "codex" : "claude";
 }
 function emptyStatus(host, cwd) {
   return {

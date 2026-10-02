@@ -3212,6 +3212,18 @@ function readObject(path) {
 }
 
 // plugins/statusline/hooks/src/statusline/collect.ts
+function statusHost(env) {
+  const override = env["TOOLU_HOST_OVERRIDE"];
+  if (override === "claude")
+    return "claude";
+  if (override === "codex")
+    return "codex";
+  if (override === "opencode")
+    return "opencode";
+  if (override !== undefined)
+    throw new Error(`unsupported statusline host override: ${override}`);
+  return envValue(env, "PLUGIN_ROOT") !== undefined ? "codex" : "claude";
+}
 function emptyStatus(host, cwd) {
   return {
     host,
@@ -3350,6 +3362,11 @@ function collectStatus(cwd, env, host) {
 }
 
 // plugins/statusline/hooks/src/statusline/report.ts
+var HOST_LABEL = {
+  claude: "Claude Code",
+  codex: "Codex",
+  opencode: "OpenCode"
+};
 function repositoryLines(status) {
   if (status.repo_root === "")
     return [`Folder: ${status.folder} (not a git repository)`];
@@ -3365,11 +3382,10 @@ function gateLine(gate) {
   return gate.status === "passing" ? "Quality gate: passing" : "Quality gate: no recorded state";
 }
 function reportText(status) {
-  const lines = [
-    `Host: ${status.host === "codex" ? "Codex" : "Claude Code"}`,
-    ...repositoryLines(status),
-    gateLine(status.gate)
-  ];
+  const hostLabel = HOST_LABEL[status.host];
+  if (hostLabel === undefined)
+    throw new Error(`unsupported statusline report host: ${status.host}`);
+  const lines = [`Host: ${hostLabel}`, ...repositoryLines(status), gateLine(status.gate)];
   if (status.comemory_count !== null)
     lines.push(`Comemory: ${status.comemory_count} memories`);
   if (status.jev.status === "ready")
@@ -3383,4 +3399,5 @@ function reportText(status) {
 
 // plugins/statusline/hooks/src/status.ts
 var dir = process.argv[2] || process.cwd();
-process.stdout.write(reportText(collectStatus(dir, process.env, "codex")));
+var host = statusHost({ TOOLU_HOST_OVERRIDE: process.env.TOOLU_HOST_OVERRIDE ?? "codex" });
+process.stdout.write(reportText(collectStatus(dir, process.env, host)));

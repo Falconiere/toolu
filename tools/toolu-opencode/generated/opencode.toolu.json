@@ -1,14 +1,44 @@
 {
-  "$comment": "OpenCode toolu surface catalog. version=1; surfaceRoot=repo-relative; plugins[].skills|agents|commands[]={id,path,source}; path is relative to surfaceRoot.",
+  "$comment": "OpenCode surface catalog. version=1; surfaceRoot=repo-relative; every plugin is classified; skills|agents|commands[]={id,path,source}; path is relative to surfaceRoot.",
   "version": 1,
   "surfaceRoot": "tools/toolu-opencode/generated",
   "plugins": [
     {
-      "name": "brainstorm",
+      "name": "agent-browser",
+      "classification": "generated",
+      "excluded": [],
       "skills": [
         {
-          "id": "brainstorm--brainstorm",
-          "path": "skills/brainstorm--brainstorm/SKILL.md",
+          "id": "agent-browser-agent-browser",
+          "path": "skills/agent-browser-agent-browser/SKILL.md",
+          "source": "plugins/agent-browser/skills/agent-browser/SKILL.md"
+        }
+      ],
+      "agents": [],
+      "commands": []
+    },
+    {
+      "name": "ast-grep",
+      "classification": "generated",
+      "excluded": [],
+      "skills": [
+        {
+          "id": "ast-grep-ast-grep",
+          "path": "skills/ast-grep-ast-grep/SKILL.md",
+          "source": "plugins/ast-grep/skills/ast-grep/SKILL.md"
+        }
+      ],
+      "agents": [],
+      "commands": []
+    },
+    {
+      "name": "brainstorm",
+      "classification": "generated",
+      "excluded": [],
+      "skills": [
+        {
+          "id": "brainstorm-brainstorm",
+          "path": "skills/brainstorm-brainstorm/SKILL.md",
           "source": "plugins/brainstorm/skills/brainstorm/SKILL.md"
         }
       ],
@@ -16,11 +46,27 @@
       "commands": []
     },
     {
-      "name": "delivery-flow",
+      "name": "context7",
+      "classification": "generated",
+      "excluded": [],
       "skills": [
         {
-          "id": "delivery-flow--delivery-flow",
-          "path": "skills/delivery-flow--delivery-flow/SKILL.md",
+          "id": "context7-context7",
+          "path": "skills/context7-context7/SKILL.md",
+          "source": "plugins/context7/skills/context7/SKILL.md"
+        }
+      ],
+      "agents": [],
+      "commands": []
+    },
+    {
+      "name": "delivery-flow",
+      "classification": "generated",
+      "excluded": [],
+      "skills": [
+        {
+          "id": "delivery-flow-delivery-flow",
+          "path": "skills/delivery-flow-delivery-flow/SKILL.md",
           "source": "plugins/delivery-flow/skills/delivery-flow/SKILL.md"
         }
       ],
@@ -29,123 +75,220 @@
     },
     {
       "name": "epic-orchestrator",
+      "classification": "generated",
+      "excluded": [],
       "skills": [
         {
-          "id": "epic-orchestrator--epic-orchestrator",
-          "path": "skills/epic-orchestrator--epic-orchestrator/SKILL.md",
+          "id": "epic-orchestrator-epic-orchestrator",
+          "path": "skills/epic-orchestrator-epic-orchestrator/SKILL.md",
           "source": "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md"
         }
       ],
       "agents": [],
       "commands": [
         {
-          "id": "epic-orchestrator--epic",
-          "path": "commands/epic-orchestrator--epic.md",
+          "id": "epic-orchestrator-epic",
+          "path": "commands/epic-orchestrator-epic.md",
           "source": "plugins/epic-orchestrator/commands/epic.md"
         }
       ]
     },
     {
-      "name": "pr-babysit",
+      "name": "exa-search",
+      "classification": "generated",
+      "excluded": [],
       "skills": [
         {
-          "id": "pr-babysit--babysit--skill",
-          "path": "skills/pr-babysit--babysit--skill/SKILL.md",
+          "id": "exa-search-exa-search",
+          "path": "skills/exa-search-exa-search/SKILL.md",
+          "source": "plugins/exa-search/skills/exa-search/SKILL.md"
+        }
+      ],
+      "agents": [],
+      "commands": []
+    },
+    {
+      "name": "jev",
+      "classification": "generated",
+      "excluded": [],
+      "skills": [
+        {
+          "id": "jev-jev",
+          "path": "skills/jev-jev/SKILL.md",
+          "source": "plugins/jev/skills/jev/SKILL.md"
+        }
+      ],
+      "agents": [],
+      "commands": []
+    },
+    {
+      "name": "jira",
+      "classification": "generated",
+      "excluded": [],
+      "skills": [
+        {
+          "id": "jira-jira",
+          "path": "skills/jira-jira/SKILL.md",
+          "source": "plugins/jira/skills/jira/SKILL.md"
+        }
+      ],
+      "agents": [],
+      "commands": []
+    },
+    {
+      "name": "pr-babysit",
+      "classification": "generated",
+      "excluded": [],
+      "skills": [
+        {
+          "id": "pr-babysit-babysit-73c340c6",
+          "path": "skills/pr-babysit-babysit-73c340c6/SKILL.md",
           "source": "plugins/pr-babysit/skills/babysit/SKILL.md"
         }
       ],
       "agents": [],
       "commands": [
         {
-          "id": "pr-babysit--babysit",
-          "path": "commands/pr-babysit--babysit.md",
+          "id": "pr-babysit-babysit-ff6e5a3d",
+          "path": "commands/pr-babysit-babysit-ff6e5a3d.md",
           "source": "plugins/pr-babysit/commands/babysit.md"
         }
       ]
     },
     {
-      "name": "toolu",
+      "name": "python-quality",
+      "classification": "no-surface",
+      "reason": "Plugin provides hooks only; no skill, agent, or command source.",
+      "excluded": [],
+      "skills": [],
+      "agents": [],
+      "commands": []
+    },
+    {
+      "name": "rust-quality",
+      "classification": "no-surface",
+      "reason": "Plugin provides hooks only; no skill, agent, or command source.",
+      "excluded": [],
+      "skills": [],
+      "agents": [],
+      "commands": []
+    },
+    {
+      "name": "statusline",
+      "classification": "generated",
+      "excluded": [
+        {
+          "source": "plugins/statusline/commands/setup.md",
+          "reason": "Claude Code settings.json statusLine command has no OpenCode implementation in OP-10.",
+          "owner": "OP-25 (#359)"
+        }
+      ],
       "skills": [
         {
-          "id": "toolu--commit--skill",
-          "path": "skills/toolu--commit--skill/SKILL.md",
+          "id": "statusline-status",
+          "path": "skills/statusline-status/SKILL.md",
+          "source": "plugins/statusline/skills/status/SKILL.md"
+        }
+      ],
+      "agents": [],
+      "commands": []
+    },
+    {
+      "name": "toolu",
+      "classification": "generated",
+      "excluded": [],
+      "skills": [
+        {
+          "id": "toolu-commit-e11d9d00",
+          "path": "skills/toolu-commit-e11d9d00/SKILL.md",
           "source": "plugins/toolu/skills/commit/SKILL.md"
         },
         {
-          "id": "toolu--debug",
-          "path": "skills/toolu--debug/SKILL.md",
+          "id": "toolu-debug",
+          "path": "skills/toolu-debug/SKILL.md",
           "source": "plugins/toolu/skills/debug/SKILL.md"
         },
         {
-          "id": "toolu--deep-research",
-          "path": "skills/toolu--deep-research/SKILL.md",
+          "id": "toolu-deep-research",
+          "path": "skills/toolu-deep-research/SKILL.md",
           "source": "plugins/toolu/skills/deep-research/SKILL.md"
         },
         {
-          "id": "toolu--orchestrator",
-          "path": "skills/toolu--orchestrator/SKILL.md",
+          "id": "toolu-orchestrator",
+          "path": "skills/toolu-orchestrator/SKILL.md",
           "source": "plugins/toolu/skills/orchestrator/SKILL.md"
         },
         {
-          "id": "toolu--review-and-commit--skill",
-          "path": "skills/toolu--review-and-commit--skill/SKILL.md",
+          "id": "toolu-review-and-commit-1a591621",
+          "path": "skills/toolu-review-and-commit-1a591621/SKILL.md",
           "source": "plugins/toolu/skills/review-and-commit/SKILL.md"
         },
         {
-          "id": "toolu--setup",
-          "path": "skills/toolu--setup/SKILL.md",
+          "id": "toolu-setup",
+          "path": "skills/toolu-setup/SKILL.md",
           "source": "plugins/toolu/skills/setup/SKILL.md"
         }
       ],
       "agents": [
         {
-          "id": "toolu--architect",
-          "path": "agents/toolu--architect.md",
+          "id": "toolu-architect",
+          "path": "agents/toolu-architect.md",
           "source": "plugins/toolu/agents/architect.md"
         },
         {
-          "id": "toolu--deep-explore",
-          "path": "agents/toolu--deep-explore.md",
+          "id": "toolu-deep-explore",
+          "path": "agents/toolu-deep-explore.md",
           "source": "plugins/toolu/agents/deep-explore.md"
         },
         {
-          "id": "toolu--implementer",
-          "path": "agents/toolu--implementer.md",
+          "id": "toolu-implementer",
+          "path": "agents/toolu-implementer.md",
           "source": "plugins/toolu/agents/implementer.md"
         },
         {
-          "id": "toolu--quick-task",
-          "path": "agents/toolu--quick-task.md",
+          "id": "toolu-quick-task",
+          "path": "agents/toolu-quick-task.md",
           "source": "plugins/toolu/agents/quick-task.md"
         },
         {
-          "id": "toolu--research-agent",
-          "path": "agents/toolu--research-agent.md",
+          "id": "toolu-research-agent",
+          "path": "agents/toolu-research-agent.md",
           "source": "plugins/toolu/agents/research-agent.md"
         }
       ],
       "commands": [
         {
-          "id": "toolu--commit",
-          "path": "commands/toolu--commit.md",
+          "id": "toolu-commit-1e9b92d5",
+          "path": "commands/toolu-commit-1e9b92d5.md",
           "source": "plugins/toolu/commands/commit.md"
         },
         {
-          "id": "toolu--review-and-commit",
-          "path": "commands/toolu--review-and-commit.md",
+          "id": "toolu-review-and-commit-db159d0c",
+          "path": "commands/toolu-review-and-commit-db159d0c.md",
           "source": "plugins/toolu/commands/review-and-commit.md"
         }
       ]
     },
     {
       "name": "toolu-review",
+      "classification": "generated",
+      "excluded": [],
       "skills": [
         {
-          "id": "toolu-review--review",
-          "path": "skills/toolu-review--review/SKILL.md",
+          "id": "toolu-review-review",
+          "path": "skills/toolu-review-review/SKILL.md",
           "source": "plugins/toolu-review/skills/review/SKILL.md"
         }
       ],
+      "agents": [],
+      "commands": []
+    },
+    {
+      "name": "ts-quality",
+      "classification": "no-surface",
+      "reason": "Plugin provides hooks only; no skill, agent, or command source.",
+      "excluded": [],
+      "skills": [],
       "agents": [],
       "commands": []
     }

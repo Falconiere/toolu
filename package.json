@@ -15,6 +15,7 @@
     "generate:opencode-surface": "bun run tools/toolu-opencode/scripts/generate-surface.ts",
     "check:opencode-surface": "bun run tools/toolu-opencode/scripts/check-surface-drift.ts",
     "probe:opencode-host": "bun run tooling/src/opencode-host-probe.ts",
+    "probe:opencode-surface": "bun run tooling/src/opencode-surface-probe.ts",
     "check:opencode-host": "bun run tooling/src/opencode-host-contract.ts",
     "smoke:opencode-entry": "bun run tooling/src/opencode-entry-smoke.ts",
     "build:plugins": "bun run tooling/src/build-plugins.ts",
