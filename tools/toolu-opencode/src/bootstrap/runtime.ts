@@ -8,7 +8,6 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { STARTUP_REPORT_ENV } from "@toolu/core/startup";
 import { opencodeDataRoot } from "../host/roots.ts";
 import { listPluginManifests } from "../inventory/scan.ts";
 import type { PluginManifest } from "../inventory/types.ts";
@@ -34,6 +33,12 @@ export type BootstrapRuntimeOptions = {
   /** Cancels the whole startup: the running entry is killed and startup is NotReady. */
   signal?: AbortSignal;
 };
+
+/**
+ * `STARTUP_REPORT_ENV` of `@toolu/core/startup`, spelled here because the package
+ * accepts `@toolu/core` releases that predate it; a test pins the two together.
+ */
+export const STARTUP_REPORT_VAR = "TOOLU_STARTUP_REPORT";
 
 type Run = {
   bun: string;
@@ -79,7 +84,7 @@ async function runEntry(
   try {
     const report = join(dir, "report.jsonl");
     writeFileSync(report, "");
-    const env = { ...run.env, CLAUDE_PLUGIN_ROOT: plugin.pluginDir, [STARTUP_REPORT_ENV]: report };
+    const env = { ...run.env, CLAUDE_PLUGIN_ROOT: plugin.pluginDir, [STARTUP_REPORT_VAR]: report };
     const stdin = JSON.stringify({
       hook_event_name: "SessionStart",
       source: "startup",
@@ -117,11 +122,13 @@ async function runEntry(
 }
 
 /** Entries run one after another: a later entry may rely on an earlier one's effects. */
+type Progress = { verified: Verified; outcomes: EntryOutcome[] };
+
 async function runEntries(
   entries: readonly StartupEntry[],
   plugin: PluginManifest,
   run: Run,
-  done: { verified: Verified; outcomes: EntryOutcome[] },
+  done: Progress,
 ): Promise<string | undefined> {
   const [entry, ...rest] = entries;
   if (entry === undefined) return undefined;
@@ -140,7 +147,7 @@ async function startPlugin(plugin: PluginManifest, run: Run): Promise<PluginRun>
   const plan = pluginStartupEntries(plugin.pluginDir);
   if (!plan.ok)
     return { status: "failed", plugin, verified, failure: `${plugin.name}: ${plan.reason}` };
-  const done = { verified, outcomes: [] };
+  const done: Progress = { verified, outcomes: [] };
   const failure = await runEntries(plan.entries, plugin, run, done);
   if (failure !== undefined) return { status: "failed", plugin, verified, failure };
   return { status: "ready", plugin, verified, entries: done.outcomes };

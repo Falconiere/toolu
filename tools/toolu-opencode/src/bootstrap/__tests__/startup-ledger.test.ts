@@ -116,3 +116,20 @@ test.concurrent("an invalid ledger is ignored with a diagnostic and rewritten", 
     plugins: { "exa-search": { spec: "exa-search@toolu" } },
   });
 });
+
+test.concurrent("a ledger path outside the data root is never removed", async () => {
+  using root = tempRoot("toolu-ledger-outside-");
+  const source = join(PLUGINS_ROOT, "jira/hooks/dist/jira.js");
+  const victim = join(root.path, "elsewhere.sh");
+  symlinkSync(source, victim);
+  const path = join(root.path, "data/toolu/startup-ledger.json");
+  mkdirSync(join(path, ".."), { recursive: true });
+  const helpers = [{ path: victim, source }];
+  writeFileSync(
+    path,
+    JSON.stringify({ version: 1, plugins: { jira: { spec: "jira@toolu", helpers } } }),
+  );
+  const result = await start(root.path, ["toolu"]);
+  expect(lstatSync(victim).isSymbolicLink()).toBe(true);
+  expect(result.diagnostics).toContain(`jira: ignored ledger path ${victim} outside the data root`);
+});

@@ -19,7 +19,7 @@ import type { ScenarioContext } from "./scenario.ts";
 import { ContractError } from "./schema.ts";
 import { openSession, type ProbeSession, type SessionOptions } from "./session.ts";
 
-const ROOT = resolve(import.meta.dir, "../../..");
+export const ROOT = resolve(import.meta.dir, "../../..");
 const PACKAGE_DIR = join(ROOT, "tools/toolu-opencode");
 const PACKAGE_ENTRIES = ["package.json", "README.md", "LICENSE", "src", "generated"];
 const PACK_TIMEOUT_MS = 120_000;
@@ -27,7 +27,7 @@ const ENV_BYTES = "SECRET=1\n";
 
 export type EntryContext = ScenarioContext & { tarball: string };
 type Observed = Record<string, boolean | number | string>;
-type EntryResult = { pass: boolean; observed: Observed };
+export type EntryResult = { pass: boolean; observed: Observed };
 export type EntryScenario = {
   id: string;
   claim: string;
@@ -35,7 +35,7 @@ export type EntryScenario = {
 };
 
 /** A project with a protected `.env` and only the core plugin enabled. */
-const PROJECT_FILES = {
+export const PROJECT_FILES = {
   ".env": ENV_BYTES,
   ".opencode/toolu.config.json": JSON.stringify({
     version: 1,
@@ -66,7 +66,7 @@ function npmSpec(tarball: string): string {
 }
 
 /** `.opencode/plugins/toolu.ts` re-exporting the package root, resolved through `node_modules`. */
-function installShim(session: ProbeSession): void {
+export function installShim(session: ProbeSession): void {
   session.sb.write(".opencode/plugins/toolu.ts", 'export { default } from "@toolu/opencode";\n');
   mkdirSync(join(session.sb.project, "node_modules/@toolu"), { recursive: true });
   symlinkSync(PACKAGE_DIR, join(session.sb.project, "node_modules/@toolu/opencode"));
@@ -81,11 +81,11 @@ function writeEnvScript(project: string): Scripts {
   };
 }
 
-const TOUCH_SCRIPT: Scripts = {
+export const TOUCH_SCRIPT: Scripts = {
   "entry.touch": [{ tool: "bash", args: { command: "touch denied.txt", description: "x" } }],
 };
 
-function entrySession(ctx: EntryContext, opts: SessionOptions): ProbeSession {
+export function entrySession(ctx: EntryContext, opts: SessionOptions): ProbeSession {
   const opened = openSession(ctx.cacheRoot, { files: PROJECT_FILES, ...opts });
   // Bootstrap resolves Bun from TOOLU_BUN; the isolated HOME has no ~/.bun.
   opened.env.TOOLU_BUN = process.execPath;
@@ -93,7 +93,7 @@ function entrySession(ctx: EntryContext, opts: SessionOptions): ProbeSession {
 }
 
 /** Count of host-log lines carrying toolu's diagnostic `message`. */
-function diagnostics(stderr: string, prefix: string): number {
+export function diagnostics(stderr: string, prefix: string): number {
   return stderr.split("\n").filter((line) => line.includes(`message="${prefix}`)).length;
 }
 

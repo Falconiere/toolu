@@ -95,7 +95,20 @@ In **your application repo** (not inside the toolu clone):
    export { default } from "@toolu/opencode/plugin";
    ```
 
-   The default export is the documented `PluginModule` ([#336](https://github.com/Falconiere/toolu/issues/336)). Its `server` runs preflight and bootstrap ([#211](https://github.com/Falconiere/toolu/issues/211)), then returns a `tool.execute.before` hook. When setup fails (no repo root, missing git or Bun, bootstrap NotReady), every tool call is refused with `toolu: not ready: <reason>`, and the same line reaches the host log (`opencode --print-logs`). A healthy start logs `toolu: ready (<n> bootstrap artifacts)`. If the npm package and this shim are both configured, only the first load enforces and the other logs `toolu: duplicate load skipped`. Bootstrap runs each enabled plugin's committed `hooks/dist/register.js` bundle, else its `hooks/dist/session-start.js` bundle, with Bun. For example, context7 publishes the executable Bun bundle at the stable `context7/search.sh` path under the bootstrap data root, and toolu's bundle writes the `toolu/.session-start-ready` readiness marker ([#263](https://github.com/Falconiere/toolu/issues/263)).
+   The default export is the documented `PluginModule` ([#336](https://github.com/Falconiere/toolu/issues/336)). Its `server` runs preflight and bootstrap ([#211](https://github.com/Falconiere/toolu/issues/211)), then returns a `tool.execute.before` hook.
+
+   - **Setup fails** (no repo root, missing git or Bun, bootstrap NotReady): every tool call is refused with `toolu: not ready: <reason>`, and the same line reaches the host log (`opencode --print-logs`).
+   - **Healthy start:** logs `toolu: ready (<p> plugins, <n> startup artifacts)`, then up to 20 startup notes, such as a kept user file or a removed contribution.
+   - **Both routes configured** (the npm package and this shim): only the first load enforces, and the other logs `toolu: duplicate load skipped`.
+
+   **Bootstrap** ([#342](https://github.com/Falconiere/toolu/issues/342)):
+
+   - **Which entries run:** every enabled plugin runs every SessionStart entry its `hooks/hooks.json` declares for `startup`, with Bun. Each entry is the committed `hooks/dist/<entry>.js` bundle behind the generated launcher. For example, ts-quality runs both `register` and `check-toolu`.
+   - **Order:** dependencies start first. A dependency cycle, a declared bundle that is missing, or a hand-written command makes toolu not ready.
+   - **Contributions:** each entry reports its registry modules and helpers to the bootstrap (`TOOLU_STARTUP_REPORT`). Each one is checked on disk: a module must be byte-equal to the plugin's bundle, and a helper must be a symlink to it. For example, context7 publishes its Bun bundle at the stable `context7/search.sh` path under the bootstrap data root.
+   - **Readiness:** comes from this run only. A failed or partial registration, a missing helper source, non-JSON startup output, or an entry that exits non-zero or outlives its 120 s deadline names the plugin and entry in the reason. Files left on disk from an earlier session never make toolu ready, whoever wrote them. The whole startup has a 180 s budget.
+   - **Disabled plugins:** when a plugin is no longer enabled, the next startup removes its `<name>@toolu__*` registry modules. It also removes the helper symlinks recorded in `.opencode/toolu/state/toolu/startup-ledger.json`. A file you put at a helper path is kept and reported, never deleted.
+   - **Context:** each entry's SessionStart context (toolu's session protocol, Jev's mandate) is collected for delivery to the model.
 
 4. **Enabled plugins** — project file `.opencode/toolu/plugins.json`:
 
@@ -170,9 +183,9 @@ Check out the last known-good tag in the toolu clone and run `bun install --froz
 
 ## Disable / uninstall
 
-- **Disable enforcement** — remove or rename `.opencode/plugins/toolu.ts`, or clear `enabled` in `.opencode/toolu/plugins.json`, then restart OpenCode. User config under `.opencode/toolu.config.json` is left intact.
+- **Disable enforcement** — remove or rename `.opencode/plugins/toolu.ts`, then restart OpenCode. User config under `.opencode/toolu.config.json` is left intact. Clearing `enabled` in `.opencode/toolu/plugins.json` only removes the plugins' startup contributions at the next start; the core gates still run.
 - **Remove toolu** — npm install: `opencode plugin remove @toolu/opencode`, then delete `.opencode/toolu/` and optional `.opencode/toolu.config.json`. Contributor clone: delete `.opencode/plugins/toolu.ts`, `.opencode/package.json` (if only used for toolu), `.opencode/toolu/`, and optional `.opencode/toolu.config.json`, remove `TOOLU_REPO_ROOT` from your environment, and delete the clone separately.
-- **Scoped cleanup** — registry/state under `.opencode/toolu/state/` can be deleted to force a fresh bootstrap; it does not remove Claude/Codex settings.
+- **Scoped cleanup** — registry, helpers, startup ledger and state under `.opencode/toolu/state/` can be deleted to force a fresh bootstrap; it does not remove Claude/Codex settings.
 
 ## Host comparison
 

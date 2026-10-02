@@ -13,8 +13,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { STARTUP_REPORT_ENV } from "@toolu/core/startup";
 import type { PluginManifest } from "../../inventory/types.ts";
-import { bootstrapRuntime, type BootstrapRuntimeOptions } from "../runtime.ts";
+import { STARTUP_REPORT_VAR, bootstrapRuntime, type BootstrapRuntimeOptions } from "../runtime.ts";
 import { REPO_ROOT, fixturePlugin, tempRoot, type FixtureOptions } from "./fixtures.ts";
 
 type Boot = Partial<BootstrapRuntimeOptions> & { plugins: PluginManifest[] };
@@ -40,6 +41,10 @@ async function reasonOf(root: string, options: Boot): Promise<string> {
 }
 
 const REPORT = 'const fs = require("node:fs"); const report = process.env.TOOLU_STARTUP_REPORT;\n';
+
+test.concurrent("the bootstrap names the report file in the variable core's writers read", () => {
+  expect(STARTUP_REPORT_VAR).toBe(STARTUP_REPORT_ENV);
+});
 
 test.concurrent("#326: bootstrap runs the TOOLU_BUN executable with a restricted PATH", async () => {
   using root = tempRoot("toolu-bs-bun-");

@@ -7,6 +7,7 @@ import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import type { Sandbox } from "@toolu/conformance/harness/sandbox";
 import { z } from "zod";
 import { stagePlugins } from "../../../tools/toolu-opencode/scripts/bundle-plugins.ts";
+import { pluginStartupEntries } from "../../../tools/toolu-opencode/src/bootstrap/entrypoint.ts";
 
 // The published @toolu/opencode carries manifests, runtime data and bundles.
 //
@@ -97,7 +98,7 @@ test.concurrent("no bash, bats or shell files enter the staged catalog", async (
   expect(staged.filter((file) => /\.(sh|bash|bats)$/.test(file))).toEqual([]);
 });
 
-test.concurrent("a legacy-only plugin stages a native-registration marker without its shell hook", () => {
+test.concurrent("a legacy-only plugin stages its hooks.json routing without its shell hook", () => {
   using sb = createSandbox();
   const source = join(sb.root, "source");
   const plugin = join(source, "legacy-only");
@@ -106,9 +107,16 @@ test.concurrent("a legacy-only plugin stages a native-registration marker withou
   mkdirSync(join(plugin, "hooks"), { recursive: true });
   writeFileSync(join(plugin, ".claude-plugin", "plugin.json"), "{}\n");
   writeFileSync(join(plugin, "hooks", "register.sh"), "#!/usr/bin/env bash\nexit 0\n");
+  const command = 'bash "${CLAUDE_PLUGIN_ROOT}/hooks/register.sh"';
+  const routing = { hooks: { SessionStart: [{ hooks: [{ type: "command", command }] }] } };
+  writeFileSync(join(plugin, "hooks", "hooks.json"), JSON.stringify(routing));
   expect(stagePlugins(source, dest)).toBe(1);
-  expect(isFile(join(dest, "legacy-only/hooks/.requires-native-register"))).toBe(true);
   expect(existsSync(join(dest, "legacy-only/hooks/register.sh"))).toBe(false);
+  // The staged routing still names the shell hook, so the OpenCode startup refuses the plugin.
+  expect(pluginStartupEntries(join(dest, "legacy-only"))).toEqual({
+    ok: false,
+    reason: "unsupported SessionStart command",
+  });
 });
 
 test.concurrent("staging refuses a destination inside the source catalog", () => {

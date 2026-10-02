@@ -50,7 +50,7 @@ function settleLedger(settlement: Settlement): void {
     let owned: OwnedHelper[];
     if (run.status === "ready") {
       const stale = old.filter((helper) => !current.some((c) => c.path === helper.path));
-      owned = unique([...current, ...retireHelpers(name, stale, cleanup)]);
+      owned = unique([...current, ...retireHelpers(name, stale, settlement.dataRoot, cleanup)]);
     } else {
       owned = unique([...old, ...current]);
     }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /** Stage the bundle-only OpenCode plugin catalog for npm packing. */
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 
 const packageRoot = resolve(import.meta.dir, "..");
@@ -49,20 +49,18 @@ export function stagePlugins(sourceDirectory: string, outputDirectory: string): 
     const hooks = join(source, "hooks");
     const hooksJson = join(hooks, "hooks.json");
     if (existsSync(hooksJson)) copy(hooksJson, join(target, "hooks", "hooks.json"));
-    copyDirectory(join(hooks, "dist"), join(target, "hooks", "dist"), (name) => name.endsWith(".js"));
-    copyDirectory(join(hooks, "docs"), join(target, "hooks", "docs"), (name) => name.endsWith(".md"));
+    copyDirectory(join(hooks, "dist"), join(target, "hooks", "dist"), (name) =>
+      name.endsWith(".js"),
+    );
+    copyDirectory(join(hooks, "docs"), join(target, "hooks", "docs"), (name) =>
+      name.endsWith(".md"),
+    );
     if (entry.name === "toolu") {
-      copyDirectory(join(source, "settings"), join(target, "settings"), (name) => !/\.(sh|bash|bats)$/.test(name));
-    }
-    const hasRegisterBundle = existsSync(join(hooks, "dist", "register.js"));
-    const missingNativeStartup =
-      (!hasRegisterBundle && existsSync(join(hooks, "register.sh"))) ||
-      (!hasRegisterBundle &&
-        !existsSync(join(hooks, "dist", "session-start.js")) &&
-        existsSync(join(hooks, "session-start.sh")));
-    if (missingNativeStartup) {
-      mkdirSync(join(target, "hooks"), { recursive: true });
-      writeFileSync(join(target, "hooks", ".requires-native-register"), "\n");
+      copyDirectory(
+        join(source, "settings"),
+        join(target, "settings"),
+        (name) => !/\.(sh|bash|bats)$/.test(name),
+      );
     }
     count++;
   }

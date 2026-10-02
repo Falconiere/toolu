@@ -19,7 +19,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { REGISTRY_DIRS } from "@toolu/core/registry";
 import { z } from "zod";
 import { opencodeRegistryRoot } from "../host/roots.ts";
@@ -102,8 +102,16 @@ export function writeLedger(dataRoot: string, ledger: Ledger): string | undefine
   }
 }
 
-/** Remove `helper` while it is still the symlink toolu published; anything else there is the user's. */
-function retireHelper(owner: string, helper: OwnedHelper, out: Cleanup): boolean {
+/**
+ * Remove `helper` while it is still the symlink toolu published; anything else
+ * there is the user's. The ledger sits in the project, so a path outside the
+ * data root is never acted on, whatever the ledger says.
+ */
+function retireHelper(owner: string, helper: OwnedHelper, dataRoot: string, out: Cleanup): boolean {
+  if (!resolve(helper.path).startsWith(resolve(dataRoot) + sep)) {
+    out.diagnostics.push(`${owner}: ignored ledger path ${helper.path} outside the data root`);
+    return true;
+  }
   const stat = lstatSync(helper.path, { throwIfNoEntry: false });
   if (stat === undefined) return true;
   if (!stat.isSymbolicLink() || readlinkSync(helper.path) !== helper.source) {
@@ -124,9 +132,10 @@ function retireHelper(owner: string, helper: OwnedHelper, out: Cleanup): boolean
 export function retireHelpers(
   owner: string,
   helpers: readonly OwnedHelper[],
+  dataRoot: string,
   out: Cleanup,
 ): OwnedHelper[] {
-  return helpers.filter((helper) => !retireHelper(owner, helper, out));
+  return helpers.filter((helper) => !retireHelper(owner, helper, dataRoot, out));
 }
 
 function isRegularFile(path: string): boolean {
@@ -178,7 +187,12 @@ export function pruneUnselected(input: PruneInput, out: Cleanup): Ledger["plugin
   for (const [name, spec] of specs) {
     if (input.selected.has(name)) continue;
     pruneModules(name, spec, input.dataRoot, out);
-    const left = retireHelpers(name, input.ledger.plugins[name]?.helpers ?? [], out);
+    const left = retireHelpers(
+      name,
+      input.ledger.plugins[name]?.helpers ?? [],
+      input.dataRoot,
+      out,
+    );
     if (left.length > 0) retained[name] = { spec, helpers: left };
   }
   return retained;

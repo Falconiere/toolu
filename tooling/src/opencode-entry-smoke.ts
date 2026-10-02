@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Live OpenCode entry smoke (#336): `bun run smoke:opencode-entry`.
+ * Live OpenCode entry smoke (#336) and plugin startup (#342): `bun run smoke:opencode-entry`.
  *
  * Resolves the pinned CLI the same way as `probe:opencode-host`, packs
  * `@toolu/opencode` into a temp directory, and runs every entry scenario in an
@@ -20,6 +20,7 @@ import {
   type EntryScenario,
 } from "./opencode-host/scenarios-entry.ts";
 import { ContractError, PinSchema, readJson } from "./opencode-host/schema.ts";
+import { STARTUP_SCENARIOS } from "./opencode-host/scenarios-startup.ts";
 
 /** Scenarios run one at a time: they share the host's caches and must not race. */
 async function runAll(ctx: EntryContext, remaining: readonly EntryScenario[]): Promise<number> {
@@ -39,9 +40,10 @@ async function main(): Promise<number> {
   const work = mkdtempSync(join(tmpdir(), "toolu-entry-pack-"));
   try {
     const tarball = await packTarball(work);
-    const failed = await runAll({ bin: host.bin, cacheRoot, tarball }, ENTRY_SCENARIOS);
+    const scenarios = [...ENTRY_SCENARIOS, ...STARTUP_SCENARIOS];
+    const failed = await runAll({ bin: host.bin, cacheRoot, tarball }, scenarios);
     process.stdout.write(
-      `opencode-entry-smoke: ${ENTRY_SCENARIOS.length - failed}/${ENTRY_SCENARIOS.length} pass on opencode-ai@${host.version}\n`,
+      `opencode-entry-smoke: ${scenarios.length - failed}/${scenarios.length} pass on opencode-ai@${host.version}\n`,
     );
     return failed === 0 ? 0 : 1;
   } finally {
