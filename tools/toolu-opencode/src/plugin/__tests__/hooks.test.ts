@@ -77,7 +77,7 @@ async function refusal(hooks: Hooks, tool: string, args: unknown): Promise<strin
   return "allowed";
 }
 
-test("ready: a protected .env edit is refused, an allowed bash call runs, one ready diagnostic", async () => {
+test("ready: a protected .env edit is refused and startup notices are logged", async () => {
   const { root, envPath } = await project();
   const logged: Logged[] = [];
   const hooks = await createTooluHooks(binding(root, logged));
@@ -86,9 +86,11 @@ test("ready: a protected .env edit is refused, an allowed bash call runs, one re
   expect(await refusal(hooks, "edit", edit)).toMatch(/protected/i);
   expect(await refusal(hooks, "bash", { command: "echo ok", description: "x" })).toBe("allowed");
   expect(await readFile(envPath, "utf8")).toBe("SECRET=1\n");
-  expect(logged).toEqual([
-    { level: "info", message: "toolu: ready (1 plugins, 0 startup artifacts)" },
-  ]);
+  expect(logged[0]).toEqual({
+    level: "info",
+    message: "toolu: ready (1 plugins, 0 startup artifacts)",
+  });
+  expect(logged.some((line) => line.message.includes("Toolu is on!"))).toBe(true);
   await hooks.dispose?.();
 });
 

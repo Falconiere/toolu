@@ -2,8 +2,9 @@
 import { expect, test } from "bun:test";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { launcherHook } from "@toolu/core/launcher";
 import { z } from "zod";
-import { pluginStartupEntries } from "../entrypoint.ts";
+import { matcherCovers, pluginHookEntries, pluginStartupEntries } from "../entrypoint.ts";
 import { PLUGINS_ROOT, copiedPlugin, fixturePlugin, tempRoot } from "./fixtures.ts";
 
 function entryNames(plugin: string): string[] {
@@ -100,6 +101,18 @@ test.concurrent("a matcher without startup is not run at plugin init", () => {
     matcher: "compact",
   });
   expect(pluginStartupEntries(compactOnly.pluginDir)).toEqual({ ok: true, entries: [] });
+  const compact = pluginHookEntries(compactOnly.pluginDir, "SessionStart", (matcher) =>
+    matcherCovers(matcher, "compact"),
+  );
+  expect(compact).toEqual({
+    ok: true,
+    entries: [
+      {
+        name: "on-compact",
+        bundle: join(compactOnly.pluginDir, "hooks", "dist", "on-compact.js"),
+      },
+    ],
+  });
   const any = fixturePlugin(root.path, "any-source", {
     entries: { boot: "process.exit(0);\n" },
     matcher: "*",
@@ -124,6 +137,58 @@ test.concurrent("an invalid hooks.json is a reason, not an empty startup", () =>
     reason:
       "invalid hooks.json: ✖ Invalid input: expected array, received undefined\n  → at hooks.SessionStart[0].hooks",
   });
+});
+
+test.concurrent("prompt and compaction entries come from the real launchers", () => {
+  const toolu = join(PLUGINS_ROOT, "toolu");
+  expect(
+    pluginHookEntries(toolu, "UserPromptSubmit", (matcher) => matcherCovers(matcher, "prompt")),
+  ).toEqual({
+    ok: true,
+    entries: [
+      {
+        name: "user-prompt-submit",
+        bundle: join(toolu, "hooks", "dist", "user-prompt-submit.js"),
+      },
+    ],
+  });
+  const compact = pluginHookEntries(toolu, "SessionStart", (matcher) =>
+    matcherCovers(matcher, "compact"),
+  );
+  expect(compact.ok && compact.entries.map((entry) => entry.name)).toEqual(["session-start"]);
+  const pre = pluginHookEntries(toolu, "PreCompact", (matcher) => matcherCovers(matcher, "auto"));
+  expect(pre.ok && pre.entries.map((entry) => entry.name)).toEqual(["pre-compact"]);
+  const jev = pluginHookEntries(join(PLUGINS_ROOT, "jev"), "UserPromptSubmit", (matcher) =>
+    matcherCovers(matcher, "prompt"),
+  );
+  expect(jev.ok && jev.entries.map((entry) => entry.name)).toEqual(["user-prompt-submit"]);
+  expect(
+    pluginHookEntries(join(PLUGINS_ROOT, "brainstorm"), "UserPromptSubmit", (matcher) =>
+      matcherCovers(matcher, "prompt"),
+    ),
+  ).toEqual({ ok: true, entries: [] });
+});
+
+test.concurrent("a missing prompt bundle is a reason", () => {
+  using root = tempRoot("toolu-entries-prompt-missing-");
+  const plugin = fixturePlugin(root.path, "prompter", {
+    entries: { "user-prompt-submit": "process.exit(0);\n" },
+  });
+  const hook = launcherHook({
+    plugin: "prompter",
+    event: "UserPromptSubmit",
+    entry: "user-prompt-submit",
+  });
+  writeFileSync(
+    join(plugin.pluginDir, "hooks", "hooks.json"),
+    JSON.stringify({ hooks: { UserPromptSubmit: [{ hooks: [hook] }] } }),
+  );
+  rmSync(join(plugin.pluginDir, "hooks", "dist", "user-prompt-submit.js"));
+  expect(
+    pluginHookEntries(plugin.pluginDir, "UserPromptSubmit", (matcher) =>
+      matcherCovers(matcher, "prompt"),
+    ),
+  ).toEqual({ ok: false, reason: "user-prompt-submit: missing UserPromptSubmit bundle" });
 });
 
 test.concurrent("keys a host adds beside a launcher do not change what runs", () => {
