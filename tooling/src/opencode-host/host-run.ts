@@ -1,8 +1,8 @@
 /**
  * Drive the pinned OpenCode binary inside a probe session (#335).
- * `opencode run` reads a non-TTY stdin as extra input and blocks on it, so
+ * `opencode run` reads a non-TTY stdin and blocks waiting for more input, so
  * every run gets an empty, closed stdin. Each run has a hard timeout; a hung
- * host is killed with its process group and reported, never treated as a verdict.
+ * host is killed with its process group and reported; it never becomes a verdict.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { z } from "zod";
@@ -50,7 +50,7 @@ export async function runHost(
   return { exitCode: res.exitCode, events: jsonLines(res.stdout), stderr: res.stderr };
 }
 
-/** `opencode debug <args>` stdout parsed as JSON. */
+/** Parse the stdout of `opencode debug <args>` into JSON. */
 export async function debugJson(
   bin: string,
   session: ProbeSession,

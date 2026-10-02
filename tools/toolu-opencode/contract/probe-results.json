@@ -343,7 +343,7 @@
       "axis": "startup",
       "kind": "event",
       "mechanism": "event hook",
-      "claim": "The event hook receives bus notifications such as session.created, message.updated and session.idle",
+      "claim": "The event hook receives bus notifications (session.created, message.updated, session.idle)",
       "verdict": "supported",
       "observed": {
         "sessionCreated": true,

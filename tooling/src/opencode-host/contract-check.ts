@@ -138,7 +138,7 @@ export function checkDocText(name: string, doc: string): void {
   if (doc.includes(V2_DOCS)) throw new ContractError(`${name} cites the V2 contract (${V2_DOCS})`);
 }
 
-/** Every declared `Hooks` member appears as a code span in the doc's `## Host surface` section. */
+/** Every declared `Hooks` member must appear in a code span of the doc's `## Host surface` section. */
 export function checkHostSurface(doc: string, hooks: readonly string[]): void {
   const start = doc.indexOf("## Host surface");
   if (start < 0) throw new ContractError("doc has no ## Host surface section");

@@ -117,7 +117,7 @@ Recorded 2026-10-02 on `opencode-ai@1.18.34` (linux-x64, Bun 1.4.2); the host pr
 | `surface.names` | surfaces | surface | skill name validation | The host rejects skill names that violate the documented naming rule | ❌ unsupported |
 | `surface.config-hook` | surfaces | config | config hook | A plugin config hook can inject commands, agents, skill paths and instructions | ✅ supported |
 | `ui.toast` | ui | event | client.tui.showToast → tui.toast.show | A server plugin can publish a TUI toast through client.tui.showToast | ✅ supported |
-| `events.bus` | startup | event | event hook | The event hook receives bus notifications such as session.created, message.updated and session.idle | ✅ supported |
+| `events.bus` | startup | event | event hook | The event hook receives bus notifications (session.created, message.updated, session.idle) | ✅ supported |
 <!-- opencode-host-probes:end -->
 
 ## Capability matrix

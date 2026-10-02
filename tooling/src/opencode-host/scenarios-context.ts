@@ -202,7 +202,7 @@ export const CONTEXT_SCENARIOS: Scenario[] = [
     kind: "event",
     mechanism: "event hook",
     claim:
-      "The event hook receives bus notifications such as session.created, message.updated and session.idle",
+      "The event hook receives bus notifications (session.created, message.updated, session.idle)",
     run: bus,
   },
 ];

@@ -87,7 +87,7 @@ export function toolRequestCount(session: ProbeSession): number {
   return chatBodies(session.requests()).filter((body) => (body.tools ?? []).length > 0).length;
 }
 
-/** Everything the model was sent, as one searchable string. */
+/** Everything the model was sent, joined into one searchable string. */
 export function allRequestText(session: ProbeSession): string {
   return session
     .requests()
