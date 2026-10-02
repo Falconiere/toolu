@@ -1,6 +1,7 @@
-/** OpenCode permission.evaluate handler backed by the native core dispatcher. */
+/** Native core gate decider, shared by tool.execute.before and the evaluate-shaped handler. */
 import { join } from "node:path";
 import { existsSync } from "node:fs";
+import type { Decision } from "@toolu/core/decision";
 import { dispatchPreTool, type ToolModule } from "@toolu/core/dispatch";
 import {
   bashCommandsModule,
@@ -47,15 +48,15 @@ function runtimeFailureDeny(event: PermissionEvaluationEvent, reason: string): v
   applyDecisionToPermission({ kind: "runtime_failure", reason, code: "parse" }, event);
 }
 
-/** One permission call, with the same built-in order as toolu's PreToolUse bundle. */
-export function createPermissionEvaluateHandler(
-  opts: PermissionEvaluateHandlerOptions,
-): (event: PermissionEvaluationEvent) => Promise<void> {
+export type GateDecider =
+  | { ok: true; decide: (request: Record<string, unknown>) => Promise<Decision> }
+  | { ok: false; reason: string };
+
+/** The nine native gates in toolu's PreToolUse order, run in process for one core request. */
+export function createGateDecider(opts: PermissionEvaluateHandlerOptions): GateDecider {
   const pluginRoot = join(opts.repoRoot, "plugins", "toolu");
   if (!existsSync(join(pluginRoot, ".claude-plugin", "plugin.json"))) {
-    return createDenyAllPermissionHandler(
-      `toolu: core plugin manifest missing under ${pluginRoot}`,
-    );
+    return { ok: false, reason: `toolu: core plugin manifest missing under ${pluginRoot}` };
   }
   const gates = nativeGates(pluginRoot);
   const env = {
@@ -67,6 +68,29 @@ export function createPermissionEvaluateHandler(
     TOOLU_HOST_OVERRIDE: "opencode",
     TOOLU_SETTINGS_DIR: join(pluginRoot, "settings"),
   };
+  const decide = async (request: Record<string, unknown>): Promise<Decision> => {
+    try {
+      const result = await dispatchPreTool(JSON.stringify(request), {
+        builtins: gates,
+        libDir: join(pluginRoot, "hooks", "lib"),
+        cwd: opts.permissionContext.cwd,
+        env,
+      });
+      return decisionFromDispatch(result);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      return { kind: "runtime_failure", reason: `toolu dispatch: ${reason}`, code: "parse" };
+    }
+  };
+  return { ok: true, decide };
+}
+
+/** One permission call, with the same built-in order as toolu's PreToolUse bundle. */
+export function createPermissionEvaluateHandler(
+  opts: PermissionEvaluateHandlerOptions,
+): (event: PermissionEvaluationEvent) => Promise<void> {
+  const decider = createGateDecider(opts);
+  if (!decider.ok) return createDenyAllPermissionHandler(decider.reason);
   return async (event: PermissionEvaluationEvent): Promise<void> => {
     const mapping = mapPermissionEventToTool(event, opts.permissionContext);
     if (mapping.kind === "skip") return;
@@ -74,18 +98,7 @@ export function createPermissionEvaluateHandler(
       applyDecisionToPermission({ kind: "deny", reason: mapping.reason }, event);
       return;
     }
-    try {
-      const result = await dispatchPreTool(JSON.stringify(mapping.request), {
-        builtins: gates,
-        libDir: join(pluginRoot, "hooks", "lib"),
-        cwd: opts.permissionContext.cwd,
-        env,
-      });
-      applyDecisionToPermission(decisionFromDispatch(result), event);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      runtimeFailureDeny(event, `toolu dispatch: ${reason}`);
-    }
+    applyDecisionToPermission(await decider.decide(mapping.request), event);
   };
 }
 

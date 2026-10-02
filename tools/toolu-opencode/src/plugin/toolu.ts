@@ -1,142 +1,26 @@
-/** OpenCode plugin entry — bootstrap + native permission dispatch. */
-import { Plugin } from "@opencode/plugin";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
-import { bootstrapRuntime } from "../bootstrap/runtime.ts";
-import { runPreflight } from "../preflight/check.ts";
-import {
-  createDenyAllPermissionHandler,
-  createPermissionEvaluateHandler,
-} from "../adapter/evaluate.ts";
-import { selectPluginsWithDependencies } from "../select/resolve.ts";
-import { opencodeDataRoot } from "../host/roots.ts";
-
-function readNonEmptyString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
 /**
- * The published package carries the bundled plugins/ catalog beside its sources, so an
- * npm install needs no environment variable. Absent that copy — a contributor
- * running from a clone — this returns undefined and the explicit sources win.
+ * OpenCode plugin entry (#336): the documented plugin API, https://opencode.ai/docs/plugins/.
+ *
+ * The module's only export is a default `PluginModule`, so the pinned host calls
+ * `server` and nothing else (probe `load.module-default`); it would otherwise call
+ * every exported function as a plugin (`load.helper-export`). Hooks come from
+ * `createTooluHooks`, which never rejects; the catch below guards the remaining
+ * binding step so init can never fail open.
  */
-function bundledRepoRoot(): string | undefined {
-  const packageRoot = join(import.meta.dir, "../..");
-  return existsSync(join(packageRoot, "plugins")) ? packageRoot : undefined;
-}
+import type { Plugin, PluginModule } from "@opencode-ai/plugin";
+import { createDenyAllToolBefore } from "../adapter/tool-before.ts";
+import { bindHostContext } from "./context.ts";
+import { createTooluHooks } from "./hooks.ts";
 
-function repoRootFromOptions(
-  options: Readonly<Record<string, unknown>>,
-  env: Record<string, string>,
-): string | undefined {
-  return (
-    readNonEmptyString(options.repoRoot) ??
-    readNonEmptyString(env.TOOLU_REPO_ROOT) ??
-    readNonEmptyString(env.TOOLU_ROOT) ??
-    bundledRepoRoot()
-  );
-}
-
-export type SetupTooluPermissionOptions = {
-  repoRoot: string;
-  projectRoot: string;
-  env?: Record<string, string>;
+const server: Plugin = async (input, options) => {
+  try {
+    return await createTooluHooks(bindHostContext(input, options, process.env));
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { "tool.execute.before": createDenyAllToolBefore(`toolu: not ready: ${reason}`) };
+  }
 };
 
-/** Wire permission.evaluate after preflight + bootstrap; deny-all when NotReady. */
-export async function setupTooluPermissionHook(
-  ctx: Pick<Plugin.Context, "permission" | "location">,
-  setupOpts: SetupTooluPermissionOptions,
-): Promise<void> {
-  const env = setupOpts.env ?? {};
-  const preflight = runPreflight({ env });
-  if (!preflight.bootstrapAllowed) {
-    const reason = preflight.reasons.join("; ") || "preflight failed";
-    await ctx.permission.hook(
-      "evaluate",
-      createDenyAllPermissionHandler(`toolu preflight: ${reason}`),
-    );
-    return;
-  }
+const tooluModule: PluginModule = { id: "toolu", server };
 
-  const pluginsRoot = join(setupOpts.repoRoot, "plugins");
-  const selected = selectPluginsWithDependencies(pluginsRoot, setupOpts.projectRoot);
-  if (!selected.ok) {
-    await ctx.permission.hook(
-      "evaluate",
-      createDenyAllPermissionHandler(`toolu plugin selection: ${selected.reason}`),
-    );
-    return;
-  }
-
-  const dataRoot = opencodeDataRoot({
-    projectRoot: setupOpts.projectRoot,
-    env,
-  });
-
-  const bootstrap = await bootstrapRuntime({
-    repoRoot: setupOpts.repoRoot,
-    projectRoot: setupOpts.projectRoot,
-    dataRoot,
-    plugins: selected.plugins,
-    env,
-  });
-
-  if (bootstrap.status !== "ready") {
-    await ctx.permission.hook(
-      "evaluate",
-      createDenyAllPermissionHandler(`toolu bootstrap: ${bootstrap.reason}`),
-    );
-    return;
-  }
-
-  const permissionContext = {
-    cwd: ctx.location.directory,
-    projectRoot: setupOpts.projectRoot,
-    worktree: ctx.location.directory,
-  };
-
-  const handler = createPermissionEvaluateHandler({
-    repoRoot: setupOpts.repoRoot,
-    configRoot: dataRoot,
-    permissionContext,
-    env: {
-      ...env,
-      TOOLU_SETTINGS_DIR: join(setupOpts.repoRoot, "plugins/toolu/settings"),
-      TOOLU_HOST_OVERRIDE: "opencode",
-    },
-  });
-
-  await ctx.permission.hook("evaluate", handler);
-}
-
-export default Plugin.define({
-  id: "toolu",
-  async setup(ctx) {
-    const env: Record<string, string> = {};
-    for (const [key, value] of Object.entries(process.env)) {
-      if (value !== undefined) {
-        env[key] = value;
-      }
-    }
-
-    const optionsRecord: Record<string, unknown> = { ...ctx.options };
-    const repoRoot = repoRootFromOptions(optionsRecord, env);
-    if (!repoRoot) {
-      await ctx.permission.hook(
-        "evaluate",
-        createDenyAllPermissionHandler(
-          "toolu: no bundled plugins/ tree; set plugin option repoRoot or TOOLU_REPO_ROOT",
-        ),
-      );
-      return;
-    }
-
-    const projectRoot = ctx.location.project.directory;
-    await setupTooluPermissionHook(ctx, {
-      repoRoot,
-      projectRoot,
-      env,
-    });
-  },
-});
+export default tooluModule;
