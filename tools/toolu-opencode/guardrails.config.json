@@ -11,7 +11,8 @@
       "select",
       "bootstrap",
       "preflight",
-      "lifecycle"
+      "lifecycle",
+      "surfaces"
     ],
     "nested": {
       "adapter": ["permission-map.ts", "evaluate.ts", "__tests__"],
@@ -28,7 +29,8 @@
         "__tests__"
       ],
       "preflight": ["check.ts", "__tests__"],
-      "lifecycle": ["table.ts", "__tests__"]
+      "lifecycle": ["table.ts", "__tests__"],
+      "surfaces": ["__tests__"]
     },
     "requireReadme": []
   },
