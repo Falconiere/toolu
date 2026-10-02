@@ -131,7 +131,9 @@ function sessionFor(
     configRoot: root,
     libDir: options.libDir,
     cwd,
-    selectedRegistrySpecs: options.selectedRegistrySpecs,
+    ...(options.selectedRegistrySpecs === undefined
+      ? {}
+      : { selectedRegistrySpecs: options.selectedRegistrySpecs }),
   };
   if (phase === "pre") {
     const project = projectRoot({ env, host, cwd }) ?? cwd;

@@ -29,7 +29,7 @@ has no OpenCode adapter. Until it does, run the two steps above.
 The git-clone flow below remains the contributor path, and is still how you work
 against an unreleased checkout.
 
-Enforcement runs in `tool.execute.before` through the native dispatcher. Covered calls are `bash`, `read`, `grep`, `glob`, `edit`, `write`, `apply_patch`, `task`, and MCP tools named `<server>_<tool>` for servers listed in `opencode.json`. Any other tool is left to the host. A toolu refusal stops the call before it runs, and a toolu allow never overrides your own `permission` rules. Gate `ask` decisions deny for now, because the host has no ask channel ([#339](https://github.com/Falconiere/toolu/issues/339)). Host events without an OpenCode hook remain outside that scope; see the [host contract](opencode-host-contract.md).
+Enforcement runs in `tool.execute.before`. Covered calls are `bash`, `read`, `grep`, `glob`, `edit`, `write`, `apply_patch`, `task`, and MCP tools named `<server>_<tool>` for servers listed in `opencode.json`. The nine native core gates run before selected `pre-tools.d` registry modules; files left by disabled plugins stay inert. MCP calls use the standalone `mcp__` blocker policy. Task calls run the native and registry gates plus the standalone agent-tier policy, which checks a supplied task model against the active plan step and records delegation telemetry. A task with no model inherits the step's tier. Any other tool is left to the host. A toolu refusal stops the call before it runs, and a toolu allow never overrides your own `permission` rules. Gate `ask` decisions deny for now, because the host has no ask channel ([#339](https://github.com/Falconiere/toolu/issues/339)). Host events without an OpenCode hook remain outside that scope; see the [host contract](opencode-host-contract.md).
 
 Bun 1.4.x is a prerequisite on every host, Claude Code and Codex included; see the [runtime contract](runtime.md). Claude Code and Codex keep their marketplace installs. OpenCode calls the TypeScript core dispatcher in process. Its npm package ships committed bundles and their runtime data. Bootstrap reports NotReady when a selected plugin lacks a required Bun registration bundle.
 
@@ -144,6 +144,12 @@ Live entry smoke on the pinned host (npm route, local shim, both at once, and a 
 ```bash
 cd /path/to/toolu
 bun run smoke:opencode-entry
+```
+
+Live pre-tool smoke on the pinned host checks protected edits, writes and patches, unsafe shell, commit and push gates, MCP and task denials, plus an allowed shell call:
+
+```bash
+bun run smoke:opencode-pretool
 ```
 
 Optional live CLI probe:

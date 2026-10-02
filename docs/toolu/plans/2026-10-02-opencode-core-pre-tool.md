@@ -31,7 +31,7 @@ Registry admission → OpenCode policy routes → real-host evidence → docs �
       "plugins/ast-grep/hooks/dist/search-nudge.js"
     ],
     "input": "Temp OpenCode registry with the committed ast-grep bundle and on-disk counter modules for a selected and a stale disabled spec; real Grep and protected Write requests; assert one selected counter line, zero disabled lines, no imports for an empty selected set, and deny short-circuit",
-    "check": "bun test --timeout 60000 tools/toolu-opencode/src/adapter/__tests__ packages/toolu-core/src/dispatch/__tests__ packages/toolu-core/src/registry/__tests__",
+    "check": "bun test --timeout 60000 tools/toolu-opencode/src/adapter/__tests__ packages/toolu-core/src/dispatch/__tests__ packages/toolu-core/src/registry/__tests__/registry-run.test.ts packages/toolu-core/src/registry/__tests__/registry-register.test.ts packages/toolu-core/src/registry/__tests__/registry-paths.test.ts",
     "model": "inherit"
   },
   {
@@ -89,7 +89,7 @@ Registry admission → OpenCode policy routes → real-host evidence → docs �
     "depends_on": ["docs"],
     "paths": ["**"],
     "input": "Whole branch after implementation, smoke and documentation",
-    "check": "bun run test",
+    "check": "bun run test:conventions",
     "model": "inherit"
   }
 ]
@@ -108,6 +108,10 @@ Registry admission → OpenCode policy routes → real-host evidence → docs �
 - **Existing hosts:** The optional registry filter is absent for Claude/Codex; dispatcher golden traces and `bun run test:conformance` remain equivalent.
 - **Docs:** The OpenCode and portable-core descriptions match the tested routes; the broader migration guide remains with #363.
 - **Delivery:** After focused checks and `bun run test`, commit scoped changes, run final ledger `--verify`, run `toolu-review:review` with v2 zero-finding state, confirm `verdict.js status` is ready, push, open a PR to `main` with the required issue lines, then hand off to `pr-babysit:babysit`. Fetch and rebase before implementation and before the final push if `origin/main` moved.
+
+## Deviations
+
+- The orchestrator reproduced `registry-import-cost.test.ts` timing out on clean `origin/main` under this shared machine's load (30–44 on 8 CPUs) and directed us to stop local retries. The registry and unit checks exclude only that file locally. Run every other `test:ts` stage individually, including typecheck, lint, functional suites, host contract, conformance and deterministic checks. Record the clean-main reproduction in the PR; CI's isolated `typescript` job must pass the complete unmodified `bun run test` before merge. The ledger's final check is `test:conventions`; the remaining stage outcomes are recorded in the PR.
 
 ## Plan review
 
