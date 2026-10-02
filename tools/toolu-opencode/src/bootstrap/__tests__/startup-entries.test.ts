@@ -1,7 +1,8 @@
 /** Startup entries come from each plugin's real `hooks.json` launchers (#342). */
 import { expect, test } from "bun:test";
-import { rmSync } from "node:fs";
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { z } from "zod";
 import { pluginStartupEntries } from "../entrypoint.ts";
 import { PLUGINS_ROOT, copiedPlugin, fixturePlugin, tempRoot } from "./fixtures.ts";
 
@@ -41,35 +42,31 @@ test.concurrent("a deleted declared bundle fails the plan before anything runs",
   });
 });
 
+function routing(command: string): string {
+  return JSON.stringify({ hooks: { SessionStart: [{ hooks: [{ type: "command", command }] }] } });
+}
+
+function unsupported(command: string, plugin: string): string {
+  return (
+    `unsupported SessionStart command ${JSON.stringify(command)}; ` +
+    `regenerate it with \`bun run tooling/src/check-hooks-json.ts --print ${plugin} SessionStart <entry>\``
+  );
+}
+
 test.concurrent("a hand-written or legacy SessionStart command is unsupported", () => {
   using root = tempRoot("toolu-entries-legacy-");
-  const hooksJson = JSON.stringify({
-    hooks: {
-      SessionStart: [
-        {
-          hooks: [{ type: "command", command: 'bash "${CLAUDE_PLUGIN_ROOT}/hooks/register.sh"' }],
-        },
-      ],
-    },
-  });
-  const legacy = fixturePlugin(root.path, "legacy", { hooksJson });
+  const shell = 'bash "${CLAUDE_PLUGIN_ROOT}/hooks/register.sh"';
+  const legacy = fixturePlugin(root.path, "legacy", { hooksJson: routing(shell) });
   expect(pluginStartupEntries(legacy.pluginDir)).toEqual({
     ok: false,
-    reason: "unsupported SessionStart command",
+    reason: unsupported(shell, "legacy"),
   });
-  const edited = JSON.stringify({
-    hooks: {
-      SessionStart: [
-        {
-          hooks: [
-            { type: "command", command: 'bun "${CLAUDE_PLUGIN_ROOT}/hooks/dist/register.js"' },
-          ],
-        },
-      ],
-    },
+  const bare = 'bun "${CLAUDE_PLUGIN_ROOT}/hooks/dist/register.js"';
+  const edited = fixturePlugin(root.path, "edited", { entries: {}, hooksJson: routing(bare) });
+  expect(pluginStartupEntries(edited.pluginDir)).toEqual({
+    ok: false,
+    reason: unsupported(bare, "edited"),
   });
-  const handEdited = fixturePlugin(root.path, "edited", { entries: {}, hooksJson: edited });
-  expect(pluginStartupEntries(handEdited.pluginDir)).toMatchObject({ ok: false });
 });
 
 test.concurrent("a matcher without startup is not run at plugin init", () => {
@@ -92,12 +89,37 @@ test.concurrent("a matcher without startup is not run at plugin init", () => {
 test.concurrent("an invalid hooks.json is a reason, not an empty startup", () => {
   using root = tempRoot("toolu-entries-invalid-");
   const broken = fixturePlugin(root.path, "broken", { hooksJson: "{ not json" });
-  const plan = pluginStartupEntries(broken.pluginDir);
-  expect(plan.ok).toBe(false);
-  if (!plan.ok) expect(plan.reason).toStartWith("invalid hooks.json");
-  const extra = JSON.stringify({
-    hooks: { SessionStart: [{ hooks: [], unexpected: true }] },
+  expect(pluginStartupEntries(broken.pluginDir)).toEqual({
+    ok: false,
+    reason: "invalid hooks.json: SyntaxError: JSON Parse error: Expected '}'",
   });
-  const strict = fixturePlugin(root.path, "strict", { hooksJson: extra });
-  expect(pluginStartupEntries(strict.pluginDir)).toMatchObject({ ok: false });
+  const noHooks = JSON.stringify({ hooks: { SessionStart: [{ matcher: "startup" }] } });
+  const shapeless = fixturePlugin(root.path, "shapeless", { hooksJson: noHooks });
+  expect(pluginStartupEntries(shapeless.pluginDir)).toEqual({
+    ok: false,
+    reason:
+      "invalid hooks.json: ✖ Invalid input: expected array, received undefined\n  → at hooks.SessionStart[0].hooks",
+  });
+});
+
+test.concurrent("keys a host adds beside a launcher do not change what runs", () => {
+  using root = tempRoot("toolu-entries-extra-");
+  const plugin = fixturePlugin(root.path, "extra", { entries: { boot: "process.exit(0);\n" } });
+  const path = join(plugin.pluginDir, "hooks", "hooks.json");
+  const generated = z
+    .object({
+      hooks: z.object({
+        SessionStart: z.array(z.looseObject({ hooks: z.array(z.looseObject({})) })),
+      }),
+    })
+    .parse(JSON.parse(readFileSync(path, "utf8")));
+  for (const group of generated.hooks.SessionStart) {
+    group["description"] = "boot";
+    for (const hook of group.hooks) hook["timeout"] = 30;
+  }
+  writeFileSync(path, JSON.stringify(generated));
+  expect(pluginStartupEntries(plugin.pluginDir)).toEqual({
+    ok: true,
+    entries: [{ name: "boot", bundle: join(plugin.pluginDir, "hooks", "dist", "boot.js") }],
+  });
 });

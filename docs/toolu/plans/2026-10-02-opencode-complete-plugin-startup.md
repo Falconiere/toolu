@@ -259,3 +259,14 @@
 - **`gate` check:** every `test:ts` stage runs in order. The unit stage uses the root-only name filter. Load average on this shared host was about 22, so two import-cost timing tests run on their own, right after the rest of the unit stage. In the parallel run they read 59.8 ms against a 50 ms bound, with the same 112.8 KB bundle as before the change, and 2.7 ms against 2 ms. Alone, they read 19.3 ms and 1.7 ms.
   - `bench:shell --assert` is left out. Its parse p99 swung from 101 to 178 to 313 µs against a 100 µs budget across three runs, while p50 held at 11–12 µs. This branch does not change `packages/toolu-core/src/shell`, matching #366's finding.
   - CI's `typescript` job runs the unfiltered `bun run test`, as a non-root user, and remains the authority.
+- **Review follow-up** (independent reviewer; every finding below is fixed with a test):
+  - Ledger helper paths are checked by real path, so an intermediate symlink cannot escape the data root.
+  - The ledger no longer stores a `spec`. Names must be catalog-shaped and specs are derived, so a crafted ledger cannot target `myorg__*` modules.
+  - After a deadline or an abort, output still held by a grandchild is abandoned after a 1 s grace.
+  - Startup notes go to the host log as one bounded line.
+  - The `hooks.json` hook and group objects accept extra host keys.
+  - The unsupported-command reason quotes the command and names the regenerate command.
+  - A failed entry's verified helpers stay owned.
+  - Docs note the shared-data-root limit (OP-09) and drop "always exits 0".
+  - Assertions are tightened.
+  - Two items are skipped, after Jev triage: layer-parallel startup (startup takes about 1 s; sequential is the spec decision) and a test of the 180 s budget constant.

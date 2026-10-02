@@ -115,7 +115,9 @@ test.concurrent("a legacy-only plugin stages its hooks.json routing without its 
   // The staged routing still names the shell hook, so the OpenCode startup refuses the plugin.
   expect(pluginStartupEntries(join(dest, "legacy-only"))).toEqual({
     ok: false,
-    reason: "unsupported SessionStart command",
+    reason:
+      `unsupported SessionStart command ${JSON.stringify(command)}; ` +
+      "regenerate it with `bun run tooling/src/check-hooks-json.ts --print legacy-only SessionStart <entry>`",
   });
 });
 

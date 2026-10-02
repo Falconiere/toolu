@@ -117,9 +117,15 @@ export type Enforcement =
 Ledger (`<dataRoot>/toolu/startup-ledger.json`, strict Zod; an unreadable or invalid ledger counts as empty and adds a diagnostic):
 
 ```json
-{ "version": 1, "plugins": { "context7": { "spec": "context7@toolu",
+{ "version": 1, "plugins": { "context7": {
   "helpers": [{ "path": "<dataRoot>/context7/search.sh", "source": "<pluginsRoot>/context7/hooks/dist/search.js" }] } } }
 ```
+
+The ledger sits in the project, so it is untrusted input:
+- Plugin names must match the launcher's name pattern.
+- Each spec is derived as `<name>@toolu`, never read from the file.
+- A helper path is acted on only when its real directory is inside the real data root.
+- Pruning skips any registry directory that is really elsewhere.
 
 `@toolu/opencode/bootstrap` exports `bootstrapRuntime`, `BootstrapRuntimeOptions`, `pluginStartupEntries` and the result types. It drops `collectBootstrapArtifacts`, `evaluateBootstrapReadiness` and `pluginBootstrapScript`, which are internal to the bootstrap and replaced. Their only consumers are in this repository.
 

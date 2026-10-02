@@ -59,6 +59,14 @@ function modules(s: ProbeSession): string[] {
   });
 }
 
+const MODULES = [
+  "pre-tools.d/ast-grep@toolu__search-nudge.js",
+  "post-tools.d/ast-grep@toolu__byte-savings.js",
+  "post-tools.d/python-quality@toolu__python-quality.js",
+  "post-tools.d/rust-quality@toolu__rust-quality.js",
+  "post-tools.d/ts-quality@toolu__ts-quality.js",
+];
+
 const HELPERS = [
   "agent-browser/agent-browser.sh",
   "context7/search.sh",
@@ -81,7 +89,7 @@ async function fullStartup(ctx: EntryContext): Promise<EntryResult> {
       `toolu: ready (${names.length} plugins, 12 startup artifacts)`,
     ),
     notReady: diagnostics(hostRun.stderr, "toolu: not ready"),
-    modules: modules(s).length,
+    modules: modules(s).toSorted().join(",") === MODULES.toSorted().join(","),
     helpers: HELPERS.filter((path) => existsSync(join(s.sb.project, DATA_ROOT, path))).length,
     bashRan: bash?.status === "completed" && s.exists("allowed.txt"),
   };
@@ -89,7 +97,7 @@ async function fullStartup(ctx: EntryContext): Promise<EntryResult> {
     observed.plugins === 16 &&
     observed.ready === 1 &&
     observed.notReady === 0 &&
-    observed.modules === 5 &&
+    observed.modules &&
     observed.helpers === HELPERS.length &&
     observed.bashRan;
   return { pass, observed };

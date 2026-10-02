@@ -7,6 +7,9 @@
  *   relinked path at that place is the user's);
  * - a registry module goes only when it is a regular file under a toolu
  *   plugin's own `<name>@toolu__` prefix (other specs, links and directories stay).
+ * The ledger sits in the project, so it is not trusted: plugin names must be
+ * catalog-shaped, specs are derived from them, and nothing whose real path
+ * leaves the data root is touched.
  */
 import { randomUUID } from "node:crypto";
 import {
@@ -15,11 +18,12 @@ import {
   readdirSync,
   readFileSync,
   readlinkSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, resolve, sep } from "node:path";
+import { basename, dirname, join, sep } from "node:path";
 import { REGISTRY_DIRS } from "@toolu/core/registry";
 import { z } from "zod";
 import { opencodeRegistryRoot } from "../host/roots.ts";
@@ -28,12 +32,12 @@ import type { OwnedHelper } from "./records.ts";
 
 const HelperSchema = z.strictObject({ path: z.string().min(1), source: z.string().min(1) });
 
+/** A catalog plugin name, the same shape the launcher accepts. */
+const PluginName = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/u);
+
 const LedgerSchema = z.strictObject({
   version: z.literal(1),
-  plugins: z.record(
-    z.string().min(1),
-    z.strictObject({ spec: z.string().min(1), helpers: z.array(HelperSchema) }),
-  ),
+  plugins: z.record(PluginName, z.strictObject({ helpers: z.array(HelperSchema) })),
 });
 
 export type Ledger = z.infer<typeof LedgerSchema>;
@@ -102,24 +106,44 @@ export function writeLedger(dataRoot: string, ledger: Ledger): string | undefine
   }
 }
 
-/**
- * Remove `helper` while it is still the symlink toolu published; anything else
- * there is the user's. The ledger sits in the project, so a path outside the
- * data root is never acted on, whatever the ledger says.
- */
+function realpathOrUndefined(path: string): string | undefined {
+  try {
+    return realpathSync(path);
+  } catch {
+    return undefined;
+  }
+}
+
+/** `dir` resolved, when it really is the data root or inside it. */
+function realDirInDataRoot(dir: string, dataRoot: string): string | undefined {
+  const real = realpathOrUndefined(dir);
+  const root = realpathOrUndefined(dataRoot);
+  if (real === undefined || root === undefined) return undefined;
+  return real === root || real.startsWith(root + sep) ? real : undefined;
+}
+
+/** `path` with its directory resolved, when that directory really is inside the data root. */
+function underDataRoot(path: string, dataRoot: string): string | undefined {
+  const parent = realDirInDataRoot(dirname(path), dataRoot);
+  return parent === undefined ? undefined : join(parent, basename(path));
+}
+
+/** Remove `helper` while it is still the symlink toolu published; anything else there is the user's. */
 function retireHelper(owner: string, helper: OwnedHelper, dataRoot: string, out: Cleanup): boolean {
-  if (!resolve(helper.path).startsWith(resolve(dataRoot) + sep)) {
+  if (realpathOrUndefined(dirname(helper.path)) === undefined) return true;
+  const path = underDataRoot(helper.path, dataRoot);
+  if (path === undefined) {
     out.diagnostics.push(`${owner}: ignored ledger path ${helper.path} outside the data root`);
     return true;
   }
-  const stat = lstatSync(helper.path, { throwIfNoEntry: false });
+  const stat = lstatSync(path, { throwIfNoEntry: false });
   if (stat === undefined) return true;
-  if (!stat.isSymbolicLink() || readlinkSync(helper.path) !== helper.source) {
+  if (!stat.isSymbolicLink() || readlinkSync(path) !== helper.source) {
     out.diagnostics.push(`${owner}: kept ${helper.path}, no longer toolu's`);
     return true;
   }
   try {
-    rmSync(helper.path);
+    rmSync(path);
     out.diagnostics.push(`${owner}: removed helper ${helper.path}`);
     return true;
   } catch (error) {
@@ -152,16 +176,18 @@ function moduleFiles(dir: string, spec: string): string[] {
   }
 }
 
-/** Remove the registry modules of `spec`, a plugin that is not selected. */
-function pruneModules(owner: string, spec: string, dataRoot: string, out: Cleanup): void {
+/** Remove the registry modules of `name@toolu`, a plugin that is not selected. */
+function pruneModules(name: string, dataRoot: string, out: Cleanup): void {
   for (const dir of REGISTRY_DIRS) {
-    for (const path of moduleFiles(join(opencodeRegistryRoot(dataRoot), dir), spec)) {
+    const real = realDirInDataRoot(join(opencodeRegistryRoot(dataRoot), dir), dataRoot);
+    if (real === undefined) continue;
+    for (const path of moduleFiles(real, `${name}@toolu`)) {
       if (!isRegularFile(path)) continue;
       try {
         rmSync(path);
-        out.diagnostics.push(`${owner}: removed module ${path}`);
+        out.diagnostics.push(`${name}: removed module ${path}`);
       } catch (error) {
-        out.failures.push(`${owner}: cannot remove module ${path}: ${String(error)}`);
+        out.failures.push(`${name}: cannot remove module ${path}: ${String(error)}`);
       }
     }
   }
@@ -180,20 +206,17 @@ export type PruneInput = {
  * must stay because something could not be removed.
  */
 export function pruneUnselected(input: PruneInput, out: Cleanup): Ledger["plugins"] {
-  const specs = new Map<string, string>();
-  for (const [name, entry] of Object.entries(input.ledger.plugins)) specs.set(name, entry.spec);
-  for (const plugin of input.catalog) specs.set(plugin.name, plugin.spec);
+  const names = new Set([
+    ...Object.keys(input.ledger.plugins),
+    ...input.catalog.map((plugin) => plugin.name),
+  ]);
   const retained: Ledger["plugins"] = {};
-  for (const [name, spec] of specs) {
+  for (const name of [...names].toSorted()) {
     if (input.selected.has(name)) continue;
-    pruneModules(name, spec, input.dataRoot, out);
-    const left = retireHelpers(
-      name,
-      input.ledger.plugins[name]?.helpers ?? [],
-      input.dataRoot,
-      out,
-    );
-    if (left.length > 0) retained[name] = { spec, helpers: left };
+    pruneModules(name, input.dataRoot, out);
+    const helpers = input.ledger.plugins[name]?.helpers ?? [];
+    const left = retireHelpers(name, helpers, input.dataRoot, out);
+    if (left.length > 0) retained[name] = { helpers: left };
   }
   return retained;
 }

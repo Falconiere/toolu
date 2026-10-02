@@ -44,8 +44,21 @@ function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** Why the child was stopped from outside, if it was. */
-type Stop = { reason: string | undefined };
+/** Why the child was stopped from outside, if it was, and when. */
+type Stop = { reason: string | undefined; halted: PromiseWithResolvers<void> };
+
+/**
+ * A killed entry's grandchild can keep its output pipes open; past this grace
+ * the outcome is reported without waiting for them, so a deadline or an abort
+ * always bounds the call.
+ */
+const DRAIN_GRACE_MS = 1_000;
+
+async function abandoned(stop: Stop): Promise<SpawnOutcome> {
+  await stop.halted.promise;
+  await Bun.sleep(DRAIN_GRACE_MS);
+  return { status: "failed", reason: stop.reason ?? "startup stopped" };
+}
 
 async function collect(
   proc: Bun.Subprocess<Blob, "pipe", "pipe">,
@@ -79,10 +92,11 @@ export async function spawnEntry(request: SpawnRequest): Promise<SpawnOutcome> {
   } catch (error) {
     return { status: "failed", reason: `cannot start: ${message(error)}` };
   }
-  const stop: Stop = { reason: undefined };
+  const stop: Stop = { reason: undefined, halted: Promise.withResolvers<void>() };
   const halt = (reason: string): void => {
     stop.reason ??= reason;
     proc.kill();
+    stop.halted.resolve();
   };
   const timer = setTimeout(
     () => halt(`timed out after ${request.deadlineMs} ms`),
@@ -91,7 +105,7 @@ export async function spawnEntry(request: SpawnRequest): Promise<SpawnOutcome> {
   const onAbort = (): void => halt("startup cancelled");
   request.signal?.addEventListener("abort", onAbort, { once: true });
   try {
-    return await collect(proc, stop);
+    return await Promise.race([collect(proc, stop), abandoned(stop)]);
   } finally {
     clearTimeout(timer);
     request.signal?.removeEventListener("abort", onAbort);

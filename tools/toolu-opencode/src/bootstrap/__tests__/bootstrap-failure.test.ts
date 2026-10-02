@@ -100,6 +100,17 @@ test.concurrent("an entry that cannot start, exits non-zero or stalls is NotRead
   );
 });
 
+test.concurrent("a grandchild holding the output pipes cannot outlast the deadline", async () => {
+  using root = tempRoot("toolu-bs-grandchild-");
+  const holder =
+    'require("node:child_process").spawn("sleep", ["8"], { stdio: "inherit", detached: true }).unref();\n' +
+    "await Bun.sleep(5000);\n";
+  const started = performance.now();
+  const reason = await reasonOf(root.path, { plugins: [one(root.path, holder)], deadlineMs: 300 });
+  expect(reason).toBe("probe/boot: timed out after 300 ms");
+  expect(performance.now() - started).toBeLessThan(4_000);
+});
+
 test.concurrent("an abort kills the running entry, and an aborted signal runs nothing", async () => {
   using root = tempRoot("toolu-bs-abort-");
   const stalled = one(root.path, "await Bun.sleep(5000);\n");
@@ -157,6 +168,14 @@ test.concurrent("SessionStart context is collected and bounded", async () => {
   const entry = result.plugins[0]?.entries[0];
   expect(entry?.systemMessage).toBe("hi");
   expect(entry?.additionalContext).toBe("y".repeat(10_000));
+});
+
+test.concurrent("a successful entry's stderr becomes a startup note", async () => {
+  using root = tempRoot("toolu-bs-stderr-");
+  const noisy = one(root.path, 'process.stderr.write("bun not found on PATH\\n");\n');
+  const result = await boot(root.path, { plugins: [noisy] });
+  if (result.status !== "ready") throw new Error(result.reason);
+  expect(result.diagnostics).toEqual(["probe/boot: bun not found on PATH"]);
 });
 
 test.concurrent("an invalid, failed or foreign report record is NotReady", async () => {
@@ -260,7 +279,8 @@ test.concurrent("#276: a selected legacy-only register hook is NotReady", async 
   });
   const legacy = fixturePlugin(root.path, "legacy-only", { hooksJson });
   expect(await reasonOf(root.path, { plugins: [legacy] })).toBe(
-    "legacy-only: unsupported SessionStart command",
+    'legacy-only: unsupported SessionStart command "bash \\"${CLAUDE_PLUGIN_ROOT}/hooks/register.sh\\""; ' +
+      "regenerate it with `bun run tooling/src/check-hooks-json.ts --print legacy-only SessionStart <entry>`",
   );
 });
 

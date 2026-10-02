@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import type { Hooks } from "@opencode-ai/plugin";
 import { definedEnv, parseOptions, type HostBinding, type LogLevel } from "../context.ts";
 import { prepareEnforcement } from "../enforcement.ts";
-import { createTooluHooks } from "../hooks.ts";
+import { createTooluHooks, startupNotes } from "../hooks.ts";
 
 const tmpBase = process.env.TMPDIR ?? "/tmp";
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../../../..");
@@ -81,8 +81,9 @@ test("ready: a protected .env edit is refused, an allowed bash call runs, one re
   expect(await refusal(hooks, "edit", edit)).toMatch(/protected/i);
   expect(await refusal(hooks, "bash", { command: "echo ok", description: "x" })).toBe("allowed");
   expect(await readFile(envPath, "utf8")).toBe("SECRET=1\n");
-  expect(logged.every((entry) => entry.level === "info")).toBe(true);
-  expect(logged[0]?.message).toMatch(/^toolu: ready \(1 plugins, \d+ startup artifacts\)$/);
+  expect(logged).toEqual([
+    { level: "info", message: "toolu: ready (1 plugins, 0 startup artifacts)" },
+  ]);
   await hooks.dispose?.();
 });
 
@@ -184,4 +185,14 @@ test("a host log that throws cannot abort init or strand the directory claim", a
   const again = await createTooluHooks(binding(root, [], { log: throwing }), failing);
   expect(again["tool.execute.before"]).toBeDefined();
   await again.dispose?.();
+});
+
+test("startup notes go to the host log as one bounded line", () => {
+  expect(startupNotes([])).toBeUndefined();
+  expect(startupNotes(["a: kept user file /x", "b: removed module /y"])).toBe(
+    "toolu: startup notes: a: kept user file /x; b: removed module /y",
+  );
+  const many = [...Array(23).keys()].map((i) => `n${String(i)}`);
+  const shown = many.slice(0, 20).join("; ");
+  expect(startupNotes(many)).toBe(`toolu: startup notes: ${shown} (3 more)`);
 });

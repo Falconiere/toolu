@@ -44,7 +44,7 @@ function unique(helpers: readonly OwnedHelper[]): OwnedHelper[] {
 function settleLedger(settlement: Settlement): void {
   const { runs, previous, next, cleanup } = settlement;
   for (const run of runs) {
-    const { name, spec } = run.plugin;
+    const { name } = run.plugin;
     const old = previous.plugins[name]?.helpers ?? [];
     const current = run.verified.helpers;
     let owned: OwnedHelper[];
@@ -54,7 +54,7 @@ function settleLedger(settlement: Settlement): void {
     } else {
       owned = unique([...old, ...current]);
     }
-    if (owned.length > 0) next.plugins[name] = { spec, helpers: owned };
+    if (owned.length > 0) next.plugins[name] = { helpers: owned };
   }
   const failure = writeLedger(settlement.dataRoot, next);
   if (failure !== undefined) cleanup.failures.push(failure);

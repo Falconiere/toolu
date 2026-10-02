@@ -35,8 +35,9 @@ export type BootstrapRuntimeOptions = {
 };
 
 /**
- * `STARTUP_REPORT_ENV` of `@toolu/core/startup`, spelled here because the package
- * accepts `@toolu/core` releases that predate it; a test pins the two together.
+ * `STARTUP_REPORT_ENV` of `@toolu/core/startup`, spelled here: the npm route
+ * installs `@toolu/core` from the registry, where the release that adds the
+ * export may not be the one installed. A test pins the two together.
  */
 export const STARTUP_REPORT_VAR = "TOOLU_STARTUP_REPORT";
 
@@ -99,6 +100,14 @@ async function runEntry(
       deadlineMs: run.deadlineMs,
       signal: run.signal,
     });
+    // Read the report whatever the exit: a helper published before a crash is still toolu's.
+    const read = readStartupReport(report);
+    const found = read.ok ? verifyRecords(read.records, plugin, run.dataRoot) : undefined;
+    if (found !== undefined) {
+      verified.artifacts.push(...found.artifacts);
+      verified.helpers.push(...found.helpers);
+      verified.diagnostics.push(...found.diagnostics);
+    }
     if (spawned.status === "failed") return spawned.reason;
     if (spawned.exitCode !== 0) {
       const said = excerpt(spawned.stderr || spawned.stdout);
@@ -106,13 +115,8 @@ async function runEntry(
     }
     const output = parseStartupOutput(spawned.stdout);
     if (!output.ok) return output.reason;
-    const read = readStartupReport(report);
     if (!read.ok) return read.reason;
-    const found = verifyRecords(read.records, plugin, run.dataRoot);
-    verified.artifacts.push(...found.artifacts);
-    verified.helpers.push(...found.helpers);
-    verified.diagnostics.push(...found.diagnostics);
-    if (found.failures.length > 0) return found.failures.join("; ");
+    if (found !== undefined && found.failures.length > 0) return found.failures.join("; ");
     const stderr = excerpt(spawned.stderr);
     if (stderr !== "") verified.diagnostics.push(`${plugin.name}/${entry.name}: ${stderr}`);
     return { entry: entry.name, ...output.context };
