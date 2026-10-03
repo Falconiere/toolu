@@ -41,6 +41,24 @@ import {
   type EntryScenario,
 } from "./scenarios-entry.ts";
 
+/** What the fixer's remote writes and subagent calls came to, from its own log. */
+function writeGuards(calls: ReturnType<typeof fixerTools>): Record<string, boolean> {
+  const said = (needle: string, pattern: RegExp): boolean =>
+    calls.some((c) => c.input.includes(needle) && pattern.test(`${c.output}${c.error}`));
+  return {
+    pushDenied: refused(calls, "bash", `"git push origin HEAD:${BRANCH}"`),
+    gitCDenied: refused(calls, "bash", `' push origin HEAD:${BRANCH}`),
+    ghDenied: refused(calls, "bash", "gh pr comment"),
+    // Forms no deny pattern names: the fixer's environment stops them.
+    wrappedPushBlocked: said(`"env git push origin HEAD:${BRANCH}"`, /pr-babysit-fixer-no-push/),
+    ghNoLogin: said('"env gh auth status"', /not logged in/i),
+    // A denied `task` is not even offered: the host turns the call into `invalid`.
+    taskUnavailable: calls.some(
+      (c) => c.tool === "invalid" && c.input.includes("unavailable tool 'task'"),
+    ),
+  };
+}
+
 async function fixer(ctx: EntryContext): Promise<EntryResult> {
   using s = babysitSession(ctx, (q) => ({
     "babysit.fixer": [
@@ -83,13 +101,7 @@ async function fixer(ctx: EntryContext): Promise<EntryResult> {
         existsSync(p.worktree) &&
         git(p.worktree, "diff", "--name-only", `origin/${BRANCH}..HEAD`) === "sum.ts",
       originUnchanged: git(originPath, "rev-parse", BRANCH) === prHead,
-      pushDenied: refused(calls, "bash", `"git push origin HEAD:${BRANCH}"`),
-      gitCDenied: refused(calls, "bash", `' push origin HEAD:${BRANCH}`),
-      ghDenied: refused(calls, "bash", "gh pr comment"),
-      // A denied `task` is not even offered: the host turns the call into `invalid`.
-      taskUnavailable: calls.some(
-        (c) => c.tool === "invalid" && c.input.includes("unavailable tool 'task'"),
-      ),
+      ...writeGuards(calls),
       reported: json(p.report)["status"] === "done",
       stateHere: state["version"] === 2 && state["slot"] === SLOT,
       recorded:

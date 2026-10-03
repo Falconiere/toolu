@@ -254,7 +254,7 @@ import { spawnSync as spawnSync2 } from "child_process";
 import {
   copyFileSync,
   existsSync as existsSync3,
-  readFileSync as readFileSync3,
+  readFileSync as readFileSync2,
   readdirSync,
   rmSync as rmSync2,
   writeFileSync as writeFileSync2
@@ -263,7 +263,7 @@ import { basename as basename2, dirname as dirname2, join as join2, resolve } fr
 
 // plugins/pr-babysit/hooks/src/babysit/fixer-process.ts
 import { spawn, spawnSync } from "child_process";
-import { closeSync, existsSync as existsSync2, openSync, readFileSync as readFileSync2 } from "fs";
+import { closeSync, existsSync as existsSync2, openSync, readSync, statSync as statSync2 } from "fs";
 
 // plugins/pr-babysit/hooks/src/babysit/fixer-route.ts
 var SAFE = /^[A-Za-z0-9_./:=,@%+#-]+$/;
@@ -358,6 +358,41 @@ function fixerConfigContent(existing) {
   const agents = isObject(base.agent) ? base.agent : {};
   return JSON.stringify({ ...base, agent: { ...agents, [FIXER_AGENT]: FIXER_AGENT_CONFIG } });
 }
+var NO_PUSH = "pr-babysit-fixer-no-push";
+var PUSH_PREFIXES = ["/", "file://", "https://", "http://", "ssh://", "git://", "git@"];
+var GITHUB_TOKENS = [
+  "GH_TOKEN",
+  "GITHUB_TOKEN",
+  "GH_ENTERPRISE_TOKEN",
+  "GITHUB_ENTERPRISE_TOKEN"
+];
+function fixerEnv(base, worktree, ghConfigDir) {
+  const env = {
+    ...base,
+    PWD: worktree,
+    OPENCODE_CONFIG_CONTENT: fixerConfigContent(base.OPENCODE_CONFIG_CONTENT),
+    GH_CONFIG_DIR: ghConfigDir,
+    GIT_TERMINAL_PROMPT: "0"
+  };
+  for (const key of GITHUB_TOKENS)
+    delete env[key];
+  const count = Number(base.GIT_CONFIG_COUNT ?? "0");
+  if (!Number.isInteger(count) || count < 0)
+    fail("config_invalid", "GIT_CONFIG_COUNT is not a whole number; fix or unset it");
+  const entries = [
+    ["credential.helper", ""],
+    ...PUSH_PREFIXES.map((prefix) => [
+      `url.${NO_PUSH}://.pushInsteadOf`,
+      prefix
+    ])
+  ];
+  entries.forEach(([key, value], index) => {
+    env[`GIT_CONFIG_KEY_${count + index}`] = key;
+    env[`GIT_CONFIG_VALUE_${count + index}`] = value;
+  });
+  env.GIT_CONFIG_COUNT = String(count + entries.length);
+  return env;
+}
 function opencodeFixerArgs(run) {
   return [
     "run",
@@ -443,16 +478,16 @@ function stopGroup(pid, start) {
     signal(member, "SIGKILL");
   return waitGone(pids, 5);
 }
-function spawnFixer(run, log, env) {
+function spawnFixer(run, log, env, ghConfigDir) {
   if (!commandAvailable("opencode"))
     return { error: "opencode is not on PATH" };
   const args = opencodeFixerArgs(run);
-  const content = fixerConfigContent(env.OPENCODE_CONFIG_CONTENT);
+  const childEnv = fixerEnv(env, run.worktree, ghConfigDir);
   const fd = openSync(log, "a");
   try {
     const child = spawn("opencode", args, {
       cwd: run.worktree,
-      env: { ...env, PWD: run.worktree, OPENCODE_CONFIG_CONTENT: content },
+      env: childEnv,
       detached: true,
       stdio: ["ignore", fd, fd]
     });
@@ -469,11 +504,40 @@ function spawnFixer(run, log, env) {
     closeSync(fd);
   }
 }
+var TAIL_BYTES = 64 * 1024;
 function logTail(log, lines = 40) {
   if (!existsSync2(log))
     return "";
-  return readFileSync2(log, "utf8").split(`
-`).slice(-lines).join(`
+  const size = statSync2(log).size;
+  const length = Math.min(size, TAIL_BYTES);
+  const buffer = Buffer.alloc(length);
+  const fd = openSync(log, "r");
+  try {
+    readSync(fd, buffer, 0, length, size - length);
+  } finally {
+    closeSync(fd);
+  }
+  const all = buffer.toString("utf8").split(`
+`);
+  return (length < size ? all.slice(1) : all).slice(-lines).join(`
+`);
+}
+function parsed(line) {
+  try {
+    return JSON.parse(line);
+  } catch {
+    return;
+  }
+}
+var ROUTINE_LOG = /\blevel=(DEBUG|INFO)\b/;
+function hostErrors(tail) {
+  return tail.split(`
+`).filter((line) => {
+    if (line.trim() === "")
+      return false;
+    const value = parsed(line);
+    return value === undefined ? !ROUTINE_LOG.test(line) : isObject(value) && value.type === "error";
+  }).join(`
 `);
 }
 
@@ -495,7 +559,7 @@ function git(args, code = "git_error", message) {
 }
 function readJson2(path, code, message) {
   try {
-    const value = JSON.parse(readFileSync3(path, "utf8"));
+    const value = JSON.parse(readFileSync2(path, "utf8"));
     if (value && typeof value === "object" && !Array.isArray(value))
       return value;
   } catch {}
@@ -579,12 +643,15 @@ function fixerReportPath(stateFile, round, seq) {
 function fixerLogPath(stateFile, round, seq) {
   return `${stateFile.replace(/\.json$/, "")}.fixer-r${round}g${seq}.log`;
 }
+function fixerGhConfigPath(stateFile) {
+  return `${stateFile.replace(/\.json$/, "")}.fixer-gh`;
+}
 function nativeWorktreePath(stateFile) {
   return `${stateFile.replace(/\.json$/, "")}.worktree`;
 }
 function fixerOutcome(report, pane) {
   try {
-    const value = JSON.parse(readFileSync3(report, "utf8"));
+    const value = JSON.parse(readFileSync2(report, "utf8"));
     if (value.status === "done")
       return "done";
     if (value.status === "failed")
@@ -768,6 +835,8 @@ class Dispatcher {
         fail("config_invalid", `plan group ${group.seq} names host '${group.host}'; use claude, codex, cursor or opencode`);
       agentArgs(hostKind(group.host), "pb-000000-r1g1", group.model, group.effort, true);
     }
+    if (plan.groups.some((group) => group.host === "opencode"))
+      fixerEnv(process.env, "", "");
   }
   dropBranch(root, branch, pr) {
     if (this.dry)
@@ -932,7 +1001,7 @@ class Dispatcher {
       reportFailed: `${reportCommand} failed --note "<the reason>"`
     };
     const items = readJson2(itemsFile, "plan_invalid", `items file is missing or not JSON: ${itemsFile}`).items;
-    const template = readFileSync3(join2(this.pluginRoot, "skills/babysit/references/fixer-brief.md"), "utf8");
+    const template = readFileSync2(join2(this.pluginRoot, "skills/babysit/references/fixer-brief.md"), "utf8");
     const rendered = renderBrief(template, items, group, ctx);
     const argv = agentArgs(group.host, agent, group.model, group.effort, unattended);
     if (!this.dry) {
@@ -966,16 +1035,21 @@ class Dispatcher {
         return rendered;
       const log = fixerLogPath(this.stateFile, round, seq);
       rmSync2(log, { force: true });
-      const spawned = spawnFixer(run, log, process.env);
+      const spawned = spawnFixer(run, log, process.env, fixerGhConfigPath(this.stateFile));
       if ("error" in spawned)
         this.settle(seq, "agent_start_failed", "", spawned.error);
       else
-        this.patchGroup(seq, {
-          status: "running",
-          pid: spawned.pid,
-          pidStart: spawned.pidStart,
-          log
-        });
+        try {
+          this.patchGroup(seq, {
+            status: "running",
+            pid: spawned.pid,
+            pidStart: spawned.pidStart,
+            log
+          });
+        } catch (error) {
+          stopGroup(spawned.pid, spawned.pidStart);
+          throw error;
+        }
       return rendered;
     }
     const start = [
@@ -1091,7 +1165,7 @@ class Dispatcher {
   groupOutcome(group) {
     if (group.host === "opencode") {
       const tail = logTail(group.log ?? "");
-      const outcome = fixerOutcome(group.report ?? "", tail);
+      const outcome = fixerOutcome(group.report ?? "", hostErrors(tail));
       const last = tail.replace(/\s+$/, "").slice(-600);
       return {
         outcome,
@@ -1303,7 +1377,7 @@ class Dispatcher {
     if (!this.dry) {
       for (const file of readdirSync(dirname2(this.stateFile)))
         if (file.startsWith(`${basename2(this.stateFile).replace(/\.json$/, "")}.fixer-`))
-          rmSync2(join2(dirname2(this.stateFile), file), { force: true });
+          rmSync2(join2(dirname2(this.stateFile), file), { force: true, recursive: true });
     }
     return this.dry ? { dryRun: true, commands: this.commands } : { version: 1, status: "cleaned", worktreeRemoved: removed, branchDeleted: deleted, note };
   }

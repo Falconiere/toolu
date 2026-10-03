@@ -113,6 +113,9 @@ export function fixerSteps(p: Paths): ScriptStep[] {
     bash(`git push origin HEAD:${BRANCH}`),
     bash(`git -C '${p.worktree}' push origin HEAD:${BRANCH}`),
     bash("gh pr comment 165 --body fixed"),
+    // Forms the deny patterns do not name: the fixer's environment stops them.
+    bash(`env git push origin HEAD:${BRANCH}`),
+    bash("env gh auth status"),
     {
       tool: "task",
       args: { description: "push", prompt: "push the fix", subagent_type: "general" },
@@ -218,7 +221,12 @@ const ToolPart = z.looseObject({
   type: z.literal("tool_use"),
   part: z.looseObject({
     tool: z.string(),
-    state: z.looseObject({ status: z.string(), input: z.unknown(), error: z.unknown() }),
+    state: z.looseObject({
+      status: z.string(),
+      input: z.unknown(),
+      output: z.unknown(),
+      error: z.unknown(),
+    }),
   }),
 });
 
@@ -234,7 +242,7 @@ function parseLine(line: string): unknown {
 /** Tool calls of the fixer's own `opencode run --format json` log, with their inputs. */
 export function fixerTools(
   log: string,
-): Array<{ tool: string; status: string; input: string; error: string }> {
+): Array<{ tool: string; status: string; input: string; output: string; error: string }> {
   return log.split("\n").flatMap((line) => {
     const parsed = ToolPart.safeParse(parseLine(line));
     if (!parsed.success) return [];
@@ -244,6 +252,7 @@ export function fixerTools(
         tool,
         status: state.status,
         input: JSON.stringify(state.input),
+        output: typeof state.output === "string" ? state.output : "",
         error: typeof state.error === "string" ? state.error : "",
       },
     ];

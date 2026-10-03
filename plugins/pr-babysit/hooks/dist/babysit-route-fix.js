@@ -140,25 +140,25 @@ function merge(a, b) {
   }
   return out;
 }
-function opencodePaths(root) {
-  const home = process.env.HOME || homedir();
-  const user = process.env.TOOLU_USER_CONFIG_DIR || process.env.TOOLU_CONFIG_DIR || join(process.env.XDG_CONFIG_HOME || join(home, ".config"), "opencode");
-  const dir = process.env.TOOLU_PROJECT_CONFIG_DIRNAME || ".opencode";
+function opencodePaths(root, env) {
+  const home = env.HOME || homedir();
+  const user = env.TOOLU_USER_CONFIG_DIR || env.TOOLU_CONFIG_DIR || join(env.XDG_CONFIG_HOME || join(home, ".config"), "opencode");
+  const dir = env.TOOLU_PROJECT_CONFIG_DIRNAME || ".opencode";
   return {
     user: join(user, "toolu.config.json"),
     project: root ? join(root, dir, "toolu.config.json") : ""
   };
 }
-function gitRoot() {
-  return process.env.TOOLU_PROJECT_DIR || (spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).stdout ?? "").trim();
+function gitRoot(env) {
+  return env.TOOLU_PROJECT_DIR || (spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).stdout ?? "").trim();
 }
-function configPaths(host) {
+function configPaths(host, env = process.env) {
   if (host === "opencode")
-    return opencodePaths(gitRoot());
-  const home = host === "codex" ? process.env.CODEX_HOME || join(process.env.HOME || homedir(), ".codex") : process.env.CLAUDE_CONFIG_DIR || join(process.env.HOME || homedir(), ".claude");
-  const user = join(process.env.TOOLU_CONFIG_DIR || home, "toolu.config.json");
-  const root = gitRoot();
-  const dir = process.env.TOOLU_PROJECT_CONFIG_DIRNAME || (host === "codex" ? ".codex" : ".claude");
+    return opencodePaths(gitRoot(env), env);
+  const home = host === "codex" ? env.CODEX_HOME || join(env.HOME || homedir(), ".codex") : env.CLAUDE_CONFIG_DIR || join(env.HOME || homedir(), ".claude");
+  const user = join(env.TOOLU_CONFIG_DIR || home, "toolu.config.json");
+  const root = gitRoot(env);
+  const dir = env.TOOLU_PROJECT_CONFIG_DIRNAME || (host === "codex" ? ".codex" : ".claude");
   return { user, project: root ? join(root, dir, "toolu.config.json") : "" };
 }
 function loadFixerConfig(host) {
@@ -246,6 +246,16 @@ function heuristic(item) {
     return 0;
   return 1;
 }
+function jevArgv(host, script, stateFile) {
+  return [
+    ...host === "opencode" ? ["--no-env-file"] : [],
+    script,
+    "ask",
+    "-",
+    "-s",
+    `@${stateFile}`
+  ];
+}
 function jevScript(host) {
   const home = process.env.HOME || homedir();
   const candidates = host === "opencode" ? [
@@ -300,8 +310,7 @@ function jevAnswers(items, disabled, replay, host) {
   try {
     const stateFile = join(temp, "state.json");
     writeFileSync(stateFile, JSON.stringify(state));
-    const bunArgs = host === "opencode" ? ["--no-env-file"] : [];
-    run = spawnSync(process.execPath, [...bunArgs, script, "ask", "-", "-s", `@${stateFile}`], {
+    run = spawnSync(process.execPath, jevArgv(host, script, stateFile), {
       input: JSON.stringify(questions),
       encoding: "utf8"
     });

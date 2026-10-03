@@ -60,6 +60,10 @@ export const PR_BABYSIT_PORTS: Readonly<Record<string, readonly PortEdit[]>> = {
   [HELPER]: [
     [BUN_HELPER, NO_ENV_HELPER, 7],
     [
+      "— Claude cron interval / Codex bounded wait for this tick.",
+      "— the bounded `sleep` before this controller's next tick.",
+    ],
+    [
       "- `--state-file` — the host's slot path, verbatim: `/tmp/pr-babysit-<slot>.json`\n  (Claude), `<repo>/.codex/tmp/pr-babysit/<slot>.json` (Codex) or\n  `<repo>/.opencode/tmp/pr-babysit/<slot>.json` (OpenCode). Created on the\n  first tick, resumed after.",
       "- `--state-file` — the slot path, verbatim:\n  `<repo>/.opencode/tmp/pr-babysit/<slot>.json`. Created on the first tick,\n  resumed after.",
     ],
@@ -70,6 +74,10 @@ export const PR_BABYSIT_PORTS: Readonly<Record<string, readonly PortEdit[]>> = {
   ],
   [WORKFLOW]: [
     [BUN_HELPER, NO_ENV_HELPER, 10],
+    [
+      "Route it (`--host` is this controller: `claude`, `codex` or `opencode`):",
+      "Route it with `--host opencode`:",
+    ],
     {
       cut: ["`PLUGIN_ROOT` = the directory holding this plugin", "\n\n---\n\n## Step 0"],
       to: "`PLUGIN_ROOT` = `$TOOLU_PLUGIN_ROOT_PR_BABYSIT`, which toolu's `shell.env` sets in every bash call.",

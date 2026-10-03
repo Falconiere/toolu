@@ -116,6 +116,8 @@ The `smoke:opencode-entry` scenarios need the pinned binary and run locally (CI 
 
 - A denied `task` is not offered to the fixer at all; a model's `task` call becomes OpenCode's `invalid` tool. The bash denials refuse with "a rule which prevents you from using this specific tool call".
 - `stopGroup` snapshots the group and every ppid descendant before signalling, because OpenCode runs each bash tool call in its own process group.
+- Deny patterns match command text, so wrapper forms (`env git push`, `bash -c 'gh …'`) slip past them. The fixer's environment therefore also drops `GH_TOKEN`/`GITHUB_TOKEN` (and the enterprise ones), points `GH_CONFIG_DIR` at a path never created, sets `GIT_TERMINAL_PROMPT=0`, empties `credential.helper`, and rewrites every push URL (`pushInsteadOf` for `/`, `file://`, `https://`, `http://`, `ssh://`, `git://`, `git@`) to `pr-babysit-fixer-no-push://`. `OPENCODE_CONFIG_CONTENT` and `GIT_CONFIG_COUNT` are validated before any side effect.
+- `host_limited` is read from the host's own errors only (`error` events and non-INFO stderr), so tool output that mentions a rate limit is not a provider limit.
 
 ## Documentation impact
 

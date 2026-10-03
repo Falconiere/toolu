@@ -227,10 +227,18 @@ bun "$PLUGIN_ROOT/hooks/dist/babysit-fixer-report.js" <report-file> done|failed 
   its own process group, stdin closed, output to `<state>.fixer-r<round>g<seq>.log`. The agent is
   added to the caller's `OPENCODE_CONFIG_CONTENT` (which must be a JSON object, else
   `config_invalid`) with `task`, `gh` and `git push` (also `git -C <dir> push`) denied; OpenCode
-  layers it over the user's own rules. The group records `pid`, `pidStart` (the leader's `ps -o
+  layers it over the user's own rules. The fixer's env has no `GH_TOKEN`/`GITHUB_TOKEN` (or the
+  enterprise ones), `GH_CONFIG_DIR=<state>.fixer-gh` (never created, so no `gh` login),
+  `GIT_TERMINAL_PROMPT=0`, and `GIT_CONFIG_*` entries (after the caller's own) that empty
+  `credential.helper` and rewrite every push URL to `pr-babysit-fixer-no-push://`, so no command
+  form can write to GitHub. A `GIT_CONFIG_COUNT` that is not a whole number is `config_invalid`.
+  Both are checked before any side effect. The group records `pid`, `pidStart` (the leader's `ps -o
   lstart=`) and `log`; a pid whose start time differs is a reused pid and is never signalled.
   `wait` polls the group once a second; `cleanup` and a relaunch send TERM, then KILL after 10 s,
-  to the whole group. It never reaches `blocked`; a missing `opencode` is `agent_start_failed`.
+  to the whole group and every descendant (OpenCode runs each bash call in a group of its own).
+  It never reaches `blocked`; a missing `opencode` is `agent_start_failed`. `host_limited` is read
+  only from the host's own errors in the log (`error` events and non-INFO stderr), never from tool
+  output or model text.
 - **Brief and report** sit beside the state file: `<state>.fixer-r<round>g<seq>.md` and
   `.report.json`. A settled agent with no report is `no_report`, or `host_limited` when its pane
   shows a provider usage/rate limit (the host then cools for 60 min).

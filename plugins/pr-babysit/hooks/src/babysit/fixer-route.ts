@@ -112,35 +112,38 @@ function merge(a: Json, b: Json): Json {
 }
 
 /** OpenCode's files, as `@toolu/core/config`'s `configFiles` resolves them under the adapter's env. */
-function opencodePaths(root: string): { user: string; project: string } {
-  const home = process.env.HOME || homedir();
+function opencodePaths(root: string, env: NodeJS.ProcessEnv): { user: string; project: string } {
+  const home = env.HOME || homedir();
   const user =
-    process.env.TOOLU_USER_CONFIG_DIR ||
-    process.env.TOOLU_CONFIG_DIR ||
-    join(process.env.XDG_CONFIG_HOME || join(home, ".config"), "opencode");
-  const dir = process.env.TOOLU_PROJECT_CONFIG_DIRNAME || ".opencode";
+    env.TOOLU_USER_CONFIG_DIR ||
+    env.TOOLU_CONFIG_DIR ||
+    join(env.XDG_CONFIG_HOME || join(home, ".config"), "opencode");
+  const dir = env.TOOLU_PROJECT_CONFIG_DIRNAME || ".opencode";
   return {
     user: join(user, "toolu.config.json"),
     project: root ? join(root, dir, "toolu.config.json") : "",
   };
 }
 
-function gitRoot(): string {
+function gitRoot(env: NodeJS.ProcessEnv): string {
   return (
-    process.env.TOOLU_PROJECT_DIR ||
+    env.TOOLU_PROJECT_DIR ||
     (spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).stdout ?? "").trim()
   );
 }
 
-export function configPaths(host: ControllerHost): { user: string; project: string } {
-  if (host === "opencode") return opencodePaths(gitRoot());
+export function configPaths(
+  host: ControllerHost,
+  env: NodeJS.ProcessEnv = process.env,
+): { user: string; project: string } {
+  if (host === "opencode") return opencodePaths(gitRoot(env), env);
   const home =
     host === "codex"
-      ? process.env.CODEX_HOME || join(process.env.HOME || homedir(), ".codex")
-      : process.env.CLAUDE_CONFIG_DIR || join(process.env.HOME || homedir(), ".claude");
-  const user = join(process.env.TOOLU_CONFIG_DIR || home, "toolu.config.json");
-  const root = gitRoot();
-  const dir = process.env.TOOLU_PROJECT_CONFIG_DIRNAME || (host === "codex" ? ".codex" : ".claude");
+      ? env.CODEX_HOME || join(env.HOME || homedir(), ".codex")
+      : env.CLAUDE_CONFIG_DIR || join(env.HOME || homedir(), ".claude");
+  const user = join(env.TOOLU_CONFIG_DIR || home, "toolu.config.json");
+  const root = gitRoot(env);
+  const dir = env.TOOLU_PROJECT_CONFIG_DIRNAME || (host === "codex" ? ".codex" : ".claude");
   return { user, project: root ? join(root, dir, "toolu.config.json") : "" };
 }
 
@@ -298,6 +301,18 @@ function heuristic(item: FixItem): number {
   return 1;
 }
 
+/** Bun's arguments for one Jev ask; on OpenCode a project .env never reaches Jev (#350). */
+export function jevArgv(host: ControllerHost, script: string, stateFile: string): string[] {
+  return [
+    ...(host === "opencode" ? ["--no-env-file"] : []),
+    script,
+    "ask",
+    "-",
+    "-s",
+    `@${stateFile}`,
+  ];
+}
+
 /** The Jev wrapper this controller host publishes; OpenCode never borrows another host's. */
 function jevScript(host: ControllerHost): string | undefined {
   const home = process.env.HOME || homedir();
@@ -364,9 +379,7 @@ function jevAnswers(
   try {
     const stateFile = join(temp, "state.json");
     writeFileSync(stateFile, JSON.stringify(state));
-    // On OpenCode a project .env never reaches Jev (#350).
-    const bunArgs = host === "opencode" ? ["--no-env-file"] : [];
-    run = spawnSync(process.execPath, [...bunArgs, script, "ask", "-", "-s", `@${stateFile}`], {
+    run = spawnSync(process.execPath, jevArgv(host, script, stateFile), {
       input: JSON.stringify(questions),
       encoding: "utf8",
     });
