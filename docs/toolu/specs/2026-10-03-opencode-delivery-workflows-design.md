@@ -1,6 +1,6 @@
 # OpenCode: brainstorm and delivery-flow workflow semantics — Design
 
-**Date:** 2026-10-03   **Status:** Draft   **Author:** Cursor agent (epic worker, #355)   **Topic:** Make the generated `brainstorm-brainstorm` and `delivery-flow-delivery-flow` skills, and every reference they link, name only OpenCode tools, skills, agents and paths, and prove the spec → plan → ledger → push approval transitions in real isolated repositories (OP-21)
+**Date:** 2026-10-03   **Status:** Approved   **Author:** Cursor agent (epic worker, #355)   **Topic:** Make the generated `brainstorm-brainstorm` and `delivery-flow-delivery-flow` skills, and every reference they link, name only OpenCode tools, skills, agents and paths, and prove the spec → plan → ledger → push approval transitions in real isolated repositories (OP-21)
 
 ## Problem
 
@@ -62,6 +62,7 @@ Reused: `applyPort`/`planSkillResources` (ports copied references by real path),
 - **`question` tool absent:** brainstorm falls back to one concise plain question.
 - **A step tier with no fitting OpenCode agent** (`fable`): mapped to `toolu-architect`; `inherit` maps to `general`, which runs the session model.
 - **Host unknown to the ledger CLI** (plain shell): Claude Code text, as today.
+- **Reading a reference outside the project:** delivery-flow's and brainstorm's references live in their own skill directories, which OpenCode lets a loaded skill read; linked shared files under `generated/resources/` are covered by toolu's existing `external_directory` allowance (#345). No permission is widened for this work.
 
 ## Acceptance criteria
 
@@ -70,9 +71,9 @@ Reused: `applyPort`/`planSkillResources` (ports copied references by real path),
 - **AC-3:** The generated `ledger.md` and `execution.md` state the OpenCode meaning of each step `model` alias (`toolu-quick-task`, `toolu-implementer`, `toolu-architect`, `general` via `subagent_type`) and that `task` takes no model argument; the generated `model-routing.md` matches the generated toolu orchestrator copy.
 - **AC-4:** The generated delivery-flow `host-mapping.md` has the OpenCode column, and its Claude Code and Codex cells are byte-identical to `origin/main`'s delivery-flow copy.
 - **AC-5:** Generation fails naming the source and anchor when a delivery-flow port anchor is removed or duplicated.
-- **AC-6:** In a real isolated git repository with a bare remote, through `createTooluHooks` with `planLedger.mode: block`, running the generated skill's commands in the `shell.env` bash: `plan-ledger.js preflight` exits 1 naming `skill({ name: "delivery-flow-delivery-flow" })` for a Draft spec and for a Draft plan, and exits 0 when both are Approved; `run <plan> --step <id>` writes `.opencode/tmp/plan-ledger/<slug>.json`; `verdict.js status` reports `overall: blocked`; `git push` is denied by the plan-ledger gate and the remote is unchanged; after `run <plan> --verify` and the review write-state command, `verdict.js status` reports `overall: ready`, the push is allowed and the remote has the commit.
+- **AC-6:** In a real isolated git repository with a bare remote, whose branch changes a test file and a README (so the docs gate has a doc surface and the quality gate sees a passing `bun test`), through `createTooluHooks` with `planLedger.mode: block`, running the generated skill's commands in the `shell.env` bash: `plan-ledger.js preflight` exits 1 naming `skill({ name: "delivery-flow-delivery-flow" })` for a Draft spec and for a Draft plan, and exits 0 when both are Approved; `run <plan> --step <id>` writes `.opencode/tmp/plan-ledger/<slug>.json`; `verdict.js status` reports `overall: blocked`; `git push` is denied by the plan-ledger gate and the remote is unchanged; after `run <plan> --verify` and the review write-state command, `verdict.js status` reports `overall: ready`, the push is allowed and the remote has the commit.
 - **AC-7:** `plan-ledger.js preflight` with no OpenCode host keeps the `run /delivery-flow:delivery-flow (…)` text; toolu SessionStart on OpenCode emits the OpenCode migration notice, and on Claude Code and Codex the existing lifecycle goldens pass unchanged.
-- **AC-8:** With `TOOLU_LIVE_OPENCODE=1`, on the pinned host with a scripted provider: the model loads `delivery-flow-delivery-flow` and `brainstorm-brainstorm` through the native `skill` tool, reads a delivery-flow reference through `read`, sees preflight fail on the Draft plan and pass on the Approved one, runs `run <plan> --verify`, and pushes; the remote has the commit.
+- **AC-8:** With `TOOLU_LIVE_OPENCODE=1`, on the pinned host with a scripted provider and no `external_directory` rule in the session config: the model loads `delivery-flow-delivery-flow` and `brainstorm-brainstorm` through the native `skill` tool, reads one installed reference of each (`references/spec.md`, `references/design-questions.md`) through `read`, sees preflight fail on the Draft plan and pass on the Approved one, runs `run <plan> --verify`, and pushes; every tool state is as scripted and the remote has the commit.
 - **AC-9:** Claude Code and Codex are intact: among plugin sources only delivery-flow's `host-mapping.md` (column added), `ledger-commands.ts` and `session-notices.ts` change, and `bun run test` passes.
 
 ## Acceptance evidence
@@ -94,6 +95,13 @@ Reused: `applyPort`/`planSkillResources` (ports copied references by real path),
 - `docs/opencode.md`: a "Delivery workflows" subsection: skill ids, `TOOLU_PLUGIN_ROOT`, tier → agent mapping, ledger state path, preflight remedy text.
 - `plugins/delivery-flow/README.md` and `plugins/brainstorm/README.md`: an OpenCode invocation note (`skill({ name })`, enabling in `plugins.json`).
 - Regenerated copies under `generated/resources/` and the generated notes.
+
+## Spec review
+
+- Acceptance criteria: 🟡 should-fix (resolved): issue criterion 1 (Jev 0.74) was proven live for only one reference; AC-8 now reads one installed reference of each skill with no permission override.
+- Acceptance evidence: 🟡 should-fix (resolved): AC-6's `overall: ready` depended on the docs and quality gates; verified against `verdict-review.ts`/`verdict-gates.ts` (no recorded quality failure passes; a changed doc surface passes docs) and the fixture now includes a README change and a passing `bun test`.
+- Blocker check (Jev 0.48, inspected): no unresolved scope, interface or safety question; the pr-babysit id risk is owned and guarded by AC-2.
+- No blockers. Status: Approved.
 
 ## Open Questions
 
