@@ -8,10 +8,13 @@
  */
 import { closeSync, openSync } from "node:fs";
 import { constants } from "node:os";
+import { resourceBinding, type ResourceBinding } from "../resources/binding.ts";
+import { runManagedJob } from "../resources/jobs.ts";
 import { toJqJson } from "../state/state-io.ts";
 
 export const TIMEOUT_EXIT = 124;
 const INVALID_TIMEOUT_EXIT = 125;
+const TRUNCATED_OUTPUT_NOTE = "plan-ledger: check output exceeded capture limit\n";
 const KILL_GRACE_MS = 2000;
 const EVIDENCE_LINES = 10;
 const EVIDENCE_BYTES = 2000;
@@ -87,13 +90,39 @@ function exitCodeOf(proc: Bun.Subprocess): number {
 /** `pl_run_check`: the check's exit code (124 when the bound killed it). */
 export async function runCheck(run: CheckRun): Promise<number> {
   const seconds = parseTimeout(run.timeout);
+  if (seconds === undefined) {
+    const note = `plan-ledger: invalid PLAN_LEDGER_STEP_TIMEOUT '${run.timeout}'\n`;
+    await Bun.write(run.outFile, note);
+    return INVALID_TIMEOUT_EXIT;
+  }
+  const binding = resourceBinding(run.cwd);
+  if (binding !== null) return runManagedCheck(run, binding, seconds);
+  return runUnmanagedCheck(run, seconds);
+}
+
+async function runManagedCheck(
+  run: CheckRun,
+  binding: ResourceBinding,
+  seconds: number,
+): Promise<number> {
+  await Bun.write(run.outFile, "");
+  const timeoutMs = seconds === 0 ? MAX_DELAY_MS : Math.min(seconds * 1000, MAX_DELAY_MS);
+  const result = await runManagedJob(
+    ["bash", "-c", 'exec bash -c "$1" 2>&1', "toolu-ledger", run.check],
+    binding,
+    { cwd: run.cwd, env: run.env, timeoutMs },
+  );
+  await Bun.write(
+    run.outFile,
+    result.stdout + result.stderr + (result.truncated ? TRUNCATED_OUTPUT_NOTE : ""),
+  );
+  if (result.timedOut) return TIMEOUT_EXIT;
+  return result.truncated ? INVALID_TIMEOUT_EXIT : result.exitCode;
+}
+
+async function runUnmanagedCheck(run: CheckRun, seconds: number): Promise<number> {
   const fd = openSync(run.outFile, "w");
   try {
-    if (seconds === undefined) {
-      const note = `plan-ledger: invalid PLAN_LEDGER_STEP_TIMEOUT '${run.timeout}'\n`;
-      await Bun.write(run.outFile, note);
-      return INVALID_TIMEOUT_EXIT;
-    }
     const proc = Bun.spawn(["bash", "-c", run.check], {
       cwd: run.cwd,
       env: run.env,

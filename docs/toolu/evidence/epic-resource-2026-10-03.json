@@ -1,0 +1,13 @@
+{
+  "measuredAt": "2026-10-03T18:46:01.083Z",
+  "platform": "darwin",
+  "runtime": "1.4.2",
+  "method": "Two epic state directories share a disposable resource root with maxJobs=1. Each real Bun workload counts loop iterations for 300ms. Attempt the second job after the first publishes its process group, then retry after the first exits.",
+  "reproduce": "bun test --timeout 60000 packages/toolu-core/src/resources/__tests__; tests cover the same managed CPU workload, concurrent admission and descendant ownership boundaries",
+  "first": { "durationMs": 357.285334, "exitCode": 0, "iterations": 10198122, "userCPUTimeUs": 307511, "systemCPUTimeUs": 6202 },
+  "concurrentAdmission": "job capacity exhausted (1)",
+  "afterRelease": { "durationMs": 341.063958, "exitCode": 0, "iterations": 9771828, "userCPUTimeUs": 307824, "systemCPUTimeUs": 4960 },
+  "activeJobsAfter": false,
+  "leasesAfter": 0,
+  "limitations": "A bounded local admission measurement, not a production CPU savings estimate or Linux hypervisor test. Historical steal samples are replayed separately by the resource policy test."
+}

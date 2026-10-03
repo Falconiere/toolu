@@ -74,6 +74,13 @@ Report each phase as you enter it — the orchestrator's only view of progress.
 
 ## Never lose progress
 
+This worktree is bound to shared machine resources. Plan-ledger checks acquire
+an expensive-job lease automatically. Run other full gates and test jobs with
+`{{JOB}} -- <command> <args...>`. If capacity or resource
+pressure refuses admission, wait and retry the same check; do not bypass it.
+Background children keep occupying capacity until they exit. Phase reports
+describe meaningful progress; job heartbeats only establish liveness.
+
 Your session can end at any moment (usage limit, crash, host switch). Keep
 the branch recoverable:
 - Commit as soon as a phase leaves working changes (`wip:` subjects are fine;

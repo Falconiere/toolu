@@ -280,6 +280,7 @@ function hostCli(host) {
 }
 function agentArgs(host, name, model, effort, unattended) {
   const args = [
+    ...host === "codex" ? ["--no-daemon"] : [],
     ...unattended ? host === "claude" ? ["--dangerously-skip-permissions"] : host === "codex" ? ["--dangerously-bypass-approvals-and-sandbox"] : ["--yolo", "--trust", "--approve-mcps"] : host === "claude" ? ["--permission-mode", "auto"] : host === "codex" ? ["--ask-for-approval", "on-request", "--sandbox", "workspace-write"] : ["--trust"],
     ...host === "claude" ? ["-n", name] : [],
     ...model ? ["--model", model] : [],

@@ -23,6 +23,21 @@ export type GraphIssue = Omit<TrackedIssue, "labels" | "excerpt"> & {
   stage?: string | null;
 };
 
+const OCCUPIED_STAGES = new Set([
+  "starting",
+  "uncertain",
+  "replacing",
+  "running",
+  "awaiting_merge",
+  "cleaning",
+  "cleanup-incomplete",
+]);
+
+/** Durable ownership keeps capacity occupied until cleanup or abandonment finishes. */
+export function occupiesSlot(stage: unknown): boolean {
+  return typeof stage === "string" && OCCUPIED_STAGES.has(stage);
+}
+
 /** herdr agent name for a work item: `repo-N` for GitHub, the lowercased
  * key (`abc-12`) for Jira/Linear, which already starts with a letter. */
 export function keyFor(issue: Pick<TrackedIssue, "ref" | "repo" | "number">): string {
@@ -217,10 +232,10 @@ export function classify(
   inEpic: Set<string>,
   launched: Record<string, { stage?: string }>,
 ): string {
-  if (issue.state === "closed") return "done";
   const stage = launched[issue.key]?.stage;
-  const live = stage !== undefined && stage !== "merged" && stage !== "abandoned";
-  if (live || issue.prs.some((p) => p.state === "OPEN")) return "in_flight";
+  if (occupiesSlot(stage)) return "in_flight";
+  if (issue.state === "closed") return "done";
+  if (issue.prs.some((p) => p.state === "OPEN")) return "in_flight";
   const openBlockers = Object.entries(issue.blockers)
     .filter(([, s]) => s === "open")
     .map(([b]) => b);
@@ -316,7 +331,7 @@ async function build(epicRef: string, opts: BuildOpts): Promise<Record<string, u
       .sort(),
     clone_root: cloneRoot,
     complete:
-      Object.keys(issues).length > 0 && Object.values(issues).every((i) => i.state === "closed"),
+      Object.keys(issues).length > 0 && Object.values(issues).every((i) => i.status === "done"),
   };
 }
 

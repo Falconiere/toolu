@@ -95,16 +95,70 @@ a `Repo: owner/name` description line, or `--repo` (default: current repo).
 
 | Host | Unattended flags | Model / effort | Resume |
 |------|------------------|----------------|--------|
-| Claude Code | `--dangerously-skip-permissions` | `--model` / `--effort` | `--continue` |
-| Codex | `--dangerously-bypass-approvals-and-sandbox` | `--model` / `-c model_reasoning_effort=` | `resume --last` |
-| Cursor Agent | `--yolo --trust --approve-mcps` | model id carries effort | `--continue` |
-| OpenCode | `--auto` | `--model provider/model#variant` | `--continue` |
+| Claude Code | `--dangerously-skip-permissions` | `--model` / `--effort` | `--resume <captured-id>` |
+| Codex | `--no-daemon --dangerously-bypass-approvals-and-sandbox` | `--model` / `-c model_reasoning_effort=` | `resume <captured-id>` |
+| Cursor Agent | `--yolo --trust --approve-mcps` | model id carries effort | Requires verified captured ID; currently unverified |
+| OpenCode | `--standalone --auto` | `--model provider/model#variant` | `--session <captured-id>` |
 
 `--safe` keeps approval prompts on. Default tiers (`trivial`, `standard`,
 `complex`, `critical`) map to Claude `sonnet` low → `opus` xhigh, Codex
 `gpt-6-sol` low → xhigh, Cursor `composer-2.5` → `gpt-5.6-sol-xhigh`, and
 OpenCode's configured model. Override per host and tier in `routing.json`
 under the state root, or point `EPIC_ROUTING_FILE` at one.
+
+Routes are preferences, not reservations. Cached routes count against each batch
+and are revalidated against the current pool; `NONE` refuses launch, including
+`--force`. Launch reserves shared capacity before creating a workspace or
+starting an agent. Start/prompt uncertainty retains ownership and requires
+inspection before explicit `--reprompt` or `--replace`.
+Replacement reserves its destination before stopping the source; both host slots
+remain occupied until source shutdown is verified. Cleanup stages cannot be
+reopened by a launch retry. Malformed saved routes, pools and ownership records
+fail before launching work.
+Explicit replacement cancels the source's owned jobs; pressure holds alone do
+not cancel existing work.
+
+## Machine resources and lifecycle
+
+All host profiles and epic runs share `~/.local/state/toolu/resources`;
+`TOOLU_RESOURCE_HOME` selects a different machine resource directory. Defaults
+allow three agent sessions and one expensive job. Set positive integer limits
+in `<resource-root>/policy.json`, for example:
+
+```json
+{ "maxAgents": 3, "maxJobs": 1, "hosts": { "claude": 1, "codex": 2 } }
+```
+
+Launch writes a resource binding in the worktree's Git directory. Plan-ledger
+checks acquire job capacity automatically. Run other expensive tests through
+`bun <plugin>/scripts/job.ts -- <command> <args...>` from that worktree.
+Admission refusal means wait for capacity and retry the same mandatory check.
+Process groups retain their lease until background descendants exit. A crashed
+job owner is reconciled only after its recorded group is gone; agent ownership
+is never freed merely because its launcher exited.
+
+Resource sampling runs at most once per 30 seconds. Load above 1.5 times effective
+CPUs, less than 10% available memory, or Linux steal above 25% starts a pressure
+window. Sixty seconds of pressure holds new work. Recovery requires 120 seconds
+below 0.8 times effective CPUs, above 20% available memory and below 10% steal.
+Existing useful jobs keep running. Non-Linux sampling uses load/memory without
+claiming to measure steal. Hypervisor starvation is distinct from guest work.
+
+Lifecycle operations verify host, pane and worktree. Shutdown distinguishes turn
+cancellation from background jobs: Codex uses `--no-daemon` and `/stop` before `/exit`; OpenCode
+uses an owned standalone runtime. Worktree process inventories and process birth
+identities guard final cleanup. Missing shutdown/workspace evidence produces
+`cleanup-incomplete`, preserves the lease and allows a later retry. Both merged
+and abandoned work require a successful final snapshot before removal.
+Prompt acknowledgement records blocked and provider-limited outcomes separately
+from started/resumed work, and uncertain errors retain their native code and exit
+status. Cleanup retries preserve successful removal and branch-deletion steps.
+
+Installed-host evidence is in `docs/toolu/evidence/epic-hosts*`; `probe.ts
+--check-evidence` validates its recorded contract, not live provider availability.
+The October 3 probe verified Codex and OpenCode tool/session lifecycles. Claude's
+expired login and Cursor's locked keychain leave their tool/cancel coverage
+explicitly unverified.
 
 ## Merging
 
@@ -120,9 +174,20 @@ disabled fall back to the watcher's periodic recheck.
 - **Progress:** workers commit and push each phase; the watcher snapshots
   every active worktree to `refs/epic-wip/<key>` every 15 minutes and when an
   agent disappears; teardown snapshots first; relaunches resume the host's
-  last session; one watcher per epic.
+  captured session; one exclusive owner per epic. Unchanged snapshots reuse an
+  independent Git index and compare tree/HEAD before creating a commit. The
+  worker's real index is preserved.
 - **Rate limits:** retries with backoff that honor `Retry-After` and reset
   headers (GitHub, Jira, Linear); at most 4 concurrent graph fetches; no new
   launches below `EPIC_GH_CORE_FLOOR` (1000) / `EPIC_GH_GRAPHQL_FLOOR` (500);
   hosts that hit a provider usage limit cool down (`EPIC_HOST_COOLDOWN_MIN`,
   60) and their issues move to another host.
+
+Watcher deadlines, queued checkpoints and dependency backoff survive restarts
+in `watch-state.json`. Urgent events precede optional checkpoints, which are
+bounded and deduplicated by worktree. `EPIC_CHECKPOINT_BATCH` bounds each pass;
+`EPIC_HERDR_BACKOFF_S` and `EPIC_HERDR_BACKOFF_MAX_S` bound dependency retries.
+Stale progress is distinct from a job heartbeat or UI `working` status. Alerts
+repeat at `EPIC_STALL_REPEAT_MIN`; acknowledge with `epic-watch.ts --state-dir
+<dir> --ack <key>`. Parked `ready`/`needs-human` workers stay quiet. `--peek`
+consumes no events or persistent state.

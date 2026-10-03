@@ -3,10 +3,24 @@
 import { readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { CommandError, REF_DIR, SCRIPTS_DIR, herdr, readJson, run, writeJson } from "./common.ts";
-import { agentArgs, hostKind, skillRef, type HostKind } from "./hosts.ts";
+import { bindWorktree } from "../hooks/dist/epic-runtime.js";
+import { launchReservation, persistAttempt, withLaunchOwnership } from "./admission.ts";
+import { acknowledgedOutcome } from "./lifecycle.ts";
+import { awaitSession, captureSession } from "./session.ts";
+import { ensureAgent, type AgentPlan } from "./launch/agent.ts";
+import { loadLaunchRecord } from "./launch-state.ts";
+import { loadLaunchRoute } from "./launch-route.ts";
+import { ensureWorktree, prepareCheckout, shellJoin } from "./launch-worktree.ts";
+import {
+  CommandError,
+  REF_DIR,
+  SCRIPTS_DIR,
+  commandExitCode,
+  failureDetails,
+  herdr,
+} from "./common.ts";
+import { hostKind, skillRef, type HostKind } from "./hosts.ts";
 import { budgetLow, ghBudget } from "./ratelimit.ts";
-import type { Route } from "./route.ts";
 
 const START_PROMPT =
   "You are an epic worker. Read {brief} and follow it exactly, starting at Pipeline step 1. " +
@@ -20,15 +34,16 @@ const RESUME_PROMPT =
 const REPORT_COMMAND = `bun "${join(SCRIPTS_DIR, "report.ts")}"`;
 const BRIEF_TEMPLATE = join(REF_DIR, "worker-brief.md");
 
-type Graph = {
+export type Graph = {
   tracker?: string;
   epic: { ref: string; url: string; title: string };
   state_dir: string;
   clone_root: string;
   issues: GraphIssue[];
+  max_parallel?: number;
 };
 
-type GraphIssue = {
+export type GraphIssue = {
   ref: string;
   key: string;
   url: string;
@@ -61,7 +76,9 @@ type Resolved = { kind: HostKind; model?: string | undefined; effort?: string | 
 
 /** Explicit flags win; a route supplies host, model, and effort; a model or
  * effort from the route applies only when its host is the one launching. */
-export function resolveHost(opts: LaunchOpts, route: Route | null): Resolved {
+export function resolveHost(opts: LaunchOpts, route: ReturnType<typeof loadLaunchRoute>): Resolved {
+  if (route && route.host === null)
+    throw new Error("no host capacity: reroute after a slot becomes available");
   const kind = hostKind(opts.kind ?? route?.host ?? "claude");
   const fromRoute = route?.host === kind ? route : null;
   return {
@@ -87,16 +104,6 @@ function trackerLines(graph: Graph, issue: GraphIssue): { read: string; closes: 
     read: `\`gh issue view ${issue.url} --comments\``,
     closes: `Closes ${issue.ref}`,
   };
-}
-
-function shellJoin(argv: string[]): string {
-  return argv
-    .map((a) => {
-      if (a === "") return "''";
-      if (/^[A-Za-z0-9_./:=,@%+-]+$/.test(a)) return a;
-      return `'${a.replace(/'/g, `'\\''`)}'`;
-    })
-    .join(" ");
 }
 
 export function findIssue(graph: Graph, wanted: string): GraphIssue {
@@ -136,6 +143,7 @@ export function renderBrief(
     BRANCH: issue.branch,
     BASE: base,
     REPORT: REPORT_COMMAND,
+    JOB: `bun "${join(SCRIPTS_DIR, "job.ts")}"`,
     STATUS_FILE: paths.status,
     BLOCKERS: closed.join(", ") || "none",
   };
@@ -147,209 +155,6 @@ export function renderBrief(
   return text;
 }
 
-async function ensureWorktree(
-  checkout: string,
-  issue: GraphIssue,
-  base: string,
-  dry: boolean,
-  log: string[],
-): Promise<{ workspace_id: string; pane_id: string; worktree: string }> {
-  type Wt = {
-    branch?: string;
-    open_workspace_id?: string;
-    path?: string;
-  };
-  const listed = dry
-    ? []
-    : (((await herdr(["worktree", "list", "--cwd", checkout])).worktrees as Wt[] | undefined) ??
-      []);
-  const existing = listed.find((w) => w.branch === issue.branch);
-  if (existing?.open_workspace_id) {
-    const ws = existing.open_workspace_id;
-    const panes = (await herdr(["pane", "list", "--workspace", ws])).panes as {
-      pane_id: string;
-    }[];
-    const pane0 = panes[0];
-    if (!pane0) throw new CommandError(`no panes in workspace ${ws}`);
-    log.push(`reuse open worktree workspace ${ws}`);
-    return {
-      workspace_id: ws,
-      pane_id: pane0.pane_id,
-      worktree: existing.path ?? "",
-    };
-  }
-  let cmd: string[];
-  if (existing) {
-    cmd = [
-      "worktree",
-      "open",
-      "--cwd",
-      checkout,
-      "--path",
-      existing.path ?? "",
-      "--label",
-      issue.key,
-      "--no-focus",
-    ];
-  } else {
-    cmd = [
-      "worktree",
-      "create",
-      "--cwd",
-      checkout,
-      "--branch",
-      issue.branch,
-      "--base",
-      `origin/${base}`,
-      "--label",
-      issue.key,
-      "--no-focus",
-    ];
-  }
-  log.push("herdr " + shellJoin(cmd));
-  if (dry) {
-    return { workspace_id: "<new>", pane_id: "<root-pane>", worktree: "<herdr worktree path>" };
-  }
-  const res = await herdr(cmd);
-  const workspace = res.workspace as { workspace_id: string };
-  const rootPane = res.root_pane as { pane_id: string };
-  const worktree = res.worktree as { path: string };
-  return {
-    workspace_id: workspace.workspace_id,
-    pane_id: rootPane.pane_id,
-    worktree: worktree.path,
-  };
-}
-
-async function liveAgent(key: string): Promise<boolean> {
-  const live = ((await herdr(["agent", "list"])).agents as { name?: string }[] | undefined) ?? [];
-  return live.some((a) => a.name === key);
-}
-
-/** Ask a live agent to exit and wait until herdr no longer lists it. Local
- * work stays in the worktree; the watcher checkpoints it as well. */
-async function stopAgent(key: string, log: string[]): Promise<void> {
-  log.push(`herdr agent prompt ${key} /exit`);
-  await herdr(["agent", "send-keys", key, "esc"]).catch(() => ({}));
-  await herdr(["agent", "prompt", key, "/exit"]).catch(() => ({}));
-  for (let i = 0; i < 30; i++) {
-    if (!(await liveAgent(key))) return;
-    await Bun.sleep(1000);
-  }
-  throw new CommandError(`agent ${key} did not exit; stop it by hand before --replace`);
-}
-
-type AgentPlan = {
-  host: Resolved;
-  bypass: boolean;
-  permissionMode: string;
-  /** Previous host for this issue, if it ran before. */
-  previousKind: string | undefined;
-  launches: number;
-};
-
-/** Start (or keep) the worker agent. Returns [started, resumed]. */
-async function ensureAgent(
-  key: string,
-  pane: string,
-  plan: AgentPlan,
-  opts: LaunchOpts,
-  log: string[],
-): Promise<[boolean, boolean]> {
-  const { kind } = plan.host;
-  if (!opts.dryRun && (await liveAgent(key))) {
-    const moving = plan.previousKind !== undefined && plan.previousKind !== kind;
-    if (!opts.replace && !moving) {
-      log.push(`agent ${key} already live`);
-      return [false, false];
-    }
-    await stopAgent(key, log);
-  }
-  // Same host again: continue its last conversation so no context is lost.
-  const resume = plan.launches > 0 && plan.previousKind === kind;
-  const start = async (withResume: boolean): Promise<void> => {
-    const args = agentArgs(kind, {
-      key,
-      model: plan.host.model,
-      effort: plan.host.effort,
-      bypass: plan.bypass,
-      permissionMode: plan.permissionMode,
-      resume: withResume,
-    });
-    const cmd = [
-      "agent",
-      "start",
-      key,
-      "--kind",
-      kind,
-      "--pane",
-      pane,
-      "--timeout",
-      "90000",
-      "--",
-      ...args,
-    ];
-    log.push("herdr " + shellJoin(cmd));
-    if (!opts.dryRun) await herdr(cmd);
-  };
-  if (!resume) {
-    await start(false);
-    return [true, false];
-  }
-  try {
-    await start(true);
-    return [true, true];
-  } catch (err) {
-    // No session to continue (history pruned, new machine): start fresh; the
-    // resume prompt still rebuilds context from git and the status file.
-    if (!(err instanceof CommandError)) throw err;
-    log.push(`# resume failed (${err.message.slice(0, 120)}); starting a fresh session`);
-    await start(false);
-    return [true, false];
-  }
-}
-
-async function prepareCheckout(
-  graph: Graph,
-  issue: GraphIssue,
-  dry: boolean,
-  log: string[],
-): Promise<[string, string]> {
-  let checkout = issue.checkout;
-  if (!checkout) {
-    const parts = issue.repo.split("/");
-    const repoName = parts[1];
-    if (!repoName || parts.length !== 2) throw new Error(`bad repo: ${issue.repo}`);
-    checkout = join(graph.clone_root, repoName);
-    const cmd = ["gh", "repo", "clone", issue.repo, checkout];
-    log.push(shellJoin(cmd));
-    if (!dry) await run(cmd);
-  }
-  // Dry-run must not call the network: CI and offline dry-runs have no access
-  // to every epic repo. Live launches still resolve the real default branch.
-  let base = "main";
-  if (!dry) {
-    base = (
-      await run([
-        "gh",
-        "repo",
-        "view",
-        issue.repo,
-        "--json",
-        "defaultBranchRef",
-        "-q",
-        ".defaultBranchRef.name",
-      ])
-    ).trim();
-  } else {
-    log.push(`# dry-run: skip gh repo view; assume default branch ${base}`);
-  }
-  const fetch = ["git", "-C", checkout, "fetch", "origin", base];
-  log.push(shellJoin(fetch));
-  if (!dry) await run(fetch);
-  return [checkout, base];
-}
-
 /** New workers each add babysit polling on the same GitHub token; refuse to
  * start one when the budget is already under its floor. */
 async function guardBudget(): Promise<void> {
@@ -359,6 +164,89 @@ async function guardBudget(): Promise<void> {
     const reset = new Date(Math.min(budget.core.reset, budget.graphql.reset)).toISOString();
     throw new CommandError(`${low}; resets by ${reset}. Launch later, or pass --force.`);
   }
+}
+
+function promptCommand(
+  key: string,
+  paths: { brief: string; status: string },
+  base: string,
+  resuming: boolean,
+  resumed: boolean,
+): string[] {
+  const prompt = (resuming ? RESUME_PROMPT : START_PROMPT)
+    .replace("{brief}", paths.brief)
+    .replace("{status}", paths.status)
+    .replace("{base}", base)
+    .concat(resumed ? " Your previous conversation for this issue is loaded above." : "");
+  return [
+    "agent",
+    "prompt",
+    key,
+    prompt,
+    "--wait",
+    "--until",
+    "working",
+    "--until",
+    "blocked",
+    "--timeout",
+    "60000",
+  ];
+}
+
+async function initializeAttempt(
+  issue: GraphIssue,
+  record: Record<string, unknown>,
+  host: HostKind,
+  at: number,
+  state: string,
+  reservation: Awaited<ReturnType<typeof launchReservation>>,
+): Promise<void> {
+  for (const k of ["ref", "key", "repo", "number", "url", "title", "branch"] as const)
+    record[k] = issue[k];
+  record.kind = host;
+  record.prompt_state = "pending";
+  record.attempt_started_at = new Date(at).toISOString();
+  await persistAttempt(state, issue.key, record, reservation.root, reservation.lease, "starting");
+}
+
+function finishRecord(
+  record: Record<string, unknown>,
+  values: {
+    host: Resolved;
+    status: string;
+    brief: string;
+    started: boolean;
+    prompted: boolean;
+    launches: number;
+    outcome: string;
+  },
+): void {
+  const now = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+  Object.assign(record, {
+    model: values.host.model ?? null,
+    effort: values.host.effort ?? null,
+    stage: "running",
+    status_file: values.status,
+    brief: values.brief,
+    launched_at: record.launched_at ?? now,
+    last_launch: values.prompted ? now : record.last_launch,
+    launches: values.started ? values.launches + 1 : values.launches,
+    prompt_state: "acknowledged",
+    lifecycle_outcome: values.outcome,
+  });
+}
+
+function requireRecoverableStage(record: Record<string, unknown>, opts: LaunchOpts): void {
+  if (["cleaning", "cleanup-incomplete"].includes(String(record.stage)))
+    throw new CommandError(
+      "cleanup is incomplete; reconcile with finish-issue before launching again",
+    );
+  if (record.stage === "replacing" && !opts.replace)
+    throw new CommandError("replacement is incomplete; retry explicitly with --replace");
+  if (["starting", "uncertain"].includes(String(record.stage)) && !opts.reprompt && !opts.replace)
+    throw new CommandError(
+      "previous launch/prompt outcome is uncertain; inspect the recorded pane/session before explicit --reprompt or --replace",
+    );
 }
 
 async function launch(
@@ -375,83 +263,139 @@ async function launch(
     );
   }
   const state = graph.state_dir;
-  const record = readJson<Record<string, unknown>>(join(state, "issues", `${issue.key}.json`), {});
-  const route = readJson<Route | null>(join(state, "routes", `${issue.key}.json`), null);
+  const record = loadLaunchRecord(join(state, "issues", `${issue.key}.json`));
+  const resuming = Object.keys(record).length > 0 || issue.status === "in_flight";
+  const route = loadLaunchRoute(join(state, "routes", `${issue.key}.json`));
   const host = resolveHost(opts, route);
   const launches = typeof record.launches === "number" ? record.launches : 0;
+  const previousKind = typeof record.kind === "string" ? record.kind : undefined;
+  const attemptStarted = Date.now();
+  requireRecoverableStage(record, opts);
+  if (previousKind !== undefined && previousKind !== host.kind && !opts.replace)
+    throw new CommandError("host change requires explicit --replace");
   if (!dry && launches === 0 && !opts.force) await guardBudget();
-  const [checkout, base] = await prepareCheckout(graph, issue, dry, log);
-  const wt = await ensureWorktree(checkout, issue, base, dry, log);
-  const plan: AgentPlan = {
-    host,
-    bypass: !opts.safe,
-    permissionMode: opts.permissionMode,
-    previousKind: typeof record.kind === "string" ? record.kind : undefined,
-    launches,
-  };
-  const [started, resumed] = await ensureAgent(issue.key, wt.pane_id, plan, opts, log);
-  const paths = {
-    worktree: wt.worktree,
-    status: join(state, "status", `${issue.key}.json`),
-    brief: join(state, "briefs", `${issue.key}.md`),
-  };
-  const brief = renderBrief(graph, issue, paths, base, host.kind);
-  const resuming = Object.keys(record).length > 0 || issue.status === "in_flight";
-  const promptTpl = resuming ? RESUME_PROMPT : START_PROMPT;
-  const prompt = promptTpl
-    .replace("{brief}", paths.brief)
-    .replace("{status}", paths.status)
-    .replace("{base}", base)
-    .concat(resumed ? " Your previous conversation for this issue is loaded above." : "");
-  const promptCmd = [
-    "agent",
-    "prompt",
-    issue.key,
-    prompt,
-    "--wait",
-    "--until",
-    "working",
-    "--until",
-    "blocked",
-    "--timeout",
-    "60000",
-  ];
-  if (started || opts.reprompt) log.push("herdr " + shellJoin(promptCmd));
-  if (dry) {
-    return {
-      dry_run: true,
-      issue: issue.ref,
+  const reservation = dry
+    ? null
+    : await launchReservation(
+        state,
+        issue.key,
+        host.kind,
+        graph.max_parallel ?? 3,
+        record,
+        opts.replace,
+      );
+  try {
+    if (reservation)
+      await initializeAttempt(issue, record, host.kind, attemptStarted, state, reservation);
+    const [checkout, base] = await prepareCheckout(graph, issue, dry, log);
+    const wt = await ensureWorktree(checkout, issue, base, dry, log);
+    if (reservation) {
+      Object.assign(record, { ...wt, checkout, base, agent: issue.key });
+      bindWorktree(reservation.root, wt.worktree, issue.key, state);
+      await persistAttempt(
+        state,
+        issue.key,
+        record,
+        reservation.root,
+        reservation.lease,
+        "starting",
+      );
+    }
+    const plan: AgentPlan = {
       host,
-      commands: log,
-      brief_path: paths.brief,
-      brief,
+      bypass: !opts.safe,
+      permissionMode: opts.permissionMode,
+      previousKind,
+      launches,
+      worktree: wt.worktree,
+      ...(typeof record.session_id === "string" ? { sessionId: record.session_id } : {}),
+      ...(typeof record.session_started_after === "number"
+        ? { sessionStartedAfter: record.session_started_after }
+        : {}),
     };
+    const [started, resumed] = await ensureAgent(issue.key, wt.pane_id, plan, opts, log);
+    if (!dry && started && !resumed) {
+      record.session_started_after = attemptStarted;
+      record.session_id = await captureSession(host.kind, wt.worktree, attemptStarted);
+    }
+    const paths = {
+      worktree: wt.worktree,
+      status: join(state, "status", `${issue.key}.json`),
+      brief: join(state, "briefs", `${issue.key}.md`),
+    };
+    const brief = renderBrief(graph, issue, paths, base, host.kind);
+    const promptCmd = promptCommand(issue.key, paths, base, resuming, resumed);
+    if (started || opts.reprompt) log.push("herdr " + shellJoin(promptCmd));
+    if (dry) {
+      return {
+        dry_run: true,
+        issue: issue.ref,
+        host,
+        commands: log,
+        brief_path: paths.brief,
+        brief,
+      };
+    }
+    await mkdir(dirname(paths.brief), { recursive: true });
+    await writeFile(paths.brief, brief);
+    if (reservation) {
+      Object.assign(record, {
+        brief: paths.brief,
+        status_file: paths.status,
+        prompt_state: started || opts.reprompt ? "submitting" : "retained",
+      });
+      await persistAttempt(
+        state,
+        issue.key,
+        record,
+        reservation.root,
+        reservation.lease,
+        "starting",
+      );
+    }
+    if (started || opts.reprompt) await herdr(promptCmd);
+    if (started && !resumed) {
+      record.session_id = await awaitSession(host.kind, wt.worktree, attemptStarted);
+    }
+    const lifecycleOutcome = await acknowledgedOutcome(
+      issue.key,
+      { kind: host.kind, pane: wt.pane_id, cwd: wt.worktree },
+      resumed ? "resumed" : started ? "started" : "retained",
+    );
+    record.bypass = !opts.safe;
+    finishRecord(record, {
+      host,
+      status: paths.status,
+      brief: paths.brief,
+      started,
+      prompted: started || opts.reprompt,
+      launches,
+      outcome: lifecycleOutcome,
+    });
+    if (reservation)
+      await persistAttempt(
+        state,
+        issue.key,
+        record,
+        reservation.root,
+        reservation.lease,
+        "running",
+      );
+    return { issue: issue.ref, commands: log, ...record };
+  } catch (error) {
+    if (reservation) {
+      Object.assign(record, failureDetails(error));
+      await persistAttempt(
+        state,
+        issue.key,
+        record,
+        reservation.root,
+        reservation.lease,
+        "uncertain",
+      );
+    }
+    throw error;
   }
-  await mkdir(dirname(paths.brief), { recursive: true });
-  await writeFile(paths.brief, brief);
-  if (started || opts.reprompt) await herdr(promptCmd);
-  const now = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-  for (const k of ["ref", "key", "repo", "number", "url", "title", "branch"] as const) {
-    record[k] = issue[k];
-  }
-  Object.assign(record, {
-    base,
-    checkout,
-    ...wt,
-    agent: issue.key,
-    kind: host.kind,
-    model: host.model ?? null,
-    effort: host.effort ?? null,
-    bypass: !opts.safe,
-    stage: "running",
-    status_file: paths.status,
-    brief: paths.brief,
-    launched_at: record.launched_at ?? now,
-    last_launch: now,
-    launches: launches + 1,
-  });
-  await writeJson(join(state, "issues", `${issue.key}.json`), record);
-  return { issue: issue.ref, commands: log, ...record };
 }
 
 async function main(): Promise<void> {
@@ -496,11 +440,14 @@ async function main(): Promise<void> {
   const graph = JSON.parse(await readFile(graphPath, "utf8")) as Graph;
   let result: Record<string, unknown>;
   try {
-    result = await launch(graph, findIssue(graph, issueRef), opts);
+    const issue = findIssue(graph, issueRef);
+    result = opts.dryRun
+      ? await launch(graph, issue, opts)
+      : await withLaunchOwnership(graph.state_dir, issue.key, () => launch(graph, issue, opts));
   } catch (err) {
     if (err instanceof CommandError) {
       process.stderr.write(JSON.stringify({ issue: issueRef, error: String(err) }) + "\n");
-      process.exit(1);
+      process.exit(commandExitCode(err));
     }
     if (err instanceof Error) {
       process.stderr.write(err.message + "\n");

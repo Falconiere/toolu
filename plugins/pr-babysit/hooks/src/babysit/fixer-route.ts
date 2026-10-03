@@ -177,6 +177,7 @@ export function agentArgs(
   unattended: boolean,
 ): string[] {
   const args = [
+    ...(host === "codex" ? ["--no-daemon"] : []),
     ...(unattended
       ? host === "claude"
         ? ["--dangerously-skip-permissions"]

@@ -93,19 +93,28 @@ export type AgentArgOpts = {
   bypass: boolean;
   permissionMode: string;
   resume: boolean;
+  sessionId?: string;
 };
 
 const SHELL_SAFE = /^[A-Za-z0-9_./:=,@%+#-]+$/;
 
 export function agentArgs(kind: HostKind, o: AgentArgOpts): string[] {
   const h = HOSTS[kind];
+  const exactResume =
+    o.resume && o.sessionId
+      ? kind === "codex"
+        ? ["resume", o.sessionId]
+        : [kind === "opencode" ? "--session" : "--resume", o.sessionId]
+      : null;
   const args = [
-    ...(o.resume ? h.resume.lead : []),
+    ...(kind === "opencode" ? ["--standalone"] : []),
+    ...(exactResume ?? (o.resume ? h.resume.lead : [])),
+    ...(kind === "codex" ? ["--no-daemon"] : []),
     ...(o.bypass ? h.bypass : h.safe(o.permissionMode)),
     ...h.name(o.key),
     ...(o.model ? h.model(o.model) : []),
     ...(o.effort ? h.effort(o.effort) : []),
-    ...(o.resume ? h.resume.flags : []),
+    ...(!exactResume && o.resume ? h.resume.flags : []),
   ];
   const bad = args.find((a) => !SHELL_SAFE.test(a));
   if (bad !== undefined) throw new Error(`unsafe ${kind} arg for the pane shell: ${bad}`);

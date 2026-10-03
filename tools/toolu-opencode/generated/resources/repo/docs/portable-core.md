@@ -35,6 +35,10 @@ TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, 
 
 | Export | Responsibility |
 |--------|----------------|
+| `./process` | Bounded `runCommand` with concurrent output draining, deadlines, cancellation, native exit status and owned process-group cleanup |
+| `./resources` | Shared agent/job admission, durable leases, atomic locks, pressure hysteresis, host cooldowns and fenced ownership transitions |
+| `./resources/binding` | Git-worktree resource binding used without inherited environment variables |
+| `./resources/jobs` | `runManagedJob` admission and lease ownership through process-group completion; bound ledger checks use this path |
 | `./decision` | Discriminated decision union |
 | `./events` | Normalized event schemas + parsers |
 | `./policy` | Classification enum + precedence helpers |

@@ -4,6 +4,7 @@ import { expect, test } from "bun:test";
 import { chmodSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
+import { acquireLease, prepareAgentMigration } from "@toolu/core/resources";
 import {
   DEFAULT_TABLE,
   coolingHosts,
@@ -122,6 +123,33 @@ test.concurrent("routeIssues: no capacity leaves the host empty instead of overb
   expect(routes.map((r) => r.host)).toEqual(["claude", null]);
 });
 
+test.concurrent("cached routes consume batch slots and revalidate reduced or removed pools", async () => {
+  using sb = createSandbox();
+  const g = graphIn(sb.root);
+  const wanted = ["Falconiere/comemory#255", "CodaSignal/comemory.io#183"];
+  await routeIssues(g, wanted.slice(0, 1), parseHosts("claude:1", 1), OPTS);
+  expect(
+    (await routeIssues(g, wanted, parseHosts("claude:1", 1), OPTS)).routes.map((r) => r.host),
+  ).toEqual(["claude", null]);
+  expect(
+    (await routeIssues(g, wanted, parseHosts("codex:1", 1), OPTS)).routes.map((r) => r.host),
+  ).toEqual(["codex", null]);
+});
+
+test.concurrent("host pools reject nonpositive, fractional, nonfinite and duplicate caps", () => {
+  for (const spec of [
+    "claude:0",
+    "claude:-1",
+    "claude:1.5",
+    "claude:NaN",
+    "claude:Infinity",
+    "claude:1,claude:2",
+    "claude:1:2",
+  ]) {
+    expect(() => parseHosts(spec, 3)).toThrow();
+  }
+});
+
 test.concurrent("routeIssues: a live record naming an unknown host neither crashes routing nor takes capacity", async () => {
   using sb = createSandbox();
   const g = graphIn(sb.root);
@@ -143,6 +171,58 @@ test.concurrent("routeIssues: a live record naming an unknown host neither crash
   );
   // One claude slot is taken by x-2; the gemini record takes none.
   expect(routes.map((r) => r.host)).toEqual(["claude", null]);
+});
+
+test.concurrent("routeIssues: every durable ownership stage consumes real host capacity", async () => {
+  using sb = createSandbox();
+  const g = graphIn(sb.root);
+  const stages = [
+    "starting",
+    "uncertain",
+    "replacing",
+    "running",
+    "awaiting_merge",
+    "cleaning",
+    "cleanup-incomplete",
+  ];
+  mkdirSync(join(g.state_dir, "issues"), { recursive: true });
+  for (const [index, stage] of stages.entries()) {
+    writeFileSync(
+      join(g.state_dir, "issues", `owned-${index}.json`),
+      JSON.stringify({ stage, kind: "claude" }),
+    );
+  }
+  for (const stage of ["merged", "abandoned", "unknown"]) {
+    writeFileSync(
+      join(g.state_dir, "issues", `released-${stage}.json`),
+      JSON.stringify({ stage, kind: "claude" }),
+    );
+  }
+  const { routes } = await routeIssues(
+    g,
+    ["Falconiere/comemory#255", "CodaSignal/comemory.io#183"],
+    parseHosts(`claude:${stages.length + 1}`, stages.length + 1),
+    OPTS,
+  );
+  expect(routes.map((r) => r.host)).toEqual(["claude", null]);
+});
+
+test.concurrent("routing counts both source and reserved destination across epics", async () => {
+  using sb = createSandbox();
+  const g = graphIn(sb.root);
+  const root = join(sb.root, "resources");
+  const lease = await acquireLease(root, {
+    type: "agent",
+    key: "other-1",
+    stateDir: "other-epic",
+    host: "claude",
+  });
+  await prepareAgentMigration(root, lease.token, "codex", { hostCap: 1 });
+  const { routes } = await routeIssues(g, ["comemory-255"], parseHosts("claude:1,codex:1", 2), {
+    ...OPTS,
+    resourceRoot: root,
+  });
+  expect(routes.map((route) => route.host)).toEqual([null]);
 });
 
 test.concurrent("routeIssues: issues resolve by ref or by key; unknown ones are refused", async () => {

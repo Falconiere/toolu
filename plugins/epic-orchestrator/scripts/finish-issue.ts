@@ -8,27 +8,31 @@
 
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { reconcileResourceJobs } from "../hooks/dist/epic-runtime.js";
+import { activeJobs } from "../hooks/dist/epic-runtime.js";
+import { runCommand } from "../hooks/dist/epic-runtime.js";
 import { snapshot } from "./checkpoint.ts";
-import { readJson, run, writeJson } from "./common.ts";
+import { herdr, readJson, run, writeJson } from "./common.ts";
+import { shutdownAgent } from "./lifecycle.ts";
+import { hostKind } from "./hosts.ts";
+import { ownedWorkload, verifyOwnedExit } from "./workload.ts";
+import { withLaunchOwnership } from "./admission.ts";
+import {
+  fenceCleanupOwnership,
+  readIssueRecord,
+  releaseRecordedOwnership,
+  type CleanupOwnership,
+  type IssueRecord,
+} from "./finish-state.ts";
 
 const USAGE = "usage: finish-issue.ts <state-dir> <key> [--abandon]";
-const AGENT_EXIT_POLLS = 10;
 const LEFTOVER_LINES = 20;
 
 class UsageError extends Error {}
 
-type IssueRecord = Record<string, unknown> & {
-  repo?: string;
-  branch?: string;
-  checkout?: string;
-  worktree?: string;
-  workspace_id?: string;
-  agent?: string;
-};
-
 type Finished = {
   key: string | null;
-  stage: "merged" | "abandoned";
+  stage: "merged" | "abandoned" | "cleanup-incomplete";
   worktree_removed: boolean;
   branch_deleted: boolean;
   wip_ref: string | null;
@@ -42,10 +46,14 @@ async function attempt(
   stderr: "ignore" | "inherit" = "ignore",
 ): Promise<{ ok: boolean; out: string }> {
   try {
-    const proc = Bun.spawn(cmd, { stdout: "pipe", stderr });
-    const [out, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
-    return { ok: code === 0, out };
-  } catch {
+    const result = await runCommand(cmd, { timeoutMs: 30_000 });
+    if (stderr === "inherit") process.stderr.write(result.stderr);
+    return {
+      ok: result.exitCode === 0 && !result.timedOut && !result.truncated,
+      out: result.stdout,
+    };
+  } catch (error) {
+    process.stderr.write(`${String(error)}\n`);
     return { ok: false, out: "" };
   }
 }
@@ -55,6 +63,24 @@ const str = (v: unknown): string =>
 
 const isDir = (path: string): boolean =>
   path !== "" && existsSync(path) && statSync(path).isDirectory();
+
+function finished(rec: IssueRecord): Finished {
+  return {
+    key: rec.key,
+    stage: rec.stage as Finished["stage"],
+    worktree_removed: rec.worktree_removed === true,
+    branch_deleted: rec.branch_deleted === true,
+    wip_ref: typeof rec.wip_ref === "string" ? rec.wip_ref : null,
+    leftover_files: Array.isArray(rec.leftover_files)
+      ? rec.leftover_files.filter((entry): entry is string => typeof entry === "string")
+      : [],
+  };
+}
+
+function terminalCleanupComplete(rec: IssueRecord): boolean {
+  if (rec.worktree_removed !== true || existsSync(rec.worktree)) return false;
+  return rec.stage === "abandoned" || rec.branch_deleted === true;
+}
 
 /** The PR number lives in the worker's status file (`status/<key>.json`), the
  * only place anything records it: `report.ts --pr N` writes it there, while the
@@ -69,14 +95,17 @@ async function requireMerged(stateDir: string, key: string, repo: string): Promi
 }
 
 /** Babysit's cron is session-scoped, so exiting the agent ends it too. */
-async function exitAgent(agent: string): Promise<void> {
-  if (agent === "" || !(await attempt(["herdr", "agent", "get", agent])).ok) return;
-  await attempt(["herdr", "agent", "send-keys", agent, "esc"]);
-  await attempt(["herdr", "agent", "prompt", agent, "/exit"]);
-  for (let i = 0; i < AGENT_EXIT_POLLS; i++) {
-    if (!(await attempt(["herdr", "agent", "get", agent])).ok) return;
-    await Bun.sleep(1000);
-  }
+async function exitAgent(rec: IssueRecord): Promise<void> {
+  const agent = str(rec.agent);
+  if (!agent) return;
+  if (!str(rec.pane_id) || !str(rec.worktree))
+    throw new Error("cannot verify agent ownership without pane and worktree");
+  const outcome = await shutdownAgent(agent, {
+    kind: hostKind(str(rec.kind) || "claude"),
+    pane: str(rec.pane_id),
+    cwd: str(rec.worktree),
+  });
+  if (outcome !== "exited") throw new Error(`agent ${agent} shutdown incomplete`);
 }
 
 /** The snapshot ref when one holds the worktree's work, else null (the
@@ -84,10 +113,12 @@ async function exitAgent(agent: string): Promise<void> {
 async function snapshotRef(worktree: string, key: string): Promise<string | null> {
   try {
     const snap = await snapshot(worktree, key);
+    if (snap.skipped && snap.skipped !== "nothing at risk")
+      throw new Error(`required checkpoint failed: ${snap.skipped}`);
     return snap.changed || snap.sha ? snap.ref : null;
   } catch (err) {
     process.stderr.write(`WARN: snapshot of ${key} failed: ${String(err)}\n`);
-    return null;
+    throw err;
   }
 }
 
@@ -95,6 +126,7 @@ async function snapshotRef(worktree: string, key: string): Promise<string | null
 async function leftovers(worktree: string): Promise<string[]> {
   if (!isDir(worktree)) return [];
   const status = await attempt(["git", "-C", worktree, "status", "--porcelain"]);
+  if (!status.ok) throw new Error(`cannot inspect worktree ${worktree}`);
   return status.out
     .split("\n")
     .filter((line) => line.length > 0)
@@ -103,62 +135,184 @@ async function leftovers(worktree: string): Promise<string[]> {
 
 async function finishIssue(stateDir: string, key: string, abandon: boolean): Promise<Finished> {
   const path = join(stateDir, "issues", `${key}.json`);
-  const rec = readJson<IssueRecord | null>(path, null);
-  if (rec === null || typeof rec !== "object" || Array.isArray(rec)) {
-    throw new Error(`no record ${path}`);
+  const rec = readIssueRecord(path, key);
+  const terminalStage = rec.stage === "merged" || rec.stage === "abandoned";
+  if (terminalStage && terminalCleanupComplete(rec)) {
+    await releaseRecordedOwnership(rec, stateDir);
+    return finished(rec);
   }
-  const worktree = str(rec.worktree);
+  const effectiveAbandon = abandon || rec.stage === "abandoned";
+  if (terminalStage) {
+    Object.assign(rec, {
+      stage: "cleanup-incomplete",
+      finished_at: undefined,
+      cleanup_error: "terminal record lacks verified cleanup evidence",
+    });
+    await writeJson(path, rec);
+  }
+  const worktree = rec.worktree;
+
+  if (!effectiveAbandon) await requireMerged(stateDir, key, rec.repo);
+  let saved: IssueRecord = rec;
+  try {
+    const ownership = await fenceCleanupOwnership(path, stateDir, key, rec);
+    const removedBefore = rec.worktree_removed === true && !isDir(worktree);
+    if (removedBefore && ownership === null)
+      throw new Error("cannot verify legacy cleanup ownership after worktree removal");
+    const result = removedBefore
+      ? await finishAfterRemoval(rec, ownership, effectiveAbandon)
+      : await finishLiveWorktree(path, rec, ownership, effectiveAbandon);
+    const stage =
+      result.removed && (effectiveAbandon || result.branchDeleted)
+        ? effectiveAbandon
+          ? "abandoned"
+          : "merged"
+        : "cleanup-incomplete";
+    const finishedAt = `${new Date().toISOString().slice(0, 19)}Z`;
+    saved = {
+      ...rec,
+      stage,
+      ...(stage === "cleanup-incomplete"
+        ? { cleanup_attempt_at: finishedAt, finished_at: undefined }
+        : { finished_at: finishedAt, cleanup_error: undefined }),
+      worktree_removed: result.removed,
+      branch_deleted: result.branchDeleted,
+      wip_ref: result.wipRef,
+      leftover_files: result.dirty,
+    };
+    await writeJson(path, saved);
+    if (stage !== "cleanup-incomplete") await releaseRecordedOwnership(saved, stateDir);
+    return finished(saved);
+  } catch (error) {
+    await writeJson(path, {
+      ...saved,
+      stage: "cleanup-incomplete",
+      finished_at: undefined,
+      cleanup_error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+}
+
+type CleanupResult = {
+  removed: boolean;
+  branchDeleted: boolean;
+  wipRef: string | null;
+  dirty: string[];
+};
+
+async function finishLiveWorktree(
+  path: string,
+  rec: IssueRecord,
+  ownership: CleanupOwnership | null,
+  abandon: boolean,
+): Promise<CleanupResult> {
+  const worktree = rec.worktree;
   const workspace = str(rec.workspace_id);
-
-  if (!abandon) await requireMerged(stateDir, key, str(rec.repo));
-  await exitAgent(str(rec.agent));
-
-  // Snapshot to refs/epic-wip/<key> first: it outlives the worktree removal below.
-  const wipRef = await snapshotRef(worktree, key);
-  const dirty = await leftovers(worktree);
-  if (abandon && wipRef === null && dirty.length > 0) {
-    throw new Error(`refusing --abandon: ${worktree} has uncommitted work and the snapshot failed`);
+  let shellPid: number | undefined;
+  if (typeof rec.pane_id === "string") {
+    const result = await herdr(["pane", "process-info", "--pane", rec.pane_id], 10_000);
+    const info = result.process_info as { shell_pid?: number } | undefined;
+    if (typeof info?.shell_pid !== "number") throw new Error("pane shell ownership unavailable");
+    shellPid = info.shell_pid;
   }
+  const owned = await ownedWorkload(worktree, shellPid);
+  await exitAgent(rec);
+  if (!(await verifyOwnedExit(owned)) || (await ownedWorkload(worktree, shellPid)).length > 0)
+    throw new Error("owned background workload remains alive");
+  await verifyNoJobs(ownership, worktree);
+
+  const wipRef = await snapshotRef(worktree, rec.key);
+  const dirty = await leftovers(worktree);
+  if (wipRef === null && dirty.length > 0)
+    throw new Error(`refusing cleanup: ${worktree} has uncommitted work and the snapshot failed`);
+  if ((await ownedWorkload(worktree, shellPid)).length > 0)
+    throw new Error("new workload appeared before cleanup; retry after it exits");
 
   let removed = false;
   if (workspace === "") {
-    process.stderr.write(`WARN: no workspace_id on record ${key}; skipping worktree remove\n`);
+    process.stderr.write(`WARN: no workspace_id on record ${rec.key}; skipping worktree remove\n`);
   } else {
     const force = abandon ? [] : ["--force"];
-    const argv = ["herdr", "worktree", "remove", "--workspace", workspace, ...force];
-    removed = (await attempt(argv, "inherit")).ok;
+    removed = (
+      await attempt(["herdr", "worktree", "remove", "--workspace", workspace, ...force], "inherit")
+    ).ok;
   }
+  if (removed) return finishRemovedWorktree(path, rec, wipRef, dirty, abandon);
+  const branchDeleted = await deleteBranch(rec, removed, abandon);
+  return { removed, branchDeleted, wipRef, dirty };
+}
 
-  // Squash merges leave the branch unmerged in git's eyes, hence -D.
-  const checkout = str(rec.checkout);
-  const branch = str(rec.branch);
-  const branchDeleted =
-    !abandon && checkout !== "" && branch !== ""
-      ? (await attempt(["git", "-C", checkout, "branch", "-D", branch])).ok
-      : false;
-
-  const stage = abandon ? "abandoned" : "merged";
-  const finishedAt = `${new Date().toISOString().slice(0, 19)}Z`;
-  await writeJson(path, {
-    ...rec,
-    stage,
-    finished_at: finishedAt,
-    worktree_removed: removed,
-    branch_deleted: branchDeleted,
+/** Persist the destructive worktree-removal boundary before touching its branch. */
+export async function finishRemovedWorktree(
+  path: string,
+  rec: IssueRecord,
+  wipRef: string | null,
+  dirty: string[],
+  abandon: boolean,
+): Promise<CleanupResult> {
+  Object.assign(rec, {
+    stage: "cleanup-incomplete",
+    worktree_removed: true,
+    branch_deleted: false,
     wip_ref: wipRef,
     leftover_files: dirty,
   });
+  await writeJson(path, rec);
   return {
-    key: typeof rec.key === "string" ? rec.key : null,
-    stage,
-    worktree_removed: removed,
-    branch_deleted: branchDeleted,
-    wip_ref: wipRef,
-    leftover_files: dirty,
+    removed: true,
+    branchDeleted: await deleteBranch(rec, true, abandon),
+    wipRef,
+    dirty,
   };
 }
 
-function parseArgs(argv: string[]): { stateDir: string; key: string; abandon: boolean } {
+async function finishAfterRemoval(
+  rec: IssueRecord,
+  ownership: CleanupOwnership | null,
+  abandon: boolean,
+): Promise<CleanupResult> {
+  await verifyNoJobs(ownership, rec.worktree);
+  return {
+    removed: true,
+    branchDeleted: await deleteBranch(rec, true, abandon),
+    wipRef: typeof rec.wip_ref === "string" ? rec.wip_ref : null,
+    dirty: Array.isArray(rec.leftover_files)
+      ? rec.leftover_files.filter((entry): entry is string => typeof entry === "string")
+      : [],
+  };
+}
+
+async function verifyNoJobs(ownership: CleanupOwnership | null, worktree: string): Promise<void> {
+  if (!ownership) return;
+  await reconcileResourceJobs(ownership.root);
+  if (activeJobs(ownership.root, worktree))
+    throw new Error("managed job ownership remains; wait or reconcile before cleanup");
+}
+
+export async function deleteBranch(
+  rec: IssueRecord,
+  removed: boolean,
+  abandon: boolean,
+): Promise<boolean> {
+  if (rec.branch_deleted === true) return true;
+  if (!removed || abandon) return false;
+  const ref = `refs/heads/${rec.branch}`;
+  const present = await runCommand(
+    ["git", "-C", rec.checkout, "show-ref", "--verify", "--quiet", ref],
+    { timeoutMs: 30_000 },
+  );
+  if (present.timedOut || present.cancelled || present.truncated || present.exitCode > 1)
+    throw new Error(`cannot verify local branch ${ref}`);
+  if (present.exitCode === 1) return true;
+  return (await attempt(["git", "-C", rec.checkout, "branch", "-D", rec.branch])).ok;
+}
+
+function parseArgs(argv: string[]): {
+  stateDir: string;
+  key: string;
+  abandon: boolean;
+} {
   const [stateDir, key, mode, ...extra] = argv;
   if (!stateDir || !key || extra.length > 0 || (mode !== undefined && mode !== "--abandon")) {
     throw new UsageError(USAGE);
@@ -168,7 +322,11 @@ function parseArgs(argv: string[]): { stateDir: string; key: string; abandon: bo
 
 async function main(): Promise<void> {
   const { stateDir, key, abandon } = parseArgs(process.argv.slice(2));
-  process.stdout.write(`${JSON.stringify(await finishIssue(stateDir, key, abandon))}\n`);
+  const result = await withLaunchOwnership(stateDir, key, () =>
+    finishIssue(stateDir, key, abandon),
+  );
+  process.stdout.write(`${JSON.stringify(result)}\n`);
+  if (result.stage === "cleanup-incomplete") process.exitCode = 1;
 }
 
 if (import.meta.main) {
