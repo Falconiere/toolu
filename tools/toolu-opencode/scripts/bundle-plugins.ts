@@ -61,6 +61,11 @@ export function stagePlugins(sourceDirectory: string, outputDirectory: string): 
         join(target, "settings"),
         (name) => !/\.(sh|bash|bats)$/.test(name),
       );
+      for (const name of readdirSync(join(source, "scripts"))) {
+        if (/^debug-[a-z]+\.ts$/.test(name)) {
+          copy(join(source, "scripts", name), join(target, "scripts", name));
+        }
+      }
     }
     count++;
   }

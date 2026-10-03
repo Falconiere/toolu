@@ -71,6 +71,28 @@ test.concurrent("the staged tree carries native bundles and required settings", 
   expect(statSync(join(dest, "toolu/settings")).isDirectory()).toBe(true);
 });
 
+test.concurrent("the debug skill's helpers ship and run from the staged copy", async () => {
+  using sb = createSandbox();
+  const { dest, bundle } = stage(sb);
+  expect((await bundle()).exitCode).toBe(0);
+  expect(readdirSync(join(dest, "toolu/scripts")).sort()).toEqual([
+    "debug-io.ts",
+    "debug-log.ts",
+    "debug-stack.ts",
+    "debug-testfail.ts",
+  ]);
+  const transcript = join(ROOT, "plugins/toolu/scripts/__tests__/fixtures/debug/bun-testfail.txt");
+  const res = await run(
+    ["bun", join(dest, "toolu/scripts/debug-testfail.ts"), "--file", transcript],
+    {
+      cwd: sb.root,
+    },
+  );
+  expect(res.exitCode).toBe(0);
+  expect(res.stdout).toContain("  - add sums two numbers\n");
+  expect(res.stdout).toContain("math.test.ts:4:21");
+});
+
 test.concurrent("colocated tests are excluded from the published copy", async () => {
   using sb = createSandbox();
   const { dest, bundle } = stage(sb);
