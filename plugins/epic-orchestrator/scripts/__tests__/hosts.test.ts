@@ -60,7 +60,7 @@ test.concurrent("agentArgs opencode: auto-approve and provider/model", () => {
 });
 
 test.concurrent("agentArgs opencode refuses a model that is not provider/model", () => {
-  for (const model of ["sonnet", "/claude", "anthropic/"]) {
+  for (const model of ["sonnet", "/claude", "anthropic/", "anthropic/claude-sonnet-5#high"]) {
     expect(() => agentArgs("opencode", { ...base, model })).toThrow(
       `OpenCode model must be provider/model, got ${model}`,
     );

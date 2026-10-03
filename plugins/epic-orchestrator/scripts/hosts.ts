@@ -53,7 +53,7 @@ export const OPENCODE_SKILL_IDS: Readonly<Record<string, string>> = {
 
 /** The TUI takes provider/model and has no variant flag. */
 export function opencodeModelArgs(model: string): string[] {
-  if (!/^[^/\s]+\/\S+$/.test(model)) {
+  if (!/^[^/\s#]+\/[^\s#]+$/.test(model)) {
     throw new Error(`OpenCode model must be provider/model, got ${model}`);
   }
   return ["--model", model];
