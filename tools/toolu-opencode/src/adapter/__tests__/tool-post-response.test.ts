@@ -93,3 +93,23 @@ test("post modules see the host's result text as tool_response.output; the shell
   ]);
   post.clear();
 });
+
+test("a result without host metadata still gives post modules a metadata record", async () => {
+  const { root, trace } = await project();
+  const post = createToolPostHandler(options(root), createToolAdviceStore());
+  const path = join(root, "glob.ts");
+  await writeFile(path, "export const glob = 1;\n");
+  const output = { title: "glob", output: path, metadata: {} };
+  // A host result whose metadata never arrived: the typed field is absent at runtime.
+  Object.defineProperty(output, "metadata", { value: undefined, writable: true });
+  const call = {
+    tool: "glob",
+    sessionID: "session-response",
+    callID: "glob",
+    args: { pattern: "*.ts" },
+  };
+  await post.after(call, output);
+  const seen: unknown = JSON.parse((await readFile(trace, "utf8")).trim());
+  expect(seen).toEqual({ output: path, interrupted: false, metadata: {} });
+  post.clear();
+});
