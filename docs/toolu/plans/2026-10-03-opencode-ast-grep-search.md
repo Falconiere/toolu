@@ -70,7 +70,7 @@ adapter measurement fix → shared report lib and OpenCode-only report → skill
       "tools/toolu-conformance/src/harness/**"
     ],
     "input": "Temp git project with src/app.ts and notes.md; real register.js run under tooluProcessEnv writes into a temp data root; OpenCode grep/bash/read/glob shapes with host metadata (including truncated); real ast-grep stdout; read/glob results carry no savings text; PATH without ast-grep; skills.ast-grep=false; duplicate, 8 parallel, interrupted, non-string and empty-output after calls",
-    "check": "bun test --timeout 60000 tools/toolu-opencode/src/adapter/__tests__/ast-grep-modules.test.ts",
+    "check": "bun test --timeout 60000 tools/toolu-opencode/src/adapter/__tests__/ast-grep-nudge.test.ts tools/toolu-opencode/src/adapter/__tests__/ast-grep-savings.test.ts",
     "model": "inherit"
   },
   {
@@ -158,7 +158,7 @@ adapter measurement fix → shared report lib and OpenCode-only report → skill
 - `tools/toolu-opencode/src/adapter/tool-post.ts` (modify)
 - `plugins/ast-grep/hooks/src/lib/savings-report.ts` (new), `byte-savings.ts`, `byte-savings-report.ts` (modify), `hooks/dist/byte-savings.js`, `hooks/dist/byte-savings-report.js` (rebuilt)
 - `plugins/ast-grep/skills/ast-grep/SKILL.md`, `plugins/ast-grep/README.md`
-- `tools/toolu-opencode/src/adapter/__tests__/ast-grep-modules.test.ts` (new)
+- `tools/toolu-opencode/src/adapter/__tests__/ast-grep-nudge.test.ts`, `ast-grep-savings.test.ts` and their shared `ast-grep-fixture.ts` (new)
 - `tooling/src/opencode-ast-grep-smoke.ts`, `tooling/src/opencode-host/scenarios-ast-grep-smoke.ts` (new); `scenarios-posttool-smoke.ts` (export `prepareSdk`)
 - `package.json` (`smoke:opencode-ast-grep`)
 - `docs/opencode.md`, `docs/opencode-host-contract.md`, `docs/portable-core.md`, `docs/ast-grep/README.md`, `docs/registry.md`, generated mirrors
@@ -173,3 +173,4 @@ PR readiness: scoped commits; `bun plugins/toolu/hooks/dist/plan-ledger.js run <
 ## Deviations
 
 - adapter: the `tool_response.output` case lives in its own `tool-post-response.test.ts`; `tool-post.test.ts` is at the 300-line lint limit.
+- hermetic: `ast-grep-modules.test.ts` became `ast-grep-nudge.test.ts` and `ast-grep-savings.test.ts` over a shared `ast-grep-fixture.ts`, to stay under the per-file and per-function line limits.
