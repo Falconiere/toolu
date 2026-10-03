@@ -1,42 +1,17 @@
 /** Pinned-host proof of selected Python quality checks on native OpenCode tools (#353). */
 import { join } from "node:path";
-import { z } from "zod";
 import { runHost, toolStates } from "./host-run.ts";
 import { finalMessages, type ScenarioContext } from "./scenario.ts";
 import { session, SMOKE_RUN_TIMEOUT_MS, type PretoolScenario } from "./pretool-shared.ts";
+import { disabledQuality, qualityGate as gate, qualityProject } from "./quality-smoke-shared.ts";
 import { prepareSdk, verdict } from "./scenarios-posttool-smoke.ts";
 
-const GATE = ".opencode/tmp/quality-gate-status.json";
-const Gate = z.object({
-  status: z.string(),
-  entries: z
-    .record(z.string(), z.object({ source: z.string(), violations: z.string() }))
-    .optional(),
-});
-const SELECTION = JSON.stringify({ version: 1, enabled: ["toolu", "python-quality"] });
-const CONFIG = JSON.stringify({
-  version: 1,
-  gates: {
-    qualityGate: { mode: "block" },
-    commitGate: { mode: "off" },
-    pushReview: { mode: "off" },
-  },
-});
-const PROJECT = {
-  ".opencode/toolu/plugins.json": SELECTION,
-  ".opencode/toolu.config.json": CONFIG,
-  "pyproject.toml": '[project]\nname = "python-quality-smoke"\n',
-};
+const FILES = { "pyproject.toml": '[project]\nname = "python-quality-smoke"\n' };
+const PROJECT = qualityProject(["python-quality"], FILES);
 const BARE = "def load():\n    try:\n        return 1\n    except:\n        return 0\n";
 const SWALLOW = "try:\n    run()\nexcept Exception: pass\n";
 const MOCKED = "from unittest import mock\n\n\ndef test_it():\n    assert mock\n";
 const CLEAN = '"""Clean."""\n\n\ndef answer():\n    """Answer."""\n    return 42\n';
-
-function gate(s: ReturnType<typeof session>): z.infer<typeof Gate> | null {
-  if (!s.exists(GATE)) return null;
-  const parsed = Gate.safeParse(JSON.parse(s.sb.read(GATE)));
-  return parsed.success ? parsed.data : null;
-}
 
 /** `text` as `+` lines of an `*** Add File` section. */
 function added(text: string): string[] {
@@ -180,39 +155,17 @@ async function patchQuality(ctx: ScenarioContext) {
   return verdict(observed, { messages, states, stderr: host.stderr });
 }
 
-async function disabledQuality(ctx: ScenarioContext) {
-  using s = session(ctx, {
-    files: {
-      ...PROJECT,
-      ".opencode/toolu/plugins.json": JSON.stringify({ version: 1, enabled: ["toolu"] }),
-    },
-    scripts: (project) => ({
-      "pyquality.disabled": [
-        { tool: "write", args: { filePath: join(project, "bad.py"), content: SWALLOW } },
-      ],
-    }),
-  });
-  await prepareSdk(s, ctx.cacheRoot);
-  const host = await runHost(
-    ctx.bin,
-    s,
-    ["--print-logs", "PROBE:pyquality.disabled"],
-    SMOKE_RUN_TIMEOUT_MS,
-  );
-  const states = toolStates(host);
-  const messages = finalMessages(s, "tool");
-  const observed = {
-    writeCompleted: states.some((state) => state.tool === "write" && state.status === "completed"),
-    bytesChanged: s.exists("bad.py") && s.sb.read("bad.py") === SWALLOW,
-    noGate: gate(s) === null,
-    noDiagnostic: !messages.some((message) => message.includes("QUALITY VIOLATION")),
-    hostSucceeded: host.exitCode === 0,
-  };
-  return verdict(observed, { messages, states, stderr: host.stderr });
-}
-
 export const PYTHON_QUALITY_SCENARIOS: PretoolScenario[] = [
   { id: "pyquality.edit", run: editQuality },
   { id: "pyquality.patch", run: patchQuality },
-  { id: "pyquality.disabled", run: disabledQuality },
+  {
+    id: "pyquality.disabled",
+    run: (ctx) =>
+      disabledQuality(ctx, {
+        id: "pyquality.disabled",
+        files: FILES,
+        file: "bad.py",
+        content: SWALLOW,
+      }),
+  },
 ];
