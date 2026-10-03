@@ -1,8 +1,19 @@
 /** Per-host CLI args: approval bypass, model/effort, resume, skill syntax. */
 
 import { expect, test } from "bun:test";
-import { HOST_LIMIT, agentArgs, hostKind, parseHostKind, skillRef } from "../hosts.ts";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  HOST_LIMIT,
+  OPENCODE_SKILL_IDS,
+  agentArgs,
+  hostKind,
+  opencodeVersionProblem,
+  parseHostKind,
+  skillRef,
+} from "../hosts.ts";
 
+const GENERATED_SKILLS = join(import.meta.dir, "../../../../tools/toolu-opencode/generated/skills");
 const base = { key: "toolu-12", bypass: true, permissionMode: "auto", resume: false };
 
 test.concurrent("agentArgs claude: skip permissions, model, effort, session name", () => {
@@ -38,13 +49,29 @@ test.concurrent("agentArgs cursor: yolo, trusted workspace, MCP approval; effort
   ]);
 });
 
-test.concurrent("agentArgs opencode: auto-approve and provider/model#variant", () => {
-  expect(agentArgs("opencode", { ...base, model: "anthropic/claude-sonnet-5#high" })).toEqual([
+test.concurrent("agentArgs opencode: auto-approve and provider/model", () => {
+  expect(agentArgs("opencode", { ...base, model: "anthropic/claude-sonnet-5" })).toEqual([
     "--standalone",
     "--auto",
     "--model",
-    "anthropic/claude-sonnet-5#high",
+    "anthropic/claude-sonnet-5",
   ]);
+  expect(agentArgs("opencode", base)).toEqual(["--standalone", "--auto"]);
+});
+
+test.concurrent("agentArgs opencode refuses a model that is not provider/model", () => {
+  for (const model of ["sonnet", "/claude", "anthropic/"]) {
+    expect(() => agentArgs("opencode", { ...base, model })).toThrow(
+      `OpenCode model must be provider/model, got ${model}`,
+    );
+  }
+});
+
+test.concurrent("opencodeVersionProblem accepts 1.x and explains anything else", () => {
+  expect(opencodeVersionProblem("1.18.34\n")).toBeNull();
+  expect(opencodeVersionProblem("2.0.21")).toContain('reports "2.0.21"');
+  expect(opencodeVersionProblem("2.0.21")).toContain("opencode-ai 1.x");
+  expect(opencodeVersionProblem("")).toContain("printed no version");
 });
 
 test.concurrent("captured sessions resume exactly and OpenCode owns its standalone runtime", () => {
@@ -92,7 +119,18 @@ test.concurrent("skill syntax per host", () => {
     "`/delivery-flow:delivery-flow`",
   );
   expect(skillRef("codex", "pr-babysit", "babysit")).toBe("`$pr-babysit:babysit`");
-  expect(skillRef("opencode", "pr-babysit", "babysit")).toBe("the `pr-babysit--babysit` skill");
+  expect(skillRef("cursor", "toolu", "debug")).toBe("the `toolu:debug` skill");
+  expect(skillRef("opencode", "pr-babysit", "babysit")).toBe(
+    '`skill({ name: "pr-babysit-babysit-73c340c6" })`',
+  );
+  expect(() => skillRef("opencode", "x", "y")).toThrow("no OpenCode skill id for x:y");
+});
+
+test.concurrent("every OpenCode skill id names a generated skill", () => {
+  for (const id of Object.values(OPENCODE_SKILL_IDS)) {
+    const skill = readFileSync(join(GENERATED_SKILLS, id, "SKILL.md"), "utf8");
+    expect(skill).toMatch(new RegExp(`^name: "${id}"$`, "m"));
+  }
 });
 
 test.concurrent("limit pattern matches provider throttle messages, not ordinary output", () => {

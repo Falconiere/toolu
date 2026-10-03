@@ -192,6 +192,11 @@ hosts → launcher and worktree exclude → helper lookup → watcher signals �
 ]
 ```
 
+## Deviations
+
+- launch: `OPENCODE_EXCLUDE`, `excludeOpencodeState` and the version check live in a new `scripts/opencode-worker.ts`, not `launch-issue.ts`. The launcher had passed the 500-line lint limit. `hosts.ts` exports `opencodeModelArgs`, so the early model check and `agentArgs` share one rule.
+- launch: the refusal text omits "(tested on 1.18.34)". The plugin cannot read the contract pin, and a hard-coded patch version would drift.
+
 ## Plan review
 
 - Spec AC-9: 🔴 blocker (fixed in the spec): `checkAcRefs` reported AC-9 as dangling because its `**AC-9 (live, …):**` heading is not a declared AC form. It now reads `**AC-9:**`, and `checkAcRefs` reports no dangling refs.

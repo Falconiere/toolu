@@ -43,6 +43,31 @@ type HostSpec = {
   skill: (plugin: string, skill: string) => string;
 };
 
+/** The generated OpenCode skill name for each `plugin:skill` a brief names
+ * (tools/toolu-opencode/generated/skills/<id>/SKILL.md). */
+export const OPENCODE_SKILL_IDS: Readonly<Record<string, string>> = {
+  "delivery-flow:delivery-flow": "delivery-flow-delivery-flow",
+  "pr-babysit:babysit": "pr-babysit-babysit-73c340c6",
+  "toolu:debug": "toolu-debug",
+};
+
+/** The TUI takes provider/model and has no variant flag. */
+export function opencodeModelArgs(model: string): string[] {
+  if (!/^[^/\s]+\/\S+$/.test(model)) {
+    throw new Error(`OpenCode model must be provider/model, got ${model}`);
+  }
+  return ["--model", model];
+}
+
+/** Why `opencode --version` output is not a release toolu's OpenCode plugin
+ * targets (opencode-ai 1.x), or null when it is. */
+export function opencodeVersionProblem(versionOutput: string): string | null {
+  const version = /\d+\.\d+\.\d+/.exec(versionOutput)?.[0];
+  if (version?.startsWith("1.")) return null;
+  const seen = version === undefined ? "printed no version" : `reports "${version}"`;
+  return `opencode --version ${seen}; toolu's OpenCode plugin targets opencode-ai 1.x. Put a 1.x opencode first on PATH, or route this issue to another host.`;
+}
+
 const HOSTS: Record<HostKind, HostSpec> = {
   claude: {
     bypass: ["--dangerously-skip-permissions"],
@@ -77,12 +102,15 @@ const HOSTS: Record<HostKind, HostSpec> = {
   opencode: {
     bypass: ["--auto"],
     safe: () => [],
-    // provider/model#variant; the routing table supplies the full string.
-    model: (m) => ["--model", m],
+    model: opencodeModelArgs,
     effort: () => [],
     name: () => [],
     resume: { lead: [], flags: ["--continue"] },
-    skill: (p, s) => `the \`${p}--${s}\` skill`,
+    skill: (p, s) => {
+      const id = OPENCODE_SKILL_IDS[`${p}:${s}`];
+      if (id === undefined) throw new Error(`no OpenCode skill id for ${p}:${s}`);
+      return `\`skill({ name: "${id}" })\``;
+    },
   },
 };
 
