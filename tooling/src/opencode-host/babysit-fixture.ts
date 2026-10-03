@@ -36,7 +36,7 @@ test("sum adds", () => {
 });
 `;
 
-export type Paths = {
+type Paths = {
   project: string;
   state: string;
   worktree: string;
