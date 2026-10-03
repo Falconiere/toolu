@@ -12,6 +12,14 @@ Jira issue search and workflow from the session via a REST wrapper — a skill p
 /plugin install jira@toolu
 ```
 
+OpenCode: add `jira` to `.opencode/toolu/plugins.json` (see [OpenCode install](../opencode.md)).
+
+- The helper lives at `$TOOLU_CONFIG_DIR/jira/jira.sh`, the per-project data root exported to every bash call.
+- The skill is `jira-jira`.
+- jira's own SessionStart gives the issue-workflow instruction, so it appears only while jira is selected; toolu's prompt hint leaves out its Jira line on OpenCode. The instruction rides on every model request and is not repeated in compaction context. It lets read-only calls run directly and makes no ticket change unless you asked for that change; loading the skill never writes to Jira.
+- The instruction's command is `'<bun>' --no-env-file '<helper>'` and the skill's is `"$TOOLU_BUN" --no-env-file "…/jira/jira.sh"`. Bun is named by path, so `bun` need not be on `PATH`, and `--no-env-file` keeps a project `.env` from supplying `JIRA_*` values, such as a `JIRA_BASE_URL` that would send your jira CLI token to another host. `plan run` adds `--no-env-file` to `BUN_OPTIONS` for its probe and checks, so the nested `"$JIRA"` ignores `.env` too. A file of your own at the helper path is kept and named alone.
+- Plan docs and ledgers go under `.opencode/tmp/jira/plans/` and `.opencode/tmp/plan-ledger/`.
+
 ## Setup
 
 ### Option 1 — Reuse jira CLI Config (Easiest)

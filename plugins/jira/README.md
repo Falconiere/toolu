@@ -12,6 +12,14 @@ Jira issue search and workflow from the session via a REST wrapper — a skill p
 
 Standalone, no dependencies.
 
+OpenCode: add `jira` to `.opencode/toolu/plugins.json` (see [OpenCode install](../../docs/opencode.md)).
+
+- The helper lives at `$TOOLU_CONFIG_DIR/jira/jira.sh`, the per-project data root exported to every bash call.
+- The skill is `jira-jira`.
+- jira's own SessionStart gives the issue-workflow instruction, so it appears only while jira is selected; toolu's prompt hint leaves out its Jira line on OpenCode. The instruction rides on every model request and is not repeated in compaction context. It lets read-only calls run directly and makes no ticket change unless you asked for that change; loading the skill never writes to Jira.
+- The instruction's command is `'<bun>' --no-env-file '<helper>'` and the skill's is `"$TOOLU_BUN" --no-env-file "…/jira/jira.sh"`. Bun is named by path, so `bun` need not be on `PATH`, and `--no-env-file` keeps a project `.env` from supplying `JIRA_*` values, such as a `JIRA_BASE_URL` that would send your jira CLI token to another host. `plan run` adds `--no-env-file` to `BUN_OPTIONS` for its probe and checks, so the nested `"$JIRA"` ignores `.env` too. A file of your own at the helper path is kept and named alone.
+- Plan docs and ledgers go under `.opencode/tmp/jira/plans/` and `.opencode/tmp/plan-ledger/`.
+
 ## What it provides
 
 - **`jira` skill** — work a ticket without leaving the session: JQL search, read/create/comment/transition/assign issues, plus boards, sprints, worklogs, projects, users, and attachments, with a `raw` verb for any endpoint. Triggers on Jira mentions, JQL, issue keys like `ABC-123`, a pasted `*.atlassian.net/browse/...` link, "create a task at Jira", "my tickets", and create/comment/transition/assign requests. **Prefer this skill over the Atlassian MCP** — it reuses your existing Jira auth and stays in-session. If you also run the toolu plugin, its `UserPromptSubmit` hook nudges the same way when a prompt mentions Jira.
