@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { captureSession, requireCapturedSession } from "../session.ts";
@@ -40,4 +40,14 @@ test.concurrent("ambiguous Codex metadata never guesses a session", async () => 
   codexSession(root, sb.project, since, FIRST);
   codexSession(root, sb.project, since, SECOND);
   expect(await captureSession("codex", sb.project, since, { CODEX_HOME: root })).toBeNull();
+});
+
+test.concurrent("a session file that vanishes during discovery is skipped", async () => {
+  using sb = createSandbox();
+  const since = Date.now() - 1_000;
+  const root = join(sb.root, "codex");
+  codexSession(root, sb.project, since, FIRST);
+  const day = new Date(since).toISOString().slice(0, 10).split("-");
+  symlinkSync(join(root, "rotated.jsonl"), join(root, "sessions", ...day, "rotated.jsonl"));
+  expect(await captureSession("codex", sb.project, since, { CODEX_HOME: root })).toBe(FIRST);
 });
