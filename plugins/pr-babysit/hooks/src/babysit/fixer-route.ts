@@ -244,9 +244,9 @@ export function agentArgs(
   return args;
 }
 
-/** Is `name` on the current PATH? `Bun.which` alone reads the PATH the process started with. */
-export function commandAvailable(name: string): boolean {
-  return Bun.which(name, { PATH: process.env.PATH ?? "" }) !== null;
+/** Is `name` on `path` (the current PATH)? `Bun.which` alone reads the PATH the process started with. */
+export function commandAvailable(name: string, path = process.env.PATH): boolean {
+  return Bun.which(name, { PATH: path ?? "" }) !== null;
 }
 
 function readJsonIfValid(path: string): unknown {

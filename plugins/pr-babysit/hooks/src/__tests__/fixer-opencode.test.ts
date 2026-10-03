@@ -13,6 +13,7 @@ import {
   logTail,
   opencodeFixerArgs,
   processStart,
+  spawnFixer,
   stopGroup,
 } from "../babysit/fixer-process.ts";
 
@@ -472,4 +473,31 @@ test.concurrent("a fixer that cannot start settles agent_start_failed; cleanup r
   expect(after.fixer).toBeNull();
   expect(after.herdrWorktree).toBeNull();
   expect(after.actions).toEqual(ledger);
+});
+
+test.concurrent("an opencode that cannot be executed is reported, and its error lands in the log", async () => {
+  using sb = sandbox("pr-babysit-badexec-");
+  const bin = join(sb.dir, "bin");
+  mkdirSync(bin);
+  // Found on PATH, but its interpreter does not exist: exec fails after spawn() returns.
+  writeFileSync(join(bin, "opencode"), "#!/nonexistent/interpreter\n", { mode: 0o755 });
+  const log = join(sb.dir, "fixer.log");
+  const spawned = spawnFixer(
+    { worktree: sb.dir, prompt: "Read /b.md", model: null, effort: null, unattended: true },
+    log,
+    { ...sb.env, PATH: `${bin}:/usr/bin:/bin` },
+    join(sb.dir, "gh"),
+  );
+  expect(spawned).toEqual({ error: `opencode did not start; its error goes to ${log}` });
+  for (let i = 0; i < 50 && !readFileSync(log, "utf8").includes("did not start"); i += 1)
+    await Bun.sleep(20);
+  expect(readFileSync(log, "utf8")).toMatch(/^opencode did not start: .*ENOENT/m);
+  expect(
+    spawnFixer(
+      { worktree: sb.dir, prompt: "Read /b.md", model: null, effort: null, unattended: true },
+      log,
+      { ...sb.env, PATH: "/usr/bin:/bin" },
+      join(sb.dir, "gh"),
+    ),
+  ).toEqual({ error: "opencode is not on PATH" });
 });

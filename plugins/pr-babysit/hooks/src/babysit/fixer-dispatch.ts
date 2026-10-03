@@ -10,7 +10,7 @@ import {
 import { basename, dirname, join, resolve } from "node:path";
 import { atomicWriteJson, fail, loadState, SlotLock, utcNow, type Json } from "./common.ts";
 import {
-  fixerEnv,
+  fixerConfigContent,
   groupAlive,
   hostErrors,
   logTail,
@@ -419,8 +419,9 @@ class Dispatcher {
         );
       agentArgs(hostKind(group.host), "pb-000000-r1g1", group.model, group.effort, true);
     }
-    // An OpenCode fixer's environment is built from this one: refuse it before any side effect.
-    if (plan.groups.some((group) => group.host === "opencode")) fixerEnv(process.env, "", "");
+    // An OpenCode fixer's config is merged into this value: refuse a bad one before any side effect.
+    if (plan.groups.some((group) => group.host === "opencode"))
+      fixerConfigContent(process.env.OPENCODE_CONFIG_CONTENT);
   }
   private dropBranch(root: string, branch: string, pr: string): void {
     if (this.dry) return;

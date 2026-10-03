@@ -210,8 +210,9 @@ bun "$PLUGIN_ROOT/hooks/dist/babysit-fixer-report.js" <report-file> done|failed 
 - **Dispatch status** (`start` / `wait` stdout): `{version:1, status: running|done|failed|blocked|none,
   reason: null|no_report|reported_failed|host_limited|agent_blocked|agent_start_failed|worktree_lost, group,
   worktree, branch, commits[], groups[{seq, tier, host, model, effort, agent, status, reason, error?}]}`
-  — `error` carries herdr's message (or the spawn error) when a group failed to start, and an
-  OpenCode fixer's last output when it exited without a report.
+  — `error` carries herdr's message when a group failed to start (for OpenCode, the log path
+  that receives the start error), and an OpenCode fixer's last output when it exited without a
+  report.
   `commits[]` = `git rev-list --reverse origin/<pr-branch>..HEAD` in the worktree. `--dry-run`
   prints `{dryRun:true, commands:[[argv…]…], brief}` and writes nothing.
 - **Agents** are named `pb-<6 hex of the slot>-r<round>g<seq>` and started with

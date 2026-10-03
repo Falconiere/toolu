@@ -205,8 +205,8 @@ function loadFixerConfig(host) {
     jev: raw.jev !== false
   };
 }
-function commandAvailable(name) {
-  return Bun.which(name, { PATH: process.env.PATH ?? "" }) !== null;
+function commandAvailable(name, path = process.env.PATH) {
+  return Bun.which(name, { PATH: path ?? "" }) !== null;
 }
 function readJsonIfValid(path) {
   try {

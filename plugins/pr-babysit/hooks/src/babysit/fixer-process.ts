@@ -9,7 +9,7 @@
  * one, never taken for the fixer or signalled.
  */
 import { spawn, spawnSync } from "node:child_process";
-import { closeSync, existsSync, openSync, readSync, statSync } from "node:fs";
+import { appendFileSync, closeSync, existsSync, openSync, readSync, statSync } from "node:fs";
 import { fail, type Json } from "./common.ts";
 import { agentArgs, commandAvailable } from "./fixer-route.ts";
 
@@ -215,7 +215,8 @@ export function spawnFixer(
   env: NodeJS.ProcessEnv,
   ghConfigDir: string,
 ): Spawned {
-  if (!commandAvailable("opencode")) return { error: "opencode is not on PATH" };
+  // spawn() resolves `opencode` on the child's PATH, so the check does too.
+  if (!commandAvailable("opencode", env.PATH)) return { error: "opencode is not on PATH" };
   const args = opencodeFixerArgs(run);
   const childEnv = fixerEnv(env, run.worktree, ghConfigDir);
   const fd = openSync(log, "a");
@@ -226,10 +227,11 @@ export function spawnFixer(
       detached: true,
       stdio: ["ignore", fd, fd],
     });
-    // A start failure leaves `pid` unset and is reported below; without a listener it would throw.
-    child.on("error", () => undefined);
+    // A start failure leaves `pid` unset and arrives after spawn() returns: the log keeps its message.
+    child.on("error", (error) => appendFileSync(log, `opencode did not start: ${error.message}\n`));
     child.unref();
-    if (child.pid === undefined) return { error: "opencode did not start" };
+    if (child.pid === undefined)
+      return { error: `opencode did not start; its error goes to ${log}` };
     return { pid: child.pid, pidStart: processStart(child.pid) };
   } catch (error) {
     return { error: `opencode did not start: ${(error as Error).message}` };
