@@ -18,11 +18,11 @@ const VERSION_TIMEOUT_MS = 15_000;
 const INSTALL_TIMEOUT_MS = 300_000;
 
 /** `<bin> --version`, trimmed; a missing or failing binary is a ContractError. */
-async function hostVersion(bin: string): Promise<string> {
-  const res = await run([bin, "--version"], { timeoutMs: VERSION_TIMEOUT_MS });
+async function hostVersion(bin: string, timeoutMs: number): Promise<string> {
+  const res = await run([bin, "--version"], { timeoutMs });
   if (res.exitCode !== 0 || res.timedOut) {
     throw new ContractError(
-      `cannot run ${bin} --version (exit ${res.exitCode}): ${res.stderr.trim()}`,
+      `cannot run ${bin} --version (exit ${res.exitCode}, timedOut ${res.timedOut}): ${res.stderr.trim()}`,
     );
   }
   return res.stdout.trim().replace(/^v/, "");
@@ -58,13 +58,17 @@ async function installPinned(pin: Pin, dir: string): Promise<string> {
   return bin;
 }
 
-export async function resolveHostBinary(pin: Pin, env: Env = process.env): Promise<HostBinary> {
+export async function resolveHostBinary(
+  pin: Pin,
+  env: Env = process.env,
+  versionTimeoutMs = VERSION_TIMEOUT_MS,
+): Promise<HostBinary> {
   const explicit = env.TOOLU_OPENCODE_HOST_BIN;
   const bin =
     explicit === undefined || explicit === ""
       ? await installPinned(pin, join(hostCacheDir(pin, env), "cli"))
       : explicit;
-  const version = await hostVersion(bin);
+  const version = await hostVersion(bin, versionTimeoutMs);
   if (version !== pin.cli.version) {
     throw new ContractError(`pin mismatch: ${bin} reports ${version}, pin is ${pin.cli.version}`);
   }

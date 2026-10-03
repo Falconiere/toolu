@@ -33,6 +33,8 @@ A ready plugin appends startup instructions, prompt reminders, and compaction co
 
 Enforcement runs in `tool.execute.before`. Covered calls are `bash`, `read`, `grep`, `glob`, `edit`, `write`, `apply_patch`, `task`, and MCP tools named `<server>_<tool>` for servers listed in `opencode.json`. The nine native core gates run before selected `pre-tools.d` registry modules; files left by disabled plugins stay inert. MCP calls use the standalone `mcp__` blocker policy. Task calls run the native and registry gates plus the standalone agent-tier policy, which checks a supplied task model against the active plan step and records delegation telemetry. A task with no model inherits the step's tier. Any other tool is left to the host. A toolu refusal stops the call before it runs, and a toolu allow never overrides your own `permission` rules. OpenCode still applies its native `deny` and `ask` rules after toolu allows; a rejected prompt gives no approval to a retry. The host cannot open a native prompt for a toolu gate. A security guardrail's `ask` therefore blocks, while a judgement gate's `ask` allows the call and appends advice to that call's successful tool result through `tool.execute.after` ([#339](https://github.com/Falconiere/toolu/issues/339)). Host events without an OpenCode hook remain outside that scope; see the [host contract](opencode-host-contract.md).
 
+After a completed tool call, `tool.execute.after` runs native gate-status and push-waiver checks, then selected `post-tools.d` modules. An edit, write or patch can record a per-file quality failure; a shell quality command with a confirmed nonzero exit records a failed global gate. The next commit or push is then checked against that state. Post-check diagnostics and matching pre-tool advice are appended to the original tool result once. A post-check message reports an action that already ran; it does not undo its side effects. A shell result without a confirmed exit, or marked interrupted, cannot clear a failure or promote a waiver. OpenCode does not call the after hook for a thrown tool error or a rejected permission prompt, so those errors reach the model through the host and leave prior gate state intact.
+
 Bun 1.4.x is a prerequisite on every host, Claude Code and Codex included; see the [runtime contract](runtime.md). Claude Code and Codex keep their marketplace installs. OpenCode calls the TypeScript core dispatcher in process. Its npm package ships committed bundles and their runtime data. Bootstrap reports NotReady when a selected plugin lacks a required Bun registration bundle.
 
 ## Prerequisites
@@ -186,6 +188,12 @@ Live permission smoke checks native deny, repeated native ask rejection, guardra
 
 ```bash
 bun run smoke:opencode-permissions
+```
+
+The pinned post-tool smoke uses isolated git projects and a scripted loopback provider to check edited file state, model-visible diagnostics and later commit/push denial:
+
+```bash
+bun run smoke:opencode-posttool
 ```
 
 Optional live CLI probe:

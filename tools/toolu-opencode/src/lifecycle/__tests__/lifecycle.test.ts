@@ -15,6 +15,7 @@ test("session, prompt and compaction are supported on the pinned hooks", () => {
   expect(lifecycleSupport("pre_compact")).toBe("supported");
   expect(lifecycleSupport("session/unload")).toBe("supported");
   expect(lifecycleSupport("permission/evaluate")).toBe("supported");
+  expect(lifecycleSupport("tool/post")).toBe("supported");
   expect(CONTEXT_HOOKS.prompt).toBe("chat.message");
   expect(CONTEXT_HOOKS.pre_compact).toBe("experimental.session.compacting");
   expect(CONTEXT_HOOKS.startup).toBe("experimental.chat.system.transform");
