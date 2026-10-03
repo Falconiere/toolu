@@ -132,6 +132,7 @@ async function dispatchMessage(
   };
   const result = await dispatchPostTool(JSON.stringify(payload), {
     builtins: POST_BUILTINS,
+    continuePostBlocks: true,
     libDir: join(context.pluginRoot, "hooks", "lib"),
     cwd: typeof request.cwd === "string" ? request.cwd : context.opts.permissionContext.cwd,
     env: context.env,

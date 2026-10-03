@@ -5223,6 +5223,16 @@ rule:
   pattern: sinon.$M($$$)`;
 
 // plugins/ts-quality/hooks/src/rules/ast-rules.ts
+var ERROR_RULES_TSX = ERROR_RULES.replaceAll(`language: ts
+`, `language: tsx
+`);
+var MOCK_RULES_TSX = MOCK_RULES.replaceAll(`language: ts
+`, `language: tsx
+`);
+function scan2(f, ts, tsx) {
+  const rules = f.ctx.host === "opencode" && f.file.path.endsWith(".tsx") ? tsx : ts;
+  return astGrepScan(f.file, rules, f.ctx);
+}
 function hits(all, rule, limit) {
   return all.filter((hit) => hit.ruleId === rule).slice(0, limit).map((hit) => hit.excerpt.replace(/\t+$/, ""));
 }
@@ -5241,10 +5251,10 @@ function scanFailure(scan) {
   return `ast-grep exit ${String(scan.exitCode)}${first}`;
 }
 function errorHandling(f) {
-  const scan = astGrepScan(f.file, ERROR_RULES, f.ctx);
-  if (scan.kind === "missing")
+  const result = scan2(f, ERROR_RULES, ERROR_RULES_TSX);
+  if (result.kind === "missing")
     return [];
-  const all = scan.kind === "ok" ? scan.hits : [];
+  const all = result.kind === "ok" ? result.hits : [];
   const errors = [
     ...group(f, all, "Empty catch block in $F \u2014 handle the error or rethrow; do not swallow", [
       ["empty-catch", 3],
@@ -5270,7 +5280,7 @@ function errorHandling(f) {
       ["throw-template", 3]
     ])
   ];
-  const failure = scanFailure(scan);
+  const failure = scanFailure(result);
   if (failure !== undefined) {
     errors.push(`ast-grep failed while scanning ${f.file.path} \u2014 ${failure}; error-handling rules could not be verified. Fix the tool/file and re-edit`);
   }
@@ -5295,11 +5305,11 @@ function mockDoubles(f) {
   if (path.includes("/e2e/") || !inTests || !f.limits.noMocks)
     return [];
   const errors = [];
-  const scan = astGrepScan(f.file, MOCK_RULES, f.ctx);
-  const failure = scan.kind === "missing" ? undefined : mockScanFailure(f, scan);
+  const result = scan2(f, MOCK_RULES, MOCK_RULES_TSX);
+  const failure = result.kind === "missing" ? undefined : mockScanFailure(f, result);
   if (failure !== undefined)
     errors.push(failure);
-  const found = scan.kind === "ok" ? scan.hits.toSorted((a, b) => a.line - b.line) : [];
+  const found = result.kind === "ok" ? result.hits.toSorted((a, b) => a.line - b.line) : [];
   if (found.length > 0) {
     const excerpt = found.slice(0, 5).map((hit) => hit.excerpt).join(`
 `);

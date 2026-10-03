@@ -4864,8 +4864,16 @@ function syntheticEdit(doc, record) {
 }
 async function dispatchRecords(doc, records, at, walk) {
   const record = records[at];
-  if (record === undefined)
-    return settle(walk.state);
+  if (record === undefined) {
+    return walk.blocks.length === 0 ? settle(walk.state) : {
+      stdout: `${toJqJson({ decision: "block", reason: walk.blocks.join(`
+
+`) }, false)}
+`,
+      stderr: walk.state.stderr.join(""),
+      exitCode: 0
+    };
+  }
   const edit = {
     operation: record.operation,
     from: record.from ?? "",
@@ -4874,6 +4882,13 @@ async function dispatchRecords(doc, records, at, walk) {
   const payload = { text: syntheticEdit(doc, record), toolName: "Edit", edit };
   const result = await dispatchModules(payload, walk.session, walk.builtins);
   walk.state.stderr.push(result.stderr);
+  if (walk.continuePostBlocks && result.exitCode === 0) {
+    const parsed = parseDocument(result.stdout);
+    if (readField(parsed, ["decision"]) === "block") {
+      walk.blocks.push(readField(parsed, ["reason"]) || "check blocked");
+      return dispatchRecords(doc, records, at + 1, walk);
+    }
+  }
   const done = consume(walk.state, "", {
     ...result,
     stderr: "",
@@ -4881,7 +4896,7 @@ async function dispatchRecords(doc, records, at, walk) {
   });
   return done ?? dispatchRecords(doc, records, at + 1, walk);
 }
-async function dispatchInput(input, session, builtins) {
+async function dispatchInput(input, session, builtins, continuePostBlocks) {
   const doc = parseDocument(input);
   const toolName = readField(doc, ["tool_name"]);
   const normalized = normalizeEditRecords(doc, toolName);
@@ -4893,7 +4908,13 @@ async function dispatchInput(input, session, builtins) {
     return { stdout, stderr: "", exitCode: 0 };
   }
   const state = newWalkState(session.phase);
-  return dispatchRecords(doc, normalized.records, 0, { session, builtins, state });
+  return dispatchRecords(doc, normalized.records, 0, {
+    session,
+    builtins,
+    state,
+    continuePostBlocks: session.phase === "post" && continuePostBlocks,
+    blocks: []
+  });
 }
 function sessionFor(phase, env, host, options) {
   const root = configRoot({ env, host });
@@ -4929,7 +4950,7 @@ async function dispatchHook(phase, stdin, options) {
     return { stdout: "", stderr: warnings.join(""), exitCode: 0 };
   }
   const session = sessionFor(phase, env, host, options);
-  const result = await dispatchInput(substituted2(stdin), session, options.builtins);
+  const result = await dispatchInput(substituted2(stdin), session, options.builtins, options.continuePostBlocks === true);
   return { ...result, stderr: warnings.join("") + result.stderr };
 }
 function dispatchPreTool(stdin, options) {

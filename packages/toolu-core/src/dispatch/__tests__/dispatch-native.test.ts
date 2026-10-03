@@ -10,8 +10,15 @@ import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import type { Decision } from "../../decision/decision.ts";
 import { buildModule } from "../../registry/__tests__/module-bundles.ts";
-import type { ToolModule } from "../dispatch.ts";
-import { hookEnv, install, registryDir, runTsDispatch, writeBuiltin } from "./dispatch-harness.ts";
+import { dispatchPostTool, type ToolModule } from "../dispatch.ts";
+import {
+  hookEnv,
+  install,
+  LIB,
+  registryDir,
+  runTsDispatch,
+  writeBuiltin,
+} from "./dispatch-harness.ts";
 
 const BASH = JSON.stringify({ tool_name: "Bash", tool_input: { command: "git status" } });
 
@@ -137,5 +144,44 @@ test.concurrent("an ESM registry deny wins over a built-in ask", async () => {
   expect(JSON.parse(out.stdout).hookSpecificOutput).toMatchObject({
     permissionDecision: "deny",
     permissionDecisionReason: "esm denies",
+  });
+});
+
+test.concurrent("opt-in post patch walk records every block while the default stops at the first", async () => {
+  using sb = createSandbox({ git: true });
+  const files = [sb.path("one.ts"), sb.path("two.ts")] as const;
+  const patch = [
+    "*** Begin Patch",
+    `*** Add File: ${files[0]}`,
+    "+first",
+    `*** Add File: ${files[1]}`,
+    "+second",
+    "*** End Patch",
+  ].join("\n");
+  const input = JSON.stringify({ tool_name: "apply_patch", tool_input: { command: patch } });
+  const visited: string[] = [];
+  const blocker: ToolModule = {
+    kind: "native",
+    name: "blocker",
+    run(event) {
+      const path = String(event.toolInput.file_path);
+      visited.push(path);
+      return Promise.resolve({ kind: "post_block", reason: `invalid ${path}` });
+    },
+  };
+  const options = { builtins: [blocker], libDir: LIB, env: hookEnv(sb), cwd: sb.project };
+  const previous = await dispatchPostTool(input, options);
+  expect(visited).toEqual([files[0]]);
+  expect(JSON.parse(previous.stdout)).toMatchObject({
+    decision: "block",
+    reason: `invalid ${files[0]}`,
+  });
+
+  visited.length = 0;
+  const continued = await dispatchPostTool(input, { ...options, continuePostBlocks: true });
+  expect(visited).toEqual([...files]);
+  expect(JSON.parse(continued.stdout)).toEqual({
+    decision: "block",
+    reason: files.map((file) => `invalid ${file}`).join("\n\n"),
   });
 });
