@@ -45,6 +45,17 @@ test("the top tier is read-only (no edit tools)", () => {
   expect(agent("architect")).not.toMatch(/^tools:.*(Edit|Write)/m);
 });
 
+test("the OpenCode routing doc names only toolu's own agents and skill", () => {
+  const doc = readFileSync(join(PLUGIN, "hooks", "docs", "model-routing-opencode.md"), "utf8");
+  const named = [...doc.matchAll(/`toolu-([a-z-]+)`/g)].map(([, id = ""]) => id);
+  expect(named).toContain("quick-task");
+  for (const id of named) {
+    const exists =
+      existsSync(join(AGENTS, `${id}.md`)) || existsSync(join(PLUGIN, "skills", id, "SKILL.md"));
+    expect(exists).toBe(true);
+  }
+});
+
 test("the private delivery references remain self-contained", () => {
   expect(existsSync(join(REFS, "model-routing.md"))).toBe(true);
   for (const phase of ["plan", "execution"]) {

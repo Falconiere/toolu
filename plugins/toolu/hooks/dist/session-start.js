@@ -4992,8 +4992,9 @@ function docParts(input) {
     parts.push(renderDoc(join11(docs, "post-compaction.md"), []));
   if (eventTitle(input.event) !== "")
     parts.push(render("session-start.md"));
-  if (enabled(input.config, "models", "enabled"))
-    parts.push(render("model-routing.md"));
+  if (enabled(input.config, "models", "enabled")) {
+    parts.push(render(input.host === "opencode" ? "model-routing-opencode.md" : "model-routing.md"));
+  }
   if (input.verbose) {
     if (facts.ts)
       parts.push(render("session-start-ts.md"));

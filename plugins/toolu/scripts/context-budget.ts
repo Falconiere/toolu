@@ -104,6 +104,7 @@ export function checkSkill(
 export const DOC_BUDGETS: readonly (readonly [name: string, budget: number])[] = [
   ["session-start", 110],
   ["model-routing", 90],
+  ["model-routing-opencode", 90],
   ["post-compaction", 28],
   ["session-start-ts", 30],
   ["session-start-rust", 36],

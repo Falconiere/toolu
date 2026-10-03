@@ -134,6 +134,19 @@ test("disabled context reports the runtime on startup only and writes no readine
   expect(compact).toMatchObject({ exitCode: 0, stdout: "" });
 });
 
+test("OpenCode routes delegation by subagent_type, not a model argument", async () => {
+  const opencode: LifecycleCase = {
+    ...START,
+    env: { TOOLU_HOST_OVERRIDE: "opencode", TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode" },
+  };
+  const { outputs, prepared } = await runTimes(opencode, 1);
+  using _sb = prepared.sb;
+  const out = outputs[0] ?? "";
+  expect(out).toContain("Route every `task` call by `subagent_type`");
+  expect(out).toContain("`agent.<id>.model`");
+  expect(out).not.toContain("Pass `model:`");
+});
+
 const CODEX_LIST =
   '{"installed":[{"pluginId":"toolu@toolu","name":"toolu","marketplaceName":"toolu","installed":true}],"available":[]}';
 
