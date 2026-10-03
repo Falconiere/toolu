@@ -70,6 +70,7 @@ export function expectations(root: string): readonly Expectation[] {
         "plugins/epic-orchestrator/scripts/epic-watch.ts",
         "plugins/epic-orchestrator/scripts/trackers/jira.ts",
         "plugins/epic-orchestrator/skills/epic-orchestrator/references/worker-brief.md",
+        "plugins/pr-babysit/skills/babysit/references/fixer-brief.md",
         ...committedBundles(root),
       ],
       forbidden: ["node_modules/", ".env"],
