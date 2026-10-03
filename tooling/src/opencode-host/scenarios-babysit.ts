@@ -86,7 +86,10 @@ async function fixer(ctx: EntryContext): Promise<EntryResult> {
       pushDenied: refused(calls, "bash", `"git push origin HEAD:${BRANCH}"`),
       gitCDenied: refused(calls, "bash", `' push origin HEAD:${BRANCH}`),
       ghDenied: refused(calls, "bash", "gh pr comment"),
-      taskDenied: calls.some((c) => c.tool === "task" && c.status === "error"),
+      // A denied `task` is not even offered: the host turns the call into `invalid`.
+      taskUnavailable: calls.some(
+        (c) => c.tool === "invalid" && c.input.includes("unavailable tool 'task'"),
+      ),
       reported: json(p.report)["status"] === "done",
       stateHere: state["version"] === 2 && state["slot"] === SLOT,
       recorded:

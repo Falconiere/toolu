@@ -375,15 +375,31 @@ function processStart(pid) {
   const res = spawnSync("ps", ["-o", "lstart=", "-p", String(pid)], { encoding: "utf8" });
   return res.status === 0 ? res.stdout.trim() : "";
 }
-function groupMembers(pgid) {
-  const res = spawnSync("ps", ["-A", "-o", "pid=,pgid=,stat="], { encoding: "utf8" });
+function processTable() {
+  const res = spawnSync("ps", ["-A", "-o", "pid=,ppid=,pgid=,stat="], { encoding: "utf8" });
   if (res.status !== 0)
     fail("process_error", `ps failed: ${(res.stderr ?? "").trim()}`);
   return res.stdout.split(`
 `).flatMap((line) => {
-    const [pid, group, stat] = line.trim().split(/\s+/);
-    return group === String(pgid) && stat !== undefined && !stat.startsWith("Z") ? [Number(pid)] : [];
+    const [pid, ppid, pgid, stat] = line.trim().split(/\s+/);
+    return stat === undefined || stat.startsWith("Z") ? [] : [{ pid: Number(pid), ppid: Number(ppid), pgid: Number(pgid) }];
   });
+}
+function groupMembers(pgid) {
+  return processTable().filter((row) => row.pgid === pgid).map((row) => row.pid);
+}
+function family(pgid) {
+  const rows = processTable();
+  const found = new Set(rows.filter((row) => row.pgid === pgid).map((row) => row.pid));
+  for (let grew = true;grew; ) {
+    grew = false;
+    for (const row of rows)
+      if (!found.has(row.pid) && found.has(row.ppid)) {
+        found.add(row.pid);
+        grew = true;
+      }
+  }
+  return [...found];
 }
 function groupAlive(pid, start) {
   if (!Number.isInteger(pid) || pid <= 1)
@@ -393,30 +409,39 @@ function groupAlive(pid, start) {
     return false;
   return groupMembers(pid).length > 0;
 }
-function signalGroup(pid, signal) {
+function signal(target, sig) {
   try {
-    process.kill(-pid, signal);
+    process.kill(target, sig);
   } catch (error) {
     if (error.code !== "ESRCH")
       throw error;
   }
 }
-function waitGone(pid, start, seconds) {
+function waitGone(pids, seconds) {
+  const gone = () => {
+    const live = new Set(processTable().map((row) => row.pid));
+    return pids.every((pid) => !live.has(pid));
+  };
   for (let i = 0;i < seconds * 10; i += 1) {
-    if (!groupAlive(pid, start))
+    if (gone())
       return true;
     Bun.sleepSync(100);
   }
-  return !groupAlive(pid, start);
+  return gone();
 }
 function stopGroup(pid, start) {
   if (!groupAlive(pid, start))
     return true;
-  signalGroup(pid, "SIGTERM");
-  if (waitGone(pid, start, 10))
+  const pids = family(pid);
+  signal(-pid, "SIGTERM");
+  for (const member of pids)
+    signal(member, "SIGTERM");
+  if (waitGone(pids, 10))
     return true;
-  signalGroup(pid, "SIGKILL");
-  return waitGone(pid, start, 5);
+  signal(-pid, "SIGKILL");
+  for (const member of pids)
+    signal(member, "SIGKILL");
+  return waitGone(pids, 5);
 }
 function spawnFixer(run, log, env) {
   if (!commandAvailable("opencode"))
