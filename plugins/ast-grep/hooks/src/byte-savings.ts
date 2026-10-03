@@ -45,14 +45,19 @@ function record(
     kind === "read" ? readFullBytes(event.toolInput["file_path"], ctx.cwd ?? process.cwd()) : 0;
   const dir = ledgerDir(ctx.env);
   const ledger = join(dir, `${ledgerSessionId(ctx.raw["session_id"])}.jsonl`);
+  const line = `{"kind":"${kind}","returned":${returned},"full":${full}}\n`;
+  return appended(dir, ledger, line) ? { ledger, kind } : undefined;
+}
+
+/** Whether `line` reached `ledger`. The ledger is best-effort instrumentation: an unwritable root records nothing. */
+function appended(dir: string, ledger: string, line: string): boolean {
   try {
     mkdirSync(dir, { recursive: true });
-    appendFileSync(ledger, `{"kind":"${kind}","returned":${returned},"full":${full}}\n`);
+    appendFileSync(ledger, line);
+    return true;
   } catch {
-    // The ledger is best-effort instrumentation; an unwritable root records nothing.
-    return undefined;
+    return false;
   }
-  return { ledger, kind };
 }
 
 /** The session's report, or why it is unavailable; the record itself is already written. */

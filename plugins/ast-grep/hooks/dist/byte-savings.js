@@ -9905,14 +9905,18 @@ function record2(event, ctx) {
   const full = kind === "read" ? readFullBytes(event.toolInput["file_path"], ctx.cwd ?? process.cwd()) : 0;
   const dir = ledgerDir(ctx.env);
   const ledger = join(dir, `${ledgerSessionId(ctx.raw["session_id"])}.jsonl`);
+  const line = `{"kind":"${kind}","returned":${returned},"full":${full}}
+`;
+  return appended(dir, ledger, line) ? { ledger, kind } : undefined;
+}
+function appended(dir, ledger, line) {
   try {
     mkdirSync(dir, { recursive: true });
-    appendFileSync(ledger, `{"kind":"${kind}","returned":${returned},"full":${full}}
-`);
+    appendFileSync(ledger, line);
+    return true;
   } catch {
-    return;
+    return false;
   }
-  return { ledger, kind };
 }
 function sessionReport(ledger) {
   let text;

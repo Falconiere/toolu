@@ -85,6 +85,7 @@ test.concurrent("replayed, interrupted, unconfirmed, empty and non-text results 
   await p.call(astGrep(found), "once");
   expect(await p.replay(astGrep(found), "once")).not.toContain(REPORT);
   await p.call(astGrep(found, { exit: 0, interrupted: true }));
+  // No numeric `metadata.exit`: tool-post.ts cannot confirm the shell outcome and dispatches nothing.
   await p.call(astGrep(found, {}));
   await p.call({ ...grep, output: "" });
   const nonText = await p.call({ ...grep, output: 42 });
