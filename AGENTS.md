@@ -64,7 +64,7 @@ Benchmarks are hermetic. Context budget caps the Session Protocol, per-language 
 | `plugins/toolu/hooks/src/post-tools.ts` | Post-tool dispatcher, bundled to `hooks/dist/post-tools.js`: native gate-status and push-waiver, then `post-tools.d` (language-quality checks on edited files). |
 | `packages/toolu-core/src/gates/gates.ts` | `@toolu/core/gates`: native pre-tool gates (bash-commands, commit-gate, quality-gate, protected-files, mcp-blocker, code-edit-rules, push-review, plan-ledger, docs-sync) and post-tool gates (gate-status, push-waiver), plus parsed-command helpers. `@toolu/core/gates/mcp-hook` and `@toolu/core/gates/agent-tier` are standalone entries. |
 | `plugins/pr-babysit/hooks/src/babysit-tick.ts` | Babysit tick, bundled to `hooks/dist/babysit-tick.js`. Writes go through the bundled reply, resolve and record entries |
-| `plugins/pr-babysit/hooks/src/babysit-route-fix.ts` | Bun fixer routing bundle; scores Fix items with Jev and groups them by host, model and effort. `babysit-dispatch-fix.ts` starts and waits for herdr fixer agents. |
+| `plugins/pr-babysit/hooks/src/babysit-route-fix.ts` | Bun fixer routing bundle; scores Fix items with Jev and groups them by host, model and effort. `babysit-dispatch-fix.ts` starts and waits for herdr fixer agents, and for detached `opencode run` fixers (`babysit/fixer-process.ts`). |
 | `plugins/*/hooks/src/register.ts` | SessionStart registry sync |
 | `plugins/*/hooks/hooks.json` | Claude Code hook routing |
 | `tools/toolu-cli/src/cli.ts` | CLI entry (`npx @toolu/plugins install`, or `toolu install` once installed): parses argv, resolves the host, dispatches a verb |

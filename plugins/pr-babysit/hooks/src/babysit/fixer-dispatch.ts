@@ -10,7 +10,9 @@ import {
 import { basename, dirname, join, resolve } from "node:path";
 import { atomicWriteJson, fail, loadState, SlotLock, utcNow, type Json } from "./common.ts";
 import {
+  fixerEnv,
   groupAlive,
+  hostErrors,
   logTail,
   opencodeFixerArgs,
   spawnFixer,
@@ -186,6 +188,10 @@ export function fixerReportPath(stateFile: string, round: number, seq: number): 
 }
 export function fixerLogPath(stateFile: string, round: number, seq: number): string {
   return `${stateFile.replace(/\.json$/, "")}.fixer-r${round}g${seq}.log`;
+}
+/** An OpenCode fixer's `GH_CONFIG_DIR`: never created by toolu, so `gh` has no login. */
+export function fixerGhConfigPath(stateFile: string): string {
+  return `${stateFile.replace(/\.json$/, "")}.fixer-gh`;
 }
 /** The native worktree beside the slot state, used when no group needs a herdr pane. */
 export function nativeWorktreePath(stateFile: string): string {
@@ -413,6 +419,8 @@ class Dispatcher {
         );
       agentArgs(hostKind(group.host), "pb-000000-r1g1", group.model, group.effort, true);
     }
+    // An OpenCode fixer's environment is built from this one: refuse it before any side effect.
+    if (plan.groups.some((group) => group.host === "opencode")) fixerEnv(process.env, "", "");
   }
   private dropBranch(root: string, branch: string, pr: string): void {
     if (this.dry) return;
@@ -671,15 +679,21 @@ class Dispatcher {
       if (this.dry) return rendered;
       const log = fixerLogPath(this.stateFile, round, seq);
       rmSync(log, { force: true });
-      const spawned = spawnFixer(run, log, process.env);
+      const spawned = spawnFixer(run, log, process.env, fixerGhConfigPath(this.stateFile));
       if ("error" in spawned) this.settle(seq, "agent_start_failed", "", spawned.error);
       else
-        this.patchGroup(seq, {
-          status: "running",
-          pid: spawned.pid,
-          pidStart: spawned.pidStart,
-          log,
-        });
+        try {
+          this.patchGroup(seq, {
+            status: "running",
+            pid: spawned.pid,
+            pidStart: spawned.pidStart,
+            log,
+          });
+        } catch (error) {
+          // An unrecorded fixer would run on beside the next launch: end it first.
+          stopGroup(spawned.pid, spawned.pidStart);
+          throw error;
+        }
       return rendered;
     }
     const start = [
@@ -826,7 +840,7 @@ class Dispatcher {
   private groupOutcome(group: Group): { outcome: string; error: string } {
     if (group.host === "opencode") {
       const tail = logTail(group.log ?? "");
-      const outcome = fixerOutcome(group.report ?? "", tail);
+      const outcome = fixerOutcome(group.report ?? "", hostErrors(tail));
       const last = tail.replace(/\s+$/, "").slice(-600);
       return {
         outcome,
@@ -1086,7 +1100,7 @@ class Dispatcher {
     if (!this.dry)
       for (const file of readdirSync(dirname(this.stateFile)))
         if (file.startsWith(`${basename(this.stateFile).replace(/\.json$/, "")}.fixer-`))
-          rmSync(join(dirname(this.stateFile), file), { force: true });
+          rmSync(join(dirname(this.stateFile), file), { force: true, recursive: true });
     return this.dry
       ? { dryRun: true, commands: this.commands }
       : { version: 1, status: "cleaned", worktreeRemoved: removed, branchDeleted: deleted, note };

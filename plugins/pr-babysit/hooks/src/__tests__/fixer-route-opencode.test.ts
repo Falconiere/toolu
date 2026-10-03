@@ -1,44 +1,33 @@
-import { afterEach, expect, test } from "bun:test";
+import { expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { configFiles } from "../../../../../packages/toolu-core/src/config/config-files.ts";
-import { agentArgs, configPaths, loadFixerConfig, routeFix } from "../babysit/fixer-route.ts";
+import { agentArgs, configPaths, jevArgv } from "../babysit/fixer-route.ts";
 
 // OpenCode as a babysit controller and fixer host (#357): config from the
 // adapter's roots, an `opencode` row, Jev only from the OpenCode data root.
+// Routing runs the shipped bundle with an explicit env, never process.env.
 
 const root = resolve(import.meta.dir, "../../../../..");
+const bundle = join(root, "plugins/pr-babysit/hooks/dist/babysit-route-fix.js");
 const fixture = join(root, "plugins/pr-babysit/scripts/__tests__/fixtures/items/review-items.json");
 const answers = join(root, "plugins/pr-babysit/scripts/__tests__/fixtures/jev/fix-tiers.json");
-const KEYS = [
-  "HOME",
-  "PATH",
-  "PB_JEV",
-  "TOOLU_CONFIG_DIR",
-  "TOOLU_USER_CONFIG_DIR",
-  "TOOLU_PROJECT_DIR",
-  "TOOLU_PROJECT_CONFIG_DIRNAME",
-  "TYPESAFE_API_KEY",
-  "XDG_CONFIG_HOME",
-] as const;
-const original = Object.fromEntries(KEYS.map((key) => [key, process.env[key]]));
-const temps: string[] = [];
 
-afterEach(() => {
-  for (const dir of temps.splice(0)) rmSync(dir, { recursive: true, force: true });
-  for (const [key, value] of Object.entries(original)) {
-    if (value === undefined) delete process.env[key];
-    else process.env[key] = value;
-  }
-});
-
-type Roots = { home: string; project: string; data: string; user: string; bin: string };
+type Roots = {
+  home: string;
+  project: string;
+  data: string;
+  user: string;
+  bin: string;
+  env: Record<string, string>;
+  [Symbol.dispose](): void;
+};
 
 /** The env OpenCode's `shell.env` gives bash, rooted in a fresh sandbox. */
-function opencodeEnv(): Roots {
+function opencodeRoots(): Roots {
   const dir = mkdtempSync(join(tmpdir(), "pr-babysit-opencode-"));
-  temps.push(dir);
   const roots = {
     home: join(dir, "home"),
     project: join(dir, "project"),
@@ -47,15 +36,18 @@ function opencodeEnv(): Roots {
     bin: join(dir, "bin"),
   };
   for (const path of Object.values(roots)) mkdirSync(path, { recursive: true });
-  process.env.HOME = roots.home;
-  process.env.TOOLU_CONFIG_DIR = roots.data;
-  process.env.TOOLU_USER_CONFIG_DIR = roots.user;
-  process.env.TOOLU_PROJECT_DIR = roots.project;
-  process.env.TOOLU_PROJECT_CONFIG_DIRNAME = ".opencode";
-  process.env.PATH = `${roots.bin}:/usr/bin:/bin`;
-  delete process.env.PB_JEV;
-  delete process.env.TYPESAFE_API_KEY;
-  return roots;
+  return {
+    ...roots,
+    env: {
+      HOME: roots.home,
+      TOOLU_CONFIG_DIR: roots.data,
+      TOOLU_USER_CONFIG_DIR: roots.user,
+      TOOLU_PROJECT_DIR: roots.project,
+      TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",
+      PATH: `${roots.bin}:/usr/bin:/bin`,
+    },
+    [Symbol.dispose]: () => rmSync(dir, { recursive: true, force: true }),
+  };
 }
 
 /** A real executable on PATH: routing only asks whether the CLI exists. */
@@ -66,26 +58,50 @@ function onPath(roots: Roots, name: string): void {
 }
 
 function writeConfig(path: string, prBabysit: unknown): void {
-  mkdirSync(resolve(path, ".."), { recursive: true });
+  mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, JSON.stringify({ version: 1, prBabysit }));
 }
 
-test("OpenCode config files are the adapter's user and .opencode project files", () => {
-  const roots = opencodeEnv();
-  const paths = configPaths("opencode");
+/** `babysit-route-fix.js --host opencode` with exactly the sandbox env; its exit and parsed stdout. */
+function route(
+  roots: Roots,
+  args: string[],
+): { status: number | null; out: Record<string, unknown> } {
+  const res = spawnSync(
+    process.execPath,
+    [bundle, "--items", fixture, "--host", "opencode", ...args],
+    { cwd: roots.project, env: roots.env, encoding: "utf8" },
+  );
+  const out: Record<string, unknown> = JSON.parse(res.stdout);
+  return { status: res.status, out };
+}
+
+test.concurrent("OpenCode config files are the adapter's user and .opencode project files", () => {
+  using roots = opencodeRoots();
+  const paths = configPaths("opencode", roots.env);
   expect(paths).toEqual({
     user: join(roots.user, "toolu.config.json"),
     project: join(roots.project, ".opencode/toolu.config.json"),
   });
-  const core = configFiles({ host: "opencode", env: process.env, cwd: roots.project }).files;
+  const core = configFiles({ host: "opencode", env: roots.env, cwd: roots.project }).files;
   expect(paths).toEqual({ user: core.user, project: core.project ?? "" });
 });
 
-test("--host opencode merges both files, accepts routing.opencode and defaults to the controller host", () => {
-  const roots = opencodeEnv();
+test.concurrent("--host opencode merges both files, accepts routing.opencode and defaults to the controller host", () => {
+  using roots = opencodeRoots();
   onPath(roots, "opencode");
-  expect(loadFixerConfig("opencode").hosts).toEqual(["opencode"]);
-  expect(loadFixerConfig("opencode").routing.opencode).toEqual([{}, {}, {}, {}]);
+  const defaults = route(roots, ["--jev-answers-in", answers]);
+  expect(defaults.status).toBe(0);
+  expect(
+    (defaults.out.groups as { host: string; model: unknown; effort: unknown }[]).map((g) => [
+      g.host,
+      g.model,
+      g.effort,
+    ]),
+  ).toEqual([
+    ["opencode", null, null],
+    ["opencode", null, null],
+  ]);
   writeConfig(join(roots.user, "toolu.config.json"), { unattended: false });
   writeConfig(join(roots.project, ".opencode/toolu.config.json"), {
     routing: {
@@ -97,10 +113,11 @@ test("--host opencode merges both files, accepts routing.opencode and defaults t
       ],
     },
   });
-  const route = routeFix({ itemsFile: fixture, host: "opencode", answersFile: answers });
-  expect(route.dispatch).toBe("herdr");
-  expect(route.unattended).toBe(false);
-  expect(route.groups).toEqual([
+  const routed = route(roots, ["--jev-answers-in", answers]);
+  expect(routed.status).toBe(0);
+  expect(routed.out.dispatch).toBe("herdr");
+  expect(routed.out.unattended).toBe(false);
+  expect(routed.out.groups).toEqual([
     {
       seq: 1,
       tier: "complex",
@@ -108,7 +125,7 @@ test("--host opencode merges both files, accepts routing.opencode and defaults t
       host: "opencode",
       model: "probe/large",
       effort: "high",
-      items: expect.any(Array),
+      items: ["PRRT_kwDOSzYYFc6jy6Au", "PRRT_kwDOSzYYFc6jy5_u"],
     },
     {
       seq: 2,
@@ -117,39 +134,64 @@ test("--host opencode merges both files, accepts routing.opencode and defaults t
       host: "opencode",
       model: "probe/small",
       effort: null,
-      items: expect.any(Array),
+      items: [
+        "PRRT_kwDOSzUwAc6K6nEk",
+        "PRRT_kwDOSzUwAc6d2Ypf",
+        "PRRT_kwDOSzYYFc6jy6BF",
+        "PRRT_kwDOSzUwAc6K6VND",
+      ],
     },
   ]);
   writeConfig(join(roots.project, ".opencode/toolu.config.json"), {
     routing: { opencode: [{ model: "probe/a b" }, {}, {}, {}] },
   });
-  expect(() => loadFixerConfig("opencode")).toThrow("shell-unsafe");
+  const unsafe = route(roots, ["--no-jev"]);
+  expect(unsafe.status).toBe(3);
+  expect(JSON.stringify(unsafe.out)).toContain("shell-unsafe");
 });
 
-test("an opencode CLI missing from PATH drops the host and routes inline", () => {
-  opencodeEnv();
-  const route = routeFix({ itemsFile: fixture, host: "opencode", noJev: true });
-  expect(route.dispatch).toBe("inline");
-  expect(route.note).toContain("CLI not on PATH: opencode");
-  expect((route.groups as { host: string | null }[]).every((g) => g.host === null)).toBe(true);
+test.concurrent("an opencode CLI missing from PATH drops the host and routes inline", () => {
+  using roots = opencodeRoots();
+  const { status, out } = route(roots, ["--no-jev"]);
+  expect(status).toBe(0);
+  expect(out.dispatch).toBe("inline");
+  expect(out.note).toContain("CLI not on PATH: opencode");
+  expect((out.groups as { host: string | null }[]).every((g) => g.host === null)).toBe(true);
 });
 
-test("Jev on OpenCode comes only from the data root, never a Claude or Codex wrapper", () => {
-  const roots = opencodeEnv();
+test.concurrent("Jev on OpenCode comes only from the data root, never a Claude or Codex wrapper", () => {
+  using roots = opencodeRoots();
   onPath(roots, "opencode");
   for (const host of [".claude", ".codex"]) {
     mkdirSync(join(roots.home, host, "jev"), { recursive: true });
     writeFileSync(join(roots.home, host, "jev/jev.sh"), "#!/bin/sh\nexit 0\n");
   }
-  const absent = routeFix({ itemsFile: fixture, host: "opencode" });
-  expect(absent.note).toContain("jev unavailable (jev.sh not installed)");
+  expect(route(roots, []).out.note).toContain("jev unavailable (jev.sh not installed)");
   mkdirSync(join(roots.data, "jev"), { recursive: true });
   writeFileSync(join(roots.data, "jev/jev.sh"), "#!/bin/sh\nexit 0\n");
-  const present = routeFix({ itemsFile: fixture, host: "opencode" });
-  expect(present.note).toContain("jev unavailable (TYPESAFE_API_KEY not set)");
+  expect(route(roots, []).out.note).toContain("jev unavailable (TYPESAFE_API_KEY not set)");
 });
 
-test("fixer flags: OpenCode uses --auto, --model and --variant; other hosts are unchanged", () => {
+test.concurrent("Jev runs without .env loading on OpenCode only", () => {
+  expect(jevArgv("opencode", "/j/jev.sh", "/s.json")).toEqual([
+    "--no-env-file",
+    "/j/jev.sh",
+    "ask",
+    "-",
+    "-s",
+    "@/s.json",
+  ]);
+  for (const host of ["claude", "codex"] as const)
+    expect(jevArgv(host, "/j/jev.sh", "/s.json")).toEqual([
+      "/j/jev.sh",
+      "ask",
+      "-",
+      "-s",
+      "@/s.json",
+    ]);
+});
+
+test.concurrent("fixer flags: OpenCode uses --auto, --model and --variant; other hosts are unchanged", () => {
   expect(agentArgs("opencode", "pb-1", "probe/m", "high", true)).toEqual([
     "--auto",
     "--model",

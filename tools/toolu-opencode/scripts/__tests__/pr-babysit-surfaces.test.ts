@@ -54,6 +54,8 @@ const BANNED = [
   "### Claude Code scheduling",
   "### Codex",
   'bun "$PLUGIN_ROOT',
+  "`--host` is this controller",
+  "Claude cron interval",
 ];
 
 test("the closure reaches the workflow and helper contract; the fixer brief ships beside them", () => {
