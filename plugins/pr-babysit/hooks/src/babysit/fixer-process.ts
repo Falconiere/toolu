@@ -126,7 +126,8 @@ function family(pgid: number): number[] {
 export function groupAlive(pid: number, start: string): boolean {
   if (!Number.isInteger(pid) || pid <= 1) return false;
   const leader = processStart(pid);
-  if (leader !== "" && leader !== start) return false;
+  // An unknown recorded start ("" when ps missed the new process) proves nothing either way.
+  if (leader !== "" && start !== "" && leader !== start) return false;
   return groupMembers(pid).length > 0;
 }
 

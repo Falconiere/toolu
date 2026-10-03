@@ -405,7 +405,7 @@ function groupAlive(pid, start) {
   if (!Number.isInteger(pid) || pid <= 1)
     return false;
   const leader = processStart(pid);
-  if (leader !== "" && leader !== start)
+  if (leader !== "" && start !== "" && leader !== start)
     return false;
   return groupMembers(pid).length > 0;
 }
@@ -1234,10 +1234,13 @@ class Dispatcher {
   }
   cleanup() {
     const active = this.state.fixer?.groups.find((g) => ["running", "launching", "blocked"].includes(g.status));
-    if (active && !this.dry && !this.stopFixer(active))
-      fail("fixer_running", `fixer group ${active.seq} did not exit; its worktree is kept`, {
-        group: active.seq
-      });
+    if (active && !this.dry) {
+      const stopped = this.stopFixer(active);
+      if (!stopped && active.host === "opencode")
+        fail("fixer_running", `fixer group ${active.seq} did not exit; its worktree is kept`, {
+          group: active.seq
+        });
+    }
     this.save((state) => {
       state.fixer = null;
     });

@@ -996,10 +996,14 @@ class Dispatcher {
     const active = this.state.fixer?.groups.find((g) =>
       ["running", "launching", "blocked"].includes(g.status),
     );
-    if (active && !this.dry && !this.stopFixer(active))
-      fail("fixer_running", `fixer group ${active.seq} did not exit; its worktree is kept`, {
-        group: active.seq,
-      });
+    if (active && !this.dry) {
+      const stopped = this.stopFixer(active);
+      // A herdr agent goes with its workspace below; an OpenCode process group that outlived KILL would keep running in the worktree.
+      if (!stopped && active.host === "opencode")
+        fail("fixer_running", `fixer group ${active.seq} did not exit; its worktree is kept`, {
+          group: active.seq,
+        });
+    }
     this.save((state) => {
       state.fixer = null;
     });
