@@ -3,8 +3,8 @@
  * herdr pane. Its agent is defined through OPENCODE_CONFIG_CONTENT with `task`
  * and the plain push and `gh` command forms denied; the host layers agent rules
  * over the user's own, and `--auto` approves asks but keeps explicit denies.
- * Whatever form a command takes, the fixer's environment holds no GitHub
- * credential and git cannot push. The dispatcher records the process group's pid
+ * Whatever form a command takes, the fixer's environment has no GitHub login
+ * and git reaches no network remote. The dispatcher records the process group's pid
  * and its leader's start time: a pid whose recorded start differs is a reused
  * one, never taken for the fixer or signalled.
  */
@@ -56,10 +56,6 @@ export function fixerConfigContent(existing: string | undefined): string {
   return JSON.stringify({ ...base, agent: { ...agents, [FIXER_AGENT]: FIXER_AGENT_CONFIG } });
 }
 
-/** The scheme every push URL is rewritten to; git has no helper for it, so no push leaves. */
-const NO_PUSH = "pr-babysit-fixer-no-push";
-/** Every remote URL starts with one of these: a local path or a network scheme. */
-const PUSH_PREFIXES = ["/", "file://", "https://", "http://", "ssh://", "git://", "git@"];
 const GITHUB_TOKENS = [
   "GH_TOKEN",
   "GITHUB_TOKEN",
@@ -69,9 +65,10 @@ const GITHUB_TOKENS = [
 
 /**
  * The fixer's environment: the caller's, plus the fixer agent, minus every way
- * to write to GitHub. `gh` gets an empty config dir and no token; git drops its
- * credential helpers, never prompts, and rewrites every push URL to a scheme it
- * cannot reach. Existing `GIT_CONFIG_*` entries are kept.
+ * to write to GitHub, whatever form a command takes. `gh` gets a config dir that
+ * does not exist and no token, so it has no login; git may use only the `file`
+ * transport, so https, ssh (scp-style aliases included) and git:// remotes are
+ * refused for push and fetch alike, while a test's local bare remote still works.
  */
 export function fixerEnv(
   base: NodeJS.ProcessEnv,
@@ -84,24 +81,10 @@ export function fixerEnv(
     PWD: worktree,
     OPENCODE_CONFIG_CONTENT: fixerConfigContent(base.OPENCODE_CONFIG_CONTENT),
     GH_CONFIG_DIR: ghConfigDir,
+    GIT_ALLOW_PROTOCOL: "file",
     GIT_TERMINAL_PROMPT: "0",
   };
   for (const key of GITHUB_TOKENS) delete env[key];
-  const count = Number(base.GIT_CONFIG_COUNT ?? "0");
-  if (!Number.isInteger(count) || count < 0)
-    fail("config_invalid", "GIT_CONFIG_COUNT is not a whole number; fix or unset it");
-  const entries: ReadonlyArray<readonly [string, string]> = [
-    ["credential.helper", ""],
-    ...PUSH_PREFIXES.map((prefix): readonly [string, string] => [
-      `url.${NO_PUSH}://.pushInsteadOf`,
-      prefix,
-    ]),
-  ];
-  entries.forEach(([key, value], index) => {
-    env[`GIT_CONFIG_KEY_${count + index}`] = key;
-    env[`GIT_CONFIG_VALUE_${count + index}`] = value;
-  });
-  env.GIT_CONFIG_COUNT = String(count + entries.length);
   return env;
 }
 

@@ -11,6 +11,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import {
   BRANCH,
+  GITHUB_REMOTE,
   RUN_MS,
   SKILL,
   SLEEP,
@@ -50,7 +51,7 @@ function writeGuards(calls: ReturnType<typeof fixerTools>): Record<string, boole
     gitCDenied: refused(calls, "bash", `' push origin HEAD:${BRANCH}`),
     ghDenied: refused(calls, "bash", "gh pr comment"),
     // Forms no deny pattern names: the fixer's environment stops them.
-    wrappedPushBlocked: said(`"env git push origin HEAD:${BRANCH}"`, /pr-babysit-fixer-no-push/),
+    wrappedPushBlocked: said(`"env git push ${GITHUB_REMOTE}`, /transport 'https' not allowed/),
     ghNoLogin: said('"env gh auth status"', /not logged in/i),
     // A denied `task` is not even offered: the host turns the call into `invalid`.
     taskUnavailable: calls.some(

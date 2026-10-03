@@ -3,7 +3,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fixerOutcome, nativeWorktreePath } from "../babysit/fixer-dispatch.ts";
+import { fixerGhConfigPath, fixerOutcome, nativeWorktreePath } from "../babysit/fixer-dispatch.ts";
 import {
   FIXER_AGENT,
   fixerConfigContent,
@@ -218,16 +218,14 @@ test.concurrent("opencode run argv names the fixer agent, worktree, approvals, m
   ]);
 });
 
-test.concurrent("the fixer env drops GitHub tokens, keeps caller git config and refuses a bad count", () => {
+test.concurrent("the fixer env drops GitHub tokens and allows git only local remotes", () => {
   const env = fixerEnv(
     {
       GH_TOKEN: "t1",
       GITHUB_TOKEN: "t2",
       GH_ENTERPRISE_TOKEN: "t3",
       GITHUB_ENTERPRISE_TOKEN: "t4",
-      GIT_CONFIG_COUNT: "1",
-      GIT_CONFIG_KEY_0: "user.name",
-      GIT_CONFIG_VALUE_0: "Caller",
+      GIT_ALLOW_PROTOCOL: "file:https:ssh",
       KEEP: "yes",
     },
     "/w",
@@ -239,53 +237,35 @@ test.concurrent("the fixer env drops GitHub tokens, keeps caller git config and 
     KEEP: "yes",
     PWD: "/w",
     GH_CONFIG_DIR: "/gh",
+    GIT_ALLOW_PROTOCOL: "file",
     GIT_TERMINAL_PROMPT: "0",
-    GIT_CONFIG_KEY_0: "user.name",
-    GIT_CONFIG_VALUE_0: "Caller",
-    GIT_CONFIG_KEY_1: "credential.helper",
-    GIT_CONFIG_VALUE_1: "",
-    GIT_CONFIG_KEY_2: "url.pr-babysit-fixer-no-push://.pushInsteadOf",
-    GIT_CONFIG_VALUE_2: "/",
-    GIT_CONFIG_COUNT: "9",
   });
   expect(JSON.parse(env.OPENCODE_CONFIG_CONTENT ?? "{}").agent[FIXER_AGENT]).toBeDefined();
-  expect(() => fixerEnv({ GIT_CONFIG_COUNT: "two" }, "/w", "/gh")).toThrow("GIT_CONFIG_COUNT");
 });
 
-test.concurrent("under the fixer env git cannot push in any command form and has no credential helper", () => {
+test.concurrent("under the fixer env git refuses every network remote, in any command form, and keeps local ones", () => {
   using sb = sandbox("pr-babysit-nopush-");
   const { repo, origin } = repository(sb);
   writeFileSync(join(repo, "sum.ts"), "export const sum = (a: number, b: number) => a + b;\n");
   gitOk(repo, sb.env, "commit", "--quiet", "-am", "fix: add");
-  const before = gitOk(origin, sb.env, "rev-parse", "feat/fix");
-  const env = fixerEnv(
-    {
-      ...sb.env,
-      GIT_CONFIG_COUNT: "1",
-      GIT_CONFIG_KEY_0: "credential.helper",
-      GIT_CONFIG_VALUE_0: "store",
-    },
-    repo,
-    join(sb.dir, "gh"),
-  );
-  for (const command of [
-    "git push origin HEAD:feat/fix",
-    `env git -C '${repo}' push origin HEAD:feat/fix`,
-    `/usr/bin/git push '${origin}' HEAD:feat/fix`,
+  const env = fixerEnv(sb.env, repo, join(sb.dir, "gh"));
+  // No network is touched: git refuses the transport before connecting.
+  for (const [command, transport] of [
+    ["git push https://github.com/Falconiere/toolu.git HEAD:refs/heads/probe", "https"],
+    ["env git push git@github.com:Falconiere/toolu.git HEAD:refs/heads/probe", "ssh"],
+    [`/usr/bin/git -C '${repo}' push ssh://git@github.com/Falconiere/toolu.git HEAD:probe`, "ssh"],
+    ["sh -c 'git push gh-alias:Falconiere/toolu.git HEAD:probe'", "ssh"],
+    ["git fetch git://github.com/Falconiere/toolu.git", "git"],
   ]) {
-    const res = spawnSync("sh", ["-c", command], { cwd: repo, env, encoding: "utf8" });
+    const res = spawnSync("sh", ["-c", command ?? ""], { cwd: repo, env, encoding: "utf8" });
     expect(res.status, command).not.toBe(0);
-    expect(res.stderr, command).toContain("pr-babysit-fixer-no-push");
+    expect(res.stderr, command).toContain(`transport '${transport}' not allowed`);
   }
-  expect(gitOk(origin, sb.env, "rev-parse", "feat/fix")).toBe(before);
-  // The empty value comes last: it resets the helper list, so no stored credential is used.
-  const helpers = spawnSync("git", ["config", "--get-all", "credential.helper"], {
-    cwd: repo,
-    env,
-    encoding: "utf8",
-  });
-  expect(helpers.stdout).toBe("store\n\n");
-  expect(gitOk(repo, env, "rev-parse", "HEAD")).not.toBe(before);
+  // A local bare remote, the kind this repository's own tests push to, still works.
+  gitOk(repo, env, "push", "--quiet", "origin", "HEAD:refs/heads/local-check");
+  expect(gitOk(origin, sb.env, "rev-parse", "local-check")).toBe(
+    gitOk(repo, sb.env, "rev-parse", "HEAD"),
+  );
 });
 
 test.concurrent.skipIf(!HAS_GH)(
@@ -375,6 +355,10 @@ test.concurrent("logTail reads at most the end of a large log and never a cut-of
   writeFileSync(log, `${lines.join("\n")}\n`);
   expect(logTail(log, 3)).toBe(`${lines.slice(-2).join("\n")}\n`);
   expect(logTail(log, 40).split("\n")[0]).toBe(lines.at(-39));
+  // Asked for more than was read: the first returned line is whole, never the cut one.
+  const all = logTail(log, 100000).split("\n");
+  expect(all[0]).toMatch(/^line \d+ x{40}$/);
+  expect(all.length).toBeLessThan(lines.length);
   expect(logTail(join(sb.dir, "missing.log"))).toBe("");
 });
 
@@ -475,12 +459,15 @@ test.concurrent("a fixer that cannot start settles agent_start_failed; cleanup r
   expect(JSON.stringify(dirty.out)).toContain("worktree_dirty");
   expect(existsSync(worktree)).toBe(true);
   rmSync(join(worktree, "extra.ts"));
+  // gh may create its config dir; cleanup removes it with the other fixer files.
+  mkdirSync(join(fixerGhConfigPath(stateFile), "state"), { recursive: true });
   expect(dispatch(sb.env, ["cleanup", "--state-file", stateFile]).out).toMatchObject({
     status: "cleaned",
     worktreeRemoved: true,
     branchDeleted: true,
   });
   expect(existsSync(worktree)).toBe(false);
+  expect(existsSync(fixerGhConfigPath(stateFile))).toBe(false);
   const after = JSON.parse(readFileSync(stateFile, "utf8"));
   expect(after.fixer).toBeNull();
   expect(after.herdrWorktree).toBeNull();

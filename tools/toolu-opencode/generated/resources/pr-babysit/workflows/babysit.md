@@ -374,8 +374,8 @@ An OpenCode fixer runs as the `pr-babysit-fixer` agent, which the dispatcher
 defines in `OPENCODE_CONFIG_CONTENT` on top of your own config: `task` and the
 plain `git push` and `gh` forms are denied, and your own permission rules still
 apply (`--auto`, the unattended default, approves asks but never a deny). Whatever
-form a command takes, the fixer has no GitHub token or `gh` login, and git rewrites
-every push URL to a scheme it cannot reach. Its model and `--variant`
+form a command takes, the fixer has no GitHub token or `gh` login, and git may use
+only local (`file`) remotes, so https and ssh pushes are refused. Its model and `--variant`
 come from `prBabysit.routing.opencode`, else your default model. When every group
 is OpenCode no herdr is needed: the worktree is a native `git worktree` at
 `<state>.worktree`.
