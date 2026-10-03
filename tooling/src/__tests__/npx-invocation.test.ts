@@ -14,7 +14,7 @@
 import { expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { run } from "@toolu/conformance/harness/spawn";
+import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { z } from "zod";
 
@@ -70,7 +70,7 @@ async function localMatches(name: string): Promise<{ exitCode: number; output: s
 const PackageJson = z.object({ version: z.string() });
 
 /** Pack the publish folder into the sandbox and return the `file:` spec npx installs. */
-async function packTarball(sb: Sandbox, env: Record<string, string>): Promise<string> {
+async function packTarball(sb: Sandbox, env: EnvPatch): Promise<string> {
   const packed = await run(["npm", "pack", "--silent", "--pack-destination", sb.project], {
     cwd: PUBLISH_DIR,
     env,
@@ -98,9 +98,10 @@ test.concurrent("npm sees no local package named @toolu/plugins, so npx goes to 
 test.concurrent("the packed tarball runs through npx with the verb first", async () => {
   using sb = createSandbox();
   // Isolated cache, and no update notice mixed into the captured output.
-  const env = {
+  const env: EnvPatch = {
     npm_config_cache: sb.path("npm-cache"),
     npm_config_update_notifier: "false",
+    npm_config_store_dir: undefined,
   };
   const spec = await packTarball(sb, env);
   const { version } = PackageJson.parse(

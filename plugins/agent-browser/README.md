@@ -12,6 +12,8 @@ Efficient, token-lean browser automation for agents via agent-browser (skill + C
 
 Standalone, no dependencies.
 
+On OpenCode, add `agent-browser` to `.opencode/toolu/plugins.json` and restart. The native skill is `agent-browser-agent-browser`; startup supplies the project-specific `"${TOOLU_CONFIG_DIR}/agent-browser/agent-browser.sh"` helper path. Install the external CLI and Chromium as below. Removing the plugin from the selection removes its skill, startup instructions, and toolu-owned helper on the next start. See [OpenCode browser automation](../../docs/opencode.md#browser-automation).
+
 ## What it provides
 
 - **`agent-browser` skill** (ALWAYS ACTIVE) — teaches the token-lean loop for driving a real, JS-rendered browser: `open → snapshot -i --json (@eN refs) → act → re-snapshot → get → close`, with a11y-tree-over-screenshots discipline, daemon reuse, and untrusted-page-text safety.

@@ -109,6 +109,8 @@ test("all 16 plugins start in dependency order with every contribution verified"
     result.plugins.find((plugin) => plugin.plugin === name)?.entries[0]?.additionalContext ?? "";
   expect(context("toolu")).toContain("Session Protocol");
   expect(context("jev")).toContain("Jev");
+  expect(context("agent-browser")).toContain("agent-browser-agent-browser");
+  expect(context("agent-browser")).toContain("agent-browser.sh");
 });
 
 test("a second startup is idempotent: same artifacts, untouched files and ledger", async () => {

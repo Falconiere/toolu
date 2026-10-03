@@ -15,19 +15,14 @@ Invoke at the **stable published path** (a symlink the plugin's SessionStart hoo
 refreshes every session):
 
 ```bash
-# Codex
-"${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/agent-browser/agent-browser.sh" <command> [args]
-# Claude Code
-"${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/agent-browser/agent-browser.sh" <command> [args]
+# OpenCode
+: "${TOOLU_CONFIG_DIR:?toolu OpenCode startup required}"
+"${TOOLU_CONFIG_DIR}/agent-browser/agent-browser.sh" <command> [args]
 ```
 
-Choose the line for the active host. Ordinary shell calls do not inherit
-plugin lifecycle variables, so never collapse these into one ambiguous
-fallback. Use the published path; plugin-root variables are lifecycle-only.
-
-Repo-checkout fallback (for tests or dev, where the SessionStart hook has not run
-so the symlink may be absent): the executable Bun bundle
-`plugins/agent-browser/hooks/dist/agent-browser.js`.
+OpenCode provides `TOOLU_CONFIG_DIR` for the current project in every bash call.
+Use the helper path above; its SessionStart entry refreshes the symlink and
+places the exact path in startup instructions.
 
 The wrapper bakes in token-lean defaults for the read-heavy commands
 (`snapshot` → `-i --json --max-output 4000 --content-boundaries`; `get`/`find`/`diff`
@@ -69,9 +64,8 @@ manager for you.
 
 ## When NOT to use
 
-- **Static docs / a library API question** → use the `context7` skill.
-- **A plain web search or fetching a static page's text/JSON** → use `exa-search`
-  (or the active host's native web fetch). Spinning up a browser for a static
+- **Static docs / a library API question** → use the native `context7-context7` skill when enabled; otherwise read official docs with OpenCode's `webfetch`.
+- **A plain web search or fetching a static page's text/JSON** → use the native `exa-search-exa-search` skill when enabled, or OpenCode's `webfetch`. Spinning up a browser for a static
   GET is pure waste.
 - Reach for agent-browser only when the page is interactive or JS-rendered, or the
   task requires clicking/typing/submitting in a live browser.

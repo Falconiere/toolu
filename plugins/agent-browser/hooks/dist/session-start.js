@@ -1,6 +1,36 @@
 // @bun
 // plugins/agent-browser/hooks/src/session-start.ts
 import { resolve } from "path";
+
+// packages/toolu-core/src/state/state-io.ts
+function toJqJson(value, pretty) {
+  const json = pretty ? JSON.stringify(value, null, 2) : JSON.stringify(value);
+  return json.replaceAll("\x7F", "\\u007f");
+}
+
+// packages/toolu-core/src/startup/context.ts
+var MAX_CONTEXT_CHARS = 1e4;
+function bounded(text, max) {
+  if (text.length <= max)
+    return text;
+  const code = text.charCodeAt(max - 1);
+  const end = code >= 55296 && code <= 56319 ? max - 1 : max;
+  return text.slice(0, end);
+}
+function sessionContext(event, text) {
+  if (text === "")
+    return;
+  return {
+    hookSpecificOutput: {
+      hookEventName: event,
+      additionalContext: bounded(text, MAX_CONTEXT_CHARS)
+    }
+  };
+}
+function renderHookOutput(value, pretty) {
+  return `${toJqJson(value, pretty)}
+`;
+}
 // packages/toolu-core/src/host/host-name.ts
 var HOST_NAMES = ["claude", "codex", "cursor", "opencode", "hermes"];
 function envValue(env, key) {
@@ -229,10 +259,15 @@ function publishBunCli(options) {
   return result;
 }
 // plugins/agent-browser/hooks/src/session-start.ts
-publishBunCli({
+var published = publishBunCli({
   plugin: "agent-browser",
   source: resolve(import.meta.dir, "../dist/agent-browser.js"),
   dir: "agent-browser",
   name: "agent-browser.sh",
   tool: "agent-browser wrapper"
 });
+if (process.env.TOOLU_HOST_OVERRIDE === "opencode" && published.status === "published") {
+  const context = sessionContext("SessionStart", `agent-browser is ready at ${published.path}. Load the native skill agent-browser-agent-browser when driving a real browser. Use the helper to open the page, snapshot its accessibility tree, act on an @eN ref, re-snapshot after changes, then close. The external agent-browser binary and Chromium are prerequisites; if missing, follow the helper's install diagnostic.`);
+  if (context !== undefined)
+    process.stdout.write(renderHookOutput(context, false));
+}

@@ -59,6 +59,32 @@ export function rewriteBody(
     rewritten = pathParts.join(destination);
   }
   if (skillId) {
+    if (skillId === "agent-browser-agent-browser") {
+      const cliStart = rewritten.indexOf("```bash\n# Codex\n");
+      const wrapperStart = rewritten.indexOf("The wrapper bakes in token-lean defaults", cliStart);
+      if (cliStart < 0 || wrapperStart < 0) {
+        throw new Error("agent-browser skill: cannot find host-specific CLI instructions");
+      }
+      rewritten = `${rewritten.slice(0, cliStart)}\`\`\`bash
+# OpenCode
+: "\${TOOLU_CONFIG_DIR:?toolu OpenCode startup required}"
+"\${TOOLU_CONFIG_DIR}/agent-browser/agent-browser.sh" <command> [args]
+\`\`\`
+
+OpenCode provides \`TOOLU_CONFIG_DIR\` for the current project in every bash call.
+Use the helper path above; its SessionStart entry refreshes the symlink and
+places the exact path in startup instructions.
+
+${rewritten.slice(wrapperStart)}`;
+      rewritten = rewritten.replace(
+        "use the `context7` skill.",
+        "use the native `context7-context7` skill when enabled; otherwise read official docs with OpenCode's `webfetch`.",
+      );
+      rewritten = rewritten.replace(
+        "use `exa-search`\n  (or the active host's native web fetch).",
+        "use the native `exa-search-exa-search` skill when enabled, or OpenCode's `webfetch`.",
+      );
+    }
     if (skillId === "toolu-review-review") {
       rewritten = rewritten.replace("# Claude Code\n", "# OpenCode\n");
       rewritten = rewritten.replace("TOOLU_HOST_OVERRIDE=claude", "TOOLU_HOST_OVERRIDE=opencode");

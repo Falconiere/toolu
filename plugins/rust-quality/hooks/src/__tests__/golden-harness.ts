@@ -149,7 +149,9 @@ async function runStep(sb: Sandbox, host: PretoolHost, c: RsCase, step: Step): P
   const state = Object.fromEntries(
     Object.entries(res.state).map(([k, v]) => [
       normalise(k, sb.root),
-      normalise(k.endsWith("quality-gate-status.json") ? canonicalGate(v) : v, sb.root),
+      k.endsWith("quality-gate-status.json")
+        ? canonicalGate(normalise(v, sb.root))
+        : normalise(v, sb.root),
     ]),
   );
   return {
