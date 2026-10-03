@@ -74,7 +74,9 @@ test.skipIf(process.env.TOOLU_LIVE_OPENCODE !== "1")(
       const captured = allRequestText(session);
       expect(system).toContain(INSTRUCTION);
       expect(system).toContain("--no-env-file");
-      expect(captured).toContain("context7-context7");
+      // Discovered, not merely named by the instruction: the host lists it as a skill.
+      const skills = system.includes(String.raw`<name>context7-context7</name>`);
+      expect(skills).toBe(true);
       expect(toolStates(hostRun)).toEqual([{ tool: "bash", status: "completed", error: null }]);
       expect(fixture.requests).toHaveLength(1);
       expect(fixture.requests[0]?.path).toBe("/api/v2/libs/search?libraryName=react&query=react");
@@ -85,7 +87,7 @@ test.skipIf(process.env.TOOLU_LIVE_OPENCODE !== "1")(
         `${JSON.stringify({
           host: host.version,
           instruction: system.includes(INSTRUCTION),
-          skill: captured.includes("context7-context7"),
+          skill: skills,
           search: captured.includes("/facebook/react"),
           fixtureRequests: fixture.requests.length,
           dotenvSent: fixture.requests.some((req) => req.headers.authorization !== undefined),
