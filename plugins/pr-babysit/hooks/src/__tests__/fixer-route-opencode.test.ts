@@ -191,7 +191,7 @@ test.concurrent("Jev runs without .env loading on OpenCode only", () => {
     ]);
 });
 
-test.concurrent("fixer flags: OpenCode uses --auto, --model and --variant; other hosts are unchanged", () => {
+test.concurrent("fixer flags: OpenCode uses --auto, --model and --variant; other hosts keep theirs", () => {
   expect(agentArgs("opencode", "pb-1", "probe/m", "high", true)).toEqual([
     "--auto",
     "--model",
@@ -216,6 +216,7 @@ test.concurrent("fixer flags: OpenCode uses --auto, --model and --variant; other
     "pb-1",
   ]);
   expect(agentArgs("codex", "pb-1", "gpt-6-sol", "high", false)).toEqual([
+    "--no-daemon",
     "--ask-for-approval",
     "on-request",
     "--sandbox",
