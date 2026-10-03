@@ -302,3 +302,56 @@ test("the shipped TypeScript quality bundle records and clears a per-file gate e
   expect(passed).toMatchObject({ status: "passing" });
   post.clear();
 });
+
+test("post modules see the host's result text as tool_response.output; the shell exit is unchanged", async () => {
+  const { root, options } = await project();
+  const trace = join(root, "response.jsonl");
+  await writeFile(
+    join(root, ".opencode/toolu/state/toolu/post-tools.d/fixture@toolu__response.js"),
+    `import { appendFileSync } from "node:fs";
+export default {
+  spec: "fixture@toolu", name: "response", event: "tool/post",
+  run(event) {
+    appendFileSync(${JSON.stringify(trace)}, JSON.stringify(event.toolOutput) + "\\n");
+    return Promise.resolve({ kind: "allow" });
+  }
+};\n`,
+  );
+  const post = createToolPostHandler(options, createToolAdviceStore());
+  const path = join(root, "read.ts");
+  await writeFile(path, "export const read = 1;\n");
+  const read = {
+    tool: "read",
+    sessionID: "session-response",
+    callID: "read",
+    args: { filePath: path },
+  };
+  const readOutput = {
+    title: "read",
+    output: "<file>\n00001| export const read = 1;\n</file>",
+    metadata: { truncated: false },
+  };
+  await post.after(read, readOutput);
+  for (const [id, exit] of [
+    ["exit-3", 3],
+    ["exit-0", 0],
+  ] as const) {
+    const call = { ...qualityCall(id), sessionID: "session-response" };
+    await post.after(call, { title: "bash", output: `ran ${id}\n`, metadata: { exit } });
+  }
+  const Response = z.object({
+    output: z.string(),
+    interrupted: z.boolean(),
+    metadata: z.record(z.string(), z.unknown()),
+  });
+  const seen = (await readFile(trace, "utf8"))
+    .trim()
+    .split("\n")
+    .map((line) => Response.parse(JSON.parse(line)));
+  expect(seen).toEqual([
+    { output: readOutput.output, interrupted: false, metadata: { truncated: false } },
+    { output: "ran exit-3\n", interrupted: false, metadata: { exit_code: 3 } },
+    { output: "ran exit-0\n", interrupted: false, metadata: { exit_code: 0 } },
+  ]);
+  post.clear();
+});
