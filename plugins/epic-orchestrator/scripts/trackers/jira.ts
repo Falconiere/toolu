@@ -6,7 +6,7 @@
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { CommandError, run } from "../common.ts";
+import { CommandError, helperCandidates, run } from "../common.ts";
 import { defaultPolicy, withRetry } from "../ratelimit.ts";
 import { excerpt, repoFor, type EpicInfo, type TrackedIssue, type Tracker } from "./types.ts";
 
@@ -41,11 +41,7 @@ export function parseJiraRef(ref: string): string | null {
 }
 
 export function jiraScript(env: NodeJS.ProcessEnv = process.env): string | null {
-  const candidates = [
-    env.EPIC_JIRA_SH,
-    join(env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"), "jira", "jira.sh"),
-    join(env.CODEX_HOME || join(homedir(), ".codex"), "jira", "jira.sh"),
-  ];
+  const candidates = [env.EPIC_JIRA_SH, ...helperCandidates("jira/jira.sh", env)];
   return candidates.find((p): p is string => !!p && existsSync(p)) ?? null;
 }
 

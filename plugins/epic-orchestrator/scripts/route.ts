@@ -6,11 +6,10 @@
  * `<state>/routes/<key>.json`, so relaunches keep their host and model. */
 
 import { existsSync, readdirSync, realpathSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { readResourceState, resourceHome } from "../hooks/dist/epic-runtime.js";
 import { runCommand } from "../hooks/dist/epic-runtime.js";
-import { EPICS_HOME, readJson, writeJson } from "./common.ts";
+import { EPICS_HOME, helperCandidates, readJson, writeJson } from "./common.ts";
 import { occupiesSlot } from "./epic-graph.ts";
 import { HOST_KINDS, hostKind, parseHostKind, type HostKind } from "./hosts.ts";
 
@@ -100,11 +99,7 @@ export function tierFromScore(score: number): number {
 }
 
 export function jevScript(env: NodeJS.ProcessEnv = process.env): string | null {
-  const candidates = [
-    env.EPIC_JEV,
-    join(env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"), "jev", "jev.sh"),
-    join(env.CODEX_HOME || join(homedir(), ".codex"), "jev", "jev.sh"),
-  ];
+  const candidates = [env.EPIC_JEV, ...helperCandidates("jev/jev.sh", env)];
   return candidates.find((p): p is string => !!p && existsSync(p)) ?? null;
 }
 

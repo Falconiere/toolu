@@ -3,10 +3,13 @@ strips this comment. Workers only ever read the rendered copy. Host- and
 tracker-specific placeholders (written here without braces so they survive):
 - DELIVERY, BABYSIT, DEBUG: the host's skill invocation, e.g. for delivery-flow
   `/delivery-flow:delivery-flow` (Claude Code), `$delivery-flow:delivery-flow`
-  (Codex), "the `delivery-flow:delivery-flow` skill" (Cursor Agent), "the
-  `delivery-flow--delivery-flow` skill" (OpenCode). See hosts.ts skillRef.
+  (Codex), "the `delivery-flow:delivery-flow` skill" (Cursor Agent),
+  `skill({ name: "delivery-flow-delivery-flow" })` (OpenCode, the generated
+  skill name from hosts.ts OPENCODE_SKILL_IDS). See hosts.ts skillRef.
 - ISSUE_READ: how to read the issue: `gh issue view N --repo OWNER/REPO
-  --comments` (GitHub), `jira.sh issue get KEY` (Jira), the issue URL (Linear).
+  --comments` (GitHub), `jira.sh issue get KEY` (Jira; OpenCode runs it as
+  `"$TOOLU_BUN" --no-env-file "$TOOLU_CONFIG_DIR/jira/jira.sh"`), the issue
+  URL (Linear).
 - CLOSES: the PR body's closing line: `Closes OWNER/REPO#N` (GitHub),
   `Resolves KEY-12` (Jira), `Fixes ENG-12` (Linear).
 - HOST: the worker's host kind.

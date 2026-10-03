@@ -67,6 +67,19 @@ export function stagePlugins(sourceDirectory: string, outputDirectory: string): 
         }
       }
     }
+    // The orchestrator skill runs these through $TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR,
+    // and launch-issue.ts renders the worker brief from the references.
+    if (entry.name === "epic-orchestrator") {
+      for (const dir of ["scripts", "scripts/trackers"]) {
+        for (const name of readdirSync(join(source, dir))) {
+          if (name.endsWith(".ts")) copy(join(source, dir, name), join(target, dir, name));
+        }
+      }
+      const references = "skills/epic-orchestrator/references";
+      copyDirectory(join(source, references), join(target, references), (name) =>
+        name.endsWith(".md"),
+      );
+    }
     count++;
   }
   return count;

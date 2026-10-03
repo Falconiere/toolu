@@ -81,7 +81,8 @@ Stop and report the first check that fails:
 - `command -v bun` succeeds.
 - `gh auth status` and `herdr status` both succeed (herdr server is running).
 - Each host in `--hosts` is on PATH (`claude`, `codex`, `cursor-agent`,
-  `opencode`) and logged in.
+  `opencode`) and logged in. For OpenCode, `opencode --version` must be 1.x
+  (toolu's OpenCode plugin targets opencode-ai 1.x).
 - Jira epic: `jira.sh` is installed (toolu `jira` plugin) and authenticated.
   Linear epic: `LINEAR_API_KEY` is set (personal key or OAuth token).
 - `gh api rate_limit` shows core above 1000 (`EPIC_GH_CORE_FLOOR`). Below it,
@@ -90,6 +91,9 @@ Stop and report the first check that fails:
   `toolu-review`, `pr-babysit`, and `brainstorm` dependencies (or the OpenCode-generated equivalents). Workers run as
   herdr agents and need those plugins installed in every host in `--hosts`
   (`npx @toolu/plugins install delivery-flow --host codex`, and so on).
+  An OpenCode worker uses its worktree's selection: a committed
+  `.opencode/toolu/plugins.json`, else the global one, else every installed
+  plugin. An uncommitted project selection does not reach worktrees.
 
 ## 1. Graph: what can run now
 
@@ -138,7 +142,7 @@ dependency counts) into `trivial`, `standard`, `complex`, or `critical`. The
 routing table maps the tier to a model and effort per host, e.g. Codex
 `gpt-6-sol` low/medium/high/xhigh, Claude `sonnet` low/medium then `opus`
 high/xhigh, Cursor `composer-2.5` up to `gpt-5.6-sol-xhigh`. OpenCode keeps
-its configured model unless the table names one. Override the table in
+its configured model unless the table names one (`provider/model`). Override the table in
 `$EPIC_STATE_HOME/routing.json` (or `EPIC_ROUTING_FILE`):
 `{"hosts": {"codex": [{"model": "gpt-6-sol", "effort": "low"}, …4 tiers]},
 "prefer": {"critical": ["claude"]}}`.
@@ -174,6 +178,10 @@ Launch issues one at a time. For each issue the launcher:
    effort and the host's approval-bypass flags. A relaunch on the same host
    continues its last session (`--continue`, or `codex resume --last`).
    Refuses a first launch while the GitHub budget is under its floor.
+   For OpenCode it first refuses a model that is not `provider/model` or an
+   `opencode` that is not 1.x, then adds `/.opencode/toolu/state/` and
+   `/.opencode/tmp/` to the checkout's shared `info/exclude`, so toolu's
+   runtime state stays out of snapshots, leftovers and commits.
 5. renders `references/worker-brief.md` into `<state_dir>/briefs/<key>.md`,
    filling host-specific skill invocations and tracker-specific issue-read
    and PR-closing lines (the template's header comment lists them)

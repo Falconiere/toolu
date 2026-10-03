@@ -103,10 +103,13 @@ hosts → launcher and worktree exclude → helper lookup → watcher signals �
       "tools/toolu-opencode/generated/**",
       "tools/toolu-opencode/src/inventory/**",
       "tools/toolu-opencode/src/surfaces/**",
+      "tools/toolu-opencode/src/bootstrap/**",
+      "tooling/src/**",
+      ".claude-plugin/marketplace.json",
       "tools/toolu-conformance/src/**"
     ],
     "input": "The real plugins/epic-orchestrator sources through planSurface; the committed generated tree; a stagePlugins copy; a sandbox copy of the plugin with an epic port anchor removed and duplicated",
-    "check": "bun test --timeout 60000 tools/toolu-opencode/scripts/__tests__/generate-surface.test.ts tools/toolu-opencode/scripts/__tests__/epic-surfaces.test.ts && bun run check:opencode-surface",
+    "check": "bun test --timeout 120000 tools/toolu-opencode/scripts/__tests__/generate-surface.test.ts tools/toolu-opencode/scripts/__tests__/epic-surfaces.test.ts tooling/src/__tests__/bundle-plugins.test.ts && bun run check:opencode-surface",
     "model": "inherit"
   },
   {
@@ -195,6 +198,7 @@ hosts → launcher and worktree exclude → helper lookup → watcher signals �
 ## Deviations
 
 - launch: `OPENCODE_EXCLUDE`, `excludeOpencodeState` and the version check live in a new `scripts/opencode-worker.ts`, not `launch-issue.ts`. The launcher had passed the 500-line lint limit. `hosts.ts` exports `opencodeModelArgs`, so the early model check and `agentArgs` share one rule.
+- port: `stagePlugins` (the `@toolu/opencode` npm staging) shipped no epic-orchestrator scripts or reference templates. On an npm install, every `"$S/<script>"` and `launch-issue.ts`'s brief template were missing, so AC-6's "exists in a `stagePlugins` copy" could not hold. It now stages `scripts/*.ts`, `scripts/trackers/*.ts` and `skills/epic-orchestrator/references/*.md`, never tests or fixtures. `bundle-plugins.test.ts` dry-runs the staged `launch-issue.ts`, and `pack-inventory.ts` requires four of those files.
 - launch: the refusal text omits "(tested on 1.18.34)". The plugin cannot read the contract pin, and a hard-coded patch version would drift.
 
 ## Plan review
