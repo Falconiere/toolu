@@ -1,6 +1,37 @@
 // @bun
 // plugins/jira/hooks/src/session-start.ts
+import { lstatSync as lstatSync2 } from "fs";
 import { resolve } from "path";
+
+// packages/toolu-core/src/state/state-io.ts
+function toJqJson(value, pretty) {
+  const json = pretty ? JSON.stringify(value, null, 2) : JSON.stringify(value);
+  return json.replaceAll("\x7F", "\\u007f");
+}
+
+// packages/toolu-core/src/startup/context.ts
+var MAX_CONTEXT_CHARS = 1e4;
+function bounded(text, max) {
+  if (text.length <= max)
+    return text;
+  const code = text.charCodeAt(max - 1);
+  const end = code >= 55296 && code <= 56319 ? max - 1 : max;
+  return text.slice(0, end);
+}
+function sessionContext(event, text) {
+  if (text === "")
+    return;
+  return {
+    hookSpecificOutput: {
+      hookEventName: event,
+      additionalContext: bounded(text, MAX_CONTEXT_CHARS)
+    }
+  };
+}
+function renderHookOutput(value, pretty) {
+  return `${toJqJson(value, pretty)}
+`;
+}
 // packages/toolu-core/src/host/host-name.ts
 var HOST_NAMES = ["claude", "codex", "cursor", "opencode", "hermes"];
 function envValue(env, key) {
@@ -228,11 +259,42 @@ function publishBunCli(options) {
   }
   return result;
 }
+// plugins/jira/hooks/src/jira/opencode.ts
+var OPENCODE_SKILL = "jira-jira";
+function onOpencode(env = process.env) {
+  return env["TOOLU_HOST_OVERRIDE"] === "opencode";
+}
+var quote = (value) => `'${value.replaceAll("'", "'\\''")}'`;
+function command(path, symlink) {
+  return symlink ? `${quote(process.execPath)} --no-env-file ${quote(path)}` : quote(path);
+}
+function instruction(run) {
+  return `jira (issue tracker) \u2014 when the user mentions Jira, a JQL query, an issue key like ABC-123 or an atlassian.net/browse link, run ${run} <family> <action> [options] (syntax: skill({ name: "${OPENCODE_SKILL}" })) instead of the Atlassian MCP. Read-only calls (search, issue get, board/sprint/project/user lookups) may run directly. Never create, update, comment on, transition, assign or delete an issue, or change a sprint, worklog or attachment, unless the user asked for that change; plan it first as the skill describes. Credentials come from JIRA_* in the environment or the jira CLI login, never from .env; without them the command prints setup help and exits 1.`;
+}
+async function compacting() {
+  let input;
+  try {
+    input = JSON.parse(await Bun.stdin.text());
+  } catch {
+    return false;
+  }
+  return input !== null && typeof input === "object" && "source" in input && input.source === "compact";
+}
+
 // plugins/jira/hooks/src/session-start.ts
-publishBunCli({
+var options = {
   plugin: "jira",
   source: resolve(import.meta.dir, "../dist/jira.js"),
   dir: "jira",
-  name: "jira.sh",
-  tool: "jira CLI"
-});
+  name: "jira.sh"
+};
+if (onOpencode()) {
+  const quiet = await compacting();
+  const result = publishWrapper(options);
+  if (!quiet && (result.status === "published" || result.status === "kept-user-file")) {
+    const symlink = lstatSync2(result.path).isSymbolicLink();
+    process.stdout.write(renderHookOutput(sessionContext("SessionStart", instruction(command(result.path, symlink))), false));
+  }
+} else {
+  publishBunCli({ ...options, tool: "jira CLI" });
+}

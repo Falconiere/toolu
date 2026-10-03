@@ -23,6 +23,7 @@ import { constants as os, tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Env } from "./creds.ts";
 import { readFlags, unknownOption } from "./flags.ts";
+import { nestedEnv } from "./opencode.ts";
 import { parseSteps } from "./plan-parse.ts";
 import {
   buildLedger,
@@ -166,8 +167,9 @@ export async function runPlan(context: RunContext, argv: readonly string[]): Pro
   const cli = planCli(context.env);
   if (!runnable(cli))
     throw new CliExit(1, `jira plan run: jira CLI not found at ${cli} (set JIRA_CLI)`);
+  const env = nestedEnv(context.env);
   // Probe BEFORE the first write: an unreachable Jira must not manufacture reds.
-  if (!probe(cli, context.env)) {
+  if (!probe(cli, env)) {
     throw new CliExit(
       1,
       "jira plan run: cannot reach Jira (user whoami failed) — no step statuses were written",
@@ -176,7 +178,7 @@ export async function runPlan(context: RunContext, argv: readonly string[]): Pro
   const targets = only === "" ? ledger.steps.map((step) => String(step["id"])) : [only];
   let failed = false;
   for (const id of targets) {
-    const result = await runStep(ledger, id, state, { cli, root, env: context.env, activity });
+    const result = await runStep(ledger, id, state, { cli, root, env, activity });
     ledger = result.ledger;
     failed ||= !result.green;
   }

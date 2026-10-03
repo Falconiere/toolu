@@ -55,7 +55,8 @@ export function mentionsGateTopic(lower: string): boolean {
   return GATE_TOPIC.test(lower);
 }
 
-export type HintOptions = { astGrep: boolean; research: boolean };
+/** `jira` is off on OpenCode, where jira's own startup instruction names its skill (#351). */
+export type HintOptions = { astGrep: boolean; research: boolean; jira: boolean };
 
 /** At most one intent hint; the most specific pattern wins. */
 function intentHint(lower: string, astGrep: boolean): string | undefined {
@@ -80,9 +81,10 @@ export function promptHints(prompt: string, lower: string, options: HintOptions)
     options.research && RESEARCH.test(lower)
       ? "External research — delegate to the research-agent subagent (routes exa-search/context7, native fallback) to keep main context lean."
       : undefined,
-    JIRA_WORD.test(lower) ||
-    JIRA_LINK.test(prompt) ||
-    (ISSUE_KEY.test(prompt) && JIRA_CONTEXT.test(lower))
+    options.jira &&
+    (JIRA_WORD.test(lower) ||
+      JIRA_LINK.test(prompt) ||
+      (ISSUE_KEY.test(prompt) && JIRA_CONTEXT.test(lower)))
       ? "Jira mentioned — use the `jira` skill (REST wrapper over jira.sh), NOT the Atlassian MCP."
       : undefined,
   ];

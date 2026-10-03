@@ -16,19 +16,15 @@ Use this skill to work a Jira ticket without leaving the session: search by JQL,
 Invoke at the **stable published path** (a symlink the plugin's SessionStart hook refreshes every session):
 
 ```bash
-# Codex
-TOOLU_HOST_OVERRIDE=codex \
-  "${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/jira/jira.sh" [--api-version N] [--lean] <family> <action> [options]
-# Claude Code
-TOOLU_HOST_OVERRIDE=claude \
-  "${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/jira/jira.sh" [--api-version N] [--lean] <family> <action> [options]
+# OpenCode
+"$TOOLU_BUN" --no-env-file "${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/jira/jira.sh" [--api-version N] [--lean] <family> <action> [options]
 ```
 
-Choose the complete command for the active host, including its override; every
-`jira.sh` shorthand below means that chosen prefix. The override propagates to
-nested plan checks and their state paths. Ordinary shell calls do not inherit
-plugin lifecycle variables, so never collapse these into one ambiguous
-fallback. Use the published path; plugin-root variables are lifecycle-only.
+`shell.env` sets `TOOLU_BUN`, `TOOLU_CONFIG_DIR` and `TOOLU_HOST_OVERRIDE=opencode`
+in every bash call, so this runs with `bun` off `PATH` and never loads a project
+`.env`; every `jira.sh` shorthand below means this command. Plan checks call
+`"$JIRA"` with `.env` loading off too. A file of your own at that path runs
+directly instead. Plugin-root variables are lifecycle-only.
 
 Repo-checkout fallback (for tests/dev when the plugin is not installed): `plugins/jira/hooks/dist/jira.js` (a Bun bundle; needs Bun 1.4.x on `PATH`).
 
@@ -80,12 +76,11 @@ jira.sh plan status <KEY> | path <KEY>                 # ledger summary / ledger
 **Mutating, or two-or-more actions → write a plan first.** Anything that changes a live ticket (`issue create/update/comment/transition/assign`, `sprint create/move/start/complete`, `worklog add/delete`, `attachment add`), or any task needing more than one call, gets decomposed:
 
 1. `jira.sh plan init <KEY>` — scaffolds the active host's project state path:
-   `.claude/tmp/jira/plans/<KEY>.md` or `.codex/tmp/jira/plans/<KEY>.md`.
+   `.opencode/tmp/jira/plans/<KEY>.md`.
 2. Author the `## Steps (machine-readable)` array: one `{id, title, check}` per small, independently verifiable action.
 3. `jira.sh plan run <DOC> --step <id>` after doing each step; a final full `jira.sh plan run <DOC>` at the end.
 
-This writes a ledger below the active host's `<repo>/.claude/tmp/plan-ledger/`
-or `<repo>/.codex/tmp/plan-ledger/`. It is **not** the branch ledger and never
+This writes a ledger below `<repo>/.opencode/tmp/plan-ledger/`. It is **not** the branch ledger and never
 blocks `git push`.
 
 ## Authoring a `check`
@@ -107,7 +102,7 @@ A `check` is a shell command that must exit 0 **only when Jira itself reflects t
 
 These change live tickets and have no undo prompt (the verb is the confirmation):
 `issue create`, `issue update`, `issue comment`, `issue transition`, `issue assign`, `issue delete`,
-`sprint create/move/start/complete`, `worklog add/delete`, `attachment add`. Know the target `KEY`/`ID` before running them.
+`sprint create/move/start/complete`, `worklog add/delete`, `attachment add`. Know the target `KEY`/`ID` before running them. Run one only when the user asked for that change; loading this skill or reading an issue never authorizes a write.
 
 Each of these is also a **plan-first** operation — decompose before you mutate (see above).
 

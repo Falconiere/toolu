@@ -4146,7 +4146,7 @@ function promptHints(prompt, lower, options) {
     SCALE.test(lower) ? "Possibly large task \u2014 if it splits into genuinely independent units, consider decomposing it; if it is really one thread of work, just do it. The orchestrator skill has the test for which." : undefined,
     BRAINSTORM.test(lower) || NEW_THING.test(lower) ? "Scope may be unresolved \u2014 consider the `brainstorm` skill for material design choices; skip it when the request is already bounded or mechanical." : undefined,
     options.research && RESEARCH.test(lower) ? "External research \u2014 delegate to the research-agent subagent (routes exa-search/context7, native fallback) to keep main context lean." : undefined,
-    JIRA_WORD.test(lower) || JIRA_LINK.test(prompt) || ISSUE_KEY.test(prompt) && JIRA_CONTEXT.test(lower) ? "Jira mentioned \u2014 use the `jira` skill (REST wrapper over jira.sh), NOT the Atlassian MCP." : undefined
+    options.jira && (JIRA_WORD.test(lower) || JIRA_LINK.test(prompt) || ISSUE_KEY.test(prompt) && JIRA_CONTEXT.test(lower)) ? "Jira mentioned \u2014 use the `jira` skill (REST wrapper over jira.sh), NOT the Atlassian MCP." : undefined
   ];
   return hints.filter((hint) => hint !== undefined);
 }
@@ -4182,7 +4182,8 @@ async function main() {
   const astGrep = (onPath("sg", path) || onPath("ast-grep", path)) && enabled(config, "skills", "ast-grep");
   const parts = promptHints(prompt, lower, {
     astGrep,
-    research: enabled(config, "agents", "research-agent")
+    research: enabled(config, "agents", "research-agent"),
+    jira: host !== "opencode"
   });
   const project = projectContext(join4(root, hostDir, "context.sh"), prompt, cwd, env);
   if (project !== "")

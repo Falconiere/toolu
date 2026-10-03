@@ -54,6 +54,7 @@ async function main(): Promise<void> {
   const parts = promptHints(prompt, lower, {
     astGrep,
     research: enabled(config, "agents", "research-agent"),
+    jira: host !== "opencode",
   });
   const project = projectContext(join(root, hostDir, "context.sh"), prompt, cwd, env);
   if (project !== "") parts.push(project);

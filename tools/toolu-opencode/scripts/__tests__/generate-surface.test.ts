@@ -463,6 +463,26 @@ test("full catalog includes all plugins and explicitly classifies empty surfaces
   for (const gone of ["CODEX_HOME", "# Codex", "# Claude Code", "Choose the line"]) {
     expect(context7Skill).not.toContain(gone);
   }
+  const jira = plan.catalog.plugins.find((plugin) => plugin.name === "jira")?.skills[0];
+  const jiraSkill = plan.files.get(join(out, jira?.path ?? "")) ?? "";
+  // One OpenCode command under shell.env's Bun and OpenCode's own state paths (#351).
+  expect(jiraSkill).toContain(
+    '# OpenCode\n"$TOOLU_BUN" --no-env-file "${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/jira/jira.sh" [--api-version N] [--lean] <family> <action> [options]\n```',
+  );
+  expect(jiraSkill).toContain("`.opencode/tmp/jira/plans/<KEY>.md`.");
+  expect(jiraSkill).toContain("below `<repo>/.opencode/tmp/plan-ledger/`.");
+  expect(jiraSkill).toContain("loading this skill or reading an issue never authorizes a write");
+  for (const gone of [
+    "CODEX_HOME",
+    "TOOLU_HOST_OVERRIDE=claude",
+    "# Codex",
+    "# Claude Code",
+    "Choose the complete command",
+    ".claude/tmp",
+    ".codex/tmp",
+  ]) {
+    expect(jiraSkill).not.toContain(gone);
+  }
 });
 
 test("resource links in generated skills resolve inside the output tree", () => {
