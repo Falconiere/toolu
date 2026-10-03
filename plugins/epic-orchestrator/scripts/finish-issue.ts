@@ -7,13 +7,13 @@
  * branch and refuses over dirty work it could not snapshot). */
 
 import { existsSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, normalize } from "node:path";
 import { reconcileResourceJobs } from "../hooks/dist/epic-runtime.js";
 import { activeJobs } from "../hooks/dist/epic-runtime.js";
 import { runCommand } from "../hooks/dist/epic-runtime.js";
 import { snapshot } from "./checkpoint.ts";
 import { herdr, readJson, run, writeJson } from "./common.ts";
-import { shutdownAgent } from "./lifecycle.ts";
+import { inspectAgent, shutdownAgent } from "./lifecycle.ts";
 import { hostKind } from "./hosts.ts";
 import { ownedWorkload, verifyOwnedExit } from "./workload.ts";
 import { withLaunchOwnership } from "./admission.ts";
@@ -21,8 +21,10 @@ import {
   fenceCleanupOwnership,
   readIssueRecord,
   releaseRecordedOwnership,
+  removalIntent,
   type CleanupOwnership,
   type IssueRecord,
+  type RemovalIntent,
 } from "./finish-state.ts";
 
 const USAGE = "usage: finish-issue.ts <state-dir> <key> [--abandon]";
@@ -156,12 +158,27 @@ async function finishIssue(stateDir: string, key: string, abandon: boolean): Pro
   let saved: IssueRecord = rec;
   try {
     const ownership = await fenceCleanupOwnership(path, stateDir, key, rec);
-    const removedBefore = rec.worktree_removed === true && !isDir(worktree);
-    if (removedBefore && ownership === null)
+    const absent = !existsSync(worktree);
+    const intent = removalIntent(rec);
+    const removedBefore = rec.worktree_removed === true && absent;
+    const preparedRemoval = rec.worktree_removed !== true && absent && intent !== null;
+    if ((removedBefore || preparedRemoval) && ownership === null)
       throw new Error("cannot verify legacy cleanup ownership after worktree removal");
-    const result = removedBefore
-      ? await finishAfterRemoval(rec, ownership, effectiveAbandon)
-      : await finishLiveWorktree(path, rec, ownership, effectiveAbandon);
+    let result: CleanupResult;
+    if (preparedRemoval && intent) {
+      await verifyPreparedRemoval(rec, intent, ownership as CleanupOwnership);
+      result = await finishRemovedWorktree(
+        path,
+        rec,
+        intent.wip_ref,
+        intent.leftover_files,
+        effectiveAbandon,
+      );
+    } else if (removedBefore) {
+      result = await finishAfterRemoval(rec, ownership, effectiveAbandon);
+    } else {
+      result = await finishLiveWorktree(path, rec, ownership, effectiveAbandon);
+    }
     const stage =
       result.removed && (effectiveAbandon || result.branchDeleted)
         ? effectiveAbandon
@@ -180,6 +197,7 @@ async function finishIssue(stateDir: string, key: string, abandon: boolean): Pro
       wip_ref: result.wipRef,
       leftover_files: result.dirty,
     };
+    if (stage !== "cleanup-incomplete") delete saved.removal_intent;
     await writeJson(path, saved);
     if (stage !== "cleanup-incomplete") await releaseRecordedOwnership(saved, stateDir);
     return finished(saved);
@@ -233,6 +251,19 @@ async function finishLiveWorktree(
   if (workspace === "") {
     process.stderr.write(`WARN: no workspace_id on record ${rec.key}; skipping worktree remove\n`);
   } else {
+    Object.assign(rec, {
+      stage: "cleanup-incomplete",
+      removal_intent: {
+        version: 1,
+        workspace_id: workspace,
+        worktree,
+        prepared_at: new Date().toISOString(),
+        wip_ref: wipRef,
+        leftover_files: dirty,
+        workload: owned,
+      } satisfies RemovalIntent,
+    });
+    await writeJson(path, rec);
     const force = abandon ? [] : ["--force"];
     removed = (
       await attempt(["herdr", "worktree", "remove", "--workspace", workspace, ...force], "inherit")
@@ -241,6 +272,33 @@ async function finishLiveWorktree(
   if (removed) return finishRemovedWorktree(path, rec, wipRef, dirty, abandon);
   const branchDeleted = await deleteBranch(rec, removed, abandon);
   return { removed, branchDeleted, wipRef, dirty };
+}
+
+async function verifyPreparedRemoval(
+  rec: IssueRecord,
+  intent: RemovalIntent,
+  ownership: CleanupOwnership,
+): Promise<void> {
+  if (intent.worktree !== rec.worktree || intent.workspace_id !== rec.workspace_id)
+    throw new Error("removal intent does not match recorded workspace ownership");
+  const agent = str(rec.agent);
+  if (agent && (await inspectAgent(agent)))
+    throw new Error(`agent ${agent} is still live after worktree removal`);
+  if (!(await verifyOwnedExit(intent.workload)))
+    throw new Error("owned background workload remains alive after worktree removal");
+  await verifyNoJobs(ownership, rec.worktree);
+  const listed = await runCommand(
+    ["git", "-C", rec.checkout, "worktree", "list", "--porcelain", "-z"],
+    { timeoutMs: 30_000 },
+  );
+  if (listed.exitCode !== 0 || listed.timedOut || listed.cancelled || listed.truncated)
+    throw new Error("cannot verify removed worktree registration");
+  const registered = listed.stdout
+    .split("\0")
+    .filter((line) => line.startsWith("worktree "))
+    .map((line) => normalize(line.slice("worktree ".length)));
+  if (registered.includes(normalize(rec.worktree)))
+    throw new Error("worktree path is absent but remains registered");
 }
 
 /** Persist the destructive worktree-removal boundary before touching its branch. */

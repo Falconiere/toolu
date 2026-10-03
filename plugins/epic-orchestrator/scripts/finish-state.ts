@@ -22,6 +22,16 @@ export type IssueRecord = Record<string, unknown> & {
 
 export type CleanupOwnership = { root: string; token: string };
 
+export type RemovalIntent = {
+  version: 1;
+  workspace_id: string;
+  worktree: string;
+  prepared_at: string;
+  wip_ref: string | null;
+  leftover_files: string[];
+  workload: { pid: number; group: number; started: string }[];
+};
+
 const STAGES = new Set([
   "starting",
   "running",
@@ -36,6 +46,44 @@ const STAGES = new Set([
 
 function isDirectory(path: string): boolean {
   return existsSync(path) && statSync(path).isDirectory();
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+
+export function removalIntent(rec: Record<string, unknown>): RemovalIntent | null {
+  const value = rec.removal_intent;
+  if (value === undefined) return null;
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error("invalid removal intent");
+  const intent = value as Record<string, unknown>;
+  const workload = intent.workload;
+  if (
+    intent.version !== 1 ||
+    typeof intent.workspace_id !== "string" ||
+    intent.workspace_id === "" ||
+    typeof intent.worktree !== "string" ||
+    !isAbsolute(intent.worktree) ||
+    typeof intent.prepared_at !== "string" ||
+    !Number.isFinite(Date.parse(intent.prepared_at)) ||
+    (intent.wip_ref !== null && typeof intent.wip_ref !== "string") ||
+    !Array.isArray(intent.leftover_files) ||
+    !intent.leftover_files.every((entry) => typeof entry === "string") ||
+    !Array.isArray(workload) ||
+    !workload.every(
+      (entry) =>
+        typeof entry === "object" &&
+        entry !== null &&
+        !Array.isArray(entry) &&
+        isPositiveInteger((entry as Record<string, unknown>).pid) &&
+        isPositiveInteger((entry as Record<string, unknown>).group) &&
+        typeof (entry as Record<string, unknown>).started === "string" &&
+        (entry as Record<string, unknown>).started !== "",
+    )
+  )
+    throw new Error("invalid removal intent");
+  return intent as RemovalIntent;
 }
 
 export function readIssueRecord(path: string, key: string): IssueRecord {
@@ -60,6 +108,11 @@ export function readIssueRecord(path: string, key: string): IssueRecord {
     (token !== undefined && (typeof token !== "string" || token === ""))
   )
     throw new Error(`invalid issue record ${path}: resource ownership`);
+  try {
+    removalIntent(rec);
+  } catch {
+    throw new Error(`invalid issue record ${path}: removal intent`);
+  }
   return rec as IssueRecord;
 }
 

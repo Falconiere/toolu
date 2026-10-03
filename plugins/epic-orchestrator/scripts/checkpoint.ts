@@ -8,7 +8,7 @@
  * so it outlives the worktree. Restore with:
  * `git checkout -b recover refs/epic-wip/<key>`. */
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, realpathSync, rmSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
 import { runCommand } from "../hooks/dist/epic-runtime.js";
@@ -32,7 +32,9 @@ export type SnapshotOptions = {
 };
 
 type GitResult = { out: string; ok: boolean };
-type CheckpointMeta = { version: 1; worktree: string; head: string };
+type CheckpointMeta =
+  | { version: 1; worktree: string; head: string }
+  | { version: 2; worktree: string; head: string; index: string };
 type CheckpointStorage = { path: string; worktree: string };
 
 const DEFAULT_COMMAND_TIMEOUT_MS = 30_000;
@@ -100,30 +102,56 @@ async function prepareTree(
   env: NodeJS.ProcessEnv,
   timeoutMs: number,
 ): Promise<GitResult> {
-  const index = join(storage.path, "index");
   const metaPath = join(storage.path, "meta.json");
   const meta = readJson<CheckpointMeta | null>(metaPath, null);
-  const indexEnv = { ...env, ...IDENTITY, GIT_INDEX_FILE: index };
+  const savedIndex =
+    meta?.version === 1
+      ? "index"
+      : meta?.version === 2 && /^index(?:-[0-9a-f-]{36})?$/.test(meta.index)
+        ? meta.index
+        : "index";
+  let index = join(storage.path, savedIndex);
+  let indexEnv = { ...env, ...IDENTITY, GIT_INDEX_FILE: index };
   const reusable =
-    meta?.version === 1 &&
+    (meta?.version === 1 || meta?.version === 2) &&
     meta.worktree === storage.worktree &&
     meta.head === head &&
-    existsSync(index);
+    existsSync(index) &&
+    !existsSync(`${index}.lock`);
   if (!reusable) {
-    rmSync(index, { force: true });
+    if (existsSync(`${index}.lock`)) {
+      index = join(storage.path, `index-${randomUUID()}`);
+      indexEnv = { ...env, ...IDENTITY, GIT_INDEX_FILE: index };
+    } else {
+      rmSync(index, { force: true });
+    }
     const initialized = await git(storage.worktree, ["read-tree", "HEAD"], indexEnv, timeoutMs);
     if (!initialized.ok) return initialized;
     writeJsonAtomic(metaPath, {
-      version: 1,
+      version: 2,
       worktree: storage.worktree,
       head,
+      index: index.slice(storage.path.length + 1),
     } satisfies CheckpointMeta);
   }
   let staged = await git(storage.worktree, ["add", "-A"], indexEnv, timeoutMs);
   if (!staged.ok && reusable) {
-    rmSync(index, { force: true });
+    if (existsSync(`${index}.lock`)) {
+      index = join(storage.path, `index-${randomUUID()}`);
+      indexEnv = { ...env, ...IDENTITY, GIT_INDEX_FILE: index };
+    } else {
+      rmSync(index, { force: true });
+    }
     const reset = await git(storage.worktree, ["read-tree", "HEAD"], indexEnv, timeoutMs);
-    if (reset.ok) staged = await git(storage.worktree, ["add", "-A"], indexEnv, timeoutMs);
+    if (reset.ok) {
+      writeJsonAtomic(metaPath, {
+        version: 2,
+        worktree: storage.worktree,
+        head,
+        index: index.slice(storage.path.length + 1),
+      } satisfies CheckpointMeta);
+      staged = await git(storage.worktree, ["add", "-A"], indexEnv, timeoutMs);
+    }
   }
   return staged.ok
     ? git(storage.worktree, ["write-tree"], indexEnv, timeoutMs)

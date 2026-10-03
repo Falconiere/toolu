@@ -242,6 +242,94 @@ test("cleanup retries branch deletion after the workspace was already removed", 
   expect(await deleteBranch(readIssueRecord(l.record, "k-1"), true, false)).toBe(true);
 });
 
+test("cleanup reconciles a crash after prepared worktree removal", async () => {
+  using sb = createSandbox();
+  const l = await layout(sb);
+  const root = join(sb.root, "resources");
+  const lease = await acquireLease(root, {
+    type: "agent",
+    key: "k-1",
+    stateDir: l.state,
+    host: "codex",
+    worktree: l.wt,
+  });
+  await patchLease(root, lease.token, { stage: "cleaning" });
+  bindWorktree(root, l.wt, "k-1", l.state);
+  writeJsonAtomic(l.record, {
+    ...readRecord(l.record),
+    stage: "cleanup-incomplete",
+    workspace_id: "workspace-1",
+    resource_root: root,
+    lease_token: lease.token,
+    worktree_removed: false,
+    branch_deleted: false,
+    removal_intent: {
+      version: 1,
+      workspace_id: "workspace-1",
+      worktree: l.wt,
+      prepared_at: new Date().toISOString(),
+      wip_ref: null,
+      leftover_files: [],
+      workload: [],
+    },
+  });
+  await git(l.main, "worktree", "remove", "--force", l.wt);
+
+  const result = await finish(l.state, "k-1", "--abandon");
+
+  expect(result.exitCode).toBe(0);
+  expect(JSON.parse(result.stdout)).toMatchObject({
+    key: "k-1",
+    stage: "abandoned",
+    worktree_removed: true,
+    branch_deleted: false,
+  });
+  expect(readRecord(l.record)).toMatchObject({
+    stage: "abandoned",
+    worktree_removed: true,
+    branch_deleted: false,
+  });
+  expect(readRecord(l.record).removal_intent).toBeUndefined();
+  expect(readResourceState(root).leases).toEqual([]);
+  expect(await git(l.main, "show-ref", "--verify", "refs/heads/feat/1-x")).not.toBe("");
+});
+
+test("an absent worktree without prepared removal evidence remains occupied", async () => {
+  using sb = createSandbox();
+  const l = await layout(sb);
+  const root = join(sb.root, "resources");
+  const lease = await acquireLease(root, {
+    type: "agent",
+    key: "k-1",
+    stateDir: l.state,
+    host: "codex",
+    worktree: l.wt,
+  });
+  await patchLease(root, lease.token, { stage: "cleaning" });
+  writeJsonAtomic(l.record, {
+    ...readRecord(l.record),
+    stage: "cleanup-incomplete",
+    workspace_id: "workspace-1",
+    resource_root: root,
+    lease_token: lease.token,
+    worktree_removed: false,
+    branch_deleted: false,
+  });
+  await git(l.main, "worktree", "remove", "--force", l.wt);
+
+  const result = await finish(l.state, "k-1", "--abandon");
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain("ENOENT");
+  expect(readRecord(l.record)).toMatchObject({
+    stage: "cleanup-incomplete",
+    worktree_removed: false,
+  });
+  expect(readResourceState(root).leases).toEqual([
+    expect.objectContaining({ token: lease.token, stage: "cleaning" }),
+  ]);
+});
+
 test("an incomplete terminal record retries cleanup without releasing ownership", async () => {
   using sb = createSandbox();
   const l = await layout(sb);

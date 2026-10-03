@@ -136,6 +136,40 @@ test.concurrent("stall acknowledgement persists and defers the next bounded esca
   ]);
 });
 
+test.concurrent("dependency outages preserve agent episodes and stall acknowledgement", () => {
+  const now = Date.parse("2026-10-03T12:00:00Z");
+  const status = { phase: "execution", updated_at: "2026-10-03T10:00:00Z" };
+  const seen: Seen = {
+    k: {
+      gone: true,
+      blocked: true,
+      stall: {
+        stamp: status.updated_at,
+        nextAlertAt: now + 10 * 60_000,
+        alerts: 2,
+        acknowledgedAt: "2026-10-03T11:55:00.000Z",
+      },
+      stalled: status.updated_at,
+    },
+  };
+  const before = structuredClone(seen.k);
+
+  expect(issueEvents("k", REC, status, { __error__: "herdr unavailable" }, seen, now)).toEqual([]);
+  expect(seen.k).toEqual(before);
+  expect(issueEvents("k", REC, status, { "comemory-255": "idle" }, seen, now + 1_000, 10)).toEqual(
+    [],
+  );
+  expect(
+    issueEvents("k", REC, status, { "comemory-255": "idle" }, seen, now + 10 * 60_000, 10),
+  ).toEqual([
+    expect.objectContaining({
+      type: "stalled",
+      occurrence: 3,
+      acknowledged_at: "2026-10-03T11:55:00.000Z",
+    }),
+  ]);
+});
+
 test.concurrent("parked ready and needs-human workers do not raise stall events", () => {
   const now = Date.parse("2026-10-03T12:00:00Z");
   for (const phase of ["ready", "needs-human"]) {

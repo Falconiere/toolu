@@ -153,6 +153,8 @@ and abandoned work require a successful final snapshot before removal.
 Prompt acknowledgement records blocked and provider-limited outcomes separately
 from started/resumed work, and uncertain errors retain their native code and exit
 status. Cleanup retries preserve successful removal and branch-deletion steps.
+Removal intent is saved before deleting the workspace, so a crash before the
+success record is written can be reconciled against Git and workload ownership.
 
 Installed-host evidence is in `docs/toolu/evidence/epic-hosts*`; `probe.ts
 --check-evidence` validates its recorded contract, not live provider availability.
@@ -176,7 +178,8 @@ disabled fall back to the watcher's periodic recheck.
   agent disappears; teardown snapshots first; relaunches resume the host's
   captured session; one exclusive owner per epic. Unchanged snapshots reuse an
   independent Git index and compare tree/HEAD before creating a commit. The
-  worker's real index is preserved.
+  worker's real index is preserved. An interrupted private index write is
+  recovered using a separate index generation.
 - **Rate limits:** retries with backoff that honor `Retry-After` and reset
   headers (GitHub, Jira, Linear); at most 4 concurrent graph fetches; no new
   launches below `EPIC_GH_CORE_FLOOR` (1000) / `EPIC_GH_GRAPHQL_FLOOR` (500);
@@ -187,6 +190,7 @@ Watcher deadlines, queued checkpoints and dependency backoff survive restarts
 in `watch-state.json`. Urgent events precede optional checkpoints, which are
 bounded and deduplicated by worktree. `EPIC_CHECKPOINT_BATCH` bounds each pass;
 `EPIC_HERDR_BACKOFF_S` and `EPIC_HERDR_BACKOFF_MAX_S` bound dependency retries.
+Dependency outages preserve existing stall acknowledgements and agent alerts.
 Stale progress is distinct from a job heartbeat or UI `working` status. Alerts
 repeat at `EPIC_STALL_REPEAT_MIN`; acknowledge with `epic-watch.ts --state-dir
 <dir> --ack <key>`. Parked `ready`/`needs-human` workers stay quiet. `--peek`

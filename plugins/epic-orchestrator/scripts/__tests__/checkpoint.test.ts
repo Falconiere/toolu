@@ -1,7 +1,14 @@
 /** Worktree snapshots against real git repositories and linked worktrees. */
 
 import { expect, test } from "bun:test";
-import { mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
@@ -157,6 +164,32 @@ test.concurrent("snapshot: a corrupt retained index is reset from the same HEAD"
   const result = await snapshot(wt, "k-corrupt");
   expect(result.changed).toBe(false);
   expect(result.skipped).toBeUndefined();
+});
+
+test.concurrent("snapshot: a locked retained index moves to a fresh private generation", async () => {
+  using sb = createSandbox();
+  const { wt } = await setup(sb.root);
+  writeFileSync(join(wt, "a.txt"), "first\n");
+  expect((await snapshot(wt, "k-locked")).changed).toBe(true);
+  const common = await git(wt, "rev-parse", "--path-format=absolute", "--git-common-dir");
+  const root = join(common, "toolu", "checkpoint");
+  const namespace = readdirSync(root)[0];
+  if (namespace === undefined) throw new Error("missing retained checkpoint index");
+  const directory = join(root, namespace);
+  const abandonedLock = join(directory, "index.lock");
+  writeFileSync(abandonedLock, "orphan writer");
+  writeFileSync(join(wt, "a.txt"), "after crash\n");
+
+  const result = await snapshot(wt, "k-locked");
+  expect(result.changed).toBe(true);
+  expect(result.skipped).toBeUndefined();
+  expect(await git(wt, "show", "refs/epic-wip/k-locked:a.txt")).toBe("after crash");
+  const meta = JSON.parse(readFileSync(join(directory, "meta.json"), "utf8")) as {
+    index: string;
+  };
+  expect(meta.index).toMatch(/^index-[0-9a-f-]{36}$/);
+  expect(existsSync(join(directory, meta.index))).toBe(true);
+  expect(existsSync(abandonedLock)).toBe(true);
 });
 
 test.concurrent("snapshot: a missing retained index is rebuilt before staging ignored tracked files", async () => {

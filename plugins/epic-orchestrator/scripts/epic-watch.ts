@@ -117,6 +117,7 @@ export function issueEvents(
     if (updated !== undefined) mark.reported = updated;
     events.push({ ...base, type: phase });
   }
+  if ("__error__" in agents) return events;
   const agentName = typeof rec.agent === "string" ? rec.agent : key;
   const agentState = agents[agentName];
   if (!("__error__" in agents) && agentState === undefined && rec.stage === "running") {
