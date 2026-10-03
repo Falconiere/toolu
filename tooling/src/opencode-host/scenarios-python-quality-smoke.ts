@@ -173,8 +173,7 @@ async function patchQuality(ctx: ScenarioContext) {
       expected.every((path) => entries[path]?.source === "python-quality-hook"),
     bothVisible: messages.some(
       (message) =>
-        message.includes("one-line except ...: pass") &&
-        message.includes("no-mocks: mock import"),
+        message.includes("one-line except ...: pass") && message.includes("no-mocks: mock import"),
     ),
     hostSucceeded: host.exitCode === 0,
   };
