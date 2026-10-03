@@ -198,6 +198,19 @@ Every bash call the agent makes gets these variables through the plugin's `shell
 
 Because `TOOLU_PROJECT_DIR` stays empty, a helper run inside another repository uses that repository's state. Every process the agent starts from bash inherits these variables. A nested `opencode` keeps its own roots through `TOOLU_OPENCODE_DATA_ROOT`. Unset the `TOOLU_*` variables before starting `claude` or `codex` from an OpenCode session.
 
+### ast-grep
+
+With `ast-grep` selected, its two registry modules run on OpenCode's own tools ([#347](https://github.com/Falconiere/toolu/issues/347)):
+
+- **search-nudge** judges `grep` (its `include` counts as the glob) and `bash`, with the same rules and text as other hosts. The host has no pre-tool advisory channel, so the nudge is appended to that call's result as `[toolu advisory]`. A call the host refuses never gets one.
+- **byte-savings** appends one line per completed `read`, `grep`, `glob` and bash `ast-grep`/`sg` run to `$TOOLU_CONFIG_DIR/toolu/byte-savings/<session>.jsonl` (the project's data root). It measures the host's result text before toolu appends anything. An interrupted call, or a shell call without a confirmed exit, is not recorded. After each `ast-grep` run, the result ends with the session's report under `[toolu post-check after execution]`; `read`, `grep` and `glob` results get no extra text. OpenCode's `read` output includes line numbers and tags, so a read's `returned` can exceed the file's `full` size. The same report on demand, from the session's bash:
+
+  ```bash
+  bun "$TOOLU_PLUGIN_ROOT_AST_GREP/hooks/dist/byte-savings-report.js" "$TOOLU_CONFIG_DIR"/toolu/byte-savings/*.jsonl
+  ```
+
+The `ast-grep-ast-grep` skill names only the `ast-grep` CLI, so its examples run as written in bash.
+
 ## Verify a real gate
 
 Hermetic proof (matches CI):
@@ -244,6 +257,12 @@ The pinned post-tool smoke uses isolated git projects and a scripted loopback pr
 
 ```bash
 bun run smoke:opencode-posttool
+```
+
+The ast-grep smoke enables `toolu` and `ast-grep` in one isolated project. It loads the `ast-grep-ast-grep` skill with the native `skill` tool and runs its search example from bash. It checks each nudge, or its absence, in the model's tool messages, the savings report after the ast-grep run, the session ledger, and the report CLI. It needs `ast-grep` on `PATH`:
+
+```bash
+bun run smoke:opencode-ast-grep
 ```
 
 Optional live CLI probe:

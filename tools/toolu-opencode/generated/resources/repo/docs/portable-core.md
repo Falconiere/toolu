@@ -136,7 +136,7 @@ Exhaustive per-source rows: [docs/gate-coverage-matrix.md](gate-coverage-matrix.
 
 ## OpenCode interception (capability table)
 
-Pinned-host probes establish each hook's interception and callback behavior; [`opencode-host-contract.md`](opencode-host-contract.md#probe-results) has the full results. The post-dispatch behavior is covered by adapter tests, and `bun run smoke:opencode-posttool` is its live integration scenario.
+Pinned-host probes establish each hook's interception and callback behavior; [`opencode-host-contract.md`](opencode-host-contract.md#probe-results) has the full results. The post-dispatch behavior is covered by adapter tests, and `bun run smoke:opencode-posttool` is its live integration scenario. `bun run smoke:opencode-ast-grep` covers ast-grep's search-nudge and byte-savings modules on the same path.
 
 | Mechanism | Hard-block? | Role for toolu |
 |-----------|-------------|----------------|

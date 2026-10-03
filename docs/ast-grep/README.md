@@ -153,7 +153,7 @@ ast-grep scan          # run all configured rules
 | Hook | Event | Purpose |
 |------|-------|--------|
 | `search-nudge` | PreToolUse | Steers a structural Grep pattern, and `grep`/`rg` run in Bash to search files, toward ast-grep |
-| `byte-savings` | PostToolUse | Records the bytes Read, Grep, Glob and ast-grep return into context |
+| `byte-savings` | PostToolUse | Records the bytes Read, Grep, Glob and ast-grep return into context; on OpenCode, an ast-grep result also carries the session's report |
 
 Both are TypeScript modules on Bun. `hooks/dist/register.js` publishes them into the core toolu dispatcher's registry at `SessionStart`, and they run in process only while this plugin is installed. search-nudge reads a Bash command through toolu's shell parser, so a grep that filters a pipe, words in a commit message, or a `for … in` loop is not taken for a file search.
 
@@ -165,3 +165,5 @@ plugins/ast-grep/hooks/dist/byte-savings-report.js ~/.claude/toolu/byte-savings/
 ```
 
 The wrapper prefers `sg`, falls back to `ast-grep`, and does nothing when neither is installed. Subcommands: `search`, `files`, `scan`, `debug`.
+
+On OpenCode ([#347](https://github.com/Falconiere/toolu/issues/347)) the nudge arrives with the tool result, because the host has no pre-tool advisory channel. The ledger sits under the project's data root (`$TOOLU_CONFIG_DIR/toolu/byte-savings/`). Each `ast-grep` run's result ends with the session's report; other hosts stay silent. From the session's bash: `bun "$TOOLU_PLUGIN_ROOT_AST_GREP/hooks/dist/byte-savings-report.js" "$TOOLU_CONFIG_DIR"/toolu/byte-savings/*.jsonl`. See [`docs/opencode.md`](../opencode.md#ast-grep).

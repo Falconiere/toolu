@@ -51,7 +51,7 @@ async function prepareSdkDir(s: ReturnType<typeof session>, dir: string): Promis
 }
 
 /** Provision the host's pinned SDK in both isolated config dirs before startup. */
-async function prepareSdk(s: ReturnType<typeof session>, cacheRoot: string): Promise<void> {
+export async function prepareSdk(s: ReturnType<typeof session>, cacheRoot: string): Promise<void> {
   s.env.BUN_INSTALL_CACHE_DIR = join(cacheRoot, "bun-install-cache");
   mkdirSync(s.env.BUN_INSTALL_CACHE_DIR, { recursive: true });
   await prepareSdkDir(s, join(s.sb.home, ".config/opencode"));

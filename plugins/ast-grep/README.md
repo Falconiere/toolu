@@ -16,7 +16,7 @@ Standalone, no dependencies.
 
 - **`ast-grep` skill** — an always-active protocol that mandates ast-grep (tree-sitter AST patterns) over Grep/sed for any find-or-rewrite-by-code-shape task, falling back to Grep only for exact literals.
 - **`search-nudge` (`PreToolUse`)** — nudges a structural Grep pattern on code files, and `grep`/`rg` run in Bash to search files, toward the proper structural tool.
-- **`byte-savings` (`PostToolUse`)** + `hooks/dist/byte-savings-report.js <ledger.jsonl>` — records the bytes each Read, Grep, Glob and ast-grep call returns, and sums a session's ledger.
+- **`byte-savings` (`PostToolUse`)** + `hooks/dist/byte-savings-report.js <ledger.jsonl>` — records the bytes each Read, Grep, Glob and ast-grep call returns, and sums a session's ledger. On OpenCode, an ast-grep result also carries the session's report ([`docs/opencode.md`](../../docs/opencode.md#ast-grep)).
 - **`hooks/dist/ast-grep.js`** — a CLI wrapper (`search`, `files`, `scan`, `debug`) that bakes in `--color never` and infers `--lang` from the first file argument.
 
 ## The ast-grep binary
