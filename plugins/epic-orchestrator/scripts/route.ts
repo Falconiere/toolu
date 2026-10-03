@@ -186,7 +186,7 @@ export function parseHosts(spec: string, defaultCap: number): HostPool {
     .map((s) => {
       const [name, raw, extra] = s.split(":");
       const kind = hostKind(name ?? "");
-      const cap = raw === undefined ? defaultCap : Number(raw);
+      const cap = raw === undefined || raw === "" ? defaultCap : Number(raw);
       if (extra !== undefined || !Number.isSafeInteger(cap) || cap <= 0 || seen.has(kind))
         throw new Error(`invalid host capacity: ${s}`);
       seen.add(kind);

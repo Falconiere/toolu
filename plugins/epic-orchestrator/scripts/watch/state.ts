@@ -69,8 +69,9 @@ export function readWatchRuntime(path: string, now: number): WatchRuntime {
     !validTime(state.nextBudgetAt) ||
     !validTime(state.budgetAlertReset) ||
     !validTime(state.budgetHoldUntil) ||
+    typeof state.herdrFailures !== "number" ||
     !Number.isSafeInteger(state.herdrFailures) ||
-    (state.herdrFailures ?? -1) < 0 ||
+    state.herdrFailures < 0 ||
     !validTime(state.herdrRetryAt)
   ) {
     throw new Error(`invalid watcher state: ${path}`);

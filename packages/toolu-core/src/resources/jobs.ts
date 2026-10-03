@@ -14,6 +14,16 @@ const FORWARDED_SIGNALS: readonly NodeJS.Signals[] = ["SIGINT", "SIGTERM", "SIGH
 
 function noop(): void {}
 
+/** Prefix the job's stdin with the go line, keeping binary input byte-exact. */
+function withGoSignal(stdin: string | Uint8Array | undefined): string | Uint8Array {
+  if (stdin === undefined || typeof stdin === "string") return `toolu-go\n${stdin ?? ""}`;
+  const prefix = new TextEncoder().encode("toolu-go\n");
+  const bytes = new Uint8Array(prefix.length + stdin.length);
+  bytes.set(prefix);
+  bytes.set(stdin, prefix.length);
+  return bytes;
+}
+
 function guardOwnedGroup(processGroupId: number): () => void {
   const onExit = (): void => signalProcessGroup(processGroupId, "SIGKILL");
   const listeners = FORWARDED_SIGNALS.map((signal): readonly [NodeJS.Signals, () => void] => [
@@ -49,8 +59,6 @@ export async function runManagedJob(
   let heartbeatFailure: unknown;
   let releaseGuard = noop;
   try {
-    const input =
-      typeof opts.stdin === "string" ? opts.stdin : new TextDecoder().decode(opts.stdin);
     const result = await runCommand(
       [
         "bash",
@@ -61,19 +69,23 @@ export async function runManagedJob(
       ],
       {
         ...opts,
-        stdin: `toolu-go\n${input}`,
+        stdin: withGoSignal(opts.stdin),
         onSpawn: async (pid) => {
           group = pid;
           releaseGuard = guardOwnedGroup(pid);
           await patchLease(binding.root, lease.token, { groupPid: pid, stage: "running" });
           await opts.onSpawn?.(pid);
-          heartbeat = setInterval(() => {
-            patchLease(binding.root, lease.token, { heartbeatAt: new Date().toISOString() }).catch(
-              (error: unknown) => {
-                heartbeatFailure = error;
-              },
-            );
-          }, 30_000);
+          const beat = async (): Promise<void> => {
+            try {
+              await patchLease(binding.root, lease.token, {
+                heartbeatAt: new Date().toISOString(),
+              });
+              heartbeatFailure = undefined;
+            } catch (error) {
+              heartbeatFailure = error;
+            }
+          };
+          heartbeat = setInterval(() => void beat(), 30_000);
         },
       },
     );

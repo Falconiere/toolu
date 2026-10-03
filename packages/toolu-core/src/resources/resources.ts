@@ -133,7 +133,12 @@ export async function patchLease(
   await updateResources(root, (state) => {
     const lease = state.leases.find((candidate) => candidate.token === token);
     if (!lease) throw new Error("resource lease lost");
-    Object.assign(lease, patch);
+    if (patch.groupPid !== undefined) lease.groupPid = patch.groupPid;
+    if (patch.worktree !== undefined) lease.worktree = patch.worktree;
+    if (patch.pane !== undefined) lease.pane = patch.pane;
+    if (patch.session !== undefined) lease.session = patch.session;
+    if (patch.stage !== undefined) lease.stage = patch.stage;
+    if (patch.heartbeatAt !== undefined) lease.heartbeatAt = patch.heartbeatAt;
   });
 }
 

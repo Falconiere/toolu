@@ -152,7 +152,6 @@ async function settleDrains(stdout: Drain, stderr: Drain): Promise<void> {
 function exitCode(proc: Bun.Subprocess, observed: number | undefined): number {
   if (observed !== undefined) return observed;
   if (proc.exitCode !== null) return proc.exitCode;
-  if (typeof proc.signalCode === "number") return 128 + proc.signalCode;
   const signalNumber = proc.signalCode === null ? undefined : constants.signals[proc.signalCode];
   return 128 + (signalNumber ?? 0);
 }

@@ -31,6 +31,10 @@ export async function ensureWorktree(
     : (((await herdr(["worktree", "list", "--cwd", checkout])).worktrees as Wt[] | undefined) ??
       []);
   const existing = listed.find((w) => w.branch === issue.branch);
+  const existingPath = (w: Wt): string => {
+    if (!w.path) throw new CommandError(`herdr listed ${issue.branch} without a worktree path`);
+    return w.path;
+  };
   if (existing?.open_workspace_id) {
     const ws = existing.open_workspace_id;
     const panes = (await herdr(["pane", "list", "--workspace", ws])).panes as {
@@ -42,7 +46,7 @@ export async function ensureWorktree(
     return {
       workspace_id: ws,
       pane_id: pane0.pane_id,
-      worktree: realpathSync(existing.path ?? ""),
+      worktree: realpathSync(existingPath(existing)),
     };
   }
   let cmd: string[];
@@ -53,7 +57,7 @@ export async function ensureWorktree(
       "--cwd",
       checkout,
       "--path",
-      existing.path ?? "",
+      existingPath(existing),
       "--label",
       issue.key,
       "--no-focus",

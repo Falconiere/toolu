@@ -290,6 +290,17 @@ test("managed jobs retain capacity until redirected descendants exit", async () 
   expect(activeJobs(root, sb.project)).toBe(false);
 });
 
+test("managed jobs pass binary stdin through byte-exact", async () => {
+  using sb = createSandbox();
+  const root = join(sb.root, "resources");
+  const input = new Uint8Array([0x00, 0xff, 0xfe, 0x80, 0x0a, 0xc3]);
+  const result = await runManagedJob(["od", "-An", "-tx1"], binding(root, sb.project), {
+    stdin: input,
+  });
+  expect(result.exitCode).toBe(0);
+  expect(result.stdout.trim().split(/\s+/)).toEqual(["00", "ff", "fe", "80", "0a", "c3"]);
+});
+
 test("managed admission lets bounded CPU work finish and report real usage", async () => {
   using sb = createSandbox();
   const root = join(sb.root, "resources");

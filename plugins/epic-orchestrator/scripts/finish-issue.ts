@@ -243,7 +243,9 @@ async function finishLiveWorktree(
   const wipRef = await snapshotRef(worktree, rec.key);
   const dirty = await leftovers(worktree);
   if (wipRef === null && dirty.length > 0)
-    throw new Error(`refusing cleanup: ${worktree} has uncommitted work and the snapshot failed`);
+    throw new Error(
+      `refusing ${abandon ? "--abandon" : "cleanup"}: ${worktree} has uncommitted work and the snapshot failed`,
+    );
   if ((await ownedWorkload(worktree, shellPid)).length > 0)
     throw new Error("new workload appeared before cleanup; retry after it exits");
 

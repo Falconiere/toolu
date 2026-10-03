@@ -49,6 +49,8 @@ test.concurrent("host pool: parses caps", () => {
     { kind: "codex", cap: 3 },
     { kind: "cursor", cap: 1 },
   ]);
+  expect(parseHosts("claude:", 3)).toEqual([{ kind: "claude", cap: 3 }]);
+  expect(() => parseHosts("claude:0", 3)).toThrow("invalid host capacity");
 });
 
 test.concurrent("host pool: most free capacity wins; cooling and full hosts are skipped", () => {

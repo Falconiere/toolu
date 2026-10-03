@@ -147,23 +147,22 @@ test("an unreadable Linux cwd in an owned process group keeps ownership uncertai
   const outside = mkdtempSync(join(tmpdir(), "toolu-workload-hidden-group-outside-"));
   temporary.push(root, outside);
   const ready = join(outside, "ready.pid");
-  const owner = Bun.spawn([process.execPath, "-e", "await Bun.sleep(30_000)"], {
-    cwd: root,
-    stdout: "ignore",
-    stderr: "ignore",
-  });
-  const hidden = Bun.spawn([process.execPath, "-e", hiddenScript(ready)], {
+  // A dedicated group leader outside the worktree holds the owned process and an
+  // unrelated sibling whose cwd is unreadable, so the group never includes the runner.
+  const leaderScript = [
+    `const owner = Bun.spawn([process.execPath, "-e", "await Bun.sleep(30_000)"], { cwd: ${JSON.stringify(root)}, stdout: "ignore", stderr: "ignore" });`,
+    `const hidden = Bun.spawn([process.execPath, "-e", ${JSON.stringify(hiddenScript(ready))}], { cwd: ${JSON.stringify(outside)}, stdout: "ignore", stderr: "ignore" });`,
+    "await Promise.all([owner.exited, hidden.exited]);",
+  ].join("\n");
+  const leader = Bun.spawn([process.execPath, "-e", leaderScript], {
     cwd: outside,
+    detached: true,
     stdout: "ignore",
     stderr: "ignore",
   });
-  try {
-    await waitFor(ready);
-    expect(() => readlinkSync(`/proc/${hidden.pid}/cwd`)).toThrow(/EACCES/);
-    await expect(ownedWorkload(root)).rejects.toThrow("cannot determine worktree ownership");
-  } finally {
-    owner.kill("SIGKILL");
-    hidden.kill("SIGKILL");
-    await Promise.all([owner.exited, hidden.exited]);
-  }
+  groups.push(leader.pid);
+  const hiddenPid = await waitFor(ready);
+  expect(() => readlinkSync(`/proc/${hiddenPid}/cwd`)).toThrow(/EACCES/);
+
+  await expect(ownedWorkload(root)).rejects.toThrow("cannot determine worktree ownership");
 });

@@ -5162,8 +5162,6 @@ function exitCode(proc, observed) {
     return observed;
   if (proc.exitCode !== null)
     return proc.exitCode;
-  if (typeof proc.signalCode === "number")
-    return 128 + proc.signalCode;
   const signalNumber = proc.signalCode === null ? undefined : constants.signals[proc.signalCode];
   return 128 + (signalNumber ?? 0);
 }
@@ -5490,7 +5488,18 @@ async function patchLease(root, token, patch) {
     const lease = state.leases.find((candidate) => candidate.token === token);
     if (!lease)
       throw new Error("resource lease lost");
-    Object.assign(lease, patch);
+    if (patch.groupPid !== undefined)
+      lease.groupPid = patch.groupPid;
+    if (patch.worktree !== undefined)
+      lease.worktree = patch.worktree;
+    if (patch.pane !== undefined)
+      lease.pane = patch.pane;
+    if (patch.session !== undefined)
+      lease.session = patch.session;
+    if (patch.stage !== undefined)
+      lease.stage = patch.stage;
+    if (patch.heartbeatAt !== undefined)
+      lease.heartbeatAt = patch.heartbeatAt;
   });
 }
 async function releaseLease(root, token) {
@@ -5506,6 +5515,17 @@ async function releaseLease(root, token) {
 // packages/toolu-core/src/resources/jobs.ts
 var FORWARDED_SIGNALS = ["SIGINT", "SIGTERM", "SIGHUP"];
 function noop() {}
+function withGoSignal(stdin) {
+  if (stdin === undefined || typeof stdin === "string")
+    return `toolu-go
+${stdin ?? ""}`;
+  const prefix = new TextEncoder().encode(`toolu-go
+`);
+  const bytes = new Uint8Array(prefix.length + stdin.length);
+  bytes.set(prefix);
+  bytes.set(stdin, prefix.length);
+  return bytes;
+}
 function guardOwnedGroup(processGroupId) {
   const onExit = () => signalProcessGroup(processGroupId, "SIGKILL");
   const listeners = FORWARDED_SIGNALS.map((signal) => [
@@ -5538,7 +5558,6 @@ async function runManagedJob(argv, binding, opts = {}) {
   let heartbeatFailure;
   let releaseGuard = noop;
   try {
-    const input = typeof opts.stdin === "string" ? opts.stdin : new TextDecoder().decode(opts.stdin);
     const result = await runCommand([
       "bash",
       "-c",
@@ -5547,18 +5566,23 @@ async function runManagedJob(argv, binding, opts = {}) {
       ...argv
     ], {
       ...opts,
-      stdin: `toolu-go
-${input}`,
+      stdin: withGoSignal(opts.stdin),
       onSpawn: async (pid) => {
         group = pid;
         releaseGuard = guardOwnedGroup(pid);
         await patchLease(binding.root, lease.token, { groupPid: pid, stage: "running" });
         await opts.onSpawn?.(pid);
-        heartbeat = setInterval(() => {
-          patchLease(binding.root, lease.token, { heartbeatAt: new Date().toISOString() }).catch((error) => {
+        const beat = async () => {
+          try {
+            await patchLease(binding.root, lease.token, {
+              heartbeatAt: new Date().toISOString()
+            });
+            heartbeatFailure = undefined;
+          } catch (error) {
             heartbeatFailure = error;
-          });
-        }, 30000);
+          }
+        };
+        heartbeat = setInterval(() => void beat(), 30000);
       }
     });
     if (heartbeatFailure !== undefined)

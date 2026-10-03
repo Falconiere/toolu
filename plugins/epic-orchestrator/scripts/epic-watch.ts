@@ -120,7 +120,7 @@ export function issueEvents(
   if ("__error__" in agents) return events;
   const agentName = typeof rec.agent === "string" ? rec.agent : key;
   const agentState = agents[agentName];
-  if (!("__error__" in agents) && agentState === undefined && rec.stage === "running") {
+  if (agentState === undefined && rec.stage === "running") {
     if (!mark.gone) {
       mark.gone = true;
       events.push({ ...base, type: "gone" });

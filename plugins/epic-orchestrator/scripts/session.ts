@@ -13,6 +13,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function vanished(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "ENOENT";
+}
+
 function validSessionId(kind: HostKind, value: unknown): value is string {
   if (typeof value !== "string") return false;
   if (kind === "opencode") return /^ses_[A-Za-z0-9]+$/.test(value);
@@ -93,40 +97,51 @@ export async function captureSession(
   let scanned = 0;
   for (const root of new Set(roots)) {
     if (!existsSync(root)) continue;
-    for await (const path of new Bun.Glob("**/*.jsonl").scan({
-      cwd: root,
-      absolute: true,
-    })) {
-      if (++scanned > MAX_SESSION_FILES) return null;
-      try {
-        if (statSync(path).mtimeMs < since) continue;
-      } catch {
-        continue; // A host may rotate a session file during discovery.
-      }
-      const records = (await Bun.file(path).slice(0, MAX_SESSION_BYTES).text())
-        .split("\n")
-        .slice(0, MAX_SESSION_RECORDS);
-      for (const line of records) {
-        if (!line) continue;
+    try {
+      for await (const path of new Bun.Glob("**/*.jsonl").scan({
+        cwd: root,
+        absolute: true,
+      })) {
+        if (++scanned > MAX_SESSION_FILES) return null;
+        let records: string[];
         try {
-          const entry: unknown = JSON.parse(line);
-          if (!isRecord(entry)) continue;
-          if (kind === "codex") {
-            const payload = entry.payload;
-            if (
-              entry.type === "session_meta" &&
-              isRecord(payload) &&
-              payload.cwd === worktree &&
-              validSessionId(kind, payload.id)
-            )
-              matches.add(payload.id);
-          }
-          if (kind === "claude" && entry.cwd === worktree && validSessionId(kind, entry.sessionId))
-            matches.add(entry.sessionId);
+          if (statSync(path).mtimeMs < since) continue;
+          records = (await Bun.file(path).slice(0, MAX_SESSION_BYTES).text())
+            .split("\n")
+            .slice(0, MAX_SESSION_RECORDS);
         } catch (error) {
-          if (!(error instanceof SyntaxError)) throw error;
+          if (vanished(error)) continue; // A host may rotate a session file during discovery.
+          throw error;
+        }
+        for (const line of records) {
+          if (!line) continue;
+          try {
+            const entry: unknown = JSON.parse(line);
+            if (!isRecord(entry)) continue;
+            if (kind === "codex") {
+              const payload = entry.payload;
+              if (
+                entry.type === "session_meta" &&
+                isRecord(payload) &&
+                payload.cwd === worktree &&
+                validSessionId(kind, payload.id)
+              )
+                matches.add(payload.id);
+            }
+            if (
+              kind === "claude" &&
+              entry.cwd === worktree &&
+              validSessionId(kind, entry.sessionId)
+            )
+              matches.add(entry.sessionId);
+          } catch (error) {
+            if (!(error instanceof SyntaxError)) throw error;
+          }
         }
       }
+    } catch (error) {
+      // A host may remove a session directory while it is scanned.
+      if (!vanished(error)) throw error;
     }
   }
   return matches.size === 1 ? ([...matches][0] ?? null) : null;
