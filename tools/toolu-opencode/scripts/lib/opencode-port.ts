@@ -1,5 +1,6 @@
 /**
- * OpenCode text for the toolu and toolu-review surfaces (#358), keyed by
+ * OpenCode text for the toolu and toolu-review (#358) and the brainstorm and
+ * delivery-flow (#355) surfaces, keyed by
  * repo-relative source path. Each `from` must occur exactly `count` times
  * (default 1) in that source, so a source edit that moves an anchor fails
  * generation instead of shipping Claude Code or Codex text to OpenCode.
@@ -15,7 +16,158 @@ const MODEL_NOTE =
 
 const TOOLU_SCRIPTS = '"$TOOLU_PLUGIN_ROOT_TOOLU/scripts';
 
+const skill = (id: string): string => `\`skill({ name: "${id}" })\``;
+const BABYSIT = skill("pr-babysit-babysit-73c340c6");
+const REVIEW = skill("toolu-review-review");
+
+const TIER_AGENTS =
+  "`toolu-quick-task` (`haiku`), `toolu-implementer` (`sonnet`), `toolu-architect` (`opus`, `fable`) or `general` (`inherit`)";
+
+// delivery-flow ships byte-identical private copies of these two toolu files.
+const MODEL_ROUTING_PORT: readonly PortEdit[] = [
+  [
+    "(`plugins/toolu/hooks/docs/model-routing.md`)",
+    "(`plugins/toolu/hooks/docs/model-routing-opencode.md` on OpenCode)",
+  ],
+  [
+    "reasoning-effort pair in `models.codex.<class>`.",
+    `reasoning-effort pair in \`models.codex.<class>\`. ${MODEL_NOTE} Each class
+routes to an agent instead (see Pre-tiered agents).`,
+  ],
+  [
+    `Pinning the tier in the agent's own frontmatter is stronger than remembering to
+pass \`model:\`, so prefer these when one fits:
+
+| Agent | Tier | Job |
+|---|---|---|
+| \`toolu:quick-task\` | \`haiku\` | Mechanical lookups and bounded mechanical edits |
+| \`toolu:deep-explore\` | \`sonnet\` | Structural exploration via ast-grep |
+| \`toolu:research-agent\` | \`sonnet\` | External docs / web research |
+| \`toolu:implementer\` | \`sonnet\` | One bounded plan step + its tests |
+| \`toolu:architect\` | \`opus\` | Design, trade-offs, synthesis (read-only) |
+
+For anything else, route explicitly with the active host's delegation interface.
+Leaving routing unset inherits host defaults.`,
+    `Pass one of these as the \`task\` tool's \`subagent_type\` when it fits. On OpenCode
+they carry no model of their own; set \`agent.<id>.model\` to pin one.
+
+| Agent | Claude Code tier | Job |
+|---|---|---|
+| \`toolu-quick-task\` | \`haiku\` | Mechanical lookups and bounded mechanical edits |
+| \`toolu-deep-explore\` | \`sonnet\` | Structural exploration via ast-grep |
+| \`toolu-research-agent\` | \`sonnet\` | External docs / web research |
+| \`toolu-implementer\` | \`sonnet\` | One bounded plan step + its tests |
+| \`toolu-architect\` | \`opus\` | Design, trade-offs, synthesis (read-only) |
+
+For anything else, use OpenCode's \`general\` or \`explore\` agent.`,
+  ],
+  [
+    `**Limit:** Claude config remaps the rubric but cannot rewrite a pre-built agent's
+frontmatter. Codex custom-agent files also take precedence over class routing;
+run \`$toolu:setup\` after plugin upgrades to install current profile templates.`,
+    `**Limit:** on OpenCode, \`models\` remaps the session text only; an agent's model
+comes from \`agent.<id>.model\` in \`opencode.json\`. There are no agent profiles to
+install.`,
+  ],
+];
+
+const SEMANTIC_JUDGMENTS_PORT: readonly PortEdit[] = [
+  [
+    "Read the installed `jev` skill for host path, CLI, question contract, and",
+    'Load `skill({ name: "jev-jev" })` when Jev is enabled, for the wrapper path, CLI, question contract, and',
+  ],
+];
+
+const DELIVERY = "plugins/delivery-flow/skills/delivery-flow";
+
 export const OPENCODE_PORTS: Readonly<Record<string, readonly PortEdit[]>> = {
+  "plugins/brainstorm/skills/brainstorm/SKILL.md": [
+    [
+      "Delegate only when the search needs a broad map, on a\nread-only exploration tier; keep the final trade-off decision in the main\nthread on the most capable tier.",
+      'Delegate only when the search needs a broad map, to the `toolu-deep-explore`\nagent (`task` with `subagent_type: "toolu-deep-explore"`) when it is listed, else\nOpenCode\'s `explore`; keep the final trade-off decision in the main thread.',
+    ],
+    [
+      "When Jev is installed, call it to compare",
+      `When Jev is enabled, load ${skill("jev-jev")} and call it to compare`,
+    ],
+    [
+      "Use\nthe host's structured-choice tool: `AskUserQuestion` in Claude Code,\n`request_user_input` in Codex when available; otherwise ask one concise plain\nquestion.",
+      "Use\nOpenCode's `question` tool when it is listed; otherwise ask one concise plain\nquestion.",
+    ],
+  ],
+  [`${DELIVERY}/SKILL.md`]: [
+    ["babysit on Claude Code or Codex.", "babysit on OpenCode."],
+    ["`pr-babysit:babysit`", BABYSIT, 3],
+    [
+      "Use the active host's `/delivery-flow:delivery-flow` or `$delivery-flow:delivery-flow` invocation as appropriate.",
+      `On OpenCode it is ${skill("delivery-flow-delivery-flow")}.`,
+    ],
+    [
+      `Before running ledger or verdict commands, locate the enabled, installed
+\`toolu@toolu\` plugin and set \`TOOLU_PLUGIN_ROOT\` to its plugin root. Claude
+Code exposes \`installPath\` in \`claude plugin list --json\`; Codex exposes
+\`source.path\` in \`codex plugin list --json\`. Prefer an enabled project install
+for the current repository, then an enabled user install. Confirm
+\`$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\` and \`$TOOLU_PLUGIN_ROOT/hooks/dist/verdict.js\` exist. In a toolu source
+checkout, \`plugins/toolu\` is also valid. The task repository need
+not contain toolu's source tree.`,
+      `Before running ledger or verdict commands, confirm \`TOOLU_PLUGIN_ROOT\` is set.
+On OpenCode, toolu's \`shell.env\` sets it in every bash call to the enabled toolu
+plugin's directory, from the npm package or a local clone; enabling delivery-flow
+enables toolu. When it is unset, toolu is not ready in this session: stop and name that
+prerequisite. Confirm \`$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\` and
+\`$TOOLU_PLUGIN_ROOT/hooks/dist/verdict.js\` exist. The task repository need not
+contain toolu's source tree.`,
+    ],
+    [
+      "Invoke the active host's `brainstorm:brainstorm` (`/brainstorm:brainstorm` or `$brainstorm:brainstorm`) in its Delivery mode",
+      `Load ${skill("brainstorm-brainstorm")} in its Delivery mode`,
+    ],
+    [
+      "`toolu-review:review` with complete version: 2 state",
+      `${REVIEW} with complete version: 2 state`,
+    ],
+    [
+      "the installed `brainstorm`, `toolu`, `toolu-review`, and `pr-babysit` skills",
+      `a set \`TOOLU_PLUGIN_ROOT\`, the ${skill("brainstorm-brainstorm")}, ${REVIEW} and ${BABYSIT} skills in the \`skill\` tool's list`,
+    ],
+  ],
+  [`${DELIVERY}/references/execution.md`]: [
+    [
+      "4. **Land it clean.** A PostToolUse quality gate runs on every TS/Rust edit. If it reports a violation the gate goes **failing** and blocks further edits until fixed — fix immediately; do not pile on more changes.",
+      "4. **Land it clean.** On OpenCode, toolu's `tool.execute.after` check runs on every TS/Rust edit and appends any violation to that edit's result. The gate then goes **failing** and blocks the next `git commit` and `git push` until fixed — fix immediately; do not pile on more changes.",
+    ],
+    [
+      "hand that step to a subagent on that model (`toolu:quick-task` / `toolu:implementer` / `toolu:architect`, or an explicit `model:`).",
+      `hand that step to its agent as the \`task\` tool's \`subagent_type\`: ${TIER_AGENTS}. \`task\` takes no model argument.`,
+    ],
+    [
+      "Change the hypothesis (`systematic-debugging`), don't retry harder.",
+      `Change the hypothesis (${skill("toolu-debug")}), don't retry harder.`,
+    ],
+    [
+      "the required `pr-babysit` plugin is not installed or its `pr-babysit:babysit` skill is unavailable.",
+      `the required \`pr-babysit\` plugin is not enabled, or ${BABYSIT} is not in the \`skill\` tool's list.`,
+    ],
+    [
+      "4. Run the active host's `toolu-review:review` invocation (see [host-mapping.md](host-mapping.md)) against",
+      `4. Load ${REVIEW} and run it against`,
+    ],
+    [
+      "3. Invoke the active host's `pr-babysit:babysit` (see [host-mapping.md](host-mapping.md)) with no arguments.",
+      `3. Load ${BABYSIT} and run it with no arguments.`,
+    ],
+  ],
+  [`${DELIVERY}/references/ledger.md`]: [
+    [
+      "- `model`: `haiku`, `sonnet`, `opus`, `fable`, or `inherit`.",
+      `- \`model\`: \`haiku\`, \`sonnet\`, \`opus\`, \`fable\`, or \`inherit\`. On OpenCode these
+  are tier labels, not models: execution passes ${TIER_AGENTS} as the \`task\`
+  tool's \`subagent_type\`, which takes no model argument.`,
+    ],
+  ],
+  [`${DELIVERY}/references/model-routing.md`]: MODEL_ROUTING_PORT,
+  [`${DELIVERY}/references/semantic-judgments.md`]: SEMANTIC_JUDGMENTS_PORT,
   "plugins/toolu-review/skills/review/SKILL.md": [
     [
       `   # Codex
@@ -103,52 +255,7 @@ routing inherits host defaults, which may be inappropriate for the task.
 | architecture | \`toolu-architect\` | design and hard-to-reverse calls |`,
     ],
   ],
-  "plugins/toolu/skills/orchestrator/references/model-routing.md": [
-    [
-      "(`plugins/toolu/hooks/docs/model-routing.md`)",
-      "(`plugins/toolu/hooks/docs/model-routing-opencode.md` on OpenCode)",
-    ],
-    [
-      "reasoning-effort pair in `models.codex.<class>`.",
-      `reasoning-effort pair in \`models.codex.<class>\`. ${MODEL_NOTE} Each class
-routes to an agent instead (see Pre-tiered agents).`,
-    ],
-    [
-      `Pinning the tier in the agent's own frontmatter is stronger than remembering to
-pass \`model:\`, so prefer these when one fits:
-
-| Agent | Tier | Job |
-|---|---|---|
-| \`toolu:quick-task\` | \`haiku\` | Mechanical lookups and bounded mechanical edits |
-| \`toolu:deep-explore\` | \`sonnet\` | Structural exploration via ast-grep |
-| \`toolu:research-agent\` | \`sonnet\` | External docs / web research |
-| \`toolu:implementer\` | \`sonnet\` | One bounded plan step + its tests |
-| \`toolu:architect\` | \`opus\` | Design, trade-offs, synthesis (read-only) |
-
-For anything else, route explicitly with the active host's delegation interface.
-Leaving routing unset inherits host defaults.`,
-      `Pass one of these as the \`task\` tool's \`subagent_type\` when it fits. On OpenCode
-they carry no model of their own; set \`agent.<id>.model\` to pin one.
-
-| Agent | Claude Code tier | Job |
-|---|---|---|
-| \`toolu-quick-task\` | \`haiku\` | Mechanical lookups and bounded mechanical edits |
-| \`toolu-deep-explore\` | \`sonnet\` | Structural exploration via ast-grep |
-| \`toolu-research-agent\` | \`sonnet\` | External docs / web research |
-| \`toolu-implementer\` | \`sonnet\` | One bounded plan step + its tests |
-| \`toolu-architect\` | \`opus\` | Design, trade-offs, synthesis (read-only) |
-
-For anything else, use OpenCode's \`general\` or \`explore\` agent.`,
-    ],
-    [
-      `**Limit:** Claude config remaps the rubric but cannot rewrite a pre-built agent's
-frontmatter. Codex custom-agent files also take precedence over class routing;
-run \`$toolu:setup\` after plugin upgrades to install current profile templates.`,
-      `**Limit:** on OpenCode, \`models\` remaps the session text only; an agent's model
-comes from \`agent.<id>.model\` in \`opencode.json\`. There are no agent profiles to
-install.`,
-    ],
-  ],
+  "plugins/toolu/skills/orchestrator/references/model-routing.md": MODEL_ROUTING_PORT,
   "plugins/toolu/skills/deep-research/SKILL.md": [
     ["that stays with `research-agent`", "that stays with `toolu-research-agent`"],
     ["that is `deep-explore`'s job", "that is `toolu-deep-explore`'s job"],
@@ -200,12 +307,7 @@ The bundled [installer](scripts/setup.ts) refuses to run on OpenCode: it exits 2
 with this explanation and writes nothing. Do not edit Codex profiles from here.`,
     ],
   ],
-  "plugins/toolu/workflows/semantic-judgments.md": [
-    [
-      "Read the installed `jev` skill for host path, CLI, question contract, and",
-      'Load `skill({ name: "jev-jev" })` when Jev is enabled, for the wrapper path, CLI, question contract, and',
-    ],
-  ],
+  "plugins/toolu/workflows/semantic-judgments.md": SEMANTIC_JUDGMENTS_PORT,
   "plugins/toolu/workflows/commit.md": [
     [
       "1. Delegate this bounded workflow to the configured `quick-task` mechanical\n   agent when that agent is available.",

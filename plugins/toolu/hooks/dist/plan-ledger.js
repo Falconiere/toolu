@@ -24,36 +24,6 @@ function childEnv(env) {
   return out;
 }
 
-// packages/toolu-core/src/state/diff-sha.ts
-function diffSha(repoRoot, baseRef, options = {}) {
-  if (baseRef.startsWith("-"))
-    return;
-  const env = childEnv(options.env ?? process.env);
-  const diff = Bun.spawnSync(["git", "-C", repoRoot, "diff", "--no-color", `${baseRef}...HEAD`], {
-    env,
-    stdout: "pipe",
-    stderr: "ignore"
-  });
-  if (!diff.success)
-    return;
-  const hash = Bun.spawnSync(["git", "-C", repoRoot, "hash-object", "--stdin"], {
-    env,
-    stdin: diff.stdout,
-    stdout: "pipe",
-    stderr: "ignore"
-  });
-  if (!hash.success)
-    return;
-  const sha = hash.stdout.toString("utf8").trim();
-  return sha === "" ? undefined : sha;
-}
-
-// packages/toolu-core/src/state/state-git.ts
-import { spawnSync as spawnSync3 } from "child_process";
-
-// packages/toolu-core/src/detect/detect-branch.ts
-import { spawnSync as spawnSync2 } from "child_process";
-
 // packages/toolu-core/src/host/host-roots.ts
 import { spawnSync } from "child_process";
 import { homedir } from "os";
@@ -220,7 +190,35 @@ function projectStateDir(name, options = {}) {
   return base === undefined ? undefined : join(base, name);
 }
 
+// packages/toolu-core/src/state/diff-sha.ts
+function diffSha(repoRoot, baseRef, options = {}) {
+  if (baseRef.startsWith("-"))
+    return;
+  const env = childEnv(options.env ?? process.env);
+  const diff = Bun.spawnSync(["git", "-C", repoRoot, "diff", "--no-color", `${baseRef}...HEAD`], {
+    env,
+    stdout: "pipe",
+    stderr: "ignore"
+  });
+  if (!diff.success)
+    return;
+  const hash = Bun.spawnSync(["git", "-C", repoRoot, "hash-object", "--stdin"], {
+    env,
+    stdin: diff.stdout,
+    stdout: "pipe",
+    stderr: "ignore"
+  });
+  if (!hash.success)
+    return;
+  const sha = hash.stdout.toString("utf8").trim();
+  return sha === "" ? undefined : sha;
+}
+
+// packages/toolu-core/src/state/state-git.ts
+import { spawnSync as spawnSync3 } from "child_process";
+
 // packages/toolu-core/src/detect/detect-branch.ts
+import { spawnSync as spawnSync2 } from "child_process";
 function branchSlug(branch) {
   const slug = branch.replaceAll("/", "_").replace(/[^A-Za-z0-9_-]/g, "");
   return slug === "" ? "_default" : slug;
@@ -5206,13 +5204,17 @@ function healLedgerFor(options) {
     return "";
   }
 }
-function preflightChecks(plan, root, cwd) {
+function reviewRemedy(host, phase) {
+  const action = host === "opencode" ? 'load skill({ name: "delivery-flow-delivery-flow" })' : host === "claude" || host === "codex" ? "run /delivery-flow:delivery-flow" : "load the delivery-flow skill";
+  return `${action} (${phase} review phase)`;
+}
+function preflightChecks(plan, root, cwd, host) {
   const under = (path) => isAbsolute(path) || root === undefined ? resolve2(cwd, path) : join5(root, path);
   const planAbs = under(plan);
   if (!readable(planAbs))
     return { code: 2, line: `preflight: plan doc not found or unreadable: ${plan}` };
   const status = docField(planAbs, "Status");
-  const planReview = "run /delivery-flow:delivery-flow (plan review phase)";
+  const planReview = reviewRemedy(host, "plan");
   if (status === "")
     return {
       code: 1,
@@ -5232,7 +5234,7 @@ function preflightChecks(plan, root, cwd) {
   const shown = specStatus === "" ? "none" : specStatus;
   return {
     code: 1,
-    line: `preflight: spec ${spec} not approved (Status: ${shown}) \u2014 run /delivery-flow:delivery-flow (spec review phase)`
+    line: `preflight: spec ${spec} not approved (Status: ${shown}) \u2014 ${reviewRemedy(host, "spec")}`
   };
 }
 function ledgerPreflight(plan = "", options = {}) {
@@ -5244,7 +5246,8 @@ function ledgerPreflight(plan = "", options = {}) {
     out.stderr("preflight: no plan doc given and no ledger plan_doc to resolve");
     return out.result(2);
   }
-  const verdict = preflightChecks(target, root, options.cwd ?? process.cwd());
+  const { host } = resolveHost(options);
+  const verdict = preflightChecks(target, root, options.cwd ?? process.cwd(), host);
   if (verdict.line !== undefined)
     out.stderr(verdict.line);
   return out.result(verdict.code);

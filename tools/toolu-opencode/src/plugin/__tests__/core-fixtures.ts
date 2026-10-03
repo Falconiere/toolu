@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Sandbox } from "@toolu/conformance/harness/sandbox";
 import { REPO_ROOT } from "../../bootstrap/__tests__/fixtures.ts";
+import { gitProject } from "./workflow-fixtures.ts";
 
 export const BRANCH = "feat/review";
 export const GENERATED = join(REPO_ROOT, "tools/toolu-opencode/generated");
@@ -47,23 +48,10 @@ export function debugTestfailCommand(): string {
  * Returns the remote's path.
  */
 export function reviewProject(sb: Sandbox, gates: object = {}): string {
-  const remote = join(sb.root, "remote.git");
-  sb.write(".gitignore", ".opencode/\nnode_modules/\n");
-  sb.write("package.json", {
-    name: "core-workflows",
-    private: true,
-    scripts: { test: "bun test" },
+  return gitProject(sb, {
+    branch: BRANCH,
+    selection: SELECTION,
+    gates,
+    files: { "math.test.ts": PASSING_TEST },
   });
-  sb.git("add", "-A");
-  sb.git("commit", "-q", "-m", "chore: project");
-  sb.git("init", "-q", "--bare", remote);
-  sb.git("remote", "add", "origin", remote);
-  sb.git("push", "-q", "origin", "main");
-  sb.git("checkout", "-q", "-b", BRANCH);
-  sb.write("math.test.ts", PASSING_TEST);
-  sb.git("add", "-A");
-  sb.git("commit", "-q", "-m", "feat: math");
-  sb.write(".opencode/toolu/plugins.json", SELECTION);
-  sb.write(".opencode/toolu.config.json", { version: 1, gates });
-  return remote;
 }

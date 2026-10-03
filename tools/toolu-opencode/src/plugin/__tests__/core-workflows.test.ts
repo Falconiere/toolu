@@ -7,13 +7,11 @@
 import { expect, test } from "bun:test";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import type { Config, Hooks } from "@opencode-ai/plugin";
+import type { Config } from "@opencode-ai/plugin";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { REPO_ROOT } from "../../bootstrap/__tests__/fixtures.ts";
 import { isPlainRecord } from "../../surfaces/merge.ts";
 import { stagePlugins } from "../../../scripts/bundle-plugins.ts";
-import type { HostBinding } from "../context.ts";
-import { createTooluHooks } from "../hooks.ts";
 import {
   BRANCH,
   FAILING_NAME,
@@ -25,48 +23,7 @@ import {
   writeStateCommand,
 } from "./core-fixtures.ts";
 import { bashEnv, binding, hook, inShell } from "./jev-fixtures.ts";
-
-const CALL = { sessionID: "ses_core", callID: "call_core" };
-
-/** The before hook's refusal for a bash `command`, or "allowed". */
-async function refusal(hooks: Hooks, command: string): Promise<string> {
-  try {
-    await hook(hooks, "tool.execute.before")({ tool: "bash", ...CALL }, { args: { command } });
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error);
-  }
-  return "allowed";
-}
-
-/** `command` run in the agent's bash, with its result shown to the after hook as OpenCode would. */
-async function bash(hooks: Hooks, sb: Sandbox, command: string) {
-  const res = await inShell(sb, command, await bashEnv(hooks, sb));
-  const input = { tool: "bash", ...CALL, args: { command } };
-  const output = {
-    title: "bash",
-    output: res.stdout + res.stderr,
-    metadata: { exit: res.exitCode },
-  };
-  await hook(hooks, "tool.execute.after")(input, output);
-  return res;
-}
-
-function remoteHead(sb: Sandbox, remote: string): string {
-  try {
-    return sb.git("--git-dir", remote, "rev-parse", `refs/heads/${BRANCH}`).trim();
-  } catch {
-    return "";
-  }
-}
-
-async function withHooks(b: HostBinding, body: (hooks: Hooks) => Promise<void>): Promise<void> {
-  const hooks = await createTooluHooks(b);
-  try {
-    await body(hooks);
-  } finally {
-    await hooks.dispose?.();
-  }
-}
+import { bash, refusal, remoteHead, withHooks } from "./workflow-fixtures.ts";
 
 test.concurrent("toolu and toolu-review register 7 skills, 5 agents and 2 commands", async () => {
   using sb = createSandbox({ git: true });
@@ -101,7 +58,7 @@ test.concurrent("the review skill's write-state command is what lets a blocked p
   const push = `git push origin ${BRANCH}`;
   await withHooks(binding(sb, [], ""), async (hooks) => {
     expect(await refusal(hooks, push)).toContain("Code review required before push");
-    expect(remoteHead(sb, remote)).toBe("");
+    expect(remoteHead(sb, remote, BRANCH)).toBe("");
 
     expect((await bash(hooks, sb, writeStateCommand(1))).exitCode).toBe(0);
     expect(await refusal(hooks, push)).toContain("Code review has open findings (1)");
@@ -119,7 +76,7 @@ test.concurrent("the review skill's write-state command is what lets a blocked p
 
     expect(await refusal(hooks, push)).toBe("allowed");
     expect((await bash(hooks, sb, push)).exitCode).toBe(0);
-    expect(remoteHead(sb, remote)).toBe(sb.git("rev-parse", "HEAD").trim());
+    expect(remoteHead(sb, remote, BRANCH)).toBe(sb.git("rev-parse", "HEAD").trim());
   });
 });
 

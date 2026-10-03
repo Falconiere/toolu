@@ -6,7 +6,8 @@
 import { accessSync, constants, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
-import { envValue } from "../host/host-name.ts";
+import { envValue, type HostName } from "../host/host-name.ts";
+import { resolveHost } from "../host/host-roots.ts";
 import { diffSha } from "../state/diff-sha.ts";
 import { baseBranch, branchSlug, hasGit } from "../state/state-git.ts";
 import { toJqJson } from "../state/state-io.ts";
@@ -143,10 +144,22 @@ function healLedgerFor(options: LedgerOptions): string {
   }
 }
 
+/** Where a refused preflight sends the agent: OpenCode loads the generated skill by its id. */
+function reviewRemedy(host: HostName, phase: "plan" | "spec"): string {
+  const action =
+    host === "opencode"
+      ? 'load skill({ name: "delivery-flow-delivery-flow" })'
+      : host === "claude" || host === "codex"
+        ? "run /delivery-flow:delivery-flow"
+        : "load the delivery-flow skill";
+  return `${action} (${phase} review phase)`;
+}
+
 function preflightChecks(
   plan: string,
   root: string | undefined,
   cwd: string,
+  host: HostName,
 ): { code: 0 | 1 | 2; line?: string } {
   const under = (path: string): string =>
     isAbsolute(path) || root === undefined ? resolve(cwd, path) : join(root, path);
@@ -154,7 +167,7 @@ function preflightChecks(
   if (!readable(planAbs))
     return { code: 2, line: `preflight: plan doc not found or unreadable: ${plan}` };
   const status = docField(planAbs, "Status");
-  const planReview = "run /delivery-flow:delivery-flow (plan review phase)";
+  const planReview = reviewRemedy(host, "plan");
   if (status === "")
     return {
       code: 1,
@@ -172,7 +185,7 @@ function preflightChecks(
   const shown = specStatus === "" ? "none" : specStatus;
   return {
     code: 1,
-    line: `preflight: spec ${spec} not approved (Status: ${shown}) — run /delivery-flow:delivery-flow (spec review phase)`,
+    line: `preflight: spec ${spec} not approved (Status: ${shown}) — ${reviewRemedy(host, "spec")}`,
   };
 }
 
@@ -190,7 +203,8 @@ export function ledgerPreflight(plan = "", options: LedgerOptions = {}): Command
     out.stderr("preflight: no plan doc given and no ledger plan_doc to resolve");
     return out.result(2);
   }
-  const verdict = preflightChecks(target, root, options.cwd ?? process.cwd());
+  const { host } = resolveHost(options);
+  const verdict = preflightChecks(target, root, options.cwd ?? process.cwd(), host);
   if (verdict.line !== undefined) out.stderr(verdict.line);
   return out.result(verdict.code);
 }

@@ -240,6 +240,17 @@ Add `exa-search` to the `enabled` list and restart OpenCode. The native skill is
 
 The generated skill documents the remaining flags. Search, crawl and similar use Exa's `/search`, `/contents` and `/findSimilar` endpoints through the existing REST wrapper. HTTP and transport failures reach the agent with a nonzero exit. If `EXA_API_KEY` is missing, startup tells the agent to use OpenCode's `websearch` when available, or `webfetch` for a known URL; the helper itself exits before making a request. Removing `exa-search` from the selection removes its skill, startup guidance and toolu-owned helper symlink on the next start.
 
+### Delivery workflows
+
+[#355](https://github.com/Falconiere/toolu/issues/355) ports brainstorm and delivery-flow through the same port table. Add `delivery-flow` to `enabled`; its `toolu`, `toolu-review`, `pr-babysit` and `brainstorm` dependencies are selected with it.
+
+- **Skills.** Load `delivery-flow-delivery-flow` to deliver a task, or `brainstorm-brainstorm` on its own. Delivery loads brainstorm, `toolu-review-review` and `pr-babysit-babysit-73c340c6` by those ids. Each skill reads its installed references from its own directory.
+- **Ledger and verdict.** The skill runs `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js"` and `verdict.js`; `shell.env` sets `TOOLU_PLUGIN_ROOT` in every bash call. The ledger is `<project>/.opencode/tmp/plan-ledger/<branch-slug>.json` (`/` becomes `_`), the file the plan-ledger push gate reads. A preflight refused on OpenCode names the skill: `preflight: plan not approved (Status: Draft) — load skill({ name: "delivery-flow-delivery-flow" }) (plan review phase)`.
+- **Model tiers.** A plan step's `model` label picks an agent: `haiku` runs `toolu-quick-task`, `sonnet` runs `toolu-implementer`, `opus` and `fable` run `toolu-architect`, and `inherit` runs `general`. The model is that agent's `agent.<id>.model`.
+- **Quality checks.** The post-edit checks run in `tool.execute.after` and append a violation to the edit's result. The quality gate then blocks the next commit and push until it is fixed.
+
+`tools/toolu-opencode/src/plugin/__tests__/delivery-workflows.test.ts` proves the preflight, ledger, verdict and push-gate transitions hermetically. `TOOLU_LIVE_OPENCODE=1 bun test tools/toolu-opencode/src/plugin/__tests__/delivery-workflows.live.test.ts` loads both skills and their references on the pinned host and delivers to a bare remote.
+
 ## Verify a real gate
 
 Hermetic proof (matches CI):
