@@ -191,7 +191,14 @@ function apply(
   }
 }
 
+const OPENCODE_REFUSAL =
+  "setup.ts: OpenCode registers toolu's agents itself (toolu-quick-task, toolu-deep-explore, toolu-research-agent, toolu-implementer, toolu-architect); there are no Codex profiles to install. Set agent.<id>.model in opencode.json to pin a model, or disable: true to drop one.\n";
+
 function run(argv: string[]): number {
+  if (process.env.TOOLU_HOST_OVERRIDE === "opencode") {
+    process.stderr.write(OPENCODE_REFUSAL);
+    return 2;
+  }
   const plan = parseArgs(argv);
   if (plan === null) {
     process.stderr.write(USAGE);
