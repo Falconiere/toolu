@@ -56,7 +56,7 @@ Add issue-owned subprocess and pinned-host scenarios using isolated real git pro
 
 ## Documentation impact
 
-Update `plugins/ts-quality/README.md` and `docs/opencode.md` with the tested OpenCode behavior and prerequisites. Synchronize generated OpenCode resource mirrors when those source docs change.
+Update `plugins/ts-quality/README.md`, `docs/ts-quality/README.md`, `docs/opencode.md`, and `docs/opencode-host-contract.md` with the tested OpenCode behavior and prerequisites. Synchronize generated OpenCode resource mirrors when those source docs change.
 
 ## Open Questions
 

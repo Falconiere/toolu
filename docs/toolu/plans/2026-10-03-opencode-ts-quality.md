@@ -58,7 +58,7 @@ Real bundle integration → pinned-host execution → user documentation → ful
 
 ## Critical files
 
-Add `tools/toolu-opencode/src/adapter/__tests__/ts-quality-post.test.ts` beside the existing post-adapter tests and add a focused core dispatcher test. Add `continuePostBlocks` to `packages/toolu-core/src/dispatch/dispatch.ts`, pass it from `tools/toolu-opencode/src/adapter/tool-post.ts`, and preserve the omitted/default behavior. Add `tooling/src/opencode-host/scenarios-ts-quality-smoke.ts` and `tooling/src/opencode-ts-quality-smoke.ts`, plus the root package script. Change `plugins/ts-quality/hooks/src/` only if another real failing test identifies a defect; rebuild its committed bundle if changed. Update `plugins/ts-quality/README.md`, `docs/opencode.md` and their generated mirrors.
+Add `tools/toolu-opencode/src/adapter/__tests__/ts-quality-post.test.ts` beside the existing post-adapter tests and add a focused core dispatcher test. Add `continuePostBlocks` to `packages/toolu-core/src/dispatch/dispatch.ts`, pass it from `tools/toolu-opencode/src/adapter/tool-post.ts`, and preserve the omitted/default behavior. Add `tooling/src/opencode-host/scenarios-ts-quality-smoke.ts` and `tooling/src/opencode-ts-quality-smoke.ts`, plus the root package script. Change `plugins/ts-quality/hooks/src/` only if another real failing test identifies a defect; rebuild its committed bundle if changed. Update `plugins/ts-quality/README.md`, `docs/ts-quality/README.md`, `docs/opencode.md`, `docs/opencode-host-contract.md`, and their generated mirrors.
 
 ## Verification
 

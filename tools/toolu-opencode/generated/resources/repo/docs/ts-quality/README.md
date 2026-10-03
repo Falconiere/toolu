@@ -14,7 +14,9 @@ TypeScript `PostToolUse` quality checks registered into the toolu hook engine. E
 
 ### Post-Edit Quality Checks
 
-Every TypeScript file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks run as one bundled TypeScript module (`hooks/dist/post-tool-use.js`, built from `hooks/src/post-tool-use.ts` and `hooks/src/rules/`). The `SessionStart` register hook publishes it into toolu's registry, and the core dispatcher imports it in process, only while this plugin is installed — **uninstall it and the TypeScript rules vanish, fail-closed.** Bun 1.4.x must be on `PATH` ([docs/runtime.md](../runtime.md)).
+Every TypeScript file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks run as one bundled TypeScript module (`hooks/dist/post-tool-use.js`, built from `hooks/src/post-tool-use.ts` and `hooks/src/rules/`). The `SessionStart` register hook publishes it into toolu's registry, and the core dispatcher imports it in process while this plugin is enabled. Bun 1.4.x must be resolvable through `TOOLU_BUN`, `PATH`, or `~/.bun/bin/bun` ([docs/runtime.md](../runtime.md)).
+
+On OpenCode, enable `ts-quality` in `.opencode/toolu/plugins.json` alongside `toolu`. Completed `.ts` and `.tsx` writes, edits and patches run the selected module when the project has a tracked `tsconfig*.json` and an available lock-file package manager. An installed `ast-grep` checks `.tsx` with its TSX parser. Violations appear after the edit and block later commit and push attempts; a linked worktree is skipped by the existing rule. See [OpenCode TypeScript post-edit quality](../opencode.md#typescript-post-edit-quality) and run `bun run smoke:opencode-ts-quality` in a toolu checkout for pinned-host proof.
 
 ## Checks Enforced
 
@@ -177,7 +179,7 @@ Agent: *writes the middleware*
 >   - src/middleware/auth.ts:55: console.log — use a logger
 >   - src/middleware/auth.ts: file exceeds 300-line limit (342 lines)
 
-# Agent is BLOCKED from starting new tasks until these are fixed:
+# Commit and push are blocked until these are fixed:
 #   - Change relative import to @/lib/jwt
 #   - Replace as User with a Zod schema or type guard
 #   - Replace console.log with logger.info
@@ -189,7 +191,7 @@ Agent: *writes the middleware*
 
 ## Hooks
 
-The module registers into the core toolu dispatcher and runs only while this plugin is installed. Uninstalling immediately removes the TypeScript rules:
+The module registers into the core toolu dispatcher and runs only while this plugin is enabled. Uninstalling removes the TypeScript rules at the next session start:
 
 ```text
 /plugin uninstall ts-quality@toolu
