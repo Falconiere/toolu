@@ -48,7 +48,7 @@ export function debugTestfailCommand(): string {
  */
 export function reviewProject(sb: Sandbox, gates: object = {}): string {
   const remote = join(sb.root, "remote.git");
-  sb.write(".gitignore", ".opencode/\n");
+  sb.write(".gitignore", ".opencode/\nnode_modules/\n");
   sb.write("package.json", {
     name: "core-workflows",
     private: true,
