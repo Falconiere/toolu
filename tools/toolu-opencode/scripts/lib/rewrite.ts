@@ -63,10 +63,13 @@ const JIRA_CHOOSE =
 /** jira on OpenCode (#351): one command under `shell.env`'s Bun, and the `.opencode` state paths. */
 export function opencodeJira(text: string): string {
   return text
-    .replace(JIRA_HOST_PAIR, `# OpenCode\n"$TOOLU_BUN" --no-env-file "${OPENCODE_CONFIG}/jira/jira.sh" $1`)
+    .replace(
+      JIRA_HOST_PAIR,
+      `# OpenCode\n"$TOOLU_BUN" --no-env-file "${OPENCODE_CONFIG}/jira/jira.sh" $1`,
+    )
     .replace(
       JIRA_CHOOSE,
-      "`shell.env` sets `TOOLU_BUN`, `TOOLU_CONFIG_DIR` and `TOOLU_HOST_OVERRIDE=opencode`\nin every bash call, so this runs with `bun` off `PATH` and never loads a project\n`.env`; every `jira.sh` shorthand below means this command. Plan checks call\n`\"$JIRA\"` with `.env` loading off too. A file of your own at that path runs\ndirectly instead. Plugin-root variables are lifecycle-only.",
+      '`shell.env` sets `TOOLU_BUN`, `TOOLU_CONFIG_DIR` and `TOOLU_HOST_OVERRIDE=opencode`\nin every bash call, so this runs with `bun` off `PATH` and never loads a project\n`.env`; every `jira.sh` shorthand below means this command. Plan checks call\n`"$JIRA"` with `.env` loading off too. A file of your own at that path runs\ndirectly instead. Plugin-root variables are lifecycle-only.',
     )
     .replace(
       "`.claude/tmp/jira/plans/<KEY>.md` or `.codex/tmp/jira/plans/<KEY>.md`.",
