@@ -5083,7 +5083,7 @@ function validateOptions(argv, options) {
   }
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs > MAX_TIMER_MS) {
-    throw new Error("timeoutMs must be a positive finite number within the timer range");
+    throw new Error(timeoutMs > MAX_TIMER_MS ? `timeoutMs exceeds the maximum timer delay of ${MAX_TIMER_MS} ms` : "timeoutMs must be a positive finite number");
   }
   const maxOutputBytes = options.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES;
   if (!Number.isSafeInteger(maxOutputBytes) || maxOutputBytes < 0) {

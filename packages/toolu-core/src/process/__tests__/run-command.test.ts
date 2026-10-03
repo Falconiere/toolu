@@ -322,6 +322,9 @@ describe("runCommand", () => {
     expect(() => runCommand(["true"], { timeoutMs: 0 })).toThrow(
       "timeoutMs must be a positive finite number",
     );
+    expect(() => runCommand(["true"], { timeoutMs: 2_147_483_648 })).toThrow(
+      "timeoutMs exceeds the maximum timer delay of 2147483647 ms",
+    );
     expect(() => runCommand(["true"], { maxOutputBytes: -1 })).toThrow(
       "maxOutputBytes must be a non-negative safe integer",
     );

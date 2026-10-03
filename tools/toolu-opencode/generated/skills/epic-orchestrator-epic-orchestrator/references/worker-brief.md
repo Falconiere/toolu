@@ -10,6 +10,8 @@ tracker-specific placeholders (written here without braces so they survive):
 - CLOSES: the PR body's closing line: `Closes OWNER/REPO#N` (GitHub),
   `Resolves KEY-12` (Jira), `Fixes ENG-12` (Linear).
 - HOST: the worker's host kind.
+- JOB: the managed command launcher (`bun scripts/job.ts`) that admits full
+  gates and test jobs under the worktree's shared resources.
 scripts/__tests__/skill-contract.test.ts fails if any placeholder goes unfilled. -->
 
 # Epic worker brief — {{ISSUE_REF}}
