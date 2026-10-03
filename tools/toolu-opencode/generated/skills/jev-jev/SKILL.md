@@ -29,10 +29,8 @@ Use the active host's published wrapper; plugin lifecycle variables are unavaila
 in ordinary shells:
 
 ```bash
-# Codex
-JEV="${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/jev/jev.sh"
-# Claude Code: use this assignment instead
-# JEV="${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/jev/jev.sh"
+# OpenCode
+JEV="${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/jev/jev.sh"
 JEV_BUN=
 for candidate in "${TOOLU_BUN:-}" "$(command -v bun 2>/dev/null)" "$HOME/.bun/bin/bun"; do
   if [ -n "$candidate" ] && [ -f "$candidate" ] && [ -x "$candidate" ]; then JEV_BUN="$candidate"; break; fi
@@ -47,10 +45,10 @@ JavaScript executables. They must provide an executable shebang; the resolved
 Bun prefix applies to the published bundle symlink.
 
 ```text
-"$JEV_BUN" "$JEV" noul   "question" -s STATE [--true DESC] [--false DESC]
-"$JEV_BUN" "$JEV" choice "question" -s STATE -o KEY=DESC -o KEY=DESC
-"$JEV_BUN" "$JEV" score  "question" -s STATE -l "lowest situation" -l "highest situation"
-"$JEV_BUN" "$JEV" ask questions.json -s STATE
+"$JEV_BUN" --no-env-file "$JEV" noul   "question" -s STATE [--true DESC] [--false DESC]
+"$JEV_BUN" --no-env-file "$JEV" choice "question" -s STATE -o KEY=DESC -o KEY=DESC
+"$JEV_BUN" --no-env-file "$JEV" score  "question" -s STATE -l "lowest situation" -l "highest situation"
+"$JEV_BUN" --no-env-file "$JEV" ask questions.json -s STATE
 ```
 
 - `-s/--state`: literal text, `@FILE`, or `-` (stdin). Required.

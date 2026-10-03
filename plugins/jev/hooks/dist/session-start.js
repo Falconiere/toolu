@@ -247,9 +247,19 @@ function publish(options) {
 }
 // plugins/jev/hooks/src/jev/availability.ts
 import { lstatSync as lstatSync2 } from "fs";
+var OPENCODE_SKILL = "jev-jev";
+function onOpencode() {
+  return process.env.TOOLU_HOST_OVERRIDE === "opencode";
+}
 function invocation(wrapper) {
   const quote = (value) => `'${value.replaceAll("'", "'\\''")}'`;
-  return lstatSync2(wrapper).isSymbolicLink() ? `${quote(process.execPath)} ${quote(wrapper)}` : quote(wrapper);
+  if (!lstatSync2(wrapper).isSymbolicLink())
+    return quote(wrapper);
+  const flags = onOpencode() ? " --no-env-file" : "";
+  return `${quote(process.execPath)}${flags} ${quote(wrapper)}`;
+}
+function skillReference(plugin) {
+  return onOpencode() ? `skill({ name: "${OPENCODE_SKILL}" })` : `${plugin}/skills/jev/SKILL.md`;
 }
 function credentialNotice() {
   return process.env.TYPESAFE_API_KEY ? "" : "The Jev hook did not receive TYPESAFE_API_KEY. Before reporting Jev unavailable, check whether TYPESAFE_API_KEY is set in the command environment without printing its value; hook and command environments can differ. If absent there too, state the limitation once per task and use an explicit evidence fallback. Never invent a Jev result or read credentials from .env. ";
@@ -269,8 +279,18 @@ function mandate(wrapper) {
   if (!executable(wrapper)) {
     return "Jev unavailable: published wrapper is not executable. Repair the Jev plugin installation. Until then, state the limitation once per task and use an explicit reasoning/evidence fallback; never invent a Jev result. Do not read credentials from .env.";
   }
-  return `${credentialNotice()}Jev is mandatory on every task containing semantic decisions. After initial exploration, identify useful judgments over supplied evidence; you MUST call ${invocation(wrapper)} before the decision it informs. Published bundles use the hook's resolved Bun executable and do not require bun on PATH. Reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions in one ask call. Reuse unchanged evidence and questions rather than repeating calls. If a task has no semantic decision, say so in one sentence rather than skipping silently. Syntax and linked examples: ${PLUGIN}/skills/jev/SKILL.md. Keep exact rules, tests, and code verification deterministic. On service failure, state the limitation and use an explicit evidence fallback. Jev never replaces tests or authorization.`;
+  return `${credentialNotice()}Jev is mandatory on every task containing semantic decisions. After initial exploration, identify useful judgments over supplied evidence; you MUST call ${invocation(wrapper)} before the decision it informs. Published bundles use the hook's resolved Bun executable and do not require bun on PATH. Reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions in one ask call. Reuse unchanged evidence and questions rather than repeating calls. If a task has no semantic decision, say so in one sentence rather than skipping silently. Syntax and linked examples: ${skillReference(PLUGIN)}. Keep exact rules, tests, and code verification deterministic. On service failure, state the limitation and use an explicit evidence fallback. Jev never replaces tests or authorization.`;
 }
+async function compacting() {
+  let input;
+  try {
+    input = JSON.parse(await Bun.stdin.text());
+  } catch {
+    return false;
+  }
+  return input !== null && typeof input === "object" && "source" in input && input.source === "compact";
+}
+var quiet = onOpencode() && await compacting();
 var result = publishWrapper({
   plugin: "jev",
   source: resolve(PLUGIN, "hooks/dist/jev.js"),
@@ -280,6 +300,6 @@ var result = publishWrapper({
 if (result.status === "link-failed") {
   process.stderr.write(`jev: cannot publish ${result.path}
 `);
-} else if (result.status === "published" || result.status === "kept-user-file") {
+} else if (!quiet && (result.status === "published" || result.status === "kept-user-file")) {
   process.stdout.write(renderHookOutput(sessionContext("SessionStart", mandate(result.path)), false));
 }

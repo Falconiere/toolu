@@ -26,6 +26,12 @@ need Bun 1.4.x (resolved from `TOOLU_BUN`, `PATH`, or `~/.bun/bin/bun`) and
 `TYPESAFE_API_KEY` in the environment executing Jev. Hooks can receive a different
 environment from agent commands.
 
+OpenCode: add `jev` to `.opencode/toolu/plugins.json` (see [OpenCode install](../opencode.md)).
+
+- The wrapper lives at `$TOOLU_CONFIG_DIR/jev/jev.sh`, the per-project data root exported to every bash call.
+- The skill is `jev-jev`.
+- The hooks' command adds Bun's `--no-env-file`, and the adapter runs every hook with it, so a project `.env` never supplies or reveals the key.
+
 Set `TYPESAFE_API_KEY` in the environment for the wrapper to authenticate
 (keys: `https://console.typesafe.ai/settings/keys`). It is never read from a
 `.env` file. `JEV_TIMEOUT` overrides the 60-second timeout per attempt.
@@ -52,7 +58,8 @@ contains executable examples with named evidence, rubrics, interpretation, and
 next actions, including no-match and uncertain outcomes.
 
 The SessionStart hook injects the full rule on startup, resume, clear, and
-compaction; the UserPromptSubmit hook restates a short form on every prompt so
+compaction. On OpenCode the rule is in every request's system prompt, so compaction
+adds nothing. The UserPromptSubmit hook restates a short form on every prompt so
 the rule survives long sessions. Neither calls the API. Both provide a command
 using the Bun executable already running the hook, so Bun need not be on `PATH`.
 If a hook lacks the key, its notice requires checking the command environment

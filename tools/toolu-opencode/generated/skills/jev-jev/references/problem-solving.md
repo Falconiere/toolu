@@ -15,9 +15,8 @@ Run setup + selected example in one Bash shell. Requires Bun 1.4.x, `jq` for the
 `TYPESAFE_API_KEY`; never read `.env`.
 
 ```bash
-# Codex (for OpenCode use the second line instead):
-JEV="${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/jev/jev.sh"
-# JEV="${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/jev/jev.sh"
+# OpenCode
+JEV="${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/jev/jev.sh"
 # Repository development, from the repository root, if not installed:
 if [ ! -x "$JEV" ]; then JEV="$PWD/plugins/jev/hooks/dist/jev.js"; fi
 JEV_BUN=
@@ -28,7 +27,7 @@ JEV_EXAMPLES=$(mktemp -d)
 
 judge() {
   local name="$1"
-  if "$JEV_BUN" "$JEV" ask "$JEV_EXAMPLES/$name.questions.json" \
+  if "$JEV_BUN" --no-env-file "$JEV" ask "$JEV_EXAMPLES/$name.questions.json" \
       -s "@$JEV_EXAMPLES/$name.state.json" --raw >"$JEV_EXAMPLES/$name.result.json"; then
     jq '.answers' "$JEV_EXAMPLES/$name.result.json"
   else

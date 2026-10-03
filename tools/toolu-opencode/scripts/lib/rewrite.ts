@@ -22,6 +22,19 @@ const DOT_CLAUDE_PATH = /(?:^|[\s"'`(/=])\.claude(?:\/|["'`)\s]|$)/;
 /** Whose surface is being rewritten: its plugin, and its id when it is a skill. */
 export type RewriteOwner = { plugin: string; skillId?: string };
 
+const OPENCODE_CONFIG = "${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}";
+
+/** Jev's Codex assignment and the commented other-host line after it, in either source layout. */
+const JEV_HOST_PAIR =
+  /# Codex[^\n]*\nJEV="\$\{TOOLU_CONFIG_DIR:-\$\{CODEX_HOME:-\$HOME\/\.codex\}\}\/jev\/jev\.sh"\n(?:# Claude Code[^\n]*\n)?# JEV="[^"\n]*"/g;
+
+/** Jev on OpenCode (#350): the one wrapper `shell.env` resolves, run by a Bun that ignores `.env`. */
+export function opencodeJev(text: string): string {
+  return text
+    .replace(JEV_HOST_PAIR, `# OpenCode\nJEV="${OPENCODE_CONFIG}/jev/jev.sh"`)
+    .replaceAll('"$JEV_BUN" "$JEV"', '"$JEV_BUN" --no-env-file "$JEV"');
+}
+
 export function rewriteBody(
   body: string,
   references: SurfaceReferences,
@@ -33,10 +46,9 @@ export function rewriteBody(
   const claudePluginRootRewrites = parts.length - 1;
   let rewritten = parts.join(`\${${pluginRootVar(owner.plugin)}}`);
   const claudeConfig = "${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}";
-  const openCodeConfig = "${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}";
   const configParts = rewritten.split(claudeConfig);
   const claudeConfigRewrites = configParts.length - 1;
-  rewritten = configParts.join(openCodeConfig);
+  rewritten = configParts.join(OPENCODE_CONFIG);
   rewritten = rewritten.replace("on Claude\nCode. Ordinary", "on OpenCode.\nOrdinary");
   let sourcePathRewrites = 0;
   for (const [source, destination] of [...references.paths].sort(
@@ -51,6 +63,7 @@ export function rewriteBody(
       rewritten = rewritten.replace("# Claude Code\n", "# OpenCode\n");
       rewritten = rewritten.replace("TOOLU_HOST_OVERRIDE=claude", "TOOLU_HOST_OVERRIDE=opencode");
     }
+    if (skillId === "jev-jev") rewritten = opencodeJev(rewritten);
     if (skillId === "statusline-status") {
       rewritten = rewritten.replace("in Codex.", "in OpenCode.");
       rewritten = rewritten.replace(

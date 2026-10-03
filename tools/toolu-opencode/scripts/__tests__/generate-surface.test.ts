@@ -285,6 +285,24 @@ test("generated status skill runs the packaged OpenCode hook", () => {
   expect(existsSync(join(root, "plugins/statusline/hooks/dist/status.js"))).toBe(true);
 });
 
+test("generated Jev skill and its examples name only the OpenCode wrapper and ignore .env", () => {
+  const root = repoRoot();
+  const out = mkdtempSync(join(tmpBase, "toolu-surface-jev-"));
+  const selected = selectPluginsByEnabledNames(join(root, "plugins"), ["jev"]);
+  if (!selected.ok) throw new Error(selected.reason);
+  const plan = planSurface({ repoRoot: root, outDir: out, plugins: selected.plugins });
+  const wrapper =
+    '# OpenCode\nJEV="${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/jev/jev.sh"\n';
+  for (const file of ["SKILL.md", "references/problem-solving.md"]) {
+    const text = plan.files.get(join(out, "skills/jev-jev", file)) ?? "";
+    expect(text).toContain(wrapper);
+    expect(text).not.toContain("CODEX_HOME");
+    expect(text).not.toContain("Claude Code");
+    expect(text).toContain('"$JEV_BUN" --no-env-file "$JEV"');
+    expect(text).not.toContain('"$JEV_BUN" "$JEV"');
+  }
+});
+
 test("generated model-routing references resolve relative to each skill", () => {
   const out = mkdtempSync(join(tmpBase, "toolu-surface-routing-"));
   const plan = planDefault(out);
@@ -411,7 +429,7 @@ test("resource links in generated skills resolve inside the output tree", () => 
     true,
   );
   const jevReference = plan.files.get(join(out, "skills/jev-jev/references/problem-solving.md"));
-  expect(jevReference).toContain("for OpenCode use the second line instead");
+  expect(jevReference).toContain("# OpenCode\nJEV=");
   expect(jevReference).toContain("${XDG_CONFIG_HOME:-$HOME/.config}/opencode");
   expect(jevReference).not.toContain("${CLAUDE_CONFIG_DIR:-$HOME/.claude}");
 });

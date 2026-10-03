@@ -1,7 +1,8 @@
 /**
  * One startup entry as a child process (#342): stdin is the SessionStart
  * payload, stdout and stderr are read to a byte bound, and a deadline or an
- * abort kills the child. Every way the child cannot finish is a reason.
+ * abort kills the child. Every way the child cannot finish is a reason. Bun
+ * runs it with `--no-env-file`, so a project `.env` never reaches it (#350).
  */
 const MAX_OUTPUT_BYTES = 512_000;
 
@@ -82,7 +83,8 @@ export async function spawnEntry(request: SpawnRequest): Promise<SpawnOutcome> {
   if (request.signal?.aborted === true) return { status: "failed", reason: "startup cancelled" };
   let proc: Bun.Subprocess<Blob, "pipe", "pipe">;
   try {
-    proc = Bun.spawn([request.bun, request.bundle], {
+    // Every variable an entry needs is in `env`; a project .env must not add to it.
+    proc = Bun.spawn([request.bun, "--no-env-file", request.bundle], {
       cwd: request.cwd,
       env: request.env,
       stdin: new Blob([request.stdin]),

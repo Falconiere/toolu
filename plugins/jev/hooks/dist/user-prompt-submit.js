@@ -3190,9 +3190,19 @@ function renderHookOutput(value, pretty) {
 }
 // plugins/jev/hooks/src/jev/availability.ts
 import { lstatSync } from "fs";
+var OPENCODE_SKILL = "jev-jev";
+function onOpencode() {
+  return process.env.TOOLU_HOST_OVERRIDE === "opencode";
+}
 function invocation2(wrapper) {
   const quote = (value) => `'${value.replaceAll("'", "'\\''")}'`;
-  return lstatSync(wrapper).isSymbolicLink() ? `${quote(process.execPath)} ${quote(wrapper)}` : quote(wrapper);
+  if (!lstatSync(wrapper).isSymbolicLink())
+    return quote(wrapper);
+  const flags = onOpencode() ? " --no-env-file" : "";
+  return `${quote(process.execPath)}${flags} ${quote(wrapper)}`;
+}
+function skillReference(plugin) {
+  return onOpencode() ? `skill({ name: "${OPENCODE_SKILL}" })` : `${plugin}/skills/jev/SKILL.md`;
 }
 function credentialNotice() {
   return process.env.TYPESAFE_API_KEY ? "" : "The Jev hook did not receive TYPESAFE_API_KEY. Before reporting Jev unavailable, check whether TYPESAFE_API_KEY is set in the command environment without printing its value; hook and command environments can differ. If absent there too, state the limitation once per task and use an explicit evidence fallback. Never invent a Jev result or read credentials from .env. ";
@@ -3224,7 +3234,7 @@ async function main() {
     return;
   if (!executable(wrapper))
     return;
-  const context = `${credentialNotice()}Jev is mandatory for this task when it contains semantic decisions. After initial exploration, identify useful judgments over supplied evidence; you MUST call ${invocation2(wrapper)} before the decision it informs. Published bundles use the hook's resolved Bun executable and do not require bun on PATH. Reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions in one ask call. Reuse unchanged evidence and questions rather than repeating calls. If a task has no semantic decision, say so in one sentence rather than skipping silently. Syntax and linked examples: ${plugin}/skills/jev/SKILL.md. On failure, state the limitation and use an evidence fallback; Jev never replaces tests or authorization.`;
+  const context = `${credentialNotice()}Jev is mandatory for this task when it contains semantic decisions. After initial exploration, identify useful judgments over supplied evidence; you MUST call ${invocation2(wrapper)} before the decision it informs. Published bundles use the hook's resolved Bun executable and do not require bun on PATH. Reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions in one ask call. Reuse unchanged evidence and questions rather than repeating calls. If a task has no semantic decision, say so in one sentence rather than skipping silently. Syntax and linked examples: ${skillReference(plugin)}. On failure, state the limitation and use an evidence fallback; Jev never replaces tests or authorization.`;
   process.stdout.write(renderHookOutput(sessionContext("UserPromptSubmit", context), false));
 }
 await main();

@@ -15,7 +15,7 @@ import {
   type ArtifactKind,
 } from "./constants.ts";
 import { parseFrontmatter } from "./frontmatter.ts";
-import type { SurfaceReferences } from "./rewrite.ts";
+import { opencodeJev, type SurfaceReferences } from "./rewrite.ts";
 import { candidateKey } from "./ids.ts";
 import { renderMarkdown } from "./render.ts";
 
@@ -217,10 +217,7 @@ function copiedMarkdown(source: string): string {
         : "";
     },
   );
-  return copied.replace(
-    '# Codex (for Claude Code use the second line instead):\nJEV="${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/jev/jev.sh"\n# JEV="${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/jev/jev.sh"',
-    '# Codex (for OpenCode use the second line instead):\nJEV="${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/jev/jev.sh"\n# JEV="${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/jev/jev.sh"',
-  );
+  return opencodeJev(copied);
 }
 
 /** Copy the local link closure for one generated skill. */
