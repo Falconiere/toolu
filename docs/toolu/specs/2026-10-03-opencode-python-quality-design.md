@@ -15,7 +15,7 @@ OpenCode registers the python-quality post-tool module, but registration alone d
 
 ## Architecture
 
-Reuse the OP-06 `tool.execute.after` bridge and the OP-18 (#352) dispatcher option `continuePostBlocks`, which the OpenCode bridge already passes for every module. The python-quality SessionStart bundle publishes `python-quality@toolu__python-quality.js`. Its existing module requires a Python marker (`pyproject.toml`, `setup.py`, `setup.cfg` or `requirements.txt`) at the git toplevel and `python3` on `PATH`, then calls `fileQuality` on `.py` paths with `skipLinkedWorktrees: false`.
+Reuse the OP-06 `tool.execute.after` bridge and its per-path patch walk. A quality violation records the failing gate entry and returns an advisory, so every completed patch path is checked and the diagnostics merge. The python-quality SessionStart bundle publishes `python-quality@toolu__python-quality.js`. Its existing module requires a Python marker (`pyproject.toml`, `setup.py`, `setup.cfg` or `requirements.txt`) at the git toplevel and `python3` on `PATH`, then calls `fileQuality` on `.py` paths with `skipLinkedWorktrees: false`.
 
 A probe test with the committed bundle in a real git project already passes for writes, edits, multi-file patches with move and delete, selection, prerequisites, project isolation and the linked worktree. No production change is needed. This issue adds the missing evidence:
 

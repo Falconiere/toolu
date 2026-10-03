@@ -62,10 +62,14 @@ Add `tools/toolu-opencode/src/adapter/__tests__/python-quality-post.test.ts`, `t
 
 ## Verification
 
-Inspect real file bytes, actual ast-grep Python findings, per-file quality entries, model-visible result text and absent commit/push markers. Cover delete/move cleanup, unrelated files, selection, marker and `python3` prerequisites, linked-worktree checking and project isolation. Show the adapter test can fail: with the bridge's `continuePostBlocks` temporarily off, the patch case must lose its second diagnostic (recorded, not committed). Keep the pinned-host result distinct from adapter evidence. Run focused tests, host-contract and surface checks, the full `bun run test` gate, final ledger `run --verify`, the committed-diff review and verdict readiness before push and PR.
+Inspect real file bytes, actual ast-grep Python findings, per-file quality entries, model-visible result text and absent commit/push markers. Cover delete/move cleanup, unrelated files, selection, marker and `python3` prerequisites, linked-worktree checking and project isolation. Show the adapter test can fail: with the move source no longer treated as removed and python-quality skipping linked worktrees (both temporary, rebuilt, recorded, not committed), the patch and linked-worktree cases must fail. Keep the pinned-host result distinct from adapter evidence. Run focused tests, host-contract and surface checks, the full `bun run test` gate, final ledger `run --verify`, the committed-diff review and verdict readiness before push and PR.
 
 Fetch and rebase on `origin/main` before implementation and before pushing if main moved; re-run affected steps after a rebase. Commit each tested increment; the PR and babysit handoff follow the final delivery checks.
 
 ## Plan review
 
 **Status:** Approved. All five spec ACs are referenced with no dangling IDs. Each step has a runnable check against real inputs, including the disabled, missing-marker, missing-`python3`, unrelated-file and linked-worktree boundaries; the mutation check shows the adapter test can fail. `live` depends on `bundle`, `docs` on `live`, `gate` on `docs`. Jev judged the plan executable (0.71); direct review confirmed the `bundle` check also runs python-quality's existing golden suites as the existing-host regression.
+
+## Deviations
+
+The planned mutation (turning off `continuePostBlocks`) left the adapter test green. Quality violations reach the dispatcher as advisories, not post blocks: `settleQuality` returns `kind: "advisory"` after recording the gate failure, so the walk never stops on them and both patch diagnostics merge either way. The mutation was replaced with two production mutations, rebuilt into the bundle: `removed` ignoring `movedTo` in `quality-edit.ts`, and `skipLinkedWorktrees: true` in python-quality. The patch case failed (the stale move-source entry stayed) and the linked-worktree case failed (no diagnostic). Both were restored and `check:plugin-bundles` reported no drift.
