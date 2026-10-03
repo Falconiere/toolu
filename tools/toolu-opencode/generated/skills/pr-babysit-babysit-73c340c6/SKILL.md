@@ -1,35 +1,37 @@
 ---
-description: "Use when the user explicitly asks Codex, or an authorized verified execution handoff invokes it, to monitor and autonomously clear the current branch's pull request until CI, review threads, and the review-bot verdict are all green."
+description: "Use when the user explicitly asks, or an authorized verified execution handoff invokes it, to monitor and autonomously clear the current branch's pull request until CI, review threads, and the review-bot verdict are all green."
 name: "pr-babysit-babysit-73c340c6"
 ---
 
 # Babysit a PR
 
-This no-argument invocation explicitly authorizes one durable babysitting goal
-for the current repository and PR. A verified execution handoff is sufficient authorization
+This no-argument invocation explicitly authorizes babysitting the current
+repository's pull request. A verified execution handoff is sufficient authorization
 when execution already confirmed delivery authorization, GitHub
 auth, a non-default branch, and this installed plugin; do not ask again or
 introduce handoff arguments. Read [the canonical workflow](../../resources/pr-babysit/workflows/babysit.md)
-completely and follow only its Codex controller branches plus every shared
-strict-clearance step. Each tick is one command — the shipped
-`hooks/dist/babysit-tick.js` under this plugin's root (`../../hooks/dist/babysit-tick.js`
-relative to this file), with `--state-file` set to the Codex slot path; its output contract is [references/helper.md](references/helper.md).
-Trust that result: never write a polling script or controller of your own,
-never re-fetch with ad-hoc `gh` calls what the result already reports, and act
-through `babysit-reply-thread.js`, `babysit-resolve-thread.js` and `babysit-record.js`. Fix items go
-through `babysit-route-fix.js --host codex` and, when it dispatches to herdr,
-`babysit-dispatch-fix.js start` then `babysit-dispatch-fix.js wait --timeout-seconds 45` — one
-bounded wait per continuation. A fixer launch that is due runs first in the
-call; it normally takes seconds and is bounded when an agent fails to start.
+completely and follow its OpenCode controller plus every shared strict-clearance
+step.
 
-Use `get_goal` before `create_goal`; keep one active goal for the resolved
-repository/PR. Continue with bounded cycles: use the native `wait` mechanism for
-at most 60 seconds, persist the exact slot state, and allow later goal
-continuations to resume. Pending checks are not completion or blockage.
+In every bash call, `PLUGIN_ROOT="$TOOLU_PLUGIN_ROOT_PR_BABYSIT"` and each helper
+runs as `"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/<helper>.js"`, so a project `.env` never
+reaches `gh`. Each tick is one command, `babysit-tick.js` with
+`--state-file "$REPO_ROOT/.opencode/tmp/pr-babysit/$SLOT.json"`; its output
+contract is [references/helper.md](references/helper.md). Trust that result:
+never write a polling script or controller of your own, never re-fetch with
+ad-hoc `gh` calls what the result already reports, and act through
+`babysit-reply-thread.js`, `babysit-resolve-thread.js` and `babysit-record.js`.
+Fix items go through `babysit-route-fix.js --host opencode` and, when it
+dispatches fixer agents, `babysit-dispatch-fix.js start` then
+`babysit-dispatch-fix.js wait --timeout-seconds 45` — one bounded wait per tick.
 
-Call `update_goal` with `complete` only after the same-cycle success audit proves
-CI green, zero unresolved threads, and an approved zero-finding bot verdict.
-Call it with `blocked` only for a genuine human-only escalation after the same
-blocker has met Codex's consecutive-goal-turn threshold. For `stop` or `cancel`,
-perform the canonical local cleanup and tell the user to cancel through Codex's
-goal control; cancellation is not a completion status.
+OpenCode has no cron or goal, so this turn is the controller. After a cycle that
+ends `keep_going`, run `sleep <backoff.waitSeconds>` (never more than 60) in one
+bash call and tick again, until the Success or Escalation stop. Pending checks are
+neither completion nor blockage. If the turn ends first, invoking this again
+resumes from the state file.
+
+Stop with success only after the same-cycle success audit proves CI green, zero
+unresolved threads, and an approved zero-finding bot verdict; escalate only for a
+genuine human-only blocker. For `stop` or `cancel`, run the workflow's OpenCode
+cancel; cancellation is not completion.

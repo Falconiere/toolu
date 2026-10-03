@@ -38,7 +38,7 @@ Extract `number`, `owner` (`headRepository.owner.login`), `repo` (`headRepositor
 
 No PR for branch → report + exit.
 
-`PLUGIN_ROOT` = the directory holding this plugin (`${CLAUDE_PLUGIN_ROOT}` on Claude; on Codex, resolve it from the installed skill's location — `skills/babysit/SKILL.md` sits two levels below it). Do not rely on a plugin-root environment variable from an ordinary shell call.
+`PLUGIN_ROOT` = `$TOOLU_PLUGIN_ROOT_PR_BABYSIT`, which toolu's `shell.env` sets in every bash call.
 
 ---
 
@@ -47,59 +47,40 @@ No PR for branch → report + exit.
 There is exactly **one slot per repository/PR**. The strict-clearance steps
 below are shared; only continuation differs by host.
 
-### Claude Code scheduling
+Slot: `SLOT="${OWNER}-${REPO}-${NUMBER}"` lowercased (e.g. `falconiere-toolu-42`).
 
-Skip this step if invocation is a cron tick (`--tick` marker, see below). Else:
+### OpenCode start or resume
 
-1. Slot: `SLOT="${OWNER}-${REPO}-${NUMBER}"` lowercased (e.g. `falconiere-toolu-42`). State: `STATE_FILE=/tmp/pr-babysit-${SLOT}.json`. Cron name: `pr-babysit:${SLOT}`. One slot per agent — see **Isolation invariants**.
-2. Collision check: `CronList`, look for entry whose `name` == `pr-babysit:${SLOT}` exactly. Boolean for that one name only. **Do NOT enumerate/log/reason about other entries** — other slots = other agents. Exists → refuse:
-   > "PR #N already being babysat by another session. Say `/pr-babysit:babysit stop` from inside this repo to cancel that one first."
-3. `CronCreate`: expr `*/3 * * * *` (base 3 min, adaptive — see **Backoff**), name `pr-babysit:${SLOT}`. Prompt = minimal tick form ONLY: `/pr-babysit:babysit --tick <OWNER>/<REPO>#<NUMBER>`. Must be plugin-namespaced — bare `/pr-babysit` fails "Unknown command". Slot/branch derivable from PR id at tick time — don't pass them (redundant + leaks orchestration internals).
-4. Run first pass now (Steps 1–6). The helper creates and initializes the state file on this first tick.
-5. Tell user:
-   > "Babysitting PR #N on branch `<branch>` every 3 min. Auto-stops when CI is green and all comments are addressed. Say `/pr-babysit:babysit stop` to cancel."
+OpenCode has no cron or goal primitive. The invocation of the babysit command
+(or the skill) is the explicit request; the controller is this turn.
 
-First arg **`stop`**: resolve `SLOT` from current branch's PR → `CronDelete pr-babysit:${SLOT}` (exact name only — never pattern/glob) → `babysit-dispatch-fix.js cleanup --state-file "$STATE_FILE"` (exits a live fixer, removes the clean herdr worktree) → `babysit-record.js status --status cancelled` → remove `/tmp/pr-babysit-${SLOT}.json` and its `.snapshot.json` → confirm. Other slots untouched. Exit.
+1. Set `STATE_FILE="$REPO_ROOT/.opencode/tmp/pr-babysit/$SLOT.json"` and
+   `PLUGIN_ROOT="$TOOLU_PLUGIN_ROOT_PR_BABYSIT"`. Run every helper as
+   `"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/<helper>.js" …`, so a
+   project `.env` (a `GH_TOKEN`, say) never reaches `gh`. The helper creates the
+   state on the first tick; an existing file for the same slot is resume state.
+   Never glob or inspect sibling slots.
+2. Run one complete clearance cycle (Steps 1–6). On `keep_going`, run
+   `sleep <backoff.waitSeconds>` (never more than 60) in one bash call, then the
+   next tick, in this same turn, until the Success or Escalation stop. Pending
+   checks are never completion. While a fixer runs, each tick's fixer command is
+   `babysit-dispatch-fix.js wait --timeout-seconds 45`.
+3. The turn can end before a stop (the user interrupts, the session closes, a
+   step limit). The state file, not the transcript, is authoritative: invoking
+   the command again with no arguments resumes from it, and a running OpenCode
+   fixer keeps working meanwhile.
+4. Keep one OpenCode session per PR. A second one is serialized by the slot lock
+   and refused duplicate replies and a second fixer, but only wastes ticks.
 
-`--tick` = internal marker added by cron prompt so callback doesn't re-create itself. Users never type it. On tick: re-derive `OWNER`/`REPO`/`NUMBER` from `--tick <OWNER>/<REPO>#<NUMBER>`, recompute `SLOT` locally → Steps 1–6 against that slot's state file only.
+### OpenCode cancel
 
-### Codex start or resume
-
-Codex has no cron primitive. A user invocation of `$pr-babysit:babysit` is the
-explicit request required to create a durable goal.
-
-1. Call `get_goal`. The objective is exactly `Babysit <OWNER>/<REPO>#<NUMBER>
-   until CI, review threads, and the review-bot verdict are clear`.
-2. If no goal is active, call `create_goal` with that objective. If the matching
-   goal is already active, resume it. If a different goal is active, stop and
-   report the collision; never replace another objective implicitly. This
-   enforces **one active goal per repository/PR** and one babysit target per
-   thread.
-3. Set `STATE_FILE="$REPO_ROOT/.codex/tmp/pr-babysit/$SLOT.json"`. The helper
-   creates its parent and initializes the state on the first tick; an
-   existing active file for the same slot is resume state. Never glob or inspect
-   sibling slots.
-4. Run one complete clearance cycle (Steps 1–6). If external checks or the bot
-   are still pending, use the native `wait` mechanism for at most
-   **`backoff.waitSeconds`** from the result (never more than 60 seconds),
-   run the helper once more, and yield with the goal active. A later goal
-   continuation repeats the cycle. Never busy-poll or use an unbounded sleep.
-5. Call `update_goal(status="complete")` only at the Success stop. Use
-   `update_goal(status="blocked")` only at a genuine Escalation stop after the
-   same human-only blocker has recurred for the host-required three consecutive
-   goal turns. Pending CI is not blocked and never completes the goal.
-
-### Codex cancel
-
-On `stop` or `cancel`, resolve only the current branch's slot. Validate that the
-state path is exactly below `$REPO_ROOT/.codex/tmp/pr-babysit/` and that any
-worktree recorded in it belongs to this exact slot. Remove that worktree with
-native `git worktree remove <exact-path>` only when clean, and run
-`babysit-dispatch-fix.js cleanup --state-file "$STATE_FILE"` for a herdr worktree; a
-failure stops cleanup and is reported. Mark the state `cancelled` with `babysit-record.js status` and
-tell the user to cancel the active goal with Codex's goal control (goal
-cancellation is user/system controlled, not an `update_goal` status). Never
-mark cancellation complete.
+On `stop` or `cancel`, resolve only the current branch's slot and its exact
+state path. Run `babysit-dispatch-fix.js cleanup --state-file "$STATE_FILE"`: it
+ends a live fixer's whole process group and removes the clean fixer worktree; a
+failure stops cleanup and is reported. Remove the inline worktree at exactly
+`$REPO_ROOT/.opencode/tmp/pr-babysit/$SLOT.inline` with `git worktree remove`
+only when it is clean. Then mark the state `cancelled` with `babysit-record.js
+status` and keep the file as the record. Never report cancellation as complete.
 
 ---
 
@@ -108,20 +89,17 @@ mark cancellation complete.
 The controller owns exactly one slot; behave as if no other slot exists.
 Violations are bugs.
 
-- **Single-slot scope.** Claude reads/writes only
-  `/tmp/pr-babysit-${SLOT}.json`; Codex reads/writes only
-  `$REPO_ROOT/.codex/tmp/pr-babysit/$SLOT.json`. Never glob `*.json`, list the
+- **Single-slot scope.** Read and write only
+  `$REPO_ROOT/.opencode/tmp/pr-babysit/$SLOT.json`. Never glob `*.json`, list the
   state directory, or read another slot. The helper refuses a state file that
   belongs to another PR (`slot_mismatch`) and a slot another controller holds
   (`locked`, exit 75).
-- **Cron isolation.** Touch only cron `pr-babysit:${SLOT}`. Never grep/list/modify/delete any other-named cron (even 1 char diff). Only `CronList` use = name-exact check in 0.2.
 - **No cross-talk.** Don't reference/count/summarize other sessions in output, comemory, or reports.
-- **No leakage in tick prompt.** Exactly `/pr-babysit:babysit --tick <OWNER>/<REPO>#<NUMBER>`. No `slot=`/`branch=`/state paths/metadata appended — agent recomputes; prose risks confusion with reviewer instructions.
-- **Worktree isolation.** Every code-change cycle uses its own worktree. Herdr
-  dispatch uses the slot's herdr worktree on `pr-babysit/<slot>`, recorded in
-  state as `herdrWorktree`. Inline, Claude uses `EnterWorktree`/`ExitWorktree`
-  and Codex uses native `git worktree` at the exact slot path recorded in state.
-  Never reuse another slot's worktree or fixer agent.
+- **Worktree isolation.** Every code-change cycle uses its own worktree. Fixer
+  dispatch uses the slot's worktree on `pr-babysit/<slot>` (native
+  `<state>.worktree` when every group is OpenCode, else a herdr worktree),
+  recorded in state as `herdrWorktree`. Inline fixes use native `git worktree` at
+  `<state>.inline`. Never reuse another slot's worktree or fixer agent.
 - **Stop is local.** Stop/cancel touches only this slot's controller, state, and
   worktree. Never enumerate or affect others.
 
@@ -133,7 +111,7 @@ Per tick, the shipped helper does the deterministic work and the agent does the
 judgment. The helper is `$PLUGIN_ROOT/hooks/dist/babysit-tick.js`; its full
 contract (every result and state field, exit codes, real examples) is
 [`skills/babysit/references/helper.md`](../../../skills/pr-babysit-babysit-73c340c6/references/helper.md).
-It is a Bun bundle on both hosts.
+It is a Bun bundle on every host.
 
 | Helper owns (deterministic, tested) | Agent owns (judgment, authorized edits) |
 | --- | --- |
@@ -147,7 +125,7 @@ It is a Bun bundle on both hosts.
 
 Rules:
 
-- **One command per tick.** `bun "$PLUGIN_ROOT/hooks/dist/babysit-tick.js" --repo "$OWNER/$REPO" --pr "$NUMBER" --state-file "$STATE_FILE"`. Nothing else reads GitHub for this tick.
+- **One command per tick.** `"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-tick.js" --repo "$OWNER/$REPO" --pr "$NUMBER" --state-file "$STATE_FILE"`. Nothing else reads GitHub for this tick.
 - **Never write a polling script or controller of your own**, in any language, for any session. If the helper cannot do something, the fix is a plugin change, not a `/tmp` script.
 - **Never re-fetch what the result reports** with ad-hoc `gh` calls, and never re-implement a filter the result already applied. `threads.actionable[]` carries the full comment chain; read it there.
 - **`decision` is overridden only by naming the result field you disagree with**, in the tick report. Silent disagreement is a bug.
@@ -158,7 +136,7 @@ Rules:
 ## Step 1 — Run the tick helper
 
 ```bash
-RESULT=$(bun "$PLUGIN_ROOT/hooks/dist/babysit-tick.js" \
+RESULT=$("$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-tick.js" \
   --repo "$OWNER/$REPO" --pr "$NUMBER" --state-file "$STATE_FILE")
 ```
 
@@ -364,10 +342,10 @@ instruction a fixer follows) and `quote` holding the reviewer's text verbatim
   "path": "src/x.sh", "line": 12, "severity": "medium", "task": "<your instruction>", "quote": "<reviewer text>"}]}
 ```
 
-Route it (`--host` is this controller: `claude` or `codex`):
+Route it (`--host` is this controller: `claude`, `codex` or `opencode`):
 
 ```bash
-bun "$PLUGIN_ROOT/hooks/dist/babysit-route-fix.js" --items "$PB_TMP/items.json" --host claude \
+"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-route-fix.js" --items "$PB_TMP/items.json" --host opencode \
   --state-file "$STATE_FILE" >"$PB_TMP/route.json"
 ```
 
@@ -386,23 +364,31 @@ probed by `babysit-dispatch-fix.js start`: `herdr_unavailable` also means inline
 
 ### Multi-host dispatch (herdr)
 
-Fixers run as real agent sessions — Claude Code, Codex or Cursor Agent, per
-group — in the slot's herdr worktree on branch `pr-babysit/<slot>`,
-fast-forwarded from the PR branch. One group runs at a time; the fixer edits,
-tests and commits only. You keep verification, push, replies and resolves.
+Fixers run as real agent sessions — Claude Code, Codex or Cursor Agent in a
+herdr pane, or OpenCode as a detached `opencode run`, per group — in the slot's
+worktree on branch `pr-babysit/<slot>`, fast-forwarded from the PR branch. One
+group runs at a time; the fixer edits, tests and commits only. You keep
+verification, push, replies and resolves.
+
+An OpenCode fixer runs as the `pr-babysit-fixer` agent, which the dispatcher
+defines in `OPENCODE_CONFIG_CONTENT` on top of your own config: `git push`, `gh`
+and `task` are denied, and your own permission rules still apply (`--auto`, the
+unattended default, approves asks but never a deny). Its model and `--variant`
+come from `prBabysit.routing.opencode`, else your default model. When every group
+is OpenCode no herdr is needed: the worktree is a native `git worktree` at
+`<state>.worktree`.
 
 ```bash
-bun "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" start --state-file "$STATE_FILE" --plan "$PB_TMP/route.json" \
+"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" start --state-file "$STATE_FILE" --plan "$PB_TMP/route.json" \
   --items "$PB_TMP/items.json" --repo-root "$REPO_ROOT" --branch "$BRANCH" --base "$BASE"   # BASE = pr.base
-bun "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" wait --state-file "$STATE_FILE"   # Codex: --timeout-seconds 45
+"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" wait --state-file "$STATE_FILE" --timeout-seconds 45
 ```
 
 `wait` waits for the fixer at most `--timeout-seconds` (480 by default). A
 launch that is due runs first in every call; the next group starts in the
 same call only when enough of the wait is left, otherwise in the next one.
 Starting an agent normally takes seconds and up to about 4 minutes only when
-it fails. On Claude, run `wait` with the Bash tool's `timeout: 600000`; on
-Codex pass `--timeout-seconds 45`.
+it fails. Pass `--timeout-seconds 45`.
 
 `babysit-dispatch-fix.js wait` is the one fixer command per tick — including a tick
 where nothing changed: it waits for the running group, records it when it
@@ -419,7 +405,7 @@ reply to and resolve the fixer's items from those `fixing[]` lists. Act on
 | `running` | Keep going; call `wait` again next tick. |
 | `done` | Verify, then Step 4. `commits[]` and `worktree` are in the result. |
 | `failed` | `host_limited`: the host is cooling for 60 min — route the remaining items again (another host) and `start`. `no_report` / `reported_failed` / `agent_start_failed` (herdr's message is in `groups[].error`): route again, or fix that group inline **in the herdr worktree** (`worktree`), which already holds the earlier groups' commits. `worktree_lost`: the worktree is gone — run `cleanup`, then `start` again. |
-| `blocked` | The fixer waits at a prompt (safe mode). Surface it to the user; never answer it. Once the user answers, the next `wait` picks the group up again. |
+| `blocked` | The fixer waits at a prompt (safe mode). Surface it to the user; never answer it. Once the user answers, the next `wait` picks the group up again. An OpenCode fixer never blocks: `opencode run` rejects what it would ask. |
 
 **After a failed group.** `start` and `cleanup` refuse a worktree with
 uncommitted work (`worktree_dirty`, with `changes[]`) — a fixer can stop
@@ -448,25 +434,26 @@ host's delegation interface from
 [`host-mapping.md`](../../toolu/workflows/host-mapping.md) — the file at
 `plugins/toolu/workflows/host-mapping.md` in this repository:
 
-| Fix looks like | Class | Claude Code | Codex |
-| --- | --- | --- | --- |
-| One-line change, rename, typo, formatting, import, comment wording | `mechanical` | `Agent` on `haiku` (`toolu:quick-task`) | `spawn_agent` with the Luna / medium profile |
-| A bounded edit with a known answer plus its colocated test | `implementation` | `Agent` on `sonnet` (`toolu:implementer`) | `spawn_agent` with the Terra / medium profile |
-| Cross-cutting, hard to reverse, several readings, needs weighing alternatives | `architecture` | `Agent` on `opus` (`toolu:architect`, then implement) | `spawn_agent` with the Sol / high profile |
+| Fix looks like | Class | OpenCode |
+| --- | --- | --- |
+| One-line change, rename, typo, formatting, import, comment wording | `mechanical` | `task` with `subagent_type: "toolu-quick-task"` |
+| A bounded edit with a known answer plus its colocated test | `implementation` | `task` with `subagent_type: "toolu-implementer"` |
+| Cross-cutting, hard to reverse, several readings, needs weighing alternatives | `architecture` | `task` with `subagent_type: "toolu-architect"`, then implement |
 
 Deciding and doing are different classes: decide the approach at the higher
 tier, then implement at the lower one. Trivial fixes may be done inline when
 the delegation round trip would cost more than the edit.
 
 Babysit is autonomous and never edits the user's main checkout. Herdr dispatch
-works only in the slot's herdr worktree (`babysit-dispatch-fix.js` owns it). Inline,
-Claude uses `EnterWorktree`/`ExitWorktree`. Codex creates one native isolated worktree at
-`${CODEX_HOME:-$HOME/.codex}/toolu/pr-babysit/worktrees/$SLOT`: validate the
-exact path, then run `git worktree add --detach "$WORKTREE" "$HEAD_SHA"`
-(`HEAD_SHA` = `pr.head` from the result). Work on detached HEAD and push with
-`git -C "$WORKTREE" push origin "HEAD:$BRANCH"`; this avoids trying to check
-out a branch already held by the main checkout. Record the exact path in slot
-state and never reuse it for a different PR.
+works only in the slot's fixer worktree (`babysit-dispatch-fix.js` owns it). Inline,
+create one detached worktree at exactly
+`$REPO_ROOT/.opencode/tmp/pr-babysit/$SLOT.inline`: validate the exact path, then
+run `git worktree add --detach "$WORKTREE" "$HEAD_SHA"` (`HEAD_SHA` = `pr.head`
+from the result). It is inside the project, so neither you nor a `task` subagent
+meets an `external_directory` prompt; give subagents absolute paths in it. Work on
+detached HEAD and push with `git -C "$WORKTREE" push origin "HEAD:$BRANCH"`; this
+avoids checking out a branch already held by the main checkout. Never reuse it
+for a different PR.
 
 Reproduce + verify locally before push. Run pre-push gate (toolu: `bats -r plugins/` + tests for touched files).
 
@@ -509,7 +496,7 @@ then post it through the helper, which posts once per reviewer comment and recor
 
 ```bash
 printf '%s\n' "<reply>" >"$PB_TMP/reply.md"
-bun "$PLUGIN_ROOT/hooks/dist/babysit-reply-thread.js" --state-file "$STATE_FILE" --kind thread \
+"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-reply-thread.js" --state-file "$STATE_FILE" --kind thread \
   --thread "$THREAD_ID" --root-comment "$ROOT_COMMENT_ID" --in-reply-to "$IN_REPLY_TO" \
   --body-file "$PB_TMP/reply.md"
 ```
@@ -517,14 +504,14 @@ bun "$PLUGIN_ROOT/hooks/dist/babysit-reply-thread.js" --state-file "$STATE_FILE"
 **Conversation:**
 
 ```bash
-bun "$PLUGIN_ROOT/hooks/dist/babysit-reply-thread.js" --state-file "$STATE_FILE" --kind conversation \
+"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-reply-thread.js" --state-file "$STATE_FILE" --kind conversation \
   --comment-id "$COMMENT_ID" --body-file "$PB_TMP/reply.md"
 ```
 
 **Review-level** — body starts `Re: review by @{reviewer} — `:
 
 ```bash
-bun "$PLUGIN_ROOT/hooks/dist/babysit-reply-thread.js" --state-file "$STATE_FILE" --kind review \
+"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-reply-thread.js" --state-file "$STATE_FILE" --kind review \
   --review-id "$REVIEW_ID" --body-file "$PB_TMP/reply.md"
 ```
 
@@ -538,7 +525,7 @@ reviewer" path: a comment that does not make sense was answered above, so it res
 `$THREAD_ID` = the thread's GraphQL `id` from the result:
 
 ```bash
-bun "$PLUGIN_ROOT/hooks/dist/babysit-resolve-thread.js" --state-file "$STATE_FILE" --thread "$THREAD_ID"
+"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-resolve-thread.js" --state-file "$STATE_FILE" --thread "$THREAD_ID"
 ```
 
 **Confirm, don't assume.** The helper reads `thread.isResolved` from the mutation response.
@@ -565,7 +552,7 @@ No performative agreement. No "Great point!" / "Thanks for catching that!". Stat
 Once every actionable item has its reply and resolve, and before the push:
 
 ```bash
-bun "$PLUGIN_ROOT/hooks/dist/babysit-record.js" round --state-file "$STATE_FILE" \
+"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-record.js" round --state-file "$STATE_FILE" \
   --had-rejection <true|false> [--fix-pushed]
 ```
 
@@ -593,11 +580,9 @@ tick and do not count the tick as done.
    - Only the PR's changed-file set may be staged. Unrelated file appears → abort + flag user.
 
 2. **Review the committed diff** and write the state file the gate reads under
-   the active host's `<worktree>/.claude/tmp/push-review/` or
-   `<worktree>/.codex/tmp/push-review/` directory; push is denied otherwise.
-   Prefer the `toolu-review:review` workflow, which mirrors the CI bot and writes
-   compatible state. Claude may use its built-in code-review skill; Codex may
-   use its native review interface or a read-only review subagent. Apply
+   `<worktree>/.opencode/tmp/push-review/`; push is denied otherwise.
+   Prefer `skill({ name: "toolu-review-review" })`, which mirrors the CI bot and
+   writes compatible state. Apply
    findings, then record the reviewer name in `reviewers[]`.
    - Findings that need code changes → amend or add a commit, then re-review. `review_round` restarts whenever the diff changes, and caps at 5 rewrites against an *unchanged* diff.
    - The state file must live under the worktree's own root — pass `--repo <worktree>` to `write-state.sh` when the session is rooted elsewhere. A state file written under the main checkout is invisible to the gate.
@@ -661,9 +646,8 @@ of these held in the same snapshot:
 Any false (even 1 check / 1 comment / 1 finding) → DON'T stop → next tick (maybe longer backoff).
 
 On success stop: `babysit-dispatch-fix.js cleanup --state-file "$STATE_FILE"` (the herdr worktree and
-`pr-babysit/<slot>` branch, when present), `babysit-record.js status --status complete`, then Claude deletes
-`pr-babysit:${SLOT}` and its `/tmp` state + snapshot; Codex cleans the exact clean worktree and calls
-`update_goal(status="complete")`.
+`pr-babysit/<slot>` branch, when present), `babysit-record.js status --status complete`, then remove the clean inline worktree, keep the state
+file as the record, and end this turn's loop.
 > "PR #N: all green and no unresolved comments. Babysit done. Ready to merge."
 
 Don't auto-merge. User merges.
@@ -680,7 +664,7 @@ Stop with clear flag when can't make forward progress without human — `decisio
 - plus your own: **Round cap** (5 fix→re-review rounds on an unchanged diff without reaching zero findings — matches the push-review gate's `MAX_ROUNDS=5`; a new commit restarts the count), a resolve that stayed `resolve_unconfirmed`, or a CI failure that needs human judgment
 
 NOT "done" — "blocked, please look". `babysit-record.js status --status escalated`, then the terminal message:
-> "PR #N: babysit paused — <reason>. Unresolved comments: <N>. Failing checks: <list>. Resume with `/pr-babysit:babysit` on Claude Code or `$pr-babysit:babysit` on Codex once unblocked."
+> "PR #N: babysit paused — <reason>. Unresolved comments: <N>. Failing checks: <list>. Resume with the babysit command once unblocked."
 
 ### Keep going (next tick)
 
@@ -698,8 +682,7 @@ Anything else, incl. indefinite waits — `decision: keep_going`:
 
 ## State + backoff
 
-State is one exact file per slot: `/tmp/pr-babysit-${SLOT}.json` on Claude or
-`<repo>/.codex/tmp/pr-babysit/${SLOT}.json` on Codex. The helper owns it —
+State is one exact file per slot: `<repo>/.opencode/tmp/pr-babysit/${SLOT}.json`. The helper owns it —
 initializes it on the first tick, validates it on every tick (`version: 2`,
 same repo/PR, one writer via a lock), and writes it atomically. The agent
 never edits it by hand; `babysit-record.js`, `babysit-reply-thread.js` and `babysit-resolve-thread.js`
@@ -740,7 +723,7 @@ are the only write paths. Every field is documented in
     "lastError": null
   },
   "actions": { "replied": {}, "resolved": {}, "flagged": {} },
-  "lastGoodSnapshot": "/tmp/pr-babysit-falconiere-toolu-42.snapshot.json"
+  "lastGoodSnapshot": "<repo>/.opencode/tmp/pr-babysit/falconiere-toolu-42.snapshot.json"
 }
 ```
 
@@ -765,7 +748,7 @@ Per tick the helper diffs current vs saved. All reads/writes → slot-scoped pat
 Only widens interval. Never terminates — terminal states = Success/Escalation stop (Step 6). The
 helper reports the interval for this tick in `backoff`:
 
-| Idle streak     | `backoff.intervalMinutes` (Claude cron) | `backoff.waitSeconds` (Codex bounded wait) |
+| Idle streak     | `backoff.intervalMinutes` (Claude cron) | `backoff.waitSeconds` (Codex and OpenCode bounded wait) |
 | --------------- | --------------------------------------- | ------------------------------------------ |
 | 0               | 3 (1 if CI failing)                      | 15                                          |
 | 3 consecutive   | 6 — recreate the exact cron              | 30                                          |
@@ -784,8 +767,8 @@ Reset to base immediately on change. Always reuse same `pr-babysit:${SLOT}` name
 
 - Worktrees for every code change: the slot's herdr worktree on
   `pr-babysit/<slot>` (fast-forward only; a rewritten PR branch is
-  `stale_branch`, never a reset), or inline the Claude host controls or Codex
-  native `git worktree` at the validated path recorded in this slot.
+  `stale_branch`, never a reset), or inline native `git worktree` at
+  the validated `<state>.inline` path.
 - Never force-push, `reset --hard`, or destructive git.
 - Never auto-rebase — surface conflicts w/ diff summary, user decides.
 - Never amend — always new fix commits.
