@@ -181,6 +181,13 @@ routing → subprocess transport + native worktree → packaging → shared work
 - Verification: 🟡 should-fix: no delivery sequence (Jev Noul 0.05). Fixed: Delivery section.
 - AC coverage: AC-1…AC-7 each mapped (route AC-4; transport AC-2/3; package AC-6; workflow, generated AC-5/7; harness, live AC-1/2/3/6/7; matrix AC-5; gate all). Jev alignment 1.23/2 before the transport fix.
 
+## Deviations
+
+- **route:** OpenCode config paths are resolved in `fixer-route.ts` instead of importing `@toolu/core/config` (its `configFiles` is not exported and the module pulls zod into the bundle); `fixer-route-opencode.test.ts` asserts equality with core's `configFiles`. `commandAvailable` passes the current `PATH` to `Bun.which`, which otherwise reads the PATH the process started with.
+- **transport:** `stopGroup` also ends descendants outside the fixer's process group: on the pinned host each bash tool call runs in its own group (found by `babysit.cancel`). An agent-level `task: deny` removes `task` from the fixer's tools, so the scenario checks that it is not offered.
+- **generated:** the port table gained a `cut` edit (anchor to anchor, or to the end) for whole host sections, in `opencode-port-pr-babysit.ts`. AC-5's ban list names the Claude state-path instructions (`/tmp/pr-babysit-${SLOT}`, `/tmp/pr-babysit-<slot>`); captured example output in `helper.md` keeps its real `/tmp` paths.
+- **live:** the scenario puts the pinned binary first on `PATH`; the dispatcher starts whatever `opencode` PATH names.
+
 ## Critical files
 
 - `plugins/pr-babysit/hooks/src/babysit/fixer-route.ts`, `babysit/fixer-dispatch.ts`, `babysit-route-fix.ts`, `hooks/dist/*.js`
