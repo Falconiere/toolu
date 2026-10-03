@@ -15,6 +15,7 @@ import { startHttpsFixture } from "@toolu/conformance/https-fixture";
 import { REPO_ROOT } from "../../bootstrap/__tests__/fixtures.ts";
 import { spawnEntry } from "../../bootstrap/spawn.ts";
 import { definedEnv } from "../../host/runtime-env.ts";
+import { isPlainRecord } from "../../surfaces/merge.ts";
 import type { HostBinding, LogLevel } from "../context.ts";
 import { createTooluHooks } from "../hooks.ts";
 
@@ -78,8 +79,8 @@ function binding(sb: Sandbox, logged: Logged[], key: string): HostBinding {
     repoRootOption: REPO_ROOT,
     optionsError: undefined,
     env,
-    log: (level, message) => {
-      logged.push({ level, message });
+    log: (level, text) => {
+      logged.push({ level, message: text });
       return Promise.resolve();
     },
   };
@@ -87,8 +88,13 @@ function binding(sb: Sandbox, logged: Logged[], key: string): HostBinding {
 
 function hook<K extends keyof Hooks>(hooks: Hooks, name: K): NonNullable<Hooks[K]> {
   const found = hooks[name];
-  if (found === undefined || found === null) throw new Error(`no ${name} hook`);
+  if (found === undefined) throw new Error(`no ${name} hook`);
   return found;
+}
+
+function skillPaths(config: Config): unknown {
+  const skills: unknown = Reflect.get(config, "skills");
+  return isPlainRecord(skills) ? skills.paths : undefined;
 }
 
 async function systemLines(hooks: Hooks, sessionID: string): Promise<string[]> {
@@ -173,8 +179,10 @@ test.concurrent("one mandate per request, one reminder per real prompt, none in 
   selectJev(sb);
   const hooks = await createTooluHooks(binding(sb, [], KEY));
   try {
-    for (const sessionID of ["ses_a", "ses_b", "ses_a"]) {
-      const lines = await systemLines(hooks, sessionID);
+    const requests = await Promise.all(
+      ["ses_a", "ses_b", "ses_a"].map((sessionID) => systemLines(hooks, sessionID)),
+    );
+    for (const lines of requests) {
       expect(lines[0]).toBe("keep-me");
       expect(count(lines, MANDATE)).toBe(1);
     }
@@ -210,7 +218,7 @@ test.concurrent("a typed judgment runs through the published wrapper in the agen
     expect(prompt.filter((text) => text.includes(REMINDER)).map(calledCommand)).toEqual([command]);
     const config: Config = {};
     await hook(hooks, "config")(config);
-    expect(config.skills?.paths).toContain(join(GENERATED, "skills/jev-jev"));
+    expect(skillPaths(config)).toContain(join(GENERATED, "skills/jev-jev"));
 
     const env = { ...(await bashEnv(hooks, sb)), ...fixture.env, TYPESAFE_API_KEY: KEY };
     fixture.plan([{ body: JSON.stringify(ANSWER) }]);
