@@ -4,8 +4,8 @@
  * linked worktree of an isolated fixture repo, with the launcher's own flags,
  * start prompt, brief and `info/exclude`, and toolu loaded from the global
  * config. The worker reports, loads delivery, delegates through `task`, edits
- * and is killed mid-turn. A checkpoint keeps the edit; `--continue` resumes the
- * same session through commit, review, push and a ready report the watcher sees.
+ * and is killed mid-turn. A checkpoint keeps the edit; `--session` with the id
+ * `session list` captured resumes it through commit, review, push and a ready report the watcher sees.
  */
 import { expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -246,14 +246,17 @@ async function checkpointKeepsEdit(session: ProbeSession): Promise<void> {
   expect(existsSync(join(p.worktree, ".opencode/tmp"))).toBe(true);
 }
 
-/** `--continue` in the same worktree: commit, review state, push, ready, seen by the watcher. */
-async function resumeToReady(bin: string, session: ProbeSession) {
+/** `--session <captured>` in the same worktree: commit, review state, push, ready, seen by the watcher. */
+async function resumeToReady(bin: string, session: ProbeSession, sessionId: string) {
   const { sb } = session;
   const p = layout(sb.root);
   const resumed = await runHost(
     bin,
     session,
-    [...agentArgs("opencode", { ...ARGS, resume: true }), "PROBE:epic.resume Resume the brief."],
+    [
+      ...agentArgs("opencode", { ...ARGS, resume: true, sessionId }),
+      "PROBE:epic.resume Resume the brief.",
+    ],
     RUN_TIMEOUT_MS,
     p.worktree,
   );
@@ -289,9 +292,12 @@ test.skipIf(process.env.TOOLU_LIVE_OPENCODE !== "1")(
     const p = layout(session.sb.root);
 
     const killed = await killMidTurn(host.bin, session);
-    expect(await listedSessions(host.bin, session, p.worktree)).toEqual(sessionIds(killed.events));
+    const listed = await listedSessions(host.bin, session, p.worktree);
+    expect(listed).toEqual(sessionIds(killed.events));
+    const [captured] = listed;
+    if (captured === undefined) throw new Error("session list captured no worker session");
     await checkpointKeepsEdit(session);
-    const resumed = await resumeToReady(host.bin, session);
+    const resumed = await resumeToReady(host.bin, session, captured);
     expect(resumed.sessions).toEqual(sessionIds(killed.events));
 
     const slug = ISSUE.branch.replaceAll("/", "_");

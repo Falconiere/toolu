@@ -266,7 +266,7 @@ The generated skill documents the remaining flags. Search, crawl and similar use
 - **Watcher.** OpenCode has no background shell, so the orchestrator runs `epic-watch.ts --max-wait 480` in the foreground with a 600000 ms bash timeout and runs it again until no issue is active.
 - **Workers.** An OpenCode worker is `opencode --auto --model provider/model` in its own herdr worktree. Launch refuses an `opencode` whose `--version` is not 1.x, and adds `/.opencode/toolu/state/` and `/.opencode/tmp/` to the repository's shared `info/exclude` so worker state stays out of `git status`, `refs/epic-wip/*` snapshots and worktree removal. The worker loads `delivery-flow-delivery-flow` by that id, and its native `task` calls reach agent-tier and delegation telemetry. A worktree reads its committed `.opencode/toolu/plugins.json`, else the global selection, else every installed plugin.
 
-`tools/toolu-opencode/src/plugin/__tests__/epic-workflows.test.ts` proves the selection, script root and agent-tier paths hermetically. `TOOLU_LIVE_OPENCODE=1 bun test tools/toolu-opencode/src/plugin/__tests__/epic-worker.live.test.ts` runs a worker on the pinned host through a kill, checkpoint and `--continue` to a ready report.
+`tools/toolu-opencode/src/plugin/__tests__/epic-workflows.test.ts` proves the selection, script root and agent-tier paths hermetically. `TOOLU_LIVE_OPENCODE=1 bun test tools/toolu-opencode/src/plugin/__tests__/epic-worker.live.test.ts` runs a worker on the pinned host through a kill, checkpoint, `session list` capture and `--session` resume to a ready report.
 
 ## Verify a real gate
 
