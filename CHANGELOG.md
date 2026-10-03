@@ -1,5 +1,36 @@
 # Changelog
 
+## [7.8.0](https://github.com/Falconiere/toolu/compare/v7.7.2...v7.8.0) (2026-10-03)
+
+
+### Features
+
+* **opencode:** deliver session, prompt and compaction context ([#372](https://github.com/Falconiere/toolu/issues/372)) ([3e24532](https://github.com/Falconiere/toolu/commit/3e245327ad55d0a080c985ed67bfea98b3aeee03))
+* **opencode:** dispatch post-tool checks ([#375](https://github.com/Falconiere/toolu/issues/375)) ([dcc6f1d](https://github.com/Falconiere/toolu/commit/dcc6f1d527b44215db946ba6f54e779c35bc1bdd))
+* **opencode:** enforce core pre-tool policies ([#370](https://github.com/Falconiere/toolu/issues/370)) ([19c1c1d](https://github.com/Falconiere/toolu/commit/19c1c1d804164b7d00e7a055439af905341282d7))
+* **opencode:** enforce TypeScript post-edit quality ([#386](https://github.com/Falconiere/toolu/issues/386)) ([3b82ce6](https://github.com/Falconiere/toolu/commit/3b82ce6a1bd2b7e62cad43bdde109ea3b5332310))
+* **opencode:** generate valid full catalog surfaces ([#367](https://github.com/Falconiere/toolu/issues/367)) ([0e45c79](https://github.com/Falconiere/toolu/commit/0e45c79b8b183f75ecd6e358c1a5d8cfec511bd8))
+* **opencode:** install and discover generated surfaces with safe ownership ([#374](https://github.com/Falconiere/toolu/issues/374)) ([abd42df](https://github.com/Falconiere/toolu/commit/abd42df75b7554de816fc24bab8f90bdaffe31bd))
+* **opencode:** normalize pinned tool calls into core pre-tool requests ([#368](https://github.com/Falconiere/toolu/issues/368)) ([0beec17](https://github.com/Falconiere/toolu/commit/0beec17bcb408ec3d6366f83a5bc3b23d4a69a31))
+* **opencode:** port agent-browser startup and workflow ([#379](https://github.com/Falconiere/toolu/issues/379)) ([d60045d](https://github.com/Falconiere/toolu/commit/d60045d5482658b18c076e6d70db4b6ed83019bd))
+* **opencode:** port ast-grep search enforcement and savings reporting ([#377](https://github.com/Falconiere/toolu/issues/377)) ([ac9eb45](https://github.com/Falconiere/toolu/commit/ac9eb45ebd4e5c04f60aaf1918150a36a694a5e5))
+* **opencode:** port brainstorm and delivery-flow workflow semantics ([#385](https://github.com/Falconiere/toolu/issues/385)) ([f98f013](https://github.com/Falconiere/toolu/commit/f98f013baed0e80891b528183a2f039c317ac9d3))
+* **opencode:** port context7 helper publication and documentation workflow ([#381](https://github.com/Falconiere/toolu/issues/381)) ([6533a20](https://github.com/Falconiere/toolu/commit/6533a2054214401a8ad18b329f926317ff1db596))
+* **opencode:** port exa-search helper and research workflow ([#383](https://github.com/Falconiere/toolu/issues/383)) ([37b717d](https://github.com/Falconiere/toolu/commit/37b717dd051867d31d918621d0753c54f46f1f46))
+* **opencode:** port Jev startup, prompt reminders and typed judgments ([#378](https://github.com/Falconiere/toolu/issues/378)) ([641394b](https://github.com/Falconiere/toolu/commit/641394b4f4da46892d81769b28c3dc1ac9bedead))
+* **opencode:** port Jira startup and issue workflow ([#384](https://github.com/Falconiere/toolu/issues/384)) ([63ae77f](https://github.com/Falconiere/toolu/commit/63ae77fdfc7a466d38b9ae26883da16803e2d380))
+* **opencode:** port review and core workflow skills to native tools ([#380](https://github.com/Falconiere/toolu/issues/380)) ([525652f](https://github.com/Falconiere/toolu/commit/525652f52eada56eb96eb11f834ec54d810d1e50))
+* **opencode:** preserve native permission decisions and deliver gate advice ([#373](https://github.com/Falconiere/toolu/issues/373)) ([cd99006](https://github.com/Falconiere/toolu/commit/cd990066172637363789ca512896fe07aada55d8))
+* **opencode:** replace the V2 entrypoint with the documented plugin function ([#366](https://github.com/Falconiere/toolu/issues/366)) ([8d6dc0f](https://github.com/Falconiere/toolu/commit/8d6dc0ff6da045f08a351e46d06d83d76244a64b))
+* **opencode:** resolve OpenCode paths, helper environment and concurrent state ([#371](https://github.com/Falconiere/toolu/issues/371)) ([eb7e72e](https://github.com/Falconiere/toolu/commit/eb7e72e669554635b8a5ee8ff58e16a8e0184b2d))
+* **opencode:** run complete plugin startup and verify fresh readiness ([#369](https://github.com/Falconiere/toolu/issues/369)) ([b5008d2](https://github.com/Falconiere/toolu/commit/b5008d2db2fff5d2591dea18f549f4731292ff49))
+* **opencode:** verify the documented host contract and inventory all 16 plugins ([#364](https://github.com/Falconiere/toolu/issues/364)) ([ffb3931](https://github.com/Falconiere/toolu/commit/ffb39313d57e29becbaea7a8f403b5c874b7c280))
+
+
+### Bug Fixes
+
+* **epic-orchestrator:** enforce shared workload ownership and bounded lifecycle ([#382](https://github.com/Falconiere/toolu/issues/382)) ([33bd879](https://github.com/Falconiere/toolu/commit/33bd8798cb3574ade35dc173b87c001add293d74))
+
 ## [7.7.2](https://github.com/Falconiere/toolu/compare/v7.7.1...v7.7.2) (2026-10-01)
 
 
