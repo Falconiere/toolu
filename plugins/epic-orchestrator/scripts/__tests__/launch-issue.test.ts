@@ -160,13 +160,26 @@ test.concurrent("malformed route and launch records refuse before acquiring owne
   for (const directory of ["routes", "issues"]) {
     const path = join(state, directory, "comemory-255.json");
     mkdirSync(join(state, directory), { recursive: true });
-    for (const source of ["{", "[]", "null"]) {
+    const refusals: Record<string, string> =
+      directory === "routes"
+        ? {
+            "{": "JSON Parse error",
+            "[]": "expected object, received array",
+            null: "expected object, received null",
+          }
+        : {
+            "{": `invalid launch record ${path}: malformed JSON`,
+            "[]": `invalid launch record ${path}: expected a JSON object`,
+            null: `invalid launch record ${path}: expected a JSON object`,
+          };
+    for (const [source, refusal] of Object.entries(refusals)) {
       writeFileSync(path, source);
       const out = await run(
         [process.execPath, LAUNCH, "--graph", graph, "--issue", "comemory-255", "--force"],
         { env: { TOOLU_RESOURCE_HOME: root, PATH: "" } },
       );
       expect(out.exitCode).toBe(1);
+      expect(out.stderr).toContain(refusal);
       expect(out.stderr).not.toContain("spawn git");
       expect(readResourceState(root).leases).toEqual([]);
     }

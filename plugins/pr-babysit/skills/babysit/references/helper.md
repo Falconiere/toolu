@@ -210,10 +210,11 @@ bun "$PLUGIN_ROOT/hooks/dist/babysit-fixer-report.js" <report-file> done|failed 
 - **Agents** are named `pb-<6 hex of the slot>-r<round>g<seq>` and started with
   `herdr agent start <name> --kind <host> --pane <pane> -- <host args>`:
   - Claude: `--dangerously-skip-permissions -n <name> --model --effort`
-  - Codex: `--no-daemon --dangerously-bypass-approvals-and-sandbox --model -c model_reasoning_effort=<e>`
+  - Codex: `--dangerously-bypass-approvals-and-sandbox --model -c model_reasoning_effort=<e>`
   - Cursor: `--yolo --trust --approve-mcps --model`
 
-  These are the unattended flags; `prBabysit.unattended: false` selects safe mode.
+  These are the unattended flags; `prBabysit.unattended: false` selects safe mode. Codex also
+  gets `--no-daemon` first in both modes.
 - **Brief and report** sit beside the state file: `<state>.fixer-r<round>g<seq>.md` and
   `.report.json`. A settled agent with no report is `no_report`, or `host_limited` when its pane
   shows a provider usage/rate limit (the host then cools for 60 min).
