@@ -185,8 +185,12 @@ test("opencode run argv names the fixer agent, worktree, approvals, model and va
   ]);
 });
 
-test("a process group with a backgrounded grandchild stays alive until stopGroup ends all of it", () => {
-  const child = spawn("sh", ["-c", "sleep 30 & sleep 30"], { detached: true, stdio: "ignore" });
+test("stopGroup ends the group and a descendant that moved to its own process group", () => {
+  // Like OpenCode's bash tool: one grandchild stays in the group, one leaves it.
+  const child = spawn("sh", ["-c", "sleep 30 & perl -e 'setpgrp(0, 0); sleep 30' & sleep 30"], {
+    detached: true,
+    stdio: "ignore",
+  });
   const pid = child.pid ?? 0;
   const start = processStart(pid);
   groups.push({ pid, start });
@@ -197,8 +201,21 @@ test("a process group with a backgrounded grandchild stays alive until stopGroup
   expect(groupAlive(pid, "Thu Jan  1 00:00:00 1970")).toBe(false);
   expect(stopGroup(pid, "Thu Jan  1 00:00:00 1970")).toBe(true);
   expect(groupAlive(pid, start)).toBe(true);
+  const moved = spawnSync("ps", ["-A", "-o", "pid=,ppid=,pgid="], { encoding: "utf8" })
+    .stdout.split("\n")
+    .map((line) => line.trim().split(/\s+/).map(Number))
+    .filter(([, ppid, pgid]) => ppid === pid && pgid !== pid)
+    .map(([child]) => child);
+  expect(moved).toHaveLength(1);
   expect(stopGroup(pid, start)).toBe(true);
   expect(groupAlive(pid, start)).toBe(false);
+  const survivors = spawnSync("ps", ["-o", "pid=,stat=", "-p", String(moved[0])], {
+    encoding: "utf8",
+  })
+    .stdout.trim()
+    .split("\n")
+    .filter((line) => line !== "" && !/\sZ/.test(line));
+  expect(survivors).toEqual([]);
   const left = spawnSync("ps", ["-A", "-o", "pgid=,stat="], { encoding: "utf8" })
     .stdout.split("\n")
     .filter((line) => line.trim().split(/\s+/)[0] === String(pid) && !/\sZ/.test(line));

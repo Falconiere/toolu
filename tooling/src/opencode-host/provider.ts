@@ -6,8 +6,10 @@
  *
  * A request without tools (title generation) gets `Probe title`. Otherwise the
  * `PROBE:<scenario>` token in the first user message picks a script, and the
- * number of tool results since the last user message picks the step. An
- * exhausted or unknown script answers `PROBE-DONE`.
+ * number of tool results since the last user message picks the step. A first
+ * user message without a token (a session the scenario did not prompt itself,
+ * such as a nested fixer) uses the `*` script. An exhausted or unknown script
+ * answers `PROBE-DONE`.
  */
 import { z } from "zod";
 
@@ -92,7 +94,7 @@ export function startScriptedProvider(scripts: Scripts): ScriptedProvider {
       if (parsed.data.tools === undefined || parsed.data.tools.length === 0)
         return textReply(TITLE_TEXT);
       const { scenario, done } = scriptPosition(parsed.data.messages);
-      const step = scenario === null ? undefined : scripts[scenario]?.[done];
+      const step = scripts[scenario ?? "*"]?.[done];
       if (step === undefined) return textReply(DONE_TEXT);
       calls += 1;
       return toolReply(step, `call_${calls}`);
