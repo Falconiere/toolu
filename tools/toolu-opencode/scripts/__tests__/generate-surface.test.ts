@@ -428,7 +428,7 @@ test("resource links in generated skills resolve inside the output tree", () => 
     true,
   );
   const jevReference = plan.files.get(join(out, "skills/jev-jev/references/problem-solving.md"));
-  expect(jevReference).toContain("for OpenCode use the second line instead");
+  expect(jevReference).toContain("# OpenCode\nJEV=");
   expect(jevReference).toContain("${XDG_CONFIG_HOME:-$HOME/.config}/opencode");
   expect(jevReference).not.toContain("${CLAUDE_CONFIG_DIR:-$HOME/.claude}");
 });
