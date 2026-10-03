@@ -1,6 +1,6 @@
 // @bun
 // plugins/ast-grep/hooks/src/byte-savings.ts
-import { appendFileSync, mkdirSync } from "fs";
+import { appendFileSync, mkdirSync, readFileSync } from "fs";
 import { join } from "path";
 
 // node_modules/.bun/zod@4.1.5/node_modules/zod/v4/core/core.js
@@ -9847,6 +9847,49 @@ function ledgerSessionId(sessionId) {
   return sid === "" ? "unknown" : sid;
 }
 
+// plugins/ast-grep/hooks/src/lib/savings-report.ts
+function isRecord(value) {
+  return typeof value === "object" && value !== null && "kind" in value && typeof value.kind === "string" && "returned" in value && typeof value.returned === "number" && "full" in value && typeof value.full === "number";
+}
+function parseLine(line) {
+  try {
+    const value = JSON.parse(line);
+    return isRecord(value) ? value : undefined;
+  } catch {
+    return;
+  }
+}
+function parseLedger(text) {
+  const records = [];
+  for (const [index, line] of text.split(`
+`).entries()) {
+    if (line.trim() === "")
+      continue;
+    const record = parseLine(line);
+    if (record === undefined)
+      return { line: index + 1 };
+    records.push(record);
+  }
+  return records;
+}
+function report(records) {
+  const byKind = new Map;
+  for (const r of records) {
+    const t = byKind.get(r.kind) ?? { kind: r.kind, returned: 0, full: 0, n: 0 };
+    byKind.set(r.kind, {
+      ...t,
+      returned: t.returned + r.returned,
+      full: t.full + r.full,
+      n: t.n + 1
+    });
+  }
+  const kinds = [...byKind.keys()].toSorted().flatMap((kind) => byKind.get(kind) ?? []);
+  const lines = kinds.map((t) => t.kind === "read" && t.full > 0 ? `${t.kind}: returned=${t.returned} full=${t.full} saved=${Math.floor((t.full - t.returned) * 100 / t.full)}% (n=${t.n})` : `${t.kind}: returned=${t.returned} (n=${t.n})`);
+  const total = kinds.reduce((sum, t) => sum + t.returned, 0);
+  return [...lines, `TOTAL returned: ${total} bytes (~${Math.floor(total / 4)} tok)`].join(`
+`);
+}
+
 // plugins/ast-grep/hooks/src/byte-savings.ts
 function ledgerDir(env) {
   const root = env["TOOLU_CONFIG_DIR"] || env["CODEX_HOME"] || env["CLAUDE_CONFIG_DIR"] || `${env["HOME"] ?? ""}/.claude`;
@@ -9861,19 +9904,42 @@ function record2(event, ctx) {
     return;
   const full = kind === "read" ? readFullBytes(event.toolInput["file_path"], ctx.cwd ?? process.cwd()) : 0;
   const dir = ledgerDir(ctx.env);
+  const ledger = join(dir, `${ledgerSessionId(ctx.raw["session_id"])}.jsonl`);
+  const line = `{"kind":"${kind}","returned":${returned},"full":${full}}
+`;
+  return appended(dir, ledger, line) ? { ledger, kind } : undefined;
+}
+function appended(dir, ledger, line) {
   try {
     mkdirSync(dir, { recursive: true });
-    appendFileSync(join(dir, `${ledgerSessionId(ctx.raw["session_id"])}.jsonl`), `{"kind":"${kind}","returned":${returned},"full":${full}}
-`);
-  } catch {}
+    appendFileSync(ledger, line);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function sessionReport(ledger) {
+  let text;
+  try {
+    text = readFileSync(ledger, "utf8");
+  } catch (error) {
+    return `report unavailable: ${error instanceof Error ? error.message : String(error)}`;
+  }
+  const records = parseLedger(text);
+  return Array.isArray(records) ? report(records) : `report unavailable: ${ledger}:${records.line}: invalid ledger line`;
 }
 var byte_savings_default = defineRegistryModule({
   spec: "ast-grep@toolu",
   name: "byte-savings",
   event: "tool/post",
   run(event, ctx) {
-    record2(event, ctx);
-    return Promise.resolve({ kind: "allow" });
+    const recorded = record2(event, ctx);
+    if (ctx.host !== "opencode" || recorded?.kind !== "ast-grep") {
+      return Promise.resolve({ kind: "allow" });
+    }
+    const message = `ast-grep byte savings this session:
+${sessionReport(recorded.ledger)}`;
+    return Promise.resolve({ kind: "advisory", message });
   }
 });
 export {

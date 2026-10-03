@@ -123,9 +123,11 @@ async function dispatchMessage(
   const payload = {
     ...request,
     tool_output: output.output,
+    // Modules that measure the result (ast-grep's byte-savings) read `.output`, as on other hosts.
     tool_response: {
-      metadata: shell && outcome !== undefined ? { exit_code: outcome.exit } : metadata,
+      metadata: shell && outcome !== undefined ? { exit_code: outcome.exit } : (metadata ?? {}),
       interrupted: false,
+      output: output.output,
     },
   };
   const result = await dispatchPostTool(JSON.stringify(payload), {

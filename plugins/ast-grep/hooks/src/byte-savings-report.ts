@@ -6,53 +6,7 @@
  * against reading the whole file. Read-only. Port of `byte-savings-report.sh`.
  */
 import { existsSync, readFileSync, statSync } from "node:fs";
-
-type LedgerRecord = { kind: string; returned: number; full: number };
-type KindTotal = LedgerRecord & { n: number };
-
-function isRecord(value: unknown): value is LedgerRecord {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "kind" in value &&
-    typeof value.kind === "string" &&
-    "returned" in value &&
-    typeof value.returned === "number" &&
-    "full" in value &&
-    typeof value.full === "number"
-  );
-}
-
-function parseLine(line: string): LedgerRecord | undefined {
-  try {
-    const value: unknown = JSON.parse(line);
-    return isRecord(value) ? value : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-/** One line per kind, sorted by kind, then the total. */
-function report(records: readonly LedgerRecord[]): string {
-  const byKind = new Map<string, KindTotal>();
-  for (const r of records) {
-    const t = byKind.get(r.kind) ?? { kind: r.kind, returned: 0, full: 0, n: 0 };
-    byKind.set(r.kind, {
-      ...t,
-      returned: t.returned + r.returned,
-      full: t.full + r.full,
-      n: t.n + 1,
-    });
-  }
-  const kinds = [...byKind.keys()].toSorted().flatMap((kind) => byKind.get(kind) ?? []);
-  const lines = kinds.map((t) =>
-    t.kind === "read" && t.full > 0
-      ? `${t.kind}: returned=${t.returned} full=${t.full} saved=${Math.floor(((t.full - t.returned) * 100) / t.full)}% (n=${t.n})`
-      : `${t.kind}: returned=${t.returned} (n=${t.n})`,
-  );
-  const total = kinds.reduce((sum, t) => sum + t.returned, 0);
-  return [...lines, `TOTAL returned: ${total} bytes (~${Math.floor(total / 4)} tok)`].join("\n");
-}
+import { parseLedger, report } from "./lib/savings-report.ts";
 
 function main(argv: readonly string[]): number {
   const ledger = argv[0] ?? "";
@@ -60,16 +14,10 @@ function main(argv: readonly string[]): number {
     process.stderr.write("usage: byte-savings-report.js <ledger.jsonl>\n");
     return 1;
   }
-  const records: LedgerRecord[] = [];
-  const lines = readFileSync(ledger, "utf8").split("\n");
-  for (const [index, line] of lines.entries()) {
-    if (line.trim() === "") continue;
-    const record = parseLine(line);
-    if (record === undefined) {
-      process.stderr.write(`byte-savings-report: ${ledger}:${index + 1}: invalid ledger line\n`);
-      return 1;
-    }
-    records.push(record);
+  const records = parseLedger(readFileSync(ledger, "utf8"));
+  if (!Array.isArray(records)) {
+    process.stderr.write(`byte-savings-report: ${ledger}:${records.line}: invalid ledger line\n`);
+    return 1;
   }
   process.stdout.write(`${report(records)}\n`);
   return 0;
