@@ -271,20 +271,40 @@ function hostKind(name) {
     return "codex";
   if (normalized === "cursor" || normalized === "cursor-agent")
     return "cursor";
-  fail("config_invalid", `unknown host '${String(name)}'; use one of claude, codex, cursor`, {
+  if (normalized === "opencode")
+    return "opencode";
+  fail("config_invalid", `unknown host '${String(name)}'; use one of claude, codex, cursor, opencode`, {
     host: name
   });
 }
 function hostCli(host) {
   return host === "cursor" ? "cursor-agent" : host;
 }
+var BYPASS = {
+  claude: ["--dangerously-skip-permissions"],
+  codex: ["--dangerously-bypass-approvals-and-sandbox"],
+  cursor: ["--yolo", "--trust", "--approve-mcps"],
+  opencode: ["--auto"]
+};
+var SAFE_MODE = {
+  claude: ["--permission-mode", "auto"],
+  codex: ["--ask-for-approval", "on-request", "--sandbox", "workspace-write"],
+  cursor: ["--trust"],
+  opencode: []
+};
+var EFFORT = {
+  claude: (effort) => ["--effort", effort],
+  codex: (effort) => ["-c", `model_reasoning_effort=${effort}`],
+  cursor: () => [],
+  opencode: (effort) => ["--variant", effort]
+};
 function agentArgs(host, name, model, effort, unattended) {
   const args = [
     ...host === "codex" ? ["--no-daemon"] : [],
-    ...unattended ? host === "claude" ? ["--dangerously-skip-permissions"] : host === "codex" ? ["--dangerously-bypass-approvals-and-sandbox"] : ["--yolo", "--trust", "--approve-mcps"] : host === "claude" ? ["--permission-mode", "auto"] : host === "codex" ? ["--ask-for-approval", "on-request", "--sandbox", "workspace-write"] : ["--trust"],
+    ...unattended ? BYPASS[host] : SAFE_MODE[host],
     ...host === "claude" ? ["-n", name] : [],
     ...model ? ["--model", model] : [],
-    ...effort ? host === "claude" ? ["--effort", effort] : host === "codex" ? ["-c", `model_reasoning_effort=${effort}`] : [] : []
+    ...effort ? EFFORT[host](effort) : []
   ];
   const bad = args.find((arg) => !SAFE.test(arg));
   if (bad)
