@@ -3192,9 +3192,7 @@ function renderHookOutput(value, pretty) {
 import { lstatSync } from "fs";
 var OPENCODE_SKILL = "jev-jev";
 function onOpencode() {
-  return detectHost({ warn: () => {
-    return;
-  } }) === "opencode";
+  return process.env.TOOLU_HOST_OVERRIDE === "opencode";
 }
 function invocation2(wrapper) {
   const quote = (value) => `'${value.replaceAll("'", "'\\''")}'`;

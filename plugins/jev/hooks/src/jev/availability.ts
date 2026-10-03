@@ -1,12 +1,11 @@
 import { lstatSync } from "node:fs";
-import { detectHost } from "@toolu/core/host";
 
 /** The id the OpenCode surface generator gives this plugin's `jev` skill. */
 export const OPENCODE_SKILL = "jev-jev";
 
 /** The OpenCode adapter runs every toolu hook with `TOOLU_HOST_OVERRIDE=opencode`. */
 export function onOpencode(): boolean {
-  return detectHost({ warn: () => undefined }) === "opencode";
+  return process.env.TOOLU_HOST_OVERRIDE === "opencode";
 }
 
 /** The hook already runs under the launcher's resolved Bun; PATH is not required. */
