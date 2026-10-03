@@ -204,6 +204,12 @@ Add `ts-quality` to `.opencode/toolu/plugins.json` alongside `toolu`, then resta
 
 A violation appears in the completed tool result and in the project's `.opencode/tmp/quality-gate-status.json`; it blocks later commit and push attempts until a clean edit or removal clears it. The edit itself has already happened. Run `bun run smoke:opencode-ts-quality` in the toolu checkout to replay native write/edit recovery, multi-file patch, and disabled-plugin scenarios on the pinned host.
 
+### Python post-edit quality
+
+Add `python-quality` to `.opencode/toolu/plugins.json` alongside `toolu`, then restart OpenCode. It requires a Python marker (`pyproject.toml`, `setup.py`, `setup.cfg` or `requirements.txt`) at the git toplevel and `python3` on `PATH`, and runs static per-file rules on completed `.py` writes, edits, and patches; it never invokes `ruff`, `pylint`, or `mypy`. If `ast-grep` is installed, the no-mocks rule scans test files with its Python parser; without it, that rule is skipped. A patch checks every changed Python destination and clears gate entries for deleted files and moved sources. Disabled python-quality and other file types do not invoke the module. Unlike ts-quality, linked worktrees are checked, each against its own gate file.
+
+A violation appears in the completed tool result and in the project's `.opencode/tmp/quality-gate-status.json`; it blocks later commit and push attempts until a clean edit or removal clears it. The edit itself has already happened. Run `bun run smoke:opencode-python-quality` in the toolu checkout to replay native write/edit recovery, multi-file patch, and disabled-plugin scenarios on the pinned host.
+
 ### ast-grep
 
 With `ast-grep` selected, its two registry modules run on OpenCode's own tools ([#347](https://github.com/Falconiere/toolu/issues/347)):

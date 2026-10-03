@@ -23,3 +23,15 @@ Every Python file the agent edits is checked on the spot, contributing to toolu'
 - Docstring checks on public functions and classes.
 
 The module registers into the core toolu dispatcher and runs only while this plugin is installed — uninstall it and the Python rules vanish, fail-closed.
+
+## OpenCode
+
+Add `python-quality` to the project selection and restart OpenCode:
+
+```json
+{ "version": 1, "enabled": ["toolu", "python-quality"] }
+```
+
+The project must be a git repository with `pyproject.toml`, `setup.py`, `setup.cfg`, or `requirements.txt` at its root, and `python3` must be on `PATH`. Completed `write`, `edit`, and `apply_patch` calls check changed `.py` files. The installed `ast-grep` CLI runs the no-mocks scan with its Python parser; without it, that rule is skipped. A multi-file patch checks every changed Python destination and clears prior entries for deleted files and moved sources. Other extensions and disabled plugins do not run these checks. Linked worktrees are checked, each against its own gate file.
+
+Violations are appended to the completed tool result and recorded in the project's `.opencode/tmp/quality-gate-status.json`; they do not undo the edit. A failing entry blocks later commit and push attempts until a clean edit or deletion clears it. The pinned-host proof is `bun run smoke:opencode-python-quality` in the toolu checkout.
