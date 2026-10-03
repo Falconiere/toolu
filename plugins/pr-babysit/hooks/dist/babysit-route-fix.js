@@ -89,7 +89,8 @@ var DEFAULTS = {
     { model: "gpt-5.6-sol-high" },
     { model: "claude-opus-5-thinking-high" },
     { model: "gpt-5.6-sol-xhigh" }
-  ]
+  ],
+  opencode: [{}, {}, {}, {}]
 };
 function hostKind(name) {
   const normalized = String(name).trim().toLowerCase();
@@ -99,7 +100,9 @@ function hostKind(name) {
     return "codex";
   if (normalized === "cursor" || normalized === "cursor-agent")
     return "cursor";
-  fail("config_invalid", `unknown host '${String(name)}'; use one of claude, codex, cursor`, {
+  if (normalized === "opencode")
+    return "opencode";
+  fail("config_invalid", `unknown host '${String(name)}'; use one of claude, codex, cursor, opencode`, {
     host: name
   });
 }
@@ -137,10 +140,24 @@ function merge(a, b) {
   }
   return out;
 }
+function opencodePaths(root) {
+  const home = process.env.HOME || homedir();
+  const user = process.env.TOOLU_USER_CONFIG_DIR || process.env.TOOLU_CONFIG_DIR || join(process.env.XDG_CONFIG_HOME || join(home, ".config"), "opencode");
+  const dir = process.env.TOOLU_PROJECT_CONFIG_DIRNAME || ".opencode";
+  return {
+    user: join(user, "toolu.config.json"),
+    project: root ? join(root, dir, "toolu.config.json") : ""
+  };
+}
+function gitRoot() {
+  return process.env.TOOLU_PROJECT_DIR || (spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).stdout ?? "").trim();
+}
 function configPaths(host) {
+  if (host === "opencode")
+    return opencodePaths(gitRoot());
   const home = host === "codex" ? process.env.CODEX_HOME || join(process.env.HOME || homedir(), ".codex") : process.env.CLAUDE_CONFIG_DIR || join(process.env.HOME || homedir(), ".claude");
   const user = join(process.env.TOOLU_CONFIG_DIR || home, "toolu.config.json");
-  const root = process.env.TOOLU_PROJECT_DIR || (spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).stdout ?? "").trim();
+  const root = gitRoot();
   const dir = process.env.TOOLU_PROJECT_CONFIG_DIRNAME || (host === "codex" ? ".codex" : ".claude");
   return { user, project: root ? join(root, dir, "toolu.config.json") : "" };
 }
@@ -189,7 +206,7 @@ function loadFixerConfig(host) {
   };
 }
 function commandAvailable(name) {
-  return Bun.which(name) !== null;
+  return Bun.which(name, { PATH: process.env.PATH ?? "" }) !== null;
 }
 function readJsonIfValid(path) {
   try {
@@ -229,7 +246,16 @@ function heuristic(item) {
     return 0;
   return 1;
 }
-function jevAnswers(items, disabled, replay) {
+function jevScript(host) {
+  const home = process.env.HOME || homedir();
+  const candidates = host === "opencode" ? [process.env.PB_JEV, process.env.TOOLU_CONFIG_DIR && join(process.env.TOOLU_CONFIG_DIR, "jev/jev.sh")] : [
+    process.env.PB_JEV,
+    join(process.env.CLAUDE_CONFIG_DIR || join(home, ".claude"), "jev/jev.sh"),
+    join(process.env.CODEX_HOME || join(home, ".codex"), "jev/jev.sh")
+  ];
+  return candidates.find((path) => !!path && existsSync(path));
+}
+function jevAnswers(items, disabled, replay, host) {
   if (replay) {
     const value = readJsonIfValid(replay);
     if (value === null)
@@ -238,12 +264,7 @@ function jevAnswers(items, disabled, replay) {
   }
   if (disabled)
     return { answers: {}, note: "jev disabled; heuristic tiers used" };
-  const home = process.env.HOME || homedir();
-  const script = [
-    process.env.PB_JEV,
-    join(process.env.CLAUDE_CONFIG_DIR || join(home, ".claude"), "jev/jev.sh"),
-    join(process.env.CODEX_HOME || join(home, ".codex"), "jev/jev.sh")
-  ].find((path) => path && existsSync(path));
+  const script = jevScript(host);
   if (!script)
     return { answers: {}, note: "jev unavailable (jev.sh not installed); heuristic tiers used" };
   if (!process.env.TYPESAFE_API_KEY)
@@ -276,7 +297,8 @@ function jevAnswers(items, disabled, replay) {
   try {
     const stateFile = join(temp, "state.json");
     writeFileSync(stateFile, JSON.stringify(state));
-    run = spawnSync(process.execPath, [script, "ask", "-", "-s", `@${stateFile}`], {
+    const bunArgs = host === "opencode" ? ["--no-env-file"] : [];
+    run = spawnSync(process.execPath, [...bunArgs, script, "ask", "-", "-s", `@${stateFile}`], {
       input: JSON.stringify(questions),
       encoding: "utf8"
     });
@@ -296,8 +318,8 @@ function jevAnswers(items, disabled, replay) {
   return { answers: {}, note: "jev returned an unparsable answer; heuristic tiers used" };
 }
 function routeFix(opts) {
-  if (opts.host !== "claude" && opts.host !== "codex")
-    fail("usage", "route-fix.js: --host claude|codex required");
+  if (opts.host !== "claude" && opts.host !== "codex" && opts.host !== "opencode")
+    fail("usage", "route-fix.js: --host claude|codex|opencode required");
   if (!opts.itemsFile)
     fail("usage", "route-fix.js: --items required");
   const raw = readJsonIfValid(opts.itemsFile);
@@ -313,7 +335,7 @@ function routeFix(opts) {
   const missing = config.hosts.filter((h) => !commandAvailable(hostCli(h)));
   const cooling = Object.entries(cooldowns).filter(([, v]) => v?.until && Date.parse(v.until) > now).map(([h]) => h);
   const eligible = config.hosts.filter((h) => !missing.includes(h) && !cooling.includes(h));
-  const { answers, note: jevNote } = jevAnswers(items, !!opts.noJev || !config.jev, opts.answersFile ?? "");
+  const { answers, note: jevNote } = jevAnswers(items, !!opts.noJev || !config.jev, opts.answersFile ?? "", opts.host);
   const scored = items.map((i) => {
     const answer = answers[i.id];
     const score = typeof answer?.score === "number" ? answer.score : null;
@@ -378,7 +400,7 @@ runCli(() => {
   const host = flag(flags, "--host");
   const itemsFile = flag(flags, "--items");
   if (!host)
-    fail("usage", "route-fix.js: --host claude|codex required");
+    fail("usage", "route-fix.js: --host claude|codex|opencode required");
   if (!itemsFile)
     fail("usage", "route-fix.js: --items required");
   return routeFix({
