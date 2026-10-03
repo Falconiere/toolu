@@ -218,8 +218,12 @@ test.concurrent("launch: OpenCode without a runnable opencode stops before any s
     { env: { PATH: sb.path("empty-bin") } },
   );
   expect(res.exitCode).toBe(1);
-  expect(res.stderr).toContain("opencode is not runnable here");
-  expect(res.stderr).toContain("opencode-ai 1.x");
+  expect(JSON.parse(res.stderr)).toEqual({
+    issue: "Falconiere/comemory#255",
+    error: expect.stringMatching(
+      /^CommandError: opencode is not runnable here \(.+\); toolu's OpenCode plugin targets opencode-ai 1\.x\. Put a 1\.x opencode first on PATH, or route this issue to another host\.$/,
+    ),
+  });
   expect(existsSync(join(state, "issues"))).toBe(false);
 });
 

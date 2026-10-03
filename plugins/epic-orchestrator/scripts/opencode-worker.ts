@@ -26,7 +26,8 @@ export async function excludeOpencodeState(checkout: string): Promise<string> {
   ]);
   const path = join(common.trim(), "info", "exclude");
   const current = existsSync(path) ? await readFile(path, "utf8") : "";
-  const present = new Set(current.split("\n"));
+  // git ignores a pattern's unescaped trailing whitespace.
+  const present = new Set(current.split("\n").map((line) => line.trimEnd()));
   const missing = [EXCLUDE_MARKER, ...OPENCODE_EXCLUDE].filter((line) => !present.has(line));
   if (missing.length === 0) return path;
   await mkdir(dirname(path), { recursive: true });

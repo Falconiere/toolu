@@ -83,6 +83,16 @@ test.concurrent("the exclude block is appended once, after a line without a newl
   );
 });
 
+test.concurrent("a line with trailing spaces already counts, as it does for git", async () => {
+  using sb = createSandbox();
+  const { main, wt } = await setup(sb.root);
+  const path = join(main, ".git", "info", "exclude");
+  const existing = `${MARKER}  \n${OPENCODE_EXCLUDE[0]} \n${OPENCODE_EXCLUDE[1]}\t\n`;
+  writeFileSync(path, existing);
+  await excludeOpencodeState(wt);
+  expect(readFileSync(path, "utf8")).toBe(existing);
+});
+
 test.concurrent("a path outside any repository fails loudly", async () => {
   using sb = createSandbox();
   await expect(excludeOpencodeState(sb.root)).rejects.toThrow("rev-parse");
