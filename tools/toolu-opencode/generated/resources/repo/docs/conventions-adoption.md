@@ -32,28 +32,51 @@ This repo is a **library/plugin Bun workspace**, not a Workers/web app. Upstream
 
 | Rule | Bun / local SoT | Claude `ts-quality` hook | Notes |
 |------|-----------------|--------------------------|-------|
-| File ≤ **300** code lines | oxlint `max-lines` | `25-size-file.sh` default 300 | Aligned |
-| Function ≤ **60** code lines | oxlint `max-lines-per-function` | `30-size-fn.sh` default 60 | Aligned with hook; upstream template used 50 |
+| File ≤ **300** code lines | oxlint `max-lines` | `25-size-file.sh` default 300 | Aligned; every TypeScript tree, plugin hooks and scripts included |
+| Function ≤ **60** code lines | oxlint `max-lines-per-function` | `30-size-fn.sh` default 60 | Aligned with hook; upstream template used 50; every TypeScript tree |
 | No `any` / assertions / non-null | oxlint type-aware | concerns | Repo TS CI/local SoT once #208 wires CI |
 | Colocated `__tests__` | guardrails + oxlint plugin | `20-tests.sh` | Tests are `__tests__/*.test.ts` under `src/`, tooling suites included (`tooling/src/__tests__`, see [`testing.md`](testing.md)) |
 | Banned validators | guardrails `bannedDeps` | — | Zod only (`package.json` dependency) |
-| Dead code / duplication | knip / jscpd | — | |
+| Dead code / duplication | knip / jscpd | — | Every TypeScript tree; tests are not scanned for duplication |
 
-`ownedByLinter` in `tooling/guardrails.config.json` must name only check ids that oxlint (or its plugin) actually enforces — verified by `bun run test:conventions`.
+`ownedByLinter` in a package's `guardrails.config.json` must name only check ids that oxlint (or its plugin) actually enforces. `bun run check:gate-reach` verifies it for every package in `guardrails.workspace.json`: `folder-tree`, `colocated-tests` and `no-barrels` map to the house rules of the same name, `filename-case` to `unicorn/filename-case`, each at error level in that package's `.oxlintrc.json` (resolved through `extends`). `patterns` maps to no rule, because toolu adopted none of the upstream pattern rules. A package with no lint config, or any other id, fails.
+
+## Gate reach and legacy exemptions
+
+Every tracked `.ts` and `.tsx` file must be reached by five gates: typecheck, format, oxlint, jscpd and knip. `bun run check:gate-reach` reads each gate's own config (the root `tsconfig.json`, the `format:check` script, every `.oxlintrc.json` with its lint targets, `.jscpd.json` and `knip.json`) and fails on a file a gate does not reach. `tooling/gate-reach.json` holds the two ways out:
+
+- `exclude`: generated, vendored and fixture trees that are not source.
+- `allowances`: a declared gap for one tool and one glob, with a reason. An allowance that no longer covers an unreached file fails as stale.
+
+Adding a TypeScript tree means adding it to each gate's config, or declaring why not.
+
+**Lint targets.** A directory holding `.oxlintrc.json` lints its `src/`, `scripts/` and `contract/`. `plugins/.oxlintrc.json` is a collection config: it lints `hooks/src/`, `scripts/` and `skills/` of every plugin under the base rules, so no lint config ships inside a plugin.
+
+**Legacy exemptions.** Code that predates a gate is exempted per file, by exact path, in the owning tool's own config:
+
+| Tool | Exemption |
+|------|-----------|
+| oxlint | an `overrides` block naming the file, with each violated rule set to `"off"` |
+| jscpd | an `ignore` entry `**/<repo path>` (jscpd ignores a bare relative path) |
+| knip | a workspace `ignore` entry naming the file |
+
+`bun run check:legacy-exemptions` re-runs each tool with these lifted and fails when an exempted file is gone or no longer has the finding. Fix the code, then delete the entry. Do not add one for new code: nothing compares the lists with an earlier revision, so a new entry is caught only in review, and an `.oxlintrc.json` edit prompts through the protected-files gate.
 
 ## Canonical Bun scripts
 
 | Script | Gate |
 |--------|------|
 | `bun run format:check` | oxfmt |
-| `bun run lint:ts` | type-aware oxlint (every workspace package), via `tooling/src/lint-ts.ts` |
+| `bun run lint:ts` | type-aware oxlint over every `.oxlintrc.json` directory and all of its lint targets (workspace packages and the plugin collection), via `tooling/src/lint-ts.ts` |
 | `bun run typecheck` | `tsc --noEmit` |
 | `bun run guardrails` | `tooling/src/guardrails/run.ts` (TypeScript port of the upstream `run.sh`) |
 | `bun run knip` | dead code |
 | `bun run jscpd` | duplication |
+| `bun run check:gate-reach` | every TypeScript file reached by every gate, and `ownedByLinter` backed by a lint rule |
+| `bun run check:legacy-exemptions` | no per-file exemption outlives its finding |
 | `bun run test:unit` | `bun test` in `tooling/`, `packages/`, `tools/`, and `plugins/` |
 | `bun run test:workspace` | Bun 1.4.x pin + export smoke |
-| `bun run test:conventions` | format/lint/tsc/guardrails/knip/jscpd + Bun convention tests |
+| `bun run test:conventions` | format/lint/tsc/guardrails/knip/jscpd/gate reach/legacy exemptions + Bun convention tests |
 | `bun run test:ts` | complete Bun gate: conventions, unit, portable-core, gate coverage, bundle/launcher drift, workspace/package, conformance, context budget, deterministic benchmarks, and shell-analysis latency budget (CI `typescript` job) |
 | `bun run test` | delegates to `test:ts` |
 

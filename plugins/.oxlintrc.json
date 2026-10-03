@@ -1,0 +1,143 @@
+{
+  "$schema": "../node_modules/oxlint/configuration_schema.json",
+  "extends": [
+    "../tooling/conventions/lint/base.oxlintrc.json"
+  ],
+  "env": {
+    "builtin": true
+  },
+  "ignorePatterns": [
+    "node_modules",
+    "fixtures",
+    "**/__tests__/**"
+  ],
+  "rules": {
+    "max-lines": [
+      "error",
+      {
+        "max": 300,
+        "skipBlankLines": true,
+        "skipComments": true
+      }
+    ],
+    "max-lines-per-function": [
+      "error",
+      {
+        "max": 60,
+        "skipBlankLines": true,
+        "skipComments": true
+      }
+    ],
+    "no-console": [
+      "error",
+      {
+        "allow": [
+          "warn",
+          "error"
+        ]
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": [
+              "**/index",
+              "**/index.js",
+              "**/index.ts"
+            ],
+            "message": "No barrel imports"
+          },
+          {
+            "group": [
+              "yup",
+              "yup/*",
+              "joi",
+              "joi/*",
+              "valibot",
+              "valibot/*",
+              "superstruct",
+              "superstruct/*",
+              "ajv",
+              "ajv/*"
+            ],
+            "message": "One validator: use zod"
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {"files":["ast-grep/hooks/src/byte-savings.ts"],"rules":{"import/no-default-export":"off","typescript/prefer-nullish-coalescing":"off"}},
+    {"files":["ast-grep/hooks/src/lib/jq-text.ts"],"rules":{"typescript/no-unnecessary-condition":"off"}},
+    {"files":["ast-grep/hooks/src/search-nudge.ts"],"rules":{"import/no-default-export":"off"}},
+    {"files":["epic-orchestrator/scripts/admission.ts"],"rules":{"import/no-duplicates":"off","max-lines-per-function":"off"}},
+    {"files":["epic-orchestrator/scripts/checkouts.ts"],"rules":{"typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off","typescript/prefer-optional-chain":"off"}},
+    {"files":["epic-orchestrator/scripts/checkpoint.ts"],"rules":{"import/no-duplicates":"off","max-lines":"off","max-lines-per-function":"off","no-await-in-loop":"off"}},
+    {"files":["epic-orchestrator/scripts/common.ts"],"rules":{"import/no-duplicates":"off","typescript/consistent-type-assertions":"off","typescript/no-unnecessary-condition":"off","typescript/no-unsafe-type-assertion":"off","typescript/prefer-nullish-coalescing":"off","typescript/prefer-optional-chain":"off","typescript/require-await":"off"}},
+    {"files":["epic-orchestrator/scripts/epic-close.ts"],"rules":{"no-restricted-imports":"off"}},
+    {"files":["epic-orchestrator/scripts/epic-graph.ts"],"rules":{"max-lines":"off","max-lines-per-function":"off","no-await-in-loop":"off","no-restricted-imports":"off","typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off","unicorn/consistent-function-scoping":"off","unicorn/no-array-sort":"off"}},
+    {"files":["epic-orchestrator/scripts/epic-watch.ts"],"rules":{"import/no-duplicates":"off","max-lines":"off","max-lines-per-function":"off","no-await-in-loop":"off","typescript/consistent-type-assertions":"off","typescript/no-unnecessary-condition":"off","typescript/no-unsafe-type-assertion":"off","unicorn/no-array-reverse":"off","unicorn/no-array-sort":"off"}},
+    {"files":["epic-orchestrator/scripts/finish-issue.ts"],"rules":{"import/no-duplicates":"off","max-lines":"off","max-lines-per-function":"off","typescript/consistent-type-assertions":"off","typescript/no-unnecessary-condition":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["epic-orchestrator/scripts/finish-state.ts"],"rules":{"import/no-duplicates":"off","typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["epic-orchestrator/scripts/job.ts"],"rules":{"import/no-duplicates":"off"}},
+    {"files":["epic-orchestrator/scripts/launch-issue.ts"],"rules":{"max-lines":"off","max-lines-per-function":"off","typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off","typescript/prefer-optional-chain":"off"}},
+    {"files":["epic-orchestrator/scripts/launch-state.ts"],"rules":{"typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["epic-orchestrator/scripts/launch-worktree.ts"],"rules":{"max-lines-per-function":"off","typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["epic-orchestrator/scripts/launch/agent.ts"],"rules":{"max-lines-per-function":"off"}},
+    {"files":["epic-orchestrator/scripts/lifecycle.ts"],"rules":{"typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["epic-orchestrator/scripts/merge-gate.ts"],"rules":{"max-lines":"off","max-lines-per-function":"off","no-await-in-loop":"off","no-restricted-imports":"off","no-underscore-dangle":"off","typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off","typescript/prefer-nullish-coalescing":"off"}},
+    {"files":["epic-orchestrator/scripts/probe.ts"],"rules":{"typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off","typescript/require-await":"off","unicorn/no-array-sort":"off"}},
+    {"files":["epic-orchestrator/scripts/ratelimit.ts"],"rules":{"no-await-in-loop":"off","typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off","unicorn/consistent-function-scoping":"off"}},
+    {"files":["epic-orchestrator/scripts/report.ts"],"rules":{"typescript/consistent-type-assertions":"off"}},
+    {"files":["epic-orchestrator/scripts/route.ts"],"rules":{"import/no-duplicates":"off","max-lines":"off","max-lines-per-function":"off","no-await-in-loop":"off","typescript/consistent-type-assertions":"off","typescript/no-unnecessary-condition":"off","typescript/no-unsafe-type-assertion":"off","typescript/prefer-nullish-coalescing":"off"}},
+    {"files":["epic-orchestrator/scripts/session.ts"],"rules":{"max-lines-per-function":"off","no-await-in-loop":"off","typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off","typescript/prefer-nullish-coalescing":"off"}},
+    {"files":["epic-orchestrator/scripts/trackers/github.ts"],"rules":{"max-lines-per-function":"off","no-await-in-loop":"off","typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["epic-orchestrator/scripts/trackers/jira.ts"],"rules":{"no-await-in-loop":"off","typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off","typescript/prefer-nullish-coalescing":"off"}},
+    {"files":["epic-orchestrator/scripts/trackers/linear.ts"],"rules":{"no-await-in-loop":"off","typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off","typescript/prefer-nullish-coalescing":"off","unicorn/no-array-sort":"off","unicorn/prefer-array-find":"off"}},
+    {"files":["epic-orchestrator/scripts/watch/state.ts"],"rules":{"typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["epic-orchestrator/scripts/workload.ts"],"rules":{"oxc/no-map-spread":"off","typescript/require-await":"off","unicorn/no-array-sort":"off"}},
+    {"files":["jev/hooks/src/jev.ts"],"rules":{"no-await-in-loop":"off"}},
+    {"files":["jev/hooks/src/jev/availability.ts"],"rules":{"unicorn/consistent-function-scoping":"off"}},
+    {"files":["jev/hooks/src/jev/parse.ts"],"rules":{"max-lines-per-function":"off","typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["jev/hooks/src/jev/response.ts"],"rules":{"no-unused-vars":"off","typescript/consistent-type-assertions":"off","typescript/no-unnecessary-condition":"off","typescript/no-unnecessary-type-assertion":"off","typescript/no-unsafe-type-assertion":"off","unicorn/consistent-function-scoping":"off","unicorn/no-array-sort":"off"}},
+    {"files":["jev/hooks/src/user-prompt-submit.ts"],"rules":{"typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["jira/hooks/src/jira/board.ts"],"rules":{"no-shadow":"off"}},
+    {"files":["jira/hooks/src/jira/creds.ts"],"rules":{"typescript/prefer-nullish-coalescing":"off"}},
+    {"files":["jira/hooks/src/jira/http.ts"],"rules":{"typescript/prefer-nullish-coalescing":"off"}},
+    {"files":["jira/hooks/src/jira/issue.ts"],"rules":{"no-shadow":"off","unicorn/consistent-function-scoping":"off"}},
+    {"files":["jira/hooks/src/jira/paginate.ts"],"rules":{"no-await-in-loop":"off","oxc/no-accumulating-spread":"off"}},
+    {"files":["jira/hooks/src/jira/plan-parse.ts"],"rules":{"oxc/no-map-spread":"off"}},
+    {"files":["jira/hooks/src/jira/plan-run.ts"],"rules":{"no-await-in-loop":"off","typescript/no-base-to-string":"off","typescript/prefer-nullish-coalescing":"off"}},
+    {"files":["jira/hooks/src/jira/plan-store.ts"],"rules":{"typescript/prefer-nullish-coalescing":"off"}},
+    {"files":["jira/hooks/src/jira/project.ts"],"rules":{"no-shadow":"off"}},
+    {"files":["jira/hooks/src/jira/sprint.ts"],"rules":{"no-shadow":"off"}},
+    {"files":["jira/hooks/src/jira/user.ts"],"rules":{"no-shadow":"off"}},
+    {"files":["pr-babysit/hooks/src/babysit-collect-pr.ts"],"rules":{"typescript/prefer-nullish-coalescing":"off"}},
+    {"files":["pr-babysit/hooks/src/babysit-record.ts"],"rules":{"max-lines-per-function":"off","typescript/consistent-type-assertions":"off","typescript/no-unnecessary-condition":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["pr-babysit/hooks/src/babysit-reduce-state.ts"],"rules":{"typescript/no-explicit-any":"off","typescript/no-non-null-assertion":"off","typescript/no-unnecessary-condition":"off","typescript/no-unsafe-argument":"off","typescript/no-unsafe-assignment":"off","typescript/no-unsafe-member-access":"off","typescript/prefer-nullish-coalescing":"off"}},
+    {"files":["pr-babysit/hooks/src/babysit-route-fix.ts"],"rules":{"typescript/no-non-null-assertion":"off"}},
+    {"files":["pr-babysit/hooks/src/babysit-tick.ts"],"rules":{"max-lines-per-function":"off","typescript/consistent-type-assertions":"off","typescript/no-explicit-any":"off","typescript/no-non-null-assertion":"off","typescript/no-unnecessary-condition":"off","typescript/no-unsafe-assignment":"off","typescript/no-unsafe-member-access":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["pr-babysit/hooks/src/babysit/collect.ts"],"rules":{"max-lines":"off","max-lines-per-function":"off","no-await-in-loop":"off","no-underscore-dangle":"off","no-unused-vars":"off","typescript/consistent-type-assertions":"off","typescript/no-explicit-any":"off","typescript/no-non-null-assertion":"off","typescript/no-unnecessary-type-assertion":"off","typescript/no-unsafe-assignment":"off","typescript/no-unsafe-call":"off","typescript/no-unsafe-member-access":"off","typescript/no-unsafe-type-assertion":"off","unicorn/no-array-reverse":"off"}},
+    {"files":["pr-babysit/hooks/src/babysit/common.ts"],"rules":{"max-lines-per-function":"off","promise/always-return":"off","typescript/consistent-type-assertions":"off","typescript/no-redundant-type-constituents":"off","typescript/no-unnecessary-type-assertion":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["pr-babysit/hooks/src/babysit/fixer-dispatch.ts"],"rules":{"max-lines":"off","max-lines-per-function":"off","no-shadow":"off","oxc/no-map-spread":"off","typescript/consistent-return":"off","typescript/consistent-type-assertions":"off","typescript/no-base-to-string":"off","typescript/no-unnecessary-condition":"off","typescript/no-unsafe-assignment":"off","typescript/no-unsafe-member-access":"off","typescript/no-unsafe-return":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["pr-babysit/hooks/src/babysit/fixer-route.ts"],"rules":{"max-lines":"off","max-lines-per-function":"off","oxc/no-map-spread":"off","typescript/consistent-return":"off","typescript/consistent-type-assertions":"off","typescript/no-non-null-assertion":"off","typescript/no-unnecessary-condition":"off","typescript/no-unsafe-argument":"off","typescript/no-unsafe-assignment":"off","typescript/no-unsafe-member-access":"off","typescript/no-unsafe-return":"off","typescript/no-unsafe-type-assertion":"off","typescript/prefer-nullish-coalescing":"off"}},
+    {"files":["pr-babysit/hooks/src/babysit/gh.ts"],"rules":{"no-await-in-loop":"off","typescript/consistent-type-assertions":"off","typescript/no-unnecessary-condition":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["pr-babysit/hooks/src/babysit/reduce.ts"],"rules":{"max-lines":"off","max-lines-per-function":"off","no-shadow":"off","no-underscore-dangle":"off","no-unused-vars":"off","typescript/no-explicit-any":"off","typescript/no-non-null-assertion":"off","typescript/no-unnecessary-condition":"off","typescript/no-unsafe-argument":"off","typescript/no-unsafe-assignment":"off","typescript/no-unsafe-call":"off","typescript/no-unsafe-member-access":"off","typescript/no-unsafe-return":"off","unicorn/prefer-set-has":"off"}},
+    {"files":["pr-babysit/hooks/src/babysit/verdict.ts"],"rules":{"max-lines-per-function":"off","typescript/no-non-null-assertion":"off","unicorn/prefer-string-starts-ends-with":"off"}},
+    {"files":["pr-babysit/hooks/src/babysit/writes.ts"],"rules":{"max-lines-per-function":"off","no-await-in-loop":"off","typescript/consistent-return":"off","typescript/consistent-type-assertions":"off","typescript/no-base-to-string":"off","typescript/no-non-null-assertion":"off","typescript/no-unnecessary-condition":"off","typescript/no-unnecessary-type-assertion":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["python-quality/hooks/src/post-tool-use.ts"],"rules":{"import/no-default-export":"off"}},
+    {"files":["rust-quality/hooks/src/post-tool-use.ts"],"rules":{"import/no-default-export":"off"}},
+    {"files":["rust-quality/hooks/src/rules/size-rules.ts"],"rules":{"no-shadow":"off"}},
+    {"files":["statusline/hooks/src/status.ts"],"rules":{"typescript/prefer-nullish-coalescing":"off"}},
+    {"files":["statusline/hooks/src/statusline/report.ts"],"rules":{"typescript/no-unnecessary-condition":"off"}},
+    {"files":["toolu/scripts/debug-io.ts"],"rules":{"typescript/prefer-nullish-coalescing":"off"}},
+    {"files":["toolu/skills/setup/scripts/setup.ts"],"rules":{"max-lines-per-function":"off","no-console":"off","no-unused-vars":"off","typescript/prefer-nullish-coalescing":"off"}},
+    {"files":["ts-quality/hooks/src/post-tool-use.ts"],"rules":{"import/no-default-export":"off"}},
+    {"files":["ts-quality/hooks/src/rules/advisories.ts"],"rules":{"typescript/no-misused-spread":"off","typescript/no-unnecessary-condition":"off","unicorn/prefer-string-starts-ends-with":"off"}},
+    {"files":["ts-quality/hooks/src/rules/ast-rules.ts"],"rules":{"no-shadow":"off"}},
+    {"files":["ts-quality/hooks/src/rules/size-rules.ts"],"rules":{"no-shadow":"off"}},
+    {"files":["ts-quality/hooks/src/rules/type-rules.ts"],"rules":{"typescript/no-unnecessary-condition":"off","unicorn/prefer-array-find":"off"}}
+  ]
+}

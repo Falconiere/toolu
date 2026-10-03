@@ -1,13 +1,43 @@
 {
   "$schema": "../../node_modules/oxlint/configuration_schema.json",
-  "extends": ["../../tooling/conventions/lint/base.oxlintrc.json"],
-  "jsPlugins": ["../../tooling/conventions/guardrails/oxlint-plugin/index.js"],
-  "env": { "builtin": true },
-  "ignorePatterns": ["node_modules"],
+  "extends": [
+    "../../tooling/conventions/lint/base.oxlintrc.json"
+  ],
+  "jsPlugins": [
+    "../../tooling/conventions/guardrails/oxlint-plugin/index.js"
+  ],
+  "env": {
+    "builtin": true
+  },
+  "ignorePatterns": [
+    "node_modules"
+  ],
   "rules": {
-    "max-lines": ["error", { "max": 300, "skipBlankLines": true, "skipComments": true }],
-    "max-lines-per-function": ["error", { "max": 60, "skipBlankLines": true, "skipComments": true }],
-    "no-console": ["error", { "allow": ["warn", "error"] }],
+    "max-lines": [
+      "error",
+      {
+        "max": 300,
+        "skipBlankLines": true,
+        "skipComments": true
+      }
+    ],
+    "max-lines-per-function": [
+      "error",
+      {
+        "max": 60,
+        "skipBlankLines": true,
+        "skipComments": true
+      }
+    ],
+    "no-console": [
+      "error",
+      {
+        "allow": [
+          "warn",
+          "error"
+        ]
+      }
+    ],
     "house/folder-tree": "error",
     "house/colocated-tests": "error",
     "house/no-barrels": "error",
@@ -16,23 +46,46 @@
       {
         "patterns": [
           {
-            "group": ["**/index", "**/index.js", "**/index.ts"],
+            "group": [
+              "**/index",
+              "**/index.js",
+              "**/index.ts"
+            ],
             "message": "No barrel imports"
           },
           {
-            "group": ["yup", "yup/*", "joi", "joi/*", "valibot", "valibot/*", "superstruct", "superstruct/*", "ajv", "ajv/*"],
+            "group": [
+              "yup",
+              "yup/*",
+              "joi",
+              "joi/*",
+              "valibot",
+              "valibot/*",
+              "superstruct",
+              "superstruct/*",
+              "ajv",
+              "ajv/*"
+            ],
             "message": "One validator: use zod"
-          },
+          }
         ]
       }
     ]
   },
   "overrides": [
-    {
-      "files": ["src/plugin/toolu.ts"],
-      "rules": {
-        "import/no-default-export": "off"
-      }
-    }
+    {"files":["src/plugin/toolu.ts"],"rules":{"import/no-default-export":"off"}},
+    {"files":["contract/probes/helper-export.ts"],"rules":{"typescript/require-await":"off","unicorn/no-array-sort":"off"}},
+    {"files":["contract/probes/init-throw.ts"],"rules":{"typescript/require-await":"off"}},
+    {"files":["contract/probes/module-default.ts"],"rules":{"import/no-default-export":"off","typescript/require-await":"off"}},
+    {"files":["contract/probes/probe.ts"],"rules":{"no-unused-vars":"off","typescript/no-unsafe-assignment":"off","typescript/require-await":"off","unicorn/no-array-sort":"off"}},
+    {"files":["scripts/__tests__/delivery-surfaces.test.ts"],"rules":{"unicorn/consistent-function-scoping":"off"}},
+    {"files":["scripts/__tests__/generate-surface.test.ts"],"rules":{"max-lines":"off","max-lines-per-function":"off","unicorn/no-array-reverse":"off"}},
+    {"files":["scripts/lib/emit.ts"],"rules":{"max-lines":"off","max-lines-per-function":"off","oxc/no-map-spread":"off","unicorn/no-array-sort":"off"}},
+    {"files":["scripts/lib/frontmatter.ts"],"rules":{"no-useless-escape":"off","typescript/no-unnecessary-condition":"off","unicorn/no-array-sort":"off"}},
+    {"files":["scripts/lib/ids.ts"],"rules":{"unicorn/no-array-sort":"off"}},
+    {"files":["scripts/lib/opencode-port.ts"],"rules":{"max-lines":"off","no-unused-vars":"off"}},
+    {"files":["scripts/lib/render.ts"],"rules":{"typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off","typescript/prefer-optional-chain":"off"}},
+    {"files":["scripts/lib/rewrite.ts"],"rules":{"max-lines-per-function":"off","unicorn/no-array-sort":"off"}},
+    {"files":["scripts/lib/scan-surface.ts"],"rules":{"max-lines-per-function":"off","unicorn/no-array-sort":"off"}}
   ]
 }

@@ -111,3 +111,13 @@ test.concurrent("lint-suppressions --file fails on unused-vars disable", async (
   expect(res.exitCode).not.toBe(0);
   expect(res.stdout + res.stderr).toContain("lint-suppressions");
 });
+
+test.concurrent("test:conventions runs the reach and legacy-exemption checks, and the adoption doc names them", () => {
+  const pkg = RootPackage.parse(JSON.parse(readText("package.json")));
+  const adoption = readText("docs/conventions-adoption.md");
+  for (const script of ["check:gate-reach", "check:legacy-exemptions"]) {
+    expect(pkg.scripts[script]).toBeTruthy();
+    expect(pkg.scripts["test:conventions"]).toContain(`bun run ${script}`);
+    expect(adoption).toContain(script);
+  }
+});

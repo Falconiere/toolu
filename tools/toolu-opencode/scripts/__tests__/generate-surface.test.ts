@@ -198,10 +198,10 @@ test("surface ids obey skill naming rules and remain stable across collisions an
     expect(id).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
     expect(id.length).toBeLessThanOrEqual(64);
   }
-  expect(forward.get(candidateKey(candidates[0]))).not.toBe(
-    forward.get(candidateKey(candidates[1])),
-  );
-  expect(() => assignSurfaceIds([candidates[0], candidates[0]])).toThrow();
+  const [first, second] = candidates;
+  if (!first || !second) throw new Error("candidates missing");
+  expect(forward.get(candidateKey(first))).not.toBe(forward.get(candidateKey(second)));
+  expect(() => assignSurfaceIds([first, first])).toThrow();
   const hashed: ArtifactCandidate = { kind: "command", plugin: "a", localId: "b" };
   const sameBase: ArtifactCandidate = { kind: "skill", plugin: "a", localId: "b" };
   const suffix = createHash("sha256").update(candidateKey(hashed)).digest("hex").slice(0, 8);
@@ -352,7 +352,7 @@ test("generated Jev skill and its examples name only the OpenCode wrapper and ig
 test("generated model-routing references resolve relative to each skill", () => {
   const out = mkdtempSync(join(tmpBase, "toolu-surface-routing-"));
   const plan = planDefault(out);
-  const references = [
+  const references: ReadonlyArray<readonly [string, string]> = [
     ["toolu-deep-research", "../toolu-orchestrator/references/model-routing.md"],
     ["toolu-orchestrator", "references/model-routing.md"],
   ];
@@ -494,7 +494,7 @@ test("resource links in generated skills resolve inside the output tree", () => 
   for (const [file, content] of plan.files) {
     if (!file.endsWith(".md")) continue;
     for (const match of content.matchAll(/\]\(([^)]+)\)/g)) {
-      const target = match[1].split("#", 1)[0];
+      const target = (match[1] ?? "").split("#", 1)[0];
       if (!target || target.includes("://")) continue;
       expect(plan.files.has(resolve(dirname(file), target))).toBe(true);
     }
