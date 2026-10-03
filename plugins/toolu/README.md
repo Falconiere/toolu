@@ -29,6 +29,7 @@ codex plugin add toolu@toolu
 - **Commit workflows** — Claude `/commit` and `/review-and-commit`, with Codex equivalents `$toolu:commit` and `$toolu:review-and-commit`, all reading shared workflow bodies.
 - **Model routing** — Claude keeps its Haiku/Sonnet/Opus aliases. Codex defaults to Luna/medium, Terra/medium or high, and Sol/high by work class. Both are configurable under `models`.
 - **Tier-pinned agents** — Claude reads bundled definitions; `$toolu:setup` safely installs the equivalent five Codex TOML profiles with preview, backup, conflict refusal, update, and removal modes.
+- **OpenCode** — `@toolu/opencode` registers the same skills, commands and five agents as `toolu-*`. Delegation routes by `task` `subagent_type`, and each agent's model comes from `agent.<id>.model` in `opencode.json`. Setup has nothing to install there. See [docs/opencode.md § Core workflows](../../docs/opencode.md#core-workflows).
 
 ## Configuration
 

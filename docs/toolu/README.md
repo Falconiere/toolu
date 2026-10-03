@@ -122,6 +122,8 @@ A specialized subagent for structural codebase exploration via ast-grep:
 ```text
 # The agent runs on Sonnet — exploration is a bounded subtask that
 # doesn't need the expensive frontier model
+# On OpenCode it is toolu-deep-explore (task subagent_type) and runs
+# agent.toolu-deep-explore.model from opencode.json, else the session's model
 
 # Triggered by the orchestrator skill for "where/how is X done across the code"
 # Uses ast-grep for structural patterns, Grep for exact literals, Glob for paths
