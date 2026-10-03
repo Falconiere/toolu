@@ -58,7 +58,8 @@ contains executable examples with named evidence, rubrics, interpretation, and
 next actions, including no-match and uncertain outcomes.
 
 The SessionStart hook injects the full rule on startup, resume, clear, and
-compaction; the UserPromptSubmit hook restates a short form on every prompt so
+compaction. On OpenCode the rule is in every request's system prompt, so compaction
+adds nothing. The UserPromptSubmit hook restates a short form on every prompt so
 the rule survives long sessions. Neither calls the API. Both provide a command
 using the Bun executable already running the hook, so Bun need not be on `PATH`.
 If a hook lacks the key, its notice requires checking the command environment
