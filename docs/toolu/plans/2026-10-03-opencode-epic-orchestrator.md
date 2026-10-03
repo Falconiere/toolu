@@ -200,6 +200,7 @@ hosts → launcher and worktree exclude → helper lookup → watcher signals �
 - launch: `OPENCODE_EXCLUDE`, `excludeOpencodeState` and the version check live in a new `scripts/opencode-worker.ts`, not `launch-issue.ts`. The launcher had passed the 500-line lint limit. `hosts.ts` exports `opencodeModelArgs`, so the early model check and `agentArgs` share one rule.
 - port: `stagePlugins` (the `@toolu/opencode` npm staging) shipped no epic-orchestrator scripts or reference templates. On an npm install, every `"$S/<script>"` and `launch-issue.ts`'s brief template were missing, so AC-6's "exists in a `stagePlugins` copy" could not hold. It now stages `scripts/*.ts`, `scripts/trackers/*.ts` and `skills/epic-orchestrator/references/*.md`, never tests or fixtures. `bundle-plugins.test.ts` dry-runs the staged `launch-issue.ts`, and `pack-inventory.ts` requires four of those files.
 - launch: the refusal text omits "(tested on 1.18.34)". The plugin cannot read the contract pin, and a hard-coded patch version would drift.
+- live: the scripted provider picked its script from the first user message only, so a `--continue` run replayed the first run's script. It now takes the token from the last user message, else the first. Existing single-prompt probes behave the same, and `provider.test.ts` covers both cases. The live prompts are `START_PROMPT` and a resume line, each with a `PROBE:` routing token appended.
 
 ## Plan review
 

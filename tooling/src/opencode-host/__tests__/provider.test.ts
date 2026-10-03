@@ -114,6 +114,29 @@ test.concurrent("tool results since the last user message advance the script, th
   }
 });
 
+test.concurrent("a later user message's token starts its own script; one without keeps the first", async () => {
+  const provider = startScriptedProvider({
+    ...SCRIPTS,
+    "resume.read": [{ tool: "read", args: { filePath: "b.txt" } }],
+  });
+  try {
+    const first = { role: "user", content: "PROBE:deny.bash" };
+    const tool = { role: "tool", content: "ok" };
+    const resumed = await post(provider.url, {
+      messages: [first, tool, { role: "user", content: "PROBE:resume.read" }],
+      tools: TOOLS,
+    });
+    expect(JSON.stringify(events(resumed.text))).toContain('{\\"filePath\\":\\"b.txt\\"}');
+    const plain = await post(provider.url, {
+      messages: [first, tool, { role: "user", content: "go on" }],
+      tools: TOOLS,
+    });
+    expect(JSON.stringify(events(plain.text))).toContain("touch DENYME.txt");
+  } finally {
+    provider.stop();
+  }
+});
+
 test.concurrent("requests without tools get the title text; unknown scenarios finish", async () => {
   const provider = startScriptedProvider(SCRIPTS);
   try {
