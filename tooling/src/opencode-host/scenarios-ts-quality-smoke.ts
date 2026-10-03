@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { z } from "zod";
 import { runHost, toolStates } from "./host-run.ts";
 import { finalMessages, type ScenarioContext } from "./scenario.ts";
-import { denied, session, SMOKE_RUN_TIMEOUT_MS, type PretoolScenario } from "./pretool-shared.ts";
+import { session, SMOKE_RUN_TIMEOUT_MS, type PretoolScenario } from "./pretool-shared.ts";
 import { prepareSdk, verdict } from "./scenarios-posttool-smoke.ts";
 
 const GATE = ".opencode/tmp/quality-gate-status.json";
@@ -79,12 +79,13 @@ async function editQuality(ctx: ScenarioContext) {
   );
   const states = toolStates(host);
   const messages = finalMessages(s, "tool");
+  const deniedBash = states.filter((state) => state.tool === "bash" && state.status === "error");
   const observed = {
     writeCompleted: states.some((state) => state.tool === "write" && state.status === "completed"),
     diagnosticVisible: messages.some((message) => message.includes("Empty catch block")),
-    commitDenied: denied(states, "bash", /quality gate failing/i),
-    pushDenied:
-      states.filter((state) => state.tool === "bash" && state.status === "error").length === 2,
+    commitDenied:
+      deniedBash.length === 2 && /quality gate failing/i.test(deniedBash[0]?.error ?? ""),
+    pushDenied: /quality gate failing/i.test(deniedBash[1]?.error ?? ""),
     markersAbsent: !s.exists("commit-marker") && !s.exists("push-marker"),
     editCompleted: states.some((state) => state.tool === "edit" && state.status === "completed"),
     recovered: gate(s)?.status === "passing" && s.sb.read("bad.tsx") === clean,
