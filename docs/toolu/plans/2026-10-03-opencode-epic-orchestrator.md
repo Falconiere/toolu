@@ -90,7 +90,7 @@ hosts → launcher and worktree exclude → helper lookup → watcher signals �
   },
   {
     "id": "port",
-    "title": "OPENCODE_PORTS entries for epic-orchestrator SKILL.md (ROOT from TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR:?, skill-list preflight with generated ids and no Codex install, foreground watcher --max-wait 480 with bash timeout 600000, header and Stop line); regenerate generated/; epic-surfaces.test.ts: the generated SKILL.md, its references and the epic command carry none of run_in_background, end your turn, re-invoked, CLAUDE_PLUGIN_ROOT, ${PLUGIN_ROOT, npx @toolu/plugins, delivery-flow:delivery-flow, pr-babysit:babysit, toolu: or a double-hyphen skill id; every skill({ name }) and \"$S/<script>\" resolves; the watcher, timeout and root lines are present",
+    "title": "OPENCODE_PORTS entries for epic-orchestrator SKILL.md (ROOT from TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR:?, skill-list preflight with generated ids and no Codex install, foreground watcher --max-wait 480 with bash timeout 600000, header and Stop line); regenerate generated/; epic-surfaces.test.ts: the generated SKILL.md, its references and the epic command carry none of run_in_background, end your turn, re-invoked, CLAUDE_PLUGIN_ROOT, ${PLUGIN_ROOT, the Codex npx install line, delivery-flow:delivery-flow, pr-babysit:babysit, toolu: or a double-hyphen skill id; every skill({ name }) and \"$S/<script>\" resolves; the watcher, timeout and root lines are present",
     "ac_refs": ["AC-6"],
     "depends_on": ["skill-source"],
     "paths": [
