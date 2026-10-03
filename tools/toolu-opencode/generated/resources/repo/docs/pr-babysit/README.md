@@ -20,9 +20,17 @@ codex plugin add toolu@toolu
 codex plugin add pr-babysit@toolu
 ```
 
+## OpenCode
+
+OpenCode: add `pr-babysit` to `.opencode/toolu/plugins.json` (see [OpenCode install](../opencode.md)); run the `pr-babysit-babysit-ff6e5a3d` command or load the `pr-babysit-babysit-73c340c6` skill.
+
+- **Controller.** OpenCode has no cron or goal, so the invoking turn is the controller: it runs a tick, sleeps `backoff.waitSeconds` (at most 60 s) in bash, and ticks again until the Success or Escalation stop. If the turn ends early, invoking the command again resumes from `<repo>/.opencode/tmp/pr-babysit/<slot>.json`. Helpers run as `"$TOOLU_BUN" --no-env-file "$TOOLU_PLUGIN_ROOT_PR_BABYSIT/hooks/dist/<helper>.js"`, so a project `.env` never reaches `gh`.
+- **Fixers.** `--host opencode` routing reads `prBabysit` from your OpenCode config (`routing.opencode` rows are `provider/model` plus an OpenCode `--variant`; with none, your default model). An OpenCode fixer is a detached `opencode run` as the `pr-babysit-fixer` agent in a native worktree beside the state file: it may edit, test and commit, but `git push`, `gh` and subagents are denied on top of your own permission rules. herdr is needed only for Claude Code, Codex or Cursor fixers. Inline fixes go to `task` with `toolu-quick-task`, `toolu-implementer` or `toolu-architect`.
+- **Cancel.** `stop` ends a running fixer's whole process group, removes the clean worktrees and marks the state `cancelled`; the state file stays as the record.
+
 ## Helper Scripts
 
-One Bun helper set, called the same way on Claude Code and Codex (only the
+One Bun helper set, called the same way on Claude Code, Codex and OpenCode (only the
 `--state-file` path differs). Contract: `plugins/pr-babysit/skills/babysit/references/helper.md`.
 
 | Script | Purpose |

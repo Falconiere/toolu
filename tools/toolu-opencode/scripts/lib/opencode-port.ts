@@ -1,12 +1,13 @@
 /**
  * OpenCode text for the toolu and toolu-review (#358), the brainstorm and
- * delivery-flow (#355) and the epic-orchestrator (#356) surfaces, keyed by
+ * delivery-flow (#355), the epic-orchestrator (#356) and pr-babysit's (#357,
+ * `opencode-port-pr-babysit.ts`) surfaces, keyed by
  * repo-relative source path. Each `from` must occur exactly `count` times
  * (default 1) in that source, so a source edit that moves an anchor fails
  * generation instead of shipping Claude Code or Codex text to OpenCode.
  */
 
-type PortEdit = readonly [from: string, to: string, count?: number];
+import { PR_BABYSIT_PORTS, type PortEdit } from "./opencode-port-pr-babysit.ts";
 
 const AGENT_LIST =
   "`toolu-quick-task`, `toolu-deep-explore`, `toolu-research-agent`, `toolu-implementer` and `toolu-architect`";
@@ -82,6 +83,7 @@ const DELIVERY = "plugins/delivery-flow/skills/delivery-flow";
 const EPIC = "plugins/epic-orchestrator/skills/epic-orchestrator";
 
 export const OPENCODE_PORTS: Readonly<Record<string, readonly PortEdit[]>> = {
+  ...PR_BABYSIT_PORTS,
   "plugins/brainstorm/skills/brainstorm/SKILL.md": [
     [
       "Delegate only when the search needs a broad map, on a\nread-only exploration tier; keep the final trade-off decision in the main\nthread on the most capable tier.",
@@ -366,8 +368,8 @@ with this explanation and writes nothing. Do not edit Codex profiles from here.`
   ],
 };
 
-/** One port edit, or an error naming the source and anchor when the count differs. */
-function applyEdit(sourcePath: string, text: string, [from, to, count = 1]: PortEdit): string {
+/** Throw naming the source and anchor unless `from` occurs `count` times in `text`. */
+function expectCount(sourcePath: string, text: string, from: string, count: number): void {
   const found = text.split(from).length - 1;
   if (found !== count) {
     const anchor = from.split("\n")[0]?.slice(0, 80) ?? "";
@@ -375,6 +377,22 @@ function applyEdit(sourcePath: string, text: string, [from, to, count = 1]: Port
       `opencode port: ${sourcePath}: expected ${count} match(es), found ${found}: ${anchor}`,
     );
   }
+}
+
+/** One port edit, or an error naming the source and anchor when a count differs. */
+function applyEdit(sourcePath: string, text: string, edit: PortEdit): string {
+  if ("cut" in edit) {
+    const [start, end] = edit.cut;
+    expectCount(sourcePath, text, start, 1);
+    const from = text.indexOf(start);
+    if (end === null) return text.slice(0, from) + edit.to;
+    expectCount(sourcePath, text, end, 1);
+    const until = text.indexOf(end);
+    if (until < from) throw new Error(`opencode port: ${sourcePath}: cut ends before it starts`);
+    return text.slice(0, from) + edit.to + text.slice(until);
+  }
+  const [from, to, count = 1] = edit;
+  expectCount(sourcePath, text, from, count);
   return text.replaceAll(from, to);
 }
 
