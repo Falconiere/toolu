@@ -35,6 +35,37 @@ const ISSUE = readFileSync(
   "utf8",
 );
 
+/**
+ * A host session selecting toolu and jira, whose project `.env` names another
+ * host and a PAT, and whose script loads the skill then reads one issue with
+ * the environment's credentials.
+ */
+function jiraSession(cacheRoot: string, fixtureEnv: Readonly<Record<string, string>>) {
+  const proxy = Object.entries(fixtureEnv)
+    .map(([name, value]) => `${name}='${value}'`)
+    .join(" ");
+  // `env -u` keeps a developer's own Jira setup out; only the project .env could add one.
+  const get = `env -u JIRA_EMAIL -u JIRA_API_TOKEN JIRA_CLI_CONFIG=/dev/null NETRC=/dev/null JIRA_BASE_URL=https://acme.atlassian.net JIRA_PAT=${TOKEN} ${proxy} "$TOOLU_BUN" --no-env-file "$TOOLU_CONFIG_DIR/jira/jira.sh" issue get ABC-1`;
+  const session = openSession(cacheRoot, {
+    config: () => ({ permission: { bash: "allow", skill: "allow" } }),
+    files: {
+      ...PROJECT_FILES,
+      ".env": `JIRA_BASE_URL=https://media.example.net\nJIRA_PAT=${SECRET}\n`,
+      ".opencode/toolu/plugins.json": SELECTION,
+    },
+    scripts: {
+      "jira.issue": [
+        { tool: "skill", args: { name: "jira-jira" } },
+        { tool: "bash", args: { command: get, description: "jira issue get" } },
+      ],
+    },
+  });
+  installShim(session);
+  session.env.TOOLU_BUN = process.execPath;
+  session.env.TOOLU_REPO_ROOT = ROOT;
+  return session;
+}
+
 test.skipIf(process.env.TOOLU_LIVE_OPENCODE !== "1")(
   "the pinned host gives the model jira's instruction and skill, and its bash reads an issue",
   async () => {
@@ -43,29 +74,8 @@ test.skipIf(process.env.TOOLU_LIVE_OPENCODE !== "1")(
     const cacheRoot = join(hostCacheDir(pin), "run-cache");
     mkdirSync(cacheRoot, { recursive: true });
     const fixture = await startHttpsFixture(["acme.atlassian.net", "media.example.net"]);
-    const proxy = Object.entries(fixture.env)
-      .map(([name, value]) => `${name}='${value}'`)
-      .join(" ");
-    // `env -u` keeps a developer's own Jira setup out; only the project .env could add one.
-    const get = `env -u JIRA_EMAIL -u JIRA_API_TOKEN JIRA_CLI_CONFIG=/dev/null NETRC=/dev/null JIRA_BASE_URL=https://acme.atlassian.net JIRA_PAT=${TOKEN} ${proxy} "$TOOLU_BUN" --no-env-file "$TOOLU_CONFIG_DIR/jira/jira.sh" issue get ABC-1`;
     try {
-      using session = openSession(cacheRoot, {
-        config: () => ({ permission: { bash: "allow", skill: "allow" } }),
-        files: {
-          ...PROJECT_FILES,
-          ".env": `JIRA_BASE_URL=https://media.example.net\nJIRA_PAT=${SECRET}\n`,
-          ".opencode/toolu/plugins.json": SELECTION,
-        },
-        scripts: {
-          "jira.issue": [
-            { tool: "skill", args: { name: "jira-jira" } },
-            { tool: "bash", args: { command: get, description: "jira issue get" } },
-          ],
-        },
-      });
-      installShim(session);
-      session.env.TOOLU_BUN = process.execPath;
-      session.env.TOOLU_REPO_ROOT = ROOT;
+      using session = jiraSession(cacheRoot, fixture.env);
       fixture.plan([{ body: ISSUE }]);
       const hostRun = await runHost(host.bin, session, ["--print-logs", PROMPT]);
       expect(hostRun.exitCode).toBe(0);
@@ -87,18 +97,20 @@ test.skipIf(process.env.TOOLU_LIVE_OPENCODE !== "1")(
       expect(fixture.requests[0]?.headers.authorization).toBe(`Bearer ${TOKEN}`);
       expect(captured).toContain("ABC-123");
       expect(captured).not.toContain(SECRET);
-      process.stdout.write(
-        `${JSON.stringify({
-          host: host.version,
-          instruction: system.includes(INSTRUCTION),
-          skill: skills,
-          tools: toolStates(hostRun).map((state) => `${state.tool}:${state.status}`),
-          fixtureRequests: fixture.requests.map((req) => `${req.method} ${req.path}`),
-          dotenvSent: fixture.requests.some((req) =>
-            (req.headers.authorization ?? "").includes(SECRET),
-          ),
-        })}\n`,
+      const requests = fixture.requests.map((req) => `${req.method} ${req.path}`);
+      const dotenvSent = fixture.requests.some((req) =>
+        req.headers.authorization?.includes(SECRET),
       );
+      const tools = toolStates(hostRun).map((state) => `${state.tool}:${state.status}`);
+      const evidence = {
+        host: host.version,
+        instruction: true,
+        skill: skills,
+        tools,
+        requests,
+        dotenvSent,
+      };
+      process.stdout.write(`${JSON.stringify(evidence)}\n`);
     } finally {
       await fixture.stop();
     }
