@@ -20,12 +20,13 @@ Keep `publishBunCli` in exa-search's SessionStart bundle. On OpenCode only, emit
 
 - Published helper: `<OpenCode project data root>/exa-search/search.sh`, exposed as `$TOOLU_CONFIG_DIR/exa-search/search.sh` in OpenCode bash calls.
 - Native skill: `exa-search-exa-search`, loaded through the existing `skills.paths` config contribution.
-- Credential: `EXA_API_KEY` is checked for presence in the startup process and read by the CLI from the process environment. No value enters context, logs, or fixture output.
+- Credential: `EXA_API_KEY` is checked for presence in the startup process and read by the CLI from the process environment, with Bun's automatic `.env` loading disabled for the executable bundle. No value enters context, logs, or fixture output.
 - CLI: `search`, `crawl`, and `similar` retain their current arguments, exit codes, JSON output, and `@toolu/core/rest` transport.
 
 ## Failure modes and edge cases
 
 - Missing or empty `EXA_API_KEY`: startup says Exa calls require the key, suggests OpenCode `websearch` when available and `webfetch` for a known URL; the CLI exits 1 before transport with its existing diagnostic.
+- A project `.env` containing `EXA_API_KEY` does not satisfy startup or CLI credential checks. A user must export the key into OpenCode's process environment.
 - Helper publication failure: retain `publishBunCli`'s advisory and omit a misleading ready instruction.
 - Disabled exa-search: the existing selection lifecycle removes its owned helper and native skill; no exa startup text reaches the next OpenCode session.
 - HTTP errors, non-JSON success, and dropped connections: preserve the existing CLI's status, response, and stderr behavior without leaking the key.
@@ -34,7 +35,7 @@ Keep `publishBunCli` in exa-search's SessionStart bundle. On OpenCode only, emit
 
 - **AC-1:** With exa-search selected in an isolated OpenCode profile, native skill discovery loads `exa-search-exa-search`, startup names the executable project helper, and the loaded skill shows OpenCode commands for search, crawl, and similar.
 - **AC-2:** The published helper sends each command to its correct Exa endpoint through a loopback HTTPS fixture, preserves successful JSON output and existing HTTP/transport failure behavior, and does not expose `EXA_API_KEY` in model-visible text or diagnostics.
-- **AC-3:** With no key, OpenCode startup supplies a usable native fallback and the wrapper makes no Exa request. After deselection, the owned helper, native skill, and startup guidance are absent while core remains ready.
+- **AC-3:** With no exported key, including when only a project `.env` contains one, OpenCode startup supplies a usable native fallback and the wrapper makes no Exa request. After deselection, the owned helper, native skill, and startup guidance are absent while core remains ready.
 - **AC-4:** Claude Code and Codex SessionStart and skill behavior remain unchanged, and the regenerated OpenCode surface and executable bundles pass drift checks.
 
 ## Acceptance evidence
@@ -43,7 +44,7 @@ Keep `publishBunCli` in exa-search's SessionStart bundle. On OpenCode only, emit
 |---|---|
 | AC-1 | Pinned OpenCode in an isolated profile selects exa-search; `skill` loads the generated body and the project symlink resolves to the committed bundle. | `bun run smoke:opencode-entry exa.enabled` |
 | AC-2 | The published symlink calls `api.exa.ai` through the repository's loopback HTTPS proxy for search, crawl, similar, 401, malformed JSON, and disconnect; no output contains a sentinel key. | `bun test plugins/exa-search/hooks/src/__tests__/search.test.ts` and `bun run smoke:opencode-entry exa.transport` |
-| AC-3 | Pinned host starts without a key, then reselects only core; startup fallback appears first and exa-owned contributions disappear second. | `bun run smoke:opencode-entry exa.no-key exa.disabled` |
+| AC-3 | Pinned host starts without a key, then reselects only core; startup fallback appears first and exa-owned contributions disappear second. A real executable symlink in a project containing `.env` still exits before HTTPS transport. | `bun run smoke:opencode-entry exa.no-key exa.disabled` and `bun test plugins/exa-search/hooks/src/__tests__/search.test.ts` |
 | AC-4 | Existing-host SessionStart suite, generated surface, bundle, and full repository gate remain green. | `bun test plugins/exa-search/hooks/src/__tests__/session-start.test.ts`; `bun run check:opencode-surface`; `bun run check:plugin-bundles`; `bun run test` |
 
 ## Documentation impact

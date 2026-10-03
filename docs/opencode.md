@@ -228,6 +228,17 @@ The external `agent-browser` CLI and Chromium are separate prerequisites: instal
 - **Debug.** `toolu-debug` runs its collectors as `bun "$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-testfail.ts"` (also `debug-stack.ts` and `debug-log.ts`). `@toolu/opencode` ships them. MCP tools are named `<server>_<tool>`; there is no tool search.
 
 `tools/toolu-opencode/src/plugin/__tests__/core-workflows.test.ts` proves the review, commit-gate and debug paths hermetically. `TOOLU_LIVE_OPENCODE=1 bun test tools/toolu-opencode/src/plugin/__tests__/core-workflows.live.test.ts` repeats them on the pinned host with a scripted provider.
+### Exa web research
+
+Add `exa-search` to the `enabled` list and restart OpenCode. The native skill is `exa-search-exa-search`; its SessionStart entry publishes the project's helper and gives the model its exact path. Set `EXA_API_KEY` in the environment that starts OpenCode. The helper does not read `.env` or print the key. In a bash call, use:
+
+```bash
+"${TOOLU_CONFIG_DIR}/exa-search/search.sh" search -q "Bun runtime"
+"${TOOLU_CONFIG_DIR}/exa-search/search.sh" crawl https://bun.sh/docs
+"${TOOLU_CONFIG_DIR}/exa-search/search.sh" similar https://bun.sh/docs
+```
+
+The generated skill documents the remaining flags. Search, crawl and similar use Exa's `/search`, `/contents` and `/findSimilar` endpoints through the existing REST wrapper. HTTP and transport failures reach the agent with a nonzero exit. If `EXA_API_KEY` is missing, startup tells the agent to use OpenCode's `websearch` when available, or `webfetch` for a known URL; the helper itself exits before making a request. Removing `exa-search` from the selection removes its skill, startup guidance and toolu-owned helper symlink on the next start.
 
 ## Verify a real gate
 
@@ -264,6 +275,12 @@ Agent-browser scenarios check native skill discovery, model-visible startup path
 ```bash
 bun run smoke:opencode-entry browser.enabled browser.missing-binary browser.missing-chromium browser.disabled
 bun run smoke:opencode-entry browser.workflow
+```
+
+Exa-search scenarios use the installed package and native `skill` tool to check the helper path, then send search, crawl and similar through a private loopback HTTPS fixture. They also check HTTP and connection errors, a missing-key fallback, secret-free model context, and cleanup after deselection. No Exa account is needed:
+
+```bash
+bun run smoke:opencode-entry exa.enabled exa.transport exa.no-key exa.disabled
 ```
 
 Live pre-tool smoke on the pinned host checks protected edits, writes and patches, unsafe shell, commit and push gates, MCP and task denials, plus an allowed shell call:

@@ -34,7 +34,7 @@ Prove the current gap, add leaf startup context and generated skill guidance, ex
     "title": "Prove installed helper, HTTPS transport, fallback, and disable on pinned OpenCode",
     "ac_refs": ["AC-1", "AC-2", "AC-3"],
     "depends_on": ["skill"],
-    "input": "Isolated pinned OpenCode profile with a selected exa-search plugin, scripted provider, published helper, and loopback HTTPS Exa fixture; repeat without key and after deselection",
+    "input": "Isolated pinned OpenCode profile with a selected exa-search plugin, scripted provider, published helper, and loopback HTTPS Exa fixture; repeat without exported key, with a project .env-only key, and after deselection",
     "check": "bun test plugins/exa-search/hooks/src/__tests__/search.test.ts && bun run smoke:opencode-entry exa.enabled exa.transport exa.no-key exa.disabled"
   },
   {
@@ -66,6 +66,10 @@ Prove the current gap, add leaf startup context and generated skill guidance, ex
 
 ## Verification
 
-The live pinned host must discover the skill and run the published symlink, not only invoke source functions. A private loopback HTTPS fixture must observe correct search, contents, and findSimilar requests, including a success, HTTP 401, malformed JSON, and dropped connection; the key is a sentinel whose bytes must never appear in startup or errors. No-key and disabled sessions must show the fallback and cleanup. Existing-host SessionStart tests, surface and bundle drift, and `bun run test` must pass before delivery. The steps omit scoped `paths`, so ledger freshness covers the whole branch diff.
+The live pinned host must discover the skill and run the published symlink, not only invoke source functions. A private loopback HTTPS fixture must observe correct search, contents, and findSimilar requests, including a success, HTTP 401, malformed JSON, and dropped connection; the key is a sentinel whose bytes must never appear in startup or errors. No-key, `.env`-only and disabled sessions must show the fallback, no request, and cleanup. Existing-host SessionStart tests, surface and bundle drift, and `bun run test` must pass before delivery. The steps omit scoped `paths`, so ledger freshness covers the whole branch diff.
+
+## Deviations
+
+During execution, a real Bun 1.4.2 subprocess showed that the existing `#!/usr/bin/env bun` search bundle loads `EXA_API_KEY` from a project `.env`, while OpenCode startup uses `--no-env-file`. That contradicts the spec's process-environment credential contract. Add a `.env`-only regression to the existing HTTPS CLI suite and change the Exa executable shebang to `env -S bun --no-env-file`; verify both existing hosts and the pinned OpenCode helper. This stays within AC-3 and leaves the request/response contract unchanged.
 
 After implementation: run delivery preflight, commit the scoped changes, verify every ledger step against the final diff, run `toolu-review:review` and require a ready verdict, then push and open a verified `main` PR for #349. Handoff to `pr-babysit:babysit` and report ready only after its success stop.

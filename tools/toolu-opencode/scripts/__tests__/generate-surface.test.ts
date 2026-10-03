@@ -83,6 +83,27 @@ test("agent-browser skill renders one project-scoped OpenCode helper command", (
   rmSync(out, { recursive: true, force: true });
 });
 
+test("exa-search skill renders project helper commands and a no-key fallback", () => {
+  const root = repoRoot();
+  const out = mkdtempSync(join(tmpBase, "toolu-exa-surface-"));
+  const exa = listPluginManifests(join(root, "plugins"))?.find(
+    (plugin) => plugin.name === "exa-search",
+  );
+  if (exa === undefined) throw new Error("exa-search manifest missing");
+  const plan = planSurface({ repoRoot: root, outDir: out, plugins: [exa] });
+  const skill = plan.files.get(join(out, "skills/exa-search-exa-search/SKILL.md"));
+  expect(skill).toContain("# OpenCode");
+  expect(skill).toContain('"${TOOLU_CONFIG_DIR}/exa-search/search.sh" search');
+  expect(skill).toContain('"${TOOLU_CONFIG_DIR}/exa-search/search.sh" crawl');
+  expect(skill).toContain('"${TOOLU_CONFIG_DIR}/exa-search/search.sh" similar');
+  expect(skill).toContain("EXA_API_KEY");
+  expect(skill).toContain("websearch");
+  expect(skill).toContain("webfetch");
+  expect(skill).not.toContain("# Codex");
+  expect(skill).not.toContain("# Claude Code");
+  rmSync(out, { recursive: true, force: true });
+});
+
 test("drift check fails when a source skill changes", () => {
   const root = repoRoot();
   const copyRoot = mkdtempSync(join(tmpBase, "toolu-surface-src-"));

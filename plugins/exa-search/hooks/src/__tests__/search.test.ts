@@ -4,6 +4,9 @@
  */
 import { afterAll, beforeEach, expect, test } from "bun:test";
 import { startHttpsFixture } from "@toolu/conformance/https-fixture";
+import { createSandbox } from "@toolu/conformance/harness/sandbox";
+import { run } from "@toolu/conformance/harness/spawn";
+import { symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { CRAWL_USAGE, MAIN_USAGE, SEARCH_USAGE, SIMILAR_USAGE } from "../exa/usage.ts";
 
@@ -177,6 +180,20 @@ test("a missing EXA_API_KEY exits 1 before any request", async () => {
     expect(run.status).toBe(1);
     expect(run.stderr).toBe("exa-search: EXA_API_KEY unset\n");
   }
+  expect(fixture.connects).toHaveLength(0);
+});
+
+test("a project .env key does not satisfy the published executable's credential check", async () => {
+  using sb = createSandbox();
+  sb.write(".env", "EXA_API_KEY=dotenv-only-sentinel\n");
+  const helper = sb.path("search.sh");
+  symlinkSync(BUNDLE, helper);
+  const result = await run([helper, "search", "-q", "needle"], {
+    cwd: sb.project,
+    env: { ...fixture.env, EXA_API_KEY: undefined },
+  });
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toBe("exa-search: EXA_API_KEY unset\n");
   expect(fixture.connects).toHaveLength(0);
 });
 
