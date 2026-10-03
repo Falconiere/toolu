@@ -146,9 +146,13 @@ function healLedgerFor(options: LedgerOptions): string {
 
 /** Where a refused preflight sends the agent: OpenCode loads the generated skill by its id. */
 function reviewRemedy(host: HostName, phase: "plan" | "spec"): string {
-  return host === "opencode"
-    ? `load skill({ name: "delivery-flow-delivery-flow" }) (${phase} review phase)`
-    : `run /delivery-flow:delivery-flow (${phase} review phase)`;
+  const action =
+    host === "opencode"
+      ? 'load skill({ name: "delivery-flow-delivery-flow" })'
+      : host === "claude" || host === "codex"
+        ? "run /delivery-flow:delivery-flow"
+        : "load the delivery-flow skill";
+  return `${action} (${phase} review phase)`;
 }
 
 function preflightChecks(

@@ -40,16 +40,23 @@ export function gatePresetNotice(configRoot: string, config: JsonObject): string
   );
 }
 
+const NEUTRAL_INSTALL = "Install the `delivery-flow` plugin, then load its `delivery-flow` skill.";
+
+const DELIVERY_FLOW_INSTALL: Record<HostName, string> = {
+  claude:
+    "Install with `/plugin install delivery-flow@toolu`, then invoke `/delivery-flow:delivery-flow`.",
+  codex:
+    "Install with `npx @toolu/plugins install delivery-flow --host codex`, then invoke `$delivery-flow:delivery-flow`.",
+  opencode:
+    'Add `delivery-flow` to `enabled` in `.opencode/toolu/plugins.json`, then load `skill({ name: "delivery-flow-delivery-flow" })`.',
+  cursor: NEUTRAL_INSTALL,
+  hermes: NEUTRAL_INSTALL,
+};
+
 export function deliveryFlowNotice(configRoot: string, host: HostName): string | undefined {
-  const install =
-    host === "codex"
-      ? "Install with `npx @toolu/plugins install delivery-flow --host codex`, then invoke `$delivery-flow:delivery-flow`."
-      : host === "opencode"
-        ? 'Add `delivery-flow` to `enabled` in `.opencode/toolu/plugins.json`, then load `skill({ name: "delivery-flow-delivery-flow" })`.'
-        : "Install with `/plugin install delivery-flow@toolu`, then invoke `/delivery-flow:delivery-flow`.";
   return once(
     join(configRoot, "toolu", ".delivery-flow-migration-v7"),
-    `WARN: toolu workflow skills moved to delivery-flow (brainstorm, spec, spec-review, plan, plan-review, execution, test). ${install}`,
+    `WARN: toolu workflow skills moved to delivery-flow (brainstorm, spec, spec-review, plan, plan-review, execution, test). ${DELIVERY_FLOW_INSTALL[host]}`,
     true,
   );
 }

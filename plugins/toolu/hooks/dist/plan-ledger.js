@@ -5205,7 +5205,8 @@ function healLedgerFor(options) {
   }
 }
 function reviewRemedy(host, phase) {
-  return host === "opencode" ? `load skill({ name: "delivery-flow-delivery-flow" }) (${phase} review phase)` : `run /delivery-flow:delivery-flow (${phase} review phase)`;
+  const action = host === "opencode" ? 'load skill({ name: "delivery-flow-delivery-flow" })' : host === "claude" || host === "codex" ? "run /delivery-flow:delivery-flow" : "load the delivery-flow skill";
+  return `${action} (${phase} review phase)`;
 }
 function preflightChecks(plan, root, cwd, host) {
   const under = (path) => isAbsolute(path) || root === undefined ? resolve2(cwd, path) : join5(root, path);

@@ -117,6 +117,17 @@ test.concurrent.each(["claude", "codex"])(
   },
 );
 
+test.concurrent.each(["cursor", "hermes"])(
+  "preflight on %s names the skill without a host-specific command",
+  async (host) => {
+    const plan = await preflight(host, "Draft", "Approved");
+    expect(plan.exitCode).toBe(1);
+    expect(plan.stderr).toBe(
+      "preflight: plan not approved (Status: Draft) — load the delivery-flow skill (plan review phase)\n",
+    );
+  },
+);
+
 test("onStderr sees exactly the returned stderr lines, in order, as they are emitted", async () => {
   using sb = repo();
   const seen: string[] = [];

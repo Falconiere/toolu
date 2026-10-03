@@ -147,17 +147,31 @@ test("OpenCode routes delegation by subagent_type, not a model argument", async 
   expect(out).not.toContain("Pass `model:`");
 });
 
-test("OpenCode's first start points at delivery-flow by its selection and skill id", async () => {
-  const opencode: LifecycleCase = {
+/** The host's config roots, unset so a runner's own `XDG_CONFIG_HOME` cannot hold the notice sentinels. */
+const NO_CONFIG_ROOTS = {
+  XDG_CONFIG_HOME: undefined,
+  TOOLU_CONFIG_DIR: undefined,
+  TOOLU_OPENCODE_HOME: undefined,
+};
+
+test.each([
+  [
+    "opencode",
+    { TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode" },
+    'Add `delivery-flow` to `enabled` in `.opencode/toolu/plugins.json`, then load `skill({ name: \\"delivery-flow-delivery-flow\\" })`.',
+  ],
+  ["cursor", {}, "Install the `delivery-flow` plugin, then load its `delivery-flow` skill."],
+])("%s's first start points at delivery-flow in its own terms", async (host, extra, install) => {
+  const first: LifecycleCase = {
     ...START,
     firstRun: true,
-    env: { TOOLU_HOST_OVERRIDE: "opencode", TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode" },
+    env: { ...NO_CONFIG_ROOTS, TOOLU_HOST_OVERRIDE: host, ...extra },
   };
-  const { outputs, prepared } = await runTimes(opencode, 1);
+  const { outputs, prepared } = await runTimes(first, 1);
   using _sb = prepared.sb;
   const out = outputs[0] ?? "";
   expect(out).toContain(
-    'toolu workflow skills moved to delivery-flow (brainstorm, spec, spec-review, plan, plan-review, execution, test). Add `delivery-flow` to `enabled` in `.opencode/toolu/plugins.json`, then load `skill({ name: \\"delivery-flow-delivery-flow\\" })`.',
+    `toolu workflow skills moved to delivery-flow (brainstorm, spec, spec-review, plan, plan-review, execution, test). ${install}`,
   );
   expect(out).not.toContain("/plugin install");
 });

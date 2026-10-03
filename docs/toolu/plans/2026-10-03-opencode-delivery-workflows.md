@@ -145,6 +145,7 @@ port table + host mapping → surface audit → core diagnostics → hermetic wo
 ## Deviations
 
 - Plan review: the `port` check first asserted all of `plugins/brainstorm` unchanged, which the `docs` step's README edit would break at `--verify`; narrowed to skills, agents and commands, extended to every plugin, and taken against the merge base so a moving `origin/main` cannot fail it. The `core-diagnostics` paths were widened to what `check:plugin-bundles` reads.
+- PR review (#385): Cursor and Hermes no longer inherit the Claude Code slash command. The preflight remedy reads `load the delivery-flow skill (… review phase)` and the migration notice reads `Install the \`delivery-flow\` plugin, then load its \`delivery-flow\` skill.` Claude Code, Codex and OpenCode text is unchanged. The SessionStart notice tests unset `XDG_CONFIG_HOME`, `TOOLU_CONFIG_DIR` and `TOOLU_OPENCODE_HOME`: a CI runner sets `XDG_CONFIG_HOME`, which put the OpenCode notice sentinel outside the sandbox.
 
 ## Plan review
 
