@@ -4,7 +4,7 @@ import { z } from "zod";
 import { runHost, toolStates } from "./host-run.ts";
 import { finalMessages, type ScenarioContext } from "./scenario.ts";
 import { denied, session, SMOKE_RUN_TIMEOUT_MS, type PretoolScenario } from "./pretool-shared.ts";
-import { prepareSdk } from "./scenarios-posttool-smoke.ts";
+import { prepareSdk, verdict } from "./scenarios-posttool-smoke.ts";
 
 const GATE = ".opencode/tmp/quality-gate-status.json";
 const Gate = z.object({
@@ -34,17 +34,6 @@ function gate(s: ReturnType<typeof session>): z.infer<typeof Gate> | null {
   if (!s.exists(GATE)) return null;
   const parsed = Gate.safeParse(JSON.parse(s.sb.read(GATE)));
   return parsed.success ? parsed.data : null;
-}
-
-function verdict(
-  observed: Record<string, boolean>,
-  details: { messages: string[]; states: ReturnType<typeof toolStates>; stderr: string },
-) {
-  const pass = Object.values(observed).every(Boolean);
-  return {
-    pass,
-    observed: pass ? observed : { ...observed, diagnostic: JSON.stringify(details).slice(0, 7000) },
-  };
 }
 
 async function editQuality(ctx: ScenarioContext) {
