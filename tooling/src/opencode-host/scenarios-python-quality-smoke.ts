@@ -134,6 +134,11 @@ async function patchQuality(ctx: ScenarioContext) {
   ].toSorted();
   const moved = BARE.replace("    except:\n        return 0\n", "    except Exception: pass\n");
   const observed = {
+    seedFailed: messages.some(
+      (message) =>
+        message.includes(`${join(s.sb.project, "pkg/old.py")} `) &&
+        message.includes(`${join(s.sb.project, "pkg/removed.py")} `),
+    ),
     patchCompleted: states.some(
       (state) => state.tool === "apply_patch" && state.status === "completed",
     ),
