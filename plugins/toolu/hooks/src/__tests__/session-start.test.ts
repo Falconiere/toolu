@@ -147,6 +147,21 @@ test("OpenCode routes delegation by subagent_type, not a model argument", async 
   expect(out).not.toContain("Pass `model:`");
 });
 
+test("OpenCode's first start points at delivery-flow by its selection and skill id", async () => {
+  const opencode: LifecycleCase = {
+    ...START,
+    firstRun: true,
+    env: { TOOLU_HOST_OVERRIDE: "opencode", TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode" },
+  };
+  const { outputs, prepared } = await runTimes(opencode, 1);
+  using _sb = prepared.sb;
+  const out = outputs[0] ?? "";
+  expect(out).toContain(
+    'toolu workflow skills moved to delivery-flow (brainstorm, spec, spec-review, plan, plan-review, execution, test). Add `delivery-flow` to `enabled` in `.opencode/toolu/plugins.json`, then load `skill({ name: \\"delivery-flow-delivery-flow\\" })`.',
+  );
+  expect(out).not.toContain("/plugin install");
+});
+
 const CODEX_LIST =
   '{"installed":[{"pluginId":"toolu@toolu","name":"toolu","marketplaceName":"toolu","installed":true}],"available":[]}';
 

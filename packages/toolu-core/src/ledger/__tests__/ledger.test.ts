@@ -71,6 +71,49 @@ const env = (sb: { home: string }) =>
     TOOLU_CONFIG_DIR: sb.home,
   });
 
+/** `preflight` on a plan and its declared spec, both stamped as given, under `host`. */
+async function preflight(host: string, planStatus: string, specStatus: string) {
+  using sb = repo();
+  sb.write("spec.md", `# S\n\n**Date:** 2031-02-03   **Status:** ${specStatus}\n`);
+  sb.write("p.md", `# P\n\n**Status:** ${planStatus}   **Spec:** spec.md\n`);
+  return ledger.ledgerMain(["preflight", "p.md"], {
+    cwd: sb.project,
+    env: { ...env(sb), TOOLU_HOST_OVERRIDE: host },
+  });
+}
+
+const OPENCODE_REMEDY = 'load skill({ name: "delivery-flow-delivery-flow" })';
+
+test.concurrent("preflight on OpenCode names the generated delivery-flow skill", async () => {
+  const plan = await preflight("opencode", "Draft", "Approved");
+  expect(plan.exitCode).toBe(1);
+  expect(plan.stderr).toBe(
+    `preflight: plan not approved (Status: Draft) — ${OPENCODE_REMEDY} (plan review phase)\n`,
+  );
+  const spec = await preflight("opencode", "Approved", "Draft");
+  expect(spec.exitCode).toBe(1);
+  expect(spec.stderr).toBe(
+    `preflight: spec spec.md not approved (Status: Draft) — ${OPENCODE_REMEDY} (spec review phase)\n`,
+  );
+  expect(await preflight("opencode", "Approved", "Approved")).toMatchObject({
+    exitCode: 0,
+    stderr: "",
+  });
+});
+
+test.concurrent.each(["claude", "codex"])(
+  "preflight on %s keeps its slash command",
+  async (host) => {
+    const plan = await preflight(host, "Draft", "Approved");
+    expect(plan.exitCode).toBe(1);
+    expect(plan.stderr).toBe(
+      "preflight: plan not approved (Status: Draft) — run /delivery-flow:delivery-flow (plan review phase)\n",
+    );
+    const spec = await preflight(host, "Approved", "Draft");
+    expect(spec.stderr).toContain("run /delivery-flow:delivery-flow (spec review phase)");
+  },
+);
+
 test("onStderr sees exactly the returned stderr lines, in order, as they are emitted", async () => {
   using sb = repo();
   const seen: string[] = [];

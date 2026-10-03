@@ -19,36 +19,6 @@ function childEnv(env) {
   return out;
 }
 
-// packages/toolu-core/src/state/diff-sha.ts
-function diffSha(repoRoot, baseRef, options = {}) {
-  if (baseRef.startsWith("-"))
-    return;
-  const env = childEnv(options.env ?? process.env);
-  const diff = Bun.spawnSync(["git", "-C", repoRoot, "diff", "--no-color", `${baseRef}...HEAD`], {
-    env,
-    stdout: "pipe",
-    stderr: "ignore"
-  });
-  if (!diff.success)
-    return;
-  const hash = Bun.spawnSync(["git", "-C", repoRoot, "hash-object", "--stdin"], {
-    env,
-    stdin: diff.stdout,
-    stdout: "pipe",
-    stderr: "ignore"
-  });
-  if (!hash.success)
-    return;
-  const sha = hash.stdout.toString("utf8").trim();
-  return sha === "" ? undefined : sha;
-}
-
-// packages/toolu-core/src/state/state-git.ts
-import { spawnSync as spawnSync3 } from "child_process";
-
-// packages/toolu-core/src/detect/detect-branch.ts
-import { spawnSync as spawnSync2 } from "child_process";
-
 // packages/toolu-core/src/host/host-roots.ts
 import { spawnSync } from "child_process";
 import { homedir } from "os";
@@ -215,7 +185,35 @@ function projectStateDir(name, options = {}) {
   return base === undefined ? undefined : join(base, name);
 }
 
+// packages/toolu-core/src/state/diff-sha.ts
+function diffSha(repoRoot, baseRef, options = {}) {
+  if (baseRef.startsWith("-"))
+    return;
+  const env = childEnv(options.env ?? process.env);
+  const diff = Bun.spawnSync(["git", "-C", repoRoot, "diff", "--no-color", `${baseRef}...HEAD`], {
+    env,
+    stdout: "pipe",
+    stderr: "ignore"
+  });
+  if (!diff.success)
+    return;
+  const hash = Bun.spawnSync(["git", "-C", repoRoot, "hash-object", "--stdin"], {
+    env,
+    stdin: diff.stdout,
+    stdout: "pipe",
+    stderr: "ignore"
+  });
+  if (!hash.success)
+    return;
+  const sha = hash.stdout.toString("utf8").trim();
+  return sha === "" ? undefined : sha;
+}
+
+// packages/toolu-core/src/state/state-git.ts
+import { spawnSync as spawnSync3 } from "child_process";
+
 // packages/toolu-core/src/detect/detect-branch.ts
+import { spawnSync as spawnSync2 } from "child_process";
 function branchSlug(branch) {
   const slug = branch.replaceAll("/", "_").replace(/[^A-Za-z0-9_-]/g, "");
   return slug === "" ? "_default" : slug;

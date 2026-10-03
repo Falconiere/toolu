@@ -44,7 +44,9 @@ export function deliveryFlowNotice(configRoot: string, host: HostName): string |
   const install =
     host === "codex"
       ? "Install with `npx @toolu/plugins install delivery-flow --host codex`, then invoke `$delivery-flow:delivery-flow`."
-      : "Install with `/plugin install delivery-flow@toolu`, then invoke `/delivery-flow:delivery-flow`.";
+      : host === "opencode"
+        ? 'Add `delivery-flow` to `enabled` in `.opencode/toolu/plugins.json`, then load `skill({ name: "delivery-flow-delivery-flow" })`.'
+        : "Install with `/plugin install delivery-flow@toolu`, then invoke `/delivery-flow:delivery-flow`.";
   return once(
     join(configRoot, "toolu", ".delivery-flow-migration-v7"),
     `WARN: toolu workflow skills moved to delivery-flow (brainstorm, spec, spec-review, plan, plan-review, execution, test). ${install}`,

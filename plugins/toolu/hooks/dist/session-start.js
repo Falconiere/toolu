@@ -5056,7 +5056,7 @@ function gatePresetNotice(configRoot, config) {
   return once(join13(configRoot, "toolu", ".gate-preset-notice-v6"), 'toolu gates no longer prompt: the `balanced` preset advises on push-review and denylist hits, and the quality gate still blocks only `git commit`/`git push`. Pin a prompt with `gates.<name>.mode: ask`, or the old hard denies with `{"gates":{"preset":"strict"}}`.', !deliveryPinned(config));
 }
 function deliveryFlowNotice(configRoot, host) {
-  const install = host === "codex" ? "Install with `npx @toolu/plugins install delivery-flow --host codex`, then invoke `$delivery-flow:delivery-flow`." : "Install with `/plugin install delivery-flow@toolu`, then invoke `/delivery-flow:delivery-flow`.";
+  const install = host === "codex" ? "Install with `npx @toolu/plugins install delivery-flow --host codex`, then invoke `$delivery-flow:delivery-flow`." : host === "opencode" ? 'Add `delivery-flow` to `enabled` in `.opencode/toolu/plugins.json`, then load `skill({ name: "delivery-flow-delivery-flow" })`.' : "Install with `/plugin install delivery-flow@toolu`, then invoke `/delivery-flow:delivery-flow`.";
   return once(join13(configRoot, "toolu", ".delivery-flow-migration-v7"), `WARN: toolu workflow skills moved to delivery-flow (brainstorm, spec, spec-review, plan, plan-review, execution, test). ${install}`, true);
 }
 
