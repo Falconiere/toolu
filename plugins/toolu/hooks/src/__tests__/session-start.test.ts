@@ -147,12 +147,8 @@ test("OpenCode routes delegation by subagent_type, not a model argument", async 
   expect(out).not.toContain("Pass `model:`");
 });
 
-/** The host's config roots, unset so a runner's own `XDG_CONFIG_HOME` cannot hold the notice sentinels. */
-const NO_CONFIG_ROOTS = {
-  XDG_CONFIG_HOME: undefined,
-  TOOLU_CONFIG_DIR: undefined,
-  TOOLU_OPENCODE_HOME: undefined,
-};
+/** The host's config roots, empty (read as unset) so a runner's own `XDG_CONFIG_HOME` cannot hold the notice sentinels. */
+const NO_CONFIG_ROOTS = { XDG_CONFIG_HOME: "", TOOLU_CONFIG_DIR: "", TOOLU_OPENCODE_HOME: "" };
 
 test.each([
   [
