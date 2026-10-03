@@ -274,6 +274,17 @@ The generated skill documents the remaining flags. Search, crawl and similar use
 
 `tools/toolu-opencode/src/plugin/__tests__/epic-workflows.test.ts` proves the selection, script root and agent-tier paths hermetically. `TOOLU_LIVE_OPENCODE=1 bun test tools/toolu-opencode/src/plugin/__tests__/epic-worker.live.test.ts` runs a worker on the pinned host through a kill, checkpoint, `session list` capture and `--session` resume to a ready report.
 
+### PR babysitting
+
+Add `pr-babysit` to the `enabled` list and restart OpenCode. Run the `pr-babysit-babysit-ff6e5a3d` command (or load `pr-babysit-babysit-73c340c6`) on a branch with an open pull request. [#357](https://github.com/Falconiere/toolu/issues/357) ports its controller and fixers:
+
+- **Controller.** The plugin API has no cron or goal, so the invoking turn runs a tick, sleeps `backoff.waitSeconds` (at most 60 s) in bash, and ticks again until CI, review threads and the review-bot verdict are clear, or a human-only blocker escalates. State is `<repo>/.opencode/tmp/pr-babysit/<slot>.json`; invoking the command again resumes from it. Helpers run as `"$TOOLU_BUN" --no-env-file "$TOOLU_PLUGIN_ROOT_PR_BABYSIT/hooks/dist/<helper>.js"`, so a project `.env` (a `GH_TOKEN`, say) never reaches `gh`.
+- **Fixers.** `babysit-route-fix.js --host opencode` reads `prBabysit` from `$TOOLU_USER_CONFIG_DIR/toolu.config.json` and `.opencode/toolu.config.json` ([config](config.md#pr-babysit-fixers-prbabysit)) and Jev only from `$TOOLU_CONFIG_DIR/jev/jev.sh`. An `opencode` group runs as a detached `opencode run --agent pr-babysit-fixer` in a native worktree beside the state file, with no herdr. The dispatcher adds that agent to `OPENCODE_CONFIG_CONTENT`, denying `git push`, `gh` and `task` on top of your own rules; `--auto` approves asks but keeps every deny. The fixer edits, tests, commits and reports; the controller verifies, pushes, replies and resolves.
+- **Inline fixes** use `task` with `toolu-quick-task`, `toolu-implementer` or `toolu-architect` in a detached worktree at `.opencode/tmp/pr-babysit/<slot>.inline`.
+- **Cancel.** `stop` ends a running fixer's whole process group, removes the clean worktrees and marks the state `cancelled`.
+
+`bun run smoke:opencode-entry babysit.fixer babysit.no-report babysit.cancel` proves this on the pinned host with the scripted provider: an OpenCode controller's bash runs the shipped helpers, and an OpenCode fixer fixes a seeded failing test in an isolated repository while its push is denied.
+
 ## Verify a real gate
 
 Hermetic proof (matches CI):
