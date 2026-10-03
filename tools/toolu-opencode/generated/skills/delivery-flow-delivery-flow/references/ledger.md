@@ -9,7 +9,9 @@ Optional fields preserve the existing ledger contract:
 - `depends_on`: earlier step ids that must be green before this work.
 - `paths`: pathspecs read by the step's check, including its test file.
 - `input`: the real input or fixture used to prove the behavior.
-- `model`: `haiku`, `sonnet`, `opus`, `fable`, or `inherit`.
+- `model`: `haiku`, `sonnet`, `opus`, `fable`, or `inherit`. On OpenCode these
+  are tier labels, not models: execution passes `toolu-quick-task` (`haiku`), `toolu-implementer` (`sonnet`), `toolu-architect` (`opus`, `fable`) or `general` (`inherit`) as the `task`
+  tool's `subagent_type`, which takes no model argument.
 
 `paths` narrows iteration freshness to what the check actually reads. Declare
 all such paths: under-declaring can leave a stale green result. Before delivery,

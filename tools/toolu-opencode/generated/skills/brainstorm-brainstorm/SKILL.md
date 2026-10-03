@@ -36,11 +36,11 @@ Default-and-proceed is the baseline: do not turn routine work into an interview.
 Start with memory recall, one targeted structural or exact-text search, then
 inspect the best hits. Reuse demonstrated repository conventions when they
 settle the choice. Outside a repository, say "no repository evidence" and work
-from the request. Delegate only when the search needs a broad map, on a
-read-only exploration tier; keep the final trade-off decision in the main
-thread on the most capable tier.
+from the request. Delegate only when the search needs a broad map, to the `toolu-deep-explore`
+agent (`task` with `subagent_type: "toolu-deep-explore"`) when it is listed, else
+OpenCode's `explore`; keep the final trade-off decision in the main thread.
 
-When Jev is installed, call it to compare concrete alternatives against the
+When Jev is enabled, load `skill({ name: "jev-jev" })` and call it to compare concrete alternatives against the
 user's stated preferences before deciding. When it is unavailable, say so once
 and decide from explicit evidence. Jev informs the choice; it never replaces the
 agent's own feasibility and architecture judgment.
@@ -49,8 +49,7 @@ Set material defaults and proceed. Ask one structured question (2–3 options)
 only when prompt and repository evidence cannot settle a
 goal-defining or hard-to-reverse fork. If several forks qualify, ask about the
 highest-blast-radius decision and record defaults and risks for the rest. Use
-the host's structured-choice tool: `AskUserQuestion` in Claude Code,
-`request_user_input` in Codex when available; otherwise ask one concise plain
+OpenCode's `question` tool when it is listed; otherwise ask one concise plain
 question.
 
 ## Capsule

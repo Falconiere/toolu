@@ -290,7 +290,7 @@ test("generated research agent labels the OpenCode config root correctly", () =>
   expect(agent).not.toContain("on Claude\nCode. Ordinary");
 });
 
-test("generated delivery skill uses the generated ID for a bare brainstorm reference", () => {
+test("generated delivery skill loads brainstorm by its generated ID", () => {
   const root = repoRoot();
   const out = mkdtempSync(join(tmpBase, "toolu-surface-delivery-"));
   const selected = selectPluginsByEnabledNames(join(root, "plugins"), [
@@ -300,8 +300,8 @@ test("generated delivery skill uses the generated ID for a bare brainstorm refer
   if (!selected.ok) throw new Error(selected.reason);
   const plan = planSurface({ repoRoot: root, outDir: out, plugins: selected.plugins });
   const skill = plan.files.get(join(out, "skills/delivery-flow-delivery-flow/SKILL.md"));
-  expect(skill).toContain("`brainstorm-brainstorm`");
-  expect(skill).not.toContain("`brainstorm:brainstorm`");
+  expect(skill).toContain('`skill({ name: "brainstorm-brainstorm" })`');
+  expect(skill).not.toContain("brainstorm:brainstorm");
 });
 
 test("generated review skill labels its OpenCode config example", () => {

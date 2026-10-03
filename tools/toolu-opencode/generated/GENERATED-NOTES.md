@@ -32,7 +32,7 @@ The catalog covers all 16 plugin manifests. At runtime the plugin's `config` hoo
 - Claude plugin-root tokens → the owning plugin's `${TOOLU_PLUGIN_ROOT_<PLUGIN>}`: 1.
 - Claude config-root tokens → OpenCode config root: 5.
 - Typed source paths → `${TOOLU_OPENCODE_ROOT}/generated/…` paths: 3.
-- Explicit skill invocations → generated skill IDs: 6.
+- Explicit skill invocations → generated skill IDs: 2.
 
 ## Runtime environment
 

@@ -186,9 +186,6 @@ ${rewritten.slice(fallbackStart)}`;
       explicitReferenceRewrites += 1;
       return `skill({ name: "${id}" })`;
     });
-    if (reference === "brainstorm:brainstorm") {
-      rewritten = rewritten.replaceAll(`\`${reference}\``, `\`${id}\``);
-    }
   }
 
   const dotClaudeRefs: string[] = [];
