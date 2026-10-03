@@ -190,3 +190,4 @@ Reused:
 ## Open Questions
 
 - None blocking. The exclude covers only OpenCode launches. Claude and Codex workers' `.claude/tmp/` and `.codex/tmp/` have the same untracked-state shape; that change belongs to a cross-host follow-up, not this issue (Non-Goal 2).
+- Decided after the rebase onto #382: OpenCode workers drop `--standalone` and keep the 1.x guard. #382 added `--standalone` to the worker launch and to `session list` from OpenCode 2.0.21 evidence. The pinned 1.18.34 rejects it on `run`, `session list` and the TUI (usage, exit 1), and toolu's plugin targets 1.x. 1.x already runs its server inside the TUI process, which is what `--standalone` buys on 2.x. Its default exit key includes ctrl+c, so #382's interrupt still closes the runtime. `--session <id>` and `session list --format json` work on 1.x; the live run checks both (Jev: `keep_guard_drop_standalone`, 0.98).

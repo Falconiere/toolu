@@ -167,7 +167,7 @@ test.concurrent("dry run: OpenCode worker gets provider/model, the state exclude
   const lines = out.stdout.split("\n");
   expect(lines.find((l) => l.startsWith("herdr agent start"))).toBe(
     "herdr agent start comemory-255 --kind opencode --pane '<root-pane>' --timeout 90000 -- " +
-      "--standalone --auto --model probe/scripted",
+      "--auto --model probe/scripted",
   );
   const exclude = lines.findIndex((l) => l.startsWith(EXCLUDE_LINE));
   expect(exclude).toBeGreaterThan(lines.findIndex((l) => l.includes("herdr worktree create")));

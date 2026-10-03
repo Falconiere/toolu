@@ -106,7 +106,7 @@ export async function shutdownAgent(
   const owned = await ownedWorkload(expected.cwd, info.shell_pid);
   if (!live) return owned.length ? "cleanup-incomplete" : "exited";
   if (expected.kind === "opencode") {
-    // Verified for --standalone: interrupt closes the owned runtime and its jobs.
+    // The 1.x TUI runs its server in-process; ctrl+c (its default exit key) closes it and its jobs.
     await herdr(["agent", "send-keys", name, "ctrl+c"], 10_000);
   } else {
     await herdr(["agent", "send-keys", name, "esc"], 10_000);

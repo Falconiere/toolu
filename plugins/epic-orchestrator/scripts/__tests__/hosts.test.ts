@@ -51,12 +51,11 @@ test.concurrent("agentArgs cursor: yolo, trusted workspace, MCP approval; effort
 
 test.concurrent("agentArgs opencode: auto-approve and provider/model", () => {
   expect(agentArgs("opencode", { ...base, model: "anthropic/claude-sonnet-5" })).toEqual([
-    "--standalone",
     "--auto",
     "--model",
     "anthropic/claude-sonnet-5",
   ]);
-  expect(agentArgs("opencode", base)).toEqual(["--standalone", "--auto"]);
+  expect(agentArgs("opencode", base)).toEqual(["--auto"]);
 });
 
 test.concurrent("agentArgs opencode refuses a model that is not provider/model", () => {
@@ -74,7 +73,7 @@ test.concurrent("opencodeVersionProblem accepts 1.x and explains anything else",
   expect(opencodeVersionProblem("")).toContain("printed no version");
 });
 
-test.concurrent("captured sessions resume exactly and OpenCode owns its standalone runtime", () => {
+test.concurrent("captured sessions resume exactly", () => {
   expect(
     agentArgs("codex", { ...base, resume: true, sessionId: "01a-session" }).slice(0, 2),
   ).toEqual(["resume", "01a-session"]);
@@ -82,8 +81,8 @@ test.concurrent("captured sessions resume exactly and OpenCode owns its standalo
     agentArgs("claude", { ...base, resume: true, sessionId: "abc-session" }).slice(0, 2),
   ).toEqual(["--resume", "abc-session"]);
   expect(
-    agentArgs("opencode", { ...base, resume: true, sessionId: "ses_123" }).slice(0, 3),
-  ).toEqual(["--standalone", "--session", "ses_123"]);
+    agentArgs("opencode", { ...base, resume: true, sessionId: "ses_123" }).slice(0, 2),
+  ).toEqual(["--session", "ses_123"]);
 });
 
 test.concurrent("agentArgs resume: codex uses the resume subcommand, the rest a flag", () => {

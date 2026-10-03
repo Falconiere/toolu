@@ -113,7 +113,7 @@ a `Repo: owner/name` description line, or `--repo` (default: current repo).
 | Claude Code | `--dangerously-skip-permissions` | `--model` / `--effort` | `--resume <captured-id>` |
 | Codex | `--no-daemon --dangerously-bypass-approvals-and-sandbox` | `--model` / `-c model_reasoning_effort=` | `resume <captured-id>` |
 | Cursor Agent | `--yolo --trust --approve-mcps` | model id carries effort | Requires verified captured ID; currently unverified |
-| OpenCode | `--standalone --auto` | `--model provider/model` (no effort flag) | `--session <captured-id>` |
+| OpenCode | `--auto` | `--model provider/model` (no effort flag) | `--session <captured-id>` |
 
 `--safe` keeps approval prompts on. Default tiers (`trivial`, `standard`,
 `complex`, `critical`) map to Claude `sonnet` low → `opus` xhigh, Codex
@@ -163,8 +163,8 @@ claiming to measure steal. Hypervisor starvation is distinct from guest work.
 
 Lifecycle operations verify host, pane and worktree. Shutdown distinguishes turn
 cancellation from background jobs: Codex uses `--no-daemon` and `/stop` before `/exit`; OpenCode
-uses an owned standalone runtime. Worktree process inventories and process birth
-identities guard final cleanup. Missing shutdown/workspace evidence produces
+uses the 1.x TUI, which runs its server in-process; ctrl+c exits it. Worktree
+process inventories and process birth identities guard final cleanup. Missing shutdown/workspace evidence produces
 `cleanup-incomplete`, preserves the lease and allows a later retry. Both merged
 and abandoned work require a successful final snapshot before removal.
 Prompt acknowledgement records blocked and provider-limited outcomes separately

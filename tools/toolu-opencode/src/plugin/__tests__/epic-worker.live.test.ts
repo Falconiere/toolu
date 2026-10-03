@@ -187,6 +187,21 @@ const sessionIds = (events: Array<z.infer<typeof Event>>) => [
 
 const statusOf = (file: string) => Status.parse(JSON.parse(readFileSync(file, "utf8")));
 
+/** Session ids `session list` attributes to `worktree`: the list launch-issue's session capture reads. */
+async function listedSessions(bin: string, session: ProbeSession, worktree: string) {
+  const listed = await run([bin, "session", "list", "--format", "json"], {
+    cwd: worktree,
+    env: { ...session.env, PWD: worktree },
+    stdin: "",
+  });
+  expect(listed.exitCode, listed.stderr).toBe(0);
+  return z
+    .array(z.looseObject({ id: z.string(), directory: z.string(), created: z.number() }))
+    .parse(JSON.parse(listed.stdout))
+    .filter((entry) => entry.directory === worktree)
+    .map((entry) => entry.id);
+}
+
 /** The first run: start prompt, delivery, one `task`, an edit, then a kill mid-turn. */
 async function killMidTurn(bin: string, session: ProbeSession) {
   const p = layout(session.sb.root);
@@ -274,6 +289,7 @@ test.skipIf(process.env.TOOLU_LIVE_OPENCODE !== "1")(
     const p = layout(session.sb.root);
 
     const killed = await killMidTurn(host.bin, session);
+    expect(await listedSessions(host.bin, session, p.worktree)).toEqual(sessionIds(killed.events));
     await checkpointKeepsEdit(session);
     const resumed = await resumeToReady(host.bin, session);
     expect(resumed.sessions).toEqual(sessionIds(killed.events));

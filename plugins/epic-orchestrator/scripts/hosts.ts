@@ -135,7 +135,6 @@ export function agentArgs(kind: HostKind, o: AgentArgOpts): string[] {
         : [kind === "opencode" ? "--session" : "--resume", o.sessionId]
       : null;
   const args = [
-    ...(kind === "opencode" ? ["--standalone"] : []),
     ...(exactResume ?? (o.resume ? h.resume.lead : [])),
     ...(kind === "codex" ? ["--no-daemon"] : []),
     ...(o.bypass ? h.bypass : h.safe(o.permissionMode)),

@@ -105,10 +105,13 @@ test.concurrent("the epic orchestrator's scripts and brief template ship and run
   expect((await bundle()).exitCode).toBe(0);
   const epic = join(dest, "epic-orchestrator");
   const source = join(ROOT, "plugins/epic-orchestrator/scripts");
+  const dirs = ["launch", "trackers", "watch"];
   expect(scripts(join(epic, "scripts"))).toEqual(scripts(source));
-  expect(scripts(join(epic, "scripts/trackers"))).toEqual(scripts(join(source, "trackers")));
+  for (const dir of dirs) {
+    expect(scripts(join(epic, "scripts", dir))).toEqual(scripts(join(source, dir)));
+  }
   expect(readdirSync(join(epic, "scripts")).toSorted()).toEqual(
-    [...scripts(source), "trackers"].toSorted(),
+    [...scripts(source), ...dirs].toSorted(),
   );
   expect(readdirSync(join(epic, "skills/epic-orchestrator/references")).toSorted()).toEqual([
     "recovery.md",
