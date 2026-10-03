@@ -10,7 +10,7 @@ Think a change through before building: evidence-backed triage, alternatives, tr
 /plugin install brainstorm@toolu
 ```
 
-Standalone, no dependencies. For Codex: `codex plugin add brainstorm@toolu`, or `npx @toolu/plugins install brainstorm --host codex`.
+Standalone, no dependencies. For Codex: `codex plugin add brainstorm@toolu`, or `npx @toolu/plugins install brainstorm --host codex`. On OpenCode, add `brainstorm` to `enabled` in `.opencode/toolu/plugins.json` and load the `brainstorm-brainstorm` skill; see [docs/opencode.md § Delivery workflows](../../docs/opencode.md#delivery-workflows).
 
 ## What it provides
 
