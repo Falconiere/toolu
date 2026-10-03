@@ -198,6 +198,12 @@ Every bash call the agent makes gets these variables through the plugin's `shell
 
 Because `TOOLU_PROJECT_DIR` stays empty, a helper run inside another repository uses that repository's state. Every process the agent starts from bash inherits these variables. A nested `opencode` keeps its own roots through `TOOLU_OPENCODE_DATA_ROOT`. Unset the `TOOLU_*` variables before starting `claude` or `codex` from an OpenCode session.
 
+### TypeScript post-edit quality
+
+Add `ts-quality` to `.opencode/toolu/plugins.json` alongside `toolu`, then restart OpenCode. It requires a git-tracked `tsconfig*.json`, a lock file for an available Bun, pnpm, yarn, or npm executable, and runs per-file rules on completed `.ts` and `.tsx` writes, edits, and patches. If `ast-grep` is installed, structural checks use the TSX parser for `.tsx`; without it, those structural rules are skipped. A patch checks every changed TypeScript destination and clears gate entries for deleted files and moved sources. Disabled ts-quality and other file types do not invoke the module. The existing linked-worktree rule skips these checks in linked worktrees.
+
+A violation appears in the completed tool result and in the project's `.opencode/tmp/quality-gate-status.json`; it blocks later commit and push attempts until a clean edit or removal clears it. The edit itself has already happened. Run `bun run smoke:opencode-ts-quality` in the toolu checkout to replay native write/edit recovery, multi-file patch, and disabled-plugin scenarios on the pinned host.
+
 ### ast-grep
 
 With `ast-grep` selected, its two registry modules run on OpenCode's own tools ([#347](https://github.com/Falconiere/toolu/issues/347)):

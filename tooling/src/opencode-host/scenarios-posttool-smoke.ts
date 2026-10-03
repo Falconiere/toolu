@@ -58,7 +58,7 @@ export async function prepareSdk(s: ReturnType<typeof session>, cacheRoot: strin
   await prepareSdkDir(s, join(s.sb.project, ".opencode"));
 }
 
-function verdict(
+export function verdict(
   observed: Record<string, boolean>,
   details: { messages: string[]; states: ReturnType<typeof toolStates>; stderr: string },
 ) {

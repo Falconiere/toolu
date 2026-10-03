@@ -7,6 +7,15 @@ import { astGrepScan, type AstGrepHit, type AstGrepScan } from "@toolu/core/qual
 import { ERROR_RULES, MOCK_RULES } from "./ast-rule-yaml.ts";
 import { ere, isTestPath, type TsFile } from "./ts-file.ts";
 
+const ERROR_RULES_TSX = ERROR_RULES.replaceAll("language: ts\n", "language: tsx\n");
+const MOCK_RULES_TSX = MOCK_RULES.replaceAll("language: ts\n", "language: tsx\n");
+
+/** OpenCode must give ast-grep TSX rules for `.tsx`; retain the earlier host behavior. */
+function scan(f: TsFile, ts: string, tsx: string): AstGrepScan {
+  const rules = f.ctx.host === "opencode" && f.file.path.endsWith(".tsx") ? tsx : ts;
+  return astGrepScan(f.file, rules, f.ctx);
+}
+
 /** One rule's excerpts, capped; `read`'s field split drops trailing tabs. */
 function hits(all: readonly AstGrepHit[], rule: string, limit: number): string[] {
   return all
@@ -35,9 +44,9 @@ function scanFailure(scan: AstGrepScan): string | undefined {
 
 /** 78-error-ast. */
 export function errorHandling(f: TsFile): string[] {
-  const scan = astGrepScan(f.file, ERROR_RULES, f.ctx);
-  if (scan.kind === "missing") return [];
-  const all = scan.kind === "ok" ? scan.hits : [];
+  const result = scan(f, ERROR_RULES, ERROR_RULES_TSX);
+  if (result.kind === "missing") return [];
+  const all = result.kind === "ok" ? result.hits : [];
   const errors = [
     ...group(f, all, "Empty catch block in $F — handle the error or rethrow; do not swallow", [
       ["empty-catch", 3],
@@ -68,7 +77,7 @@ export function errorHandling(f: TsFile): string[] {
       ["throw-template", 3],
     ]),
   ];
-  const failure = scanFailure(scan);
+  const failure = scanFailure(result);
   if (failure !== undefined) {
     errors.push(
       `ast-grep failed while scanning ${f.file.path} — ${failure}; error-handling rules could not be verified. Fix the tool/file and re-edit`,
@@ -100,10 +109,10 @@ export function mockDoubles(f: TsFile): string[] {
   const inTests = isTestPath(path) || path.includes("/__tests__/");
   if (path.includes("/e2e/") || !inTests || !f.limits.noMocks) return [];
   const errors: string[] = [];
-  const scan = astGrepScan(f.file, MOCK_RULES, f.ctx);
-  const failure = scan.kind === "missing" ? undefined : mockScanFailure(f, scan);
+  const result = scan(f, MOCK_RULES, MOCK_RULES_TSX);
+  const failure = result.kind === "missing" ? undefined : mockScanFailure(f, result);
   if (failure !== undefined) errors.push(failure);
-  const found = scan.kind === "ok" ? scan.hits.toSorted((a, b) => a.line - b.line) : [];
+  const found = result.kind === "ok" ? result.hits.toSorted((a, b) => a.line - b.line) : [];
   if (found.length > 0) {
     const excerpt = found
       .slice(0, 5)
