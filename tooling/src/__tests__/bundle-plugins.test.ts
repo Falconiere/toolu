@@ -75,7 +75,7 @@ test.concurrent("the debug skill's helpers ship and run from the staged copy", a
   using sb = createSandbox();
   const { dest, bundle } = stage(sb);
   expect((await bundle()).exitCode).toBe(0);
-  expect(readdirSync(join(dest, "toolu/scripts")).sort()).toEqual([
+  expect(readdirSync(join(dest, "toolu/scripts")).toSorted()).toEqual([
     "debug-io.ts",
     "debug-log.ts",
     "debug-stack.ts",

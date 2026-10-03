@@ -4,7 +4,7 @@ Use the host-native interface for the same workflow concept:
 
 | Concept | Claude Code | Codex | OpenCode |
 | --- | --- | --- | --- |
-| Invoke a plugin workflow | `/plugin:name` | `$plugin:name` | `skill({ name: "plugin-name" })` |
+| Invoke a plugin workflow | `/plugin:name` | `$plugin:name` | the `skill` tool with the generated skill ID |
 | Delegate bounded work | `Agent` / `Task` with an explicit tier | `spawn_agent` with the matching custom agent when installed | `task` with `subagent_type` naming a `toolu-*` agent; the model comes from `agent.<id>.model` in `opencode.json` |
 | Ask a structured user choice | `AskUserQuestion` | `request_user_input` when available; otherwise ask one concise question | `question` when available; otherwise ask one concise question |
 | Inspect or steer delegated work | the host's agent controls | Codex subagent thread controls (`/agent` in CLI) | the child session (`task_id` resumes it) |
