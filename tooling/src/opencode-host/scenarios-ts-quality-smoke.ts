@@ -1,40 +1,17 @@
 /** Pinned-host proof of selected TypeScript quality checks on native OpenCode tools (#352). */
 import { join } from "node:path";
-import { z } from "zod";
 import { runHost, toolStates } from "./host-run.ts";
 import { finalMessages, type ScenarioContext } from "./scenario.ts";
 import { session, SMOKE_RUN_TIMEOUT_MS, type PretoolScenario } from "./pretool-shared.ts";
+import { disabledQuality, qualityGate as gate, qualityProject } from "./quality-smoke-shared.ts";
 import { prepareSdk, verdict } from "./scenarios-posttool-smoke.ts";
 
-const GATE = ".opencode/tmp/quality-gate-status.json";
-const Gate = z.object({
-  status: z.string(),
-  entries: z
-    .record(z.string(), z.object({ source: z.string(), violations: z.string() }))
-    .optional(),
-});
-const SELECTION = JSON.stringify({ version: 1, enabled: ["toolu", "ts-quality"] });
-const CONFIG = JSON.stringify({
-  version: 1,
-  gates: {
-    qualityGate: { mode: "block" },
-    commitGate: { mode: "off" },
-    pushReview: { mode: "off" },
-  },
-});
-const PROJECT = {
-  ".opencode/toolu/plugins.json": SELECTION,
-  ".opencode/toolu.config.json": CONFIG,
+const FILES = {
   "package.json": '{"name":"ts-quality-smoke","private":true}\n',
   "bun.lock": "lock marker\n",
   "tsconfig.json": "{}\n",
 };
-
-function gate(s: ReturnType<typeof session>): z.infer<typeof Gate> | null {
-  if (!s.exists(GATE)) return null;
-  const parsed = Gate.safeParse(JSON.parse(s.sb.read(GATE)));
-  return parsed.success ? parsed.data : null;
-}
+const PROJECT = qualityProject(["ts-quality"], FILES);
 
 async function editQuality(ctx: ScenarioContext) {
   const bad = "function f() { try { return 1; } catch {} }\n";
@@ -172,43 +149,18 @@ async function patchQuality(ctx: ScenarioContext) {
   return verdict(observed, { messages, states, stderr: host.stderr });
 }
 
-async function disabledQuality(ctx: ScenarioContext) {
-  using s = session(ctx, {
-    files: {
-      ...PROJECT,
-      ".opencode/toolu/plugins.json": JSON.stringify({ version: 1, enabled: ["toolu"] }),
-    },
-    scripts: (project) => ({
-      "tsquality.disabled": [
-        {
-          tool: "write",
-          args: { filePath: join(project, "bad.ts"), content: 'console.log("bad");\n' },
-        },
-      ],
-    }),
-  });
-  s.sb.git("add", "tsconfig.json");
-  await prepareSdk(s, ctx.cacheRoot);
-  const host = await runHost(
-    ctx.bin,
-    s,
-    ["--print-logs", "PROBE:tsquality.disabled"],
-    SMOKE_RUN_TIMEOUT_MS,
-  );
-  const states = toolStates(host);
-  const messages = finalMessages(s, "tool");
-  const observed = {
-    writeCompleted: states.some((state) => state.tool === "write" && state.status === "completed"),
-    bytesChanged: s.exists("bad.ts") && s.sb.read("bad.ts") === 'console.log("bad");\n',
-    noGate: gate(s) === null,
-    noDiagnostic: !messages.some((message) => message.includes("QUALITY VIOLATION")),
-    hostSucceeded: host.exitCode === 0,
-  };
-  return verdict(observed, { messages, states, stderr: host.stderr });
-}
-
 export const TS_QUALITY_SCENARIOS: PretoolScenario[] = [
   { id: "tsquality.edit", run: editQuality },
   { id: "tsquality.patch", run: patchQuality },
-  { id: "tsquality.disabled", run: disabledQuality },
+  {
+    id: "tsquality.disabled",
+    run: (ctx) =>
+      disabledQuality(ctx, {
+        id: "tsquality.disabled",
+        files: FILES,
+        file: "bad.ts",
+        content: 'console.log("bad");\n',
+        prepare: (s) => s.sb.git("add", "tsconfig.json"),
+      }),
+  },
 ];
