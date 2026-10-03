@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { runHost, toolStates } from "./host-run.ts";
 import { finalMessages, type ScenarioContext } from "./scenario.ts";
 import { session, SMOKE_RUN_TIMEOUT_MS, type PretoolScenario } from "./pretool-shared.ts";
-import { disabledQuality, qualityGate as gate, qualityProject } from "./quality-smoke-shared.ts";
+import { disabledQuality, qualityGate, qualityProject } from "./quality-smoke-shared.ts";
 import { prepareSdk, verdict } from "./scenarios-posttool-smoke.ts";
 
 const FILES = { "pyproject.toml": '[project]\nname = "python-quality-smoke"\n' };
@@ -67,7 +67,7 @@ async function editQuality(ctx: ScenarioContext) {
     pushDenied: /quality gate failing/i.test(deniedBash[1]?.error ?? ""),
     markersAbsent: !s.exists("commit-marker") && !s.exists("push-marker"),
     editCompleted: states.some((state) => state.tool === "edit" && state.status === "completed"),
-    recovered: gate(s)?.status === "passing" && s.sb.read("bad.py") === CLEAN,
+    recovered: qualityGate(s)?.status === "passing" && s.sb.read("bad.py") === CLEAN,
     unrelatedIgnored:
       s.sb.read("notes.md") === SWALLOW &&
       !(messages.at(-1)?.includes("QUALITY VIOLATION") ?? false),
@@ -127,7 +127,7 @@ async function patchQuality(ctx: ScenarioContext) {
   );
   const states = toolStates(host);
   const messages = finalMessages(s, "tool");
-  const entries = gate(s)?.entries ?? {};
+  const entries = qualityGate(s)?.entries ?? {};
   const expected = [
     join(s.sb.project, "pkg/moved.py"),
     join(s.sb.project, "pkg/test_added.py"),
@@ -143,7 +143,7 @@ async function patchQuality(ctx: ScenarioContext) {
     addApplied: s.exists("pkg/test_added.py") && s.sb.read("pkg/test_added.py") === MOCKED,
     unrelatedApplied: s.exists("pkg/notes.md") && s.sb.read("pkg/notes.md") === "except: pass\n",
     exactGateEntries:
-      gate(s)?.status === "failing" &&
+      qualityGate(s)?.status === "failing" &&
       JSON.stringify(Object.keys(entries).toSorted()) === JSON.stringify(expected) &&
       expected.every((path) => entries[path]?.source === "python-quality-hook"),
     bothVisible: messages.some(
