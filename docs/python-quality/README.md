@@ -16,6 +16,8 @@ Python `PostToolUse` quality checks registered into the toolu hook engine. Every
 
 Every Python file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are one bundled TypeScript module, published into toolu's registry at `SessionStart`, and run only while this plugin is installed — **uninstall it and the Python rules vanish, fail-closed.**
 
+On OpenCode, enable `python-quality` in `.opencode/toolu/plugins.json` alongside `toolu`. Completed `.py` writes, edits and patches run the selected module when the git toplevel has a Python marker (`pyproject.toml`, `setup.py`, `setup.cfg` or `requirements.txt`) and `python3` is on `PATH`. An installed `ast-grep` runs the no-mocks scan with its Python parser. Violations appear after the edit and block later commit and push attempts; linked worktrees are checked against their own gate file, as on other hosts. See [OpenCode Python post-edit quality](../opencode.md#python-post-edit-quality) and run `bun run smoke:opencode-python-quality` in a toolu checkout for pinned-host proof.
+
 ## Checks Enforced
 
 ### 1. Size Discipline

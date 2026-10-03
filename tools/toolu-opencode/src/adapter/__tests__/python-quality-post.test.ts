@@ -237,9 +237,9 @@ test("independent OpenCode projects keep separate Python gate entries", async ()
   second.write("bad.py", SWALLOW);
   await Promise.all(
     [
-      [a, first],
-      [b, second],
-    ].map(([post, sb]) =>
+      { post: a, sb: first },
+      { post: b, sb: second },
+    ].map(({ post, sb }) =>
       post.after(
         {
           tool: "write",
@@ -252,9 +252,7 @@ test("independent OpenCode projects keep separate Python gate entries", async ()
     ),
   );
   expect(gate(first.project).entries?.[first.path("bad.py")]?.source).toBe("python-quality-hook");
-  expect(gate(second.project).entries?.[second.path("bad.py")]?.source).toBe(
-    "python-quality-hook",
-  );
+  expect(gate(second.project).entries?.[second.path("bad.py")]?.source).toBe("python-quality-hook");
   first.write("bad.py", CLEAN);
   await a.after(
     {
@@ -283,7 +281,12 @@ test("a linked worktree keeps python-quality's existing check and owns its gate"
   writeFileSync(path, SWALLOW);
   const output = result();
   await post.after(
-    { tool: "write", sessionID: "linked", callID: "bad", args: { filePath: path, content: SWALLOW } },
+    {
+      tool: "write",
+      sessionID: "linked",
+      callID: "bad",
+      args: { filePath: path, content: SWALLOW },
+    },
     output,
   );
   expect(output.output).toContain("Forbidden suppression");
