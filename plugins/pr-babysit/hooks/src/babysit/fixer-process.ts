@@ -83,16 +83,43 @@ export function processStart(pid: number): string {
   return res.status === 0 ? res.stdout.trim() : "";
 }
 
-/** Live (non-zombie) members of process group `pgid`. */
-function groupMembers(pgid: number): number[] {
-  const res = spawnSync("ps", ["-A", "-o", "pid=,pgid=,stat="], { encoding: "utf8" });
+type Row = { pid: number; ppid: number; pgid: number };
+
+/** Every live (non-zombie) process. */
+function processTable(): Row[] {
+  const res = spawnSync("ps", ["-A", "-o", "pid=,ppid=,pgid=,stat="], { encoding: "utf8" });
   if (res.status !== 0) fail("process_error", `ps failed: ${(res.stderr ?? "").trim()}`);
   return res.stdout.split("\n").flatMap((line) => {
-    const [pid, group, stat] = line.trim().split(/\s+/);
-    return group === String(pgid) && stat !== undefined && !stat.startsWith("Z")
-      ? [Number(pid)]
-      : [];
+    const [pid, ppid, pgid, stat] = line.trim().split(/\s+/);
+    return stat === undefined || stat.startsWith("Z")
+      ? []
+      : [{ pid: Number(pid), ppid: Number(ppid), pgid: Number(pgid) }];
   });
+}
+
+/** Live members of process group `pgid`. */
+function groupMembers(pgid: number): number[] {
+  return processTable()
+    .filter((row) => row.pgid === pgid)
+    .map((row) => row.pid);
+}
+
+/**
+ * The group's members and every descendant, whatever its group: OpenCode starts
+ * each bash tool call in a process group of its own.
+ */
+function family(pgid: number): number[] {
+  const rows = processTable();
+  const found = new Set(rows.filter((row) => row.pgid === pgid).map((row) => row.pid));
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const row of rows)
+      if (!found.has(row.pid) && found.has(row.ppid)) {
+        found.add(row.pid);
+        grew = true;
+      }
+  }
+  return [...found];
 }
 
 /** Is the fixer group started as `pid` at `start` still running? A reused pid is not. */
@@ -103,30 +130,42 @@ export function groupAlive(pid: number, start: string): boolean {
   return groupMembers(pid).length > 0;
 }
 
-function signalGroup(pid: number, signal: NodeJS.Signals): void {
+/** Signal a process (or, negative, a group) that may already have exited. */
+function signal(target: number, sig: NodeJS.Signals): void {
   try {
-    process.kill(-pid, signal);
+    process.kill(target, sig);
   } catch (error) {
-    // ESRCH: the group exited between the liveness check and the signal.
+    // ESRCH: it exited between the liveness check and the signal.
     if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
   }
 }
 
-function waitGone(pid: number, start: string, seconds: number): boolean {
+function waitGone(pids: readonly number[], seconds: number): boolean {
+  const gone = (): boolean => {
+    const live = new Set(processTable().map((row) => row.pid));
+    return pids.every((pid) => !live.has(pid));
+  };
   for (let i = 0; i < seconds * 10; i += 1) {
-    if (!groupAlive(pid, start)) return true;
+    if (gone()) return true;
     Bun.sleepSync(100);
   }
-  return !groupAlive(pid, start);
+  return gone();
 }
 
-/** End the fixer group: TERM, up to 10 s, then KILL. True when nothing of it is left. */
+/**
+ * End the fixer: its group and every descendant (taken before any signal, so
+ * none is lost to reparenting), TERM, up to 10 s, then KILL. True when nothing
+ * of it is left.
+ */
 export function stopGroup(pid: number, start: string): boolean {
   if (!groupAlive(pid, start)) return true;
-  signalGroup(pid, "SIGTERM");
-  if (waitGone(pid, start, 10)) return true;
-  signalGroup(pid, "SIGKILL");
-  return waitGone(pid, start, 5);
+  const pids = family(pid);
+  signal(-pid, "SIGTERM");
+  for (const member of pids) signal(member, "SIGTERM");
+  if (waitGone(pids, 10)) return true;
+  signal(-pid, "SIGKILL");
+  for (const member of pids) signal(member, "SIGKILL");
+  return waitGone(pids, 5);
 }
 
 export type Spawned = { pid: number; pidStart: string } | { error: string };

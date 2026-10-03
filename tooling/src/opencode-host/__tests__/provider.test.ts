@@ -176,3 +176,41 @@ test.concurrent("a first user message without content finishes instead of failin
     provider.stop();
   }
 });
+
+test.concurrent("a session without a scenario token follows the * script", async () => {
+  const provider = startScriptedProvider({
+    ...SCRIPTS,
+    "*": [{ tool: "bash", args: { command: "true", description: "nested" } }],
+  });
+  try {
+    const user = { role: "user", content: "You are a pr-babysit fixer. Read /b.md" };
+    const first = await post(provider.url, { messages: [user], tools: TOOLS });
+    expect(events(first.text)).toEqual([
+      chunk(
+        {
+          role: "assistant",
+          tool_calls: [
+            {
+              index: 0,
+              id: "call_1",
+              type: "function",
+              function: { name: "bash", arguments: '{"command":"true","description":"nested"}' },
+            },
+          ],
+        },
+        null,
+      ),
+      chunk({}, "tool_calls"),
+    ]);
+    const tool = { role: "tool", content: "ok" };
+    const done = await post(provider.url, { messages: [user, tool], tools: TOOLS });
+    expect(events(done.text)).toEqual(textChunks(DONE_TEXT));
+    const tokened = await post(provider.url, {
+      messages: [{ role: "user", content: "PROBE:no.such" }],
+      tools: TOOLS,
+    });
+    expect(events(tokened.text)).toEqual(textChunks(DONE_TEXT));
+  } finally {
+    provider.stop();
+  }
+});
