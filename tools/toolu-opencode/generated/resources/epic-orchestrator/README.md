@@ -133,6 +133,8 @@ Launch writes a resource binding in the worktree's Git directory. Plan-ledger
 checks acquire job capacity automatically. Run other expensive tests through
 `bun <plugin>/scripts/job.ts -- <command> <args...>` from that worktree.
 Admission refusal means wait for capacity and retry the same mandatory check.
+A job runs for at most one hour so it cannot hold a shared slot forever; on
+timeout its process group is stopped and `job.ts` exits 124.
 Process groups retain their lease until background descendants exit. A crashed
 job owner is reconciled only after its recorded group is gone; agent ownership
 is never freed merely because its launcher exited.
