@@ -7,6 +7,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { runHost, toolStates } from "./host-run.ts";
 import { session, SMOKE_RUN_TIMEOUT_MS, type PretoolScenario } from "./pretool-shared.ts";
+import type { ProbeSession } from "./session.ts";
 import { finalMessages, type ScenarioContext } from "./scenario.ts";
 import { prepareSdk } from "./scenarios-posttool-smoke.ts";
 import { ContractError } from "./schema.ts";
@@ -16,8 +17,10 @@ const ADVISORY = "[toolu advisory]";
 const REPORT = "ast-grep byte savings this session:";
 const SEARCH = "ast-grep run -p 'export function $N($$$) { $$$ }' -l typescript src";
 const LEDGER_DIR = ".opencode/toolu/state/toolu/byte-savings";
+/** An earlier session's ledger, older and sorted first: the report must skip it. */
+const OLD_LEDGER = "aaa-earlier-session.jsonl";
 const REPORT_CLI =
-  'bun "$TOOLU_PLUGIN_ROOT_AST_GREP/hooks/dist/byte-savings-report.js" "$TOOLU_CONFIG_DIR"/toolu/byte-savings/*.jsonl';
+  'bun "$TOOLU_PLUGIN_ROOT_AST_GREP/hooks/dist/byte-savings-report.js" "$(ls -t "$TOOLU_CONFIG_DIR"/toolu/byte-savings/*.jsonl | head -n 1)"';
 
 function bash(command: string) {
   return { tool: "bash", args: { command, description: "ast-grep smoke" } };
@@ -43,12 +46,44 @@ function count(text: string, needle: string): number {
 function ledgerKinds(project: string): string[] {
   const dir = join(project, LEDGER_DIR);
   if (!existsSync(dir)) return [];
-  return readdirSync(dir).flatMap((file) =>
-    readFileSync(join(dir, file), "utf8")
-      .trim()
-      .split("\n")
-      .map((line) => line.match(/"kind":"([^"]+)"/u)?.[1] ?? "?"),
-  );
+  return readdirSync(dir)
+    .filter((file) => file !== OLD_LEDGER)
+    .flatMap((file) =>
+      readFileSync(join(dir, file), "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => line.match(/"kind":"([^"]+)"/u)?.[1] ?? "?"),
+    );
+}
+
+/** Each claim the session must prove, from its tool messages, tool states and project. */
+function observe(
+  m: readonly string[],
+  states: ReturnType<typeof toolStates>,
+  s: ProbeSession,
+): Record<string, boolean> {
+  const at = (i: number): string => m[i] ?? "";
+  return {
+    allCompleted:
+      states.length === STEPS.length && states.every((state) => state.status === "completed"),
+    skillLoaded: at(0).includes("ast-grep run -p") && !at(0).includes("detect.sh"),
+    grepStructuralNudged:
+      count(at(1), ADVISORY) === 1 && at(1).includes("STOP: Structural code pattern detected"),
+    grepNonCodeQuiet: !at(2).includes(ADVISORY),
+    rgStructuralNudged:
+      count(at(3), ADVISORY) === 1 && at(3).includes("STOP: grep/rg for structural code search"),
+    rgLiteralGeneric: count(at(4), ADVISORY) === 1 && at(4).includes("grep/rg in Bash detected"),
+    pipedQuiet: !at(5).includes(ADVISORY),
+    exampleFoundGreet: at(6).includes("export function greet"),
+    reportOnAstGrep: count(at(6), REPORT) === 1 && at(6).includes("TOTAL returned:"),
+    readQuiet: !at(7).includes(REPORT) && !at(7).includes(ADVISORY),
+    reportCliRan:
+      at(8).includes("ast-grep: returned=") &&
+      at(8).includes("read: returned=") &&
+      !at(8).includes("glob: returned="),
+    earlierLedgerKept: s.exists(`${LEDGER_DIR}/${OLD_LEDGER}`),
+    ledger: ledgerKinds(s.sb.project).toSorted().join(",") === "ast-grep,grep,grep,read",
+  };
 }
 
 async function astGrepSession(ctx: ScenarioContext) {
@@ -63,10 +98,13 @@ async function astGrepSession(ctx: ScenarioContext) {
       }),
       "src/app.ts": "export function greet(name: string) {\n  return name;\n}\n",
       "notes.md": "TODO: write notes\n",
+      [`${LEDGER_DIR}/${OLD_LEDGER}`]: '{"kind":"glob","returned":1,"full":0}\n',
     },
     scripts: (project) => ({
       "ast-grep.session": STEPS.map((step) =>
-        step.tool === "read" ? { ...step, args: { filePath: join(project, "src/app.ts") } } : step,
+        step.tool === "read"
+          ? { tool: "read", args: { filePath: join(project, "src/app.ts") } }
+          : step,
       ),
     }),
   });
@@ -79,24 +117,7 @@ async function astGrepSession(ctx: ScenarioContext) {
   );
   const states = toolStates(hostRun);
   const m = finalMessages(s, "tool");
-  const at = (i: number): string => m[i] ?? "";
-  const observed = {
-    allCompleted:
-      states.length === STEPS.length && states.every((state) => state.status === "completed"),
-    skillLoaded: at(0).includes("ast-grep run -p") && !at(0).includes("detect.sh"),
-    grepStructuralNudged:
-      count(at(1), ADVISORY) === 1 && at(1).includes("STOP: Structural code pattern detected"),
-    grepNonCodeQuiet: !at(2).includes(ADVISORY),
-    rgStructuralNudged:
-      count(at(3), ADVISORY) === 1 && at(3).includes("STOP: grep/rg for structural code search"),
-    rgLiteralGeneric: count(at(4), ADVISORY) === 1 && at(4).includes("grep/rg in Bash detected"),
-    pipedQuiet: !at(5).includes(ADVISORY),
-    exampleFoundGreet: at(6).includes("export function greet"),
-    reportOnAstGrep: count(at(6), REPORT) === 1 && at(6).includes("TOTAL returned:"),
-    readQuiet: !at(7).includes(REPORT) && !at(7).includes(ADVISORY),
-    reportCliRan: at(8).includes("ast-grep: returned=") && at(8).includes("read: returned="),
-    ledger: ledgerKinds(s.sb.project).toSorted().join(",") === "ast-grep,grep,grep,read",
-  };
+  const observed = observe(m, states, s);
   const pass = Object.values(observed).every(Boolean);
   return {
     pass,
