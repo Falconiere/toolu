@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env -S bun --no-env-file
 // @bun
 
 // packages/toolu-core/src/cli/cli.ts

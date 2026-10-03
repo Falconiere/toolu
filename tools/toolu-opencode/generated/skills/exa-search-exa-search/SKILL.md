@@ -14,20 +14,20 @@ Use this skill when you need to search the web, find code examples, crawl a URL,
 Invoke at the **stable published path** (a symlink the plugin's SessionStart hook refreshes every session):
 
 ```bash
-# Codex
-"${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/exa-search/search.sh" <command> [options]
-# Claude Code
-"${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/exa-search/search.sh" <command> [options]
+# OpenCode
+"${TOOLU_CONFIG_DIR}/exa-search/search.sh" <command> [options]
 ```
 
-Choose the line for the active host. Ordinary shell calls do not inherit
-plugin lifecycle variables, so never collapse these into one ambiguous
-fallback. Use the published path; plugin-root variables are lifecycle-only.
+OpenCode sets `TOOLU_CONFIG_DIR` to this project's helper root in every bash call.
+The exa-search SessionStart entry publishes the helper and gives its exact path.
+If `EXA_API_KEY` is unset, use OpenCode's `websearch` when available or
+`webfetch` for a known URL. Do not call the Exa helper until the key is set,
+and never print the key.
 
 Repo-checkout fallback (for tests/dev when the plugin is not installed): the executable Bun bundle `plugins/exa-search/hooks/dist/search.js`.
 
 ```
-search.sh <command> [options]
+"${TOOLU_CONFIG_DIR}/exa-search/search.sh" <command> [options]
 
 Commands:
   search   Search the web (default if no command given)
@@ -38,8 +38,8 @@ Commands:
 ### search (default)
 
 ```bash
-search.sh search -q "query" [options]
-search.sh "query"               # bare query works too
+"${TOOLU_CONFIG_DIR}/exa-search/search.sh" search -q "query" [options]
+"${TOOLU_CONFIG_DIR}/exa-search/search.sh" "query"               # bare query works too
 
 Options:
   -q, --query          Search query (required)
@@ -60,7 +60,7 @@ Options:
 ### crawl
 
 ```bash
-search.sh crawl <url> [url...] [-m max_chars]
+"${TOOLU_CONFIG_DIR}/exa-search/search.sh" crawl <url> [url...] [-m max_chars]
 
 Options:
   -m, --max-chars  Max characters per page (default: 3000)
@@ -69,7 +69,7 @@ Options:
 ### similar
 
 ```bash
-search.sh similar <url> [-n num_results] [--highlights N]
+"${TOOLU_CONFIG_DIR}/exa-search/search.sh" similar <url> [-n num_results] [--highlights N]
 ```
 
 ## Key Constraints

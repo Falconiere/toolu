@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env -S bun --no-env-file
 /**
  * Exa API CLI — search, crawl, and find similar content. The TypeScript port of
  * the bash search.sh (#270): same commands, flags, output and exit statuses.

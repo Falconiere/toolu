@@ -26,6 +26,7 @@ import { INSTALL_SCENARIOS } from "./opencode-host/scenarios-install.ts";
 import { PATH_SCENARIOS } from "./opencode-host/scenarios-paths.ts";
 import { STARTUP_SCENARIOS } from "./opencode-host/scenarios-startup.ts";
 import { BROWSER_SCENARIOS } from "./opencode-host/scenarios-browser.ts";
+import { EXA_SCENARIOS } from "./opencode-host/scenarios-exa.ts";
 
 const ALL_SCENARIOS = [
   ...ENTRY_SCENARIOS,
@@ -33,6 +34,7 @@ const ALL_SCENARIOS = [
   ...PATH_SCENARIOS,
   ...INSTALL_SCENARIOS,
   ...BROWSER_SCENARIOS,
+  ...EXA_SCENARIOS,
 ];
 
 /** The scenarios named in `ids`, or every one; an unknown id is an error, not an empty run. */

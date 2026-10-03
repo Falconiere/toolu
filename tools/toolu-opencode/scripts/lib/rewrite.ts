@@ -103,6 +103,29 @@ ${rewritten.slice(wrapperStart)}`;
         "use the native `exa-search-exa-search` skill when enabled, or OpenCode's `webfetch`.",
       );
     }
+    if (skillId === "exa-search-exa-search") {
+      const cliStart = rewritten.indexOf("```bash\n# Codex\n");
+      const fallbackStart = rewritten.indexOf("Repo-checkout fallback", cliStart);
+      if (cliStart < 0 || fallbackStart < 0) {
+        throw new Error("exa-search skill: cannot find host-specific CLI instructions");
+      }
+      rewritten = `${rewritten.slice(0, cliStart)}\`\`\`bash
+# OpenCode
+"\${TOOLU_CONFIG_DIR}/exa-search/search.sh" <command> [options]
+\`\`\`
+
+OpenCode sets \`TOOLU_CONFIG_DIR\` to this project's helper root in every bash call.
+The exa-search SessionStart entry publishes the helper and gives its exact path.
+If \`EXA_API_KEY\` is unset, use OpenCode's \`websearch\` when available or
+\`webfetch\` for a known URL. Do not call the Exa helper until the key is set,
+and never print the key.
+
+${rewritten.slice(fallbackStart)}`;
+      rewritten = rewritten.replace(
+        /^search\.sh(?= )/gm,
+        '"${TOOLU_CONFIG_DIR}/exa-search/search.sh"',
+      );
+    }
     if (skillId === "jev-jev") rewritten = opencodeJev(rewritten);
     if (skillId === "context7-context7") rewritten = opencodeContext7(rewritten);
     if (skillId === "statusline-status") {

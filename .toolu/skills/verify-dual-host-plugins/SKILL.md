@@ -46,6 +46,11 @@ startup behavior in both Codex and Claude Code.
   command environment before reporting them missing, and never print their value.
   Exercise published Bun commands with an empty `PATH`: a launcher can resolve
   Bun through `TOOLU_BUN` or `~/.bun/bin/bun` even when an env shebang cannot.
+- A published `#!/usr/bin/env bun` CLI can auto-load a project's `.env` even
+  when its startup hook used `--no-env-file`. For credentialed helpers that must
+  use only exported keys, use `#!/usr/bin/env -S bun --no-env-file` and test the
+  published symlink from a project with a `.env`-only sentinel key. Require no
+  request and no key in model-visible output.
 - Packaging and Codex smoke assertions contain explicit plugin/skill/hook counts.
   Update relevant counts together when adding a plugin.
 - Keep host overrides scoped to the operation being verified. A Codex override

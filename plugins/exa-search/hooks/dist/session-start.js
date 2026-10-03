@@ -1,6 +1,36 @@
 // @bun
 // plugins/exa-search/hooks/src/session-start.ts
 import { resolve } from "path";
+
+// packages/toolu-core/src/state/state-io.ts
+function toJqJson(value, pretty) {
+  const json = pretty ? JSON.stringify(value, null, 2) : JSON.stringify(value);
+  return json.replaceAll("\x7F", "\\u007f");
+}
+
+// packages/toolu-core/src/startup/context.ts
+var MAX_CONTEXT_CHARS = 1e4;
+function bounded(text, max) {
+  if (text.length <= max)
+    return text;
+  const code = text.charCodeAt(max - 1);
+  const end = code >= 55296 && code <= 56319 ? max - 1 : max;
+  return text.slice(0, end);
+}
+function sessionContext(event, text) {
+  if (text === "")
+    return;
+  return {
+    hookSpecificOutput: {
+      hookEventName: event,
+      additionalContext: bounded(text, MAX_CONTEXT_CHARS)
+    }
+  };
+}
+function renderHookOutput(value, pretty) {
+  return `${toJqJson(value, pretty)}
+`;
+}
 // packages/toolu-core/src/host/host-name.ts
 var HOST_NAMES = ["claude", "codex", "cursor", "opencode", "hermes"];
 function envValue(env, key) {
@@ -229,10 +259,16 @@ function publishBunCli(options) {
   return result;
 }
 // plugins/exa-search/hooks/src/session-start.ts
-publishBunCli({
+var published = publishBunCli({
   plugin: "exa-search",
   source: resolve(import.meta.dir, "../dist/search.js"),
   dir: "exa-search",
   name: "search.sh",
   tool: "exa-search search CLI"
 });
+if (process.env.TOOLU_HOST_OVERRIDE === "opencode" && published.status === "published") {
+  const guidance = (process.env.EXA_API_KEY ?? "") === "" ? "EXA_API_KEY is unset. For web search, use OpenCode's websearch if available; for a known URL, use webfetch. Do not call the Exa helper until the key is set." : "Load the native skill exa-search-exa-search for the research workflow. Use search for web queries, crawl for known URLs, and similar for related pages.";
+  const context = sessionContext("SessionStart", `exa-search helper: ${published.path}. ${guidance} Native skill: exa-search-exa-search.`);
+  if (context !== undefined)
+    process.stdout.write(renderHookOutput(context, false));
+}
