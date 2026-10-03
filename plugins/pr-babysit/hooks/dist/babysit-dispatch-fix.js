@@ -250,16 +250,20 @@ function loadState(path) {
 }
 
 // plugins/pr-babysit/hooks/src/babysit/fixer-dispatch.ts
-import { spawnSync } from "child_process";
+import { spawnSync as spawnSync2 } from "child_process";
 import {
   copyFileSync,
-  existsSync as existsSync2,
-  readFileSync as readFileSync2,
+  existsSync as existsSync3,
+  readFileSync as readFileSync3,
   readdirSync,
   rmSync as rmSync2,
   writeFileSync as writeFileSync2
 } from "fs";
 import { basename as basename2, dirname as dirname2, join as join2, resolve } from "path";
+
+// plugins/pr-babysit/hooks/src/babysit/fixer-process.ts
+import { spawn, spawnSync } from "child_process";
+import { closeSync, existsSync as existsSync2, openSync, readFileSync as readFileSync2 } from "fs";
 
 // plugins/pr-babysit/hooks/src/babysit/fixer-route.ts
 var SAFE = /^[A-Za-z0-9_./:=,@%+#-]+$/;
@@ -311,10 +315,146 @@ function agentArgs(host, name, model, effort, unattended) {
     fail("config_invalid", `unsafe ${host} arg for the pane shell: ${bad}`, { arg: bad });
   return args;
 }
+function commandAvailable(name) {
+  return Bun.which(name, { PATH: process.env.PATH ?? "" }) !== null;
+}
+
+// plugins/pr-babysit/hooks/src/babysit/fixer-process.ts
+var FIXER_AGENT = "pr-babysit-fixer";
+var DENY = "deny";
+var FIXER_AGENT_CONFIG = {
+  mode: "primary",
+  description: "pr-babysit fixer: edits, tests and commits review fixes in its worktree",
+  permission: {
+    task: DENY,
+    bash: {
+      gh: DENY,
+      "gh *": DENY,
+      "git push": DENY,
+      "git push *": DENY,
+      "git * push": DENY,
+      "git * push *": DENY
+    }
+  }
+};
+function isObject(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function fixerConfigContent(existing) {
+  let base = {};
+  if (existing !== undefined && existing.trim() !== "") {
+    let parsed;
+    try {
+      parsed = JSON.parse(existing);
+    } catch {
+      parsed = undefined;
+    }
+    if (!isObject(parsed))
+      fail("config_invalid", "OPENCODE_CONFIG_CONTENT is not a JSON object; fix or unset it");
+    if (parsed.agent !== undefined && !isObject(parsed.agent))
+      fail("config_invalid", "OPENCODE_CONFIG_CONTENT agent is not an object");
+    base = parsed;
+  }
+  const agents = isObject(base.agent) ? base.agent : {};
+  return JSON.stringify({ ...base, agent: { ...agents, [FIXER_AGENT]: FIXER_AGENT_CONFIG } });
+}
+function opencodeFixerArgs(run) {
+  return [
+    "run",
+    "--format",
+    "json",
+    "--dir",
+    run.worktree,
+    "--agent",
+    FIXER_AGENT,
+    ...agentArgs("opencode", FIXER_AGENT, run.model, run.effort, run.unattended),
+    run.prompt
+  ];
+}
+function processStart(pid) {
+  const res = spawnSync("ps", ["-o", "lstart=", "-p", String(pid)], { encoding: "utf8" });
+  return res.status === 0 ? res.stdout.trim() : "";
+}
+function groupMembers(pgid) {
+  const res = spawnSync("ps", ["-A", "-o", "pid=,pgid=,stat="], { encoding: "utf8" });
+  if (res.status !== 0)
+    fail("process_error", `ps failed: ${(res.stderr ?? "").trim()}`);
+  return res.stdout.split(`
+`).flatMap((line) => {
+    const [pid, group, stat] = line.trim().split(/\s+/);
+    return group === String(pgid) && stat !== undefined && !stat.startsWith("Z") ? [Number(pid)] : [];
+  });
+}
+function groupAlive(pid, start) {
+  if (!Number.isInteger(pid) || pid <= 1)
+    return false;
+  const leader = processStart(pid);
+  if (leader !== "" && leader !== start)
+    return false;
+  return groupMembers(pid).length > 0;
+}
+function signalGroup(pid, signal) {
+  try {
+    process.kill(-pid, signal);
+  } catch (error) {
+    if (error.code !== "ESRCH")
+      throw error;
+  }
+}
+function waitGone(pid, start, seconds) {
+  for (let i = 0;i < seconds * 10; i += 1) {
+    if (!groupAlive(pid, start))
+      return true;
+    Bun.sleepSync(100);
+  }
+  return !groupAlive(pid, start);
+}
+function stopGroup(pid, start) {
+  if (!groupAlive(pid, start))
+    return true;
+  signalGroup(pid, "SIGTERM");
+  if (waitGone(pid, start, 10))
+    return true;
+  signalGroup(pid, "SIGKILL");
+  return waitGone(pid, start, 5);
+}
+function spawnFixer(run, log, env) {
+  if (!commandAvailable("opencode"))
+    return { error: "opencode is not on PATH" };
+  const args = opencodeFixerArgs(run);
+  const content = fixerConfigContent(env.OPENCODE_CONFIG_CONTENT);
+  const fd = openSync(log, "a");
+  try {
+    const child = spawn("opencode", args, {
+      cwd: run.worktree,
+      env: { ...env, PWD: run.worktree, OPENCODE_CONFIG_CONTENT: content },
+      detached: true,
+      stdio: ["ignore", fd, fd]
+    });
+    child.on("error", () => {
+      return;
+    });
+    child.unref();
+    if (child.pid === undefined)
+      return { error: "opencode did not start" };
+    return { pid: child.pid, pidStart: processStart(child.pid) };
+  } catch (error) {
+    return { error: `opencode did not start: ${error.message}` };
+  } finally {
+    closeSync(fd);
+  }
+}
+function logTail(log, lines = 40) {
+  if (!existsSync2(log))
+    return "";
+  return readFileSync2(log, "utf8").split(`
+`).slice(-lines).join(`
+`);
+}
 
 // plugins/pr-babysit/hooks/src/babysit/fixer-dispatch.ts
 function run(argv, quiet = false) {
-  const result = spawnSync(argv[0] ?? "", argv.slice(1), {
+  const result = spawnSync2(argv[0] ?? "", argv.slice(1), {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -330,7 +470,7 @@ function git(args, code = "git_error", message) {
 }
 function readJson2(path, code, message) {
   try {
-    const value = JSON.parse(readFileSync2(path, "utf8"));
+    const value = JSON.parse(readFileSync3(path, "utf8"));
     if (value && typeof value === "object" && !Array.isArray(value))
       return value;
   } catch {}
@@ -411,9 +551,15 @@ function fixerBriefPath(stateFile, round, seq) {
 function fixerReportPath(stateFile, round, seq) {
   return `${stateFile.replace(/\.json$/, "")}.fixer-r${round}g${seq}.report.json`;
 }
+function fixerLogPath(stateFile, round, seq) {
+  return `${stateFile.replace(/\.json$/, "")}.fixer-r${round}g${seq}.log`;
+}
+function nativeWorktreePath(stateFile) {
+  return `${stateFile.replace(/\.json$/, "")}.worktree`;
+}
 function fixerOutcome(report, pane) {
   try {
-    const value = JSON.parse(readFileSync2(report, "utf8"));
+    const value = JSON.parse(readFileSync3(report, "utf8"));
     if (value.status === "done")
       return "done";
     if (value.status === "failed")
@@ -471,7 +617,7 @@ function acceptClaudeTrust(name, path) {
 function dirt(path) {
   const result = run(["git", "-C", path, "status", "--porcelain", "--untracked-files=all"], true);
   return result.output.split(`
-`).filter((line) => line && !/^\?\? \.(claude|codex|cursor)\//.test(line));
+`).filter((line) => line && !/^\?\? \.(claude|codex|cursor|opencode)\//.test(line));
 }
 function cleanOrFail(path) {
   const changes = dirt(path);
@@ -545,7 +691,7 @@ class Dispatcher {
   status() {
     const wt = this.state.herdrWorktree;
     let commits = [];
-    if (wt?.path && existsSync2(wt.path)) {
+    if (wt?.path && existsSync3(wt.path)) {
       const result = run(["git", "-C", wt.path, "rev-list", "--reverse", `refs/remotes/origin/${wt.prBranch}..HEAD`], true);
       if (result.status === 0)
         commits = result.output.trim().split(`
@@ -593,8 +739,8 @@ class Dispatcher {
     if (plan.groups.flatMap((g) => g.items).some((id) => flagged?.flagged?.[id]))
       fail("plan_invalid", "the plan includes an injection-flagged thread");
     for (const group of plan.groups) {
-      if (!["claude", "codex", "cursor"].includes(group.host))
-        fail("config_invalid", `plan group ${group.seq} names host '${group.host}'; use claude, codex or cursor`);
+      if (!["claude", "codex", "cursor", "opencode"].includes(group.host))
+        fail("config_invalid", `plan group ${group.seq} names host '${group.host}'; use claude, codex, cursor or opencode`);
       agentArgs(hostKind(group.host), "pb-000000-r1g1", group.model, group.effort, true);
     }
   }
@@ -615,14 +761,36 @@ class Dispatcher {
       fail("stale_branch", `local ${branch} holds commits origin/${pr} does not; inspect it before babysit reuses the name`, { branch });
     this.cmd(["git", "-C", root, "branch", "--quiet", "-D", branch], "stale_branch", `git could not delete ${branch} (is it checked out in another worktree?)`);
   }
-  worktree(root, pr) {
+  openPane(root, path, label) {
+    const cmd = [
+      "herdr",
+      "worktree",
+      "open",
+      "--cwd",
+      root,
+      "--path",
+      path,
+      "--label",
+      label,
+      "--no-focus"
+    ];
+    this.record(cmd);
+    if (this.dry)
+      return { workspaceId: "<workspace>", paneId: "<root pane>" };
+    const opened = herdr(cmd.slice(1));
+    return {
+      workspaceId: opened.workspace.workspace_id,
+      paneId: opened.root_pane.pane_id
+    };
+  }
+  worktree(root, pr, needsPane) {
     const branch = `pr-babysit/${this.state.slot}`;
     const label = `pb-${this.state.number}`;
     const existing = this.state.herdrWorktree;
     let path;
     let workspaceId;
     let paneId;
-    if (existing?.path && (this.dry || existsSync2(existing.path))) {
+    if (existing?.path && (this.dry || existsSync3(existing.path))) {
       if (!this.dry)
         cleanOrFail(existing.path);
       this.cmd(["git", "-C", existing.path, "fetch", "--quiet", "origin", pr], "git_error", `git fetch origin ${pr} failed in ${existing.path}`);
@@ -630,55 +798,46 @@ class Dispatcher {
       path = existing.path;
       workspaceId = existing.workspaceId;
       paneId = existing.paneId;
-      if (!this.dry) {
-        const panes = herdrTry(["pane", "list", "--workspace", workspaceId]).value?.panes;
-        if (!panes?.some((pane) => pane.pane_id === paneId)) {
-          const cmd = [
-            "herdr",
-            "worktree",
-            "open",
-            "--cwd",
-            root,
-            "--path",
-            path,
-            "--label",
-            label,
-            "--no-focus"
-          ];
-          this.record(cmd);
-          const opened = herdr(cmd.slice(1));
-          workspaceId = opened.workspace.workspace_id;
-          paneId = opened.root_pane.pane_id;
-        }
+      if (needsPane && !this.dry) {
+        const panes = workspaceId === null ? undefined : herdrTry(["pane", "list", "--workspace", workspaceId]).value?.panes;
+        if (!panes?.some((pane) => pane.pane_id === paneId))
+          ({ workspaceId, paneId } = this.openPane(root, path, label));
       }
     } else {
       this.cmd(["git", "-C", root, "fetch", "--quiet", "origin", pr], "git_error", `git fetch origin ${pr} failed in ${root}`);
       this.cmd(["git", "-C", root, "worktree", "prune"]);
       this.dropBranch(root, branch, pr);
-      const cmd = [
-        "herdr",
-        "worktree",
-        "create",
-        "--cwd",
-        root,
-        "--branch",
-        branch,
-        "--base",
-        `origin/${pr}`,
-        "--label",
-        label,
-        "--no-focus"
-      ];
-      this.record(cmd);
-      if (this.dry) {
-        path = "<herdr worktree path>";
-        workspaceId = "<workspace>";
-        paneId = "<root pane>";
+      if (needsPane) {
+        const cmd = [
+          "herdr",
+          "worktree",
+          "create",
+          "--cwd",
+          root,
+          "--branch",
+          branch,
+          "--base",
+          `origin/${pr}`,
+          "--label",
+          label,
+          "--no-focus"
+        ];
+        this.record(cmd);
+        if (this.dry) {
+          path = "<herdr worktree path>";
+          workspaceId = "<workspace>";
+          paneId = "<root pane>";
+        } else {
+          const created = herdr(cmd.slice(1));
+          path = created.worktree.path;
+          workspaceId = created.workspace.workspace_id;
+          paneId = created.root_pane.pane_id;
+        }
       } else {
-        const created = herdr(cmd.slice(1));
-        path = created.worktree.path;
-        workspaceId = created.workspace.workspace_id;
-        paneId = created.root_pane.pane_id;
+        path = nativeWorktreePath(this.stateFile);
+        this.cmd(["git", "-C", root, "worktree", "add", "--quiet", "-b", branch, path, `origin/${pr}`], "git_error", `git worktree add ${path} failed (does the path already exist?)`);
+        workspaceId = null;
+        paneId = null;
       }
     }
     const wt = {
@@ -748,7 +907,7 @@ class Dispatcher {
       reportFailed: `${reportCommand} failed --note "<the reason>"`
     };
     const items = readJson2(itemsFile, "plan_invalid", `items file is missing or not JSON: ${itemsFile}`).items;
-    const template = readFileSync2(join2(this.pluginRoot, "skills/babysit/references/fixer-brief.md"), "utf8");
+    const template = readFileSync3(join2(this.pluginRoot, "skills/babysit/references/fixer-brief.md"), "utf8");
     const rendered = renderBrief(template, items, group, ctx);
     const argv = agentArgs(group.host, agent, group.model, group.effort, unattended);
     if (!this.dry) {
@@ -767,6 +926,33 @@ class Dispatcher {
       reason: null,
       startedAt: utcNow()
     });
+    const message = `You are a pr-babysit fixer. Read ${brief} and follow it exactly.`;
+    if (group.host === "opencode") {
+      const round = this.state.fixer?.round ?? context.round;
+      const run = {
+        model: group.model,
+        effort: group.effort,
+        unattended,
+        worktree: String(context.worktree),
+        prompt: message
+      };
+      this.record(["opencode", ...opencodeFixerArgs(run)]);
+      if (this.dry)
+        return rendered;
+      const log = fixerLogPath(this.stateFile, round, seq);
+      rmSync2(log, { force: true });
+      const spawned = spawnFixer(run, log, process.env);
+      if ("error" in spawned)
+        this.settle(seq, "agent_start_failed", "", spawned.error);
+      else
+        this.patchGroup(seq, {
+          status: "running",
+          pid: spawned.pid,
+          pidStart: spawned.pidStart,
+          log
+        });
+      return rendered;
+    }
     const start = [
       "herdr",
       "agent",
@@ -786,7 +972,7 @@ class Dispatcher {
       "agent",
       "prompt",
       agent,
-      `You are a pr-babysit fixer. Read ${brief} and follow it exactly.`,
+      message,
       "--wait",
       "--until",
       "working",
@@ -800,7 +986,7 @@ class Dispatcher {
     if (this.dry)
       return rendered;
     let error = "";
-    if (Bun.which(hostCli(group.host)) === null)
+    if (!commandAvailable(hostCli(group.host)))
       error = `${hostCli(group.host)} is not on PATH`;
     else {
       const started = herdrTry(start.slice(1));
@@ -833,10 +1019,11 @@ class Dispatcher {
         agent: group?.agent ?? null
       });
     }
-    if (!this.dry && !reachable())
+    const needsPane = plan.groups.some((group) => group.host !== "opencode");
+    if (needsPane && !this.dry && !reachable())
       fail("herdr_unavailable", "herdr is not reachable (not installed, or its server is not running); run this round inline");
     this.cmd(["git", "-C", repoRoot, "fetch", "--quiet", "origin", base], "git_error", `git fetch origin ${base} failed in ${repoRoot}`);
-    const wt = this.worktree(repoRoot, branch);
+    const wt = this.worktree(repoRoot, branch, needsPane);
     const round = items.round ?? 1;
     const itemsCopy = `${this.stateFile.replace(/\.json$/, "")}.fixer-items.json`;
     const context = {
@@ -873,11 +1060,19 @@ class Dispatcher {
         }))
       };
     });
-    const brief = this.launch(1, this.dry ? itemsFile : itemsCopy, context, wt.paneId, plan.unattended !== false, this.dry ? plan.groups[0] : undefined);
+    const brief = this.launch(1, this.dry ? itemsFile : itemsCopy, context, wt.paneId ?? "", plan.unattended !== false, this.dry ? plan.groups[0] : undefined);
     return this.dry ? { dryRun: true, commands: this.commands, brief } : this.status();
   }
-  settleGroup(seq) {
-    const group = this.group(seq);
+  groupOutcome(group) {
+    if (group.host === "opencode") {
+      const tail = logTail(group.log ?? "");
+      const outcome = fixerOutcome(group.report ?? "", tail);
+      const last = tail.replace(/\s+$/, "").slice(-600);
+      return {
+        outcome,
+        error: outcome === "no_report" ? `the fixer exited without a report; last output: ${last || "(none)"}` : ""
+      };
+    }
     const read = run([
       "herdr",
       "agent",
@@ -891,6 +1086,10 @@ class Dispatcher {
     const readError = read.status !== 0 ? `could not read the fixer's last screen: ${read.output.replace(/\s+$/, "").replace(/\n/g, " ").slice(0, 160)}` : "";
     const outcome = fixerOutcome(group.report ?? "", read.status === 0 ? read.output : "");
     stopAgent(group.agent ?? "");
+    return { outcome, error: outcome === "no_report" ? readError : "" };
+  }
+  settleGroup(seq) {
+    const { outcome, error } = this.groupOutcome(this.group(seq));
     let head = "";
     if (outcome === "done") {
       const wt = this.state.herdrWorktree?.path ?? "";
@@ -901,7 +1100,20 @@ class Dispatcher {
       }
       head = result.output.trim();
     }
-    this.settle(seq, outcome, head, outcome === "no_report" ? readError : "");
+    this.settle(seq, outcome, head, error);
+  }
+  processExited(group, deadline) {
+    while (groupAlive(group.pid ?? 0, group.pidStart ?? "")) {
+      if (Date.now() >= deadline)
+        return false;
+      Bun.sleepSync(1000);
+    }
+    return true;
+  }
+  stopFixer(group) {
+    if (group.host === "opencode")
+      return group.pid === undefined || stopGroup(group.pid, group.pidStart ?? "");
+    return group.agent === undefined || stopAgent(group.agent);
   }
   wait() {
     if (!this.state.fixer)
@@ -936,12 +1148,19 @@ class Dispatcher {
         if (!fresh && remaining < 250)
           break;
         fresh = false;
-        if (group.agent)
-          stopAgent(group.agent);
+        this.stopFixer(group);
         this.launch(seq, this.state.fixer.itemsFile, this.state.fixer.context, this.state.herdrWorktree?.paneId ?? "", this.state.fixer.unattended);
         continue;
       }
       fresh = false;
+      if (group.host === "opencode") {
+        if (!this.processExited(group, deadline))
+          break;
+        this.settleGroup(seq);
+        if (this.next(seq, count))
+          continue;
+        break;
+      }
       const waited = herdrTry([
         "agent",
         "wait",
@@ -965,28 +1184,35 @@ class Dispatcher {
         break;
       }
       this.settleGroup(seq);
-      if (this.state.fixer?.status !== "running")
+      if (!this.next(seq, count))
         break;
-      if (seq >= count) {
-        this.save((state) => {
-          if (state.fixer) {
-            state.fixer.status = "done";
-            state.fixer.finishedAt = utcNow();
-          }
-        });
-        break;
-      }
-      this.save((state) => {
-        if (state.fixer)
-          state.fixer.current = seq + 1;
-      });
     }
     return this.status();
   }
+  next(seq, count) {
+    if (this.state.fixer?.status !== "running")
+      return false;
+    if (seq >= count) {
+      this.save((state) => {
+        if (state.fixer) {
+          state.fixer.status = "done";
+          state.fixer.finishedAt = utcNow();
+        }
+      });
+      return false;
+    }
+    this.save((state) => {
+      if (state.fixer)
+        state.fixer.current = seq + 1;
+    });
+    return true;
+  }
   cleanup() {
     const active = this.state.fixer?.groups.find((g) => ["running", "launching", "blocked"].includes(g.status));
-    if (active?.agent && !this.dry)
-      stopAgent(active.agent);
+    if (active && !this.dry && !this.stopFixer(active))
+      fail("fixer_running", `fixer group ${active.seq} did not exit; its worktree is kept`, {
+        group: active.seq
+      });
     this.save((state) => {
       state.fixer = null;
     });
@@ -995,18 +1221,21 @@ class Dispatcher {
     let deleted = false;
     let note = null;
     if (wt) {
-      if (this.dry || existsSync2(wt.path)) {
-        if (!this.dry) {
+      if (this.dry || existsSync3(wt.path)) {
+        if (!this.dry)
           cleanOrFail(wt.path);
-          if (!reachable())
+        if (wt.workspaceId === null)
+          this.cmd(["git", "-C", wt.repoRoot, "worktree", "remove", "--force", wt.path], "git_error", `could not remove the fixer worktree ${wt.path}`);
+        else {
+          if (!this.dry && !reachable())
             fail("herdr_unavailable", `herdr is not reachable; cannot remove workspace ${wt.workspaceId}`);
-        }
-        const remove = ["herdr", "worktree", "remove", "--workspace", wt.workspaceId, "--force"];
-        this.record(remove);
-        if (!this.dry) {
-          const result = herdrTry(remove.slice(1));
-          if (result.error)
-            this.cmd(["git", "-C", wt.repoRoot, "worktree", "remove", "--force", wt.path], "herdr_error", `could not remove the fixer worktree ${wt.path}: ${result.error.message}`);
+          const remove = ["herdr", "worktree", "remove", "--workspace", wt.workspaceId, "--force"];
+          this.record(remove);
+          if (!this.dry) {
+            const result = herdrTry(remove.slice(1));
+            if (result.error)
+              this.cmd(["git", "-C", wt.repoRoot, "worktree", "remove", "--force", wt.path], "herdr_error", `could not remove the fixer worktree ${wt.path}: ${result.error.message}`);
+          }
         }
         removed = true;
       }
