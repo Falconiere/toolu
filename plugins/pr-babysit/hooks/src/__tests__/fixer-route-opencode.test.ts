@@ -190,5 +190,7 @@ test("fixer flags: OpenCode uses --auto, --model and --variant; other hosts are 
     "--model",
     "composer-2.5",
   ]);
-  expect(() => agentArgs("opencode", "pb-1", "probe/m", "a;b", true)).toThrow("unsafe opencode arg");
+  expect(() => agentArgs("opencode", "pb-1", "probe/m", "a;b", true)).toThrow(
+    "unsafe opencode arg",
+  );
 });

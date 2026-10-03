@@ -248,7 +248,10 @@ function heuristic(item) {
 }
 function jevScript(host) {
   const home = process.env.HOME || homedir();
-  const candidates = host === "opencode" ? [process.env.PB_JEV, process.env.TOOLU_CONFIG_DIR && join(process.env.TOOLU_CONFIG_DIR, "jev/jev.sh")] : [
+  const candidates = host === "opencode" ? [
+    process.env.PB_JEV,
+    process.env.TOOLU_CONFIG_DIR && join(process.env.TOOLU_CONFIG_DIR, "jev/jev.sh")
+  ] : [
     process.env.PB_JEV,
     join(process.env.CLAUDE_CONFIG_DIR || join(home, ".claude"), "jev/jev.sh"),
     join(process.env.CODEX_HOME || join(home, ".codex"), "jev/jev.sh")

@@ -58,9 +58,13 @@ export function hostKind(name: unknown): Host {
   if (normalized === "codex") return "codex";
   if (normalized === "cursor" || normalized === "cursor-agent") return "cursor";
   if (normalized === "opencode") return "opencode";
-  fail("config_invalid", `unknown host '${String(name)}'; use one of claude, codex, cursor, opencode`, {
-    host: name,
-  });
+  fail(
+    "config_invalid",
+    `unknown host '${String(name)}'; use one of claude, codex, cursor, opencode`,
+    {
+      host: name,
+    },
+  );
 }
 
 export function hostCli(host: Host): string {
@@ -299,7 +303,10 @@ function jevScript(host: ControllerHost): string | undefined {
   const home = process.env.HOME || homedir();
   const candidates =
     host === "opencode"
-      ? [process.env.PB_JEV, process.env.TOOLU_CONFIG_DIR && join(process.env.TOOLU_CONFIG_DIR, "jev/jev.sh")]
+      ? [
+          process.env.PB_JEV,
+          process.env.TOOLU_CONFIG_DIR && join(process.env.TOOLU_CONFIG_DIR, "jev/jev.sh"),
+        ]
       : [
           process.env.PB_JEV,
           join(process.env.CLAUDE_CONFIG_DIR || join(home, ".claude"), "jev/jev.sh"),
