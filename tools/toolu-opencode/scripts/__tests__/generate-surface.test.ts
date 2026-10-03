@@ -60,6 +60,29 @@ test("generated resource links are independent of plugin directory order", () =>
   expect(jevDoc).toContain("../../../../skills/jev-jev/evals/README.md");
 });
 
+test("agent-browser skill renders one project-scoped OpenCode helper command", () => {
+  const root = repoRoot();
+  const out = mkdtempSync(join(tmpBase, "toolu-browser-surface-"));
+  const browser = listPluginManifests(join(root, "plugins"))?.find(
+    (plugin) => plugin.name === "agent-browser",
+  );
+  if (browser === undefined) throw new Error("agent-browser manifest missing");
+  const plan = planSurface({ repoRoot: root, outDir: out, plugins: [browser] });
+  const skill = plan.files.get(join(out, "skills/agent-browser-agent-browser/SKILL.md"));
+  expect(skill).toBeDefined();
+  expect(skill).toContain("# OpenCode");
+  expect(skill).toContain('"${TOOLU_CONFIG_DIR}/agent-browser/agent-browser.sh"');
+  expect(skill).not.toContain("# Codex");
+  expect(skill).not.toContain("# Claude Code");
+  expect(skill).toContain("snapshot");
+  expect(skill).toContain("--content-boundaries");
+  expect(skill).toContain("agent-browser install");
+  expect(skill).toContain("context7-context7");
+  expect(skill).toContain("exa-search-exa-search");
+  expect(skill).toContain("when enabled");
+  rmSync(out, { recursive: true, force: true });
+});
+
 test("drift check fails when a source skill changes", () => {
   const root = repoRoot();
   const copyRoot = mkdtempSync(join(tmpBase, "toolu-surface-src-"));

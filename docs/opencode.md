@@ -211,6 +211,12 @@ With `ast-grep` selected, its two registry modules run on OpenCode's own tools (
 
 The `ast-grep-ast-grep` skill names only the `ast-grep` CLI, so its examples run as written in bash.
 
+### Browser automation
+
+Add `agent-browser` to the `enabled` list and restart OpenCode. Native skill discovery then exposes `agent-browser-agent-browser`. Startup gives the agent the project-specific helper path; in a bash call it is `"${TOOLU_CONFIG_DIR}/agent-browser/agent-browser.sh"`. Open a page with that helper, take an accessibility-tree `snapshot` for `@eN` refs, act on a ref, re-snapshot after the page changes, and close the browser. The skill includes output bounds and untrusted-page-text guidance.
+
+The external `agent-browser` CLI and Chromium are separate prerequisites: install the CLI with `npm i -g agent-browser`, then run `agent-browser install`. The helper does not install either one. If the CLI is absent, it exits 127 with an install command; a missing browser executable is reported by the CLI. Disabling `agent-browser` in the next selection removes its skill, startup instructions and toolu-owned helper symlink from that project's data root.
+
 ## Verify a real gate
 
 Hermetic proof (matches CI):
@@ -239,6 +245,13 @@ The same runner proves surface install and discovery ([#345](https://github.com/
 
 ```bash
 bun run smoke:opencode-entry surfaces.npm-clean surfaces.lifecycle surfaces.precedence surfaces.skill-roots surfaces.both-routes surfaces.selection
+```
+
+Agent-browser scenarios check native skill discovery, model-visible startup path, missing CLI and Chromium diagnostics, and cleanup after disabling the plugin. The workflow scenario uses the installed `agent-browser` CLI and Chromium to click a button on a local interactive page through the published helper, then checks the changed text. It requires `agent-browser install` once on the test machine; it uses an isolated OpenCode profile and a short temporary browser socket directory.
+
+```bash
+bun run smoke:opencode-entry browser.enabled browser.missing-binary browser.missing-chromium browser.disabled
+bun run smoke:opencode-entry browser.workflow
 ```
 
 Live pre-tool smoke on the pinned host checks protected edits, writes and patches, unsafe shell, commit and push gates, MCP and task denials, plus an allowed shell call:

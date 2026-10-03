@@ -1,10 +1,15 @@
 /** agent-browser's SessionStart bundle through its real hooks.json launcher (#269, ported from session-start.bats). */
 import { resolve } from "node:path";
-import { publishedCliSuite } from "@toolu/conformance/harness/startup";
+import { readlinkSync } from "node:fs";
+import { expect, test } from "bun:test";
+import { createSandbox } from "@toolu/conformance/harness/sandbox";
+import { publishedCliSuite, runStartupHook } from "@toolu/conformance/harness/startup";
+
+const pluginRoot = resolve(import.meta.dir, "../../..");
 
 publishedCliSuite({
   plugin: "agent-browser",
-  pluginRoot: resolve(import.meta.dir, "../../.."),
+  pluginRoot,
   source: "hooks/dist/agent-browser.js",
   dir: "agent-browser",
   name: "agent-browser.sh",
@@ -17,4 +22,28 @@ publishedCliSuite({
     exitCode: 127,
     output: "agent-browser not found",
   },
+});
+
+test("OpenCode startup names the published helper and native browser skill", async () => {
+  using sb = createSandbox();
+  const dataRoot = resolve(sb.project, ".opencode/toolu/state");
+  const result = await runStartupHook(pluginRoot, "session-start", sb, {
+    HOME: sb.home,
+    CLAUDE_PLUGIN_ROOT: pluginRoot,
+    TOOLU_BUN: process.execPath,
+    TOOLU_HOST_OVERRIDE: "opencode",
+    TOOLU_CONFIG_DIR: dataRoot,
+  });
+  expect(result.exitCode).toBe(0);
+  expect(result.stderr).toBe("");
+  const output = JSON.parse(result.stdout);
+  expect(output.hookSpecificOutput.hookEventName).toBe("SessionStart");
+  expect(output.hookSpecificOutput.additionalContext).toContain(
+    `${dataRoot}/agent-browser/agent-browser.sh`,
+  );
+  expect(output.hookSpecificOutput.additionalContext).toContain("agent-browser-agent-browser");
+  expect(output.hookSpecificOutput.additionalContext).toContain("snapshot");
+  expect(readlinkSync(`${dataRoot}/agent-browser/agent-browser.sh`)).toBe(
+    resolve(pluginRoot, "hooks/dist/agent-browser.js"),
+  );
 });
