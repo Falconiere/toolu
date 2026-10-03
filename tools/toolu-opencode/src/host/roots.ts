@@ -108,6 +108,11 @@ export function opencodePluginSelectionPath(projectRoot: string): string {
   return join(projectRoot, OPENCODE_PROJECT_DIRNAME, "toolu", "plugins.json");
 }
 
+/** Global selection file for every project without its own (#345): `<config root>/toolu/plugins.json`. */
+export function opencodeGlobalPluginSelectionPath(configRoot: string): string {
+  return join(configRoot, "toolu", "plugins.json");
+}
+
 /** Registry root under the OpenCode data root. */
 export function opencodeRegistryRoot(dataRoot: string): string {
   return join(dataRoot, "toolu");

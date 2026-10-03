@@ -39,6 +39,7 @@ test("binds directory, project root, options and a defined-only env", () => {
     { KEEP: "1", DROP: undefined },
   );
   expect(binding.directory).toBe("/repo/pkg");
+  expect(binding.worktree).toBe("/repo");
   expect(binding.projectRoot).toBe("/repo");
   expect(binding.repoRootOption).toBe("/opt/toolu");
   expect(binding.optionsError).toBeUndefined();

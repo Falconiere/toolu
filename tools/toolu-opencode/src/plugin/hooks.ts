@@ -6,11 +6,16 @@
  * failure becomes a `tool.execute.before` that refuses every call, and the reason
  * goes to the host log, which `opencode --print-logs` shows. A ready instance
  * also gives every bash call toolu's helper environment through `shell.env`
- * (#343); a not-ready one refuses bash, so it adds none.
+ * (#343), and adds the selected plugins' skills, agents and commands to the
+ * host config through `config` (#345). A not-ready instance refuses every
+ * call, so it adds neither.
  */
 import type { Hooks } from "@opencode-ai/plugin";
+import type { SelectionSource } from "../inventory/selection.ts";
 import { createDenyAllToolBefore } from "../adapter/tool-before.ts";
 import { applyShellEnv, type ShellEnv } from "../host/runtime-env.ts";
+import { applySurfaces, type SurfaceReport } from "../surfaces/apply.ts";
+import type { SurfacePlan } from "../surfaces/plan.ts";
 import type { HostBinding, LogLevel } from "./context.ts";
 import { createContextHooks } from "./context-delivery.ts";
 import { prepareEnforcement, type Enforcement } from "./enforcement.ts";
@@ -51,12 +56,60 @@ function shellEnvHook(shell: ShellEnv): NonNullable<Hooks["shell.env"]> {
   };
 }
 
-/** Startup notes as one log line, so a slow host log costs one bounded call, not one per note. */
+/** Notes as one bounded log line, so a slow host log costs one call, not one per note. */
+function notesLine(label: string, notes: readonly string[]): string | undefined {
+  if (notes.length === 0) return undefined;
+  const shown = notes.slice(0, MAX_DIAGNOSTICS).join("; ");
+  const more = notes.length - MAX_DIAGNOSTICS;
+  return `toolu: ${label}: ${shown}${more > 0 ? ` (${more} more)` : ""}`;
+}
+
 export function startupNotes(diagnostics: readonly string[]): string | undefined {
-  if (diagnostics.length === 0) return undefined;
-  const shown = diagnostics.slice(0, MAX_DIAGNOSTICS).join("; ");
-  const more = diagnostics.length - MAX_DIAGNOSTICS;
-  return `toolu: startup notes: ${shown}${more > 0 ? ` (${more} more)` : ""}`;
+  return notesLine("startup notes", diagnostics);
+}
+
+const SOURCE_LABEL: Record<SelectionSource, string> = {
+  project: "project selection",
+  global: "global selection",
+  default: "all installed plugins",
+};
+
+function idList(list: readonly string[]): string {
+  return list.length > 0 ? list.join(", ") : "none";
+}
+
+/** The owned contribution, by ID, and every overlap with the user's own definitions. */
+function surfaceLines(applied: SurfaceReport, source: SelectionSource, ms: number): string[] {
+  const { skills, agents, commands } = applied;
+  const owned = `skills ${idList(skills)}; agents ${idList(agents)}; commands ${idList(commands)}`;
+  const notes = notesLine("surface notes", [
+    ...applied.kept.map(({ id, location }) => `skill ${id} kept from ${location}`),
+    ...applied.merged.map(({ kind, id }) => `${kind} ${id} merged under your config`),
+    ...applied.notes,
+  ]);
+  const head = `toolu: surfaces (${SOURCE_LABEL[source]}, ${Math.round(ms)} ms): ${owned}`;
+  return notes === undefined ? [head] : [head, notes];
+}
+
+/** `config`: add the planned surfaces to the host's merged config; never throws. */
+function surfacesHook(
+  binding: HostBinding,
+  plan: SurfacePlan,
+  source: SelectionSource,
+): NonNullable<Hooks["config"]> {
+  return async (config) => {
+    const started = performance.now();
+    let lines: string[];
+    try {
+      const scope = { directory: binding.directory, worktree: binding.worktree, env: binding.env };
+      lines = surfaceLines(applySurfaces(config, plan, scope), source, performance.now() - started);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      await report(binding, "error", `toolu: surfaces not applied: ${reason}`);
+      return;
+    }
+    await Promise.all(lines.map((line) => report(binding, "info", line)));
+  };
 }
 
 /** Never rejects: a failure to prepare enforcement yields a hook that denies every tool call. */
@@ -92,6 +145,7 @@ export async function createTooluHooks(
       "tool.execute.before": enforcement.before,
       "shell.env": shellEnvHook(enforcement.shellEnv),
       "tool.execute.after": enforcement.after,
+      config: surfacesHook(binding, enforcement.surfaces, enforcement.selectionSource),
       "experimental.chat.system.transform": context.system,
       "chat.message": context.prompt,
       "experimental.session.compacting": context.compacting,

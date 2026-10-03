@@ -77,6 +77,7 @@ function binding(root: string, logged: Logged[]): HostBinding {
   env.TOOLU_BUN = process.execPath;
   return {
     directory: root,
+    worktree: root,
     projectRoot: root,
     repoRootOption: REPO_ROOT,
     optionsError: undefined,

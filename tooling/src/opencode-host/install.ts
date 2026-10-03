@@ -14,7 +14,12 @@ import { ContractError, type Pin } from "./schema.ts";
 export type HostBinary = { bin: string; version: string; installSource: string };
 type Env = Record<string, string | undefined>;
 
-const VERSION_TIMEOUT_MS = 15_000;
+/**
+ * A hang guard, not a budget, like `RUN_TIMEOUT_MS`. Under shared CPU load the
+ * pinned binary took 34 s, and over 60 s, to print its version and exit (#345),
+ * so 15 s killed a healthy host before any scenario ran.
+ */
+const VERSION_TIMEOUT_MS = 120_000;
 const INSTALL_TIMEOUT_MS = 300_000;
 
 /** `<bin> --version`, trimmed; a missing or failing binary is a ContractError. */

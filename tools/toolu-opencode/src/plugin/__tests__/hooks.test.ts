@@ -46,6 +46,7 @@ function binding(
   env.TOOLU_BUN = process.execPath;
   return {
     directory: root,
+    worktree: root,
     projectRoot: root,
     repoRootOption: REPO_ROOT,
     optionsError: undefined,
@@ -189,7 +190,7 @@ test("no repo root from options, env or a bundled catalog refuses every tool", a
   const logged: Logged[] = [];
   // A packed or prepacked checkout carries tools/toolu-opencode/plugins; this case has none.
   const hooks = await createTooluHooks(binding(root, logged, { repoRootOption: undefined }), (b) =>
-    prepareEnforcement(b, () => undefined),
+    prepareEnforcement(b, { findBundled: () => undefined }),
   );
   expect(await refusal(hooks, "bash", { command: "echo ok" })).toBe(
     "toolu: not ready: no bundled plugins/ tree; set plugin option repoRoot or TOOLU_REPO_ROOT",

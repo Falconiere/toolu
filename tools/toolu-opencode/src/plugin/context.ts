@@ -8,6 +8,8 @@ export type LogLevel = "info" | "error";
 export type HostBinding = {
   /** The host instance directory: the cwd every gate runs in. */
   directory: string;
+  /** The host's own worktree, `/` outside version control; skill discovery walks up to it. */
+  worktree: string;
   /** Where `.opencode/toolu.config.json` and `.opencode/toolu/plugins.json` live. */
   projectRoot: string;
   repoRootOption: string | undefined;
@@ -60,6 +62,7 @@ export function bindHostContext(
 ): HostBinding {
   return {
     directory: input.directory,
+    worktree: input.worktree,
     projectRoot: projectRootOf(input.worktree, input.directory),
     ...parseOptions(options),
     env: definedEnv(env),

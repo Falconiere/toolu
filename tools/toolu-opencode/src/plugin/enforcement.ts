@@ -1,4 +1,7 @@
-/** Preflight, plugin selection and bootstrap, then the gate hook — or the reason toolu is not ready (#336). */
+/**
+ * Preflight, plugin selection, the surface plan and bootstrap, then the gate
+ * hook — or the reason toolu is not ready (#336, #345).
+ */
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createToolAdviceStore } from "../adapter/tool-advice.ts";
@@ -6,6 +9,7 @@ import { createToolBeforeHandler, type ToolBefore } from "../adapter/tool-before
 import { createToolPostHandler } from "../adapter/tool-post.ts";
 import type { PermissionEvaluateHandlerOptions } from "../adapter/evaluate.ts";
 import type { PluginStartup } from "../bootstrap/result.ts";
+import type { SelectionSource } from "../inventory/selection.ts";
 import type { PluginManifest } from "../inventory/types.ts";
 import { bootstrapRuntime } from "../bootstrap/runtime.ts";
 import { opencodeConfigRoot, opencodeDataRoot } from "../host/roots.ts";
@@ -17,6 +21,8 @@ import {
 } from "../host/runtime-env.ts";
 import { resolveBunExecutable, runPreflight } from "../preflight/check.ts";
 import { selectPluginsWithDependencies } from "../select/resolve.ts";
+import { realGeneratedDir } from "../surfaces/catalog.ts";
+import { planSurfaces, type SurfacePlan } from "../surfaces/plan.ts";
 import { contextJobs, type ContextPlan } from "./context-delivery.ts";
 import type { HostBinding } from "./context.ts";
 
@@ -34,6 +40,9 @@ export type Enforcement =
       shellEnv: ShellEnv;
       /** Startup lines and the bundles that produce prompt and compaction text (#341). */
       context: ContextPlan;
+      /** The selected plugins' generated surfaces, applied by the `config` hook (#345). */
+      surfaces: SurfacePlan;
+      selectionSource: SelectionSource;
     }
   | { status: "not-ready"; reason: string };
 
@@ -118,6 +127,44 @@ function rootsFor(binding: HostBinding, repoRoot: string): OpencodeRoots {
   };
 }
 
+export type EnforcementOptions = {
+  findBundled?: () => string | undefined;
+  /** The generated surface directory; defaults to this package's `generated/`, as a real path. */
+  generatedDir?: string;
+};
+
+type Selection = {
+  plugins: PluginManifest[];
+  source: SelectionSource;
+  surfaces: SurfacePlan;
+  /** Selection and surface notes for the host log. */
+  notes: string[];
+};
+
+/** The selected plugins (project, then global selection) and their planned surfaces. */
+function selectAndPlan(
+  repoRoot: string,
+  projectRoot: string,
+  userConfigRoot: string,
+  options: EnforcementOptions,
+): Selection | string {
+  const selected = selectPluginsWithDependencies(
+    join(repoRoot, "plugins"),
+    projectRoot,
+    userConfigRoot,
+  );
+  if (!selected.ok) return `plugin selection: ${selected.reason}`;
+  const generatedDir = options.generatedDir ?? realGeneratedDir(PACKAGE_ROOT);
+  if (generatedDir === undefined) return `surfaces: no generated/ in ${PACKAGE_ROOT}`;
+  const planned = planSurfaces(
+    generatedDir,
+    selected.plugins.map((plugin) => plugin.name),
+  );
+  if (!planned.ok) return `surfaces: ${planned.reason}`;
+  const { plugins, source, notes } = selected;
+  return { plugins, source, surfaces: planned.plan, notes: [...notes, ...planned.plan.notes] };
+}
+
 function gateOptionsFor(
   binding: HostBinding,
   roots: OpencodeRoots,
@@ -128,6 +175,7 @@ function gateOptionsFor(
     repoRoot: roots.repoRoot,
     configRoot: roots.dataRoot,
     userConfigRoot: roots.userConfigRoot,
+    // The project root, not the host's raw worktree: that is `/` outside version control.
     permissionContext: { cwd: binding.directory, projectRoot, worktree: projectRoot },
     env: {
       ...env,
@@ -140,10 +188,10 @@ function gateOptionsFor(
 
 export async function prepareEnforcement(
   binding: HostBinding,
-  findBundled: () => string | undefined = bundledRepoRoot,
+  options: EnforcementOptions = {},
 ): Promise<Enforcement> {
   if (binding.optionsError !== undefined) return notReady(binding.optionsError);
-  const found = resolveRepoRoot(binding, findBundled);
+  const found = resolveRepoRoot(binding, options.findBundled ?? bundledRepoRoot);
   if (found === undefined)
     return notReady("no bundled plugins/ tree; set plugin option repoRoot or TOOLU_REPO_ROOT");
   // Absolute, so every path handed to bash still resolves after the agent changes directory.
@@ -152,12 +200,12 @@ export async function prepareEnforcement(
   const preflight = runPreflight({ env });
   if (!preflight.bootstrapAllowed)
     return notReady(`preflight: ${preflight.reasons.join("; ") || "preflight failed"}`);
-  const selected = selectPluginsWithDependencies(join(repoRoot, "plugins"), projectRoot);
-  if (!selected.ok) return notReady(`plugin selection: ${selected.reason}`);
+  const roots = rootsFor(binding, repoRoot);
+  const selected = selectAndPlan(repoRoot, projectRoot, roots.userConfigRoot, options);
+  if (typeof selected === "string") return notReady(selected);
   const bun = resolveBunExecutable(env);
   if (bun === null)
     return notReady("Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun");
-  const roots = rootsFor(binding, repoRoot);
   const bootstrap = await bootstrapRuntime({
     repoRoot,
     projectRoot,
@@ -185,8 +233,10 @@ export async function prepareEnforcement(
     },
     artifacts: bootstrap.artifacts,
     plugins: bootstrap.plugins,
-    diagnostics: bootstrap.diagnostics,
+    diagnostics: [...selected.notes, ...bootstrap.diagnostics],
     shellEnv,
     context,
+    surfaces: selected.surfaces,
+    selectionSource: selected.source,
   };
 }

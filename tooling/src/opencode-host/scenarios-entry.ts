@@ -44,13 +44,20 @@ export const PROJECT_FILES = {
   ".opencode/toolu/plugins.json": JSON.stringify({ version: 1, enabled: ["toolu"] }),
 };
 
-/** Pack the package the way npm publishes it: sources plus the staged plugin catalog. */
-export async function packTarball(workDir: string): Promise<string> {
+/**
+ * Pack the package the way npm publishes it: sources plus the staged plugin
+ * catalog. `edit` may change the staged copy first, to make a distinct release.
+ */
+export async function packTarball(
+  workDir: string,
+  edit: (stage: string) => void = () => undefined,
+): Promise<string> {
   const stage = join(workDir, "package");
   mkdirSync(stage, { recursive: true });
   for (const entry of PACKAGE_ENTRIES)
     cpSync(join(PACKAGE_DIR, entry), join(stage, entry), { recursive: true });
   stagePlugins(join(ROOT, "plugins"), join(stage, "plugins"));
+  edit(stage);
   const res = await run(
     [process.execPath, "pm", "pack", "--ignore-scripts", "--destination", workDir],
     { cwd: stage, timeoutMs: PACK_TIMEOUT_MS },
@@ -61,7 +68,7 @@ export async function packTarball(workDir: string): Promise<string> {
   return join(workDir, tarball);
 }
 
-function npmSpec(tarball: string): string {
+export function npmSpec(tarball: string): string {
   return `@toolu/opencode@file:${tarball}`;
 }
 

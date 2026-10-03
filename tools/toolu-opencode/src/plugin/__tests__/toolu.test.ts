@@ -137,6 +137,7 @@ function bundled(): string {
 function rootBinding(repoRootOption: string | undefined, env: Record<string, string>): HostBinding {
   return {
     directory: "/w",
+    worktree: "/w",
     projectRoot: "/w",
     repoRootOption,
     optionsError: undefined,

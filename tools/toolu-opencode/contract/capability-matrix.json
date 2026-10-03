@@ -22,7 +22,7 @@
       "owner": ["OP-10"]
     },
     {
-      "need": "Surfaces can be registered from the plugin config hook (commands, agents, skills.paths, instructions) instead of writing into user directories",
+      "need": "Surfaces are registered from the plugin config hook (the selected plugins' commands, agents and skills.paths; user definitions win) instead of writing into user directories",
       "evidence": ["surface.config-hook", "surface.files"],
       "owner": ["OP-11"]
     },
