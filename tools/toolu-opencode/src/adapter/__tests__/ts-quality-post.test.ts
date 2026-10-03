@@ -125,6 +125,43 @@ test("two TypeScript patch violations persist while move and delete clear old en
   post.clear();
 });
 
+test("a post block keeps a later registry crash visible to the model", async () => {
+  using sb = createSandbox({ git: true });
+  tsProject(sb);
+  const registry = join(sb.project, ".opencode/toolu/state/toolu/post-tools.d");
+  const selected = {
+    ...options(sb),
+    selectedPluginSpecs: new Set(["toolu@toolu", "ts-quality@toolu", "fixture@toolu"]),
+  };
+  writeFileSync(
+    join(registry, "fixture@toolu__crash.js"),
+    `export default { spec: "fixture@toolu", name: "crash", event: "tool/post",
+      run(event) { if (event.toolInput.file_path === ${JSON.stringify(sb.path("one.ts"))})
+        return Promise.resolve({ kind: "post_block", reason: "fixture first block" });
+        if (event.toolInput.file_path === ${JSON.stringify(sb.path("two.ts"))})
+        throw new Error("fixture post crash"); return Promise.resolve({ kind: "allow" }); } };\n`,
+  );
+  sb.write("one.ts", 'console.log("bad");\n');
+  sb.write("two.ts", "const two = 2;\n");
+  const patchText = [
+    "*** Begin Patch",
+    `*** Add File: ${sb.path("one.ts")}`,
+    '+console.log("bad");',
+    `*** Add File: ${sb.path("two.ts")}`,
+    "+const two = 2;",
+    "*** End Patch",
+  ].join("\n");
+  const post = createToolPostHandler(selected, createToolAdviceStore());
+  const output = result();
+  await post.after(
+    { tool: "apply_patch", sessionID: "crash", callID: "patch", args: { patchText } },
+    output,
+  );
+  expect(output.output).toContain("fixture first block");
+  expect(output.output).toContain("fixture post crash");
+  post.clear();
+});
+
 type Mode = "selected" | "disabled" | "no-tsconfig" | "no-lock";
 
 async function selectionCase(mode: Mode): Promise<void> {

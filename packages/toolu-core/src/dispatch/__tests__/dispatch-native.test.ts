@@ -185,3 +185,42 @@ test.concurrent("opt-in post patch walk records every block while the default st
     reason: files.map((file) => `invalid ${file}`).join("\n\n"),
   });
 });
+
+test.concurrent("opt-in post patch walk stops on a fatal module exit after an earlier block", async () => {
+  using sb = createSandbox({ git: true });
+  writeBuiltin(sb, "fatal.sh", 'printf "fatal check\\n" >&2; exit 2', "post");
+  const files = [sb.path("one.ts"), sb.path("two.ts"), sb.path("three.ts")];
+  const input = JSON.stringify({
+    tool_name: "apply_patch",
+    tool_input: {
+      command: [
+        "*** Begin Patch",
+        ...files.flatMap((file) => [`*** Add File: ${file}`, "+content"]),
+        "*** End Patch",
+      ].join("\n"),
+    },
+  });
+  const visited: string[] = [];
+  const blocker: ToolModule = {
+    kind: "native",
+    name: "block-first",
+    run(event) {
+      const path = String(event.toolInput.file_path);
+      visited.push(path);
+      return Promise.resolve(
+        path === files[0] ? { kind: "post_block", reason: "first blocked" } : { kind: "allow" },
+      );
+    },
+  };
+  const out = await dispatchPostTool(input, {
+    builtins: [blocker],
+    libDir: LIB,
+    env: hookEnv(sb),
+    cwd: sb.project,
+    continuePostBlocks: true,
+  });
+  expect(visited).toEqual(files.slice(0, 2));
+  expect(out.exitCode).toBe(2);
+  expect(out.stdout).toBe("");
+  expect(out.stderr).toContain("fatal check");
+});

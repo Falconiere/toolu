@@ -4882,7 +4882,10 @@ async function dispatchRecords(doc, records, at, walk) {
   const payload = { text: syntheticEdit(doc, record), toolName: "Edit", edit };
   const result = await dispatchModules(payload, walk.session, walk.builtins);
   walk.state.stderr.push(result.stderr);
-  if (walk.continuePostBlocks && result.exitCode === 0) {
+  if (walk.continuePostBlocks && result.exitCode !== 0) {
+    return { ...result, stderr: walk.state.stderr.join("") };
+  }
+  if (walk.continuePostBlocks) {
     const parsed = parseDocument(result.stdout);
     if (readField(parsed, ["decision"]) === "block") {
       walk.blocks.push(readField(parsed, ["reason"]) || "check blocked");

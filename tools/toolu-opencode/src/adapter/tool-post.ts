@@ -65,7 +65,8 @@ function resultMessage(result: ModuleResult): string | undefined {
   if (doc === undefined) return "Post-tool checks returned invalid output";
   const block = field(doc, "decision");
   if (block === "block") {
-    return `Post-tool check failed: ${field(doc, "reason") ?? "check blocked"}`;
+    const reason = field(doc, "reason") ?? "check blocked";
+    return `Post-tool check failed: ${reason}${stderr === "" ? "" : `\n\nPost-tool check warning: ${stderr}`}`;
   }
   if (block !== undefined) return `Post-tool checks returned unknown decision: ${block}`;
   const hook = object(doc.hookSpecificOutput);
