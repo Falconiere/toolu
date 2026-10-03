@@ -8,7 +8,7 @@
  * `PROBE:<scenario>` token in the first user message picks a script, and the
  * number of tool results since the last user message picks the step. A first
  * user message without a token (a session the scenario did not prompt itself,
- * such as a nested fixer) uses the `*` script. An exhausted or unknown script
+ * for example a nested fixer) uses the `*` script. An exhausted or unknown script
  * answers `PROBE-DONE`.
  */
 import { z } from "zod";

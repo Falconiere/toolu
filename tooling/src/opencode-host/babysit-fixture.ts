@@ -2,7 +2,7 @@
  * Fixture for the pinned-host pr-babysit scenarios (#357): an isolated project
  * on a PR branch with a failing test and a bare origin, the scripted controller
  * and fixer steps, and readers for what the helpers and the fixer left behind.
- * The fixer finds the provider in the profile's global config, as a user's
+ * The fixer finds the provider in the profile's global config, where a user's
  * own would be.
  */
 import { spawnSync } from "node:child_process";
