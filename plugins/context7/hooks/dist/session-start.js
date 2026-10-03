@@ -1,6 +1,37 @@
 // @bun
 // plugins/context7/hooks/src/session-start.ts
+import { lstatSync as lstatSync2 } from "fs";
 import { resolve } from "path";
+
+// packages/toolu-core/src/state/state-io.ts
+function toJqJson(value, pretty) {
+  const json = pretty ? JSON.stringify(value, null, 2) : JSON.stringify(value);
+  return json.replaceAll("\x7F", "\\u007f");
+}
+
+// packages/toolu-core/src/startup/context.ts
+var MAX_CONTEXT_CHARS = 1e4;
+function bounded(text, max) {
+  if (text.length <= max)
+    return text;
+  const code = text.charCodeAt(max - 1);
+  const end = code >= 55296 && code <= 56319 ? max - 1 : max;
+  return text.slice(0, end);
+}
+function sessionContext(event, text) {
+  if (text === "")
+    return;
+  return {
+    hookSpecificOutput: {
+      hookEventName: event,
+      additionalContext: bounded(text, MAX_CONTEXT_CHARS)
+    }
+  };
+}
+function renderHookOutput(value, pretty) {
+  return `${toJqJson(value, pretty)}
+`;
+}
 // packages/toolu-core/src/host/host-name.ts
 var HOST_NAMES = ["claude", "codex", "cursor", "opencode", "hermes"];
 function envValue(env, key) {
@@ -228,11 +259,42 @@ function publishBunCli(options) {
   }
   return result;
 }
+// plugins/context7/hooks/src/context7/opencode.ts
+var OPENCODE_SKILL = "context7-context7";
+function onOpencode() {
+  return process.env.TOOLU_HOST_OVERRIDE === "opencode";
+}
+var quote = (value) => `'${value.replaceAll("'", "'\\''")}'`;
+function command(path, symlink) {
+  return symlink ? `${quote(process.execPath)} --no-env-file ${quote(path)}` : quote(path);
+}
+function instruction(run) {
+  return `context7 (library docs) \u2014 for ANY third-party library/framework question (API usage, current docs, code examples, version behavior) you MUST run ${run} FIRST (\`search <library>\` to resolve the ID, then \`docs <id> <query>\`) BEFORE answering from memory or searching the web. Web search is a FALLBACK ONLY when context7 lacks coverage or the command exits non-zero (22 is an HTTP error such as a 429 rate limit). Syntax: skill({ name: "${OPENCODE_SKILL}" }). CONTEXT7_API_KEY is optional and read from the environment only, never from .env.`;
+}
+async function compacting() {
+  let input;
+  try {
+    input = JSON.parse(await Bun.stdin.text());
+  } catch {
+    return false;
+  }
+  return input !== null && typeof input === "object" && "source" in input && input.source === "compact";
+}
+
 // plugins/context7/hooks/src/session-start.ts
-publishBunCli({
+var options = {
   plugin: "context7",
   source: resolve(import.meta.dir, "../dist/search.js"),
   dir: "context7",
-  name: "search.sh",
-  tool: "context7 search CLI"
-});
+  name: "search.sh"
+};
+if (onOpencode()) {
+  const quiet = await compacting();
+  const result = publishWrapper(options);
+  if (!quiet && (result.status === "published" || result.status === "kept-user-file")) {
+    const symlink = lstatSync2(result.path).isSymbolicLink();
+    process.stdout.write(renderHookOutput(sessionContext("SessionStart", instruction(command(result.path, symlink))), false));
+  }
+} else {
+  publishBunCli({ ...options, tool: "context7 search CLI" });
+}

@@ -5084,7 +5084,7 @@ function mandates(input) {
     out.push(`exa-search (web search) \u2014 for ANY web search, code-example hunt, URL crawl, or topic research you MUST reach for \`"${exa}"\` FIRST (commands: search / crawl / similar \u2014 see the exa-search skill). Native web tools are a FALLBACK ONLY \u2014 use them when the wrapper errors or a URL needs your logged-in session.`);
   }
   const ctx7 = join14(input.configRoot, "context7", "search.sh");
-  if (isExecutable(ctx7) && wanted(input, "context7")) {
+  if (input.host !== "opencode" && isExecutable(ctx7) && wanted(input, "context7")) {
     out.push(`context7 (library docs) \u2014 for ANY third-party library/framework question (API usage, current docs, code examples, version behavior) you MUST query \`"${ctx7}"\` FIRST (\`search <library>\` to resolve the ID, then \`docs <id> <query>\`) BEFORE answering from memory or searching the web. Web search is a FALLBACK ONLY when context7 lacks coverage.`);
   }
   return out;
