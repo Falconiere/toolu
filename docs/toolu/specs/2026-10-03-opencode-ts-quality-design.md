@@ -1,6 +1,6 @@
 # OpenCode TypeScript post-edit quality — Design
 
-**Date:** 2026-10-03 **Status:** Draft **Author:** Codex **Topic:** OP-18 native ts-quality enforcement
+**Date:** 2026-10-03 **Status:** Approved **Author:** Codex **Topic:** OP-18 native ts-quality enforcement
 
 ## Problem
 
@@ -27,7 +27,7 @@ Add issue-owned subprocess and pinned-host scenarios using isolated real git pro
 ## Failure modes and edge cases
 
 - A disabled ts-quality plugin, a non-TypeScript file, an untracked/missing tsconfig, or an unavailable package manager does not invoke ts-quality checks or create its gate entry. The core post bridge may still run for other selected modules.
-- Preserve ts-quality's existing linked-worktree skip: an edit there leaves its quality entry untouched. A separate ordinary git worktree/project owns its own root and gate file; relative paths are resolved within that root.
+- Preserve ts-quality's existing linked-worktree skip: an edit there leaves its quality entry untouched. An independent git project owns its own root and gate file; relative paths are resolved within that root.
 - A valid multi-file patch checks each added/updated destination once. A deletion and the old side of a move clear their prior entries; the moved destination is checked if it is a TypeScript file. An unrelated extension does not acquire a ts-quality entry.
 - A failed or cancelled tool has no confirmed successful edit check. A thrown host tool error has no after callback; an interrupted after result must leave existing failure state intact.
 - A rule or subprocess failure appears in the result as a post-check diagnostic and must not be reported as a clean pass. A failure already stored in the gate remains until the normal clean edit or removal path clears it.
