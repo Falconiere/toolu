@@ -16,7 +16,7 @@ task fanned out to five agents, each waiting on the last, taking ten minutes to
 do three minutes of work.
 
 Subagents do bounded work and return concise results; they do not recursively
-delegate unless the task explicitly requires a nested workflow. Use [the host
+delegate. OpenCode's default `subagent_depth` of 1 refuses a `task` call made from inside a subagent. Use [the host
 mapping](../../resources/toolu/workflows/host-mapping.md) for the active delegation, user-input,
 and thread-control interfaces.
 
@@ -95,16 +95,17 @@ work inline, but do not re-spawn the same prompt hoping for a better roll.
 
 ## Which agent for which job
 
-Prefer a **tier-pinned** agent when one fits — its frontmatter fixes the model, so routing can't be forgotten:
+Prefer a toolu agent when one fits. Pass its name as the `task` tool's `subagent_type`:
 
-- **`toolu:quick-task` / Codex `quick-task`** — mechanical lookups and listings.
-- **`toolu:deep-explore` / Codex `deep-explore`** — structural exploration.
-- **`toolu:research-agent` / Codex `research-agent`** — external research.
-- **`toolu:implementer` / Codex `implementer`** — one bounded plan step and tests.
-- **`toolu:architect` / Codex `architect`** — design and synthesis, read-only.
-- **`Explore`** — broad read-only fan-out search when you need the conclusion, not file dumps.
-- **`Plan`** — design an implementation strategy for a non-trivial change.
-- **`general-purpose`** — multi-step research/execution that doesn't fit a specific agent; set `model:` yourself.
+- **`toolu-quick-task`** — mechanical lookups and listings.
+- **`toolu-deep-explore`** — structural exploration.
+- **`toolu-research-agent`** — external research.
+- **`toolu-implementer`** — one bounded plan step and tests.
+- **`toolu-architect`** — design and synthesis, read-only.
+- **`explore`** — OpenCode's built-in read-only search agent, when you need the conclusion, not file dumps.
+- **`general`** — OpenCode's built-in agent for multi-step research/execution that doesn't fit a specific agent.
+
+OpenCode's `plan` is a primary agent, not a subagent: plan in the main thread instead.
 
 Carry the session mandates into every subagent prompt (comemory recall/save, ast-grep first). Delegation never exempts the work.
 
@@ -121,18 +122,16 @@ The expensive, recurring cost in a long session is **input tokens re-sent every 
 
 ## Model tiers
 
-Route on the **class of work**, not phrasing. Select the matching preconfigured
-agent or pass the active host's explicit model and reasoning settings. Omitting
-routing inherits host defaults, which may be inappropriate for the task.
+Route on the **class of work**, not phrasing. On OpenCode the `task` tool takes no model argument: each agent runs `agent.<id>.model` from your `opencode.json`, else the session's model. You route by choosing the agent.
 
-| Class | Claude default | Codex default | Belongs here |
-|---|---|---|---|
-| mechanical | `haiku` | Luna / medium | lookups, listings, formatting, one command |
-| exploration | `sonnet` | Terra / medium | read-only search across many files |
-| implementation | `sonnet` | Terra / medium | a bounded decided edit + tests |
-| review | `sonnet` | Terra / high | diff review, audits |
-| synthesis | `opus` | Sol / high | reconciling findings |
-| architecture | `opus` | Sol / high | design and hard-to-reverse calls |
+| Class | OpenCode agent | Belongs here |
+|---|---|---|
+| mechanical | `toolu-quick-task` | lookups, listings, formatting, one command |
+| exploration | `toolu-deep-explore`, `toolu-research-agent` | read-only search across many files |
+| implementation | `toolu-implementer` | a bounded decided edit + tests |
+| review | `general` | diff review, audits |
+| synthesis | `toolu-architect` | reconciling findings |
+| architecture | `toolu-architect` | design and hard-to-reverse calls |
 
 Escalate one tier on any of: **hard to reverse**, **cross-cutting**, **the how isn't decided**, **must weigh alternatives**. De-escalate when the task is bounded and has one verifiable answer. Deciding and doing are different classes — one task often splits across two tiers.
 

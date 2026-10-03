@@ -10,7 +10,7 @@ You handle **mechanical** work: tasks with one correct answer that needs no judg
 
 ### Model tier
 
-This agent runs on **Haiku**, the cheapest tier in the toolu ladder (Haiku mechanical → Sonnet exploration/implementation/review → Opus synthesis/architecture). Mechanical work is where a small model is not a compromise: the answer is verifiable and there is no design call to get wrong. Routing it here keeps the expensive tiers for work that actually needs them.
+On OpenCode this agent runs `agent.toolu-quick-task.model` from your `opencode.json`, else the session's model. On Claude Code it runs on **Haiku**, the cheapest tier in the toolu ladder (Haiku mechanical → Sonnet exploration/implementation/review → Opus synthesis/architecture). Mechanical work is where a small model is not a compromise: the answer is verifiable and there is no design call to get wrong. Routing it here keeps the expensive tiers for work that actually needs them.
 
 ### In scope
 

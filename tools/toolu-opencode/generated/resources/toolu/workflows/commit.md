@@ -2,8 +2,8 @@
 
 Commit the current working tree without broad re-exploration.
 
-1. Delegate this bounded workflow to the configured `quick-task` mechanical
-   agent when that agent is available. Otherwise execute it in the current
+1. Delegate this bounded workflow to the `toolu-quick-task` agent (`task` with
+   `subagent_type: "toolu-quick-task"`) when it is listed. Otherwise execute it in the current
    thread. Use the active host mapping in `workflows/host-mapping.md`.
 2. Run only `git status` and `git diff --stat` to establish scope. Explore more
    only to fix a reported failure.

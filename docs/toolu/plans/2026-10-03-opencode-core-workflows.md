@@ -1,6 +1,6 @@
 # OpenCode: review and core workflow skills on native tools — Plan
 
-**Date:** 2026-10-03   **Status:** Approved   **Spec:** `docs/toolu/specs/2026-10-03-opencode-core-workflows-design.md`   **Topic:** Port toolu and toolu-review skills, agents, commands and session routing to OpenCode's native interfaces, with workflows proven on real isolated repositories (#358, OP-24)
+**Date:** 2026-10-03   **Status:** Approved   **Spec:** docs/toolu/specs/2026-10-03-opencode-core-workflows-design.md   **Topic:** Port toolu and toolu-review skills, agents, commands and session routing to OpenCode's native interfaces, with workflows proven on real isolated repositories (#358, OP-24)
 
 ## Evidence and approach
 

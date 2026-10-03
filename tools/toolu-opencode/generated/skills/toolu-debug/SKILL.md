@@ -25,7 +25,7 @@ Reproduction/tests establish causes.
 4. **Instrument & test the hypothesis.** Prove or kill it: add a targeted log/assert, bisect (`git bisect`, or halve the input/code path), or inspect the exact value. One change at a time — change two things and you learn nothing from the result.
 5. **Isolate the root cause.** Trace from symptom to the actual defect. Confirm it explains *all* the observed evidence, not just the loudest symptom. If your fix wouldn't explain every data point from step 2, you haven't found the cause yet.
 6. **Fix at the root, verify red → green.** Apply the minimal fix at the cause. Re-run the step-1 reproduction: it must go from failing to passing. No green reproduction, no fix.
-7. **Regression test (real data, no mocks).** Add a test that fails before the fix and passes after, in the toolu layout — see the `test` skill (TS `__tests__/`, Rust `tests/`). This is what stops the bug coming back.
+7. **Regression test (real data, no mocks).** Add a test that fails before the fix and passes after, in the toolu layout (TS `__tests__/`, Rust `tests/`). This is what stops the bug coming back.
 8. **Record.** Save the bug to comemory so the next encounter is a hit, not a re-investigation:
    `comemory.sh save "<symptom>" "Root cause: <cause>. Fix: <what changed + path>." --kind bug`
 
@@ -35,9 +35,9 @@ Reproduction/tests establish causes.
 
 Three language-agnostic collectors turn raw failure output into a compact, capped summary so Observe doesn't flood context. Run each with `bun`; each reads stdin or `--file <path>`, takes `--json`, and degrades to a capped raw passthrough on input it doesn't recognize. Caps are env-overridable (`DEBUG_MAX_*`).
 
-- `plugins/toolu/scripts/debug-testfail.ts` — failing-test transcript → failed test names, error/assertion lines, code `file:line` locations. `bun test 2>&1 | bun plugins/toolu/scripts/debug-testfail.ts` or `cargo test 2>&1 | bun plugins/toolu/scripts/debug-testfail.ts`.
-- `plugins/toolu/scripts/debug-stack.ts` — stack trace / backtrace → app frames first, framework/runtime frames collapsed.
-- `plugins/toolu/scripts/debug-log.ts` — large log → deduped error/warn lines + a tail, hard-capped in lines and bytes.
+- `"$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-testfail.ts"` — failing-test transcript → failed test names, error/assertion lines, code `file:line` locations. `bun test 2>&1 | bun "$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-testfail.ts"` or `cargo test 2>&1 | bun "$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-testfail.ts"`.
+- `"$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-stack.ts"` — stack trace / backtrace → app frames first, framework/runtime frames collapsed.
+- `"$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-log.ts"` — large log → deduped error/warn lines + a tail, hard-capped in lines and bytes.
 
 Use them to *seed* the investigation; they observe, they don't diagnose.
 
@@ -45,8 +45,8 @@ Use them to *seed* the investigation; they observe, they don't diagnose.
 
 When the bug originates from a Sentry issue and the Sentry MCP is authenticated, you can pull the event to seed Reproduce + Observe:
 
-1. The Sentry MCP's fetch tools only appear **after** OAuth — discover them at runtime with `ToolSearch` (e.g. query `+Sentry issue event`); do not assume tool names. If only `mcp__claude_ai_Sentry__authenticate` is present, the user hasn't connected it.
-2. Fetch the issue/event the user names (URL or short-id), extract the exception + stack + breadcrumbs, pipe the stack through `bun plugins/toolu/scripts/debug-stack.ts`, then proceed from Observe.
+1. OpenCode lists MCP tools with the others, named `<server>_<tool>` for each server under `mcp` in `opencode.json`; there is no tool search. Look for a Sentry server's fetch tools by that prefix; do not assume tool names. If none is listed, the user hasn't configured or authenticated it (`opencode mcp auth <server>`).
+2. Fetch the issue/event the user names (URL or short-id), extract the exception + stack + breadcrumbs, pipe the stack through `bun "$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-stack.ts"`, then proceed from Observe.
 3. **If Sentry is unavailable, unauthed, or exposes no fetch tool:** say so in one line ("Sentry unavailable, proceeding manually") and continue — ask the user to paste the stack/error. The loop never depends on Sentry.
 
 ## Return to the chain

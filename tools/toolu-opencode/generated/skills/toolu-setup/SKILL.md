@@ -5,20 +5,17 @@ name: "toolu-setup"
 
 # Set up toolu agents
 
-Use the bundled [installer](scripts/setup.ts); run it with `bun`. It manages `quick-task`,
-`deep-explore`, `research-agent`, `implementer`, and `architect` under
-`${CODEX_HOME:-$HOME/.codex}/agents`.
+On OpenCode there is nothing to install. The toolu plugin's `config` hook
+registers its five agents at every start: `toolu-quick-task`, `toolu-deep-explore`, `toolu-research-agent`, `toolu-implementer` and `toolu-architect`. Codex agent profiles do
+not apply to OpenCode.
 
-1. Run `bun <installer-path> preview` and show the exact plan.
-2. For installs and managed upgrades, run `bun <installer-path> install`.
-3. If preview reports an unmanaged conflict, inspect only the named file and
-   ask for explicit confirmation before `install --force`. The script creates a
-   timestamped backup before replacement.
-4. For removal, show preview and ask for explicit confirmation before
-   `remove --yes`. Use `--force` only after separately confirming any unmanaged
-   conflict. Removal moves profiles into a timestamped backup.
-5. Report the backup path and tell the user to restart Codex so agent profiles
-   reload.
+Tell the user that, then offer the OpenCode equivalents:
 
-Never edit agent files by hand or infer confirmation from the original setup
-request when a conflict or removal is involved.
+- **Pin a model:** set `agent.<id>.model` (for example
+  `agent.toolu-quick-task.model`) in `opencode.json`. toolu's prompt and
+  permissions stay.
+- **Drop an agent:** set `agent.<id>.disable` to `true`.
+- **Update:** `opencode plugin update @toolu/opencode`, then restart OpenCode.
+
+The bundled [installer](scripts/setup.ts) refuses to run on OpenCode: it exits 2
+with this explanation and writes nothing. Do not edit Codex profiles from here.

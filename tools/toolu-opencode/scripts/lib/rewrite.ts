@@ -68,7 +68,6 @@ export function rewriteBody(
   const configParts = rewritten.split(claudeConfig);
   const claudeConfigRewrites = configParts.length - 1;
   rewritten = configParts.join(OPENCODE_CONFIG);
-  rewritten = rewritten.replace("on Claude\nCode. Ordinary", "on OpenCode.\nOrdinary");
   let sourcePathRewrites = 0;
   for (const [source, destination] of [...references.paths].sort(
     (a, b) => b[0].length - a[0].length,
@@ -103,10 +102,6 @@ ${rewritten.slice(wrapperStart)}`;
         "use `exa-search`\n  (or the active host's native web fetch).",
         "use the native `exa-search-exa-search` skill when enabled, or OpenCode's `webfetch`.",
       );
-    }
-    if (skillId === "toolu-review-review") {
-      rewritten = rewritten.replace("# Claude Code\n", "# OpenCode\n");
-      rewritten = rewritten.replace("TOOLU_HOST_OVERRIDE=claude", "TOOLU_HOST_OVERRIDE=opencode");
     }
     if (skillId === "jev-jev") rewritten = opencodeJev(rewritten);
     if (skillId === "context7-context7") rewritten = opencodeContext7(rewritten);

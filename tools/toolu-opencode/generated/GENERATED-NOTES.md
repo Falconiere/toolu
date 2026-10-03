@@ -30,7 +30,7 @@ The catalog covers all 16 plugin manifests. At runtime the plugin's `config` hoo
 ## Path rewrites
 
 - Claude plugin-root tokens → the owning plugin's `${TOOLU_PLUGIN_ROOT_<PLUGIN>}`: 1.
-- Claude config-root tokens → OpenCode config root: 7.
+- Claude config-root tokens → OpenCode config root: 5.
 - Typed source paths → `${TOOLU_OPENCODE_ROOT}/generated/…` paths: 3.
 - Explicit skill invocations → generated skill IDs: 6.
 
@@ -53,4 +53,3 @@ The OpenCode adapter's `shell.env` hook gives every bash call these variables (s
 - This writes a ledger below the active host's `<repo>/.claude/tmp/plan-ledger/`
 - `.claude/tmp/jira/plans/<KEY>.md` or `.codex/tmp/jira/plans/<KEY>.md`.
 - `~/.claude/epics/<owner>-<repo>-<n>/`, Codex: `$CODEX_HOME/toolu/epics/…`,
-- the active host's `<repo root>/.claude/tmp/push-review/` or
