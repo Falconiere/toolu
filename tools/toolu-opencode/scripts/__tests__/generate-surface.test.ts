@@ -291,7 +291,8 @@ test("generated Jev skill and its examples name only the OpenCode wrapper and ig
   const selected = selectPluginsByEnabledNames(join(root, "plugins"), ["jev"]);
   if (!selected.ok) throw new Error(selected.reason);
   const plan = planSurface({ repoRoot: root, outDir: out, plugins: selected.plugins });
-  const wrapper = '# OpenCode\nJEV="${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/jev/jev.sh"\n';
+  const wrapper =
+    '# OpenCode\nJEV="${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/jev/jev.sh"\n';
   for (const file of ["SKILL.md", "references/problem-solving.md"]) {
     const text = plan.files.get(join(out, "skills/jev-jev", file)) ?? "";
     expect(text).toContain(wrapper);

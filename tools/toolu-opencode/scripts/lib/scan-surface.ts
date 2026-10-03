@@ -1,19 +1,8 @@
 /** Scan plugin trees for portable surface sources (#206). */
-import {
-  existsSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
-  lstatSync,
-  statSync,
-} from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync, lstatSync, statSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
 import type { PluginManifest } from "../../src/inventory/types.ts";
-import {
-  COMMAND_SKILL_TARGETS,
-  EXCLUDED_SURFACES,
-  type ArtifactKind,
-} from "./constants.ts";
+import { COMMAND_SKILL_TARGETS, EXCLUDED_SURFACES, type ArtifactKind } from "./constants.ts";
 import { parseFrontmatter } from "./frontmatter.ts";
 import { opencodeJev, type SurfaceReferences } from "./rewrite.ts";
 import { candidateKey } from "./ids.ts";
@@ -62,11 +51,7 @@ function listMarkdownFiles(dir: string): string[] {
     .map((name) => join(dir, name));
 }
 
-function localIdFromParsed(
-  kind: ArtifactKind,
-  sourcePath: string,
-  name: unknown,
-): string {
+function localIdFromParsed(kind: ArtifactKind, sourcePath: string, name: unknown): string {
   if (typeof name === "string" && name.trim()) {
     return name.trim();
   }
@@ -132,10 +117,8 @@ export function buildSurfaceForPlugin(
       throw new Error(`missing id for ${source.kind} ${source.localId}`);
     }
     const target =
-      COMMAND_SKILL_TARGETS[`${plugin}:${source.localId}`] ??
-      `${plugin}:${source.localId}`;
-    const [targetPlugin = plugin, targetLocalId = source.localId] =
-      target.split(":", 2);
+      COMMAND_SKILL_TARGETS[`${plugin}:${source.localId}`] ?? `${plugin}:${source.localId}`;
+    const [targetPlugin = plugin, targetLocalId = source.localId] = target.split(":", 2);
     const commandSkillId =
       source.kind === "command"
         ? idMap.get(
@@ -168,9 +151,7 @@ export function buildSurfaceForPlugin(
       surfaceId,
       sourcePath: source.path,
       relativeSource: relative(repoRoot, source.path),
-      ...(source.kind === "skill"
-        ? { skillDirName: basename(dirname(source.path)) }
-        : {}),
+      ...(source.kind === "skill" ? { skillDirName: basename(dirname(source.path)) } : {}),
       ...built,
     });
   }
@@ -201,22 +182,14 @@ function listFilesRecursive(dir: string, rootReal: string): string[] {
 
 function within(root: string, target: string): boolean {
   const rel = relative(root, target);
-  return (
-    rel === "" ||
-    (rel !== ".." && !rel.startsWith("../") && !rel.startsWith("..\\"))
-  );
+  return rel === "" || (rel !== ".." && !rel.startsWith("../") && !rel.startsWith("..\\"));
 }
 
 function copiedMarkdown(source: string): string {
-  const copied = source.replace(
-    /[ \t]+(?=\r?$)/gm,
-    (spaces: string, offset: number) => {
-      const lineStart = source.lastIndexOf("\n", offset - 1) + 1;
-      return source.slice(lineStart, offset).trim() && spaces.length >= 2
-        ? "\\"
-        : "";
-    },
-  );
+  const copied = source.replace(/[ \t]+(?=\r?$)/gm, (spaces: string, offset: number) => {
+    const lineStart = source.lastIndexOf("\n", offset - 1) + 1;
+    return source.slice(lineStart, offset).trim() && spaces.length >= 2 ? "\\" : "";
+  });
   return opencodeJev(copied);
 }
 
@@ -252,52 +225,43 @@ export function planSkillResources(
     if (!item || processed.has(item.dest)) continue;
     processed.add(item.dest);
     const content = files.get(item.dest);
-    if (content === undefined)
-      throw new Error(`missing generated resource: ${item.dest}`);
-    const rewritten = content.replace(
-      /\]\(([^)]+)\)/g,
-      (whole, link: string) => {
-        if (link.startsWith("#") || /^[a-z][a-z0-9+.-]*:/i.test(link))
-          return whole;
-        const [path, fragment] = link.split("#", 2);
-        if (!path) return whole;
-        const target = join(dirname(item.source), path);
-        if (!existsSync(target)) {
-          throw new Error(`${item.source}: missing linked resource ${link}`);
-        }
-        if (!statSync(target).isFile()) {
-          throw new Error(`${item.source}: linked resource is not a file: ${link}`);
-        }
-        const real = realpathSync(target);
-        if (!within(repoRoot, real))
-          throw new Error(
-            `${item.source}: linked resource escapes repo: ${link}`,
-          );
-        const repoRelative = relative(repoRoot, real);
-        const resourceRelative = repoRelative.startsWith("plugins/")
-          ? repoRelative.slice("plugins/".length)
-          : join("repo", repoRelative);
-        const mapped = sourceToGenerated.get(real);
-        const dest =
-          mapped ??
-          (within(skillDir, real)
-            ? join(outSkillDir, relative(skillDir, real))
-            : join(outDir, "resources", resourceRelative));
-        if (!mapped && !files.has(dest)) {
-          files.set(
-            dest,
-            real.endsWith(".md")
-              ? copiedMarkdown(readFileSync(real, "utf8"))
-              : readFileSync(real, "utf8"),
-          );
-          if (real.endsWith(".md")) queue.push({ source: real, dest });
-        }
-        const relativeLink = relative(dirname(item.dest), dest)
-          .split("\\")
-          .join("/");
-        return `](${relativeLink}${fragment ? `#${fragment}` : ""})`;
-      },
-    );
+    if (content === undefined) throw new Error(`missing generated resource: ${item.dest}`);
+    const rewritten = content.replace(/\]\(([^)]+)\)/g, (whole, link: string) => {
+      if (link.startsWith("#") || /^[a-z][a-z0-9+.-]*:/i.test(link)) return whole;
+      const [path, fragment] = link.split("#", 2);
+      if (!path) return whole;
+      const target = join(dirname(item.source), path);
+      if (!existsSync(target)) {
+        throw new Error(`${item.source}: missing linked resource ${link}`);
+      }
+      if (!statSync(target).isFile()) {
+        throw new Error(`${item.source}: linked resource is not a file: ${link}`);
+      }
+      const real = realpathSync(target);
+      if (!within(repoRoot, real))
+        throw new Error(`${item.source}: linked resource escapes repo: ${link}`);
+      const repoRelative = relative(repoRoot, real);
+      const resourceRelative = repoRelative.startsWith("plugins/")
+        ? repoRelative.slice("plugins/".length)
+        : join("repo", repoRelative);
+      const mapped = sourceToGenerated.get(real);
+      const dest =
+        mapped ??
+        (within(skillDir, real)
+          ? join(outSkillDir, relative(skillDir, real))
+          : join(outDir, "resources", resourceRelative));
+      if (!mapped && !files.has(dest)) {
+        files.set(
+          dest,
+          real.endsWith(".md")
+            ? copiedMarkdown(readFileSync(real, "utf8"))
+            : readFileSync(real, "utf8"),
+        );
+        if (real.endsWith(".md")) queue.push({ source: real, dest });
+      }
+      const relativeLink = relative(dirname(item.dest), dest).split("\\").join("/");
+      return `](${relativeLink}${fragment ? `#${fragment}` : ""})`;
+    });
     files.set(item.dest, rewritten);
   }
 }
