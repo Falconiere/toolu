@@ -1,6 +1,6 @@
 # OpenCode ast-grep search enforcement and savings — Plan
 
-**Date:** 2026-10-03 **Status:** Draft **Spec:** docs/toolu/specs/2026-10-03-opencode-ast-grep-search-design.md **Topic:** OP-13 (#347): ast-grep nudge, byte-savings report and skill on the pinned OpenCode host
+**Date:** 2026-10-03 **Status:** Approved **Spec:** docs/toolu/specs/2026-10-03-opencode-ast-grep-search-design.md **Topic:** OP-13 (#347): ast-grep nudge, byte-savings report and skill on the pinned OpenCode host
 
 ## Evidence and approach
 
@@ -19,61 +19,135 @@ adapter measurement fix → shared report lib and OpenCode-only report → skill
 [
   {
     "id": "adapter",
-    "title": "Carry the host's result text in tool_response.output so post modules measure the real result",
-    "ac_refs": ["AC-2"],
-    "paths": ["tools/toolu-opencode/src/adapter/**", "packages/toolu-core/src/gates/tool-exit.ts", "packages/toolu-core/src/dispatch/**"],
-    "input": "Real temp git projects through the existing post-tool suite: shell exit 3/0, interrupted and unknown outcomes, edit/patch results",
-    "check": "bun test --timeout 60000 tools/toolu-opencode/src/adapter/__tests__/tool-post.test.ts tools/toolu-opencode/src/adapter/__tests__/tool-advice.test.ts",
+    "title": "Carry the host's result text in tool_response.output so post modules measure the real result; pin it with a real post module that reads tool_response.output",
+    "ac_refs": [
+      "AC-2"
+    ],
+    "paths": [
+      "tools/toolu-opencode/src/adapter/**"
+    ],
+    "input": "Real temp git projects; a fixture post-tools.d module on disk recording event.toolOutput; shell exit 0 and 3, interrupted call (no dispatch), non-string output (no dispatch), read result text",
+    "check": "bun test --timeout 60000 tools/toolu-opencode/src/adapter/__tests__/tool-post-response.test.ts tools/toolu-opencode/src/adapter/__tests__/tool-post.test.ts tools/toolu-opencode/src/adapter/__tests__/tool-advice.test.ts",
     "model": "inherit"
   },
   {
     "id": "module",
-    "title": "Move report() and ledger parsing to lib/savings-report.ts; on OpenCode, byte-savings returns the session report after an ast-grep run; fix the skill's dead detect.sh pointer; rebuild bundles",
-    "ac_refs": ["AC-3", "AC-6"],
-    "depends_on": ["adapter"],
-    "paths": ["plugins/ast-grep/**", "tools/toolu-opencode/generated/skills/ast-grep-ast-grep/**", "tooling/src/build-plugins.ts"],
-    "input": "Golden byte-savings and report corpora (host claude) plus the real report bundle on committed ledgers",
-    "check": "bun test --timeout 60000 plugins/ast-grep/hooks/src/__tests__/ && bun run tooling/src/build-plugins.ts --check",
+    "title": "Move report() and ledger parsing to lib/savings-report.ts; byte-savings returns the session report after an ast-grep run on OpenCode only (header comment updated); fix the skill's dead detect.sh pointer; rebuild bundles; regenerate the skill mirror",
+    "ac_refs": [
+      "AC-3",
+      "AC-6"
+    ],
+    "depends_on": [
+      "adapter"
+    ],
+    "paths": [
+      "plugins/ast-grep/**",
+      "packages/toolu-core/src/**",
+      "tools/toolu-conformance/src/harness/**",
+      "tools/toolu-opencode/generated/**",
+      "tools/toolu-opencode/scripts/**"
+    ],
+    "input": "Golden byte-savings and report corpora (host claude); real register.js-published byte-savings bundle run through the core post dispatcher with host opencode vs claude on a real temp ledger; corrupt ledger line; non-ast-grep kinds",
+    "check": "bun test --timeout 60000 plugins/ast-grep/hooks/src/__tests__/ && bun run tooling/src/build-plugins.ts --check && bun run generate:opencode-surface && bun run check:opencode-surface && bun run typecheck",
     "model": "inherit"
   },
   {
     "id": "hermetic",
     "title": "Real register.js-published modules driven by the OpenCode before/after handlers: nudge routes, ledger bytes, report visibility and boundaries",
-    "ac_refs": ["AC-1", "AC-2", "AC-3"],
-    "depends_on": ["module"],
-    "paths": ["tools/toolu-opencode/src/adapter/**", "tools/toolu-opencode/src/host/**", "plugins/ast-grep/hooks/**", "packages/toolu-core/src/**"],
-    "input": "Temp git project with src/app.ts and notes.md, data root from the real register.js under tooluProcessEnv; OpenCode grep/bash/read/glob shapes with host metadata; real ast-grep stdout; PATH without ast-grep; skills.ast-grep=false; duplicate, 8 parallel, interrupted and empty-output after calls; corrupt ledger",
+    "ac_refs": [
+      "AC-1",
+      "AC-2",
+      "AC-3"
+    ],
+    "depends_on": [
+      "module"
+    ],
+    "paths": [
+      "tools/toolu-opencode/src/adapter/**",
+      "tools/toolu-opencode/src/host/**",
+      "plugins/ast-grep/hooks/**",
+      "packages/toolu-core/src/**",
+      "tools/toolu-conformance/src/harness/**"
+    ],
+    "input": "Temp git project with src/app.ts and notes.md; real register.js run under tooluProcessEnv writes into a temp data root; OpenCode grep/bash/read/glob shapes with host metadata (including truncated); real ast-grep stdout; read/glob results carry no savings text; PATH without ast-grep; skills.ast-grep=false; duplicate, 8 parallel, interrupted, non-string and empty-output after calls",
     "check": "bun test --timeout 60000 tools/toolu-opencode/src/adapter/__tests__/ast-grep-modules.test.ts",
     "model": "inherit"
   },
   {
     "id": "live",
-    "title": "Pinned-host smoke: native skill load, the skill's search example on a real project, nudges and report in tool messages, the session ledger",
-    "ac_refs": ["AC-4", "AC-5"],
-    "depends_on": ["hermetic"],
-    "paths": ["tooling/src/opencode-ast-grep-smoke.ts", "tooling/src/opencode-host/**", "tools/toolu-opencode/src/**", "tools/toolu-opencode/generated/**", "plugins/ast-grep/**", "plugins/toolu/**", "package.json"],
-    "input": "Pinned opencode-ai@1.18.34 in an isolated git project and profile with a scripted loopback provider, toolu and ast-grep enabled, src/app.ts and notes.md; skill, grep, bash and read calls",
+    "title": "Pinned-host smoke (adds package.json script, scenarios file, and exports prepareSdk from scenarios-posttool-smoke.ts): native skill load, the skill's search example on a real project, nudges and report in tool messages, the session ledger",
+    "ac_refs": [
+      "AC-4",
+      "AC-5"
+    ],
+    "depends_on": [
+      "hermetic"
+    ],
+    "paths": [
+      "tooling/src/opencode-ast-grep-smoke.ts",
+      "tooling/src/opencode-host/**",
+      "tools/toolu-opencode/src/**",
+      "tools/toolu-opencode/generated/**",
+      "plugins/ast-grep/**",
+      "plugins/toolu/**",
+      "package.json"
+    ],
+    "input": "Pinned opencode-ai@1.18.34 (first run needs network to resolve the host; ast-grep on PATH, /opt/homebrew/bin here) in an isolated git project and profile with a scripted loopback provider, toolu and ast-grep enabled, src/app.ts and notes.md; skill, grep, bash and read calls",
     "check": "bun run smoke:opencode-ast-grep",
     "model": "inherit"
   },
   {
     "id": "docs",
-    "title": "Document OpenCode ast-grep behavior, ledger, report and smoke; update README and smoke lists; regenerate OpenCode mirrors",
-    "ac_refs": ["AC-5", "AC-6"],
-    "depends_on": ["live"],
-    "paths": ["docs/**", "plugins/ast-grep/README.md", "tools/toolu-opencode/generated/**", "tools/toolu-opencode/contract/**", "tools/toolu-opencode/scripts/**"],
+    "title": "Document OpenCode ast-grep behavior, ledger, report and smoke in docs/opencode.md, docs/ast-grep/README.md, docs/registry.md, plugin README and smoke lists; regenerate OpenCode mirrors",
+    "ac_refs": [
+      "AC-5",
+      "AC-6"
+    ],
+    "depends_on": [
+      "live"
+    ],
+    "paths": [
+      "docs/**",
+      "plugins/ast-grep/README.md",
+      "tools/toolu-opencode/generated/**",
+      "tools/toolu-opencode/contract/**",
+      "tools/toolu-opencode/scripts/**"
+    ],
     "input": "Observed smoke results; docs/opencode.md, docs/opencode-host-contract.md, docs/portable-core.md, plugins/ast-grep/README.md and generated mirrors",
-    "check": "bun run check:opencode-surface && bun run test:portable-core",
+    "check": "bun run generate:opencode-surface && bun run check:opencode-surface && bun run test:portable-core",
     "model": "inherit"
   },
   {
     "id": "gate",
     "title": "Run the complete repository gate on the final branch",
-    "ac_refs": ["AC-6"],
-    "depends_on": ["docs"],
-    "paths": ["**"],
+    "ac_refs": [
+      "AC-6"
+    ],
+    "depends_on": [
+      "docs"
+    ],
+    "paths": [
+      "**"
+    ],
     "input": "Whole branch with the hermetic and pinned-host checks green",
     "check": "bun run test",
+    "model": "inherit"
+  },
+  {
+    "id": "final-live",
+    "title": "Re-run the pinned-host smoke on the final branch after docs and mirror regeneration; its output goes in the PR body",
+    "ac_refs": [
+      "AC-4",
+      "AC-5"
+    ],
+    "depends_on": [
+      "gate"
+    ],
+    "paths": [
+      "**"
+    ],
+    "input": "Final branch, pinned opencode-ai@1.18.34, same isolated scenario",
+    "check": "bun run smoke:opencode-ast-grep",
     "model": "inherit"
   }
 ]
@@ -87,8 +161,15 @@ adapter measurement fix → shared report lib and OpenCode-only report → skill
 - `tools/toolu-opencode/src/adapter/__tests__/ast-grep-modules.test.ts` (new)
 - `tooling/src/opencode-ast-grep-smoke.ts`, `tooling/src/opencode-host/scenarios-ast-grep-smoke.ts` (new); `scenarios-posttool-smoke.ts` (export `prepareSdk`)
 - `package.json` (`smoke:opencode-ast-grep`)
-- `docs/opencode.md`, `docs/opencode-host-contract.md`, `docs/portable-core.md`, generated mirrors
+- `docs/opencode.md`, `docs/opencode-host-contract.md`, `docs/portable-core.md`, `docs/ast-grep/README.md`, `docs/registry.md`, generated mirrors
+- New colocated tests: `plugins/ast-grep/hooks/src/__tests__/byte-savings-opencode.test.ts`, `tools/toolu-opencode/src/adapter/__tests__/tool-post-response.test.ts`
 
 ## Verification
 
 End to end, a pinned OpenCode session with ast-grep enabled loads the skill, runs its search example and gets the matching function. It sees exactly one nudge on each structural or file search and none on piped, literal or non-code searches. After the ast-grep run it sees the session savings report. The data root holds one accurate ledger line per measured call. Boundaries: missing ast-grep (WARN text), opt-out, duplicate, parallel, interrupted and empty-output after calls, a corrupt ledger, host `claude` unchanged. Docs and mirrors are kept in sync by `check:opencode-surface`, and `bun run test` covers Claude and Codex.
+
+PR readiness: scoped commits; `bun plugins/toolu/hooks/dist/plan-ledger.js run <plan> --verify`; `toolu-review:review`; `verdict.js status` ready; push. The PR body carries the final `smoke:opencode-ast-grep` output, because no CI gate runs it before OP-28 (#362).
+
+## Deviations
+
+- adapter: the `tool_response.output` case lives in its own `tool-post-response.test.ts`; `tool-post.test.ts` is at the 300-line lint limit.

@@ -102,7 +102,7 @@ Examples:
 2. Run preview: `ast-grep run -p '...' -r '...' -l <lang> <paths>`.
 3. Read the diff. Confirm metavariables map correctly.
 4. Apply: same command with `-U`.
-5. Run your project's typecheck/lint (use the detected package manager — see `detect_node_pm` / `detect_rust` in `hooks/lib/detect.sh`) to verify zero regressions.
+5. Run the project's own typecheck and lint commands (with its package manager) to verify zero regressions.
 6. Save the pattern if reusable — when the `comemory` plugin is installed, persist it via its wrapper: `comemory.sh save "ast-grep <name> pattern" "<pattern + what it matches>" --kind pattern --tags "ast-grep"`.
 
 ## Self-Check Before Editing

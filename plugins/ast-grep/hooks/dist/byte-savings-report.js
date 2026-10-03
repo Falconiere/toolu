@@ -3,6 +3,8 @@
 
 // plugins/ast-grep/hooks/src/byte-savings-report.ts
 import { existsSync, readFileSync, statSync } from "fs";
+
+// plugins/ast-grep/hooks/src/lib/savings-report.ts
 function isRecord(value) {
   return typeof value === "object" && value !== null && "kind" in value && typeof value.kind === "string" && "returned" in value && typeof value.returned === "number" && "full" in value && typeof value.full === "number";
 }
@@ -13,6 +15,19 @@ function parseLine(line) {
   } catch {
     return;
   }
+}
+function parseLedger(text) {
+  const records = [];
+  for (const [index, line] of text.split(`
+`).entries()) {
+    if (line.trim() === "")
+      continue;
+    const record = parseLine(line);
+    if (record === undefined)
+      return { line: index + 1 };
+    records.push(record);
+  }
+  return records;
 }
 function report(records) {
   const byKind = new Map;
@@ -31,6 +46,8 @@ function report(records) {
   return [...lines, `TOTAL returned: ${total} bytes (~${Math.floor(total / 4)} tok)`].join(`
 `);
 }
+
+// plugins/ast-grep/hooks/src/byte-savings-report.ts
 function main(argv) {
   const ledger = argv[0] ?? "";
   if (ledger === "" || !existsSync(ledger) || !statSync(ledger).isFile()) {
@@ -38,19 +55,11 @@ function main(argv) {
 `);
     return 1;
   }
-  const records = [];
-  const lines = readFileSync(ledger, "utf8").split(`
+  const records = parseLedger(readFileSync(ledger, "utf8"));
+  if (!Array.isArray(records)) {
+    process.stderr.write(`byte-savings-report: ${ledger}:${records.line}: invalid ledger line
 `);
-  for (const [index, line] of lines.entries()) {
-    if (line.trim() === "")
-      continue;
-    const record = parseLine(line);
-    if (record === undefined) {
-      process.stderr.write(`byte-savings-report: ${ledger}:${index + 1}: invalid ledger line
-`);
-      return 1;
-    }
-    records.push(record);
+    return 1;
   }
   process.stdout.write(`${report(records)}
 `);
