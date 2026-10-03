@@ -7,7 +7,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { z } from "zod";
 import { SELECTION, selection } from "./install-host.ts";
 import type { ScriptStep, Scripts } from "./provider.ts";
@@ -147,6 +147,8 @@ export function babysitSession(ctx: EntryContext, scripts: (p: Paths) => Scripts
     scripts: (project) => scripts(paths(project)),
     config: () => ({ plugin: [npmSpec(ctx.tarball)], permission: { bash: "allow" } }),
   });
+  // The dispatcher starts `opencode` from PATH: the pinned binary, not one the machine has.
+  s.env.PATH = `${dirname(ctx.bin)}${delimiter}${process.env.PATH ?? ""}`;
   const p = paths(s.sb.project);
   const bare = s.outside("origin.git");
   git(s.sb.root, "init", "--quiet", "--bare", "-b", "main", bare);
@@ -216,7 +218,7 @@ const ToolPart = z.looseObject({
   type: z.literal("tool_use"),
   part: z.looseObject({
     tool: z.string(),
-    state: z.looseObject({ status: z.string(), input: z.unknown() }),
+    state: z.looseObject({ status: z.string(), input: z.unknown(), error: z.unknown() }),
   }),
 });
 
@@ -230,21 +232,37 @@ function parseLine(line: string): unknown {
 }
 
 /** Tool calls of the fixer's own `opencode run --format json` log, with their inputs. */
-export function fixerTools(log: string): Array<{ tool: string; status: string; input: string }> {
+export function fixerTools(
+  log: string,
+): Array<{ tool: string; status: string; input: string; error: string }> {
   return log.split("\n").flatMap((line) => {
     const parsed = ToolPart.safeParse(parseLine(line));
     if (!parsed.success) return [];
     const { tool, state } = parsed.data.part;
-    return [{ tool, status: state.status, input: JSON.stringify(state.input) }];
+    return [
+      {
+        tool,
+        status: state.status,
+        input: JSON.stringify(state.input),
+        error: typeof state.error === "string" ? state.error : "",
+      },
+    ];
   });
 }
 
+/** A call the host refused by a permission rule before running it. */
 export function refused(
   calls: ReturnType<typeof fixerTools>,
   tool: string,
   needle: string,
 ): boolean {
-  return calls.some((c) => c.tool === tool && c.input.includes(needle) && c.status === "error");
+  return calls.some(
+    (c) =>
+      c.tool === tool &&
+      c.input.includes(needle) &&
+      c.status === "error" &&
+      c.error.includes("a rule which prevents you from using this specific tool call"),
+  );
 }
 
 /** Live processes whose whole command line is `command`. */
