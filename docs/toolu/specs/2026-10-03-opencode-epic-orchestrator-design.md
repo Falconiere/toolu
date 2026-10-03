@@ -28,7 +28,7 @@ Already correct, verified on the pinned host: the TUI accepts `--auto`, `-m prov
 1. Replacing herdr dispatch with OpenCode `task` subagents. Workers keep one herdr worktree and one interactive agent per sub-issue (Jev choice 0.99: isolation, parallelism and recovery need separate worktrees and sessions).
 2. Changing Claude Code, Codex or Cursor worker launches, briefs or state. Only OpenCode launches gain the version check, the model-format check and the worktree exclude.
 3. Changing toolu's OpenCode state roots or making core state writers self-ignore. That is cross-host core behavior (OP-09). This issue makes epic worktrees deterministic.
-4. Remapping agent-tier's model-mismatch rule to OpenCode agent names. OpenCode `task` takes no model argument, so agent-tier records the delegation and never flags a mismatch, as decided in #355.
+4. Remapping agent-tier's model-mismatch rule to OpenCode agent names. The adapter passes a native `task`'s optional `model` to agent-tier as is (#337). A call without one inherits the tier and is recorded, never flagged, as decided in #355.
 5. pr-babysit's cron and fixer dispatch on OpenCode (OP-23, #357), CLI management (OP-26), packaging (OP-27) and mandatory CI acceptance (OP-28).
 6. Moving the OpenCode epics state home (`$TOOLU_OPENCODE_HOME/toolu/epics`, else `~/.opencode/toolu/epics`). Moving it would orphan existing runs.
 
@@ -133,7 +133,7 @@ Reused:
   - a worker that reports `failed --note "rate-limited: 429 Too Many Requests"` makes `limitEvents` emit `host-limited` with `host: "opencode"` and `cooldown: true`, and write an `opencode` entry to `hosts.json`;
   - `issueEvents` emits `failed` with the note;
   - for a running record whose agent is absent from the live herdr agent list (a cancelled or crashed worker), `issueEvents` emits `gone` once.
-- **AC-9 (live, `TOOLU_LIVE_OPENCODE=1`):** On the pinned host with the scripted provider, an isolated epic fixture runs a real OpenCode worker in a linked worktree, launched with the launcher's own `agentArgs("opencode")` flags and `START_PROMPT`. The fixture is a git repo with a bare remote, a committed `epic-orchestrator` selection, a state dir, a brief rendered by `renderBrief(…, "opencode")`, and `excludeOpencodeState` applied. Toolu is loaded through the global config's `file://` plugin. The worker:
+- **AC-9:** Live, gated on `TOOLU_LIVE_OPENCODE=1`. On the pinned host with the scripted provider, an isolated epic fixture runs a real OpenCode worker in a linked worktree, launched with the launcher's own `agentArgs("opencode")` flags and `START_PROMPT`. The fixture is a git repo with a bare remote, a committed `epic-orchestrator` selection, a state dir, a brief rendered by `renderBrief(…, "opencode")`, and `excludeOpencodeState` applied. Toolu is loaded through the global config's `file://` plugin. The worker:
   - reads the brief;
   - reports `execution`;
   - loads `delivery-flow-delivery-flow`;
@@ -184,6 +184,7 @@ Reused:
 - Acceptance criteria: 🟡 should-fix (resolved). AC-9's "porcelain is empty" depended on OpenCode's own config-dir install. It now asserts no toolu runtime path and records the observed output.
 - Acceptance criteria: 🟡 should-fix (resolved). AC-2's "byte-identical" had no baseline, and AC-1's "no `/` or `$`" was ambiguous. Both now name concrete checks.
 - Coverage after revision (Jev): issue criteria 1.89 / 1.75 / 1.81 of 2. The rest is real herdr in CI, which no test here can supply. herdr dispatch is covered by the exact dry-run commands and the existing herdr contract, and the worker by the live run.
+- Non-Goal 4: 🟡 should-fix (resolved). It claimed OpenCode `task` takes no model, which contradicts the adapter (`tool-before.ts` forwards `model`) and the revised AC-7.
 - No blockers. **Status:** Approved.
 
 ## Open Questions
