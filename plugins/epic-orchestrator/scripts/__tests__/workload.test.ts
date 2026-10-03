@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readlinkSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ownedWorkload, verifyOwnedExit } from "../workload.ts";
@@ -22,6 +22,25 @@ async function waitFor(path: string): Promise<number> {
     await Bun.sleep(20);
   }
   throw new Error(`missing process fixture ${path}`);
+}
+
+function hiddenScript(readyPath: string): string {
+  return [
+    'import { dlopen } from "bun:ffi";',
+    'const libc = dlopen("libc.so.6", { prctl: { args: ["i32", "i32", "i32", "i32", "i32"], returns: "i32" } });',
+    'if (libc.symbols.prctl(4, 0, 0, 0, 0) !== 0) throw new Error("PR_SET_DUMPABLE failed");',
+    `await Bun.write(${JSON.stringify(readyPath)}, String(process.pid));`,
+    "await Bun.sleep(30_000);",
+  ].join("\n");
+}
+
+function hiddenProcess(readyPath: string, cwd: string): Bun.Subprocess {
+  return Bun.spawn([process.execPath, "-e", hiddenScript(readyPath)], {
+    cwd,
+    detached: true,
+    stdout: "ignore",
+    stderr: "ignore",
+  });
 }
 
 test("finds worktree processes and descendants after they change cwd", async () => {
@@ -80,4 +99,71 @@ test("Linux inventory reads current-user processes without requiring root", asyn
   const root = mkdtempSync(join(tmpdir(), "toolu-workload-linux-"));
   temporary.push(root);
   expect(await ownedWorkload(root)).toEqual([]);
+});
+
+test("an unrelated unreadable Linux cwd does not block inventory or empty verification", async () => {
+  if (process.platform !== "linux") return;
+  const root = mkdtempSync(join(tmpdir(), "toolu-workload-hidden-unrelated-"));
+  const outside = mkdtempSync(join(tmpdir(), "toolu-workload-hidden-outside-"));
+  temporary.push(root, outside);
+  const child = hiddenProcess(join(outside, "ready.pid"), outside);
+  groups.push(child.pid);
+  await waitFor(join(outside, "ready.pid"));
+  expect(() => readlinkSync(`/proc/${child.pid}/cwd`)).toThrow(/EACCES/);
+
+  expect(await ownedWorkload(root)).toEqual([]);
+  expect(await verifyOwnedExit([])).toBe(true);
+});
+
+test("a known descendant remains owned when its Linux cwd becomes unreadable", async () => {
+  if (process.platform !== "linux") return;
+  const root = mkdtempSync(join(tmpdir(), "toolu-workload-hidden-owned-"));
+  const outside = mkdtempSync(join(tmpdir(), "toolu-workload-hidden-child-"));
+  temporary.push(root, outside);
+  const ready = join(outside, "ready.pid");
+  const parentScript = [
+    `const child = Bun.spawn([process.execPath, "-e", ${JSON.stringify(hiddenScript(ready))}], { cwd: ${JSON.stringify(outside)}, stdout: "ignore", stderr: "ignore" });`,
+    "await child.exited;",
+  ].join("\n");
+  const parent = Bun.spawn([process.execPath, "-e", parentScript], {
+    cwd: root,
+    detached: true,
+    stdout: "ignore",
+    stderr: "ignore",
+  });
+  groups.push(parent.pid);
+  const childPid = await waitFor(ready);
+  expect(() => readlinkSync(`/proc/${childPid}/cwd`)).toThrow(/EACCES/);
+
+  const records = await ownedWorkload(root);
+  expect(records.map((record) => record.pid)).toContain(parent.pid);
+  expect(records.map((record) => record.pid)).toContain(childPid);
+  expect(await verifyOwnedExit(records)).toBe(false);
+});
+
+test("an unreadable Linux cwd in an owned process group keeps ownership uncertain", async () => {
+  if (process.platform !== "linux") return;
+  const root = mkdtempSync(join(tmpdir(), "toolu-workload-hidden-group-"));
+  const outside = mkdtempSync(join(tmpdir(), "toolu-workload-hidden-group-outside-"));
+  temporary.push(root, outside);
+  const ready = join(outside, "ready.pid");
+  const owner = Bun.spawn([process.execPath, "-e", "await Bun.sleep(30_000)"], {
+    cwd: root,
+    stdout: "ignore",
+    stderr: "ignore",
+  });
+  const hidden = Bun.spawn([process.execPath, "-e", hiddenScript(ready)], {
+    cwd: outside,
+    stdout: "ignore",
+    stderr: "ignore",
+  });
+  try {
+    await waitFor(ready);
+    expect(() => readlinkSync(`/proc/${hidden.pid}/cwd`)).toThrow(/EACCES/);
+    await expect(ownedWorkload(root)).rejects.toThrow("cannot determine worktree ownership");
+  } finally {
+    owner.kill("SIGKILL");
+    hidden.kill("SIGKILL");
+    await Promise.all([owner.exited, hidden.exited]);
+  }
 });

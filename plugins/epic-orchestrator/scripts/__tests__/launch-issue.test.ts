@@ -202,8 +202,24 @@ test.concurrent("a real missing dependency leaves durable uncertain ownership an
   const argv = [process.execPath, LAUNCH, "--graph", graph, "--issue", "comemory-255", "--force"];
   const env = { TOOLU_RESOURCE_HOME: root, PATH: "" };
   const first = await run(argv, { env });
-  expect(first.exitCode).toBe(1);
   const record = JSON.parse(readFileSync(join(state, "issues/comemory-255.json"), "utf8"));
+  expect(record.lifecycle_error).toContain("gh");
+  const reportedError = first.stderr.trim().startsWith("{")
+    ? JSON.parse(first.stderr).error
+    : first.stderr.trim();
+  expect(reportedError).toContain(record.lifecycle_error);
+  const nativeExit = record.native_error.exitCode;
+  if (typeof nativeExit === "number") {
+    expect(record.lifecycle_error).toContain("gh repo view Falconiere/comemory");
+  }
+  expect(first.exitCode).toBe(
+    typeof nativeExit === "number" &&
+      Number.isSafeInteger(nativeExit) &&
+      nativeExit > 0 &&
+      nativeExit <= 255
+      ? nativeExit
+      : 1,
+  );
   expect(record.stage).toBe("uncertain");
   expect(record.attempt_id).toBe(readResourceState(root).leases[0]?.token);
   const retry = await run(argv, { env });

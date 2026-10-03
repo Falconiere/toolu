@@ -6,7 +6,11 @@ const INVENTORY_MAX_BYTES = 8 * 1024 * 1024;
 
 export type OwnedWorkload = { pid: number; group: number; started: string };
 
-type ProcessRecord = OwnedWorkload & { parent: number; cwd: string | undefined };
+type ProcessRecord = OwnedWorkload & {
+  parent: number;
+  cwd: string | undefined;
+  cwdUnavailable?: boolean;
+};
 
 function errno(error: unknown, code: string): boolean {
   return error instanceof Error && "code" in error && error.code === code;
@@ -36,15 +40,7 @@ function linuxRecord(pid: number): ProcessRecord | null {
     throw new Error(`invalid /proc stat for process ${pid}`);
   }
   if (state === "Z") return null;
-  let cwd: string | undefined;
-  try {
-    cwd = readlinkSync(`/proc/${pid}/cwd`);
-  } catch (error) {
-    if (!errno(error, "ENOENT")) {
-      throw new Error(`cannot inspect process ${pid} cwd`, { cause: error });
-    }
-  }
-  return { pid, parent, group, started: `linux:${started}`, cwd };
+  return { pid, parent, group, started: `linux:${started}`, cwd: undefined };
 }
 
 function linuxProcesses(): ProcessRecord[] {
@@ -54,14 +50,29 @@ function linuxProcesses(): ProcessRecord[] {
   const records: ProcessRecord[] = [];
   for (const entry of readdirSync("/proc", { withFileTypes: true })) {
     if (!entry.isDirectory() || !/^\d+$/.test(entry.name)) continue;
+    let owner: number;
     try {
-      if (statSync(`/proc/${entry.name}`).uid !== uid) continue;
+      owner = statSync(`/proc/${entry.name}`).uid;
     } catch (error) {
       if (errno(error, "ENOENT")) continue;
       throw new Error(`cannot inspect process owner ${entry.name}`, { cause: error });
     }
     const record = linuxRecord(Number(entry.name));
-    if (record !== null) records.push(record);
+    if (record === null) continue;
+    // Foreign-UID descendants still need their parent and birth identity.
+    if (owner === uid) {
+      try {
+        record.cwd = readlinkSync(`/proc/${record.pid}/cwd`);
+      } catch (error) {
+        if (errno(error, "EACCES") || errno(error, "EPERM")) record.cwdUnavailable = true;
+        else if (!errno(error, "ENOENT")) {
+          throw new Error(`cannot inspect process ${record.pid} cwd`, { cause: error });
+        }
+      }
+    } else {
+      record.cwdUnavailable = true;
+    }
+    records.push(record);
   }
   return records;
 }
@@ -148,6 +159,14 @@ export async function ownedWorkload(worktree: string, shellPid?: number): Promis
     return changed;
   };
   while (addDescendants()) {}
+  const ownedGroups = new Set(
+    inventory.filter((record) => owned.has(record.pid)).map((record) => record.group),
+  );
+  for (const record of inventory) {
+    if (!owned.has(record.pid) && record.cwdUnavailable && ownedGroups.has(record.group)) {
+      throw new Error(`cannot determine worktree ownership of process ${record.pid}`);
+    }
+  }
   return inventory
     .filter((record) => owned.has(record.pid))
     .map(({ pid, group, started }) => ({ pid, group, started }))
@@ -156,6 +175,12 @@ export async function ownedWorkload(worktree: string, shellPid?: number): Promis
 
 /** True only when every recorded PID is gone or belongs to a later process incarnation. */
 export async function verifyOwnedExit(records: readonly OwnedWorkload[]): Promise<boolean> {
-  const current = new Map(processes().map((record) => [record.pid, record.started]));
+  if (records.length === 0) return true;
+  if (process.platform === "linux") {
+    return records.every((record) => linuxRecord(record.pid)?.started !== record.started);
+  }
+  if (process.platform !== "darwin")
+    throw new Error(`process inventory is unavailable on ${process.platform}`);
+  const current = new Map(macIdentities().map((record) => [record.pid, record.started]));
   return records.every((record) => current.get(record.pid) !== record.started);
 }
