@@ -10,6 +10,8 @@ tracker-specific placeholders (written here without braces so they survive):
 - CLOSES: the PR body's closing line: `Closes OWNER/REPO#N` (GitHub),
   `Resolves KEY-12` (Jira), `Fixes ENG-12` (Linear).
 - HOST: the worker's host kind.
+- JOB: the managed command launcher (`bun scripts/job.ts`) that admits full
+  gates and test jobs under the worktree's shared resources.
 scripts/__tests__/skill-contract.test.ts fails if any placeholder goes unfilled. -->
 
 # Epic worker brief — {{ISSUE_REF}}
@@ -73,6 +75,13 @@ Report each phase as you enter it — the orchestrator's only view of progress.
    then stop and wait. The orchestrator owns merge.
 
 ## Never lose progress
+
+This worktree is bound to shared machine resources. Plan-ledger checks acquire
+an expensive-job lease automatically. Run other full gates and test jobs with
+`{{JOB}} -- <command> <args...>`. If capacity or resource
+pressure refuses admission, wait and retry the same check; do not bypass it.
+Background children keep occupying capacity until they exit. Phase reports
+describe meaningful progress; job heartbeats only establish liveness.
 
 Your session can end at any moment (usage limit, crash, host switch). Keep
 the branch recoverable:

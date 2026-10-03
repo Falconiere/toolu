@@ -34,6 +34,9 @@
     "./launcher": "./src/launcher/launcher.ts",
     "./cli": "./src/cli/cli.ts",
     "./rest": "./src/rest/rest.ts",
+    "./resources": "./src/resources/resources.ts",
+    "./resources/binding": "./src/resources/binding.ts",
+    "./resources/jobs": "./src/resources/jobs.ts",
     "./host": "./src/host/host.ts",
     "./state": "./src/state/state.ts",
     "./registry": "./src/registry/registry.ts",
@@ -46,7 +49,8 @@
     "./shell": "./src/shell/shell.ts",
     "./shell/writes": "./src/shell/shell-writes.ts",
     "./detect": "./src/detect/detect.ts",
-    "./quality": "./src/quality/quality.ts"
+    "./quality": "./src/quality/quality.ts",
+    "./process": "./src/process/process.ts"
   },
   "dependencies": {
     "unbash": "4.0.11",

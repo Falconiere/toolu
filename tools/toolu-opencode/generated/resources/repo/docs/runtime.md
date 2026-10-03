@@ -62,6 +62,26 @@ A skill CLI is a bundle too. An entry that starts with `#!/usr/bin/env bun` buil
 
 **Startup hooks.** The SessionStart hooks of context7, exa-search, agent-browser, jira, toolu-review and jev, and the Codex dependency checks of pr-babysit, python-quality, rust-quality and epic-orchestrator, are bundles on `@toolu/core/startup` (#269). A publisher never replaces a regular file at its stable path, only a symlink. When the launcher found Bun through `TOOLU_BUN` or `~/.bun/bin` but `bun` is not on `PATH`, it still publishes and prints one stderr line (`<plugin>: bun not found on PATH — the <tool> needs Bun 1.4.x …`), because the published CLI's shebang needs `bun` on `PATH`. With no Bun at all, the launcher's `systemMessage` replaces the hook and nothing is published.
 
+## Managed epic workloads
+
+Epic orchestration uses `@toolu/core/process` for bounded subprocesses with drained
+output, native exit status and process-group cancellation. Shared resource state
+defaults to `~/.local/state/toolu/resources` (`TOOLU_RESOURCE_HOME` overrides it).
+The installed plugin's raw epic scripts load these APIs from the committed
+`hooks/dist/epic-runtime.js` bundle, so they do not require workspace packages
+or an installed `node_modules` tree.
+Agent slots and expensive-job slots are separate; conservative defaults allow
+three agents and one managed job. Load, available memory and Linux CPU steal
+inform sustained admission holds with recovery hysteresis.
+
+A binding in the worktree's Git directory automatically admits plan-ledger checks
+through `@toolu/core/resources/jobs`. Workers use the epic `job.ts -- <command>`
+entry for other expensive commands. These limits cover managed commands; native
+host tools outside that path are checked through workload inventory at teardown.
+Uncertain launches and incomplete cleanup retain ownership. See the
+[epic orchestrator contract](../../epic-orchestrator/README.md) for policy,
+host verification limits and recovery.
+
 ## Why not node
 
 There is no `node` fallback. Measured warm hook startup on macOS: bash plus jq 6.3 ms, bun 5.2 ms (12.3 ms with zod), bun single-file bundle 6.4–8.6 ms, **node 49.7 ms**, python3 23.5 ms. Node is roughly 10x slower per hook than Bun (49.7 ms versus 5.2 ms), so a fallback would silently slow every tool call.

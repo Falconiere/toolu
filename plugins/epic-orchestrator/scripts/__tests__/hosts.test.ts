@@ -19,6 +19,7 @@ test.concurrent("agentArgs claude: skip permissions, model, effort, session name
 
 test.concurrent("agentArgs codex: bypass approvals and sandbox; effort through -c", () => {
   expect(agentArgs("codex", { ...base, model: "gpt-6-sol", effort: "medium" })).toEqual([
+    "--no-daemon",
     "--dangerously-bypass-approvals-and-sandbox",
     "--model",
     "gpt-6-sol",
@@ -39,10 +40,23 @@ test.concurrent("agentArgs cursor: yolo, trusted workspace, MCP approval; effort
 
 test.concurrent("agentArgs opencode: auto-approve and provider/model#variant", () => {
   expect(agentArgs("opencode", { ...base, model: "anthropic/claude-sonnet-5#high" })).toEqual([
+    "--standalone",
     "--auto",
     "--model",
     "anthropic/claude-sonnet-5#high",
   ]);
+});
+
+test.concurrent("captured sessions resume exactly and OpenCode owns its standalone runtime", () => {
+  expect(
+    agentArgs("codex", { ...base, resume: true, sessionId: "01a-session" }).slice(0, 2),
+  ).toEqual(["resume", "01a-session"]);
+  expect(
+    agentArgs("claude", { ...base, resume: true, sessionId: "abc-session" }).slice(0, 2),
+  ).toEqual(["--resume", "abc-session"]);
+  expect(
+    agentArgs("opencode", { ...base, resume: true, sessionId: "ses_123" }).slice(0, 3),
+  ).toEqual(["--standalone", "--session", "ses_123"]);
 });
 
 test.concurrent("agentArgs resume: codex uses the resume subcommand, the rest a flag", () => {

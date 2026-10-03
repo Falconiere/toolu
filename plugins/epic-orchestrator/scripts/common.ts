@@ -1,11 +1,13 @@
-/** Shared helpers for epic-orchestrator CLIs (Bun + stdlib only). */
+/** Shared helpers for epic-orchestrator CLIs. */
 
-import { mkdir, rename, writeFile } from "node:fs/promises";
+import { runCommand } from "../hooks/dist/epic-runtime.js";
+import { writeJsonAtomic } from "../hooks/dist/epic-runtime.js";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defaultPolicy, ghResetAt, withRetry } from "./ratelimit.ts";
+import { HOST_LIMIT } from "./hosts.ts";
 
 export const PLUGIN_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const REF_DIR = join(PLUGIN_ROOT, "skills", "epic-orchestrator", "references");
@@ -32,13 +34,36 @@ const REF_URL = /github\.com\/([^/\s]+)\/([^/\s]+)\/(?:issues|pull)\/(\d+)/;
 const REF_SHORT = /^([\w.-]+)\/([\w.-]+)#(\d+)$/;
 
 export class CommandError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly exitCode?: number,
+    readonly uncertain = false,
+    readonly nativeCode?: string,
+  ) {
     super(message);
     this.name = "CommandError";
   }
 }
 
-export type RunOpts = { cwd?: string; check?: boolean; write?: boolean };
+export type RunOpts = { cwd?: string; check?: boolean; write?: boolean; timeoutMs?: number };
+
+export function failureDetails(error: unknown): Record<string, unknown> {
+  const message = error instanceof Error ? error.message : String(error);
+  return {
+    lifecycle_error: message,
+    lifecycle_outcome: HOST_LIMIT.test(message) ? "provider-limited" : "uncertain",
+    native_error: {
+      exitCode: error instanceof CommandError ? (error.exitCode ?? null) : null,
+      code: error instanceof CommandError ? (error.nativeCode ?? null) : null,
+      uncertain: error instanceof CommandError ? error.uncertain : true,
+    },
+  };
+}
+
+export function commandExitCode(error: unknown): number {
+  const code = error instanceof CommandError ? error.exitCode : undefined;
+  return code !== undefined && Number.isSafeInteger(code) && code > 0 && code <= 255 ? code : 1;
+}
 
 /** Run a command. `gh` calls retry transient failures and wait out rate
  * limits; pass `write: true` for non-idempotent gh mutations so only rate
@@ -54,19 +79,17 @@ export async function run(cmd: string[], opts: RunOpts = {}): Promise<string> {
 
 async function runOnce(cmd: string[], opts: RunOpts): Promise<string> {
   const check = opts.check ?? true;
-  const spawnOpts: { cwd?: string; stdout: "pipe"; stderr: "pipe" } = {
-    stdout: "pipe",
-    stderr: "pipe",
-  };
-  if (opts.cwd !== undefined) spawnOpts.cwd = opts.cwd;
-  const proc = Bun.spawn(cmd, spawnOpts);
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
-  if (check && code !== 0) {
-    throw new CommandError(`${cmd.join(" ")} failed (${code}): ${(stderr || stdout).trim()}`);
+  const result = await runCommand(cmd, {
+    ...(opts.cwd ? { cwd: opts.cwd } : {}),
+    timeoutMs: opts.timeoutMs ?? 120_000,
+  });
+  const { stdout, stderr, exitCode: code } = result;
+  if (result.timedOut || result.cancelled || result.truncated || (check && code !== 0)) {
+    throw new CommandError(
+      `${cmd.join(" ")} failed (${code}${result.timedOut ? ", timeout" : ""}): ${(stderr || stdout).trim()}`,
+      code,
+      result.timedOut || result.cancelled,
+    );
   }
   return stdout;
 }
@@ -76,28 +99,43 @@ export async function ghJson(args: string[], opts: { cwd?: string } = {}): Promi
   return out.trim() ? JSON.parse(out) : null;
 }
 
-export async function herdr(args: string[]): Promise<Record<string, unknown>> {
-  const proc = Bun.spawn(["herdr", ...args], { stdout: "pipe", stderr: "pipe" });
-  const [stdout, stderr] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-  ]);
-  await proc.exited;
+export async function herdr(args: string[], timeoutMs = 120_000): Promise<Record<string, unknown>> {
+  const result = await runCommand(["herdr", ...args], { timeoutMs });
+  const { stdout, stderr } = result;
   const text = stdout.trim() || stderr.trim();
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new CommandError(`herdr ${args.join(" ")}: non-JSON output: ${text.slice(0, 300)}`);
+    throw new CommandError(
+      `herdr ${args.join(" ")}: non-JSON output: ${text.slice(0, 300)}`,
+      result.exitCode,
+      result.timedOut || result.cancelled,
+    );
   }
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new CommandError(`herdr ${args.join(" ")}: expected object JSON`);
+    throw new CommandError(
+      `herdr ${args.join(" ")}: expected object JSON`,
+      result.exitCode,
+      result.timedOut || result.cancelled,
+    );
   }
   const data: Record<string, unknown> = { ...parsed };
   if ("error" in data && data.error && typeof data.error === "object" && data.error !== null) {
     const err = data.error as { code?: unknown; message?: unknown };
-    throw new CommandError(`herdr ${args.join(" ")}: ${String(err.code)}: ${String(err.message)}`);
+    throw new CommandError(
+      `herdr ${args.join(" ")}: ${String(err.code)}: ${String(err.message)}`,
+      result.exitCode,
+      result.timedOut || err.code === "timeout" || err.code === "agent_prompt_stalled",
+      typeof err.code === "string" ? err.code : undefined,
+    );
   }
+  if (result.exitCode !== 0 || result.timedOut || result.cancelled || result.truncated)
+    throw new CommandError(
+      `herdr ${args.join(" ")} failed (${result.exitCode}): ${text.slice(0, 300)}`,
+      result.exitCode,
+      result.timedOut || result.cancelled,
+    );
   if (
     data.result &&
     typeof data.result === "object" &&
@@ -130,19 +168,24 @@ export function parseRef(ref: string, defaultRepo?: string | null): [string, str
 }
 
 function currentRepoSync(): string {
-  const proc = Bun.spawnSync([
-    "gh",
-    "repo",
-    "view",
-    "--json",
-    "nameWithOwner",
-    "-q",
-    ".nameWithOwner",
-  ]);
-  if (proc.exitCode !== 0) {
+  const proc = Bun.spawnSync(
+    ["gh", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"],
+    { timeout: 30_000, maxBuffer: 65_536 },
+  );
+  if (proc.exitCode !== 0 || proc.exitedDueToTimeout || proc.exitedDueToMaxBuffer) {
     const errBuf = proc.stderr;
     const errText = typeof errBuf === "undefined" ? "" : Buffer.from(errBuf).toString();
-    throw new CommandError(`gh repo view failed: ${errText}`);
+    const nativeCode = proc.exitedDueToTimeout
+      ? "timeout"
+      : proc.exitedDueToMaxBuffer
+        ? "output_limit"
+        : undefined;
+    throw new CommandError(
+      `gh repo view failed${nativeCode ? ` (${nativeCode})` : ""}: ${errText}`,
+      proc.exitCode,
+      nativeCode !== undefined,
+      nativeCode,
+    );
   }
   const outBuf = proc.stdout;
   return (typeof outBuf === "undefined" ? "" : Buffer.from(outBuf).toString()).trim();
@@ -183,10 +226,7 @@ export function readJson<T>(path: string, fallback: T): T {
 }
 
 export async function writeJson(path: string, data: unknown): Promise<void> {
-  await mkdir(dirname(path), { recursive: true });
-  const tmp = `${path}.tmp`;
-  await writeFile(tmp, `${JSON.stringify(data, null, 2)}\n`);
-  await rename(tmp, path);
+  writeJsonAtomic(path, data);
 }
 
 export function die(msg: string, code = 1): never {

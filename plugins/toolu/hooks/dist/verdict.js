@@ -4274,6 +4274,12 @@ var EditRecordSchema = strictObject({
   moved_to: string2().optional(),
   from: string2().optional()
 });
+
+// packages/toolu-core/src/process/process-group.ts
+var PROCESS_TABLE_MAX_BYTES = 8 * 1024 * 1024;
+
+// packages/toolu-core/src/process/parent-guard.ts
+var parentOwnedGroups = new Set;
 // packages/toolu-core/src/ledger/verdict-gates.ts
 import { spawnSync as spawnSync4 } from "child_process";
 import { readFileSync as readFileSync4 } from "fs";

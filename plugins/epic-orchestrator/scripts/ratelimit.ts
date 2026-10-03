@@ -6,6 +6,8 @@
  * rate limit sleeps until reset (bounded), and launches can check the
  * remaining budget first. */
 
+import { runCommand } from "../hooks/dist/epic-runtime.js";
+
 export class RateLimitError extends Error {
   constructor(
     message: string,
@@ -135,14 +137,10 @@ export async function ghBudget(policy: RetryPolicy = defaultPolicy()): Promise<G
     // Transient failures retry; a rate limit here cannot wait for itself.
     out = await withRetry(
       async () => {
-        const proc = Bun.spawn(["gh", "api", "rate_limit"], { stdout: "pipe", stderr: "pipe" });
-        const [text, err, code] = await Promise.all([
-          new Response(proc.stdout).text(),
-          new Response(proc.stderr).text(),
-          proc.exited,
-        ]);
-        if (code !== 0) throw new Error(`gh api rate_limit failed (${code}): ${err.trim()}`);
-        return text;
+        const result = await runCommand(["gh", "api", "rate_limit"], { timeoutMs: 10_000 });
+        if (result.exitCode !== 0 || result.timedOut || result.truncated)
+          throw new Error(`gh api rate_limit failed (${result.exitCode}): ${result.stderr.trim()}`);
+        return result.stdout;
       },
       { ...policy, maxSleepMs: Math.min(policy.maxSleepMs, 30_000) },
     );

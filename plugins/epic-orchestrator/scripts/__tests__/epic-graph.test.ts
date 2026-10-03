@@ -57,6 +57,27 @@ test.concurrent("graph: classify ready blocked done and in_flight", () => {
   expect(classify(i255, refs, { "comemory-255": { stage: "merged" } })).toBe("ready");
 });
 
+test.concurrent("graph: durable ownership stays in flight after the tracker issue closes", () => {
+  const issues = loadIssues();
+  const refs = new Set(Object.keys(issues));
+  const source = issues["Falconiere/comemory#253"];
+  if (!source) throw new Error("fixture missing closed issue #253");
+  for (const stage of [
+    "starting",
+    "uncertain",
+    "replacing",
+    "running",
+    "awaiting_merge",
+    "cleaning",
+    "cleanup-incomplete",
+  ]) {
+    expect(classify(source, refs, { [source.key]: { stage } })).toBe("in_flight");
+  }
+  for (const stage of ["merged", "abandoned", "unknown"]) {
+    expect(classify(source, refs, { [source.key]: { stage } })).toBe("done");
+  }
+});
+
 test.concurrent("graph: blocker outside epic is external", () => {
   const issues = loadIssues();
   const base = issues["Falconiere/comemory#254"];

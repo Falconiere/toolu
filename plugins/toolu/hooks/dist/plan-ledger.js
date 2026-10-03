@@ -2,9 +2,9 @@
 // @bun
 
 // packages/toolu-core/src/ledger/ledger-commands.ts
-import { accessSync, constants as constants2, mkdtempSync, rmSync as rmSync3, writeFileSync as writeFileSync2 } from "fs";
+import { accessSync, constants as constants3, mkdtempSync, rmSync as rmSync4, writeFileSync as writeFileSync3 } from "fs";
 import { tmpdir } from "os";
-import { isAbsolute, join as join5, resolve as resolve2 } from "path";
+import { isAbsolute, join as join7, resolve as resolve3 } from "path";
 
 // packages/toolu-core/src/host/host-name.ts
 var HOST_NAMES = ["claude", "codex", "cursor", "opencode", "hermes"];
@@ -4644,8 +4644,8 @@ function writeOrFail(ctx, ledger, failure) {
 }
 
 // packages/toolu-core/src/ledger/ledger-run.ts
-import { mkdirSync as mkdirSync3, readFileSync as readFileSync4, rmSync as rmSync2 } from "fs";
-import { dirname as dirname2 } from "path";
+import { mkdirSync as mkdirSync4, readFileSync as readFileSync7, rmSync as rmSync3 } from "fs";
+import { dirname as dirname4 } from "path";
 
 // packages/toolu-core/src/state/telemetry.ts
 import { appendFileSync, mkdirSync as mkdirSync2 } from "fs";
@@ -4782,10 +4782,828 @@ function telemetryAppend(root, event, extras, options = {}) {
 
 // packages/toolu-core/src/ledger/ledger-check.ts
 import { closeSync, openSync } from "fs";
+import { constants as constants2 } from "os";
+
+// packages/toolu-core/src/resources/binding.ts
+import { existsSync as existsSync2, readFileSync as readFileSync5, realpathSync, statSync as statSync5 } from "fs";
+import { dirname as dirname3, join as join5, resolve as resolve2 } from "path";
+
+// packages/toolu-core/src/resources/lock.ts
+import { existsSync, mkdirSync as mkdirSync3, readFileSync as readFileSync4, renameSync as renameSync2, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "fs";
+import { dirname as dirname2 } from "path";
+import { randomUUID } from "crypto";
+function errno(error, code) {
+  return error instanceof Error && "code" in error && error.code === code;
+}
+function processAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0)
+    return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if (errno(error, "ESRCH"))
+      return false;
+    throw error;
+  }
+}
+function readJsonFile(path, fallback) {
+  try {
+    const value = JSON.parse(readFileSync4(path, "utf8"));
+    return value;
+  } catch (error) {
+    if (errno(error, "ENOENT"))
+      return fallback;
+    throw error;
+  }
+}
+function writeJsonAtomic(path, value) {
+  mkdirSync3(dirname2(path), { recursive: true });
+  const temp = `${path}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync2(temp, `${JSON.stringify(value, null, 2)}
+`, { flag: "wx", mode: 384 });
+    renameSync2(temp, path);
+  } finally {
+    rmSync2(temp, { force: true });
+  }
+}
+function stale(path) {
+  const owner = readJsonFile(`${path}/owner.json`, null);
+  if (isJsonObject(owner) && typeof owner.pid === "number" && typeof owner.token === "string")
+    return !processAlive(owner.pid);
+  return false;
+}
+function reclaim(path) {
+  const reap = `${path}.reap`;
+  try {
+    mkdirSync3(reap);
+  } catch (error) {
+    if (errno(error, "EEXIST"))
+      return;
+    throw error;
+  }
+  try {
+    if (stale(path))
+      rmSync2(path, { recursive: true });
+  } finally {
+    rmSync2(reap, { recursive: true });
+  }
+}
+async function acquireLock(path, opts = {}) {
+  const timeoutMs = opts.timeoutMs ?? 0;
+  if (!Number.isFinite(timeoutMs) || timeoutMs < 0 || timeoutMs > 2147483647) {
+    throw new Error("lock timeoutMs must be a non-negative finite number within the timer range");
+  }
+  mkdirSync3(dirname2(path), { recursive: true });
+  const until = Date.now() + timeoutMs;
+  const attempt = async () => {
+    const token = randomUUID();
+    const prepared = `${path}.${token}.pending`;
+    try {
+      if (existsSync(`${path}.reap`))
+        return null;
+      if (existsSync(path)) {
+        reclaim(path);
+        if (existsSync(path)) {
+          if (Date.now() >= until)
+            return null;
+          return Bun.sleep(25).then(attempt);
+        }
+      }
+      mkdirSync3(prepared);
+      writeJsonAtomic(`${prepared}/owner.json`, { pid: process.pid, token });
+      renameSync2(prepared, path);
+      return {
+        token,
+        release: () => {
+          const owner = readJsonFile(`${path}/owner.json`, null);
+          if (isJsonObject(owner) && owner.token === token) {
+            rmSync2(path, { recursive: true });
+          }
+        }
+      };
+    } catch (error) {
+      if (!errno(error, "EEXIST") && !errno(error, "ENOTEMPTY"))
+        throw error;
+    } finally {
+      rmSync2(prepared, { recursive: true, force: true });
+    }
+    reclaim(path);
+    if (Date.now() >= until)
+      return null;
+    return Bun.sleep(25).then(attempt);
+  };
+  return attempt();
+}
+async function withResourceLock(root, fn) {
+  const lock = await acquireLock(`${root}/state.lock`, { timeoutMs: 5000 });
+  if (!lock)
+    throw new Error("resource state busy; retry later");
+  try {
+    return await fn();
+  } finally {
+    lock.release();
+  }
+}
+
+// packages/toolu-core/src/resources/binding.ts
+function gitDir(cwd) {
+  let path = realpathSync(cwd);
+  for (;; ) {
+    const marker = join5(path, ".git");
+    if (existsSync2(marker)) {
+      if (statSync5(marker).isDirectory())
+        return { git: marker, worktree: path };
+      const target = /^gitdir: (.+)\s*$/.exec(readFileSync5(marker, "utf8"))?.[1];
+      if (!target)
+        throw new Error(`invalid git worktree marker: ${marker}`);
+      return { git: resolve2(path, target.trim()), worktree: path };
+    }
+    const parent = dirname3(path);
+    if (parent === path)
+      return null;
+    path = parent;
+  }
+}
+function resourceBinding(cwd) {
+  const target = gitDir(cwd);
+  if (!target)
+    return null;
+  const binding = readJsonFile(join5(target.git, "toolu-resource.json"), null);
+  if (binding === null)
+    return null;
+  if (!isJsonObject(binding) || binding.version !== 1 || typeof binding.root !== "string" || !binding.root.startsWith("/") || binding.worktree !== target.worktree || typeof binding.key !== "string" || typeof binding.stateDir !== "string")
+    throw new Error("invalid worktree resource binding");
+  return {
+    version: 1,
+    root: binding.root,
+    worktree: binding.worktree,
+    key: binding.key,
+    stateDir: binding.stateDir
+  };
+}
+
+// packages/toolu-core/src/resources/jobs.ts
+import { randomUUID as randomUUID3 } from "crypto";
+
+// packages/toolu-core/src/process/run-command.ts
 import { constants } from "os";
+
+// packages/toolu-core/src/process/process-group.ts
+var PROCESS_POLL_MS = 25;
+var TERMINATE_GRACE_MS = 250;
+var KILL_GRACE_MS = 1000;
+var PROCESS_TABLE_TIMEOUT_MS = 2000;
+var PROCESS_TABLE_MAX_BYTES = 8 * 1024 * 1024;
+function errno2(error, code) {
+  return error instanceof Error && "code" in error && error.code === code;
+}
+function validateProcessGroupId(processGroupId) {
+  if (!Number.isSafeInteger(processGroupId) || processGroupId <= 0) {
+    throw new Error("processGroupId must be a positive safe integer");
+  }
+}
+function groupTarget(processGroupId) {
+  return process.platform === "win32" ? processGroupId : -processGroupId;
+}
+function signalProcessGroup(processGroupId, signal) {
+  validateProcessGroupId(processGroupId);
+  try {
+    process.kill(groupTarget(processGroupId), signal);
+  } catch (error) {
+    if (!errno2(error, "ESRCH"))
+      throw error;
+  }
+}
+function signalProbe(processGroupId) {
+  try {
+    process.kill(groupTarget(processGroupId), 0);
+    return true;
+  } catch (error) {
+    if (errno2(error, "ESRCH"))
+      return false;
+    if (errno2(error, "EPERM"))
+      return true;
+    throw error;
+  }
+}
+function processGroupAlive(processGroupId) {
+  validateProcessGroupId(processGroupId);
+  if (process.platform === "win32")
+    return signalProbe(processGroupId);
+  const table = Bun.spawnSync(["ps", "-axo", "pgid=,stat="], {
+    stdout: "pipe",
+    stderr: "ignore",
+    timeout: PROCESS_TABLE_TIMEOUT_MS,
+    killSignal: "SIGKILL",
+    maxBuffer: PROCESS_TABLE_MAX_BYTES
+  });
+  if (table.exitCode !== 0)
+    return signalProbe(processGroupId);
+  const rows = new TextDecoder().decode(table.stdout).split(`
+`);
+  for (const row of rows) {
+    const match = /^\s*(\d+)\s+(\S+)/.exec(row);
+    if (match === null || Number(match[1]) !== processGroupId)
+      continue;
+    if (!match[2]?.startsWith("Z"))
+      return true;
+  }
+  return false;
+}
+async function waitForDeadGroup(processGroupId, deadline) {
+  if (!processGroupAlive(processGroupId))
+    return true;
+  const remaining = deadline - performance.now();
+  if (remaining <= 0)
+    return false;
+  await Bun.sleep(Math.min(PROCESS_POLL_MS, remaining));
+  return waitForDeadGroup(processGroupId, deadline);
+}
+async function terminateProcessGroup(processGroupId) {
+  signalProcessGroup(processGroupId, "SIGTERM");
+  if (await waitForDeadGroup(processGroupId, performance.now() + TERMINATE_GRACE_MS))
+    return;
+  signalProcessGroup(processGroupId, "SIGKILL");
+  if (!await waitForDeadGroup(processGroupId, performance.now() + KILL_GRACE_MS)) {
+    throw new Error(`process group ${processGroupId} survived SIGKILL`);
+  }
+}
+
+// packages/toolu-core/src/process/parent-guard.ts
+var PARENT_SIGNALS = ["SIGINT", "SIGTERM", "SIGHUP"];
+var parentOwnedGroups = new Set;
+var parentGuardInstalled = false;
+function killParentOwnedGroups() {
+  for (const processGroupId of parentOwnedGroups)
+    signalProcessGroup(processGroupId, "SIGKILL");
+}
+function removeParentGuard() {
+  if (!parentGuardInstalled)
+    return;
+  process.off("exit", killParentOwnedGroups);
+  for (const signal of PARENT_SIGNALS)
+    process.off(signal, forwardParentSignal);
+  parentGuardInstalled = false;
+}
+function forwardParentSignal(signal) {
+  killParentOwnedGroups();
+  removeParentGuard();
+  process.kill(process.pid, signal);
+}
+function guardParentLifecycle(processGroupId) {
+  parentOwnedGroups.add(processGroupId);
+  if (!parentGuardInstalled) {
+    process.on("exit", killParentOwnedGroups);
+    for (const signal of PARENT_SIGNALS)
+      process.on(signal, forwardParentSignal);
+    parentGuardInstalled = true;
+  }
+  return () => {
+    parentOwnedGroups.delete(processGroupId);
+    if (parentOwnedGroups.size === 0)
+      removeParentGuard();
+  };
+}
+
+// packages/toolu-core/src/process/run-command.ts
+var DEFAULT_TIMEOUT_MS = 30000;
+var DEFAULT_MAX_OUTPUT_BYTES = 1048576;
+var MAX_TIMER_MS = 2147483647;
+var GROUP_POLL_MS = 250;
+var FINAL_DRAIN_MS = 250;
+var CANCELLED_EXIT_CODE = 130;
+function errno3(error, code) {
+  return error instanceof Error && "code" in error && error.code === code;
+}
+function validateOptions(argv, options) {
+  if (argv.length === 0 || argv[0] === undefined || argv[0] === "") {
+    throw new Error("argv must not be empty");
+  }
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs > MAX_TIMER_MS) {
+    throw new Error(timeoutMs > MAX_TIMER_MS ? `timeoutMs exceeds the maximum timer delay of ${MAX_TIMER_MS} ms` : "timeoutMs must be a positive finite number");
+  }
+  const maxOutputBytes = options.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES;
+  if (!Number.isSafeInteger(maxOutputBytes) || maxOutputBytes < 0) {
+    throw new Error("maxOutputBytes must be a non-negative safe integer");
+  }
+  return { timeoutMs, maxOutputBytes };
+}
+function drain(stream, budget) {
+  const reader = stream.getReader();
+  const chunks = [];
+  const readNext = async () => {
+    const next = await reader.read();
+    if (next.done)
+      return;
+    const take = Math.min(next.value.byteLength, budget.remaining);
+    if (take > 0)
+      chunks.push(next.value.slice(0, take));
+    budget.remaining -= take;
+    if (take < next.value.byteLength)
+      budget.truncated = true;
+    return readNext();
+  };
+  const done = (async () => {
+    try {
+      await readNext();
+    } finally {
+      reader.releaseLock();
+    }
+    const length = chunks.reduce((total, chunk) => total + chunk.byteLength, 0);
+    const bytes = new Uint8Array(length);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return new TextDecoder().decode(bytes);
+  })();
+  return {
+    done,
+    async cancel() {
+      try {
+        await reader.cancel();
+      } catch {}
+    }
+  };
+}
+async function feedStdin(proc, input) {
+  try {
+    await proc.stdin.write(input);
+    await proc.stdin.end();
+  } catch (error) {
+    if (!errno3(error, "EPIPE"))
+      throw error;
+  }
+}
+async function waitForGroupExit(processGroupId, stopped) {
+  if (!processGroupAlive(processGroupId))
+    return;
+  const outcome = await Promise.race([
+    Bun.sleep(GROUP_POLL_MS).then(() => "poll"),
+    stopped
+  ]);
+  if (outcome === "poll")
+    return waitForGroupExit(processGroupId, stopped);
+}
+async function settleDrains(stdout, stderr) {
+  const drained = Promise.all([stdout.done, stderr.done]).then(() => true);
+  const finished = await Promise.race([drained, Bun.sleep(FINAL_DRAIN_MS).then(() => false)]);
+  if (finished)
+    return;
+  await Promise.all([stdout.cancel(), stderr.cancel()]);
+  await Promise.all([stdout.done, stderr.done]);
+}
+function exitCode(proc, observed) {
+  if (observed !== undefined)
+    return observed;
+  if (proc.exitCode !== null)
+    return proc.exitCode;
+  const signalNumber = proc.signalCode === null ? undefined : constants.signals[proc.signalCode];
+  return 128 + (signalNumber ?? 0);
+}
+function stopControl(timeoutMs, signal) {
+  const deferred = Promise.withResolvers();
+  let current;
+  const stop = (reason) => {
+    if (current !== undefined)
+      return;
+    current = reason;
+    deferred.resolve(reason);
+  };
+  const timeout = setTimeout(() => stop("timeout"), timeoutMs);
+  const onAbort = () => stop("cancelled");
+  signal?.addEventListener("abort", onAbort, { once: true });
+  return {
+    stopped: deferred.promise,
+    reason: () => current,
+    release() {
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", onAbort);
+    }
+  };
+}
+function registerSpawn(callback, pid) {
+  try {
+    return Promise.resolve(callback?.(pid));
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+async function normalCompletion(proc, prerequisites, stdout, stderr, stop) {
+  await Promise.all(prerequisites);
+  await waitForGroupExit(proc.pid, stop.stopped);
+  if (stop.reason() === undefined)
+    await Promise.all([stdout.done, stderr.done]);
+}
+async function stopCommand(proc, exited, stdout, stderr) {
+  await terminateProcessGroup(proc.pid);
+  await Promise.allSettled([exited]);
+  await settleDrains(stdout, stderr);
+}
+function commandResult(proc, observedExitCode, started, stop, budget, stdout, stderr) {
+  return {
+    stdout,
+    stderr,
+    exitCode: exitCode(proc, observedExitCode),
+    durationMs: performance.now() - started,
+    timedOut: stop.reason() === "timeout",
+    cancelled: stop.reason() === "cancelled",
+    truncated: budget.truncated
+  };
+}
+async function monitorCommand(proc, options, started, timeoutMs, maxOutputBytes) {
+  const budget = { remaining: maxOutputBytes, truncated: false };
+  const stdout = drain(proc.stdout, budget);
+  const stderr = drain(proc.stderr, budget);
+  const stop = stopControl(timeoutMs, options.signal);
+  let observedExitCode;
+  const exited = proc.exited.then((code) => observedExitCode = code);
+  const registered = registerSpawn(options.onSpawn, proc.pid);
+  const fed = registered.then(() => feedStdin(proc, options.stdin ?? ""));
+  const normal = normalCompletion(proc, [fed, exited], stdout, stderr, stop);
+  const outcome = normal.then(() => ({ kind: "complete" }), (error) => ({ kind: "error", error }));
+  try {
+    const first = await Promise.race([
+      outcome,
+      stop.stopped.then(() => ({ kind: "stopped" }))
+    ]);
+    if (first.kind !== "complete")
+      await stopCommand(proc, exited, stdout, stderr);
+    if (first.kind === "error")
+      throw first.error;
+    return commandResult(proc, observedExitCode, started, stop, budget, await stdout.done, await stderr.done);
+  } finally {
+    stop.release();
+  }
+}
+async function execute(argv, options, timeoutMs, maxOutputBytes) {
+  const started = performance.now();
+  if (options.signal?.aborted === true) {
+    return {
+      stdout: "",
+      stderr: "",
+      exitCode: CANCELLED_EXIT_CODE,
+      durationMs: performance.now() - started,
+      timedOut: false,
+      cancelled: true,
+      truncated: false
+    };
+  }
+  const spawnOptions = {
+    stdin: "pipe",
+    stdout: "pipe",
+    stderr: "pipe",
+    detached: true
+  };
+  if (options.cwd !== undefined)
+    spawnOptions.cwd = options.cwd;
+  if (options.env !== undefined)
+    spawnOptions.env = options.env;
+  const proc = Bun.spawn([...argv], spawnOptions);
+  const releaseParentGuard = guardParentLifecycle(proc.pid);
+  try {
+    return await monitorCommand(proc, options, started, timeoutMs, maxOutputBytes);
+  } finally {
+    releaseParentGuard();
+  }
+}
+function runCommand(argv, options = {}) {
+  const { timeoutMs, maxOutputBytes } = validateOptions(argv, options);
+  return execute(argv, options, timeoutMs, maxOutputBytes);
+}
+// packages/toolu-core/src/resources/resources.ts
+import { randomUUID as randomUUID2 } from "crypto";
+
+// packages/toolu-core/src/resources/pressure.ts
+import { readFileSync as readFileSync6 } from "fs";
+import { cpus, freemem, loadavg, totalmem } from "os";
+var PRESSURE_SAMPLE_MS = 30000;
+var PRESSURE_HOLD_MS = 60000;
+var PRESSURE_RECOVERY_MS = 120000;
+function finite(value) {
+  return Number.isFinite(value);
+}
+function isSample(sample) {
+  if (!isJsonObject(sample))
+    return false;
+  const ticks = sample.ticks;
+  return typeof sample.at === "number" && finite(sample.at) && sample.at >= 0 && typeof sample.cpus === "number" && Number.isSafeInteger(sample.cpus) && sample.cpus > 0 && typeof sample.load === "number" && finite(sample.load) && sample.load >= 0 && typeof sample.availableBytes === "number" && finite(sample.availableBytes) && sample.availableBytes >= 0 && typeof sample.totalBytes === "number" && finite(sample.totalBytes) && sample.totalBytes > 0 && sample.availableBytes <= sample.totalBytes && (sample.steal === null || typeof sample.steal === "number" && finite(sample.steal) && sample.steal >= 0 && sample.steal <= 1) && (ticks === undefined || isJsonObject(ticks) && typeof ticks.total === "number" && Number.isSafeInteger(ticks.total) && ticks.total >= 0 && typeof ticks.steal === "number" && Number.isSafeInteger(ticks.steal) && ticks.steal >= 0);
+}
+function isPressure(value) {
+  if (!isJsonObject(value))
+    return false;
+  const badSinceValid = value.badSince === null || typeof value.badSince === "number" && finite(value.badSince) && isSample(value.sample) && value.badSince <= value.sample.at;
+  const goodSinceValid = value.goodSince === null || typeof value.goodSince === "number" && finite(value.goodSince) && isSample(value.sample) && value.goodSince <= value.sample.at;
+  return typeof value.held === "boolean" && badSinceValid && goodSinceValid && isSample(value.sample) && (value.held ? typeof value.reason === "string" : value.reason === null);
+}
+function advancePressure(previous, sample) {
+  if (!isSample(sample) || previous !== undefined && !isPressure(previous)) {
+    throw new Error("invalid resource pressure sample");
+  }
+  if (previous !== undefined && sample.at < previous.sample.at) {
+    throw new Error("resource pressure sample moved backwards");
+  }
+  const memory = sample.availableBytes / sample.totalBytes;
+  const effective = Math.max(0.1, sample.cpus * (1 - (sample.steal ?? 0)));
+  const bad = sample.load > effective * 1.5 || memory < 0.1 || (sample.steal ?? 0) > 0.25;
+  const good = sample.load < effective * 0.8 && memory > 0.2 && (sample.steal ?? 0) < 0.1;
+  const badSince = bad ? previous?.badSince ?? sample.at : null;
+  const goodSince = good ? previous?.goodSince ?? sample.at : null;
+  let held = previous?.held ?? false;
+  if (badSince !== null && sample.at - badSince >= PRESSURE_HOLD_MS)
+    held = true;
+  if (goodSince !== null && sample.at - goodSince >= PRESSURE_RECOVERY_MS)
+    held = false;
+  return {
+    held,
+    badSince,
+    goodSince,
+    sample,
+    reason: held ? "sustained CPU/load or memory pressure" : null
+  };
+}
+function sampleResources(previous) {
+  const sample = {
+    at: Date.now(),
+    cpus: cpus().length,
+    load: loadavg()[0] ?? 0,
+    availableBytes: freemem(),
+    totalBytes: totalmem(),
+    steal: null
+  };
+  if (process.platform !== "linux")
+    return sample;
+  try {
+    const cpu = readFileSync6("/proc/stat", "utf8").split(`
+`)[0]?.trim().split(/\s+/).slice(1).map(Number) ?? [];
+    const ticks = { total: cpu.slice(0, 8).reduce((sum, n) => sum + n, 0), steal: cpu[7] ?? 0 };
+    const before = previous?.ticks;
+    if (before && ticks.total > before.total)
+      sample.steal = Math.max(0, (ticks.steal - before.steal) / (ticks.total - before.total));
+    sample.ticks = ticks;
+    const available = /^MemAvailable:\s+(\d+) kB$/m.exec(readFileSync6("/proc/meminfo", "utf8"));
+    if (available?.[1])
+      sample.availableBytes = Number(available[1]) * 1024;
+  } catch (error) {
+    if (!errno(error, "ENOENT"))
+      throw error;
+  }
+  return sample;
+}
+
+// packages/toolu-core/src/resources/resource-store.ts
+import { join as join6 } from "path";
+function resourcePolicy(root) {
+  const p = readJsonFile(join6(root, "policy.json"), {});
+  if (!isJsonObject(p))
+    throw new Error("invalid resource policy");
+  const hosts = {};
+  if (p.hosts !== undefined) {
+    if (!isJsonObject(p.hosts))
+      throw new Error("invalid resource hosts");
+    for (const [host, cap] of Object.entries(p.hosts)) {
+      if (typeof cap !== "number")
+        throw new Error(`invalid resource capacity ${host}`);
+      hosts[host] = cap;
+    }
+  }
+  const maxAgents = p.maxAgents ?? 3;
+  const maxJobs = p.maxJobs ?? 1;
+  if (typeof maxAgents !== "number" || typeof maxJobs !== "number")
+    throw new Error("invalid resource capacity");
+  const policy = { maxAgents, maxJobs, hosts };
+  for (const [key, value] of Object.entries({
+    maxAgents: policy.maxAgents,
+    maxJobs: policy.maxJobs,
+    ...policy.hosts
+  })) {
+    if (!Number.isSafeInteger(value) || value <= 0)
+      throw new Error(`invalid resource capacity ${key}`);
+  }
+  return policy;
+}
+function optionalString(value) {
+  return value === undefined || typeof value === "string";
+}
+function isLease(lease) {
+  return isJsonObject(lease) && typeof lease.token === "string" && lease.token.length > 0 && (lease.type === "agent" || lease.type === "job") && typeof lease.key === "string" && typeof lease.stateDir === "string" && optionalString(lease.host) && optionalString(lease.pendingHost) && typeof lease.ownerPid === "number" && Number.isSafeInteger(lease.ownerPid) && lease.ownerPid > 0 && (lease.groupPid === undefined || typeof lease.groupPid === "number" && Number.isSafeInteger(lease.groupPid) && lease.groupPid > 0) && optionalString(lease.worktree) && optionalString(lease.pane) && optionalString(lease.session) && typeof lease.stage === "string" && typeof lease.createdAt === "string" && typeof lease.heartbeatAt === "string";
+}
+function isResourceState(state) {
+  return isJsonObject(state) && state.version === 1 && Array.isArray(state.leases) && isJsonObject(state.cooldowns) && state.leases.every(isLease) && Object.values(state.cooldowns).every((value) => isJsonObject(value) && typeof value.until === "number" && Number.isFinite(value.until) && typeof value.reason === "string") && (state.pressure === undefined || isPressure(state.pressure));
+}
+function readResourceState(root) {
+  const state = readJsonFile(join6(root, "state.json"), {
+    version: 1,
+    leases: [],
+    cooldowns: {}
+  });
+  if (!isResourceState(state))
+    throw new Error("invalid resource state; reconcile ownership before launching");
+  return state;
+}
+async function updateResources(root, fn) {
+  return withResourceLock(root, () => {
+    const state = readResourceState(root);
+    try {
+      return fn(state);
+    } finally {
+      writeJsonAtomic(join6(root, "state.json"), state);
+    }
+  });
+}
+
+// packages/toolu-core/src/resources/resources.ts
+function reconcileJobs(state) {
+  const before = state.leases.length;
+  state.leases = state.leases.filter((lease) => lease.type !== "job" || processAlive(lease.ownerPid) || lease.groupPid !== undefined && processGroupAlive(lease.groupPid));
+  return before - state.leases.length;
+}
+function requireJobAdmission(state, req) {
+  if (req.type !== "job" || req.worktree === undefined)
+    return;
+  const agent = state.leases.find((lease) => lease.type === "agent" && lease.worktree === req.worktree);
+  if (agent && agent.stage !== "starting" && agent.stage !== "running")
+    throw new Error(`worktree job admission blocked by agent stage ${agent.stage}`);
+}
+function validateRequestCaps(req) {
+  if (req.hostCap !== undefined && (!Number.isSafeInteger(req.hostCap) || req.hostCap <= 0))
+    throw new Error("invalid host capacity");
+  if (req.epicCap !== undefined && (!Number.isSafeInteger(req.epicCap) || req.epicCap <= 0))
+    throw new Error("invalid epic capacity");
+}
+async function acquireLease(root, req) {
+  validateRequestCaps(req);
+  return updateResources(root, (state) => {
+    const policy = resourcePolicy(root);
+    reconcileJobs(state);
+    if (!state.pressure || Date.now() - state.pressure.sample.at >= PRESSURE_SAMPLE_MS)
+      state.pressure = advancePressure(state.pressure, sampleResources(state.pressure?.sample));
+    if (state.pressure.held)
+      throw new Error(`resource hold: ${state.pressure.reason}`);
+    const live = state.leases.filter((lease) => lease.type === req.type);
+    requireJobAdmission(state, req);
+    if (live.some((lease) => lease.stateDir === req.stateDir && lease.key === req.key))
+      throw new Error("existing ownership; reconcile before retry");
+    const limit = req.type === "agent" ? policy.maxAgents : policy.maxJobs;
+    if (live.length >= limit)
+      throw new Error(`${req.type} capacity exhausted (${limit})`);
+    if (req.type === "agent" && req.epicCap !== undefined && live.filter((lease) => lease.stateDir === req.stateDir).length >= req.epicCap)
+      throw new Error("epic capacity exhausted");
+    if (req.type === "agent" && req.host) {
+      const hostLimit = Math.min(req.hostCap ?? policy.maxAgents, policy.hosts[req.host] ?? policy.maxAgents);
+      if (!Number.isSafeInteger(hostLimit) || hostLimit <= 0)
+        throw new Error("invalid host capacity");
+      if ((state.cooldowns[req.host]?.until ?? 0) > Date.now())
+        throw new Error(`${req.host} is cooling down`);
+      if (live.filter((lease) => lease.host === req.host || lease.pendingHost === req.host).length >= hostLimit)
+        throw new Error(`${req.host} capacity exhausted`);
+    }
+    const now = new Date().toISOString();
+    const lease = {
+      token: randomUUID2(),
+      type: req.type,
+      key: req.key,
+      stateDir: req.stateDir,
+      ownerPid: process.pid,
+      stage: "starting",
+      createdAt: now,
+      heartbeatAt: now
+    };
+    if (req.host !== undefined)
+      lease.host = req.host;
+    if (req.worktree !== undefined)
+      lease.worktree = req.worktree;
+    state.leases.push(lease);
+    return lease;
+  });
+}
+async function patchLease(root, token, patch) {
+  if (patch.groupPid !== undefined && (!Number.isSafeInteger(patch.groupPid) || patch.groupPid <= 0))
+    throw new Error("invalid resource lease patch");
+  await updateResources(root, (state) => {
+    const lease = state.leases.find((candidate) => candidate.token === token);
+    if (!lease)
+      throw new Error("resource lease lost");
+    if (patch.groupPid !== undefined)
+      lease.groupPid = patch.groupPid;
+    if (patch.worktree !== undefined)
+      lease.worktree = patch.worktree;
+    if (patch.pane !== undefined)
+      lease.pane = patch.pane;
+    if (patch.session !== undefined)
+      lease.session = patch.session;
+    if (patch.stage !== undefined)
+      lease.stage = patch.stage;
+    if (patch.heartbeatAt !== undefined)
+      lease.heartbeatAt = patch.heartbeatAt;
+  });
+}
+async function releaseLease(root, token) {
+  await updateResources(root, (state) => {
+    reconcileJobs(state);
+    const lease = state.leases.find((candidate) => candidate.token === token);
+    if (lease?.type === "agent" && lease.worktree !== undefined && state.leases.some((candidate) => candidate.type === "job" && candidate.worktree === lease.worktree))
+      throw new Error("active jobs prevent agent lease release");
+    state.leases = state.leases.filter((candidate) => candidate.token !== token);
+  });
+}
+
+// packages/toolu-core/src/resources/jobs.ts
+var FORWARDED_SIGNALS = ["SIGINT", "SIGTERM", "SIGHUP"];
+function noop() {}
+function withGoSignal(stdin) {
+  if (stdin === undefined || typeof stdin === "string")
+    return `toolu-go
+${stdin ?? ""}`;
+  const prefix = new TextEncoder().encode(`toolu-go
+`);
+  const bytes = new Uint8Array(prefix.length + stdin.length);
+  bytes.set(prefix);
+  bytes.set(stdin, prefix.length);
+  return bytes;
+}
+function guardOwnedGroup(processGroupId) {
+  const onExit = () => signalProcessGroup(processGroupId, "SIGKILL");
+  const listeners = FORWARDED_SIGNALS.map((signal) => [
+    signal,
+    () => {
+      signalProcessGroup(processGroupId, "SIGKILL");
+      release();
+      process.kill(process.pid, signal);
+    }
+  ]);
+  const release = () => {
+    process.off("exit", onExit);
+    for (const [signal, listener] of listeners)
+      process.off(signal, listener);
+  };
+  process.on("exit", onExit);
+  for (const [signal, listener] of listeners)
+    process.on(signal, listener);
+  return release;
+}
+async function runManagedJob(argv, binding, opts = {}) {
+  const lease = await acquireLease(binding.root, {
+    type: "job",
+    key: `${binding.key}:${randomUUID3()}`,
+    stateDir: binding.stateDir,
+    worktree: binding.worktree
+  });
+  let group;
+  let heartbeat;
+  let heartbeatFailure;
+  let releaseGuard = noop;
+  try {
+    const result = await runCommand([
+      "bash",
+      "-c",
+      'IFS= read -r ack && [ "$ack" = toolu-go ] && exec "$@"',
+      "toolu-job",
+      ...argv
+    ], {
+      ...opts,
+      stdin: withGoSignal(opts.stdin),
+      onSpawn: async (pid) => {
+        group = pid;
+        releaseGuard = guardOwnedGroup(pid);
+        await patchLease(binding.root, lease.token, { groupPid: pid, stage: "running" });
+        await opts.onSpawn?.(pid);
+        const beat = async () => {
+          try {
+            await patchLease(binding.root, lease.token, {
+              heartbeatAt: new Date().toISOString()
+            });
+            heartbeatFailure = undefined;
+          } catch (error) {
+            heartbeatFailure = error;
+          }
+        };
+        heartbeat = setInterval(() => void beat(), 30000);
+      }
+    });
+    if (heartbeatFailure !== undefined)
+      throw heartbeatFailure;
+    return result;
+  } finally {
+    releaseGuard();
+    clearInterval(heartbeat);
+    if (group === undefined || !processGroupAlive(group))
+      await releaseLease(binding.root, lease.token);
+    else
+      await patchLease(binding.root, lease.token, { stage: "cleanup-incomplete" });
+  }
+}
+
+// packages/toolu-core/src/ledger/ledger-check.ts
 var TIMEOUT_EXIT = 124;
 var INVALID_TIMEOUT_EXIT = 125;
-var KILL_GRACE_MS = 2000;
+var TRUNCATED_OUTPUT_NOTE = `plan-ledger: check output exceeded capture limit
+`;
+var KILL_GRACE_MS2 = 2000;
 var EVIDENCE_LINES = 10;
 var EVIDENCE_BYTES = 2000;
 var UNIT_SECONDS = { "": 1, s: 1, m: 60, h: 3600, d: 86400 };
@@ -4824,19 +5642,34 @@ function exitCodeOf(proc) {
   if (proc.exitCode !== null)
     return proc.exitCode;
   const signal = proc.signalCode;
-  const number = signal === null ? undefined : constants.signals[signal];
+  const number = signal === null ? undefined : constants2.signals[signal];
   return 128 + (number ?? 0);
 }
 async function runCheck(run) {
   const seconds = parseTimeout(run.timeout);
+  if (seconds === undefined) {
+    const note = `plan-ledger: invalid PLAN_LEDGER_STEP_TIMEOUT '${run.timeout}'
+`;
+    await Bun.write(run.outFile, note);
+    return INVALID_TIMEOUT_EXIT;
+  }
+  const binding = resourceBinding(run.cwd);
+  if (binding !== null)
+    return runManagedCheck(run, binding, seconds);
+  return runUnmanagedCheck(run, seconds);
+}
+async function runManagedCheck(run, binding, seconds) {
+  await Bun.write(run.outFile, "");
+  const timeoutMs = seconds === 0 ? MAX_DELAY_MS : Math.min(seconds * 1000, MAX_DELAY_MS);
+  const result = await runManagedJob(["bash", "-c", 'exec bash -c "$1" 2>&1', "toolu-ledger", run.check], binding, { cwd: run.cwd, env: run.env, timeoutMs });
+  await Bun.write(run.outFile, result.stdout + result.stderr + (result.truncated ? TRUNCATED_OUTPUT_NOTE : ""));
+  if (result.timedOut)
+    return TIMEOUT_EXIT;
+  return result.truncated ? INVALID_TIMEOUT_EXIT : result.exitCode;
+}
+async function runUnmanagedCheck(run, seconds) {
   const fd = openSync(run.outFile, "w");
   try {
-    if (seconds === undefined) {
-      const note = `plan-ledger: invalid PLAN_LEDGER_STEP_TIMEOUT '${run.timeout}'
-`;
-      await Bun.write(run.outFile, note);
-      return INVALID_TIMEOUT_EXIT;
-    }
     const proc = Bun.spawn(["bash", "-c", run.check], {
       cwd: run.cwd,
       env: run.env,
@@ -4868,7 +5701,7 @@ async function waitBounded(proc, seconds) {
   clearTimeout(deadline);
   if (timedOut) {
     killGroup(proc.pid, "SIGTERM");
-    const grace = setTimeout(() => killGroup(proc.pid, "SIGKILL"), KILL_GRACE_MS);
+    const grace = setTimeout(() => killGroup(proc.pid, "SIGKILL"), KILL_GRACE_MS2);
     await proc.exited;
     clearTimeout(grace);
     killGroup(proc.pid, "SIGKILL");
@@ -4974,7 +5807,7 @@ function progress(ctx, message) {
 async function runStep(ctx, id, matches, prior, at, scopeNow) {
   const tmp = `${ctx.ledgerFile}.run.${process.pid}.${id}`;
   try {
-    mkdirSync3(dirname2(ctx.ledgerFile), { recursive: true });
+    mkdirSync4(dirname4(ctx.ledgerFile), { recursive: true });
   } catch {}
   progress(ctx, `${at} ${id}: running check`);
   const check = matches.map((m) => raw(get(m, "check"))).join(`
@@ -4990,9 +5823,9 @@ async function runStep(ctx, id, matches, prior, at, scopeNow) {
       outFile: tmp,
       timeout: ctx.timeout
     });
-    output = readFileSync4(tmp);
+    output = readFileSync7(tmp);
   } catch {} finally {
-    rmSync2(tmp, { force: true });
+    rmSync3(tmp, { force: true });
   }
   const duration = Math.floor(Date.now() / 1000) - t0;
   const status = code === 0 ? "green" : "red";
@@ -5113,10 +5946,10 @@ function baseFor(options, root) {
   return envValue(env, "PUSH_REVIEW_BASE") ?? (root === undefined ? "main" : baseBranch(root, env));
 }
 function fileOrUnderRoot(path, cwd, root) {
-  if (isFile2(resolve2(cwd, path)))
-    return resolve2(cwd, path);
-  if (root !== undefined && isFile2(join5(root, path)))
-    return join5(root, path);
+  if (isFile2(resolve3(cwd, path)))
+    return resolve3(cwd, path);
+  if (root !== undefined && isFile2(join7(root, path)))
+    return join7(root, path);
   return;
 }
 function coverageReport(ledger, cur, options, out) {
@@ -5129,7 +5962,7 @@ function coverageReport(ledger, cur, options, out) {
   if (plan === undefined)
     return;
   const specField = docField(plan, "Spec");
-  const spec = isSpecless(specField) ? specField : fileOrUnderRoot(specField, cwd, root) ?? resolve2(cwd, specField);
+  const spec = isSpecless(specField) ? specField : fileOrUnderRoot(specField, cwd, root) ?? resolve3(cwd, specField);
   const report = acCoverage(ledger, cur, spec);
   out.stdout(report.stdout);
   for (const line of report.stderr)
@@ -5176,7 +6009,7 @@ function ledgerStatus(options = {}) {
 }
 function readable(path) {
   try {
-    accessSync(path, constants2.R_OK);
+    accessSync(path, constants3.R_OK);
     return true;
   } catch {
     return false;
@@ -5209,7 +6042,7 @@ function reviewRemedy(host, phase) {
   return `${action} (${phase} review phase)`;
 }
 function preflightChecks(plan, root, cwd, host) {
-  const under = (path) => isAbsolute(path) || root === undefined ? resolve2(cwd, path) : join5(root, path);
+  const under = (path) => isAbsolute(path) || root === undefined ? resolve3(cwd, path) : join7(root, path);
   const planAbs = under(plan);
   if (!readable(planAbs))
     return { code: 2, line: `preflight: plan doc not found or unreadable: ${plan}` };
@@ -5265,11 +6098,11 @@ var SELF_TEST_DOC = `# Self-test Plan
 `;
 function ledgerSelfTest(options = {}) {
   const out = new Output(options.onStderr);
-  const dir = mkdtempSync(join5(tmpdir(), "plan-ledger-self-test-"));
-  const doc = join5(dir, "selftest-plan.md");
-  writeFileSync2(doc, SELF_TEST_DOC);
+  const dir = mkdtempSync(join7(tmpdir(), "plan-ledger-self-test-"));
+  const doc = join7(dir, "selftest-plan.md");
+  writeFileSync3(doc, SELF_TEST_DOC);
   const parsed = parseSteps(doc);
-  rmSync3(dir, { recursive: true, force: true });
+  rmSync4(dir, { recursive: true, force: true });
   if (!parsed.ok) {
     out.stderr(parsed.message);
     out.stderr("plan-ledger --self-test: parse failed");

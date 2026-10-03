@@ -1,10 +1,11 @@
 /** Launcher tests: brief rendering and a real read-only dry run against a sandboxed copy of the #248 snapshot. */
 
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
+import { acquireLease, readResourceState, writeJsonAtomic } from "@toolu/core/resources";
 import { findIssue, renderBrief } from "../launch-issue.ts";
 
 const HERE = join(import.meta.dir, "..");
@@ -120,7 +121,7 @@ test.concurrent("dry run: routed host: codex with bypass, model, and effort; cod
   const start = out.stdout.split("\n").find((l) => l.startsWith("herdr agent start"));
   expect(start).toBe(
     "herdr agent start comemory-255 --kind codex --pane '<root-pane>' --timeout 90000 -- " +
-      "--dangerously-bypass-approvals-and-sandbox --model gpt-6-sol -c model_reasoning_effort=medium",
+      "--no-daemon --dangerously-bypass-approvals-and-sandbox --model gpt-6-sol -c model_reasoning_effort=medium",
   );
   expect(out.stdout).toContain("`$delivery-flow:delivery-flow`");
   expect(out.stdout).not.toContain("`/delivery-flow:delivery-flow`");
@@ -139,4 +140,151 @@ test.concurrent("dry run: blocked issue is refused", async () => {
   const out = await runDry(sb, "Falconiere/comemory#257");
   expect(out.code).not.toBe(0);
   expect(out.stderr + out.stdout).toContain("blocked");
+});
+
+test.concurrent("a persisted null host refuses even a forced launch before any mutation", async () => {
+  using sb = createSandbox();
+  mkdirSync(join(sb.root, "state/routes"), { recursive: true });
+  writeFileSync(join(sb.root, "state/routes/comemory-255.json"), JSON.stringify({ host: null }));
+  const out = await runDry(sb, "Falconiere/comemory#255", ["--force"]);
+  expect(out.code).not.toBe(0);
+  expect(out.stderr).toContain("no host capacity");
+  expect(out.stdout).not.toContain("herdr agent start");
+});
+
+test.concurrent("malformed route and launch records refuse before acquiring ownership", async () => {
+  using sb = createSandbox();
+  const state = join(sb.root, "state");
+  const root = join(sb.root, "resources");
+  const graph = sb.write("graph.json", { ...loadGraph(), state_dir: state });
+  for (const directory of ["routes", "issues"]) {
+    const path = join(state, directory, "comemory-255.json");
+    mkdirSync(join(state, directory), { recursive: true });
+    const refusals: Record<string, string> =
+      directory === "routes"
+        ? {
+            "{": "JSON Parse error",
+            "[]": "expected object, received array",
+            null: "expected object, received null",
+          }
+        : {
+            "{": `invalid launch record ${path}: malformed JSON`,
+            "[]": `invalid launch record ${path}: expected a JSON object`,
+            null: `invalid launch record ${path}: expected a JSON object`,
+          };
+    for (const [source, refusal] of Object.entries(refusals)) {
+      writeFileSync(path, source);
+      const out = await run(
+        [process.execPath, LAUNCH, "--graph", graph, "--issue", "comemory-255", "--force"],
+        { env: { TOOLU_RESOURCE_HOME: root, PATH: "" } },
+      );
+      expect(out.exitCode).toBe(1);
+      expect(out.stderr).toContain(refusal);
+      expect(out.stderr).not.toContain("spawn git");
+      expect(readResourceState(root).leases).toEqual([]);
+    }
+    writeFileSync(path, directory === "routes" ? '{"host":"codex"}' : "{}");
+  }
+});
+
+test.concurrent("a forced actual launch still respects shared capacity before external work", async () => {
+  using sb = createSandbox();
+  const root = join(sb.root, "resources");
+  writeJsonAtomic(join(root, "policy.json"), { maxAgents: 1 });
+  await acquireLease(root, {
+    type: "agent",
+    key: "other",
+    stateDir: "another-epic",
+    host: "claude",
+  });
+  const graph = sb.write("graph.json", { ...loadGraph(), state_dir: join(sb.root, "state") });
+  const out = await run(
+    [process.execPath, LAUNCH, "--graph", graph, "--issue", "comemory-255", "--force"],
+    { env: { TOOLU_RESOURCE_HOME: root, PATH: "" } },
+  );
+  expect(out.exitCode).toBe(1);
+  expect(out.stderr).toContain("capacity exhausted");
+  expect(readResourceState(root).leases).toHaveLength(1);
+});
+
+test.concurrent("a real missing dependency leaves durable uncertain ownership and refuses blind retry", async () => {
+  using sb = createSandbox();
+  const root = join(sb.root, "resources");
+  const state = join(sb.root, "state");
+  const graph = sb.write("graph.json", { ...loadGraph(), state_dir: state });
+  const argv = [process.execPath, LAUNCH, "--graph", graph, "--issue", "comemory-255", "--force"];
+  const env = { TOOLU_RESOURCE_HOME: root, PATH: "" };
+  const first = await run(argv, { env });
+  const record = JSON.parse(readFileSync(join(state, "issues/comemory-255.json"), "utf8"));
+  expect(record.lifecycle_error).toContain("gh");
+  const reportedError = first.stderr.trim().startsWith("{")
+    ? JSON.parse(first.stderr).error
+    : first.stderr.trim();
+  expect(reportedError).toContain(record.lifecycle_error);
+  const nativeExit = record.native_error.exitCode;
+  if (typeof nativeExit === "number") {
+    expect(record.lifecycle_error).toContain("gh repo view Falconiere/comemory");
+  }
+  expect(first.exitCode).toBe(
+    typeof nativeExit === "number" &&
+      Number.isSafeInteger(nativeExit) &&
+      nativeExit > 0 &&
+      nativeExit <= 255
+      ? nativeExit
+      : 1,
+  );
+  expect(record.stage).toBe("uncertain");
+  expect(record.attempt_id).toBe(readResourceState(root).leases[0]?.token);
+  const retry = await run(argv, { env });
+  expect(retry.stderr).toContain("previous launch/prompt outcome is uncertain");
+  expect(readResourceState(root).leases).toHaveLength(1);
+});
+
+test.concurrent("incomplete lifecycle stages require explicit reconciliation before mutation", async () => {
+  using sb = createSandbox();
+  const root = join(sb.root, "resources");
+  const state = join(sb.root, "state");
+  const graph = sb.write("graph.json", { ...loadGraph(), state_dir: state });
+  mkdirSync(join(state, "issues"), { recursive: true });
+  for (const stage of ["starting", "cleaning", "cleanup-incomplete", "replacing"]) {
+    writeFileSync(join(state, "issues/comemory-255.json"), JSON.stringify({ stage }));
+    const out = await run(
+      [process.execPath, LAUNCH, "--graph", graph, "--issue", "comemory-255", "--force"],
+      { env: { TOOLU_RESOURCE_HOME: root, PATH: "" } },
+    );
+    expect(out.exitCode).toBe(1);
+    const recovery =
+      stage === "starting" ? "--reprompt" : stage === "replacing" ? "--replace" : "finish-issue";
+    expect(out.stderr).toContain(recovery);
+    expect(readResourceState(root).leases).toEqual([]);
+  }
+});
+
+test.concurrent("a legacy live-host change requires replace before acquiring ownership", async () => {
+  using sb = createSandbox();
+  const root = join(sb.root, "resources");
+  const state = join(sb.root, "state");
+  const graph = sb.write("graph.json", { ...loadGraph(), state_dir: state });
+  mkdirSync(join(state, "issues"), { recursive: true });
+  writeFileSync(
+    join(state, "issues/comemory-255.json"),
+    JSON.stringify({ stage: "running", kind: "claude", launches: 1 }),
+  );
+  const out = await run(
+    [
+      process.execPath,
+      LAUNCH,
+      "--graph",
+      graph,
+      "--issue",
+      "comemory-255",
+      "--kind",
+      "codex",
+      "--force",
+    ],
+    { env: { TOOLU_RESOURCE_HOME: root, PATH: "" } },
+  );
+  expect(out.exitCode).toBe(1);
+  expect(out.stderr).toContain("host change requires explicit --replace");
+  expect(readResourceState(root).leases).toEqual([]);
 });

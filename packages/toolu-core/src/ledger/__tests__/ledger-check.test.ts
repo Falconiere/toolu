@@ -9,7 +9,14 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
-import { evidenceOf, parseTimeout, runCheck, stepEvidence } from "../ledger-check.ts";
+import { bindWorktree } from "../../resources/binding.ts";
+import {
+  acquireLease,
+  readResourceState,
+  releaseLease,
+  writeJsonAtomic,
+} from "../../resources/resources.ts";
+import { TIMEOUT_EXIT, evidenceOf, parseTimeout, runCheck, stepEvidence } from "../ledger-check.ts";
 
 /** A PATH holding only bash, sleep and cat: no `timeout`/`gtimeout` binary is reachable. */
 function barePath(sb: Sandbox): string {
@@ -92,6 +99,74 @@ describe("runCheck on real processes", () => {
     const res = await check(sb, "true", "soon");
     expect(res.code).toBe(125);
     expect(res.output.toString()).toContain("invalid PLAN_LEDGER_STEP_TIMEOUT 'soon'");
+  });
+});
+
+describe("resource-bound ledger checks", () => {
+  test("runs under job admission while preserving combined output and status", async () => {
+    using sb = createSandbox({ git: true });
+    const root = join(sb.root, "resources");
+    await writeJsonAtomic(join(root, "policy.json"), { maxAgents: 1, maxJobs: 1 });
+    bindWorktree(root, sb.project, "issue-376", join(sb.root, "epic"));
+
+    const res = await check(sb, "echo out; echo err >&2; exit 3", "5");
+
+    expect(res).toEqual({ code: 3, output: Buffer.from("out\nerr\n") });
+    expect(readResourceState(root).leases).toHaveLength(0);
+  });
+
+  test("truncated managed check output fails closed", async () => {
+    using sb = createSandbox({ git: true });
+    const root = join(sb.root, "resources");
+    await writeJsonAtomic(join(root, "policy.json"), { maxAgents: 1, maxJobs: 1 });
+    bindWorktree(root, sb.project, "issue-376", join(sb.root, "epic"));
+
+    const res = await check(
+      sb,
+      `${process.execPath} -e 'process.stdout.write("x".repeat(1100000))'`,
+      "5",
+    );
+
+    expect(res.code).toBe(125);
+    expect(
+      res.output.toString().endsWith("plan-ledger: check output exceeded capture limit\n"),
+    ).toBe(true);
+    expect(readResourceState(root).leases).toHaveLength(0);
+  });
+
+  test("capacity refusal happens before the mandatory check starts", async () => {
+    using sb = createSandbox({ git: true });
+    const root = join(sb.root, "resources");
+    const stateDir = join(sb.root, "epic");
+    const marker = join(sb.root, "started");
+    await writeJsonAtomic(join(root, "policy.json"), { maxAgents: 1, maxJobs: 1 });
+    bindWorktree(root, sb.project, "issue-376", stateDir);
+    const occupied = await acquireLease(root, {
+      type: "job",
+      key: "occupied",
+      stateDir,
+      worktree: sb.project,
+    });
+
+    await expect(check(sb, `echo started > '${marker}'`, "5")).rejects.toThrow("capacity");
+    expect(existsSync(marker)).toBe(false);
+    await releaseLease(root, occupied.token);
+  });
+
+  test("timeout kills a managed check's redirected background descendant", async () => {
+    using sb = createSandbox({ git: true });
+    const root = join(sb.root, "resources");
+    const pidFile = join(sb.root, "managed-child.pid");
+    await writeJsonAtomic(join(root, "policy.json"), { maxAgents: 1, maxJobs: 1 });
+    bindWorktree(root, sb.project, "issue-376", join(sb.root, "epic"));
+
+    const res = await check(sb, `sleep 30 >/dev/null 2>&1 & echo $! > '${pidFile}'`, "0.4");
+    const child = Number(readFileSync(pidFile, "utf8").trim());
+
+    expect(res.code).toBe(TIMEOUT_EXIT);
+    await Bun.sleep(100);
+    expect(alive(child)).toBe(false);
+    expect(readResourceState(root).leases).toHaveLength(0);
   });
 });
 

@@ -7,8 +7,11 @@ import { CommandError, herdr } from "./common.ts";
 const REMOTE = /github\.com[:/]([^/]+)\/(.+?)(?:\.git)?\/?$/;
 
 export function originOf(path: string): string | null {
-  const proc = Bun.spawnSync(["git", "-C", path, "remote", "get-url", "origin"]);
-  if (proc.exitCode !== 0) return null;
+  const proc = Bun.spawnSync(["git", "-C", path, "remote", "get-url", "origin"], {
+    timeout: 10_000,
+    maxBuffer: 65_536,
+  });
+  if (proc.exitCode !== 0 || proc.exitedDueToTimeout || proc.exitedDueToMaxBuffer) return null;
   const m = REMOTE.exec(proc.stdout.toString().trim());
   return m && m[1] && m[2] ? `${m[1]}/${m[2]}`.toLowerCase() : null;
 }

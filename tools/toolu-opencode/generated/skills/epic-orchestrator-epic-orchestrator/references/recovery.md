@@ -1,7 +1,8 @@
 # Recovery playbook
 
 Read the section that matches the failure. For every case: fix the cause, then
-re-run the same script. All the scripts are idempotent.
+re-run the same script after checking ownership. A timeout during start/prompt
+is uncertain and is never retried automatically as a fresh session.
 
 ## herdr
 
@@ -24,7 +25,17 @@ re-run the same script. All the scripts are idempotent.
   prompt twice.
 - **Name collision** (`<key>` is already a live agent in some other pane):
   inspect it with `herdr agent get <key>`. If it's a previous worker for the
-  same issue, reuse it. Otherwise ask the user.
+  same host, pane, worktree and captured session, reuse it. Otherwise reconcile
+  the ownership record before retrying; name alone is insufficient.
+- **`uncertain` launch:** inspect its `attempt_id`, `pane_id`, `session_id`,
+  `prompt_state` and native `lifecycle_error`. After confirming what ran, use
+  explicit `--reprompt` for a verified delivered/retained session or `--replace`
+  to request verified shutdown before a new session. Never delete a lease to
+  make capacity appear free.
+- **`cleanup-incomplete`:** keep the workspace and resource ownership until
+  background jobs have exited and final checkpoint/workspace removal succeed.
+  Retry finish after addressing `cleanup_error`; a missing CLI or failed lookup
+  is not evidence of exit.
 
 ## git / GitHub
 
@@ -48,8 +59,8 @@ re-run the same script. All the scripts are idempotent.
 ## Hosts and API limits
 
 - **`host-limited`** (usage limit, 429, quota): the host is on cooldown in
-  `<state_dir>/hosts.json`. Reroute and relaunch with `--replace` (see the
-  watcher table). To lift a cooldown early, delete that host's entry.
+  epic and shared machine resource state. Wait until reset, then reroute and
+  relaunch with `--replace` (see the watcher table).
 - **Wrong model name** (the agent exits right after start): the routing table
   names a model the host doesn't offer. Check `codex debug models`,
   `cursor-agent --list-models`, or `opencode models`, fix `routing.json`, then

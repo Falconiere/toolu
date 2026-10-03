@@ -259,7 +259,7 @@ have unblocked new issues. Launch into the free slots and restart the watcher.
 
 ## 6. Epic complete
 
-The epic is complete when every sub-issue is closed (`complete: true`). Then:
+The epic is complete when every sub-issue is closed and its workload cleanup has finished (`complete: true`). Then:
 1. `bun "$S/epic-close.ts" --graph <state_dir>/graph.json` posts the
    sub-issue → merged PR table (admin merges noted) and closes the epic in its
    tracker. `--dry-run` prints the table only. A Linear project stays open
@@ -291,12 +291,19 @@ The epic is complete when every sub-issue is closed (`complete: true`). Then:
 - The watcher snapshots every active worktree, including uncommitted and
   untracked files, to `refs/epic-wip/<key>` in the shared repo, every 15
   minutes and whenever an agent vanishes. `finish-issue.ts` snapshots before
-  removal and refuses `--abandon` over dirty work it could not snapshot.
+  removal and refuses every cleanup over work it could not snapshot.
   Restore: `git -C <checkout> checkout -b recover/<key> refs/epic-wip/<key>`
   (`git reflog refs/epic-wip/<key>` lists older snapshots).
-- Relaunches continue the host's last session; a host switch starts fresh
-  with the resume prompt (git log, status file, open PR).
-- State files are written atomically; one watcher per epic (`watch.lock`).
+- Relaunches use captured session IDs. Uncertain start/prompt outcomes retain
+  capacity; inspect before explicit `--reprompt` or `--replace`. A host switch
+  verifies old workload exit before starting fresh with the resume prompt.
+- Machine-wide agent/job leases and shared cooldowns cover every epic and host
+  profile; `--force` cannot bypass capacity. Ledger checks acquire job leases
+  automatically. See the README's machine resource policy.
+- State writes use unique temporary files; watcher deadlines/backoff survive
+  restart. `--ack <key>` acknowledges a repeated stall alert. `working` UI and
+  job heartbeat do not establish meaningful progress. Cleanup failure retains
+  capacity as `cleanup-incomplete`.
 
 **API budgets are respected.**
 - GitHub, Jira, and Linear calls retry transient errors with backoff and

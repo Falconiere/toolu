@@ -8,7 +8,10 @@
 import { existsSync, readdirSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { readResourceState, resourceHome } from "../hooks/dist/epic-runtime.js";
+import { runCommand } from "../hooks/dist/epic-runtime.js";
 import { EPICS_HOME, readJson, writeJson } from "./common.ts";
+import { occupiesSlot } from "./epic-graph.ts";
 import { HOST_KINDS, hostKind, parseHostKind, type HostKind } from "./hosts.ts";
 
 export const TIERS = ["trivial", "standard", "complex", "critical"] as const;
@@ -149,17 +152,13 @@ async function jevScores(issues: IssueEvidence[]): Promise<Record<string, Score>
       ]),
     ),
   };
-  const proc = Bun.spawn([...jevCommand(jev), "ask", "-", "-s", JSON.stringify(state)], {
-    stdin: new Blob([JSON.stringify(jevQuestions(issues))]),
-    stdout: "pipe",
-    stderr: "pipe",
+  const result = await runCommand([...jevCommand(jev), "ask", "-", "-s", JSON.stringify(state)], {
+    stdin: JSON.stringify(jevQuestions(issues)),
+    timeoutMs: 30_000,
   });
-  const [out, err, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
-  if (code !== 0) return `jev failed (${code}): ${(err || out).trim().slice(0, 200)}`;
+  const { stdout: out, stderr: err, exitCode: code } = result;
+  if (code !== 0 || result.timedOut || result.truncated)
+    return `jev failed (${code}): ${(err || out).trim().slice(0, 200)}`;
   const answers = JSON.parse(out) as Record<string, { score?: number; confidence?: number }>;
   const scores: Record<string, Score> = {};
   for (const i of issues) {
@@ -179,14 +178,22 @@ export type HostPool = { kind: HostKind; cap: number }[];
 
 /** `claude:2,codex:1` -> pool; a bare host gets `defaultCap`. */
 export function parseHosts(spec: string, defaultCap: number): HostPool {
-  return spec
+  const seen = new Set<HostKind>();
+  const pool = spec
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean)
     .map((s) => {
-      const [name, cap] = s.split(":");
-      return { kind: hostKind(name ?? ""), cap: cap ? Number(cap) : defaultCap };
+      const [name, raw, extra] = s.split(":");
+      const kind = hostKind(name ?? "");
+      const cap = raw === undefined || raw === "" ? defaultCap : Number(raw);
+      if (extra !== undefined || !Number.isSafeInteger(cap) || cap <= 0 || seen.has(kind))
+        throw new Error(`invalid host capacity: ${s}`);
+      seen.add(kind);
+      return { kind, cap };
     });
+  if (!pool.length) throw new Error("host pool is empty");
+  return pool;
 }
 
 export type Cooldowns = Partial<Record<HostKind, { until: string; reason?: string }>>;
@@ -239,8 +246,8 @@ type Graph = {
   issues: (IssueEvidence & { status?: string })[];
 };
 
-function liveHostCounts(state: string): Partial<Record<HostKind, number>> {
-  const used: Partial<Record<HostKind, number>> = {};
+function liveHosts(state: string): Map<string, HostKind> {
+  const used = new Map<string, HostKind>();
   let names: string[] = [];
   try {
     names = readdirSync(join(state, "issues"));
@@ -251,10 +258,10 @@ function liveHostCounts(state: string): Partial<Record<HostKind, number>> {
   }
   for (const name of names) {
     const rec = readJson<{ stage?: string; kind?: string }>(join(state, "issues", name), {});
-    if (rec.stage !== "running" && rec.stage !== "awaiting_merge") continue;
+    if (!occupiesSlot(rec.stage)) continue;
     // A record naming no known host occupies no host's capacity.
     const kind = parseHostKind(rec.kind ?? "claude");
-    if (kind) used[kind] = (used[kind] ?? 0) + 1;
+    if (kind) used.set(name.replace(/\.json$/, ""), kind);
   }
   return used;
 }
@@ -263,17 +270,21 @@ export async function routeIssues(
   graph: Graph,
   wanted: string[],
   pool: HostPool,
-  opts: { jev: boolean; reroute: boolean; table: RoutingTable },
+  opts: { jev: boolean; reroute: boolean; table: RoutingTable; resourceRoot?: string },
 ): Promise<{ routes: Route[]; note: string | null }> {
   const dir = join(graph.state_dir, "routes");
   // Separate maps so a ref can never be shadowed by another issue's key.
   const byRef = new Map(graph.issues.map((i) => [i.ref, i] as const));
   const byKey = new Map(graph.issues.map((i) => [i.key, i] as const));
-  const targets = wanted.map((w) => {
-    const i = byRef.get(w) ?? byKey.get(w);
-    if (!i) throw new Error(`${w} is not in the graph`);
-    return i;
-  });
+  const targets = [
+    ...new Set(
+      wanted.map((w) => {
+        const i = byRef.get(w) ?? byKey.get(w);
+        if (!i) throw new Error(`${w} is not in the graph`);
+        return i;
+      }),
+    ),
+  ];
   const existing = new Map(
     targets.map((i) => [i.key, readJson<Route | null>(join(dir, `${i.key}.json`), null)]),
   );
@@ -285,13 +296,37 @@ export async function routeIssues(
     if (typeof res === "string") note = `jev unavailable (${res}); heuristic tiers used`;
     else scores = res;
   }
-  const used = liveHostCounts(graph.state_dir);
+  const active = liveHosts(graph.state_dir);
+  const used: Partial<Record<HostKind, number>> = {};
+  for (const host of active.values()) used[host] = (used[host] ?? 0) + 1;
   const cooling = coolingHosts(readJson<Cooldowns>(join(graph.state_dir, "hosts.json"), {}));
+  if (opts.resourceRoot) {
+    const shared = readResourceState(opts.resourceRoot);
+    for (const lease of shared.leases) {
+      if (lease.type !== "agent") continue;
+      for (const host of new Set([lease.host, lease.pendingHost])) {
+        const kind = parseHostKind(host ?? "");
+        if (!kind || (lease.stateDir === graph.state_dir && active.get(lease.key) === kind))
+          continue;
+        used[kind] = (used[kind] ?? 0) + 1;
+      }
+    }
+    for (const [host, c] of Object.entries(shared.cooldowns)) {
+      const kind = parseHostKind(host);
+      if (kind && c.until > Date.now()) cooling.add(kind);
+    }
+  }
+  await writeJson(join(graph.state_dir, "pool.json"), pool);
   const routes: Route[] = [];
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
   for (const i of targets) {
     const prev = existing.get(i.key);
-    const keepHost = prev?.host && !opts.reroute && !cooling.has(prev.host);
+    const live = active.get(i.key);
+    const keepHost =
+      prev?.host &&
+      !opts.reroute &&
+      !cooling.has(prev.host) &&
+      pool.some((h) => h.kind === prev.host && ((used[h.kind] ?? 0) < h.cap || live === h.kind));
     const s = prev
       ? {
           tier: TIERS.indexOf(prev.tier),
@@ -309,8 +344,8 @@ export async function routeIssues(
     let host: HostKind | null = keepHost ? (prev?.host ?? null) : null;
     if (!host) {
       host = pickHost(pool, used, cooling, opts.table.prefer?.[tierName]);
-      if (host) used[host] = (used[host] ?? 0) + 1;
     }
+    if (host && live !== host) used[host] = (used[host] ?? 0) + 1;
     const choice = host ? (opts.table.hosts[host]?.[s.tier] ?? {}) : {};
     const route: Route = {
       key: i.key,
@@ -375,6 +410,7 @@ async function main(): Promise<void> {
     jev,
     reroute,
     table: loadTable(),
+    resourceRoot: resourceHome(),
   });
   process.stdout.write(
     (asJson ? JSON.stringify({ routes, note }, null, 2) : renderRoutes(routes, note)) + "\n",

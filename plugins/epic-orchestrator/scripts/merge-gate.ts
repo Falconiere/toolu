@@ -1,6 +1,7 @@
 /** Verify a sub-issue PR against the epic merge policy and optionally merge it. */
 
 import { join } from "node:path";
+import { runCommand } from "../hooks/dist/epic-runtime.js";
 import { ghJson, parseRef, readJson, run, writeJson } from "./common.ts";
 import { detectTracker, makeTracker } from "./trackers/index.ts";
 
@@ -25,6 +26,49 @@ const PASS = new Set(["SUCCESS", "NEUTRAL", "SKIPPED"]);
 
 export const PROTECTION =
   /protected branch|branch policy|required status|review is required|approving review|not mergeable: the base branch|merge requirements|--admin/i;
+
+type MergeAttempt = {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  timedOut: boolean;
+  cancelled: boolean;
+  truncated: boolean;
+};
+
+export function mergeAttemptOutcome(
+  result: MergeAttempt,
+): "success" | "admin" | "failed" | "uncertain" {
+  if (result.timedOut || result.cancelled || result.truncated) return "uncertain";
+  if (result.exitCode === 0) return "success";
+  return PROTECTION.test(result.stderr + result.stdout) ? "admin" : "failed";
+}
+
+function mergeFailure(result: MergeAttempt, admin: boolean): Record<string, unknown> {
+  const outcome = mergeAttemptOutcome(result);
+  const detail = (result.stderr || result.stdout).trim();
+  const nativeCode = result.timedOut
+    ? "timeout"
+    : result.cancelled
+      ? "cancelled"
+      : result.truncated
+        ? "output_limit"
+        : "exit";
+  return {
+    merged: false,
+    ...(admin ? { admin_used: true } : {}),
+    native_exit_code: result.exitCode,
+    native_error_code: nativeCode,
+    uncertain: outcome === "uncertain",
+    error:
+      detail ||
+      (result.timedOut
+        ? "merge command timed out"
+        : result.cancelled
+          ? "merge command was cancelled"
+          : "merge command output exceeded its limit"),
+  };
+}
 
 const THREADS = `query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){
 reviewThreads(first:100){nodes{isResolved isOutdated}}}}}`;
@@ -191,24 +235,16 @@ async function doMerge(
     "--match-head-commit",
     head,
   ];
-  const first = Bun.spawnSync(base, { stdout: "pipe", stderr: "pipe" });
+  const first = await runCommand(base, { timeoutMs: 120_000, maxOutputBytes: 65_536 });
   let admin = false;
-  if (first.exitCode !== 0) {
-    const errText = first.stderr.toString() + first.stdout.toString();
-    if (!PROTECTION.test(errText)) {
-      return { merged: false, error: errText.trim() };
-    }
-    const second = Bun.spawnSync([...base, "--admin"], {
-      stdout: "pipe",
-      stderr: "pipe",
+  const firstOutcome = mergeAttemptOutcome(first);
+  if (firstOutcome === "uncertain" || firstOutcome === "failed") return mergeFailure(first, false);
+  if (firstOutcome === "admin") {
+    const second = await runCommand([...base, "--admin"], {
+      timeoutMs: 120_000,
+      maxOutputBytes: 65_536,
     });
-    if (second.exitCode !== 0) {
-      return {
-        merged: false,
-        admin_used: true,
-        error: (second.stderr.toString() || second.stdout.toString()).trim(),
-      };
-    }
+    if (mergeAttemptOutcome(second) !== "success") return mergeFailure(second, true);
     admin = true;
   }
   for (let i = 0; i < 15; i++) {
@@ -406,6 +442,10 @@ async function main(): Promise<void> {
       head: result.head,
       merged: result.merged,
       admin_used: result.admin_used,
+      uncertain: result.uncertain,
+      native_exit_code: result.native_exit_code,
+      native_error_code: result.native_error_code,
+      error: result.error,
       auto_merge: autoMergeState(result),
     };
     await writeJson(recPath, rec);

@@ -9,6 +9,7 @@ import {
   autoMergeArgs,
   autoMergeState,
   checkBuckets,
+  mergeAttemptOutcome,
 } from "../merge-gate.ts";
 import { tickBody } from "../trackers/github.ts";
 
@@ -122,6 +123,23 @@ test.concurrent("protection: other failures do not allow admin retry", () => {
   ]) {
     expect(PROTECTION.test(msg)).toBe(false);
   }
+});
+
+test.concurrent("admin retry requires a complete protected-branch failure", () => {
+  const base = {
+    exitCode: 1,
+    stdout: "",
+    stderr: "protected branch requires administrator privileges",
+    timedOut: false,
+    cancelled: false,
+    truncated: false,
+  };
+  expect(mergeAttemptOutcome(base)).toBe("admin");
+  expect(mergeAttemptOutcome({ ...base, timedOut: true })).toBe("uncertain");
+  expect(mergeAttemptOutcome({ ...base, cancelled: true })).toBe("uncertain");
+  expect(mergeAttemptOutcome({ ...base, truncated: true })).toBe("uncertain");
+  expect(mergeAttemptOutcome({ ...base, stderr: "head changed" })).toBe("failed");
+  expect(mergeAttemptOutcome({ ...base, exitCode: 0, stderr: "" })).toBe("success");
 });
 
 test.concurrent("auto-merge is pinned to the verified head and deletes the branch", () => {

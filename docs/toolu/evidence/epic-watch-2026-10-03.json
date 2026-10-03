@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "captured_at": "2026-10-03T18:06:47.039Z",
+  "issue": "Falconiere/toolu#376",
+  "herdr": {
+    "version": "0.9.3",
+    "session": "toolu-376-hostprobe-20261003",
+    "socket": "/Users/falconiere/.config/herdr/sessions/toolu-376-hostprobe-20261003/herdr.sock",
+    "listed_agent": "probeclaude2",
+    "fixture_kind": "real isolated herdr server and CLI; no replacement executable"
+  },
+  "ownership": {
+    "competing_result": {
+      "events": [
+        {
+          "type": "watcher-busy",
+          "note": "watcher already running"
+        }
+      ]
+    },
+    "competing_latency_ms": 38,
+    "owner_exit_code": 130,
+    "lock_released": true
+  },
+  "gone_checkpoint": {
+    "event_types": ["gone", "gone"],
+    "records": 2,
+    "shared_dirty_worktrees": 1,
+    "checkpoints": 1,
+    "checkpoint_changed": true,
+    "event_latency_ms": 407,
+    "git_processes_first_run": 13,
+    "git_commands": {
+      "read_tree": 1,
+      "add_all": 1,
+      "write_tree": 1,
+      "commit_tree": 1,
+      "update_ref": 1
+    },
+    "restart_event_types": ["heartbeat"],
+    "restart_checkpoints": 0,
+    "git_processes_after_restart": 13,
+    "git_process_delta_on_restart": 0,
+    "deadlines_unchanged": {
+      "checkpoint": true,
+      "budget": true
+    }
+  },
+  "generated_cadence": {
+    "first_event_types": ["heartbeat"],
+    "restart_event_types": ["heartbeat"],
+    "agent_state": "idle",
+    "next_checkpoint_after_first": 1791051812983,
+    "next_checkpoint_after_restart": 1791051812983,
+    "next_budget_after_first": 1791051212983,
+    "next_budget_after_restart": 1791051212983,
+    "git_processes_after_first": 4,
+    "git_processes_after_restart": 4,
+    "git_process_delta_on_restart": 0
+  },
+  "dependency_backoff": {
+    "failure_event_types": ["herdr-error"],
+    "restart_event_types": ["idle-no-active-issues"],
+    "failures_after_first": 1,
+    "failures_after_restart": 1,
+    "retry_at_after_first": 1791050866936,
+    "retry_at_after_restart": 1791050866936,
+    "restart_spawned_herdr": false
+  }
+}

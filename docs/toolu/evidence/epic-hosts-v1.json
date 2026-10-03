@@ -1,0 +1,371 @@
+{
+  "schemaVersion": 1,
+  "probeContractVersion": 1,
+  "generatedAt": "2026-10-03T17:56:00Z",
+  "source": {
+    "issue": "https://github.com/Falconiere/toolu/issues/376",
+    "revision": "abd42df75b7554de816fc24bab8f90bdaffe31bd"
+  },
+  "environment": {
+    "platform": "Darwin",
+    "arch": "arm64",
+    "herdrVersion": "0.9.3",
+    "topology": "Dedicated named Herdr session; one temporary Git project; per-host panes and temporary profiles; OpenCode used a fully isolated HOME/XDG profile with --standalone."
+  },
+  "hosts": {
+    "claude": {
+      "binary": "claude",
+      "version": "2.1.288",
+      "versionCommand": ["claude", "--version"],
+      "profileIsolation": "Temporary CLAUDE_CONFIG_DIR containing only a copied authentication record and generated session state.",
+      "capabilities": {
+        "start": {
+          "outcome": "verified",
+          "summary": "Herdr started Claude Code interactively in the owned pane and reported it idle with the expected cwd.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": [
+            "herdr",
+            "agent",
+            "start",
+            "probeclaude",
+            "--kind",
+            "claude",
+            "--pane",
+            "w2:p1",
+            "--",
+            "--dangerously-skip-permissions"
+          ],
+          "evidence": [
+            "agent_started returned argv, pane_id, cwd, agent=claude, and interactive_ready=true."
+          ],
+          "nativeError": null
+        },
+        "tool_task": {
+          "outcome": "unverified",
+          "summary": "The isolated session accepted the prompt but the provider rejected execution because its copied login had expired.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": [
+            "herdr",
+            "agent",
+            "prompt",
+            "probeclaude",
+            "Create and verify claude-artifact.txt"
+          ],
+          "evidence": ["No Claude artifact was created."],
+          "nativeError": {
+            "code": "provider_auth_expired",
+            "message": "Login expired \u00b7 Please run /login",
+            "exitCode": null
+          }
+        },
+        "resume": {
+          "outcome": "verified",
+          "summary": "The exact captured UUID restored the prior conversation and prompt; provider execution remained unavailable.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": [
+            "claude",
+            "--resume",
+            "cc2796b5-05f8-4d45-91fb-a4b1000908df",
+            "--dangerously-skip-permissions"
+          ],
+          "evidence": [
+            "The resumed UI displayed the original artifact prompt and the same authentication failure."
+          ],
+          "nativeError": null
+        },
+        "background_work": {
+          "outcome": "unverified",
+          "summary": "Provider authentication prevented starting a real background tool or child process.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": ["claude", "--resume", "cc2796b5-05f8-4d45-91fb-a4b1000908df"],
+          "evidence": [],
+          "nativeError": {
+            "code": "provider_auth_expired",
+            "message": "Login expired \u00b7 Please run /login",
+            "exitCode": null
+          }
+        },
+        "cancel_replace": {
+          "outcome": "unverified",
+          "summary": "No real Claude workload could be started, so cancellation and replacement were not exercised.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": ["claude", "--resume", "cc2796b5-05f8-4d45-91fb-a4b1000908df"],
+          "evidence": [],
+          "nativeError": {
+            "code": "provider_auth_expired",
+            "message": "Login expired \u00b7 Please run /login",
+            "exitCode": null
+          }
+        },
+        "teardown": {
+          "outcome": "unverified",
+          "summary": "Native /exit returned to the pane shell, but no owned workload existed to prove descendant cleanup.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": ["claude", "/exit"],
+          "evidence": ["Herdr process-info showed fish as the foreground process after /exit."],
+          "nativeError": {
+            "code": "workload_cleanup_not_exercised",
+            "message": "Session exit observed without a live child workload",
+            "exitCode": null
+          }
+        }
+      }
+    },
+    "codex": {
+      "binary": "codex",
+      "version": "0.160.0",
+      "versionCommand": ["codex", "--version"],
+      "profileIsolation": "Temporary CODEX_HOME containing only a copied auth.json and generated session state; --no-daemon prevents profile-scoped helpers surviving client exit.",
+      "capabilities": {
+        "start": {
+          "outcome": "verified",
+          "summary": "Herdr started Codex interactively in the owned pane and reported it idle with the expected cwd.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": [
+            "codex",
+            "--no-daemon",
+            "--dangerously-bypass-approvals-and-sandbox",
+            "--no-alt-screen"
+          ],
+          "evidence": [
+            "agent_started returned argv, pane_id, cwd, agent=codex, and interactive_ready=true."
+          ],
+          "nativeError": null
+        },
+        "tool_task": {
+          "outcome": "verified",
+          "summary": "Codex created and byte-verified a marker artifact with a real shell tool.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": [
+            "herdr",
+            "agent",
+            "prompt",
+            "probecodex",
+            "Create and verify codex-artifact.txt"
+          ],
+          "evidence": ["codex-artifact.txt contained exactly CODEX_PROBE_376 followed by newline."],
+          "nativeError": null
+        },
+        "resume": {
+          "outcome": "verified",
+          "summary": "The exact rollout UUID restored conversation memory and completed a second verified artifact.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": [
+            "codex",
+            "resume",
+            "01a102dd-81c6-70a1-a199-c36f9825e64c",
+            "--dangerously-bypass-approvals-and-sandbox",
+            "--no-alt-screen"
+          ],
+          "evidence": [
+            "session_meta.payload.id matched the resume UUID; codex-resumed.txt reproduced CODEX_PROBE_376."
+          ],
+          "nativeError": null
+        },
+        "background_work": {
+          "outcome": "verified",
+          "summary": "A real shell and sleep child continued after the foreground conversation was interrupted and were visible as live processes.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": ["sh", "-c", "sleep 45; printf CODEX_CANCELLED_376 > codex-cancelled.txt"],
+          "evidence": [
+            "Both sh and sleep remained live while Herdr reported the agent done; the Codex UI showed one background terminal."
+          ],
+          "nativeError": null
+        },
+        "cancel_replace": {
+          "outcome": "verified",
+          "summary": "The bounded production sequence interrupted the turn, stopped the background terminal with /stop, then exited the exact session.",
+          "observedAt": "2026-10-03T18:36:00Z",
+          "command": ["codex", "Esc", "/stop", "/exit"],
+          "evidence": [
+            "Owned sh pid 52762 and sleep pid 52808 disappeared; no-daemon-cancelled2.txt stayed absent; shutdownAgent returned exited in 2.43 seconds."
+          ],
+          "nativeError": null
+        },
+        "teardown": {
+          "outcome": "verified",
+          "summary": "With --no-daemon, /exit removed the exact Herdr agent and all owned workload processes after /stop.",
+          "observedAt": "2026-10-03T18:36:00Z",
+          "command": ["codex", "/stop", "/exit"],
+          "evidence": [
+            "Herdr returned agent_not_found, the delayed artifact stayed absent, and no matching sh or sleep survived."
+          ],
+          "nativeError": null
+        }
+      }
+    },
+    "cursor": {
+      "binary": "cursor-agent",
+      "version": null,
+      "versionCommand": ["cursor-agent", "--version"],
+      "profileIsolation": "Owned Herdr pane; the native CLI stopped before profile creation because the login keychain was locked.",
+      "capabilities": {
+        "start": {
+          "outcome": "unverified",
+          "summary": "Cursor Agent exited before interactive readiness because the macOS login keychain was locked.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": ["cursor-agent", "--yolo", "--trust", "--approve-mcps"],
+          "evidence": ["Herdr agent start timed out and the owned pane returned to its shell."],
+          "nativeError": {
+            "code": "keychain_locked",
+            "message": "Your macOS login keychain is locked. Run security unlock-keychain and try again.",
+            "exitCode": 1
+          }
+        },
+        "tool_task": {
+          "outcome": "unverified",
+          "summary": "Cursor never reached an interactive session.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": ["cursor-agent", "--yolo", "--trust", "--approve-mcps"],
+          "evidence": [],
+          "nativeError": {
+            "code": "keychain_locked",
+            "message": "Cursor could not start",
+            "exitCode": 1
+          }
+        },
+        "resume": {
+          "outcome": "unverified",
+          "summary": "No Cursor session ID was created to resume.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": ["cursor-agent", "--continue"],
+          "evidence": [],
+          "nativeError": {
+            "code": "keychain_locked",
+            "message": "Cursor could not start",
+            "exitCode": 1
+          }
+        },
+        "background_work": {
+          "outcome": "unverified",
+          "summary": "No Cursor session existed to start background work.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": ["cursor-agent", "--continue"],
+          "evidence": [],
+          "nativeError": {
+            "code": "keychain_locked",
+            "message": "Cursor could not start",
+            "exitCode": 1
+          }
+        },
+        "cancel_replace": {
+          "outcome": "unverified",
+          "summary": "No Cursor workload existed to cancel or replace.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": ["cursor-agent", "--continue"],
+          "evidence": [],
+          "nativeError": {
+            "code": "keychain_locked",
+            "message": "Cursor could not start",
+            "exitCode": 1
+          }
+        },
+        "teardown": {
+          "outcome": "unverified",
+          "summary": "Only the failed startup process exited; an active Cursor session teardown was not exercised.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": ["cursor-agent", "--yolo", "--trust", "--approve-mcps"],
+          "evidence": ["The failed process returned the owned pane to fish."],
+          "nativeError": {
+            "code": "keychain_locked",
+            "message": "Cursor could not start",
+            "exitCode": 1
+          }
+        }
+      }
+    },
+    "opencode": {
+      "binary": "opencode",
+      "version": "2.0.21",
+      "versionCommand": ["opencode", "--version"],
+      "profileIsolation": "Temporary HOME and XDG data/config/cache/state roots with --standalone; no user session database or service was reused.",
+      "capabilities": {
+        "start": {
+          "outcome": "verified",
+          "summary": "OpenCode started against a fully isolated standalone profile and Herdr reported it idle in the owned pane.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": [
+            "opencode",
+            "--standalone",
+            "--session",
+            "ses_efd1133cdffeZJJ1RF9ec5eTJF",
+            "--auto"
+          ],
+          "evidence": [
+            "agent_started returned the exact standalone argv, pane, cwd, and interactive_ready=true."
+          ],
+          "nativeError": null
+        },
+        "tool_task": {
+          "outcome": "verified",
+          "summary": "OpenCode used an explicit available model to create and read-verify a real artifact in the isolated profile.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": [
+            "opencode",
+            "run",
+            "--standalone",
+            "--model",
+            "openai/gpt-5.6-luna",
+            "--auto",
+            "--format",
+            "json"
+          ],
+          "evidence": [
+            "JSON events carried one sessionID and completed patch/read tool states; opencode-strict-artifact.txt contained OPENCODE_STRICT_376."
+          ],
+          "nativeError": null
+        },
+        "resume": {
+          "outcome": "verified",
+          "summary": "The exact session ID restored prior context and completed a second verified artifact.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": [
+            "opencode",
+            "--standalone",
+            "--session",
+            "ses_efd1133cdffeZJJ1RF9ec5eTJF",
+            "--auto"
+          ],
+          "evidence": [
+            "Isolated session list returned only the captured ID; the resumed UI recalled OPENCODE_STRICT_376 and verified opencode-strict-resumed.txt."
+          ],
+          "nativeError": null
+        },
+        "background_work": {
+          "outcome": "verified",
+          "summary": "A real sh and sleep child ran beneath the standalone OpenCode session and remained observable while the agent was working.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": ["sh", "-c", "sleep 120; touch opencode-standalone-cancelled.txt"],
+          "evidence": ["The owned sh and sleep PIDs were observed before cancellation."],
+          "nativeError": null
+        },
+        "cancel_replace": {
+          "outcome": "verified",
+          "summary": "Esc did not cancel; Ctrl-C terminated the standalone TUI and its sh/sleep descendants, and exact-ID restart completed new work.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": [
+            "opencode",
+            "Ctrl-C",
+            "--standalone",
+            "--session",
+            "ses_efd1133cdffeZJJ1RF9ec5eTJF"
+          ],
+          "evidence": [
+            "No sh, sleep, or delayed artifact survived Ctrl-C; the restarted exact session created opencode-after-cancel.txt."
+          ],
+          "nativeError": null
+        },
+        "teardown": {
+          "outcome": "verified",
+          "summary": "Native /exit after recovery returned to fish with no matching standalone session or child process.",
+          "observedAt": "2026-10-03T17:56:00Z",
+          "command": ["opencode", "/exit"],
+          "evidence": [
+            "Herdr process-info showed only fish and process inspection found no session or sleep survivor."
+          ],
+          "nativeError": null
+        }
+      }
+    }
+  }
+}

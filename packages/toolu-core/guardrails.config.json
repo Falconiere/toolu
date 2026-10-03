@@ -22,7 +22,9 @@
       "shell",
       "detect",
       "gates",
-      "quality"
+      "quality",
+      "process",
+      "resources"
     ],
     "nested": {
       "decision": [
@@ -174,6 +176,21 @@
         "quality-gate.ts",
         "quality-ast-grep.ts",
         "quality-run.ts",
+        "__tests__"
+      ],
+      "process": [
+        "parent-guard.ts",
+        "process-group.ts",
+        "run-command.ts",
+        "__tests__"
+      ],
+      "resources": [
+        "binding.ts",
+        "jobs.ts",
+        "lease-transitions.ts",
+        "lock.ts",
+        "pressure.ts",
+        "resource-store.ts",
         "__tests__"
       ]
     },
