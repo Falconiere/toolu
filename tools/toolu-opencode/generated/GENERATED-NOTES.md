@@ -50,6 +50,4 @@ The OpenCode adapter's `shell.env` hook gives every bash call these variables (s
 
 ## Literal `.claude` references (not rewritten)
 
-- This writes a ledger below the active host's `<repo>/.claude/tmp/plan-ledger/`
-- `.claude/tmp/jira/plans/<KEY>.md` or `.codex/tmp/jira/plans/<KEY>.md`.
 - `~/.claude/epics/<owner>-<repo>-<n>/`, Codex: `$CODEX_HOME/toolu/epics/…`,

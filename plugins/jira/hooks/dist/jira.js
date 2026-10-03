@@ -949,6 +949,17 @@ import {
 import { constants as os, tmpdir as tmpdir2 } from "os";
 import { join as join4 } from "path";
 
+// plugins/jira/hooks/src/jira/opencode.ts
+function onOpencode(env = process.env) {
+  return env["TOOLU_HOST_OVERRIDE"] === "opencode";
+}
+function nestedEnv(env) {
+  if (!onOpencode(env))
+    return env;
+  const options = env["BUN_OPTIONS"] ?? "";
+  return { ...env, BUN_OPTIONS: options === "" ? "--no-env-file" : `${options} --no-env-file` };
+}
+
 // plugins/jira/hooks/src/jira/plan-store.ts
 import { spawnSync as spawnSync2 } from "child_process";
 import { mkdirSync, readFileSync as readFileSync3, renameSync, rmSync, writeFileSync as writeFileSync2 } from "fs";
@@ -1177,13 +1188,14 @@ async function runPlan(context, argv) {
   const cli = planCli(context.env);
   if (!runnable(cli))
     throw new CliExit(1, `jira plan run: jira CLI not found at ${cli} (set JIRA_CLI)`);
-  if (!probe(cli, context.env)) {
+  const env = nestedEnv(context.env);
+  if (!probe(cli, env)) {
     throw new CliExit(1, "jira plan run: cannot reach Jira (user whoami failed) \u2014 no step statuses were written");
   }
   const targets = only === "" ? ledger.steps.map((step) => String(step["id"])) : [only];
   let failed = false;
   for (const id of targets) {
-    const result = await runStep(ledger, id, state, { cli, root, env: context.env, activity });
+    const result = await runStep(ledger, id, state, { cli, root, env, activity });
     ledger = result.ledger;
     failed ||= !result.green;
   }
