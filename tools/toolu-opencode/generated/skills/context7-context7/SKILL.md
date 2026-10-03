@@ -9,15 +9,13 @@ Use this skill to find up-to-date documentation and code examples for any progra
 Invoke at the **stable published path** (a symlink the plugin's SessionStart hook refreshes every session):
 
 ```bash
-# Codex
-"${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/context7/search.sh" <command> [options]
-# Claude Code
-"${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/context7/search.sh" <command> [options]
+# OpenCode
+"$TOOLU_BUN" --no-env-file "${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/context7/search.sh" <command> [options]
 ```
 
-Choose the line for the active host. Ordinary shell calls do not inherit
-plugin lifecycle variables, so never collapse these into one ambiguous
-fallback. Use the published path; plugin-root variables are lifecycle-only.
+`shell.env` sets `TOOLU_BUN` and `TOOLU_CONFIG_DIR` in every bash call, so this
+runs with `bun` off `PATH` and never loads a project `.env`. A file of your own
+at that path runs directly instead. Plugin-root variables are lifecycle-only.
 
 Repo-checkout fallback (for tests/dev when the plugin is not installed): the executable Bun bundle `plugins/context7/hooks/dist/search.js`.
 ```

@@ -431,7 +431,15 @@ test("full catalog includes all plugins and explicitly classifies empty surfaces
     `${TOOLU_OPENCODE_ROOT}/generated/skills/${orchestratorSkill?.id}/references/model-routing.md`,
   );
   const context7 = plan.catalog.plugins.find((plugin) => plugin.name === "context7")?.skills[0];
-  expect(plan.files.get(join(out, context7?.path ?? ""))).not.toContain("CLAUDE_CONFIG_DIR");
+  const context7Skill = plan.files.get(join(out, context7?.path ?? "")) ?? "";
+  expect(context7Skill).not.toContain("CLAUDE_CONFIG_DIR");
+  // One OpenCode command under shell.env's Bun, which ignores the project .env (#348).
+  expect(context7Skill).toContain(
+    '# OpenCode\n"$TOOLU_BUN" --no-env-file "${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/context7/search.sh" <command> [options]\n```',
+  );
+  for (const gone of ["CODEX_HOME", "# Codex", "# Claude Code", "Choose the line"]) {
+    expect(context7Skill).not.toContain(gone);
+  }
 });
 
 test("resource links in generated skills resolve inside the output tree", () => {

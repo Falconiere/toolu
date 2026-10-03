@@ -10,6 +10,13 @@ Library documentation and code-example lookup via the Context7 REST API — a sk
 /plugin install context7@toolu
 ```
 
+OpenCode: add `context7` to `.opencode/toolu/plugins.json` (see [OpenCode install](../opencode.md)).
+
+- The helper lives at `$TOOLU_CONFIG_DIR/context7/search.sh`, the per-project data root exported to every bash call.
+- The skill is `context7-context7`.
+- context7's own SessionStart gives the documentation-first instruction, so it appears only while context7 is selected; toolu's session protocol omits its context7 line on OpenCode. The instruction rides on every model request and is not repeated in compaction context.
+- The instruction's command is `'<bun>' --no-env-file '<helper>'` and the skill's is `"$TOOLU_BUN" --no-env-file "…/context7/search.sh"`. Bun is named by path, so `bun` need not be on `PATH`, and `--no-env-file` keeps a project `.env` from supplying `CONTEXT7_API_KEY`. A file of your own at the helper path is kept and named alone.
+
 **No API key required** (rate-limited). For higher limits, export `CONTEXT7_API_KEY=ctx7sk...` in the environment — the script reads it from the environment only, never from a `.env` file.
 
 ## What It Provides

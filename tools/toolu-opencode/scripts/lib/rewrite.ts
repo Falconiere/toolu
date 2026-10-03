@@ -35,6 +35,25 @@ export function opencodeJev(text: string): string {
     .replaceAll('"$JEV_BUN" "$JEV"', '"$JEV_BUN" --no-env-file "$JEV"');
 }
 
+/** context7's Codex and Claude Code command lines, after the config-root rewrite. */
+const CONTEXT7_HOST_PAIR =
+  /# Codex\n"\$\{TOOLU_CONFIG_DIR:-\$\{CODEX_HOME:-\$HOME\/\.codex\}\}\/context7\/search\.sh" <command> \[options\]\n# Claude Code\n"[^"\n]*\/context7\/search\.sh" <command> \[options\]/;
+const CONTEXT7_CHOOSE =
+  /Choose the line for the active host\. Ordinary shell calls do not inherit\nplugin lifecycle variables, so never collapse these into one ambiguous\nfallback\. Use the published path; plugin-root variables are lifecycle-only\./;
+
+/** context7 on OpenCode (#348): one command, run by `shell.env`'s Bun, which ignores `.env`. */
+export function opencodeContext7(text: string): string {
+  return text
+    .replace(
+      CONTEXT7_HOST_PAIR,
+      `# OpenCode\n"$TOOLU_BUN" --no-env-file "${OPENCODE_CONFIG}/context7/search.sh" <command> [options]`,
+    )
+    .replace(
+      CONTEXT7_CHOOSE,
+      "`shell.env` sets `TOOLU_BUN` and `TOOLU_CONFIG_DIR` in every bash call, so this\nruns with `bun` off `PATH` and never loads a project `.env`. A file of your own\nat that path runs directly instead. Plugin-root variables are lifecycle-only.",
+    );
+}
+
 export function rewriteBody(
   body: string,
   references: SurfaceReferences,
@@ -90,6 +109,7 @@ ${rewritten.slice(wrapperStart)}`;
       rewritten = rewritten.replace("TOOLU_HOST_OVERRIDE=claude", "TOOLU_HOST_OVERRIDE=opencode");
     }
     if (skillId === "jev-jev") rewritten = opencodeJev(rewritten);
+    if (skillId === "context7-context7") rewritten = opencodeContext7(rewritten);
     if (skillId === "statusline-status") {
       rewritten = rewritten.replace("in Codex.", "in OpenCode.");
       rewritten = rewritten.replace(

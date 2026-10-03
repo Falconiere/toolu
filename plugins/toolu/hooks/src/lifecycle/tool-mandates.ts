@@ -44,8 +44,9 @@ function mandates(input: MandateInput): string[] {
       `exa-search (web search) — for ANY web search, code-example hunt, URL crawl, or topic research you MUST reach for \`"${exa}"\` FIRST (commands: search / crawl / similar — see the exa-search skill). Native web tools are a FALLBACK ONLY — use them when the wrapper errors or a URL needs your logged-in session.`,
     );
   }
+  // On OpenCode context7's own SessionStart gives this instruction (#348).
   const ctx7 = join(input.configRoot, "context7", "search.sh");
-  if (isExecutable(ctx7) && wanted(input, "context7")) {
+  if (input.host !== "opencode" && isExecutable(ctx7) && wanted(input, "context7")) {
     out.push(
       `context7 (library docs) — for ANY third-party library/framework question (API usage, current docs, code examples, version behavior) you MUST query \`"${ctx7}"\` FIRST (\`search <library>\` to resolve the ID, then \`docs <id> <query>\`) BEFORE answering from memory or searching the web. Web search is a FALLBACK ONLY when context7 lacks coverage.`,
     );
