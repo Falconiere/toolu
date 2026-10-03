@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { copyFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -98,6 +99,43 @@ test("a completed patch checks each add, move side and delete once; duplicate af
   expect(output.output).toContain(`checked ${target}`);
   await post.after(call, output);
   expect((await rows(trace)).length).toBe(4);
+  post.clear();
+});
+
+test("the same call ID on a different tool still runs post checks", async () => {
+  const { root, options } = await project();
+  const trace = join(root, "trace.jsonl");
+  await traceModule(root, trace);
+  const post = createToolPostHandler(options, createToolAdviceStore());
+  const path = join(root, "written.ts");
+  await writeFile(path, "written\n");
+  const call = {
+    tool: "write",
+    sessionID: "session-reused",
+    callID: "same-id",
+    args: { filePath: path, content: "written\n" },
+  };
+  await post.after(call, result());
+  const read = { ...call, tool: "read", args: { filePath: path } };
+  const readOutput = result();
+  await post.after(read, readOutput);
+  expect((await rows(trace)).length).toBe(2);
+  expect(readOutput.output).toContain(`checked ${path}`);
+  post.clear();
+});
+
+test("a non-text host result reports failed delivery without recording a quality pass", async () => {
+  const { root, options } = await project();
+  const advice = createToolAdviceStore();
+  const post = createToolPostHandler(options, advice);
+  const call = qualityCall("non-text");
+  advice.record(call, "pre advice");
+  const output = result({ exit: 0 });
+  Object.defineProperty(output, "output", { value: 42, writable: true });
+  await post.after(call, output);
+  expect(output.output).toContain("Post-tool checks failed to run: output is not text");
+  expect(output.output).toContain("pre advice");
+  expect(existsSync(join(root, ".opencode/tmp/quality-gate-status.json"))).toBe(false);
   post.clear();
 });
 

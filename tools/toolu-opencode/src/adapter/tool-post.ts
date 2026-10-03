@@ -1,7 +1,7 @@
 /** Completed OpenCode calls enter the same post-tool dispatcher as other hosts. */
 import { join } from "node:path";
 import type { Hooks } from "@opencode-ai/plugin";
-import { dispatchPostTool, type ModuleResult } from "@toolu/core/dispatch";
+import { dispatchPostTool, type ModuleResult, type ToolModule } from "@toolu/core/dispatch";
 import { gateStatusModule, pushWaiverModule } from "@toolu/core/gates";
 import { gateEnv, type PermissionEvaluateHandlerOptions } from "./evaluate.ts";
 import { mapToolCall, mcpServerNames, type ToolCall } from "./tool-before.ts";
@@ -20,6 +20,7 @@ export type ToolPostHandler = {
 const TTL_MS = 5 * 60_000;
 const MAX_SEEN = 256;
 const MAX_DIAGNOSTIC = 8192;
+const POST_BUILTINS: readonly ToolModule[] = [gateStatusModule, pushWaiverModule];
 
 function key(call: ToolCall): string {
   return JSON.stringify([call.sessionID, call.callID]);
@@ -128,7 +129,7 @@ async function dispatchMessage(
     },
   };
   const result = await dispatchPostTool(JSON.stringify(payload), {
-    builtins: [gateStatusModule, pushWaiverModule],
+    builtins: POST_BUILTINS,
     libDir: join(context.pluginRoot, "hooks", "lib"),
     cwd: typeof request.cwd === "string" ? request.cwd : context.opts.permissionContext.cwd,
     env: context.env,
@@ -163,14 +164,19 @@ export function createToolPostHandler(
   const after: ToolAfter = async (input, output) => {
     prune();
     const id = key(input);
-    if (seen.get(id)?.tool === input.tool) return;
+    // A different tool reusing the same IDs is a new call, not a replay.
+    const previous = seen.get(id);
+    if (previous?.tool === input.tool) return;
     if (seen.size >= MAX_SEEN) {
       const oldest = seen.keys().next().value;
       if (oldest !== undefined) seen.delete(oldest);
     }
     seen.set(id, { tool: input.tool, expiresAt: Date.now() + TTL_MS });
     if (typeof output.output !== "string") {
-      throw new Error("toolu: post-check delivery failed after execution: output is not text");
+      output.output =
+        "[toolu post-check after execution]\nPost-tool checks failed to run: output is not text";
+      await advice.after(input, output);
+      return;
     }
     try {
       const message = await dispatchMessage(input, output, context);

@@ -308,8 +308,8 @@ export function createToolBeforeHandler(
   if (!decider.ok) return createDenyAllToolBefore(decider.reason);
   const servers = mcpServerNames(opts.permissionContext.projectRoot);
   return async (input, output) => {
-    advice?.begin(input);
     onBegin?.(input);
+    advice?.begin(input);
     const args: unknown = output.args;
     const mapping = mapToolCall(input, args, opts.permissionContext, servers);
     if (mapping.kind === "skip") return;
