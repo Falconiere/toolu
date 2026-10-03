@@ -110,7 +110,10 @@ test.concurrent.each(["claude", "codex"])(
       "preflight: plan not approved (Status: Draft) — run /delivery-flow:delivery-flow (plan review phase)\n",
     );
     const spec = await preflight(host, "Approved", "Draft");
-    expect(spec.stderr).toContain("run /delivery-flow:delivery-flow (spec review phase)");
+    expect(spec.exitCode).toBe(1);
+    expect(spec.stderr).toBe(
+      "preflight: spec spec.md not approved (Status: Draft) — run /delivery-flow:delivery-flow (spec review phase)\n",
+    );
   },
 );
 
