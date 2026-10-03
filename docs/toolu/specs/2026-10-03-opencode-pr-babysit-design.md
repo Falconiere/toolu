@@ -112,6 +112,11 @@ The `smoke:opencode-entry` scenarios need the pinned binary and run locally (CI 
 - Acceptance evidence: 🟡 should-fix: where the live scenarios run was unstated. Fixed: paragraph above.
 - Jev: coverage 1.62/2; weakest section "none" 0.49 (evidence 0.33); buildable Noul 0.37 (uncertain, no named gap). No blocker remains.
 
+## Implementation notes
+
+- A denied `task` is not offered to the fixer at all; a model's `task` call becomes OpenCode's `invalid` tool. The bash denials refuse with "a rule which prevents you from using this specific tool call".
+- `stopGroup` snapshots the group and every ppid descendant before signalling, because OpenCode runs each bash tool call in its own process group.
+
 ## Documentation impact
 
 - `plugins/pr-babysit/workflows/babysit.md` (OpenCode controller, cancel, state path, inline column), `skills/babysit/references/helper.md` (OpenCode state path, `--host opencode`, subprocess transport, new fields), `plugins/pr-babysit/README.md` (OpenCode section).
