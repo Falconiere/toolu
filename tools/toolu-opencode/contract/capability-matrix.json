@@ -554,7 +554,7 @@
           "use": "none"
         },
         "task": {
-          "use": "Fixes are dispatched to fixer agents",
+          "use": "Fixes are dispatched to fixer agents: an opencode run subprocess per group, or inline task subagents",
           "required": true,
           "enforcement": false,
           "mechanism": "task tool + child sessions",
@@ -575,7 +575,7 @@
       },
       "notes": [
         {
-          "need": "Tick scheduling: the documented plugin API has no cron or loop primitive, so babysit ticks need a host-native scheduler or an external loop",
+          "need": "Tick scheduling: the documented plugin API has no cron or loop primitive, so the OpenCode controller runs bounded ticks in the invoking turn (bash sleep of backoff.waitSeconds, at most 60 s) and resumes from the slot state file when invoked again",
           "owner": "OP-23"
         }
       ]

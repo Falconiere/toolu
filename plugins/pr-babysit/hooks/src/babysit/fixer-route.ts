@@ -5,7 +5,9 @@ import { join } from "node:path";
 import { fail, type Json } from "./common.ts";
 
 export const TIERS = ["trivial", "standard", "complex", "critical"] as const;
-type Host = "claude" | "codex" | "cursor";
+type Host = "claude" | "codex" | "cursor" | "opencode";
+/** A controller host: the one running the babysit workflow. */
+export type ControllerHost = "claude" | "codex" | "opencode";
 type Choice = { model?: string; effort?: string };
 type Config = {
   dispatch: "herdr" | "inline";
@@ -45,6 +47,9 @@ const DEFAULTS: Record<Host, Choice[]> = {
     { model: "claude-opus-5-thinking-high" },
     { model: "gpt-5.6-sol-xhigh" },
   ],
+  // OpenCode models are provider/model ids the user configures; with none set the
+  // fixer runs the user's own default model.
+  opencode: [{}, {}, {}, {}],
 };
 
 export function hostKind(name: unknown): Host {
@@ -52,9 +57,14 @@ export function hostKind(name: unknown): Host {
   if (normalized === "claude" || normalized === "claude-code") return "claude";
   if (normalized === "codex") return "codex";
   if (normalized === "cursor" || normalized === "cursor-agent") return "cursor";
-  fail("config_invalid", `unknown host '${String(name)}'; use one of claude, codex, cursor`, {
-    host: name,
-  });
+  if (normalized === "opencode") return "opencode";
+  fail(
+    "config_invalid",
+    `unknown host '${String(name)}'; use one of claude, codex, cursor, opencode`,
+    {
+      host: name,
+    },
+  );
 }
 
 export function hostCli(host: Host): string {
@@ -101,20 +111,43 @@ function merge(a: Json, b: Json): Json {
   return out;
 }
 
-export function configPaths(host: "claude" | "codex"): { user: string; project: string } {
+/** OpenCode's files, as `@toolu/core/config`'s `configFiles` resolves them under the adapter's env. */
+function opencodePaths(root: string, env: NodeJS.ProcessEnv): { user: string; project: string } {
+  const home = env.HOME || homedir();
+  const user =
+    env.TOOLU_USER_CONFIG_DIR ||
+    env.TOOLU_CONFIG_DIR ||
+    join(env.XDG_CONFIG_HOME || join(home, ".config"), "opencode");
+  const dir = env.TOOLU_PROJECT_CONFIG_DIRNAME || ".opencode";
+  return {
+    user: join(user, "toolu.config.json"),
+    project: root ? join(root, dir, "toolu.config.json") : "",
+  };
+}
+
+function gitRoot(env: NodeJS.ProcessEnv): string {
+  return (
+    env.TOOLU_PROJECT_DIR ||
+    (spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).stdout ?? "").trim()
+  );
+}
+
+export function configPaths(
+  host: ControllerHost,
+  env: NodeJS.ProcessEnv = process.env,
+): { user: string; project: string } {
+  if (host === "opencode") return opencodePaths(gitRoot(env), env);
   const home =
     host === "codex"
-      ? process.env.CODEX_HOME || join(process.env.HOME || homedir(), ".codex")
-      : process.env.CLAUDE_CONFIG_DIR || join(process.env.HOME || homedir(), ".claude");
-  const user = join(process.env.TOOLU_CONFIG_DIR || home, "toolu.config.json");
-  const root =
-    process.env.TOOLU_PROJECT_DIR ||
-    (spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).stdout ?? "").trim();
-  const dir = process.env.TOOLU_PROJECT_CONFIG_DIRNAME || (host === "codex" ? ".codex" : ".claude");
+      ? env.CODEX_HOME || join(env.HOME || homedir(), ".codex")
+      : env.CLAUDE_CONFIG_DIR || join(env.HOME || homedir(), ".claude");
+  const user = join(env.TOOLU_CONFIG_DIR || home, "toolu.config.json");
+  const root = gitRoot(env);
+  const dir = env.TOOLU_PROJECT_CONFIG_DIRNAME || (host === "codex" ? ".codex" : ".claude");
   return { user, project: root ? join(root, dir, "toolu.config.json") : "" };
 }
 
-export function loadFixerConfig(host: "claude" | "codex"): Config {
+export function loadFixerConfig(host: ControllerHost): Config {
   const paths = configPaths(host);
   const raw = merge(block(paths.user), paths.project ? block(paths.project) : {});
   const dispatch = raw.dispatch ?? "herdr";
@@ -169,6 +202,29 @@ export function loadFixerConfig(host: "claude" | "codex"): Config {
   };
 }
 
+const BYPASS: Record<Host, string[]> = {
+  claude: ["--dangerously-skip-permissions"],
+  codex: ["--dangerously-bypass-approvals-and-sandbox"],
+  cursor: ["--yolo", "--trust", "--approve-mcps"],
+  // Approves asks; the fixer agent's explicit denies still hold.
+  opencode: ["--auto"],
+};
+const SAFE_MODE: Record<Host, string[]> = {
+  claude: ["--permission-mode", "auto"],
+  codex: ["--ask-for-approval", "on-request", "--sandbox", "workspace-write"],
+  cursor: ["--trust"],
+  // `opencode run` rejects every ask it would otherwise prompt for.
+  opencode: [],
+};
+const EFFORT: Record<Host, (effort: string) => string[]> = {
+  claude: (effort) => ["--effort", effort],
+  codex: (effort) => ["-c", `model_reasoning_effort=${effort}`],
+  // Cursor encodes effort in the model id.
+  cursor: () => [],
+  opencode: (effort) => ["--variant", effort],
+};
+
+/** A fixer's approval, name, model and effort flags; every one shell-safe. */
 export function agentArgs(
   host: Host,
   name: string,
@@ -178,34 +234,19 @@ export function agentArgs(
 ): string[] {
   const args = [
     ...(host === "codex" ? ["--no-daemon"] : []),
-    ...(unattended
-      ? host === "claude"
-        ? ["--dangerously-skip-permissions"]
-        : host === "codex"
-          ? ["--dangerously-bypass-approvals-and-sandbox"]
-          : ["--yolo", "--trust", "--approve-mcps"]
-      : host === "claude"
-        ? ["--permission-mode", "auto"]
-        : host === "codex"
-          ? ["--ask-for-approval", "on-request", "--sandbox", "workspace-write"]
-          : ["--trust"]),
+    ...(unattended ? BYPASS[host] : SAFE_MODE[host]),
     ...(host === "claude" ? ["-n", name] : []),
     ...(model ? ["--model", model] : []),
-    ...(effort
-      ? host === "claude"
-        ? ["--effort", effort]
-        : host === "codex"
-          ? ["-c", `model_reasoning_effort=${effort}`]
-          : []
-      : []),
+    ...(effort ? EFFORT[host](effort) : []),
   ];
   const bad = args.find((arg) => !SAFE.test(arg));
   if (bad) fail("config_invalid", `unsafe ${host} arg for the pane shell: ${bad}`, { arg: bad });
   return args;
 }
 
-function commandAvailable(name: string): boolean {
-  return Bun.which(name) !== null;
+/** Is `name` on `path` (the current PATH)? `Bun.which` alone reads the PATH the process started with. */
+export function commandAvailable(name: string, path = process.env.PATH): boolean {
+  return Bun.which(name, { PATH: path ?? "" }) !== null;
 }
 
 function readJsonIfValid(path: string): unknown {
@@ -260,10 +301,40 @@ function heuristic(item: FixItem): number {
   return 1;
 }
 
+/** Bun's arguments for one Jev ask; on OpenCode a project .env never reaches Jev (#350). */
+export function jevArgv(host: ControllerHost, script: string, stateFile: string): string[] {
+  return [
+    ...(host === "opencode" ? ["--no-env-file"] : []),
+    script,
+    "ask",
+    "-",
+    "-s",
+    `@${stateFile}`,
+  ];
+}
+
+/** The Jev wrapper this controller host publishes; OpenCode never borrows another host's. */
+function jevScript(host: ControllerHost): string | undefined {
+  const home = process.env.HOME || homedir();
+  const candidates =
+    host === "opencode"
+      ? [
+          process.env.PB_JEV,
+          process.env.TOOLU_CONFIG_DIR && join(process.env.TOOLU_CONFIG_DIR, "jev/jev.sh"),
+        ]
+      : [
+          process.env.PB_JEV,
+          join(process.env.CLAUDE_CONFIG_DIR || join(home, ".claude"), "jev/jev.sh"),
+          join(process.env.CODEX_HOME || join(home, ".codex"), "jev/jev.sh"),
+        ];
+  return candidates.find((path): path is string => !!path && existsSync(path));
+}
+
 function jevAnswers(
   items: FixItem[],
   disabled: boolean,
   replay: string,
+  host: ControllerHost,
 ): { answers: Json; note: string } {
   if (replay) {
     const value = readJsonIfValid(replay);
@@ -271,12 +342,7 @@ function jevAnswers(
     return { answers: value as Json, note: "" };
   }
   if (disabled) return { answers: {}, note: "jev disabled; heuristic tiers used" };
-  const home = process.env.HOME || homedir();
-  const script = [
-    process.env.PB_JEV,
-    join(process.env.CLAUDE_CONFIG_DIR || join(home, ".claude"), "jev/jev.sh"),
-    join(process.env.CODEX_HOME || join(home, ".codex"), "jev/jev.sh"),
-  ].find((path) => path && existsSync(path));
+  const script = jevScript(host);
   if (!script)
     return { answers: {}, note: "jev unavailable (jev.sh not installed); heuristic tiers used" };
   if (!process.env.TYPESAFE_API_KEY)
@@ -313,7 +379,7 @@ function jevAnswers(
   try {
     const stateFile = join(temp, "state.json");
     writeFileSync(stateFile, JSON.stringify(state));
-    run = spawnSync(process.execPath, [script, "ask", "-", "-s", `@${stateFile}`], {
+    run = spawnSync(process.execPath, jevArgv(host, script, stateFile), {
       input: JSON.stringify(questions),
       encoding: "utf8",
     });
@@ -344,8 +410,8 @@ export function routeFix(opts: {
   answersFile?: string;
   now?: string;
 }): Json {
-  if (opts.host !== "claude" && opts.host !== "codex")
-    fail("usage", "route-fix.js: --host claude|codex required");
+  if (opts.host !== "claude" && opts.host !== "codex" && opts.host !== "opencode")
+    fail("usage", "route-fix.js: --host claude|codex|opencode required");
   if (!opts.itemsFile) fail("usage", "route-fix.js: --items required");
   const raw = readJsonIfValid(opts.itemsFile);
   if (raw === null) fail("plan_invalid", `items file is missing or not JSON: ${opts.itemsFile}`);
@@ -368,6 +434,7 @@ export function routeFix(opts: {
     items,
     !!opts.noJev || !config.jev,
     opts.answersFile ?? "",
+    opts.host,
   );
   const scored = items.map((i) => {
     const answer = answers[i.id] as { score?: unknown; confidence?: unknown } | undefined;

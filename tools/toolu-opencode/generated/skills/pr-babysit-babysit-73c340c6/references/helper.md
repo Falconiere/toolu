@@ -1,8 +1,8 @@
 # pr-babysit helper contract
 
 The tick helper is the deterministic half of babysitting. Its Bun bundle lives
-under the plugin's `hooks/dist/` directory and runs the same way on Claude Code
-and Codex — only `--state-file` differs by host. The fixer commands use the same bundled Bun path.
+under the plugin's `hooks/dist/` directory and runs the same way on Claude Code,
+Codex and OpenCode — only `--state-file` differs by host. The fixer commands use the same bundled Bun path.
 Read this file instead of the script sources: every field the agent may act
 on is listed here. Fields not listed are not part of the contract.
 
@@ -18,7 +18,7 @@ on is listed here. Fields not listed are not part of the contract.
 | `babysit-record.js` | Hand agent decisions to the reducer: `round`, `flag-injection`, `status`. | `0` · `2` · `3` · `75` |
 | `babysit-parse-verdict.js` | Parse the CI review-bot comment from stdin. | `0` |
 | `babysit-route-fix.js` | Fix routing: Jev-scores the round's items file, tiers and groups it, picks host/model/effort per group from `prBabysit` config. Reads no GitHub. | `0` · `2` · `3` |
-| `babysit-dispatch-fix.js` | Herdr fixer dispatch: `start` / `wait` / `cleanup` of the slot's herdr worktree and fixer agents. | `0` · `2` · `3` · `75` |
+| `babysit-dispatch-fix.js` | Fixer dispatch: `start` / `wait` / `cleanup` of the slot's worktree and fixer agents (herdr panes, or `opencode run` processes). | `0` · `2` · `3` · `75` |
 | `babysit-fixer-report.js` | Run by a fixer agent, never by the controller: writes its done/failed report. | `0` · `2` |
 
 Structured errors are one JSON document on stdout:
@@ -27,7 +27,7 @@ Structured errors are one JSON document on stdout:
 `head_moved`, `state_malformed`, `slot_mismatch`, `locked`, `duplicate_reply`,
 `resolve_unconfirmed` — plus, from fixer dispatch (all exit `3`):
 `config_invalid`, `plan_invalid`, `fixer_running`, `herdr_unavailable`,
-`herdr_error`, `git_error`, `worktree_dirty`, `stale_branch`.
+`herdr_error`, `git_error`, `worktree_dirty`, `stale_branch`, `process_error`.
 
 ## `babysit-tick.js`
 
@@ -37,9 +37,9 @@ babysit-tick.js --repo <owner/repo> --pr <n> --state-file <path>
                 [--page-size N] [--timeout SECONDS] [--now <iso8601>]
 ```
 
-- `--state-file` — the host's slot path, verbatim: `/tmp/pr-babysit-<slot>.json`
-  (Claude) or `<repo>/.codex/tmp/pr-babysit/<slot>.json` (Codex). Created on the
-  first tick, resumed after.
+- `--state-file` — the slot path, verbatim:
+  `<repo>/.opencode/tmp/pr-babysit/<slot>.json`. Created on the first tick,
+  resumed after.
 - `--snapshot-out` — full snapshot (default `<state-file minus .json>.snapshot.json`).
 - `--snapshot-in` — replay a captured snapshot instead of collecting (tests,
   debugging). The workflow never passes it.
@@ -79,13 +79,13 @@ What the agent acts on. Printed on stdout by `babysit-tick.js`.
 | `threads.staleUnresolved[]` | Audit members that are NOT actionable: the PR author replied but no resolve landed. Resolve them without a new reply. |
 | `threads.skippedOutdated[]` | Outdated CI-reviewer threads: skipped silently. |
 | `threads.flaggedInjection[]` | Threads the agent recorded with `babysit-record.js flag-injection`. |
-| `threads.fixing[]` | Threads an **active** herdr fixer (running or blocked) owns: the same objects `actionable[]` would hold, reply ids included, moved out of it (never dispatched twice) and still counted in `unresolved`. Reply to them from here when `bun "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" wait` says `done`. |
+| `threads.fixing[]` | Threads an **active** herdr fixer (running or blocked) owns: the same objects `actionable[]` would hold, reply ids included, moved out of it (never dispatched twice) and still counted in `unresolved`. Reply to them from here when `"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" wait` says `done`. |
 | `fixer` | The slot's fixer record (see State), or `null`. |
 | `conversation.actionable[]` | Human issue comments with no later author comment and no recorded reply. |
 | `reviews.actionable[]` | Human non-`APPROVED` reviews with a body and no recorded reply. |
 | `conversation.fixing[]`, `reviews.fixing[]` | Comments and reviews an active fixer owns (by item id), moved out of `actionable[]` like `threads.fixing[]`. |
 | `recurrence` | `{streak, lastRoundHadRejection, recurringKeys[], fixAttempts}` — the Step 4 gate inputs. |
-| `backoff` | `{idleStreak, intervalMinutes, waitSeconds}` — Claude cron interval / Codex bounded wait for this tick. While a fixer is running `idleStreak` stays 0, so the interval stays at its base and every tick runs `bun "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" wait`; a blocked fixer waits for a human and backs off normally. |
+| `backoff` | `{idleStreak, intervalMinutes, waitSeconds}` — the bounded `sleep` before this controller's next tick. While a fixer is running `idleStreak` stays 0, so the interval stays at its base and every tick runs `"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" wait`; a blocked fixer waits for a human and backs off normally. |
 | `errors[]` | Always empty on exit 0. |
 | `snapshotPath`, `statePath` | Where the full evidence lives. |
 
@@ -136,8 +136,8 @@ and `babysit-resolve-thread.js`.
 | `actions.resolved` | `threadId → {confirmed, at, attempts, headSha}`. |
 | `actions.flagged` | `threadId → {reason, at}`. |
 | `lastGoodSnapshot` | Path of the last snapshot that produced a result. |
-| `fixer` | Written by `babysit-dispatch-fix.js`: `{round, status (running·done·failed·blocked), reason, startedAt, finishedAt, current, unattended, context, itemsFile, items[], groups[{seq, tier, host, model, effort, items[], agent, status (pending·launching·running·done·failed·blocked), reason, error?, brief, report, startedAt, finishedAt, head}]}`, or `null`. `babysit-record.js round` clears a done or failed record; a running or blocked one has a live agent and is kept. |
-| `herdrWorktree` | `{path, workspaceId, paneId, branch: "pr-babysit/<slot>", prBranch, repoRoot, base}` of the slot's herdr worktree, or `null`. |
+| `fixer` | Written by `babysit-dispatch-fix.js`: `{round, status (running·done·failed·blocked), reason, startedAt, finishedAt, current, unattended, context, itemsFile, items[], groups[{seq, tier, host, model, effort, items[], agent, status (pending·launching·running·done·failed·blocked), reason, error?, brief, report, startedAt, finishedAt, head, pid?, pidStart?, log?}]}`, or `null`; `pid`, `pidStart` and `log` are an OpenCode group's process. `babysit-record.js round` clears a done or failed record; a running or blocked one has a live agent and is kept. |
+| `herdrWorktree` | `{path, workspaceId, paneId, branch: "pr-babysit/<slot>", prBranch, repoRoot, base}` of the slot's fixer worktree, or `null`. `workspaceId` and `paneId` are `null` for a native worktree (an all-OpenCode plan). |
 | `hostCooldowns` | `{<host>: {until, reason: "host_limited"}}` — a host that hit a provider usage limit is skipped by `babysit-route-fix.js` for 60 min. |
 
 ## Write side
@@ -169,12 +169,12 @@ babysit-record.js status --state-file <path> --status complete|escalated|cancell
 ## Fixer dispatch
 
 ```
-bun "$PLUGIN_ROOT/hooks/dist/babysit-route-fix.js" --items <file> --host claude|codex [--state-file <path>] [--raise <itemId>]... [--no-jev]
+"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-route-fix.js" --items <file> --host opencode [--state-file <path>] [--raise <itemId>]... [--no-jev]
              [--jev-answers-in <file>] [--now <iso8601>]
-bun "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" start   --state-file <p> --plan <route.json> --items <items.json> --repo-root <dir> --branch <pr-branch> --base <base-branch> [--dry-run]
-bun "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" wait    --state-file <p> [--timeout-seconds N]
-bun "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" cleanup --state-file <p> [--dry-run]
-bun "$PLUGIN_ROOT/hooks/dist/babysit-fixer-report.js" <report-file> done|failed [--note <text>]
+"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" start   --state-file <p> --plan <route.json> --items <items.json> --repo-root <dir> --branch <pr-branch> --base <base-branch> [--dry-run]
+"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" wait    --state-file <p> [--timeout-seconds N]
+"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" cleanup --state-file <p> [--dry-run]
+"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-fixer-report.js" <report-file> done|failed [--note <text>]
 ```
 
 - **Items file** (the agent writes it): `{round, items:[{id, kind: thread|conversation|review|ci,
@@ -186,12 +186,17 @@ bun "$PLUGIN_ROOT/hooks/dist/babysit-fixer-report.js" <report-file> done|failed 
   tier, class, host, model, effort, items[]}]}`. Tier = `clamp(round(score + 0.15), 0, 3)` over
   `trivial · standard · complex · critical`; `class` maps to the inline rubric (`mechanical ·
   implementation · architecture · architecture`). A host is dropped when cooling
-  (`hostCooldowns`) or when its CLI (`claude`, `codex`, `cursor-agent`) is not on `PATH`; no host
-  left → `dispatch: inline` with a `note`. `--jev-answers-in` replays a captured Jev answer map
+  (`hostCooldowns`) or when its CLI (`claude`, `codex`, `cursor-agent`, `opencode`) is not on `PATH`;
+  no host left → `dispatch: inline` with a `note`. `dispatch: herdr` means fixer agents through
+  `babysit-dispatch-fix.js`, whatever their transport. With `--host opencode` the config is
+  `$TOOLU_USER_CONFIG_DIR/toolu.config.json` plus `.opencode/toolu.config.json`, and Jev is only
+  `$TOOLU_CONFIG_DIR/jev/jev.sh`, run with `--no-env-file`. `--jev-answers-in` replays a captured Jev answer map
   (tests, debugging — the workflow never passes it).
 - **Start** validates everything before a side effect: the plan and items (`plan_invalid`, including a
   `round` that is not a positive integer), each group's host and model/effort (`config_invalid`), an
-  active fixer (`fixer_running`, also when blocked), then herdr (`herdr_unavailable`). It fetches
+  active fixer (`fixer_running`, also when blocked), then herdr (`herdr_unavailable`) when a group
+  needs a pane: an all-`opencode` plan does not, and gets a native `git worktree` at
+  `<state>.worktree` instead. It fetches
   `origin/<base>` (the brief's changed-file rule diffs against it) and the PR branch; a failed git
   step is `git_error`.
 - **Wait** waits at most `--timeout-seconds` (default 480) for the running group. A group moves
@@ -204,7 +209,9 @@ bun "$PLUGIN_ROOT/hooks/dist/babysit-fixer-report.js" <report-file> done|failed 
 - **Dispatch status** (`start` / `wait` stdout): `{version:1, status: running|done|failed|blocked|none,
   reason: null|no_report|reported_failed|host_limited|agent_blocked|agent_start_failed|worktree_lost, group,
   worktree, branch, commits[], groups[{seq, tier, host, model, effort, agent, status, reason, error?}]}`
-  — `error` carries herdr's message when a group failed to start.
+  — `error` carries herdr's message when a group failed to start (for OpenCode, the log path
+  that receives the start error), and an OpenCode fixer's last output when it exited without a
+  report.
   `commits[]` = `git rev-list --reverse origin/<pr-branch>..HEAD` in the worktree. `--dry-run`
   prints `{dryRun:true, commands:[[argv…]…], brief}` and writes nothing.
 - **Agents** are named `pb-<6 hex of the slot>-r<round>g<seq>` and started with
@@ -215,6 +222,23 @@ bun "$PLUGIN_ROOT/hooks/dist/babysit-fixer-report.js" <report-file> done|failed 
 
   These are the unattended flags; `prBabysit.unattended: false` selects safe mode. Codex also
   gets `--no-daemon` first in both modes.
+- **OpenCode fixers** never use herdr: `opencode run --format json --dir <worktree> --agent
+  pr-babysit-fixer [--auto] [--model <provider/model>] [--variant <effort>] <prompt>`, detached in
+  its own process group, stdin closed, output to `<state>.fixer-r<round>g<seq>.log`. The agent is
+  added to the caller's `OPENCODE_CONFIG_CONTENT` (which must be a JSON object, else
+  `config_invalid`) with `task`, `gh` and `git push` (also `git -C <dir> push`) denied; OpenCode
+  layers it over the user's own rules. The fixer's env has no `GH_TOKEN`/`GITHUB_TOKEN` (or the
+  enterprise ones), `GH_CONFIG_DIR=<state>.fixer-gh` (never created, so no `gh` login),
+  `GIT_TERMINAL_PROMPT=0` and `GIT_ALLOW_PROTOCOL=file`: git refuses every https, ssh (scp-style
+  aliases included) and git:// remote, for push and fetch alike, while a test's local bare remote
+  still works. So no command form can write to GitHub. `OPENCODE_CONFIG_CONTENT` is checked before
+  any side effect. The group records `pid`, `pidStart` (the leader's `ps -o
+  lstart=`) and `log`; a pid whose start time differs is a reused pid and is never signalled.
+  `wait` polls the group once a second; `cleanup` and a relaunch send TERM, then KILL after 10 s,
+  to the whole group and every descendant (OpenCode runs each bash call in a group of its own).
+  It never reaches `blocked`; a missing `opencode` is `agent_start_failed`. `host_limited` is read
+  only from the host's own errors in the log (`error` events and non-INFO stderr), never from tool
+  output or model text.
 - **Brief and report** sit beside the state file: `<state>.fixer-r<round>g<seq>.md` and
   `.report.json`. A settled agent with no report is `no_report`, or `host_limited` when its pane
   shows a provider usage/rate limit (the host then cools for 60 min).
@@ -222,10 +246,11 @@ bun "$PLUGIN_ROOT/hooks/dist/babysit-fixer-report.js" <report-file> done|failed 
   Claude Code's first-run workspace-trust prompt. The dispatcher accepts that prompt only when it is
   the standard one naming exactly this worktree (epic-orchestrator's recovery rule); any other
   blocked screen fails the group with `agent_start_failed` and is never answered.
-- **Session artifacts are not work.** Untracked files under `.claude/`, `.codex/` or `.cursor/` (a
+- **Session artifacts are not work.** Untracked files under `.claude/`, `.codex/`, `.cursor/` or `.opencode/` (a
   fixer's own SessionStart hooks write `.claude/settings.local.json` and `.claude/tmp/`) do not make
   the worktree dirty; any other change does (`worktree_dirty`, with `changes[]`).
-- **Cleanup** exits a live fixer and clears the `fixer` record, then removes the worktree (`--force`,
+- **Cleanup** exits a live fixer (`fixer_running` when an OpenCode group outlives KILL; the worktree
+  is kept) and clears the `fixer` record, then removes the worktree (`--force`,
   discarding only those session artifacts) when it has no other changes (`worktree_dirty`
   otherwise, the worktree stays recorded), prunes git's worktree metadata, deletes
   `pr-babysit/<slot>` only when `origin/<pr-branch>` contains it, and removes this slot's

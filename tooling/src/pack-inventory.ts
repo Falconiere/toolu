@@ -66,6 +66,7 @@ export function expectations(root: string): readonly Expectation[] {
         "plugins/toolu/scripts/debug-log.ts",
         "plugins/toolu/scripts/debug-stack.ts",
         "plugins/toolu/scripts/debug-testfail.ts",
+        "plugins/pr-babysit/skills/babysit/references/fixer-brief.md",
         ...committedBundles(root),
       ],
       forbidden: ["node_modules/", ".env"],

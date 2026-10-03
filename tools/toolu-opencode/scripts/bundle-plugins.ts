@@ -55,6 +55,11 @@ export function stagePlugins(sourceDirectory: string, outputDirectory: string): 
     copyDirectory(join(hooks, "docs"), join(target, "hooks", "docs"), (name) =>
       name.endsWith(".md"),
     );
+    if (entry.name === "pr-babysit") {
+      // babysit-dispatch-fix.js renders each fixer's brief from this template.
+      const brief = join("skills", "babysit", "references", "fixer-brief.md");
+      copy(join(source, brief), join(target, brief));
+    }
     if (entry.name === "toolu") {
       copyDirectory(
         join(source, "settings"),

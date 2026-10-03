@@ -46,6 +46,7 @@ test("native config defaults match epic routing table", () => {
       claude: DEFAULT_TABLE.hosts.claude!,
       codex: DEFAULT_TABLE.hosts.codex!,
       cursor: DEFAULT_TABLE.hosts.cursor!,
+      opencode: DEFAULT_TABLE.hosts.opencode!,
     });
     expect(config.dispatch).toBe("herdr");
   } finally {
@@ -58,8 +59,10 @@ test("native config defaults match epic routing table", () => {
 });
 
 test("host aliases and usage limit wording stay aligned", () => {
-  for (const alias of ["cursor-agent", "Claude-Code", " Cursor-Agent ", "codex"])
-    expect(hostKind(alias)).toBe(parseHostKind(alias) as "claude" | "codex" | "cursor");
+  for (const alias of ["cursor-agent", "Claude-Code", " Cursor-Agent ", "codex", "OpenCode"])
+    expect(hostKind(alias)).toBe(
+      parseHostKind(alias) as "claude" | "codex" | "cursor" | "opencode",
+    );
   expect(HOST_LIMIT.test("rate limit reached")).toBe(true);
   expect(HOST_LIMIT.test("all tests passed")).toBe(false);
 });
