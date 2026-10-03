@@ -165,8 +165,8 @@ async function finishIssue(stateDir: string, key: string, abandon: boolean): Pro
     if ((removedBefore || preparedRemoval) && ownership === null)
       throw new Error("cannot verify legacy cleanup ownership after worktree removal");
     let result: CleanupResult;
-    if (preparedRemoval && intent) {
-      await verifyPreparedRemoval(rec, intent, ownership as CleanupOwnership);
+    if (preparedRemoval && intent && ownership !== null) {
+      await verifyPreparedRemoval(rec, intent, ownership);
       result = await finishRemovedWorktree(
         path,
         rec,
