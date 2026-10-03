@@ -263,7 +263,7 @@ import { basename as basename2, dirname as dirname2, join as join2, resolve } fr
 
 // plugins/pr-babysit/hooks/src/babysit/fixer-process.ts
 import { spawn, spawnSync } from "child_process";
-import { closeSync, existsSync as existsSync2, openSync, readSync, statSync as statSync2 } from "fs";
+import { appendFileSync, closeSync, existsSync as existsSync2, openSync, readSync, statSync as statSync2 } from "fs";
 
 // plugins/pr-babysit/hooks/src/babysit/fixer-route.ts
 var SAFE = /^[A-Za-z0-9_./:=,@%+#-]+$/;
@@ -315,8 +315,8 @@ function agentArgs(host, name, model, effort, unattended) {
     fail("config_invalid", `unsafe ${host} arg for the pane shell: ${bad}`, { arg: bad });
   return args;
 }
-function commandAvailable(name) {
-  return Bun.which(name, { PATH: process.env.PATH ?? "" }) !== null;
+function commandAvailable(name, path = process.env.PATH) {
+  return Bun.which(name, { PATH: path ?? "" }) !== null;
 }
 
 // plugins/pr-babysit/hooks/src/babysit/fixer-process.ts
@@ -463,7 +463,7 @@ function stopGroup(pid, start) {
   return waitGone(pids, 5);
 }
 function spawnFixer(run, log, env, ghConfigDir) {
-  if (!commandAvailable("opencode"))
+  if (!commandAvailable("opencode", env.PATH))
     return { error: "opencode is not on PATH" };
   const args = opencodeFixerArgs(run);
   const childEnv = fixerEnv(env, run.worktree, ghConfigDir);
@@ -475,12 +475,11 @@ function spawnFixer(run, log, env, ghConfigDir) {
       detached: true,
       stdio: ["ignore", fd, fd]
     });
-    child.on("error", () => {
-      return;
-    });
+    child.on("error", (error) => appendFileSync(log, `opencode did not start: ${error.message}
+`));
     child.unref();
     if (child.pid === undefined)
-      return { error: "opencode did not start" };
+      return { error: `opencode did not start; its error goes to ${log}` };
     return { pid: child.pid, pidStart: processStart(child.pid) };
   } catch (error) {
     return { error: `opencode did not start: ${error.message}` };
@@ -820,7 +819,7 @@ class Dispatcher {
       agentArgs(hostKind(group.host), "pb-000000-r1g1", group.model, group.effort, true);
     }
     if (plan.groups.some((group) => group.host === "opencode"))
-      fixerEnv(process.env, "", "");
+      fixerConfigContent(process.env.OPENCODE_CONFIG_CONTENT);
   }
   dropBranch(root, branch, pr) {
     if (this.dry)
