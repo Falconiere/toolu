@@ -16,4 +16,6 @@ Standalone, no dependencies.
 
 - **`toolu-review:review` skill** — reviews the branch diff against what the CI Toolu Code Review action (`github-actions[bot]` verdict comment, optionally App-branded) flags, so the first-push verdict is clean instead of bouncing low/nit findings back as rework. It also records a clean `push-review` state, satisfying toolu's `push-review` gate.
 
+On OpenCode the skill is `toolu-review-review`. Its write-state command records the state in `<project>/.opencode/tmp/push-review/<branch>.json`; see [docs/opencode.md § Core workflows](../../docs/opencode.md#core-workflows).
+
 Explicit — it does not auto-fire on edits. Run it before pushing a feature branch, or when `pr-babysit` needs a reviewer.

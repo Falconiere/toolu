@@ -21,8 +21,7 @@ Use the host mapping in `workflows/host-mapping.md`. Independent packages may
 be reviewed concurrently; within one package, passes are sequential so every
 reviewer sees the latest diff.
 
-Prefer the installed toolu reviewer (`toolu-review:review` in the active host's
-invocation syntax). An installed repository-specific reviewer may be used when
+Prefer the installed toolu reviewer (`skill({ name: "toolu-review-review" })`). An installed repository-specific reviewer may be used when
 it writes a compatible push-review attestation. Optional clarity/simplification
 passes run before correctness review, never concurrently with it.
 

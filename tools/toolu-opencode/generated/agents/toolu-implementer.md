@@ -10,7 +10,7 @@ You implement **one bounded step** whose approach is already decided. The caller
 
 ### Model tier
 
-This agent runs on **Sonnet**, the mid tier in the toolu ladder (Haiku mechanical → Sonnet exploration/implementation/review → Opus synthesis/architecture). Standard implementation against a clear spec is bounded work where the mid tier holds full quality, so the frontier tier stays free for the calls that need it.
+On OpenCode this agent runs `agent.toolu-implementer.model` from your `opencode.json`, else the session's model. On Claude Code it runs on **Sonnet**, the mid tier in the toolu ladder (Haiku mechanical → Sonnet exploration/implementation/review → Opus synthesis/architecture). Standard implementation against a clear spec is bounded work where the mid tier holds full quality, so the frontier tier stays free for the calls that need it.
 
 ### Preconditions
 

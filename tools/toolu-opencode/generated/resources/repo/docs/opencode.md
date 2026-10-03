@@ -217,6 +217,18 @@ Add `agent-browser` to the `enabled` list and restart OpenCode. Native skill dis
 
 The external `agent-browser` CLI and Chromium are separate prerequisites: install the CLI with `npm i -g agent-browser`, then run `agent-browser install`. The helper does not install either one. If the CLI is absent, it exits 127 with an install command; a missing browser executable is reported by the CLI. Disabling `agent-browser` in the next selection removes its skill, startup instructions and toolu-owned helper symlink from that project's data root.
 
+### Core workflows
+
+[#358](https://github.com/Falconiere/toolu/issues/358) ports the toolu and toolu-review skills, agents and commands to OpenCode's own tools. The generator applies an exact-match port table (`tools/toolu-opencode/scripts/lib/opencode-port.ts`). When a source edit moves one of its anchors, generation fails and names the file, so Claude Code or Codex text never reaches OpenCode unnoticed. The shared host mapping (`plugins/toolu/workflows/host-mapping.md`) has an OpenCode column.
+
+- **Agents.** The `config` hook registers `toolu-quick-task`, `toolu-deep-explore`, `toolu-research-agent`, `toolu-implementer` and `toolu-architect`. Delegate with `task` and `subagent_type`. The `task` tool takes no model argument, so each agent runs `agent.<id>.model` from your `opencode.json`, else the session's model. Set `agent.<id>.disable: true` to drop one. OpenCode's default `subagent_depth` of 1 stops a subagent from delegating again. With `models` enabled, the SessionStart context routes by agent (`plugins/toolu/hooks/docs/model-routing-opencode.md`) and does not tell the model to pass `model:`.
+- **Setup.** There are no Codex profiles to install. The `toolu-setup` skill explains the overrides above, and its `setup.ts` exits 2 with that message when `TOOLU_HOST_OVERRIDE=opencode`.
+- **Questions.** Workflow skills use OpenCode's `question` tool when the client offers it, and otherwise ask one concise question.
+- **Review.** `toolu-review-review` runs the published `"$TOOLU_CONFIG_DIR/toolu-review/write-state.sh"` with `TOOLU_HOST_OVERRIDE=opencode`. That writes `<project>/.opencode/tmp/push-review/<branch>.json`, the file the push-review gate reads.
+- **Debug.** `toolu-debug` runs its collectors as `bun "$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-testfail.ts"` (also `debug-stack.ts` and `debug-log.ts`). `@toolu/opencode` ships them. MCP tools are named `<server>_<tool>`; there is no tool search.
+
+`tools/toolu-opencode/src/plugin/__tests__/core-workflows.test.ts` proves the review, commit-gate and debug paths hermetically. `TOOLU_LIVE_OPENCODE=1 bun test tools/toolu-opencode/src/plugin/__tests__/core-workflows.live.test.ts` repeats them on the pinned host with a scripted provider.
+
 ## Verify a real gate
 
 Hermetic proof (matches CI):

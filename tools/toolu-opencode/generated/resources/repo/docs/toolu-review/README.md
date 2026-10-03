@@ -62,6 +62,11 @@ TOOLU_HOST_OVERRIDE=codex \
 TOOLU_HOST_OVERRIDE=claude \
   "${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu-review/write-state.sh" \
   --findings-count 0 --reviewers '["toolu-review:review"]'
+
+# OpenCode equivalent (the generated toolu-review-review skill names only this one).
+TOOLU_HOST_OVERRIDE=opencode \
+  "${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/toolu-review/write-state.sh" \
+  --findings-count 0 --reviewers '["toolu-review:review"]'
 ```
 
 When reviewing a worktree from a session rooted elsewhere, append
@@ -72,8 +77,9 @@ state file under the pushed repository's own root.
 `hooks/dist/write-state.js`) that the SessionStart hook publishes at the paths
 above; run the path itself with `bun` on PATH, not through `bash`. It needs `git`,
 not `jq`. It computes the gate's exact `diff_sha`/`base`/`slug`, sets
-`review_round`, and writes the host-native `<repo root>/.claude/tmp/push-review/`
-or `<repo root>/.codex/tmp/push-review/` state atomically as schema version 2.
+`review_round`, and writes the host-native `<repo root>/.claude/tmp/push-review/`,
+`<repo root>/.codex/tmp/push-review/` or `<repo root>/.opencode/tmp/push-review/`
+state atomically as schema version 2.
 `--repo` defaults to the cwd's repo root; `$STATE_DIR` overrides the directory
 for tests and explicit integrations.
 

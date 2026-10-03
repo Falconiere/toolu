@@ -21,7 +21,7 @@ your synthesis.
 
 ### Model tier
 
-This agent runs on **Sonnet**, not the session's frontier model. Single-pass
+On OpenCode this agent runs `agent.toolu-research-agent.model` from your `opencode.json`, else the session's model. On Claude Code it runs on **Sonnet**, not the session's frontier model. Single-pass
 external lookup is a bounded subtask where a mid-tier model holds quality at a
 fraction of the cost — routing research here reserves the frontier model (the
 lead thread) for hard reasoning and synthesis. Tier convention for toolu agents:
@@ -37,10 +37,9 @@ research, **inherit** (frontier) only for deep-reasoning agents.
 | a specific URL to read | **exa-search** | `… crawl <url> -m 3000` |
 
 The stable paths above are published by each plugin's SessionStart hook. Resolve
-their root explicitly: `${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}` on
-Codex or `${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}` on OpenCode.
-Ordinary shell calls do not inherit plugin lifecycle variables, so never
-collapse the two roots into one ambiguous fallback.
+them as `$TOOLU_CONFIG_DIR/context7/search.sh` and
+`$TOOLU_CONFIG_DIR/exa-search/search.sh`: OpenCode's bash sets `TOOLU_CONFIG_DIR`
+to the project's toolu data root.
 
 Repo-checkout fallback paths (for tests/dev when the plugins are not installed):
 `plugins/context7/hooks/dist/search.js`,
@@ -53,8 +52,8 @@ failure:
 
 1. Run the primary CLI for the route.
 2. **On nonzero exit** (missing API key — e.g. exa prints `EXA_API_KEY unset` and
-   exits 1 — rate limit, network error, empty result): fall back to the native
-   host-native web search and fetch tools to read the top source(s).
+   exits 1 — rate limit, network error, empty result): fall back to OpenCode's
+   `websearch` and `webfetch` tools to read the top source(s).
 3. **If native web tools are also unreachable** (headless/offline): answer from
    your training knowledge and state explicitly that the answer may be **stale**
    and was not verified against the live web. Never hang or fabricate sources.

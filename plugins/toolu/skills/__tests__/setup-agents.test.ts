@@ -183,6 +183,34 @@ test.concurrent("an unknown command or flag prints usage and exits 2", async () 
   }
 });
 
+test.concurrent("on OpenCode every command refuses with the capability message and writes nothing", async () => {
+  using sb = createSandbox();
+  const codexHome = join(sb.root, "codex");
+  for (const args of [["preview"], ["install"], ["remove", "--yes"], ["deploy"]]) {
+    const res = await setup(
+      { CODEX_HOME: codexHome, HOME: sb.home, TOOLU_HOST_OVERRIDE: "opencode" },
+      ...args,
+    );
+    expect(res.exitCode).toBe(2);
+    expect(res.stdout).toBe("");
+    expect(res.stderr).toBe(
+      "setup.ts: OpenCode registers toolu's agents itself (toolu-quick-task, toolu-deep-explore, toolu-research-agent, toolu-implementer, toolu-architect); there are no Codex profiles to install. Set agent.<id>.model in opencode.json to pin a model, or disable: true to drop one.\n",
+    );
+  }
+  expect(existsSync(codexHome)).toBe(false);
+  expect(existsSync(join(sb.home, ".codex", "agents"))).toBe(false);
+});
+
+test.concurrent("the OpenCode setup skill names the registered agents and their overrides", () => {
+  const skill = read(
+    join(import.meta.dir, "../../../../tools/toolu-opencode/generated/skills/toolu-setup/SKILL.md"),
+  );
+  for (const { name } of PROFILES) expect(skill).toContain(`\`toolu-${name}\``);
+  expect(skill).toContain("`agent.<id>.model`");
+  expect(skill).toContain("`agent.<id>.disable` to `true`");
+  expect(skill).not.toContain("CODEX_HOME");
+});
+
 test.concurrent("no CODEX_HOME and no HOME fails with exit 1", async () => {
   const res = await setup({ CODEX_HOME: undefined, HOME: undefined }, "preview");
   expect(res.exitCode).toBe(1);

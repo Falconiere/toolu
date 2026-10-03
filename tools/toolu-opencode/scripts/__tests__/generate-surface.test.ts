@@ -262,9 +262,11 @@ test("no generated file names the ambiguous braced TOOLU_PLUGIN_ROOT, and the no
 test("generated research agent labels the OpenCode config root correctly", () => {
   const out = mkdtempSync(join(tmpBase, "toolu-surface-agent-"));
   const agent = planDefault(out).files.get(join(out, "agents/toolu-research-agent.md"));
-  expect(agent).toContain("/opencode}` on OpenCode");
-  expect(agent).not.toContain("/opencode}` on Claude");
-  expect(agent).not.toContain("OpenCode\nCode.");
+  expect(agent).toContain(
+    "them as `$TOOLU_CONFIG_DIR/context7/search.sh` and\n`$TOOLU_CONFIG_DIR/exa-search/search.sh`: OpenCode's bash sets `TOOLU_CONFIG_DIR`\nto the project's toolu data root.",
+  );
+  expect(agent).not.toContain("CODEX_HOME");
+  expect(agent).not.toContain("on Claude\nCode. Ordinary");
 });
 
 test("generated delivery skill uses the generated ID for a bare brainstorm reference", () => {

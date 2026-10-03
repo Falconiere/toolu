@@ -15,6 +15,7 @@ import {
   type ArtifactKind,
 } from "./constants.ts";
 import { parseFrontmatter } from "./frontmatter.ts";
+import { applyPort, portAgent } from "./opencode-port.ts";
 import { opencodeJev, type SurfaceReferences } from "./rewrite.ts";
 import { candidateKey } from "./ids.ts";
 import { renderMarkdown } from "./render.ts";
@@ -153,11 +154,15 @@ export function buildSurfaceForPlugin(
     ) {
       throw new Error(`${source.path}: mapped skill is missing: ${target}`);
     }
+    const sourceRel = relative(repoRoot, source.path).split("\\").join("/");
+    const ported = applyPort(sourceRel, source.text);
     const built = renderMarkdown(
       source.kind,
       surfaceId,
       source.path,
-      source.text,
+      source.kind === "agent" && plugin === "toolu"
+        ? portAgent(surfaceId, sourceRel, ported)
+        : ported,
       references,
       plugin,
       commandSkillId,
@@ -167,7 +172,7 @@ export function buildSurfaceForPlugin(
       plugin,
       surfaceId,
       sourcePath: source.path,
-      relativeSource: relative(repoRoot, source.path),
+      relativeSource: sourceRel,
       ...(source.kind === "skill"
         ? { skillDirName: basename(dirname(source.path)) }
         : {}),
@@ -207,7 +212,12 @@ function within(root: string, target: string): boolean {
   );
 }
 
-function copiedMarkdown(source: string): string {
+/** A Markdown resource as OpenCode reads it; `path` is its real path, for the port table. */
+function copiedMarkdown(path: string, repoRoot: string): string {
+  const source = applyPort(
+    relative(repoRoot, path).split("\\").join("/"),
+    readFileSync(path, "utf8"),
+  );
   const copied = source.replace(
     /[ \t]+(?=\r?$)/gm,
     (spaces: string, offset: number) => {
@@ -241,9 +251,7 @@ export function planSkillResources(
     const dest = join(outSkillDir, relative(skillDir, file));
     files.set(
       dest,
-      file.endsWith(".md")
-        ? copiedMarkdown(readFileSync(file, "utf8"))
-        : readFileSync(file, "utf8"),
+      file.endsWith(".md") ? copiedMarkdown(file, repoRoot) : readFileSync(file, "utf8"),
     );
     if (file.endsWith(".md")) queue.push({ source: file, dest });
   }
@@ -286,9 +294,7 @@ export function planSkillResources(
         if (!mapped && !files.has(dest)) {
           files.set(
             dest,
-            real.endsWith(".md")
-              ? copiedMarkdown(readFileSync(real, "utf8"))
-              : readFileSync(real, "utf8"),
+            real.endsWith(".md") ? copiedMarkdown(real, repoRoot) : readFileSync(real, "utf8"),
           );
           if (real.endsWith(".md")) queue.push({ source: real, dest });
         }

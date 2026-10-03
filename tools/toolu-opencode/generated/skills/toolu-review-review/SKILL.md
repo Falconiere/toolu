@@ -45,11 +45,6 @@ the pre-fix tree, so committing staleifies it and the push denies.
 4. Record the clean state for the push-review gate:
 
    ```bash
-   # Codex
-   TOOLU_HOST_OVERRIDE=codex \
-     "${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/toolu-review/write-state.sh" \
-     --findings-count 0 --reviewers '["toolu-review:review"]'
-
    # OpenCode
    TOOLU_HOST_OVERRIDE=opencode \
      "${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/toolu-review/write-state.sh" \
@@ -77,8 +72,7 @@ the pre-fix tree, so committing staleifies it and the push denies.
    It computes the gate's exact `diff_sha`/`base`/`slug`, sets `review_round`
    (1 for a new `diff_sha`, +1 only when rewriting at the same one — the gate
    caps at 5 rounds on an unchanged diff), and writes
-   the active host's `<repo root>/.claude/tmp/push-review/` or
-   `<repo root>/.codex/tmp/push-review/` path atomically as
+   `<repo root>/.opencode/tmp/push-review/<branch>.json` atomically as
    schema `version: 2`, including `reviewed_files` — auto-computed from
    `git diff --name-only <base>...HEAD` (sorted, unique); pass
    `--reviewed-files a.ts,b.rs` only if the review genuinely covered a

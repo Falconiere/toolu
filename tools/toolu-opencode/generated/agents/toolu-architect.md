@@ -10,7 +10,7 @@ You are called when getting it **wrong is expensive**: the shape is not obvious,
 
 ### Model tier
 
-This agent runs on **Opus**, the most capable tier in the toolu ladder (Haiku mechanical → Sonnet exploration/implementation/review → Opus synthesis/architecture). It is the expensive tier on purpose — spend it on decisions, not on gathering. If you find yourself doing broad mechanical discovery, that was the wrong tier: say so in your answer so the caller re-routes next time.
+On OpenCode this agent runs `agent.toolu-architect.model` from your `opencode.json`, else the session's model. On Claude Code it runs on **Opus**, the most capable tier in the toolu ladder (Haiku mechanical → Sonnet exploration/implementation/review → Opus synthesis/architecture). It is the expensive tier on purpose — spend it on decisions, not on gathering. If you find yourself doing broad mechanical discovery, that was the wrong tier: say so in your answer so the caller re-routes next time.
 
 ### Use it for
 

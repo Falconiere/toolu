@@ -6,13 +6,14 @@ architecture decision; a long prompt can be a file listing.
 
 Referenced by `orchestrator`, `brainstorm`, `plan`, and `execution`. The runtime
 copy of the table is injected into every session by the toolu SessionStart hook
-(`plugins/toolu/hooks/docs/model-routing.md`), so the tiers are in context from
+(`plugins/toolu/hooks/docs/model-routing-opencode.md` on OpenCode), so the tiers are in context from
 turn one even when no skill has fired.
 
 ## The ladder
 
 Claude tiers use stable aliases. Codex routes each class through the model and
-reasoning-effort pair in `models.codex.<class>`.
+reasoning-effort pair in `models.codex.<class>`. On OpenCode the `task` tool takes no model argument: each agent runs `agent.<id>.model` from your `opencode.json`, else the session's model. Each class
+routes to an agent instead (see Pre-tiered agents).
 
 | Class | Claude | Codex | What belongs here |
 |---|---|---|---|
@@ -60,19 +61,18 @@ Never re-run a failed task on the *same* tier hoping for a better roll.
 
 ## Pre-tiered agents
 
-Pinning the tier in the agent's own frontmatter is stronger than remembering to
-pass `model:`, so prefer these when one fits:
+Pass one of these as the `task` tool's `subagent_type` when it fits. On OpenCode
+they carry no model of their own; set `agent.<id>.model` to pin one.
 
-| Agent | Tier | Job |
+| Agent | Claude Code tier | Job |
 |---|---|---|
-| `toolu:quick-task` | `haiku` | Mechanical lookups and bounded mechanical edits |
-| `toolu:deep-explore` | `sonnet` | Structural exploration via ast-grep |
-| `toolu:research-agent` | `sonnet` | External docs / web research |
-| `toolu:implementer` | `sonnet` | One bounded plan step + its tests |
-| `toolu:architect` | `opus` | Design, trade-offs, synthesis (read-only) |
+| `toolu-quick-task` | `haiku` | Mechanical lookups and bounded mechanical edits |
+| `toolu-deep-explore` | `sonnet` | Structural exploration via ast-grep |
+| `toolu-research-agent` | `sonnet` | External docs / web research |
+| `toolu-implementer` | `sonnet` | One bounded plan step + its tests |
+| `toolu-architect` | `opus` | Design, trade-offs, synthesis (read-only) |
 
-For anything else, route explicitly with the active host's delegation interface.
-Leaving routing unset inherits host defaults.
+For anything else, use OpenCode's `general` or `explore` agent.
 
 ## Plan steps carry their tier
 
@@ -101,9 +101,9 @@ else is rejected with a warning and falls back to the default, so a typo
 mis-tiers nothing. `{"models": {"enabled": false}}` turns off the session
 injection entirely.
 
-**Limit:** Claude config remaps the rubric but cannot rewrite a pre-built agent's
-frontmatter. Codex custom-agent files also take precedence over class routing;
-run `$toolu:setup` after plugin upgrades to install current profile templates.
+**Limit:** on OpenCode, `models` remaps the session text only; an agent's model
+comes from `agent.<id>.model` in `opencode.json`. There are no agent profiles to
+install.
 
 ## Budget note
 

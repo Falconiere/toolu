@@ -28,7 +28,7 @@ Use relevant rows, not a stage checklist. Agent/tools own architecture,
 feasibility, exact checks, arithmetic, reproduction, tests, correctness, and
 approval. Jev never waives verification or authorization.
 
-Read the installed `jev` skill for host path, CLI, question contract, and
+Load `skill({ name: "jev-jev" })` when Jev is enabled, for the wrapper path, CLI, question contract, and
 uncertainty handling. Load only the needed section of its linked
 `references/problem-solving.md`. Keep state to named, relevant excerpts and
 candidates. Record useful evidence → question → answer → next action; retain
