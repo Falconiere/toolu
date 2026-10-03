@@ -17,6 +17,8 @@ import type { ProbeSession } from "./session.ts";
 export const SKILL = "pr-babysit-babysit-73c340c6";
 export const SLOT = "falconiere-toolu-165";
 export const BRANCH = "feat/sum";
+/** A GitHub remote: the fixer's git refuses its transport before any connection. */
+export const GITHUB_REMOTE = "https://github.com/Falconiere/toolu.git";
 const SNAPSHOT = join(
   ROOT,
   "plugins/pr-babysit/scripts/__tests__/fixtures/snapshots/toolu-165.json",
@@ -114,7 +116,7 @@ export function fixerSteps(p: Paths): ScriptStep[] {
     bash(`git -C '${p.worktree}' push origin HEAD:${BRANCH}`),
     bash("gh pr comment 165 --body fixed"),
     // Forms the deny patterns do not name: the fixer's environment stops them.
-    bash(`env git push origin HEAD:${BRANCH}`),
+    bash(`env git push ${GITHUB_REMOTE} HEAD:refs/heads/${BRANCH}`),
     bash("env gh auth status"),
     {
       tool: "task",

@@ -358,8 +358,6 @@ function fixerConfigContent(existing) {
   const agents = isObject(base.agent) ? base.agent : {};
   return JSON.stringify({ ...base, agent: { ...agents, [FIXER_AGENT]: FIXER_AGENT_CONFIG } });
 }
-var NO_PUSH = "pr-babysit-fixer-no-push";
-var PUSH_PREFIXES = ["/", "file://", "https://", "http://", "ssh://", "git://", "git@"];
 var GITHUB_TOKENS = [
   "GH_TOKEN",
   "GITHUB_TOKEN",
@@ -372,25 +370,11 @@ function fixerEnv(base, worktree, ghConfigDir) {
     PWD: worktree,
     OPENCODE_CONFIG_CONTENT: fixerConfigContent(base.OPENCODE_CONFIG_CONTENT),
     GH_CONFIG_DIR: ghConfigDir,
+    GIT_ALLOW_PROTOCOL: "file",
     GIT_TERMINAL_PROMPT: "0"
   };
   for (const key of GITHUB_TOKENS)
     delete env[key];
-  const count = Number(base.GIT_CONFIG_COUNT ?? "0");
-  if (!Number.isInteger(count) || count < 0)
-    fail("config_invalid", "GIT_CONFIG_COUNT is not a whole number; fix or unset it");
-  const entries = [
-    ["credential.helper", ""],
-    ...PUSH_PREFIXES.map((prefix) => [
-      `url.${NO_PUSH}://.pushInsteadOf`,
-      prefix
-    ])
-  ];
-  entries.forEach(([key, value], index) => {
-    env[`GIT_CONFIG_KEY_${count + index}`] = key;
-    env[`GIT_CONFIG_VALUE_${count + index}`] = value;
-  });
-  env.GIT_CONFIG_COUNT = String(count + entries.length);
   return env;
 }
 function opencodeFixerArgs(run) {

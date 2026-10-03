@@ -228,10 +228,10 @@ babysit-record.js status --state-file <path> --status complete|escalated|cancell
   `config_invalid`) with `task`, `gh` and `git push` (also `git -C <dir> push`) denied; OpenCode
   layers it over the user's own rules. The fixer's env has no `GH_TOKEN`/`GITHUB_TOKEN` (or the
   enterprise ones), `GH_CONFIG_DIR=<state>.fixer-gh` (never created, so no `gh` login),
-  `GIT_TERMINAL_PROMPT=0`, and `GIT_CONFIG_*` entries (after the caller's own) that empty
-  `credential.helper` and rewrite every push URL to `pr-babysit-fixer-no-push://`, so no command
-  form can write to GitHub. A `GIT_CONFIG_COUNT` that is not a whole number is `config_invalid`.
-  Both are checked before any side effect. The group records `pid`, `pidStart` (the leader's `ps -o
+  `GIT_TERMINAL_PROMPT=0` and `GIT_ALLOW_PROTOCOL=file`: git refuses every https, ssh (scp-style
+  aliases included) and git:// remote, for push and fetch alike, while a test's local bare remote
+  still works. So no command form can write to GitHub. `OPENCODE_CONFIG_CONTENT` is checked before
+  any side effect. The group records `pid`, `pidStart` (the leader's `ps -o
   lstart=`) and `log`; a pid whose start time differs is a reused pid and is never signalled.
   `wait` polls the group once a second; `cleanup` and a relaunch send TERM, then KILL after 10 s,
   to the whole group and every descendant (OpenCode runs each bash call in a group of its own).
