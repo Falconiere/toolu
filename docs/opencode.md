@@ -22,25 +22,29 @@ Install the host with `npm install -g opencode-ai@1.18.34`, or any route that ma
 
 ## Quick start
 
-Run this in the project you want guarded. It installs toolu in your global OpenCode config with the core `toolu` plugin and one leaf plugin, `context7`. It then sets protected files to `block`, checks that OpenCode discovers the leaf plugin's skill, and asks your agent to overwrite `.env`:
+Run this in the project you want guarded. It installs toolu in your global OpenCode config with the core `toolu` plugin and one leaf plugin, `context7`. It then checks that OpenCode discovers the leaf plugin's skill and asks your agent to overwrite a scratch secrets file, `.env.toolu-check`. The block does not touch your `.env` or your gate config, and it removes the scratch file at the end:
 
 <!-- opencode-doc:quickstart:start -->
 
 ```bash
 test "$(opencode --version)" = 1.18.34
 npx @toolu/plugins install toolu context7 --host opencode
-mkdir -p .opencode
-printf '%s\n' '{ "version": 1, "gates": { "protectedFiles": { "mode": "block" } } }' > .opencode/toolu.config.json
 opencode debug skill | grep context7-context7
-printf 'SECRET=1\n' > .env
-opencode run "Replace the contents of .env with PWNED"
-grep -qx 'SECRET=1' .env && echo "toolu refused the write: .env is unchanged"
+test ! -e .env.toolu-check
+printf 'SECRET=1\n' > .env.toolu-check
+opencode run "Replace the contents of .env.toolu-check with PWNED"
+grep -qx 'SECRET=1' .env.toolu-check && echo "toolu refused the write: .env.toolu-check is unchanged"
+rm .env.toolu-check
 ```
 
 <!-- opencode-doc:quickstart:end -->
 
-- **What `install` writes.** It adds `@toolu/opencode@<CLI version>` to the `plugin` array of `~/.config/opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode`). It writes `{ "version": 1, "enabled": ["toolu", "context7"] }` to `toolu/plugins.json` beside that file. Add `--scope project` to write this project's `opencode.json` and `.opencode/toolu/plugins.json` instead.
-- **What the session shows.** `opencode debug skill` lists the skills OpenCode discovered. `opencode run` uses your configured model. toolu refuses the write in `tool.execute.before`, before the file changes, and the model receives `… a protected path … Blocked by gates.protectedFiles.mode='block'` as the tool error.
+- **What `install` writes.** It adds `@toolu/opencode@<CLI version>` to the `plugin` array of `~/.config/opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode`). It writes `{ "version": 1, "enabled": ["toolu", "context7"] }` to `toolu/plugins.json` under the global config root. That root is the same directory unless `TOOLU_CONFIG_DIR` or `TOOLU_OPENCODE_HOME` overrides it (see [Roots](#roots-and-helper-environment)). Add `--scope project` to write this project's `opencode.json` and `.opencode/toolu/plugins.json` instead.
+- **What the session shows.**
+  - `opencode debug skill` lists the skills OpenCode discovered, and `opencode run` uses your configured model.
+  - Paths matching `.env` and `.env.*` are protected. With the default gate config, `protectedFiles` asks, and on OpenCode a security guardrail's ask refuses the call.
+  - toolu refuses the write in `tool.execute.before`, before the file changes. The model receives `… a protected path (matches ".env.*") …` as the tool error.
+  - If your `toolu.config.json` sets `protectedFiles` to `advise` or `off`, the write goes through and the last check prints nothing.
 - **How CI runs it.** The acceptance runs this block word for word (`docs.quickstart`) in an isolated profile. It redirects only `npx @toolu/plugins` to the checkout's CLI and `opencode` to the pinned binary, and it replaces your model with a scripted one that attempts the write.
 
 ## Plugin support
@@ -63,7 +67,7 @@ Each plugin's status comes from the [capability matrix](opencode-host-contract.m
 | python-quality | Supported | `pyquality.*` (3) |
 | rust-quality | Supported | `rsquality.*` (3) |
 | statusline | Supported with limitations | `status.*` (2) |
-| toolu | Supported with limitations | `entry.*` (6), `surfaces.*` (6), `cli.*` (2), `docs.*` (2), `pretool.*` (7), `permissions.*` (7), `posttool.*` (3), `live.*` (2), `concurrent.sessions`, `budget.overhead` |
+| toolu | Supported with limitations | `entry.*` (6), `surfaces.*` (6), `cli.*` (2), `docs.*` (3), `pretool.*` (7), `permissions.*` (7), `posttool.*` (3), `live.*` (2), `concurrent.sessions`, `budget.overhead` |
 | toolu-review | Supported | `live.core-workflows` |
 | ts-quality | Supported | `tsquality.*` (3) |
 
@@ -400,7 +404,7 @@ bun run check:opencode-docs   # this page's support section and stale-claim guar
 
 ```bash
 bun run smoke:opencode-entry                       # every scenario
-bun run smoke:opencode-entry docs.quickstart docs.migration   # this page and the migration guide, verbatim
+bun run smoke:opencode-entry docs.quickstart docs.migration docs.migration-refusals   # this page and the migration guide, verbatim
 bun run smoke:opencode-entry entry.helper-env entry.worktree-state
 ```
 

@@ -12,10 +12,18 @@ CI checks this guide. The `docs.migration` acceptance check seeds a profile with
 After the migrate block, the check expects:
 
 - toolu loads once and refuses a protected write;
+- the backups are readable only by their owner;
 - your selection and gate config are unchanged;
 - your comments and the other plugin are kept.
 
 After the rollback block, every seeded file must match its original byte for byte.
+
+`docs.migration-refusals` runs the migrate block where `update` must fail:
+
+- a clone-only setup with no entry, which must exit `1`;
+- a package configured in both scopes, which must exit `2`.
+
+In both cases the block must stop with every user file unchanged.
 
 ## What changes
 
@@ -40,13 +48,13 @@ After the rollback block, every seeded file must match its original byte for byt
 | `.opencode/package.json` dependencies `@opencode/plugin`, `@toolu/opencode`, `@toolu/core` | You | Deleted. The host adds its own SDK dependency at startup | Restored |
 | `TOOLU_REPO_ROOT` / `TOOLU_ROOT` in your environment | You | Unset, unless you stay on the [contributor path](opencode.md#contributor-path-git-clone) | — |
 | Hand-wired `skills.paths` to `generated/skills`, or generated skills, agents and commands copied into `.opencode/` or `~/.config/opencode/` | You | Remove them by hand (see [after migrating](#after-migrating)) | — |
-| `.opencode/toolu/state/` (data root) | toolu | Rebuilt at each start. Safe to delete | — |
-| `.opencode/tmp/` (gate state) | toolu | Kept | Kept |
+| `.opencode/toolu/state/` (data root) | toolu | Rebuilt at each start. Safe to delete | Deleted; whichever toolu starts next rebuilds it |
+| `.opencode/tmp/` (gate state) | toolu | Kept | Kept: the backup leaves it out |
 
 ## Before you start
 
-1. Install the pinned host. `npm install -g opencode-ai@1.18.34` replaces a globally installed V2 `opencode`. Afterwards, `opencode --version` must print `1.18.34`.
-2. Run the blocks from the project where you used toolu. The global part is shared, so for each further project, repeat only the shim and dependency lines.
+1. Install the pinned host. Both `@opencode/cli` and `opencode-ai` install an `opencode` command, and npm will not overwrite one package's command with another's. Run `npm uninstall -g @opencode/cli` first, then `npm install -g opencode-ai@1.18.34`. Afterwards, `opencode --version` must print `1.18.34`.
+2. Run the block from each project where you used toolu. The global config is backed up and migrated on the first run. Later runs keep that first backup and only back up and clean the project.
 3. If the package is configured in both your global and project config, add `--scope user` or `--scope project` to `update`. Without it, the CLI exits `2` and writes nothing.
 
 ## Migrate
@@ -56,20 +64,29 @@ After the rollback block, every seeded file must match its original byte for byt
 ```bash
 test "$(opencode --version)" = 1.18.34
 config="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
-[ ! -d "$config" ] || tar -czf ~/toolu-opencode-v2-global.tgz -C "$config" .
-[ ! -d .opencode ] || tar -czf ~/toolu-opencode-v2-project.tgz .opencode
+backup="$HOME/toolu-opencode-v2-backup"
+project="$backup/projects/$(printf %s "$PWD" | tr '/ ' '__').tgz"
+(umask 077 && mkdir -p "$backup/projects")
+[ -e "$backup/global.tgz" ] || [ ! -d "$config" ] || (umask 077 && tar -czf "$backup/global.tgz" --exclude node_modules -C "$config" .)
+[ -e "$project" ] || [ ! -d .opencode ] || (umask 077 && tar -czf "$project" --exclude node_modules --exclude .opencode/tmp --exclude .opencode/toolu/state .opencode)
+npx @toolu/plugins update --host opencode
 rm -f .opencode/plugins/toolu.ts
 [ ! -f .opencode/package.json ] || (cd .opencode && npm pkg delete "dependencies.@opencode/plugin" "dependencies.@toolu/opencode" "dependencies.@toolu/core")
-npx @toolu/plugins update --host opencode || npx @toolu/plugins install toolu --host opencode
 npx @toolu/plugins list --host opencode
 ```
 
 <!-- opencode-doc:migrate:end -->
 
-- `update` rewrites every `@toolu/opencode` entry, including the V2 one, to this release. It leaves your selection alone.
-- If only the clone shim loaded toolu, there is no entry and `update` exits `1`. `install toolu` then adds the package and enables `toolu` only. A bare `install` would enable every plugin in an existing selection, so the block avoids it.
-- `list` shows the entry OpenCode will load and the enabled plugins.
-- Restart OpenCode. The host log (`opencode --print-logs`) shows one `toolu: ready (…)` line, and the [quick start](opencode.md#quick-start) check refuses the `.env` write.
+- **Backups.** They go under `~/toolu-opencode-v2-backup/`, readable only by you, because a global config can hold provider keys. A backup that already exists is never overwritten, so running the block again cannot replace the V2 state with migrated state. `node_modules`, toolu's data root and gate state are left out.
+- **`update`.** It rewrites every `@toolu/opencode` entry, the V2 one included, to this release, and leaves your selection alone. When it fails, the block stops before changing anything else:
+  - **Exit `1`, not configured:** only the clone shim loaded toolu, so there is no entry to update. Add one, then run the block again:
+    - with a selection file, `npx @toolu/plugins install toolu --host opencode` keeps it (adding `toolu` if it is missing);
+    - with no selection file, `npx @toolu/plugins install --host opencode` enables every plugin, as before.
+
+    A bare `install` with an existing selection would enable every plugin in it.
+  - **Exit `2`:** the package is configured in both your global and project config. Add `--scope user` or `--scope project` to the `update` line.
+- **`list`** shows the entry OpenCode will load and the enabled plugins.
+- **Restart OpenCode.** The host log (`opencode --print-logs`) shows one `toolu: ready (…)` line, and the [quick start](opencode.md#quick-start) check refuses the scratch `.env.toolu-check` write.
 
 ## After migrating
 
@@ -82,19 +99,22 @@ Before #343, an override root (`TOOLU_CONFIG_DIR` or `TOOLU_OPENCODE_HOME`) was 
 
 ## Roll back
 
-To restore the files exactly as they were before the migration:
+Run this from the same project. It restores every file the backups hold and deletes toolu's data root. The migration creates no other toolu file. OpenCode's own startup files in its config directories (`package.json`, `node_modules`, `.gitignore`) stay where they are.
 
 <!-- opencode-doc:rollback:start -->
 
 ```bash
 config="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
-[ ! -f ~/toolu-opencode-v2-global.tgz ] || tar -xzf ~/toolu-opencode-v2-global.tgz -C "$config"
-[ ! -f ~/toolu-opencode-v2-project.tgz ] || tar -xzf ~/toolu-opencode-v2-project.tgz
+backup="$HOME/toolu-opencode-v2-backup"
+project="$backup/projects/$(printf %s "$PWD" | tr '/ ' '__').tgz"
+[ ! -f "$backup/global.tgz" ] || tar -xzf "$backup/global.tgz" -C "$config"
+[ ! -f "$project" ] || tar -xzf "$project"
+rm -rf .opencode/toolu/state
 ```
 
 <!-- opencode-doc:rollback:end -->
 
-Then reinstall the V2 host (`npm install -g @opencode/cli@2.0.12`). If your restored entry is the unpinned `@toolu/opencode`, pin it to `@toolu/opencode@7.7.2`, the last V2-targeted release; any later release does not load on V2. CI verifies that the files are restored. It does not test running the V2 host again.
+Then swap the hosts back: `npm uninstall -g opencode-ai`, then `npm install -g @opencode/cli@2.0.12`. If your restored entry is the unpinned `@toolu/opencode`, pin it to `@toolu/opencode@7.7.2`, the last V2-targeted release; no later release loads on V2. CI checks that every backed-up file is restored byte for byte. It does not test running the V2 host again.
 
 To go back to an earlier release on the documented line instead, pin it with `TOOLU_OPENCODE_PACKAGE=@toolu/opencode@<X.Y.Z> npx @toolu/plugins update --host opencode` ([Update, roll back and remove](opencode.md#update-roll-back-and-remove)).
 

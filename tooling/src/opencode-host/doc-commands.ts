@@ -51,20 +51,25 @@ export function docBlock(text: string, name: string): string {
 
 type ShimTargets = { node: string; cli: string; opencode: string };
 
+/** `value` wrapped in one single-quoted sh word: nothing inside it expands. */
+export function shQuote(value: string): string {
+  return `'${value.replaceAll("'", `'\\''`)}'`;
+}
+
 /** `npx` and `opencode` shims in `dir`, for the front of a doc block's PATH. */
 export function writeShims(dir: string, targets: ShimTargets): void {
   mkdirSync(dir, { recursive: true });
   const npx = [
     "#!/bin/sh",
-    `if [ "$1" != ${JSON.stringify(NPX_PACKAGE)} ]; then`,
+    `if [ "$1" != ${shQuote(NPX_PACKAGE)} ]; then`,
     `  echo "doc shim: only ${NPX_PACKAGE} is redirected, got: $1" >&2`,
     `  exit ${NPX_REFUSED_EXIT}`,
     "fi",
     "shift",
-    `exec ${JSON.stringify(targets.node)} ${JSON.stringify(targets.cli)} "$@"`,
+    `exec ${shQuote(targets.node)} ${shQuote(targets.cli)} "$@"`,
     "",
   ].join("\n");
-  const opencode = `#!/bin/sh\nexec ${JSON.stringify(targets.opencode)} "$@"\n`;
+  const opencode = `#!/bin/sh\nexec ${shQuote(targets.opencode)} "$@"\n`;
   for (const [name, body] of Object.entries({ npx, opencode })) {
     writeFileSync(join(dir, name), body);
     chmodSync(join(dir, name), 0o755);

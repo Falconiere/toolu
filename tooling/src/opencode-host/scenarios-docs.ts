@@ -9,7 +9,7 @@
  * migrate block, checks toolu loads once and enforces, then runs its rollback
  * block and checks every seeded file is restored byte for byte.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
@@ -32,9 +32,12 @@ import { PROBE_PLUGIN, type ProbeSession } from "./session.ts";
 const INSTALL_DOC = join(ROOT, "docs/opencode.md");
 const MIGRATION_DOC = join(ROOT, "docs/opencode-migration.md");
 const PACKAGE = "@toolu/opencode";
-const ORIGINAL_ENV = "SECRET=1\n";
+/** The quick start's scratch secrets file, protected by the shipped `.env.*` pattern. */
+const SCRATCH = ".env.toolu-check";
 /** Text of the protected-files refusal that must reach the model in the tool error. */
-const REFUSAL = ["a protected path", "Blocked by gates.protectedFiles.mode='block'"];
+const REFUSAL = ["a protected path", SCRATCH];
+/** The `update` step's report when the entry already names the release under test. */
+const UPDATE_CURRENT = `current at ${PACKAGE}@`;
 const Selection = z.object({ version: z.literal(1), enabled: z.array(z.string()) });
 
 function block(doc: string, name: string): string {
@@ -67,7 +70,7 @@ async function quickstart(ctx: EntryContext): Promise<EntryResult> {
   using s = entrySession(ctx, {
     files: {},
     scripts: (project) => ({
-      "*": [{ tool: "write", args: { filePath: join(project, ".env"), content: "PWNED\n" } }],
+      "*": [{ tool: "write", args: { filePath: join(project, SCRATCH), content: "PWNED\n" } }],
     }),
   });
   const start = await runDocBlock(ctx, s, block(INSTALL_DOC, "quickstart"));
@@ -80,14 +83,15 @@ async function quickstart(ctx: EntryContext): Promise<EntryResult> {
     spec: merged[0] === JSON.stringify(npmSpec(ctx.tarball)),
     selection: enabled(join(globalDir(s), "toolu/plugins.json")),
     leafSkill: skills.includes("context7-context7"),
-    envUnchanged: s.exists(".env") && s.sb.read(".env") === ORIGINAL_ENV,
+    scratchRemoved: !s.exists(SCRATCH),
+    userFilesUntouched: !s.exists(".env") && !s.exists(".opencode/toolu.config.json"),
     refusalReachedModel: refusalReachedModel(s),
   };
   const manage = await runDocBlock(ctx, s, block(INSTALL_DOC, "manage"));
   const observed = {
     ...afterStart,
     manageExit: manage.exitCode,
-    updateCurrent: /current/.test(manage.stdout + manage.stderr),
+    updateCurrent: (manage.stdout + manage.stderr).includes(UPDATE_CURRENT),
     entriesAfterRemove: tooluEntries(await mergedPlugins(ctx, s)).length,
     skillsAfterRemove: (await tooluSkills(ctx, s)).length,
     selectionAfterRemove: enabled(join(globalDir(s), "toolu/plugins.json")),
@@ -100,7 +104,8 @@ async function quickstart(ctx: EntryContext): Promise<EntryResult> {
     observed.spec &&
     observed.selection === "context7,toolu" &&
     observed.leafSkill &&
-    observed.envUnchanged &&
+    observed.scratchRemoved &&
+    observed.userFilesUntouched &&
     observed.refusalReachedModel &&
     observed.manageExit === 0 &&
     observed.updateCurrent &&
@@ -141,12 +146,35 @@ const V2_PROJECT = {
 const KEPT = [".opencode/toolu/plugins.json", ".opencode/toolu.config.json"];
 const GLOBAL_FILE = "opencode.jsonc";
 
+/** Every user file the migration may touch: project files, the project config and the global config. */
 function snapshot(s: ProbeSession): Record<string, string> {
-  const project = [...KEPT, ...Object.keys(V2_PROJECT)];
+  const project = [...KEPT, ...Object.keys(V2_PROJECT), "opencode.json"];
+  const global = join(globalDir(s), GLOBAL_FILE);
   return {
     ...Object.fromEntries(project.map((rel) => [rel, s.exists(rel) ? s.sb.read(rel) : "absent"])),
-    [GLOBAL_FILE]: readFileSync(join(globalDir(s), GLOBAL_FILE), "utf8"),
+    [GLOBAL_FILE]: existsSync(global) ? readFileSync(global, "utf8") : "absent",
   };
+}
+
+function changedSince(s: ProbeSession, seeded: Record<string, string>): string {
+  const now = snapshot(s);
+  return Object.keys(seeded)
+    .filter((key) => now[key] !== seeded[key])
+    .join(",");
+}
+
+/** The backup tarballs the migrate block wrote, and whether any is readable by group or others. */
+function backups(s: ProbeSession): { count: number; private: boolean } {
+  const root = join(s.sb.home, "toolu-opencode-v2-backup");
+  const files = [join(root, "global.tgz"), ...listed(join(root, "projects"))].filter(existsSync);
+  return {
+    count: files.length,
+    private: files.every((file) => (statSync(file).mode & 0o077) === 0),
+  };
+}
+
+function listed(dir: string): string[] {
+  return existsSync(dir) ? readdirSync(dir).map((name) => join(dir, name)) : [];
 }
 
 const V2_DEPENDENCIES = new Set(["@opencode/plugin", "@toolu/opencode", "@toolu/core"]);
@@ -171,8 +199,11 @@ async function migration(ctx: EntryContext): Promise<EntryResult> {
   const globalText = readFileSync(join(globalDir(s), GLOBAL_FILE), "utf8");
   const merged = tooluEntries(await mergedPlugins(ctx, s));
   const gate = await protectedWrite(ctx, s);
+  const saved = backups(s);
   const afterMigrate = {
     migrateExit: migrate.exitCode,
+    backups: saved.count,
+    backupsPrivate: saved.private,
     entries: merged.length,
     spec: merged[0] === JSON.stringify(npmSpec(ctx.tarball)),
     commentsKept:
@@ -185,15 +216,17 @@ async function migration(ctx: EntryContext): Promise<EntryResult> {
     ...gate,
   };
   const rollback = await runDocBlock(ctx, s, block(MIGRATION_DOC, "rollback"));
-  const restored = snapshot(s);
   const observed = {
     ...afterMigrate,
     rollbackExit: rollback.exitCode,
-    restored: Object.keys(seeded).every((key) => restored[key] === seeded[key]),
+    notRestored: changedSince(s, seeded),
+    dataRootRemoved: !s.exists(".opencode/toolu/state"),
     tail: `${migrate.stderr.slice(-300)}${rollback.stderr.slice(-300)}`,
   };
   const pass =
     observed.migrateExit === 0 &&
+    observed.backups === 2 &&
+    observed.backupsPrivate &&
     observed.entries === 1 &&
     observed.spec &&
     observed.commentsKept &&
@@ -205,7 +238,55 @@ async function migration(ctx: EntryContext): Promise<EntryResult> {
     gate.duplicate === 0 &&
     observed.enforced &&
     observed.rollbackExit === 0 &&
-    observed.restored;
+    observed.notRestored === "" &&
+    observed.dataRootRemoved;
+  return { pass, observed };
+}
+
+/** Run the migrate block over `seed`, which must make `update` fail with `exit`, leaving every user file unchanged. */
+async function refused(
+  ctx: EntryContext,
+  seed: { global: boolean; projectEntry: boolean },
+  exit: number,
+  message: string,
+): Promise<{ exit: number; expectedExit: boolean; message: boolean; changed: string }> {
+  using s = entrySession(ctx, {
+    files: { ...PROJECT_FILES, ...V2_PROJECT },
+    config: () => (seed.projectEntry ? { plugin: [PACKAGE] } : {}),
+  });
+  if (seed.global) {
+    mkdirSync(globalDir(s), { recursive: true });
+    writeFileSync(join(globalDir(s), GLOBAL_FILE), v2GlobalConfig());
+  }
+  const seeded = snapshot(s);
+  const res = await runDocBlock(ctx, s, block(MIGRATION_DOC, "migrate"));
+  return {
+    exit: res.exitCode,
+    expectedExit: res.exitCode === exit,
+    message: (res.stdout + res.stderr).includes(message),
+    changed: changedSince(s, seeded),
+  };
+}
+
+async function migrationRefusals(ctx: EntryContext): Promise<EntryResult> {
+  const cloneOnly = await refused(
+    ctx,
+    { global: false, projectEntry: false },
+    1,
+    `${PACKAGE} is not configured in OpenCode`,
+  );
+  const bothScopes = await refused(ctx, { global: true, projectEntry: true }, 2, "--scope");
+  const observed = {
+    cloneOnlyExit: cloneOnly.exit,
+    cloneOnlyMessage: cloneOnly.message,
+    cloneOnlyChanged: cloneOnly.changed,
+    bothScopesExit: bothScopes.exit,
+    bothScopesMessage: bothScopes.message,
+    bothScopesChanged: bothScopes.changed,
+  };
+  const pass = [cloneOnly, bothScopes].every(
+    (run) => run.expectedExit && run.message && run.changed === "",
+  );
   return { pass, observed };
 }
 
@@ -213,7 +294,7 @@ export const QUICKSTART_SCENARIOS: EntryScenario[] = [
   {
     id: "docs.quickstart",
     claim:
-      "docs/opencode.md's quick start, run verbatim in a clean profile, installs toolu and context7, discovers context7's skill and refuses a .env write; its update/remove block then leaves no toolu entry or skill",
+      "docs/opencode.md's quick start, run verbatim in a clean profile, installs toolu and context7, discovers context7's skill and refuses a write to the scratch .env.toolu-check; its update/remove block then leaves no toolu entry or skill",
     run: quickstart,
   },
 ];
@@ -224,6 +305,12 @@ export const MIGRATION_SCENARIOS: EntryScenario[] = [
     claim:
       "docs/opencode-migration.md's migrate block, run verbatim over V2-era state, loads toolu once and enforces while keeping user files; its rollback block restores every seeded file",
     run: migration,
+  },
+  {
+    id: "docs.migration-refusals",
+    claim:
+      "docs/opencode-migration.md's migrate block stops with every user file unchanged when update fails: exit 1 with no entry (clone shim only), exit 2 with the package in both scopes",
+    run: migrationRefusals,
   },
 ];
 

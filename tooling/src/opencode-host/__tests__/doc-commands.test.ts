@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
-import { chmodSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
-import { NPX_REFUSED_EXIT, docBlock, runScript, writeShims } from "../doc-commands.ts";
+import { NPX_REFUSED_EXIT, docBlock, runScript, shQuote, writeShims } from "../doc-commands.ts";
 import { ROOT } from "../scenarios-entry.ts";
 import { ContractError } from "../schema.ts";
 
@@ -24,6 +24,7 @@ test.concurrent("the install and migration docs carry their executable blocks", 
   expect(docBlock(INSTALL_DOC, "manage")).toContain("npx @toolu/plugins remove toolu");
   expect(docBlock(MIGRATION_DOC, "migrate")).toContain("npx @toolu/plugins update --host opencode");
   expect(docBlock(MIGRATION_DOC, "rollback")).toContain("tar -xzf");
+  expect(docBlock(MIGRATION_DOC, "migrate")).not.toContain("npx @toolu/plugins install --host");
 });
 
 test.concurrent("a block's markers must exist once and wrap exactly one bash fence", () => {
@@ -77,4 +78,24 @@ test.concurrent("the shims redirect only @toolu/plugins and opencode, and a fail
   const piped = await runScript("false | cat\necho unreachable\n", opts);
   expect(piped.exitCode).not.toBe(0);
   expect(piped.stdout).not.toContain("unreachable");
+});
+
+test.concurrent("shim targets with shell metacharacters run as literal paths", async () => {
+  using sb = createSandbox({});
+  // A directory whose name would expand or break inside double quotes.
+  const odd = sb.path("we$HOME`id` 'dir");
+  const log = sb.path("calls.log");
+  const target = join(odd, "opencode.sh");
+  mkdirSync(odd, { recursive: true });
+  writeShims(sb.path("bin"), { node: "/bin/sh", cli: "/bin/true", opencode: target });
+  writeFileSync(target, `#!/bin/sh\necho "opencode $*" >> ${shQuote(log)}\n`);
+  chmodSync(target, 0o755);
+  const res = await runScript("opencode --version\n", {
+    cwd: sb.project,
+    shims: sb.path("bin"),
+    env: {},
+  });
+  expect(res.exitCode).toBe(0);
+  expect(readFileSync(log, "utf8")).toBe("opencode --version\n");
+  expect(shQuote("it's")).toBe(`'it'\\''s'`);
 });

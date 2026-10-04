@@ -44,7 +44,7 @@ OpenCode is not a conformance suite. The old `opencode --version` probe and the 
 - The 29 host contract probes, compared with `contract/probe-results.json`.
 - The generated surface and the names the host discovers.
 - Every `smoke:opencode-*` scenario.
-- The documentation's executable blocks, run word for word: `docs.quickstart` (the [quick start](opencode.md#quick-start), then update and removal) and `docs.migration` (the [migration guide](opencode-migration.md), seeded with V2-era state, then its rollback).
+- The documentation's executable blocks, run word for word: `docs.quickstart` (the [quick start](opencode.md#quick-start), then update and removal) `docs.migration` (the [migration guide](opencode-migration.md), seeded with V2-era state, then its rollback) and `docs.migration-refusals` (its block stopping cleanly when `update` fails).
 - The seven `*.live.test.ts` files, through a JUnit report, so a skipped host test fails.
 - Three concurrent runs over two projects.
 - A startup and per-tool budget.

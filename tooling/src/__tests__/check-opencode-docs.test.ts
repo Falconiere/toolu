@@ -4,7 +4,8 @@ import { dirname, join, resolve } from "node:path";
 import { run, type RunResult } from "@toolu/conformance/harness/spawn";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { STALE_CLAIMS, TARGET_DOCS, staleClaims } from "../check-opencode-docs.ts";
-import { MatrixSchema, readJson, type Matrix } from "../opencode-host/schema.ts";
+import { renderSupport } from "../opencode-acceptance/support-doc.ts";
+import { isUsed, MatrixSchema, readJson, type Matrix } from "../opencode-host/schema.ts";
 
 // Real-data checks for tooling/src/check-opencode-docs.ts (#363): the committed
 // docs pass, and each mutated copy fails with its named message.
@@ -146,4 +147,32 @@ test.concurrent("every V2-only claim on the install path fails with file:line; t
   });
   expect(res.exitCode).toBe(1);
   expect(res.stderr).toMatch(/\nREADME\.md:\d+: V2 permission hook \(permission\.evaluate\)\n$/);
+});
+
+test.concurrent("a release blocker renders Blocked; no limitations render None.; no checks render none", () => {
+  const matrix = readJson(join(CONTRACT, "capability-matrix.json"), MatrixSchema);
+  const jev = matrix.plugins.jev;
+  if (jev === undefined) throw new Error("no jev row");
+  const only: Matrix = { ...matrix, plugins: { jev } };
+  expect(renderSupport(only, { jev: ["live.jev"] })).toBe(
+    [
+      "| Plugin | Status on OpenCode | Dedicated CI checks |",
+      "|---|---|---|",
+      "| jev | Supported | `live.jev` |",
+      "",
+      "**Host-specific limitations**",
+      "",
+      "None.",
+    ].join("\n"),
+  );
+  expect(renderSupport(only, {})).toContain("| jev | Supported | none |");
+  const prompt = jev.axes.prompt;
+  if (!isUsed(prompt)) throw new Error("jev prompt axis is not used");
+  const blocked: Matrix = {
+    ...matrix,
+    plugins: {
+      jev: { ...jev, axes: { ...jev.axes, prompt: { ...prompt, releaseBlocker: true } } },
+    },
+  };
+  expect(renderSupport(blocked, { jev: ["live.jev"] })).toContain("| jev | Blocked | `live.jev` |");
 });
