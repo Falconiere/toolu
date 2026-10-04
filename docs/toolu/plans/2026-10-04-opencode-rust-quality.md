@@ -69,3 +69,9 @@ Fetch and rebase on `origin/main` before implementation and before pushing if ma
 ## Plan review
 
 **Status:** Approved. All five spec ACs are referenced with no dangling IDs (checked by diffing spec AC ids against ledger `ac_refs`). Each step has a runnable check against real inputs, including the disabled, missing-`Cargo.toml`, missing-`cargo`, unrelated-file and linked-worktree boundaries; the mutation check shows the adapter test can fail. `live` depends on `bundle`, `docs` on `live`, `gate` on `docs`. Jev scored executability 1.69 of 2 (confidence 0.54); direct review found only the missing delivery prerequisite, now stated above, and confirmed the `bundle` check also runs rust-quality's existing golden suites as the existing-host regression.
+
+## Deviations
+
+The repository's zero-threshold duplicate check (`jscpd`) rejected the Rust smoke for repeating the Python smoke's patch-line helper, host run and observation blocks. The edit and patch flows moved into data-driven `editQuality` and `patchQuality` helpers in `tooling/src/opencode-host/quality-smoke-shared.ts`, beside `addedLines`. `scenarios-python-quality-smoke.ts` and `scenarios-rust-quality-smoke.ts` now pass only fixtures and expected diagnostics; the Python checks are unchanged. `disabledQuality` uses the same host-run helper, so `bun run smoke:opencode-python-quality` and `bun run smoke:opencode-ts-quality` were re-run and passed 3/3 each, beside the Rust smoke's 3/3.
+
+Mutation evidence as planned: with `removed` ignoring `movedTo` in `quality-edit.ts` and `skipLinkedWorktrees: true` in rust-quality, both rebuilt into the bundles, the patch and linked-worktree cases failed and the other two passed. Both were reverted and `check:plugin-bundles` reported no drift.
