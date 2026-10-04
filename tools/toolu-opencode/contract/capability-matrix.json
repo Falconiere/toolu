@@ -688,7 +688,7 @@
       "owner": ["OP-25"],
       "axes": {
         "tools": {
-          "use": "status skill and setup command read helper output through bash",
+          "use": "status skill runs the status report through bash",
           "required": true,
           "enforcement": false,
           "mechanism": "bash tool + shell.env (helper path and environment)",
@@ -726,14 +726,7 @@
           "use": "none"
         },
         "ui": {
-          "use": "Show toolu session and gate status in the host UI",
-          "required": true,
-          "enforcement": false,
-          "mechanism": "client.tui.showToast → tui.toast.show",
-          "kind": "tui",
-          "status": "supported",
-          "evidence": ["ui.toast"],
-          "owner": ["OP-25"]
+          "use": "none"
         }
       },
       "surfaces": {
@@ -744,7 +737,7 @@
       },
       "notes": [
         {
-          "need": "A persistent statusline needs a TUI plugin (@opencode-ai/plugin/tui slots); headless probes cannot verify TUI rendering",
+          "need": "A persistent statusline is Claude Code-only (its statusLine setting). The pinned server plugin API has no status bar, and @opencode-ai/plugin/tui slots (home_footer, sidebar_footer) load only in the interactive TUI, which headless probes cannot verify. Alternative: the statusline-status skill reports toolu readiness from <data root>/toolu/opencode-status.json, and each startup sends one structured toolu: status client.app.log entry",
           "owner": "OP-25"
         }
       ]

@@ -153,7 +153,10 @@ test("a selected plugin whose startup fails refuses every tool with its plugin a
   const reason = await refusal(hooks, "bash", { command: "touch never.txt" });
   expect(reason).toStartWith("toolu: not ready: bootstrap: ts-quality/register: ");
   expect(reason).toContain("ts-quality@toolu__ts-quality.js: bundle unreadable");
-  expect(logged).toEqual([{ level: "error", message: `${reason}; every tool call is denied` }]);
+  expect(logged).toEqual([
+    { level: "error", message: `${reason}; every tool call is denied` },
+    { level: "error", message: "toolu: status" },
+  ]);
   await hooks.dispose?.();
   await rm(catalog, { recursive: true, force: true });
 });
@@ -170,6 +173,7 @@ test("a preparation that throws yields a hook that refuses every tool", async ()
   expect(hooks["shell.env"]).toBeUndefined();
   expect(logged).toEqual([
     { level: "error", message: "toolu: not ready: setup failed: boom; every tool call is denied" },
+    { level: "error", message: "toolu: status" },
   ]);
   await hooks.dispose?.();
 });

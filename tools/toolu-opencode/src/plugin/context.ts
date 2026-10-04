@@ -5,6 +5,9 @@ import { definedEnv } from "../host/runtime-env.ts";
 
 export type LogLevel = "info" | "error";
 
+/** Flat structured fields of one host-log entry (#359), sent as the SDK's `body.extra`. */
+export type LogExtra = Record<string, string | number>;
+
 export type HostBinding = {
   /** The host instance directory: the cwd every gate runs in. */
   directory: string;
@@ -16,7 +19,7 @@ export type HostBinding = {
   /** Set when the plugin options fail validation; enforcement then refuses every call. */
   optionsError: string | undefined;
   env: Record<string, string>;
-  log: (level: LogLevel, message: string) => Promise<void>;
+  log: (level: LogLevel, message: string, extra?: LogExtra) => Promise<void>;
 };
 
 const TooluPluginOptionsSchema = z.looseObject({ repoRoot: z.string().min(1).optional() });
@@ -42,8 +45,9 @@ export function parseOptions(
 
 /** Send one entry to the host log; a failed or slow call is dropped, never thrown. */
 function hostLog(client: PluginInput["client"], timeoutMs: number): HostBinding["log"] {
-  return async (level, message) => {
-    const sent = client.app.log({ body: { service: "toolu", level, message } }).then(
+  return async (level, message, extra) => {
+    const body = { service: "toolu", level, message, ...(extra === undefined ? {} : { extra }) };
+    const sent = client.app.log({ body }).then(
       () => undefined,
       () => undefined,
     );

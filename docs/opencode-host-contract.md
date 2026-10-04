@@ -139,7 +139,7 @@ Recorded 2026-10-02 on `opencode-ai@1.18.34` (linux-x64, Bun 1.4.2); the host pr
 
 The matrix covers all 16 catalog plugins across nine axes. Each needed axis has an owner work package. `check:opencode-host` derives the minimum axes from each plugin's own manifests (`hooks/hooks.json` events and matchers, `hooks/src/register.ts` registry modules), checks surface counts against `skills/`, `commands/` and `agents/`, and requires every status to agree with the probe verdicts it cites. Source: `tools/toolu-opencode/contract/capability-matrix.json`.
 
-The matrix counts source Markdown. The generated OpenCode catalog excludes the Claude-only statusline setup command with an explicit OP-25 owner; `bun run probe:opencode-surface` separately proves the generated 18 skills, five agents and four commands load on this pinned host.
+The matrix counts source Markdown. The generated OpenCode catalog excludes the statusline setup command as host-specific (OP-25: OpenCode has no `statusLine` setting; the `statusline-status` skill is the alternative); `bun run probe:opencode-surface` separately proves the generated 18 skills, five agents and four commands load on this pinned host.
 
 <!-- opencode-host-matrix:start -->
 ✅ supported · 🟡 partial · ❌ unsupported · — not needed · 🔒 enforcement (decides whether a tool call runs)
@@ -158,7 +158,7 @@ The matrix counts source Markdown. The generated OpenCode catalog excludes the C
 | pr-babysit | ✅ | — | ✅ | — | — | — | — | ✅ | — | 1/1/0 |
 | python-quality | — | — | ✅ | — | — | ✅ | — | — | — | 0/0/0 |
 | rust-quality | — | — | ✅ | — | — | ✅ | — | — | — | 0/0/0 |
-| statusline | ✅ | — | ✅ | — | — | — | — | — | ✅ | 1/1/0 |
+| statusline | ✅ | — | ✅ | — | — | — | — | — | — | 1/1/0 |
 | toolu | ✅🔒 | 🟡🔒 | ✅ | ✅ | ✅ | 🟡 | ✅🔒 | ✅🔒 | — | 6/2/5 |
 | toolu-review | ✅ | — | ✅ | — | — | — | — | — | — | 1/0/0 |
 | ts-quality | — | — | ✅ | — | — | ✅ | — | — | — | 0/0/0 |
@@ -215,11 +215,10 @@ The matrix counts source Markdown. The generated OpenCode catalog excludes the C
   - **postTool** — Post-edit Rust quality checks reach the model and gate later commit/push. `tool.execute.after (append to output)` (hook): supported; evidence `post.feedback`, `post.bash-exit`. Owner: OP-20 (#354), OP-06 (#340).
   - **surfaces** — 0 skills, 0 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345).
 - **statusline** (owner OP-25 (#359))
-  - **tools** — status skill and setup command read helper output through bash. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-25 (#359), OP-09 (#343).
+  - **tools** — status skill runs the status report through bash. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-25 (#359), OP-09 (#343).
   - **startup** — SessionStart publishes the status helper. `plugin init (bootstrap)` (hook): supported; evidence `load.local-file`. Owner: OP-25 (#359), OP-08 (#342).
-  - **ui** — Show toolu session and gate status in the host UI. `client.tui.showToast → tui.toast.show` (tui): supported; evidence `ui.toast`. Owner: OP-25 (#359).
   - **surfaces** — 1 skills, 1 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345), OP-25 (#359).
-  - **note** — A persistent statusline needs a TUI plugin (@opencode-ai/plugin/tui slots); headless probes cannot verify TUI rendering. Owner: OP-25 (#359).
+  - **note** — A persistent statusline is Claude Code-only (its statusLine setting). The pinned server plugin API has no status bar, and @opencode-ai/plugin/tui slots (home_footer, sidebar_footer) load only in the interactive TUI, which headless probes cannot verify. Alternative: the statusline-status skill reports toolu readiness from <data root>/toolu/opencode-status.json, and each startup sends one structured toolu: status client.app.log entry. Owner: OP-25 (#359).
 - **toolu** (owner OP-02 (#336), OP-03 (#337), OP-04 (#338), OP-05 (#339), OP-06 (#340), OP-07 (#341), OP-08 (#342), OP-09 (#343), OP-10 (#344), OP-11 (#345), OP-24 (#358))
   - **tools** — Core pre-tool gates (bash-commands, commit-gate, quality-gate, protected-files, code-edit-rules, push-review, plan-ledger, docs-sync) allow or deny bash, edit, write, apply_patch and grep before they run. `tool.execute.before (throw to deny)` (hook): supported; evidence `deny.bash`, `deny.write`, `deny.edit`, `deny.apply-patch`, `deny.grep`. Owner: OP-03 (#337), OP-04 (#338).
   - **permission** — Gate ask decisions open a native prompt, and the user's permission rules stay authoritative. `permission.ask (declared, never invoked) + opencode.json permission` (hook): partial; evidence `permission.ask-hook`, `permission.config-deny`, `permission.order`. Alternative: Degrade ask with the @toolu/core/host class rules: security guardrails ask becomes a tool.execute.before deny, judgement gates ask becomes advice appended by tool.execute.after; the user's own ask/deny rules still apply after toolu allows. Owner: OP-05 (#339).

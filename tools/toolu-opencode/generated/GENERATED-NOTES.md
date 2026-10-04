@@ -25,7 +25,7 @@ The catalog covers all 16 plugin manifests. At runtime the plugin's `config` hoo
 
 ## Excluded host-specific surfaces
 
-- `plugins/statusline/commands/setup.md`: Claude Code settings.json statusLine command has no OpenCode implementation in OP-10. Owner: OP-25 (#359).
+- `plugins/statusline/commands/setup.md`: Claude Code statusLine setting in settings.json; OpenCode has no statusline setting, so the persistent statusline is host-specific. Use the statusline-status skill. Owner: OP-25 (#359).
 
 ## Path rewrites
 

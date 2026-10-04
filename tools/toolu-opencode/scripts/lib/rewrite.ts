@@ -156,13 +156,6 @@ ${rewritten.slice(fallbackStart)}`;
     if (skillId === "jev-jev") rewritten = opencodeJev(rewritten);
     if (skillId === "context7-context7") rewritten = opencodeContext7(rewritten);
     if (skillId === "jira-jira") rewritten = opencodeJira(rewritten);
-    if (skillId === "statusline-status") {
-      rewritten = rewritten.replace("in Codex.", "in OpenCode.");
-      rewritten = rewritten.replace(
-        "TOOLU_HOST_OVERRIDE=codex bun ../../hooks/dist/status.js",
-        "TOOLU_HOST_OVERRIDE=opencode bun ../../../plugins/statusline/hooks/dist/status.js",
-      );
-    }
     const modelRouting = `${TOOLU_OPENCODE_ROOT}/generated/skills/toolu-orchestrator/references/model-routing.md`;
     const relativeRouting = posix.relative(
       `skills/${skillId}`,

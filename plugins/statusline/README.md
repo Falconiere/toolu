@@ -1,7 +1,8 @@
 # statusline
 
 Host-native project status. Claude Code gets an optional persistent one-line
-statusline assembled defensively from the JSON Claude sends on stdin:
+statusline assembled defensively from the JSON Claude sends on stdin (Codex and
+OpenCode get an explicit status skill instead):
 
 ```
 model | effort:high | ctx:45k/200k (22%) | example.com | ✗ gate:failing | my-folder | main ↑2↓1 [+2 ~1 ?3] | [COMEMORY:42] | [JEV:READY]
@@ -53,6 +54,35 @@ codex plugin add statusline@toolu
 
 Run `$statusline:status` whenever you want a current report. No setup or
 persistent renderer is required.
+
+## OpenCode
+
+On OpenCode the native `statusline-status` skill is the status surface. OpenCode
+has no `statusLine` setting, so the persistent statusline and
+`/statusline:setup` are Claude Code-only: toolu does not generate the setup
+command for OpenCode and never writes a `statusLine` key into OpenCode
+configuration. The skill runs
+`"$TOOLU_BUN" --no-env-file "$TOOLU_PLUGIN_ROOT_STATUSLINE/hooks/dist/status.js"`.
+`shell.env` sets both variables in every bash call. The report starts with toolu's
+own readiness:
+
+```
+Host: OpenCode
+toolu: ready — 2 plugins (project selection), 2 startup artifacts
+Plugins: statusline (session-start), jev (session-start, user-prompt-submit)
+Startup record: <project>/.opencode/toolu/state/toolu/opencode-status.json, written <time> for <project>
+Repository: …
+```
+
+Every startup of the toolu OpenCode plugin writes that record
+(`<data root>/toolu/opencode-status.json`). It also sends one structured
+`toolu: status` entry to the host log (`opencode --print-logs`) with `status`,
+`plugins`, `selection`, `artifacts`, `record` and, when toolu is not ready,
+`reason`. Neither holds environment values. A missing or unreadable record prints
+a line naming the next step. When toolu is not ready, it denies every tool call,
+bash included. Its reason then reaches you through the denial and the host log,
+and the record keeps it for a later `status.js` run with `TOOLU_CONFIG_DIR` set to
+the data root.
 
 ## Claude Code install & wire up
 
