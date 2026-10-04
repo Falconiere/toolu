@@ -343,17 +343,12 @@ function isObject(value) {
 function fixerConfigContent(existing) {
   let base = {};
   if (existing !== undefined && existing.trim() !== "") {
-    let parsed;
-    try {
-      parsed = JSON.parse(existing);
-    } catch {
-      parsed = undefined;
-    }
-    if (!isObject(parsed))
+    const value = parsed(existing);
+    if (!isObject(value))
       fail("config_invalid", "OPENCODE_CONFIG_CONTENT is not a JSON object; fix or unset it");
-    if (parsed.agent !== undefined && !isObject(parsed.agent))
+    if (value.agent !== undefined && !isObject(value.agent))
       fail("config_invalid", "OPENCODE_CONFIG_CONTENT agent is not an object");
-    base = parsed;
+    base = value;
   }
   const agents = isObject(base.agent) ? base.agent : {};
   return JSON.stringify({ ...base, agent: { ...agents, [FIXER_AGENT]: FIXER_AGENT_CONFIG } });
@@ -397,7 +392,7 @@ function processStart(pid) {
 function processTable() {
   const res = spawnSync("ps", ["-A", "-o", "pid=,ppid=,pgid=,stat="], { encoding: "utf8" });
   if (res.status !== 0)
-    fail("process_error", `ps failed: ${(res.stderr ?? "").trim()}`);
+    fail("process_error", `ps failed: ${res.stderr.trim()}`);
   return res.stdout.split(`
 `).flatMap((line) => {
     const [pid, ppid, pgid, stat] = line.trim().split(/\s+/);
@@ -432,7 +427,7 @@ function signal(target, sig) {
   try {
     process.kill(target, sig);
   } catch (error) {
-    if (error.code !== "ESRCH")
+    if (!(error instanceof Error) || !("code" in error) || error.code !== "ESRCH")
       throw error;
   }
 }
@@ -482,7 +477,9 @@ function spawnFixer(run, log, env, ghConfigDir) {
       return { error: `opencode did not start; its error goes to ${log}` };
     return { pid: child.pid, pidStart: processStart(child.pid) };
   } catch (error) {
-    return { error: `opencode did not start: ${error.message}` };
+    return {
+      error: `opencode did not start: ${error instanceof Error ? error.message : String(error)}`
+    };
   } finally {
     closeSync(fd);
   }
@@ -505,9 +502,9 @@ function logTail(log, lines = 40) {
   return (length < size ? all.slice(1) : all).slice(-lines).join(`
 `);
 }
-function parsed(line) {
+function parsed(text) {
   try {
-    return JSON.parse(line);
+    return JSON.parse(text);
   } catch {
     return;
   }

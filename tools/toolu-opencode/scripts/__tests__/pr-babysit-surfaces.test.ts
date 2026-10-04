@@ -104,11 +104,13 @@ test("the skill and workflow name the OpenCode controller, routing, state and he
     expect(workflow).toContain(needle);
 });
 
+/** The workflow's "Authorization and execution handoff" section. */
+function section(text: string): string {
+  const start = text.indexOf("## Authorization and execution handoff");
+  return text.slice(start, text.indexOf("\n## ", start + 1));
+}
+
 test("the shared authorization and execution handoff section is kept verbatim", () => {
-  const section = (text: string): string => {
-    const start = text.indexOf("## Authorization and execution handoff");
-    return text.slice(start, text.indexOf("\n## ", start + 1));
-  };
   const source = readFileSync(join(ROOT, SOURCE_WORKFLOW), "utf8");
   expect(section(source).length).toBeGreaterThan(100);
   expect(section(read(WORKFLOW))).toBe(section(source));

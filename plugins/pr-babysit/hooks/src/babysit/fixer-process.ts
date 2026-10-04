@@ -40,17 +40,12 @@ function isObject(value: unknown): value is Json {
 export function fixerConfigContent(existing: string | undefined): string {
   let base: Json = {};
   if (existing !== undefined && existing.trim() !== "") {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(existing);
-    } catch {
-      parsed = undefined;
-    }
-    if (!isObject(parsed))
+    const value = parsed(existing);
+    if (!isObject(value))
       fail("config_invalid", "OPENCODE_CONFIG_CONTENT is not a JSON object; fix or unset it");
-    if (parsed.agent !== undefined && !isObject(parsed.agent))
+    if (value.agent !== undefined && !isObject(value.agent))
       fail("config_invalid", "OPENCODE_CONFIG_CONTENT agent is not an object");
-    base = parsed;
+    base = value;
   }
   const agents = isObject(base.agent) ? base.agent : {};
   return JSON.stringify({ ...base, agent: { ...agents, [FIXER_AGENT]: FIXER_AGENT_CONFIG } });
@@ -122,7 +117,7 @@ type Row = { pid: number; ppid: number; pgid: number };
 /** Every live (non-zombie) process. */
 function processTable(): Row[] {
   const res = spawnSync("ps", ["-A", "-o", "pid=,ppid=,pgid=,stat="], { encoding: "utf8" });
-  if (res.status !== 0) fail("process_error", `ps failed: ${(res.stderr ?? "").trim()}`);
+  if (res.status !== 0) fail("process_error", `ps failed: ${res.stderr.trim()}`);
   return res.stdout.split("\n").flatMap((line) => {
     const [pid, ppid, pgid, stat] = line.trim().split(/\s+/);
     return stat === undefined || stat.startsWith("Z")
@@ -171,7 +166,7 @@ function signal(target: number, sig: NodeJS.Signals): void {
     process.kill(target, sig);
   } catch (error) {
     // ESRCH: it exited between the liveness check and the signal.
-    if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+    if (!(error instanceof Error) || !("code" in error) || error.code !== "ESRCH") throw error;
   }
 }
 
@@ -203,7 +198,7 @@ export function stopGroup(pid: number, start: string): boolean {
   return waitGone(pids, 5);
 }
 
-export type Spawned = { pid: number; pidStart: string } | { error: string };
+type Spawned = { pid: number; pidStart: string } | { error: string };
 
 /**
  * Start `opencode run` detached in `worktree`, output to `log`, with `fixerEnv`;
@@ -234,7 +229,9 @@ export function spawnFixer(
       return { error: `opencode did not start; its error goes to ${log}` };
     return { pid: child.pid, pidStart: processStart(child.pid) };
   } catch (error) {
-    return { error: `opencode did not start: ${(error as Error).message}` };
+    return {
+      error: `opencode did not start: ${error instanceof Error ? error.message : String(error)}`,
+    };
   } finally {
     closeSync(fd);
   }
@@ -260,11 +257,12 @@ export function logTail(log: string, lines = 40): string {
   return (length < size ? all.slice(1) : all).slice(-lines).join("\n");
 }
 
-function parsed(line: string): unknown {
+/** `text` as JSON, or `undefined` when it is not JSON (a log's stderr line, a bad config value). */
+function parsed(text: string): unknown {
   try {
-    return JSON.parse(line);
+    return JSON.parse(text);
   } catch {
-    // Not a JSON event: the host's own stderr.
+    // Not JSON: callers treat undefined as such.
     return undefined;
   }
 }
