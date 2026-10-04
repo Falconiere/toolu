@@ -167,7 +167,8 @@ highest-priority file that defines `plugin` counts. Global and project arrays
 then concatenate, and for the same package the last entry wins. An empty
 `"plugin": []` clears every earlier entry, so `remove` deletes a `plugin` key it
 would leave empty. `list` reports the entry OpenCode would actually load, and
-`install` says so when a project file shadows the global one.
+`install` says so when a project file shadows the global one, or when filling a
+project's empty `plugin` array lets earlier plugins load again.
 
 **What survives.** Edits go through a JSONC parser that changes only the
 `plugin` array or the selection. Comments, formatting, other keys and other
