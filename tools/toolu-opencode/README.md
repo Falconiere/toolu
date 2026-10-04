@@ -6,7 +6,7 @@ The adapter uses the documented plugin API (`opencode-ai@1.18.34`, `@opencode-ai
 
 ## Generated OpenCode surface
 
-`bun run generate:opencode-surface` builds `generated/` from all 16 plugin manifests. The catalog records 18 skills, five subagents, four commands, three plugins with no Markdown surface, and the Claude-only statusline setup command excluded for [OP-25](https://github.com/Falconiere/toolu/issues/359). `bun run check:opencode-surface` detects drift. `bun run probe:opencode-surface` loads the generated Markdown in an isolated pinned OpenCode 1.18.34 profile and checks discovery and parsed agent/command configuration.
+`bun run generate:opencode-surface` builds `generated/` from all 16 plugin manifests. The catalog records 18 skills, five subagents, four commands, three plugins with no Markdown surface, and the statusline setup command excluded as host-specific: OpenCode has no `statusLine` setting, so [OP-25](https://github.com/Falconiere/toolu/issues/359) ships the `statusline-status` skill instead. `bun run check:opencode-surface` detects drift. `bun run probe:opencode-surface` loads the generated Markdown in an isolated pinned OpenCode 1.18.34 profile and checks discovery and parsed agent/command configuration.
 
 Skill names are unique, at most 64 characters, and use lowercase letters, digits, and single hyphens. The generator preserves YAML metadata and agent permissions, maps Claude tool lists to restrictive OpenCode permissions, and lets agents inherit the configured host model instead of emitting Claude model aliases. Local linked resources are copied into `generated/`; known skill references and source paths point to generated IDs and files.
 

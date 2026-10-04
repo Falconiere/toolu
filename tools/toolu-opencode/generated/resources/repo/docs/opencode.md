@@ -295,6 +295,12 @@ Add `pr-babysit` to the `enabled` list and restart OpenCode. Run the `pr-babysit
 
 `bun run smoke:opencode-entry babysit.fixer babysit.no-report babysit.cancel` proves this on the pinned host with the scripted provider: an OpenCode controller's bash runs the shipped helpers, and an OpenCode fixer fixes a seeded failing test in an isolated repository while its push is denied.
 
+### Status
+
+Add `statusline` to the `enabled` list and restart OpenCode. The native `statusline-status` skill runs `"$TOOLU_BUN" --no-env-file "$TOOLU_PLUGIN_ROOT_STATUSLINE/hooks/dist/status.js"` and reports toolu's readiness first: `toolu: ready — N plugins (<selection>), M startup artifacts`, then a `Plugins:` line with each plugin's startup entries, any startup notes and the record's path and time. The repository, branch, working tree, `.opencode/tmp/quality-gate-status.json` gate and Jev readiness follow. Every toolu startup writes the record to `<data root>/toolu/opencode-status.json` and sends one structured `toolu: status` host-log entry (`opencode --print-logs`) with `status`, `plugins`, `selection`, `artifacts`, `record` and, when not ready, `reason`; no environment value is copied into either. A missing or unreadable record prints a line naming the next step.
+
+The persistent statusline is Claude Code-only. OpenCode has no `statusLine` setting, and the pinned SDK's TUI slots (`@opencode-ai/plugin/tui`) load only in the interactive TUI, which the headless contract cannot verify. So toolu ships no OpenCode statusline UI or `/statusline:setup` command, and writes no Claude Code setting into OpenCode configuration. `bun run smoke:opencode-entry status.enabled status.disabled` proves the skill, the log entry and the clean configuration on the pinned host.
+
 ## Verify a real gate
 
 Hermetic proof (matches CI):

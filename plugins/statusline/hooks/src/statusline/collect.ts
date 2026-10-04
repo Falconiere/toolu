@@ -1,7 +1,9 @@
 /**
  * Host-neutral project status shared by the Claude renderer and explicit
  * Codex/OpenCode reports: repository, branch, ahead/behind, working-tree counts, the quality
- * gate, the comemory memory count and Jev readiness, collected in-process.
+ * gate, the comemory memory count and Jev readiness, collected in-process. On
+ * OpenCode it also reads the adapter's status record (#359): which toolu plugins
+ * started and whether toolu is ready.
  *
  * Jev readiness is local configuration only: the wrapper is never executed and
  * no request is sent on the statusline's per-prompt hot path.
@@ -9,9 +11,20 @@
 import { accessSync, constants, lstatSync, statSync, type Stats } from "node:fs";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { configRoot, envValue, projectStateRoot, type HostEnv } from "@toolu/core/host";
+import {
+  opencodeStatusPath,
+  readOpencodeStatus,
+  type OpencodeStatusRecord,
+} from "@toolu/core/startup";
 import { readObject } from "./json.ts";
 
 export type StatusHost = "claude" | "codex" | "opencode";
+
+/** toolu's own readiness on OpenCode, from the adapter's record; empty on other hosts. */
+export type TooluStatus =
+  | { status: ""; path: string }
+  | { status: "missing" | "invalid"; path: string }
+  | { status: "recorded"; path: string; record: OpencodeStatusRecord };
 
 export type ProjectStatus = {
   host: StatusHost;
@@ -25,6 +38,7 @@ export type ProjectStatus = {
   gate: { status: string; reason: string };
   jev: { status: "" | "ready" | "unavailable"; reason: string };
   comemory_count: number | null;
+  toolu: TooluStatus;
 };
 
 /** Explicit host override, then Codex's `PLUGIN_ROOT` fallback, then Claude. */
@@ -51,6 +65,7 @@ export function emptyStatus(host: StatusHost, cwd: string): ProjectStatus {
     gate: { status: "", reason: "" },
     jev: { status: "", reason: "" },
     comemory_count: null,
+    toolu: { status: "", path: "" },
   };
 }
 
@@ -165,6 +180,15 @@ function jevReadiness(env: HostEnv, root: string): ProjectStatus["jev"] {
     : { status: "unavailable", reason: reasons.join("; ") };
 }
 
+/** The record at `<config root>/toolu/opencode-status.json`; in OpenCode's bash the config root is the data root. */
+function tooluStatus(root: string): TooluStatus {
+  const path = opencodeStatusPath(root);
+  const read = readOpencodeStatus(path);
+  return read.ok
+    ? { status: "recorded", path, record: read.record }
+    : { status: read.reason, path };
+}
+
 /** Status for `cwd`; an empty `cwd` is profile-only (no project fields, Jev still evaluated). */
 export function collectStatus(cwd: string, env: HostEnv, host: StatusHost): ProjectStatus {
   const status = emptyStatus(host, cwd);
@@ -190,5 +214,6 @@ export function collectStatus(cwd: string, env: HostEnv, host: StatusHost): Proj
     status.gate = { status: stringMember(gate, "status"), reason: stringMember(gate, "reason") };
   }
   status.jev = jevReadiness(env, root);
+  if (host === "opencode") status.toolu = tooluStatus(root);
   return status;
 }

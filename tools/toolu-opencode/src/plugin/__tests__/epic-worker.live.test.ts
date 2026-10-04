@@ -215,7 +215,7 @@ async function killMidTurn(bin: string, session: ProbeSession) {
   expect(killed.atKillPoint, killed.stderr.slice(-4000)).toBe(true);
   expect(killed.exitCode).not.toBe(0);
   expect(statusOf(p.status).phase).toBe("execution");
-  const states = toolStates({ exitCode: killed.exitCode, events: killed.events, stderr: "" });
+  const states = toolStates({ events: killed.events });
   expect(states.slice(0, 5).map(({ tool, status }) => `${tool}:${status}`)).toEqual([
     "read:completed",
     "bash:completed",

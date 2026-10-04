@@ -317,18 +317,32 @@ test("generated review skill labels its OpenCode config example", () => {
   expect(skill).not.toContain("${CLAUDE_CONFIG_DIR:-$HOME/.claude}");
 });
 
-test("generated status skill runs the packaged OpenCode hook", () => {
+test("generated status skill runs the selected plugin's report under shell.env", () => {
   const root = repoRoot();
   const out = mkdtempSync(join(tmpBase, "toolu-surface-status-"));
   const selected = selectPluginsByEnabledNames(join(root, "plugins"), ["statusline"]);
   if (!selected.ok) throw new Error(selected.reason);
   const plan = planSurface({ repoRoot: root, outDir: out, plugins: selected.plugins });
-  const skill = plan.files.get(join(out, "skills/statusline-status/SKILL.md"));
+  const skill = plan.files.get(join(out, "skills/statusline-status/SKILL.md")) ?? "";
   expect(skill).toContain(
-    "TOOLU_HOST_OVERRIDE=opencode bun ../../../plugins/statusline/hooks/dist/status.js",
+    '# OpenCode\n"$TOOLU_BUN" --no-env-file "$TOOLU_PLUGIN_ROOT_STATUSLINE/hooks/dist/status.js"\n',
   );
-  expect(skill).not.toContain("../../hooks/dist/status.js");
+  expect(skill).toContain("or toolu plugin readiness status in OpenCode.");
+  expect(skill).toContain("OpenCode has no persistent statusline");
+  for (const stale of ["../../", "Codex", "TOOLU_HOST_OVERRIDE=codex", "bun ../"]) {
+    expect(skill).not.toContain(stale);
+  }
   expect(existsSync(join(root, "plugins/statusline/hooks/dist/status.js"))).toBe(true);
+  const statusline = plan.catalog.plugins.find((plugin) => plugin.name === "statusline");
+  expect(statusline?.excluded).toEqual([
+    {
+      source: "plugins/statusline/commands/setup.md",
+      reason:
+        "Claude Code statusLine setting in settings.json; OpenCode has no statusline setting, so the persistent statusline is host-specific. Use the statusline-status skill.",
+      owner: "OP-25 (#359)",
+    },
+  ]);
+  expect(statusline?.commands).toEqual([]);
 });
 
 test("generated Jev skill and its examples name only the OpenCode wrapper and ignore .env", () => {

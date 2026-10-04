@@ -14,7 +14,8 @@ export type ArtifactKind = (typeof ARTIFACT_KIND_ORDER)[number];
 
 export const EXCLUDED_SURFACES = {
   "statusline/commands/setup.md": {
-    reason: "Claude Code settings.json statusLine command has no OpenCode implementation in OP-10.",
+    reason:
+      "Claude Code statusLine setting in settings.json; OpenCode has no statusline setting, so the persistent statusline is host-specific. Use the statusline-status skill.",
     owner: "OP-25 (#359)",
   },
 } as const;

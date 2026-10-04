@@ -1,7 +1,7 @@
 // @bun
 // plugins/statusline/hooks/src/statusline/collect.ts
-import { accessSync, constants, lstatSync, statSync } from "fs";
-import { basename, dirname, isAbsolute, join as join2, resolve } from "path";
+import { accessSync, constants, lstatSync, statSync as statSync2 } from "fs";
+import { basename, dirname, isAbsolute, join as join3, resolve } from "path";
 
 // packages/toolu-core/src/host/host-name.ts
 var HOST_NAMES = ["claude", "codex", "cursor", "opencode", "hermes"];
@@ -3198,14 +3198,90 @@ var ASK_EVENTS = {
   hermes: new Set,
   opencode: new Set
 };
+// packages/toolu-core/src/startup/opencode-status.ts
+import { readFileSync, statSync } from "fs";
+import { join as join2 } from "path";
+var OPENCODE_STATUS_FILE = "opencode-status.json";
+var MAX_OPENCODE_STATUS_BYTES = 262144;
+function opencodeStatusPath(configRoot) {
+  return join2(configRoot, "toolu", OPENCODE_STATUS_FILE);
+}
+function isObject2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function onlyKeys(value, allowed) {
+  return Object.keys(value).every((key) => allowed.includes(key));
+}
+function isStringArray(value) {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+function isPlugin(value) {
+  return isObject2(value) && onlyKeys(value, ["name", "entries", "artifacts"]) && typeof value["name"] === "string" && value["name"] !== "" && isStringArray(value["entries"]) && Number.isInteger(value["artifacts"]) && Number(value["artifacts"]) >= 0;
+}
+function isSelection(value) {
+  return value === undefined || value === "project" || value === "global" || value === "default";
+}
+function parseOpencodeStatus(value) {
+  const keys = [
+    "version",
+    "written",
+    "project",
+    "status",
+    "reason",
+    "selection",
+    "plugins",
+    "notes"
+  ];
+  if (!isObject2(value) || !onlyKeys(value, keys))
+    return;
+  const { version, written, project, status, reason, selection, plugins, notes } = value;
+  if (version !== 1 || typeof written !== "string" || typeof project !== "string")
+    return;
+  if (status !== "ready" && status !== "not-ready")
+    return;
+  if (reason !== undefined && typeof reason !== "string")
+    return;
+  if (!isSelection(selection) || !Array.isArray(plugins) || !isStringArray(notes))
+    return;
+  if (!plugins.every(isPlugin))
+    return;
+  const record = { version, written, project, status, plugins, notes };
+  if (reason !== undefined)
+    record.reason = reason;
+  if (selection !== undefined)
+    record.selection = selection;
+  return record;
+}
+function errorCode(error) {
+  return error instanceof Error && "code" in error && typeof error.code === "string" ? error.code : undefined;
+}
+function readOpencodeStatus(path) {
+  let text;
+  try {
+    if (statSync(path).size > MAX_OPENCODE_STATUS_BYTES)
+      return { ok: false, reason: "invalid" };
+    text = readFileSync(path, "utf8");
+  } catch (error) {
+    const code = errorCode(error);
+    return { ok: false, reason: code === "ENOENT" || code === "ENOTDIR" ? "missing" : "invalid" };
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { ok: false, reason: "invalid" };
+  }
+  const record = parseOpencodeStatus(parsed);
+  return record === undefined ? { ok: false, reason: "invalid" } : { ok: true, record };
+}
 // plugins/statusline/hooks/src/statusline/json.ts
-import { readFileSync } from "fs";
+import { readFileSync as readFileSync2 } from "fs";
 function asObject(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? Object.fromEntries(Object.entries(value)) : undefined;
 }
 function readObject(path) {
   try {
-    return asObject(JSON.parse(readFileSync(path, "utf8")));
+    return asObject(JSON.parse(readFileSync2(path, "utf8")));
   } catch {
     return;
   }
@@ -3236,7 +3312,8 @@ function emptyStatus(host, cwd) {
     working_tree: { staged: 0, unstaged: 0, untracked: 0 },
     gate: { status: "", reason: "" },
     jev: { status: "", reason: "" },
-    comemory_count: null
+    comemory_count: null,
+    toolu: { status: "", path: "" }
   };
 }
 function childEnv2(env) {
@@ -3262,10 +3339,10 @@ function probe(read) {
   }
 }
 function isDirectory(path) {
-  return path !== "" && (probe(() => statSync(path))?.isDirectory() ?? false);
+  return path !== "" && (probe(() => statSync2(path))?.isDirectory() ?? false);
 }
 function isFile(path) {
-  return probe(() => statSync(path))?.isFile() ?? false;
+  return probe(() => statSync2(path))?.isFile() ?? false;
 }
 function folderName(cwd) {
   const name = basename(cwd);
@@ -3305,7 +3382,7 @@ function comemoryCount(cwd, commonDir, root) {
   if (commonDir === "")
     return null;
   const abs = isAbsolute(commonDir) ? commonDir : resolve(cwd, commonDir);
-  const marker = readObject(join2(root, "comemory-status", `${basename(dirname(abs))}.json`));
+  const marker = readObject(join3(root, "comemory-status", `${basename(dirname(abs))}.json`));
   const count = marker?.["count"];
   return typeof count === "number" ? count : null;
 }
@@ -3320,7 +3397,7 @@ function executableFile(path) {
   }
 }
 function jevReadiness(env, root) {
-  const wrapper = join2(root, "jev", "jev.sh");
+  const wrapper = join3(root, "jev", "jev.sh");
   if (probe(() => lstatSync(wrapper)) === undefined)
     return { status: "", reason: "" };
   const reasons = [];
@@ -3335,6 +3412,11 @@ function jevReadiness(env, root) {
   else if (/[\r\n]/.test(key))
     reasons.push("invalid TYPESAFE_API_KEY");
   return reasons.length === 0 ? { status: "ready", reason: "" } : { status: "unavailable", reason: reasons.join("; ") };
+}
+function tooluStatus(root) {
+  const path = opencodeStatusPath(root);
+  const read = readOpencodeStatus(path);
+  return read.ok ? { status: "recorded", path, record: read.record } : { status: read.reason, path };
 }
 function collectStatus(cwd, env, host) {
   const status = emptyStatus(host, cwd);
@@ -3354,10 +3436,12 @@ function collectStatus(cwd, env, host) {
   }
   if (cwd !== "") {
     const stateRoot = projectStateRoot({ env, host, root: status.repo_root || cwd });
-    const gate = stateRoot === undefined ? undefined : readObject(join2(stateRoot, "quality-gate-status.json"));
+    const gate = stateRoot === undefined ? undefined : readObject(join3(stateRoot, "quality-gate-status.json"));
     status.gate = { status: stringMember(gate, "status"), reason: stringMember(gate, "reason") };
   }
   status.jev = jevReadiness(env, root);
+  if (host === "opencode")
+    status.toolu = tooluStatus(root);
   return status;
 }
 
@@ -3375,6 +3459,38 @@ function repositoryLines(status) {
   const tree = staged === 0 && unstaged === 0 && untracked === 0 ? "Working tree: clean" : `Working tree: staged ${staged}, unstaged ${unstaged}, untracked ${untracked}`;
   return [`Repository: ${status.repo_root}`, branch, tree];
 }
+var SELECTION_LABEL = {
+  project: "project selection",
+  global: "global selection",
+  default: "all installed plugins"
+};
+function tooluLines(toolu) {
+  if (toolu.status === "")
+    return [];
+  if (toolu.status !== "recorded") {
+    return toolu.status === "missing" ? [
+      `toolu: no startup record at ${toolu.path} \u2014 start OpenCode with the toolu plugin in this project, then run the status skill again`
+    ] : [`toolu: unreadable startup record at ${toolu.path} \u2014 restart OpenCode to rewrite it`];
+  }
+  const { record } = toolu;
+  const recorded = `Startup record: ${toolu.path}, written ${record.written} for ${record.project}`;
+  if (record.status === "not-ready") {
+    return [
+      `toolu: not ready \u2014 ${record.reason ?? "no reason recorded"}; every tool call stays denied until OpenCode restarts with the cause fixed`,
+      recorded
+    ];
+  }
+  const artifacts = record.plugins.reduce((sum, plugin) => sum + plugin.artifacts, 0);
+  const source = record.selection === undefined ? "" : ` (${SELECTION_LABEL[record.selection]})`;
+  const plugins = record.plugins.map((plugin) => plugin.entries.length === 0 ? plugin.name : `${plugin.name} (${plugin.entries.join(", ")})`);
+  const lines = [
+    `toolu: ready \u2014 ${record.plugins.length} plugins${source}, ${artifacts} startup artifacts`,
+    `Plugins: ${plugins.length === 0 ? "none" : plugins.join(", ")}`
+  ];
+  if (record.notes.length > 0)
+    lines.push(`Startup notes: ${record.notes.join("; ")}`);
+  return [...lines, recorded];
+}
 function gateLine(gate) {
   if (gate.status === "failing") {
     return gate.reason === "" ? "Quality gate: failing" : `Quality gate: failing \u2014 ${gate.reason}`;
@@ -3385,7 +3501,12 @@ function reportText(status) {
   const hostLabel = HOST_LABEL[status.host];
   if (hostLabel === undefined)
     throw new Error(`unsupported statusline report host: ${status.host}`);
-  const lines = [`Host: ${hostLabel}`, ...repositoryLines(status), gateLine(status.gate)];
+  const lines = [
+    `Host: ${hostLabel}`,
+    ...tooluLines(status.toolu),
+    ...repositoryLines(status),
+    gateLine(status.gate)
+  ];
   if (status.comemory_count !== null)
     lines.push(`Comemory: ${status.comemory_count} memories`);
   if (status.jev.status === "ready")

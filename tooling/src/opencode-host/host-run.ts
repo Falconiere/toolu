@@ -19,7 +19,13 @@ import { ContractError } from "./schema.ts";
 export const RUN_TIMEOUT_MS = 300_000;
 const SERVE_READY_TIMEOUT_MS = 60_000;
 
-type HostRun = { exitCode: number; events: Array<Record<string, unknown>>; stderr: string };
+type HostRun = {
+  exitCode: number;
+  events: Array<Record<string, unknown>>;
+  stderr: string;
+  /** The raw protocol stream, for checks that nothing else was written to it. */
+  stdout: string;
+};
 
 const JsonRecord = z.record(z.string(), z.unknown());
 
@@ -57,7 +63,12 @@ export async function runHost(
     throw new ContractError(
       `opencode run ${args.join(" ")} timed out after ${timeoutMs} ms; stderr: ${res.stderr.slice(-2000)}; stdout: ${res.stdout.slice(-2000)}`,
     );
-  return { exitCode: res.exitCode, events: jsonLines(res.stdout), stderr: res.stderr };
+  return {
+    exitCode: res.exitCode,
+    events: jsonLines(res.stdout),
+    stderr: res.stderr,
+    stdout: res.stdout,
+  };
 }
 
 /** Parse the stdout of `opencode debug <args>` into JSON. */
@@ -82,7 +93,7 @@ export async function debugJson(
 
 /** The tool parts of `opencode run --format json` events, by tool name. */
 export function toolStates(
-  hostRun: HostRun,
+  hostRun: Pick<HostRun, "events">,
 ): Array<{ tool: string; status: string; error: string | null }> {
   const ToolUse = z.looseObject({
     type: z.literal("tool_use"),

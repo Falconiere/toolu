@@ -8,7 +8,8 @@
  * also gives every bash call toolu's helper environment through `shell.env`
  * (#343), and adds the selected plugins' skills, agents and commands to the
  * host config through `config` (#345). A not-ready instance refuses every
- * call, so it adds neither.
+ * call, so it adds neither. Either way the verdict is recorded for the status
+ * skill and sent as one structured host-log entry (#359).
  */
 import type { Hooks } from "@opencode-ai/plugin";
 import type { SelectionSource } from "../inventory/selection.ts";
@@ -16,10 +17,16 @@ import { createDenyAllToolBefore } from "../adapter/tool-before.ts";
 import { applyShellEnv, type ShellEnv } from "../host/runtime-env.ts";
 import { applySurfaces, type SurfaceReport } from "../surfaces/apply.ts";
 import type { SurfacePlan } from "../surfaces/plan.ts";
-import type { HostBinding, LogLevel } from "./context.ts";
+import type { HostBinding, LogExtra, LogLevel } from "./context.ts";
 import { createContextHooks } from "./context-delivery.ts";
 import { prepareEnforcement, type Enforcement } from "./enforcement.ts";
 import { claimInstance, releaseInstance } from "./once.ts";
+import {
+  statusLogExtra,
+  statusRecord,
+  statusRecordPath,
+  writeStatusRecord,
+} from "./status-record.ts";
 
 export type PrepareEnforcement = (binding: HostBinding) => Promise<Enforcement>;
 
@@ -40,9 +47,14 @@ async function settle(prepare: PrepareEnforcement, binding: HostBinding): Promis
  * log that throws or rejects is dropped rather than allowed to abort init after the
  * directory was claimed (which would leave the claim held with no `dispose`).
  */
-async function report(binding: HostBinding, level: LogLevel, message: string): Promise<void> {
+async function report(
+  binding: HostBinding,
+  level: LogLevel,
+  message: string,
+  extra?: LogExtra,
+): Promise<void> {
   try {
-    await binding.log(level, message);
+    await binding.log(level, message, extra);
   } catch {
     return;
   }
@@ -112,6 +124,26 @@ function surfacesHook(
   };
 }
 
+/** Record the verdict for the status skill, then send it as one structured entry; never throws. */
+async function reportStatus(binding: HostBinding, enforcement: Enforcement): Promise<void> {
+  const record = statusRecord(enforcement, binding.projectRoot, new Date());
+  let path: string;
+  try {
+    path = statusRecordPath(binding);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    await report(binding, "error", `toolu: status record not written: ${reason}`);
+    return;
+  }
+  const failure = writeStatusRecord(path, record);
+  if (failure !== undefined) {
+    await report(binding, "error", `toolu: status record not written: ${failure}`);
+  }
+  const level = record.status === "ready" ? "info" : "error";
+  const written = failure === undefined ? path : undefined;
+  await report(binding, level, "toolu: status", statusLogExtra(record, written));
+}
+
 /** Never rejects: a failure to prepare enforcement yields a hook that denies every tool call. */
 export async function createTooluHooks(
   binding: HostBinding,
@@ -138,6 +170,7 @@ export async function createTooluHooks(
     const notes = startupNotes(diagnostics);
     if (notes !== undefined) await report(binding, "info", notes);
     await Promise.all(enforcement.context.notices.map((notice) => report(binding, "info", notice)));
+    await reportStatus(binding, enforcement);
     const context = createContextHooks(enforcement.context, (level, message) =>
       report(binding, level, message),
     );
@@ -158,5 +191,6 @@ export async function createTooluHooks(
   }
   const message = `toolu: not ready: ${enforcement.reason}`;
   await report(binding, "error", `${message}; every tool call is denied`);
+  await reportStatus(binding, enforcement);
   return { "tool.execute.before": createDenyAllToolBefore(message), dispose };
 }
