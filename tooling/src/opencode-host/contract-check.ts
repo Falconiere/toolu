@@ -23,16 +23,34 @@ import {
 } from "./schema.ts";
 
 /** Check the pins and that the results hold each probe once; return the verdict per probe. */
-export function checkPins(
-  pin: Pin,
-  adapterSdk: string | undefined,
-  results: ProbeResults,
-): Verdicts {
-  if (adapterSdk !== pin.sdk.version) {
-    throw new ContractError(
-      `pin mismatch: @toolu/opencode devDependency @opencode-ai/plugin is ${adapterSdk ?? "absent"}, pin is ${pin.sdk.version}`,
-    );
+/** The adapter's SDK declarations: dev dependencies for typechecking, peers for the host it loads into. */
+type AdapterSdk = {
+  devDependencies?: Record<string, string> | undefined;
+  peerDependencies?: Record<string, string> | undefined;
+};
+
+const SDK_PACKAGES = ["@opencode-ai/plugin", "@opencode-ai/sdk"];
+const SDK_DECLARATIONS = [
+  ["devDependencies", "devDependency"],
+  ["peerDependencies", "peerDependency"],
+] as const;
+
+/** Every SDK package the adapter declares, in devDependencies and peerDependencies, equals the pin. */
+function checkAdapterSdk(pin: Pin, adapter: AdapterSdk): void {
+  for (const [field, label] of SDK_DECLARATIONS) {
+    for (const name of SDK_PACKAGES) {
+      const declared = adapter[field]?.[name];
+      if (declared !== pin.sdk.version) {
+        throw new ContractError(
+          `pin mismatch: @toolu/opencode ${label} ${name} is ${declared ?? "absent"}, pin is ${pin.sdk.version}`,
+        );
+      }
+    }
   }
+}
+
+export function checkPins(pin: Pin, adapter: AdapterSdk, results: ProbeResults): Verdicts {
+  checkAdapterSdk(pin, adapter);
   if (results.host.cliVersion !== pin.cli.version) {
     throw new ContractError(
       `pin mismatch: probe results recorded opencode-ai ${results.host.cliVersion}, pin is ${pin.cli.version}`,

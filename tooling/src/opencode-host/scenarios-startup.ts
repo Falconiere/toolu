@@ -24,7 +24,7 @@ import {
 import type { ProbeSession } from "./session.ts";
 
 /** Where the shimmed package bootstraps a project that sets no data-root override. */
-const DATA_ROOT = ".opencode/toolu/state";
+export const DATA_ROOT = ".opencode/toolu/state";
 
 const ALLOWED_SCRIPT: Scripts = {
   "startup.touch": [{ tool: "bash", args: { command: "touch allowed.txt", description: "x" } }],
@@ -52,14 +52,15 @@ function shimmedSession(
 }
 
 /** Registry modules on disk, as `<dir>/<file>`. */
-function modules(s: ProbeSession): string[] {
+export function modules(s: ProbeSession): string[] {
   return ["pre-tools.d", "post-tools.d"].flatMap((dir) => {
     const path = join(s.sb.project, DATA_ROOT, "toolu", dir);
     return existsSync(path) ? readdirSync(path).map((file) => `${dir}/${file}`) : [];
   });
 }
 
-const MODULES = [
+/** The registry modules all 16 plugins publish. */
+export const MODULES = [
   "pre-tools.d/ast-grep@toolu__search-nudge.js",
   "post-tools.d/ast-grep@toolu__byte-savings.js",
   "post-tools.d/python-quality@toolu__python-quality.js",
@@ -67,7 +68,8 @@ const MODULES = [
   "post-tools.d/ts-quality@toolu__ts-quality.js",
 ];
 
-const HELPERS = [
+/** The helper symlinks all 16 plugins publish into the data root. */
+export const HELPERS = [
   "agent-browser/agent-browser.sh",
   "context7/search.sh",
   "exa-search/search.sh",

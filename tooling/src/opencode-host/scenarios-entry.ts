@@ -8,21 +8,17 @@
  * in the host log (`--print-logs`); enforcement is read from the tool states and
  * from the files on disk.
  */
-import { cpSync, mkdirSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { run } from "@toolu/conformance/harness/spawn";
-import { stagePlugins } from "../../../tools/toolu-opencode/scripts/bundle-plugins.ts";
+import { packInto, stageOpencode } from "../npm-pack.ts";
 import { runHost, toolStates } from "./host-run.ts";
 import type { Scripts } from "./provider.ts";
 import type { ScenarioContext } from "./scenario.ts";
-import { ContractError } from "./schema.ts";
 import { openSession, type ProbeSession, type SessionOptions } from "./session.ts";
 
 export const ROOT = resolve(import.meta.dir, "../../..");
 const PACKAGE_DIR = join(ROOT, "tools/toolu-opencode");
-const PACKAGE_ENTRIES = ["package.json", "README.md", "LICENSE", "src", "generated"];
-const PACK_TIMEOUT_MS = 120_000;
 const ENV_BYTES = "SECRET=1\n";
 
 export type EntryContext = ScenarioContext & { tarball: string };
@@ -50,27 +46,17 @@ export const PROJECT_FILES = {
 };
 
 /**
- * Pack the package the way npm publishes it: sources plus the staged plugin
- * catalog. `edit` may change the staged copy first, to make a distinct release.
+ * Pack the package the way npm publishes it: `npm pack` over a temp copy runs
+ * the package's own prepack and applies its `files` field. `edit` may change
+ * the copy first, to make a distinct release.
  */
-export async function packTarball(
+export function packTarball(
   workDir: string,
   edit: (stage: string) => void = () => undefined,
-): Promise<string> {
-  const stage = join(workDir, "package");
-  mkdirSync(stage, { recursive: true });
-  for (const entry of PACKAGE_ENTRIES)
-    cpSync(join(PACKAGE_DIR, entry), join(stage, entry), { recursive: true });
-  stagePlugins(join(ROOT, "plugins"), join(stage, "plugins"));
+): string {
+  const stage = stageOpencode(workDir);
   edit(stage);
-  const res = await run(
-    [process.execPath, "pm", "pack", "--ignore-scripts", "--destination", workDir],
-    { cwd: stage, timeoutMs: PACK_TIMEOUT_MS },
-  );
-  const tarball = readdirSync(workDir).find((name) => name.endsWith(".tgz"));
-  if (res.exitCode !== 0 || tarball === undefined)
-    throw new ContractError(`bun pm pack failed (exit ${res.exitCode}): ${res.stderr.trim()}`);
-  return join(workDir, tarball);
+  return packInto(stage, workDir);
 }
 
 export function npmSpec(tarball: string): string {

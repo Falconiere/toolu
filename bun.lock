@@ -22,7 +22,7 @@
     },
     "packages/toolu-core": {
       "name": "@toolu/core",
-      "version": "7.7.2",
+      "version": "7.9.0",
       "dependencies": {
         "unbash": "4.0.11",
         "zod": "4.1.5",
@@ -37,7 +37,7 @@
     },
     "tools/toolu-cli": {
       "name": "toolu-cli",
-      "version": "7.7.2",
+      "version": "7.9.0",
       "dependencies": {
         "@clack/prompts": "1.8.1",
         "@toolu/opencode": "workspace:*",
@@ -47,7 +47,7 @@
     },
     "tools/toolu-conformance": {
       "name": "@toolu/conformance",
-      "version": "7.7.2",
+      "version": "7.9.0",
       "bin": {
         "toolu-conformance": "./src/cli/run.ts",
       },
@@ -58,13 +58,17 @@
     },
     "tools/toolu-opencode": {
       "name": "@toolu/opencode",
-      "version": "7.7.2",
+      "version": "7.9.0",
       "dependencies": {
-        "@toolu/core": "^7.4.0",
+        "@toolu/core": "^7.9.0",
         "gray-matter": "4.0.3",
         "zod": "4.1.5",
       },
       "devDependencies": {
+        "@opencode-ai/plugin": "1.18.34",
+        "@opencode-ai/sdk": "1.18.34",
+      },
+      "peerDependencies": {
         "@opencode-ai/plugin": "1.18.34",
         "@opencode-ai/sdk": "1.18.34",
       },

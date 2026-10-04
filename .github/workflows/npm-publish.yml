@@ -19,7 +19,8 @@ name: npm publish
 # workspace under the published name made `npx @toolu/cli` fail with
 # "toolu: command not found" from every toolu checkout.
 #
-# @toolu/opencode carries the bash plugins/ tree, staged by its prepack, so an
+# @toolu/opencode carries the plugins/ catalog (manifests, committed bundles and
+# their runtime data), staged by its prepack, so an
 # `opencode plugin add @toolu/opencode` needs no clone and no TOOLU_REPO_ROOT.
 #
 # npm acknowledges a publish minutes before the package is fetchable. The first
@@ -93,6 +94,17 @@ jobs:
               exit 1
             fi
           done
+          # release-please raises @toolu/opencode's @toolu/core floor with every
+          # release. A stale floor would let an install resolve an older core that
+          # lacks the exports the adapter imports. Tags cut before the floor was
+          # synced do not carry that config entry and stay retryable.
+          if grep -qF "\$.dependencies['@toolu/core']" release-please-config.json; then
+            floor=$(node -p "require('./tools/toolu-opencode/package.json').dependencies['@toolu/core']")
+            if [ "$floor" != "^${tag#v}" ]; then
+              echo "tag $tag does not match the @toolu/opencode @toolu/core floor $floor" >&2
+              exit 1
+            fi
+          fi
           echo "publishing $tag"
 
       # Dependency order: @toolu/opencode depends on @toolu/core via a caret range

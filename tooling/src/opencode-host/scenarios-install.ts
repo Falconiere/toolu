@@ -105,7 +105,7 @@ async function npmClean(ctx: EntryContext): Promise<EntryResult> {
 const UPDATED = "Updated toolu-debug description for surfaces.lifecycle";
 
 /** A second release whose toolu-debug skill has a different description. */
-async function updatedTarball(): Promise<string> {
+function updatedTarball(): string {
   const work = mkdtempSync(join(tmpdir(), "toolu-surfaces-update-"));
   return packTarball(work, (stage) => {
     const path = join(stage, "generated/skills/toolu-debug/SKILL.md");
@@ -125,7 +125,7 @@ async function lifecycle(ctx: EntryContext): Promise<EntryResult> {
   const first = (await skills(ctx, s)).rows;
   s.sb.write(SELECTION, selection(["jev"]));
   const reselected = (await skills(ctx, s)).rows;
-  const tarball = await updatedTarball();
+  const tarball = updatedTarball();
   s.sb.write(SELECTION, selection(["toolu"]));
   editConfig(s, (config) => Object.assign(config, { plugin: [npmSpec(tarball)] }));
   const updated = (await skills(ctx, s)).rows.find((r) => r.name === "toolu-debug");
