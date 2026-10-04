@@ -23,6 +23,7 @@
     "smoke:opencode-posttool": "bun run tooling/src/opencode-posttool-smoke.ts",
     "smoke:opencode-ts-quality": "bun run tooling/src/opencode-ts-quality-smoke.ts",
     "smoke:opencode-python-quality": "bun run tooling/src/opencode-python-quality-smoke.ts",
+    "smoke:opencode-rust-quality": "bun run tooling/src/opencode-rust-quality-smoke.ts",
     "smoke:opencode-ast-grep": "bun run tooling/src/opencode-ast-grep-smoke.ts",
     "build:plugins": "bun run tooling/src/build-plugins.ts",
     "check:plugin-bundles": "bun run tooling/src/build-plugins.ts --check",

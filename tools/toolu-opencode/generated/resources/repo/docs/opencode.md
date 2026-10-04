@@ -214,6 +214,12 @@ Add `python-quality` to `.opencode/toolu/plugins.json` alongside `toolu`, then r
 
 A violation appears in the completed tool result and in the project's `.opencode/tmp/quality-gate-status.json`; it blocks later commit and push attempts until a clean edit or removal clears it. The edit itself has already happened. Run `bun run smoke:opencode-python-quality` in the toolu checkout to replay native write/edit recovery, multi-file patch, and disabled-plugin scenarios on the pinned host.
 
+### Rust post-edit quality
+
+Add `rust-quality` to `.opencode/toolu/plugins.json` alongside `toolu`, then restart OpenCode. It requires `Cargo.toml` at the git toplevel and `cargo` on `PATH`, and runs static per-file rules on completed `.rs` writes, edits, and patches; it never invokes `cargo check`, `clippy`, or `rustfmt`. If `ast-grep` is installed, its Rust parser runs the error-handling rule (`.unwrap()`, `.expect()`, `panic!` and friends in `src/`) and the no-mocks rule; without it, those rules are skipped. Those rules, and the docs advisory, match `/src/` and `/tests/` in the edited path as the tool gave it, as on other hosts, so a relative `src/lib.rs` gets only the line, size, suppression and `unsafe` rules. A patch checks every changed Rust destination and clears gate entries for deleted files and moved sources. Disabled rust-quality and other file types do not invoke the module. Like python-quality, linked worktrees are checked, each against its own gate file.
+
+A violation appears in the completed tool result and in the project's `.opencode/tmp/quality-gate-status.json`; it blocks later commit and push attempts until a clean edit or removal clears it. The edit itself has already happened. Run `bun run smoke:opencode-rust-quality` in the toolu checkout to replay native write/edit recovery, multi-file patch, and disabled-plugin scenarios on the pinned host.
+
 ### ast-grep
 
 With `ast-grep` selected, its two registry modules run on OpenCode's own tools ([#347](https://github.com/Falconiere/toolu/issues/347)):
