@@ -2,7 +2,7 @@ import { catalogNames, installOrder } from "../catalog/order";
 import type { Marketplace } from "../catalog/types";
 import type { InstallStep } from "../plugins/install";
 import { PACKAGE, effectiveEntry, governingGlobal, pluginArray, type PluginEntry } from "./entries";
-import { editJsonc, newConfigText, parseConfig, type ConfigFile } from "./jsonc";
+import { appendJsonc, editJsonc, newConfigText, parseConfig, type ConfigFile } from "./jsonc";
 import type { OpencodeScope } from "./paths";
 import { closure, selectionText } from "./selection";
 import {
@@ -43,7 +43,7 @@ function withEntry(file: ConfigFile, spec: string): string {
   if (file.text === undefined) return newConfigText(spec);
   const array = pluginArray(file);
   if (array === undefined) return editJsonc(file.text, ["plugin"], [spec]);
-  return editJsonc(file.text, ["plugin", array.length], spec, true);
+  return appendJsonc(file.text, "plugin", spec);
 }
 
 function presentStep(entry: PluginEntry, target: string): InstallStep {

@@ -3,7 +3,7 @@ import type { Marketplace } from "../catalog/types";
 import { UsageError } from "../exit";
 import type { RemoveStep } from "../plugins/remove";
 import { PACKAGE, pluginArray, tooluEntries } from "./entries";
-import { editJsonc, type ConfigFile } from "./jsonc";
+import { editJsonc, removeJsonc, type ConfigFile } from "./jsonc";
 import type { OpencodeScope } from "./paths";
 import { closure, dependentsBlocking, selectionText } from "./selection";
 import { filesOf, installedScopes, type OpencodePlan, type OpencodeState } from "./state";
@@ -37,7 +37,7 @@ function withoutEntries(file: ConfigFile): string {
     return editJsonc(text, ["plugin"], undefined);
   return entries
     .toReversed()
-    .reduce((current, entry) => editJsonc(current, ["plugin", entry.index], undefined), text);
+    .reduce((current, entry) => removeJsonc(current, "plugin", entry.index), text);
 }
 
 /** A lower-priority global file whose list applies again once `file` loses its key. */

@@ -2,7 +2,15 @@ import { describe, expect, test } from "bun:test";
 import { lstatSync, readFileSync, symlinkSync } from "node:fs";
 import { EXIT } from "../../exit";
 import { effectiveEntry, packageName, pluginArray, targetSpec, versionOf } from "../entries";
-import { editJsonc, parseConfig, readConfigFile, writeAtomic, type ConfigFile } from "../jsonc";
+import {
+  appendJsonc,
+  editJsonc,
+  parseConfig,
+  readConfigFile,
+  removeJsonc,
+  writeAtomic,
+  type ConfigFile,
+} from "../jsonc";
 import { profile } from "./cli-fixture";
 
 const COMMENTED = `// user settings
@@ -43,17 +51,22 @@ describe("plugin specs", () => {
 
 describe("JSONC edits keep the user's file", () => {
   test("appending, replacing a tuple spec and removing leave comments and other entries", () => {
-    const added = editJsonc(COMMENTED, ["plugin", 1], "@toolu/opencode@1.0.0", true);
-    expect(added).toContain("// user settings");
-    expect(added).toContain("/* keep me */");
-    expect(added).toContain('"file:///opt/probe.ts", // unrelated');
-    expect(pluginArray(file("a", added))).toEqual([
-      "file:///opt/probe.ts",
-      "@toolu/opencode@1.0.0",
+    const added = appendJsonc(COMMENTED, "plugin", "@toolu/opencode@1.0.0");
+    expect(added).toBe(
+      COMMENTED.replace("// unrelated\n", '// unrelated\n    "@toolu/opencode@1.0.0",\n'),
+    );
+    expect(removeJsonc(added, "plugin", 1)).toBe(COMMENTED);
+    const strict = '{\n  "plugin": [\n    "a" // first\n  ]\n}\n';
+    const appended = appendJsonc(strict, "plugin", "@toolu/opencode@1.0.0");
+    expect(appended).toBe(
+      '{\n  "plugin": [\n    "a", // first\n    "@toolu/opencode@1.0.0"\n  ]\n}\n',
+    );
+    expect(removeJsonc(appended, "plugin", 1)).toBe('{\n  "plugin": [\n    "a" // first\n  ]\n}\n');
+    const inline = '{ "plugin": ["a"] }\n';
+    expect(pluginArray(file("i", appendJsonc(inline, "plugin", "b")))).toEqual(["a", "b"]);
+    expect(pluginArray(file("i", removeJsonc('{ "plugin": ["a", "b"] }', "plugin", 0)))).toEqual([
+      "b",
     ]);
-    const removed = editJsonc(added, ["plugin", 1], undefined);
-    expect(pluginArray(file("a", removed))).toEqual(["file:///opt/probe.ts"]);
-    expect(removed).toContain("/* keep me */");
     const tuple = '{ "plugin": [["@toolu/opencode@1.0.0", { "x": 1 }]] }\n';
     const swapped = editJsonc(tuple, ["plugin", 0, 0], "@toolu/opencode@2.0.0");
     expect(pluginArray(file("t", swapped))).toEqual([["@toolu/opencode@2.0.0", { x: 1 }]]);
