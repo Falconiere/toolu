@@ -169,6 +169,10 @@ test.concurrent("a bundle that is executable in the catalog but not in the tarba
   ]);
 });
 
+function isExecutable(mode: number): boolean {
+  return (mode & 0o111) !== 0;
+}
+
 const CoreManifest = z.looseObject({ exports: z.record(z.string(), z.unknown()) });
 
 test("the real @toolu/opencode, packed through its own prepack, is closed", () => {
@@ -185,13 +189,12 @@ test("the real @toolu/opencode, packed through its own prepack, is closed", () =
   });
   expect(problems).toEqual([]);
   // The mode rule has real input: the catalog's executable bundles ship 0755.
-  const executable = (mode: number): boolean => (mode & 0o111) !== 0;
   const sourceExecutable = files
     .filter((file) => file.path.startsWith("plugins/"))
-    .filter((file) => executable(statSync(join(ROOT, file.path)).mode))
+    .filter((file) => isExecutable(statSync(join(ROOT, file.path)).mode))
     .map((file) => file.path);
   expect(sourceExecutable).toContain("plugins/toolu/hooks/dist/verdict.js");
   expect(sourceExecutable.length).toBeGreaterThanOrEqual(18);
-  const packedExecutable = files.filter((file) => executable(file.mode)).map((file) => file.path);
+  const packedExecutable = files.filter((file) => isExecutable(file.mode)).map((file) => file.path);
   expect(packedExecutable).toEqual(sourceExecutable);
 }, 180_000);
