@@ -33,7 +33,7 @@ const INSTALL_DOC = join(ROOT, "docs/opencode.md");
 const MIGRATION_DOC = join(ROOT, "docs/opencode-migration.md");
 const PACKAGE = "@toolu/opencode";
 const ORIGINAL_ENV = "SECRET=1\n";
-/** Text of the protected-files refusal the model must receive as the tool error. */
+/** Text of the protected-files refusal that must reach the model in the tool error. */
 const REFUSAL = ["a protected path", "Blocked by gates.protectedFiles.mode='block'"];
 const Selection = z.object({ version: z.literal(1), enabled: z.array(z.string()) });
 
@@ -52,7 +52,7 @@ function enabled(path: string): string {
     .join(",");
 }
 
-/** Whether the scripted model's requests carry toolu's refusal back as a tool result. */
+/** Whether a tool result in the scripted model's requests carries toolu's refusal. */
 function refusalReachedModel(s: ProbeSession): boolean {
   return s
     .requests()

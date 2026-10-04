@@ -89,7 +89,7 @@ export async function runScript(
   return res;
 }
 
-/** Run a doc block in the session's project, as a reader of the doc would. */
+/** Run a doc block in the session's project, the way a reader of the doc would. */
 export async function runDocBlock(
   ctx: EntryContext,
   s: ProbeSession,

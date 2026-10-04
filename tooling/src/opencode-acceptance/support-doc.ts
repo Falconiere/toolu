@@ -40,7 +40,7 @@ function status(row: Row): string {
   return limitations(row).length === 0 ? "Supported" : "Supported with limitations";
 }
 
-/** Ids grouped by their prefix: one id as itself, several as `prefix.*` with a count. */
+/** Ids grouped by their prefix: a lone id verbatim, a larger group `prefix.*` with a count. */
 function checkGroups(ids: readonly string[]): string {
   if (ids.length === 0) return "none";
   const prefixes = [...new Set(ids.map((id) => id.split(".")[0] ?? id))];
