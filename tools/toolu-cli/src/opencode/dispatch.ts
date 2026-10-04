@@ -22,7 +22,7 @@ export interface OpencodeContext {
 }
 
 /** `--scope user` is OpenCode's global config, `project` the worktree root. */
-export function opencodeScope(scope: Scope | undefined): OpencodeScope | undefined {
+function opencodeScope(scope: Scope | undefined): OpencodeScope | undefined {
   if (scope === undefined) return undefined;
   if (scope === "local")
     throw new UsageError("--scope local is Claude Code only; OpenCode has user and project");

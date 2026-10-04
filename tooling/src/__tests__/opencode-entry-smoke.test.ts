@@ -8,7 +8,7 @@ test("no ids runs every scenario; ids narrow it in catalog order", () => {
   expect(all).toContain("entry.npm-root");
   expect(all).toContain("entry.full-startup");
   expect(all).toContain("entry.worktree-state");
-  expect(all.slice(-18)).toEqual([
+  expect(all.slice(-20)).toEqual([
     "surfaces.npm-clean",
     "surfaces.lifecycle",
     "surfaces.precedence",
@@ -27,6 +27,8 @@ test("no ids runs every scenario; ids narrow it in catalog order", () => {
     "babysit.fixer",
     "babysit.no-report",
     "babysit.cancel",
+    "cli.install",
+    "cli.lifecycle",
   ]);
   const picked = chosen(["entry.worktree-state", "entry.helper-env"]).map((s) => s.id);
   expect(picked).toEqual(["entry.helper-env", "entry.worktree-state"]);
