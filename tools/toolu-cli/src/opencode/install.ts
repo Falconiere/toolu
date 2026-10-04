@@ -1,7 +1,14 @@
 import { catalogNames, installOrder } from "../catalog/order";
 import type { Marketplace } from "../catalog/types";
 import type { InstallStep } from "../plugins/install";
-import { PACKAGE, effectiveEntry, governingGlobal, pluginArray, type PluginEntry } from "./entries";
+import {
+  PACKAGE,
+  effectiveEntry,
+  governingGlobal,
+  pluginArray,
+  tooluEntries,
+  type PluginEntry,
+} from "./entries";
 import { appendJsonc, editJsonc, newConfigText, parseConfig, type ConfigFile } from "./jsonc";
 import type { OpencodeScope } from "./paths";
 import { closure, selectionText } from "./selection";
@@ -76,13 +83,20 @@ function shadowNote(state: OpencodeState): string {
   return reset === undefined ? "" : `; no effect here: ${reset.path} sets an empty plugin list`;
 }
 
-/** With no scope, the entry the host loads (or any, when one is shadowed). */
+/** Entries the host can load from `scope`; a lower-priority global array never loads (R1). */
+function loadableEntries(state: OpencodeState, scope: OpencodeScope): readonly PluginEntry[] {
+  if (scope === "project") return entriesIn(state, "project");
+  const governing = governingGlobal(state.global);
+  return governing === undefined ? [] : tooluEntries(governing);
+}
+
+/** With no scope, the entry the host loads (or any loadable one, when a reset shadows it). */
 function existingEntry(state: OpencodeState, scope: OpencodeScope | undefined) {
-  if (scope !== undefined) return entriesIn(state, scope)[0];
+  if (scope !== undefined) return loadableEntries(state, scope)[0];
   return (
     effectiveEntry(state.global, state.project) ??
-    entriesIn(state, "project")[0] ??
-    entriesIn(state, "global")[0]
+    loadableEntries(state, "project")[0] ??
+    loadableEntries(state, "global")[0]
   );
 }
 
@@ -139,7 +153,7 @@ function selectionPlan(
   request: InstallRequest,
   installedBefore: boolean,
 ): OpencodePlan<InstallStep> {
-  const scope = request.scope ?? "global";
+  const scope = request.scope ?? (state.selection.project === undefined ? "global" : "project");
   const all = catalogNames(marketplace);
   const want = request.names.length > 0 ? installOrder(marketplace, request.names) : all;
   const governing =
