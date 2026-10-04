@@ -149,19 +149,35 @@ export function renderLimitations(matrix: Matrix): string {
     .trim();
 }
 
+/** The text between `start` and `end` in `doc`; missing or misordered markers name `label`. */
+export function readMarked(doc: string, start: string, end: string, label: string): string {
+  const from = doc.indexOf(start);
+  const to = doc.indexOf(end);
+  if (from < 0 || to < from) throw new ContractError(`doc block ${label} markers missing`);
+  return doc.slice(from + start.length, to).trim();
+}
+
+/** `doc` with the text between `start` and `end` replaced by `body`. */
+export function writeMarked(
+  doc: string,
+  start: string,
+  end: string,
+  label: string,
+  body: string,
+): string {
+  const from = doc.indexOf(start);
+  const to = doc.indexOf(end);
+  if (from < 0 || to < from) throw new ContractError(`doc block ${label} markers missing`);
+  return `${doc.slice(0, from + start.length)}\n${body}\n${doc.slice(to)}`;
+}
+
 /** The current text between a block's markers. */
 export function readBlock(doc: string, name: BlockName): string {
   const [start, end] = markers(name);
-  const from = doc.indexOf(start);
-  const to = doc.indexOf(end);
-  if (from < 0 || to < from) throw new ContractError(`doc block ${name} markers missing`);
-  return doc.slice(from + start.length, to).trim();
+  return readMarked(doc, start, end, name);
 }
 
 export function writeBlock(doc: string, name: BlockName, body: string): string {
   const [start, end] = markers(name);
-  const from = doc.indexOf(start);
-  const to = doc.indexOf(end);
-  if (from < 0 || to < from) throw new ContractError(`doc block ${name} markers missing`);
-  return `${doc.slice(0, from + start.length)}\n${body}\n${doc.slice(to)}`;
+  return writeMarked(doc, start, end, name, body);
 }
