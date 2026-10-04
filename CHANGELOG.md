@@ -1,5 +1,18 @@
 # Changelog
 
+## [7.9.0](https://github.com/Falconiere/toolu/compare/v7.8.0...v7.9.0) (2026-10-04)
+
+
+### Features
+
+* **epic-orchestrator:** run OpenCode workers with native skill routing and isolated worktrees ([#388](https://github.com/Falconiere/toolu/issues/388)) ([b7638a0](https://github.com/Falconiere/toolu/commit/b7638a01c76a0090d6341975e6b949533c67c538))
+* **opencode:** enforce Python post-edit quality ([#389](https://github.com/Falconiere/toolu/issues/389)) ([7b0aab7](https://github.com/Falconiere/toolu/commit/7b0aab778f63fb6e49a75810f0f6b1ae99e20c1e))
+
+
+### Bug Fixes
+
+* **epic-orchestrator:** count reclaimable macOS memory in resource admission ([#393](https://github.com/Falconiere/toolu/issues/393)) ([3116fc2](https://github.com/Falconiere/toolu/commit/3116fc23f0b73134dd62e80e15855b4699c1269a))
+
 ## [7.8.0](https://github.com/Falconiere/toolu/compare/v7.7.2...v7.8.0) (2026-10-03)
 
 
