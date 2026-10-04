@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { NPX_REFUSED_EXIT, docBlock, runScript, shQuote, writeShims } from "../doc-commands.ts";
@@ -87,7 +87,7 @@ test.concurrent("shim targets with shell metacharacters run verbatim", async () 
   const log = sb.path("calls.log");
   const target = join(odd, "opencode.sh");
   mkdirSync(odd, { recursive: true });
-  writeShims(sb.path("bin"), { node: "/bin/sh", cli: "/bin/true", opencode: target });
+  writeShims(sb.path("bin"), { node: "/usr/bin/env", cli: "true", opencode: target });
   writeFileSync(target, `#!/bin/sh\necho "opencode $*" >> ${shQuote(log)}\n`);
   chmodSync(target, 0o755);
   const res = await runScript("opencode --version\n", {
@@ -98,4 +98,33 @@ test.concurrent("shim targets with shell metacharacters run verbatim", async () 
   expect(res.exitCode).toBe(0);
   expect(readFileSync(log, "utf8")).toBe("opencode --version\n");
   expect(shQuote("it's")).toBe(`'it'\\''s'`);
+});
+
+/** An `opencode` stand-in: the pinned version, a discovered leaf skill, and a run that fails. */
+const FAILING_HOST = `#!/bin/sh
+case "$1" in
+  --version) echo 1.18.34 ;;
+  debug) echo '[{"name":"context7-context7"}]' ;;
+  run) echo "provider unreachable" >&2; exit 3 ;;
+esac
+`;
+
+test.concurrent("the quick start removes its scratch file when a step fails, and never touches an existing one", async () => {
+  using sb = createSandbox({});
+  const host = sb.path("opencode.sh");
+  writeFileSync(host, FAILING_HOST);
+  chmodSync(host, 0o755);
+  writeShims(sb.path("bin"), { node: "/usr/bin/env", cli: "true", opencode: host });
+  const opts = { cwd: sb.project, shims: sb.path("bin"), env: {} };
+  const quickstart = docBlock(INSTALL_DOC, "quickstart");
+
+  const failed = await runScript(quickstart, opts);
+  expect(failed.exitCode).toBe(3);
+  expect(failed.stderr).toContain("provider unreachable");
+  expect(existsSync(join(sb.project, ".env.toolu-check"))).toBe(false);
+
+  writeFileSync(join(sb.project, ".env.toolu-check"), "MINE\n");
+  const refused = await runScript(quickstart, opts);
+  expect(refused.exitCode).toBe(1);
+  expect(readFileSync(join(sb.project, ".env.toolu-check"), "utf8")).toBe("MINE\n");
 });

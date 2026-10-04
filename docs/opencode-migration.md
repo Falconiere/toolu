@@ -67,7 +67,8 @@ config="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
 backup="$HOME/toolu-opencode-v2-backup"
 project="$backup/projects/$(printf %s "$PWD" | cksum | cut -d' ' -f1)-$(basename "$PWD").tgz"
 (umask 077 && mkdir -p "$backup/projects")
-[ -e "$backup/global.tgz" ] || [ ! -d "$config" ] || (umask 077 && tar -czf "$backup/global.tgz.part" --exclude node_modules -C "$config" . && mv "$backup/global.tgz.part" "$backup/global.tgz")
+[ -e "$backup/global.tgz" ] || [ -e "$backup/global.none" ] || [ -d "$config" ] || touch "$backup/global.none"
+[ -e "$backup/global.tgz" ] || [ -e "$backup/global.none" ] || (umask 077 && tar -czf "$backup/global.tgz.part" --exclude node_modules -C "$config" . && mv "$backup/global.tgz.part" "$backup/global.tgz")
 [ -e "$project" ] || [ ! -d .opencode ] || (umask 077 && tar -czf "$project.part" --exclude node_modules --exclude .opencode/tmp --exclude .opencode/toolu/state .opencode && mv "$project.part" "$project")
 npx @toolu/plugins update --host opencode
 rm -f .opencode/plugins/toolu.ts
@@ -81,6 +82,7 @@ npx @toolu/plugins list --host opencode
   - They go under `~/toolu-opencode-v2-backup/`, readable only by you, because a global config can hold provider keys.
   - Each project's backup is named after a checksum of its path plus its directory name.
   - An archive becomes final only once `tar` succeeds. A complete backup is never overwritten, so running the block again cannot replace the V2 state with migrated state.
+  - Without a global config directory, the first run records `global.none` instead of an archive. A later run then cannot back up a config that toolu's own `install` created.
   - `node_modules`, toolu's data root and gate state are left out.
 - **`update`.** It rewrites every `@toolu/opencode` entry, the V2 one included, to this release, and leaves your selection alone. When it fails, the block stops before changing anything else:
   - **Exit `1`, not configured:** only the clone shim loaded toolu, so there is no entry to update. Add one with the [no-entry step](#no-entry) below, then run the block again.
@@ -110,7 +112,12 @@ npx @toolu/plugins install --host opencode
 
 <!-- opencode-doc:no-entry-all:end -->
 
-Do not use the second form with an existing selection: a bare `install` enables every plugin in it. `docs.migration-refusals` runs each form on a clone-only setup, then the migrate block again. It checks that the block then finishes, that the selection is as described, and that the first backup is kept.
+Do not use the second form with an existing selection: a bare `install` enables every plugin in it. `docs.migration-refusals` runs each form on clone-only setups, including a selection without `toolu`. It then runs the migrate block again and checks:
+
+- the block finishes;
+- the selection is as described;
+- the first backup is kept;
+- the rollback leaves no `@toolu/opencode` entry and restores the selection.
 
 ## After migrating
 
@@ -123,7 +130,7 @@ Before #343, an override root (`TOOLU_CONFIG_DIR` or `TOOLU_OPENCODE_HOME`) was 
 
 ## Roll back
 
-Run this from the same project. It restores every file the backups hold and deletes toolu's data root. The migration creates no other toolu file. OpenCode's own startup files in its config directories (`package.json`, `node_modules`, `.gitignore`) stay where they are.
+Run this from the same project. It removes the `@toolu/opencode` entry the migration or the [no-entry step](#no-entry) wrote, restores every file the backups hold, and deletes toolu's data root. A V2 entry comes back from the backup. OpenCode's own startup files in its config directories (`package.json`, `node_modules`, `.gitignore`) stay where they are. If the package is configured in both your global and project config, add `--scope` to the `remove` line, as for `update`.
 
 <!-- opencode-doc:rollback:start -->
 
@@ -131,6 +138,7 @@ Run this from the same project. It restores every file the backups hold and dele
 config="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
 backup="$HOME/toolu-opencode-v2-backup"
 project="$backup/projects/$(printf %s "$PWD" | cksum | cut -d' ' -f1)-$(basename "$PWD").tgz"
+npx @toolu/plugins remove toolu --host opencode --yes
 [ ! -f "$backup/global.tgz" ] || tar -xzf "$backup/global.tgz" -C "$config"
 [ ! -f "$project" ] || tar -xzf "$project"
 rm -rf .opencode/toolu/state
