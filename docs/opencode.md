@@ -500,6 +500,7 @@ Full matrix and limitations: [`docs/conformance-report.md`](conformance-report.m
 ## Related
 
 - [Migrating from the V2-targeted adapter](opencode-migration.md)
+- [Plugin catalog](plugins/index.md)
 - [OpenCode host contract](opencode-host-contract.md)
 - [Portable core contracts](portable-core.md)
 - [Configuration](config.md)

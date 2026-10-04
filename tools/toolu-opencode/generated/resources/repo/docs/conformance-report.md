@@ -44,11 +44,12 @@ OpenCode is not a conformance suite. The old `opencode --version` probe and the 
 - The 29 host contract probes, compared with `contract/probe-results.json`.
 - The generated surface and the names the host discovers.
 - Every `smoke:opencode-*` scenario.
+- The documentation's executable blocks, run word for word: `docs.quickstart` (the [quick start](opencode.md#quick-start), then update and removal) and `docs.migration` (the [migration guide](opencode-migration.md), seeded with V2-era state, then its rollback).
 - The seven `*.live.test.ts` files, through a JUnit report, so a skipped host test fails.
 - Three concurrent runs over two projects.
 - A startup and per-tool budget.
 
-Every one of the 16 catalog plugins must have a passing dedicated actual-host check.
+Every one of the 16 catalog plugins must have a passing dedicated actual-host check. [docs/opencode.md § Plugin support](opencode.md#plugin-support) lists those checks per plugin; `bun run check:opencode-docs` regenerates that list from this registry and fails on drift.
 
 **Preflight.** A missing host, `git`, `npm`, `tar`, `ast-grep`, `agent-browser` or its Chromium fails the run before any session, and names what is missing. Nothing is reported as skipped.
 
@@ -94,6 +95,8 @@ For #276, the old fixture matrix passed with a temporary `@opencode/cli@2.0.12` 
 Conformance fixtures use `TMPDIR` (recommended: `/Volumes/Projects/.tmp` locally) and bootstrap paths set `TOOLU_CONFIG_DIR` / isolated `HOME` so Claude/Codex host settings are not mutated.
 
 ## Final Bun-only clean-install smoke (#279)
+
+**Historical V2 record.** This smoke predates the documented-line adapter. Its OpenCode lane installs the V2 host `@opencode/cli@2.0.12` and drives the retained `permission.evaluate`-shaped export directly, so it is not evidence for current OpenCode support; [OpenCode acceptance](#opencode-acceptance-required) is. See [what is not retained](opencode-migration.md#what-is-not-retained).
 
 On 2026-10-01, `bun run tooling/src/clean-install-smoke.ts` passed with temporary `HOME`, `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `TOOLU_CONFIG_DIR`, `XDG_CONFIG_HOME`, and `OPENCODE_CONFIG_DIR`. No command in this smoke targeted the user's real host configuration. Claude Code and Codex each installed `toolu` from the checkout's local marketplace into their temporary config root; the installed bundle denied an edit of a temporary project's `.env` and left its bytes unchanged. OpenCode v2.0.12 installed a staged local Git package into its temporary config, then the staged package bootstrapped its native adapter and denied the same protected edit. The OpenCode permission call exercised the adapter directly after CLI installation; it did not launch an interactive OpenCode session.
 
