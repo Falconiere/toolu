@@ -49,7 +49,7 @@ Any Conventional Commit on `main` counts, any path. `feat` / `fix` / `feat!` bum
 
 | Workflow | When | What |
 |----------|------|------|
-| `tests.yml` | push/PR to `main`, or a manual run. Skipped when the diff is only release version files and `CHANGELOG.md`; bundle-only changes still run | `typescript`: format, lint, typecheck, guardrails, unit, conformance, bundle/launcher drift, context and latency budgets, deterministic benchmarks |
+| `tests.yml` | push/PR to `main`, or a manual run. Skipped when the diff is only release version files and `CHANGELOG.md`; bundle-only changes still run | `typescript`: format, lint, typecheck, guardrails, gate reach, legacy exemptions, unit, conformance, bundle/launcher drift, context and latency budgets, deterministic benchmarks |
 | `release-please.yml` | push to `main` | Release PR; on merge, tag and GitHub Release |
 | `toolu-review.yml` | PR opened/synchronize, except a release-version-and-changelog-only diff | `falconiere/toolu-ghactions/code-review@v8` (Jev on: `JEV_ENABLED` + `JEV_MODEL_ID: typesafe/jev-1.13`) |
 
@@ -72,6 +72,8 @@ Benchmarks are hermetic. Context budget caps the Session Protocol, per-language 
 | `tools/toolu-cli/src/host/` | Per-host adapters normalizing `plugin list --json` into one shape |
 | `tooling/src/pack-inventory.ts` | Published-tarball file-list gate |
 | `tooling/src/guardrails/run.ts` | Structural gate (`bun run guardrails`): TypeScript port of the vendored conventions runner; data in `tooling/conventions/guardrails/` |
+| `tooling/src/check-gate-reach.ts` | Reach gate (`bun run check:gate-reach`): every tracked TypeScript file is reached by typecheck, format, oxlint, jscpd and knip, or `tooling/gate-reach.json` declares the gap; also checks that each `ownedByLinter` id is a rule the package lint config runs. Code in `tooling/src/gate-reach/` |
+| `tooling/src/check-legacy-exemptions.ts` | Stale-exemption gate (`bun run check:legacy-exemptions`): re-runs oxlint, jscpd and knip with exact-path exemptions lifted; an exemption whose finding is gone fails. See `docs/conventions-adoption.md` |
 | `tooling/src/opencode-host-probe.ts` | Live OpenCode host probes (`bun run probe:opencode-host`): the pinned `opencode-ai` CLI in isolated profiles against a scripted loopback provider. Evidence lives in `tools/toolu-opencode/contract/probe-results.json`; contract in `docs/opencode-host-contract.md` |
 | `tooling/src/opencode-host-contract.ts` | Hermetic OpenCode host-contract check (`bun run check:opencode-host`, in `test:portable-core`): the pin, the probe evidence, the 16-plugin capability matrix, the plugin manifests, the pinned SDK declarations and the contract doc must agree |
 | `tooling/src/benchmarks/run.ts` | Benchmark harness (`bun run benchmarks`); inputs, fixtures and committed results in `benchmarks/` |
@@ -104,5 +106,6 @@ Benchmarks are hermetic. Context budget caps the Session Protocol, per-language 
 - Skill CLI: an entry starting `#!/usr/bin/env bun` builds to an executable bundle (the drift check covers the exec bit) that a SessionStart hook symlinks to a stable path, e.g. `hooks/src/search.ts` for exa-search and context7. HTTP goes through `@toolu/core/rest`; tests run the bundle against `@toolu/conformance/https-fixture`, a loopback HTTPS server reached through `HTTPS_PROXY`.
 - Plugin: `plugins/<name>/.claude-plugin/plugin.json` and a README from `tooling/templates/plugin-README.md`
 - Subset: `bun test plugins/<plugin>/hooks/src/__tests__/`
+- New TypeScript tree: add it to `tsconfig.json`, `format:check`, a lint config, `.jscpd.json` and `knip.json`, or declare the gap in `tooling/gate-reach.json`; `bun run check:gate-reach` fails otherwise. Never add a legacy exemption for new code.
 
 Version is `package.json` and every `plugin.json`. License: MIT.

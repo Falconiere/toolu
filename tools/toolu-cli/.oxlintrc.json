@@ -1,0 +1,104 @@
+{
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
+  "extends": [
+    "../../tooling/conventions/lint/base.oxlintrc.json"
+  ],
+  "jsPlugins": [
+    "../../tooling/conventions/guardrails/oxlint-plugin/index.js"
+  ],
+  "env": {
+    "builtin": true
+  },
+  "ignorePatterns": [
+    "node_modules"
+  ],
+  "rules": {
+    "max-lines": [
+      "error",
+      {
+        "max": 300,
+        "skipBlankLines": true,
+        "skipComments": true
+      }
+    ],
+    "max-lines-per-function": [
+      "error",
+      {
+        "max": 60,
+        "skipBlankLines": true,
+        "skipComments": true
+      }
+    ],
+    "no-console": [
+      "error",
+      {
+        "allow": [
+          "warn",
+          "error"
+        ]
+      }
+    ],
+    "house/folder-tree": "error",
+    "house/colocated-tests": "error",
+    "house/no-barrels": "error",
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": [
+              "**/index",
+              "**/index.js",
+              "**/index.ts"
+            ],
+            "message": "No barrel imports"
+          },
+          {
+            "group": [
+              "yup",
+              "yup/*",
+              "joi",
+              "joi/*",
+              "valibot",
+              "valibot/*",
+              "superstruct",
+              "superstruct/*",
+              "ajv",
+              "ajv/*"
+            ],
+            "message": "One validator: use zod"
+          },
+          {
+            "group": [
+              "@opencode/plugin",
+              "@opencode/plugin/*",
+              "@opencode-ai/plugin",
+              "@opencode-ai/plugin/*",
+              "@opencode-ai/sdk",
+              "@opencode-ai/sdk/*"
+            ],
+            "message": "Host SDK stays in tools/toolu-opencode"
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {"files":["src/args/__tests__/parse.test.ts"],"rules":{"max-lines-per-function":"off","no-unused-vars":"off","typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["src/catalog/__tests__/order.test.ts"],"rules":{"typescript/require-await":"off","unicorn/no-array-sort":"off"}},
+    {"files":["src/cli.ts"],"rules":{"no-await-in-loop":"off","typescript/consistent-type-assertions":"off","typescript/no-unnecessary-boolean-literal-compare":"off","typescript/no-unnecessary-type-assertion":"off"}},
+    {"files":["src/config/__tests__/selection.test.ts"],"rules":{"unicorn/no-array-sort":"off"}},
+    {"files":["src/host/__tests__/adapters.test.ts"],"rules":{"typescript/await-thenable":"off","typescript/require-await":"off"}},
+    {"files":["src/host/detect.ts"],"rules":{"no-await-in-loop":"off"}},
+    {"files":["src/host/run.ts"],"rules":{"no-await-in-loop":"off"}},
+    {"files":["src/plugins/__tests__/dispatch.test.ts"],"rules":{"max-lines-per-function":"off","typescript/await-thenable":"off","typescript/no-unsafe-assignment":"off","typescript/require-await":"off"}},
+    {"files":["src/plugins/__tests__/install.test.ts"],"rules":{"typescript/consistent-type-assertions":"off","typescript/require-await":"off"}},
+    {"files":["src/plugins/__tests__/update.test.ts"],"rules":{"typescript/require-await":"off"}},
+    {"files":["src/plugins/dispatch.ts"],"rules":{"no-await-in-loop":"off"}},
+    {"files":["src/plugins/install.ts"],"rules":{"no-await-in-loop":"off"}},
+    {"files":["src/plugins/remove.ts"],"rules":{"no-await-in-loop":"off"}},
+    {"files":["src/plugins/update.ts"],"rules":{"no-await-in-loop":"off"}},
+    {"files":["src/ui/__tests__/prompts.test.ts"],"rules":{"typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off"}},
+    {"files":["src/ui/__tests__/report.test.ts"],"rules":{"unicorn/consistent-function-scoping":"off"}}
+  ]
+}

@@ -37,8 +37,9 @@ function parseArgs(argv: string[]): z.infer<typeof CliSchema> {
       i += 1;
       continue;
     }
-    if (arg === "--enabled" && argv[i + 1]) {
-      out.enabled = argv[i + 1]
+    const enabled = argv[i + 1];
+    if (arg === "--enabled" && enabled) {
+      out.enabled = enabled
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);

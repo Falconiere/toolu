@@ -1,15 +1,35 @@
 {
-  "path": ["tooling/src", "packages/toolu-core/src", "tools/toolu-opencode/src", "tools/toolu-conformance/src"],
+  "path": [
+    "tooling/src",
+    "packages/toolu-core/src",
+    "tools/toolu-opencode/src",
+    "tools/toolu-opencode/scripts",
+    "tools/toolu-opencode/contract",
+    "tools/toolu-conformance/src",
+    "tools/toolu-cli/src",
+    "plugins"
+  ],
   "threshold": 0,
   "exitCode": 1,
   "minLines": 10,
   "minTokens": 60,
-  "reporters": ["console"],
+  "reporters": [
+    "console"
+  ],
   "gitignore": true,
   "ignore": [
     "**/__tests__/**",
     "**/node_modules/**",
     "**/fixtures/**",
-    "**/conventions/**"
+    "**/conventions/**",
+    "**/hooks/dist/**",
+    "**/plugins/context7/hooks/src/context7/opencode.ts",
+    "**/plugins/jira/hooks/src/jira/opencode.ts",
+    "**/plugins/jira/hooks/src/session-start.ts",
+    "**/plugins/pr-babysit/hooks/src/babysit/fixer-route.ts"
+  ],
+  "format": [
+    "typescript",
+    "tsx"
   ]
 }

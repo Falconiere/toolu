@@ -19,7 +19,11 @@ afterAll(() => {
 function copyOfRepo(): string {
   const root = mkdtempSync(join(tmpdir(), "check-hooks-json-"));
   temps.push(root);
-  for (const plugin of readdirSync(join(ROOT, "plugins"))) {
+  // plugins/ also holds the collection lint config, which is not a plugin.
+  const plugins = readdirSync(join(ROOT, "plugins"), { withFileTypes: true })
+    .filter((item) => item.isDirectory())
+    .map((item) => item.name);
+  for (const plugin of plugins) {
     for (const part of ["hooks/hooks.json", "hooks/dist"]) {
       const from = join(ROOT, "plugins", plugin, part);
       try {

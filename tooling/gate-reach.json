@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "exclude": ["**/fixtures/**", "**/hooks/dist/**", "tools/toolu-opencode/generated/**"],
+  "allowances": [
+    {
+      "tool": "oxlint",
+      "glob": "packages/toolu-core/src/**/__tests__/**",
+      "why": "core tests are not linted yet; decided with the test-file question in phase 2"
+    },
+    {
+      "tool": "oxlint",
+      "glob": "plugins/**/__tests__/**",
+      "why": "plugin tests are not linted yet; decided with the test-file question in phase 2"
+    },
+    {
+      "tool": "jscpd",
+      "glob": "**/__tests__/**",
+      "why": "no tree scans tests for duplication yet; decided with the test-file question in phase 2"
+    }
+  ]
+}
