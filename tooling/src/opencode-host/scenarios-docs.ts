@@ -180,7 +180,7 @@ async function migration(ctx: EntryContext): Promise<EntryResult> {
     otherPluginKept: globalText.includes(pathToFileURL(PROBE_PLUGIN).href),
     shimRemoved: !s.exists(".opencode/plugins/toolu.ts"),
     v2DependenciesLeft: v2DependenciesLeft(s),
-    keptUnchanged: KEPT.every((rel) => s.sb.read(rel) === seeded[rel]),
+    keptChanged: KEPT.filter((rel) => s.sb.read(rel) !== seeded[rel]).join(","),
     enforced: enforced(gate),
     ...gate,
   };
@@ -200,7 +200,7 @@ async function migration(ctx: EntryContext): Promise<EntryResult> {
     observed.otherPluginKept &&
     observed.shimRemoved &&
     observed.v2DependenciesLeft === 0 &&
-    observed.keptUnchanged &&
+    observed.keptChanged === "" &&
     gate.ready === 1 &&
     gate.duplicate === 0 &&
     observed.enforced &&

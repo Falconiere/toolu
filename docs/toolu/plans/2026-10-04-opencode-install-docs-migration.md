@@ -236,3 +236,14 @@ docs rewrite → doc-block runner and live `docs.*` scenarios → hermetic doc c
 - AC coverage: per-AC Jev nouls are AC-1 0.86, AC-2 0.88, AC-3 0.86, AC-4 0.91, AC-5 0.70, AC-6 0.88, AC-7 0.89. Every AC is mapped by `ac_refs` (S1, S3–S7). The low aggregate score (0.46) came from the stricter "every" phrasing; each AC was checked by hand against its step's check and input.
 
 **Status:** Approved
+
+## Deviations
+
+- **Open question resolved (S4).** `opencode run` exits 0 after its only tool call is denied: `docs.quickstart` ran the block under `bash -euo pipefail` with `startExit: 0`. The quick-start block therefore needs no `|| true`.
+- **AC-7 observation.** The `manage` block runs as one script, so `docs.quickstart` observes its end state rather than the state between commands:
+  - the selection is `toolu`, so `remove context7` ran;
+  - no toolu skill and no `@toolu/opencode` entry remain;
+  - `update` reported `current`.
+
+  `cli.lifecycle` already shows a disabled plugin's skill disappearing after `remove`.
+- **Migrate block (S4 finding).** The first live run failed `keptUnchanged`. The CLI explains it: a bare `npx @toolu/plugins install --host opencode` with an existing project selection enables every catalog plugin in that file. The block now runs `update || install toolu`, which leaves the selection alone (Jev choice U, 0.82 over `install toolu` + `update`). The scenario now names the kept files that changed (`keptChanged`).

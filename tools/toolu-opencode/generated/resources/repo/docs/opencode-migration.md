@@ -60,15 +60,14 @@ config="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
 [ ! -d .opencode ] || tar -czf ~/toolu-opencode-v2-project.tgz .opencode
 rm -f .opencode/plugins/toolu.ts
 [ ! -f .opencode/package.json ] || (cd .opencode && npm pkg delete "dependencies.@opencode/plugin" "dependencies.@toolu/opencode" "dependencies.@toolu/core")
-npx @toolu/plugins install --host opencode
-npx @toolu/plugins update --host opencode
+npx @toolu/plugins update --host opencode || npx @toolu/plugins install toolu --host opencode
 npx @toolu/plugins list --host opencode
 ```
 
 <!-- opencode-doc:migrate:end -->
 
-- `install` adds the package when only the clone shim loaded it before. Otherwise it reports the existing V2 entry and leaves it alone.
-- `update` then rewrites every `@toolu/opencode` entry to this release.
+- `update` rewrites every `@toolu/opencode` entry, including the V2 one, to this release. It leaves your selection alone.
+- If only the clone shim loaded toolu, there is no entry and `update` exits `1`. `install toolu` then adds the package and enables `toolu` only. A bare `install` would enable every plugin in an existing selection, so the block avoids it.
 - `list` shows the entry OpenCode will load and the enabled plugins.
 - Restart OpenCode. The host log (`opencode --print-logs`) shows one `toolu: ready (…)` line, and the [quick start](opencode.md#quick-start) check refuses the `.env` write.
 
