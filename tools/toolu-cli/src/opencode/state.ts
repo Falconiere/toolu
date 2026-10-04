@@ -49,6 +49,12 @@ export function entriesIn(state: OpencodeState, scope: OpencodeScope): readonly 
   return filesOf(state, scope).flatMap(tooluEntries);
 }
 
+/** A note for a global selection edit that a project selection overrides here. */
+export function overriddenNote(state: OpencodeState, scope: OpencodeScope): string {
+  if (scope !== "global" || state.selection.project === undefined) return "";
+  return `; no effect in this project: ${state.paths.selection.project} governs it`;
+}
+
 /** The scopes holding a toolu entry. */
 export function installedScopes(state: OpencodeState): readonly OpencodeScope[] {
   return (["global", "project"] as const).filter((scope) => entriesIn(state, scope).length > 0);

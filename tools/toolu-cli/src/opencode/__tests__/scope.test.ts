@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { lstatSync, mkdirSync, symlinkSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { TARGET, enabledNames, enabledOf, listed, profile, selection, toolu } from "./cli-fixture";
+import { TARGET, enabledOf, pluginsOf, profile, selection, toolu } from "./cli-fixture";
 
 const CLI = resolve(import.meta.dir, "../../cli.ts");
 
@@ -20,33 +20,9 @@ describe("scopes", () => {
       },
     );
     expect(run.status).toBe(0);
-    expect(JSON.parse(p.read(p.local("opencode.json"))).plugin).toEqual([TARGET]);
+    expect(pluginsOf(p.read(p.local("opencode.json")))).toEqual([TARGET]);
     expect(enabledOf(p.read(p.local(".opencode/toolu/plugins.json")))).toEqual(["jev"]);
     expect(p.exists(p.global("opencode.json"))).toBe(false);
-  });
-
-  test("without --scope, install enables in the project selection when one governs", () => {
-    using p = profile();
-    expect(toolu(p, ["install", "context7", "--scope", "project"]).code).toBe(0);
-    const run = toolu(p, ["install", "jev"]);
-    expect(run.code).toBe(0);
-    expect(run.stdout).toContain(`enabled in ${p.local(".opencode/toolu/plugins.json")}`);
-    expect(enabledOf(p.read(p.local(".opencode/toolu/plugins.json")))).toEqual(["context7", "jev"]);
-    expect(p.exists(p.global("toolu/plugins.json"))).toBe(false);
-    expect(enabledNames(p)).toEqual(["context7", "jev"]);
-  });
-
-  test("an entry in a shadowed global file does not count; install adds it where the host loads", () => {
-    using p = profile();
-    const shadowed = `{ "plugin": ["${TARGET}"] }\n`;
-    p.write(p.global("config.json"), shadowed);
-    p.write(p.global("opencode.json"), `{ "plugin": ["other-plugin"] }\n`);
-    const run = toolu(p, ["install"]);
-    expect(run.code).toBe(0);
-    expect(run.stdout).toContain(`added ${TARGET} to ${p.global("opencode.json")}`);
-    expect(JSON.parse(p.read(p.global("opencode.json"))).plugin).toEqual(["other-plugin", TARGET]);
-    expect(p.read(p.global("config.json"))).toBe(shadowed);
-    expect(listed(p).get("toolu")?.installed).toBe(true);
   });
 
   test("--scope local is a usage error", () => {
@@ -67,7 +43,7 @@ describe("scopes", () => {
     expect(p.read(p.global("opencode.json"))).toBe(both);
     expect(p.read(p.local("opencode.json"))).toBe(both);
     expect(toolu(p, ["update", "--scope", "project"]).code).toBe(0);
-    expect(JSON.parse(p.read(p.local("opencode.json"))).plugin).toEqual([TARGET]);
+    expect(pluginsOf(p.read(p.local("opencode.json")))).toEqual([TARGET]);
     expect(p.read(p.global("opencode.json"))).toBe(both);
   });
 });
@@ -103,7 +79,7 @@ describe("failures write nothing", () => {
     symlinkSync(p.local("dotfiles/opencode.json"), p.global("opencode.json"));
     expect(toolu(p, ["install"]).code).toBe(0);
     expect(lstatSync(p.global("opencode.json")).isSymbolicLink()).toBe(true);
-    expect(JSON.parse(p.read(p.local("dotfiles/opencode.json"))).plugin).toEqual([TARGET]);
+    expect(pluginsOf(p.read(p.local("dotfiles/opencode.json")))).toEqual([TARGET]);
   });
 });
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { lstatSync, readFileSync, symlinkSync } from "node:fs";
-import { EXIT } from "../../exit";
+import { chmodSync, lstatSync, readFileSync, statSync, symlinkSync } from "node:fs";
+import { CliError, EXIT } from "../../exit";
 import { effectiveEntry, packageName, pluginArray, targetSpec, versionOf } from "../entries";
 import {
   appendJsonc,
@@ -71,6 +71,16 @@ describe("JSONC edits keep the user's file", () => {
     const swapped = editJsonc(tuple, ["plugin", 0, 0], "@toolu/opencode@2.0.0");
     expect(pluginArray(file("t", swapped))).toEqual([["@toolu/opencode@2.0.0", { x: 1 }]]);
   });
+
+  test("line breaks inside a block comment are not line ends", () => {
+    const pinned =
+      '{\n  "plugin": [\n    "other",\n    "@toolu/opencode@1.0.0" /* pinned for\n       the team */\n  ]\n}\n';
+    expect(removeJsonc(pinned, "plugin", 1)).toBe('{\n  "plugin": [\n    "other"\n  ]\n}\n');
+    const closing = '{\n  "plugin": [\n    "a" /* spans\n  */]\n}\n';
+    const appended = appendJsonc(closing, "plugin", "b");
+    expect(appended).toBe('{\n  "plugin": [\n    "a", /* spans\n  */\n    "b"]\n}\n');
+    expect(pluginArray(file("c", appended))).toEqual(["a", "b"]);
+  });
 });
 
 describe("effective entry mirrors the pinned host's merge", () => {
@@ -116,10 +126,10 @@ describe("reading and writing config files", () => {
     using prof = profile();
     expect((await readConfigFile(prof.local("none.json"))).text).toBeUndefined();
     prof.write(prof.local("bad.jsonc"), '{ "plugin": [ "a" ');
-    expect(readConfigFile(prof.local("bad.jsonc"))).rejects.toMatchObject({
-      code: EXIT.failed,
-      message: expect.stringContaining("bad.jsonc is not valid JSONC"),
-    });
+    const bad = await readConfigFile(prof.local("bad.jsonc")).catch((error: unknown) => error);
+    if (!(bad instanceof CliError)) throw new Error("expected a CliError");
+    expect(bad.code).toBe(EXIT.failed);
+    expect(bad.message).toContain("bad.jsonc is not valid JSONC");
     prof.write(prof.local("str.json"), '{ "plugin": "a" }');
     const str = await readConfigFile(prof.local("str.json"));
     expect(() => pluginArray(str)).toThrow(/"plugin" must be an array/);
@@ -132,5 +142,13 @@ describe("reading and writing config files", () => {
     await writeAtomic(prof.local("link.json"), '{ "plugin": [] }\n');
     expect(lstatSync(prof.local("link.json")).isSymbolicLink()).toBe(true);
     expect(readFileSync(prof.local("real.json"), "utf8")).toBe('{ "plugin": [] }\n');
+  });
+
+  test("a rewrite keeps the file's permissions", async () => {
+    using prof = profile();
+    prof.write(prof.local("secret.json"), '{ "provider": {} }\n');
+    chmodSync(prof.local("secret.json"), 0o600);
+    await writeAtomic(prof.local("secret.json"), '{ "provider": {}, "plugin": [] }\n');
+    expect(statSync(prof.local("secret.json")).mode & 0o777).toBe(0o600);
   });
 });

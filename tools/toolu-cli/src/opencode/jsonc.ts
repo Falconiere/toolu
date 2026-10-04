@@ -1,4 +1,4 @@
-import { mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, basename } from "node:path";
 import {
   applyEdits,
@@ -93,16 +93,33 @@ function ownLine(text: string, offset: number): boolean {
   return text.slice(lineStart(text, offset), offset).trim() === "";
 }
 
-/** Offset of the first comma token in `text[from, to)`, skipping comments. */
-function commaIn(text: string, from: number, to: number): number | undefined {
+interface Token {
+  readonly text: string;
+  readonly offset: number;
+  readonly end: number;
+}
+
+/** The tokens of `text[from, to)`; a comment is a single token, so its contents never match. */
+function tokensIn(text: string, from: number, to: number): readonly Token[] {
   const slice = text.slice(from, to);
   const scanner = createScanner(slice, false);
+  const tokens: Token[] = [];
   while (scanner.getPosition() < slice.length) {
     scanner.scan();
     const offset = scanner.getTokenOffset();
-    if (slice.slice(offset, offset + scanner.getTokenLength()) === ",") return from + offset;
+    const end = offset + scanner.getTokenLength();
+    tokens.push({ text: slice.slice(offset, end), offset: from + offset, end: from + end });
   }
-  return undefined;
+  return tokens;
+}
+
+/** Offset of the first comma token in `text[from, to)`, skipping comments. */
+function commaIn(text: string, from: number, to: number): number | undefined {
+  return tokensIn(text, from, to).find((token) => token.text === ",")?.offset;
+}
+
+function isLineBreak(token: Token): boolean {
+  return token.text === "\n" || token.text === "\r\n";
 }
 
 /**
@@ -117,12 +134,8 @@ export function appendJsonc(text: string, key: string, value: unknown): string {
   }
   const close = array.offset + array.length - 1;
   const lastEnd = last.offset + last.length;
-  // Before the line break ending the last element's line, or before `]` sharing that line.
-  let at = close;
-  if (lineStart(text, close) > lastEnd) {
-    at = lineStart(text, close) - 1;
-    if (text[at - 1] === "\r") at -= 1;
-  }
+  // Before the last line break ahead of `]`, or before `]` when no line break precedes it.
+  const at = tokensIn(text, lastEnd, close).findLast(isLineBreak)?.offset ?? close;
   const trailing = commaIn(text, lastEnd, close) !== undefined;
   const indent = text.slice(lineStart(text, last.offset), last.offset);
   const eol = text.includes("\r\n") ? "\r\n" : "\n";
@@ -147,11 +160,9 @@ export function removeJsonc(text: string, key: string, index: number): string {
   const next = array.children?.[index + 1];
   const limit = next?.offset ?? array.offset + array.length - 1;
   const comma = commaIn(text, elementEnd, limit);
-  const newline = text.indexOf("\n", comma ?? elementEnd);
-  const sharesLine = newline === -1 || newline >= limit;
-  if (sharesLine && next !== undefined) return editJsonc(text, [key, index], undefined);
-  const body =
-    text.slice(0, lineStart(text, element.offset)) + text.slice(sharesLine ? limit : newline + 1);
+  const lineEnd = tokensIn(text, comma ?? elementEnd, limit).find(isLineBreak);
+  if (lineEnd === undefined && next !== undefined) return editJsonc(text, [key, index], undefined);
+  const body = text.slice(0, lineStart(text, element.offset)) + text.slice(lineEnd?.end ?? limit);
   // The new last element must not keep a comma the removed one followed.
   const previous = array.children?.[index - 1];
   if (comma !== undefined || next !== undefined || previous === undefined) return body;
@@ -174,11 +185,28 @@ async function writeTarget(path: string): Promise<string> {
   }
 }
 
+/** Permission bits of an existing file, so a rewrite keeps a private config private. */
+async function modeOf(path: string): Promise<number | undefined> {
+  try {
+    return (await stat(path)).mode & 0o7777;
+  } catch (error) {
+    if (isMissing(error)) return undefined;
+    throw error;
+  }
+}
+
 /** Writes through a temp file and rename in the target's directory. */
 export async function writeAtomic(path: string, text: string): Promise<void> {
   const target = await writeTarget(path);
   await mkdir(dirname(target), { recursive: true });
+  const mode = await modeOf(target);
   const temp = join(dirname(target), `.${basename(target)}.${process.pid}.tmp`);
-  await writeFile(temp, text, "utf8");
-  await rename(temp, target);
+  try {
+    await writeFile(temp, text, "utf8");
+    if (mode !== undefined) await chmod(temp, mode);
+    await rename(temp, target);
+  } catch (error) {
+    await rm(temp, { force: true });
+    throw error;
+  }
 }

@@ -21,8 +21,9 @@ Commands:
 For example: npx @toolu/plugins install
 
 OpenCode is managed through its config files: install adds @toolu/opencode to
-opencode.json and enables plugins in .opencode/toolu/plugins.json; remove toolu
-drops the package, remove <name> disables one plugin.
+opencode.json and enables plugins in a toolu/plugins.json selection (global, or
+the project's .opencode/toolu/plugins.json); remove toolu drops the package,
+remove <name> disables one plugin.
 
 Options:
   --host <id>       claude | codex | opencode (detected when omitted)

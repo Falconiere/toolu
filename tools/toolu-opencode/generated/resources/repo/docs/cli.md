@@ -72,25 +72,25 @@ npx @toolu/plugins update [name...]    Update only what is behind the marketplac
 
 ## Options
 
-| Flag | Meaning |
-|------|---------|
-| `--host <id>` | `claude`, `codex`, or `opencode`. Detected when omitted. |
+| Flag              | Meaning                                                                                                                                                          |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--host <id>`     | `claude`, `codex`, or `opencode`. Detected when omitted.                                                                                                         |
 | `--scope <scope>` | Claude Code: `user`, `project`, `local`. OpenCode: `user` (global config, the default) or `project`. Any other combination, and any scope with Codex, exits `2`. |
-| `--config <path>` | Replay a `.toolu/plugins.json` selection. |
-| `--yes`, `-y` | Confirm a destructive or command-declaring operation. |
-| `--dry-run` | Print the host commands in order (OpenCode: the planned config edits); change nothing. |
-| `--no-input` | Never prompt; fail listing what is missing. Use in CI. |
-| `--json` | Machine-readable output where supported. |
+| `--config <path>` | Replay a `.toolu/plugins.json` selection.                                                                                                                        |
+| `--yes`, `-y`     | Confirm a destructive or command-declaring operation.                                                                                                            |
+| `--dry-run`       | Print the host commands in order (OpenCode: the planned config edits); change nothing.                                                                           |
+| `--no-input`      | Never prompt; fail listing what is missing. Use in CI.                                                                                                           |
+| `--json`          | Machine-readable output where supported.                                                                                                                         |
 
 ## Exit codes
 
-| Code | Meaning |
-|------|---------|
-| `0` | Everything succeeded or was already satisfied |
-| `1` | Something failed; every failure is named on stderr |
-| `2` | Usage error: unknown command, flag, host, or plugin |
-| `3` | Required input missing, or an ambiguous host with no TTY / `--no-input` |
-| `130` | An interactive prompt was cancelled |
+| Code  | Meaning                                                                 |
+| ----- | ----------------------------------------------------------------------- |
+| `0`   | Everything succeeded or was already satisfied                           |
+| `1`   | Something failed; every failure is named on stderr                      |
+| `2`   | Usage error: unknown command, flag, host, or plugin                     |
+| `3`   | Required input missing, or an ambiguous host with no TTY / `--no-input` |
+| `130` | An interactive prompt was cancelled                                     |
 
 ## Behavior worth knowing
 
@@ -139,14 +139,14 @@ every plugin. The CLI manages two things: that package's entry in a `plugin`
 array, and a plugin selection file `toolu/plugins.json`
 (`{ "version": 1, "enabled": [...] }`). Restart OpenCode to load a change.
 
-| Verb | Effect |
-|------|--------|
-| `install` | Adds `@toolu/opencode@<CLI version>` to the `plugin` array once. Without a selection file every plugin is enabled. |
+| Verb                | Effect                                                                                                                                                   |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `install`           | Adds `@toolu/opencode@<CLI version>` to the `plugin` array once. Without a selection file every plugin is enabled.                                       |
 | `install <name...>` | Adds the package if needed and enables the names plus their dependencies. A fresh install selects only those; otherwise they join the current selection. |
-| `list` | The effective package entry and selection, and per plugin whether it is enabled. |
-| `update` | Rewrites every toolu entry in scope to the CLI's version. A `[spec, options]` tuple keeps its options. Exits `1` when the package is not configured. |
-| `remove <name...>` | Disables the names in the selection. Refused with exit `1` while an enabled plugin still depends on one. |
-| `remove toolu` | Removes the package entry and keeps the selection file, so a reinstall restores it. |
+| `list`              | The effective package entry and selection, and per plugin whether it is enabled.                                                                         |
+| `update`            | Rewrites every toolu entry in scope to the CLI's version. A `[spec, options]` tuple keeps its options. Exits `1` when the package is not configured.     |
+| `remove <name...>`  | Disables the names in the selection. Refused with exit `1` while an enabled plugin still depends on one.                                                 |
+| `remove toolu`      | Removes the package entry and keeps the selection file, so a reinstall restores it.                                                                      |
 
 **Where it writes.** `--scope user`, the default, edits the global directory
 `${XDG_CONFIG_HOME:-~/.config}/opencode/`. It picks the highest-priority file
@@ -157,14 +157,18 @@ The selection is `toolu/plugins.json` under the same root that
 `--scope project` writes at the git worktree root, even from a subdirectory. It
 picks the last of `opencode.json`, `opencode.jsonc`, `.opencode/opencode.json`
 and `.opencode/opencode.jsonc` that defines `plugin`. The selection is
-`.opencode/toolu/plugins.json`. `--scope local` exits `2`.
+`.opencode/toolu/plugins.json`. `--scope local` exits `2`. Without `--scope`,
+`install <name...>` and `remove <name...>` edit the project selection when one
+exists, since that is the one `@toolu/opencode` reads there. With `--scope user`
+in such a project, the step says the global change has no effect here.
 
 **How OpenCode merges, so the CLI does too.** In the global directory only the
 highest-priority file that defines `plugin` counts. Global and project arrays
 then concatenate, and for the same package the last entry wins. An empty
 `"plugin": []` clears every earlier entry, so `remove` deletes a `plugin` key it
 would leave empty. `list` reports the entry OpenCode would actually load, and
-`install` says so when a project file shadows the global one.
+`install` says so when a project file shadows the global one, or when filling a
+project's empty `plugin` array lets earlier plugins load again.
 
 **What survives.** Edits go through a JSONC parser that changes only the
 `plugin` array or the selection. Comments, formatting, other keys and other

@@ -15,7 +15,7 @@ import { closure, selectionText } from "./selection";
 import {
   entriesIn,
   filesOf,
-  installedScopes,
+  overriddenNote,
   type OpencodePlan,
   type OpencodeState,
   type PlannedWrite,
@@ -83,6 +83,17 @@ function shadowNote(state: OpencodeState): string {
   return reset === undefined ? "" : `; no effect here: ${reset.path} sets an empty plugin list`;
 }
 
+/** A note when the entry fills a project `plugin: []`, which then stops resetting earlier layers (R3). */
+function liftNote(state: OpencodeState, file: ConfigFile): string {
+  const at = state.project.indexOf(file);
+  if (at === -1 || pluginArray(file)?.length !== 0) return "";
+  const earlier = [governingGlobal(state.global), ...state.project.slice(0, at)];
+  const lifted = earlier.some((f) => f !== undefined && (pluginArray(f)?.length ?? 0) > 0);
+  return lifted
+    ? `; ${file.path} no longer empties the plugin list, so plugins from earlier config files load here again`
+    : "";
+}
+
 /** Entries the host can load from `scope`; a lower-priority global array never loads (R1). */
 function loadableEntries(state: OpencodeState, scope: OpencodeScope): readonly PluginEntry[] {
   if (scope === "project") return entriesIn(state, "project");
@@ -116,7 +127,7 @@ function packageStep(
   const step: InstallStep = {
     name: PACKAGE,
     outcome: note === "" ? "installed" : "skew",
-    detail: `added ${request.target} to ${file.path}${note}`,
+    detail: `added ${request.target} to ${file.path}${note}${liftNote(state, file)}`,
     argv: [],
     plan: `add ${request.target} to ${file.path}`,
   };
@@ -128,10 +139,12 @@ function pluginStep(
   added: boolean,
   path: string | undefined,
   state: OpencodeState,
+  overridden: string,
 ): InstallStep {
-  const off = state.disabled.has(name)
+  const skillOff = state.disabled.has(name)
     ? ` (skills.${name} is false in ${state.paths.tooluConfig}, so it stays off)`
     : "";
+  const off = skillOff + overridden;
   if (!added) return { name, outcome: "already", detail: `already enabled${off}`, argv: [] };
   if (path === undefined) {
     const detail = `enabled (no selection file, so every plugin is on)${off}`;
@@ -168,8 +181,9 @@ function selectionPlan(
   const path = state.paths.selection[scope];
   const skip = added.length === 0 || (noFiles && all.every((name) => next.includes(name)));
   const writes = skip ? [] : [{ path, text: selectionText(next) }];
+  const overridden = overriddenNote(state, scope);
   const steps = want.map((name) =>
-    pluginStep(name, added.includes(name), skip ? undefined : path, state),
+    pluginStep(name, added.includes(name), skip ? undefined : path, state, overridden),
   );
   return { steps, writes };
 }
@@ -180,7 +194,7 @@ export function opencodeInstall(
   marketplace: Marketplace,
   request: InstallRequest,
 ): OpencodePlan<InstallStep> {
-  const installedBefore = installedScopes(state).length > 0;
+  const installedBefore = existingEntry(state, undefined) !== undefined;
   const entry = packageStep(state, request);
   const selection = selectionPlan(state, marketplace, request, installedBefore);
   return {

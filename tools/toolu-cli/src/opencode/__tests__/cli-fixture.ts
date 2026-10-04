@@ -104,6 +104,13 @@ export function enabledOf(text: string): readonly string[] {
   return selectionSchema.parse(JSON.parse(text)).enabled;
 }
 
+const configSchema = z.looseObject({ plugin: z.array(z.unknown()) });
+
+/** The `plugin` array of a config file's text. */
+export function pluginsOf(text: string): readonly unknown[] {
+  return configSchema.parse(JSON.parse(text)).plugin;
+}
+
 /** `list --json` rows keyed by plugin name. */
 export function listed(p: Profile): Map<string, z.infer<typeof rowsSchema>[number]> {
   const run = toolu(p, ["list", "--json"]);

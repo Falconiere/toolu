@@ -7,7 +7,7 @@
  * session writing a protected `.env`). The package spec points at the packed
  * tarball through `TOOLU_OPENCODE_PACKAGE`.
  */
-import { copyFileSync, cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { run } from "@toolu/conformance/harness/spawn";
@@ -121,7 +121,9 @@ async function cliInstall(ctx: EntryContext): Promise<EntryResult> {
     entries: merged.filter((entry) => entry.includes(PACKAGE)).length,
     spec: merged.some((entry) => entry === JSON.stringify(npmSpec(ctx.tarball))),
     idempotent: readGlobal(s, "opencode.json") === written,
-    noSelection: !s.exists(".opencode/toolu/plugins.json"),
+    noSelection:
+      !s.exists(".opencode/toolu/plugins.json") &&
+      !existsSync(join(globalDir(s), "toolu/plugins.json")),
     enforced: enforced(gate),
     ...gate,
   };

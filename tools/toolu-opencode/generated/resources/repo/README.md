@@ -20,7 +20,7 @@ AI writes code fast — then skips the parts that keep a codebase alive: oversiz
 
 ## Why
 
-Your AI coding agent is a superb pair-programmer, but left alone it optimizes for *getting the change in*, not for the conventions that make a change safe to keep. You end up re-typing the same review feedback every session: *split that file, don't swallow that error, that test is all mocks, document the export, don't push that unreviewed.*
+Your AI coding agent is a superb pair-programmer, but left alone it optimizes for _getting the change in_, not for the conventions that make a change safe to keep. You end up re-typing the same review feedback every session: _split that file, don't swallow that error, that test is all mocks, document the export, don't push that unreviewed._
 
 toolu moves those rules out of your head and into the tool:
 
@@ -121,6 +121,7 @@ OpenCode has no marketplace; it installs the npm adapter instead.
 #### Claude Code
 
 <!-- install-everything:claude -->
+
 ```bash
 # Optional: lets Claude Code resolve the code-simplifier companion. Nothing is
 # installed from it; skip if you do not want the pre-simplify pass.
@@ -130,11 +131,13 @@ claude plugin marketplace add anthropics/claude-plugins-official
 # Already-installed plugins are reported and left alone.
 npx @toolu/plugins install
 ```
+
 <!-- /install-everything:claude -->
 
 #### Codex
 
 <!-- install-everything:codex -->
+
 ```bash
 # Adds the toolu marketplace and installs every catalog plugin, core first.
 npx @toolu/plugins install --host codex
@@ -148,16 +151,18 @@ After they are installed, review and trust the hooks in `/hooks` before they run
 OpenCode has no marketplace — paste this prompt so the agent installs the npm adapter with the `toolu` CLI, which edits OpenCode's own config files ([docs/cli.md](docs/cli.md#opencode)). It enables every plugin unless you name some.
 
 <!-- install-everything:opencode -->
+
 ```text
 Install toolu for OpenCode (npm adapter; no marketplace, no clone). Skip steps already done.
 
 1. Run: npx @toolu/plugins install --host opencode
-   It adds @toolu/opencode to the global OpenCode config (~/.config/opencode) once and enables every plugin. Add --scope project to write this project's opencode.json instead. To enable only some plugins, name them (npx @toolu/plugins install toolu ts-quality --host opencode); their dependencies are added and the choice lands in toolu/plugins.json beside that config (.opencode/toolu/plugins.json for --scope project).
+   It adds @toolu/opencode to the global OpenCode config (~/.config/opencode) once and enables every plugin. Add --scope project to write this project's opencode.json instead. To enable only some plugins, name them (npx @toolu/plugins install toolu ts-quality --host opencode); their dependencies are added and the choice lands in toolu/plugins.json beside that config (.opencode/toolu/plugins.json for --scope project, or when this project already has one).
 2. Optional: .opencode/toolu.config.json for gate modes (same schema as other hosts), e.g. { "version": 1, "gates": { "protectedFiles": { "mode": "block" } } }
 3. Restart OpenCode. Smoke-check: attempt a protected .env edit with protectedFiles mode block and confirm it is denied before bytes change.
 
 Do not install comemory via toolu. Working on toolu itself? Use the git-clone contributor path in docs/opencode.md instead. Full detail: docs/opencode.md
 ```
+
 <!-- /install-everything:opencode -->
 
 > **Note** — `delivery-flow` depends on `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm`; `epic-orchestrator` uses `delivery-flow`. Quality plugins and `pr-babysit` depend on `toolu`. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
@@ -203,31 +208,31 @@ packages and the root — at one version matching the git tag, so a plugin's
 version is always the repository's. Install the core alone, or add the domain
 plugins.
 
-| Group | Plugin | What it does |
-|--------|--------|--------------|
-| Core | **`toolu`** | Registry-driven hook engine, commit workflows, model routing, push-review gate, and custom-agent templates. |
-| Quality gate | **`rust-quality`** | Rust post-edit checks — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests. |
-| Quality gate | **`ts-quality`** | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
-| Quality gate | **`python-quality`** | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
-| Code intel | **`ast-grep`** | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
-| Browser | **`agent-browser`** | Token-lean browser automation through accessibility-tree snapshots and stable element references. |
-| Knowledge | **`context7`** | Live library documentation and code examples through Context7. |
-| Knowledge | **`exa-search`** | Web, code, URL search, and deep research through Exa. |
-| Knowledge | **`jev`** | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores a script can branch on. |
-| Workflow | **`jira`** | Jira Cloud and Server/DC search plus safe issue workflow operations. |
-| Workflow | **`toolu-review`** | Pre-push review matching CI `code-review@v8` (Jev-enabled) and writing review attestations. |
-| Workflow | **`brainstorm`** | Evidence-backed design triage, alternatives, and a recommended approach — standalone, and phase 1 of delivery-flow. |
-| Workflow | **`delivery-flow`** | One public skill for brainstorm through PR and babysit, with private phase guidance. |
-| Workflow | **`pr-babysit`** | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
-| Workflow | **`epic-orchestrator`** | Drive a GitHub, Jira, or Linear epic to merged PRs via herdr workers on any host, dependency waves, and a merge gate with auto-merge. |
-| Status | **`statusline`** | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
+| Group        | Plugin                  | What it does                                                                                                                             |
+| ------------ | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Core         | **`toolu`**             | Registry-driven hook engine, commit workflows, model routing, push-review gate, and custom-agent templates.                              |
+| Quality gate | **`rust-quality`**      | Rust post-edit checks — size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, flat real-data tests.               |
+| Quality gate | **`ts-quality`**        | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests.              |
+| Quality gate | **`python-quality`**    | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
+| Code intel   | **`ast-grep`**          | Structural code search and rewrite plus a registry-driven text-to-AST nudge.                                                             |
+| Browser      | **`agent-browser`**     | Token-lean browser automation through accessibility-tree snapshots and stable element references.                                        |
+| Knowledge    | **`context7`**          | Live library documentation and code examples through Context7.                                                                           |
+| Knowledge    | **`exa-search`**        | Web, code, URL search, and deep research through Exa.                                                                                    |
+| Knowledge    | **`jev`**               | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores a script can branch on.                                   |
+| Workflow     | **`jira`**              | Jira Cloud and Server/DC search plus safe issue workflow operations.                                                                     |
+| Workflow     | **`toolu-review`**      | Pre-push review matching CI `code-review@v8` (Jev-enabled) and writing review attestations.                                              |
+| Workflow     | **`brainstorm`**        | Evidence-backed design triage, alternatives, and a recommended approach — standalone, and phase 1 of delivery-flow.                      |
+| Workflow     | **`delivery-flow`**     | One public skill for brainstorm through PR and babysit, with private phase guidance.                                                     |
+| Workflow     | **`pr-babysit`**        | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees.                                                 |
+| Workflow     | **`epic-orchestrator`** | Drive a GitHub, Jira, or Linear epic to merged PRs via herdr workers on any host, dependency waves, and a merge gate with auto-merge.    |
+| Status       | **`statusline`**        | Persistent Claude statusline plus an explicit Codex repository/gate status report.                                                       |
 
 Beyond the plugins, the core (`toolu`) also ships:
 
 - **\`push-review\` gate** — blocks \`git push\` on a feature branch until the diff has been run through an accepted reviewer (the built-in \`/code-review xhigh --fix\` skill or the \`toolu-review:review\` skill), with a round cap (5 rewrites against an unchanged diff) that escalates instead of looping forever. The state file lives under the pushed repo's own root, so `git -C <worktree> push` is gated on the worktree's branch and diff.
 - **docs-sync backstop** — on `git push`, an **advisory** (never a block) when the branch diff changes code but no documentation surface (README, `docs/` guides, `SKILL.md` triggers) — a nudge to keep user-facing docs in sync with behavior. Silenced by a diff-`sha`-keyed attestation; surfaces are tunable via `docsSync.*` ([config](docs/config.md#docs-sync-surfaces-docssync)). Pairs with the "Docs in sync" convention the workflow skills enforce.
 - **Commit workflows** — Claude exposes `/commit` and `/review-and-commit`; Codex exposes `$toolu:commit` and `$toolu:review-and-commit`. Both read the same canonical workflow files, preventing host drift.
-- **Model routing** — delegated work is tiered by its *class*, not its phrasing. Claude defaults to Haiku/Sonnet/Opus aliases; Codex defaults to Luna/medium for mechanical work, Terra/medium for exploration and implementation, Terra/high for review, and Sol/high for synthesis and architecture. Both mappings are configurable in [config](docs/config.md#model-routing-models).
+- **Model routing** — delegated work is tiered by its _class_, not its phrasing. Claude defaults to Haiku/Sonnet/Opus aliases; Codex defaults to Luna/medium for mechanical work, Terra/medium for exploration and implementation, Terra/high for review, and Sol/high for synthesis and architecture. Both mappings are configurable in [config](docs/config.md#model-routing-models).
 - **Tier-pinned agents** — Claude reads the bundled agent definitions directly. `$toolu:setup` manages Codex TOML profiles for `quick-task` (Luna/medium, read-only), `deep-explore` and `research-agent` (Terra/medium, read-only), `implementer` (Terra/medium, workspace-write), and `architect` (Sol/high, read-only), with previews, conflict refusal, timestamped backups, and recoverable removal.
 
 ## Delivery workflow

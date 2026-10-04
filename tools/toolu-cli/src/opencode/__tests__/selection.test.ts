@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 import { readMarketplace } from "../../catalog/manifest";
-import { EXIT } from "../../exit";
+import { CliError, EXIT } from "../../exit";
 import {
   dependentsBlocking,
   effectiveEnabled,
@@ -17,12 +17,16 @@ describe("selection files", () => {
     using p = profile();
     expect(await readSelectionFile(p.local("none.json"))).toBeUndefined();
     p.write(p.local("bad.json"), "{ not json");
-    expect(readSelectionFile(p.local("bad.json"))).rejects.toMatchObject({
-      code: EXIT.failed,
-      message: expect.stringContaining("bad.json"),
-    });
     p.write(p.local("extra.json"), JSON.stringify({ version: 1, enabled: [], host: "x" }));
-    expect(readSelectionFile(p.local("extra.json"))).rejects.toMatchObject({ code: EXIT.failed });
+    const names = ["bad.json", "extra.json"];
+    const errors = await Promise.all(
+      names.map((name) => readSelectionFile(p.local(name)).catch((caught: unknown) => caught)),
+    );
+    for (const [i, error] of errors.entries()) {
+      if (!(error instanceof CliError)) throw new Error(`expected a CliError for ${names[i]}`);
+      expect(error.code).toBe(EXIT.failed);
+      expect(error.message).toContain(p.local(names[i] ?? ""));
+    }
     p.write(p.local("ok.json"), selection(["jev"]));
     expect(await readSelectionFile(p.local("ok.json"))).toEqual(["jev"]);
   });

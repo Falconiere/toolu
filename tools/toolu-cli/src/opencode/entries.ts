@@ -41,7 +41,8 @@ export function pluginArray(file: ConfigFile): readonly unknown[] | undefined {
   if (!Array.isArray(value)) {
     throw new CliError(EXIT.failed, `${file.path}: "plugin" must be an array; nothing was written`);
   }
-  return value;
+  const array: readonly unknown[] = value;
+  return array;
 }
 
 function specOf(element: unknown): { spec: string; tuple: boolean } | undefined {
@@ -56,7 +57,9 @@ function specOf(element: unknown): { spec: string; tuple: boolean } | undefined 
 function elements(file: ConfigFile): readonly (PluginEntry | undefined)[] {
   return (pluginArray(file) ?? []).map((element, index) => {
     const parsed = specOf(element);
-    return parsed === undefined ? undefined : { file: file.path, index, ...parsed };
+    return parsed === undefined
+      ? undefined
+      : { file: file.path, index, spec: parsed.spec, tuple: parsed.tuple };
   });
 }
 

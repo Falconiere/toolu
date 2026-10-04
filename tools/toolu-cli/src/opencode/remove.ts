@@ -6,7 +6,13 @@ import { PACKAGE, pluginArray, tooluEntries } from "./entries";
 import { editJsonc, removeJsonc, type ConfigFile } from "./jsonc";
 import type { OpencodeScope } from "./paths";
 import { closure, dependentsBlocking, selectionText } from "./selection";
-import { filesOf, installedScopes, type OpencodePlan, type OpencodeState } from "./state";
+import {
+  filesOf,
+  installedScopes,
+  overriddenNote,
+  type OpencodePlan,
+  type OpencodeState,
+} from "./state";
 
 const CORE = "toolu";
 
@@ -118,9 +124,12 @@ function removeLeaves(
   const enabled = closure(marketplace, base);
   const removing = removable(marketplace, enabled, names);
   const path = state.paths.selection[target];
+  const overridden = overriddenNote(state, target);
   const steps = names.map((name): RemoveStep => {
-    if (!enabled.has(name)) return done(name, "not enabled; nothing to change");
-    if (removing.has(name)) return done(name, `disabled in ${path}`, `disable ${name} in ${path}`);
+    if (!enabled.has(name)) return done(name, `not enabled; nothing to change${overridden}`);
+    if (removing.has(name)) {
+      return done(name, `disabled in ${path}${overridden}`, `disable ${name} in ${path}`);
+    }
     const blockers = dependentsBlocking(marketplace, enabled, removing, name);
     return {
       name,

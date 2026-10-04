@@ -32,13 +32,15 @@ function opencodeScope(scope: Scope | undefined): OpencodeScope | undefined {
 /** Writes the plan's files unless this is a dry run. */
 async function apply<Step>(plan: OpencodePlan<Step>, dryRun: boolean): Promise<readonly Step[]> {
   if (dryRun) return plan.steps;
-  for (const write of plan.writes) {
-    try {
-      await writeAtomic(write.path, write.text);
-    } catch (error) {
-      throw new CliError(EXIT.failed, `cannot write ${write.path}: ${String(error)}`);
-    }
-  }
+  await Promise.all(
+    plan.writes.map(async (write) => {
+      try {
+        await writeAtomic(write.path, write.text);
+      } catch (error) {
+        throw new CliError(EXIT.failed, `cannot write ${write.path}: ${String(error)}`);
+      }
+    }),
+  );
   return plan.steps;
 }
 
