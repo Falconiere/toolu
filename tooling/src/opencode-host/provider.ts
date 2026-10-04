@@ -15,7 +15,7 @@ import { z } from "zod";
 
 export type ScriptStep = { tool: string; args: Record<string, unknown> };
 export type Scripts = Readonly<Record<string, readonly ScriptStep[]>>;
-/** One request as the server received it; `at` is its arrival time in ms since the epoch. */
+/** One request the server received; `at` is its arrival time in ms since the epoch. */
 export type RecordedRequest = { path: string; body: unknown; at: number };
 type ScriptedProvider = {
   url: string;
