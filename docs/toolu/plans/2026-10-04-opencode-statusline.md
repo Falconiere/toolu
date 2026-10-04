@@ -99,3 +99,12 @@ Use real files, real bundles, real git repos and the pinned host, with no mocks.
 ## Plan review
 
 **Status:** Approved. Every spec AC (AC-1 to AC-5) maps to at least one step, with no dangling ids (checked by comparing the ledger's `ac_refs` with the spec's bold ids). Each step has a runnable check against real inputs, including boundary cases: missing, empty, malformed, oversized and wrong-version records; a not-ready startup; an unwritable data root; a fake secret; an unselected plugin. The order is acyclic: core-record → adapter-record and statusline-report → surface-matrix → live → docs → gate. Findings fixed during review: `adapter-record` now declares `tools/toolu-opencode/generated/**`, which `planSurfaces` reads, and `statusline-report` now asserts that stdout holds only the report and stderr is empty (AC-3). Jev judged the original step set 0.67 for full AC evidence and flagged the AC-3 stdout gap, which is now closed.
+
+## Deviations
+
+- **Schema without zod.** Every SessionStart bundle imports `@toolu/core/startup`. A first build that held module-level `Set`s in `opencode-status.ts` pulled them into 15 other bundles. The reader now validates by hand, with key lists kept inside functions, so only the statusline bundles change (`check:plugin-bundles` ok).
+- **Port table, not body rewrite.** The `statusline-status` description is frontmatter, and `rewrite.ts` edits only the body, so the OpenCode text moved to `scripts/lib/opencode-port-statusline.ts` (exact-anchor ports, spread into `OPENCODE_PORTS`). The old `rewrite.ts` branch, which pointed at `../../../plugins/…/status.js`, is removed.
+- **Report state shape.** `ProjectStatus.toolu` is a discriminated union (`""`, `missing`/`invalid`, `recorded` with the record) instead of the spec's flat status. The output lines are the ones the spec names.
+- **Test files.** The OpenCode report cases live in a new `plugins/statusline/hooks/src/__tests__/status-opencode.test.ts`, and the step's check runs the whole directory. Its records are literal JSON files with the shared schema's shape, so the plugin test does not import the adapter. The adapter test reads what the real writer produced through the same core reader.
+- **`toolStates`** now takes `Pick<HostRun, "events">`, because `runHost` returns raw `stdout` for the protocol check. The epic-worker live test passes only its events.
+- **Job admission.** Focused tests and ledger checks wait for the shared epic job slot (`job.ts`, capacity 1), and are not run outside it.

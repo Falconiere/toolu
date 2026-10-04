@@ -67,7 +67,7 @@ own readiness:
 ```
 Host: OpenCode
 toolu: ready — 2 plugins (project selection), 2 startup artifacts
-Plugins: statusline (session-start), jev (session-start, user-prompt-submit)
+Plugins: jev (session-start), statusline (session-start)
 Startup record: <project>/.opencode/toolu/state/toolu/opencode-status.json, written <time> for <project>
 Repository: …
 ```

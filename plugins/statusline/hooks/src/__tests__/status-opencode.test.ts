@@ -41,8 +41,8 @@ test.concurrent("status: OpenCode lists the plugins toolu started and its readin
       status: "ready",
       selection: "project",
       plugins: [
+        { name: "jev", entries: ["session-start"], artifacts: 1 },
         { name: "statusline", entries: ["session-start"], artifacts: 1 },
-        { name: "jev", entries: ["session-start", "user-prompt-submit"], artifacts: 1 },
       ],
       notes: ['enabled plugin "nope" in plugins.json is not installed'],
     }),
@@ -52,12 +52,13 @@ test.concurrent("status: OpenCode lists the plugins toolu started and its readin
     [
       "Host: OpenCode",
       "toolu: ready — 2 plugins (project selection), 2 startup artifacts",
-      "Plugins: statusline (session-start), jev (session-start, user-prompt-submit)",
+      "Plugins: jev (session-start), statusline (session-start)",
       'Startup notes: enabled plugin "nope" in plugins.json is not installed',
       `Startup record: ${path}, written ${WRITTEN} for ${sb.project}`,
       `Repository: ${realpathSync(sb.project)}`,
       "Branch: main",
-      "Working tree: clean",
+      // The record and gate files sit untracked under .opencode/.
+      "Working tree: staged 0, unstaged 0, untracked 1",
       "Quality gate: passing",
       "",
     ].join("\n"),

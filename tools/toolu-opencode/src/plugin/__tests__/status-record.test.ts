@@ -77,8 +77,8 @@ test("a ready startup records the selected plugins and logs one structured statu
     expect(record).toMatchObject({ version: 1, project: sb.project, status: "ready" });
     expect(record.selection).toBe("project");
     expect(record.plugins).toEqual([
+      { name: "jev", entries: ["session-start"], artifacts: 1 },
       { name: "statusline", entries: ["session-start"], artifacts: 1 },
-      { name: "jev", entries: ["session-start", "user-prompt-submit"], artifacts: 1 },
     ]);
     expect(Date.now() - Date.parse(record.written)).toBeLessThan(120_000);
     expect(statusEntries(entries)).toEqual([
@@ -87,7 +87,7 @@ test("a ready startup records the selected plugins and logs one structured statu
         message: "toolu: status",
         extra: {
           status: "ready",
-          plugins: "statusline,jev",
+          plugins: "jev,statusline",
           artifacts: 2,
           record: path,
           selection: "project",
@@ -118,7 +118,7 @@ test("a not-ready startup records and logs the bounded bootstrap reason", async 
     const read = readOpencodeStatus(recordPath(sb));
     if (!read.ok) throw new Error(`record ${read.reason}`);
     expect(read.record).toMatchObject({ status: "not-ready", plugins: [], notes: [] });
-    expect(read.record.reason).toStartWith("bootstrap: jev/session-start: ");
+    expect(read.record.reason).toStartWith("bootstrap: jev: session-start: ");
     expect(read.record.selection).toBeUndefined();
     const [status] = statusEntries(entries);
     expect(status?.level).toBe("error");

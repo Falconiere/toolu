@@ -86,12 +86,10 @@ async function enabled(ctx: EntryContext): Promise<EntryResult> {
       skill.text.includes("TOOLU_PLUGIN_ROOT_STATUSLINE/hooks/dist/status.js"),
     bashRan: bash?.status === "completed",
     ready: report.includes("toolu: ready — 2 plugins (project selection)"),
-    plugins: report.includes(
-      "Plugins: statusline (session-start), jev (session-start, user-prompt-submit)",
-    ),
+    plugins: report.includes("Plugins: jev (session-start), statusline (session-start)"),
     record: s.exists(RECORD) && report.includes(join(s.sb.project, RECORD)),
     statusEntries: diagnostics(hostRun.stderr, "toolu: status"),
-    structured: logged.includes("statusline,jev") && logged.includes("ready"),
+    structured: logged.includes("jev,statusline") && logged.includes("ready"),
     protocolClean: protocolClean(hostRun.stdout),
     noClaudeConfig: noClaudeConfig(s),
   };
