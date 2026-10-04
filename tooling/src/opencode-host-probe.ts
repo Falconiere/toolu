@@ -27,7 +27,7 @@ import {
 import { openSession, PROBE_PLUGIN } from "./opencode-host/session.ts";
 
 /** One warm-up session fills the shared caches and reports the host-provisioned SDK. */
-async function warmUp(ctx: ScenarioContext): Promise<string> {
+export async function warmUp(ctx: ScenarioContext): Promise<string> {
   using session = openSession(ctx.cacheRoot, { localPlugins: [PROBE_PLUGIN] });
   await runHost(ctx.bin, session, ["PROBE:warm-up"]);
   const version = provisionedSdkVersion(session.sb.project);

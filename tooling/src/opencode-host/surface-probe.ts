@@ -68,7 +68,7 @@ function checkPlugin(
   for (const command of plugin.commands) checkCommand(loaded.commands, command.id);
 }
 
-/** Load the generated tree as project files on the pinned host; throws on the first surface it lost. */
+/** Load the generated tree into project files on the pinned host; throws on the first surface it lost. */
 export async function probeGeneratedSurface(
   bin: string,
   cacheRoot: string,
