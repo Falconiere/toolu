@@ -12,6 +12,7 @@ import { REPO_ROOT } from "../../bootstrap/__tests__/fixtures.ts";
 import { definedEnv } from "../../host/runtime-env.ts";
 import type { HostBinding, LogExtra, LogLevel } from "../context.ts";
 import { createTooluHooks } from "../hooks.ts";
+import { STATUS_FILE, statusRecordPath } from "../status-record.ts";
 import { hook } from "./jev-fixtures.ts";
 
 const FAKE_SECRET = "sk-test-359";
@@ -63,6 +64,14 @@ function recordPath(sb: Sandbox): string {
 function statusEntries(entries: readonly Entry[]): Entry[] {
   return entries.filter((entry) => entry.message === "toolu: status");
 }
+
+test.concurrent("the adapter's record path is the one core's reader names", () => {
+  using sb = createSandbox();
+  const entries: Entry[] = [];
+  const binding = hostBinding(sb, entries);
+  expect(statusRecordPath(binding)).toBe(recordPath(sb));
+  expect(opencodeStatusPath("/root")).toBe(`/root/toolu/${STATUS_FILE}`);
+});
 
 test("a ready startup records the selected plugins and logs one structured status entry", async () => {
   using sb = createSandbox();

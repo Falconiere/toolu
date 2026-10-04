@@ -6,11 +6,18 @@
  */
 import { randomUUID } from "node:crypto";
 import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
-import { opencodeStatusPath, type OpencodeStatusRecord } from "@toolu/core/startup";
-import { opencodeDataRoot } from "../host/roots.ts";
+import { dirname, join } from "node:path";
+import type { OpencodeStatusRecord } from "@toolu/core/startup";
+import { opencodeDataRoot, opencodeRegistryRoot } from "../host/roots.ts";
 import type { HostBinding, LogExtra } from "./context.ts";
 import type { Enforcement } from "./enforcement.ts";
+
+/**
+ * `OPENCODE_STATUS_FILE` of `@toolu/core/startup`, spelled here: the npm route
+ * installs `@toolu/core` from the registry, where the release that adds the
+ * export may not be the one installed. A test pins the two together.
+ */
+export const STATUS_FILE = "opencode-status.json";
 
 const MAX_REASON_CHARS = 4_000;
 const MAX_NOTES = 20;
@@ -52,9 +59,8 @@ export function statusRecord(
  * `shell.env` sets `TOOLU_CONFIG_DIR` to that data root, where the reader looks.
  */
 export function statusRecordPath(binding: Pick<HostBinding, "projectRoot" | "env">): string {
-  return opencodeStatusPath(
-    opencodeDataRoot({ projectRoot: binding.projectRoot, env: binding.env }),
-  );
+  const dataRoot = opencodeDataRoot({ projectRoot: binding.projectRoot, env: binding.env });
+  return join(opencodeRegistryRoot(dataRoot), STATUS_FILE);
 }
 
 /** Atomic: a unique temp file renamed over the record. Returns why it failed, if it did. */
