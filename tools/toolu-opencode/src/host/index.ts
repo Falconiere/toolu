@@ -2,6 +2,7 @@ export { detectHost } from "./detect.ts";
 export {
   opencodeConfigRoot,
   opencodeDataRoot,
+  opencodeGlobalPluginSelectionPath,
   opencodeLegacySharedRoot,
   opencodePluginSelectionPath,
   opencodeProjectConfigPath,

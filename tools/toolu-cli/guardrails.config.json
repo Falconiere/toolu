@@ -53,8 +53,15 @@
         "__tests__"
       ],
       "opencode": [
-        "wire.ts",
-        "merge.ts",
+        "paths.ts",
+        "jsonc.ts",
+        "entries.ts",
+        "selection.ts",
+        "install.ts",
+        "list.ts",
+        "remove.ts",
+        "update.ts",
+        "dispatch.ts",
         "__tests__"
       ],
       "ui": [
