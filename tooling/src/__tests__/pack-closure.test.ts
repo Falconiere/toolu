@@ -41,8 +41,8 @@ const BASE: Record<string, string> = {
 };
 
 /**
- * A package on disk: `src`, `generated` and `plugins` ship, with zod and
- * @toolu/core as dependencies. `executable` paths are 0755 in the source
+ * A package on disk: `src`, `generated` and `plugins` ship, and zod and
+ * @toolu/core declared dependencies. `executable` paths are 0755 in the source
  * catalog (`<dir>/source/<path>`) but 0644 in the package.
  */
 function fixture({ files, executable = [], exports = ENTRY }: Fixture): {

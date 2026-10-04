@@ -35,7 +35,7 @@ const SDK_DECLARATIONS = [
   ["peerDependencies", "peerDependency"],
 ] as const;
 
-/** Every SDK package the adapter declares, as a dev dependency and as a peer, equals the pin. */
+/** Every SDK package the adapter declares, in devDependencies and peerDependencies, equals the pin. */
 function checkAdapterSdk(pin: Pin, adapter: AdapterSdk): void {
   for (const [field, label] of SDK_DECLARATIONS) {
     for (const name of SDK_PACKAGES) {

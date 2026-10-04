@@ -139,7 +139,7 @@ test.concurrent("the workflow publishes in dependency order, core before opencod
 // release-please's json updater replaces only the semver inside the value, so
 // the caret survives and the floor tracks every release (#361). A floor below
 // the release let an install resolve a core without the adapter's exports.
-test.concurrent("@toolu/opencode declares @toolu/core as a caret on its own release, never workspace:*", () => {
+test.concurrent("@toolu/opencode declares @toolu/core with a caret on its own release, never workspace:*", () => {
   const pkg = readPackage("tools/toolu-opencode");
   expect(pkg.dependencies?.["@toolu/core"]).toBe(`^${pkg.version ?? ""}`);
   const raw = readFileSync(join(ROOT, "tools/toolu-opencode/package.json"), "utf8");
