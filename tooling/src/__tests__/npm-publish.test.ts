@@ -1,7 +1,8 @@
 // npm publish wiring: the CLI is versioned by release-please and published by
 // a workflow release-please calls once the Release exists.
 import { expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { run } from "@toolu/conformance/harness/spawn";
 import { z } from "zod";
@@ -25,7 +26,9 @@ const PackageJson = z.looseObject({
 });
 const ReleasePleaseConfig = z.object({
   packages: z.object({
-    ".": z.object({ "extra-files": z.array(z.looseObject({ path: z.string() })) }),
+    ".": z.object({
+      "extra-files": z.array(z.looseObject({ path: z.string(), jsonpath: z.string().optional() })),
+    }),
   }),
 });
 
@@ -133,11 +136,27 @@ test.concurrent("the workflow publishes in dependency order, core before opencod
   expect(WF).toContain("packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm");
 });
 
-test.concurrent("@toolu/opencode declares @toolu/core with a caret range, never workspace:*", () => {
-  const dependency = readPackage("tools/toolu-opencode").dependencies?.["@toolu/core"] ?? "";
-  expect(dependency).toMatch(/^\^[0-9]+\.[0-9]+\.[0-9]+$/);
+// release-please's json updater replaces only the semver inside the value, so
+// the caret survives and the floor tracks every release (#361). A floor below
+// the release let an install resolve a core without the adapter's exports.
+test.concurrent("@toolu/opencode declares @toolu/core as a caret on its own release, never workspace:*", () => {
+  const pkg = readPackage("tools/toolu-opencode");
+  expect(pkg.dependencies?.["@toolu/core"]).toBe(`^${pkg.version ?? ""}`);
   const raw = readFileSync(join(ROOT, "tools/toolu-opencode/package.json"), "utf8");
   expect(raw).not.toContain("workspace:");
+});
+
+test.concurrent("release-please raises the @toolu/core floor with every release", () => {
+  const config = ReleasePleaseConfig.parse(
+    JSON.parse(readFileSync(join(ROOT, "release-please-config.json"), "utf8")),
+  );
+  const entries = config.packages["."]["extra-files"].filter(
+    (file) => file.path === "tools/toolu-opencode/package.json",
+  );
+  expect(entries.map((entry) => entry.jsonpath)).toEqual([
+    "$.version",
+    "$.dependencies['@toolu/core']",
+  ]);
 });
 
 test.concurrent("@toolu/opencode ships a resolvable default entry", () => {
@@ -230,4 +249,56 @@ test.concurrent("the workflow waits until every published package resolves befor
   // setup-node's .npmrc reads NODE_AUTH_TOKEN on every npm call, so the wait
   // step needs the token too, not only the publish step.
   expect(countLines(WF, TOKEN_LINE)).toBe(2);
+});
+
+/** The workflow's "Check the tag matches every package version" script, for `tag`. */
+function tagCheckScript(tag: string): string {
+  const lines = WF.split("\n");
+  const start = lines.findIndex((line) => line.includes("name: Check the tag matches"));
+  const body: string[] = [];
+  for (const line of lines.slice(start + 2)) {
+    if (!line.startsWith("          ") && line.trim() !== "") break;
+    body.push(line.slice(10));
+  }
+  return body.join("\n").replace("${{ inputs.tag }}", tag);
+}
+
+/** The three published manifests copied into a temp tree, `edit` applied to opencode's. */
+function manifestTree(edit: (pkg: Record<string, unknown>) => void): string {
+  const dir = mkdtempSync(join(tmpdir(), "npm-publish-tag-"));
+  for (const rel of PUBLISHED) {
+    const pkg = z
+      .record(z.string(), z.unknown())
+      .parse(JSON.parse(readFileSync(join(ROOT, rel, "package.json"), "utf8")));
+    if (rel === "tools/toolu-opencode") edit(pkg);
+    mkdirSync(join(dir, rel), { recursive: true });
+    writeFileSync(join(dir, rel, "package.json"), JSON.stringify(pkg));
+  }
+  return dir;
+}
+
+test.concurrent("the tag check passes for this release and refuses a stale @toolu/core floor", async () => {
+  const tag = `v${readPackage(".").version ?? ""}`;
+  const good = manifestTree(() => undefined);
+  const stale = manifestTree((pkg) => {
+    pkg["dependencies"] = {
+      ...z.record(z.string(), z.string()).parse(pkg["dependencies"]),
+      "@toolu/core": "^7.4.0",
+    };
+  });
+  try {
+    const ok = await run(["bash", "-c", tagCheckScript(tag)], { cwd: good });
+    expect({ exitCode: ok.exitCode, stdout: ok.stdout }).toEqual({
+      exitCode: 0,
+      stdout: `publishing ${tag}\n`,
+    });
+    const refused = await run(["bash", "-c", tagCheckScript(tag)], { cwd: stale });
+    expect({ exitCode: refused.exitCode, stderr: refused.stderr }).toEqual({
+      exitCode: 1,
+      stderr: `tag ${tag} does not match the @toolu/opencode @toolu/core floor ^7.4.0\n`,
+    });
+  } finally {
+    rmSync(good, { recursive: true, force: true });
+    rmSync(stale, { recursive: true, force: true });
+  }
 });

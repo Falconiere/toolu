@@ -24,6 +24,7 @@
   },
   "files": [
     "src",
+    "!src/**/__tests__",
     "generated",
     "plugins"
   ],
@@ -47,9 +48,21 @@
     "./adapter/tool-before": "./src/adapter/tool-before.ts"
   },
   "dependencies": {
-    "@toolu/core": "^7.4.0",
+    "@toolu/core": "^7.9.0",
     "gray-matter": "4.0.3",
     "zod": "4.1.5"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": "1.18.34",
+    "@opencode-ai/sdk": "1.18.34"
+  },
+  "peerDependenciesMeta": {
+    "@opencode-ai/plugin": {
+      "optional": true
+    },
+    "@opencode-ai/sdk": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@opencode-ai/plugin": "1.18.34",

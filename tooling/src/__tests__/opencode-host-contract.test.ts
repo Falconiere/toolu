@@ -10,6 +10,7 @@ import {
 import { dirname, join, resolve } from "node:path";
 import { run, type RunResult } from "@toolu/conformance/harness/spawn";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
+import { z } from "zod";
 import {
   isUsed,
   MatrixSchema,
@@ -30,12 +31,18 @@ const CHECK = join(ROOT, "tooling/src/opencode-host-contract.ts");
 const CONTRACT = join(ROOT, "tools/toolu-opencode/contract");
 const DOC = join(ROOT, "docs/opencode-host-contract.md");
 const pin = readJson(join(CONTRACT, "pin.json"), PinSchema);
+const AdapterManifest = z.looseObject({
+  devDependencies: z.record(z.string(), z.string()),
+  peerDependencies: z.record(z.string(), z.string()),
+});
+type AdapterManifest = z.infer<typeof AdapterManifest>;
 
 type Mutations = {
   matrix?: (m: Matrix) => void;
   results?: (r: ProbeResults) => void;
   doc?: (doc: string) => string;
-  adapterSdk?: string;
+  /** Edits a copy of the adapter's real package.json. */
+  adapter?: (pkg: AdapterManifest) => void;
   plugins?: (dir: string) => void;
 };
 
@@ -86,10 +93,12 @@ async function check(sb: Sandbox, m: Mutations = {}, args: string[] = []): Promi
     TOOLU_OPENCODE_CONTRACT_DIR: dir,
     TOOLU_OPENCODE_CONTRACT_DOC: doc,
   };
-  if (m.adapterSdk !== undefined) {
-    env.TOOLU_OPENCODE_ADAPTER_PKG = sb.write("adapter/package.json", {
-      devDependencies: { "@opencode-ai/plugin": m.adapterSdk },
-    });
+  if (m.adapter !== undefined) {
+    const pkg = AdapterManifest.parse(
+      JSON.parse(readFileSync(join(ROOT, "tools/toolu-opencode/package.json"), "utf8")),
+    );
+    m.adapter(pkg);
+    env.TOOLU_OPENCODE_ADAPTER_PKG = sb.write("adapter/package.json", pkg);
   }
   if (m.plugins !== undefined) {
     mirrorPlugins(sb.path("plugins"));
@@ -200,8 +209,20 @@ test.concurrent("results must hold every probe exactly once", () =>
 
 test.concurrent("the adapter devDependency must equal the SDK pin", () =>
   expectFailure(
-    { adapterSdk: "1.18.33" },
+    { adapter: (pkg) => void (pkg.devDependencies["@opencode-ai/plugin"] = "1.18.33") },
     `pin mismatch: @toolu/opencode devDependency @opencode-ai/plugin is 1.18.33, pin is ${pin.sdk.version}`,
+  ));
+
+test.concurrent("the adapter's optional SDK peers must equal the SDK pin", () =>
+  expectFailure(
+    { adapter: (pkg) => void (pkg.peerDependencies["@opencode-ai/sdk"] = "1.18.33") },
+    `pin mismatch: @toolu/opencode peerDependency @opencode-ai/sdk is 1.18.33, pin is ${pin.sdk.version}`,
+  ));
+
+test.concurrent("an adapter without the SDK peers fails the pin check", () =>
+  expectFailure(
+    { adapter: (pkg) => void delete pkg.peerDependencies["@opencode-ai/plugin"] },
+    `pin mismatch: @toolu/opencode peerDependency @opencode-ai/plugin is absent, pin is ${pin.sdk.version}`,
   ));
 
 test.concurrent("a hand-edited generated block is stale", () =>

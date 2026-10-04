@@ -178,6 +178,11 @@
         },
         {
           "type": "json",
+          "path": "tools/toolu-opencode/package.json",
+          "jsonpath": "$.dependencies['@toolu/core']"
+        },
+        {
+          "type": "json",
           "path": "tools/toolu-cli/package.json",
           "jsonpath": "$.version"
         },

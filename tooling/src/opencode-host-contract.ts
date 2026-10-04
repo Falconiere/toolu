@@ -38,6 +38,7 @@ import {
 
 const AdapterPackage = z.looseObject({
   devDependencies: z.record(z.string(), z.string()).optional(),
+  peerDependencies: z.record(z.string(), z.string()).optional(),
 });
 
 function main(argv: string[]): void {
@@ -60,7 +61,7 @@ function main(argv: string[]): void {
   const results = readJson(paths.results, ProbeResultsSchema);
   const matrix = readJson(paths.matrix, MatrixSchema);
   const adapter = AdapterPackage.parse(JSON.parse(readFileSync(adapterPkg, "utf8")));
-  const verdicts = checkPins(pin, adapter.devDependencies?.["@opencode-ai/plugin"], results);
+  const verdicts = checkPins(pin, adapter, results);
   checkMatrix(matrix, verdicts, pluginsDir);
 
   const sdk = installedSdk(adapterPkg, ROOT);

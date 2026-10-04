@@ -93,6 +93,14 @@ jobs:
               exit 1
             fi
           done
+          # release-please raises @toolu/opencode's @toolu/core floor with every
+          # release. A stale floor would let an install resolve an older core that
+          # lacks the exports the adapter imports.
+          floor=$(node -p "require('./tools/toolu-opencode/package.json').dependencies['@toolu/core']")
+          if [ "$floor" != "^${tag#v}" ]; then
+            echo "tag $tag does not match the @toolu/opencode @toolu/core floor $floor" >&2
+            exit 1
+          fi
           echo "publishing $tag"
 
       # Dependency order: @toolu/opencode depends on @toolu/core via a caret range
