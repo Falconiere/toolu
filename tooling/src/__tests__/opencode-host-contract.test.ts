@@ -213,7 +213,7 @@ test.concurrent("the adapter devDependency must equal the SDK pin", () =>
     `pin mismatch: @toolu/opencode devDependency @opencode-ai/plugin is 1.18.33, pin is ${pin.sdk.version}`,
   ));
 
-test.concurrent("the adapter's optional SDK peers must equal the SDK pin", () =>
+test.concurrent("the adapter's SDK peers must equal the SDK pin", () =>
   expectFailure(
     { adapter: (pkg) => void (pkg.peerDependencies["@opencode-ai/sdk"] = "1.18.33") },
     `pin mismatch: @toolu/opencode peerDependency @opencode-ai/sdk is 1.18.33, pin is ${pin.sdk.version}`,

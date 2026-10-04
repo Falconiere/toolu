@@ -25,7 +25,7 @@ closure gate (red on today's manifest) → manifest and release sync (green) →
   },
   {
     "id": "manifest-release",
-    "title": "Exclude __tests__ from files, set the @toolu/core floor to ^<version>, add optional SDK peers equal to the pin, send the prepack summary to stderr, add the release-please core-floor extra-file and the publish tag check, and extend the host contract check to the peers",
+    "title": "Exclude __tests__ from files, set the @toolu/core floor to ^<version>, add SDK peers equal to the pin, send the prepack summary to stderr, add the release-please core-floor extra-file and the publish tag check, and extend the host contract check to the peers",
     "ac_refs": ["AC-1", "AC-4"],
     "depends_on": ["closure-gate"],
     "paths": ["tools/toolu-opencode/package.json", "tools/toolu-opencode/scripts/bundle-plugins.ts", "release-please-config.json", ".github/workflows/npm-publish.yml", "tooling/src/__tests__/npm-publish.test.ts", "tooling/src/opencode-host-contract.ts", "tooling/src/__tests__/opencode-host-contract.test.ts", "tooling/src/opencode-host/**", "tools/toolu-opencode/contract/**", "bun.lock"],
@@ -100,6 +100,7 @@ Jev alignment scored 1.44 (P = 0.53 for 'mapped but some checks would not observ
 
 - `packedFiles` moved into a new `tooling/src/npm-pack.ts`, alongside `stageOpencode` and `packInto`, instead of `pack-inventory.ts`. The inventory gate, the closure test and the live `packTarball` share one npm pack path. Packing a temp copy keeps `npm pack` from rewriting the gitignored `tools/toolu-opencode/plugins/` while other tests run.
 - The live scenario imports each export in process from the installed path. It does not spawn a fresh `bun` subprocess, because that would need a new entry file that knip would flag. Module resolution still starts at the installed file, so bare dependencies resolve from the host's install.
+- The SDK peers are required, not optional. knip's `Referenced optional peerDependencies` rule counts `import type` references, and new code gets no exemption. Jev chose a required peer (0.82) over an optional peer plus a knip ignore (0.06) or no peer (0.12). The spec was updated to match.
 - `required` keeps the files that only code or a `$ROOT`-style shell variable reaches: the epic scripts and briefs, the fixer brief and the settings. The closure rule cannot see those references. Only the `debug-*.ts` entries, which surfaces name through `$TOOLU_PLUGIN_ROOT_TOOLU`, moved to the derived rule.
 
 ## Evidence

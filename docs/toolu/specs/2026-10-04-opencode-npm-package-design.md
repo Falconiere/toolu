@@ -25,7 +25,7 @@
 1. **Manifest (`tools/toolu-opencode/package.json`).**
    - `files` becomes `["src", "!src/**/__tests__", "generated", "plugins"]`. npm and bun both honor the negation (measured: 354 → 290 files).
    - `dependencies["@toolu/core"]` becomes `^7.9.0`, the current release.
-   - `peerDependencies` gains `@opencode-ai/plugin` and `@opencode-ai/sdk`, both `1.18.34` (the `contract/pin.json` SDK pin). `peerDependenciesMeta` marks both `optional: true`. The adapter uses them only through `import type`, the host supplies its own copy, and Bun does not auto-install optional peers. The existing `devDependencies` stay for local typechecking.
+   - `peerDependencies` gains `@opencode-ai/plugin` and `@opencode-ai/sdk`, both `1.18.34` (the `contract/pin.json` SDK pin). They are required peers, not optional ones. The adapter uses them only through `import type`, but knip's `Referenced optional peerDependencies` rule counts type references, and new code gets no exemption. Jev chose a required peer (0.82) over an optional peer plus a knip ignore (0.06) or no peer at all (0.12). A required peer also states which host SDK is verified: Bun installs it alongside the package and only warns on a mismatch. The existing `devDependencies` stay for local typechecking.
    - `exports` and `main` are unchanged. The closure gate now proves each target ships.
 2. **Release sync.**
    - `release-please-config.json` gains `{"type":"json","path":"tools/toolu-opencode/package.json","jsonpath":"$.dependencies['@toolu/core']"}`. release-please's `GenericJson` replaces only the semver match inside the value, so `^7.9.0` becomes `^7.10.0` in the Release PR.
@@ -34,7 +34,7 @@
 4. **Closure gate (new `tooling/src/pack-closure.ts`, run by `pack-inventory.ts` for `@toolu/opencode`).** Given the package directory, after prepack, and the packed `{path, mode}` list, it reports:
    - **References:** each `$TOOLU_PLUGIN_ROOT/<p>` maps to `plugins/toolu/<p>`. Each `$TOOLU_PLUGIN_ROOT_<NAME>/<p>` maps to `plugins/<name>/<p>`, where `<name>` is `NAME` lower-cased with `_` turned into `-`. Each `$TOOLU_OPENCODE_ROOT/<p>` maps to `<p>`. Braced and unbraced forms both count. The reference comes from any packed `.md` or `.json` file under `generated/` or `plugins/` and must name a packed file, or, when it ends in `/`, a packed directory prefix. Paths holding `<`, `…` or `*` are placeholders and are skipped.
    - **Links:** each relative Markdown link `](path)` in a packed `generated/**/*.md` resolves, after removing any `#fragment`, to a packed file. URLs and pure anchors are skipped.
-   - **Imports:** for every packed `.ts` and `.js` file, `Bun.Transpiler.scanImports` reads the import specifiers. Relative ones must resolve to a packed file, either exactly or by adding `.ts`, `.js` or `/index.ts`. Bare ones must be a `node:` or `bun:` builtin or a name in `dependencies`. A `@toolu/core/<sub>` import must be a key in the workspace core's `exports`. Type-only imports are erased by the transpiler and therefore not checked, which is why the SDK can stay an optional peer.
+   - **Imports:** for every packed `.ts` and `.js` file, `Bun.Transpiler.scanImports` reads the import specifiers. Relative ones must resolve to a packed file, either exactly or by adding `.ts`, `.js` or `/index.ts`. Bare ones must be a `node:` or `bun:` builtin or a name in `dependencies`. A `@toolu/core/<sub>` import must be a key in the workspace core's `exports`. Type-only imports are erased by the transpiler and therefore not checked.
    - **Exports:** `main` and every `exports` target are packed.
    - **Modes:** every packed `plugins/<x>/<p>` whose source `plugins/<x>/<p>` is executable has mode 0755.
    - **Forbidden:** any path containing `__tests__/` or `fixtures/` (added to the existing forbidden prefixes and patterns).
@@ -90,8 +90,7 @@ Problem line formats (stable, asserted by tests):
 ```json
 "files": ["src", "!src/**/__tests__", "generated", "plugins"],
 "dependencies": { "@toolu/core": "^7.9.0", "gray-matter": "4.0.3", "zod": "4.1.5" },
-"peerDependencies": { "@opencode-ai/plugin": "1.18.34", "@opencode-ai/sdk": "1.18.34" },
-"peerDependenciesMeta": { "@opencode-ai/plugin": { "optional": true }, "@opencode-ai/sdk": { "optional": true } }
+"peerDependencies": { "@opencode-ai/plugin": "1.18.34", "@opencode-ai/sdk": "1.18.34" }
 ```
 
 ## Failure modes and edge cases
@@ -101,7 +100,7 @@ Problem line formats (stable, asserted by tests):
 - **Placeholder references** (`$TOOLU_PLUGIN_ROOT_PR_BABYSIT/hooks/dist/<helper>.js`, `${TOOLU_PLUGIN_ROOT_<PLUGIN>}`, `…/generated/…`): skipped. A bare variable with no path (`$TOOLU_PLUGIN_ROOT_PR_BABYSIT`) is not a reference.
 - **Directory references** ending in `/` (`${TOOLU_OPENCODE_ROOT}/generated/`): satisfied when any packed path starts with the reference.
 - **Fragment links** (`file.md#section`): the fragment is removed before resolving. External links (`https:`), `mailto:` and pure anchors are skipped.
-- **Type-only imports:** erased by `scanImports`, so they are not checked. `import type` from the SDK is therefore fine as an optional peer.
+- **Type-only imports:** erased by `scanImports`, so they are not checked. The SDK peers are declared anyway, so a bare SDK value import would still pass the dependency rule. The real-package closure test shows that only test files had one.
 - **A core export that is in the workspace but not yet on npm:** the hermetic gate passes, because it checks the workspace exports. The live scenario then fails at load (`toolu: ready` absent), which is the existing guard (memory 6dbe117a). The spec records it, and the scenario's observed output names the missing ready line.
 - **Concurrent packs:** the gate runs `npm pack --dry-run` in the real package directory, which rewrites the gitignored `plugins/`. The live tarball packs in its own temp stage, so the live smoke and the gate never share a stage. As before, `test:pack` and the unit test `npm-publish.test.ts` each run the inventory serially.
 - **The host's install cache is reused across runs:** each run packs into a fresh `mkdtemp` and uses a `file:` spec with a unique path, so the host installs a fresh copy.
@@ -113,7 +112,7 @@ Problem line formats (stable, asserted by tests):
 - **AC-1:** Given the repository's `@toolu/opencode` package, `npm pack --dry-run --json` lists no `__tests__` or `fixtures` path. The packed list includes every `exports` target. Every packed `plugins/*/hooks/dist/*.js` whose source is executable has mode 0755.
 - **AC-2:** Given the packed `@toolu/opencode` list, the closure gate reports zero problems. Given fixture packages that each break one rule (a missing referenced helper, a broken Markdown link, a relative import outside the tarball, an undeclared bare import, a `@toolu/core/<sub>` not in core's exports, a missing export target, and a lost exec bit), it reports exactly the matching problem line. Given a placeholder reference, it reports nothing.
 - **AC-3:** Before the change, the closure gate run on the current manifest reports the shipped `__tests__` imports of `@toolu/conformance` as undeclared dependencies.
-- **AC-4:** `tools/toolu-opencode/package.json` declares `@toolu/core` as `^<own version>` and `@opencode-ai/plugin` and `@opencode-ai/sdk` as optional peers equal to `contract/pin.json`'s SDK version. `release-please-config.json` has the `$.dependencies['@toolu/core']` extra-file entry. `npm-publish.yml` refuses a tag that differs from the core floor. `bun run check:opencode-host` fails when a peer pin differs from the contract pin.
+- **AC-4:** `tools/toolu-opencode/package.json` declares `@toolu/core` as `^<own version>` and `@opencode-ai/plugin` and `@opencode-ai/sdk` as peers equal to `contract/pin.json`'s SDK version. `release-please-config.json` has the `$.dependencies['@toolu/core']` extra-file entry. `npm-publish.yml` refuses a tag that differs from the core floor. `bun run check:opencode-host` fails when a peer pin differs from the contract pin.
 - **AC-5:** On the pinned host (`opencode-ai@1.18.34`), `bun run smoke:opencode-entry package.clean-install` passes. The tarball comes from the real `npm pack` with `prepack`, and the session has empty `TOOLU_REPO_ROOT` and `TOOLU_ROOT`. The installed tree equals the tarball list, the roots sit outside the checkout, and all 16 plugins become ready. The registry modules on disk match `entry.full-startup`'s list. A `.env` write is refused through the tarball's `plugins/toolu/settings` runtime data. The listed helpers exit 0, every export imports, and every helper symlink resolves inside the installed root.
 - **AC-6:** The existing npm-route scenarios (`entry.npm-root`, `surfaces.npm-clean`, `surfaces.lifecycle`, `cli.install`) still pass with the publish-path tarball. `bun run test` passes.
 
@@ -141,7 +140,7 @@ None blocking. The live scenario runs locally, and adding it to CI is OP-28's jo
 
 ## Spec review
 
-Jev alignment: AC coverage scored 2.72 out of 3 (P(full coverage) = 0.73). Scope creep came back at 0.40, which is uncertain. The optional SDK peers and the release sync answer the issue's scope bullets (a) and (c), so they are not extra scope.
+Jev alignment: AC coverage scored 2.72 out of 3 (P(full coverage) = 0.73). Scope creep came back at 0.40, which is uncertain. The SDK peers and the release sync answer the issue's scope bullets (a) and (c), so they are not extra scope.
 
 - Acceptance criteria: 🟡 should-fix: AC-5 did not name the runtime-data (`settings`) or registry-module assertions that the architecture lists. Fixed by stating both in AC-5.
 - No blockers. Every AC has a real input and a runnable check. Approved.

@@ -29,7 +29,7 @@ const PackReport = z.array(
 );
 
 /** `npm pack --json` output; prepack may print before the JSON array, so parsing starts at its first line. */
-export function parsePackReport(stdout: string): { filename: string; files: PackedFile[] } {
+function parsePackReport(stdout: string): { filename: string; files: PackedFile[] } {
   const lines = stdout.split("\n");
   const start = lines.findIndex((line) => line.startsWith("["));
   if (start === -1) throw new Error(`npm pack printed no JSON report: ${stdout.slice(0, 500)}`);

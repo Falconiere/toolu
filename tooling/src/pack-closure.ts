@@ -11,7 +11,7 @@ import { join, posix } from "node:path";
 import { z } from "zod";
 import type { PackedFile } from "./npm-pack.ts";
 
-export type ClosureInput = {
+type ClosureInput = {
   /** The package root, after prepack. */
   packageDir: string;
   files: readonly PackedFile[];

@@ -72,10 +72,6 @@
         "@opencode-ai/plugin": "1.18.34",
         "@opencode-ai/sdk": "1.18.34",
       },
-      "optionalPeers": [
-        "@opencode-ai/plugin",
-        "@opencode-ai/sdk",
-      ],
     },
   },
   "packages": {

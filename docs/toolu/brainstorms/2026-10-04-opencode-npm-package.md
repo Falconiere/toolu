@@ -13,7 +13,7 @@
 | Core dependency | `^<release>`, with a release-please `extra-files` JSON entry at `$.dependencies['@toolu/core']` | release-please's `GenericJson` replaces only the semver match, so the `^` survives. Publish order is core, then opencode. Jev compared exact against a hand-bumped caret and chose exact (0.98). The synced caret, found afterwards, keeps both properties: the floor always equals the release, and the existing caret convention and test stay | A future core minor could change behavior within the caret. Accepted, as it was before |
 | Pack tool | `npm pack --json` (dry run for the gate, real pack for the live tarball) | Jev `npm` 0.99. npm reports file modes. Both tools produce the same 354-file list today | npm must be on PATH in CI. It is: the job already runs `npm install -g` |
 | Tests in tarball | Exclude with `!src/**/__tests__` | Jev 0.91. npm and bun both honor the negation (290 files) | None |
-| SDK peers | Optional peers pinned to `contract/pin.json` | Only `import type` uses them. Bun does not auto-install optional peers | None at runtime |
+| SDK peers | Optional peers pinned to `contract/pin.json` (superseded during execution by required peers; see the plan's Deviations) | Only `import type` uses them. Bun does not auto-install optional peers | None at runtime |
 | Live proof | A new `package.clean-install` scenario: all 16 plugins, npm route, repo env blanked | `fullStartup` already counts modules and helpers through the shim | Runtime: one more full host session |
 
 ## Rejected

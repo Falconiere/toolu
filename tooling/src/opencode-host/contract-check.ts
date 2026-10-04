@@ -23,8 +23,8 @@ import {
 } from "./schema.ts";
 
 /** Check the pins and that the results hold each probe once; return the verdict per probe. */
-/** The adapter's SDK declarations: dev dependencies for typechecking, optional peers for consumers. */
-export type AdapterSdk = {
+/** The adapter's SDK declarations: dev dependencies for typechecking, peers for the host it loads into. */
+type AdapterSdk = {
   devDependencies?: Record<string, string> | undefined;
   peerDependencies?: Record<string, string> | undefined;
 };
