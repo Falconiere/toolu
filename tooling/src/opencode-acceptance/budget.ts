@@ -25,6 +25,7 @@ import {
 import { ContractError, readJson } from "../opencode-host/schema.ts";
 import { openSession, type ProbeSession } from "../opencode-host/session.ts";
 import {
+  catalogNames,
   hostEvidence,
   inSequence,
   type AcceptanceCheck,
@@ -122,7 +123,7 @@ async function timedRun(
     kind,
     spawnAt,
     requestTimes,
-    ready: diagnostics(run.stderr, "toolu: ready (16 plugins"),
+    ready: diagnostics(run.stderr, `toolu: ready (${catalogNames().length} plugins`),
   };
 }
 

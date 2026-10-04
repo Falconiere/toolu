@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { contractPaths } from "../../opencode-host/results.ts";
 import { ProbeResultsSchema, readJson } from "../../opencode-host/schema.ts";
-import { CONTROLS, replaceExactly, selectControls, stageControl } from "../controls.ts";
+import { hostEvidence, type AcceptanceCheck } from "../checks.ts";
+import { CONTROLS, replaceExactly, runControl, selectControls, stageControl } from "../controls.ts";
 import { acceptanceChecks } from "../families.ts";
 
 // Every regression control applies to a fresh stage of the real package (#362 AC-1), so a
@@ -94,4 +95,64 @@ test.concurrent("a narrowed run selects only the controls it names", () => {
   expect(selectControls(["control.missing-context", "entry.npm-root"]).map((c) => c.id)).toEqual([
     "control.missing-context",
   ]);
+});
+
+// Control verdicts over real stages, with checks that read the staged files instead of starting a host.
+
+const CTX = { bin: "", cacheRoot: "", tarball: "" };
+
+/** A check that passes only while the staged hooks.ts still wires tool.execute.after. */
+function afterWired(): AcceptanceCheck {
+  return {
+    id: "posttool.edit",
+    family: "test",
+    plugins: ["toolu"],
+    evidence: hostEvidence(),
+    run: () => {
+      const stage = process.env.TOOLU_ACCEPTANCE_PACKAGE ?? "";
+      const wired = readFileSync(join(stage, "src/plugin/hooks.ts"), "utf8").includes(
+        '"tool.execute.after"',
+      );
+      return Promise.resolve({ pass: wired, observed: { wired } });
+    },
+  };
+}
+
+function fixed(pass: boolean): AcceptanceCheck {
+  return { ...afterWired(), run: () => Promise.resolve({ pass, observed: {} }) };
+}
+
+const POST_TOOL = CONTROLS[3];
+
+test("a control is detected only when its check passes unbroken and fails after the edit", async () => {
+  if (POST_TOOL === undefined) throw new Error("missing control");
+  const result = await runControl(POST_TOOL, afterWired(), CTX);
+  expect(result.detected).toBe(true);
+  expect(result.observed).toEqual({ pristine: "pass", broken: { wired: false } });
+  expect(process.env.TOOLU_ACCEPTANCE_PACKAGE).toBeUndefined();
+});
+
+test("a check that still passes after the edit is a missed control", async () => {
+  if (POST_TOOL === undefined) throw new Error("missing control");
+  expect((await runControl(POST_TOOL, fixed(true), CTX)).detected).toBe(false);
+});
+
+test("a check that already fails on the unbroken stage proves nothing", async () => {
+  if (POST_TOOL === undefined) throw new Error("missing control");
+  const result = await runControl(POST_TOOL, fixed(false), CTX);
+  expect(result.detected).toBe(false);
+  expect(result.error).toContain("fails on the unbroken stage");
+});
+
+test("an edit that does not apply is a missed control, not a detection", async () => {
+  const moved = {
+    id: "control.moved",
+    regression: "x",
+    check: "posttool.edit",
+    apply: (stage: string) =>
+      replaceExactly(join(stage, "src/plugin/hooks.ts"), "no such text", ""),
+  };
+  const result = await runControl(moved, afterWired(), CTX);
+  expect(result.detected).toBe(false);
+  expect(result.error).toContain('has 0 of "no such text"');
 });

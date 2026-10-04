@@ -7,7 +7,7 @@
  */
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
 import { ROOT } from "../opencode-host/scenarios-entry.ts";
 import { hostEvidence, type AcceptanceCheck, type CheckOutcome, type Service } from "./checks.ts";
@@ -19,11 +19,12 @@ type ExternalTest = {
   /** The env flag that un-skips it. */
   flag: string;
   service: string;
-  /** An env key it cannot run without; absent means `not-configured`. */
+  /** An env key it cannot run without: unset, the test is `not-configured`. No key needed: it always runs. */
   requires?: string;
 };
-type LiveTestFile = {
+export type LiveTestFile = {
   id: string;
+  /** Relative to the repository root, or absolute. */
   file: string;
   plugins: readonly string[];
   service: Service;
@@ -172,7 +173,7 @@ export async function runLiveFile(
 /** Host tests must all pass and the external ones must stay skipped without their flag. */
 async function runHostTests(entry: LiveTestFile): Promise<CheckOutcome> {
   const externalNames = new Set((entry.external ?? []).map((test) => test.name));
-  const { cases, exitCode, tail } = await runLiveFile(join(ROOT, entry.file), {
+  const { cases, exitCode, tail } = await runLiveFile(resolve(ROOT, entry.file), {
     TOOLU_LIVE_OPENCODE: "1",
   });
   const host = cases.filter((test) => !externalNames.has(test.name));
@@ -218,12 +219,16 @@ export async function runExternal(
     [test.flag]: "1",
     ...(test.requires === undefined ? {} : { [test.requires]: key }),
   };
-  const { cases, tail } = await runLiveFile(join(ROOT, entry.file), env);
+  const { cases, tail } = await runLiveFile(resolve(ROOT, entry.file), env);
   const found = cases.find((item) => item.name === test.name);
   const status: ExternalStatus = found?.status === "passed" ? "available" : "unavailable";
-  return {
-    ...base,
-    status,
-    detail: found === undefined ? `not run: ${tail}` : `${found.status} in ${found.seconds}s`,
-  };
+  const detail = found === undefined ? `not run: ${tail}` : `${found.status} in ${found.seconds}s`;
+  return { ...base, status, detail: redact(detail, key === undefined ? [] : [key]) };
+}
+
+/** `text` with every secret value replaced, so a test that echoes its environment cannot leak a key into the report. */
+export function redact(text: string, secrets: readonly string[]): string {
+  return secrets
+    .filter((secret) => secret !== "")
+    .reduce((out, secret) => out.replaceAll(secret, "***"), text);
 }

@@ -52,7 +52,7 @@ Every one of the 16 catalog plugins must have a passing dedicated actual-host ch
 
 **Preflight.** A missing host, `git`, `npm`, `tar`, `ast-grep`, `agent-browser` or its Chromium fails the run before any session, and names what is missing. Nothing is reported as skipped.
 
-**Regression controls.** Each run stages broken copies of `@toolu/opencode` and passes only when the matching check fails against them:
+**Regression controls.** Each run stages copies of `@toolu/opencode`. A control is detected only when its check passes against the unbroken copy and then fails once one edit breaks it. A stage that fails on its own, or an edit that no longer applies, counts as a missed control:
 
 | Control | Regression | Check that must fail |
 |---|---|---|
@@ -72,7 +72,7 @@ Every one of the 16 catalog plugins must have a passing dedicated actual-host ch
 
 The run removes service credentials (`CONTEXT7_API_KEY`, `EXA_API_KEY`, `TYPESAFE_API_KEY`, `JIRA_*`) from its own environment, so no fixture check can reach a live service.
 
-**Budgets.** The same six-call session runs twice with no plugin (a no-op local plugin) and twice with toolu selecting every plugin. The startup overhead (spawn to first model request) and the median per-tool overhead are toolu's fastest run minus the reference's fastest. They must stay within `contract/acceptance-budgets.json`. On darwin-arm64 the measured overheads were +444 ms startup and +45 ms per tool call; the ceilings leave a wide margin for shared CI runners.
+**Budgets.** The same six-call session runs twice with no plugin (a no-op local plugin) and twice with toolu selecting every plugin. The startup overhead (spawn to first model request) and the median per-tool overhead are toolu's fastest run minus the reference's fastest. They must stay within `contract/acceptance-budgets.json`. On darwin-arm64, two runs measured +444 and +539 ms startup and +45 and +35 ms per tool call. The ceilings leave a wide margin for shared CI runners.
 
 **Report.** The JSON report holds:
 

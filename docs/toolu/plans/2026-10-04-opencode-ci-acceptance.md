@@ -182,3 +182,23 @@ Findings:
 - AC-9: 🟡 should-fix: the CI half (`opencode (ubuntu-latest)` and `opencode (macos-latest)` green on the PR head) cannot be a pre-push ledger check, because CI runs only after the push. Resolved: the ledger proves the darwin-arm64 half (`full-local`). The CI half is post-push evidence that `pr-babysit` gates on (CI green), and it is recorded in the PR before `report ready`.
 - docs: 🔵 consider: `grep -l` with `\|` is not portable to BSD grep. Fixed: `grep -lE`.
 - full-local: 🔵 consider: the report directory must exist. Resolved: the runner creates the report's parent directory.
+
+## Deviations
+
+- **Concurrent sessions use a second profile.** Two `opencode run` processes that start on the same profile at the same moment fail in the host with `database is locked`, because the host keeps its session database in the profile. That is a host limit, not toolu's. P1 and P2 therefore share project P (its gate files and toolu state) but use separate profiles, which models a second user or terminal. Q stays a separate project.
+- **The invalid-skill-name control is caught twice.** toolu validates its own catalog at startup, refuses the double-hyphen id (`toolu: not ready: surfaces: invalid … an ID is lowercase words joined by single hyphens`) and denies every tool call. `surface.discovered-names` therefore fails on `ready: 0` and every skill missing, before its name rule is reached. An unmodified stage passes the same check (18/18 skills owned), so the detection is not a staging artifact. The check now records `ready` and requires it.
+- **Budget in the check, not a top-level report key.** `budget.overhead` is an ordinary check, so `--only` and coverage treat it like any other. Its observations carry the measured overheads, the ceilings and raw request offsets. First darwin-arm64 measurement: +444 ms startup and +45 ms per tool call. The ceilings are 6000 ms and 1500 ms, at least 3× any measurement so far; they are re-checked against the CI Linux numbers before ready.
+- **Service credentials set aside.** The runner removes `CONTEXT7_API_KEY`, `EXA_API_KEY`, `TYPESAFE_API_KEY` and the `JIRA_*` credentials from its own environment before any check, so a check labeled `fixture` cannot quietly reach a live service. Only the matching external test gets its key back. The report lists what was set aside (`scrubbed`).
+- **`--only` names checks or controls.** A selected control runs its check against its stage even when that check is not selected. Selection happens before preflight, so a typo fails without a host run. The CLI test proves this through `bun run test:opencode --only nope.missing`.
+- **Preflight test without real tools.** The gate job (`bun run test`) does not install `agent-browser`, so `preflight.test.ts` builds its own `PATH` from `git`/`tar` links and controlled stub executables (a broken `ast-grep`, an `agent-browser` whose doctor reports no Chromium) instead of depending on this machine's tools.
+- **Probe drift is per probe.** Each contract probe is its own check (`probe.<id>`), and `probe.host-versions` compares the CLI and provisioned SDK versions. A drifted probe fails with both observations, instead of failing the run once.
+- **No `wip:` push gate.** The toolu push gate (fresh ledger plus review) blocks intermediate pushes, so the branch keeps its commits locally until delivery. The orchestrator snapshots `refs/epic-wip/*`.
+- **Review triage.** An independent review found 5 should-fix items and 5 nits. Fixed:
+  - **Controls need a pristine pass.** A control now has to pass against the unbroken stage before its edit; Jev chose this 0.99 over per-control markers. Staging fails on a missing dependency link.
+  - **Secrets.** External-test output is redacted of the key it received.
+  - **Budget readiness.** The ready string follows the catalog size.
+  - **Run setup.** A preset `TOOLU_ACCEPTANCE_PACKAGE` is refused, and the pack directory is cleaned when packing fails.
+  - **New tests:** live-test verdicts (a skipped host test fails), external statuses, control verdicts, credential set-aside, selection, and a workflow test that rules out a skip condition on the gate or acceptance.
+  - **Small fixes:** two stale comments, and the conformance helpers' unused `.opencode` variant.
+
+  Declined: switching the aggregator from `always()` to `!cancelled()`. A cancelled run would then leave the required `typescript` status skipped, which GitHub counts as passing; `always()` makes it fail (Jev 0.91).

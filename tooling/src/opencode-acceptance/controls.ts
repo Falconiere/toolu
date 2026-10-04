@@ -116,11 +116,18 @@ export const CONTROLS: readonly Control[] = [
   },
 ];
 
+/** Link `target` at `path`; a missing target is an error, never a dangling link. */
+function linkExisting(target: string, path: string): void {
+  if (!existsSync(target))
+    throw new ContractError(`control stage: ${target} does not exist (run bun install)`);
+  symlinkSync(target, path);
+}
+
 /** A staged package whose imports resolve from the checkout's installed dependencies. */
 export function stageControl(work: string): string {
   const stage = stageOpencode(work);
-  symlinkSync(join(ROOT, "tools/toolu-opencode/node_modules"), join(stage, "node_modules"));
-  symlinkSync(join(ROOT, "node_modules"), join(work, "repo/node_modules"));
+  linkExisting(join(ROOT, "tools/toolu-opencode/node_modules"), join(stage, "node_modules"));
+  linkExisting(join(ROOT, "node_modules"), join(work, "repo/node_modules"));
   return stage;
 }
 
@@ -172,8 +179,13 @@ export function runControls(
   });
 }
 
-/** One control: detected when its check fails against the broken stage. A staging failure is never detection. */
-async function runControl(
+/**
+ * One control. Its check must first pass against the unbroken stage, which
+ * proves the stage itself works; then the same stage gets the one edit and
+ * the check must fail. Only that pair is detection: a stage that fails on its
+ * own, a failed edit, or a check that still passes is a missed control.
+ */
+export async function runControl(
   control: Control,
   check: AcceptanceCheck,
   ctx: AcceptanceContext,
@@ -182,9 +194,18 @@ async function runControl(
   const work = mkdtempSync(join(tmpdir(), "toolu-acceptance-control-"));
   try {
     const stage = stageControl(work);
+    const pristine = await againstStage(check, stage, ctx);
+    if (!pristine.pass) {
+      const error = `${control.check} fails on the unbroken stage, so a failure proves nothing`;
+      return { ...base, detected: false, observed: { pristine: pristine.observed }, error };
+    }
     control.apply(stage);
-    const outcome = await againstStage(check, stage, ctx);
-    return { ...base, detected: !outcome.pass, observed: outcome.observed };
+    const broken = await againstStage(check, stage, ctx);
+    return {
+      ...base,
+      detected: !broken.pass,
+      observed: { pristine: "pass", broken: broken.observed },
+    };
   } catch (err) {
     return { ...base, detected: false, observed: {}, error: errorText(err) };
   } finally {

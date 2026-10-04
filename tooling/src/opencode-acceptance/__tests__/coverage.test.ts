@@ -4,10 +4,15 @@ import { join } from "node:path";
 import { contractPaths } from "../../opencode-host/results.ts";
 import { ProbeResultsSchema, readJson } from "../../opencode-host/schema.ts";
 import { ROOT } from "../../opencode-host/scenarios-entry.ts";
-import { coverage, inSequence, selectChecks, type AcceptanceCheck } from "../checks.ts";
+import {
+  catalogNames,
+  coverage,
+  inSequence,
+  selectChecks,
+  type AcceptanceCheck,
+} from "../checks.ts";
 import { acceptanceChecks } from "../families.ts";
 import { LIVE_TEST_FILES } from "../live-tests.ts";
-import { catalogNames } from "../run.ts";
 
 // The real registry against the real catalog (#362 AC-3): no plugin may lack an actual-host check.
 

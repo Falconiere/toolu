@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { warmUp } from "../opencode-host-probe.ts";
 import { hostCacheDir, resolveHostBinary, type HostBinary } from "../opencode-host/install.ts";
 import { contractPaths } from "../opencode-host/results.ts";
-import { packTarball, ROOT } from "../opencode-host/scenarios-entry.ts";
+import { packTarball } from "../opencode-host/scenarios-entry.ts";
 import {
   ContractError,
   PinSchema,
@@ -18,8 +18,8 @@ import {
   type Pin,
   type ProbeResults,
 } from "../opencode-host/schema.ts";
-import { listPluginManifests } from "../../../tools/toolu-opencode/src/inventory/scan.ts";
 import {
+  catalogNames,
   coverage,
   hostEvidence,
   inSequence,
@@ -38,7 +38,11 @@ import {
   type ControlResult,
 } from "./report.ts";
 
-/** Service credentials no fixture check may see; only the matching external test gets its key back. */
+/**
+ * Service credentials no fixture check may see. An external test that names
+ * one in `requires` gets it back; the others (context7 runs without a key)
+ * never do.
+ */
 const SERVICE_KEYS = [
   "CONTEXT7_API_KEY",
   "EXA_API_KEY",
@@ -55,15 +59,26 @@ function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-/** Remove the service credentials from this process; the removed values are returned for the external tests. */
-function setAsideKeys(): Record<string, string> {
+/** Remove the service credentials from `env` (this process by default); the removed values are returned for the external tests. */
+export function setAsideKeys(
+  env: Record<string, string | undefined> = process.env,
+): Record<string, string> {
   const kept: Record<string, string> = {};
   for (const key of SERVICE_KEYS) {
-    const value = process.env[key];
+    const value = env[key];
     if (value !== undefined && value !== "") kept[key] = value;
-    delete process.env[key];
+    delete env[key];
   }
   return kept;
+}
+
+/** A package override left in the shell would point every shim at another package; only controls set it. */
+export function refusePresetPackage(env: Record<string, string | undefined> = process.env): void {
+  const preset = env.TOOLU_ACCEPTANCE_PACKAGE;
+  if (preset !== undefined && preset !== "")
+    throw new ContractError(
+      `unset TOOLU_ACCEPTANCE_PACKAGE (${preset}): only regression controls set it`,
+    );
 }
 
 async function runCheck(check: AcceptanceCheck, ctx: AcceptanceContext): Promise<CheckResult> {
@@ -148,15 +163,13 @@ async function setUpHost(): Promise<HostSetup> {
   mkdirSync(cacheRoot, { recursive: true });
   const provisioned = await warmUp({ bin: host.bin, cacheRoot });
   const work = mkdtempSync(join(tmpdir(), "toolu-acceptance-"));
-  const ctx = { bin: host.bin, cacheRoot, tarball: packTarball(work) };
-  return { pin, host, provisioned, work, ctx };
-}
-
-/** The catalog every acceptance run must cover; an unreadable or empty catalog fails closed. */
-export function catalogNames(pluginsRoot: string = join(ROOT, "plugins")): string[] {
-  const names = (listPluginManifests(pluginsRoot) ?? []).map((manifest) => manifest.name);
-  if (names.length === 0) throw new ContractError(`no catalog plugins under ${pluginsRoot}`);
-  return names;
+  try {
+    const ctx = { bin: host.bin, cacheRoot, tarball: packTarball(work) };
+    return { pin, host, provisioned, work, ctx };
+  } catch (err) {
+    rmSync(work, { recursive: true, force: true });
+    throw err;
+  }
 }
 
 type Collected = {
@@ -170,7 +183,7 @@ type Collected = {
 };
 
 /** Checks and controls of a run; `only` names either kind, and an unknown name is an error. */
-function selection(
+export function selection(
   registry: readonly AcceptanceCheck[],
   only: readonly string[],
 ): { checks: AcceptanceCheck[]; controls: ReturnType<typeof selectControls> } {
@@ -216,6 +229,7 @@ export async function runAcceptance(opts: AcceptanceOptions): Promise<Acceptance
   const committed = readJson(contractPaths().results, ProbeResultsSchema);
   const registry = acceptanceChecks(committed);
   const { checks, controls } = selection(registry, opts.only);
+  refusePresetPackage();
   const keys = setAsideKeys();
   const tools = await preflight();
   if (tools.missing.length > 0)

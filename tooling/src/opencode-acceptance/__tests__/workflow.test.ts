@@ -46,11 +46,15 @@ test.concurrent("the acceptance job runs the full command on Linux and macOS", (
   expect(commands.join("\n")).not.toContain("--only");
 });
 
-test.concurrent("no acceptance or gate step may soft-fail", () => {
+test.concurrent("no acceptance or gate step may soft-fail or be skipped by a condition", () => {
   for (const id of ["gate", "opencode"]) {
     expect(job(id)["continue-on-error"]).toBeUndefined();
     expect(job(id).steps.filter((step) => step["continue-on-error"] !== undefined)).toEqual([]);
+    expect(job(id).if).toBeUndefined();
+    expect(job(id).needs).toBeUndefined();
   }
+  const acceptance = job("opencode").steps.find((step) => step.run?.includes("test:opencode"));
+  expect(acceptance?.if).toBeUndefined();
   expect(runs("gate").join("\n")).toContain("bun run test:ts");
 });
 

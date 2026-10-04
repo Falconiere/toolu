@@ -9,8 +9,10 @@
  *   by a loopback fixture or bare git remote (`fixture`), or really called
  *   (`live`). Live calls are reported apart and never decide acceptance.
  */
+import { join } from "node:path";
+import { listPluginManifests } from "../../../tools/toolu-opencode/src/inventory/scan.ts";
 import { ContractError } from "../opencode-host/schema.ts";
-import type { EntryContext } from "../opencode-host/scenarios-entry.ts";
+import { ROOT, type EntryContext } from "../opencode-host/scenarios-entry.ts";
 
 export type Service = "none" | "fixture" | "live";
 type Evidence = {
@@ -32,6 +34,13 @@ export type AcceptanceCheck = {
   evidence: Evidence;
   run: (ctx: AcceptanceContext) => Promise<CheckOutcome>;
 };
+
+/** The catalog every acceptance run must cover; an unreadable or empty catalog fails closed. */
+export function catalogNames(pluginsRoot: string = join(ROOT, "plugins")): string[] {
+  const names = (listPluginManifests(pluginsRoot) ?? []).map((manifest) => manifest.name);
+  if (names.length === 0) throw new ContractError(`no catalog plugins under ${pluginsRoot}`);
+  return names;
+}
 
 /** Evidence of a session the pinned host ran against the scripted model. */
 export function hostEvidence(service: Service = "none"): Evidence {
