@@ -23,6 +23,8 @@ import { PACKAGE_SCENARIOS } from "../opencode-host/scenarios-package.ts";
 import { SCENARIOS } from "../opencode-host/scenarios.ts";
 import type { ProbeResults } from "../opencode-host/schema.ts";
 import { probeGeneratedSurface } from "../opencode-host/surface-probe.ts";
+import { CONCURRENT_SCENARIOS, NAME_SCENARIOS } from "../opencode-host/scenarios-acceptance.ts";
+import { BUDGET_CHECK } from "./budget.ts";
 import { hostEvidence, scenarioChecks, type AcceptanceCheck } from "./checks.ts";
 import { liveTestChecks } from "./live-tests.ts";
 
@@ -83,5 +85,13 @@ function scenarioFamilies(): AcceptanceCheck[] {
 
 /** The whole registry, given the committed probe results the contract probes compare against. */
 export function acceptanceChecks(committed: ProbeResults): AcceptanceCheck[] {
-  return [...probeChecks(committed), SURFACE_CHECK, ...scenarioFamilies(), ...liveTestChecks()];
+  return [
+    ...probeChecks(committed),
+    SURFACE_CHECK,
+    ...scenarioChecks("surface", "all", "none", NAME_SCENARIOS),
+    ...scenarioFamilies(),
+    ...liveTestChecks(),
+    ...scenarioChecks("concurrent", ["toolu"], "none", CONCURRENT_SCENARIOS),
+    BUDGET_CHECK,
+  ];
 }
