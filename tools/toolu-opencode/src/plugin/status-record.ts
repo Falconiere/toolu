@@ -77,14 +77,17 @@ export function writeStatusRecord(path: string, record: OpencodeStatusRecord): s
   }
 }
 
-/** The structured log entry's flat fields. */
-export function statusLogExtra(record: OpencodeStatusRecord, path: string): LogExtra {
+/** The structured log entry's flat fields; `record` only when the file was written. */
+export function statusLogExtra(
+  record: OpencodeStatusRecord,
+  written: string | undefined,
+): LogExtra {
   const extra: LogExtra = {
     status: record.status,
     plugins: record.plugins.map((plugin) => plugin.name).join(","),
     artifacts: record.plugins.reduce((sum, plugin) => sum + plugin.artifacts, 0),
-    record: path,
   };
+  if (written !== undefined) extra.record = written;
   if (record.selection !== undefined) extra.selection = record.selection;
   if (record.reason !== undefined) extra.reason = record.reason;
   return extra;

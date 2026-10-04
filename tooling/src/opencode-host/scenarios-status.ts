@@ -89,7 +89,11 @@ async function enabled(ctx: EntryContext): Promise<EntryResult> {
     plugins: report.includes("Plugins: jev (session-start), statusline (session-start)"),
     record: s.exists(RECORD) && report.includes(join(s.sb.project, RECORD)),
     statusEntries: diagnostics(hostRun.stderr, "toolu: status"),
-    structured: logged.includes("jev,statusline") && logged.includes("ready"),
+    structured:
+      / status=ready(?: |$)/u.test(logged) &&
+      / plugins=jev,statusline(?: |$)/u.test(logged) &&
+      / artifacts=2(?: |$)/u.test(logged) &&
+      logged.includes(` record=${join(s.sb.project, RECORD)}`),
     protocolClean: protocolClean(hostRun.stdout),
     noClaudeConfig: noClaudeConfig(s),
   };

@@ -140,7 +140,8 @@ async function reportStatus(binding: HostBinding, enforcement: Enforcement): Pro
     await report(binding, "error", `toolu: status record not written: ${failure}`);
   }
   const level = record.status === "ready" ? "info" : "error";
-  await report(binding, level, "toolu: status", statusLogExtra(record, path));
+  const written = failure === undefined ? path : undefined;
+  await report(binding, level, "toolu: status", statusLogExtra(record, written));
 }
 
 /** Never rejects: a failure to prepare enforcement yields a hook that denies every tool call. */

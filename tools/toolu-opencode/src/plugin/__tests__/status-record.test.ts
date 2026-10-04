@@ -153,7 +153,13 @@ test("a record that cannot be written is logged and leaves the verdict ready", a
     );
     expect(failures).toHaveLength(1);
     expect(failures[0]?.level).toBe("error");
-    expect(statusEntries(entries)[0]?.extra?.status).toBe("ready");
+    // The entry still reports the verdict, but names no record it did not write.
+    expect(statusEntries(entries)[0]?.extra).toEqual({
+      status: "ready",
+      plugins: "statusline",
+      artifacts: 1,
+      selection: "project",
+    });
     const before = hook(hooks, "tool.execute.before");
     const args = { command: "echo ok", description: "x" };
     await before({ tool: "bash", sessionID: "s", callID: "c" }, { args });
