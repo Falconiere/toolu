@@ -118,7 +118,8 @@ function importProblems(
   context: { manifest: Manifest; coreExports: ReadonlySet<string> },
 ): string[] {
   const loader = file.endsWith(".ts") ? "ts" : "js";
-  // The scanner rejects a shebang, which every executable bundle starts with.
+  // Bun 1.4.2's scanImports throws `Unexpected #!/usr/bin/env bun` on a shebang,
+  // which every executable bundle starts with, so the first line is blanked.
   const source = text.replace(/^#!.*/, "");
   const imports = new Bun.Transpiler({ loader }).scanImports(source);
   return imports.flatMap(({ path }) => importProblem(file, path, paths, context) ?? []);

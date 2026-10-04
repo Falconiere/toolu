@@ -2,7 +2,15 @@
 // declared dependencies (#361). Fixture packages are real directories packed by
 // npm; the last case packs the real package through its own prepack.
 import { afterEach, expect, test } from "bun:test";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { z } from "zod";
@@ -118,6 +126,16 @@ test.concurrent("a relative import outside the tarball is reported", () => {
   ]);
 });
 
+test.concurrent("an executable bundle's shebang is skipped and its imports are still checked", () => {
+  const files = {
+    "plugins/pr-babysit/hooks/dist/tick.js":
+      '#!/usr/bin/env bun\nimport pad from "left-pad";\npad;\n',
+  };
+  expect(fixture({ files }).problems).toEqual([
+    `${P} plugins/pr-babysit/hooks/dist/tick.js imports left-pad, which is not a declared dependency`,
+  ]);
+});
+
 test.concurrent("an undeclared bare import is reported", () => {
   const files = {
     "src/plugin/run.ts": 'import { run } from "@toolu/conformance/harness/spawn";\nrun;\n',
@@ -158,11 +176,22 @@ test("the real @toolu/opencode, packed through its own prepack, is closed", () =
   const core = CoreManifest.parse(
     JSON.parse(readFileSync(join(ROOT, "packages/toolu-core/package.json"), "utf8")),
   );
+  const files = packedFiles(stage);
   const problems = closureProblems({
     packageDir: stage,
-    files: packedFiles(stage),
+    files,
     sourcePlugins: join(ROOT, "plugins"),
     coreExports: Object.keys(core.exports),
   });
   expect(problems).toEqual([]);
+  // The mode rule has real input: the catalog's executable bundles ship 0755.
+  const executable = (mode: number): boolean => (mode & 0o111) !== 0;
+  const sourceExecutable = files
+    .filter((file) => file.path.startsWith("plugins/"))
+    .filter((file) => executable(statSync(join(ROOT, file.path)).mode))
+    .map((file) => file.path);
+  expect(sourceExecutable).toContain("plugins/toolu/hooks/dist/verdict.js");
+  expect(sourceExecutable.length).toBeGreaterThanOrEqual(18);
+  const packedExecutable = files.filter((file) => executable(file.mode)).map((file) => file.path);
+  expect(packedExecutable).toEqual(sourceExecutable);
 }, 180_000);
