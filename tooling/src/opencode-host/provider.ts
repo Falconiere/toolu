@@ -15,7 +15,8 @@ import { z } from "zod";
 
 export type ScriptStep = { tool: string; args: Record<string, unknown> };
 export type Scripts = Readonly<Record<string, readonly ScriptStep[]>>;
-export type RecordedRequest = { path: string; body: unknown };
+/** One request as the server received it; `at` is its arrival time in ms since the epoch. */
+export type RecordedRequest = { path: string; body: unknown; at: number };
 type ScriptedProvider = {
   url: string;
   requests(): RecordedRequest[];
@@ -92,9 +93,10 @@ export function startScriptedProvider(scripts: Scripts): ScriptedProvider {
     port: 0,
     hostname: "127.0.0.1",
     async fetch(req) {
+      const at = Date.now();
       const path = new URL(req.url).pathname;
       const body: unknown = req.method === "POST" ? await req.json().catch(() => null) : null;
-      recorded.push({ path, body });
+      recorded.push({ path, body, at });
       if (!path.endsWith("/chat/completions"))
         return Response.json({ error: "not found" }, { status: 404 });
       const parsed = ChatRequest.safeParse(body);

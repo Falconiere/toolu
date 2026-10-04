@@ -11,6 +11,7 @@
 import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { envOr } from "../env.ts";
 import { packInto, stageOpencode } from "../npm-pack.ts";
 import { runHost, toolStates } from "./host-run.ts";
 import type { Scripts } from "./provider.ts";
@@ -63,15 +64,30 @@ export function npmSpec(tarball: string): string {
   return `@toolu/opencode@file:${tarball}`;
 }
 
+/**
+ * The package a shim links: the checkout's, or a staged copy named by
+ * `TOOLU_ACCEPTANCE_PACKAGE`. The acceptance run's regression controls (#362)
+ * break a staged copy and expect the scenarios using it to fail.
+ */
+export function acceptancePackageDir(
+  env: Record<string, string | undefined> = process.env,
+): string {
+  return envOr("TOOLU_ACCEPTANCE_PACKAGE", PACKAGE_DIR, env);
+}
+
 /** `.opencode/plugins/toolu.ts` re-exporting the package root, resolved through `node_modules`. */
-export function installShim(session: ProbeSession, dir = session.sb.project): void {
+export function installShim(
+  session: ProbeSession,
+  dir = session.sb.project,
+  packageDir = acceptancePackageDir(),
+): void {
   mkdirSync(join(dir, ".opencode/plugins"), { recursive: true });
   writeFileSync(
     join(dir, ".opencode/plugins/toolu.ts"),
     'export { default } from "@toolu/opencode";\n',
   );
   mkdirSync(join(dir, "node_modules/@toolu"), { recursive: true });
-  symlinkSync(PACKAGE_DIR, join(dir, "node_modules/@toolu/opencode"));
+  symlinkSync(packageDir, join(dir, "node_modules/@toolu/opencode"));
 }
 
 export function writeEnvScript(project: string): Scripts {
