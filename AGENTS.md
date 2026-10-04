@@ -43,7 +43,7 @@ release-please (`.github/workflows/release-please.yml`). No manual bumps or tags
 
 Any Conventional Commit on `main` counts, any path. `feat` / `fix` / `feat!` bump minor / patch / major. `chore` / `docs` / `ci` / `refactor` bump nothing. Merge the Release PR to publish: it bumps root `package.json`, Bun workspace packages under `packages/` and `tools/`, and every `plugin.json`, updates `CHANGELOG.md`, tags `vX.Y.Z` with no component prefix, and opens the GitHub Release. OpenCode install: `docs/opencode.md`.
 
-**npm.** `release-please.yml` calls `npm-publish.yml` after the Release, which publishes `@toolu/core`, `@toolu/opencode`, then `@toolu/plugins` with provenance via OIDC and `secrets.NPM_TOKEN`, and does not go green until each one resolves on the registry (a first publish can take minutes to stop answering 404). `@toolu/conformance` stays `private`; it is an internal harness. The tarball's file list is gated by `bun run test:pack`.
+**npm.** `release-please.yml` calls `npm-publish.yml` after the Release, which publishes `@toolu/core`, `@toolu/opencode`, then `@toolu/plugins` with provenance via OIDC and `secrets.NPM_TOKEN`, and does not go green until each one resolves on the registry (a first publish can take minutes to stop answering 404). `@toolu/conformance` stays `private`; it is an internal harness. release-please also raises `@toolu/opencode`'s `^X.Y.Z` `@toolu/core` floor, and the publish step refuses a tag that does not match it. `bun run test:pack` gates each tarball's file list as `npm pack` reports it, and checks that `@toolu/opencode` is closed over its own tarball (`tooling/src/pack-closure.ts`).
 
 ## CI
 
@@ -71,7 +71,7 @@ Benchmarks are hermetic. Context budget caps the Session Protocol, per-language 
 | `tools/toolu-cli/src/plugins/install.ts` | Dependency-ordered install; core failure stops dependents, others continue |
 | `tools/toolu-cli/src/host/` | Per-host adapters normalizing `plugin list --json` into one shape |
 | `tools/toolu-cli/src/opencode/` | OpenCode management without host commands: JSONC edits of the `plugin` array (global or project, merged the way the pinned host merges them) and the `toolu/plugins.json` selection. Live proof: `bun run smoke:opencode-entry cli.install cli.lifecycle` |
-| `tooling/src/pack-inventory.ts` | Published-tarball file-list gate |
+| `tooling/src/pack-inventory.ts` | Published-tarball file-list gate over `npm pack --dry-run --json`; `@toolu/opencode` is packed from a temp copy through its own prepack (`tooling/src/npm-pack.ts`) and closure-checked (`tooling/src/pack-closure.ts`) |
 | `tooling/src/guardrails/run.ts` | Structural gate (`bun run guardrails`): TypeScript port of the vendored conventions runner; data in `tooling/conventions/guardrails/` |
 | `tooling/src/check-gate-reach.ts` | Reach gate (`bun run check:gate-reach`): every tracked TypeScript file is reached by typecheck, format, oxlint, jscpd and knip, or `tooling/gate-reach.json` declares the gap; also checks that each `ownedByLinter` id is a rule the package lint config runs. Code in `tooling/src/gate-reach/` |
 | `tooling/src/check-legacy-exemptions.ts` | Stale-exemption gate (`bun run check:legacy-exemptions`): re-runs oxlint, jscpd and knip with exact-path exemptions lifted; an exemption whose finding is gone fails. See `docs/conventions-adoption.md` |

@@ -95,3 +95,15 @@ Jev alignment scored 1.44 (P = 0.53 for 'mapped but some checks would not observ
 - manifest-release: 🟡 should-fix: the publish tag check versus the core floor was observed only as a string in the workflow. Fixed: the step now executes the workflow's own run block against temp manifests, with a matching tag and a mismatched floor.
 - Verification: 🟡 should-fix: no delivery sequence was listed. Fixed: added the final ledger verify, review, verdict, PR and babysit handoff.
 - All six ACs are mapped (`AC-1` to `AC-6`). Every step has a runnable check with a real input. `paths` cover the tests and sources each check reads. Dependencies run in order. The docs step has a runnable check. Approved.
+
+## Deviations
+
+- `packedFiles` moved into a new `tooling/src/npm-pack.ts`, alongside `stageOpencode` and `packInto`, instead of `pack-inventory.ts`. The inventory gate, the closure test and the live `packTarball` share one npm pack path. Packing a temp copy keeps `npm pack` from rewriting the gitignored `tools/toolu-opencode/plugins/` while other tests run.
+- The live scenario imports each export in process from the installed path. It does not spawn a fresh `bun` subprocess, because that would need a new entry file that knip would flag. Module resolution still starts at the installed file, so bare dependencies resolve from the host's install.
+- `required` keeps the files that only code or a `$ROOT`-style shell variable reaches: the epic scripts and briefs, the fixer brief and the settings. The closure rule cannot see those references. Only the `debug-*.ts` entries, which surfaces name through `$TOOLU_PLUGIN_ROOT_TOOLU`, moved to the derived rule.
+
+## Evidence
+
+- AC-3 red, before `manifest-release`: the real-package closure test reported 82 problems. All of them were in shipped `src/**/__tests__` files: undeclared `@toolu/conformance/*` and `@opencode-ai/sdk` value imports, and relative imports into `tooling/` and `plugins/*/hooks/src`. After the change it reports 0.
+- AC-1: `pack-inventory: @toolu/opencode — 290 files` (354 before), `pack-inventory: ok`.
+- AC-5 and AC-6, live on `opencode-ai@1.18.34`: `opencode-entry-smoke: 5/5 pass`. `package.clean-install` observed `{"plugins":16,"ready":1,"notReady":0,"modules":true,"writeDenied":true,"envUnchanged":true,"outsideCheckout":true,"pluginRoot":true,"treeMatchesTarball":true,"helpersOwned":7,"exportsLoaded":12,"exportsTotal":12,"markers":"status=0,report=0,ledger=0","statusReady":true,"reported":true}`. `entry.npm-root`, `surfaces.npm-clean`, `surfaces.lifecycle` and `cli.install` passed with the npm-packed tarball.

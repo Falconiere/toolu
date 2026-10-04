@@ -37,7 +37,7 @@ Enforcement runs in `tool.execute.before`. Covered calls are `bash`, `read`, `gr
 
 After a completed tool call, `tool.execute.after` runs native gate-status and push-waiver checks, then selected `post-tools.d` modules. An edit, write or patch can record a per-file quality failure; a shell quality command with a confirmed nonzero exit records a failed global gate. The next commit or push is then checked against that state. Post-check diagnostics and matching pre-tool advice are appended to the original tool result once. A post-check message reports an action that already ran; it does not undo its side effects. A shell result without a confirmed exit, or marked interrupted, cannot clear a failure or promote a waiver. OpenCode does not call the after hook for a thrown tool error or a rejected permission prompt, so those errors reach the model through the host and leave prior gate state intact.
 
-Bun 1.4.x is a prerequisite on every host, Claude Code and Codex included; see the [runtime contract](runtime.md). Claude Code and Codex keep their marketplace installs. OpenCode calls the TypeScript core dispatcher in process. Its npm package ships committed bundles and their runtime data. Bootstrap reports NotReady when a selected plugin lacks a required Bun registration bundle.
+Bun 1.4.x is a prerequisite on every host, Claude Code and Codex included; see the [runtime contract](runtime.md). Claude Code and Codex keep their marketplace installs. OpenCode calls the TypeScript core dispatcher in process. Its npm package ships committed bundles and their runtime data, and it loads without a checkout. Every helper, link, import and export it reaches ships in the same tarball or comes from a declared registry dependency (`bun run test:pack`). `@toolu/core` is declared as `^<this release>`, and `@opencode-ai/plugin` and `@opencode-ai/sdk` are optional peers at the pinned SDK version. Bootstrap reports NotReady when a selected plugin lacks a required Bun registration bundle.
 
 ## Prerequisites
 
@@ -329,6 +329,12 @@ The same runner proves surface install and discovery ([#345](https://github.com/
 
 ```bash
 bun run smoke:opencode-entry surfaces.npm-clean surfaces.lifecycle surfaces.precedence surfaces.skill-roots surfaces.both-routes surfaces.selection
+```
+
+The runner packs the tarball with `npm pack` through the package's own `prepack`, the way a release publishes it. `package.clean-install` ([#361](https://github.com/Falconiere/toolu/issues/361)) loads that tarball with all 16 plugins in a sandbox where `TOOLU_REPO_ROOT` and `TOOLU_ROOT` are blank. It checks that every plugin becomes ready, that the installed tree equals the tarball and sits outside the checkout, that helpers and published symlinks run from it, and that every export imports.
+
+```bash
+bun run smoke:opencode-entry package.clean-install
 ```
 
 Agent-browser scenarios check native skill discovery, model-visible startup path, missing CLI and Chromium diagnostics, and cleanup after disabling the plugin. The workflow scenario uses the installed `agent-browser` CLI and Chromium to click a button on a local interactive page through the published helper, then checks the changed text. It requires `agent-browser install` once on the test machine; it uses an isolated OpenCode profile and a short temporary browser socket directory.
