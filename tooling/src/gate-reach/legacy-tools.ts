@@ -68,7 +68,8 @@ export function findingKey(file: string, rule: string): string {
 /**
  * The lifted config sits beside the real one so relative `extends`,
  * `ignorePatterns` and `overrides` globs keep their meaning; lint discovery
- * only reads files named `.oxlintrc.json`, so a leftover is inert.
+ * only reads files named `.oxlintrc.json`, and `*.tmp.*` is gitignored, so a
+ * leftover from a killed run is inert and cannot be committed.
  */
 export function oxlintFindings(
   root: string,
@@ -76,7 +77,7 @@ export function oxlintFindings(
   targets: readonly string[],
   lifted: unknown,
 ): Set<string> {
-  const name = `.oxlintrc.lifted-${String(process.pid)}.json`;
+  const name = `.oxlintrc.lifted.tmp.${String(process.pid)}.json`;
   writeFileSync(join(dir, name), JSON.stringify(lifted));
   try {
     const text = output(
@@ -94,7 +95,7 @@ export function oxlintFindings(
 
 /** Files jscpd finds in at least one clone. The lifted config stays in `root`: its paths are relative. */
 export function jscpdClones(root: string, lifted: unknown): Set<string> {
-  const config = join(root, `.jscpd.lifted-${String(process.pid)}.json`);
+  const config = join(root, `.jscpd.lifted.tmp.${String(process.pid)}.json`);
   const out = mkdtempSync(join(tmpdir(), "toolu-jscpd-"));
   writeFileSync(config, JSON.stringify(lifted));
   try {

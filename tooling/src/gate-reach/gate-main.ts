@@ -3,7 +3,11 @@ import { resolve } from "node:path";
 import { envOr } from "../env.ts";
 import { GateFatal } from "./reach-schema.ts";
 
-/** Run `check` over the repo (or `rootEnv`'s tree), one finding per stderr line. */
+/**
+ * Run `check` over the repo (or `rootEnv`'s tree), one finding per stderr
+ * line. Every failure to finish is exit 3: an uncaught error would exit 1, which
+ * means findings.
+ */
 export function gateMain(
   label: string,
   rootEnv: string,
@@ -15,8 +19,10 @@ export function gateMain(
     for (const finding of findings) console.error(finding);
     return findings.length === 0 ? 0 : 1;
   } catch (err: unknown) {
-    if (!(err instanceof GateFatal)) throw err;
-    console.error(`${label}: ${err.message}`);
+    const detail = err instanceof Error ? (err.stack ?? err.message) : String(err);
+    console.error(
+      `${label}: ${err instanceof GateFatal ? err.message : `unexpected failure: ${detail}`}`,
+    );
     return 3;
   }
 }

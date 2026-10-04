@@ -156,9 +156,10 @@ test.concurrent("a tool that crashes is misconfiguration, never taken for no fin
   const broken = sb.write("bin/oxlint", "#!/bin/sh\necho 'oxlint: internal error' >&2\nexit 2\n");
   chmodSync(broken, 0o755);
   const res = await runLegacy(sb, `${sb.path("bin")}:${BIN_PATH}`);
-  expect(res.exitCode).toBe(3);
-  expect(res.stderr).toContain("legacy-exemptions: oxlint exited 2");
-  expect(res.stderr).toContain("internal error");
+  expect({ exitCode: res.exitCode, stderr: res.stderr.trim() }).toEqual({
+    exitCode: 3,
+    stderr: "legacy-exemptions: oxlint exited 2: oxlint: internal error",
+  });
   expect(liftedConfigs(sb)).toEqual([]);
 });
 
@@ -167,9 +168,81 @@ test.concurrent("a report that is not JSON is misconfiguration", async () => {
   const broken = sb.write("bin/oxlint", "#!/bin/sh\necho 'not a report'\nexit 0\n");
   chmodSync(broken, 0o755);
   const res = await runLegacy(sb, `${sb.path("bin")}:${BIN_PATH}`);
-  expect(res.exitCode).toBe(3);
-  expect(res.stderr).toContain("legacy-exemptions: oxlint report");
+  expect({ exitCode: res.exitCode, stderr: res.stderr.trim() }).toEqual({
+    exitCode: 3,
+    stderr: "legacy-exemptions: oxlint report is not JSON",
+  });
 });
+
+/** The fixture with its one oxlint exemption replaced by `overrides`. */
+function withOverrides(overrides: object[]): Record<string, string> {
+  const files = exemptedFiles();
+  files["packages/a/.oxlintrc.json"] = json({ rules: { "no-var": "error" }, overrides });
+  return files;
+}
+
+test.concurrent("an override with no rules is not an exemption, so nothing is asked of its file", async () => {
+  const files = withOverrides([
+    { files: ["src/gone.ts"], rules: {} },
+    { files: ["src/legacy.ts"], rules: { "no-var": "off" } },
+  ]);
+  using sb = createSandbox({ files });
+  const res = await runLegacy(sb);
+  expect({ exitCode: res.exitCode, stderr: res.stderr }).toEqual({ exitCode: 0, stderr: "" });
+});
+
+test.concurrent("a glob in an off-only override is a structural rule, not an exemption", async () => {
+  const files = withOverrides([{ files: ["**/legacy.ts"], rules: { "no-var": "off" } }]);
+  files["packages/a/src/legacy.ts"] = "export const legacy = 1;\n";
+  using sb = createSandbox({ files });
+  const res = await runLegacy(sb);
+  expect({ exitCode: res.exitCode, stderr: res.stderr }).toEqual({ exitCode: 0, stderr: "" });
+});
+
+test.concurrent("an off-only override mixing exact paths and globs is misconfiguration", async () => {
+  const files = withOverrides([
+    { files: ["src/legacy.ts", "src/**/*.gen.ts"], rules: { "no-var": "off" } },
+  ]);
+  using sb = createSandbox({ files });
+  const res = await runLegacy(sb);
+  expect({ exitCode: res.exitCode, stderr: res.stderr.trim() }).toEqual({
+    exitCode: 3,
+    stderr:
+      "legacy-exemptions: packages/a/.oxlintrc.json: an override that only switches rules off mixes exact paths and globs (src/legacy.ts, src/**/*.gen.ts); split it so each exemption names its files exactly",
+  });
+});
+
+test.concurrent("a bare path in the jscpd ignore list is misconfiguration: jscpd would not honour it", async () => {
+  const files = exemptedFiles();
+  files[".jscpd.json"] = json({
+    path: ["packages/a/src"],
+    ignore: ["**/__tests__/**", "packages/a/src/clone-b.ts"],
+  });
+  using sb = createSandbox({ files });
+  const res = await runLegacy(sb);
+  expect({ exitCode: res.exitCode, stderr: res.stderr.trim() }).toEqual({
+    exitCode: 3,
+    stderr:
+      'legacy-exemptions: .jscpd.json: ignore entry "packages/a/src/clone-b.ts" is a bare path, which jscpd does not honour; write "**/packages/a/src/clone-b.ts"',
+  });
+});
+
+// A read-only directory does not stop root, so the case proves nothing there.
+test.skipIf(process.getuid?.() === 0)(
+  "a failure the check did not foresee is exit 3, never the exit 1 of a finding",
+  async () => {
+    using sb = createSandbox({ files: exemptedFiles() });
+    chmodSync(sb.path("packages/a"), 0o555);
+    try {
+      const res = await runLegacy(sb);
+      expect(res.exitCode).toBe(3);
+      expect(res.stderr).toStartWith("legacy-exemptions: unexpected failure: ");
+      expect(res.stderr).toContain("EACCES");
+    } finally {
+      chmodSync(sb.path("packages/a"), 0o755);
+    }
+  },
+);
 
 test("the repo's committed exemptions are all still needed", async () => {
   const res = await run([process.execPath, SCRIPT], {

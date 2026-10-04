@@ -57,8 +57,10 @@ Adding a TypeScript tree means adding it to each gate's config, or declaring why
 | Tool | Exemption |
 |------|-----------|
 | oxlint | an `overrides` block naming the file, with each violated rule set to `"off"` |
-| jscpd | an `ignore` entry `**/<repo path>` (jscpd ignores a bare relative path) |
+| jscpd | an `ignore` entry `**/<repo path>` |
 | knip | a workspace `ignore` entry naming the file |
+
+An entry with glob characters is a structural rule, not an exemption, and is never checked for staleness. Three shapes are refused as misconfiguration (exit 3) because they cannot be read either way: a bare path in the jscpd `ignore` list (jscpd matches absolute paths and would not honour it), an off-only oxlint override that mixes exact paths with globs, and a negated (`!`) pattern in any config the reach check reads.
 
 `bun run check:legacy-exemptions` re-runs each tool with these lifted and fails when an exempted file is gone or no longer has the finding. Fix the code, then delete the entry. Do not add one for new code: nothing compares the lists with an earlier revision, so a new entry is caught only in review, and an `.oxlintrc.json` edit prompts through the protected-files gate.
 

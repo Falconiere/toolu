@@ -9,8 +9,8 @@ import { existsSync } from "node:fs";
 import { join, relative } from "node:path";
 import { lintDirs } from "../lint-ts.ts";
 import { findingKey, jscpdClones, knipFindings, oxlintFindings } from "./legacy-tools.ts";
-import { exactPath, isExactPath } from "./reach-files.ts";
-import { JscpdSchema, KnipSchema, OxlintSchema, readJson } from "./reach-schema.ts";
+import { isExactPath, jscpdIgnore } from "./reach-files.ts";
+import { JscpdSchema, KnipSchema, OxlintSchema, fatal, readJson } from "./reach-schema.ts";
 
 type Override = { files: string[]; rules: Record<string, unknown> };
 
@@ -30,21 +30,30 @@ function fileVerdict(
   return found.has(file) ? [] : [stale(config, file, why)];
 }
 
-/** An override that only switches rules off, for files named exactly. */
-function isLegacy(override: Override): boolean {
-  return (
-    override.files.every(isExactPath) &&
-    Object.values(override.rules).every((level) => level === "off")
-  );
+/**
+ * An override that switches at least one rule off, and nothing else, for files
+ * named exactly. Exact paths mixed with globs are neither an exemption nor a
+ * structural rule, so that is fatal.
+ */
+function isLegacy(config: string, override: Override): boolean {
+  const levels = Object.values(override.rules);
+  if (levels.length === 0 || !levels.every((level) => level === "off")) return false;
+  const exact = override.files.filter(isExactPath).length;
+  if (exact > 0 && exact < override.files.length) {
+    fatal(
+      `${config}: an override that only switches rules off mixes exact paths and globs (${override.files.join(", ")}); split it so each exemption names its files exactly`,
+    );
+  }
+  return exact > 0;
 }
 
 function oxlintStale(root: string): string[] {
   return lintDirs(root).flatMap(({ dir, targets }) => {
     const rel = `${relative(root, dir)}/.oxlintrc.json`;
     const config = readJson(root, rel, OxlintSchema);
-    const legacy = config.overrides.filter(isLegacy);
+    const legacy = config.overrides.filter((override) => isLegacy(rel, override));
     if (legacy.length === 0) return [];
-    const lifted = { ...config, overrides: config.overrides.filter((o) => !isLegacy(o)) };
+    const lifted = { ...config, overrides: config.overrides.filter((o) => !legacy.includes(o)) };
     const found = oxlintFindings(root, dir, targets, lifted);
     return legacy.flatMap(({ files, rules }) =>
       files.flatMap((file) => {
@@ -59,10 +68,9 @@ function oxlintStale(root: string): string[] {
 
 function jscpdStale(root: string): string[] {
   const config = readJson(root, ".jscpd.json", JscpdSchema);
-  const legacy = config.ignore.filter(isExactPath).map(exactPath);
+  const { structural, exempt: legacy } = jscpdIgnore(config.ignore);
   if (legacy.length === 0) return [];
-  const lifted = { ...config, ignore: config.ignore.filter((glob) => !isExactPath(glob)) };
-  const clones = jscpdClones(root, lifted);
+  const clones = jscpdClones(root, { ...config, ignore: structural });
   return legacy.flatMap((file) => fileVerdict(root, ".jscpd.json", file, clones, "has no clone"));
 }
 

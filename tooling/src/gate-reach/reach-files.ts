@@ -6,23 +6,49 @@ export function matches(glob: string, path: string): boolean {
   return new Bun.Glob(glob).match(path);
 }
 
+/**
+ * The patterns of `source`, refused when one is negated. A negation cannot be
+ * decided one file at a time, and a lazy match would let an earlier glob hide it.
+ */
+export function plainGlobs(source: string, globs: readonly string[]): readonly string[] {
+  const negated = globs.find((glob) => glob.startsWith("!"));
+  if (negated !== undefined) {
+    fatal(
+      `${source}: negated pattern "${negated}" is not supported; reach cannot be decided for it`,
+    );
+  }
+  return globs;
+}
+
 /** `pattern` names `path` itself or a directory above it. */
 export function covers(pattern: string, path: string): boolean {
   return matches(pattern, path) || matches(`${pattern}/**`, path);
 }
 
-/**
- * An ignore entry naming one file is a legacy exemption, not a structural
- * rule. jscpd only honours such an entry behind a leading `**\/`, so one is
- * dropped before looking for glob characters.
- */
+/** An entry with no glob characters names one file: a legacy exemption, not a structural rule. */
 export function isExactPath(pattern: string): boolean {
-  return !/[*?[\]{}!]/.test(pattern.replace(/^\*\*\//, ""));
+  return !/[*?[\]{}!]/.test(pattern);
 }
 
-/** The repo path an exact-path entry names. */
-export function exactPath(pattern: string): string {
-  return pattern.replace(/^\*\*\//, "");
+/**
+ * .jscpd.json `ignore`, split into structural globs and exempted repo paths.
+ * jscpd matches against absolute paths, so its per-file exemption is written
+ * `**\/<repo path>`; a bare path would look like an exemption and exempt
+ * nothing, so it is fatal.
+ */
+export function jscpdIgnore(ignore: readonly string[]): { structural: string[]; exempt: string[] } {
+  const structural: string[] = [];
+  const exempt: string[] = [];
+  for (const entry of ignore) {
+    const rest = entry.startsWith("**/") ? entry.slice("**/".length) : "";
+    if (rest !== "" && isExactPath(rest)) exempt.push(rest);
+    else if (isExactPath(entry)) {
+      fatal(
+        `.jscpd.json: ignore entry "${entry}" is a bare path, which jscpd does not honour; write "**/${entry}"`,
+      );
+    } else structural.push(entry);
+  }
+  return { structural, exempt };
 }
 
 /** Tracked TypeScript files outside `exclude`. No work tree, or none left, is fatal. */

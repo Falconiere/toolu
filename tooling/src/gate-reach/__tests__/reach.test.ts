@@ -5,19 +5,51 @@ import { reachedConfigs, repoFiles, runReach } from "./reach-fixture.ts";
 import type { RepoConfigs } from "./reach-fixture.ts";
 
 const SCRIPTS_FILE = "packages/a/scripts/x.ts";
+const NEGATED = "is not supported; reach cannot be decided for it";
 
-/** One way to take packages/a/scripts out of each tool's reach, and nothing else. */
-const UNREACHED: ReadonlyArray<readonly [string, (configs: RepoConfigs) => void]> = [
-  ["typecheck", (c) => (c.tsconfig = { include: ["packages/a/src/**/*.ts"] })],
-  ["format", (c) => (c.formatCheck = "oxfmt --check packages/*/src")],
-  ["oxlint", (c) => (c.oxlint = { ignorePatterns: ["scripts"] })],
-  ["jscpd", (c) => (c.jscpd = { path: ["packages/a/src"] })],
-  ["knip", (c) => (c.knip = { workspaces: { "packages/a": { project: ["src/**/*.ts"] } } })],
+/** Ways to take packages/a/scripts out of one tool's reach, and nothing else. */
+const UNREACHED: ReadonlyArray<readonly [string, string, (configs: RepoConfigs) => void]> = [
+  ["typecheck", "typecheck", (c) => (c.tsconfig = { include: ["packages/a/src/**/*.ts"] })],
+  ["format", "format", (c) => (c.formatCheck = "oxfmt --check packages/*/src")],
+  ["oxlint by a bare name", "oxlint", (c) => (c.oxlint = { ignorePatterns: ["scripts"] })],
+  ["oxlint by a directory pattern", "oxlint", (c) => (c.oxlint = { ignorePatterns: ["scripts/"] })],
+  ["oxlint by an anchored pattern", "oxlint", (c) => (c.oxlint = { ignorePatterns: ["/scripts"] })],
+  ["jscpd", "jscpd", (c) => (c.jscpd = { path: ["packages/a/src"] })],
+  [
+    "knip",
+    "knip",
+    (c) => (c.knip = { workspaces: { "packages/a": { project: ["src/**/*.ts"] } } }),
+  ],
 ];
 
-function notReached(stderr: string): string[] {
-  return stderr.split("\n").filter((line) => line.includes("not reached by"));
-}
+/** Configs the check must refuse, with the one stderr line it prints. */
+const MISCONFIGURED: ReadonlyArray<readonly [string, (configs: RepoConfigs) => void, string]> = [
+  [
+    "a negated oxlint ignore pattern",
+    (c) => (c.oxlint = { ignorePatterns: ["!scripts"] }),
+    `gate-reach: packages/a/.oxlintrc.json: negated pattern "!scripts" ${NEGATED}`,
+  ],
+  [
+    "a negated knip project glob that an earlier glob would hide",
+    (c) =>
+      (c.knip = {
+        workspaces: {
+          "packages/a": { project: ["src/**/*.ts", "scripts/**/*.ts", "!scripts/x.ts"] },
+        },
+      }),
+    `gate-reach: knip.json: negated pattern "!scripts/x.ts" ${NEGATED}`,
+  ],
+  [
+    "a bare path in the jscpd ignore list",
+    (c) => (c.jscpd = { path: ["packages/a/src", "packages/a/scripts"], ignore: [SCRIPTS_FILE] }),
+    `gate-reach: .jscpd.json: ignore entry "${SCRIPTS_FILE}" is a bare path, which jscpd does not honour; write "**/${SCRIPTS_FILE}"`,
+  ],
+  [
+    "a format:check script that is not an oxfmt check",
+    (c) => (c.formatCheck = "prettier --check ."),
+    'gate-reach: package.json: format:check is not an "oxfmt --check <paths>" script',
+  ],
+];
 
 test.concurrent("a repo every tool reaches passes", async () => {
   using sb = createSandbox({ git: true, files: repoFiles(reachedConfigs()) });
@@ -25,14 +57,29 @@ test.concurrent("a repo every tool reaches passes", async () => {
   expect({ exitCode: res.exitCode, stderr: res.stderr }).toEqual({ exitCode: 0, stderr: "" });
 });
 
-for (const [tool, unreach] of UNREACHED) {
-  test.concurrent(`a tracked file outside ${tool} fails, naming the file and the tool`, async () => {
+for (const [label, tool, unreach] of UNREACHED) {
+  test.concurrent(`a tracked file outside ${label} fails, naming the file and the tool`, async () => {
     const configs = reachedConfigs();
     unreach(configs);
     using sb = createSandbox({ git: true, files: repoFiles(configs) });
     const res = await runReach(sb);
-    expect(res.exitCode).toBe(1);
-    expect(notReached(res.stderr)).toEqual([`gate-reach: ${SCRIPTS_FILE}: not reached by ${tool}`]);
+    expect({ exitCode: res.exitCode, stderr: res.stderr.trim() }).toEqual({
+      exitCode: 1,
+      stderr: `gate-reach: ${SCRIPTS_FILE}: not reached by ${tool}`,
+    });
+  });
+}
+
+for (const [label, misconfigure, line] of MISCONFIGURED) {
+  test.concurrent(`${label} is misconfiguration`, async () => {
+    const configs = reachedConfigs();
+    misconfigure(configs);
+    using sb = createSandbox({ git: true, files: repoFiles(configs) });
+    const res = await runReach(sb);
+    expect({ exitCode: res.exitCode, stderr: res.stderr.trim() }).toEqual({
+      exitCode: 3,
+      stderr: line,
+    });
   });
 }
 
@@ -60,10 +107,10 @@ test.concurrent("an allowance for another tool does not cover the file", async (
   using sb = createSandbox({ git: true, files: repoFiles(configs) });
   const res = await runReach(sb);
   expect(res.exitCode).toBe(1);
-  expect(res.stderr).toContain(`gate-reach: ${SCRIPTS_FILE}: not reached by typecheck`);
-  expect(res.stderr).toContain(
+  expect(res.stderr.trim().split("\n")).toEqual([
+    `gate-reach: ${SCRIPTS_FILE}: not reached by typecheck`,
     "gate-reach: stale allowance: format packages/a/scripts/** covers no unreached file",
-  );
+  ]);
 });
 
 test.concurrent("an allowance that covers no unreached file is stale", async () => {
@@ -75,10 +122,10 @@ test.concurrent("an allowance that covers no unreached file is stale", async () 
   };
   using sb = createSandbox({ git: true, files: repoFiles(configs) });
   const res = await runReach(sb);
-  expect(res.exitCode).toBe(1);
-  expect(res.stderr.trim()).toBe(
-    "gate-reach: stale allowance: jscpd packages/a/scripts/** covers no unreached file",
-  );
+  expect({ exitCode: res.exitCode, stderr: res.stderr.trim() }).toEqual({
+    exitCode: 1,
+    stderr: "gate-reach: stale allowance: jscpd packages/a/scripts/** covers no unreached file",
+  });
 });
 
 test.concurrent("an excluded tree is outside the file universe", async () => {
@@ -90,7 +137,7 @@ test.concurrent("an excluded tree is outside the file universe", async () => {
   expect({ exitCode: res.exitCode, stderr: res.stderr }).toEqual({ exitCode: 0, stderr: "" });
 });
 
-test.concurrent("an exact-path jscpd or knip ignore is an exemption, not lost reach", async () => {
+test.concurrent("a per-file jscpd or knip exemption is not lost reach", async () => {
   const configs = reachedConfigs();
   configs.jscpd = {
     path: ["packages/a/src", "packages/a/scripts"],
@@ -106,14 +153,30 @@ test.concurrent("an exact-path jscpd or knip ignore is an exemption, not lost re
   expect({ exitCode: res.exitCode, stderr: res.stderr }).toEqual({ exitCode: 0, stderr: "" });
 });
 
+test.concurrent("a glob knip ignore entry does remove reach", async () => {
+  const configs = reachedConfigs();
+  configs.knip = {
+    workspaces: {
+      "packages/a": { project: ["src/**/*.ts", "scripts/**/*.ts"], ignore: ["**/x.ts"] },
+    },
+  };
+  using sb = createSandbox({ git: true, files: repoFiles(configs) });
+  const res = await runReach(sb);
+  expect({ exitCode: res.exitCode, stderr: res.stderr.trim() }).toEqual({
+    exitCode: 1,
+    stderr: `gate-reach: ${SCRIPTS_FILE}: not reached by knip`,
+  });
+});
+
 test.concurrent("an unknown key in gate-reach.json is misconfiguration", async () => {
   const configs = reachedConfigs();
   configs.reach = { version: 1, exclude: [], allowances: [], allowences: [] };
   using sb = createSandbox({ git: true, files: repoFiles(configs) });
   const res = await runReach(sb);
   expect(res.exitCode).toBe(3);
-  expect(res.stderr).toContain("gate-reach: tooling/gate-reach.json");
-  expect(res.stderr).toContain("allowences");
+  expect(res.stderr.trim()).toBe(
+    'gate-reach: tooling/gate-reach.json: ✖ Unrecognized key: "allowences"',
+  );
 });
 
 test.concurrent("a tool config that is not JSON is misconfiguration, not an empty rule set", async () => {
@@ -122,23 +185,15 @@ test.concurrent("a tool config that is not JSON is misconfiguration, not an empt
   using sb = createSandbox({ git: true, files });
   const res = await runReach(sb);
   expect(res.exitCode).toBe(3);
-  expect(res.stderr).toContain("gate-reach: knip.json");
-});
-
-test.concurrent("a format:check script that is not an oxfmt check is misconfiguration", async () => {
-  const configs = reachedConfigs();
-  configs.formatCheck = "prettier --check .";
-  using sb = createSandbox({ git: true, files: repoFiles(configs) });
-  const res = await runReach(sb);
-  expect(res.exitCode).toBe(3);
-  expect(res.stderr).toContain("format:check");
+  expect(res.stderr).toStartWith("gate-reach: knip.json: unreadable or not JSON (");
+  expect(res.stderr.trim().split("\n")).toHaveLength(1);
 });
 
 test.concurrent("outside a git work tree the check refuses to pass", async () => {
   using sb = createSandbox({ files: repoFiles(reachedConfigs()) });
   const res = await runReach(sb);
   expect(res.exitCode).toBe(3);
-  expect(res.stderr).toContain("gate-reach: git ls-files failed");
+  expect(res.stderr).toStartWith(`gate-reach: git ls-files failed in ${sb.project}: `);
 });
 
 test.concurrent("a repo with no tracked TypeScript governs nothing and fails", async () => {
@@ -147,6 +202,9 @@ test.concurrent("a repo with no tracked TypeScript governs nothing and fails", a
   delete files["packages/a/scripts/x.ts"];
   using sb = createSandbox({ git: true, files });
   const res = await runReach(sb);
-  expect(res.exitCode).toBe(3);
-  expect(res.stderr).toContain("no tracked TypeScript files");
+  expect({ exitCode: res.exitCode, stderr: res.stderr.trim() }).toEqual({
+    exitCode: 3,
+    stderr:
+      "gate-reach: no tracked TypeScript files after exclude: a gate that governs nothing must not pass",
+  });
 });

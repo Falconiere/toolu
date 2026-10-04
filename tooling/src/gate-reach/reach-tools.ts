@@ -7,7 +7,7 @@
  */
 import { relative } from "node:path";
 import { lintDirs } from "../lint-ts.ts";
-import { covers, isExactPath, matches } from "./reach-files.ts";
+import { covers, isExactPath, jscpdIgnore, matches, plainGlobs } from "./reach-files.ts";
 import {
   JscpdSchema,
   KnipSchema,
@@ -23,6 +23,7 @@ type Reached = (file: string) => boolean;
 
 function typecheck(root: string): Reached {
   const { include, exclude } = readJson(root, "tsconfig.json", TsConfigSchema);
+  plainGlobs("tsconfig.json", [...include, ...exclude]);
   return (file) =>
     include.some((glob) => covers(glob, file)) && !exclude.some((glob) => covers(glob, file));
 }
@@ -34,22 +35,29 @@ function format(root: string): Reached {
   if (words[0] !== "oxfmt" || flag === -1) {
     fatal('package.json: format:check is not an "oxfmt --check <paths>" script');
   }
-  const paths = words.slice(flag + 1);
+  const paths = plainGlobs("package.json format:check", words.slice(flag + 1));
   return (file) => paths.some((path) => covers(path, file));
 }
 
-/** oxlint ignorePatterns are gitignore-style: a bare name matches at any depth. */
+/**
+ * oxlint ignorePatterns are gitignore-style: a leading `/` anchors the pattern
+ * to the config directory, a trailing `/` names a directory, and anything else
+ * matches at any depth. Over-matching can only make a file count unreached.
+ */
 function ignoredBy(pattern: string, path: string): boolean {
-  return [pattern, `${pattern}/**`, `**/${pattern}`, `**/${pattern}/**`].some((glob) =>
-    matches(glob, path),
-  );
+  const name = pattern.replace(/^\//, "").replace(/\/$/, "");
+  const globs = pattern.startsWith("/")
+    ? [name, `${name}/**`]
+    : [name, `${name}/**`, `**/${name}`, `**/${name}/**`];
+  return globs.some((glob) => matches(glob, path));
 }
 
 function oxlint(root: string): Reached {
   const dirs = lintDirs(root).map(({ dir, targets }) => {
     const rel = relative(root, dir);
-    const { ignorePatterns } = readJson(root, `${rel}/.oxlintrc.json`, OxlintSchema);
-    return { rel, targets, ignorePatterns };
+    const config = `${rel}/.oxlintrc.json`;
+    const { ignorePatterns } = readJson(root, config, OxlintSchema);
+    return { rel, targets, ignorePatterns: plainGlobs(config, ignorePatterns) };
   });
   return (file) =>
     dirs.some(({ rel, targets, ignorePatterns }) => {
@@ -61,13 +69,17 @@ function oxlint(root: string): Reached {
 
 function jscpd(root: string): Reached {
   const { path, ignore } = readJson(root, ".jscpd.json", JscpdSchema);
-  const structural = ignore.filter((glob) => !isExactPath(glob));
+  const { structural } = jscpdIgnore(ignore);
+  plainGlobs(".jscpd.json", [...path, ...structural]);
   return (file) =>
     path.some((entry) => covers(entry, file)) && !structural.some((glob) => matches(glob, file));
 }
 
 function knip(root: string): Reached {
   const { workspaces } = readJson(root, "knip.json", KnipSchema);
+  for (const { project, ignore } of Object.values(workspaces)) {
+    plainGlobs("knip.json", [...project, ...ignore]);
+  }
   // Longest first: a file belongs to its nearest workspace, "." takes the rest.
   const owners = Object.entries(workspaces).toSorted(([a], [b]) => b.length - a.length);
   return (file) => {

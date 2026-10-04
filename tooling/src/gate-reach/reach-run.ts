@@ -4,7 +4,7 @@
  * allowance that covers no unreached file is a finding too, so the declared
  * gaps shrink when trees are brought in.
  */
-import { matches, trackedFiles } from "./reach-files.ts";
+import { matches, plainGlobs, trackedFiles } from "./reach-files.ts";
 import { ReachConfigSchema, readJson } from "./reach-schema.ts";
 import { loadReach } from "./reach-tools.ts";
 
@@ -12,6 +12,7 @@ export const REACH_CONFIG = "tooling/gate-reach.json";
 
 export function checkReach(root: string): string[] {
   const config = readJson(root, REACH_CONFIG, ReachConfigSchema);
+  plainGlobs(REACH_CONFIG, [...config.exclude, ...config.allowances.map(({ glob }) => glob)]);
   const reach = loadReach(root);
   const used = new Set<number>();
   const findings: string[] = [];
