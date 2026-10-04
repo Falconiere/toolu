@@ -112,8 +112,15 @@ test("server: invalid options deny every call and the reason reaches the host lo
     { repoRoot: 42 },
   );
   expect(await refusal(hooks)).toMatch(/^toolu: not ready: invalid plugin options: /);
-  expect(api.bodies).toHaveLength(1);
+  // The deny reason, then the structured status entry (#359).
+  expect(api.bodies).toHaveLength(2);
   expect(JSON.stringify(api.bodies[0])).toContain('"level":"error"');
+  expect(api.bodies[1]).toMatchObject({
+    service: "toolu",
+    level: "error",
+    message: "toolu: status",
+    extra: { status: "not-ready", plugins: "", artifacts: 0 },
+  });
   await hooks.dispose?.();
 });
 
