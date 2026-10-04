@@ -8,13 +8,12 @@ test("runProtectedFilesConformance passes on real protected-files bridge", async
 
 test("runConformanceMatrix passes every fixture suite; none skips (#362)", async () => {
   const { pass, results } = await runConformanceMatrix();
-  expect(results.map((r) => r.id)).toEqual([
-    "protected-files",
-    "bootstrap-readiness",
-    "surface-drift",
-    "spaces-cwd",
+  expect(results.map((r) => [r.id, r.outcome.status])).toEqual([
+    ["protected-files", "pass"],
+    ["bootstrap-readiness", "pass"],
+    ["surface-drift", "pass"],
+    ["spaces-cwd", "pass"],
   ]);
-  expect(results.map((r) => r.outcome)).toEqual(results.map(() => ({ status: "pass" })));
   expect(pass).toBe(true);
 });
 

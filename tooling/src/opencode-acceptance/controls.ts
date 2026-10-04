@@ -135,21 +135,28 @@ function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-/** Run `check` with the shim pointed at `stage`; a throw means the check did not pass. */
+/**
+ * Run `check` with the shim pointed at `stage`; a throw means the check did not
+ * pass. The override is process-wide, so a second control while one is running
+ * is refused instead of silently testing the wrong package.
+ */
 async function againstStage(
   check: AcceptanceCheck,
   stage: string,
   ctx: AcceptanceContext,
 ): Promise<CheckOutcome> {
-  const previous = process.env.TOOLU_ACCEPTANCE_PACKAGE;
+  const active = process.env.TOOLU_ACCEPTANCE_PACKAGE;
+  if (active !== undefined && active !== "")
+    throw new ContractError(
+      `a control is already running against ${active}; controls run one at a time`,
+    );
   process.env.TOOLU_ACCEPTANCE_PACKAGE = stage;
   try {
     return await check.run(ctx);
   } catch (err) {
     return { pass: false, observed: { error: errorText(err) } };
   } finally {
-    if (previous === undefined) delete process.env.TOOLU_ACCEPTANCE_PACKAGE;
-    else process.env.TOOLU_ACCEPTANCE_PACKAGE = previous;
+    delete process.env.TOOLU_ACCEPTANCE_PACKAGE;
   }
 }
 

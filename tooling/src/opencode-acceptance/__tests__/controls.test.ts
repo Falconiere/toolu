@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
+import { z } from "zod";
 import { contractPaths } from "../../opencode-host/results.ts";
 import { ProbeResultsSchema, readJson } from "../../opencode-host/schema.ts";
 import { hostEvidence, type AcceptanceCheck } from "../checks.ts";
@@ -155,4 +156,25 @@ test("an edit that does not apply is a missed control, not a detection", async (
   const result = await runControl(moved, afterWired(), CTX);
   expect(result.detected).toBe(false);
   expect(result.error).toContain('has 0 of "no such text"');
+});
+
+test("a second control while one is running is refused, not run against the wrong package", async () => {
+  if (POST_TOOL === undefined) throw new Error("missing control");
+  const nested: AcceptanceCheck = {
+    ...afterWired(),
+    run: async () => {
+      const inner = await runControl(POST_TOOL, afterWired(), CTX);
+      return {
+        pass: true,
+        observed: { innerError: inner.error ?? "", innerDetected: inner.detected },
+      };
+    },
+  };
+  const outer = await runControl(POST_TOOL, nested, CTX);
+  const broken = z
+    .object({ innerError: z.string(), innerDetected: z.boolean() })
+    .parse(outer.observed.broken);
+  expect(broken.innerError).toContain("a control is already running");
+  expect(broken.innerDetected).toBe(false);
+  expect(process.env.TOOLU_ACCEPTANCE_PACKAGE).toBeUndefined();
 });

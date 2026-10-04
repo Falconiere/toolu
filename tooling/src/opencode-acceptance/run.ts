@@ -72,6 +72,14 @@ export function setAsideKeys(
   return kept;
 }
 
+/** Put the set-aside credentials back once the run is over, so a later run in this process gets them again. */
+export function restoreKeys(
+  keys: Readonly<Record<string, string>>,
+  env: Record<string, string | undefined> = process.env,
+): void {
+  for (const [key, value] of Object.entries(keys)) env[key] = value;
+}
+
 /** A package override left in the shell would point every shim at another package; only controls set it. */
 export function refusePresetPackage(env: Record<string, string | undefined> = process.env): void {
   const preset = env.TOOLU_ACCEPTANCE_PACKAGE;
@@ -231,24 +239,49 @@ export async function runAcceptance(opts: AcceptanceOptions): Promise<Acceptance
   const { checks, controls } = selection(registry, opts.only);
   refusePresetPackage();
   const keys = setAsideKeys();
+  try {
+    return await runSelected({
+      startedAt,
+      committed,
+      registry,
+      checks,
+      controls,
+      keys,
+      complete: opts.only.length === 0,
+    });
+  } finally {
+    restoreKeys(keys);
+  }
+}
+
+type RunPlan = {
+  startedAt: Date;
+  committed: ProbeResults;
+  registry: readonly AcceptanceCheck[];
+  checks: readonly AcceptanceCheck[];
+  controls: ReturnType<typeof selectControls>;
+  keys: Record<string, string>;
+  complete: boolean;
+};
+
+async function runSelected(plan: RunPlan): Promise<AcceptanceReport> {
   const tools = await preflight();
   if (tools.missing.length > 0)
     throw new ContractError(`required tools missing:\n  ${tools.missing.join("\n  ")}`);
   const setup = await setUpHost();
   try {
-    const versions = hostVersions(committed, setup.host, setup.provisioned);
+    const versions = hostVersions(plan.committed, setup.host, setup.provisioned);
     printResult(versions);
-    const results = [versions, ...(await runChecks(checks, setup.ctx))];
-    const controlResults = await runControls(controls, registry, setup.ctx);
-    const complete = opts.only.length === 0;
-    const external = complete ? await runExternals(keys) : [];
-    return buildReport(setup, startedAt, {
-      complete,
-      checks,
+    const results = [versions, ...(await runChecks(plan.checks, setup.ctx))];
+    const controlResults = await runControls(plan.controls, plan.registry, setup.ctx);
+    const external = plan.complete ? await runExternals(plan.keys) : [];
+    return buildReport(setup, plan.startedAt, {
+      complete: plan.complete,
+      checks: plan.checks,
       results,
       controls: controlResults,
       external,
-      scrubbed: Object.keys(keys).toSorted(),
+      scrubbed: Object.keys(plan.keys).toSorted(),
       tools: tools.tools,
     });
   } finally {

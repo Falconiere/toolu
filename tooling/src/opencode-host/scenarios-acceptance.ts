@@ -138,6 +138,7 @@ function enforced(run: HostRun): boolean {
 async function concurrentSessions(ctx: EntryContext): Promise<EntryResult> {
   const files = { ".opencode/toolu.config.json": CONFIG };
   using p = shimmed(ctx, files, P_SCRIPTS);
+  // P2 only lends its profile (HOME, XDG dirs): it runs with cwd = P's project, whose shim loads toolu.
   using p2 = entrySession(ctx, { files: {} });
   p2.env.TOOLU_REPO_ROOT = ROOT;
   using q = shimmed(ctx, { ...files, [GATE]: GATE_BYTES }, Q_SCRIPTS);

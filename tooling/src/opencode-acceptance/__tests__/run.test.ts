@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { contractPaths } from "../../opencode-host/results.ts";
 import { ProbeResultsSchema, readJson } from "../../opencode-host/schema.ts";
 import { acceptanceChecks } from "../families.ts";
-import { refusePresetPackage, selection, setAsideKeys } from "../run.ts";
+import { refusePresetPackage, restoreKeys, selection, setAsideKeys } from "../run.ts";
 
 // What a run sets up before any host session (#362): selection, credentials and the package override.
 
@@ -42,4 +42,12 @@ test.concurrent("--only selects named checks and controls apart", () => {
   expect(() => selection(registry, ["control.v2-entry", "nope.missing"])).toThrow(
     "unknown acceptance check: nope.missing",
   );
+});
+
+test.concurrent("credentials set aside come back after the run", () => {
+  const env: Record<string, string | undefined> = { TYPESAFE_API_KEY: "sk-362", PATH: "/usr/bin" };
+  const kept = setAsideKeys(env);
+  expect(env.TYPESAFE_API_KEY).toBeUndefined();
+  restoreKeys(kept, env);
+  expect(env).toEqual({ TYPESAFE_API_KEY: "sk-362", PATH: "/usr/bin" });
 });
