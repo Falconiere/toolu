@@ -32,7 +32,7 @@ const ControlResult = z.object({
   observed: Observed,
   error: z.string().optional(),
 });
-type ControlResult = z.infer<typeof ControlResult>;
+export type ControlResult = z.infer<typeof ControlResult>;
 
 const External = z.object({
   id: z.string(),

@@ -76,18 +76,21 @@ async function discoveredNames(ctx: EntryContext): Promise<EntryResult> {
   const packageDir = realpathSync(acceptancePackageDir());
   const expected = catalogSkills(packageDir);
   using s = shimmed(ctx, {}, {});
-  const { rows } = await skills(ctx, s);
+  const { rows, log } = await skills(ctx, s);
   const prefix = `${join(packageDir, "generated/skills")}${sep}`;
   const owned = rows.filter((row) => row.location.startsWith(prefix));
   const invalid = owned.filter((row) => nameProblem(row.name, row.location)).map((row) => row.name);
   const missing = [...expected].filter((id) => !rows.some((row) => row.name === id));
+  // toolu validates its own catalog and refuses to start on a bad id; the name rule covers what loads.
   const observed = {
+    ready: diagnostics(log, "toolu: ready"),
     owned: owned.length,
     catalog: expected.size,
     invalid: invalid.join(","),
     missing: missing.join(","),
   };
   const pass =
+    observed.ready === 1 &&
     expected.size > 0 &&
     owned.length === expected.size &&
     invalid.length === 0 &&

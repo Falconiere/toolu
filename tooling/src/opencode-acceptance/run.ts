@@ -27,10 +27,16 @@ import {
   type AcceptanceCheck,
   type AcceptanceContext,
 } from "./checks.ts";
+import { runControls, selectControls } from "./controls.ts";
 import { acceptanceChecks } from "./families.ts";
 import { LIVE_TEST_FILES, runExternal, type ExternalResult } from "./live-tests.ts";
 import { preflight } from "./preflight.ts";
-import { acceptancePass, type AcceptanceReport, type CheckResult } from "./report.ts";
+import {
+  acceptancePass,
+  type AcceptanceReport,
+  type CheckResult,
+  type ControlResult,
+} from "./report.ts";
 
 /** Service credentials no fixture check may see; only the matching external test gets its key back. */
 const SERVICE_KEYS = [
@@ -157,10 +163,22 @@ type Collected = {
   complete: boolean;
   checks: readonly AcceptanceCheck[];
   results: CheckResult[];
+  controls: ControlResult[];
   external: ExternalResult[];
   scrubbed: string[];
   tools: Record<string, string>;
 };
+
+/** Checks and controls of a run; `only` names either kind, and an unknown name is an error. */
+function selection(
+  registry: readonly AcceptanceCheck[],
+  only: readonly string[],
+): { checks: AcceptanceCheck[]; controls: ReturnType<typeof selectControls> } {
+  const controls = selectControls(only);
+  const checkIds = only.filter((id) => !controls.some((control) => control.id === id));
+  if (only.length > 0 && checkIds.length === 0) return { checks: [], controls };
+  return { checks: selectChecks(registry, checkIds), controls };
+}
 
 function buildReport(setup: HostSetup, startedAt: Date, run: Collected): AcceptanceReport {
   const outcomes = run.results.flatMap((result) => {
@@ -185,7 +203,7 @@ function buildReport(setup: HostSetup, startedAt: Date, run: Collected): Accepta
     tools: run.tools,
     scrubbed: run.scrubbed,
     checks: run.results,
-    controls: [],
+    controls: run.controls,
     external: run.external,
     coverage: coverage(outcomes, catalogNames()),
   };
@@ -196,7 +214,8 @@ function buildReport(setup: HostSetup, startedAt: Date, run: Collected): Accepta
 export async function runAcceptance(opts: AcceptanceOptions): Promise<AcceptanceReport> {
   const startedAt = new Date();
   const committed = readJson(contractPaths().results, ProbeResultsSchema);
-  const checks = selectChecks(acceptanceChecks(committed), opts.only);
+  const registry = acceptanceChecks(committed);
+  const { checks, controls } = selection(registry, opts.only);
   const keys = setAsideKeys();
   const tools = await preflight();
   if (tools.missing.length > 0)
@@ -206,15 +225,16 @@ export async function runAcceptance(opts: AcceptanceOptions): Promise<Acceptance
     const versions = hostVersions(committed, setup.host, setup.provisioned);
     printResult(versions);
     const results = [versions, ...(await runChecks(checks, setup.ctx))];
+    const controlResults = await runControls(controls, registry, setup.ctx);
     const complete = opts.only.length === 0;
     const external = complete ? await runExternals(keys) : [];
-    const scrubbed = Object.keys(keys).toSorted();
     return buildReport(setup, startedAt, {
       complete,
       checks,
       results,
+      controls: controlResults,
       external,
-      scrubbed,
+      scrubbed: Object.keys(keys).toSorted(),
       tools: tools.tools,
     });
   } finally {
