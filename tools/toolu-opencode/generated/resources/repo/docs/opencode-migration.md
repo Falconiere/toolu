@@ -96,7 +96,7 @@ config="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
 
 Then reinstall the V2 host (`npm install -g @opencode/cli@2.0.12`). If your restored entry is the unpinned `@toolu/opencode`, pin it to `@toolu/opencode@7.7.2`, the last V2-targeted release; any later release does not load on V2. CI verifies that the files are restored. It does not test running the V2 host again.
 
-To go back to an earlier release on the documented line instead, run that release's CLI: `npx @toolu/plugins@<X.Y.Z> update --host opencode` ([Update, roll back and remove](opencode.md#update-roll-back-and-remove)).
+To go back to an earlier release on the documented line instead, pin it with `TOOLU_OPENCODE_PACKAGE=@toolu/opencode@<X.Y.Z> npx @toolu/plugins update --host opencode` ([Update, roll back and remove](opencode.md#update-roll-back-and-remove)).
 
 ## What is not retained
 

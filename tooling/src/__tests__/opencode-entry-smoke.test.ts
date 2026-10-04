@@ -8,7 +8,7 @@ test("no ids runs every scenario; ids narrow it in catalog order", () => {
   expect(all).toContain("entry.npm-root");
   expect(all).toContain("entry.full-startup");
   expect(all).toContain("entry.worktree-state");
-  expect(all.slice(-23)).toEqual([
+  expect(all.slice(-25)).toEqual([
     "surfaces.npm-clean",
     "surfaces.lifecycle",
     "surfaces.precedence",
@@ -29,6 +29,8 @@ test("no ids runs every scenario; ids narrow it in catalog order", () => {
     "babysit.cancel",
     "cli.install",
     "cli.lifecycle",
+    "docs.quickstart",
+    "docs.migration",
     "status.enabled",
     "status.disabled",
     "package.clean-install",
