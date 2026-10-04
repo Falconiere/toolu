@@ -12,7 +12,7 @@ function probeEnv(): Record<string, string> {
   return out;
 }
 
-/** Validate OPENCODE_BIN / argv[0] is an existing regular file when absolute. */
+/** Validate that argv[0] is an existing regular file when absolute. */
 export function assertSafeBinary(path: string): SuiteOutcome | null {
   if (path.includes("\0")) {
     return { status: "fail", message: "binary path contains NUL" };

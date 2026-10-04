@@ -374,17 +374,15 @@ The ast-grep smoke enables `toolu` and `ast-grep` in one isolated project. It lo
 bun run smoke:opencode-ast-grep
 ```
 
-Optional live CLI probe:
+All of the above, plus the host probes, the `*.live.test.ts` files, concurrency, budgets and regression controls, run as one required acceptance on Linux and macOS in CI. It needs `ast-grep`, `agent-browser` and its Chromium on `PATH`, and it fails, never skips, when one is missing:
 
 ```bash
-export TOOLU_LIVE_OPENCODE=1
-# optional: export OPENCODE_BIN=/path/to/opencode
-bun run test:conformance
+bun run test:opencode
 ```
 
 Full matrix and limitations: [`docs/conformance-report.md`](conformance-report.md). Do not advertise gates that [#212](https://github.com/Falconiere/toolu/issues/212) has not exercised.
 
-In OpenCode, a blocked edit to a protected file (for example `.env` with `protectedFiles` in `block` mode) should **deny** before bytes change — same class as the `protected-files` and `permission-evaluate` suites.
+In OpenCode, a blocked edit to a protected file (for example `.env` with `protectedFiles` in `block` mode) is **denied** before its bytes change. `entry.*`, `pretool.files` and `concurrent.sessions` prove this on the pinned host.
 
 ## Update
 

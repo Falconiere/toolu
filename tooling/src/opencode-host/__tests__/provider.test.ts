@@ -214,3 +214,27 @@ test.concurrent("a session without a scenario token follows the * script", async
     provider.stop();
   }
 });
+
+test.concurrent("each recorded request carries its arrival time in order (#362 budgets)", async () => {
+  const provider = startScriptedProvider(SCRIPTS);
+  try {
+    const before = Date.now();
+    await post(provider.url, {
+      messages: [{ role: "user", content: "PROBE:deny.bash" }],
+      tools: TOOLS,
+    });
+    await Bun.sleep(5);
+    await post(provider.url, {
+      messages: [{ role: "user", content: "PROBE:deny.bash" }],
+      tools: TOOLS,
+    });
+    const after = Date.now();
+    const times = provider.requests().map((r) => r.at);
+    expect(times).toHaveLength(2);
+    expect(times[0]).toBeGreaterThanOrEqual(before);
+    expect(times[1]).toBeGreaterThan(times[0] ?? Number.POSITIVE_INFINITY);
+    expect(times[1]).toBeLessThanOrEqual(after);
+  } finally {
+    provider.stop();
+  }
+});

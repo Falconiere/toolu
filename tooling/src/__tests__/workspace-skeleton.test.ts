@@ -34,13 +34,14 @@ test.concurrent("workspaces list core, opencode, conformance, and cli packages",
   }
 });
 
-test.concurrent("CI workflow defines a typescript job running test:ts", () => {
-  // Same walk the awk did: enter at `  typescript:`, leave at the next two-space key.
+test.concurrent("CI workflow defines a gate job running test:ts", () => {
+  // Same walk the awk did: enter at `  gate:`, leave at the next two-space key.
+  // The required `typescript` status needs this job (#362).
   let inJob = false;
   let foundJob = false;
   let foundRun = false;
   for (const line of readText(".github/workflows/tests.yml").split("\n")) {
-    if (line.startsWith("  typescript:")) {
+    if (line.startsWith("  gate:")) {
       inJob = true;
       foundJob = true;
     } else if (/^ {2}[a-z]/.test(line)) {
@@ -79,7 +80,8 @@ test.concurrent("root test delegates to the complete Bun-only lane", () => {
 
 test.concurrent("CI runs the Bun lane without retired shell jobs", () => {
   const workflow = readText(".github/workflows/tests.yml");
-  expect(workflow).toMatch(/  typescript:\n    name: typescript[\s\S]*?bun run test:ts/);
+  expect(workflow).toMatch(/  gate:\n    name: bun run test[\s\S]*?bun run test:ts/);
+  expect(workflow).toMatch(/  typescript:\n    name: typescript\n    needs: \[gate, opencode\]/);
   expect(workflow).not.toMatch(/^  shellcheck:/m);
   expect(workflow).not.toMatch(/^  bats:/m);
   expect(readText(".github/workflows/toolu-review.yml")).toContain("  review:");

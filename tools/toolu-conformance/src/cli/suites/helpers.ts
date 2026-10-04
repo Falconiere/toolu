@@ -21,30 +21,22 @@ export function bridgeEnvClaude(root: string): Record<string, string> {
   };
 }
 
-export function bridgeEnvOpencode(root: string): Record<string, string> {
-  return {
-    TOOLU_SETTINGS_DIR: join(root, "plugins/toolu/settings"),
-    TOOLU_HOST_OVERRIDE: "opencode",
-    TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",
-  };
-}
-
 export type ProtectedProject = {
   projectRoot: string;
   envPath: string;
   envBefore: string;
 };
 
-function writeProtectedProjectLayout(
-  projectRoot: string,
-  configDirName: ".claude" | ".opencode",
-): { envPath: string; envBefore: string } {
+function writeProtectedProjectLayout(projectRoot: string): {
+  envPath: string;
+  envBefore: string;
+} {
   const envPath = join(projectRoot, ".env");
   const envBefore = "SECRET=1\n";
   writeFileSync(envPath, envBefore, "utf8");
-  mkdirSync(join(projectRoot, configDirName), { recursive: true });
+  mkdirSync(join(projectRoot, ".claude"), { recursive: true });
   writeFileSync(
-    join(projectRoot, configDirName, "toolu.config.json"),
+    join(projectRoot, ".claude", "toolu.config.json"),
     JSON.stringify({
       version: 1,
       gates: { protectedFiles: { mode: "block" } },
@@ -54,20 +46,15 @@ function writeProtectedProjectLayout(
   return { envPath, envBefore };
 }
 
-export function installProtectedProjectAt(
-  projectRoot: string,
-  configDirName: ".claude" | ".opencode" = ".claude",
-): ProtectedProject {
-  const { envPath, envBefore } = writeProtectedProjectLayout(projectRoot, configDirName);
+/** A `.env` under protectedFiles block mode, configured through the Claude project config. */
+export function installProtectedProjectAt(projectRoot: string): ProtectedProject {
+  const { envPath, envBefore } = writeProtectedProjectLayout(projectRoot);
   return { projectRoot, envPath, envBefore };
 }
 
-export function createProtectedProject(
-  tempPrefix: string,
-  configDirName: ".claude" | ".opencode" = ".claude",
-): ProtectedProject {
+export function createProtectedProject(tempPrefix: string): ProtectedProject {
   const projectRoot = mkdtempSync(join(tmpBase(), tempPrefix));
-  return installProtectedProjectAt(projectRoot, configDirName);
+  return installProtectedProjectAt(projectRoot);
 }
 
 export function readProtectedEnv(envPath: string): string {

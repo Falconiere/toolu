@@ -1,53 +1,93 @@
 # Cross-host conformance report
 
 **Issue:** [#212](https://github.com/Falconiere/toolu/issues/212)  
-**Depth:** fixture-suite (hermetic temp projects; native dispatcher and Bun bootstrap)
-**Runner:** `bun run test:conformance` → `tools/toolu-conformance/src/cli/run.ts`
+**Depth:** fixture suites (hermetic temp projects, native dispatcher, Bun bootstrap), plus required OpenCode acceptance on the real host
+**Runners:**
+- `bun run test:conformance` → `tools/toolu-conformance/src/cli/run.ts`
+- `bun run test:opencode` → `tooling/src/opencode-acceptance.ts`
 
-## Pins (V2 adapter suites)
-
-These suites drive the retained `permission.evaluate`-shaped adapter (`createPermissionEvaluateHandler`), not the host entry. Since [#336](https://github.com/Falconiere/toolu/issues/336), the entry is the documented plugin function, proven on the pinned host by `bun run smoke:opencode-entry`. The documented-host contract (`opencode-ai@1.18.34`, `@opencode-ai/plugin@1.18.34`) and its live probes are in [opencode-host-contract.md](opencode-host-contract.md). OP-28 ([#362](https://github.com/Falconiere/toolu/issues/362)) replaces this lane with real-host acceptance.
+## Pins
 
 | Component | Pin |
 |-----------|-----|
 | Bun | `1.4.x` (workspace engines `>=1.4.0 <1.5.0`; CI/docs baseline `1.4.2`) |
-| OpenCode CLI | `v2.0.12` (`$OPENCODE_BIN` or `command -v opencode`) |
-| Plugin SDK | none: the suites import the adapter directly (the package no longer depends on `@opencode/plugin`) |
+| OpenCode CLI | `opencode-ai@1.18.34` (`tools/toolu-opencode/contract/pin.json`; see [opencode-host-contract.md](opencode-host-contract.md)) |
+| Plugin SDK | `@opencode-ai/plugin@1.18.34`, which the host provisions at its own version |
 
 ## Platforms
 
 | OS | Status |
 |----|--------|
-| macOS | Supported (Bun 1.4.x and git for OpenCode) |
-| Linux | Supported (same OpenCode prerequisites) |
-| Windows | **N/A** — not probed for this port |
+| macOS | Supported. OpenCode acceptance runs in CI on `macos-latest` (darwin-arm64) |
+| Linux | Supported. OpenCode acceptance runs in CI on `ubuntu-latest` (linux-x64) |
+| Windows | **N/A**: not probed for this port |
 
 ## Fixture suites
 
+No suite can skip: a suite that cannot run fails the matrix.
+
 | Suite | What it proves |
 |-------|----------------|
-| `protected-files` | Native PreToolUse bundle blocks `.env` edit (`deny` or `ask`); **file bytes unchanged on `deny`** |
-| `bootstrap-readiness` | A Bun registration bundle exits 0 without registry artifacts → `NotReady` |
-| `permission-evaluate` | `permission.evaluate` handler + block mode → `deny` on protected `.env` |
-| `surface-drift` | `bun run check:opencode-surface` clean |
-| `spaces-cwd` | Project path with spaces still blocks protected edit |
-| `live-opencode` | Optional live CLI probe (see below) |
+| `protected-files` | The native PreToolUse bundle blocks a `.env` edit (`deny` or `ask`); **file bytes are unchanged on `deny`** |
+| `bootstrap-readiness` | A Bun registration bundle that exits 0 without registry artifacts is `NotReady` |
+| `surface-drift` | `bun run check:opencode-surface` is clean |
+| `spaces-cwd` | A project path with spaces still blocks a protected edit |
 
-## Live OpenCode lane (optional)
+OpenCode is not a conformance suite. The old `opencode --version` probe and the handwritten `permission.evaluate` event were removed in [#362](https://github.com/Falconiere/toolu/issues/362). The real host replaces them, below.
 
-CI does **not** require a live OpenCode install. The `live-opencode` suite records **skip** and the matrix still exits 0.
+## OpenCode acceptance (required)
 
-To run locally:
+`bun run test:opencode` runs the pinned `opencode-ai` binary in isolated profiles (temporary `HOME`, `XDG_*` and git project) against a scripted loopback model. CI runs it on Linux and macOS (`opencode (ubuntu-latest)` and `opencode (macos-latest)`). The required `typescript` status fails unless both acceptance runs and the `bun run test` job pass.
+
+**What it runs.**
+
+- The 29 host contract probes, compared with `contract/probe-results.json`.
+- The generated surface and the names the host discovers.
+- Every `smoke:opencode-*` scenario.
+- The seven `*.live.test.ts` files, through a JUnit report, so a skipped host test fails.
+- Three concurrent runs over two projects.
+- A startup and per-tool budget.
+
+Every one of the 16 catalog plugins must have a passing dedicated actual-host check.
+
+**Preflight.** A missing host, `git`, `npm`, `tar`, `ast-grep`, `agent-browser` or its Chromium fails the run before any session, and names what is missing. Nothing is reported as skipped.
+
+**Regression controls.** Each run stages copies of `@toolu/opencode`. A control is detected only when its check passes against the unbroken copy and then fails once one edit breaks it. A stage that fails on its own, or an edit that no longer applies, counts as a missed control:
+
+| Control | Regression | Check that must fail |
+|---|---|---|
+| `control.v2-entry` | The entry is the V2 `Plugin.define` / `permission.hook("evaluate")` shape | `entry.local-shim` |
+| `control.invalid-skill-name` | A generated skill id has a double hyphen | `surface.discovered-names` |
+| `control.missing-context` | `experimental.chat.system.transform` is not wired | `live.context-delivery` |
+| `control.missing-post-tool` | `tool.execute.after` is not wired | `posttool.edit` |
+
+**Evidence.** The report keeps three categories apart:
+
+- **Execution.** `actual-host` means the pinned binary ran; `in-process` means the hooks were called directly.
+- **Model.** Always `scripted-loopback`: a fixture that only scripts replies.
+- **Service.**
+  - `none`.
+  - `fixture`: a loopback HTTP(S) server or bare git remote stands in for exa, context7, Jev, Jira or GitHub.
+  - `live`: real external services are reported under `external` and never decide acceptance. context7.com is called without a key. api.typesafe.ai is called only when `TYPESAFE_API_KEY` is set and is otherwise `not-configured`.
+
+The run removes service credentials (`CONTEXT7_API_KEY`, `EXA_API_KEY`, `TYPESAFE_API_KEY`, `JIRA_*`) from its own environment, so no fixture check can reach a live service.
+
+**Budgets.** The same six-call session runs twice with no plugin (a no-op local plugin) and twice with toolu selecting every plugin. The startup overhead (spawn to first model request) and the median per-tool overhead are toolu's fastest run minus the reference's fastest. They must stay within `contract/acceptance-budgets.json`. On darwin-arm64, two runs measured +444 and +539 ms startup and +45 and +35 ms per tool call. The ceilings leave a wide margin for shared CI runners.
+
+**Report.** The JSON report holds:
+
+- the CLI version, the provisioned SDK version, the platform, Bun and every tool version;
+- each check with its plugins, evidence, duration and observations;
+- the controls, the budget and the coverage.
+
+The CI jobs upload it as `opencode-acceptance-<os>`, and the Markdown summary goes to the job summary.
 
 ```bash
-export TOOLU_LIVE_OPENCODE=1
-# optional: export OPENCODE_BIN=/path/to/opencode
-bun run test:conformance
+bun run test:opencode                              # complete run; exits 0 only on acceptance
+bun run test:opencode --only entry.npm-root pretool.mcp control.missing-post-tool   # local narrowing, never acceptance
 ```
 
-When `TOOLU_LIVE_OPENCODE=1`, the runner executes `opencode --version` (or `$OPENCODE_BIN --version`) and fails the matrix if that command is missing or non-zero.
-
-For #276, the full fixture matrix passed with a temporary `@opencode/cli@2.0.12` binary, `TOOLU_LIVE_OPENCODE=1`, and a PATH containing only Bun and git. The live lane verifies the pinned CLI version; the separate OpenCode adapter test stages the npm catalog, bootstraps `ast-grep` into an isolated config root, and checks its in-process advisory with the same bash-free PATH.
+For #276, the old fixture matrix passed with a temporary `@opencode/cli@2.0.12` binary on a PATH containing only Bun and git. That V2 lane no longer exists.
 
 ## Isolation
 

@@ -1,7 +1,13 @@
 /** Model-visible advice and other-plugin composition on the pinned host. */
+import { rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { z } from "zod";
 import { runHost, toolStates } from "./host-run.ts";
 import { denied, session, SMOKE_RUN_TIMEOUT_MS, type PretoolScenario } from "./pretool-shared.ts";
 import { finalMessages, type ScenarioContext } from "./scenario.ts";
+import { acceptancePackageDir } from "./scenarios-entry.ts";
+import { PROBE_PLUGIN } from "./session.ts";
 
 const ENABLE_AST = JSON.stringify({ version: 1, enabled: ["toolu", "ast-grep"] });
 
@@ -110,12 +116,32 @@ export default {
 };
 `;
 
+/**
+ * The host runs config-listed plugins before `.opencode/plugins/*`, on every
+ * platform; inside that directory its order follows the filesystem (creation
+ * order on ext4, not on APFS). So the load route, not a file name, orders the
+ * other plugin: `aaa-deny` is a config entry ahead of the directory's probe and
+ * toolu shim, and `zzz-deny` sits in the directory behind config entries for the
+ * probe and the package.
+ */
+function orderByRoute(s: ReturnType<typeof session>, name: "aaa-deny" | "zzz-deny"): void {
+  const config = z.looseObject({}).parse(JSON.parse(s.sb.read("opencode.json")));
+  if (name === "aaa-deny") {
+    const other = s.outside("aaa-deny.ts");
+    writeFileSync(other, OTHER_PLUGIN);
+    config.plugin = [pathToFileURL(other).href];
+  } else {
+    rmSync(join(s.sb.project, ".opencode/plugins/probe.ts"));
+    rmSync(join(s.sb.project, ".opencode/plugins/toolu.ts"));
+    config.plugin = [pathToFileURL(PROBE_PLUGIN).href, pathToFileURL(acceptancePackageDir()).href];
+    s.sb.write(".opencode/plugins/zzz-deny.ts", OTHER_PLUGIN);
+  }
+  s.sb.write("opencode.json", `${JSON.stringify(config, null, 2)}\n`);
+}
+
 async function otherPlugin(ctx: ScenarioContext, name: "aaa-deny" | "zzz-deny") {
   using s = session(ctx, {
-    files: {
-      ".opencode/toolu/plugins.json": ENABLE_AST,
-      ...(name === "aaa-deny" ? { ".opencode/plugins/aaa-deny.ts": OTHER_PLUGIN } : {}),
-    },
+    files: { ".opencode/toolu/plugins.json": ENABLE_AST },
     scripts: {
       [`permissions.${name}`]: [
         {
@@ -126,7 +152,7 @@ async function otherPlugin(ctx: ScenarioContext, name: "aaa-deny" | "zzz-deny") 
       ],
     },
   });
-  if (name === "zzz-deny") s.sb.write(".opencode/plugins/zzz-deny.ts", OTHER_PLUGIN);
+  orderByRoute(s, name);
   const run = await runHost(
     ctx.bin,
     s,

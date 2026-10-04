@@ -51,7 +51,8 @@
     "benchmarks": "bun run tooling/src/benchmarks/run.ts",
     "test:pack": "bun run tooling/src/pack-inventory.ts && bun test --timeout 60000 tooling/src/__tests__/npm-publish.test.ts",
     "check:gate-reach": "bun run tooling/src/check-gate-reach.ts",
-    "check:legacy-exemptions": "bun run tooling/src/check-legacy-exemptions.ts"
+    "check:legacy-exemptions": "bun run tooling/src/check-legacy-exemptions.ts",
+    "test:opencode": "bun run tooling/src/opencode-acceptance.ts"
   },
   "dependencies": {
     "zod": "4.1.5",

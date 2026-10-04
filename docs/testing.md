@@ -2,9 +2,9 @@
 
 toolu uses `bun test` for its hook, tooling, and conformance suites ([epic #247](https://github.com/Falconiere/toolu/issues/247)). `bun run test` runs the TypeScript gate: conventions, real-subprocess unit and conformance tests, portable-core and gate-coverage checks, final-removal checks, bundle and launcher drift, package/workspace checks, context budget, deterministic benchmarks, and the shell-analysis latency measurement.
 
-The CI job is `typescript`. Its shell-analysis cold-start budget is hard on macOS arm64 or with `TOOLU_LATENCY_ENFORCE=1`, and report-only on Linux. See [conformance-report.md](conformance-report.md) for measurements against the `v7.2.0` Bash baseline.
+CI runs `bun run test` in the `bun run test` job (`gate`). Its shell-analysis cold-start budget is hard on macOS arm64 or with `TOOLU_LATENCY_ENFORCE=1`, and report-only on Linux. See [conformance-report.md](conformance-report.md) for measurements against the `v7.2.0` Bash baseline.
 
-Live OpenCode host probes (`bun run probe:opencode-host`) install the pinned `opencode-ai` CLI and drive it in isolated profiles against a scripted loopback provider. They stay opt-in until OP-28 ([#362](https://github.com/Falconiere/toolu/issues/362)). Every `bun run test` runs `bun run check:opencode-host`, which checks the committed evidence; see [opencode-host-contract.md](opencode-host-contract.md).
+OpenCode acceptance (`bun run test:opencode`) runs in its own CI jobs, `opencode (ubuntu-latest)` and `opencode (macos-latest)` ([#362](https://github.com/Falconiere/toolu/issues/362)). It installs the pinned `opencode-ai` CLI and drives it in isolated profiles against a scripted loopback provider, through every live check, regression control and budget. The required `typescript` status passes only when the gate and both acceptance jobs pass. Every `bun run test` also runs `bun run check:opencode-host`, which checks the committed evidence; see [opencode-host-contract.md](opencode-host-contract.md).
 
 A test spawns the real thing: a hook bundle, `git`, `npm`, or a host CLI. It runs against real temp repositories and config roots. There are no mocks (AGENTS.md).
 

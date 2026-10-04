@@ -1,6 +1,4 @@
 import { runBootstrapReadinessSuite } from "./suites/bootstrap-readiness.ts";
-import { runLiveOpencodeSuite } from "./suites/live-opencode.ts";
-import { runPermissionEvaluateSuite } from "./suites/permission-evaluate.ts";
 import { runProtectedFilesSuite } from "./suites/protected-files.ts";
 import { runSpacesCwdSuite } from "./suites/spaces-cwd.ts";
 import { runSurfaceDriftSuite } from "./suites/surface-drift.ts";
@@ -9,18 +7,13 @@ import type { ConformanceResult, SuiteDefinition, SuiteOutcome, SuiteResult } fr
 export const CONFORMANCE_SUITES: SuiteDefinition[] = [
   { id: "protected-files", run: runProtectedFilesSuite },
   { id: "bootstrap-readiness", run: runBootstrapReadinessSuite },
-  { id: "permission-evaluate", run: runPermissionEvaluateSuite },
   { id: "surface-drift", run: runSurfaceDriftSuite },
   { id: "spaces-cwd", run: runSpacesCwdSuite },
-  { id: "live-opencode", run: runLiveOpencodeSuite },
 ];
 
 export function formatSuiteLine(id: string, outcome: SuiteOutcome): string {
   if (outcome.status === "pass") {
     return `toolu-conformance: ${id} pass`;
-  }
-  if (outcome.status === "skip") {
-    return `toolu-conformance: ${id} skip (${outcome.message})`;
   }
   return `toolu-conformance: ${id} fail (${outcome.message})`;
 }
@@ -61,7 +54,7 @@ export async function runConformanceMatrix(
 /** Back-compat: protected-files only (#210). */
 export async function runProtectedFilesConformance(): Promise<ConformanceResult> {
   const outcome = await runProtectedFilesSuite();
-  if (outcome.status === "pass" || outcome.status === "skip") {
+  if (outcome.status === "pass") {
     return { pass: true };
   }
   return { pass: false, message: outcome.message };
