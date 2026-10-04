@@ -6,18 +6,23 @@ test("runProtectedFilesConformance passes on real protected-files bridge", async
   expect(result.pass).toBe(true);
 });
 
-test("runConformanceMatrix passes all fixture suites (live lane skipped by default)", async () => {
+test("runConformanceMatrix passes every fixture suite; none skips (#362)", async () => {
   const { pass, results } = await runConformanceMatrix();
-  const live = results.find((r) => r.id === "live-opencode");
-  expect(live?.outcome.status).toBe("skip");
-  if (live?.outcome.status === "skip") {
-    expect(live.outcome.message).toContain("TOOLU_LIVE_OPENCODE");
-  }
+  expect(results.map((r) => r.id)).toEqual([
+    "protected-files",
+    "bootstrap-readiness",
+    "surface-drift",
+    "spaces-cwd",
+  ]);
+  expect(results.map((r) => r.outcome)).toEqual(results.map(() => ({ status: "pass" })));
   expect(pass).toBe(true);
-  for (const { id, outcome } of results) {
-    if (id === "live-opencode") {
-      continue;
-    }
-    expect(outcome.status).toBe("pass");
-  }
+});
+
+test("runConformanceMatrix fails closed when one suite fails", async () => {
+  const { pass, results } = await runConformanceMatrix([
+    { id: "ok", run: () => Promise.resolve({ status: "pass" }) },
+    { id: "broken", run: () => Promise.reject(new Error("suite crashed")) },
+  ]);
+  expect(results[1]?.outcome).toEqual({ status: "fail", message: "suite crashed" });
+  expect(pass).toBe(false);
 });

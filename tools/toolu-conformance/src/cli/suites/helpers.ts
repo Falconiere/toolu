@@ -21,14 +21,6 @@ export function bridgeEnvClaude(root: string): Record<string, string> {
   };
 }
 
-export function bridgeEnvOpencode(root: string): Record<string, string> {
-  return {
-    TOOLU_SETTINGS_DIR: join(root, "plugins/toolu/settings"),
-    TOOLU_HOST_OVERRIDE: "opencode",
-    TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",
-  };
-}
-
 export type ProtectedProject = {
   projectRoot: string;
   envPath: string;

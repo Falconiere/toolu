@@ -27,7 +27,7 @@ const Catalog = z.object({
 });
 type CatalogPlugin = z.infer<typeof Catalog>["plugins"][number];
 
-export type SurfaceCounts = { plugins: number; skills: number; agents: number; commands: number };
+type SurfaceCounts = { plugins: number; skills: number; agents: number; commands: number };
 
 function record(value: unknown, label: string): Record<string, unknown> {
   const result = z.record(z.string(), z.unknown()).safeParse(value);

@@ -1,8 +1,9 @@
-/** Per-suite outcome for the conformance matrix (#212). */
-export type SuiteOutcome =
-  | { status: "pass" }
-  | { status: "fail"; message: string }
-  | { status: "skip"; message: string };
+/**
+ * Per-suite outcome for the conformance matrix (#212). There is no skip: a
+ * suite that cannot run fails (#362). Live OpenCode acceptance is
+ * `bun run test:opencode`, not a conformance suite.
+ */
+export type SuiteOutcome = { status: "pass" } | { status: "fail"; message: string };
 
 export type SuiteResult = {
   id: string;
