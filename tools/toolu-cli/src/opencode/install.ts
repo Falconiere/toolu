@@ -120,7 +120,7 @@ function pluginStep(
     : "";
   if (!added) return { name, outcome: "already", detail: `already enabled${off}`, argv: [] };
   if (path === undefined) {
-    const detail = `enabled: with no selection file every plugin is${off}`;
+    const detail = `enabled (no selection file, so every plugin is on)${off}`;
     return { name, outcome: "installed", detail, argv: [] };
   }
   return {

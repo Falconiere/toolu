@@ -71,7 +71,10 @@ async function toolu(
     stdin: "",
     timeoutMs: CLI_TIMEOUT_MS,
   });
-  if (res.timedOut) throw new ContractError(`toolu ${args.join(" ")} timed out`);
+  if (res.timedOut || res.exitCode !== 0)
+    throw new ContractError(
+      `toolu ${args.join(" ")} failed (exit ${res.exitCode}): ${res.stderr.slice(-2000)}${res.stdout.slice(-2000)}`,
+    );
   return res.exitCode;
 }
 

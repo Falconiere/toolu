@@ -11,7 +11,7 @@ import {
   type JSONPath,
   type Node,
   type ParseError,
-} from "jsonc-parser";
+} from "jsonc-parser/lib/esm/main.js"; // the UMD entry's dynamic requires break the Node bundle
 import { CliError, EXIT } from "../exit";
 
 /** One OpenCode config file: absent files have neither text nor data. */
