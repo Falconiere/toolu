@@ -219,9 +219,25 @@ test.concurrent("the adapter's SDK peers must equal the SDK pin", () =>
     `pin mismatch: @toolu/opencode peerDependency @opencode-ai/sdk is 1.18.33, pin is ${pin.sdk.version}`,
   ));
 
+test.concurrent("the real adapter declares both SDK peers at the pin", () => {
+  const pkg = AdapterManifest.parse(
+    JSON.parse(readFileSync(join(ROOT, "tools/toolu-opencode/package.json"), "utf8")),
+  );
+  expect(pkg.peerDependencies).toEqual({
+    "@opencode-ai/plugin": pin.sdk.version,
+    "@opencode-ai/sdk": pin.sdk.version,
+  });
+});
+
 test.concurrent("an adapter without the SDK peers fails the pin check", () =>
   expectFailure(
-    { adapter: (pkg) => void delete pkg.peerDependencies["@opencode-ai/plugin"] },
+    {
+      adapter: (pkg) => {
+        // Deletes a peer the real manifest declares (asserted above), so the failure is this one.
+        expect(pkg.peerDependencies["@opencode-ai/plugin"]).toBe(pin.sdk.version);
+        delete pkg.peerDependencies["@opencode-ai/plugin"];
+      },
+    },
     `pin mismatch: @toolu/opencode peerDependency @opencode-ai/plugin is absent, pin is ${pin.sdk.version}`,
   ));
 
