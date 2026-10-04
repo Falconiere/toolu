@@ -12466,7 +12466,12 @@ async function withResourceLock(root, fn) {
   }
 }
 
+// packages/toolu-core/src/resources/resource-store.ts
+import { homedir } from "os";
+import { join } from "path";
+
 // packages/toolu-core/src/resources/pressure.ts
+import { spawnSync } from "child_process";
 import { readFileSync as readFileSync2 } from "fs";
 import { cpus, freemem, loadavg, totalmem } from "os";
 var PRESSURE_SAMPLE_MS = 30000;
@@ -12514,6 +12519,25 @@ function advancePressure(previous, sample) {
     reason: held ? "sustained CPU/load or memory pressure" : null
   };
 }
+function vmStatAvailableBytes(text) {
+  const pageSize = /page size of (\d+) bytes/.exec(text)?.[1];
+  if (pageSize === undefined)
+    return null;
+  let pages = 0;
+  for (const kind of ["free", "inactive", "speculative"]) {
+    const count = new RegExp(`^Pages ${kind}:\\s+(\\d+)\\.$`, "m").exec(text)?.[1];
+    if (count === undefined)
+      return null;
+    pages += Number(count);
+  }
+  return pages * Number(pageSize);
+}
+function darwinAvailableBytes(command = "/usr/bin/vm_stat") {
+  const result = spawnSync(command, { encoding: "utf8", timeout: 2000 });
+  if (result.error !== undefined || result.status !== 0)
+    return null;
+  return vmStatAvailableBytes(result.stdout);
+}
 function sampleResources(previous) {
   const sample = {
     at: Date.now(),
@@ -12523,6 +12547,12 @@ function sampleResources(previous) {
     totalBytes: totalmem(),
     steal: null
   };
+  if (process.platform === "darwin") {
+    const available = darwinAvailableBytes();
+    if (available !== null)
+      sample.availableBytes = Math.min(available, sample.totalBytes);
+    return sample;
+  }
   if (process.platform !== "linux")
     return sample;
   try {
@@ -12544,8 +12574,6 @@ function sampleResources(previous) {
 }
 
 // packages/toolu-core/src/resources/resource-store.ts
-import { homedir } from "os";
-import { join } from "path";
 function resourceHome(env = process.env) {
   return env.TOOLU_RESOURCE_HOME ?? join(homedir(), ".local", "state", "toolu", "resources");
 }
@@ -12567,7 +12595,10 @@ function resourcePolicy(root) {
   const maxJobs = p.maxJobs ?? 1;
   if (typeof maxAgents !== "number" || typeof maxJobs !== "number")
     throw new Error("invalid resource capacity");
-  const policy = { maxAgents, maxJobs, hosts };
+  const pressure = p.pressure ?? true;
+  if (typeof pressure !== "boolean")
+    throw new Error("invalid resource pressure policy");
+  const policy = { maxAgents, maxJobs, hosts, pressure };
   for (const [key, value] of Object.entries({
     maxAgents: policy.maxAgents,
     maxJobs: policy.maxJobs,
@@ -12577,6 +12608,18 @@ function resourcePolicy(root) {
       throw new Error(`invalid resource capacity ${key}`);
   }
   return policy;
+}
+function freshPressure(state) {
+  if (!state.pressure || Date.now() - state.pressure.sample.at >= PRESSURE_SAMPLE_MS)
+    state.pressure = advancePressure(state.pressure, sampleResources(state.pressure?.sample));
+  return state.pressure;
+}
+function admitPressure(state, policy) {
+  if (!policy.pressure)
+    return;
+  const pressure = freshPressure(state);
+  if (pressure.held)
+    throw new Error(`resource hold: ${pressure.reason}`);
 }
 function optionalString(value) {
   return value === undefined || typeof value === "string";
@@ -12629,11 +12672,8 @@ function validateMigration(targetHost, options) {
     throw new Error("invalid epic capacity");
 }
 function reserveTarget(root, state, lease, targetHost, options) {
-  if (!state.pressure || Date.now() - state.pressure.sample.at >= PRESSURE_SAMPLE_MS)
-    state.pressure = advancePressure(state.pressure, sampleResources(state.pressure?.sample));
-  if (state.pressure.held)
-    throw new Error(`resource hold: ${state.pressure.reason}`);
   const policy = resourcePolicy(root);
+  admitPressure(state, policy);
   const others = state.leases.filter((candidate) => candidate.type === "agent" && candidate.token !== lease.token);
   if (others.length >= policy.maxAgents)
     throw new Error(`agent capacity exhausted (${policy.maxAgents})`);
@@ -12742,10 +12782,7 @@ async function acquireLease(root, req) {
   return updateResources(root, (state) => {
     const policy = resourcePolicy(root);
     reconcileJobs2(state);
-    if (!state.pressure || Date.now() - state.pressure.sample.at >= PRESSURE_SAMPLE_MS)
-      state.pressure = advancePressure(state.pressure, sampleResources(state.pressure?.sample));
-    if (state.pressure.held)
-      throw new Error(`resource hold: ${state.pressure.reason}`);
+    admitPressure(state, policy);
     const live = state.leases.filter((lease) => lease.type === req.type);
     requireJobAdmission(state, req);
     if (live.some((lease) => lease.stateDir === req.stateDir && lease.key === req.key))
@@ -12821,11 +12858,7 @@ async function coolResourceHost(root, host, until, reason) {
   });
 }
 async function refreshPressure(root) {
-  return updateResources(root, (state) => {
-    if (!state.pressure || Date.now() - state.pressure.sample.at >= PRESSURE_SAMPLE_MS)
-      state.pressure = advancePressure(state.pressure, sampleResources(state.pressure?.sample));
-    return state.pressure;
-  });
+  return updateResources(root, freshPressure);
 }
 // packages/toolu-core/src/resources/binding.ts
 import { existsSync as existsSync2, readFileSync as readFileSync3, realpathSync, statSync } from "fs";

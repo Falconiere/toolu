@@ -1,4 +1,5 @@
 /** Bounded machine sampling and replayable sustained-pressure decisions. */
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { cpus, freemem, loadavg, totalmem } from "node:os";
 import { isJsonObject } from "../config/config-load.ts";
@@ -113,6 +114,26 @@ export function advancePressure(previous: Pressure | undefined, sample: Resource
   };
 }
 
+/** Reclaimable bytes from `vm_stat`: free, inactive and speculative pages are
+ * disjoint; purgeable pages overlap active/inactive and stay uncounted. */
+export function vmStatAvailableBytes(text: string): number | null {
+  const pageSize = /page size of (\d+) bytes/.exec(text)?.[1];
+  if (pageSize === undefined) return null;
+  let pages = 0;
+  for (const kind of ["free", "inactive", "speculative"]) {
+    const count = new RegExp(`^Pages ${kind}:\\s+(\\d+)\\.$`, "m").exec(text)?.[1];
+    if (count === undefined) return null;
+    pages += Number(count);
+  }
+  return pages * Number(pageSize);
+}
+
+export function darwinAvailableBytes(command = "/usr/bin/vm_stat"): number | null {
+  const result = spawnSync(command, { encoding: "utf8", timeout: 2_000 });
+  if (result.error !== undefined || result.status !== 0) return null;
+  return vmStatAvailableBytes(result.stdout);
+}
+
 export function sampleResources(previous?: ResourceSample): ResourceSample {
   const sample: ResourceSample = {
     at: Date.now(),
@@ -122,6 +143,12 @@ export function sampleResources(previous?: ResourceSample): ResourceSample {
     totalBytes: totalmem(),
     steal: null,
   };
+  if (process.platform === "darwin") {
+    // freemem() counts only untouched pages; keep it only when vm_stat fails.
+    const available = darwinAvailableBytes();
+    if (available !== null) sample.availableBytes = Math.min(available, sample.totalBytes);
+    return sample;
+  }
   if (process.platform !== "linux") return sample;
   try {
     const cpu =

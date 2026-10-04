@@ -72,7 +72,9 @@ The installed plugin's raw epic scripts load these APIs from the committed
 or an installed `node_modules` tree.
 Agent slots and expensive-job slots are separate; conservative defaults allow
 three agents and one managed job. Load, available memory and Linux CPU steal
-inform sustained admission holds with recovery hysteresis.
+inform sustained admission holds with recovery hysteresis. On macOS, available
+memory comes from `vm_stat` (free + inactive + speculative pages), and
+`"pressure": false` in the resource root's `policy.json` disables the hold.
 
 A binding in the worktree's Git directory automatically admits plan-ledger checks
 through `@toolu/core/resources/jobs`. Workers use the epic `job.ts -- <command>`

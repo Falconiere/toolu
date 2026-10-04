@@ -2,8 +2,10 @@
 import { randomUUID } from "node:crypto";
 import { processGroupAlive } from "../process/process.ts";
 import { processAlive } from "./lock.ts";
-import { PRESSURE_SAMPLE_MS, advancePressure, sampleResources, type Pressure } from "./pressure.ts";
+import type { Pressure } from "./pressure.ts";
 import {
+  admitPressure,
+  freshPressure,
   resourcePolicy,
   updateResources,
   type Lease,
@@ -70,9 +72,7 @@ export async function acquireLease(root: string, req: LeaseRequest): Promise<Lea
   return updateResources(root, (state) => {
     const policy = resourcePolicy(root);
     reconcileJobs(state);
-    if (!state.pressure || Date.now() - state.pressure.sample.at >= PRESSURE_SAMPLE_MS)
-      state.pressure = advancePressure(state.pressure, sampleResources(state.pressure?.sample));
-    if (state.pressure.held) throw new Error(`resource hold: ${state.pressure.reason}`);
+    admitPressure(state, policy);
     const live = state.leases.filter((lease) => lease.type === req.type);
     requireJobAdmission(state, req);
     if (live.some((lease) => lease.stateDir === req.stateDir && lease.key === req.key))
@@ -172,9 +172,5 @@ export async function coolResourceHost(
 }
 
 export async function refreshPressure(root: string): Promise<Pressure> {
-  return updateResources(root, (state) => {
-    if (!state.pressure || Date.now() - state.pressure.sample.at >= PRESSURE_SAMPLE_MS)
-      state.pressure = advancePressure(state.pressure, sampleResources(state.pressure?.sample));
-    return state.pressure;
-  });
+  return updateResources(root, freshPressure);
 }

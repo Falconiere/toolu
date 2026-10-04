@@ -3,7 +3,13 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { isJsonObject } from "../config/config-load.ts";
 import { readJsonFile, withResourceLock, writeJsonAtomic } from "./lock.ts";
-import { isPressure, type Pressure } from "./pressure.ts";
+import {
+  PRESSURE_SAMPLE_MS,
+  advancePressure,
+  isPressure,
+  sampleResources,
+  type Pressure,
+} from "./pressure.ts";
 
 export type Lease = {
   token: string;
@@ -27,7 +33,12 @@ export type ResourceState = {
   cooldowns: Record<string, { until: number; reason: string }>;
   pressure?: Pressure;
 };
-export type ResourcePolicy = { maxAgents: number; maxJobs: number; hosts: Record<string, number> };
+export type ResourcePolicy = {
+  maxAgents: number;
+  maxJobs: number;
+  hosts: Record<string, number>;
+  pressure: boolean;
+};
 export type LeaseRequest = Pick<Lease, "type" | "key" | "stateDir"> & {
   host?: string;
   hostCap?: number;
@@ -54,7 +65,9 @@ export function resourcePolicy(root: string): ResourcePolicy {
   const maxJobs = p.maxJobs ?? 1;
   if (typeof maxAgents !== "number" || typeof maxJobs !== "number")
     throw new Error("invalid resource capacity");
-  const policy = { maxAgents, maxJobs, hosts };
+  const pressure = p.pressure ?? true;
+  if (typeof pressure !== "boolean") throw new Error("invalid resource pressure policy");
+  const policy = { maxAgents, maxJobs, hosts, pressure };
   for (const [key, value] of Object.entries({
     maxAgents: policy.maxAgents,
     maxJobs: policy.maxJobs,
@@ -64,6 +77,20 @@ export function resourcePolicy(root: string): ResourcePolicy {
       throw new Error(`invalid resource capacity ${key}`);
   }
   return policy;
+}
+
+/** Refresh a stale pressure sample in place; callers hold the resource lock. */
+export function freshPressure(state: ResourceState): Pressure {
+  if (!state.pressure || Date.now() - state.pressure.sample.at >= PRESSURE_SAMPLE_MS)
+    state.pressure = advancePressure(state.pressure, sampleResources(state.pressure?.sample));
+  return state.pressure;
+}
+
+/** Refuse new work during a sustained pressure hold unless policy disables pressure. */
+export function admitPressure(state: ResourceState, policy: ResourcePolicy): void {
+  if (!policy.pressure) return;
+  const pressure = freshPressure(state);
+  if (pressure.held) throw new Error(`resource hold: ${pressure.reason}`);
 }
 
 function optionalString(value: unknown): boolean {
