@@ -7,6 +7,7 @@ export interface UpdateStep {
   readonly outcome: "updated" | "current" | "failed";
   readonly detail: string;
   readonly argv: readonly string[];
+  readonly plan?: string;
 }
 
 async function versions(

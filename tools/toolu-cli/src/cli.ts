@@ -10,7 +10,7 @@ import { dispatchPlugins } from "./plugins/dispatch";
 
 const HELP = `npx @toolu/plugins <command> [options]
 
-Install toolu plugins into Claude Code and Codex.
+Install toolu plugins into Claude Code, Codex and OpenCode.
 
 Commands:
   install [name...]   Install plugins, core first (no names = all)
@@ -20,12 +20,17 @@ Commands:
 
 For example: npx @toolu/plugins install
 
+OpenCode is managed through its config files: install adds @toolu/opencode to
+opencode.json and enables plugins in a toolu/plugins.json selection (global, or
+the project's .opencode/toolu/plugins.json); remove toolu drops the package,
+remove <name> disables one plugin.
+
 Options:
   --host <id>       claude | codex | opencode (detected when omitted)
-  --scope <scope>   user | project | local (Claude Code only)
+  --scope <scope>   user | project | local (Claude Code); user | project (OpenCode)
   --config <path>   Replay a .toolu/plugins.json selection
   --yes, -y         Confirm destructive or command-declaring operations
-  --dry-run         Print the host commands without running them
+  --dry-run         Print the host commands or config changes without applying them
   --no-input        Never prompt; fail listing what is missing
   --json            Machine-readable output where supported
   -h, --help        Show help
@@ -86,6 +91,8 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
       { ...args, verb: args.verb },
       {
         manifestPath: await manifestPath(),
+        version: await packageVersion(),
+        cwd: process.cwd(),
         interactive: isInteractive(args.noInput),
         terminal: process.stdout.isTTY === true && process.env.TERM !== "dumb",
         write: (text: string) => process.stdout.write(text),

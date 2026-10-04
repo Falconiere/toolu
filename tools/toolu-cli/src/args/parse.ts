@@ -104,9 +104,7 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
   const scope = readEnum<Scope>(values, "--scope", scopeSchema, SCOPES);
   // With an explicit host this is decidable now. With an implicit one the check
   // runs again once detection resolves, in assertScopeAllowed.
-  if (scope !== undefined && host !== undefined && host !== "claude") {
-    throw new UsageError(scopeRejection(host));
-  }
+  if (host !== undefined) assertScopeAllowed(scope, host);
   return {
     verb,
     names: positionals.slice(1),
@@ -122,12 +120,18 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
   };
 }
 
-/** The message used whether the host was named or detected. */
-function scopeRejection(host: Host): string {
-  return `--scope is Claude Code only; ${host} has no scope concept`;
-}
-
-/** Re-checks --scope once an implicit host has been resolved. */
+/**
+ * Claude Code takes every scope, OpenCode `user` (global config) or `project`,
+ * Codex none. Checked at parse time for a named host and again once an
+ * implicit one resolves.
+ */
 export function assertScopeAllowed(scope: Scope | undefined, host: Host): void {
-  if (scope !== undefined && host !== "claude") throw new UsageError(scopeRejection(host));
+  if (scope === undefined || host === "claude") return;
+  if (host === "opencode") {
+    if (scope === "local") {
+      throw new UsageError("--scope local is Claude Code only; OpenCode takes user or project");
+    }
+    return;
+  }
+  throw new UsageError(`--scope is for Claude Code and OpenCode; ${host} has no scope concept`);
 }

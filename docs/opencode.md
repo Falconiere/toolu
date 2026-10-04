@@ -1,10 +1,12 @@
 # OpenCode install
 
 **Issue:** [#207](https://github.com/Falconiere/toolu/issues/207) (epic [#203](https://github.com/Falconiere/toolu/issues/203))  
-**Status:** `@toolu/opencode` publishes to npm from v6.8.0. Install it with OpenCode's own plugin CLI — no clone, no `TOOLU_REPO_ROOT`:
+**Status:** `@toolu/opencode` publishes to npm from v6.8.0. Install it with the `toolu` CLI, which adds it to OpenCode's config file — no clone, no `TOOLU_REPO_ROOT`:
 
 ```bash
-opencode plugin add @toolu/opencode
+npx @toolu/plugins install --host opencode                 # global config, every plugin
+npx @toolu/plugins install delivery-flow --host opencode   # only these plugins and their dependencies
+npx @toolu/plugins install --host opencode --scope project # this project's opencode.json
 ```
 
 > **Documented contract.** The plugin API at <https://opencode.ai/docs/plugins/> is pinned and probed in [opencode-host-contract.md](opencode-host-contract.md): `opencode-ai@1.18.34` with `@opencode-ai/plugin@1.18.34` ([#335](https://github.com/Falconiere/toolu/issues/335)). Since [#336](https://github.com/Falconiere/toolu/issues/336) the package entry is the documented plugin function. [#363](https://github.com/Falconiere/toolu/issues/363) replaces this install guide.
@@ -21,8 +23,10 @@ through an `opencode.json` `plugin` entry with no local shim. Choose which plugi
 
 Every plugin ships its skills, agents and commands in the package. OpenCode discovers the ones you enable automatically (step 5). For example, add `delivery-flow`, `brainstorm`, `pr-babysit` or `epic-orchestrator` to `enabled` when you want those workflows. Dependencies close automatically.
 
-`npx @toolu/plugins install --host opencode` does not drive this yet — the CLI
-has no OpenCode adapter. Until it does, run the two steps above.
+The pinned host has no `plugin add`, `list`, `update` or `remove` command, so
+the CLI ([docs/cli.md § OpenCode](cli.md#opencode)) edits the `plugin` array and
+the selection file directly, keeping your comments and other entries. `list`,
+`update` and `remove` work the same way.
 
 The git-clone flow below remains the contributor path, and is still how you work
 against an unreleased checkout.
@@ -366,11 +370,10 @@ In OpenCode, a blocked edit to a protected file (for example `.env` with `protec
 
 ## Update
 
-npm install — OpenCode's plugin CLI checks and moves the package:
+npm install — the `toolu` CLI rewrites the package spec to its own release (add `--scope project` for a project entry):
 
 ```bash
-opencode plugin check @toolu/opencode    # is a newer release published?
-opencode plugin update @toolu/opencode   # move to it; omit the name to update every outdated plugin
+npx @toolu/plugins update --host opencode
 ```
 
 Contributor clone:
@@ -391,7 +394,8 @@ Check out the last known-good tag in the toolu clone and run `bun install --froz
 ## Disable / uninstall
 
 - **Disable enforcement** — remove or rename `.opencode/plugins/toolu.ts`, then restart OpenCode. User config under `.opencode/toolu.config.json` is left intact. Clearing `enabled` in `.opencode/toolu/plugins.json` only removes the plugins' startup contributions and their skills, agents and commands at the next start; the core gates still run.
-- **Remove toolu** — npm install: `opencode plugin remove @toolu/opencode`, then delete `.opencode/toolu/` and optional `.opencode/toolu.config.json`. Contributor clone: delete `.opencode/plugins/toolu.ts`, `.opencode/package.json` (if only used for toolu), `.opencode/toolu/`, and optional `.opencode/toolu.config.json`, remove `TOOLU_REPO_ROOT` from your environment, and delete the clone separately.
+- **Disable one plugin** — npm install: `npx @toolu/plugins remove <name> --host opencode --yes` takes it out of the selection; it is refused while an enabled plugin depends on it.
+- **Remove toolu** — npm install: `npx @toolu/plugins remove toolu --host opencode --yes` removes the package entry and keeps the selection; delete `toolu/plugins.json` and optional `.opencode/toolu.config.json` yourself if you want them gone. Contributor clone: delete `.opencode/plugins/toolu.ts`, `.opencode/package.json` (if only used for toolu), `.opencode/toolu/`, and optional `.opencode/toolu.config.json`, remove `TOOLU_REPO_ROOT` from your environment, and delete the clone separately.
 - **Scoped cleanup** — registry, helpers, startup ledger and state under the project's data root (`.opencode/toolu/state/`, or `<override>/toolu/opencode/projects/<name>-<hash>/`) can be deleted to force a fresh bootstrap; it does not remove Claude/Codex settings.
 
 ## Host comparison

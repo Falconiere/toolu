@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 /**
  * Live OpenCode entry smoke (#336), plugin startup (#342), paths and helper
- * environment (#343), surface install and discovery (#345), leaf plugins, and
- * pr-babysit's controller and OpenCode fixer (#357):
+ * environment (#343), surface install and discovery (#345), leaf plugins,
+ * pr-babysit's controller and OpenCode fixer (#357), and CLI management (#360):
  * `bun run smoke:opencode-entry [<scenario id>…]`; ids narrow the run.
  *
  * Resolves the pinned CLI the same way as `probe:opencode-host`, packs
@@ -29,6 +29,7 @@ import { STARTUP_SCENARIOS } from "./opencode-host/scenarios-startup.ts";
 import { BROWSER_SCENARIOS } from "./opencode-host/scenarios-browser.ts";
 import { EXA_SCENARIOS } from "./opencode-host/scenarios-exa.ts";
 import { BABYSIT_SCENARIOS } from "./opencode-host/scenarios-babysit.ts";
+import { CLI_SCENARIOS } from "./opencode-host/scenarios-cli.ts";
 
 const ALL_SCENARIOS = [
   ...ENTRY_SCENARIOS,
@@ -38,6 +39,7 @@ const ALL_SCENARIOS = [
   ...BROWSER_SCENARIOS,
   ...EXA_SCENARIOS,
   ...BABYSIT_SCENARIOS,
+  ...CLI_SCENARIOS,
 ];
 
 /** The scenarios named in `ids`, or every one; an unknown id is an error, not an empty run. */

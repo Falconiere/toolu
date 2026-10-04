@@ -66,11 +66,19 @@ describe("parseArgs", () => {
   });
 
   test("rejects --scope on a host that has no scope concept", () => {
-    for (const host of ["codex", "opencode"]) {
-      expect(() => parseArgs(["install", "--scope", "user", "--host", host])).toThrow(
-        /--scope is Claude Code only/,
-      );
-    }
+    expect(() => parseArgs(["install", "--scope", "user", "--host", "codex"])).toThrow(
+      /codex has no scope concept/,
+    );
+  });
+
+  test("OpenCode takes user and project scopes but not local", () => {
+    expect(parseArgs(["install", "--scope", "user", "--host", "opencode"]).scope).toBe("user");
+    expect(parseArgs(["install", "--scope", "project", "--host", "opencode"]).scope).toBe(
+      "project",
+    );
+    expect(() => parseArgs(["install", "--scope", "local", "--host", "opencode"])).toThrow(
+      /--scope local is Claude Code only/,
+    );
   });
 
   test("accepts --scope when the host is claude or unspecified", () => {
@@ -99,8 +107,9 @@ describe("review-driven behavior", () => {
   test("--scope without --host parses, and is re-checked once the host resolves", () => {
     expect(parseArgs(["install", "--scope", "user"]).scope).toBe("user");
     expect(() => assertScopeAllowed("user", "claude")).not.toThrow();
-    expect(() => assertScopeAllowed("user", "codex")).toThrow(/Claude Code only/);
-    expect(() => assertScopeAllowed("user", "opencode")).toThrow(/Claude Code only/);
+    expect(() => assertScopeAllowed("user", "codex")).toThrow(/no scope concept/);
+    expect(() => assertScopeAllowed("project", "opencode")).not.toThrow();
+    expect(() => assertScopeAllowed("local", "opencode")).toThrow(/Claude Code only/);
     expect(() => assertScopeAllowed(undefined, "codex")).not.toThrow();
   });
 });

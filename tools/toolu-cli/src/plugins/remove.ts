@@ -7,6 +7,7 @@ export interface RemoveStep {
   readonly removed: boolean;
   readonly detail: string;
   readonly argv: readonly string[];
+  readonly plan?: string;
 }
 
 /** Uninstalls the named plugins, reporting each independently. */

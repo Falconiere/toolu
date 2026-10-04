@@ -23,10 +23,10 @@ Your own definitions win:
 ## Install
 
 ```bash
-opencode plugin add @toolu/opencode
+npx @toolu/plugins install --host opencode
 ```
 
-Then choose which toolu plugins are active, in your project:
+The [`@toolu/plugins`](https://www.npmjs.com/package/@toolu/plugins) CLI adds this package to the `plugin` array of OpenCode's global config (`--scope project` for the project's), keeping your comments and other entries. Name plugins (`install ts-quality --host opencode`) to write a selection instead of enabling everything. You can also write the selection yourself, in your project:
 
 ```jsonc
 // .opencode/toolu/plugins.json

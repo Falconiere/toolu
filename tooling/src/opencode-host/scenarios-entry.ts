@@ -34,13 +34,18 @@ export type EntryScenario = {
   run: (ctx: EntryContext) => Promise<EntryResult>;
 };
 
-/** A project with a protected `.env` and only the core plugin enabled. */
-export const PROJECT_FILES = {
+/** A project with a protected `.env` and no plugin selection. */
+export const GATED_FILES = {
   ".env": ENV_BYTES,
   ".opencode/toolu.config.json": JSON.stringify({
     version: 1,
     gates: { protectedFiles: { mode: "block" } },
   }),
+};
+
+/** A project with a protected `.env` and only the core plugin enabled. */
+export const PROJECT_FILES = {
+  ...GATED_FILES,
   ".opencode/toolu/plugins.json": JSON.stringify({ version: 1, enabled: ["toolu"] }),
 };
 
@@ -83,7 +88,7 @@ export function installShim(session: ProbeSession, dir = session.sb.project): vo
   symlinkSync(PACKAGE_DIR, join(dir, "node_modules/@toolu/opencode"));
 }
 
-function writeEnvScript(project: string): Scripts {
+export function writeEnvScript(project: string): Scripts {
   return {
     "entry.write-env": [
       { tool: "write", args: { filePath: join(project, ".env"), content: "PWNED\n" } },
@@ -108,7 +113,7 @@ export function diagnostics(stderr: string, prefix: string): number {
   return stderr.split("\n").filter((line) => line.includes(`message="${prefix}`)).length;
 }
 
-async function protectedWrite(ctx: EntryContext, s: ProbeSession): Promise<Observed> {
+export async function protectedWrite(ctx: EntryContext, s: ProbeSession): Promise<Observed> {
   const hostRun = await runHost(ctx.bin, s, ["--print-logs", "PROBE:entry.write-env"]);
   const states = toolStates(hostRun);
   const write = states.find((state) => state.tool === "write");
@@ -123,7 +128,7 @@ async function protectedWrite(ctx: EntryContext, s: ProbeSession): Promise<Obser
   };
 }
 
-function enforced(observed: Observed): boolean {
+export function enforced(observed: Observed): boolean {
   return (
     observed.notReady === 0 &&
     observed.writeDenied === true &&
