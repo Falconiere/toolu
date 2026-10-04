@@ -192,7 +192,9 @@ async function selectionCase(mode: Mode): Promise<void> {
     output,
   );
   if (mode === "selected") {
-    expect(output.output).toContain("Forbidden lint suppression");
+    expect(output.output).toContain(
+      "Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs",
+    );
     expect(gate(sb.project).entries?.[relative]?.source).toBe("rust-quality-hook");
     sb.write(relative, CLEAN);
     await post.after(
@@ -205,18 +207,24 @@ async function selectionCase(mode: Mode): Promise<void> {
       result(),
     );
     expect(gate(sb.project).status).toBe("passing");
-    sb.write("notes.md", SUPPRESSED);
-    const notes = result();
-    await post.after(
-      {
-        tool: "write",
-        sessionID: mode,
-        callID: "notes",
-        args: { filePath: sb.path("notes.md"), content: SUPPRESSED },
-      },
-      notes,
+    // Error handling matches `/src/` in the path as given, so a relative `src/` unwrap is not reported.
+    const outputs = await Promise.all(
+      (
+        [
+          ["notes.md", sb.path("notes.md"), SUPPRESSED],
+          ["src/load.rs", "src/load.rs", UNWRAP],
+        ] as const
+      ).map(async ([name, filePath, content]) => {
+        sb.write(name, content);
+        const unchecked = result();
+        await post.after(
+          { tool: "write", sessionID: mode, callID: filePath, args: { filePath, content } },
+          unchecked,
+        );
+        return unchecked.output;
+      }),
     );
-    expect(notes.output).toBe("original result");
+    expect(outputs).toEqual(["original result", "original result"]);
     expect(gate(sb.project).status).toBe("passing");
   } else {
     expect(output.output).toBe("original result");

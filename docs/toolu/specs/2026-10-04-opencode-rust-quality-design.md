@@ -11,7 +11,7 @@ OpenCode registers the rust-quality post-tool module, but registration alone doe
 1. Add `cargo check`, `clippy` or `rustfmt` runs. rust-quality is static on every host: its toolchain is the `Cargo.toml` marker and `cargo` prerequisite plus real `ast-grep` Rust scans (error handling, mock imports and definitions) and in-process line rules.
 2. Change the shared OpenCode post-tool bridge, the core dispatcher or the rust-quality rules without a reproduced defect.
 3. Change rust-quality's linked-worktree behavior. Like python-quality, it checks linked worktrees on Claude Code and Codex, and OpenCode keeps that.
-4. Change rust-quality's path rules. Error-handling, no-mocks and docs rules key on `/src/` and `/tests/` in the edited path as given, exactly as on other hosts; a relative `src/x.rs` therefore reaches only the line and size rules.
+4. Change rust-quality's path rules. Error-handling, no-mocks and docs rules key on `/src/` and `/tests/` in the edited path as given, exactly as on other hosts; a relative `src/x.rs` therefore skips the error-handling, inline-test and docs checks, while size, suppression, `unsafe` and test-location rules still run.
 5. Treat a post-tool diagnostic as undoing a completed edit.
 
 ## Architecture
