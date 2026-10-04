@@ -79,7 +79,7 @@ An entry with glob characters is a structural rule, not an exemption, and is nev
 | `bun run test:unit` | `bun test` in `tooling/`, `packages/`, `tools/`, and `plugins/` |
 | `bun run test:workspace` | Bun 1.4.x pin + export smoke |
 | `bun run test:conventions` | format/lint/tsc/guardrails/knip/jscpd/gate reach/legacy exemptions + Bun convention tests |
-| `bun run test:ts` | complete Bun gate: conventions, unit, portable-core, gate coverage, bundle/launcher drift, workspace/package, conformance, context budget, deterministic benchmarks, and shell-analysis latency budget (CI `typescript` job) |
+| `bun run test:ts` | complete Bun gate: conventions, unit, portable-core, gate coverage, bundle/launcher drift, workspace/package, conformance, context budget, deterministic benchmarks, and shell-analysis latency budget (CI `bun run test` job) |
 | `bun run test` | delegates to `test:ts` |
 
 `bun install --frozen-lockfile` is required before these scripts in CI and locally after dependency changes. Missing required workspace config or tooling is an error, not a successful skip.
@@ -91,7 +91,7 @@ bun install --frozen-lockfile
 bun run test
 ```
 
-CI job `typescript` in `.github/workflows/tests.yml` runs the same gate on every non-release-only PR/push. The retired `shellcheck` and `bats (plugins)` jobs no longer report, so branch protection must require `typescript` in their place. The repo-admin branch-protection setting is tracked separately from this change.
+CI job `bun run test` (`gate`) in `.github/workflows/tests.yml` runs the same gate on every non-release-only PR/push. The required `typescript` status passes only when that job and the OpenCode acceptance jobs pass. The retired `shellcheck` and `bats (plugins)` jobs no longer report, so branch protection must require `typescript` in their place. The repo-admin branch-protection setting is tracked separately from this change.
 
 ## Related contracts
 

@@ -20,7 +20,7 @@ This contract is the plugin API documented at <https://opencode.ai/docs/plugins/
 | OpenCode CLI | `opencode-ai@1.18.34` | npm `opencode-ai`; its platform binary is `opencode-<os>-<arch>`. The probe installs it with `bun add --exact` into `$XDG_CACHE_HOME/toolu/opencode-host/1.18.34/cli`, never onto `PATH` |
 | Plugin SDK | `@opencode-ai/plugin@1.18.34` | npm. The host writes the same version into each config directory's `package.json` and installs it there; `@toolu/opencode` pins it as a devDependency |
 | Documentation | <https://opencode.ai/docs/plugins/> | Plugin function returning `Hooks` |
-| Platform probed | linux-x64 | macOS acceptance belongs to OP-28 ([#362](https://github.com/Falconiere/toolu/issues/362)); Windows is not probed |
+| Platforms | linux-x64, darwin-arm64 | The probe results below were recorded on linux-x64. `bun run test:opencode` repeats every probe and the full acceptance on both platforms in CI ([#362](https://github.com/Falconiere/toolu/issues/362)). Windows is not probed |
 | Probe runner | Bun 1.4.x | The host binary embeds its own runtime |
 
 The machine-readable pin is `tools/toolu-opencode/contract/pin.json`. `bun run check:opencode-host` fails when the adapter devDependency, the installed SDK or the recorded probe results disagree with it.
@@ -291,8 +291,9 @@ bun run probe:opencode-host            # live: install the pinned CLI into the c
 bun run probe:opencode-host --write    # refresh tools/toolu-opencode/contract/probe-results.json
 bun run check:opencode-host            # hermetic: pins, evidence, matrix, manifests, SDK declarations and this doc agree
 bun run check:opencode-host --write-doc
+bun run test:opencode                  # live: the probes plus every acceptance check, controls and budgets (required in CI)
 ```
 
 - **Overrides.** `TOOLU_OPENCODE_HOST_BIN` uses an existing binary, which must report the pinned version. `TOOLU_OPENCODE_HOST_CACHE` moves the cache.
 - **What it never touches.** The probe never reads or writes the user's `~/.config/opencode`, never uses an `opencode` on `PATH`, and never calls a real model provider.
-- **CI.** Live probing is opt-in until OP-28 ([#362](https://github.com/Falconiere/toolu/issues/362)) makes it mandatory. `check:opencode-host` runs in `bun run test`.
+- **CI.** `bun run test:opencode` is required on Linux and macOS. It compares every live probe with the committed results, and the required `typescript` status fails when it fails. `check:opencode-host` runs in `bun run test`. See [conformance-report.md](conformance-report.md#opencode-acceptance-required).
