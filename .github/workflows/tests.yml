@@ -36,8 +36,8 @@ permissions:
   contents: read
 
 jobs:
-  typescript:
-    name: typescript
+  gate:
+    name: bun run test
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -81,3 +81,81 @@ jobs:
           # latency measurement, hard size/parser budgets, and deterministic
           # benchmarks. bench:shell appends its measured table to the job summary.
           bun run test:ts
+
+  # Real OpenCode acceptance (#362): the pinned opencode-ai host runs every
+  # catalog plugin's checks in isolated profiles against a scripted loopback
+  # model, on both declared platforms. A missing host, tool or Chromium fails
+  # the run; nothing is skipped. The report is uploaded even on failure.
+  opencode:
+    name: opencode (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+
+      - name: Install jq
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+
+      # ast-grep backs the ast-grep plugin's checks; agent-browser and its
+      # Chromium back the browser workflow check.
+      - name: Install acceptance tools
+        run: |
+          set -euo pipefail
+          npm install -g @ast-grep/cli agent-browser@0.38.2
+          if [ "$RUNNER_OS" = "Linux" ]; then agent-browser install --with-deps; else agent-browser install; fi
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # The pinned CLI and the host's package caches; the run still checks the
+      # cached binary's version against tools/toolu-opencode/contract/pin.json.
+      - name: Cache the pinned OpenCode host
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/toolu/opencode-host
+          key: opencode-host-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/toolu-opencode/contract/pin.json') }}
+
+      - name: OpenCode acceptance
+        run: bun run test:opencode --report "$RUNNER_TEMP/opencode-acceptance.json"
+
+      - name: Upload the acceptance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-acceptance-${{ matrix.os }}
+          path: ${{ runner.temp }}/opencode-acceptance.json
+          if-no-files-found: warn
+
+  # The required status. Branch protection requires `typescript`; this job
+  # carries that name and fails unless the gate and both OpenCode acceptance
+  # runs succeeded. `if: always()` keeps it from being skipped (a skipped
+  # required check would count as passing) when a needed job fails.
+  typescript:
+    name: typescript
+    needs: [gate, opencode]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require the gate and OpenCode acceptance
+        env:
+          GATE_RESULT: ${{ needs.gate.result }}
+          OPENCODE_RESULT: ${{ needs.opencode.result }}
+        run: |
+          echo "bun run test: $GATE_RESULT; OpenCode acceptance: $OPENCODE_RESULT"
+          test "$GATE_RESULT" = success
+          test "$OPENCODE_RESULT" = success
