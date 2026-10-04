@@ -263,9 +263,19 @@ function tagCheckScript(tag: string): string {
   return body.join("\n").replace("${{ inputs.tag }}", tag);
 }
 
-/** The three published manifests copied into a temp tree, `edit` applied to opencode's. */
-function manifestTree(edit: (pkg: Record<string, unknown>) => void): string {
+/**
+ * The three published manifests and release-please-config.json copied into a
+ * temp tree, `edit` applied to opencode's. `synced: false` drops the core-floor
+ * extra-file, like a tag cut before #361.
+ */
+function manifestTree(edit: (pkg: Record<string, unknown>) => void, synced = true): string {
   const dir = mkdtempSync(join(tmpdir(), "npm-publish-tag-"));
+  const config = readFileSync(join(ROOT, "release-please-config.json"), "utf8");
+  const floorEntry = /\s*\{[^{}]*"\$\.dependencies\['@toolu\/core'\]"[^{}]*\},/;
+  writeFileSync(
+    join(dir, "release-please-config.json"),
+    synced ? config : config.replace(floorEntry, ""),
+  );
   for (const rel of PUBLISHED) {
     const pkg = z
       .record(z.string(), z.unknown())
@@ -277,15 +287,18 @@ function manifestTree(edit: (pkg: Record<string, unknown>) => void): string {
   return dir;
 }
 
+function staleFloor(pkg: Record<string, unknown>): void {
+  pkg["dependencies"] = {
+    ...z.record(z.string(), z.string()).parse(pkg["dependencies"]),
+    "@toolu/core": "^7.4.0",
+  };
+}
+
 test.concurrent("the tag check passes for this release and refuses a stale @toolu/core floor", async () => {
   const tag = `v${readPackage(".").version ?? ""}`;
   const good = manifestTree(() => undefined);
-  const stale = manifestTree((pkg) => {
-    pkg["dependencies"] = {
-      ...z.record(z.string(), z.string()).parse(pkg["dependencies"]),
-      "@toolu/core": "^7.4.0",
-    };
-  });
+  const stale = manifestTree(staleFloor);
+  const older = manifestTree(staleFloor, false);
   try {
     const ok = await run(["bash", "-c", tagCheckScript(tag)], { cwd: good });
     expect({ exitCode: ok.exitCode, stdout: ok.stdout }).toEqual({
@@ -297,8 +310,16 @@ test.concurrent("the tag check passes for this release and refuses a stale @tool
       exitCode: 1,
       stderr: `tag ${tag} does not match the @toolu/opencode @toolu/core floor ^7.4.0\n`,
     });
+    // A tag from before the floor was synced has no such config entry and stays retryable.
+    const retried = await run(["bash", "-c", tagCheckScript(tag)], { cwd: older });
+    expect({ exitCode: retried.exitCode, stdout: retried.stdout }).toEqual({
+      exitCode: 0,
+      stdout: `publishing ${tag}\n`,
+    });
+    expect(readFileSync(join(older, "release-please-config.json"), "utf8")).not.toContain(
+      "@toolu/core']",
+    );
   } finally {
-    rmSync(good, { recursive: true, force: true });
-    rmSync(stale, { recursive: true, force: true });
+    for (const dir of [good, stale, older]) rmSync(dir, { recursive: true, force: true });
   }
 });

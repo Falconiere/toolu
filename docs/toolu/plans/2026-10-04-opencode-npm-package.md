@@ -40,7 +40,7 @@ closure gate (red on today's manifest) → manifest and release sync (green) →
     "depends_on": ["manifest-release"],
     "paths": ["tooling/src/pack-inventory.ts", "tooling/src/pack-closure.ts", "tooling/src/__tests__/**", "tools/toolu-opencode/**", "tools/toolu-cli/npm/**", "packages/toolu-core/**", "plugins/**"],
     "input": "The three real package directories packed by npm",
-    "check": "bun run test:pack",
+    "check": "bun run test:pack && bun test --timeout 120000 tooling/src/__tests__/npm-pack.test.ts tooling/src/__tests__/pack-inventory.test.ts",
     "model": "inherit"
   },
   {
@@ -100,6 +100,7 @@ Jev alignment scored 1.44 (P = 0.53 for 'mapped but some checks would not observ
 
 - `packedFiles` moved into a new `tooling/src/npm-pack.ts`, alongside `stageOpencode` and `packInto`, instead of `pack-inventory.ts`. The inventory gate, the closure test and the live `packTarball` share one npm pack path. Packing a temp copy keeps `npm pack` from rewriting the gitignored `tools/toolu-opencode/plugins/` while other tests run.
 - The live scenario imports each export in process from the installed path. It does not spawn a fresh `bun` subprocess, because that would need a new entry file that knip would flag. Module resolution still starts at the installed file, so bare dependencies resolve from the host's install.
+- Local review added `tooling/src/__tests__/npm-pack.test.ts`, which covers prepack stdout noise, a failing prepack and the stage layout, to the `inventory-npm` check. It also made the publish tag check skip tags whose `release-please-config.json` predates the core-floor entry, so older tags stay retryable.
 - The SDK peers are required, not optional. knip's `Referenced optional peerDependencies` rule counts `import type` references, and new code gets no exemption. Jev chose a required peer (0.82) over an optional peer plus a knip ignore (0.06) or no peer (0.12). The spec was updated to match.
 - `required` keeps the files that only code or a `$ROOT`-style shell variable reaches: the epic scripts and briefs, the fixer brief and the settings. The closure rule cannot see those references. Only the `debug-*.ts` entries, which surfaces name through `$TOOLU_PLUGIN_ROOT_TOOLU`, moved to the derived rule.
 
