@@ -144,8 +144,8 @@ in `<resource-root>/policy.json`, for example:
 { "maxAgents": 3, "maxJobs": 1, "hosts": { "claude": 1, "codex": 2 } }
 ```
 
-Add `"pressure": false` to skip pressure sampling and holds on a host where
-sampling is unreliable. Capacity limits still apply. Every process sharing the
+Add `"pressure": false` to admit new work regardless of pressure holds on a host
+where sampling is unreliable. Capacity limits still apply. Every process sharing the
 resource root reads this file, so the override reaches the orchestrator and
 every worker.
 
