@@ -1,6 +1,6 @@
 # OpenCode CI acceptance — Design
 
-**Date:** 2026-10-04   **Status:** Draft   **Author:** Claude Code   **Topic:** OP-28 (#362): replace version-only probes with real OpenCode acceptance that CI requires
+**Date:** 2026-10-04   **Status:** Approved   **Author:** Claude Code   **Topic:** OP-28 (#362): replace version-only probes with real OpenCode acceptance that CI requires
 
 ## Problem
 
@@ -75,7 +75,7 @@ Each registry entry names its checks and states what they prove:
 | Family | Source | Plugins | service |
 |---|---|---|---|
 | `probe.*` | `SCENARIOS` + drift | none (host contract) | none |
-| `surface.generated` | the logic of `opencode-surface-probe.ts`, moved into an exported function | all with surfaces | none |
+| `surface.generated` | the logic of `opencode-surface-probe.ts`, moved into an exported function | all | none |
 | `entry.*`, `paths.*`, `install.*`, `cli.*` | `ENTRY_`, `PATH_`, `INSTALL_`, `CLI_SCENARIOS` | toolu (`entry.helper-env` also context7) | none |
 | `startup.*`, `package.*` | `STARTUP_`, `PACKAGE_SCENARIOS` | all | none |
 | `browser.*` | `BROWSER_SCENARIOS` | agent-browser | fixture (local page) |
@@ -94,6 +94,23 @@ Each registry entry names its checks and states what they prove:
 | `live.jira` | live test file | jira | fixture |
 | `surface.discovered-names`, `concurrent.sessions`, `budget.overhead` | new | toolu (+ all selected) | none |
 | `control.*` | new | toolu | none |
+
+**Issue scope → checks.** Every scope item of #362 maps to named checks the run requires:
+
+| Scope item | Checks |
+|---|---|
+| npm, local and config loading | `entry.npm-root`, `entry.local-shim`, `entry.both-routes`, `entry.init-failure`, `package.clean-install`, `probe.load.*` |
+| Discovery | `surface.generated`, `surface.discovered-names`, `install.surfaces.*` (`surfaces.npm-clean`, `.precedence`, `.skill-roots`, `.both-routes`, `.selection`, `.lifecycle`) |
+| Startup | `entry.full-startup`, `entry.startup-failure`, `entry.startup-disable`, `entry.helper-env`, `entry.worktree-state` |
+| Pre gates | `pretool.*` (files, patch, shell, push), `permissions.guardrail` |
+| Post gates | `posttool.shell`, `posttool.edit`, `posttool.patch`, `tsquality.*`, `pyquality.*`, `rsquality.*`, `ast-grep.session` |
+| Permissions | `permissions.native-deny`, `.reject`, `.judgement`, `.registry-advice`, `.other-before`, `.other-after`, `probe.permission.*` |
+| MCP / task routing | `pretool.mcp`, `pretool.task`, `probe.deny.mcp`, `probe.deny.task-child`, `live.core-workflows` (task delegation) |
+| Compaction | `live.context-delivery` (startup, prompt and compaction context reach the model), `probe.context.compaction` |
+| Concurrent sessions | `concurrent.sessions`; child sessions in `pretool.task`, `live.epic-worker` |
+| Plugin-specific | every non-`toolu` family above; `coverage` must list all 16 |
+| Mandatory CI | The `opencode` matrix job and the `typescript` aggregator (§7) |
+| Versions and budgets | report `host`, `tools`, `budget` (§2, `budget.overhead`) |
 
 **Live test files** (`live-tests.ts`).
 
@@ -156,7 +173,7 @@ A control is `detected` when its check does not pass. An undetected control fail
 | `control.v2-entry` | `src/plugin/toolu.ts` replaced by a V2-shaped module: `export default { id: "toolu", async setup(ctx) { await ctx.permission.hook("evaluate", …) } }`, which denies `.env` under the old contract | `entry.local-shim` |
 | `control.invalid-skill-name` | `generated/skills/brainstorm-brainstorm` renamed to `brainstorm--brainstorm`, in its folder, its `SKILL.md` `name:` and `generated/opencode.toolu.json` | `surface.discovered-names` |
 | `control.missing-context` | `"experimental.chat.system.transform": context.system,` removed from `src/plugin/hooks.ts` | `live.context-delivery` |
-| `control.missing-post-tool` | `"tool.execute.after": enforcement.after,` removed from `src/plugin/hooks.ts` | `posttool.shell` |
+| `control.missing-post-tool` | `"tool.execute.after": enforcement.after,` removed from `src/plugin/hooks.ts` | `posttool.edit` |
 
 A hermetic test in `bun run test` applies every edit to a fresh stage. A source change that breaks an edit therefore fails the ordinary gate before CI reaches the live run.
 
@@ -299,11 +316,20 @@ The `external[].status` values are `available` (passed), `unavailable` (failed o
 
 - **AC-1:** For each of the four regressions (a V2 entry, a `--` skill name, a missing `experimental.chat.system.transform` hook, a missing `tool.execute.after` hook), applied to a staged copy of the package, the matching acceptance check fails on the pinned host, and the run reports the control as `detected: true`. With the checkout's own package, the same four checks pass.
 - **AC-2:**
-  - **Deny:** a `.env` write is refused with `.env` byte-identical, and so is a refused commit (no commit added, marker absent).
-  - **Allow:** an allowed bash call runs and leaves its marker.
-  - **Post-edit quality:** after a failing quality command, a later `git commit` and `git push` are refused.
+  - **Deny:** for every denied tool kind on the pinned host, nothing changes. Each kind is checked in the report:
 
-  The acceptance report shows these as passing checks (`entry.*`, `posttool.shell`, `concurrent.sessions`).
+    | Denied tool kind | Check | Observation |
+    |---|---|---|
+    | write and edit | `pretool.files`, `entry.*` | `.env` byte-identical |
+    | multi-file `apply_patch` | `pretool.patch` | `.env` unchanged, destination absent |
+    | unsafe bash, commit and push | `pretool.shell`, `pretool.push` | marker absent |
+    | MCP | `pretool.mcp` | the server's marker absent |
+    | task child | `pretool.task` | the child's marker absent |
+    | a refused commit | `concurrent.sessions` | no commit added |
+  - **Allow:** an allowed bash call runs and leaves its marker (`pretool.baseline`, `pretool.files` `allowedBashRan`, `entry.*` `bashRan`).
+  - **Post-edit quality:** an edit or write that leaves a quality violation, or a failing quality command, makes a later `git commit` and `git push` refused, with their markers absent.
+
+  The acceptance report shows these as passing checks: `entry.*` and `concurrent.sessions` (deny and allow); `posttool.edit`, `tsquality.edit`, `pyquality.edit` and `rsquality.edit` (`commitDenied`, `pushDenied`, `markersAbsent`); `posttool.shell`.
 - **AC-3:** The report's `coverage` gives each of the 16 catalog plugins at least one passing dedicated actual-host check. In CI the run happens on linux-x64 and darwin-arm64. When a required tool is removed from PATH, the run exits 1 with a preflight error naming that tool, and no check reports `skip`.
 - **AC-4:** Every report check carries `evidence.execution`, `evidence.model` and `evidence.service`. External services appear only under `external`, with status `available`, `unavailable` or `not-configured`. The Markdown summary prints the three categories separately.
 - **AC-5:** The report records the CLI version, provisioned SDK version, platform, Bun and tool versions, per-check durations, and the measured startup and per-tool overheads against the committed ceilings. An overhead above its ceiling fails the run.
@@ -316,7 +342,7 @@ The `external[].status` values are `available` (passed), `unavailable` (failed o
 
 | AC | Real input | Expected | Boundary | Check |
 |---|---|---|---|---|
-| AC-1 | Staged package copies on pinned `opencode-ai@1.18.34` | Four `detected: true`; the same checks pass on the checkout | An edit target missing makes `replaceOnce` throw (hermetic) | `bun run test:opencode --only control.v2-entry control.invalid-skill-name control.missing-context control.missing-post-tool entry.local-shim surface.discovered-names live.context-delivery posttool.shell` (exit 0 only when all eight pass, i.e. four controls detected and four checks pass); `bun test tooling/src/opencode-acceptance/__tests__/controls.test.ts` |
+| AC-1 | Staged package copies on pinned `opencode-ai@1.18.34` | Four `detected: true`; the same checks pass on the checkout | An edit target missing makes `replaceOnce` throw (hermetic) | `bun run test:opencode --only control.v2-entry control.invalid-skill-name control.missing-context control.missing-post-tool entry.local-shim surface.discovered-names live.context-delivery posttool.edit` (exit 0 only when all eight pass, i.e. four controls detected and four checks pass); `bun test tooling/src/opencode-acceptance/__tests__/controls.test.ts` |
 | AC-2 | Isolated projects with `.env`, gate state and a scripted model | Deny, allow and post-quality observations true | Three concurrent runs over two projects | `bun run test:opencode` (report checks) |
 | AC-3 | The catalog from `listPluginManifests`, and the registry | All 16 plugins covered; a removed tool fails preflight | A `PATH` without `agent-browser`, set inside the test | `bun test tooling/src/opencode-acceptance/__tests__/coverage.test.ts tooling/src/opencode-acceptance/__tests__/preflight.test.ts` |
 | AC-4 | A real `bun test --reporter=junit` run of a fixture file with pass, skip and fail cases; real report output | Evidence fields present; external apart | A key absent gives `not-configured` | `bun test tooling/src/opencode-acceptance/__tests__/live-tests.test.ts tooling/src/opencode-acceptance/__tests__/report.test.ts` |
@@ -340,3 +366,13 @@ The `external[].status` values are `available` (passed), `unavailable` (failed o
 
 - **Exact budget ceilings.** Owner: this delivery. Non-blocking: they are calibrated from the first local and CI measurements, with at least a 3× margin, before the PR is ready.
 - **Admin adds `opencode (*)` as separate required contexts.** Owner: repository admin. Non-blocking: the `typescript` aggregator already makes acceptance required.
+
+## Review
+
+Spec review, 2026-10-04. Jev's judgments on requirement–evidence alignment, after revision: I1 0.82, I2 0.83, I3 0.78, I4 0.85, scope 0.94.
+
+- Acceptance criteria: 🟡 should-fix: AC-2 named only the post-quality *command* path, while the issue asks for a post-*edit* failure. Fixed: added `posttool.edit` and the three `*quality.edit` checks, and moved `control.missing-post-tool` to `posttool.edit`.
+- Acceptance criteria: 🟡 should-fix: the deny proof did not enumerate tool kinds. Fixed: the AC-2 table maps every denied kind to its check and observation.
+- Architecture: 🟡 should-fix: the issue's scope items had no explicit mapping. Fixed: the "Issue scope → checks" table.
+- Architecture: 🔵 consider: a narrowed run's exit code made the AC-1 ledger check unusable. Fixed: the exit code covers the selected checks, the report keeps `pass: false`, and the workflow test forbids `--only` in CI.
+- Non-Goals: 🔵 consider: the harness edits were understated. Fixed: all four are listed.
