@@ -4,26 +4,27 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 
 ## Plugin Index
 
-|  #  | Plugin                                                     | Type         |                     Depends On                      | Quick Summary                                                                                     |
-| :-: | ---------------------------------------------------------- | ------------ | :-------------------------------------------------: | ------------------------------------------------------------------------------------------------- |
-|  1  | [**toolu**](../toolu/README.md)                            | Core         |                          —                          | Dual-host hook engine, push-review gate, and agent routing                                        |
-|  2  | [**ast-grep**](../ast-grep/README.md)                      | Code Intel   |                          —                          | Structural code search & rewrite (tree-sitter AST patterns)                                       |
-|  3  | [**toolu-review**](../toolu-review/README.md)              | Workflow     |                          —                          | Pre-push review mirroring CI `code-review@v8` (Jev-enabled)                                       |
-|  4  | [**context7**](../context7/README.md)                      | Knowledge    |                          —                          | Live library documentation & code-example lookup                                                  |
-|  5  | [**exa-search**](../exa-search/README.md)                  | Knowledge    |                          —                          | Web / code / URL search plus deep research                                                        |
-|  6  | [**jira**](../jira/README.md)                              | Workflow     |                          —                          | Jira issue search & workflow from the session                                                     |
-|  7  | [**delivery-flow**](../../../delivery-flow/README.md) | Workflow     | `toolu`, `toolu-review`, `pr-babysit`, `brainstorm` | One skill for brainstorm through checked PR delivery                                              |
-|  8  | [**pr-babysit**](../pr-babysit/README.md)                  | Workflow     |                       `toolu`                       | Claude cron / durable Codex PR babysitter that chases findings to zero                            |
-|  9  | [**epic-orchestrator**](../epic-orchestrator/README.md)    | Workflow     |                   `delivery-flow`                   | Drive a GitHub, Jira, or Linear epic to merged PRs via herdr workers on any host and a merge gate |
-| 10  | [**python-quality**](../python-quality/README.md)          | Quality Gate |                       `toolu`                       | Python post-edit quality checks (size, suppression, test layout, no-mocks)                        |
-| 11  | [**rust-quality**](../rust-quality/README.md)              | Quality Gate |                       `toolu`                       | Rust post-edit quality checks (size, unsafe, unwrap bans)                                         |
-| 12  | [**statusline**](../statusline/README.md)                  | Status       |                          —                          | Persistent Claude statusline plus explicit Codex repository/gate status                           |
-| 13  | [**ts-quality**](../ts-quality/README.md)                  | Quality Gate |                       `toolu`                       | TypeScript post-edit quality checks (size, imports, type guards)                                  |
-| 14  | [**agent-browser**](../../../agent-browser/README.md) | Browser      |                          —                          | Token-lean live browser automation via accessibility-tree snapshots                               |
-| 15  | [**jev**](../jev/README.md)                                | Knowledge    |                          —                          | Typed judgments from TypeSafe's Jev — probability, choice, and score answers code can branch on   |
-| 16  | [**brainstorm**](../../../brainstorm/README.md)       | Workflow     |                          —                          | Evidence-backed design triage and a recommended approach; standalone and delivery-flow phase 1    |
+| # | Plugin | Type | Depends On | Quick Summary |
+|:--:|--------|------|:----------:|---------------|
+| 1 | [**toolu**](../toolu/README.md) | Core | — | Dual-host hook engine, push-review gate, and agent routing |
+| 2 | [**ast-grep**](../ast-grep/README.md) | Code Intel | — | Structural code search & rewrite (tree-sitter AST patterns) |
+| 3 | [**toolu-review**](../toolu-review/README.md) | Workflow | — | Pre-push review mirroring CI `code-review@v8` (Jev-enabled) |
+| 4 | [**context7**](../context7/README.md) | Knowledge | — | Live library documentation & code-example lookup |
+| 5 | [**exa-search**](../exa-search/README.md) | Knowledge | — | Web / code / URL search plus deep research |
+| 6 | [**jira**](../jira/README.md) | Workflow | — | Jira issue search & workflow from the session |
+| 7 | [**delivery-flow**](../../../delivery-flow/README.md) | Workflow | `toolu`, `toolu-review`, `pr-babysit`, `brainstorm` | One skill for brainstorm through checked PR delivery |
+| 8 | [**pr-babysit**](../pr-babysit/README.md) | Workflow | `toolu` | Claude cron / durable Codex PR babysitter that chases findings to zero |
+| 9 | [**epic-orchestrator**](../epic-orchestrator/README.md) | Workflow | `delivery-flow` | Drive a GitHub, Jira, or Linear epic to merged PRs via herdr workers on any host and a merge gate |
+| 10 | [**python-quality**](../python-quality/README.md) | Quality Gate | `toolu` | Python post-edit quality checks (size, suppression, test layout, no-mocks) |
+| 11 | [**rust-quality**](../rust-quality/README.md) | Quality Gate | `toolu` | Rust post-edit quality checks (size, unsafe, unwrap bans) |
+| 12 | [**statusline**](../statusline/README.md) | Status | — | Persistent Claude statusline plus explicit Codex repository/gate status |
+| 13 | [**ts-quality**](../ts-quality/README.md) | Quality Gate | `toolu` | TypeScript post-edit quality checks (size, imports, type guards) |
+| 14 | [**agent-browser**](../../../agent-browser/README.md) | Browser | — | Token-lean live browser automation via accessibility-tree snapshots |
+| 15 | [**jev**](../jev/README.md) | Knowledge | — | Typed judgments from TypeSafe's Jev — probability, choice, and score answers code can branch on |
+| 16 | [**brainstorm**](../../../brainstorm/README.md) | Workflow | — | Evidence-backed design triage and a recommended approach; standalone and delivery-flow phase 1 |
 
 ## Architecture Overview
+
 
 ```
 toolu core (hook dispatcher + registry)
@@ -48,8 +49,8 @@ servers without uninstalling:
 ```json
 {
   "version": 1,
-  "hooks": { "user-prompt-submit": false },
-  "mcp": { "figma": false }
+  "hooks":  { "user-prompt-submit": false },
+  "mcp":    { "figma": false }
 }
 ```
 
@@ -64,7 +65,6 @@ are in the root [README](../../README.md#install-everything).
 #### Claude Code
 
 <!-- install-everything:claude -->
-
 ```bash
 # Optional: lets Claude Code resolve the code-simplifier companion. Nothing is
 # installed from it; skip if you do not want the pre-simplify pass.
@@ -74,13 +74,11 @@ claude plugin marketplace add anthropics/claude-plugins-official
 # Already-installed plugins are reported and left alone.
 npx @toolu/plugins install
 ```
-
 <!-- /install-everything:claude -->
 
 #### Codex
 
 <!-- install-everything:codex -->
-
 ```bash
 # Adds the toolu marketplace and installs every catalog plugin, core first.
 npx @toolu/plugins install --host codex
@@ -94,7 +92,6 @@ After they are installed, review and trust the hooks in `/hooks` before they run
 OpenCode has no marketplace — paste this prompt so the agent installs the npm adapter with the `toolu` CLI, which edits OpenCode's own config files ([docs/cli.md](../cli.md#opencode)). It enables every plugin unless you name some.
 
 <!-- install-everything:opencode -->
-
 ```text
 Install toolu for OpenCode (npm adapter; no marketplace, no clone). Skip steps already done.
 
@@ -105,7 +102,6 @@ Install toolu for OpenCode (npm adapter; no marketplace, no clone). Skip steps a
 
 Do not install comemory via toolu. Working on toolu itself? Use the git-clone contributor path in docs/opencode.md instead. Full detail: docs/opencode.md
 ```
-
 <!-- /install-everything:opencode -->
 
 Codex support covers CLI, IDE extension, and ChatGPT desktop Codex on macOS

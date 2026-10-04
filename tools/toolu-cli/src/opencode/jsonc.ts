@@ -202,7 +202,7 @@ export async function writeAtomic(path: string, text: string): Promise<void> {
   const mode = await modeOf(target);
   const temp = join(dirname(target), `.${basename(target)}.${process.pid}.tmp`);
   try {
-    await writeFile(temp, text, "utf8");
+    await writeFile(temp, text, { encoding: "utf8", ...(mode === undefined ? {} : { mode }) });
     if (mode !== undefined) await chmod(temp, mode);
     await rename(temp, target);
   } catch (error) {
