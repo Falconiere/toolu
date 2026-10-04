@@ -1,8 +1,8 @@
 /** Atomic ownership transitions that must never release capacity between states. */
 import { processGroupAlive } from "../process/process.ts";
 import { processAlive } from "./lock.ts";
-import { PRESSURE_SAMPLE_MS, advancePressure, sampleResources } from "./pressure.ts";
 import {
+  admitPressure,
   resourcePolicy,
   updateResources,
   type Lease,
@@ -49,10 +49,8 @@ function reserveTarget(
   targetHost: string,
   options: AgentMigrationOptions,
 ): void {
-  if (!state.pressure || Date.now() - state.pressure.sample.at >= PRESSURE_SAMPLE_MS)
-    state.pressure = advancePressure(state.pressure, sampleResources(state.pressure?.sample));
-  if (state.pressure.held) throw new Error(`resource hold: ${state.pressure.reason}`);
   const policy = resourcePolicy(root);
+  admitPressure(state, policy);
   const others = state.leases.filter(
     (candidate) => candidate.type === "agent" && candidate.token !== lease.token,
   );

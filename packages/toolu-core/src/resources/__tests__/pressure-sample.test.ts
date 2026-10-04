@@ -63,9 +63,7 @@ test.concurrent("a vm_stat command that cannot run or parse yields no sample", (
 
 test.if(process.platform === "darwin")("macOS samples reclaimable memory from vm_stat", () => {
   const sample = sampleResources();
-  const live = vmStatAvailableBytes(
-    spawnSync("/usr/bin/vm_stat", { encoding: "utf8" }).stdout,
-  );
+  const live = vmStatAvailableBytes(spawnSync("/usr/bin/vm_stat", { encoding: "utf8" }).stdout);
   if (live === null) throw new Error("live vm_stat output did not parse");
   expect(Math.abs(sample.availableBytes - live)).toBeLessThan(totalmem() * 0.05);
   expect(sample.availableBytes).toBeGreaterThanOrEqual(freemem());
