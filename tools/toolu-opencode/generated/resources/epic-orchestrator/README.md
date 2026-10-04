@@ -43,13 +43,15 @@ the `/epic-orchestrator:epic` command.
 ### OpenCode
 
 ```bash
-opencode plugin add @toolu/opencode
+npx @toolu/plugins install epic-orchestrator --host opencode
 ```
 
-Enable the workflow plugins in `<project>/.opencode/toolu/plugins.json`:
+That adds `@toolu/opencode` to OpenCode's config and enables
+`epic-orchestrator` with its dependencies in the `toolu/plugins.json`
+selection, for example:
 
 ```json
-{ "version": 1, "enabled": ["delivery-flow", "epic-orchestrator"] }
+{ "version": 1, "enabled": ["toolu", "toolu-review", "pr-babysit", "brainstorm", "delivery-flow", "epic-orchestrator"] }
 ```
 
 Wire OpenCode to the generated surface under

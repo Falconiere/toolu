@@ -304,7 +304,7 @@ Tell the user that, then offer the OpenCode equivalents:
   \`agent.toolu-quick-task.model\`) in \`opencode.json\`. toolu's prompt and
   permissions stay.
 - **Drop an agent:** set \`agent.<id>.disable\` to \`true\`.
-- **Update:** \`opencode plugin update @toolu/opencode\`, then restart OpenCode.
+- **Update:** \`npx @toolu/plugins update --host opencode\`, then restart OpenCode.
 
 The bundled [installer](scripts/setup.ts) refuses to run on OpenCode: it exits 2
 with this explanation and writes nothing. Do not edit Codex profiles from here.`,

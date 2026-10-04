@@ -1,6 +1,6 @@
 # @toolu/plugins
 
-Install [toolu](https://github.com/Falconiere/toolu) plugins into Claude Code and Codex.
+Install [toolu](https://github.com/Falconiere/toolu) plugins into Claude Code, Codex and OpenCode.
 
 ```bash
 npx @toolu/plugins install              # every catalog plugin, core first
@@ -16,6 +16,8 @@ A global install (`npm install -g @toolu/plugins`) puts the same commands on you
 
 It drives each host's own plugin CLI — `claude plugin install`, `codex plugin add` — rather than writing into their directories itself. Install order comes from the marketplace catalog's dependency edges, so `rust-quality` pulls in `toolu` first.
 
+OpenCode has no plugin management commands, so `--host opencode` edits its documented config instead: it adds `@toolu/opencode` to the `plugin` array of the global config (or the project's, with `--scope project`) and records named plugins in a `toolu/plugins.json` selection. Comments, other keys and other plugins in those files are kept.
+
 Already-installed plugins are reported and left alone. If the installed version differs from the one the marketplace offers, both are named and nothing changes; `update` is how you move it.
 
 On a TTY (without `--no-input`), several hosts on `PATH` prompts instead of failing: `install` multi-selects hosts and, when no names were given, multi-selects plugins (default: all). Other verbs single-select one host. Cancel exits `130`.
@@ -25,10 +27,10 @@ On a TTY (without `--no-input`), several hosts on `PATH` prompts instead of fail
 | Flag | Meaning |
 |------|---------|
 | `--host <id>` | `claude`, `codex`, or `opencode`. Detected when omitted. |
-| `--scope <scope>` | `user`, `project`, `local`. **Claude Code only.** |
+| `--scope <scope>` | Claude Code: `user`, `project`, `local`. OpenCode: `user` (default) or `project`. Not for Codex. |
 | `--config <path>` | Replay a `.toolu/plugins.json` selection. |
 | `--yes`, `-y` | Confirm a destructive or command-declaring operation. |
-| `--dry-run` | Print the host commands in order; run none. |
+| `--dry-run` | Print the host commands (OpenCode: the planned config edits); change nothing. |
 | `--no-input` | Never prompt; fail listing what is missing. For CI. |
 | `--json` | Machine-readable output where supported. |
 
@@ -41,14 +43,6 @@ On a TTY (without `--no-input`), several hosts on `PATH` prompts instead of fail
 | `2` | Usage error: unknown command, flag, host, or plugin |
 | `3` | Required input missing, or an ambiguous host with no TTY / `--no-input` |
 | `130` | An interactive prompt was cancelled |
-
-## Not yet supported
-
-`--host opencode` exits `2`. OpenCode has its own plugin CLI, but it installs npm packages rather than marketplace entries, so the bash plugins are not addressable through it. Install the bridge directly instead:
-
-```bash
-opencode plugin add @toolu/opencode
-```
 
 Full documentation: **[docs/cli.md](https://github.com/Falconiere/toolu/blob/main/docs/cli.md)**
 

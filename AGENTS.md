@@ -12,7 +12,7 @@ This file is the source of truth. Codex, Cursor, and Claude Code read it directl
 
 - **bun test** — TypeScript suites in colocated `__tests__/*.test.ts` spawn real bundles, scripts and repos through `@toolu/conformance/harness/*`: files in parallel, tests concurrent, each test owns its sandbox. See `docs/testing.md`.
 - **Bun** — the runtime for every host and plugin (1.4.x prerequisite; see `docs/runtime.md`). `bun.lock`. `bun run test` runs the TypeScript gate, including bundle drift, context budget, deterministic benchmarks, and the shell-analysis latency budget.
-- **`toolu` CLI** — `tools/toolu-cli`, a Node bundle published to npm as `@toolu/plugins` from its `npm/` folder; the workspace itself is private, so npx never mistakes it for the published package. Installs plugins across hosts by shelling out to each host's own plugin CLI. See `docs/cli.md`.
+- **`toolu` CLI** — `tools/toolu-cli`, a Node bundle published to npm as `@toolu/plugins` from its `npm/` folder; the workspace itself is private, so npx never mistakes it for the published package. Installs plugins across hosts by shelling out to each host's own plugin CLI, or for OpenCode by editing its documented config files. See `docs/cli.md`.
 
 ## Plugin layout
 
@@ -70,6 +70,7 @@ Benchmarks are hermetic. Context budget caps the Session Protocol, per-language 
 | `tools/toolu-cli/src/cli.ts` | CLI entry (`npx @toolu/plugins install`, or `toolu install` once installed): parses argv, resolves the host, dispatches a verb |
 | `tools/toolu-cli/src/plugins/install.ts` | Dependency-ordered install; core failure stops dependents, others continue |
 | `tools/toolu-cli/src/host/` | Per-host adapters normalizing `plugin list --json` into one shape |
+| `tools/toolu-cli/src/opencode/` | OpenCode management without host commands: JSONC edits of the `plugin` array (global or project, merged the way the pinned host merges them) and the `toolu/plugins.json` selection. Live proof: `bun run smoke:opencode-entry cli.install cli.lifecycle` |
 | `tooling/src/pack-inventory.ts` | Published-tarball file-list gate |
 | `tooling/src/guardrails/run.ts` | Structural gate (`bun run guardrails`): TypeScript port of the vendored conventions runner; data in `tooling/conventions/guardrails/` |
 | `tooling/src/check-gate-reach.ts` | Reach gate (`bun run check:gate-reach`): every tracked TypeScript file is reached by typecheck, format, oxlint, jscpd and knip, or `tooling/gate-reach.json` declares the gap; also checks that each `ownedByLinter` id is a rule the package lint config runs. Code in `tooling/src/gate-reach/` |

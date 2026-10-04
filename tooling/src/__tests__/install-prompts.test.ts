@@ -58,16 +58,18 @@ test.concurrent("the codex fence targets codex and the claude fence does not", (
   expect(extractRegion(README, "claude")).not.toContain("--host");
 });
 
-// @toolu/opencode is on npm (from 6.8.0) and carries a bundle-only plugin catalog, so
-// the user prompt installs it with OpenCode's own plugin CLI. The git clone is
-// the contributor path in docs/opencode.md, not something a user is told to do.
+// @toolu/opencode is on npm (from 6.8.0) and carries a bundle-only plugin catalog.
+// The pinned host has no `opencode plugin add`, so the user prompt installs it with
+// the toolu CLI, which edits OpenCode's config. The git clone is the contributor
+// path in docs/opencode.md, not something a user is told to do.
 test.concurrent("install-everything opencode fence installs the npm adapter, not a clone or marketplace plugins", () => {
   const fence = extractRegion(README, "opencode");
   expect(fence).not.toBe("");
   // Mentions the ban explicitly (same intent for Claude/Codex omitting comemory installs).
   expect(fence).toContain("Do not install comemory via toolu");
   expect(fence).not.toMatch(/[a-z0-9-]+@toolu/);
-  expect(fence).toContain("opencode plugin add @toolu/opencode");
+  expect(fence).toContain("npx @toolu/plugins install --host opencode");
+  expect(fence).not.toContain("opencode plugin");
   expect(fence).toContain(".opencode/toolu/plugins.json");
   expect(fence).not.toContain("TOOLU_REPO_ROOT");
   expect(fence).not.toContain("git clone");

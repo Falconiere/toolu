@@ -78,11 +78,11 @@ the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux.
 
 ### OpenCode (preview)
 
-OpenCode installs the npm adapter through its own plugin CLI — no clone, no
-`TOOLU_REPO_ROOT`:
+OpenCode installs the npm adapter through the `toolu` CLI, which adds
+`@toolu/opencode` to OpenCode's config file — no clone, no `TOOLU_REPO_ROOT`:
 
 ```bash
-opencode plugin add @toolu/opencode
+npx @toolu/plugins install --host opencode
 ```
 
 It wires `permission.evaluate` to the same native TypeScript gate engine for the coverage
@@ -95,7 +95,8 @@ update, and uninstall. Claude Code and Codex marketplace installs below are unch
 ### The `toolu` CLI
 
 Installation goes through a published CLI that drives each host's own plugin CLI
-in catalog dependency order:
+in catalog dependency order. OpenCode has no plugin management commands, so
+there the CLI edits its documented config files instead:
 
 ```bash
 npx @toolu/plugins install              # everything, core first
@@ -105,9 +106,9 @@ npx @toolu/plugins remove jira --yes
 npx @toolu/plugins update
 ```
 
-Claude Code and Codex are covered. OpenCode wiring and the interactive prompts
-are not built yet. Full grammar, exit codes, and the
-`.toolu/plugins.json` selection file: **[docs/cli.md](docs/cli.md)**.
+Claude Code, Codex and OpenCode are covered. Full grammar, exit codes, the
+OpenCode config edits, and the `.toolu/plugins.json` selection file:
+**[docs/cli.md](docs/cli.md)**.
 
 ### Install everything
 
@@ -144,17 +145,16 @@ After they are installed, review and trust the hooks in `/hooks` before they run
 
 #### OpenCode
 
-OpenCode has no marketplace — paste this prompt so the agent installs the npm adapter from [docs/opencode.md](docs/opencode.md). It enables the `toolu` core plugin.
+OpenCode has no marketplace — paste this prompt so the agent installs the npm adapter with the `toolu` CLI, which edits OpenCode's own config files ([docs/cli.md](docs/cli.md#opencode)). It enables every plugin unless you name some.
 
 <!-- install-everything:opencode -->
 ```text
-Install toolu for OpenCode in this project (npm adapter; no marketplace, no clone). Skip steps already done.
+Install toolu for OpenCode (npm adapter; no marketplace, no clone). Skip steps already done.
 
-1. Run: opencode plugin add @toolu/opencode
-2. In THIS project create .opencode/toolu/plugins.json containing: { "version": 1, "enabled": ["toolu"] }
-   Keep the initial selection to toolu; OpenCode currently wires permission.evaluate, not post-tool quality events.
-3. Optional: .opencode/toolu.config.json for gate modes (same schema as other hosts), e.g. { "version": 1, "gates": { "protectedFiles": { "mode": "block" } } }
-4. Restart OpenCode. Smoke-check: attempt a protected .env edit with protectedFiles mode block and confirm it is denied before bytes change.
+1. Run: npx @toolu/plugins install --host opencode
+   It adds @toolu/opencode to the global OpenCode config (~/.config/opencode) once and enables every plugin. Add --scope project to write this project's opencode.json instead. To enable only some plugins, name them (npx @toolu/plugins install toolu ts-quality --host opencode); their dependencies are added and the choice lands in toolu/plugins.json beside that config (.opencode/toolu/plugins.json for --scope project).
+2. Optional: .opencode/toolu.config.json for gate modes (same schema as other hosts), e.g. { "version": 1, "gates": { "protectedFiles": { "mode": "block" } } }
+3. Restart OpenCode. Smoke-check: attempt a protected .env edit with protectedFiles mode block and confirm it is denied before bytes change.
 
 Do not install comemory via toolu. Working on toolu itself? Use the git-clone contributor path in docs/opencode.md instead. Full detail: docs/opencode.md
 ```

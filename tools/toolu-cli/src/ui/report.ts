@@ -18,7 +18,8 @@ function line(mark: string, name: string, detail: string): string {
   return `  ${mark} ${name.padEnd(16)} ${detail}\n`;
 }
 
-export function reportInstall(steps: readonly InstallStep[], dryRun: boolean): string {
+export function reportInstall(steps: readonly InstallStep[], dryRun: boolean, host?: Host): string {
+  if (dryRun && host === "opencode") return reportPlanned(steps);
   const header = dryRun ? "Planned commands (nothing was run):\n" : "";
   const body = steps
     .map((step) =>
@@ -38,10 +39,10 @@ export function reportInstallByHost(
   if (sections.length === 0) return "";
   if (sections.length === 1) {
     const only = sections[0];
-    return only === undefined ? "" : reportInstall(only.steps, dryRun);
+    return only === undefined ? "" : reportInstall(only.steps, dryRun, only.host);
   }
   return sections
-    .map((section) => `${section.host}:\n${reportInstall(section.steps, dryRun)}`)
+    .map((section) => `${section.host}:\n${reportInstall(section.steps, dryRun, section.host)}`)
     .join("\n");
 }
 
@@ -70,7 +71,19 @@ export function reportUpdate(steps: readonly UpdateStep[]): string {
 /** Every step shape a verb can report. */
 type AnyStep = InstallStep | RemoveStep | UpdateStep;
 
+function failed(step: AnyStep): boolean {
+  return "removed" in step ? !step.removed : step.outcome === "failed";
+}
+
 /** Exit 1 when any step failed, so a caller's shell sees the failure. */
 export function anyFailed(steps: readonly AnyStep[]): boolean {
-  return steps.some((step) => ("removed" in step ? !step.removed : step.outcome === "failed"));
+  return steps.some(failed);
+}
+
+/** A dry run of a file-editing host: the planned changes, then any refused step. */
+export function reportPlanned(steps: readonly AnyStep[]): string {
+  const planned = steps.flatMap((step) => (step.plan === undefined ? [] : [`  ${step.plan}\n`]));
+  const refused = steps.filter(failed).map((step) => line("x", step.name, step.detail));
+  const body = planned.length > 0 ? planned.join("") : "  (no changes)\n";
+  return `Planned changes (nothing was written):\n${body}${refused.join("")}`;
 }

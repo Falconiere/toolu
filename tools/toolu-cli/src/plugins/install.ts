@@ -17,6 +17,8 @@ export interface InstallStep {
   readonly outcome: StepOutcome;
   readonly detail: string;
   readonly argv: readonly string[];
+  /** A config change a dry run prints, for hosts managed by editing files. */
+  readonly plan?: string;
 }
 
 interface InstallOptions {
