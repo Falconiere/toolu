@@ -25,7 +25,8 @@ const Gate = z.object({
     .record(z.string(), z.object({ source: z.string(), violations: z.string() }))
     .optional(),
 });
-const UNWRAP = '//! Loader.\n\n/// Load a value.\npub fn load() -> u32 {\n    "1".parse().unwrap()\n}\n';
+const UNWRAP =
+  '//! Loader.\n\n/// Load a value.\npub fn load() -> u32 {\n    "1".parse().unwrap()\n}\n';
 const EXPECT = UNWRAP.replace(".unwrap()", '.expect("number")');
 const SUPPRESSED = "#[allow(dead_code)]\nfn unused() {}\n";
 const MOCKED =
@@ -47,13 +48,18 @@ function options(
     configRoot,
     userConfigRoot: join(sb.root, ".xdg/opencode"),
     permissionContext: { cwd: projectRoot, projectRoot, worktree: projectRoot },
-    selectedPluginSpecs: new Set(selected ? ["toolu@toolu", "rust-quality@toolu"] : ["toolu@toolu"]),
+    selectedPluginSpecs: new Set(
+      selected ? ["toolu@toolu", "rust-quality@toolu"] : ["toolu@toolu"],
+    ),
     env: { ...env, TOOLU_HOST_OVERRIDE: "opencode" },
   };
 }
 
 function cargoProject(sb: Sandbox): void {
-  sb.write("Cargo.toml", '[package]\nname = "rust-quality-host"\nversion = "0.1.0"\nedition = "2021"\n');
+  sb.write(
+    "Cargo.toml",
+    '[package]\nname = "rust-quality-host"\nversion = "0.1.0"\nedition = "2021"\n',
+  );
 }
 
 function result(): { title: string; output: string; metadata: object } {

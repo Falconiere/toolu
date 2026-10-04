@@ -4,5 +4,9 @@ import { RUST_QUALITY_SCENARIOS } from "./opencode-host/scenarios-rust-quality-s
 import { runSmoke } from "./opencode-host/smoke-main.ts";
 
 if (import.meta.main) {
-  process.exitCode = await runSmoke("opencode-rust-quality-smoke", RUST_QUALITY_SCENARIOS, process.argv[2]);
+  process.exitCode = await runSmoke(
+    "opencode-rust-quality-smoke",
+    RUST_QUALITY_SCENARIOS,
+    process.argv[2],
+  );
 }
