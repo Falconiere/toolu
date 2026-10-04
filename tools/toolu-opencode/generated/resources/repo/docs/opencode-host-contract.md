@@ -185,7 +185,7 @@ The matrix counts source Markdown. The generated OpenCode catalog excludes the C
 - **epic-orchestrator** (owner OP-22 (#356))
   - **tools** — Report, watch and tracker scripts run through bash. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-22 (#356), OP-09 (#343).
   - **startup** — SessionStart reports missing dependency plugins. `plugin init + experimental.chat.system.transform` (hook): supported; evidence `load.local-file`, `context.system`. Owner: OP-22 (#356), OP-08 (#342).
-  - **task** — Workers are routed to OpenCode agents per sub-issue. `agents (.opencode/agents) + task tool` (tool): supported; evidence `surface.files`, `deny.task-child`. Owner: OP-22 (#356).
+  - **task** — Each worker is an OpenCode session in its own herdr worktree; its delegation goes through task. `herdr agent start --kind opencode + task tool inside the worker` (tool): supported; evidence `surface.files`, `deny.task-child`. Owner: OP-22 (#356).
   - **surfaces** — 1 skills, 1 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345), OP-22 (#356).
 - **exa-search** (owner OP-15 (#349))
   - **tools** — exa-search helper runs through bash. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-15 (#349), OP-09 (#343).

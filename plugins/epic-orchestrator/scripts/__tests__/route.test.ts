@@ -5,11 +5,13 @@ import { chmodSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "
 import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { acquireLease, prepareAgentMigration } from "@toolu/core/resources";
+import { helperCandidates } from "../common.ts";
 import {
   DEFAULT_TABLE,
   coolingHosts,
   heuristicTier,
   jevCommand,
+  jevScript,
   parseHosts,
   pickHost,
   routeIssues,
@@ -19,6 +21,30 @@ import {
 const FIXTURE = join(import.meta.dir, "..", "fixtures", "epic248-graph.json");
 
 const OPTS = { jev: false, reroute: false, table: DEFAULT_TABLE };
+
+test.concurrent("jev.sh is found under TOOLU_CONFIG_DIR first, then the Claude and Codex dirs", () => {
+  using sb = createSandbox();
+  const env = {
+    TOOLU_CONFIG_DIR: sb.path("toolu"),
+    CLAUDE_CONFIG_DIR: sb.path("claude"),
+    CODEX_HOME: sb.path("codex"),
+  };
+  expect(helperCandidates("jev/jev.sh", env)).toEqual([
+    sb.path("toolu/jev/jev.sh"),
+    sb.path("claude/jev/jev.sh"),
+    sb.path("codex/jev/jev.sh"),
+  ]);
+  expect(jevScript(env)).toBeNull();
+  sb.write("codex/jev/jev.sh", "#!/usr/bin/env bun\n");
+  expect(jevScript(env)).toBe(sb.path("codex/jev/jev.sh"));
+  sb.write("claude/jev/jev.sh", "#!/usr/bin/env bun\n");
+  expect(jevScript(env)).toBe(sb.path("claude/jev/jev.sh"));
+  sb.write("toolu/jev/jev.sh", "#!/usr/bin/env bun\n");
+  expect(jevScript(env)).toBe(sb.path("toolu/jev/jev.sh"));
+  expect(jevScript({ ...env, EPIC_JEV: sb.path("codex/jev/jev.sh") })).toBe(
+    sb.path("codex/jev/jev.sh"),
+  );
+});
 
 type G = Parameters<typeof routeIssues>[0];
 

@@ -5,7 +5,7 @@
  * Plugin loading, permissions, tools, MCP and child sessions stay the host's own.
  *
  * A request without tools (title generation) gets `Probe title`. Otherwise the
- * `PROBE:<scenario>` token in the first user message picks a script, and the
+ * `PROBE:<scenario>` token in the last user message, else the first, picks a script, and the
  * number of tool results since the last user message picks the step. An
  * exhausted or unknown script answers `PROBE-DONE`.
  */
@@ -61,18 +61,26 @@ function toolReply(step: ScriptStep, callId: string): Response {
   return sse([chunk({ role: "assistant", tool_calls: [call] }, null), chunk({}, "tool_calls")]);
 }
 
-/** The scenario named by the first user message, and how many tool results follow the last one. */
+function scenarioToken(message: ChatMessage | undefined): string | null {
+  // `content` may be absent; stringify null so the token search never sees undefined.
+  const text = message === undefined ? "" : JSON.stringify(message.content ?? null);
+  return text.match(/PROBE:([a-z0-9.-]+)/)?.[1] ?? null;
+}
+
+/**
+ * The scenario named by the last user message, else by the first (a continued
+ * session's new prompt can name its own script), and how many tool results
+ * follow the last user message.
+ */
 function scriptPosition(messages: readonly ChatMessage[]): {
   scenario: string | null;
   done: number;
 } {
-  const firstUser = messages.find((m) => m.role === "user");
-  // `content` may be absent; stringify null so the token search never sees undefined.
-  const text = firstUser === undefined ? "" : JSON.stringify(firstUser.content ?? null);
-  const token = text.match(/PROBE:([a-z0-9.-]+)/);
   const lastUser = messages.map((m) => m.role).lastIndexOf("user");
+  const scenario =
+    scenarioToken(messages[lastUser]) ?? scenarioToken(messages.find((m) => m.role === "user"));
   const done = messages.slice(Math.max(lastUser, 0)).filter((m) => m.role === "tool").length;
-  return { scenario: token?.[1] ?? null, done };
+  return { scenario, done };
 }
 
 export function startScriptedProvider(scripts: Scripts): ScriptedProvider {

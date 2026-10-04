@@ -30,6 +30,17 @@ export function defaultEpicsHome(env: NodeJS.ProcessEnv = process.env): string {
 
 export const EPICS_HOME = defaultEpicsHome();
 
+/** Where a toolu helper (`jev/jev.sh`, `jira/jira.sh`) may be published:
+ * TOOLU_CONFIG_DIR (OpenCode's data root, set by its shell.env), then the
+ * Claude Code and Codex config dirs. */
+export function helperCandidates(rel: string, env: NodeJS.ProcessEnv = process.env): string[] {
+  return [
+    ...(env.TOOLU_CONFIG_DIR ? [join(env.TOOLU_CONFIG_DIR, rel)] : []),
+    join(env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"), rel),
+    join(env.CODEX_HOME || join(homedir(), ".codex"), rel),
+  ];
+}
+
 const REF_URL = /github\.com\/([^/\s]+)\/([^/\s]+)\/(?:issues|pull)\/(\d+)/;
 const REF_SHORT = /^([\w.-]+)\/([\w.-]+)#(\d+)$/;
 

@@ -44,6 +44,12 @@ function isTests(dir: string): boolean {
   return dir.endsWith("/__tests__");
 }
 
+function scripts(dir: string): string[] {
+  return readdirSync(dir)
+    .filter((name) => name.endsWith(".ts"))
+    .toSorted();
+}
+
 function isFile(path: string): boolean {
   return statSync(path, { throwIfNoEntry: false })?.isFile() === true;
 }
@@ -91,6 +97,50 @@ test.concurrent("the debug skill's helpers ship and run from the staged copy", a
   expect(res.exitCode).toBe(0);
   expect(res.stdout).toContain("  - add sums two numbers\n");
   expect(res.stdout).toContain("math.test.ts:4:21");
+});
+
+test.concurrent("the epic orchestrator's scripts and brief template ship and run from the staged copy", async () => {
+  using sb = createSandbox();
+  const { dest, bundle } = stage(sb);
+  expect((await bundle()).exitCode).toBe(0);
+  const epic = join(dest, "epic-orchestrator");
+  const source = join(ROOT, "plugins/epic-orchestrator/scripts");
+  const dirs = ["launch", "trackers", "watch"];
+  expect(scripts(join(epic, "scripts"))).toEqual(scripts(source));
+  for (const dir of dirs) {
+    expect(scripts(join(epic, "scripts", dir))).toEqual(scripts(join(source, dir)));
+  }
+  expect(readdirSync(join(epic, "scripts")).toSorted()).toEqual(
+    [...scripts(source), ...dirs].toSorted(),
+  );
+  expect(readdirSync(join(epic, "skills/epic-orchestrator/references")).toSorted()).toEqual([
+    "recovery.md",
+    "worker-brief.md",
+  ]);
+  const fixture: unknown = JSON.parse(
+    readFileSync(join(source, "fixtures/epic248-graph.json"), "utf8"),
+  );
+  const graph = sb.write("graph.json", {
+    ...z.record(z.string(), z.unknown()).parse(fixture),
+    state_dir: join(sb.root, "state"),
+  });
+  const res = await run(
+    [
+      "bun",
+      join(epic, "scripts/launch-issue.ts"),
+      "--graph",
+      graph,
+      "--issue",
+      "Falconiere/comemory#255",
+      "--dry-run",
+      "--kind",
+      "opencode",
+    ],
+    { cwd: sb.root },
+  );
+  expect(res.stderr).toBe("");
+  expect(res.exitCode).toBe(0);
+  expect(res.stdout).toContain('`skill({ name: "delivery-flow-delivery-flow" })`');
 });
 
 test.concurrent("colocated tests are excluded from the published copy", async () => {

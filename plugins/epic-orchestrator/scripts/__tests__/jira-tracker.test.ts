@@ -7,14 +7,20 @@
 import { expect, test } from "bun:test";
 import { startHttpsFixture, type HttpsFixture } from "@toolu/conformance/https-fixture";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
-import { run, type RunResult } from "@toolu/conformance/harness/spawn";
+import { run, type EnvPatch, type RunResult } from "@toolu/conformance/harness/spawn";
+import { mkdirSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 
 const BUNDLE = join(import.meta.dir, "../../../jira/hooks/dist/jira.js");
 const TRACKER = join(import.meta.dir, "../trackers/jira.ts");
 
 /** Runs `new JiraTracker(ref).epic()` in a fresh bun process and returns its result. */
-function epicVia(sb: Sandbox, fixture: HttpsFixture, ref: string): Promise<RunResult> {
+function epicVia(
+  sb: Sandbox,
+  fixture: HttpsFixture,
+  ref: string,
+  helperEnv: EnvPatch = { EPIC_JIRA_SH: BUNDLE },
+): Promise<RunResult> {
   const script = sb.write(
     "main.ts",
     `import { JiraTracker } from ${JSON.stringify(TRACKER)};\n` +
@@ -23,7 +29,7 @@ function epicVia(sb: Sandbox, fixture: HttpsFixture, ref: string): Promise<RunRe
   return run([process.execPath, script], {
     env: {
       ...fixture.env,
-      EPIC_JIRA_SH: BUNDLE,
+      ...helperEnv,
       JIRA_BASE_URL: "https://acme.atlassian.net",
       JIRA_PAT: "tok",
       JIRA_API_VERSION: "3",
@@ -60,6 +66,35 @@ test.concurrent("epic() reads the epic through the jira CLI bundle", async () =>
       path: "/rest/api/3/issue/PAY-7?fields=summary,status",
     });
     expect(fixture.requests[0]?.headers["authorization"]).toBe("Bearer tok");
+  } finally {
+    await fixture.stop();
+  }
+});
+
+test.concurrent("epic() finds jira.sh published only under TOOLU_CONFIG_DIR (OpenCode)", async () => {
+  using sb = createSandbox();
+  mkdirSync(sb.path("toolu/jira"), { recursive: true });
+  symlinkSync(BUNDLE, sb.path("toolu/jira/jira.sh"));
+  const fixture = await startHttpsFixture(["acme.atlassian.net"]);
+  try {
+    fixture.plan([
+      {
+        body: JSON.stringify({
+          key: "PAY-8",
+          fields: { summary: "Disputes epic", status: { statusCategory: { key: "new" } } },
+        }),
+      },
+    ]);
+    const res = await epicVia(sb, fixture, "PAY-8", {
+      EPIC_JIRA_SH: undefined,
+      TOOLU_CONFIG_DIR: sb.path("toolu"),
+      CLAUDE_CONFIG_DIR: sb.path("claude"),
+      CODEX_HOME: sb.path("codex"),
+    });
+    expect(res.stderr).toBe("");
+    expect(res.exitCode).toBe(0);
+    expect(JSON.parse(res.stdout)).toMatchObject({ ref: "PAY-8", title: "Disputes epic" });
+    expect(fixture.requests).toHaveLength(1);
   } finally {
     await fixture.stop();
   }

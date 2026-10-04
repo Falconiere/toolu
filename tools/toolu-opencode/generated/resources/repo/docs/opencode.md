@@ -37,13 +37,13 @@ Bun 1.4.x is a prerequisite on every host, Claude Code and Codex included; see t
 
 ## Prerequisites
 
-| Requirement | Pin / note |
-|-------------|------------|
-| OpenCode CLI | `opencode-ai@1.18.34` ([host contract](opencode-host-contract.md)); `opencode --version` |
-| Plugin SDK | `@opencode-ai/plugin@1.18.34`. The host provisions it into each config directory; toolu imports its types only |
-| Bun | `1.4.x` (workspace `>=1.4.0 <1.5.0`; CI/docs baseline `1.4.2`) |
-| git | Project and gate context |
-| Platform | macOS and Linux ([#212](conformance-report.md)); Windows **N/A** |
+| Requirement  | Pin / note                                                                                                     |
+| ------------ | -------------------------------------------------------------------------------------------------------------- |
+| OpenCode CLI | `opencode-ai@1.18.34` ([host contract](opencode-host-contract.md)); `opencode --version`                       |
+| Plugin SDK   | `@opencode-ai/plugin@1.18.34`. The host provisions it into each config directory; toolu imports its types only |
+| Bun          | `1.4.x` (workspace `>=1.4.0 <1.5.0`; CI/docs baseline `1.4.2`)                                                 |
+| git          | Project and gate context                                                                                       |
+| Platform     | macOS and Linux ([#212](conformance-report.md)); Windows **N/A**                                             |
 
 Do **not** target the legacy `opencode-ai@1.18.31` (V1) line. Pins and contracts: [`docs/portable-core.md`](portable-core.md).
 
@@ -173,28 +173,28 @@ In **your application repo** (not inside the toolu clone):
 
 [#343](https://github.com/Falconiere/toolu/issues/343) fixes three roots. None of them is a Claude Code or Codex home, and toolu never changes `HOME`.
 
-| Root | Where | Holds |
-|---|---|---|
-| Project | The OpenCode instance's worktree. A linked git worktree is its own project. A `TOOLU_PROJECT_DIR` in your environment does not replace it | `.opencode/toolu.config.json`, `.opencode/toolu/plugins.json`, gate state in `.opencode/tmp/` |
-| Global config | `TOOLU_CONFIG_DIR`, else `TOOLU_OPENCODE_HOME`, else `$XDG_CONFIG_HOME/opencode`, else `~/.config/opencode` | The global `toolu.config.json`; toolu only reads it |
-| Data | `<project>/.opencode/toolu/state/`. With `TOOLU_CONFIG_DIR` or `TOOLU_OPENCODE_HOME` set: `<override>/toolu/opencode/projects/<name>-<hash>/`, one directory per project | Registry modules, published helpers, startup ledger |
+| Root          | Where                                                                                                                                                                    | Holds                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| Project       | The OpenCode instance's worktree. A linked git worktree is its own project. A `TOOLU_PROJECT_DIR` in your environment does not replace it                                | `.opencode/toolu.config.json`, `.opencode/toolu/plugins.json`, gate state in `.opencode/tmp/` |
+| Global config | `TOOLU_CONFIG_DIR`, else `TOOLU_OPENCODE_HOME`, else `$XDG_CONFIG_HOME/opencode`, else `~/.config/opencode`                                                              | The global `toolu.config.json`; toolu only reads it                                           |
+| Data          | `<project>/.opencode/toolu/state/`. With `TOOLU_CONFIG_DIR` or `TOOLU_OPENCODE_HOME` set: `<override>/toolu/opencode/projects/<name>-<hash>/`, one directory per project | Registry modules, published helpers, startup ledger                                           |
 
 Projects and worktrees never share a data root, even under one override, so one project's startup cannot remove or relink another's modules and helpers. Before #343 an override was itself the shared data root. Those old files (`<override>/toolu/{pre,post}-tools.d/*@toolu__*`, `<override>/<plugin>/<helper>.sh`, `<override>/toolu/startup-ledger.json`) are no longer used. While that old ledger remains, each startup logs a `toolu: startup notes:` line naming it. Deleting the ledger, which only OpenCode writes, silences the note. Delete the old modules and helpers too when no Claude Code or Codex install shares that override.
 
 Every bash call the agent makes gets these variables through the plugin's `shell.env` hook. They are added only when toolu is ready, and nothing secret is copied:
 
-| Variable | Value |
-|---|---|
-| `TOOLU_CONFIG_DIR` | The project's data root, where helpers such as `context7/search.sh` are published (the generated skills name `"${TOOLU_CONFIG_DIR:-…}/<plugin>/<helper>"`) |
-| `TOOLU_OPENCODE_DATA_ROOT` | The same path. An OpenCode started from this bash sees `TOOLU_CONFIG_DIR` equal to it and does not treat it as an override, so it keeps its own roots |
-| `TOOLU_USER_CONFIG_DIR` | The global config root |
-| `TOOLU_HOST_OVERRIDE`, `TOOLU_PROJECT_CONFIG_DIRNAME`, `TOOLU_SETTINGS_DIR` | `opencode`, `.opencode`, the toolu settings directory, so helpers resolve OpenCode state |
-| `TOOLU_PLUGIN_ROOT_<PLUGIN>` | Each enabled plugin's directory, the name upper-cased with `-` as `_` (`TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR`). Generated surfaces use it wherever the source says `${CLAUDE_PLUGIN_ROOT}` |
-| `TOOLU_PLUGIN_ROOT` | The toolu core plugin, for `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js"` and `verdict.js` |
-| `TOOLU_OPENCODE_ROOT` | The `@toolu/opencode` package, which holds `generated/` |
-| `TOOLU_BUN` | The Bun that startup resolved (`TOOLU_BUN`, `PATH`, then `~/.bun/bin/bun`) |
-| `PATH` | Gains that Bun's directory at the end, only when `PATH` has no `bun`, so `#!/usr/bin/env bun` helpers run. This works when that executable is named `bun`, as the default `~/.bun/bin/bun` is |
-| `TOOLU_PROJECT_DIR` | Set to empty when your environment exports one, so it cannot point every helper at a single project |
+| Variable                                                                    | Value                                                                                                                                                                                         |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TOOLU_CONFIG_DIR`                                                          | The project's data root, where helpers such as `context7/search.sh` are published (the generated skills name `"${TOOLU_CONFIG_DIR:-…}/<plugin>/<helper>"`)                                    |
+| `TOOLU_OPENCODE_DATA_ROOT`                                                  | The same path. An OpenCode started from this bash sees `TOOLU_CONFIG_DIR` equal to it and does not treat it as an override, so it keeps its own roots                                         |
+| `TOOLU_USER_CONFIG_DIR`                                                     | The global config root                                                                                                                                                                        |
+| `TOOLU_HOST_OVERRIDE`, `TOOLU_PROJECT_CONFIG_DIRNAME`, `TOOLU_SETTINGS_DIR` | `opencode`, `.opencode`, the toolu settings directory, so helpers resolve OpenCode state                                                                                                      |
+| `TOOLU_PLUGIN_ROOT_<PLUGIN>`                                                | Each enabled plugin's directory, the name upper-cased with `-` as `_` (`TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR`). Generated surfaces use it wherever the source says `${CLAUDE_PLUGIN_ROOT}`     |
+| `TOOLU_PLUGIN_ROOT`                                                         | The toolu core plugin, for `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js"` and `verdict.js`                                                                                              |
+| `TOOLU_OPENCODE_ROOT`                                                       | The `@toolu/opencode` package, which holds `generated/`                                                                                                                                       |
+| `TOOLU_BUN`                                                                 | The Bun that startup resolved (`TOOLU_BUN`, `PATH`, then `~/.bun/bin/bun`)                                                                                                                    |
+| `PATH`                                                                      | Gains that Bun's directory at the end, only when `PATH` has no `bun`, so `#!/usr/bin/env bun` helpers run. This works when that executable is named `bun`, as the default `~/.bun/bin/bun` is |
+| `TOOLU_PROJECT_DIR`                                                         | Set to empty when your environment exports one, so it cannot point every helper at a single project                                                                                           |
 
 Because `TOOLU_PROJECT_DIR` stays empty, a helper run inside another repository uses that repository's state. Every process the agent starts from bash inherits these variables. A nested `opencode` keeps its own roots through `TOOLU_OPENCODE_DATA_ROOT`. Unset the `TOOLU_*` variables before starting `claude` or `codex` from an OpenCode session.
 
@@ -234,6 +234,7 @@ The external `agent-browser` CLI and Chromium are separate prerequisites: instal
 - **Debug.** `toolu-debug` runs its collectors as `bun "$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-testfail.ts"` (also `debug-stack.ts` and `debug-log.ts`). `@toolu/opencode` ships them. MCP tools are named `<server>_<tool>`; there is no tool search.
 
 `tools/toolu-opencode/src/plugin/__tests__/core-workflows.test.ts` proves the review, commit-gate and debug paths hermetically. `TOOLU_LIVE_OPENCODE=1 bun test tools/toolu-opencode/src/plugin/__tests__/core-workflows.live.test.ts` repeats them on the pinned host with a scripted provider.
+
 ### Exa web research
 
 Add `exa-search` to the `enabled` list and restart OpenCode. The native skill is `exa-search-exa-search`; its SessionStart entry publishes the project's helper and gives the model its exact path. Set `EXA_API_KEY` in the environment that starts OpenCode. The helper does not read `.env` or print the key. In a bash call, use:
@@ -256,6 +257,16 @@ The generated skill documents the remaining flags. Search, crawl and similar use
 - **Quality checks.** The post-edit checks run in `tool.execute.after` and append a violation to the edit's result. The quality gate then blocks the next commit and push until it is fixed.
 
 `tools/toolu-opencode/src/plugin/__tests__/delivery-workflows.test.ts` proves the preflight, ledger, verdict and push-gate transitions hermetically. `TOOLU_LIVE_OPENCODE=1 bun test tools/toolu-opencode/src/plugin/__tests__/delivery-workflows.live.test.ts` loads both skills and their references on the pinned host and delivers to a bare remote.
+
+### Epic orchestrator
+
+[#356](https://github.com/Falconiere/toolu/issues/356) ports epic-orchestrator. Add `epic-orchestrator` to `enabled`; delivery-flow and its dependencies are selected with it.
+
+- **Skill.** Load `epic-orchestrator-epic-orchestrator`, or run the `epic-orchestrator-epic` command. It runs its scripts from `$TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR` and stops with `epic-orchestrator is not enabled in this OpenCode session` when the plugin is off.
+- **Watcher.** OpenCode has no background shell, so the orchestrator runs `epic-watch.ts --max-wait 480` in the foreground with a 600000 ms bash timeout and runs it again until no issue is active.
+- **Workers.** An OpenCode worker is `opencode --auto --model provider/model` in its own herdr worktree. Launch refuses an `opencode` whose `--version` is not 1.x, and adds `/.opencode/toolu/state/` and `/.opencode/tmp/` to the repository's shared `info/exclude` so worker state stays out of `git status`, `refs/epic-wip/*` snapshots and worktree removal. The worker loads `delivery-flow-delivery-flow` by that id, and its native `task` calls reach agent-tier and delegation telemetry. A worktree reads its committed `.opencode/toolu/plugins.json`, else the global selection, else every installed plugin.
+
+`tools/toolu-opencode/src/plugin/__tests__/epic-workflows.test.ts` proves the selection, script root and agent-tier paths hermetically. `TOOLU_LIVE_OPENCODE=1 bun test tools/toolu-opencode/src/plugin/__tests__/epic-worker.live.test.ts` runs a worker on the pinned host through a kill, checkpoint, `session list` capture and `--session` resume to a ready report.
 
 ## Verify a real gate
 
@@ -368,11 +379,11 @@ Check out the last known-good tag in the toolu clone and run `bun install --froz
 
 ## Host comparison
 
-| Host | Install doc | Runtime |
-|------|-------------|---------|
-| Claude Code | [README § Install](../README.md#install) | Bun hook bundles |
-| Codex | [README § Install](../README.md#install) | Bun hook bundles |
-| OpenCode | This file | In-process TypeScript dispatcher |
+| Host        | Install doc                              | Runtime                          |
+| ----------- | ---------------------------------------- | -------------------------------- |
+| Claude Code | [README § Install](../README.md#install) | Bun hook bundles                 |
+| Codex       | [README § Install](../README.md#install) | Bun hook bundles                 |
+| OpenCode    | This file                                | In-process TypeScript dispatcher |
 
 ## Related
 

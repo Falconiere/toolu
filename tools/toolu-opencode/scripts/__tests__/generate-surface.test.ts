@@ -272,8 +272,8 @@ test("no generated file names the ambiguous braced TOOLU_PLUGIN_ROOT, and the no
   const braced = [...plan.files].filter(([, text]) => text.includes("${TOOLU_PLUGIN_ROOT}"));
   expect(braced.map(([path]) => path)).toEqual([]);
   const epic = plan.files.get(join(out, "skills/epic-orchestrator-epic-orchestrator/SKILL.md"));
-  expect(epic).toContain('ROOT="${TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR}"');
-  expect(epic).toContain("${PLUGIN_ROOT:-${TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR}}");
+  expect(epic).toContain('ROOT="${TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR:?');
+  expect(epic).not.toContain("${PLUGIN_ROOT");
   const notes = plan.files.get(join(out, "GENERATED-NOTES.md")) ?? "";
   expect(notes).toContain("`TOOLU_PLUGIN_ROOT_<PLUGIN>`");
   expect(notes).toContain("`TOOLU_OPENCODE_ROOT`");

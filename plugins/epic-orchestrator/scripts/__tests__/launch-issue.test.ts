@@ -1,7 +1,7 @@
 /** Launcher tests: brief rendering and a real read-only dry run against a sandboxed copy of the #248 snapshot. */
 
 import { expect, test } from "bun:test";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
@@ -133,6 +133,98 @@ test.concurrent("dry run: --safe keeps approval prompts on", async () => {
   expect(out.code).toBe(0);
   expect(out.stdout).toContain("--kind cursor --pane '<root-pane>' --timeout 90000 -- --trust");
   expect(out.stdout).not.toContain("--yolo");
+});
+
+const EXCLUDE_LINE = "# opencode: exclude /.opencode/toolu/state/ /.opencode/tmp/ in ";
+const OTHER_HOST_INVOCATION = /[/$](delivery-flow|pr-babysit|toolu):/;
+
+test.concurrent("brief: OpenCode names generated skills and runs jira.sh from the data root", () => {
+  const graph = loadGraph();
+  const issue = findIssue(graph, "Falconiere/comemory#255");
+  const paths = { worktree: "/wt", status: "/s.json" };
+  const brief = renderBrief(graph, issue, paths, "main", "opencode");
+  expect(brief).toContain('`skill({ name: "delivery-flow-delivery-flow" })`');
+  expect(brief).toContain('`skill({ name: "pr-babysit-babysit-73c340c6" })`');
+  expect(brief).toContain('`skill({ name: "toolu-debug" })`');
+  expect(brief).not.toMatch(OTHER_HOST_INVOCATION);
+  expect(brief).not.toMatch(/`[a-z-]+--[a-z-]+`/);
+  const jiraIssue = { ...issue, ref: "PAY-12", number: null };
+  const jira = renderBrief({ ...graph, tracker: "jira" }, jiraIssue, paths, "main", "opencode");
+  expect(jira).toContain(
+    '`"$TOOLU_BUN" --no-env-file "$TOOLU_CONFIG_DIR/jira/jira.sh" issue get PAY-12` (`skill({ name: "jira-jira" })`)',
+  );
+});
+
+test.concurrent("dry run: OpenCode worker gets provider/model, the state exclude and its skill ids", async () => {
+  using sb = createSandbox();
+  const out = await runDry(sb, "Falconiere/comemory#255", [
+    "--kind",
+    "opencode",
+    "--model",
+    "probe/scripted",
+  ]);
+  expect(out.code).toBe(0);
+  const lines = out.stdout.split("\n");
+  expect(lines.find((l) => l.startsWith("herdr agent start"))).toBe(
+    "herdr agent start comemory-255 --kind opencode --pane '<root-pane>' --timeout 90000 -- " +
+      "--auto --model probe/scripted",
+  );
+  const exclude = lines.findIndex((l) => l.startsWith(EXCLUDE_LINE));
+  expect(exclude).toBeGreaterThan(lines.findIndex((l) => l.includes("herdr worktree create")));
+  expect(exclude).toBeLessThan(lines.findIndex((l) => l.startsWith("herdr agent start")));
+  expect(out.stdout).toContain('`skill({ name: "delivery-flow-delivery-flow" })`');
+  expect(out.stdout).not.toMatch(OTHER_HOST_INVOCATION);
+  expect(existsSync(join(sb.root, "state", "issues"))).toBe(false);
+});
+
+test.concurrent("dry run: an OpenCode model that is not provider/model is refused", async () => {
+  using sb = createSandbox();
+  const out = await runDry(sb, "Falconiere/comemory#255", [
+    "--kind",
+    "opencode",
+    "--model",
+    "sonnet",
+  ]);
+  expect(out.code).toBe(1);
+  expect(out.stderr).toContain("OpenCode model must be provider/model, got sonnet");
+  expect(out.stdout).not.toContain("herdr");
+});
+
+test.concurrent("dry run: other hosts get no OpenCode exclude", async () => {
+  using sb = createSandbox();
+  for (const kind of ["claude", "codex", "cursor"]) {
+    const out = await runDry(sb, "Falconiere/comemory#255", ["--kind", kind]);
+    expect(out.code).toBe(0);
+    expect(out.stdout).not.toContain(EXCLUDE_LINE);
+  }
+});
+
+test.concurrent("launch: OpenCode without a runnable opencode stops before any side effect", async () => {
+  using sb = createSandbox();
+  const state = join(sb.root, "state");
+  const graph = sb.write("graph.json", { ...loadGraph(), state_dir: state });
+  const res = await run(
+    [
+      process.execPath,
+      "run",
+      LAUNCH,
+      "--graph",
+      graph,
+      "--issue",
+      "Falconiere/comemory#255",
+      "--kind",
+      "opencode",
+    ],
+    { env: { PATH: sb.path("empty-bin") } },
+  );
+  expect(res.exitCode).toBe(1);
+  expect(JSON.parse(res.stderr)).toEqual({
+    issue: "Falconiere/comemory#255",
+    error: expect.stringMatching(
+      /^CommandError: opencode is not runnable here \(.+\); toolu's OpenCode plugin targets opencode-ai 1\.x\. Put a 1\.x opencode first on PATH, or route this issue to another host\.$/,
+    ),
+  });
+  expect(existsSync(join(state, "issues"))).toBe(false);
 });
 
 test.concurrent("dry run: blocked issue is refused", async () => {

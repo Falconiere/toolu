@@ -11,14 +11,12 @@ worktree with an agent (the *worker*) inside it. Workers can run on Claude
 Code, Codex, Cursor Agent, or OpenCode, several hosts at once. Workers write the code and babysit their PRs. You decide
 the order, gate each merge, merge, and clean up. Don't write product code
 yourself. An epic run lasts hours, so keep your context small: the scripts
-handle the deterministic work, and a background watcher wakes you only when a
+handle the deterministic work, and a bounded watcher returns only when a
 decision is needed.
 
 ```bash
-# Claude / Cursor Agent: CLAUDE_PLUGIN_ROOT. Codex: PLUGIN_ROOT.
-# OpenCode: TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR (its generated surface rewrites CLAUDE_PLUGIN_ROOT to it).
-ROOT="${TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR}"
-ROOT="${ROOT:-${PLUGIN_ROOT:-${TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR}}}"
+# OpenCode's bash sets TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR while the plugin is enabled.
+ROOT="${TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR:?epic-orchestrator is not enabled in this OpenCode session}"
 S="${ROOT}/scripts"
 ```
 
@@ -81,15 +79,18 @@ Stop and report the first check that fails:
 - `command -v bun` succeeds.
 - `gh auth status` and `herdr status` both succeed (herdr server is running).
 - Each host in `--hosts` is on PATH (`claude`, `codex`, `cursor-agent`,
-  `opencode`) and logged in.
+  `opencode`) and logged in. For OpenCode, `opencode --version` must be 1.x
+  (toolu's OpenCode plugin targets opencode-ai 1.x).
 - Jira epic: `jira.sh` is installed (toolu `jira` plugin) and authenticated.
   Linear epic: `LINEAR_API_KEY` is set (personal key or OAuth token).
 - `gh api rate_limit` shows core above 1000 (`EPIC_GH_CORE_FLOOR`). Below it,
   wait for the reset: every worker's babysit spends the same token.
-- Your skill list includes `delivery-flow:delivery-flow` and its `toolu`,
-  `toolu-review`, `pr-babysit`, and `brainstorm` dependencies (or the OpenCode-generated equivalents). Workers run as
-  herdr agents and need those plugins installed in every host in `--hosts`
-  (`npx @toolu/plugins install delivery-flow --host codex`, and so on).
+- These load through the `skill` tool: `skill({ name: "delivery-flow-delivery-flow" })`,
+  `skill({ name: "brainstorm-brainstorm" })`, `skill({ name: "toolu-review-review" })` and `skill({ name: "pr-babysit-babysit-73c340c6" })`. Workers run as
+  herdr agents and need those plugins installed and enabled in every host in `--hosts`.
+  An OpenCode worker uses its worktree's selection: a committed
+  `.opencode/toolu/plugins.json`, else the global one, else every installed
+  plugin. An uncommitted project selection does not reach worktrees.
 
 ## 1. Graph: what can run now
 
@@ -138,7 +139,7 @@ dependency counts) into `trivial`, `standard`, `complex`, or `critical`. The
 routing table maps the tier to a model and effort per host, e.g. Codex
 `gpt-6-sol` low/medium/high/xhigh, Claude `sonnet` low/medium then `opus`
 high/xhigh, Cursor `composer-2.5` up to `gpt-5.6-sol-xhigh`. OpenCode keeps
-its configured model unless the table names one. Override the table in
+its configured model unless the table names one (`provider/model`). Override the table in
 `$EPIC_STATE_HOME/routing.json` (or `EPIC_ROUTING_FILE`):
 `{"hosts": {"codex": [{"model": "gpt-6-sol", "effort": "low"}, …4 tiers]},
 "prefer": {"critical": ["claude"]}}`.
@@ -174,6 +175,10 @@ Launch issues one at a time. For each issue the launcher:
    effort and the host's approval-bypass flags. A relaunch on the same host
    continues its last session (`--continue`, or `codex resume --last`).
    Refuses a first launch while the GitHub budget is under its floor.
+   For OpenCode it first refuses a model that is not `provider/model` or an
+   `opencode` that is not 1.x, then adds `/.opencode/toolu/state/` and
+   `/.opencode/tmp/` to the checkout's shared `info/exclude`, so toolu's
+   runtime state stays out of snapshots, leftovers and commits.
 5. renders `references/worker-brief.md` into `<state_dir>/briefs/<key>.md`,
    filling host-specific skill invocations and tracker-specific issue-read
    and PR-closing lines (the template's header comment lists them)
@@ -188,15 +193,17 @@ Tell the user which agents are running, on which host, model, and effort, and
 that each one has a herdr workspace named after its key (`comemory-255`, …),
 so they can watch or step in.
 
-## 3. Watch (background)
+## 3. Watch
 
 ```bash
-bun "$S/epic-watch.ts" --state-dir <state_dir>        # Bash with run_in_background: true
+bun "$S/epic-watch.ts" --state-dir <state_dir> --max-wait 480   # bash tool with timeout: 600000
 ```
 
-Then end your turn. The watcher polls once a minute and costs nothing while
-it waits. When it exits, you are re-invoked with JSON events. Keep exactly one
-watcher running. After you handle the events, start it again.
+OpenCode's bash tool has no background mode, and nothing wakes a finished
+turn. So run the watcher in the foreground with a bounded wait: it polls once a
+minute and returns JSON events, or a `heartbeat` after 480 seconds. Handle the
+events, then run it again in the same turn, and keep that loop going while any
+issue is active. Keep exactly one watcher running.
 
 | event | action |
 |---|---|
@@ -210,7 +217,7 @@ watcher running. After you handle the events, start it again.
 | `watcher-busy` | Another watcher owns this epic. Don't start a second; wait for its events. |
 | `stalled` | `herdr agent prompt <key> "STATUS?" --wait --timeout 120000`, then read the reply. Nudge the worker or treat it as `failed`. |
 | `recheck` | Re-run the merge gate for each listed key. |
-| `heartbeat` | Re-run the graph (`--save`). This catches issues closed or reopened outside the run, and fills any free slot (route first). |
+| `heartbeat` | About every 8 minutes on OpenCode. When about 45 minutes have passed since the last graph run, re-run the graph (`--save`); otherwise just run the watcher again. This catches issues closed or reopened outside the run, and fills any free slot (route first). |
 
 Every 15 minutes (`--checkpoint`) the watcher also snapshots each active
 worktree to `refs/epic-wip/<key>` (see Guardrails). Snapshots it took are
@@ -279,7 +286,7 @@ The epic is complete when every sub-issue is closed and its workload cleanup has
 - **Status.** Print the graph table plus
   `bun "$S/epic-watch.ts" --state-dir <state_dir> --peek` (per-issue stage,
   phase, PR and agent state). This consumes no events.
-- **Stop.** Stop the watcher task only. Agents finish their current step and
+- **Stop.** Stop running the watcher (interrupt a watcher bash call in flight). Agents finish their current step and
   go idle. To tear down one issue, run
   `bun "$S/finish-issue.ts" <state_dir> <key> --abandon`, which keeps the branch.
 

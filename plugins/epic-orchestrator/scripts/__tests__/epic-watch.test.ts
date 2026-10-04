@@ -359,3 +359,31 @@ test.concurrent("a record naming an unknown host is still reported, without a co
   ]);
   expect(existsSync(join(sb.root, "hosts.json"))).toBe(false);
 });
+
+test.concurrent("an OpenCode worker's failure and disappearance reach the orchestrator", async () => {
+  using sb = createSandbox();
+  const rec = { ...REC, kind: "opencode" };
+  const note = "rate-limited: 429 Too Many Requests";
+  const st = await reported(sb.root, "failed", "--note", note);
+  const seen: Seen = {};
+  const live = { "comemory-255": "idle" };
+  expect(issueEvents("comemory-255", rec, st, live, seen)).toEqual([
+    { key: "comemory-255", ref: REC.ref, phase: "failed", pr: null, note, type: "failed" },
+  ]);
+  expect(await limitEvents(sb.root, { k: rec }, { k: st }, live, {})).toEqual([
+    { key: "k", ref: REC.ref, type: "host-limited", host: "opencode", cooldown: true, note },
+  ]);
+  const hosts = JSON.parse(readFileSync(join(sb.root, "hosts.json"), "utf8")) as Record<
+    string,
+    { reason: string }
+  >;
+  expect(hosts.opencode?.reason).toBe(note);
+
+  const working = await reported(sb.root, "execution");
+  const cancelled: Seen = {};
+  expect(issueEvents("comemory-255", rec, working, live, cancelled)).toEqual([]);
+  expect(issueEvents("comemory-255", rec, working, {}, cancelled).map((e) => e.type)).toEqual([
+    "gone",
+  ]);
+  expect(issueEvents("comemory-255", rec, working, {}, cancelled)).toEqual([]);
+});

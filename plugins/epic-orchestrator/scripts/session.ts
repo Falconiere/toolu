@@ -54,13 +54,10 @@ export async function captureSession(
 ): Promise<string | null> {
   if (kind === "cursor") return null; // Installed CLI currently cannot attest session storage.
   if (kind === "opencode") {
-    const result = await runCommand(
-      ["opencode", "session", "list", "--standalone", "--format", "json"],
-      {
-        cwd: worktree,
-        timeoutMs: 10_000,
-      },
-    );
+    const result = await runCommand(["opencode", "session", "list", "--format", "json"], {
+      cwd: worktree,
+      timeoutMs: 10_000,
+    });
     if (result.exitCode !== 0 || result.timedOut || result.truncated) return null;
     let data: unknown;
     try {

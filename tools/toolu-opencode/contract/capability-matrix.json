@@ -332,10 +332,10 @@
           "use": "none"
         },
         "task": {
-          "use": "Workers are routed to OpenCode agents per sub-issue",
+          "use": "Each worker is an OpenCode session in its own herdr worktree; its delegation goes through task",
           "required": true,
           "enforcement": false,
-          "mechanism": "agents (.opencode/agents) + task tool",
+          "mechanism": "herdr agent start --kind opencode + task tool inside the worker",
           "kind": "tool",
           "status": "supported",
           "evidence": ["surface.files", "deny.task-child"],

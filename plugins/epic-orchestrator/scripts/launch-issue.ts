@@ -20,9 +20,10 @@ import {
   herdr,
 } from "./common.ts";
 import { hostKind, skillRef, type HostKind } from "./hosts.ts";
+import { checkOpencode, excludeForWorker } from "./opencode-worker.ts";
 import { budgetLow, ghBudget } from "./ratelimit.ts";
 
-const START_PROMPT =
+export const START_PROMPT =
   "You are an epic worker. Read {brief} and follow it exactly, starting at Pipeline step 1. " +
   "Report status with the command it gives.";
 const RESUME_PROMPT =
@@ -89,10 +90,19 @@ export function resolveHost(opts: LaunchOpts, route: ReturnType<typeof loadLaunc
 }
 
 /** How the worker reads its issue and what its PR body must say, per tracker. */
-function trackerLines(graph: Graph, issue: GraphIssue): { read: string; closes: string } {
+function trackerLines(
+  graph: Graph,
+  issue: GraphIssue,
+  kind: HostKind,
+): { read: string; closes: string } {
   if (graph.tracker === "jira") {
+    // OpenCode puts no helper on PATH; the jira skill runs it from the data root.
+    const read =
+      kind === "opencode"
+        ? `\`"$TOOLU_BUN" --no-env-file "$TOOLU_CONFIG_DIR/jira/jira.sh" issue get ${issue.ref}\` (\`skill({ name: "jira-jira" })\`)`
+        : `\`jira.sh issue get ${issue.ref}\` (the toolu jira skill)`;
     return {
-      read: `\`jira.sh issue get ${issue.ref}\` (the toolu jira skill)`,
+      read,
       closes: `Resolves ${issue.ref}`,
     };
   }
@@ -122,7 +132,7 @@ export function renderBrief(
   base: string,
   kind: HostKind = "claude",
 ): string {
-  const lines = trackerLines(graph, issue);
+  const lines = trackerLines(graph, issue, kind);
   const closed = Object.entries(issue.blockers)
     .filter(([, s]) => s === "closed")
     .map(([b]) => b);
@@ -267,6 +277,8 @@ async function launch(
   const resuming = Object.keys(record).length > 0 || issue.status === "in_flight";
   const route = loadLaunchRoute(join(state, "routes", `${issue.key}.json`));
   const host = resolveHost(opts, route);
+  // Before any clone, gh, herdr or state write.
+  if (host.kind === "opencode") await checkOpencode(host.model, dry);
   const launches = typeof record.launches === "number" ? record.launches : 0;
   const previousKind = typeof record.kind === "string" ? record.kind : undefined;
   const attemptStarted = Date.now();
@@ -289,6 +301,7 @@ async function launch(
       await initializeAttempt(issue, record, host.kind, attemptStarted, state, reservation);
     const [checkout, base] = await prepareCheckout(graph, issue, dry, log);
     const wt = await ensureWorktree(checkout, issue, base, dry, log);
+    if (host.kind === "opencode") log.push(await excludeForWorker(checkout, dry));
     if (reservation) {
       Object.assign(record, { ...wt, checkout, base, agent: issue.key });
       bindWorktree(reservation.root, wt.worktree, issue.key, state);
