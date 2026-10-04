@@ -2,15 +2,16 @@
 /**
  * Live OpenCode entry smoke (#336), plugin startup (#342), paths and helper
  * environment (#343), surface install and discovery (#345), leaf plugins,
- * pr-babysit's controller and OpenCode fixer (#357), CLI management (#360), and
- * the statusline status skill (#359):
+ * pr-babysit's controller and OpenCode fixer (#357), CLI management (#360), the
+ * statusline status skill (#359), and the clean npm install (#361):
  * `bun run smoke:opencode-entry [<scenario id>…]`; ids narrow the run.
  *
  * Resolves the pinned CLI the same way as `probe:opencode-host`, packs
- * `@toolu/opencode` into a temp directory, and runs every entry scenario in an
- * isolated profile against the scripted loopback provider. The first run needs
- * the network: the host provisions its SDK and installs the tarball's registry
- * dependencies. Any failed expectation, or any host error, exits 1.
+ * `@toolu/opencode` with `npm pack` (prepack included) into a temp directory,
+ * and runs every entry scenario in an isolated profile against the scripted
+ * loopback provider. The first run needs the network: the host provisions its
+ * SDK and installs the tarball's registry dependencies. Any failed
+ * expectation, or any host error, exits 1.
  */
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -32,6 +33,7 @@ import { EXA_SCENARIOS } from "./opencode-host/scenarios-exa.ts";
 import { BABYSIT_SCENARIOS } from "./opencode-host/scenarios-babysit.ts";
 import { CLI_SCENARIOS } from "./opencode-host/scenarios-cli.ts";
 import { STATUS_SCENARIOS } from "./opencode-host/scenarios-status.ts";
+import { PACKAGE_SCENARIOS } from "./opencode-host/scenarios-package.ts";
 
 const ALL_SCENARIOS = [
   ...ENTRY_SCENARIOS,
@@ -43,6 +45,7 @@ const ALL_SCENARIOS = [
   ...BABYSIT_SCENARIOS,
   ...CLI_SCENARIOS,
   ...STATUS_SCENARIOS,
+  ...PACKAGE_SCENARIOS,
 ];
 
 /** The scenarios named in `ids`, or every one; an unknown id is an error, not an empty run. */
@@ -70,7 +73,7 @@ async function main(ids: readonly string[]): Promise<number> {
   mkdirSync(cacheRoot, { recursive: true });
   const work = mkdtempSync(join(tmpdir(), "toolu-entry-pack-"));
   try {
-    const tarball = await packTarball(work);
+    const tarball = packTarball(work);
     const failed = await runAll({ bin: host.bin, cacheRoot, tarball }, scenarios);
     process.stdout.write(
       `opencode-entry-smoke: ${scenarios.length - failed}/${scenarios.length} pass on opencode-ai@${host.version}\n`,
