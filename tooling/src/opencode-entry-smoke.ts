@@ -3,7 +3,8 @@
  * Live OpenCode entry smoke (#336), plugin startup (#342), paths and helper
  * environment (#343), surface install and discovery (#345), leaf plugins,
  * pr-babysit's controller and OpenCode fixer (#357), CLI management (#360), the
- * statusline status skill (#359), and the clean npm install (#361):
+ * statusline status skill (#359), the clean npm install (#361), and the install
+ * and migration docs run verbatim (#363):
  * `bun run smoke:opencode-entry [<scenario id>…]`; ids narrow the run.
  *
  * Resolves the pinned CLI the same way as `probe:opencode-host`, packs
@@ -32,6 +33,7 @@ import { BROWSER_SCENARIOS } from "./opencode-host/scenarios-browser.ts";
 import { EXA_SCENARIOS } from "./opencode-host/scenarios-exa.ts";
 import { BABYSIT_SCENARIOS } from "./opencode-host/scenarios-babysit.ts";
 import { CLI_SCENARIOS } from "./opencode-host/scenarios-cli.ts";
+import { DOCS_SCENARIOS } from "./opencode-host/scenarios-docs.ts";
 import { STATUS_SCENARIOS } from "./opencode-host/scenarios-status.ts";
 import { PACKAGE_SCENARIOS } from "./opencode-host/scenarios-package.ts";
 
@@ -44,6 +46,7 @@ const ALL_SCENARIOS = [
   ...EXA_SCENARIOS,
   ...BABYSIT_SCENARIOS,
   ...CLI_SCENARIOS,
+  ...DOCS_SCENARIOS,
   ...STATUS_SCENARIOS,
   ...PACKAGE_SCENARIOS,
 ];
