@@ -62,6 +62,8 @@ docs rewrite → doc-block runner and live `docs.*` scenarios → hermetic doc c
     "paths": [
       "tooling/src/opencode-host/doc-commands.ts",
       "tooling/src/opencode-host/scenarios-docs.ts",
+      "tooling/src/opencode-host/scenarios-docs-migration.ts",
+      "tooling/src/opencode-host/scenarios-docs-refusals.ts",
       "tooling/src/opencode-host/scenarios-cli.ts",
       "tooling/src/opencode-host/__tests__/doc-commands.test.ts",
       "tooling/src/opencode-acceptance/families.ts",
@@ -253,3 +255,4 @@ docs rewrite → doc-block runner and live `docs.*` scenarios → hermetic doc c
   - the new `docs.migration-refusals` check proves the exit-1 and exit-2 paths leave user files unchanged, and S4/S7 now run it;
   - the shims are single-quoted;
   - the renderer's branches have tests.
+- **Review round 2.** The quick start cleans up its scratch file even when a step fails. Backups are named by a path checksum and written atomically. The no-entry recovery commands became executable blocks, and `docs.migration-refusals` now runs them. The scenarios were split into three modules for the 300-line limit, and S2's `paths` list the new files.
