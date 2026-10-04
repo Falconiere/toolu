@@ -93,6 +93,47 @@ test.concurrent("status: OpenCode reports a not-ready startup with its cause", a
   expect(out).toContain("Quality gate: no recorded state\n");
 });
 
+test.concurrent("status: OpenCode labels every plugin and selection shape", async () => {
+  using sb = createSandbox();
+  repo(sb.project);
+  recordAt(
+    sb,
+    JSON.stringify({
+      version: 1,
+      written: WRITTEN,
+      project: sb.project,
+      status: "ready",
+      selection: "default",
+      plugins: [{ name: "toolu", entries: [], artifacts: 0 }],
+      notes: [],
+    }),
+  );
+  const out = await opencode(sb);
+  expect(out).toContain(
+    "\ntoolu: ready — 1 plugins (all installed plugins), 0 startup artifacts\nPlugins: toolu\nStartup record: ",
+  );
+  expect(out).not.toContain("Startup notes:");
+});
+
+test.concurrent("status: OpenCode says so when a not-ready record carries no reason", async () => {
+  using sb = createSandbox();
+  repo(sb.project);
+  recordAt(
+    sb,
+    JSON.stringify({
+      version: 1,
+      written: WRITTEN,
+      project: sb.project,
+      status: "not-ready",
+      plugins: [],
+      notes: [],
+    }),
+  );
+  expect(await opencode(sb)).toContain(
+    "\ntoolu: not ready — no reason recorded; every tool call stays denied until OpenCode restarts with the cause fixed\n",
+  );
+});
+
 test.concurrent("status: OpenCode names a missing record and how to create it", async () => {
   using sb = createSandbox();
   repo(sb.project);
