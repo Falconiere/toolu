@@ -17,7 +17,7 @@ runCli(() => {
   );
   const host = flag(flags, "--host");
   const itemsFile = flag(flags, "--items");
-  if (!host) fail("usage", "route-fix.js: --host claude|codex required");
+  if (!host) fail("usage", "route-fix.js: --host claude|codex|opencode required");
   if (!itemsFile) fail("usage", "route-fix.js: --items required");
   return routeFix({
     itemsFile,

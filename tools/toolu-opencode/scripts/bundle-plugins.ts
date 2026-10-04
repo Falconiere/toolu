@@ -24,6 +24,42 @@ function copyDirectory(source: string, target: string, accept: (name: string) =>
   }
 }
 
+/** The files beyond manifests and hook bundles that a plugin's shipped code reads at runtime. */
+function stagePluginExtras(plugin: string, source: string, target: string): void {
+  if (plugin === "pr-babysit") {
+    // babysit-dispatch-fix.js renders each fixer's brief from this template.
+    const brief = join("skills", "babysit", "references", "fixer-brief.md");
+    copy(join(source, brief), join(target, brief));
+  }
+  if (plugin === "toolu") {
+    copyDirectory(
+      join(source, "settings"),
+      join(target, "settings"),
+      (name) => !/\.(sh|bash|bats)$/.test(name),
+    );
+    for (const name of readdirSync(join(source, "scripts"))) {
+      if (/^debug-[a-z]+\.ts$/.test(name)) {
+        copy(join(source, "scripts", name), join(target, "scripts", name));
+      }
+    }
+  }
+  // The orchestrator skill runs these through $TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR,
+  // and launch-issue.ts renders the worker brief from the references.
+  if (plugin === "epic-orchestrator") {
+    for (const item of readdirSync(join(source, "scripts"), { withFileTypes: true })) {
+      const from = join(source, "scripts", item.name);
+      const to = join(target, "scripts", item.name);
+      if (item.isFile() && item.name.endsWith(".ts")) copy(from, to);
+      else if (item.isDirectory() && item.name !== "__tests__" && item.name !== "fixtures")
+        copyDirectory(from, to, (name) => name.endsWith(".ts"));
+    }
+    const references = "skills/epic-orchestrator/references";
+    copyDirectory(join(source, references), join(target, references), (name) =>
+      name.endsWith(".md"),
+    );
+  }
+}
+
 export function stagePlugins(sourceDirectory: string, outputDirectory: string): number {
   const sourceRoot = resolve(sourceDirectory);
   const destination = resolve(outputDirectory);
@@ -55,33 +91,7 @@ export function stagePlugins(sourceDirectory: string, outputDirectory: string): 
     copyDirectory(join(hooks, "docs"), join(target, "hooks", "docs"), (name) =>
       name.endsWith(".md"),
     );
-    if (entry.name === "toolu") {
-      copyDirectory(
-        join(source, "settings"),
-        join(target, "settings"),
-        (name) => !/\.(sh|bash|bats)$/.test(name),
-      );
-      for (const name of readdirSync(join(source, "scripts"))) {
-        if (/^debug-[a-z]+\.ts$/.test(name)) {
-          copy(join(source, "scripts", name), join(target, "scripts", name));
-        }
-      }
-    }
-    // The orchestrator skill runs these through $TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR,
-    // and launch-issue.ts renders the worker brief from the references.
-    if (entry.name === "epic-orchestrator") {
-      for (const item of readdirSync(join(source, "scripts"), { withFileTypes: true })) {
-        const from = join(source, "scripts", item.name);
-        const to = join(target, "scripts", item.name);
-        if (item.isFile() && item.name.endsWith(".ts")) copy(from, to);
-        else if (item.isDirectory() && item.name !== "__tests__" && item.name !== "fixtures")
-          copyDirectory(from, to, (name) => name.endsWith(".ts"));
-      }
-      const references = "skills/epic-orchestrator/references";
-      copyDirectory(join(source, references), join(target, references), (name) =>
-        name.endsWith(".md"),
-      );
-    }
+    stagePluginExtras(entry.name, source, target);
     count++;
   }
   return count;

@@ -203,9 +203,9 @@ The matrix counts source Markdown. The generated OpenCode catalog excludes the C
 - **pr-babysit** (owner OP-23 (#357))
   - **tools** — Tick, collect, reply, resolve and record bundles run through bash. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-23 (#357), OP-09 (#343).
   - **startup** — SessionStart checks that toolu is installed. `plugin init + experimental.chat.system.transform` (hook): supported; evidence `load.local-file`, `context.system`. Owner: OP-23 (#357), OP-08 (#342).
-  - **task** — Fixes are dispatched to fixer agents. `task tool + child sessions` (tool): supported; evidence `deny.task-child`. Owner: OP-23 (#357).
+  - **task** — Fixes are dispatched to fixer agents: an opencode run subprocess per group, or inline task subagents. `task tool + child sessions` (tool): supported; evidence `deny.task-child`. Owner: OP-23 (#357).
   - **surfaces** — 1 skills, 1 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345), OP-23 (#357).
-  - **note** — Tick scheduling: the documented plugin API has no cron or loop primitive, so babysit ticks need a host-native scheduler or an external loop. Owner: OP-23 (#357).
+  - **note** — Tick scheduling: the documented plugin API has no cron or loop primitive, so the OpenCode controller runs bounded ticks in the invoking turn (bash sleep of backoff.waitSeconds, at most 60 s) and resumes from the slot state file when invoked again. Owner: OP-23 (#357).
 - **python-quality** (owner OP-19 (#353))
   - **startup** — SessionStart registers the Python post-tools.d module. `plugin init (bootstrap registry)` (hook): supported; evidence `load.local-file`. Owner: OP-19 (#353), OP-08 (#342).
   - **postTool** — Post-edit Python quality checks reach the model and gate later commit/push. `tool.execute.after (append to output)` (hook): supported; evidence `post.feedback`, `post.bash-exit`. Owner: OP-19 (#353), OP-06 (#340).
