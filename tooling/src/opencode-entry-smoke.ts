@@ -33,7 +33,9 @@ import { BROWSER_SCENARIOS } from "./opencode-host/scenarios-browser.ts";
 import { EXA_SCENARIOS } from "./opencode-host/scenarios-exa.ts";
 import { BABYSIT_SCENARIOS } from "./opencode-host/scenarios-babysit.ts";
 import { CLI_SCENARIOS } from "./opencode-host/scenarios-cli.ts";
-import { DOCS_SCENARIOS } from "./opencode-host/scenarios-docs.ts";
+import { QUICKSTART_SCENARIOS } from "./opencode-host/scenarios-docs.ts";
+import { MIGRATION_SCENARIOS } from "./opencode-host/scenarios-docs-migration.ts";
+import { MIGRATION_REFUSAL_SCENARIOS } from "./opencode-host/scenarios-docs-refusals.ts";
 import { STATUS_SCENARIOS } from "./opencode-host/scenarios-status.ts";
 import { PACKAGE_SCENARIOS } from "./opencode-host/scenarios-package.ts";
 
@@ -46,7 +48,9 @@ const ALL_SCENARIOS = [
   ...EXA_SCENARIOS,
   ...BABYSIT_SCENARIOS,
   ...CLI_SCENARIOS,
-  ...DOCS_SCENARIOS,
+  ...QUICKSTART_SCENARIOS,
+  ...MIGRATION_SCENARIOS,
+  ...MIGRATION_REFUSAL_SCENARIOS,
   ...STATUS_SCENARIOS,
   ...PACKAGE_SCENARIOS,
 ];

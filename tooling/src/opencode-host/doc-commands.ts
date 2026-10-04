@@ -9,13 +9,17 @@
  * doc can never reach an unpinned network package unnoticed. Everything else
  * is the reader's own shell.
  */
-import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, join } from "node:path";
 import { run, type RunResult } from "@toolu/conformance/harness/spawn";
 import { cliBundle } from "./scenarios-cli.ts";
-import { npmSpec, type EntryContext } from "./scenarios-entry.ts";
+import { ROOT, npmSpec, type EntryContext } from "./scenarios-entry.ts";
 import { ContractError } from "./schema.ts";
 import type { ProbeSession } from "./session.ts";
+
+export const INSTALL_DOC = join(ROOT, "docs/opencode.md");
+export const MIGRATION_DOC = join(ROOT, "docs/opencode-migration.md");
+export const PACKAGE = "@toolu/opencode";
 
 /** The `npx` shim's exit for any package other than `@toolu/plugins`. */
 export const NPX_REFUSED_EXIT = 97;
@@ -109,4 +113,19 @@ export async function runDocBlock(
     shims,
     env: { ...s.env, TOOLU_OPENCODE_PACKAGE: npmSpec(ctx.tarball) },
   });
+}
+
+/** The named block of a doc file. */
+export function block(doc: string, name: string): string {
+  return docBlock(readFileSync(doc, "utf8"), name);
+}
+
+/** The session's global OpenCode config directory. */
+export function globalDir(s: ProbeSession): string {
+  return join(s.sb.home, ".config/opencode");
+}
+
+/** The serialized `plugin` entries that name toolu's package. */
+export function tooluEntries(merged: readonly string[]): string[] {
+  return merged.filter((entry) => entry.includes(PACKAGE));
 }

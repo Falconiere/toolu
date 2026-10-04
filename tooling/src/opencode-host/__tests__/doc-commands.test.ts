@@ -80,7 +80,7 @@ test.concurrent("the shims redirect only @toolu/plugins and opencode, and a fail
   expect(piped.stdout).not.toContain("unreachable");
 });
 
-test.concurrent("shim targets with shell metacharacters run as literal paths", async () => {
+test.concurrent("shim targets with shell metacharacters run verbatim", async () => {
   using sb = createSandbox({});
   // A directory whose name would expand or break inside double quotes.
   const odd = sb.path("we$HOME`id` 'dir");

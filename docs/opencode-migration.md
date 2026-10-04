@@ -23,7 +23,7 @@ After the rollback block, every seeded file must match its original byte for byt
 - a clone-only setup with no entry, which must exit `1`;
 - a package configured in both scopes, which must exit `2`.
 
-In both cases the block must stop with every user file unchanged.
+In both cases the block must stop with every user file unchanged. For the clone-only setup, the check then runs the documented [no-entry step](#no-entry) and the migrate block again.
 
 ## What changes
 
@@ -53,7 +53,7 @@ In both cases the block must stop with every user file unchanged.
 
 ## Before you start
 
-1. Install the pinned host. Both `@opencode/cli` and `opencode-ai` install an `opencode` command, and npm will not overwrite one package's command with another's. Run `npm uninstall -g @opencode/cli` first, then `npm install -g opencode-ai@1.18.34`. Afterwards, `opencode --version` must print `1.18.34`.
+1. Install the pinned host. Both packages declare an `opencode` command (`npm view @opencode/cli@2.0.12 bin`, `npm view opencode-ai@1.18.34 bin`), and a global npm install fails with `EEXIST` rather than replace another package's command unless you pass `--force`. Run `npm uninstall -g @opencode/cli` first, then `npm install -g opencode-ai@1.18.34`. Afterwards, `opencode --version` must print `1.18.34`.
 2. Run the block from each project where you used toolu. The global config is backed up and migrated on the first run. Later runs keep that first backup and only back up and clean the project.
 3. If the package is configured in both your global and project config, add `--scope user` or `--scope project` to `update`. Without it, the CLI exits `2` and writes nothing.
 
@@ -65,10 +65,10 @@ In both cases the block must stop with every user file unchanged.
 test "$(opencode --version)" = 1.18.34
 config="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
 backup="$HOME/toolu-opencode-v2-backup"
-project="$backup/projects/$(printf %s "$PWD" | tr '/ ' '__').tgz"
+project="$backup/projects/$(printf %s "$PWD" | cksum | cut -d' ' -f1)-$(basename "$PWD").tgz"
 (umask 077 && mkdir -p "$backup/projects")
-[ -e "$backup/global.tgz" ] || [ ! -d "$config" ] || (umask 077 && tar -czf "$backup/global.tgz" --exclude node_modules -C "$config" .)
-[ -e "$project" ] || [ ! -d .opencode ] || (umask 077 && tar -czf "$project" --exclude node_modules --exclude .opencode/tmp --exclude .opencode/toolu/state .opencode)
+[ -e "$backup/global.tgz" ] || [ ! -d "$config" ] || (umask 077 && tar -czf "$backup/global.tgz.part" --exclude node_modules -C "$config" . && mv "$backup/global.tgz.part" "$backup/global.tgz")
+[ -e "$project" ] || [ ! -d .opencode ] || (umask 077 && tar -czf "$project.part" --exclude node_modules --exclude .opencode/tmp --exclude .opencode/toolu/state .opencode && mv "$project.part" "$project")
 npx @toolu/plugins update --host opencode
 rm -f .opencode/plugins/toolu.ts
 [ ! -f .opencode/package.json ] || (cd .opencode && npm pkg delete "dependencies.@opencode/plugin" "dependencies.@toolu/opencode" "dependencies.@toolu/core")
@@ -77,16 +77,40 @@ npx @toolu/plugins list --host opencode
 
 <!-- opencode-doc:migrate:end -->
 
-- **Backups.** They go under `~/toolu-opencode-v2-backup/`, readable only by you, because a global config can hold provider keys. A backup that already exists is never overwritten, so running the block again cannot replace the V2 state with migrated state. `node_modules`, toolu's data root and gate state are left out.
+- **Backups.**
+  - They go under `~/toolu-opencode-v2-backup/`, readable only by you, because a global config can hold provider keys.
+  - Each project's backup is named after a checksum of its path plus its directory name.
+  - An archive becomes final only once `tar` succeeds. A complete backup is never overwritten, so running the block again cannot replace the V2 state with migrated state.
+  - `node_modules`, toolu's data root and gate state are left out.
 - **`update`.** It rewrites every `@toolu/opencode` entry, the V2 one included, to this release, and leaves your selection alone. When it fails, the block stops before changing anything else:
-  - **Exit `1`, not configured:** only the clone shim loaded toolu, so there is no entry to update. Add one, then run the block again:
-    - with a selection file, `npx @toolu/plugins install toolu --host opencode` keeps it (adding `toolu` if it is missing);
-    - with no selection file, `npx @toolu/plugins install --host opencode` enables every plugin, as before.
-
-    A bare `install` with an existing selection would enable every plugin in it.
+  - **Exit `1`, not configured:** only the clone shim loaded toolu, so there is no entry to update. Add one with the [no-entry step](#no-entry) below, then run the block again.
   - **Exit `2`:** the package is configured in both your global and project config. Add `--scope user` or `--scope project` to the `update` line.
 - **`list`** shows the entry OpenCode will load and the enabled plugins.
 - **Restart OpenCode.** The host log (`opencode --print-logs`) shows one `toolu: ready (…)` line, and the [quick start](opencode.md#quick-start) check refuses the scratch `.env.toolu-check` write.
+
+### No entry
+
+With a selection file (`.opencode/toolu/plugins.json` or the global `toolu/plugins.json`), this adds the package and keeps your selection, adding `toolu` to it only if it is missing:
+
+<!-- opencode-doc:no-entry-selection:start -->
+
+```bash
+npx @toolu/plugins install toolu --host opencode
+```
+
+<!-- opencode-doc:no-entry-selection:end -->
+
+With no selection file, this adds the package with every plugin enabled, as before:
+
+<!-- opencode-doc:no-entry-all:start -->
+
+```bash
+npx @toolu/plugins install --host opencode
+```
+
+<!-- opencode-doc:no-entry-all:end -->
+
+Do not use the second form with an existing selection: a bare `install` enables every plugin in it. `docs.migration-refusals` runs each form on a clone-only setup, then the migrate block again. It checks that the block then finishes, that the selection is as described, and that the first backup is kept.
 
 ## After migrating
 
@@ -106,7 +130,7 @@ Run this from the same project. It restores every file the backups hold and dele
 ```bash
 config="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
 backup="$HOME/toolu-opencode-v2-backup"
-project="$backup/projects/$(printf %s "$PWD" | tr '/ ' '__').tgz"
+project="$backup/projects/$(printf %s "$PWD" | cksum | cut -d' ' -f1)-$(basename "$PWD").tgz"
 [ ! -f "$backup/global.tgz" ] || tar -xzf "$backup/global.tgz" -C "$config"
 [ ! -f "$project" ] || tar -xzf "$project"
 rm -rf .opencode/toolu/state

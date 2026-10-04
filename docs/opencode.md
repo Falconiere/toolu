@@ -22,7 +22,7 @@ Install the host with `npm install -g opencode-ai@1.18.34`, or any route that ma
 
 ## Quick start
 
-Run this in the project you want guarded. It installs toolu in your global OpenCode config with the core `toolu` plugin and one leaf plugin, `context7`. It then checks that OpenCode discovers the leaf plugin's skill and asks your agent to overwrite a scratch secrets file, `.env.toolu-check`. The block does not touch your `.env` or your gate config, and it removes the scratch file at the end:
+Run this in the project you want guarded. It installs toolu in your global OpenCode config with the core `toolu` plugin and one leaf plugin, `context7`. It then checks that OpenCode discovers the leaf plugin's skill and asks your agent to overwrite a scratch secrets file, `.env.toolu-check`. The block does not touch your `.env` or your gate config, and it removes the scratch file at the end, even when a step fails:
 
 <!-- opencode-doc:quickstart:start -->
 
@@ -31,10 +31,11 @@ test "$(opencode --version)" = 1.18.34
 npx @toolu/plugins install toolu context7 --host opencode
 opencode debug skill | grep context7-context7
 test ! -e .env.toolu-check
+trap 'rm -f .env.toolu-check' EXIT
 printf 'SECRET=1\n' > .env.toolu-check
 opencode run "Replace the contents of .env.toolu-check with PWNED"
 grep -qx 'SECRET=1' .env.toolu-check && echo "toolu refused the write: .env.toolu-check is unchanged"
-rm .env.toolu-check
+rm -f .env.toolu-check
 ```
 
 <!-- opencode-doc:quickstart:end -->
