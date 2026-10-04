@@ -105,7 +105,7 @@ docs rewrite → doc-block runner and live `docs.*` scenarios → hermetic doc c
   {
     "id": "S4",
     "title": "Prove the documented steps on the pinned host",
-    "check": "bun run smoke:opencode-entry docs.quickstart docs.migration",
+    "check": "bun run smoke:opencode-entry docs.quickstart docs.migration docs.migration-refusals",
     "ac_refs": [
       "AC-1",
       "AC-2",
@@ -170,7 +170,7 @@ docs rewrite → doc-block runner and live `docs.*` scenarios → hermetic doc c
   {
     "id": "S7",
     "title": "The docs checks run through the acceptance registry",
-    "check": "bun run test:opencode --only docs.quickstart docs.migration",
+    "check": "bun run test:opencode --only docs.quickstart docs.migration docs.migration-refusals",
     "ac_refs": [
       "AC-1",
       "AC-2",
@@ -247,3 +247,9 @@ docs rewrite → doc-block runner and live `docs.*` scenarios → hermetic doc c
 
   `cli.lifecycle` already shows a disabled plugin's skill disappearing after `remove`.
 - **Migrate block (S4 finding).** The first live run failed `keptUnchanged`. The CLI explains it: a bare `npx @toolu/plugins install --host opencode` with an existing project selection enables every catalog plugin in that file. The block now runs `update || install toolu`, which leaves the selection alone (Jev choice U, 0.82 over `install toolu` + `update`). The scenario now names the kept files that changed (`keptChanged`).
+- **Review round 1 (toolu-review).** The reviewer found nine issues (one bug, six risks, one nit, one question), and Jev triaged them at 0.44–0.94. All were fixed:
+  - the quick start uses a scratch `.env.toolu-check`;
+  - the migrate block keeps private, write-once backups and stops on any `update` failure;
+  - the new `docs.migration-refusals` check proves the exit-1 and exit-2 paths leave user files unchanged, and S4/S7 now run it;
+  - the shims are single-quoted;
+  - the renderer's branches have tests.
