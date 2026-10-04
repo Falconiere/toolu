@@ -144,6 +144,11 @@ in `<resource-root>/policy.json`, for example:
 { "maxAgents": 3, "maxJobs": 1, "hosts": { "claude": 1, "codex": 2 } }
 ```
 
+Add `"pressure": false` to skip pressure sampling and holds on a host where
+sampling is unreliable. Capacity limits still apply. Every process sharing the
+resource root reads this file, so the override reaches the orchestrator and
+every worker.
+
 Launch writes a resource binding in the worktree's Git directory. Plan-ledger
 checks acquire job capacity automatically. Run other expensive tests through
 `bun <plugin>/scripts/job.ts -- <command> <args...>` from that worktree.
@@ -158,8 +163,11 @@ Resource sampling runs at most once per 30 seconds. Load above 1.5 times effecti
 CPUs, less than 10% available memory, or Linux steal above 25% starts a pressure
 window. Sixty seconds of pressure holds new work. Recovery requires 120 seconds
 below 0.8 times effective CPUs, above 20% available memory and below 10% steal.
-Existing useful jobs keep running. Non-Linux sampling uses load/memory without
-claiming to measure steal. Hypervisor starvation is distinct from guest work.
+Existing useful jobs keep running. Available memory is `MemAvailable` on Linux
+and free + inactive + speculative pages from `vm_stat` on macOS (Node's
+`os.freemem()` there omits reclaimable cache), falling back to `os.freemem()`
+when `vm_stat` fails or on other platforms. Non-Linux sampling uses load/memory
+without claiming to measure steal. Hypervisor starvation is distinct from guest work.
 
 Lifecycle operations verify host, pane and worktree. Shutdown distinguishes turn
 cancellation from background jobs: Codex uses `--no-daemon` and `/stop` before `/exit`; OpenCode
