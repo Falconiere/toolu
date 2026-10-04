@@ -1,6 +1,6 @@
 {
   "name": "epic-orchestrator",
-  "version": "7.8.0",
+  "version": "7.9.0",
   "description": "Drive a GitHub, Jira, or Linear epic to merged PRs: dependency graph, herdr worktrees, parallel Claude Code / Codex / Cursor Agent / OpenCode workers routed by Jev complexity, merge gate, rate-limit and progress guardrails.",
   "author": {
     "name": "Falconiere Barbosa",
