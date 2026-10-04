@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.9.0](https://github.com/Falconiere/toolu/compare/v7.8.0...v7.9.0) (2026-10-04)
+
+
+### Features
+
+* **epic-orchestrator:** run OpenCode workers with native skill routing and isolated worktrees ([#388](https://github.com/Falconiere/toolu/issues/388)) ([b7638a0](https://github.com/Falconiere/toolu/commit/b7638a01c76a0090d6341975e6b949533c67c538))
+
 ## [7.8.0](https://github.com/Falconiere/toolu/compare/v7.7.2...v7.8.0) (2026-10-03)
 
 
