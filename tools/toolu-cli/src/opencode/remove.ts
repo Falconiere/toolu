@@ -35,7 +35,10 @@ export function packageScopes(
   return scopes;
 }
 
-/** Drops every toolu entry; an emptied array loses its key, since `[]` resets the host's list. */
+/**
+ * Drops every toolu entry and keeps other packages' entries. An array left empty
+ * loses its key instead, since `[]` resets the host's list.
+ */
 function withoutEntries(file: ConfigFile): string {
   const text = file.text ?? "";
   const entries = tooluEntries(file);
@@ -46,7 +49,11 @@ function withoutEntries(file: ConfigFile): string {
     .reduce((current, entry) => removeJsonc(current, "plugin", entry.index), text);
 }
 
-/** A lower-priority global file whose list applies again once `file` loses its key. */
+/**
+ * A lower-priority global file whose list applies again once `file` loses its
+ * key, which happens only when toolu entries were all it held; while other
+ * entries remain, `file` keeps shadowing lower files.
+ */
 function resurfaced(state: OpencodeState, file: ConfigFile): string {
   const index = state.global.findIndex((f) => f.path === file.path);
   if (index <= 0 || tooluEntries(file).length !== pluginArray(file)?.length) return "";
@@ -103,6 +110,11 @@ function removable(
   }
 }
 
+/**
+ * Edits the selection `@toolu/opencode` reads: the project's whenever it exists,
+ * wherever the package entry lives, else the global one. No selection file means
+ * every plugin is on.
+ */
 function removeLeaves(
   state: OpencodeState,
   marketplace: Marketplace,

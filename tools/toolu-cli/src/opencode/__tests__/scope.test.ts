@@ -66,6 +66,20 @@ describe("failures write nothing", () => {
     expect(p.read(p.global("toolu/plugins.json"))).toBe("{ nope");
   });
 
+  test("remove without --yes exits 3", () => {
+    using p = profile();
+    const config = `{ "plugin": ["${TARGET}"] }\n`;
+    p.write(p.global("opencode.json"), config);
+    p.write(p.global("toolu/plugins.json"), selection(["jev"]));
+    for (const name of ["jev", "toolu"]) {
+      const run = toolu(p, ["remove", name]);
+      expect(run.code).toBe(3);
+      expect(run.stderr).toContain("remove requires --yes");
+    }
+    expect(p.read(p.global("opencode.json"))).toBe(config);
+    expect(p.read(p.global("toolu/plugins.json"))).toBe(selection(["jev"]));
+  });
+
   test("an invalid TOOLU_OPENCODE_PACKAGE is a usage error", () => {
     using p = profile();
     expect(toolu(p, ["install"], { TOOLU_OPENCODE_PACKAGE: "evil@1.0.0" }).code).toBe(2);

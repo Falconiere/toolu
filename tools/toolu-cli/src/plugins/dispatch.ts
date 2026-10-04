@@ -47,7 +47,9 @@ interface DispatchContext {
 }
 
 function opencodeContext(marketplace: Marketplace, context: DispatchContext): OpencodeContext {
-  if (context.version === undefined) throw new Error("the CLI version is required for OpenCode");
+  if (context.version === undefined) {
+    throw new CliError(EXIT.failed, "the CLI version is required for OpenCode");
+  }
   return {
     marketplace,
     env: context.env ?? process.env,
