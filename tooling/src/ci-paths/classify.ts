@@ -29,7 +29,7 @@ function versionLine(versionKeys: readonly string[]): RegExp {
 }
 
 /** Whether `file` is a release-please version bump the gates need not see. */
-export function isReleaseOnly(config: CiPaths, file: ChangedFile): boolean {
+function isReleaseOnly(config: CiPaths, file: ChangedFile): boolean {
   if (!matchesAny(config.releaseOnly.paths, file.path)) return false;
   if (file.path === CHANGELOG) return true;
   const pattern = versionLine(config.releaseOnly.versionKeys);

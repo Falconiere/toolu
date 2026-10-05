@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { join, resolve } from "node:path";
 import { run } from "@toolu/conformance/harness/spawn";
 
-// The `typescript` aggregate (#458) run as CI runs it: the real script, the real
+// The `typescript` aggregate (#458) run the way CI runs it: the real script, the real
 // data file, and NEEDS in GitHub's toJSON(needs) shape.
 
 const ROOT = resolve(import.meta.dir, "../../../..");

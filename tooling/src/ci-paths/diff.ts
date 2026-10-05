@@ -8,7 +8,7 @@ import { z } from "zod";
 import type { ChangedFile } from "./classify.ts";
 import { type CiPaths, matchesAny } from "./config.ts";
 
-export type DiffRange = { kind: "range"; spec: string } | { kind: "all"; reason: string };
+type DiffRange = { kind: "range"; spec: string } | { kind: "all"; reason: string };
 
 const Sha = z.string().regex(/^[0-9a-f]{40}$/);
 const ZERO_SHA = /^0{40}$/;

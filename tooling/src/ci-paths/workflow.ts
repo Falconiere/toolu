@@ -1,4 +1,4 @@
-/** GitHub workflow files as the CI path checks read them (#458). */
+/** GitHub workflow files, parsed for the CI path checks (#458). */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
@@ -42,13 +42,13 @@ export function readWorkflows(dir: string): { workflows: WorkflowFile[]; errors:
   return { workflows, errors };
 }
 
-/** A job's `needs` as a list. */
+/** A job's `needs`, always a list. */
 export function needsOf(job: Job): string[] {
   if (job.needs === undefined) return [];
   return typeof job.needs === "string" ? [job.needs] : job.needs;
 }
 
-/** A job's `if` as text (`""` when absent). */
+/** A job's `if` text (`""` when absent). */
 export function conditionOf(job: Job): string {
   return job.if === undefined ? "" : String(job.if);
 }

@@ -23,7 +23,7 @@ const WorkflowSchema = z.strictObject({
   jobs: z.record(z.string().min(1), z.string().min(1)),
 });
 
-export const CiPathsSchema = z.strictObject({
+const CiPathsSchema = z.strictObject({
   groups: z.record(z.string().regex(/^[a-z][a-z0-9_]*$/), Globs),
   runEverything: Globs,
   releaseOnly: z.strictObject({ paths: Globs, versionKeys: z.array(z.string().min(1)).min(1) }),

@@ -16,9 +16,9 @@ export const NeedsSchema = z.record(
     outputs: z.record(z.string(), z.string()).optional(),
   }),
 );
-export type Needs = z.infer<typeof NeedsSchema>;
+type Needs = z.infer<typeof NeedsSchema>;
 
-export type Verdict = { ok: boolean; lines: string[] };
+type Verdict = { ok: boolean; lines: string[] };
 
 const CHANGES = "changes";
 
