@@ -31,7 +31,13 @@ const SUCCESS: Job = { result: "success", outputs: {} };
 
 /** Runs the aggregate; the Rust jobs default to skipped (their groups are off unless a test turns them on). */
 async function aggregate(needs: Record<string, Job>, workflow = "tests.yml") {
-  const all = { rust: SKIPPED, "rust-musl": SKIPPED, "rust-conformance": SKIPPED, ...needs };
+  const all = {
+    rust: SKIPPED,
+    "rust-musl": SKIPPED,
+    "rust-conformance": SKIPPED,
+    "hook-bench": SKIPPED,
+    ...needs,
+  };
   const res = await run([process.execPath, SCRIPT, workflow], {
     cwd: ROOT,
     env: { NEEDS: JSON.stringify(all), CI_CHANGES_ROOT: ROOT },
@@ -191,14 +197,17 @@ test.concurrent("the Rust conformance leg skipped while ports is on fails the ag
     opencode: SUCCESS,
     docs: SKIPPED,
     "rust-conformance": SUCCESS,
+    "hook-bench": SUCCESS,
   });
   expect(passed.exitCode).toBe(0);
   expect(passed.out).toContain("rust-conformance (ports on): success");
+  expect(passed.out).toContain("hook-bench (ports on): success");
   const skipped = await aggregate({
     changes: ports,
     gate: SUCCESS,
     opencode: SUCCESS,
     docs: SKIPPED,
+    "hook-bench": SUCCESS,
   });
   expect(skipped).toEqual({
     exitCode: 1,

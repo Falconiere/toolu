@@ -76,6 +76,7 @@ test.concurrent("the required typescript status needs every gated job, always ru
     "changes",
     "docs",
     "gate",
+    "hook-bench",
     "opencode",
     "rust",
     "rust-conformance",

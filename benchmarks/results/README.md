@@ -60,3 +60,24 @@ per-mechanism deltas.
 `token_stats` / `cost_stats` (whole-session) — holding the full `{mean,stddev,n}`
 for each measured quantity. These are informational; the required schema above is
 the contract.
+
+## Hook resource results
+
+`hook-resources-<impl>-<platform>-<arch>-<ci|local>-<date>.json` files come from
+`bun run bench:hooks --out` (#410). The committed `bun` baselines are the
+`hook-bench` CI job's artifacts from `ubuntu-latest` and `macos-latest`. Schema
+`toolu.hook-resources/v1`:
+
+```
+schema, provenance{date,commit,platform,arch,cpu,bun,runner,runs,warmup,elapsedMs,
+                   floor{maxRssBytes,cpuUs,wallUs}},
+entries[{entry,event,implementation,maxRssBytes{p50,p90},cpuUs{p50,p90},wallUs{p50,p90}}]
+```
+
+CPU is user plus system time of the spawn's whole process tree, the `sh` launcher
+included. `floor` is `/usr/bin/true` measured the same way. On Linux a child
+inherits the measurer's RSS high-water mark, so an RSS at the floor means "at
+most the floor". `hook-prototype-<date>.json` (`toolu.hook-prototype/v1`) records
+the single-binary prototype the hook budgets come from: its shape, dependency
+versions, hook and surface measurements. See
+[`docs/resource-budgets.md`](../../docs/resource-budgets.md).

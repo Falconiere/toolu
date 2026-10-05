@@ -23,6 +23,8 @@ license = "MIT"
 publish = false
 
 [workspace.dependencies]
+# getrusage for `cargo xtask measure`, without unsafe in the workspace.
+nix = { version = "0.31", default-features = false, features = ["resource"] }
 proc-macro2 = { version = "1", features = ["span-locations"] }
 regex = "1"
 serde = { version = "1", features = ["derive"] }

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "percentile": 50,
+  "entries": {
+    "toolu/post-tools": {
+      "maxRssMiB": 6,
+      "cpuMs": 10
+    },
+    "toolu/pre-tools": {
+      "maxRssMiB": 6,
+      "cpuMs": 5
+    }
+  }
+}

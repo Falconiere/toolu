@@ -1,0 +1,186 @@
+{
+  "version": 1,
+  "entries": {
+    "ast-grep/register": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "epic-orchestrator/check-deps": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "jev/session-start": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "jev/user-prompt-submit": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": "Summarise README.md in one sentence."
+      }
+    },
+    "pr-babysit/check-toolu": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "python-quality/check-toolu": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "python-quality/register": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "rust-quality/check-toolu": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "rust-quality/register": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "statusline/session-start": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "toolu-review/session-start": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "toolu/agent-tier": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "PreToolUse",
+        "tool_name": "Agent",
+        "tool_input": {
+          "description": "Find callers",
+          "prompt": "Find the callers of answer in src/app.ts.",
+          "subagent_type": "Explore"
+        }
+      }
+    },
+    "toolu/mcp-tools": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "PreToolUse",
+        "tool_name": "mcp__example__search",
+        "tool_input": {
+          "query": "hook budgets"
+        }
+      }
+    },
+    "toolu/post-tools": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "${PROJECT}/README.md",
+          "old_string": "hello",
+          "new_string": "hello, bench"
+        },
+        "tool_response": {
+          "filePath": "${PROJECT}/README.md",
+          "success": true
+        }
+      }
+    },
+    "toolu/pre-compact": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "PreCompact",
+        "trigger": "auto",
+        "custom_instructions": ""
+      }
+    },
+    "toolu/pre-tools": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "PreToolUse",
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        }
+      }
+    },
+    "toolu/session-start": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "toolu/user-prompt-submit": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": "Summarise README.md in one sentence."
+      }
+    },
+    "ts-quality/check-toolu": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "ts-quality/register": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    }
+  }
+}

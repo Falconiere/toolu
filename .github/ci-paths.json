@@ -54,6 +54,11 @@
     "ports": [
       "fixtures/rust-ported.json",
       "tooling/src/rust-conformance.ts",
+      "tooling/src/benchmarks/hook-resources.ts",
+      "tooling/src/benchmarks/lib/hook-*.ts",
+      "tooling/src/benchmarks/__tests__/hook-resources*.ts",
+      "benchmarks/cases/hooks/**",
+      "benchmarks/hook-budgets.json",
       "tools/toolu-conformance/**",
       "plugins/**",
       "packages/**",
@@ -89,7 +94,8 @@
         "docs": "docs",
         "rust": "rust",
         "rust-musl": "rust",
-        "rust-conformance": "ports"
+        "rust-conformance": "ports",
+        "hook-bench": "ports"
       }
     },
     "toolu-review.yml": {

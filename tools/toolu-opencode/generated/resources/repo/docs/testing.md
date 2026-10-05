@@ -63,6 +63,10 @@ Test files reach a bundle only through `entry-command`: `bundle-references.test.
 
 `fixtures/rust-ported.json` lists the ported entries, `{ "entries": ["<plugin>/<entry>", ...] }`, and a port adds its entry there. `bun run test:rust-conformance` reads it: an empty list is a no-op, otherwise it runs `cargo build --release --locked --bin toolu` (`CARGO` overrides the cargo executable), then `test:unit` and `test:conformance` with `TOOLU_IMPL=rust:<entries>`. CI runs it in the `rust-conformance` job, which installs the Rust toolchain only when the list is not empty.
 
+A port also has a resource budget ([#410](https://github.com/Falconiere/toolu/issues/410), [resource-budgets.md](resource-budgets.md)). `bun run bench:hooks --assert` measures every entry in `fixtures/rust-ported.json` as Rust and fails when one is over its p50 budget in `benchmarks/hook-budgets.json`. It also fails when a ported entry has no budget, so a port adds its budget there too. The `hook-bench` CI job runs it on Linux; macOS only reports.
+
+The bench and its end-to-end tests need the native measurer (`cargo xtask measure`), so they need the Rust toolchain. Test files named `*.native.test.ts` hold such tests: `test:unit` ignores them (`--path-ignore-patterns`), and the `hook-bench` job runs `tooling/src/benchmarks/__tests__/hook-resources.native.test.ts` before the bench.
+
 Epic-orchestrator's `report.test.ts` and `epic-watch.test.ts` test the TypeScript scripts' own behavior and stay as they are: #434 (the resident engine) and #435 (worker reports and actions) replace them with Rust black-box tests, so they have no `toolu epic` mapping here.
 
 ## Concurrency rule

@@ -106,6 +106,7 @@ test.concurrent("the Rust jobs run cargo xtask gate and both musl targets (#407 
     "rust",
     "rust-musl",
     "rust-conformance",
+    "hook-bench",
   ]);
   const Matrix = z.looseObject({
     strategy: z.looseObject({
@@ -153,4 +154,27 @@ test.concurrent("the Rust conformance leg reads the port list and no-ops when it
   expect(toolchain.find((step) => step.run === "rustup toolchain install")?.if).toBe(
     "steps.ports.outputs.count != '0'",
   );
+});
+
+test.concurrent("hook-bench measures on Linux and macOS and asserts budgets on Linux only (#410 AC-8)", () => {
+  const job = workflow("tests.yml").jobs["hook-bench"];
+  expect(job?.if).toBe("needs.changes.outputs.ports == 'true'");
+  expect(config.workflows["tests.yml"]?.jobs["hook-bench"]).toBe("ports");
+  for (const path of ["benchmarks/hook-budgets.json", "tooling/src/benchmarks/hook-resources.ts"]) {
+    expect(config.groups.ports).toContain(path);
+  }
+  const Matrix = z.looseObject({
+    strategy: z.looseObject({ matrix: z.looseObject({ os: z.array(z.string()) }) }),
+  });
+  expect(Matrix.parse(job).strategy.matrix.os).toEqual(["ubuntu-latest", "macos-latest"]);
+  const all = steps("tests.yml", "hook-bench");
+  const runs = all.map((step) => step.run ?? "");
+  expect(runs).toContain(
+    "bun test --timeout 180000 tooling/src/benchmarks/__tests__/hook-resources.native.test.ts",
+  );
+  const bench = runs.find((run) => run.includes("bun run bench:hooks"));
+  expect(bench).toContain('if [ "$RUNNER_OS" = "Linux" ]; then assert=--assert; fi');
+  expect(bench).toContain('--out "$RESULT" $assert');
+  expect(scripts["bench:hooks"]).toBe("bun run tooling/src/benchmarks/hook-resources.ts");
+  expect(JSON.stringify(all)).toContain("actions/upload-artifact@v4");
 });

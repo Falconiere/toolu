@@ -1,0 +1,172 @@
+{
+  "schema": "toolu.hook-prototype/v1",
+  "date": "2026-10-05",
+  "issue": 410,
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "AMD EPYC 9354P 32-Core Processor",
+    "kernel": "Linux 7.0.0-38-generic",
+    "cpus": 8,
+    "runner": "local",
+    "note": "shared epic host; the CI Linux runner's measurer floor is lower (2.97 MiB, 0.55 ms CPU)"
+  },
+  "prototype": {
+    "source": "out of tree (Rust outside a workspace member fails cargo xtask check-reach); the shape below is what was built",
+    "shape": [
+      "one binary `toolu`, clap 4 derive tree: global --json/--host/--config-dir/--quiet and 19 namespaces (hook, ledger, doctor, config, status, commands, serve, ts-quality, python-quality, rust-quality, ast-grep, jev, statusline, review, babysit, epic, plugins, brainstorm, delivery-flow) with 66 subcommands",
+      "`toolu hook <entry>` fast path: argv[1] == \"hook\" dispatches before the clap tree is built (PROTO_NO_FAST_PATH=1 forces the full tree for comparison)",
+      "every hook: stdin JSON via serde_json, user and project toolu.config.json, the pre-tools.d registry listing, the gate file and .git/HEAD from the toplevel found by walking up to .git",
+      "pre-tools: tool_input.command parsed by brush-parser",
+      "post-tools: gate file rewritten under an O_EXCL <file>.lock with tmp + rename",
+      "jev ask links ureq + rustls (not called on the hook path)",
+      "statusline render: payload, gate file and branch read, one line printed",
+      "epic serve: loopback TcpListener, one thread per connection, keep-alive HTTP/1.1, a 50-task JSON status body written in one write with TCP_NODELAY"
+    ],
+    "dependencies": {
+      "clap": "4.6.7",
+      "serde_json": "1.0.151",
+      "ureq": "3.4.2",
+      "rustls": "0.23.45",
+      "brush-parser": "0.3.0"
+    },
+    "profile": {
+      "lto": "fat",
+      "codegen-units": 1,
+      "strip": true,
+      "panic": "unwind"
+    },
+    "toolchain": "1.99.0"
+  },
+  "method": {
+    "hooks": "bun run bench:hooks --only toolu/pre-tools --only toolu/post-tools --runs 30 --warmup 3 with TOOLU_IMPL=rust:toolu/pre-tools,toolu/post-tools and TOOLU_RUST_BIN_DIR=<prototype>/target/release; the bench runs `/bin/sh -c 'exec \"$0\" \"$@\"' toolu hook <entry>` through cargo xtask measure",
+    "surfaces": "a scratch probe: `toolu --version` and `toolu statusline render` through cargo xtask measure (30 runs after 3 warm-up), the idle `toolu epic serve` VmRSS after 2 s, then 50 concurrent Bun fetch clients x 40 keep-alive requests (client-side latency, server VmHWM)",
+    "gate": "the `cargo xtask gate` step of the required rust jobs in the three #455-era CI runs (warm rust-cache)"
+  },
+  "measurerFloor": {
+    "maxRssBytes": 3731456,
+    "cpuUs": 930,
+    "wallUs": 1063
+  },
+  "binaryBytes": 2886624,
+  "hooks": {
+    "fastPath": {
+      "toolu/post-tools": {
+        "maxRssBytes": {
+          "p50": 3780608,
+          "p90": 3907584
+        },
+        "cpuUs": {
+          "p50": 2550,
+          "p90": 2990
+        },
+        "wallUs": {
+          "p50": 2676,
+          "p90": 3104
+        }
+      },
+      "toolu/pre-tools": {
+        "maxRssBytes": {
+          "p50": 3796992,
+          "p90": 3903488
+        },
+        "cpuUs": {
+          "p50": 2547,
+          "p90": 3067
+        },
+        "wallUs": {
+          "p50": 2713,
+          "p90": 3163
+        }
+      }
+    },
+    "fullClapTree": {
+      "toolu/post-tools": {
+        "maxRssBytes": {
+          "p50": 4124672,
+          "p90": 4222976
+        },
+        "cpuUs": {
+          "p50": 3815,
+          "p90": 4343
+        },
+        "wallUs": {
+          "p50": 3926,
+          "p90": 4628
+        }
+      },
+      "toolu/pre-tools": {
+        "maxRssBytes": {
+          "p50": 4218880,
+          "p90": 4345856
+        },
+        "cpuUs": {
+          "p50": 3437,
+          "p90": 4046
+        },
+        "wallUs": {
+          "p50": 3564,
+          "p90": 4194
+        }
+      }
+    }
+  },
+  "surfaces": {
+    "version": {
+      "wallUs": {
+        "p50": 2328,
+        "p90": 2729
+      },
+      "cpuUs": {
+        "p50": 2237,
+        "p90": 2636
+      },
+      "maxRssBytes": {
+        "p50": 3932160,
+        "p90": 4128768
+      }
+    },
+    "statuslineRender": {
+      "wallUs": {
+        "p50": 2643,
+        "p90": 3142
+      },
+      "cpuUs": {
+        "p50": 2530,
+        "p90": 3032
+      },
+      "maxRssBytes": {
+        "p50": 4063232,
+        "p90": 4194304
+      }
+    },
+    "idleRssBytes": 4079616,
+    "server50": {
+      "clients": 50,
+      "requestsPerClient": 40,
+      "latencyMs": {
+        "p50": 2.4456959999997707,
+        "p90": 4.418917999999849,
+        "p99": 12.820870999999897
+      },
+      "maxRssBytes": 10174464
+    }
+  },
+  "gateSeconds": {
+    "ubuntu-latest": [
+      40,
+      18,
+      21
+    ],
+    "macos-latest": [
+      66,
+      45,
+      35
+    ],
+    "runs": [
+      37355093119,
+      37352213680,
+      37284400415
+    ]
+  }
+}
