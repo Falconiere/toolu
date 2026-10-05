@@ -70,5 +70,5 @@ The committed baselines show what the Bun bundles cost on the CI runners. They a
 
 | Entry | Linux CI RSS / CPU (p50) | macOS CI RSS / CPU (p50) |
 |---|---|---|
-| `toolu/pre-tools` | 47.9 MiB / 89 ms | 37.3 MiB / 71 ms |
-| `toolu/post-tools` | 55.5 MiB / 160 ms | 45.7 MiB / 170 ms |
+| `toolu/pre-tools` | 48.2 MiB / 91 ms | 37.2 MiB / 57 ms |
+| `toolu/post-tools` | 55.6 MiB / 166 ms | 45.1 MiB / 120 ms |
