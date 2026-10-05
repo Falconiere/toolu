@@ -13,6 +13,7 @@ This file is the source of truth. Codex, Cursor, and Claude Code read it directl
 - **bun test** — TypeScript suites in colocated `__tests__/*.test.ts` spawn real bundles, scripts and repos through `@toolu/conformance/harness/*`: files in parallel, tests concurrent, each test owns its sandbox. See `docs/testing.md`.
 - **Bun** — the runtime for every host and plugin (1.4.x prerequisite; see `docs/runtime.md`). `bun.lock`. `bun run test` runs the TypeScript gate, including bundle drift, context budget, deterministic benchmarks, and the shell-analysis latency budget.
 - **`toolu` CLI** — `tools/toolu-cli`, a Node bundle published to npm as `@toolu/plugins` from its `npm/` folder; the workspace itself is private, so npx never mistakes it for the published package. Installs plugins across hosts by shelling out to each host's own plugin CLI, or for OpenCode by editing its documented config files. See `docs/cli.md`.
+- **Rust workspace** (epic #402) — root `Cargo.toml`, toolchain pinned in `rust-toolchain.toml` (1.99.0 with rustfmt and clippy). Core crates live in `crates/core/<layer>` (package `toolu-<layer>`), tooling in `crates/xtask`. `rustfmt.toml` uses two spaces per indentation level, no tabs, width 100. `[workspace.lints]` denies warnings and `unwrap`/`expect`/`panic!` outside tests (`clippy.toml` allows them in tests); the full rule set is #455. The gate is `cargo fmt --all --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, `cargo test --workspace --locked` and `cargo xtask check-layers`.
 
 ## Plugin layout
 
@@ -35,13 +36,13 @@ plugins/<name>/
   settings/                    # core only
 ```
 
-Root `package.json`, Bun workspace packages (`packages/toolu-core`, `tools/toolu-opencode`, `tools/toolu-conformance`, `tools/toolu-cli`), and every `plugin.json` share one `vX.Y.Z`, matching the git tag. A plugin is re-extracted only when its `plugin.json` version changes, so a release re-extracts all of them.
+Root `package.json`, Bun workspace packages (`packages/toolu-core`, `tools/toolu-opencode`, `tools/toolu-conformance`, `tools/toolu-cli`), the Cargo workspace (`[workspace.package] version`), and every `plugin.json` share one `vX.Y.Z`, matching the git tag. A plugin is re-extracted only when its `plugin.json` version changes, so a release re-extracts all of them.
 
 ## Releases
 
 release-please (`.github/workflows/release-please.yml`). No manual bumps or tags.
 
-Any Conventional Commit on `main` counts, any path. `feat` / `fix` / `feat!` bump minor / patch / major. `chore` / `docs` / `ci` / `refactor` bump nothing. Merge the Release PR to publish: it bumps root `package.json`, Bun workspace packages under `packages/` and `tools/`, and every `plugin.json`, updates `CHANGELOG.md`, tags `vX.Y.Z` with no component prefix, and opens the GitHub Release. OpenCode install: `docs/opencode.md`.
+Any Conventional Commit on `main` counts, any path. `feat` / `fix` / `feat!` bump minor / patch / major. `chore` / `docs` / `ci` / `refactor` bump nothing. Merge the Release PR to publish: it bumps root `package.json`, Bun workspace packages under `packages/` and `tools/`, `Cargo.toml` and the workspace crates in `Cargo.lock` (TOML extra-files), and every `plugin.json`, updates `CHANGELOG.md`, tags `vX.Y.Z` with no component prefix, and opens the GitHub Release. OpenCode install: `docs/opencode.md`.
 
 **npm.** `release-please.yml` calls `npm-publish.yml` after the Release, which publishes `@toolu/core`, `@toolu/opencode`, then `@toolu/plugins` with provenance via OIDC and `secrets.NPM_TOKEN`, and does not go green until each one resolves on the registry (a first publish can take minutes to stop answering 404). `@toolu/conformance` stays `private`; it is an internal harness. release-please also raises `@toolu/opencode`'s `^X.Y.Z` `@toolu/core` floor, and the publish step refuses a tag that does not match it. `bun run test:pack` gates each tarball's file list as `npm pack` reports it, and checks that `@toolu/opencode` is closed over its own tarball (`tooling/src/pack-closure.ts`).
 
@@ -67,6 +68,8 @@ Each gated job carries a job-level `if`, and a job skipped that way reports Succ
 | `gate` (`bun run test`) | `ts` | `bun run test` (`test:ts`): format, lint, typecheck, guardrails, gate reach, legacy exemptions, unit, conformance, bundle/launcher drift, CI path check, context and latency budgets, deterministic benchmarks |
 | `opencode (ubuntu-latest)`, `opencode (macos-latest)` | `opencode` | `bun run test:opencode`, the real OpenCode acceptance |
 | `docs` | `docs` | `bun run test:docs`: the checks and tests from `test:ts` that read `docs/**` or root Markdown |
+| `rust (ubuntu-latest)`, `rust (macos-latest)` | `rust` | `cargo fmt --all --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, `cargo build` and `cargo test --workspace --locked`, `cargo xtask check-layers` |
+| `rust-musl (x86_64-unknown-linux-musl)`, `rust-musl (aarch64-unknown-linux-musl)` | `rust` | A release build per musl target (aarch64 on `ubuntu-24.04-arm`); `file` must report the binary static |
 | `review` | `changed` | The code review. Runs for any change outside the release-only files, docs included, and runs anyway if `changes` failed or left `changed` empty |
 | `typescript` | aggregate, `if: always()` | `tooling/src/ci-aggregate.ts`. Fails when `changes` failed or left a group output that is not `true`/`false`, a needed job failed or was cancelled, or a job was skipped while its group was on |
 
@@ -77,7 +80,7 @@ These paths turn every group on:
 - a path no group matches;
 - an empty diff, or a diff error.
 
-A release-please bump turns every group off. That means release-only paths whose diff is only `version`, `.` or `@toolu/core` semver lines, plus `CHANGELOG.md`. `bun run check:ci-paths` fails on any of these:
+A release-please bump turns every group off. That means release-only paths whose diff is only `version`, `.` or `@toolu/core` semver lines (JSON, or TOML `version = "X.Y.Z"` in `Cargo.toml`/`Cargo.lock`), plus `CHANGELOG.md`. The `rust` group is `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `rustfmt.toml`, `clippy.toml`, `crates/**` and `.cargo/**`; #408 adds `fixtures/**` with the directory. `bun run check:ci-paths` fails on any of these:
 
 - a workflow-level `paths`/`paths-ignore` where a required check is reported;
 - an aggregate whose `needs` differ from its gated jobs;
@@ -123,6 +126,8 @@ Benchmarks are hermetic. Context budget caps the Session Protocol, per-language 
 | `packages/toolu-core/src/quality/quality-edit.ts` | Post-edit quality helpers: identify the edited file and delete/move status, check whether it is a regular file, and detect linked worktrees |
 | `tooling/src/check-hooks-json.ts` | `hooks.json` launcher gate (`bun run check:hooks-json`); `--print <plugin> <Event> <entry>` emits the entry to paste |
 | `tooling/src/build-plugins.ts` | Builds `plugins/*/hooks/src` entries into committed `hooks/dist` bundles; `--check` is the drift gate |
+| `Cargo.toml` | Rust workspace: explicit `members` (a `crates/*` glob would also match `crates/core`), lockstep version, shared dependencies, base lints, release profile (`lto = "fat"`, `codegen-units = 1`, `strip`, `panic = "unwind"`) |
+| `crates/xtask/src/main.rs` | `cargo xtask <task>`. `check-layers` reads `cargo metadata --no-deps` and the layer table `crates/xtask/layers.json`: a core crate may use only lower core layers, a plugin crate only core, only `crates/toolu` may use a rule crate, only `crates/cli` (and `crates/xtask`) builds a binary, nothing uses `cli` or `xtask`, and every `crates/<name>` or `crates/core/<name>` with a `Cargo.toml` is a member. Normal and build dependencies are judged; dev-dependencies are not. Exit 0 clean, 1 violations, 2 setup error |
 | `docs/config.md` | Config schema |
 | `plugins/toolu/scripts/context-budget.ts` | Injected-context word ceilings (`bun run test:context-budget`) |
 
@@ -138,6 +143,7 @@ Benchmarks are hermetic. Context budget caps the Session Protocol, per-language 
 - Hook module: a `defineRegistryModule` entry in `plugins/<plugin>/hooks/src/`, listed in its `hooks/src/register.ts`
 - TypeScript hook: `plugins/<name>/hooks/src/<entry>.ts` (a top-level file is an entry; helpers go in subdirectories). `bun run build:plugins` writes the self-contained `hooks/dist/<entry>.js`; commit both. Wire it in `hooks.json` with the generated launcher (`bun run tooling/src/check-hooks-json.ts --print <plugin> <Event> <entry>`), never a hand-written `bun` call; `bun run check:hooks-json` gates it. `bun run check:plugin-bundles` (in `test:ts`) fails when a bundle drifts from its source, is missing, or is orphaned. Build with the pinned Bun (CI: 1.4.2).
 - Skill CLI: an entry starting `#!/usr/bin/env bun` builds to an executable bundle (the drift check covers the exec bit) that a SessionStart hook symlinks to a stable path, e.g. `hooks/src/search.ts` for exa-search and context7. HTTP goes through `@toolu/core/rest`; tests run the bundle against `@toolu/conformance/https-fixture`, a loopback HTTPS server reached through `HTTPS_PROXY`.
+- Rust crate: add its directory to `members` in the root `Cargo.toml` (a core crate also needs its layer in `crates/xtask/layers.json`), set `version.workspace = true` and `[lints] workspace = true`, and put tests under the crate's `tests/`. `cargo xtask check-layers` fails on an unlisted crate directory.
 - Plugin: `plugins/<name>/.claude-plugin/plugin.json` and a README from `tooling/templates/plugin-README.md`
 - Subset: `bun test plugins/<plugin>/hooks/src/__tests__/`
 - New TypeScript tree: add it to `tsconfig.json`, `format:check`, a lint config, `.jscpd.json` and `knip.json`, or declare the gap in `tooling/gate-reach.json`; `bun run check:gate-reach` fails otherwise. Never add a legacy exemption for new code.

@@ -33,13 +33,24 @@
       "package.json",
       "bun.lock"
     ],
-    "docs": ["docs/**", "**/*.md"]
+    "docs": ["docs/**", "**/*.md"],
+    "rust": [
+      "Cargo.toml",
+      "Cargo.lock",
+      "rust-toolchain.toml",
+      "rustfmt.toml",
+      "clippy.toml",
+      "crates/**",
+      ".cargo/**"
+    ]
   },
   "runEverything": [".github/**", "bun.lock"],
   "releaseOnly": {
     "paths": [
       "CHANGELOG.md",
       ".release-please-manifest.json",
+      "Cargo.toml",
+      "Cargo.lock",
       "package.json",
       "packages/*/package.json",
       "tools/*/package.json",
@@ -53,7 +64,13 @@
     "tests.yml": {
       "aggregate": "typescript",
       "required": [],
-      "jobs": { "gate": "ts", "opencode": "opencode", "docs": "docs" }
+      "jobs": {
+        "gate": "ts",
+        "opencode": "opencode",
+        "docs": "docs",
+        "rust": "rust",
+        "rust-musl": "rust"
+      }
     },
     "toolu-review.yml": {
       "aggregate": null,

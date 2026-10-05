@@ -1,6 +1,11 @@
 {
   "version": 1,
-  "exclude": ["**/fixtures/**", "**/hooks/dist/**", "tools/toolu-opencode/generated/**"],
+  "exclude": [
+    "**/fixtures/**",
+    "**/hooks/dist/**",
+    "tools/toolu-opencode/generated/**",
+    "crates/**"
+  ],
   "allowances": [
     {
       "tool": "oxlint",

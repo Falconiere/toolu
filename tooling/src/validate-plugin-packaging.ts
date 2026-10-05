@@ -2,6 +2,7 @@
  * Validates that every plugin is packaged consistently for Claude Code and
  * Codex: manifests agree, marketplace catalogs list each plugin once with the
  * right source and policy, release-please bumps every versioned manifest,
+ * the Cargo workspace version moves with package.json (#407),
  * skills carry frontmatter, Codex agent TOML parses, and hook commands point at
  * executable plugin-relative scripts (launcher one-liners are gated by
  * check-hooks-json.ts). `PACKAGING_ROOT` points it at another checkout.
@@ -33,6 +34,40 @@ function releaseTracks(release: unknown, path: string): boolean {
       get(entry, "path") === path &&
       get(entry, "jsonpath") === "$.version",
   );
+}
+
+/** The release-please TOML entries that keep the Cargo workspace in lockstep (#407). */
+const CARGO_RELEASE = [
+  { path: "Cargo.toml", jsonpath: "$.workspace.package.version" },
+  { path: "Cargo.lock", jsonpath: "$.package[?(!@.source)].version" },
+];
+
+/**
+ * `Cargo.toml`'s workspace version and every workspace crate in `Cargo.lock`
+ * (the entries without a `source`) equal `version`, and release-please bumps both.
+ */
+function checkCargo(repo: Repo, version: string, release: unknown): void {
+  for (const want of CARGO_RELEASE) {
+    const tracked = list(get(release, "packages", ".", "extra-files")).some(
+      (entry) =>
+        get(entry, "type") === "toml" &&
+        get(entry, "path") === want.path &&
+        get(entry, "jsonpath") === want.jsonpath,
+    );
+    if (!tracked) fail(`release-please is missing ${want.path} (${want.jsonpath})`);
+  }
+  if (get(repo.toml("Cargo.toml"), "workspace", "package", "version") !== version) {
+    fail("Cargo.toml [workspace.package] version differs from package.json");
+  }
+  const local = list(get(repo.toml("Cargo.lock"), "package")).filter(
+    (pkg) => get(pkg, "source") === undefined,
+  );
+  if (local.length === 0) fail("Cargo.lock lists no workspace crate");
+  for (const pkg of local) {
+    if (get(pkg, "version") !== version) {
+      fail(`Cargo.lock ${String(get(pkg, "name"))} version differs from package.json`);
+    }
+  }
 }
 
 /** Every symlink under the plugin must resolve inside it. */
@@ -154,6 +189,7 @@ function checkPlugins(repo: Repo, version: string): number {
       fail(`${pkg} version differs from package.json`);
     if (!releaseTracks(release, pkg)) fail(`release-please is missing ${pkg}`);
   }
+  checkCargo(repo, version, release);
   if (count !== EXPECTED.plugins)
     fail(`expected ${String(EXPECTED.plugins)} plugins, found ${String(count)}`);
   if (list(get(claudeCatalog, "plugins")).length !== count) {

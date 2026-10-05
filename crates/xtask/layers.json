@@ -1,0 +1,7 @@
+{
+  "core": [["protocol"], ["runtime"], ["shell", "http", "state"], ["engine", "github", "jev"]],
+  "rules": ["ts-quality", "python-quality", "rust-quality", "ast-grep"],
+  "hub": "toolu",
+  "binary": "cli",
+  "tooling": "xtask"
+}

@@ -1,7 +1,8 @@
 /**
  * Changed files → group switches (#458). A file is release-only when its path
- * is in `releaseOnly.paths` and its diff touches only version lines (any
- * CHANGELOG.md change counts). Everything else turns on the groups it matches;
+ * is in `releaseOnly.paths` and its diff touches only version lines, JSON
+ * (`"version": "X.Y.Z"`) or TOML (`version = "X.Y.Z"`, Cargo.toml/Cargo.lock);
+ * any CHANGELOG.md change counts. Everything else turns on the groups it matches;
  * `runEverything` paths and paths no group matches turn every group on.
  */
 import { CHANGED, type CiPaths, matchesAny, outputNames } from "./config.ts";
@@ -25,7 +26,9 @@ function escapeRegExp(text: string): string {
 
 function versionLine(versionKeys: readonly string[]): RegExp {
   const keys = versionKeys.map(escapeRegExp).join("|");
-  return new RegExp(String.raw`^[+-]\s*"(?:${keys})"\s*:\s*"${SEMVER}"\s*,?\s*$`);
+  const json = String.raw`"(?:${keys})"\s*:\s*"${SEMVER}"\s*,?`;
+  const toml = String.raw`(?:${keys})\s*=\s*"${SEMVER}"`;
+  return new RegExp(String.raw`^[+-]\s*(?:${json}|${toml})\s*$`);
 }
 
 /** Whether `file` is a release-please version bump the gates need not see. */

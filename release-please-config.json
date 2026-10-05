@@ -195,6 +195,16 @@
           "type": "json",
           "path": "tools/toolu-conformance/package.json",
           "jsonpath": "$.version"
+        },
+        {
+          "type": "toml",
+          "path": "Cargo.toml",
+          "jsonpath": "$.workspace.package.version"
+        },
+        {
+          "type": "toml",
+          "path": "Cargo.lock",
+          "jsonpath": "$.package[?(!@.source)].version"
         }
       ]
     }

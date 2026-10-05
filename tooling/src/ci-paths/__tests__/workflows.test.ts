@@ -92,3 +92,46 @@ test.concurrent("the aggregate receives every needed job's result", () => {
 test.concurrent("the full gate runs the CI path check", () => {
   expect(scripts["test:ts"]).toContain("bun run check:ci-paths");
 });
+
+test.concurrent("the Rust jobs run the full cargo gate and both musl targets (#407 AC-5, AC-7)", () => {
+  const tests = workflow("tests.yml");
+  for (const id of ["rust", "rust-musl"]) {
+    expect(tests.jobs[id]?.if).toBe("needs.changes.outputs.rust == 'true'");
+    expect(config.workflows["tests.yml"]?.jobs[id]).toBe("rust");
+  }
+  expect(tests.jobs.typescript?.needs).toEqual(
+    expect.arrayContaining(["changes", "gate", "opencode", "docs", "rust", "rust-musl"]),
+  );
+  const Matrix = z.looseObject({
+    strategy: z.looseObject({
+      matrix: z.looseObject({
+        os: z.array(z.string()).optional(),
+        include: z.array(z.looseObject({ target: z.string(), os: z.string() })).optional(),
+      }),
+    }),
+  });
+  expect(Matrix.parse(tests.jobs.rust).strategy.matrix.os).toEqual([
+    "ubuntu-latest",
+    "macos-latest",
+  ]);
+  expect(Matrix.parse(tests.jobs["rust-musl"]).strategy.matrix.include).toEqual([
+    { target: "x86_64-unknown-linux-musl", os: "ubuntu-latest" },
+    { target: "aarch64-unknown-linux-musl", os: "ubuntu-24.04-arm" },
+  ]);
+  const cargo = steps("tests.yml", "rust").map((step) => step.run);
+  expect(cargo).toEqual(
+    expect.arrayContaining([
+      "rustup toolchain install",
+      "cargo fmt --all --check",
+      "cargo clippy --workspace --all-targets --locked -- -D warnings",
+      "cargo build --workspace --locked",
+      "cargo test --workspace --locked",
+      "cargo xtask check-layers",
+    ]),
+  );
+  const musl = steps("tests.yml", "rust-musl").map((step) => step.run ?? "");
+  expect(musl).toContain(
+    'cargo build --workspace --release --locked --target "${{ matrix.target }}"',
+  );
+  expect(musl.some((run) => run.includes("grep -Eq 'static(-pie)? linked'"))).toBe(true);
+});
