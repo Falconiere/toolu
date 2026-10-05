@@ -35,8 +35,8 @@ function standIn(sb: Sandbox, body: string): string {
 }
 
 /**
- * Fifty `git` spawns per call: about 50 ms CPU on a fast CI runner and 150 ms on a
- * loaded host, so the 10 ms budget fails it with a wide margin either way.
+ * Fifty `git` spawns per call: about 50 ms CPU on the Linux CI runner and far more
+ * on macOS, well above a budget calibrated from the git-free stand-in.
  */
 const GIT_FIFTY_TIMES =
   'i=0; while [ "$i" -lt 50 ]; do git rev-parse --show-toplevel >/dev/null 2>&1; i=$((i+1)); done';
@@ -93,20 +93,28 @@ test(
   "a ported entry that spawns git on every call fails on CPU; without git it passes",
   async () => {
     using sb = createSandbox();
-    const budgets = { "toolu/pre-tools": { maxRssMiB: 1024, cpuMs: 10 } };
+    const only = ["--only", "toolu/pre-tools", "--runs", "5", "--warmup", "1"];
+    // Calibrate on this machine: spawning costs ~1.5 ms CPU on Linux and ~13 ms on
+    // macOS, so the budget is twice the git-free stand-in's p90 plus 1 ms.
+    const out = sb.path("calibration.json");
+    const calibration = await bench([...only, "--out", out], {
+      TOOLU_IMPL: "rust:toolu/pre-tools",
+      TOOLU_RUST_BIN_DIR: standIn(sb, ":"),
+    });
+    expect(calibration.exitCode, calibration.stderr).toBe(0);
+    const p90 = HookResult.parse(JSON.parse(sb.read("calibration.json"))).entries[0]?.cpuUs.p90;
+    expect(p90).toBeGreaterThan(0);
+    const cpuMs = Math.ceil(((p90 ?? 0) / 1000) * 2) + 1;
     const flags = [
-      "--only",
-      "toolu/pre-tools",
-      "--runs",
-      "5",
-      "--warmup",
-      "1",
-      ...ported(sb, ["toolu/pre-tools"], budgets),
+      ...only,
+      ...ported(sb, ["toolu/pre-tools"], { "toolu/pre-tools": { maxRssMiB: 1024, cpuMs } }),
     ];
     const slow = await bench(flags, { TOOLU_RUST_BIN_DIR: standIn(sb, GIT_FIFTY_TIMES) });
     expect(slow.exitCode, slow.stderr).toBe(1);
     expect(slow.stderr).toMatch(
-      /hook-bench: toolu\/pre-tools \[rust\]: cpu p50 \d+\.\d ms > budget 10 ms/,
+      new RegExp(
+        `hook-bench: toolu/pre-tools \\[rust\\]: cpu p50 \\d+\\.\\d ms > budget ${String(cpuMs)} ms`,
+      ),
     );
     expect(slow.stdout).toContain("| toolu/pre-tools | PreToolUse | rust |");
     const fast = await bench(flags, { TOOLU_RUST_BIN_DIR: standIn(sb, ":") });
