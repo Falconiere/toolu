@@ -1,6 +1,6 @@
 # @toolu/opencode
 
-The [toolu](https://github.com/Falconiere/toolu) adapter for [OpenCode](https://opencode.ai) runs toolu's TypeScript dispatcher in `tool.execute.before`, so an edit that violates a gate is denied before bytes change.
+The [toolu](https://github.com/Falconiere/toolu) adapter for [OpenCode](https://opencode.ai). It runs toolu's TypeScript dispatcher in `tool.execute.before` and `tool.execute.after`, so an edit that violates a gate is denied before bytes change.
 
 The adapter uses the documented plugin API (`opencode-ai@1.18.34`, `@opencode-ai/plugin@1.18.34`) pinned in [docs/opencode-host-contract.md](https://github.com/Falconiere/toolu/blob/main/docs/opencode-host-contract.md). [#336](https://github.com/Falconiere/toolu/issues/336) established the native plugin entrypoint.
 
@@ -41,25 +41,31 @@ Selection works in three tiers:
 
 Dependencies are added automatically. An invalid selection file stops toolu: every tool call is refused until you fix it.
 
-Restart OpenCode. The package carries plugin manifests, settings and committed Bun bundles, so there is no clone and no `TOOLU_REPO_ROOT` to export.
+Restart OpenCode. The package carries plugin manifests, settings and committed Bun bundles, so there is no clone and no `TOOLU_REPO_ROOT` to export. Update with `npx @toolu/plugins update --host opencode`; remove with `npx @toolu/plugins remove toolu --host opencode --yes`.
 
 ## What you get
 
-The `toolu` plugin brings protected-file blocking and shell command gates through `permission.evaluate`. Bundled registry plugins such as `ast-grep` also contribute pre-tool decisions. OpenCode post-tool quality checks are not wired through this permission hook.
+- **Before each tool call.** `tool.execute.before` runs toolu's core gates and the selected plugins' registry modules on `bash`, `read`, `grep`, `glob`, `edit`, `write`, `apply_patch`, `task` and MCP tools. A refusal stops the call before it has any side effect, and a toolu allow never overrides your own `permission` rules.
+- **After each tool call.** `tool.execute.after` appends post-edit quality diagnostics and gate advice to the result, and records gate state that later commits and pushes are checked against. It cannot undo an action that already ran.
+- **Context and surfaces.** The selected plugins' startup instructions, prompt reminders and compaction context reach the model. Their skills, agents and commands are added through the `config` hook.
 
-Enforcement scope matches the fixture evidence in [#212](https://github.com/Falconiere/toolu/issues/212); it is not yet the full Claude Code and Codex hook surface.
+Each plugin's status and its host-specific limitations are in [docs/opencode.md § Plugin support](https://github.com/Falconiere/toolu/blob/main/docs/opencode.md#plugin-support). The required real-host acceptance in CI checks that table.
 
 ## Requirements
 
-- OpenCode `v2.0.12`
+- OpenCode `opencode-ai@1.18.34`, the only verified version
 - Bun 1.4.x and git
 - macOS or Linux. Windows is not supported.
 
 Per-gate tools (rustfmt, oxlint, ruff, …) are whatever the plugins you enable require.
 
+## Upgrading from 7.7.2 or earlier
+
+Those releases targeted OpenCode V2 and do not load on this line, and this package does not load on V2. Follow the [migration guide](https://github.com/Falconiere/toolu/blob/main/docs/opencode-migration.md); it covers what toolu owns and how to roll back.
+
 ## Overriding the plugin root
 
-The bundled tree is used by default. To run against a checkout instead — when working on toolu itself — set `TOOLU_REPO_ROOT` to the clone, or pass `repoRoot` as a plugin option. Both take precedence over the bundled copy.
+The bundled tree is used by default. To run against a checkout instead, when working on toolu itself, set `TOOLU_REPO_ROOT` to the clone or pass `repoRoot` as a plugin option. Both take precedence over the bundled copy.
 
 Full documentation: **[docs/opencode.md](https://github.com/Falconiere/toolu/blob/main/docs/opencode.md)**
 

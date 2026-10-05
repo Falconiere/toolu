@@ -51,7 +51,8 @@ async function buildCli(workDir: string): Promise<string> {
   return cli;
 }
 
-function cliBundle(ctx: EntryContext): Promise<string> {
+/** The CLI bundle, built once per run beside the packed tarball. */
+export function cliBundle(ctx: EntryContext): Promise<string> {
   built ??= buildCli(dirname(ctx.tarball));
   return built;
 }
@@ -87,13 +88,14 @@ function readGlobal(s: ProbeSession, name: string): string {
 }
 
 /** The plugin entries the host merged, serialized for matching. */
-async function mergedPlugins(ctx: EntryContext, s: ProbeSession): Promise<string[]> {
+export async function mergedPlugins(ctx: EntryContext, s: ProbeSession): Promise<string[]> {
   const out = await host(ctx, s, ["debug", "config"]);
   const plugins = ResolvedPlugins.parse(JSON.parse(out.stdout)).plugin ?? [];
   return plugins.map((entry) => JSON.stringify(entry));
 }
 
-async function tooluSkills(ctx: EntryContext, s: ProbeSession): Promise<string[]> {
+/** The toolu catalog skills the host discovered, sorted. */
+export async function tooluSkills(ctx: EntryContext, s: ProbeSession): Promise<string[]> {
   return named((await skills(ctx, s)).rows, catalogIds().skills).toSorted();
 }
 

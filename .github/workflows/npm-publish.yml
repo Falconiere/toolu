@@ -20,8 +20,9 @@ name: npm publish
 # "toolu: command not found" from every toolu checkout.
 #
 # @toolu/opencode carries the plugins/ catalog (manifests, committed bundles and
-# their runtime data), staged by its prepack, so an
-# `opencode plugin add @toolu/opencode` needs no clone and no TOOLU_REPO_ROOT.
+# their runtime data), staged by its prepack, so the `plugin` config entry
+# `npx @toolu/plugins install --host opencode` writes needs no clone and no
+# TOOLU_REPO_ROOT.
 #
 # npm acknowledges a publish minutes before the package is fetchable. The first
 # ever CLI package, @toolu/cli 6.8.1, answered 404 for about six minutes after

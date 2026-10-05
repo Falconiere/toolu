@@ -36,7 +36,7 @@ toolu core (hook dispatcher + registry)
 
 Standalone plugins (no `toolu` dependency) work independently via their own skills and commands. `delivery-flow` installs its declared dependencies through Claude Code or the toolu CLI; native Codex plugin installs require adding those dependencies explicitly.
 
-Hook entries and registry contributions are bundled TypeScript running on Bun. OpenCode evaluates its supported pre-tool permissions through the same native core.
+Hook entries and registry contributions are bundled TypeScript running on Bun. OpenCode runs the same native core in process, before and after its tool calls; each plugin's OpenCode status is in [docs/opencode.md § Plugin support](../opencode.md#plugin-support).
 
 ## Shared Configuration
 
@@ -100,7 +100,7 @@ Install toolu for OpenCode (npm adapter; no marketplace, no clone). Skip steps a
 2. Optional: .opencode/toolu.config.json for gate modes (same schema as other hosts), e.g. { "version": 1, "gates": { "protectedFiles": { "mode": "block" } } }
 3. Restart OpenCode. Smoke-check: attempt a protected .env edit with protectedFiles mode block and confirm it is denied before bytes change.
 
-Do not install comemory via toolu. Working on toolu itself? Use the git-clone contributor path in docs/opencode.md instead. Full detail: docs/opencode.md
+Do not install comemory via toolu. Upgrading from the V2-targeted adapter (toolu 7.7.2 or earlier)? Follow docs/opencode-migration.md instead. Working on toolu itself? Use the git-clone contributor path in docs/opencode.md. Full detail, including the per-plugin support table: docs/opencode.md
 ```
 <!-- /install-everything:opencode -->
 

@@ -18,6 +18,9 @@ import { BROWSER_SCENARIOS } from "../opencode-host/scenarios-browser.ts";
 import { EXA_SCENARIOS } from "../opencode-host/scenarios-exa.ts";
 import { BABYSIT_SCENARIOS } from "../opencode-host/scenarios-babysit.ts";
 import { CLI_SCENARIOS } from "../opencode-host/scenarios-cli.ts";
+import { QUICKSTART_SCENARIOS } from "../opencode-host/scenarios-docs.ts";
+import { MIGRATION_SCENARIOS } from "../opencode-host/scenarios-docs-migration.ts";
+import { MIGRATION_REFUSAL_SCENARIOS } from "../opencode-host/scenarios-docs-refusals.ts";
 import { STATUS_SCENARIOS } from "../opencode-host/scenarios-status.ts";
 import { PACKAGE_SCENARIOS } from "../opencode-host/scenarios-package.ts";
 import { SCENARIOS } from "../opencode-host/scenarios.ts";
@@ -71,6 +74,9 @@ function scenarioFamilies(): AcceptanceCheck[] {
     ...scenarioChecks("exa", ["exa-search"], "fixture", EXA_SCENARIOS),
     ...scenarioChecks("babysit", ["pr-babysit"], "fixture", BABYSIT_SCENARIOS),
     ...scenarioChecks("cli", ["toolu"], "none", CLI_SCENARIOS),
+    ...scenarioChecks("docs", ["toolu", "context7"], "none", QUICKSTART_SCENARIOS),
+    ...scenarioChecks("docs", ["toolu"], "none", MIGRATION_SCENARIOS),
+    ...scenarioChecks("docs", ["toolu"], "none", MIGRATION_REFUSAL_SCENARIOS),
     ...scenarioChecks("status", ["statusline"], "none", STATUS_SCENARIOS),
     ...scenarioChecks("package", "all", "none", PACKAGE_SCENARIOS),
     ...scenarioChecks("pretool", ["toolu"], "none", PRETOOL_SCENARIOS),

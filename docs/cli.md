@@ -137,7 +137,9 @@ The supported host (`opencode-ai@1.18.34`, see the
 documents and never runs the host. One npm package, `@toolu/opencode`, carries
 every plugin. The CLI manages two things: that package's entry in a `plugin`
 array, and a plugin selection file `toolu/plugins.json`
-(`{ "version": 1, "enabled": [...] }`). Restart OpenCode to load a change.
+(`{ "version": 1, "enabled": [...] }`). Restart OpenCode to load a change. A `@toolu/opencode` entry that OpenCode 2.x's own
+plugin command wrote is an ordinary entry here: `update` rewrites it
+([migration guide](opencode-migration.md)).
 
 | Verb | Effect |
 |------|--------|
