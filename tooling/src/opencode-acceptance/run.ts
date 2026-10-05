@@ -40,7 +40,7 @@ import {
 
 /**
  * Service credentials no fixture check may see. The built-in epic-orchestrator
- * Jira tracker still uses these keys after the standalone Jira plugin's removal.
+ * Jira tracker still uses the Jira keys after the standalone plugin's removal.
  * An external test that names one in `requires` gets it back.
  */
 const SERVICE_KEYS = [
