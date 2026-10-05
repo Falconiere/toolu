@@ -1,0 +1,662 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "violations are recorded under the file's path and reported with the standard header",
+      "kind": "run",
+      "files": {
+        "src/a.fx": "x\n"
+      },
+      "steps": [
+        {
+          "errors": ["first\nexcerpt", "second"],
+          "call": {
+            "input": {
+              "file_path": "src/a.fx"
+            }
+          },
+          "decision": {
+            "kind": "advisory",
+            "message": "QUALITY VIOLATION — fix before proceeding:\nfirst\nexcerpt\nsecond\n"
+          },
+          "entries": {
+            "src/a.fx": "first\nexcerpt\nsecond\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "a clean file clears only its own entry and reports the advisories joined by newlines",
+      "kind": "run",
+      "files": {
+        "src/a.fx": "x\n",
+        "src/b.fx": "x\n"
+      },
+      "steps": [
+        {
+          "errors": ["bad a"],
+          "call": {
+            "input": {
+              "file_path": "src/a.fx"
+            }
+          }
+        },
+        {
+          "errors": ["bad b"],
+          "call": {
+            "input": {
+              "file_path": "src/b.fx"
+            }
+          }
+        },
+        {
+          "errors": [],
+          "advisories": ["", "doc", "", "handler"],
+          "call": {
+            "input": {
+              "file_path": "src/a.fx"
+            }
+          },
+          "decision": {
+            "kind": "advisory",
+            "message": "doc\nhandler"
+          },
+          "entries": {
+            "src/b.fx": "bad b\n"
+          }
+        },
+        {
+          "errors": [],
+          "call": {
+            "input": {
+              "file_path": "src/b.fx"
+            }
+          },
+          "decision": {
+            "kind": "allow"
+          },
+          "gateStatus": "passing"
+        }
+      ]
+    },
+    {
+      "name": "a removed file clears its entry without being checked; a foreign extension is left alone",
+      "kind": "run",
+      "files": {
+        "src/a.fx": "x\n"
+      },
+      "steps": [
+        {
+          "errors": ["bad"],
+          "call": {
+            "input": {
+              "file_path": "src/a.fx"
+            }
+          }
+        },
+        {
+          "errors": ["never"],
+          "call": {
+            "input": {
+              "file_path": "src/a.other",
+              "toolu_edit_operation": "delete"
+            }
+          },
+          "decision": {
+            "kind": "allow"
+          },
+          "entries": {
+            "src/a.fx": "bad\n"
+          }
+        },
+        {
+          "errors": ["never"],
+          "call": {
+            "input": {
+              "file_path": "src/a.fx",
+              "toolu_edit_operation": "delete"
+            }
+          },
+          "decision": {
+            "kind": "allow"
+          },
+          "entries": {}
+        }
+      ]
+    },
+    {
+      "name": "a missing file, a foreign extension or no path at all is allowed and never recorded",
+      "kind": "run",
+      "files": {
+        "src/a.txt": "x\n"
+      },
+      "steps": [
+        {
+          "errors": ["bad"],
+          "call": {
+            "input": {
+              "file_path": "src/missing.fx"
+            }
+          },
+          "decision": {
+            "kind": "allow"
+          }
+        },
+        {
+          "errors": ["bad"],
+          "call": {
+            "input": {
+              "file_path": "src/a.txt"
+            }
+          },
+          "decision": {
+            "kind": "allow"
+          }
+        },
+        {
+          "errors": ["bad"],
+          "call": {
+            "toolName": "Bash",
+            "input": {
+              "command": "ls"
+            }
+          },
+          "decision": {
+            "kind": "allow"
+          },
+          "gateStatus": "missing"
+        }
+      ]
+    },
+    {
+      "name": "an edit tool's path, then file_path, then target_file",
+      "kind": "edit",
+      "setup": [],
+      "checks": [
+        {
+          "subject": "edited",
+          "call": {
+            "input": {
+              "file_path": "src/a.ts",
+              "path": "src/p.ts"
+            }
+          },
+          "field": "path",
+          "expected": "src/p.ts"
+        },
+        {
+          "subject": "edited",
+          "call": {
+            "input": {
+              "file_path": "src/a.ts"
+            }
+          },
+          "field": "full",
+          "expected": {
+            "path": "src/a.ts",
+            "absolute": "<P>/src/a.ts",
+            "removed": false
+          }
+        },
+        {
+          "subject": "edited",
+          "call": {
+            "toolName": "MultiEdit",
+            "input": {
+              "target_file": "/abs/t.ts"
+            }
+          },
+          "field": "path",
+          "expected": "/abs/t.ts"
+        }
+      ]
+    },
+    {
+      "name": "jq's // skips null and false but keeps an empty string",
+      "kind": "edit",
+      "setup": [],
+      "checks": [
+        {
+          "subject": "edited",
+          "call": {
+            "input": {
+              "path": null,
+              "file_path": false,
+              "target_file": "t.ts"
+            }
+          },
+          "field": "path",
+          "expected": "t.ts"
+        },
+        {
+          "subject": "edited",
+          "call": {
+            "input": {
+              "path": "",
+              "file_path": "a.ts"
+            }
+          },
+          "field": "undefined"
+        }
+      ]
+    },
+    {
+      "name": "CLAUDE_FILE_PATHS wins, for any tool; a non-edit tool alone names nothing",
+      "kind": "edit",
+      "setup": [],
+      "checks": [
+        {
+          "subject": "edited",
+          "call": {
+            "input": {
+              "file_path": "a.ts"
+            },
+            "env": {
+              "CLAUDE_FILE_PATHS": "env.ts"
+            }
+          },
+          "field": "path",
+          "expected": "env.ts"
+        },
+        {
+          "subject": "edited",
+          "call": {
+            "toolName": "Bash",
+            "input": {
+              "file_path": "a.ts"
+            },
+            "env": {
+              "CLAUDE_FILE_PATHS": "env.ts"
+            }
+          },
+          "field": "path",
+          "expected": "env.ts"
+        },
+        {
+          "subject": "edited",
+          "call": {
+            "toolName": "Bash",
+            "input": {
+              "file_path": "a.ts"
+            }
+          },
+          "field": "undefined"
+        }
+      ]
+    },
+    {
+      "name": "a delete or a move source is removed, from the split edit, the env or tool_input",
+      "kind": "edit",
+      "setup": [],
+      "checks": [
+        {
+          "subject": "edited",
+          "call": {
+            "input": {
+              "file_path": "a.ts"
+            },
+            "edit": {
+              "operation": "delete",
+              "from": "a.ts",
+              "movedTo": ""
+            }
+          },
+          "field": "removed",
+          "expected": true
+        },
+        {
+          "subject": "edited",
+          "call": {
+            "input": {
+              "file_path": "a.ts"
+            },
+            "edit": {
+              "operation": "update",
+              "from": "a.ts",
+              "movedTo": "b.ts"
+            }
+          },
+          "field": "removed",
+          "expected": true
+        },
+        {
+          "subject": "edited",
+          "call": {
+            "input": {
+              "file_path": "a.ts"
+            },
+            "edit": {
+              "operation": "update",
+              "from": "a.ts",
+              "movedTo": ""
+            }
+          },
+          "field": "removed",
+          "expected": false
+        },
+        {
+          "subject": "edited",
+          "call": {
+            "input": {
+              "file_path": "a.ts"
+            },
+            "env": {
+              "TOOLU_EDIT_OPERATION": "delete"
+            }
+          },
+          "field": "removed",
+          "expected": true
+        },
+        {
+          "subject": "edited",
+          "call": {
+            "input": {
+              "file_path": "a.ts",
+              "toolu_edit_moved_to": "b.ts"
+            }
+          },
+          "field": "removed",
+          "expected": true
+        },
+        {
+          "subject": "edited",
+          "call": {
+            "input": {
+              "file_path": "a.ts"
+            },
+            "edit": {
+              "operation": "update",
+              "from": "a.ts",
+              "movedTo": ""
+            },
+            "env": {
+              "TOOLU_EDIT_OPERATION": "delete"
+            }
+          },
+          "field": "removed",
+          "expected": false
+        }
+      ]
+    },
+    {
+      "name": "a regular file counts; a directory or a missing path does not",
+      "kind": "edit",
+      "setup": [
+        {
+          "op": "write",
+          "path": "$PROJECT/src/a.ts",
+          "body": "x\n"
+        }
+      ],
+      "checks": [
+        {
+          "subject": "regular",
+          "path": "src/a.ts",
+          "expected": true
+        },
+        {
+          "subject": "regular",
+          "path": "src",
+          "expected": false
+        },
+        {
+          "subject": "regular",
+          "path": "src/none.ts",
+          "expected": false
+        }
+      ]
+    },
+    {
+      "name": "edited file paths inside a linked worktree are skipped",
+      "kind": "edit",
+      "setup": [
+        {
+          "op": "git",
+          "args": [
+            "worktree",
+            "add",
+            "-q",
+            "-b",
+            "side",
+            {
+              "$path": "$ROOT/linked"
+            }
+          ]
+        },
+        {
+          "op": "write",
+          "path": "$PROJECT/src/a.ts",
+          "body": "x\n"
+        }
+      ],
+      "checks": [
+        {
+          "subject": "linked",
+          "path": {
+            "$path": "$ROOT/linked/a.ts"
+          },
+          "expected": true
+        },
+        {
+          "subject": "linked",
+          "path": "../linked/a.ts",
+          "expected": true
+        },
+        {
+          "subject": "linked",
+          "path": {
+            "$path": "$PROJECT/src/a.ts"
+          },
+          "expected": false
+        },
+        {
+          "subject": "linked",
+          "path": "src/a.ts",
+          "expected": false
+        },
+        {
+          "subject": "linked",
+          "path": {
+            "$path": "$HOME/a.ts"
+          },
+          "expected": false
+        }
+      ]
+    },
+    {
+      "name": "every matched source line becomes a rule-tagged excerpt",
+      "kind": "scan",
+      "requiresAstGrep": true,
+      "checks": [
+        {
+          "path": "src/a.ts",
+          "body": "export function f() {\n  throw \"boom\";\n}\nexport function g() {\n  try {\n    f();\n  } catch (e) { }\n}\n",
+          "rules": "id: throw-string\nlanguage: ts\nseverity: warning\nmessage: throw of a string literal\nrule:\n  pattern: 'throw \"$S\"'\n---\nid: empty-catch\nlanguage: ts\nseverity: warning\nmessage: empty catch\nrule:\n  pattern: 'try { $$$ } catch ($_) { }'",
+          "expect": {
+            "kind": "rules",
+            "empty": false,
+            "count": 4,
+            "hitsByRule": {
+              "throw-string": [
+                {
+                  "ruleId": "throw-string",
+                  "line": 2,
+                  "excerpt": "src/a.ts:2:  throw \"boom\";",
+                  "text": "  throw \"boom\";",
+                  "first": true
+                }
+              ],
+              "empty-catch": [
+                {
+                  "ruleId": "empty-catch",
+                  "line": 5,
+                  "excerpt": "src/a.ts:5:  try {",
+                  "text": "  try {",
+                  "first": true
+                },
+                {
+                  "ruleId": "empty-catch",
+                  "line": 6,
+                  "excerpt": "src/a.ts:6:    f();",
+                  "text": "    f();",
+                  "first": false
+                },
+                {
+                  "ruleId": "empty-catch",
+                  "line": 7,
+                  "excerpt": "src/a.ts:7:  } catch (e) { }",
+                  "text": "  } catch (e) { }",
+                  "first": false
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "adjacent multi-line matches each start with a first line; tabs stay in the text",
+      "kind": "scan",
+      "requiresAstGrep": true,
+      "checks": [
+        {
+          "path": "m.py",
+          "body": "def a(mocker):\n\treturn 1\ndef b(mocker):\n\treturn 2\n",
+          "rules": "id: mocker-param\nlanguage: python\nseverity: warning\nmessage: m\nrule:\n  kind: function_definition\n  has:\n    field: parameters\n    has: {kind: identifier, regex: '^mocker$'}",
+          "expect": {
+            "kind": "lines",
+            "lines": [
+              {
+                "line": 1,
+                "text": "def a(mocker):",
+                "first": true
+              },
+              {
+                "line": 2,
+                "text": "\treturn 1",
+                "first": false
+              },
+              {
+                "line": 3,
+                "text": "def b(mocker):",
+                "first": true
+              },
+              {
+                "line": 4,
+                "text": "\treturn 2",
+                "first": false
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "an invalid rule is an ast-grep failure with its exit code and stderr",
+      "kind": "scan",
+      "requiresAstGrep": true,
+      "checks": [
+        {
+          "path": "src/a.ts",
+          "body": "export function f() {\n  throw \"boom\";\n}\nexport function g() {\n  try {\n    f();\n  } catch (e) { }\n}\n",
+          "rules": "id: broken\nlanguage: nope\nrule:\n  pattern: x",
+          "expect": {
+            "kind": "failure",
+            "stage": "ast-grep",
+            "nonzeroExit": true,
+            "stderrMin": 1,
+            "stderrMax": 200
+          }
+        }
+      ]
+    },
+    {
+      "name": "non-JSON output is a parse failure; blank output is an empty scan",
+      "kind": "scan",
+      "requiresAstGrep": false,
+      "checks": [
+        {
+          "path": "src/a.ts",
+          "body": "export function f() {\n  throw \"boom\";\n}\nexport function g() {\n  try {\n    f();\n  } catch (e) { }\n}\n",
+          "rules": "id: throw-string\nlanguage: ts\nseverity: warning\nmessage: throw of a string literal\nrule:\n  pattern: 'throw \"$S\"'\n---\nid: empty-catch\nlanguage: ts\nseverity: warning\nmessage: empty catch\nrule:\n  pattern: 'try { $$$ } catch ($_) { }'",
+          "expect": {
+            "kind": "exact",
+            "result": {
+              "kind": "failed",
+              "stage": "parse",
+              "exitCode": 0,
+              "stderrFirst": ""
+            }
+          },
+          "env": {
+            "kind": "stubAstGrep",
+            "body": "echo 'not json'"
+          }
+        },
+        {
+          "path": "src/a.ts",
+          "body": "export function f() {\n  throw \"boom\";\n}\nexport function g() {\n  try {\n    f();\n  } catch (e) { }\n}\n",
+          "rules": "id: throw-string\nlanguage: ts\nseverity: warning\nmessage: throw of a string literal\nrule:\n  pattern: 'throw \"$S\"'\n---\nid: empty-catch\nlanguage: ts\nseverity: warning\nmessage: empty catch\nrule:\n  pattern: 'try { $$$ } catch ($_) { }'",
+          "expect": {
+            "kind": "exact",
+            "result": {
+              "kind": "ok",
+              "hits": [],
+              "empty": true
+            }
+          },
+          "env": {
+            "kind": "stubAstGrep",
+            "body": "printf '  \\n'"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ast-grep killed by a signal reports 128 + the signal number, as bash's $? does",
+      "kind": "scan",
+      "requiresAstGrep": false,
+      "checks": [
+        {
+          "path": "src/a.ts",
+          "body": "export function f() {\n  throw \"boom\";\n}\nexport function g() {\n  try {\n    f();\n  } catch (e) { }\n}\n",
+          "rules": "id: throw-string\nlanguage: ts\nseverity: warning\nmessage: throw of a string literal\nrule:\n  pattern: 'throw \"$S\"'\n---\nid: empty-catch\nlanguage: ts\nseverity: warning\nmessage: empty catch\nrule:\n  pattern: 'try { $$$ } catch ($_) { }'",
+          "expect": {
+            "kind": "exact",
+            "result": {
+              "kind": "failed",
+              "stage": "ast-grep",
+              "exitCode": 143,
+              "stderrFirst": ""
+            }
+          },
+          "env": {
+            "kind": "stubAstGrep",
+            "body": "kill -TERM $$"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ast-grep missing from PATH is reported as missing",
+      "kind": "scan",
+      "requiresAstGrep": false,
+      "checks": [
+        {
+          "path": "src/a.ts",
+          "body": "export function f() {\n  throw \"boom\";\n}\nexport function g() {\n  try {\n    f();\n  } catch (e) { }\n}\n",
+          "rules": "id: throw-string\nlanguage: ts\nseverity: warning\nmessage: throw of a string literal\nrule:\n  pattern: 'throw \"$S\"'\n---\nid: empty-catch\nlanguage: ts\nseverity: warning\nmessage: empty catch\nrule:\n  pattern: 'try { $$$ } catch ($_) { }'",
+          "expect": {
+            "kind": "exact",
+            "result": {
+              "kind": "missing"
+            }
+          },
+          "env": {
+            "kind": "pathWithoutAstGrep"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -3,10 +3,10 @@ import type { Sandbox } from "@toolu/conformance/harness/sandbox";
 import type { RegistryContext, RegistryHookEvent } from "../../registry/registry-types.ts";
 
 export type Call = {
-  toolName?: string;
-  input?: Record<string, unknown>;
-  env?: Record<string, string>;
-  edit?: RegistryContext["edit"];
+  toolName?: string | undefined;
+  input?: Record<string, unknown> | undefined;
+  env?: Record<string, string> | undefined;
+  edit?: RegistryContext["edit"] | undefined;
 };
 
 export function postEvent(sb: Sandbox, call: Call): RegistryHookEvent {

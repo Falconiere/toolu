@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "bats: per-kind summary with Read saving% and totals",
+      "ledger": "{\"kind\":\"read\",\"returned\":120,\"full\":4000}\n{\"kind\":\"grep\",\"returned\":300,\"full\":0}\n{\"kind\":\"ast-grep\",\"returned\":80,\"full\":0}\n"
+    },
+    {
+      "name": "bats: sums repeated kinds across a session",
+      "ledger": "{\"kind\":\"read\",\"returned\":100,\"full\":1000}\n{\"kind\":\"read\",\"returned\":100,\"full\":1000}\n"
+    },
+    {
+      "name": "bats: missing ledger argument fails with usage",
+      "noArgument": true,
+      "deviation": "usage: byte-savings-report.js <ledger.jsonl>\n"
+    },
+    {
+      "name": "a ledger path that does not exist",
+      "deviation": "usage: byte-savings-report.js <ledger.jsonl>\n"
+    },
+    {
+      "name": "kinds sort by name; a Read with no full size has no saving",
+      "ledger": "{\"kind\":\"read\",\"returned\":7,\"full\":0}\n{\"kind\":\"glob\",\"returned\":9,\"full\":0}\n{\"kind\":\"ast-grep\",\"returned\":3,\"full\":0}\n{\"kind\":\"grep\",\"returned\":2,\"full\":0}\n"
+    },
+    {
+      "name": "a Read that returned more than the file saves a negative share",
+      "ledger": "{\"kind\":\"read\",\"returned\":150,\"full\":100}\n{\"kind\":\"read\",\"returned\":1,\"full\":7}\n"
+    }
+  ]
+}

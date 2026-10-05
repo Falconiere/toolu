@@ -1072,6 +1072,29 @@
         "kinds sort by name; a Read with no full size has no saving",
         "a Read that returned more than the file saves a negative share"
       ]
+    },
+    {
+      "id": "quality-runner",
+      "fixture": "fixtures/quality/runner.json",
+      "source": "packages/toolu-core/src/quality/__tests__/runner-cases.ts",
+      "names": [
+        "violations are recorded under the file's path and reported with the standard header",
+        "a clean file clears only its own entry and reports the advisories joined by newlines",
+        "a removed file clears its entry without being checked; a foreign extension is left alone",
+        "a missing file, a foreign extension or no path at all is allowed and never recorded",
+        "an edit tool's path, then file_path, then target_file",
+        "jq's // skips null and false but keeps an empty string",
+        "CLAUDE_FILE_PATHS wins, for any tool; a non-edit tool alone names nothing",
+        "a delete or a move source is removed, from the split edit, the env or tool_input",
+        "a regular file counts; a directory or a missing path does not",
+        "edited file paths inside a linked worktree are skipped",
+        "every matched source line becomes a rule-tagged excerpt",
+        "adjacent multi-line matches each start with a first line; tabs stay in the text",
+        "an invalid rule is an ast-grep failure with its exit code and stderr",
+        "non-JSON output is a parse failure; blank output is an empty scan",
+        "ast-grep killed by a signal reports 128 + the signal number, as bash's $? does",
+        "ast-grep missing from PATH is reported as missing"
+      ]
     }
   ]
 }

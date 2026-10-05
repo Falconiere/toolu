@@ -7,6 +7,7 @@
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { entryArgv } from "@toolu/conformance/harness/entry-command";
+import { applyCaseSetup, materializeCaseValue } from "@toolu/conformance/harness/json-cases";
 import { toStdin } from "@toolu/conformance/harness/fixtures";
 import { runPostBundle } from "@toolu/conformance/harness/posttool";
 import { pretoolEnv, runBundle, type PretoolHost } from "@toolu/conformance/harness/pretool";
@@ -18,6 +19,7 @@ import {
 } from "@toolu/conformance/harness/pretool-corpus";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type RunResult } from "@toolu/conformance/harness/spawn";
+import { z } from "zod";
 import type { NudgeCase, ReportCase, SavingsCase } from "./cases-types.ts";
 import {
   PLUGIN_ROOT,
@@ -93,13 +95,17 @@ export async function runSavings(
 ): Promise<SavingsCaptured> {
   using sb = createSandbox({ git: true });
   baseSandbox(sb);
-  c.setup?.(sb);
-  const extra = c.env?.(sb) ?? {};
+  applyCaseSetup(sb, c.setup, host);
+  const extra =
+    c.env === undefined
+      ? {}
+      : z.record(z.string(), z.string()).parse(materializeCaseValue(sb, c.env, host));
   await registerAstGrep(sb, host, reg, extra);
+  applyCaseSetup(sb, c.payloadSetup, host);
   const stdin = JSON.stringify({
     cwd: sb.project,
     hook_event_name: "PostToolUse",
-    ...c.payload(sb),
+    ...z.record(z.string(), z.unknown()).parse(materializeCaseValue(sb, c.payload, host)),
   });
   const res = await runPostBundle(sb, { cwd: sb.project, env: pretoolEnv(sb, host, extra), stdin });
   return { ...captured(res, sb), ledgers: ledgers(sb) };
@@ -137,6 +143,6 @@ export async function runCorpus(
   );
 }
 
-export function hostsOf(c: { hosts?: readonly PretoolHost[] }): readonly PretoolHost[] {
+export function hostsOf(c: { hosts?: readonly PretoolHost[] | undefined }): readonly PretoolHost[] {
   return c.hosts ?? ["claude"];
 }
