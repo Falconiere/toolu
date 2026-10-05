@@ -128,6 +128,7 @@ test.concurrent("the Rust jobs run cargo xtask gate and both musl targets (#407 
   const cargo = rust.map((step) => step.run ?? "");
   expect(cargo).toContain("rustup toolchain install");
   expect(cargo).toContain("bun install --frozen-lockfile");
+  expect(cargo).toContain("npm install -g @ast-grep/cli");
   // #455: the job runs the whole quality bar through `cargo xtask gate`.
   expect(cargo.some((run) => run.includes("cargo xtask gate "))).toBe(true);
   expect(JSON.stringify(rust)).toContain(

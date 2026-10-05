@@ -69,6 +69,11 @@ export function checkTree(root: string): string[] {
 }
 
 function main(args: readonly string[]): number {
+  // The plugin skips its ast-grep rules without ast-grep; a gate must not pass unchecked.
+  if (Bun.which("ast-grep") === null) {
+    console.error("rust-quality: ast-grep is not installed (npm install -g @ast-grep/cli)");
+    return 2;
+  }
   const root = resolve(args[0] ?? join(import.meta.dir, "../.."));
   const errors = checkTree(root);
   for (const error of errors) console.error(error);

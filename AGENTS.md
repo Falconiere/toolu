@@ -122,7 +122,7 @@ Every crate under `crates/` passes `cargo xtask gate` (#455), the required `rust
 
 - **Data.** Gate data (a limit, a ban, a lint level, a layer rule): `[workspace.lints]`, `clippy.toml`, `rustfmt.toml`, `deny.toml`, `lang.rust`, `tooling/conventions/guardrails/rust/{rules,jscpd}.json`. It changes only in its own `chore(gates): …` PR. Registration data may grow next to the code it registers: `layers.json`, `folders.json`, `inventory.json`, `coverage-floor.json` (rows at or above the default). `cargo xtask check-gate-change` enforces the split. No file has an ignore, exempt or per-path override field; the loaders reject one.
 - **Fixtures.** `fixtures/guardrails/rust/<rule>/{clean,violating*}`: each case is an overlay on `base/` with an `expect.txt`; Rust sources end in `.rs.fixture`. `cargo test -p xtask` runs every case through `cargo xtask gate --root <temp> --only <step>` with this repository's real gate data.
-- **Commands.** `cargo xtask gate` (all steps, or `--only <step>`), `cargo xtask guardrails`. The gate needs cargo-deny, cargo-machete, cargo-llvm-cov, Bun and `bun install`; a missing tool fails closed.
+- **Commands.** `cargo xtask gate` (all steps, or `--only <step>`), `cargo xtask guardrails`. The gate needs cargo-deny, cargo-machete, cargo-llvm-cov, ast-grep, Bun and `bun install`; a missing tool fails closed.
 
 ## Key files
 

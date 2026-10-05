@@ -230,6 +230,10 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # The rust-quality step runs the plugin's ast-grep rules and fails closed without it.
+      - name: Install ast-grep
+        run: npm install -g @ast-grep/cli
+
       # The quality bar (#455): format, clippy, guardrails, layers, reach, deny,
       # machete, unused-pub, jscpd, rust-quality, tests, coverage, docs, and
       # check-gate-change against the PR base (or the pushed range).
