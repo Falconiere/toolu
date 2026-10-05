@@ -48,8 +48,12 @@ test.concurrent("listed, prefixed and exact servers ask; others and comments are
 
 test.concurrent("a redirect hint names the replacement", async () => {
   using sb = createSandbox({ git: true });
-  const decision = await call(sb, "mcp__someserver__do", "someserver -> use the jira skill\n");
-  expect(text(decision)).toContain("Use instead: use the jira skill");
+  const decision = await call(
+    sb,
+    "mcp__someserver__do",
+    "someserver -> use the host's native Jira tools instead\n",
+  );
+  expect(text(decision)).toContain("Use instead: use the host's native Jira tools instead");
 });
 
 test.concurrent("only mcp__<server>__<tool> names are inspected", async () => {

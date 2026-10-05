@@ -4122,10 +4122,6 @@ var SCALE = words("migrate|codebase-wide|throughout|end-to-end");
 var BRAINSTORM = words("brainstorms?|designs?|scopes?|approach(es)?|architectures?|trade-?offs?|redesigns?|overhauls?");
 var NEW_THING = new RegExp(`${WB}new[ \\t\\n\\v\\f\\r]+(feature|workflow|system)${WE}`);
 var RESEARCH = words("latest|docs for|library docs|api reference|api docs|changelog|release notes|best practices?|look up|search the web|web search|how to use");
-var JIRA_WORD = words("jira|atlassian");
-var JIRA_LINK = /atlassian[.]net\/browse\/[A-Z][A-Z0-9]+-[0-9]+/;
-var ISSUE_KEY = /[A-Z][A-Z0-9]+-[0-9]+/;
-var JIRA_CONTEXT = words("ticket|issue|board|sprint|epic|backlog");
 function promptGate(lower) {
   if (TRIVIAL.test(lower) || lower.startsWith("/"))
     return "skip";
@@ -4140,13 +4136,12 @@ function intentHint(lower, astGrep) {
   }
   return INTENTS.find(([pattern]) => pattern.test(lower))?.[1];
 }
-function promptHints(prompt, lower, options) {
+function promptHints(lower, options) {
   const hints = [
     intentHint(lower, options.astGrep),
     SCALE.test(lower) ? "Possibly large task \u2014 if it splits into genuinely independent units, consider decomposing it; if it is really one thread of work, just do it. The orchestrator skill has the test for which." : undefined,
     BRAINSTORM.test(lower) || NEW_THING.test(lower) ? "Scope may be unresolved \u2014 consider the `brainstorm` skill for material design choices; skip it when the request is already bounded or mechanical." : undefined,
-    options.research && RESEARCH.test(lower) ? "External research \u2014 delegate to the research-agent subagent (routes exa-search/context7, native fallback) to keep main context lean." : undefined,
-    options.jira && (JIRA_WORD.test(lower) || JIRA_LINK.test(prompt) || ISSUE_KEY.test(prompt) && JIRA_CONTEXT.test(lower)) ? "Jira mentioned \u2014 use the `jira` skill (REST wrapper over jira.sh), NOT the Atlassian MCP." : undefined
+    options.research && RESEARCH.test(lower) ? "External research \u2014 delegate to the research-agent subagent (uses native web search and fetch) to keep main context lean." : undefined
   ];
   return hints.filter((hint) => hint !== undefined);
 }
@@ -4180,10 +4175,9 @@ async function main() {
   const gateHint = mentionsGateTopic(lower) ? undefined : failingGateHint(join4(root, hostDir, "tmp"));
   const path = env.PATH ?? "";
   const astGrep = (onPath("sg", path) || onPath("ast-grep", path)) && enabled(config, "skills", "ast-grep");
-  const parts = promptHints(prompt, lower, {
+  const parts = promptHints(lower, {
     astGrep,
-    research: enabled(config, "agents", "research-agent"),
-    jira: host !== "opencode"
+    research: enabled(config, "agents", "research-agent")
   });
   const project = projectContext(join4(root, hostDir, "context.sh"), prompt, cwd, env);
   if (project !== "")

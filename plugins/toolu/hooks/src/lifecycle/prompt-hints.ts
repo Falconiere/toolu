@@ -37,10 +37,6 @@ const NEW_THING = new RegExp(`${WB}new[ \\t\\n\\v\\f\\r]+(feature|workflow|syste
 const RESEARCH = words(
   "latest|docs for|library docs|api reference|api docs|changelog|release notes|best practices?|look up|search the web|web search|how to use",
 );
-const JIRA_WORD = words("jira|atlassian");
-const JIRA_LINK = /atlassian[.]net\/browse\/[A-Z][A-Z0-9]+-[0-9]+/;
-const ISSUE_KEY = /[A-Z][A-Z0-9]+-[0-9]+/;
-const JIRA_CONTEXT = words("ticket|issue|board|sprint|epic|backlog");
 
 export type PromptGate = "skip" | "block" | "hint";
 
@@ -55,8 +51,7 @@ export function mentionsGateTopic(lower: string): boolean {
   return GATE_TOPIC.test(lower);
 }
 
-/** `jira` is off on OpenCode, where jira's own startup instruction names its skill (#351). */
-export type HintOptions = { astGrep: boolean; research: boolean; jira: boolean };
+export type HintOptions = { astGrep: boolean; research: boolean };
 
 /** At most one intent hint; the most specific pattern wins. */
 function intentHint(lower: string, astGrep: boolean): string | undefined {
@@ -69,7 +64,7 @@ function intentHint(lower: string, astGrep: boolean): string | undefined {
 }
 
 /** The intent hint, then the independent nudges, in the bash order. */
-export function promptHints(prompt: string, lower: string, options: HintOptions): string[] {
+export function promptHints(lower: string, options: HintOptions): string[] {
   const hints: (string | undefined)[] = [
     intentHint(lower, options.astGrep),
     SCALE.test(lower)
@@ -79,13 +74,7 @@ export function promptHints(prompt: string, lower: string, options: HintOptions)
       ? "Scope may be unresolved — consider the `brainstorm` skill for material design choices; skip it when the request is already bounded or mechanical."
       : undefined,
     options.research && RESEARCH.test(lower)
-      ? "External research — delegate to the research-agent subagent (routes exa-search/context7, native fallback) to keep main context lean."
-      : undefined,
-    options.jira &&
-    (JIRA_WORD.test(lower) ||
-      JIRA_LINK.test(prompt) ||
-      (ISSUE_KEY.test(prompt) && JIRA_CONTEXT.test(lower)))
-      ? "Jira mentioned — use the `jira` skill (REST wrapper over jira.sh), NOT the Atlassian MCP."
+      ? "External research — delegate to the research-agent subagent (uses native web search and fetch) to keep main context lean."
       : undefined,
   ];
   return hints.filter((hint) => hint !== undefined);

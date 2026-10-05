@@ -49,6 +49,21 @@ describe("session-start", () => {
     },
     CASE_TIMEOUT_MS,
   );
+
+  test(
+    "installed research wrappers and EXA_API_KEY add no research mandate",
+    async () => {
+      const caseWithWrappers = SESSION_START_CASES.find((c) =>
+        c.name.includes("deprecated research wrappers"),
+      );
+      if (!caseWithWrappers) throw new Error("mandate case missing");
+      const got = await runCase(caseWithWrappers, bundleArgv);
+      const context = sessionParts(got.stdout).context ?? "";
+      expect(context).toContain("ast-grep (structural search)");
+      expect((context.match(/\n  • /g) ?? []).length).toBe(2);
+    },
+    CASE_TIMEOUT_MS,
+  );
 });
 
 describe("user-prompt-submit", () => {
@@ -58,6 +73,42 @@ describe("user-prompt-submit", () => {
       const want = expected(c);
       const got = await runCase(c, bundleArgv);
       expect(got).toEqual(want);
+    },
+    CASE_TIMEOUT_MS,
+  );
+
+  test(
+    "latest-release research uses the agent without third-party tools",
+    async () => {
+      const got = await runCase(
+        {
+          name: "user-prompt-submit: native latest release",
+          hook: "user-prompt-submit",
+          stdin: JSON.stringify({ prompt: "what is the latest Bun release" }),
+        },
+        bundleArgv,
+      );
+      const context = JSON.parse(got.stdout).hookSpecificOutput.additionalContext as string;
+      expect(context).toContain("research-agent");
+      expect(context).toContain("native web");
+      expect(context).not.toContain("search.sh");
+    },
+    CASE_TIMEOUT_MS,
+  );
+
+  test(
+    "an Atlassian browse link adds no Jira hint",
+    async () => {
+      const got = await runCase(
+        {
+          name: "user-prompt-submit: native Atlassian link",
+          hook: "user-prompt-submit",
+          stdin: JSON.stringify({ prompt: "see https://acme.atlassian.net/browse/ABC-123" }),
+        },
+        bundleArgv,
+      );
+      const context = JSON.parse(got.stdout).hookSpecificOutput.additionalContext as string;
+      expect(context).not.toContain("Jira mentioned");
     },
     CASE_TIMEOUT_MS,
   );

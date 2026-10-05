@@ -537,16 +537,16 @@ index cf42fa4..3e955b7 100644
    "description": "Persistent agent memory + code-index search (comemory): skill, scoped wrapper (with delete/context verbs), a /comemory:setup command that detect-and-guides the binary then wires git index-code hooks, PreToolUse scope enforcement, and a SessionStart memory-count publisher for the statusline — registered into the toolu hook engine.",
    "author": {
      "name": "Falconiere Barbosa",
-diff --git a/plugins/context7/.claude-plugin/plugin.json b/plugins/context7/.claude-plugin/plugin.json
+diff --git a/plugins/retired-docs/.claude-plugin/plugin.json b/plugins/retired-docs/.claude-plugin/plugin.json
 index 53dd340..a255e61 100644
---- a/plugins/context7/.claude-plugin/plugin.json
-+++ b/plugins/context7/.claude-plugin/plugin.json
+--- a/plugins/retired-docs/.claude-plugin/plugin.json
++++ b/plugins/retired-docs/.claude-plugin/plugin.json
 @@ -1,6 +1,6 @@
  {
-   "name": "context7",
+   "name": "retired-docs",
 -  "version": "1.21.0",
 +  "version": "1.22.0",
-   "description": "Library documentation & code-example lookup via Context7 (skill + REST wrapper). Standalone, no dependencies.",
+   "description": "Library documentation & code-example lookup via retired docs (skill + REST wrapper). Standalone, no dependencies.",
    "author": {
      "name": "Falconiere Barbosa",
 diff --git a/plugins/design/.claude-plugin/plugin.json b/plugins/design/.claude-plugin/plugin.json
@@ -561,16 +561,16 @@ index 16af5aa..902a991 100644
    "description": "Web & mobile UI/UX design review over a cited, stack-aware knowledge base (skill + bash detector). Standalone, no dependencies.",
    "author": {
      "name": "Falconiere Barbosa",
-diff --git a/plugins/exa-search/.claude-plugin/plugin.json b/plugins/exa-search/.claude-plugin/plugin.json
+diff --git a/plugins/retired-search/.claude-plugin/plugin.json b/plugins/retired-search/.claude-plugin/plugin.json
 index 052506f..cb50d8b 100644
---- a/plugins/exa-search/.claude-plugin/plugin.json
-+++ b/plugins/exa-search/.claude-plugin/plugin.json
+--- a/plugins/retired-search/.claude-plugin/plugin.json
++++ b/plugins/retired-search/.claude-plugin/plugin.json
 @@ -1,6 +1,6 @@
  {
-   "name": "exa-search",
+   "name": "retired-search",
 -  "version": "1.21.0",
 +  "version": "1.22.0",
-   "description": "Web, code, and URL search plus deep research via Exa (skill + REST wrapper). Standalone, no dependencies.",
+   "description": "Web, code, and URL search plus deep research via retired search (skill + REST wrapper). Standalone, no dependencies.",
    "author": {
      "name": "Falconiere Barbosa",
 diff --git a/plugins/git-better/.claude-plugin/plugin.json b/plugins/git-better/.claude-plugin/plugin.json
@@ -2988,8 +2988,8 @@ index 6cdea85..d4c2294 100644
  
 @@ -254,6 +255,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
      ├── comemory/               # agent-memory skill + scope-enforcement & memory-count registry modules
-     ├── context7/               # context7 skill + Context7 REST wrapper
-     ├── exa-search/             # exa-search skill + Exa REST wrapper
+     ├── retired-docs/           # retired docs skill + REST wrapper
+     ├── retired-search/         # retired search skill + REST wrapper
 +    ├── design/                 # design-review skill + detect-stack.sh + cited references/ knowledge base
      ├── rust-quality/           # Rust PostToolUse quality fragments, assembled at SessionStart
      ├── ts-quality/             # TypeScript PostToolUse quality fragments, assembled at SessionStart

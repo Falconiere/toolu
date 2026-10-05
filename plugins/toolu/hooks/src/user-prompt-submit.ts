@@ -51,10 +51,9 @@ async function main(): Promise<void> {
   const path = env.PATH ?? "";
   const astGrep =
     (onPath("sg", path) || onPath("ast-grep", path)) && enabled(config, "skills", "ast-grep");
-  const parts = promptHints(prompt, lower, {
+  const parts = promptHints(lower, {
     astGrep,
     research: enabled(config, "agents", "research-agent"),
-    jira: host !== "opencode",
   });
   const project = projectContext(join(root, hostDir, "context.sh"), prompt, cwd, env);
   if (project !== "") parts.push(project);

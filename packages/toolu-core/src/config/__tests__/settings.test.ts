@@ -67,9 +67,9 @@ test.concurrent("the typed list loaders read the shipped files", () => {
 /** Lines and the prefix/redirect `mcp-blocker.sh` split them into (verified against it before #260 deleted it). */
 const MCP_LINES: readonly (readonly [string, string, string])[] = [
   [
-    "claude_ai_Atlassian -> use the `jira` skill instead",
+    "claude_ai_Atlassian -> use the host's native Jira tools instead",
     "claude_ai_Atlassian",
-    "use the `jira` skill instead",
+    "use the host's native Jira tools instead",
   ],
   ["  figma  ", "figma", ""],
   ["canva -> a -> b", "canva", "a -> b"],
