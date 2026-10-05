@@ -1,6 +1,6 @@
 // @bun
 // plugins/toolu/hooks/src/session-start.ts
-import { join as join15 } from "path";
+import { join as join14 } from "path";
 
 // node_modules/.bun/zod@4.1.5/node_modules/zod/v4/core/core.js
 var NEVER = Object.freeze({
@@ -4656,7 +4656,6 @@ function sweepState(root, options = {}) {
   }
 }
 // plugins/toolu/hooks/src/lifecycle/bash-compat.ts
-import { accessSync, constants } from "fs";
 function stripTrailingNewlines(text) {
   return text.replace(/\n+$/, "");
 }
@@ -4668,14 +4667,6 @@ function jqAlt(value, fallback) {
 }
 function onPath(name, path) {
   return Bun.which(name, { PATH: path }) !== null;
-}
-function isExecutable(path) {
-  try {
-    accessSync(path, constants.X_OK);
-    return true;
-  } catch {
-    return false;
-  }
 }
 function gitToplevel2(cwd, env) {
   const res = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], {
@@ -5068,7 +5059,6 @@ function deliveryFlowNotice(configRoot, host) {
 }
 
 // plugins/toolu/hooks/src/lifecycle/tool-mandates.ts
-import { join as join14 } from "path";
 function hasAstGrep(env) {
   const path = env.PATH ?? "";
   return onPath("sg", path) || onPath("ast-grep", path);
@@ -5087,14 +5077,6 @@ function mandates(input) {
   if (hasAstGrep(input.env) && wanted(input, "ast-grep")) {
     out.push("ast-grep (structural search) \u2014 for ANY search by code shape (signatures, call sites, impls, trait/interface usage, patterns) you MUST reach for `ast-grep run --pattern \u2026` FIRST. Grep/ripgrep/sed are a FALLBACK ONLY \u2014 use them for plain-text literals in non-code files, or when a query genuinely cannot be expressed structurally. Never reach for them first on code.");
   }
-  const exa = join14(input.configRoot, "exa-search", "search.sh");
-  if ((input.env.EXA_API_KEY ?? "") !== "" && isExecutable(exa) && wanted(input, "exa-search")) {
-    out.push(`exa-search (web search) \u2014 for ANY web search, code-example hunt, URL crawl, or topic research you MUST reach for \`"${exa}"\` FIRST (commands: search / crawl / similar \u2014 see the exa-search skill). Native web tools are a FALLBACK ONLY \u2014 use them when the wrapper errors or a URL needs your logged-in session.`);
-  }
-  const ctx7 = join14(input.configRoot, "context7", "search.sh");
-  if (input.host !== "opencode" && isExecutable(ctx7) && wanted(input, "context7")) {
-    out.push(`context7 (library docs) \u2014 for ANY third-party library/framework question (API usage, current docs, code examples, version behavior) you MUST query \`"${ctx7}"\` FIRST (\`search <library>\` to resolve the ID, then \`docs <id> <query>\`) BEFORE answering from memory or searching the web. Web search is a FALLBACK ONLY when context7 lacks coverage.`);
-  }
   return out;
 }
 function mandateBlock(input) {
@@ -5108,7 +5090,7 @@ function mandateBlock(input) {
 }
 
 // plugins/toolu/hooks/src/session-start.ts
-var DOCS = join15(import.meta.dir, "..", "docs");
+var DOCS = join14(import.meta.dir, "..", "docs");
 function sessionEvent(input) {
   const doc = parseStdin(input);
   const picked = ["source", "session_event", "event"].map((key) => member2(doc, key)).find((value) => value !== undefined && value !== null && value !== false);
@@ -5145,7 +5127,7 @@ function contextParts({ event, env, host, root, config }) {
     return;
   } };
   const permissions = permissionsAutowrite(quiet, project, { env, cwd });
-  const mandates = { config, env, host, configRoot: root };
+  const mandates = { config, env, host };
   const extras = [
     permissions.written ? permissions.notice : undefined,
     gatePresetNotice(root, config.data),

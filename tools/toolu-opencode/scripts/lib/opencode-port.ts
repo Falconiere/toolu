@@ -360,14 +360,7 @@ with this explanation and writes nothing. Do not edit Codex profiles from here.`
     ],
   ],
   "plugins/toolu/agents/research-agent.md": [
-    [
-      "their root explicitly: `${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}` on\nCodex or `${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}` on Claude\nCode. Ordinary shell calls do not inherit plugin lifecycle variables, so never\ncollapse the two roots into one ambiguous fallback.",
-      "them as `$TOOLU_CONFIG_DIR/context7/search.sh` and\n`$TOOLU_CONFIG_DIR/exa-search/search.sh`: OpenCode's bash sets `TOOLU_CONFIG_DIR`\nto the project's toolu data root.",
-    ],
-    [
-      "fall back to the native\n   host-native web search and fetch tools",
-      "fall back to OpenCode's\n   `websearch` and `webfetch` tools",
-    ],
+    ["`WebSearch` and `WebFetch`", "`websearch` and `webfetch`"],
   ],
 };
 

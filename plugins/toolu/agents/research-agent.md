@@ -5,8 +5,8 @@ description: >-
   framework usage, "what is / latest / how does X work" on third-party tech,
   topic surveys, and comparisons that need the live web. NOT for local codebase
   questions (use deep-explore) and NOT for full multi-source cited reports (use
-  the deep-research skill). Routes to exa-search / context7 when reachable, falls
-  back to native web search. Returns a compact synthesis with source URLs.
+  the deep-research skill). Uses the host's native web search and fetch tools.
+  Returns a compact synthesis with source URLs.
 tools: Read, Bash, WebSearch, WebFetch, Grep, Glob
 model: sonnet
 ---
@@ -35,43 +35,19 @@ lead thread) for hard reasoning and synthesis. Tier convention for toolu agents:
 **Haiku** for mechanical/lookup, **Sonnet** for read-only exploration and
 research, **inherit** (frontier) only for deep-reasoning agents.
 
-### Routing — pick the primary tool by query shape
+### Native web workflow
 
-| Query shape | Primary tool | Invocation |
-| --- | --- | --- |
-| library / framework / API / version / "docs for X" | **context7** | `context7/search.sh` — `search <lib>` to resolve the id, then `docs <id> "<question>" -t txt --fast` |
-| general web / topic / news / "latest" / comparison | **exa-search** | `exa-search/search.sh search -q "<query>" --lean --highlights 4000 -n 5` |
-| a specific URL to read | **exa-search** | `… crawl <url> -m 3000` |
-
-The stable paths above are published by each plugin's SessionStart hook. Resolve
-their root explicitly: `${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}` on
-Codex or `${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}` on Claude
-Code. Ordinary shell calls do not inherit plugin lifecycle variables, so never
-collapse the two roots into one ambiguous fallback.
-
-Repo-checkout fallback paths (for tests/dev when the plugins are not installed):
-`plugins/context7/hooks/dist/search.js`,
-`plugins/exa-search/hooks/dist/search.js` (executable Bun bundles).
-
-### Try-then-fallback protocol
-
-Do **not** pre-probe availability. Attempt the primary CLI, then degrade on any
-failure:
-
-1. Run the primary CLI for the route.
-2. **On nonzero exit** (missing API key — e.g. exa prints `EXA_API_KEY unset` and
-   exits 1 — rate limit, network error, empty result): fall back to the native
-   host-native web search and fetch tools to read the top source(s).
-3. **If native web tools are also unreachable** (headless/offline): answer from
-   your training knowledge and state explicitly that the answer may be **stale**
-   and was not verified against the live web. Never hang or fabricate sources.
-
-Note in the output which path actually served the answer.
+1. Use `WebSearch` and `WebFetch` for current facts, library/API documentation,
+   and topic research. Prefer official documentation for technical claims.
+2. For a known URL, fetch it directly. For an open question, search first, then
+   fetch the most relevant sources and read the passages behind the answer.
+3. If live web tools are unavailable, say that the answer was not verified and
+   may be stale. Never fabricate a source or imply that you read a page you did
+   not reach.
 
 ### Token rules — you are the cheap tier; stay cheap
 
-- Prefer lean flags: exa `--lean --highlights` (NOT `--with-text`); context7
-  `-t txt --fast`. Cap crawl with `-m` (≤3000). Default **result cap: 5**.
+- Default **result cap: 5**. Fetch only the pages needed to answer the question.
 - Read only what you need. Do not paste raw pages back to the caller.
 - Return a synthesis, not bytes.
 
@@ -86,13 +62,12 @@ Sources:
 - <title> — <url>
 - ...
 
-Tools used: <exa|context7|native>[, fallback: native]
+Tools used: native web search and fetch | native web fetch | none
 ```
 
-If any provider failed or you fell back to training knowledge, note the
-degradation on the `Tools used:` line (e.g. `Tools used: native (exa
-unavailable: EXA_API_KEY unset)` or `Tools used: none — answered from training
-knowledge, may be stale`).
+If live tools failed or you answered from training knowledge, name that limit on
+the `Tools used:` line (for example, `Tools used: none — live web unavailable;
+answer may be stale`).
 
 ### What you return
 

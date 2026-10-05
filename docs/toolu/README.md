@@ -42,7 +42,7 @@ The arithmetic, and the cases where delegation loses, are in [`references/delega
 
 ### 3. Deep-Research Skill
 
-The `deep-research` skill is a standalone knowledge workflow: it picks guiding questions, then fans out `research-agent` workers (exa-search + context7) before verifying and writing a cited report.
+The `deep-research` skill is a standalone knowledge workflow: it picks guiding questions, then fans out `research-agent` workers (native web search and fetch) before verifying and writing a cited report.
 
 ```text
 "deep research on X" → picks guiding questions, fan-out

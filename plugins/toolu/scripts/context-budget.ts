@@ -131,7 +131,7 @@ function runSkills(root: string): Line[] {
       "brainstorm",
       "trade-offs",
     ]),
-    ...checkSkill(root, "deep-research", "plugins/toolu/skills/deep-research/SKILL.md", 90, [
+    ...checkSkill(root, "deep-research", "plugins/toolu/skills/deep-research/SKILL.md", 80, [
       "deep research",
       "cited report",
     ]),

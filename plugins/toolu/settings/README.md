@@ -65,12 +65,11 @@ hint is ignored for matching.
 ```text
 # <server-prefix> -> <redirect text shown in the deny reason>
 # Example (commented = inert; uncomment to actually block the Atlassian MCP and
-# steer Jira work to the bundled jira skill):
-# claude_ai_Atlassian -> use the `jira` skill instead
+# steer Jira work to the host's native Jira tools when available):
+# claude_ai_Atlassian -> use the host's native Jira tools instead
 ```
 
-The example is shown **commented**, so nothing is blocked out of the box — the
-`jira`/toolu prompt nudge handles discoverability without denying the MCP.
+The example is shown **commented**, so nothing is blocked out of the box.
 Uncomment the line (in your own settings dir) only if you want a hard block too.
 
 Allow/deny semantics for the bash guard: rules apply to each simple command

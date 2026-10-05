@@ -280,14 +280,15 @@ test("no generated file names the ambiguous braced TOOLU_PLUGIN_ROOT, and the no
   expect(notes).not.toContain("package root.\n- The OpenCode adapter must set `TOOLU_PLUGIN_ROOT`");
 });
 
-test("generated research agent labels the OpenCode config root correctly", () => {
+test("generated research agent uses native OpenCode web tools", () => {
   const out = mkdtempSync(join(tmpBase, "toolu-surface-agent-"));
-  const agent = planDefault(out).files.get(join(out, "agents/toolu-research-agent.md"));
-  expect(agent).toContain(
-    "them as `$TOOLU_CONFIG_DIR/context7/search.sh` and\n`$TOOLU_CONFIG_DIR/exa-search/search.sh`: OpenCode's bash sets `TOOLU_CONFIG_DIR`\nto the project's toolu data root.",
-  );
-  expect(agent).not.toContain("CODEX_HOME");
-  expect(agent).not.toContain("on Claude\nCode. Ordinary");
+  const files = planDefault(out).files;
+  const agent = files.get(join(out, "agents/toolu-research-agent.md"));
+  const skill = files.get(join(out, "skills/toolu-deep-research/SKILL.md"));
+  expect(agent).toContain("`websearch` and `webfetch`");
+  expect(agent).not.toContain("search.sh");
+  expect(skill).toContain("native web search and fetch");
+  expect(skill).not.toContain("search.sh");
 });
 
 test("generated delivery skill loads brainstorm by its generated ID", () => {

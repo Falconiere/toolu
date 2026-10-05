@@ -497,14 +497,17 @@ const MCP_BLOCKER_CASES: ModuleCase[] = [
   }),
   mb({
     name: "mcp-blocker: a redirect hint is appended to the reason",
-    settings: { "mcp-blocklist.txt": "someserver -> use the jira skill instead\n" },
+    settings: { "mcp-blocklist.txt": "someserver -> use the host's native Jira tools instead\n" },
     fixture: mcp("someserver", "do"),
     expect: "ask",
-    has: ["use the jira skill instead"],
+    has: ["use the host's native Jira tools instead"],
+    deviation: "#405 native Jira redirect replaces the historical skill hint",
   }),
   mb({
     name: "mcp-blocker: a commented entry does not block",
-    settings: { "mcp-blocklist.txt": "# claude_ai_Atlassian -> use the jira skill instead\n" },
+    settings: {
+      "mcp-blocklist.txt": "# claude_ai_Atlassian -> use the host's native Jira tools instead\n",
+    },
     fixture: mcp("claude_ai_Atlassian", "createIssue"),
     expect: "silent",
   }),

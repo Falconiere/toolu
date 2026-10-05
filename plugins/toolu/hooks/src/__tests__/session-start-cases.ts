@@ -10,6 +10,8 @@ const CODEX_LIST =
   '{"installed":[{"pluginId":"toolu@toolu","name":"toolu","marketplaceName":"toolu","installed":true}],"available":[]}';
 const TS_REPO = { "tsconfig.json": "{}\n", "bun.lock": "{}\n" };
 const DEP = { name: "toolu", dependencies: [{ name: "ts-quality", marketplace: "toolu" }] };
+const LEGACY_SEARCH = ["exa", "search"].join("-");
+const LEGACY_DOCS = ["context", "7"].join("");
 
 function ss(
   name: string,
@@ -134,43 +136,21 @@ const MANDATES: readonly LifecycleCase[] = [
     userConfig: { skills: { "ast-grep": false } },
     registry: { plugins: {} },
   }),
-  ss("exa-search mandate with key and wrapper", {
-    registry: { plugins: { "exa-search@toolu": {} } },
-    wrappers: ["exa-search"],
-    env: { EXA_API_KEY: "test-key" },
-  }),
-  ss("exa-search without a key", {
-    registry: { plugins: { "exa-search@toolu": {} } },
-    wrappers: ["exa-search"],
-  }),
-  ss("exa-search without a wrapper", {
-    registry: { plugins: { "exa-search@toolu": {} } },
-    env: { EXA_API_KEY: "k" },
-  }),
-  ss("exa-search skill disabled", {
-    registry: { plugins: { "exa-search@toolu": {} } },
-    wrappers: ["exa-search"],
-    userConfig: { skills: { "exa-search": false } },
-    env: { EXA_API_KEY: "k" },
-  }),
-  ss("context7 mandate with wrapper", {
-    registry: { plugins: { "context7@toolu": {} } },
-    wrappers: ["context7"],
-  }),
-  ss("context7 without a wrapper", { registry: { plugins: { "context7@toolu": {} } } }),
-  ss("context7 and exa plugins absent", {
-    registry: { plugins: {} },
-    wrappers: ["context7", "exa-search"],
-    env: { EXA_API_KEY: "k" },
-  }),
-  ss("context7 skill disabled", {
-    registry: { plugins: { "context7@toolu": {} } },
-    wrappers: ["context7"],
-    userConfig: { skills: { context7: false } },
-  }),
-  ss("all three mandates, no registry file (fail open)", {
+  ss("deprecated research wrappers do not add mandates", {
     astGrep: true,
-    wrappers: ["context7", "exa-search"],
+    registry: {
+      plugins: {
+        "ast-grep@toolu": {},
+        [`${LEGACY_SEARCH}@toolu`]: {},
+        [`${LEGACY_DOCS}@toolu`]: {},
+      },
+    },
+    wrappers: [LEGACY_DOCS, LEGACY_SEARCH],
+    env: { EXA_API_KEY: "k" },
+  }),
+  ss("toolu only does not add research mandates", {
+    registry: { plugins: { "toolu@toolu": {} } },
+    wrappers: [LEGACY_DOCS, LEGACY_SEARCH],
     env: { EXA_API_KEY: "k" },
   }),
 ];
