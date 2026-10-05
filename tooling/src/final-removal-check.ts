@@ -48,7 +48,7 @@ function check(): void {
   if (!/^  typescript:/m.test(workflow)) problems.push("replacement typescript CI job missing");
 
   const raw: unknown = JSON.parse(
-    readFileSync(resolve(ROOT, "tooling/fixtures/gate-coverage/inventory.json"), "utf8"),
+    readFileSync(resolve(ROOT, "fixtures/gate-coverage/inventory.json"), "utf8"),
   );
   const inventory = z.array(Row).parse(raw);
   if (inventory.length === 0) problems.push("coverage inventory is empty");

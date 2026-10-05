@@ -129,7 +129,8 @@ export function render(rows: InventoryRow[]): void {
 
 **Issue:** [#209](https://github.com/Falconiere/toolu/issues/209) (epic [#203](https://github.com/Falconiere/toolu/issues/203))  
 **Final removal:** [#279](https://github.com/Falconiere/toolu/issues/279) (epic [#247](https://github.com/Falconiere/toolu/issues/247))
-**Inventory:** \`tooling/fixtures/gate-coverage/inventory.json\`  
+**Inventory:** \`fixtures/gate-coverage/inventory.json\`
+
 **Check:** \`bun run tooling/src/gate-coverage-inventory.ts check\`
 
 Every live hook and built-in gate in this inventory is \`port-native\` and runs through a Bun bundle. The final-removal check also rejects tracked shell and Bats files.
@@ -194,7 +195,7 @@ export function seed(): void {
           : old.verificationConformance,
     });
   });
-  mkdirSync(join(ROOT, "tooling/fixtures/gate-coverage"), { recursive: true });
+  mkdirSync(join(ROOT, "fixtures/gate-coverage"), { recursive: true });
   writeFileSync(INVENTORY, `${JSON.stringify(rows, null, 2)}\n`);
   process.stdout.write(`gate-coverage-inventory: seeded ${rel(INVENTORY)} (${rows.length} rows)\n`);
   render(rows);

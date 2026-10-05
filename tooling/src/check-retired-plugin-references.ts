@@ -16,6 +16,7 @@ const HISTORY = new Set([
 const JIRA_INTEGRATION = new Set([
   ".claude-plugin/marketplace.json",
   "AGENTS.md",
+  "fixtures/index.json", // preserves the existing Jira word case name for parity
   "README.md",
   "docs/conformance-report.md",
   "docs/epic-orchestrator/README.md",

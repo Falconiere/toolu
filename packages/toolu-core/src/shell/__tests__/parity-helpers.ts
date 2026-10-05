@@ -17,7 +17,7 @@ import { analyzeShell } from "../shell-parse.ts";
 import { writeTargets } from "../shell-writes.ts";
 
 export const REPO = resolve(import.meta.dir, "../../../../..");
-export const FIXTURES = join(REPO, "tooling/fixtures/shell");
+export const FIXTURES = join(REPO, "fixtures/shell");
 
 export type Env = Record<string, string>;
 

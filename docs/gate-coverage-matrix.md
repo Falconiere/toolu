@@ -2,7 +2,8 @@
 
 **Issue:** [#209](https://github.com/Falconiere/toolu/issues/209) (epic [#203](https://github.com/Falconiere/toolu/issues/203))  
 **Final removal:** [#279](https://github.com/Falconiere/toolu/issues/279) (epic [#247](https://github.com/Falconiere/toolu/issues/247))
-**Inventory:** `tooling/fixtures/gate-coverage/inventory.json`  
+**Inventory:** `fixtures/gate-coverage/inventory.json`
+
 **Check:** `bun run tooling/src/gate-coverage-inventory.ts check`
 
 Every live hook and built-in gate in this inventory is `port-native` and runs through a Bun bundle. The final-removal check also rejects tracked shell and Bats files.

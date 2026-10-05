@@ -130,7 +130,7 @@ Exhaustive per-source rows: [docs/gate-coverage-matrix.md](gate-coverage-matrix.
 
 ## Protected-files gate trace
 
-**Fixture:** `tooling/fixtures/portable-core/protected-files-pre.json` (Edit targeting `/repo/.env`).
+**Fixture:** `fixtures/portable-core/protected-files-pre.json` (Edit targeting `/repo/.env`).
 
 1. Host carries an edit (or Bash write) to a protected path.
 2. Normalize via edit records (`packages/toolu-core/src/state/edit-records.ts`).

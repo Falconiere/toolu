@@ -13,7 +13,7 @@ import { contractPaths } from "./opencode-host/results.ts";
 import { ContractError, PinSchema, readJson } from "./opencode-host/schema.ts";
 
 const ROOT = resolve(import.meta.dir, "../..");
-const FIXTURE = resolve(ROOT, "tooling/fixtures/portable-core/protected-files-pre.json");
+const FIXTURE = resolve(ROOT, "fixtures/portable-core/protected-files-pre.json");
 
 const HEADINGS = [
   "## Pins",
@@ -35,7 +35,7 @@ const CITATIONS: ReadonlyArray<readonly [string, string]> = [
   ["gates/protected-files.ts", "missing protected-files gate citation"],
   ["gate-mode.sh", "missing gate-mode.sh citation"],
   ["dispatch.sh", "missing dispatch.sh citation"],
-  ["tooling/fixtures/portable-core/protected-files-pre.json", "missing fixture citation"],
+  ["fixtures/portable-core/protected-files-pre.json", "missing fixture citation"],
   ["deny", "missing deny mapping language"],
 ];
 

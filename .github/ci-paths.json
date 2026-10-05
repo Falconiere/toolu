@@ -5,6 +5,7 @@
       "plugins/**",
       "tools/**",
       "tooling/**",
+      "fixtures/**",
       "benchmarks/**",
       "package.json",
       "bun.lock",
@@ -28,6 +29,7 @@
       "tooling/src/opencode-*.ts",
       "tooling/src/env.ts",
       "tooling/src/npm-pack.ts",
+      "fixtures/**",
       "docs/opencode.md",
       "docs/opencode-migration.md",
       "package.json",
@@ -46,7 +48,7 @@
       ".cargo/**",
       ".claude/toolu.config.json",
       ".codex/toolu.config.json",
-      "fixtures/guardrails/**",
+      "fixtures/**",
       "tooling/conventions/guardrails/rust/**",
       "tooling/src/check-rust-quality.ts",
       "plugins/rust-quality/**",
@@ -57,7 +59,7 @@
       "benchmarks/startup-budgets.json"
     ],
     "ports": [
-      "fixtures/rust-ported.json",
+      "fixtures/**",
       "tooling/src/rust-conformance.ts",
       "tooling/src/benchmarks/hook-resources.ts",
       "tooling/src/benchmarks/lib/hook-*.ts",

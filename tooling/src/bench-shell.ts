@@ -169,7 +169,7 @@ const Fixture = z.object({ cases: z.array(z.object({ command: z.string() })) });
 /** Every command in the checked-in shell fixtures. */
 export function fixtureCommands(): string[] {
   return ["bats-parity.json", "issue-283.json"].flatMap((name) => {
-    const text = readFileSync(join(ROOT, "tooling/fixtures/shell", name), "utf8");
+    const text = readFileSync(join(ROOT, "fixtures/shell", name), "utf8");
     const commands = Fixture.parse(JSON.parse(text)).cases.map((c) => c.command);
     return commands.map((command) =>
       command.replaceAll("$TMP", "/tmp/t").replaceAll("$MKTEMP", "/tmp/m"),

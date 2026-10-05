@@ -1,6 +1,6 @@
 /**
  * Every payload the hook launcher (#250) emits must pass Codex's own output
- * schemas, vendored verbatim under tooling/fixtures/codex-hook-schemas/. The
+ * schemas, vendored verbatim under fixtures/codex-hook-schemas/. The
  * payloads are produced by running the generated command for real with Bun
  * absent (advisory branch) and by the diagnostic helper the SessionStart bundle
  * prints (found branch). The enforcing branch writes nothing to stdout.
