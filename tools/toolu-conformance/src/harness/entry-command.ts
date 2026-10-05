@@ -1,6 +1,6 @@
 /** Resolve a committed hook entry to its Bun bundle or selected Rust CLI command. */
 import { accessSync, existsSync, readFileSync, statSync, constants } from "node:fs";
-import { basename, isAbsolute, join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { launcherCommand, type LauncherTarget } from "@toolu/core/launcher";
 import { z } from "zod";
 
@@ -149,7 +149,7 @@ export function resolveEntryCommand(
     return { argv: defaultArgv ?? [process.execPath, bundle], implementation: "bun" };
   }
   // Only a selected entry becomes CLI arguments; a Bun run keeps any copied root.
-  if (!ENTRY_NAME.test(plugin) || !ENTRY_NAME.test(entry) || !isAbsolute(bundle)) {
+  if (!ENTRY_NAME.test(plugin) || !ENTRY_NAME.test(entry)) {
     throw new Error(`invalid hook entry: ${plugin}/${entry} at ${bundle}`);
   }
   const args = plugin === "toolu" ? ["hook", entry] : [plugin, "hook", entry];

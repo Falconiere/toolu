@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { chmodSync, readFileSync } from "node:fs";
+import { chmodSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
@@ -23,7 +23,7 @@ test.concurrent("an empty list is a successful no-op that never calls cargo", as
   });
   expect(result.exitCode).toBe(0);
   expect(result.stdout).toBe("rust-conformance: no ported entries; nothing to run\n");
-  expect(() => readFileSync(calls, "utf8")).toThrow();
+  expect(existsSync(calls)).toBe(false);
 });
 
 test.concurrent("malformed and duplicate lists are rejected before cargo runs", async () => {
@@ -52,7 +52,7 @@ test.concurrent("malformed and duplicate lists are rejected before cargo runs", 
     }),
   );
   expect(results).toEqual(cases.map(([name]) => ({ name, exitCode: 2, prefixed: true })));
-  expect(() => readFileSync(calls, "utf8")).toThrow();
+  expect(existsSync(calls)).toBe(false);
 });
 
 test.concurrent("a populated list builds the toolu binary and stops when the build fails", async () => {

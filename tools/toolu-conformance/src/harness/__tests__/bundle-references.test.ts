@@ -10,7 +10,8 @@ import { run } from "../spawn.ts";
 
 const ROOT = resolve(import.meta.dir, "../../../../..");
 // A bundle path spelled out, a relative `../dist/` from `hooks/src`, or path.join parts.
-const PATTERN = String.raw`hooks/dist\b|(\.\./)+dist/|"hooks",\s*"dist"`;
+// POSIX ERE only (no \b or \s), so `git grep -E` reads it alike on every platform.
+const PATTERN = String.raw`hooks/dist([^A-Za-z0-9_-]|$)|(\.\./)+dist/|"hooks",[[:space:]]*"dist"`;
 const SELF = "tools/toolu-conformance/src/harness/__tests__/bundle-references.test.ts";
 const COMMENT = /^\s*(\/\/|\/?\*)/;
 
@@ -88,7 +89,7 @@ test("every allowlist entry still names a bundle path", async () => {
 });
 
 test("tests run a hook's launcher only through launchedArgv", async () => {
-  const found = await references(String.raw`\blauncherCommand\(`);
+  const found = await references(String.raw`(^|[^A-Za-z0-9_])launcherCommand\(`);
   const offenders = [...found].filter(([file]) => !allowed(file, LAUNCHER_ALLOWED));
   expect(offenders).toEqual([]);
   const stale = Object.keys(LAUNCHER_ALLOWED).filter((prefix) => !found.has(prefix));

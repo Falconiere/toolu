@@ -66,7 +66,10 @@ export async function publishJev(
     host === "claude"
       ? { CLAUDE_CONFIG_DIR: root, TOOLU_HOST_OVERRIDE: "claude", ...extra }
       : { CODEX_HOME: root, TOOLU_HOST_OVERRIDE: "codex", ...extra };
-  const res = await run(entryArgv("jev", "session-start"), { env, stdin: "" });
+  const res = await run(entryArgv("jev", "session-start", resolve(PLUGIN, "../jev")), {
+    env,
+    stdin: "",
+  });
   expect(res.exitCode).toBe(0);
 }
 
@@ -78,7 +81,7 @@ type RenderOpts = { payload?: string; cwd?: string; env?: EnvPatch };
 /** Run the renderer the way Claude Code does; the payload defaults to `payload(sb.project)`. */
 export async function render(sb: Sandbox, opts: RenderOpts = {}): Promise<string> {
   const env = { HOME: sb.home, CLAUDE_CONFIG_DIR: cfgOf(sb), TYPESAFE_API_KEY: KEY, ...opts.env };
-  const res = await run(publishedArgv("statusline", "statusline"), {
+  const res = await run(publishedArgv("statusline", "statusline", PLUGIN), {
     cwd: opts.cwd ?? sb.project,
     env,
     stdin: opts.payload ?? payload(sb.project),
@@ -94,7 +97,7 @@ export async function report(
   env: EnvPatch = {},
   cwd = sb.root,
 ): Promise<string> {
-  const status = entryArgv("statusline", "status");
+  const status = entryArgv("statusline", "status", PLUGIN);
   const argv = dir === undefined ? status : [...status, dir];
   const res = await run(argv, {
     cwd,

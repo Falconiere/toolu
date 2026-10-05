@@ -155,3 +155,18 @@ test("a copied plugin keeps its manifest name; an unselected odd root still runs
   expect(command).toEqual({ argv: [process.execPath, SAMPLE], implementation: "bun" });
   expect((await run(command.argv)).exitCode).toBe(0);
 });
+
+test("an empty TOOLU_RUST_BIN_DIR is an error, never the current directory", () => {
+  expect(() =>
+    resolveEntryCommand(ENTRY, { TOOLU_IMPL: "rust:toolu/pre-tools", TOOLU_RUST_BIN_DIR: "" }),
+  ).toThrow("TOOLU_RUST_BIN_DIR must not be empty");
+});
+
+test("a relative bundle path no longer blocks a selected Rust entry", () => {
+  using sb = createSandbox();
+  const bin = sb.write("bin/toolu", "#!/bin/sh\nexit 0\n");
+  chmodSync(bin, 0o755);
+  const relative = { ...ENTRY, bundle: bundlePath("plugins/toolu", "pre-tools") };
+  const env = { TOOLU_IMPL: "rust:toolu/pre-tools", TOOLU_RUST_BIN_DIR: sb.path("bin") };
+  expect(resolveEntryCommand(relative, env).argv).toEqual([bin, "hook", "pre-tools"]);
+});

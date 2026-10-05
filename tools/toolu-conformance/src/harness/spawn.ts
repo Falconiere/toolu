@@ -5,7 +5,7 @@
  * group so a hook's grandchildren cannot hold the pipes open.
  */
 import { existsSync } from "node:fs";
-import { basename, extname } from "node:path";
+import { basename, extname, resolve } from "node:path";
 import { pluginName, resolveEntryCommand } from "./entry-command.ts";
 import type { HostName, Sandbox } from "./sandbox.ts";
 
@@ -202,7 +202,8 @@ function hookArgv(opts: RunHookOptions): string[] {
     const { argv, implementation } = resolveEntryCommand({
       plugin: opts.plugin ?? pluginName(opts.pluginRoot),
       entry: basename(opts.bundle, extname(opts.bundle)),
-      bundle: opts.bundle,
+      bundle: resolve(opts.bundle),
+      defaultArgv: [process.execPath, opts.bundle],
     });
     if (implementation === "bun" && !existsSync(opts.bundle)) {
       throw new Error(`bundle not found: ${opts.bundle}`);
