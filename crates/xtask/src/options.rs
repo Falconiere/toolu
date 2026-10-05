@@ -18,6 +18,10 @@ pub(crate) struct Options {
   pub(crate) only: Vec<String>,
   /// Positional arguments (the llvm-cov JSON file of `check-coverage`).
   pub(crate) files: Vec<PathBuf>,
+  /// Where `measure` writes its report (`--out`).
+  pub(crate) out: Option<PathBuf>,
+  /// The command `measure` runs: every word after `--`.
+  pub(crate) command: Vec<String>,
 }
 
 impl Options {
@@ -27,6 +31,10 @@ impl Options {
     let mut root = None;
     let mut rest = args.iter();
     while let Some(word) = rest.next() {
+      if word == "--" {
+        options.command = rest.by_ref().cloned().collect();
+        break;
+      }
       if !word.starts_with("--") {
         options.files.push(PathBuf::from(word));
         continue;
@@ -40,6 +48,7 @@ impl Options {
         "--base" => options.base = Some(value),
         "--title" => options.title = Some(value),
         "--only" => options.only.push(value),
+        "--out" => options.out = Some(PathBuf::from(value)),
         _ => return Err(format!("unknown option {word}")),
       }
     }
@@ -47,6 +56,14 @@ impl Options {
     options.root = std::fs::canonicalize(&root)
       .map_err(|err| format!("cannot resolve root {}: {err}", root.display()))?;
     Ok(options)
+  }
+
+  /// Refuse `measure`'s options on any other task.
+  pub(crate) fn for_task(self, task: &str) -> Result<Self, String> {
+    if task != "measure" && (self.out.is_some() || !self.command.is_empty()) {
+      return Err("only measure takes --out and a command after --".to_owned());
+    }
+    Ok(self)
   }
 }
 

@@ -41,3 +41,22 @@ fn bad_options_are_errors() {
   let err = Options::parse(&words(&["--root", "/no/such/dir"])).unwrap_err();
   assert!(err.starts_with("cannot resolve root /no/such/dir"), "{err}");
 }
+
+#[test]
+fn measure_takes_out_and_every_word_after_the_separator() {
+  let options = Options::parse(&words(&["--out", "r.json", "--", "sh", "-c", "--root x"])).unwrap();
+  assert_eq!(options.out, Some(PathBuf::from("r.json")));
+  assert_eq!(options.command, ["sh", "-c", "--root x"]);
+  assert!(options.for_task("measure").is_ok());
+}
+
+#[test]
+fn other_tasks_refuse_measure_options() {
+  for args in [&["--out", "r.json"][..], &["--", "true"][..]] {
+    let options = Options::parse(&words(args)).unwrap();
+    assert_eq!(
+      options.for_task("guardrails").unwrap_err(),
+      "only measure takes --out and a command after --"
+    );
+  }
+}

@@ -10,6 +10,7 @@ mod guardrails;
 mod layers;
 mod layers_check;
 mod lexer;
+mod measure;
 mod metadata;
 mod options;
 mod output;
@@ -43,18 +44,21 @@ const TASKS: &[(&str, Task)] = &[
   ("check-unused-pub", unused_pub::run),
   ("check-gate-change", gate_change::run),
   ("check-coverage", coverage::run),
+  ("measure", measure::run),
 ];
 
 const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--title TEXT] \
   [--only STEP]... [FILE]\n\
+  \x20      cargo xtask measure --out FILE -- COMMAND [ARG]...\n\
   tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
-  check-coverage";
+  check-coverage, measure";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.
 fn run(args: &[String]) -> ExitCode {
   let result = match args.split_first() {
     Some((name, rest)) => match TASKS.iter().find(|(task, _)| task == name) {
       Some((_, task)) => Options::parse(rest)
+        .and_then(|options| options.for_task(name))
         .map_err(|err| format!("{err}\n{USAGE}"))
         .and_then(|options| task(&options)),
       None => Err(format!("unknown task {name}\n{USAGE}")),

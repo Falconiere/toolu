@@ -41,6 +41,12 @@
       "id": "check-coverage",
       "pass": "crates/xtask/tests/fixtures_tools.rs::coverage_clean",
       "fail": "crates/xtask/tests/fixtures_tools.rs::coverage_violating"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "measure",
+      "pass": "crates/xtask/tests/measure.rs::a_failing_command_is_measured_and_its_code_reported",
+      "fail": "crates/xtask/tests/measure.rs::an_unspawnable_command_exits_2_and_names_it"
     }
   ]
 }
