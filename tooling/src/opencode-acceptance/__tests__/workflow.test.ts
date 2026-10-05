@@ -64,7 +64,7 @@ test.concurrent("no acceptance or gate step may soft-fail or be skipped except b
   expect(runs("gate").join("\n")).toContain("bun run test:ts");
 });
 
-test.concurrent("the acceptance job installs every tool its preflight requires", () => {
+test.concurrent("the acceptance job installs ast-grep beyond runner-provided tools", () => {
   const installs = runs("opencode").join("\n");
   expect(installs).toContain("@ast-grep/cli");
 });

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { contractPaths } from "../../opencode-host/results.ts";
 import { ProbeResultsSchema, readJson } from "../../opencode-host/schema.ts";
 import { ROOT } from "../../opencode-host/scenarios-entry.ts";
+import { PATH_SCENARIOS } from "../../opencode-host/scenarios-paths.ts";
 import {
   catalogNames,
   coverage,
@@ -48,6 +49,12 @@ test.concurrent("path and quickstart checks belong to the helpers they exercise"
   expect(all.jev).not.toContain("entry.worktree-state");
   expect(all["ast-grep"]).toContain("entry.worktree-state");
   expect(all["ast-grep"]).toContain("docs.quickstart");
+});
+
+test.concurrent("every path scenario is registered once", () => {
+  expect(checks.filter((check) => check.family === "paths").map((check) => check.id)).toEqual(
+    PATH_SCENARIOS.map((scenario) => scenario.id),
+  );
 });
 
 test.concurrent("a plugin whose only checks fail, or are whole-catalog, is uncovered", () => {

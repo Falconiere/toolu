@@ -39,8 +39,9 @@ import {
 } from "./report.ts";
 
 /**
- * Service credentials no fixture check may see. An external test that names
- * one in `requires` gets it back; other fixture checks never see them.
+ * Service credentials no fixture check may see. The built-in epic-orchestrator
+ * Jira tracker still uses these keys after the standalone Jira plugin's removal.
+ * An external test that names one in `requires` gets it back.
  */
 const SERVICE_KEYS = [
   "TYPESAFE_API_KEY",

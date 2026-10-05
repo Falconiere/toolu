@@ -66,20 +66,16 @@ function scenarioFamilies(): AcceptanceCheck[] {
   return [
     ...scenarioChecks("entry", ["toolu"], "none", ENTRY_SCENARIOS),
     ...scenarioChecks("startup", "all", "none", STARTUP_SCENARIOS),
-    // The path scenario runs and asserts the published Jev helper without Bun on PATH.
-    ...scenarioChecks(
-      "paths",
-      ["toolu", "jev"],
-      "none",
-      PATH_SCENARIOS.filter((scenario) => scenario.id === "entry.helper-env"),
-    ),
-    // The worktree scenario asserts ast-grep registry modules in the selected checkout only.
-    ...scenarioChecks(
-      "paths",
-      ["toolu", "ast-grep"],
-      "none",
-      PATH_SCENARIOS.filter((scenario) => scenario.id === "entry.worktree-state"),
-    ),
+    ...PATH_SCENARIOS.flatMap((scenario) => {
+      // The two named scenarios verify leaf plugin behavior alongside toolu.
+      const plugins =
+        scenario.id === "entry.helper-env"
+          ? ["toolu", "jev"]
+          : scenario.id === "entry.worktree-state"
+            ? ["toolu", "ast-grep"]
+            : ["toolu"];
+      return scenarioChecks("paths", plugins, "none", [scenario]);
+    }),
     ...scenarioChecks("install", ["toolu"], "none", INSTALL_SCENARIOS),
     ...scenarioChecks("babysit", ["pr-babysit"], "fixture", BABYSIT_SCENARIOS),
     ...scenarioChecks("cli", ["toolu"], "none", CLI_SCENARIOS),

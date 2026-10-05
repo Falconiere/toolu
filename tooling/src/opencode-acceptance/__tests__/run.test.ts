@@ -12,9 +12,18 @@ test.concurrent("service credentials leave the environment and come back only to
   const env: Record<string, string | undefined> = {
     TYPESAFE_API_KEY: "sk-362",
     JIRA_PAT: "pat-362",
+    JIRA_API_TOKEN: "api-362",
+    JIRA_EMAIL: "agent@example.test",
+    JIRA_BASE_URL: "https://jira.example.test",
     PATH: "/usr/bin",
   };
-  expect(setAsideKeys(env)).toEqual({ TYPESAFE_API_KEY: "sk-362", JIRA_PAT: "pat-362" });
+  expect(setAsideKeys(env)).toEqual({
+    TYPESAFE_API_KEY: "sk-362",
+    JIRA_PAT: "pat-362",
+    JIRA_API_TOKEN: "api-362",
+    JIRA_EMAIL: "agent@example.test",
+    JIRA_BASE_URL: "https://jira.example.test",
+  });
   expect(env).toEqual({ PATH: "/usr/bin" });
 });
 
