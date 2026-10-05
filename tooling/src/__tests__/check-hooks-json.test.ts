@@ -175,3 +175,29 @@ test("--print rejects missing or invalid arguments with a usage line", () => {
     );
   }
 });
+
+/** The native launcher `cargo xtask print-hook` emits, from the committed Rust golden. */
+const NATIVE_COMMAND = readFileSync(
+  join(ROOT, "crates/core/protocol/src/tests/fixtures/launcher-pre-tool-use.sh"),
+  "utf8",
+);
+
+test("a native entry is left to cargo xtask check-hooks while Bun entries stay gated", () => {
+  expect(NATIVE_COMMAND).toContain("--hook-protocol");
+  expect(NATIVE_COMMAND).toContain("hooks/dist/pre-tools.js");
+  const root = copyOfRepo();
+  const native = { type: "command", command: NATIVE_COMMAND, commandWindows: "x", timeout: 60 };
+  edit(root, TOOLU, (text) =>
+    text.replace('"PreToolUse": [', `"PreToolUse": [${JSON.stringify({ hooks: [native] })},`),
+  );
+  expect(checkHooksJson(root)).toEqual([]);
+  edit(root, TOOLU, (text) =>
+    text.replace(
+      JSON.stringify(sessionStart.command),
+      JSON.stringify(sessionStart.command.replace("exit 0", "exit 1")),
+    ),
+  );
+  expect(checkHooksJson(root).map((p) => p.problem)).toEqual([
+    "command differs from the generated launcher",
+  ]);
+});
