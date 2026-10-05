@@ -1,33 +1,31 @@
-//! `toolu`: the one binary behind every plugin (epic #402). Until #442 brings the
-//! clap command tree, it answers `--version`, `--hook-protocol` and
-//! `[<plugin>] hook <name> [--event <Event>] [--plugin-root <dir>]` (#412).
+//! `toolu`: the one binary behind every plugin (epic #402). Each plugin crate
+//! contributes a namespace to its clap tree (#442), and hooks take a fast path
+//! that never builds the tree (#410's budget, `fast`).
 //!
-//! Exit codes: 0 success, 2 blocked, 64 usage.
+//! Exit codes: 0 success, 1 failure, 2 blocked, 64 usage, 69 unavailable,
+//! 75 temporary failure (`toolu_protocol::exit::Exit`).
 
-mod args;
+mod clap_error;
+mod commands;
+mod dispatch;
+mod export;
+mod fast;
 mod hook;
 mod output;
+mod registry;
 mod session_start;
+mod tree;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use args::Command;
+use clap::Command;
+use fast::Fast;
 use toolu_protocol::HOOK_PROTOCOL;
+use toolu_runtime::cli::Outcome;
 
 /// This binary's version.
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-
-/// What a run prints and how it exits.
-#[derive(Debug, Default, PartialEq, Eq)]
-pub(crate) struct Outcome {
-  /// Exit status.
-  pub(crate) code: u8,
-  /// One line for standard output.
-  pub(crate) stdout: Option<String>,
-  /// One line for standard error.
-  pub(crate) stderr: Option<String>,
-}
 
 /// What a run reads from its process, injected so tests can supply it.
 pub(crate) struct Context<'a> {
@@ -38,23 +36,13 @@ pub(crate) struct Context<'a> {
   pub(crate) stdin: &'a dyn Fn() -> std::io::Result<String>,
 }
 
-/// Run `words` (argv after the program name).
-pub(crate) fn run(words: &[String], context: &Context<'_>) -> Outcome {
-  match args::parse(words) {
-    Ok(Command::Version) => Outcome {
-      stdout: Some(format!("toolu {VERSION}")),
-      ..Outcome::default()
-    },
-    Ok(Command::HookProtocol) => Outcome {
-      stdout: Some(HOOK_PROTOCOL.to_string()),
-      ..Outcome::default()
-    },
-    Ok(Command::Hook(request)) => hook::run(&request, context),
-    Err(message) => Outcome {
-      code: 64,
-      stdout: None,
-      stderr: Some(format!("toolu: {message}\n{}", args::USAGE)),
-    },
+/// Run `words` (argv after the program name). `tree` builds the clap tree; the
+/// fast path never calls it.
+pub(crate) fn run(words: &[String], context: &Context<'_>, tree: &dyn Fn() -> Command) -> Outcome {
+  match fast::parse(words) {
+    Some(Fast::HookProtocol) => Outcome::data(HOOK_PROTOCOL.to_string()),
+    Some(Fast::Hook(request)) => hook::run(&request, context),
+    None => dispatch::run(words, context, tree),
   }
 }
 
@@ -63,9 +51,9 @@ fn main() -> ExitCode {
     exe: &toolu_runtime::invocation::current_exe,
     stdin: &toolu_protocol::stdin::read_stdin,
   };
-  let outcome = run(&toolu_runtime::invocation::args(), &context);
+  let outcome = run(&toolu_runtime::invocation::args(), &context, &tree::command);
   output::emit(&outcome);
-  ExitCode::from(outcome.code)
+  ExitCode::from(outcome.exit.code())
 }
 
 #[cfg(test)]

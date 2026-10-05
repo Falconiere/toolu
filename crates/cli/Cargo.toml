@@ -12,11 +12,23 @@ name = "toolu"
 path = "src/main.rs"
 
 [dependencies]
+clap.workspace = true
 serde_json.workspace = true
+toolu-brainstorm = { path = "../brainstorm" }
+toolu-delivery-flow = { path = "../delivery-flow" }
+toolu-epic-orchestrator = { path = "../epic-orchestrator" }
+toolu-hub = { path = "../toolu" }
+toolu-jev = { path = "../jev" }
+toolu-pr-babysit = { path = "../pr-babysit" }
 toolu-protocol = { path = "../core/protocol" }
+toolu-review = { path = "../toolu-review" }
 toolu-runtime = { path = "../core/runtime" }
+toolu-statusline = { path = "../statusline" }
 
 [dev-dependencies]
+assert_cmd.workspace = true
+insta.workspace = true
+jsonschema.workspace = true
 tempfile.workspace = true
 
 [lints]

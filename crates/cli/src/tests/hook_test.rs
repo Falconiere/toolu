@@ -1,8 +1,10 @@
 use std::path::PathBuf;
 
+use toolu_runtime::cli::Outcome;
+
 use super::run;
-use crate::args::HookRequest;
-use crate::{Context, Outcome, VERSION};
+use crate::fast::HookRequest;
+use crate::{Context, VERSION};
 
 const STARTUP: &str = r#"{"hook_event_name":"SessionStart","source":"startup"}"#;
 
@@ -52,7 +54,7 @@ fn the_same_version_prints_only_the_diagnostic() {
   let dir = plugin(VERSION, "1");
   let root = dir.path().to_str().unwrap();
   let outcome = run_hook(&request("session-start", Some("SessionStart"), Some(root)));
-  assert_eq!(outcome.code, 0);
+  assert_eq!(outcome.exit.code(), 0);
   assert_eq!(
     message(outcome.stdout),
     format!("toolu runtime: native {VERSION} at /usr/local/bin/toolu")
@@ -73,7 +75,7 @@ fn semver_skew_advises_at_session_start_only() {
     "\ntoolu runtime: native {VERSION} at /usr/local/bin/toolu"
   )));
   let pre = run_hook(&request("session-start", Some("PreToolUse"), Some(root)));
-  assert_eq!(pre.code, 0);
+  assert_eq!(pre.exit.code(), 0);
   assert!(!message(pre.stdout).contains("older than"));
 }
 
@@ -82,7 +84,7 @@ fn a_protocol_mismatch_blocks_enforcing_and_reports_context_events() {
   let dir = plugin(VERSION, "2");
   let root = dir.path().to_str().unwrap();
   let pre = run_hook(&request("session-start", Some("PreToolUse"), Some(root)));
-  assert_eq!(pre.code, 2);
+  assert_eq!(pre.exit.code(), 2);
   assert_eq!(pre.stdout, None);
   assert!(
     pre
@@ -91,21 +93,21 @@ fn a_protocol_mismatch_blocks_enforcing_and_reports_context_events() {
       .starts_with("blocked: toolu plugin: hook protocol 2 needs a newer")
   );
   let start = run_hook(&request("session-start", Some("SessionStart"), Some(root)));
-  assert_eq!(start.code, 0);
+  assert_eq!(start.exit.code(), 0);
   assert!(message(start.stdout).starts_with("toolu plugin: hook protocol 2 needs a newer"));
 }
 
 #[test]
 fn an_empty_plugin_root_is_a_mismatch_not_a_bypass() {
   let outcome = run_hook(&request("session-start", Some("PreToolUse"), Some("")));
-  assert_eq!(outcome.code, 2);
+  assert_eq!(outcome.exit.code(), 2);
   assert!(outcome.stderr.unwrap().contains("the plugin root is empty"));
 }
 
 #[test]
 fn without_a_plugin_root_the_prelude_is_skipped() {
   let outcome = run_hook(&request("session-start", Some("SessionStart"), None));
-  assert_eq!(outcome.code, 0);
+  assert_eq!(outcome.exit.code(), 0);
   assert!(message(outcome.stdout).starts_with("toolu runtime: native"));
 }
 
@@ -113,7 +115,7 @@ fn without_a_plugin_root_the_prelude_is_skipped() {
 fn an_unknown_hook_blocks_enforcing_and_missing_events_and_reports_context_ones() {
   for event in [Some("PreToolUse"), None] {
     let outcome = run_hook(&request("pre-tools", event, None));
-    assert_eq!(outcome.code, 2, "{event:?}");
+    assert_eq!(outcome.exit.code(), 2, "{event:?}");
     assert!(
       outcome
         .stderr
@@ -122,7 +124,7 @@ fn an_unknown_hook_blocks_enforcing_and_missing_events_and_reports_context_ones(
     );
   }
   let context_event = run_hook(&request("pre-compact", Some("PreCompact"), None));
-  assert_eq!(context_event.code, 0);
+  assert_eq!(context_event.exit.code(), 0);
   assert!(message(context_event.stdout).contains("has no hook pre-compact"));
 }
 
@@ -139,7 +141,7 @@ fn a_session_start_with_nothing_to_say_prints_nothing() {
     &context,
   );
   assert_eq!(outcome.stdout, None);
-  assert_eq!(outcome.code, 0);
+  assert_eq!(outcome.exit.code(), 0);
 }
 
 #[test]
@@ -154,7 +156,7 @@ fn an_unreadable_payload_is_reported_not_swallowed() {
     &request("session-start", Some("SessionStart"), None),
     &context,
   );
-  assert_eq!(outcome.code, 0);
+  assert_eq!(outcome.exit.code(), 0);
   assert_eq!(
     message(outcome.stdout),
     format!(
@@ -172,7 +174,7 @@ fn another_plugins_session_start_advises_and_never_blocks() {
     plugin_root: None,
   };
   let outcome = run_hook(&jev);
-  assert_eq!(outcome.code, 0);
+  assert_eq!(outcome.exit.code(), 0);
   assert_eq!(outcome.stderr, None);
   assert!(message(outcome.stdout).starts_with(&format!(
     "jev plugin: toolu {VERSION} has no hook session-start"

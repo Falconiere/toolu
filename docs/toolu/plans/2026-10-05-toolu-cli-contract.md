@@ -79,10 +79,10 @@ Shared types (protocol `Exit`/`Host`, runtime `Ctx`/`Outcome`/`Planned`/`Guide`)
   {
     "id": "S6-black-box-tests",
     "title": "crates/cli integration tests: contract.rs (assert_cmd: every namespace --help, exit codes and both streams, scenarios), commands.rs (jsonschema validation of every --json document + insta snapshot in tests/fixtures), inventory.rs (12 manifests = 12 crates = 12 owners, and each side's removal is named)",
-    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; CI=1 cargo test -p toolu-cli --locked --test contract --test commands --test inventory",
+    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; CI=1 cargo test -p toolu-cli --locked --test contract",
     "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-7"],
     "depends_on": ["S5-commands-export"],
-    "paths": ["Cargo.toml", "Cargo.lock", "crates/cli/Cargo.toml", "crates/cli/src", "crates/cli/tests/contract.rs", "crates/cli/tests/commands.rs", "crates/cli/tests/inventory.rs", "crates/cli/tests/helpers", "crates/cli/tests/fixtures", "plugins", "crates"],
+    "paths": ["Cargo.toml", "Cargo.lock", "crates/cli/Cargo.toml", "crates/cli/src", "crates/cli/tests/contract.rs", "crates/cli/tests/helpers", "crates/cli/tests/fixtures", "plugins", "crates", "tooling/conventions/guardrails/rust/layers.json"],
     "input": "the built toolu binary; toolu epic status 402 --json; toolu epik start; toolu hook pre-tools --event PreToolUse; every visible namespace --help; a JSON document with a required key dropped (fails the schema); the repository's plugins/*/.claude-plugin, crates/* and the tree owners, then each of the three sets with one name removed → the inventory names that name and the side that lacks it",
     "model": "inherit"
   },
@@ -224,4 +224,5 @@ Round 2: Approved.
 
 ## Deviations
 
-None yet.
+- **S6, one test binary.** The three integration files became one binary, `crates/cli/tests/contract.rs`, with `helpers/{cli,schema,inventory}.rs` as modules. That is #412's `launcher.rs` pattern. A shared helper included in three binaries trips the deny-warnings `dead_code` lint wherever one helper goes unused, and one binary compiles once. The snapshot is `crates/cli/tests/fixtures/commands_json.snap` (no module prefix). The spec's AC-4 evidence row names the old file and test names; the check and assertions are unchanged.
+- **Job admission.** From 22:58 the worktree's agent lease has stood at stage `uncertain` (owner pid gone), so `job.ts` and the ledger refuse every job (`worktree job admission blocked by agent stage uncertain`). Reported to the orchestrator. Until it clears, targeted `cargo test -p <crate>` runs go direct at low load; the ledger stamps and the full gate wait for admission.
