@@ -1,5 +1,5 @@
 /** Shared JSON case loading and sandbox setup for the TypeScript/Rust parity fixtures. */
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { z } from "zod";
 import type { ToolFixture } from "./fixtures.ts";
@@ -8,12 +8,27 @@ import type { HostName, Sandbox } from "./sandbox.ts";
 const HostSchema = z.enum(["claude", "codex", "cursor", "opencode"]);
 const ScopeSchema = z.enum(["project", "user"]);
 const TaggedPathSchema = z.strictObject({ $path: z.string() });
+const TaggedTemplateSchema = z.strictObject({ $template: z.string() });
 export const ActionSchema = z.discriminatedUnion("op", [
-  z.strictObject({ op: z.literal("write"), path: z.string(), body: z.string() }),
+  z.strictObject({
+    op: z.literal("write"),
+    path: z.string(),
+    body: z.union([z.string(), TaggedTemplateSchema]),
+  }),
   z.strictObject({ op: z.literal("remove"), path: z.string() }),
   z.strictObject({
+    op: z.literal("symlink"),
+    path: z.string(),
+    target: z.union([z.string(), TaggedPathSchema, TaggedTemplateSchema]),
+  }),
+  z.strictObject({
+    op: z.literal("chmod"),
+    path: z.string(),
+    mode: z.string().regex(/^[0-7]{3}$/),
+  }),
+  z.strictObject({
     op: z.literal("git"),
-    args: z.array(z.union([z.string(), TaggedPathSchema])).min(1),
+    args: z.array(z.union([z.string(), TaggedPathSchema, TaggedTemplateSchema])).min(1),
   }),
   z.strictObject({
     op: z.literal("config"),
@@ -139,10 +154,22 @@ export function applyCaseSetup(sb: Sandbox, actions: unknown, host: HostName = "
   for (const action of parsed) {
     switch (action.op) {
       case "write":
-        write(resolveFixturePath(sb, action.path, host), action.body);
+        write(
+          resolveFixturePath(sb, action.path, host),
+          z.string().parse(materializeCaseValue(sb, action.body, host)),
+        );
         break;
       case "remove":
         rmSync(resolveFixturePath(sb, action.path, host), { recursive: true, force: true });
+        break;
+      case "symlink": {
+        const path = resolveFixturePath(sb, action.path, host);
+        mkdirSync(dirname(path), { recursive: true });
+        symlinkSync(z.string().parse(materializeCaseValue(sb, action.target, host)), path);
+        break;
+      }
+      case "chmod":
+        chmodSync(resolveFixturePath(sb, action.path, host), parseInt(action.mode, 8));
         break;
       case "git":
         sb.git(...action.args.map((arg) => z.string().parse(materializeCaseValue(sb, arg, host))));

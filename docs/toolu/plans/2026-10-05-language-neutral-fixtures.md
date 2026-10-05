@@ -89,7 +89,7 @@ Inventory and loader → existing JSON moves → gate and conformance records �
     "ac_refs": ["AC-6"],
     "depends_on": ["existing-json"],
     "paths": ["fixtures/shell/**", "packages/toolu-core/src/shell/__tests__/**", "tooling/src/check-unbash-baseline.ts", "tooling/src/__tests__/check-unbash-baseline.test.ts", "bun.lock"],
-    "input": "Every command string in bats-parity.json and issue-283.json, including malformed syntax; pinned unbash parser's real output and parse-error shape",
+    "input": "Every distinct command in bats-parity.json and issue-283.json plus two malformed parser probes; pinned unbash parser's real output and parse-error shape",
     "check": "bun test --timeout 60000 tooling/src/__tests__/check-unbash-baseline.test.ts packages/toolu-core/src/shell/__tests__ && bun run tooling/src/check-unbash-baseline.ts",
     "model": "inherit"
   },
@@ -123,3 +123,4 @@ Preserve every existing case name, count, golden output and assertion. Validate 
 
 - During `inventory-loader`, the JSON payload representation was specified more precisely: dynamic path and command-template values carry `$path` or `$template` tags. Plain strings remain literal so shell variables in existing cases cannot change meaning. This refines the approved spec without changing scope or step checks; Jev favored tagged values over global replacement (1.00 relative probability).
 - The read-only inline-suite inventory showed that host/state/statusline/OpenCode cases are individual test declarations, not exported arrays. Their exact expanded names belong to `future-port-cases`, which owns their conversion; `inventory-loader` records the 13 existing exported arrays (979 names). Jev favored this dependency-aligned split (0.99 relative probability). AC coverage and checks are unchanged.
+- The existing shell JSON has 201 distinct commands, none producing an unbash parse error. Added two separate malformed probes in `fixtures/shell/parser-errors.json`, bringing the pinned baseline to 203 distinct inputs without changing the legacy parity rows. The completeness check includes all three sources and rejects missing or extra inputs. Jev favored an explicit source fixture over baseline-only exceptions (1.00 relative probability).

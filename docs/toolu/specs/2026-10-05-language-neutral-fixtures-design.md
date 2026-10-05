@@ -13,7 +13,7 @@ The Rust port cannot read parity inputs embedded in TypeScript case tables. #408
 ## Architecture
 Move existing JSON contract trees for shell, config, portable-core, gate-coverage, and Codex hook schemas to `fixtures/<area>/`, updating every reader and CI path mapping. Export the remaining named case families as committed JSON and make the current TypeScript suites load them. Keep runtime harnesses in TypeScript: they translate JSON setup operations and path tokens into real sandbox files, git actions, and hook payloads. The records, including names, inputs, setup parameters, expectations, and golden outputs, live only in JSON. Bounded interpreters replace case-specific closures. A fixture audit compares the inventory and case counts and rejects orphaned captures and residual TypeScript case tables.
 
-For shell parsing, record the pinned unbash parser's result for each distinct input in `fixtures/shell/unbash-baseline.json`. This is a recorded differential oracle for #416, never regenerated during tests. Existing golden JSON keeps its observed output and base commit unchanged while moving to the shared tree.
+For shell parsing, record the pinned unbash parser's result for each distinct input in `fixtures/shell/unbash-baseline.json`. The 201 distinct commands in the two existing shell files have no parser errors, so `fixtures/shell/parser-errors.json` adds two explicit malformed inputs. This is a recorded differential oracle for #416, never regenerated during tests. Existing golden JSON keeps its observed output and base commit unchanged while moving to the shared tree.
 
 ## Interfaces / Schema
 The new case records live at `fixtures/gates/{lifecycle,pre-tool-modules-a,pre-tool-modules-b,pre-tool-modules-c,pretool-corpus,posttool-corpus}.json`, `fixtures/quality/{ts,python,rust,runner}.json`, `fixtures/ast-grep/{nudge,savings,report}.json`, `fixtures/host/root.json`, `fixtures/state/cases.json`, `fixtures/statusline/cases.json`, and `fixtures/opencode/{permission-evaluate,lifecycle-events}.json`. The existing golden captures move beside the matching cases. The moved trees are `fixtures/{shell,config,portable-core,gate-coverage,codex-hook-schemas}`.
@@ -33,7 +33,7 @@ Missing or malformed JSON, duplicate names, missing or extra golden captures, un
 - **AC-3:** Pre-tool and post-tool conformance corpora, including edit/shell split and #283 gate cases, load JSON records and preserve their sandbox setup and decision assertions.
 - **AC-4:** ts-, python-, rust-quality, ast-grep, and shared quality runner suites load JSON case records and golden outputs with their existing outcomes and counts.
 - **AC-5:** Host-root, state, statusline, and OpenCode permission/evaluate and lifecycle event cases are exported to JSON for #414, #415, #431, and #462, with current TypeScript consumers loading them.
-- **AC-6:** `fixtures/shell/unbash-baseline.json` has one pinned-parser result for every distinct shell fixture input, including parse failures, and a check detects missing or extra inputs.
+- **AC-6:** `fixtures/shell/unbash-baseline.json` has one pinned-parser result for every distinct shell fixture input and two dedicated malformed inputs, including parse failures, and a check detects missing or extra inputs.
 - **AC-7:** `fixtures/README.md` documents file shapes, consumer issue numbers, the three deferred tooling-only trees, and the before/after case count of each suite; `bun run test` passes with no assertion change.
 
 ## Acceptance evidence

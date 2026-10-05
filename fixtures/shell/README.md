@@ -19,6 +19,11 @@ Real command lines for `@toolu/core/shell` (#284). The tests live in
   are re-derived from bash on every run. `oracle: "recorded"` baselines came from
   shipped hook scripts (commit-gate, gate-status, search-nudge) or wall-clock
   numbers, and #283 reproduced them on v7.2.0.
+- `parser-errors.json` adds two malformed commands because the 201 distinct
+  commands in the first two files produce no unbash parse errors.
+- `unbash-baseline.json` records the raw parse result for all 203 distinct
+  commands under pinned `unbash@4.0.11`. `bun run tooling/src/check-unbash-baseline.ts`
+  verifies the parser version, exact input set and every result for #416.
 
 `bash-oracle.test.ts` sources `plugins/toolu/hooks/lib/detect.sh` unmodified and
 re-derives every live `bash` value except `bash_commands_decide`, whose module

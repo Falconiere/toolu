@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { writeFileSync } from "node:fs";
+import { statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox } from "../sandbox.ts";
 import {
@@ -39,6 +39,14 @@ test("a JSON case prepares a real git sandbox and keeps its name", () => {
     { op: "git", args: ["worktree", "add", "-q", "-b", "feat/fixture", { $path: "$ROOT/wt" }] },
   ]);
   expect(sb.git("worktree", "list", "--porcelain")).toContain(join(sb.root, "wt"));
+  applyCaseSetup(sb, [
+    { op: "write", path: "$ROOT/target", body: { $template: "project=$PROJECT" } },
+    { op: "symlink", path: "$PROJECT/link", target: { $path: "$ROOT/target" } },
+    { op: "write", path: "$PROJECT/bin/tool", body: "#!/bin/sh\n" },
+    { op: "chmod", path: "$PROJECT/bin/tool", mode: "755" },
+  ]);
+  expect(sb.read("link")).toBe(`project=${sb.project}`);
+  expect(statSync(sb.path("bin/tool")).mode & 0o777).toBe(0o755);
   expect(
     materializeCaseValue(sb, {
       file_path: { $path: "$PROJECT/.env" },
