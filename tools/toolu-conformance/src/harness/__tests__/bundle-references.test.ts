@@ -28,10 +28,6 @@ const ALLOWED: Record<string, string> = {
     "builds a fake plugin layout to test stable-path publishing",
   "tools/toolu-opencode/":
     "the OpenCode bootstrap itself spawns bundles; its Rust shim is a later epic issue",
-  "plugins/toolu/hooks/src/__tests__/fixtures/pre-tool-modules-c-golden.json":
-    "golden command text that names the plan-ledger bundle",
-  "plugins/toolu/hooks/src/__tests__/pre-tool-modules-c-plan-ledger.ts":
-    "command text that names the plan-ledger bundle",
   "plugins/delivery-flow/skills/__tests__/delivery-flow-contract.test.ts":
     "skill text that names the plan-ledger bundle",
   "tooling/src/__tests__/workspace-skeleton.test.ts": "asserts release-only paths exclude bundles",

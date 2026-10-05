@@ -16,6 +16,7 @@ export const ActionSchema = z.discriminatedUnion("op", [
     body: z.union([z.string(), TaggedTemplateSchema]),
   }),
   z.strictObject({ op: z.literal("remove"), path: z.string() }),
+  z.strictObject({ op: z.literal("mkdir"), path: z.string() }),
   z.strictObject({
     op: z.literal("symlink"),
     path: z.string(),
@@ -161,6 +162,9 @@ export function applyCaseSetup(sb: Sandbox, actions: unknown, host: HostName = "
         break;
       case "remove":
         rmSync(resolveFixturePath(sb, action.path, host), { recursive: true, force: true });
+        break;
+      case "mkdir":
+        mkdirSync(resolveFixturePath(sb, action.path, host), { recursive: true });
         break;
       case "symlink": {
         const path = resolveFixturePath(sb, action.path, host);

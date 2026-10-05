@@ -11,9 +11,7 @@ import { implementationTag } from "@toolu/conformance/harness/entry-command";
 import { MAX_SHELL_INPUT } from "@toolu/core/shell";
 import { decisionOf } from "./pre-tool-modules-b-cases.ts";
 import {
-  commitFile,
   comparable,
-  featureRepo,
   group,
   runCase,
   type Captured,
@@ -63,10 +61,18 @@ for (const c of MODULE_CASES) {
 const oversize = group({})({
   name: "workflow gates: an unanalyzable oversize push line is not judged",
   config: { version: 1, gates: { preset: "strict" } },
-  setup: (sb) => {
-    featureRepo(sb);
-    commitFile(sb, "src/tool.ts", "export {};");
-  },
+  setup: [
+    { op: "write", path: "$PROJECT/base.txt", body: "base\n" },
+    { op: "git", args: ["add", "base.txt"] },
+    { op: "git", args: ["commit", "-q", "-m", "add base.txt"] },
+    { op: "git", args: ["checkout", "-q", "-b", "feat/example"] },
+    { op: "write", path: "$PROJECT/feature.txt", body: "feature\n" },
+    { op: "git", args: ["add", "feature.txt"] },
+    { op: "git", args: ["commit", "-q", "-m", "add feature.txt"] },
+    { op: "write", path: "$PROJECT/src/tool.ts", body: "export {};\n" },
+    { op: "git", args: ["add", "src/tool.ts"] },
+    { op: "git", args: ["commit", "-q", "-m", "add src/tool.ts"] },
+  ],
   command: `git push # ${"x".repeat(MAX_SHELL_INPUT)}`,
   expect: "silent",
 });

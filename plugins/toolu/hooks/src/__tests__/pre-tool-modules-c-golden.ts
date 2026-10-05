@@ -5,26 +5,19 @@
  * before the bash was deleted.
  */
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { resolve } from "node:path";
+import { assertCaptureNames, readCaseFile } from "@toolu/conformance/harness/json-cases";
 import { z } from "zod";
-import { AGENT_TIER_CASES } from "./pre-tool-modules-c-agent-tier.ts";
-import type { Captured, GateCase } from "./pre-tool-modules-c-cases.ts";
-import { DOCS_SYNC_CASES } from "./pre-tool-modules-c-docs-sync.ts";
-import { PLAN_LEDGER_CASES } from "./pre-tool-modules-c-plan-ledger.ts";
-import { PUSH_REVIEW_CASES } from "./pre-tool-modules-c-push-review.ts";
-import { CASES_283 } from "./pre-tool-modules-c-283.ts";
+import { MODULE_CASES, type Captured } from "./pre-tool-modules-c-cases.ts";
 
 export const BASE_COMMIT = "2912cd9d";
 
-export const GOLDEN_PATH = join(import.meta.dir, "fixtures", "pre-tool-modules-c-golden.json");
+export const GOLDEN_PATH = resolve(
+  import.meta.dir,
+  "../../../../../fixtures/gates/pre-tool-modules-c-golden.json",
+);
 
-export const MODULE_CASES: readonly GateCase[] = [
-  ...PUSH_REVIEW_CASES,
-  ...PLAN_LEDGER_CASES,
-  ...DOCS_SYNC_CASES,
-  ...AGENT_TIER_CASES,
-  ...CASES_283,
-];
+export { MODULE_CASES };
 
 const CapturedSchema = z.strictObject({
   stdout: z.string(),
@@ -42,5 +35,10 @@ const GoldenSchema = z.strictObject({
 export type Golden = { base: string; cases: Record<string, Captured> };
 
 export function readGolden(): Golden {
-  return GoldenSchema.parse(JSON.parse(readFileSync(GOLDEN_PATH, "utf8")));
+  const golden = GoldenSchema.parse(JSON.parse(readFileSync(GOLDEN_PATH, "utf8")));
+  assertCaptureNames(
+    readCaseFile(resolve(import.meta.dir, "../../../../../fixtures/gates/pre-tool-modules-c.json")),
+    golden.cases,
+  );
+  return golden;
 }

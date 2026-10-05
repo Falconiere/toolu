@@ -1,14 +1,4 @@
-/**
- * Case shape and runner for the native push-review, plan-ledger, docs-sync and
- * agent-tier gates (#262). Every `@test` of their deleted bats suites is a case
- * with the same input and intent. Each case runs the whole hook in a fresh git
- * sandbox and records what the host sees (stdout, stderr, exit code) and every
- * file the hook added, changed or removed (telemetry lines, pending waivers),
- * timestamps normalised. The base PreToolUse bundle and `agent-tier.sh` at
- * 2912cd9d produced `fixtures/pre-tool-modules-c-golden.json`, before the bash
- * modules were deleted; `pre-tool-modules-c.test.ts` replays the new bundles.
- */
-import { spawnSync } from "node:child_process";
+/** Shared JSON cases and real sandbox runner for workflow gates and agent-tier. */
 import {
   mkdirSync,
   readdirSync,
@@ -17,53 +7,53 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative } from "node:path";
-import { bashFixture, toStdin, type Fixture } from "@toolu/conformance/harness/fixtures";
-import { pretoolEnv, TOOLU_PLUGIN, type PretoolHost } from "@toolu/conformance/harness/pretool";
-import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
-import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
+import { dirname, join, relative, resolve } from "node:path";
+import { bashFixture, toStdin } from "@toolu/conformance/harness/fixtures";
+import {
+  ActionSchema,
+  applyCaseSetup,
+  materializeCaseValue,
+  materializeToolFixture,
+  readCaseFile,
+  resolveFixturePath,
+} from "@toolu/conformance/harness/json-cases";
+import { pretoolEnv, TOOLU_PLUGIN } from "@toolu/conformance/harness/pretool";
+import { createSandbox } from "@toolu/conformance/harness/sandbox";
+import { run } from "@toolu/conformance/harness/spawn";
 import { launchedArgv } from "@toolu/conformance/harness/entry-command";
-import type { Outcome } from "./pre-tool-modules-b-cases.ts";
+import { z } from "zod";
 
 export type Hook = "pre-tools" | "agent-tier";
 
-export type GateCase = {
-  name: string;
-  host: PretoolHost;
-  hook: Hook;
-  /** Repos, commits, state files; runs after the sandbox exists, before the call. */
-  setup?: (sb: Sandbox) => void;
-  /** A Bash command, or a whole fixture. */
-  command?: string;
-  fixture?: (sb: Sandbox) => Fixture;
-  /** Raw stdin, e.g. malformed JSON. Wins over `command` and `fixture`. */
-  stdin?: string;
-  /** Project `toolu.config.json` for the case's host. */
-  config?: object | string;
-  /** The hook's working directory, default the project. */
-  cwd?: (sb: Sandbox) => string;
-  env?: (sb: Sandbox) => EnvPatch;
-  /** Tools left off PATH, e.g. `["jq"]`. */
-  without?: string[];
-  expect: Outcome;
-  /** Substrings the decision text must contain, and must not. */
-  has?: string[];
-  lacks?: string[];
-  /**
-   * Why bash answered differently: a #283 defect it had, or a contract of the
-   * TypeScript core. Its golden result is kept as the known-wrong baseline.
-   */
-  deviation?: string;
+const GateCaseSchema = z.strictObject({
+  name: z.string().min(1),
+  host: z.enum(["claude", "codex"]),
+  hook: z.enum(["pre-tools", "agent-tier"]),
+  setup: z.array(ActionSchema).optional(),
+  command: z.string().optional(),
+  fixture: z.unknown().optional(),
+  stdin: z.string().optional(),
+  config: z.union([z.record(z.string(), z.unknown()), z.string()]).optional(),
+  cwd: z.strictObject({ $path: z.string() }).optional(),
+  env: z.record(z.string(), z.unknown()).optional(),
+  without: z.array(z.string()).optional(),
+  expect: z.enum(["deny", "ask", "advisory", "silent"]),
+  has: z.array(z.string()).optional(),
+  lacks: z.array(z.string()).optional(),
+  deviation: z.string().optional(),
+});
+
+export type GateCase = z.infer<typeof GateCaseSchema>;
+export type CaseInput = Omit<GateCase, "host" | "hook"> & {
+  host?: GateCase["host"];
+  hook?: Hook;
 };
 
-export type CaseInput = Omit<GateCase, "host" | "hook"> & { host?: PretoolHost; hook?: Hook };
-
-/** A case builder with the group's defaults filled in. */
+/** Fill the standard hook and host for the additional parser boundary case. */
 export function group(defaults: Partial<GateCase>): (c: CaseInput) => GateCase {
   return (c) => ({ host: "claude", hook: "pre-tools", ...defaults, ...c });
 }
 
-/** A hook call's result plus the files it touched, `null` for a removed file. */
 export type Captured = {
   stdout: string;
   stderr: string;
@@ -71,63 +61,12 @@ export type Captured = {
   files: Record<string, string | null>;
 };
 
-/** The shipped base branch every sandbox starts on. */
 export const BASE = "main";
-export const FEATURE = "feat/example";
-
-/**
- * The bats `setup_sandbox`: `base.txt` on the base branch, then `feat/example`
- * with one commit of `feature.txt`. `dir` defaults to the project.
- */
-export function featureRepo(sb: Sandbox, dir: string = sb.project): void {
-  commitFile(sb, "base.txt", "base", dir);
-  gitIn(dir, ["checkout", "-q", "-b", FEATURE]);
-  commitFile(sb, "feature.txt", "feature", dir);
-}
-
-/** Write `body` at `path` under `dir`, parents created. */
-export function writeIn(dir: string, path: string, body: string): void {
-  const abs = join(dir, path);
-  mkdirSync(dirname(abs), { recursive: true });
-  writeFileSync(abs, body);
-}
-
-export function gitIn(dir: string, args: readonly string[]): string {
-  const res = spawnSync("git", ["-C", dir, ...args], { encoding: "utf8" });
-  if (res.status !== 0) throw new Error(`git ${args.join(" ")}: ${res.stderr.trim()}`);
-  return res.stdout;
-}
-
-/** Commit `path` (parents created) in `dir`, default the project. */
-export function commitFile(sb: Sandbox, path: string, body = "x", dir = sb.project): void {
-  writeIn(dir, path, `${body}\n`);
-  gitIn(dir, ["add", path]);
-  gitIn(dir, ["commit", "-q", "-m", `add ${path}`]);
-}
-
-/** `git diff --no-color BASE...HEAD | git hash-object --stdin`, the gates' diff sha. */
-export function diffShaIn(dir: string, base: string = BASE): string {
-  const diff = spawnSync("git", ["-C", dir, "diff", "--no-color", `${base}...HEAD`]);
-  const hash = spawnSync("git", ["-C", dir, "hash-object", "--stdin"], { input: diff.stdout });
-  return hash.stdout.toString().trim();
-}
-
-/** `git diff BASE...HEAD --name-only` in `dir`. */
-export function changedFiles(dir: string, base: string = BASE): string[] {
-  return gitIn(dir, ["diff", "--no-color", `${base}...HEAD`, "--name-only"])
-    .split("\n")
-    .filter((line) => line !== "");
-}
-
-/** The branch slug bash derives: `/` → `_`, then only `[A-Za-z0-9_-]`. */
-export function slugOf(branch: string): string {
-  const slug = branch.replaceAll("/", "_").replace(/[^A-Za-z0-9_-]/g, "");
-  return slug === "" ? "_default" : slug;
-}
-
-export function headBranch(dir: string): string {
-  return gitIn(dir, ["rev-parse", "--abbrev-ref", "HEAD"]).trim();
-}
+export const MODULE_CASES: readonly GateCase[] = z
+  .array(GateCaseSchema)
+  .parse(
+    readCaseFile(resolve(import.meta.dir, "../../../../../fixtures/gates/pre-tool-modules-c.json")),
+  );
 
 /** Every tool the hooks and their libs reach for. */
 const TOOLS = [
@@ -247,20 +186,34 @@ export async function runCase(
   mkdirSync(settings, { recursive: true });
   if (c.config !== undefined) {
     const body = typeof c.config === "string" ? c.config : JSON.stringify(c.config);
-    writeIn(sb.configDir(c.host, "project"), "toolu.config.json", body);
+    const path = join(sb.configDir(c.host, "project"), "toolu.config.json");
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, body);
   }
-  c.setup?.(sb);
-  const cwd = c.cwd?.(sb) ?? sb.project;
+  applyCaseSetup(sb, c.setup ?? [], c.host);
+  const cwd = c.cwd === undefined ? sb.project : resolveFixturePath(sb, c.cwd.$path, c.host);
   const stdin =
     c.stdin ??
-    JSON.stringify(toStdin(c.host, c.fixture?.(sb) ?? bashFixture(c.command ?? ""), { cwd }));
+    JSON.stringify(
+      toStdin(
+        c.host,
+        c.fixture === undefined
+          ? bashFixture(c.command ?? "")
+          : materializeToolFixture(sb, c.fixture, c.host),
+        { cwd },
+      ),
+    );
   const path = c.without === undefined ? {} : { PATH: pathWithout(sb.root, c.without) };
+  const caseEnv =
+    c.env === undefined
+      ? {}
+      : z.record(z.string(), z.string()).parse(materializeCaseValue(sb, c.env, c.host));
   const env = pretoolEnv(sb, c.host, {
     TOOLU_SETTINGS_DIR: settings,
     CLAUDE_PLUGIN_ROOT: root,
     ...(c.host === "codex" ? { PLUGIN_ROOT: root } : {}),
     ...path,
-    ...c.env?.(sb),
+    ...caseEnv,
   });
   const before = snapshot(sb.root);
   const result = await run(argv(c.hook, root), { cwd, env, stdin });
