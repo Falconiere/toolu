@@ -16,10 +16,10 @@ Inventory and loader → existing JSON moves → gate and conformance records �
 [
   {
     "id": "inventory-loader",
-    "title": "Record every named suite's original names/counts and add strict JSON case loading plus bounded sandbox action and path-token interpretation",
+    "title": "Record the 13 exported case arrays' original names/counts and add strict JSON case loading plus bounded sandbox action and path-token interpretation",
     "ac_refs": ["AC-2", "AC-3", "AC-4", "AC-5", "AC-7"],
     "paths": ["fixtures/index.json", "tools/toolu-conformance/src/harness/json-cases.ts", "tools/toolu-conformance/src/harness/__tests__/json-cases.test.ts", "tooling/src/check-fixture-inventory.ts", "tooling/src/__tests__/check-fixture-inventory.test.ts"],
-    "input": "The original exported case arrays and inline host/state/statusline/OpenCode scenarios; valid records plus unknown operation/token, duplicate name, missing capture, and sandbox escape cases in real temporary directories",
+    "input": "The 13 original exported case arrays (979 names); valid records plus unknown operation/token, duplicate name, missing capture, and sandbox escape cases in real temporary directories",
     "check": "bun test --timeout 60000 tools/toolu-conformance/src/harness/__tests__/json-cases.test.ts tooling/src/__tests__/check-fixture-inventory.test.ts",
     "model": "inherit"
   },
@@ -75,7 +75,7 @@ Inventory and loader → existing JSON moves → gate and conformance records �
   },
   {
     "id": "future-port-cases",
-    "title": "Export host-root, state, statusline, OpenCode permission/evaluate and lifecycle event cases for their dependent Rust issues",
+    "title": "Record the inline baseline names and export host-root, state, statusline, OpenCode permission/evaluate and lifecycle event cases for their dependent Rust issues",
     "ac_refs": ["AC-5", "AC-7"],
     "depends_on": ["inventory-loader", "existing-json"],
     "paths": ["fixtures/host/**", "fixtures/state/**", "fixtures/statusline/**", "fixtures/opencode/**", "packages/toolu-core/src/host/**", "packages/toolu-core/src/state/**", "plugins/statusline/hooks/src/**", "tools/toolu-opencode/src/**"],
@@ -118,3 +118,8 @@ Preserve every existing case name, count, golden output and assertion. Validate 
 
 - existing-json: 🟡 should-fix: a broad `test:unit` check would reach known root-host permission cases unrelated to moved readers. Replaced it with the focused shell/config/conformance CLI suites, gate inventory, and docs check; the final step still runs the complete gate. Jev favored this separation with 1.00 relative probability, and the verified root-host baseline supports it.
 - paths: 🟡 should-fix: several steps omitted shared hook bundles and harness dependencies from freshness declarations. Added their read paths. Every AC-1 through AC-7 is mapped, every step has a runnable check, and the dependencies are acyclic.
+
+## Deviations
+
+- During `inventory-loader`, the JSON payload representation was specified more precisely: dynamic path and command-template values carry `$path` or `$template` tags. Plain strings remain literal so shell variables in existing cases cannot change meaning. This refines the approved spec without changing scope or step checks; Jev favored tagged values over global replacement (1.00 relative probability).
+- The read-only inline-suite inventory showed that host/state/statusline/OpenCode cases are individual test declarations, not exported arrays. Their exact expanded names belong to `future-port-cases`, which owns their conversion; `inventory-loader` records the 13 existing exported arrays (979 names). Jev favored this dependency-aligned split (0.99 relative probability). AC coverage and checks are unchanged.
