@@ -50,7 +50,7 @@ The `crates/cli` tests run the real binary (`CARGO_BIN_EXE_toolu`) through the r
       "Cargo.toml",
       "Cargo.lock"
     ],
-    "input": "Targets (toolu, PreToolUse, pre-tools), (toolu, SessionStart, session-start), (jev, SessionStart, session-start); invalid names Bad_Name, empty, 'a/b', event 'preToolUse'; golden files crates/core/protocol/src/tests/fixtures/launcher-{pre-tool-use,session-start}.sh; cmd-unsafe character scan of every message",
+    "input": "Targets (toolu, PreToolUse, pre-tools), (toolu, SessionStart, session-start), (jev, SessionStart, session-start); invalid names Bad_Name, empty, 'a/b', event 'preToolUse'; golden files crates/core/protocol/src/tests/fixtures/launcher-{pre-tool-use,session-start}.txt; cmd-unsafe character scan of every message",
     "check": "cargo test -p toolu-protocol --locked && cargo xtask gate --only fmt --only clippy --only guardrails --only layers --only reach --only unused-pub --only jscpd",
     "model": "inherit"
   },
@@ -171,7 +171,7 @@ The `crates/cli` tests run the real binary (`CARGO_BIN_EXE_toolu`) through the r
   },
   {
     "id": "ts-gate",
-    "title": "tooling/src/check-hooks-json.ts recognises native entries (--hook-protocol) before isLauncherHook and skips them; test builds its native fixture from the committed Rust golden launcher-pre-tool-use.sh",
+    "title": "tooling/src/check-hooks-json.ts recognises native entries (--hook-protocol) before isLauncherHook and skips them; test builds its native fixture from the committed Rust golden launcher-pre-tool-use.txt",
     "ac_refs": [
       "AC-10"
     ],
@@ -181,7 +181,7 @@ The `crates/cli` tests run the real binary (`CARGO_BIN_EXE_toolu`) through the r
     "paths": [
       "tooling/src/check-hooks-json.ts",
       "tooling/src/__tests__/check-hooks-json.test.ts",
-      "crates/core/protocol/src/tests/fixtures/launcher-pre-tool-use.sh",
+      "crates/core/protocol/src/tests/fixtures/launcher-pre-tool-use.txt",
       "plugins/*/hooks/hooks.json",
       "packages/toolu-core/src/launcher/**"
     ],

@@ -1,7 +1,7 @@
 use super::{DEFAULT_TIMEOUT, MARKER, MAX_TIMEOUT, Target, hook, hook_name};
 
-const PRE_TOOL_USE: &str = include_str!("fixtures/launcher-pre-tool-use.sh");
-const SESSION_START: &str = include_str!("fixtures/launcher-session-start.sh");
+const PRE_TOOL_USE: &str = include_str!("fixtures/launcher-pre-tool-use.txt");
+const SESSION_START: &str = include_str!("fixtures/launcher-session-start.txt");
 
 fn target<'a>(plugin: &'a str, event: &'a str, name: &'a str) -> Target<'a> {
   Target {

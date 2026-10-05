@@ -6,7 +6,7 @@ use crate::options::Options;
 use toolu_protocol::launcher::{Target, hook};
 
 const GOLDEN: &str =
-  include_str!("../../../core/protocol/src/tests/fixtures/launcher-pre-tool-use.sh");
+  include_str!("../../../core/protocol/src/tests/fixtures/launcher-pre-tool-use.txt");
 
 fn options(args: &[&str], timeout: Option<&str>) -> Options {
   Options {

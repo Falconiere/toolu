@@ -178,7 +178,7 @@ test("--print rejects missing or invalid arguments with a usage line", () => {
 
 /** The native launcher `cargo xtask print-hook` emits, from the committed Rust golden. */
 const NATIVE_COMMAND = readFileSync(
-  join(ROOT, "crates/core/protocol/src/tests/fixtures/launcher-pre-tool-use.sh"),
+  join(ROOT, "crates/core/protocol/src/tests/fixtures/launcher-pre-tool-use.txt"),
   "utf8",
 );
 

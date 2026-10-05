@@ -82,7 +82,7 @@ printf '%s\n' 'blocked: <missing message>' >&2; exit 2
 printf '%s\n' '{"systemMessage":"<missing message>"}'; exit 0
 ```
 
-The string has no version input, so it is byte-identical across releases. Golden strings for one enforcing and one context entry are committed as `crates/core/protocol/src/tests/fixtures/launcher-{pre-tool-use,session-start}.sh` and compared byte for byte.
+The string has no version input, so it is byte-identical across releases. Golden strings for one enforcing and one context entry are committed as `crates/core/protocol/src/tests/fixtures/launcher-{pre-tool-use,session-start}.txt` and compared byte for byte.
 
 **Messages.** These are cmd-safe: no `( ) & < > ^ % "` and no `'`. The only exception is `|`, which is written as `^|` inside `commandWindows`.
 
