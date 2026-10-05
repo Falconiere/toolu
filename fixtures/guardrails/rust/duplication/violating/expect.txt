@@ -1,0 +1,4 @@
+step jscpd
+exit 1
+contains crates/demo/src/first.rs
+contains crates/demo/src/second.rs

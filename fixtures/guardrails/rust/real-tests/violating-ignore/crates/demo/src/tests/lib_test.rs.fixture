@@ -1,0 +1,7 @@
+use super::bump;
+
+#[test]
+#[ignore]
+fn bump_adds_one() {
+  assert_eq!(bump(1), 2);
+}

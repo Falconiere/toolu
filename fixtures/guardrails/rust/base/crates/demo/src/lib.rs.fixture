@@ -1,0 +1,10 @@
+//! A fixture crate that passes every rule of the quality bar.
+
+/// Add one, saturating at the top.
+pub fn bump(value: u8) -> u8 {
+  value.saturating_add(1)
+}
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;

@@ -1,0 +1,35 @@
+//! A fixture crate.
+
+/// Add one, saturating at the top.
+pub fn bump(value: u8) -> u8 {
+  value.saturating_add(1)
+}
+
+/// Classify a triple.
+pub fn classify(a: u8, b: u8, c: u8) -> u8 {
+  let mut score = 0;
+  if a > 1 && b > 1 || c > 1 {
+    score += 1;
+  }
+  if a > 2 {
+    if b > 2 {
+      score += 2;
+    } else if c > 2 {
+      score += 3;
+    }
+  }
+  for value in [a, b, c] {
+    if value > 3 && score < 9 || value == 7 {
+      score += 4;
+    }
+  }
+  match (a, b) {
+    (0, _) if c > 4 || b > 5 => score + 1,
+    (_, 0) if c > 5 && a > 1 => score + 2,
+    _ => score,
+  }
+}
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;

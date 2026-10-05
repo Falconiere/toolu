@@ -1,0 +1,3 @@
+step clippy
+exit 0
+contains gate: clippy ok

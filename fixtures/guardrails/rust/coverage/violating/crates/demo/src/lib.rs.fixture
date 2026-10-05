@@ -1,0 +1,24 @@
+//! A fixture crate.
+
+/// Add one, saturating at the top.
+pub fn bump(value: u8) -> u8 {
+  value.saturating_add(1)
+}
+
+/// Halve a value.
+pub fn halve(value: u8) -> u8 {
+  let half = value / 2;
+  let rest = value % 2;
+  half + rest - rest
+}
+
+/// Double a value.
+pub fn double(value: u8) -> u8 {
+  let twice = value.saturating_mul(2);
+  let check = twice / 2;
+  twice + check - check
+}
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;

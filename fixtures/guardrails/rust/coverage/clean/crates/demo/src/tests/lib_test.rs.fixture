@@ -1,0 +1,8 @@
+use super::{bump, double, halve};
+
+#[test]
+fn all_three_work() {
+  assert_eq!(bump(1), 2);
+  assert_eq!(halve(4), 2);
+  assert_eq!(double(2), 4);
+}

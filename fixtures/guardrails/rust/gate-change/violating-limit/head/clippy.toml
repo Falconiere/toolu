@@ -1,0 +1,15 @@
+# The quality bar (#455): gate data, read by clippy. A change here is its own
+# `chore(gates):` PR. maxFnLines in .claude/toolu.config.json must equal
+# too-many-lines-threshold (crates/xtask/tests/thresholds.rs).
+too-many-lines-threshold = 60
+cognitive-complexity-threshold = 15
+excessive-nesting-threshold = 4
+too-many-arguments-threshold = 5
+max-fn-params-bools = 2
+max-struct-bools = 3
+# Rule 18 holds in src; tests may unwrap, expect, panic, index and print.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-indexing-slicing-in-tests = true
+allow-print-in-tests = true

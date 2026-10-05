@@ -1,0 +1,4 @@
+step unused-pub
+exit 1
+contains unused-pub crates/demo/src/lib.rs:
+contains orphan is used by no other crate and no test

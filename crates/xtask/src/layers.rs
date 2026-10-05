@@ -1,30 +1,30 @@
-//! The layer table (`crates/xtask/layers.json`) and the role each crate plays in it.
+//! The layer table (`tooling/conventions/guardrails/rust/layers.json`) and the role each crate plays in it.
 
 use std::fmt;
-use std::path::{Component, Path};
+use std::path::Path;
 
 use serde::Deserialize;
 
-/// `crates/xtask/layers.json`: core layers lowest first, rule crates, and the
+/// `layers.json`: core layers lowest first, rule crates, and the
 /// three crates with a fixed role.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct LayerTable {
+pub(crate) struct LayerTable {
   /// Core crate directory names under `crates/core/`, grouped by layer, lowest first.
-  pub core: Vec<Vec<String>>,
+  pub(crate) core: Vec<Vec<String>>,
   /// Rule crate directory names under `crates/`; only `hub` may depend on them.
-  pub rules: Vec<String>,
+  pub(crate) rules: Vec<String>,
   /// The plugin crate that links the rule crates (`crates/toolu`).
-  pub hub: String,
+  pub(crate) hub: String,
   /// The only crate that builds a binary (`crates/cli`).
-  pub binary: String,
+  pub(crate) binary: String,
   /// The workspace tooling crate (`crates/xtask`).
-  pub tooling: String,
+  pub(crate) tooling: String,
 }
 
 /// What a crate is allowed to depend on, decided by its directory.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Role {
+pub(crate) enum Role {
   /// `crates/core/<name>` at the given layer index.
   Core(usize),
   /// `crates/<rule>`: a rule crate.
@@ -54,19 +54,14 @@ impl fmt::Display for Role {
 
 impl LayerTable {
   /// Parse the table from JSON text.
-  pub fn parse(text: &str) -> Result<Self, String> {
+  pub(crate) fn parse(text: &str) -> Result<Self, String> {
     serde_json::from_str(text).map_err(|err| format!("invalid layer table: {err}"))
   }
 
   /// The role of the crate in `dir`, relative to the workspace root.
-  pub fn role(&self, dir: &Path) -> Result<Role, String> {
-    let parts: Vec<&str> = dir
-      .components()
-      .map(|part| match part {
-        Component::Normal(name) => name.to_str().unwrap_or(""),
-        _ => "",
-      })
-      .collect();
+  pub(crate) fn role(&self, dir: &Path) -> Result<Role, String> {
+    let names = crate::workspace::parts(dir);
+    let parts: Vec<&str> = names.iter().map(String::as_str).collect();
     match parts.as_slice() {
       ["crates", "core", name] => self.core_layer(name).map(Role::Core).ok_or_else(|| {
         format!(
@@ -105,7 +100,7 @@ impl LayerTable {
 }
 
 /// Why `from` may not depend on `to`, or `None` when the edge is allowed.
-pub fn forbidden_edge(from: Role, to: Role) -> Option<&'static str> {
+pub(crate) fn forbidden_edge(from: Role, to: Role) -> Option<&'static str> {
   match (from, to) {
     (_, Role::Cli) => Some("nothing may depend on the cli crate"),
     (_, Role::Tooling) => Some("nothing may depend on the tooling crate"),
@@ -119,6 +114,10 @@ pub fn forbidden_edge(from: Role, to: Role) -> Option<&'static str> {
 }
 
 /// Whether a crate in `role` may build a binary target.
-pub fn may_build_binary(role: Role) -> bool {
+pub(crate) fn may_build_binary(role: Role) -> bool {
   matches!(role, Role::Cli | Role::Tooling)
 }
+
+#[cfg(test)]
+#[path = "tests/layers_test.rs"]
+mod tests;

@@ -1,5 +1,12 @@
 {
   "comemory": {
     "setup_done": true
+  },
+  "lang": {
+    "rust": {
+      "maxFileLines": 300,
+      "maxFnLines": 50,
+      "maxImplLines": 200
+    }
   }
 }

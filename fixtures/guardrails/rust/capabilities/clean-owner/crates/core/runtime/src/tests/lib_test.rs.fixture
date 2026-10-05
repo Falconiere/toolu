@@ -1,0 +1,6 @@
+use super::home;
+
+#[test]
+fn reads_home() {
+  assert!(home().is_some() || home().is_none());
+}

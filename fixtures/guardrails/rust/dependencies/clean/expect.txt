@@ -1,0 +1,5 @@
+step deny machete guardrails
+exit 0
+contains gate: deny ok
+contains gate: machete ok
+contains guardrails: ok

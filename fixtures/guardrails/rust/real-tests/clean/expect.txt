@@ -1,0 +1,4 @@
+step deny guardrails
+exit 0
+contains gate: deny ok
+contains guardrails: ok

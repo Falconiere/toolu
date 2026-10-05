@@ -1,74 +1,79 @@
 //! `cargo xtask <task>`: workspace tasks for the toolu Rust rebuild (epic #402).
 //!
-//! Exit codes: 0 clean, 1 violations found, 2 usage or setup error.
+//! Exit codes: 0 clean, 1 findings, 2 usage, setup or missing-tool error.
 
-mod check;
+mod coverage;
+mod data;
+mod gate;
+mod gate_change;
+mod guardrails;
 mod layers;
+mod layers_check;
+mod lexer;
 mod metadata;
+mod options;
+mod output;
+mod reach;
+mod source;
+mod unused_pub;
+mod workspace;
 
-use std::path::PathBuf;
 use std::process::ExitCode;
 
-const USAGE: &str =
-  "usage: cargo xtask check-layers [--manifest-path <Cargo.toml>] [--layers <layers.json>]";
+use options::Options;
 
-/// The layer table shipped beside this crate.
-const DEFAULT_LAYERS: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/layers.json");
-
-struct Options {
-  manifest: Option<PathBuf>,
-  layers: PathBuf,
+/// What a task concluded when it ran to the end.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Verdict {
+  /// Nothing to report.
+  Clean,
+  /// Findings were printed.
+  Findings,
 }
 
-fn parse_options(args: &[String]) -> Result<Options, String> {
-  let mut options = Options {
-    manifest: None,
-    layers: PathBuf::from(DEFAULT_LAYERS),
+/// A task: parsed options in, a verdict or a setup error out.
+type Task = fn(&Options) -> Result<Verdict, String>;
+
+/// Every `cargo xtask` task. The behaviour inventory discovers its entries here.
+const TASKS: &[(&str, Task)] = &[
+  ("gate", gate::run),
+  ("guardrails", guardrails::run),
+  ("check-layers", layers_check::run),
+  ("check-reach", reach::run),
+  ("check-unused-pub", unused_pub::run),
+  ("check-gate-change", gate_change::run),
+  ("check-coverage", coverage::run),
+];
+
+const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--title TEXT] \
+  [--only STEP]... [FILE]\n\
+  tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
+  check-coverage";
+
+/// Run the task named by `args[0]` and map its outcome to an exit code.
+fn run(args: &[String]) -> ExitCode {
+  let result = match args.split_first() {
+    Some((name, rest)) => match TASKS.iter().find(|(task, _)| task == name) {
+      Some((_, task)) => Options::parse(rest).and_then(|options| task(&options)),
+      None => Err(format!("unknown task {name}\n{USAGE}")),
+    },
+    None => Err(USAGE.to_owned()),
   };
-  let mut rest = args.iter();
-  while let Some(flag) = rest.next() {
-    let value = rest
-      .next()
-      .ok_or_else(|| format!("{flag} needs a value\n{USAGE}"))?;
-    match flag.as_str() {
-      "--manifest-path" => options.manifest = Some(PathBuf::from(value)),
-      "--layers" => options.layers = PathBuf::from(value),
-      _ => return Err(format!("unknown option {flag}\n{USAGE}")),
+  match result {
+    Ok(Verdict::Clean) => ExitCode::SUCCESS,
+    Ok(Verdict::Findings) => ExitCode::from(1),
+    Err(message) => {
+      output::error(&format!("xtask: {message}"));
+      ExitCode::from(2)
     }
   }
-  Ok(options)
-}
-
-fn check_layers(args: &[String]) -> Result<ExitCode, String> {
-  let options = parse_options(args)?;
-  let text = std::fs::read_to_string(&options.layers)
-    .map_err(|err| format!("cannot read {}: {err}", options.layers.display()))?;
-  let table = layers::LayerTable::parse(&text)
-    .map_err(|err| format!("{}: {err}", options.layers.display()))?;
-  let metadata = metadata::load(options.manifest.as_deref())?;
-  let report = check::check_layers(&metadata, &table);
-  if report.violations.is_empty() {
-    println!(
-      "check-layers: {} crates, {} edges, ok",
-      report.crates, report.edges
-    );
-    return Ok(ExitCode::SUCCESS);
-  }
-  for violation in &report.violations {
-    eprintln!("check-layers: {violation}");
-  }
-  Ok(ExitCode::from(1))
 }
 
 fn main() -> ExitCode {
   let args: Vec<String> = std::env::args().skip(1).collect();
-  let result = match args.split_first() {
-    Some((task, rest)) if task == "check-layers" => check_layers(rest),
-    Some((task, _)) => Err(format!("unknown task {task}\n{USAGE}")),
-    None => Err(USAGE.to_string()),
-  };
-  result.unwrap_or_else(|message| {
-    eprintln!("xtask: {message}");
-    ExitCode::from(2)
-  })
+  run(&args)
 }
+
+#[cfg(test)]
+#[path = "tests/main_test.rs"]
+mod tests;

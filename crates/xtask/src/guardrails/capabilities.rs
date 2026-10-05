@@ -1,0 +1,147 @@
+//! Rule 14: environment reads, process spawning and the standard streams only
+//! in the modules that own them (`rules.json` `capabilities`).
+
+use syn::UseTree;
+use syn::spanned::Spanned;
+use syn::visit::Visit;
+
+use super::syntax::line;
+use super::{Context, Finding};
+use crate::data::Capability;
+use crate::source::{Kind, Source};
+use crate::workspace::parts;
+
+/// Capability uses in `src` outside their owners.
+pub(super) fn check(ctx: &Context<'_>) -> Vec<Finding> {
+  let mut found = Vec::new();
+  for source in ctx.sources.iter().filter(|source| source.kind == Kind::Src) {
+    let Ok(ast) = &source.ast else { continue };
+    let mut paths = Paths(Vec::new());
+    paths.visit_file(ast);
+    for capability in &ctx.rules.capabilities {
+      if !owns(source, capability) {
+        found.extend(hits(source, &paths, capability));
+      }
+    }
+  }
+  found
+}
+
+/// Uses of `capability` among the paths of `source`.
+fn hits(source: &Source<'_>, paths: &Paths, capability: &Capability) -> Vec<Finding> {
+  paths
+    .0
+    .iter()
+    .filter_map(|(at, segments)| {
+      let window = uses(segments, capability)?;
+      Some(Finding::new(
+        "capabilities",
+        &source.display(),
+        *at,
+        format!(
+          "`{window}` is the `{}` capability; only {} may use it",
+          capability.id,
+          owners(capability)
+        ),
+      ))
+    })
+    .collect()
+}
+
+fn owners(capability: &Capability) -> String {
+  capability
+    .owners
+    .iter()
+    .map(|owner| match &owner.module {
+      Some(module) => format!("{}::{module}", owner.krate),
+      None => owner.krate.clone(),
+    })
+    .collect::<Vec<_>>()
+    .join(", ")
+}
+
+/// Whether the crate (and top-level module) of `source` owns `capability`.
+fn owns(source: &Source<'_>, capability: &Capability) -> bool {
+  let Some(member) = source.member else {
+    return false;
+  };
+  let module = source.in_src().and_then(|inside| {
+    parts(&inside)
+      .first()
+      .map(|name| name.trim_end_matches(".rs").to_owned())
+  });
+  capability.owners.iter().any(|owner| {
+    owner.krate == member.name
+      && owner
+        .module
+        .as_ref()
+        .is_none_or(|wanted| module.as_ref() == Some(wanted))
+  })
+}
+
+/// The `a::b` tail of a capability path that `segments` contains, if any.
+fn uses(segments: &[String], capability: &Capability) -> Option<String> {
+  capability.paths.iter().find_map(|path| {
+    let tail: Vec<&str> = path
+      .rsplit("::")
+      .take(2)
+      .collect::<Vec<_>>()
+      .into_iter()
+      .rev()
+      .collect();
+    segments
+      .windows(tail.len())
+      .any(|window| window.iter().zip(&tail).all(|(have, want)| have == want))
+      .then(|| tail.join("::"))
+  })
+}
+
+/// Every path in a file with its line: expression and type paths, macro paths
+/// and each import a `use` tree spells out.
+struct Paths(Vec<(usize, Vec<String>)>);
+
+impl Paths {
+  fn tree(&mut self, prefix: &[String], tree: &UseTree) {
+    let mut joined = prefix.to_vec();
+    match tree {
+      UseTree::Path(path) => {
+        joined.push(path.ident.to_string());
+        self.tree(&joined, &path.tree);
+      }
+      UseTree::Name(name) => {
+        joined.push(name.ident.to_string());
+        self.0.push((line(name.ident.span()), joined));
+      }
+      UseTree::Rename(rename) => {
+        joined.push(rename.ident.to_string());
+        self.0.push((line(rename.ident.span()), joined));
+      }
+      UseTree::Glob(glob) => self.0.push((line(glob.span()), joined)),
+      UseTree::Group(group) => {
+        for item in &group.items {
+          self.tree(prefix, item);
+        }
+      }
+    }
+  }
+}
+
+impl<'ast> Visit<'ast> for Paths {
+  fn visit_path(&mut self, path: &'ast syn::Path) {
+    let segments = path
+      .segments
+      .iter()
+      .map(|segment| segment.ident.to_string())
+      .collect();
+    self.0.push((line(path.span()), segments));
+    syn::visit::visit_path(self, path);
+  }
+
+  fn visit_item_use(&mut self, item: &'ast syn::ItemUse) {
+    self.tree(&[], &item.tree);
+  }
+}
+
+#[cfg(test)]
+#[path = "tests/capabilities_test.rs"]
+mod tests;

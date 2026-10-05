@@ -1,0 +1,64 @@
+//! A fixture crate.
+
+/// Add one, saturating at the top.
+pub fn bump(value: u8) -> u8 {
+  value.saturating_add(1)
+}
+
+/// Sum a fixed series.
+pub fn series() -> u32 {
+  let mut total = 0_u32;
+  total = total.wrapping_add(1);
+  total = total.wrapping_add(2);
+  total = total.wrapping_add(3);
+  total = total.wrapping_add(4);
+  total = total.wrapping_add(5);
+  total = total.wrapping_add(6);
+  total = total.wrapping_add(7);
+  total = total.wrapping_add(8);
+  total = total.wrapping_add(9);
+  total = total.wrapping_add(10);
+  total = total.wrapping_add(11);
+  total = total.wrapping_add(12);
+  total = total.wrapping_add(13);
+  total = total.wrapping_add(14);
+  total = total.wrapping_add(15);
+  total = total.wrapping_add(16);
+  total = total.wrapping_add(17);
+  total = total.wrapping_add(18);
+  total = total.wrapping_add(19);
+  total = total.wrapping_add(20);
+  total = total.wrapping_add(21);
+  total = total.wrapping_add(22);
+  total = total.wrapping_add(23);
+  total = total.wrapping_add(24);
+  total = total.wrapping_add(25);
+  total = total.wrapping_add(26);
+  total = total.wrapping_add(27);
+  total = total.wrapping_add(28);
+  total = total.wrapping_add(29);
+  total = total.wrapping_add(30);
+  total = total.wrapping_add(31);
+  total = total.wrapping_add(32);
+  total = total.wrapping_add(33);
+  total = total.wrapping_add(34);
+  total = total.wrapping_add(35);
+  total = total.wrapping_add(36);
+  total = total.wrapping_add(37);
+  total = total.wrapping_add(38);
+  total = total.wrapping_add(39);
+  total = total.wrapping_add(40);
+  total = total.wrapping_add(41);
+  total = total.wrapping_add(42);
+  total = total.wrapping_add(43);
+  total = total.wrapping_add(44);
+  total = total.wrapping_add(45);
+  total = total.wrapping_add(46);
+  total = total.wrapping_add(47);
+  total = total.wrapping_add(48);
+  total
+}
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;

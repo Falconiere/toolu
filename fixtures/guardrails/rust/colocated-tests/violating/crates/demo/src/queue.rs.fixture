@@ -1,0 +1,6 @@
+//! A queue.
+
+/// Pop the first value.
+pub fn pop(values: &mut Vec<u8>) -> Option<u8> {
+  if values.is_empty() { None } else { Some(values.remove(0)) }
+}

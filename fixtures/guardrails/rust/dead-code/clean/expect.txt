@@ -1,0 +1,4 @@
+step clippy unused-pub
+exit 0
+contains gate: clippy ok
+contains check-unused-pub: ok

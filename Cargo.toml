@@ -23,18 +23,80 @@ license = "MIT"
 publish = false
 
 [workspace.dependencies]
+proc-macro2 = { version = "1", features = ["span-locations"] }
+regex = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+syn = { version = "3", features = ["full", "visit"] }
 tempfile = "3"
+toml = "1"
 
-# Base lints (#407). The full rule set and its thresholds are #455.
+# The quality bar (#455): gate data. A change here is its own `chore(gates):` PR
+# (`cargo xtask check-gate-change`); the reasons are in docs/rust-quality-bar.md.
 [workspace.lints.rust]
 warnings = "deny"
+unsafe_code = "forbid"
+missing_docs = "deny"
+unreachable_pub = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+
+[workspace.lints.rustdoc]
+broken_intra_doc_links = "deny"
+private_intra_doc_links = "deny"
 
 [workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# Size and complexity (rules 2 and 4); thresholds in clippy.toml.
+too_many_lines = "deny"
+cognitive_complexity = "deny"
+excessive_nesting = "deny"
+too_many_arguments = "deny"
+fn_params_excessive_bools = "deny"
+struct_excessive_bools = "deny"
+# No panicking paths outside tests (rule 18).
 unwrap_used = "deny"
 expect_used = "deny"
 panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+indexing_slicing = "deny"
+string_slice = "deny"
+unwrap_in_result = "deny"
+panic_in_result_fn = "deny"
+# Leftovers and capability boundaries (rules 14 and 19).
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+exit = "deny"
+# No mod.rs (rule 11).
+mod_module_files = "deny"
+# Casts, clones and pass-by-value, after toolu-ghrunner.
+cast_possible_truncation = "deny"
+cast_sign_loss = "deny"
+cast_possible_wrap = "deny"
+checked_conversions = "deny"
+lossy_float_literal = "deny"
+redundant_clone = "deny"
+clone_on_ref_ptr = "deny"
+implicit_clone = "deny"
+cloned_instead_of_copied = "deny"
+str_to_string = "deny"
+needless_pass_by_value = "deny"
+trivially_copy_pass_by_ref = "deny"
+large_types_passed_by_value = "deny"
+unnecessary_wraps = "deny"
+result_large_err = "deny"
+map_err_ignore = "deny"
+manual_let_else = "deny"
+single_match_else = "deny"
+wildcard_enum_match_arm = "deny"
+verbose_file_reads = "deny"
+flat_map_option = "deny"
+# The kit's two relaxations of the noisiest pedantic lints, for every crate.
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
 
 # Hooks wrap their main in catch_unwind (#413), so panics must unwind.
 [profile.release]

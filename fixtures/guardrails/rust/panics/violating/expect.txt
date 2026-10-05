@@ -1,0 +1,4 @@
+step clippy
+exit 1
+contains used `unwrap()` on an `Option` value
+contains crates/demo/src/lib.rs

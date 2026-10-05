@@ -1,0 +1,4 @@
+step gate-change
+exit 1
+contains gate data changed (clippy.toml changed) together with product code (crates/demo/src/lib.rs)
+contains ship the gate change alone

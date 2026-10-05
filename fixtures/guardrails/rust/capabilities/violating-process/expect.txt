@@ -1,0 +1,3 @@
+step guardrails
+exit 1
+contains `process::Command` is the `process` capability; only toolu-runtime::process, xtask may use it

@@ -1,0 +1,3 @@
+step clippy
+exit 1
+contains function `unused` is never used

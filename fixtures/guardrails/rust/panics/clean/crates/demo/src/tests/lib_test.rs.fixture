@@ -1,0 +1,7 @@
+use super::bump;
+
+#[test]
+fn bump_unwraps_in_tests() {
+  let value: Option<u8> = Some(bump(1));
+  assert_eq!(value.unwrap(), 2);
+}

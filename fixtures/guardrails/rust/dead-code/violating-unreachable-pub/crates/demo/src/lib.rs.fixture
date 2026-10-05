@@ -1,0 +1,22 @@
+//! A fixture crate.
+
+/// Add one, saturating at the top.
+pub fn bump(value: u8) -> u8 {
+  value.saturating_add(1)
+}
+
+mod hidden {
+  /// Hidden.
+  pub fn shown() -> u8 {
+    1
+  }
+}
+
+/// Call the hidden function.
+pub fn call() -> u8 {
+  hidden::shown()
+}
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;

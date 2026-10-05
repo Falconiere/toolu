@@ -1,0 +1,3 @@
+step guardrails
+exit 1
+contains suppression crates/demo/src/lib.rs:8: `allow` lint attribute

@@ -1,0 +1,3 @@
+step guardrails
+exit 1
+contains `BadName.rs` is not a snake_case file name

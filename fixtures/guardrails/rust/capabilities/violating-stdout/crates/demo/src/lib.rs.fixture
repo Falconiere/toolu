@@ -1,0 +1,17 @@
+//! A fixture crate.
+
+/// Add one, saturating at the top.
+pub fn bump(value: u8) -> u8 {
+  value.saturating_add(1)
+}
+
+use std::io::Write;
+
+/// Say hello.
+pub fn hello() -> std::io::Result<()> {
+  writeln!(std::io::stdout(), "hello")
+}
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;

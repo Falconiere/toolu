@@ -1,0 +1,3 @@
+step guardrails
+exit 1
+contains has no #[test] fn rejects_unknown_task

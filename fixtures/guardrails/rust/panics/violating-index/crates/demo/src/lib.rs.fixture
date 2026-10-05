@@ -1,0 +1,16 @@
+//! A fixture crate.
+
+/// Add one, saturating at the top.
+pub fn bump(value: u8) -> u8 {
+  value.saturating_add(1)
+}
+
+/// The first value.
+#[must_use]
+pub fn first(values: &[u8]) -> u8 {
+  values[0]
+}
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;

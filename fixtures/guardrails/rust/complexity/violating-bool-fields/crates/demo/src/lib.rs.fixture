@@ -1,0 +1,23 @@
+//! A fixture crate.
+
+/// Add one, saturating at the top.
+pub fn bump(value: u8) -> u8 {
+  value.saturating_add(1)
+}
+
+/// Switches.
+#[derive(Debug, Default)]
+pub struct Switches {
+  /// A.
+  pub a: bool,
+  /// B.
+  pub b: bool,
+  /// C.
+  pub c: bool,
+  /// D.
+  pub d: bool,
+}
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;

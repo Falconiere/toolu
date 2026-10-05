@@ -1,0 +1,18 @@
+//! A fixture crate.
+
+/// Add one, saturating at the top.
+pub fn bump(value: u8) -> u8 {
+  value.saturating_add(1)
+}
+
+/// Parse a number.
+///
+/// # Errors
+/// When the text is not a number.
+pub fn parse(text: &str) -> Result<u8, Box<dyn std::error::Error>> {
+  Ok(text.parse()?)
+}
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;

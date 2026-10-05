@@ -1,0 +1,3 @@
+step gate-change
+exit 0
+contains check-gate-change: ok

@@ -1,0 +1,3 @@
+step jscpd
+exit 0
+contains gate: jscpd ok

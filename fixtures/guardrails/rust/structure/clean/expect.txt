@@ -1,0 +1,3 @@
+step guardrails
+exit 0
+contains guardrails: ok
