@@ -10,17 +10,22 @@ const SCRIPT = join(ROOT, "tooling/src/ci-aggregate.ts");
 
 type Job = { result: string; outputs?: Record<string, string> };
 
-function changes(on: { ts: boolean; opencode: boolean; docs: boolean }): Job {
+function changes(on: { ts: boolean; opencode: boolean; docs: boolean; rust?: boolean }): Job {
   const outputs = Object.fromEntries(
-    Object.entries(on).map(([key, value]) => [key, String(value)]),
+    Object.entries({ rust: false, ...on }).map(([key, value]) => [key, String(value)]),
   );
   return { result: "success", outputs: { ...outputs, changed: "true" } };
 }
 
+const SKIPPED: Job = { result: "skipped", outputs: {} };
+const SUCCESS: Job = { result: "success", outputs: {} };
+
+/** Runs the aggregate; the Rust jobs default to skipped (their group is off unless a test turns it on). */
 async function aggregate(needs: Record<string, Job>, workflow = "tests.yml") {
+  const all = { rust: SKIPPED, "rust-musl": SKIPPED, ...needs };
   const res = await run([process.execPath, SCRIPT, workflow], {
     cwd: ROOT,
-    env: { NEEDS: JSON.stringify(needs), CI_CHANGES_ROOT: ROOT },
+    env: { NEEDS: JSON.stringify(all), CI_CHANGES_ROOT: ROOT },
   });
   return { exitCode: res.exitCode, out: res.stdout + res.stderr };
 }
@@ -43,7 +48,7 @@ test.concurrent("a docs-only run passes with gate and opencode skipped (AC-1)", 
 test.concurrent("a release-only run passes with every gated job skipped (AC-2)", async () => {
   const off = {
     result: "success",
-    outputs: { ts: "false", opencode: "false", docs: "false", changed: "false" },
+    outputs: { ts: "false", opencode: "false", docs: "false", rust: "false", changed: "false" },
   };
   const skipped = { result: "skipped", outputs: {} };
   const res = await aggregate({ changes: off, gate: skipped, opencode: skipped, docs: skipped });
@@ -88,10 +93,10 @@ test.concurrent("needs that differ from the gated jobs fail the aggregate", asyn
     changes: EVERYTHING,
     gate: { result: "success", outputs: {} },
     opencode: { result: "success", outputs: {} },
-    rust: { result: "success", outputs: {} },
+    lint: { result: "success", outputs: {} },
   });
   expect(res.exitCode).toBe(1);
-  expect(res.out).toBe("rust: needed but not mapped to a group\ndocs: missing from needs\n");
+  expect(res.out).toBe("lint: needed but not mapped to a group\ndocs: missing from needs\n");
 });
 
 test.concurrent("missing or malformed NEEDS never passes", async () => {
@@ -119,6 +124,45 @@ test.concurrent("a changes job that succeeded without group outputs never passes
   });
   expect(res).toEqual({
     exitCode: 1,
-    out: 'changes: output ts is "", not true or false\nchanges: output docs is "", not true or false\n',
+    out: 'changes: output ts is "", not true or false\nchanges: output docs is "", not true or false\nchanges: output rust is "", not true or false\n',
   });
+});
+
+const RUST_ONLY = changes({ ts: false, opencode: false, docs: false, rust: true });
+
+test.concurrent("a Rust-only run passes with the TypeScript jobs skipped (#407 AC-5)", async () => {
+  const res = await aggregate({
+    changes: RUST_ONLY,
+    gate: SKIPPED,
+    opencode: SKIPPED,
+    docs: SKIPPED,
+    rust: SUCCESS,
+    "rust-musl": SUCCESS,
+  });
+  expect(res.exitCode).toBe(0);
+  expect(res.out).toContain("rust (rust on): success");
+  expect(res.out).toContain("rust-musl (rust on): success");
+});
+
+test.concurrent("a failed Rust job fails the required aggregate (#407 AC-5)", async () => {
+  const res = await aggregate({
+    changes: RUST_ONLY,
+    gate: SKIPPED,
+    opencode: SKIPPED,
+    docs: SKIPPED,
+    rust: { result: "failure", outputs: {} },
+    "rust-musl": SUCCESS,
+  });
+  expect(res).toEqual({ exitCode: 1, out: "rust (rust on): failure\n" });
+});
+
+test.concurrent("a musl job skipped while rust is on fails the aggregate (#407 AC-5)", async () => {
+  const res = await aggregate({
+    changes: RUST_ONLY,
+    gate: SKIPPED,
+    opencode: SKIPPED,
+    docs: SKIPPED,
+    rust: SUCCESS,
+  });
+  expect(res).toEqual({ exitCode: 1, out: "rust-musl (rust on): skipped, but its group is on\n" });
 });

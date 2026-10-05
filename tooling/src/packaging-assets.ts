@@ -38,6 +38,15 @@ export class Repo {
     }
   }
 
+  toml(rel: string): unknown {
+    if (!existsSync(this.path(rel))) fail(`missing ${rel}`);
+    try {
+      return Bun.TOML.parse(readFileSync(this.path(rel), "utf8"));
+    } catch {
+      return fail(`invalid TOML: ${rel}`);
+    }
+  }
+
   /** `dir/*` entries that are directories, sorted like a shell glob. */
   dirs(rel: string): string[] {
     if (!existsSync(this.path(rel))) return [];

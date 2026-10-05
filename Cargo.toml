@@ -1,0 +1,44 @@
+# The toolu Rust workspace (epic #402). Members are listed one by one: the glob
+# `crates/*` would also match `crates/core`, which is not a package, and
+# `exclude = ["crates/core"]` would drop every core crate with it.
+# `cargo xtask check-layers` fails when a crate directory is not listed here.
+[workspace]
+resolver = "3"
+members = [
+  "crates/core/protocol",
+  "crates/core/runtime",
+  "crates/core/shell",
+  "crates/core/http",
+  "crates/core/state",
+  "crates/core/engine",
+  "crates/xtask",
+]
+
+# The lockstep version: release-please bumps it with package.json and every plugin.json.
+[workspace.package]
+version = "7.10.0"
+edition = "2024"
+rust-version = "1.99"
+license = "MIT"
+publish = false
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tempfile = "3"
+
+# Base lints (#407). The full rule set and its thresholds are #455.
+[workspace.lints.rust]
+warnings = "deny"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+# Hooks wrap their main in catch_unwind (#413), so panics must unwind.
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "unwind"

@@ -26,7 +26,7 @@ function packagingFixture(): Sandbox {
   const sb = createSandbox();
   try {
     const repo = sb.project;
-    for (const file of ["package.json", "release-please-config.json"]) {
+    for (const file of ["package.json", "release-please-config.json", "Cargo.toml", "Cargo.lock"]) {
       cpSync(join(ROOT, file), join(repo, file));
     }
     for (const dir of ["plugins", ".claude-plugin", ".agents"]) {
@@ -116,4 +116,44 @@ test.concurrent("plugin packaging validator rejects workspace package.json versi
   const res = await validate(sb.project);
   expect(res.exitCode).not.toBe(0);
   expect(res.stdout + res.stderr).toContain("packages/toolu-core/package.json version differs");
+});
+
+test.concurrent("plugin packaging validator rejects a Cargo workspace version that drifts (#407)", async () => {
+  using sb = packagingFixture();
+  const manifest = sb.read("Cargo.toml");
+  const drifted = manifest.replace(/^version = "[^"]+"$/m, 'version = "9.9.9"');
+  expect(drifted).not.toBe(manifest);
+  sb.write("Cargo.toml", drifted);
+
+  const res = await validate(sb.project);
+  expect(res.exitCode).not.toBe(0);
+  expect(res.stdout + res.stderr).toContain(
+    "Cargo.toml [workspace.package] version differs from package.json",
+  );
+});
+
+test.concurrent("plugin packaging validator rejects a stale Cargo.lock workspace crate (#407)", async () => {
+  using sb = packagingFixture();
+  const lock = sb.read("Cargo.lock");
+  const stale = lock.replace(/(name = "toolu-runtime"\nversion = )"[^"]+"/, '$1"9.9.9"');
+  expect(stale).not.toBe(lock);
+  sb.write("Cargo.lock", stale);
+
+  const res = await validate(sb.project);
+  expect(res.exitCode).not.toBe(0);
+  expect(res.stdout + res.stderr).toContain("Cargo.lock toolu-runtime version differs");
+});
+
+test.concurrent("plugin packaging validator rejects a release config without the Cargo.lock bump (#407)", async () => {
+  using sb = packagingFixture();
+  const config = ReleaseConfig.parse(JSON.parse(sb.read("release-please-config.json")));
+  const root = config.packages["."];
+  root["extra-files"] = root["extra-files"].filter((entry) => entry.path !== "Cargo.lock");
+  sb.write("release-please-config.json", config);
+
+  const res = await validate(sb.project);
+  expect(res.exitCode).not.toBe(0);
+  expect(res.stdout + res.stderr).toContain(
+    "release-please is missing Cargo.lock ($.package[?(!@.source)].version)",
+  );
 });

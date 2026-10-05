@@ -34,6 +34,7 @@ jobs:
       ts: ${{ steps.groups.outputs.ts }}
       opencode: ${{ steps.groups.outputs.opencode }}
       docs: ${{ steps.groups.outputs.docs }}
+      rust: ${{ steps.groups.outputs.rust }}
       changed: ${{ steps.groups.outputs.changed }}
     steps:
       - name: Checkout repository
@@ -188,6 +189,86 @@ jobs:
       - name: Documentation checks
         run: bun run test:docs
 
+  # The Rust workspace gate (#407): format, clippy with warnings denied, build,
+  # tests and the layer graph, on both declared platforms. The toolchain comes
+  # from rust-toolchain.toml; --locked keeps Cargo.lock authoritative.
+  rust:
+    name: rust (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: cargo fmt
+        run: cargo fmt --all --check
+
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: cargo build
+        run: cargo build --workspace --locked
+
+      - name: cargo test
+        run: cargo test --workspace --locked
+
+      - name: cargo xtask check-layers
+        run: cargo xtask check-layers
+
+  # Static Linux builds (#411) from the first Rust PR, not first at release
+  # time: a release build per musl target, and the binary must be static.
+  rust-musl:
+    name: rust-musl (${{ matrix.target }})
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-24.04-arm
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install the pinned toolchain and the musl target
+        run: |
+          set -euo pipefail
+          rustup toolchain install
+          rustup target add "${{ matrix.target }}"
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Release build
+        run: cargo build --workspace --release --locked --target "${{ matrix.target }}"
+
+      - name: Require a static binary
+        run: |
+          set -euo pipefail
+          info="$(file "target/${{ matrix.target }}/release/xtask")"
+          echo "$info"
+          # file(1) says "static-pie linked" (x86_64) or "statically linked" (aarch64).
+          echo "$info" | grep -Eq '(static-pie|statically) linked'
+
   # The required status. Branch protection requires `typescript`; this job
   # carries that name. `if: always()` keeps it from being skipped (a skipped
   # required check would count as passing). It fails when `changes` failed, a
@@ -195,7 +276,7 @@ jobs:
   # was on; it passes when each job succeeded or was skipped with its group off.
   typescript:
     name: typescript
-    needs: [changes, gate, opencode, docs]
+    needs: [changes, gate, opencode, docs, rust, rust-musl]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10

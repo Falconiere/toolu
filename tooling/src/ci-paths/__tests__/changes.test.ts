@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { z } from "zod";
 import { run } from "@toolu/conformance/harness/spawn";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { CI_PATHS_FILE, loadRepoCiPaths, matchesAny } from "../config.ts";
@@ -24,6 +25,7 @@ const SEEDED = [
   "docs/statusline/README.md",
   "README.md",
   "tools/toolu-opencode/src/plugin/hooks.ts",
+  "crates/core/runtime/src/lib.rs",
   "bun.lock",
   ...RELEASE_ONLY,
 ];
@@ -74,27 +76,51 @@ async function prOutputs(edits: Record<string, string>): Promise<Outputs> {
   });
 }
 
-const ALL_ON = { ts: "true", opencode: "true", docs: "true", changed: "true" };
-const ALL_OFF = { ts: "false", opencode: "false", docs: "false", changed: "false" };
+const ALL_ON = { ts: "true", opencode: "true", docs: "true", rust: "true", changed: "true" };
+const ALL_OFF = { ts: "false", opencode: "false", docs: "false", rust: "false", changed: "false" };
+
+const VERSION = z
+  .object({ version: z.string() })
+  .parse(JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"))).version;
 
 function bump(path: string): string {
   const text = readFileSync(join(ROOT, path), "utf8");
   if (path === "CHANGELOG.md") return `## [99.0.0](https://example.test) (2026-10-05)\n\n${text}`;
+  // release-please's TOML updater rewrites the workspace version lines of both files.
+  if (path === "Cargo.toml" || path === "Cargo.lock") {
+    return text.replaceAll(`version = "${VERSION}"`, 'version = "99.0.0"');
+  }
   return text.replace(/("(?:version|\.|@toolu\/core)": "\^?)\d+\.\d+\.\d+/g, "$199.0.0");
 }
 
 test.concurrent("a docs-only PR turns on docs and changed only (AC-1)", async () => {
   const outputs = await prOutputs({ "docs/statusline/README.md": "# statusline\n\nEdited.\n" });
-  expect(outputs).toEqual({ ts: "false", opencode: "false", docs: "true", changed: "true" });
+  expect(outputs).toEqual({
+    ts: "false",
+    opencode: "false",
+    docs: "true",
+    rust: "false",
+    changed: "true",
+  });
 });
 
 test.concurrent("a root Markdown edit is docs-only too (AC-1)", async () => {
   const outputs = await prOutputs({ "README.md": "# toolu\n" });
-  expect(outputs).toEqual({ ts: "false", opencode: "false", docs: "true", changed: "true" });
+  expect(outputs).toEqual({
+    ts: "false",
+    opencode: "false",
+    docs: "true",
+    rust: "false",
+    changed: "true",
+  });
 });
 
 test.concurrent("a release-please version bump turns every output off (AC-2)", async () => {
   expect(RELEASE_ONLY).toContain("tools/toolu-cli/npm/package.json");
+  for (const path of ["Cargo.toml", "Cargo.lock"]) {
+    expect(RELEASE_ONLY).toContain(path);
+    expect(bump(path)).toContain('version = "99.0.0"');
+  }
   const edits = Object.fromEntries(RELEASE_ONLY.map((path) => [path, bump(path)]));
   expect(Object.keys(edits).length).toBeGreaterThan(30);
   expect(await prOutputs(edits)).toEqual(ALL_OFF);
@@ -105,14 +131,54 @@ test.concurrent("a scripts edit in root package.json is not release-only (AC-2)"
   const edited = text.replace('"test": "bun run test:ts"', '"test": "bun run test:ts --bail"');
   expect(edited).not.toBe(text);
   const outputs = await prOutputs({ "package.json": edited });
-  expect(outputs).toEqual({ ts: "true", opencode: "true", docs: "false", changed: "true" });
+  expect(outputs).toEqual({
+    ts: "true",
+    opencode: "true",
+    docs: "false",
+    rust: "false",
+    changed: "true",
+  });
+});
+
+test.concurrent("a Rust-only PR turns on rust and changed only (#407 AC-5)", async () => {
+  const path = "crates/core/runtime/src/lib.rs";
+  const text = readFileSync(join(ROOT, path), "utf8");
+  const outputs = await prOutputs({ [path]: `${text}\n// edited\n` });
+  expect(outputs).toEqual({
+    ts: "false",
+    opencode: "false",
+    docs: "false",
+    rust: "true",
+    changed: "true",
+  });
+});
+
+test.concurrent("a Cargo.toml edit beyond the version is not release-only (#407 AC-6)", async () => {
+  const edited = bump("Cargo.toml").replace(
+    "[workspace.dependencies]\n",
+    '[workspace.dependencies]\nitoa = "1"\n',
+  );
+  expect(edited).not.toBe(bump("Cargo.toml"));
+  expect(await prOutputs({ "Cargo.toml": edited })).toEqual({
+    ts: "false",
+    opencode: "false",
+    docs: "false",
+    rust: "true",
+    changed: "true",
+  });
 });
 
 test.concurrent("an OpenCode adapter edit turns on ts and opencode (AC-3)", async () => {
   const path = "tools/toolu-opencode/src/plugin/hooks.ts";
   const text = readFileSync(join(ROOT, path), "utf8");
   const outputs = await prOutputs({ [path]: `${text}\n// edited\n` });
-  expect(outputs).toEqual({ ts: "true", opencode: "true", docs: "false", changed: "true" });
+  expect(outputs).toEqual({
+    ts: "true",
+    opencode: "true",
+    docs: "false",
+    rust: "false",
+    changed: "true",
+  });
 });
 
 for (const path of ["newdir/file.txt", ".github/workflows/tests.yml", CI_PATHS_FILE, "bun.lock"]) {
@@ -127,7 +193,13 @@ test.concurrent("a push compares before..after with the same groups (AC-6)", asy
   const before = sb.git("rev-parse", "HEAD").trim();
   const after = commit(sb, { "docs/statusline/README.md": "# pushed\n" });
   const outputs = await changes(sb, "push", { before, after });
-  expect(outputs).toEqual({ ts: "false", opencode: "false", docs: "true", changed: "true" });
+  expect(outputs).toEqual({
+    ts: "false",
+    opencode: "false",
+    docs: "true",
+    rust: "false",
+    changed: "true",
+  });
 });
 
 test.concurrent("a push without a previous commit runs everything (AC-6)", async () => {
@@ -183,6 +255,7 @@ test.concurrent("a version bump plus a docs edit runs docs only (AC-1, AC-2)", a
     ts: "false",
     opencode: "false",
     docs: "true",
+    rust: "false",
     changed: "true",
   });
 });
@@ -195,6 +268,7 @@ test.concurrent("a plugin manifest with a version and another change is not rele
     ts: "true",
     opencode: "true",
     docs: "false",
+    rust: "false",
     changed: "true",
   });
 });
@@ -210,6 +284,7 @@ test.concurrent("deleting a release-only file is not release-only", async () => 
     ts: "true",
     opencode: "true",
     docs: "false",
+    rust: "false",
     changed: "true",
   });
 });

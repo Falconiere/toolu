@@ -82,7 +82,7 @@ test.concurrent("CI runs the Bun lane without retired shell jobs", () => {
   const workflow = readText(".github/workflows/tests.yml");
   expect(workflow).toMatch(/  gate:\n    name: bun run test[\s\S]*?bun run test:ts/);
   expect(workflow).toMatch(
-    /  typescript:\n    name: typescript\n    needs: \[changes, gate, opencode, docs\]/,
+    /  typescript:\n    name: typescript\n    needs: \[changes, gate, opencode, docs, rust, rust-musl\]/,
   );
   expect(workflow).not.toMatch(/^  shellcheck:/m);
   expect(workflow).not.toMatch(/^  bats:/m);
@@ -102,6 +102,8 @@ test.concurrent("release-only files skip jobs through the data file, not path fi
   expect(data.releaseOnly.paths).toEqual([
     "CHANGELOG.md",
     ".release-please-manifest.json",
+    "Cargo.toml",
+    "Cargo.lock",
     "package.json",
     "packages/*/package.json",
     "tools/*/package.json",
