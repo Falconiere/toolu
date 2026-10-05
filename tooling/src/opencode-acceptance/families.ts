@@ -66,12 +66,14 @@ function scenarioFamilies(): AcceptanceCheck[] {
   return [
     ...scenarioChecks("entry", ["toolu"], "none", ENTRY_SCENARIOS),
     ...scenarioChecks("startup", "all", "none", STARTUP_SCENARIOS),
+    // The path scenario runs and asserts the published Jev helper without Bun on PATH.
     ...scenarioChecks(
       "paths",
       ["toolu", "jev"],
       "none",
       PATH_SCENARIOS.filter((scenario) => scenario.id === "entry.helper-env"),
     ),
+    // The worktree scenario asserts ast-grep registry modules in the selected checkout only.
     ...scenarioChecks(
       "paths",
       ["toolu", "ast-grep"],
