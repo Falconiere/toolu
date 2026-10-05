@@ -72,7 +72,7 @@ core helper → plugin entries + harness + bundles → OpenCode once-at-load pro
     "title": "Run the full repository gate",
     "ac_refs": ["AC-7"],
     "depends_on": ["plugin-entries", "opencode-once", "docs-banners"],
-    "check": "bun run test:conventions && bun test --timeout 120000 packages/toolu-core/src/startup packages/toolu-core/src/host tools/toolu-conformance plugins/exa-search plugins/context7 plugins/jira plugins/agent-browser plugins/toolu-review tools/toolu-opencode/src/plugin/__tests__/deprecation-notice.test.ts tools/toolu-opencode/src/plugin/__tests__/context7-delivery.test.ts tools/toolu-opencode/src/plugin/__tests__/jira-delivery.test.ts tools/toolu-opencode/src/bootstrap tooling/src/__tests__/deprecation-banners.test.ts && bun run test:portable-core && bun run test:gate-coverage && bun run test:final-removal && bun run check:plugin-bundles && bun run check:hooks-json && bun run test:workspace && bun run test:pack && bun run test:conformance && bun run test:context-budget && bun run benchmarks --tier deterministic",
+    "check": "bun run test:conventions && bun test --timeout 120000 packages/toolu-core/src/startup/__tests__/deprecation.test.ts packages/toolu-core/src/startup/__tests__/context.test.ts packages/toolu-core/src/startup/__tests__/dependencies.test.ts packages/toolu-core/src/startup/__tests__/report.test.ts packages/toolu-core/src/host tools/toolu-conformance plugins/exa-search plugins/context7 plugins/jira plugins/agent-browser plugins/toolu-review tools/toolu-opencode/src/plugin/__tests__/deprecation-notice.test.ts tools/toolu-opencode/src/plugin/__tests__/context7-delivery.test.ts tools/toolu-opencode/src/plugin/__tests__/jira-delivery.test.ts tools/toolu-opencode/src/bootstrap tooling/src/__tests__/deprecation-banners.test.ts && bun run test:portable-core && bun run test:gate-coverage && bun run test:final-removal && bun run check:plugin-bundles && bun run check:hooks-json && bun run test:workspace && bun run test:pack && bun run test:conformance && bun run test:context-budget && bun run benchmarks --tier deterministic",
     "model": "inherit"
   },
   {
@@ -92,7 +92,7 @@ core helper → plugin entries + harness + bundles → OpenCode once-at-load pro
 
 - The full gate showed that `plugins/{context7,jira}/hooks/src/__tests__/opencode.test.ts` parse OpenCode startup stdout with a strict schema. The schema now expects the exact notice, and `plugin-entries` runs both files.
 
-- `full-gate` runs every `bun run test` stage, but runs `test:unit` only for the touched packages, plugins and OpenCode suites, and leaves out the load-sensitive `bench:shell` timing.
+- `full-gate` runs every `bun run test` stage, but runs `test:unit` only for the touched packages, plugins and OpenCode suites, and leaves out the load-sensitive `bench:shell` timing and `publish.test.ts`, whose only failure here is the root-only chmod case (it is unchanged by this branch).
   - The full `test:unit` run here, on 2026-10-05 after rebasing onto f6fd995d, left 19 failures. Each also fails on a clean `origin/main` worktree on this root host: chmod-refusal, unreadable-cwd and "X not on PATH" cases, plus a hard-coded `/Volumes` comemory path. Comemory be52369e covers the chmod and PATH cases.
   - CI's required `typescript` check runs the whole `bun run test` and is the authority for AC-7.
 
