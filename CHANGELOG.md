@@ -6,6 +6,17 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [7.11.0](https://github.com/Falconiere/toolu/compare/v7.10.0...v7.11.0) (2026-10-05)
+
+
+### Features
+
+* **deprecation:** warn that exa-search, context7, jira and agent-browser are removed in v8.0.0 ([#465](https://github.com/Falconiere/toolu/issues/465)) ([3a0bee0](https://github.com/Falconiere/toolu/commit/3a0bee0473862e94153333117415aa7bd60a894e))
+* **epic-orchestrator:** use built-in Jira REST tracker ([#471](https://github.com/Falconiere/toolu/issues/471)) ([68869d2](https://github.com/Falconiere/toolu/commit/68869d29a65256d7fbb94f5a79bb801abaf48421))
+* **rust:** Cargo workspace skeleton, check-layers and gated Rust CI ([#469](https://github.com/Falconiere/toolu/issues/469)) ([2998051](https://github.com/Falconiere/toolu/commit/29980512fc995bb394fbe2c16e0395460c2cc0af))
+* **rust:** quality bar — cargo xtask gate, guardrails and gate-change check ([#472](https://github.com/Falconiere/toolu/issues/472)) ([2ae2952](https://github.com/Falconiere/toolu/commit/2ae295263d8138056ba205bf9e3da05074a42642))
+* **toolu:** route research to native web tools ([#470](https://github.com/Falconiere/toolu/issues/470)) ([8dfaf65](https://github.com/Falconiere/toolu/commit/8dfaf6568e2752375969942abb1e856fd87ffa66))
+
 ## [7.10.0](https://github.com/Falconiere/toolu/compare/v7.9.0...v7.10.0) (2026-10-05)
 
 
