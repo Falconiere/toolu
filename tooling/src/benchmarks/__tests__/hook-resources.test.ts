@@ -5,6 +5,8 @@
  */
 import { expect, test } from "bun:test";
 import { join, resolve } from "node:path";
+import { createSandbox } from "@toolu/conformance/harness/sandbox";
+import { run } from "@toolu/conformance/harness/spawn";
 import { parseArgs } from "../lib/hook-args.ts";
 import {
   BenchError,
@@ -136,4 +138,22 @@ test("the committed budgets file is strict", () => {
       entries: { "a/b": { maxRssMiB: 0, cpuMs: 1 } },
     }).success,
   ).toBe(false);
+});
+
+test("a ported entry with no hooks.json launcher fails before anything is measured", async () => {
+  using sb = createSandbox();
+  const manifest = sb.write("rust-ported.json", { entries: ["toolu/pre-tools", "toolu/nope"] });
+  const result = await run(
+    [
+      process.execPath,
+      join(ROOT, "tooling/src/benchmarks/hook-resources.ts"),
+      "--assert",
+      "--manifest",
+      manifest,
+    ],
+    // No cargo: the run must stop before it builds the measurer.
+    { cwd: ROOT, env: { CARGO: "/no/such/cargo" } },
+  );
+  expect(result.exitCode).toBe(2);
+  expect(result.stderr).toContain("ported entries with no hooks.json launcher: toolu/nope");
 });

@@ -105,16 +105,22 @@ async function measureEntry(
 }
 
 /** `TOOLU_IMPL` for the run: the manifest's selector under `--assert`, the caller's otherwise. */
-function implEnv(args: BenchArgs): { env: Env; ported: string[] } {
+function implEnv(args: BenchArgs, known: ReadonlySet<string>): { env: Env; ported: string[] } {
   if (!args.assert) return { env: process.env, ported: [] };
+  let ported: string[];
+  let selector: string | null;
   try {
-    const ported = readPorted(args.manifest);
-    const selector = portSelector(ported);
-    return { env: { ...process.env, TOOLU_IMPL: selector ?? undefined }, ported };
+    ported = readPorted(args.manifest);
+    selector = portSelector(ported);
   } catch (error) {
     if (error instanceof PortsError) throw new BenchError(error.message, 2, { cause: error });
     throw error;
   }
+  const absent = ported.filter((id) => !known.has(id));
+  if (absent.length > 0) {
+    throw new BenchError(`ported entries with no hooks.json launcher: ${absent.join(", ")}`);
+  }
+  return { env: { ...process.env, TOOLU_IMPL: selector ?? undefined }, ported };
 }
 
 async function measureAll(
@@ -148,15 +154,7 @@ async function measureAll(
   return { schema: "toolu.hook-resources/v1", provenance, entries: rows };
 }
 
-function assertBudgets(
-  args: BenchArgs,
-  result: HookResult,
-  ported: string[],
-  known: ReadonlySet<string>,
-): string[] {
-  const absent = ported.filter((id) => !known.has(id));
-  if (absent.length > 0)
-    throw new BenchError(`ported entries with no hooks.json launcher: ${absent.join(", ")}`);
+function assertBudgets(args: BenchArgs, result: HookResult, ported: string[]): string[] {
   if (ported.length === 0) {
     process.stdout.write("hook-bench: no ported entries; nothing to assert\n");
     return [];
@@ -178,7 +176,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     const all = discoverEntries(join(ROOT, "plugins"));
     const payloads = loadJson(args.payloads, Payloads);
     const entries = selected(all, payloads, args);
-    const { env, ported } = implEnv(args);
+    const { env, ported } = implEnv(args, new Set(all.map((e) => e.id)));
     const result = await measureAll(args, entries, payloads, env);
     process.stdout.write(
       `Platform: ${result.provenance.platform} ${result.provenance.arch} (${result.provenance.cpu}); Bun ${result.provenance.bun}; ` +
@@ -190,7 +188,7 @@ export async function main(argv: readonly string[]): Promise<number> {
       writeFileSync(args.out, `${JSON.stringify(result, null, 2)}\n`);
     }
     if (!args.assert) return 0;
-    const found = assertBudgets(args, result, ported, new Set(all.map((e) => e.id)));
+    const found = assertBudgets(args, result, ported);
     for (const line of found) process.stderr.write(`hook-bench: ${line}\n`);
     return found.length === 0 ? 0 : 1;
   } catch (error) {
