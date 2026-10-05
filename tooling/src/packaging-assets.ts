@@ -6,7 +6,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { get, isNullish, list } from "./json-path.ts";
 
-export const EXPECTED = { plugins: 16, skills: 18, agents: 5, hooks: 14 };
+export const EXPECTED = { plugins: 12, skills: 14, agents: 5, hooks: 10 };
 const REQUIRED_SKILLS = [
   "plugins/toolu/skills/commit/SKILL.md",
   "plugins/toolu/skills/review-and-commit/SKILL.md",

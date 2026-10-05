@@ -33,14 +33,14 @@ describe("dispatchPlugins install", () => {
           chunks.push(text);
         },
         selectHosts: async () => ["claude", "codex"],
-        selectPlugins: async () => ["jira"],
+        selectPlugins: async () => ["ast-grep"],
       },
     );
     expect(code).toBe(EXIT.ok);
     const text = chunks.join("");
     expect(text).toContain("claude:");
     expect(text).toContain("codex:");
-    expect(text).toContain("jira");
+    expect(text).toContain("ast-grep");
     expect(text).not.toContain("\u001b");
   });
 
@@ -66,7 +66,7 @@ describe("dispatchPlugins install", () => {
   test("named plugins skip the plugin picker", async () => {
     let pluginsAsked = false;
     const chunks: string[] = [];
-    const args = parseArgs(["install", "jira", "--dry-run", "--host", "claude"]);
+    const args = parseArgs(["install", "ast-grep", "--dry-run", "--host", "claude"]);
     if (args.verb === undefined) throw new Error("verb missing");
     const code = await dispatchPlugins(
       { ...args, verb: args.verb },
@@ -85,7 +85,7 @@ describe("dispatchPlugins install", () => {
     );
     expect(code).toBe(EXIT.ok);
     expect(pluginsAsked).toBe(false);
-    expect(chunks.join("")).toContain("jira");
+    expect(chunks.join("")).toContain("ast-grep");
   });
 
   test("cancelling the plugin picker returns exit 130", async () => {

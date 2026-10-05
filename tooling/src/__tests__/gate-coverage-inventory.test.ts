@@ -11,7 +11,7 @@ const CLI = join(ROOT, "tooling/src/gate-coverage-inventory.ts");
 const INVENTORY = join(ROOT, "tooling/fixtures/gate-coverage/inventory.json");
 const MATRIX = join(ROOT, "docs/gate-coverage-matrix.md");
 /** A floor, not a count: future bundled hooks should extend this native inventory. */
-const MIN_ROWS = 35;
+const MIN_ROWS = 32;
 
 const Row = z.looseObject({ id: z.string() });
 const Rows = z.array(Row);

@@ -45,13 +45,13 @@ OpenCode is not a conformance suite. The old `opencode --version` probe and the 
 - The generated surface and the names the host discovers.
 - Every `smoke:opencode-*` scenario.
 - The documentation's executable blocks, run word for word: `docs.quickstart` (the [quick start](opencode.md#quick-start), then update and removal) `docs.migration` (the [migration guide](opencode-migration.md), seeded with V2-era state, then its rollback) and `docs.migration-refusals` (its block stopping cleanly when `update` fails).
-- The seven `*.live.test.ts` files, through a JUnit report, so a skipped host test fails.
+- The five `*.live.test.ts` files, through a JUnit report, so a skipped host test fails.
 - Three concurrent runs over two projects.
 - A startup and per-tool budget.
 
-Every one of the 16 catalog plugins must have a passing dedicated actual-host check. [docs/opencode.md § Plugin support](opencode.md#plugin-support) lists those checks per plugin; `bun run check:opencode-docs` regenerates that list from this registry and fails on drift.
+Every one of the 12 catalog plugins must have a passing dedicated actual-host check. [docs/opencode.md § Plugin support](opencode.md#plugin-support) lists those checks per plugin; `bun run check:opencode-docs` regenerates that list from this registry and fails on drift.
 
-**Preflight.** A missing host, `git`, `npm`, `tar`, `ast-grep`, `agent-browser` or its Chromium fails the run before any session, and names what is missing. Nothing is reported as skipped.
+**Preflight.** A missing host, `git`, `npm`, `tar`, or `ast-grep` fails the run before any session, and names what is missing. Nothing is reported as skipped.
 
 **Regression controls.** Each run stages copies of `@toolu/opencode`. A control is detected only when its check passes against the unbroken copy and then fails once one edit breaks it. A stage that fails on its own, or an edit that no longer applies, counts as a missed control:
 
@@ -68,10 +68,10 @@ Every one of the 16 catalog plugins must have a passing dedicated actual-host ch
 - **Model.** Always `scripted-loopback`: a fixture that only scripts replies.
 - **Service.**
   - `none`.
-  - `fixture`: a loopback HTTP(S) server or bare git remote stands in for exa, context7, Jev, Jira or GitHub.
-  - `live`: real external services are reported under `external` and never decide acceptance. context7.com is called without a key. api.typesafe.ai is called only when `TYPESAFE_API_KEY` is set and is otherwise `not-configured`.
+  - `fixture`: a loopback HTTP(S) server or bare git remote stands in for Jev or GitHub.
+  - `live`: real external services are reported under `external` and never decide acceptance. api.typesafe.ai is called only when `TYPESAFE_API_KEY` is set and is otherwise `not-configured`.
 
-The run removes service credentials (`CONTEXT7_API_KEY`, `EXA_API_KEY`, `TYPESAFE_API_KEY`, `JIRA_*`) from its own environment, so no fixture check can reach a live service.
+The run removes service credentials (`TYPESAFE_API_KEY` and `JIRA_*`) from its own environment, so no fixture check can reach a live service.
 
 **Budgets.** The same six-call session runs twice with no plugin (a no-op local plugin) and twice with toolu selecting every plugin. The startup overhead (spawn to first model request) and the median per-tool overhead are toolu's fastest run minus the reference's fastest. They must stay within `contract/acceptance-budgets.json`. On darwin-arm64, two runs measured +444 and +539 ms startup and +45 and +35 ms per tool call. The ceilings leave a wide margin for shared CI runners.
 

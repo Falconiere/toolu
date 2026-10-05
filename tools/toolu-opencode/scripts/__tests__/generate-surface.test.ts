@@ -60,50 +60,6 @@ test("generated resource links are independent of plugin directory order", () =>
   expect(jevDoc).toContain("../../../../skills/jev-jev/evals/README.md");
 });
 
-test("agent-browser skill renders one project-scoped OpenCode helper command", () => {
-  const root = repoRoot();
-  const out = mkdtempSync(join(tmpBase, "toolu-browser-surface-"));
-  const browser = listPluginManifests(join(root, "plugins"))?.find(
-    (plugin) => plugin.name === "agent-browser",
-  );
-  if (browser === undefined) throw new Error("agent-browser manifest missing");
-  const plan = planSurface({ repoRoot: root, outDir: out, plugins: [browser] });
-  const skill = plan.files.get(join(out, "skills/agent-browser-agent-browser/SKILL.md"));
-  expect(skill).toBeDefined();
-  expect(skill).toContain("# OpenCode");
-  expect(skill).toContain('"${TOOLU_CONFIG_DIR}/agent-browser/agent-browser.sh"');
-  expect(skill).not.toContain("# Codex");
-  expect(skill).not.toContain("# Claude Code");
-  expect(skill).toContain("snapshot");
-  expect(skill).toContain("--content-boundaries");
-  expect(skill).toContain("agent-browser install");
-  expect(skill).toContain("context7-context7");
-  expect(skill).toContain("exa-search-exa-search");
-  expect(skill).toContain("when enabled");
-  rmSync(out, { recursive: true, force: true });
-});
-
-test("exa-search skill renders project helper commands and a no-key fallback", () => {
-  const root = repoRoot();
-  const out = mkdtempSync(join(tmpBase, "toolu-exa-surface-"));
-  const exa = listPluginManifests(join(root, "plugins"))?.find(
-    (plugin) => plugin.name === "exa-search",
-  );
-  if (exa === undefined) throw new Error("exa-search manifest missing");
-  const plan = planSurface({ repoRoot: root, outDir: out, plugins: [exa] });
-  const skill = plan.files.get(join(out, "skills/exa-search-exa-search/SKILL.md"));
-  expect(skill).toContain("# OpenCode");
-  expect(skill).toContain('"${TOOLU_CONFIG_DIR}/exa-search/search.sh" search');
-  expect(skill).toContain('"${TOOLU_CONFIG_DIR}/exa-search/search.sh" crawl');
-  expect(skill).toContain('"${TOOLU_CONFIG_DIR}/exa-search/search.sh" similar');
-  expect(skill).toContain("EXA_API_KEY");
-  expect(skill).toContain("websearch");
-  expect(skill).toContain("webfetch");
-  expect(skill).not.toContain("# Codex");
-  expect(skill).not.toContain("# Claude Code");
-  rmSync(out, { recursive: true, force: true });
-});
-
 test("drift check fails when a source skill changes", () => {
   const root = repoRoot();
   const copyRoot = mkdtempSync(join(tmpBase, "toolu-surface-src-"));
@@ -417,11 +373,11 @@ test("full catalog includes all plugins and explicitly classifies empty surfaces
   const manifests = listPluginManifests(join(root, "plugins"));
   if (!manifests) throw new Error("plugin manifests missing");
   const plan = planSurface({ repoRoot: root, outDir: out, plugins: manifests });
-  expect(plan.catalog.plugins).toHaveLength(16);
+  expect(plan.catalog.plugins).toHaveLength(12);
   expect(
     plan.catalog.plugins.filter((plugin) => plugin.classification === "no-surface"),
   ).toHaveLength(3);
-  expect(plan.catalog.plugins.flatMap((plugin) => plugin.skills)).toHaveLength(18);
+  expect(plan.catalog.plugins.flatMap((plugin) => plugin.skills)).toHaveLength(14);
   expect(plan.catalog.plugins.flatMap((plugin) => plugin.agents)).toHaveLength(5);
   expect(plan.catalog.plugins.flatMap((plugin) => plugin.commands)).toHaveLength(4);
   expect(plan.catalog.plugins.find((plugin) => plugin.name === "statusline")?.excluded).toEqual([
@@ -468,36 +424,6 @@ test("full catalog includes all plugins and explicitly classifies empty surfaces
   expect(plan.files.get(join(out, deepExplore?.path ?? ""))).toContain(
     `${TOOLU_OPENCODE_ROOT}/generated/skills/${orchestratorSkill?.id}/references/model-routing.md`,
   );
-  const context7 = plan.catalog.plugins.find((plugin) => plugin.name === "context7")?.skills[0];
-  const context7Skill = plan.files.get(join(out, context7?.path ?? "")) ?? "";
-  expect(context7Skill).not.toContain("CLAUDE_CONFIG_DIR");
-  // One OpenCode command under shell.env's Bun, which ignores the project .env (#348).
-  expect(context7Skill).toContain(
-    '# OpenCode\n"$TOOLU_BUN" --no-env-file "${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/context7/search.sh" <command> [options]\n```',
-  );
-  for (const gone of ["CODEX_HOME", "# Codex", "# Claude Code", "Choose the line"]) {
-    expect(context7Skill).not.toContain(gone);
-  }
-  const jira = plan.catalog.plugins.find((plugin) => plugin.name === "jira")?.skills[0];
-  const jiraSkill = plan.files.get(join(out, jira?.path ?? "")) ?? "";
-  // One OpenCode command under shell.env's Bun and OpenCode's own state paths (#351).
-  expect(jiraSkill).toContain(
-    '# OpenCode\n"$TOOLU_BUN" --no-env-file "${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/jira/jira.sh" [--api-version N] [--lean] <family> <action> [options]\n```',
-  );
-  expect(jiraSkill).toContain("`.opencode/tmp/jira/plans/<KEY>.md`.");
-  expect(jiraSkill).toContain("below `<repo>/.opencode/tmp/plan-ledger/`.");
-  expect(jiraSkill).toContain("loading this skill or reading an issue never authorizes a write");
-  for (const gone of [
-    "CODEX_HOME",
-    "TOOLU_HOST_OVERRIDE=claude",
-    "# Codex",
-    "# Claude Code",
-    "Choose the complete command",
-    ".claude/tmp",
-    ".codex/tmp",
-  ]) {
-    expect(jiraSkill).not.toContain(gone);
-  }
 });
 
 test("resource links in generated skills resolve inside the output tree", () => {

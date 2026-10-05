@@ -4,7 +4,7 @@
  * `npm pack` builds the tarball through the package's own prepack, the same
  * way the release publishes it. A sandbox with no checkout path in its env
  * (`TOOLU_REPO_ROOT` and `TOOLU_ROOT` blank) loads it through the npm route
- * with all 16 plugins selected. The agent's bash runs helpers from the
+ * with all 12 plugins selected. The agent's bash runs helpers from the
  * installed tree. The scenario then reads the installed tree itself: it must
  * equal the tarball, sit outside the checkout, own every published helper
  * symlink, and import every export.
@@ -133,7 +133,7 @@ async function cleanInstall(ctx: EntryContext): Promise<EntryResult> {
     plugins: names.length,
     ready: diagnostics(
       hostRun.stderr,
-      `toolu: ready (${names.length} plugins, 12 startup artifacts)`,
+      `toolu: ready (${names.length} plugins, ${MODULES.length + HELPERS.length} startup artifacts)`,
     ),
     notReady: diagnostics(hostRun.stderr, "toolu: not ready"),
     modules: modules(s).toSorted().join(",") === MODULES.toSorted().join(","),
@@ -142,7 +142,7 @@ async function cleanInstall(ctx: EntryContext): Promise<EntryResult> {
     ...(await installedObservations(s.sb.project, ctx.tarball)),
   };
   const pass =
-    observed.plugins === 16 &&
+    observed.plugins === 12 &&
     observed.ready === 1 &&
     observed.notReady === 0 &&
     observed.modules &&
@@ -164,7 +164,7 @@ export const PACKAGE_SCENARIOS: EntryScenario[] = [
   {
     id: "package.clean-install",
     claim:
-      "The npm-packed tarball loads all 16 plugins with no checkout env, and every helper, export and installed file comes from the tarball",
+      "The npm-packed tarball loads all 12 plugins with no checkout env, and every helper, export and installed file comes from the tarball",
     run: cleanInstall,
   },
 ];

@@ -6,7 +6,7 @@ Install [toolu](https://github.com/Falconiere/toolu) plugins into Claude Code, C
 npx @toolu/plugins install              # every catalog plugin, core first
 npx @toolu/plugins install rust-quality # one plugin and its dependency
 npx @toolu/plugins list                 # catalog joined with what is installed
-npx @toolu/plugins remove jira --yes
+npx @toolu/plugins remove ast-grep --yes
 npx @toolu/plugins update
 ```
 

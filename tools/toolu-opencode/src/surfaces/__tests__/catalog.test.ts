@@ -65,7 +65,7 @@ function reasonOf(dir: string): string {
 test("the committed catalog validates with every file inside generated/", () => {
   const catalog = readSurfaceCatalog(GENERATED);
   if (!catalog.ok) throw new Error(catalog.reason);
-  expect(catalog.plugins).toHaveLength(16);
+  expect(catalog.plugins).toHaveLength(12);
   const core = catalog.plugins.find((p) => p.name === "toolu");
   expect(core?.skills.map((s) => s.id)).toContain("toolu-debug");
   expect(core?.agents).toHaveLength(5);

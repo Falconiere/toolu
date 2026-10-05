@@ -153,7 +153,7 @@ async function migrationRefusals(ctx: EntryContext): Promise<EntryResult> {
       exit: 1,
       run: await refused(
         ctx,
-        { ...cloneOnly, selection: ["context7"] },
+        { ...cloneOnly, selection: ["jev"] },
         { ...notConfigured, step: "no-entry-selection" },
       ),
     },

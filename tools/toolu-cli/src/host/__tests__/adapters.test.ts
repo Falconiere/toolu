@@ -40,8 +40,8 @@ describe("command construction", () => {
       "user",
     ]);
     expect(claudeAdapter.install("rust-quality", "toolu", undefined).argv).not.toContain("--scope");
-    expect(claudeAdapter.remove("jira", "toolu").argv).toContain("uninstall");
-    expect(claudeAdapter.update("jira", "toolu").argv).toContain("update");
+    expect(claudeAdapter.remove("ast-grep", "toolu").argv).toContain("uninstall");
+    expect(claudeAdapter.update("ast-grep", "toolu").argv).toContain("update");
   });
 
   test("codex omits scope entirely and re-adds to update", () => {
@@ -51,11 +51,11 @@ describe("command construction", () => {
       "add",
       "rust-quality@toolu",
     ]);
-    expect(codexAdapter.update("jira", "toolu").argv).toEqual([
+    expect(codexAdapter.update("ast-grep", "toolu").argv).toEqual([
       "codex",
       "plugin",
       "add",
-      "jira@toolu",
+      "ast-grep@toolu",
     ]);
   });
 });

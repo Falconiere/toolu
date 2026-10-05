@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { contractPaths } from "../../opencode-host/results.ts";
 import { ProbeResultsSchema, readJson } from "../../opencode-host/schema.ts";
 import { ROOT } from "../../opencode-host/scenarios-entry.ts";
+import { PATH_SCENARIOS } from "../../opencode-host/scenarios-paths.ts";
 import {
   catalogNames,
   coverage,
@@ -20,8 +21,8 @@ const committed = readJson(contractPaths().results, ProbeResultsSchema);
 const checks = acceptanceChecks(committed);
 const catalog = catalogNames();
 
-test.concurrent("the catalog has the 16 plugins the acceptance must cover", () => {
-  expect(catalog).toHaveLength(16);
+test.concurrent("the catalog has the 12 plugins the acceptance must cover", () => {
+  expect(catalog).toHaveLength(12);
 });
 
 test.concurrent("check ids are unique and every named plugin is a catalog plugin", () => {
@@ -39,12 +40,29 @@ test.concurrent("every catalog plugin has a dedicated actual-host check when all
   expect(Object.entries(all).filter(([, ids]) => ids.length === 0)).toEqual([]);
 });
 
+test.concurrent("path and quickstart checks belong to the helpers they exercise", () => {
+  const all = coverage(
+    checks.map((check) => ({ check, pass: true })),
+    catalog,
+  );
+  expect(all.jev).toContain("entry.helper-env");
+  expect(all.jev).not.toContain("entry.worktree-state");
+  expect(all["ast-grep"]).toContain("entry.worktree-state");
+  expect(all["ast-grep"]).toContain("docs.quickstart");
+});
+
+test.concurrent("every path scenario is registered once", () => {
+  expect(checks.filter((check) => check.family === "paths").map((check) => check.id)).toEqual(
+    PATH_SCENARIOS.map((scenario) => scenario.id),
+  );
+});
+
 test.concurrent("a plugin whose only checks fail, or are whole-catalog, is uncovered", () => {
   const results = checks.map((check) => ({
     check,
-    pass: !(check.plugins !== "all" && check.plugins.includes("jira")),
+    pass: !(check.plugins !== "all" && check.plugins.includes("jev")),
   }));
-  expect(coverage(results, catalog).jira).toEqual([]);
+  expect(coverage(results, catalog).jev).toEqual([]);
   const wholeCatalog = checks.filter((check) => check.plugins === "all");
   expect(wholeCatalog.length).toBeGreaterThan(0);
   const onlyAll = coverage(

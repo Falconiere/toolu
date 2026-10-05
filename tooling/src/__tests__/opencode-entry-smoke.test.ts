@@ -8,22 +8,13 @@ test("no ids runs every scenario; ids narrow it in catalog order", () => {
   expect(all).toContain("entry.npm-root");
   expect(all).toContain("entry.full-startup");
   expect(all).toContain("entry.worktree-state");
-  expect(all.slice(-26)).toEqual([
+  expect(all.slice(-17)).toEqual([
     "surfaces.npm-clean",
     "surfaces.lifecycle",
     "surfaces.precedence",
     "surfaces.skill-roots",
     "surfaces.both-routes",
     "surfaces.selection",
-    "browser.enabled",
-    "browser.missing-binary",
-    "browser.missing-chromium",
-    "browser.disabled",
-    "browser.workflow",
-    "exa.enabled",
-    "exa.transport",
-    "exa.no-key",
-    "exa.disabled",
     "babysit.fixer",
     "babysit.no-report",
     "babysit.cancel",

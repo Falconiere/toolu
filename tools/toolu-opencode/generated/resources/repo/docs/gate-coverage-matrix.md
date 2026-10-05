@@ -9,14 +9,10 @@ Every live hook and built-in gate in this inventory is `port-native` and runs th
 
 | id | source | plugin | event | classification | support | impl | host mechanism | bash | limits |
 |----|--------|--------|-------|----------------|---------|------|----------------|------|--------|
-| `agent-browser:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/agent-browser/hooks/hooks.json` | agent-browser | SessionStart | port-native | required | #269/done | bun-bundle | no | — |
 | `ast-grep:hooks.json:SessionStart:register.js:startup|resume|clear|compact` | `plugins/ast-grep/hooks/hooks.json` | ast-grep | SessionStart | port-native | required | #268/done | bun-bundle | no | — |
-| `context7:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/context7/hooks/hooks.json` | context7 | SessionStart | port-native | required | #269/done | bun-bundle | no | — |
 | `epic-orchestrator:hooks.json:SessionStart:check-deps.js:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #269/done | bun-bundle | no | — |
-| `exa-search:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/exa-search/hooks/hooks.json` | exa-search | SessionStart | port-native | required | #269/done | bun-bundle | no | — |
 | `jev:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/jev/hooks/hooks.json` | jev | SessionStart | port-native | required | #269/done | bun-bundle | no | — |
 | `jev:hooks.json:UserPromptSubmit:user-prompt-submit.js` | `plugins/jev/hooks/hooks.json` | jev | UserPromptSubmit | port-native | required | #271/done | bun-bundle | no | — |
-| `jira:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/jira/hooks/hooks.json` | jira | SessionStart | port-native | required | #269/done | bun-bundle | no | — |
 | `pr-babysit:hooks.json:SessionStart:check-toolu.js:startup|resume|clear|compact` | `plugins/pr-babysit/hooks/hooks.json` | pr-babysit | SessionStart | port-native | required | #269/done | bun-bundle | no | — |
 | `python-quality:hooks.json:SessionStart:check-toolu.js:startup|resume|clear|compact` | `plugins/python-quality/hooks/hooks.json` | python-quality | SessionStart | port-native | required | #269/done | bun-bundle | no | — |
 | `python-quality:hooks.json:SessionStart:register.js:startup|resume|clear|compact` | `plugins/python-quality/hooks/hooks.json` | python-quality | SessionStart | port-native | required | #266/done | bun-bundle | no | — |

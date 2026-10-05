@@ -32,19 +32,19 @@ function temp(): string {
 /** A temp tree with a real source file to publish. */
 function fixture(): { root: string; source: string } {
   const root = temp();
-  const source = join(root, "plugin/hooks/dist/search.js");
+  const source = join(root, "plugin/hooks/dist/jev.js");
   mkdirSync(dirname(source), { recursive: true });
   writeFileSync(source, "#!/usr/bin/env bun\n");
   return { root, source };
 }
 
-const base = { plugin: "context7", dir: "context7", name: "search.sh" };
+const base = { plugin: "jev", dir: "jev", name: "jev.sh" };
 
 test.concurrent("publishes a symlink under CLAUDE_CONFIG_DIR on the Claude host", () => {
   const { root, source } = fixture();
   const env = { HOME: root, CLAUDE_CONFIG_DIR: join(root, "cfg") };
   const result = publishWrapper({ ...base, source, env });
-  const dst = join(root, "cfg/context7/search.sh");
+  const dst = join(root, "cfg/jev/jev.sh");
   expect(result).toEqual({ status: "published", path: dst });
   expect(readlinkSync(dst)).toBe(source);
 });
@@ -53,7 +53,7 @@ test.concurrent("publishes under CODEX_HOME when PLUGIN_ROOT marks the Codex hos
   const { root, source } = fixture();
   const env = { HOME: root, PLUGIN_ROOT: "/p", CODEX_HOME: join(root, "codex home") };
   publishWrapper({ ...base, source, env });
-  expect(readlinkSync(join(root, "codex home/context7/search.sh"))).toBe(source);
+  expect(readlinkSync(join(root, "codex home/jev/jev.sh"))).toBe(source);
   expect(existsSync(join(root, ".claude"))).toBe(false);
 });
 
@@ -66,23 +66,23 @@ test.concurrent("TOOLU_CONFIG_DIR beats both native roots", () => {
     TOOLU_CONFIG_DIR: join(root, "custom"),
   };
   publishWrapper({ ...base, source, env });
-  expect(readlinkSync(join(root, "custom/context7/search.sh"))).toBe(source);
+  expect(readlinkSync(join(root, "custom/jev/jev.sh"))).toBe(source);
   expect(existsSync(join(root, "codex"))).toBe(false);
 });
 
 test.concurrent("replaces a stale or broken symlink with the current target", () => {
   const { root, source } = fixture();
   const env = { HOME: root, TOOLU_CONFIG_DIR: join(root, "cfg") };
-  mkdirSync(join(root, "cfg/context7"), { recursive: true });
-  symlinkSync("/nonexistent/old/search.sh", join(root, "cfg/context7/search.sh"));
+  mkdirSync(join(root, "cfg/jev"), { recursive: true });
+  symlinkSync("/nonexistent/old/jev.sh", join(root, "cfg/jev/jev.sh"));
   expect(publishWrapper({ ...base, source, env }).status).toBe("published");
-  expect(readlinkSync(join(root, "cfg/context7/search.sh"))).toBe(source);
+  expect(readlinkSync(join(root, "cfg/jev/jev.sh"))).toBe(source);
 });
 
 test.concurrent("never touches a regular file or directory at the published path", () => {
   const { root, source } = fixture();
   const env = { HOME: root, TOOLU_CONFIG_DIR: join(root, "cfg") };
-  const file = join(root, "cfg/context7/search.sh");
+  const file = join(root, "cfg/jev/jev.sh");
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, "#!/usr/bin/env bash\necho user-override\n");
   expect(publishWrapper({ ...base, source, env })).toEqual({
@@ -92,7 +92,7 @@ test.concurrent("never touches a regular file or directory at the published path
   expect(lstatSync(file).isSymbolicLink()).toBe(false);
   expect(readFileSync(file, "utf8")).toBe("#!/usr/bin/env bash\necho user-override\n");
 
-  const dirAtPath = join(root, "cfg/context7/other.sh");
+  const dirAtPath = join(root, "cfg/jev/other.sh");
   mkdirSync(dirAtPath);
   const other = publishWrapper({ ...base, name: "other.sh", source, env });
   expect(other.status).toBe("kept-user-file");
@@ -103,10 +103,10 @@ test.concurrent("a second run leaves the same link and no temp litter", () => {
   const { root, source } = fixture();
   const env = { HOME: root, TOOLU_CONFIG_DIR: join(root, "cfg") };
   publishWrapper({ ...base, source, env });
-  const before = lstatSync(join(root, "cfg/context7/search.sh")).ino;
+  const before = lstatSync(join(root, "cfg/jev/jev.sh")).ino;
   expect(publishWrapper({ ...base, source, env }).status).toBe("published");
-  expect(lstatSync(join(root, "cfg/context7/search.sh")).ino).toBe(before);
-  expect(readlinkSync(join(root, "cfg/context7/search.sh"))).toBe(source);
+  expect(lstatSync(join(root, "cfg/jev/jev.sh")).ino).toBe(before);
+  expect(readlinkSync(join(root, "cfg/jev/jev.sh"))).toBe(source);
 });
 
 test.concurrent("a missing source publishes nothing and creates no directory", () => {
@@ -137,7 +137,7 @@ test.concurrent("an uncreatable config dir warns once and publishes nothing", ()
     env,
     warn: (line) => lines.push(line),
   });
-  const dir = join(root, "blocker/context7");
+  const dir = join(root, "blocker/jev");
   expect(result).toEqual({ status: "unwritable", path: dir });
   expect(lines).toEqual([`toolu-review: cannot create ${dir} — helper not published`]);
 });
@@ -149,20 +149,20 @@ test.concurrent("bunOnPath reads the PATH it is given", () => {
 });
 
 test.concurrent("bunAdvisory is the bash hooks' exact line", () => {
-  expect(bunAdvisory("context7", "context7 search CLI")).toBe(
-    "context7: bun not found on PATH — the context7 search CLI needs Bun 1.4.x (https://bun.sh; see docs/runtime.md)",
+  expect(bunAdvisory("jev", "jev search CLI")).toBe(
+    "jev: bun not found on PATH — the jev search CLI needs Bun 1.4.x (https://bun.sh; see docs/runtime.md)",
   );
 });
 
 test.concurrent("a directory that refuses the link reports link-failed and leaves no litter", () => {
   const { root, source } = fixture();
   const env = { HOME: root, TOOLU_CONFIG_DIR: join(root, "cfg") };
-  const dir = join(root, "cfg/context7");
+  const dir = join(root, "cfg/jev");
   mkdirSync(dir, { recursive: true });
   chmodSync(dir, 0o555);
   try {
     const result = publishWrapper({ ...base, source, env });
-    expect(result).toEqual({ status: "link-failed", path: join(dir, "search.sh") });
+    expect(result).toEqual({ status: "link-failed", path: join(dir, "jev.sh") });
     expect(readdirSync(dir)).toEqual([]);
   } finally {
     chmodSync(dir, 0o755);

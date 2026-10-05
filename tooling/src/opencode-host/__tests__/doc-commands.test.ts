@@ -18,8 +18,8 @@ function marked(name: string, body: string): string {
 
 test.concurrent("the install and migration docs carry their executable blocks", () => {
   const quickstart = docBlock(INSTALL_DOC, "quickstart");
-  expect(quickstart).toContain("npx @toolu/plugins install toolu context7 --host opencode");
-  expect(quickstart).toContain("opencode debug skill | grep context7-context7");
+  expect(quickstart).toContain("npx @toolu/plugins install toolu ast-grep --host opencode");
+  expect(quickstart).toContain("opencode debug skill | grep ast-grep-ast-grep");
   expect(quickstart).toContain("opencode run ");
   expect(docBlock(INSTALL_DOC, "manage")).toContain("npx @toolu/plugins remove toolu");
   expect(docBlock(MIGRATION_DOC, "migrate")).toContain("npx @toolu/plugins update --host opencode");
@@ -104,7 +104,7 @@ test.concurrent("shim targets with shell metacharacters run verbatim", async () 
 const FAILING_HOST = `#!/bin/sh
 case "$1" in
   --version) echo 1.18.34 ;;
-  debug) echo '[{"name":"context7-context7"}]' ;;
+    debug) echo '[{"name":"ast-grep-ast-grep"}]' ;;
   run) echo "provider unreachable" >&2; exit 3 ;;
 esac
 `;

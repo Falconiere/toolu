@@ -13,10 +13,7 @@ const ROOT = resolve(import.meta.dir, "../../..");
 type Publisher = { plugin: string; published: string };
 
 const SESSION_START: readonly Publisher[] = [
-  { plugin: "agent-browser", published: "agent-browser/agent-browser.sh" },
-  { plugin: "context7", published: "context7/search.sh" },
-  { plugin: "exa-search", published: "exa-search/search.sh" },
-  { plugin: "jira", published: "jira/jira.sh" },
+  { plugin: "jev", published: "jev/jev.sh" },
   { plugin: "statusline", published: "statusline/statusline.sh" },
   { plugin: "toolu-review", published: "toolu-review/write-state.sh" },
 ];

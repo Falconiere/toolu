@@ -39,13 +39,11 @@ import {
 } from "./report.ts";
 
 /**
- * Service credentials no fixture check may see. An external test that names
- * one in `requires` gets it back; the others (context7 runs without a key)
- * never do.
+ * Service credentials no fixture check may see. The built-in epic-orchestrator
+ * Jira tracker still uses the Jira keys after the standalone plugin's removal.
+ * An external test that names one in `requires` gets it back.
  */
 const SERVICE_KEYS = [
-  "CONTEXT7_API_KEY",
-  "EXA_API_KEY",
   "TYPESAFE_API_KEY",
   "JIRA_API_TOKEN",
   "JIRA_PAT",

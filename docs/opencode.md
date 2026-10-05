@@ -3,7 +3,7 @@
 **Supported host:** `opencode-ai@1.18.34` with `@opencode-ai/plugin@1.18.34`. That is the plugin API documented at <https://opencode.ai/docs/plugins/>, pinned and probed in the [host contract](opencode-host-contract.md). Runs on macOS and Linux; Windows is **N/A**.
 **Evidence:** the required OpenCode acceptance (`bun run test:opencode`) runs on Linux and macOS in CI and checks every support claim on this page. The [quick start](#quick-start) and the [update and removal steps](#update-roll-back-and-remove) run there exactly as written, and [Plugin support](#plugin-support) lists the checks each plugin must pass.
 
-toolu ships to OpenCode as one npm package, `@toolu/opencode`, which carries all 16 plugins. OpenCode has no `plugin add`, `list`, `update` or `remove` command of its own. The `toolu` CLI therefore adds the package to OpenCode's documented `plugin` config and writes which plugins are enabled ([docs/cli.md § OpenCode](cli.md#opencode)). It keeps your comments and other entries.
+toolu ships to OpenCode as one npm package, `@toolu/opencode`, which carries all 12 plugins. OpenCode has no `plugin add`, `list`, `update` or `remove` command of its own. The `toolu` CLI therefore adds the package to OpenCode's documented `plugin` config and writes which plugins are enabled ([docs/cli.md § OpenCode](cli.md#opencode)). It keeps your comments and other entries.
 
 If you installed the V2-targeted adapter (toolu 7.7.2 or earlier on `opencode` 2.x), follow the [migration guide](opencode-migration.md) instead.
 
@@ -22,14 +22,14 @@ Install the host with `npm install -g opencode-ai@1.18.34`, or any route that ma
 
 ## Quick start
 
-Run this in the project you want guarded. It installs toolu in your global OpenCode config with the core `toolu` plugin and one leaf plugin, `context7`. It then checks that OpenCode discovers the leaf plugin's skill and asks your agent to overwrite a scratch secrets file, `.env.toolu-check`. The block does not touch your `.env` or your gate config, and it removes the scratch file at the end, even when a step fails:
+Run this in the project you want guarded. It installs toolu in your global OpenCode config with the core `toolu` plugin and one leaf plugin, `ast-grep`. It then checks that OpenCode discovers the leaf plugin's skill and asks your agent to overwrite a scratch secrets file, `.env.toolu-check`. The block does not touch your `.env` or your gate config, and it removes the scratch file at the end, even when a step fails:
 
 <!-- opencode-doc:quickstart:start -->
 
 ```bash
 test "$(opencode --version)" = 1.18.34
-npx @toolu/plugins install toolu context7 --host opencode
-opencode debug skill | grep context7-context7
+npx @toolu/plugins install toolu ast-grep --host opencode
+opencode debug skill | grep ast-grep-ast-grep
 test ! -e .env.toolu-check
 trap 'rm -f .env.toolu-check' EXIT
 printf 'SECRET=1\n' > .env.toolu-check
@@ -40,7 +40,7 @@ rm -f .env.toolu-check
 
 <!-- opencode-doc:quickstart:end -->
 
-- **What `install` writes.** It adds `@toolu/opencode@<CLI version>` to the `plugin` array of `~/.config/opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode`). It writes `{ "version": 1, "enabled": ["toolu", "context7"] }` to `toolu/plugins.json` under the global config root. That root is the same directory unless `TOOLU_CONFIG_DIR` or `TOOLU_OPENCODE_HOME` overrides it (see [Roots](#roots-and-helper-environment)). Add `--scope project` to write this project's `opencode.json` and `.opencode/toolu/plugins.json` instead.
+- **What `install` writes.** It adds `@toolu/opencode@<CLI version>` to the `plugin` array of `~/.config/opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode`). It writes `{ "version": 1, "enabled": ["toolu", "ast-grep"] }` to `toolu/plugins.json` under the global config root. That root is the same directory unless `TOOLU_CONFIG_DIR` or `TOOLU_OPENCODE_HOME` overrides it (see [Roots](#roots-and-helper-environment)). Add `--scope project` to write this project's `opencode.json` and `.opencode/toolu/plugins.json` instead.
 - **What the session shows.**
   - `opencode debug skill` lists the skills OpenCode discovered, and `opencode run` uses your configured model.
   - Paths matching `.env` and `.env.*` are protected. With the default gate config, `protectedFiles` asks, and on OpenCode a security guardrail's ask refuses the call.
@@ -50,20 +50,16 @@ rm -f .env.toolu-check
 
 ## Plugin support
 
-Each plugin's status comes from the [capability matrix](opencode-host-contract.md#capability-matrix). Its CI checks are the actual-host acceptance checks dedicated to it: `bun run test:opencode` fails unless every one of them passes on Linux and macOS. The limitations below are host-specific: each one names what OpenCode lacks and the alternative toolu uses. Prerequisites such as the `agent-browser` CLI or an `EXA_API_KEY` are listed in [Plugin guides](#plugin-guides). `bun run check:opencode-docs` regenerates this section from the matrix and the acceptance registry, and fails when it drifts.
+Each plugin's status comes from the [capability matrix](opencode-host-contract.md#capability-matrix). Its CI checks are the actual-host acceptance checks dedicated to it: `bun run test:opencode` fails unless every one of them passes on Linux and macOS. The limitations below are host-specific: each one names what OpenCode lacks and the alternative toolu uses. `bun run check:opencode-docs` regenerates this section from the matrix and the acceptance registry, and fails when it drifts.
 
 <!-- opencode-support:start -->
 | Plugin | Status on OpenCode | Dedicated CI checks |
 |---|---|---|
-| agent-browser | Supported | `browser.*` (5) |
-| ast-grep | Supported with limitations | `ast-grep.session` |
+| ast-grep | Supported with limitations | `entry.worktree-state`, `docs.quickstart`, `ast-grep.session` |
 | brainstorm | Supported | `live.delivery-workflows` |
-| context7 | Supported | `entry.*` (2), `docs.quickstart`, `live.context7` |
 | delivery-flow | Supported | `live.delivery-workflows` |
 | epic-orchestrator | Supported | `live.epic-worker` |
-| exa-search | Supported | `exa.*` (4) |
-| jev | Supported | `live.jev` |
-| jira | Supported | `live.jira` |
+| jev | Supported | `entry.helper-env`, `live.jev` |
 | pr-babysit | Supported with limitations | `babysit.*` (3) |
 | python-quality | Supported | `pyquality.*` (3) |
 | rust-quality | Supported | `rsquality.*` (3) |
@@ -109,7 +105,7 @@ Changes take effect at the next OpenCode start.
 
 ```bash
 npx @toolu/plugins update --host opencode
-npx @toolu/plugins remove context7 --host opencode --yes
+npx @toolu/plugins remove ast-grep --host opencode --yes
 npx @toolu/plugins remove toolu --host opencode --yes
 ```
 
@@ -121,7 +117,7 @@ npx @toolu/plugins remove toolu --host opencode --yes
 - **Remove toolu.** `remove toolu` deletes the package entry and keeps the selection file, so a reinstall restores it. Delete `toolu/plugins.json` and `.opencode/toolu.config.json` yourself if you want them gone.
 - **Clean state.** The project's data root (`.opencode/toolu/state/`, or `<override>/toolu/opencode/projects/<name>-<hash>/`) holds registry modules, helpers and the startup ledger. Deleting it forces a fresh bootstrap and touches no Claude Code or Codex settings. Gate state lives in `.opencode/tmp/`.
 
-CI runs this block word for word after the quick start (`docs.quickstart`). It checks that the entry stays at the tested release, that `context7-context7` disappears, and that removing toolu leaves no toolu entry or skill.
+CI runs this block word for word after the quick start (`docs.quickstart`). It checks that the entry stays at the tested release, that `ast-grep-ast-grep` disappears, and that removing toolu leaves no toolu entry or skill.
 
 ## How toolu runs inside OpenCode
 
@@ -162,7 +158,7 @@ Host events without an OpenCode hook remain outside this scope; see the [host co
 - **Contributions:**
   - Each entry reports its registry modules and helpers to the bootstrap (`TOOLU_STARTUP_REPORT`).
   - Each one is checked on disk: a module must be byte-equal to the plugin's bundle, and a helper must be a symlink to it.
-  - For example, context7 publishes its Bun bundle at the stable `context7/search.sh` path under the bootstrap data root.
+  - For example, jev publishes its Bun bundle at the stable `jev/jev.sh` path under the bootstrap data root.
 - **Readiness:** comes from this run only.
   - Any of these makes toolu not ready, with the plugin and entry named in the reason: a failed or partial registration, a missing helper source, non-JSON startup output, or an entry that exits non-zero or outlives its 120 s deadline.
   - Files left on disk from an earlier session never make toolu ready, whoever wrote them.
@@ -176,9 +172,7 @@ Host events without an OpenCode hook remain outside this scope; see the [host co
   - Inherited Claude Code, Codex, Cursor and Hermes root variables (`CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `PLUGIN_ROOT`, `CLAUDE_PLUGIN_DATA`, …) are removed first, so no other host's home is read or written ([#343](https://github.com/Falconiere/toolu/issues/343)).
   - Bun runs every entry with `--no-env-file`, at startup and for prompt and compaction context. A project `.env` therefore never adds variables, and a credential check sees only the environment OpenCode started with ([#350](https://github.com/Falconiere/toolu/issues/350)).
 - **Context:**
-  - Each entry's SessionStart context is collected for delivery to the model: toolu's session protocol, Jev's mandate, context7's documentation-first instruction, jira's issue-workflow instruction.
-  - On OpenCode, context7's instruction comes from context7's own entry, so toolu's session protocol leaves out its context7 line ([#348](https://github.com/Falconiere/toolu/issues/348)).
-  - Likewise, jira's instruction comes from jira's own entry, so toolu's prompt hint leaves out its Jira line ([#351](https://github.com/Falconiere/toolu/issues/351)).
+  - Each entry's SessionStart context is collected for delivery to the model: toolu's session protocol and Jev's mandate.
 
 ### Skills, agents and commands
 
@@ -234,7 +228,7 @@ Every bash call the agent makes gets these variables through the plugin's `shell
 
 | Variable                                                                    | Value                                                                                                                                                                                         |
 | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TOOLU_CONFIG_DIR`                                                          | The project's data root, where helpers such as `context7/search.sh` are published (the generated skills name `"${TOOLU_CONFIG_DIR:-…}/<plugin>/<helper>"`)                                    |
+| `TOOLU_CONFIG_DIR`                                                          | The project's data root, where helpers such as `jev/jev.sh` are published (the generated skills name `"${TOOLU_CONFIG_DIR:-…}/<plugin>/<helper>"`)                                    |
 | `TOOLU_OPENCODE_DATA_ROOT`                                                  | The same path. An OpenCode started from this bash sees `TOOLU_CONFIG_DIR` equal to it and does not treat it as an override, so it keeps its own roots                                         |
 | `TOOLU_USER_CONFIG_DIR`                                                     | The global config root                                                                                                                                                                        |
 | `TOOLU_HOST_OVERRIDE`, `TOOLU_PROJECT_CONFIG_DIRNAME`, `TOOLU_SETTINGS_DIR` | `opencode`, `.opencode`, the toolu settings directory, so helpers resolve OpenCode state                                                                                                      |
@@ -282,12 +276,6 @@ With `ast-grep` selected, its two registry modules run on OpenCode's own tools (
 
 The `ast-grep-ast-grep` skill names only the `ast-grep` CLI, so its examples run as written in bash.
 
-### Browser automation
-
-Add `agent-browser` to the `enabled` list and restart OpenCode. Native skill discovery then exposes `agent-browser-agent-browser`. Startup gives the agent the project-specific helper path; in a bash call it is `"${TOOLU_CONFIG_DIR}/agent-browser/agent-browser.sh"`. Open a page with that helper, take an accessibility-tree `snapshot` for `@eN` refs, act on a ref, re-snapshot after the page changes, and close the browser. The skill includes output bounds and untrusted-page-text guidance.
-
-The external `agent-browser` CLI and Chromium are separate prerequisites: install the CLI with `npm i -g agent-browser`, then run `agent-browser install`. The helper does not install either one. If the CLI is absent, it exits 127 with an install command; a missing browser executable is reported by the CLI. Disabling `agent-browser` in the next selection removes its skill, startup instructions and toolu-owned helper symlink from that project's data root.
-
 ### Core workflows
 
 [#358](https://github.com/Falconiere/toolu/issues/358) ports the toolu and toolu-review skills, agents and commands to OpenCode's own tools. The generator applies an exact-match port table (`tools/toolu-opencode/scripts/lib/opencode-port.ts`). When a source edit moves one of its anchors, generation fails and names the file, so Claude Code or Codex text never reaches OpenCode unnoticed. The shared host mapping (`plugins/toolu/workflows/host-mapping.md`) has an OpenCode column.
@@ -299,18 +287,6 @@ The external `agent-browser` CLI and Chromium are separate prerequisites: instal
 - **Debug.** `toolu-debug` runs its collectors as `bun "$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-testfail.ts"` (also `debug-stack.ts` and `debug-log.ts`). `@toolu/opencode` ships them. MCP tools are named `<server>_<tool>`; there is no tool search.
 
 `tools/toolu-opencode/src/plugin/__tests__/core-workflows.test.ts` proves the review, commit-gate and debug paths hermetically. `TOOLU_LIVE_OPENCODE=1 bun test tools/toolu-opencode/src/plugin/__tests__/core-workflows.live.test.ts` repeats them on the pinned host with a scripted provider.
-
-### Exa web research
-
-Add `exa-search` to the `enabled` list and restart OpenCode. The native skill is `exa-search-exa-search`; its SessionStart entry publishes the project's helper and gives the model its exact path. Set `EXA_API_KEY` in the environment that starts OpenCode. The helper does not read `.env` or print the key. In a bash call, use:
-
-```bash
-"${TOOLU_CONFIG_DIR}/exa-search/search.sh" search -q "Bun runtime"
-"${TOOLU_CONFIG_DIR}/exa-search/search.sh" crawl https://bun.sh/docs
-"${TOOLU_CONFIG_DIR}/exa-search/search.sh" similar https://bun.sh/docs
-```
-
-The generated skill documents the remaining flags. Search, crawl and similar use Exa's `/search`, `/contents` and `/findSimilar` endpoints through the existing REST wrapper. HTTP and transport failures reach the agent with a nonzero exit. If `EXA_API_KEY` is missing, startup tells the agent to use OpenCode's `websearch` when available, or `webfetch` for a known URL; the helper itself exits before making a request. Removing `exa-search` from the selection removes its skill, startup guidance and toolu-owned helper symlink on the next start.
 
 ### Delivery workflows
 
@@ -424,7 +400,7 @@ bun run smoke:opencode-entry surfaces.npm-clean surfaces.lifecycle surfaces.prec
 
 The runner packs the tarball with `npm pack` through the package's own `prepack`, the way a release publishes it.
 
-`package.clean-install` ([#361](https://github.com/Falconiere/toolu/issues/361)) loads that tarball with all 16 plugins in a sandbox where `TOOLU_REPO_ROOT` and `TOOLU_ROOT` are blank. It checks that:
+`package.clean-install` ([#361](https://github.com/Falconiere/toolu/issues/361)) loads that tarball with all 12 plugins in a sandbox where `TOOLU_REPO_ROOT` and `TOOLU_ROOT` are blank. It checks that:
 
 - every plugin becomes ready;
 - the installed tree equals the tarball and sits outside the checkout;
@@ -435,21 +411,6 @@ The runner packs the tarball with `npm pack` through the package's own `prepack`
 
 ```bash
 bun run smoke:opencode-entry package.clean-install cli.install cli.lifecycle
-```
-
-Agent-browser scenarios check native skill discovery, the startup path the model sees, missing CLI and Chromium diagnostics, and cleanup after the plugin is disabled.
-
-The workflow scenario uses the installed `agent-browser` CLI and Chromium. Through the published helper, it clicks a button on a local interactive page and checks the changed text. It requires `agent-browser install` once on the test machine, and it uses an isolated OpenCode profile and a short temporary browser socket directory.
-
-```bash
-bun run smoke:opencode-entry browser.enabled browser.missing-binary browser.missing-chromium browser.disabled
-bun run smoke:opencode-entry browser.workflow
-```
-
-Exa-search scenarios use the installed package and the native `skill` tool to check the helper path. They send search, crawl and similar through a private loopback HTTPS fixture. They also check HTTP and connection errors, a missing-key fallback, secret-free model context, and cleanup after deselection. No Exa account is needed:
-
-```bash
-bun run smoke:opencode-entry exa.enabled exa.transport exa.no-key exa.disabled
 ```
 
 The pre-tool smoke checks protected edits, writes and patches, unsafe shell, the commit and push gates, MCP and task denials, and an allowed shell call:
@@ -486,7 +447,7 @@ The ast-grep smoke enables `toolu` and `ast-grep` in one isolated project. It ne
 bun run smoke:opencode-ast-grep
 ```
 
-All of the above runs as one required acceptance on Linux and macOS in CI, together with the host probes, the `*.live.test.ts` files, concurrency, budgets and regression controls. It needs `ast-grep`, `agent-browser` and its Chromium on `PATH`, and it fails, never skips, when one is missing:
+All of the above runs as one required acceptance on Linux and macOS in CI, together with the host probes, the `*.live.test.ts` files, concurrency, budgets and regression controls. It needs `ast-grep` on `PATH`, and it fails, never skips, when one is missing:
 
 ```bash
 bun run test:opencode

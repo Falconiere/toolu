@@ -4,20 +4,6 @@
   "surfaceRoot": "tools/toolu-opencode/generated",
   "plugins": [
     {
-      "name": "agent-browser",
-      "classification": "generated",
-      "excluded": [],
-      "skills": [
-        {
-          "id": "agent-browser-agent-browser",
-          "path": "skills/agent-browser-agent-browser/SKILL.md",
-          "source": "plugins/agent-browser/skills/agent-browser/SKILL.md"
-        }
-      ],
-      "agents": [],
-      "commands": []
-    },
-    {
       "name": "ast-grep",
       "classification": "generated",
       "excluded": [],
@@ -40,20 +26,6 @@
           "id": "brainstorm-brainstorm",
           "path": "skills/brainstorm-brainstorm/SKILL.md",
           "source": "plugins/brainstorm/skills/brainstorm/SKILL.md"
-        }
-      ],
-      "agents": [],
-      "commands": []
-    },
-    {
-      "name": "context7",
-      "classification": "generated",
-      "excluded": [],
-      "skills": [
-        {
-          "id": "context7-context7",
-          "path": "skills/context7-context7/SKILL.md",
-          "source": "plugins/context7/skills/context7/SKILL.md"
         }
       ],
       "agents": [],
@@ -94,20 +66,6 @@
       ]
     },
     {
-      "name": "exa-search",
-      "classification": "generated",
-      "excluded": [],
-      "skills": [
-        {
-          "id": "exa-search-exa-search",
-          "path": "skills/exa-search-exa-search/SKILL.md",
-          "source": "plugins/exa-search/skills/exa-search/SKILL.md"
-        }
-      ],
-      "agents": [],
-      "commands": []
-    },
-    {
       "name": "jev",
       "classification": "generated",
       "excluded": [],
@@ -116,20 +74,6 @@
           "id": "jev-jev",
           "path": "skills/jev-jev/SKILL.md",
           "source": "plugins/jev/skills/jev/SKILL.md"
-        }
-      ],
-      "agents": [],
-      "commands": []
-    },
-    {
-      "name": "jira",
-      "classification": "generated",
-      "excluded": [],
-      "skills": [
-        {
-          "id": "jira-jira",
-          "path": "skills/jira-jira/SKILL.md",
-          "source": "plugins/jira/skills/jira/SKILL.md"
         }
       ],
       "agents": [],

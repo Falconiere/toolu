@@ -18,16 +18,6 @@
         },
         {
           "type": "json",
-          "path": "plugins/agent-browser/.claude-plugin/plugin.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
-          "path": "plugins/agent-browser/.codex-plugin/plugin.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
           "path": "plugins/ast-grep/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
         },
@@ -48,42 +38,12 @@
         },
         {
           "type": "json",
-          "path": "plugins/context7/.claude-plugin/plugin.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
-          "path": "plugins/context7/.codex-plugin/plugin.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
-          "path": "plugins/exa-search/.claude-plugin/plugin.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
-          "path": "plugins/exa-search/.codex-plugin/plugin.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
           "path": "plugins/jev/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
         },
         {
           "type": "json",
           "path": "plugins/jev/.codex-plugin/plugin.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
-          "path": "plugins/jira/.claude-plugin/plugin.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
-          "path": "plugins/jira/.codex-plugin/plugin.json",
           "jsonpath": "$.version"
         },
         {

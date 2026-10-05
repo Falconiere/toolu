@@ -55,19 +55,19 @@ test.concurrent("the committed docs, matrix and acceptance registry agree", asyn
   expect(res.exitCode).toBe(0);
 });
 
-test.concurrent("the support section lists all 16 plugins with a status and their CI checks", () => {
+test.concurrent("the support section lists all 12 plugins with a status and their CI checks", () => {
   const doc = readFileSync(INSTALL_DOC, "utf8");
   const section = doc.slice(doc.indexOf("<!-- opencode-support:start -->"));
   const rows = section.split("\n").filter((line) => /^\| [a-z0-9-]+ \| Supported/.test(line));
-  expect(rows).toHaveLength(16);
-  expect(section).toContain("| context7 | Supported | ");
+  expect(rows).toHaveLength(12);
+  expect(section).toContain("| jev | Supported | ");
   expect(section).toContain("`docs.quickstart`");
   expect(section).toContain("| statusline | Supported with limitations |");
 });
 
 /** The committed doc with one support row's status changed by hand. */
 function edited(doc: string): string {
-  return doc.replace("| jira | Supported |", "| jira | Supported with limitations |");
+  return doc.replace("| statusline | Supported with limitations |", "| statusline | Supported |");
 }
 
 test.concurrent("an edited support row is stale, and --write restores it", async () => {
@@ -102,9 +102,9 @@ test.concurrent("a catalog plugin with no dedicated actual-host check fails", as
   using sb = createSandbox({});
   const res = await check(sb, {
     matrix: (m) => {
-      const jira = m.plugins.jira;
-      if (jira === undefined) throw new Error("no jira row");
-      m.plugins.ghost = jira;
+      const jev = m.plugins.jev;
+      if (jev === undefined) throw new Error("no jev row");
+      m.plugins.ghost = jev;
     },
   });
   expect(res.exitCode).toBe(1);

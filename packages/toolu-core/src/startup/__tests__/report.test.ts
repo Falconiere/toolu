@@ -121,16 +121,16 @@ test.concurrent("publishWrapper reports every outcome with its path", () => {
   const report = sb.path("report.jsonl");
   const source = sb.write(bundlePath("plugin", "search"), "#!/usr/bin/env bun\n");
   const env = { HOME: sb.home, TOOLU_CONFIG_DIR: sb.path("cfg"), TOOLU_STARTUP_REPORT: report };
-  const options = { plugin: "context7", dir: "context7", name: "search.sh", env };
+  const options = { plugin: "jev", dir: "jev", name: "jev.sh", env };
   publishWrapper({ ...options, source });
   publishWrapper({ ...options, source: sb.path("absent.js") });
-  const userFile = sb.path("cfg/context7/own.sh");
+  const userFile = sb.path("cfg/jev/own.sh");
   writeFileSync(userFile, "#!/bin/sh\n");
   publishWrapper({ ...options, name: "own.sh", source });
 
-  const base = { kind: "helper", plugin: "context7" };
+  const base = { kind: "helper", plugin: "jev" };
   expect(records(report)).toEqual([
-    { ...base, source, path: sb.path("cfg/context7/search.sh"), status: "published" },
+    { ...base, source, path: sb.path("cfg/jev/jev.sh"), status: "published" },
     { ...base, source: sb.path("absent.js"), status: "source-missing" },
     { ...base, source, path: userFile, status: "kept-user-file" },
   ]);

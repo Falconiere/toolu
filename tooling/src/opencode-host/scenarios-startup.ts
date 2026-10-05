@@ -59,7 +59,7 @@ export function modules(s: ProbeSession): string[] {
   });
 }
 
-/** The registry modules all 16 plugins publish. */
+/** The registry modules the retained catalog publishes. */
 export const MODULES = [
   "pre-tools.d/ast-grep@toolu__search-nudge.js",
   "post-tools.d/ast-grep@toolu__byte-savings.js",
@@ -68,16 +68,8 @@ export const MODULES = [
   "post-tools.d/ts-quality@toolu__ts-quality.js",
 ];
 
-/** The helper symlinks all 16 plugins publish into the data root. */
-export const HELPERS = [
-  "agent-browser/agent-browser.sh",
-  "context7/search.sh",
-  "exa-search/search.sh",
-  "jev/jev.sh",
-  "jira/jira.sh",
-  "statusline/statusline.sh",
-  "toolu-review/write-state.sh",
-];
+/** The helper symlinks the retained catalog publishes into the data root. */
+export const HELPERS = ["jev/jev.sh", "statusline/statusline.sh", "toolu-review/write-state.sh"];
 
 async function fullStartup(ctx: EntryContext): Promise<EntryResult> {
   const names = (listPluginManifests(join(ROOT, "plugins")) ?? []).map((p) => p.name);
@@ -88,7 +80,7 @@ async function fullStartup(ctx: EntryContext): Promise<EntryResult> {
     plugins: names.length,
     ready: diagnostics(
       hostRun.stderr,
-      `toolu: ready (${names.length} plugins, 12 startup artifacts)`,
+      `toolu: ready (${names.length} plugins, ${MODULES.length + HELPERS.length} startup artifacts)`,
     ),
     notReady: diagnostics(hostRun.stderr, "toolu: not ready"),
     modules: modules(s).toSorted().join(",") === MODULES.toSorted().join(","),
@@ -96,7 +88,7 @@ async function fullStartup(ctx: EntryContext): Promise<EntryResult> {
     bashRan: bash?.status === "completed" && s.exists("allowed.txt"),
   };
   const pass =
-    observed.plugins === 16 &&
+    observed.plugins === 12 &&
     observed.ready === 1 &&
     observed.notReady === 0 &&
     observed.modules &&
@@ -151,7 +143,7 @@ export const STARTUP_SCENARIOS: EntryScenario[] = [
   {
     id: "entry.full-startup",
     claim:
-      "With all 16 plugins enabled, every startup runs and its modules and helpers are in place",
+      "With all 12 plugins enabled, every startup runs and its modules and helpers are in place",
     run: fullStartup,
   },
   {

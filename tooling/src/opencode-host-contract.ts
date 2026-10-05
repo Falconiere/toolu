@@ -2,7 +2,7 @@
 /**
  * Hermetic OpenCode host-contract check (#335): `bun run check:opencode-host`.
  *
- * Verifies that the pin, the committed live-probe evidence, the 16-plugin
+ * Verifies that the pin, the committed live-probe evidence, the 12-plugin
  * capability matrix, the catalog manifests, the installed pinned SDK
  * declarations and docs/opencode-host-contract.md agree. `--write-doc`
  * regenerates the doc's blocks first. Live probing is `probe:opencode-host`.

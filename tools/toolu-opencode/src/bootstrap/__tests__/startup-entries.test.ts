@@ -21,15 +21,14 @@ test.concurrent("every catalog SessionStart launcher is an entry, in file order"
   expect(entryNames("toolu")).toEqual(["session-start"]);
   expect(entryNames("epic-orchestrator")).toEqual(["check-deps"]);
   expect(entryNames("brainstorm")).toEqual([]);
-  const plan = pluginStartupEntries(join(PLUGINS_ROOT, "context7"));
-  expect(plan).toEqual({
+  expect(entryNames("jev")).toEqual(["session-start"]);
+});
+
+test.concurrent("Jev SessionStart resolves its shipped bundle", () => {
+  const plugin = join(PLUGINS_ROOT, "jev");
+  expect(pluginStartupEntries(plugin)).toEqual({
     ok: true,
-    entries: [
-      {
-        name: "session-start",
-        bundle: join(PLUGINS_ROOT, "context7", "hooks", "dist", "session-start.js"),
-      },
-    ],
+    entries: [{ name: "session-start", bundle: join(plugin, "hooks", "dist", "session-start.js") }],
   });
 });
 

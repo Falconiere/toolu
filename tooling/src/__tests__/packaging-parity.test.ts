@@ -57,7 +57,7 @@ test.concurrent("plugin packaging validator accepts the checked-in dual-host cat
     console.error(`packaging validator failed:\n${output}`);
   }
   expect(res.exitCode).toBe(0);
-  expect(output).toContain("validated 16 plugins");
+  expect(output).toContain("validated 12 plugins");
 });
 
 test.concurrent("plugin packaging validator rejects a release config that omits a Codex manifest", async () => {

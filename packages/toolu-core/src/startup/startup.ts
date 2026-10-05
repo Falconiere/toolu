@@ -3,8 +3,7 @@
  * publishing a plugin file at a stable config-root path, the Bun-on-PATH
  * advisory, bounded context output, Codex plugin-dependency warnings with
  * host-native install commands, and the startup report a self-hosting
- * bootstrap reads (#342), the OpenCode status record (#359), and the
- * deprecation notice of plugins #406 removes (#403). Ports the `session-start.sh`, `check-toolu.sh` and
+ * bootstrap reads (#342), and the OpenCode status record (#359). Ports the `session-start.sh`, `check-toolu.sh` and
  * `check-deps.sh` scripts of the leaf plugins.
  */
 export {
@@ -20,12 +19,6 @@ export {
   requiresCoreWarning,
   requiresPluginsWarning,
 } from "./dependencies.ts";
-export {
-  REMOVAL_RELEASE,
-  deprecatedStartupOutput,
-  deprecationNotice,
-  startedByCompaction,
-} from "./deprecation.ts";
 export {
   bunAdvisory,
   bunOnPath,

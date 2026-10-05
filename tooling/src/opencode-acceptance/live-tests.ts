@@ -52,20 +52,6 @@ export const LIVE_TEST_FILES: readonly LiveTestFile[] = [
     service: "none",
   },
   {
-    id: "live.context7",
-    file: `${DIR}/context7-delivery.live.test.ts`,
-    plugins: ["context7"],
-    service: "fixture",
-    external: [
-      {
-        id: "external.context7",
-        name: "one real context7.com search runs through the OpenCode-published command",
-        flag: "TOOLU_LIVE_CONTEXT7",
-        service: "context7.com",
-      },
-    ],
-  },
-  {
     id: "live.core-workflows",
     file: `${DIR}/core-workflows.live.test.ts`,
     plugins: ["toolu", "toolu-review"],
@@ -97,12 +83,6 @@ export const LIVE_TEST_FILES: readonly LiveTestFile[] = [
         requires: "TYPESAFE_API_KEY",
       },
     ],
-  },
-  {
-    id: "live.jira",
-    file: `${DIR}/jira-delivery.live.test.ts`,
-    plugins: ["jira"],
-    service: "fixture",
   },
 ];
 

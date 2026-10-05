@@ -45,8 +45,8 @@ function report(overrides: Partial<AcceptanceReport> = {}): AcceptanceReport {
       installSource: "npm:opencode-ai@1.18.34 (bun add --exact)",
     },
     tools: { git: "git version 2.50.0" },
-    scrubbed: ["CONTEXT7_API_KEY"],
-    checks: [check("entry.npm-root", "pass"), check("exa.transport", "pass", "fixture")],
+    scrubbed: ["TYPESAFE_API_KEY"],
+    checks: [check("entry.npm-root", "pass"), check("jev.transport", "pass", "fixture")],
     controls: [
       {
         id: "control.missing-post-tool",
@@ -65,7 +65,7 @@ function report(overrides: Partial<AcceptanceReport> = {}): AcceptanceReport {
         detail: "TYPESAFE_API_KEY is not set",
       },
     ],
-    coverage: { toolu: ["entry.npm-root"], "exa-search": ["exa.transport"] },
+    coverage: { toolu: ["entry.npm-root"], jev: ["jev.transport"] },
     ...overrides,
   };
 }
@@ -85,8 +85,10 @@ test.concurrent("a failed check, a missed control, a coverage gap or a narrowed 
     observed: {},
   };
   expect(acceptancePass(report({ controls: [{ ...missed, detected: false }] }))).toBe(false);
-  expect(acceptancePass(report({ coverage: { toolu: ["entry.npm-root"], jira: [] } }))).toBe(false);
-  expect(uncovered({ toolu: ["a"], jira: [] })).toEqual(["jira"]);
+  expect(acceptancePass(report({ coverage: { toolu: ["entry.npm-root"], "ast-grep": [] } }))).toBe(
+    false,
+  );
+  expect(uncovered({ toolu: ["a"], "ast-grep": [] })).toEqual(["ast-grep"]);
   const narrowed = report({ complete: false });
   expect(acceptancePass(narrowed)).toBe(false);
   expect(selectedPass(narrowed)).toBe(true);
@@ -95,8 +97,8 @@ test.concurrent("a failed check, a missed control, a coverage gap or a narrowed 
 test.concurrent("an unavailable or unconfigured external service never changes the verdict", () => {
   const external: AcceptanceReport["external"] = [
     {
-      id: "external.context7",
-      service: "context7.com",
+      id: "external.jev",
+      service: "api.typesafe.ai",
       execution: "in-process",
       status: "unavailable",
       detail: "failed in 3s",
@@ -124,12 +126,12 @@ test.concurrent("the summary names every failure of a complete run", () => {
     report({
       pass: false,
       checks: [{ ...check("entry.npm-root", "fail"), error: "host timed out" }],
-      coverage: { toolu: [], jira: [] },
+      coverage: { toolu: [], "ast-grep": [] },
     }),
   );
   expect(text).toContain(": FAIL");
   expect(text).toContain("- `entry.npm-root`: host timed out");
-  expect(text).toContain("- `jira` has no passing dedicated check");
+  expect(text).toContain("- `ast-grep` has no passing dedicated check");
 });
 
 test.concurrent("a narrowed run lists its failed checks but no coverage gaps", () => {
@@ -138,7 +140,7 @@ test.concurrent("a narrowed run lists its failed checks but no coverage gaps", (
       pass: false,
       complete: false,
       checks: [{ ...check("entry.npm-root", "fail"), error: "host timed out" }],
-      coverage: { toolu: [], jira: [] },
+      coverage: { toolu: [], "ast-grep": [] },
     }),
   );
   expect(text).toContain("narrowed run (not acceptance)");

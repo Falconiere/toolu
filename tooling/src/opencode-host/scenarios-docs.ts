@@ -64,7 +64,7 @@ async function quickstart(ctx: EntryContext): Promise<EntryResult> {
     entries: merged.length,
     spec: merged[0] === JSON.stringify(npmSpec(ctx.tarball)),
     selection: enabled(join(globalDir(s), "toolu/plugins.json")),
-    leafSkill: skills.includes("context7-context7"),
+    leafSkill: skills.includes("ast-grep-ast-grep"),
     scratchRemoved: !s.exists(SCRATCH),
     userFilesUntouched: !s.exists(".env") && !s.exists(".opencode/toolu.config.json"),
     refusalReachedModel: refusalReachedModel(s),
@@ -84,7 +84,7 @@ async function quickstart(ctx: EntryContext): Promise<EntryResult> {
     observed.refusedLine &&
     observed.entries === 1 &&
     observed.spec &&
-    observed.selection === "context7,toolu" &&
+    observed.selection === "ast-grep,toolu" &&
     observed.leafSkill &&
     observed.scratchRemoved &&
     observed.userFilesUntouched &&
@@ -101,7 +101,7 @@ export const QUICKSTART_SCENARIOS: EntryScenario[] = [
   {
     id: "docs.quickstart",
     claim:
-      "docs/opencode.md's quick start, run verbatim in a clean profile, installs toolu and context7, discovers context7's skill and refuses a write to the scratch .env.toolu-check; its update/remove block then leaves no toolu entry or skill",
+      "docs/opencode.md's quick start, run verbatim in a clean profile, installs toolu and ast-grep, discovers the leaf skill and refuses a write to the scratch .env.toolu-check; its update/remove block then leaves no toolu entry or skill",
     run: quickstart,
   },
 ];

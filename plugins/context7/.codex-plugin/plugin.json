@@ -1,7 +1,0 @@
-{
-  "name": "context7",
-  "version": "7.11.0",
-  "description": "Library documentation & code-example lookup via Context7 (skill + REST wrapper). Standalone, no dependencies.",
-  "skills": "./skills/",
-  "hooks": "./hooks/hooks.json"
-}

@@ -35,7 +35,7 @@ const ROOTS: OpencodeRoots = {
 const HOST_ENV = {
   HOME: "/home/u",
   PATH: "/usr/bin:/bin",
-  EXA_API_KEY: "secret-exa",
+  TYPESAFE_API_KEY: "secret-jev",
   CLAUDE_CONFIG_DIR: "/home/u/.claude-alt",
   CLAUDE_PROJECT_DIR: "/elsewhere",
   CLAUDE_PLUGIN_ROOT: "/home/u/.claude/plugins/x",
@@ -57,7 +57,7 @@ test("toolu's own processes keep HOME and the host env but no foreign host root"
   const env = tooluProcessEnv(HOST_ENV, ROOTS);
   expect(env.HOME).toBe("/home/u");
   expect(env.PATH).toBe("/usr/bin:/bin");
-  expect(env.EXA_API_KEY).toBe("secret-exa");
+  expect(env.TYPESAFE_API_KEY).toBe("secret-jev");
   for (const key of FOREIGN_HOST_VARS) expect(env[key]).toBeUndefined();
   expect(env).toMatchObject({
     TOOLU_HOST_OVERRIDE: "opencode",
@@ -77,10 +77,9 @@ test("the host's worktree stays the project root whatever TOOLU_PROJECT_DIR says
 });
 
 test("bash gets toolu's roots, one root per selected plugin, and nothing copied from the host", () => {
-  const { plugins } = selected(["context7", "epic-orchestrator"]);
+  const { plugins } = selected(["jev", "epic-orchestrator"]);
   const names = plugins.map((plugin) => plugin.name);
   expect(names).toContain("toolu");
-  expect(names).not.toContain("jira");
   const shell = shellEnvFor({ roots: ROOTS, plugins, bun: BUN, host: HOST_ENV });
   const perPlugin = Object.fromEntries(
     names.map((name) => [pluginRootVar(name), join(REPO_ROOT, "plugins", name)]),
@@ -102,12 +101,11 @@ test("bash gets toolu's roots, one root per selected plugin, and nothing copied 
     bun: BUN,
     hostPath: "/usr/bin:/bin",
   });
-  expect(shell.vars.TOOLU_PLUGIN_ROOT_CONTEXT7).toBe(join(REPO_ROOT, "plugins/context7"));
+  expect(shell.vars.TOOLU_PLUGIN_ROOT_JEV).toBe(join(REPO_ROOT, "plugins/jev"));
   expect(shell.vars.TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR).toBe(
     join(REPO_ROOT, "plugins/epic-orchestrator"),
   );
-  expect(shell.vars.TOOLU_PLUGIN_ROOT_JIRA).toBeUndefined();
-  expect(Object.values(shell.vars)).not.toContain("secret-exa");
+  expect(Object.values(shell.vars)).not.toContain("secret-jev");
 });
 
 test("TOOLU_PROJECT_DIR is blanked in bash only when the host exports one", () => {
@@ -143,5 +141,5 @@ test("Bun's directory is appended to the PATH bash will see, only when it has no
 test("plugin root variable names are the plugin name in upper snake case", () => {
   expect(pluginRootVar("toolu")).toBe("TOOLU_PLUGIN_ROOT_TOOLU");
   expect(pluginRootVar("epic-orchestrator")).toBe("TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR");
-  expect(pluginRootVar("context7")).toBe("TOOLU_PLUGIN_ROOT_CONTEXT7");
+  expect(pluginRootVar("jev")).toBe("TOOLU_PLUGIN_ROOT_JEV");
 });
