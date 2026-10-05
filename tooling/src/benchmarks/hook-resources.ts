@@ -13,7 +13,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { arch, cpus, platform } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { resolveEntryCommand } from "@toolu/conformance/harness/entry-command";
+import { bundlePath, resolveEntryCommand } from "@toolu/conformance/harness/entry-command";
 import { pretoolEnv } from "@toolu/conformance/harness/pretool";
 import type { Sandbox } from "@toolu/conformance/harness/sandbox";
 import { PortsError, portSelector, readPorted } from "../rust-conformance.ts";
@@ -61,7 +61,7 @@ function entryArgv(entry: HookEntry, env: Env): { argv: string[]; implementation
     {
       plugin: entry.plugin,
       entry: entry.entry,
-      bundle: join(entry.root, "hooks", "dist", `${entry.entry}.js`),
+      bundle: bundlePath(entry.root, entry.entry),
       defaultArgv: ["/bin/sh", "-c", entry.command],
     },
     env,

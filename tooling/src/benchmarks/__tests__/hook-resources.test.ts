@@ -5,6 +5,7 @@
  */
 import { expect, test } from "bun:test";
 import { join, resolve } from "node:path";
+import { bundlePath } from "@toolu/conformance/harness/entry-command";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
 import { parseArgs } from "../lib/hook-args.ts";
@@ -36,7 +37,7 @@ test("discovery finds every hooks.json bundle entry once, register included per 
     "rust-quality/register",
     "ts-quality/register",
   ]);
-  for (const entry of ENTRIES) expect(entry.command).toContain(`/hooks/dist/${entry.entry}.js`);
+  for (const entry of ENTRIES) expect(entry.command).toContain(bundlePath("", entry.entry));
 });
 
 test("the committed payloads cover exactly the discovered entries, each for its event", () => {
