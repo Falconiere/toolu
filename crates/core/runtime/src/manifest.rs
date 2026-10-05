@@ -8,7 +8,7 @@ use serde_json::Value;
 /// What a hook needs from `plugin.json`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Manifest {
-  /// The plugin's semver; empty when absent or not a string.
+  /// The plugin's semver.
   pub version: String,
   /// The hook-interface version the plugin was written for.
   pub hook_protocol: u32,
@@ -19,8 +19,9 @@ pub struct Manifest {
 /// bad is an error, never a fallback.
 ///
 /// # Errors
-/// When `root` is empty, no manifest exists or reads, it is not JSON, or
-/// `hookProtocol` is not a JSON integer from 1 to `u32::MAX`.
+/// When `root` is empty, no manifest exists or reads, it is not JSON,
+/// `hookProtocol` is not a JSON integer from 1 to `u32::MAX`, or `version` is
+/// not a string.
 pub fn read(root: &Path) -> Result<Manifest, String> {
   if root.as_os_str().is_empty() {
     return Err("the plugin root is empty".to_owned());
@@ -50,7 +51,7 @@ pub fn read(root: &Path) -> Result<Manifest, String> {
   let version = json
     .get("version")
     .and_then(Value::as_str)
-    .unwrap_or_default()
+    .ok_or_else(|| format!("{} has no string version", path.display()))?
     .to_owned();
   Ok(Manifest {
     version,

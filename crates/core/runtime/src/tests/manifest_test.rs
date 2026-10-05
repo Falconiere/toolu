@@ -61,9 +61,24 @@ fn hook_protocol_must_be_an_integer_from_1_to_u32_max() {
   }
   let absent = plugin(Some(r#"{"version":"1.0.0"}"#), None);
   assert!(read(absent.path()).is_err());
-  let max = plugin(Some(r#"{"hookProtocol":4294967295}"#), None);
+  let max = plugin(
+    Some(r#"{"version":"1.0.0","hookProtocol":4294967295}"#),
+    None,
+  );
   assert_eq!(read(max.path()).unwrap().hook_protocol, u32::MAX);
-  assert_eq!(read(max.path()).unwrap().version, "");
+}
+
+#[test]
+fn a_missing_or_non_string_version_is_an_error() {
+  for text in [r#"{"hookProtocol":1}"#, r#"{"version":7,"hookProtocol":1}"#] {
+    let dir = plugin(Some(text), None);
+    assert!(
+      read(dir.path())
+        .unwrap_err()
+        .ends_with("has no string version"),
+      "{text}"
+    );
+  }
 }
 
 #[test]

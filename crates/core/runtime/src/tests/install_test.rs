@@ -3,6 +3,8 @@ use std::path::Path;
 use super::upgrade_command;
 use toolu_protocol::install::{BREW_UPGRADE, INSTALLER};
 
+/// These paths do not exist on a Linux test host, so they also exercise the
+/// unresolvable-path fallback.
 #[test]
 fn homebrew_prefixes_upgrade_with_brew() {
   assert_eq!(

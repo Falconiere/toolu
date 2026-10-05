@@ -11,8 +11,14 @@ const BREW_PREFIXES: &[&str] = &["/opt/homebrew/", "/home/linuxbrew/.linuxbrew/"
 
 /// `brew upgrade toolu` for a Homebrew install, else the installer command.
 /// `exe` is canonicalized first, so a `bin/toolu` link into a `Cellar` counts.
+/// A path that does not resolve (a dangling link) is judged as given: the
+/// caller passes the absolute `current_exe`, so a Homebrew prefix still matches
+/// it, and this advice-only answer never needs to fail or write to stderr.
 pub fn upgrade_command(exe: &Path) -> &'static str {
-  let resolved = std::fs::canonicalize(exe).unwrap_or_else(|_| exe.to_path_buf());
+  let resolved = match std::fs::canonicalize(exe) {
+    Ok(resolved) => resolved,
+    Err(_unresolvable) => exe.to_path_buf(),
+  };
   let text = resolved.to_string_lossy();
   let in_cellar = resolved
     .components()
