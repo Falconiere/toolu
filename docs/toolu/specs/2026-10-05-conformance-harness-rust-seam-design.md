@@ -37,7 +37,7 @@ resolveEntryCommand(entry: EntryCommand, env?: NodeJS.ProcessEnv): ResolvedComma
 
 - Selector grammar: absent or empty means Bun; `rust` selects every hook entry; `rust:<plugin>/<entry>,...` selects exact entries. Whitespace, duplicate entries, empty items, unknown syntax and path separators inside a component are errors rather than silent fallback.
 - The binary is `toolu` in `TOOLU_RUST_BIN_DIR` if set, else `<repository>/target/release/toolu`. A relative override is resolved from the test process's current working directory. The selected path must be a regular executable file. The error names the selector entry and expected path before a subprocess starts.
-- The Rust command receives the same stdin, cwd and environment as the Bun command. Selector and binary-directory variables are harness controls and do not leak into child hook environments.
+- The Rust command receives the same stdin, cwd and environment as the Bun command. Selector and binary-directory variables are harness controls: the harness `run` (which drops every `TOOLU_*` key) and `protected-dispatch` strip them from the hook's environment. A test that spawns with its own `process.env` copy passes them through, which neither implementation reads.
 - `fixtures/rust-ported.json` is `{ "entries": [] }`; values use the exact `<plugin>/<entry>` selector form. CI rejects malformed or duplicate values.
 
 ## Failure modes and edge cases

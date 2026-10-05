@@ -1,5 +1,5 @@
 /** Resolve a committed hook entry to its Bun bundle or selected Rust CLI command. */
-import { accessSync, readFileSync, statSync, constants } from "node:fs";
+import { accessSync, existsSync, readFileSync, statSync, constants } from "node:fs";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import { launcherCommand, type LauncherTarget } from "@toolu/core/launcher";
 import { z } from "zod";
@@ -101,14 +101,9 @@ const PluginManifest = z.looseObject({ name: z.string() });
  * in a sandbox directory keeps its identity; the directory name otherwise.
  */
 export function pluginName(root: string): string {
-  try {
-    const raw: unknown = JSON.parse(
-      readFileSync(join(root, ".claude-plugin", "plugin.json"), "utf8"),
-    );
-    return PluginManifest.parse(raw).name;
-  } catch {
-    return basename(root);
-  }
+  const manifest = join(root, ".claude-plugin", "plugin.json");
+  if (!existsSync(manifest)) return basename(root);
+  return PluginManifest.parse(JSON.parse(readFileSync(manifest, "utf8"))).name;
 }
 
 /** The committed bundle for `entry` under `root`; a relative root gives a plugin-relative path. */

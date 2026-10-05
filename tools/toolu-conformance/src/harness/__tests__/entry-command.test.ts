@@ -1,9 +1,19 @@
 import { expect, test } from "bun:test";
-import { chmodSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { chmodSync, cpSync, readFileSync } from "node:fs";
+import { basename, join } from "node:path";
+import { launcherCommand } from "@toolu/core/launcher";
 import { createSandbox } from "../sandbox.ts";
 import { run } from "../spawn.ts";
-import { bundlePath, pluginRoot, resolveEntryCommand } from "../entry-command.ts";
+import {
+  bundlePath,
+  entryArgv,
+  implementationTag,
+  launchedArgv,
+  pluginName,
+  pluginRoot,
+  publishedArgv,
+  resolveEntryCommand,
+} from "../entry-command.ts";
 
 const SAMPLE = bundlePath(pluginRoot("toolu"), "sample");
 const ENTRY = { plugin: "toolu", entry: "pre-tools", bundle: SAMPLE };
@@ -77,4 +87,71 @@ test("invalid selectors and non-executable binaries fail without fallback", () =
       TOOLU_RUST_BIN_DIR: join(bin, ".."),
     }),
   ).toThrow("not executable");
+});
+
+test("a non-core plugin keeps its namespace and `rust` selects every entry", () => {
+  using sb = createSandbox();
+  const bin = sb.write("bin/toolu", "#!/bin/sh\nexit 0\n");
+  chmodSync(bin, 0o755);
+  const env = { TOOLU_IMPL: "rust", TOOLU_RUST_BIN_DIR: sb.path("bin") };
+  const jev = {
+    plugin: "jev",
+    entry: "session-start",
+    bundle: bundlePath(pluginRoot("jev"), "session-start"),
+  };
+  expect(resolveEntryCommand(jev, env)).toEqual({
+    argv: [bin, "jev", "hook", "session-start"],
+    implementation: "rust",
+  });
+  expect(resolveEntryCommand(ENTRY, env).argv).toEqual([bin, "hook", "pre-tools"]);
+});
+
+test("each argv helper keeps its default command and switches only when selected", () => {
+  using sb = createSandbox();
+  const bin = sb.write("bin/toolu", "#!/bin/sh\nexit 0\n");
+  chmodSync(bin, 0o755);
+  const rust = { TOOLU_IMPL: "rust:toolu/pre-tools", TOOLU_RUST_BIN_DIR: sb.path("bin") };
+  const target = { plugin: "toolu", event: "PreToolUse", entry: "pre-tools" } as const;
+  const bundle = bundlePath(pluginRoot("toolu"), "pre-tools");
+  expect(launchedArgv(target, pluginRoot("toolu"), {})).toEqual([
+    "/bin/sh",
+    "-c",
+    launcherCommand(target),
+  ]);
+  expect(entryArgv("toolu", "pre-tools", pluginRoot("toolu"), {})).toEqual([
+    process.execPath,
+    bundle,
+  ]);
+  expect(publishedArgv("toolu", "pre-tools", pluginRoot("toolu"), {})).toEqual([bundle]);
+  for (const argv of [
+    launchedArgv(target, pluginRoot("toolu"), rust),
+    entryArgv("toolu", "pre-tools", pluginRoot("toolu"), rust),
+    publishedArgv("toolu", "pre-tools", pluginRoot("toolu"), rust),
+  ]) {
+    expect(argv).toEqual([bin, "hook", "pre-tools"]);
+  }
+});
+
+test("test names carry the Rust implementation only when it is selected", () => {
+  expect(implementationTag("toolu", "pre-tools", {})).toBe("");
+  expect(implementationTag("toolu", "pre-tools", { TOOLU_IMPL: "rust:toolu/post-tools" })).toBe("");
+  expect(implementationTag("toolu", "pre-tools", { TOOLU_IMPL: "rust:toolu/pre-tools" })).toBe(
+    " [rust:toolu/pre-tools]",
+  );
+});
+
+test("a copied plugin keeps its manifest name; an unselected odd root still runs Bun", async () => {
+  using sb = createSandbox();
+  const copy = sb.path('plugin "cache"\nfolder');
+  cpSync(join(pluginRoot("toolu"), ".claude-plugin"), join(copy, ".claude-plugin"), {
+    recursive: true,
+  });
+  expect(pluginName(copy)).toBe("toolu");
+  expect(pluginName(sb.path("bare-plugin"))).toBe("bare-plugin");
+  sb.write("broken/.claude-plugin/plugin.json", "{");
+  expect(() => pluginName(sb.path("broken"))).toThrow();
+  const odd = { plugin: basename(copy), entry: "sample", bundle: SAMPLE };
+  const command = resolveEntryCommand(odd, { TOOLU_IMPL: "rust:toolu/pre-tools" });
+  expect(command).toEqual({ argv: [process.execPath, SAMPLE], implementation: "bun" });
+  expect((await run(command.argv)).exitCode).toBe(0);
 });

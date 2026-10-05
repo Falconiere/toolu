@@ -44,6 +44,8 @@ const LAUNCHER_ALLOWED: Record<string, string> = {
     "the launcher itself is the subject",
   "tooling/src/__tests__/launcher-host-schemas.test.ts":
     "the launcher's own outputs against host schemas",
+  "tools/toolu-conformance/src/harness/__tests__/entry-command.test.ts":
+    "checks that launchedArgv defaults to the launcher text",
   "plugins/toolu/hooks/src/__tests__/pre-tools-wiring.test.ts":
     "compares hooks.json commands with the launcher text",
   "plugins/toolu/hooks/src/__tests__/post-tools-wiring.test.ts":
