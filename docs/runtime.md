@@ -2,6 +2,8 @@
 
 Every toolu plugin runs on one runtime: **Bun**. This page is the contract; other docs link here instead of restating it. It retires the [#203](https://github.com/Falconiere/toolu/issues/203) constraint that Claude Code and Codex gain no mandatory Bun dependency. Epic: [#247](https://github.com/Falconiere/toolu/issues/247).
 
+> **Native binary.** Under the Rust rebuild (epic #402) the `toolu` binary is installed once with the get.toolu.sh installer or Homebrew, and Bun stops being a prerequisite on Claude Code and Codex when the last TypeScript hook is gone. See [install.md](install.md) for the targets, location, version-skew policy and rollback.
+
 > **Migration status.** Plugins move from bash to TypeScript one at a time (epic #247). Until a plugin's port merges, its bash hooks still ship and still need `bash` and `jq`. Bun is a prerequisite for every host now, so installs do not change again as ports land.
 
 ## Prerequisite
