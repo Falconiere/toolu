@@ -2,11 +2,15 @@
 //!
 //! Exit codes: 0 clean, 1 findings, 2 usage, setup or missing-tool error.
 
+mod check_hooks;
 mod coverage;
 mod data;
 mod gate;
 mod gate_change;
 mod guardrails;
+mod hooks_entries;
+mod hooks_manifests;
+mod launcher_e2e;
 mod layers;
 mod layers_check;
 mod lexer;
@@ -14,6 +18,7 @@ mod measure;
 mod metadata;
 mod options;
 mod output;
+mod print_hook;
 mod reach;
 mod source;
 mod unused_pub;
@@ -45,14 +50,17 @@ const TASKS: &[(&str, Task)] = &[
   ("check-gate-change", gate_change::run),
   ("check-coverage", coverage::run),
   ("measure", measure::run),
+  ("print-hook", print_hook::run),
+  ("check-hooks", check_hooks::run),
+  ("launcher-e2e", launcher_e2e::run),
 ];
 
 // `\x20` keeps the second line's indent: a `\` continuation strips leading spaces.
 const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--title TEXT] \
-  [--only STEP]... [FILE]\n\
+  [--only STEP]... [--timeout N] [--bin PATH] [--home DIR] [ARG]...\n\
   \x20      cargo xtask measure --out FILE -- COMMAND [ARG]...\n\
   tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
-  check-coverage, measure";
+  check-coverage, measure, print-hook, check-hooks, launcher-e2e";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.
 fn run(args: &[String]) -> ExitCode {

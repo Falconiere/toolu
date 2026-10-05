@@ -49,7 +49,10 @@
       "fixtures/guardrails/**",
       "tooling/conventions/guardrails/rust/**",
       "tooling/src/check-rust-quality.ts",
-      "plugins/rust-quality/**"
+      "plugins/rust-quality/**",
+      "plugins/*/hooks/hooks.json",
+      "plugins/*/.claude-plugin/plugin.json",
+      "plugins/*/.codex-plugin/plugin.json"
     ],
     "ports": [
       "fixtures/rust-ported.json",

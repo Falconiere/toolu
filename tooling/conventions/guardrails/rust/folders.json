@@ -41,6 +41,6 @@
     "tsconfig.base.json",
     "tsconfig.json"
   ],
-  "crates": ["core", "xtask"],
+  "crates": ["cli", "core", "xtask"],
   "core": ["protocol", "runtime", "shell", "http", "state", "engine"]
 }

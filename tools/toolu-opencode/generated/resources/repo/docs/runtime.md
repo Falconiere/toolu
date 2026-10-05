@@ -56,6 +56,10 @@ Without Bun the launcher itself answers, with no bundle involved:
 
 **Diagnostic.** On session start and resume, toolu's `hooks/dist/session-start.js` reports which runtime the hooks use on the second line of its `systemMessage`, after the event title: `Toolu is on!\ntoolu runtime: bun <version> at <path>`. With `hooks.session-start` set to `false` it prints that line alone: `{"systemMessage":"toolu runtime: bun <version> at <path>"}`.
 
+## Native launcher
+
+A hook ported to Rust runs the installed `toolu` binary through its own generated launcher, not this Bun one. The launcher looks in `TOOLU_BIN`, the install directories and `PATH`, checks `toolu --hook-protocol`, and falls back to the shipped bundle through the Bun chain above while #425 is open. Print an entry with `cargo xtask print-hook <plugin> <Event> <name>` (`crates/core/protocol/src/launcher.rs`); `cargo xtask check-hooks` gates native entries and every manifest's `hookProtocol`, and `bun run check:hooks-json` leaves those entries alone. Resolution, messages and the version-skew rule: [install.md](install.md#hook-launcher).
+
 ## Bundles
 
 A TypeScript hook ships as a committed single-file ESM bundle. It is never installed or compiled on the user's machine. Each top-level `plugins/<name>/hooks/src/<entry>.ts` is built by `bun run build:plugins` into `plugins/<name>/hooks/dist/<entry>.js`, which inlines `@toolu/core` and its dependencies and runs with `bun` and no `node_modules`. The build pins its working directory to the repository root, so the output is byte-identical on every machine running the same Bun. `bun run check:plugin-bundles` rebuilds into a temp directory and fails CI when a committed bundle drifts from its source, is missing, or has no source. Published packages carry `hooks/dist`, never `hooks/src`.

@@ -233,7 +233,7 @@ jobs:
         run: npm install -g @ast-grep/cli
 
       # The quality bar (#455): format, clippy, guardrails, layers, reach, deny,
-      # machete, unused-pub, jscpd, rust-quality, tests, coverage, docs, and
+      # machete, unused-pub, hooks, jscpd, rust-quality, tests, coverage, docs, and
       # check-gate-change against the PR base (or the pushed range).
       - name: cargo xtask gate
         env:
@@ -242,6 +242,22 @@ jobs:
         run: |
           if [ "$GATE_BASE" = "0000000000000000000000000000000000000000" ]; then GATE_BASE=; fi
           cargo xtask gate ${GATE_BASE:+--base "$GATE_BASE"} ${PR_TITLE:+--title "$PR_TITLE"}
+
+      # The native hook launcher (#412) finds a toolu installed at Homebrew's bin
+      # and at the installer's /usr/local/bin, under a PATH that lacks both.
+      - name: Launcher end to end
+        run: |
+          set -euo pipefail
+          cargo build --release -p toolu-cli --locked
+          if [ "$RUNNER_OS" = macOS ]; then brew_bin=/opt/homebrew/bin; else brew_bin=/home/linuxbrew/.linuxbrew/bin; fi
+          for dir in "$brew_bin" /usr/local/bin; do
+            sudo mkdir -p "$dir"
+            sudo install -m 0755 target/release/toolu "$dir/toolu"
+            status=0
+            cargo xtask launcher-e2e --bin "$dir/toolu" || status=$?
+            sudo rm -f "$dir/toolu"
+            [ "$status" -eq 0 ] || exit "$status"
+          done
 
   # Static Linux builds (#411) from the first Rust PR, not first at release
   # time: a release build per musl target, and the binary must be static.
@@ -280,7 +296,7 @@ jobs:
       - name: Require a static binary
         run: |
           set -euo pipefail
-          info="$(file "target/${{ matrix.target }}/release/xtask")"
+          info="$(file "target/${{ matrix.target }}/release/toolu")"
           echo "$info"
           # file(1) says "static-pie linked" (x86_64) or "statically linked" (aarch64).
           echo "$info" | grep -Eq '(static-pie|statically) linked'

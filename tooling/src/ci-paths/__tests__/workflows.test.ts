@@ -139,6 +139,21 @@ test.concurrent("the Rust jobs run cargo xtask gate and both musl targets (#407 
     'cargo build --workspace --release --locked --target "${{ matrix.target }}"',
   );
   expect(musl.some((run) => run.includes("grep -Eq '(static-pie|statically) linked'"))).toBe(true);
+  // The product binary is the one that must be static (#411).
+  expect(musl.some((run) => run.includes('release/toolu")'))).toBe(true);
+  // #412: the launcher finds toolu at Homebrew's bin and at /usr/local/bin.
+  const e2e = cargo.find((run) => run.includes("cargo xtask launcher-e2e")) ?? "";
+  for (const part of [
+    "cargo build --release -p toolu-cli --locked",
+    "brew_bin=/opt/homebrew/bin",
+    "brew_bin=/home/linuxbrew/.linuxbrew/bin",
+    'for dir in "$brew_bin" /usr/local/bin',
+    'sudo install -m 0755 target/release/toolu "$dir/toolu"',
+    'cargo xtask launcher-e2e --bin "$dir/toolu"',
+    'sudo rm -f "$dir/toolu"',
+  ]) {
+    expect(e2e).toContain(part);
+  }
 });
 
 test.concurrent("the Rust conformance leg reads the port list and no-ops when it is empty (#409 AC-5)", () => {

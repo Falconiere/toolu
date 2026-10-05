@@ -5,7 +5,9 @@
  *
  * A hook is a launcher hook when its command names `hooks/dist/`, runs
  * `bun`, or carries `commandWindows`. Legacy script commands pass untouched until
- * their plugin is ported (epic #247).
+ * their plugin is ported (epic #247). A native `toolu` entry (its command
+ * probes `--hook-protocol`) also names `hooks/dist/` for its Bun fallback; it is
+ * skipped here and gated by `cargo xtask check-hooks` (#412).
  *
  * Usage: bun run tooling/src/check-hooks-json.ts [--root <dir>]
  *        bun run tooling/src/check-hooks-json.ts --print <plugin> <event> <entry>
@@ -40,6 +42,13 @@ const HooksFileSchema = z
 type Hook = z.infer<typeof HookSchema>;
 
 const DIST = /hooks[/\\]dist[/\\]([^"'\s/\\]+)\.js/;
+
+/** The marker of a native launcher entry (`toolu_protocol::launcher::MARKER`). */
+const NATIVE_MARKER = "--hook-protocol";
+
+function isNativeHook(hook: Hook): boolean {
+  return (hook.command ?? "").includes(NATIVE_MARKER);
+}
 
 function isLauncherHook(hook: Hook): boolean {
   const command = hook.command ?? "";
@@ -108,7 +117,7 @@ function checkFile(root: string, plugin: string): HooksJsonProblem[] {
   return Object.entries(parsed.hooks).flatMap(([event, groups]) =>
     groups.flatMap((group, i) =>
       group.hooks.flatMap((hook, j) =>
-        isLauncherHook(hook)
+        !isNativeHook(hook) && isLauncherHook(hook)
           ? checkHook({ root, plugin, event, file, where: `${event}[${i}].hooks[${j}]` }, hook)
           : [],
       ),
