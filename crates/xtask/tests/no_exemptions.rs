@@ -10,6 +10,41 @@ type Res<T> = Result<T, Box<dyn Error>>;
 
 const REPO: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 
+/// Lints the bar requires at `deny` or `forbid`, by tool (rules 2, 4, 11, 14, 17-19, 21, 22).
+const REQUIRED: &[(&str, &[&str])] = &[
+  (
+    "rust",
+    &["warnings", "unsafe_code", "missing_docs", "unreachable_pub"],
+  ),
+  ("rustdoc", &["broken_intra_doc_links"]),
+  (
+    "clippy",
+    &[
+      "too_many_lines",
+      "cognitive_complexity",
+      "excessive_nesting",
+      "too_many_arguments",
+      "fn_params_excessive_bools",
+      "struct_excessive_bools",
+      "unwrap_used",
+      "expect_used",
+      "panic",
+      "todo",
+      "unimplemented",
+      "unreachable",
+      "indexing_slicing",
+      "string_slice",
+      "unwrap_in_result",
+      "panic_in_result_fn",
+      "dbg_macro",
+      "print_stdout",
+      "print_stderr",
+      "exit",
+      "mod_module_files",
+    ],
+  ),
+];
+
 /// Lint levels `[workspace.lints]` may set to `allow`: rules for every crate.
 const RELAXED: &[&str] = &["module_name_repetitions", "must_use_candidate"];
 
@@ -23,7 +58,7 @@ fn exemptions(root: &Path) -> Res<Vec<String>> {
   let deny = toml_at(root, "deny.toml")?;
   for (section, keys) in [
     ("advisories", &["ignore"][..]),
-    ("bans", &["skip", "skip-tree", "allow-wildcard-paths"][..]),
+    ("bans", &["skip", "skip-tree"][..]),
     ("licenses", &["exceptions", "clarify"][..]),
     ("sources", &["allow-git", "allow-org"][..]),
   ] {
@@ -113,6 +148,49 @@ fn banned_in_crates(root: &Path) -> Res<Vec<String>> {
     }
   }
   Ok(found)
+}
+
+/// Required lints that are absent or weaker than `deny`.
+fn weakened_lints(manifest: &toml::Table) -> Vec<String> {
+  let lints = manifest
+    .get("workspace")
+    .and_then(|workspace| workspace.get("lints"));
+  let mut found = Vec::new();
+  for (tool, names) in REQUIRED {
+    for name in *names {
+      let level = lints
+        .and_then(|lints| lints.get(*tool))
+        .and_then(|table| table.get(*name))
+        .and_then(|level| {
+          level
+            .as_str()
+            .or_else(|| level.get("level").and_then(toml::Value::as_str))
+        });
+      if !matches!(level, Some("deny" | "forbid")) {
+        found.push(format!("[workspace.lints.{tool}] {name} = {level:?}"));
+      }
+    }
+  }
+  found
+}
+
+#[test]
+fn every_required_lint_is_denied() {
+  let manifest = toml_at(Path::new(REPO), "Cargo.toml").unwrap();
+  assert_eq!(weakened_lints(&manifest), Vec::<String>::new());
+  let text = fs::read_to_string(Path::new(REPO).join("Cargo.toml")).unwrap();
+  let weakened: toml::Table = text
+    .replace("string_slice = \"deny\"", "string_slice = \"warn\"")
+    .replace("dbg_macro = \"deny\"\n", "")
+    .parse()
+    .unwrap();
+  assert_eq!(
+    weakened_lints(&weakened),
+    [
+      "[workspace.lints.clippy] string_slice = Some(\"warn\")",
+      "[workspace.lints.clippy] dbg_macro = None"
+    ]
+  );
 }
 
 #[test]

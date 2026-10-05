@@ -21,6 +21,9 @@ fn cfg_test_is_recognised_inside_combinators_only_for_cfg() {
   assert!(!is_cfg_test(&attr("#[cfg(unix)]")));
   assert!(!is_cfg_test(&attr("#[doc = \"test\"]")));
   assert!(!is_cfg_test(&attr("#[cfg_attr(test, path = \"x.rs\")]")));
+  assert!(!is_cfg_test(&attr("#[cfg(not(test))]")));
+  assert!(is_cfg_test(&attr("#[cfg(all(not(unix), test))]")));
+  assert!(!is_cfg_test(&attr("#[cfg(any(unix, not(test)))]")));
 }
 
 #[test]

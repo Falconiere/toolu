@@ -3,6 +3,7 @@
 
 use std::collections::BTreeSet;
 
+use proc_macro2::TokenTree;
 use syn::visit::Visit;
 
 use crate::options::Options;
@@ -53,17 +54,39 @@ pub(crate) fn unused(sources: &[Source<'_>]) -> Vec<String> {
 
 /// Every identifier token of `source`.
 fn idents(source: &Source<'_>) -> BTreeSet<String> {
-  struct Idents(BTreeSet<String>);
-  impl<'ast> Visit<'ast> for Idents {
-    fn visit_ident(&mut self, ident: &'ast proc_macro2::Ident) {
-      self.0.insert(ident.to_string());
-    }
-  }
   let mut idents = Idents(BTreeSet::new());
   if let Ok(ast) = &source.ast {
     idents.visit_file(ast);
   }
   idents.0
+}
+
+/// Identifier collector; macro arguments are walked as tokens.
+struct Idents(BTreeSet<String>);
+
+impl Idents {
+  fn tokens(&mut self, tokens: proc_macro2::TokenStream) {
+    for tree in tokens {
+      match tree {
+        TokenTree::Ident(ident) => {
+          self.0.insert(ident.to_string());
+        }
+        TokenTree::Group(group) => self.tokens(group.stream()),
+        TokenTree::Punct(_) | TokenTree::Literal(_) => {}
+      }
+    }
+  }
+}
+
+impl<'ast> Visit<'ast> for Idents {
+  fn visit_ident(&mut self, ident: &'ast proc_macro2::Ident) {
+    self.0.insert(ident.to_string());
+  }
+
+  fn visit_macro(&mut self, mac: &'ast syn::Macro) {
+    self.tokens(mac.tokens.clone());
+    syn::visit::visit_macro(self, mac);
+  }
 }
 
 /// Items declared exactly `pub`, with their line and name.

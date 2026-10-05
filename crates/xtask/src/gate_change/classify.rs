@@ -98,8 +98,9 @@ fn data_file(
   let reason = if GATE_DATA.contains(&file) {
     Some(format!("{shown} changed"))
   } else if REGISTRATION.contains(&file) {
-    (!additive(&json(before), &json(after)))
-      .then(|| format!("{shown} changed an existing entry (only additions are registration)"))
+    let grew =
+      additive(&json(before), &json(after)) && (file != "layers.json" || unique(&json(after)));
+    (!grew).then(|| format!("{shown} changed an existing entry (only additions are registration)"))
   } else if file == "coverage-floor.json" {
     floors(&json(before), &json(after), &data::rules(root)?)
   } else {
@@ -109,6 +110,34 @@ fn data_file(
     gate: reason,
     product: false,
   })
+}
+
+/// Whether every crate name of a layer table appears once: a name added to a
+/// second layer would move it, which is not an addition.
+fn unique(table: &Value) -> bool {
+  let mut names = Vec::new();
+  let mut collect = |value: &Value| match value {
+    Value::String(name) => names.push(name.clone()),
+    Value::Array(items) => names.extend(items.iter().filter_map(Value::as_str).map(str::to_owned)),
+    Value::Null | Value::Bool(_) | Value::Number(_) | Value::Object(_) => {}
+  };
+  for layer in table
+    .get("core")
+    .and_then(Value::as_array)
+    .into_iter()
+    .flatten()
+  {
+    collect(layer);
+  }
+  for key in ["rules", "hub", "binary", "tooling"] {
+    if let Some(value) = table.get(key) {
+      collect(value);
+    }
+  }
+  let count = names.len();
+  names.sort();
+  names.dedup();
+  names.len() == count
 }
 
 /// A removed or lowered row, or a new row below the default floor.

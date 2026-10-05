@@ -10,6 +10,9 @@ yanked = "deny"
 [bans]
 multiple-versions = "deny"
 wildcards = "deny"
+# Workspace crates are unpublished and depend on each other by path; a registry
+# `*` requirement stays denied.
+allow-wildcard-paths = true
 deny = [
   # Real tests only (rule 10).
   { name = "mockall" },

@@ -1,0 +1,17 @@
+//! A fixture crate.
+
+/// Add one, saturating at the top.
+pub fn bump(value: u8) -> u8 {
+  value.saturating_add(1)
+}
+
+use std::process as p;
+
+/// Whether git runs.
+pub fn git() -> bool {
+  p::Command::new("git").status().is_ok()
+}
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;

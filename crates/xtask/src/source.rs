@@ -33,8 +33,14 @@ pub(crate) struct Source<'w> {
 impl<'w> Source<'w> {
   /// Read, lex and parse `rel`.
   pub(crate) fn load(workspace: &'w Workspace, rel: &Path) -> Result<Self, String> {
-    let text = workspace.read(rel)?;
+    let bytes = std::fs::read(workspace.root.join(rel))
+      .map_err(|err| format!("cannot read {}: {err}", rel.display()))?;
     let member = workspace.member_of(rel);
+    let Ok(text) = String::from_utf8(bytes) else {
+      let mut source = Self::new(rel, member, "");
+      source.ast = Err((1, "the file is not UTF-8".to_owned()));
+      return Ok(source);
+    };
     Ok(Self::new(rel, member, &text))
   }
 

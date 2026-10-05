@@ -50,8 +50,38 @@ fn dependencies_violating_anyhow() {
 }
 
 #[test]
+fn dependencies_violating_git_source() {
+  fixture::check("dependencies", "violating-git-source").unwrap();
+}
+
+#[test]
+fn dependencies_violating_license() {
+  fixture::check("dependencies", "violating-license").unwrap();
+}
+
+#[test]
+fn dependencies_violating_native_tls() {
+  fixture::check("dependencies", "violating-native-tls").unwrap();
+}
+
+#[test]
+fn dependencies_violating_openssl() {
+  fixture::check("dependencies", "violating-openssl").unwrap();
+}
+
+#[test]
 fn dependencies_violating_unused() {
   fixture::check("dependencies", "violating-unused").unwrap();
+}
+
+#[test]
+fn dependencies_violating_versions() {
+  fixture::check("dependencies", "violating-versions").unwrap();
+}
+
+#[test]
+fn dependencies_violating_wildcard() {
+  fixture::check("dependencies", "violating-wildcard").unwrap();
 }
 
 #[test]

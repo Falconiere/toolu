@@ -15,6 +15,16 @@ fn capabilities_violating() {
 }
 
 #[test]
+fn capabilities_violating_alias() {
+  fixture::check("capabilities", "violating-alias").unwrap();
+}
+
+#[test]
+fn capabilities_violating_glob() {
+  fixture::check("capabilities", "violating-glob").unwrap();
+}
+
+#[test]
 fn capabilities_violating_process() {
   fixture::check("capabilities", "violating-process").unwrap();
 }

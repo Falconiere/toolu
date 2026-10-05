@@ -81,7 +81,18 @@ fn owns(source: &Source<'_>, capability: &Capability) -> bool {
 }
 
 /// The `a::b` tail of a capability path that `segments` contains, if any.
+/// A `use` of a whole module, by glob or under another name, ends in this marker.
+const WHOLE_MODULE: &str = "*";
+
 fn uses(segments: &[String], capability: &Capability) -> Option<String> {
+  if let Some((last, module)) = segments.split_last()
+    && last == WHOLE_MODULE
+  {
+    return capability.paths.iter().find_map(|path| {
+      let parent = path.rsplit("::").nth(1)?;
+      (module.last().map(String::as_str) == Some(parent)).then(|| format!("{parent}::*"))
+    });
+  }
   capability.paths.iter().find_map(|path| {
     let tail: Vec<&str> = path
       .rsplit("::")
@@ -114,10 +125,20 @@ impl Paths {
         self.0.push((line(name.ident.span()), joined));
       }
       UseTree::Rename(rename) => {
-        joined.push(rename.ident.to_string());
-        self.0.push((line(rename.ident.span()), joined));
+        // `{self as x}` renames the module itself.
+        if rename.ident != "self" {
+          joined.push(rename.ident.to_string());
+        }
+        let at = line(rename.ident.span());
+        let mut whole = joined.clone();
+        whole.push(WHOLE_MODULE.to_owned());
+        self.0.push((at, joined));
+        self.0.push((at, whole));
       }
-      UseTree::Glob(glob) => self.0.push((line(glob.span()), joined)),
+      UseTree::Glob(glob) => {
+        joined.push(WHOLE_MODULE.to_owned());
+        self.0.push((line(glob.span()), joined));
+      }
       UseTree::Group(group) => {
         for item in &group.items {
           self.tree(prefix, item);

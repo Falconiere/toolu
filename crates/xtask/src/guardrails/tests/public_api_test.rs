@@ -13,7 +13,7 @@ fn a_public_fn_returning_a_type_erased_error_fails() {
   assert!(
     found[0]
       .message
-      .starts_with("pub fn parse returns or takes")
+      .starts_with("pub parse exposes a type-erased error")
   );
 }
 
@@ -25,8 +25,8 @@ fn methods_and_parameters_count_but_private_and_typed_errors_pass() {
   ));
   let names: Vec<&str> = found.iter().map(|f| f.message.as_str()).collect();
   assert_eq!(names.len(), 2, "{names:?}");
-  assert!(names[0].starts_with("pub fn take"));
-  assert!(names[1].starts_with("pub fn sized"));
+  assert!(names[0].starts_with("pub take"));
+  assert!(names[1].starts_with("pub sized"));
 }
 
 #[test]
@@ -39,4 +39,20 @@ fn binaries_and_tests_are_not_library_api() {
   assert_eq!(check(&context(&bin.workspace)), Vec::new());
   let test = tree(&[("crates/demo/tests/it.rs", source)]);
   assert_eq!(check(&context(&test.workspace)), Vec::new());
+}
+
+#[test]
+fn aliases_fields_variants_and_trait_methods_count() {
+  let source = "//! d\npub type Res<T> = Result<T, Box<dyn std::error::Error>>;\npub struct Holder {\n  pub cause: Box<dyn Error>,\n  hidden: Box<dyn Error>,\n}\npub enum Outcome {\n  Failed(Box<dyn Error>),\n}\npub trait Run {\n  fn run(&self) -> Box<dyn Error>;\n}\nstruct Private {\n  cause: Box<dyn Error>,\n}\ntrait Hidden {\n  fn run(&self) -> Box<dyn Error>;\n}\n";
+  let found = check(&context(
+    &tree(&[("crates/demo/src/lib.rs", source)]).workspace,
+  ));
+  let named: Vec<(usize, &str)> = found
+    .iter()
+    .map(|f| (f.line, f.message.split_whitespace().nth(1).unwrap_or("")))
+    .collect();
+  assert_eq!(
+    named,
+    [(2, "Res"), (3, "Holder"), (7, "Outcome"), (11, "run")]
+  );
 }

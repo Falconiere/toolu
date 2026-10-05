@@ -64,6 +64,10 @@ reasons.
   `toolu-protocol` and the CLI output module), so policy for them lives in one
   place. Only `toolu-http` links HTTP or TLS, only `toolu-shell` a shell
   parser. `cargo xtask` is the tooling crate and owns its own use.
+- **Dependencies.** cargo-deny denies duplicate versions, wildcard
+  requirements, unknown licences and any source but crates.io. Workspace crates
+  depend on each other by path without a version; `allow-wildcard-paths`
+  admits that for unpublished crates only, so a registry `*` still fails.
 - **No `anyhow`, `eyre` or `dyn Error` in a library's public API.** Callers
   match on typed errors to map them to today's messages (#414).
 - **Folders.** An allowlist for the repository root, `crates/`, each crate and

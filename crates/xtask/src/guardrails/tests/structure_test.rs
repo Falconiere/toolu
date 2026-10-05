@@ -102,3 +102,21 @@ fn main_rs_is_allowed_in_the_main_crates_and_fuzz_entries_are_allowlisted() {
   );
   assert_eq!(rules(&found), ["structure"]);
 }
+
+#[test]
+fn files_directly_in_crates_core_and_a_plugin_are_allowlisted_too() {
+  let tree = tree(&[
+    ("crates/stray.txt", ""),
+    ("crates/core/notes.md", ""),
+    ("plugins/p/stray.sh", ""),
+  ]);
+  let found = messages(&check(&context(&tree.workspace)));
+  assert_eq!(
+    found,
+    [
+      "crates/core/notes.md: `notes.md` is not in the folder allowlist for `crates/core`",
+      "crates/stray.txt: `stray.txt` is not in the folder allowlist for `crates`",
+      "plugins/p/stray.sh: `stray.sh` is not in the folder allowlist for `plugins/p`",
+    ]
+  );
+}

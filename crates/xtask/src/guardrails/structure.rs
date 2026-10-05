@@ -49,11 +49,11 @@ fn allowlist(ctx: &Context<'_>, file: &Path) -> Option<Finding> {
     return Some(finding);
   }
   match names.as_slice() {
-    [crates, core, name, _, ..] if crates == "crates" && core == "core" => {
+    [crates, core, name, ..] if crates == "crates" && core == "core" => {
       entry(&ctx.folders.core, "crates/core", name)
     }
-    [crates, name, _, ..] if crates == "crates" => entry(&ctx.folders.crates, "crates", name),
-    [plugins, name, inner, _, ..] if plugins == "plugins" => {
+    [crates, name, ..] if crates == "crates" => entry(&ctx.folders.crates, "crates", name),
+    [plugins, name, inner, ..] if plugins == "plugins" => {
       entry(&structure.plugin, &format!("plugins/{name}"), inner)
     }
     _ => None,

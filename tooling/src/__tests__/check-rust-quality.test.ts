@@ -7,7 +7,7 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { checkTree, rustFiles } from "../check-rust-quality.ts";
 
 const REPO = resolve(import.meta.dir, "../../..");
@@ -54,6 +54,17 @@ describe("check-rust-quality", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  test("the script fails closed (exit 2) when ast-grep is not on PATH", () => {
+    const res = spawnSync(process.execPath, [join(REPO, "tooling/src/check-rust-quality.ts")], {
+      encoding: "utf8",
+      env: { ...process.env, PATH: `${dirname(process.execPath)}:/usr/bin:/bin` },
+    });
+    expect(res.status).toBe(2);
+    expect(res.stderr).toBe(
+      "rust-quality: ast-grep is not installed (npm install -g @ast-grep/cli)\n",
+    );
   });
 
   test("without the repository config the plugin default (500) applies", () => {

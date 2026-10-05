@@ -37,12 +37,34 @@ pub(super) fn has_ident(tokens: &TokenStream, name: &str) -> bool {
   })
 }
 
-/// `#[cfg(test)]`, or a `cfg` combinator that mentions `test`.
+/// `#[cfg(test)]`, or a `cfg` combinator that mentions `test` outside a `not(…)`.
 pub(super) fn is_cfg_test(attr: &Attribute) -> bool {
   let Meta::List(list) = &attr.meta else {
     return false;
   };
-  list.path.is_ident("cfg") && has_ident(&list.tokens, "test")
+  list.path.is_ident("cfg") && mentions_test(&list.tokens)
+}
+
+/// Whether `tokens` hold the identifier `test`, skipping the argument of `not`.
+fn mentions_test(tokens: &TokenStream) -> bool {
+  let mut negated = false;
+  for tree in tokens.clone() {
+    let found = match &tree {
+      TokenTree::Ident(ident) => {
+        negated = *ident == "not";
+        *ident == "test"
+      }
+      TokenTree::Group(group) => !std::mem::take(&mut negated) && mentions_test(&group.stream()),
+      TokenTree::Punct(_) | TokenTree::Literal(_) => {
+        negated = false;
+        false
+      }
+    };
+    if found {
+      return true;
+    }
+  }
+  false
 }
 
 /// The value of `#[path = "…"]`.

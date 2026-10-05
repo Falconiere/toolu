@@ -35,6 +35,24 @@ fn files_are_classified_by_where_they_sit_in_their_crate() {
 }
 
 #[test]
+fn a_non_utf8_file_is_a_parse_failure_not_a_setup_error() {
+  let dir = tempfile::tempdir().unwrap();
+  std::fs::create_dir_all(dir.path().join("crates/demo/src")).unwrap();
+  std::fs::write(dir.path().join("crates/demo/src/lib.rs"), [0xff_u8, 0xfe]).unwrap();
+  let workspace = crate::workspace::Workspace {
+    root: dir.path().to_path_buf(),
+    members: vec![demo()],
+    files: Vec::new(),
+  };
+  let source = Source::load(&workspace, Path::new("crates/demo/src/lib.rs")).unwrap();
+  assert_eq!(
+    source.ast.err(),
+    Some((1, "the file is not UTF-8".to_owned()))
+  );
+  assert!(Source::load(&workspace, Path::new("missing.rs")).is_err());
+}
+
+#[test]
 fn a_source_knows_its_src_path_and_parse_errors() {
   let member = demo();
   let source = Source::new(Path::new("crates/demo/src/a/b.rs"), Some(&member), "fn (");

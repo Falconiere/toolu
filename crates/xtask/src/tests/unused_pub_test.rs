@@ -56,3 +56,21 @@ fn binaries_tests_and_unparsable_files_are_skipped() {
   ];
   assert_eq!(unused(&sources), Vec::<String>::new());
 }
+
+#[test]
+fn a_use_inside_a_macro_argument_counts() {
+  let lib = member("toolu-a", "crates/a", true);
+  let sources = [
+    Source::new(
+      Path::new("crates/a/src/lib.rs"),
+      Some(&lib),
+      "//! a\npub fn used_in_assert() -> u8 { 1 }\n",
+    ),
+    Source::new(
+      Path::new("crates/a/tests/it.rs"),
+      Some(&lib),
+      "#[test]\nfn t() { assert_eq!(toolu_a::used_in_assert(), 1); }\n",
+    ),
+  ];
+  assert_eq!(unused(&sources), Vec::<String>::new());
+}

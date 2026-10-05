@@ -59,3 +59,27 @@ fn a_file_outside_any_member_is_not_production_code() {
   let tree = tree(&[("crates/loose/src/lib.rs", "//! l\nuse std::env::var;\n")]);
   assert_eq!(rules(&check(&context(&tree.workspace))), Vec::<&str>::new());
 }
+
+#[test]
+fn a_module_alias_or_glob_import_is_a_use_of_the_capability() {
+  let found = found_in(&[
+    ("crates/demo/src/a.rs", "//! a\nuse std::process as p;\n"),
+    ("crates/demo/src/b.rs", "//! b\nuse std::env::*;\n"),
+    (
+      "crates/demo/src/c.rs",
+      "//! c\nuse std::io::{self as stdio, Write};\n",
+    ),
+    (
+      "crates/demo/src/d.rs",
+      "//! d\nuse std::env::args as words;\nuse std::fmt::*;\n",
+    ),
+  ]);
+  assert_eq!(
+    found,
+    [
+      "crates/demo/src/a.rs:2 `process::*` is the `process` capability; only toolu-runtime::process, xtask may use it",
+      "crates/demo/src/b.rs:2 `env::*` is the `env` capability; only toolu-runtime, xtask may use it",
+      "crates/demo/src/c.rs:2 `io::*` is the `stdio` capability; only toolu-protocol, toolu-cli::output, xtask::output may use it",
+    ]
+  );
+}

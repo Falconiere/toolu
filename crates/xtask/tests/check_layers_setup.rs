@@ -62,7 +62,7 @@ fn the_real_workspace_passes() {
   let output = xtask(&["check-layers", "--root", root]).unwrap();
   assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
   assert!(
-    stdout(&output).starts_with("check-layers: 7 crates, "),
+    stdout(&output).starts_with("check-layers: ") && stdout(&output).ends_with(" edges, ok\n"),
     "{}",
     stdout(&output)
   );

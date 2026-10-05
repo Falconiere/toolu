@@ -1,0 +1,13 @@
+[package]
+name = "demo"
+description = "A fixture crate"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+itoa = { git = "https://github.com/dtolnay/itoa", tag = "1.0.15" }
+
+[lints]
+workspace = true
