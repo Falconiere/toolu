@@ -65,7 +65,7 @@ test.concurrent("deleting a job's group from the data file fails (AC-5)", async 
     "tests.yml: job docs reads needs.changes.outputs but has no group in the data file",
   );
   expect(res.out).toContain(
-    "tests.yml: aggregate typescript needs [changes, gate, opencode, docs, rust, rust-musl, rust-conformance], expected [changes, gate, opencode, rust, rust-musl, rust-conformance]",
+    "tests.yml: aggregate typescript needs [changes, gate, opencode, docs, rust, rust-musl, rust-conformance, hook-bench], expected [changes, gate, opencode, rust, rust-musl, rust-conformance, hook-bench]",
   );
 });
 
@@ -73,14 +73,14 @@ test.concurrent("an aggregate whose needs miss a gated job fails (AC-7)", async 
   const res = await check((dir) =>
     edit(dir, "workflows/tests.yml", (text) =>
       text.replace(
-        "needs: [changes, gate, opencode, docs, rust, rust-musl, rust-conformance]",
-        "needs: [changes, gate, opencode, rust, rust-musl, rust-conformance]",
+        "needs: [changes, gate, opencode, docs, rust, rust-musl, rust-conformance, hook-bench]",
+        "needs: [changes, gate, opencode, rust, rust-musl, rust-conformance, hook-bench]",
       ),
     ),
   );
   expect(res).toEqual({
     exitCode: 1,
-    out: "check:ci-paths: tests.yml: aggregate typescript needs [changes, gate, opencode, rust, rust-musl, rust-conformance], expected [changes, gate, opencode, docs, rust, rust-musl, rust-conformance]\n",
+    out: "check:ci-paths: tests.yml: aggregate typescript needs [changes, gate, opencode, rust, rust-musl, rust-conformance, hook-bench], expected [changes, gate, opencode, docs, rust, rust-musl, rust-conformance, hook-bench]\n",
   });
 });
 

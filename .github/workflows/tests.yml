@@ -334,9 +334,70 @@ jobs:
   # required check would count as passing). It fails when `changes` failed, a
   # needed job failed or was cancelled, or a job was skipped although its group
   # was on; it passes when each job succeeded or was skipped with its group off.
+  # Hook resource benchmark (#410): every hook entry's max RSS, CPU (children
+  # included) and wall per spawn, measured by `cargo xtask measure`. Linux
+  # asserts the entries in fixtures/rust-ported.json against
+  # benchmarks/hook-budgets.json; macOS reports only. Each leg uploads its
+  # `toolu.hook-resources/v1` result, the source of the committed baselines.
+  hook-bench:
+    name: hook-bench (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.ports == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build the measurer and any ported entries
+        run: |
+          set -euo pipefail
+          cargo build --release --locked -p xtask
+          if [ "$(jq '.entries | length' fixtures/rust-ported.json)" != "0" ]; then
+            cargo build --release --locked --bin toolu
+          fi
+
+      - name: Bench end-to-end tests
+        run: bun test --timeout 180000 tooling/src/benchmarks/__tests__/hook-resources.native.test.ts
+
+      - name: bench:hooks
+        env:
+          RESULT: ${{ runner.temp }}/hook-resources.json
+        run: |
+          set -euo pipefail
+          assert=
+          if [ "$RUNNER_OS" = "Linux" ]; then assert=--assert; fi
+          bun run bench:hooks --out "$RESULT" $assert | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hook-resources-${{ matrix.os }}
+          path: ${{ runner.temp }}/hook-resources.json
+          if-no-files-found: warn
+
   typescript:
     name: typescript
-    needs: [changes, gate, opencode, docs, rust, rust-musl, rust-conformance]
+    needs: [changes, gate, opencode, docs, rust, rust-musl, rust-conformance, hook-bench]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
