@@ -21,8 +21,16 @@ fn the_listing_has_one_line_per_visible_command() {
   );
   assert!(lines.iter().any(|line| line.starts_with("toolu hook ")));
   assert!(!lines.iter().any(|line| line.starts_with("toolu jev hook")));
-  let width = lines[0].find("  ").unwrap();
-  assert!(lines.iter().all(|line| line.len() > width));
+  // The about column lines up: it starts at the same byte on every line.
+  let about_at = |line: &str| {
+    let gap = line.find("  ").unwrap();
+    gap + line.get(gap..).unwrap().find(|c: char| c != ' ').unwrap()
+  };
+  let column = about_at(lines[0]);
+  assert!(column > "toolu epic planned".len());
+  for line in &lines {
+    assert_eq!(about_at(line), column, "{line}");
+  }
 }
 
 #[test]

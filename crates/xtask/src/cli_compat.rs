@@ -26,7 +26,8 @@ const DEFAULT_BASE: &str = "origin/main";
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   let root = options.root.as_path();
   let base_ref = options.base.as_deref().unwrap_or(DEFAULT_BASE);
-  let base = git(root, &["merge-base", base_ref, "HEAD"])?
+  let base = git(root, &["merge-base", base_ref, "HEAD"])
+    .map_err(|err| format!("{err} — pass --base <ref>, a revision this repository has"))?
     .trim()
     .to_owned();
   let Some(before) = show(root, &base, Path::new(TREE))? else {

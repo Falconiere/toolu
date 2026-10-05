@@ -8,7 +8,7 @@ Generated from the `toolu` binary by `cargo xtask docs-cli`; do not edit. `toolu
 - [`commands.schema.json`](commands.schema.json) is `toolu commands --schema`, the JSON Schema of that tree and of every other `--json` document.
 - [`installer.md`](installer.md) documents the Node installer, `npx @toolu/plugins`, until `toolu plugins` (#438) replaces it.
 
-Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly one JSON document. The exit codes are in the `toolu --help` output below. Within a major version every documented command, alias, flag, value and exit code keeps working: `cargo xtask check-cli-compat` fails a change that removes one unless `hookProtocol` is bumped in a breaking (`!`) pull request.
+Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly one JSON document. The exit codes are in the `toolu --help` output below. Within a major version every documented command, alias, flag, value and exit code keeps working: `cargo xtask check-cli-compat` fails a change that removes one unless `hookProtocol` is bumped in a breaking (`!`) pull request. The placeholder `planned` verbs are exempt: they go when the real verbs land.
 
 ## Commands
 

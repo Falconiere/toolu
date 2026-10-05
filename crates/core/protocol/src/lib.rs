@@ -5,9 +5,7 @@
 //! the exit codes and host names of the `toolu` CLI (#442).
 
 pub mod event;
-/// The exit codes of every `toolu` command.
 pub mod exit;
-/// The hosts `--host` names.
 pub mod host;
 pub mod install;
 pub mod launcher;

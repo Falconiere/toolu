@@ -1,7 +1,8 @@
 //! What a newer command tree breaks for a caller of the older one: a command,
 //! alias, flag, short flag, possible value or exit code that disappeared, an
-//! argument that became required, or a new required one. Placeholder verbs
-//! (`planned`) are not documented verbs and may disappear.
+//! argument that became required, or a new required one, a global flag that
+//! stopped being global, a free-form value that now accepts only listed ones.
+//! Placeholder verbs (`planned`) are not documented verbs and may disappear.
 
 use serde_json::Value;
 
@@ -114,7 +115,8 @@ fn commands(path: &str, before: &Value, after: &Value, found: &mut Vec<String>) 
       continue;
     };
     for alias in list(old, "aliases").iter().filter_map(Value::as_str) {
-      if child(after, alias).is_none() {
+      // The alias must still reach this command, not whichever now answers to it.
+      if !child(after, alias).is_some_and(|now| std::ptr::eq(now, new)) {
         found.push(format!("alias `{alias}` of `{shown}` removed"));
       }
     }
@@ -156,8 +158,26 @@ fn flag(path: &str, old: &Value, new: &Value, found: &mut Vec<String>) {
   if !flag_set(old, "required") && flag_set(new, "required") {
     found.push(format!("flag `--{long}` on `{path}` became required"));
   }
+  if flag_set(old, "global") && !flag_set(new, "global") {
+    found.push(format!("flag `--{long}` on `{path}` is no longer global"));
+  }
+  values(path, old, new, found);
+}
+
+/// The values `old` accepts that `new` no longer does.
+fn values(path: &str, old: &Value, new: &Value, found: &mut Vec<String>) {
+  let long = text(old, "long");
+  let listed = list(new, "possibleValues");
+  if list(old, "possibleValues").is_empty() {
+    if flag_set(old, "takesValue") && !listed.is_empty() {
+      found.push(format!(
+        "`--{long}` on `{path}` now accepts only listed values"
+      ));
+    }
+    return;
+  }
   for value in list(old, "possibleValues") {
-    if !list(new, "possibleValues").contains(value) {
+    if !listed.contains(value) {
       found.push(format!("value {value} of `--{long}` on `{path}` removed"));
     }
   }

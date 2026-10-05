@@ -49,12 +49,12 @@ impl Planned {
       return Outcome::data(doc.to_string());
     }
     let verbs = if self.verbs.is_empty() {
-      "none; the command itself is planned".to_owned()
+      "none (the command itself is planned)".to_owned()
     } else {
       self.verbs.join(", ")
     };
     Outcome::data(format!(
-      "toolu {} is not ported yet ({}).\nPlanned verbs: {verbs}",
+      "toolu {} is not ported yet ({}). Planned verbs: {verbs}",
       self.name,
       self.issue_list()
     ))

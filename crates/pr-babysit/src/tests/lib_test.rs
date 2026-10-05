@@ -15,7 +15,7 @@ fn the_pr_babysit_crate_is_its_plugin_and_lists_the_planned_verbs() {
   assert_eq!(
     outcome.stdout.as_deref(),
     Some(
-      "toolu babysit is not ported yet (#433).\nPlanned verbs: tick, collect, record, reply, resolve, route-fix, dispatch-fix"
+      "toolu babysit is not ported yet (#433). Planned verbs: tick, collect, record, reply, resolve, route-fix, dispatch-fix"
     )
   );
 }

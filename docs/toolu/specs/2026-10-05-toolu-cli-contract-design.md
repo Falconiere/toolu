@@ -42,7 +42,7 @@ Epic #402 turns every plugin into "a Rust crate plus Markdown". Skills, commands
 
 ## Interfaces / Schema
 
-**Workspace** (`Cargo.toml`, product section): `clap = { version = "4.6", default-features = false, features = ["std", "help", "usage", "error-context", "suggestions"] }`; dev: `insta = { version = "1", default-features = false }`, `assert_cmd = "2"`, `jsonschema = { version = "0.58", default-features = false }`. Members gain `crates/toolu`, `crates/ts-quality`, `crates/python-quality`, `crates/rust-quality`, `crates/ast-grep`, `crates/brainstorm`, `crates/delivery-flow`, `crates/toolu-review`, `crates/jev`, `crates/statusline`, `crates/pr-babysit`, `crates/epic-orchestrator`. Package names are `toolu-<dir>` (`toolu-jev`, `toolu-ast-grep`, …). There are two exceptions: `toolu-review` keeps its name, and the hub is `toolu-hub`, because a library named `toolu` would collide with the `toolu` binary in `cargo doc`. `folders.json` `crates` gains the same twelve directory names.
+**Workspace** (`Cargo.toml`, product section): `clap = { version = "4.6", default-features = false, features = ["std", "help", "usage", "error-context", "suggestions"] }`; dev: `insta = { version = "1", default-features = false }`, `assert_cmd = "2"`, `jsonschema = { version = "0.58", default-features = false }`. Members gain `crates/toolu`, `crates/ts-quality`, `crates/python-quality`, `crates/rust-quality`, `crates/ast-grep`, `crates/brainstorm`, `crates/delivery-flow`, `crates/toolu-review`, `crates/jev`, `crates/statusline`, `crates/pr-babysit`, `crates/epic-orchestrator`. Package names are `toolu-<dir>` (`toolu-jev`, `toolu-ast-grep`, …). There are two exceptions: `toolu-review` keeps its name, and the hub is `toolu-hub`, because a library named `toolu` would collide with the `toolu` binary in `cargo doc`. `toolu-jev` is therefore the jev plugin's, and the core Jev client of #460 (`crates/core/jev`) takes another package name; AGENTS.md records this. `folders.json` `crates` gains the same twelve directory names.
 
 **`toolu-protocol`**
 ```rust
@@ -61,9 +61,9 @@ pub mod cli;        // pub struct Ctx { pub json: bool, pub quiet: bool, pub hos
 pub mod namespace;  // pub const PLACEHOLDER: &str = "planned";
                     // pub struct Planned { pub name: &'static str, pub about: &'static str,
                     //                      pub verbs: &'static [&'static str], pub issues: &'static [u32] }
-                    // impl Planned { pub fn command(&self) -> clap::Command; pub fn run(&self, m: &ArgMatches, ctx: &Ctx) -> Outcome }
+                    // impl Planned { pub fn command(&self) -> clap::Command; pub fn run(&self, ctx: &Ctx) -> Outcome }
                     // pub struct Guide { pub name: &'static str, pub about: &'static str, pub text: &'static str }
-                    // impl Guide { pub fn command(&self) -> clap::Command; pub fn run(&self, m: &ArgMatches, ctx: &Ctx) -> Outcome }
+                    // impl Guide { pub fn command(&self) -> clap::Command; pub fn run(&self, ctx: &Ctx) -> Outcome }
 ```
 `Planned::command()` is `<name>` with `about`, `subcommand_required` and `arg_required_else_help`, plus one verb, `planned`. That verb's about reads "Not ported yet (#n…): show the planned verbs". `Planned::run` gives `toolu <name> is not ported yet (#434, #435, #448). Planned verbs: engine, start, …` (or `Planned verbs: none (the command itself is planned)`), exit 0. With `--json` it gives `{"namespace":"epic","ported":false,"planned":["engine",…],"issues":[434,435,448]}`. `Guide::run` gives `text`, or `{"namespace":"brainstorm","about":…,"text":…}`, exit 0.
 
@@ -127,7 +127,7 @@ The tree omits the implicit `--help` on every command. Global flags appear once,
 - `empty`: `{}`
 
 **xtask**
-- `docs-cli [--check] [--bin FILE] [--root DIR]`. Without `--bin` it runs `cargo build --locked -p toolu-cli --message-format=json` and takes the `toolu` executable from the artifact line. `--check` is a value-less option.
+- `docs-cli [--check] [--bin FILE] [--root DIR]`. Without `--bin` it runs `cargo build --locked -p toolu-cli --message-format=json-render-diagnostics` (compiler errors stay readable on stderr) and takes the `toolu` executable from the artifact line. `--check` is a value-less option.
 - `check-cli-compat [--base REF] [--title TEXT] [--root DIR]`.
 - `check-startup --bin FILE [--root DIR]`.
 - Gate steps `docs-cli` and `cli-compat` run after `unused-pub` and before `jscpd`.

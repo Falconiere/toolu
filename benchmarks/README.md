@@ -25,6 +25,7 @@ fabricated counterfactual.
 benchmarks/                       data only
   cases/<mechanism>/              per-mechanism inputs (queries.tsv, tasks/, hooks/payloads.json)
   hook-budgets.json               p50 RSS/CPU budget per ported hook entry
+  startup-budgets.json            the `toolu --version` wall budget (`cargo xtask check-startup`)
   fixtures/                       stable test corpus + a real transcript set
   results/                        committed result JSON + methodology (results/README.md)
 tooling/src/benchmarks/           the harness, TypeScript on Bun

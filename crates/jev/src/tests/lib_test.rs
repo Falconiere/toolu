@@ -12,6 +12,6 @@ fn the_jev_crate_is_its_plugin_and_lists_the_planned_verbs() {
   let outcome = run(&matches, &Ctx::default());
   assert_eq!(
     outcome.stdout.as_deref(),
-    Some("toolu jev is not ported yet (#430).\nPlanned verbs: noul, choice, score, ask")
+    Some("toolu jev is not ported yet (#430). Planned verbs: noul, choice, score, ask")
   );
 }

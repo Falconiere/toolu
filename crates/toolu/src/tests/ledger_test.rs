@@ -11,7 +11,7 @@ fn toolu_ledger_lists_its_planned_verbs() {
   assert_eq!(
     outcome.stdout.as_deref(),
     Some(
-      "toolu ledger is not ported yet (#421).\nPlanned verbs: run, status, preflight, path, root, self-test, verdict"
+      "toolu ledger is not ported yet (#421). Planned verbs: run, status, preflight, path, root, self-test, verdict"
     )
   );
 }

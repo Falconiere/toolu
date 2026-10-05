@@ -32,7 +32,7 @@ pub(crate) fn outcome(err: &clap::Error, json: bool) -> Outcome {
   let suggestion = suggestion(err);
   Outcome {
     exit: Exit::Usage,
-    stdout: json.then(|| envelope(Exit::Usage, first_line(text), suggestion.as_deref())),
+    stdout: json.then(|| envelope(Exit::Usage, &message(kind, text), suggestion.as_deref())),
     stderr: Some(text.to_owned()),
   }
 }
@@ -50,10 +50,38 @@ pub(crate) fn envelope(exit: Exit, message: &str, suggestion: Option<&str>) -> S
   .to_string()
 }
 
-/// The first line of `text`, without clap's `error: ` prefix.
+/// The one-line `message` of a usage error: a missing verb shows the help, whose
+/// first paragraph is only the namespace's about, so it names the usage instead.
+fn message(kind: ErrorKind, text: &str) -> String {
+  if kind == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand {
+    let usage = text
+      .lines()
+      .find_map(|line| line.strip_prefix("Usage: "))
+      .unwrap_or_default();
+    return format!("a command is required: {usage}");
+  }
+  summary(text)
+}
+
+/// The first line of `text`, without clap's `error: ` prefix: a verb's
+/// diagnostics state the error on their first line.
 pub(crate) fn first_line(text: &str) -> &str {
   let line = text.lines().next().unwrap_or_default();
   line.strip_prefix("error: ").unwrap_or(line)
+}
+
+/// The first paragraph of `text` on one line, without clap's `error: ` prefix:
+/// clap continues a message on the next lines (`<NAME>`, `[possible values: …]`).
+pub(crate) fn summary(text: &str) -> String {
+  let paragraph: Vec<&str> = text
+    .lines()
+    .take_while(|line| !line.trim().is_empty())
+    .map(str::trim)
+    .collect();
+  let line = paragraph.join(" ");
+  line
+    .strip_prefix("error: ")
+    .map_or_else(|| line.clone(), str::to_owned)
 }
 
 /// The command, flag or value clap suggests in its `tip:` line.

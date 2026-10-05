@@ -15,7 +15,7 @@ The Rust rebuild (epic #402) exists to cut what every hook spawn costs. This pag
 | Status server under 50 clients | ≤ 7 ms latency (p90), ≤ 13 MiB max RSS | prototype: 4.4 ms, 9.7 MiB | 50 concurrent keep-alive clients × 40 loopback requests; client-side latency, server `VmHWM` | #449 |
 | Gate duration | ≤ 60 s | 40 s (slowest of three CI runs) | the `cargo xtask gate` step of the `rust (ubuntu-latest)` job, warm cache | #455 |
 
-Linux CI is the gating platform. macOS is measured and reported, never gated.
+Linux CI is the gating platform. macOS is never gated: the hook bench measures and reports there, and the startup check runs on Linux only.
 
 ## Where the numbers come from
 
@@ -41,7 +41,7 @@ A budget changes only together with a new measurement committed under `benchmark
 
 ## Requirements the budgets rest on
 
-- **`toolu hook` takes a fast path.** It dispatches on `argv[1] == "hook"` before building the full clap command tree. Building the tree first cost the prototype's pre-tools 0.9 ms CPU and 0.4 MiB at p50 (3.4 ms against 2.5 ms), a fifth of its CPU budget. Owned by #442 and #418.
+- **`toolu hook` takes a fast path.** `toolu hook <name>`, `toolu <plugin> hook <name>` and `toolu --hook-protocol` are recognised before the clap command tree is built (`crates/cli/src/fast.rs`). Building the tree first cost the prototype's pre-tools 0.9 ms CPU and 0.4 MiB at p50 (3.4 ms against 2.5 ms), a fifth of its CPU budget. Owned by #442 and #418.
 - **Hooks are measured the way hosts pay for them.** Each spawn includes the `sh` launcher. Until the native launcher (#412) exists, the bench runs a ported entry as `/bin/sh -c 'exec "$0" "$@"' toolu hook <entry>`, the same shape as the Bun launcher.
 
 ## How hooks are measured

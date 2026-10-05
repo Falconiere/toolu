@@ -65,7 +65,8 @@ fn build(root: &Path) -> Result<PathBuf, String> {
   let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
   let built = Command::new(cargo)
     .args(["build", "--locked", "--quiet", "-p", "toolu-cli"])
-    .arg("--message-format=json")
+    // The `executable` records stay on stdout; compiler diagnostics go to stderr.
+    .arg("--message-format=json-render-diagnostics")
     .current_dir(root)
     .output()
     .map_err(|err| format!("cannot run cargo build: {err}"))?;

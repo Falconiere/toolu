@@ -51,6 +51,10 @@ fn the_index_lists_visible_commands_with_owner_and_status() {
   assert!(readme.contains("| [`commands`](commands.md) | built into `crates/cli` | available |"));
   assert!(!readme.contains("secret"));
   assert!(
+    readme
+      .contains("The placeholder `planned` verbs are exempt: they go when the real verbs land.")
+  );
+  assert!(
     readme.ends_with("```text\nUsage: toolu\n\nOptions:\n```\n"),
     "{readme}"
   );

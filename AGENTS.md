@@ -18,7 +18,7 @@ This file is the source of truth. Codex, Cursor, and Claude Code read it directl
 
 ## Plugin layout
 
-A plugin is a Rust crate plus Markdown. `crates/<name>` is a library that contributes one namespace, `toolu <namespace>`; the toolu hub, `crates/toolu`, contributes several and re-exports the rule crates. `plugins/<name>/` holds the skills, commands, agents, `hooks.json` and `plugin.json` that run `toolu …`. Until its port lands, a crate's namespace has one placeholder verb, `planned`, and its hooks are the Bun bundles below.
+A plugin is a Rust crate plus Markdown. `crates/<name>` is a library that contributes one namespace, `toolu <namespace>`; the toolu hub, `crates/toolu`, contributes several and re-exports the rule crates. `plugins/<name>/` holds the skills, commands, agents, `hooks.json` and `plugin.json` that run `toolu …`. Until its port lands, a crate's namespace has one placeholder verb, `planned`, and its hooks are the Bun bundles below. Plugin packages are `toolu-<dir>` (the hub is `toolu-hub`), so `toolu-jev` is the jev plugin's: the core Jev client of #460 takes another package name.
 
 The plugin directory is self-contained under `plugins/<name>/`. No symlinks out.
 
@@ -126,7 +126,7 @@ Every crate under `crates/` passes `cargo xtask gate` (#455), the required `rust
 
 - **Data.** Gate data (a limit, a ban, a lint level, a layer rule): `[workspace.lints]`, `clippy.toml`, `rustfmt.toml`, `deny.toml`, `lang.rust`, `tooling/conventions/guardrails/rust/{rules,jscpd}.json`. It changes only in its own `chore(gates): …` PR. Registration data may grow next to the code it registers: `layers.json`, `folders.json`, `inventory.json`, `coverage-floor.json` (rows at or above the default). `cargo xtask check-gate-change` enforces the split. No file has an ignore, exempt or per-path override field; the loaders reject one.
 - **Fixtures.** `fixtures/guardrails/rust/<rule>/{clean,violating*}`: each case is an overlay on `base/` with an `expect.txt`; Rust sources end in `.rs.fixture`. `cargo test -p xtask` runs every case through `cargo xtask gate --root <temp> --only <step>` with this repository's real gate data.
-- **Commands.** `cargo xtask gate` (all steps, or `--only <step>`), `cargo xtask guardrails`. `cargo xtask docs-cli` rewrites `docs/cli/` from the binary, and the gate's `docs-cli` step checks it. `cargo xtask check-cli-compat` (the gate's `cli-compat` step) fails when a documented command, alias, flag, value or exit code disappears, unless `HOOK_PROTOCOL` rises in a `!` pull request. `cargo xtask check-startup --bin <toolu>` gates the `toolu --version` budget. The gate needs cargo-deny, cargo-machete, cargo-llvm-cov, ast-grep, Bun and `bun install`; a missing tool fails closed.
+- **Commands.** `cargo xtask gate` (all steps, or `--only <step>`), `cargo xtask guardrails`. `cargo xtask docs-cli` rewrites `docs/cli/` from the binary, and the gate's `docs-cli` step checks it. `cargo xtask check-cli-compat` (the gate's `cli-compat` step) fails when a documented command, alias, flag, value or exit code disappears, unless `HOOK_PROTOCOL` rises in a `!` pull request; the placeholder `planned` verbs are exempt. `cargo xtask check-startup --bin <toolu>` gates the `toolu --version` budget. The gate needs cargo-deny, cargo-machete, cargo-llvm-cov, ast-grep, Bun and `bun install`; a missing tool fails closed.
 
 ## Key files
 

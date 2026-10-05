@@ -15,7 +15,7 @@ fn the_ast_grep_crate_is_its_plugin_and_lists_the_planned_verbs() {
   assert_eq!(
     outcome.stdout.as_deref(),
     Some(
-      "toolu ast-grep is not ported yet (#429).\nPlanned verbs: search, files, scan, debug, savings"
+      "toolu ast-grep is not ported yet (#429). Planned verbs: search, files, scan, debug, savings"
     )
   );
 }

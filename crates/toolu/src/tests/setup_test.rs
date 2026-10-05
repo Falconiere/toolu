@@ -10,6 +10,6 @@ fn toolu_setup_lists_its_planned_verbs() {
   let outcome = run(&matches, &Ctx::default());
   assert_eq!(
     outcome.stdout.as_deref(),
-    Some("toolu setup is not ported yet (#445).\nPlanned verbs: agents")
+    Some("toolu setup is not ported yet (#445). Planned verbs: agents")
   );
 }

@@ -70,7 +70,7 @@ fn the_placeholder_names_the_planned_verbs_and_issues() {
   assert_eq!(
     outcome.stdout.as_deref(),
     Some(
-      "toolu epic is not ported yet (#434, #435, #448).\nPlanned verbs: engine, start, gate, queue"
+      "toolu epic is not ported yet (#434, #435, #448). Planned verbs: engine, start, gate, queue"
     )
   );
   assert_eq!(outcome.stderr, None);
@@ -82,7 +82,7 @@ fn a_namespace_without_verbs_says_the_command_itself_is_planned() {
   assert_eq!(
     outcome.stdout.as_deref(),
     Some(
-      "toolu doctor is not ported yet (#445).\nPlanned verbs: none; the command itself is planned"
+      "toolu doctor is not ported yet (#445). Planned verbs: none (the command itself is planned)"
     )
   );
 }

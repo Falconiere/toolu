@@ -14,6 +14,6 @@ fn the_statusline_crate_is_its_plugin_and_lists_the_planned_verbs() {
   let outcome = run(&matches, &Ctx::default());
   assert_eq!(
     outcome.stdout.as_deref(),
-    Some("toolu statusline is not ported yet (#431).\nPlanned verbs: render, setup, refresh")
+    Some("toolu statusline is not ported yet (#431). Planned verbs: render, setup, refresh")
   );
 }

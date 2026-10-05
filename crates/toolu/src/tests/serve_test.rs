@@ -11,7 +11,7 @@ fn toolu_serve_lists_its_planned_verbs() {
   assert_eq!(
     outcome.stdout.as_deref(),
     Some(
-      "toolu serve is not ported yet (#437).\nPlanned verbs: none; the command itself is planned"
+      "toolu serve is not ported yet (#437). Planned verbs: none (the command itself is planned)"
     )
   );
 }

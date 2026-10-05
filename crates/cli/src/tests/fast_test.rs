@@ -30,6 +30,10 @@ fn the_toolu_and_plugin_forms_parse() {
     }))
   );
   assert_eq!(parsed("--hook-protocol"), Some(Fast::HookProtocol));
+  let Some(Fast::Hook(review)) = parsed("toolu-review hook check --event Stop") else {
+    panic!("not a hook")
+  };
+  assert_eq!(review.plugin, "toolu-review");
 }
 
 #[test]
@@ -60,6 +64,13 @@ fn everything_else_is_left_to_clap() {
     "jev hook a--b",
     "epic planned",
     "a b c",
+    "review hook x --event Stop",
+    "commands hook x",
+    "ledger hook x",
+    "toolu hook x",
+    "bogus hook x",
+    "hook x --event A --event B",
+    "jev hook x --plugin-root /a --plugin-root /b",
   ] {
     assert_eq!(parsed(line), None, "{line}");
   }
@@ -95,6 +106,7 @@ fn the_clap_mirror_rejects_what_the_fast_path_declines() {
     &["hook", "Bad_Name"],
     &["hook", "x", "--nope", "y"],
     &["hook", "x", "--event"],
+    &["hook", "x", "--event", "A", "--event", "B"],
   ] {
     assert!(command().try_get_matches_from(argv).is_err(), "{argv:?}");
   }

@@ -141,6 +141,16 @@ fn the_global_flags_become_the_verb_context() {
 }
 
 #[test]
+fn a_tree_command_missing_from_the_registry_is_an_internal_failure() {
+  let tree = || tree::command().subcommand(clap::Command::new("ghost"));
+  let outcome = run(&words("ghost"), &context(), &tree);
+  assert_eq!(
+    outcome,
+    Outcome::failed(Exit::Failure, "toolu: no namespace ghost".to_owned())
+  );
+}
+
+#[test]
 fn json_is_noticed_only_before_the_separator() {
   assert!(wants_json(&words("epik --json")));
   assert!(!wants_json(&words("epik -- --json")));

@@ -30,7 +30,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 document. The exit codes are in the `toolu --help` output below. Within a major version every \
 documented command, alias, flag, value and exit code keeps working: `cargo xtask \
 check-cli-compat` fails a change that removes one unless `hookProtocol` is bumped in a breaking \
-(`!`) pull request.";
+(`!`) pull request. The placeholder `planned` verbs are exempt: they go when the real verbs land.";
 
 const HOOKS: &str = "`hooks.json` calls `toolu hook <name> --event <Event> --plugin-root \
 <dir>` for the toolu plugin and `toolu <plugin> hook <name> …` for every other plugin. Those \

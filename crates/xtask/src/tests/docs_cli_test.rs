@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use super::{DOCS_DIR, MARKER, run};
+use super::{DOCS_DIR, MARKER, differences, expected, run};
 use crate::Verdict;
 use crate::options::Options;
 use crate::tests::install;
@@ -27,6 +27,12 @@ fn options(root: &Path, bin: &Path, check: bool) -> Options {
     check,
     ..Options::default()
   }
+}
+
+/// The findings `--check` reports for the tree under `root` against what the stand-in prints.
+fn findings(root: &Path, bin: &Path) -> Vec<String> {
+  let files = expected(&options(root, bin, true)).unwrap();
+  differences(&root.join(DOCS_DIR), &files).unwrap()
 }
 
 #[test]
@@ -56,6 +62,7 @@ fn a_written_tree_checks_clean() {
     "{jev}"
   );
   assert_eq!(run(&options(dir.path(), &bin, true)), Ok(Verdict::Clean));
+  assert_eq!(findings(dir.path(), &bin), Vec::<String>::new());
 }
 
 #[test]
@@ -63,9 +70,24 @@ fn a_missing_or_stale_page_is_a_finding() {
   let dir = tempfile::tempdir().unwrap();
   let bin = stand_in(dir.path());
   assert_eq!(run(&options(dir.path(), &bin, true)), Ok(Verdict::Findings));
+  assert_eq!(
+    findings(dir.path(), &bin),
+    [
+      "README.md",
+      "commands.json",
+      "commands.schema.json",
+      "hook.md",
+      "jev.md"
+    ]
+    .map(|name| format!("docs/cli/{name}: missing or unreadable — run `cargo xtask docs-cli`"))
+  );
   run(&options(dir.path(), &bin, false)).unwrap();
   std::fs::write(dir.path().join(DOCS_DIR).join("jev.md"), "edited by hand\n").unwrap();
   assert_eq!(run(&options(dir.path(), &bin, true)), Ok(Verdict::Findings));
+  assert_eq!(
+    findings(dir.path(), &bin),
+    ["docs/cli/jev.md: stale — run `cargo xtask docs-cli`"]
+  );
 }
 
 #[test]
@@ -77,6 +99,10 @@ fn orphaned_generated_pages_are_found_and_removed_but_hand_written_ones_stay() {
   std::fs::write(docs.join("gone.md"), format!("{MARKER}\n\n# old\n")).unwrap();
   std::fs::write(docs.join("installer.md"), "# Installer\n").unwrap();
   assert_eq!(run(&options(dir.path(), &bin, true)), Ok(Verdict::Findings));
+  assert_eq!(
+    findings(dir.path(), &bin),
+    ["docs/cli/gone.md: orphaned generated page — run `cargo xtask docs-cli`"]
+  );
   run(&options(dir.path(), &bin, false)).unwrap();
   assert!(!docs.join("gone.md").exists());
   assert_eq!(

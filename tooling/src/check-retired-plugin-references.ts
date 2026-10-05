@@ -56,8 +56,7 @@ for (const term of ["exa-search", "context7", "agent-browser", "jira"]) {
       path === SELF ||
       HISTORY.has(path) ||
       path.startsWith("docs/toolu/") ||
-      path.startsWith("plugins/epic-orchestrator/") ||
-      path.startsWith("crates/epic-orchestrator/")
+      path.startsWith("plugins/epic-orchestrator/")
     ) {
       continue;
     }
@@ -66,9 +65,11 @@ for (const term of ["exa-search", "context7", "agent-browser", "jira"]) {
     }
     if (
       term === "jira" &&
-      (JIRA_INTEGRATION.has(path) || path.startsWith("tools/toolu-opencode/generated/"))
+      (JIRA_INTEGRATION.has(path) ||
+        path.startsWith("crates/epic-orchestrator/") ||
+        path.startsWith("tools/toolu-opencode/generated/"))
     ) {
-      continue; // built-in tracker and drift-checked generated copies
+      continue; // built-in tracker, its crate's verb and drift-checked generated copies
     }
     unexpected.push(`${path}: ${term}`);
   }

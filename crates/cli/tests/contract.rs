@@ -12,6 +12,17 @@ mod inventory;
 mod schema;
 
 use cli::{namespaces, one_document, stderr, stdout, toolu};
+use serde_json::json;
+
+/// The visible namespaces that are not ported yet: all but the hook runner, the
+/// command export and the two Markdown-only guides.
+fn unported(names: &[String]) -> Vec<&String> {
+  let ported = ["hook", "commands", "brainstorm", "delivery-flow"];
+  names
+    .iter()
+    .filter(|name| !ported.contains(&name.as_str()))
+    .collect()
+}
 
 #[test]
 fn every_namespace_answers_help_on_stdout() {
@@ -52,6 +63,13 @@ fn every_namespace_answers_help_on_stdout() {
     );
     assert_eq!(stderr(&output).unwrap(), "", "{name}");
   }
+  for name in unported(&names) {
+    let help = stdout(&toolu(&[name, "--help"]).unwrap()).unwrap();
+    assert!(
+      help.contains("\n  planned  Not ported yet (#"),
+      "{name}: {help}"
+    );
+  }
   let epic = stdout(&toolu(&["epic", "--help"]).unwrap()).unwrap();
   assert!(
     epic.contains("planned  Not ported yet (#434, #435, #448)"),
@@ -75,6 +93,7 @@ fn help_and_version_are_data_on_stdout() {
     let output = toolu(args).unwrap();
     assert_eq!(output.status.code(), Some(0), "{args:?}");
     one_document(&output).unwrap();
+    assert_eq!(stderr(&output).unwrap(), "", "{args:?}");
   }
 }
 
@@ -94,18 +113,32 @@ fn a_typo_exits_64_and_suggests_the_namespace_on_stderr() {
 fn json_on_a_usage_error_is_one_document_and_a_diagnostic() {
   let output = toolu(&["--json", "epik", "start"]).unwrap();
   assert_eq!(output.status.code(), Some(64));
-  let doc = one_document(&output).unwrap();
-  assert_eq!(doc["error"]["name"], "usage");
-  assert_eq!(doc["error"]["suggestion"], "epic");
-  assert!(stderr(&output).unwrap().contains("unrecognized subcommand"));
+  assert_eq!(
+    one_document(&output).unwrap(),
+    json!({ "error": { "code": 64, "name": "usage",
+      "message": "unrecognized subcommand 'epik'", "suggestion": "epic" } })
+  );
+  assert!(
+    stderr(&output)
+      .unwrap()
+      .starts_with("error: unrecognized subcommand 'epik'\n")
+  );
 }
 
 #[test]
 fn a_skill_running_epic_status_with_json_gets_one_document() {
   let output = toolu(&["epic", "status", "402", "--json"]).unwrap();
   assert_eq!(output.status.code(), Some(64));
-  let doc = one_document(&output).unwrap();
-  assert_eq!(doc["error"]["code"], 64);
+  assert_eq!(
+    one_document(&output).unwrap(),
+    json!({ "error": { "code": 64, "name": "usage",
+      "message": "unrecognized subcommand 'status'", "suggestion": null } })
+  );
+  assert!(
+    stderr(&output)
+      .unwrap()
+      .starts_with("error: unrecognized subcommand 'status'\n")
+  );
 }
 
 #[test]
@@ -143,7 +176,10 @@ fn a_successful_verb_leaves_stderr_empty() {
     assert_eq!(stderr(&output).unwrap(), "", "{args:?}");
   }
   let doctor = stdout(&toolu(&["doctor", "planned"]).unwrap()).unwrap();
-  assert!(doctor.contains("Planned verbs: none"), "{doctor}");
+  assert_eq!(
+    doctor,
+    "toolu doctor is not ported yet (#445). Planned verbs: none (the command itself is planned)\n"
+  );
   let guide = stdout(&toolu(&["delivery-flow"]).unwrap()).unwrap();
   assert!(guide.contains("/delivery-flow:delivery-flow"), "{guide}");
 }
@@ -152,9 +188,16 @@ fn a_successful_verb_leaves_stderr_empty() {
 fn host_must_be_a_known_host_and_config_dir_is_accepted() {
   let bogus = toolu(&["--host", "bogus", "commands"]).unwrap();
   assert_eq!(bogus.status.code(), Some(64));
-  assert!(stderr(&bogus).unwrap().contains("possible values"));
+  assert_eq!(stdout(&bogus).unwrap(), "");
+  assert!(
+    stderr(&bogus)
+      .unwrap()
+      .contains("[possible values: claude, codex, opencode, cursor, hermes]")
+  );
   let known = toolu(&["--host", "codex", "--config-dir", "/tmp", "commands"]).unwrap();
   assert_eq!(known.status.code(), Some(0));
+  assert!(stdout(&known).unwrap().starts_with("toolu hook "));
+  assert_eq!(stderr(&known).unwrap(), "");
 }
 
 #[test]

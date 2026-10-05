@@ -4,7 +4,7 @@
 
 use serde_json::{Value, json};
 
-use crate::cli::{Res, one_document, stdout, toolu};
+use crate::cli::{Res, namespaces, one_document, stderr, stdout, toolu};
 
 /// The schema the binary prints.
 fn schema() -> Res<Value> {
@@ -84,4 +84,25 @@ fn every_other_json_document_validates_against_its_definition() {
     violations(&json!({ "error": { "code": 64 } }), Some("error")).unwrap(),
     Vec::<String>::new()
   );
+}
+
+#[test]
+fn every_namespace_s_json_run_is_its_own_valid_document() {
+  for name in namespaces().unwrap() {
+    let (args, def) = match name.as_str() {
+      "hook" | "commands" => continue,
+      "brainstorm" | "delivery-flow" => (vec!["--json", name.as_str()], "guide"),
+      _ => (vec!["--json", name.as_str(), "planned"], "planned"),
+    };
+    let output = toolu(&args).unwrap();
+    assert_eq!(output.status.code(), Some(0), "{name}");
+    assert_eq!(stderr(&output).unwrap(), "", "{name}");
+    let document = one_document(&output).unwrap();
+    assert_eq!(
+      violations(&document, Some(def)).unwrap(),
+      Vec::<String>::new(),
+      "{name}"
+    );
+    assert_eq!(document["namespace"], name.as_str());
+  }
 }

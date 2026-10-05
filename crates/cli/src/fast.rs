@@ -1,10 +1,13 @@
 //! The hook fast path (#442, #410 budget): the argv forms `hooks.json` and the
-//! launcher use, recognised before the clap tree is built. A malformed hook line
-//! is not handled here: it falls through to clap, whose `hook` command
-//! (`command`) mirrors this grammar and reports the error.
+//! launcher use, recognised before the clap tree is built. Only a leaf plugin's
+//! own name starts a plugin hook line, and each flag appears at most once.
+//! Anything else, a malformed hook line included, falls through to clap, whose
+//! `hook` command (`command`) mirrors this grammar and reports the error.
 
 use clap::{Arg, ArgMatches, Command};
 use toolu_protocol::launcher::is_name;
+
+use crate::registry::is_hook_owner;
 
 /// A command line the fast path answers without the clap tree.
 #[derive(Debug, PartialEq, Eq)]
@@ -34,7 +37,7 @@ pub(crate) fn parse(words: &[String]) -> Option<Fast> {
   match strs.as_slice() {
     ["--hook-protocol"] => Some(Fast::HookProtocol),
     ["hook", name, rest @ ..] => hook("toolu", name, rest),
-    [plugin, "hook", name, rest @ ..] if is_name(plugin) => hook(plugin, name, rest),
+    [plugin, "hook", name, rest @ ..] if is_hook_owner(plugin) => hook(plugin, name, rest),
     _ => None,
   }
 }
@@ -57,6 +60,9 @@ fn hook(plugin: &str, name: &str, flags: &[&str]) -> Option<Fast> {
       "--plugin-root" => &mut request.plugin_root,
       _ => return None,
     };
+    if slot.is_some() {
+      return None;
+    }
     *slot = Some((*value).to_owned());
   }
   Some(Fast::Hook(request))

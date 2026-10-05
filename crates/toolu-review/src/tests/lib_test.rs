@@ -14,6 +14,6 @@ fn the_toolu_review_crate_is_its_plugin_and_lists_the_planned_verbs() {
   let outcome = run(&matches, &Ctx::default());
   assert_eq!(
     outcome.stdout.as_deref(),
-    Some("toolu review is not ported yet (#432).\nPlanned verbs: write-state, status")
+    Some("toolu review is not ported yet (#432). Planned verbs: write-state, status")
   );
 }

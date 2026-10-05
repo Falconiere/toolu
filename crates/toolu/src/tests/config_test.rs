@@ -10,6 +10,6 @@ fn toolu_config_lists_its_planned_verbs() {
   let outcome = run(&matches, &Ctx::default());
   assert_eq!(
     outcome.stdout.as_deref(),
-    Some("toolu config is not ported yet (#445).\nPlanned verbs: get, set, validate")
+    Some("toolu config is not ported yet (#445). Planned verbs: get, set, validate")
   );
 }

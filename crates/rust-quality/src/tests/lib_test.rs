@@ -15,7 +15,7 @@ fn the_rust_quality_crate_is_its_plugin_and_lists_the_planned_verbs() {
   assert_eq!(
     outcome.stdout.as_deref(),
     Some(
-      "toolu rust-quality is not ported yet (#428).\nPlanned verbs: none; the command itself is planned"
+      "toolu rust-quality is not ported yet (#428). Planned verbs: none (the command itself is planned)"
     )
   );
 }

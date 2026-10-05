@@ -177,6 +177,12 @@ pub(crate) fn is_leaf_plugin(owner: &str) -> bool {
   owner != toolu_hub::PLUGIN && owner != BUILTIN
 }
 
+/// Whether `word` is a leaf plugin's own name, the first word of its `hooks.json`
+/// line (`toolu <plugin> hook <name>`). Reads the owners only: no clap command is built.
+pub(crate) fn is_hook_owner(word: &str) -> bool {
+  is_leaf_plugin(word) && NAMESPACES.iter().any(|namespace| namespace.owner == word)
+}
+
 #[cfg(test)]
 #[path = "tests/registry_test.rs"]
 mod tests;

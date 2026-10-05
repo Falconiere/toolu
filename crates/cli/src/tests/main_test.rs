@@ -55,6 +55,27 @@ fn the_fast_path_never_builds_the_tree() {
 }
 
 #[test]
+fn a_namespace_word_hook_line_runs_as_its_plugin_through_clap() {
+  let (fast, fast_calls) = counted("toolu-review hook x --event Stop");
+  let (clap, clap_calls) = counted("review hook x --event Stop");
+  let (quiet, _) = counted("--quiet review hook x --event Stop");
+  assert_eq!((fast_calls, clap_calls), (0, 1));
+  assert_eq!(clap, fast);
+  assert_eq!(quiet.exit, fast.exit);
+}
+
+#[test]
+fn a_repeated_hook_flag_is_a_usage_error_with_or_without_global_flags() {
+  for line in [
+    "hook x --event Stop --event PreToolUse",
+    "--quiet hook x --event Stop --event PreToolUse",
+  ] {
+    let (outcome, calls) = counted(line);
+    assert_eq!((outcome.exit, calls), (Exit::Usage, 1), "{line}");
+  }
+}
+
+#[test]
 fn version_builds_the_tree_once_and_prints_one_line() {
   let (outcome, calls) = counted("--version");
   assert_eq!(calls, 1);
