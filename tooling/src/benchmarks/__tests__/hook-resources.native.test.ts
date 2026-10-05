@@ -34,8 +34,12 @@ function standIn(sb: Sandbox, body: string): string {
   return sb.path("bin");
 }
 
-const GIT_TEN_TIMES =
-  'i=0; while [ "$i" -lt 10 ]; do git rev-parse --show-toplevel >/dev/null 2>&1; i=$((i+1)); done';
+/**
+ * Fifty `git` spawns per call: about 50 ms CPU on a fast CI runner and 150 ms on a
+ * loaded host, so the 10 ms budget fails it with a wide margin either way.
+ */
+const GIT_FIFTY_TIMES =
+  'i=0; while [ "$i" -lt 50 ]; do git rev-parse --show-toplevel >/dev/null 2>&1; i=$((i+1)); done';
 
 function ported(sb: Sandbox, entries: string[], budgets: object): string[] {
   const manifest = sb.write("rust-ported.json", { entries });
@@ -99,7 +103,7 @@ test(
       "1",
       ...ported(sb, ["toolu/pre-tools"], budgets),
     ];
-    const slow = await bench(flags, { TOOLU_RUST_BIN_DIR: standIn(sb, GIT_TEN_TIMES) });
+    const slow = await bench(flags, { TOOLU_RUST_BIN_DIR: standIn(sb, GIT_FIFTY_TIMES) });
     expect(slow.exitCode, slow.stderr).toBe(1);
     expect(slow.stderr).toMatch(
       /hook-bench: toolu\/pre-tools \[rust\]: cpu p50 \d+\.\d ms > budget 10 ms/,
