@@ -69,10 +69,11 @@ fn unwrap_expect_and_panic_outside_tests_fail() -> TestResult {
   )?;
   let stderr = String::from_utf8_lossy(&output.stderr);
   assert!(!output.status.success(), "{stderr}");
+  // clippy names each lint in its documentation link.
   for lint in [
-    "clippy::unwrap_used",
-    "clippy::expect_used",
-    "clippy::panic",
+    "index.html#unwrap_used",
+    "index.html#expect_used",
+    "index.html#panic",
   ] {
     assert!(stderr.contains(lint), "{lint} missing from:\n{stderr}");
   }
