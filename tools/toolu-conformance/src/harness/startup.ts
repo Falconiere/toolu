@@ -216,18 +216,15 @@ async function opencodeNotice(spec: PublishedCliSpec, notice: string): Promise<v
     TOOLU_HOST_OVERRIDE: "opencode",
     TOOLU_CONFIG_DIR: join(sb.project, ".opencode/toolu/state"),
   };
-  const [start, compact] = await Promise.all(
-    ["startup", "compact"].map((source) =>
-      runStartupHook(spec.pluginRoot, "session-start", sb, env, source),
-    ),
-  );
+  // In order, as OpenCode runs them: both publish the same helper path.
+  const start = await runStartupHook(spec.pluginRoot, "session-start", sb, env, "startup");
   expect(start).toMatchObject({ exitCode: 0, stderr: "" });
-  const started = NoticeOutput.parse(JSON.parse(start?.stdout ?? ""));
+  const started = NoticeOutput.parse(JSON.parse(start.stdout));
   expect(started.systemMessage).toBe(notice);
   expect(started.hookSpecificOutput?.additionalContext ?? "").not.toContain("deprecated");
+  const compact = await runStartupHook(spec.pluginRoot, "session-start", sb, env, "compact");
   expect(compact).toMatchObject({ exitCode: 0, stderr: "" });
-  const text = compact?.stdout ?? "";
-  const compacted = text === "" ? {} : NoticeOutput.parse(JSON.parse(text));
+  const compacted = compact.stdout === "" ? {} : NoticeOutput.parse(JSON.parse(compact.stdout));
   expect(compacted.systemMessage).toBeUndefined();
 }
 
