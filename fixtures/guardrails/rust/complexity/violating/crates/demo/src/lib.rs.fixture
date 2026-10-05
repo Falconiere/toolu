@@ -5,29 +5,60 @@ pub fn bump(value: u8) -> u8 {
   value.saturating_add(1)
 }
 
-/// Classify a triple.
-pub fn classify(a: u8, b: u8, c: u8) -> u8 {
-  let mut score = 0;
-  if a > 1 && b > 1 || c > 1 {
-    score += 1;
-  }
-  if a > 2 {
-    if b > 2 {
-      score += 2;
-    } else if c > 2 {
-      score += 3;
+/// Score the values.
+pub fn classify(values: &[u8]) -> u8 {
+  let mut score: u8 = 0;
+  for value in values {
+    if *value == 1 || *value > 41 && score < 1 {
+      score = score.saturating_add(1);
+    }
+    if *value == 2 || *value > 42 && score < 2 {
+      score = score.saturating_add(2);
+    }
+    if *value == 3 || *value > 43 && score < 3 {
+      score = score.saturating_add(3);
+    }
+    if *value == 4 || *value > 44 && score < 4 {
+      score = score.saturating_add(4);
+    }
+    if *value == 5 || *value > 45 && score < 5 {
+      score = score.saturating_add(5);
+    }
+    if *value == 6 || *value > 46 && score < 6 {
+      score = score.saturating_add(6);
+    }
+    if *value == 7 || *value > 47 && score < 7 {
+      score = score.saturating_add(7);
+    }
+    if *value == 8 || *value > 48 && score < 8 {
+      score = score.saturating_add(8);
+    }
+    if *value == 9 || *value > 49 && score < 9 {
+      score = score.saturating_add(9);
+    }
+    if *value == 10 || *value > 50 && score < 10 {
+      score = score.saturating_add(10);
+    }
+    if *value == 11 || *value > 51 && score < 11 {
+      score = score.saturating_add(11);
+    }
+    if *value == 12 || *value > 52 && score < 12 {
+      score = score.saturating_add(12);
+    }
+    if *value == 13 || *value > 53 && score < 13 {
+      score = score.saturating_add(13);
+    }
+    if *value == 14 || *value > 54 && score < 14 {
+      score = score.saturating_add(14);
+    }
+    if *value == 15 || *value > 55 && score < 15 {
+      score = score.saturating_add(15);
+    }
+    if *value == 16 || *value > 56 && score < 16 {
+      score = score.saturating_add(16);
     }
   }
-  for value in [a, b, c] {
-    if value > 3 && score < 9 || value == 7 {
-      score += 4;
-    }
-  }
-  match (a, b) {
-    (0, _) if c > 4 || b > 5 => score + 1,
-    (_, 0) if c > 5 && a > 1 => score + 2,
-    _ => score,
-  }
+  score
 }
 
 #[cfg(test)]

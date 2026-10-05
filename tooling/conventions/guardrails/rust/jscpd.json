@@ -1,11 +1,14 @@
 {
-  "path": ["crates"],
   "pattern": "**/src/**/*.rs",
-  "format": ["rust"],
+  "format": [
+    "rust"
+  ],
   "threshold": 0,
   "exitCode": 1,
   "minLines": 10,
   "minTokens": 60,
-  "reporters": ["console"],
+  "reporters": [
+    "console"
+  ],
   "gitignore": true
 }

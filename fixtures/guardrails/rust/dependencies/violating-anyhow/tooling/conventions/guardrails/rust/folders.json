@@ -1,6 +1,7 @@
 {
   "root": [
     ".claude",
+    ".gitignore",
     "Cargo.lock",
     "Cargo.toml",
     "clippy.toml",

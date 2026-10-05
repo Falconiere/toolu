@@ -55,6 +55,7 @@ pub fn series() -> u32 {
   total = total.wrapping_add(45);
   total = total.wrapping_add(46);
   total = total.wrapping_add(47);
+  total = total.wrapping_add(48);
   total
 }
 

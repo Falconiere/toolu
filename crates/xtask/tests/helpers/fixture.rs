@@ -107,12 +107,22 @@ fn overlay(from: &Path, to: &Path) -> Res<()> {
   Ok(())
 }
 
-/// Write this repository's gate data into `root`.
+/// Write this repository's gate data into `root`, keeping any file a case
+/// provides itself, and give the root manifest the repository's lint tables.
 fn install_gate_data(root: &Path) -> Res<()> {
   let repo = Path::new(REPO);
   for file in GATE_FILES {
-    fs::create_dir_all(root.join(file).parent().ok_or("no parent")?)?;
-    fs::copy(repo.join(file), root.join(file))?;
+    if !root.join(file).exists() {
+      fs::create_dir_all(root.join(file).parent().ok_or("no parent")?)?;
+      fs::copy(repo.join(file), root.join(file))?;
+    }
+  }
+  let fixture = fs::read_to_string(root.join("Cargo.toml"))?;
+  if fixture
+    .lines()
+    .any(|line| line.starts_with("[workspace.lints"))
+  {
+    return Ok(());
   }
   let manifest = fs::read_to_string(repo.join("Cargo.toml"))?;
   let start = manifest
@@ -122,7 +132,6 @@ fn install_gate_data(root: &Path) -> Res<()> {
     .find("# Hooks wrap their main")
     .ok_or("no end of lints")?;
   let lints = manifest.get(start..end).ok_or("lints out of range")?;
-  let fixture = fs::read_to_string(root.join("Cargo.toml"))?;
   fs::write(root.join("Cargo.toml"), format!("{fixture}\n{lints}"))?;
   Ok(())
 }
@@ -147,11 +156,11 @@ pub(crate) fn fixture(rule: &str, case: &str) -> Res<Fixture> {
   let fixtures = Path::new(REPO).join(FIXTURES);
   let case_dir = fixtures.join(rule).join(case);
   overlay(&fixtures.join("base"), &root)?;
-  install_gate_data(&root)?;
   overlay(&case_dir, &root)?;
   if case_dir.join("base").is_dir() {
     overlay(&case_dir.join("base"), &root)?;
   }
+  install_gate_data(&root)?;
   git(&root, &["init", "-q", "-b", "main"])?;
   git(&root, &["add", "-A"])?;
   git(
@@ -168,6 +177,7 @@ pub(crate) fn fixture(rule: &str, case: &str) -> Res<Fixture> {
   )?;
   if case_dir.join("head").is_dir() {
     overlay(&case_dir.join("head"), &root)?;
+    install_gate_data(&root)?;
   }
   let expect = parse_expect(&fs::read_to_string(case_dir.join("expect.txt"))?)?;
   Ok(Fixture {

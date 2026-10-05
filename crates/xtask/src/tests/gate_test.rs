@@ -32,11 +32,28 @@ fn a_failing_step_stops_the_gate() {
 #[test]
 fn missing_tools_fail_closed() {
   let dir = tempfile::tempdir().unwrap();
-  let err = require(dir.path(), "cargo-nope", &["nope-subcommand", "--version"]).unwrap_err();
-  assert_eq!(
-    err,
-    "cargo-nope is not installed: cargo install cargo-nope --locked (CI installs it with taiki-e/install-action)"
+  let err = require(
+    dir.path(),
+    "cargo-nope",
+    "cargo".as_ref(),
+    &["nope-subcommand", "--version"],
+  )
+  .unwrap_err();
+  assert!(
+    err.starts_with(
+      "cargo-nope is not installed: cargo install cargo-nope --locked (CI installs it with \
+       taiki-e/install-action) — error: no such command"
+    ),
+    "{err}"
   );
+  let err = require(
+    dir.path(),
+    "cargo-gone",
+    "no-such-program-xtask".as_ref(),
+    &[],
+  )
+  .unwrap_err();
+  assert!(err.contains("No such file or directory"), "{err}");
   let err = status(dir.path(), "no-such-program-xtask".as_ref(), &[], &[]).unwrap_err();
   assert!(err.starts_with("cannot run no-such-program-xtask"), "{err}");
 }

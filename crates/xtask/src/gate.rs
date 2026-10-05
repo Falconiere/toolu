@@ -83,12 +83,17 @@ fn step_run(step: &str, options: &Options) -> Result<Verdict, String> {
     "layers" => layers_check::run(options),
     "reach" => reach::run(options),
     "deny" => {
-      require(root, "cargo-deny", &["deny", "--version"])?;
+      require(root, "cargo-deny", &cargo_bin(), &["deny", "--version"])?;
       cargo(root, &["deny", "--all-features", "check"])
     }
     "machete" => {
-      require(root, "cargo-machete", &["machete", "--version"])?;
-      cargo(root, &["machete"])
+      require(
+        root,
+        "cargo-machete",
+        "cargo-machete".as_ref(),
+        &["--version"],
+      )?;
+      status(root, "cargo-machete".as_ref(), &[], &[])
     }
     "unused-pub" => unused_pub::run(options),
     "jscpd" => jscpd(root),
@@ -127,18 +132,22 @@ fn cargo(root: &Path, args: &[&str]) -> Result<Verdict, String> {
   status(root, &cargo_bin(), args, &[])
 }
 
-/// Fail closed when a cargo subcommand is missing.
-fn require(root: &Path, tool: &str, probe: &[&str]) -> Result<(), String> {
-  let found = Command::new(cargo_bin())
-    .args(probe)
-    .current_dir(root)
-    .output()
-    .is_ok_and(|output| output.status.success());
-  if found {
-    return Ok(());
-  }
+/// Fail closed when a tool is missing: `program probe` must succeed.
+fn require(
+  root: &Path,
+  tool: &str,
+  program: &std::ffi::OsStr,
+  probe: &[&str],
+) -> Result<(), String> {
+  let output = Command::new(program).args(probe).current_dir(root).output();
+  let detail = match output {
+    Ok(output) if output.status.success() => return Ok(()),
+    Ok(output) => String::from_utf8_lossy(&output.stderr).trim().to_owned(),
+    Err(err) => err.to_string(),
+  };
   Err(format!(
-    "{tool} is not installed: cargo install {tool} --locked (CI installs it with taiki-e/install-action)"
+    "{tool} is not installed: cargo install {tool} --locked (CI installs it with \
+     taiki-e/install-action) — {detail}"
   ))
 }
 
@@ -150,7 +159,7 @@ fn jscpd(root: &Path) -> Result<Verdict, String> {
     "jscpd".into()
   };
   let config = format!("{}/jscpd.json", data::DATA_DIR);
-  status(root, &program, &["--config", &config], &[])
+  status(root, &program, &["--config", &config, "crates"], &[])
     .map_err(|err| format!("{err} — jscpd is missing: run `bun install` (it is a devDependency)"))
 }
 
@@ -165,7 +174,12 @@ fn rust_quality(root: &Path) -> Result<Verdict, String> {
 }
 
 fn tests(root: &Path) -> Result<Verdict, String> {
-  require(root, "cargo-llvm-cov", &["llvm-cov", "--version"])?;
+  require(
+    root,
+    "cargo-llvm-cov",
+    &cargo_bin(),
+    &["llvm-cov", "--version"],
+  )?;
   for args in [
     &["llvm-cov", "clean", "--workspace"][..],
     &["llvm-cov", "--no-report", "--workspace", "--locked"][..],
@@ -181,7 +195,12 @@ fn tests(root: &Path) -> Result<Verdict, String> {
 /// Report the coverage of the `tests` step and judge it.
 fn coverage_step(options: &Options) -> Result<Verdict, String> {
   let root = options.root.as_path();
-  require(root, "cargo-llvm-cov", &["llvm-cov", "--version"])?;
+  require(
+    root,
+    "cargo-llvm-cov",
+    &cargo_bin(),
+    &["llvm-cov", "--version"],
+  )?;
   let report = Command::new(cargo_bin())
     .args(["llvm-cov", "report", "--json", "--summary-only"])
     .current_dir(root)

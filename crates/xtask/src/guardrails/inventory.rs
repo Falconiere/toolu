@@ -4,8 +4,6 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use syn::spanned::Spanned;
-
 use super::syntax::{line, string_literal, test_fns};
 use super::{Context, Finding};
 use crate::data::{DATA_DIR, InventoryKind};
@@ -88,7 +86,7 @@ fn discover(
       kind.file, kind.constant, kind.kind
     )
   })?;
-  Ok(Some((line(table.span()), names(&table.expr))))
+  Ok(Some((line(table.ident.span()), names(&table.expr))))
 }
 
 /// String literals that are array elements, or the first field of a tuple element.

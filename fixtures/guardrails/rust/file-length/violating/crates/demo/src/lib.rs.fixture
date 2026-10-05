@@ -594,14 +594,6 @@ pub const C293: u8 = 93;
 pub const C294: u8 = 94;
 /// Constant 295.
 pub const C295: u8 = 95;
-/// Constant 296.
-pub const C296: u8 = 96;
-/// Constant 297.
-pub const C297: u8 = 97;
-/// Constant 298.
-pub const C298: u8 = 98;
-/// Constant 299.
-pub const C299: u8 = 99;
 
 #[cfg(test)]
 #[path = "tests/lib_test.rs"]

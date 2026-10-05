@@ -1,6 +1,7 @@
 //! Rule 14: environment reads, process spawning and the standard streams only
 //! in the modules that own them (`rules.json` `capabilities`).
 
+use proc_macro2::TokenTree;
 use syn::UseTree;
 use syn::spanned::Spanned;
 use syn::visit::Visit;
@@ -126,7 +127,59 @@ impl Paths {
   }
 }
 
+impl Paths {
+  /// Paths spelled inside macro arguments, which the syntax tree keeps as tokens:
+  /// every run of identifiers joined by `::`.
+  fn tokens(&mut self, tokens: proc_macro2::TokenStream) {
+    let mut run = Run::default();
+    for tree in tokens {
+      match tree {
+        TokenTree::Ident(ident) => run.ident(&ident, self),
+        TokenTree::Punct(punct) if punct.as_char() == ':' => run.colons += 1,
+        TokenTree::Group(group) => {
+          run.end(self);
+          self.tokens(group.stream());
+        }
+        TokenTree::Punct(_) | TokenTree::Literal(_) => run.end(self),
+      }
+    }
+    run.end(self);
+  }
+}
+
+/// The identifiers of one `a::b::c` run in a token stream.
+#[derive(Default)]
+struct Run {
+  segments: Vec<String>,
+  at: usize,
+  colons: usize,
+}
+
+impl Run {
+  fn ident(&mut self, ident: &proc_macro2::Ident, paths: &mut Paths) {
+    if self.colons != 2 {
+      self.end(paths);
+      self.at = line(ident.span());
+    }
+    self.segments.push(ident.to_string());
+    self.colons = 0;
+  }
+
+  fn end(&mut self, paths: &mut Paths) {
+    if self.segments.len() > 1 {
+      paths.0.push((self.at, std::mem::take(&mut self.segments)));
+    }
+    self.segments.clear();
+    self.colons = 0;
+  }
+}
+
 impl<'ast> Visit<'ast> for Paths {
+  fn visit_macro(&mut self, mac: &'ast syn::Macro) {
+    self.tokens(mac.tokens.clone());
+    syn::visit::visit_macro(self, mac);
+  }
+
   fn visit_path(&mut self, path: &'ast syn::Path) {
     let segments = path
       .segments
