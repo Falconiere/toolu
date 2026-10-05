@@ -19,6 +19,10 @@ const OutputSchema = z.strictObject({
     hookEventName: z.literal("SessionStart"),
     additionalContext: z.string(),
   }),
+  // The deprecation notice (#403) rides beside the instruction at a start.
+  systemMessage: z.literal(
+    "context7 is deprecated and will be removed in v8.0.0; uninstall with: npx @toolu/plugins remove context7 --host opencode --yes",
+  ),
 });
 
 function contextOf(res: RunResult): string {
