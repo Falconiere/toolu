@@ -138,5 +138,5 @@ test.concurrent("the Rust jobs run the full cargo gate and both musl targets (#4
   expect(musl).toContain(
     'cargo build --workspace --release --locked --target "${{ matrix.target }}"',
   );
-  expect(musl.some((run) => run.includes("grep -Eq 'static(-pie)? linked'"))).toBe(true);
+  expect(musl.some((run) => run.includes("grep -Eq '(static-pie|statically) linked'"))).toBe(true);
 });

@@ -1,0 +1,62 @@
+{
+  "mechanism": "retrieval",
+  "tier": "deterministic",
+  "method": "tool-bytes",
+  "tokenizer": {
+    "mode": "heuristic",
+    "source": "bytes-div-4"
+  },
+  "provenance": {
+    "model": null,
+    "date": "2026-10-05",
+    "commit": "751aa517ff1c8a3b83aba85cec7da25e8576cba5",
+    "n_runs": 1,
+    "pricing_id": "2026-06-15"
+  },
+  "baseline": {
+    "label": "full-read",
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "cache_read": 0,
+      "cache_write": 0,
+      "total": 0
+    },
+    "cost": null
+  },
+  "treatment": {
+    "label": "ast-grep",
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "cache_read": 0,
+      "cache_write": 0,
+      "total": 0
+    },
+    "cost": null
+  },
+  "delta": {
+    "tokens_pct": 0,
+    "cost_pct": null,
+    "abs_tokens": 0,
+    "mean": null,
+    "stddev": null
+  },
+  "cases": [
+    {
+      "id": "toolu-export-fn",
+      "baseline_tokens": 0,
+      "treatment_tokens": 0,
+      "saved": 0,
+      "note": "missing-or-empty-target"
+    },
+    {
+      "id": "toolu-const-arrow",
+      "baseline_tokens": 0,
+      "treatment_tokens": 0,
+      "saved": 0,
+      "note": "missing-or-empty-target"
+    }
+  ],
+  "notes": "toolu-export-fn:missing-target; toolu-const-arrow:missing-target; "
+}

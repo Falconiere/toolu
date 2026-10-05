@@ -266,7 +266,8 @@ jobs:
           set -euo pipefail
           info="$(file "target/${{ matrix.target }}/release/xtask")"
           echo "$info"
-          echo "$info" | grep -Eq 'static(-pie)? linked'
+          # file(1) says "static-pie linked" (x86_64) or "statically linked" (aarch64).
+          echo "$info" | grep -Eq '(static-pie|statically) linked'
 
   # The required status. Branch protection requires `typescript`; this job
   # carries that name. `if: always()` keeps it from being skipped (a skipped
