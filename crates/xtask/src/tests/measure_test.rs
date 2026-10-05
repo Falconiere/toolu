@@ -1,7 +1,9 @@
 // Resident set and CPU are asserted in `tests/measure.rs` against the real
 // binary: in this process, `RUSAGE_CHILDREN` also counts other tests' children.
 
-use super::{measure, rss_bytes};
+use nix::sys::time::TimeVal;
+
+use super::{measure, micros, rss_bytes, unsigned};
 
 fn sh(script: &str) -> Vec<String> {
   ["sh", "-c", script].map(str::to_owned).to_vec()
@@ -44,5 +46,33 @@ fn no_command_and_an_unspawnable_one_are_errors() {
   assert!(
     err.starts_with("measure: cannot run /no/such/command:"),
     "{err}"
+  );
+}
+
+#[test]
+fn readings_convert_exactly_and_impossible_ones_fail() {
+  assert_eq!(unsigned("x", 7_i64), Ok(7));
+  assert_eq!(unsigned("wall time", u128::from(u64::MAX)), Ok(u64::MAX));
+  // The std error text in parentheses varies by toolchain; the reading itself must be named.
+  let too_big = unsigned("wall time", u128::from(u64::MAX) + 1).unwrap_err();
+  assert!(
+    too_big.starts_with("measure: wall time out of range: 18446744073709551616 ("),
+    "{too_big}"
+  );
+  let negative = unsigned("ru_maxrss", -1_i64).unwrap_err();
+  assert!(
+    negative.starts_with("measure: ru_maxrss out of range: -1 ("),
+    "{negative}"
+  );
+  assert_eq!(micros("user time", TimeVal::new(2, 500)), Ok(2_000_500));
+  assert!(
+    micros("user time", TimeVal::new(-1, 0))
+      .unwrap_err()
+      .starts_with("measure: user time out of range")
+  );
+  assert!(
+    micros("user time", TimeVal::new(i64::MAX, 0))
+      .unwrap_err()
+      .starts_with("measure: user time out of range")
   );
 }

@@ -69,18 +69,33 @@ pub(crate) fn measure(command: &[String]) -> Result<Report, String> {
     command: command.to_vec(),
     exit_code: status.code(),
     signal: status.signal(),
-    wall_us: u64::try_from(wall.as_micros()).unwrap_or(u64::MAX),
-    user_us: micros(usage.user_time()),
-    sys_us: micros(usage.system_time()),
-    max_rss_bytes: rss_bytes(u64::try_from(usage.max_rss()).unwrap_or(0)),
+    wall_us: unsigned("wall time", wall.as_micros())?,
+    user_us: micros("user time", usage.user_time())?,
+    sys_us: micros("system time", usage.system_time())?,
+    max_rss_bytes: rss_bytes(unsigned("ru_maxrss", usage.max_rss())?),
   })
 }
 
-/// `time` in whole microseconds; a negative field counts as zero.
-fn micros(time: TimeVal) -> u64 {
-  let seconds = u64::try_from(time.tv_sec()).unwrap_or(0);
-  let micros = u64::try_from(time.tv_usec()).unwrap_or(0);
-  seconds.saturating_mul(1_000_000).saturating_add(micros)
+/// `value` as a `u64`; a negative or oversized reading fails the measurement
+/// rather than being reported as a made-up number.
+pub(crate) fn unsigned<T>(what: &str, value: T) -> Result<u64, String>
+where
+  T: TryInto<u64> + Copy + std::fmt::Display,
+  T::Error: std::fmt::Display,
+{
+  value
+    .try_into()
+    .map_err(|err| format!("measure: {what} out of range: {value} ({err})"))
+}
+
+/// `time` in whole microseconds.
+pub(crate) fn micros(what: &str, time: TimeVal) -> Result<u64, String> {
+  let seconds = unsigned(what, time.tv_sec())?;
+  let micros = unsigned(what, time.tv_usec())?;
+  seconds
+    .checked_mul(1_000_000)
+    .and_then(|us| us.checked_add(micros))
+    .ok_or_else(|| format!("measure: {what} out of range: {time}"))
 }
 
 /// `ru_maxrss` in bytes: Apple kernels report bytes, the others KiB.
