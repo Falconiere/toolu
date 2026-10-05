@@ -1,5 +1,7 @@
 # exa-search — Web, Code & URL Search
 
+> **Deprecated:** exa-search will be removed in v8.0.0. Use your host's native web search and fetch tools instead. Uninstall it with `claude plugin uninstall exa-search@toolu` (Claude Code), `codex plugin remove exa-search@toolu` (Codex) or `npx @toolu/plugins remove exa-search --host opencode --yes` (OpenCode). Until then it keeps working and shows a one-line notice when a session starts.
+
 **Type:** Knowledge | **Version:** 6.5.0 | **Standalone** (no dependencies)
 
 Web search, code-example search, URL crawling, and deep research via the Exa REST API — a skill plus a TypeScript REST CLI (an executable Bun bundle, published as `search.sh`).

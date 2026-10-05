@@ -1,5 +1,7 @@
 # jira
 
+> **Deprecated:** jira will be removed in v8.0.0. For Jira epics, use epic-orchestrator's built-in Jira tracker instead. Uninstall it with `claude plugin uninstall jira@toolu` (Claude Code), `codex plugin remove jira@toolu` (Codex) or `npx @toolu/plugins remove jira --host opencode --yes` (OpenCode). Until then it keeps working and shows a one-line notice when a session starts.
+
 Jira issue search and workflow from the session via a REST wrapper — a skill plus a TypeScript CLI on Bun. Cloud + Server/DC, read and safe writes.
 
 ## Install

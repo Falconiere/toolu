@@ -1,5 +1,7 @@
 # jira — Jira Issue Search & Workflow
 
+> **Deprecated:** jira will be removed in v8.0.0. For Jira epics, use epic-orchestrator's built-in Jira tracker instead. Uninstall it with `claude plugin uninstall jira@toolu` (Claude Code), `codex plugin remove jira@toolu` (Codex) or `npx @toolu/plugins remove jira --host opencode --yes` (OpenCode). Until then it keeps working and shows a one-line notice when a session starts.
+
 **Type:** Workflow | **Version:** 6.5.0 | **Standalone** (no dependencies)
 
 Jira issue search and workflow from the session via a REST wrapper — a skill plus a TypeScript CLI on Bun. Works with Jira Cloud and Server/Data Center, supporting both read and safe writes.
