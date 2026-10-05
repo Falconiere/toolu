@@ -1,6 +1,6 @@
 # Deprecation notice for exa-search, context7, jira and agent-browser — Design
 
-**Date:** 2026-10-05   **Status:** Draft   **Author:** Claude (epic worker, #403)   **Topic:** One release of notice before #406 removes four plugins
+**Date:** 2026-10-05   **Status:** Approved   **Author:** Claude (epic worker, #403)   **Topic:** One release of notice before #406 removes four plugins
 
 ## Problem
 
@@ -47,13 +47,20 @@ export function pluginUninstallCommand(name: string, options?: HostOptions): str
 export const REMOVAL_RELEASE = "v8.0.0";
 /** "<plugin> is deprecated and will be removed in v8.0.0; uninstall with: <command>" */
 export function deprecationNotice(plugin: string, options?: HostOptions): string;
-/** The hook's whole stdout: `context` (may be undefined) plus the notice as `systemMessage`. */
+/**
+ * The hook's whole stdout: `context` (may be undefined) plus the notice as
+ * `systemMessage`; on OpenCode with `compacting`, `context` alone ("" when absent).
+ */
 export function deprecatedStartupOutput(
   plugin: string,
   context: SessionContext | undefined,
-  options?: HostOptions,
+  options?: HostOptions & { compacting?: boolean },
 ): string;
+/** SessionStart stdin's `source === "compact"`; unreadable stdin is a plain start. */
+export function startedByCompaction(stdin?: Promise<string>): Promise<boolean>;
 ```
+
+exa-search and agent-browser read stdin through `startedByCompaction()` only on OpenCode, so Claude Code and Codex behaviour is untouched. context7 and jira keep their existing `compacting()`. Refactoring them is out of scope.
 
 Host commands (Claude Code's `claude plugin uninstall` and Codex's `codex plugin remove` are the argv `tools/toolu-cli/src/host/{claude,codex}.ts` already runs; OpenCode's is documented in `docs/opencode.md#update-roll-back-and-remove`):
 
@@ -94,6 +101,7 @@ Replacement sentences:
 - **AC-5:** The notice is never `additionalContext`. On Claude Code and Codex the stdout object has no `hookSpecificOutput` key. On OpenCode the notice text never appears in `additionalContext`.
 - **AC-6:** The four plugin READMEs, `docs/{exa-search,context7,jira}/README.md` and `plugins/agent-browser/skills/agent-browser/SKILL.md` (with its generated OpenCode copy) carry the banner naming v8.0.0 and the replacement. `check:opencode-surface` and the docs-sync gate pass.
 - **AC-7:** `bun run test` is green.
+- **AC-8:** The PR title, which becomes the squash commit, is a `feat(deprecation):` Conventional Commit, so release-please lists the deprecation in CHANGELOG.
 
 ## Acceptance evidence
 
@@ -103,8 +111,9 @@ Replacement sentences:
 | AC-3, AC-5 | The real toolu and plugin bundles through `createTooluHooks`, a project selecting all four | One log line per plugin, none added by `tool.execute.before`, `tool.execute.after` or a compaction | Compaction (`source: "compact"`) | `bun test tools/toolu-opencode/src/plugin/__tests__/deprecation-notice.test.ts` |
 | AC-3 | exa-search and agent-browser on OpenCode, as in the existing per-plugin tests | `hookSpecificOutput` unchanged plus `systemMessage` | No key, and compact source | `bun test plugins/{exa-search,agent-browser}/hooks/src/__tests__/session-start.test.ts` |
 | AC-4 | Every host name | Exact command or `null` | Cursor and Hermes | `bun test packages/toolu-core/src/startup/__tests__/deprecation.test.ts` |
-| AC-6 | The edited Markdown files | Banner present. Generated surface matches | Generated drift | `bun run check:opencode-surface` and `bun test packages/toolu-core/src/startup/__tests__/deprecation.test.ts` (banner check over the eight files) |
+| AC-6 | The edited Markdown files | Banner present. Generated surface matches | Generated drift | `bun run check:opencode-surface` and `bun test tooling/src/__tests__/deprecation-banners.test.ts` (banner check over the eight files); the docs-sync push gate does not block the push |
 | AC-7 | Whole repository | Green | — | `bun run test` |
+| AC-8 | The opened PR | Title starts `feat(deprecation):` | — | `gh pr view <n> --json title` |
 
 ## Documentation impact
 
