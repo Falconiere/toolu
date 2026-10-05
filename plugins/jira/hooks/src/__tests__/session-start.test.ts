@@ -16,4 +16,12 @@ publishedCliSuite({
     JIRA_API_TOKEN: "jira-test",
   },
   probe: { args: [], exitCode: 1, output: "plan         init|run|status|path" },
+  notice: {
+    claude:
+      "jira is deprecated and will be removed in v8.0.0; uninstall with: claude plugin uninstall jira@toolu",
+    codex:
+      "jira is deprecated and will be removed in v8.0.0; uninstall with: codex plugin remove jira@toolu",
+    opencode:
+      "jira is deprecated and will be removed in v8.0.0; uninstall with: npx @toolu/plugins remove jira --host opencode --yes",
+  },
 });

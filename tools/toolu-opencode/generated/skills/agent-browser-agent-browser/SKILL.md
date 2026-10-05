@@ -4,6 +4,8 @@ name: "agent-browser-agent-browser"
 ---
 # Agent Browser — token-lean browser automation
 
+> **Deprecated:** agent-browser will be removed in v8.0.0. It has no replacement. Uninstall it with `claude plugin uninstall agent-browser@toolu` (Claude Code), `codex plugin remove agent-browser@toolu` (Codex) or `npx @toolu/plugins remove agent-browser --host opencode --yes` (OpenCode). Until then it keeps working and shows a one-line notice when a session starts.
+
 Drive a real Chromium via [agent-browser](https://github.com/vercel-labs/agent-browser)
 (a Rust CLI + persistent daemon). The efficient path is the **accessibility
 tree**: `snapshot` returns `role "name" [ref=eN]` text with stable `@eN` refs —

@@ -22,6 +22,14 @@ publishedCliSuite({
     exitCode: 127,
     output: "agent-browser not found",
   },
+  notice: {
+    claude:
+      "agent-browser is deprecated and will be removed in v8.0.0; uninstall with: claude plugin uninstall agent-browser@toolu",
+    codex:
+      "agent-browser is deprecated and will be removed in v8.0.0; uninstall with: codex plugin remove agent-browser@toolu",
+    opencode:
+      "agent-browser is deprecated and will be removed in v8.0.0; uninstall with: npx @toolu/plugins remove agent-browser --host opencode --yes",
+  },
 });
 
 test("OpenCode startup names the published helper and native browser skill", async () => {

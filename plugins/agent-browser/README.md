@@ -1,5 +1,7 @@
 # agent-browser
 
+> **Deprecated:** agent-browser will be removed in v8.0.0. It has no replacement. Uninstall it with `claude plugin uninstall agent-browser@toolu` (Claude Code), `codex plugin remove agent-browser@toolu` (Codex) or `npx @toolu/plugins remove agent-browser --host opencode --yes` (OpenCode). Until then it keeps working and shows a one-line notice when a session starts.
+
 Efficient, token-lean browser automation for agents via agent-browser (skill + CLI wrapper) — accessibility-tree snapshots with @eN refs instead of HTML/screenshots.
 
 ## Install

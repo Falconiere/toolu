@@ -161,6 +161,47 @@ function configRoot(options = {}) {
   const { env, host } = resolveHost(options);
   return envValue(env, "TOOLU_CONFIG_DIR") ?? NATIVE_CONFIG_ROOT[host](env);
 }
+function requireNonEmpty(fn, values) {
+  for (const [key, value] of Object.entries(values)) {
+    if (value === "") {
+      throw new TypeError(`${fn}: ${key} must be non-empty`);
+    }
+  }
+}
+var UNINSTALL = {
+  claude: (name) => `claude plugin uninstall ${name}@toolu`,
+  codex: (name) => `codex plugin remove ${name}@toolu`,
+  cursor: null,
+  hermes: null,
+  opencode: (name) => `npx @toolu/plugins remove ${name} --host opencode --yes`
+};
+function pluginUninstallCommand(name, options = {}) {
+  requireNonEmpty("pluginUninstallCommand", { name });
+  return UNINSTALL[resolveHost(options).host]?.(name) ?? null;
+}
+// packages/toolu-core/src/startup/deprecation.ts
+var REMOVAL_RELEASE = "v8.0.0";
+function deprecationNotice(plugin, options = {}) {
+  const command = pluginUninstallCommand(plugin, options);
+  const how = command === null ? "uninstall it with your host's plugin manager" : `uninstall with: ${command}`;
+  return `${plugin} is deprecated and will be removed in ${REMOVAL_RELEASE}; ${how}`;
+}
+function deprecatedStartupOutput(plugin, context, options = {}) {
+  const resolved = resolveHost(options);
+  if (resolved.host === "opencode" && options.compacting === true) {
+    return context === undefined ? "" : renderHookOutput(context, false);
+  }
+  return renderHookOutput({ ...context, systemMessage: deprecationNotice(plugin, resolved) }, false);
+}
+async function startedByCompaction(stdin = Bun.stdin.text()) {
+  let input;
+  try {
+    input = JSON.parse(await stdin);
+  } catch {
+    return false;
+  }
+  return input !== null && typeof input === "object" && "source" in input && input.source === "compact";
+}
 // packages/toolu-core/src/startup/publish.ts
 import { randomUUID } from "crypto";
 import {
@@ -266,8 +307,10 @@ var published = publishBunCli({
   name: "agent-browser.sh",
   tool: "agent-browser wrapper"
 });
-if (process.env.TOOLU_HOST_OVERRIDE === "opencode" && published.status === "published") {
-  const context = sessionContext("SessionStart", `agent-browser is ready at ${published.path}. Load the native skill agent-browser-agent-browser when driving a real browser. Use the helper to open the page, snapshot its accessibility tree, act on an @eN ref, re-snapshot after changes, then close. The external agent-browser binary and Chromium are prerequisites; if missing, follow the helper's install diagnostic.`);
-  if (context !== undefined)
-    process.stdout.write(renderHookOutput(context, false));
+var onOpencode = process.env.TOOLU_HOST_OVERRIDE === "opencode";
+var context;
+if (onOpencode && published.status === "published") {
+  context = sessionContext("SessionStart", `agent-browser is ready at ${published.path}. Load the native skill agent-browser-agent-browser when driving a real browser. Use the helper to open the page, snapshot its accessibility tree, act on an @eN ref, re-snapshot after changes, then close. The external agent-browser binary and Chromium are prerequisites; if missing, follow the helper's install diagnostic.`);
 }
+var compacting = onOpencode && await startedByCompaction();
+process.stdout.write(deprecatedStartupOutput("agent-browser", context, { compacting }));

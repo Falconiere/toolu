@@ -1,5 +1,7 @@
 # context7 — Live Library Documentation Lookup
 
+> **Deprecated:** context7 will be removed in v8.0.0. Use your host's native web search and fetch tools instead. Uninstall it with `claude plugin uninstall context7@toolu` (Claude Code), `codex plugin remove context7@toolu` (Codex) or `npx @toolu/plugins remove context7 --host opencode --yes` (OpenCode). Until then it keeps working and shows a one-line notice when a session starts.
+
 **Type:** Knowledge | **Version:** 6.5.0 | **Standalone** (no dependencies)
 
 Library documentation and code-example lookup via the Context7 REST API — a skill plus a TypeScript REST CLI (an executable Bun bundle, published as `search.sh`).

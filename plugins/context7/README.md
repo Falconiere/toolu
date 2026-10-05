@@ -1,5 +1,7 @@
 # context7
 
+> **Deprecated:** context7 will be removed in v8.0.0. Use your host's native web search and fetch tools instead. Uninstall it with `claude plugin uninstall context7@toolu` (Claude Code), `codex plugin remove context7@toolu` (Codex) or `npx @toolu/plugins remove context7 --host opencode --yes` (OpenCode). Until then it keeps working and shows a one-line notice when a session starts.
+
 Library documentation & code-example lookup via Context7 — a skill plus a REST wrapper.
 
 ## Install
