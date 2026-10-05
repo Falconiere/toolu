@@ -8,9 +8,10 @@
  * in the host log (`--print-logs`); enforcement is read from the tool states and
  * from the files on disk.
  */
-import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { z } from "zod";
 import { envOr } from "../env.ts";
 import { packInto, stageOpencode } from "../npm-pack.ts";
 import { runHost, toolStates } from "./host-run.ts";
@@ -20,6 +21,8 @@ import { openSession, type ProbeSession, type SessionOptions } from "./session.t
 
 export const ROOT = resolve(import.meta.dir, "../../..");
 const PACKAGE_DIR = join(ROOT, "tools/toolu-opencode");
+const CORE_DIR = join(ROOT, "packages/toolu-core");
+const CORE_PACKAGE = "@toolu/core";
 const ENV_BYTES = "SECRET=1\n";
 
 export type EntryContext = ScenarioContext & { tarball: string };
@@ -46,16 +49,35 @@ export const PROJECT_FILES = {
   ".opencode/toolu/plugins.json": JSON.stringify({ version: 1, enabled: ["toolu"] }),
 };
 
+const StagedManifest = z.looseObject({ dependencies: z.record(z.string(), z.string()) });
+
+/**
+ * Point the staged package's `@toolu/core` at the checkout's core, packed into
+ * `workDir`. A release raises the `^X.Y.Z` floor before that core is on the
+ * registry, so the npm route would otherwise fail to install the tarball. A
+ * tarball, not the directory: a `file:` directory would link into the checkout.
+ */
+export function pinCheckoutCore(stage: string, workDir: string): string {
+  const core = packInto(CORE_DIR, workDir);
+  const path = join(stage, "package.json");
+  const manifest = StagedManifest.parse(JSON.parse(readFileSync(path, "utf8")));
+  manifest.dependencies[CORE_PACKAGE] = `file:${core}`;
+  writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`);
+  return core;
+}
+
 /**
  * Pack the package the way npm publishes it: `npm pack` over a temp copy runs
- * the package's own prepack and applies its `files` field. `edit` may change
- * the copy first, to make a distinct release.
+ * the package's own prepack and applies its `files` field. Its `@toolu/core`
+ * is the checkout's (`pinCheckoutCore`). `edit` may change the copy first, to
+ * make a distinct release.
  */
 export function packTarball(
   workDir: string,
   edit: (stage: string) => void = () => undefined,
 ): string {
   const stage = stageOpencode(workDir);
+  pinCheckoutCore(stage, workDir);
   edit(stage);
   return packInto(stage, workDir);
 }
