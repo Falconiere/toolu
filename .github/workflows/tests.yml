@@ -233,7 +233,8 @@ jobs:
         run: npm install -g @ast-grep/cli
 
       # The quality bar (#455): format, clippy, guardrails, layers, reach, deny,
-      # machete, unused-pub, hooks, jscpd, rust-quality, tests, coverage, docs, and
+      # machete, unused-pub, hooks, docs-cli, cli-compat, jscpd, rust-quality, tests,
+      # coverage, docs, and
       # check-gate-change against the PR base (or the pushed range).
       - name: cargo xtask gate
         env:
@@ -258,6 +259,12 @@ jobs:
             sudo rm -f "$dir/toolu"
             [ "$status" -eq 0 ] || exit "$status"
           done
+
+      # The `toolu --version` startup budget (#442, docs/resource-budgets.md) on
+      # the release binary the previous step built. Linux gates; macOS is not gated.
+      - name: toolu --version startup budget
+        if: runner.os == 'Linux'
+        run: cargo xtask check-startup --bin target/release/toolu
 
   # Static Linux builds (#411) from the first Rust PR, not first at release
   # time: a release build per musl target, and the binary must be static.

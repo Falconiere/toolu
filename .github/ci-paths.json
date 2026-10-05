@@ -52,7 +52,9 @@
       "plugins/rust-quality/**",
       "plugins/*/hooks/hooks.json",
       "plugins/*/.claude-plugin/plugin.json",
-      "plugins/*/.codex-plugin/plugin.json"
+      "plugins/*/.codex-plugin/plugin.json",
+      "docs/cli/**",
+      "benchmarks/startup-budgets.json"
     ],
     "ports": [
       "fixtures/rust-ported.json",

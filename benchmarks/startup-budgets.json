@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "command": ["--version"],
+  "warmup": 3,
+  "runs": 30,
+  "percentile": 50,
+  "wallMs": 4
+}

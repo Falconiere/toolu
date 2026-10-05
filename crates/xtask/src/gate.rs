@@ -7,7 +7,18 @@ use std::time::Instant;
 
 use crate::options::Options;
 use crate::{Verdict, check_hooks, coverage, data, gate_change, guardrails, layers_check, output};
-use crate::{reach, unused_pub};
+use crate::{cli_compat, docs_cli, reach, unused_pub};
+
+/// The clippy invocation: every target, warnings denied.
+const CLIPPY: &[&str] = &[
+  "clippy",
+  "--workspace",
+  "--all-targets",
+  "--locked",
+  "--",
+  "-D",
+  "warnings",
+];
 
 /// The steps, in the order they run.
 pub(crate) const STEPS: &[&str] = &[
@@ -21,6 +32,8 @@ pub(crate) const STEPS: &[&str] = &[
   "machete",
   "unused-pub",
   "hooks",
+  "docs-cli",
+  "cli-compat",
   "jscpd",
   "rust-quality",
   "tests",
@@ -68,18 +81,7 @@ fn step_run(step: &str, options: &Options) -> Result<Verdict, String> {
   match step {
     "gate-change" => gate_change::run(options),
     "fmt" => cargo(root, &["fmt", "--all", "--check"]),
-    "clippy" => cargo(
-      root,
-      &[
-        "clippy",
-        "--workspace",
-        "--all-targets",
-        "--locked",
-        "--",
-        "-D",
-        "warnings",
-      ],
-    ),
+    "clippy" => cargo(root, CLIPPY),
     "guardrails" => guardrails::run(options),
     "layers" => layers_check::run(options),
     "reach" => reach::run(options),
@@ -99,6 +101,8 @@ fn step_run(step: &str, options: &Options) -> Result<Verdict, String> {
     }
     "unused-pub" => unused_pub::run(options),
     "hooks" => check_hooks::run(options),
+    "docs-cli" => docs_cli::check(options),
+    "cli-compat" => cli_compat::run(options),
     "jscpd" => jscpd(root),
     "rust-quality" => rust_quality(root),
     "tests" => tests(root),

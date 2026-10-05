@@ -16,6 +16,10 @@ Hooks and registry contributions run as bundled TypeScript on Bun. Document the 
 
 Keep `name`, `version`, and `description` identical in the plugin's `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`. Declare `./skills/` and `./hooks/hooks.json` in the Codex manifest when those directories exist, then add matching entries to both marketplaces.
 
+## Crate
+
+`crates/<NAME>` is this plugin's Rust library. It contributes the `toolu <namespace>` commands that this plugin's skills, commands, agents and `hooks.json` run; the generated reference is [docs/cli/](../../docs/cli/README.md). <NAMESPACE-NOTE — name the namespace and its verbs. Before the port: "Not ported yet; `toolu <namespace> planned` names the planned verbs." A Markdown-only plugin has a guide namespace with no verbs.>
+
 ## What it provides
 
 - <SKILL/COMMAND/HOOK by name — what the user actually invokes or what fires.>

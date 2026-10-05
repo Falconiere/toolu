@@ -1,0 +1,1274 @@
+{
+  "about": "The one binary behind every toolu plugin's hooks, skills and commands",
+  "commands": [
+    {
+      "about": "Run a hook entry; hooks.json calls it (internal)",
+      "aliases": [],
+      "args": [
+        {
+          "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+          "multiple": false,
+          "name": "NAME",
+          "required": true
+        }
+      ],
+      "commands": [],
+      "flags": [
+        {
+          "global": false,
+          "help": "The host event it is registered under; absent counts as enforcing",
+          "hidden": false,
+          "long": "event",
+          "possibleValues": [],
+          "required": false,
+          "short": null,
+          "takesValue": true,
+          "valueName": "EVENT"
+        },
+        {
+          "global": false,
+          "help": "The calling plugin's root, for the version-skew check",
+          "hidden": false,
+          "long": "plugin-root",
+          "possibleValues": [],
+          "required": false,
+          "short": null,
+          "takesValue": true,
+          "valueName": "DIR"
+        }
+      ],
+      "hidden": false,
+      "longAbout": null,
+      "name": "hook",
+      "owner": "toolu",
+      "path": [
+        "hook"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "The plan ledger, verdicts and push waivers",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#421): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "toolu",
+          "path": [
+            "ledger",
+            "planned"
+          ],
+          "placeholder": true
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "ledger",
+      "owner": "toolu",
+      "path": [
+        "ledger"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Debugging helpers: I/O capture, logs, stacks and failing tests",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#425): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "toolu",
+          "path": [
+            "debug",
+            "planned"
+          ],
+          "placeholder": true
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "debug",
+      "owner": "toolu",
+      "path": [
+        "debug"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Preview, install or remove toolu's agent profiles",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#445): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "toolu",
+          "path": [
+            "setup",
+            "planned"
+          ],
+          "placeholder": true
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "setup",
+      "owner": "toolu",
+      "path": [
+        "setup"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Check the toolu installation and name what is wrong",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#445): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "toolu",
+          "path": [
+            "doctor",
+            "planned"
+          ],
+          "placeholder": true
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "doctor",
+      "owner": "toolu",
+      "path": [
+        "doctor"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Read, change and validate toolu.config.json",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#445): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "toolu",
+          "path": [
+            "config",
+            "planned"
+          ],
+          "placeholder": true
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "config",
+      "owner": "toolu",
+      "path": [
+        "config"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Show the repository, gate and plugin status",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#445): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "toolu",
+          "path": [
+            "status",
+            "planned"
+          ],
+          "placeholder": true
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "status",
+      "owner": "toolu",
+      "path": [
+        "status"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Serve the OpenCode shim over standard I/O",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#437): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "toolu",
+          "path": [
+            "serve",
+            "planned"
+          ],
+          "placeholder": true
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "serve",
+      "owner": "toolu",
+      "path": [
+        "serve"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "TypeScript quality rules that run after each edit",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#426): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "ts-quality",
+          "path": [
+            "ts-quality",
+            "planned"
+          ],
+          "placeholder": true
+        },
+        {
+          "about": "Run a hook entry; hooks.json calls it (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The host event it is registered under; absent counts as enforcing",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EVENT"
+            },
+            {
+              "global": false,
+              "help": "The calling plugin's root, for the version-skew check",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": true,
+          "longAbout": null,
+          "name": "hook",
+          "owner": "ts-quality",
+          "path": [
+            "ts-quality",
+            "hook"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "ts-quality",
+      "owner": "ts-quality",
+      "path": [
+        "ts-quality"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Python quality rules that run after each edit",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#427): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "python-quality",
+          "path": [
+            "python-quality",
+            "planned"
+          ],
+          "placeholder": true
+        },
+        {
+          "about": "Run a hook entry; hooks.json calls it (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The host event it is registered under; absent counts as enforcing",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EVENT"
+            },
+            {
+              "global": false,
+              "help": "The calling plugin's root, for the version-skew check",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": true,
+          "longAbout": null,
+          "name": "hook",
+          "owner": "python-quality",
+          "path": [
+            "python-quality",
+            "hook"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "python-quality",
+      "owner": "python-quality",
+      "path": [
+        "python-quality"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Rust quality rules that run after each edit",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#428): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "rust-quality",
+          "path": [
+            "rust-quality",
+            "planned"
+          ],
+          "placeholder": true
+        },
+        {
+          "about": "Run a hook entry; hooks.json calls it (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The host event it is registered under; absent counts as enforcing",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EVENT"
+            },
+            {
+              "global": false,
+              "help": "The calling plugin's root, for the version-skew check",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": true,
+          "longAbout": null,
+          "name": "hook",
+          "owner": "rust-quality",
+          "path": [
+            "rust-quality",
+            "hook"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "rust-quality",
+      "owner": "rust-quality",
+      "path": [
+        "rust-quality"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Structural code search and rewrite with ast-grep",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#429): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "ast-grep",
+          "path": [
+            "ast-grep",
+            "planned"
+          ],
+          "placeholder": true
+        },
+        {
+          "about": "Run a hook entry; hooks.json calls it (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The host event it is registered under; absent counts as enforcing",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EVENT"
+            },
+            {
+              "global": false,
+              "help": "The calling plugin's root, for the version-skew check",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": true,
+          "longAbout": null,
+          "name": "hook",
+          "owner": "ast-grep",
+          "path": [
+            "ast-grep",
+            "hook"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "ast-grep",
+      "owner": "ast-grep",
+      "path": [
+        "ast-grep"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Think a change through before building (a Markdown-only plugin)",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Run a hook entry; hooks.json calls it (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The host event it is registered under; absent counts as enforcing",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EVENT"
+            },
+            {
+              "global": false,
+              "help": "The calling plugin's root, for the version-skew check",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": true,
+          "longAbout": null,
+          "name": "hook",
+          "owner": "brainstorm",
+          "path": [
+            "brainstorm",
+            "hook"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": "brainstorm is a Markdown-only plugin: it has no verbs. Its skill thinks a change through before building: evidence-backed triage, alternatives, trade-offs and a recommended approach, without editing code.\n\nRun it as /brainstorm:brainstorm in Claude Code or $brainstorm:brainstorm in Codex. delivery-flow runs it as its first phase.",
+      "name": "brainstorm",
+      "owner": "brainstorm",
+      "path": [
+        "brainstorm"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Deliver a task end to end, from brainstorm to a babysat PR (a Markdown-only plugin)",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Run a hook entry; hooks.json calls it (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The host event it is registered under; absent counts as enforcing",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EVENT"
+            },
+            {
+              "global": false,
+              "help": "The calling plugin's root, for the version-skew check",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": true,
+          "longAbout": null,
+          "name": "hook",
+          "owner": "delivery-flow",
+          "path": [
+            "delivery-flow",
+            "hook"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": "delivery-flow is a Markdown-only plugin: it has no verbs. Its one skill delivers a task end to end: brainstorm, an approved spec and plan, real-data execution, the pull request and the pr-babysit handoff.\n\nRun it as /delivery-flow:delivery-flow in Claude Code or $delivery-flow:delivery-flow in Codex.",
+      "name": "delivery-flow",
+      "owner": "delivery-flow",
+      "path": [
+        "delivery-flow"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Pre-push code review that mirrors the CI review bot",
+      "aliases": [
+        "toolu-review"
+      ],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#432): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "toolu-review",
+          "path": [
+            "review",
+            "planned"
+          ],
+          "placeholder": true
+        },
+        {
+          "about": "Run a hook entry; hooks.json calls it (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The host event it is registered under; absent counts as enforcing",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EVENT"
+            },
+            {
+              "global": false,
+              "help": "The calling plugin's root, for the version-skew check",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": true,
+          "longAbout": null,
+          "name": "hook",
+          "owner": "toolu-review",
+          "path": [
+            "review",
+            "hook"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "review",
+      "owner": "toolu-review",
+      "path": [
+        "review"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Typed judgments from Jev: yes/no probabilities, choices and scores",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#430): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "jev",
+          "path": [
+            "jev",
+            "planned"
+          ],
+          "placeholder": true
+        },
+        {
+          "about": "Run a hook entry; hooks.json calls it (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The host event it is registered under; absent counts as enforcing",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EVENT"
+            },
+            {
+              "global": false,
+              "help": "The calling plugin's root, for the version-skew check",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": true,
+          "longAbout": null,
+          "name": "hook",
+          "owner": "jev",
+          "path": [
+            "jev",
+            "hook"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "jev",
+      "owner": "jev",
+      "path": [
+        "jev"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Project status for the host's status line",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#431): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "statusline",
+          "path": [
+            "statusline",
+            "planned"
+          ],
+          "placeholder": true
+        },
+        {
+          "about": "Run a hook entry; hooks.json calls it (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The host event it is registered under; absent counts as enforcing",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EVENT"
+            },
+            {
+              "global": false,
+              "help": "The calling plugin's root, for the version-skew check",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": true,
+          "longAbout": null,
+          "name": "hook",
+          "owner": "statusline",
+          "path": [
+            "statusline",
+            "hook"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "statusline",
+      "owner": "statusline",
+      "path": [
+        "statusline"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Babysit a PR until CI, review threads and the review-bot verdict are clear",
+      "aliases": [
+        "pr-babysit"
+      ],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#433): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "pr-babysit",
+          "path": [
+            "babysit",
+            "planned"
+          ],
+          "placeholder": true
+        },
+        {
+          "about": "Run a hook entry; hooks.json calls it (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The host event it is registered under; absent counts as enforcing",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EVENT"
+            },
+            {
+              "global": false,
+              "help": "The calling plugin's root, for the version-skew check",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": true,
+          "longAbout": null,
+          "name": "hook",
+          "owner": "pr-babysit",
+          "path": [
+            "babysit",
+            "hook"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "babysit",
+      "owner": "pr-babysit",
+      "path": [
+        "babysit"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Drive an epic to merged PRs: the resident engine, merge queue and trackers",
+      "aliases": [
+        "epic-orchestrator"
+      ],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#434, #435, #448): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "planned"
+          ],
+          "placeholder": true
+        },
+        {
+          "about": "Run a hook entry; hooks.json calls it (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The host event it is registered under; absent counts as enforcing",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EVENT"
+            },
+            {
+              "global": false,
+              "help": "The calling plugin's root, for the version-skew check",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": true,
+          "longAbout": null,
+          "name": "hook",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "hook"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "epic",
+      "owner": "epic-orchestrator",
+      "path": [
+        "epic"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "List every toolu command; --json exports the tree for tools and docs",
+      "aliases": [],
+      "args": [],
+      "commands": [],
+      "flags": [
+        {
+          "global": false,
+          "help": "Print the JSON Schema of every --json document instead",
+          "hidden": false,
+          "long": "schema",
+          "possibleValues": [],
+          "required": false,
+          "short": null,
+          "takesValue": false,
+          "valueName": null
+        }
+      ],
+      "hidden": false,
+      "longAbout": null,
+      "name": "commands",
+      "owner": "toolu-cli",
+      "path": [
+        "commands"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Install, list, remove and update toolu plugins on every host",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Not ported yet (#438): show the planned verbs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "planned",
+          "owner": "toolu-cli",
+          "path": [
+            "plugins",
+            "planned"
+          ],
+          "placeholder": true
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "plugins",
+      "owner": "toolu-cli",
+      "path": [
+        "plugins"
+      ],
+      "placeholder": false
+    }
+  ],
+  "exitCodes": [
+    {
+      "code": 0,
+      "meaning": "the command did what was asked",
+      "name": "success"
+    },
+    {
+      "code": 1,
+      "meaning": "the command ran and failed",
+      "name": "failure"
+    },
+    {
+      "code": 2,
+      "meaning": "a hook or gate blocked or denied the action",
+      "name": "blocked"
+    },
+    {
+      "code": 64,
+      "meaning": "the command line is wrong",
+      "name": "usage"
+    },
+    {
+      "code": 69,
+      "meaning": "a dependency (for example `gh`) is missing or unreachable",
+      "name": "unavailable"
+    },
+    {
+      "code": 75,
+      "meaning": "a temporary failure; the caller may retry",
+      "name": "tempfail"
+    }
+  ],
+  "flags": [
+    {
+      "global": true,
+      "help": "Print exactly one JSON document on stdout",
+      "hidden": false,
+      "long": "json",
+      "possibleValues": [],
+      "required": false,
+      "short": null,
+      "takesValue": false,
+      "valueName": null
+    },
+    {
+      "global": true,
+      "help": "Drop the diagnostics of a successful run",
+      "hidden": false,
+      "long": "quiet",
+      "possibleValues": [],
+      "required": false,
+      "short": "q",
+      "takesValue": false,
+      "valueName": null
+    },
+    {
+      "global": true,
+      "help": "The host to act for, instead of the detected one",
+      "hidden": false,
+      "long": "host",
+      "possibleValues": [
+        "claude",
+        "codex",
+        "opencode",
+        "cursor",
+        "hermes"
+      ],
+      "required": false,
+      "short": null,
+      "takesValue": true,
+      "valueName": "HOST"
+    },
+    {
+      "global": true,
+      "help": "Read the toolu config from DIR instead of the host's default",
+      "hidden": false,
+      "long": "config-dir",
+      "possibleValues": [],
+      "required": false,
+      "short": null,
+      "takesValue": true,
+      "valueName": "DIR"
+    },
+    {
+      "global": false,
+      "help": "Print the hook-interface version the launcher checks",
+      "hidden": true,
+      "long": "hook-protocol",
+      "possibleValues": [],
+      "required": false,
+      "short": null,
+      "takesValue": false,
+      "valueName": null
+    },
+    {
+      "global": false,
+      "help": "Print version",
+      "hidden": false,
+      "long": "version",
+      "possibleValues": [],
+      "required": false,
+      "short": "V",
+      "takesValue": false,
+      "valueName": null
+    }
+  ],
+  "hookProtocol": 1,
+  "name": "toolu",
+  "schema": "toolu.commands/v1"
+}

@@ -86,3 +86,11 @@ fn the_separator_is_never_an_option_value() {
     "--out needs a value"
   );
 }
+
+#[test]
+fn check_is_a_flag_without_a_value() {
+  let options = Options::parse(&words(&["--check", "--bin", "/t/toolu"])).unwrap();
+  assert!(options.check);
+  assert_eq!(options.bin, Some(PathBuf::from("/t/toolu")));
+  assert!(!Options::parse(&words(&[])).unwrap().check);
+}

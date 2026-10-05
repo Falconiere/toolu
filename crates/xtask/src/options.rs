@@ -29,6 +29,8 @@ pub(crate) struct Options {
   pub(crate) out: Option<PathBuf>,
   /// The command `measure` runs: every word after `--`.
   pub(crate) command: Vec<String>,
+  /// Compare instead of writing (`--check`, `docs-cli`).
+  pub(crate) check: bool,
 }
 
 impl Options {
@@ -44,6 +46,10 @@ impl Options {
       }
       if !word.starts_with("--") {
         options.files.push(PathBuf::from(word));
+        continue;
+      }
+      if word == "--check" {
+        options.check = true;
         continue;
       }
       let value = rest

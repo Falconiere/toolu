@@ -1,6 +1,6 @@
 # Resource budgets
 
-The Rust rebuild (epic #402) exists to cut what every hook spawn costs. This page holds every resource budget other issues point at, where each number came from, and how it is measured. Hook budgets are machine data in `benchmarks/hook-budgets.json`, and CI gates them. The other rows are the numbers their owning issues measure their real implementation against.
+The Rust rebuild (epic #402) exists to cut what every hook spawn costs. This page holds every resource budget other issues point at, where each number came from, and how it is measured. Hook budgets are machine data in `benchmarks/hook-budgets.json`, and CI gates them; so is the `toolu --version` startup budget, in `benchmarks/startup-budgets.json`. The other rows are the numbers their owning issues measure their real implementation against.
 
 ## Budgets
 
@@ -9,7 +9,7 @@ The Rust rebuild (epic #402) exists to cut what every hook spawn costs. This pag
 | `toolu hook pre-tools` | ≤ 6 MiB max RSS, ≤ 5 ms CPU (p50) | prototype: 3.6 MiB, 2.5 ms | `bun run bench:hooks --assert`, per hook spawn, `sh` launcher included | #418–#422 |
 | `toolu hook post-tools` | ≤ 6 MiB max RSS, ≤ 10 ms CPU (p50), excluding external linters it runs on purpose | prototype: 3.6 MiB, 2.6 ms | as above | #423 |
 | Binary size | ≤ 4 MiB | prototype: 2.75 MiB | size of the stripped release `toolu` (fat LTO, one codegen unit), Linux x86_64 | #417 |
-| `toolu --version` startup | ≤ 4 ms wall (p50) | prototype: 2.3 ms | wall time of one spawn through `cargo xtask measure`, 30 runs after 3 warm-up | #442 |
+| `toolu --version` startup | ≤ 4 ms wall (p50) | prototype: 2.3 ms | `cargo xtask check-startup --bin <toolu>`: wall time from spawn to reap of one `toolu --version`, 30 runs after 3 warm-up, nearest-rank p50; the Linux `rust` CI job gates the release binary | #442 |
 | One statusline render | ≤ 4 ms wall, ≤ 5 MiB max RSS (p50) | prototype: 2.6 ms, 3.9 MiB | one `toolu statusline render` with a session payload through `cargo xtask measure` | #431 |
 | Idle engine RSS | ≤ 5 MiB | prototype: 3.9 MiB | resident set (`VmRSS`) of the idle resident engine 2 s after start | #434 |
 | Status server under 50 clients | ≤ 7 ms latency (p90), ≤ 13 MiB max RSS | prototype: 4.4 ms, 9.7 MiB | 50 concurrent keep-alive clients × 40 loopback requests; client-side latency, server `VmHWM` | #449 |
