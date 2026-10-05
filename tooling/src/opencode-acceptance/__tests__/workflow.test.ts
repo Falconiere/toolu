@@ -80,6 +80,7 @@ test.concurrent("the required typescript status needs every gated job, always ru
     "gate",
     "opencode",
     "rust",
+    "rust-conformance",
     "rust-musl",
   ]);
   expect(required.if).toBe("${{ always() }}");

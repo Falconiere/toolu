@@ -5,7 +5,7 @@
  * is a no-op. Otherwise it builds the release `toolu` binary, then runs
  * `test:unit` and `test:conformance` with `TOOLU_IMPL=rust:<entries>`, so each
  * ported entry faces the black-box suites its Bun bundle passes.
- * `CARGO` names the cargo executable, as cargo itself does.
+ * `CARGO` names the cargo executable, following cargo's own convention.
  */
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
