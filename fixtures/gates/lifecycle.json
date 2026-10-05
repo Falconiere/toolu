@@ -1,0 +1,919 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "session-start: startup in a fresh repo",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}"
+    },
+    {
+      "name": "session-start: resume",
+      "hook": "session-start",
+      "stdin": "{\"source\":\"resume\"}"
+    },
+    {
+      "name": "session-start: clear",
+      "hook": "session-start",
+      "stdin": "{\"source\":\"clear\"}"
+    },
+    {
+      "name": "session-start: compact adds the post-compaction doc",
+      "hook": "session-start",
+      "stdin": "{\"source\":\"compact\"}"
+    },
+    {
+      "name": "session-start: an unknown source gets no title and no main doc",
+      "hook": "session-start",
+      "stdin": "{\"source\":\"reboot\"}"
+    },
+    {
+      "name": "session-start: a numeric source is an unknown event",
+      "hook": "session-start",
+      "stdin": "{\"source\":7}"
+    },
+    {
+      "name": "session-start: legacy session_event field",
+      "hook": "session-start",
+      "stdin": "{\"session_event\":\"resume\"}"
+    },
+    {
+      "name": "session-start: a false source falls through like jq //",
+      "hook": "session-start",
+      "stdin": "{\"source\":false,\"event\":\"resume\"}"
+    },
+    {
+      "name": "session-start: empty stdin is startup",
+      "hook": "session-start",
+      "stdin": ""
+    },
+    {
+      "name": "session-start: invalid JSON stdin is startup",
+      "hook": "session-start",
+      "stdin": "{not json"
+    },
+    {
+      "name": "session-start: outside a git repo",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "git": false
+    },
+    {
+      "name": "session-start: a feature branch names itself",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "branch": "feat/live-thing"
+    },
+    {
+      "name": "session-start: project name with sed metacharacters",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "subdir": "we|ird&name"
+    },
+    {
+      "name": "session-start: dirty tree and failing gate stay out of the prefix",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "untracked": {
+        "file.txt": "dirty\n",
+        ".claude/tmp/quality-gate-status.json": "{\"status\":\"failing\",\"reason\":\"boom\"}"
+      }
+    },
+    {
+      "name": "session-start: TypeScript repo, verbose unset",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "files": {
+        "tsconfig.json": "{}\n",
+        "bun.lock": "{}\n"
+      }
+    },
+    {
+      "name": "session-start: TypeScript repo, TOOLU_VERBOSE=0",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "files": {
+        "tsconfig.json": "{}\n",
+        "bun.lock": "{}\n"
+      },
+      "env": {
+        "TOOLU_VERBOSE": "0"
+      }
+    },
+    {
+      "name": "session-start: TypeScript repo, TOOLU_VERBOSE=1",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "files": {
+        "tsconfig.json": "{}\n",
+        "bun.lock": "{}\n"
+      },
+      "env": {
+        "TOOLU_VERBOSE": "1"
+      }
+    },
+    {
+      "name": "session-start: untracked tsconfig is not TypeScript",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "untracked": {
+        "tsconfig.json": "{}\n"
+      },
+      "env": {
+        "TOOLU_VERBOSE": "1"
+      }
+    },
+    {
+      "name": "session-start: rust and python repo, verbose",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "files": {
+        "Cargo.toml": "[package]\n",
+        "pyproject.toml": "[project]\n",
+        "pnpm-lock.yaml": ""
+      },
+      "env": {
+        "TOOLU_VERBOSE": "true"
+      }
+    },
+    {
+      "name": "session-start: nested tsconfig with npm lock, verbose",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "files": {
+        "web/tsconfig.app.json": "{}\n",
+        "package-lock.json": "{}\n"
+      },
+      "env": {
+        "TOOLU_VERBOSE": "1"
+      }
+    },
+    {
+      "name": "session-start: config remaps two tiers",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "userConfig": {
+        "version": 1,
+        "models": {
+          "review": "opus",
+          "mechanical": "sonnet"
+        }
+      }
+    },
+    {
+      "name": "session-start: an unroutable alias falls back with a warning",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "userConfig": {
+        "version": 1,
+        "models": {
+          "review": "gpt-9"
+        }
+      }
+    },
+    {
+      "name": "session-start: a false model is unset",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "userConfig": {
+        "version": 1,
+        "models": {
+          "review": false
+        }
+      }
+    },
+    {
+      "name": "session-start: models.enabled false drops the routing block",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "userConfig": {
+        "version": 1,
+        "models": {
+          "enabled": false
+        }
+      }
+    },
+    {
+      "name": "session-start: routing block survives compact with a remap",
+      "hook": "session-start",
+      "stdin": "{\"source\":\"compact\"}",
+      "userConfig": {
+        "models": {
+          "review": "opus"
+        }
+      }
+    },
+    {
+      "name": "session-start: Codex default slugs and efforts",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "host": "codex",
+      "codexList": "{\"installed\":[{\"pluginId\":\"toolu@toolu\",\"name\":\"toolu\",\"marketplaceName\":\"toolu\",\"installed\":true}],\"available\":[]}"
+    },
+    {
+      "name": "session-start: Codex project override of one tier",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "host": "codex",
+      "codexList": "{\"installed\":[{\"pluginId\":\"toolu@toolu\",\"name\":\"toolu\",\"marketplaceName\":\"toolu\",\"installed\":true}],\"available\":[]}",
+      "untracked": {
+        ".codex/toolu.config.json": "{\"models\":{\"codex\":{\"review\":{\"model\":\"review-local\",\"reasoningEffort\":\"xhigh\"}}}}"
+      }
+    },
+    {
+      "name": "session-start: Codex bad effort falls back alone",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "host": "codex",
+      "codexList": "{\"installed\":[{\"pluginId\":\"toolu@toolu\",\"name\":\"toolu\",\"marketplaceName\":\"toolu\",\"installed\":true}],\"available\":[]}",
+      "userConfig": {
+        "models": {
+          "codex": {
+            "review": {
+              "model": "r",
+              "reasoningEffort": "extreme"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "session-start: first run announces gates, workflow move and permissions",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "firstRun": true
+    },
+    {
+      "name": "session-start: Codex first run names the npx install",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "firstRun": true,
+      "host": "codex",
+      "codexList": "{\"installed\":[{\"pluginId\":\"toolu@toolu\",\"name\":\"toolu\",\"marketplaceName\":\"toolu\",\"installed\":true}],\"available\":[]}"
+    },
+    {
+      "name": "session-start: a pinned preset silences the gate notice",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "firstRun": true,
+      "untracked": {
+        ".claude/toolu.config.json": "{\"version\":1,\"gates\":{\"preset\":\"strict\"}}"
+      }
+    },
+    {
+      "name": "session-start: a per-gate mode silences the gate notice",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "firstRun": true,
+      "untracked": {
+        ".claude/toolu.config.json": "{\"version\":1,\"gates\":{\"pushReview\":{\"mode\":\"ask\"}}}"
+      }
+    },
+    {
+      "name": "session-start: sweep and ttl alone still announce",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "firstRun": true,
+      "untracked": {
+        ".claude/toolu.config.json": "{\"version\":1,\"gates\":{\"sweep\":true,\"stateTtlHours\":24}}"
+      }
+    },
+    {
+      "name": "session-start: a non-object gates still announces",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "firstRun": true,
+      "untracked": {
+        ".claude/toolu.config.json": "{\"version\":1,\"gates\":[]}"
+      }
+    },
+    {
+      "name": "session-start: autoAllow false skips the permission write",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "firstRun": true,
+      "userConfig": {
+        "permissions": {
+          "autoAllow": false
+        }
+      }
+    },
+    {
+      "name": "session-start: ast-grep installed and on PATH",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "astGrep": true,
+      "registry": {
+        "plugins": {
+          "ast-grep@toolu": {}
+        }
+      }
+    },
+    {
+      "name": "session-start: ast-grep plugin absent",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "astGrep": true,
+      "registry": {
+        "plugins": {}
+      }
+    },
+    {
+      "name": "session-start: ast-grep skill disabled hides the missing-tool warning",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "userConfig": {
+        "skills": {
+          "ast-grep": false
+        }
+      },
+      "registry": {
+        "plugins": {}
+      }
+    },
+    {
+      "name": "session-start: deprecated research wrappers do not add mandates",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "astGrep": true,
+      "registry": {
+        "plugins": {
+          "ast-grep@toolu": {},
+          "exa-search@toolu": {},
+          "context7@toolu": {}
+        }
+      },
+      "wrappers": ["context7", "exa-search"],
+      "env": {
+        "EXA_API_KEY": "k"
+      }
+    },
+    {
+      "name": "session-start: toolu only does not add research mandates",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "registry": {
+        "plugins": {
+          "toolu@toolu": {}
+        }
+      },
+      "wrappers": ["context7", "exa-search"],
+      "env": {
+        "EXA_API_KEY": "k"
+      }
+    },
+    {
+      "name": "session-start: missing dependency warns with the install command",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "manifest": {
+        "name": "toolu",
+        "dependencies": [
+          {
+            "name": "ts-quality",
+            "marketplace": "toolu"
+          }
+        ]
+      },
+      "registry": {
+        "plugins": {}
+      }
+    },
+    {
+      "name": "session-start: installed dependency is silent",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "manifest": {
+        "name": "toolu",
+        "dependencies": [
+          {
+            "name": "ts-quality",
+            "marketplace": "toolu"
+          }
+        ]
+      },
+      "registry": {
+        "plugins": {
+          "ts-quality@toolu": {}
+        }
+      }
+    },
+    {
+      "name": "session-start: missing registry suppresses dependency warnings",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "manifest": {
+        "name": "toolu",
+        "dependencies": [
+          {
+            "name": "ts-quality",
+            "marketplace": "toolu"
+          }
+        ]
+      }
+    },
+    {
+      "name": "session-start: malformed registry suppresses dependency warnings",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "manifest": {
+        "name": "toolu",
+        "dependencies": [
+          {
+            "name": "ts-quality",
+            "marketplace": "toolu"
+          }
+        ]
+      },
+      "registry": {
+        "plugins": []
+      }
+    },
+    {
+      "name": "session-start: no dependencies key",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "manifest": {
+        "name": "toolu"
+      },
+      "registry": {
+        "plugins": {}
+      }
+    },
+    {
+      "name": "session-start: nameless entry and scalar entry are skipped",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "manifest": {
+        "dependencies": [
+          {
+            "marketplace": "toolu"
+          },
+          42,
+          "",
+          {
+            "name": "ts-quality",
+            "marketplace": "toolu"
+          }
+        ]
+      },
+      "registry": {
+        "plugins": {}
+      }
+    },
+    {
+      "name": "session-start: string, marketplace-less and object-valued dependencies",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "manifest": {
+        "dependencies": {
+          "a": "jev@toolu",
+          "b": {
+            "name": "jira"
+          },
+          "c": {
+            "name": "x",
+            "marketplace": false
+          }
+        }
+      },
+      "registry": {
+        "plugins": {}
+      }
+    },
+    {
+      "name": "session-start: scalar dependencies yield nothing",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "manifest": {
+        "dependencies": "ts-quality"
+      },
+      "registry": {
+        "plugins": {}
+      }
+    },
+    {
+      "name": "session-start: Codex reads shared dependencies and names codex plugin add",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "host": "codex",
+      "codexList": "{\"installed\":[]}",
+      "manifest": {
+        "name": "dependent",
+        "dependencies": [
+          {
+            "name": "toolu",
+            "marketplace": "toolu"
+          }
+        ]
+      },
+      "codexManifest": {
+        "name": "dependent",
+        "version": "1.0.0",
+        "description": "test"
+      }
+    },
+    {
+      "name": "session-start: Codex without a snapshot is indeterminate",
+      "hook": "session-start",
+      "stdin": "{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}",
+      "host": "codex",
+      "manifest": {
+        "name": "dependent",
+        "dependencies": [
+          {
+            "name": "toolu",
+            "marketplace": "toolu"
+          }
+        ]
+      },
+      "codexManifest": {
+        "name": "dependent"
+      }
+    },
+    {
+      "name": "user-prompt-submit: trivial yes",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"yes\"}"
+    },
+    {
+      "name": "user-prompt-submit: trivial with punctuation",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"Thanks!\"}"
+    },
+    {
+      "name": "user-prompt-submit: trivial go ahead",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"go ahead\"}"
+    },
+    {
+      "name": "user-prompt-submit: trivial needs the whole prompt",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"yes please\"}"
+    },
+    {
+      "name": "user-prompt-submit: trivial with a backslash",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"ok\\\\\"}"
+    },
+    {
+      "name": "user-prompt-submit: trivial takes one punctuation mark",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"ok!!\"}"
+    },
+    {
+      "name": "user-prompt-submit: object prompt",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":{\"text\":\"fix it\"}}"
+    },
+    {
+      "name": "user-prompt-submit: non-ASCII capitals are not lowercased",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"FİX the Äpp\"}"
+    },
+    {
+      "name": "user-prompt-submit: slash command",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"/delivery-flow:delivery-flow build it\"}"
+    },
+    {
+      "name": "user-prompt-submit: vague fix is blocked",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"fix\"}"
+    },
+    {
+      "name": "user-prompt-submit: vague with trailing spaces is blocked",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"help   \"}"
+    },
+    {
+      "name": "user-prompt-submit: vague uppercase is blocked",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"DEBUG\"}"
+    },
+    {
+      "name": "user-prompt-submit: trailing newlines are stripped like $(…)",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"fix\\n\\n\"}"
+    },
+    {
+      "name": "user-prompt-submit: empty prompt",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"\"}"
+    },
+    {
+      "name": "user-prompt-submit: null prompt",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":null}"
+    },
+    {
+      "name": "user-prompt-submit: false prompt",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":false}"
+    },
+    {
+      "name": "user-prompt-submit: numeric prompt",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":42}"
+    },
+    {
+      "name": "user-prompt-submit: prompt key missing",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\"}"
+    },
+    {
+      "name": "user-prompt-submit: invalid JSON",
+      "hook": "user-prompt-submit",
+      "stdin": "{nope"
+    },
+    {
+      "name": "user-prompt-submit: empty stdin",
+      "hook": "user-prompt-submit",
+      "stdin": ""
+    },
+    {
+      "name": "user-prompt-submit: plain feature prompt has empty context",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"implement a new feature for the dashboard\"}"
+    },
+    {
+      "name": "user-prompt-submit: structural without ast-grep",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"find every function that returns a Result\"}"
+    },
+    {
+      "name": "user-prompt-submit: structural with ast-grep",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"list all methods on the trait\"}",
+      "astGrep": true
+    },
+    {
+      "name": "user-prompt-submit: structural with ast-grep skill disabled",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"show the signature\"}",
+      "astGrep": true,
+      "userConfig": {
+        "skills": {
+          "ast-grep": false
+        }
+      }
+    },
+    {
+      "name": "user-prompt-submit: rename",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"rename the helper and move it\"}"
+    },
+    {
+      "name": "user-prompt-submit: tests",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"add coverage for the parser\"}"
+    },
+    {
+      "name": "user-prompt-submit: fix",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"debug the crash on startup\"}"
+    },
+    {
+      "name": "user-prompt-submit: delete",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"clean up the old logs\"}"
+    },
+    {
+      "name": "user-prompt-submit: review",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"audit the auth module\"}"
+    },
+    {
+      "name": "user-prompt-submit: one intent when several match",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"fix and remove the failing test review the code\"}"
+    },
+    {
+      "name": "user-prompt-submit: implement is not impl",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"implement the parser\"}"
+    },
+    {
+      "name": "user-prompt-submit: remove is not move",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"remove the old flag\"}"
+    },
+    {
+      "name": "user-prompt-submit: fast is not ast",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"make it fast\"}"
+    },
+    {
+      "name": "user-prompt-submit: dropdown is not drop",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"add a dropdown\"}"
+    },
+    {
+      "name": "user-prompt-submit: preview is not review",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"preview the page\"}"
+    },
+    {
+      "name": "user-prompt-submit: uppercase matches",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"FIX THE BUG IN LOGIN\"}"
+    },
+    {
+      "name": "user-prompt-submit: multi-line prompt",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"please\\nfix the bug\\n\"}"
+    },
+    {
+      "name": "user-prompt-submit: scale nudge",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"migrate the whole codebase to bun\"}"
+    },
+    {
+      "name": "user-prompt-submit: scale nudge with an intent",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"fix the build end-to-end\"}"
+    },
+    {
+      "name": "user-prompt-submit: everyday refactor gets no scale nudge",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"refactor this function across two files\"}"
+    },
+    {
+      "name": "user-prompt-submit: auditor is not audit",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"the auditor notes are in the doc\"}"
+    },
+    {
+      "name": "user-prompt-submit: brainstorm nudge",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"brainstorm the approach for caching\"}"
+    },
+    {
+      "name": "user-prompt-submit: brainstorm plural and trade-off",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"compare designs and tradeoffs\"}"
+    },
+    {
+      "name": "user-prompt-submit: brainstorm new feature",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"a new  feature for exports\"}"
+    },
+    {
+      "name": "user-prompt-submit: brainstorm inflection stays silent",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"we redesigned and scoped it\"}"
+    },
+    {
+      "name": "user-prompt-submit: research nudge",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"what are the latest release notes for react\"}"
+    },
+    {
+      "name": "user-prompt-submit: research with intent",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"look up the api docs then fix the call\"}"
+    },
+    {
+      "name": "user-prompt-submit: research off by toggle",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"search the web for bun best practice\"}",
+      "userConfig": {
+        "agents": {
+          "research-agent": false
+        }
+      }
+    },
+    {
+      "name": "user-prompt-submit: codebase question gets no research nudge",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"where is the config loaded\"}"
+    },
+    {
+      "name": "user-prompt-submit: jira word",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"check the jira board\"}"
+    },
+    {
+      "name": "user-prompt-submit: atlassian link",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"see https://acme.atlassian.net/browse/ABC-123\"}"
+    },
+    {
+      "name": "user-prompt-submit: issue key with context word",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"pick up ABC-42 from the sprint\"}"
+    },
+    {
+      "name": "user-prompt-submit: key-shaped tokens without context",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"UTF-8 and GPT-4 encoding\"}"
+    },
+    {
+      "name": "user-prompt-submit: lowercase key does not count",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"abc-42 is on the backlog list\"}"
+    },
+    {
+      "name": "user-prompt-submit: every nudge at once",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"brainstorm how to migrate jira ticket ABC-1 docs for the latest api reference\"}"
+    },
+    {
+      "name": "user-prompt-submit: failing gate hint",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"add a button\"}",
+      "untracked": {
+        ".claude/tmp/quality-gate-status.json": "{\"status\":\"failing\",\"reason\":\"lint errors in a.ts\"}"
+      }
+    },
+    {
+      "name": "user-prompt-submit: fix suppresses the gate hint",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"fix the gate\"}",
+      "untracked": {
+        ".claude/tmp/quality-gate-status.json": "{\"status\":\"failing\",\"reason\":\"lint errors in a.ts\"}"
+      }
+    },
+    {
+      "name": "user-prompt-submit: prefix does not suppress the gate hint",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"add a prefix\"}",
+      "untracked": {
+        ".claude/tmp/quality-gate-status.json": "{\"status\":\"failing\",\"reason\":\"lint errors in a.ts\"}"
+      }
+    },
+    {
+      "name": "user-prompt-submit: passing gate is silent",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"add a button\"}",
+      "untracked": {
+        ".claude/tmp/quality-gate-status.json": "{\"status\":\"passing\"}"
+      }
+    },
+    {
+      "name": "user-prompt-submit: gate without reason",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"add a button\"}",
+      "untracked": {
+        ".claude/tmp/quality-gate-status.json": "{\"status\":\"failing\",\"reason\":false}"
+      }
+    },
+    {
+      "name": "user-prompt-submit: gate reason object",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"add a button\"}",
+      "untracked": {
+        ".claude/tmp/quality-gate-status.json": "{\"status\":\"failing\",\"reason\":{\"file\":\"a.ts\"}}"
+      }
+    },
+    {
+      "name": "user-prompt-submit: malformed gate file",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"add a button\"}",
+      "untracked": {
+        ".claude/tmp/quality-gate-status.json": "{broken"
+      }
+    },
+    {
+      "name": "user-prompt-submit: claude context.sh",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"implement a new feature\"}",
+      "untracked": {
+        ".claude/context.sh": "printf \"CTX:%s\\n\\n\" \"$PROMPT\"\n"
+      }
+    },
+    {
+      "name": "user-prompt-submit: codex context.sh",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"implement a new feature\"}",
+      "host": "codex",
+      "untracked": {
+        ".codex/context.sh": "echo CODEX_PROJECT_CONTEXT_MARKER\n"
+      }
+    },
+    {
+      "name": "user-prompt-submit: failing context.sh keeps its output",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"add coverage\"}",
+      "untracked": {
+        ".claude/context.sh": "echo partial; exit 3\n",
+        ".claude/tmp/quality-gate-status.json": "{\"status\":\"failing\",\"reason\":\"lint errors in a.ts\"}"
+      }
+    },
+    {
+      "name": "user-prompt-submit: outside a git repo",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"rename the thing\"}",
+      "git": false
+    },
+    {
+      "name": "user-prompt-submit: disabled by config",
+      "hook": "user-prompt-submit",
+      "stdin": "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"fix the bug\"}",
+      "userConfig": {
+        "hooks": {
+          "user-prompt-submit": false
+        }
+      }
+    }
+  ]
+}

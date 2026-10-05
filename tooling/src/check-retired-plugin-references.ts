@@ -7,9 +7,9 @@ const ROOT = resolve(import.meta.dir, "../..");
 const SELF = "tooling/src/check-retired-plugin-references.ts";
 const HISTORY = new Set([
   "CHANGELOG.md",
+  "fixtures/gates/lifecycle-golden.json",
   "plugins/pr-babysit/hooks/src/__tests__/fixtures/parse-verdict.golden.json",
   "plugins/pr-babysit/scripts/__tests__/fixtures/pr120-verdict-changes.txt",
-  "plugins/toolu/hooks/src/__tests__/fixtures/lifecycle-golden.json",
   "plugins/toolu/hooks/src/__tests__/fixtures/pre-tool-modules-a-golden.json",
   "plugins/toolu/scripts/__tests__/fixtures/debug/big.log",
 ]);

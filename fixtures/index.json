@@ -56,7 +56,8 @@
         "session-start: scalar dependencies yield nothing",
         "session-start: Codex reads shared dependencies and names codex plugin add",
         "session-start: Codex without a snapshot is indeterminate"
-      ]
+      ],
+      "namePrefix": "session-start:"
     },
     {
       "id": "lifecycle-prompt",
@@ -130,7 +131,8 @@
         "user-prompt-submit: failing context.sh keeps its output",
         "user-prompt-submit: outside a git repo",
         "user-prompt-submit: disabled by config"
-      ]
+      ],
+      "namePrefix": "user-prompt-submit:"
     },
     {
       "id": "pre-tool-a",
