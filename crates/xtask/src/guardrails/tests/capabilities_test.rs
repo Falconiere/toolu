@@ -71,7 +71,7 @@ fn a_module_alias_or_glob_import_is_a_use_of_the_capability() {
     ),
     (
       "crates/demo/src/d.rs",
-      "//! d\nuse std::env::args as words;\nuse std::fmt::*;\n",
+      "//! d\nuse std::env::args as words;\nuse std::fmt::*;\nuse crate::env::*;\nuse self::process as p;\n",
     ),
   ]);
   assert_eq!(

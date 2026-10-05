@@ -80,17 +80,19 @@ fn owns(source: &Source<'_>, capability: &Capability) -> bool {
   })
 }
 
-/// The `a::b` tail of a capability path that `segments` contains, if any.
 /// A `use` of a whole module, by glob or under another name, ends in this marker.
 const WHOLE_MODULE: &str = "*";
 
+/// The `a::b` tail of a capability path that `segments` contains, or the
+/// `module::*` a whole-module import of its full parent path makes, if any.
 fn uses(segments: &[String], capability: &Capability) -> Option<String> {
   if let Some((last, module)) = segments.split_last()
     && last == WHOLE_MODULE
   {
     return capability.paths.iter().find_map(|path| {
-      let parent = path.rsplit("::").nth(1)?;
-      (module.last().map(String::as_str) == Some(parent)).then(|| format!("{parent}::*"))
+      let (parent, _) = path.rsplit_once("::")?;
+      let name = parent.rsplit("::").next()?;
+      (module.join("::") == parent).then(|| format!("{name}::*"))
     });
   }
   capability.paths.iter().find_map(|path| {
