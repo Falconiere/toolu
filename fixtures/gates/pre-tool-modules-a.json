@@ -1,0 +1,2199 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: asks on .env, a secrets file, with the loud banner",
+      "expect": "ask",
+      "has": [
+        "SECURITY GUARDRAIL — OVERRIDE REQUESTED",
+        ".env",
+        "WHY THIS IS GUARDED",
+        "This is a secrets file",
+        "THIS ONE CALL"
+      ],
+      "lacks": ["example/template"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": ".env",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: asks on hooks/lib/detect.sh as enforcement code",
+      "expect": "ask",
+      "has": ["enforcement code"],
+      "lacks": ["secrets file"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": "hooks/lib/detect.sh",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: asks on MultiEdit of hooks/lib/detect.sh",
+      "expect": "ask",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "MultiEdit",
+        "toolInput": {
+          "file_path": "hooks/lib/detect.sh",
+          "edits": [
+            {
+              "old_string": "a",
+              "new_string": "b"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: allows src/foo.ts",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": "src/foo.ts",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: asks on an absolute path under hooks/lib/**",
+      "files": ["hooks/lib/detect.sh"],
+      "expect": "ask",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/hooks/lib/detect.sh"
+          },
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: asks on an absolute path under hooks/**/*.sh",
+      "files": ["hooks/post-tools/modules/rust-quality.sh"],
+      "expect": "ask",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/hooks/post-tools/modules/rust-quality.sh"
+          },
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: allows an absolute path outside the globs",
+      "files": ["src/foo.ts"],
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/src/foo.ts"
+          },
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: .env.example is a template, not a secrets file",
+      "expect": "ask",
+      "has": ["example/template env file"],
+      "lacks": ["This is a secrets file"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": ".env.example",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: mode block restores the hard deny",
+      "config": {
+        "scope": "project",
+        "body": {
+          "version": 1,
+          "gates": {
+            "protectedFiles": {
+              "mode": "block"
+            }
+          }
+        }
+      },
+      "expect": "deny",
+      "has": ["Blocked by gates.protectedFiles.mode='block'"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": ".env",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: mode off disables the check",
+      "config": {
+        "scope": "project",
+        "body": {
+          "version": 1,
+          "gates": {
+            "protectedFiles": {
+              "mode": "off"
+            }
+          }
+        }
+      },
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": ".env",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: mode advise warns without stopping",
+      "config": {
+        "scope": "project",
+        "body": {
+          "version": 1,
+          "gates": {
+            "protectedFiles": {
+              "mode": "advise"
+            }
+          }
+        }
+      },
+      "expect": "advisory",
+      "has": ["NOT stopped"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": ".env",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: on Codex the guardrail blocks",
+      "expect": "deny",
+      "has": [".env"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": ".env",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: an invalid config envelope fails closed",
+      "config": {
+        "scope": "project",
+        "body": {
+          "version": 2
+        }
+      },
+      "expect": "deny",
+      "deviation": "#253 fail-closed config envelope",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": ".env",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: Bash redirect onto .env says WRITE and names it",
+      "expect": "ask",
+      "has": ["SECURITY GUARDRAIL — OVERRIDE REQUESTED", "would WRITE to .env", "secrets file"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo hi > .env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: Bash sed -i on .env.example asks",
+      "expect": "ask",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "sed -i 's/a/b/' .env.example"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: Bash python3 -c open(.env, w) asks",
+      "expect": "ask",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "python3 -c \"open('.env', 'w').write(x)\""
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: Bash tee onto .env asks",
+      "expect": "ask",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo hi | tee .env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: Bash write in an unquoted heredoc substitution asks",
+      "expect": "ask",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "cat <<EOF\n$(echo hi > .env)\nEOF\n"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: Bash second open() names .env, not ok.txt",
+      "expect": "ask",
+      "has": ["would WRITE to .env,"],
+      "lacks": ["would WRITE to ok.txt"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "python3 -c \"open('ok.txt','w'); open('.env','w')\""
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: Bash write to an unprotected path is allowed",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo hi > /tmp/scratch.txt"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: Bash read of .env.example is allowed",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "cat .env.example"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: the Shell tool is covered like Bash",
+      "expect": "ask",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Shell",
+        "toolInput": {
+          "command": "echo hi > .env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {},
+      "name": "protected-files: .git internals get their own reason",
+      "shippedSettings": true,
+      "expect": "ask",
+      "has": ["git's internal state"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Write",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/.git/config"
+          },
+          "content": "x"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {},
+      "name": "protected-files: a path under secrets/ reads as a secrets file",
+      "shippedSettings": true,
+      "expect": "ask",
+      "has": ["This is a secrets file"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": "config/secrets/key.txt",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {},
+      "name": "protected-files: a lint config gets the generic reason",
+      "shippedSettings": true,
+      "expect": "ask",
+      "has": ["listed in settings/protected-files.txt"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": ".oxlintrc.json",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": "@(foo|bar).cfg\n"
+      },
+      "name": "protected-files: an extglob pattern matches",
+      "expect": "ask",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": "deep/bar.cfg",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: a non-string file_path is a malformed edit",
+      "expect": "deny",
+      "has": ["Unable to parse apply_patch file headers"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": 5,
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: an empty Bash command is ignored",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": ""
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {},
+      "name": "protected-files: no protected-files.txt means no check",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": ".env",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: a dynamic target is matched by its text",
+      "expect": "ask",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo x > $HOME/.env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: a quoted variable target is not a protected path",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo x > \"$OUT\""
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: the protected write in a chain is found",
+      "expect": "ask",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "cp a b && echo x >> .env.local"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files: 2>&1 is not a write target",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo x 2>&1"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: echo SECRET=1 >.env",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 1",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo SECRET=1 >.env"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: echo SECRET=1 >.env",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 1",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo SECRET=1 >.env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: echo SECRET=1>.env",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 1",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo SECRET=1>.env"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: echo SECRET=1>.env",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 1",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo SECRET=1>.env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: printf k=v 1>.env",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 1",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "printf k=v 1>.env"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: printf k=v 1>.env",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 1",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "printf k=v 1>.env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: echo x &>.env",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 1",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo x &>.env"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: echo x &>.env",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 1",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo x &>.env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: echo x >| .env",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 1",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo x >| .env"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: echo x >| .env",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 1",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo x >| .env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: { echo x; } >.env",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 1",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "{ echo x; } >.env"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: { echo x; } >.env",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 1",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "{ echo x; } >.env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: exec 3>.env",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 1",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "exec 3>.env"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: exec 3>.env",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 1",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "exec 3>.env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: echo x 2>.env",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 1",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo x 2>.env"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: echo x 2>.env",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 1",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo x 2>.env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: cp src/.env apps/api/.env 2>&1",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to apps/api/.env"],
+      "deviation": "#283 item 2",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "cp src/.env apps/api/.env 2>&1"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: cp src/.env apps/api/.env 2>&1",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to apps/api/.env"],
+      "deviation": "#283 item 2",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "cp src/.env apps/api/.env 2>&1"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: cp -t apps/api src/.env",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to apps/api/.env"],
+      "deviation": "#283 item 2",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "cp -t apps/api src/.env"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: cp -t apps/api src/.env",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to apps/api/.env"],
+      "deviation": "#283 item 2",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "cp -t apps/api src/.env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: mv .env.new .env 2>/dev/null",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 2",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "mv .env.new .env 2>/dev/null"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: mv .env.new .env 2>/dev/null",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 2",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "mv .env.new .env 2>/dev/null"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: bash -c 'echo x > .env'",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 3",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "bash -c 'echo x > .env'"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: bash -c 'echo x > .env'",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 3",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "bash -c 'echo x > .env'"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: sh -c \"cp a .env\"",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 3",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "sh -c \"cp a .env\""
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: sh -c \"cp a .env\"",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 3",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "sh -c \"cp a .env\""
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: eval 'echo x > .env'",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 3",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "eval 'echo x > .env'"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: eval 'echo x > .env'",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "deviation": "#283 item 3",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "eval 'echo x > .env'"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: echo x | tee -a .env",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo x | tee -a .env"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: echo x | tee -a .env",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo x | tee -a .env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: sed -i 's/a/b/' .env.local",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env.local"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "sed -i 's/a/b/' .env.local"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: sed -i 's/a/b/' .env.local",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env.local"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "sed -i 's/a/b/' .env.local"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: perl -i -pe 's/a/b/' .env",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "perl -i -pe 's/a/b/' .env"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: perl -i -pe 's/a/b/' .env",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "perl -i -pe 's/a/b/' .env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: mv x .env",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "mv x .env"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: mv x .env",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "mv x .env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: install -m 644 x .env",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "install -m 644 x .env"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: install -m 644 x .env",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "install -m 644 x .env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: dd if=/dev/zero of=.env",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "dd if=/dev/zero of=.env"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: dd if=/dev/zero of=.env",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "dd if=/dev/zero of=.env"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: python3 -c \"open('.env','w')\"",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "python3 -c \"open('.env','w')\""
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: python3 -c \"open('.env','w')\"",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "python3 -c \"open('.env','w')\""
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [claude]: echo x > .en[v]",
+      "files": [".env"],
+      "expect": "ask",
+      "has": ["would WRITE to .env"],
+      "deviation": "#284: a pattern target is every path it matches",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo x > .en[v]"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "pre-tools",
+      "settings": {
+        "protected-files.txt": ".env\n.env.*\n**/secrets/**\nhooks/lib/**\nhooks/**/*.sh\n"
+      },
+      "name": "protected-files [codex]: echo x > .en[v]",
+      "files": [".env"],
+      "expect": "deny",
+      "has": ["would WRITE to .env"],
+      "deviation": "#284: a pattern target is every path it matches",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo x > .en[v]"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "name": "code-edit-rules: empty rules are a no-op",
+      "settings": {
+        "code-edit-rules.json": "{\"rules\":[]}\n"
+      },
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": "/abs/src/foo.rs",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "name": "code-edit-rules: a missing file is a no-op",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": "/abs/src/foo.rs",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "name": "code-edit-rules: a matching glob surfaces docs",
+      "settings": {
+        "code-edit-rules.json": "{ \"rules\": [ { \"match\": \"*.rs\", \"docs\": [\"rust.md\"] } ] }\n"
+      },
+      "expect": "advisory",
+      "has": ["File: /abs/src/foo.rs\nApply these rules: rust.md"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": "/abs/src/foo.rs",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "name": "code-edit-rules: MultiEdit on a .rs file surfaces docs",
+      "settings": {
+        "code-edit-rules.json": "{ \"rules\": [ { \"match\": \"*.rs\", \"docs\": [\"Rust: zero compiler/clippy warnings\"] } ] }\n"
+      },
+      "expect": "advisory",
+      "has": ["Rust: zero compiler/clippy warnings"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "MultiEdit",
+        "toolInput": {
+          "file_path": "/abs/src/foo.rs",
+          "edits": [
+            {
+              "old_string": "a",
+              "new_string": "b"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "name": "code-edit-rules: an absolute path in the repo matches a repo-relative glob",
+      "settings": {
+        "code-edit-rules.json": "{ \"rules\": [ { \"match\": \"src/**/*.rs\", \"docs\": [\"rust.md\"] } ] }\n"
+      },
+      "files": ["src/foo/bar.rs"],
+      "expect": "advisory",
+      "has": ["File: src/foo/bar.rs\n"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/src/foo/bar.rs"
+          },
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "name": "code-edit-rules: shipped rules add feature docs",
+      "shippedSettings": true,
+      "settings": {},
+      "expect": "advisory",
+      "has": ["frontend: colocate by feature"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Write",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/src/features/x.ts"
+          },
+          "content": "export {};"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "name": "code-edit-rules: shipped rules without a feature path",
+      "shippedSettings": true,
+      "settings": {},
+      "expect": "advisory",
+      "lacks": ["frontend: colocate by feature"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": "lib/x.ts",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "name": "code-edit-rules: the first matching rule wins even without docs",
+      "settings": {
+        "code-edit-rules.json": "{\"rules\":[{\"match\":\"*.rs\",\"docs\":[]},{\"match\":\"*.rs\",\"docs\":[\"second\"]}]}\n"
+      },
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": "a.rs",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "name": "code-edit-rules: extra keys and missing docs do not disable other rules",
+      "settings": {
+        "code-edit-rules.json": "{\"rules\":[{\"match\":\"*.py\",\"note\":1},{\"match\":\"*.rs\",\"docs\":[\"rs\"],\"x\":true}]}\n"
+      },
+      "expect": "advisory",
+      "has": ["Apply these rules: rs"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": "a.rs",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "name": "code-edit-rules: malformed JSON is a no-op",
+      "settings": {
+        "code-edit-rules.json": "{not json\n"
+      },
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": "a.rs",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "name": "code-edit-rules: non-string docs are joined as JSON text",
+      "settings": {
+        "code-edit-rules.json": "{\"rules\":[{\"match\":\"*.rs\",\"docs\":[\"a\",5,true]}]}\n"
+      },
+      "expect": "advisory",
+      "has": ["Apply these rules: a + 5 + true"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": "a.rs",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "pre-tools",
+      "name": "code-edit-rules: Bash is not an edit",
+      "settings": {
+        "code-edit-rules.json": "{ \"rules\": [ { \"match\": \"*.rs\", \"docs\": [\"rust.md\"] } ] }\n"
+      },
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "touch a.rs"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {
+        "mcp-blocklist.txt": "exampleblocked\n"
+      },
+      "name": "mcp-blocker: asks on a listed server, pointing at the blocklist file",
+      "expect": "ask",
+      "has": ["mcp-blocklist.txt"],
+      "lacks": ["toolu config"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__exampleblocked__search",
+        "toolInput": {},
+        "mcp": {
+          "server": "exampleblocked",
+          "tool": "search"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {
+        "mcp-blocklist.txt": "exampleblocked\n"
+      },
+      "name": "mcp-blocker: allows an unlisted server",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__other__do_thing",
+        "toolInput": {},
+        "mcp": {
+          "server": "other",
+          "tool": "do_thing"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {
+        "mcp-blocklist.txt": "claude_ai_\n"
+      },
+      "name": "mcp-blocker: a prefix entry blocks a longer server name",
+      "expect": "ask",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__claude_ai_Canva__search",
+        "toolInput": {},
+        "mcp": {
+          "server": "claude_ai_Canva",
+          "tool": "search"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {
+        "mcp-blocklist.txt": "claude_ai_\n"
+      },
+      "name": "mcp-blocker: a prefix entry does not block a different prefix",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__friend_ai_Canva__search",
+        "toolInput": {},
+        "mcp": {
+          "server": "friend_ai_Canva",
+          "tool": "search"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {
+        "mcp-blocklist.txt": "exampleblocked\n"
+      },
+      "name": "mcp-blocker: an exact server name blocks",
+      "expect": "ask",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__exampleblocked__save",
+        "toolInput": {},
+        "mcp": {
+          "server": "exampleblocked",
+          "tool": "save"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "entry": "mcp-tools",
+      "settings": {
+        "mcp-blocklist.txt": "exampleblocked\n"
+      },
+      "name": "mcp-blocker: on Codex a listed server is blocked",
+      "expect": "deny",
+      "has": ["exampleblocked"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__exampleblocked__search",
+        "toolInput": {},
+        "mcp": {
+          "server": "exampleblocked",
+          "tool": "search"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {},
+      "name": "mcp-blocker: config mcp.<server>=false blocks without the file",
+      "config": {
+        "scope": "user",
+        "body": {
+          "version": 1,
+          "mcp": {
+            "someserver": false
+          }
+        }
+      },
+      "expect": "ask",
+      "has": ["someserver", "toolu config"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__someserver__do",
+        "toolInput": {},
+        "mcp": {
+          "server": "someserver",
+          "tool": "do"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {},
+      "name": "mcp-blocker: a non-object config mcp neither blocks nor crashes",
+      "config": {
+        "scope": "user",
+        "body": {
+          "version": 1,
+          "mcp": "broken-not-an-object"
+        }
+      },
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__someserver__do",
+        "toolInput": {},
+        "mcp": {
+          "server": "someserver",
+          "tool": "do"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {
+        "mcp-blocklist.txt": "someserver -> use the host's native Jira tools instead\n"
+      },
+      "name": "mcp-blocker: a redirect hint is appended to the reason",
+      "expect": "ask",
+      "has": ["use the host's native Jira tools instead"],
+      "deviation": "#405 native Jira redirect replaces the historical skill hint",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__someserver__do",
+        "toolInput": {},
+        "mcp": {
+          "server": "someserver",
+          "tool": "do"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {
+        "mcp-blocklist.txt": "# claude_ai_Atlassian -> use the host's native Jira tools instead\n"
+      },
+      "name": "mcp-blocker: a commented entry does not block",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__claude_ai_Atlassian__createIssue",
+        "toolInput": {},
+        "mcp": {
+          "server": "claude_ai_Atlassian",
+          "tool": "createIssue"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {
+        "mcp-blocklist.txt": "exampleblocked\n"
+      },
+      "name": "mcp-blocker: empty stdin",
+      "stdin": "",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {
+        "mcp-blocklist.txt": "exampleblocked\n"
+      },
+      "name": "mcp-blocker: non-JSON stdin",
+      "stdin": "not json\n",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {
+        "mcp-blocklist.txt": "exampleblocked\n"
+      },
+      "name": "mcp-blocker: a tool name without a server segment",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__exampleblocked",
+        "toolInput": {}
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {
+        "mcp-blocklist.txt": "exampleblocked\n"
+      },
+      "name": "mcp-blocker: mode block denies",
+      "config": {
+        "scope": "project",
+        "body": {
+          "version": 1,
+          "gates": {
+            "mcpBlocker": {
+              "mode": "block"
+            }
+          }
+        }
+      },
+      "expect": "deny",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__exampleblocked__search",
+        "toolInput": {},
+        "mcp": {
+          "server": "exampleblocked",
+          "tool": "search"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {
+        "mcp-blocklist.txt": "exampleblocked\n"
+      },
+      "name": "mcp-blocker: mode advise warns without stopping",
+      "config": {
+        "scope": "project",
+        "body": {
+          "version": 1,
+          "gates": {
+            "mcpBlocker": {
+              "mode": "advise"
+            }
+          }
+        }
+      },
+      "expect": "advisory",
+      "has": ["NOT stopped"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__exampleblocked__search",
+        "toolInput": {},
+        "mcp": {
+          "server": "exampleblocked",
+          "tool": "search"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {
+        "mcp-blocklist.txt": "exampleblocked\n"
+      },
+      "name": "mcp-blocker: mode off is silent",
+      "config": {
+        "scope": "project",
+        "body": {
+          "version": 1,
+          "gates": {
+            "mcpBlocker": {
+              "mode": "off"
+            }
+          }
+        }
+      },
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__exampleblocked__search",
+        "toolInput": {},
+        "mcp": {
+          "server": "exampleblocked",
+          "tool": "search"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {
+        "mcp-blocklist.txt": "exampleblocked\n"
+      },
+      "name": "mcp-blocker: an invalid config envelope still blocks a listed server",
+      "config": {
+        "scope": "project",
+        "body": {
+          "version": 2
+        }
+      },
+      "expect": "deny",
+      "deviation": "#253 fail-closed config envelope",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__exampleblocked__search",
+        "toolInput": {},
+        "mcp": {
+          "server": "exampleblocked",
+          "tool": "search"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {
+        "mcp-blocklist.txt": "  exampleblocked  \n"
+      },
+      "name": "mcp-blocker: a whitespace-padded entry still matches",
+      "expect": "ask",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__exampleblocked__search",
+        "toolInput": {},
+        "mcp": {
+          "server": "exampleblocked",
+          "tool": "search"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {},
+      "name": "mcp-blocker: config mcp value 'false' as a string does not block",
+      "config": {
+        "scope": "user",
+        "body": {
+          "version": 1,
+          "mcp": {
+            "someserver": "false"
+          }
+        }
+      },
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__someserver__do",
+        "toolInput": {},
+        "mcp": {
+          "server": "someserver",
+          "tool": "do"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "entry": "mcp-tools",
+      "settings": {},
+      "name": "mcp-blocker: no blocklist and no config is silent",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__exampleblocked__search",
+        "toolInput": {},
+        "mcp": {
+          "server": "exampleblocked",
+          "tool": "search"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,1799 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: accepts an allowed command",
+      "command": "ls -la",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "biome\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: rejects a denied command (substring match)",
+      "command": "biome check .",
+      "expect": "deny",
+      "has": ["Command blocked by deny rule: biome"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "node -e\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: rejects node -e argv-aware",
+      "command": "node -e \"console.log(1)\"",
+      "expect": "deny",
+      "has": ["node -e"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "git push --force\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: rejects git push --force origin feat/x",
+      "command": "git push --force origin feat/x",
+      "expect": "deny",
+      "has": ["git push --force"]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: no-op when data files are missing",
+      "command": "node -e 'rm -rf /'",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "node -e\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: bare node script.js does not trip node -e",
+      "command": "node script.js",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "biome\n",
+        "bash-denylist.txt": "biome\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: deny+allow, the allowlist entry overrides the deny",
+      "command": "biome check .",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "node -e\n",
+        "bash-denylist.txt": "node -e\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: deny+allow, argv-aware allow override of node -e",
+      "command": "node -e \"console.log(1)\"",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "biome\n",
+        "bash-denylist.txt": "node -e\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: an allow rule that does not match does not override",
+      "command": "node -e \"console.log(1)\"",
+      "expect": "deny"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "ls\n",
+        "bash-denylist.txt": "\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: allow-only, an allowlisted command passes",
+      "command": "ls -la",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "biome\n",
+        "bash-denylist.txt": "node -e\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: neither list matches, default allow",
+      "command": "git status",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "node\n",
+        "bash-denylist.txt": "node -e\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: a broad node allow entry overrides the node -e deny",
+      "command": "node -e \"console.log(1)\"",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "cargo test\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: empty command is allowed",
+      "command": "",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "node -e\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: whitespace-only command is allowed",
+      "command": "   ",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "node\n",
+        "bash-denylist.txt": "node -e\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: node script.js with node allowed and node -e denied",
+      "command": "node script.js",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "cargo test\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: a commit message mentioning cargo test is not denied",
+      "command": "git commit -m \"fix cargo test failure\"",
+      "expect": "advisory",
+      "lacks": ["deny rule"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "cargo test\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: cargo --verbose test is denied via the argv rule",
+      "command": "cargo --verbose test",
+      "expect": "deny"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "cargo test\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: mycargo test is allowed",
+      "command": "mycargo test",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "node -e\n"
+      },
+      "config": {
+        "version": 1
+      },
+      "name": "bash-commands: the shipped default asks",
+      "command": "node -e \"console.log(1)\"",
+      "expect": "ask",
+      "has": ["SECURITY GUARDRAIL"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "node -e\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "advise"
+          }
+        }
+      },
+      "name": "bash-commands: advise mode only warns",
+      "command": "node -e \"console.log(1)\"",
+      "expect": "advisory",
+      "has": ["The command was not stopped"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "node -e\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "ask"
+          }
+        }
+      },
+      "name": "bash-commands: ask mode prompts with the guardrail banner",
+      "command": "node -e \"console.log(1)\"",
+      "expect": "ask",
+      "has": ["SECURITY GUARDRAIL — OVERRIDE REQUESTED", "node -e", "full shell privileges"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "node -e\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "preset": "strict"
+        }
+      },
+      "name": "bash-commands: strict preset restores the hard deny",
+      "command": "node -e \"console.log(1)\"",
+      "expect": "deny"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "node -e\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "off"
+          }
+        }
+      },
+      "name": "bash-commands: off turns the denylist into a no-op",
+      "command": "node -e \"console.log(1)\"",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "node -e\n",
+        "bash-denylist.txt": "node -e\n"
+      },
+      "config": {
+        "version": 1
+      },
+      "name": "bash-commands: an allowlisted command is silent whatever the mode",
+      "command": "node -e \"console.log(1)\"",
+      "expect": "silent"
+    },
+    {
+      "host": "codex",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "node -e\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "ask"
+          }
+        }
+      },
+      "name": "bash-commands: ask degrades to block on codex",
+      "command": "node -e \"x\"",
+      "expect": "deny"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "shippedSettings": true,
+      "name": "bash-commands: bash -lc (#283 item 3)",
+      "command": "bash -lc 'node -e 1'",
+      "expect": "deny",
+      "has": ["node -e"],
+      "deviation": "#283 item 3: bash never looked inside bash -c or eval"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "shippedSettings": true,
+      "name": "bash-commands: eval (#283 item 3)",
+      "command": "eval \"node -e 1\"",
+      "expect": "deny",
+      "has": ["node -e"],
+      "deviation": "#283 item 3: bash never looked inside bash -c or eval"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "shippedSettings": true,
+      "name": "bash-commands: after && (#283 item 4)",
+      "command": "cd /tmp && node -e 1",
+      "expect": "deny",
+      "has": ["node -e"],
+      "deviation": "#283 item 4: bash matched a rule against the line's first word only"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "shippedSettings": true,
+      "name": "bash-commands: behind an env prefix (#283 item 4)",
+      "command": "FOO=1 node -e 1",
+      "expect": "deny",
+      "has": ["node -e"],
+      "deviation": "#283 item 4: bash matched a rule against the line's first word only"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "shippedSettings": true,
+      "name": "bash-commands: in a subshell (#283 item 4)",
+      "command": "(node -e 1)",
+      "expect": "deny",
+      "has": ["node -e"],
+      "deviation": "#283 item 4: bash matched a rule against the line's first word only"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "shippedSettings": true,
+      "name": "bash-commands: behind sudo (#283 item 4)",
+      "command": "sudo node -e 1",
+      "expect": "deny",
+      "has": ["node -e"],
+      "deviation": "#283 item 4: bash matched a rule against the line's first word only"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "shippedSettings": true,
+      "name": "bash-commands: cargo test after cd (#283 item 4)",
+      "command": "cd crate && cargo test",
+      "expect": "deny",
+      "has": ["cargo test"],
+      "deviation": "#283 item 4: bash matched a rule against the line's first word only"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "shippedSettings": true,
+      "name": "bash-commands: after a pipe (#283 item 4)",
+      "command": "echo x | node -e 1",
+      "expect": "deny",
+      "has": ["node -e"],
+      "deviation": "#283 item 4: bash matched a rule against the line's first word only"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "shippedSettings": true,
+      "name": "bash-commands: after ; (#283 item 4)",
+      "command": "true; node -e 1",
+      "expect": "deny",
+      "has": ["node -e"],
+      "deviation": "#283 item 4: bash matched a rule against the line's first word only"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "shippedSettings": true,
+      "name": "bash-commands: a rule does not match across two commands (#283 item 4)",
+      "command": "bun install && node -e \"1\"",
+      "expect": "deny",
+      "has": ["deny rule: node -e"],
+      "lacks": ["bun -e"],
+      "deviation": "#283 item 4: bash matched a rule against the line's first word only; it reported bun -e from bun + a later -e"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "ls\n",
+        "bash-denylist.txt": "node -e\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: allow on another command does not override (#283 item 4)",
+      "command": "ls && node -e 1",
+      "expect": "deny",
+      "has": ["node -e"],
+      "deviation": "#283 item 4: bash matched a rule against the line's first word only; any allow match anywhere on the line overrode the deny"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1
+      },
+      "shippedSettings": true,
+      "name": "bash-commands: node -e without python3 on PATH (#283 item 4)",
+      "noPython": true,
+      "command": "node -e 1",
+      "expect": "ask",
+      "has": ["node -e"],
+      "deviation": "#283 item 4: bash matched a rule against the line's first word only; without python3 every multi-token rule was silently off"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "shippedSettings": true,
+      "name": "bash-commands: a heredoc body is not a command",
+      "command": "cat <<EOF\nnode -e 1\nEOF",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "shippedSettings": true,
+      "name": "bash-commands: a commit message naming node -e is not denied",
+      "command": "git commit -m \"fix: drop node -e usage\"",
+      "expect": "advisory",
+      "lacks": ["deny rule"]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "shippedSettings": true,
+      "name": "bash-commands: the Shell tool is checked too",
+      "expect": "deny",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Shell",
+        "toolInput": {
+          "command": "node -e 1"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "shippedSettings": true,
+      "name": "bash-commands: an Edit tool call is out of scope",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/notes.md"
+          },
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "bash-allowlist.txt": "\n",
+        "bash-denylist.txt": "biome\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "bash-commands: a single-token rule matches a redirect target",
+      "command": "echo x > biome.txt",
+      "expect": "deny",
+      "has": ["biome"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: accepts a feat: prefix",
+      "command": "git commit -m \"feat: add widget\"",
+      "expect": "advisory",
+      "has": ["BEFORE COMMITTING", "git diff --stat against main"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: rejects an unknown prefix",
+      "command": "git commit -m \"wibble: stuff\"",
+      "expect": "deny",
+      "has": ["Unknown Conventional Commits prefix: \"wibble\"", "Base branch: main"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: accepts fix: with escaped quotes",
+      "command": "git commit -m \"fix: handle \\\"quoted\\\" text\"",
+      "expect": "advisory",
+      "has": ["BEFORE COMMITTING"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: rejects an unknown prefix with escaped quotes",
+      "command": "git commit -m \"wibble: a \\\"b\\\" c\"",
+      "expect": "deny"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: rejects an unknown prefix whose scope has escaped quotes",
+      "command": "git commit -m \"wibble(\\\"ui\\\"): add stuff\"",
+      "expect": "deny"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: accepts a known prefix whose scope has escaped quotes",
+      "command": "git commit -m \"feat(\\\"ui\\\"): add stuff\"",
+      "expect": "advisory"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: accepts a single-quoted -m message",
+      "command": "git commit -m 'feat: single quoted'",
+      "expect": "advisory"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1
+      },
+      "name": "commit-gate: the shipped default advises on a bad prefix",
+      "command": "git commit -m \"wip: something\"",
+      "expect": "advisory",
+      "has": ["Unknown Conventional Commits prefix"],
+      "lacks": ["BEFORE COMMITTING"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "off"
+          }
+        }
+      },
+      "name": "commit-gate: off emits nothing",
+      "command": "git commit -m \"wip: something\"",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: git -C <path> commit is gated",
+      "command": "git -C /tmp/wt commit -m \"wip: something\"",
+      "expect": "deny"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: a commit reached through && is gated",
+      "command": "git add -A && git commit -m \"wip: something\"",
+      "expect": "deny"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: a commit-shaped heredoc body is not a commit",
+      "command": "cat <<EOF > notes.txt\ngit commit -m \"wip: nope\"\nEOF",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: the $(cat <<'EOF') message form (#283 item 5)",
+      "command": "git commit -m \"$(cat <<'EOF'\nwibble: x\n\nbody\nEOF\n)\"",
+      "expect": "deny",
+      "has": ["Unknown Conventional Commits prefix: \"wibble\""],
+      "deviation": "#283 item 5: bash's sed extraction found no message in this form"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: -am (#283 item 5)",
+      "command": "git commit -am \"wibble: x\"",
+      "expect": "deny",
+      "has": ["Unknown Conventional Commits prefix"],
+      "deviation": "#283 item 5: bash's sed extraction found no message in this form"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: -m'…' (#283 item 5)",
+      "command": "git commit -m'wibble: x'",
+      "expect": "deny",
+      "has": ["Unknown Conventional Commits prefix"],
+      "deviation": "#283 item 5: bash's sed extraction found no message in this form"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: --message= (#283 item 5)",
+      "command": "git commit --message=\"wibble: x\"",
+      "expect": "deny",
+      "has": ["Unknown Conventional Commits prefix"],
+      "deviation": "#283 item 5: bash's sed extraction found no message in this form"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: the subject is the first -m (#283 item 5)",
+      "command": "git commit -m \"wibble: x\" -m \"feat: body\"",
+      "expect": "deny",
+      "has": ["Unknown Conventional Commits prefix: \"wibble\""],
+      "deviation": "#283 item 5: bash's greedy sed checked the last -m, which git records as the body"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: behind sudo (#283 item 8)",
+      "command": "sudo -u me git commit -m \"wibble: x\"",
+      "expect": "deny",
+      "has": ["Unknown Conventional Commits prefix"],
+      "deviation": "#283 item 8: bash did not see this commit"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: /usr/bin/git (#283 item 8)",
+      "command": "/usr/bin/git commit -m \"wibble: x\"",
+      "expect": "deny",
+      "has": ["Unknown Conventional Commits prefix"],
+      "deviation": "#283 item 8: bash did not see this commit"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: inside bash -c (#283 item 8)",
+      "command": "bash -c 'git commit -m \"wibble: x\"'",
+      "expect": "deny",
+      "has": ["Unknown Conventional Commits prefix"],
+      "deviation": "#283 item 8: bash did not see this commit"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: no prefix file skips the prefix check",
+      "command": "git commit -m \"wibble: x\"",
+      "expect": "advisory",
+      "has": ["BEFORE COMMITTING"],
+      "lacks": ["Unknown Conventional Commits prefix"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: a message without a type is not checked",
+      "command": "git commit -m \"wip\"",
+      "expect": "advisory",
+      "has": ["BEFORE COMMITTING"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: a breaking-change bang is not parsed as a type",
+      "command": "git commit -m \"wibble!: x\"",
+      "expect": "advisory",
+      "has": ["BEFORE COMMITTING"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: a dynamic message is not checked",
+      "command": "git commit -m \"$MSG\"",
+      "expect": "advisory",
+      "has": ["BEFORE COMMITTING"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: an editor-driven commit only gets the reminder",
+      "command": "git commit",
+      "expect": "advisory",
+      "has": ["BEFORE COMMITTING"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "ask"
+          }
+        }
+      },
+      "name": "commit-gate: ask mode prompts on claude",
+      "command": "git commit -m \"wibble: x\"",
+      "expect": "ask",
+      "has": ["Unknown Conventional Commits prefix"]
+    },
+    {
+      "host": "codex",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "ask"
+          }
+        }
+      },
+      "name": "commit-gate: ask degrades to advice on codex",
+      "command": "git commit -m \"wibble: x\"",
+      "expect": "advisory",
+      "has": ["Unknown Conventional Commits prefix"]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "preset": "relaxed"
+        }
+      },
+      "name": "commit-gate: a relaxed preset turns the gate off",
+      "command": "git commit -m \"wibble: x\"",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: the Shell tool is not a commit-gate tool",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Shell",
+        "toolInput": {
+          "command": "git commit -m \"wibble: x\""
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "name": "commit-gate: the base branch comes from origin/HEAD",
+      "command": "git commit -m \"feat: x\"",
+      "expect": "advisory",
+      "has": ["against develop"],
+      "setup": [
+        {
+          "op": "git",
+          "args": ["update-ref", "refs/remotes/origin/develop", "HEAD"]
+        },
+        {
+          "op": "git",
+          "args": ["symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/develop"]
+        }
+      ]
+    },
+    {
+      "host": "claude",
+      "settings": {
+        "commit-prefixes.txt": "feat\nfix\nchore\ndocs\nrefactor\ntest\n"
+      },
+      "config": {
+        "version": 2
+      },
+      "name": "commit-gate: an invalid config envelope blocks",
+      "command": "git commit -m \"wibble: x\"",
+      "expect": "deny",
+      "has": ["Unknown Conventional Commits prefix"],
+      "deviation": "#253: loadConfig rejects an unsupported envelope and every gate blocks; bash read it as {}"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: MY_CLAUDE_QUALITY=off switches it off",
+      "env": {
+        "MY_CLAUDE_QUALITY": "off"
+      },
+      "command": "git commit -m \"wip\"",
+      "expect": "advisory",
+      "lacks": ["BLOCKED: quality gate failing"]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "name": "quality-gate: no state file blocks nothing",
+      "command": "echo hi",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: reading a file is untouched",
+      "command": "cat tsconfig.json",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: a destructive command is not this gate's business",
+      "command": "rm -rf node_modules && bun run check",
+      "expect": "silent",
+      "setup": [
+        {
+          "op": "write",
+          "path": "$PROJECT/bun.lock",
+          "body": ""
+        }
+      ]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: git commit is denied during a failing gate",
+      "command": "git commit -m \"wip\"",
+      "expect": "deny",
+      "has": ["BLOCKED: quality gate failing", "forced"]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: bun run check alone is allowed",
+      "command": "bun run check",
+      "expect": "silent",
+      "setup": [
+        {
+          "op": "write",
+          "path": "$PROJECT/bun.lock",
+          "body": ""
+        }
+      ]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: git status is allowed",
+      "command": "git status",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: a destructive command in a bun+rust repo is out of scope",
+      "command": "rm -rf src && cargo fmt",
+      "expect": "silent",
+      "setup": [
+        {
+          "op": "write",
+          "path": "$PROJECT/bun.lock",
+          "body": ""
+        },
+        {
+          "op": "write",
+          "path": "$PROJECT/Cargo.toml",
+          "body": ""
+        }
+      ]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: cargo fmt alone is allowed in a bun+rust repo",
+      "command": "cargo fmt",
+      "expect": "silent",
+      "setup": [
+        {
+          "op": "write",
+          "path": "$PROJECT/bun.lock",
+          "body": ""
+        },
+        {
+          "op": "write",
+          "path": "$PROJECT/Cargo.toml",
+          "body": ""
+        }
+      ]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: bun run check && bun run build is allowed",
+      "command": "bun run check && bun run build",
+      "expect": "silent",
+      "setup": [
+        {
+          "op": "write",
+          "path": "$PROJECT/bun.lock",
+          "body": ""
+        }
+      ]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: git push is denied during a failing gate",
+      "command": "git push origin feat/x",
+      "expect": "deny",
+      "has": ["BLOCKED: quality gate failing"]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: git -C <path> commit is denied",
+      "expect": "deny",
+      "has": ["BLOCKED: quality gate failing"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": {
+            "$template": "git -C $PROJECT commit -m \"feat: x\""
+          }
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: a commit reached through && is denied",
+      "command": "git add -A && git commit -m \"wip\"",
+      "expect": "deny"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"passing\"}\n",
+      "name": "quality-gate: a passing gate stops nothing",
+      "command": "echo ok",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: an Edit tool call is untouched",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": "/tmp/notes.md",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: relaxed preset advises instead of denying",
+      "config": {
+        "version": 1,
+        "gates": {
+          "preset": "relaxed"
+        }
+      },
+      "command": "git commit -m \"wip\"",
+      "expect": "advisory",
+      "has": ["quality gate is failing"],
+      "lacks": ["BLOCKED"]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: ask mode phrases the reason as a question",
+      "config": {
+        "version": 1,
+        "gates": {
+          "qualityGate": {
+            "mode": "ask"
+          }
+        }
+      },
+      "command": "git commit -m \"wip\"",
+      "expect": "ask",
+      "has": ["anyway?"],
+      "lacks": ["BLOCKED"]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: a non-commit command never needs the config",
+      "config": "not json",
+      "command": "ls -la",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: per-gate off emits nothing",
+      "config": {
+        "version": 1,
+        "gates": {
+          "qualityGate": {
+            "mode": "off"
+          }
+        }
+      },
+      "command": "git commit -m \"wip\"",
+      "expect": "advisory",
+      "lacks": ["quality gate"]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"oxlint: 2 errors\",\"violations\":\"src/a.ts:1 no-explicit-any\"}\n",
+      "name": "quality-gate: the failure reason and violations reach the user",
+      "command": "git commit -m \"wip\"",
+      "expect": "deny",
+      "has": ["oxlint: 2 errors", "no-explicit-any"]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: a commit behind sudo (#283 item 8)",
+      "command": "sudo -u me git commit -m \"feat: x\"",
+      "expect": "deny",
+      "has": ["BLOCKED: quality gate failing"],
+      "deviation": "#283 item 8: bash did not see this commit or push"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: /usr/bin/git commit (#283 item 8)",
+      "command": "/usr/bin/git commit -m \"feat: x\"",
+      "expect": "deny",
+      "has": ["BLOCKED: quality gate failing"],
+      "deviation": "#283 item 8: bash did not see this commit or push"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: a commit inside bash -c (#283 item 8)",
+      "command": "bash -c 'git commit -m \"feat: x\"'",
+      "expect": "deny",
+      "has": ["BLOCKED: quality gate failing"],
+      "deviation": "#283 item 8: bash did not see this commit or push"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: a push behind timeout (#283 item 8)",
+      "command": "timeout 120 git push",
+      "expect": "deny",
+      "has": ["BLOCKED: quality gate failing"],
+      "deviation": "#283 item 8: bash did not see this commit or push"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: a push through xargs (#283 item 8)",
+      "command": "echo main | xargs git push origin",
+      "expect": "deny",
+      "has": ["BLOCKED: quality gate failing"],
+      "deviation": "#283 item 8: bash did not see this commit or push"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":{\"tool\":\"oxlint\",\"errors\":2},\"violations\":[\"a.ts\",\"b.ts\"]}\n",
+      "name": "quality-gate: non-string reason and violations print as jq -r does",
+      "command": "git commit -m \"wip\"",
+      "expect": "deny",
+      "has": ["\"tool\": \"oxlint\"", "[\n  \"a.ts\","]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "name": "quality-gate: outside a git repository the working directory is the root",
+      "command": "git commit -m \"wip\"",
+      "expect": "deny",
+      "has": ["BLOCKED: quality gate failing"],
+      "setup": [
+        {
+          "op": "write",
+          "path": "$ROOT/outside/.claude/tmp/quality-gate-status.json",
+          "body": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n"
+        }
+      ],
+      "cwd": {
+        "$path": "$ROOT/outside"
+      }
+    },
+    {
+      "host": "codex",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: a codex apply_patch is untouched while the gate fails",
+      "expect": "silent",
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/src/fix.ts"
+          },
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "host": "codex",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: codex blocks a commit",
+      "command": "git commit -m \"wip\"",
+      "expect": "deny",
+      "has": ["BLOCKED: quality gate failing"]
+    },
+    {
+      "host": "codex",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: codex degrades ask to advice",
+      "config": {
+        "version": 1,
+        "gates": {
+          "qualityGate": {
+            "mode": "ask"
+          }
+        }
+      },
+      "command": "git commit -m \"wip\"",
+      "expect": "advisory",
+      "has": ["Heads up: the quality gate is failing"],
+      "lacks": ["BLOCKED", "anyway?"]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{not json",
+      "name": "quality-gate: a malformed gate file is not failing",
+      "command": "git commit -m \"wip\"",
+      "expect": "advisory",
+      "lacks": ["quality gate"]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "\"failing\"\n",
+      "name": "quality-gate: a gate file that is not an object is not failing",
+      "command": "git commit -m \"wip\"",
+      "expect": "advisory",
+      "lacks": ["quality gate"]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"r2\",\"source\":\"ts\",\"file\":\"/p/b.ts\",\"violations\":\"v1\\nv2\\n\",\"entries\":{},\"updatedAt\":\"2026-09-29T00:00:00Z\"}\n",
+      "name": "quality-gate: a multi-slot gate file blocks with its joined violations",
+      "command": "git commit -m \"wip\"",
+      "expect": "deny",
+      "has": ["r2", "v1\nv2"]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":null}\n",
+      "name": "quality-gate: a null reason falls back to the default",
+      "command": "git commit -m \"wip\"",
+      "expect": "deny",
+      "has": ["Quality gate failing"]
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: the Shell tool's commit is denied",
+      "expect": "deny",
+      "has": ["BLOCKED: quality gate failing"],
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Shell",
+        "toolInput": {
+          "command": "git commit -m \"wip\""
+        }
+      }
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: a commit-shaped heredoc body is not a commit",
+      "command": "cat <<EOF\ngit commit -m \"wip\"\nEOF",
+      "expect": "silent"
+    },
+    {
+      "host": "claude",
+      "settings": {},
+      "gate": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n",
+      "name": "quality-gate: a linked worktree is skipped",
+      "command": "git commit -m \"wip\"",
+      "expect": "advisory",
+      "lacks": ["quality gate"],
+      "setup": [
+        {
+          "op": "git",
+          "args": [
+            "worktree",
+            "add",
+            "-q",
+            "-b",
+            "feat/wt",
+            {
+              "$path": "$ROOT/wt"
+            }
+          ]
+        },
+        {
+          "op": "write",
+          "path": "$ROOT/wt/.claude/tmp/quality-gate-status.json",
+          "body": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n"
+        }
+      ],
+      "cwd": {
+        "$path": "$ROOT/wt"
+      }
+    }
+  ]
+}

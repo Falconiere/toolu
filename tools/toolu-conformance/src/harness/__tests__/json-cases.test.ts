@@ -35,6 +35,10 @@ test("a JSON case prepares a real git sandbox and keeps its name", () => {
   applyCaseSetup(sb, fixture?.setup ?? []);
   expect(sb.read(".env")).toBe("SECRET=fixture\n");
   expect(sb.git("log", "-1", "--format=%s").trim()).toBe("add protected input");
+  applyCaseSetup(sb, [
+    { op: "git", args: ["worktree", "add", "-q", "-b", "feat/fixture", { $path: "$ROOT/wt" }] },
+  ]);
+  expect(sb.git("worktree", "list", "--porcelain")).toContain(join(sb.root, "wt"));
   expect(
     materializeCaseValue(sb, {
       file_path: { $path: "$PROJECT/.env" },

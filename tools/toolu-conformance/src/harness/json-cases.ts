@@ -2,14 +2,19 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { z } from "zod";
+import type { ToolFixture } from "./fixtures.ts";
 import type { HostName, Sandbox } from "./sandbox.ts";
 
 const HostSchema = z.enum(["claude", "codex", "cursor", "opencode"]);
 const ScopeSchema = z.enum(["project", "user"]);
-const ActionSchema = z.discriminatedUnion("op", [
+const TaggedPathSchema = z.strictObject({ $path: z.string() });
+export const ActionSchema = z.discriminatedUnion("op", [
   z.strictObject({ op: z.literal("write"), path: z.string(), body: z.string() }),
   z.strictObject({ op: z.literal("remove"), path: z.string() }),
-  z.strictObject({ op: z.literal("git"), args: z.array(z.string()).min(1) }),
+  z.strictObject({
+    op: z.literal("git"),
+    args: z.array(z.union([z.string(), TaggedPathSchema])).min(1),
+  }),
   z.strictObject({
     op: z.literal("config"),
     host: HostSchema,
@@ -24,6 +29,14 @@ const CaseSchema = z.looseObject({
 const CaseFileSchema = z.strictObject({
   version: z.literal(1),
   cases: z.array(CaseSchema),
+});
+const ToolFixtureSchema = z.strictObject({
+  kind: z.literal("tool"),
+  event: z.enum(["PreToolUse", "PostToolUse"]),
+  toolName: z.string(),
+  toolInput: z.record(z.string(), z.unknown()),
+  toolResponse: z.unknown().optional(),
+  mcp: z.strictObject({ server: z.string(), tool: z.string() }).optional(),
 });
 
 export type SetupAction = z.infer<typeof ActionSchema>;
@@ -109,6 +122,12 @@ export function materializeCaseValue(
   );
 }
 
+/** Validate a tool event after expanding its tagged sandbox paths. */
+export function materializeToolFixture(sb: Sandbox, value: unknown, host: HostName): ToolFixture {
+  const { mcp, ...base } = ToolFixtureSchema.parse(materializeCaseValue(sb, value, host));
+  return mcp === undefined ? base : { ...base, mcp };
+}
+
 function write(path: string, body: string): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, body);
@@ -126,7 +145,7 @@ export function applyCaseSetup(sb: Sandbox, actions: unknown, host: HostName = "
         rmSync(resolveFixturePath(sb, action.path, host), { recursive: true, force: true });
         break;
       case "git":
-        sb.git(...action.args);
+        sb.git(...action.args.map((arg) => z.string().parse(materializeCaseValue(sb, arg, host))));
         break;
       case "config":
         sb.writeConfig(action.host, action.scope, action.body);

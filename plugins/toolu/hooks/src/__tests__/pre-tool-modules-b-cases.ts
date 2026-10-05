@@ -1,15 +1,14 @@
-/**
- * Case shape and runner for the native bash-commands, commit-gate and
- * quality-gate gates (#261). Every `@test` of their deleted bats suites is a
- * case with the same input and intent (`pre-tool-modules-b-{bash-commands,
- * commit-gate,quality-gate}.ts`). Each case runs the whole PreToolUse hook in a
- * fresh git sandbox: `bash pre-tools/mod.sh` produced
- * `fixtures/pre-tool-modules-b-golden.json` at the base commit, before the bash
- * modules were deleted; `pre-tool-modules-b.test.ts` replays the bundle.
- */
+/** Shared JSON cases and real sandbox runner for bash, commit, and quality gates. */
 import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { bashFixture, toStdin, type Fixture } from "@toolu/conformance/harness/fixtures";
+import { dirname, join, resolve } from "node:path";
+import { bashFixture, toStdin } from "@toolu/conformance/harness/fixtures";
+import {
+  ActionSchema,
+  applyCaseSetup,
+  materializeToolFixture,
+  readCaseFile,
+  resolveFixturePath,
+} from "@toolu/conformance/harness/json-cases";
 import { pretoolEnv, TOOLU_PLUGIN, type PretoolHost } from "@toolu/conformance/harness/pretool";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
@@ -17,59 +16,48 @@ import { z } from "zod";
 
 export type Outcome = "deny" | "ask" | "advisory" | "silent";
 
-export type ModuleCase = {
-  name: string;
-  host: PretoolHost;
-  /** A Bash command, or a whole fixture. */
-  command?: string;
-  fixture?: (sb: Sandbox) => Fixture;
-  /** Files written into the settings directory (`TOOLU_SETTINGS_DIR`). */
-  settings: Record<string, string>;
-  /** Start from a copy of the shipped `plugins/toolu/settings`. */
-  shippedSettings?: boolean;
-  /** Project `toolu.config.json` for the case's host. */
-  config?: object | string;
-  /** `<project>/<host dir>/tmp/quality-gate-status.json`; `undefined` writes none. */
-  gate?: string | undefined;
-  setup?: (sb: Sandbox) => void;
-  /** The hook's working directory, default the project. */
-  cwd?: (sb: Sandbox) => string;
-  env?: EnvPatch;
-  /** Run with a PATH that has no `python3` (#283 item 4). */
-  noPython?: boolean;
-  expect: Outcome;
-  /** Substrings the decision text must contain, and must not. */
-  has?: string[];
-  lacks?: string[];
-  /**
-   * Why bash answered differently: a #283 defect it had, or a contract of the
-   * TypeScript core. Its golden result is kept as the known-wrong baseline.
-   */
-  deviation?: string;
-};
+const ModuleCaseSchema = z.strictObject({
+  name: z.string().min(1),
+  host: z.enum(["claude", "codex"]),
+  command: z.string().optional(),
+  fixture: z.unknown().optional(),
+  settings: z.record(z.string(), z.string()),
+  shippedSettings: z.boolean().optional(),
+  config: z.union([z.record(z.string(), z.unknown()), z.string()]).optional(),
+  gate: z.string().optional(),
+  setup: z.array(ActionSchema).optional(),
+  cwd: z.strictObject({ $path: z.string() }).optional(),
+  env: z.record(z.string(), z.string()).optional(),
+  noPython: z.boolean().optional(),
+  expect: z.enum(["deny", "ask", "advisory", "silent"]),
+  has: z.array(z.string()).optional(),
+  lacks: z.array(z.string()).optional(),
+  deviation: z.string().optional(),
+});
 
+export type ModuleCase = z.infer<typeof ModuleCaseSchema>;
 export type Captured = { stdout: string; stderr: string; exitCode: number };
-
 export type CaseInput = Omit<ModuleCase, "host" | "settings"> & {
-  host?: PretoolHost;
+  host?: ModuleCase["host"];
   settings?: Record<string, string>;
 };
 
-/** A case builder with the group's defaults filled in. */
+/** Fill the defaults used by the extra parser-boundary tests. */
 export function group(defaults: Partial<ModuleCase>): (c: CaseInput) => ModuleCase {
   return (c) => ({ host: "claude", settings: {}, ...defaults, ...c });
 }
 
-/** `bash-allowlist.txt` and `bash-denylist.txt`, one rule per line. */
-export function bashLists(allow: string, deny: string): Record<string, string> {
-  return { "bash-allowlist.txt": `${allow}\n`, "bash-denylist.txt": `${deny}\n` };
-}
-
-export function gateMode(gate: string, mode: string): object {
+export function gateMode(gate: string, mode: string): Record<string, unknown> {
   return { version: 1, gates: { [gate]: { mode } } };
 }
 
 export const FAILING_GATE = '{"status":"failing","reason":"forced","violations":""}\n';
+
+export const MODULE_CASES: readonly ModuleCase[] = z
+  .array(ModuleCaseSchema)
+  .parse(
+    readCaseFile(resolve(import.meta.dir, "../../../../../fixtures/gates/pre-tool-modules-b.json")),
+  );
 
 function writeAt(path: string, body: string): void {
   mkdirSync(dirname(path), { recursive: true });
@@ -161,9 +149,12 @@ async function prepare(
   if (c.gate !== undefined) {
     writeAt(sb.path(`${stateDir(c.host)}/tmp/quality-gate-status.json`), c.gate);
   }
-  c.setup?.(sb);
-  const cwd = c.cwd?.(sb) ?? sb.project;
-  const fixture = c.fixture?.(sb) ?? bashFixture(c.command ?? "");
+  applyCaseSetup(sb, c.setup ?? [], c.host);
+  const cwd = c.cwd === undefined ? sb.project : resolveFixturePath(sb, c.cwd.$path, c.host);
+  const fixture =
+    c.fixture === undefined
+      ? bashFixture(c.command ?? "")
+      : materializeToolFixture(sb, c.fixture, c.host);
   const stdin = JSON.stringify(toStdin(c.host, fixture, { cwd }));
   const path = c.noPython === true ? { PATH: pathWithoutPython(sb.root) } : {};
   const env = pretoolEnv(sb, c.host, { TOOLU_SETTINGS_DIR: settings, ...path, ...c.env });
