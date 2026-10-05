@@ -1,0 +1,64 @@
+{
+  "groups": {
+    "ts": [
+      "packages/**",
+      "plugins/**",
+      "tools/**",
+      "tooling/**",
+      "benchmarks/**",
+      "package.json",
+      "bun.lock",
+      "tsconfig*.json",
+      ".oxlintrc.json",
+      ".oxfmtrc.json",
+      "knip.json",
+      ".jscpd.json",
+      "guardrails.workspace.json",
+      "release-please-config.json",
+      "LICENSE",
+      ".claude-plugin/**",
+      ".agents/**"
+    ],
+    "opencode": [
+      "tools/toolu-opencode/**",
+      "tools/toolu-conformance/**",
+      "plugins/**",
+      "packages/toolu-core/**",
+      "tooling/src/opencode-*/**",
+      "tooling/src/opencode-*.ts",
+      "tooling/src/env.ts",
+      "tooling/src/npm-pack.ts",
+      "docs/opencode.md",
+      "docs/opencode-migration.md",
+      "package.json",
+      "bun.lock"
+    ],
+    "docs": ["docs/**", "**/*.md"]
+  },
+  "runEverything": [".github/**", "bun.lock"],
+  "releaseOnly": {
+    "paths": [
+      "CHANGELOG.md",
+      ".release-please-manifest.json",
+      "package.json",
+      "packages/*/package.json",
+      "tools/*/package.json",
+      "tools/*/npm/package.json",
+      "plugins/*/.claude-plugin/plugin.json",
+      "plugins/*/.codex-plugin/plugin.json"
+    ],
+    "versionKeys": ["version", ".", "@toolu/core"]
+  },
+  "workflows": {
+    "tests.yml": {
+      "aggregate": "typescript",
+      "required": [],
+      "jobs": { "gate": "ts", "opencode": "opencode", "docs": "docs" }
+    },
+    "toolu-review.yml": {
+      "aggregate": null,
+      "required": ["review"],
+      "jobs": { "review": "changed" }
+    }
+  }
+}

@@ -16,7 +16,7 @@ const Step = z.looseObject({
 });
 const Job = z.looseObject({
   name: z.string(),
-  needs: z.array(z.string()).optional(),
+  needs: z.union([z.string(), z.array(z.string())]).optional(),
   if: z.string().optional(),
   "continue-on-error": z.unknown().optional(),
   strategy: z.looseObject({ matrix: z.looseObject({ os: z.array(z.string()) }) }).optional(),
@@ -36,6 +36,8 @@ function job(id: string): z.infer<typeof Job> {
 
 const runs = (id: string): string[] => job(id).steps.flatMap((step) => step.run ?? []);
 
+const GROUP_OF: Record<string, string> = { gate: "ts", opencode: "opencode" };
+
 test.concurrent("the acceptance job runs the full command on Linux and macOS", () => {
   const opencode = job("opencode");
   expect(opencode.strategy?.matrix.os.toSorted()).toEqual(["macos-latest", "ubuntu-latest"]);
@@ -46,12 +48,13 @@ test.concurrent("the acceptance job runs the full command on Linux and macOS", (
   expect(commands.join("\n")).not.toContain("--only");
 });
 
-test.concurrent("no acceptance or gate step may soft-fail or be skipped by a condition", () => {
-  for (const id of ["gate", "opencode"]) {
+// #458: the gate and the acceptance skip only through their path group; no step soft-fails.
+test.concurrent("no acceptance or gate step may soft-fail or be skipped except by its path group", () => {
+  for (const [id, group] of Object.entries(GROUP_OF)) {
     expect(job(id)["continue-on-error"]).toBeUndefined();
     expect(job(id).steps.filter((step) => step["continue-on-error"] !== undefined)).toEqual([]);
-    expect(job(id).if).toBeUndefined();
-    expect(job(id).needs).toBeUndefined();
+    expect(job(id).if).toBe(`needs.changes.outputs.${group} == 'true'`);
+    expect(job(id).needs).toBe("changes");
   }
   const acceptance = job("opencode").steps.find((step) => step.run?.includes("test:opencode"));
   expect(acceptance?.if).toBeUndefined();
@@ -65,14 +68,12 @@ test.concurrent("the acceptance job installs every tool its preflight requires",
   expect(installs).toContain("agent-browser install");
 });
 
-test.concurrent("the required typescript status needs both jobs, always runs and checks their results", () => {
+test.concurrent("the required typescript status needs every gated job, always runs and judges their results", () => {
   const required = job("typescript");
   expect(required.name).toBe("typescript");
-  expect(required.needs?.toSorted()).toEqual(["gate", "opencode"]);
+  expect([required.needs ?? []].flat().toSorted()).toEqual(["changes", "docs", "gate", "opencode"]);
   expect(required.if).toBe("${{ always() }}");
-  const guard = runs("typescript").join("\n");
-  expect(guard).toContain('test "$GATE_RESULT" = success');
-  expect(guard).toContain('test "$OPENCODE_RESULT" = success');
+  expect(runs("typescript")).toContain("bun run tooling/src/ci-aggregate.ts tests.yml");
   const names = Object.entries(workflow.jobs).filter(([, item]) => item.name === "typescript");
   expect(names.map(([id]) => id)).toEqual(["typescript"]);
 });

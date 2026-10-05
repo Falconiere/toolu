@@ -81,30 +81,50 @@ test.concurrent("root test delegates to the complete Bun-only lane", () => {
 test.concurrent("CI runs the Bun lane without retired shell jobs", () => {
   const workflow = readText(".github/workflows/tests.yml");
   expect(workflow).toMatch(/  gate:\n    name: bun run test[\s\S]*?bun run test:ts/);
-  expect(workflow).toMatch(/  typescript:\n    name: typescript\n    needs: \[gate, opencode\]/);
+  expect(workflow).toMatch(
+    /  typescript:\n    name: typescript\n    needs: \[changes, gate, opencode, docs\]/,
+  );
   expect(workflow).not.toMatch(/^  shellcheck:/m);
   expect(workflow).not.toMatch(/^  bats:/m);
   expect(readText(".github/workflows/toolu-review.yml")).toContain("  review:");
 });
 
-test.concurrent("release-only path filters still run bundle-only changes", () => {
-  const workflow = readText(".github/workflows/tests.yml");
-  const releaseOnly = workflow
-    .split("    paths-ignore: &release-only\n")[1]
-    ?.split("  pull_request:")[0];
-  expect(releaseOnly).toBeDefined();
-  const ignored = releaseOnly?.match(/^      - .+$/gm) ?? [];
-  expect(ignored).toEqual([
-    '      - "CHANGELOG.md"',
-    '      - ".release-please-manifest.json"',
-    '      - "package.json"',
-    '      - "packages/*/package.json"',
-    '      - "tools/*/package.json"',
-    '      - "plugins/*/.claude-plugin/plugin.json"',
-    '      - "plugins/*/.codex-plugin/plugin.json"',
+// #458: no workflow-level path filter. The release-only skip is a job-level
+// `if` fed by .github/ci-paths.json, and bundle-only changes still run the gate.
+test.concurrent("release-only files skip jobs through the data file, not path filters", () => {
+  for (const file of ["tests.yml", "toolu-review.yml"]) {
+    const workflow = readText(`.github/workflows/${file}`);
+    expect(workflow).not.toMatch(/^\s+paths(-ignore)?:/m);
+  }
+  const data = z
+    .looseObject({ releaseOnly: z.looseObject({ paths: z.array(z.string()) }) })
+    .parse(JSON.parse(readText(".github/ci-paths.json")));
+  expect(data.releaseOnly.paths).toEqual([
+    "CHANGELOG.md",
+    ".release-please-manifest.json",
+    "package.json",
+    "packages/*/package.json",
+    "tools/*/package.json",
+    "tools/*/npm/package.json",
+    "plugins/*/.claude-plugin/plugin.json",
+    "plugins/*/.codex-plugin/plugin.json",
   ]);
-  expect(workflow).toContain("    paths-ignore: *release-only");
-  expect(ignored.join("\n")).not.toContain("hooks/dist");
+  expect(data.releaseOnly.paths.join("\n")).not.toContain("hooks/dist");
+});
+
+test.concurrent("AGENTS.md maps each CI job to its path group and the aggregate (#458)", () => {
+  const agents = readText("AGENTS.md");
+  for (const row of [
+    /^\| `gate` \(`bun run test`\) \| `ts` \|/m,
+    /^\| `opencode \(ubuntu-latest\)`, `opencode \(macos-latest\)` \| `opencode` \|/m,
+    /^\| `docs` \| `docs` \| `bun run test:docs`/m,
+    /^\| `review` \| `changed` \|/m,
+    /^\| `typescript` \| aggregate, `if: always\(\)` \|/m,
+  ]) {
+    expect(agents).toMatch(row);
+  }
+  expect(agents).toContain("`.github/ci-paths.json`");
+  expect(agents).toContain("No workflow-level path filter");
 });
 
 test.concurrent("contributor guidance names the Bun default", () => {

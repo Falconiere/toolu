@@ -33,7 +33,7 @@ data + classifier + `changes` entry → aggregate → check → workflows and th
     "title": "Add .github/ci-paths.json, its zod schema, glob matching, the release-only content rule and classification, and the ci-changes.ts entry writing GITHUB_OUTPUT for pull_request, push and workflow_dispatch with fail-open paths",
     "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-6"],
     "paths": [".github/ci-paths.json", "tooling/src/ci-paths/**", "tooling/src/ci-changes.ts", "tools/toolu-conformance/src/harness/**"],
-    "input": "Temp git repos built by the test: a base commit with real repo paths, then commits editing docs/statusline/README.md, README.md, tools/toolu-opencode/src/index.ts, newdir/file.txt, .github/workflows/tests.yml, .github/ci-paths.json, bun.lock, a #390-shaped version bump over every release-only file plus CHANGELOG.md, and a package.json scripts edit; real event JSON files for pull_request, push (real SHAs, all-zero before, bogus SHA) and workflow_dispatch; a real GITHUB_OUTPUT file",
+    "input": "Temp git repos built by the test: a base commit with real repo paths, then commits editing docs/statusline/README.md, README.md, tools/toolu-opencode/src/plugin/hooks.ts, newdir/file.txt, .github/workflows/tests.yml, .github/ci-paths.json, bun.lock, a #390-shaped version bump over every release-only file plus CHANGELOG.md, and a package.json scripts edit; real event JSON files for pull_request, push (real SHAs, all-zero before, bogus SHA) and workflow_dispatch; a real GITHUB_OUTPUT file",
     "check": "bun test --timeout 60000 tooling/src/ci-paths/__tests__/changes.test.ts",
     "model": "inherit"
   },

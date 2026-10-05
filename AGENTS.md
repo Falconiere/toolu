@@ -49,9 +49,39 @@ Any Conventional Commit on `main` counts, any path. `feat` / `fix` / `feat!` bum
 
 | Workflow | When | What |
 |----------|------|------|
-| `tests.yml` | push/PR to `main`, or a manual run. Skipped when the diff is only release version files and `CHANGELOG.md`; bundle-only changes still run | `bun run test` (`gate`): format, lint, typecheck, guardrails, gate reach, legacy exemptions, unit, conformance, bundle/launcher drift, context and latency budgets, deterministic benchmarks. `opencode (ubuntu-latest)` and `opencode (macos-latest)`: `bun run test:opencode`, the real OpenCode acceptance. `typescript`: the required status, which fails unless all three pass |
+| `tests.yml` | push/PR to `main`, or a manual run. No workflow-level path filter | Jobs run by path group (below); `typescript` is the required aggregate |
 | `release-please.yml` | push to `main` | Release PR; on merge, tag and GitHub Release |
-| `toolu-review.yml` | PR opened/synchronize, except a release-version-and-changelog-only diff | `falconiere/toolu-ghactions/code-review@v8` (Jev on: `JEV_ENABLED` + `JEV_MODEL_ID: typesafe/jev-1.13`) |
+| `toolu-review.yml` | PR opened/synchronize. No workflow-level path filter | `changes`, then `review` (required): `falconiere/toolu-ghactions/code-review@v8` (Jev on: `JEV_ENABLED` + `JEV_MODEL_ID: typesafe/jev-1.13`) |
+
+Path groups live in `.github/ci-paths.json` (#458). A `changes` job runs `tooling/src/ci-changes.ts`, which turns on the groups the diff touches:
+
+- `pull_request`: base...head;
+- `push`: before..after;
+- `workflow_dispatch`: every group.
+
+Each gated job carries a job-level `if`, and a job skipped that way reports Success. A required check therefore never stays Pending.
+
+| Job | Group | Runs |
+|-----|-------|------|
+| `gate` (`bun run test`) | `ts` | `bun run test` (`test:ts`): format, lint, typecheck, guardrails, gate reach, legacy exemptions, unit, conformance, bundle/launcher drift, CI path check, context and latency budgets, deterministic benchmarks |
+| `opencode (ubuntu-latest)`, `opencode (macos-latest)` | `opencode` | `bun run test:opencode`, the real OpenCode acceptance |
+| `docs` | `docs` | `bun run test:docs`: the doc-reading checks from `test:ts` |
+| `review` | `changed` | The code review. Runs for any change outside the release-only files, docs included, and runs anyway if `changes` failed |
+| `typescript` | aggregate, `if: always()` | `tooling/src/ci-aggregate.ts`. Fails when `changes` failed, a needed job failed or was cancelled, or a job was skipped while its group was on |
+
+These paths turn every group on:
+
+- `.github/**`, which includes the data file;
+- `bun.lock`;
+- a path no group matches;
+- an empty diff, or a diff error.
+
+A release-please bump turns every group off. That means release-only paths whose diff is only `version`, `.` or `@toolu/core` semver lines, plus `CHANGELOG.md`. `bun run check:ci-paths` fails on any of these:
+
+- a workflow-level `paths`/`paths-ignore` where a required check is reported;
+- an aggregate whose `needs` differ from its gated jobs;
+- a gated job without a group;
+- a glob that matches no tracked file.
 
 Benchmarks are hermetic. Context budget caps the Session Protocol, per-language docs, and skill descriptions.
 

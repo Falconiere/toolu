@@ -149,7 +149,7 @@ Classification, for each changed path:
 
 - **AC-1:** Given a git diff that changes only `docs/statusline/README.md`, `ci-changes` outputs `docs=true ts=false opencode=false changed=true`. `ci-aggregate tests.yml` passes on `{changes: success, docs: success, gate: skipped, opencode: skipped}`. In the workflow, `docs` runs `test:docs` and `review` is gated only on `changed`.
 - **AC-2:** Given a diff shaped like release PR #390 (version-line bumps in every release-only file, including `tools/toolu-cli/npm/package.json`, plus a CHANGELOG entry), `ci-changes` outputs every group and `changed` as `false`. The aggregate passes with every gated job skipped, and neither workflow has `paths`/`paths-ignore`. Given a diff that changes a `scripts` line in root `package.json`, `ts=true`.
-- **AC-3:** Given a diff that changes `tools/toolu-opencode/src/index.ts`, `ts=true opencode=true`, and the workflow gates `gate` on `ts` and the two-OS `opencode` matrix on `opencode`.
+- **AC-3:** Given a diff that changes `tools/toolu-opencode/src/plugin/hooks.ts`, `ts=true opencode=true`, and the workflow gates `gate` on `ts` and the two-OS `opencode` matrix on `opencode`.
 - **AC-4:** Given a diff that adds `newdir/file.txt`, or that edits `.github/workflows/tests.yml`, `.github/ci-paths.json` or `bun.lock`, every group is `true`.
 - **AC-5:** `ci-aggregate` fails and names the job when:
   - `changes` is `failure`;
@@ -168,7 +168,7 @@ Classification, for each changed path:
 |---|---|---|---|---|
 | AC-1 | Temp git repo seeded with real tracked paths; a commit editing `docs/statusline/README.md`; real `ci-paths.json`; real `GITHUB_OUTPUT` file | Outputs as stated; aggregate exit 0 | `README.md` at the root also maps to docs only | `bun test tooling/src/__tests__/ci-changes.test.ts tooling/src/__tests__/ci-aggregate.test.ts` |
 | AC-2 | Temp repo with copies of the real release-only files, bumped exactly like #390 | All false; aggregate exit 0 | A `scripts` line in `package.json` → `ts=true` | same, plus `ci-workflows.test.ts` |
-| AC-3 | Temp repo commit editing `tools/toolu-opencode/src/index.ts` | `ts`, `opencode` true; `docs` false | — | `ci-changes.test.ts`, `ci-workflows.test.ts` |
+| AC-3 | Temp repo commit editing `tools/toolu-opencode/src/plugin/hooks.ts` | `ts`, `opencode` true; `docs` false | — | `ci-changes.test.ts`, `ci-workflows.test.ts` |
 | AC-4 | Commits adding `newdir/file.txt`; editing `.github/workflows/tests.yml`, `.github/ci-paths.json`, `bun.lock` | All true | — | `ci-changes.test.ts` |
 | AC-5 | Real `toJSON(needs)` shapes; fixture copy of the repo's `.github` minus the `docs` mapping | Exit 1 naming the job; check exit 1 | `skipped` with group off passes | `ci-aggregate.test.ts`, `check-ci-paths.test.ts` |
 | AC-6 | Push event JSON with real SHAs, `0000…` before, a bogus SHA; dispatch event | Same groups; fail open | — | `ci-changes.test.ts` |
