@@ -11,7 +11,8 @@ import { chmodSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type RunResult } from "@toolu/conformance/harness/spawn";
-import { HookResult, Payloads, loadJson } from "../lib/hook-data.ts";
+import { BenchError, HookResult, Payloads, loadJson } from "../lib/hook-data.ts";
+import { buildMeasurer, measureOnce } from "../lib/hook-measurer.ts";
 import { discoverEntries } from "../lib/hook-entries.ts";
 
 const ROOT = resolve(import.meta.dir, "../../../..");
@@ -156,3 +157,17 @@ test(
   },
   TIMEOUT,
 );
+
+test("a spawn that outlives its timeout is a setup error that says so", async () => {
+  using sb = createSandbox();
+  const measurer = buildMeasurer(ROOT);
+  const spawn = { argv: ["sleep", "5"], cwd: sb.project, env: {}, stdin: "" };
+  let caught: unknown;
+  try {
+    await measureOnce(measurer, spawn, "toolu/slow [rust]", 300);
+  } catch (error) {
+    caught = error;
+  }
+  expect(caught).toBeInstanceOf(BenchError);
+  expect(String(caught)).toContain("toolu/slow [rust]: timed out after 300 ms");
+});

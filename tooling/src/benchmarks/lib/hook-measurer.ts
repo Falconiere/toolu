@@ -60,6 +60,7 @@ export async function measureOnce(
   measurer: string,
   spawn: Spawn,
   label: string,
+  timeoutMs = SPAWN_TIMEOUT_MS,
 ): Promise<MeasureReport> {
   const dir = mkdtempSync(join(tmpdir(), "toolu-hook-bench-"));
   try {
@@ -68,10 +69,10 @@ export async function measureOnce(
       cwd: spawn.cwd,
       env: spawn.env,
       stdin: spawn.stdin,
-      timeoutMs: SPAWN_TIMEOUT_MS,
+      timeoutMs,
     });
     if (result.timedOut) {
-      throw new BenchError(`${label}: timed out after ${String(SPAWN_TIMEOUT_MS)} ms`);
+      throw new BenchError(`${label}: timed out after ${String(timeoutMs)} ms`);
     }
     if (result.exitCode !== 0) {
       throw new BenchError(
