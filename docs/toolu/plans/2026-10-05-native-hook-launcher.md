@@ -253,7 +253,7 @@ The `crates/cli` tests run the real binary (`CARGO_BIN_EXE_toolu`) through the r
   },
   {
     "id": "unit-baseline",
-    "title": "bun run test:unit fails exactly the tests a clean origin/main worktree fails on this host (environmental failures, comemory be52369e/9cda9086); CI runs the full suite",
+    "title": "bun run test:unit fails no test that a clean origin/main worktree passes on this host (environmental failures, comemory be52369e/9cda9086; base-only load flakes such as the detect import-cost test are tolerated); CI runs the full suite",
     "ac_refs": [
       "AC-10"
     ],
@@ -269,7 +269,7 @@ The `crates/cli` tests run the real binary (`CARGO_BIN_EXE_toolu`) through the r
       "package.json"
     ],
     "input": "The branch and a detached origin/main worktree, both running bun run test:unit on this host",
-    "check": "B=$(mktemp -d) && git worktree add -q --detach \"$B/base\" origin/main && (cd \"$B/base\" && bun install --frozen-lockfile >/dev/null 2>&1 && bun run test:unit > \"$B/base.log\" 2>&1); bun run test:unit > \"$B/branch.log\" 2>&1; for f in base branch; do grep '^(fail)' \"$B/$f.log\" | sed 's/ \\[[0-9.]*ms\\]//' | sort > \"$B/$f.txt\"; done; grep -q ' pass' \"$B/base.log\" && diff \"$B/base.txt\" \"$B/branch.txt\"; s=$?; git worktree remove --force \"$B/base\"; rm -rf \"$B\"; exit $s",
+    "check": "B=$(mktemp -d) && git worktree add -q --detach \"$B/base\" origin/main && (cd \"$B/base\" && bun install --frozen-lockfile >/dev/null 2>&1 && bun run test:unit > \"$B/base.log\" 2>&1); bun run test:unit > \"$B/branch.log\" 2>&1; for f in base branch; do grep '^(fail)' \"$B/$f.log\" | sed 's/ \\[[0-9.]*ms\\]//' | sort > \"$B/$f.txt\"; done; grep -q ' pass' \"$B/base.log\" && test -z \"$(comm -13 \"$B/base.txt\" \"$B/branch.txt\")\"; s=$?; git worktree remove --force \"$B/base\"; rm -rf \"$B\"; exit $s",
     "model": "inherit"
   },
   {
@@ -317,7 +317,7 @@ The `crates/cli` tests run the real binary (`CARGO_BIN_EXE_toolu`) through the r
 - **launcher-tests:** one integration-test crate, `crates/cli/tests/launcher.rs`, with case modules `tests/helpers/{missing,native,skew,resolution,crash,fallback}.rs` and a shared `tests/helpers/sandbox.rs`. It replaces six `launcher_*` crates. Warnings are denied, so a shared helper included by six crates would be dead code in every crate that skips one of its items. The cases and ACs are unchanged; the check runs `--test launcher`.
 - **launcher-tests:** the sandbox serialises writes of executables against child spawns (`RwLock`). A child forked while a copied binary was still open for writing made the launcher's probe fail with `ETXTBSY` on Linux, which showed up as one flaky run in about 25.
 
-- **gate:** `bun run test:unit` fails 18 tests on this root host, and a clean `origin/main` worktree at the same base fails exactly the same 18: root ignores `chmod`, merged `/bin` and `/usr/bin` on `PATH`, ownership checks (comemory `be52369e`, `9cda9086`). So `gate` runs every other `test:ts` script, and the new `unit-baseline` step requires `test:unit`'s failures to equal `origin/main`'s. CI's full `bun run test` stays the authority (Jev 0.77 that this hides no branch-caused failure).
+- **gate:** `bun run test:unit` fails 18 tests on this root host, and a clean `origin/main` worktree at the same base fails exactly the same 18: root ignores `chmod`, merged `/bin` and `/usr/bin` on `PATH`, ownership checks (comemory `be52369e`, `9cda9086`). So `gate` runs every other `test:ts` script, and the new `unit-baseline` step requires every `test:unit` failure on the branch to fail on `origin/main` too. A base-only failure, such as the load-sensitive detect import-cost test (comemory `38d27723`), is not a branch regression. CI's full `bun run test` stays the authority (Jev 0.77 that this hides no branch-caused failure).
 
 ## Delivery
 
