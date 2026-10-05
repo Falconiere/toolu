@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { createSandbox } from "../sandbox.ts";
 import {
   applyCaseSetup,
@@ -70,6 +70,10 @@ test("invalid records and operations fail before a hook runs", () => {
   expect(() => applyCaseSetup(sb, [{ op: "shell", command: "touch bad" }])).toThrow();
   expect(() => resolveFixturePath(sb, "$PROJECT/../../outside")).toThrow("escapes");
   expect(() => resolveFixturePath(sb, "$UNKNOWN/file")).toThrow("unknown path token");
+  expect(resolveFixturePath(sb, "$REPO/package.json")).toBe(
+    resolve(import.meta.dir, "../../../../../package.json"),
+  );
+  expect(() => resolveFixturePath(sb, "$REPO/../outside")).toThrow("escapes");
   expect(() => materializeCaseValue(sb, { $template: "echo $UNKNOWN" })).toThrow(
     "unknown path token",
   );

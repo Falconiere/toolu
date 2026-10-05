@@ -1,0 +1,2541 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "gating: outside a Rust project",
+      "from": ["dispatch.bats: rust-quality: no-op outside a Rust project (no Cargo.toml)"],
+      "project": {},
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "#[allow(dead_code)]\nfn helper() {}\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.rs"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "gating: cargo not on PATH",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "#[allow(dead_code)]\nfn helper() {}\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.rs"
+        }
+      ],
+      "expect": "silent",
+      "env": {
+        "kind": "pathWithout",
+        "without": ["cargo"]
+      }
+    },
+    {
+      "name": "DEV-1: no jq on PATH",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "#[allow(dead_code)]\nfn helper() {}\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.rs"
+        }
+      ],
+      "expect": "silent",
+      "env": {
+        "kind": "pathWithout",
+        "without": ["jq"]
+      },
+      "deviation": {
+        "contains": ["Forbidden lint suppression"]
+      }
+    },
+    {
+      "name": "flow: a non-Rust file is ignored",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/notes.txt": "#[allow(dead_code)]\nfn helper() {}\n"
+          },
+          "tool": "Write",
+          "file": "src/notes.txt"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "flow: a missing file is ignored",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "tool": "Write",
+          "file": "src/gone.rs"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "flow: Edit names the file",
+      "from": [
+        "dispatch.bats: rust-quality: Edit tool extracts file path and flags violations (regression)"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "#[allow(dead_code)]\nfn helper() {}\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden lint suppression"]
+    },
+    {
+      "name": "flow: MultiEdit names the file",
+      "from": [
+        "dispatch.bats: rust-quality: MultiEdit extracts file path and flags violations (regression)"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "#[allow(dead_code)]\nfn helper() {}\n"
+          },
+          "tool": "MultiEdit",
+          "file": "src/bad.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden lint suppression"]
+    },
+    {
+      "name": "flow: a relative path resolves against the hook's cwd",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "#[allow(dead_code)]\nfn helper() {}\n"
+          },
+          "file": "src/bad.rs",
+          "relative": true
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in src/bad.rs"]
+    },
+    {
+      "name": "flow: CLAUDE_FILE_PATHS names the file for any tool",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "#[allow(dead_code)]\nfn helper() {}\n"
+          },
+          "tool": "Bash",
+          "input": {
+            "command": "true"
+          },
+          "env": {
+            "CLAUDE_FILE_PATHS": "src/bad.rs"
+          }
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden lint suppression"]
+    },
+    {
+      "name": "flow: a file in a linked worktree is still checked",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "wt/src/bad.rs": "#[allow(dead_code)]\nfn helper() {}\n"
+          },
+          "tool": "Write",
+          "file": "wt/src/bad.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden lint suppression"],
+      "setup": [
+        {
+          "op": "git",
+          "args": [
+            "-C",
+            {
+              "$path": "$PROJECT"
+            },
+            "worktree",
+            "add",
+            "-q",
+            "-b",
+            "side",
+            "wt"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gate: re-editing a failing file clean clears it",
+      "from": [
+        "dispatch.bats: rust-quality: gate is cleared when the failing file is re-edited clean",
+        "assembled.bats: rust assembled: re-editing a failing file clean flips the gate to passing"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/x.rs": "#[allow(dead_code)]\nfn helper() {}\n"
+          },
+          "tool": "Edit",
+          "file": "src/x.rs"
+        },
+        {
+          "write": {
+            "src/x.rs": "fn helper() {}\n"
+          },
+          "tool": "Edit",
+          "file": "src/x.rs"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "gate: deleting a failing file clears its entry",
+      "from": ["dispatch.bats: rust-quality: deleting a failing file clears its gate entry"],
+      "hosts": ["claude", "codex"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "#[allow(dead_code)]\nfn helper() {}\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.rs"
+        },
+        {
+          "remove": ["src/bad.rs"],
+          "tool": "Delete",
+          "file": "src/bad.rs"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "gate: clearing one file keeps another's failure",
+      "from": [
+        "dispatch.bats: rust-quality: clearing one file does not clobber another file's failure"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.rs": "#[allow(dead_code)]\nfn a() {}\n"
+          },
+          "tool": "Edit",
+          "file": "src/a.rs"
+        },
+        {
+          "write": {
+            "src/b.rs": "#[allow(dead_code)]\nfn b() {}\n"
+          },
+          "tool": "Edit",
+          "file": "src/b.rs"
+        },
+        {
+          "write": {
+            "src/b.rs": "fn b() {}\n"
+          },
+          "tool": "Edit",
+          "file": "src/b.rs"
+        },
+        {
+          "write": {
+            "src/a.rs": "fn a() {}\n"
+          },
+          "tool": "Edit",
+          "file": "src/a.rs"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "gate: clearing one file keeps another's failure (midway)",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.rs": "#[allow(dead_code)]\nfn a() {}\n"
+          },
+          "tool": "Edit",
+          "file": "src/a.rs"
+        },
+        {
+          "write": {
+            "src/b.rs": "#[allow(dead_code)]\nfn b() {}\n"
+          },
+          "tool": "Edit",
+          "file": "src/b.rs"
+        },
+        {
+          "write": {
+            "src/b.rs": "fn b() {}\n"
+          },
+          "tool": "Edit",
+          "file": "src/b.rs"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "gate: another hook's failure survives a rust fail and clear",
+      "from": [
+        "dispatch.bats: rust-quality: failing gate owned by another hook survives a rust fail->clear cycle"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.rs": "#[allow(dead_code)]\nfn a() {}\n"
+          },
+          "tool": "Edit",
+          "file": "src/a.rs"
+        },
+        {
+          "write": {
+            "src/a.rs": "fn a() {}\n"
+          },
+          "tool": "Edit",
+          "file": "src/a.rs"
+        }
+      ],
+      "expect": "silent",
+      "setup": [
+        {
+          "op": "write",
+          "path": "$PROJECT/.claude/tmp/quality-gate-status.json",
+          "body": "{\n  \"status\": \"failing\",\n  \"reason\": \"TS violation\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/p/x.ts\",\n  \"violations\": \"bad ts\\n\",\n  \"updatedAt\": \"2026-01-01T00:00:00Z\"\n}\n"
+        }
+      ]
+    },
+    {
+      "name": "gate: a moved file clears its source entry and checks its target",
+      "hosts": ["codex"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/old.rs": "#[allow(dead_code)]\nfn helper() {}\n"
+          },
+          "tool": "Edit",
+          "file": "src/old.rs"
+        },
+        {
+          "write": {
+            "src/new.rs": "fn helper() {}\n"
+          },
+          "remove": ["src/old.rs"],
+          "rawPatch": "*** Begin Patch\n*** Update File: src/old.rs\n*** Move to: src/new.rs\n@@\n-a\n+b\n*** End Patch"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "codex: a written file with a violation",
+      "hosts": ["codex"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "#[allow(dead_code)]\nfn helper() {}\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden lint suppression"]
+    },
+    {
+      "name": "codex: one patch over two Rust files",
+      "hosts": ["codex"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.rs": "#[allow(dead_code)]\nfn helper() {}\n",
+            "src/b.rs": "pub fn f() {\n    unsafe {\n        do_thing();\n    }\n}\n"
+          },
+          "patch": [
+            {
+              "op": "update",
+              "path": "src/a.rs",
+              "lines": ["-a", "+b"]
+            },
+            {
+              "op": "update",
+              "path": "src/b.rs",
+              "lines": ["-a", "+b"]
+            }
+          ]
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden lint suppression", "Forbidden unsafe code"]
+    },
+    {
+      "name": "assembled: two violations in rule order",
+      "from": ["assembled.bats: rust assembled == monolith on a 2-violation fixture (oracle diff)"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxFileLines": 5
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "fn main() {\n    let x = thing().unwrap();\n    let v1 = 1;\n    let v2 = 2;\n    let v3 = 3;\n    let v4 = 4;\n    let v5 = 5;\n    let v6 = 6;\n    let v7 = 7;\n    let v8 = 8;\n    let v9 = 9;\n    let v10 = 10;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["exceeds 5-line limit", ".unwrap()"]
+    },
+    {
+      "name": "assembled: fixing one of two keeps the gate failing",
+      "from": [
+        "assembled.bats: rust assembled keeps gate failing after fixing one of two violations"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxFileLines": 5
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "fn main() {\n    let x = thing().unwrap();\n    let v1 = 1;\n    let v2 = 2;\n    let v3 = 3;\n    let v4 = 4;\n    let v5 = 5;\n    let v6 = 6;\n    let v7 = 7;\n    let v8 = 8;\n    let v9 = 9;\n    let v10 = 10;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.rs"
+        },
+        {
+          "write": {
+            "src/bad.rs": "fn main() {\n    let v1 = 1;\n    let v2 = 2;\n    let v3 = 3;\n    let v4 = 4;\n    let v5 = 5;\n    let v6 = 6;\n    let v7 = 7;\n    let v8 = 8;\n    let v9 = 9;\n    let v10 = 10;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["exceeds 5-line limit"],
+      "absent": [".unwrap()"]
+    },
+    {
+      "name": "assembled: inline cfg(test) mod raises no placement violation",
+      "from": [
+        "assembled.bats: rust assembled: inline #[cfg(test)] mod produces no test-placement violation"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/lib.rs": "pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn it_adds() {\n        assert_eq!(super::add(1, 2), 3);\n    }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/lib.rs"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["test file outside tests/"]
+    },
+    {
+      "name": "assembled: clean file writes no failure",
+      "from": [
+        "assembled.bats: rust assembled: clean file writes no failure (gate passing) and == monolith"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/good.rs": "/// Reads a file and returns its contents.\npub fn read_it() -> Result<String, std::io::Error> {\n    let s = std::fs::read_to_string(\"x\")?;\n    Ok(s)\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/good.rs"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "assembled: every rule family in order",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxFileLines": 5,
+            "maxFnLines": 3,
+            "maxImplLines": 4
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/all.rs": "#[allow(dead_code)]\n#[cfg_attr(test, automock)]\ntrait Service {\n    fn call(&self) -> u8;\n}\npub struct S;\nimpl S {\n    pub fn go(&self) -> u8 {\n        let a = thing().unwrap();\n        let b = other().expect(\"b\");\n        unsafe { raw() };\n        if a > b { panic!(\"x\") }\n        todo!()\n    }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/all.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": [
+        "exceeds 5-line limit",
+        "Forbidden lint suppression",
+        "Forbidden unsafe code",
+        "Impl block too large"
+      ]
+    },
+    {
+      "name": "size: a clippy config names clippy in the hint",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n",
+        "clippy.toml": ""
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxFileLines": 3
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/big.rs": "pub const A: u8 = 1;\npub const B: u8 = 2;\npub const C: u8 = 3;\npub const D: u8 = 4;\n"
+          },
+          "tool": "Write",
+          "file": "src/big.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["(clippy enforces complexity here)"]
+    },
+    {
+      "name": "unsafe: a crate on the exemption list is not flagged",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/ffi_sys/lib.rs": "pub fn f() {\n    unsafe {\n        do_thing();\n    }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/ffi_sys/lib.rs"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Forbidden unsafe code"],
+      "env": {
+        "kind": "projectSettings",
+        "files": {
+          "rust-unsafe-exemptions.txt": "# FFI crates\n\nffi_sys\n"
+        }
+      }
+    },
+    {
+      "name": "unsafe: a crate missing from the exemption list is flagged",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/ffi_sys/lib.rs": "pub fn f() {\n    unsafe {\n        do_thing();\n    }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/ffi_sys/lib.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden unsafe code"],
+      "env": {
+        "kind": "projectSettings",
+        "files": {
+          "rust-unsafe-exemptions.txt": "# FFI crates\nother_sys\n"
+        }
+      }
+    },
+    {
+      "name": "tests: test file (#[test]) outside tests/ is flagged",
+      "from": ["tests.bats: rust-quality: test file (#[test]) outside tests/ is flagged"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/foo.rs": "#[test]\nfn it_works() {\n    assert_eq!(1, 1);\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/foo.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Rust test file outside tests/"]
+    },
+    {
+      "name": "tests: integration test under tests/ is accepted",
+      "from": ["tests.bats: rust-quality: integration test under tests/ is accepted"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "tests/integration_test.rs": "#[test]\nfn it_works() {\n    assert_eq!(1, 1);\n}\n"
+          },
+          "tool": "Write",
+          "file": "tests/integration_test.rs"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["test file outside"]
+    },
+    {
+      "name": "tests: bare #[rstest] test attribute outside tests/ is flagged",
+      "from": ["tests.bats: rust-quality: bare #[rstest] test attribute outside tests/ is flagged"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/foo.rs": "#[rstest]\nfn it_works() {\n    assert_eq!(1, 1);\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/foo.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Rust test file outside tests/"]
+    },
+    {
+      "name": "tests: #[test_log::test] attribute outside tests/ is flagged",
+      "from": ["tests.bats: rust-quality: #[test_log::test] attribute outside tests/ is flagged"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/foo.rs": "#[test_log::test]\nfn it_works() {\n    assert_eq!(1, 1);\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/foo.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Rust test file outside tests/"]
+    },
+    {
+      "name": "tests: #[test_case(...)] attribute outside tests/ is flagged",
+      "from": ["tests.bats: rust-quality: #[test_case(...)] attribute outside tests/ is flagged"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/foo.rs": "#[test_case(1)]\nfn it_works(x: u8) {\n    assert_eq!(x, x);\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/foo.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Rust test file outside tests/"]
+    },
+    {
+      "name": "tests: #[cfg(test)] is not caught by the widened test-attr rule",
+      "from": [
+        "tests.bats: rust-quality: #[cfg(test)] is not caught by the widened test-attr rule"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/lib.rs": "pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn it_adds() {\n        assert_eq!(super::add(1, 2), 3);\n    }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/lib.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Inline #[cfg(test)]"],
+      "absent": ["Rust test file outside tests/"]
+    },
+    {
+      "name": "tests: inline #[cfg(all(test, ...))] is flagged",
+      "from": ["tests.bats: rust-quality: inline #[cfg(all(test, ...))] is flagged"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/lib.rs": "pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n#[cfg(all(test, feature = \"unit\"))]\nmod tests {\n    #[test]\n    fn it_adds() {\n        assert_eq!(super::add(1, 2), 3);\n    }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/lib.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: cfg(not(test)) and a test- feature string are not inline cfg(test)",
+      "from": [
+        "tests.bats: rust-quality: #[cfg(not(test))] and feature=\"test-x\" are NOT flagged as inline cfg(test)"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/m.rs": "#[cfg(not(test))]\npub fn prod_only() -> u8 {\n    1\n}\n\n#[cfg(feature = \"test-utils\")]\npub fn helper() -> u8 {\n    2\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/m.rs"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: canonical inline cfg(test) mod, one violation (lib.rs)",
+      "from": [
+        "tests.bats: rust-quality: canonical inline #[cfg(test)] mod produces one violation, not two"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/lib.rs": "pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn it_adds() {\n        assert_eq!(super::add(1, 2), 3);\n    }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/lib.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Inline #[cfg(test)]"],
+      "absent": ["Rust test file outside tests/"]
+    },
+    {
+      "name": "tests: #[bench] does not trigger tests/ placement",
+      "from": [
+        "tests.bats: rust-quality: #[bench] and #[wasm_bindgen_test] do not trigger tests/ placement"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "benches/speed.rs": "#[bench]\nfn bench_it(b: &mut Bencher) {\n    b.iter(|| 1 + 1);\n}\n"
+          },
+          "tool": "Write",
+          "file": "benches/speed.rs"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["test file outside"]
+    },
+    {
+      "name": "tests: #[wasm_bindgen_test] does not trigger tests/ placement",
+      "from": [
+        "tests.bats: rust-quality: #[bench] and #[wasm_bindgen_test] do not trigger tests/ placement"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/wasm_checks.rs": "#[wasm_bindgen_test]\nfn browser_works() {\n    assert_eq!(1, 1);\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/wasm_checks.rs"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["test file outside"]
+    },
+    {
+      "name": "tests: single-line bodyless #[cfg(test)] mod tests; passes",
+      "from": ["tests.bats: rust-quality: single-line bodyless #[cfg(test)] mod tests; passes"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/foo.rs": "pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n#[cfg(test)] mod tests;\n"
+          },
+          "tool": "Write",
+          "file": "src/foo.rs"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: rustfmt two-line bodyless #[cfg(test)] / mod tests; passes",
+      "from": [
+        "tests.bats: rust-quality: rustfmt two-line bodyless #[cfg(test)] / mod tests; passes"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/foo.rs": "pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n#[cfg(test)]\nmod tests;\n"
+          },
+          "tool": "Write",
+          "file": "src/foo.rs"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: two-line bodyless #[cfg(test)] / pub mod foo_tests; passes",
+      "from": [
+        "tests.bats: rust-quality: two-line bodyless #[cfg(test)] / pub mod foo_tests; passes"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/foo.rs": "pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n#[cfg(test)]\npub mod foo_tests;\n"
+          },
+          "tool": "Write",
+          "file": "src/foo.rs"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: #[path]-wired bodyless #[cfg(test)] mod tests; passes",
+      "from": ["tests.bats: rust-quality: #[path]-wired bodyless #[cfg(test)] mod tests; passes"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/api/stats.rs": "pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n#[cfg(test)]\n#[path = \"tests/stats.rs\"]\nmod tests;\n"
+          },
+          "tool": "Write",
+          "file": "src/api/stats.rs"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: a run of attributes before the bodyless mod decl still passes",
+      "from": [
+        "tests.bats: rust-quality: a run of attributes before the bodyless mod decl still passes"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/foo.rs": "pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n#[cfg(test)]\n#[path = \"tests/foo.rs\"]\n#[cfg_attr(miri, ignore)]\npub mod foo_tests;\n"
+          },
+          "tool": "Write",
+          "file": "src/foo.rs"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: a decl behind the full attribute bound is exempt",
+      "from": ["tests.bats: rust-quality: a decl behind the full attribute bound is exempt"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/foo.rs": "pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n#[cfg(test)]\n#[path = \"tests/p1.rs\"]\n#[path = \"tests/p2.rs\"]\n#[path = \"tests/p3.rs\"]\n#[path = \"tests/p4.rs\"]\n#[path = \"tests/p5.rs\"]\n#[path = \"tests/p6.rs\"]\n#[path = \"tests/p7.rs\"]\n#[path = \"tests/p8.rs\"]\nmod tests;\n"
+          },
+          "tool": "Write",
+          "file": "src/foo.rs"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: a decl behind more attributes than the bound is still flagged",
+      "from": [
+        "tests.bats: rust-quality: a decl behind more attributes than the bound is still flagged"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/foo.rs": "pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n#[cfg(test)]\n#[path = \"tests/p1.rs\"]\n#[path = \"tests/p2.rs\"]\n#[path = \"tests/p3.rs\"]\n#[path = \"tests/p4.rs\"]\n#[path = \"tests/p5.rs\"]\n#[path = \"tests/p6.rs\"]\n#[path = \"tests/p7.rs\"]\n#[path = \"tests/p8.rs\"]\n#[path = \"tests/p9.rs\"]\nmod tests;\n"
+          },
+          "tool": "Write",
+          "file": "src/foo.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: #[path]-wired #[cfg(test)] mod tests { with a body still fails",
+      "from": [
+        "tests.bats: rust-quality: #[path]-wired #[cfg(test)] mod tests { with a body still fails"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/foo.rs": "pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n#[cfg(test)]\n#[path = \"tests/foo.rs\"]\nmod tests {\n    #[test]\n    fn it_adds() {\n        assert_eq!(super::add(1, 2), 3);\n    }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/foo.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: single-line #[cfg(test)] mod tests { with a body still fails",
+      "from": [
+        "tests.bats: rust-quality: single-line #[cfg(test)] mod tests { with a body still fails"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/foo.rs": "pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n#[cfg(test)] mod tests {\n    #[test]\n    fn it_adds() {\n        assert_eq!(super::add(1, 2), 3);\n    }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/foo.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: two-line #[cfg(test)] / mod tests { with a body still fails",
+      "from": [
+        "tests.bats: rust-quality: two-line #[cfg(test)] / mod tests { with a body still fails"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/foo.rs": "pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn it_adds() {\n        assert_eq!(super::add(1, 2), 3);\n    }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/foo.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: #[cfg(all(test, ...))] followed by bodyless mod tests; still fails",
+      "from": [
+        "tests.bats: rust-quality: #[cfg(all(test, ...))] followed by bodyless mod tests; still fails"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/foo.rs": "pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n#[cfg(all(test, feature = \"unit\"))]\nmod tests;\n"
+          },
+          "tool": "Write",
+          "file": "src/foo.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: #[cfg(test)] only in a doc comment does NOT suppress placement enforcement",
+      "from": [
+        "tests.bats: rust-quality: #[cfg(test)] only in a doc comment does NOT suppress placement enforcement"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/foo.rs": "/// Example usage: annotate with #[cfg(test)] in your own crate.\n#[tokio::test]\nasync fn it_works() {\n    assert_eq!(1, 1);\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/foo.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Rust test file outside tests/"],
+      "absent": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: cfg(all(test)) with no comma is still flagged",
+      "from": ["tests.bats: rust-quality: cfg(all(test)) with no comma is still flagged"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/allnocomma.rs": "#[cfg(all(test))]\nmod tests {\n    fn t() {}\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/allnocomma.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: cfg(all(test , feature)) with space before comma is still flagged",
+      "from": [
+        "tests.bats: rust-quality: cfg(all(test , feature)) with space before comma is still flagged"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/allspace.rs": "#[cfg(all(test , feature = \"x\"))]\nmod tests;\n"
+          },
+          "tool": "Write",
+          "file": "src/allspace.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: bodyless decl with trailing // comment is exempt",
+      "from": ["tests.bats: rust-quality: bodyless decl with trailing // comment is exempt"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/trailing.rs": "#[cfg(test)]\nmod tests; // unit tests live in tests/\nfn real() {}\n"
+          },
+          "tool": "Write",
+          "file": "src/trailing.rs"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: cfg(test) as the last line fails closed",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/tail.rs": "pub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n\n#[cfg(test)]\n"
+          },
+          "tool": "Write",
+          "file": "src/tail.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Inline #[cfg(test)]"]
+    },
+    {
+      "name": "tests: a nested tests/ subdirectory is flagged",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "tests/deep/it_test.rs": "#[test]\nfn it_works() {\n    assert_eq!(1, 1);\n}\n"
+          },
+          "tool": "Write",
+          "file": "tests/deep/it_test.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Rust test nested in tests/ subdirectory"]
+    },
+    {
+      "name": "tests: tests/common is an allowed subdirectory",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "tests/common/helpers_test.rs": "#[test]\nfn it_works() {\n    assert_eq!(1, 1);\n}\n"
+          },
+          "tool": "Write",
+          "file": "tests/common/helpers_test.rs"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "tests: a _test.rs name outside tests/ is flagged",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/parse_test.rs": "fn check() {}\n"
+          },
+          "tool": "Write",
+          "file": "src/parse_test.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Rust test file outside tests/"]
+    },
+    {
+      "name": "size: project config lowers maxFileLines, flags a file the default would not",
+      "from": [
+        "size.bats: rust-quality: project config lowers maxFileLines, flags a file the default would not"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxFileLines": 10
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/big.rs": "pub const V1: u32 = 1;\npub const V2: u32 = 2;\npub const V3: u32 = 3;\npub const V4: u32 = 4;\npub const V5: u32 = 5;\npub const V6: u32 = 6;\npub const V7: u32 = 7;\npub const V8: u32 = 8;\npub const V9: u32 = 9;\npub const V10: u32 = 10;\npub const V11: u32 = 11;\npub const V12: u32 = 12;\npub const V13: u32 = 13;\npub const V14: u32 = 14;\npub const V15: u32 = 15;\n"
+          },
+          "tool": "Write",
+          "file": "src/big.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["exceeds 10-line limit"]
+    },
+    {
+      "name": "size: over-limit message flags approximate size on unterminated /*",
+      "from": [
+        "size.bats: rust-quality: over-limit message flags approximate size on unterminated /*"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxFileLines": 2
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/m.rs": "let s = \"/*\";\nlet a = 1;\nlet b = 2;\nlet c = 3;\n"
+          },
+          "tool": "Write",
+          "file": "src/m.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["exceeds 2-line limit", "size approximated"]
+    },
+    {
+      "name": "size: pub(crate) const fn is subject to the fn-length limit",
+      "from": ["size.bats: rust-quality: pub(crate) const fn is subject to the fn-length limit"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxFnLines": 3
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/m.rs": "pub(crate) const fn big() -> u8 {\n    let a = 1;\n    let b = 2;\n    let c = 3;\n    a + b + c\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/m.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long"]
+    },
+    {
+      "name": "size: long fn with inner if/else is measured to its real close (regression)",
+      "from": [
+        "size.bats: rust-quality: long fn with inner if/else is measured to its real close (regression)"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxFnLines": 5
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/long.rs": "fn long_with_branches(x: u8) -> u8 {\n    let mut acc = 0;\n    if x > 0 {\n        acc += 1;\n    } else {\n        acc += 2;\n    }\n    acc += 3;\n    acc += 4;\n    acc\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/long.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long"]
+    },
+    {
+      "name": "size: short impl method followed by other items is NOT flagged",
+      "from": ["size.bats: rust-quality: short impl method followed by other items is NOT flagged"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxFnLines": 5
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/m.rs": "pub struct Foo;\nimpl Foo {\n    fn short(&self) -> u8 {\n        1\n    }\n    const A: u8 = 1;\n    const B: u8 = 2;\n    const C: u8 = 3;\n    const D: u8 = 4;\n    const E: u8 = 5;\n    const F: u8 = 6;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/m.rs"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Function too long"]
+    },
+    {
+      "name": "size: long method inside an impl IS flagged",
+      "from": ["size.bats: rust-quality: long method inside an impl IS flagged"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxFnLines": 5
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/m.rs": "pub struct Foo;\nimpl Foo {\n    fn long_method(&self, x: u8) -> u8 {\n        let mut acc = 0;\n        if x > 0 {\n            acc += 1;\n        } else {\n            acc += 2;\n        }\n        acc += 3;\n        acc\n    }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/m.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long"]
+    },
+    {
+      "name": "size: long fn with unbalanced brace in a string is still measured",
+      "from": [
+        "size.bats: rust-quality: long fn with unbalanced brace in a string is still measured"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxFnLines": 5
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/m.rs": "fn unbalanced_string(x: u8) -> u8 {\n    let open = \"{\";\n    let close = '{';\n    if x > 0 {\n        return 1;\n    }\n    let a = 2;\n    let b = 3;\n    a + b\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/m.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long"]
+    },
+    {
+      "name": "size: pub(in path) fn is subject to the fn-length limit",
+      "from": ["size.bats: rust-quality: pub(in path) fn is subject to the fn-length limit"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxFnLines": 3
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/m.rs": "pub(in crate::foo) fn big() -> u8 {\n    let a = 1;\n    let b = 2;\n    let c = 3;\n    a + b + c\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/m.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long"]
+    },
+    {
+      "name": "size: oversized impl block is flagged (brace-depth)",
+      "from": ["size.bats: rust-quality: oversized impl block is flagged (brace-depth)"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxImplLines": 6
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/m.rs": "pub struct Foo;\nimpl Foo {\n    pub const V1: u8 = 1;\n    pub const V2: u8 = 2;\n    pub const V3: u8 = 3;\n    pub const V4: u8 = 4;\n    pub const V5: u8 = 5;\n    pub const V6: u8 = 6;\n    pub const V7: u8 = 7;\n    pub const V8: u8 = 8;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/m.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Impl block too large"]
+    },
+    {
+      "name": "size: small impl with an inner-control-flow method is NOT flagged",
+      "from": [
+        "size.bats: rust-quality: small impl with an inner-control-flow method is NOT flagged"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxImplLines": 20
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/m.rs": "pub struct Foo;\nimpl Foo {\n    fn pick(&self, x: u8) -> u8 {\n        if x > 0 {\n            1\n        } else {\n            2\n        }\n    }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/m.rs"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Impl block too large"]
+    },
+    {
+      "name": "size: long fn in a COLOCATED test under src/ is NOT flagged",
+      "from": ["size.bats: rust-quality: long fn in a COLOCATED test under src/ is NOT flagged"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxFnLines": 3
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/store/tests/big.rs": "#[test]\nfn table_driven() {\n    let a = 1;\n    let b = 2;\n    let c = 3;\n    assert_eq!(a + b + c, 6);\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/store/tests/big.rs"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Function too long in"]
+    },
+    {
+      "name": "size: oversized impl in a COLOCATED test under src/ is NOT flagged",
+      "from": [
+        "size.bats: rust-quality: oversized impl in a COLOCATED test under src/ is NOT flagged"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxImplLines": 6
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/store/tests/big.rs": "#[test]\nfn anchor() { assert!(true); }\nstruct Fixture;\nimpl Fixture {\n    const V1: u8 = 1;\n    const V2: u8 = 2;\n    const V3: u8 = 3;\n    const V4: u8 = 4;\n    const V5: u8 = 5;\n    const V6: u8 = 6;\n    const V7: u8 = 7;\n    const V8: u8 = 8;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/store/tests/big.rs"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Impl block too large in"]
+    },
+    {
+      "name": "size: default limits leave a small file alone",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/small.rs": "fn long_with_branches(x: u8) -> u8 {\n    let mut acc = 0;\n    if x > 0 {\n        acc += 1;\n    } else {\n        acc += 2;\n    }\n    acc += 3;\n    acc += 4;\n    acc\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/small.rs"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "size: a trait fn declaration ends at its semicolon",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxFnLines": 3
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/t.rs": "trait T {\n    fn a(&self) -> u8;\n    fn b(&self) -> u8;\n    fn c(&self) -> u8;\n    fn d(&self) -> u8;\n    fn e(&self) -> u8;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/t.rs"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "size: async unsafe extern fn heads are measured",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxFnLines": 2
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/x.rs": "pub async fn a() {\n    one();\n    two();\n    three();\n}\npub unsafe extern \"C\" fn b() {\n    one();\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/x.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long"]
+    },
+    {
+      "name": "size: an unsafe impl block is measured",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "maxImplLines": 2
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/x.rs": "struct S;\nunsafe impl Send for S {\n    // one\n    // two\n}\nimpl<T> From<T> for S {\n    fn from(_: T) -> S { S }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/x.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Impl block too large"]
+    },
+    {
+      "name": "suppression: cfg_attr(allow) lint suppression is flagged",
+      "from": ["suppression.bats: rust-quality: cfg_attr(allow) lint suppression is flagged"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "#[cfg_attr(test, allow(dead_code))]\nfn helper() {}\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden lint suppression"]
+    },
+    {
+      "name": "suppression: #[allow] mentioned in a line comment is NOT flagged",
+      "from": [
+        "suppression.bats: rust-quality: #[allow] mentioned in a line comment is NOT flagged"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/ok.rs": "// historically this used #[allow(dead_code)] elsewhere; removed now.\nfn helper() -> u8 {\n    1\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/ok.rs"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Forbidden lint suppression"]
+    },
+    {
+      "name": "suppression: file-level #![allow] header in a module-sibling test is NOT flagged",
+      "from": [
+        "suppression.bats: rust-quality: file-level #![allow] header in a module-sibling test is NOT flagged"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/api/tests/stats.rs": "#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]\n\n#[test]\nfn it_adds() {\n    assert_eq!(1 + 1, 2);\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/api/tests/stats.rs"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Forbidden lint suppression"]
+    },
+    {
+      "name": "suppression: file-level #![allow] header in a crate-root integration test is NOT flagged",
+      "from": [
+        "suppression.bats: rust-quality: file-level #![allow] header in a crate-root integration test is NOT flagged"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "tests/integration.rs": "#![allow(clippy::unwrap_used)]\n\n#[test]\nfn it_runs() {\n    assert!(true);\n}\n"
+          },
+          "tool": "Write",
+          "file": "tests/integration.rs"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Forbidden lint suppression"]
+    },
+    {
+      "name": "suppression: inner #![cfg_attr(..., allow(...))] in a test file is NOT flagged",
+      "from": [
+        "suppression.bats: rust-quality: inner #![cfg_attr(..., allow(...))] in a test file is NOT flagged"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/api/tests/stats.rs": "#![cfg_attr(miri, allow(clippy::unwrap_used))]\n\n#[test]\nfn it_adds() {\n    assert_eq!(1 + 1, 2);\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/api/tests/stats.rs"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Forbidden lint suppression"]
+    },
+    {
+      "name": "suppression: per-item #[allow] inside a test file IS still flagged",
+      "from": [
+        "suppression.bats: rust-quality: per-item #[allow] inside a test file IS still flagged"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/api/tests/stats.rs": "#[allow(dead_code)]\nfn helper() {}\n\n#[test]\nfn it_adds() {\n    assert_eq!(1 + 1, 2);\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/api/tests/stats.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": [
+        "Forbidden lint suppression",
+        "only the file-level #![allow(...)] header is accepted"
+      ]
+    },
+    {
+      "name": "suppression: file-level #![allow] header outside tests/ IS still flagged",
+      "from": [
+        "suppression.bats: rust-quality: file-level #![allow] header outside tests/ IS still flagged"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/lib.rs": "#![allow(clippy::unwrap_used)]\n\npub fn add(a: u8, b: u8) -> u8 {\n    a + b\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/lib.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden lint suppression"],
+      "absent": ["only the file-level #![allow(...)] header is accepted"]
+    },
+    {
+      "name": "suppression: #[expect] is flagged",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/e.rs": "#[expect(unused)]\nfn helper() {}\n"
+          },
+          "tool": "Write",
+          "file": "src/e.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden lint suppression"]
+    },
+    {
+      "name": "unsafe: unsafe block in src/ is flagged",
+      "from": ["unsafe.bats: rust-quality: unsafe block in src/ is flagged"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/u.rs": "pub fn f() {\n    unsafe {\n        do_thing();\n    }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/u.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden unsafe code"]
+    },
+    {
+      "name": "unsafe: unsafe mentioned only in a comment is NOT flagged",
+      "from": ["unsafe.bats: rust-quality: unsafe mentioned only in a comment is NOT flagged"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/ok.rs": "// we deliberately avoid unsafe { } here; use safe wrappers instead.\npub fn f() -> u8 {\n    1\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/ok.rs"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Forbidden unsafe code"]
+    },
+    {
+      "name": "unsafe: unsafe inside a multi-line block comment is NOT flagged",
+      "from": [
+        "unsafe.bats: rust-quality: unsafe inside a multi-line block comment is NOT flagged"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/ok.rs": "/*\nlegacy implementation:\nunsafe {\n    do_thing();\n}\n*/\npub fn f() -> u8 {\n    1\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/ok.rs"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Forbidden unsafe code"]
+    },
+    {
+      "name": "unsafe: an unsafe fn and an inline block comment",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/u.rs": "/* unsafe { */ fn safe() {}\nunsafe fn raw() {}\n"
+          },
+          "tool": "Write",
+          "file": "src/u.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden unsafe code"]
+    },
+    {
+      "name": "unsafe: an identifier ending in unsafe is not flagged",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/u.rs": "fn f() {\n    let not_unsafe {\n    };\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/u.rs"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Forbidden unsafe code"]
+    },
+    {
+      "name": "docs: pub(crate) fn without /// doc emits a docs advisory",
+      "from": ["docs.bats: rust-quality: pub(crate) fn without /// doc emits a docs advisory"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/api.rs": "pub(crate) fn do_thing() -> u32 {\n    1\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/api.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["missing a /// doc"],
+      "absent": ["QUALITY VIOLATION"]
+    },
+    {
+      "name": "docs: pub fn without /// doc emits a non-blocking docs advisory",
+      "from": [
+        "docs.bats: rust-quality: pub fn without /// doc emits a non-blocking docs advisory"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/api.rs": "pub fn do_thing() -> u32 {\n    1\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/api.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["missing a /// doc"],
+      "absent": ["QUALITY VIOLATION"]
+    },
+    {
+      "name": "docs: attributes and blank lines sit between the doc and the item",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/api.rs": "/// Documented.\n\n#[inline]\npub fn a() {}\n//! inner\npub struct B;\npub enum C {}\n"
+          },
+          "tool": "Write",
+          "file": "src/api.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["7: pub enum C {}"]
+    },
+    {
+      "name": "docs: more than three undocumented items show the first three",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/api.rs": "pub fn a() {}\npub fn b() {}\npub const C: u8 = 1;\npub mod d;\n"
+          },
+          "tool": "Write",
+          "file": "src/api.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["3: pub const C: u8 = 1;"],
+      "absent": ["4: pub mod d;"]
+    },
+    {
+      "name": "docs: a long doc block is verbose",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/api.rs": "/// line 1\n/// line 2\n/// line 3\n/// line 4\n/// line 5\n/// line 6\n/// line 7\n/// line 8\n/// line 9\n/// line 10\n/// line 11\n/// line 12\n/// line 13\npub fn documented() -> u8 {\n    1\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/api.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["1: doc block is 13 lines \u2014 trim to the essentials"]
+    },
+    {
+      "name": "docs: undocumented and verbose together",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/api.rs": "pub fn bare() {}\n/// line 1\n/// line 2\n/// line 3\n/// line 4\n/// line 5\n/// line 6\n/// line 7\n/// line 8\n/// line 9\n/// line 10\n/// line 11\n/// line 12\n/// line 13\npub fn documented() -> u8 {\n    1\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/api.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["missing a /// doc", "Verbose doc comment"]
+    },
+    {
+      "name": "docs: a doc block at the end of the file",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/api.rs": "fn x() {}\n//! tail\n//! tail\n//! tail\n//! tail\n//! tail\n//! tail\n//! tail\n//! tail\n//! tail\n//! tail\n//! tail\n//! tail\n//! tail\n"
+          },
+          "tool": "Write",
+          "file": "src/api.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["2: doc block is 13 lines"]
+    },
+    {
+      "name": "docs: outside src/ there is no advisory",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "examples/demo.rs": "pub fn bare() {}\n"
+          },
+          "tool": "Write",
+          "file": "examples/demo.rs"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "error-handling: .unwrap() in src/ is flagged",
+      "from": ["error-handling.bats: rust-quality: .unwrap() in src/ is flagged"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "fn main() {\n    let x = some_result().unwrap();\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": [".unwrap()"]
+    },
+    {
+      "name": "error-handling: .expect() in src/ is flagged",
+      "from": ["error-handling.bats: rust-quality: .expect() in src/ is flagged"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "fn main() {\n    let y = thing.expect(\"nope\");\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": [".expect()"]
+    },
+    {
+      "name": "error-handling: panic!/todo!/unimplemented! in src/ is flagged",
+      "from": ["error-handling.bats: rust-quality: panic!/todo!/unimplemented! in src/ is flagged"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "fn main() {\n    panic!(\"explode\");\n    todo!();\n    unimplemented!();\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["panic!/todo!/unimplemented!"]
+    },
+    {
+      "name": "error-handling: clean Result-based code produces no error output",
+      "from": [
+        "error-handling.bats: rust-quality: clean Result-based code produces no error output"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/good.rs": "fn main() -> Result<(), std::io::Error> {\n    let _ = std::fs::read_to_string(\"x\")?;\n    Ok(())\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/good.rs"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["QUALITY VIOLATION"]
+    },
+    {
+      "name": "error-handling: ast-grep crash is surfaced as a violation, not silent pass",
+      "from": [
+        "error-handling.bats: rust-quality: ast-grep crash is surfaced as a violation, not silent pass"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/good.rs": "fn helper() {}\n"
+          },
+          "tool": "Write",
+          "file": "src/good.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["ast-grep failed", "boom", "exit 2"],
+      "env": {
+        "kind": "stubAstGrep",
+        "body": "echo boom >&2\nexit 2"
+      }
+    },
+    {
+      "name": "error-handling: gate-status file is written on violation",
+      "from": ["error-handling.bats: rust-quality: gate-status file is written on violation"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "fn main() { panic!(); }\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["QUALITY VIOLATION"]
+    },
+    {
+      "name": "error-handling: unreachable! in src/ is flagged",
+      "from": ["error-handling.bats: rust-quality: unreachable! in src/ is flagged"],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "fn f(x: u8) -> u8 {\n    match x {\n        0 => 1,\n        _ => unreachable!(\"never\"),\n    }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["unreachable!"]
+    },
+    {
+      "name": "error-handling: .unwrap() in a COLOCATED test under src/ is not flagged",
+      "from": [
+        "error-handling.bats: rust-quality: .unwrap() in a COLOCATED test under src/ is not flagged"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/store/tests/migrate.rs": "#[test]\nfn migration_applies() {\n    let conn = open().unwrap();\n    assert_eq!(conn.version(), 14);\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/store/tests/migrate.rs"
+        }
+      ],
+      "expect": "silent",
+      "absent": [".unwrap()"]
+    },
+    {
+      "name": "error-handling: .unwrap() in a NON-test file under a src/.../tests/ path is still flagged",
+      "from": [
+        "error-handling.bats: rust-quality: .unwrap() in a NON-test file under a src/.../tests/ path is still flagged"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/store/tests/helper.rs": "pub fn open_or_die() -> Conn {\n    connect().unwrap()\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/store/tests/helper.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": [".unwrap()"]
+    },
+    {
+      "name": "error-handling: ast-grep absent skips the rule sets",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.rs": "fn main() {\n    let x = some_result().unwrap();\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.rs"
+        }
+      ],
+      "expect": "silent",
+      "env": {
+        "kind": "pathWithout",
+        "without": ["ast-grep", "sg"]
+      }
+    },
+    {
+      "name": "error-handling: unparsable ast-grep output is a failure",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "noMocks": false
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/good.rs": "fn helper() {}\n"
+          },
+          "tool": "Write",
+          "file": "src/good.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["did not parse as the documented JSON array"],
+      "env": {
+        "kind": "stubAstGrep",
+        "body": "echo 'not json'"
+      }
+    },
+    {
+      "name": "error-handling: empty ast-grep output is no hits",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "config": {
+        "lang": {
+          "rust": {
+            "noMocks": false
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/good.rs": "fn helper() {}\n"
+          },
+          "tool": "Write",
+          "file": "src/good.rs"
+        }
+      ],
+      "expect": "silent",
+      "env": {
+        "kind": "stubAstGrep",
+        "body": "exit 0"
+      }
+    },
+    {
+      "name": "error-handling: excerpts stop at five per rule",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/many.rs": "fn main() {\n\tlet v1 = r1().unwrap();\t\n\tlet v2 = r2().unwrap();\t\n\tlet v3 = r3().unwrap();\t\n\tlet v4 = r4().unwrap();\t\n\tlet v5 = r5().unwrap();\t\n\tlet v6 = r6().unwrap();\t\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/many.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["r5().unwrap()"],
+      "absent": ["r6().unwrap()"]
+    },
+    {
+      "name": "no-mocks: src/ fixture with #[cfg_attr(test, automock)] fails the gate",
+      "from": [
+        "no-mocks.bats: rust-quality no-mocks: src/ fixture with #[cfg_attr(test, automock)] fails the gate"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/service.rs": "#[cfg_attr(test, automock)]\ntrait Service {\n    fn call(&self) -> u8;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/service.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["no-mocks", "QUALITY VIOLATION"]
+    },
+    {
+      "name": "no-mocks: src/lib.rs with mock! { ... } fails the gate",
+      "from": [
+        "no-mocks.bats: rust-quality no-mocks: src/lib.rs with mock! { ... } fails the gate"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/lib.rs": "pub trait Foo {\n    fn bar(&self) -> u8;\n}\n\nmock! {\n    pub MyMock {}\n    impl Foo for MyMock {\n        fn bar(&self) -> u8;\n    }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/lib.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["no-mocks", "mock! { ... }"]
+    },
+    {
+      "name": "no-mocks: src/lib.rs with mock!(...) paren-delimiter form fails the gate",
+      "from": [
+        "no-mocks.bats: rust-quality no-mocks: src/lib.rs with mock!(...) paren-delimiter form fails the gate"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/lib.rs": "pub trait Foo {\n    fn bar(&self) -> u8;\n}\n\nmock!(\n    pub MyMock {}\n    impl Foo for MyMock {\n        fn bar(&self) -> u8;\n    }\n);\n"
+          },
+          "tool": "Write",
+          "file": "src/lib.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["no-mocks", "mock! { ... } mock definition"]
+    },
+    {
+      "name": "no-mocks: tests/integration_test.rs with use mockall::predicate::*; fails the gate",
+      "from": [
+        "no-mocks.bats: rust-quality no-mocks: tests/integration_test.rs with use mockall::predicate::*; fails the gate"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "tests/integration_test.rs": "use mockall::predicate::*;\n\n#[test]\nfn it_works() {\n    assert_eq!(1, 1);\n}\n"
+          },
+          "tool": "Write",
+          "file": "tests/integration_test.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["no-mocks", "mockall/faux import"]
+    },
+    {
+      "name": "no-mocks: tests/ fixture with use faux::...; fails the gate",
+      "from": [
+        "no-mocks.bats: rust-quality no-mocks: tests/ fixture with use faux::...; fails the gate"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "tests/faux_test.rs": "use faux::create;\n\n#[test]\nfn it_works() {\n    assert_eq!(1, 1);\n}\n"
+          },
+          "tool": "Write",
+          "file": "tests/faux_test.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["no-mocks", "mockall/faux import"]
+    },
+    {
+      "name": "no-mocks: *_tests.rs basename outside tests/ is still scoped for mock imports",
+      "from": [
+        "no-mocks.bats: rust-quality no-mocks: *_tests.rs basename outside tests/ is still scoped for mock imports"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "integration_tests.rs": "use mockall::automock;\n\n#[test]\nfn it_works() {\n    assert_eq!(1, 1);\n}\n"
+          },
+          "tool": "Write",
+          "file": "integration_tests.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["no-mocks"]
+    },
+    {
+      "name": "no-mocks: real-data test fixture (reads a real fixture file from tests/data/) passes",
+      "from": [
+        "no-mocks.bats: rust-quality no-mocks: real-data test fixture (reads a real fixture file from tests/data/) passes"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "tests/real_data_test.rs": "use std::fs;\n\n#[test]\nfn reads_real_fixture() {\n    let s = fs::read_to_string(\"tests/data/sample.txt\").expect(\"fixture file must exist\");\n    assert_eq!(s.trim(), \"hello world\");\n}\n"
+          },
+          "tool": "Write",
+          "file": "tests/real_data_test.rs"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["no-mocks"],
+      "commit": {
+        "tests/data/sample.txt": "hello world\n"
+      }
+    },
+    {
+      "name": "no-mocks: lang.rust.noMocks=false lets a src/ automock fixture pass",
+      "from": [
+        "no-mocks.bats: rust-quality no-mocks: lang.rust.noMocks=false lets a src/ automock fixture pass"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/service.rs": "#[cfg_attr(test, automock)]\ntrait Service {\n    fn call(&self) -> u8;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/service.rs"
+        }
+      ],
+      "config": {
+        "lang": {
+          "rust": {
+            "noMocks": false
+          }
+        }
+      },
+      "expect": "silent",
+      "absent": ["no-mocks"]
+    },
+    {
+      "name": "no-mocks: lang.rust.noMocks=false lets a tests/ mockall-import fixture pass",
+      "from": [
+        "no-mocks.bats: rust-quality no-mocks: lang.rust.noMocks=false lets a tests/ mockall-import fixture pass"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "tests/integration_test.rs": "use mockall::predicate::*;\n\n#[test]\nfn it_works() {\n    assert_eq!(1, 1);\n}\n"
+          },
+          "tool": "Write",
+          "file": "tests/integration_test.rs"
+        }
+      ],
+      "config": {
+        "lang": {
+          "rust": {
+            "noMocks": false
+          }
+        }
+      },
+      "expect": "silent",
+      "absent": ["no-mocks"]
+    },
+    {
+      "name": "no-mocks: ast-grep crash while scanning for mocks is surfaced, not silent",
+      "from": [
+        "no-mocks.bats: rust-quality no-mocks: ast-grep crash while scanning for mocks is surfaced, not silent"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/service.rs": "trait Service {\n    fn call(&self) -> u8;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/service.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": [
+        "ast-grep failed while scanning",
+        "no-mocks rules could not be verified",
+        "boom"
+      ],
+      "env": {
+        "kind": "stubAstGrep",
+        "body": "echo boom >&2\nexit 2"
+      }
+    },
+    {
+      "name": "no-mocks: ast-grep exit 0 with empty stdout is surfaced, not silent",
+      "from": [
+        "no-mocks.bats: rust-quality no-mocks: ast-grep exit 0 with empty stdout is surfaced, not silent"
+      ],
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/service.rs": "trait Service {\n    fn call(&self) -> u8;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/service.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": [
+        "ast-grep failed while scanning",
+        "empty output",
+        "no-mocks rules could not be verified"
+      ],
+      "env": {
+        "kind": "stubAstGrep",
+        "body": "exit 0"
+      }
+    },
+    {
+      "name": "no-mocks: a bare #[automock] in src/ fails the gate",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/service.rs": "#[automock]\ntrait Service {\n    fn call(&self) -> u8;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/service.rs"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["#[automock] mock definition"]
+    },
+    {
+      "name": "no-mocks: a mock import in a non-test src/ file is not scanned",
+      "project": {
+        "Cargo.toml": "[package]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/uses.rs": "use mockall::predicate::*;\nfn helper() {}\n"
+          },
+          "tool": "Write",
+          "file": "src/uses.rs"
+        }
+      ],
+      "expect": "silent"
+    }
+  ]
+}

@@ -6,7 +6,7 @@
  * must instead show what the TypeScript module does right.
  */
 import { expect, test } from "bun:test";
-import { DEVIATIONS, PY_CASES } from "./cases.ts";
+import { PY_CASES } from "./cases.ts";
 import { caseKey, runCase } from "./golden-harness.ts";
 import { readGolden } from "./golden-io.ts";
 
@@ -24,7 +24,7 @@ for (const c of PY_CASES) {
         const expected = golden.cases[key];
         if (expected === undefined) throw new Error(`no golden capture for ${key}`);
         const actual = await runCase(c, host, { kind: "bundle" });
-        const deviation = DEVIATIONS[c.name];
+        const deviation = c.deviation;
         if (deviation !== undefined) {
           const last = actual.at(-1)?.stdout ?? "";
           for (const text of deviation.contains) expect(last).toContain(text);

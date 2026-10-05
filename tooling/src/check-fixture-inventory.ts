@@ -13,8 +13,8 @@ const SuiteSchema = z.strictObject({
 });
 const IndexSchema = z.strictObject({ version: z.literal(1), suites: z.array(SuiteSchema).min(1) });
 
-export type FixtureSuite = z.infer<typeof SuiteSchema>;
-export type FixtureIndex = z.infer<typeof IndexSchema>;
+type FixtureSuite = z.infer<typeof SuiteSchema>;
+type FixtureIndex = z.infer<typeof IndexSchema>;
 
 function unique(items: readonly string[], label: string): void {
   if (new Set(items).size !== items.length) throw new Error(`${label}: duplicate value`);

@@ -22,7 +22,7 @@ function readJson(path: string): unknown {
 }
 
 /** Compare exact input identity, not just row counts. */
-export function checkInputs(baseline: Baseline, inputs: readonly string[]): void {
+function checkInputs(baseline: Baseline, inputs: readonly string[]): void {
   const actual = baseline.cases.map((item) => item.input).toSorted();
   const expected = [...new Set(inputs)].toSorted();
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {

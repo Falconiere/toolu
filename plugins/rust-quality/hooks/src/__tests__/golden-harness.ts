@@ -11,6 +11,8 @@ import { rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { isJsonObject } from "@toolu/core/config";
 import { launchedArgv } from "@toolu/conformance/harness/entry-command";
+import { applyCaseSetup } from "@toolu/conformance/harness/json-cases";
+import { qualityCaseEnv } from "@toolu/conformance/harness/quality-cases";
 import {
   patchFixture,
   postToolFixture,
@@ -102,7 +104,8 @@ function prepare(sb: Sandbox, host: PretoolHost, c: RsCase): void {
     sb.git("commit", "-q", "-m", "project");
   }
   if (c.config !== undefined) sb.writeConfig(host, "project", c.config);
-  c.setup?.(sb);
+  if (Array.isArray(c.setup)) applyCaseSetup(sb, c.setup);
+  else c.setup?.(sb);
 }
 
 /** A PostToolUse call of `toolName` that already ran. */
@@ -111,7 +114,15 @@ function ran(toolName: string, toolInput: Record<string, unknown>, response: unk
 }
 
 function fixtureFor(sb: Sandbox, host: PretoolHost, step: Step): Fixture {
-  if (step.patch !== undefined) return postToolFixture(patchFixture([...step.patch]), "Done");
+  if (step.patch !== undefined)
+    return postToolFixture(
+      patchFixture(
+        step.patch.map(({ op, path, lines }) =>
+          lines === undefined ? { op, path } : { op, path, lines },
+        ),
+      ),
+      "Done",
+    );
   if (step.rawPatch !== undefined) return ran("apply_patch", { command: step.rawPatch }, "Done");
   const file = step.file ?? "";
   const path = step.relative === true ? file : sb.path(file);
@@ -128,7 +139,8 @@ function fixtureFor(sb: Sandbox, host: PretoolHost, step: Step): Fixture {
 /** A Claude deletion reaches the module as an Edit with `TOOLU_EDIT_OPERATION=delete` (bats). */
 function stepEnv(sb: Sandbox, host: PretoolHost, c: RsCase, step: Step): EnvPatch {
   const deletion = step.tool === "Delete" && host === "claude";
-  const extra: EnvPatch = { ...c.env?.(sb), ...step.env };
+  const caseEnv = typeof c.env === "function" ? c.env(sb) : qualityCaseEnv(sb, c.env);
+  const extra: EnvPatch = { ...caseEnv, ...step.env };
   return pretoolEnv(sb, host, deletion ? { ...extra, TOOLU_EDIT_OPERATION: "delete" } : extra);
 }
 

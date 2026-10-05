@@ -7,7 +7,7 @@
  */
 import { expect, test } from "bun:test";
 import { isJsonObject } from "@toolu/core/config";
-import { DEVIATIONS, TS_CASES } from "./cases.ts";
+import { TS_CASES } from "./cases.ts";
 import type { TsCase } from "./cases-types.ts";
 import { caseKey, runCase, type StepResult } from "./golden-harness.ts";
 import { readGolden } from "./golden-io.ts";
@@ -52,7 +52,7 @@ for (const c of TS_CASES) {
         const expected = golden.cases[key];
         if (expected === undefined) throw new Error(`no golden capture for ${key}`);
         const actual = await runCase(c, host, { kind: "bundle" });
-        const deviation = DEVIATIONS[c.name];
+        const deviation = c.deviation;
         if (deviation !== undefined) {
           const last = actual.at(-1)?.stdout ?? "";
           for (const text of deviation.contains) expect(last).toContain(text);

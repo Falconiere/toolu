@@ -9,6 +9,7 @@ import type { HostName, Sandbox } from "./sandbox.ts";
 
 const HostSchema = z.enum(["claude", "codex", "cursor", "opencode"]);
 const ScopeSchema = z.enum(["project", "user"]);
+const REPO_ROOT = resolve(import.meta.dir, "../../../..");
 const TaggedPathSchema = z.strictObject({ $path: z.string() });
 const TaggedTemplateSchema = z.strictObject({ $template: z.string() });
 export const ActionSchema = z.discriminatedUnion("op", [
@@ -108,6 +109,8 @@ export function resolveFixturePath(sb: Sandbox, path: string, host: HostName = "
   if (path.startsWith("$ROOT/")) return inside(sb.root, path.slice(6));
   if (path === "$HOME") return sb.home;
   if (path.startsWith("$HOME/")) return inside(sb.home, path.slice(6));
+  if (path === "$REPO") return REPO_ROOT;
+  if (path.startsWith("$REPO/")) return inside(REPO_ROOT, path.slice(6));
   const state = sb.configDir(host, "project");
   if (path === "$HOST_STATE") return state;
   if (path.startsWith("$HOST_STATE/")) return inside(state, path.slice(12));
@@ -137,6 +140,7 @@ export function materializeCaseValue(
       $PROJECT: sb.project,
       $ROOT: sb.root,
       $HOME: sb.home,
+      $REPO: REPO_ROOT,
       $HOST_STATE: sb.configDir(host, "project"),
     };
     return template.replace(/\$[A-Z][A-Z_]*(?=\/|\b)/g, (token) => {
