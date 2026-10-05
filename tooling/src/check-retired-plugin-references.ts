@@ -34,11 +34,15 @@ const JIRA_INTEGRATION = new Set([
   "tooling/src/pack-inventory.ts",
 ]);
 
-function paths(term: string): string[] {
-  const result = spawnSync("git", ["grep", "-l", "-i", "-w", "-e", term, "--", "."], {
-    cwd: ROOT,
-    encoding: "utf8",
-  });
+function paths(term: string, literal = false): string[] {
+  const result = spawnSync(
+    "git",
+    ["grep", "-l", "-i", literal ? "-F" : "-w", "-e", term, "--", "."],
+    {
+      cwd: ROOT,
+      encoding: "utf8",
+    },
+  );
   if (result.status !== 0 && result.status !== 1) {
     throw new Error(`git grep ${term} failed: ${result.stderr}`);
   }
@@ -66,6 +70,19 @@ for (const term of ["exa-search", "context7", "agent-browser", "jira"]) {
       continue; // built-in tracker and drift-checked generated copies
     }
     unexpected.push(`${path}: ${term}`);
+  }
+}
+for (const phrase of [
+  "plugins/jira/",
+  "docs/jira/",
+  "jira@toolu",
+  "jira-jira",
+  "install jira",
+  "remove jira",
+]) {
+  for (const path of paths(phrase, true)) {
+    if (path === SELF || HISTORY.has(path) || path.startsWith("docs/toolu/")) continue;
+    unexpected.push(`${path}: standalone ${phrase}`);
   }
 }
 if (unexpected.length) {
