@@ -162,6 +162,38 @@ function configRoot(options = {}) {
   const { env, host } = resolveHost(options);
   return envValue(env, "TOOLU_CONFIG_DIR") ?? NATIVE_CONFIG_ROOT[host](env);
 }
+function requireNonEmpty(fn, values) {
+  for (const [key, value] of Object.entries(values)) {
+    if (value === "") {
+      throw new TypeError(`${fn}: ${key} must be non-empty`);
+    }
+  }
+}
+var UNINSTALL = {
+  claude: (name) => `claude plugin uninstall ${name}@toolu`,
+  codex: (name) => `codex plugin remove ${name}@toolu`,
+  cursor: null,
+  hermes: null,
+  opencode: (name) => `npx @toolu/plugins remove ${name} --host opencode --yes`
+};
+function pluginUninstallCommand(name, options = {}) {
+  requireNonEmpty("pluginUninstallCommand", { name });
+  return UNINSTALL[resolveHost(options).host]?.(name) ?? null;
+}
+// packages/toolu-core/src/startup/deprecation.ts
+var REMOVAL_RELEASE = "v8.0.0";
+function deprecationNotice(plugin, options = {}) {
+  const command = pluginUninstallCommand(plugin, options);
+  const how = command === null ? "uninstall it with your host's plugin manager" : `uninstall with: ${command}`;
+  return `${plugin} is deprecated and will be removed in ${REMOVAL_RELEASE}; ${how}`;
+}
+function deprecatedStartupOutput(plugin, context, options = {}) {
+  const resolved = resolveHost(options);
+  if (resolved.host === "opencode" && options.compacting === true) {
+    return context === undefined ? "" : renderHookOutput(context, false);
+  }
+  return renderHookOutput({ ...context, systemMessage: deprecationNotice(plugin, resolved) }, false);
+}
 // packages/toolu-core/src/startup/publish.ts
 import { randomUUID } from "crypto";
 import {
@@ -288,13 +320,16 @@ var options = {
   dir: "context7",
   name: "search.sh"
 };
+var context;
+var quiet = false;
 if (onOpencode()) {
-  const quiet = await compacting();
+  quiet = await compacting();
   const result = publishWrapper(options);
   if (!quiet && (result.status === "published" || result.status === "kept-user-file")) {
     const symlink = lstatSync2(result.path).isSymbolicLink();
-    process.stdout.write(renderHookOutput(sessionContext("SessionStart", instruction(command(result.path, symlink))), false));
+    context = sessionContext("SessionStart", instruction(command(result.path, symlink)));
   }
 } else {
   publishBunCli({ ...options, tool: "context7 search CLI" });
 }
+process.stdout.write(deprecatedStartupOutput("context7", context, { compacting: quiet }));

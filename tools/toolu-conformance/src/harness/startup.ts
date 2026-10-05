@@ -66,15 +66,16 @@ export function startupRoot(host: StartupHost, sb: Sandbox): string {
   return host === "claude" ? join(sb.home, ".claude") : sb.codexHome;
 }
 
-/** Run `pluginRoot`'s SessionStart launcher for `entry` with `env`, stdin `{}`. */
+/** Run `pluginRoot`'s SessionStart launcher for `entry` with `env`, stdin naming `source`. */
 export function runStartupHook(
   pluginRoot: string,
   entry: string,
   sb: Sandbox,
   env: EnvPatch,
+  source = "startup",
 ): Promise<RunResult> {
   const command = hookCommand(pluginRoot, "SessionStart", entry);
-  return run(["sh", "-c", command], { cwd: sb.project, env, stdin: '{"source":"startup"}' });
+  return run(["sh", "-c", command], { cwd: sb.project, env, stdin: JSON.stringify({ source }) });
 }
 
 export type PublishedCliSpec = {
@@ -90,7 +91,15 @@ export type PublishedCliSpec = {
   credentials: Record<string, string>;
   /** Running the published path with `args` (and `env`) exits `exitCode` and prints `output`. */
   probe: { args: string[]; env?: EnvPatch; exitCode: number; output: string };
+  /** The exact `systemMessage` a deprecated plugin prints on each host (#403); absent: silent. */
+  notice?: Record<StartupHost | "opencode", string>;
 };
+
+/** The hook's exact stdout on `host`: the notice object, or nothing. */
+function noticeStdout(spec: PublishedCliSpec, host: StartupHost): string {
+  const notice = spec.notice?.[host];
+  return notice === undefined ? "" : `${JSON.stringify({ systemMessage: notice })}\n`;
+}
 
 /** `credentials` set, or each one explicitly unset. */
 function withCredentials(spec: PublishedCliSpec, set: boolean): EnvPatch {
@@ -104,7 +113,7 @@ async function publishOnce(spec: PublishedCliSpec, host: StartupHost, set: boole
   using sb = createSandbox();
   const env = { ...startupEnv(host, sb, spec.pluginRoot), ...withCredentials(spec, set) };
   const res = await runStartupHook(spec.pluginRoot, "session-start", sb, env);
-  expect(res).toMatchObject({ exitCode: 0, stdout: "", stderr: "" });
+  expect(res).toMatchObject({ exitCode: 0, stdout: noticeStdout(spec, host), stderr: "" });
   const dst = join(startupRoot(host, sb), spec.dir, spec.name);
   expect(readlinkSync(dst)).toBe(join(spec.pluginRoot, spec.source));
   const probeEnv = { ...env, ...spec.probe.env };
@@ -157,7 +166,11 @@ async function advisesWithoutBunOnPath(spec: PublishedCliSpec): Promise<void> {
     TOOLU_BUN: process.execPath,
   };
   const res = await runStartupHook(spec.pluginRoot, "session-start", sb, env);
-  expect(res).toMatchObject({ exitCode: 0, stdout: "", stderr: `${spec.advisory}\n` });
+  expect(res).toMatchObject({
+    exitCode: 0,
+    stdout: noticeStdout(spec, "claude"),
+    stderr: `${spec.advisory}\n`,
+  });
   expect(existsSync(join(startupRoot("claude", sb), spec.dir, spec.name))).toBe(true);
 }
 
@@ -179,8 +192,43 @@ async function failsSoftWithoutSource(spec: PublishedCliSpec): Promise<void> {
   copyFileSync(join(spec.pluginRoot, "hooks/dist/session-start.js"), bundle);
   const env = startupEnv("claude", sb, fake);
   const res = await run([process.execPath, bundle], { cwd: sb.project, env, stdin: "{}" });
-  expect(res).toMatchObject({ exitCode: 0, stdout: "", stderr: "" });
+  expect(res).toMatchObject({ exitCode: 0, stdout: noticeStdout(spec, "claude"), stderr: "" });
   expect(existsSync(join(startupRoot("claude", sb), spec.dir))).toBe(false);
+}
+
+const NoticeOutput = z.strictObject({
+  hookSpecificOutput: z
+    .strictObject({ hookEventName: z.literal("SessionStart"), additionalContext: z.string() })
+    .optional(),
+  systemMessage: z.string().optional(),
+});
+
+/**
+ * On OpenCode the notice rides beside any startup context at a start, and is
+ * left out at a compaction, which OpenCode runs SessionStart again for (#403).
+ */
+async function opencodeNotice(spec: PublishedCliSpec, notice: string): Promise<void> {
+  using sb = createSandbox();
+  const env = {
+    HOME: sb.home,
+    CLAUDE_PLUGIN_ROOT: spec.pluginRoot,
+    TOOLU_BUN: process.execPath,
+    TOOLU_HOST_OVERRIDE: "opencode",
+    TOOLU_CONFIG_DIR: join(sb.project, ".opencode/toolu/state"),
+  };
+  const [start, compact] = await Promise.all(
+    ["startup", "compact"].map((source) =>
+      runStartupHook(spec.pluginRoot, "session-start", sb, env, source),
+    ),
+  );
+  expect(start).toMatchObject({ exitCode: 0, stderr: "" });
+  const started = NoticeOutput.parse(JSON.parse(start?.stdout ?? ""));
+  expect(started.systemMessage).toBe(notice);
+  expect(started.hookSpecificOutput?.additionalContext ?? "").not.toContain("deprecated");
+  expect(compact).toMatchObject({ exitCode: 0, stderr: "" });
+  const text = compact?.stdout ?? "";
+  const compacted = text === "" ? {} : NoticeOutput.parse(JSON.parse(text));
+  expect(compacted.systemMessage).toBeUndefined();
 }
 
 /** Register the shared published-CLI SessionStart cases for one plugin. */
@@ -196,6 +244,12 @@ export function publishedCliSuite(spec: PublishedCliSpec): void {
     advisesWithoutBunOnPath(spec));
   test.concurrent(`${name}: no Bun at all -> launcher advisory, nothing published`, () =>
     noBunAtAll(spec));
-  test.concurrent(`${name}: missing CLI bundle -> silent, nothing published`, () =>
+  const quiet = spec.notice === undefined ? "silent" : "only the notice";
+  test.concurrent(`${name}: missing CLI bundle -> ${quiet}, nothing published`, () =>
     failsSoftWithoutSource(spec));
+  const notice = spec.notice?.opencode;
+  if (notice !== undefined) {
+    test.concurrent(`${name}: OpenCode notice once at start, none at compaction`, () =>
+      opencodeNotice(spec, notice));
+  }
 }

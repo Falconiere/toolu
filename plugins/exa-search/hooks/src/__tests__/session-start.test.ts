@@ -19,6 +19,14 @@ publishedCliSuite({
     "exa-search: bun not found on PATH — the exa-search search CLI needs Bun 1.4.x (https://bun.sh; see docs/runtime.md)",
   credentials: { EXA_API_KEY: "exa-test" },
   probe: { args: [], env: { EXA_API_KEY: "k" }, exitCode: 1, output: "Exa Search CLI" },
+  notice: {
+    claude:
+      "exa-search is deprecated and will be removed in v8.0.0; uninstall with: claude plugin uninstall exa-search@toolu",
+    codex:
+      "exa-search is deprecated and will be removed in v8.0.0; uninstall with: codex plugin remove exa-search@toolu",
+    opencode:
+      "exa-search is deprecated and will be removed in v8.0.0; uninstall with: npx @toolu/plugins remove exa-search --host opencode --yes",
+  },
 });
 
 for (const key of ["sentinel-exa-key", undefined]) {

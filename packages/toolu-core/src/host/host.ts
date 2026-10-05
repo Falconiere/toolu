@@ -24,6 +24,7 @@ export {
   pluginData,
   pluginInstallCommand,
   pluginRoot,
+  pluginUninstallCommand,
   projectConfigPath,
   projectDirname,
   projectRoot,
