@@ -69,6 +69,7 @@ test.concurrent("the docs job runs only the documentation checks (AC-1)", () => 
     "check:opencode-surface",
     "workspace-skeleton.test.ts",
     "plan-ledger-contract.test.ts",
+    "deprecation-banners.test.ts",
     "npx-invocation.test.ts",
   ]) {
     expect(docs).toContain(part);
