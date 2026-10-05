@@ -81,7 +81,7 @@ export const HookResult = z.strictObject({
 });
 export type HookResult = z.infer<typeof HookResult>;
 
-/** Parse `file` as JSON against `schema`; any failure names the file. */
+/** Parse the JSON in `file` against `schema`; any failure names the file. */
 export function loadJson<T>(file: string, schema: z.ZodType<T>): T {
   let doc: unknown;
   try {

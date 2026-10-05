@@ -10,6 +10,11 @@ fabricated counterfactual.
 - **Deterministic (CI, hermetic):** `retrieval`. No model in the loop — compares
   full-file read bytes vs ast-grep targeted-match bytes, as tokens. Runs in CI
   with no API key; its result is committed under `results/`.
+- **Hook resources (CI, `hook-bench` job):** `bun run bench:hooks` measures max
+  RSS, CPU and wall per spawn of every hook entry and gates ported Rust entries
+  against `hook-budgets.json` (#410). Fixed payloads live in `cases/hooks/`, the
+  Bun baselines and the Rust prototype measurement in `results/`. Budgets and
+  method: [`docs/resource-budgets.md`](../docs/resource-budgets.md).
 - **Live (manual, non-CI):** `whole-session`. Real API / `claude -p` runs; token
   counts come from real `message.usage`. Results are run by hand and committed
   with provenance (model, commit, n_runs, variance).
@@ -18,11 +23,13 @@ fabricated counterfactual.
 
 ```
 benchmarks/                       data only
-  cases/<mechanism>/              per-mechanism inputs (queries.tsv, tasks/)
+  cases/<mechanism>/              per-mechanism inputs (queries.tsv, tasks/, hooks/payloads.json)
+  hook-budgets.json               p50 RSS/CPU budget per ported hook entry
   fixtures/                       stable test corpus + a real transcript set
   results/                        committed result JSON + methodology (results/README.md)
 tooling/src/benchmarks/           the harness, TypeScript on Bun
   run.ts                          entry point (`bun run benchmarks`)
+  hook-resources.ts               `bun run bench:hooks`; helpers in lib/hook-*.ts
   lib/                            root, tokens, result, pricing, usage
   cases/                          retrieval.ts, whole-session.ts (each also runnable directly)
   __tests__/                      bun tests
@@ -34,6 +41,7 @@ tooling/src/benchmarks/           the harness, TypeScript on Bun
 bun run benchmarks --tier deterministic            # hermetic; writes results/retrieval-*.json
 bun run benchmarks --tier live --mechanism whole-session  # manual; needs the claude CLI
 bun run benchmarks --validate <result.json>        # schema check
+bun run bench:hooks [--runs N] [--warmup N] [--only <plugin/entry>] [--out FILE] [--assert]
 bun run tooling/src/benchmarks/cases/whole-session.ts --n 3 --model <id>  # case flags go to the case itself
 bun run tooling/src/benchmarks/cases/retrieval.ts --queries <tsv> --corpus <dir>
 ```

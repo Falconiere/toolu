@@ -76,7 +76,7 @@ An entry with glob characters is a structural rule, not an exemption, and is nev
 | `bun run jscpd` | duplication |
 | `bun run check:gate-reach` | every TypeScript file reached by every gate, and `ownedByLinter` backed by a lint rule |
 | `bun run check:legacy-exemptions` | no per-file exemption outlives its finding |
-| `bun run test:unit` | `bun test` in `tooling/`, `packages/`, `tools/`, and `plugins/` |
+| `bun run test:unit` | `bun test` in `tooling/`, `packages/`, `tools/`, and `plugins/`, except `*.native.test.ts` (they need the Rust toolchain; the `hook-bench` job runs them) |
 | `bun run test:workspace` | Bun 1.4.x pin + export smoke |
 | `bun run test:conventions` | format/lint/tsc/guardrails/knip/jscpd/gate reach/legacy exemptions + Bun convention tests |
 | `bun run test:ts` | complete Bun gate: conventions, unit, portable-core, gate coverage, bundle/launcher drift, workspace/package, conformance, context budget, deterministic benchmarks, and shell-analysis latency budget (CI `bun run test` job) |

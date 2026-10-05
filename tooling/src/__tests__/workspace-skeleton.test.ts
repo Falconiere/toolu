@@ -82,7 +82,7 @@ test.concurrent("CI runs the Bun lane without retired shell jobs", () => {
   const workflow = readText(".github/workflows/tests.yml");
   expect(workflow).toMatch(/  gate:\n    name: bun run test[\s\S]*?bun run test:ts/);
   expect(workflow).toMatch(
-    /  typescript:\n    name: typescript\n    needs: \[changes, gate, opencode, docs, rust, rust-musl, rust-conformance\]/,
+    /  typescript:\n    name: typescript\n    needs: \[changes, gate, opencode, docs, rust, rust-musl, rust-conformance, hook-bench\]/,
   );
   expect(workflow).not.toMatch(/^  shellcheck:/m);
   expect(workflow).not.toMatch(/^  bats:/m);
