@@ -33,7 +33,7 @@ The binary and the plugins are upgraded separately (`brew upgrade`, the installe
 | Case | Behaviour |
 |------|-----------|
 | Same `hookProtocol` | Hooks run and enforce. |
-| Same `hookProtocol`, any semver difference (major included; a newer or an older binary) | Hooks still enforce. Context events print one advisory with the upgrade command. `feat!` releases such as #406 and #440 do not change `hookProtocol`. |
+| Same `hookProtocol`, any semver difference (major included; a newer or an older binary) | Hooks still enforce. SessionStart prints one advisory: the upgrade command when the binary is older, an update of the plugins when it is newer or the versions cannot be compared. `feat!` releases such as #406 and #440 do not change `hookProtocol`. |
 | Different `hookProtocol` | Enforcing events fail closed with the upgrade command. |
 
 `toolu doctor` warns on skew and fails only on a `hookProtocol` mismatch.
@@ -42,7 +42,7 @@ The binary and the plugins are upgraded separately (`brew upgrade`, the installe
 
 **Config compatibility.** An older binary accepts and ignores unknown keys inside namespaced sections (for example `epic`, #463). Unknown top-level keys are still rejected.
 
-The binary reads the calling plugin's `version` and `hookProtocol` from `.claude-plugin/plugin.json` (or `.codex-plugin/plugin.json` when the first is absent) under the root the launcher passes. The advisory prints once, at SessionStart. Its upgrade command is `brew upgrade toolu` when the binary resolves into a Homebrew prefix or a `Cellar`, and the installer one-liner otherwise. A missing or malformed manifest, or a `hookProtocol` that is not an integer of 1 or more, counts as a mismatch. Every skew case is tested in `crates/cli/tests/helpers/skew.rs`.
+The binary reads the calling plugin's `version` and `hookProtocol` from `.claude-plugin/plugin.json` (or `.codex-plugin/plugin.json` when the first is absent) under the root the launcher passes. The advisory prints once, at SessionStart. Its upgrade command is `brew upgrade toolu` when the binary resolves into a Homebrew prefix or a `Cellar`, and the installer one-liner otherwise. A missing or malformed manifest, or a `hookProtocol` that is not an integer of 1 or more, counts as a mismatch. The cases are tested through the real launcher in `crates/cli/tests/helpers/skew.rs`, and in unit tests beside `crates/core/runtime/src/{skew,version,manifest}.rs` and `crates/cli/src/hook.rs`; those cover the cases that need a protocol 2 binary or a malformed manifest.
 
 ## Hook launcher
 

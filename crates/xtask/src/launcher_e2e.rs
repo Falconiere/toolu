@@ -73,9 +73,15 @@ fn check(
   }
   manifest(root, version, protocol + 1)?;
   let pre = launch(home, root, "PreToolUse")?;
-  if pre.status.code() != Some(2) || !text(&pre.stderr).starts_with("blocked: ") {
+  let refusal = format!(
+    "hook protocol {} needs a newer toolu - toolu {version} speaks protocol {protocol}",
+    protocol + 1
+  );
+  let stderr = text(&pre.stderr);
+  if pre.status.code() != Some(2) || !stderr.starts_with("blocked: ") || !stderr.contains(&refusal)
+  {
     found.push(format!(
-      "PreToolUse with hookProtocol {}: expected exit 2 and `blocked:`, got {:?}: {}",
+      "PreToolUse with hookProtocol {}: expected exit 2 and `blocked: … {refusal}`, got {:?}: {}",
       protocol + 1,
       pre.status.code(),
       text(&pre.stderr)

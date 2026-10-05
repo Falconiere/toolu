@@ -8,9 +8,13 @@ fn no_stdin() -> String {
   String::new()
 }
 
+fn no_exe() -> Option<std::path::PathBuf> {
+  None
+}
+
 fn context() -> Context<'static> {
   Context {
-    exe: None,
+    exe: &no_exe,
     stdin: &no_stdin,
   }
 }

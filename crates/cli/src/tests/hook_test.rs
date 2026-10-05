@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use super::run;
 use crate::args::HookRequest;
-use crate::{Context, VERSION};
+use crate::{Context, Outcome, VERSION};
 
 const STARTUP: &str = r#"{"hook_event_name":"SessionStart","source":"startup"}"#;
 
@@ -30,11 +30,16 @@ fn request(name: &str, event: Option<&str>, root: Option<&str>) -> HookRequest {
   }
 }
 
-fn context() -> Context<'static> {
-  Context {
-    exe: Some(PathBuf::from("/usr/local/bin/toolu")),
-    stdin: &startup,
-  }
+/// Run `request` as the binary installed at `/usr/local/bin/toolu`, on a startup payload.
+fn run_hook(request: &HookRequest) -> Outcome {
+  let exe = || Some(PathBuf::from("/usr/local/bin/toolu"));
+  run(
+    request,
+    &Context {
+      exe: &exe,
+      stdin: &startup,
+    },
+  )
 }
 
 fn message(stdout: Option<String>) -> String {
@@ -46,10 +51,7 @@ fn message(stdout: Option<String>) -> String {
 fn the_same_version_prints_only_the_diagnostic() {
   let dir = plugin(VERSION, "1");
   let root = dir.path().to_str().unwrap();
-  let outcome = run(
-    &request("session-start", Some("SessionStart"), Some(root)),
-    &context(),
-  );
+  let outcome = run_hook(&request("session-start", Some("SessionStart"), Some(root)));
   assert_eq!(outcome.code, 0);
   assert_eq!(
     message(outcome.stdout),
@@ -61,10 +63,7 @@ fn the_same_version_prints_only_the_diagnostic() {
 fn semver_skew_advises_at_session_start_only() {
   let dir = plugin("999.0.0", "1");
   let root = dir.path().to_str().unwrap();
-  let start = run(
-    &request("session-start", Some("SessionStart"), Some(root)),
-    &context(),
-  );
+  let start = run_hook(&request("session-start", Some("SessionStart"), Some(root)));
   let text = message(start.stdout);
   assert!(text.starts_with(&format!(
     "toolu {VERSION} is older than the toolu plugin 999.0.0"
@@ -73,10 +72,7 @@ fn semver_skew_advises_at_session_start_only() {
   assert!(text.ends_with(&format!(
     "\ntoolu runtime: native {VERSION} at /usr/local/bin/toolu"
   )));
-  let pre = run(
-    &request("session-start", Some("PreToolUse"), Some(root)),
-    &context(),
-  );
+  let pre = run_hook(&request("session-start", Some("PreToolUse"), Some(root)));
   assert_eq!(pre.code, 0);
   assert!(!message(pre.stdout).contains("older than"));
 }
@@ -85,10 +81,7 @@ fn semver_skew_advises_at_session_start_only() {
 fn a_protocol_mismatch_blocks_enforcing_and_reports_context_events() {
   let dir = plugin(VERSION, "2");
   let root = dir.path().to_str().unwrap();
-  let pre = run(
-    &request("session-start", Some("PreToolUse"), Some(root)),
-    &context(),
-  );
+  let pre = run_hook(&request("session-start", Some("PreToolUse"), Some(root)));
   assert_eq!(pre.code, 2);
   assert_eq!(pre.stdout, None);
   assert!(
@@ -97,30 +90,21 @@ fn a_protocol_mismatch_blocks_enforcing_and_reports_context_events() {
       .unwrap()
       .starts_with("blocked: toolu plugin: hook protocol 2 needs a newer")
   );
-  let start = run(
-    &request("session-start", Some("SessionStart"), Some(root)),
-    &context(),
-  );
+  let start = run_hook(&request("session-start", Some("SessionStart"), Some(root)));
   assert_eq!(start.code, 0);
   assert!(message(start.stdout).starts_with("toolu plugin: hook protocol 2 needs a newer"));
 }
 
 #[test]
 fn an_empty_plugin_root_is_a_mismatch_not_a_bypass() {
-  let outcome = run(
-    &request("session-start", Some("PreToolUse"), Some("")),
-    &context(),
-  );
+  let outcome = run_hook(&request("session-start", Some("PreToolUse"), Some("")));
   assert_eq!(outcome.code, 2);
   assert!(outcome.stderr.unwrap().contains("the plugin root is empty"));
 }
 
 #[test]
 fn without_a_plugin_root_the_prelude_is_skipped() {
-  let outcome = run(
-    &request("session-start", Some("SessionStart"), None),
-    &context(),
-  );
+  let outcome = run_hook(&request("session-start", Some("SessionStart"), None));
   assert_eq!(outcome.code, 0);
   assert!(message(outcome.stdout).starts_with("toolu runtime: native"));
 }
@@ -128,7 +112,7 @@ fn without_a_plugin_root_the_prelude_is_skipped() {
 #[test]
 fn an_unknown_hook_blocks_enforcing_and_missing_events_and_reports_context_ones() {
   for event in [Some("PreToolUse"), None] {
-    let outcome = run(&request("pre-tools", event, None), &context());
+    let outcome = run_hook(&request("pre-tools", event, None));
     assert_eq!(outcome.code, 2, "{event:?}");
     assert!(
       outcome
@@ -137,10 +121,7 @@ fn an_unknown_hook_blocks_enforcing_and_missing_events_and_reports_context_ones(
         .contains("has no hook pre-tools; upgrade it: curl")
     );
   }
-  let context_event = run(
-    &request("pre-compact", Some("PreCompact"), None),
-    &context(),
-  );
+  let context_event = run_hook(&request("pre-compact", Some("PreCompact"), None));
   assert_eq!(context_event.code, 0);
   assert!(message(context_event.stdout).contains("has no hook pre-compact"));
 }
@@ -148,8 +129,9 @@ fn an_unknown_hook_blocks_enforcing_and_missing_events_and_reports_context_ones(
 #[test]
 fn a_session_start_with_nothing_to_say_prints_nothing() {
   let quiet = || "{}".to_owned();
+  let no_exe = || None;
   let context = Context {
-    exe: None,
+    exe: &no_exe,
     stdin: &quiet,
   };
   let outcome = run(

@@ -1,6 +1,7 @@
 //! The native entries of one plugin's `hooks/hooks.json`, judged against the
 //! launcher generator.
 
+use std::io::ErrorKind;
 use std::path::Path;
 
 use serde_json::{Map, Value};
@@ -8,17 +9,19 @@ use toolu_protocol::launcher::{MARKER, MAX_TIMEOUT, Target, hook, hook_name};
 
 use crate::check_hooks::Finding;
 
-/// Findings for `plugins/<plugin>/hooks/hooks.json`; none when it is absent.
+/// Findings for `plugins/<plugin>/hooks/hooks.json`; none when it does not exist.
 pub(crate) fn check(root: &Path, plugin: &str) -> Vec<Finding> {
   let file = format!("plugins/{plugin}/hooks/hooks.json");
-  let Ok(text) = std::fs::read_to_string(root.join(&file)) else {
-    return Vec::new();
-  };
   let finding = |at: String, problem: String, expected: Option<String>| Finding {
     file: file.clone(),
     at,
     problem,
     expected,
+  };
+  let text = match std::fs::read_to_string(root.join(&file)) {
+    Ok(text) => text,
+    Err(err) if err.kind() == ErrorKind::NotFound => return Vec::new(),
+    Err(err) => return vec![finding(String::new(), format!("cannot read: {err}"), None)],
   };
   let events = match serde_json::from_str::<Value>(&text) {
     Ok(json) => json.get("hooks").and_then(Value::as_object).cloned(),

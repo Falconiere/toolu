@@ -31,3 +31,13 @@ fn every_real_manifest_declares_the_protocol() {
     assert_eq!(check(root, plugin), Vec::new(), "{plugin}");
   }
 }
+
+#[test]
+fn an_unreadable_manifest_is_a_finding_and_an_absent_one_is_not() {
+  let dir = tempfile::tempdir().unwrap();
+  std::fs::create_dir_all(dir.path().join("plugins/x/.claude-plugin/plugin.json")).unwrap();
+  let found = check(dir.path(), "x");
+  assert_eq!(found.len(), 1, "{found:?}");
+  assert_eq!(found[0].file, "plugins/x/.claude-plugin/plugin.json");
+  assert!(found[0].problem.starts_with("cannot read: "), "{found:?}");
+}

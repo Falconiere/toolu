@@ -1,5 +1,6 @@
 //! Each plugin manifest declares the binary's `hookProtocol` (#411).
 
+use std::io::ErrorKind;
 use std::path::Path;
 
 use serde_json::Value;
@@ -13,8 +14,11 @@ pub(crate) fn check(root: &Path, plugin: &str) -> Vec<Finding> {
     .iter()
     .filter_map(|dir| {
       let file = format!("plugins/{plugin}/{dir}/plugin.json");
-      let text = std::fs::read_to_string(root.join(&file)).ok()?;
-      let problem = problem(&text)?;
+      let problem = match std::fs::read_to_string(root.join(&file)) {
+        Ok(text) => problem(&text)?,
+        Err(err) if err.kind() == ErrorKind::NotFound => return None,
+        Err(err) => format!("cannot read: {err}"),
+      };
       Some(Finding {
         file,
         at: String::new(),

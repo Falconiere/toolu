@@ -74,3 +74,13 @@ fn timeout_type_and_name_problems_are_named() {
       .starts_with("event must match")
   );
 }
+
+#[test]
+fn an_unreadable_hooks_json_is_a_finding_and_an_absent_one_is_not() {
+  let dir = tempfile::tempdir().unwrap();
+  assert_eq!(super::check(dir.path(), "x"), Vec::new());
+  std::fs::create_dir_all(dir.path().join("plugins/x/hooks/hooks.json")).unwrap();
+  let found = super::check(dir.path(), "x");
+  assert_eq!(found.len(), 1, "{found:?}");
+  assert!(found[0].problem.starts_with("cannot read: "), "{found:?}");
+}

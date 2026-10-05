@@ -1,5 +1,6 @@
 //! The calling plugin's manifest: its `version` and its `hookProtocol` (#411).
 
+use std::io::ErrorKind;
 use std::path::Path;
 
 use serde_json::Value;
@@ -14,8 +15,8 @@ pub struct Manifest {
 }
 
 /// Read `<root>/.claude-plugin/plugin.json`, or `<root>/.codex-plugin/plugin.json`
-/// when the first does not exist. An existing but bad first file is an error,
-/// never a fallback.
+/// when the first does not exist. A first file that exists but is unreadable or
+/// bad is an error, never a fallback.
 ///
 /// # Errors
 /// When `root` is empty, no manifest exists or reads, it is not JSON, or
@@ -25,10 +26,11 @@ pub fn read(root: &Path) -> Result<Manifest, String> {
     return Err("the plugin root is empty".to_owned());
   }
   let claude = root.join(".claude-plugin/plugin.json");
-  let path = if claude.exists() {
-    claude
-  } else {
+  let absent = matches!(std::fs::metadata(&claude), Err(err) if err.kind() == ErrorKind::NotFound);
+  let path = if absent {
     root.join(".codex-plugin/plugin.json")
+  } else {
+    claude
   };
   let text = std::fs::read_to_string(&path)
     .map_err(|err| format!("cannot read {}: {err}", path.display()))?;

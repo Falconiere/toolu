@@ -35,11 +35,9 @@ fn the_entry_carries_the_golden_command_and_the_default_timeout() {
   assert_eq!(entry["type"], "command");
   assert_eq!(entry["command"], GOLDEN);
   assert_eq!(entry["timeout"], 60);
-  assert!(
-    entry["commandWindows"]
-      .as_str()
-      .unwrap()
-      .contains("pre-tools.js")
+  assert_eq!(
+    entry["commandWindows"],
+    hook(&target, 60).unwrap().command_windows
   );
 }
 

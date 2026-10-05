@@ -27,7 +27,8 @@ struct HookResult {
 /// Run the prelude and the hook `request` names.
 pub(crate) fn run(request: &HookRequest, context: &Context<'_>) -> Outcome {
   let enforcing = request.event.as_deref().is_none_or(is_enforcing);
-  let upgrade = context.exe.as_deref().map_or(INSTALLER, upgrade_command);
+  let exe = (context.exe)();
+  let upgrade = exe.as_deref().map_or(INSTALLER, upgrade_command);
   let skew = match &request.plugin_root {
     Some(root) => {
       let caller = Caller {
@@ -47,7 +48,7 @@ pub(crate) fn run(request: &HookRequest, context: &Context<'_>) -> Outcome {
     Skew::Advise(text) if request.event.as_deref() == Some("SessionStart") => Some(text),
     Skew::Advise(_) | Skew::Same => None,
   };
-  let result = dispatch(request, context, enforcing, upgrade);
+  let result = dispatch(request, context, exe.as_deref(), enforcing, upgrade);
   compose(advisory, result)
 }
 
@@ -55,11 +56,12 @@ pub(crate) fn run(request: &HookRequest, context: &Context<'_>) -> Outcome {
 fn dispatch(
   request: &HookRequest,
   context: &Context<'_>,
+  exe: Option<&Path>,
   enforcing: bool,
   upgrade: &str,
 ) -> HookResult {
   if request.plugin == "toolu" && request.name == "session-start" {
-    let message = session_start::diagnostic(&(context.stdin)(), VERSION, context.exe.as_deref());
+    let message = session_start::diagnostic(&(context.stdin)(), VERSION, exe);
     return HookResult {
       code: 0,
       message,

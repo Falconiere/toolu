@@ -72,3 +72,11 @@ fn a_missing_manifest_or_empty_root_is_an_error() {
   assert!(read(empty.path()).unwrap_err().contains("cannot read"));
   assert_eq!(read(Path::new("")).unwrap_err(), "the plugin root is empty");
 }
+
+#[test]
+fn an_unreadable_claude_path_does_not_fall_back() {
+  let dir = plugin(None, Some(r#"{"version":"2.0.0","hookProtocol":1}"#));
+  std::fs::write(dir.path().join(".claude-plugin"), "a file, not a directory").unwrap();
+  let err = read(dir.path()).unwrap_err();
+  assert!(err.contains(".claude-plugin/plugin.json"), "{err}");
+}
