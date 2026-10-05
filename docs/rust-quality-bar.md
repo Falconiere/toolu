@@ -22,7 +22,9 @@ reasons.
 3. **We pass what we ship.** The gate runs the rust-quality plugin's own rules
    over every crate file (`bun run check:rust-quality`) at the same limits an
    agent sees after each edit, and toolu's quality gate refuses a commit while
-   that post-edit check fails.
+   that post-edit check fails (in a main checkout; a linked worktree keeps its
+   quality state on the main checkout, so there `lefthook.yml` and CI hold the
+   line).
 4. **No exemptions.** No per-path override, ignore list or suppression
    attribute. The data loaders reject unknown keys, and
    `crates/xtask/tests/no_exemptions.rs` fails on a `skip`, `ignore`,
