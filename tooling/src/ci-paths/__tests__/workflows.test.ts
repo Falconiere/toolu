@@ -99,9 +99,14 @@ test.concurrent("the Rust jobs run the full cargo gate and both musl targets (#4
     expect(tests.jobs[id]?.if).toBe("needs.changes.outputs.rust == 'true'");
     expect(config.workflows["tests.yml"]?.jobs[id]).toBe("rust");
   }
-  expect(tests.jobs.typescript?.needs).toEqual(
-    expect.arrayContaining(["changes", "gate", "opencode", "docs", "rust", "rust-musl"]),
-  );
+  expect(tests.jobs.typescript?.needs).toEqual([
+    "changes",
+    "gate",
+    "opencode",
+    "docs",
+    "rust",
+    "rust-musl",
+  ]);
   const Matrix = z.looseObject({
     strategy: z.looseObject({
       matrix: z.looseObject({
@@ -119,16 +124,16 @@ test.concurrent("the Rust jobs run the full cargo gate and both musl targets (#4
     { target: "aarch64-unknown-linux-musl", os: "ubuntu-24.04-arm" },
   ]);
   const cargo = steps("tests.yml", "rust").map((step) => step.run);
-  expect(cargo).toEqual(
-    expect.arrayContaining([
-      "rustup toolchain install",
-      "cargo fmt --all --check",
-      "cargo clippy --workspace --all-targets --locked -- -D warnings",
-      "cargo build --workspace --locked",
-      "cargo test --workspace --locked",
-      "cargo xtask check-layers",
-    ]),
-  );
+  for (const command of [
+    "rustup toolchain install",
+    "cargo fmt --all --check",
+    "cargo clippy --workspace --all-targets --locked -- -D warnings",
+    "cargo build --workspace --locked",
+    "cargo test --workspace --locked",
+    "cargo xtask check-layers",
+  ]) {
+    expect(cargo).toContain(command);
+  }
   const musl = steps("tests.yml", "rust-musl").map((step) => step.run ?? "");
   expect(musl).toContain(
     'cargo build --workspace --release --locked --target "${{ matrix.target }}"',

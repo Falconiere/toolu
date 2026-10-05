@@ -117,9 +117,10 @@ test.concurrent("a root Markdown edit is docs-only too (AC-1)", async () => {
 
 test.concurrent("a release-please version bump turns every output off (AC-2)", async () => {
   expect(RELEASE_ONLY).toContain("tools/toolu-cli/npm/package.json");
-  expect(RELEASE_ONLY).toEqual(expect.arrayContaining(["Cargo.toml", "Cargo.lock"]));
-  for (const path of ["Cargo.toml", "Cargo.lock"])
+  for (const path of ["Cargo.toml", "Cargo.lock"]) {
+    expect(RELEASE_ONLY).toContain(path);
     expect(bump(path)).toContain('version = "99.0.0"');
+  }
   const edits = Object.fromEntries(RELEASE_ONLY.map((path) => [path, bump(path)]));
   expect(Object.keys(edits).length).toBeGreaterThan(30);
   expect(await prOutputs(edits)).toEqual(ALL_OFF);

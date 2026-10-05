@@ -19,7 +19,10 @@ const Job = z.looseObject({
   needs: z.union([z.string(), z.array(z.string())]).optional(),
   if: z.string().optional(),
   "continue-on-error": z.unknown().optional(),
-  strategy: z.looseObject({ matrix: z.looseObject({ os: z.array(z.string()) }) }).optional(),
+  // `os` is optional: rust-musl (#407) builds its matrix from `include` entries.
+  strategy: z
+    .looseObject({ matrix: z.looseObject({ os: z.array(z.string()).optional() }) })
+    .optional(),
   steps: z.array(Step),
 });
 const Workflow = z.looseObject({ jobs: z.record(z.string(), Job) });
@@ -40,7 +43,7 @@ const GROUP_OF: Record<string, string> = { gate: "ts", opencode: "opencode" };
 
 test.concurrent("the acceptance job runs the full command on Linux and macOS", () => {
   const opencode = job("opencode");
-  expect(opencode.strategy?.matrix.os.toSorted()).toEqual(["macos-latest", "ubuntu-latest"]);
+  expect(opencode.strategy?.matrix.os?.toSorted()).toEqual(["macos-latest", "ubuntu-latest"]);
   const commands = runs("opencode").filter((run) => run.includes("test:opencode"));
   expect(commands).toEqual([
     'bun run test:opencode --report "$RUNNER_TEMP/opencode-acceptance.json"',
@@ -71,7 +74,14 @@ test.concurrent("the acceptance job installs every tool its preflight requires",
 test.concurrent("the required typescript status needs every gated job, always runs and judges their results", () => {
   const required = job("typescript");
   expect(required.name).toBe("typescript");
-  expect([required.needs ?? []].flat().toSorted()).toEqual(["changes", "docs", "gate", "opencode"]);
+  expect([required.needs ?? []].flat().toSorted()).toEqual([
+    "changes",
+    "docs",
+    "gate",
+    "opencode",
+    "rust",
+    "rust-musl",
+  ]);
   expect(required.if).toBe("${{ always() }}");
   expect(runs("typescript")).toContain("bun run tooling/src/ci-aggregate.ts tests.yml");
   const names = Object.entries(workflow.jobs).filter(([, item]) => item.name === "typescript");
