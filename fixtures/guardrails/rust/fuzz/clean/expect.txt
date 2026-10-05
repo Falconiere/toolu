@@ -1,0 +1,6 @@
+step guardrails layers reach fmt clippy
+exit 0
+contains guardrails: ok
+contains check-layers: 1 crates
+contains check-reach: ok
+contains gate: clippy ok

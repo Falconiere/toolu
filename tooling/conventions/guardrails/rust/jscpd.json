@@ -1,0 +1,14 @@
+{
+  "pattern": "**/src/**/*.rs",
+  "format": [
+    "rust"
+  ],
+  "threshold": 0,
+  "exitCode": 1,
+  "minLines": 10,
+  "minTokens": 60,
+  "reporters": [
+    "console"
+  ],
+  "gitignore": true
+}

@@ -1,0 +1,30 @@
+{
+  "core": [
+    [
+      "protocol"
+    ],
+    [
+      "runtime"
+    ],
+    [
+      "shell",
+      "http",
+      "state"
+    ],
+    [
+      "engine",
+      "github",
+      "jev",
+      "newcore"
+    ]
+  ],
+  "rules": [
+    "ts-quality",
+    "python-quality",
+    "rust-quality",
+    "ast-grep"
+  ],
+  "hub": "toolu",
+  "binary": "cli",
+  "tooling": "xtask"
+}

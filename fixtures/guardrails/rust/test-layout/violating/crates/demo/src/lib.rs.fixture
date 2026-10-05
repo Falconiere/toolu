@@ -1,0 +1,18 @@
+//! A fixture crate.
+
+/// Add one, saturating at the top.
+pub fn bump(value: u8) -> u8 {
+  value.saturating_add(1)
+}
+
+#[cfg(test)]
+mod inline {
+  #[test]
+  fn works() {
+    assert_eq!(super::bump(0), 1);
+  }
+}
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;

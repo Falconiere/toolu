@@ -1,0 +1,20 @@
+//! The second mixer.
+
+/// Mix the input.
+pub fn mix(input: u32) -> u32 {
+  let v0 = input.wrapping_mul(3).rotate_left(0);
+  let v1 = input.wrapping_mul(4).rotate_left(1);
+  let v2 = input.wrapping_mul(5).rotate_left(2);
+  let v3 = input.wrapping_mul(6).rotate_left(3);
+  let v4 = input.wrapping_mul(7).rotate_left(4);
+  let v5 = input.wrapping_mul(8).rotate_left(5);
+  let v6 = input.wrapping_mul(9).rotate_left(6);
+  let v7 = input.wrapping_mul(10).rotate_left(0);
+  let v8 = input.wrapping_mul(11).rotate_left(1);
+  let v9 = input.wrapping_mul(12).rotate_left(2);
+  let v10 = input.wrapping_mul(13).rotate_left(3);
+  let v11 = input.wrapping_mul(14).rotate_left(4);
+  let v12 = input.wrapping_mul(15).rotate_left(5);
+  let v13 = input.wrapping_mul(16).rotate_left(6);
+  v0 ^ v1 ^ v2 ^ v3 ^ v4 ^ v5 ^ v6 ^ v7 ^ v8 ^ v9 ^ v10 ^ v11 ^ v12 ^ v13
+}

@@ -1,0 +1,14 @@
+//! Fixture tasks.
+
+/// Every task.
+const TASKS: &[(&str, u8)] = &[("demo-task", 1)];
+
+fn main() {
+  if TASKS.is_empty() {
+    std::process::exit(1);
+  }
+}
+
+#[cfg(test)]
+#[path = "tests/main_test.rs"]
+mod tests;

@@ -1,0 +1,3 @@
+step guardrails
+exit 1
+contains `expect` lint attribute

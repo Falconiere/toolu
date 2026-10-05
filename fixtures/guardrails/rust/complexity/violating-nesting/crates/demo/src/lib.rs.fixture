@@ -1,0 +1,27 @@
+//! A fixture crate.
+
+/// Add one, saturating at the top.
+pub fn bump(value: u8) -> u8 {
+  value.saturating_add(1)
+}
+
+/// Count deep matches.
+pub fn deep(values: &[u8]) -> u8 {
+  let mut count = 0;
+  for a in values {
+    if *a > 1 {
+      for b in values {
+        if *b > 1 {
+          {
+            count += 1;
+          }
+        }
+      }
+    }
+  }
+  count
+}
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;

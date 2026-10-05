@@ -1,0 +1,6 @@
+use super::TASKS;
+
+#[test]
+fn runs_demo_task() {
+  assert_eq!(TASKS.len(), 1);
+}

@@ -1,0 +1,45 @@
+# The quality bar (#455), rules 10 and 15: gate data, read by cargo-deny. A change
+# here is its own `chore(gates):` PR. No ignore, skip or exception entries.
+[graph]
+all-features = true
+
+[advisories]
+version = 2
+yanked = "deny"
+
+[bans]
+multiple-versions = "deny"
+wildcards = "deny"
+# Workspace crates are unpublished and depend on each other by path; a registry
+# `*` requirement stays denied.
+allow-wildcard-paths = true
+deny = [
+  # Real tests only (rule 10).
+  { name = "mockall" },
+  { name = "faux" },
+  { name = "mockito" },
+  { name = "wiremock" },
+  # No async runtime (rule 15).
+  { name = "tokio" },
+  { name = "async-std" },
+  { name = "smol" },
+  { name = "async-executor" },
+  # No OpenSSL or native-tls (rule 15).
+  { name = "openssl" },
+  { name = "openssl-sys" },
+  { name = "native-tls" },
+  # No type-erased error crates (rule 15).
+  { name = "anyhow" },
+  { name = "eyre" },
+  { name = "color-eyre" },
+]
+
+[licenses]
+version = 2
+confidence-threshold = 0.9
+allow = ["MIT", "Apache-2.0", "Unicode-3.0"]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

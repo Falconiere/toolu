@@ -1,0 +1,4 @@
+step tests coverage
+exit 1
+contains coverage demo:
+contains lines, floor 85% — add tests

@@ -1,0 +1,3 @@
+step guardrails
+exit 1
+contains crate-hygiene crates/demo/Cargo.toml:1: missing `version.workspace = true`

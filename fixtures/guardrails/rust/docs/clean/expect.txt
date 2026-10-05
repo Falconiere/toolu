@@ -1,0 +1,4 @@
+step clippy docs
+exit 0
+contains gate: clippy ok
+contains gate: docs ok

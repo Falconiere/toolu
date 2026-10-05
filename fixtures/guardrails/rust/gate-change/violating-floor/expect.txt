@@ -1,0 +1,4 @@
+step gate-change
+exit 1
+contains coverage floor of demo lowered to 86
+contains together with product code (crates/demo/src/lib.rs)

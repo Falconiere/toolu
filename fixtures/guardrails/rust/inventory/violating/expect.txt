@@ -1,0 +1,3 @@
+step guardrails
+exit 1
+contains inventory crates/xtask/src/main.rs:4: xtask-task `demo-task` has no entry in tooling/conventions/guardrails/rust/inventory.json: add a passing and a failing scenario

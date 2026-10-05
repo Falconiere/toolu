@@ -1,0 +1,3 @@
+step guardrails
+exit 2
+contains unknown field `exempt`

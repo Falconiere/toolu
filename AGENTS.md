@@ -13,7 +13,7 @@ This file is the source of truth. Codex, Cursor, and Claude Code read it directl
 - **bun test** — TypeScript suites in colocated `__tests__/*.test.ts` spawn real bundles, scripts and repos through `@toolu/conformance/harness/*`: files in parallel, tests concurrent, each test owns its sandbox. See `docs/testing.md`.
 - **Bun** — the runtime for every host and plugin (1.4.x prerequisite; see `docs/runtime.md`). `bun.lock`. `bun run test` runs the TypeScript gate, including bundle drift, context budget, deterministic benchmarks, and the shell-analysis latency budget.
 - **`toolu` CLI** — `tools/toolu-cli`, a Node bundle published to npm as `@toolu/plugins` from its `npm/` folder; the workspace itself is private, so npx never mistakes it for the published package. Installs plugins across hosts by shelling out to each host's own plugin CLI, or for OpenCode by editing its documented config files. See `docs/cli.md`.
-- **Rust workspace** (epic #402) — root `Cargo.toml`, toolchain pinned in `rust-toolchain.toml` (1.99.0 with rustfmt and clippy). Core crates live in `crates/core/<layer>` (package `toolu-<layer>`), tooling in `crates/xtask`. `rustfmt.toml` uses two spaces per indentation level, no tabs, width 100. `[workspace.lints]` denies warnings and `unwrap`/`expect`/`panic!` outside tests (`clippy.toml` allows them in tests); the full rule set is #455. The gate is `cargo fmt --all --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, `cargo test --workspace --locked` and `cargo xtask check-layers`.
+- **Rust workspace** (epic #402) — root `Cargo.toml`, toolchain pinned in `rust-toolchain.toml` (1.99.0 with rustfmt and clippy). Core crates live in `crates/core/<layer>` (package `toolu-<layer>`), tooling in `crates/xtask`. Every crate passes the quality bar of #455 (see **Rust conventions** below); the gate is `cargo xtask gate`.
 
 ## Plugin layout
 
@@ -68,7 +68,7 @@ Each gated job carries a job-level `if`, and a job skipped that way reports Succ
 | `gate` (`bun run test`) | `ts` | `bun run test` (`test:ts`): format, lint, typecheck, guardrails, gate reach, legacy exemptions, unit, conformance, bundle/launcher drift, CI path check, context and latency budgets, deterministic benchmarks |
 | `opencode (ubuntu-latest)`, `opencode (macos-latest)` | `opencode` | `bun run test:opencode`, the real OpenCode acceptance |
 | `docs` | `docs` | `bun run test:docs`: the checks and tests from `test:ts` that read `docs/**` or root Markdown |
-| `rust (ubuntu-latest)`, `rust (macos-latest)` | `rust` | `cargo fmt --all --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, `cargo build` and `cargo test --workspace --locked`, `cargo xtask check-layers` |
+| `rust (ubuntu-latest)`, `rust (macos-latest)` | `rust` | `cargo xtask gate --base <PR base or pushed range> --title <PR title>`: the whole Rust quality bar, with cargo-deny, cargo-machete and cargo-llvm-cov from `taiki-e/install-action` and Bun for jscpd and rust-quality |
 | `rust-musl (x86_64-unknown-linux-musl)`, `rust-musl (aarch64-unknown-linux-musl)` | `rust` | A release build per musl target (aarch64 on `ubuntu-24.04-arm`); `file` must report the binary static |
 | `rust-conformance` | `ports` | `bun run test:rust-conformance`: the ported hook entries in `fixtures/rust-ported.json` against `test:unit` and `test:conformance` with `TOOLU_IMPL` set (#409). An empty list is a no-op and installs no toolchain |
 | `review` | `changed` | The code review. Runs for any change outside the release-only files, docs included, and runs anyway if `changes` failed or left `changed` empty |
@@ -81,7 +81,7 @@ These paths turn every group on:
 - a path no group matches;
 - an empty diff, or a diff error.
 
-A release-please bump turns every group off. That means release-only paths whose diff is only `version`, `.` or `@toolu/core` semver lines (JSON, or TOML `version = "X.Y.Z"` in `Cargo.toml`/`Cargo.lock`), plus `CHANGELOG.md`. The `rust` group is `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `rustfmt.toml`, `clippy.toml`, `crates/**` and `.cargo/**`; #408 adds `fixtures/**` with the directory. The `ports` group is the port list and its runner, `tools/toolu-conformance/**`, `plugins/**`, `packages/**` and the Rust paths. `bun run check:ci-paths` fails on any of these:
+A release-please bump turns every group off. That means release-only paths whose diff is only `version`, `.` or `@toolu/core` semver lines (JSON, or TOML `version = "X.Y.Z"` in `Cargo.toml`/`Cargo.lock`), plus `CHANGELOG.md`. The `rust` group is `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `rustfmt.toml`, `clippy.toml`, `deny.toml`, `lefthook.yml`, `crates/**`, `.cargo/**`, the two `toolu.config.json` copies, `fixtures/guardrails/**`, `tooling/conventions/guardrails/rust/**`, `tooling/src/check-rust-quality.ts` and `plugins/rust-quality/**`; #408 adds the rest of `fixtures/**`. The `ports` group is the port list and its runner, `tools/toolu-conformance/**`, `plugins/**`, `packages/**` and the Rust paths. `bun run check:ci-paths` fails on any of these:
 
 - a workflow-level `paths`/`paths-ignore` where a required check is reported;
 - an aggregate whose `needs` differ from its gated jobs;
@@ -89,6 +89,40 @@ A release-please bump turns every group off. That means release-only paths whose
 - a glob that matches no tracked file.
 
 Benchmarks are hermetic. Context budget caps the Session Protocol, per-language docs, and skill descriptions.
+
+## Rust conventions
+
+Every crate under `crates/` passes `cargo xtask gate` (#455), the required `rust` CI job on Linux and macOS, also run by `lefthook.yml` (fast checks on commit, the gate on push) and, after each edit, by the rust-quality plugin at this repository's limits (`lang.rust` in `.claude/toolu.config.json`). Code lines exclude blank lines and comments. Reasons: [`docs/rust-quality-bar.md`](docs/rust-quality-bar.md).
+
+| # | Rule | Limit | Owner |
+|---|---|---|---|
+| 1 | File length, `src` and tests | 300 code lines | guardrails |
+| 2 | Function length | 50 code lines | clippy `too_many_lines` |
+| 3 | `impl` block length | 200 code lines | guardrails |
+| 4 | Complexity | cognitive 15, nesting 4, 5 parameters, 2 `bool` parameters, 3 `bool` fields | clippy |
+| 5 | Formatting | width 100, two spaces per level, no tabs | `cargo fmt --check` |
+| 6 | Test layout | no inline `#[cfg(test)]` body in `src`; unit tests in `tests/<module>_test.rs` beside the module, wired by `#[cfg(test)] #[path = "tests/<module>_test.rs"] mod tests;`; `tests/` flat except `fixtures/`, `helpers/`, `common/` | guardrails |
+| 7 | Co-located tests | a module file with a function has a wired `tests/<module>_test.rs` with a test | guardrails |
+| 8 | Behaviour inventory | each discovered item (today every `cargo xtask` task) names a passing and a failing test in `inventory.json` | guardrails |
+| 9 | Coverage | 85% of lines per crate, 90% for `toolu-protocol`, `toolu-shell`, `toolu-state`, `toolu-engine`; floors only rise | llvm-cov, `check-coverage` |
+| 10 | Real tests | no mocking crates, no `#[ignore]` | cargo-deny, guardrails |
+| 11 | Folders | allowlists for the root, `crates/`, each crate and each plugin; snake_case files; no mod files, build scripts or source includes; ≤3 levels under `src`; `main.rs` only in `cli`/`xtask`; `#[path]` only for test wiring | guardrails, clippy |
+| 12 | Crate hygiene | `[lints] workspace = true`, `version.workspace = true`, crate `//!` doc | guardrails |
+| 13 | Layers | `protocol` ← `runtime` ← {`shell`, `http`, `state`} ← {`engine`, `github`, `jev`}; plugins link only core | `check-layers` |
+| 14 | Capabilities | HTTP/TLS crates only in `toolu-http`, shell parsers only in `toolu-shell`; env, process and stdio only in their owners; `process::exit` only in `main` | `check-layers`, guardrails, clippy |
+| 15 | Dependencies | no async runtime, OpenSSL, `anyhow`/`eyre`, duplicate versions, unknown licence or source, unused dependency, or `dyn Error` in a library's `pub fn` | cargo-deny, cargo-machete, guardrails |
+| 16 | Duplication | 0 clones of 10 lines / 60 tokens in `crates/**/src` | jscpd |
+| 17 | No unsafe | `unsafe_code = "forbid"` | rustc |
+| 18 | No panics in `src` | `unwrap`, `expect`, `panic!`, `todo!`, `unimplemented!`, `unreachable!`, indexing, string slicing denied outside tests | clippy |
+| 19 | No leftovers | no `dbg!`; a to-do marker names its issue (`#<n>`) | clippy, guardrails |
+| 20 | No suppression | no `allow`/`expect` attribute (outer, inner or in `cfg_attr`), no jscpd ignore comment | guardrails |
+| 21 | No dead code | warnings denied, `unreachable_pub`, every `pub` item used by another crate or a test | rustc, `check-unused-pub` |
+| 22 | Documentation | `missing_docs`, rustdoc warnings denied | rustc, `cargo doc` |
+| 23 | Secrets | no committed secret | guardrails |
+
+- **Data.** Gate data (a limit, a ban, a lint level, a layer rule): `[workspace.lints]`, `clippy.toml`, `rustfmt.toml`, `deny.toml`, `lang.rust`, `tooling/conventions/guardrails/rust/{rules,jscpd}.json`. It changes only in its own `chore(gates): …` PR. Registration data may grow next to the code it registers: `layers.json`, `folders.json`, `inventory.json`, `coverage-floor.json` (rows at or above the default). `cargo xtask check-gate-change` enforces the split. No file has an ignore, exempt or per-path override field; the loaders reject one.
+- **Fixtures.** `fixtures/guardrails/rust/<rule>/{clean,violating*}`: each case is an overlay on `base/` with an `expect.txt`; Rust sources end in `.rs.fixture`. `cargo test -p xtask` runs every case through `cargo xtask gate --root <temp> --only <step>` with this repository's real gate data.
+- **Commands.** `cargo xtask gate` (all steps, or `--only <step>`), `cargo xtask guardrails`. The gate needs cargo-deny, cargo-machete, cargo-llvm-cov, ast-grep, Bun and `bun install`; a missing tool fails closed.
 
 ## Key files
 
@@ -129,7 +163,7 @@ Benchmarks are hermetic. Context budget caps the Session Protocol, per-language 
 | `tooling/src/check-hooks-json.ts` | `hooks.json` launcher gate (`bun run check:hooks-json`); `--print <plugin> <Event> <entry>` emits the entry to paste |
 | `tooling/src/build-plugins.ts` | Builds `plugins/*/hooks/src` entries into committed `hooks/dist` bundles; `--check` is the drift gate |
 | `Cargo.toml` | Rust workspace: explicit `members` (a `crates/*` glob would also match `crates/core`), lockstep version, shared dependencies, base lints, release profile (`lto = "fat"`, `codegen-units = 1`, `strip`, `panic = "unwind"`) |
-| `crates/xtask/src/main.rs` | `cargo xtask <task>`. `check-layers` reads `cargo metadata --no-deps` and the layer table `crates/xtask/layers.json`: a core crate may use only lower core layers, a plugin crate only core, only `crates/toolu` may use a rule crate, only `crates/cli` (and `crates/xtask`) builds a binary, nothing uses `cli` or `xtask`, and every `crates/<name>` or `crates/core/<name>` with a `Cargo.toml` is a member. Normal and build dependencies are judged; dev-dependencies are not. Exit 0 clean, 1 violations, 2 setup error |
+| `crates/xtask/src/main.rs` | `cargo xtask <task>` (`TASKS`): `gate`, `guardrails`, `check-layers`, `check-reach`, `check-unused-pub`, `check-gate-change`, `check-coverage`; see **Rust conventions**. `check-layers` reads `cargo metadata --no-deps`, the layer table `tooling/conventions/guardrails/rust/layers.json` and the capability crates of `rules.json`: a core crate may use only lower core layers, a plugin crate only core, only `crates/toolu` may use a rule crate, only `crates/cli` (and `crates/xtask`) builds a binary, nothing uses `cli` or `xtask`, and every `crates/<name>` or `crates/core/<name>` with a `Cargo.toml` is a member. Normal and build dependencies are judged; dev-dependencies are not. Exit 0 clean, 1 violations, 2 setup error |
 | `docs/config.md` | Config schema |
 | `plugins/toolu/scripts/context-budget.ts` | Injected-context word ceilings (`bun run test:context-budget`) |
 
@@ -145,7 +179,7 @@ Benchmarks are hermetic. Context budget caps the Session Protocol, per-language 
 - Hook module: a `defineRegistryModule` entry in `plugins/<plugin>/hooks/src/`, listed in its `hooks/src/register.ts`
 - TypeScript hook: `plugins/<name>/hooks/src/<entry>.ts` (a top-level file is an entry; helpers go in subdirectories). `bun run build:plugins` writes the self-contained `hooks/dist/<entry>.js`; commit both. Wire it in `hooks.json` with the generated launcher (`bun run tooling/src/check-hooks-json.ts --print <plugin> <Event> <entry>`), never a hand-written `bun` call; `bun run check:hooks-json` gates it. `bun run check:plugin-bundles` (in `test:ts`) fails when a bundle drifts from its source, is missing, or is orphaned. Build with the pinned Bun (CI: 1.4.2).
 - Skill CLI: an entry starting `#!/usr/bin/env bun` builds to an executable bundle (the drift check covers the exec bit) that a SessionStart hook symlinks to a stable path, e.g. `hooks/src/search.ts` for exa-search and context7. HTTP goes through `@toolu/core/rest`; tests run the bundle against `@toolu/conformance/https-fixture`, a loopback HTTPS server reached through `HTTPS_PROXY`.
-- Rust crate: add its directory to `members` in the root `Cargo.toml` (a core crate also needs its layer in `crates/xtask/layers.json`), set `version.workspace = true` and `[lints] workspace = true`, and put tests under the crate's `tests/`. `cargo xtask check-layers` fails on an unlisted crate directory.
+- Rust crate: add its directory to `members` in the root `Cargo.toml` (a core crate also needs its layer in `tooling/conventions/guardrails/rust/layers.json`), list it in `folders.json`, set `version.workspace = true` and `[lints] workspace = true`, give the crate root a `//!` doc, and follow **Rust conventions**. `cargo xtask gate` must pass with no exemption.
 - Plugin: `plugins/<name>/.claude-plugin/plugin.json` and a README from `tooling/templates/plugin-README.md`
 - Subset: `bun test plugins/<plugin>/hooks/src/__tests__/`
 - New TypeScript tree: add it to `tsconfig.json`, `format:check`, a lint config, `.jscpd.json` and `knip.json`, or declare the gap in `tooling/gate-reach.json`; `bun run check:gate-reach` fails otherwise. Never add a legacy exemption for new code.

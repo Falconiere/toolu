@@ -1,0 +1,3 @@
+step fmt
+exit 0
+contains gate: fmt ok

@@ -1,0 +1,3 @@
+step clippy
+exit 1
+contains the `dbg!` macro is intended as a debugging tool

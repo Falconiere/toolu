@@ -1,0 +1,3 @@
+step guardrails
+exit 1
+contains `bin` is not in the folder allowlist for `plugins/demo`

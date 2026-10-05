@@ -1,0 +1,3 @@
+step guardrails
+exit 1
+contains colocated-tests crates/demo/src/queue.rs:1: defines functions but has no crates/demo/src/tests/queue_test.rs beside it

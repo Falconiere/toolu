@@ -1,0 +1,4 @@
+step guardrails
+exit 1
+contains public-api crates/demo/src/lib.rs:
+contains pub parse exposes a type-erased error (`dyn Error`); use a typed error

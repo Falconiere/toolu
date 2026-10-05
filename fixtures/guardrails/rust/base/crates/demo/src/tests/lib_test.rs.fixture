@@ -1,0 +1,11 @@
+use super::bump;
+
+#[test]
+fn bump_adds_one() {
+  assert_eq!(bump(1), 2);
+}
+
+#[test]
+fn bump_saturates() {
+  assert_eq!(bump(u8::MAX), u8::MAX);
+}

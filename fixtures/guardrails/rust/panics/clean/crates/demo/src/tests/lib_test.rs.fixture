@@ -1,0 +1,8 @@
+use super::bump;
+
+#[test]
+fn bump_unwraps_in_tests() {
+  let values = [bump(1)];
+  assert_eq!(values.first().copied().unwrap(), 2);
+  assert_eq!(values[0], 2);
+}

@@ -1,0 +1,3 @@
+step deny
+exit 1
+contains source not explicitly allowed

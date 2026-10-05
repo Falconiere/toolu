@@ -1,0 +1,22 @@
+[package]
+name = "demo-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+demo = { path = ".." }
+
+[[bin]]
+name = "bump"
+path = "fuzz_targets/bump.rs"
+test = false
+doc = false
+bench = false
+
+# Not a member of the fixture workspace.
+[workspace]

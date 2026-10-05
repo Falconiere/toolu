@@ -1,0 +1,6 @@
+//! Black-box test.
+
+#[test]
+fn bumps() {
+  assert_eq!(demo::bump(0), 1);
+}

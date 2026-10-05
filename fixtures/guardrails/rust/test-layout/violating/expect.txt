@@ -1,0 +1,4 @@
+step guardrails
+exit 1
+contains test-layout crates/demo/src/lib.rs:
+contains inline #[cfg(test)] module body in src

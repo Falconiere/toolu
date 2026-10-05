@@ -1,0 +1,46 @@
+{
+  "entries": [
+    {
+      "kind": "xtask-task",
+      "id": "gate",
+      "pass": "crates/xtask/tests/fixtures_clippy.rs::format_clean",
+      "fail": "crates/xtask/tests/fixtures_clippy.rs::format_violating"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "guardrails",
+      "pass": "crates/xtask/tests/fixtures_guardrails.rs::file_length_clean",
+      "fail": "crates/xtask/tests/fixtures_guardrails.rs::file_length_violating"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "check-layers",
+      "pass": "crates/xtask/tests/check_layers.rs::lower_layers_and_dev_dependencies_pass",
+      "fail": "crates/xtask/tests/check_layers.rs::runtime_depending_on_engine_fails_and_names_the_edge"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "check-reach",
+      "pass": "crates/xtask/src/tests/main_test.rs::a_clean_task_exits_0",
+      "fail": "crates/xtask/src/tests/reach_test.rs::rust_files_outside_every_member_are_named"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "check-unused-pub",
+      "pass": "crates/xtask/tests/fixtures_tools.rs::dead_code_clean",
+      "fail": "crates/xtask/tests/fixtures_tools.rs::dead_code_violating_unused_pub"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "check-gate-change",
+      "pass": "crates/xtask/tests/fixtures_gate_change.rs::gate_change_clean_registration",
+      "fail": "crates/xtask/tests/fixtures_gate_change.rs::gate_change_violating_limit"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "check-coverage",
+      "pass": "crates/xtask/tests/fixtures_tools.rs::coverage_clean",
+      "fail": "crates/xtask/tests/fixtures_tools.rs::coverage_violating"
+    }
+  ]
+}

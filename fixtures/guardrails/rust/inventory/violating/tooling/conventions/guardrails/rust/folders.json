@@ -1,0 +1,19 @@
+{
+  "root": [
+    ".claude",
+    ".gitignore",
+    "Cargo.lock",
+    "Cargo.toml",
+    "clippy.toml",
+    "crates",
+    "deny.toml",
+    "rust-toolchain.toml",
+    "rustfmt.toml",
+    "tooling"
+  ],
+  "crates": [
+    "demo",
+    "xtask"
+  ],
+  "core": []
+}

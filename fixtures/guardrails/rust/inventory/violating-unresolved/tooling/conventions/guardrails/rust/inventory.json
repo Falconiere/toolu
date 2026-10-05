@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "kind": "xtask-task",
+      "id": "demo-task",
+      "pass": "crates/xtask/src/tests/main_test.rs::runs_demo_task",
+      "fail": "crates/xtask/src/tests/main_test.rs::rejects_unknown_task"
+    }
+  ]
+}

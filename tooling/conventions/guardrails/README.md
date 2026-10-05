@@ -14,6 +14,11 @@ of one rule is how ceilings drift apart.
 > read (`patterns/`, the schemas) and the oxlint house plugin. `bun run guardrails` runs it with the
 > same flags and exit codes; the deliberate differences are listed in PROVENANCE. Sections below that mention `run.sh`, a scaffold copy or
 > `__tests__/*.sh` describe the upstream kit; see `tooling/conventions/PROVENANCE.md`.
+>
+> **Rust.** The data of the Rust quality bar (#455) lives in [`rust/`](rust/) and is read by
+> `cargo xtask guardrails` and `cargo xtask gate`, not by this runner; see
+> [`docs/rust-quality-bar.md`](../../../docs/rust-quality-bar.md). The kit's `patterns/rust/` YAML
+> belongs to the runner above and never scans `crates/`.
 
 ## Two paths, one module
 

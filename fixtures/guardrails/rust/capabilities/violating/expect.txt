@@ -1,0 +1,4 @@
+step guardrails
+exit 1
+contains capabilities crates/demo/src/lib.rs:
+contains `env::var` is the `env` capability; only toolu-runtime, xtask may use it

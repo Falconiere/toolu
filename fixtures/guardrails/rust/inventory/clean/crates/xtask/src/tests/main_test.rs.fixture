@@ -1,0 +1,11 @@
+use super::TASKS;
+
+#[test]
+fn runs_demo_task() {
+  assert_eq!(TASKS.len(), 1);
+}
+
+#[test]
+fn rejects_unknown_task() {
+  assert!(TASKS.iter().all(|(name, _)| *name != "nope"));
+}

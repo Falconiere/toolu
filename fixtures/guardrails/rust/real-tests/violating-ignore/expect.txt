@@ -1,0 +1,4 @@
+step guardrails
+exit 1
+contains no-ignore crates/demo/src/tests/lib_test.rs:
+contains #[ignore] — a test that cannot run is deleted or fixed

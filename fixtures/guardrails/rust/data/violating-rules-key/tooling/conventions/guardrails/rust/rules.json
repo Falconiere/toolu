@@ -1,0 +1,183 @@
+{
+  "version": 1,
+  "tests": {
+    "subdirs": [
+      "fixtures",
+      "helpers",
+      "common"
+    ],
+    "fileSuffix": "_test"
+  },
+  "structure": {
+    "maxSrcDepth": 3,
+    "mainCrates": [
+      "cli",
+      "xtask"
+    ],
+    "crate": [
+      "Cargo.toml",
+      "README.md",
+      "src",
+      "tests",
+      "fuzz"
+    ],
+    "fuzz": [
+      "Cargo.toml",
+      "rust-toolchain.toml",
+      "fuzz_targets",
+      ".gitignore"
+    ],
+    "plugin": [
+      ".claude-plugin",
+      ".codex-plugin",
+      "README.md",
+      "agents",
+      "assets",
+      "commands",
+      "hooks",
+      "scripts",
+      "settings",
+      "skills",
+      "workflows"
+    ],
+    "exempt": [
+      "crates/demo"
+    ]
+  },
+  "capabilities": [
+    {
+      "id": "env",
+      "paths": [
+        "std::env::var",
+        "std::env::var_os",
+        "std::env::vars",
+        "std::env::vars_os",
+        "std::env::set_var",
+        "std::env::remove_var"
+      ],
+      "owners": [
+        {
+          "crate": "toolu-runtime"
+        },
+        {
+          "crate": "xtask"
+        }
+      ]
+    },
+    {
+      "id": "process",
+      "paths": [
+        "std::process::Command"
+      ],
+      "owners": [
+        {
+          "crate": "toolu-runtime",
+          "module": "process"
+        },
+        {
+          "crate": "xtask"
+        }
+      ]
+    },
+    {
+      "id": "stdio",
+      "paths": [
+        "std::io::stdout",
+        "std::io::stderr"
+      ],
+      "owners": [
+        {
+          "crate": "toolu-protocol"
+        },
+        {
+          "crate": "toolu-cli",
+          "module": "output"
+        },
+        {
+          "crate": "xtask",
+          "module": "output"
+        }
+      ]
+    }
+  ],
+  "capabilityCrates": [
+    {
+      "id": "http",
+      "crates": [
+        "ureq",
+        "reqwest",
+        "hyper",
+        "http-body",
+        "rustls",
+        "native-tls",
+        "openssl",
+        "curl",
+        "isahc",
+        "attohttpc",
+        "minreq"
+      ],
+      "owner": "toolu-http"
+    },
+    {
+      "id": "shell-parser",
+      "crates": [
+        "brush-parser",
+        "tree-sitter-bash",
+        "conch-parser"
+      ],
+      "owner": "toolu-shell"
+    }
+  ],
+  "secrets": [
+    {
+      "id": "aws-access-key",
+      "regex": "AKIA[0-9A-Z]{16}"
+    },
+    {
+      "id": "github-token",
+      "regex": "gh[pousr]_[A-Za-z0-9]{36,}"
+    },
+    {
+      "id": "github-fine-grained-token",
+      "regex": "github_pat_[A-Za-z0-9_]{40,}"
+    },
+    {
+      "id": "private-key",
+      "regex": "-----BEGIN [A-Z ]*PRIVATE KEY-----"
+    },
+    {
+      "id": "slack-token",
+      "regex": "xox[abprs]-[A-Za-z0-9-]{10,}"
+    },
+    {
+      "id": "anthropic-key",
+      "regex": "sk-ant-[A-Za-z0-9_-]{20,}"
+    },
+    {
+      "id": "stripe-live-key",
+      "regex": "sk_live_[0-9A-Za-z]{20,}"
+    },
+    {
+      "id": "google-api-key",
+      "regex": "AIza[0-9A-Za-z_-]{35}"
+    }
+  ],
+  "inventory": {
+    "kinds": [
+      {
+        "kind": "xtask-task",
+        "file": "crates/xtask/src/main.rs",
+        "const": "TASKS"
+      }
+    ]
+  },
+  "coverage": {
+    "default": 85,
+    "strict": {
+      "toolu-protocol": 90,
+      "toolu-shell": 90,
+      "toolu-state": 90,
+      "toolu-engine": 90
+    }
+  }
+}

@@ -1,0 +1,4 @@
+step machete
+exit 1
+contains cargo-machete found the following unused dependencies
+contains helper

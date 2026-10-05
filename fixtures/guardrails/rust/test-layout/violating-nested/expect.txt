@@ -1,0 +1,3 @@
+step guardrails
+exit 1
+contains test-layout crates/demo/tests/deep/black_box.rs:1: tests/ is flat

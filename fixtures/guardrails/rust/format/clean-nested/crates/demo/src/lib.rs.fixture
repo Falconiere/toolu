@@ -1,0 +1,13 @@
+//! A fixture crate.
+
+/// Add one, saturating at the top.
+pub fn bump(value: u8) -> u8 {
+  if value < u8::MAX {
+    return value + 1;
+  }
+  value
+}
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;

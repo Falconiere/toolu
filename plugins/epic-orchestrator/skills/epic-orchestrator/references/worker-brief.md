@@ -57,7 +57,9 @@ Report each phase as you enter it — the orchestrator's only view of progress.
 1. **Sync.** `git fetch origin && git rebase origin/{{BASE}}`. Read the issue with
    {{ISSUE_READ}} and skim the
    epic for agreed decisions and delivery guardrails. Read closed blockers'
-   merged PRs only as far as this issue needs.
+   merged PRs only as far as this issue needs. Read the repository's agent
+   instructions (`AGENTS.md` or `CLAUDE.md`) and the quality-bar documents they
+   link (for toolu's Rust crates, `docs/rust-quality-bar.md`): the PR must pass that bar.
 2. **Deliver.** Invoke {{DELIVERY}} for this issue. Within that
    single skill invocation, run `report brainstorm`, `report spec`,
    `report spec-review`, `report plan`, `report plan-review`, and

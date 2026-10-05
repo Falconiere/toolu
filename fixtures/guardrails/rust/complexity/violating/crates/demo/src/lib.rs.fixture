@@ -1,0 +1,66 @@
+//! A fixture crate.
+
+/// Add one, saturating at the top.
+pub fn bump(value: u8) -> u8 {
+  value.saturating_add(1)
+}
+
+/// Score the values.
+pub fn classify(values: &[u8]) -> u8 {
+  let mut score: u8 = 0;
+  for value in values {
+    if *value == 1 || *value > 41 && score < 1 {
+      score = score.saturating_add(1);
+    }
+    if *value == 2 || *value > 42 && score < 2 {
+      score = score.saturating_add(2);
+    }
+    if *value == 3 || *value > 43 && score < 3 {
+      score = score.saturating_add(3);
+    }
+    if *value == 4 || *value > 44 && score < 4 {
+      score = score.saturating_add(4);
+    }
+    if *value == 5 || *value > 45 && score < 5 {
+      score = score.saturating_add(5);
+    }
+    if *value == 6 || *value > 46 && score < 6 {
+      score = score.saturating_add(6);
+    }
+    if *value == 7 || *value > 47 && score < 7 {
+      score = score.saturating_add(7);
+    }
+    if *value == 8 || *value > 48 && score < 8 {
+      score = score.saturating_add(8);
+    }
+    if *value == 9 || *value > 49 && score < 9 {
+      score = score.saturating_add(9);
+    }
+    if *value == 10 || *value > 50 && score < 10 {
+      score = score.saturating_add(10);
+    }
+    if *value == 11 || *value > 51 && score < 11 {
+      score = score.saturating_add(11);
+    }
+    if *value == 12 || *value > 52 && score < 12 {
+      score = score.saturating_add(12);
+    }
+    if *value == 13 || *value > 53 && score < 13 {
+      score = score.saturating_add(13);
+    }
+    if *value == 14 || *value > 54 && score < 14 {
+      score = score.saturating_add(14);
+    }
+    if *value == 15 || *value > 55 && score < 15 {
+      score = score.saturating_add(15);
+    }
+    if *value == 16 || *value > 56 && score < 16 {
+      score = score.saturating_add(16);
+    }
+  }
+  score
+}
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;

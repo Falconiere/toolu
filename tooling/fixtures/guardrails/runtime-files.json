@@ -8,6 +8,7 @@
     "violating/tests/central.test.ts": "ZXhwb3J0IGNvbnN0IGNlbnRyYWwgPSAxOwo="
   },
   "text": {
+    "violating/src/utilities/env-probe.rs": "pub fn probe() {\n    let key = std::env::var(\"SECRET\");\n}\n",
     "violating/src/utilities/leaked-key.ts": "// Recognized fake — the AWS docs example access key id, never a real credential.\nexport const leaked = '{{FAKE_AWS_KEY}}';\n"
   }
 }
