@@ -1,5 +1,23 @@
 # Changelog
 
+## [7.10.0](https://github.com/Falconiere/toolu/compare/v7.9.0...v7.10.0) (2026-10-05)
+
+
+### Features
+
+* **opencode:** enforce Rust post-edit quality ([#397](https://github.com/Falconiere/toolu/issues/397)) ([a025237](https://github.com/Falconiere/toolu/commit/a025237a3c46394686449733239f1a4db8f35419))
+* **opencode:** port pr-babysit native fixer dispatch and lifecycle ([#387](https://github.com/Falconiere/toolu/issues/387)) ([54c039e](https://github.com/Falconiere/toolu/commit/54c039e2baf44330137efac2b86bf200accd972f))
+* **opencode:** port statusline to supported native diagnostics ([#398](https://github.com/Falconiere/toolu/issues/398)) ([2fa5c05](https://github.com/Falconiere/toolu/commit/2fa5c052875264d463c45bc87df25fcfb96ceb2c))
+* **opencode:** require real OpenCode acceptance in CI ([#400](https://github.com/Falconiere/toolu/issues/400)) ([7a87267](https://github.com/Falconiere/toolu/commit/7a87267716a3bcbd3b3b9fc368bcc40986a8ccea))
+* **toolu-cli:** manage OpenCode through its documented config files ([#396](https://github.com/Falconiere/toolu/issues/396)) ([e4856a8](https://github.com/Falconiere/toolu/commit/e4856a8aa4a5130e468cf34e204fec3cedafa681))
+
+
+### Bug Fixes
+
+* **epic-orchestrator:** capture Cursor Agent session IDs from chat metadata ([#441](https://github.com/Falconiere/toolu/issues/441)) ([c9243bd](https://github.com/Falconiere/toolu/commit/c9243bd4f6ee5e33ebb9baf0ad1214dd8c940f81))
+* **opencode:** install the checkout's @toolu/core in npm-route acceptance ([#464](https://github.com/Falconiere/toolu/issues/464)) ([f6fd995](https://github.com/Falconiere/toolu/commit/f6fd995d63162b201ab6fd47f8b36b2d76086742))
+* **opencode:** ship a closed, independently loadable npm package ([#399](https://github.com/Falconiere/toolu/issues/399)) ([24e6518](https://github.com/Falconiere/toolu/commit/24e6518956e6c539efb319f54a18e81455aec25f))
+
 ## [7.9.0](https://github.com/Falconiere/toolu/compare/v7.8.0...v7.9.0) (2026-10-04)
 
 
