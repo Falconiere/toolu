@@ -23,9 +23,6 @@
     "**/fixtures/**",
     "**/conventions/**",
     "**/hooks/dist/**",
-    "**/plugins/context7/hooks/src/context7/opencode.ts",
-    "**/plugins/jira/hooks/src/jira/opencode.ts",
-    "**/plugins/jira/hooks/src/session-start.ts",
     "**/plugins/pr-babysit/hooks/src/babysit/fixer-route.ts"
   ],
   "format": [

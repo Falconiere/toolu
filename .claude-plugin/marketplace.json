@@ -138,48 +138,12 @@
       ]
     },
     {
-      "name": "agent-browser",
-      "source": "./plugins/agent-browser",
-      "description": "Efficient, token-lean browser automation for agents via agent-browser (skill + CLI wrapper) — accessibility-tree snapshots with @eN refs instead of HTML/screenshots. Standalone, no dependencies.",
-      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
-      "category": "productivity",
-      "keywords": ["agent-browser", "browser-automation", "skills"],
-      "license": "MIT"
-    },
-    {
-      "name": "context7",
-      "source": "./plugins/context7",
-      "description": "Library documentation & code-example lookup via Context7 (skill + REST wrapper). Standalone, no dependencies.",
-      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
-      "category": "productivity",
-      "keywords": ["context7", "documentation", "skills"],
-      "license": "MIT"
-    },
-    {
-      "name": "exa-search",
-      "source": "./plugins/exa-search",
-      "description": "Web, code, and URL search plus deep research via Exa (skill + REST wrapper). Standalone, no dependencies.",
-      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
-      "category": "productivity",
-      "keywords": ["exa", "web-search", "skills"],
-      "license": "MIT"
-    },
-    {
       "name": "jev",
       "source": "./plugins/jev",
       "description": "Typed judgments from TypeSafe's Jev model at runtime (skill + REST wrapper) — yes/no probabilities, choices, and scores a script can branch on. Standalone, no dependencies.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["typesafe", "jev", "judgment", "skills"],
-      "license": "MIT"
-    },
-    {
-      "name": "jira",
-      "source": "./plugins/jira",
-      "description": "Jira issue search and workflow from the session via a REST wrapper (skill + TypeScript CLI on Bun). Cloud + Server/DC, read and safe writes. Standalone, no dependencies.",
-      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
-      "category": "productivity",
-      "keywords": ["jira", "atlassian", "skills"],
       "license": "MIT"
     }
   ]

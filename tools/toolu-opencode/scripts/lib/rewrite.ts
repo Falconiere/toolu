@@ -2,7 +2,6 @@
 import { posix } from "node:path";
 import { pluginRootVar } from "../../src/host/runtime-env.ts";
 import { CLAUDE_PLUGIN_ROOT, TOOLU_OPENCODE_ROOT } from "./constants.ts";
-import { rewriteJiraSkill } from "./rewrite-jira.ts";
 
 export type RewriteNotes = {
   claudePluginRootRewrites: number;
@@ -36,25 +35,6 @@ export function opencodeJev(text: string): string {
     .replaceAll('"$JEV_BUN" "$JEV"', '"$JEV_BUN" --no-env-file "$JEV"');
 }
 
-/** context7's Codex and Claude Code command lines, after the config-root rewrite. */
-const CONTEXT7_HOST_PAIR =
-  /# Codex\n"\$\{TOOLU_CONFIG_DIR:-\$\{CODEX_HOME:-\$HOME\/\.codex\}\}\/context7\/search\.sh" <command> \[options\]\n# Claude Code\n"[^"\n]*\/context7\/search\.sh" <command> \[options\]/;
-const CONTEXT7_CHOOSE =
-  /Choose the line for the active host\. Ordinary shell calls do not inherit\nplugin lifecycle variables, so never collapse these into one ambiguous\nfallback\. Use the published path; plugin-root variables are lifecycle-only\./;
-
-/** context7 on OpenCode (#348): one command, run by `shell.env`'s Bun, which ignores `.env`. */
-export function opencodeContext7(text: string): string {
-  return text
-    .replace(
-      CONTEXT7_HOST_PAIR,
-      `# OpenCode\n"$TOOLU_BUN" --no-env-file "${OPENCODE_CONFIG}/context7/search.sh" <command> [options]`,
-    )
-    .replace(
-      CONTEXT7_CHOOSE,
-      "`shell.env` sets `TOOLU_BUN` and `TOOLU_CONFIG_DIR` in every bash call, so this\nruns with `bun` off `PATH` and never loads a project `.env`. A file of your own\nat that path runs directly instead. Plugin-root variables are lifecycle-only.",
-    );
-}
-
 export function rewriteBody(
   body: string,
   references: SurfaceReferences,
@@ -78,58 +58,7 @@ export function rewriteBody(
     rewritten = pathParts.join(destination);
   }
   if (skillId) {
-    if (skillId === "agent-browser-agent-browser") {
-      const cliStart = rewritten.indexOf("```bash\n# Codex\n");
-      const wrapperStart = rewritten.indexOf("The wrapper bakes in token-lean defaults", cliStart);
-      if (cliStart < 0 || wrapperStart < 0) {
-        throw new Error("agent-browser skill: cannot find host-specific CLI instructions");
-      }
-      rewritten = `${rewritten.slice(0, cliStart)}\`\`\`bash
-# OpenCode
-: "\${TOOLU_CONFIG_DIR:?toolu OpenCode startup required}"
-"\${TOOLU_CONFIG_DIR}/agent-browser/agent-browser.sh" <command> [args]
-\`\`\`
-
-OpenCode provides \`TOOLU_CONFIG_DIR\` for the current project in every bash call.
-Use the helper path above; its SessionStart entry refreshes the symlink and
-places the exact path in startup instructions.
-
-${rewritten.slice(wrapperStart)}`;
-      rewritten = rewritten.replace(
-        "use the `context7` skill.",
-        "use the native `context7-context7` skill when enabled; otherwise read official docs with OpenCode's `webfetch`.",
-      );
-      rewritten = rewritten.replace(
-        "use `exa-search`\n  (or the active host's native web fetch).",
-        "use the native `exa-search-exa-search` skill when enabled, or OpenCode's `webfetch`.",
-      );
-    }
-    if (skillId === "exa-search-exa-search") {
-      const cliStart = rewritten.indexOf("```bash\n# Codex\n");
-      const fallbackStart = rewritten.indexOf("Repo-checkout fallback", cliStart);
-      if (cliStart < 0 || fallbackStart < 0) {
-        throw new Error("exa-search skill: cannot find host-specific CLI instructions");
-      }
-      rewritten = `${rewritten.slice(0, cliStart)}\`\`\`bash
-# OpenCode
-"\${TOOLU_CONFIG_DIR}/exa-search/search.sh" <command> [options]
-\`\`\`
-
-OpenCode sets \`TOOLU_CONFIG_DIR\` to this project's helper root in every bash call.
-The exa-search SessionStart entry publishes the helper and gives its exact path.
-If \`EXA_API_KEY\` is unset, use OpenCode's \`websearch\` when available or
-\`webfetch\` for a known URL. Do not call the Exa helper until the key is set,
-and never print the key.
-
-${rewritten.slice(fallbackStart)}`;
-      rewritten = rewritten.replace(
-        /^search\.sh(?= )/gm,
-        '"${TOOLU_CONFIG_DIR}/exa-search/search.sh"',
-      );
-    }
     if (skillId === "jev-jev") rewritten = opencodeJev(rewritten);
-    if (skillId === "context7-context7") rewritten = opencodeContext7(rewritten);
-    rewritten = rewriteJiraSkill(skillId, rewritten);
     const modelRouting = `${TOOLU_OPENCODE_ROOT}/generated/skills/toolu-orchestrator/references/model-routing.md`;
     const relativeRouting = posix.relative(
       `skills/${skillId}`,

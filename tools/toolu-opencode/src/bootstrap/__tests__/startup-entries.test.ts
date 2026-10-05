@@ -21,16 +21,7 @@ test.concurrent("every catalog SessionStart launcher is an entry, in file order"
   expect(entryNames("toolu")).toEqual(["session-start"]);
   expect(entryNames("epic-orchestrator")).toEqual(["check-deps"]);
   expect(entryNames("brainstorm")).toEqual([]);
-  const plan = pluginStartupEntries(join(PLUGINS_ROOT, "context7"));
-  expect(plan).toEqual({
-    ok: true,
-    entries: [
-      {
-        name: "session-start",
-        bundle: join(PLUGINS_ROOT, "context7", "hooks", "dist", "session-start.js"),
-      },
-    ],
-  });
+  expect(entryNames("jev")).toEqual(["session-start"]);
 });
 
 test.concurrent("a deleted declared bundle fails the plan before anything runs", () => {

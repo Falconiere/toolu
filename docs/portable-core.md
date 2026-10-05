@@ -15,7 +15,7 @@ The OpenCode target is the documented plugin API. [`opencode-host-contract.md`](
 | Plugin SDK | `@opencode-ai/plugin@1.18.34` | npm. The host provisions the SDK at its own version; `@toolu/opencode` pins it as a devDependency |
 | Bun | `1.4.2` (workspace requires 1.4.x) | `bun --version` |
 | Docs baseline | Plugin function returning `Hooks` | https://opencode.ai/docs/plugins/ |
-| Contract | Pins, loader behavior, host surface, probes, 16-plugin matrix | [`opencode-host-contract.md`](opencode-host-contract.md), checked by `bun run check:opencode-host` |
+| Contract | Pins, loader behavior, host surface, probes, 12-plugin matrix | [`opencode-host-contract.md`](opencode-host-contract.md), checked by `bun run check:opencode-host` |
 
 Runtime contract: [`runtime.md`](runtime.md). OpenCode requires Bun 1.4.x and git; bash and jq are not prerequisites. Windows is out of scope until probed.
 
@@ -152,7 +152,7 @@ Pinned-host probes establish each hook's interception and callback behavior; [`o
 
 ### Capability-results
 
-The pinned results, the probe harness and the 16-plugin capability matrix live in [`opencode-host-contract.md`](opencode-host-contract.md). `bun run probe:opencode-host` refreshes the live evidence (`tools/toolu-opencode/contract/probe-results.json`). `bun run check:opencode-host` (part of `bun run test`) keeps that evidence, the matrix, the catalog manifests, the pinned SDK declarations and the contract doc in agreement.
+The pinned results, the probe harness and the 12-plugin capability matrix live in [`opencode-host-contract.md`](opencode-host-contract.md). `bun run probe:opencode-host` refreshes the live evidence (`tools/toolu-opencode/contract/probe-results.json`). `bun run check:opencode-host` (part of `bun run test`) keeps that evidence, the matrix, the catalog manifests, the pinned SDK declarations and the contract doc in agreement.
 
 ## Release blockers (parity)
 

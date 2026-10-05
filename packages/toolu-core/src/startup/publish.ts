@@ -25,7 +25,7 @@ export type PublishOptions = {
   plugin: string;
   /** Absolute path of the file to publish. */
   source: string;
-  /** Directory under the config root, e.g. `context7`. */
+  /** Directory under the config root, e.g. `jev`. */
   dir: string;
   /** Published file name, e.g. `search.sh`. */
   name: string;

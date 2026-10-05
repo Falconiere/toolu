@@ -100,7 +100,7 @@ export function stagePlugins(sourceDirectory: string, outputDirectory: string): 
 if (import.meta.main) {
   const destination = resolve(process.env.BUNDLE_PLUGINS_DEST ?? join(packageRoot, "plugins"));
   const count = stagePlugins(join(repositoryRoot, "plugins"), destination);
-  if (count < 16) throw new Error(`only ${count} plugin manifests staged`);
+  if (count !== 12) throw new Error(`expected 12 plugin manifests, staged ${count}`);
   // stderr: `npm pack --json` prints the prepack's stdout ahead of its JSON report.
   process.stderr.write(`bundle-plugins: ${count} plugins staged in ${destination}\n`);
 }

@@ -231,7 +231,7 @@ export function planSurface(options: GenerateSurfaceOptions): GenerateSurfaceRes
     "- `TOOLU_PLUGIN_ROOT_<PLUGIN>`: each enabled plugin's directory, the name upper-cased with `-` as `_`.",
     "- `TOOLU_PLUGIN_ROOT`: the toolu core plugin's directory.",
     "- `TOOLU_OPENCODE_ROOT`: the `@toolu/opencode` package directory, which holds `generated/`.",
-    "- `TOOLU_CONFIG_DIR`: the project's data root, where helpers such as `context7/search.sh` are published.",
+    "- `TOOLU_CONFIG_DIR`: the project's data root, where plugin helpers are published.",
     "- `TOOLU_USER_CONFIG_DIR`, `TOOLU_HOST_OVERRIDE`, `TOOLU_PROJECT_CONFIG_DIRNAME`, `TOOLU_SETTINGS_DIR` and `TOOLU_BUN`; `PATH` gains Bun's directory only when it has no `bun`.",
     "",
     "## Stripped frontmatter",

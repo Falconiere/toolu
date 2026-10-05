@@ -79,7 +79,7 @@
     {"files":["contract/probes/module-default.ts"],"rules":{"import/no-default-export":"off","typescript/require-await":"off"}},
     {"files":["contract/probes/probe.ts"],"rules":{"no-unused-vars":"off","typescript/no-unsafe-assignment":"off","typescript/require-await":"off","unicorn/no-array-sort":"off"}},
     {"files":["scripts/__tests__/delivery-surfaces.test.ts"],"rules":{"unicorn/consistent-function-scoping":"off"}},
-    {"files":["scripts/__tests__/generate-surface.test.ts"],"rules":{"max-lines":"off","max-lines-per-function":"off","unicorn/no-array-reverse":"off"}},
+    {"files":["scripts/__tests__/generate-surface.test.ts"],"rules":{"max-lines":"off","unicorn/no-array-reverse":"off"}},
     {"files":["scripts/lib/emit.ts"],"rules":{"max-lines":"off","max-lines-per-function":"off","oxc/no-map-spread":"off","unicorn/no-array-sort":"off"}},
     {"files":["scripts/lib/frontmatter.ts"],"rules":{"no-useless-escape":"off","typescript/no-unnecessary-condition":"off","unicorn/no-array-sort":"off"}},
     {"files":["scripts/lib/ids.ts"],"rules":{"unicorn/no-array-sort":"off"}},

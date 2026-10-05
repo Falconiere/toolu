@@ -40,12 +40,9 @@ import {
 
 /**
  * Service credentials no fixture check may see. An external test that names
- * one in `requires` gets it back; the others (context7 runs without a key)
- * never do.
+ * one in `requires` gets it back; other fixture checks never see them.
  */
 const SERVICE_KEYS = [
-  "CONTEXT7_API_KEY",
-  "EXA_API_KEY",
   "TYPESAFE_API_KEY",
   "JIRA_API_TOKEN",
   "JIRA_PAT",

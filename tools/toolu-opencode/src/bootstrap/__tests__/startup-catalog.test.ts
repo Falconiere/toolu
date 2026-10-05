@@ -1,5 +1,5 @@
 /**
- * The whole catalog starts on OpenCode (#342): all 16 plugins, their real
+ * The whole catalog starts on OpenCode (#342): all 12 plugins, their real
  * committed startup bundles, dependencies first, every registry module and
  * helper verified, startup context collected; a second startup changes nothing.
  */
@@ -23,11 +23,7 @@ const MODULES = {
 };
 
 const HELPERS = {
-  "agent-browser/agent-browser.sh": "agent-browser/hooks/dist/agent-browser.js",
-  "context7/search.sh": "context7/hooks/dist/search.js",
-  "exa-search/search.sh": "exa-search/hooks/dist/search.js",
   "jev/jev.sh": "jev/hooks/dist/jev.js",
-  "jira/jira.sh": "jira/hooks/dist/jira.js",
   "statusline/statusline.sh": "statusline/hooks/dist/statusline.js",
   "toolu-review/write-state.sh": "toolu-review/hooks/dist/write-state.js",
 };
@@ -80,11 +76,11 @@ function expectCatalogContributions(data: string, result: ReadyResult): void {
   expect(existsSync(join(data, "toolu", ".session-start-ready"))).toBe(false);
 }
 
-test("all 16 plugins start in dependency order with every contribution verified", async () => {
+test("all 12 plugins start in dependency order with every contribution verified", async () => {
   using root = tempRoot("toolu-catalog-");
   const result = await start(root.path);
   const order = result.plugins.map((plugin) => plugin.plugin);
-  expect(CATALOG).toHaveLength(16);
+  expect(CATALOG).toHaveLength(12);
   expect(order.toSorted()).toEqual(CATALOG);
   for (const dependent of [
     "ts-quality",
@@ -109,8 +105,6 @@ test("all 16 plugins start in dependency order with every contribution verified"
     result.plugins.find((plugin) => plugin.plugin === name)?.entries[0]?.additionalContext ?? "";
   expect(context("toolu")).toContain("Session Protocol");
   expect(context("jev")).toContain("Jev");
-  expect(context("agent-browser")).toContain("agent-browser-agent-browser");
-  expect(context("agent-browser")).toContain("agent-browser.sh");
 });
 
 test("a second startup is idempotent: same artifacts, untouched files and ledger", async () => {

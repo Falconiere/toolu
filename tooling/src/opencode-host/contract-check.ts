@@ -1,7 +1,7 @@
 /**
  * Hermetic consistency rules for the OpenCode host contract (#335). Each rule
  * throws a ContractError naming what disagrees: pins, committed live evidence,
- * the 16-plugin matrix, the catalog's own manifests, the installed SDK
+ * the 12-plugin matrix, the catalog's own manifests, the installed SDK
  * declarations and the contract doc.
  */
 import { join } from "node:path";

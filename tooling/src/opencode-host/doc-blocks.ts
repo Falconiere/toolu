@@ -1,6 +1,6 @@
 /**
  * Generated blocks of docs/opencode-host-contract.md (#335): the probe
- * results, the 16-plugin matrix, and the limitations list. The checker
+ * results, the 12-plugin matrix, and the limitations list. The checker
  * compares each block with this rendering; `check --write-doc` rewrites them.
  */
 import {

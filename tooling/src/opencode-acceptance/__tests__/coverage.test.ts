@@ -20,8 +20,8 @@ const committed = readJson(contractPaths().results, ProbeResultsSchema);
 const checks = acceptanceChecks(committed);
 const catalog = catalogNames();
 
-test.concurrent("the catalog has the 16 plugins the acceptance must cover", () => {
-  expect(catalog).toHaveLength(16);
+test.concurrent("the catalog has the 12 plugins the acceptance must cover", () => {
+  expect(catalog).toHaveLength(12);
 });
 
 test.concurrent("check ids are unique and every named plugin is a catalog plugin", () => {
@@ -42,9 +42,9 @@ test.concurrent("every catalog plugin has a dedicated actual-host check when all
 test.concurrent("a plugin whose only checks fail, or are whole-catalog, is uncovered", () => {
   const results = checks.map((check) => ({
     check,
-    pass: !(check.plugins !== "all" && check.plugins.includes("jira")),
+    pass: !(check.plugins !== "all" && check.plugins.includes("jev")),
   }));
-  expect(coverage(results, catalog).jira).toEqual([]);
+  expect(coverage(results, catalog).jev).toEqual([]);
   const wholeCatalog = checks.filter((check) => check.plugins === "all");
   expect(wholeCatalog.length).toBeGreaterThan(0);
   const onlyAll = coverage(

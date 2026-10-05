@@ -11,7 +11,6 @@ const registry = acceptanceChecks(readJson(contractPaths().results, ProbeResults
 test.concurrent("service credentials leave the environment and come back only to the caller", () => {
   const env: Record<string, string | undefined> = {
     TYPESAFE_API_KEY: "sk-362",
-    EXA_API_KEY: "",
     JIRA_PAT: "pat-362",
     PATH: "/usr/bin",
   };

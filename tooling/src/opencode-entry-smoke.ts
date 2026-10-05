@@ -29,8 +29,6 @@ import { ContractError, PinSchema, readJson } from "./opencode-host/schema.ts";
 import { INSTALL_SCENARIOS } from "./opencode-host/scenarios-install.ts";
 import { PATH_SCENARIOS } from "./opencode-host/scenarios-paths.ts";
 import { STARTUP_SCENARIOS } from "./opencode-host/scenarios-startup.ts";
-import { BROWSER_SCENARIOS } from "./opencode-host/scenarios-browser.ts";
-import { EXA_SCENARIOS } from "./opencode-host/scenarios-exa.ts";
 import { BABYSIT_SCENARIOS } from "./opencode-host/scenarios-babysit.ts";
 import { CLI_SCENARIOS } from "./opencode-host/scenarios-cli.ts";
 import { QUICKSTART_SCENARIOS } from "./opencode-host/scenarios-docs.ts";
@@ -44,8 +42,6 @@ const ALL_SCENARIOS = [
   ...STARTUP_SCENARIOS,
   ...PATH_SCENARIOS,
   ...INSTALL_SCENARIOS,
-  ...BROWSER_SCENARIOS,
-  ...EXA_SCENARIOS,
   ...BABYSIT_SCENARIOS,
   ...CLI_SCENARIOS,
   ...QUICKSTART_SCENARIOS,

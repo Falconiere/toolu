@@ -89,7 +89,7 @@ describe.skipIf(!hasClaude)("real install against a temporary CLAUDE_CONFIG_DIR"
     const updates: InstallProgress[] = [];
     const first = await installPlugins({
       ...base,
-      requested: ["jira"],
+      requested: ["ast-grep"],
       dryRun: false,
       onProgress: (progress) => {
         updates.push(progress);
@@ -98,24 +98,24 @@ describe.skipIf(!hasClaude)("real install against a temporary CLAUDE_CONFIG_DIR"
     expect(updates.map((progress) => progress.label)).toEqual([
       "Preparing marketplace",
       "Checking installed plugins",
-      "Installing jira",
+      "Installing ast-grep",
       "Finished",
     ]);
     expect(updates.at(-1)).toEqual({ completed: 1, total: 1, label: "Finished" });
-    expect(first.map((step) => step.name)).toEqual(["jira"]);
+    expect(first.map((step) => step.name)).toEqual(["ast-grep"]);
     expect(first[0]?.outcome).toBe("installed");
 
     const state = await listPlugins(claudeAdapter, marketplace, env);
-    expect(state.find((entry) => entry.name === "jira")?.installed).toBe(true);
+    expect(state.find((entry) => entry.name === "ast-grep")?.installed).toBe(true);
     expect(state.find((entry) => entry.name === "rust-quality")?.installed).toBe(false);
 
-    const second = await installPlugins({ ...base, requested: ["jira"], dryRun: false });
+    const second = await installPlugins({ ...base, requested: ["ast-grep"], dryRun: false });
     expect(second[0]?.outcome).toBe("already");
     expect(second[0]?.detail).toMatch(/already installed at \d/);
 
-    const removed = await removePlugins(claudeAdapter, "toolu", ["jira"], env);
+    const removed = await removePlugins(claudeAdapter, "toolu", ["ast-grep"], env);
     expect(removed[0]?.removed).toBe(true);
     const afterRemove = await listPlugins(claudeAdapter, marketplace, env);
-    expect(afterRemove.find((entry) => entry.name === "jira")?.installed).toBe(false);
+    expect(afterRemove.find((entry) => entry.name === "ast-grep")?.installed).toBe(false);
   }, 120_000);
 });

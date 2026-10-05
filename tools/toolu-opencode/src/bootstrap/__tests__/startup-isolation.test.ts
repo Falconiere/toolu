@@ -72,7 +72,7 @@ test("two sessions starting at once in one project are both ready with a valid l
   using root = tempRoot("toolu-concurrent-start-");
   const env = { HOME: join(root.path, "home"), TOOLU_BUN: process.execPath };
   const project = join(root.path, "project");
-  const names = ["toolu", "ast-grep", "context7"];
+  const names = ["toolu", "ast-grep", "jev"];
   const [one, two] = await Promise.all([start(project, names, env), start(project, names, env)]);
   expect(one.status).toBe("ready");
   expect(two.status).toBe("ready");
@@ -83,11 +83,11 @@ test("two sessions starting at once in one project are both ready with a valid l
   expect(ledger).toEqual({
     version: 1,
     plugins: {
-      context7: {
+      jev: {
         helpers: [
           {
-            path: join(data, "context7", "search.sh"),
-            source: join(PLUGINS_ROOT, "context7/hooks/dist/search.js"),
+            path: join(data, "jev", "jev.sh"),
+            source: join(PLUGINS_ROOT, "jev/hooks/dist/jev.js"),
           },
         ],
       },

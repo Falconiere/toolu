@@ -110,7 +110,7 @@ there the CLI edits its documented config files instead:
 npx @toolu/plugins install              # everything, core first
 npx @toolu/plugins install rust-quality # one plugin and its dependency
 npx @toolu/plugins list                 # catalog joined with what is installed
-npx @toolu/plugins remove jira --yes
+npx @toolu/plugins remove jev --yes
 npx @toolu/plugins update
 ```
 
@@ -218,11 +218,7 @@ plugins.
 | Quality gate | **`ts-quality`** | TypeScript post-edit checks — size limits, imports, type assertions/guards, duplicate types, and colocated real-data tests. |
 | Quality gate | **`python-quality`** | Python post-edit checks — size limits, no suppression (bare `except:`/`# noqa`/`# type: ignore`), docstrings, colocated real-data tests. |
 | Code intel | **`ast-grep`** | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
-| Browser | **`agent-browser`** | Token-lean browser automation through accessibility-tree snapshots and stable element references. |
-| Knowledge | **`context7`** | Live library documentation and code examples through Context7. |
-| Knowledge | **`exa-search`** | Web, code, URL search, and deep research through Exa. |
 | Knowledge | **`jev`** | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores a script can branch on. |
-| Workflow | **`jira`** | Jira Cloud and Server/DC search plus safe issue workflow operations. |
 | Workflow | **`toolu-review`** | Pre-push review matching CI `code-review@v8` (Jev-enabled) and writing review attestations. |
 | Workflow | **`brainstorm`** | Evidence-backed design triage, alternatives, and a recommended approach — standalone, and phase 1 of delivery-flow. |
 | Workflow | **`delivery-flow`** | One public skill for brainstorm through PR and babysit, with private phase guidance. |
@@ -251,7 +247,7 @@ To think a change through without starting delivery, invoke `/brainstorm:brainst
 
 Spec and plan reviews must approve before the next phase. The execution phase verifies ledger steps, real-data tests, documentation, local review, and the green verdict. A rejection or failed check stops the flow at that phase; resume there and refresh stale evidence. Missing GitHub auth, a non-default branch, a dependency, or a gate is reported as a specific delivery blocker.
 
-The workflow skills, plus `ast-grep`, `context7`, and `exa-search`, all run on Bun hook bundles. The standalone `deep-research` skill combines `exa-search` and `context7` fan-out into cited reports under `docs/research/`.
+The workflow skills and `ast-grep` run on Bun hook bundles. The standalone `deep-research` skill uses the active host's native web tools for cited reports under `docs/research/`.
 
 ## Architecture
 
@@ -292,8 +288,6 @@ At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality` and `ast-grep`
     │   ├── hooks/              # PreToolUse / PostToolUse / SessionStart bundles
     │   └── settings/           # reusable settings fragments
     ├── ast-grep/               # ast-grep skill + nudge and byte-savings registry modules (Bun)
-    ├── context7/               # context7 skill + Context7 REST wrapper
-    ├── exa-search/             # exa-search skill + Exa REST wrapper
     ├── jev/                    # jev skill + TypeSafe System One REST wrapper
     ├── rust-quality/           # Rust PostToolUse quality checks, one bundled registry module
     ├── ts-quality/             # TypeScript PostToolUse quality checks, one bundled registry module

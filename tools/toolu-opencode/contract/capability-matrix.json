@@ -38,58 +38,6 @@
     }
   ],
   "plugins": {
-    "agent-browser": {
-      "owner": ["OP-12"],
-      "axes": {
-        "tools": {
-          "use": "agent-browser CLI runs through bash from the published helper path",
-          "required": true,
-          "enforcement": false,
-          "mechanism": "bash tool + shell.env (helper path and environment)",
-          "kind": "tool",
-          "status": "supported",
-          "evidence": ["env.shell"],
-          "owner": ["OP-12", "OP-09"]
-        },
-        "permission": {
-          "use": "none"
-        },
-        "startup": {
-          "use": "SessionStart publishes the agent-browser helper and bounded browser instructions",
-          "required": true,
-          "enforcement": false,
-          "mechanism": "plugin init + experimental.chat.system.transform",
-          "kind": "hook",
-          "status": "supported",
-          "evidence": ["load.local-file", "context.system"],
-          "owner": ["OP-12", "OP-07", "OP-08"]
-        },
-        "prompt": {
-          "use": "none"
-        },
-        "compaction": {
-          "use": "none"
-        },
-        "postTool": {
-          "use": "none"
-        },
-        "mcp": {
-          "use": "none"
-        },
-        "task": {
-          "use": "none"
-        },
-        "ui": {
-          "use": "none"
-        }
-      },
-      "surfaces": {
-        "skills": 1,
-        "commands": 0,
-        "agents": 0,
-        "owner": ["OP-10", "OP-11", "OP-12"]
-      }
-    },
     "ast-grep": {
       "owner": ["OP-13"],
       "axes": {
@@ -187,58 +135,6 @@
         "commands": 0,
         "agents": 0,
         "owner": ["OP-10", "OP-11", "OP-21"]
-      }
-    },
-    "context7": {
-      "owner": ["OP-14"],
-      "axes": {
-        "tools": {
-          "use": "context7 search helper runs through bash",
-          "required": true,
-          "enforcement": false,
-          "mechanism": "bash tool + shell.env (helper path and environment)",
-          "kind": "tool",
-          "status": "supported",
-          "evidence": ["env.shell"],
-          "owner": ["OP-14", "OP-09"]
-        },
-        "permission": {
-          "use": "none"
-        },
-        "startup": {
-          "use": "SessionStart publishes the context7 search helper and the documentation-first instructions",
-          "required": true,
-          "enforcement": false,
-          "mechanism": "plugin init + experimental.chat.system.transform",
-          "kind": "hook",
-          "status": "supported",
-          "evidence": ["load.local-file", "context.system"],
-          "owner": ["OP-14", "OP-07", "OP-08"]
-        },
-        "prompt": {
-          "use": "none"
-        },
-        "compaction": {
-          "use": "none"
-        },
-        "postTool": {
-          "use": "none"
-        },
-        "mcp": {
-          "use": "none"
-        },
-        "task": {
-          "use": "none"
-        },
-        "ui": {
-          "use": "none"
-        }
-      },
-      "surfaces": {
-        "skills": 1,
-        "commands": 0,
-        "agents": 0,
-        "owner": ["OP-10", "OP-11", "OP-14"]
       }
     },
     "delivery-flow": {
@@ -352,58 +248,6 @@
         "owner": ["OP-10", "OP-11", "OP-22"]
       }
     },
-    "exa-search": {
-      "owner": ["OP-15"],
-      "axes": {
-        "tools": {
-          "use": "exa-search helper runs through bash",
-          "required": true,
-          "enforcement": false,
-          "mechanism": "bash tool + shell.env (helper path and environment)",
-          "kind": "tool",
-          "status": "supported",
-          "evidence": ["env.shell"],
-          "owner": ["OP-15", "OP-09"]
-        },
-        "permission": {
-          "use": "none"
-        },
-        "startup": {
-          "use": "SessionStart publishes the exa-search helper and the web-research instructions",
-          "required": true,
-          "enforcement": false,
-          "mechanism": "plugin init + experimental.chat.system.transform",
-          "kind": "hook",
-          "status": "supported",
-          "evidence": ["load.local-file", "context.system"],
-          "owner": ["OP-15", "OP-07", "OP-08"]
-        },
-        "prompt": {
-          "use": "none"
-        },
-        "compaction": {
-          "use": "none"
-        },
-        "postTool": {
-          "use": "none"
-        },
-        "mcp": {
-          "use": "none"
-        },
-        "task": {
-          "use": "none"
-        },
-        "ui": {
-          "use": "none"
-        }
-      },
-      "surfaces": {
-        "skills": 1,
-        "commands": 0,
-        "agents": 0,
-        "owner": ["OP-10", "OP-11", "OP-15"]
-      }
-    },
     "jev": {
       "owner": ["OP-16"],
       "axes": {
@@ -461,58 +305,6 @@
         "commands": 0,
         "agents": 0,
         "owner": ["OP-10", "OP-11", "OP-16"]
-      }
-    },
-    "jira": {
-      "owner": ["OP-17"],
-      "axes": {
-        "tools": {
-          "use": "jira helper runs through bash",
-          "required": true,
-          "enforcement": false,
-          "mechanism": "bash tool + shell.env (helper path and environment)",
-          "kind": "tool",
-          "status": "supported",
-          "evidence": ["env.shell"],
-          "owner": ["OP-17", "OP-09"]
-        },
-        "permission": {
-          "use": "none"
-        },
-        "startup": {
-          "use": "SessionStart publishes the jira helper and issue-workflow instructions",
-          "required": true,
-          "enforcement": false,
-          "mechanism": "plugin init + experimental.chat.system.transform",
-          "kind": "hook",
-          "status": "supported",
-          "evidence": ["load.local-file", "context.system"],
-          "owner": ["OP-17", "OP-07", "OP-08"]
-        },
-        "prompt": {
-          "use": "none"
-        },
-        "compaction": {
-          "use": "none"
-        },
-        "postTool": {
-          "use": "none"
-        },
-        "mcp": {
-          "use": "none"
-        },
-        "task": {
-          "use": "none"
-        },
-        "ui": {
-          "use": "none"
-        }
-      },
-      "surfaces": {
-        "skills": 1,
-        "commands": 0,
-        "agents": 0,
-        "owner": ["OP-10", "OP-11", "OP-17"]
       }
     },
     "pr-babysit": {

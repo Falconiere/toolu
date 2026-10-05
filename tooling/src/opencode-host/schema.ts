@@ -1,6 +1,6 @@
 /**
  * Zod contracts for the OpenCode host contract (#335): the pin, the committed
- * live-probe results and the 16-plugin capability matrix, all under
+ * live-probe results and the 12-plugin capability matrix, all under
  * `tools/toolu-opencode/contract/`. Strict objects: unknown keys fail.
  */
 import { readFileSync } from "node:fs";

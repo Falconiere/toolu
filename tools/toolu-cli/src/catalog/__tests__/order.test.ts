@@ -11,8 +11,22 @@ const marketplace = await readMarketplace(MANIFEST);
 
 describe("catalog against the real .claude-plugin/marketplace.json", () => {
   test("reads every catalog plugin", () => {
-    expect(catalogNames(marketplace)).toContain("toolu");
-    expect(catalogNames(marketplace).length).toBeGreaterThanOrEqual(16);
+    expect(catalogNames(marketplace).toSorted()).toEqual(
+      [
+        "ast-grep",
+        "brainstorm",
+        "delivery-flow",
+        "epic-orchestrator",
+        "jev",
+        "pr-babysit",
+        "python-quality",
+        "rust-quality",
+        "statusline",
+        "toolu",
+        "toolu-review",
+        "ts-quality",
+      ].sort(),
+    );
   });
 
   test("the declared dependents really depend on toolu", () => {
@@ -43,7 +57,9 @@ describe("catalog against the real .claude-plugin/marketplace.json", () => {
       "epic-orchestrator",
     ]);
   });
+});
 
+describe("catalog install ordering", () => {
   test("a full install orders every dependent after toolu", () => {
     const order = installOrder(marketplace, []);
     expect(order.length).toBe(catalogNames(marketplace).length);
@@ -58,7 +74,6 @@ describe("catalog against the real .claude-plugin/marketplace.json", () => {
   });
 
   test("a standalone plugin brings nothing else along", () => {
-    expect(installOrder(marketplace, ["jira"])).toEqual(["jira"]);
     expect(installOrder(marketplace, ["brainstorm"])).toEqual(["brainstorm"]);
   });
 
@@ -72,6 +87,7 @@ describe("catalog against the real .claude-plugin/marketplace.json", () => {
   test("an unknown name is rejected before anything is ordered", () => {
     expect(() => installOrder(marketplace, ["not-a-plugin"])).toThrow(UsageError);
     expect(() => installOrder(marketplace, ["not-a-plugin"])).toThrow(/unknown plugin/);
+    expect(() => installOrder(marketplace, ["context7"])).toThrow(/unknown plugin/);
   });
 });
 

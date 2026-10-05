@@ -166,9 +166,9 @@ async function cliLifecycle(ctx: EntryContext): Promise<EntryResult> {
   const afterJev = readGlobal(s, "opencode.jsonc");
   exits.push(await toolu(ctx, s, ["install", "jev"]));
   const repeated = readGlobal(s, "opencode.jsonc") === afterJev;
-  exits.push(await toolu(ctx, s, ["install", "context7"]));
+  exits.push(await toolu(ctx, s, ["install", "ast-grep"]));
   const both = await tooluSkills(ctx, s);
-  exits.push(await toolu(ctx, s, ["remove", "--yes", "context7"]));
+  exits.push(await toolu(ctx, s, ["remove", "--yes", "ast-grep"]));
   const narrowed = await tooluSkills(ctx, s);
   const release = join(dirname(ctx.tarball), "toolu-opencode-next.tgz");
   cpSync(ctx.tarball, release);
@@ -183,7 +183,7 @@ async function cliLifecycle(ctx: EntryContext): Promise<EntryResult> {
     exits: exits.join(","),
     jevOnly: startsWith(named1, "jev-"),
     repeated,
-    both: both.some((n) => n.startsWith("context7-")) && both.some((n) => n.startsWith("jev-")),
+    both: both.some((n) => n.startsWith("ast-grep-")) && both.some((n) => n.startsWith("jev-")),
     narrowed: startsWith(narrowed, "jev-"),
     updated: updated.includes(JSON.stringify(npmSpec(release))) && updated.length === 2,
     updatedSkills: startsWith(updatedSkills, "jev-"),

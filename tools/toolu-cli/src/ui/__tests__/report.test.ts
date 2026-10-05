@@ -14,7 +14,7 @@ describe("reportInstall", () => {
   const steps = [
     { name: "toolu", outcome: "installed" as const, detail: "installed", argv: ["claude", "x"] },
     {
-      name: "jira",
+      name: "ast-grep",
       outcome: "skew" as const,
       detail: "installed at 6.4.0, marketplace offers 6.5.0",
       argv: ["claude", "y"],
@@ -59,14 +59,14 @@ describe("reportInstallByHost", () => {
     const text = reportInstallByHost(
       [
         { host: "claude", steps: [step("toolu")] },
-        { host: "codex", steps: [step("jira")] },
+        { host: "codex", steps: [step("ast-grep")] },
       ],
       true,
     );
     expect(text).toContain("claude:");
     expect(text).toContain("codex:");
     expect(text).toContain("toolu");
-    expect(text).toContain("jira");
+    expect(text).toContain("ast-grep");
   });
 });
 
@@ -105,7 +105,7 @@ describe("the other reporters", () => {
     const text = reportList([
       { name: "toolu", installed: true, version: "6.5.0", enabled: true },
       { name: "jev", installed: true, version: "6.5.0", enabled: false },
-      { name: "jira", installed: false, version: undefined, enabled: false },
+      { name: "ast-grep", installed: false, version: undefined, enabled: false },
     ]);
     expect(text).toContain("6.5.0");
     expect(text).toContain("(disabled)");
@@ -113,11 +113,13 @@ describe("the other reporters", () => {
   });
 
   test("remove and update name each plugin", () => {
-    expect(reportRemove([{ name: "jira", removed: true, detail: "removed", argv: [] }])).toContain(
-      "jira",
-    );
     expect(
-      reportUpdate([{ name: "jira", outcome: "current", detail: "current at 6.5.0", argv: [] }]),
+      reportRemove([{ name: "ast-grep", removed: true, detail: "removed", argv: [] }]),
+    ).toContain("ast-grep");
+    expect(
+      reportUpdate([
+        { name: "ast-grep", outcome: "current", detail: "current at 6.5.0", argv: [] },
+      ]),
     ).toContain("current at 6.5.0");
   });
 });

@@ -13,23 +13,23 @@ import {
 describe("which selection an edit lands in", () => {
   test("without --scope, install enables in the project selection when one governs", () => {
     using p = profile();
-    expect(toolu(p, ["install", "context7", "--scope", "project"]).code).toBe(0);
+    expect(toolu(p, ["install", "ast-grep", "--scope", "project"]).code).toBe(0);
     const run = toolu(p, ["install", "jev"]);
     expect(run.code).toBe(0);
     expect(run.stdout).toContain(`enabled in ${p.local(".opencode/toolu/plugins.json")}`);
-    expect(enabledOf(p.read(p.local(".opencode/toolu/plugins.json")))).toEqual(["context7", "jev"]);
+    expect(enabledOf(p.read(p.local(".opencode/toolu/plugins.json")))).toEqual(["ast-grep", "jev"]);
     expect(p.exists(p.global("toolu/plugins.json"))).toBe(false);
-    expect(enabledNames(p)).toEqual(["context7", "jev"]);
+    expect(enabledNames(p)).toEqual(["ast-grep", "jev"]);
   });
 
   test("without --scope, a leaf remove disables in the project selection when one governs", () => {
     using p = profile();
-    p.write(p.local(".opencode/toolu/plugins.json"), selection(["context7", "jev"]));
+    p.write(p.local(".opencode/toolu/plugins.json"), selection(["ast-grep", "jev"]));
     p.write(p.global("opencode.json"), `{ "plugin": ["${TARGET}"] }\n`);
     const run = toolu(p, ["remove", "--yes", "jev"]);
     expect(run.code).toBe(0);
     expect(run.stdout).toContain(`disabled in ${p.local(".opencode/toolu/plugins.json")}`);
-    expect(enabledOf(p.read(p.local(".opencode/toolu/plugins.json")))).toEqual(["context7"]);
+    expect(enabledOf(p.read(p.local(".opencode/toolu/plugins.json")))).toEqual(["ast-grep"]);
     expect(p.exists(p.global("toolu/plugins.json"))).toBe(false);
   });
 
@@ -39,10 +39,10 @@ describe("which selection an edit lands in", () => {
     p.write(p.global("opencode.json"), `{ "plugin": ["${TARGET}"] }\n`);
     p.write(p.global("toolu/plugins.json"), selection(["jev"]));
     const note = `no effect in this project: ${p.local(".opencode/toolu/plugins.json")} governs it`;
-    const install = toolu(p, ["install", "context7", "--scope", "user"]);
+    const install = toolu(p, ["install", "ast-grep", "--scope", "user"]);
     expect(install.code).toBe(0);
     expect(install.stdout).toContain(note);
-    expect(enabledOf(p.read(p.global("toolu/plugins.json")))).toEqual(["jev", "context7"]);
+    expect(enabledOf(p.read(p.global("toolu/plugins.json")))).toEqual(["jev", "ast-grep"]);
     const remove = toolu(p, ["remove", "--yes", "jev", "--scope", "user"]);
     expect(remove.code).toBe(0);
     expect(remove.stdout).toContain(note);

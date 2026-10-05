@@ -1,7 +1,15 @@
 /** Line counters on real source files and byte-level edge cases. */
 import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { closeSync, mkdirSync, openSync, readFileSync, writeFileSync, writeSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  writeFileSync,
+  writeSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
@@ -25,7 +33,8 @@ function trackedSources(): string[] {
   return res.stdout
     .split("\0")
     .filter((f) => f !== "")
-    .map((f) => join(REPO, f));
+    .map((f) => join(REPO, f))
+    .filter(existsSync);
 }
 
 const SOURCES = trackedSources();

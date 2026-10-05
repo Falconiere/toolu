@@ -67,9 +67,9 @@ describe("the full lifecycle keeps the user's JSONC", () => {
     expect(keepsUserText(p.read(path))).toBe(true);
     expect(p.read(path)).toContain('"@toolu/opencode@1.0.0"');
     expect(p.exists(p.global("opencode.json"))).toBe(false);
-    expect(toolu(p, ["install", "context7"]).code).toBe(0);
-    expect(enabledNames(p)).toEqual(["context7", "jev"]);
-    expect(toolu(p, ["remove", "--yes", "context7"]).code).toBe(0);
+    expect(toolu(p, ["install", "ast-grep"]).code).toBe(0);
+    expect(enabledNames(p)).toEqual(["ast-grep", "jev"]);
+    expect(toolu(p, ["remove", "--yes", "ast-grep"]).code).toBe(0);
     expect(enabledNames(p)).toEqual(["jev"]);
     const update = toolu(p, ["update"]);
     expect(update.code).toBe(0);
@@ -132,11 +132,11 @@ describe("list reflects the files as they are", () => {
     using p = profile();
     p.write(p.global("opencode.json"), '{ "plugin": ["@toolu/opencode@1.0.0"] }\n');
     p.write(p.local("opencode.json"), '{ "plugin": ["@toolu/opencode@2.0.0"] }\n');
-    p.write(p.global("toolu/plugins.json"), selection(["context7"]));
-    p.write(p.local(".opencode/toolu/plugins.json"), selection(["jev", "exa-search"]));
+    p.write(p.global("toolu/plugins.json"), selection(["ast-grep"]));
+    p.write(p.local(".opencode/toolu/plugins.json"), selection(["jev", "rust-quality"]));
     p.write(
       p.local(".opencode/toolu.config.json"),
-      JSON.stringify({ version: 1, skills: { "exa-search": false } }),
+      JSON.stringify({ version: 1, skills: { "rust-quality": false } }),
     );
     expect(listed(p).get("jev")?.version).toBe("2.0.0");
     expect(enabledNames(p)).toEqual(["jev"]);

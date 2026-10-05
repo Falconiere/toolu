@@ -49,17 +49,17 @@ test.concurrent("deselected plugins lose their modules and helpers; other files 
   const unrelated = join(data, "toolu/pre-tools.d/custom@local__extra.js");
   mkdirSync(join(unrelated, ".."), { recursive: true });
   writeFileSync(unrelated, "export default {};\n");
-  await start(root.path, ["toolu", "ast-grep", "context7"]);
+  await start(root.path, ["toolu", "ast-grep", "jev"]);
   expect(readdirSync(join(data, "toolu/pre-tools.d")).toSorted()).toEqual([
     "ast-grep@toolu__search-nudge.js",
     "custom@local__extra.js",
   ]);
-  const helper = join(data, "context7/search.sh");
+  const helper = join(data, "jev/jev.sh");
   expect(ledger(root.path)).toEqual({
     version: 1,
     plugins: {
-      context7: {
-        helpers: [{ path: helper, source: join(PLUGINS_ROOT, "context7/hooks/dist/search.js") }],
+      jev: {
+        helpers: [{ path: helper, source: join(PLUGINS_ROOT, "jev/hooks/dist/jev.js") }],
       },
     },
   });
@@ -68,7 +68,7 @@ test.concurrent("deselected plugins lose their modules and helpers; other files 
   expect(readdirSync(join(data, "toolu/pre-tools.d"))).toEqual(["custom@local__extra.js"]);
   expect(readdirSync(join(data, "toolu/post-tools.d"))).toEqual([]);
   expect(existsSync(helper)).toBe(false);
-  expect(second.diagnostics).toContain(`context7: removed helper ${helper}`);
+  expect(second.diagnostics).toContain(`jev: removed helper ${helper}`);
   expect(second.diagnostics).toContain(
     `ast-grep: removed module ${join(data, "toolu/post-tools.d/ast-grep@toolu__byte-savings.js")}`,
   );
@@ -77,33 +77,33 @@ test.concurrent("deselected plugins lose their modules and helpers; other files 
 
 test.concurrent("a user file at a deselected plugin's helper path is kept and reported", async () => {
   using root = tempRoot("toolu-ledger-user-");
-  await start(root.path, ["toolu", "jira"]);
-  const helper = join(root.path, "data/jira/jira.sh");
+  await start(root.path, ["toolu", "jev"]);
+  const helper = join(root.path, "data/jev/jev.sh");
   rmSync(helper);
   writeFileSync(helper, "#!/bin/sh\necho mine\n");
   const second = await start(root.path, ["toolu"]);
   expect(lstatSync(helper).isFile()).toBe(true);
   expect(readFileSync(helper, "utf8")).toBe("#!/bin/sh\necho mine\n");
-  expect(second.diagnostics).toContain(`jira: kept ${helper}, no longer toolu's`);
+  expect(second.diagnostics).toContain(`jev: kept ${helper}, no longer toolu's`);
   expect(ledger(root.path)).toEqual({ version: 1, plugins: {} });
 });
 
 test.concurrent("a selected plugin's helper it no longer publishes is retired", async () => {
   using root = tempRoot("toolu-ledger-stale-");
-  await start(root.path, ["toolu", "context7"]);
-  const source = join(PLUGINS_ROOT, "context7/hooks/dist/search.js");
-  const old = join(root.path, "data/context7/old-search.sh");
+  await start(root.path, ["toolu", "jev"]);
+  const source = join(PLUGINS_ROOT, "jev/hooks/dist/jev.js");
+  const old = join(root.path, "data/jev/old-jev.sh");
   symlinkSync(source, old);
   const path = join(root.path, "data/toolu/startup-ledger.json");
-  const recorded = { path: join(root.path, "data/context7/search.sh"), source };
+  const recorded = { path: join(root.path, "data/jev/jev.sh"), source };
   const helpers = [recorded, { path: old, source }];
-  writeFileSync(path, JSON.stringify({ version: 1, plugins: { context7: { helpers } } }));
-  const second = await start(root.path, ["toolu", "context7"]);
+  writeFileSync(path, JSON.stringify({ version: 1, plugins: { jev: { helpers } } }));
+  const second = await start(root.path, ["toolu", "jev"]);
   expect(existsSync(old)).toBe(false);
-  expect(second.diagnostics).toContain(`context7: removed helper ${old}`);
+  expect(second.diagnostics).toContain(`jev: removed helper ${old}`);
   expect(ledger(root.path)).toEqual({
     version: 1,
-    plugins: { context7: { helpers: [recorded] } },
+    plugins: { jev: { helpers: [recorded] } },
   });
 });
 
@@ -112,16 +112,16 @@ test.concurrent("an invalid ledger is ignored with a diagnostic and rewritten", 
   const path = join(root.path, "data/toolu/startup-ledger.json");
   mkdirSync(join(path, ".."), { recursive: true });
   writeFileSync(path, '{"version": 2}');
-  const result = await start(root.path, ["toolu", "exa-search"]);
+  const result = await start(root.path, ["toolu", "jev"]);
   expect(result.diagnostics).toContain(`startup ledger ${path} invalid; ignored`);
   expect(ledger(root.path)).toEqual({
     version: 1,
     plugins: {
-      "exa-search": {
+      jev: {
         helpers: [
           {
-            path: join(root.path, "data/exa-search/search.sh"),
-            source: join(PLUGINS_ROOT, "exa-search/hooks/dist/search.js"),
+            path: join(root.path, "data/jev/jev.sh"),
+            source: join(PLUGINS_ROOT, "jev/hooks/dist/jev.js"),
           },
         ],
       },
@@ -138,7 +138,7 @@ function writeLedger(root: string, plugins: Record<string, unknown>): void {
 
 test.concurrent("a ledger path whose real location leaves the data root is never removed", async () => {
   using root = tempRoot("toolu-ledger-outside-");
-  const source = join(PLUGINS_ROOT, "jira/hooks/dist/jira.js");
+  const source = join(PLUGINS_ROOT, "jev/hooks/dist/jev.js");
   const outside = join(root.path, "outside");
   mkdirSync(outside);
   const direct = join(outside, "direct.sh");
@@ -149,7 +149,7 @@ test.concurrent("a ledger path whose real location leaves the data root is never
   symlinkSync(outside, join(root.path, "data/escape"));
   const throughLink = join(root.path, "data/escape/via-link.sh");
   writeLedger(root.path, {
-    jira: {
+    jev: {
       helpers: [
         { path: direct, source },
         { path: throughLink, source },
@@ -159,9 +159,9 @@ test.concurrent("a ledger path whose real location leaves the data root is never
   const result = await start(root.path, ["toolu"]);
   expect(lstatSync(direct).isSymbolicLink()).toBe(true);
   expect(lstatSync(viaLink).isSymbolicLink()).toBe(true);
-  expect(result.diagnostics).toContain(`jira: ignored ledger path ${direct} outside the data root`);
+  expect(result.diagnostics).toContain(`jev: ignored ledger path ${direct} outside the data root`);
   expect(result.diagnostics).toContain(
-    `jira: ignored ledger path ${throughLink} outside the data root`,
+    `jev: ignored ledger path ${throughLink} outside the data root`,
   );
 });
 
@@ -209,11 +209,11 @@ test.concurrent("only regular files under a deselected prefix are removed", asyn
 
 test.concurrent("a failed plugin keeps owning the helpers it published before", async () => {
   using root = tempRoot("toolu-ledger-failed-");
-  await start(root.path, ["toolu", "context7"]);
+  await start(root.path, ["toolu", "jev"]);
   const before = ledger(root.path);
   const copies = join(root.path, "copies");
-  const broken = copiedPlugin(copies, "context7");
-  rmSync(join(broken.pluginDir, "hooks/dist/search.js"));
+  const broken = copiedPlugin(copies, "jev");
+  rmSync(join(broken.pluginDir, "hooks/dist/jev.js"));
   mkdirSync(join(root.path, "project"), { recursive: true });
   const result = await bootstrapRuntime({
     repoRoot: REPO_ROOT,
@@ -228,11 +228,11 @@ test.concurrent("a failed plugin keeps owning the helpers it published before", 
 
 test.concurrent("a user file already at a helper path is kept and reported at startup", async () => {
   using root = tempRoot("toolu-ledger-own-");
-  const helper = join(root.path, "data/jira/jira.sh");
+  const helper = join(root.path, "data/jev/jev.sh");
   mkdirSync(join(helper, ".."), { recursive: true });
   writeFileSync(helper, "#!/bin/sh\necho mine\n");
-  const result = await start(root.path, ["toolu", "jira"]);
-  expect(result.diagnostics).toContain(`jira: kept user file ${helper}`);
+  const result = await start(root.path, ["toolu", "jev"]);
+  expect(result.diagnostics).toContain(`jev: kept user file ${helper}`);
   expect(readFileSync(helper, "utf8")).toBe("#!/bin/sh\necho mine\n");
   expect(ledger(root.path)).toEqual({ version: 1, plugins: {} });
 });
@@ -296,8 +296,8 @@ test.concurrent("a ledger path that cannot exist is treated as gone, never a las
   const file = join(root.path, "data/not-a-dir");
   mkdirSync(join(root.path, "data"), { recursive: true });
   writeFileSync(file, "plain file\n");
-  const source = join(PLUGINS_ROOT, "jira/hooks/dist/jira.js");
-  writeLedger(root.path, { jira: { helpers: [{ path: join(file, "jira.sh"), source }] } });
+  const source = join(PLUGINS_ROOT, "jev/hooks/dist/jev.js");
+  writeLedger(root.path, { jev: { helpers: [{ path: join(file, "jev.sh"), source }] } });
   await start(root.path, ["toolu"]);
   expect(readFileSync(file, "utf8")).toBe("plain file\n");
   expect(ledger(root.path)).toEqual({ version: 1, plugins: {} });

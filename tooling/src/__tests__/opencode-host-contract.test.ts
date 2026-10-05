@@ -127,7 +127,7 @@ test.concurrent("the committed contract, evidence, matrix and doc agree", async 
 });
 
 test.concurrent("a catalog plugin without a matrix row fails", () =>
-  expectFailure({ matrix: (m) => void delete m.plugins.jira }, "missing matrix row: jira"));
+  expectFailure({ matrix: (m) => void delete m.plugins.jev }, "missing matrix row: jev"));
 
 test.concurrent("a new plugins/<name> with a manifest fails until the matrix covers it", () =>
   expectFailure(

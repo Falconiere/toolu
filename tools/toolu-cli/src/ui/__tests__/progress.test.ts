@@ -10,8 +10,8 @@ test("shows counts and the active plugin, then clears the line and stops", async
     },
     () => 100,
   );
-  progress.update({ completed: 1, total: 2, label: "Installing jira" });
-  expect(chunks.join("")).toContain("1/2 50% · Installing jira");
+  progress.update({ completed: 1, total: 2, label: "Installing ast-grep" });
+  expect(chunks.join("")).toContain("1/2 50% · Installing ast-grep");
   await new Promise((resolve) => setTimeout(resolve, 100));
   expect(chunks.length).toBeGreaterThan(1);
   progress.update({ completed: 2, total: 2, label: "Finished" });

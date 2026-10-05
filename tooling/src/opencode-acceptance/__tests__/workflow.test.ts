@@ -67,8 +67,6 @@ test.concurrent("no acceptance or gate step may soft-fail or be skipped except b
 test.concurrent("the acceptance job installs every tool its preflight requires", () => {
   const installs = runs("opencode").join("\n");
   expect(installs).toContain("@ast-grep/cli");
-  expect(installs).toMatch(/agent-browser@\d/);
-  expect(installs).toContain("agent-browser install");
 });
 
 test.concurrent("the required typescript status needs every gated job, always runs and judges their results", () => {

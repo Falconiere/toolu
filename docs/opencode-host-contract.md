@@ -137,24 +137,20 @@ Recorded 2026-10-02 on `opencode-ai@1.18.34` (linux-x64, Bun 1.4.2); the host pr
 
 ## Capability matrix
 
-The matrix covers all 16 catalog plugins across nine axes. Each needed axis has an owner work package. `check:opencode-host` derives the minimum axes from each plugin's own manifests (`hooks/hooks.json` events and matchers, `hooks/src/register.ts` registry modules), checks surface counts against `skills/`, `commands/` and `agents/`, and requires every status to agree with the probe verdicts it cites. Source: `tools/toolu-opencode/contract/capability-matrix.json`.
+The matrix covers all 12 catalog plugins across nine axes. Each needed axis has an owner work package. `check:opencode-host` derives the minimum axes from each plugin's own manifests (`hooks/hooks.json` events and matchers, `hooks/src/register.ts` registry modules), checks surface counts against `skills/`, `commands/` and `agents/`, and requires every status to agree with the probe verdicts it cites. Source: `tools/toolu-opencode/contract/capability-matrix.json`.
 
-The matrix counts source Markdown. The generated OpenCode catalog excludes the statusline setup command as host-specific (OP-25: OpenCode has no `statusLine` setting; the `statusline-status` skill is the alternative); `bun run probe:opencode-surface` separately proves the generated 18 skills, five agents and four commands load on this pinned host.
+The matrix counts source Markdown. The generated OpenCode catalog excludes the statusline setup command as host-specific (OP-25: OpenCode has no `statusLine` setting; the `statusline-status` skill is the alternative); `bun run probe:opencode-surface` separately proves the generated 14 skills, five agents and four commands load on this pinned host.
 
 <!-- opencode-host-matrix:start -->
 ✅ supported · 🟡 partial · ❌ unsupported · — not needed · 🔒 enforcement (decides whether a tool call runs)
 
 | Plugin | tools | permission | startup | prompt | compaction | postTool | mcp | task | ui | Surfaces (skills/commands/agents) |
 |---|---|---|---|---|---|---|---|---|---|---|
-| agent-browser | ✅ | — | ✅ | — | — | — | — | — | — | 1/0/0 |
 | ast-grep | ❌ | — | ✅ | — | — | ✅ | — | — | — | 1/0/0 |
 | brainstorm | — | — | — | — | — | — | — | — | — | 1/0/0 |
-| context7 | ✅ | — | ✅ | — | — | — | — | — | — | 1/0/0 |
 | delivery-flow | ✅ | — | — | — | — | — | — | ✅ | — | 1/0/0 |
 | epic-orchestrator | ✅ | — | ✅ | — | — | — | — | ✅ | — | 1/1/0 |
-| exa-search | ✅ | — | ✅ | — | — | — | — | — | — | 1/0/0 |
 | jev | ✅ | — | ✅ | ✅ | — | — | — | — | — | 1/0/0 |
-| jira | ✅ | — | ✅ | — | — | — | — | — | — | 1/0/0 |
 | pr-babysit | ✅ | — | ✅ | — | — | — | — | ✅ | — | 1/1/0 |
 | python-quality | — | — | ✅ | — | — | ✅ | — | — | — | 0/0/0 |
 | rust-quality | — | — | ✅ | — | — | ✅ | — | — | — | 0/0/0 |
@@ -163,10 +159,6 @@ The matrix counts source Markdown. The generated OpenCode catalog excludes the s
 | toolu-review | ✅ | — | ✅ | — | — | — | — | — | — | 1/0/0 |
 | ts-quality | — | — | ✅ | — | — | ✅ | — | — | — | 0/0/0 |
 
-- **agent-browser** (owner OP-12 (#346))
-  - **tools** — agent-browser CLI runs through bash from the published helper path. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-12 (#346), OP-09 (#343).
-  - **startup** — SessionStart publishes the agent-browser helper and bounded browser instructions. `plugin init + experimental.chat.system.transform` (hook): supported; evidence `load.local-file`, `context.system`. Owner: OP-12 (#346), OP-07 (#341), OP-08 (#342).
-  - **surfaces** — 1 skills, 0 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345), OP-12 (#346).
 - **ast-grep** (owner OP-13 (#347))
   - **tools** — search-nudge advises ast-grep before Grep or bash text search, without blocking. `tool.execute.before (no advisory channel)` (hook): unsupported; evidence `pre.advisory`. Alternative: Deliver the nudge with the tool result through tool.execute.after. Owner: OP-13 (#347), OP-05 (#339).
   - **startup** — SessionStart registers the search-nudge (pre) and byte-savings (post) registry modules. `plugin init (bootstrap registry)` (hook): supported; evidence `load.local-file`. Owner: OP-13 (#347), OP-08 (#342).
@@ -174,10 +166,6 @@ The matrix counts source Markdown. The generated OpenCode catalog excludes the s
   - **surfaces** — 1 skills, 0 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345), OP-13 (#347).
 - **brainstorm** (owner OP-21 (#355))
   - **surfaces** — 1 skills, 0 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345), OP-21 (#355).
-- **context7** (owner OP-14 (#348))
-  - **tools** — context7 search helper runs through bash. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-14 (#348), OP-09 (#343).
-  - **startup** — SessionStart publishes the context7 search helper and the documentation-first instructions. `plugin init + experimental.chat.system.transform` (hook): supported; evidence `load.local-file`, `context.system`. Owner: OP-14 (#348), OP-07 (#341), OP-08 (#342).
-  - **surfaces** — 1 skills, 0 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345), OP-14 (#348).
 - **delivery-flow** (owner OP-21 (#355))
   - **tools** — plan-ledger and verdict CLIs run through bash with TOOLU_PLUGIN_ROOT. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-21 (#355), OP-09 (#343).
   - **task** — Phases delegate bounded work to subagents. `task tool + child sessions` (tool): supported; evidence `deny.task-child`. Owner: OP-21 (#355).
@@ -187,19 +175,11 @@ The matrix counts source Markdown. The generated OpenCode catalog excludes the s
   - **startup** — SessionStart reports missing dependency plugins. `plugin init + experimental.chat.system.transform` (hook): supported; evidence `load.local-file`, `context.system`. Owner: OP-22 (#356), OP-08 (#342).
   - **task** — Each worker is an OpenCode session in its own herdr worktree; its delegation goes through task. `herdr agent start --kind opencode + task tool inside the worker` (tool): supported; evidence `surface.files`, `deny.task-child`. Owner: OP-22 (#356).
   - **surfaces** — 1 skills, 1 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345), OP-22 (#356).
-- **exa-search** (owner OP-15 (#349))
-  - **tools** — exa-search helper runs through bash. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-15 (#349), OP-09 (#343).
-  - **startup** — SessionStart publishes the exa-search helper and the web-research instructions. `plugin init + experimental.chat.system.transform` (hook): supported; evidence `load.local-file`, `context.system`. Owner: OP-15 (#349), OP-07 (#341), OP-08 (#342).
-  - **surfaces** — 1 skills, 0 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345), OP-15 (#349).
 - **jev** (owner OP-16 (#350))
   - **tools** — jev.sh runs through bash with the resolved Bun. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-16 (#350), OP-09 (#343).
   - **startup** — SessionStart publishes jev.sh and the mandatory-judgment instructions. `plugin init + experimental.chat.system.transform` (hook): supported; evidence `load.local-file`, `context.system`. Owner: OP-16 (#350), OP-07 (#341), OP-08 (#342).
   - **prompt** — UserPromptSubmit reminds the agent to call Jev before semantic decisions. `chat.message (output.parts)` (hook): supported; evidence `context.prompt`. Owner: OP-16 (#350), OP-07 (#341).
   - **surfaces** — 1 skills, 0 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345), OP-16 (#350).
-- **jira** (owner OP-17 (#351))
-  - **tools** — jira helper runs through bash. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-17 (#351), OP-09 (#343).
-  - **startup** — SessionStart publishes the jira helper and issue-workflow instructions. `plugin init + experimental.chat.system.transform` (hook): supported; evidence `load.local-file`, `context.system`. Owner: OP-17 (#351), OP-07 (#341), OP-08 (#342).
-  - **surfaces** — 1 skills, 0 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345), OP-17 (#351).
 - **pr-babysit** (owner OP-23 (#357))
   - **tools** — Tick, collect, reply, resolve and record bundles run through bash. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-23 (#357), OP-09 (#343).
   - **startup** — SessionStart checks that toolu is installed. `plugin init + experimental.chat.system.transform` (hook): supported; evidence `load.local-file`, `context.system`. Owner: OP-23 (#357), OP-08 (#342).
@@ -266,7 +246,7 @@ None. Every required capability is supported on the pinned host or has an altern
 
 ### Experimental hooks under the exact pin
 
-- `experimental.chat.system.transform`: `agent-browser.startup`, `context7.startup`, `epic-orchestrator.startup`, `exa-search.startup`, `jev.startup`, `jira.startup`, `pr-babysit.startup`, `toolu.startup`
+- `experimental.chat.system.transform`: `epic-orchestrator.startup`, `jev.startup`, `pr-babysit.startup`, `toolu.startup`
 - `experimental.session.compacting`: `toolu.compaction`
 <!-- opencode-host-limitations:end -->
 

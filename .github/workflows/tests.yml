@@ -133,13 +133,11 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y jq
 
-      # ast-grep backs the ast-grep plugin's checks; agent-browser and its
-      # Chromium back the browser workflow check.
+      # ast-grep backs the ast-grep plugin's checks.
       - name: Install acceptance tools
         run: |
           set -euo pipefail
-          npm install -g @ast-grep/cli agent-browser@0.38.2
-          if [ "$RUNNER_OS" = "Linux" ]; then agent-browser install --with-deps; else agent-browser install; fi
+          npm install -g @ast-grep/cli
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
