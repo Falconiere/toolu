@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { entryArgv } from "@toolu/conformance/harness/entry-command";
 import { dirname, join, resolve } from "node:path";
 import { configFiles } from "../../../../../packages/toolu-core/src/config/config-files.ts";
 import { agentArgs, configPaths, jevArgv } from "../babysit/fixer-route.ts";
@@ -11,7 +12,6 @@ import { agentArgs, configPaths, jevArgv } from "../babysit/fixer-route.ts";
 // Routing runs the shipped bundle with an explicit env, never process.env.
 
 const root = resolve(import.meta.dir, "../../../../..");
-const bundle = join(root, "plugins/pr-babysit/hooks/dist/babysit-route-fix.js");
 const fixture = join(root, "plugins/pr-babysit/scripts/__tests__/fixtures/items/review-items.json");
 const answers = join(root, "plugins/pr-babysit/scripts/__tests__/fixtures/jev/fix-tiers.json");
 
@@ -67,11 +67,12 @@ function route(
   roots: Roots,
   args: string[],
 ): { status: number | null; out: Record<string, unknown> } {
-  const res = spawnSync(
-    process.execPath,
-    [bundle, "--items", fixture, "--host", "opencode", ...args],
-    { cwd: roots.project, env: roots.env, encoding: "utf8" },
-  );
+  const [command = "", ...prefix] = entryArgv("pr-babysit", "babysit-route-fix");
+  const res = spawnSync(command, [...prefix, "--items", fixture, "--host", "opencode", ...args], {
+    cwd: roots.project,
+    env: roots.env,
+    encoding: "utf8",
+  });
   const out: Record<string, unknown> = JSON.parse(res.stdout);
   return { status: res.status, out };
 }

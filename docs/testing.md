@@ -19,20 +19,22 @@ Shared helpers live in `@toolu/conformance/harness/*` (`tools/toolu-conformance/
 | `hosts` | `readHostOutcome(host, event, result)` validates a hook's output against that host's contract and returns `{ effect: allow \| deny \| ask, reason?, context? }`. Claude and Codex use `hookSpecificOutput`, and Codex has no `ask`. Cursor answers with `permission` and an empty reply is invalid. `readOpencodeOutcome` reads the effect of an OpenCode permission event. A violation throws `HostOutputError`. |
 | `fixtures` | Builders: `editFixture`, `writeFixture`, `patchFixture` (multi-file `apply_patch`), `bashFixture`, `mcpFixture`, `sessionFixture`, `promptFixture`, `postToolFixture`. `toStdin(host, fixture, { cwd })` renders the host's stdin: Codex receives edits as `apply_patch`, and Cursor gets `beforeShellExecution` / `beforeMCPExecution` / `preToolUse`. `toOpencodePermission` builds the in-process event. |
 | `timing` | `measureLatency(once, { runs, warmup })` samples sequentially and reports p50/p95. `assertLatencyBudget(candidate, baseline, 5)` checks the cold-start delta measured in the same run when enforcement is enabled. |
+| `entry-command` | The one place a test names a committed hook entry. `bundlePath(root, entry)` is `hooks/dist/<entry>.js` under `root`; `entryArgv(plugin, entry)` runs it with Bun; `launchedArgv({ plugin, event, entry })` runs it through its `hooks.json` launcher under `sh -c`; `resolveEntryCommand` is the resolver behind them. Each returns the selected Rust command instead under `TOOLU_IMPL` (below). `implementationTag(plugin, entry)` is a test-name suffix that names the Rust run. |
 | `startup` | SessionStart startup hooks run the way a host runs them: `runStartupHook(pluginRoot, entry, sb, env)` executes the plugin's real `hooks.json` launcher under `sh -c`; `startupEnv(host, sb, pluginRoot)` / `startupRoot` give the Claude or Codex environment and config root. `publishedCliSuite(spec)` registers the shared cases for a plugin that publishes a Bun CLI at a stable config-root path (both hosts with and without credentials, stale link, user file, Bun off `PATH`, no Bun, missing bundle). |
 
 A port test reads like this:
 
 ```ts
 import { expect, test } from "bun:test";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 import { editFixture, toStdin } from "@toolu/conformance/harness/fixtures";
 import { readHostOutcome } from "@toolu/conformance/harness/hosts";
+import { bundlePath } from "@toolu/conformance/harness/entry-command";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { runHook } from "@toolu/conformance/harness/spawn";
 
 const pluginRoot = resolve(import.meta.dir, "../../.."); // plugins/<name>
-const bundle = join(pluginRoot, "hooks/dist/<entry>.js");
+const bundle = bundlePath(pluginRoot, "<entry>");
 
 test.concurrent("protected files deny an .env edit on codex", async () => {
   using sb = createSandbox({ git: true });
@@ -42,6 +44,26 @@ test.concurrent("protected files deny an .env edit on codex", async () => {
   expect(readHostOutcome("codex", "PreToolUse", res).effect).toBe("deny");
 });
 ```
+
+## Running the suites against a Rust port
+
+The Rust rebuild ([epic #402](https://github.com/Falconiere/toolu/issues/402)) reuses these black-box tests unchanged ([#409](https://github.com/Falconiere/toolu/issues/409)). `TOOLU_IMPL` selects which hook entries run as the Rust binary:
+
+| `TOOLU_IMPL` | Runs |
+|---|---|
+| unset or empty | every entry as its committed Bun bundle, exactly as before |
+| `rust` | every entry as the Rust binary |
+| `rust:<plugin>/<entry>,...` | only the listed entries as the Rust binary, e.g. `rust:toolu/pre-tools` |
+
+Any other value, an empty item, a duplicate or a path separator inside a name is an error, never a silent fallback to Bun. The binary is `toolu` in `TOOLU_RUST_BIN_DIR`, or `target/release/toolu` at the repository root when that is unset. A selected entry runs `toolu hook <entry>` for the core `toolu` plugin and `toolu <plugin> hook <entry>` for the others, with the same stdin, cwd and environment the bundle gets. A selected binary that is missing, not a file or not executable fails the test at setup and names the selector and the expected path. The pre-tools case suites put `implementationTag` in their test names, so `TOOLU_IMPL=rust:toolu/pre-tools bun test plugins/toolu/hooks/src/__tests__/pre-tool-modules-a-golden.test.ts` reports a failing case as `… [rust:toolu/pre-tools]`.
+
+Test files reach a bundle only through `entry-command`: `bundle-references.test.ts` fails on a test that spells the `hooks/dist/` path or calls `launcherCommand` itself, except for the listed files whose subject is the bundle or launcher text (packaging, drift, the launcher, and the OpenCode bootstrap, which spawns bundles in production code).
+
+`test:conformance` runs four suites. `protected-files` and `spaces-cwd` dispatch `toolu/pre-tools` and take the Rust route when it is selected; `bootstrap-readiness` (OpenCode's missing-bundle diagnosis) and `surface-drift` (generated TypeScript) keep their checks in both modes.
+
+`fixtures/rust-ported.json` lists the ported entries, `{ "entries": ["<plugin>/<entry>", ...] }`, and a port adds its entry there. `bun run test:rust-conformance` reads it: an empty list is a no-op, otherwise it runs `cargo build --release --locked --bin toolu` (`CARGO` overrides the cargo executable), then `test:unit` and `test:conformance` with `TOOLU_IMPL=rust:<entries>`. CI runs it in the `rust-conformance` job, which installs the Rust toolchain only when the list is not empty.
+
+Epic-orchestrator's `report.test.ts` and `epic-watch.test.ts` test the TypeScript scripts' own behavior and stay as they are: #434 (the resident engine) and #435 (worker reports and actions) replace them with Rust black-box tests, so they have no `toolu epic` mapping here.
 
 ## Concurrency rule
 

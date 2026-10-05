@@ -2,13 +2,14 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { entryArgv } from "@toolu/conformance/harness/entry-command";
 
 const plugin = join(import.meta.dir, "../../..");
-const startup = join(plugin, "hooks/dist/session-start.js");
-const prompt = join(plugin, "hooks/dist/user-prompt-submit.js");
+const startup = "session-start";
+const prompt = "user-prompt-submit";
 
-async function run(cmd: string, env: Record<string, string | undefined>, stdin: string) {
-  const child = Bun.spawn([process.execPath, cmd], {
+async function run(entry: string, env: Record<string, string | undefined>, stdin: string) {
+  const child = Bun.spawn(entryArgv("jev", entry, plugin), {
     env,
     stdin: "pipe",
     stdout: "pipe",

@@ -7,7 +7,7 @@
  * capture must differ.
  */
 import { describe, expect, test } from "bun:test";
-import { launcherCommand } from "@toolu/core/launcher";
+import { implementationTag, launchedArgv } from "@toolu/conformance/harness/entry-command";
 import {
   decisionOf,
   MODULE_CASES,
@@ -24,7 +24,7 @@ const golden = readGolden();
 const CASE_TIMEOUT_MS = 30_000;
 
 function bundle(entry: Entry): string[] {
-  return ["/bin/sh", "-c", launcherCommand({ plugin: "toolu", event: "PreToolUse", entry })];
+  return launchedArgv({ plugin: "toolu", event: "PreToolUse", entry });
 }
 
 function intent(c: ModuleCase, stdout: string): void {
@@ -35,7 +35,9 @@ function intent(c: ModuleCase, stdout: string): void {
 }
 
 describe("pre-tool modules A", () => {
-  test.concurrent.each(MODULE_CASES.map((c) => [c.name, c] as const))(
+  test.concurrent.each(
+    MODULE_CASES.map((c) => [`${c.name}${implementationTag("toolu", c.entry)}`, c] as const),
+  )(
     "%s",
     async (_name, c) => {
       const want = golden.cases[c.name];

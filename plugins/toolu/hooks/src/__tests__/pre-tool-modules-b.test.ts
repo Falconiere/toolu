@@ -7,7 +7,7 @@
  * deviation, its golden is the known-wrong baseline and the bundle must differ.
  */
 import { expect, test } from "bun:test";
-import { launcherCommand } from "@toolu/core/launcher";
+import { implementationTag, launchedArgv } from "@toolu/conformance/harness/entry-command";
 import { MAX_SHELL_INPUT } from "@toolu/core/shell";
 import {
   comparable,
@@ -26,8 +26,8 @@ const golden = readGolden();
 /** Each case spawns git, bash and Bun; 5 s is too tight on a loaded machine. */
 const CASE_TIMEOUT_MS = 60_000;
 
-const LAUNCHER = launcherCommand({ plugin: "toolu", event: "PreToolUse", entry: "pre-tools" });
-const bundle = () => ["/bin/sh", "-c", LAUNCHER];
+const IMPL = implementationTag("toolu", "pre-tools");
+const bundle = () => launchedArgv({ plugin: "toolu", event: "PreToolUse", entry: "pre-tools" });
 
 function expected(c: ModuleCase): Captured {
   const found = golden.cases[c.name];
@@ -44,7 +44,7 @@ test("golden covers every case, and case names are unique", () => {
 
 for (const c of MODULE_CASES) {
   test.concurrent(
-    c.name,
+    `${c.name}${IMPL}`,
     async () => {
       const want = expected(c);
       const got = await runCase(c, bundle);
@@ -94,7 +94,7 @@ const OVERSIZE_CASES: ModuleCase[] = [
 
 for (const c of OVERSIZE_CASES) {
   test.concurrent(
-    c.name,
+    `${c.name}${IMPL}`,
     async () => {
       const { outcome, text } = decisionOf((await runCase(c, bundle)).stdout);
       expect(outcome).toBe(c.expect);

@@ -70,6 +70,7 @@ Each gated job carries a job-level `if`, and a job skipped that way reports Succ
 | `docs` | `docs` | `bun run test:docs`: the checks and tests from `test:ts` that read `docs/**` or root Markdown |
 | `rust (ubuntu-latest)`, `rust (macos-latest)` | `rust` | `cargo fmt --all --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, `cargo build` and `cargo test --workspace --locked`, `cargo xtask check-layers` |
 | `rust-musl (x86_64-unknown-linux-musl)`, `rust-musl (aarch64-unknown-linux-musl)` | `rust` | A release build per musl target (aarch64 on `ubuntu-24.04-arm`); `file` must report the binary static |
+| `rust-conformance` | `ports` | `bun run test:rust-conformance`: the ported hook entries in `fixtures/rust-ported.json` against `test:unit` and `test:conformance` with `TOOLU_IMPL` set (#409). An empty list is a no-op and installs no toolchain |
 | `review` | `changed` | The code review. Runs for any change outside the release-only files, docs included, and runs anyway if `changes` failed or left `changed` empty |
 | `typescript` | aggregate, `if: always()` | `tooling/src/ci-aggregate.ts`. Fails when `changes` failed or left a group output that is not `true`/`false`, a needed job failed or was cancelled, or a job was skipped while its group was on |
 
@@ -80,7 +81,7 @@ These paths turn every group on:
 - a path no group matches;
 - an empty diff, or a diff error.
 
-A release-please bump turns every group off. That means release-only paths whose diff is only `version`, `.` or `@toolu/core` semver lines (JSON, or TOML `version = "X.Y.Z"` in `Cargo.toml`/`Cargo.lock`), plus `CHANGELOG.md`. The `rust` group is `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `rustfmt.toml`, `clippy.toml`, `crates/**` and `.cargo/**`; #408 adds `fixtures/**` with the directory. `bun run check:ci-paths` fails on any of these:
+A release-please bump turns every group off. That means release-only paths whose diff is only `version`, `.` or `@toolu/core` semver lines (JSON, or TOML `version = "X.Y.Z"` in `Cargo.toml`/`Cargo.lock`), plus `CHANGELOG.md`. The `rust` group is `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `rustfmt.toml`, `clippy.toml`, `crates/**` and `.cargo/**`; #408 adds `fixtures/**` with the directory. The `ports` group is the port list and its runner, `tools/toolu-conformance/**`, `plugins/**`, `packages/**` and the Rust paths. `bun run check:ci-paths` fails on any of these:
 
 - a workflow-level `paths`/`paths-ignore` where a required check is reported;
 - an aggregate whose `needs` differ from its gated jobs;
@@ -113,6 +114,7 @@ Benchmarks are hermetic. Context budget caps the Session Protocol, per-language 
 | `tooling/src/opencode-acceptance.ts` | Required OpenCode acceptance (`bun run test:opencode`, CI on Linux and macOS). It runs the pinned host through the contract probes, every live scenario and `*.live.test.ts` file, concurrency, a startup/per-tool budget (`contract/acceptance-budgets.json`) and four staged regression controls. It fails on a missing tool, a skip, an undetected control or a plugin without a dedicated actual-host check, and writes a JSON report that keeps host, fixture and live-service evidence apart. Code in `tooling/src/opencode-acceptance/`; see `docs/conformance-report.md` |
 | `tooling/src/opencode-host-contract.ts` | Hermetic OpenCode host-contract check (`bun run check:opencode-host`, in `test:portable-core`): the pin, the probe evidence, the 16-plugin capability matrix, the plugin manifests, the pinned SDK declarations and the contract doc must agree |
 | `tooling/src/check-opencode-docs.ts` | OpenCode docs check (`bun run check:opencode-docs`, in `test:portable-core`): regenerates `docs/opencode.md`'s per-plugin support section from the capability matrix and the acceptance registry, and rejects V2-only claims on the install path. The `docs.*` acceptance checks run the install and migration guides' marked bash blocks verbatim (`tooling/src/opencode-host/scenarios-docs*.ts`) |
+| `tools/toolu-conformance/src/harness/entry-command.ts` | The `TOOLU_IMPL` seam (#409): tests reach a committed hook bundle only through it (`bundlePath`, `entryArgv`, `launchedArgv`), so a selected entry runs the Rust `toolu` binary instead. `bundle-references.test.ts` enforces it; see `docs/testing.md` |
 | `tooling/src/benchmarks/run.ts` | Benchmark harness (`bun run benchmarks`); inputs, fixtures and committed results in `benchmarks/` |
 | `packages/toolu-core/src/launcher/launcher.ts` | `@toolu/core/launcher`: the generated `hooks.json` command that runs a bundle with Bun and fails closed without it |
 | `packages/toolu-core/src/host/host.ts` | `@toolu/core/host`: host detection (Claude, Codex, Cursor, OpenCode, Hermes), roots, Codex plugin snapshot, event-name map, per-host output encoders and `ask` degradation |

@@ -76,8 +76,22 @@ async function prOutputs(edits: Record<string, string>): Promise<Outputs> {
   });
 }
 
-const ALL_ON = { ts: "true", opencode: "true", docs: "true", rust: "true", changed: "true" };
-const ALL_OFF = { ts: "false", opencode: "false", docs: "false", rust: "false", changed: "false" };
+const ALL_ON = {
+  ts: "true",
+  opencode: "true",
+  docs: "true",
+  rust: "true",
+  ports: "true",
+  changed: "true",
+};
+const ALL_OFF = {
+  ts: "false",
+  opencode: "false",
+  docs: "false",
+  rust: "false",
+  ports: "false",
+  changed: "false",
+};
 
 const VERSION = z
   .object({ version: z.string() })
@@ -100,6 +114,7 @@ test.concurrent("a docs-only PR turns on docs and changed only (AC-1)", async ()
     opencode: "false",
     docs: "true",
     rust: "false",
+    ports: "false",
     changed: "true",
   });
 });
@@ -111,6 +126,7 @@ test.concurrent("a root Markdown edit is docs-only too (AC-1)", async () => {
     opencode: "false",
     docs: "true",
     rust: "false",
+    ports: "false",
     changed: "true",
   });
 });
@@ -136,6 +152,7 @@ test.concurrent("a scripts edit in root package.json is not release-only (AC-2)"
     opencode: "true",
     docs: "false",
     rust: "false",
+    ports: "false",
     changed: "true",
   });
 });
@@ -149,6 +166,7 @@ test.concurrent("a Rust-only PR turns on rust and changed only (#407 AC-5)", asy
     opencode: "false",
     docs: "false",
     rust: "true",
+    ports: "true",
     changed: "true",
   });
 });
@@ -164,6 +182,7 @@ test.concurrent("a Cargo.toml edit beyond the version is not release-only (#407 
     opencode: "false",
     docs: "false",
     rust: "true",
+    ports: "true",
     changed: "true",
   });
 });
@@ -177,6 +196,7 @@ test.concurrent("an OpenCode adapter edit turns on ts and opencode (AC-3)", asyn
     opencode: "true",
     docs: "false",
     rust: "false",
+    ports: "false",
     changed: "true",
   });
 });
@@ -198,6 +218,7 @@ test.concurrent("a push compares before..after with the same groups (AC-6)", asy
     opencode: "false",
     docs: "true",
     rust: "false",
+    ports: "false",
     changed: "true",
   });
 });
@@ -256,6 +277,7 @@ test.concurrent("a version bump plus a docs edit runs docs only (AC-1, AC-2)", a
     opencode: "false",
     docs: "true",
     rust: "false",
+    ports: "false",
     changed: "true",
   });
 });
@@ -269,6 +291,7 @@ test.concurrent("a plugin manifest with a version and another change is not rele
     opencode: "true",
     docs: "false",
     rust: "false",
+    ports: "true",
     changed: "true",
   });
 });
@@ -285,6 +308,7 @@ test.concurrent("deleting a release-only file is not release-only", async () => 
     opencode: "true",
     docs: "false",
     rust: "false",
+    ports: "true",
     changed: "true",
   });
 });

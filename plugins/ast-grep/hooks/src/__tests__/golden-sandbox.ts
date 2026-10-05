@@ -8,7 +8,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, rmSync, symlinkSync } from "node:fs";
 import { delimiter, join, resolve } from "node:path";
-import { launcherCommand } from "@toolu/core/launcher";
+import { launchedArgv } from "@toolu/conformance/harness/entry-command";
 import {
   hostConfigRoot,
   installPlugins,
@@ -66,11 +66,7 @@ export async function registerAstGrep(
   const argv =
     reg.kind === "bash"
       ? ["bash", join(plugin, "hooks/register.sh")]
-      : [
-          "/bin/sh",
-          "-c",
-          launcherCommand({ plugin: "ast-grep", event: "SessionStart", entry: "register" }),
-        ];
+      : launchedArgv({ plugin: "ast-grep", event: "SessionStart", entry: "register" });
   const env = pretoolEnv(sb, host, {
     CLAUDE_PLUGIN_ROOT: plugin,
     PLUGIN_ROOT: host === "codex" ? plugin : undefined,

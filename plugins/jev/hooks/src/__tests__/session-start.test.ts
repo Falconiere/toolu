@@ -16,6 +16,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
+import { bundlePath, entryArgv } from "@toolu/conformance/harness/entry-command";
 import { readHostOutcome } from "@toolu/conformance/harness/hosts";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch, type RunResult } from "@toolu/conformance/harness/spawn";
@@ -33,7 +34,7 @@ const runtimeCommand = (wrapper: string) =>
   `'${process.execPath.replaceAll("'", "'\\''")}' '${wrapper.replaceAll("'", "'\\''")}'`;
 
 const PLUGIN = resolve(import.meta.dir, "../../..");
-const WRAPPER = "hooks/dist/jev.js";
+const WRAPPER = bundlePath("", "jev");
 const KEY = "local-test-key";
 const NODE = Bun.which("node");
 
@@ -116,9 +117,12 @@ test.concurrent("without the hook key: verify the command environment before dec
 
 test.concurrent("missing key is reported even without jq and curl", async () => {
   using sb = createSandbox();
-  const bundle = join(PLUGIN, "hooks/dist/session-start.js");
   const env = { ...startupEnv("claude", sb, PLUGIN), TYPESAFE_API_KEY: undefined };
-  const res = await run([process.execPath, bundle], { cwd: sb.project, env, stdin: "{}" });
+  const res = await run(entryArgv("jev", "session-start", PLUGIN), {
+    cwd: sb.project,
+    env,
+    stdin: "{}",
+  });
   expectCredentialCheck(contextOf(res));
 });
 
@@ -221,7 +225,7 @@ test.concurrent.skipIf(NODE === null)(
     const source = `#!${NODE}\nconsole.log("javascript-override");\n`;
     writeFileSync(dst, source, { mode: 0o755 });
     const env = { PATH: "/nonexistent", TYPESAFE_API_KEY: KEY };
-    const res = await run([process.execPath, join(PLUGIN, "hooks/dist/session-start.js")], {
+    const res = await run(entryArgv("jev", "session-start", PLUGIN), {
       cwd: sb.project,
       env: { ...startupEnv("claude", sb, PLUGIN), ...env },
       stdin: "{}",

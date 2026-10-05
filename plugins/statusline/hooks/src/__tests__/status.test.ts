@@ -3,7 +3,8 @@ import { expect, test } from "bun:test";
 import { realpathSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
-import { git, put, report, repo, STATUS, withRemote } from "./harness.ts";
+import { entryArgv } from "@toolu/conformance/harness/entry-command";
+import { git, put, report, repo, withRemote } from "./harness.ts";
 
 test.concurrent("status: reads Codex gate state and repository status without Claude fallback", async () => {
   using sb = createSandbox();
@@ -44,7 +45,7 @@ test.concurrent("status: OpenCode report reads its own gate state", async () => 
 test.concurrent("status: unknown explicit host override fails with a diagnostic", async () => {
   using sb = createSandbox();
   for (const override of ["opencodee", ""]) {
-    const res = Bun.spawnSync([process.execPath, STATUS, sb.project], {
+    const res = Bun.spawnSync([...entryArgv("statusline", "status"), sb.project], {
       env: { ...process.env, HOME: sb.home, TOOLU_HOST_OVERRIDE: override },
       stdout: "pipe",
       stderr: "pipe",

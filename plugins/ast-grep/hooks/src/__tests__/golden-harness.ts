@@ -6,6 +6,7 @@
  */
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { entryArgv } from "@toolu/conformance/harness/entry-command";
 import { toStdin } from "@toolu/conformance/harness/fixtures";
 import { runPostBundle } from "@toolu/conformance/harness/posttool";
 import { pretoolEnv, runBundle, type PretoolHost } from "@toolu/conformance/harness/pretool";
@@ -110,7 +111,7 @@ export async function runReport(c: ReportCase, reg: Registration): Promise<Captu
   const argv =
     reg.kind === "bash"
       ? ["bash", join(reg.pluginRoot, "scripts/byte-savings-report.sh")]
-      : [process.execPath, join(PLUGIN_ROOT, "hooks/dist/byte-savings-report.js")];
+      : entryArgv("ast-grep", "byte-savings-report", PLUGIN_ROOT);
   const res = await run(c.noArgument === true ? argv : [...argv, ledger], { cwd: sb.root });
   return captured(res, sb);
 }

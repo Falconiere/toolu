@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
-import { SETUP } from "./harness.ts";
+import { entryArgv } from "@toolu/conformance/harness/entry-command";
 
 const CUSTOM = '{\n  "statusLine": { "type": "command", "command": "my-custom-bar" }\n}\n';
 
@@ -20,7 +20,7 @@ function config(sb: Sandbox): { cfg: string; settings: string } {
 
 /** Run setup with `CLAUDE_CONFIG_DIR` at the sandbox's `cfg`, or unset for `defaultDir`. */
 function setup(sb: Sandbox, args: string[] = [], defaultDir = false) {
-  return run([process.execPath, SETUP, ...args], {
+  return run([...entryArgv("statusline", "setup"), ...args], {
     env: { HOME: sb.home, CLAUDE_CONFIG_DIR: defaultDir ? undefined : sb.path("cfg") },
   });
 }
@@ -214,7 +214,7 @@ test.concurrent("setup: the wired command runs the published renderer by path", 
   using sb = createSandbox();
   const { cfg, settings } = config(sb);
   await setup(sb);
-  const hook = await run([process.execPath, join(SETUP, "../session-start.js")], {
+  const hook = await run(entryArgv("statusline", "session-start"), {
     env: { HOME: sb.home, CLAUDE_CONFIG_DIR: cfg, TOOLU_HOST_OVERRIDE: "claude" },
     stdin: "{}",
   });

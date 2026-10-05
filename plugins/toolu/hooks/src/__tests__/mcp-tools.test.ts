@@ -7,6 +7,7 @@
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { bundlePath } from "@toolu/conformance/harness/entry-command";
 import { mcpFixture, toStdin } from "@toolu/conformance/harness/fixtures";
 import { pretoolEnv, type PretoolHost } from "@toolu/conformance/harness/pretool";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
@@ -91,7 +92,7 @@ for (const [name, server, stdin] of [
 }
 
 test("the bundle does not inline the shell parser", () => {
-  const bundle = readFileSync(join(PLUGIN, "hooks/dist/mcp-tools.js"), "utf8");
+  const bundle = readFileSync(bundlePath(PLUGIN, "mcp-tools"), "utf8");
   expect(bundle).not.toContain("analyzeShell");
   expect(bundle).not.toContain("unbash");
 });

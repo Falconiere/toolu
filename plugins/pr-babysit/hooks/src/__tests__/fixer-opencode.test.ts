@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { entryArgv } from "@toolu/conformance/harness/entry-command";
 import { dirname, join, resolve } from "node:path";
 import { fixerGhConfigPath, fixerOutcome, nativeWorktreePath } from "../babysit/fixer-dispatch.ts";
 import {
@@ -22,7 +23,6 @@ import {
 // dispatcher bundle against a sandbox repository. Nothing writes process.env.
 
 const root = resolve(import.meta.dir, "../../../../..");
-const dispatchBundle = join(root, "plugins/pr-babysit/hooks/dist/babysit-dispatch-fix.js");
 const initial = join(
   root,
   "plugins/pr-babysit/scripts/__tests__/fixtures/states/toolu-165-initial.json",
@@ -135,7 +135,8 @@ function dispatch(
   env: NodeJS.ProcessEnv,
   args: string[],
 ): { status: number | null; out: Record<string, unknown> } {
-  const res = spawnSync(process.execPath, [dispatchBundle, ...args], { env, encoding: "utf8" });
+  const [command = "", ...prefix] = entryArgv("pr-babysit", "babysit-dispatch-fix");
+  const res = spawnSync(command, [...prefix, ...args], { env, encoding: "utf8" });
   const out: Record<string, unknown> = JSON.parse(res.stdout);
   return { status: res.status, out };
 }

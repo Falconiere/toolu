@@ -1,12 +1,13 @@
 import { expect, test } from "bun:test";
 import { join, resolve } from "node:path";
 import { z } from "zod";
+import { bundlePath } from "../entry-command.ts";
 import { createSandbox } from "../sandbox.ts";
 import { childEnv, run, runHook } from "../spawn.ts";
 
 const ROOT = resolve(import.meta.dir, "../../../../..");
 const PLUGIN_ROOT = join(ROOT, "plugins/toolu");
-const SAMPLE = join(PLUGIN_ROOT, "hooks/dist/sample.js");
+const SAMPLE = bundlePath(PLUGIN_ROOT, "sample");
 const EnvSchema = z.record(z.string(), z.string());
 
 /** A real hook script that echoes the env it was spawned with. */

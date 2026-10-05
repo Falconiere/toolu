@@ -1,11 +1,12 @@
 /** jira's SessionStart bundle through its real hooks.json launcher (#269, ported from session-start.bats). */
 import { resolve } from "node:path";
+import { bundlePath } from "@toolu/conformance/harness/entry-command";
 import { publishedCliSuite } from "@toolu/conformance/harness/startup";
 
 publishedCliSuite({
   plugin: "jira",
   pluginRoot: resolve(import.meta.dir, "../../.."),
-  source: "hooks/dist/jira.js",
+  source: bundlePath("", "jira"),
   dir: "jira",
   name: "jira.sh",
   advisory:

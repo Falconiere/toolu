@@ -5,6 +5,8 @@
  * group so a hook's grandchildren cannot hold the pipes open.
  */
 import { existsSync } from "node:fs";
+import { basename, extname } from "node:path";
+import { pluginName, resolveEntryCommand } from "./entry-command.ts";
 import type { HostName, Sandbox } from "./sandbox.ts";
 
 export type RunResult = {
@@ -180,7 +182,9 @@ export type RunHookOptions = {
   host: HostName;
   sandbox: Sandbox;
   pluginRoot: string;
-  /** A committed bundle, run as `bun <bundle>`. */
+  /** The plugin `TOOLU_IMPL` names; defaults to `pluginRoot`'s plugin.json name. */
+  plugin?: string;
+  /** A committed bundle, run as `bun <bundle>` or as its selected Rust command. */
   bundle?: string;
   /** An explicit command, for bash hooks during the strangler migration. */
   argv?: string[];
@@ -195,10 +199,15 @@ function hookArgv(opts: RunHookOptions): string[] {
     throw new Error("runHook: pass bundle or argv, not both");
   }
   if (opts.bundle !== undefined) {
-    if (!existsSync(opts.bundle)) {
+    const { argv, implementation } = resolveEntryCommand({
+      plugin: opts.plugin ?? pluginName(opts.pluginRoot),
+      entry: basename(opts.bundle, extname(opts.bundle)),
+      bundle: opts.bundle,
+    });
+    if (implementation === "bun" && !existsSync(opts.bundle)) {
       throw new Error(`bundle not found: ${opts.bundle}`);
     }
-    return [process.execPath, opts.bundle];
+    return argv;
   }
   if (opts.argv === undefined || opts.argv.length === 0) {
     throw new Error("runHook: pass bundle or argv");

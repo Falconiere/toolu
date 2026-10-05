@@ -6,14 +6,15 @@
 import { expect, test } from "bun:test";
 import { existsSync, mkdirSync, readlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { bundlePath, entryArgv } from "@toolu/conformance/harness/entry-command";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch, type RunResult } from "@toolu/conformance/harness/spawn";
 import { startupEnv } from "@toolu/conformance/harness/startup";
 import { z } from "zod";
 
 const PLUGIN = resolve(import.meta.dir, "../../..");
-const STARTUP = join(PLUGIN, "hooks/dist/session-start.js");
-const PROMPT = join(PLUGIN, "hooks/dist/user-prompt-submit.js");
+const STARTUP = "session-start";
+const PROMPT = "user-prompt-submit";
 const KEY = "local-test-key";
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 
@@ -46,8 +47,8 @@ function opencodeEnv(sb: Sandbox): EnvPatch {
   };
 }
 
-function hook(bundle: string, sb: Sandbox, env: EnvPatch, stdin: object): Promise<RunResult> {
-  return run([process.execPath, bundle], {
+function hook(entry: string, sb: Sandbox, env: EnvPatch, stdin: object): Promise<RunResult> {
+  return run(entryArgv("jev", entry, PLUGIN), {
     cwd: sb.project,
     env,
     stdin: JSON.stringify(stdin),
@@ -67,7 +68,7 @@ test.concurrent("OpenCode startup names the native skill and a Bun command that 
     }),
   );
   const wrapper = join(dataRoot(sb), "jev/jev.sh");
-  expect(readlinkSync(wrapper)).toBe(join(PLUGIN, "hooks/dist/jev.js"));
+  expect(readlinkSync(wrapper)).toBe(bundlePath(PLUGIN, "jev"));
   expect(calledCommand(context)).toBe(`${quote(process.execPath)} --no-env-file ${quote(wrapper)}`);
   expect(context).toContain('Syntax and linked examples: skill({ name: "jev-jev" }).');
   expect(context).not.toContain("skills/jev/SKILL.md");
@@ -82,7 +83,7 @@ test.concurrent("OpenCode compaction relinks the wrapper and adds no second mand
   unlinkSync(wrapper);
   const res = await hook(STARTUP, sb, env, { hook_event_name: "SessionStart", source: "compact" });
   expect(res).toMatchObject({ exitCode: 0, stdout: "", stderr: "" });
-  expect(readlinkSync(wrapper)).toBe(join(PLUGIN, "hooks/dist/jev.js"));
+  expect(readlinkSync(wrapper)).toBe(bundlePath(PLUGIN, "jev"));
 });
 
 test.concurrent("OpenCode prompt reminder carries the same command and skill", async () => {

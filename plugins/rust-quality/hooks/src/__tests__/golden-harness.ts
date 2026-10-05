@@ -10,7 +10,7 @@ import { spawnSync } from "node:child_process";
 import { rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { isJsonObject } from "@toolu/core/config";
-import { launcherCommand } from "@toolu/core/launcher";
+import { launchedArgv } from "@toolu/conformance/harness/entry-command";
 import {
   patchFixture,
   postToolFixture,
@@ -83,11 +83,7 @@ async function registerRustQuality(sb: Sandbox, host: PretoolHost, reg: Registra
   const argv =
     reg.kind === "bash"
       ? ["bash", reg.register]
-      : [
-          "/bin/sh",
-          "-c",
-          launcherCommand({ plugin: "rust-quality", event: "SessionStart", entry: "register" }),
-        ];
+      : launchedArgv({ plugin: "rust-quality", event: "SessionStart", entry: "register" });
   const res = await run(argv, { cwd: sb.project, env, stdin: "{}" });
   if (res.exitCode !== 0 || res.stdout !== "") {
     throw new Error(`register rust-quality (${reg.kind}): ${String(res.exitCode)} ${res.stderr}`);
