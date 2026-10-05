@@ -1,6 +1,28 @@
-use std::process::ExitCode;
+use std::io::Write;
+use std::path::Path;
+use std::process::{Command, ExitCode, Stdio};
 
 use super::{TASKS, run};
+
+/// Write an executable through a child `sh`, so no descriptor open for writing
+/// lives in this multi-threaded test process: a sibling test's fork could
+/// inherit it and make the launcher's `exec` fail with `ETXTBSY`.
+pub(crate) fn install(path: &Path, text: &str) {
+  std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+  let mut child = Command::new("/bin/sh")
+    .args(["-c", "cat > \"$1\" && chmod 755 \"$1\"", "sh"])
+    .arg(path)
+    .stdin(Stdio::piped())
+    .spawn()
+    .unwrap();
+  child
+    .stdin
+    .take()
+    .unwrap()
+    .write_all(text.as_bytes())
+    .unwrap();
+  assert!(child.wait().unwrap().success());
+}
 
 fn words(args: &[&str]) -> Vec<String> {
   args.iter().map(|word| (*word).to_owned()).collect()

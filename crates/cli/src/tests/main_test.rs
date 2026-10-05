@@ -6,7 +6,8 @@ use toolu_runtime::cli::Outcome;
 
 use super::{Context, VERSION, run, tree};
 
-fn words(line: &str) -> Vec<String> {
+/// The words of `line`, as the shell would split a simple command line.
+pub(crate) fn words(line: &str) -> Vec<String> {
   line.split_whitespace().map(str::to_owned).collect()
 }
 
@@ -18,7 +19,8 @@ fn no_exe() -> Option<std::path::PathBuf> {
   None
 }
 
-fn context() -> Context<'static> {
+/// A context with no standard input and no known executable path.
+pub(crate) fn context() -> Context<'static> {
   Context {
     exe: &no_exe,
     stdin: &no_stdin,

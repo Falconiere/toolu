@@ -6,26 +6,11 @@ use toolu_protocol::host::Host;
 use toolu_runtime::cli::{Ctx, Outcome};
 
 use super::{ctx_of, finish, run, wants_json};
-use crate::{Context, tree};
-
-fn words(line: &str) -> Vec<String> {
-  line.split_whitespace().map(str::to_owned).collect()
-}
-
-fn no_stdin() -> std::io::Result<String> {
-  toolu_protocol::stdin::read_all(std::io::empty())
-}
-
-fn no_exe() -> Option<PathBuf> {
-  None
-}
+use crate::tests::{context, words};
+use crate::tree;
 
 fn dispatched(line: &str) -> Outcome {
-  let context = Context {
-    exe: &no_exe,
-    stdin: &no_stdin,
-  };
-  run(&words(line), &context, &tree::command)
+  run(&words(line), &context(), &tree::command)
 }
 
 fn document(outcome: &Outcome) -> Value {

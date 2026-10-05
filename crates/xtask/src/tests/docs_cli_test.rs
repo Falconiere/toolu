@@ -1,28 +1,9 @@
-use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 
 use super::{DOCS_DIR, MARKER, run};
 use crate::Verdict;
 use crate::options::Options;
-
-/// Write an executable through a child `sh`, so no descriptor open for writing
-/// lives in this multi-threaded test process (see `launcher_e2e_test.rs`).
-fn install(path: &Path, text: &str) {
-  let mut child = Command::new("/bin/sh")
-    .args(["-c", "cat > \"$1\" && chmod 755 \"$1\"", "sh"])
-    .arg(path)
-    .stdin(Stdio::piped())
-    .spawn()
-    .unwrap();
-  child
-    .stdin
-    .take()
-    .unwrap()
-    .write_all(text.as_bytes())
-    .unwrap();
-  assert!(child.wait().unwrap().success());
-}
+use crate::tests::install;
 
 /// A `toolu` stand-in with one live command and one planned namespace.
 fn stand_in(dir: &Path) -> PathBuf {

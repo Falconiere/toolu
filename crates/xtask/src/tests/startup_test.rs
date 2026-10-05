@@ -1,32 +1,14 @@
-use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use super::{BUDGET, judge, load, run};
 use crate::Verdict;
 use crate::options::Options;
+use crate::tests::install;
 
 /// This repository, whose real budget file the checks read.
 fn repo() -> PathBuf {
   std::fs::canonicalize(concat!(env!("CARGO_MANIFEST_DIR"), "/../..")).unwrap()
-}
-
-/// Write an executable through a child `sh` (see `launcher_e2e_test.rs`).
-fn install(path: &Path, text: &str) {
-  let mut child = Command::new("/bin/sh")
-    .args(["-c", "cat > \"$1\" && chmod 755 \"$1\"", "sh"])
-    .arg(path)
-    .stdin(Stdio::piped())
-    .spawn()
-    .unwrap();
-  child
-    .stdin
-    .take()
-    .unwrap()
-    .write_all(text.as_bytes())
-    .unwrap();
-  assert!(child.wait().unwrap().success());
 }
 
 fn stand_in(dir: &Path, body: &str) -> PathBuf {

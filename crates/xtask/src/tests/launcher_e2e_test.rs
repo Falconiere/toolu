@@ -1,30 +1,9 @@
-use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 
 use super::run;
 use crate::Verdict;
 use crate::options::Options;
-
-/// Write an executable through a child `sh`, so no descriptor open for writing
-/// lives in this multi-threaded test process: a sibling test's fork could
-/// inherit it and make the launcher's `exec` fail with `ETXTBSY`.
-fn install(path: &Path, text: &str) {
-  std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-  let mut child = Command::new("/bin/sh")
-    .args(["-c", "cat > \"$1\" && chmod 755 \"$1\"", "sh"])
-    .arg(path)
-    .stdin(Stdio::piped())
-    .spawn()
-    .unwrap();
-  child
-    .stdin
-    .take()
-    .unwrap()
-    .write_all(text.as_bytes())
-    .unwrap();
-  assert!(child.wait().unwrap().success());
-}
+use crate::tests::install;
 
 /// A `toolu` stand-in that reports `at` as its path and blocks `PreToolUse`.
 fn stand_in(home: &Path, at: &str) -> PathBuf {
