@@ -252,8 +252,29 @@ The `crates/cli` tests run the real binary (`CARGO_BIN_EXE_toolu`) through the r
     "model": "inherit"
   },
   {
+    "id": "unit-baseline",
+    "title": "bun run test:unit fails exactly the tests a clean origin/main worktree fails on this host (environmental failures, comemory be52369e/9cda9086); CI runs the full suite",
+    "ac_refs": [
+      "AC-10"
+    ],
+    "depends_on": [
+      "ts-gate"
+    ],
+    "paths": [
+      "tooling/**",
+      "packages/**",
+      "plugins/**",
+      "tools/**",
+      "bun.lock",
+      "package.json"
+    ],
+    "input": "The branch and a detached origin/main worktree, both running bun run test:unit on this host",
+    "check": "B=$(mktemp -d) && git worktree add -q --detach \"$B/base\" origin/main && (cd \"$B/base\" && bun install --frozen-lockfile >/dev/null 2>&1 && bun run test:unit > \"$B/base.log\" 2>&1); bun run test:unit > \"$B/branch.log\" 2>&1; for f in base branch; do grep '^(fail)' \"$B/$f.log\" | sed 's/ \\[[0-9.]*ms\\]//' | sort > \"$B/$f.txt\"; done; grep -q ' pass' \"$B/base.log\" && diff \"$B/base.txt\" \"$B/branch.txt\"; s=$?; git worktree remove --force \"$B/base\"; rm -rf \"$B\"; exit $s",
+    "model": "inherit"
+  },
+  {
     "id": "gate",
-    "title": "Full quality gates after bun install --frozen-lockfile: cargo xtask gate (incl. tests and coverage floors) and bun run test",
+    "title": "Full quality gates after bun install --frozen-lockfile: cargo xtask gate (incl. tests and coverage floors) and every bun run test (test:ts) script except test:unit, which unit-baseline judges",
     "ac_refs": [
       "AC-11"
     ],
@@ -267,7 +288,8 @@ The `crates/cli` tests run the real binary (`CARGO_BIN_EXE_toolu`) through the r
       "ts-gate",
       "ci",
       "docs",
-      "e2e-local"
+      "e2e-local",
+      "unit-baseline"
     ],
     "paths": [
       "crates/**",
@@ -284,7 +306,7 @@ The `crates/cli` tests run the real binary (`CARGO_BIN_EXE_toolu`) through the r
       "package.json"
     ],
     "input": "The whole branch",
-    "check": "bun install --frozen-lockfile && cargo xtask gate && bun run test",
+    "check": "bun install --frozen-lockfile && cargo xtask gate && bun run test:conventions && bun run test:portable-core && bun run test:gate-coverage && bun run test:final-removal && bun run check:ci-paths && bun run check:plugin-bundles && bun run check:hooks-json && bun run test:workspace && bun run test:pack && bun run test:conformance && bun run test:context-budget && bun run benchmarks --tier deterministic && bun run bench:shell --assert",
     "model": "inherit"
   }
 ]
@@ -294,6 +316,8 @@ The `crates/cli` tests run the real binary (`CARGO_BIN_EXE_toolu`) through the r
 
 - **launcher-tests:** one integration-test crate, `crates/cli/tests/launcher.rs`, with case modules `tests/helpers/{missing,native,skew,resolution,crash,fallback}.rs` and a shared `tests/helpers/sandbox.rs`. It replaces six `launcher_*` crates. Warnings are denied, so a shared helper included by six crates would be dead code in every crate that skips one of its items. The cases and ACs are unchanged; the check runs `--test launcher`.
 - **launcher-tests:** the sandbox serialises writes of executables against child spawns (`RwLock`). A child forked while a copied binary was still open for writing made the launcher's probe fail with `ETXTBSY` on Linux, which showed up as one flaky run in about 25.
+
+- **gate:** `bun run test:unit` fails 18 tests on this root host, and a clean `origin/main` worktree at the same base fails exactly the same 18: root ignores `chmod`, merged `/bin` and `/usr/bin` on `PATH`, ownership checks (comemory `be52369e`, `9cda9086`). So `gate` runs every other `test:ts` script, and the new `unit-baseline` step requires `test:unit`'s failures to equal `origin/main`'s. CI's full `bun run test` stays the authority (Jev 0.77 that this hides no branch-caused failure).
 
 ## Delivery
 
