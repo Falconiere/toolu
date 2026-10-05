@@ -51,7 +51,7 @@ function paths(term: string, literal = false): string[] {
 
 const unexpected: string[] = [];
 for (const term of ["exa-search", "context7", "agent-browser", "jira"]) {
-  for (const path of paths(term)) {
+  for (const path of paths(term, term !== "jira")) {
     if (
       path === SELF ||
       HISTORY.has(path) ||

@@ -47,6 +47,12 @@ test("the reference gate accepts reviewed history and rejects a current referenc
     expect(stale.exitCode).not.toBe(0);
     expect(stale.stderr).toContain("README.md");
 
+    write(root, "README.md", `${["agent", "browser"].join("-")}-install\n`);
+    stage(root);
+    const suffixed = await run([process.execPath, script], { cwd: root });
+    expect(suffixed.exitCode).not.toBe(0);
+    expect(suffixed.stderr).toContain("README.md");
+
     write(root, "README.md", `See ${["plugins", TRACKER_NAME, "README.md"].join("/")}\n`);
     stage(root);
     const standalone = await run([process.execPath, script], { cwd: root });

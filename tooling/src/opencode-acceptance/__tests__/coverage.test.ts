@@ -39,6 +39,17 @@ test.concurrent("every catalog plugin has a dedicated actual-host check when all
   expect(Object.entries(all).filter(([, ids]) => ids.length === 0)).toEqual([]);
 });
 
+test.concurrent("path and quickstart checks belong to the helpers they exercise", () => {
+  const all = coverage(
+    checks.map((check) => ({ check, pass: true })),
+    catalog,
+  );
+  expect(all.jev).toContain("entry.helper-env");
+  expect(all.jev).not.toContain("entry.worktree-state");
+  expect(all["ast-grep"]).toContain("entry.worktree-state");
+  expect(all["ast-grep"]).toContain("docs.quickstart");
+});
+
 test.concurrent("a plugin whose only checks fail, or are whole-catalog, is uncovered", () => {
   const results = checks.map((check) => ({
     check,

@@ -55,11 +55,11 @@ Each plugin's status comes from the [capability matrix](opencode-host-contract.m
 <!-- opencode-support:start -->
 | Plugin | Status on OpenCode | Dedicated CI checks |
 |---|---|---|
-| ast-grep | Supported with limitations | `ast-grep.session` |
+| ast-grep | Supported with limitations | `entry.worktree-state`, `docs.quickstart`, `ast-grep.session` |
 | brainstorm | Supported | `live.delivery-workflows` |
 | delivery-flow | Supported | `live.delivery-workflows` |
 | epic-orchestrator | Supported | `live.epic-worker` |
-| jev | Supported | `entry.*` (2), `live.jev` |
+| jev | Supported | `entry.helper-env`, `live.jev` |
 | pr-babysit | Supported with limitations | `babysit.*` (3) |
 | python-quality | Supported | `pyquality.*` (3) |
 | rust-quality | Supported | `rsquality.*` (3) |
