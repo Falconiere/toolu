@@ -96,13 +96,13 @@ function trackerLines(
   kind: HostKind,
 ): { read: string; closes: string } {
   if (graph.tracker === "jira") {
-    // OpenCode puts no helper on PATH; the jira skill runs it from the data root.
-    const read =
+    const script = join(SCRIPTS_DIR, "jira-issue.ts");
+    const command =
       kind === "opencode"
-        ? `\`"$TOOLU_BUN" --no-env-file "$TOOLU_CONFIG_DIR/jira/jira.sh" issue get ${issue.ref}\` (\`skill({ name: "jira-jira" })\`)`
-        : `\`jira.sh issue get ${issue.ref}\` (the toolu jira skill)`;
+        ? `"$TOOLU_BUN" --no-env-file "${script}" get ${issue.ref}`
+        : `bun --no-env-file "${script}" get ${issue.ref}`;
     return {
-      read,
+      read: `\`${command}\``,
       closes: `Resolves ${issue.ref}`,
     };
   }

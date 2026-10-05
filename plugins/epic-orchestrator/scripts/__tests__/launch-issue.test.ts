@@ -48,14 +48,22 @@ test.concurrent("brief: every placeholder is filled", () => {
   }
 });
 
-test.concurrent("brief: Jira items read through jira.sh and resolve by key", () => {
+test.concurrent("brief: Jira items read through the epic issue command on Claude and Codex", () => {
   const graph = loadGraph();
   const jiraGraph = { ...graph, tracker: "jira" };
   const issue = { ...findIssue(graph, "Falconiere/comemory#255"), ref: "PAY-12", number: null };
-  const brief = renderBrief(jiraGraph, issue, { worktree: "/wt", status: "/s.json" }, "main");
-  expect(brief).toContain("Resolves PAY-12");
-  expect(brief).toContain("jira.sh issue get PAY-12");
-  expect(brief).not.toContain("{{");
+  for (const host of ["claude", "codex"] as const) {
+    const brief = renderBrief(
+      jiraGraph,
+      issue,
+      { worktree: "/wt", status: "/s.json" },
+      "main",
+      host,
+    );
+    expect(brief).toContain("Resolves PAY-12");
+    expect(brief).toContain(`bun --no-env-file "${join(HERE, "jira-issue.ts")}" get PAY-12`);
+    expect(brief).not.toContain("{{");
+  }
 });
 
 test.concurrent("brief: find_issue by key or ref", () => {
@@ -138,7 +146,7 @@ test.concurrent("dry run: --safe keeps approval prompts on", async () => {
 const EXCLUDE_LINE = "# opencode: exclude /.opencode/toolu/state/ /.opencode/tmp/ in ";
 const OTHER_HOST_INVOCATION = /[/$](delivery-flow|pr-babysit|toolu):/;
 
-test.concurrent("brief: OpenCode names generated skills and runs jira.sh from the data root", () => {
+test.concurrent("brief: OpenCode names generated skills and the epic issue command", () => {
   const graph = loadGraph();
   const issue = findIssue(graph, "Falconiere/comemory#255");
   const paths = { worktree: "/wt", status: "/s.json" };
@@ -150,9 +158,7 @@ test.concurrent("brief: OpenCode names generated skills and runs jira.sh from th
   expect(brief).not.toMatch(/`[a-z-]+--[a-z-]+`/);
   const jiraIssue = { ...issue, ref: "PAY-12", number: null };
   const jira = renderBrief({ ...graph, tracker: "jira" }, jiraIssue, paths, "main", "opencode");
-  expect(jira).toContain(
-    '`"$TOOLU_BUN" --no-env-file "$TOOLU_CONFIG_DIR/jira/jira.sh" issue get PAY-12` (`skill({ name: "jira-jira" })`)',
-  );
+  expect(jira).toContain(`"$TOOLU_BUN" --no-env-file "${join(HERE, "jira-issue.ts")}" get PAY-12`);
 });
 
 test.concurrent("dry run: OpenCode worker gets provider/model, the state exclude and its skill ids", async () => {
@@ -308,14 +314,16 @@ test.concurrent("a real missing dependency leaves durable uncertain ownership an
   const env = { TOOLU_RESOURCE_HOME: root, PATH: "" };
   const first = await run(argv, { env });
   const record = JSON.parse(readFileSync(join(state, "issues/comemory-255.json"), "utf8"));
-  expect(record.lifecycle_error).toContain("gh");
+  expect(record.lifecycle_error).toMatch(/^(git -C|gh repo view)/);
   const reportedError = first.stderr.trim().startsWith("{")
     ? JSON.parse(first.stderr).error
     : first.stderr.trim();
   expect(reportedError).toContain(record.lifecycle_error);
   const nativeExit = record.native_error.exitCode;
   if (typeof nativeExit === "number") {
-    expect(record.lifecycle_error).toContain("gh repo view Falconiere/comemory");
+    expect(record.lifecycle_error).toMatch(
+      /git -C .* fetch origin main|gh repo view Falconiere\/comemory/,
+    );
   }
   expect(first.exitCode).toBe(
     typeof nativeExit === "number" &&
