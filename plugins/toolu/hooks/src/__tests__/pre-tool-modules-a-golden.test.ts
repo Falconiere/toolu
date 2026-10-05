@@ -6,6 +6,7 @@
  * `mod.sh` in `pre-tools-parity.test.ts`.
  */
 import { expect, test } from "bun:test";
+import { implementationTag } from "@toolu/conformance/harness/entry-command";
 import { toStdin } from "@toolu/conformance/harness/fixtures";
 import { pretoolEnv, runBundle } from "@toolu/conformance/harness/pretool";
 import { PRETOOL_CORPUS, prepare } from "@toolu/conformance/harness/pretool-corpus";
@@ -20,13 +21,14 @@ const CASES = PRETOOL_CORPUS.flatMap((fixture) =>
     .map((host) => ({ fixture, host })),
 );
 
+const IMPL = implementationTag("toolu", "pre-tools");
 test("the golden corpus is the 22 rows these modules decide", () => {
   expect(CASES.length).toBe(Object.keys(golden).length);
   expect(CASES.length).toBe(22);
 });
 
 for (const { fixture, host } of CASES) {
-  test.concurrent(`${fixture.name} [${host}]`, async () => {
+  test.concurrent(`${fixture.name} [${host}]${IMPL}`, async () => {
     using sb = createSandbox({ git: true });
     const extra = await prepare(sb, host, fixture);
     const stdin =

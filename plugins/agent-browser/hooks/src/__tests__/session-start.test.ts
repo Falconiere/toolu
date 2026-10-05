@@ -2,6 +2,7 @@
 import { resolve } from "node:path";
 import { readlinkSync } from "node:fs";
 import { expect, test } from "bun:test";
+import { bundlePath } from "@toolu/conformance/harness/entry-command";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { publishedCliSuite, runStartupHook } from "@toolu/conformance/harness/startup";
 
@@ -10,7 +11,7 @@ const pluginRoot = resolve(import.meta.dir, "../../..");
 publishedCliSuite({
   plugin: "agent-browser",
   pluginRoot,
-  source: "hooks/dist/agent-browser.js",
+  source: bundlePath("", "agent-browser"),
   dir: "agent-browser",
   name: "agent-browser.sh",
   advisory:
@@ -52,6 +53,6 @@ test("OpenCode startup names the published helper and native browser skill", asy
   expect(output.hookSpecificOutput.additionalContext).toContain("agent-browser-agent-browser");
   expect(output.hookSpecificOutput.additionalContext).toContain("snapshot");
   expect(readlinkSync(`${dataRoot}/agent-browser/agent-browser.sh`)).toBe(
-    resolve(pluginRoot, "hooks/dist/agent-browser.js"),
+    bundlePath(pluginRoot, "agent-browser"),
   );
 });

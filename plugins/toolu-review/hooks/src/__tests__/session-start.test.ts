@@ -1,11 +1,12 @@
 /** toolu-review's SessionStart bundle through its real hooks.json launcher (#269, ported from session-start.bats). */
 import { resolve } from "node:path";
+import { bundlePath } from "@toolu/conformance/harness/entry-command";
 import { publishedCliSuite } from "@toolu/conformance/harness/startup";
 
 publishedCliSuite({
   plugin: "toolu-review",
   pluginRoot: resolve(import.meta.dir, "../../.."),
-  source: "hooks/dist/write-state.js",
+  source: bundlePath("", "write-state"),
   dir: "toolu-review",
   name: "write-state.sh",
   advisory:

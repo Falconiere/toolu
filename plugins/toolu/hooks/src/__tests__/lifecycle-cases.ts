@@ -9,6 +9,7 @@ import { chmodSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { PERMISSIONS_SENTINEL } from "@toolu/core/config";
 import { z } from "zod";
+import { entryArgv } from "@toolu/conformance/harness/entry-command";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch, type RunResult } from "@toolu/conformance/harness/spawn";
 
@@ -198,7 +199,7 @@ export async function launchCount(event: string, entry: string): Promise<number>
     .filter((hook) => hook.command.includes(bundle)).length;
 }
 
-/** The committed bundle for `hook`, run by the Bun running the tests. */
+/** The committed bundle for `hook`, run by the Bun running the tests, or its selected Rust command. */
 export function bundleArgv(hook: LifecycleHook): string[] {
-  return [process.execPath, join(PLUGIN, "hooks", "dist", `${hook}.js`)];
+  return entryArgv("toolu", hook, PLUGIN);
 }

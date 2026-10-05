@@ -23,7 +23,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { launcherCommand } from "@toolu/core/launcher";
+import { bundlePath, launchedArgv } from "@toolu/conformance/harness/entry-command";
 import { toStdin } from "@toolu/conformance/harness/fixtures";
 import { runPostBundle } from "@toolu/conformance/harness/posttool";
 import { installPlugins, pretoolEnv, runBundle } from "@toolu/conformance/harness/pretool";
@@ -33,7 +33,7 @@ import { PLUGIN_ROOT } from "./golden-sandbox.ts";
 
 const NUDGE = "ast-grep@toolu__search-nudge.js";
 const SAVINGS = "ast-grep@toolu__byte-savings.js";
-const dist = (entry: string) => join(PLUGIN_ROOT, "hooks/dist", `${entry}.js`);
+const dist = (entry: string) => bundlePath(PLUGIN_ROOT, entry);
 
 type Root = { name: string; env: (sb: Sandbox) => EnvPatch; dir: (sb: Sandbox) => string };
 
@@ -52,8 +52,7 @@ const ROOTS: Root[] = [
 ];
 
 function register(sb: Sandbox, env: EnvPatch = {}) {
-  const command = launcherCommand({ plugin: "ast-grep", event: "SessionStart", entry: "register" });
-  return run(["/bin/sh", "-c", command], {
+  return run(launchedArgv({ plugin: "ast-grep", event: "SessionStart", entry: "register" }), {
     cwd: sb.project,
     env: { HOME: sb.home, CLAUDE_PLUGIN_ROOT: PLUGIN_ROOT, TOOLU_BUN: process.execPath, ...env },
     stdin: "{}",

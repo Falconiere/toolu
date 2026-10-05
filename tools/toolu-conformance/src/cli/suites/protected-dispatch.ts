@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
+import { bundlePath, resolveEntryCommand } from "../../harness/entry-command.ts";
 import type { SuiteOutcome } from "../types.ts";
 import { bridgeEnvClaude, repoRoot, tmpBase } from "./helpers.ts";
 
@@ -16,17 +17,25 @@ const HookOutput = z.object({
   hookSpecificOutput: z.object({ permissionDecision: z.string() }).optional(),
 });
 
+const SELECTOR_KEYS = new Set(["TOOLU_IMPL", "TOOLU_RUST_BIN_DIR"]);
+
+/** Selector controls stay in the harness; the hook sees the environment either implementation would. */
+function hookParentEnv(): Record<string, string | undefined> {
+  return Object.fromEntries(Object.entries(process.env).filter(([key]) => !SELECTOR_KEYS.has(key)));
+}
+
 async function executeNative(
+  argv: string[],
   root: string,
   projectRoot: string,
   payload: Record<string, unknown>,
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const pluginRoot = join(root, "plugins", "toolu");
   const home = mkdtempSync(join(tmpBase(), "toolu-conformance-claude-home-"));
-  const proc = Bun.spawn([process.execPath, join(pluginRoot, "hooks", "dist", "pre-tools.js")], {
+  const proc = Bun.spawn(argv, {
     cwd: projectRoot,
     env: {
-      ...process.env,
+      ...hookParentEnv(),
       ...bridgeEnvClaude(root),
       HOME: home,
       TOOLU_CONFIG_DIR: home,
@@ -50,6 +59,58 @@ async function executeNative(
   }
 }
 
+type HookCommand = { argv: string[]; failPrefix: string };
+
+/** The pre-tools command `TOOLU_IMPL` selects; a Rust run names itself in every failure. */
+function hookCommand(root: string, failPrefix: string): HookCommand | SuiteOutcome {
+  try {
+    const command = resolveEntryCommand({
+      plugin: "toolu",
+      entry: "pre-tools",
+      bundle: bundlePath(join(root, "plugins", "toolu"), "pre-tools"),
+    });
+    const prefix =
+      command.implementation === "rust" ? `${failPrefix} [rust:toolu/pre-tools]` : failPrefix;
+    return { argv: command.argv, failPrefix: prefix };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { status: "fail", message: `${failPrefix}: setup failed: ${message}` };
+  }
+}
+
+/** A protected .env edit must be denied or asked, and a deny must leave the bytes alone. */
+function judgeDecision(
+  stdout: string,
+  failPrefix: string,
+  ctx: ProtectedDispatchContext,
+): SuiteOutcome {
+  let decision: string | undefined;
+  try {
+    const loaded: unknown = JSON.parse(stdout);
+    decision = HookOutput.parse(loaded).hookSpecificOutput?.permissionDecision;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      status: "fail",
+      message: `${failPrefix}: native dispatch output invalid: ${message}`,
+    };
+  }
+  if (decision !== "deny" && decision !== "ask") {
+    return {
+      status: "fail",
+      message: `${failPrefix}: expected deny or ask for protected .env edit, got ${decision ?? "allow"}`,
+    };
+  }
+  if (
+    decision === "deny" &&
+    ctx.envBefore !== undefined &&
+    readFileSync(ctx.envPath, "utf8") !== ctx.envBefore
+  ) {
+    return { status: "fail", message: `${failPrefix}: deny path mutated protected .env bytes` };
+  }
+  return { status: "pass" };
+}
+
 /** Claude's committed native PreToolUse bundle on the protected-file fixture. */
 export async function runProtectedEditDispatch(
   ctx: ProtectedDispatchContext,
@@ -71,36 +132,19 @@ export async function runProtectedEditDispatch(
     tool_use_id: fixtureRaw.toolCallId,
     cwd: ctx.projectRoot,
   };
-  const { stdout, stderr, exitCode } = await executeNative(root, ctx.projectRoot, payload);
+  const command = hookCommand(root, ctx.failPrefix);
+  if ("status" in command) return command;
+  const { stdout, stderr, exitCode } = await executeNative(
+    command.argv,
+    root,
+    ctx.projectRoot,
+    payload,
+  );
   if (exitCode !== 0) {
     return {
       status: "fail",
-      message: `${ctx.failPrefix}: native dispatch exited ${exitCode}: ${stderr}`,
+      message: `${command.failPrefix}: native dispatch exited ${exitCode}: ${stderr}`,
     };
   }
-  let decision: string | undefined;
-  try {
-    const loaded: unknown = JSON.parse(stdout);
-    decision = HookOutput.parse(loaded).hookSpecificOutput?.permissionDecision;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      status: "fail",
-      message: `${ctx.failPrefix}: native dispatch output invalid: ${message}`,
-    };
-  }
-  if (decision !== "deny" && decision !== "ask") {
-    return {
-      status: "fail",
-      message: `${ctx.failPrefix}: expected deny or ask for protected .env edit, got ${decision ?? "allow"}`,
-    };
-  }
-  if (
-    decision === "deny" &&
-    ctx.envBefore !== undefined &&
-    readFileSync(ctx.envPath, "utf8") !== ctx.envBefore
-  ) {
-    return { status: "fail", message: `${ctx.failPrefix}: deny path mutated protected .env bytes` };
-  }
-  return { status: "pass" };
+  return judgeDecision(stdout, command.failPrefix, ctx);
 }

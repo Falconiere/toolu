@@ -35,6 +35,7 @@ jobs:
       opencode: ${{ steps.groups.outputs.opencode }}
       docs: ${{ steps.groups.outputs.docs }}
       rust: ${{ steps.groups.outputs.rust }}
+      ports: ${{ steps.groups.outputs.ports }}
       changed: ${{ steps.groups.outputs.changed }}
     steps:
       - name: Checkout repository
@@ -269,6 +270,50 @@ jobs:
           # file(1) says "static-pie linked" (x86_64) or "statically linked" (aarch64).
           echo "$info" | grep -Eq '(static-pie|statically) linked'
 
+  # The Rust conformance leg (#409): the black-box suites against the Rust
+  # binary for each hook entry in fixtures/rust-ported.json, the one list that
+  # grows with every port. An empty list is a no-op, so no toolchain is set up.
+  rust-conformance:
+    name: rust-conformance
+    needs: changes
+    if: needs.changes.outputs.ports == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+
+      - name: Count the ported entries
+        id: ports
+        run: echo "count=$(jq '.entries | length' fixtures/rust-ported.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Install test tools
+        if: steps.ports.outputs.count != '0'
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+          npm install -g @openai/codex @ast-grep/cli
+
+      - name: Install the pinned toolchain
+        if: steps.ports.outputs.count != '0'
+        run: rustup toolchain install
+
+      - name: Cache cargo
+        if: steps.ports.outputs.count != '0'
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Rust conformance
+        run: bun run test:rust-conformance
+
   # The required status. Branch protection requires `typescript`; this job
   # carries that name. `if: always()` keeps it from being skipped (a skipped
   # required check would count as passing). It fails when `changes` failed, a
@@ -276,7 +321,7 @@ jobs:
   # was on; it passes when each job succeeded or was skipped with its group off.
   typescript:
     name: typescript
-    needs: [changes, gate, opencode, docs, rust, rust-musl]
+    needs: [changes, gate, opencode, docs, rust, rust-musl, rust-conformance]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10

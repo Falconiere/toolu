@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { join, resolve } from "node:path";
+import { bundlePath, pluginRoot } from "../entry-command.ts";
 import { run } from "../spawn.ts";
 import {
   assertLatencyBudget,
@@ -11,10 +11,7 @@ import {
   type Latency,
 } from "../timing.ts";
 
-const SAMPLE = join(
-  resolve(import.meta.dir, "../../../../.."),
-  "plugins/toolu/hooks/dist/sample.js",
-);
+const SAMPLE = bundlePath(pluginRoot("toolu"), "sample");
 
 /** The rejection of `promise`, or null when it resolved. */
 function rejection(promise: Promise<unknown>): Promise<unknown> {

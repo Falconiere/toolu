@@ -48,6 +48,7 @@
     "jscpd": "jscpd --config .jscpd.json",
     "test:conventions": "bun run format:check && bun run lint:ts && bun run typecheck && bun run guardrails && bun run knip && bun run jscpd && bun run check:gate-reach && bun run check:legacy-exemptions && bun test --timeout 60000 tooling/src/__tests__/conventions-guardrails.test.ts tooling/src/__tests__/workspace-skeleton.test.ts",
     "test:conformance": "bun run tools/toolu-conformance/src/cli/run.ts",
+    "test:rust-conformance": "bun run tooling/src/rust-conformance.ts",
     "test:unit": "bun test --timeout 60000 tooling/src packages tools plugins",
     "test:workspace": "bun run tooling/src/check-workspace.ts",
     "test:ts": "bun run test:conventions && bun run test:unit && bun run test:portable-core && bun run test:gate-coverage && bun run test:final-removal && bun run check:ci-paths && bun run check:plugin-bundles && bun run check:hooks-json && bun run test:workspace && bun run test:pack && bun run test:conformance && bun run test:context-budget && bun run benchmarks --tier deterministic && bun run bench:shell --assert",

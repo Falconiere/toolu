@@ -5,6 +5,7 @@
  * suites; this corpus also exercises registry and dispatcher-only cases.
  */
 import { expect, test } from "bun:test";
+import { implementationTag } from "@toolu/conformance/harness/entry-command";
 import { toStdin } from "@toolu/conformance/harness/fixtures";
 import { pretoolEnv, runBundle, type PretoolHost } from "@toolu/conformance/harness/pretool";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
@@ -28,9 +29,11 @@ function outcomeOf(stdout: string, exitCode: number): Outcome {
   return "advisory";
 }
 
+const IMPL = implementationTag("toolu", "pre-tools");
+
 for (const fixture of PRETOOL_CORPUS) {
   for (const host of HOSTS.filter((h) => PORTED_A[corpusKey(fixture.name, h)] === undefined)) {
-    test.concurrent(`${fixture.name} [${host}]`, async () => {
+    test.concurrent(`${fixture.name} [${host}]${IMPL}`, async () => {
       using sb = createSandbox({ git: true });
       const extra = await prepare(sb, host, fixture);
       const stdin =

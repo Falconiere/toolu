@@ -1,6 +1,7 @@
 /** statusline's SessionStart bundle through its real hooks.json launcher (ported from session-start.bats). */
 import { expect, test } from "bun:test";
 import { join, resolve } from "node:path";
+import { bundlePath } from "@toolu/conformance/harness/entry-command";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import {
   publishedCliSuite,
@@ -18,7 +19,7 @@ const ADVISORY =
 publishedCliSuite({
   plugin: "statusline",
   pluginRoot: PLUGIN,
-  source: "hooks/dist/statusline.js",
+  source: bundlePath("", "statusline"),
   dir: "statusline",
   name: "statusline.sh",
   advisory:

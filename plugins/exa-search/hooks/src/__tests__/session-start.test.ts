@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { join } from "node:path";
 import { readlinkSync } from "node:fs";
 import { expect, test } from "bun:test";
+import { bundlePath } from "@toolu/conformance/harness/entry-command";
 import { publishedCliSuite } from "@toolu/conformance/harness/startup";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { runStartupHook } from "@toolu/conformance/harness/startup";
@@ -12,7 +13,7 @@ const PLUGIN_ROOT = resolve(import.meta.dir, "../../..");
 publishedCliSuite({
   plugin: "exa-search",
   pluginRoot: PLUGIN_ROOT,
-  source: "hooks/dist/search.js",
+  source: bundlePath("", "search"),
   dir: "exa-search",
   name: "search.sh",
   advisory:
@@ -44,7 +45,7 @@ for (const key of ["sentinel-exa-key", undefined]) {
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
     const published = join(dataRoot, "exa-search/search.sh");
-    expect(readlinkSync(published)).toBe(join(PLUGIN_ROOT, "hooks/dist/search.js"));
+    expect(readlinkSync(published)).toBe(bundlePath(PLUGIN_ROOT, "search"));
     const parsed = JSON.parse(result.stdout) as {
       hookSpecificOutput: { hookEventName: string; additionalContext: string };
     };

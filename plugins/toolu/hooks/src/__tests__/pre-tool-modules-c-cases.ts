@@ -22,7 +22,7 @@ import { bashFixture, toStdin, type Fixture } from "@toolu/conformance/harness/f
 import { pretoolEnv, TOOLU_PLUGIN, type PretoolHost } from "@toolu/conformance/harness/pretool";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
-import { launcherCommand } from "@toolu/core/launcher";
+import { launchedArgv } from "@toolu/conformance/harness/entry-command";
 import type { Outcome } from "./pre-tool-modules-b-cases.ts";
 
 export type Hook = "pre-tools" | "agent-tier";
@@ -231,11 +231,8 @@ function touched(
 export type Argv = (hook: Hook, root: string) => string[];
 
 /** The committed bundle behind its generated launcher. */
-export const bundleArgv: Argv = (hook) => [
-  "/bin/sh",
-  "-c",
-  launcherCommand({ plugin: "toolu", event: "PreToolUse", entry: hook }),
-];
+export const bundleArgv: Argv = (hook, root) =>
+  launchedArgv({ plugin: "toolu", event: "PreToolUse", entry: hook }, root);
 
 /** Run `c` in a fresh sandbox with the plugin at `root`, the sandbox root normalised to `$ROOT`. */
 export async function runCase(

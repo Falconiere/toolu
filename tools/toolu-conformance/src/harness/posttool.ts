@@ -1,7 +1,7 @@
 /** Run the committed PostToolUse bundle and capture its project state. */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { launcherCommand } from "@toolu/core/launcher";
+import { launchedArgv } from "./entry-command.ts";
 import type { PretoolRun } from "./pretool.ts";
 import type { Sandbox } from "./sandbox.ts";
 import { run, type RunResult } from "./spawn.ts";
@@ -42,8 +42,8 @@ async function withState(sb: Sandbox, result: Promise<RunResult>): Promise<Postt
   return { ...(await result), state: projectState(sb) };
 }
 
-/** The hooks.json launcher, which execs the committed `hooks/dist/post-tools.js`. */
+/** The hooks.json launcher for `post-tools`, or its selected Rust command. */
 export function runPostBundle(sb: Sandbox, call: PretoolRun): Promise<PosttoolResult> {
-  const command = launcherCommand({ plugin: "toolu", event: "PostToolUse", entry: "post-tools" });
-  return withState(sb, run(["/bin/sh", "-c", command], call));
+  const argv = launchedArgv({ plugin: "toolu", event: "PostToolUse", entry: "post-tools" });
+  return withState(sb, run(argv, call));
 }

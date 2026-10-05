@@ -12,6 +12,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { bundlePath } from "@toolu/conformance/harness/entry-command";
 import { launcherCommand } from "@toolu/core/launcher";
 import { BUILTIN_MODULES, builtins, NATIVE_MODULES } from "../pre-tools/builtins.ts";
 
@@ -46,7 +47,7 @@ test("the built-in table keeps mod.sh's byte order; every module is native", () 
 });
 
 test("the dispatcher bundle has no built-in bash path and no bash bridge", () => {
-  const bundle = readFileSync(join(PLUGIN, "hooks/dist/pre-tools.js"), "utf8");
+  const bundle = readFileSync(bundlePath(PLUGIN, "pre-tools"), "utf8");
   for (const needle of ["bashModule", "runPreToolBridge", "src/bridge/", "pre-tools/modules"]) {
     expect(bundle).not.toContain(needle);
   }

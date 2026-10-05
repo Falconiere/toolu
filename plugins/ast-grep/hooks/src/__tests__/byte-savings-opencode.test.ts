@@ -9,6 +9,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { dispatchPostTool } from "@toolu/core/dispatch";
+import { entryArgv } from "@toolu/conformance/harness/entry-command";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
 import { PLUGIN_ROOT, REPO_ROOT } from "./golden-sandbox.ts";
@@ -36,7 +37,7 @@ function env(sb: Sandbox, host: Host): Record<string, string> {
 async function project(): Promise<Sandbox> {
   const sb = createSandbox({ git: true });
   sb.write("src/app.ts", "export function greet(name: string) {\n  return name;\n}\n");
-  const registered = await run([process.execPath, join(PLUGIN_ROOT, "hooks/dist/register.js")], {
+  const registered = await run(entryArgv("ast-grep", "register", PLUGIN_ROOT), {
     cwd: sb.project,
     env: env(sb, "opencode"),
     stdin: "{}",

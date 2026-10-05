@@ -2,15 +2,17 @@
 import { expect } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import {
+  bundlePath,
+  entryArgv,
+  pluginRoot,
+  publishedArgv,
+} from "@toolu/conformance/harness/entry-command";
 import type { Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
 
 export const PLUGIN = resolve(import.meta.dir, "../../..");
-export const RENDER = join(PLUGIN, "hooks/dist/statusline.js");
-export const STATUS = join(PLUGIN, "hooks/dist/status.js");
-export const SETUP = join(PLUGIN, "hooks/dist/setup.js");
-export const JEV_BUNDLE = resolve(PLUGIN, "../jev/hooks/dist/jev.js");
-const JEV_HOOK = resolve(PLUGIN, "../jev/hooks/dist/session-start.js");
+export const JEV_BUNDLE = bundlePath(pluginRoot("jev"), "jev");
 
 export const KEY = "statusline-test-key";
 
@@ -64,7 +66,10 @@ export async function publishJev(
     host === "claude"
       ? { CLAUDE_CONFIG_DIR: root, TOOLU_HOST_OVERRIDE: "claude", ...extra }
       : { CODEX_HOME: root, TOOLU_HOST_OVERRIDE: "codex", ...extra };
-  const res = await run([process.execPath, JEV_HOOK], { env, stdin: "" });
+  const res = await run(entryArgv("jev", "session-start", resolve(PLUGIN, "../jev")), {
+    env,
+    stdin: "",
+  });
   expect(res.exitCode).toBe(0);
 }
 
@@ -76,7 +81,7 @@ type RenderOpts = { payload?: string; cwd?: string; env?: EnvPatch };
 /** Run the renderer the way Claude Code does; the payload defaults to `payload(sb.project)`. */
 export async function render(sb: Sandbox, opts: RenderOpts = {}): Promise<string> {
   const env = { HOME: sb.home, CLAUDE_CONFIG_DIR: cfgOf(sb), TYPESAFE_API_KEY: KEY, ...opts.env };
-  const res = await run([RENDER], {
+  const res = await run(publishedArgv("statusline", "statusline", PLUGIN), {
     cwd: opts.cwd ?? sb.project,
     env,
     stdin: opts.payload ?? payload(sb.project),
@@ -92,7 +97,8 @@ export async function report(
   env: EnvPatch = {},
   cwd = sb.root,
 ): Promise<string> {
-  const argv = dir === undefined ? [process.execPath, STATUS] : [process.execPath, STATUS, dir];
+  const status = entryArgv("statusline", "status", PLUGIN);
+  const argv = dir === undefined ? status : [...status, dir];
   const res = await run(argv, {
     cwd,
     env: { HOME: sb.home, CODEX_HOME: sb.codexHome, TYPESAFE_API_KEY: KEY, ...env },

@@ -15,8 +15,9 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { z } from "zod";
+import { bundlePath, pluginName, resolveEntryCommand } from "./entry-command.ts";
 import { createSandbox, type Sandbox } from "./sandbox.ts";
 import { run, type EnvPatch, type RunResult } from "./spawn.ts";
 
@@ -66,7 +67,10 @@ export function startupRoot(host: StartupHost, sb: Sandbox): string {
   return host === "claude" ? join(sb.home, ".claude") : sb.codexHome;
 }
 
-/** Run `pluginRoot`'s SessionStart launcher for `entry` with `env`, stdin naming `source`. */
+/**
+ * Run `pluginRoot`'s SessionStart launcher for `entry` with `env`, stdin naming
+ * `source`; under `TOOLU_IMPL`, the selected Rust command runs instead.
+ */
 export function runStartupHook(
   pluginRoot: string,
   entry: string,
@@ -74,8 +78,13 @@ export function runStartupHook(
   env: EnvPatch,
   source = "startup",
 ): Promise<RunResult> {
-  const command = hookCommand(pluginRoot, "SessionStart", entry);
-  return run(["sh", "-c", command], { cwd: sb.project, env, stdin: JSON.stringify({ source }) });
+  const { argv } = resolveEntryCommand({
+    plugin: pluginName(pluginRoot),
+    entry,
+    bundle: resolve(bundlePath(pluginRoot, entry)),
+    defaultArgv: ["sh", "-c", hookCommand(pluginRoot, "SessionStart", entry)],
+  });
+  return run(argv, { cwd: sb.project, env, stdin: JSON.stringify({ source }) });
 }
 
 export type PublishedCliSpec = {
@@ -187,11 +196,12 @@ async function noBunAtAll(spec: PublishedCliSpec): Promise<void> {
 async function failsSoftWithoutSource(spec: PublishedCliSpec): Promise<void> {
   using sb = createSandbox();
   const fake = join(sb.root, "fake-plugin");
-  const bundle = join(fake, "hooks/dist/session-start.js");
+  const bundle = bundlePath(fake, "session-start");
   mkdirSync(dirname(bundle), { recursive: true });
-  copyFileSync(join(spec.pluginRoot, "hooks/dist/session-start.js"), bundle);
+  copyFileSync(bundlePath(spec.pluginRoot, "session-start"), bundle);
   const env = startupEnv("claude", sb, fake);
-  const res = await run([process.execPath, bundle], { cwd: sb.project, env, stdin: "{}" });
+  const { argv } = resolveEntryCommand({ plugin: spec.plugin, entry: "session-start", bundle });
+  const res = await run(argv, { cwd: sb.project, env, stdin: "{}" });
   expect(res).toMatchObject({ exitCode: 0, stdout: noticeStdout(spec, "claude"), stderr: "" });
   expect(existsSync(join(startupRoot("claude", sb), spec.dir))).toBe(false);
 }

@@ -7,6 +7,7 @@
  * its golden is the known-wrong baseline and the bundle must differ.
  */
 import { expect, test } from "bun:test";
+import { implementationTag } from "@toolu/conformance/harness/entry-command";
 import { MAX_SHELL_INPUT } from "@toolu/core/shell";
 import { decisionOf } from "./pre-tool-modules-b-cases.ts";
 import {
@@ -39,7 +40,7 @@ test("golden covers every case, and case names are unique", () => {
 
 for (const c of MODULE_CASES) {
   test.concurrent(
-    c.name,
+    `${c.name}${implementationTag("toolu", c.hook)}`,
     async () => {
       const want = expected(c);
       const got = await runCase(c);
@@ -71,7 +72,7 @@ const oversize = group({})({
 });
 
 test.concurrent(
-  oversize.name,
+  `${oversize.name}${implementationTag("toolu", oversize.hook)}`,
   async () => {
     const { text } = decisionOf((await runCase(oversize)).stdout);
     for (const needle of ["Code review required", "docs-sync:", "plan-ledger:"]) {

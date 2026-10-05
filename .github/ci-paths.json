@@ -42,6 +42,17 @@
       "clippy.toml",
       "crates/**",
       ".cargo/**"
+    ],
+    "ports": [
+      "fixtures/rust-ported.json",
+      "tooling/src/rust-conformance.ts",
+      "tools/toolu-conformance/**",
+      "plugins/**",
+      "packages/**",
+      "Cargo.toml",
+      "Cargo.lock",
+      "rust-toolchain.toml",
+      "crates/**"
     ]
   },
   "runEverything": [".github/**", "bun.lock"],
@@ -69,7 +80,8 @@
         "opencode": "opencode",
         "docs": "docs",
         "rust": "rust",
-        "rust-musl": "rust"
+        "rust-musl": "rust",
+        "rust-conformance": "ports"
       }
     },
     "toolu-review.yml": {

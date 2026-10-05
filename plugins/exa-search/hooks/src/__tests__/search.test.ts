@@ -4,13 +4,13 @@
  */
 import { afterAll, beforeEach, expect, test } from "bun:test";
 import { startHttpsFixture } from "@toolu/conformance/https-fixture";
+import { bundlePath, pluginRoot, publishedArgv } from "@toolu/conformance/harness/entry-command";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
 import { symlinkSync } from "node:fs";
-import { join } from "node:path";
 import { CRAWL_USAGE, MAIN_USAGE, SEARCH_USAGE, SIMILAR_USAGE } from "../exa/usage.ts";
 
-const BUNDLE = join(import.meta.dir, "../../dist/search.js");
+const ARGV = publishedArgv("exa-search", "search");
 const fixture = await startHttpsFixture(["api.exa.ai"]);
 
 afterAll(() => fixture.stop());
@@ -21,7 +21,7 @@ async function exa(args: readonly string[], key: string | null = "k") {
   // Never inherit a developer's real key.
   delete env["EXA_API_KEY"];
   if (key !== null) env["EXA_API_KEY"] = key;
-  const child = Bun.spawn([BUNDLE, ...args], { env, stdout: "pipe", stderr: "pipe" });
+  const child = Bun.spawn([...ARGV, ...args], { env, stdout: "pipe", stderr: "pipe" });
   const [stdout, stderr, status] = await Promise.all([
     new Response(child.stdout).text(),
     new Response(child.stderr).text(),
@@ -187,7 +187,7 @@ test("a project .env key does not satisfy the published executable's credential 
   using sb = createSandbox();
   sb.write(".env", "EXA_API_KEY=dotenv-only-sentinel\n");
   const helper = sb.path("search.sh");
-  symlinkSync(BUNDLE, helper);
+  symlinkSync(bundlePath(pluginRoot("exa-search"), "search"), helper);
   const result = await run([helper, "search", "-q", "needle"], {
     cwd: sb.project,
     env: { ...fixture.env, EXA_API_KEY: undefined },

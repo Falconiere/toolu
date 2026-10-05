@@ -8,7 +8,7 @@
 import { expect, test } from "bun:test";
 import { mkdirSync, readdirSync, readFileSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { launcherCommand } from "@toolu/core/launcher";
+import { bundlePath, launchedArgv } from "@toolu/conformance/harness/entry-command";
 import { runPostBundle } from "@toolu/conformance/harness/posttool";
 import { installPlugins, pretoolEnv } from "@toolu/conformance/harness/pretool";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
@@ -16,7 +16,7 @@ import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
 import { PLUGIN_ROOT } from "./golden-harness.ts";
 
 const MODULE = "ts-quality@toolu__ts-quality.js";
-const BUNDLE = join(PLUGIN_ROOT, "hooks/dist/post-tool-use.js");
+const BUNDLE = bundlePath(PLUGIN_ROOT, "post-tool-use");
 
 type Root = { name: string; env: (sb: Sandbox) => EnvPatch; dir: (sb: Sandbox) => string };
 
@@ -35,16 +35,18 @@ const ROOTS: Root[] = [
 ];
 
 function register(sb: Sandbox, env: EnvPatch = {}) {
-  const command = launcherCommand({
-    plugin: "ts-quality",
-    event: "SessionStart",
-    entry: "register",
-  });
-  return run(["/bin/sh", "-c", command], {
-    cwd: sb.project,
-    env: { HOME: sb.home, CLAUDE_PLUGIN_ROOT: PLUGIN_ROOT, TOOLU_BUN: process.execPath, ...env },
-    stdin: "{}",
-  });
+  return run(
+    launchedArgv({
+      plugin: "ts-quality",
+      event: "SessionStart",
+      entry: "register",
+    }),
+    {
+      cwd: sb.project,
+      env: { HOME: sb.home, CLAUDE_PLUGIN_ROOT: PLUGIN_ROOT, TOOLU_BUN: process.execPath, ...env },
+      stdin: "{}",
+    },
+  );
 }
 
 function postDir(root: string): string {

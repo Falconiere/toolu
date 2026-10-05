@@ -6,7 +6,7 @@
  */
 import { expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { entryArgv } from "@toolu/conformance/harness/entry-command";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
 import { REPORT_CASES, REPORT_DEVIATIONS } from "./cases-report.ts";
@@ -16,7 +16,6 @@ import { readGolden } from "./golden-io.ts";
 import { PLUGIN_ROOT } from "./golden-sandbox.ts";
 
 const golden = readGolden().report;
-const REPORT = join(PLUGIN_ROOT, "hooks/dist/byte-savings-report.js");
 
 test("the golden holds exactly the report cases", () => {
   expect(Object.keys(golden).toSorted()).toEqual(REPORT_CASES.map((c) => c.name).toSorted());
@@ -40,7 +39,9 @@ async function reportOn(ledger: string) {
   using sb = createSandbox();
   const file = sb.path("ledger.jsonl");
   writeFileSync(file, ledger);
-  const res = await run([process.execPath, REPORT, file], { cwd: sb.root });
+  const res = await run([...entryArgv("ast-grep", "byte-savings-report", PLUGIN_ROOT), file], {
+    cwd: sb.root,
+  });
   return { ...res, stderr: res.stderr.split(file).join("<LEDGER>") };
 }
 

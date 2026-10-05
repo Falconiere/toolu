@@ -1,11 +1,12 @@
 /** context7's SessionStart bundle through its real hooks.json launcher (#269, ported from session-start.bats). */
 import { resolve } from "node:path";
+import { bundlePath } from "@toolu/conformance/harness/entry-command";
 import { publishedCliSuite } from "@toolu/conformance/harness/startup";
 
 publishedCliSuite({
   plugin: "context7",
   pluginRoot: resolve(import.meta.dir, "../../.."),
-  source: "hooks/dist/search.js",
+  source: bundlePath("", "search"),
   dir: "context7",
   name: "search.sh",
   advisory:

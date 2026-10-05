@@ -13,6 +13,7 @@ import {
   toStdin,
   writeFixture,
 } from "../fixtures.ts";
+import { bundlePath } from "../entry-command.ts";
 import { HostOutputError, readHostOutcome } from "../hosts.ts";
 import { createSandbox, type Sandbox } from "../sandbox.ts";
 import { runHook } from "../spawn.ts";
@@ -20,7 +21,7 @@ import { runHook } from "../spawn.ts";
 const ROOT = resolve(import.meta.dir, "../../../../..");
 const PLUGIN_ROOT = join(ROOT, "plugins/toolu");
 /** toolu's PreToolUse hook: the protected-files gate is native in it since #260. */
-const PRE_TOOLS = join(PLUGIN_ROOT, "hooks/dist/pre-tools.js");
+const PRE_TOOLS = bundlePath(PLUGIN_ROOT, "pre-tools");
 const BLOCK = { version: 1, gates: { protectedFiles: { mode: "block" } } };
 
 function protectedProject(): Sandbox {

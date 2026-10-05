@@ -6,12 +6,12 @@
 import { expect, test } from "bun:test";
 import { chmodSync, mkdirSync, readlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { bundlePath, entryArgv } from "@toolu/conformance/harness/entry-command";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch, type RunResult } from "@toolu/conformance/harness/spawn";
 import { z } from "zod";
 
 const PLUGIN = resolve(import.meta.dir, "../../..");
-const STARTUP = join(PLUGIN, "hooks/dist/session-start.js");
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 
 const OutputSchema = z.strictObject({
@@ -47,7 +47,7 @@ function opencodeEnv(sb: Sandbox): EnvPatch {
 }
 
 function startup(sb: Sandbox, source: string): Promise<RunResult> {
-  return run([process.execPath, STARTUP], {
+  return run(entryArgv("context7", "session-start", PLUGIN), {
     cwd: sb.project,
     env: opencodeEnv(sb),
     stdin: JSON.stringify({ source }),
@@ -57,7 +57,7 @@ function startup(sb: Sandbox, source: string): Promise<RunResult> {
 test.concurrent("startup publishes the helper and names it with Bun and the native skill", async () => {
   using sb = createSandbox();
   const context = contextOf(await startup(sb, "startup"));
-  expect(readlinkSync(helper(sb))).toBe(join(PLUGIN, "hooks/dist/search.js"));
+  expect(readlinkSync(helper(sb))).toBe(bundlePath(PLUGIN, "search"));
   expect(context).toContain(
     `you MUST run ${quote(process.execPath)} --no-env-file ${quote(helper(sb))} FIRST`,
   );
@@ -69,7 +69,7 @@ test.concurrent("compaction relinks the helper and prints nothing", async () => 
   using sb = createSandbox();
   const res = await startup(sb, "compact");
   expect(res).toMatchObject({ exitCode: 0, stdout: "", stderr: "" });
-  expect(readlinkSync(helper(sb))).toBe(join(PLUGIN, "hooks/dist/search.js"));
+  expect(readlinkSync(helper(sb))).toBe(bundlePath(PLUGIN, "search"));
 });
 
 test.concurrent("a user's own search.sh is kept and named alone", async () => {
@@ -85,7 +85,7 @@ test.concurrent("a user's own search.sh is kept and named alone", async () => {
 test.concurrent("a data root with a space and a quote is quoted for the shell", async () => {
   using sb = createSandbox();
   const root = join(sb.project, "it's a dir");
-  const res = await run([process.execPath, STARTUP], {
+  const res = await run(entryArgv("context7", "session-start", PLUGIN), {
     cwd: sb.project,
     env: { ...opencodeEnv(sb), TOOLU_CONFIG_DIR: root },
     stdin: "not json",

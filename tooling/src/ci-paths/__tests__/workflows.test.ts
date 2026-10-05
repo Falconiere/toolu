@@ -106,6 +106,7 @@ test.concurrent("the Rust jobs run the full cargo gate and both musl targets (#4
     "docs",
     "rust",
     "rust-musl",
+    "rust-conformance",
   ]);
   const Matrix = z.looseObject({
     strategy: z.looseObject({
@@ -139,4 +140,19 @@ test.concurrent("the Rust jobs run the full cargo gate and both musl targets (#4
     'cargo build --workspace --release --locked --target "${{ matrix.target }}"',
   );
   expect(musl.some((run) => run.includes("grep -Eq '(static-pie|statically) linked'"))).toBe(true);
+});
+
+test.concurrent("the Rust conformance leg reads the port list and no-ops when it is empty (#409 AC-5)", () => {
+  const job = workflow("tests.yml").jobs["rust-conformance"];
+  expect(job?.if).toBe("needs.changes.outputs.ports == 'true'");
+  expect(config.workflows["tests.yml"]?.jobs["rust-conformance"]).toBe("ports");
+  expect(config.groups.ports).toContain("fixtures/rust-ported.json");
+  const runs = steps("tests.yml", "rust-conformance").map((step) => step.run);
+  expect(runs).toContain("bun run test:rust-conformance");
+  expect(scripts["test:rust-conformance"]).toBe("bun run tooling/src/rust-conformance.ts");
+  const Gated = z.looseObject({ if: z.string().optional(), run: z.string().optional() });
+  const toolchain = Steps.parse(job).steps.map((step) => Gated.parse(step));
+  expect(toolchain.find((step) => step.run === "rustup toolchain install")?.if).toBe(
+    "steps.ports.outputs.count != '0'",
+  );
 });

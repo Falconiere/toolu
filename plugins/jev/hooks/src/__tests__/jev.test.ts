@@ -1,10 +1,11 @@
 import { afterAll, beforeEach, expect, test } from "bun:test";
 import { startHttpsFixture } from "@toolu/conformance/https-fixture";
+import { publishedArgv } from "@toolu/conformance/harness/entry-command";
 import { join } from "node:path";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 
-const bundle = join(import.meta.dir, "../../dist/jev.js");
+const ARGV = publishedArgv("jev", "jev");
 const fixture = await startHttpsFixture(["api.typesafe.ai"]);
 afterAll(() => fixture.stop());
 beforeEach(() => fixture.plan([]));
@@ -25,7 +26,7 @@ async function jev(
   delete env.TYPESAFE_API_KEY;
   if (!("JEV_TIMEOUT" in extraEnv)) delete env.JEV_TIMEOUT;
   if (key !== null) env.TYPESAFE_API_KEY = key;
-  const child = Bun.spawn([bundle, ...args], {
+  const child = Bun.spawn([...ARGV, ...args], {
     env,
     stdin: "pipe",
     stdout: "pipe",

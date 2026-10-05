@@ -9,11 +9,11 @@
 import { expect, test } from "bun:test";
 import { mkdirSync, realpathSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
+import { entryArgv } from "@toolu/conformance/harness/entry-command";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type RunResult } from "@toolu/conformance/harness/spawn";
 import { PLUGIN_ROOT } from "./golden-sandbox.ts";
 
-const WRAPPER = join(PLUGIN_ROOT, "hooks/dist/ast-grep.js");
 const found = Bun.which("ast-grep") ?? Bun.which("sg");
 if (found === null) throw new Error("ast-grep-cli.test: the real ast-grep CLI must be on PATH");
 const REAL = realpathSync(found);
@@ -52,7 +52,7 @@ async function outcome(argv: string[], sb: Sandbox, path: string): Promise<Outco
 }
 
 function wrapper(sb: Sandbox, path: string, args: readonly string[]): Promise<Outcome> {
-  return outcome([process.execPath, WRAPPER, ...args], sb, path);
+  return outcome([...entryArgv("ast-grep", "ast-grep", PLUGIN_ROOT), ...args], sb, path);
 }
 
 function cli(sb: Sandbox, binary: string, args: readonly string[]): Promise<Outcome> {

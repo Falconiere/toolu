@@ -14,12 +14,13 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
+import { bundlePath, pluginRoot } from "@toolu/conformance/harness/entry-command";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
 import { registerModules } from "../registry-register.ts";
 
-const BUNDLE = resolve(import.meta.dir, "../../../../../plugins/toolu/hooks/dist/sample.js");
+const BUNDLE = bundlePath(pluginRoot("toolu"), "sample");
 const FIXTURE = join(import.meta.dir, "fixtures", "register-fixture.ts");
 const IS_ROOT = process.getuid?.() === 0;
 

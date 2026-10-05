@@ -5,7 +5,7 @@
  */
 import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { launcherCommand } from "@toolu/core/launcher";
+import { launchedArgv } from "./entry-command.ts";
 import type { Sandbox } from "./sandbox.ts";
 import { hostEnv, run, type EnvPatch, type RunResult } from "./spawn.ts";
 
@@ -52,15 +52,11 @@ export async function registerPlugin(
   plugin: string,
 ): Promise<void> {
   const root = join(REPO_ROOT, "plugins", plugin);
-  const argv = [
-    "/bin/sh",
-    "-c",
-    launcherCommand({ plugin, event: "SessionStart", entry: "register" }),
-  ];
   const env = pretoolEnv(sb, host, {
     CLAUDE_PLUGIN_ROOT: root,
     ...(host === "codex" ? { PLUGIN_ROOT: root } : {}),
   });
+  const argv = launchedArgv({ plugin, event: "SessionStart", entry: "register" }, root);
   const result = await run(argv, { cwd: sb.project, env, stdin: "{}" });
   if (result.exitCode !== 0) {
     throw new Error(`register ${plugin} exited ${String(result.exitCode)}: ${result.stderr}`);
@@ -69,10 +65,10 @@ export async function registerPlugin(
 
 export type PretoolRun = { cwd: string; env: EnvPatch; stdin: string };
 
-/** The hooks.json launcher, which execs the committed `hooks/dist/pre-tools.js`. */
+/** The hooks.json launcher for `pre-tools`, or its selected Rust command. */
 export function runBundle(call: PretoolRun): Promise<RunResult> {
-  const command = launcherCommand({ plugin: "toolu", event: "PreToolUse", entry: "pre-tools" });
-  return run(["/bin/sh", "-c", command], call);
+  const argv = launchedArgv({ plugin: "toolu", event: "PreToolUse", entry: "pre-tools" });
+  return run(argv, call);
 }
 
 function isErrno(error: unknown, code: string): boolean {

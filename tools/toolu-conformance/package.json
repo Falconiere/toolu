@@ -11,6 +11,7 @@
     "./run-stub": "./src/cli/run-stub.ts",
     "./harness/sandbox": "./src/harness/sandbox.ts",
     "./harness/spawn": "./src/harness/spawn.ts",
+    "./harness/entry-command": "./src/harness/entry-command.ts",
     "./harness/hosts": "./src/harness/hosts.ts",
     "./harness/fixtures": "./src/harness/fixtures.ts",
     "./harness/timing": "./src/harness/timing.ts",

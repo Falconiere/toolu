@@ -4,11 +4,12 @@
  * executable that logs its argv; the wrapper itself runs for real.
  */
 import { afterAll, beforeEach, expect, test } from "bun:test";
+import { publishedArgv } from "@toolu/conformance/harness/entry-command";
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const BUNDLE = join(import.meta.dir, "../../dist/agent-browser.js");
+const ARGV = publishedArgv("agent-browser", "agent-browser");
 const dir = mkdtempSync(join(tmpdir(), "agent-browser-"));
 const LOG = join(dir, "argv.log");
 const STUB = join(dir, "agent-browser");
@@ -46,7 +47,7 @@ async function until(done: () => boolean, deadline = Date.now() + 5000): Promise
 
 async function wrap(args: readonly string[], extra: Record<string, string> = {}) {
   const env = { ...process.env, AB_LOG: LOG, AGENT_BROWSER_BIN: STUB, ...extra };
-  const child = Bun.spawn([BUNDLE, ...args], { env, stdout: "pipe", stderr: "pipe" });
+  const child = Bun.spawn([...ARGV, ...args], { env, stdout: "pipe", stderr: "pipe" });
   const [stderr, status] = await Promise.all([new Response(child.stderr).text(), child.exited]);
   return { status, stderr, argv: readFileSync(LOG, "utf8") };
 }
@@ -97,7 +98,7 @@ test("an absent binary prints the install guide and exits 127", async () => {
 
 test("stdin and stdout pass straight through to and from the binary", async () => {
   const env = { ...process.env, AB_LOG: LOG, AGENT_BROWSER_BIN: STUB, STUB_ECHO: "1" };
-  const child = Bun.spawn([BUNDLE, "eval"], { env, stdin: "pipe", stdout: "pipe" });
+  const child = Bun.spawn([...ARGV, "eval"], { env, stdin: "pipe", stdout: "pipe" });
   void child.stdin.write("document.title");
   void child.stdin.end();
   const [stdout, status] = await Promise.all([new Response(child.stdout).text(), child.exited]);
@@ -124,7 +125,7 @@ test("--raw still needs the binary", async () => {
 
 test("SIGTERM to the wrapper reaches the binary, whose status the wrapper returns", async () => {
   const env = { ...process.env, AB_LOG: LOG, AGENT_BROWSER_BIN: STUB, STUB_WAIT: "1" };
-  const child = Bun.spawn([BUNDLE, "open", "https://example.test"], { env, stdout: "pipe" });
+  const child = Bun.spawn([...ARGV, "open", "https://example.test"], { env, stdout: "pipe" });
   // Wait until the binary's SIGTERM handler is installed (it logs "ready" after).
   await until(() => readFileSync(LOG, "utf8").includes("ready"));
   child.kill("SIGTERM");

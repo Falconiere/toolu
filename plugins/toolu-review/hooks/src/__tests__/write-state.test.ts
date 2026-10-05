@@ -9,15 +9,14 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { entryArgv, launchedArgv } from "@toolu/conformance/harness/entry-command";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch, type RunResult } from "@toolu/conformance/harness/spawn";
-import { launcherCommand } from "@toolu/core/launcher";
 import { z } from "zod";
 
 const PLUGIN = resolve(import.meta.dir, "../../..");
-const BUNDLE = join(PLUGIN, "hooks/dist/write-state.js");
 const TOOLU_PLUGIN = resolve(PLUGIN, "../toolu");
-const GATE = launcherCommand({ plugin: "toolu", event: "PreToolUse", entry: "pre-tools" });
+const GATE = { plugin: "toolu", event: "PreToolUse", entry: "pre-tools" } as const;
 
 const StateSchema = z.strictObject({
   version: z.literal(2),
@@ -33,7 +32,10 @@ const StateSchema = z.strictObject({
 });
 
 function writeState(sb: Sandbox, args: string[], env: EnvPatch = {}, cwd = sb.project) {
-  return run([process.execPath, BUNDLE, ...args], { cwd, env: { HOME: sb.home, ...env } });
+  return run([...entryArgv("toolu-review", "write-state", PLUGIN), ...args], {
+    cwd,
+    env: { HOME: sb.home, ...env },
+  });
 }
 
 /** The state file a successful run printed, schema-checked, with its raw bytes. */
@@ -66,7 +68,7 @@ function feature(sb: Sandbox, branch = "feature"): void {
 /** The real PreToolUse bundle judging `command` from `sb.project`. */
 async function gate(sb: Sandbox, command: string) {
   const payload = JSON.stringify({ tool_name: "Bash", tool_input: { command } });
-  const res = await run(["/bin/sh", "-c", GATE], {
+  const res = await run(launchedArgv(GATE), {
     cwd: sb.project,
     env: {
       HOME: sb.home,
