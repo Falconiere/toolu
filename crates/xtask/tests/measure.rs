@@ -122,6 +122,7 @@ fn usage_errors_exit_2() {
   assert!(String::from_utf8_lossy(&no_out.stderr).contains("measure needs --out FILE"));
   let no_command = xtask(&["measure", "--out", "/tmp/unused-report.json"]).unwrap();
   assert_eq!(no_command.status.code(), Some(2));
+  assert!(String::from_utf8_lossy(&no_command.stderr).contains("measure needs a command after --"));
   let unwritable = xtask(&["measure", "--out", "/no/such/dir/report.json", "--", "true"]).unwrap();
   assert_eq!(unwritable.status.code(), Some(2));
   assert!(String::from_utf8_lossy(&unwritable.stderr).contains("cannot write /no/such/dir"));

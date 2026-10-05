@@ -329,11 +329,6 @@ jobs:
       - name: Rust conformance
         run: bun run test:rust-conformance
 
-  # The required status. Branch protection requires `typescript`; this job
-  # carries that name. `if: always()` keeps it from being skipped (a skipped
-  # required check would count as passing). It fails when `changes` failed, a
-  # needed job failed or was cancelled, or a job was skipped although its group
-  # was on; it passes when each job succeeded or was skipped with its group off.
   # Hook resource benchmark (#410): every hook entry's max RSS, CPU (children
   # included) and wall per spawn, measured by `cargo xtask measure`. Linux
   # asserts the entries in fixtures/rust-ported.json against
@@ -395,6 +390,11 @@ jobs:
           path: ${{ runner.temp }}/hook-resources.json
           if-no-files-found: warn
 
+  # The required status. Branch protection requires `typescript`; this job
+  # carries that name. `if: always()` keeps it from being skipped (a skipped
+  # required check would count as passing). It fails when `changes` failed, a
+  # needed job failed or was cancelled, or a job was skipped although its group
+  # was on; it passes when each job succeeded or was skipped with its group off.
   typescript:
     name: typescript
     needs: [changes, gate, opencode, docs, rust, rust-musl, rust-conformance, hook-bench]

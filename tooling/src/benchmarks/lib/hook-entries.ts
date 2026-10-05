@@ -3,10 +3,11 @@
  * whose `hooks.json` command launches `hooks/dist/<entry>.js`, with the event it
  * is first registered under and the exact launcher command hosts run.
  */
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { pluginName } from "@toolu/conformance/harness/entry-command";
 import { z } from "zod";
+import { loadJson } from "./hook-data.ts";
 
 export type HookEntry = {
   /** `<plugin>/<entry>`, the `TOOLU_IMPL` and budget key. */
@@ -33,7 +34,7 @@ function entriesOf(root: string): HookEntry[] {
   const file = join(root, "hooks", "hooks.json");
   if (!existsSync(file)) return [];
   const plugin = pluginName(root);
-  const parsed = HooksFile.parse(JSON.parse(readFileSync(file, "utf8")));
+  const parsed = loadJson(file, HooksFile);
   return Object.entries(parsed.hooks).flatMap(([event, groups]) =>
     groups.flatMap((group) =>
       group.hooks.flatMap(({ command }) => {

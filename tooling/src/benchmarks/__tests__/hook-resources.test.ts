@@ -13,12 +13,13 @@ import {
   BenchError,
   Budgets,
   type EntryResult,
-  type MeasureReport,
+  MeasureReport,
   Payloads,
   loadJson,
 } from "../lib/hook-data.ts";
 import { discoverEntries } from "../lib/hook-entries.ts";
 import { payloadStdin } from "../lib/hook-fixture.ts";
+import { buildMeasurer } from "../lib/hook-measurer.ts";
 import { MIB, summarize, violations } from "../lib/hook-report.ts";
 
 const ROOT = resolve(import.meta.dir, "../../../..");
@@ -157,4 +158,32 @@ test("a ported entry with no hooks.json launcher fails before anything is measur
   );
   expect(result.exitCode).toBe(2);
   expect(result.stderr).toContain("ported entries with no hooks.json launcher: toolu/nope");
+});
+
+test("a malformed hooks.json or measurer report is a setup error naming the file", () => {
+  using sb = createSandbox();
+  sb.write("plugins/broken/hooks/hooks.json", "{ not json");
+  expect(() => discoverEntries(sb.path("plugins"))).toThrow(BenchError);
+  expect(() => discoverEntries(sb.path("plugins"))).toThrow(
+    sb.path("plugins/broken/hooks/hooks.json"),
+  );
+  const report = sb.write("report.json", { version: 1, command: ["true"], exitCode: 0 });
+  let caught: unknown;
+  try {
+    loadJson(report, MeasureReport);
+  } catch (error) {
+    caught = error;
+  }
+  expect(caught).toBeInstanceOf(BenchError);
+  expect(caught instanceof BenchError && caught.exitCode).toBe(2);
+  expect(String(caught)).toContain(`${report} is malformed`);
+});
+
+test("the measurer path is absolute even for a relative CARGO_TARGET_DIR", () => {
+  // `true` stands in for an up-to-date `cargo build`; only the returned path is under test.
+  const path = buildMeasurer(ROOT, { CARGO: "true", CARGO_TARGET_DIR: "target-alt" });
+  expect(path).toBe(join(ROOT, "target-alt", "release", "xtask"));
+  expect(() => buildMeasurer(ROOT, { CARGO: "false" })).toThrow(
+    "cargo build --release -p xtask failed",
+  );
 });

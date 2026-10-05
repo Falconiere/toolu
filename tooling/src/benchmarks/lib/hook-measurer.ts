@@ -2,16 +2,17 @@
  * The native measurer (#410): `cargo xtask measure` runs one command and reports
  * its tree's max RSS, CPU and wall from `getrusage(RUSAGE_CHILDREN)`. Bun cannot
  * measure this itself: on Linux a child inherits its spawner's RSS high-water
- * mark. The measurer's own (about 4 MiB for the release build, 5.5 MiB debug) is
- * therefore the floor: a reading above it is exact, one at it means "at most".
+ * mark, so the measurer's own RSS is the floor (about 3 MiB on the Linux CI
+ * runner, 1.3 MiB on macOS): a reading above it is exact, one at it means
+ * "at most the floor".
  */
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
 import { envOr } from "../../env.ts";
-import { BenchError, MeasureReport } from "./hook-data.ts";
+import { BenchError, MeasureReport, loadJson } from "./hook-data.ts";
 
 /** Build the release measurer once (a no-op when current) and return its path. */
 export function buildMeasurer(root: string, env: EnvPatch = process.env): string {
@@ -26,8 +27,12 @@ export function buildMeasurer(root: string, env: EnvPatch = process.env): string
   if (built.status !== 0) {
     throw new BenchError(`cargo build --release -p xtask failed:\n${built.stderr.trim()}`);
   }
-  return join(envOr("CARGO_TARGET_DIR", join(root, "target"), env), "release", "xtask");
+  // Absolute: the measurer is spawned from the sandbox, not from `root`.
+  return resolve(root, envOr("CARGO_TARGET_DIR", "target", env), "release", "xtask");
 }
+
+/** One spawn may take this long; the slowest Bun hook takes well under a second. */
+const SPAWN_TIMEOUT_MS = 30_000;
 
 export type Spawn = { argv: string[]; cwd: string; env: EnvPatch; stdin: string };
 
@@ -63,13 +68,17 @@ export async function measureOnce(
       cwd: spawn.cwd,
       env: spawn.env,
       stdin: spawn.stdin,
+      timeoutMs: SPAWN_TIMEOUT_MS,
     });
-    if (result.exitCode !== 0 || result.timedOut) {
+    if (result.timedOut) {
+      throw new BenchError(`${label}: timed out after ${String(SPAWN_TIMEOUT_MS)} ms`);
+    }
+    if (result.exitCode !== 0) {
       throw new BenchError(
         `${label}: measurer exited ${String(result.exitCode)}:\n${tail(result.stderr)}`,
       );
     }
-    const report = MeasureReport.parse(JSON.parse(readFileSync(out, "utf8")));
+    const report = loadJson(out, MeasureReport);
     if (report.exitCode !== 0) {
       const status =
         report.exitCode === null
