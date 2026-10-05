@@ -76,7 +76,7 @@ test.concurrent("the docs job runs only the documentation checks (AC-1)", () => 
 
 test.concurrent("review runs for any non-release change and fails open on a broken changes job (AC-1, AC-2)", () => {
   expect(workflow("toolu-review.yml").jobs.review?.if).toBe(
-    "${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.changed == 'true') }}",
+    "${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.changed != 'false') }}",
   );
 });
 

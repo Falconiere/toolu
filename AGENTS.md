@@ -63,11 +63,12 @@ Each gated job carries a job-level `if`, and a job skipped that way reports Succ
 
 | Job | Group | Runs |
 |-----|-------|------|
+| `changes` | — | `tooling/src/ci-changes.ts`: one `true`/`false` output per group, plus `changed` |
 | `gate` (`bun run test`) | `ts` | `bun run test` (`test:ts`): format, lint, typecheck, guardrails, gate reach, legacy exemptions, unit, conformance, bundle/launcher drift, CI path check, context and latency budgets, deterministic benchmarks |
 | `opencode (ubuntu-latest)`, `opencode (macos-latest)` | `opencode` | `bun run test:opencode`, the real OpenCode acceptance |
-| `docs` | `docs` | `bun run test:docs`: the doc-reading checks from `test:ts` |
-| `review` | `changed` | The code review. Runs for any change outside the release-only files, docs included, and runs anyway if `changes` failed |
-| `typescript` | aggregate, `if: always()` | `tooling/src/ci-aggregate.ts`. Fails when `changes` failed, a needed job failed or was cancelled, or a job was skipped while its group was on |
+| `docs` | `docs` | `bun run test:docs`: the checks and tests from `test:ts` that read `docs/**` or root Markdown |
+| `review` | `changed` | The code review. Runs for any change outside the release-only files, docs included, and runs anyway if `changes` failed or left `changed` empty |
+| `typescript` | aggregate, `if: always()` | `tooling/src/ci-aggregate.ts`. Fails when `changes` failed or left a group output that is not `true`/`false`, a needed job failed or was cancelled, or a job was skipped while its group was on |
 
 These paths turn every group on:
 

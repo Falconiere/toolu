@@ -104,7 +104,7 @@ test.concurrent("a gated job reading another group fails (AC-7)", async () => {
   );
   expect(res).toEqual({
     exitCode: 1,
-    out: "check:ci-paths: tests.yml: job gate is not gated on needs.changes.outputs.ts == 'true'\n",
+    out: "check:ci-paths: tests.yml: job gate is not gated on needs.changes.outputs.ts\n",
   });
 });
 

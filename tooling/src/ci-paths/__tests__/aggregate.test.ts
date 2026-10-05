@@ -108,3 +108,17 @@ test.concurrent("missing or malformed NEEDS never passes", async () => {
     out: "ci-aggregate: nope.yml has no entry in the data file\n",
   });
 });
+
+test.concurrent("a changes job that succeeded without group outputs never passes (AC-5)", async () => {
+  const skipped = { result: "skipped", outputs: {} };
+  const res = await aggregate({
+    changes: { result: "success", outputs: { ts: "", opencode: "false" } },
+    gate: skipped,
+    opencode: skipped,
+    docs: skipped,
+  });
+  expect(res).toEqual({
+    exitCode: 1,
+    out: 'changes: output ts is "", not true or false\nchanges: output docs is "", not true or false\n',
+  });
+});

@@ -1,6 +1,6 @@
 /**
  * Required-aggregate rules (#458). The aggregate fails when `changes` did not
- * succeed, when a needed job ended in anything but success or skipped, when a
+ * succeed or left a group output that is not `true`/`false`, when a needed job ended in anything but success or skipped, when a
  * job was skipped although its group was on, and when `needs` differs from the
  * workflow's gated jobs. It passes only when every gated job either succeeded
  * or was skipped with its group off.
@@ -45,6 +45,16 @@ export function judge(workflow: CiWorkflow, needs: Needs): Verdict {
     return { ok: false, lines: [`${CHANGES}: ${changes.result}; no group decision to trust`] };
   }
   const outputs = changes.outputs ?? {};
+  const groups = [...new Set(Object.values(workflow.jobs))];
+  const malformed = groups.filter(
+    (group) => outputs[group] !== "true" && outputs[group] !== "false",
+  );
+  if (malformed.length > 0) {
+    const lines = malformed.map(
+      (group) => `${CHANGES}: output ${group} is "${outputs[group] ?? ""}", not true or false`,
+    );
+    return { ok: false, lines };
+  }
   const failures: string[] = [];
   for (const id of Object.keys(needs)) {
     if (id !== CHANGES && workflow.jobs[id] === undefined) {

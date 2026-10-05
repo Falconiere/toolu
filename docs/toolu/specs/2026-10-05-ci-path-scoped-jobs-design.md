@@ -133,7 +133,7 @@ Classification, for each changed path:
 - **A release-only path with a non-version line** (a script edit in `package.json`): classified by its groups. Root `package.json` → `ts` and `opencode`.
 - **A release-only file that is added or deleted:** every line counts, so it is not release-only and falls through to the groups.
 - **Rename:** `--no-renames` lists the old and the new path, and both are classified.
-- **`changes` fails or is cancelled:** `typescript` fails and names `changes`; it never passes on missing outputs. `review` runs (fail open).
+- **`changes` fails or is cancelled, or succeeds with a group output that is not `true`/`false`:** `typescript` fails and names `changes`; it never passes on missing outputs. `review` runs (fail open).
 - **A needed job ends `failure` or `cancelled`** (GitHub reports a job timeout as `failure`): `typescript` fails and names the job. A job `skipped` while its group is on also fails `typescript`. A job `skipped` with its group off passes; `success` passes either way.
 - **`NEEDS` lacks a gated job, or lists an unmapped one:** `typescript` fails (a needs/data mismatch).
 - **Check failures:**

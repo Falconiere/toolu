@@ -36,8 +36,9 @@ function checkGatedJob(
     problems.push(`${file}: job ${id} is mapped to undefined group ${group}`);
   }
   if (!needsOf(job).includes(CHANGES)) problems.push(`${file}: job ${id} does not need ${CHANGES}`);
-  if (!new RegExp(String.raw`needs\.changes\.outputs\.${group} == 'true'`).test(conditionOf(job))) {
-    problems.push(`${file}: job ${id} is not gated on needs.changes.outputs.${group} == 'true'`);
+  const gate = new RegExp(String.raw`needs\.changes\.outputs\.${group} (?:== 'true'|!= 'false')`);
+  if (!gate.test(conditionOf(job))) {
+    problems.push(`${file}: job ${id} is not gated on needs.changes.outputs.${group}`);
   }
   return problems;
 }

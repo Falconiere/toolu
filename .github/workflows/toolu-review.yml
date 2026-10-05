@@ -46,11 +46,12 @@ jobs:
 
   # The required `review` check. Docs are reviewed too, so any change outside
   # the release-only files runs it. A release-only diff skips it through `if`,
-  # which reports Success. If `changes` did not succeed, review runs anyway:
-  # a skipped required check must never stand in for a missing decision.
+  # which reports Success. If `changes` did not succeed or left `changed`
+  # empty, review runs anyway: a skipped required check must never stand in
+  # for a missing decision.
   review:
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.changed == 'true') }}
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.changed != 'false') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

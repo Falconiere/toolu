@@ -171,3 +171,45 @@ test.concurrent("an invalid data file fails the job instead of guessing", async 
   expect(res.stderr).toContain(`${CI_PATHS_FILE} is invalid`);
   expect(readFileSync(outputPath, "utf8")).toBe("");
 });
+
+test.concurrent("a CHANGELOG-only diff is release-only", async () => {
+  expect(await prOutputs({ "CHANGELOG.md": bump("CHANGELOG.md") })).toEqual(ALL_OFF);
+});
+
+test.concurrent("a version bump plus a docs edit runs docs only (AC-1, AC-2)", async () => {
+  const edits = Object.fromEntries(RELEASE_ONLY.map((path) => [path, bump(path)]));
+  edits["docs/statusline/README.md"] = "# statusline\n\nEdited.\n";
+  expect(await prOutputs(edits)).toEqual({
+    ts: "false",
+    opencode: "false",
+    docs: "true",
+    changed: "true",
+  });
+});
+
+test.concurrent("a plugin manifest with a version and another change is not release-only", async () => {
+  const path = "plugins/jev/.claude-plugin/plugin.json";
+  const edited = bump(path).replace(/"description": "/, '"description": "Edited. ');
+  expect(edited).not.toBe(bump(path));
+  expect(await prOutputs({ [path]: edited })).toEqual({
+    ts: "true",
+    opencode: "true",
+    docs: "false",
+    changed: "true",
+  });
+});
+
+test.concurrent("deleting a release-only file is not release-only", async () => {
+  using sb = seed();
+  const base = sb.git("rev-parse", "HEAD").trim();
+  sb.git("rm", "-q", "plugins/jev/.codex-plugin/plugin.json");
+  sb.git("commit", "-q", "-m", "delete");
+  const head = sb.git("rev-parse", "HEAD").trim();
+  const event = { pull_request: { base: { sha: base }, head: { sha: head } } };
+  expect(await changes(sb, "pull_request", event)).toEqual({
+    ts: "true",
+    opencode: "true",
+    docs: "false",
+    changed: "true",
+  });
+});
