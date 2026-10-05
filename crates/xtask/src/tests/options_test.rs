@@ -23,6 +23,24 @@ fn flags_and_files_are_parsed() {
 }
 
 #[test]
+fn launcher_options_are_parsed() {
+  let options = Options::parse(&words(&[
+    "--timeout",
+    "30",
+    "--bin",
+    "/usr/local/bin/toolu",
+    "--home",
+    "/h",
+    "toolu",
+  ]))
+  .unwrap();
+  assert_eq!(options.timeout.as_deref(), Some("30"));
+  assert_eq!(options.bin, Some(PathBuf::from("/usr/local/bin/toolu")));
+  assert_eq!(options.home, Some(PathBuf::from("/h")));
+  assert_eq!(options.files, [PathBuf::from("toolu")]);
+}
+
+#[test]
 fn the_default_root_is_this_repository() {
   let options = Options::parse(&[]).unwrap();
   assert!(options.root.join("crates/xtask/Cargo.toml").is_file());

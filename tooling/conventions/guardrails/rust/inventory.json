@@ -47,6 +47,24 @@
       "id": "measure",
       "pass": "crates/xtask/tests/measure.rs::a_failing_command_is_measured_and_its_code_reported",
       "fail": "crates/xtask/tests/measure.rs::an_unspawnable_command_exits_2_and_names_it"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "print-hook",
+      "pass": "crates/xtask/src/tests/print_hook_test.rs::a_known_plugin_entry_prints",
+      "fail": "crates/xtask/src/tests/print_hook_test.rs::bad_timeouts_names_plugins_and_arity_are_errors"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "check-hooks",
+      "pass": "crates/xtask/src/tests/check_hooks_test.rs::the_repository_is_clean",
+      "fail": "crates/xtask/src/tests/check_hooks_test.rs::a_hand_edited_native_entry_is_named_with_the_expected_command"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "launcher-e2e",
+      "pass": "crates/xtask/src/tests/launcher_e2e_test.rs::a_binary_in_local_bin_that_reports_itself_passes",
+      "fail": "crates/xtask/src/tests/launcher_e2e_test.rs::a_binary_that_reports_another_path_is_a_finding"
     }
   ]
 }

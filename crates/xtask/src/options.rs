@@ -16,7 +16,14 @@ pub(crate) struct Options {
   pub(crate) title: Option<String>,
   /// Gate steps to run instead of all of them (`--only`, repeatable).
   pub(crate) only: Vec<String>,
-  /// Positional arguments (the llvm-cov JSON file of `check-coverage`).
+  /// The entry `timeout` for `print-hook` (`--timeout`, seconds).
+  pub(crate) timeout: Option<String>,
+  /// The installed binary `launcher-e2e` runs (`--bin`).
+  pub(crate) bin: Option<PathBuf>,
+  /// The home `launcher-e2e` gives the launcher (`--home`, default `$HOME`).
+  pub(crate) home: Option<PathBuf>,
+  /// Positional arguments (the llvm-cov JSON file of `check-coverage`, the
+  /// plugin, event and hook name of `print-hook`).
   pub(crate) files: Vec<PathBuf>,
   /// Where `measure` writes its report (`--out`).
   pub(crate) out: Option<PathBuf>,
@@ -51,6 +58,9 @@ impl Options {
         "--title" => options.title = Some(value),
         "--only" => options.only.push(value),
         "--out" => options.out = Some(PathBuf::from(value)),
+        "--timeout" => options.timeout = Some(value),
+        "--bin" => options.bin = Some(PathBuf::from(value)),
+        "--home" => options.home = Some(PathBuf::from(value)),
         _ => return Err(format!("unknown option {word}")),
       }
     }

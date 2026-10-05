@@ -14,7 +14,8 @@ fn options(root: PathBuf, only: &[&str]) -> Options {
 
 #[test]
 fn every_step_has_an_inventory_free_name_and_unknown_steps_are_refused() {
-  assert_eq!(STEPS.len(), 14);
+  assert_eq!(STEPS.len(), 15);
+  assert!(STEPS.contains(&"hooks"));
   let err = run(&options(PathBuf::from("."), &["nope"])).unwrap_err();
   assert!(
     err.starts_with("unknown gate step nope; steps: gate-change, fmt"),

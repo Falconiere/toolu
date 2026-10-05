@@ -24,7 +24,7 @@ fn the_repository_has_no_violation() {
     "{:?}",
     report.violations
   );
-  assert_eq!(report.crates, 7);
+  assert_eq!(report.crates, 8);
 }
 
 #[test]
@@ -38,6 +38,11 @@ fn a_capability_crate_linked_outside_its_owner_is_named() {
   let report = check_layers(&metadata, &table(), &owned);
   assert_eq!(
     report.violations,
-    ["crates/xtask (xtask) depends on serde_json: only toolu-http may link a `json` crate"]
+    [
+      "crates/core/runtime (toolu-runtime) depends on serde_json: only toolu-http may link a \
+       `json` crate",
+      "crates/cli (toolu-cli) depends on serde_json: only toolu-http may link a `json` crate",
+      "crates/xtask (xtask) depends on serde_json: only toolu-http may link a `json` crate",
+    ]
   );
 }

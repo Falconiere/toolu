@@ -248,7 +248,7 @@ The `crates/cli` tests run the real binary (`CARGO_BIN_EXE_toolu`) through the r
       "Cargo.lock"
     ],
     "input": "The release toolu binary at the real Homebrew (linuxbrew) and installer directories, PATH=/usr/bin:/bin",
-    "check": "cargo build --release -p toolu-cli --locked && for d in /home/linuxbrew/.linuxbrew/bin /usr/local/bin; do mkdir -p \"$d\" && install -m 0755 target/release/toolu \"$d/toolu\" && cargo xtask launcher-e2e --bin \"$d/toolu\"; s=$?; rm -f \"$d/toolu\"; [ $s -eq 0 ] || exit $s; done",
+    "check": "cargo build --release -p toolu-cli --locked && for d in /home/linuxbrew/.linuxbrew/bin /usr/local/bin; do mkdir -p \"$d\" && install -m 0755 target/release/toolu \"$d/toolu\" && cargo xtask launcher-e2e --bin \"$d/toolu\"; s=$?; rm -f \"$d/toolu\"; [ $s -eq 0 ] || exit $s; done; rmdir /home/linuxbrew/.linuxbrew/bin /home/linuxbrew/.linuxbrew /home/linuxbrew 2>/dev/null; true",
     "model": "inherit"
   },
   {

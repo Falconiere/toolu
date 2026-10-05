@@ -6,7 +6,7 @@ use std::process::Command;
 use std::time::Instant;
 
 use crate::options::Options;
-use crate::{Verdict, coverage, data, gate_change, guardrails, layers_check, output};
+use crate::{Verdict, check_hooks, coverage, data, gate_change, guardrails, layers_check, output};
 use crate::{reach, unused_pub};
 
 /// The steps, in the order they run.
@@ -20,6 +20,7 @@ pub(crate) const STEPS: &[&str] = &[
   "deny",
   "machete",
   "unused-pub",
+  "hooks",
   "jscpd",
   "rust-quality",
   "tests",
@@ -97,6 +98,7 @@ fn step_run(step: &str, options: &Options) -> Result<Verdict, String> {
       status(root, "cargo-machete".as_ref(), &["crates"], &[])
     }
     "unused-pub" => unused_pub::run(options),
+    "hooks" => check_hooks::run(options),
     "jscpd" => jscpd(root),
     "rust-quality" => rust_quality(root),
     "tests" => tests(root),
