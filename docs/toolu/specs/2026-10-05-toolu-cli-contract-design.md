@@ -1,6 +1,6 @@
 # The `toolu` CLI contract — Design
 
-**Date:** 2026-10-05   **Status:** Draft   **Author:** epic worker (Claude Code)   **Topic:** #442 — one `toolu` binary, a clap namespace per plugin, the output and exit-code contract, `toolu commands --json`, generated `docs/cli/`, and the checks that keep them honest.
+**Date:** 2026-10-05   **Status:** Approved   **Author:** epic worker (Claude Code)   **Topic:** #442 — one `toolu` binary, a clap namespace per plugin, the output and exit-code contract, `toolu commands --json`, generated `docs/cli/`, and the checks that keep them honest.
 
 Brainstorm: `docs/toolu/brainstorms/2026-10-05-toolu-cli-contract.md`. Builds on #412 (PR #476), which adds `crates/cli` with a hand-written argv parser and the native hook runner.
 
@@ -164,9 +164,9 @@ The tree omits the implicit `--help` on every command. Global flags appear once,
 
 ## Acceptance criteria
 
-- **AC-1:** `toolu --help`, `toolu --version` and `toolu <ns> --help` exit 0 with output on stdout and nothing on stderr. `<ns>` is every visible top-level command in `toolu commands --json`, and every unported namespace's help lists the `planned` verb.
+- **AC-1:** `toolu --help`, `toolu --version` and `toolu <ns> --help` exit 0 with output on stdout and nothing on stderr. `<ns>` is every visible top-level command in `toolu commands --json`, which includes all twelve plugins' namespaces (`brainstorm` and `delivery-flow` among them) and the two built-ins. Every unported namespace's help lists the `planned` verb.
 - **AC-2:** `toolu <ns> planned` prints that namespace's planned verbs and issues, and with `--json` emits one `planned` document that validates against the schema. `toolu brainstorm` and `toolu delivery-flow` print their guide.
-- **AC-3:** The inventory test passes on the repository: 12 manifests ↔ 12 plugin crates ↔ 12 plugin owners in `toolu commands --json`. It fails, naming the missing name, when any one side loses an entry.
+- **AC-3:** The inventory test passes on the repository: 12 manifests ↔ 12 plugin crates ↔ 12 plugin owners in `toolu commands --json`, `brainstorm` and `delivery-flow` included. It fails, naming the missing name and the side that lacks it, when any one side loses an entry.
 - **AC-4:** `toolu commands --json` validates against `toolu commands --schema`, and an insta snapshot pins its exact text.
 - **AC-5:** Black-box tests pin the exit codes and streams:
   - `toolu epik start` exits 64 with an empty stdout and an `epic` suggestion on stderr;
@@ -174,13 +174,18 @@ The tree omits the implicit `--help` on every command. Global flags appear once,
   - a missing verb exits 64 with help on stderr;
   - `toolu hook pre-tools --event PreToolUse` exits 2 with `blocked:` on stderr;
   - a successful verb exits 0 with an empty stderr;
+  - the scenario `toolu epic status 402 --json` (`--json` after the verb) exits 64 with exactly one `error` JSON document on stdout and nothing else, until #434 ports the verb;
+  - `toolu --host bogus commands` exits 64 and names the possible values on stderr; `--host codex` and `--config-dir DIR` are accepted;
   - `--json` help and version are single JSON documents;
-  - unit tests pin `Exit` codes 0, 1, 2, 64, 69 and 75.
+  - every `--json` document above validates against its `$defs` entry in `toolu commands --schema`;
+  - each case asserts both streams.
+  
+  No #442 command produces 1, 69 or 75. Unit tests pin those codes in `Exit`, the error envelope built for them, and `--quiet` dropping a success-path stderr line while keeping an error's.
 - **AC-6:** The fast path builds no tree. A unit test runs `toolu hook <name> …`, `toolu <plugin> hook <name> …` and `toolu --hook-protocol` with a tree builder that records calls, and the builder is never called. `toolu --version` calls it exactly once.
 - **AC-7:** The clap tree accepts every hook form #412 generates. `toolu jev hook --help` and `toolu pr-babysit hook --help` exit 0, and `toolu commands --json` lists those hidden `hook` verbs and the plugin-name aliases.
 - **AC-8:** `cargo xtask docs-cli` writes `docs/cli/` from the real binary. `cargo xtask docs-cli --check` (gate step `docs-cli`) passes on the committed tree, and fails, naming the file, on a stale, missing or orphaned generated file.
-- **AC-9:** `cargo xtask check-cli-compat` passes on this branch against `origin/main`, where the base has no tree. It fails on a removed verb, alias, flag or possible value. It passes when only a placeholder disappears or when `hookProtocol` increased and the title has `!`.
-- **AC-10:** `cargo xtask check-startup --bin target/release/toolu` reports a p50 wall within 4 ms on this host, and fails, naming the budget, for a binary slower than the budget.
+- **AC-9:** `cargo xtask check-cli-compat` passes on this branch against `origin/main`, where the base has no tree. It fails on a removed verb, alias, flag, short flag, possible value or exit code, and on an optional argument that became required. It passes when only a placeholder disappears or when `hookProtocol` increased and the title has `!`.
+- **AC-10:** `cargo xtask check-startup --bin target/release/toolu` reports a p50 wall within 4 ms (3 warm-up, 30 runs, nearest-rank). It fails, naming the budget, for a binary slower than the budget, and the Linux `rust` CI job runs it against the release binary. Startup does no namespace work: every `command()` only constructs clap values, `run` executes only for the matched namespace, and `--version` is answered by clap before any `run`.
 - **AC-11:** `cargo xtask gate` passes in full with the new crates, steps and tasks, with no exemption. `bun run test` passes apart from the documented environmental failures that also fail on `origin/main`.
 - **AC-12:** `docs/cli.md` no longer exists; its guide is `docs/cli/installer.md`, every reference resolves, and the OpenCode surface drift check passes after regeneration.
 
@@ -188,16 +193,16 @@ The tree omits the implicit `--help` on every command. Global flags appear once,
 
 | AC | Real input | Expected | Boundary / failure | Check |
 |---|---|---|---|---|
-| AC-1 | the built `toolu` and every visible top-level command in its own `commands --json` | exit 0, stdout has `Usage: toolu <ns>`, stderr empty | an unported namespace shows `planned` | `cargo test -p toolu-cli --test contract` |
+| AC-1 | the built `toolu` and every visible top-level command in its own `commands --json` | exit 0, stdout has `Usage: toolu <ns>`, stderr empty | an unported namespace shows `planned`; the 14 expected names are all present | `cargo test -p toolu-cli --test contract` (assert_cmd) |
 | AC-2 | `toolu epic planned`, `toolu --json jev planned`, `toolu brainstorm` | verbs and issues text; a `planned` document valid against the schema; guide text | `doctor` (no planned verbs) says so | `cargo test -p toolu-cli --test contract`, `--test commands` |
 | AC-3 | the repository's `plugins/`, `crates/` and the binary's tree | three equal sets | each side with one name removed → names it | `cargo test -p toolu-cli --test inventory` |
 | AC-4 | `toolu commands --json` and `--schema` | valid; snapshot `crates/cli/tests/fixtures/commands__commands_json.snap` matches | an edited document fails validation (a test drops a required key) | `cargo test -p toolu-cli --test commands` |
-| AC-5 | the binary with typo, missing-verb, hook, `--json` argv | codes and streams as stated | `--json` usage error | `cargo test -p toolu-cli --test contract`; `cargo test -p toolu-protocol` |
+| AC-5 | the binary run by assert_cmd with the typo, `toolu epic status 402 --json`, missing-verb, hook, `--host bogus` and `--json` help/version argv | codes and both streams as stated; JSON documents valid against the schema | `--json` usage error after the verb; 1/69/75 and `--quiet` in unit tests | `cargo test -p toolu-cli --test contract`; `cargo test -p toolu-protocol`; `cargo test -p toolu-cli --bin toolu` |
 | AC-6 | `run(words, ctx, &recording_tree)` in-process | 0 builds for the fast forms, 1 for `--version` | malformed hook line → 1 build (clap) | `cargo test -p toolu-cli --bin toolu` |
 | AC-7 | `toolu jev hook --help`, `toolu pr-babysit hook --help`, the tree JSON | exit 0; hidden hook verbs and aliases present | `toolu hook --help` → clap help | `cargo test -p toolu-cli --test contract` |
 | AC-8 | the real `toolu` built by cargo, a temp `--root` | write then `--check` → 0; `--check` on an empty root → 1 naming files; an orphaned marker file → 1 | an unmarked `installer.md` is untouched | `cargo test -p xtask --test docs_cli`; `cargo xtask docs-cli --check` |
-| AC-9 | `docs/cli/commands.json` produced by the binary, then edited copies in a temp git repo | removed verb/alias/flag/value → 1; placeholder removal → 0; bump + `feat!:` title → 0 | no base file → 0 with a note | `cargo test -p xtask --test cli_compat`; unit tests on the comparison |
-| AC-10 | the release `toolu`; a script that sleeps past the budget | p50 ≤ 4 ms → 0; slow script → 1 naming the budget | a binary that prints the wrong text → 2 | `cargo test -p xtask --test startup`; `cargo xtask check-startup --bin target/release/toolu` |
+| AC-9 | `docs/cli/commands.json` produced by the binary, then edited copies in a temp git repo | removed verb/alias/flag/short/value/exit code → 1; optional → required → 1; placeholder removal → 0; bump + `feat!:` title → 0; bump without `!` → 1 | no base file → 0 with a note | `cargo test -p xtask --test cli_compat`; unit tests on the comparison |
+| AC-10 | the release `toolu`; a script that sleeps past the budget | p50 ≤ 4 ms → 0; slow script → 1 naming the budget | a binary that prints the wrong text → 2 | `cargo test -p xtask --test startup`; `cargo xtask check-startup --bin target/release/toolu`; the `tests.yml` step on `ubuntu-latest` |
 | AC-11 | the whole workspace | every gate step ok | — | `cargo xtask gate`; `bun run test` |
 | AC-12 | the repository after the move | no `docs/cli.md`; references resolve; surface drift clean | — | `bun run check:opencode-docs`, `bun run check:opencode-surface`, `bun run test:docs` |
 
@@ -215,3 +220,20 @@ The tree omits the implicit `--help` on every command. Global flags appear once,
 
 - **When does PR #476 merge?** Owner: the orchestrator. Non-blocking for the spec and plan. Execution starts on `origin/main` after it merges. If it has not merged by then, the plan's first steps (plugin crates, runtime and protocol types, xtask tasks) do not touch #476's files.
 - **The `cli-verb` inventory kind.** Owner: a later `chore(gates):` PR (#444 or the orchestrator). Non-blocking; see Non-Goal 5.
+
+## Spec review
+
+Round 1 (Needs changes), findings fixed in place:
+
+- Acceptance evidence: 🟡 should-fix: the issue scenario `toolu epic status 402 --json` was not exercised. Added to AC-5 with `--json` after the verb.
+- Acceptance evidence: 🟡 should-fix: the contract tests did not say they were assert_cmd tests asserting both streams. Named in AC-5 and its evidence row.
+- Acceptance criteria: 🟡 should-fix: `--host`, `--config-dir` and `--quiet` had no AC. Added to AC-5 (black-box for `--host`/`--config-dir`, unit test for `--quiet`).
+- Acceptance criteria: 🟡 should-fix: the startup AC had no CI gate and no statement on namespace work at startup. AC-10 now names the Linux CI step and the pure `command()` rule.
+- Acceptance criteria: 🔵 consider: the inventory and help ACs did not name `brainstorm` and `delivery-flow`, and AC-9 omitted short flags, exit codes and optional → required. Added.
+
+Jev (`jev-1.13.0`, `--raw`): coverage of the issue's acceptance items and scenarios.
+- Round 1: `acc_help` 0.46, `acc_exit` 0.72, `acc_startup` 0.63, `scen_json` 0.19; `acc_json`, `acc_docs`, `acc_fast`, `scen_typo` and `scen_hook` ≥ 0.86.
+- After the fixes: `acc_exit` 0.94, `acc_startup` 0.91 and `scen_json` 0.78.
+- `acc_help` stayed at 0.47 under its "at least one AC" framing. Split into its two parts, it scored 0.92 (help) and 0.96 (inventory), with 0.33 that any requirement is unaddressed.
+
+Round 2: Approved.
