@@ -8,6 +8,7 @@ const REPO: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 
 #[test]
 fn every_fixture_case_is_run_by_a_test() {
+  // Whitespace is dropped on both sides, so reformatting a test never hides a case.
   let tests: String = [
     "fixtures_guardrails.rs",
     "fixtures_clippy.rs",
@@ -23,6 +24,8 @@ fn every_fixture_case_is_run_by_a_test() {
     )
     .unwrap()
   })
+  .collect::<String>()
+  .split_whitespace()
   .collect();
   let root = Path::new(REPO).join("fixtures/guardrails/rust");
   let mut missing = Vec::new();
@@ -35,7 +38,7 @@ fn every_fixture_case_is_run_by_a_test() {
     for case in fs::read_dir(root.join(&rule)).unwrap() {
       let case = case.unwrap().file_name().to_string_lossy().into_owned();
       cases += 1;
-      if !tests.contains(&format!("fixture::check(\"{rule}\", \"{case}\")")) {
+      if !tests.contains(&format!("fixture::check(\"{rule}\",\"{case}\")")) {
         missing.push(format!("{rule}/{case}"));
       }
     }

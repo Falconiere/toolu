@@ -4,13 +4,13 @@
 #[path = "helpers/layered.rs"]
 mod layered;
 
+use std::fs;
+
 use layered::{Crate, check, krate, stderr, stdout, workspace, xtask};
 
 fn protocol() -> Crate {
   krate("crates/core/protocol", "toolu-protocol")
 }
-
-use std::fs;
 
 #[test]
 fn a_crate_directory_missing_from_members_fails() {
@@ -134,6 +134,11 @@ fn usage_errors_exit_2() {
   ] {
     let output = xtask(args).unwrap();
     assert_eq!(output.status.code(), Some(2), "{args:?}");
-    assert!(stderr(&output).starts_with("xtask: "), "{args:?}");
+    let text = stderr(&output);
+    assert!(text.starts_with("xtask: "), "{args:?}: {text}");
+    assert!(
+      text.contains("usage: cargo xtask <task>"),
+      "{args:?}: {text}"
+    );
   }
 }

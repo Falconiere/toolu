@@ -54,7 +54,9 @@ const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--titl
 fn run(args: &[String]) -> ExitCode {
   let result = match args.split_first() {
     Some((name, rest)) => match TASKS.iter().find(|(task, _)| task == name) {
-      Some((_, task)) => Options::parse(rest).and_then(|options| task(&options)),
+      Some((_, task)) => Options::parse(rest)
+        .map_err(|err| format!("{err}\n{USAGE}"))
+        .and_then(|options| task(&options)),
       None => Err(format!("unknown task {name}\n{USAGE}")),
     },
     None => Err(USAGE.to_owned()),
