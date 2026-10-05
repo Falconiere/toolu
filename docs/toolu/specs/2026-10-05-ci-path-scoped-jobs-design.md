@@ -41,8 +41,8 @@ workflows lose `paths-ignore`.
 
 The `review` job in `toolu-review.yml` is gated on the synthetic `changed` group, which is
 true when any non-release-only file changed. Its `if` is
-`!cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.changed == 'true')`:
-if `changes` crashed, review runs instead of reporting a skipped Success. `review` is itself
+`!cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.changed != 'false')`:
+if `changes` crashed or left `changed` empty, review runs instead of reporting a skipped Success. `review` is itself
 the required context, so it has no separate aggregate.
 
 `bun run check:ci-paths` (`tooling/src/check-ci-paths.ts`, added to `test:ts`) enforces the
