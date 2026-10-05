@@ -2,7 +2,7 @@
 
 > Tracked as epic #402, which is the delivery tracker: its sub-issues and phase table supersede the order sketched here. The epic-orchestrator design is in [2026-10-04-epic-engine.md](2026-10-04-epic-engine.md): a resident engine, not a port of the watcher.
 
-Brainstorm, 2026-10-04. The user decided to rebuild every toolu plugin in Rust, with a `crates/` workspace holding `crates/core/` and one crate per plugin, and then that the Rust code is one CLI which each plugin's Markdown (skills, commands, agents) runs. Motivation: hook memory and CPU (see [2026-10-04-hook-resource-diet.md](2026-10-04-hook-resource-diet.md) for the measurements). This file covers workspace shape only. How binaries reach Claude Code and Codex installs is still open (see "Open decision").
+Brainstorm, 2026-10-04. The user decided to rebuild every toolu plugin in Rust, with a `crates/` workspace holding `crates/core/` and one crate per plugin, and then that the Rust code is one CLI which each plugin's Markdown (skills, commands, agents) runs. Motivation: hook memory and CPU (see [2026-10-04-hook-resource-diet.md](2026-10-04-hook-resource-diet.md) for the measurements). This file covers workspace shape, the quality bar and distribution.
 
 ## Capsule
 
@@ -10,18 +10,17 @@ Brainstorm, 2026-10-04. The user decided to rebuild every toolu plugin in Rust, 
 - **Material defaults:**
   - A crate is not a binary. `crates/cli` builds the only binary, `toolu`, and every plugin crate is a library (Jev: 0.98 for one CLI over a binary per plugin). Rule plugins (ts-, python-, rust-quality and the ast-grep rules) are linked into the dispatcher.
   - Core is split into six layered crates, not one big crate.
-  - `plugins/<name>/` stays the install tree: the skills, commands and agents that tell the agent which `toolu` command to run, `hooks.json`, `plugin.json` and a `bin/toolu` launcher. `crates/<name>/` is the source.
+  - `plugins/<name>/` stays the install tree: the skills, commands and agents that tell the agent which `toolu` command to run, `hooks.json` and `plugin.json`. `crates/<name>/` is the source.
   - Migration is plugin by plugin, with today's black-box tests and JSON fixtures checking each Rust port.
 - **Non-goal:**
   - Markdown-only plugins (brainstorm, delivery-flow) get no crate. Skills, commands and agents stay Markdown.
   - exa-search, context7, jira and agent-browser are deprecated and removed, not ported (see "Removed plugins").
 - **Repository evidence:** the core import graph (below); inventory of 16 plugins and about 45k lines of source; 333 test files, 55 to 60% of them black-box spawns.
 - **Risk:**
-  - Distribution is undecided.
   - The ESM registry contract for third parties is dropped, which is a breaking change.
   - The gate file must stay byte-compatible while TypeScript and Rust hooks coexist.
   - The shell parser has to match unbash on the parity fixtures.
-- **Handoff:** epic #402. "Open decision" is its sub-issue #411.
+- **Handoff:** epic #402.
 
 ## Layout
 
@@ -52,7 +51,7 @@ toolu/
     xtask/             `cargo xtask`        # build, checks, budgets, docs, release packaging
   fixtures/          # language-neutral JSON contracts shared by both test suites during migration
   packages/opencode-shim/   # thin TypeScript plugin that spawns `toolu serve --stdio`
-  plugins/<name>/    # install trees: Markdown that runs `toolu …`, hooks.json on the native launcher, bin/toolu
+  plugins/<name>/    # install trees: Markdown that runs `toolu …`, hooks.json on the native launcher
 ```
 
 Directory names are short and package names are prefixed (`toolu-*`), so nothing collides on crates.io if a crate is ever published.
@@ -129,9 +128,9 @@ Notes:
 
 - **Namespaces, not argv[0]:** every plugin is a namespace of `toolu` (`toolu hook pre-tools`, `toolu epic status`). The Claude cache drops symlinks on Linux, so argv[0] aliases are out.
 - **Contract:** global `--json`, data on stdout and diagnostics on stderr, documented exit codes (`2` means blocked). `toolu commands --json` exports the command tree; `docs/cli/` is generated from it, and a CI gate fails when a skill, command or agent names a verb or flag the CLI lacks.
-- **Reaching the binary from Markdown:** each plugin ships a `bin/toolu` launcher, which Claude Code puts on the Bash tool's PATH. SessionStart publishes one stable path for Codex and OpenCode.
-- **Launcher:** `@toolu/core/launcher` becomes `xtask print-hook`. It emits a POSIX `command` and a `commandWindows` that find the platform binary and fail closed with exit 2 on enforcing events, as the Bun launcher does now.
-- **Codex trust prompt:** Codex re-prompts for trust when a hook command string changes. Keep the command identical across versions; the version lives in the binary path the launcher resolves, not in `hooks.json`.
+- **Reaching the binary from Markdown:** the installed `toolu` is on `PATH` (see "Distribution"), so skills write plain `toolu …`. Hooks use the generated launcher, which also looks in the usual install directories because a host may run hooks with a reduced `PATH`.
+- **Launcher:** `@toolu/core/launcher` becomes `xtask print-hook`. It emits a POSIX `command` and a `commandWindows` that find the installed binary and fail closed with exit 2 and the install commands on enforcing events, as the Bun launcher does now for a missing Bun.
+- **Codex trust prompt:** Codex re-prompts for trust when a hook command string changes. Keep the command identical across versions; the binary reads the plugin's version from its `plugin.json`.
 - **Panics:** keep `panic = "unwind"` and wrap every hook `main` in `catch_unwind`. A panic must exit 2 on enforcing events and 0 with a `systemMessage` on context events, never 101. Release profile: `lto = "fat"`, `codegen-units = 1`, `strip = true`.
 - **Old skill CLIs:** scripts published to stable paths today, such as `~/.claude/jev/jev.sh`, stay as one-line shims onto their namespace until the TypeScript removal.
 
@@ -211,7 +210,7 @@ OpenCode acceptance (`tooling/src/opencode-*`) drives the real Bun-hosted OpenCo
 ## OpenCode and the npm CLI
 
 - **OpenCode:** `packages/opencode-shim` (about 300 lines of TypeScript, down from 9k) starts one long-lived `toolu serve --stdio` per OpenCode instance and exchanges JSON lines per event, restarting it if it dies. Jev: 0.51 for this, 0.42 for an in-process napi addon. Choose napi only if the round-trip cost shows up in acceptance budgets.
-- **npm CLI:** `@toolu/plugins` becomes a small npm wrapper over per-platform `optionalDependencies` packages, the biome/esbuild pattern. The same platform packages give the OpenCode shim its binary, because OpenCode installs npm plugins with Bun. `@toolu/core` stops being published at the end, after a deprecation release.
+- **npm CLI (as first sketched; open since the install decision, see "Distribution"):** `@toolu/plugins` becomes a small npm wrapper over per-platform `optionalDependencies` packages, the biome/esbuild pattern. The same platform packages give the OpenCode shim its binary, because OpenCode installs npm plugins with Bun. `@toolu/core` stops being published at the end, after a deprecation release.
 
 ## Removed plugins
 
@@ -256,7 +255,7 @@ Each phase merges green and ships. TypeScript and Rust hooks coexist, and the la
 | 7 | `toolu plugins`, `opencode-shim`, npm platform packages | about 7k (plus 9k adapter) | `test:opencode` acceptance on Linux and macOS |
 | 8 | xtask replaces `tooling/src`; delete TS and the Bun prerequisite for Claude Code and Codex | about 17k | the whole gate |
 
-Phase 3 is the first one users feel (pre/post-tool hooks), so the distribution decision has to land before it ships.
+Phase 3 is the first one users feel (pre/post-tool hooks), so the install channels have to work before it ships.
 
 ## What I think
 
@@ -275,11 +274,22 @@ Phase 3 is the first one users feel (pre/post-tool hooks), so the distribution d
   - `@toolu/core` is deprecated on npm.
   - Bun stops being a prerequisite on Claude Code and Codex, while OpenCode keeps it because OpenCode itself runs on Bun.
 
-## Open decision
+## Distribution
 
-How Claude Code and Codex installs get the binary. Jev split 0.52 / 0.47 between:
+Decided by the user on 2026-10-04: the binary is installed once, the way toolu-runner already ships.
 
-- **Download at SessionStart:** the binary for the platform comes from the GitHub Release, is checked against a pinned sha256, and is installed into `CLAUDE_PLUGIN_DATA` / `PLUGIN_DATA`. The repo stays tiny. Needs network on first run. Enforcing hooks fail closed until the binary is present.
-- **Separate dist repo:** release CI publishes a marketplace repo, squashed to one commit per release, whose plugin dirs carry prebuilt binaries for every platform. Works offline, with no download code. Users re-add the marketplace once.
+```bash
+curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
+brew install falconiere/tap/toolu
+```
 
-Committing binaries into this repo was rejected because every release would add tens of MB to git history. npm per-platform packages are kept for `npx @toolu/plugins` and OpenCode only.
+- **Plugins carry no binary and download nothing.** Their hooks and Markdown call the installed `toolu`.
+- **The pieces exist in `Falconiere/toolu-ghrunner`:** a tag-driven release that builds four native targets (`darwin-arm64`, `darwin-amd64`, `linux-amd64`, `linux-arm64`), packages tarballs with `SHA256SUMS`, smoke-tests the published assets and pushes a formula to `Falconiere/homebrew-tap`; an `install.sh`; and `get.toolu.sh`, a Cloudflare Worker that redirects `/pkg/<name>/install` to a package's install script (`toolu` is not registered yet and returns 404).
+- **Stricter than the reference in one place:** the installer verifies the tarball against `SHA256SUMS` before installing, because this binary enforces security gates.
+- **Version skew.** The binary and the plugins are upgraded separately. Within a major version hooks run and enforce, and an older binary gets one advisory with the upgrade command; a different major fails closed on enforcing events (Jev: 0.91). Within a major, `toolu hook <event>` and every documented verb keep working.
+- **Missing binary:** enforcing hooks fail closed and name both install commands.
+- **Workflows:** CI (ubuntu and macOS legs), review, merge gate and the release chain follow the toolu-ghrunner set, with release-please kept for versioning.
+
+Rejected: downloading the binary at SessionStart (network on first run, a race with the first hook), a separate distribution marketplace repository (every install carries every platform), and committing binaries into this repository (tens of MB of history per release).
+
+Open: whether npm per-platform packages are still needed. With `toolu` on `PATH`, `npx @toolu/plugins` and the OpenCode shim could use the installed binary.
