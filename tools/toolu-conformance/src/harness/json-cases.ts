@@ -109,8 +109,6 @@ export function resolveFixturePath(sb: Sandbox, path: string, host: HostName = "
   if (path.startsWith("$ROOT/")) return inside(sb.root, path.slice(6));
   if (path === "$HOME") return sb.home;
   if (path.startsWith("$HOME/")) return inside(sb.home, path.slice(6));
-  if (path === "$REPO") return REPO_ROOT;
-  if (path.startsWith("$REPO/")) return inside(REPO_ROOT, path.slice(6));
   const state = sb.configDir(host, "project");
   if (path === "$HOST_STATE") return state;
   if (path.startsWith("$HOST_STATE/")) return inside(state, path.slice(12));
@@ -140,7 +138,6 @@ export function materializeCaseValue(
       $PROJECT: sb.project,
       $ROOT: sb.root,
       $HOME: sb.home,
-      $REPO: REPO_ROOT,
       $HOST_STATE: sb.configDir(host, "project"),
     };
     return template.replace(/\$[A-Z][A-Z_]*(?=\/|\b)/g, (token) => {
@@ -165,6 +162,20 @@ function write(path: string, body: string): void {
   writeFileSync(path, body);
 }
 
+/** The checkout token is allowed only as a symlink target, never a write path. */
+function symlinkTarget(sb: Sandbox, target: unknown, host: HostName): string {
+  if (
+    target !== null &&
+    typeof target === "object" &&
+    "$path" in target &&
+    typeof target.$path === "string" &&
+    target.$path.startsWith("$REPO/")
+  ) {
+    return inside(REPO_ROOT, target.$path.slice(6));
+  }
+  return z.string().parse(materializeCaseValue(sb, target, host));
+}
+
 /** Execute the small setup vocabulary against a disposable real sandbox. */
 export function applyCaseSetup(sb: Sandbox, actions: unknown, host: HostName = "claude"): void {
   const parsed = z.array(ActionSchema).parse(actions);
@@ -185,7 +196,7 @@ export function applyCaseSetup(sb: Sandbox, actions: unknown, host: HostName = "
       case "symlink": {
         const path = resolveFixturePath(sb, action.path, host);
         mkdirSync(dirname(path), { recursive: true });
-        symlinkSync(z.string().parse(materializeCaseValue(sb, action.target, host)), path);
+        symlinkSync(symlinkTarget(sb, action.target, host), path);
         break;
       }
       case "chmod":
