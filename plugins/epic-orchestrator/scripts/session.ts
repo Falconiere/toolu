@@ -1,7 +1,8 @@
 /** Capture host-native session IDs; never substitute the host's unrelated last session. */
-import { existsSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { runCommand } from "../hooks/dist/epic-runtime.js";
 import type { HostKind } from "./hosts.ts";
 
@@ -27,6 +28,53 @@ function utcDayParts(epochMs: number): string[] {
   return new Date(epochMs).toISOString().slice(0, 10).split("-");
 }
 
+/** Cursor Agent keeps each chat at `<config>/chats/<md5(resolved cwd)>/<chat id>/meta.json`,
+ * written when the first prompt reaches the input; `--resume` rewrites `createdAtMs`. */
+async function captureCursorChat(
+  worktree: string,
+  since: number,
+  env: NodeJS.ProcessEnv,
+): Promise<string | null> {
+  const config =
+    env.CURSOR_CONFIG_DIR?.trim() ||
+    (env.XDG_CONFIG_HOME?.trim()
+      ? join(env.XDG_CONFIG_HOME, "cursor")
+      : join(homedir(), ".cursor"));
+  const cwd = resolve(worktree);
+  const root = join(config, "chats", createHash("md5").update(cwd).digest("hex"));
+  let chats: string[];
+  try {
+    chats = readdirSync(root);
+  } catch (error) {
+    if (vanished(error)) return null;
+    throw error;
+  }
+  if (chats.length > MAX_SESSION_FILES) return null;
+  const matches: string[] = [];
+  for (const chat of chats) {
+    if (!validSessionId("cursor", chat)) continue;
+    let meta: unknown;
+    try {
+      meta = JSON.parse(
+        await Bun.file(join(root, chat, "meta.json"))
+          .slice(0, MAX_SESSION_BYTES)
+          .text(),
+      );
+    } catch (error) {
+      if (vanished(error) || error instanceof SyntaxError) continue; // Not yet written, or mid-write.
+      throw error;
+    }
+    if (
+      isRecord(meta) &&
+      meta.cwd === cwd &&
+      typeof meta.createdAtMs === "number" &&
+      meta.createdAtMs >= since
+    )
+      matches.push(chat);
+  }
+  return matches.length === 1 ? (matches[0] ?? null) : null;
+}
+
 /** Start readiness can precede native session persistence (observed with Codex). */
 export async function awaitSession(
   kind: HostKind,
@@ -37,7 +85,7 @@ export async function awaitSession(
   const poll = async (): Promise<string> => {
     const id = await captureSession(kind, worktree, since);
     if (id) return id;
-    if (Date.now() >= deadline || kind === "cursor")
+    if (Date.now() >= deadline)
       throw new Error(
         `cannot attest ${kind} session identity; inspect the owned pane before retry`,
       );
@@ -52,7 +100,7 @@ export async function captureSession(
   since: number,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<string | null> {
-  if (kind === "cursor") return null; // Installed CLI currently cannot attest session storage.
+  if (kind === "cursor") return captureCursorChat(worktree, since, env);
   if (kind === "opencode") {
     const result = await runCommand(["opencode", "session", "list", "--format", "json"], {
       cwd: worktree,

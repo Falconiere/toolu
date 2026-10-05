@@ -114,7 +114,7 @@ a `Repo: owner/name` description line, or `--repo` (default: current repo).
 |------|------------------|----------------|--------|
 | Claude Code | `--dangerously-skip-permissions` | `--model` / `--effort` | `--resume <captured-id>` |
 | Codex | `--no-daemon --dangerously-bypass-approvals-and-sandbox` | `--model` / `-c model_reasoning_effort=` | `resume <captured-id>` |
-| Cursor Agent | `--yolo --trust --approve-mcps` | model id carries effort | Requires verified captured ID; currently unverified |
+| Cursor Agent | `--yolo --trust --approve-mcps` | model id carries effort | `--resume <captured-id>` |
 | OpenCode | `--auto` | `--model provider/model` (no effort flag) | `--session <captured-id>` |
 
 `--safe` keeps approval prompts on. Default tiers (`trivial`, `standard`,
