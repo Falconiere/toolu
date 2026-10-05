@@ -33,7 +33,7 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          token: ${{ github.token }} # default token. tests.yml and toolu-review.yml skip a diff that is only version files and CHANGELOG; this workflow still runs on the merge so the tag publishes
+          token: ${{ github.token }} # default token. tests.yml and toolu-review.yml skip their jobs (through job-level `if`) for a diff that only bumps versions and CHANGELOG; this workflow still runs on the merge so the tag publishes
 
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
