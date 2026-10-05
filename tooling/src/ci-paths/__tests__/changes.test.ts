@@ -187,6 +187,19 @@ test.concurrent("a Cargo.toml edit beyond the version is not release-only (#407 
   });
 });
 
+test.concurrent("a hooks.json edit turns on rust for cargo xtask check-hooks (#412)", async () => {
+  const path = "plugins/toolu/hooks/hooks.json";
+  const text = readFileSync(join(ROOT, path), "utf8");
+  expect(await prOutputs({ [path]: `${text}\n` })).toEqual({
+    ts: "true",
+    opencode: "true",
+    docs: "false",
+    rust: "true",
+    ports: "true",
+    changed: "true",
+  });
+});
+
 test.concurrent("an OpenCode adapter edit turns on ts and opencode (AC-3)", async () => {
   const path = "tools/toolu-opencode/src/plugin/hooks.ts";
   const text = readFileSync(join(ROOT, path), "utf8");
@@ -290,7 +303,8 @@ test.concurrent("a plugin manifest with a version and another change is not rele
     ts: "true",
     opencode: "true",
     docs: "false",
-    rust: "false",
+    // check-hooks gates every manifest's hookProtocol (#412).
+    rust: "true",
     ports: "true",
     changed: "true",
   });
@@ -307,7 +321,7 @@ test.concurrent("deleting a release-only file is not release-only", async () => 
     ts: "true",
     opencode: "true",
     docs: "false",
-    rust: "false",
+    rust: "true",
     ports: "true",
     changed: "true",
   });
