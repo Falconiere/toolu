@@ -7,6 +7,9 @@ import { spawnSync } from "node:child_process";
 import { run } from "@toolu/conformance/harness/spawn";
 
 const CHECKER = resolve(import.meta.dir, "../check-retired-plugin-references.ts");
+// Split these names so the checked test source does not need its own exception.
+const RETIRED_NAME = ["context", "7"].join("");
+const TRACKER_NAME = ["ji", "ra"].join("");
 
 function write(root: string, path: string, content: string): void {
   const target = join(root, path);
@@ -26,15 +29,11 @@ test("the reference gate accepts reviewed history and rejects a current referenc
     expect(init.status).toBe(0);
     const relativeChecker = "tooling/src/check-retired-plugin-references.ts";
     write(root, relativeChecker, readFileSync(CHECKER, "utf8"));
-    write(
-      root,
-      `plugins/epic-orchestrator/scripts/trackers/${["ji", "ra"].join("")}.ts`,
-      "// tracker\n",
-    );
+    write(root, `plugins/epic-orchestrator/scripts/trackers/${TRACKER_NAME}.ts`, "// tracker\n");
     write(
       root,
       "plugins/pr-babysit/scripts/__tests__/fixtures/pr120-verdict-changes.txt",
-      `historical ${["context", "7"].join("")} output\n`,
+      `historical ${RETIRED_NAME} output\n`,
     );
     stage(root);
     const script = join(root, relativeChecker);
@@ -42,13 +41,13 @@ test("the reference gate accepts reviewed history and rejects a current referenc
     expect(clean.exitCode).toBe(0);
     expect(clean.stdout).toContain("only reviewed history");
 
-    write(root, "README.md", `current ${["context", "7"].join("")} guidance\n`);
+    write(root, "README.md", `current ${RETIRED_NAME} guidance\n`);
     stage(root);
     const stale = await run([process.execPath, script], { cwd: root });
     expect(stale.exitCode).not.toBe(0);
     expect(stale.stderr).toContain("README.md");
 
-    write(root, "README.md", `See ${["plugins", ["ji", "ra"].join(""), "README.md"].join("/")}\n`);
+    write(root, "README.md", `See ${["plugins", TRACKER_NAME, "README.md"].join("/")}\n`);
     stage(root);
     const standalone = await run([process.execPath, script], { cwd: root });
     expect(standalone.exitCode).not.toBe(0);
