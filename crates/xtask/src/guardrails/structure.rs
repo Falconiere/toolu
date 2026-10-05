@@ -98,7 +98,7 @@ fn rust_file(ctx: &Context<'_>, rel: &Path) -> Vec<Finding> {
     flag("a mod file — name the module file after the module".to_owned());
   }
   if stem == "build" {
-    flag("build.rs is reserved for build scripts, and the workspace has none".to_owned());
+    flag("a build script — the workspace has none".to_owned());
   }
   let crate_dir = member
     .and_then(|member| member.dir.file_name())

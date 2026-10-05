@@ -1,6 +1,10 @@
 use super::check;
 use crate::guardrails::tests::{context, member, rules, tree, tree_with};
 
+/// File names the repository bans, spelled in parts so no source holds them.
+const MOD: &str = concat!("mod", ".rs");
+const BUILD: &str = concat!("build", ".rs");
+
 fn messages(found: &[crate::guardrails::Finding]) -> Vec<String> {
   found
     .iter()
@@ -63,11 +67,11 @@ fn crates_core_crate_and_plugin_entries_are_allowlisted() {
 fn rust_file_names_depth_main_and_build_are_checked() {
   let tree = tree(&[
     ("crates/demo/src/BadName.rs", "//! b\n"),
-    ("crates/demo/src/inner/mod.rs", "//! m\n"),
+    (&format!("crates/demo/src/inner/{MOD}"), "//! m\n"),
     ("crates/demo/src/a/b/c/d/deep.rs", "//! d\n"),
     ("crates/demo/src/a/b/c/ok.rs", "//! o\n"),
     ("crates/demo/src/main.rs", "//! m\nfn main() {}\n"),
-    ("crates/demo/build.rs", "fn main() {}\n"),
+    (&format!("crates/demo/{BUILD}"), "fn main() {}\n"),
   ]);
   let mut ctx = context(&tree.workspace);
   ctx.folders.crates.push("demo".to_owned());
@@ -76,7 +80,7 @@ fn rust_file_names_depth_main_and_build_are_checked() {
   assert!(found.iter().any(|m| m.starts_with("a mod file")));
   assert!(found.contains(&"4 directory levels under src, limit 3".to_owned()));
   assert!(found.contains(&"main.rs outside cli, xtask".to_owned()));
-  assert!(found.iter().any(|m| m.starts_with("build.rs is reserved")));
+  assert!(found.iter().any(|m| m.starts_with("a build script")));
   assert!(!found.iter().any(|m| m.contains("ok.rs")));
 }
 

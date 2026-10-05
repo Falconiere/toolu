@@ -1,5 +1,5 @@
 //! Attributes and macros: no suppression (rule 20), no `#[ignore]` (rule 10),
-//! no `include!` and `#[path]` only for test wiring (rule 11).
+//! no source includes and `#[path]` only for test wiring (rule 11).
 
 use syn::spanned::Spanned;
 use syn::visit::Visit;

@@ -93,7 +93,8 @@ fn step_run(step: &str, options: &Options) -> Result<Verdict, String> {
         "cargo-machete".as_ref(),
         &["--version"],
       )?;
-      status(root, "cargo-machete".as_ref(), &[], &[])
+      // Every member lives under crates/ (check-layers); fixtures elsewhere are not workspace code.
+      status(root, "cargo-machete".as_ref(), &["crates"], &[])
     }
     "unused-pub" => unused_pub::run(options),
     "jscpd" => jscpd(root),
