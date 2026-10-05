@@ -4,10 +4,10 @@
  */
 import { afterAll, beforeEach, expect, test } from "bun:test";
 import { startHttpsFixture } from "@toolu/conformance/https-fixture";
-import { join } from "node:path";
+import { publishedArgv } from "@toolu/conformance/harness/entry-command";
 import { DOCS_USAGE, MAIN_USAGE, SEARCH_USAGE } from "../context7/usage.ts";
 
-const BUNDLE = join(import.meta.dir, "../../dist/search.js");
+const ARGV = publishedArgv("context7", "search");
 const fixture = await startHttpsFixture(["context7.com"]);
 
 afterAll(() => fixture.stop());
@@ -23,7 +23,7 @@ async function context7(args: readonly string[], key: string | null = null) {
   // Never inherit a developer's real key.
   delete env["CONTEXT7_API_KEY"];
   if (key !== null) env["CONTEXT7_API_KEY"] = key;
-  const child = Bun.spawn([BUNDLE, ...args], { env, stdout: "pipe", stderr: "pipe" });
+  const child = Bun.spawn([...ARGV, ...args], { env, stdout: "pipe", stderr: "pipe" });
   const [stdout, stderr, status] = await Promise.all([
     new Response(child.stdout).text(),
     new Response(child.stderr).text(),

@@ -1,12 +1,11 @@
 import { expect, test } from "bun:test";
 import { chmodSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { createSandbox } from "../sandbox.ts";
 import { run } from "../spawn.ts";
-import { resolveEntryCommand } from "../entry-command.ts";
+import { bundlePath, pluginRoot, resolveEntryCommand } from "../entry-command.ts";
 
-const ROOT = resolve(import.meta.dir, "../../../../..");
-const SAMPLE = join(ROOT, "plugins/toolu/hooks/dist/sample.js");
+const SAMPLE = bundlePath(pluginRoot("toolu"), "sample");
 const ENTRY = { plugin: "toolu", entry: "pre-tools", bundle: SAMPLE };
 
 test("unset selector executes the committed Bun bundle unchanged", async () => {

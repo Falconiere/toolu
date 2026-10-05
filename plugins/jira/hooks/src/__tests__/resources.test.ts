@@ -4,7 +4,7 @@
  * argument guards. One live test runs only with JIRA_LIVE=1 and real creds.
  */
 import { afterAll, beforeEach, expect, test } from "bun:test";
-import { BASE, BUNDLE, startJira } from "./harness.ts";
+import { BASE, JIRA_ARGV, startJira } from "./harness.ts";
 
 const h = await startJira();
 afterAll(() => h.fixture.stop());
@@ -99,7 +99,7 @@ test("user unknown action exits 1", async () => {
 
 test.skipIf(process.env["JIRA_LIVE"] !== "1")("user whoami (live, gated)", async () => {
   // Real env, real Jira: no fixture proxy.
-  const child = Bun.spawn([BUNDLE, "user", "whoami"], { stdout: "pipe", stderr: "pipe" });
+  const child = Bun.spawn([...JIRA_ARGV, "user", "whoami"], { stdout: "pipe", stderr: "pipe" });
   const [stdout, status] = await Promise.all([new Response(child.stdout).text(), child.exited]);
   expect(status).toBe(0);
   expect(JSON.parse(stdout)).toHaveProperty("accountId");

@@ -9,9 +9,9 @@ import { resolve } from "node:path";
 import { run } from "../spawn.ts";
 
 const ROOT = resolve(import.meta.dir, "../../../../..");
-// Built from parts so this file does not match its own search.
-const NEEDLE = ["hooks", "dist", ""].join("/");
-const SPLIT_NEEDLE = ['"hooks"', '"dist"'].join(",\\s*");
+// A bundle path spelled out, a relative `../dist/` from `hooks/src`, or path.join parts.
+const PATTERN = String.raw`hooks/dist\b|(\.\./)+dist/|"hooks",\s*"dist"`;
+const SELF = "tools/toolu-conformance/src/harness/__tests__/bundle-references.test.ts";
 const COMMENT = /^\s*(\/\/|\/?\*)/;
 
 /** Path prefix → why the bundle path is the subject rather than a command to run. */
@@ -33,7 +33,9 @@ const ALLOWED: Record<string, string> = {
     "command text that names the plan-ledger bundle",
   "plugins/delivery-flow/skills/__tests__/delivery-flow-contract.test.ts":
     "skill text that names the plan-ledger bundle",
-  "plugins/toolu/hooks/src/__tests__/lifecycle-cases.ts": "counts hooks.json launcher entries",
+  "tooling/src/__tests__/workspace-skeleton.test.ts": "asserts release-only paths exclude bundles",
+  "plugins/toolu/hooks/src/__tests__/lifecycle-cases.ts":
+    "matches bundle text in hooks.json commands to count launcher entries",
 };
 
 /** Test files that build the hooks.json launcher text to compare it, not only to run it. */
@@ -52,7 +54,7 @@ function allowed(file: string, list: Record<string, string> = ALLOWED): boolean 
   return Object.keys(list).some((prefix) => file.startsWith(prefix));
 }
 
-async function references(pattern = `${NEEDLE}|${SPLIT_NEEDLE}`): Promise<Map<string, string[]>> {
+async function references(pattern = PATTERN): Promise<Map<string, string[]>> {
   const result = await run(
     ["git", "grep", "-n", "-E", pattern, "--", "**/__tests__/**", "*.test.ts"],
     { cwd: ROOT },
@@ -63,7 +65,7 @@ async function references(pattern = `${NEEDLE}|${SPLIT_NEEDLE}`): Promise<Map<st
     const match = /^([^:]+):(\d+):(.*)$/.exec(line);
     if (match === null) continue;
     const [, file = "", lineNo = "", text = ""] = match;
-    if (COMMENT.test(text)) continue;
+    if (COMMENT.test(text) || file === SELF) continue;
     found.set(file, [...(found.get(file) ?? []), `${lineNo}: ${text.trim()}`]);
   }
   return found;

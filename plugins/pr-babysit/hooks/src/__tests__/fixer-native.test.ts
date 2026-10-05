@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { entryArgv } from "@toolu/conformance/harness/entry-command";
 import {
   dispatchFix,
   fixerAgentName,
@@ -426,22 +427,23 @@ test("bundled fixer commands resolve the shipped plugin template and write an at
       ],
     }),
   );
-  const dist = join(root, "plugins/pr-babysit/hooks/dist");
   writeFileSync(
     join(dir, "toolu.config.json"),
     JSON.stringify({ prBabysit: { dispatch: "inline" } }),
   );
+  const [routeCmd = "", ...routeArgs] = entryArgv("pr-babysit", "babysit-route-fix");
   const routed = spawnSync(
-    process.execPath,
-    [join(dist, "babysit-route-fix.js"), "--items", fixture, "--host", "claude", "--no-jev"],
+    routeCmd,
+    [...routeArgs, "--items", fixture, "--host", "claude", "--no-jev"],
     { encoding: "utf8", env: { ...process.env, TOOLU_CONFIG_DIR: dir, TOOLU_PROJECT_DIR: dir } },
   );
   expect(routed.status, `${routed.stdout}\n${routed.stderr}`).toBe(0);
   expect(JSON.parse(routed.stdout).dispatch).toBe("inline");
+  const [dispatchCmd = "", ...dispatchArgs] = entryArgv("pr-babysit", "babysit-dispatch-fix");
   const dry = spawnSync(
-    process.execPath,
+    dispatchCmd,
     [
-      join(dist, "babysit-dispatch-fix.js"),
+      ...dispatchArgs,
       "start",
       "--state-file",
       stateFile,
@@ -461,11 +463,10 @@ test("bundled fixer commands resolve the shipped plugin template and write an at
   );
   expect(dry.status).toBe(0);
   expect(JSON.parse(dry.stdout).brief).toContain("babysit-fixer-report.js");
-  const report = spawnSync(
-    process.execPath,
-    [join(dist, "babysit-fixer-report.js"), reportFile, "done", "--note", "fixed"],
-    { encoding: "utf8" },
-  );
+  const [reportCmd = "", ...reportArgs] = entryArgv("pr-babysit", "babysit-fixer-report");
+  const report = spawnSync(reportCmd, [...reportArgs, reportFile, "done", "--note", "fixed"], {
+    encoding: "utf8",
+  });
   expect(report.status).toBe(0);
   expect(JSON.parse(readFileSync(reportFile, "utf8"))).toMatchObject({
     status: "done",

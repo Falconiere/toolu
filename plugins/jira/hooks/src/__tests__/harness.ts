@@ -4,11 +4,14 @@
  * host for attachment redirects). Responses are recorded real Jira bodies from
  * fixtures/. The environment never inherits a developer's Jira or host setup.
  */
+import { bundlePath, pluginRoot, publishedArgv } from "@toolu/conformance/harness/entry-command";
 import { type HttpsFixture, startHttpsFixture } from "@toolu/conformance/https-fixture";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-export const BUNDLE = join(import.meta.dir, "../../dist/jira.js");
+export const BUNDLE = bundlePath(pluginRoot("jira"), "jira");
+/** The jira CLI as its published symlink runs it, or its selected Rust command. */
+export const JIRA_ARGV = publishedArgv("jira", "jira");
 export const FIXTURES = join(import.meta.dir, "fixtures");
 export const BASE = "https://acme.atlassian.net";
 
@@ -64,7 +67,7 @@ export async function startJira(): Promise<JiraHarness> {
   return {
     fixture,
     async jira(args, options = {}) {
-      const child = Bun.spawn([BUNDLE, ...args], {
+      const child = Bun.spawn([...JIRA_ARGV, ...args], {
         env: jiraEnv(fixture, options.env),
         cwd: options.cwd ?? import.meta.dir,
         stdout: "pipe",

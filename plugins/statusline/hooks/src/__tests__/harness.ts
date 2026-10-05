@@ -2,7 +2,12 @@
 import { expect } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { bundlePath, entryArgv, pluginRoot } from "@toolu/conformance/harness/entry-command";
+import {
+  bundlePath,
+  entryArgv,
+  pluginRoot,
+  publishedArgv,
+} from "@toolu/conformance/harness/entry-command";
 import type { Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
 
@@ -73,7 +78,7 @@ type RenderOpts = { payload?: string; cwd?: string; env?: EnvPatch };
 /** Run the renderer the way Claude Code does; the payload defaults to `payload(sb.project)`. */
 export async function render(sb: Sandbox, opts: RenderOpts = {}): Promise<string> {
   const env = { HOME: sb.home, CLAUDE_CONFIG_DIR: cfgOf(sb), TYPESAFE_API_KEY: KEY, ...opts.env };
-  const res = await run(entryArgv("statusline", "statusline"), {
+  const res = await run(publishedArgv("statusline", "statusline"), {
     cwd: opts.cwd ?? sb.project,
     env,
     stdin: opts.payload ?? payload(sb.project),

@@ -15,7 +15,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { z } from "zod";
 import { bundlePath, pluginName, resolveEntryCommand } from "./entry-command.ts";
 import { createSandbox, type Sandbox } from "./sandbox.ts";
@@ -81,7 +81,7 @@ export function runStartupHook(
   const { argv } = resolveEntryCommand({
     plugin: pluginName(pluginRoot),
     entry,
-    bundle: bundlePath(pluginRoot, entry),
+    bundle: resolve(bundlePath(pluginRoot, entry)),
     defaultArgv: ["sh", "-c", hookCommand(pluginRoot, "SessionStart", entry)],
   });
   return run(argv, { cwd: sb.project, env, stdin: JSON.stringify({ source }) });

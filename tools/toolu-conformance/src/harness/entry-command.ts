@@ -130,6 +130,20 @@ export function entryArgv(
   return resolveEntryCommand({ plugin, entry, bundle: resolve(bundlePath(root, entry)) }, env).argv;
 }
 
+/**
+ * argv for a skill CLI bundle run by path through its shebang, the way its
+ * published symlink runs it; the selected Rust command under `TOOLU_IMPL`.
+ */
+export function publishedArgv(
+  plugin: string,
+  entry: string,
+  root: string = pluginRoot(plugin),
+  env: SelectorEnv = process.env,
+): string[] {
+  const bundle = resolve(bundlePath(root, entry));
+  return resolveEntryCommand({ plugin, entry, bundle, defaultArgv: [bundle] }, env).argv;
+}
+
 /** Return argv without a shell; selected binary setup errors occur before spawn. */
 export function resolveEntryCommand(
   command: EntryCommand,

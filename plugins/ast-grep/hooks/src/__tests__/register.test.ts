@@ -23,7 +23,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { launchedArgv } from "@toolu/conformance/harness/entry-command";
+import { bundlePath, launchedArgv } from "@toolu/conformance/harness/entry-command";
 import { toStdin } from "@toolu/conformance/harness/fixtures";
 import { runPostBundle } from "@toolu/conformance/harness/posttool";
 import { installPlugins, pretoolEnv, runBundle } from "@toolu/conformance/harness/pretool";
@@ -33,7 +33,7 @@ import { PLUGIN_ROOT } from "./golden-sandbox.ts";
 
 const NUDGE = "ast-grep@toolu__search-nudge.js";
 const SAVINGS = "ast-grep@toolu__byte-savings.js";
-const dist = (entry: string) => join(PLUGIN_ROOT, "hooks/dist", `${entry}.js`);
+const dist = (entry: string) => bundlePath(PLUGIN_ROOT, entry);
 
 type Root = { name: string; env: (sb: Sandbox) => EnvPatch; dir: (sb: Sandbox) => string };
 

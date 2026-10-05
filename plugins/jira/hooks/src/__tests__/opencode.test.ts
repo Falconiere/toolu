@@ -9,7 +9,11 @@ import { afterAll, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { bundlePath, entryArgv } from "@toolu/conformance/harness/entry-command";
+import {
+  bundlePath,
+  entryArgv,
+  resolveEntryCommand,
+} from "@toolu/conformance/harness/entry-command";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch, type RunResult } from "@toolu/conformance/harness/spawn";
 import { z } from "zod";
@@ -143,7 +147,13 @@ async function planRun(repo: string, host: EnvPatch): Promise<string[]> {
     JIRA_CLI: BUNDLE,
     ...host,
   });
-  const res = await run([process.execPath, "--no-env-file", BUNDLE, "plan", "run", "plan.md"], {
+  const { argv } = resolveEntryCommand({
+    plugin: "jira",
+    entry: "jira",
+    bundle: BUNDLE,
+    defaultArgv: [process.execPath, "--no-env-file", BUNDLE],
+  });
+  const res = await run([...argv, "plan", "run", "plan.md"], {
     cwd: repo,
     env,
   });
