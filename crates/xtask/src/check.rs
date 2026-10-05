@@ -42,9 +42,11 @@ pub fn check_layers(metadata: &Metadata, table: &LayerTable) -> Report {
     edges += check_edges(member, &members, &mut violations);
     if member.package.builds_binary() && !may_build_binary(member.role) {
       violations.push(format!(
-        "{} ({}) builds a binary: only crates/cli builds one (crates/xtask excepted)",
+        "{} ({}) builds a binary: only crates/{} builds one (crates/{} excepted)",
         member.rel.display(),
-        member.package.name
+        member.package.name,
+        table.binary,
+        table.tooling
       ));
     }
   }
@@ -98,12 +100,18 @@ fn unlisted_crates(metadata: &Metadata) -> Vec<String> {
     .collect();
   let mut found = BTreeSet::new();
   for parent in ["crates", "crates/core"] {
-    let Ok(entries) = std::fs::read_dir(root.join(parent)) else {
-      continue;
+    let entries = match std::fs::read_dir(root.join(parent)) {
+      Ok(entries) => entries,
+      Err(err) if err.kind() == std::io::ErrorKind::NotFound => continue,
+      Err(err) => return vec![format!("cannot list {parent}: {err}")],
     };
-    for entry in entries.flatten() {
-      if entry.path().join("Cargo.toml").is_file() {
-        found.insert(Path::new(parent).join(entry.file_name()));
+    for entry in entries {
+      match entry {
+        Ok(entry) if entry.path().join("Cargo.toml").is_file() => {
+          found.insert(Path::new(parent).join(entry.file_name()));
+        }
+        Ok(_) => {}
+        Err(err) => return vec![format!("cannot list {parent}: {err}")],
       }
     }
   }

@@ -111,8 +111,9 @@ pub fn forbidden_edge(from: Role, to: Role) -> Option<&'static str> {
     (_, Role::Tooling) => Some("nothing may depend on the tooling crate"),
     (Role::Core(from), Role::Core(to)) if to < from => None,
     (Role::Core(_), _) => Some("a core crate may depend only on lower core layers"),
-    (Role::Cli | Role::Tooling, _) | (_, Role::Core(_)) | (Role::Hub, Role::Rule) => None,
+    (Role::Hub, Role::Rule) => None,
     (_, Role::Rule) => Some("only the hub crate (crates/toolu) may depend on a rule crate"),
+    (Role::Cli | Role::Tooling, _) | (_, Role::Core(_)) => None,
     (_, Role::Hub | Role::Plugin) => Some("a plugin crate may not depend on another plugin crate"),
   }
 }

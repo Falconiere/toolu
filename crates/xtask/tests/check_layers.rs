@@ -251,6 +251,22 @@ fn the_hub_links_rules_and_the_cli_builds_the_binary() -> TestResult {
 }
 
 #[test]
+fn the_cli_may_not_depend_on_a_rule_crate() -> TestResult {
+  let rule = krate("crates/ts-quality", "toolu-ts-quality");
+  let cli = krate("crates/cli", "toolu")
+    .dep("toolu-ts-quality", "crates/ts-quality")
+    .bin();
+  let output = check(&workspace(vec![rule, cli], vec![])?)?;
+  assert_eq!(output.status.code(), Some(1));
+  assert_eq!(
+    stderr(&output),
+    "check-layers: crates/cli (toolu, cli crate) depends on toolu-ts-quality (crates/ts-quality, \
+     rule crate): only the hub crate (crates/toolu) may depend on a rule crate\n"
+  );
+  Ok(())
+}
+
+#[test]
 fn a_plugin_crate_building_a_binary_fails() -> TestResult {
   let statusline = krate("crates/statusline", "toolu-statusline").bin();
   let output = check(&workspace(vec![statusline], vec![])?)?;
@@ -292,6 +308,20 @@ fn a_crate_directory_missing_from_members_fails() -> TestResult {
   assert_eq!(
     stderr(&output),
     "check-layers: crates/stray has a Cargo.toml but is not a workspace member\n"
+  );
+  Ok(())
+}
+
+#[test]
+fn an_unlistable_crate_directory_is_reported() -> TestResult {
+  let fixture = workspace(vec![krate("crates/statusline", "toolu-statusline")], vec![])?;
+  fs::write(fixture.root.join("crates/core"), "not a directory\n")?;
+  let output = check(&fixture)?;
+  assert_eq!(output.status.code(), Some(1));
+  assert!(
+    stderr(&output).starts_with("check-layers: cannot list crates/core: "),
+    "{}",
+    stderr(&output)
   );
   Ok(())
 }
