@@ -130,7 +130,9 @@ test.concurrent("the Rust jobs run cargo xtask gate and both musl targets (#407 
   expect(cargo).toContain("bun install --frozen-lockfile");
   // #455: the job runs the whole quality bar through `cargo xtask gate`.
   expect(cargo.some((run) => run.includes("cargo xtask gate "))).toBe(true);
-  expect(JSON.stringify(rust)).toContain("cargo-deny@0.20.2,cargo-machete@0.9.2,cargo-llvm-cov@0.9.1");
+  expect(JSON.stringify(rust)).toContain(
+    "cargo-deny@0.20.2,cargo-machete@0.9.2,cargo-llvm-cov@0.9.1",
+  );
   const musl = steps("tests.yml", "rust-musl").map((step) => step.run ?? "");
   expect(musl).toContain(
     'cargo build --workspace --release --locked --target "${{ matrix.target }}"',
