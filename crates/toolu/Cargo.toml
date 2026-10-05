@@ -1,0 +1,19 @@
+[package]
+name = "toolu-hub"
+description = "toolu plugin (the hub): the toolu namespaces and the rule crates"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+clap.workspace = true
+toolu-ast-grep = { path = "../ast-grep" }
+toolu-python-quality = { path = "../python-quality" }
+toolu-rust-quality = { path = "../rust-quality" }
+toolu-ts-quality = { path = "../ts-quality" }
+toolu-runtime = { path = "../core/runtime" }
+
+[lints]
+workspace = true

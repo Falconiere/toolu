@@ -1,6 +1,6 @@
 [package]
-name = "toolu-runtime"
-description = "toolu core: the runtime layer"
+name = "toolu-python-quality"
+description = "toolu python-quality plugin: the `toolu python-quality` namespace"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,11 +9,7 @@ publish.workspace = true
 
 [dependencies]
 clap.workspace = true
-serde_json.workspace = true
-toolu-protocol = { path = "../protocol" }
-
-[dev-dependencies]
-tempfile.workspace = true
+toolu-runtime = { path = "../core/runtime" }
 
 [lints]
 workspace = true

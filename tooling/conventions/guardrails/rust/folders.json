@@ -41,6 +41,22 @@
     "tsconfig.base.json",
     "tsconfig.json"
   ],
-  "crates": ["cli", "core", "xtask"],
+  "crates": [
+    "cli",
+    "core",
+    "xtask",
+    "toolu",
+    "ts-quality",
+    "python-quality",
+    "rust-quality",
+    "ast-grep",
+    "brainstorm",
+    "delivery-flow",
+    "toolu-review",
+    "jev",
+    "statusline",
+    "pr-babysit",
+    "epic-orchestrator"
+  ],
   "core": ["protocol", "runtime", "shell", "http", "state", "engine"]
 }
