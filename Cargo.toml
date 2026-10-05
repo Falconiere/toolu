@@ -16,7 +16,7 @@ members = [
 
 # The lockstep version: release-please bumps it with package.json and every plugin.json.
 [workspace.package]
-version = "7.10.0"
+version = "7.11.0"
 edition = "2024"
 rust-version = "1.99"
 license = "MIT"

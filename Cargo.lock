@@ -285,27 +285,27 @@ checksum = "7d56353a2a665ad0f41a421187180aab746c8c325620617ad883a99a1cbe66d2"
 
 [[package]]
 name = "toolu-engine"
-version = "7.10.0"
+version = "7.11.0"
 
 [[package]]
 name = "toolu-http"
-version = "7.10.0"
+version = "7.11.0"
 
 [[package]]
 name = "toolu-protocol"
-version = "7.10.0"
+version = "7.11.0"
 
 [[package]]
 name = "toolu-runtime"
-version = "7.10.0"
+version = "7.11.0"
 
 [[package]]
 name = "toolu-shell"
-version = "7.10.0"
+version = "7.11.0"
 
 [[package]]
 name = "toolu-state"
-version = "7.10.0"
+version = "7.11.0"
 
 [[package]]
 name = "unicode-ident"
@@ -336,7 +336,7 @@ checksum = "23b97319f7b8343df12cc98938e5c3eb436064524c8d2b4e30a1d3a36eecdf81"
 
 [[package]]
 name = "xtask"
-version = "7.10.0"
+version = "7.11.0"
 dependencies = [
  "proc-macro2",
  "regex",
