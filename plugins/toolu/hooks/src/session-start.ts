@@ -72,7 +72,7 @@ function contextParts({ event, env, host, root, config }: Session): string[] {
   sweepState(project, { env, host, config });
   const quiet = { ...config, warn: () => undefined };
   const permissions = permissionsAutowrite(quiet, project, { env, cwd });
-  const mandates = { config, env, host, configRoot: root };
+  const mandates = { config, env, host };
   const extras: (string | null | undefined)[] = [
     permissions.written ? permissions.notice : undefined,
     gatePresetNotice(root, config.data),

@@ -5127,7 +5127,7 @@ function contextParts({ event, env, host, root, config }) {
     return;
   } };
   const permissions = permissionsAutowrite(quiet, project, { env, cwd });
-  const mandates = { config, env, host, configRoot: root };
+  const mandates = { config, env, host };
   const extras = [
     permissions.written ? permissions.notice : undefined,
     gatePresetNotice(root, config.data),

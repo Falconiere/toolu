@@ -11,7 +11,7 @@ import { pluginActive } from "./plugin-presence.ts";
 
 type Env = Record<string, string | undefined>;
 
-export type MandateInput = { config: LoadedConfig; env: Env; host: HostName; configRoot: string };
+export type MandateInput = { config: LoadedConfig; env: Env; host: HostName };
 
 export function hasAstGrep(env: Env): boolean {
   const path = env.PATH ?? "";
