@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+* **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
+
 ## [7.10.0](https://github.com/Falconiere/toolu/compare/v7.9.0...v7.10.0) (2026-10-05)
 
 

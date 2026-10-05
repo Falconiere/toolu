@@ -27,8 +27,9 @@ S="${ROOT}/scripts"
 `<epic>` can be:
 - GitHub: an issue URL, `owner/repo#N`, or `#N` (current repo).
 - Jira: `https://<site>.atlassian.net/browse/KEY-12`, `jira:KEY-12`, or a bare
-  `KEY-12` when only Jira is configured. Uses the toolu `jira` plugin's
-  `jira.sh` for auth. Children are `parent = KEY-12` (or `"Epic Link"` on
+  `KEY-12` when only Jira is configured. Set `JIRA_BASE_URL` and either
+  `JIRA_PAT` or both `JIRA_EMAIL` and `JIRA_API_TOKEN` in the environment.
+  `JIRA_API_VERSION` is `2` or `3` (default `3`). Children are `parent = KEY-12` (or `"Epic Link"` on
   Server/DC); blockers are "is blocked by" / "depends on" links.
 - Linear: an issue or project URL, `linear:ENG-12`, or a bare `ENG-12` when
   only `LINEAR_API_KEY` is set. Children are sub-issues (or project issues);
@@ -83,7 +84,8 @@ Stop and report the first check that fails:
 - Each host in `--hosts` is on PATH (`claude`, `codex`, `cursor-agent`,
   `opencode`) and logged in. For OpenCode, `opencode --version` must be 1.x
   (toolu's OpenCode plugin targets opencode-ai 1.x).
-- Jira epic: `jira.sh` is installed (toolu `jira` plugin) and authenticated.
+- Jira epic: `JIRA_BASE_URL` and either `JIRA_PAT` or both `JIRA_EMAIL` and
+  `JIRA_API_TOKEN` are exported. The jira-cli config and keyring are not read.
   Linear epic: `LINEAR_API_KEY` is set (personal key or OAuth token).
 - `gh api rate_limit` shows core above 1000 (`EPIC_GH_CORE_FLOOR`). Below it,
   wait for the reset: every worker's babysit spends the same token.

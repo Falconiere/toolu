@@ -18,9 +18,14 @@ Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `bra
 (with `HERDR_ENV=1` inside a herdr pane).
 
 Optional: `jev` with `TYPESAFE_API_KEY` (complexity routing; without it tiers
-come from a heuristic), the `jira` plugin (Jira epics), and `LINEAR_API_KEY`
+come from a heuristic), Jira environment credentials (Jira epics), and `LINEAR_API_KEY`
 (Linear epics: a personal key `lin_api_…` is sent bare, an OAuth token
 `lin_oauth_…` as `Bearer`; `LINEAR_API_URL` overrides the endpoint).
+
+For Jira, export `JIRA_BASE_URL` and either `JIRA_PAT` or both `JIRA_EMAIL`
+and `JIRA_API_TOKEN`. `JIRA_API_VERSION` accepts `2` or `3` and defaults to
+`3`. The jira-cli config and keyring are not read. Workers read an item with
+`bun --no-env-file scripts/jira-issue.ts get PAY-12` from the installed plugin.
 
 ### Claude Code
 
@@ -81,7 +86,7 @@ plugin; an uncommitted project selection does not reach worktrees.
 - **Skill `epic-orchestrator` and command `epic`** — orchestrate an epic (or
   `status` / `stop`). Workers run the toolu delivery chain then babysit; the
   orchestrator merges and advances the graph.
-- **Bun CLIs** under `scripts/` — `epic-graph.ts`, `route.ts`,
+- **Bun CLIs** under `scripts/` — `epic-graph.ts`, `jira-issue.ts`, `route.ts`,
   `launch-issue.ts`, `epic-watch.ts`, `merge-gate.ts`, `checkpoint.ts`,
   `epic-close.ts`, `finish-issue.ts`, `report.ts`. Tracker adapters live
   in `scripts/trackers/`.

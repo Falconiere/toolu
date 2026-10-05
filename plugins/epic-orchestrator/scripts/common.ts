@@ -30,7 +30,7 @@ export function defaultEpicsHome(env: NodeJS.ProcessEnv = process.env): string {
 
 export const EPICS_HOME = defaultEpicsHome();
 
-/** Where a toolu helper (`jev/jev.sh`, `jira/jira.sh`) may be published:
+/** Where a toolu helper (for example `jev/jev.sh`) may be published:
  * TOOLU_CONFIG_DIR (OpenCode's data root, set by its shell.env), then the
  * Claude Code and Codex config dirs. */
 export function helperCandidates(rel: string, env: NodeJS.ProcessEnv = process.env): string[] {

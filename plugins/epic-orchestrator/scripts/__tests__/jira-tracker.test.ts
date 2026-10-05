@@ -1,100 +1,250 @@
-/** JiraTracker end to end through the real toolu jira CLI bundle (EPIC_JIRA_SH)
- * against the loopback HTTPS fixture posing as a Jira site. The bundle is a
- * Bun program published as jira.sh, so the tracker must exec it, not feed it
- * to bash. The tracker runs in its own process: the CLI it spawns inherits that
- * process's environment, which carries the fixture's proxy and CA. */
-
+/** Jira tracker against the loopback HTTPS service, without the jira plugin. */
 import { expect, test } from "bun:test";
 import { startHttpsFixture, type HttpsFixture } from "@toolu/conformance/https-fixture";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch, type RunResult } from "@toolu/conformance/harness/spawn";
-import { mkdirSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 
-const BUNDLE = join(import.meta.dir, "../../../jira/hooks/dist/jira.js");
 const TRACKER = join(import.meta.dir, "../trackers/jira.ts");
+const BASE = "https://acme.atlassian.net";
 
-/** Runs `new JiraTracker(ref).epic()` in a fresh bun process and returns its result. */
-function epicVia(
+function via(
   sb: Sandbox,
   fixture: HttpsFixture,
-  ref: string,
-  helperEnv: EnvPatch = { EPIC_JIRA_SH: BUNDLE },
+  method: string,
+  args: unknown[] = [],
+  env: EnvPatch = {},
 ): Promise<RunResult> {
   const script = sb.write(
     "main.ts",
-    `import { JiraTracker } from ${JSON.stringify(TRACKER)};\n` +
-      `console.log(JSON.stringify(await new JiraTracker(${JSON.stringify(ref)}, "acme/payments").epic()));\n`,
+    "import { JiraTracker } from " +
+      JSON.stringify(TRACKER) +
+      ";\n" +
+      'console.log(JSON.stringify(await new JiraTracker("PAY-7", "acme/payments")[' +
+      JSON.stringify(method) +
+      "](..." +
+      JSON.stringify(args) +
+      ")));\n",
   );
   return run([process.execPath, script], {
     env: {
       ...fixture.env,
-      ...helperEnv,
-      JIRA_BASE_URL: "https://acme.atlassian.net",
-      JIRA_PAT: "tok",
+      JIRA_BASE_URL: BASE,
+      JIRA_PAT: "pat-token",
+      JIRA_EMAIL: undefined,
+      JIRA_API_TOKEN: undefined,
       JIRA_API_VERSION: "3",
-      JIRA_CLI_CONFIG: "/dev/null",
-      NETRC: "/dev/null",
+      EPIC_API_ATTEMPTS: "1",
+      TOOLU_CONFIG_DIR: sb.path("config"),
+      CLAUDE_CONFIG_DIR: sb.path("claude"),
+      CODEX_HOME: sb.path("codex"),
+      HOME: sb.root,
+      ...env,
     },
   });
 }
 
-test.concurrent("epic() reads the epic through the jira CLI bundle", async () => {
+const issue = (key: string, summary: string, done = false) => ({
+  key,
+  fields: {
+    summary,
+    status: { statusCategory: { key: done ? "done" : "new" } },
+    description: {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "Repo: acme/refunds" }] }],
+    },
+    labels: ["backend"],
+    issuelinks: [
+      {
+        type: { inward: "is blocked by", outward: "blocks" },
+        inwardIssue: { key: "PAY-11", fields: { status: { statusCategory: { key: "new" } } } },
+      },
+    ],
+  },
+});
+
+test.concurrent("v3 bearer client reads epic and paginated children with blockers", async () => {
   using sb = createSandbox();
   const fixture = await startHttpsFixture(["acme.atlassian.net"]);
   try {
-    fixture.plan([
-      {
-        body: JSON.stringify({
-          key: "PAY-7",
-          fields: { summary: "Refunds epic", status: { statusCategory: { key: "done" } } },
-        }),
-      },
-    ]);
-    const res = await epicVia(sb, fixture, "PAY-7");
-    expect(res.stderr).toBe("");
-    expect(res.exitCode).toBe(0);
-    expect(JSON.parse(res.stdout)).toEqual({
+    fixture.plan([{ body: JSON.stringify(issue("PAY-7", "Refunds epic", true)) }]);
+    const epic = await via(sb, fixture, "epic");
+    expect(epic.exitCode).toBe(0);
+    expect(JSON.parse(epic.stdout)).toEqual({
       ref: "PAY-7",
       title: "Refunds epic",
       state: "closed",
-      url: "https://acme.atlassian.net/browse/PAY-7",
+      url: BASE + "/browse/PAY-7",
     });
-    expect(fixture.requests).toHaveLength(1);
     expect(fixture.requests[0]).toMatchObject({
       method: "GET",
       path: "/rest/api/3/issue/PAY-7?fields=summary,status",
     });
-    expect(fixture.requests[0]?.headers["authorization"]).toBe("Bearer tok");
+    expect(fixture.requests[0]?.headers["authorization"]).toBe("Bearer pat-token");
+
+    fixture.plan([
+      {
+        body: JSON.stringify({ issues: [issue("PAY-12", "Build refunds")], nextPageToken: "next" }),
+      },
+      { body: JSON.stringify({ issues: [issue("PAY-13", "Test refunds")] }) },
+    ]);
+    const children = await via(sb, fixture, "children");
+    expect(children.exitCode).toBe(0);
+    expect(JSON.parse(children.stdout)).toMatchObject([
+      { ref: "PAY-12", repo: "acme/refunds", blockers: { "PAY-11": "open" } },
+      { ref: "PAY-13", repo: "acme/refunds" },
+    ]);
+    expect(fixture.requests.map((r) => r.path)).toEqual([
+      "/rest/api/3/search/jql",
+      "/rest/api/3/search/jql",
+    ]);
+    expect(JSON.parse(fixture.requests[1]?.body ?? "{}")).toMatchObject({
+      nextPageToken: "next",
+      jql: "parent = PAY-7 ORDER BY key",
+    });
   } finally {
     await fixture.stop();
   }
 });
 
-test.concurrent("epic() finds jira.sh published only under TOOLU_CONFIG_DIR (OpenCode)", async () => {
+test.concurrent("v2 basic client pages children and comments then transitions by name", async () => {
   using sb = createSandbox();
-  mkdirSync(sb.path("toolu/jira"), { recursive: true });
-  symlinkSync(BUNDLE, sb.path("toolu/jira/jira.sh"));
   const fixture = await startHttpsFixture(["acme.atlassian.net"]);
+  const env = {
+    JIRA_PAT: undefined,
+    JIRA_EMAIL: "agent@example.com",
+    JIRA_API_TOKEN: "api-token",
+    JIRA_API_VERSION: "2",
+  };
   try {
     fixture.plan([
+      { body: JSON.stringify({ issues: [issue("PAY-12", "Build refunds")], total: 2 }) },
+      { body: JSON.stringify({ issues: [issue("PAY-13", "Test refunds")], total: 2 }) },
+    ]);
+    const children = await via(sb, fixture, "children", [], env);
+    expect(children.exitCode).toBe(0);
+    expect(JSON.parse(children.stdout)).toHaveLength(2);
+    expect(fixture.requests.map((r) => r.path)).toEqual([
+      "/rest/api/2/search",
+      "/rest/api/2/search",
+    ]);
+    expect(JSON.parse(fixture.requests[1]?.body ?? "{}")).toMatchObject({ startAt: 1 });
+    expect(fixture.requests[0]?.headers["authorization"]).toBe(
+      "Basic " + Buffer.from("agent@example.com:api-token").toString("base64"),
+    );
+
+    fixture.plan([
+      { body: JSON.stringify(issue("PAY-12", "Build refunds")) },
+      { body: "{}" },
       {
         body: JSON.stringify({
-          key: "PAY-8",
-          fields: { summary: "Disputes epic", status: { statusCategory: { key: "new" } } },
+          transitions: [
+            {
+              id: "31",
+              name: "Done",
+              to: { statusCategory: { key: "done" } },
+            },
+          ],
         }),
       },
+      {
+        body: JSON.stringify({
+          transitions: [
+            {
+              id: "31",
+              name: "Done",
+              to: { statusCategory: { key: "done" } },
+            },
+          ],
+        }),
+      },
+      { body: "{}" },
     ]);
-    const res = await epicVia(sb, fixture, "PAY-8", {
-      EPIC_JIRA_SH: undefined,
-      TOOLU_CONFIG_DIR: sb.path("toolu"),
-      CLAUDE_CONFIG_DIR: sb.path("claude"),
-      CODEX_HOME: sb.path("codex"),
+    const closed = await via(sb, fixture, "closeIssue", ["PAY-12", "Delivered"], env);
+    expect(closed.exitCode).toBe(0);
+    expect(JSON.parse(closed.stdout)).toBe("transitioned-done");
+    expect(fixture.requests.map((r) => r.path)).toEqual([
+      "/rest/api/2/issue/PAY-12?fields=status",
+      "/rest/api/2/issue/PAY-12/comment",
+      "/rest/api/2/issue/PAY-12/transitions",
+      "/rest/api/2/issue/PAY-12/transitions",
+      "/rest/api/2/issue/PAY-12/transitions",
+    ]);
+    expect(JSON.parse(fixture.requests[1]?.body ?? "{}")).toEqual({ body: "Delivered" });
+    expect(JSON.parse(fixture.requests[4]?.body ?? "{}")).toEqual({ transition: { id: "31" } });
+  } finally {
+    await fixture.stop();
+  }
+});
+
+test.concurrent("v3 comments use ADF and epic closes through the named Done transition", async () => {
+  using sb = createSandbox();
+  const fixture = await startHttpsFixture(["acme.atlassian.net"]);
+  try {
+    const transitions = {
+      transitions: [
+        {
+          id: "41",
+          name: "Resolve",
+          to: { statusCategory: { key: "done" } },
+        },
+      ],
+    };
+    fixture.plan([
+      { body: "{}" },
+      { body: JSON.stringify(transitions) },
+      { body: JSON.stringify(transitions) },
+      { body: "{}" },
+    ]);
+    const result = await via(sb, fixture, "closeEpic", ["Shipped"]);
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout)).toBe("transitioned-done");
+    expect(fixture.requests.map((r) => r.method)).toEqual(["POST", "GET", "GET", "POST"]);
+    expect(JSON.parse(fixture.requests[0]?.body ?? "{}")).toEqual({
+      body: {
+        type: "doc",
+        version: 1,
+        content: [{ type: "paragraph", content: [{ type: "text", text: "Shipped" }] }],
+      },
     });
-    expect(res.stderr).toBe("");
-    expect(res.exitCode).toBe(0);
-    expect(JSON.parse(res.stdout)).toMatchObject({ ref: "PAY-8", title: "Disputes epic" });
-    expect(fixture.requests).toHaveLength(1);
+    expect(JSON.parse(fixture.requests[3]?.body ?? "{}")).toEqual({
+      transition: { id: "41" },
+    });
+  } finally {
+    await fixture.stop();
+  }
+});
+
+test.concurrent("missing base or credentials fail before HTTP with named variables", async () => {
+  using sb = createSandbox();
+  const fixture = await startHttpsFixture(["acme.atlassian.net"]);
+  try {
+    for (const env of [
+      { JIRA_BASE_URL: undefined },
+      { JIRA_PAT: undefined, JIRA_EMAIL: undefined, JIRA_API_TOKEN: undefined },
+    ]) {
+      fixture.plan([]);
+      const result = await via(sb, fixture, "epic", [], env);
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stderr).toContain("JIRA_BASE_URL");
+      expect(result.stderr).toContain("JIRA_PAT");
+      expect(result.stderr).toContain("JIRA_EMAIL");
+      expect(result.stderr).toContain("JIRA_API_TOKEN");
+      expect(fixture.requests).toHaveLength(0);
+    }
+  } finally {
+    await fixture.stop();
+  }
+});
+
+test.concurrent("bad API version fails before HTTP", async () => {
+  using sb = createSandbox();
+  const fixture = await startHttpsFixture(["acme.atlassian.net"]);
+  try {
+    const result = await via(sb, fixture, "epic", [], { JIRA_API_VERSION: "4" });
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain("JIRA_API_VERSION");
+    expect(fixture.requests).toHaveLength(0);
   } finally {
     await fixture.stop();
   }

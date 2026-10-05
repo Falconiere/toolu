@@ -5,9 +5,10 @@ tracker-specific placeholders (written here without braces so they survive):
   skillRef); an OpenCode worker gets `skill({ name: "delivery-flow-delivery-flow" })`,
   the generated skill name from hosts.ts OPENCODE_SKILL_IDS.
 - ISSUE_READ: how to read the issue: `gh issue view N --repo OWNER/REPO
-  --comments` (GitHub), `jira.sh issue get KEY` (Jira; OpenCode runs it as
-  `"$TOOLU_BUN" --no-env-file "$TOOLU_CONFIG_DIR/jira/jira.sh"`), the issue
-  URL (Linear).
+  --comments` (GitHub), `bun --no-env-file scripts/jira-issue.ts get KEY` from the
+  installed epic-orchestrator plugin (Jira on Claude/Codex/Cursor),
+  `"$TOOLU_BUN" --no-env-file scripts/jira-issue.ts get KEY` (Jira on
+  OpenCode), the issue URL (Linear).
 - CLOSES: the PR body's closing line: `Closes OWNER/REPO#N` (GitHub),
   `Resolves KEY-12` (Jira), `Fixes ENG-12` (Linear).
 - HOST: the worker's host kind.

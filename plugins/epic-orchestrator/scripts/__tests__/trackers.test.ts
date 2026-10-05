@@ -1,6 +1,8 @@
 /** Tracker detection and the Jira/Linear payload normalizers, on API-shaped JSON. */
 
 import { expect, test } from "bun:test";
+import { createSandbox } from "@toolu/conformance/harness/sandbox";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { branchFor, keyFor } from "../epic-graph.ts";
 import { detectTracker } from "../trackers/index.ts";
 import { adfText, jiraBlockers, parseJiraRef } from "../trackers/jira.ts";
@@ -34,6 +36,13 @@ test.concurrent("detectTracker: a bare key follows the configured tracker, else 
     }),
   ).toThrow("prefix it");
   expect(detectTracker("PAY-7", "jira", none)).toBe("jira");
+});
+
+test.concurrent("detectTracker ignores a jira-cli config without JIRA_BASE_URL", () => {
+  using sb = createSandbox();
+  mkdirSync(sb.path(".config/.jira"), { recursive: true });
+  writeFileSync(sb.path(".config/.jira/.config.yml"), "site: https://old.example\n");
+  expect(detectTracker("PAY-7", undefined, { HOME: sb.root, LINEAR_API_KEY: "k" })).toBe("linear");
 });
 
 test.concurrent("refs: Jira keys and browse URLs", () => {
