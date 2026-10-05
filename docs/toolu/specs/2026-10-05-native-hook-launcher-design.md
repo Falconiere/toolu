@@ -1,6 +1,6 @@
 # Native hook launcher — Design
 
-**Date:** 2026-10-05   **Status:** Draft   **Author:** Claude Code   **Topic:** Issue #412, find the installed `toolu`, fail closed without it, apply the #411 skew rule
+**Date:** 2026-10-05   **Status:** Approved   **Author:** Claude Code   **Topic:** Issue #412, find the installed `toolu`, fail closed without it, apply the #411 skew rule
 
 ## Problem
 
@@ -163,7 +163,7 @@ The string has no version input, so it is byte-identical across releases. Golden
 - **Spaces** in `CLAUDE_PLUGIN_ROOT`, `HOME` or `TOOLU_BIN`: always quoted.
 - **Stdin:** the probe reads `/dev/null`, so the payload reaches the hook untouched.
 - **Skew inputs:** malformed manifests, bad `hookProtocol`, empty `--plugin-root` and unparsable versions behave as the skew table says. A `.claude-plugin/plugin.json` that is malformed does not fall back to `.codex-plugin`.
-- **A real `toolu` already in a fixed install directory:** the `crates/cli` launcher tests check this first and fail with the path. They never skip. A developer with toolu installed runs them in a container, or with the binary moved aside (`docs/install.md`).
+- **A real `toolu` already in a fixed install directory:** the `crates/cli` launcher tests and the `xtask` `launcher_e2e` tests check this first and fail with the path. They never skip. A developer with toolu installed runs them in a container, or with the binary moved aside (`docs/install.md`).
 - **Bun fallback with no `hooks/dist/<name>.js`:** the missing branch runs.
 
 ## Acceptance criteria
