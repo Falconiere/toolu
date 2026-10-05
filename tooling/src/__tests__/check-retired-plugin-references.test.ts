@@ -30,6 +30,7 @@ test("the reference gate accepts reviewed history and rejects a current referenc
     const relativeChecker = "tooling/src/check-retired-plugin-references.ts";
     write(root, relativeChecker, readFileSync(CHECKER, "utf8"));
     write(root, `plugins/epic-orchestrator/scripts/trackers/${TRACKER_NAME}.ts`, "// tracker\n");
+    write(root, "crates/epic-orchestrator/src/lib.rs", `// planned verb: ${TRACKER_NAME}\n`);
     write(
       root,
       "plugins/pr-babysit/scripts/__tests__/fixtures/pr120-verdict-changes.txt",

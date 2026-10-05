@@ -89,11 +89,11 @@ Shared types (protocol `Exit`/`Host`, runtime `Ctx`/`Outcome`/`Planned`/`Guide`)
   {
     "id": "S7-docs-cli",
     "title": "cargo xtask docs-cli [--check] [--bin]: render docs/cli/README.md, one page per visible top-level command from real --help output, commands.json and commands.schema.json with a generated marker; --check reports stale, missing and orphaned marker files; gate step docs-cli; inventory entries",
-    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo test -p xtask --locked --bin xtask docs_cli && cargo test -p xtask --locked --test docs_cli",
+    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo test -p xtask --locked --bin xtask docs_cli && cargo xtask docs-cli --check",
     "ac_refs": ["AC-8"],
     "depends_on": ["S6-black-box-tests"],
-    "paths": ["crates/xtask/src/main.rs", "crates/xtask/src/options.rs", "crates/xtask/src/gate.rs", "crates/xtask/src/docs_cli.rs", "crates/xtask/src/docs_cli", "crates/xtask/src/tests", "crates/xtask/tests/docs_cli.rs", "tooling/conventions/guardrails/rust/inventory.json", "crates/cli/src"],
-    "input": "the real toolu built by cargo; an empty temp --root (all missing), a written root (clean), an edited page (stale), an orphaned marker page, an unmarked installer.md (untouched)",
+    "paths": ["crates/xtask/src/main.rs", "crates/xtask/src/options.rs", "crates/xtask/src/gate.rs", "crates/xtask/src/docs_cli.rs", "crates/xtask/src/docs_cli", "crates/xtask/src/tests", "tooling/conventions/guardrails/rust/inventory.json", "crates/cli/src", "crates/cli/Cargo.toml", "crates", "docs/cli"],
+    "input": "the real toolu built by cargo against the committed docs/cli; a stand-in toolu with an empty temp --root (all missing), a written root (clean), an edited page (stale), an orphaned marker page, an unmarked installer.md (untouched)",
     "model": "inherit"
   },
   {
@@ -109,21 +109,21 @@ Shared types (protocol `Exit`/`Host`, runtime `Ctx`/`Outcome`/`Planned`/`Guide`)
   {
     "id": "S9-cli-compat",
     "title": "cargo xtask check-cli-compat [--base] [--title]: compare docs/cli/commands.json at the merge base with the working tree (names, aliases, flags, shorts, possible values, exit codes, optional→required; placeholders exempt; hookProtocol bump + ! title allows); gate step cli-compat; inventory entries",
-    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo test -p xtask --locked --bin xtask cli_compat && cargo test -p xtask --locked --test cli_compat && cargo xtask check-cli-compat",
+    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo test -p xtask --locked --bin xtask cli_compat && cargo xtask check-cli-compat",
     "ac_refs": ["AC-9"],
     "depends_on": ["S8-generate-docs-and-fold"],
-    "paths": ["crates/xtask/src/main.rs", "crates/xtask/src/gate.rs", "crates/xtask/src/cli_compat.rs", "crates/xtask/src/cli_compat", "crates/xtask/src/tests", "crates/xtask/tests/cli_compat.rs", "tooling/conventions/guardrails/rust/inventory.json", "docs/cli/commands.json"],
+    "paths": ["crates/xtask/src/main.rs", "crates/xtask/src/gate.rs", "crates/xtask/src/cli_compat.rs", "crates/xtask/src/cli_compat", "crates/xtask/src/tests", "tooling/conventions/guardrails/rust/inventory.json", "docs/cli/commands.json"],
     "input": "the committed docs/cli/commands.json and copies with a removed verb, alias, flag, short, possible value, exit code, an optional→required arg, a removed placeholder, and a hookProtocol bump with and without a feat! title; a base without the file",
     "model": "inherit"
   },
   {
     "id": "S10-startup",
     "title": "cargo xtask check-startup --bin: 3 warm-up + 30 timed spawns of <bin> --version, nearest-rank p50 against benchmarks/startup-budgets.json; Linux rust CI step on the release binary; ci-paths rust group gains docs/cli/** and the budget file; inventory entries",
-    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo test -p xtask --locked --bin xtask startup && cargo test -p xtask --locked --test startup && cargo build --release --locked -p toolu-cli && cargo xtask check-startup --bin target/release/toolu && grep -q 'xtask check-startup' .github/workflows/tests.yml && bun run check:ci-paths",
+    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo test -p xtask --locked --bin xtask startup && cargo build --release --locked -p toolu-cli && cargo xtask check-startup --bin target/release/toolu && grep -q 'xtask check-startup' .github/workflows/tests.yml && bun run check:ci-paths",
     "ac_refs": ["AC-10"],
     "depends_on": ["S4-cli-front-end", "S8-generate-docs-and-fold"],
-    "paths": ["crates/xtask/src/main.rs", "crates/xtask/src/startup.rs", "crates/xtask/src/tests", "crates/xtask/tests/startup.rs", "benchmarks/startup-budgets.json", ".github/workflows/tests.yml", ".github/ci-paths.json", "tooling/conventions/guardrails/rust/inventory.json", "crates/cli/src"],
-    "input": "the release toolu (tests/startup.rs a_fast_binary_passes uses the cargo-built toolu); a script that sleeps 10 ms before printing toolu 0.0.0 (a_slow_binary_fails_naming_the_budget → exit 1); a script printing the wrong version text (exit 2); a malformed budget file (exit 2); the tests.yml step on ubuntu-latest",
+    "paths": ["crates/xtask/src/main.rs", "crates/xtask/src/startup.rs", "crates/xtask/src/tests", "benchmarks/startup-budgets.json", ".github/workflows/tests.yml", ".github/ci-paths.json", "tooling/conventions/guardrails/rust/inventory.json", "crates/cli/src"],
+    "input": "the release toolu built by cargo (check-startup --bin target/release/toolu); a stand-in printing toolu 0.0.0 (a_fast_binary_passes); a script that sleeps 10 ms before printing toolu 0.0.0 (a_slow_binary_fails_naming_the_budget → exit 1); a script printing the wrong version text (exit 2); a malformed budget file (exit 2); the tests.yml step on ubuntu-latest",
     "model": "inherit"
   },
   {
@@ -132,7 +132,7 @@ Shared types (protocol `Exit`/`Host`, runtime `Ctx`/`Outcome`/`Planned`/`Guide`)
     "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; grep -q 'cargo xtask docs-cli' AGENTS.md && grep -q 'check-cli-compat' AGENTS.md && grep -q 'check-startup' docs/resource-budgets.md && grep -q 'toolu <namespace>' tooling/templates/plugin-README.md && bun run guardrails && bun run check:retired-plugins && bun run check:ci-paths",
     "ac_refs": ["AC-12"],
     "depends_on": ["S8-generate-docs-and-fold", "S9-cli-compat", "S10-startup"],
-    "paths": ["AGENTS.md", "tooling/templates/plugin-README.md", "docs/resource-budgets.md", "docs/cli/installer.md", ".github/ci-paths.json"],
+    "paths": ["AGENTS.md", "tooling/templates/plugin-README.md", "docs/resource-budgets.md", "docs/cli/installer.md", ".github/ci-paths.json", "tooling/src/check-retired-plugin-references.ts", "tooling/src/__tests__/check-retired-plugin-references.test.ts", "crates"],
     "input": "the final command surface and xtask tasks",
     "model": "inherit"
   },
@@ -164,7 +164,6 @@ Shared types (protocol `Exit`/`Host`, runtime `Ctx`/`Outcome`/`Planned`/`Guide`)
   - `crates/cli/tests/{contract,commands,inventory}.rs`, `crates/cli/tests/helpers/*.rs`, `crates/cli/tests/fixtures/commands__commands_json.snap`
 - **xtask:**
   - `crates/xtask/src/{main,options,gate,docs_cli,cli_compat,startup}.rs` (submodules if a file nears 300 code lines), with unit tests
-  - `crates/xtask/tests/{docs_cli,cli_compat,startup}.rs`
 - **Data:** `Cargo.toml`, `Cargo.lock`, `tooling/conventions/guardrails/rust/{folders,inventory}.json`, `benchmarks/startup-budgets.json`.
 - **CI:** `.github/ci-paths.json`, `.github/workflows/tests.yml`.
 - **Docs:**
@@ -226,3 +225,5 @@ Round 2: Approved.
 
 - **S6, one test binary.** The three integration files became one binary, `crates/cli/tests/contract.rs`, with `helpers/{cli,schema,inventory}.rs` as modules. That is #412's `launcher.rs` pattern. A shared helper included in three binaries trips the deny-warnings `dead_code` lint wherever one helper goes unused, and one binary compiles once. The snapshot is `crates/cli/tests/fixtures/commands_json.snap` (no module prefix). The spec's AC-4 evidence row names the old file and test names; the check and assertions are unchanged.
 - **Job admission.** From 22:58 the worktree's agent lease has stood at stage `uncertain` (owner pid gone), so `job.ts` and the ledger refuse every job (`worktree job admission blocked by agent stage uncertain`). Reported to the orchestrator. Until it clears, targeted `cargo test -p <crate>` runs go direct at low load; the ledger stamps and the full gate wait for admission.
+- **S7, S9, S10, no xtask integration targets.** The checks named `cargo test -p xtask --test docs_cli|cli_compat|startup`, which were never written. The real `toolu` cannot be a dependency of xtask (the layer rule), so those targets would nest `cargo build -p toolu-cli` inside `cargo test`, also under the gate's `cargo llvm-cov`. #412's `launcher-e2e` set the pattern instead: pass and fail unit tests in `crates/xtask/src/tests/` with a stand-in binary, and a real-binary run as the check. So S7 runs `cargo xtask docs-cli --check` (cargo builds the real `toolu`), S9 runs `cargo xtask check-cli-compat` on the real tree, and S10 runs `cargo xtask check-startup --bin target/release/toolu`. Jev agreed (`choice`, amend 0.94).
+- **S11, the epic crate's `jira` verb.** `bun run check:retired-plugins` flagged `crates/epic-orchestrator/src/lib.rs` and its test. The word there is the planned `toolu epic jira` verb, the built-in tracker that #404 keeps, not the retired standalone plugin. The check already exempts `plugins/epic-orchestrator/`. A plugin is now its crate plus Markdown, so it exempts `crates/epic-orchestrator/` too. Its test gained the crate case: red before the change, green after.

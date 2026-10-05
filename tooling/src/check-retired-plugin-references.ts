@@ -56,7 +56,8 @@ for (const term of ["exa-search", "context7", "agent-browser", "jira"]) {
       path === SELF ||
       HISTORY.has(path) ||
       path.startsWith("docs/toolu/") ||
-      path.startsWith("plugins/epic-orchestrator/")
+      path.startsWith("plugins/epic-orchestrator/") ||
+      path.startsWith("crates/epic-orchestrator/")
     ) {
       continue;
     }
