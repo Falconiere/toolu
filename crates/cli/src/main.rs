@@ -31,11 +31,11 @@ pub(crate) struct Outcome {
 
 /// What a run reads from its process, injected so tests can supply it.
 pub(crate) struct Context<'a> {
-  /// This executable's canonical path, resolved only by hooks that need it,
-  /// so the per-hook `--hook-protocol` probe makes no extra syscall.
+  /// This executable's canonical path, resolved by `hook` runs only, so the
+  /// per-hook `--version` and `--hook-protocol` probes make no extra syscall.
   pub(crate) exe: &'a dyn Fn() -> Option<PathBuf>,
   /// The hook payload, read only by hooks that need it.
-  pub(crate) stdin: &'a dyn Fn() -> String,
+  pub(crate) stdin: &'a dyn Fn() -> std::io::Result<String>,
 }
 
 /// Run `words` (argv after the program name).
@@ -59,10 +59,9 @@ pub(crate) fn run(words: &[String], context: &Context<'_>) -> Outcome {
 }
 
 fn main() -> ExitCode {
-  let read = || toolu_protocol::stdin::read_stdin().unwrap_or_default();
   let context = Context {
     exe: &toolu_runtime::invocation::current_exe,
-    stdin: &read,
+    stdin: &toolu_protocol::stdin::read_stdin,
   };
   let outcome = run(&toolu_runtime::invocation::args(), &context);
   output::emit(&outcome);

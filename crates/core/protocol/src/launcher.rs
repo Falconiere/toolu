@@ -162,8 +162,8 @@ fn validate(target: &Target<'_>) -> Result<(), String> {
   Ok(())
 }
 
-/// `^[a-z0-9]+(-[a-z0-9]+)*$`.
-fn is_name(text: &str) -> bool {
+/// Whether `text` is a valid plugin or hook name: `^[a-z0-9]+(-[a-z0-9]+)*$`.
+pub fn is_name(text: &str) -> bool {
   !text.is_empty()
     && text.split('-').all(|part| {
       !part.is_empty()

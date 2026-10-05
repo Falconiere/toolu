@@ -6,8 +6,8 @@ use crate::{Context, Outcome, VERSION};
 
 const STARTUP: &str = r#"{"hook_event_name":"SessionStart","source":"startup"}"#;
 
-fn startup() -> String {
-  STARTUP.to_owned()
+fn startup() -> std::io::Result<String> {
+  toolu_protocol::stdin::read_all(STARTUP.as_bytes())
 }
 
 fn plugin(version: &str, protocol: &str) -> tempfile::TempDir {
@@ -128,7 +128,7 @@ fn an_unknown_hook_blocks_enforcing_and_missing_events_and_reports_context_ones(
 
 #[test]
 fn a_session_start_with_nothing_to_say_prints_nothing() {
-  let quiet = || "{}".to_owned();
+  let quiet = || Ok("{}".to_owned());
   let no_exe = || None;
   let context = Context {
     exe: &no_exe,
@@ -140,4 +140,41 @@ fn a_session_start_with_nothing_to_say_prints_nothing() {
   );
   assert_eq!(outcome.stdout, None);
   assert_eq!(outcome.code, 0);
+}
+
+#[test]
+fn an_unreadable_payload_is_reported_not_swallowed() {
+  let broken = || Err(std::io::Error::other("stdin is closed"));
+  let no_exe = || None;
+  let context = Context {
+    exe: &no_exe,
+    stdin: &broken,
+  };
+  let outcome = run(
+    &request("session-start", Some("SessionStart"), None),
+    &context,
+  );
+  assert_eq!(outcome.code, 0);
+  assert_eq!(
+    message(outcome.stdout),
+    format!(
+      "toolu runtime: native {VERSION}, but the hook payload could not be read: stdin is closed"
+    )
+  );
+}
+
+#[test]
+fn another_plugins_session_start_advises_and_never_blocks() {
+  let jev = HookRequest {
+    plugin: "jev".to_owned(),
+    name: "session-start".to_owned(),
+    event: Some("SessionStart".to_owned()),
+    plugin_root: None,
+  };
+  let outcome = run_hook(&jev);
+  assert_eq!(outcome.code, 0);
+  assert_eq!(outcome.stderr, None);
+  assert!(message(outcome.stdout).starts_with(&format!(
+    "jev plugin: toolu {VERSION} has no hook session-start"
+  )));
 }

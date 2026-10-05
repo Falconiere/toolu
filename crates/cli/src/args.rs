@@ -1,5 +1,7 @@
 //! Hand-parsed argv until #442 replaces it with clap, keeping these forms.
 
+use toolu_protocol::launcher::is_name;
+
 /// The usage text printed with exit 64.
 pub(crate) const USAGE: &str = "usage: toolu --version | toolu --hook-protocol | \
   toolu [<plugin>] hook <name> [--event <Event>] [--plugin-root <dir>]";
@@ -35,15 +37,17 @@ pub(crate) fn parse(words: &[String]) -> Result<Command, String> {
     ["--version"] => Ok(Command::Version),
     ["--hook-protocol"] => Ok(Command::HookProtocol),
     ["hook", name, rest @ ..] => hook("toolu", name, rest),
-    [plugin, "hook", name, rest @ ..] if !plugin.starts_with('-') => hook(plugin, name, rest),
+    [plugin, "hook", name, rest @ ..] if is_name(plugin) => hook(plugin, name, rest),
     [] => Err("no command".to_owned()),
     _ => Err(format!("unknown command: {}", words.join(" "))),
   }
 }
 
 fn hook(plugin: &str, name: &str, flags: &[&str]) -> Result<Command, String> {
-  if name.starts_with('-') {
-    return Err(format!("hook needs a name, got {name}"));
+  if !is_name(name) {
+    return Err(format!(
+      "hook needs a name matching ^[a-z0-9]+(-[a-z0-9]+)*$, got {name}"
+    ));
   }
   let mut request = HookRequest {
     plugin: plugin.to_owned(),

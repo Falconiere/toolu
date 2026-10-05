@@ -52,6 +52,10 @@ fn flags_and_forms_outside_the_grammar_are_errors() {
     "hook x --event",
     "hook x --nope y",
     "--x hook y",
+    "-toolu hook y",
+    "Bad_Name hook y",
+    "hook Bad_Name",
+    "jev hook a--b",
     "a b c",
   ] {
     assert!(parsed(line).is_err(), "{line}");

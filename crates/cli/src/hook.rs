@@ -3,7 +3,10 @@
 //! The prelude owns the advisory and mismatch output. A mismatch never reaches
 //! the hook: enforcing events exit 2 with `blocked:` on stderr, context events
 //! print it as a `systemMessage`. A semver advisory is printed at `SessionStart`
-//! only, on the line before the hook's own message.
+//! only, on the line before the hook's own message: skew changes only on an
+//! upgrade, so one line per session is the design (#411, the #412 scenario), and
+//! repeating it on every prompt or tool call would be noise. Enforcement is the
+//! same either way.
 
 use std::path::Path;
 
@@ -52,7 +55,12 @@ pub(crate) fn run(request: &HookRequest, context: &Context<'_>) -> Outcome {
   compose(advisory, result)
 }
 
-/// The named hook. Only toolu's `session-start` is native so far (#424 ports the rest).
+/// The named hook. Only toolu's `session-start` is native so far, as the spec
+/// of #412 sets: it carries the runtime diagnostic that toolu's Bun
+/// `session-start` prints today. Every other hook, another plugin's
+/// `session-start` included, is ported by its own issue (#424, #430-#432);
+/// until then a native entry for it reports "has no hook" — a `systemMessage`
+/// on a context event such as `SessionStart`, a block on an enforcing one.
 fn dispatch(
   request: &HookRequest,
   context: &Context<'_>,
@@ -61,7 +69,12 @@ fn dispatch(
   upgrade: &str,
 ) -> HookResult {
   if request.plugin == "toolu" && request.name == "session-start" {
-    let message = session_start::diagnostic(&(context.stdin)(), VERSION, exe);
+    let message = match (context.stdin)() {
+      Ok(payload) => session_start::diagnostic(&payload, VERSION, exe),
+      Err(err) => Some(format!(
+        "toolu runtime: native {VERSION}, but the hook payload could not be read: {err}"
+      )),
+    };
     return HookResult {
       code: 0,
       message,

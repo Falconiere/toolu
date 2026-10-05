@@ -4,8 +4,8 @@ fn words(line: &str) -> Vec<String> {
   line.split_whitespace().map(str::to_owned).collect()
 }
 
-fn no_stdin() -> String {
-  String::new()
+fn no_stdin() -> std::io::Result<String> {
+  toolu_protocol::stdin::read_all(std::io::empty())
 }
 
 fn no_exe() -> Option<std::path::PathBuf> {
