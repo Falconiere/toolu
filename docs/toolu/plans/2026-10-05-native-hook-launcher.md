@@ -121,7 +121,7 @@ The `crates/cli` tests run the real binary (`CARGO_BIN_EXE_toolu`) through the r
       "bun.lock"
     ],
     "input": "Real toolu binary copied into temp HOME/.local/bin; real Bun on PATH (after bun install --frozen-lockfile); real npm wrapper built from tools/toolu-cli/src/cli.ts with bun build --target=node; temp plugin roots with edited version/hookProtocol; vendored Codex session-start schema; shell stand-ins that kill -ABRT/-SEGV themselves",
-    "check": "cargo test -p toolu-cli --locked --test launcher_missing --test launcher_native --test launcher_skew --test launcher_resolution --test launcher_crash --test launcher_fallback && cargo xtask gate --only fmt --only clippy --only guardrails --only layers --only reach --only unused-pub --only jscpd",
+    "check": "cargo test -p toolu-cli --locked --test launcher && cargo xtask gate --only fmt --only clippy --only guardrails --only layers --only reach --only unused-pub --only jscpd",
     "model": "inherit"
   },
   {
@@ -289,6 +289,11 @@ The `crates/cli` tests run the real binary (`CARGO_BIN_EXE_toolu`) through the r
   }
 ]
 ```
+
+## Deviations
+
+- **launcher-tests:** one integration-test crate, `crates/cli/tests/launcher.rs`, with case modules `tests/helpers/{missing,native,skew,resolution,crash,fallback}.rs` and a shared `tests/helpers/sandbox.rs`. It replaces six `launcher_*` crates. Warnings are denied, so a shared helper included by six crates would be dead code in every crate that skips one of its items. The cases and ACs are unchanged; the check runs `--test launcher`.
+- **launcher-tests:** the sandbox serialises writes of executables against child spawns (`RwLock`). A child forked while a copied binary was still open for writing made the launcher's probe fail with `ETXTBSY` on Linux, which showed up as one flaky run in about 25.
 
 ## Delivery
 
