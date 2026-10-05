@@ -40,8 +40,16 @@
       "rust-toolchain.toml",
       "rustfmt.toml",
       "clippy.toml",
+      "deny.toml",
+      "lefthook.yml",
       "crates/**",
-      ".cargo/**"
+      ".cargo/**",
+      ".claude/toolu.config.json",
+      ".codex/toolu.config.json",
+      "fixtures/guardrails/**",
+      "tooling/conventions/guardrails/rust/**",
+      "tooling/src/check-rust-quality.ts",
+      "plugins/rust-quality/**"
     ],
     "ports": [
       "fixtures/rust-ported.json",

@@ -93,7 +93,7 @@ test.concurrent("the full gate runs the CI path check", () => {
   expect(scripts["test:ts"]).toContain("bun run check:ci-paths");
 });
 
-test.concurrent("the Rust jobs run the full cargo gate and both musl targets (#407 AC-5, AC-7)", () => {
+test.concurrent("the Rust jobs run cargo xtask gate and both musl targets (#407 AC-5, AC-7; #455)", () => {
   const tests = workflow("tests.yml");
   for (const id of ["rust", "rust-musl"]) {
     expect(tests.jobs[id]?.if).toBe("needs.changes.outputs.rust == 'true'");
@@ -124,17 +124,13 @@ test.concurrent("the Rust jobs run the full cargo gate and both musl targets (#4
     { target: "x86_64-unknown-linux-musl", os: "ubuntu-latest" },
     { target: "aarch64-unknown-linux-musl", os: "ubuntu-24.04-arm" },
   ]);
-  const cargo = steps("tests.yml", "rust").map((step) => step.run);
-  for (const command of [
-    "rustup toolchain install",
-    "cargo fmt --all --check",
-    "cargo clippy --workspace --all-targets --locked -- -D warnings",
-    "cargo build --workspace --locked",
-    "cargo test --workspace --locked",
-    "cargo xtask check-layers",
-  ]) {
-    expect(cargo).toContain(command);
-  }
+  const rust = steps("tests.yml", "rust");
+  const cargo = rust.map((step) => step.run ?? "");
+  expect(cargo).toContain("rustup toolchain install");
+  expect(cargo).toContain("bun install --frozen-lockfile");
+  // #455: the job runs the whole quality bar through `cargo xtask gate`.
+  expect(cargo.some((run) => run.includes("cargo xtask gate "))).toBe(true);
+  expect(JSON.stringify(rust)).toContain("cargo-deny@0.20.2,cargo-machete@0.9.2,cargo-llvm-cov@0.9.1");
   const musl = steps("tests.yml", "rust-musl").map((step) => step.run ?? "");
   expect(musl).toContain(
     'cargo build --workspace --release --locked --target "${{ matrix.target }}"',

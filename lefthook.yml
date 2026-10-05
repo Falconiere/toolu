@@ -1,0 +1,21 @@
+# The Rust quality bar's git hooks (#455), after toolu-ghrunner's.
+#
+# Install: lefthook install. Staged Rust changes get the fast checks on commit;
+# a push that touches Rust runs the full `cargo xtask gate`, the same gate CI
+# requires. The file must stay named lefthook.yml (guardrails' shadow-configs check).
+
+pre-commit:
+  parallel: true
+  commands:
+    rust-fmt:
+      glob: "crates/**/*.rs"
+      run: cargo fmt --all --check
+    rust-guardrails:
+      glob: "{crates/**,Cargo.toml,clippy.toml,rustfmt.toml,deny.toml,tooling/conventions/guardrails/rust/**}"
+      run: cargo xtask guardrails
+
+pre-push:
+  commands:
+    rust-gate:
+      glob: "{crates/**,Cargo.toml,Cargo.lock,clippy.toml,rustfmt.toml,deny.toml,rust-toolchain.toml,tooling/conventions/guardrails/rust/**,fixtures/guardrails/**}"
+      run: cargo xtask gate
