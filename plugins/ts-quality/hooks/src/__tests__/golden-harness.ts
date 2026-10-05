@@ -197,4 +197,4 @@ export function caseKey(c: TsCase, host: PretoolHost): string {
   return `${c.name} [${host}]`;
 }
 
-export const GOLDEN_PATH = join(import.meta.dir, "fixtures", "golden.json");
+export const GOLDEN_PATH = join(REPO_ROOT, "fixtures", "quality", "ts-golden.json");

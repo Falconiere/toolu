@@ -1,6 +1,8 @@
 /** Shared JSON case loading and sandbox setup for the TypeScript/Rust parity fixtures. */
 import { chmodSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { pushWaiverPend } from "@toolu/core/ledger";
+import { diffSha } from "@toolu/core/state";
 import { z } from "zod";
 import type { ToolFixture } from "./fixtures.ts";
 import type { HostName, Sandbox } from "./sandbox.ts";
@@ -37,7 +39,17 @@ export const ActionSchema = z.discriminatedUnion("op", [
     scope: ScopeSchema,
     body: z.record(z.string(), z.json()),
   }),
+  z.strictObject({
+    op: z.literal("push-waiver-pend"),
+    slug: z.string().min(1),
+    base: z.string().min(1),
+    reasonCode: z.string().min(1),
+  }),
 ]);
+export const HostSetupSchema = z.strictObject({
+  claude: z.array(ActionSchema),
+  codex: z.array(ActionSchema),
+});
 const CaseSchema = z.looseObject({
   name: z.string().min(1),
   setup: z.array(ActionSchema).optional(),
@@ -181,6 +193,20 @@ export function applyCaseSetup(sb: Sandbox, actions: unknown, host: HostName = "
       case "config":
         sb.writeConfig(action.host, action.scope, action.body);
         break;
+      case "push-waiver-pend": {
+        const env = { HOME: sb.home, PATH: process.env.PATH ?? "/usr/bin:/bin" };
+        const sha = diffSha(sb.project, action.base, { env });
+        if (sha === undefined) throw new Error("fixture could not compute push waiver diff SHA");
+        if (
+          !pushWaiverPend(sb.project, action.slug, sha, action.base, action.reasonCode, {
+            env,
+            host,
+          })
+        ) {
+          throw new Error("fixture could not create pending push waiver");
+        }
+        break;
+      }
     }
   }
 }

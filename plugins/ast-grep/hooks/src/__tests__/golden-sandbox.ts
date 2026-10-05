@@ -22,7 +22,7 @@ export const PLUGIN_ROOT = resolve(import.meta.dir, "../../..");
 export const REPO_ROOT = resolve(PLUGIN_ROOT, "../..");
 /** The last commit whose ast-grep plugin is bash. */
 export const BASH_BASE = "2912cd9d";
-export const GOLDEN_PATH = join(import.meta.dir, "fixtures", "golden.json");
+export const GOLDEN_PATH = join(REPO_ROOT, "fixtures", "ast-grep", "golden.json");
 
 export type Registration =
   | { readonly kind: "bash"; readonly pluginRoot: string }

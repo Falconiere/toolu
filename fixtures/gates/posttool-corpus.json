@@ -1,0 +1,642 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "gate-status: failing quality command advises",
+      "expect": "advisory",
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PostToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "bun test"
+        },
+        "toolResponse": {
+          "metadata": {
+            "exit_code": 1
+          },
+          "stdout": "",
+          "stderr": ""
+        }
+      }
+    },
+    {
+      "name": "gate-status: first passing quality command",
+      "expect": "silent",
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PostToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "cargo clippy"
+        },
+        "toolResponse": {
+          "metadata": {
+            "exit_code": 0
+          },
+          "stdout": "",
+          "stderr": ""
+        }
+      }
+    },
+    {
+      "name": "gate-status: a file-hook failure survives a passing command",
+      "expect": "silent",
+      "setupByHost": {
+        "claude": [
+          {
+            "op": "write",
+            "path": "$PROJECT/.claude/tmp/quality-gate-status.json",
+            "body": "{\n  \"status\": \"failing\",\n  \"source\": \"ts-quality-hook\",\n  \"reason\": \"bad ts\",\n  \"violations\": \"viol\\n\",\n  \"updatedAt\": \"2026-01-01T00:00:00Z\",\n  \"file\": \"/p/a.ts\",\n  \"entries\": {\n    \"/p/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"bad ts\",\n      \"violations\": \"viol\\n\",\n      \"updatedAt\": \"2026-01-01T00:00:00Z\"\n    }\n  }\n}\n"
+          }
+        ],
+        "codex": [
+          {
+            "op": "write",
+            "path": "$PROJECT/.codex/tmp/quality-gate-status.json",
+            "body": "{\n  \"status\": \"failing\",\n  \"source\": \"ts-quality-hook\",\n  \"reason\": \"bad ts\",\n  \"violations\": \"viol\\n\",\n  \"updatedAt\": \"2026-01-01T00:00:00Z\",\n  \"file\": \"/p/a.ts\",\n  \"entries\": {\n    \"/p/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"bad ts\",\n      \"violations\": \"viol\\n\",\n      \"updatedAt\": \"2026-01-01T00:00:00Z\"\n    }\n  }\n}\n"
+          }
+        ]
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PostToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "cargo test"
+        },
+        "toolResponse": {
+          "metadata": {
+            "exit_code": 0
+          },
+          "stdout": "",
+          "stderr": ""
+        }
+      }
+    },
+    {
+      "name": "gate-status: NO-TRIGGER cat tsconfig.json",
+      "expect": "silent",
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PostToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "cat tsconfig.json"
+        },
+        "toolResponse": {
+          "metadata": {
+            "exit_code": 0
+          },
+          "stdout": "",
+          "stderr": ""
+        }
+      }
+    },
+    {
+      "name": "plain command is silent",
+      "expect": "silent",
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PostToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "ls"
+        },
+        "toolResponse": {
+          "metadata": {
+            "exit_code": 0
+          },
+          "stdout": "",
+          "stderr": ""
+        }
+      }
+    },
+    {
+      "name": "push-waiver: a successful push promotes the waiver",
+      "expect": "silent",
+      "setupByHost": {
+        "claude": [
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "checkout",
+              "-q",
+              "-b",
+              "feat/example"
+            ]
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/a.ts",
+            "body": "export const a = 1;\n"
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "add",
+              "-A"
+            ]
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "commit",
+              "-q",
+              "-m",
+              "feat: example"
+            ]
+          },
+          {
+            "op": "push-waiver-pend",
+            "slug": "feat_example",
+            "base": "main",
+            "reasonCode": "no-state"
+          }
+        ],
+        "codex": [
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "checkout",
+              "-q",
+              "-b",
+              "feat/example"
+            ]
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/a.ts",
+            "body": "export const a = 1;\n"
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "add",
+              "-A"
+            ]
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "commit",
+              "-q",
+              "-m",
+              "feat: example"
+            ]
+          },
+          {
+            "op": "push-waiver-pend",
+            "slug": "feat_example",
+            "base": "main",
+            "reasonCode": "no-state"
+          }
+        ]
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PostToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "git push"
+        },
+        "toolResponse": {
+          "metadata": {
+            "exit_code": 0
+          },
+          "stdout": "",
+          "stderr": ""
+        }
+      }
+    },
+    {
+      "name": "push-waiver: a failed push keeps the pending marker",
+      "expect": "silent",
+      "setupByHost": {
+        "claude": [
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "checkout",
+              "-q",
+              "-b",
+              "feat/example"
+            ]
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/a.ts",
+            "body": "export const a = 1;\n"
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "add",
+              "-A"
+            ]
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "commit",
+              "-q",
+              "-m",
+              "feat: example"
+            ]
+          },
+          {
+            "op": "push-waiver-pend",
+            "slug": "feat_example",
+            "base": "main",
+            "reasonCode": "no-state"
+          }
+        ],
+        "codex": [
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "checkout",
+              "-q",
+              "-b",
+              "feat/example"
+            ]
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/a.ts",
+            "body": "export const a = 1;\n"
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "add",
+              "-A"
+            ]
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "commit",
+              "-q",
+              "-m",
+              "feat: example"
+            ]
+          },
+          {
+            "op": "push-waiver-pend",
+            "slug": "feat_example",
+            "base": "main",
+            "reasonCode": "no-state"
+          }
+        ]
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PostToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "git push"
+        },
+        "toolResponse": {
+          "metadata": {
+            "exit_code": 1
+          },
+          "stdout": "",
+          "stderr": ""
+        }
+      }
+    },
+    {
+      "name": "hooks.post-tools false disables the dispatcher",
+      "config": {
+        "version": 1,
+        "hooks": {
+          "post-tools": false
+        }
+      },
+      "expect": "silent",
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PostToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "bun test"
+        },
+        "toolResponse": {
+          "metadata": {
+            "exit_code": 1
+          },
+          "stdout": "",
+          "stderr": ""
+        }
+      }
+    },
+    {
+      "name": "malformed apply_patch blocks",
+      "stdin": "{\"tool_name\":\"apply_patch\",\"tool_input\":{\"command\":\"garbage\"},\"tool_response\":\"Done\"}",
+      "expect": "block",
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      }
+    },
+    {
+      "name": "empty stdin is silent",
+      "stdin": "",
+      "expect": "silent",
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      }
+    },
+    {
+      "name": "non-JSON stdin is silent",
+      "stdin": "not json\n",
+      "expect": "silent",
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      }
+    },
+    {
+      "name": "registry: a written file reaches a module with its path",
+      "expect": "advisory",
+      "setupByHost": {
+        "claude": [
+          {
+            "op": "write",
+            "path": "$HOME/.claude/toolu/post-tools.d/fixture@toolu__gate.sh",
+            "body": "#!/usr/bin/env bash\n. \"$TOOLU_LIB_DIR/detect.sh\"\n. \"$TOOLU_LIB_DIR/gate-file.sh\"\nfile=$(jq -r '.tool_input.file_path // empty' <<<\"$input\")\n[ -n \"$file\" ] || exit 0\ngate=\"$(toolu_project_state_root \"$PROJECT_ROOT\")/quality-gate-status.json\"\nmkdir -p \"${gate%/*}\"\ngate_record_failure \"$gate\" \"$file\" fixture-hook \"fixture violation\" \"fixture violation in $file\"\njq -n --arg e PostToolUse --arg ctx \"fixture violation in $file\" '{hookSpecificOutput:{hookEventName:$e,additionalContext:$ctx}}'\n"
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/bad.txt",
+            "body": "bad\n"
+          }
+        ],
+        "codex": [
+          {
+            "op": "write",
+            "path": "$HOME/.codex/toolu/post-tools.d/fixture@toolu__gate.sh",
+            "body": "#!/usr/bin/env bash\n. \"$TOOLU_LIB_DIR/detect.sh\"\n. \"$TOOLU_LIB_DIR/gate-file.sh\"\nfile=$(jq -r '.tool_input.file_path // empty' <<<\"$input\")\n[ -n \"$file\" ] || exit 0\ngate=\"$(toolu_project_state_root \"$PROJECT_ROOT\")/quality-gate-status.json\"\nmkdir -p \"${gate%/*}\"\ngate_record_failure \"$gate\" \"$file\" fixture-hook \"fixture violation\" \"fixture violation in $file\"\njq -n --arg e PostToolUse --arg ctx \"fixture violation in $file\" '{hookSpecificOutput:{hookEventName:$e,additionalContext:$ctx}}'\n"
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/bad.txt",
+            "body": "bad\n"
+          }
+        ]
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PostToolUse",
+        "toolName": "Write",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/src/bad.txt"
+          },
+          "content": "bad\n"
+        },
+        "toolResponse": {
+          "success": true
+        }
+      }
+    },
+    {
+      "name": "registry: a multi-path patch records a gate entry per path",
+      "expect": "advisory",
+      "setupByHost": {
+        "claude": [
+          {
+            "op": "write",
+            "path": "$HOME/.claude/toolu/post-tools.d/fixture@toolu__gate.sh",
+            "body": "#!/usr/bin/env bash\n. \"$TOOLU_LIB_DIR/detect.sh\"\n. \"$TOOLU_LIB_DIR/gate-file.sh\"\nfile=$(jq -r '.tool_input.file_path // empty' <<<\"$input\")\n[ -n \"$file\" ] || exit 0\ngate=\"$(toolu_project_state_root \"$PROJECT_ROOT\")/quality-gate-status.json\"\nmkdir -p \"${gate%/*}\"\ngate_record_failure \"$gate\" \"$file\" fixture-hook \"fixture violation\" \"fixture violation in $file\"\njq -n --arg e PostToolUse --arg ctx \"fixture violation in $file\" '{hookSpecificOutput:{hookEventName:$e,additionalContext:$ctx}}'\n"
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/worse.txt",
+            "body": "worse\n"
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/bad.txt",
+            "body": "bad\n"
+          }
+        ],
+        "codex": [
+          {
+            "op": "write",
+            "path": "$HOME/.codex/toolu/post-tools.d/fixture@toolu__gate.sh",
+            "body": "#!/usr/bin/env bash\n. \"$TOOLU_LIB_DIR/detect.sh\"\n. \"$TOOLU_LIB_DIR/gate-file.sh\"\nfile=$(jq -r '.tool_input.file_path // empty' <<<\"$input\")\n[ -n \"$file\" ] || exit 0\ngate=\"$(toolu_project_state_root \"$PROJECT_ROOT\")/quality-gate-status.json\"\nmkdir -p \"${gate%/*}\"\ngate_record_failure \"$gate\" \"$file\" fixture-hook \"fixture violation\" \"fixture violation in $file\"\njq -n --arg e PostToolUse --arg ctx \"fixture violation in $file\" '{hookSpecificOutput:{hookEventName:$e,additionalContext:$ctx}}'\n"
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/worse.txt",
+            "body": "worse\n"
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/bad.txt",
+            "body": "bad\n"
+          }
+        ]
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PostToolUse",
+        "toolName": "apply_patch",
+        "toolInput": {
+          "command": "*** Begin Patch\n*** Update File: src/bad.txt\n@@\n-a\n+b\n*** Update File: src/worse.txt\n@@\n-a\n+b\n*** End Patch"
+        },
+        "toolResponse": "Done"
+      }
+    },
+    {
+      "name": "registry: a block stops the walk",
+      "expect": "block",
+      "setupByHost": {
+        "claude": [
+          {
+            "op": "write",
+            "path": "$HOME/.claude/toolu/post-tools.d/fixture@toolu__b.sh",
+            "body": {
+              "$template": "#!/usr/bin/env bash\ntouch \"$PROJECT/ran-after-block\"\n"
+            }
+          },
+          {
+            "op": "write",
+            "path": "$HOME/.claude/toolu/post-tools.d/fixture@toolu__a.sh",
+            "body": "#!/usr/bin/env bash\njq -n '{decision:\"block\",reason:\"fixture-block\"}'\n"
+          }
+        ],
+        "codex": [
+          {
+            "op": "write",
+            "path": "$HOME/.codex/toolu/post-tools.d/fixture@toolu__b.sh",
+            "body": {
+              "$template": "#!/usr/bin/env bash\ntouch \"$PROJECT/ran-after-block\"\n"
+            }
+          },
+          {
+            "op": "write",
+            "path": "$HOME/.codex/toolu/post-tools.d/fixture@toolu__a.sh",
+            "body": "#!/usr/bin/env bash\njq -n '{decision:\"block\",reason:\"fixture-block\"}'\n"
+          }
+        ]
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PostToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "ls"
+        },
+        "toolResponse": {
+          "metadata": {
+            "exit_code": 0
+          },
+          "stdout": "",
+          "stderr": ""
+        }
+      }
+    },
+    {
+      "name": "registry: exit 2 blocks with stderr",
+      "expect": "exit2",
+      "setupByHost": {
+        "claude": [
+          {
+            "op": "write",
+            "path": "$HOME/.claude/toolu/post-tools.d/fixture@toolu__hard.sh",
+            "body": "#!/usr/bin/env bash\necho fixture-exit-2 >&2; exit 2\n"
+          }
+        ],
+        "codex": [
+          {
+            "op": "write",
+            "path": "$HOME/.codex/toolu/post-tools.d/fixture@toolu__hard.sh",
+            "body": "#!/usr/bin/env bash\necho fixture-exit-2 >&2; exit 2\n"
+          }
+        ]
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PostToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "ls"
+        },
+        "toolResponse": {
+          "metadata": {
+            "exit_code": 0
+          },
+          "stdout": "",
+          "stderr": ""
+        }
+      }
+    },
+    {
+      "name": "registry: advisories merge after the built-ins",
+      "expect": "advisory",
+      "setupByHost": {
+        "claude": [
+          {
+            "op": "write",
+            "path": "$HOME/.claude/toolu/post-tools.d/fixture@toolu__note.sh",
+            "body": "#!/usr/bin/env bash\njq -n '{hookSpecificOutput:{hookEventName:\"PostToolUse\",additionalContext:\"fixture-note\"}}'\n"
+          }
+        ],
+        "codex": [
+          {
+            "op": "write",
+            "path": "$HOME/.codex/toolu/post-tools.d/fixture@toolu__note.sh",
+            "body": "#!/usr/bin/env bash\njq -n '{hookSpecificOutput:{hookEventName:\"PostToolUse\",additionalContext:\"fixture-note\"}}'\n"
+          }
+        ]
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PostToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "bun test"
+        },
+        "toolResponse": {
+          "metadata": {
+            "exit_code": 1
+          },
+          "stdout": "",
+          "stderr": ""
+        }
+      }
+    }
+  ]
+}

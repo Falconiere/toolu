@@ -1,0 +1,1242 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "protected-files: .env edit asks",
+      "expect": {
+        "claude": "ask",
+        "codex": "deny"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/.env"
+          },
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "name": "protected-files: block mode denies",
+      "config": {
+        "version": 1,
+        "gates": {
+          "protectedFiles": {
+            "mode": "block"
+          }
+        }
+      },
+      "expect": {
+        "claude": "deny"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/.env"
+          },
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "name": "protected-files: advise mode advises",
+      "config": {
+        "version": 1,
+        "gates": {
+          "protectedFiles": {
+            "mode": "advise"
+          }
+        }
+      },
+      "expect": {
+        "claude": "advisory"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Write",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/.env.local"
+          },
+          "content": "x"
+        }
+      }
+    },
+    {
+      "name": "protected-files: shell write to .env asks",
+      "expect": {
+        "claude": "ask",
+        "codex": "deny"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "echo x > .env"
+        }
+      }
+    },
+    {
+      "name": "protected-files: off mode is silent",
+      "config": {
+        "version": 1,
+        "gates": {
+          "protectedFiles": {
+            "mode": "off"
+          }
+        }
+      },
+      "expect": {
+        "claude": "silent"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/.env"
+          },
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "name": "code-edit-rules: rust rules",
+      "expect": {
+        "claude": "advisory"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/src/a.rs"
+          },
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "name": "code-edit-rules: feature docs",
+      "expect": {
+        "claude": "advisory"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Write",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/src/features/x.ts"
+          },
+          "content": "export {};"
+        }
+      }
+    },
+    {
+      "name": "edit of a plain text file is silent",
+      "expect": {
+        "claude": "silent"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Write",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/notes.txt"
+          },
+          "content": "hi"
+        }
+      }
+    },
+    {
+      "name": "multi-file patch: protected second path",
+      "expect": {
+        "claude": "ask",
+        "codex": "deny"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "apply_patch",
+        "toolInput": {
+          "command": "*** Begin Patch\n*** Update File: src/a.ts\n@@\n-a\n+b\n*** Update File: .env\n@@\n-a\n+b\n*** End Patch"
+        }
+      }
+    },
+    {
+      "name": "multi-file patch: blocked second path",
+      "config": {
+        "version": 1,
+        "gates": {
+          "protectedFiles": {
+            "mode": "block"
+          }
+        }
+      },
+      "expect": {
+        "claude": "deny"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "apply_patch",
+        "toolInput": {
+          "command": "*** Begin Patch\n*** Add File: src/b.rs\n+x\n*** Delete File: .env\n*** End Patch"
+        }
+      }
+    },
+    {
+      "name": "multi-file patch: advisories only",
+      "expect": {
+        "claude": "advisory"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "apply_patch",
+        "toolInput": {
+          "command": "*** Begin Patch\n*** Add File: src/b.rs\n+x\n*** Add File: src/c.ts\n+y\n*** End Patch"
+        }
+      }
+    },
+    {
+      "name": "malformed apply_patch fails closed",
+      "expect": {
+        "claude": "deny"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "apply_patch",
+        "toolInput": {
+          "command": "garbage"
+        }
+      }
+    },
+    {
+      "name": "bash-commands: denylisted command asks",
+      "expect": {
+        "claude": "ask",
+        "codex": "deny"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "bun -e \"1\""
+        }
+      }
+    },
+    {
+      "name": "bash-commands: block mode denies",
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "block"
+          }
+        }
+      },
+      "expect": {
+        "claude": "deny"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "cargo test"
+        }
+      }
+    },
+    {
+      "name": "bash-commands: advise mode advises",
+      "config": {
+        "version": 1,
+        "gates": {
+          "bashCommands": {
+            "mode": "advise"
+          }
+        }
+      },
+      "expect": {
+        "claude": "advisory"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "cargo test"
+        }
+      }
+    },
+    {
+      "name": "plain command is silent",
+      "expect": {
+        "claude": "silent"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "ls"
+        }
+      }
+    },
+    {
+      "name": "commit-gate: commit advice",
+      "expect": {
+        "claude": "advisory"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "git commit -m \"feat: x\""
+        }
+      }
+    },
+    {
+      "name": "commit-gate: unknown prefix denied in block mode",
+      "config": {
+        "version": 1,
+        "gates": {
+          "commitGate": {
+            "mode": "block"
+          }
+        }
+      },
+      "expect": {
+        "claude": "deny"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "git commit -m \"wibble: stuff\""
+        }
+      }
+    },
+    {
+      "name": "quality-gate: failing gate blocks a commit",
+      "expect": {
+        "claude": "deny"
+      },
+      "setupByHost": {
+        "claude": [
+          {
+            "op": "write",
+            "path": "$PROJECT/.claude/tmp/quality-gate-status.json",
+            "body": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n"
+          }
+        ],
+        "codex": [
+          {
+            "op": "write",
+            "path": "$PROJECT/.codex/tmp/quality-gate-status.json",
+            "body": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n"
+          }
+        ]
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "git commit -m \"wip\""
+        }
+      }
+    },
+    {
+      "name": "quality-gate: ask mode",
+      "config": {
+        "version": 1,
+        "gates": {
+          "qualityGate": {
+            "mode": "ask"
+          }
+        }
+      },
+      "expect": {
+        "claude": "ask",
+        "codex": "advisory"
+      },
+      "setupByHost": {
+        "claude": [
+          {
+            "op": "write",
+            "path": "$PROJECT/.claude/tmp/quality-gate-status.json",
+            "body": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n"
+          }
+        ],
+        "codex": [
+          {
+            "op": "write",
+            "path": "$PROJECT/.codex/tmp/quality-gate-status.json",
+            "body": "{\"status\":\"failing\",\"reason\":\"forced\",\"violations\":\"\"}\n"
+          }
+        ]
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "git push"
+        }
+      }
+    },
+    {
+      "name": "push-review + docs-sync: unreviewed push advises",
+      "expect": {
+        "claude": "advisory"
+      },
+      "setupByHost": {
+        "claude": [
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "checkout",
+              "-q",
+              "-b",
+              "feat/example"
+            ]
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/a.ts",
+            "body": "export const a = 1;\n"
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "add",
+              "-A"
+            ]
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "commit",
+              "-q",
+              "-m",
+              "feat: example"
+            ]
+          }
+        ],
+        "codex": [
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "checkout",
+              "-q",
+              "-b",
+              "feat/example"
+            ]
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/a.ts",
+            "body": "export const a = 1;\n"
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "add",
+              "-A"
+            ]
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "commit",
+              "-q",
+              "-m",
+              "feat: example"
+            ]
+          }
+        ]
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "git push origin feat/example"
+        }
+      }
+    },
+    {
+      "name": "push-review: block mode denies",
+      "config": {
+        "version": 1,
+        "gates": {
+          "pushReview": {
+            "mode": "block"
+          }
+        }
+      },
+      "expect": {
+        "claude": "deny"
+      },
+      "setupByHost": {
+        "claude": [
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "checkout",
+              "-q",
+              "-b",
+              "feat/example"
+            ]
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/a.ts",
+            "body": "export const a = 1;\n"
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "add",
+              "-A"
+            ]
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "commit",
+              "-q",
+              "-m",
+              "feat: example"
+            ]
+          }
+        ],
+        "codex": [
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "checkout",
+              "-q",
+              "-b",
+              "feat/example"
+            ]
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/a.ts",
+            "body": "export const a = 1;\n"
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "add",
+              "-A"
+            ]
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "commit",
+              "-q",
+              "-m",
+              "feat: example"
+            ]
+          }
+        ]
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "git push origin feat/example"
+        }
+      }
+    },
+    {
+      "name": "push-review: ask mode",
+      "config": {
+        "version": 1,
+        "gates": {
+          "pushReview": {
+            "mode": "ask"
+          }
+        }
+      },
+      "expect": {
+        "claude": "ask",
+        "codex": "advisory"
+      },
+      "setupByHost": {
+        "claude": [
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "checkout",
+              "-q",
+              "-b",
+              "feat/example"
+            ]
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/a.ts",
+            "body": "export const a = 1;\n"
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "add",
+              "-A"
+            ]
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "commit",
+              "-q",
+              "-m",
+              "feat: example"
+            ]
+          }
+        ],
+        "codex": [
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "checkout",
+              "-q",
+              "-b",
+              "feat/example"
+            ]
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/a.ts",
+            "body": "export const a = 1;\n"
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "add",
+              "-A"
+            ]
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "commit",
+              "-q",
+              "-m",
+              "feat: example"
+            ]
+          }
+        ]
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "git push origin feat/example"
+        }
+      }
+    },
+    {
+      "name": "docs-sync: block mode denies a code-only push",
+      "config": {
+        "version": 1,
+        "gates": {
+          "docsSync": {
+            "mode": "block"
+          },
+          "pushReview": {
+            "mode": "off"
+          }
+        }
+      },
+      "expect": {
+        "claude": "deny"
+      },
+      "setupByHost": {
+        "claude": [
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "checkout",
+              "-q",
+              "-b",
+              "feat/example"
+            ]
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/a.ts",
+            "body": "export const a = 1;\n"
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "add",
+              "-A"
+            ]
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "commit",
+              "-q",
+              "-m",
+              "feat: example"
+            ]
+          }
+        ],
+        "codex": [
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "checkout",
+              "-q",
+              "-b",
+              "feat/example"
+            ]
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/src/a.ts",
+            "body": "export const a = 1;\n"
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "add",
+              "-A"
+            ]
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "commit",
+              "-q",
+              "-m",
+              "feat: example"
+            ]
+          }
+        ]
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "git push origin feat/example"
+        }
+      }
+    },
+    {
+      "name": "plan-ledger: unparseable ledger denies",
+      "expect": {
+        "claude": "deny"
+      },
+      "setupByHost": {
+        "claude": [
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "checkout",
+              "-q",
+              "-b",
+              "feat/example"
+            ]
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/README.md",
+            "body": "export const a = 1;\n"
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "add",
+              "-A"
+            ]
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "commit",
+              "-q",
+              "-m",
+              "feat: example"
+            ]
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/.claude/tmp/plan-ledger/feat_example.json",
+            "body": "{not json"
+          }
+        ],
+        "codex": [
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "checkout",
+              "-q",
+              "-b",
+              "feat/example"
+            ]
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/README.md",
+            "body": "export const a = 1;\n"
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "add",
+              "-A"
+            ]
+          },
+          {
+            "op": "git",
+            "args": [
+              "-C",
+              {
+                "$path": "$PROJECT"
+              },
+              "commit",
+              "-q",
+              "-m",
+              "feat: example"
+            ]
+          },
+          {
+            "op": "write",
+            "path": "$PROJECT/.codex/tmp/plan-ledger/feat_example.json",
+            "body": "{not json"
+          }
+        ]
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "git push origin feat/example"
+        }
+      }
+    },
+    {
+      "name": "ast-grep registry: structural Grep nudge",
+      "expect": {
+        "claude": "advisory"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Grep",
+        "toolInput": {
+          "pattern": "fn handle_request",
+          "glob": "*.rs"
+        }
+      }
+    },
+    {
+      "name": "ast-grep registry: grep in Bash nudge",
+      "expect": {
+        "claude": "advisory"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "grep -r \"impl Foo\" src"
+        }
+      }
+    },
+    {
+      "name": "registry module exit 2 blocks",
+      "expect": {
+        "claude": "exit2"
+      },
+      "setupByHost": {
+        "claude": [
+          {
+            "op": "write",
+            "path": "$HOME/.claude/toolu/pre-tools.d/fixture@toolu__hard-block.sh",
+            "body": "#!/usr/bin/env bash\necho hard-block >&2\nexit 2\n"
+          },
+          {
+            "op": "chmod",
+            "path": "$HOME/.claude/toolu/pre-tools.d/fixture@toolu__hard-block.sh",
+            "mode": "755"
+          }
+        ],
+        "codex": [
+          {
+            "op": "write",
+            "path": "$HOME/.codex/toolu/pre-tools.d/fixture@toolu__hard-block.sh",
+            "body": "#!/usr/bin/env bash\necho hard-block >&2\nexit 2\n"
+          },
+          {
+            "op": "chmod",
+            "path": "$HOME/.codex/toolu/pre-tools.d/fixture@toolu__hard-block.sh",
+            "mode": "755"
+          }
+        ]
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "ls"
+        }
+      }
+    },
+    {
+      "name": "hooks.pre-tools false disables the dispatcher",
+      "config": {
+        "version": 1,
+        "hooks": {
+          "pre-tools": false
+        }
+      },
+      "expect": {
+        "claude": "silent"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Edit",
+        "toolInput": {
+          "file_path": {
+            "$path": "$PROJECT/.env"
+          },
+          "old_string": "a",
+          "new_string": "b"
+        }
+      }
+    },
+    {
+      "name": "empty stdin",
+      "stdin": "",
+      "expect": {
+        "claude": "silent"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "ls"
+        }
+      }
+    },
+    {
+      "name": "non-JSON stdin",
+      "stdin": "not json\n",
+      "expect": {
+        "claude": "silent"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "Bash",
+        "toolInput": {
+          "command": "ls"
+        }
+      }
+    },
+    {
+      "name": "mcp-blocker: blocklisted server with redirect, block mode",
+      "settings": {
+        "mcp-blocklist.txt": "exampleblocked -> use the CLI\n"
+      },
+      "config": {
+        "version": 1,
+        "gates": {
+          "mcpBlocker": {
+            "mode": "block"
+          }
+        }
+      },
+      "expect": {
+        "claude": "deny"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__exampleblocked__search",
+        "toolInput": {},
+        "mcp": {
+          "server": "exampleblocked",
+          "tool": "search"
+        }
+      }
+    },
+    {
+      "name": "mcp-blocker: also runs inside the dispatcher",
+      "config": {
+        "version": 1,
+        "mcp": {
+          "exampleblocked": false
+        }
+      },
+      "expect": {
+        "claude": "ask",
+        "codex": "deny"
+      },
+      "setupByHost": {
+        "claude": [],
+        "codex": []
+      },
+      "fixture": {
+        "kind": "tool",
+        "event": "PreToolUse",
+        "toolName": "mcp__exampleblocked__search",
+        "toolInput": {},
+        "mcp": {
+          "server": "exampleblocked",
+          "tool": "search"
+        }
+      }
+    }
+  ]
+}

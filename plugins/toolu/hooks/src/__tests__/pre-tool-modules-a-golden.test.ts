@@ -7,9 +7,8 @@
  */
 import { expect, test } from "bun:test";
 import { implementationTag } from "@toolu/conformance/harness/entry-command";
-import { toStdin } from "@toolu/conformance/harness/fixtures";
 import { pretoolEnv, runBundle } from "@toolu/conformance/harness/pretool";
-import { PRETOOL_CORPUS, prepare } from "@toolu/conformance/harness/pretool-corpus";
+import { PRETOOL_CORPUS, prepare, pretoolStdin } from "@toolu/conformance/harness/pretool-corpus";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { corpusKey, readGolden } from "./pre-tool-modules-a-golden.ts";
 import { comparable } from "./pre-tool-modules-a-parity.ts";
@@ -31,8 +30,7 @@ for (const { fixture, host } of CASES) {
   test.concurrent(`${fixture.name} [${host}]${IMPL}`, async () => {
     using sb = createSandbox({ git: true });
     const extra = await prepare(sb, host, fixture);
-    const stdin =
-      fixture.stdin ?? JSON.stringify(toStdin(host, fixture.fixture(sb), { cwd: sb.project }));
+    const stdin = pretoolStdin(sb, host, fixture);
     const out = await runBundle({ cwd: sb.project, env: pretoolEnv(sb, host, extra), stdin });
     const norm = (text: string) => text.split(sb.root).join("$ROOT");
     const got = { stdout: norm(out.stdout), stderr: norm(out.stderr), exitCode: out.exitCode };

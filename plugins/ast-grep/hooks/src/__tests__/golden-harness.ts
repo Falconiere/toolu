@@ -13,6 +13,7 @@ import { pretoolEnv, runBundle, type PretoolHost } from "@toolu/conformance/harn
 import {
   PRETOOL_CORPUS,
   prepare,
+  pretoolStdin,
   type PretoolCase,
 } from "@toolu/conformance/harness/pretool-corpus";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
@@ -129,7 +130,7 @@ export async function runCorpus(
   using sb = createSandbox({ git: true });
   const extra = await prepare(sb, host, f);
   await registerAstGrep(sb, host, reg);
-  const stdin = f.stdin ?? JSON.stringify(toStdin(host, f.fixture(sb), { cwd: sb.project }));
+  const stdin = pretoolStdin(sb, host, f);
   return captured(
     await runBundle({ cwd: sb.project, env: pretoolEnv(sb, host, extra), stdin }),
     sb,
