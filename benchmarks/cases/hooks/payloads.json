@@ -1,14 +1,6 @@
 {
   "version": 1,
   "entries": {
-    "agent-browser/session-start": {
-      "stdin": {
-        "session_id": "hook-bench",
-        "cwd": "${PROJECT}",
-        "hook_event_name": "SessionStart",
-        "source": "startup"
-      }
-    },
     "ast-grep/register": {
       "stdin": {
         "session_id": "hook-bench",
@@ -17,23 +9,7 @@
         "source": "startup"
       }
     },
-    "context7/session-start": {
-      "stdin": {
-        "session_id": "hook-bench",
-        "cwd": "${PROJECT}",
-        "hook_event_name": "SessionStart",
-        "source": "startup"
-      }
-    },
     "epic-orchestrator/check-deps": {
-      "stdin": {
-        "session_id": "hook-bench",
-        "cwd": "${PROJECT}",
-        "hook_event_name": "SessionStart",
-        "source": "startup"
-      }
-    },
-    "exa-search/session-start": {
       "stdin": {
         "session_id": "hook-bench",
         "cwd": "${PROJECT}",
@@ -55,14 +31,6 @@
         "cwd": "${PROJECT}",
         "hook_event_name": "UserPromptSubmit",
         "prompt": "Summarise README.md in one sentence."
-      }
-    },
-    "jira/session-start": {
-      "stdin": {
-        "session_id": "hook-bench",
-        "cwd": "${PROJECT}",
-        "hook_event_name": "SessionStart",
-        "source": "startup"
       }
     },
     "pr-babysit/check-toolu": {

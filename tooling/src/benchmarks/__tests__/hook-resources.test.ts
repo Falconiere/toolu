@@ -28,7 +28,7 @@ const PAYLOADS = loadJson(join(ROOT, "benchmarks/cases/hooks/payloads.json"), Pa
 
 test("discovery finds every hooks.json bundle entry once, register included per plugin", () => {
   const ids = ENTRIES.map((e) => e.id);
-  expect(ids).toHaveLength(24);
+  expect(ids).toHaveLength(20);
   expect(new Set(ids).size).toBe(ids.length);
   expect(ids).toContain("toolu/pre-tools");
   expect(ids).toContain("toolu/post-tools");

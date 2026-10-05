@@ -1,7 +1,7 @@
 /**
  * The committed hook-bench results (#410 AC-6, AC-8): every one is a valid
  * `toolu.hook-resources/v1` result, and the Bun baseline from the CI runners
- * covers every hook entry on Linux and macOS, the Linux run inside 60 s.
+ * covers every current hook entry on Linux and macOS, the Linux run inside 60 s.
  */
 import { expect, test } from "bun:test";
 import { join, resolve } from "node:path";
@@ -34,10 +34,12 @@ test("the Bun baseline from CI covers every hook entry on Linux and macOS", () =
         doc.entries.every((e) => e.implementation === "bun"),
     );
     expect(baseline, platform).toBeDefined();
+    // A baseline is a dated measurement: it may also hold entries removed since.
+    const measured = new Set(baseline?.doc.entries.map((e) => e.entry));
     expect(
-      baseline?.doc.entries.map((e) => e.entry),
+      ids.filter((id) => !measured.has(id)),
       platform,
-    ).toEqual(ids);
+    ).toEqual([]);
     for (const row of baseline?.doc.entries ?? []) {
       expect(row.maxRssBytes.p50, row.entry).toBeGreaterThan(
         baseline?.doc.provenance.floor.maxRssBytes ?? 0,
