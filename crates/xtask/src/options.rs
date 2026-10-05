@@ -41,6 +41,8 @@ impl Options {
       }
       let value = rest
         .next()
+        // The separator is never a value: `--out -- cmd` lacks the file.
+        .filter(|value| value.as_str() != "--")
         .ok_or_else(|| format!("{word} needs a value"))?
         .clone();
       match word.as_str() {

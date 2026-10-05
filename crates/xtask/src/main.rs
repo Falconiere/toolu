@@ -47,6 +47,7 @@ const TASKS: &[(&str, Task)] = &[
   ("measure", measure::run),
 ];
 
+// `\x20` keeps the second line's indent: a `\` continuation strips leading spaces.
 const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--title TEXT] \
   [--only STEP]... [FILE]\n\
   \x20      cargo xtask measure --out FILE -- COMMAND [ARG]...\n\

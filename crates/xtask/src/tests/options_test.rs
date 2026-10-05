@@ -60,3 +60,11 @@ fn other_tasks_refuse_measure_options() {
     );
   }
 }
+
+#[test]
+fn the_separator_is_never_an_option_value() {
+  assert_eq!(
+    Options::parse(&words(&["--out", "--", "true"])).unwrap_err(),
+    "--out needs a value"
+  );
+}
