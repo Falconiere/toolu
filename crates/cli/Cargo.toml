@@ -1,0 +1,23 @@
+[package]
+name = "toolu-cli"
+description = "toolu: the one binary behind every plugin's hooks and Markdown"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "toolu"
+path = "src/main.rs"
+
+[dependencies]
+serde_json.workspace = true
+toolu-protocol = { path = "../core/protocol" }
+toolu-runtime = { path = "../core/runtime" }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

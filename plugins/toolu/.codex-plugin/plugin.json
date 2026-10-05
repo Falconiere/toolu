@@ -1,6 +1,7 @@
 {
   "name": "toolu",
   "version": "7.11.0",
+  "hookProtocol": 1,
   "description": "Dual-host engineering discipline for Claude Code and Codex: workflow skills, agents, commands, and registry-driven quality hooks.",
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json"
