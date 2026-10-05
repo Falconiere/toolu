@@ -141,7 +141,7 @@ Notes:
   - `[workspace.package] version` is the single lockstep version.
   - release-please uses the Rust/cargo-workspace strategy and keeps updating every `plugin.json` through extra-files.
   - `[workspace.dependencies]` pins serde, serde_json, brush-parser, tree-sitter(-bash), jsonc-parser, ureq, fs4, tempfile, insta, assert_cmd and proptest once.
-  - `[workspace.lints]` denies `unwrap_used`, `expect_used`, `panic` and warnings, matching what rust-quality already enforces on users' code.
+  - `[workspace.lints]` carries the lint levels of the quality bar below.
 - **zod becomes serde:** use `#[serde(deny_unknown_fields)]` plus explicit `version` handling, keeping the fail-closed envelope for `toolu.config.json` and strict v1 for the gate file. Avoid `flatten` on strict types, because `deny_unknown_fields` does not compose with it.
 - **JSONC edits for OpenCode config:** `jsonc-parser` with the `cst` feature, which keeps comments.
 - **Git:** read `.git` directly for toplevel, branch and worktree. Spawn `git` only for diffs and pushes.
@@ -152,12 +152,43 @@ Notes:
 - **Shared contract:** `fixtures/` holds the language-neutral contract. Move `tooling/fixtures/{shell,config,portable-core,gate-coverage,codex-hook-schemas}` there, and export the TypeScript golden captures (`*-golden.ts`, `*-cases.ts`, `posttool-corpus.ts`) to JSON. That export is phase 0, so both implementations read the same files.
 - **During migration:** the TypeScript conformance harness spawns either the bundle or the Rust binary through one seam (`TOOLU_IMPL=rust`). About 200 black-box test files then check each Rust port for free.
 - **Rust-side tests:**
-  - `crates/*/tests/` with `assert_cmd` and `insta` read the same `fixtures/`.
+  - Black-box tests in `crates/*/tests/` with `assert_cmd` and `insta` read the same `fixtures/`.
   - `proptest` covers differential parsing against the recorded unbash outputs.
-  - Unit tests stay inline (`#[cfg(test)]`).
+  - Unit tests are co-located the way toolu's rust-quality plugin requires: no inline `#[cfg(test)]` body in `src`, a `tests/` directory beside the module, wired by a bodyless `#[cfg(test)] mod` declaration (`src/queue.rs` ↔ `src/tests/queue_test.rs`).
   - No mocks, real repos and processes as today.
 - **Removing TypeScript tests:** a TypeScript test is deleted only when its plugin's Rust crate covers the same fixtures.
 - **Resource budget:** `cargo xtask bench` records max RSS, CPU and wall time per hook. Its gate is the measured target, for example `toolu hook pre-tools` at 8 MB or less and 5 ms or less of CPU.
+
+## Quality bar
+
+The user asked for strict, well-defined gates. They exist before any product crate (epic sub-issue "Rust quality bar"), and there are no exemptions: new code has no legacy excuse. Code lines exclude blank lines and comments.
+
+| Area | Rule | Owner |
+|------|------|-------|
+| File size | 300 code lines, `src` and tests | xtask guardrails |
+| Function size | 50 code lines in `src` | clippy `too_many_lines` |
+| `impl` block size | 200 code lines | xtask guardrails |
+| Complexity | cognitive complexity 15, nesting 4, 5 parameters | clippy |
+| Co-located tests | every module with a function has `tests/<module>_test.rs` beside it; no inline test bodies in `src` | xtask guardrails |
+| Behaviour inventory | a passing and a failing scenario per hook, gate, rule, CLI verb and engine transition | xtask guardrails |
+| Coverage | 85% of lines per crate, 90% for protocol, shell, state and engine; the floor only moves up | `cargo llvm-cov` |
+| Folder structure | allowlist for the workspace, each crate and each plugin directory; no `mod.rs`, `build.rs`, `include!` | xtask guardrails |
+| Architecture | layer table and capability boundaries as data (who may link HTTP, parse shell, spawn processes, read the environment, write stdout) | `xtask check-layers`, ast-grep patterns |
+| Dependencies | no async runtime, no OpenSSL, no mocking crate, one version per crate, licences, advisories, nothing unused | cargo-deny, cargo-machete |
+| Duplication | zero clones of 10 lines / 60 tokens or more | jscpd |
+| Panics | `unsafe` forbidden; no `unwrap`, `expect`, `panic!`, `todo!`, `unimplemented!`, `unreachable!`, panicking index in `src` | rustc, clippy |
+| Dead code | warnings denied, `unreachable_pub`, no unused public item across the workspace | rustc, `xtask check-unused-pub` |
+| Suppression | no `#[allow]`, `#[expect]`, ignore list or per-path override | xtask guardrails |
+
+How it holds:
+
+- **One owner per rule, one source per number.** The guardrails kit already says why: "Two enforcers of one rule is how ceilings drift apart." Limits live in `toolu.config.json` and `clippy.toml`, and a test fails when two copies disagree.
+- **We pass what we ship.** toolu's Rust code passes toolu's rust-quality rules at these thresholds (Jev: 0.85). The numbers are the stricter of the two house sets: 300 per file from the TypeScript tree, 50 per function and 200 per `impl` from rust-quality (Jev: 0.78 over the plugin default of 500).
+- **Every rule is proven.** Each has a clean and a violating fixture, run by the gate's own tests.
+- **Three places it runs:** after each edit through the rust-quality plugin, before commit and push through the quality gate, and in CI as `cargo xtask gate`.
+- **Agents cannot loosen it to pass.** A limit, ban or lint level changes only in its own `chore(gates):` PR, and a PR that changes gate data together with product code fails.
+
+All 34 lint names were checked against the installed toolchain (clippy 0.1.99, zero unknown), and jscpd was run on Rust sources. A coverage floor is new for this repository (Jev: 0.71 for adding it); the TypeScript tree has none.
 
 ## Tooling
 
