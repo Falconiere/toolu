@@ -25,12 +25,14 @@ Every new named case file below has `{ "version": 1, "cases": [...] }`. Each cas
 | Host roots | `host/root.json` | 18 → 18 | `packages/toolu-core/src/host/__tests__/host-roots.test.ts` | #414 |
 | Host output encoders | `host/encode.json` | new, 299 | `packages/toolu-core/src/host/__tests__/host-encode-fixture.test.ts` | #413 (`crates/core/protocol/tests/encode_fixture.rs`) |
 | Config resolution | `config/expected.json` | new, 35 | `packages/toolu-core/src/config/__tests__/config-fixture.test.ts` | #414 (`crates/core/runtime/tests/config_fixture.rs`) |
-| State | `state/cases.json` | 77 → 77 | `packages/toolu-core/src/state/__tests__` | #415 |
+| State | `state/cases.json` | 77 → 77 | `packages/toolu-core/src/state/__tests__` | #415 (`crates/core/state/tests/{state_cases,io_cases,gate_cases,interleave}.rs`) |
+| State gate-file bytes | `state/gate-bytes.json` | new, 16 | `packages/toolu-core/src/state/__tests__/gate-bytes.test.ts` | #415 (`crates/core/state/tests/gate_bytes.rs`) |
+| State edit records | `state/edit-records.json` | new, 42 | `packages/toolu-core/src/state/__tests__/edit-records.test.ts` | #415 (`crates/core/state/tests/edit_records.rs`) |
 | Statusline states | `statusline/cases.json` | 83 → 83 | `plugins/statusline/hooks/src/__tests__` | #431 |
 | OpenCode permission/evaluate | `opencode/permission-evaluate.json` | 17 → 17 | `tools/toolu-opencode/src/adapter/__tests__` | #462 |
 | OpenCode lifecycle tests | `opencode/lifecycle-events.json` | 2 → 2 tests, 11 events | `tools/toolu-opencode/src/lifecycle/__tests__` | #462 |
 
-The original 13 exported arrays contain 979 names. The six newly extracted families add 213 names, #413's host encoder suite adds 299 more, and #414's config resolution suite adds 35, for 1,526 indexed cases in 21 suite groups. OpenCode's lifecycle file records all 11 event outcomes across its two tests. The inventory checks names and counts, so swapping or dropping a case fails.
+The original 13 exported arrays contain 979 names. The six newly extracted families add 213 names, #413's host encoder suite adds 299 more, #414's config resolution suite adds 35, and #415's gate-file byte and edit-record goldens add 16 and 42, for 1,584 indexed cases in 23 suite groups. OpenCode's lifecycle file records all 11 event outcomes across its two tests. The inventory checks names and counts, so swapping or dropping a case fails.
 
 ## Case fields and setup
 
@@ -47,7 +49,7 @@ The original 13 exported arrays contain 979 names. The six newly extracted famil
 - seven string-escaping cases;
 - the four events a host lacks.
 
-Each case's `expect` is the exact `stdout`, the `JSON.stringify`ed OpenCode `callback`, or the wiring `error`. The TypeScript and Rust encoders must both reproduce it byte for byte. `state/cases.json` has discriminated schema, gate-file, I/O, branch, diff, concurrency and public-package cases. `statusline/cases.json` has renderer, status report, Jev readiness, SessionStart and setup cases; its `actions` or `steps` are bounded real file/Git/plugin actions. `opencode/permission-evaluate.json` has mapping, decision and evaluate integration cases. `opencode/lifecycle-events.json` maps the eleven supported, deferred or unsupported events and checks the pinned SDK hook names.
+Each case's `expect` is the exact `stdout`, the `JSON.stringify`ed OpenCode `callback`, or the wiring `error`. The TypeScript and Rust encoders must both reproduce it byte for byte. `state/cases.json` has discriminated schema, gate-file, I/O, branch, diff, concurrency and public-package cases. `state/gate-bytes.json` (#415) was captured once from the TypeScript gate-file writers: record and clear sequences with the exact file bytes, clear outcome and drop log after each step. `state/edit-records.json` (#415) holds edit payloads with the kind, records and printed text TypeScript's normalizer gives them. Both implementations must reproduce them byte for byte. `statusline/cases.json` has renderer, status report, Jev readiness, SessionStart and setup cases; its `actions` or `steps` are bounded real file/Git/plugin actions. `opencode/permission-evaluate.json` has mapping, decision and evaluate integration cases. `opencode/lifecycle-events.json` maps the eleven supported, deferred or unsupported events and checks the pinned SDK hook names.
 
 Pre-tool corpus `settings` keys are filenames within the sandbox settings directory. Statusline action `path`, `cwd`, `root`, and `target` fields use tagged `$path` values. Mutating actions reject paths that cross an existing symlink, including the read-only jscpd checkout link.
 

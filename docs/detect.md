@@ -38,6 +38,34 @@ The `o` argument is `{ env?, cwd? }`, defaulting to `process.env` and the proces
 
 The git questions take a `ShellAnalysis`, not a command string. A gate parses once per event (`shellAnalysisOf(event)` from `@toolu/core/shell`) and hands the analysis to every question. `isGitPush` and `isGitCommit` return `false` when `runsGitSubcommand` answers `unknown` (`$g push`), as bash does for the workflow gates. A gate that must fail closed asks `runsGitSubcommand` for the tristate.
 
+## Rust port
+
+`toolu_state::detect` (#415, `crates/core/state/src/detect/`) is the Rust port of the shell-free answers above: `project` (toplevel, name, package manager, markers, linters, `to_relative_path`), `tools` (`tool_available`, `detect_ast_grep`) and `lines` (the three counters). The answers are the same, on the same inputs, as the tests show:
+- the 35 layouts and the bats answers;
+- the PATH cases and the snippet table;
+- a check that compares Rust and TypeScript line counts on every tracked `*.ts`, `*.rs`, `*.py` and `*.sh` file of the repository (`crates/core/state/tests/detect.rs`).
+
+The push and commit questions, which need the shell parser, follow in #418.
+
+**Git facts without git.** The toplevel comes from `toolu_runtime::git`, which walks up from the physical cwd for `.git` as git's own discovery does. It handles:
+- linked worktrees, submodules and `--separate-git-dir` pointers;
+- bare repositories and the inside of `.git`;
+- filesystem boundaries;
+- `core.bare` and `core.worktree`.
+
+`toolu_state::git` reads the branch (`HEAD`, loose refs and `packed-refs`), the linked-worktree test, the common dir and origin's HEAD the same way. So `Roots::project_root` and these facts spawn no process. Only these cases ask git, as TypeScript always does:
+- the `GIT_DIR` family of variables;
+- `sudo` as root;
+- a path owned by another user (`safe.directory`);
+- config includes, `config.worktree` and quoted values;
+- reftable repositories;
+- a branch name that git would lengthen because a tag or a remote shares it.
+
+Git is still spawned for history and index questions, which run once per session:
+- `diff_sha` (`git diff`, `git hash-object`);
+- the sweeper's branch lists (`git branch [--merged]`);
+- `detect_ts` (`git ls-files`).
+
 ## Ported elsewhere
 
 | bash | TypeScript |
