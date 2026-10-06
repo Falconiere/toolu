@@ -12,6 +12,10 @@ on:
     branches: [main]
   workflow_dispatch: {} # allow manual runs (validation / re-trigger if a push event is missed)
 
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   pull-requests: write

@@ -52,6 +52,11 @@ function checkReleaseCaller(root: string, caller: ObjectMap, errors: string[]): 
   );
   need(
     errors,
+    at(caller, "concurrency", "cancel-in-progress") === false,
+    "release-please.yml must not cancel a release in progress",
+  );
+  need(
+    errors,
     includes(at(caller, "jobs", "release-please", "if"), "TOOLU_RELEASE_DISABLED"),
     "release-please.yml lacks kill switch",
   );
@@ -115,6 +120,11 @@ function checkNativeBuild(native: ObjectMap, errors: string[]): void {
 
 function checkNativePublish(native: ObjectMap, errors: string[]): void {
   const jobs = object(native.jobs);
+  need(
+    errors,
+    at(native, "concurrency", "cancel-in-progress") === false,
+    "release-native.yml must not cancel an in-flight release",
+  );
   const finalizeNeeds = array(at(jobs, "finalize", "needs"));
   need(
     errors,
@@ -196,6 +206,11 @@ export function checkRelease(
   checkNativeBuild(get("release-native.yml"), errors);
   checkNativePublish(get("release-native.yml"), errors);
   checkFinalize(get("release-finalize.yml"), get("advisory-audit.yml"), errors);
+  need(
+    errors,
+    at(get("npm-publish.yml"), "concurrency", "cancel-in-progress") === false,
+    "npm-publish.yml must not cancel an in-flight publication",
+  );
   need(
     errors,
     runs(at(get("npm-publish.yml"), "jobs", "publish")).includes("npm_tag=next") &&

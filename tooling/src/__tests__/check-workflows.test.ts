@@ -110,6 +110,13 @@ for (const scenario of [
     finding: "draft and a real tag",
   },
   {
+    name: "cancelled release publication",
+    file: ".github/workflows/npm-publish.yml",
+    before: "cancel-in-progress: false",
+    after: "cancel-in-progress: true",
+    finding: "must not cancel an in-flight publication",
+  },
+  {
     name: "prerelease moving npm latest",
     file: ".github/workflows/npm-publish.yml",
     before: "npm_tag=next",
