@@ -22,7 +22,7 @@ import { z } from "zod";
 import { listPluginManifests } from "../../../tools/toolu-opencode/src/inventory/scan.ts";
 import { runHost, toolStates } from "./host-run.ts";
 import type { Scripts } from "./provider.ts";
-import { messagesText } from "./scenario.ts";
+import { finalMessages, messagesText } from "./scenario.ts";
 import {
   PROJECT_FILES,
   ROOT,
@@ -217,12 +217,15 @@ async function nativeMissingBinary(ctx: EntryContext): Promise<EntryResult> {
     s.env.TOOLU_BIN = s.outside("missing-toolu");
     const hostRun = await runHost(ctx.bin, s, ["--print-logs", "PROBE:startup.touch"]);
     const context = messagesText(s, "system");
+    const installNotice = "toolu plugin: toolu is not installed";
     const observed = {
       hostExit: hostRun.exitCode,
       ready: diagnostics(hostRun.stderr, "toolu: ready"),
       installer: context.includes("curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash"),
       homebrew: context.includes("brew install falconiere/tap/toolu"),
       restart: context.includes("Then restart the session"),
+      modelCopies: finalMessages(s, "system").join("\n").split(installNotice).length - 1,
+      hostLogCopies: hostRun.stderr.split(installNotice).length - 1,
     };
     return {
       pass:
@@ -230,7 +233,9 @@ async function nativeMissingBinary(ctx: EntryContext): Promise<EntryResult> {
         observed.ready === 1 &&
         observed.installer &&
         observed.homebrew &&
-        observed.restart,
+        observed.restart &&
+        observed.modelCopies === 1 &&
+        observed.hostLogCopies === 1,
       observed,
     };
   });

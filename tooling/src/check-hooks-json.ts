@@ -87,7 +87,9 @@ function expectedNativeCommand(plugin: string, event: string, entry: string): st
 
 /** The context golden carries the #412 install text used by both POSIX and Windows. */
 function nativeMissingMessage(plugin: string): string {
-  const message = /"systemMessage":"([^"]+)"/u.exec(NATIVE_EXAMPLES.context.command)?.[1];
+  const message = /"systemMessage":"(toolu plugin: [^"]+ is not installed[^"]*)"/u.exec(
+    NATIVE_EXAMPLES.context.command,
+  )?.[1];
   if (message === undefined) throw new Error("native SessionStart golden has no install message");
   return message.replace("toolu plugin:", `${plugin} plugin:`);
 }
@@ -111,8 +113,16 @@ function isLauncherHook(hook: Hook): boolean {
   return (
     hook.commandWindows !== undefined ||
     command.includes("hooks/dist/") ||
-    /\bbun\b/u.test(command) ||
-    /\btoolu(?:\s+[a-z0-9-]+)?\s+hook\s+[a-z0-9-]+/u.test(command)
+    /\bbun\b/u.test(command)
+  );
+}
+
+/** A hand-written native call must fail even when its generated marker is missing. */
+function isNativeLikeHook(hook: Hook): boolean {
+  const command = hook.command ?? "";
+  return (
+    /\btoolu(?:\s+[a-z0-9-]+)?\s+hook\s+[a-z0-9-]+/u.test(command) ||
+    /\bhook\s+[a-z0-9-]+\s+--event\s+[A-Z][A-Za-z]+/u.test(command)
   );
 }
 
@@ -223,6 +233,8 @@ function checkFile(root: string, plugin: string): HooksJsonProblem[] {
               { root, plugin, event, file, where: `${event}[${i}].hooks[${j}]` },
               hook,
             )
+          : isNativeLikeHook(hook)
+            ? [{ file, where: `${event}[${i}].hooks[${j}]`, problem: "unsupported native hook command" }]
           : isLauncherHook(hook)
             ? checkHook({ root, plugin, event, file, where: `${event}[${i}].hooks[${j}]` }, hook)
             : [],

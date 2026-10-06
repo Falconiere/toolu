@@ -152,7 +152,7 @@ test("a hand-written toolu hook command without the generated launcher fails", (
       ),
   );
   expect(checkHooksJson(root).map((p) => p.problem)).toEqual([
-    "launcher hook names no hooks/dist/<entry>.js bundle",
+    "unsupported native hook command",
   ]);
 });
 
@@ -239,14 +239,12 @@ test("a generated native entry passes beside Bun entries and a hand edit fails",
   expect(NATIVE_COMMAND).toContain("--hook-protocol");
   expect(NATIVE_COMMAND).toContain("hooks/dist/session-start.js");
   expect(NATIVE_SESSION_HOOK.command).toBe(NATIVE_COMMAND);
+  expect(NATIVE_SESSION_HOOK.commandWindows).toContain("toolu is not installed");
   const root = copyOfRepo();
   switchSessionStart(root);
   expect(checkHooksJson(root)).toEqual([]);
   edit(root, TOOLU, (text) => text.replace("--hook-protocol", "--wrong-protocol"));
-  expect(checkHooksJson(root).map((p) => p.problem)).toEqual([
-    "command differs from the generated launcher",
-    "commandWindows differs from the generated launcher",
-  ]);
+  expect(checkHooksJson(root).map((p) => p.problem)).toEqual(["unsupported native hook command"]);
 });
 
 test("generated native prompt and pre-compaction entries pass the launcher check", () => {
