@@ -16,6 +16,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { z } from "zod";
 import { listPluginManifests } from "../../../tools/toolu-opencode/src/inventory/scan.ts";
 import { runHost, toolStates } from "./host-run.ts";
 import type { Scripts } from "./provider.ts";
@@ -39,6 +40,12 @@ export const DATA_ROOT = ".opencode/toolu/state";
 const ALLOWED_SCRIPT: Scripts = {
   "startup.touch": [{ tool: "bash", args: { command: "touch allowed.txt", description: "x" } }],
 };
+
+const HookFile = z.looseObject({
+  hooks: z.looseObject({
+    SessionStart: z.array(z.looseObject({ hooks: z.array(z.unknown()) })),
+  }),
+});
 
 function selection(names: readonly string[]): string {
   return JSON.stringify({ version: 1, enabled: names });
@@ -156,12 +163,11 @@ function useNativeLauncher(catalog: string, plugin: string): void {
     ROOT,
     `tooling/fixtures/native-launcher/${plugin === "toolu" ? "" : `${plugin}-`}session-start.json`,
   );
-  const hooks = JSON.parse(readFileSync(path, "utf8")) as {
-    hooks: { SessionStart: Array<{ hooks: unknown[] }> };
-  };
+  const hooks = HookFile.parse(JSON.parse(readFileSync(path, "utf8")));
   const first = hooks.hooks.SessionStart[0]?.hooks;
   if (first === undefined || first.length === 0) throw new Error(`${plugin}: no SessionStart hook`);
-  first[0] = JSON.parse(readFileSync(fixture, "utf8")) as unknown;
+  const nativeHook: unknown = JSON.parse(readFileSync(fixture, "utf8"));
+  first[0] = nativeHook;
   writeFileSync(path, `${JSON.stringify(hooks, null, 2)}\n`);
 }
 
