@@ -12,6 +12,7 @@ mod docs_cli;
 mod gate;
 mod gate_change;
 mod guardrails;
+mod homebrew_formula;
 mod hooks_entries;
 mod hooks_manifests;
 mod launcher_e2e;
@@ -64,6 +65,7 @@ const TASKS: &[(&str, Task)] = &[
   ("check-cli-compat", cli_compat::run),
   ("check-startup", startup::run),
   ("check-markdown-cli", markdown_cli::run),
+  ("homebrew-formula", homebrew_formula::run),
 ];
 
 // `\x20` keeps the second line's indent: a `\` continuation strips leading spaces.
@@ -72,7 +74,7 @@ const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--titl
   \x20      cargo xtask measure --out FILE -- COMMAND [ARG]...\n\
   tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
   check-coverage, measure, print-hook, check-hooks, check-workflows, launcher-e2e, docs-cli, check-cli-compat, \
-  check-startup, check-markdown-cli";
+  check-startup, check-markdown-cli, homebrew-formula";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.
 fn run(args: &[String]) -> ExitCode {

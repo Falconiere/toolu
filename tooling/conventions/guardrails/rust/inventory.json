@@ -95,6 +95,12 @@
       "id": "check-markdown-cli",
       "pass": "crates/xtask/tests/markdown_cli.rs::this_repository_passes_in_under_five_seconds",
       "fail": "crates/xtask/tests/markdown_cli.rs::an_unknown_verb_names_the_file_line_and_closest_verb"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "homebrew-formula",
+      "pass": "crates/xtask/src/tests/homebrew_formula_test.rs::homebrew_formula_prints_the_four_checksums",
+      "fail": "crates/xtask/src/tests/homebrew_formula_test.rs::homebrew_formula_missing_checksum_exits_1"
     }
   ]
 }

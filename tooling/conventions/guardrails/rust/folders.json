@@ -28,6 +28,7 @@
     "docs",
     "fixtures",
     "guardrails.workspace.json",
+    "install.sh",
     "knip.json",
     "lefthook.yml",
     "package.json",
