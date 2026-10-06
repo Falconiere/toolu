@@ -71,7 +71,7 @@ pub(crate) fn verdict(gate: &[String], product: &[String], title: Option<&str>) 
   found
 }
 
-fn git(root: &Path, args: &[&str]) -> Result<String, String> {
+pub(crate) fn git(root: &Path, args: &[&str]) -> Result<String, String> {
   let output = Command::new("git")
     .arg("-C")
     .arg(root)
@@ -89,7 +89,7 @@ fn git(root: &Path, args: &[&str]) -> Result<String, String> {
 }
 
 /// `path` at revision `base`, or `None` when it does not exist there.
-fn show(root: &Path, base: &str, path: &Path) -> Result<Option<String>, String> {
+pub(crate) fn show(root: &Path, base: &str, path: &Path) -> Result<Option<String>, String> {
   let spec = format!("{base}:{}", path.to_string_lossy().replace('\\', "/"));
   let exists = Command::new("git")
     .arg("-C")

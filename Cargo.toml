@@ -13,6 +13,18 @@ members = [
   "crates/core/engine",
   "crates/cli",
   "crates/xtask",
+  "crates/toolu",
+  "crates/ts-quality",
+  "crates/python-quality",
+  "crates/rust-quality",
+  "crates/ast-grep",
+  "crates/brainstorm",
+  "crates/delivery-flow",
+  "crates/toolu-review",
+  "crates/jev",
+  "crates/statusline",
+  "crates/pr-babysit",
+  "crates/epic-orchestrator",
 ]
 
 # The lockstep version: release-please bumps it with package.json and every plugin.json.
@@ -24,6 +36,14 @@ license = "MIT"
 publish = false
 
 [workspace.dependencies]
+# Black-box tests of the `toolu` binary (#442).
+assert_cmd = "2"
+# The `toolu` command tree (#442): the builder API only, without derive's
+# proc-macro dependencies or colour's anstream stack.
+clap = { version = "4.6", default-features = false, features = ["std", "help", "usage", "error-context", "suggestions"] }
+# The `toolu commands --json` snapshot and its schema validation (#442).
+insta = { version = "1", default-features = false }
+jsonschema = { version = "0.58", default-features = false }
 # getrusage for `cargo xtask measure`, without unsafe in the workspace.
 nix = { version = "0.31", default-features = false, features = ["resource"] }
 proc-macro2 = { version = "1", features = ["span-locations"] }

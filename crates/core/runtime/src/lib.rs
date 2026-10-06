@@ -1,10 +1,12 @@
-//! toolu core, `runtime` layer: what a hook learns from its process and the
-//! calling plugin: argv, the binary's path, the plugin manifest, and the
-//! version-skew rule of #411.
+//! toolu core, `runtime` layer: what a command learns from its process and the
+//! calling plugin (argv, the binary's path, the plugin manifest, the version-skew
+//! rule of #411), and what a `toolu` verb receives and returns (#442).
 
+pub mod cli;
 pub mod install;
 pub mod invocation;
 pub mod manifest;
+pub mod namespace;
 pub mod skew;
 pub mod version;
 

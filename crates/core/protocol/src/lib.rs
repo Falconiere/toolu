@@ -1,9 +1,12 @@
-//! toolu core, `protocol` layer: the hook interface shared by every host and plugin.
+//! toolu core, `protocol` layer: the contract shared by every host and plugin.
 //!
 //! It holds the hook-interface version (`HOOK_PROTOCOL`, #411), which host events
-//! enforce, the install commands, and the generated `hooks.json` launcher (#412).
+//! enforce, the install commands, the generated `hooks.json` launcher (#412), and
+//! the exit codes and host names of the `toolu` CLI (#442).
 
 pub mod event;
+pub mod exit;
+pub mod host;
 pub mod install;
 pub mod launcher;
 pub mod stdin;

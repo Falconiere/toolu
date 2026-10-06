@@ -44,6 +44,6 @@ On a TTY (without `--no-input`), several hosts on `PATH` prompts instead of fail
 | `3` | Required input missing, or an ambiguous host with no TTY / `--no-input` |
 | `130` | An interactive prompt was cancelled |
 
-Full documentation: **[docs/cli.md](https://github.com/Falconiere/toolu/blob/main/docs/cli.md)**
+Full documentation: **[docs/cli/installer.md](https://github.com/Falconiere/toolu/blob/main/docs/cli/installer.md)**
 
 MIT © Falconiere Barbosa

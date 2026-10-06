@@ -32,7 +32,7 @@ import {
 export const TARGET_DOCS = [
   "README.md",
   "docs/opencode.md",
-  "docs/cli.md",
+  "docs/cli/installer.md",
   "docs/plugins/index.md",
   "tools/toolu-opencode/README.md",
 ];

@@ -3,7 +3,7 @@
 **Supported host:** `opencode-ai@1.18.34` with `@opencode-ai/plugin@1.18.34`. That is the plugin API documented at <https://opencode.ai/docs/plugins/>, pinned and probed in the [host contract](opencode-host-contract.md). Runs on macOS and Linux; Windows is **N/A**.
 **Evidence:** the required OpenCode acceptance (`bun run test:opencode`) runs on Linux and macOS in CI and checks every support claim on this page. The [quick start](#quick-start) and the [update and removal steps](#update-roll-back-and-remove) run there exactly as written, and [Plugin support](#plugin-support) lists the checks each plugin must pass.
 
-toolu ships to OpenCode as one npm package, `@toolu/opencode`, which carries all 12 plugins. OpenCode has no `plugin add`, `list`, `update` or `remove` command of its own. The `toolu` CLI therefore adds the package to OpenCode's documented `plugin` config and writes which plugins are enabled ([docs/cli.md § OpenCode](cli.md#opencode)). It keeps your comments and other entries.
+toolu ships to OpenCode as one npm package, `@toolu/opencode`, which carries all 12 plugins. OpenCode has no `plugin add`, `list`, `update` or `remove` command of its own. The `toolu` CLI therefore adds the package to OpenCode's documented `plugin` config and writes which plugins are enabled ([docs/cli/installer.md § OpenCode](cli/installer.md#opencode)). It keeps your comments and other entries.
 
 If you installed the V2-targeted adapter (toolu 7.7.2 or earlier on `opencode` 2.x), follow the [migration guide](opencode-migration.md) instead.
 
@@ -471,4 +471,4 @@ Full matrix and limitations: [`docs/conformance-report.md`](conformance-report.m
 - [Portable core contracts](portable-core.md)
 - [Configuration](config.md)
 - [Conformance report](conformance-report.md)
-- [CLI](cli.md#opencode)
+- [CLI](cli/installer.md#opencode)

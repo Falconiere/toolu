@@ -1,0 +1,17 @@
+use toolu_runtime::cli::Ctx;
+
+use super::{command, run};
+
+#[test]
+fn toolu_status_lists_its_planned_verbs() {
+  let matches = command()
+    .try_get_matches_from(["status", "planned"])
+    .unwrap();
+  let outcome = run(&matches, &Ctx::default());
+  assert_eq!(
+    outcome.stdout.as_deref(),
+    Some(
+      "toolu status is not ported yet (#445). Planned verbs: none (the command itself is planned)"
+    )
+  );
+}

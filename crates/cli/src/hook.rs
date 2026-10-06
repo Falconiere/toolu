@@ -12,17 +12,19 @@ use std::path::Path;
 
 use toolu_protocol::HOOK_PROTOCOL;
 use toolu_protocol::event::is_enforcing;
+use toolu_protocol::exit::Exit;
 use toolu_protocol::install::INSTALLER;
+use toolu_runtime::cli::Outcome;
 use toolu_runtime::install::upgrade_command;
 use toolu_runtime::manifest;
 use toolu_runtime::skew::{Binary, Caller, Skew, assess};
 
-use crate::args::HookRequest;
-use crate::{Context, Outcome, VERSION, session_start};
+use crate::fast::HookRequest;
+use crate::{Context, VERSION, session_start};
 
 /// What a native hook decided before the prelude's advisory is added.
 struct HookResult {
-  code: u8,
+  exit: Exit,
   message: Option<String>,
   stderr: Option<String>,
 }
@@ -76,7 +78,7 @@ fn dispatch(
       )),
     };
     return HookResult {
-      code: 0,
+      exit: Exit::Success,
       message,
       stderr: None,
     };
@@ -87,13 +89,13 @@ fn dispatch(
   );
   if enforcing {
     HookResult {
-      code: 2,
+      exit: Exit::Blocked,
       message: None,
       stderr: Some(format!("blocked: {text}")),
     }
   } else {
     HookResult {
-      code: 0,
+      exit: Exit::Success,
       message: Some(text),
       stderr: None,
     }
@@ -104,13 +106,13 @@ fn dispatch(
 fn refuse(text: &str, enforcing: bool) -> Outcome {
   if enforcing {
     Outcome {
-      code: 2,
+      exit: Exit::Blocked,
       stdout: None,
       stderr: Some(format!("blocked: {text}")),
     }
   } else {
     Outcome {
-      code: 0,
+      exit: Exit::Success,
       stdout: Some(system_message(text)),
       stderr: None,
     }
@@ -121,7 +123,7 @@ fn refuse(text: &str, enforcing: bool) -> Outcome {
 fn compose(advisory: Option<String>, result: HookResult) -> Outcome {
   let lines: Vec<String> = advisory.into_iter().chain(result.message).collect();
   Outcome {
-    code: result.code,
+    exit: result.exit,
     stdout: (!lines.is_empty()).then(|| system_message(&lines.join("\n"))),
     stderr: result.stderr,
   }

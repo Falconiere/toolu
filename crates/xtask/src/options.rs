@@ -10,15 +10,15 @@ const DEFAULT_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 pub(crate) struct Options {
   /// The workspace root (`--root`, default: this repository).
   pub(crate) root: PathBuf,
-  /// The base revision for `check-gate-change` (`--base`).
+  /// The base revision for `check-gate-change` and `check-cli-compat` (`--base`).
   pub(crate) base: Option<String>,
-  /// The pull request title for `check-gate-change` (`--title`).
+  /// The pull request title for `check-gate-change` and `check-cli-compat` (`--title`).
   pub(crate) title: Option<String>,
   /// Gate steps to run instead of all of them (`--only`, repeatable).
   pub(crate) only: Vec<String>,
   /// The entry `timeout` for `print-hook` (`--timeout`, seconds).
   pub(crate) timeout: Option<String>,
-  /// The installed binary `launcher-e2e` runs (`--bin`).
+  /// The `toolu` binary `launcher-e2e`, `docs-cli` and `check-startup` run (`--bin`).
   pub(crate) bin: Option<PathBuf>,
   /// The home `launcher-e2e` gives the launcher (`--home`, default `$HOME`).
   pub(crate) home: Option<PathBuf>,
@@ -29,6 +29,8 @@ pub(crate) struct Options {
   pub(crate) out: Option<PathBuf>,
   /// The command `measure` runs: every word after `--`.
   pub(crate) command: Vec<String>,
+  /// Compare instead of writing (`--check`, `docs-cli`).
+  pub(crate) check: bool,
 }
 
 impl Options {
@@ -44,6 +46,10 @@ impl Options {
       }
       if !word.starts_with("--") {
         options.files.push(PathBuf::from(word));
+        continue;
+      }
+      if word == "--check" {
+        options.check = true;
         continue;
       }
       let value = rest

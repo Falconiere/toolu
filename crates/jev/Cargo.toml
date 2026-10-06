@@ -1,0 +1,15 @@
+[package]
+name = "toolu-jev"
+description = "toolu jev plugin: the `toolu jev` namespace"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+clap.workspace = true
+toolu-runtime = { path = "../core/runtime" }
+
+[lints]
+workspace = true

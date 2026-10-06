@@ -1,7 +1,12 @@
-# `toolu` CLI
+# The plugin installer (`npx @toolu/plugins`)
+
+This guide covers the Node installer published to npm as `@toolu/plugins`, which
+installs toolu's plugins on each host. The commands of the Rust `toolu` binary
+are generated in [docs/cli/README.md](README.md); `toolu plugins` replaces this installer
+in #438.
 
 The commands below work against Claude Code, Codex and OpenCode, and the
-[README](../README.md#install) install snippets use them. Interactive host and
+[README](../../README.md#install) install snippets use them. Interactive host and
 plugin prompts are live on a TTY. Claude Code and Codex are driven through their
 own plugin CLIs; OpenCode has none for this, so the CLI edits its documented
 config files ([OpenCode](#opencode)).
@@ -132,14 +137,14 @@ yourself, never because it noticed there is no terminal.
 ## OpenCode
 
 The supported host (`opencode-ai@1.18.34`, see the
-[host contract](opencode-host-contract.md)) has no `plugin add`, `list`,
+[host contract](../opencode-host-contract.md)) has no `plugin add`, `list`,
 `update` or `remove` command. The CLI therefore edits the config files OpenCode
 documents and never runs the host. One npm package, `@toolu/opencode`, carries
 every plugin. The CLI manages two things: that package's entry in a `plugin`
 array, and a plugin selection file `toolu/plugins.json`
 (`{ "version": 1, "enabled": [...] }`). Restart OpenCode to load a change. A `@toolu/opencode` entry that OpenCode 2.x's own
 plugin command wrote is an ordinary entry here: `update` rewrites it
-([migration guide](opencode-migration.md)).
+([migration guide](../opencode-migration.md)).
 
 | Verb | Effect |
 |------|--------|
@@ -155,7 +160,7 @@ plugin command wrote is an ordinary entry here: `update` rewrites it
 that defines `plugin` (`opencode.jsonc` over `opencode.json` over
 `config.json`), else the last of those that exists, else a new `opencode.json`.
 The selection is `toolu/plugins.json` under the same root that
-`@toolu/opencode` reads (see [Roots](opencode.md#roots-and-helper-environment)).
+`@toolu/opencode` reads (see [Roots](../opencode.md#roots-and-helper-environment)).
 `--scope project` writes at the git worktree root, even from a subdirectory. It
 picks the last of `opencode.json`, `opencode.jsonc`, `.opencode/opencode.json`
 and `.opencode/opencode.jsonc` that defines `plugin`. The selection is

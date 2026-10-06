@@ -526,7 +526,7 @@ baseline cannot silently regrow.
 ## CLI selection file (`.toolu/plugins.json`)
 
 Separate from the hook config above: this file records **which plugins to
-install**, and is read by the [`toolu` CLI](cli.md), not by any hook. It sits
+install**, and is read by the [`toolu` CLI](cli/installer.md), not by any hook. It sits
 beside the tracked `.toolu/skills/` convention.
 
 ```json

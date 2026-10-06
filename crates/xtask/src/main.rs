@@ -3,8 +3,10 @@
 //! Exit codes: 0 clean, 1 findings, 2 usage, setup or missing-tool error.
 
 mod check_hooks;
+mod cli_compat;
 mod coverage;
 mod data;
+mod docs_cli;
 mod gate;
 mod gate_change;
 mod guardrails;
@@ -21,6 +23,7 @@ mod output;
 mod print_hook;
 mod reach;
 mod source;
+mod startup;
 mod unused_pub;
 mod workspace;
 
@@ -53,14 +56,18 @@ const TASKS: &[(&str, Task)] = &[
   ("print-hook", print_hook::run),
   ("check-hooks", check_hooks::run),
   ("launcher-e2e", launcher_e2e::run),
+  ("docs-cli", docs_cli::run),
+  ("check-cli-compat", cli_compat::run),
+  ("check-startup", startup::run),
 ];
 
 // `\x20` keeps the second line's indent: a `\` continuation strips leading spaces.
 const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--title TEXT] \
-  [--only STEP]... [--timeout N] [--bin PATH] [--home DIR] [ARG]...\n\
+  [--only STEP]... [--timeout N] [--bin PATH] [--home DIR] [--check] [ARG]...\n\
   \x20      cargo xtask measure --out FILE -- COMMAND [ARG]...\n\
   tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
-  check-coverage, measure, print-hook, check-hooks, launcher-e2e";
+  check-coverage, measure, print-hook, check-hooks, launcher-e2e, docs-cli, check-cli-compat, \
+  check-startup";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.
 fn run(args: &[String]) -> ExitCode {

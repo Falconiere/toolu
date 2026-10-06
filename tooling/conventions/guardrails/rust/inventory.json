@@ -65,6 +65,24 @@
       "id": "launcher-e2e",
       "pass": "crates/xtask/src/tests/launcher_e2e_test.rs::a_binary_in_local_bin_that_reports_itself_passes",
       "fail": "crates/xtask/src/tests/launcher_e2e_test.rs::a_binary_that_reports_another_path_is_a_finding"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "docs-cli",
+      "pass": "crates/xtask/src/tests/docs_cli_test.rs::a_written_tree_checks_clean",
+      "fail": "crates/xtask/src/tests/docs_cli_test.rs::a_missing_or_stale_page_is_a_finding"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "check-cli-compat",
+      "pass": "crates/xtask/src/tests/cli_compat_test.rs::an_unchanged_tree_is_compatible",
+      "fail": "crates/xtask/src/tests/cli_compat_test.rs::a_removed_command_is_a_finding"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "check-startup",
+      "pass": "crates/xtask/src/tests/startup_test.rs::a_fast_binary_passes",
+      "fail": "crates/xtask/src/tests/startup_test.rs::a_slow_binary_fails_naming_the_budget"
     }
   ]
 }

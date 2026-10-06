@@ -116,7 +116,7 @@ npx @toolu/plugins update
 
 Claude Code, Codex and OpenCode are covered. Full grammar, exit codes, the
 OpenCode config edits, and the `.toolu/plugins.json` selection file:
-**[docs/cli.md](docs/cli.md)**.
+**[docs/cli/installer.md](docs/cli/installer.md)**.
 
 ### Install everything
 
@@ -153,7 +153,7 @@ After they are installed, review and trust the hooks in `/hooks` before they run
 
 #### OpenCode
 
-OpenCode has no marketplace — paste this prompt so the agent installs the npm adapter with the `toolu` CLI, which edits OpenCode's own config files ([docs/cli.md](docs/cli.md#opencode)). It enables every plugin unless you name some.
+OpenCode has no marketplace — paste this prompt so the agent installs the npm adapter with the `toolu` CLI, which edits OpenCode's own config files ([docs/cli/installer.md](docs/cli/installer.md#opencode)). It enables every plugin unless you name some.
 
 <!-- install-everything:opencode -->
 ```text

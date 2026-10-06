@@ -2,7 +2,7 @@
 
 use std::io::Write;
 
-use crate::Outcome;
+use toolu_runtime::cli::Outcome;
 
 // A closed stream has nowhere left to report to, so a failed write is dropped.
 

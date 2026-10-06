@@ -30,6 +30,7 @@ test("the reference gate accepts reviewed history and rejects a current referenc
     const relativeChecker = "tooling/src/check-retired-plugin-references.ts";
     write(root, relativeChecker, readFileSync(CHECKER, "utf8"));
     write(root, `plugins/epic-orchestrator/scripts/trackers/${TRACKER_NAME}.ts`, "// tracker\n");
+    write(root, "crates/epic-orchestrator/src/lib.rs", `// planned verb: ${TRACKER_NAME}\n`);
     write(
       root,
       "plugins/pr-babysit/scripts/__tests__/fixtures/pr120-verdict-changes.txt",
@@ -40,6 +41,13 @@ test("the reference gate accepts reviewed history and rejects a current referenc
     const clean = await run([process.execPath, script], { cwd: root });
     expect(clean.exitCode).toBe(0);
     expect(clean.stdout).toContain("only reviewed history");
+
+    write(root, "crates/epic-orchestrator/src/notes.rs", `// ${RETIRED_NAME}\n`);
+    stage(root);
+    const crate = await run([process.execPath, script], { cwd: root });
+    expect(crate.exitCode).not.toBe(0);
+    expect(crate.stderr).toContain(`crates/epic-orchestrator/src/notes.rs: ${RETIRED_NAME}`);
+    rmSync(join(root, "crates/epic-orchestrator/src/notes.rs"));
 
     write(root, "README.md", `current ${RETIRED_NAME} guidance\n`);
     stage(root);
