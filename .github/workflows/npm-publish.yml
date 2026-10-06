@@ -56,7 +56,6 @@ permissions:
   contents: read
   id-token: write # npm provenance attestation
 
-
 jobs:
   publish:
     name: publish npm packages
@@ -95,7 +94,7 @@ jobs:
           tag="${{ inputs.tag }}"
           for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm; do
             if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
-              echo "$dir is private at $TAG; skipping"
+              echo "$dir is private at $tag; skipping"
               continue
             fi
             pkg=$(node -p "require('./$dir/package.json').version")
@@ -131,7 +130,7 @@ jobs:
           if [[ "$TAG" == *-* ]]; then npm_tag=next; fi
           for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm; do
             if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
-              echo "$dir is private at $tag; skipping"
+              echo "$dir is private at $TAG; skipping"
               continue
             fi
             name=$(node -p "require('./$dir/package.json').name")
