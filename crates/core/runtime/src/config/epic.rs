@@ -65,7 +65,8 @@ fn section<'a>(
     .transpose()
 }
 
-fn credential_key(key: &str) -> bool {
+/// Whether a JSON key is reserved for a credential, including common spellings.
+pub(crate) fn credential_key(key: &str) -> bool {
   let normalized: String = key
     .chars()
     .filter(char::is_ascii_alphanumeric)

@@ -11,4 +11,6 @@ pub mod load;
 pub mod permissions;
 pub mod quality;
 pub mod read;
+/// User-only epic credentials and output redaction.
+pub mod secrets;
 pub mod settings;
