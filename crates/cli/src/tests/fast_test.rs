@@ -34,6 +34,10 @@ fn the_toolu_and_plugin_forms_parse() {
     panic!("not a hook")
   };
   assert_eq!(review.plugin, "toolu-review");
+  let Some(Fast::Hook(relative)) = parsed("hook x --plugin-root ./--my-dir") else {
+    panic!("not a hook")
+  };
+  assert_eq!(relative.plugin_root.as_deref(), Some("./--my-dir"));
   let Some(Fast::Hook(newer)) = parsed("newer-plugin hook check --event Stop") else {
     panic!("not a hook")
   };

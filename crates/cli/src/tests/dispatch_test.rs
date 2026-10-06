@@ -187,3 +187,20 @@ fn finish_fills_json_and_honours_quiet() {
     json!({ "error": { "code": 69, "name": "unavailable", "message": "gh is missing", "suggestion": null } })
   );
 }
+
+#[test]
+fn a_silent_failure_s_json_message_is_the_exit_meaning() {
+  let json = Ctx {
+    json: true,
+    ..Ctx::default()
+  };
+  for stderr in [None, Some(String::new())] {
+    let silent = Outcome {
+      exit: Exit::Failure,
+      stdout: None,
+      stderr,
+    };
+    let doc: Value = serde_json::from_str(&finish(silent, &json).stdout.unwrap()).unwrap();
+    assert_eq!(doc["error"]["message"], "the command ran and failed");
+  }
+}

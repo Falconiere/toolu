@@ -58,6 +58,8 @@ fn hook(plugin: &str, name: &str, flags: &[&str]) -> Option<Fast> {
   };
   let mut rest = flags.iter();
   while let Some(flag) = rest.next() {
+    // clap also refuses a value that starts with `-`, so such a line goes to clap for
+    // its error; a relative path such as `./--my-dir` does not start with `-` and stays.
     let value = rest.next().filter(|value| !value.starts_with('-'))?;
     let slot = match *flag {
       "--event" => &mut request.event,

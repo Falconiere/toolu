@@ -92,7 +92,13 @@ pub(crate) fn finish(mut outcome: Outcome, ctx: &Ctx) -> Outcome {
     outcome.stdout = Some(if success {
       "{}".to_owned()
     } else {
-      let message = outcome.stderr.as_deref().map_or("", clap_error::first_line);
+      // A failure that printed nothing still says what its exit code means.
+      let message = outcome
+        .stderr
+        .as_deref()
+        .map(clap_error::first_line)
+        .filter(|line| !line.is_empty())
+        .unwrap_or_else(|| outcome.exit.meaning());
       clap_error::envelope(outcome.exit, message, None)
     });
   }
