@@ -10,9 +10,9 @@ import {
   readFixtureIndex,
 } from "../check-fixture-inventory.ts";
 
-test("the recorded case inventory has unique names and 1192 inputs", () => {
+test("the recorded case inventory has unique names and 1491 inputs", () => {
   const index = readFixtureIndex(resolve(import.meta.dir, "../../../fixtures/index.json"));
-  expect(index.suites.reduce((count, suite) => count + suite.names.length, 0)).toBe(1192);
+  expect(index.suites.reduce((count, suite) => count + suite.names.length, 0)).toBe(1491);
   expect(new Set(index.suites.map((suite) => suite.id)).size).toBe(index.suites.length);
 });
 

@@ -7,8 +7,17 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
-[lints]
-workspace = true
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
 
 [dev-dependencies]
-serde_json.workspace = true
+jsonschema.workspace = true
+
+# Runs itself as a child to see real exit codes and streams (#413).
+[[test]]
+name = "run_hook"
+harness = false
+
+[lints]
+workspace = true

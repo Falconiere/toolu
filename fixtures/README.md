@@ -23,12 +23,13 @@ Every new named case file below has `{ "version": 1, "cases": [...] }`. Each cas
 | Ast-grep report | `ast-grep/report.json` | 6 → 6 | `plugins/ast-grep/hooks/src/__tests__/cases-report.ts` | #426–#429 |
 | Shared quality runner | `quality/runner.json` | 16 → 16 | `packages/toolu-core/src/quality/__tests__` | #459 |
 | Host roots | `host/root.json` | 18 → 18 | `packages/toolu-core/src/host/__tests__/host-roots.test.ts` | #414 |
+| Host output encoders | `host/encode.json` | new, 299 | `packages/toolu-core/src/host/__tests__/host-encode-fixture.test.ts` | #413 (`crates/core/protocol/tests/encode_fixture.rs`) |
 | State | `state/cases.json` | 77 → 77 | `packages/toolu-core/src/state/__tests__` | #415 |
 | Statusline states | `statusline/cases.json` | 83 → 83 | `plugins/statusline/hooks/src/__tests__` | #431 |
 | OpenCode permission/evaluate | `opencode/permission-evaluate.json` | 17 → 17 | `tools/toolu-opencode/src/adapter/__tests__` | #462 |
 | OpenCode lifecycle tests | `opencode/lifecycle-events.json` | 2 → 2 tests, 11 events | `tools/toolu-opencode/src/lifecycle/__tests__` | #462 |
 
-The original 13 exported arrays contain 979 names. The six newly extracted families add 213 names, for 1,192 indexed cases in 19 suite groups. OpenCode's lifecycle file records all 11 event outcomes across its two tests. The inventory checks names and counts, so swapping or dropping a case fails.
+The original 13 exported arrays contain 979 names. The six newly extracted families add 213 names, and #413's host encoder suite adds 299 more, for 1,491 indexed cases in 20 suite groups. OpenCode's lifecycle file records all 11 event outcomes across its two tests. The inventory checks names and counts, so swapping or dropping a case fails.
 
 ## Case fields and setup
 
@@ -38,7 +39,14 @@ The original 13 exported arrays contain 979 names. The six newly extracted famil
 
 `ast-grep/{nudge,savings,report}.json` records hook payloads and expected output. Savings cases have `setup` before registry startup and `payloadSetup` after it, preserving the original timing. Named deviations live on the affected case. `ast-grep/golden.json` keeps the captured nudge and savings output and its `base` commit.
 
-`host/root.json` holds ordered host-root calls and expected values, with real Git sandboxes for project-root cases. `state/cases.json` has discriminated schema, gate-file, I/O, branch, diff, concurrency and public-package cases. `statusline/cases.json` has renderer, status report, Jev readiness, SessionStart and setup cases; its `actions` or `steps` are bounded real file/Git/plugin actions. `opencode/permission-evaluate.json` has mapping, decision and evaluate integration cases. `opencode/lifecycle-events.json` maps the eleven supported, deferred or unsupported events and checks the pinned SDK hook names.
+`host/root.json` holds ordered host-root calls and expected values, with real Git sandboxes for project-root cases. `host/encode.json` was captured once from `encodeDecision`. It holds:
+
+- every host × host event × the six standard decisions;
+- an `ask` from each gate class, passed through `degradeAsk`;
+- seven string-escaping cases;
+- the four events a host lacks.
+
+Each case's `expect` is the exact `stdout`, the `JSON.stringify`ed OpenCode `callback`, or the wiring `error`. The TypeScript and Rust encoders must both reproduce it byte for byte. `state/cases.json` has discriminated schema, gate-file, I/O, branch, diff, concurrency and public-package cases. `statusline/cases.json` has renderer, status report, Jev readiness, SessionStart and setup cases; its `actions` or `steps` are bounded real file/Git/plugin actions. `opencode/permission-evaluate.json` has mapping, decision and evaluate integration cases. `opencode/lifecycle-events.json` maps the eleven supported, deferred or unsupported events and checks the pinned SDK hook names.
 
 Pre-tool corpus `settings` keys are filenames within the sandbox settings directory. Statusline action `path`, `cwd`, `root`, and `target` fields use tagged `$path` values. Mutating actions reject paths that cross an existing symlink, including the read-only jscpd checkout link.
 
