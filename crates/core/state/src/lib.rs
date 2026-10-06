@@ -11,6 +11,7 @@
 
 pub mod apply_patch;
 pub mod ctx;
+pub mod detect;
 pub mod diff_sha;
 pub mod edit_records;
 mod gate_doc;
