@@ -48,6 +48,7 @@ function discoverHooksJson(plugin: string, add: AddFn): void {
           event,
           matcher,
           commandOrModule,
+          hostMechanism: command.includes("--hook-protocol") ? "native" : "bun-bundle",
           parentId: null,
         });
       }
@@ -72,6 +73,7 @@ function discoverNativeBuiltins(add: AddFn): void {
       event: "PreToolUse",
       matcher: "",
       commandOrModule: name,
+      hostMechanism: "bun-bundle",
       parentId:
         "toolu:hooks.json:PreToolUse:pre-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Shell|Grep",
     });
@@ -91,6 +93,7 @@ function discoverBuiltinModules(add: AddFn): void {
       event: "PostToolUse",
       matcher: "",
       commandOrModule: name,
+      hostMechanism: "bun-bundle",
       parentId:
         "toolu:hooks.json:PostToolUse:post-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Sh",
     });
@@ -105,6 +108,7 @@ function discoverBuiltinModules(add: AddFn): void {
       event: "PreToolUse",
       matcher: "",
       commandOrModule: "agent-tier",
+      hostMechanism: "bun-bundle",
       parentId: "toolu:hooks.json:PreToolUse:agent-tier.js:spawn_agent|Agent|Task",
     });
   }

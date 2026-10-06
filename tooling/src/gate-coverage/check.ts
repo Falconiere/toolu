@@ -32,7 +32,6 @@ function defaultMeta(d: Discovered): InventoryRow {
     ...d,
     semantics: semanticsNote(d),
     classification: "port-native",
-    hostMechanism: "bun-bundle",
     support: "required",
     implementationIssue: d.kind === "builtin-module" && d.event === "PostToolUse" ? 259 : 279,
     implementationStatus: "done",
@@ -105,6 +104,7 @@ export function check(): void {
       "event",
       "matcher",
       "commandOrModule",
+      "hostMechanism",
       "parentId",
     ] as const) {
       if (row[key] !== live[key]) errors.push(`${row.id}: ${key} differs from discovery`);
@@ -133,7 +133,7 @@ export function render(rows: InventoryRow[]): void {
 
 **Check:** \`bun run tooling/src/gate-coverage-inventory.ts check\`
 
-Every live hook and built-in gate in this inventory is \`port-native\` and runs through a Bun bundle. The final-removal check also rejects tracked shell and Bats files.
+Every live hook and built-in gate in this inventory is \`port-native\`. The host mechanism records whether its entry uses a Bun bundle or the generated native launcher. The final-removal check also rejects tracked shell and Bats files.
 
 | id | source | plugin | event | classification | support | impl | host mechanism | bash | limits |
 |----|--------|--------|-------|----------------|---------|------|----------------|------|--------|
