@@ -94,12 +94,8 @@ test.concurrent("the full gate runs the CI path check", () => {
   expect(scripts["test:ts"]).toContain("bun run check:ci-paths");
 });
 
-test.concurrent("the Rust jobs run cargo xtask gate and both musl targets (#407 AC-5, AC-7; #455)", () => {
+test.concurrent("both required aggregates and Rust OS checks retain their status names", () => {
   const tests = workflow("tests.yml");
-  for (const id of ["rust", "rust-musl"]) {
-    expect(tests.jobs[id]?.if).toBe("needs.changes.outputs.rust == 'true'");
-    expect(config.workflows["tests.yml"]?.jobs[id]).toBe("rust");
-  }
   const needed = [
     "changes",
     "ts",
@@ -112,14 +108,6 @@ test.concurrent("the Rust jobs run cargo xtask gate and both musl targets (#407 
   ];
   expect(tests.jobs.gate?.needs).toEqual(needed);
   expect(tests.jobs.typescript?.needs).toEqual(needed);
-  const Matrix = z.looseObject({
-    strategy: z.looseObject({
-      matrix: z.looseObject({
-        os: z.array(z.string()).optional(),
-        include: z.array(z.looseObject({ target: z.string(), os: z.string() })).optional(),
-      }),
-    }),
-  });
   const RustMatrix = z.looseObject({
     strategy: z.looseObject({
       matrix: z.looseObject({
@@ -131,6 +119,22 @@ test.concurrent("the Rust jobs run cargo xtask gate and both musl targets (#407 
     { os: "ubuntu-latest", check: "rust" },
     { os: "macos-14", check: "rust-macos" },
   ]);
+});
+
+test.concurrent("the Rust jobs run cargo xtask gate and both musl targets (#407 AC-5, AC-7; #455)", () => {
+  const tests = workflow("tests.yml");
+  for (const id of ["rust", "rust-musl"]) {
+    expect(tests.jobs[id]?.if).toBe("needs.changes.outputs.rust == 'true'");
+    expect(config.workflows["tests.yml"]?.jobs[id]).toBe("rust");
+  }
+  const Matrix = z.looseObject({
+    strategy: z.looseObject({
+      matrix: z.looseObject({
+        os: z.array(z.string()).optional(),
+        include: z.array(z.looseObject({ target: z.string(), os: z.string() })).optional(),
+      }),
+    }),
+  });
   expect(Matrix.parse(tests.jobs["rust-musl"]).strategy.matrix.include).toEqual([
     { target: "x86_64-unknown-linux-musl", os: "ubuntu-latest" },
     { target: "aarch64-unknown-linux-musl", os: "ubuntu-24.04-arm" },

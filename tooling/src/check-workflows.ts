@@ -96,7 +96,7 @@ function checkCiAggregates(tests: ObjectMap, errors: string[]): void {
   const jobs = object(tests.jobs);
   for (const id of ["gate", "typescript"]) {
     const job = object(jobs[id]);
-    const deps = array(job.needs).map(string).sort();
+    const deps = array(job.needs).map(string).toSorted();
     const expected = [
       "changes",
       "ts",
@@ -106,7 +106,7 @@ function checkCiAggregates(tests: ObjectMap, errors: string[]): void {
       "rust-musl",
       "rust-conformance",
       "hook-bench",
-    ].sort();
+    ].toSorted();
     need(
       errors,
       JSON.stringify(deps) === JSON.stringify(expected) && includes(job.if, "always()"),
