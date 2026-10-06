@@ -145,7 +145,10 @@ impl Race {
       Err(format!("left over: {leftovers:?}"))
     }
   }
+}
 
+/// The lock scenarios: a stale lock left behind, and a holder killed mid-hold.
+impl Race {
   /// The fixture's crashed-writer lock: one Rust writer gets past it quickly.
   pub(crate) fn stale_lock(&self, case: &Ordered) -> Res<()> {
     let lock = lock_path(&self.gate);
