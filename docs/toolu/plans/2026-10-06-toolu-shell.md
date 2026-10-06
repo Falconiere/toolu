@@ -38,7 +38,7 @@ Dependencies and records → option parser → parse and words → wrappers → 
 [
   {
     "id": "deps-records",
-    "title": "tree-sitter 0.27 and tree-sitter-bash 0.25 in [workspace.dependencies] and toolu-shell; analysis.rs records (ShellAnalysis, ShellCommand, ShellRedirect, Heredoc, RedirectOperator, CommandOrigin, PipelinePosition, ShellError, Tristate) with as_str tests; options.rs getopt port with shell-options cases",
+    "title": "tree-sitter 0.24 and tree-sitter-bash 0.23 in [workspace.dependencies] and toolu-shell; analysis.rs records (ShellAnalysis, ShellCommand, ShellRedirect, Heredoc, RedirectOperator, CommandOrigin, PipelinePosition, ShellError, Tristate) with as_str tests; options.rs getopt port with shell-options cases",
     "check": "t() { PATH=\"$HOME/.cargo/bin:$PATH\" cargo test -q -p toolu-shell --lib -- \"$@\" 2>&1 | grep -Eq 'test result: ok\\. [1-9][0-9]* passed'; }; t analysis::tests:: && t options::tests:: && PATH=\"$HOME/.cargo/bin:$PATH\" cargo deny --all-features check bans licenses sources",
     "ac_refs": [
       "AC-8",
@@ -394,3 +394,7 @@ Dependencies and records → option parser → parse and words → wrappers → 
 - `rust-fixture`/`docs`: 🟡 should-fix (fixed). Documented intended differences were not checked. `analysis-fixture.test.ts` now asserts that every `rust.reason` appears in `docs/shell-analysis.md`.
 - `fuzz-long`: 🟡 should-fix (fixed). The 10-minute local runs are now a ledger step with a check.
 - AC-5: 🔵 accepted limitation. GitHub runs scheduled workflows only from the default branch, so the scheduled run is post-merge evidence. Jev's residual 0.63 reflects exactly that, and the PR states it.
+
+## Deviations
+
+- `deps-records` (2026-10-06): `tree-sitter` 0.27 with `tree-sitter-bash` 0.25 failed `cargo deny` licences inside the workspace, though they passed in an isolated probe. The cause is `foldhash` (Zlib). It reaches a non-dev path through `tree-sitter`'s non-optional `serde_json/preserve_order` build dependency, then `indexmap`, then `hashbrown`, whose default features the `jsonschema` dev-dependency turns on. Every `tree-sitter` from 0.25 to 0.27 has that build dependency, and 0.24.7 does not. The pair is now `tree-sitter` 0.24.7 with `tree-sitter-bash` 0.23.3 (ABI 14), which gives `bans ok, licenses ok, sources ok`. A re-probe gave identical results on the 203 fixture inputs. Only `(( … ))` maps differently, and the spec covers it. The budget uses `set_timeout_micros`. The spec is updated, and no gate data changes.

@@ -18,7 +18,11 @@ The pre-tool and post-tool gates that #418–#423 port to Rust all ask one quest
 
 ## Architecture
 
-**Parser.** `tree-sitter` 0.27 with `tree-sitter-bash` 0.25 (`[workspace.dependencies]`). Only `toolu-shell` may link them, under the `shell-parser` capability in `rules.json`. One `Parser` is created per `analyze` call and reused for every nested re-parse. `parse_with_options` installs a progress callback that cancels the parse once the analysis has run past `PARSE_BUDGET` (1 s, wall clock, shared by every nested parse). The measured worst case that made this necessary is 1 MiB of `${`, which takes 4.2 s in release. Real commands parse in microseconds, and a cancelled parse is `unknown`, which the gates treat as "ask". Timing noise can therefore only make an answer more conservative.
+**Parser.** `tree-sitter` 0.24.7 with `tree-sitter-bash` 0.23.3, which is language ABI 14 (`[workspace.dependencies]`). Only `toolu-shell` may link them, under the `shell-parser` capability in `rules.json`.
+
+The versions are forced by `deny.toml`. Every `tree-sitter` from 0.25 to 0.27 build-depends on `serde_json` with `preserve_order`, which pulls in `indexmap` and then `hashbrown`. In this workspace `hashbrown` is unified with default features, because the `jsonschema` dev-dependency's `referencing` enables them. That brings `foldhash`, licensed Zlib, onto a non-dev path, and `cargo deny` licences fails, as measured during execution. 0.24.7 has no such build dependency, and `tree-sitter-bash` 0.25 needs ABI 15, which 0.24 cannot load. The 0.23.3 grammar was re-probed: it gives the same result on all 203 fixture inputs and the same construct trees, except `(( … ))`, which it reads as a `command` whose name is an `arithmetic_expansion` (see the table).
+
+One `Parser` is created per `analyze` call and reused for every nested re-parse. Before each parse, `set_timeout_micros` is set to what remains of `PARSE_BUDGET` (1 s, wall clock, shared by every nested parse), and a parse that returns `None` was cancelled. The measured worst case that made this necessary is 1 MiB of `${`, which takes 4.2 s in release. Real commands parse in microseconds, and a cancelled parse is `unknown`, which the gates treat as "ask". Timing noise can therefore only make an answer more conservative.
 
 **Walk.** The walk ports `shell-walk.ts`, mapping tree-sitter-bash's node kinds to unbash's semantics. It holds one context per level: `source`, `origin`, `depth` (the `bash -c`/`eval` level), `proves`, `pipeline` and `nesting`. Each construct maps as follows:
 
@@ -34,9 +38,9 @@ The pre-tool and post-tool gates that #418–#423 port to Rust all ask one quest
 | If / While / For / Select / ArithmeticFor / Case | `if_statement`, `while_statement`, `for_statement` (which is also `select`), `c_style_for_statement`, `case_statement` | bodies walked with `proves = false`. Words and conditions are scanned for nested scripts |
 | Function | `function_definition` | body walked with `origin = function`, `proves = false`. Its `redirect` children go to `compound_redirects` |
 | Subshell / BraceGroup | `subshell`, a `compound_statement` whose first token is `{` | body walked with the same `proves` |
-| TestCommand `[[ … ]]` / ArithmeticCommand `(( … ))` | `test_command` whose first token is `[[`, a `compound_statement` whose first token is `((` | scanned for nested scripts only |
+| TestCommand `[[ … ]]` / ArithmeticCommand `(( … ))` | `test_command` whose first token is `[[`; a `command` whose `command_name` is an `arithmetic_expansion` written `((` (0.23.3), or a `compound_statement` whose first token is `((` (newer grammars) | scanned for nested scripts only |
 
-**Mapping notes.** These were measured with tree-sitter-bash 0.25.1 against the TypeScript answers.
+**Mapping notes.** These were measured with tree-sitter-bash 0.25.1 and re-measured with 0.23.3, against the TypeScript answers.
 
 - **Heredoc continuation.** After `heredoc_start`, the rest of the line is nested inside the `heredoc_redirect` node:
   - further redirects (`redirect:` fields) belong to the same command;

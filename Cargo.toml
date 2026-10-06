@@ -58,6 +58,11 @@ syn = { version = "3", features = ["full", "visit"] }
 tempfile = "3"
 toml = "1"
 url = { version = "2", default-features = false }
+# The shell parser (#416): only toolu-shell links it (rules.json `shell-parser`).
+# 0.24 is the last tree-sitter without a serde_json/preserve_order build dependency, which
+# pulls the Zlib foldhash into the graph; brush-parser fails deny.toml too (docs/shell-analysis.md).
+tree-sitter = "0.24"
+tree-sitter-bash = "0.23"
 
 # The quality bar (#455): gate data. A change here is its own `chore(gates):` PR
 # (`cargo xtask check-gate-change`); the reasons are in docs/rust-quality-bar.md.
