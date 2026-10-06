@@ -83,9 +83,15 @@ test.concurrent("a native launcher switch keeps the inventory ID and records its
     row.id.startsWith("toolu:hooks.json:SessionStart:session-start.js:"),
   )?.id;
   expect(id).toBeDefined();
-  const document = JSON.parse(readFileSync(hooksFile, "utf8")) as {
-    hooks: { SessionStart: Array<{ hooks: Array<Record<string, unknown>> }> };
-  };
+  const document = z
+    .looseObject({
+      hooks: z.looseObject({
+        SessionStart: z.array(
+          z.looseObject({ hooks: z.array(z.looseObject({ command: z.string() })) }),
+        ),
+      }),
+    })
+    .parse(JSON.parse(readFileSync(hooksFile, "utf8")));
   const target = document.hooks.SessionStart.flatMap((group) => group.hooks).find(
     (hook) =>
       typeof hook.command === "string" && hook.command.includes("hooks/dist/session-start.js"),

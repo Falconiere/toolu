@@ -220,9 +220,15 @@ const NATIVE_PRE_HOOK = NativeHook.parse(
 
 function switchSessionStart(root: string): void {
   const path = join(root, TOOLU);
-  const doc = JSON.parse(readFileSync(path, "utf8")) as {
-    hooks: { SessionStart: Array<{ hooks: Array<Record<string, unknown>> }> };
-  };
+  const doc = z
+    .looseObject({
+      hooks: z.looseObject({
+        SessionStart: z.array(
+          z.looseObject({ hooks: z.array(z.looseObject({ command: z.string() })) }),
+        ),
+      }),
+    })
+    .parse(JSON.parse(readFileSync(path, "utf8")));
   const hook = doc.hooks.SessionStart?.[0]?.hooks[0];
   if (hook === undefined) throw new Error("toolu has no SessionStart hook");
   Object.assign(hook, NATIVE_SESSION_HOOK);
