@@ -42,7 +42,7 @@ const CODEX_DEFAULTS: [(&str, &str); 6] = [
 pub struct CodexModel {
   /// The model slug.
   pub model: String,
-  /// One of [`CODEX_REASONING_EFFORTS`].
+  /// One of `low`, `medium`, `high`, `xhigh`, `max` or `ultra`.
   pub reasoning_effort: String,
 }
 
