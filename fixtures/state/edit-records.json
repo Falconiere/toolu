@@ -1,0 +1,652 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "Edit names its file_path",
+      "tool": "Edit",
+      "payload": {
+        "tool_input": {
+          "file_path": "/r/a.ts",
+          "old_string": "a",
+          "new_string": "b"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "/r/a.ts",
+            "operation": "update"
+          }
+        ],
+        "text": "{\"path\":\"/r/a.ts\",\"operation\":\"update\"}\n"
+      }
+    },
+    {
+      "name": "Write is a write record",
+      "tool": "Write",
+      "payload": {
+        "tool_input": {
+          "file_path": "/r/a.ts",
+          "content": "x"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "/r/a.ts",
+            "operation": "write"
+          }
+        ],
+        "text": "{\"path\":\"/r/a.ts\",\"operation\":\"write\"}\n"
+      }
+    },
+    {
+      "name": "MultiEdit is an update record",
+      "tool": "MultiEdit",
+      "payload": {
+        "tool_input": {
+          "file_path": "/r/a.ts",
+          "edits": []
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "/r/a.ts",
+            "operation": "update"
+          }
+        ],
+        "text": "{\"path\":\"/r/a.ts\",\"operation\":\"update\"}\n"
+      }
+    },
+    {
+      "name": "path stands in for a missing file_path",
+      "tool": "Edit",
+      "payload": {
+        "tool_input": {
+          "path": "/r/p.ts"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "/r/p.ts",
+            "operation": "update"
+          }
+        ],
+        "text": "{\"path\":\"/r/p.ts\",\"operation\":\"update\"}\n"
+      }
+    },
+    {
+      "name": "target_file stands in for both",
+      "tool": "Edit",
+      "payload": {
+        "tool_input": {
+          "target_file": "/r/t.ts"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "/r/t.ts",
+            "operation": "update"
+          }
+        ],
+        "text": "{\"path\":\"/r/t.ts\",\"operation\":\"update\"}\n"
+      }
+    },
+    {
+      "name": "a null file_path falls through to path",
+      "tool": "Edit",
+      "payload": {
+        "tool_input": {
+          "file_path": null,
+          "path": "/r/p.ts"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "/r/p.ts",
+            "operation": "update"
+          }
+        ],
+        "text": "{\"path\":\"/r/p.ts\",\"operation\":\"update\"}\n"
+      }
+    },
+    {
+      "name": "a false file_path falls through to path",
+      "tool": "Edit",
+      "payload": {
+        "tool_input": {
+          "file_path": false,
+          "path": "/r/p.ts"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "/r/p.ts",
+            "operation": "update"
+          }
+        ],
+        "text": "{\"path\":\"/r/p.ts\",\"operation\":\"update\"}\n"
+      }
+    },
+    {
+      "name": "an empty file_path is chosen and is malformed",
+      "tool": "Edit",
+      "payload": {
+        "tool_input": {
+          "file_path": "",
+          "path": "/r/p.ts"
+        }
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "file_path wins over path and target_file",
+      "tool": "Write",
+      "payload": {
+        "tool_input": {
+          "file_path": "/r/f.ts",
+          "path": "/r/p.ts",
+          "target_file": "/r/t.ts"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "/r/f.ts",
+            "operation": "write"
+          }
+        ],
+        "text": "{\"path\":\"/r/f.ts\",\"operation\":\"write\"}\n"
+      }
+    },
+    {
+      "name": "trailing newlines of a path are stripped",
+      "tool": "Edit",
+      "payload": {
+        "tool_input": {
+          "file_path": "/r/a.ts\n\n"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "/r/a.ts",
+            "operation": "update"
+          }
+        ],
+        "text": "{\"path\":\"/r/a.ts\",\"operation\":\"update\"}\n"
+      }
+    },
+    {
+      "name": "a tab in a path is malformed",
+      "tool": "Edit",
+      "payload": {
+        "tool_input": {
+          "file_path": "/r/a\t.ts"
+        }
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "a carriage return in a path is malformed",
+      "tool": "Edit",
+      "payload": {
+        "tool_input": {
+          "file_path": "/r/a\r.ts"
+        }
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "a numeric file_path is malformed",
+      "tool": "Edit",
+      "payload": {
+        "tool_input": {
+          "file_path": 7
+        }
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "a missing tool_input is malformed",
+      "tool": "Edit",
+      "payload": {},
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "a null payload is malformed",
+      "tool": "Write",
+      "payload": null,
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "an array payload is malformed",
+      "tool": "Edit",
+      "payload": [
+        "x"
+      ],
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "an array tool_input is malformed",
+      "tool": "Edit",
+      "payload": {
+        "tool_input": [
+          "x"
+        ]
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "a string tool_input is malformed",
+      "tool": "Edit",
+      "payload": {
+        "tool_input": "x"
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "Read is not an edit tool",
+      "tool": "Read",
+      "payload": {
+        "tool_input": {
+          "file_path": "/r/a.ts"
+        }
+      },
+      "expect": {
+        "kind": "not-edit"
+      }
+    },
+    {
+      "name": "Bash is not an edit tool",
+      "tool": "Bash",
+      "payload": {
+        "tool_input": {
+          "command": "ls"
+        }
+      },
+      "expect": {
+        "kind": "not-edit"
+      }
+    },
+    {
+      "name": "an empty tool name is not an edit tool",
+      "tool": "",
+      "payload": {
+        "tool_input": {
+          "file_path": "/r/a.ts"
+        }
+      },
+      "expect": {
+        "kind": "not-edit"
+      }
+    },
+    {
+      "name": "apply_patch adds a file",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Add File: a.ts\n+x\n*** End Patch"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "a.ts",
+            "operation": "add"
+          }
+        ],
+        "text": "{\"path\":\"a.ts\",\"operation\":\"add\"}\n"
+      }
+    },
+    {
+      "name": "apply_patch updates a file",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Update File: a.ts\n@@\n-x\n+y\n*** End Patch"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "a.ts",
+            "operation": "update"
+          }
+        ],
+        "text": "{\"path\":\"a.ts\",\"operation\":\"update\"}\n"
+      }
+    },
+    {
+      "name": "apply_patch deletes a file",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Delete File: a.ts\n*** End Patch"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "a.ts",
+            "operation": "delete"
+          }
+        ],
+        "text": "{\"path\":\"a.ts\",\"operation\":\"delete\"}\n"
+      }
+    },
+    {
+      "name": "apply_patch moves a file to two records",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Update File: a.ts\n*** Move to: b/a.ts\n@@\n-x\n+y\n*** End Patch"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "a.ts",
+            "operation": "update",
+            "moved_to": "b/a.ts"
+          },
+          {
+            "path": "b/a.ts",
+            "operation": "move",
+            "from": "a.ts"
+          }
+        ],
+        "text": "{\"path\":\"a.ts\",\"operation\":\"update\",\"moved_to\":\"b/a.ts\"}\n{\"path\":\"b/a.ts\",\"operation\":\"move\",\"from\":\"a.ts\"}\n"
+      }
+    },
+    {
+      "name": "apply_patch with several files and an end-of-file marker",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Add File: n.ts\n+n\n*** End of File\n*** Update File: u.ts\n@@\n+u\n*** Update File: v.ts\n@@\n+v\n*** Delete File: d.ts\n*** End Patch"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "n.ts",
+            "operation": "add"
+          },
+          {
+            "path": "u.ts",
+            "operation": "update"
+          },
+          {
+            "path": "v.ts",
+            "operation": "update"
+          },
+          {
+            "path": "d.ts",
+            "operation": "delete"
+          }
+        ],
+        "text": "{\"path\":\"n.ts\",\"operation\":\"add\"}\n{\"path\":\"u.ts\",\"operation\":\"update\"}\n{\"path\":\"v.ts\",\"operation\":\"update\"}\n{\"path\":\"d.ts\",\"operation\":\"delete\"}\n"
+      }
+    },
+    {
+      "name": "apply_patch with CRLF lines",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\r\n*** Update File: a.ts\r\n@@\r\n+y\r\n*** End Patch"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "a.ts",
+            "operation": "update"
+          }
+        ],
+        "text": "{\"path\":\"a.ts\",\"operation\":\"update\"}\n"
+      }
+    },
+    {
+      "name": "apply_patch allows blank lines after the end",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Add File: a.ts\n+x\n*** End Patch\n\n"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "a.ts",
+            "operation": "add"
+          }
+        ],
+        "text": "{\"path\":\"a.ts\",\"operation\":\"add\"}\n"
+      }
+    },
+    {
+      "name": "apply_patch with text after the end is malformed",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Add File: a.ts\n+x\n*** End Patch\ntrailing"
+        }
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "apply_patch without a begin is malformed",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Add File: a.ts\n+x\n*** End Patch"
+        }
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "apply_patch with two begins is malformed",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Begin Patch\n*** Add File: a.ts\n*** End Patch"
+        }
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "apply_patch without an end is malformed",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Add File: a.ts\n+x"
+        }
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "apply_patch without a file header is malformed",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** End Patch"
+        }
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "apply_patch with an unknown header is malformed",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Rename File: a.ts\n*** End Patch"
+        }
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "apply_patch with a move and no update is malformed",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Move to: b.ts\n*** End Patch"
+        }
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "apply_patch with a move after an add is malformed",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Add File: a.ts\n*** Move to: b.ts\n*** End Patch"
+        }
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "apply_patch with no space after the header colon is malformed",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Add File:a.ts\n*** End Patch"
+        }
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "apply_patch with a tab in a header path is malformed",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Delete File: a\t.ts\n*** End Patch"
+        }
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "apply_patch with an end-of-file marker before any header is malformed",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** End of File\n*** Add File: a.ts\n*** End Patch"
+        }
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "apply_patch with a non-string command is malformed",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": [
+            "x"
+          ]
+        }
+      },
+      "expect": {
+        "kind": "malformed"
+      }
+    },
+    {
+      "name": "apply_patch strips trailing newlines from its command",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Delete File: a.ts\n*** End Patch\n\n\n"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "a.ts",
+            "operation": "delete"
+          }
+        ],
+        "text": "{\"path\":\"a.ts\",\"operation\":\"delete\"}\n"
+      }
+    },
+    {
+      "name": "apply_patch with a non-ASCII path",
+      "tool": "apply_patch",
+      "payload": {
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Add File: dir/ünï 😀.ts\n+x\n*** End Patch"
+        }
+      },
+      "expect": {
+        "kind": "records",
+        "records": [
+          {
+            "path": "dir/ünï 😀.ts",
+            "operation": "add"
+          }
+        ],
+        "text": "{\"path\":\"dir/ünï 😀.ts\",\"operation\":\"add\"}\n"
+      }
+    }
+  ]
+}

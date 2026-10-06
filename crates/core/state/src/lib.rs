@@ -9,7 +9,9 @@
 //! - `diff_sha`: the branch-diff hash; `git`: branch, worktree and origin facts
 //!   read from `.git`; `detect`: project markers, linters, tools and line counts.
 
+pub mod apply_patch;
 pub mod ctx;
+pub mod edit_records;
 mod gate_doc;
 pub mod gate_file;
 pub mod gate_schema;
