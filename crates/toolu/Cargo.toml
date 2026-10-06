@@ -1,4 +1,6 @@
 [package]
+# Not `toolu`: a library of that name would collide with the `toolu` binary in
+# `cargo doc`. The directory stays `crates/toolu`, the hub in `layers.json`.
 name = "toolu-hub"
 description = "toolu plugin (the hub): the toolu namespaces and the rule crates"
 version.workspace = true
