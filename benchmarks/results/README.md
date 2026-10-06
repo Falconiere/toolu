@@ -68,6 +68,11 @@ the contract.
 `hook-bench` CI job's artifacts from `ubuntu-latest` and `macos-latest`. Schema
 `toolu.hook-resources/v1`:
 
+Each committed file records the hooks present on its measurement date. The
+current hook set is checked against `benchmarks/cases/hooks/payloads.json`, and
+the CI job measures that current set on both platforms. New hooks are not added
+to an older result without a real CI measurement.
+
 ```
 schema, provenance{date,commit,platform,arch,cpu,bun,runner,runs,warmup,elapsedMs,
                    floor{maxRssBytes,cpuUs,wallUs}},

@@ -105,11 +105,7 @@ fn prose_mentions_pass_inline_and_fail_fenced() {
     &["`toolu hook` needs its NAME argument"],
   );
   passes("toolu doctor", Origin::Inline);
-  fails(
-    "toolu doctor",
-    Origin::Fenced,
-    &["`toolu doctor` needs a command (valid: planned)"],
-  );
+  passes("toolu doctor", Origin::Fenced);
   passes("toolu", Origin::Inline);
 }
 

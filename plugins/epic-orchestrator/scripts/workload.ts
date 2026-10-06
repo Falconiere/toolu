@@ -21,7 +21,7 @@ function linuxRecord(pid: number): ProcessRecord | null {
   try {
     stat = readFileSync(`/proc/${pid}/stat`, "utf8");
   } catch (error) {
-    if (errno(error, "ENOENT")) return null;
+    if (errno(error, "ENOENT") || errno(error, "ESRCH")) return null;
     throw new Error(`cannot inspect process ${pid}`, { cause: error });
   }
   const close = stat.lastIndexOf(")");

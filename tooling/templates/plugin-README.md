@@ -12,6 +12,12 @@
 
 Hooks and registry contributions run as bundled TypeScript on Bun. Document the executable bundle and its host wiring when this plugin has a hook.
 
+In skills, commands and agents, write plain `toolu <namespace> <verb>` for a
+ported CLI verb. SessionStart supplies the native binary's absolute path for
+that session when the agent command shell cannot resolve plain `toolu`; never
+put a fixed binary path in static Markdown. Keep the current Bun invocation
+until the namespace's port supplies that verb. See [docs/install.md](../../docs/install.md#agent-command-shell).
+
 <DEPENDENCY-NOTE — if the Claude plugin.json lists a dependency, e.g. "Requires the `toolu` plugin." Otherwise: "Standalone, no dependencies.">
 
 Keep `name`, `version`, and `description` identical in the plugin's `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`. Declare `./skills/` and `./hooks/hooks.json` in the Codex manifest when those directories exist, then add matching entries to both marketplaces.

@@ -143,27 +143,10 @@
       "placeholder": false
     },
     {
-      "about": "Check the toolu installation and name what is wrong",
+      "about": "Check that the agent command shell finds native toolu",
       "aliases": [],
       "args": [],
-      "commands": [
-        {
-          "about": "Not ported yet (#445): show the planned verbs",
-          "aliases": [],
-          "args": [],
-          "commands": [],
-          "flags": [],
-          "hidden": false,
-          "longAbout": null,
-          "name": "planned",
-          "owner": "toolu",
-          "path": [
-            "doctor",
-            "planned"
-          ],
-          "placeholder": true
-        }
-      ],
+      "commands": [],
       "flags": [],
       "hidden": false,
       "longAbout": null,

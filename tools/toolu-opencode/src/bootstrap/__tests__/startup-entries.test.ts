@@ -25,18 +25,21 @@ test.concurrent("every catalog SessionStart launcher is an entry, in file order"
   expect(entryNames("ts-quality")).toEqual(["register", "check-toolu"]);
   expect(entryNames("python-quality")).toEqual(["register", "check-toolu"]);
   expect(entryNames("rust-quality")).toEqual(["register", "check-toolu"]);
-  expect(entryNames("ast-grep")).toEqual(["register"]);
-  expect(entryNames("toolu")).toEqual(["session-start"]);
-  expect(entryNames("epic-orchestrator")).toEqual(["check-deps"]);
+  expect(entryNames("ast-grep")).toEqual(["register", "check-binary"]);
+  expect(entryNames("toolu")).toEqual(["session-start", "check-binary"]);
+  expect(entryNames("epic-orchestrator")).toEqual(["check-deps", "check-binary"]);
   expect(entryNames("brainstorm")).toEqual([]);
-  expect(entryNames("jev")).toEqual(["session-start"]);
+  expect(entryNames("jev")).toEqual(["session-start", "check-binary"]);
 });
 
 test.concurrent("Jev SessionStart resolves its shipped bundle", () => {
   const plugin = join(PLUGINS_ROOT, "jev");
   expect(pluginStartupEntries(plugin)).toEqual({
     ok: true,
-    entries: [{ name: "session-start", bundle: join(plugin, "hooks", "dist", "session-start.js") }],
+    entries: [
+      { name: "session-start", bundle: join(plugin, "hooks", "dist", "session-start.js") },
+      { name: "check-binary", bundle: join(plugin, "hooks", "dist", "check-binary.js") },
+    ],
   });
 });
 
@@ -229,7 +232,10 @@ test.concurrent("prompt and compaction entries come from the real launchers", ()
   const compact = pluginHookEntries(toolu, "SessionStart", (matcher) =>
     matcherCovers(matcher, "compact"),
   );
-  expect(compact.ok && compact.entries.map((entry) => entry.name)).toEqual(["session-start"]);
+  expect(compact.ok && compact.entries.map((entry) => entry.name)).toEqual([
+    "session-start",
+    "check-binary",
+  ]);
   const pre = pluginHookEntries(toolu, "PreCompact", (matcher) => matcherCovers(matcher, "auto"));
   expect(pre.ok && pre.entries.map((entry) => entry.name)).toEqual(["pre-compact"]);
   const jev = pluginHookEntries(join(PLUGINS_ROOT, "jev"), "UserPromptSubmit", (matcher) =>

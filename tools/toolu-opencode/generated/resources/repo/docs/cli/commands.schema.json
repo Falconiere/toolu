@@ -124,6 +124,17 @@
         "issues": { "type": "array", "minItems": 1, "items": { "type": "integer", "minimum": 1 } }
       }
     },
+    "doctor": {
+      "description": "toolu doctor --json when native toolu is reachable in a non-login shell.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "reachable", "path"],
+      "properties": {
+        "namespace": { "const": "doctor" },
+        "reachable": { "const": true },
+        "path": { "type": "string", "minLength": 1 }
+      }
+    },
     "guide": {
       "description": "toolu <namespace> --json, for a Markdown-only plugin.",
       "type": "object",

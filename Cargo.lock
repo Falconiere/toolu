@@ -918,7 +918,9 @@ name = "toolu-hub"
 version = "7.11.0"
 dependencies = [
  "clap",
+ "serde_json",
  "toolu-ast-grep",
+ "toolu-protocol",
  "toolu-python-quality",
  "toolu-runtime",
  "toolu-rust-quality",

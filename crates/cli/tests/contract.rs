@@ -17,7 +17,7 @@ use serde_json::json;
 /// The visible namespaces that are not ported yet: all but the hook runner, the
 /// command export and the two Markdown-only guides.
 fn unported(names: &[String]) -> Vec<&String> {
-  let ported = ["hook", "commands", "brainstorm", "delivery-flow"];
+  let ported = ["hook", "commands", "doctor", "brainstorm", "delivery-flow"];
   names
     .iter()
     .filter(|name| !ported.contains(&name.as_str()))
@@ -167,7 +167,6 @@ fn a_successful_verb_leaves_stderr_empty() {
   for args in [
     &["epic", "planned"][..],
     &["--json", "jev", "planned"],
-    &["doctor", "planned"],
     &["brainstorm"],
     &["commands"],
   ] {
@@ -175,11 +174,6 @@ fn a_successful_verb_leaves_stderr_empty() {
     assert_eq!(output.status.code(), Some(0), "{args:?}");
     assert_eq!(stderr(&output).unwrap(), "", "{args:?}");
   }
-  let doctor = stdout(&toolu(&["doctor", "planned"]).unwrap()).unwrap();
-  assert_eq!(
-    doctor,
-    "toolu doctor is not ported yet (#445). Planned verbs: none (the command itself is planned)\n"
-  );
   let guide = stdout(&toolu(&["delivery-flow"]).unwrap()).unwrap();
   assert!(guide.contains("/delivery-flow:delivery-flow"), "{guide}");
 }

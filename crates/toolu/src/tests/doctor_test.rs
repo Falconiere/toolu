@@ -1,17 +1,11 @@
-use toolu_runtime::cli::Ctx;
-
-use super::{command, run};
+use super::command;
 
 #[test]
-fn toolu_doctor_lists_its_planned_verbs() {
-  let matches = command()
-    .try_get_matches_from(["doctor", "planned"])
-    .unwrap();
-  let outcome = run(&matches, &Ctx::default());
-  assert_eq!(
-    outcome.stdout.as_deref(),
-    Some(
-      "toolu doctor is not ported yet (#445). Planned verbs: none (the command itself is planned)"
-    )
+fn doctor_is_a_command_without_a_planned_verb() {
+  assert!(command().try_get_matches_from(["doctor"]).is_ok());
+  assert!(
+    command()
+      .try_get_matches_from(["doctor", "planned"])
+      .is_err()
   );
 }

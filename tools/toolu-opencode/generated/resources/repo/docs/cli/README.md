@@ -18,7 +18,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`ledger`](ledger.md) | `plugins/toolu` | planned | The plan ledger, verdicts and push waivers |
 | [`debug`](debug.md) | `plugins/toolu` | planned | Debugging helpers: I/O capture, logs, stacks and failing tests |
 | [`setup`](setup.md) | `plugins/toolu` | planned | Preview, install or remove toolu's agent profiles |
-| [`doctor`](doctor.md) | `plugins/toolu` | planned | Check the toolu installation and name what is wrong |
+| [`doctor`](doctor.md) | `plugins/toolu` | available | Check that the agent command shell finds native toolu |
 | [`config`](config.md) | `plugins/toolu` | planned | Read, change and validate toolu.config.json |
 | [`status`](status.md) | `plugins/toolu` | planned | Show the repository, gate and plugin status |
 | [`serve`](serve.md) | `plugins/toolu` | planned | Serve the OpenCode shim over standard I/O |
@@ -52,7 +52,7 @@ Commands:
   ledger          The plan ledger, verdicts and push waivers
   debug           Debugging helpers: I/O capture, logs, stacks and failing tests
   setup           Preview, install or remove toolu's agent profiles
-  doctor          Check the toolu installation and name what is wrong
+  doctor          Check that the agent command shell finds native toolu
   config          Read, change and validate toolu.config.json
   status          Show the repository, gate and plugin status
   serve           Serve the OpenCode shim over standard I/O

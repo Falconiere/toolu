@@ -2,35 +2,16 @@
 
 # `toolu doctor`
 
-Check the toolu installation and name what is wrong.
+Check that the agent command shell finds native toolu.
 
 Owner: `plugins/toolu`.
 
 ## `toolu doctor`
 
 ```text
-Check the toolu installation and name what is wrong
+Check that the agent command shell finds native toolu
 
-Usage: toolu doctor [OPTIONS] <COMMAND>
-
-Commands:
-  planned  Not ported yet (#445): show the planned verbs
-  help     Print this message or the help of the given subcommand(s)
-
-Options:
-      --json              Print exactly one JSON document on stdout
-  -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
-      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-  -h, --help              Print help
-```
-
-## `toolu doctor planned`
-
-```text
-Not ported yet (#445): show the planned verbs
-
-Usage: toolu doctor planned [OPTIONS]
+Usage: toolu doctor [OPTIONS]
 
 Options:
       --json              Print exactly one JSON document on stdout
