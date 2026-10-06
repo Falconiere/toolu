@@ -72,16 +72,26 @@ test("invalid records and operations fail before a hook runs", () => {
   expect(() => resolveFixturePath(sb, "$UNKNOWN/file")).toThrow("unknown path token");
   expect(() => resolveFixturePath(sb, "$REPO/package.json")).toThrow("unknown path token");
   applyCaseSetup(sb, [
-    { op: "symlink", path: "$PROJECT/repo-package", target: { $path: "$REPO/package.json" } },
+    {
+      op: "symlink",
+      path: "$PROJECT/repo-jscpd",
+      target: { $path: "$REPO/node_modules/.bin/jscpd" },
+    },
   ]);
-  expect(readlinkSync(sb.path("repo-package"))).toBe(
-    resolve(import.meta.dir, "../../../../../package.json"),
+  expect(readlinkSync(sb.path("repo-jscpd"))).toBe(
+    resolve(import.meta.dir, "../../../../../node_modules/.bin/jscpd"),
   );
   expect(() =>
+    applyCaseSetup(sb, [{ op: "write", path: "$PROJECT/repo-jscpd", body: "bad" }]),
+  ).toThrow("mutation follows symlink");
+  expect(() =>
     applyCaseSetup(sb, [
-      { op: "symlink", path: "$PROJECT/escape", target: { $path: "$REPO/../outside" } },
+      { op: "symlink", path: "$PROJECT/escape", target: { $path: "$REPO/package.json" } },
     ]),
-  ).toThrow("escapes");
+  ).toThrow("unknown path token");
+  expect(() =>
+    applyCaseSetup(sb, [{ op: "symlink", path: "$PROJECT/escape", target: "/etc/passwd" }]),
+  ).toThrow();
   expect(() => materializeCaseValue(sb, { $template: "echo $UNKNOWN" })).toThrow(
     "unknown path token",
   );

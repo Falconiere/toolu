@@ -1,6 +1,14 @@
 /** Shared JSON case loading and sandbox setup for the TypeScript/Rust parity fixtures. */
-import { chmodSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import {
+  chmodSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { pushWaiverPend } from "@toolu/core/ledger";
 import { diffSha } from "@toolu/core/state";
 import { z } from "zod";
@@ -23,7 +31,7 @@ export const ActionSchema = z.discriminatedUnion("op", [
   z.strictObject({
     op: z.literal("symlink"),
     path: z.string(),
-    target: z.union([z.string(), TaggedPathSchema, TaggedTemplateSchema]),
+    target: TaggedPathSchema,
   }),
   z.strictObject({
     op: z.literal("chmod"),
@@ -164,16 +172,26 @@ function write(path: string, body: string): void {
 
 /** The checkout token is allowed only as a symlink target, never a write path. */
 function symlinkTarget(sb: Sandbox, target: unknown, host: HostName): string {
-  if (
-    target !== null &&
-    typeof target === "object" &&
-    "$path" in target &&
-    typeof target.$path === "string" &&
-    target.$path.startsWith("$REPO/")
-  ) {
-    return inside(REPO_ROOT, target.$path.slice(6));
+  const path = TaggedPathSchema.parse(target).$path;
+  if (path === "$REPO/node_modules/.bin/jscpd") {
+    return resolve(REPO_ROOT, "node_modules/.bin/jscpd");
   }
-  return z.string().parse(materializeCaseValue(sb, target, host));
+  return resolveFixturePath(sb, path, host);
+}
+
+function mutationPath(sb: Sandbox, path: string, host: HostName): string {
+  const abs = resolveFixturePath(sb, path, host);
+  const back = relative(sb.root, abs);
+  if (back.startsWith("..") || isAbsolute(back))
+    throw new Error(`fixture path escapes sandbox: ${path}`);
+  let current = sb.root;
+  for (const part of back.split(sep)) {
+    current = resolve(current, part);
+    if (lstatSync(current, { throwIfNoEntry: false })?.isSymbolicLink()) {
+      throw new Error(`fixture mutation follows symlink: ${path}`);
+    }
+  }
+  return abs;
 }
 
 /** Execute the small setup vocabulary against a disposable real sandbox. */
@@ -183,24 +201,24 @@ export function applyCaseSetup(sb: Sandbox, actions: unknown, host: HostName = "
     switch (action.op) {
       case "write":
         write(
-          resolveFixturePath(sb, action.path, host),
+          mutationPath(sb, action.path, host),
           z.string().parse(materializeCaseValue(sb, action.body, host)),
         );
         break;
       case "remove":
-        rmSync(resolveFixturePath(sb, action.path, host), { recursive: true, force: true });
+        rmSync(mutationPath(sb, action.path, host), { recursive: true, force: true });
         break;
       case "mkdir":
-        mkdirSync(resolveFixturePath(sb, action.path, host), { recursive: true });
+        mkdirSync(mutationPath(sb, action.path, host), { recursive: true });
         break;
       case "symlink": {
-        const path = resolveFixturePath(sb, action.path, host);
+        const path = mutationPath(sb, action.path, host);
         mkdirSync(dirname(path), { recursive: true });
         symlinkSync(symlinkTarget(sb, action.target, host), path);
         break;
       }
       case "chmod":
-        chmodSync(resolveFixturePath(sb, action.path, host), parseInt(action.mode, 8));
+        chmodSync(mutationPath(sb, action.path, host), parseInt(action.mode, 8));
         break;
       case "git":
         sb.git(...action.args.map((arg) => z.string().parse(materializeCaseValue(sb, arg, host))));
