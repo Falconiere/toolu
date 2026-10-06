@@ -18,7 +18,7 @@ The future status server, notifications and peer clients need credentials, but p
 
 `toolu-runtime::config::epic` interprets the existing open `epic` namespace in the merged `LoadedConfig`. `toolu-runtime::config::secrets` is the only reader and writer of `<Roots::config_root()>/toolu/secrets.json`. The epic plugin exposes `toolu epic token new`, uses the shared store, and keeps its other placeholder verbs. Runtime supplies a redacted JSON/text view for every later presenter. It never exposes a secret through `Debug`, errors or command output. Consumers reread the file for each authentication decision, so token rotation takes effect immediately.
 
-The storage file is strict on `version` and known value types, but preserves unknown fields during rotation for forward compatibility. Reads use a no-follow open and inspect the opened file's mode. Writes create a fresh `0600` file beside it and rename atomically; an existing unsafe file or symlink is rejected. The status token is 32 random bytes from the OS, hex encoded. No token value appears on stdout/stderr, including under `--json`.
+The storage file is strict on `version` and known value types, but preserves unknown fields during rotation for forward compatibility. Reads use a no-follow open and inspect the opened file's mode. Writes create a fresh `0600` file beside it and rename atomically; an existing unsafe file or symlink is rejected. Redaction keeps file values even when an environment value shadows them, so either source is masked in output. The status token is 32 random bytes from the OS, hex encoded. No token value appears on stdout/stderr, including under `--json`.
 
 ## Interfaces / Schema
 

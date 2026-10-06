@@ -30,6 +30,7 @@ pub struct Secrets {
   status_token: Option<String>,
   notify_url: Option<String>,
   peer_tokens: BTreeMap<String, String>,
+  shadowed_values: Vec<String>,
 }
 
 impl fmt::Debug for Secrets {
@@ -62,6 +63,7 @@ impl Secrets {
       .into_iter()
       .chain(self.notify_url())
       .chain(self.peer_tokens.values().map(String::as_str))
+      .chain(self.shadowed_values.iter().map(String::as_str))
       .collect();
     values.sort_by_key(|value| std::cmp::Reverse(value.len()));
     values
@@ -176,6 +178,21 @@ fn env_peer_tokens(roots: &Roots) -> Result<BTreeMap<String, String>, SecretErro
 pub fn load(roots: &Roots) -> Result<Secrets, SecretError> {
   let map = read_file(&path(roots))?.unwrap_or_default();
   let env = roots.env();
+  let file_status = optional_string(&map, "status_token")?;
+  let file_notify = optional_string(&map, "notify_url")?;
+  let mut tokens = peer_tokens(&map)?;
+  let mut shadowed_values: Vec<String> = file_status
+    .iter()
+    .chain(file_notify.iter())
+    .cloned()
+    .collect();
+  shadowed_values.extend(tokens.values().cloned());
+  if let Some(alias) = env
+    .get("TOOLU_EPIC_TOKEN")
+    .filter(|value| !value.is_empty())
+  {
+    shadowed_values.push(alias.to_owned());
+  }
   let status_token = env
     .get("TOOLU_EPIC_STATUS_TOKEN")
     .filter(|value| !value.is_empty())
@@ -184,23 +201,17 @@ pub fn load(roots: &Roots) -> Result<Secrets, SecretError> {
         .get("TOOLU_EPIC_TOKEN")
         .filter(|value| !value.is_empty())
     })
-    .map_or_else(
-      || optional_string(&map, "status_token"),
-      |value| Ok(Some(value.to_owned())),
-    )?;
+    .map_or_else(|| Ok(file_status), |value| Ok(Some(value.to_owned())))?;
   let notify_url = env
     .get("TOOLU_EPIC_NOTIFY_URL")
     .filter(|value| !value.is_empty())
-    .map_or_else(
-      || optional_string(&map, "notify_url"),
-      |value| Ok(Some(value.to_owned())),
-    )?;
-  let mut tokens = peer_tokens(&map)?;
+    .map_or_else(|| Ok(file_notify), |value| Ok(Some(value.to_owned())))?;
   tokens.extend(env_peer_tokens(roots)?);
   Ok(Secrets {
     status_token,
     notify_url,
     peer_tokens: tokens,
+    shadowed_values,
   })
 }
 

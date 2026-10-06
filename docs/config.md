@@ -170,7 +170,8 @@ only file and environment reader plus redacted JSON/text helpers. The future
 config and doctor commands, journal, status page, notification sender and fleet
 client must use this module and test their actual outputs with secret canaries;
 the shared redactor already replaces credential fields and loaded secret
-substrings with `"<redacted>"`.
+substrings with `"<redacted>"`, including file values shadowed by environment
+overrides.
 
 ### Gate modes (`gates`)
 

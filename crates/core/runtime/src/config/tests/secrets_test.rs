@@ -76,6 +76,22 @@ fn env_overrides_file_per_field_and_rejects_bad_peer_json() {
   assert_eq!(resolved.notify_url(), Some("env-notify"));
   assert_eq!(resolved.peer_token("alpha"), Some("env-alpha"));
   assert_eq!(resolved.peer_token("beta"), Some("file-beta"));
+  let shown = redact_text(
+    "file-status file-notify file-alpha file-beta old-alias primary env-notify env-alpha",
+    &resolved,
+  );
+  for secret in [
+    "file-status",
+    "file-notify",
+    "file-alpha",
+    "file-beta",
+    "old-alias",
+    "primary",
+    "env-notify",
+    "env-alpha",
+  ] {
+    assert!(!shown.contains(secret), "{shown}");
+  }
 
   let alias = roots.env().clone().with("TOOLU_EPIC_TOKEN", "old-alias");
   assert_eq!(
