@@ -35,7 +35,9 @@ test("the fixture covers exactly the unbash baseline inputs, in order", () => {
 });
 
 test("TypeScript reproduces every projected analysis", () => {
-  const differing = fixture.cases.filter((c) => !Bun.deepEquals(projectAnalysis(c.input), c.expect));
+  const differing = fixture.cases.filter(
+    (c) => !Bun.deepEquals(projectAnalysis(c.input), c.expect),
+  );
   expect(differing.map((c) => c.input)).toEqual([]);
 });
 

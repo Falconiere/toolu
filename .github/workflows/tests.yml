@@ -281,6 +281,11 @@ jobs:
         if: matrix.os == 'macos-14'
         run: cargo xtask gate --only clippy --only tests
 
+      # Shell analysis latency (#416): parse and walk p99 within 0.1 ms over the
+      # real fixture commands, measured on a release build.
+      - name: Shell analysis latency
+        run: cargo test --release --locked -p toolu-shell --test latency -- --nocapture
+
       # The native hook launcher (#412) finds a toolu installed at Homebrew's bin
       # and at the installer's /usr/local/bin, under a PATH that lacks both.
       - name: Launcher end to end
@@ -329,6 +334,14 @@ jobs:
           rustup toolchain install
           rustup target add "${{ matrix.target }}"
 
+      # toolu-shell compiles tree-sitter's C sources (#416), which needs a musl C compiler.
+      - name: Install the musl C compiler
+        run: |
+          set -euo pipefail
+          sudo apt-get update -q
+          sudo apt-get install -y -q musl-tools
+          echo "CC_$(echo '${{ matrix.target }}' | tr - _)=musl-gcc" >> "$GITHUB_ENV"
+
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
         with:
@@ -349,6 +362,56 @@ jobs:
           echo "$info"
           # file(1) says "static-pie linked" (x86_64) or "statically linked" (aarch64).
           echo "$info" | grep -Eq '(static-pie|statically) linked'
+
+  # Fuzzing (#416): both toolu-shell fuzz targets for a bounded time on every
+  # change; fuzz.yml runs them longer on a schedule. cargo-fuzz needs nightly
+  # (crates/core/shell/fuzz/rust-toolchain.toml), and clang instruments
+  # tree-sitter's C sources so libFuzzer and AddressSanitizer reach them too.
+  fuzz:
+    name: fuzz
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: crates/core/shell/fuzz
+    env:
+      CC: clang
+      CFLAGS: -fsanitize=fuzzer-no-link,address
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install nightly
+        run: rustup toolchain install nightly --profile minimal
+
+      - name: Install cargo-fuzz
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz@0.13.2
+
+      # The workspace lock pins every shared dependency of the fuzz package.
+      - name: Seed the corpora from the shell fixtures
+        run: |
+          set -euo pipefail
+          cp ../../../../Cargo.lock .
+          for target in analyze nested; do
+            python3 -c 'import json, os, sys; d = sys.argv[1]; os.makedirs(d, exist_ok=True); [open(os.path.join(d, "seed-%03d" % i), "w").write(c["input"]) for i, c in enumerate(json.load(open("../../../../fixtures/shell/unbash-baseline.json"))["cases"])]' "corpus/$target"
+          done
+
+      - name: Fuzz analyze for 60 seconds
+        run: cargo fuzz run analyze -- -max_total_time=60 -timeout=10 -rss_limit_mb=4096
+
+      - name: Fuzz nested for 60 seconds
+        run: cargo fuzz run nested -- -max_total_time=60 -timeout=10 -rss_limit_mb=4096
+
+      - name: Upload the failing inputs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-artifacts
+          path: crates/core/shell/fuzz/artifacts
 
   # The Rust conformance leg (#409): the black-box suites against the Rust
   # binary for each hook entry in fixtures/rust-ported.json, the one list that
@@ -461,7 +524,7 @@ jobs:
   # was on; it passes when each job succeeded or was skipped with its group off.
   gate:
     name: gate
-    needs: [changes, ts, opencode, docs, rust, rust-musl, rust-conformance, hook-bench]
+    needs: [changes, ts, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -486,7 +549,7 @@ jobs:
   # `gate` until the repository setting is migrated to the new check name.
   typescript:
     name: typescript
-    needs: [changes, ts, opencode, docs, rust, rust-musl, rust-conformance, hook-bench]
+    needs: [changes, ts, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10

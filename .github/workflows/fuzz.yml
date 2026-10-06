@@ -1,0 +1,60 @@
+name: fuzz
+
+# Long fuzzing runs for toolu-shell (#416): each target for 30 minutes, daily and
+# on demand. tests.yml runs the same targets for 60 seconds on every change.
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    name: fuzz (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [analyze, nested]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: crates/core/shell/fuzz
+    env:
+      CC: clang
+      CFLAGS: -fsanitize=fuzzer-no-link,address
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install nightly
+        run: rustup toolchain install nightly --profile minimal
+
+      - name: Install cargo-fuzz
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz@0.13.2
+
+      - name: Seed the corpus from the shell fixtures
+        run: |
+          set -euo pipefail
+          cp ../../../../Cargo.lock .
+          python3 -c 'import json, os, sys; d = sys.argv[1]; os.makedirs(d, exist_ok=True); [open(os.path.join(d, "seed-%03d" % i), "w").write(c["input"]) for i, c in enumerate(json.load(open("../../../../fixtures/shell/unbash-baseline.json"))["cases"])]' "corpus/${{ matrix.target }}"
+
+      - name: Fuzz analyze for 30 minutes
+        if: matrix.target == 'analyze'
+        run: cargo fuzz run analyze -- -max_total_time=1800 -timeout=10 -rss_limit_mb=4096
+
+      - name: Fuzz nested for 30 minutes
+        if: matrix.target == 'nested'
+        run: cargo fuzz run nested -- -max_total_time=1800 -timeout=10 -rss_limit_mb=4096
+
+      - name: Upload the failing inputs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-artifacts-${{ matrix.target }}
+          path: crates/core/shell/fuzz/artifacts

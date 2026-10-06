@@ -103,6 +103,7 @@
         "docs": "docs",
         "rust": "rust",
         "rust-musl": "rust",
+        "fuzz": "rust",
         "rust-conformance": "ports",
         "hook-bench": "ports"
       }

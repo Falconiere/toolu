@@ -34,6 +34,7 @@ async function aggregate(needs: Record<string, Job>, workflow = "tests.yml") {
   const all = {
     rust: SKIPPED,
     "rust-musl": SKIPPED,
+    fuzz: SKIPPED,
     "rust-conformance": SKIPPED,
     "hook-bench": SKIPPED,
     ...needs,
@@ -160,9 +161,11 @@ test.concurrent("a Rust-only run passes with the TypeScript jobs skipped (#407 A
     docs: SKIPPED,
     rust: SUCCESS,
     "rust-musl": SUCCESS,
+    fuzz: SUCCESS,
   });
   expect(res.exitCode).toBe(0);
   expect(res.out).toContain("rust (rust on): success");
+  expect(res.out).toContain("fuzz (rust on): success");
   expect(res.out).toContain("rust-musl (rust on): success");
 });
 
@@ -174,6 +177,7 @@ test.concurrent("a failed Rust job fails the required aggregate (#407 AC-5)", as
     docs: SKIPPED,
     rust: { result: "failure", outputs: {} },
     "rust-musl": SUCCESS,
+    fuzz: SUCCESS,
   });
   expect(res).toEqual({ exitCode: 1, out: "rust (rust on): failure\n" });
 });
@@ -185,6 +189,7 @@ test.concurrent("a musl job skipped while rust is on fails the aggregate (#407 A
     opencode: SKIPPED,
     docs: SKIPPED,
     rust: SUCCESS,
+    fuzz: SUCCESS,
   });
   expect(res).toEqual({ exitCode: 1, out: "rust-musl (rust on): skipped, but its group is on\n" });
 });
