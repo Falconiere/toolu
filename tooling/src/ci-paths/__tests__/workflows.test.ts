@@ -160,7 +160,7 @@ test.concurrent("the Rust conformance leg reads the port list and no-ops when it
   const job = workflow("tests.yml").jobs["rust-conformance"];
   expect(job?.if).toBe("needs.changes.outputs.ports == 'true'");
   expect(config.workflows["tests.yml"]?.jobs["rust-conformance"]).toBe("ports");
-  expect(config.groups.ports).toContain("fixtures/rust-ported.json");
+  expect(config.groups.ports).toContain("fixtures/**");
   const runs = steps("tests.yml", "rust-conformance").map((step) => step.run);
   expect(runs).toContain("bun run test:rust-conformance");
   expect(scripts["test:rust-conformance"]).toBe("bun run tooling/src/rust-conformance.ts");

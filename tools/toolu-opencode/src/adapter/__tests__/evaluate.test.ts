@@ -1,205 +1,223 @@
+/** OpenCode evaluate integration over shared permission and registry scenarios. */
 import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readCaseFile } from "@toolu/conformance/harness/json-cases";
+import { z } from "zod";
 import { FOREIGN_HOST_VARS } from "../../host/runtime-env.ts";
-import { createGateDecider, createPermissionEvaluateHandler, gateEnv } from "../evaluate.ts";
-import type { PermissionEvaluationEvent } from "../permission-map.ts";
 import { bootstrapRuntime } from "../../bootstrap/runtime.ts";
 import { selectPluginsByEnabledNames } from "../../select/resolve.ts";
+import { createGateDecider, createPermissionEvaluateHandler, gateEnv } from "../evaluate.ts";
+import type { PermissionEvaluationEvent } from "../permission-map.ts";
 
 const tmpBase = process.env.TMPDIR ?? "/tmp";
+const root = join(dirname(fileURLToPath(import.meta.url)), "../../../../..");
+const EffectSchema = z.enum(["allow", "ask", "deny"]);
+const EventSchema = z.strictObject({
+  sessionID: z.string(),
+  action: z.string(),
+  effect: EffectSchema,
+  toolCallId: z.string().optional(),
+});
+const ProtectedSchema = z.strictObject({
+  name: z.string(),
+  kind: z.literal("evaluate-protected"),
+  config: z.json(),
+  file: z.string(),
+  body: z.string(),
+  pathTools: z.array(z.enum(["git", "bun"])).optional(),
+  event: EventSchema,
+  expected: z.strictObject({ effect: EffectSchema, messageContains: z.string().optional() }),
+});
+const BadRootSchema = z.strictObject({
+  name: z.string(),
+  kind: z.literal("evaluate-bad-root"),
+  config: z.json(),
+  file: z.string(),
+  body: z.string(),
+  badRoot: z.string(),
+  event: EventSchema,
+  expected: z.strictObject({ effect: EffectSchema, messageNonempty: z.boolean() }),
+});
+const RegistrySchema = z.strictObject({
+  name: z.string(),
+  kind: z.literal("evaluate-registry"),
+  plugins: z.array(z.string()),
+  pathTools: z.array(z.enum(["git", "bun"])),
+  command: z.string(),
+  artifactSuffix: z.string(),
+  advisoryContains: z.string(),
+  event: EventSchema,
+  expected: z.strictObject({ effect: EffectSchema }),
+});
+const GateEnvSchema = z.strictObject({
+  name: z.string(),
+  kind: z.literal("evaluate-gate-env"),
+  base: z.strictObject({
+    repoRoot: z.string(),
+    configRoot: z.string(),
+    cwd: z.string(),
+    projectRoot: z.string(),
+    worktree: z.string(),
+    env: z.record(z.string(), z.string()),
+    userConfigRoot: z.string(),
+    pluginRoot: z.string(),
+  }),
+  expected: z.record(z.string(), z.string()),
+});
+const cases = readCaseFile(
+  resolve(import.meta.dir, "../../../../../fixtures/opencode/permission-evaluate.json"),
+);
 
-function repoRoot(): string {
-  return join(dirname(fileURLToPath(import.meta.url)), "../../../../..");
-}
-
-async function protectedEnvProject(): Promise<{ projectRoot: string; envPath: string }> {
+async function protectedProject(
+  file: string,
+  body: string,
+  config: z.infer<typeof ProtectedSchema>["config"],
+): Promise<string> {
   const projectRoot = await mkdtemp(join(tmpBase, "toolu-oc-eval-"));
-  const envPath = join(projectRoot, ".env");
-  await writeFile(envPath, "SECRET=1\n", "utf8");
+  await writeFile(join(projectRoot, file), body, "utf8");
   await mkdir(join(projectRoot, ".opencode"), { recursive: true });
-  await writeFile(
-    join(projectRoot, ".opencode/toolu.config.json"),
-    JSON.stringify({
-      version: 1,
-      gates: { protectedFiles: { mode: "block" } },
-    }),
-    "utf8",
-  );
-  return { projectRoot, envPath };
+  await writeFile(join(projectRoot, ".opencode/toolu.config.json"), JSON.stringify(config), "utf8");
+  return projectRoot;
 }
 
-function editEvent(envPath: string): PermissionEvaluationEvent {
-  return {
-    sessionID: "sess_eval_1",
-    action: "edit",
-    resources: [envPath],
-    effect: "allow",
-    metadata: { toolCallId: "call_eval_1" },
-  };
-}
-
-async function expectRegistryAdvisory(
-  options: Parameters<typeof createGateDecider>[0],
-  sessionID: string,
-): Promise<void> {
-  const decider = createGateDecider(options);
-  if (!decider.ok) throw new Error(decider.reason);
-  const decision = await decider.decide({
-    session_id: sessionID,
-    tool_use_id: "call_registry_1",
-    cwd: options.permissionContext.cwd,
-    tool_name: "Bash",
-    tool_input: { command: "rg TODO src" },
-  });
-  expect(decision.kind).toBe("advisory");
-  if (decision.kind === "advisory") expect(decision.message).toContain("grep/rg in Bash detected");
-}
-
-test("AC-2: evaluate handler + core dispatcher on protected .env yields deny", async () => {
-  const root = repoRoot();
-  const { projectRoot, envPath } = await protectedEnvProject();
-  const handler = createPermissionEvaluateHandler({
-    repoRoot: root,
-    configRoot: join(projectRoot, ".opencode", "toolu", "state"),
-    permissionContext: {
-      cwd: projectRoot,
-      projectRoot,
-      worktree: projectRoot,
-    },
-    env: {
-      TOOLU_SETTINGS_DIR: join(root, "plugins/toolu/settings"),
-      TOOLU_HOST_OVERRIDE: "opencode",
-      TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",
-    },
-  });
-
-  const event = editEvent(envPath);
-  await handler(event);
-
-  expect(event.effect).toBe("deny");
-});
-
-test("#276: native protected-file deny works with bash and jq absent from PATH", async () => {
-  const root = repoRoot();
-  const { projectRoot, envPath } = await protectedEnvProject();
+async function toolPath(names: readonly ("git" | "bun")[]): Promise<string> {
   const bin = await mkdtemp(join(tmpBase, "toolu-oc-bin-"));
-  await symlink(Bun.which("git") ?? "/usr/bin/git", join(bin, "git"));
-  await symlink(Bun.which("bun") ?? process.execPath, join(bin, "bun"));
-  const handler = createPermissionEvaluateHandler({
-    repoRoot: root,
-    configRoot: join(projectRoot, ".opencode", "toolu", "state"),
-    permissionContext: { cwd: projectRoot, projectRoot, worktree: projectRoot },
-    env: {
-      PATH: bin,
-      TOOLU_SETTINGS_DIR: join(root, "plugins/toolu/settings"),
-      TOOLU_HOST_OVERRIDE: "opencode",
-      TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",
-    },
-  });
-  const event = editEvent(envPath);
-  await handler(event);
-  expect(event.effect).toBe("deny");
-  expect(event.message).toContain("protected");
-});
-
-test("#276: bundled ast-grep registry runs from isolated OpenCode root without bash", async () => {
-  const root = repoRoot();
-  const packageRoot = await mkdtemp(join(tmpBase, "toolu-oc-package-"));
-  const staged = join(packageRoot, "plugins");
-  const bundled = Bun.spawnSync(
-    [process.execPath, join(root, "tools/toolu-opencode/scripts/bundle-plugins.ts")],
-    {
-      cwd: root,
-      env: { ...process.env, BUNDLE_PLUGINS_DEST: staged },
-    },
+  await Promise.all(
+    names.map((name) => {
+      const target =
+        name === "git"
+          ? (Bun.which("git") ?? "/usr/bin/git")
+          : (Bun.which("bun") ?? process.execPath);
+      return symlink(target, join(bin, name));
+    }),
   );
-  expect(bundled.exitCode).toBe(0);
-  const selected = selectPluginsByEnabledNames(staged, ["toolu", "ast-grep"]);
-  expect(selected.ok).toBe(true);
-  if (!selected.ok) return;
-  const projectRoot = await mkdtemp(join(tmpBase, "toolu-oc-registry-project-"));
-  const configRoot = await mkdtemp(join(tmpBase, "toolu-oc-registry-data-"));
-  const bin = await mkdtemp(join(tmpBase, "toolu-oc-registry-bin-"));
-  await symlink(Bun.which("git") ?? "/usr/bin/git", join(bin, "git"));
-  await symlink(process.execPath, join(bin, "bun"));
-  const env = { PATH: bin, TOOLU_HOST_OVERRIDE: "opencode" };
-  const boot = await bootstrapRuntime({
-    repoRoot: packageRoot,
-    projectRoot,
-    dataRoot: configRoot,
-    plugins: selected.plugins,
-    isolatedHome: await mkdtemp(join(tmpBase, "toolu-oc-registry-home-")),
-    env,
-  });
-  expect(boot.status).toBe("ready");
-  if (boot.status !== "ready") return;
-  expect(boot.artifacts.some((path) => path.endsWith("ast-grep@toolu__search-nudge.js"))).toBe(
-    true,
-  );
-  const options = {
-    repoRoot: packageRoot,
-    configRoot,
-    permissionContext: { cwd: projectRoot, projectRoot, worktree: projectRoot },
-    env,
-  };
-  const handler = createPermissionEvaluateHandler(options);
-  const event: PermissionEvaluationEvent = {
-    sessionID: "sess_registry_1",
-    action: "bash",
-    resources: [],
-    metadata: { command: "rg TODO src" },
-    effect: "allow",
-  };
-  await expectRegistryAdvisory(options, event.sessionID);
-  await handler(event);
-  expect(event.effect).toBe("allow");
-  expect(event.message).toBeUndefined();
-});
+  return bin;
+}
 
-test("AC-3: runtime_failure from bad repoRoot maps to deny", async () => {
-  const { projectRoot, envPath } = await protectedEnvProject();
-  const handler = createPermissionEvaluateHandler({
-    repoRoot: join(tmpBase, "toolu-nonexistent-repo-root"),
-    configRoot: join(projectRoot, ".opencode", "toolu", "state"),
-    permissionContext: {
-      cwd: projectRoot,
-      projectRoot,
-      worktree: projectRoot,
+function evalEvent(
+  input: z.infer<typeof EventSchema>,
+  resources: string[],
+  command?: string,
+): PermissionEvaluationEvent {
+  return {
+    sessionID: input.sessionID,
+    action: input.action,
+    resources,
+    effect: input.effect,
+    metadata: {
+      ...(input.toolCallId === undefined ? {} : { toolCallId: input.toolCallId }),
+      ...(command === undefined ? {} : { command }),
     },
-  });
-
-  const event = editEvent(envPath);
-  await handler(event);
-
-  expect(event.effect).toBe("deny");
-  expect(typeof event.message).toBe("string");
-  expect(event.message && event.message.length > 0).toBe(true);
-});
-
-test("#343: gates see no other host's root and read the global config from userConfigRoot", () => {
-  const poisoned = Object.fromEntries(FOREIGN_HOST_VARS.map((key) => [key, `/poison/${key}`]));
-  const base = {
-    repoRoot: "/repo",
-    configRoot: "/data",
-    permissionContext: { cwd: "/p/sub", projectRoot: "/p", worktree: "/p" },
-    env: { ...poisoned, KEEP: "1", TOOLU_PROJECT_DIR: "/elsewhere" },
   };
-  const opts = { ...base, userConfigRoot: "/global" };
-  const env = gateEnv(opts, "/repo/plugins/toolu");
-  for (const key of FOREIGN_HOST_VARS) expect(env[key]).toBeUndefined();
-  expect(env).toMatchObject({
-    KEEP: "1",
-    TOOLU_USER_CONFIG_DIR: "/global",
-    TOOLU_CONFIG_DIR: "/data",
-    TOOLU_PROJECT_DIR: "/p",
-    TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",
-    TOOLU_HOST_OVERRIDE: "opencode",
-    TOOLU_SETTINGS_DIR: "/repo/plugins/toolu/settings",
-  });
-  // Without userConfigRoot (the legacy permission.evaluate route) nothing is added.
-  expect(gateEnv(base, "/repo/plugins/toolu").TOOLU_USER_CONFIG_DIR).toBe(
-    process.env.TOOLU_USER_CONFIG_DIR,
-  );
-});
+}
+
+for (const raw of cases) {
+  if (raw.kind === "evaluate-protected" || raw.kind === "evaluate-bad-root") {
+    const c =
+      raw.kind === "evaluate-protected" ? ProtectedSchema.parse(raw) : BadRootSchema.parse(raw);
+    test(c.name, async () => {
+      const projectRoot = await protectedProject(c.file, c.body, c.config);
+      const bin =
+        c.kind === "evaluate-protected" && c.pathTools !== undefined
+          ? await toolPath(c.pathTools)
+          : undefined;
+      const handler = createPermissionEvaluateHandler({
+        repoRoot: c.kind === "evaluate-bad-root" ? join(tmpBase, c.badRoot) : root,
+        configRoot: join(projectRoot, ".opencode", "toolu", "state"),
+        permissionContext: { cwd: projectRoot, projectRoot, worktree: projectRoot },
+        ...(c.kind === "evaluate-bad-root"
+          ? {}
+          : {
+              env: {
+                ...(bin === undefined ? {} : { PATH: bin }),
+                TOOLU_SETTINGS_DIR: join(root, "plugins/toolu/settings"),
+                TOOLU_HOST_OVERRIDE: "opencode",
+                TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode",
+              },
+            }),
+      });
+      const event = evalEvent(c.event, [join(projectRoot, c.file)]);
+      await handler(event);
+      expect(event.effect).toBe(c.expected.effect);
+      if (c.kind === "evaluate-protected" && c.expected.messageContains !== undefined)
+        expect(event.message).toContain(c.expected.messageContains);
+      if (c.kind === "evaluate-bad-root" && c.expected.messageNonempty)
+        expect(event.message?.length).toBeGreaterThan(0);
+    });
+  } else if (raw.kind === "evaluate-registry") {
+    const c = RegistrySchema.parse(raw);
+    test(c.name, async () => {
+      const packageRoot = await mkdtemp(join(tmpBase, "toolu-oc-package-"));
+      const staged = join(packageRoot, "plugins");
+      const bundled = Bun.spawnSync(
+        [process.execPath, join(root, "tools/toolu-opencode/scripts/bundle-plugins.ts")],
+        {
+          cwd: root,
+          env: { ...process.env, BUNDLE_PLUGINS_DEST: staged },
+        },
+      );
+      expect(bundled.exitCode).toBe(0);
+      const selected = selectPluginsByEnabledNames(staged, c.plugins);
+      expect(selected.ok).toBe(true);
+      if (!selected.ok) return;
+      const projectRoot = await mkdtemp(join(tmpBase, "toolu-oc-registry-project-"));
+      const configRoot = await mkdtemp(join(tmpBase, "toolu-oc-registry-data-"));
+      const env = { PATH: await toolPath(c.pathTools), TOOLU_HOST_OVERRIDE: "opencode" };
+      const boot = await bootstrapRuntime({
+        repoRoot: packageRoot,
+        projectRoot,
+        dataRoot: configRoot,
+        plugins: selected.plugins,
+        isolatedHome: await mkdtemp(join(tmpBase, "toolu-oc-registry-home-")),
+        env,
+      });
+      expect(boot.status).toBe("ready");
+      if (boot.status !== "ready") return;
+      expect(boot.artifacts.some((path) => path.endsWith(c.artifactSuffix))).toBe(true);
+      const options = {
+        repoRoot: packageRoot,
+        configRoot,
+        permissionContext: { cwd: projectRoot, projectRoot, worktree: projectRoot },
+        env,
+      };
+      const decider = createGateDecider(options);
+      if (!decider.ok) throw new Error(decider.reason);
+      const decision = await decider.decide({
+        session_id: c.event.sessionID,
+        tool_use_id: "call_registry_1",
+        cwd: projectRoot,
+        tool_name: "Bash",
+        tool_input: { command: c.command },
+      });
+      expect(decision.kind).toBe("advisory");
+      if (decision.kind === "advisory") expect(decision.message).toContain(c.advisoryContains);
+      const event = evalEvent(c.event, [], c.command);
+      await createPermissionEvaluateHandler(options)(event);
+      expect(event.effect).toBe(c.expected.effect);
+      expect(event.message).toBeUndefined();
+    });
+  } else if (raw.kind === "evaluate-gate-env") {
+    const c = GateEnvSchema.parse(raw);
+    test(c.name, () => {
+      const poisoned = Object.fromEntries(FOREIGN_HOST_VARS.map((key) => [key, `/poison/${key}`]));
+      const base = {
+        repoRoot: c.base.repoRoot,
+        configRoot: c.base.configRoot,
+        permissionContext: {
+          cwd: c.base.cwd,
+          projectRoot: c.base.projectRoot,
+          worktree: c.base.worktree,
+        },
+        env: { ...poisoned, ...c.base.env },
+      };
+      const env = gateEnv({ ...base, userConfigRoot: c.base.userConfigRoot }, c.base.pluginRoot);
+      for (const key of FOREIGN_HOST_VARS) expect(env[key]).toBeUndefined();
+      expect(env).toMatchObject(c.expected);
+      expect(gateEnv(base, c.base.pluginRoot).TOOLU_USER_CONFIG_DIR).toBe(
+        process.env.TOOLU_USER_CONFIG_DIR,
+      );
+    });
+  }
+}

@@ -1,0 +1,2580 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "statusline session-start: a bash statusLine on Claude gets one notice",
+      "kind": "startup",
+      "host": "claude",
+      "commands": ["bash ~/.claude/statusline/statusline.sh"],
+      "expected": "{\"systemMessage\":\"statusline: settings.json still runs the statusline through a shell, which cannot run the Bun statusline — run /statusline:setup to update it\"}\n"
+    },
+    {
+      "name": "statusline session-start: an interpreter path counts as a shell",
+      "kind": "startup",
+      "host": "claude",
+      "commands": ["/usr/bin/env bash ~/.claude/statusline/statusline.sh"],
+      "expected": "{\"systemMessage\":\"statusline: settings.json still runs the statusline through a shell, which cannot run the Bun statusline — run /statusline:setup to update it\"}\n"
+    },
+    {
+      "name": "statusline session-start: a Bun statusLine on Claude is silent",
+      "kind": "startup",
+      "host": "claude",
+      "commands": ["~/.claude/statusline/statusline.sh"],
+      "expected": ""
+    },
+    {
+      "name": "statusline session-start: a custom statusLine on Claude is silent",
+      "kind": "startup",
+      "host": "claude",
+      "commands": ["bash my-custom-bar.sh", "bash -c \"~/.claude/statusline/statusline.sh | cat\""],
+      "expected": ""
+    },
+    {
+      "name": "statusline session-start: Codex never reads Claude's settings",
+      "kind": "startup",
+      "host": "codex",
+      "commands": ["bash ~/.claude/statusline/statusline.sh"],
+      "expected": ""
+    },
+    {
+      "name": "status: OpenCode lists the plugins toolu started and its readiness",
+      "kind": "opencode-status",
+      "records": [
+        {
+          "version": 1,
+          "written": "2026-10-04T12:00:00.000Z",
+          "project": {
+            "$path": "$PROJECT"
+          },
+          "status": "ready",
+          "selection": "project",
+          "plugins": [
+            {
+              "name": "jev",
+              "entries": ["session-start"],
+              "artifacts": 1
+            },
+            {
+              "name": "statusline",
+              "entries": ["session-start"],
+              "artifacts": 1
+            }
+          ],
+          "notes": ["enabled plugin \"nope\" in plugins.json is not installed"]
+        }
+      ],
+      "gate": "{\"status\":\"passing\"}\n",
+      "host": "opencode",
+      "checks": [
+        {
+          "op": "equal",
+          "value": {
+            "$template": "Host: OpenCode\ntoolu: ready — 2 plugins (project selection), 2 startup artifacts\nPlugins: jev (session-start), statusline (session-start)\nStartup notes: enabled plugin \"nope\" in plugins.json is not installed\nStartup record: $PROJECT/.opencode/toolu/state/toolu/opencode-status.json, written 2026-10-04T12:00:00.000Z for $PROJECT\nRepository: $PROJECT\nBranch: main\nWorking tree: staged 0, unstaged 0, untracked 1\nQuality gate: passing\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "status: OpenCode reports a not-ready startup with its cause",
+      "kind": "opencode-status",
+      "records": [
+        {
+          "version": 1,
+          "written": "2026-10-04T12:00:00.000Z",
+          "project": {
+            "$path": "$PROJECT"
+          },
+          "status": "not-ready",
+          "reason": "bootstrap: jev/session-start: exited 1",
+          "plugins": [],
+          "notes": []
+        }
+      ],
+      "host": "opencode",
+      "checks": [
+        {
+          "op": "starts",
+          "value": {
+            "$template": "Host: OpenCode\ntoolu: not ready — bootstrap: jev/session-start: exited 1; every tool call stays denied until OpenCode restarts with the cause fixed\nStartup record: $PROJECT/.opencode/toolu/state/toolu/opencode-status.json, written 2026-10-04T12:00:00.000Z for $PROJECT\nRepository: $PROJECT"
+          }
+        },
+        {
+          "op": "contains",
+          "value": "Quality gate: no recorded state\n"
+        }
+      ]
+    },
+    {
+      "name": "status: OpenCode labels every plugin and selection shape",
+      "kind": "opencode-status",
+      "records": [
+        {
+          "version": 1,
+          "written": "2026-10-04T12:00:00.000Z",
+          "project": {
+            "$path": "$PROJECT"
+          },
+          "status": "ready",
+          "selection": "default",
+          "plugins": [
+            {
+              "name": "toolu",
+              "entries": [],
+              "artifacts": 0
+            }
+          ],
+          "notes": []
+        }
+      ],
+      "host": "opencode",
+      "checks": [
+        {
+          "op": "contains",
+          "value": "\ntoolu: ready — 1 plugins (all installed plugins), 0 startup artifacts\nPlugins: toolu\nStartup record: "
+        },
+        {
+          "op": "absent",
+          "value": "Startup notes:"
+        }
+      ]
+    },
+    {
+      "name": "status: OpenCode says so when a not-ready record carries no reason",
+      "kind": "opencode-status",
+      "records": [
+        {
+          "version": 1,
+          "written": "2026-10-04T12:00:00.000Z",
+          "project": {
+            "$path": "$PROJECT"
+          },
+          "status": "not-ready",
+          "plugins": [],
+          "notes": []
+        }
+      ],
+      "host": "opencode",
+      "checks": [
+        {
+          "op": "contains",
+          "value": "\ntoolu: not ready — no reason recorded; every tool call stays denied until OpenCode restarts with the cause fixed\n"
+        }
+      ]
+    },
+    {
+      "name": "status: OpenCode names a missing record and how to create it",
+      "kind": "opencode-status",
+      "records": [],
+      "host": "opencode",
+      "checks": [
+        {
+          "op": "contains",
+          "value": {
+            "$template": "\ntoolu: no startup record at $PROJECT/.opencode/toolu/state/toolu/opencode-status.json — start OpenCode with the toolu plugin in this project, then run the status skill again\n"
+          }
+        },
+        {
+          "op": "contains",
+          "value": "Branch: main\n"
+        }
+      ]
+    },
+    {
+      "name": "status: OpenCode names an unreadable record and still reports the rest",
+      "kind": "opencode-status",
+      "records": ["{}", "{\"version\":1,\"written\":\"x\""],
+      "host": "opencode",
+      "checks": [
+        {
+          "op": "contains",
+          "value": {
+            "$template": "\ntoolu: unreadable startup record at $PROJECT/.opencode/toolu/state/toolu/opencode-status.json — restart OpenCode to rewrite it\n"
+          }
+        },
+        {
+          "op": "contains",
+          "value": "Branch: main\n"
+        },
+        {
+          "op": "absent",
+          "value": "toolu: ready"
+        }
+      ]
+    },
+    {
+      "name": "status: Codex never reads an OpenCode status record",
+      "kind": "opencode-status",
+      "records": ["{}"],
+      "host": "codex",
+      "checks": [
+        {
+          "op": "absent",
+          "value": "toolu:"
+        },
+        {
+          "op": "absent",
+          "value": "Startup record"
+        }
+      ]
+    },
+    {
+      "name": "statusline: renders model and context segments",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "contains",
+              "value": "Opus"
+            },
+            {
+              "op": "contains",
+              "value": "ctx:45k/200k (22%)"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "ctx",
+            "tokens": 45000,
+            "pct": 22
+          }
+        }
+      ],
+      "actions": []
+    },
+    {
+      "name": "statusline: effort shown when present",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "contains",
+              "value": "effort:high"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "workspace",
+            "cwd": {
+              "$path": "$PROJECT"
+            },
+            "extra": ",\"effort\":{\"level\":\"high\"}"
+          }
+        }
+      ],
+      "actions": []
+    },
+    {
+      "name": "statusline: effort omitted when absent",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "absent",
+              "value": "effort:"
+            }
+          ],
+          "plain": true
+        }
+      ],
+      "actions": []
+    },
+    {
+      "name": "statusline: red gate marker when the project gate is failing",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "contains",
+              "value": "\u001b[1m\u001b[31m✗ gate:failing\u001b[0m"
+            }
+          ],
+          "plain": false
+        }
+      ],
+      "actions": [
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/.claude/tmp/quality-gate-status.json"
+          },
+          "body": "{\"status\":\"failing\",\"reason\":\"x\"}"
+        }
+      ]
+    },
+    {
+      "name": "statusline: no gate marker when the gate is passing",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "absent",
+              "value": "gate:failing"
+            }
+          ],
+          "plain": true
+        }
+      ],
+      "actions": [
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/.claude/tmp/quality-gate-status.json"
+          },
+          "body": "{\"status\":\"passing\"}"
+        }
+      ]
+    },
+    {
+      "name": "statusline: no gate marker when there is no gate file",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "absent",
+              "value": "gate:failing"
+            }
+          ],
+          "plain": true
+        }
+      ],
+      "actions": []
+    },
+    {
+      "name": "statusline: branch + folder shown for a git workspace",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "Opus | ctx:1k/200k | project | main"
+            }
+          ],
+          "plain": true
+        }
+      ],
+      "actions": [
+        {
+          "op": "repo",
+          "path": {
+            "$path": "$PROJECT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "statusline: dirty shows staged files with [+N]",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "contains",
+              "value": "[+1]"
+            }
+          ],
+          "plain": true
+        }
+      ],
+      "actions": [
+        {
+          "op": "repo",
+          "path": {
+            "$path": "$PROJECT"
+          }
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/staged.txt"
+          },
+          "body": ""
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$PROJECT"
+          },
+          "args": ["add", "staged.txt"]
+        }
+      ]
+    },
+    {
+      "name": "statusline: dirty shows unstaged files with [~N]",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "contains",
+              "value": "[~1]"
+            }
+          ],
+          "plain": true
+        }
+      ],
+      "actions": [
+        {
+          "op": "repo",
+          "path": {
+            "$path": "$PROJECT"
+          }
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/f.txt"
+          },
+          "body": "c\n"
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$PROJECT"
+          },
+          "args": ["add", "f.txt"]
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$PROJECT"
+          },
+          "args": ["commit", "-qm", "add"]
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/f.txt"
+          },
+          "body": "c\nch\n"
+        }
+      ]
+    },
+    {
+      "name": "statusline: dirty shows untracked files with [?N]",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "contains",
+              "value": "[?1]"
+            }
+          ],
+          "plain": true
+        }
+      ],
+      "actions": [
+        {
+          "op": "repo",
+          "path": {
+            "$path": "$PROJECT"
+          }
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/u.txt"
+          },
+          "body": ""
+        }
+      ]
+    },
+    {
+      "name": "statusline: dirty shows all three counts when mixed",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "ends",
+              "value": "\u001b[2m | \u001b[0m\u001b[1mproject\u001b[0m\u001b[2m | \u001b[0m\u001b[34mmain\u001b[0m\u001b[33m[+1 ~1 ?1]\u001b[0m"
+            }
+          ],
+          "plain": false
+        }
+      ],
+      "actions": [
+        {
+          "op": "repo",
+          "path": {
+            "$path": "$PROJECT"
+          }
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/f.txt"
+          },
+          "body": "c\n"
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$PROJECT"
+          },
+          "args": ["add", "f.txt"]
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$PROJECT"
+          },
+          "args": ["commit", "-qm", "add"]
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/f.txt"
+          },
+          "body": "c\nch\n"
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/s.txt"
+          },
+          "body": ""
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$PROJECT"
+          },
+          "args": ["add", "s.txt"]
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/u.txt"
+          },
+          "body": ""
+        }
+      ]
+    },
+    {
+      "name": "statusline: clean repo omits dirty bracket",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "not-match",
+              "value": "\\[[+~?]"
+            }
+          ],
+          "plain": true
+        }
+      ],
+      "actions": [
+        {
+          "op": "repo",
+          "path": {
+            "$path": "$PROJECT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "statusline: ahead arrow shown when local is ahead of upstream",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "contains",
+              "value": "main↑1"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "workspace",
+            "cwd": {
+              "$path": "$ROOT/repo"
+            },
+            "extra": ""
+          }
+        }
+      ],
+      "actions": [
+        {
+          "op": "remote",
+          "branch": "main"
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$ROOT/repo"
+          },
+          "args": ["commit", "-q", "--allow-empty", "-m", "ahead"]
+        }
+      ]
+    },
+    {
+      "name": "statusline: behind arrow shown when local is behind upstream",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "contains",
+              "value": "main↓1"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "workspace",
+            "cwd": {
+              "$path": "$ROOT/repo"
+            },
+            "extra": ""
+          }
+        }
+      ],
+      "actions": [
+        {
+          "op": "remote",
+          "branch": "main"
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$ROOT/repo"
+          },
+          "args": ["commit", "-q", "--allow-empty", "-m", "behind"]
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$ROOT/repo"
+          },
+          "args": ["push", "-q", "origin", "main"]
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$ROOT/repo"
+          },
+          "args": ["reset", "-q", "--hard", "HEAD~1"]
+        }
+      ]
+    },
+    {
+      "name": "statusline: dirty and ahead shown together",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "ends",
+              "value": "\u001b[34mmain\u001b[0m\u001b[2m↑1\u001b[0m\u001b[33m[?1]\u001b[0m"
+            }
+          ],
+          "plain": false,
+          "payload": {
+            "kind": "workspace",
+            "cwd": {
+              "$path": "$ROOT/repo"
+            },
+            "extra": ""
+          }
+        }
+      ],
+      "actions": [
+        {
+          "op": "remote",
+          "branch": "main"
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$ROOT/repo"
+          },
+          "args": ["commit", "-q", "--allow-empty", "-m", "ahead"]
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$ROOT/repo/new.txt"
+          },
+          "body": ""
+        }
+      ]
+    },
+    {
+      "name": "statusline: no dirty status outside a git repo",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "Opus | ctx:1k/200k | project"
+            }
+          ],
+          "plain": true
+        }
+      ],
+      "actions": [
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/u.txt"
+          },
+          "body": ""
+        }
+      ]
+    },
+    {
+      "name": "statusline: gate marker resolves via git root when cwd is a subdir",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "Opus | ctx:1k/200k | ✗ gate:failing | src | main[?1]"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "workspace",
+            "cwd": {
+              "$path": "$PROJECT/packages/app/src"
+            },
+            "extra": ""
+          }
+        }
+      ],
+      "actions": [
+        {
+          "op": "repo",
+          "path": {
+            "$path": "$PROJECT"
+          }
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/.claude/tmp/quality-gate-status.json"
+          },
+          "body": "{\"status\":\"failing\",\"reason\":\"x\"}"
+        },
+        {
+          "op": "mkdir",
+          "path": {
+            "$path": "$PROJECT/packages/app/src"
+          }
+        }
+      ]
+    },
+    {
+      "name": "statusline: format_tokens M-tier renders millions with one decimal",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "contains",
+              "value": "ctx:13.7M/200k"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "ctx",
+            "tokens": 13779513,
+            "pct": 99
+          }
+        }
+      ],
+      "actions": []
+    },
+    {
+      "name": "statusline: format_tokens M-tier stays k below a million",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "contains",
+              "value": "ctx:13k/200k (7%)"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "ctx",
+            "tokens": 13779,
+            "pct": 7
+          }
+        }
+      ],
+      "actions": []
+    },
+    {
+      "name": "statusline: account:renders the email domain from .claude.json",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "contains",
+              "value": "ctx:1k/200k (1%) | example.com"
+            },
+            {
+              "op": "absent",
+              "value": "hello@example.com"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "ctx",
+            "tokens": 1000,
+            "pct": 1
+          }
+        }
+      ],
+      "actions": [
+        {
+          "op": "write",
+          "path": {
+            "$path": "$ROOT/cfg/.claude.json"
+          },
+          "body": "{\"oauthAccount\":{\"emailAddress\":\"hello@example.com\"}}"
+        }
+      ]
+    },
+    {
+      "name": "statusline: account:omitted when .claude.json has no oauthAccount",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "Opus | ctx:1k/200k (1%)"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "ctx",
+            "tokens": 1000,
+            "pct": 1
+          }
+        }
+      ],
+      "actions": [
+        {
+          "op": "write",
+          "path": {
+            "$path": "$ROOT/cfg/.claude.json"
+          },
+          "body": "{}"
+        }
+      ]
+    },
+    {
+      "name": "statusline: account:a custom CLAUDE_CONFIG_DIR without .claude.json never falls back to $HOME",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "Opus | ctx:1k/200k (1%)"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "ctx",
+            "tokens": 1000,
+            "pct": 1
+          }
+        }
+      ],
+      "actions": [
+        {
+          "op": "write",
+          "path": {
+            "$path": "$HOME/.claude.json"
+          },
+          "body": "{\"oauthAccount\":{\"emailAddress\":\"hello@shouldnotleak.example\"}}"
+        }
+      ]
+    },
+    {
+      "name": "statusline: account:read from $HOME when CLAUDE_CONFIG_DIR is unset",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "Opus | ctx:1k/200k (1%) | home.example"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "ctx",
+            "tokens": 1000,
+            "pct": 1
+          },
+          "env": {
+            "CLAUDE_CONFIG_DIR": null
+          }
+        }
+      ],
+      "actions": [
+        {
+          "op": "write",
+          "path": {
+            "$path": "$HOME/.claude.json"
+          },
+          "body": "{\"oauthAccount\":{\"emailAddress\":\"a@home.example\"}}"
+        }
+      ]
+    },
+    {
+      "name": "statusline: comemory:renders the count from the comemory marker",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "contains",
+              "value": "\u001b[1m\u001b[32m[COMEMORY:7]\u001b[0m"
+            }
+          ],
+          "plain": false
+        }
+      ],
+      "actions": [
+        {
+          "op": "repo",
+          "path": {
+            "$path": "$PROJECT"
+          }
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$ROOT/cfg/comemory-status/project.json"
+          },
+          "body": "{\"repo\":\"project\",\"count\":7}"
+        }
+      ]
+    },
+    {
+      "name": "statusline: comemory:worktree resolves to the main-repo key",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "contains",
+              "value": "[COMEMORY:5]"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "workspace",
+            "cwd": {
+              "$path": "$ROOT/wt"
+            },
+            "extra": ""
+          }
+        }
+      ],
+      "actions": [
+        {
+          "op": "repo",
+          "path": {
+            "$path": "$ROOT/main"
+          }
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$ROOT/main"
+          },
+          "args": [
+            "worktree",
+            "add",
+            "-q",
+            {
+              "$path": "$ROOT/wt"
+            }
+          ]
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$ROOT/cfg/comemory-status/main.json"
+          },
+          "body": "{\"repo\":\"main\",\"count\":5}"
+        }
+      ]
+    },
+    {
+      "name": "statusline: comemory:omitted when there is no marker",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "absent",
+              "value": "[COMEMORY:"
+            }
+          ],
+          "plain": true
+        }
+      ],
+      "actions": [
+        {
+          "op": "repo",
+          "path": {
+            "$path": "$PROJECT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "statusline: every segment in order, colours included",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "\u001b[36mOpus 4\u001b[0m\u001b[2m | \u001b[0m\u001b[33meffort:high\u001b[0m\u001b[2m | \u001b[0m\u001b[35mctx:456k/1.0M (46%)\u001b[0m\u001b[2m | \u001b[0m\u001b[32mcorp.example\u001b[0m\u001b[2m | \u001b[0m\u001b[1m\u001b[31m✗ gate:failing\u001b[0m\u001b[2m | \u001b[0m\u001b[1mrepo\u001b[0m\u001b[2m | \u001b[0m\u001b[34mmain\u001b[0m\u001b[2m↑1\u001b[0m\u001b[33m[?2]\u001b[0m\u001b[2m | \u001b[0m\u001b[1m\u001b[32m[COMEMORY:42]\u001b[0m\u001b[2m | \u001b[0m\u001b[1m\u001b[32m[JEV:READY]\u001b[0m"
+            }
+          ],
+          "plain": false,
+          "payload": {
+            "kind": "object",
+            "value": {
+              "model": {
+                "display_name": "Opus 4"
+              },
+              "effort": {
+                "level": "high"
+              },
+              "workspace": {
+                "current_dir": {
+                  "$path": "$ROOT/repo"
+                }
+              },
+              "context_window": {
+                "context_window_size": 1000000,
+                "total_input_tokens": 456789,
+                "used_percentage": 45.6
+              }
+            }
+          }
+        }
+      ],
+      "actions": [
+        {
+          "op": "remote",
+          "branch": "main"
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$ROOT/repo"
+          },
+          "args": ["commit", "-q", "--allow-empty", "-m", "ahead"]
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$ROOT/repo/u.txt"
+          },
+          "body": ""
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$ROOT/repo/.claude/tmp/quality-gate-status.json"
+          },
+          "body": "{\"status\":\"failing\"}"
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$ROOT/cfg/.claude.json"
+          },
+          "body": "{\"oauthAccount\":{\"emailAddress\":\"me@corp.example\"}}"
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$ROOT/cfg/comemory-status/repo.json"
+          },
+          "body": "{\"count\":42}"
+        },
+        {
+          "op": "publish-jev",
+          "root": {
+            "$path": "$ROOT/cfg"
+          },
+          "host": "claude"
+        }
+      ]
+    },
+    {
+      "name": "statusline: a malformed payload still renders the defaults",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "\u001b[36mClaude\u001b[0m\u001b[2m | \u001b[0m\u001b[35mctx:0/0\u001b[0m"
+            }
+          ],
+          "plain": false,
+          "payload": {
+            "kind": "raw",
+            "value": "not json"
+          }
+        },
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "\u001b[36mClaude\u001b[0m\u001b[2m | \u001b[0m\u001b[35mctx:0/0\u001b[0m"
+            }
+          ],
+          "plain": false,
+          "payload": {
+            "kind": "raw",
+            "value": ""
+          }
+        },
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "\u001b[36mClaude\u001b[0m\u001b[2m | \u001b[0m\u001b[35mctx:0/0\u001b[0m"
+            }
+          ],
+          "plain": false,
+          "payload": {
+            "kind": "raw",
+            "value": "[1,2]"
+          }
+        },
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "\u001b[36mClaude\u001b[0m\u001b[2m | \u001b[0m\u001b[35mctx:0/0\u001b[0m"
+            }
+          ],
+          "plain": false,
+          "payload": {
+            "kind": "raw",
+            "value": "\"str\""
+          }
+        },
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "\u001b[36mClaude\u001b[0m\u001b[2m | \u001b[0m\u001b[35mctx:0/0\u001b[0m"
+            }
+          ],
+          "plain": false,
+          "payload": {
+            "kind": "raw",
+            "value": "null"
+          }
+        }
+      ],
+      "actions": []
+    },
+    {
+      "name": "statusline: a wrongly typed field stops reading the payload there",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "\u001b[36mClaude\u001b[0m\u001b[2m | \u001b[0m\u001b[35mctx:0/0\u001b[0m"
+            }
+          ],
+          "plain": false,
+          "payload": {
+            "kind": "object",
+            "value": {
+              "model": "Opus",
+              "workspace": {
+                "current_dir": {
+                  "$path": "$PROJECT"
+                }
+              }
+            }
+          }
+        },
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "M | ctx:0/0"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "object",
+            "value": {
+              "model": {
+                "display_name": "M"
+              },
+              "effort": "x",
+              "workspace": {
+                "current_dir": {
+                  "$path": "$PROJECT"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "actions": []
+    },
+    {
+      "name": "statusline: exact half percentages round to even",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "Opus | ctx:1k/200k (22%)"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "ctx",
+            "tokens": 1000,
+            "pct": 22.5
+          }
+        },
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "Opus | ctx:1k/200k (24%)"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "ctx",
+            "tokens": 1000,
+            "pct": 23.5
+          }
+        },
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "Opus | ctx:1k/200k (0%)"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "ctx",
+            "tokens": 1000,
+            "pct": 0.5
+          }
+        }
+      ],
+      "actions": []
+    },
+    {
+      "name": "statusline: a branch named like a tracking word keeps its counts",
+      "kind": "render",
+      "runs": [
+        {
+          "checks": [
+            {
+              "op": "equal",
+              "value": "Opus | ctx:1k/200k | repo | ahead-behind↑1[?1]"
+            }
+          ],
+          "plain": true,
+          "payload": {
+            "kind": "workspace",
+            "cwd": {
+              "$path": "$ROOT/repo"
+            },
+            "extra": ""
+          }
+        }
+      ],
+      "actions": [
+        {
+          "op": "remote",
+          "branch": "ahead-behind"
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$ROOT/repo"
+          },
+          "args": ["commit", "-q", "--allow-empty", "-m", "ahead"]
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$ROOT/repo/u.txt"
+          },
+          "body": ""
+        }
+      ]
+    },
+    {
+      "name": "status: reads Codex gate state and repository status without Claude fallback",
+      "kind": "report",
+      "actions": [
+        {
+          "op": "repo",
+          "path": {
+            "$path": "$PROJECT"
+          }
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/.codex/tmp/quality-gate-status.json"
+          },
+          "body": "{\"status\":\"failing\",\"reason\":\"codex failure\"}\n"
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/.claude/tmp/quality-gate-status.json"
+          },
+          "body": "{\"status\":\"passing\"}\n"
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$PROJECT"
+          },
+          "args": ["add", ".codex", ".claude"]
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$PROJECT"
+          },
+          "args": ["commit", "-q", "-m", "state"]
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/untracked.txt"
+          },
+          "body": ""
+        }
+      ],
+      "host": "codex",
+      "dir": {
+        "$path": "$PROJECT"
+      },
+      "checks": [
+        {
+          "op": "equal",
+          "value": {
+            "$template": "Host: Codex\nRepository: $PROJECT\nBranch: main\nWorking tree: staged 0, unstaged 0, untracked 1\nQuality gate: failing — codex failure\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "status: OpenCode report reads its own gate state",
+      "kind": "report",
+      "actions": [
+        {
+          "op": "repo",
+          "path": {
+            "$path": "$PROJECT"
+          }
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/.opencode/tmp/quality-gate-status.json"
+          },
+          "body": "{\"status\":\"failing\",\"reason\":\"opencode failure\"}\n"
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/.codex/tmp/quality-gate-status.json"
+          },
+          "body": "{\"status\":\"passing\"}\n"
+        }
+      ],
+      "host": "opencode",
+      "dir": {
+        "$path": "$PROJECT"
+      },
+      "checks": [
+        {
+          "op": "contains",
+          "value": "Host: OpenCode\n"
+        },
+        {
+          "op": "contains",
+          "value": "Quality gate: failing — opencode failure\n"
+        }
+      ]
+    },
+    {
+      "name": "status: unknown explicit host override fails with a diagnostic",
+      "kind": "report-error",
+      "overrides": ["opencodee", ""],
+      "expectedPrefix": "unsupported statusline host override: "
+    },
+    {
+      "name": "status: reads the host-native comemory marker when present",
+      "kind": "report",
+      "actions": [
+        {
+          "op": "repo",
+          "path": {
+            "$path": "$PROJECT"
+          }
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$HOME/.codex/comemory-status/project.json"
+          },
+          "body": "{\"repo\":\"project\",\"count\":7}\n"
+        }
+      ],
+      "host": "codex",
+      "dir": {
+        "$path": "$PROJECT"
+      },
+      "checks": [
+        {
+          "op": "contains",
+          "value": "Comemory: 7 memories\n"
+        }
+      ]
+    },
+    {
+      "name": "status: Codex report omits unavailable Claude model context and account fields",
+      "kind": "report",
+      "actions": [
+        {
+          "op": "repo",
+          "path": {
+            "$path": "$PROJECT"
+          }
+        }
+      ],
+      "host": "codex",
+      "dir": {
+        "$path": "$PROJECT"
+      },
+      "checks": [
+        {
+          "op": "contains",
+          "value": "Host: Codex\n"
+        },
+        {
+          "op": "contains",
+          "value": "Branch: main\n"
+        },
+        {
+          "op": "contains",
+          "value": "Quality gate: no recorded state\n"
+        },
+        {
+          "op": "absent",
+          "value": "Model:"
+        },
+        {
+          "op": "absent",
+          "value": "Context:"
+        },
+        {
+          "op": "absent",
+          "value": "Account:"
+        }
+      ]
+    },
+    {
+      "name": "status: selects Codex paths without lifecycle environment variables",
+      "kind": "report",
+      "actions": [
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/.codex/tmp/quality-gate-status.json"
+          },
+          "body": "{\"status\":\"failing\",\"reason\":\"codex state\"}\n"
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/.claude/tmp/quality-gate-status.json"
+          },
+          "body": "{\"status\":\"passing\"}\n"
+        }
+      ],
+      "host": "codex",
+      "dir": {
+        "$path": "$PROJECT"
+      },
+      "checks": [
+        {
+          "op": "contains",
+          "value": "Host: Codex\n"
+        },
+        {
+          "op": "contains",
+          "value": "Quality gate: failing — codex state\n"
+        }
+      ],
+      "env": {
+        "CODEX_HOME": null
+      }
+    },
+    {
+      "name": "status: a detached HEAD and a passing gate",
+      "kind": "report",
+      "actions": [
+        {
+          "op": "repo",
+          "path": {
+            "$path": "$PROJECT"
+          }
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$PROJECT"
+          },
+          "args": ["checkout", "-q", "--detach"]
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/.codex/tmp/quality-gate-status.json"
+          },
+          "body": "{\"status\":\"passing\"}"
+        }
+      ],
+      "host": "codex",
+      "dir": {
+        "$path": "$PROJECT"
+      },
+      "checks": [
+        {
+          "op": "equal",
+          "value": {
+            "$template": "Host: Codex\nRepository: $PROJECT\nBranch: detached HEAD\nWorking tree: staged 0, unstaged 0, untracked 1\nQuality gate: passing\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "status: a folder outside git",
+      "kind": "report",
+      "actions": [
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/.codex/tmp/quality-gate-status.json"
+          },
+          "body": "{\"status\":\"failing\"}"
+        }
+      ],
+      "host": "codex",
+      "dir": {
+        "$path": "$PROJECT"
+      },
+      "checks": [
+        {
+          "op": "equal",
+          "value": "Host: Codex\nFolder: project (not a git repository)\nQuality gate: failing\n"
+        }
+      ]
+    },
+    {
+      "name": "status: ahead and behind its upstream",
+      "kind": "report",
+      "actions": [
+        {
+          "op": "remote",
+          "branch": "main"
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$ROOT/repo"
+          },
+          "args": ["commit", "-q", "--allow-empty", "-m", "remote"]
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$ROOT/repo"
+          },
+          "args": ["push", "-q", "origin", "main"]
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$ROOT/repo"
+          },
+          "args": ["reset", "-q", "--hard", "HEAD~1"]
+        },
+        {
+          "op": "git",
+          "cwd": {
+            "$path": "$ROOT/repo"
+          },
+          "args": ["commit", "-q", "--allow-empty", "-m", "local"]
+        }
+      ],
+      "host": "codex",
+      "dir": {
+        "$path": "$ROOT/repo"
+      },
+      "checks": [
+        {
+          "op": "contains",
+          "value": "Branch: main (ahead 1) (behind 1)\nWorking tree: clean\n"
+        }
+      ]
+    },
+    {
+      "name": "Jev readiness: Claude renders ready from the published wrapper",
+      "kind": "jev",
+      "steps": [
+        {
+          "op": "publish-jev",
+          "root": {
+            "$path": "$ROOT/cfg"
+          },
+          "host": "claude"
+        },
+        {
+          "op": "render-workspace",
+          "checks": [
+            {
+              "op": "ends",
+              "value": "\u001b[2m | \u001b[0m\u001b[1m\u001b[32m[JEV:READY]\u001b[0m"
+            },
+            {
+              "op": "absent",
+              "value": "statusline-test-key"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Jev readiness: Codex report uses its published wrapper without lifecycle variables",
+      "kind": "jev",
+      "steps": [
+        {
+          "op": "publish-jev",
+          "root": {
+            "$path": "$HOME/.codex"
+          },
+          "host": "codex"
+        },
+        {
+          "op": "report",
+          "dir": {
+            "$path": "$PROJECT"
+          },
+          "checks": [
+            {
+              "op": "contains",
+              "value": "Jev: ready\n"
+            },
+            {
+              "op": "absent",
+              "value": "statusline-test-key"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Jev readiness: missing or empty key is unavailable with a reason",
+      "kind": "jev",
+      "steps": [
+        {
+          "op": "publish-jev",
+          "root": {
+            "$path": "$ROOT/cfg"
+          },
+          "host": "claude"
+        },
+        {
+          "op": "render-workspace",
+          "checks": [
+            {
+              "op": "ends",
+              "value": "\u001b[1m\u001b[33m[JEV:UNAVAILABLE: missing TYPESAFE_API_KEY]\u001b[0m"
+            }
+          ],
+          "env": {
+            "TYPESAFE_API_KEY": null
+          }
+        },
+        {
+          "op": "publish-jev",
+          "root": {
+            "$path": "$HOME/.codex"
+          },
+          "host": "codex"
+        },
+        {
+          "op": "report",
+          "dir": {
+            "$path": "$PROJECT"
+          },
+          "checks": [
+            {
+              "op": "contains",
+              "value": "Jev: unavailable — missing TYPESAFE_API_KEY\n"
+            }
+          ],
+          "env": {
+            "TYPESAFE_API_KEY": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jev readiness: malformed credentials are unavailable without exposing their contents",
+      "kind": "jev",
+      "steps": [
+        {
+          "op": "publish-jev",
+          "root": {
+            "$path": "$ROOT/cfg"
+          },
+          "host": "claude"
+        },
+        {
+          "op": "render-workspace",
+          "checks": [
+            {
+              "op": "ends",
+              "value": "\u001b[1m\u001b[33m[JEV:UNAVAILABLE: invalid TYPESAFE_API_KEY]\u001b[0m"
+            },
+            {
+              "op": "absent",
+              "value": "secret"
+            },
+            {
+              "op": "absent",
+              "value": "value"
+            }
+          ],
+          "env": {
+            "TYPESAFE_API_KEY": "secret\nvalue"
+          }
+        },
+        {
+          "op": "render-workspace",
+          "checks": [
+            {
+              "op": "ends",
+              "value": "\u001b[1m\u001b[33m[JEV:UNAVAILABLE: invalid TYPESAFE_API_KEY]\u001b[0m"
+            },
+            {
+              "op": "absent",
+              "value": "secret"
+            },
+            {
+              "op": "absent",
+              "value": "value"
+            }
+          ],
+          "env": {
+            "TYPESAFE_API_KEY": "secret\rvalue"
+          }
+        },
+        {
+          "op": "render-workspace",
+          "checks": [
+            {
+              "op": "ends",
+              "value": "\u001b[1m\u001b[33m[JEV:UNAVAILABLE: invalid TYPESAFE_API_KEY]\u001b[0m"
+            },
+            {
+              "op": "absent",
+              "value": "secret"
+            },
+            {
+              "op": "absent",
+              "value": "value"
+            }
+          ],
+          "env": {
+            "TYPESAFE_API_KEY": "\r"
+          }
+        },
+        {
+          "op": "render-workspace",
+          "checks": [
+            {
+              "op": "ends",
+              "value": "\u001b[1m\u001b[33m[JEV:UNAVAILABLE: invalid TYPESAFE_API_KEY]\u001b[0m"
+            },
+            {
+              "op": "absent",
+              "value": "secret"
+            },
+            {
+              "op": "absent",
+              "value": "value"
+            }
+          ],
+          "env": {
+            "TYPESAFE_API_KEY": "\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jev readiness: unpublished plugin is omitted on both hosts",
+      "kind": "jev",
+      "steps": [
+        {
+          "op": "render-workspace",
+          "checks": [
+            {
+              "op": "absent",
+              "value": "[JEV:"
+            }
+          ]
+        },
+        {
+          "op": "report",
+          "dir": {
+            "$path": "$PROJECT"
+          },
+          "checks": [
+            {
+              "op": "absent",
+              "value": "Jev:"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Jev readiness: broken wrapper symlink is unavailable",
+      "kind": "jev",
+      "steps": [
+        {
+          "op": "mkdir",
+          "path": {
+            "$path": "$ROOT/cfg/jev"
+          }
+        },
+        {
+          "op": "symlink",
+          "path": {
+            "$path": "$ROOT/cfg/jev/jev.sh"
+          },
+          "target": {
+            "$path": "$PROJECT/removed/jev.sh"
+          }
+        },
+        {
+          "op": "render-workspace",
+          "checks": [
+            {
+              "op": "ends",
+              "value": "\u001b[1m\u001b[33m[JEV:UNAVAILABLE: missing executable wrapper]\u001b[0m"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Jev readiness: a non-executable wrapper or directory cannot be ready",
+      "kind": "jev",
+      "steps": [
+        {
+          "op": "mkdir",
+          "path": {
+            "$path": "$ROOT/cfg/jev"
+          }
+        },
+        {
+          "op": "copy",
+          "path": {
+            "$path": "$ROOT/cfg/jev/jev.sh"
+          },
+          "from": "jev-bundle"
+        },
+        {
+          "op": "chmod",
+          "path": {
+            "$path": "$ROOT/cfg/jev/jev.sh"
+          },
+          "mode": 420
+        },
+        {
+          "op": "render-workspace",
+          "checks": [
+            {
+              "op": "ends",
+              "value": "\u001b[1m\u001b[33m[JEV:UNAVAILABLE: missing executable wrapper]\u001b[0m"
+            }
+          ]
+        },
+        {
+          "op": "remove",
+          "path": {
+            "$path": "$ROOT/cfg/jev/jev.sh"
+          }
+        },
+        {
+          "op": "mkdir",
+          "path": {
+            "$path": "$ROOT/cfg/jev/jev.sh"
+          }
+        },
+        {
+          "op": "render-workspace",
+          "checks": [
+            {
+              "op": "ends",
+              "value": "\u001b[1m\u001b[33m[JEV:UNAVAILABLE: missing executable wrapper]\u001b[0m"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Jev readiness: a self-looping wrapper symlink is unavailable",
+      "kind": "jev",
+      "steps": [
+        {
+          "op": "mkdir",
+          "path": {
+            "$path": "$ROOT/cfg/jev"
+          }
+        },
+        {
+          "op": "symlink",
+          "path": {
+            "$path": "$ROOT/cfg/jev/jev.sh"
+          },
+          "target": {
+            "$path": "$ROOT/cfg/jev/jev.sh"
+          }
+        },
+        {
+          "op": "mkdir",
+          "path": {
+            "$path": "$HOME/.codex/jev"
+          }
+        },
+        {
+          "op": "symlink",
+          "path": {
+            "$path": "$HOME/.codex/jev/jev.sh"
+          },
+          "target": {
+            "$path": "$HOME/.codex/jev/jev.sh"
+          }
+        },
+        {
+          "op": "render-workspace",
+          "checks": [
+            {
+              "op": "ends",
+              "value": "\u001b[1m\u001b[33m[JEV:UNAVAILABLE: missing executable wrapper]\u001b[0m"
+            }
+          ]
+        },
+        {
+          "op": "report",
+          "dir": {
+            "$path": "$PROJECT"
+          },
+          "checks": [
+            {
+              "op": "contains",
+              "value": "Jev: unavailable — missing executable wrapper\n"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Jev readiness: a file where the jev directory belongs is unpublished",
+      "kind": "jev",
+      "steps": [
+        {
+          "op": "write",
+          "path": {
+            "$path": "$ROOT/cfg/jev"
+          },
+          "body": ""
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$HOME/.codex/jev"
+          },
+          "body": ""
+        },
+        {
+          "op": "render-workspace",
+          "checks": [
+            {
+              "op": "absent",
+              "value": "[JEV:"
+            }
+          ]
+        },
+        {
+          "op": "report",
+          "dir": {
+            "$path": "$PROJECT"
+          },
+          "checks": [
+            {
+              "op": "absent",
+              "value": "Jev:"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Jev readiness: a workspace path under a regular file keeps readiness",
+      "kind": "jev",
+      "steps": [
+        {
+          "op": "publish-jev",
+          "root": {
+            "$path": "$ROOT/cfg"
+          },
+          "host": "claude"
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/file"
+          },
+          "body": ""
+        },
+        {
+          "op": "render",
+          "payload": {
+            "kind": "workspace",
+            "cwd": {
+              "$path": "$PROJECT/file/x"
+            },
+            "extra": ""
+          },
+          "plain": true,
+          "checks": [
+            {
+              "op": "equal",
+              "value": "Opus | ctx:1k/200k | [JEV:READY]"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Jev readiness: the report names missing Bun using only local prerequisites",
+      "kind": "jev",
+      "steps": [
+        {
+          "op": "publish-jev",
+          "root": {
+            "$path": "$HOME/.codex"
+          },
+          "host": "codex"
+        },
+        {
+          "op": "mkdir",
+          "path": {
+            "$path": "$PROJECT/bin"
+          }
+        },
+        {
+          "op": "link-tool",
+          "path": {
+            "$path": "$PROJECT/bin/git"
+          },
+          "tool": "git"
+        },
+        {
+          "op": "report",
+          "dir": {
+            "$path": "$PROJECT"
+          },
+          "checks": [
+            {
+              "op": "contains",
+              "value": "Jev: unavailable — missing bun\n"
+            }
+          ],
+          "env": {
+            "PATH": {
+              "$path": "$PROJECT/bin"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jev readiness: hosts never fall back to another profile's wrapper",
+      "kind": "jev",
+      "steps": [
+        {
+          "op": "publish-jev",
+          "root": {
+            "$path": "$ROOT/cfg"
+          },
+          "host": "claude"
+        },
+        {
+          "op": "report",
+          "dir": {
+            "$path": "$PROJECT"
+          },
+          "checks": [
+            {
+              "op": "absent",
+              "value": "Jev:"
+            }
+          ]
+        },
+        {
+          "op": "remove",
+          "path": {
+            "$path": "$ROOT/cfg/jev/jev.sh"
+          }
+        },
+        {
+          "op": "publish-jev",
+          "root": {
+            "$path": "$HOME/.codex"
+          },
+          "host": "codex"
+        },
+        {
+          "op": "render-workspace",
+          "checks": [
+            {
+              "op": "absent",
+              "value": "[JEV:"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Jev readiness: explicit config root takes priority on both hosts",
+      "kind": "jev",
+      "steps": [
+        {
+          "op": "publish-jev",
+          "root": {
+            "$path": "$PROJECT/explicit profile"
+          },
+          "host": "claude",
+          "env": {
+            "TOOLU_CONFIG_DIR": {
+              "$path": "$PROJECT/explicit profile"
+            }
+          }
+        },
+        {
+          "op": "render-workspace",
+          "checks": [
+            {
+              "op": "ends",
+              "value": "\u001b[1m\u001b[32m[JEV:READY]\u001b[0m"
+            }
+          ],
+          "env": {
+            "TOOLU_CONFIG_DIR": {
+              "$path": "$PROJECT/explicit profile"
+            }
+          }
+        },
+        {
+          "op": "report",
+          "dir": {
+            "$path": "$PROJECT"
+          },
+          "checks": [
+            {
+              "op": "contains",
+              "value": "Jev: ready\n"
+            }
+          ],
+          "env": {
+            "TOOLU_CONFIG_DIR": {
+              "$path": "$PROJECT/explicit profile"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jev readiness: Claude still renders readiness when payload has no workspace",
+      "kind": "jev",
+      "steps": [
+        {
+          "op": "publish-jev",
+          "root": {
+            "$path": "$ROOT/cfg"
+          },
+          "host": "claude"
+        },
+        {
+          "op": "render",
+          "payload": {
+            "kind": "raw",
+            "value": "{}"
+          },
+          "plain": false,
+          "checks": [
+            {
+              "op": "equal",
+              "value": "\u001b[36mClaude\u001b[0m\u001b[2m | \u001b[0m\u001b[35mctx:0/0\u001b[0m\u001b[2m | \u001b[0m\u001b[1m\u001b[32m[JEV:READY]\u001b[0m"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Jev readiness: a payload without a cwd omits project state; the report defaults to its cwd",
+      "kind": "jev",
+      "steps": [
+        {
+          "op": "publish-jev",
+          "root": {
+            "$path": "$ROOT/cfg"
+          },
+          "host": "claude"
+        },
+        {
+          "op": "repo",
+          "path": {
+            "$path": "$PROJECT"
+          }
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/.claude/tmp/quality-gate-status.json"
+          },
+          "body": "{\"status\":\"failing\",\"reason\":\"fixture\"}"
+        },
+        {
+          "op": "render",
+          "payload": {
+            "kind": "raw",
+            "value": "{}"
+          },
+          "plain": false,
+          "checks": [
+            {
+              "op": "equal",
+              "value": "\u001b[36mClaude\u001b[0m\u001b[2m | \u001b[0m\u001b[35mctx:0/0\u001b[0m\u001b[2m | \u001b[0m\u001b[1m\u001b[32m[JEV:READY]\u001b[0m"
+            }
+          ],
+          "cwd": {
+            "$path": "$PROJECT"
+          }
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/.codex/tmp/quality-gate-status.json"
+          },
+          "body": "{\"status\":\"failing\",\"reason\":\"fixture\"}"
+        },
+        {
+          "op": "report",
+          "dir": null,
+          "checks": [
+            {
+              "op": "contains",
+              "value": "Repository: "
+            },
+            {
+              "op": "contains",
+              "value": "Quality gate: failing — fixture\n"
+            },
+            {
+              "op": "contains",
+              "value": "Working tree: staged 0, unstaged 0, untracked 2\n"
+            }
+          ],
+          "cwd": {
+            "$path": "$PROJECT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jev readiness: an apostrophe in the workspace is literal path data",
+      "kind": "jev",
+      "steps": [
+        {
+          "op": "publish-jev",
+          "root": {
+            "$path": "$ROOT/cfg"
+          },
+          "host": "claude"
+        },
+        {
+          "op": "write",
+          "path": {
+            "$path": "$PROJECT/user's project/.keep"
+          },
+          "body": ""
+        },
+        {
+          "op": "render",
+          "payload": {
+            "kind": "object",
+            "value": {
+              "model": {
+                "display_name": "Claude"
+              },
+              "workspace": {
+                "current_dir": {
+                  "$path": "$PROJECT/user's project"
+                }
+              },
+              "context_window": {
+                "context_window_size": 200000,
+                "total_input_tokens": 1000
+              }
+            }
+          },
+          "plain": false,
+          "checks": [
+            {
+              "op": "equal",
+              "value": "\u001b[36mClaude\u001b[0m\u001b[2m | \u001b[0m\u001b[35mctx:1k/200k\u001b[0m\u001b[2m | \u001b[0m\u001b[1muser's project\u001b[0m\u001b[2m | \u001b[0m\u001b[1m\u001b[32m[JEV:READY]\u001b[0m"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "setup: creates settings.json when absent",
+      "kind": "setup",
+      "scenario": "create",
+      "expectedExit": 0,
+      "expectedStdout": {
+        "$template": "CREATED wrote $PROJECT/cfg/settings.json with the statusLine wired. Restart the session to see it.\n"
+      },
+      "expectedCommand": {
+        "$template": "\"$PROJECT/cfg/statusline/statusline.sh\""
+      }
+    },
+    {
+      "name": "setup: adds statusLine to an existing settings.json, preserving other keys",
+      "kind": "setup",
+      "scenario": "preserve",
+      "initial": "{\n  \"theme\": \"dark\"\n}\n",
+      "expectedExit": 0,
+      "stdoutPrefix": {
+        "$template": "WIRED added statusLine to $PROJECT/cfg/settings.json"
+      },
+      "expectedDoc": {
+        "theme": "dark",
+        "statusLine": {
+          "type": "command",
+          "command": {
+            "$template": "\"$PROJECT/cfg/statusline/statusline.sh\""
+          }
+        }
+      },
+      "backup": "{\n  \"theme\": \"dark\"\n}\n"
+    },
+    {
+      "name": "setup: is idempotent — second run is a no-op",
+      "kind": "setup",
+      "scenario": "idempotent",
+      "expectedExit": 0,
+      "expectedStdout": "ALREADY statusLine already points at the statusline plugin — nothing to do.\n"
+    },
+    {
+      "name": "setup: refuses to clobber a custom statusLine without --force",
+      "kind": "setup",
+      "scenario": "refuse-custom",
+      "initial": "{\n  \"statusLine\": { \"type\": \"command\", \"command\": \"my-custom-bar\" }\n}\n",
+      "expectedExit": 3,
+      "stdoutPrefix": "REFUSED a different statusLine is already set",
+      "backupAbsent": true
+    },
+    {
+      "name": "setup: --force replaces a custom statusLine (after backing it up)",
+      "kind": "setup",
+      "scenario": "force-custom",
+      "initial": "{\n  \"statusLine\": { \"type\": \"command\", \"command\": \"my-custom-bar\" }\n}\n",
+      "flags": ["--force", "-f"],
+      "expectedExit": 0,
+      "stdoutPrefix": "WIRED ",
+      "expectedCommand": {
+        "$template": "\"$PROJECT/cfg/statusline/statusline.sh\""
+      },
+      "backupCommand": "my-custom-bar"
+    },
+    {
+      "name": "setup: refuses to touch unparseable settings.json",
+      "kind": "setup",
+      "scenario": "malformed",
+      "initial": "not json {{{",
+      "expectedExit": 1,
+      "stdoutPrefix": {
+        "$template": "ERROR could not parse $PROJECT/cfg/settings.json: "
+      }
+    },
+    {
+      "name": "setup: wires an explicit config dir as a quoted path, not a bare ~",
+      "kind": "setup",
+      "scenario": "explicit",
+      "expectedExit": 0,
+      "expectedCommand": {
+        "$template": "\"$PROJECT/cfg/statusline/statusline.sh\""
+      }
+    },
+    {
+      "name": "setup: the default config dir is wired as ~/.claude",
+      "kind": "setup",
+      "scenario": "default",
+      "expectedExit": 0,
+      "expectedCommand": "~/.claude/statusline/statusline.sh"
+    },
+    {
+      "name": "setup: upgrades the pre-Bun bash command, then is a no-op",
+      "kind": "setup",
+      "scenario": "legacy-default",
+      "initial": "{\"statusLine\":{\"type\":\"command\",\"command\":\"bash ~/.claude/statusline/statusline.sh\"},\"a\":1}",
+      "expectedExit": 0,
+      "expectedStdout": {
+        "$template": "WIRED updated statusLine in $HOME/.claude/settings.json to run the Bun statusline directly (backup: settings.json.bak). Restart the session to see it.\n"
+      },
+      "expectedDoc": {
+        "statusLine": {
+          "type": "command",
+          "command": "~/.claude/statusline/statusline.sh"
+        },
+        "a": 1
+      },
+      "alreadyPrefix": "ALREADY "
+    },
+    {
+      "name": "setup: upgrades the quoted pre-Bun command of an explicit config dir",
+      "kind": "setup",
+      "scenario": "legacy-explicit",
+      "initialDoc": {
+        "statusLine": {
+          "type": "command",
+          "command": {
+            "$template": "bash \"$PROJECT/cfg/statusline/statusline.sh\""
+          }
+        }
+      },
+      "expectedExit": 0,
+      "stdoutPrefix": {
+        "$template": "WIRED updated statusLine in $PROJECT/cfg/settings.json"
+      },
+      "expectedCommand": {
+        "$template": "\"$PROJECT/cfg/statusline/statusline.sh\""
+      }
+    },
+    {
+      "name": "setup: upgrades any shell-prefixed form of the published path",
+      "kind": "setup",
+      "scenario": "shell-prefixes",
+      "shells": ["/bin/bash", "/usr/bin/env bash", "sh", "zsh", "bash -e", "bash  --norc"],
+      "expectedExit": 0,
+      "stdoutPrefix": {
+        "$template": "WIRED updated statusLine in $PROJECT/cfg/settings.json"
+      },
+      "expectedCommand": {
+        "$template": "\"$PROJECT/cfg/statusline/statusline.sh\""
+      }
+    },
+    {
+      "name": "setup: a shell -c pipeline around the path is already wired, not legacy",
+      "kind": "setup",
+      "scenario": "shell-pipelines",
+      "commands": [
+        "bash -c \"~/.claude/statusline/statusline.sh | cat\"",
+        "sh -lc '~/.claude/statusline/statusline.sh'",
+        "bash  -c \"~/.claude/statusline/statusline.sh | cat\"",
+        "bash -e -c \"~/.claude/statusline/statusline.sh\"",
+        "bash --norc -c \"~/.claude/statusline/statusline.sh\"",
+        "bash -o pipefail -c \"~/.claude/statusline/statusline.sh | cat\"",
+        "sh -lc'~/.claude/statusline/statusline.sh'"
+      ],
+      "expectedExit": 0,
+      "stdoutPrefix": "ALREADY "
+    },
+    {
+      "name": "setup: an empty settings.json is treated as absent",
+      "kind": "setup",
+      "scenario": "empty",
+      "initial": "",
+      "expectedExit": 0,
+      "stdoutPrefix": "CREATED "
+    },
+    {
+      "name": "setup: refuses a settings.json that is not an object",
+      "kind": "setup",
+      "scenario": "not-object",
+      "initial": "[1]",
+      "expectedExit": 1,
+      "expectedStdout": {
+        "$template": "ERROR $PROJECT/cfg/settings.json is not a JSON object — not touching it\n"
+      }
+    },
+    {
+      "name": "setup: the wired command runs the published renderer by path",
+      "kind": "setup",
+      "scenario": "wired-command",
+      "hookExpected": {
+        "exitCode": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "rendererExpected": {
+        "exitCode": 0,
+        "stdout": "\u001b[36mClaude\u001b[0m\u001b[2m | \u001b[0m\u001b[35mctx:0/0\u001b[0m"
+      },
+      "expectedExit": 0
+    }
+  ]
+}

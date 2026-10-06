@@ -15,7 +15,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { launcherCommand, runtimeDiagnostic } from "@toolu/core/launcher";
 
-const SCHEMAS = resolve(import.meta.dir, "../../fixtures/codex-hook-schemas");
+const SCHEMAS = resolve(import.meta.dir, "../../../fixtures/codex-hook-schemas");
 const ANNOTATIONS = new Set(["$schema", "default", "description", "title", "definitions"]);
 const home = mkdtempSync(join(tmpdir(), "launcher-schemas-"));
 

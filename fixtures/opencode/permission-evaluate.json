@@ -1,0 +1,437 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "AC-4: mapPermissionEventToTool maps edit to PreToolUse payload",
+      "kind": "map",
+      "event": {
+        "sessionID": "sess_1",
+        "action": "edit",
+        "resources": ["/proj/.env"],
+        "effect": "allow"
+      },
+      "expected": {
+        "kind": "request",
+        "request": {
+          "session_id": "sess_1",
+          "tool_use_id": "perm_sess_1",
+          "cwd": "/proj",
+          "tool_name": "Edit",
+          "tool_input": {
+            "file_path": "/proj/.env"
+          }
+        }
+      }
+    },
+    {
+      "name": "AC-4: mapPermissionEventToTool skips unknown actions",
+      "kind": "map",
+      "event": {
+        "sessionID": "sess_1",
+        "action": "read",
+        "resources": ["/proj/.env"],
+        "effect": "allow"
+      },
+      "expected": {
+        "kind": "skip"
+      }
+    },
+    {
+      "name": "AC-4: gated write without path fails closed in mapper",
+      "kind": "map",
+      "event": {
+        "sessionID": "sess_1",
+        "action": "write",
+        "resources": [],
+        "effect": "allow"
+      },
+      "expected": {
+        "kind": "deny",
+        "reason": "toolu: write permission missing file path (resources or metadata)"
+      }
+    },
+    {
+      "name": "AC-4: bash maps command from metadata",
+      "kind": "map",
+      "event": {
+        "sessionID": "sess_1",
+        "action": "bash",
+        "resources": [],
+        "effect": "allow",
+        "metadata": {
+          "command": "rm -rf /"
+        }
+      },
+      "expected": {
+        "kind": "request",
+        "request": {
+          "session_id": "sess_1",
+          "tool_use_id": "perm_sess_1",
+          "cwd": "/proj",
+          "tool_name": "Bash",
+          "tool_input": {
+            "command": "rm -rf /"
+          }
+        }
+      }
+    },
+    {
+      "name": "AC-4: applyDecisionToPermission deny",
+      "kind": "decision",
+      "checks": [
+        {
+          "decision": {
+            "kind": "deny",
+            "reason": "blocked"
+          },
+          "event": {
+            "sessionID": "sess_1",
+            "action": "edit",
+            "resources": ["/proj/.env"],
+            "effect": "allow"
+          },
+          "expected": {
+            "effect": "deny",
+            "message": "blocked"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AC-4: applyDecisionToPermission ask",
+      "kind": "decision",
+      "checks": [
+        {
+          "decision": {
+            "kind": "ask",
+            "reason": "confirm"
+          },
+          "event": {
+            "sessionID": "sess_1",
+            "action": "edit",
+            "resources": ["/proj/.env"],
+            "effect": "allow"
+          },
+          "expected": {
+            "effect": "deny",
+            "message": "confirm"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AC-4: applyDecisionToPermission allow",
+      "kind": "decision",
+      "checks": [
+        {
+          "decision": {
+            "kind": "allow"
+          },
+          "event": {
+            "sessionID": "sess_1",
+            "action": "edit",
+            "resources": ["/proj/.env"],
+            "effect": "allow"
+          },
+          "expected": {
+            "effect": "allow"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AC-4: applyDecisionToPermission advisory",
+      "kind": "decision",
+      "checks": [
+        {
+          "decision": {
+            "kind": "advisory",
+            "message": "hint"
+          },
+          "event": {
+            "sessionID": "sess_1",
+            "action": "edit",
+            "resources": ["/proj/.env"],
+            "effect": "allow"
+          },
+          "expected": {
+            "effect": "allow"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AC-4: applyDecisionToPermission post_block",
+      "kind": "decision",
+      "checks": [
+        {
+          "decision": {
+            "kind": "post_block",
+            "reason": "post"
+          },
+          "event": {
+            "sessionID": "sess_1",
+            "action": "edit",
+            "resources": ["/proj/.env"],
+            "effect": "allow"
+          },
+          "expected": {
+            "effect": "deny",
+            "message": "post"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AC-4: applyDecisionToPermission runtime_failure",
+      "kind": "decision",
+      "checks": [
+        {
+          "decision": {
+            "kind": "runtime_failure",
+            "reason": "fail",
+            "code": "parse"
+          },
+          "event": {
+            "sessionID": "sess_1",
+            "action": "edit",
+            "resources": ["/proj/.env"],
+            "effect": "allow"
+          },
+          "expected": {
+            "effect": "deny",
+            "message": "fail"
+          }
+        }
+      ]
+    },
+    {
+      "name": "toolu allow or advisory preserves a stricter native deny or ask",
+      "kind": "decision",
+      "checks": [
+        {
+          "decision": {
+            "kind": "allow"
+          },
+          "event": {
+            "sessionID": "sess_1",
+            "action": "edit",
+            "resources": ["/proj/.env"],
+            "effect": "deny",
+            "message": "native reason"
+          },
+          "expected": {
+            "effect": "deny",
+            "message": "native reason"
+          }
+        },
+        {
+          "decision": {
+            "kind": "advisory",
+            "message": "hint"
+          },
+          "event": {
+            "sessionID": "sess_1",
+            "action": "edit",
+            "resources": ["/proj/.env"],
+            "effect": "deny",
+            "message": "native reason"
+          },
+          "expected": {
+            "effect": "deny",
+            "message": "native reason"
+          }
+        },
+        {
+          "decision": {
+            "kind": "allow"
+          },
+          "event": {
+            "sessionID": "sess_1",
+            "action": "edit",
+            "resources": ["/proj/.env"],
+            "effect": "ask",
+            "message": "native reason"
+          },
+          "expected": {
+            "effect": "ask",
+            "message": "native reason"
+          }
+        },
+        {
+          "decision": {
+            "kind": "advisory",
+            "message": "hint"
+          },
+          "event": {
+            "sessionID": "sess_1",
+            "action": "edit",
+            "resources": ["/proj/.env"],
+            "effect": "ask",
+            "message": "native reason"
+          },
+          "expected": {
+            "effect": "ask",
+            "message": "native reason"
+          }
+        }
+      ]
+    },
+    {
+      "name": "a generated ask never weakens a native deny or replaces an existing native ask",
+      "kind": "decision",
+      "checks": [
+        {
+          "decision": {
+            "kind": "ask",
+            "reason": "toolu ask"
+          },
+          "event": {
+            "sessionID": "sess_1",
+            "action": "edit",
+            "resources": ["/proj/.env"],
+            "effect": "deny",
+            "message": "native reason"
+          },
+          "expected": {
+            "effect": "deny",
+            "message": "native reason"
+          }
+        },
+        {
+          "decision": {
+            "kind": "ask",
+            "reason": "toolu ask"
+          },
+          "event": {
+            "sessionID": "sess_1",
+            "action": "edit",
+            "resources": ["/proj/.env"],
+            "effect": "ask",
+            "message": "native reason"
+          },
+          "expected": {
+            "effect": "ask",
+            "message": "native reason"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AC-2: evaluate handler + core dispatcher on protected .env yields deny",
+      "kind": "evaluate-protected",
+      "config": {
+        "version": 1,
+        "gates": {
+          "protectedFiles": {
+            "mode": "block"
+          }
+        }
+      },
+      "file": ".env",
+      "body": "SECRET=1\n",
+      "expected": {
+        "effect": "deny"
+      },
+      "event": {
+        "sessionID": "sess_eval_1",
+        "action": "edit",
+        "effect": "allow",
+        "toolCallId": "call_eval_1"
+      }
+    },
+    {
+      "name": "#276: native protected-file deny works with bash and jq absent from PATH",
+      "kind": "evaluate-protected",
+      "config": {
+        "version": 1,
+        "gates": {
+          "protectedFiles": {
+            "mode": "block"
+          }
+        }
+      },
+      "file": ".env",
+      "body": "SECRET=1\n",
+      "pathTools": ["git", "bun"],
+      "expected": {
+        "effect": "deny",
+        "messageContains": "protected"
+      },
+      "event": {
+        "sessionID": "sess_eval_1",
+        "action": "edit",
+        "effect": "allow",
+        "toolCallId": "call_eval_1"
+      }
+    },
+    {
+      "name": "#276: bundled ast-grep registry runs from isolated OpenCode root without bash",
+      "kind": "evaluate-registry",
+      "plugins": ["toolu", "ast-grep"],
+      "pathTools": ["git", "bun"],
+      "command": "rg TODO src",
+      "artifactSuffix": "ast-grep@toolu__search-nudge.js",
+      "advisoryContains": "grep/rg in Bash detected",
+      "expected": {
+        "effect": "allow"
+      },
+      "event": {
+        "sessionID": "sess_registry_1",
+        "action": "bash",
+        "effect": "allow"
+      }
+    },
+    {
+      "name": "AC-3: runtime_failure from bad repoRoot maps to deny",
+      "kind": "evaluate-bad-root",
+      "config": {
+        "version": 1,
+        "gates": {
+          "protectedFiles": {
+            "mode": "block"
+          }
+        }
+      },
+      "file": ".env",
+      "body": "SECRET=1\n",
+      "badRoot": "toolu-nonexistent-repo-root",
+      "expected": {
+        "effect": "deny",
+        "messageNonempty": true
+      },
+      "event": {
+        "sessionID": "sess_eval_1",
+        "action": "edit",
+        "effect": "allow",
+        "toolCallId": "call_eval_1"
+      }
+    },
+    {
+      "name": "#343: gates see no other host's root and read the global config from userConfigRoot",
+      "kind": "evaluate-gate-env",
+      "base": {
+        "repoRoot": "/repo",
+        "configRoot": "/data",
+        "cwd": "/p/sub",
+        "projectRoot": "/p",
+        "worktree": "/p",
+        "env": {
+          "KEEP": "1",
+          "TOOLU_PROJECT_DIR": "/elsewhere"
+        },
+        "userConfigRoot": "/global",
+        "pluginRoot": "/repo/plugins/toolu"
+      },
+      "expected": {
+        "KEEP": "1",
+        "TOOLU_USER_CONFIG_DIR": "/global",
+        "TOOLU_CONFIG_DIR": "/data",
+        "TOOLU_PROJECT_DIR": "/p",
+        "TOOLU_PROJECT_CONFIG_DIRNAME": ".opencode",
+        "TOOLU_HOST_OVERRIDE": "opencode",
+        "TOOLU_SETTINGS_DIR": "/repo/plugins/toolu/settings"
+      }
+    }
+  ]
+}

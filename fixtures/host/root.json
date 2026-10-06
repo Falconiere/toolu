@@ -1,0 +1,1090 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "each host has its native user root",
+      "kind": "calls",
+      "git": false,
+      "dirs": [],
+      "checks": [
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u"
+              },
+              "host": "claude"
+            }
+          ],
+          "expected": "/home/u/.claude"
+        },
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u"
+              },
+              "host": "codex"
+            }
+          ],
+          "expected": "/home/u/.codex"
+        },
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u"
+              },
+              "host": "cursor"
+            }
+          ],
+          "expected": "/home/u/.cursor"
+        },
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u"
+              },
+              "host": "hermes"
+            }
+          ],
+          "expected": "/home/u/.hermes"
+        },
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u"
+              },
+              "host": "opencode"
+            }
+          ],
+          "expected": "/home/u/.config/opencode"
+        }
+      ]
+    },
+    {
+      "name": "host-native overrides apply to their own host only",
+      "kind": "calls",
+      "git": false,
+      "dirs": [],
+      "checks": [
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u",
+                "CLAUDE_CONFIG_DIR": "/cc",
+                "CODEX_HOME": "/cx",
+                "HERMES_HOME": "/hh",
+                "XDG_CONFIG_HOME": "/xdg"
+              },
+              "host": "claude"
+            }
+          ],
+          "expected": "/cc"
+        },
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u",
+                "CLAUDE_CONFIG_DIR": "/cc",
+                "CODEX_HOME": "/cx",
+                "HERMES_HOME": "/hh",
+                "XDG_CONFIG_HOME": "/xdg"
+              },
+              "host": "codex"
+            }
+          ],
+          "expected": "/cx"
+        },
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u",
+                "CLAUDE_CONFIG_DIR": "/cc",
+                "CODEX_HOME": "/cx",
+                "HERMES_HOME": "/hh",
+                "XDG_CONFIG_HOME": "/xdg"
+              },
+              "host": "hermes"
+            }
+          ],
+          "expected": "/hh"
+        },
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u",
+                "CLAUDE_CONFIG_DIR": "/cc",
+                "CODEX_HOME": "/cx",
+                "HERMES_HOME": "/hh",
+                "XDG_CONFIG_HOME": "/xdg"
+              },
+              "host": "opencode"
+            }
+          ],
+          "expected": "/xdg/opencode"
+        },
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u",
+                "CLAUDE_CONFIG_DIR": "/cc",
+                "CODEX_HOME": "/cx",
+                "HERMES_HOME": "/hh",
+                "XDG_CONFIG_HOME": "/xdg"
+              },
+              "host": "cursor"
+            }
+          ],
+          "expected": "/home/u/.cursor"
+        },
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u",
+                "CLAUDE_CONFIG_DIR": "/cc",
+                "CODEX_HOME": "/cx",
+                "HERMES_HOME": "/hh",
+                "XDG_CONFIG_HOME": "/xdg",
+                "TOOLU_OPENCODE_HOME": "/oc"
+              },
+              "host": "opencode"
+            }
+          ],
+          "expected": "/oc"
+        }
+      ]
+    },
+    {
+      "name": "TOOLU_CONFIG_DIR wins on every host",
+      "kind": "calls",
+      "git": false,
+      "dirs": [],
+      "checks": [
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u",
+                "TOOLU_CONFIG_DIR": "/explicit",
+                "CODEX_HOME": "/wrong"
+              },
+              "host": "claude"
+            }
+          ],
+          "expected": "/explicit"
+        },
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u",
+                "TOOLU_CONFIG_DIR": "/explicit",
+                "CODEX_HOME": "/wrong"
+              },
+              "host": "codex"
+            }
+          ],
+          "expected": "/explicit"
+        },
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u",
+                "TOOLU_CONFIG_DIR": "/explicit",
+                "CODEX_HOME": "/wrong"
+              },
+              "host": "cursor"
+            }
+          ],
+          "expected": "/explicit"
+        },
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u",
+                "TOOLU_CONFIG_DIR": "/explicit",
+                "CODEX_HOME": "/wrong"
+              },
+              "host": "hermes"
+            }
+          ],
+          "expected": "/explicit"
+        },
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u",
+                "TOOLU_CONFIG_DIR": "/explicit",
+                "CODEX_HOME": "/wrong"
+              },
+              "host": "opencode"
+            }
+          ],
+          "expected": "/explicit"
+        }
+      ]
+    },
+    {
+      "name": "detects the host from env when none is given",
+      "kind": "calls",
+      "git": false,
+      "dirs": [],
+      "checks": [
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {
+                "HOME": "/home/u",
+                "PLUGIN_ROOT": "/p"
+              }
+            }
+          ],
+          "expected": "/home/u/.codex"
+        }
+      ]
+    },
+    {
+      "name": "an unset HOME falls back to the OS home directory",
+      "kind": "calls",
+      "git": false,
+      "dirs": [],
+      "checks": [
+        {
+          "fn": "configRoot",
+          "args": [
+            {
+              "env": {},
+              "host": "claude"
+            }
+          ],
+          "expected": {
+            "$runtime": "OS_CLAUDE_HOME"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TOOLU_PROJECT_DIR wins, then the host's project variable",
+      "kind": "calls",
+      "git": false,
+      "dirs": [],
+      "checks": [
+        {
+          "fn": "projectRoot",
+          "args": [
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/t",
+                "CLAUDE_PROJECT_DIR": "/c",
+                "CURSOR_PROJECT_DIR": "/k"
+              },
+              "host": "claude"
+            }
+          ],
+          "expected": "/t"
+        },
+        {
+          "fn": "projectRoot",
+          "args": [
+            {
+              "env": {
+                "CLAUDE_PROJECT_DIR": "/c",
+                "CURSOR_PROJECT_DIR": "/k"
+              },
+              "host": "claude"
+            }
+          ],
+          "expected": "/c"
+        },
+        {
+          "fn": "projectRoot",
+          "args": [
+            {
+              "env": {
+                "CLAUDE_PROJECT_DIR": "/c",
+                "CURSOR_PROJECT_DIR": "/k"
+              },
+              "host": "cursor"
+            }
+          ],
+          "expected": "/k"
+        }
+      ]
+    },
+    {
+      "name": "Codex ignores CLAUDE_PROJECT_DIR and falls back to the git toplevel of cwd",
+      "kind": "calls",
+      "git": true,
+      "dirs": ["src"],
+      "checks": [
+        {
+          "fn": "projectRoot",
+          "args": [
+            {
+              "env": {
+                "PATH": {
+                  "$runtime": "PATH"
+                },
+                "CLAUDE_PROJECT_DIR": "/c"
+              },
+              "host": "codex",
+              "cwd": {
+                "$path": "$PROJECT/src"
+              }
+            }
+          ],
+          "expected": {
+            "$path": "$PROJECT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "git runs with the caller's env, not the ambient one",
+      "kind": "calls",
+      "git": true,
+      "dirs": ["src"],
+      "checks": [
+        {
+          "fn": "projectRoot",
+          "args": [
+            {
+              "env": {
+                "PATH": {
+                  "$runtime": "PATH"
+                }
+              },
+              "host": "codex",
+              "cwd": {
+                "$path": "$PROJECT"
+              }
+            }
+          ],
+          "expected": {
+            "$path": "$PROJECT"
+          }
+        },
+        {
+          "fn": "projectRoot",
+          "args": [
+            {
+              "env": {
+                "PATH": {
+                  "$runtime": "PATH"
+                },
+                "GIT_CEILING_DIRECTORIES": {
+                  "$path": "$PROJECT"
+                }
+              },
+              "host": "codex",
+              "cwd": {
+                "$path": "$PROJECT/src"
+              }
+            }
+          ],
+          "expected": null
+        }
+      ]
+    },
+    {
+      "name": "outside a git repository there is no project root and no project paths",
+      "kind": "calls",
+      "git": false,
+      "dirs": ["$ROOT/outside"],
+      "checks": [
+        {
+          "fn": "projectRoot",
+          "args": [
+            {
+              "env": {
+                "PATH": {
+                  "$runtime": "PATH"
+                }
+              },
+              "host": "claude",
+              "cwd": {
+                "$path": "$ROOT/outside"
+              }
+            }
+          ],
+          "expected": null
+        },
+        {
+          "fn": "projectConfigPath",
+          "args": [
+            {
+              "env": {
+                "PATH": {
+                  "$runtime": "PATH"
+                }
+              },
+              "host": "claude",
+              "cwd": {
+                "$path": "$ROOT/outside"
+              }
+            }
+          ],
+          "expected": null
+        },
+        {
+          "fn": "projectStateRoot",
+          "args": [
+            {
+              "env": {
+                "PATH": {
+                  "$runtime": "PATH"
+                }
+              },
+              "host": "claude",
+              "cwd": {
+                "$path": "$ROOT/outside"
+              }
+            }
+          ],
+          "expected": null
+        },
+        {
+          "fn": "projectStateDir",
+          "args": [
+            "telemetry",
+            {
+              "env": {
+                "PATH": {
+                  "$runtime": "PATH"
+                }
+              },
+              "host": "claude",
+              "cwd": {
+                "$path": "$ROOT/outside"
+              }
+            }
+          ],
+          "expected": null
+        }
+      ]
+    },
+    {
+      "name": "config and state paths are isolated by host dirname",
+      "kind": "calls",
+      "git": false,
+      "dirs": [],
+      "checks": [
+        {
+          "fn": "projectDirname",
+          "args": [
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo"
+              },
+              "host": "claude"
+            }
+          ],
+          "expected": ".claude"
+        },
+        {
+          "fn": "projectConfigPath",
+          "args": [
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo"
+              },
+              "host": "claude"
+            }
+          ],
+          "expected": "/repo/.claude/toolu.config.json"
+        },
+        {
+          "fn": "projectStateDir",
+          "args": [
+            "telemetry",
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo"
+              },
+              "host": "claude"
+            }
+          ],
+          "expected": "/repo/.claude/tmp/telemetry"
+        },
+        {
+          "fn": "projectDirname",
+          "args": [
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo"
+              },
+              "host": "codex"
+            }
+          ],
+          "expected": ".codex"
+        },
+        {
+          "fn": "projectConfigPath",
+          "args": [
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo"
+              },
+              "host": "codex"
+            }
+          ],
+          "expected": "/repo/.codex/toolu.config.json"
+        },
+        {
+          "fn": "projectStateDir",
+          "args": [
+            "telemetry",
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo"
+              },
+              "host": "codex"
+            }
+          ],
+          "expected": "/repo/.codex/tmp/telemetry"
+        },
+        {
+          "fn": "projectDirname",
+          "args": [
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo"
+              },
+              "host": "cursor"
+            }
+          ],
+          "expected": ".cursor"
+        },
+        {
+          "fn": "projectConfigPath",
+          "args": [
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo"
+              },
+              "host": "cursor"
+            }
+          ],
+          "expected": "/repo/.cursor/toolu.config.json"
+        },
+        {
+          "fn": "projectStateDir",
+          "args": [
+            "telemetry",
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo"
+              },
+              "host": "cursor"
+            }
+          ],
+          "expected": "/repo/.cursor/tmp/telemetry"
+        },
+        {
+          "fn": "projectDirname",
+          "args": [
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo"
+              },
+              "host": "hermes"
+            }
+          ],
+          "expected": ".hermes"
+        },
+        {
+          "fn": "projectConfigPath",
+          "args": [
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo"
+              },
+              "host": "hermes"
+            }
+          ],
+          "expected": "/repo/.hermes/toolu.config.json"
+        },
+        {
+          "fn": "projectStateDir",
+          "args": [
+            "telemetry",
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo"
+              },
+              "host": "hermes"
+            }
+          ],
+          "expected": "/repo/.hermes/tmp/telemetry"
+        },
+        {
+          "fn": "projectDirname",
+          "args": [
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo"
+              },
+              "host": "opencode"
+            }
+          ],
+          "expected": ".opencode"
+        },
+        {
+          "fn": "projectConfigPath",
+          "args": [
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo"
+              },
+              "host": "opencode"
+            }
+          ],
+          "expected": "/repo/.opencode/toolu.config.json"
+        },
+        {
+          "fn": "projectStateDir",
+          "args": [
+            "telemetry",
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo"
+              },
+              "host": "opencode"
+            }
+          ],
+          "expected": "/repo/.opencode/tmp/telemetry"
+        }
+      ]
+    },
+    {
+      "name": "TOOLU_PROJECT_CONFIG_DIRNAME and an explicit root override the defaults",
+      "kind": "calls",
+      "git": false,
+      "dirs": [],
+      "checks": [
+        {
+          "fn": "projectStateDir",
+          "args": [
+            "telemetry",
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo",
+                "TOOLU_PROJECT_CONFIG_DIRNAME": ".test-state"
+              },
+              "host": "codex"
+            }
+          ],
+          "expected": "/repo/.test-state/tmp/telemetry"
+        },
+        {
+          "fn": "projectStateRoot",
+          "args": [
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/repo",
+                "TOOLU_PROJECT_CONFIG_DIRNAME": ".test-state"
+              },
+              "host": "codex",
+              "root": "/other"
+            }
+          ],
+          "expected": "/other/.test-state/tmp"
+        }
+      ]
+    },
+    {
+      "name": "an empty state-dir name is a caller error",
+      "kind": "calls",
+      "git": false,
+      "dirs": [],
+      "checks": [
+        {
+          "fn": "projectStateDir",
+          "args": [
+            "",
+            {
+              "env": {
+                "TOOLU_PROJECT_DIR": "/r"
+              }
+            }
+          ],
+          "throws": "TypeError"
+        }
+      ]
+    },
+    {
+      "name": "each host reads its own plugin root first, then CLAUDE_PLUGIN_ROOT",
+      "kind": "calls",
+      "git": false,
+      "dirs": [],
+      "checks": [
+        {
+          "fn": "pluginRoot",
+          "args": [
+            {
+              "env": {
+                "PLUGIN_ROOT": "/codex-root",
+                "PLUGIN_DATA": "/codex-data",
+                "CURSOR_PLUGIN_ROOT": "/cursor-root",
+                "TOOLU_PLUGIN_ROOT": "/oc-root",
+                "CLAUDE_PLUGIN_ROOT": "/claude-root",
+                "CLAUDE_PLUGIN_DATA": "/claude-data"
+              },
+              "host": "codex"
+            }
+          ],
+          "expected": "/codex-root"
+        },
+        {
+          "fn": "pluginRoot",
+          "args": [
+            {
+              "env": {
+                "PLUGIN_ROOT": "/codex-root",
+                "PLUGIN_DATA": "/codex-data",
+                "CURSOR_PLUGIN_ROOT": "/cursor-root",
+                "TOOLU_PLUGIN_ROOT": "/oc-root",
+                "CLAUDE_PLUGIN_ROOT": "/claude-root",
+                "CLAUDE_PLUGIN_DATA": "/claude-data"
+              },
+              "host": "cursor"
+            }
+          ],
+          "expected": "/cursor-root"
+        },
+        {
+          "fn": "pluginRoot",
+          "args": [
+            {
+              "env": {
+                "PLUGIN_ROOT": "/codex-root",
+                "PLUGIN_DATA": "/codex-data",
+                "CURSOR_PLUGIN_ROOT": "/cursor-root",
+                "TOOLU_PLUGIN_ROOT": "/oc-root",
+                "CLAUDE_PLUGIN_ROOT": "/claude-root",
+                "CLAUDE_PLUGIN_DATA": "/claude-data"
+              },
+              "host": "opencode"
+            }
+          ],
+          "expected": "/oc-root"
+        },
+        {
+          "fn": "pluginRoot",
+          "args": [
+            {
+              "env": {
+                "PLUGIN_ROOT": "/codex-root",
+                "PLUGIN_DATA": "/codex-data",
+                "CURSOR_PLUGIN_ROOT": "/cursor-root",
+                "TOOLU_PLUGIN_ROOT": "/oc-root",
+                "CLAUDE_PLUGIN_ROOT": "/claude-root",
+                "CLAUDE_PLUGIN_DATA": "/claude-data"
+              },
+              "host": "claude"
+            }
+          ],
+          "expected": "/claude-root"
+        },
+        {
+          "fn": "pluginRoot",
+          "args": [
+            {
+              "env": {
+                "PLUGIN_ROOT": "/codex-root",
+                "PLUGIN_DATA": "/codex-data",
+                "CURSOR_PLUGIN_ROOT": "/cursor-root",
+                "TOOLU_PLUGIN_ROOT": "/oc-root",
+                "CLAUDE_PLUGIN_ROOT": "/claude-root",
+                "CLAUDE_PLUGIN_DATA": "/claude-data"
+              },
+              "host": "hermes"
+            }
+          ],
+          "expected": "/claude-root"
+        },
+        {
+          "fn": "pluginRoot",
+          "args": [
+            {
+              "env": {
+                "CLAUDE_PLUGIN_ROOT": "/c"
+              },
+              "host": "codex"
+            }
+          ],
+          "expected": "/c"
+        },
+        {
+          "fn": "pluginRoot",
+          "args": [
+            {
+              "env": {},
+              "host": "claude"
+            }
+          ],
+          "expected": null
+        }
+      ]
+    },
+    {
+      "name": "plugin data is PLUGIN_DATA on Codex, else CLAUDE_PLUGIN_DATA",
+      "kind": "calls",
+      "git": false,
+      "dirs": [],
+      "checks": [
+        {
+          "fn": "pluginData",
+          "args": [
+            {
+              "env": {
+                "PLUGIN_ROOT": "/codex-root",
+                "PLUGIN_DATA": "/codex-data",
+                "CURSOR_PLUGIN_ROOT": "/cursor-root",
+                "TOOLU_PLUGIN_ROOT": "/oc-root",
+                "CLAUDE_PLUGIN_ROOT": "/claude-root",
+                "CLAUDE_PLUGIN_DATA": "/claude-data"
+              },
+              "host": "codex"
+            }
+          ],
+          "expected": "/codex-data"
+        },
+        {
+          "fn": "pluginData",
+          "args": [
+            {
+              "env": {
+                "PLUGIN_ROOT": "/codex-root",
+                "PLUGIN_DATA": "/codex-data",
+                "CURSOR_PLUGIN_ROOT": "/cursor-root",
+                "TOOLU_PLUGIN_ROOT": "/oc-root",
+                "CLAUDE_PLUGIN_ROOT": "/claude-root",
+                "CLAUDE_PLUGIN_DATA": "/claude-data"
+              },
+              "host": "claude"
+            }
+          ],
+          "expected": "/claude-data"
+        },
+        {
+          "fn": "pluginData",
+          "args": [
+            {
+              "env": {},
+              "host": "cursor"
+            }
+          ],
+          "expected": null
+        }
+      ]
+    },
+    {
+      "name": "invocation syntax is host-native",
+      "kind": "calls",
+      "git": false,
+      "dirs": [],
+      "checks": [
+        {
+          "fn": "invocation",
+          "args": [
+            "toolu",
+            "setup",
+            {
+              "env": {},
+              "host": "claude"
+            }
+          ],
+          "expected": "/toolu:setup"
+        },
+        {
+          "fn": "invocation",
+          "args": [
+            "toolu",
+            "setup",
+            {
+              "env": {},
+              "host": "codex"
+            }
+          ],
+          "expected": "$toolu:setup"
+        },
+        {
+          "fn": "invocation",
+          "args": [
+            "toolu",
+            "setup",
+            {
+              "env": {},
+              "host": "cursor"
+            }
+          ],
+          "expected": "/toolu:setup"
+        },
+        {
+          "fn": "invocation",
+          "args": [
+            "toolu",
+            "setup",
+            {
+              "env": {},
+              "host": "hermes"
+            }
+          ],
+          "expected": "/toolu:setup"
+        },
+        {
+          "fn": "invocation",
+          "args": [
+            "toolu",
+            "commit",
+            {
+              "env": {},
+              "host": "opencode"
+            }
+          ],
+          "expected": "/toolu--commit"
+        }
+      ]
+    },
+    {
+      "name": "an empty namespace or name is a caller error",
+      "kind": "calls",
+      "git": false,
+      "dirs": [],
+      "checks": [
+        {
+          "fn": "invocation",
+          "args": [
+            "",
+            "setup",
+            {
+              "env": {}
+            }
+          ],
+          "throws": "TypeError"
+        },
+        {
+          "fn": "invocation",
+          "args": [
+            "toolu",
+            "",
+            {
+              "env": {}
+            }
+          ],
+          "throws": "TypeError"
+        }
+      ]
+    },
+    {
+      "name": "only Claude and Codex have a host-native per-plugin install command",
+      "kind": "calls",
+      "git": false,
+      "dirs": [],
+      "checks": [
+        {
+          "fn": "pluginInstallCommand",
+          "args": [
+            "toolu@toolu",
+            {
+              "env": {},
+              "host": "claude"
+            }
+          ],
+          "expected": "/plugin install toolu@toolu"
+        },
+        {
+          "fn": "pluginInstallCommand",
+          "args": [
+            "toolu@toolu",
+            {
+              "env": {},
+              "host": "codex"
+            }
+          ],
+          "expected": "codex plugin add toolu@toolu"
+        },
+        {
+          "fn": "pluginInstallCommand",
+          "args": [
+            "toolu@toolu",
+            {
+              "env": {},
+              "host": "cursor"
+            }
+          ],
+          "expected": null
+        },
+        {
+          "fn": "pluginInstallCommand",
+          "args": [
+            "toolu@toolu",
+            {
+              "env": {},
+              "host": "hermes"
+            }
+          ],
+          "expected": null
+        },
+        {
+          "fn": "pluginInstallCommand",
+          "args": [
+            "toolu@toolu",
+            {
+              "env": {},
+              "host": "opencode"
+            }
+          ],
+          "expected": null
+        },
+        {
+          "fn": "pluginInstallCommand",
+          "args": [
+            "",
+            {
+              "env": {}
+            }
+          ],
+          "throws": "TypeError"
+        }
+      ]
+    },
+    {
+      "name": "an invalid override warns once from composite path functions",
+      "kind": "warning",
+      "override": "bogus",
+      "projectDir": "/repo",
+      "warning": "toolu-host: invalid TOOLU_HOST_OVERRIDE 'bogus' (using environment detection)"
+    }
+  ]
+}

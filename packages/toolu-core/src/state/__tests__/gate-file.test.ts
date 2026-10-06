@@ -1,27 +1,51 @@
-/**
- * Gate-file behaviour that goes past bash (#255): strict reads classify an
- * unknown field or a foreign version as unrecognized. Recording replaces such
- * a file, with a warning and a breadcrumb. Clearing leaves it byte-identical.
- * Every other failure path never throws.
- */
-import { describe, expect, test } from "bun:test";
+/** Strict gate-file reads, replacement and clear behavior over shared JSON records. */
+import { expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { readCaseFile } from "@toolu/conformance/harness/json-cases";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
+import { z } from "zod";
 import { clearGateFile, readGateFile, recordGateFailure } from "../gate-file.ts";
 
-const OLD = "2020-01-01T00:00:00Z";
-const NOW = new Date("2026-09-28T10:00:00.500Z");
-const ENTRY = { source: "ts-quality-hook", reason: "r", violations: "v\n", updatedAt: OLD };
-const FAILING = {
-  status: "failing",
-  reason: "r",
-  source: "ts-quality-hook",
-  file: "/r/a.ts",
-  violations: "v\n",
-  entries: { "/r/a.ts": ENTRY, "/r/b.ts": ENTRY },
-  updatedAt: OLD,
-};
+const CaseSchema = z.strictObject({
+  name: z.string(),
+  kind: z.literal("gate-file"),
+  scenario: z.enum([
+    "read",
+    "read-reason",
+    "replace",
+    "clear-unrecognized",
+    "clear-malformed",
+    "clear-missing",
+    "clear-live-lock",
+    "telemetry",
+    "ordering",
+  ]),
+  now: z.string(),
+  body: z.string().nullable().optional(),
+  document: z.json().optional(),
+  expectedKind: z.enum(["missing", "malformed", "unrecognized", "ok"]).optional(),
+  reasonContains: z.string().optional(),
+  branch: z.string().optional(),
+  file: z.string().optional(),
+  source: z.string().optional(),
+  reason: z.string().optional(),
+  violations: z.string().optional(),
+  expectedDoc: z.json().optional(),
+  warningPrefix: z.string().optional(),
+  warningSuffix: z.string().optional(),
+  warning: z.string().optional(),
+  dropLog: z.string().optional(),
+  expected: z.union([z.string(), z.array(z.string())]).optional(),
+  lockSuffix: z.string().optional(),
+  maxMs: z.number().int().optional(),
+  telemetryFile: z.string().optional(),
+  expectedLine: z.string().optional(),
+});
+const cases = readCaseFile(resolve(import.meta.dir, "../../../../../fixtures/state/cases.json"))
+  .filter((raw) => raw.kind === "gate-file")
+  .map((raw) => CaseSchema.parse(raw));
+const str = (value: unknown) => z.string().parse(value);
 
 function gate(sb: Sandbox, body?: string): string {
   const dir = join(sb.project, ".claude", "tmp");
@@ -31,145 +55,98 @@ function gate(sb: Sandbox, body?: string): string {
   return file;
 }
 
-function options(sb: Sandbox, warnings: string[]) {
-  return {
-    env: { HOME: sb.home, TOOLU_PROJECT_DIR: sb.project, TOOLU_HOST_OVERRIDE: "claude" },
-    host: "claude" as const,
-    now: () => NOW,
-    warn: (m: string) => warnings.push(m),
-  };
-}
-
-describe("readGateFile", () => {
-  test.each([
-    ["missing", undefined, "missing"],
-    ["malformed", "{", "malformed"],
-    ["null", "null", "malformed"],
-    ["false", "false", "malformed"],
-    ["empty", "", "malformed"],
-    ["array", "[]", "unrecognized"],
-    ["unknown field", JSON.stringify({ ...FAILING, owner: "x" }), "unrecognized"],
-    ["version 2", JSON.stringify({ ...FAILING, version: 2 }), "unrecognized"],
-    ["valid", JSON.stringify(FAILING), "ok"],
-    ["valid with version 1", JSON.stringify({ ...FAILING, version: 1 }), "ok"],
-  ])("%s → %s", (_name, body, kind) => {
-    using sb = createSandbox();
-    expect(String(readGateFile(gate(sb, body)).kind)).toBe(kind);
-  });
-
-  test("an unrecognized document names the offending field", () => {
-    using sb = createSandbox();
-    const read = readGateFile(
-      gate(sb, JSON.stringify({ ...FAILING, entries: { a: { ...ENTRY, x: 1 } } })),
-    );
-    expect(read.kind === "unrecognized" && read.reason).toContain("entries.a");
-  });
-});
-
-describe("unrecognized documents", () => {
-  const cases = [
-    ["an unknown top-level field", { ...FAILING, owner: "someone" }],
-    ["version 2", { ...FAILING, version: 2 }],
-  ] as const;
-
-  for (const [name, doc] of cases) {
-    test(`record replaces ${name}, warns, and logs the drop`, () => {
-      using sb = createSandbox({ git: true, branch: "feat/x" });
-      const file = gate(sb, JSON.stringify(doc, null, 2));
-      const warnings: string[] = [];
-      recordGateFailure(file, "/r/c.ts", "ts-quality-hook", "reason", "c\n", options(sb, warnings));
+for (const c of cases) {
+  test(c.name, () => {
+    using sb = createSandbox({
+      git: c.branch !== undefined,
+      ...(c.branch === undefined ? {} : { branch: c.branch }),
+    });
+    const body =
+      c.document === undefined ? (c.body ?? undefined) : JSON.stringify(c.document, null, 2);
+    const file = gate(sb, body);
+    const warnings: string[] = [];
+    const options = {
+      env: { HOME: sb.home, TOOLU_PROJECT_DIR: sb.project, TOOLU_HOST_OVERRIDE: "claude" },
+      host: "claude" as const,
+      now: () => new Date(c.now),
+      warn: (m: string) => warnings.push(m),
+    };
+    if (c.scenario === "read") {
+      expect(readGateFile(file).kind).toBe(
+        z.enum(["missing", "malformed", "unrecognized", "ok"]).parse(c.expectedKind),
+      );
+    } else if (c.scenario === "read-reason") {
+      const read = readGateFile(file);
+      expect(read.kind === "unrecognized" && read.reason).toContain(str(c.reasonContains));
+    } else if (c.scenario === "replace") {
+      recordGateFailure(
+        file,
+        str(c.file),
+        str(c.source),
+        str(c.reason),
+        str(c.violations),
+        options,
+      );
       const read = readGateFile(file);
       expect(read.kind).toBe("ok");
-      expect(read.kind === "ok" && read.doc).toEqual({
-        status: "failing",
-        reason: "reason",
-        source: "ts-quality-hook",
-        file: "/r/c.ts",
-        violations: "c\n",
-        entries: {
-          "/r/c.ts": {
-            source: "ts-quality-hook",
-            reason: "reason",
-            violations: "c\n",
-            updatedAt: "2026-09-28T10:00:00Z",
-          },
-        },
-        updatedAt: "2026-09-28T10:00:00Z",
-      });
+      expect<unknown>(read.kind === "ok" && read.doc).toEqual(c.expectedDoc);
       expect(warnings).toHaveLength(1);
-      expect(warnings[0]).toStartWith(`gate-file: unrecognized gate file at ${file} (`);
-      expect(readFileSync(`${file}.dropped.log`, "utf8")).toBe(
-        "2026-09-28T10:00:00Z unrecognized gate file replaced; dropped 2 entry(ies)\n",
+      expect(warnings[0]).toStartWith(str(c.warningPrefix).replace("$GATE", file));
+      expect(readFileSync(`${file}.dropped.log`, "utf8")).toBe(str(c.dropLog));
+    } else if (c.scenario === "clear-unrecognized") {
+      expect<unknown>(clearGateFile(file, str(c.file), str(c.source), options)).toBe(
+        str(c.expected),
       );
-    });
-
-    test(`clear leaves ${name} byte-identical and emits no telemetry`, () => {
-      using sb = createSandbox({ git: true, branch: "feat/x" });
-      const body = JSON.stringify(doc, null, 2);
-      const file = gate(sb, body);
-      const warnings: string[] = [];
-      expect(clearGateFile(file, "/r/a.ts", "ts-quality-hook", options(sb, warnings))).toBe("noop");
-      expect(readFileSync(file, "utf8")).toBe(body);
+      expect(readFileSync(file, "utf8")).toBe(str(body));
       expect(warnings).toHaveLength(1);
-      expect(warnings[0]).toEndWith("; ignoring clear");
+      expect(warnings[0]).toEndWith(str(c.warningSuffix));
       expect(existsSync(join(sb.project, ".claude", "tmp", "telemetry"))).toBe(false);
-    });
-  }
-});
-
-describe("failure paths never throw", () => {
-  test("clear on a malformed file warns like bash and keeps it", () => {
-    using sb = createSandbox();
-    const file = gate(sb, "{oops");
-    const warnings: string[] = [];
-    expect(clearGateFile(file, "/r/a.ts", "s", options(sb, warnings))).toBe("noop");
-    expect(warnings).toEqual([
-      `gate-file: malformed JSON at ${file}; ignoring clear (gate stays failing until next write)`,
-    ]);
-    expect(readFileSync(file, "utf8")).toBe("{oops");
+    } else if (c.scenario === "clear-malformed") {
+      expect<unknown>(clearGateFile(file, str(c.file), str(c.source), options)).toBe(
+        str(c.expected),
+      );
+      expect(warnings).toEqual([str(c.warning).replace("$GATE", file)]);
+      expect(readFileSync(file, "utf8")).toBe(str(c.body));
+    } else if (c.scenario === "clear-missing") {
+      expect<unknown>(clearGateFile(file, str(c.file), str(c.source), options)).toBe(
+        str(c.expected),
+      );
+      expect(warnings).toEqual([]);
+    } else if (c.scenario === "clear-live-lock") {
+      const lock = `${String(process.pid)}${str(c.lockSuffix)}`;
+      writeFileSync(`${file}.lock`, lock);
+      const started = Date.now();
+      expect<unknown>(clearGateFile(file, str(c.file), str(c.source), options)).toBe(
+        str(c.expected),
+      );
+      expect(Date.now() - started).toBeLessThan(z.number().parse(c.maxMs));
+      expect(warnings).toEqual([]);
+      expect(readFileSync(`${file}.lock`, "utf8")).toBe(lock);
+    } else if (c.scenario === "telemetry") {
+      recordGateFailure(
+        file,
+        str(c.file),
+        str(c.source),
+        str(c.reason),
+        str(c.violations),
+        options,
+      );
+      expect(
+        readFileSync(join(sb.project, ".claude", "tmp", "telemetry", str(c.telemetryFile)), "utf8"),
+      ).toBe(str(c.expectedLine));
+    } else {
+      recordGateFailure(
+        file,
+        str(c.file),
+        str(c.source),
+        str(c.reason),
+        str(c.violations),
+        options,
+      );
+      const read = readGateFile(file);
+      expect(
+        read.kind === "ok" && read.doc.status === "failing" && Object.keys(read.doc.entries ?? {}),
+      ).toEqual(z.array(z.string()).parse(c.expected));
+    }
   });
-
-  test("clear with no file is a silent no-op", () => {
-    using sb = createSandbox();
-    const warnings: string[] = [];
-    expect(clearGateFile(gate(sb), "/r/a.ts", "s", options(sb, warnings))).toBe("noop");
-    expect(warnings).toEqual([]);
-  });
-
-  test("a clear with nothing to clear takes no lock, even behind a live one", () => {
-    using sb = createSandbox();
-    const file = gate(sb, JSON.stringify({ status: "passing", source: "s", updatedAt: OLD }));
-    writeFileSync(`${file}.lock`, `${String(process.pid)} busy\n`);
-    const warnings: string[] = [];
-    const started = Date.now();
-    expect(clearGateFile(file, "/r/a.ts", "s", options(sb, warnings))).toBe("noop");
-    expect(Date.now() - started).toBeLessThan(500);
-    expect(warnings).toEqual([]);
-    expect(readFileSync(`${file}.lock`, "utf8")).toBe(`${String(process.pid)} busy\n`);
-  });
-
-  test("record creates the telemetry line under the gate file's root", () => {
-    using sb = createSandbox({ git: true, branch: "feat/x" });
-    const file = gate(sb);
-    recordGateFailure(file, "/r/a.ts", "ts-quality-hook", "r", "v", options(sb, []));
-    expect(
-      readFileSync(join(sb.project, ".claude", "tmp", "telemetry", "feat_x.jsonl"), "utf8"),
-    ).toBe(
-      '{"file":"/r/a.ts","source":"ts-quality-hook","v":1,"t":"2026-09-28T10:00:00Z","branch":"feat/x","event":"gate_fail"}\n',
-    );
-  });
-});
-
-test("pinned divergence: an integer-like entry key is ordered first (jq keeps insertion order)", () => {
-  // Unreachable from real callers, which pass absolute paths or __global__; pinned so a change is deliberate.
-  using sb = createSandbox();
-  const file = gate(
-    sb,
-    JSON.stringify({ ...FAILING, entries: { b: ENTRY, "10": ENTRY } }, null, 2),
-  );
-  recordGateFailure(file, "/r/c.ts", "s", "r", "v", options(sb, []));
-  const read = readGateFile(file);
-  expect(
-    read.kind === "ok" && read.doc.status === "failing" && Object.keys(read.doc.entries ?? {}),
-  ).toEqual(["10", "b", "/r/c.ts"]);
-});
+}

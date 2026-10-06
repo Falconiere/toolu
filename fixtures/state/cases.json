@@ -1,0 +1,1177 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "GateFileSchema > accepts passing",
+      "kind": "schema",
+      "schema": "gate",
+      "input": {
+        "status": "passing",
+        "source": "bun test",
+        "updatedAt": "2026-01-01T00:00:00Z"
+      },
+      "valid": true
+    },
+    {
+      "name": "GateFileSchema > accepts legacy single-slot failing",
+      "kind": "schema",
+      "schema": "gate",
+      "input": {
+        "status": "failing",
+        "reason": "Quality command failed: bun test (exit 1)",
+        "source": "gate-status-hook",
+        "file": "__global__",
+        "violations": "",
+        "updatedAt": "2026-01-01T00:00:00Z"
+      },
+      "valid": true
+    },
+    {
+      "name": "GateFileSchema > accepts multi-slot failing",
+      "kind": "schema",
+      "schema": "gate",
+      "input": {
+        "status": "failing",
+        "reason": "Quality command failed: bun test (exit 1)",
+        "source": "gate-status-hook",
+        "file": "__global__",
+        "violations": "",
+        "updatedAt": "2026-01-01T00:00:00Z",
+        "entries": {
+          "/repo/a.ts": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          },
+          "__global__": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "GateFileSchema > accepts explicit version 1",
+      "kind": "schema",
+      "schema": "gate",
+      "input": {
+        "status": "failing",
+        "reason": "Quality command failed: bun test (exit 1)",
+        "source": "gate-status-hook",
+        "file": "__global__",
+        "violations": "",
+        "updatedAt": "2026-01-01T00:00:00Z",
+        "entries": {
+          "/repo/a.ts": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          },
+          "__global__": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        },
+        "version": 1
+      },
+      "valid": true
+    },
+    {
+      "name": "GateFileSchema > rejects unknown top-level key",
+      "kind": "schema",
+      "schema": "gate",
+      "input": {
+        "status": "failing",
+        "reason": "Quality command failed: bun test (exit 1)",
+        "source": "gate-status-hook",
+        "file": "__global__",
+        "violations": "",
+        "updatedAt": "2026-01-01T00:00:00Z",
+        "entries": {
+          "/repo/a.ts": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          },
+          "__global__": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        },
+        "owner": "x"
+      },
+      "valid": false
+    },
+    {
+      "name": "GateFileSchema > rejects unknown entry key",
+      "kind": "schema",
+      "schema": "gate",
+      "input": {
+        "status": "failing",
+        "reason": "Quality command failed: bun test (exit 1)",
+        "source": "gate-status-hook",
+        "file": "__global__",
+        "violations": "",
+        "updatedAt": "2026-01-01T00:00:00Z",
+        "entries": {
+          "a": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "extra": 1
+          }
+        }
+      },
+      "valid": false
+    },
+    {
+      "name": "GateFileSchema > rejects unknown key on passing",
+      "kind": "schema",
+      "schema": "gate",
+      "input": {
+        "status": "passing",
+        "source": "bun test",
+        "updatedAt": "2026-01-01T00:00:00Z",
+        "file": "a"
+      },
+      "valid": false
+    },
+    {
+      "name": "GateFileSchema > rejects version 2",
+      "kind": "schema",
+      "schema": "gate",
+      "input": {
+        "status": "failing",
+        "reason": "Quality command failed: bun test (exit 1)",
+        "source": "gate-status-hook",
+        "file": "__global__",
+        "violations": "",
+        "updatedAt": "2026-01-01T00:00:00Z",
+        "entries": {
+          "/repo/a.ts": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          },
+          "__global__": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        },
+        "version": 2
+      },
+      "valid": false
+    },
+    {
+      "name": "GateFileSchema > rejects unknown status",
+      "kind": "schema",
+      "schema": "gate",
+      "input": {
+        "status": "unknown",
+        "source": "bun test",
+        "updatedAt": "2026-01-01T00:00:00Z"
+      },
+      "valid": false
+    },
+    {
+      "name": "GateFileSchema > rejects non-string violations",
+      "kind": "schema",
+      "schema": "gate",
+      "input": {
+        "status": "failing",
+        "reason": "Quality command failed: bun test (exit 1)",
+        "source": "gate-status-hook",
+        "file": "__global__",
+        "violations": 3,
+        "updatedAt": "2026-01-01T00:00:00Z"
+      },
+      "valid": false
+    },
+    {
+      "name": "GateFileSchema > rejects entries not an object",
+      "kind": "schema",
+      "schema": "gate",
+      "input": {
+        "status": "failing",
+        "reason": "Quality command failed: bun test (exit 1)",
+        "source": "gate-status-hook",
+        "file": "__global__",
+        "violations": "",
+        "updatedAt": "2026-01-01T00:00:00Z",
+        "entries": []
+      },
+      "valid": false
+    },
+    {
+      "name": "TelemetryLineSchema > accepts each event with its exact extras",
+      "kind": "telemetry-events",
+      "lines": [
+        {
+          "file": "/a.ts",
+          "source": "ts-quality-hook",
+          "v": 1,
+          "t": "2026-01-01T00:00:00Z",
+          "branch": "feat/x",
+          "event": "gate_fail"
+        },
+        {
+          "file": "/a.ts",
+          "source": "ts-quality-hook",
+          "v": 1,
+          "t": "2026-01-01T00:00:00Z",
+          "branch": "feat/x",
+          "event": "gate_clear"
+        },
+        {
+          "step_id": "S1",
+          "status": "green",
+          "exit_code": 0,
+          "duration_s": 2,
+          "attempt": 1,
+          "v": 1,
+          "t": "2026-01-01T00:00:00Z",
+          "branch": "feat/x",
+          "event": "step_run"
+        },
+        {
+          "covered": 3,
+          "uncovered": 1,
+          "v": 1,
+          "t": "2026-01-01T00:00:00Z",
+          "branch": "feat/x",
+          "event": "ac_coverage"
+        },
+        {
+          "decision": "updated",
+          "v": 1,
+          "t": "2026-01-01T00:00:00Z",
+          "branch": "feat/x",
+          "event": "docs_attested"
+        },
+        {
+          "v": 1,
+          "t": "2026-01-01T00:00:00Z",
+          "branch": "feat/x",
+          "event": "docs_nudge"
+        },
+        {
+          "result": "deny",
+          "reason_code": "stale",
+          "round": null,
+          "v": 1,
+          "t": "2026-01-01T00:00:00Z",
+          "branch": "feat/x",
+          "event": "push_check"
+        },
+        {
+          "model": "sonnet",
+          "subagent_type": null,
+          "reasoning_effort": null,
+          "step_id": null,
+          "step_model": null,
+          "v": 1,
+          "t": "2026-01-01T00:00:00Z",
+          "branch": "feat/x",
+          "event": "delegation"
+        }
+      ],
+      "events": [
+        "ac_coverage",
+        "delegation",
+        "docs_attested",
+        "docs_nudge",
+        "gate_clear",
+        "gate_fail",
+        "push_check",
+        "step_run"
+      ]
+    },
+    {
+      "name": "TelemetryLineSchema > rejects unknown event",
+      "kind": "schema",
+      "schema": "telemetry",
+      "input": {
+        "v": 1,
+        "t": "2026-01-01T00:00:00Z",
+        "branch": "feat/x",
+        "event": "shell"
+      },
+      "valid": false
+    },
+    {
+      "name": "TelemetryLineSchema > rejects extra field",
+      "kind": "schema",
+      "schema": "telemetry",
+      "input": {
+        "decision": "x",
+        "command": "curl -H token",
+        "v": 1,
+        "t": "2026-01-01T00:00:00Z",
+        "branch": "feat/x",
+        "event": "docs_attested"
+      },
+      "valid": false
+    },
+    {
+      "name": "TelemetryLineSchema > rejects nested payload",
+      "kind": "schema",
+      "schema": "telemetry",
+      "input": {
+        "decision": {
+          "tool_input": {}
+        },
+        "v": 1,
+        "t": "2026-01-01T00:00:00Z",
+        "branch": "feat/x",
+        "event": "docs_attested"
+      },
+      "valid": false
+    },
+    {
+      "name": "TelemetryLineSchema > rejects v 2",
+      "kind": "schema",
+      "schema": "telemetry",
+      "input": {
+        "v": 2,
+        "t": "2026-01-01T00:00:00Z",
+        "branch": "feat/x",
+        "event": "docs_nudge"
+      },
+      "valid": false
+    },
+    {
+      "name": "TelemetryLineSchema > rejects missing protocol field",
+      "kind": "schema",
+      "schema": "telemetry",
+      "input": {
+        "v": 1,
+        "t": "2026-01-01T00:00:00Z",
+        "event": "docs_nudge"
+      },
+      "valid": false
+    },
+    {
+      "name": "TelemetryLineSchema > per-event extras reject protocol keys smuggled in by a caller",
+      "kind": "telemetry-extras",
+      "checks": [
+        {
+          "event": "docs_nudge",
+          "input": {
+            "event": "gate_clear"
+          }
+        },
+        {
+          "event": "gate_fail",
+          "input": {
+            "file": "a",
+            "source": "b",
+            "branch": "main"
+          }
+        }
+      ]
+    },
+    {
+      "name": "EditRecordSchema > accepts {\"path\":\"a.ts\",\"operation\":\"update\"}",
+      "kind": "schema",
+      "schema": "edit",
+      "input": {
+        "path": "a.ts",
+        "operation": "update"
+      },
+      "valid": true
+    },
+    {
+      "name": "EditRecordSchema > accepts {\"path\":\"a.ts\",\"operation\":\"update\",\"moved_to\":\"b.ts\"}",
+      "kind": "schema",
+      "schema": "edit",
+      "input": {
+        "path": "a.ts",
+        "operation": "update",
+        "moved_to": "b.ts"
+      },
+      "valid": true
+    },
+    {
+      "name": "EditRecordSchema > accepts {\"path\":\"b.ts\",\"operation\":\"move\",\"from\":\"a.ts\"}",
+      "kind": "schema",
+      "schema": "edit",
+      "input": {
+        "path": "b.ts",
+        "operation": "move",
+        "from": "a.ts"
+      },
+      "valid": true
+    },
+    {
+      "name": "EditRecordSchema > rejects {\"path\":\"\",\"operation\":\"add\"}",
+      "kind": "schema",
+      "schema": "edit",
+      "input": {
+        "path": "",
+        "operation": "add"
+      },
+      "valid": false
+    },
+    {
+      "name": "EditRecordSchema > rejects {\"path\":\"a.ts\",\"operation\":\"rename\"}",
+      "kind": "schema",
+      "schema": "edit",
+      "input": {
+        "path": "a.ts",
+        "operation": "rename"
+      },
+      "valid": false
+    },
+    {
+      "name": "EditRecordSchema > rejects {\"path\":\"a.ts\",\"operation\":\"add\",\"content\":\"secret\"}",
+      "kind": "schema",
+      "schema": "edit",
+      "input": {
+        "path": "a.ts",
+        "operation": "add",
+        "content": "secret"
+      },
+      "valid": false
+    },
+    {
+      "name": "a feature branch has a nonempty content hash",
+      "kind": "diff-sha",
+      "git": true,
+      "files": {
+        "a.txt": "one\n"
+      },
+      "steps": [
+        {
+          "op": "git",
+          "args": ["checkout", "-q", "-b", "feat/x"]
+        },
+        {
+          "op": "write",
+          "path": "a.txt",
+          "body": "one\ntwo  é\n"
+        },
+        {
+          "op": "write",
+          "path": "b.bin",
+          "body": "\u0000\u0001binary"
+        },
+        {
+          "op": "git",
+          "args": ["add", "-A"]
+        },
+        {
+          "op": "git",
+          "args": ["commit", "-q", "-m", "change"]
+        }
+      ],
+      "base": "main",
+      "expect": "nonempty-hash",
+      "notHash": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "name": "a large diff (over 1 MiB) still hashes",
+      "kind": "diff-sha",
+      "git": true,
+      "files": {},
+      "steps": [
+        {
+          "op": "git",
+          "args": ["checkout", "-q", "-b", "feat/big"]
+        },
+        {
+          "op": "repeat-write",
+          "path": "big.txt",
+          "body": "line of text\n",
+          "count": 200000
+        },
+        {
+          "op": "git",
+          "args": ["add", "-A"]
+        },
+        {
+          "op": "git",
+          "args": ["commit", "-q", "-m", "big"]
+        }
+      ],
+      "base": "main",
+      "expect": "hash"
+    },
+    {
+      "name": "an empty diff returns the empty-blob id",
+      "kind": "diff-sha",
+      "git": true,
+      "files": {},
+      "steps": [
+        {
+          "op": "git",
+          "args": ["checkout", "-q", "-b", "feat/empty"]
+        }
+      ],
+      "base": "main",
+      "expect": "empty-blob",
+      "hash": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "name": "a bad base ref gives no hash",
+      "kind": "diff-sha",
+      "git": true,
+      "files": {},
+      "steps": [],
+      "base": "no-such-ref",
+      "expect": "undefined"
+    },
+    {
+      "name": "a directory that is not a repository gives no hash",
+      "kind": "diff-sha",
+      "git": false,
+      "files": {},
+      "steps": [],
+      "base": "main",
+      "expect": "undefined"
+    },
+    {
+      "name": "a dash-prefixed base ref is a revision, never a git option",
+      "kind": "diff-sha",
+      "git": true,
+      "files": {},
+      "steps": [],
+      "base": {
+        "$template": "--output=$ROOT/planted.txt"
+      },
+      "planted": {
+        "$path": "$ROOT/planted.txt"
+      },
+      "expect": "undefined"
+    },
+    {
+      "name": "branchSlug(\"feat/255-state\") returns \"feat_255-state\"",
+      "kind": "branch-slug",
+      "branch": "feat/255-state",
+      "expected": "feat_255-state"
+    },
+    {
+      "name": "branchSlug(\"release-please--branches--main\") returns \"release-please--branches--main\"",
+      "kind": "branch-slug",
+      "branch": "release-please--branches--main",
+      "expected": "release-please--branches--main"
+    },
+    {
+      "name": "branchSlug(\"fix/a.b@c\") returns \"fix_abc\"",
+      "kind": "branch-slug",
+      "branch": "fix/a.b@c",
+      "expected": "fix_abc"
+    },
+    {
+      "name": "branchSlug(\"////\") returns \"____\"",
+      "kind": "branch-slug",
+      "branch": "////",
+      "expected": "____"
+    },
+    {
+      "name": "branchSlug(\"\") returns \"_default\"",
+      "kind": "branch-slug",
+      "branch": "",
+      "expected": "_default"
+    },
+    {
+      "name": "branchSlug(\"ünïcode/x\") returns \"ncode_x\"",
+      "kind": "branch-slug",
+      "branch": "ünïcode/x",
+      "expected": "ncode_x"
+    },
+    {
+      "name": "branchSlug(\"a b\") returns \"ab\"",
+      "kind": "branch-slug",
+      "branch": "a b",
+      "expected": "ab"
+    },
+    {
+      "name": "baseBranch follows origin/HEAD, else main",
+      "kind": "base-branch",
+      "initial": "trunk",
+      "before": "main",
+      "remote": "refs/remotes/origin/trunk",
+      "after": "trunk"
+    },
+    {
+      "name": "currentBranch: branch name, HEAD when detached or unborn, empty outside a repo",
+      "kind": "current-branch",
+      "branch": "feat/x",
+      "expected": ["feat/x", "HEAD", "HEAD", ""]
+    },
+    {
+      "name": "branchSlugs lists local branches, and only merged ones with mergedInto",
+      "kind": "branch-slugs",
+      "merged": "feat/merged",
+      "ahead": "feat/ahead",
+      "file": "a.txt",
+      "body": "a",
+      "base": "main",
+      "expectedAll": ["feat_ahead", "feat_merged", "main"],
+      "expectedMerged": ["feat_merged", "main"],
+      "missingBase": "nope"
+    },
+    {
+      "name": "toJqJson pretty equals `jq .` byte for byte",
+      "kind": "io",
+      "scenario": "jq-json",
+      "value": {
+        "del": "ab",
+        "control": "tab\tnl\ncr\r\u0001\u001f",
+        "unicode": "é ～ 😀  ",
+        "quote": "q\"\\",
+        "empty": {},
+        "list": [],
+        "nested": {
+          "n": 1.5,
+          "big": 12345678901,
+          "neg": -3,
+          "t": true,
+          "f": false,
+          "z": null
+        }
+      },
+      "pretty": true,
+      "jqArgs": ["."]
+    },
+    {
+      "name": "toJqJson compact equals `jq -c .` byte for byte",
+      "kind": "io",
+      "scenario": "jq-json",
+      "value": {
+        "del": "ab",
+        "control": "tab\tnl\ncr\r\u0001\u001f",
+        "unicode": "é ～ 😀  ",
+        "quote": "q\"\\",
+        "empty": {},
+        "list": [],
+        "nested": {
+          "n": 1.5,
+          "big": 12345678901,
+          "neg": -3,
+          "t": true,
+          "f": false,
+          "z": null
+        }
+      },
+      "pretty": false,
+      "jqArgs": ["-c", "."]
+    },
+    {
+      "name": "compareJqStrings orders like jq sort (codepoint, not UTF-16)",
+      "kind": "io",
+      "scenario": "jq-sort",
+      "words": ["😀", "～", "b", "B", "", "é", "a", "a"],
+      "jqArgs": ["-c", "sort"],
+      "jsSortDiffers": true
+    },
+    {
+      "name": "isoSeconds matches `date -u +%Y-%m-%dT%H:%M:%SZ` shape and truncates",
+      "kind": "io",
+      "scenario": "iso",
+      "input": "2026-09-28T12:34:56.789Z",
+      "expected": "2026-09-28T12:34:56Z"
+    },
+    {
+      "name": "writeAtomic replaces the file and leaves no temp behind",
+      "kind": "io",
+      "scenario": "atomic-replace",
+      "file": "state/gate.json",
+      "before": "old\n",
+      "after": "new\n",
+      "remaining": ["gate.json"]
+    },
+    {
+      "name": "writeAtomic reports failure when the directory is missing",
+      "kind": "io",
+      "scenario": "atomic-missing",
+      "file": "missing/gate.json",
+      "body": "x"
+    },
+    {
+      "name": "withLock returns the result and releases the lock, even on throw",
+      "kind": "io",
+      "scenario": "lock-result",
+      "file": "gate.json",
+      "error": "boom"
+    },
+    {
+      "name": "withLock breaks a stale lock left by a crashed writer",
+      "kind": "io",
+      "scenario": "stale-lock",
+      "file": "gate.json",
+      "lock": "99999 crashed\n",
+      "ageMs": 60000,
+      "expectedWarnings": []
+    },
+    {
+      "name": "withLock times out on a live lock, warns, and still runs unlocked",
+      "kind": "io",
+      "scenario": "live-lock",
+      "file": "gate.json",
+      "lock": "1 live\n",
+      "timeoutMs": 100,
+      "warning": {
+        "$template": "state: lock $PROJECT/gate.json.lock still held; writing without it"
+      }
+    },
+    {
+      "name": "writeAtomic creates the file 0600, as bash's mktemp + mv does",
+      "kind": "io",
+      "scenario": "atomic-mode",
+      "file": "gate.json",
+      "body": "x",
+      "mode": 384
+    },
+    {
+      "name": "withLock breaks a fresh lock whose holder pid is gone",
+      "kind": "io",
+      "scenario": "dead-pid-lock",
+      "file": "gate.json",
+      "lockSuffix": " crashed-token\n",
+      "maxMs": 1000
+    },
+    {
+      "name": "withLock breaks a live holder's lock once it is older than staleMs (2 s default)",
+      "kind": "io",
+      "scenario": "stale-own-pid",
+      "file": "gate.json",
+      "lockSuffix": " hung-token\n",
+      "ageMs": 3000
+    },
+    {
+      "name": "withLock never releases a lock another holder took over",
+      "kind": "io",
+      "scenario": "lock-takeover",
+      "file": "gate.json",
+      "otherLock": "4242 their-token\n"
+    },
+    {
+      "name": "breaking a stale lock leaves no claimed .broken file behind",
+      "kind": "io",
+      "scenario": "stale-no-broken",
+      "file": "gate.json",
+      "lock": "99999 crashed\n",
+      "ageMs": 60000
+    },
+    {
+      "name": "readGateFile > missing → %s",
+      "kind": "gate-file",
+      "scenario": "read",
+      "body": null,
+      "expectedKind": "missing",
+      "now": "2026-09-28T10:00:00.500Z"
+    },
+    {
+      "name": "readGateFile > malformed → {",
+      "kind": "gate-file",
+      "scenario": "read",
+      "body": "{",
+      "expectedKind": "malformed",
+      "now": "2026-09-28T10:00:00.500Z"
+    },
+    {
+      "name": "readGateFile > null → null",
+      "kind": "gate-file",
+      "scenario": "read",
+      "body": "null",
+      "expectedKind": "malformed",
+      "now": "2026-09-28T10:00:00.500Z"
+    },
+    {
+      "name": "readGateFile > false → false",
+      "kind": "gate-file",
+      "scenario": "read",
+      "body": "false",
+      "expectedKind": "malformed",
+      "now": "2026-09-28T10:00:00.500Z"
+    },
+    {
+      "name": "readGateFile > empty → ",
+      "kind": "gate-file",
+      "scenario": "read",
+      "body": "",
+      "expectedKind": "malformed",
+      "now": "2026-09-28T10:00:00.500Z"
+    },
+    {
+      "name": "readGateFile > array → []",
+      "kind": "gate-file",
+      "scenario": "read",
+      "body": "[]",
+      "expectedKind": "unrecognized",
+      "now": "2026-09-28T10:00:00.500Z"
+    },
+    {
+      "name": "readGateFile > unknown field → {\"status\":\"failing\",\"reason\":\"r\",\"source\":\"ts-quality-hook\",\"file\":\"/r/a.ts\",\"violations\":\"v\\n\",\"entries\":{\"/r/a.ts\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"v\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"},\"/r/b.ts\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"v\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"}},\"updatedAt\":\"2020-01-01T00:00:00Z\",\"owner\":\"x\"}",
+      "kind": "gate-file",
+      "scenario": "read",
+      "body": "{\"status\":\"failing\",\"reason\":\"r\",\"source\":\"ts-quality-hook\",\"file\":\"/r/a.ts\",\"violations\":\"v\\n\",\"entries\":{\"/r/a.ts\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"v\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"},\"/r/b.ts\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"v\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"}},\"updatedAt\":\"2020-01-01T00:00:00Z\",\"owner\":\"x\"}",
+      "expectedKind": "unrecognized",
+      "now": "2026-09-28T10:00:00.500Z"
+    },
+    {
+      "name": "readGateFile > version 2 → {\"status\":\"failing\",\"reason\":\"r\",\"source\":\"ts-quality-hook\",\"file\":\"/r/a.ts\",\"violations\":\"v\\n\",\"entries\":{\"/r/a.ts\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"v\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"},\"/r/b.ts\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"v\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"}},\"updatedAt\":\"2020-01-01T00:00:00Z\",\"version\":2}",
+      "kind": "gate-file",
+      "scenario": "read",
+      "body": "{\"status\":\"failing\",\"reason\":\"r\",\"source\":\"ts-quality-hook\",\"file\":\"/r/a.ts\",\"violations\":\"v\\n\",\"entries\":{\"/r/a.ts\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"v\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"},\"/r/b.ts\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"v\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"}},\"updatedAt\":\"2020-01-01T00:00:00Z\",\"version\":2}",
+      "expectedKind": "unrecognized",
+      "now": "2026-09-28T10:00:00.500Z"
+    },
+    {
+      "name": "readGateFile > valid → {\"status\":\"failing\",\"reason\":\"r\",\"source\":\"ts-quality-hook\",\"file\":\"/r/a.ts\",\"violations\":\"v\\n\",\"entries\":{\"/r/a.ts\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"v\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"},\"/r/b.ts\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"v\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"}},\"updatedAt\":\"2020-01-01T00:00:00Z\"}",
+      "kind": "gate-file",
+      "scenario": "read",
+      "body": "{\"status\":\"failing\",\"reason\":\"r\",\"source\":\"ts-quality-hook\",\"file\":\"/r/a.ts\",\"violations\":\"v\\n\",\"entries\":{\"/r/a.ts\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"v\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"},\"/r/b.ts\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"v\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"}},\"updatedAt\":\"2020-01-01T00:00:00Z\"}",
+      "expectedKind": "ok",
+      "now": "2026-09-28T10:00:00.500Z"
+    },
+    {
+      "name": "readGateFile > valid with version 1 → {\"status\":\"failing\",\"reason\":\"r\",\"source\":\"ts-quality-hook\",\"file\":\"/r/a.ts\",\"violations\":\"v\\n\",\"entries\":{\"/r/a.ts\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"v\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"},\"/r/b.ts\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"v\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"}},\"updatedAt\":\"2020-01-01T00:00:00Z\",\"version\":1}",
+      "kind": "gate-file",
+      "scenario": "read",
+      "body": "{\"status\":\"failing\",\"reason\":\"r\",\"source\":\"ts-quality-hook\",\"file\":\"/r/a.ts\",\"violations\":\"v\\n\",\"entries\":{\"/r/a.ts\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"v\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"},\"/r/b.ts\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"v\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"}},\"updatedAt\":\"2020-01-01T00:00:00Z\",\"version\":1}",
+      "expectedKind": "ok",
+      "now": "2026-09-28T10:00:00.500Z"
+    },
+    {
+      "name": "readGateFile > an unrecognized document names the offending field",
+      "kind": "gate-file",
+      "scenario": "read-reason",
+      "document": {
+        "status": "failing",
+        "reason": "r",
+        "source": "ts-quality-hook",
+        "file": "/r/a.ts",
+        "violations": "v\n",
+        "entries": {
+          "a": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2020-01-01T00:00:00Z",
+            "x": 1
+          }
+        },
+        "updatedAt": "2020-01-01T00:00:00Z"
+      },
+      "reasonContains": "entries.a",
+      "now": "2026-09-28T10:00:00.500Z"
+    },
+    {
+      "name": "unrecognized documents > record replaces an unknown top-level field, warns, and logs the drop",
+      "kind": "gate-file",
+      "scenario": "replace",
+      "document": {
+        "status": "failing",
+        "reason": "r",
+        "source": "ts-quality-hook",
+        "file": "/r/a.ts",
+        "violations": "v\n",
+        "entries": {
+          "/r/a.ts": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2020-01-01T00:00:00Z"
+          },
+          "/r/b.ts": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2020-01-01T00:00:00Z"
+          }
+        },
+        "updatedAt": "2020-01-01T00:00:00Z",
+        "owner": "someone"
+      },
+      "branch": "feat/x",
+      "now": "2026-09-28T10:00:00.500Z",
+      "file": "/r/c.ts",
+      "source": "ts-quality-hook",
+      "reason": "reason",
+      "violations": "c\n",
+      "expectedDoc": {
+        "status": "failing",
+        "reason": "reason",
+        "source": "ts-quality-hook",
+        "file": "/r/c.ts",
+        "violations": "c\n",
+        "entries": {
+          "/r/c.ts": {
+            "source": "ts-quality-hook",
+            "reason": "reason",
+            "violations": "c\n",
+            "updatedAt": "2026-09-28T10:00:00Z"
+          }
+        },
+        "updatedAt": "2026-09-28T10:00:00Z"
+      },
+      "warningPrefix": "gate-file: unrecognized gate file at $GATE (",
+      "dropLog": "2026-09-28T10:00:00Z unrecognized gate file replaced; dropped 2 entry(ies)\n"
+    },
+    {
+      "name": "unrecognized documents > clear leaves an unknown top-level field byte-identical and emits no telemetry",
+      "kind": "gate-file",
+      "scenario": "clear-unrecognized",
+      "document": {
+        "status": "failing",
+        "reason": "r",
+        "source": "ts-quality-hook",
+        "file": "/r/a.ts",
+        "violations": "v\n",
+        "entries": {
+          "/r/a.ts": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2020-01-01T00:00:00Z"
+          },
+          "/r/b.ts": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2020-01-01T00:00:00Z"
+          }
+        },
+        "updatedAt": "2020-01-01T00:00:00Z",
+        "owner": "someone"
+      },
+      "branch": "feat/x",
+      "now": "2026-09-28T10:00:00.500Z",
+      "file": "/r/a.ts",
+      "source": "ts-quality-hook",
+      "expected": "noop",
+      "warningSuffix": "; ignoring clear"
+    },
+    {
+      "name": "unrecognized documents > record replaces version 2, warns, and logs the drop",
+      "kind": "gate-file",
+      "scenario": "replace",
+      "document": {
+        "status": "failing",
+        "reason": "r",
+        "source": "ts-quality-hook",
+        "file": "/r/a.ts",
+        "violations": "v\n",
+        "entries": {
+          "/r/a.ts": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2020-01-01T00:00:00Z"
+          },
+          "/r/b.ts": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2020-01-01T00:00:00Z"
+          }
+        },
+        "updatedAt": "2020-01-01T00:00:00Z",
+        "version": 2
+      },
+      "branch": "feat/x",
+      "now": "2026-09-28T10:00:00.500Z",
+      "file": "/r/c.ts",
+      "source": "ts-quality-hook",
+      "reason": "reason",
+      "violations": "c\n",
+      "expectedDoc": {
+        "status": "failing",
+        "reason": "reason",
+        "source": "ts-quality-hook",
+        "file": "/r/c.ts",
+        "violations": "c\n",
+        "entries": {
+          "/r/c.ts": {
+            "source": "ts-quality-hook",
+            "reason": "reason",
+            "violations": "c\n",
+            "updatedAt": "2026-09-28T10:00:00Z"
+          }
+        },
+        "updatedAt": "2026-09-28T10:00:00Z"
+      },
+      "warningPrefix": "gate-file: unrecognized gate file at $GATE (",
+      "dropLog": "2026-09-28T10:00:00Z unrecognized gate file replaced; dropped 2 entry(ies)\n"
+    },
+    {
+      "name": "unrecognized documents > clear leaves version 2 byte-identical and emits no telemetry",
+      "kind": "gate-file",
+      "scenario": "clear-unrecognized",
+      "document": {
+        "status": "failing",
+        "reason": "r",
+        "source": "ts-quality-hook",
+        "file": "/r/a.ts",
+        "violations": "v\n",
+        "entries": {
+          "/r/a.ts": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2020-01-01T00:00:00Z"
+          },
+          "/r/b.ts": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2020-01-01T00:00:00Z"
+          }
+        },
+        "updatedAt": "2020-01-01T00:00:00Z",
+        "version": 2
+      },
+      "branch": "feat/x",
+      "now": "2026-09-28T10:00:00.500Z",
+      "file": "/r/a.ts",
+      "source": "ts-quality-hook",
+      "expected": "noop",
+      "warningSuffix": "; ignoring clear"
+    },
+    {
+      "name": "failure paths never throw > clear on a malformed file warns like bash and keeps it",
+      "kind": "gate-file",
+      "scenario": "clear-malformed",
+      "body": "{oops",
+      "file": "/r/a.ts",
+      "source": "s",
+      "expected": "noop",
+      "warning": "gate-file: malformed JSON at $GATE; ignoring clear (gate stays failing until next write)",
+      "now": "2026-09-28T10:00:00.500Z"
+    },
+    {
+      "name": "failure paths never throw > clear with no file is a silent no-op",
+      "kind": "gate-file",
+      "scenario": "clear-missing",
+      "file": "/r/a.ts",
+      "source": "s",
+      "expected": "noop",
+      "now": "2026-09-28T10:00:00.500Z"
+    },
+    {
+      "name": "failure paths never throw > a clear with nothing to clear takes no lock, even behind a live one",
+      "kind": "gate-file",
+      "scenario": "clear-live-lock",
+      "document": {
+        "status": "passing",
+        "source": "s",
+        "updatedAt": "2020-01-01T00:00:00Z"
+      },
+      "file": "/r/a.ts",
+      "source": "s",
+      "lockSuffix": " busy\n",
+      "maxMs": 500,
+      "expected": "noop",
+      "now": "2026-09-28T10:00:00.500Z"
+    },
+    {
+      "name": "failure paths never throw > record creates the telemetry line under the gate file's root",
+      "kind": "gate-file",
+      "scenario": "telemetry",
+      "branch": "feat/x",
+      "file": "/r/a.ts",
+      "source": "ts-quality-hook",
+      "reason": "r",
+      "violations": "v",
+      "telemetryFile": "feat_x.jsonl",
+      "expectedLine": "{\"file\":\"/r/a.ts\",\"source\":\"ts-quality-hook\",\"v\":1,\"t\":\"2026-09-28T10:00:00Z\",\"branch\":\"feat/x\",\"event\":\"gate_fail\"}\n",
+      "now": "2026-09-28T10:00:00.500Z"
+    },
+    {
+      "name": "pinned divergence: an integer-like entry key is ordered first (jq keeps insertion order)",
+      "kind": "gate-file",
+      "scenario": "ordering",
+      "document": {
+        "status": "failing",
+        "reason": "r",
+        "source": "ts-quality-hook",
+        "file": "/r/a.ts",
+        "violations": "v\n",
+        "entries": {
+          "b": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2020-01-01T00:00:00Z"
+          },
+          "10": {
+            "source": "ts-quality-hook",
+            "reason": "r",
+            "violations": "v\n",
+            "updatedAt": "2020-01-01T00:00:00Z"
+          }
+        },
+        "updatedAt": "2020-01-01T00:00:00Z"
+      },
+      "file": "/r/c.ts",
+      "source": "s",
+      "reason": "r",
+      "violations": "v",
+      "expected": ["10", "b", "/r/c.ts"],
+      "now": "2026-09-28T10:00:00.500Z"
+    },
+    {
+      "name": "16 concurrent TypeScript writers: valid file, every entry kept, no temp or lock left",
+      "kind": "concurrency",
+      "scenario": "race",
+      "branch": "feat/race",
+      "writers": 16,
+      "iterations": 4,
+      "mode": "strict",
+      "keptIndices": [1, 3],
+      "minReads": 5,
+      "timeoutMs": 60000
+    },
+    {
+      "name": "a stale lock from a crashed writer does not block the next one",
+      "kind": "concurrency",
+      "scenario": "stale-lock",
+      "branch": "feat/race",
+      "lock": "4242 crashed\n",
+      "ageMs": 60000,
+      "writerId": "solo",
+      "iterations": 2,
+      "mode": "strict",
+      "maxMs": 5000,
+      "expectedEntries": ["/w/solo/1"]
+    },
+    {
+      "name": "@toolu/core/state exposes the state layer",
+      "kind": "package",
+      "exports": [
+        "recordGateFailure",
+        "clearGateFile",
+        "readGateFile",
+        "sweepState",
+        "diffSha",
+        "telemetryAppend",
+        "normalizeEditRecords",
+        "formatEditRecords",
+        "isEditTool",
+        "branchSlug"
+      ],
+      "gateFileVersion": 1,
+      "validGateFile": {
+        "status": "passing",
+        "source": "s",
+        "updatedAt": "t"
+      }
+    }
+  ]
+}
