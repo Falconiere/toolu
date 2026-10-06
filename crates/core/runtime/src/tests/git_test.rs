@@ -136,21 +136,41 @@ fn an_invalid_gitfile_ends_the_walk_and_an_invalid_git_dir_is_skipped() {
 }
 
 #[test]
-fn deferred_cases_ask_git_and_get_its_answer() {
+fn core_worktree_moves_the_toplevel_and_core_bare_removes_it_as_git_does() {
   let dir = tempfile::tempdir().unwrap();
   let top = dir.path().join("repo");
   let elsewhere = dir.path().join("elsewhere");
   std::fs::create_dir_all(&elsewhere).unwrap();
   std::fs::create_dir(&top).unwrap();
   run_git(&top, &["init", "-q"]);
+  run_git(&top, &["config", "core.worktree", "../../elsewhere"]);
+  assert_eq!(toplevel(&env(), &top), Some(real(&elsewhere)));
+  assert_eq!(
+    run_git(&top, &["rev-parse", "--show-toplevel"]),
+    real(&elsewhere).display().to_string()
+  );
+  run_git(&top, &["config", "core.bare", "true"]);
+  assert_eq!(toplevel(&env(), &top), None);
+  run_git(&top, &["config", "core.worktree", "../../missing"]);
+  run_git(&top, &["config", "core.bare", "false"]);
+  assert_eq!(
+    discover(&env(), &top),
+    Discovery::AskGit,
+    "an unresolvable worktree"
+  );
+}
+
+#[test]
+fn deferred_cases_ask_git_and_get_its_answer() {
+  let dir = tempfile::tempdir().unwrap();
+  let top = dir.path().join("repo");
+  std::fs::create_dir(&top).unwrap();
+  run_git(&top, &["init", "-q"]);
   assert_eq!(
     discover(&env().with("GIT_DIR", "x"), &top),
     Discovery::AskGit
   );
-  run_git(
-    &top,
-    &["config", "core.worktree", &elsewhere.display().to_string()],
-  );
+  run_git(&top, &["config", "include.path", "none"]);
   assert_eq!(discover(&env(), &top), Discovery::AskGit);
-  assert_eq!(toplevel(&env(), &top), Some(real(&elsewhere)));
+  assert_eq!(toplevel(&env(), &top), Some(real(&top)));
 }

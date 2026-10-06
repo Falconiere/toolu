@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use super::{config_defers, env_defers, foreign_owner, moves_worktree, truthy};
+use super::{Core, core_config, env_defers, foreign_owner, parse_core, truthy};
 use crate::env::Env;
 
 #[test]
@@ -23,53 +23,74 @@ fn redirecting_variables_defer_and_empty_ones_do_not() {
   assert_eq!(env_defers(&sudo), nix::unistd::geteuid().is_root());
 }
 
+fn core(bare: bool, worktree: Option<&str>) -> Core {
+  Core {
+    bare,
+    worktree: worktree.map(str::to_owned),
+  }
+}
+
 #[test]
-fn core_worktree_bare_and_includes_move_the_worktree() {
-  let moves = |text: &str| moves_worktree(text, true);
-  assert!(!moves(
-    "[core]\n\trepositoryformatversion = 0\n\tbare = false\n"
-  ));
-  assert!(moves("[core]\n\tworktree = /elsewhere\n"));
-  assert!(moves("[Core]\n\tBare = true ; comment\n"));
-  assert!(
-    moves("[core] bare\n"),
-    "a key on the header line, no value, is true"
-  );
-  assert!(!moves("[core]\n\tbare =\n"), "an empty value is false");
-  assert!(!moves("[remote \"core\"]\n\tworktree = x\n"));
-  assert!(!moves("[core \"sub\"]\n\tworktree = x\n"));
-  assert!(moves("[includeIf \"gitdir:/x\"]\n\tpath = y\n"));
-  assert!(moves("[include]\n\tpath = y\n"));
-  assert!(!moves("[unterminated\n\tworktree = x\n"));
-  assert!(
-    !moves_worktree("[core]\n\tbare = true\n", false),
-    "bare repositories say so"
-  );
-  assert!(moves_worktree("[core]\n\tworktree = /w\n", false));
+fn core_bare_and_worktree_are_read_like_git() {
+  let cases = [
+    (
+      "[core]\n\trepositoryformatversion = 0\n\tbare = false\n",
+      false,
+      None,
+    ),
+    (
+      "[core]\n\tworktree = ../../../sub # c\n",
+      false,
+      Some("../../../sub"),
+    ),
+    ("[Core]\n\tBare = true ; comment\n", true, None),
+    ("[core] bare\n", true, None),
+    ("[core]\n\tbare =\n", false, None),
+    ("[core]\n\tbare = yes\n[core]\n\tbare = off\n", false, None),
+    ("[remote \"core\"]\n\tworktree = x\n", false, None),
+    ("[core \"sub\"]\n\tworktree = x\n", false, None),
+    ("[core]\n\trepositoryformatversion = 1\n", false, None),
+  ];
+  for (text, bare, worktree) in cases {
+    assert_eq!(parse_core(text), Some(core(bare, worktree)), "{text:?}");
+  }
+}
+
+#[test]
+fn what_only_git_can_read_defers() {
+  for text in [
+    "[includeIf \"gitdir:/x\"]\n\tpath = y\n",
+    "[include]\n\tpath = y\n",
+    "[unterminated\n",
+    "[core]\n\tworktree = \"/a b\"\n",
+    "[core]\n\tworktree = a\\\\b\n",
+    "[core]\n\tworktree\n",
+    "[core]\n\tworktree =\n",
+    "[core]\n\trepositoryformatversion = 2\n",
+  ] {
+    assert_eq!(parse_core(text), None, "{text:?}");
+  }
 }
 
 #[test]
 fn git_booleans_follow_git() {
-  for yes in ["true", "yes", "on", "1", "\"true\"", "TRUE # c"] {
+  for yes in ["true", "yes", "on", "1", "TRUE"] {
     assert!(truthy(yes), "{yes}");
   }
-  for no in ["false", "no", "off", "0", "", " ; c"] {
+  for no in ["false", "no", "off", "0", "", "False"] {
     assert!(!truthy(no), "{no}");
   }
 }
 
 #[test]
-fn a_config_worktree_file_or_config_text_defers() {
+fn a_config_worktree_file_defers_and_a_missing_config_is_empty() {
   let dir = tempfile::tempdir().unwrap();
   let git = dir.path();
-  assert!(!config_defers(git, git, true), "no config at all");
-  std::fs::write(git.join("config"), "[core]\n\tbare = false\n").unwrap();
-  assert!(!config_defers(git, git, true));
-  std::fs::write(git.join("config"), "[core]\n\tworktree = ../w\n").unwrap();
-  assert!(config_defers(git, git, false));
-  std::fs::write(git.join("config"), "").unwrap();
+  assert_eq!(core_config(git, git), Some(core(false, None)), "no config");
+  std::fs::write(git.join("config"), "[core]\n\tbare = true\n").unwrap();
+  assert_eq!(core_config(git, git), Some(core(true, None)));
   std::fs::write(git.join("config.worktree"), "").unwrap();
-  assert!(config_defers(git, git, true));
+  assert_eq!(core_config(git, git), None);
 }
 
 #[test]

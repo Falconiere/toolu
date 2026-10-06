@@ -1,9 +1,10 @@
 //! Repository discovery from the filesystem (#415): the toplevel, git dir and
 //! common dir holding a directory, found by walking up for `.git` as git's
-//! `setup_git_directory_gently_1` does, so no process is spawned. Where the
-//! walk cannot answer as git would (the `GIT_DIR` variables, `sudo`, another
-//! owner, `core.worktree`, `core.bare`, `config.worktree`, includes), the
-//! answer is [`Discovery::AskGit`].
+//! `setup_git_directory_gently_1` does, so no process is spawned. `core.bare`
+//! removes the worktree and `core.worktree` moves it, as in git. Where the walk
+//! cannot answer as git would (the `GIT_DIR` variables, `sudo`, another owner,
+//! includes, `config.worktree`, quoted values), the answer is
+//! [`Discovery::AskGit`].
 
 mod defer;
 mod gitdir;
@@ -110,17 +111,29 @@ fn repo(toplevel: Option<&Path>, git_dir: PathBuf) -> Repo {
   }
 }
 
-/// `repo`, unless its owner or its config leaves the answer to git.
-fn checked(repo: Repo, gitfile: Option<&Path>) -> Discovery {
+/// `repo` with the worktree its config gives it (`core.bare`, `core.worktree`),
+/// unless its owner or its config leaves the answer to git.
+fn checked(mut repo: Repo, gitfile: Option<&Path>) -> Discovery {
   let owned: Vec<&Path> = [repo.toplevel.as_deref(), gitfile]
     .into_iter()
     .flatten()
     .chain([repo.git_dir.as_path()])
     .collect();
-  let worktree = repo.toplevel.is_some();
-  if defer::foreign_owner(&owned) || defer::config_defers(&repo.git_dir, &repo.common_dir, worktree)
-  {
+  if defer::foreign_owner(&owned) {
     return Discovery::AskGit;
+  }
+  let Some(core) = defer::core_config(&repo.git_dir, &repo.common_dir) else {
+    return Discovery::AskGit;
+  };
+  if core.bare {
+    repo.toplevel = None;
+  } else if let Some(worktree) = core.worktree {
+    // A linked worktree with `core.worktree` set is git's to untangle.
+    let explicit = std::fs::canonicalize(repo.git_dir.join(worktree));
+    match explicit {
+      Ok(top) if repo.git_dir == repo.common_dir => repo.toplevel = Some(top),
+      _ => return Discovery::AskGit,
+    }
   }
   Discovery::Repo(repo)
 }

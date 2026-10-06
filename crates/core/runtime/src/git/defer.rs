@@ -37,56 +37,86 @@ pub(crate) fn foreign_owner(paths: &[&Path]) -> bool {
     .any(|path| !std::fs::symlink_metadata(path).is_ok_and(|meta| meta.uid() == euid))
 }
 
-/// Whether the repository config moves or removes the worktree: a
-/// `config.worktree` file, an include, `core.worktree`, or, when a `.git` gave
-/// the repository a worktree, `core.bare` true.
-pub(crate) fn config_defers(git_dir: &Path, common_dir: &Path, has_worktree: bool) -> bool {
-  if git_dir.join("config.worktree").exists() || common_dir.join("config.worktree").exists() {
-    return true;
-  }
-  std::fs::read_to_string(common_dir.join("config"))
-    .is_ok_and(|text| moves_worktree(&text, has_worktree))
+/// The worktree settings of a repository's `[core]` config.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub(crate) struct Core {
+  /// `core.bare` is true: no worktree.
+  pub(crate) bare: bool,
+  /// `core.worktree` as written: the worktree, relative to the git dir.
+  pub(crate) worktree: Option<String>,
 }
 
-/// The `[core]` keys of git config `text` that move the worktree, or an include.
-fn moves_worktree(text: &str, has_worktree: bool) -> bool {
+/// The `[core]` worktree settings, or `None` when only git can read them: a
+/// `config.worktree` file, an include, a malformed header, a quoted or escaped
+/// value, a valueless `worktree`, or a repository format above 1.
+pub(crate) fn core_config(git_dir: &Path, common_dir: &Path) -> Option<Core> {
+  if git_dir.join("config.worktree").exists() || common_dir.join("config.worktree").exists() {
+    return None;
+  }
+  match std::fs::read_to_string(common_dir.join("config")) {
+    Ok(text) => parse_core(&text),
+    Err(_) => Some(Core::default()),
+  }
+}
+
+fn parse_core(text: &str) -> Option<Core> {
+  let mut core = Core::default();
   let mut section = String::new();
   for raw in text.lines() {
     let mut line = raw.trim_start();
     if let Some(rest) = line.strip_prefix('[') {
-      let Some((header, after)) = rest.split_once(']') else {
-        continue;
-      };
+      let (header, after) = rest.split_once(']')?;
       section = header.trim().to_ascii_lowercase();
       if section.starts_with("include") {
-        return true;
+        return None;
       }
       line = after.trim_start();
     }
-    if section == "core" && core_key_moves(line, has_worktree) {
-      return true;
+    if section == "core" {
+      core_key(&mut core, line)?;
     }
   }
-  false
+  Some(core)
 }
 
-fn core_key_moves(line: &str, has_worktree: bool) -> bool {
+/// Applies one `[core]` line to `core`; `None` when its value needs git.
+fn core_key(core: &mut Core, line: &str) -> Option<()> {
   let (key, value) = match line.split_once('=') {
     Some((key, value)) => (key, Some(value)),
     None => (line, None),
   };
-  match key.trim().to_ascii_lowercase().as_str() {
-    "worktree" => true,
-    "bare" => has_worktree && value.is_none_or(truthy),
-    _ => false,
+  let key = key.trim().to_ascii_lowercase();
+  if !matches!(
+    key.as_str(),
+    "bare" | "worktree" | "repositoryformatversion"
+  ) {
+    return Some(());
   }
+  let value = match value {
+    Some(raw) => Some(plain(raw)?),
+    None => None,
+  };
+  match (key.as_str(), value) {
+    ("bare", value) => core.bare = value.as_deref().is_none_or(truthy),
+    ("worktree", Some(value)) if !value.is_empty() => core.worktree = Some(value),
+    ("repositoryformatversion", Some(version)) if version.parse::<u32>().is_ok_and(|v| v <= 1) => {}
+    _ => return None,
+  }
+  Some(())
+}
+
+/// A config value with its comment and blanks removed; `None` when quoted or escaped.
+fn plain(value: &str) -> Option<String> {
+  let value = value.split(['#', ';']).next().unwrap_or_default().trim();
+  (!value.contains(['"', '\\'])).then(|| value.to_owned())
 }
 
 /// A git boolean value that is true; an empty value is false.
 fn truthy(value: &str) -> bool {
-  let value = value.split(['#', ';']).next().unwrap_or_default();
-  let value = value.trim().trim_matches('"').to_ascii_lowercase();
-  !matches!(value.as_str(), "" | "false" | "no" | "off" | "0")
+  !matches!(
+    value.to_ascii_lowercase().as_str(),
+    "" | "false" | "no" | "off" | "0"
+  )
 }
 
 #[cfg(test)]
