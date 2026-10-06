@@ -229,7 +229,7 @@ function switchSessionStart(root: string): void {
       }),
     })
     .parse(JSON.parse(readFileSync(path, "utf8")));
-  const hook = doc.hooks.SessionStart?.[0]?.hooks[0];
+  const hook = doc.hooks.SessionStart[0]?.hooks[0];
   if (hook === undefined) throw new Error("toolu has no SessionStart hook");
   Object.assign(hook, NATIVE_SESSION_HOOK);
   writeFileSync(path, JSON.stringify(doc));

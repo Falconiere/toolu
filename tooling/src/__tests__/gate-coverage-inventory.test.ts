@@ -23,6 +23,32 @@ const HooksRow = z.looseObject({
   event: z.string().optional(),
   commandOrModule: z.string().optional(),
 });
+const DiscoveredFixture = z.array(
+  z.looseObject({ id: z.string(), commandOrModule: z.string(), hostMechanism: z.string() }),
+);
+
+function fixtureHooks(root: string): string {
+  const hooksFile = join(root, "plugins/toolu/hooks/hooks.json");
+  mkdirSync(join(root, "plugins/toolu/hooks/src"), { recursive: true });
+  mkdirSync(join(root, "packages/toolu-core/src"), { recursive: true });
+  mkdirSync(join(root, "docs"));
+  cpSync(join(ROOT, "plugins/toolu/hooks/hooks.json"), hooksFile);
+  symlinkSync(
+    join(ROOT, "plugins/toolu/hooks/src/agent-tier.ts"),
+    join(root, "plugins/toolu/hooks/src/agent-tier.ts"),
+  );
+  symlinkSync(
+    join(ROOT, "packages/toolu-core/src/gates"),
+    join(root, "packages/toolu-core/src/gates"),
+  );
+  return hooksFile;
+}
+
+async function discoverFixture(env: Record<string, string>) {
+  const result = await run([process.execPath, "run", CLI, "discover"], { cwd: ROOT, env });
+  expect(result.exitCode).toBe(0);
+  return DiscoveredFixture.parse(JSON.parse(result.stdout));
+}
 
 async function committedInventory(): Promise<z.infer<typeof Rows>> {
   return Rows.parse(JSON.parse(await Bun.file(INVENTORY).text()));
@@ -55,30 +81,9 @@ test.concurrent("discover emits native built-ins and a Bun launcher entry", asyn
 test.concurrent("a native launcher switch keeps the inventory ID and records its host mechanism", async () => {
   using sb = createSandbox();
   const root = sb.project;
-  const hooksFile = join(root, "plugins/toolu/hooks/hooks.json");
-  mkdirSync(join(root, "plugins/toolu/hooks/src"), { recursive: true });
-  mkdirSync(join(root, "packages/toolu-core/src"), { recursive: true });
-  mkdirSync(join(root, "docs"));
-  cpSync(join(ROOT, "plugins/toolu/hooks/hooks.json"), hooksFile);
-  symlinkSync(
-    join(ROOT, "plugins/toolu/hooks/src/agent-tier.ts"),
-    join(root, "plugins/toolu/hooks/src/agent-tier.ts"),
-  );
-  symlinkSync(
-    join(ROOT, "packages/toolu-core/src/gates"),
-    join(root, "packages/toolu-core/src/gates"),
-  );
+  const hooksFile = fixtureHooks(root);
   const env = { GATE_COVERAGE_ROOT: root };
-  const discoverFixture = async () => {
-    const result = await run([process.execPath, "run", CLI, "discover"], { cwd: ROOT, env });
-    expect(result.exitCode).toBe(0);
-    return z
-      .array(
-        z.looseObject({ id: z.string(), commandOrModule: z.string(), hostMechanism: z.string() }),
-      )
-      .parse(JSON.parse(result.stdout));
-  };
-  const before = await discoverFixture();
+  const before = await discoverFixture(env);
   const id = before.find((row) =>
     row.id.startsWith("toolu:hooks.json:SessionStart:session-start.js:"),
   )?.id;
@@ -102,7 +107,7 @@ test.concurrent("a native launcher switch keeps the inventory ID and records its
   );
   Object.assign(target, native);
   writeFileSync(hooksFile, JSON.stringify(document));
-  const after = await discoverFixture();
+  const after = await discoverFixture(env);
   expect(after.find((row) => row.id === id)).toMatchObject({
     id,
     commandOrModule: "hooks/dist/session-start.js",

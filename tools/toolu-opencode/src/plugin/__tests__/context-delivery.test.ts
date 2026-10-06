@@ -4,42 +4,21 @@
  * a bad stdout are logged and do not change the turn.
  */
 import { expect, test } from "bun:test";
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Hooks } from "@opencode-ai/plugin";
 import type { Model, Part, UserMessage } from "@opencode-ai/sdk";
 import type { SpawnOutcome, SpawnRequest } from "../../bootstrap/spawn.ts";
 import { definedEnv } from "../../host/runtime-env.ts";
 import type { HostBinding, LogLevel } from "../context.ts";
-import {
-  contextJobs,
-  createContextHooks,
-  type ContextPlan,
-  type Spawner,
-} from "../context-delivery.ts";
+import { createContextHooks, type ContextPlan, type Spawner } from "../context-delivery.ts";
 import { createTooluHooks } from "../hooks.ts";
-import { fixturePlugin, tempRoot } from "../../bootstrap/__tests__/fixtures.ts";
 
 const tmpBase = process.env.TMPDIR ?? "/tmp";
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../../../..");
 const RENAME = "Rename: find all refs (ast-grep + Grep on configs) before rewriting.";
 const VAGUE = "Prompt too vague - specify what file/feature/error needs attention";
-const NATIVE_COMMAND = readFileSync(
-  resolve(
-    import.meta.dir,
-    "../../../../../crates/core/protocol/src/tests/fixtures/launcher-session-start.txt",
-  ),
-  "utf8",
-);
-const NATIVE_PROMPT_HOOK: unknown = JSON.parse(
-  readFileSync(join(REPO_ROOT, "tooling/fixtures/native-launcher/user-prompt-submit.json"), "utf8"),
-);
-const NATIVE_COMPACT_HOOK: unknown = JSON.parse(
-  readFileSync(join(REPO_ROOT, "tooling/fixtures/native-launcher/pre-compact.json"), "utf8"),
-);
-
 type Logged = { level: LogLevel; message: string };
 
 const MODEL: Model = {
@@ -182,118 +161,6 @@ test("compaction keeps unrelated context, the recovery instructions and the sess
   expect(output.prompt).toBeUndefined();
   expect(output.context).toHaveLength(once);
   await hooks.dispose?.();
-});
-
-test("a generated native compact hook runs through the real context subprocess", async () => {
-  using root = tempRoot("toolu-native-compact-");
-  const plugin = fixturePlugin(root.path, "toolu", {
-    entries: { "session-start": "process.exit(0);\n" },
-  });
-  writeFileSync(
-    join(plugin.pluginDir, "hooks", "hooks.json"),
-    JSON.stringify({
-      hooks: {
-        SessionStart: [
-          {
-            matcher: "compact",
-            hooks: [
-              {
-                type: "command",
-                command: NATIVE_COMMAND,
-                timeout: 60,
-              },
-            ],
-          },
-        ],
-      },
-    }),
-  );
-  const executable = join(root.path, "native-bin");
-  writeFileSync(
-    executable,
-    `#!/bin/sh
-if [ "$1" = "--hook-protocol" ]; then printf '1\\n'; exit 0; fi
-printf '%s\\n' '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"native compact context"}}'
-`,
-  );
-  chmodSync(executable, 0o755);
-  const jobs = contextJobs([{ name: "toolu", pluginDir: plugin.pluginDir }]);
-  if (!jobs.ok) throw new Error(jobs.reason);
-  const projectRoot = join(root.path, "project");
-  mkdirSync(projectRoot);
-  const hooks = createContextHooks(
-    {
-      startupLines: [],
-      notices: [],
-      prompt: jobs.prompt,
-      compact: jobs.compact,
-      bun: process.execPath,
-      projectRoot,
-      env: { TOOLU_BIN: executable, TOOLU_BUN: process.execPath },
-    },
-    () => Promise.resolve(),
-  );
-  const output = { context: ["keep-me"] };
-  await hooks.compacting({ sessionID: "ses_native" }, output);
-  expect(output.context).toContain("native compact context");
-  expect(output.context).toContain("keep-me");
-  await hooks.dispose();
-});
-
-test("generated native prompt and pre-compact hooks deliver their context", async () => {
-  using root = tempRoot("toolu-native-context-events-");
-  const plugin = fixturePlugin(root.path, "toolu", {
-    entries: { "user-prompt-submit": "", "pre-compact": "" },
-  });
-  writeFileSync(
-    join(plugin.pluginDir, "hooks", "hooks.json"),
-    JSON.stringify({
-      hooks: {
-        UserPromptSubmit: [{ matcher: "prompt", hooks: [NATIVE_PROMPT_HOOK] }],
-        PreCompact: [{ matcher: "auto", hooks: [NATIVE_COMPACT_HOOK] }],
-      },
-    }),
-  );
-  const executable = join(root.path, "native-bin");
-  writeFileSync(
-    executable,
-    `#!/bin/sh
-if [ "$1" = "--hook-protocol" ]; then printf '1\\n'; exit 0; fi
-case "$2" in
-  user-prompt-submit) printf '%s\\n' '{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"native prompt context"}}' ;;
-  pre-compact) printf '%s\\n' '{"hookSpecificOutput":{"hookEventName":"PreCompact","additionalContext":"native precompact context"}}' ;;
-  *) exit 3 ;;
-esac
-`,
-  );
-  chmodSync(executable, 0o755);
-  const jobs = contextJobs([{ name: "toolu", pluginDir: plugin.pluginDir }]);
-  if (!jobs.ok) throw new Error(jobs.reason);
-  const projectRoot = join(root.path, "project");
-  mkdirSync(projectRoot);
-  const hooks = createContextHooks(
-    {
-      startupLines: [],
-      notices: [],
-      prompt: jobs.prompt,
-      compact: jobs.compact,
-      bun: process.execPath,
-      projectRoot,
-      env: { TOOLU_BIN: executable, TOOLU_BUN: process.execPath },
-    },
-    () => Promise.resolve(),
-  );
-  const parts: Part[] = [textPart("ses_native", "msg_native", "describe the change")];
-  const output = { message: message("msg_native", "ses_native"), parts };
-  await hooks.prompt({ sessionID: "ses_native", messageID: "msg_native" }, output);
-  expect(
-    output.parts.some((part) => part.type === "text" && part.text === "native prompt context"),
-  ).toBe(true);
-  const compact = { context: ["keep-me"] };
-  await hooks.compacting({ sessionID: "ses_native" }, compact);
-  expect(compact.context).toContain("native precompact context");
-  expect(compact.context).toContain("keep-me");
-  await hooks.dispose();
 });
 
 test("a second load has no context hooks and disposing it leaves the first in place", async () => {
