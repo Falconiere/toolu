@@ -3,14 +3,14 @@
 use std::collections::BTreeMap;
 use std::io::{self, BufRead, BufReader, Write};
 use std::net::{Ipv4Addr, TcpListener, TcpStream};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use toolu_http::fixture_rustls as rustls;
 
-use crate::{Error, ObservedRequest, Reply, error};
+use crate::{Error, ObservedRequest, Reply, ServerData, error};
 
 /// Generate a self-signed test certificate and rustls server configuration.
 ///
@@ -47,14 +47,13 @@ pub(crate) fn bind() -> Result<TcpListener, Error> {
 pub(crate) fn spawn_https(
   listener: TcpListener,
   config: Arc<rustls::ServerConfig>,
-  routes: Arc<Mutex<BTreeMap<String, Reply>>>,
-  requests: Arc<Mutex<Vec<ObservedRequest>>>,
+  data: Arc<ServerData>,
   stop: Arc<AtomicBool>,
 ) -> JoinHandle<()> {
   thread::spawn(move || {
     while !stop.load(Ordering::SeqCst) {
       match listener.accept() {
-        Ok((socket, _)) => spawn_connection(socket, &config, &routes, &requests),
+        Ok((socket, _)) => spawn_connection(socket, &config, &data),
         Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
           thread::sleep(Duration::from_millis(2));
         }
@@ -64,25 +63,23 @@ pub(crate) fn spawn_https(
   })
 }
 
-fn spawn_connection(
-  socket: TcpStream,
-  config: &Arc<rustls::ServerConfig>,
-  routes: &Arc<Mutex<BTreeMap<String, Reply>>>,
-  requests: &Arc<Mutex<Vec<ObservedRequest>>>,
-) {
+fn spawn_connection(socket: TcpStream, config: &Arc<rustls::ServerConfig>, data: &Arc<ServerData>) {
   let config = Arc::clone(config);
-  let routes = Arc::clone(routes);
-  let requests = Arc::clone(requests);
+  let data = Arc::clone(data);
   thread::spawn(move || {
-    let _ = serve_https(socket, config, &routes, &requests);
+    if let Err(err) = serve_https(socket, config, &data) {
+      let _ = data
+        .diagnostics
+        .lock()
+        .map(|mut log| log.push(format!("HTTPS: {err}")));
+    }
   });
 }
 
 fn serve_https(
   socket: TcpStream,
   config: Arc<rustls::ServerConfig>,
-  routes: &Arc<Mutex<BTreeMap<String, Reply>>>,
-  requests: &Arc<Mutex<Vec<ObservedRequest>>>,
+  data: &ServerData,
 ) -> Result<(), Error> {
   socket
     .set_read_timeout(Some(Duration::from_secs(2)))
@@ -91,13 +88,14 @@ fn serve_https(
   let stream = rustls::StreamOwned::new(connection, socket);
   let mut reader = BufReader::new(stream);
   let request = read_request(&mut reader)?;
-  let reply = routes
+  let reply = data
+    .routes
     .lock()
     .map_err(error)?
     .get(&request.path)
     .cloned()
     .unwrap_or_else(|| Reply::new(404, "missing route"));
-  requests.lock().map_err(error)?.push(request);
+  data.requests.lock().map_err(error)?.push(request);
   if !reply.delay.is_zero() {
     thread::sleep(reply.delay);
   }

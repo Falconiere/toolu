@@ -33,9 +33,10 @@ fn get_json_sends_basic_auth_through_connect() {
     .get_json(&fixture.url("/get"), &auth)
     .unwrap_or_else(|err| {
       panic!(
-        "GET: {err:?}; CONNECTs: {:?}; HTTPS requests: {:?}",
+        "GET: {err:?}; CONNECTs: {:?}; HTTPS requests: {:?}; diagnostics: {:?}",
         fixture.connects(),
-        fixture.requests()
+        fixture.requests(),
+        fixture.diagnostics()
       )
     });
   assert_eq!(result["kind"], "get");

@@ -83,6 +83,27 @@ pub struct ObservedRequest {
   pub body: Vec<u8>,
 }
 
+/// Shared HTTPS server state for the two fixture origins.
+pub(crate) struct ServerData {
+  pub(crate) routes: Arc<Mutex<BTreeMap<String, Reply>>>,
+  pub(crate) requests: Arc<Mutex<Vec<ObservedRequest>>>,
+  pub(crate) diagnostics: Arc<Mutex<Vec<String>>>,
+}
+
+impl ServerData {
+  fn new(
+    routes: &Arc<Mutex<BTreeMap<String, Reply>>>,
+    requests: &Arc<Mutex<Vec<ObservedRequest>>>,
+    diagnostics: &Arc<Mutex<Vec<String>>>,
+  ) -> Arc<Self> {
+    Arc::new(Self {
+      routes: Arc::clone(routes),
+      requests: Arc::clone(requests),
+      diagnostics: Arc::clone(diagnostics),
+    })
+  }
+}
+
 /// Two HTTPS origins with one shared route table and a CONNECT proxy.
 pub struct Fixture {
   cert_der: Vec<u8>,
@@ -92,6 +113,7 @@ pub struct Fixture {
   routes: Arc<Mutex<BTreeMap<String, Reply>>>,
   requests: Arc<Mutex<Vec<ObservedRequest>>>,
   connects: Arc<Mutex<Vec<String>>>,
+  diagnostics: Arc<Mutex<Vec<String>>>,
   stop: Arc<AtomicBool>,
   handles: Vec<JoinHandle<()>>,
 }
@@ -107,6 +129,8 @@ impl Fixture {
     let routes = Arc::new(Mutex::new(BTreeMap::new()));
     let requests = Arc::new(Mutex::new(Vec::new()));
     let connects = Arc::new(Mutex::new(Vec::new()));
+    let diagnostics = Arc::new(Mutex::new(Vec::new()));
+    let server_data = ServerData::new(&routes, &requests, &diagnostics);
     let stop = Arc::new(AtomicBool::new(false));
     let first = bind()?;
     let second = bind()?;
@@ -118,21 +142,15 @@ impl Fixture {
       spawn_https(
         first,
         Arc::clone(&config),
-        Arc::clone(&routes),
-        Arc::clone(&requests),
+        Arc::clone(&server_data),
         Arc::clone(&stop),
       ),
-      spawn_https(
-        second,
-        config,
-        Arc::clone(&routes),
-        Arc::clone(&requests),
-        Arc::clone(&stop),
-      ),
+      spawn_https(second, config, server_data, Arc::clone(&stop)),
       spawn_proxy(
         proxy_listener,
         [first_origin, second_origin],
         Arc::clone(&connects),
+        Arc::clone(&diagnostics),
         Arc::clone(&stop),
       ),
     ];
@@ -144,6 +162,7 @@ impl Fixture {
       routes,
       requests,
       connects,
+      diagnostics,
       stop,
       handles,
     })
@@ -202,6 +221,14 @@ impl Fixture {
   /// Returns an error if the CONNECT log lock is poisoned.
   pub fn connects(&self) -> Result<Vec<String>, Error> {
     Ok(self.connects.lock().map_err(error)?.clone())
+  }
+
+  /// Worker progress and failures, to diagnose a failed transport test.
+  ///
+  /// # Errors
+  /// Returns an error if the diagnostic log lock is poisoned.
+  pub fn diagnostics(&self) -> Result<Vec<String>, Error> {
+    Ok(self.diagnostics.lock().map_err(error)?.clone())
   }
 }
 

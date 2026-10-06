@@ -14,12 +14,13 @@ pub(crate) fn spawn_proxy(
   listener: TcpListener,
   origins: [SocketAddr; 2],
   connects: Arc<Mutex<Vec<String>>>,
+  diagnostics: Arc<Mutex<Vec<String>>>,
   stop: Arc<AtomicBool>,
 ) -> JoinHandle<()> {
   thread::spawn(move || {
     while !stop.load(Ordering::SeqCst) {
       match listener.accept() {
-        Ok((socket, _)) => spawn_connection(socket, origins, &connects),
+        Ok((socket, _)) => spawn_connection(socket, origins, &connects, &diagnostics),
         Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
           thread::sleep(Duration::from_millis(2));
         }
@@ -33,10 +34,16 @@ fn spawn_connection(
   socket: TcpStream,
   origins: [SocketAddr; 2],
   connects: &Arc<Mutex<Vec<String>>>,
+  diagnostics: &Arc<Mutex<Vec<String>>>,
 ) {
   let connects = Arc::clone(connects);
+  let diagnostics = Arc::clone(diagnostics);
   thread::spawn(move || {
-    let _ = serve_proxy(socket, origins, &connects);
+    if let Err(err) = serve_proxy(socket, origins, &connects) {
+      let _ = diagnostics
+        .lock()
+        .map(|mut log| log.push(format!("CONNECT: {err}")));
+    }
   });
 }
 
