@@ -57,10 +57,10 @@ impl Run {
     )
   }
 
-  fn text(&self, key: &str) -> String {
-    text(&self.case, key)
-      .unwrap_or_default()
-      .replace("$GATE", &self.gate.display().to_string())
+  /// `case[key]` with `$GATE` filled in; a missing key fails the test.
+  fn text(&self, key: &str) -> Res<String> {
+    let value = text(&self.case, key)?;
+    Ok(value.replace("$GATE", &self.gate.display().to_string()))
   }
 }
 
@@ -109,13 +109,27 @@ fn read(path: &Path) -> String {
   std::fs::read_to_string(path).unwrap_or_default()
 }
 
-fn as_json(value: &Ordered) -> serde_json::Value {
-  serde_json::from_str(&value.to_text(false)).unwrap_or_default()
+fn as_json(value: &Ordered) -> Res<serde_json::Value> {
+  serde_json::from_str(&value.to_text(false)).map_err(|err| err.to_string())
 }
 
 #[test]
 fn twenty_cases_in_nine_scenarios() {
   assert_eq!(cases_of("state/cases.json", "gate-file").unwrap().len(), 20);
+  let counts = [
+    ("read", 10),
+    ("read-reason", 1),
+    ("replace", 2),
+    ("clear-unrecognized", 2),
+    ("clear-malformed", 1),
+    ("clear-missing", 1),
+    ("clear-live-lock", 1),
+    ("telemetry", 1),
+    ("ordering", 1),
+  ];
+  for (scenario, count) in counts {
+    assert_eq!(runs(scenario).unwrap().len(), count, "{scenario}");
+  }
 }
 
 #[test]
@@ -125,16 +139,19 @@ fn reads_classify_every_document() {
   for run in all {
     assert_eq!(
       kind(&read_gate_file(&run.gate)),
-      run.text("expectedKind"),
+      run.text("expectedKind").unwrap(),
       "{}",
-      run.text("name")
+      run.text("name").unwrap()
     );
   }
   for run in runs("read-reason").unwrap() {
     let GateRead::Unrecognized { reason, .. } = read_gate_file(&run.gate) else {
       panic!("kind")
     };
-    assert!(reason.contains(&run.text("reasonContains")), "{reason}");
+    assert!(
+      reason.contains(&run.text("reasonContains").unwrap()),
+      "{reason}"
+    );
   }
 }
 
@@ -146,16 +163,19 @@ fn a_record_replaces_an_unrecognized_document_and_logs_the_drop() {
       panic!("not ok")
     };
     assert_eq!(
-      as_json(&doc.to_ordered()),
-      as_json(field(&run.case, "expectedDoc").unwrap())
+      as_json(&doc.to_ordered()).unwrap(),
+      as_json(field(&run.case, "expectedDoc").unwrap()).unwrap()
     );
     let [warning] = &run.ctx.warnings[..] else {
       panic!("{:?}", run.ctx.warnings)
     };
-    assert!(warning.starts_with(&run.text("warningPrefix")), "{warning}");
+    assert!(
+      warning.starts_with(&run.text("warningPrefix").unwrap()),
+      "{warning}"
+    );
     assert_eq!(
       read(Path::new(&format!("{}.dropped.log", run.gate.display()))),
-      run.text("dropLog")
+      run.text("dropLog").unwrap()
     );
   }
 }
@@ -163,21 +183,24 @@ fn a_record_replaces_an_unrecognized_document_and_logs_the_drop() {
 #[test]
 fn a_clear_leaves_unrecognized_malformed_and_missing_files_alone() {
   for mut run in runs("clear-unrecognized").unwrap() {
-    assert_eq!(run.clear().unwrap(), run.text("expected"));
+    assert_eq!(run.clear().unwrap(), run.text("expected").unwrap());
     assert_eq!(Some(read(&run.gate)), run.body);
     let [warning] = &run.ctx.warnings[..] else {
       panic!("{:?}", run.ctx.warnings)
     };
-    assert!(warning.ends_with(&run.text("warningSuffix")), "{warning}");
+    assert!(
+      warning.ends_with(&run.text("warningSuffix").unwrap()),
+      "{warning}"
+    );
     assert!(!run.sb.project.join(".claude/tmp/telemetry").exists());
   }
   for mut run in runs("clear-malformed").unwrap() {
-    assert_eq!(run.clear().unwrap(), run.text("expected"));
-    assert_eq!(run.ctx.warnings, [run.text("warning")]);
-    assert_eq!(read(&run.gate), run.text("body"));
+    assert_eq!(run.clear().unwrap(), run.text("expected").unwrap());
+    assert_eq!(run.ctx.warnings, [run.text("warning").unwrap()]);
+    assert_eq!(read(&run.gate), run.text("body").unwrap());
   }
   for mut run in runs("clear-missing").unwrap() {
-    assert_eq!(run.clear().unwrap(), run.text("expected"));
+    assert_eq!(run.clear().unwrap(), run.text("expected").unwrap());
     assert_eq!(run.ctx.warnings, Vec::<String>::new());
   }
 }
@@ -185,10 +208,10 @@ fn a_clear_leaves_unrecognized_malformed_and_missing_files_alone() {
 #[test]
 fn a_clear_with_nothing_to_clear_never_waits_on_a_live_lock() {
   for mut run in runs("clear-live-lock").unwrap() {
-    let lock = format!("{}{}", std::process::id(), run.text("lockSuffix"));
+    let lock = format!("{}{}", std::process::id(), run.text("lockSuffix").unwrap());
     std::fs::write(lock_path(&run.gate), &lock).unwrap();
     let started = Instant::now();
-    assert_eq!(run.clear().unwrap(), run.text("expected"));
+    assert_eq!(run.clear().unwrap(), run.text("expected").unwrap());
     let Ordered::Number(max) = field(&run.case, "maxMs").unwrap() else {
       panic!("maxMs")
     };
@@ -206,8 +229,8 @@ fn a_record_appends_its_telemetry_line_under_the_gate_root() {
       .sb
       .project
       .join(".claude/tmp/telemetry")
-      .join(run.text("telemetryFile"));
-    assert_eq!(read(&log), run.text("expectedLine"));
+      .join(run.text("telemetryFile").unwrap());
+    assert_eq!(read(&log), run.text("expectedLine").unwrap());
   }
 }
 

@@ -54,8 +54,15 @@ fn passes(schema: &str, input: &Ordered) -> Res<bool> {
 
 #[test]
 fn every_case_has_a_rust_runner_but_the_typescript_package_one() {
-  let all = cases_of(CASES, "").unwrap_or_default();
-  assert!(all.is_empty(), "no case lacks a kind");
+  let text = std::fs::read_to_string(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../../fixtures/state/cases.json"
+  ))
+  .unwrap();
+  let all = Ordered::parse(&text).unwrap();
+  let Some(Ordered::Array(all)) = all.get("cases") else {
+    panic!("no cases")
+  };
   let kinds = [
     "schema",
     "telemetry-events",
@@ -70,14 +77,28 @@ fn every_case_has_a_rust_runner_but_the_typescript_package_one() {
     "io",
     "gate-file",
     "concurrency",
+    "package",
   ];
-  let counts: BTreeMap<&str, usize> = kinds
+  let known: Vec<&str> = kinds.iter().chain(&more).copied().collect();
+  for case in all {
+    let kind = text_of(case.get("kind"));
+    assert!(known.contains(&kind), "a case of unknown kind {kind:?}");
+  }
+  let counts: BTreeMap<&str, usize> = known
     .iter()
-    .chain(&more)
     .map(|kind| (*kind, cases_of(CASES, kind).unwrap().len()))
     .collect();
-  assert_eq!(counts.values().sum::<usize>(), 76);
-  assert_eq!(cases_of(CASES, "package").unwrap().len(), 1);
+  assert_eq!(all.len(), 77);
+  assert_eq!(counts.values().sum::<usize>(), 77);
+  assert_eq!(counts["package"], 1);
+}
+
+fn text_of(value: Option<&Ordered>) -> &str {
+  if let Some(Ordered::String(text)) = value {
+    text
+  } else {
+    ""
+  }
 }
 
 #[test]

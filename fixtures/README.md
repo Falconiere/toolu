@@ -25,7 +25,7 @@ Every new named case file below has `{ "version": 1, "cases": [...] }`. Each cas
 | Host roots | `host/root.json` | 18 → 18 | `packages/toolu-core/src/host/__tests__/host-roots.test.ts` | #414 |
 | Host output encoders | `host/encode.json` | new, 299 | `packages/toolu-core/src/host/__tests__/host-encode-fixture.test.ts` | #413 (`crates/core/protocol/tests/encode_fixture.rs`) |
 | Config resolution | `config/expected.json` | new, 35 | `packages/toolu-core/src/config/__tests__/config-fixture.test.ts` | #414 (`crates/core/runtime/tests/config_fixture.rs`) |
-| State | `state/cases.json` | 77 → 77 | `packages/toolu-core/src/state/__tests__` | #415 (`crates/core/state/tests/{state_cases,io_cases,gate_cases,interleave}.rs`) |
+| State | `state/cases.json` | 77 → 77 | `packages/toolu-core/src/state/__tests__` | #415 (`crates/core/state/tests/{state_cases,diff_cases,io_cases,gate_cases,interleave}.rs`) |
 | State gate-file bytes | `state/gate-bytes.json` | new, 16 | `packages/toolu-core/src/state/__tests__/gate-bytes.test.ts` | #415 (`crates/core/state/tests/gate_bytes.rs`) |
 | State edit records | `state/edit-records.json` | new, 42 | `packages/toolu-core/src/state/__tests__/edit-records.test.ts` | #415 (`crates/core/state/tests/edit_records.rs`) |
 | Statusline states | `statusline/cases.json` | 83 → 83 | `plugins/statusline/hooks/src/__tests__` | #431 |

@@ -56,7 +56,9 @@
       "plugins/*/.claude-plugin/plugin.json",
       "plugins/*/.codex-plugin/plugin.json",
       "docs/cli/**",
-      "benchmarks/startup-budgets.json"
+      "benchmarks/startup-budgets.json",
+      "packages/toolu-core/src/state/**",
+      "packages/toolu-core/src/detect/**"
     ],
     "ports": [
       "fixtures/**",

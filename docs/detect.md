@@ -53,12 +53,15 @@ The push and commit questions, which need the shell parser, follow in #418.
 - filesystem boundaries;
 - `core.bare` and `core.worktree`.
 
-`toolu_state::git` reads the branch (`HEAD`, loose refs and `packed-refs`), the linked-worktree test, the common dir and origin's HEAD the same way. So `Roots::project_root` and these facts spawn no process. Only these cases ask git, as TypeScript always does:
-- the `GIT_DIR` family of variables;
+`toolu_state::git` reads the branch (`HEAD`, loose refs and `packed-refs`), the linked-worktree test, the common dir and origin's HEAD the same way. So `Roots::project_root` and these facts spawn no process. These cases ask git, as TypeScript always does:
+- the `GIT_DIR` family of variables, even when empty;
 - `sudo` as root;
 - a path owned by another user (`safe.directory`);
-- config includes, `config.worktree`, quoted values, and a config that is not UTF-8 or cannot be read;
+- a config with an include, a malformed section header, a quoted or escaped value, a valueless `core.worktree`, or a repository format above 1;
+- a config that is not UTF-8 or cannot be read, and a `config.worktree` file;
+- a `core.worktree` that does not resolve;
 - reftable repositories;
+- a symlinked `HEAD` or `refs/remotes/origin/HEAD`, and a `HEAD` that names a ref outside `refs/heads/`;
 - a branch name that git would lengthen because a tag or a remote shares it.
 
 Git is still spawned for history and index questions, which run once per session:
