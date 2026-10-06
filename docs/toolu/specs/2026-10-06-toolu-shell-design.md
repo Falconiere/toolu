@@ -215,13 +215,13 @@ The fields:
 | AC | Real input | Expected | Check |
 |---|---|---|---|
 | AC-1 | `fixtures/shell/bats-parity.json`, `issue-283.json`; real git repositories under a temp dir | every case equal | `cargo test -p toolu-shell --test fixture_cases` |
-| AC-2 | `fixtures/shell/analysis.json` (203 cases) | Rust projection = `expect`/`rust.expect`; TS projection = `expect` | `cargo test -p toolu-shell --test analysis_fixture`; `bun test packages/toolu-core/src/shell/__tests__/analysis-fixture.test.ts` |
+| AC-2 | `fixtures/shell/analysis.json` (203 cases) | Rust projection = `expect`/`rust.expect`; TS projection = `expect`; every `rust.reason` appears in `docs/shell-analysis.md` (asserted by the TS test) | `cargo test -p toolu-shell --test analysis_fixture`; `bun test packages/toolu-core/src/shell/__tests__/analysis-fixture.test.ts` |
 | AC-3 | the four malformed lines | commands plus errors; `unknown` | `cargo test -p toolu-shell --test malformed` |
 | AC-4 | generated 10,000-level and 100,000-term inputs | no overflow; `unknown` for nesting | `cargo test -p toolu-shell --test limits` |
 | AC-5 | fixture-seeded corpus plus random bytes | no crash | `cargo +nightly fuzz run analyze -- -max_total_time=600` and the same for `nested`; the CI `fuzz` job log |
 | AC-6 | the 203 inputs × 200 rounds | p99 ≤ 100 µs | `cargo test --release -p toolu-shell --test latency -- --nocapture` |
 | AC-7 | the scenario lines | as stated | `cargo test -p toolu-shell --test scenarios` |
-| AC-8 | the workspace | gate green | `cargo xtask gate`; `bun run test`; CI `rust`, `rust-musl` |
+| AC-8 | the workspace | gate green | Locally: `cargo xtask gate`, `bun run test:conventions`, the touched TypeScript suites, `check:ci-paths`, `test:docs`, and a static x86_64 musl test binary built with `musl-gcc`. The full `bun run test` is compared against an `origin/main` baseline on this host. In CI: `gate` (the full `bun run test`), `rust`, `rust-musl` on both targets and `fuzz`, all green before `ready` (babysit) |
 | AC-9 | the TypeScript unit-test inputs, plus the probed constructs | the same expectations | `cargo test -p toolu-shell --lib` (the `src/tests/*_test.rs` files) |
 
 ## Documentation impact
@@ -247,3 +247,4 @@ None blocking.
 - AC-4: 🔵 consider (fixed). "Nor allows the command" now names the decision rule's `unknown` verdict.
 - AC-6: 🔵 consider (fixed). It now states that the timed span includes parse and walk.
 - AC-5: 🔵 consider (fixed). The scheduled run cannot happen before merge. The spec now says so, and the PR will.
+- Plan review, evidence (fixed): AC-8's local and CI evidence are now separate, and AC-2's documented differences are machine-checked.
