@@ -20,7 +20,7 @@ use drain::{Budget, Drain};
 /// The deadline when a caller sets none.
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 /// The bytes of stdout and stderr kept, together, when a caller sets no budget.
-pub const DEFAULT_MAX_OUTPUT_BYTES: usize = 1_048_576;
+const DEFAULT_MAX_OUTPUT_BYTES: usize = 1_048_576;
 /// How long the streams may take to close once the group was terminated.
 const FINAL_DRAIN: Duration = Duration::from_millis(250);
 /// The wait between two looks at a running command.

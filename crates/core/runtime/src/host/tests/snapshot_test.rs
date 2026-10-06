@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 use toolu_protocol::host::Host;
 
 use super::{
-  CodexPluginSnapshot, Installed, SnapshotStatus, canonical, codex_plugin_installed,
-  codex_plugin_snapshot_path, snapshot_codex_plugins,
+  CodexPluginSnapshot, Installed, SnapshotResult, SnapshotStatus, canonical,
+  codex_plugin_installed, codex_plugin_snapshot_path, snapshot_codex_plugins,
 };
 use crate::env::Env;
 use crate::host::roots::Roots;
@@ -118,7 +118,7 @@ fn codex_writes_the_snapshot_bytes_and_reads_them_back() {
     codex_env(dir.path(), r#"{"installed":[{"pluginId":"jev@toolu"}]}"#),
     Some(Host::Codex),
   );
-  let result = snapshot_codex_plugins(&roots).unwrap();
+  let result: SnapshotResult = snapshot_codex_plugins(&roots).unwrap();
   assert!(result.written);
   assert_eq!(result.snapshot, ready(&["jev@toolu"]));
   let bytes = std::fs::read_to_string(&result.path).unwrap();

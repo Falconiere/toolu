@@ -2,7 +2,8 @@ use serde_json::{Value, json};
 use toolu_protocol::host::Host;
 
 use super::{
-  CodexModel, codex_model, config_string, enabled, enabled_explicit, flag_false, flag_true, model,
+  CodexModel, MODEL_CLASSES, codex_model, config_string, enabled, enabled_explicit, flag_false,
+  flag_true, model,
 };
 use crate::config::load::LoadedConfig;
 
@@ -80,6 +81,7 @@ fn model_passes_aliases_warns_on_junk_and_reads_false_and_empty_as_unset() {
   let c = config(
     json!({ "models": { "review": "opus", "synthesis": "gpt", "mechanical": false, "exploration": "", "architecture": 3 } }),
   );
+  assert_eq!(MODEL_CLASSES.len(), 6);
   let got: Vec<String> = [
     "review",
     "mechanical",

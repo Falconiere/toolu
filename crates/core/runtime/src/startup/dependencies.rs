@@ -12,7 +12,7 @@ use crate::host::roots::Roots;
 use crate::process::commands::codex_plugin_list;
 
 /// The core plugin every other plugin needs.
-pub const CORE_PLUGIN: &str = "toolu@toolu";
+const CORE_PLUGIN: &str = "toolu@toolu";
 
 /// Which warning [`codex_dependency_notice`] words.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

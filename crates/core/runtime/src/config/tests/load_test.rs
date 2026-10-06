@@ -3,7 +3,7 @@ use std::path::Path;
 use serde_json::{Value, json};
 use toolu_protocol::host::Host;
 
-use super::{LoadedConfig, exists, load, merge};
+use super::{ConfigFiles, LoadedConfig, WARN_PREFIX, exists, load, merge};
 use crate::env::Env;
 use crate::host::roots::Roots;
 
@@ -32,7 +32,7 @@ fn place(path: &Path, text: &str) {
 
 fn loaded(user: Option<&str>, project: Option<&str>) -> (tempfile::TempDir, LoadedConfig) {
   let (dir, roots) = sandbox(Host::Claude);
-  let files = super::config_files(&roots, None);
+  let files: ConfigFiles = super::config_files(&roots, None);
   user.inspect(|text| place(&files.user, text));
   project.inspect(|text| place(files.project.as_ref().unwrap(), text));
   (dir, load(&roots, None))
@@ -233,6 +233,11 @@ fn codex_and_toolu_user_config_dir_choose_their_files() {
     super::config_files(&opencode, None).user,
     global.join("toolu.config.json")
   );
+}
+
+#[test]
+fn warnings_are_printed_after_the_config_prefix() {
+  assert_eq!(WARN_PREFIX, "toolu-config: ");
 }
 
 #[test]

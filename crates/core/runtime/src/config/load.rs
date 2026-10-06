@@ -19,7 +19,7 @@ pub const WARN_PREFIX: &str = "toolu-config: ";
 
 /// The top-level keys of a v1 config. `epic` is a namespaced section (#463)
 /// whose contents the loader never inspects.
-pub const KNOWN_KEYS: &[&str] = &[
+const KNOWN_KEYS: &[&str] = &[
   "version",
   "skills",
   "hooks",

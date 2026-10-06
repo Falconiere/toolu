@@ -19,10 +19,10 @@ pub const MODEL_CLASSES: [&str; 6] = [
 ];
 
 /// The model aliases a tier may name.
-pub const MODEL_ALIASES: [&str; 5] = ["haiku", "sonnet", "opus", "fable", "inherit"];
+const MODEL_ALIASES: [&str; 5] = ["haiku", "sonnet", "opus", "fable", "inherit"];
 
 /// The reasoning efforts a Codex tier may name.
-pub const CODEX_REASONING_EFFORTS: [&str; 6] = ["low", "medium", "high", "xhigh", "max", "ultra"];
+const CODEX_REASONING_EFFORTS: [&str; 6] = ["low", "medium", "high", "xhigh", "max", "ultra"];
 
 /// Each tier's default alias, in [`MODEL_CLASSES`] order.
 const MODEL_DEFAULTS: [&str; 6] = ["haiku", "sonnet", "sonnet", "sonnet", "opus", "opus"];

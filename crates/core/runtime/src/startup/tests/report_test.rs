@@ -1,4 +1,4 @@
-use super::{HelperStatus, RegistryStatus, StartupRecord, report};
+use super::{HelperStatus, RegistryStatus, STARTUP_REPORT_ENV, StartupRecord, report};
 use crate::env::Env;
 use crate::registry::RegistryEvent;
 
@@ -6,7 +6,7 @@ use crate::registry::RegistryEvent;
 fn every_record_is_one_json_line_in_typescript_key_order() {
   let dir = tempfile::tempdir().unwrap();
   let file = dir.path().join("report.jsonl");
-  let env = Env::from_pairs([("TOOLU_STARTUP_REPORT", file.display().to_string())]);
+  let env = Env::from_pairs([(STARTUP_REPORT_ENV, file.display().to_string())]);
   let records = [
     StartupRecord::Registry {
       spec: "ts-quality@toolu".to_owned(),

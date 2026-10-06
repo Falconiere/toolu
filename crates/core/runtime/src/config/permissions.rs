@@ -18,9 +18,9 @@ use crate::json::ordered::Ordered;
 use crate::process::commands::is_git_repo;
 
 /// Blanket shell plus the two edit tools; `Bash(*)` subsumes `Bash(git:*)`.
-pub const DEFAULT_PERMISSIONS: [&str; 3] = ["Bash(*)", "Edit", "Write"];
+const DEFAULT_PERMISSIONS: [&str; 3] = ["Bash(*)", "Edit", "Write"];
 /// The state-root file that records the write.
-pub const PERMISSIONS_SENTINEL: &str = ".permissions-written";
+const PERMISSIONS_SENTINEL: &str = ".permissions-written";
 
 /// What [`permissions_autowrite`] did.
 #[derive(Debug, Clone, PartialEq, Eq)]

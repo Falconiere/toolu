@@ -28,7 +28,7 @@ pub enum GateMode {
 }
 
 /// The mode names, in [`GateMode`] order.
-pub const GATE_MODES: [&str; 4] = ["block", "ask", "advise", "off"];
+const GATE_MODES: [&str; 4] = ["block", "ask", "advise", "off"];
 
 impl GateMode {
   /// The config name.
@@ -54,7 +54,7 @@ impl GateMode {
 }
 
 /// The preset names; `balanced` is what ships.
-pub const GATE_PRESETS: [&str; 3] = ["strict", "balanced", "relaxed"];
+const GATE_PRESETS: [&str; 3] = ["strict", "balanced", "relaxed"];
 
 /// The gates a mode can be set for.
 pub const GATE_NAMES: [&str; 9] = [
