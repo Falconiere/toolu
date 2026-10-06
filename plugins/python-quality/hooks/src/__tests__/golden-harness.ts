@@ -103,7 +103,7 @@ function prepare(sb: Sandbox, host: PretoolHost, c: PyCase): void {
     sb.git("commit", "-q", "-m", "project");
   }
   if (c.config !== undefined) sb.writeConfig(host, "project", c.config);
-  if (Array.isArray(c.setup)) applyCaseSetup(sb, c.setup);
+  if (Array.isArray(c.setup)) applyCaseSetup(sb, c.setup, host);
   else c.setup?.(sb);
 }
 

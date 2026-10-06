@@ -8,7 +8,7 @@ import { RUN_CASES } from "./runner-cases.ts";
 
 const GATE = ".claude/tmp/quality-gate-status.json";
 
-function spec(errors: string[], advisories: string[]): FileQualitySpec {
+function spec(errors: string[], advisories: string[] = []): FileQualitySpec {
   return {
     source: "fixture-quality-hook",
     reason: "Post-edit fixture violation(s) detected",
