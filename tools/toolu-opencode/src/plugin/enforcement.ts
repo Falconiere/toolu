@@ -89,6 +89,7 @@ function deliveryPlan(
     for (const entry of plugin.entries) {
       if (entry.additionalContext !== undefined) startupLines.push(entry.additionalContext);
       if (entry.systemMessage !== undefined) {
+        if (entry.native === true) startupLines.push(entry.systemMessage);
         notices.push(`toolu: ${plugin.plugin}/${entry.entry}: ${entry.systemMessage}`);
       }
     }

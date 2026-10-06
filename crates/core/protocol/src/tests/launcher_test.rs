@@ -6,6 +6,8 @@ const SESSION_HOOK: &str =
   include_str!("../../../../../tooling/fixtures/native-launcher/session-start.json");
 const PRE_HOOK: &str =
   include_str!("../../../../../tooling/fixtures/native-launcher/pre-tool-use.json");
+const STATUSLINE_SESSION_HOOK: &str =
+  include_str!("../../../../../tooling/fixtures/native-launcher/statusline-session-start.json");
 
 fn target<'a>(plugin: &'a str, event: &'a str, name: &'a str) -> Target<'a> {
   Target {
@@ -36,6 +38,12 @@ fn typescript_checker_fixtures_match_the_rust_generator() {
   for (plugin, event, name, fixture) in [
     ("toolu", "SessionStart", "session-start", SESSION_HOOK),
     ("toolu", "PreToolUse", "pre-tools", PRE_HOOK),
+    (
+      "statusline",
+      "SessionStart",
+      "session-start",
+      STATUSLINE_SESSION_HOOK,
+    ),
   ] {
     let generated = generated(plugin, event, name);
     let expected = serde_json::json!({

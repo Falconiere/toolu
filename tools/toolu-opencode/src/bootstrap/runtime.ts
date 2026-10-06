@@ -168,7 +168,11 @@ async function runEntry(
     if (found !== undefined && found.failures.length > 0) return found.failures.join("; ");
     const stderr = excerpt(spawned.stderr);
     if (stderr !== "") verified.diagnostics.push(`${plugin.name}/${entry.name}: ${stderr}`);
-    return { entry: entry.name, ...output.context };
+    return {
+      entry: entry.name,
+      ...(entry.command === undefined ? {} : { native: true as const }),
+      ...output.context,
+    };
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
