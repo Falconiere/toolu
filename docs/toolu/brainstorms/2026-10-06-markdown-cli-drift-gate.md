@@ -47,7 +47,8 @@ cost and on the issue text.
 
 ### Allowlist location (Jev: `in_plugin` 0.56, `in_tooling` 0.44)
 
-`plugins/<name>/markdown-cli.json` per plugin, as the issue words it,
+`tooling/conventions/markdown-cli/<plugin>.json` per plugin (execution moved it
+out of `plugins/<name>/`: the plugin folder allowlist is gate data),
 and `tooling/conventions/markdown-cli.json` repository-wide (spec review moved it out of `docs/`). A file is
 optional (absent = no entries). Each entry names `file`, the exact `subject`
 text and a non-empty `reason`; an entry that no longer matches a finding fails

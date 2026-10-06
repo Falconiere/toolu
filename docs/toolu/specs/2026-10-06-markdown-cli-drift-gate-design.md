@@ -74,8 +74,10 @@ under 300 code lines:
   reference fails when every namespace it maps to exists and has no
   `placeholder` verb ("ported").
 - `markdown_cli/allow.rs` — loads `tooling/conventions/markdown-cli.json`
-  (repository-wide) and `plugins/<name>/markdown-cli.json` (that plugin's
-  files only), validates them, matches findings and reports stale entries.
+  (repository-wide) and `tooling/conventions/markdown-cli/<plugin>.json`
+  (the files under `plugins/<plugin>/` only; amended in execution: the plugin
+  folder allowlist is gate data, and the file stays out of the shipped
+  plugin), validates them, matches findings and reports stale entries.
 
 Reuse: `output::findings`/`say`, `Options.root`, `serde_json::Value` as in
 `cli_compat/compare.rs`; no new dependency.
@@ -120,7 +122,7 @@ Allowlist file (both locations):
 Both keys optional; unknown keys rejected. `external` names commands that are
 not `toolu`. An `allow` entry excuses the finding whose file and subject (the
 backticked text) match exactly; `file` is repository-relative and must lie in
-the file's scope (the plugin directory, or anywhere scanned for the
+the file's scope (`plugins/<plugin>/`, or anywhere scanned for the
 repository-wide file); `reason` is non-empty. Initial repository-wide data:
 `external` = every external command today's Markdown runs (`bun`, `npx`,
 `ast-grep`, `cat`, `rm`, `codex`, `claude`, `opencode`, `git`, `gh`, `jq`,

@@ -16,6 +16,7 @@ mod launcher_e2e;
 mod layers;
 mod layers_check;
 mod lexer;
+mod markdown_cli;
 mod measure;
 mod metadata;
 mod options;
@@ -59,6 +60,7 @@ const TASKS: &[(&str, Task)] = &[
   ("docs-cli", docs_cli::run),
   ("check-cli-compat", cli_compat::run),
   ("check-startup", startup::run),
+  ("check-markdown-cli", markdown_cli::run),
 ];
 
 // `\x20` keeps the second line's indent: a `\` continuation strips leading spaces.
@@ -67,7 +69,7 @@ const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--titl
   \x20      cargo xtask measure --out FILE -- COMMAND [ARG]...\n\
   tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
   check-coverage, measure, print-hook, check-hooks, launcher-e2e, docs-cli, check-cli-compat, \
-  check-startup";
+  check-startup, check-markdown-cli";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.
 fn run(args: &[String]) -> ExitCode {

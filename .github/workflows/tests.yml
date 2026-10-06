@@ -84,6 +84,14 @@ jobs:
       - name: Install ast-grep
         run: npm install -g @ast-grep/cli
 
+      # cargo xtask check-markdown-cli (#444) judges every skill, command, agent
+      # and doc against the toolu command tree; test:ts runs it.
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
@@ -181,6 +189,14 @@ jobs:
       # The guardrails pattern checks drive real ast-grep.
       - name: Install ast-grep
         run: npm install -g @ast-grep/cli
+
+      # cargo xtask check-markdown-cli (#444) judges every skill, command, agent
+      # and doc against the toolu command tree; test:docs runs it.
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
 
       - name: Install dependencies
         run: bun install --frozen-lockfile

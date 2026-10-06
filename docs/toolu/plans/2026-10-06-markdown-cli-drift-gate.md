@@ -21,9 +21,18 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
   {
     "id": "S1-shell-lexer",
     "title": "markdown_cli/shell.rs: lex a shell block into commands (quotes spanning lines, backslash-newline, comments, heredoc bodies skipped, redirections dropped, separators, keywords, leading assignments, for-headers, defined functions, console $-prompt lines)",
-    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo test -p xtask --locked markdown_cli::shell",
-    "ac_refs": ["AC-5"],
-    "paths": ["crates/xtask/src/main.rs", "crates/xtask/src/markdown_cli.rs", "crates/xtask/src/markdown_cli/shell.rs", "crates/xtask/src/markdown_cli/tests/shell_test.rs"],
+    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo test -p xtask --locked markdown_cli::shell && cargo test -p xtask --locked markdown_cli::words",
+    "ac_refs": [
+      "AC-5"
+    ],
+    "paths": [
+      "crates/xtask/src/main.rs",
+      "crates/xtask/src/markdown_cli.rs",
+      "crates/xtask/src/markdown_cli/shell.rs",
+      "crates/xtask/src/markdown_cli/tests/shell_test.rs",
+      "crates/xtask/src/markdown_cli/words.rs",
+      "crates/xtask/src/markdown_cli/tests/words_test.rs"
+    ],
     "input": "real blocks copied from plugins/jev/skills/jev/SKILL.md (the JEV_BUN for-loop), plugins/ast-grep/skills/ast-grep/references/ast-grep-advanced.md (multi-line single-quoted YAML), plugins/jev/skills/jev/references/problem-solving.md (cat <<'JSON' heredoc, judge() function); an unterminated quote and heredoc",
     "model": "inherit"
   },
@@ -31,9 +40,17 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
     "id": "S2-markdown-scan",
     "title": "markdown_cli/scan.rs: shell-tagged fences (bash, sh, shell, zsh, fish, console) with line numbers, single-backtick inline spans outside fences, untagged/text fences skipped, unterminated fence to EOF; the scanned file list (plugins skills/commands/agents, AGENTS.md, docs/** minus docs/toolu and docs/releases)",
     "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo test -p xtask --locked markdown_cli::scan",
-    "ac_refs": ["AC-3", "AC-4"],
-    "depends_on": ["S1-shell-lexer"],
-    "paths": ["crates/xtask/src/markdown_cli/scan.rs", "crates/xtask/src/markdown_cli/tests/scan_test.rs"],
+    "ac_refs": [
+      "AC-3",
+      "AC-4"
+    ],
+    "depends_on": [
+      "S1-shell-lexer"
+    ],
+    "paths": [
+      "crates/xtask/src/markdown_cli/scan.rs",
+      "crates/xtask/src/markdown_cli/tests/scan_test.rs"
+    ],
     "input": "real docs/install.md and docs/resource-budgets.md inline spans; a Markdown string with ```text, ``` untagged, ~~~bash and an unterminated fence; this repository's file list containing plugins/brainstorm/skills/brainstorm/SKILL.md and plugins/delivery-flow/skills/delivery-flow/SKILL.md and no docs/toolu file",
     "model": "inherit"
   },
@@ -41,9 +58,19 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
     "id": "S3-tree-judge",
     "title": "markdown_cli/judge.rs: walk words against the real tree (children and aliases, hidden matches not suggested, inherited globals, --help/-h, --flag=value, value flags, possibleValues unless placeholder, placeholder command positions incl. optional [..], ellipsis, positional count, fenced completeness vs inline mentions, Levenshtein closest verb)",
     "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo test -p xtask --locked markdown_cli::judge",
-    "ac_refs": ["AC-1", "AC-2", "AC-3"],
-    "depends_on": ["S1-shell-lexer"],
-    "paths": ["crates/xtask/src/markdown_cli/judge.rs", "crates/xtask/src/markdown_cli/tests/judge_test.rs", "docs/cli/commands.json"],
+    "ac_refs": [
+      "AC-1",
+      "AC-2",
+      "AC-3"
+    ],
+    "depends_on": [
+      "S1-shell-lexer"
+    ],
+    "paths": [
+      "crates/xtask/src/markdown_cli/judge.rs",
+      "crates/xtask/src/markdown_cli/tests/judge_test.rs",
+      "docs/cli/commands.json"
+    ],
     "input": "the real docs/cli/commands.json: toolu epic strat, toolu --jsn epic planned, toolu --host bogus commands, toolu --host <h> commands, toolu --host=<h> commands, toolu hook (inline ok, fenced missing NAME), toolu doctor (inline ok, fenced missing verb), toolu <plugin> hook <name>, toolu [<plugin>] hook <name> --event <Event> --plugin-root <root>, toolu --hook-protocol, toolu ledger run, toolu review hook a b, toolu --version, toolu jev planned --help, toolu …",
     "model": "inherit"
   },
@@ -51,19 +78,37 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
     "id": "S4-names-surfaces",
     "title": "markdown_cli/names.rs (builtins/keywords, defined functions, paths, variables, external list) and markdown_cli/surfaces.rs (hooks/dist, scripts/*.ts, bun-run .ts/.js, stable scripts; stem table; owner fallback; ported = present without placeholder verb; plugin Markdown only)",
     "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo test -p xtask --locked markdown_cli::names && cargo test -p xtask --locked markdown_cli::surfaces",
-    "ac_refs": ["AC-4", "AC-5"],
-    "depends_on": ["S1-shell-lexer"],
-    "paths": ["crates/xtask/src/markdown_cli/names.rs", "crates/xtask/src/markdown_cli/surfaces.rs", "crates/xtask/src/markdown_cli/tests/names_test.rs", "crates/xtask/src/markdown_cli/tests/surfaces_test.rs", "docs/cli/commands.json"],
+    "ac_refs": [
+      "AC-4",
+      "AC-5"
+    ],
+    "depends_on": [
+      "S1-shell-lexer"
+    ],
+    "paths": [
+      "crates/xtask/src/markdown_cli/names.rs",
+      "crates/xtask/src/markdown_cli/surfaces.rs",
+      "crates/xtask/src/markdown_cli/tests/names_test.rs",
+      "crates/xtask/src/markdown_cli/tests/surfaces_test.rs",
+      "docs/cli/commands.json"
+    ],
     "input": "commands ast-grep, mod.sh, judge (defined), \"$JEV_BUN\", plugins/x/hooks/dist/y.js, export, [; real tree and a copy with ledger's planned replaced by run: bun \"$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\" preflight, bun \"$S/launch-issue.ts\", jev.sh, bun test packages/x.test.ts (not a surface), brainstorm/delivery-flow already ported",
     "model": "inherit"
   },
   {
     "id": "S5-allowlists",
-    "title": "markdown_cli/allow.rs: load and validate tooling/conventions/markdown-cli.json and plugins/<name>/markdown-cli.json (external, allow with file/subject/reason; unknown keys, empty reason, out-of-scope file → setup error), excuse exact matches, report stale entries",
+    "title": "markdown_cli/allow.rs: load and validate tooling/conventions/markdown-cli.json and tooling/conventions/markdown-cli/<plugin>.json (external, allow with file/subject/reason; unknown keys, empty reason, out-of-scope file → setup error), excuse exact matches, report stale entries",
     "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo test -p xtask --locked markdown_cli::allow",
-    "ac_refs": ["AC-7"],
-    "depends_on": ["S2-markdown-scan"],
-    "paths": ["crates/xtask/src/markdown_cli/allow.rs", "crates/xtask/src/markdown_cli/tests/allow_test.rs"],
+    "ac_refs": [
+      "AC-7"
+    ],
+    "depends_on": [
+      "S2-markdown-scan"
+    ],
+    "paths": [
+      "crates/xtask/src/markdown_cli/allow.rs",
+      "crates/xtask/src/markdown_cli/tests/allow_test.rs"
+    ],
     "input": "temp allowlist files: a valid entry excusing one finding, a stale entry, an entry without reason, a plugin file naming another plugin's file, an unknown key, invalid JSON, absent files",
     "model": "inherit"
   },
@@ -71,9 +116,38 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
     "id": "S6-task-and-real-repo",
     "title": "markdown_cli.rs run + TASKS/USAGE + inventory.json; tooling/conventions/markdown-cli.json with the external list and the two allowances; fix the stale mod.sh wrapper name in the ast-grep advanced reference; integration tests spawning the xtask binary on temp roots (AC-1..AC-8) and on this repository",
     "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo xtask check-markdown-cli && cargo test -p xtask --locked --test markdown_cli && cargo test -p xtask --locked markdown_cli && cargo xtask guardrails",
-    "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8"],
-    "depends_on": ["S2-markdown-scan", "S3-tree-judge", "S4-names-surfaces", "S5-allowlists"],
-    "paths": ["crates/xtask/src/main.rs", "crates/xtask/src/markdown_cli.rs", "crates/xtask/src/markdown_cli", "crates/xtask/src/tests/main_test.rs", "crates/xtask/src/tests/markdown_cli_test.rs", "crates/xtask/tests/markdown_cli.rs", "tooling/conventions/guardrails/rust/inventory.json", "tooling/conventions/markdown-cli.json", "plugins/ast-grep/skills/ast-grep/references/ast-grep-advanced.md", "plugins", "AGENTS.md", "docs", "docs/cli/commands.json"],
+    "ac_refs": [
+      "AC-1",
+      "AC-2",
+      "AC-3",
+      "AC-4",
+      "AC-5",
+      "AC-6",
+      "AC-7",
+      "AC-8"
+    ],
+    "depends_on": [
+      "S2-markdown-scan",
+      "S3-tree-judge",
+      "S4-names-surfaces",
+      "S5-allowlists"
+    ],
+    "paths": [
+      "crates/xtask/src/main.rs",
+      "crates/xtask/src/markdown_cli.rs",
+      "crates/xtask/src/markdown_cli",
+      "crates/xtask/src/tests/main_test.rs",
+      "crates/xtask/src/tests/markdown_cli_test.rs",
+      "crates/xtask/tests/markdown_cli.rs",
+      "tooling/conventions/guardrails/rust/inventory.json",
+      "tooling/conventions/markdown-cli.json",
+      "plugins/ast-grep/skills/ast-grep/references/ast-grep-advanced.md",
+      "plugins",
+      "AGENTS.md",
+      "docs",
+      "docs/cli/commands.json",
+      "tooling/conventions/markdown-cli"
+    ],
     "input": "this repository; temp roots with the real tree plus a skill with toolu epic strat on line 12, toolu --jsn epic planned, a fenced ast-grep run with the real external list and with ast-grep removed, the real delivery-flow execution.md under a ledger-ported tree, babysit planned renamed to tick then step, allowlist cases; elapsed time of the spawned binary on this repository",
     "model": "inherit"
   },
@@ -81,9 +155,21 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
     "id": "S7-ci-wiring",
     "title": "package.json check:markdown-cli in test:ts and test:docs; tests.yml installs the pinned toolchain with rust-cache in the gate and docs jobs; changes.test.ts proves a rename diff (crates + docs/cli/commands.json) turns on docs",
     "check": "bun test --timeout 60000 tooling/src/ci-paths/__tests__/changes.test.ts tooling/src/ci-paths/__tests__/workflows.test.ts && bun run check:ci-paths && bun run check:markdown-cli",
-    "ac_refs": ["AC-6", "AC-9"],
-    "depends_on": ["S6-task-and-real-repo"],
-    "paths": ["package.json", ".github/workflows/tests.yml", ".github/ci-paths.json", "tooling/src/ci-paths", "tooling/src/ci-changes.ts", "tooling/src/check-ci-paths.ts"],
+    "ac_refs": [
+      "AC-6",
+      "AC-9"
+    ],
+    "depends_on": [
+      "S6-task-and-real-repo"
+    ],
+    "paths": [
+      "package.json",
+      ".github/workflows/tests.yml",
+      ".github/ci-paths.json",
+      "tooling/src/ci-paths",
+      "tooling/src/ci-changes.ts",
+      "tooling/src/check-ci-paths.ts"
+    ],
     "input": "the real .github/ci-paths.json and ci-changes.ts in a git sandbox with an edit to crates/core/runtime/src/lib.rs and docs/cli/commands.json; the real tests.yml",
     "model": "inherit"
   },
@@ -91,9 +177,18 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
     "id": "S8-docs",
     "title": "docs/markdown-cli.md (scope, commands, removed surfaces and stem table, allowlist format, what a port changes); AGENTS.md CI rows, Key files xtask task list, Rust conventions Commands, Contributing; the page itself passes the gate",
     "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo xtask check-markdown-cli && test -f docs/markdown-cli.md && grep -q 'check-markdown-cli' AGENTS.md && grep -q 'markdown-cli.md' AGENTS.md && bun run guardrails && bun run check:opencode-surface",
-    "ac_refs": ["AC-9"],
-    "depends_on": ["S7-ci-wiring"],
-    "paths": ["docs/markdown-cli.md", "AGENTS.md", "tooling/conventions/markdown-cli.json"],
+    "ac_refs": [
+      "AC-9"
+    ],
+    "depends_on": [
+      "S7-ci-wiring"
+    ],
+    "paths": [
+      "docs/markdown-cli.md",
+      "AGENTS.md",
+      "tooling/conventions/markdown-cli.json",
+      "tooling/conventions/markdown-cli"
+    ],
     "input": "the new page and AGENTS.md as scanned by the gate itself",
     "model": "inherit"
   },
@@ -101,9 +196,24 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
     "id": "S9-full-gates",
     "title": "Full quality gates: cargo xtask gate (Rust bar incl. coverage, jscpd, docs-cli, inventory) and bun run test, through the job lease; failures compared with origin/main",
     "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; bun /root/.claude/plugins/cache/toolu/epic-orchestrator/7.9.0/scripts/job.ts -- cargo xtask gate --base origin/main --title 'feat(xtask): Markdown–CLI drift gate (#444)' && bun /root/.claude/plugins/cache/toolu/epic-orchestrator/7.9.0/scripts/job.ts -- bun run test:docs",
-    "ac_refs": ["AC-3", "AC-9"],
-    "depends_on": ["S8-docs"],
-    "paths": ["crates", "Cargo.toml", "Cargo.lock", "tooling", "package.json", ".github", "docs", "AGENTS.md", "plugins"],
+    "ac_refs": [
+      "AC-3",
+      "AC-9"
+    ],
+    "depends_on": [
+      "S8-docs"
+    ],
+    "paths": [
+      "crates",
+      "Cargo.toml",
+      "Cargo.lock",
+      "tooling",
+      "package.json",
+      ".github",
+      "docs",
+      "AGENTS.md",
+      "plugins"
+    ],
     "input": "the whole branch",
     "model": "inherit"
   }
@@ -112,7 +222,7 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
 
 ## Critical files
 
-- Create: `crates/xtask/src/markdown_cli.rs`, `crates/xtask/src/markdown_cli/{scan,shell,judge,names,surfaces,allow}.rs`, `crates/xtask/src/markdown_cli/tests/{scan,shell,judge,names,surfaces,allow}_test.rs`, `crates/xtask/src/tests/markdown_cli_test.rs`, `crates/xtask/tests/markdown_cli.rs`, `tooling/conventions/markdown-cli.json`, `docs/markdown-cli.md`.
+- Create: `crates/xtask/src/markdown_cli.rs`, `crates/xtask/src/markdown_cli/{scan,shell,words,judge,names,surfaces,allow}.rs`, `crates/xtask/src/markdown_cli/tests/{scan,shell,words,judge,names,surfaces,allow}_test.rs`, `tooling/conventions/markdown-cli/ast-grep.json`, `crates/xtask/src/tests/markdown_cli_test.rs`, `crates/xtask/tests/markdown_cli.rs`, `tooling/conventions/markdown-cli.json`, `docs/markdown-cli.md`.
 - Modify: `crates/xtask/src/main.rs`, `tooling/conventions/guardrails/rust/inventory.json`, `package.json`, `.github/workflows/tests.yml`, `tooling/src/ci-paths/__tests__/changes.test.ts`, `AGENTS.md`, `plugins/ast-grep/skills/ast-grep/references/ast-grep-advanced.md`.
 
 ## Verification
@@ -130,3 +240,9 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
 - S9 / Verification: 🟡 should-fix (fixed): the plan named `bun run test` but its known root-host failures would make a ledger check unrunnable; S9 checks `cargo xtask gate` and `test:docs`, and the full `bun run test` run is recorded against an `origin/main` baseline.
 - Verification: 🟡 should-fix (fixed): the delivery sequence (ledger verify, review state, verdict, PR body, babysit) was missing.
 - AC coverage: every spec AC (AC-1…AC-9) appears in at least one step's `ac_refs`.
+
+## Deviations
+
+- **Per-plugin allowlists live in `tooling/conventions/markdown-cli/<plugin>.json`, not `plugins/<plugin>/markdown-cli.json`.** `cargo xtask guardrails` rejects a new file at a plugin root: the plugin folder allowlist is `structure.plugin` in `rules.json`, gate data that changes only in its own `chore(gates):` PR. The tooling location was Jev's runner-up (0.44) and also keeps the file out of the shipped plugin. A file there must be named after a directory under `plugins/`.
+- **`markdown_cli/words.rs`** holds `Command`, `Lexed`, `unquote` and the command-start rule, split from `shell.rs` to keep it under 300 code lines (rule 1).
+- **Real findings settled in S6:** the ast-grep advanced reference's stale `mod.sh ast-grep …` became `plugins/ast-grep/hooks/dist/ast-grep.js …` (the form `docs/ast-grep/README.md` uses); the ast-grep skill's Strictness block, a list of flag values in a `bash` fence, has a per-plugin allowance; `docs/cli/installer.md` names the Node installer's own `toolu` bin twice and gets two repository allowances beside the planned two. Functions defined in one block count for the file's later blocks (the Jev problem-solving reference defines `judge()` once).
