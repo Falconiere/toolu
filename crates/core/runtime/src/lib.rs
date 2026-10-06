@@ -10,6 +10,7 @@
 //! - `config`: the `toolu.config.json` loader with its fail-closed envelope, gate
 //!   modes, thresholds, model tiers, docs-sync globs, the permissions write and the
 //!   plugin settings files;
+//! - `git`: the repository holding a directory, read from `.git` without spawning git (#415);
 //! - `process`: bounded subprocesses in their own process group (only this module spawns);
 //! - `startup`: stable-path publishing, bounded context output, Codex dependency
 //!   warnings and `TOOLU_STARTUP_REPORT` records;
@@ -21,6 +22,7 @@ pub mod cli;
 pub mod cli_args;
 pub mod config;
 pub mod env;
+pub mod git;
 pub mod host;
 pub mod install;
 pub mod invocation;

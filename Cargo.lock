@@ -995,6 +995,12 @@ version = "7.11.0"
 [[package]]
 name = "toolu-state"
 version = "7.11.0"
+dependencies = [
+ "nix",
+ "tempfile",
+ "toolu-protocol",
+ "toolu-runtime",
+]
 
 [[package]]
 name = "toolu-statusline"

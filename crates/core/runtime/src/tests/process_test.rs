@@ -116,3 +116,10 @@ fn a_process_that_left_the_group_holding_stdin_does_not_block_the_run() {
     started.elapsed()
   );
 }
+
+#[test]
+fn stdout_bytes_keep_what_the_lossy_text_replaces() {
+  let output = run(&sh("printf 'a\\377\\376b'")).unwrap();
+  assert_eq!(output.stdout_bytes, b"a\xff\xfeb".to_vec());
+  assert_eq!(output.stdout, "a\u{fffd}\u{fffd}b");
+}

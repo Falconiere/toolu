@@ -8,7 +8,7 @@ use toolu_protocol::host::Host;
 
 use super::detect::{Detected, detect};
 use crate::env::Env;
-use crate::process::commands::git_toplevel;
+use crate::git;
 
 /// A caller passed an empty name where one is required (TypeScript's `TypeError`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -99,7 +99,7 @@ impl Roots {
       Some(cwd) => cwd.to_path_buf(),
       None => std::env::current_dir().ok()?,
     };
-    git_toplevel(&self.env, &cwd)
+    git::toplevel(&self.env, &cwd)
   }
 
   /// `.claude`, `.codex`, `.cursor`, `.hermes` or `.opencode`, unless

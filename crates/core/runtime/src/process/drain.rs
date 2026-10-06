@@ -59,6 +59,11 @@ impl Drain {
   pub(super) fn text(&self) -> String {
     String::from_utf8_lossy(&lock(&self.bytes)).into_owned()
   }
+
+  /// The bytes kept so far, exactly as the child wrote them.
+  pub(super) fn bytes(&self) -> Vec<u8> {
+    lock(&self.bytes).clone()
+  }
 }
 
 fn read_all<R: Read>(mut stream: R, bytes: &Mutex<Vec<u8>>, budget: &Budget) {
