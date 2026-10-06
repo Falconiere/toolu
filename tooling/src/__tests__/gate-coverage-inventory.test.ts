@@ -123,7 +123,7 @@ test.concurrent("a native launcher switch keeps the inventory ID and records its
   expect(readFileSync(join(root, "docs/gate-coverage-matrix.md"), "utf8")).toContain(
     " | native | ",
   );
-  const inventory = join(root, "tooling/fixtures/gate-coverage/inventory.json");
+  const inventory = join(root, "fixtures/gate-coverage/inventory.json");
   const rows = z
     .array(z.looseObject({ id: z.string(), hostMechanism: z.string() }))
     .parse(JSON.parse(readFileSync(inventory, "utf8")));
