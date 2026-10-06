@@ -7,6 +7,8 @@
 use regex::Regex;
 use serde_json::Value;
 
+use crate::command_tree::list;
+
 use super::words::{Command, unquote};
 
 /// Paths of removed surfaces in code text, with the stem in group 1.
@@ -112,10 +114,7 @@ fn is_ported(tree: &Value, namespace: &str) -> bool {
 }
 
 fn commands(node: &Value) -> &[Value] {
-  node
-    .get("commands")
-    .and_then(Value::as_array)
-    .map_or(&[], Vec::as_slice)
+  list(node, "commands")
 }
 
 #[cfg(test)]

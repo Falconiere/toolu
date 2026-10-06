@@ -4,6 +4,8 @@
 
 use serde_json::Value;
 
+use crate::command_tree::{flag_set, list, text};
+
 /// Where the command was written.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Origin {
@@ -325,21 +327,6 @@ pub(crate) fn is_placeholder(word: &str) -> bool {
 
 fn is_ellipsis(word: &str) -> bool {
   word == "…" || word == "..."
-}
-
-fn list<'a>(node: &'a Value, key: &str) -> &'a [Value] {
-  node
-    .get(key)
-    .and_then(Value::as_array)
-    .map_or(&[], Vec::as_slice)
-}
-
-fn text<'a>(node: &'a Value, key: &str) -> &'a str {
-  node.get(key).and_then(Value::as_str).unwrap_or_default()
-}
-
-fn flag_set(node: &Value, key: &str) -> bool {
-  node.get(key) == Some(&Value::Bool(true))
 }
 
 #[cfg(test)]

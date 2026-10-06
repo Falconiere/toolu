@@ -69,7 +69,10 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
     "paths": [
       "crates/xtask/src/markdown_cli/judge.rs",
       "crates/xtask/src/markdown_cli/tests/judge_test.rs",
-      "docs/cli/commands.json"
+      "docs/cli/commands.json",
+      "crates/xtask/src/command_tree.rs",
+      "crates/xtask/src/tests/command_tree_test.rs",
+      "crates/xtask/src/cli_compat/compare.rs"
     ],
     "input": "the real docs/cli/commands.json: toolu epic strat, toolu --jsn epic planned, toolu --host bogus commands, toolu --host <h> commands, toolu --host=<h> commands, toolu hook (inline ok, fenced missing NAME), toolu doctor (inline ok, fenced missing verb), toolu <plugin> hook <name>, toolu [<plugin>] hook <name> --event <Event> --plugin-root <root>, toolu --hook-protocol, toolu ledger run, toolu review hook a b, toolu --version, toolu jev planned --help, toolu …",
     "model": "inherit"
@@ -146,7 +149,10 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
       "AGENTS.md",
       "docs",
       "docs/cli/commands.json",
-      "tooling/conventions/markdown-cli"
+      "tooling/conventions/markdown-cli",
+      "crates/xtask/src/command_tree.rs",
+      "crates/xtask/src/tests/command_tree_test.rs",
+      "crates/xtask/src/cli_compat/compare.rs"
     ],
     "input": "this repository; temp roots with the real tree plus a skill with toolu epic strat on line 12, toolu --jsn epic planned, a fenced ast-grep run with the real external list and with ast-grep removed, the real delivery-flow execution.md under a ledger-ported tree, babysit planned renamed to tick then step, allowlist cases; elapsed time of the spawned binary on this repository",
     "model": "inherit"
@@ -247,5 +253,6 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
 - **Per-plugin allowlists live in `tooling/conventions/markdown-cli/<plugin>.json`, not `plugins/<plugin>/markdown-cli.json`.** `cargo xtask guardrails` rejects a new file at a plugin root: the plugin folder allowlist is `structure.plugin` in `rules.json`, gate data that changes only in its own `chore(gates):` PR. The tooling location was Jev's runner-up (0.44) and also keeps the file out of the shipped plugin. A file there must be named after a directory under `plugins/`.
 - **`markdown_cli/words.rs`** holds `Command`, `Lexed`, `unquote` and the command-start rule, split from `shell.rs` to keep it under 300 code lines (rule 1).
 - **The OpenCode generated surface** copies the ast-grep advanced reference, so `bun run generate:opencode-surface` regenerates it with the `mod.sh` fix (`check:opencode-surface` in S8).
+- **`crates/xtask/src/command_tree.rs`** holds the tree-JSON readers (`list`, `text`, `flag_set`) that `cli_compat/compare.rs` and `markdown_cli/judge.rs` both need; jscpd (rule 16) failed S9 on the copy.
 - **S9 runs its gates without `job.ts`:** the ledger already holds the epic's job lease for each check, and the job capacity is 1, so a nested `job.ts` would always be refused.
 - **Real findings settled in S6:** the ast-grep advanced reference's stale `mod.sh ast-grep …` became `plugins/ast-grep/hooks/dist/ast-grep.js …` (the form `docs/ast-grep/README.md` uses); the ast-grep skill's Strictness block, a list of flag values in a `bash` fence, has a per-plugin allowance; `docs/cli/installer.md` names the Node installer's own `toolu` bin twice and gets two repository allowances beside the planned two. Functions defined in one block count for the file's later blocks (the Jev problem-solving reference defines `judge()` once).

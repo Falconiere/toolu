@@ -4,6 +4,7 @@
 
 mod check_hooks;
 mod cli_compat;
+mod command_tree;
 mod coverage;
 mod data;
 mod docs_cli;
