@@ -75,14 +75,16 @@ fn git(analysis: &ShellAnalysis) -> (Vec<Value>, Vec<Value>) {
 fn pushes(analysis: &ShellAnalysis) -> Vec<Value> {
   let targets = push_targets(analysis);
   let shown = targets.iter().map(|p| {
-    let mut push =
-      json!({ "command": index(analysis, p.invocation.command), "destination": p.destination });
+    let at = index(analysis, p.invocation.command);
+    let mut push = serde_json::Map::new();
+    push.insert("command".to_owned(), json!(at));
+    push.insert("destination".to_owned(), json!(p.destination));
     match p.refspec {
       Refspec::Absent => {}
-      Refspec::Dynamic => push["refspec"] = Value::Null,
-      Refspec::Static(spec) => push["refspec"] = json!(spec),
+      Refspec::Dynamic => drop(push.insert("refspec".to_owned(), Value::Null)),
+      Refspec::Static(spec) => drop(push.insert("refspec".to_owned(), json!(spec))),
     }
-    push
+    Value::Object(push)
   });
   shown.collect()
 }

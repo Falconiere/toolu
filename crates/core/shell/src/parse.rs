@@ -74,8 +74,10 @@ impl Syntax {
       if found == Fixups::default() {
         break;
       }
-      text = fixup::blank(&text, &found.blank);
-      glued.extend(found.glued);
+      text = fixup::swap(&fixup::blank(&text, &found.blank), &found.swaps);
+      if found.swaps.is_empty() {
+        glued.extend(found.glued);
+      }
       tree = self.parse(&fixup::mask(&text, &glued))?;
     }
     Ok((tree, text))
@@ -93,6 +95,22 @@ impl Syntax {
       .parser
       .parse(source, None)
       .ok_or(ParseFailure::Cancelled)
+  }
+}
+
+/// Visit `node` and its descendants in source order with one cursor; `visit`
+/// returns whether to go into the node's children.
+pub(crate) fn preorder<'t>(node: Node<'t>, mut visit: impl FnMut(Node<'t>) -> bool) {
+  let mut cursor = node.walk();
+  loop {
+    if visit(cursor.node()) && cursor.goto_first_child() {
+      continue;
+    }
+    while !cursor.goto_next_sibling() {
+      if !cursor.goto_parent() {
+        return;
+      }
+    }
   }
 }
 
@@ -116,7 +134,10 @@ fn error_message(node: Node<'_>, source: &str) -> String {
       kind => format!("expected '{kind}'"),
     };
   }
-  let text = source.get(node.byte_range()).unwrap_or_default();
+  let text = source
+    .get(node.byte_range())
+    .unwrap_or_default()
+    .trim_start();
   match text.chars().next() {
     None => "unexpected end of input".to_owned(),
     Some('\'') => "unterminated single quote".to_owned(),

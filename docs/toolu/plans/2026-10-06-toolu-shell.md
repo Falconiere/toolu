@@ -222,7 +222,7 @@ Dependencies and records → option parser → parse and words → wrappers → 
   },
   {
     "id": "latency",
-    "title": "tests/latency.rs: p99 of analyze + runs_git_subcommand + push_targets + write_targets over the 203 baseline inputs × 200 rounds; ≤100 µs in release, 10 ms smoke ceiling otherwise",
+    "title": "tests/latency.rs: p99 of analyze + runs_git_subcommand + push_targets + write_targets over the 235 real commands of bats-parity.json and issue-283.json (bench:shell's fixtureCommands) × 200 rounds; ≤100 µs in release, 10 ms smoke ceiling otherwise",
     "check": "PATH=\"$HOME/.cargo/bin:$PATH\" cargo test --release -p toolu-shell --test latency -- --nocapture 2>&1 | grep -Eq 'test result: ok\\. 1 passed'",
     "ac_refs": [
       "AC-6"
@@ -232,11 +232,12 @@ Dependencies and records → option parser → parse and words → wrappers → 
     ],
     "paths": [
       "crates/core/shell/",
-      "fixtures/shell/unbash-baseline.json",
+      "fixtures/shell/bats-parity.json",
+      "fixtures/shell/issue-283.json",
       "Cargo.toml",
       "Cargo.lock"
     ],
-    "input": "fixtures/shell/unbash-baseline.json inputs",
+    "input": "the 235 commands of fixtures/shell/bats-parity.json and issue-283.json",
     "model": "inherit"
   },
   {
@@ -398,3 +399,5 @@ Dependencies and records → option parser → parse and words → wrappers → 
 ## Deviations
 
 - `deps-records` (2026-10-06): `tree-sitter` 0.27 with `tree-sitter-bash` 0.25 failed `cargo deny` licences inside the workspace, though they passed in an isolated probe. The cause is `foldhash` (Zlib). It reaches a non-dev path through `tree-sitter`'s non-optional `serde_json/preserve_order` build dependency, then `indexmap`, then `hashbrown`, whose default features the `jsonschema` dev-dependency turns on. Every `tree-sitter` from 0.25 to 0.27 has that build dependency, and 0.24.7 does not. The pair is now `tree-sitter` 0.24.7 with `tree-sitter-bash` 0.23.3 (ABI 14), which gives `bans ok, licenses ok, sources ok`. A re-probe gave identical results on the 203 fixture inputs. Only `(( … ))` maps differently, and the spec covers it. The budget uses `set_timeout_micros`. The spec is updated, and no gate data changes.
+- `latency` (2026-10-06): the timed set is now the 235 real commands that `bench:shell`'s `fixtureCommands` reads, not the 203 baseline inputs. The baseline includes the two synthetic malformed inputs, and tree-sitter's error recovery takes about 100 µs on `echo $(unterminated`, which alone set the old p99 at 100–102 µs. AC-6 says "real-command fixture set", and the spec is updated to name it.
+- `ts-projection` (2026-10-06): the projection lives in `__tests__/analysis-projection.ts`, not in `parity-helpers.ts`, which other suites import.

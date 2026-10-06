@@ -11,7 +11,7 @@ use tree_sitter::{Node, Tree};
 
 use crate::analysis::{CommandOrigin, PipelinePosition, ShellCommand, ShellError, ShellRedirect};
 use crate::command;
-use crate::parse::{ParseFailure, Syntax, syntax_errors};
+use crate::parse::{ParseFailure, Syntax, preorder, syntax_errors};
 use crate::words::{self, quote};
 
 /// How deep nested scripts and compound bodies are followed before the line is unknown.
@@ -223,14 +223,21 @@ impl Walker {
   /// Walk one statement: an and-or list of pipelines (`walkAndOr`, `walkPipeline`).
   pub(crate) fn walk_statement(&mut self, statement: Node<'_>, ctx: Ctx<'_>) {
     let chain = chain::chain(statement, ctx.source);
+    let mut and_after = vec![true; chain.pipelines.len()];
+    for index in (0..chain.operators.len()).rev() {
+      let rest = and_after.get(index + 1).copied().unwrap_or(true);
+      let joined = chain.operators.get(index).is_some_and(|op| *op == "&&");
+      if let Some(slot) = and_after.get_mut(index) {
+        *slot = joined && rest;
+      }
+    }
     for (index, pipeline) in chain.pipelines.iter().enumerate() {
       let before = index
         .checked_sub(1)
         .and_then(|at| chain.operators.get(at))
         .copied();
-      let after = chain.operators.get(index..).unwrap_or_default();
-      let proves =
-        ctx.proves && before.is_none_or(|op| op == "&&") && after.iter().all(|op| *op == "&&");
+      let after = and_after.get(index).copied().unwrap_or(true);
+      let proves = ctx.proves && before.is_none_or(|op| op == "&&") && after;
       self.walk_pipeline(pipeline, Ctx { proves, ..ctx });
     }
   }
@@ -310,20 +317,17 @@ impl Walker {
       pipeline: PipelinePosition::ALONE,
       ..ctx
     };
-    let mut stack = vec![node];
-    while let Some(next) = stack.pop() {
+    preorder(node, |next| {
       if let Some(body) = escaped_backticks(next, ctx.source) {
         self.parse_and_walk(&quote::backticks(body), nested);
-        continue;
+        return false;
       }
       if matches!(next.kind(), "command_substitution" | "process_substitution") {
         self.walk_body(next, &[], nested);
-        continue;
+        return false;
       }
-      let mut cursor = next.walk();
-      let children: Vec<Node<'_>> = next.children(&mut cursor).collect();
-      stack.extend(children.into_iter().rev());
-    }
+      true
+    });
   }
 }
 

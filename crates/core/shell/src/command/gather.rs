@@ -123,6 +123,11 @@ fn sort_children<'t>(node: Node<'t>, gathered: &mut Gathered<'t>, nodes: &mut Ve
   }
 }
 
+/// Text between two nodes of one bash word: nothing, or escaped separators.
+fn joins(gap: &str) -> bool {
+  gap.is_empty() || words::is_escaped_gap(gap)
+}
+
 /// Group word nodes that tree-sitter split at an escaped separator, which bash
 /// does not split at: `node -\<newline>e`, `'node'\ '-e x'`.
 fn join_escaped<'t>(nodes: Vec<Node<'t>>, source: &str) -> Vec<WordNodes<'t>> {
@@ -132,7 +137,7 @@ fn join_escaped<'t>(nodes: Vec<Node<'t>>, source: &str) -> Vec<WordNodes<'t>> {
       .last()
       .and_then(|word| word.nodes.last())
       .is_some_and(|last| {
-        words::is_escaped_gap(
+        joins(
           source
             .get(last.end_byte()..node.start_byte())
             .unwrap_or_default(),

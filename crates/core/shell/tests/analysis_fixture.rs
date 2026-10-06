@@ -4,63 +4,78 @@
 //! where `rust.reason` records an intended difference
 //! (`packages/toolu-core/src/shell/__tests__/analysis-fixture.test.ts`).
 
-#[path = "helpers/fixture.rs"]
-mod fixture;
+#[path = "helpers/cases.rs"]
+mod cases;
 #[path = "helpers/project.rs"]
 mod project;
 
+use cases::{Res, field};
 use serde_json::Value;
 
 const FIXTURE: &str = "fixtures/shell/analysis.json";
 
 /// The fields of `actual` that differ from `expected`, for a readable failure.
 fn differing(expected: &Value, actual: &Value) -> Vec<String> {
-  let keys = expected
-    .as_object()
-    .map(|map| map.keys().cloned().collect())
-    .unwrap_or_else(Vec::new);
-  keys
-    .into_iter()
-    .filter(|key| expected[key] != actual[key])
-    .map(|key| {
-      format!(
-        "  {key}:\n    want {}\n    got  {}",
-        expected[&key], actual[&key]
-      )
-    })
+  let Some(fields) = expected.as_object() else {
+    return vec![format!("  want {expected}\n  got  {actual}")];
+  };
+  let mismatched = fields
+    .iter()
+    .filter(|(key, want)| actual.get(key.as_str()) != Some(*want));
+  let shown = mismatched.map(|(key, want)| {
+    let got = actual.get(key.as_str()).unwrap_or(&Value::Null);
+    format!("  {key}:\n    want {want}\n    got  {got}")
+  });
+  shown.collect()
+}
+
+/// The inputs of the fixture `rel`, in order.
+fn inputs(rel: &str) -> Res<Vec<String>> {
+  let found = cases::cases(rel)?;
+  found
+    .iter()
+    .map(|case| field(case, "input").map(str::to_owned))
     .collect()
+}
+
+/// The answer a case expects from Rust: its `rust.expect`, else its `expect`.
+fn expected(case: &Value) -> Res<&Value> {
+  let rust = case.get("rust").and_then(|rust| rust.get("expect"));
+  rust
+    .or_else(|| case.get("expect"))
+    .ok_or_else(|| format!("no expect in {case}"))
+}
+
+/// Every case whose Rust projection differs, with the differing fields.
+fn failures() -> Res<Vec<String>> {
+  let mut failures = Vec::new();
+  for case in cases::cases(FIXTURE)? {
+    let input = field(&case, "input")?;
+    let actual = project::project(&toolu_shell::analyze(input));
+    let want = expected(&case)?;
+    if &actual != want {
+      failures.push(format!(
+        "{input:?}\n{}",
+        differing(want, &actual).join("\n")
+      ));
+    }
+  }
+  Ok(failures)
 }
 
 #[test]
 fn the_fixture_has_every_baseline_input_in_order() {
-  let inputs: Vec<String> = fixture::cases(FIXTURE)
-    .iter()
-    .map(|case| fixture::text(case, "input").to_owned())
-    .collect();
-  let baseline: Vec<String> = fixture::cases("fixtures/shell/unbash-baseline.json")
-    .iter()
-    .map(|case| fixture::text(case, "input").to_owned())
-    .collect();
-  assert_eq!(inputs.len(), 203);
-  assert_eq!(inputs, baseline);
+  let fixture = inputs(FIXTURE).unwrap();
+  assert_eq!(fixture.len(), 203);
+  assert_eq!(
+    fixture,
+    inputs("fixtures/shell/unbash-baseline.json").unwrap()
+  );
 }
 
 #[test]
 fn rust_reproduces_every_projected_analysis() {
-  let mut failures = Vec::new();
-  for case in fixture::cases(FIXTURE) {
-    let input = fixture::text(&case, "input");
-    let expected = case
-      .get("rust")
-      .map_or(&case["expect"], |rust| &rust["expect"]);
-    let actual = project::project(&toolu_shell::analyze(input));
-    if &actual != expected {
-      failures.push(format!(
-        "{input:?}\n{}",
-        differing(expected, &actual).join("\n")
-      ));
-    }
-  }
+  let failures = failures().unwrap();
   assert!(
     failures.is_empty(),
     "{} differ:\n{}",
@@ -71,7 +86,7 @@ fn rust_reproduces_every_projected_analysis() {
 
 #[test]
 fn every_intended_difference_has_a_reason() {
-  for case in fixture::cases(FIXTURE) {
+  for case in cases::cases(FIXTURE).unwrap() {
     if let Some(rust) = case.get("rust") {
       assert!(
         rust["reason"]

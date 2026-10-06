@@ -173,11 +173,18 @@ pub(crate) fn literal(raw: &str) -> Resolved {
 }
 
 /// Resolve the logical word made of `nodes`.
-/// The text between two nodes of one word (an escaped separator) is literal.
+/// The text between two nodes of one word (an escaped separator) is literal,
+/// and a `$` token before a string makes it a locale string (`$"…"`).
 pub(crate) fn resolve(nodes: &[Node<'_>], source: &str) -> Resolved {
   let mut pieces = Vec::new();
   let mut previous: Option<Node<'_>> = None;
-  for node in nodes {
+  for (at, node) in nodes.iter().enumerate() {
+    let locale = nodes
+      .get(at + 1)
+      .is_some_and(|next| next.kind() == "string");
+    if node.kind() == "$" && locale {
+      continue;
+    }
     if let Some(before) = previous {
       let gap = source
         .get(before.end_byte()..node.start_byte())
