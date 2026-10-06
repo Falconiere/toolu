@@ -64,6 +64,49 @@ pub enum EditRecords {
   Malformed,
 }
 
+/// `EditRecordSchema`: a non-empty `path`, a known `operation`, optional
+/// string `moved_to` and `from`, nothing else.
+///
+/// # Errors
+/// The first offending key, as `<key>: <problem>`.
+pub fn parse_edit_record(value: &Value) -> Result<EditRecord, String> {
+  let object = value.as_object().ok_or("(root): expected object")?;
+  if let Some(key) = object
+    .keys()
+    .find(|key| !["path", "operation", "moved_to", "from"].contains(&key.as_str()))
+  {
+    return Err(format!("(root): unrecognized key \"{key}\""));
+  }
+  let text = |key: &str| {
+    let value = object.get(key).map(|value| {
+      value
+        .as_str()
+        .ok_or_else(|| format!("{key}: expected string"))
+    });
+    value.transpose().map(|text| text.map(str::to_owned))
+  };
+  let path = text("path")?
+    .filter(|path| !path.is_empty())
+    .ok_or("path: expected a non-empty string")?;
+  let operation = text("operation")?.unwrap_or_default();
+  let operation = [
+    EditOperation::Add,
+    EditOperation::Update,
+    EditOperation::Delete,
+    EditOperation::Write,
+    EditOperation::Move,
+  ]
+  .into_iter()
+  .find(|known| known.name() == operation)
+  .ok_or_else(|| format!("operation: unknown operation \"{operation}\""))?;
+  Ok(EditRecord {
+    path,
+    operation,
+    moved_to: text("moved_to")?,
+    from: text("from")?,
+  })
+}
+
 /// `toolu_is_edit_tool`.
 pub fn is_edit_tool(tool: &str) -> bool {
   EDIT_TOOLS.contains(&tool)

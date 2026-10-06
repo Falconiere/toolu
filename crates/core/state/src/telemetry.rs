@@ -19,6 +19,17 @@ use crate::time::iso_seconds;
 
 /// The `v` every line carries.
 pub const TELEMETRY_VERSION: u8 = 1;
+/// Every event name, in `TELEMETRY_EXTRAS` order.
+pub const TELEMETRY_EVENTS: [&str; 8] = [
+  "gate_fail",
+  "gate_clear",
+  "step_run",
+  "ac_coverage",
+  "docs_attested",
+  "docs_nudge",
+  "push_check",
+  "delegation",
+];
 /// Headroom under the 4 KiB atomic-append floor: one append stays whole.
 pub const TELEMETRY_MAX_LINE_BYTES: usize = 3900;
 

@@ -92,3 +92,39 @@ fn records_print_one_compact_object_per_line() {
   .collect();
   assert_eq!(names, ["add", "delete", "write"]);
 }
+
+#[test]
+fn records_parse_strictly() {
+  use super::parse_edit_record;
+  let moved = json!({ "path": "a", "operation": "update", "moved_to": "b" });
+  assert_eq!(
+    parse_edit_record(&moved).unwrap().moved_to.as_deref(),
+    Some("b")
+  );
+  let cases = [
+    (json!([]), "(root): expected object"),
+    (
+      json!({ "path": "", "operation": "add" }),
+      "path: expected a non-empty string",
+    ),
+    (
+      json!({ "path": 1, "operation": "add" }),
+      "path: expected string",
+    ),
+    (
+      json!({ "path": "a", "operation": "rename" }),
+      "operation: unknown operation \"rename\"",
+    ),
+    (
+      json!({ "path": "a", "operation": "add", "content": "x" }),
+      "(root): unrecognized key \"content\"",
+    ),
+    (
+      json!({ "path": "a", "operation": "move", "from": null }),
+      "from: expected string",
+    ),
+  ];
+  for (value, error) in cases {
+    assert_eq!(parse_edit_record(&value), Err(error.to_owned()), "{value}");
+  }
+}

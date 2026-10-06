@@ -160,7 +160,7 @@ Runtime discovery and raw stdout → state foundation (ctx, time, atomic write, 
   },
   {
     "id": "edit-records",
-    "title": "toolu_state::edit_records and apply_patch (TS port), golden fixtures/state/edit-records.json captured from TypeScript, Bun test and Rust integration test, index registration",
+    "title": "toolu_state::edit_records and apply_patch (TS port), golden fixtures/state/edit-records.json captured from TypeScript, Bun test and Rust integration test, index registration; plus parse_edit_record for the shared EditRecordSchema cases",
     "check": "t() { o=$(PATH=\"$HOME/.cargo/bin:$PATH\" cargo test -q -p toolu-state --lib -- \"$@\" 2>&1) && printf '%s' \"$o\" | grep -Eq 'test result: ok\\. [1-9][0-9]* passed'; }; t edit_records::tests:: && t apply_patch::tests:: && o=$(PATH=\"$HOME/.cargo/bin:$PATH\" cargo test -q -p toolu-state --test edit_records 2>&1) && printf '%s' \"$o\" | grep -Eq 'test result: ok\\. [1-9][0-9]* passed' && bun test packages/toolu-core/src/state/__tests__/edit-records.test.ts tooling/src/__tests__/check-fixture-inventory.test.ts && bun run tooling/src/check-fixture-inventory.ts",
     "ac_refs": [
       "AC-8"
@@ -200,8 +200,8 @@ Runtime discovery and raw stdout → state foundation (ctx, time, atomic write, 
   },
   {
     "id": "state-cases",
-    "title": "Rust consumer of fixtures/state/cases.json: schema, telemetry-events, telemetry-extras, gate-file, io (jq text vs real jq, jq sort, iso, atomic, lock scenarios), branch-slug, base-branch, current-branch, branch-slugs, diff-sha; the package case is TypeScript-only and asserted absent from the run list by name",
-    "check": "o=$(PATH=\"$HOME/.cargo/bin:$PATH\" cargo test -q -p toolu-state --test state_cases 2>&1) && printf '%s' \"$o\" | grep -Eq 'test result: ok\\. [1-9][0-9]* passed'",
+    "title": "Rust consumer of fixtures/state/cases.json: schema, telemetry-events, telemetry-extras, gate-file, io (jq text vs real jq, jq sort, iso, atomic, lock scenarios), branch-slug, base-branch, current-branch, branch-slugs, diff-sha; the package case is TypeScript-only and asserted absent from the run list by name; split across tests/state_cases.rs, tests/io_cases.rs and tests/gate_cases.rs (300-line file limit)",
+    "check": "o=$(PATH=\"$HOME/.cargo/bin:$PATH\" cargo test -q -p toolu-state --test state_cases --test io_cases --test gate_cases 2>&1) && printf '%s' \"$o\" | grep -Eq 'test result: ok\\. [1-9][0-9]* passed'",
     "ac_refs": [
       "AC-4",
       "AC-11"
@@ -382,6 +382,17 @@ Then the Bun suites for state and detect, plus the fixture inventory. `bun run t
 7. Report `pr-open`, then `babysit`, and hand off to `pr-babysit:babysit`.
 
 `TOOLU_PLUGIN_ROOT` is `/root/.claude/plugins/cache/toolu/toolu/7.11.0`, the project install of `toolu@toolu` for this worktree, which holds `plan-ledger.js` and `verdict.js`.
+
+## Deviations
+
+- **runtime-discovery.** The spec listed `core.worktree` and `core.bare` as reasons to ask git. Absorbed submodules always set `core.worktree`, so deferring would have made every submodule spawn git, against AC-6. The walk now applies both keys as git's `setup_discovered_git_dir` and `setup_bare_git_dir` do:
+  - `core.bare = true` means no toplevel;
+  - otherwise `core.worktree`, resolved against the git dir, is the toplevel.
+  
+  It still asks git for a linked worktree with `core.worktree`, a quoted or escaped value, includes, `config.worktree`, and a repository format above 1.
+- **state-cases.** The 76 Rust-run cases are split over three files to stay under the 300-line limit: `tests/state_cases.rs` (schema, telemetry, branch, diff), `tests/io_cases.rs` and `tests/gate_cases.rs`. The step's check runs all three.
+- **edit-records.** The shared `EditRecordSchema` cases need a strict reader, so `toolu_state::edit_records::parse_edit_record` was added. `toolu_state::telemetry::TELEMETRY_EVENTS` lists the closed event set for the `telemetry-events` case.
+- **gate-file.** `record_gate_failure` takes a `GateFailure` struct (file, source, reason, violations) rather than four strings, which keeps it within the five-parameter limit.
 
 ## Plan review
 
