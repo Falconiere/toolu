@@ -24,7 +24,7 @@ function mutate(root: string, file: string, before: string, after: string): void
   const path = join(root, file);
   const text = readFileSync(path, "utf8");
   expect(text).toContain(before);
-  writeFileSync(path, text.replace(before, after));
+  writeFileSync(path, text.replaceAll(before, after));
 }
 
 afterEach(() => {
@@ -100,6 +100,13 @@ for (const scenario of [
     before: "needs: [package, upload]",
     after: "needs: [package]",
     finding: "must wait for packaged and uploaded assets",
+  },
+  {
+    name: "missing release verifier",
+    file: ".github/workflows/release-finalize.yml",
+    before: "release_native.py verify-package",
+    after: "missing_release.py verify-package",
+    finding: "must verify both published and dry-run archives",
   },
   {
     name: "fork-unsafe review exemption",

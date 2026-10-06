@@ -39,6 +39,8 @@ jobs:
         with:
           ref: ${{ inputs.tag }}
           fetch-depth: 0
+      - name: Test native release helper
+        run: python3 -B -m unittest discover -s .github/scripts -p 'test_*.py'
       - name: Install the pinned toolchain
         run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
@@ -58,9 +60,9 @@ jobs:
           PUBLISH: ${{ inputs.publish }}
         run: |
           if [ "$PUBLISH" = true ]; then
-            bash .github/scripts/release-native.sh verify-tag "$TAG"
+            python3 .github/scripts/release_native.py verify-tag "$TAG"
           else
-            bash .github/scripts/release-native.sh verify-tag "$TAG" --test-tag
+            python3 .github/scripts/release_native.py verify-tag "$TAG" --test-tag
           fi
       - name: Require published npm packages before native publication
         if: inputs.publish == true
@@ -160,7 +162,7 @@ jobs:
           for item in darwin-arm64 darwin-amd64 linux-amd64 linux-arm64; do
             os=${item%-*}
             arch=${item#*-}
-            bash .github/scripts/release-native.sh package "$os" "$arch" "binaries/binary-$item/toolu" dist
+            python3 .github/scripts/release_native.py package "$os" "$arch" "binaries/binary-$item/toolu" dist
           done
           (cd dist && shasum -a 256 -- *.tar.gz > SHA256SUMS)
           test "$(find dist -maxdepth 1 -name '*.tar.gz' | wc -l)" -eq 4

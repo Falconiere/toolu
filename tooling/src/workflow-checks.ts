@@ -6,7 +6,7 @@ export type ObjectMap = Record<string, unknown>;
 
 export function object(value: unknown): ObjectMap {
   return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as ObjectMap)
+    ? Object.fromEntries(Object.entries(value))
     : {};
 }
 
@@ -41,9 +41,9 @@ export function need(errors: string[], condition: boolean, message: string): voi
 }
 
 function checkReleaseCaller(root: string, caller: ObjectMap, errors: string[]): void {
-  const config = JSON.parse(
+  const config: unknown = JSON.parse(
     readFileSync(join(root, "release-please-config.json"), "utf8"),
-  ) as unknown;
+  );
   need(
     errors,
     at(config, "packages", ".", "draft") === true &&
@@ -103,12 +103,16 @@ function checkNativeBuild(native: ObjectMap, errors: string[]): void {
   );
   need(
     errors,
-    runs(jobs.verify).includes("cargo xtask gate") && runs(jobs.verify).includes("npm view"),
-    "release-native.yml verify must gate the tag and require npm packages",
+    runs(jobs.verify).includes("release_native.py verify-tag") &&
+      runs(jobs.verify).includes("cargo xtask gate") &&
+      runs(jobs.verify).includes("npm view") &&
+      runs(jobs.verify).includes("python3 -B -m unittest discover -s .github/scripts"),
+    "release-native.yml verify must test the helper, gate the tag, and require npm packages",
   );
   need(
     errors,
-    runs(jobs.package).includes("SHA256SUMS") &&
+    runs(jobs.package).includes("release_native.py package") &&
+      runs(jobs.package).includes("SHA256SUMS") &&
       steps(jobs.package).some(
         (step) =>
           includes(step.uses, "sbom-action@") &&
@@ -175,16 +179,15 @@ function checkFinalize(finalize: ObjectMap, audit: ObjectMap, errors: string[]):
   const smokeRuns = runs(smoke);
   need(
     errors,
+    (smokeRuns.match(/release_native\.py verify-package/g) ?? []).length === 2,
+    "release-finalize.yml must verify both published and dry-run archives",
+  );
+  need(
+    errors,
     smokeRuns.includes("--test-tag") && includes(at(smoke, "env", "PUBLISHED"), "inputs.published"),
     "release-finalize.yml must distinguish a dry-run test tag from a published version",
   );
-  for (const required of [
-    "verify-package",
-    "codesign --verify",
-    "alpine:",
-    "debian:",
-    "statically",
-  ]) {
+  for (const required of ["codesign --verify", "alpine:", "debian:", "statically"]) {
     need(errors, smokeRuns.includes(required), `release-finalize.yml lacks ${required}`);
   }
   need(

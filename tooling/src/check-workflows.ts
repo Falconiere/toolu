@@ -168,6 +168,7 @@ function checkRustCi(tests: ObjectMap, errors: string[]): void {
     "cargo xtask gate --only layers",
     "cargo xtask gate",
     "@ast-grep/cli",
+    "python3 -B -m unittest discover -s .github/scripts",
   ] as const) {
     need(errors, command.includes(required), `tests.yml:rust lacks ${required}`);
   }

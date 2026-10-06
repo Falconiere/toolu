@@ -61,9 +61,9 @@ jobs:
           set -euo pipefail
           test -s dist/toolu.spdx.json
           if [ "$PUBLISHED" = true ]; then
-            bash .github/scripts/release-native.sh verify-package "$TAG" "dist/$TARBALL" dist/SHA256SUMS extracted
+            python3 .github/scripts/release_native.py verify-package "$TAG" "dist/$TARBALL" dist/SHA256SUMS extracted
           else
-            bash .github/scripts/release-native.sh verify-package "$TAG" "dist/$TARBALL" dist/SHA256SUMS extracted --test-tag
+            python3 .github/scripts/release_native.py verify-package "$TAG" "dist/$TARBALL" dist/SHA256SUMS extracted --test-tag
           fi
       - name: Verify Darwin code signature
         if: matrix.os == 'darwin'

@@ -34,14 +34,13 @@ test.concurrent("workspaces list core, opencode, conformance, and cli packages",
   }
 });
 
-test.concurrent("CI workflow defines a gate job running test:ts", () => {
-  // Same walk the awk did: enter at `  gate:`, leave at the next two-space key.
-  // The required `typescript` status needs this job (#362).
+test.concurrent("CI workflow defines a ts job running test:ts", () => {
+  // The `gate` and compatibility `typescript` aggregates both need this job.
   let inJob = false;
   let foundJob = false;
   let foundRun = false;
   for (const line of readText(".github/workflows/tests.yml").split("\n")) {
-    if (line.startsWith("  gate:")) {
+    if (line.startsWith("  ts:")) {
       inJob = true;
       foundJob = true;
     } else if (/^ {2}[a-z]/.test(line)) {
@@ -80,9 +79,12 @@ test.concurrent("root test delegates to the complete Bun-only lane", () => {
 
 test.concurrent("CI runs the Bun lane without retired shell jobs", () => {
   const workflow = readText(".github/workflows/tests.yml");
-  expect(workflow).toMatch(/  gate:\n    name: bun run test[\s\S]*?bun run test:ts/);
+  expect(workflow).toMatch(/  ts:\n    name: bun run test[\s\S]*?bun run test:ts/);
   expect(workflow).toMatch(
-    /  typescript:\n    name: typescript\n    needs: \[changes, gate, opencode, docs, rust, rust-musl, rust-conformance, hook-bench\]/,
+    /  gate:\n    name: gate\n    needs: \[changes, ts, opencode, docs, rust, rust-musl, rust-conformance, hook-bench\]/,
+  );
+  expect(workflow).toMatch(
+    /  typescript:\n    name: typescript\n    needs: \[changes, ts, opencode, docs, rust, rust-musl, rust-conformance, hook-bench\]/,
   );
   expect(workflow).not.toMatch(/^  shellcheck:/m);
   expect(workflow).not.toMatch(/^  bats:/m);
@@ -117,11 +119,11 @@ test.concurrent("release-only files skip jobs through the data file, not path fi
 test.concurrent("AGENTS.md maps each CI job to its path group and the aggregate (#458)", () => {
   const agents = readText("AGENTS.md");
   for (const row of [
-    /^\| `gate` \(`bun run test`\) \| `ts` \|/m,
+    /^\| `ts` \(`bun run test`\) \| `ts` \|/m,
     /^\| `opencode \(ubuntu-latest\)`, `opencode \(macos-latest\)` \| `opencode` \|/m,
     /^\| `docs` \| `docs` \| `bun run test:docs`/m,
     /^\| `review` \| `changed` \|/m,
-    /^\| `typescript` \| aggregate, `if: always\(\)` \|/m,
+    /^\| `gate`, `typescript` \| aggregate, `if: always\(\)` \|/m,
   ]) {
     expect(agents).toMatch(row);
   }

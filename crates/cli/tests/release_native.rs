@@ -10,8 +10,8 @@ fn root() -> PathBuf {
 }
 
 fn script(args: &[&str]) -> Output {
-  Command::new("bash")
-    .arg(".github/scripts/release-native.sh")
+  Command::new("python3")
+    .arg(".github/scripts/release_native.py")
     .args(args)
     .current_dir(root())
     .output()
