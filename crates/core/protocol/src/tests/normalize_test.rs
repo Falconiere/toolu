@@ -3,7 +3,7 @@
 
 use serde_json::json;
 
-use super::Roots;
+use super::{Roots, text_or};
 use crate::event::{EventKind, HostEvent};
 use crate::host::Host;
 use crate::normalized::NormalizedEvent;
@@ -259,4 +259,12 @@ fn opencode_payloads_do_not_normalize_until_the_tool_map_is_ported() {
   )
   .unwrap();
   assert_eq!(payload.normalize(HostEvent::ToolPre, &roots()), None);
+}
+
+#[test]
+fn text_or_takes_a_non_empty_string_and_otherwise_its_fallback() {
+  let fallback = Text::new("unknown").unwrap();
+  assert_eq!(text_or(Some("s1"), &fallback).as_str(), "s1");
+  assert_eq!(text_or(Some(""), &fallback), fallback);
+  assert_eq!(text_or(None, &fallback), fallback);
 }

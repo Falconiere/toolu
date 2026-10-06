@@ -26,16 +26,16 @@ const GATES: [&str; 5] = [
 
 fn roots() -> Res<Roots> {
   Ok(Roots {
-    project_root: Text::new(render::PROJECT)?,
-    worktree: Text::new(render::PROJECT)?,
+    project_root: Text::new(render::PROJECT).map_err(|err| err.to_string())?,
+    worktree: Text::new(render::PROJECT).map_err(|err| err.to_string())?,
   })
 }
 
 fn normalized(host: Host, event: HostEvent, payload: &Value) -> Res<NormalizedEvent> {
-  let parsed = parse(host, &payload.to_string())?;
+  let parsed = parse(host, &payload.to_string()).map_err(|err| err.to_string())?;
   parsed
     .normalize(event, &roots()?)
-    .ok_or_else(|| format!("{host:?} did not normalize {payload}").into())
+    .ok_or_else(|| format!("{host:?} did not normalize {payload}"))
 }
 
 /// The kind TypeScript's `toolEvent` gives a descriptor.
@@ -81,7 +81,7 @@ fn check_descriptor(descriptor: &Value, hosts: &[Host]) -> Res<usize> {
     let stdin = render::stdin(*host, &descriptor, render::PROJECT)?;
     let kind = normalized(*host, event, &stdin)?.kind();
     if kind != expected_kind(&descriptor) {
-      return Err(format!("{host:?} {descriptor}: {kind:?}").into());
+      return Err(format!("{host:?} {descriptor}: {kind:?}"));
     }
   }
   Ok(targets.len())
@@ -92,7 +92,7 @@ fn check_stdin(text: &str, hosts: &[Host]) -> Res<bool> {
   let object = serde_json::from_str::<Value>(text).is_ok_and(|value| value.is_object());
   for host in hosts {
     if parse(*host, text).is_ok() != object {
-      return Err(format!("{host:?}: {text:?}").into());
+      return Err(format!("{host:?}: {text:?}"));
     }
   }
   Ok(object)
@@ -157,7 +157,12 @@ fn lifecycle_kinds() -> Res<(Vec<(String, EventKind)>, usize)> {
       Some("user-prompt-submit") => HostEvent::Prompt,
       _ => HostEvent::SessionStart,
     };
-    let kind = normalized(host, event, &serde_json::from_str(stdin)?)?.kind();
+    let kind = normalized(
+      host,
+      event,
+      &serde_json::from_str(stdin).map_err(|err| err.to_string())?,
+    )?
+    .kind();
     let name = case.get("name").and_then(Value::as_str).ok_or("no name")?;
     kinds.push((name.to_owned(), kind));
   }

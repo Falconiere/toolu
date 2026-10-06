@@ -48,12 +48,11 @@ impl Payload {
 
 impl View<'_> {
   fn event(self, event: HostEvent, roots: &Roots) -> Option<NormalizedEvent> {
+    // The one literal fallback; every read below falls back to a `Text`, so none can fail.
+    let unknown = Text::new("unknown").ok()?;
     let session = Session {
-      session_id: text_or(self.session_id, "unknown")?,
-      cwd: self
-        .cwd
-        .and_then(|cwd| Text::new(cwd).ok())
-        .unwrap_or_else(|| roots.project_root.clone()),
+      session_id: text_or(self.session_id, &unknown),
+      cwd: text_or(self.cwd, &roots.project_root),
       project_root: roots.project_root.clone(),
       worktree: roots.worktree.clone(),
     };
@@ -67,29 +66,31 @@ impl View<'_> {
       HostEvent::PreCompact => NormalizedEvent::PreCompact(session),
       HostEvent::PermissionEvaluate => NormalizedEvent::PermissionEvaluate {
         session,
-        permission: text_or(self.tool_name, "unknown")?,
+        permission: text_or(self.tool_name, &unknown),
       },
-      HostEvent::ToolPre | HostEvent::ShellPre => pre_tool(session, self.tool()?),
+      HostEvent::ToolPre | HostEvent::ShellPre => pre_tool(session, self.tool(&unknown)),
       HostEvent::ToolPost => NormalizedEvent::ToolPost {
         session,
         output: self.tool_output.cloned(),
-        tool: self.tool()?,
+        tool: self.tool(&unknown),
       },
     })
   }
 
-  fn tool(&self) -> Option<Tool> {
-    Some(Tool {
-      call_id: text_or(self.call_id, "unknown")?,
-      name: text_or(self.tool_name, "unknown")?,
+  fn tool(&self, unknown: &Text) -> Tool {
+    Tool {
+      call_id: text_or(self.call_id, unknown),
+      name: text_or(self.tool_name, unknown),
       input: self.tool_input.clone(),
-    })
+    }
   }
 }
 
-/// `value` when it is a non-empty string, else `fallback`; `None` only for an empty `fallback`.
-fn text_or(value: Option<&str>, fallback: &str) -> Option<Text> {
-  Text::new(value.filter(|text| !text.is_empty()).unwrap_or(fallback)).ok()
+/// `value` when it is a non-empty string, else `fallback`: TypeScript's `text(value, fallback)`.
+fn text_or(value: Option<&str>, fallback: &Text) -> Text {
+  value
+    .and_then(|text| Text::new(text).ok())
+    .unwrap_or_else(|| fallback.clone())
 }
 
 /// `shell/pre` for a `Bash` or `Shell` call with a non-empty string command, else `tool/pre`.

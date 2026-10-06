@@ -129,6 +129,10 @@ fn context_only(event: HostEvent) -> bool {
   )
 }
 
+/// What `decision` can mean on `event`, as `normalize` in `host-encode.ts` decides
+/// it. A gate's class degrades its `ask` before encoding ([`degrade_ask`]), so an
+/// `ask` left here only fails closed. Host outputs carry a reason alone, so a
+/// runtime failure's code stays with the caller.
 fn normalize(host: Host, event: HostEvent, decision: &Decision) -> Normal<'_> {
   match decision {
     Decision::Allow => Normal::Allow,

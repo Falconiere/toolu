@@ -26,19 +26,19 @@ struct Case {
 
 fn field<'a>(case: &'a Value, key: &str) -> Res<&'a str> {
   let value = case.get(key).and_then(Value::as_str);
-  value.ok_or_else(|| format!("no {key} in {case}").into())
+  value.ok_or_else(|| format!("no {key} in {case}"))
 }
 
 fn parse(case: &Value) -> Res<Case> {
   let host = Host::parse(field(case, "host")?).ok_or("unknown host")?;
   let event = HostEvent::from_slug(field(case, "event")?).ok_or("unknown event")?;
   let decision = case.get("decision").cloned().ok_or("no decision")?;
-  let decision: Decision = serde_json::from_value(decision)?;
+  let decision: Decision = serde_json::from_value(decision).map_err(|err| err.to_string())?;
   let decision = match case.get("gateClass").and_then(Value::as_str) {
     None => decision,
     Some("guardrail") => degrade_ask(host, event, decision, GateClass::Guardrail),
     Some("judgement") => degrade_ask(host, event, decision, GateClass::Judgement),
-    Some(other) => return Err(format!("unknown gate class {other}").into()),
+    Some(other) => return Err(format!("unknown gate class {other}")),
   };
   Ok(Case {
     name: field(case, "name")?.to_owned(),

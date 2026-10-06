@@ -7,7 +7,6 @@
 //!
 //! `main` is not test code to clippy, so it unwraps nothing and returns errors.
 
-use std::error::Error;
 use std::io::{Read, Write};
 use std::process::{Command, ExitCode, Stdio};
 
@@ -19,7 +18,7 @@ use toolu_protocol::text::Text;
 
 const MODE: &str = "TOOLU_PROTOCOL_CHILD";
 
-type Res<T> = Result<T, Box<dyn Error>>;
+type Res<T> = Result<T, String>;
 
 fn main() -> ExitCode {
   if let Ok(mode) = std::env::var(MODE) {
@@ -73,12 +72,13 @@ struct Run {
 
 /// Run the child in `mode` on `{}`; with `close` its stdout reader is gone first.
 fn spawn(mode: &str, close: bool) -> Res<Run> {
-  let mut child = Command::new(std::env::current_exe()?)
+  let mut child = Command::new(std::env::current_exe().map_err(|err| err.to_string())?)
     .env(MODE, mode)
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
-    .spawn()?;
+    .spawn()
+    .map_err(|err| err.to_string())?;
   let stdout = child.stdout.take().ok_or("no stdout")?;
   let reader = if close {
     drop(stdout);
@@ -87,19 +87,22 @@ fn spawn(mode: &str, close: bool) -> Res<Run> {
     Some(stdout)
   };
   let mut stdin = child.stdin.take().ok_or("no stdin")?;
-  stdin.write_all(b"{}")?;
+  stdin.write_all(b"{}").map_err(|err| err.to_string())?;
   drop(stdin);
   let mut out = String::new();
   if let Some(mut reader) = reader {
-    reader.read_to_string(&mut out)?;
+    reader
+      .read_to_string(&mut out)
+      .map_err(|err| err.to_string())?;
   }
   let mut err = String::new();
   child
     .stderr
     .take()
     .ok_or("no stderr")?
-    .read_to_string(&mut err)?;
-  let status = child.wait()?;
+    .read_to_string(&mut err)
+    .map_err(|err| err.to_string())?;
+  let status = child.wait().map_err(|err| err.to_string())?;
   Ok(Run {
     code: status.code(),
     stdout: out,
@@ -111,26 +114,20 @@ fn expect(mode: &str, run: &Run, code: i32, stdout: &str, stderr: &str) -> Res<(
   if run.code == Some(code) && run.stdout == stdout && run.stderr == stderr {
     return Ok(());
   }
-  Err(
-    format!(
-      "{mode}: got {:?} {:?} {:?}, want {code} {stdout:?} {stderr:?}",
-      run.code, run.stdout, run.stderr
-    )
-    .into(),
-  )
+  Err(format!(
+    "{mode}: got {:?} {:?} {:?}, want {code} {stdout:?} {stderr:?}",
+    run.code, run.stdout, run.stderr
+  ))
 }
 
 fn expect_lost(mode: &str, run: &Run, code: i32, prefix: &str) -> Res<()> {
   if run.code == Some(code) && run.stderr.starts_with(prefix) {
     return Ok(());
   }
-  Err(
-    format!(
-      "{mode}: got {:?} {:?}, want {code} {prefix:?}…",
-      run.code, run.stderr
-    )
-    .into(),
-  )
+  Err(format!(
+    "{mode}: got {:?} {:?}, want {code} {prefix:?}…",
+    run.code, run.stderr
+  ))
 }
 
 fn parent() -> Res<()> {
@@ -175,7 +172,10 @@ fn parent() -> Res<()> {
   expect("advise closed", &lost, 0, "", "")?;
   let outside = spawn("outside", false)?;
   if outside.code != Some(101) || !outside.stderr.contains("boom outside") {
-    return Err(format!("outside: got {:?} {:?}", outside.code, outside.stderr).into());
+    return Err(format!(
+      "outside: got {:?} {:?}",
+      outside.code, outside.stderr
+    ));
   }
   Ok(())
 }
