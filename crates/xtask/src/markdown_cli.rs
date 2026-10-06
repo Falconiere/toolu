@@ -24,7 +24,7 @@ use crate::options::Options;
 use crate::{Verdict, output};
 use allow::Allowlist;
 use judge::Origin;
-use words::{Command, Lexed, unquote};
+use words::{Command, Lexed, is_ellipsis, is_placeholder, unquote};
 
 /// One problem at one Markdown line.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -112,7 +112,7 @@ fn in_blocks(
     .iter()
     .map(|block| shell::lex(&block.text, block.line))
     .collect();
-  // A function one block defines runs in the file's later blocks too.
+  // A function any block of the file defines may run in every block.
   let functions: Vec<String> = lexed
     .iter()
     .flat_map(|block| block.functions.iter().cloned())
@@ -190,9 +190,8 @@ fn inline(context: &Context, text: &str) -> Vec<(String, String)> {
 fn command_like(word: &str) -> bool {
   let word = unquote(word);
   word.starts_with('-')
-    || judge::is_placeholder(&word)
-    || word == "…"
-    || word == "..."
+    || is_placeholder(&word)
+    || is_ellipsis(&word)
     || word.chars().next().is_some_and(|c| c.is_ascii_lowercase())
       && word
         .chars()

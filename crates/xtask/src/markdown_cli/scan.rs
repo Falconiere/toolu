@@ -1,6 +1,7 @@
 //! Which Markdown files are scanned, and the code in them: shell-tagged
 //! fenced blocks and single-line inline code spans outside fences.
 
+use std::io::ErrorKind;
 use std::path::Path;
 
 /// Fence info strings whose blocks are shell.
@@ -51,14 +52,14 @@ pub(crate) fn scan(markdown: &str) -> Scanned {
   let mut fence: Option<Fence> = None;
   for (index, raw) in markdown.lines().enumerate() {
     let line = index + 1;
-    let trimmed = raw.trim_start();
+    let trimmed = unblockquote(raw);
     match fence.as_mut() {
       Some(open) if closes(trimmed, open.marker, open.len) => {
         out.blocks.extend(fence.take().and_then(|open| open.block));
       }
       Some(open) => {
         if let Some(block) = open.block.as_mut() {
-          block.text.push_str(&content(trimmed, raw, open.console));
+          block.text.push_str(&content(trimmed, open.console));
           block.text.push('\n');
         }
       }
@@ -90,11 +91,21 @@ fn open_fence(marker: char, len: usize, info: &str, line: usize) -> Fence {
   }
 }
 
+/// The line without its indentation and blockquote markers (`> `), so a
+/// fence quoted in a callout is still read.
+fn unblockquote(raw: &str) -> &str {
+  let mut line = raw.trim_start();
+  while let Some(rest) = line.strip_prefix('>') {
+    line = rest.trim_start();
+  }
+  line
+}
+
 /// A content line; outside a `console` prompt line it becomes empty, so line
 /// numbers stay aligned.
-fn content(trimmed: &str, raw: &str, console: bool) -> String {
+fn content(trimmed: &str, console: bool) -> String {
   if !console {
-    return raw.to_owned();
+    return trimmed.to_owned();
   }
   trimmed.strip_prefix("$ ").unwrap_or_default().to_owned()
 }
@@ -196,10 +207,15 @@ pub(crate) fn files(root: &Path) -> Result<Vec<String>, String> {
   Ok(found)
 }
 
-/// Directory entry names, sorted; an absent directory has none.
+/// Directory entry names, sorted; an absent directory, or a file where a
+/// directory may be, has none. Any other error is a setup error.
 pub(crate) fn entries(dir: &Path) -> Result<Vec<String>, String> {
-  let Ok(read) = std::fs::read_dir(dir) else {
-    return Ok(Vec::new());
+  let read = match std::fs::read_dir(dir) {
+    Ok(read) => read,
+    Err(err) if matches!(err.kind(), ErrorKind::NotFound | ErrorKind::NotADirectory) => {
+      return Ok(Vec::new());
+    }
+    Err(err) => return Err(format!("cannot list {}: {err}", dir.display())),
   };
   let mut names = Vec::new();
   for entry in read {

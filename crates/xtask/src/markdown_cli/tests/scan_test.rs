@@ -108,3 +108,24 @@ fn an_empty_root_has_no_files() {
   let dir = tempfile::tempdir().unwrap();
   assert_eq!(files(dir.path()).unwrap(), Vec::<String>::new());
 }
+
+#[test]
+fn fences_inside_blockquotes_are_read_without_their_markers() {
+  let scanned = scan("> **Note**\n> ```bash\n> toolu epic strat\n> ```\n");
+  assert_eq!(
+    scanned.blocks,
+    [Block {
+      line: 3,
+      text: "toolu epic strat\n".to_owned()
+    }]
+  );
+}
+
+#[test]
+fn listing_errors_other_than_absence_are_setup_errors() {
+  let dir = tempfile::tempdir().unwrap();
+  std::fs::write(dir.path().join("plugins"), "a file, not a directory").unwrap();
+  assert_eq!(files(dir.path()).unwrap(), Vec::<String>::new());
+  let err = super::entries(&dir.path().join("plugins\0bad")).unwrap_err();
+  assert!(err.starts_with("cannot list "), "{err}");
+}

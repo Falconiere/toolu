@@ -1,8 +1,8 @@
 use super::lex;
 use crate::markdown_cli::words::Command;
 
-/// Each command's name and line.
-fn names(text: &str) -> Vec<(String, usize)> {
+/// Each command's name and line; the `case` tests share it.
+pub(super) fn names(text: &str) -> Vec<(String, usize)> {
   lex(text, 1)
     .commands
     .into_iter()
@@ -10,7 +10,7 @@ fn names(text: &str) -> Vec<(String, usize)> {
     .collect()
 }
 
-fn owned(pairs: &[(&str, usize)]) -> Vec<(String, usize)> {
+pub(super) fn owned(pairs: &[(&str, usize)]) -> Vec<(String, usize)> {
   pairs
     .iter()
     .map(|(name, line)| ((*name).to_owned(), *line))
@@ -156,4 +156,23 @@ fn escapes_trailing_backslashes_and_process_substitution() {
     ["echo", "\"a \" b\""]
   );
   assert_eq!(names("echo ${unclosed\n"), owned(&[("echo", 1)]));
+}
+
+#[test]
+fn array_assignments_are_not_commands() {
+  assert_eq!(
+    names(
+      "files=(a.txt b.txt)
+rm \"${files[@]}\"
+"
+    ),
+    owned(&[("rm", 2)])
+  );
+  assert_eq!(
+    names(
+      "x+=(c)
+"
+    ),
+    Vec::<(String, usize)>::new()
+  );
 }

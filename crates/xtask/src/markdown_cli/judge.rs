@@ -4,6 +4,7 @@
 
 use serde_json::Value;
 
+use super::words::{distance, is_ellipsis, is_placeholder};
 use crate::command_tree::{flag_set, list, text};
 
 /// Where the command was written.
@@ -125,7 +126,8 @@ fn flag(
     None => (word, None),
   };
   let found = match name.strip_prefix("--") {
-    Some(long) => find(state, |flag| text(flag, "long") == long, long),
+    Some(HELP) => Some(Found::Help),
+    Some(long) => find(state, |flag| text(flag, "long") == long),
     None => short(state, name),
   };
   let Some(found) = found else {
@@ -135,15 +137,34 @@ fn flag(
       valid_flags(state)
     ));
   };
+  let takes_value = match found {
+    Found::Help => false,
+    Found::Flag(flag) => flag_set(flag, "takesValue"),
+  };
+  if inline_value.is_some() && !takes_value {
+    return Err(format!("`{name}` on `{}` takes no value", state.path));
+  }
   let Found::Flag(flag) = found else {
     state.done = true;
     return Ok(0);
   };
-  let long = text(flag, "long");
-  state.done |= TERMINAL.contains(&long);
-  if !flag_set(flag, "takesValue") {
+  state.done |= TERMINAL.contains(&text(flag, "long"));
+  if !takes_value {
     return Ok(0);
   }
+  value(state, flag, inline_value, rest, origin)
+}
+
+/// Judge the value of `flag`, given inline (`--host=x`) or as the next word;
+/// returns the extra words used.
+fn value(
+  state: &State<'_>,
+  flag: &Value,
+  inline_value: Option<String>,
+  rest: &[String],
+  origin: Origin,
+) -> Result<usize, String> {
+  let long = text(flag, "long");
   let (value, used) = match inline_value {
     Some(value) => (Some(value), 0),
     None => (rest.first().cloned(), 1),
@@ -172,16 +193,17 @@ fn short<'a>(state: &State<'a>, name: &str) -> Option<Found<'a>> {
   let mut found = None;
   for letter in letters.chars() {
     let shown = letter.to_string();
-    found = Some(find(state, |flag| text(flag, "short") == shown, &shown)?);
+    found = Some(if letter == 'h' {
+      Found::Help
+    } else {
+      find(state, |flag| text(flag, "short") == shown)?
+    });
   }
   found
 }
 
 /// The flag `matches` picks among the node's flags and inherited globals.
-fn find<'a>(state: &State<'a>, matches: impl Fn(&Value) -> bool, name: &str) -> Option<Found<'a>> {
-  if name == HELP || name == "h" {
-    return Some(Found::Help);
-  }
+fn find<'a>(state: &State<'a>, matches: impl Fn(&Value) -> bool) -> Option<Found<'a>> {
   flags(state)
     .into_iter()
     .find(|flag| matches(flag))
@@ -278,25 +300,6 @@ fn valid_flags(state: &State<'_>) -> String {
   shown.join(", ")
 }
 
-/// Levenshtein distance.
-fn distance(a: &str, b: &str) -> usize {
-  let b: Vec<char> = b.chars().collect();
-  let mut previous: Vec<usize> = (0..=b.len()).collect();
-  for (i, left) in a.chars().enumerate() {
-    let mut current = vec![i + 1];
-    for (j, right) in b.iter().enumerate() {
-      let substitute = previous
-        .get(j)
-        .map_or(0, |d| d + usize::from(left != *right));
-      let delete = previous.get(j + 1).map_or(0, |d| d + 1);
-      let insert = current.get(j).map_or(0, |d| d + 1);
-      current.push(substitute.min(delete).min(insert));
-    }
-    previous = current;
-  }
-  previous.last().copied().unwrap_or_default()
-}
-
 fn child<'a>(node: &'a Value, name: &str) -> Option<&'a Value> {
   list(node, "commands").iter().find(|command| {
     text(command, "name") == name
@@ -316,17 +319,6 @@ fn visible(node: &Value) -> Vec<&str> {
 
 fn has_children(node: &Value) -> bool {
   !list(node, "commands").is_empty()
-}
-
-/// `<…>`, `[…]` and anything with a `$` stand for a value.
-pub(crate) fn is_placeholder(word: &str) -> bool {
-  (word.contains('<') && word.contains('>'))
-    || (word.starts_with('[') && word.ends_with(']'))
-    || word.contains('$')
-}
-
-fn is_ellipsis(word: &str) -> bool {
-  word == "…" || word == "..."
 }
 
 #[cfg(test)]

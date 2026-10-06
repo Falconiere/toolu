@@ -1,6 +1,6 @@
 use serde_json::Value;
 
-use super::{Origin, distance, is_placeholder, judge};
+use super::{Origin, judge};
 
 /// The repository's real command tree.
 fn tree() -> Value {
@@ -57,6 +57,18 @@ fn an_unknown_flag_lists_the_valid_flags() {
       "--help/-h",
     ],
   );
+  fails(
+    "toolu --json=x commands",
+    Origin::Fenced,
+    &["`--json` on `toolu` takes no value"],
+  );
+  fails(
+    "toolu --help=x",
+    Origin::Inline,
+    &["`--help` on `toolu` takes no value"],
+  );
+  fails("toolu --h", Origin::Inline, &["unknown flag `--h`"]);
+  passes("toolu -h", Origin::Fenced);
   fails(
     "toolu epic planned -x",
     Origin::Fenced,
@@ -161,21 +173,4 @@ fn positional_counts_and_placeholders_in_command_position() {
   );
   passes("toolu hook -- x", Origin::Fenced);
   passes("toolu [<plugin>] hook <name>", Origin::Fenced);
-}
-
-#[test]
-fn distances_and_placeholders() {
-  assert_eq!(distance("strat", "start"), 2);
-  assert_eq!(distance("", "abc"), 3);
-  assert_eq!(distance("planned", "planned"), 0);
-  for word in [
-    "<ref>",
-    "[<plugin>]",
-    "$VAR",
-    "${X}",
-    "<state_dir>/graph.json",
-  ] {
-    assert!(is_placeholder(word), "{word}");
-  }
-  assert!(!is_placeholder("--json"));
 }

@@ -69,7 +69,7 @@ under 300 code lines:
   `statusline.sh`. A stem table maps a stem to its namespace (`plan-ledger`,
   `verdict` → `ledger`; `jev` → `jev`; `write-state` → `review`;
   `babysit-*` → `babysit`; `debug-*` → `debug`; `setup` → `setup`; `status`,
-  `statusline` → `statusline`; `search`, `ast-grep` → `ast-grep`); any other
+  `statusline` → `statusline`; `search`, `ast-grep`, `byte-savings` → `ast-grep`; exact stems, prefixes only for entries ending in `-`); any other
   stem maps to the namespaces whose `owner` is the containing plugin. A
   reference fails when every namespace it maps to exists and has no
   `placeholder` verb ("ported").

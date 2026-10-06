@@ -21,7 +21,7 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
   {
     "id": "S1-shell-lexer",
     "title": "markdown_cli/shell.rs: lex a shell block into commands (quotes spanning lines, backslash-newline, comments, heredoc bodies skipped, redirections dropped, separators, keywords, leading assignments, for-headers, defined functions, console $-prompt lines)",
-    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo test -p xtask --locked markdown_cli::shell && cargo test -p xtask --locked markdown_cli::words",
+    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo test -p xtask --locked markdown_cli::shell && cargo test -p xtask --locked markdown_cli::words && cargo test -p xtask --locked markdown_cli::shell::",
     "ac_refs": [
       "AC-5"
     ],
@@ -31,7 +31,9 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
       "crates/xtask/src/markdown_cli/shell.rs",
       "crates/xtask/src/markdown_cli/tests/shell_test.rs",
       "crates/xtask/src/markdown_cli/words.rs",
-      "crates/xtask/src/markdown_cli/tests/words_test.rs"
+      "crates/xtask/src/markdown_cli/tests/words_test.rs",
+      "crates/xtask/src/markdown_cli/shell",
+      "crates/xtask/src/markdown_cli/shell/tests"
     ],
     "input": "real blocks copied from plugins/jev/skills/jev/SKILL.md (the JEV_BUN for-loop), plugins/ast-grep/skills/ast-grep/references/ast-grep-advanced.md (multi-line single-quoted YAML), plugins/jev/skills/jev/references/problem-solving.md (cat <<'JSON' heredoc, judge() function); an unterminated quote and heredoc",
     "model": "inherit"
@@ -254,5 +256,6 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
 - **`markdown_cli/words.rs`** holds `Command`, `Lexed`, `unquote` and the command-start rule, split from `shell.rs` to keep it under 300 code lines (rule 1).
 - **The OpenCode generated surface** copies the ast-grep advanced reference, so `bun run generate:opencode-surface` regenerates it with the `mod.sh` fix (`check:opencode-surface` in S8).
 - **`crates/xtask/src/command_tree.rs`** holds the tree-JSON readers (`list`, `text`, `flag_set`) that `cli_compat/compare.rs` and `markdown_cli/judge.rs` both need; jscpd (rule 16) failed S9 on the copy.
+- **Review fixes:** `shell/redirect.rs` and `shell/case.rs` (child modules with their own tests) hold redirections, heredocs and `case` arms so `shell.rs` stays within the impl and file limits; array assignments, `+=`, blockquoted fences, `bun run`/`bun --cwd` scripts, valueless flags given a value, `--h`, exact stem matching and non-`NotFound` listing errors were review findings, each with a test.
 - **S9 runs its gates without `job.ts`:** the ledger already holds the epic's job lease for each check, and the job capacity is 1, so a nested `job.ts` would always be refused.
 - **Real findings settled in S6:** the ast-grep advanced reference's stale `mod.sh ast-grep …` became `plugins/ast-grep/hooks/dist/ast-grep.js …` (the form `docs/ast-grep/README.md` uses); the ast-grep skill's Strictness block, a list of flag values in a `bash` fence, has a per-plugin allowance; `docs/cli/installer.md` names the Node installer's own `toolu` bin twice and gets two repository allowances beside the planned two. Functions defined in one block count for the file's later blocks (the Jev problem-solving reference defines `judge()` once).

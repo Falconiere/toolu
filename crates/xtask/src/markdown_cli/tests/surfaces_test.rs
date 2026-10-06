@@ -47,7 +47,20 @@ fn paths_of_removed_surfaces_are_found_with_their_stems() {
     ]
   );
   assert_eq!(
-    references(&patterns, "comemory.sh save x; bun test packages/a.test.ts"),
+    references(
+      &patterns,
+      "\"$R/toolu-review/write-state.sh\" --x; x=jev.sh"
+    ),
+    [
+      ("write-state.sh".to_owned(), "write-state".to_owned()),
+      ("jev.sh".to_owned(), "jev".to_owned()),
+    ]
+  );
+  assert_eq!(
+    references(
+      &patterns,
+      "comemory.sh save x; my-jev.sh; ast-grep-search.sh; bun test packages/a.test.ts"
+    ),
     []
   );
 }
@@ -67,8 +80,17 @@ fn bun_running_a_script_is_a_reference_unless_a_path_pattern_caught_it() {
     ),
     Some(("./x/route.js".to_owned(), "route".to_owned()))
   );
+  assert_eq!(
+    bun_script(&patterns, &first("bun run ./launch-issue.ts --dry-run")),
+    Some(("./launch-issue.ts".to_owned(), "launch-issue".to_owned()))
+  );
+  assert_eq!(
+    bun_script(&patterns, &first("bun --cwd dir route.ts")),
+    Some(("route.ts".to_owned(), "route".to_owned()))
+  );
   for text in [
     "bun test packages/x.test.ts",
+    "bun build src/x.ts --outdir dist",
     "bun run test",
     "bun \"$R/hooks/dist/verdict.js\" status",
     "gh x.ts",
@@ -99,6 +121,13 @@ fn unmapped_stems_fall_back_to_the_plugins_own_namespaces() {
   assert!(problem(&tree(), "anything", "brainstorm").is_some());
   // a plugin owning several namespaces needs all of them ported.
   assert_eq!(problem(&ported("ledger"), "anything", "toolu"), None);
+  // stems match exactly unless the entry is a `-` prefix.
+  assert!(problem(&ported("statusline"), "status", "toolu").is_some());
+  assert_eq!(
+    problem(&ported("statusline"), "status-board", "toolu"),
+    None
+  );
+  assert!(problem(&ported("babysit"), "babysit-route-fix", "toolu").is_some());
   // an unknown plugin owns nothing.
   assert_eq!(problem(&tree(), "anything", "nope"), None);
 }

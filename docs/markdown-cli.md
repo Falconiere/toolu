@@ -22,11 +22,11 @@ A fenced command must be complete: a verb where the tree needs one and every req
 
 ## Other fenced commands
 
-Every other command in a shell fence must be a shell builtin or keyword, a function the file defines, a path (it contains `/`), a variable (`"$JEV_BUN"`), or a name on an `external` list. Leading `NAME=value` assignments, `if`/`then`/`do` and `for` headers, heredoc bodies, comments and redirections are skipped; `$(…)` and pipelines are judged command by command.
+Every other command in a shell fence must be a shell builtin or keyword, a function the file defines, a path (it contains `/`), a variable (`"$JEV_BUN"`), or a name on an `external` list. Leading `NAME=value` assignments, array assignments, `if`/`then`/`do` and `for` headers, `case` arm patterns, heredoc bodies, comments and redirections are skipped, and a fence inside a blockquote is read without its `>` markers; `$(…)` and pipelines are judged command by command.
 
 ## Removed surfaces
 
-In a plugin's Markdown, a path to a Bun bundle (`hooks/dist/<stem>.js`), a TypeScript script (`scripts/<stem>.ts`, or any `.ts`/`.js` file `bun` runs) or a stable script (`jev.sh`, `write-state.sh`, `search.sh`, `statusline.sh`) fails once the namespace that replaces it is ported: present in the tree with no `planned` verb. The stem table in `crates/xtask/src/markdown_cli/surfaces.rs` maps stems to namespaces (`plan-ledger` and `verdict` to `ledger`, `babysit-*` to `babysit`, …); any other stem maps to the namespaces the plugin owns. `AGENTS.md` and `docs/**` still describe the TypeScript tree, which stays until #440, so they are not checked for removed surfaces.
+In a plugin's Markdown, a path to a Bun bundle (`hooks/dist/<stem>.js`), a TypeScript script (`scripts/<stem>.ts`, or any `.ts`/`.js` file `bun` runs) or a stable script (`jev.sh`, `write-state.sh`, `search.sh`, `statusline.sh`) fails once the namespace that replaces it is ported: present in the tree with no `planned` verb. The stem table in `crates/xtask/src/markdown_cli/surfaces.rs` maps stems to namespaces (`plan-ledger` and `verdict` to `ledger`, `byte-savings` to `ast-grep`, `babysit-*` to `babysit`, …; an entry matches a stem exactly unless it ends in `-`); any other stem maps to the namespaces the plugin owns. `bun test` and `bun build` take files they do not run, so they are not references. `AGENTS.md` and `docs/**` still describe the TypeScript tree, which stays until #440, so they are not checked for removed surfaces.
 
 ## Allowlists
 

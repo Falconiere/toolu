@@ -56,12 +56,44 @@ pub(crate) fn command(words: Vec<(String, usize)>) -> Option<Command> {
 
 fn is_assignment(word: &str) -> bool {
   word.split_once('=').is_some_and(|(name, _)| {
-    let mut chars = name.chars();
+    // `NAME+=value` appends.
+    let mut chars = name.strip_suffix('+').unwrap_or(name).chars();
     chars
       .next()
       .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
       && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
   })
+}
+
+/// `<…>`, `[…]` and anything with a `$` stand for a value.
+pub(crate) fn is_placeholder(word: &str) -> bool {
+  (word.contains('<') && word.contains('>'))
+    || (word.starts_with('[') && word.ends_with(']'))
+    || word.contains('$')
+}
+
+/// `…` or `...`: the rest of the command is elided.
+pub(crate) fn is_ellipsis(word: &str) -> bool {
+  word == "…" || word == "..."
+}
+
+/// Levenshtein distance.
+pub(crate) fn distance(a: &str, b: &str) -> usize {
+  let b: Vec<char> = b.chars().collect();
+  let mut previous: Vec<usize> = (0..=b.len()).collect();
+  for (i, left) in a.chars().enumerate() {
+    let mut current = vec![i + 1];
+    for (j, right) in b.iter().enumerate() {
+      let substitute = previous
+        .get(j)
+        .map_or(0, |d| d + usize::from(left != *right));
+      let delete = previous.get(j + 1).map_or(0, |d| d + 1);
+      let insert = current.get(j).map_or(0, |d| d + 1);
+      current.push(substitute.min(delete).min(insert));
+    }
+    previous = current;
+  }
+  previous.last().copied().unwrap_or_default()
 }
 
 #[cfg(test)]
