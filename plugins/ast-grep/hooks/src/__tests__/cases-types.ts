@@ -21,7 +21,9 @@ const SavingsSchema = z.strictObject({
   name: z.string().min(1),
   hosts: Hosts,
   payload: z.record(z.string(), z.json()),
-  env: z.record(z.string(), z.json()).optional(),
+  env: z
+    .record(z.string(), z.union([z.string(), z.strictObject({ $path: z.string() })]))
+    .optional(),
   setup: z.array(ActionSchema),
   payloadSetup: z.array(ActionSchema),
   deviation: DeviationSchema.optional(),
