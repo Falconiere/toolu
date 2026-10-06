@@ -7,15 +7,19 @@ const ROOT = resolve(import.meta.dir, "../..");
 const SELF = "tooling/src/check-retired-plugin-references.ts";
 const HISTORY = new Set([
   "CHANGELOG.md",
+  "fixtures/gates/lifecycle.json", // exact historical parity inputs include retired-plugin names
+  "fixtures/gates/lifecycle-golden.json",
+  "fixtures/gates/pre-tool-modules-a.json", // preserves the former MCP/Jira case inputs
+  "fixtures/gates/pre-tool-modules-a-golden.json",
   "plugins/pr-babysit/hooks/src/__tests__/fixtures/parse-verdict.golden.json",
   "plugins/pr-babysit/scripts/__tests__/fixtures/pr120-verdict-changes.txt",
-  "plugins/toolu/hooks/src/__tests__/fixtures/lifecycle-golden.json",
   "plugins/toolu/hooks/src/__tests__/fixtures/pre-tool-modules-a-golden.json",
   "plugins/toolu/scripts/__tests__/fixtures/debug/big.log",
 ]);
 const JIRA_INTEGRATION = new Set([
   ".claude-plugin/marketplace.json",
   "AGENTS.md",
+  "fixtures/index.json", // preserves the existing Jira word case name for parity
   "README.md",
   "docs/conformance-report.md",
   "docs/epic-orchestrator/README.md",

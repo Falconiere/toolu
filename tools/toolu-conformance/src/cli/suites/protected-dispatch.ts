@@ -116,7 +116,7 @@ export async function runProtectedEditDispatch(
   ctx: ProtectedDispatchContext,
 ): Promise<SuiteOutcome> {
   const root = repoRoot();
-  const fixturePath = join(root, "tooling/fixtures/portable-core/protected-files-pre.json");
+  const fixturePath = join(root, "fixtures/portable-core/protected-files-pre.json");
   let fixtureRaw: z.infer<typeof Fixture>;
   try {
     const loaded: unknown = JSON.parse(readFileSync(fixturePath, "utf8"));

@@ -5,20 +5,17 @@
  * were deleted.
  */
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { resolve } from "node:path";
+import { assertCaptureNames, readCaseFile } from "@toolu/conformance/harness/json-cases";
 import { z } from "zod";
-import { BASH_COMMANDS_CASES } from "./pre-tool-modules-b-bash-commands.ts";
-import type { Captured, ModuleCase } from "./pre-tool-modules-b-cases.ts";
-import { COMMIT_GATE_CASES } from "./pre-tool-modules-b-commit-gate.ts";
-import { QUALITY_GATE_CASES } from "./pre-tool-modules-b-quality-gate.ts";
+import { MODULE_CASES, type Captured } from "./pre-tool-modules-b-cases.ts";
 
-export const GOLDEN_PATH = join(import.meta.dir, "fixtures", "pre-tool-modules-b-golden.json");
+export const GOLDEN_PATH = resolve(
+  import.meta.dir,
+  "../../../../../fixtures/gates/pre-tool-modules-b-golden.json",
+);
 
-export const MODULE_CASES: readonly ModuleCase[] = [
-  ...BASH_COMMANDS_CASES,
-  ...COMMIT_GATE_CASES,
-  ...QUALITY_GATE_CASES,
-];
+export { MODULE_CASES };
 
 /** #258 corpus fixtures these modules decide: their names start with the module's. */
 export function decidedByModulesB(fixtureName: string): boolean {
@@ -50,5 +47,10 @@ export type Golden = {
 };
 
 export function readGolden(): Golden {
-  return GoldenSchema.parse(JSON.parse(readFileSync(GOLDEN_PATH, "utf8")));
+  const golden = GoldenSchema.parse(JSON.parse(readFileSync(GOLDEN_PATH, "utf8")));
+  assertCaptureNames(
+    readCaseFile(resolve(import.meta.dir, "../../../../../fixtures/gates/pre-tool-modules-b.json")),
+    golden.cases,
+  );
+  return golden;
 }

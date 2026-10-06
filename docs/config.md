@@ -77,7 +77,7 @@ See `plugins/toolu/settings/toolu.config.example.json` for a fully-populated exa
 ([#253](https://github.com/Falconiere/toolu/issues/253)). It reads the same two
 files, merges them the same way, and resolves every threshold, gate mode, model
 tier, docs-sync list and flag to the value bash resolves
-(`config-parity.test.ts` runs both over `tooling/fixtures/config/`). The
+(`config-parity.test.ts` runs both over `fixtures/config/`). The
 PreToolUse dispatcher ([#258](https://github.com/Falconiere/toolu/issues/258))
 reads `hooks.pre-tools` through this loader; its modules and the other hooks
 still run the bash libs until they are ported.

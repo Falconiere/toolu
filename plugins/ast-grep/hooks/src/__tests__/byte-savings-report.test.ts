@@ -9,7 +9,7 @@ import { writeFileSync } from "node:fs";
 import { entryArgv } from "@toolu/conformance/harness/entry-command";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
-import { REPORT_CASES, REPORT_DEVIATIONS } from "./cases-report.ts";
+import { REPORT_CASES } from "./cases-report.ts";
 import { CASE_TIMEOUT_MS } from "./golden-expect.ts";
 import { runReport } from "./golden-harness.ts";
 import { readGolden } from "./golden-io.ts";
@@ -28,7 +28,7 @@ for (const c of REPORT_CASES) {
       const expected = golden[c.name];
       if (expected === undefined) throw new Error(`no golden capture for ${c.name}`);
       const actual = await runReport(c, { kind: "bundle" });
-      const stderr = REPORT_DEVIATIONS[c.name];
+      const stderr = c.deviation;
       expect(actual).toEqual(stderr === undefined ? expected : { ...expected, stderr });
     },
     CASE_TIMEOUT_MS,

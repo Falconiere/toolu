@@ -13,6 +13,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { toStdin } from "@toolu/conformance/harness/fixtures";
+import { materializeCaseValue } from "@toolu/conformance/harness/json-cases";
 import { runPostBundle } from "@toolu/conformance/harness/posttool";
 import { pretoolEnv, runBundle } from "@toolu/conformance/harness/pretool";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
@@ -24,6 +25,7 @@ import {
 } from "@toolu/conformance/harness/timing";
 import { NUDGE_CASES } from "../../../plugins/ast-grep/hooks/src/__tests__/cases-nudge.ts";
 import { SAVINGS_CASES } from "../../../plugins/ast-grep/hooks/src/__tests__/cases-savings.ts";
+import { z } from "zod";
 import {
   BASH_BASE,
   baseSandbox,
@@ -67,11 +69,18 @@ function nudgeCall(name: string): Call {
 function savingsCall(name: string): Call {
   const c = SAVINGS_CASES.find((entry) => entry.name === name);
   if (c === undefined) throw new Error(`no byte-savings case named ${name}`);
+  if (c.setup.length > 0 || c.payloadSetup.length > 0 || c.env !== undefined) {
+    throw new Error(`${name}: latency slice requires a plain payload`);
+  }
   return (sb) =>
     runPostBundle(sb, {
       cwd: sb.project,
       env: pretoolEnv(sb, "claude"),
-      stdin: JSON.stringify({ cwd: sb.project, hook_event_name: "PostToolUse", ...c.payload(sb) }),
+      stdin: JSON.stringify({
+        cwd: sb.project,
+        hook_event_name: "PostToolUse",
+        ...z.record(z.string(), z.unknown()).parse(materializeCaseValue(sb, c.payload, "claude")),
+      }),
     });
 }
 

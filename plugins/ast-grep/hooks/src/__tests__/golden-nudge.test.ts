@@ -6,7 +6,7 @@
  * the TypeScript module does right.
  */
 import { expect, test } from "bun:test";
-import { NUDGE_CASES, NUDGE_DEVIATIONS } from "./cases-nudge.ts";
+import { NUDGE_CASES } from "./cases-nudge.ts";
 import { CASE_TIMEOUT_MS, expectDeviation } from "./golden-expect.ts";
 import { caseKey, hostsOf, runNudge } from "./golden-harness.ts";
 import { readGolden } from "./golden-io.ts";
@@ -24,9 +24,8 @@ test("no capture names a source repository", () => {
   }
 });
 
-test("every deviation names a case", () => {
-  const names = new Set(NUDGE_CASES.map((c) => c.name));
-  for (const name of Object.keys(NUDGE_DEVIATIONS)) expect(names.has(name)).toBe(true);
+test("the baseline has ten named deviations", () => {
+  expect(NUDGE_CASES.filter((c) => c.deviation !== undefined).length).toBe(10);
 });
 
 for (const c of NUDGE_CASES) {
@@ -38,7 +37,7 @@ for (const c of NUDGE_CASES) {
         const expected = golden[key];
         if (expected === undefined) throw new Error(`no golden capture for ${key}`);
         const actual = await runNudge(c, host, { kind: "bundle" });
-        const deviation = NUDGE_DEVIATIONS[c.name];
+        const deviation = c.deviation;
         if (deviation === undefined) {
           expect(actual).toEqual(expected);
           return;

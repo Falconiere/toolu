@@ -1,0 +1,6 @@
+{
+  "cases": [
+    { "id": "unterminated-single-quote", "command": "echo 'unterminated" },
+    { "id": "unterminated-command-substitution", "command": "echo $(unterminated" }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "names": [
+    "dispatch.bats: rust-quality: exits 0 silently when TOOLU_LIB_DIR is unset (fail soft)",
+    "assembled.bats: assembled module exists after register.sh"
+  ]
+}

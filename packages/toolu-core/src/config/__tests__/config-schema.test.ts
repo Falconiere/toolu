@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { parseTooluConfig, TooluConfigSchema } from "../config.ts";
 
 const REPO = resolve(import.meta.dir, "../../../../..");
-const FIXTURES = join(REPO, "tooling/fixtures/config");
+const FIXTURES = join(REPO, "fixtures/config");
 const EXAMPLE = join(REPO, "plugins/toolu/settings/toolu.config.example.json");
 
 function readJson(path: string): unknown {

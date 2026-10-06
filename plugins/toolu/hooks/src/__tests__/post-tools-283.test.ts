@@ -1,7 +1,7 @@
 /**
  * AC-3 (#259): the named #283 fixtures through the committed bundle behind its
  * launcher against real project state.
- * Commands come from `tooling/fixtures/shell/issue-283.json`.
+ * Commands come from `fixtures/shell/issue-283.json`.
  */
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -13,7 +13,7 @@ import { POSTTOOL_CORPUS, preparePost, ran } from "@toolu/conformance/harness/po
 import { pretoolEnv, type PretoolRun } from "@toolu/conformance/harness/pretool";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 
-const FIXTURES = resolve(import.meta.dir, "../../../../../tooling/fixtures/shell/issue-283.json");
+const FIXTURES = resolve(import.meta.dir, "../../../../../fixtures/shell/issue-283.json");
 
 function fixtureCommand(id: string): string {
   const doc: unknown = JSON.parse(readFileSync(FIXTURES, "utf8"));

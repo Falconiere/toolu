@@ -2,16 +2,18 @@
   "name": "@toolu/conformance",
   "version": "7.11.0",
   "private": true,
-  "type": "module",
   "bin": {
     "toolu-conformance": "./src/cli/run.ts"
   },
+  "type": "module",
   "exports": {
     "./run": "./src/cli/run.ts",
     "./run-stub": "./src/cli/run-stub.ts",
     "./harness/sandbox": "./src/harness/sandbox.ts",
     "./harness/spawn": "./src/harness/spawn.ts",
     "./harness/entry-command": "./src/harness/entry-command.ts",
+    "./harness/json-cases": "./src/harness/json-cases.ts",
+    "./harness/quality-cases": "./src/harness/quality-cases.ts",
     "./harness/hosts": "./src/harness/hosts.ts",
     "./harness/fixtures": "./src/harness/fixtures.ts",
     "./harness/timing": "./src/harness/timing.ts",

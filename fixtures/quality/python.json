@@ -1,0 +1,1879 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "dispatch: no-op outside a Python project",
+      "project": {},
+      "steps": [
+        {
+          "write": {
+            "main.py": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "Write",
+          "file": "main.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "dispatch: Edit extracts the file path",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "bad.py": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "Edit",
+          "file": "bad.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden suppression"]
+    },
+    {
+      "name": "dispatch: MultiEdit extracts the file path",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "bad.py": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "MultiEdit",
+          "file": "bad.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden suppression"]
+    },
+    {
+      "name": "dispatch: re-editing a failing file clean clears its entry",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "bad.py": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "Edit",
+          "file": "bad.py"
+        },
+        {
+          "write": {
+            "bad.py": "try:\n    pass\nexcept ValueError:\n    pass\n"
+          },
+          "tool": "Edit",
+          "file": "bad.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "dispatch: deleting a failing file clears its entry",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "bad.py": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "Edit",
+          "file": "bad.py"
+        },
+        {
+          "remove": ["bad.py"],
+          "tool": "Delete",
+          "file": "bad.py"
+        }
+      ],
+      "expect": "silent",
+      "hosts": ["claude", "codex"]
+    },
+    {
+      "name": "dispatch: clearing one file keeps another's failure",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "a.py": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "Edit",
+          "file": "a.py"
+        },
+        {
+          "write": {
+            "b.py": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "Edit",
+          "file": "b.py"
+        },
+        {
+          "write": {
+            "b.py": "try:\n    pass\nexcept ValueError:\n    pass\n"
+          },
+          "tool": "Edit",
+          "file": "b.py"
+        },
+        {
+          "write": {
+            "a.py": "try:\n    pass\nexcept ValueError:\n    pass\n"
+          },
+          "tool": "Edit",
+          "file": "a.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "dispatch: another hook's failure survives a python fail and clear",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "a.py": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "Edit",
+          "file": "a.py"
+        },
+        {
+          "write": {
+            "a.py": "try:\n    pass\nexcept ValueError:\n    pass\n"
+          },
+          "tool": "Edit",
+          "file": "a.py"
+        }
+      ],
+      "expect": "silent",
+      "setup": [
+        {
+          "op": "write",
+          "path": "$PROJECT/.claude/tmp/quality-gate-status.json",
+          "body": "{\n  \"status\": \"failing\",\n  \"reason\": \"Rust violation\",\n  \"source\": \"rust-quality-hook\",\n  \"file\": \"/p/x.rs\",\n  \"violations\": \"bad rust\\n\",\n  \"updatedAt\": \"2026-01-01T00:00:00Z\"\n}\n"
+        }
+      ]
+    },
+    {
+      "name": "assembled: two violations in fragment order",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "bad.py": "def big():\n    try:\n        pass\n    except:\n        v1 = 1\n        v2 = 2\n        v3 = 3\n        v4 = 4\n        v5 = 5\n        v6 = 6\n"
+          },
+          "tool": "Write",
+          "file": "bad.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["exceeds 5-line limit", "bare except"],
+      "config": {
+        "lang": {
+          "python": {
+            "maxFileLines": 5
+          }
+        }
+      }
+    },
+    {
+      "name": "assembled: fixing one of two keeps the gate failing",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "bad.py": "def big():\n    except_marker = 1\n    v1 = 1\n    v2 = 2\n    v3 = 3\n    v4 = 4\n    v5 = 5\n    v6 = 6\n    # noqa\n"
+          },
+          "tool": "Write",
+          "file": "bad.py"
+        },
+        {
+          "write": {
+            "bad.py": "def big():\n    except_marker = 1\n    v1 = 1\n    v2 = 2\n    v3 = 3\n    v4 = 4\n    v5 = 5\n    v6 = 6\n"
+          },
+          "tool": "Write",
+          "file": "bad.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["exceeds 5-line limit"],
+      "absent": ["blanket # noqa"],
+      "config": {
+        "lang": {
+          "python": {
+            "maxFileLines": 5
+          }
+        }
+      }
+    },
+    {
+      "name": "assembled: clean file",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "good.py": "def read_it():\n    \"\"\"Read and return a constant.\"\"\"\n    return 1\n"
+          },
+          "tool": "Write",
+          "file": "good.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "assembled: re-editing a failing file clean flips the gate",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "x.py": "def helper():\n    except_bad = 1\n    return except_bad\n\n\ntry:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "Edit",
+          "file": "x.py"
+        },
+        {
+          "write": {
+            "x.py": "def helper():\n    \"\"\"Do a thing.\"\"\"\n    return 1\n"
+          },
+          "tool": "Edit",
+          "file": "x.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "flow: a non-.py file is ignored",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "README.md": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "Write",
+          "file": "README.md"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "flow: a missing file is ignored",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "tool": "Write",
+          "file": "gone.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "flow: a relative path resolves against the hook's cwd",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.py": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "file": "src/a.py",
+          "relative": true
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden suppression in src/a.py"]
+    },
+    {
+      "name": "flow: CLAUDE_FILE_PATHS names the file for any tool",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.py": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "Bash",
+          "input": {
+            "command": "true"
+          },
+          "env": {
+            "CLAUDE_FILE_PATHS": "src/a.py"
+          }
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden suppression"]
+    },
+    {
+      "name": "flow: a Bash call without CLAUDE_FILE_PATHS is ignored",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.py": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "Bash",
+          "file": "src/a.py",
+          "input": {
+            "command": "true"
+          }
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "flow: python3 not on PATH",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "bad.py": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "Write",
+          "file": "bad.py"
+        }
+      ],
+      "expect": "silent",
+      "env": {
+        "kind": "pathWithout",
+        "without": ["python3"]
+      }
+    },
+    {
+      "name": "DEV-1: no jq on PATH",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "bad.py": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "Write",
+          "file": "bad.py"
+        }
+      ],
+      "expect": "silent",
+      "env": {
+        "kind": "pathWithout",
+        "without": ["jq"]
+      },
+      "deviation": {
+        "contains": ["Forbidden suppression"]
+      }
+    },
+    {
+      "name": "flow: malformed thresholds fall back to the defaults",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "big.py": "v1 = 1\nv2 = 2\nv3 = 3\nv4 = 4\nv5 = 5\nv6 = 6\nv7 = 7\nv8 = 8\nv9 = 9\nv10 = 10\nv11 = 11\nv12 = 12\nv13 = 13\nv14 = 14\nv15 = 15\nv16 = 16\nv17 = 17\nv18 = 18\nv19 = 19\nv20 = 20\nv21 = 21\nv22 = 22\nv23 = 23\nv24 = 24\nv25 = 25\nv26 = 26\nv27 = 27\nv28 = 28\nv29 = 29\nv30 = 30\nv31 = 31\nv32 = 32\nv33 = 33\nv34 = 34\nv35 = 35\nv36 = 36\nv37 = 37\nv38 = 38\nv39 = 39\nv40 = 40\nv41 = 41\nv42 = 42\nv43 = 43\nv44 = 44\nv45 = 45\nv46 = 46\nv47 = 47\nv48 = 48\nv49 = 49\nv50 = 50\nv51 = 51\nv52 = 52\nv53 = 53\nv54 = 54\nv55 = 55\nv56 = 56\nv57 = 57\nv58 = 58\nv59 = 59\nv60 = 60\nv61 = 61\nv62 = 62\nv63 = 63\nv64 = 64\nv65 = 65\nv66 = 66\nv67 = 67\nv68 = 68\nv69 = 69\nv70 = 70\nv71 = 71\nv72 = 72\nv73 = 73\nv74 = 74\nv75 = 75\nv76 = 76\nv77 = 77\nv78 = 78\nv79 = 79\nv80 = 80\nv81 = 81\nv82 = 82\nv83 = 83\nv84 = 84\nv85 = 85\nv86 = 86\nv87 = 87\nv88 = 88\nv89 = 89\nv90 = 90\nv91 = 91\nv92 = 92\nv93 = 93\nv94 = 94\nv95 = 95\nv96 = 96\nv97 = 97\nv98 = 98\nv99 = 99\nv100 = 100\nv101 = 101\nv102 = 102\nv103 = 103\nv104 = 104\nv105 = 105\nv106 = 106\nv107 = 107\nv108 = 108\nv109 = 109\nv110 = 110\nv111 = 111\nv112 = 112\nv113 = 113\nv114 = 114\nv115 = 115\nv116 = 116\nv117 = 117\nv118 = 118\nv119 = 119\nv120 = 120\nv121 = 121\nv122 = 122\nv123 = 123\nv124 = 124\nv125 = 125\nv126 = 126\nv127 = 127\nv128 = 128\nv129 = 129\nv130 = 130\nv131 = 131\nv132 = 132\nv133 = 133\nv134 = 134\nv135 = 135\nv136 = 136\nv137 = 137\nv138 = 138\nv139 = 139\nv140 = 140\nv141 = 141\nv142 = 142\nv143 = 143\nv144 = 144\nv145 = 145\nv146 = 146\nv147 = 147\nv148 = 148\nv149 = 149\nv150 = 150\nv151 = 151\nv152 = 152\nv153 = 153\nv154 = 154\nv155 = 155\nv156 = 156\nv157 = 157\nv158 = 158\nv159 = 159\nv160 = 160\nv161 = 161\nv162 = 162\nv163 = 163\nv164 = 164\nv165 = 165\nv166 = 166\nv167 = 167\nv168 = 168\nv169 = 169\nv170 = 170\nv171 = 171\nv172 = 172\nv173 = 173\nv174 = 174\nv175 = 175\nv176 = 176\nv177 = 177\nv178 = 178\nv179 = 179\nv180 = 180\nv181 = 181\nv182 = 182\nv183 = 183\nv184 = 184\nv185 = 185\nv186 = 186\nv187 = 187\nv188 = 188\nv189 = 189\nv190 = 190\nv191 = 191\nv192 = 192\nv193 = 193\nv194 = 194\nv195 = 195\nv196 = 196\nv197 = 197\nv198 = 198\nv199 = 199\nv200 = 200\nv201 = 201\nv202 = 202\nv203 = 203\nv204 = 204\nv205 = 205\nv206 = 206\nv207 = 207\nv208 = 208\nv209 = 209\nv210 = 210\nv211 = 211\nv212 = 212\nv213 = 213\nv214 = 214\nv215 = 215\nv216 = 216\nv217 = 217\nv218 = 218\nv219 = 219\nv220 = 220\nv221 = 221\nv222 = 222\nv223 = 223\nv224 = 224\nv225 = 225\nv226 = 226\nv227 = 227\nv228 = 228\nv229 = 229\nv230 = 230\nv231 = 231\nv232 = 232\nv233 = 233\nv234 = 234\nv235 = 235\nv236 = 236\nv237 = 237\nv238 = 238\nv239 = 239\nv240 = 240\nv241 = 241\nv242 = 242\nv243 = 243\nv244 = 244\nv245 = 245\nv246 = 246\nv247 = 247\nv248 = 248\nv249 = 249\nv250 = 250\nv251 = 251\nv252 = 252\nv253 = 253\nv254 = 254\nv255 = 255\nv256 = 256\nv257 = 257\nv258 = 258\nv259 = 259\nv260 = 260\nv261 = 261\nv262 = 262\nv263 = 263\nv264 = 264\nv265 = 265\nv266 = 266\nv267 = 267\nv268 = 268\nv269 = 269\nv270 = 270\nv271 = 271\nv272 = 272\nv273 = 273\nv274 = 274\nv275 = 275\nv276 = 276\nv277 = 277\nv278 = 278\nv279 = 279\nv280 = 280\nv281 = 281\nv282 = 282\nv283 = 283\nv284 = 284\nv285 = 285\nv286 = 286\nv287 = 287\nv288 = 288\nv289 = 289\nv290 = 290\nv291 = 291\nv292 = 292\nv293 = 293\nv294 = 294\nv295 = 295\nv296 = 296\nv297 = 297\nv298 = 298\nv299 = 299\nv300 = 300\nv301 = 301\nv302 = 302\nv303 = 303\nv304 = 304\nv305 = 305\nv306 = 306\nv307 = 307\nv308 = 308\nv309 = 309\nv310 = 310\nv311 = 311\nv312 = 312\nv313 = 313\nv314 = 314\nv315 = 315\nv316 = 316\nv317 = 317\nv318 = 318\nv319 = 319\nv320 = 320\nv321 = 321\nv322 = 322\nv323 = 323\nv324 = 324\nv325 = 325\nv326 = 326\nv327 = 327\nv328 = 328\nv329 = 329\nv330 = 330\nv331 = 331\nv332 = 332\nv333 = 333\nv334 = 334\nv335 = 335\nv336 = 336\nv337 = 337\nv338 = 338\nv339 = 339\nv340 = 340\nv341 = 341\nv342 = 342\nv343 = 343\nv344 = 344\nv345 = 345\nv346 = 346\nv347 = 347\nv348 = 348\nv349 = 349\nv350 = 350\nv351 = 351\nv352 = 352\nv353 = 353\nv354 = 354\nv355 = 355\nv356 = 356\nv357 = 357\nv358 = 358\nv359 = 359\nv360 = 360\nv361 = 361\nv362 = 362\nv363 = 363\nv364 = 364\nv365 = 365\nv366 = 366\nv367 = 367\nv368 = 368\nv369 = 369\nv370 = 370\nv371 = 371\nv372 = 372\nv373 = 373\nv374 = 374\nv375 = 375\nv376 = 376\nv377 = 377\nv378 = 378\nv379 = 379\nv380 = 380\nv381 = 381\nv382 = 382\nv383 = 383\nv384 = 384\nv385 = 385\nv386 = 386\nv387 = 387\nv388 = 388\nv389 = 389\nv390 = 390\nv391 = 391\nv392 = 392\nv393 = 393\nv394 = 394\nv395 = 395\nv396 = 396\nv397 = 397\nv398 = 398\nv399 = 399\nv400 = 400\nv401 = 401\n"
+          },
+          "tool": "Write",
+          "file": "big.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["exceeds 400-line limit"],
+      "config": {
+        "lang": {
+          "python": {
+            "maxFileLines": "abc",
+            "maxFnLines": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "flow: a numeric-string threshold is honoured",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "big.py": "v1 = 1\nv2 = 2\nv3 = 3\nv4 = 4\nv5 = 5\nv6 = 6\nv7 = 7\nv8 = 8\nv9 = 9\nv10 = 10\nv11 = 11\n"
+          },
+          "tool": "Write",
+          "file": "big.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["exceeds 10-line limit"],
+      "config": {
+        "lang": {
+          "python": {
+            "maxFileLines": "10"
+          }
+        }
+      }
+    },
+    {
+      "name": "flow: a file in a linked worktree is checked",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "wt/bad.py": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "Write",
+          "file": "wt/bad.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden suppression"],
+      "setup": [
+        {
+          "op": "git",
+          "args": [
+            "-C",
+            {
+              "$path": "$PROJECT"
+            },
+            "worktree",
+            "add",
+            "-q",
+            "-b",
+            "side",
+            "wt"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "codex: a written file with a violation",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "bad.py": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "Write",
+          "file": "bad.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden suppression"],
+      "hosts": ["codex"]
+    },
+    {
+      "name": "codex: a moved file clears its source entry and checks its target",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "old.py": "try:\n    pass\nexcept:\n    pass\n"
+          },
+          "tool": "Edit",
+          "file": "old.py"
+        },
+        {
+          "write": {
+            "new.py": "try:\n    pass\nexcept ValueError:\n    pass\n"
+          },
+          "remove": ["old.py"],
+          "rawPatch": "*** Begin Patch\n*** Update File: old.py\n*** Move to: new.py\n@@\n-a\n+b\n*** End Patch"
+        }
+      ],
+      "expect": "silent",
+      "hosts": ["codex"]
+    },
+    {
+      "name": "codex: one patch through python-quality and rust-quality",
+      "hosts": ["codex"],
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n",
+        "Cargo.toml": "[package]\nname = \"fixture\"\nversion = \"0.1.0\"\n"
+      },
+      "register": ["rust-quality"],
+      "steps": [
+        {
+          "write": {
+            "tests/test_bad.py": "from unittest.mock import patch\n\n\ndef test_x():\n    assert patch\n",
+            "src/bad.rs": "#[allow(dead_code)]\nfn bad() {}\n"
+          },
+          "patch": [
+            {
+              "op": "update",
+              "path": "tests/test_bad.py",
+              "lines": ["-a", "+b"]
+            },
+            {
+              "op": "update",
+              "path": "src/bad.rs",
+              "lines": ["-a", "+b"]
+            }
+          ]
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["no-mocks: mock import", "Forbidden lint suppression"]
+    },
+    {
+      "name": "size: file at the default limit",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "ok.py": "v1 = 1\nv2 = 2\nv3 = 3\nv4 = 4\nv5 = 5\nv6 = 6\nv7 = 7\nv8 = 8\nv9 = 9\nv10 = 10\nv11 = 11\nv12 = 12\nv13 = 13\nv14 = 14\nv15 = 15\nv16 = 16\nv17 = 17\nv18 = 18\nv19 = 19\nv20 = 20\nv21 = 21\nv22 = 22\nv23 = 23\nv24 = 24\nv25 = 25\nv26 = 26\nv27 = 27\nv28 = 28\nv29 = 29\nv30 = 30\nv31 = 31\nv32 = 32\nv33 = 33\nv34 = 34\nv35 = 35\nv36 = 36\nv37 = 37\nv38 = 38\nv39 = 39\nv40 = 40\nv41 = 41\nv42 = 42\nv43 = 43\nv44 = 44\nv45 = 45\nv46 = 46\nv47 = 47\nv48 = 48\nv49 = 49\nv50 = 50\nv51 = 51\nv52 = 52\nv53 = 53\nv54 = 54\nv55 = 55\nv56 = 56\nv57 = 57\nv58 = 58\nv59 = 59\nv60 = 60\nv61 = 61\nv62 = 62\nv63 = 63\nv64 = 64\nv65 = 65\nv66 = 66\nv67 = 67\nv68 = 68\nv69 = 69\nv70 = 70\nv71 = 71\nv72 = 72\nv73 = 73\nv74 = 74\nv75 = 75\nv76 = 76\nv77 = 77\nv78 = 78\nv79 = 79\nv80 = 80\nv81 = 81\nv82 = 82\nv83 = 83\nv84 = 84\nv85 = 85\nv86 = 86\nv87 = 87\nv88 = 88\nv89 = 89\nv90 = 90\nv91 = 91\nv92 = 92\nv93 = 93\nv94 = 94\nv95 = 95\nv96 = 96\nv97 = 97\nv98 = 98\nv99 = 99\nv100 = 100\nv101 = 101\nv102 = 102\nv103 = 103\nv104 = 104\nv105 = 105\nv106 = 106\nv107 = 107\nv108 = 108\nv109 = 109\nv110 = 110\nv111 = 111\nv112 = 112\nv113 = 113\nv114 = 114\nv115 = 115\nv116 = 116\nv117 = 117\nv118 = 118\nv119 = 119\nv120 = 120\nv121 = 121\nv122 = 122\nv123 = 123\nv124 = 124\nv125 = 125\nv126 = 126\nv127 = 127\nv128 = 128\nv129 = 129\nv130 = 130\nv131 = 131\nv132 = 132\nv133 = 133\nv134 = 134\nv135 = 135\nv136 = 136\nv137 = 137\nv138 = 138\nv139 = 139\nv140 = 140\nv141 = 141\nv142 = 142\nv143 = 143\nv144 = 144\nv145 = 145\nv146 = 146\nv147 = 147\nv148 = 148\nv149 = 149\nv150 = 150\nv151 = 151\nv152 = 152\nv153 = 153\nv154 = 154\nv155 = 155\nv156 = 156\nv157 = 157\nv158 = 158\nv159 = 159\nv160 = 160\nv161 = 161\nv162 = 162\nv163 = 163\nv164 = 164\nv165 = 165\nv166 = 166\nv167 = 167\nv168 = 168\nv169 = 169\nv170 = 170\nv171 = 171\nv172 = 172\nv173 = 173\nv174 = 174\nv175 = 175\nv176 = 176\nv177 = 177\nv178 = 178\nv179 = 179\nv180 = 180\nv181 = 181\nv182 = 182\nv183 = 183\nv184 = 184\nv185 = 185\nv186 = 186\nv187 = 187\nv188 = 188\nv189 = 189\nv190 = 190\nv191 = 191\nv192 = 192\nv193 = 193\nv194 = 194\nv195 = 195\nv196 = 196\nv197 = 197\nv198 = 198\nv199 = 199\nv200 = 200\nv201 = 201\nv202 = 202\nv203 = 203\nv204 = 204\nv205 = 205\nv206 = 206\nv207 = 207\nv208 = 208\nv209 = 209\nv210 = 210\nv211 = 211\nv212 = 212\nv213 = 213\nv214 = 214\nv215 = 215\nv216 = 216\nv217 = 217\nv218 = 218\nv219 = 219\nv220 = 220\nv221 = 221\nv222 = 222\nv223 = 223\nv224 = 224\nv225 = 225\nv226 = 226\nv227 = 227\nv228 = 228\nv229 = 229\nv230 = 230\nv231 = 231\nv232 = 232\nv233 = 233\nv234 = 234\nv235 = 235\nv236 = 236\nv237 = 237\nv238 = 238\nv239 = 239\nv240 = 240\nv241 = 241\nv242 = 242\nv243 = 243\nv244 = 244\nv245 = 245\nv246 = 246\nv247 = 247\nv248 = 248\nv249 = 249\nv250 = 250\nv251 = 251\nv252 = 252\nv253 = 253\nv254 = 254\nv255 = 255\nv256 = 256\nv257 = 257\nv258 = 258\nv259 = 259\nv260 = 260\nv261 = 261\nv262 = 262\nv263 = 263\nv264 = 264\nv265 = 265\nv266 = 266\nv267 = 267\nv268 = 268\nv269 = 269\nv270 = 270\nv271 = 271\nv272 = 272\nv273 = 273\nv274 = 274\nv275 = 275\nv276 = 276\nv277 = 277\nv278 = 278\nv279 = 279\nv280 = 280\nv281 = 281\nv282 = 282\nv283 = 283\nv284 = 284\nv285 = 285\nv286 = 286\nv287 = 287\nv288 = 288\nv289 = 289\nv290 = 290\nv291 = 291\nv292 = 292\nv293 = 293\nv294 = 294\nv295 = 295\nv296 = 296\nv297 = 297\nv298 = 298\nv299 = 299\nv300 = 300\nv301 = 301\nv302 = 302\nv303 = 303\nv304 = 304\nv305 = 305\nv306 = 306\nv307 = 307\nv308 = 308\nv309 = 309\nv310 = 310\nv311 = 311\nv312 = 312\nv313 = 313\nv314 = 314\nv315 = 315\nv316 = 316\nv317 = 317\nv318 = 318\nv319 = 319\nv320 = 320\nv321 = 321\nv322 = 322\nv323 = 323\nv324 = 324\nv325 = 325\nv326 = 326\nv327 = 327\nv328 = 328\nv329 = 329\nv330 = 330\nv331 = 331\nv332 = 332\nv333 = 333\nv334 = 334\nv335 = 335\nv336 = 336\nv337 = 337\nv338 = 338\nv339 = 339\nv340 = 340\nv341 = 341\nv342 = 342\nv343 = 343\nv344 = 344\nv345 = 345\nv346 = 346\nv347 = 347\nv348 = 348\nv349 = 349\nv350 = 350\nv351 = 351\nv352 = 352\nv353 = 353\nv354 = 354\nv355 = 355\nv356 = 356\nv357 = 357\nv358 = 358\nv359 = 359\nv360 = 360\nv361 = 361\nv362 = 362\nv363 = 363\nv364 = 364\nv365 = 365\nv366 = 366\nv367 = 367\nv368 = 368\nv369 = 369\nv370 = 370\nv371 = 371\nv372 = 372\nv373 = 373\nv374 = 374\nv375 = 375\nv376 = 376\nv377 = 377\nv378 = 378\nv379 = 379\nv380 = 380\nv381 = 381\nv382 = 382\nv383 = 383\nv384 = 384\nv385 = 385\nv386 = 386\nv387 = 387\nv388 = 388\nv389 = 389\nv390 = 390\nv391 = 391\nv392 = 392\nv393 = 393\nv394 = 394\nv395 = 395\nv396 = 396\nv397 = 397\nv398 = 398\nv399 = 399\nv400 = 400\n"
+          },
+          "tool": "Write",
+          "file": "ok.py"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["exceeds"]
+    },
+    {
+      "name": "size: file one line over the default limit",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "big.py": "v1 = 1\nv2 = 2\nv3 = 3\nv4 = 4\nv5 = 5\nv6 = 6\nv7 = 7\nv8 = 8\nv9 = 9\nv10 = 10\nv11 = 11\nv12 = 12\nv13 = 13\nv14 = 14\nv15 = 15\nv16 = 16\nv17 = 17\nv18 = 18\nv19 = 19\nv20 = 20\nv21 = 21\nv22 = 22\nv23 = 23\nv24 = 24\nv25 = 25\nv26 = 26\nv27 = 27\nv28 = 28\nv29 = 29\nv30 = 30\nv31 = 31\nv32 = 32\nv33 = 33\nv34 = 34\nv35 = 35\nv36 = 36\nv37 = 37\nv38 = 38\nv39 = 39\nv40 = 40\nv41 = 41\nv42 = 42\nv43 = 43\nv44 = 44\nv45 = 45\nv46 = 46\nv47 = 47\nv48 = 48\nv49 = 49\nv50 = 50\nv51 = 51\nv52 = 52\nv53 = 53\nv54 = 54\nv55 = 55\nv56 = 56\nv57 = 57\nv58 = 58\nv59 = 59\nv60 = 60\nv61 = 61\nv62 = 62\nv63 = 63\nv64 = 64\nv65 = 65\nv66 = 66\nv67 = 67\nv68 = 68\nv69 = 69\nv70 = 70\nv71 = 71\nv72 = 72\nv73 = 73\nv74 = 74\nv75 = 75\nv76 = 76\nv77 = 77\nv78 = 78\nv79 = 79\nv80 = 80\nv81 = 81\nv82 = 82\nv83 = 83\nv84 = 84\nv85 = 85\nv86 = 86\nv87 = 87\nv88 = 88\nv89 = 89\nv90 = 90\nv91 = 91\nv92 = 92\nv93 = 93\nv94 = 94\nv95 = 95\nv96 = 96\nv97 = 97\nv98 = 98\nv99 = 99\nv100 = 100\nv101 = 101\nv102 = 102\nv103 = 103\nv104 = 104\nv105 = 105\nv106 = 106\nv107 = 107\nv108 = 108\nv109 = 109\nv110 = 110\nv111 = 111\nv112 = 112\nv113 = 113\nv114 = 114\nv115 = 115\nv116 = 116\nv117 = 117\nv118 = 118\nv119 = 119\nv120 = 120\nv121 = 121\nv122 = 122\nv123 = 123\nv124 = 124\nv125 = 125\nv126 = 126\nv127 = 127\nv128 = 128\nv129 = 129\nv130 = 130\nv131 = 131\nv132 = 132\nv133 = 133\nv134 = 134\nv135 = 135\nv136 = 136\nv137 = 137\nv138 = 138\nv139 = 139\nv140 = 140\nv141 = 141\nv142 = 142\nv143 = 143\nv144 = 144\nv145 = 145\nv146 = 146\nv147 = 147\nv148 = 148\nv149 = 149\nv150 = 150\nv151 = 151\nv152 = 152\nv153 = 153\nv154 = 154\nv155 = 155\nv156 = 156\nv157 = 157\nv158 = 158\nv159 = 159\nv160 = 160\nv161 = 161\nv162 = 162\nv163 = 163\nv164 = 164\nv165 = 165\nv166 = 166\nv167 = 167\nv168 = 168\nv169 = 169\nv170 = 170\nv171 = 171\nv172 = 172\nv173 = 173\nv174 = 174\nv175 = 175\nv176 = 176\nv177 = 177\nv178 = 178\nv179 = 179\nv180 = 180\nv181 = 181\nv182 = 182\nv183 = 183\nv184 = 184\nv185 = 185\nv186 = 186\nv187 = 187\nv188 = 188\nv189 = 189\nv190 = 190\nv191 = 191\nv192 = 192\nv193 = 193\nv194 = 194\nv195 = 195\nv196 = 196\nv197 = 197\nv198 = 198\nv199 = 199\nv200 = 200\nv201 = 201\nv202 = 202\nv203 = 203\nv204 = 204\nv205 = 205\nv206 = 206\nv207 = 207\nv208 = 208\nv209 = 209\nv210 = 210\nv211 = 211\nv212 = 212\nv213 = 213\nv214 = 214\nv215 = 215\nv216 = 216\nv217 = 217\nv218 = 218\nv219 = 219\nv220 = 220\nv221 = 221\nv222 = 222\nv223 = 223\nv224 = 224\nv225 = 225\nv226 = 226\nv227 = 227\nv228 = 228\nv229 = 229\nv230 = 230\nv231 = 231\nv232 = 232\nv233 = 233\nv234 = 234\nv235 = 235\nv236 = 236\nv237 = 237\nv238 = 238\nv239 = 239\nv240 = 240\nv241 = 241\nv242 = 242\nv243 = 243\nv244 = 244\nv245 = 245\nv246 = 246\nv247 = 247\nv248 = 248\nv249 = 249\nv250 = 250\nv251 = 251\nv252 = 252\nv253 = 253\nv254 = 254\nv255 = 255\nv256 = 256\nv257 = 257\nv258 = 258\nv259 = 259\nv260 = 260\nv261 = 261\nv262 = 262\nv263 = 263\nv264 = 264\nv265 = 265\nv266 = 266\nv267 = 267\nv268 = 268\nv269 = 269\nv270 = 270\nv271 = 271\nv272 = 272\nv273 = 273\nv274 = 274\nv275 = 275\nv276 = 276\nv277 = 277\nv278 = 278\nv279 = 279\nv280 = 280\nv281 = 281\nv282 = 282\nv283 = 283\nv284 = 284\nv285 = 285\nv286 = 286\nv287 = 287\nv288 = 288\nv289 = 289\nv290 = 290\nv291 = 291\nv292 = 292\nv293 = 293\nv294 = 294\nv295 = 295\nv296 = 296\nv297 = 297\nv298 = 298\nv299 = 299\nv300 = 300\nv301 = 301\nv302 = 302\nv303 = 303\nv304 = 304\nv305 = 305\nv306 = 306\nv307 = 307\nv308 = 308\nv309 = 309\nv310 = 310\nv311 = 311\nv312 = 312\nv313 = 313\nv314 = 314\nv315 = 315\nv316 = 316\nv317 = 317\nv318 = 318\nv319 = 319\nv320 = 320\nv321 = 321\nv322 = 322\nv323 = 323\nv324 = 324\nv325 = 325\nv326 = 326\nv327 = 327\nv328 = 328\nv329 = 329\nv330 = 330\nv331 = 331\nv332 = 332\nv333 = 333\nv334 = 334\nv335 = 335\nv336 = 336\nv337 = 337\nv338 = 338\nv339 = 339\nv340 = 340\nv341 = 341\nv342 = 342\nv343 = 343\nv344 = 344\nv345 = 345\nv346 = 346\nv347 = 347\nv348 = 348\nv349 = 349\nv350 = 350\nv351 = 351\nv352 = 352\nv353 = 353\nv354 = 354\nv355 = 355\nv356 = 356\nv357 = 357\nv358 = 358\nv359 = 359\nv360 = 360\nv361 = 361\nv362 = 362\nv363 = 363\nv364 = 364\nv365 = 365\nv366 = 366\nv367 = 367\nv368 = 368\nv369 = 369\nv370 = 370\nv371 = 371\nv372 = 372\nv373 = 373\nv374 = 374\nv375 = 375\nv376 = 376\nv377 = 377\nv378 = 378\nv379 = 379\nv380 = 380\nv381 = 381\nv382 = 382\nv383 = 383\nv384 = 384\nv385 = 385\nv386 = 386\nv387 = 387\nv388 = 388\nv389 = 389\nv390 = 390\nv391 = 391\nv392 = 392\nv393 = 393\nv394 = 394\nv395 = 395\nv396 = 396\nv397 = 397\nv398 = 398\nv399 = 399\nv400 = 400\nv401 = 401\n"
+          },
+          "tool": "Write",
+          "file": "big.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["exceeds 400-line limit"]
+    },
+    {
+      "name": "size: project config lowers maxFileLines",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "big.py": "v1 = 1\nv2 = 2\nv3 = 3\nv4 = 4\nv5 = 5\nv6 = 6\nv7 = 7\nv8 = 8\nv9 = 9\nv10 = 10\nv11 = 11\nv12 = 12\nv13 = 13\nv14 = 14\nv15 = 15\n"
+          },
+          "tool": "Write",
+          "file": "big.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["exceeds 10-line limit"],
+      "config": {
+        "lang": {
+          "python": {
+            "maxFileLines": 10
+          }
+        }
+      }
+    },
+    {
+      "name": "size: comments and blanks do not count",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "commented.py": "# comment 1\n# comment 2\n# comment 3\n# comment 4\n# comment 5\n# comment 6\n# comment 7\n# comment 8\n# comment 9\n# comment 10\n# comment 11\n# comment 12\n# comment 13\n# comment 14\n# comment 15\n# comment 16\n# comment 17\n# comment 18\n# comment 19\n# comment 20\n\n\nv1 = 1\nv2 = 2\nv3 = 3\nv4 = 4\n"
+          },
+          "tool": "Write",
+          "file": "commented.py"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["exceeds"],
+      "config": {
+        "lang": {
+          "python": {
+            "maxFileLines": 5
+          }
+        }
+      }
+    },
+    {
+      "name": "size: def at the default fn-length limit",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "ok.py": "def ok():\n    v1 = 1\n    v2 = 2\n    v3 = 3\n    v4 = 4\n    v5 = 5\n    v6 = 6\n    v7 = 7\n    v8 = 8\n    v9 = 9\n    v10 = 10\n    v11 = 11\n    v12 = 12\n    v13 = 13\n    v14 = 14\n    v15 = 15\n    v16 = 16\n    v17 = 17\n    v18 = 18\n    v19 = 19\n    v20 = 20\n    v21 = 21\n    v22 = 22\n    v23 = 23\n    v24 = 24\n    v25 = 25\n    v26 = 26\n    v27 = 27\n    v28 = 28\n    v29 = 29\n    v30 = 30\n    v31 = 31\n    v32 = 32\n    v33 = 33\n    v34 = 34\n    v35 = 35\n    v36 = 36\n    v37 = 37\n    v38 = 38\n    v39 = 39\n    v40 = 40\n    v41 = 41\n    v42 = 42\n    v43 = 43\n    v44 = 44\n    v45 = 45\n    v46 = 46\n    v47 = 47\n    v48 = 48\n    return v1\n"
+          },
+          "tool": "Write",
+          "file": "ok.py"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Function too long"]
+    },
+    {
+      "name": "size: project config lowers maxFnLines",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "def big():\n    a = 1\n    b = 2\n    c = 3\n    return a + b + c\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long", "big:1"],
+      "config": {
+        "lang": {
+          "python": {
+            "maxFnLines": 3
+          }
+        }
+      }
+    },
+    {
+      "name": "size: a decorator is not counted",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "@staticmethod\ndef ok():\n    a = 1\n    b = 2\n    return a + b\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Function too long"],
+      "config": {
+        "lang": {
+          "python": {
+            "maxFnLines": 4
+          }
+        }
+      }
+    },
+    {
+      "name": "size: a method is measured to its own close",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "class Foo:\n    def short(self):\n        return 1\n\n    def long_method(self):\n        a = 1\n        b = 2\n        c = 3\n        return a + b + c\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long", "long_method"],
+      "absent": ["short:2"],
+      "config": {
+        "lang": {
+          "python": {
+            "maxFnLines": 3
+          }
+        }
+      }
+    },
+    {
+      "name": "size: async def is measured",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "async def big():\n    a = 1\n    b = 2\n    c = 3\n    return a + b + c\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long"],
+      "config": {
+        "lang": {
+          "python": {
+            "maxFnLines": 3
+          }
+        }
+      }
+    },
+    {
+      "name": "docs: top-level def without a docstring",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "def undocumented():\n    return 1\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["missing a docstring", "undocumented"],
+      "absent": ["QUALITY VIOLATION"]
+    },
+    {
+      "name": "docs: top-level def with a docstring",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "def documented():\n    \"\"\"Does a thing.\"\"\"\n    return 1\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "docs: single-quoted docstring",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "def documented():\n    '''Does a thing.'''\n    return 1\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "docs: a _private def is exempt",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "def _private():\n    return 1\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "docs: an indented method is exempt",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "class Foo:\n    \"\"\"A class.\"\"\"\n\n    def method(self):\n        return 1\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "docs: a class without a docstring",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "class Foo:\n    def method(self):\n        return 1\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["missing a docstring", "Foo"]
+    },
+    {
+      "name": "docs: a multi-line signature is tracked to its colon",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "def multi_line(\n    a,\n    b,\n):\n    \"\"\"Adds two numbers.\"\"\"\n    return a + b\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "docs: a multi-line signature missing its docstring",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "def multi_line(\n    a,\n    b,\n):\n    return a + b\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["missing a docstring", "multi_line"]
+    },
+    {
+      "name": "suppression: bare except:",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "try:\n    pass\nexcept:\n    log_it()\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden suppression", "bare except:"]
+    },
+    {
+      "name": "suppression: one-line except ...: pass",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "try:\n    pass\nexcept ValueError: pass\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["one-line except"]
+    },
+    {
+      "name": "suppression: blanket # noqa",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "x = 1  # noqa\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["blanket # noqa"]
+    },
+    {
+      "name": "suppression: blanket # type: ignore",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "x: int = \"y\"  # type: ignore\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["blanket # type: ignore"]
+    },
+    {
+      "name": "suppression: except SpecificError: with a body",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "try:\n    pass\nexcept ValueError:\n    log_it()\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "suppression: scoped # noqa: E501",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "x = 1  # noqa: E501\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "suppression: scoped # type: ignore[assignment]",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "x: int = \"y\"  # type: ignore[assignment]\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "tests: def test_ in a misnamed file",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "checks.py": "def test_something():\n    assert True\n"
+          },
+          "tool": "Write",
+          "file": "checks.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["not named test_*.py or *_test.py"]
+    },
+    {
+      "name": "tests: a pytest import in a misnamed file",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "checks.py": "import pytest\n\n\ndef check_thing():\n    assert True\n"
+          },
+          "tool": "Write",
+          "file": "checks.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["not named test_*.py or *_test.py"]
+    },
+    {
+      "name": "tests: a unittest import in a misnamed file",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "checks.py": "from unittest import TestCase\n"
+          },
+          "tool": "Write",
+          "file": "checks.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["not named test_*.py or *_test.py"]
+    },
+    {
+      "name": "tests: test_foo.py naming is accepted",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "foo.py": "def module():\n    return 1\n",
+            "test_foo.py": "def test_something():\n    assert True\n"
+          },
+          "file": "test_foo.py"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["not named test_"]
+    },
+    {
+      "name": "tests: foo_test.py naming is accepted",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "foo.py": "def module():\n    return 1\n",
+            "foo_test.py": "def test_something():\n    assert True\n"
+          },
+          "file": "foo_test.py"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["not named test_"]
+    },
+    {
+      "name": "tests: test_*.py alone in its directory",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "lonely/test_orphan.py": "def test_something():\n    assert True\n"
+          },
+          "tool": "Write",
+          "file": "lonely/test_orphan.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Test not co-located with a module"]
+    },
+    {
+      "name": "tests: test_*.py next to its module",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "pkg/calc.py": "def add(a, b):\n    return a + b\n",
+            "pkg/test_calc.py": "def test_add():\n    assert True\n"
+          },
+          "file": "pkg/test_calc.py"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Test not co-located"]
+    },
+    {
+      "name": "tests: conftest.py importing pytest is exempt",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "lonely/conftest.py": "import pytest\n\n\n@pytest.fixture\ndef thing():\n    \"\"\"A fixture.\"\"\"\n    return 1\n"
+          },
+          "tool": "Write",
+          "file": "lonely/conftest.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "tests: __init__.py is exempt",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "pkg/__init__.py": "import unittest\n"
+          },
+          "tool": "Write",
+          "file": "pkg/__init__.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "no-mocks: from unittest import mock",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "test_a.py": "from unittest import mock\n\n\ndef test_it():\n    \"\"\"Test it.\"\"\"\n    assert mock\n"
+          },
+          "tool": "Write",
+          "file": "test_a.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["no-mocks: mock import"]
+    },
+    {
+      "name": "no-mocks: import unittest.mock",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "test_a.py": "import unittest.mock\n\n\ndef test_it():\n    \"\"\"Test it.\"\"\"\n    assert unittest.mock\n"
+          },
+          "tool": "Write",
+          "file": "test_a.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["no-mocks: mock import"]
+    },
+    {
+      "name": "no-mocks: from mock import Mock",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "test_a.py": "from mock import Mock\n\n\ndef test_it():\n    \"\"\"Test it.\"\"\"\n    assert Mock\n"
+          },
+          "tool": "Write",
+          "file": "test_a.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["no-mocks: mock import"]
+    },
+    {
+      "name": "no-mocks: import pytest_mock",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "test_a.py": "import pytest_mock\n\n\ndef test_it():\n    \"\"\"Test it.\"\"\"\n    assert pytest_mock\n"
+          },
+          "tool": "Write",
+          "file": "test_a.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["no-mocks: mock import"]
+    },
+    {
+      "name": "no-mocks: from unittest.mock import MagicMock, patch",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "test_a.py": "from unittest.mock import MagicMock, patch\n\n\ndef test_it():\n    \"\"\"Test it.\"\"\"\n    assert MagicMock and patch\n"
+          },
+          "tool": "Write",
+          "file": "test_a.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["no-mocks: mock import"]
+    },
+    {
+      "name": "no-mocks: mocker fixture parameter",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "test_a.py": "def test_it(mocker):\n    \"\"\"Test it.\"\"\"\n    assert mocker\n"
+          },
+          "tool": "Write",
+          "file": "test_a.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["no-mocks: mocker/monkeypatch fixture parameter"]
+    },
+    {
+      "name": "no-mocks: monkeypatch fixture parameter",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "test_a.py": "def test_it(monkeypatch):\n    \"\"\"Test it.\"\"\"\n    assert monkeypatch\n"
+          },
+          "tool": "Write",
+          "file": "test_a.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["no-mocks: mocker/monkeypatch fixture parameter"]
+    },
+    {
+      "name": "no-mocks: a mock import in a non-test file",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "helper.py": "import mock\n\n\ndef helper():\n    \"\"\"Use mock.\"\"\"\n    return mock\n"
+          },
+          "tool": "Write",
+          "file": "helper.py"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["no-mocks"]
+    },
+    {
+      "name": "no-mocks: lang.python.noMocks false",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "test_a.py": "from unittest import mock\n\n\ndef test_it():\n    \"\"\"Test it.\"\"\"\n    assert mock\n"
+          },
+          "tool": "Write",
+          "file": "test_a.py"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["no-mocks"],
+      "config": {
+        "lang": {
+          "python": {
+            "noMocks": false
+          }
+        }
+      }
+    },
+    {
+      "name": "no-mocks: a real-fixture test passes",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "test_a.py": "def test_add():\n    \"\"\"Add two numbers.\"\"\"\n    assert 1 + 1 == 2\n"
+          },
+          "tool": "Write",
+          "file": "test_a.py"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["no-mocks"]
+    },
+    {
+      "name": "no-mocks: ast-grep absent skips the rule",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "pkg/mod.py": "\"\"\"Mod.\"\"\"\n",
+            "pkg/test_mod.py": "import mock\n\n\ndef test_it():\n    \"\"\"Test it.\"\"\"\n    assert mock\n"
+          },
+          "file": "pkg/test_mod.py"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["no-mocks"],
+      "env": {
+        "kind": "pathWithout",
+        "without": ["ast-grep"]
+      }
+    },
+    {
+      "name": "no-mocks: ast-grep exit 2 with stderr",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "pkg/mod.py": "\"\"\"Mod.\"\"\"\n",
+            "pkg/test_mod.py": "def test_add():\n    \"\"\"Add two numbers.\"\"\"\n    assert 1 + 1 == 2\n"
+          },
+          "file": "pkg/test_mod.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["ast-grep failed while scanning", "ast-grep exit 2: boom"],
+      "env": {
+        "kind": "stubAstGrep",
+        "body": "echo boom >&2\nexit 2"
+      }
+    },
+    {
+      "name": "no-mocks: ast-grep stderr with exit 0",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "pkg/mod.py": "\"\"\"Mod.\"\"\"\n",
+            "pkg/test_mod.py": "def test_add():\n    \"\"\"Add two numbers.\"\"\"\n    assert 1 + 1 == 2\n"
+          },
+          "file": "pkg/test_mod.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["ast-grep failed while scanning", "ast-grep exit 0: warn"],
+      "env": {
+        "kind": "stubAstGrep",
+        "body": "echo '[]'\necho warn >&2"
+      }
+    },
+    {
+      "name": "no-mocks: ast-grep exit 0 with empty output",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "pkg/mod.py": "\"\"\"Mod.\"\"\"\n",
+            "pkg/test_mod.py": "def test_add():\n    \"\"\"Add two numbers.\"\"\"\n    assert 1 + 1 == 2\n"
+          },
+          "file": "pkg/test_mod.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["ast-grep failed while scanning", "exited 0 with empty output"],
+      "env": {
+        "kind": "stubAstGrep",
+        "body": "exit 0"
+      }
+    },
+    {
+      "name": "no-mocks: ast-grep exit 0 with non-JSON output",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "pkg/mod.py": "\"\"\"Mod.\"\"\"\n",
+            "pkg/test_mod.py": "def test_add():\n    \"\"\"Add two numbers.\"\"\"\n    assert 1 + 1 == 2\n"
+          },
+          "file": "pkg/test_mod.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["ast-grep failed while scanning", "did not parse as the documented JSON array"],
+      "env": {
+        "kind": "stubAstGrep",
+        "body": "echo 'not json'"
+      }
+    },
+    {
+      "name": "no-mocks: ast-grep JSON that is not an array of matches",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "pkg/mod.py": "\"\"\"Mod.\"\"\"\n",
+            "pkg/test_mod.py": "def test_add():\n    \"\"\"Add two numbers.\"\"\"\n    assert 1 + 1 == 2\n"
+          },
+          "file": "pkg/test_mod.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["ast-grep failed while scanning", "did not parse"],
+      "env": {
+        "kind": "stubAstGrep",
+        "body": "echo '{\"a\":1}'"
+      }
+    },
+    {
+      "name": "edges: more than five suppressions list the first five",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "x1 = 1  # noqa\nx2 = 1  # noqa\nx3 = 1  # noqa\nx4 = 1  # noqa\nx5 = 1  # noqa\nx6 = 1  # noqa\nx7 = 1  # noqa\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["5: blanket # noqa"],
+      "absent": ["6: blanket"]
+    },
+    {
+      "name": "edges: more than five mock imports list the first five",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "test_a.py": "import mock\nimport mock\nimport mock\nimport mock\nimport mock\nimport mock\nimport mock\n\n\ndef test_it():\n    \"\"\"T.\"\"\"\n    assert mock\n"
+          },
+          "tool": "Write",
+          "file": "test_a.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["5: import mock"],
+      "absent": ["6: import mock"]
+    },
+    {
+      "name": "edges: more than three undocumented defs list the first three",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "def f1():\n    return 1\n\n\ndef f2():\n    return 2\n\n\ndef f3():\n    return 3\n\n\ndef f4():\n    return 4\n\n\ndef f5():\n    return 5\n\n\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["f3"],
+      "absent": ["f4"]
+    },
+    {
+      "name": "edges: every long function is listed",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "def g1():\n    \"\"\"D.\"\"\"\n    a = 1\n    return a\n\n\ndef g2():\n    \"\"\"D.\"\"\"\n    a = 1\n    return a\n\n\ndef g3():\n    \"\"\"D.\"\"\"\n    a = 1\n    return a\n\n\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["g1:1", "g2:7", "g3:13"],
+      "config": {
+        "lang": {
+          "python": {
+            "maxFnLines": 2
+          }
+        }
+      }
+    },
+    {
+      "name": "edges: CRLF bare except",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "try:\r\n    pass\r\nexcept:\r\n    pass\r\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["bare except:"]
+    },
+    {
+      "name": "edges: CRLF docstring and signature",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "def a():\r\n    \"\"\"Doc.\"\"\"\r\n    return 1\r\ndef b():\r\n    return 2\r\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "edges: no final newline",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "try:\n    pass\nexcept:\n    pass"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["bare except:"]
+    },
+    {
+      "name": "edges: empty file",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": ""
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "edges: one-line except pass with a comment",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "try:\n    x()\nexcept ValueError: pass  # ignored\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["3: one-line except"]
+    },
+    {
+      "name": "edges: noqa and type-ignore spellings",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "a = 1  # noqa:E501\nb = 2  # noqa : x\nc = 3  #noqa\nd = 4  # NOQA\ne = 5  # type:ignore\nf = 6  # type: ignore [x]\ng = 7\t#\tnoqa\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": [
+        "3: blanket # noqa",
+        "5: blanket # type",
+        "6: blanket # type",
+        "7: blanket # noqa"
+      ],
+      "absent": ["1: ", "2: ", "4: "]
+    },
+    {
+      "name": "edges: tab-indented except",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "try:\n\tpass\n\texcept\t:\t# x\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["3: bare except:"]
+    },
+    {
+      "name": "edges: mocker in a multi-line and a nested def",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "test_a.py": "def test_outer(\n    mocker,\n):\n    \"\"\"Outer.\"\"\"\n    def inner(monkeypatch):\n        return monkeypatch\n    assert inner and mocker\n"
+          },
+          "tool": "Write",
+          "file": "test_a.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["1: def test_outer(", "5:     def inner(monkeypatch):"]
+    },
+    {
+      "name": "edges: a tab in a mock hit line",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "test_a.py": "def test_it(mocker):\t# fixture\n    \"\"\"T.\"\"\"\n    assert mocker\n"
+          },
+          "tool": "Write",
+          "file": "test_a.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["1: def test_it(mocker):"],
+      "absent": ["# fixture"]
+    },
+    {
+      "name": "edges: conftest.py with a mock import is not scanned",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "pkg/mod.py": "\"\"\"M.\"\"\"\n",
+            "pkg/conftest.py": "from unittest import mock\n"
+          },
+          "file": "pkg/conftest.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "edges: docstring prefixes",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "def f():\n    r\"\"\"Raw.\"\"\"\n\n\ndef g():\n    b\"\"\"Bytes.\"\"\"\n\n\ndef h():\n    F'''Fmt.'''\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["5: g"],
+      "absent": ["1: f", "9: h"]
+    },
+    {
+      "name": "edges: a one-line def swallows the next def",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "def one(): return 1\ndef two():\n    return 2\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["1: one"],
+      "absent": ["two"]
+    },
+    {
+      "name": "edges: a comment after the signature is not a docstring",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "async def a():  # note\n    # first\n    \"\"\"Late.\"\"\"\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["1: a"]
+    },
+    {
+      "name": "edges: a nested def counts toward its outer",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "def outer():\n    \"\"\"Doc.\"\"\"\n    def inner():\n        return 1\n    return inner\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["outer:1 (5 lines)"],
+      "absent": ["inner:"],
+      "config": {
+        "lang": {
+          "python": {
+            "maxFnLines": 4
+          }
+        }
+      }
+    },
+    {
+      "name": "edges: comments inside a def are not counted",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "m.py": "def f():\n    \"\"\"D.\"\"\"\n    # a\n    # b\n\n    return 1\n"
+          },
+          "tool": "Write",
+          "file": "m.py"
+        }
+      ],
+      "expect": "silent",
+      "config": {
+        "lang": {
+          "python": {
+            "maxFnLines": 3
+          }
+        }
+      }
+    },
+    {
+      "name": "edges: a symlinked sibling is not a module",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "lonely/test_x.py": "def test_x():\n    assert True\n"
+          },
+          "tool": "Write",
+          "file": "lonely/test_x.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Test not co-located"],
+      "setup": [
+        {
+          "op": "write",
+          "path": "$PROJECT/other/mod.py",
+          "body": "X = 1\n"
+        },
+        {
+          "op": "symlink",
+          "path": "$PROJECT/lonely/mod.py",
+          "target": {
+            "$path": "$PROJECT/other/mod.py"
+          }
+        }
+      ]
+    },
+    {
+      "name": "edges: pytest-prefixed import names are not test markers",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "helper.py": "\"\"\"H.\"\"\"\nimport pytest_asyncio\nimport unittestx\n"
+          },
+          "tool": "Write",
+          "file": "helper.py"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "edges: test marker variants in a misnamed file",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "checks.py": "async def test_x ():\n    assert True\n"
+          },
+          "tool": "Write",
+          "file": "checks.py"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["not named test_"]
+    },
+    {
+      "name": "edges: an indented test method is not a marker",
+      "project": {
+        "pyproject.toml": "[project]\nname = \"x\"\nversion = \"0.1.0\"\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "checks.py": "class TestA:\n    def test_x(self):\n        assert True\n"
+          },
+          "tool": "Write",
+          "file": "checks.py"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["not named test_"],
+      "contains": ["TestA"]
+    }
+  ]
+}

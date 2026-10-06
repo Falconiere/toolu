@@ -1,8 +1,10 @@
 /** statusline's SessionStart bundle through its real hooks.json launcher (ported from session-start.bats). */
 import { expect, test } from "bun:test";
 import { join, resolve } from "node:path";
+import { readCaseFile } from "@toolu/conformance/harness/json-cases";
 import { bundlePath } from "@toolu/conformance/harness/entry-command";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
+import { z } from "zod";
 import {
   publishedCliSuite,
   runStartupHook,
@@ -13,8 +15,18 @@ import {
 import { put } from "./harness.ts";
 
 const PLUGIN = resolve(import.meta.dir, "../../..");
-const ADVISORY =
-  '{"systemMessage":"statusline: settings.json still runs the statusline through a shell, which cannot run the Bun statusline — run /statusline:setup to update it"}\n';
+const StartupSchema = z.strictObject({
+  name: z.string(),
+  kind: z.literal("startup"),
+  host: z.enum(["claude", "codex"]),
+  commands: z.array(z.string()).min(1),
+  expected: z.string(),
+});
+const cases = readCaseFile(
+  resolve(import.meta.dir, "../../../../../fixtures/statusline/cases.json"),
+)
+  .filter((raw) => raw.kind === "startup")
+  .map((raw) => StartupSchema.parse(raw));
 
 publishedCliSuite({
   plugin: "statusline",
@@ -38,27 +50,8 @@ async function startupWith(host: StartupHost, command: string): Promise<string> 
   return res.stdout;
 }
 
-test.concurrent("statusline session-start: a bash statusLine on Claude gets one notice", async () => {
-  expect(await startupWith("claude", "bash ~/.claude/statusline/statusline.sh")).toBe(ADVISORY);
-});
-
-test.concurrent("statusline session-start: an interpreter path counts as a shell", async () => {
-  expect(await startupWith("claude", "/usr/bin/env bash ~/.claude/statusline/statusline.sh")).toBe(
-    ADVISORY,
-  );
-});
-
-test.concurrent("statusline session-start: a Bun statusLine on Claude is silent", async () => {
-  expect(await startupWith("claude", "~/.claude/statusline/statusline.sh")).toBe("");
-});
-
-test.concurrent("statusline session-start: a custom statusLine on Claude is silent", async () => {
-  expect(await startupWith("claude", "bash my-custom-bar.sh")).toBe("");
-  expect(await startupWith("claude", 'bash -c "~/.claude/statusline/statusline.sh | cat"')).toBe(
-    "",
-  );
-});
-
-test.concurrent("statusline session-start: Codex never reads Claude's settings", async () => {
-  expect(await startupWith("codex", "bash ~/.claude/statusline/statusline.sh")).toBe("");
-});
+for (const c of cases) {
+  test.concurrent(c.name, async () => {
+    for (const command of c.commands) expect(await startupWith(c.host, command)).toBe(c.expected);
+  });
+}

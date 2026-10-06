@@ -6,9 +6,8 @@ use crate::sandbox::{Res, STARTUP, Sandbox, system_message};
 
 const INSTALLER: &str = "curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash";
 const BREW: &str = "brew install falconiere/tap/toolu";
-const SCHEMA: &str = include_str!(
-  "../../../../tooling/fixtures/codex-hook-schemas/session-start.command.output.schema.json"
-);
+const SCHEMA: &str =
+  include_str!("../../../../fixtures/codex-hook-schemas/session-start.command.output.schema.json");
 
 #[test]
 fn pre_tool_use_blocks_naming_both_install_commands() {

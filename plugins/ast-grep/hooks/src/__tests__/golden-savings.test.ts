@@ -6,7 +6,7 @@
  * the ledger the TypeScript module writes.
  */
 import { expect, test } from "bun:test";
-import { SAVINGS_CASES, SAVINGS_DEVIATIONS } from "./cases-savings.ts";
+import { SAVINGS_CASES } from "./cases-savings.ts";
 import { CASE_TIMEOUT_MS, expectDeviation } from "./golden-expect.ts";
 import { caseKey, hostsOf, runSavings } from "./golden-harness.ts";
 import { readGolden } from "./golden-io.ts";
@@ -22,9 +22,8 @@ test("the golden holds exactly the byte-savings cases", () => {
   expect(Object.keys(golden).toSorted()).toEqual(KEYS.toSorted());
 });
 
-test("every deviation names a case", () => {
-  const names = new Set(SAVINGS_CASES.map((c) => c.name));
-  for (const name of Object.keys(SAVINGS_DEVIATIONS)) expect(names.has(name)).toBe(true);
+test("the baseline has two named deviations", () => {
+  expect(SAVINGS_CASES.filter((c) => c.deviation !== undefined).length).toBe(2);
 });
 
 for (const c of SAVINGS_CASES) {
@@ -36,7 +35,7 @@ for (const c of SAVINGS_CASES) {
         const expected = golden[key];
         if (expected === undefined) throw new Error(`no golden capture for ${key}`);
         const actual = await runSavings(c, host, { kind: "bundle" });
-        const deviation = SAVINGS_DEVIATIONS[c.name];
+        const deviation = c.deviation;
         if (deviation === undefined) {
           expect(actual).toEqual(expected);
           return;

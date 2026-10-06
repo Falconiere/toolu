@@ -52,7 +52,7 @@ Without Bun the launcher itself answers, with no bundle involved:
 | `PreToolUse`, `PermissionRequest` (enforcing) | — | `blocked: <plugin> plugin: Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun. Install Bun 1.4.x …` | `2`: the host blocks the action |
 | every other event (context-only) | `{"systemMessage":"<plugin> plugin: Bun runtime not found, …"}` | — | `0`: nothing blocks |
 
-`systemMessage` is shown to the user and costs no model context. The payloads are checked against Codex's own output schemas (`tooling/fixtures/codex-hook-schemas/`).
+`systemMessage` is shown to the user and costs no model context. The payloads are checked against Codex's own output schemas (`fixtures/codex-hook-schemas/`).
 
 **Diagnostic.** On session start and resume, toolu's `hooks/dist/session-start.js` reports which runtime the hooks use on the second line of its `systemMessage`, after the event title: `Toolu is on!\ntoolu runtime: bun <version> at <path>`. With `hooks.session-start` set to `false` it prints that line alone: `{"systemMessage":"toolu runtime: bun <version> at <path>"}`.
 

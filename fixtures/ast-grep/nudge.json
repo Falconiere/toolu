@@ -1,0 +1,318 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "bats: no-op on unrelated tool",
+      "toolName": "Read",
+      "toolInput": {}
+    },
+    {
+      "name": "bats: Grep with non-code glob allowed silently",
+      "toolName": "Grep",
+      "toolInput": {
+        "pattern": "foo",
+        "glob": "*.md"
+      }
+    },
+    {
+      "name": "bats: Grep with structural pattern nudges to ast-grep",
+      "hosts": ["claude", "codex"],
+      "toolName": "Grep",
+      "toolInput": {
+        "pattern": "fn handle_request",
+        "glob": "*.rs"
+      }
+    },
+    {
+      "name": "bats: Bash grep on structural pattern nudges to ast-grep",
+      "hosts": ["claude", "codex"],
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "grep -r \"impl Foo\" src"
+      },
+      "deviation": {
+        "contains": "STOP: grep/rg for structural code search."
+      }
+    },
+    {
+      "name": "bats: Bash without grep is silent",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "ls -la"
+      }
+    },
+    {
+      "name": "bats: output does not leak source-repo names",
+      "toolName": "Grep",
+      "toolInput": {
+        "pattern": "fn x"
+      }
+    },
+    {
+      "name": "Grep structural, ast-grep missing",
+      "state": "missing",
+      "toolName": "Grep",
+      "toolInput": {
+        "pattern": "fn x"
+      }
+    },
+    {
+      "name": "Grep structural, ast-grep opted out",
+      "state": "opt-out",
+      "toolName": "Grep",
+      "toolInput": {
+        "pattern": "fn x"
+      }
+    },
+    {
+      "name": "Grep plain identifier is silent",
+      "toolName": "Grep",
+      "toolInput": {
+        "pattern": "handleRequest",
+        "glob": "*.ts"
+      }
+    },
+    {
+      "name": "Grep non-code type is silent",
+      "toolName": "Grep",
+      "toolInput": {
+        "pattern": "fn x",
+        "type": "toml"
+      }
+    },
+    {
+      "name": "Grep code type still nudges",
+      "toolName": "Grep",
+      "toolInput": {
+        "pattern": "impl Foo",
+        "type": "rust"
+      }
+    },
+    {
+      "name": "Grep non-code path is silent",
+      "toolName": "Grep",
+      "toolInput": {
+        "pattern": "fn x",
+        "path": "docs/guide"
+      }
+    },
+    {
+      "name": "Grep code glob still nudges",
+      "toolName": "Grep",
+      "toolInput": {
+        "pattern": "class Foo",
+        "glob": "*.{ts,tsx}"
+      }
+    },
+    {
+      "name": "Grep non-code glob is case-insensitive",
+      "toolName": "Grep",
+      "toolInput": {
+        "pattern": "fn x",
+        "glob": "*.MD"
+      }
+    },
+    {
+      "name": "Grep multi-line pattern",
+      "toolName": "Grep",
+      "toolInput": {
+        "pattern": "foo\nimpl Bar"
+      }
+    },
+    {
+      "name": "Grep arrow pattern",
+      "toolName": "Grep",
+      "toolInput": {
+        "pattern": "(a) => b"
+      }
+    },
+    {
+      "name": "Bash generic grep",
+      "hosts": ["claude", "codex"],
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "grep -rn TODO src"
+      }
+    },
+    {
+      "name": "Bash generic grep, ast-grep missing",
+      "state": "missing",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "grep -rn TODO src"
+      }
+    },
+    {
+      "name": "Bash generic grep, ast-grep opted out",
+      "state": "opt-out",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "grep -rn TODO src"
+      }
+    },
+    {
+      "name": "Bash structural grep",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "grep -rn \"pub fn main\" src"
+      }
+    },
+    {
+      "name": "Bash structural grep, ast-grep missing",
+      "state": "missing",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "grep -rn \"pub fn main\" src"
+      }
+    },
+    {
+      "name": "Bash structural grep, ast-grep opted out",
+      "state": "opt-out",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "grep -rn \"pub fn main\" src"
+      }
+    },
+    {
+      "name": "Bash rg without a path",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "rg TODO"
+      }
+    },
+    {
+      "name": "Bash grep piped onward",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "grep -rn TODO src | head -5"
+      }
+    },
+    {
+      "name": "Bash grep under sudo",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "sudo grep -r TODO /etc"
+      }
+    },
+    {
+      "name": "Bash xargs grep searches files",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "git ls-files | xargs grep -n TODO"
+      }
+    },
+    {
+      "name": "Bash git grep",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "git grep -n TODO"
+      }
+    },
+    {
+      "name": "Bash structural grep run by find -exec",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "find . -name '*.rs' -exec grep -n 'fn main' {} +"
+      },
+      "deviation": {
+        "contains": "STOP: grep/rg for structural code search."
+      }
+    },
+    {
+      "name": "Bash grep run by watch",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "watch grep -r TODO src"
+      }
+    },
+    {
+      "name": "Bash structural grep in a substitution",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "echo $(grep -rn \"pub fn x\" src)"
+      },
+      "deviation": {
+        "contains": "STOP: grep/rg for structural code search."
+      }
+    },
+    {
+      "name": "Shell tool grep",
+      "toolName": "Shell",
+      "toolInput": {
+        "command": "grep -rn TODO src"
+      }
+    },
+    {
+      "name": "283-10a: grep filtering a pipe",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "git log | grep fix"
+      },
+      "deviation": {
+        "silent": true
+      }
+    },
+    {
+      "name": "283-10b: grep and rg inside a commit message",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "git commit -m \"use grep and rg to find it\""
+      },
+      "deviation": {
+        "contains": "BEFORE COMMITTING",
+        "excludes": "grep/rg in Bash detected."
+      }
+    },
+    {
+      "name": "283-10c: a shell for-in loop",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "for f in src/*.ts; do grep -n TODO \"$f\"; done"
+      },
+      "deviation": {
+        "contains": "grep/rg in Bash detected.",
+        "excludes": "STOP"
+      }
+    },
+    {
+      "name": "283-10d: structural pattern as one argument",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "rg -n \"fn main\" src/"
+      },
+      "deviation": {
+        "contains": "STOP: grep/rg for structural code search."
+      }
+    },
+    {
+      "name": "structural grep filtering a pipe",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "cat src/a.rs | grep \"pub fn main\""
+      },
+      "deviation": {
+        "silent": true
+      }
+    },
+    {
+      "name": "grep as a word to echo",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "echo grep me"
+      },
+      "deviation": {
+        "silent": true
+      }
+    },
+    {
+      "name": "grep in a heredoc run by bash",
+      "toolName": "Bash",
+      "toolInput": {
+        "command": "bash <<'EOF'\ngrep -rn TODO src\nEOF"
+      },
+      "deviation": {
+        "contains": "grep/rg in Bash detected."
+      }
+    }
+  ]
+}

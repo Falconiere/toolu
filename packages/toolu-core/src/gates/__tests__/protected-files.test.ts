@@ -15,7 +15,7 @@ import type { RegistryHookEvent } from "../../registry/registry-types.ts";
 import { protectedFilesModule } from "../protected-files.ts";
 import { gateCtx, gateEnv, SHIPPED_SETTINGS, shellEvent, toolEvent } from "./gate-harness.ts";
 
-const FIXTURES = resolve(import.meta.dir, "../../../../../tooling/fixtures/shell/issue-283.json");
+const FIXTURES = resolve(import.meta.dir, "../../../../../fixtures/shell/issue-283.json");
 const Fixtures = z.object({
   cases: z.array(
     z.looseObject({ id: z.string(), item: z.number(), kind: z.string(), command: z.string() }),

@@ -1,6 +1,6 @@
 /**
  * #283 fixed (#284 AC-6): every example in the defect list is a named fixture
- * (tooling/fixtures/shell/issue-283.json) on which `@toolu/core/shell` gives the
+ * (fixtures/shell/issue-283.json) on which `@toolu/core/shell` gives the
  * correct answer, and the bash result is kept as the known-wrong baseline.
  */
 import { expect, test } from "bun:test";

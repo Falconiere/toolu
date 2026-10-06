@@ -6,10 +6,14 @@
  */
 import { expect, test } from "bun:test";
 import { implementationTag } from "@toolu/conformance/harness/entry-command";
-import { toStdin } from "@toolu/conformance/harness/fixtures";
 import { pretoolEnv, runBundle, type PretoolHost } from "@toolu/conformance/harness/pretool";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
-import { PRETOOL_CORPUS, prepare, type Outcome } from "@toolu/conformance/harness/pretool-corpus";
+import {
+  PRETOOL_CORPUS,
+  prepare,
+  pretoolStdin,
+  type Outcome,
+} from "@toolu/conformance/harness/pretool-corpus";
 import { comparable } from "./pre-tool-modules-b-cases.ts";
 import { corpusKey, decidedByModulesB, readGolden } from "./pre-tool-modules-b-golden.ts";
 import { readGolden as readGoldenA } from "./pre-tool-modules-a-golden.ts";
@@ -36,8 +40,7 @@ for (const fixture of PRETOOL_CORPUS) {
     test.concurrent(`${fixture.name} [${host}]${IMPL}`, async () => {
       using sb = createSandbox({ git: true });
       const extra = await prepare(sb, host, fixture);
-      const stdin =
-        fixture.stdin ?? JSON.stringify(toStdin(host, fixture.fixture(sb), { cwd: sb.project }));
+      const stdin = pretoolStdin(sb, host, fixture);
       const call = { cwd: sb.project, env: pretoolEnv(sb, host, extra), stdin };
       if (decidedByModulesB(fixture.name)) {
         const want = golden[corpusKey(fixture.name, host)];

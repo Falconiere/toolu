@@ -1,8 +1,4 @@
-/**
- * state-io (#255): jq-identical serialization and string order, checked
- * against the real `jq` binary; atomic writes and the sidecar lock on real
- * files.
- */
+/** jq-compatible serialization, atomic writes and real lock files from shared cases. */
 import { expect, test } from "bun:test";
 import {
   existsSync,
@@ -12,20 +8,59 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { materializeCaseValue, readCaseFile } from "@toolu/conformance/harness/json-cases";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
+import { z } from "zod";
 import { compareJqStrings, isoSeconds, toJqJson, withLock, writeAtomic } from "../state-io.ts";
 
-const AWKWARD = {
-  del: "a\u007fb",
-  control: "tab\tnl\ncr\r\u0001\u001f",
-  unicode: "é ～ 😀  ",
-  quote: 'q"\\',
-  empty: {},
-  list: [],
-  nested: { n: 1.5, big: 12345678901, neg: -3, t: true, f: false, z: null },
-};
+const CaseSchema = z.strictObject({
+  name: z.string(),
+  kind: z.literal("io"),
+  scenario: z.enum([
+    "jq-json",
+    "jq-sort",
+    "iso",
+    "atomic-replace",
+    "atomic-missing",
+    "lock-result",
+    "stale-lock",
+    "live-lock",
+    "atomic-mode",
+    "dead-pid-lock",
+    "stale-own-pid",
+    "lock-takeover",
+    "stale-no-broken",
+  ]),
+  value: z.json().optional(),
+  pretty: z.boolean().optional(),
+  jqArgs: z.array(z.string()).optional(),
+  words: z.array(z.string()).optional(),
+  jsSortDiffers: z.boolean().optional(),
+  input: z.string().optional(),
+  expected: z.string().optional(),
+  file: z.string().optional(),
+  before: z.string().optional(),
+  after: z.string().optional(),
+  remaining: z.array(z.string()).optional(),
+  body: z.string().optional(),
+  error: z.string().optional(),
+  lock: z.string().optional(),
+  ageMs: z.number().int().optional(),
+  expectedWarnings: z.array(z.string()).optional(),
+  timeoutMs: z.number().int().optional(),
+  warning: z.json().optional(),
+  mode: z.number().int().optional(),
+  lockSuffix: z.string().optional(),
+  maxMs: z.number().int().optional(),
+  otherLock: z.string().optional(),
+});
+const cases = readCaseFile(resolve(import.meta.dir, "../../../../../fixtures/state/cases.json"))
+  .filter((raw) => raw.kind === "io")
+  .map((raw) => CaseSchema.parse(raw));
+const str = (value: unknown) => z.string().parse(value);
+const num = (value: unknown) => z.number().parse(value);
 
 async function jq(args: string[], input: string): Promise<string> {
   const res = await run(["jq", ...args], { stdin: input });
@@ -33,130 +68,99 @@ async function jq(args: string[], input: string): Promise<string> {
   return res.stdout;
 }
 
-test("toJqJson pretty equals `jq .` byte for byte", async () => {
-  const input = JSON.stringify(AWKWARD);
-  expect(`${toJqJson(AWKWARD, true)}\n`).toBe(await jq(["."], input));
-});
-
-test("toJqJson compact equals `jq -c .` byte for byte", async () => {
-  const input = JSON.stringify(AWKWARD);
-  expect(`${toJqJson(AWKWARD, false)}\n`).toBe(await jq(["-c", "."], input));
-});
-
-test("compareJqStrings orders like jq sort (codepoint, not UTF-16)", async () => {
-  const words = ["😀", "～", "b", "B", "", "é", "a\u007f", "a"];
-  const sorted = JSON.parse(await jq(["-c", "sort"], JSON.stringify(words)));
-  expect([...words].sort(compareJqStrings)).toEqual(sorted);
-  // The default JS sort disagrees on this input, which is why the helper exists.
-  expect([...words].sort()).not.toEqual(sorted);
-});
-
-test("isoSeconds matches `date -u +%Y-%m-%dT%H:%M:%SZ` shape and truncates", () => {
-  expect(isoSeconds(new Date("2026-09-28T12:34:56.789Z"))).toBe("2026-09-28T12:34:56Z");
-});
-
-test("writeAtomic replaces the file and leaves no temp behind", () => {
-  using sb = createSandbox();
-  const file = sb.write("state/gate.json", "old\n");
-  expect(writeAtomic(file, "new\n")).toBe(true);
-  expect(readFileSync(file, "utf8")).toBe("new\n");
-  expect(readdirSync(join(sb.project, "state"))).toEqual(["gate.json"]);
-});
-
-test("writeAtomic reports failure when the directory is missing", () => {
-  using sb = createSandbox();
-  const file = join(sb.project, "missing", "gate.json");
-  expect(writeAtomic(file, "x")).toBe(false);
-  expect(existsSync(file)).toBe(false);
-});
-
-test("withLock returns the result and releases the lock, even on throw", () => {
-  using sb = createSandbox();
-  const file = sb.path("gate.json");
-  expect(withLock(file, () => existsSync(`${file}.lock`))).toBe(true);
-  expect(existsSync(`${file}.lock`)).toBe(false);
-  expect(() =>
-    withLock(file, () => {
-      throw new Error("boom");
-    }),
-  ).toThrow("boom");
-  expect(existsSync(`${file}.lock`)).toBe(false);
-});
-
-test("withLock breaks a stale lock left by a crashed writer", () => {
-  using sb = createSandbox();
-  const file = sb.path("gate.json");
-  writeFileSync(`${file}.lock`, "99999 crashed\n");
-  const old = new Date(Date.now() - 60_000);
-  utimesSync(`${file}.lock`, old, old);
-  const warnings: string[] = [];
-  const ran = withLock(file, () => true, { warn: (m) => warnings.push(m) });
-  expect(ran).toBe(true);
-  expect(warnings).toEqual([]);
-  expect(existsSync(`${file}.lock`)).toBe(false);
-});
-
-test("withLock times out on a live lock, warns, and still runs unlocked", () => {
-  using sb = createSandbox();
-  const file = sb.path("gate.json");
-  writeFileSync(`${file}.lock`, "1 live\n");
-  const warnings: string[] = [];
-  const started = Date.now();
-  const ran = withLock(file, () => true, { timeoutMs: 100, warn: (m) => warnings.push(m) });
-  expect(ran).toBe(true);
-  expect(Date.now() - started).toBeGreaterThanOrEqual(100);
-  expect(warnings).toEqual([`state: lock ${file}.lock still held; writing without it`]);
-  // Someone else's lock is not ours to remove.
-  expect(existsSync(`${file}.lock`)).toBe(true);
-});
-
-test("writeAtomic creates the file 0600, as bash's mktemp + mv does", () => {
-  using sb = createSandbox();
-  const file = sb.path("gate.json");
-  expect(writeAtomic(file, "x")).toBe(true);
-  expect(statSync(file).mode & 0o777).toBe(0o600);
-});
-
-test("withLock breaks a fresh lock whose holder pid is gone", async () => {
-  using sb = createSandbox();
-  const file = sb.path("gate.json");
-  const done = await run(["bash", "-c", "echo $$"]);
-  writeFileSync(`${file}.lock`, `${done.stdout.trim()} crashed-token\n`);
-  const warnings: string[] = [];
-  const started = Date.now();
-  expect(withLock(file, () => true, { warn: (m) => warnings.push(m) })).toBe(true);
-  expect(Date.now() - started).toBeLessThan(1000);
-  expect(warnings).toEqual([]);
-});
-
-test("withLock breaks a live holder's lock once it is older than staleMs (2 s default)", () => {
-  using sb = createSandbox();
-  const file = sb.path("gate.json");
-  writeFileSync(`${file}.lock`, `${String(process.pid)} hung-token\n`);
-  const old = new Date(Date.now() - 3000);
-  utimesSync(`${file}.lock`, old, old);
-  const warnings: string[] = [];
-  expect(withLock(file, () => true, { warn: (m) => warnings.push(m) })).toBe(true);
-  expect(warnings).toEqual([]);
-  expect(existsSync(`${file}.lock`)).toBe(false);
-});
-
-test("withLock never releases a lock another holder took over", () => {
-  using sb = createSandbox();
-  const file = sb.path("gate.json");
-  withLock(file, () => {
-    // Someone judged ours stale and took the lock while fn ran.
-    writeFileSync(`${file}.lock`, "4242 their-token\n");
+for (const c of cases) {
+  test(c.name, async () => {
+    if (c.scenario === "jq-json") {
+      const value = z.json().parse(c.value);
+      const pretty = z.boolean().parse(c.pretty);
+      expect(`${toJqJson(value, pretty)}\n`).toBe(
+        await jq(z.array(z.string()).parse(c.jqArgs), JSON.stringify(value)),
+      );
+      return;
+    }
+    if (c.scenario === "jq-sort") {
+      const words = z.array(z.string()).parse(c.words);
+      const sorted = JSON.parse(
+        await jq(z.array(z.string()).parse(c.jqArgs), JSON.stringify(words)),
+      );
+      expect([...words].sort(compareJqStrings)).toEqual(sorted);
+      if (c.jsSortDiffers) expect([...words].sort()).not.toEqual(sorted);
+      return;
+    }
+    if (c.scenario === "iso") {
+      expect(isoSeconds(new Date(str(c.input)))).toBe(str(c.expected));
+      return;
+    }
+    using sb = createSandbox();
+    const file =
+      c.scenario === "atomic-missing" ? join(sb.project, str(c.file)) : sb.path(str(c.file));
+    if (c.scenario === "atomic-replace") {
+      sb.write(str(c.file), str(c.before));
+      expect(writeAtomic(file, str(c.after))).toBe(true);
+      expect(readFileSync(file, "utf8")).toBe(str(c.after));
+      expect(readdirSync(join(sb.project, "state"))).toEqual(
+        z.array(z.string()).parse(c.remaining),
+      );
+    } else if (c.scenario === "atomic-missing") {
+      expect(writeAtomic(file, str(c.body))).toBe(false);
+      expect(existsSync(file)).toBe(false);
+    } else if (c.scenario === "atomic-mode") {
+      expect(writeAtomic(file, str(c.body))).toBe(true);
+      expect(statSync(file).mode & 0o777).toBe(num(c.mode));
+    } else if (c.scenario === "lock-result") {
+      expect(withLock(file, () => existsSync(`${file}.lock`))).toBe(true);
+      expect(existsSync(`${file}.lock`)).toBe(false);
+      expect(() =>
+        withLock(file, () => {
+          throw new Error(str(c.error));
+        }),
+      ).toThrow(c.error);
+      expect(existsSync(`${file}.lock`)).toBe(false);
+    } else if (c.scenario === "dead-pid-lock") {
+      const done = await run(["bash", "-c", "echo $$"]);
+      writeFileSync(`${file}.lock`, `${done.stdout.trim()}${str(c.lockSuffix)}`);
+      const warnings: string[] = [];
+      const started = Date.now();
+      expect(withLock(file, () => true, { warn: (m) => warnings.push(m) })).toBe(true);
+      expect(Date.now() - started).toBeLessThan(num(c.maxMs));
+      expect(warnings).toEqual([]);
+    } else if (c.scenario === "stale-own-pid") {
+      writeFileSync(`${file}.lock`, `${String(process.pid)}${str(c.lockSuffix)}`);
+      const old = new Date(Date.now() - num(c.ageMs));
+      utimesSync(`${file}.lock`, old, old);
+      const warnings: string[] = [];
+      expect(withLock(file, () => true, { warn: (m) => warnings.push(m) })).toBe(true);
+      expect(warnings).toEqual([]);
+      expect(existsSync(`${file}.lock`)).toBe(false);
+    } else if (c.scenario === "lock-takeover") {
+      withLock(file, () => writeFileSync(`${file}.lock`, str(c.otherLock)));
+      expect(readFileSync(`${file}.lock`, "utf8")).toBe(str(c.otherLock));
+    } else {
+      writeFileSync(`${file}.lock`, str(c.lock));
+      if (c.ageMs !== undefined) {
+        const old = new Date(Date.now() - c.ageMs);
+        utimesSync(`${file}.lock`, old, old);
+      }
+      if (c.scenario === "stale-no-broken") {
+        withLock(file, () => true);
+        expect(readdirSync(sb.project).filter((name) => name.includes(".lock"))).toEqual([]);
+      } else {
+        const warnings: string[] = [];
+        const started = Date.now();
+        const ran = withLock(file, () => true, {
+          ...(c.timeoutMs === undefined ? {} : { timeoutMs: c.timeoutMs }),
+          warn: (m) => warnings.push(m),
+        });
+        expect(ran).toBe(true);
+        if (c.scenario === "live-lock") {
+          expect(Date.now() - started).toBeGreaterThanOrEqual(num(c.timeoutMs));
+          expect(warnings).toEqual([str(materializeCaseValue(sb, c.warning))]);
+          expect(existsSync(`${file}.lock`)).toBe(true);
+        } else {
+          expect(warnings).toEqual(z.array(z.string()).parse(c.expectedWarnings));
+          expect(existsSync(`${file}.lock`)).toBe(false);
+        }
+      }
+    }
   });
-  expect(readFileSync(`${file}.lock`, "utf8")).toBe("4242 their-token\n");
-});
-
-test("breaking a stale lock leaves no claimed .broken file behind", () => {
-  using sb = createSandbox();
-  const file = sb.path("gate.json");
-  writeFileSync(`${file}.lock`, "99999 crashed\n");
-  const old = new Date(Date.now() - 60_000);
-  utimesSync(`${file}.lock`, old, old);
-  withLock(file, () => true);
-  expect(readdirSync(sb.project).filter((name) => name.includes(".lock"))).toEqual([]);
-});
+}

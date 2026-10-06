@@ -1,0 +1,2626 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "gating: outside a TS project",
+      "project": {},
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "console.log(\"x\");\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "gating: TS project with no lock file",
+      "project": {
+        "tsconfig.json": "{}\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "foo.ts": "console.log(\"x\");\n"
+          },
+          "tool": "Write",
+          "file": "foo.ts"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "gating: tsconfig present but untracked",
+      "project": {
+        "bun.lock": ""
+      },
+      "commit": {},
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "console.log(\"x\");\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "silent",
+      "setup": [
+        {
+          "op": "write",
+          "path": "$PROJECT/tsconfig.json",
+          "body": "{}\n"
+        }
+      ]
+    },
+    {
+      "name": "gating: package manager not on PATH",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": "",
+        "pnpm-lock.yaml": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "console.log(\"x\");\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "silent",
+      "env": {
+        "kind": "pathWithout",
+        "without": ["bun", "bunx"]
+      }
+    },
+    {
+      "name": "DEV-1: no jq on PATH",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "console.log(\"x\");\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "silent",
+      "env": {
+        "kind": "pathWithout",
+        "without": ["jq"]
+      },
+      "deviation": {
+        "contains": ["Forbidden console.log"]
+      }
+    },
+    {
+      "name": "flow: a non-TS file is ignored",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "README.md": "console.log(\"x\");\n"
+          },
+          "tool": "Write",
+          "file": "README.md"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "flow: a missing file is ignored",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "tool": "Write",
+          "file": "src/gone.ts"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "flow: a relative path resolves against the hook's cwd",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "console.log(\"x\");\n"
+          },
+          "file": "src/a.ts",
+          "relative": true
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden console.log in src/a.ts"]
+    },
+    {
+      "name": "flow: CLAUDE_FILE_PATHS names the file for any tool",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "console.log(\"x\");\n"
+          },
+          "tool": "Bash",
+          "input": {
+            "command": "true"
+          },
+          "env": {
+            "CLAUDE_FILE_PATHS": "src/a.ts"
+          }
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden console.log"]
+    },
+    {
+      "name": "flow: a file in a linked worktree is skipped",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "wt/src/a.ts": "console.log(\"x\");\n"
+          },
+          "tool": "Write",
+          "file": "wt/src/a.ts"
+        }
+      ],
+      "expect": "silent",
+      "setup": [
+        {
+          "op": "git",
+          "args": [
+            "-C",
+            {
+              "$path": "$PROJECT"
+            },
+            "worktree",
+            "add",
+            "-q",
+            "-b",
+            "side",
+            "wt"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "assembled: three violations in fragment order",
+      "project": {
+        "tsconfig.json": "{\"compilerOptions\":{\"paths\":{\"@/*\":[\"./src/*\"]}}}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "import { thing } from \"../other\";\nexport const x = thing as Bar;\nexport function go() {\n  console.log(\"debug\");\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden ../ import", "Forbidden 'as' type assertion", "Forbidden console.log"]
+    },
+    {
+      "name": "assembled: fixing one of three keeps the gate failing",
+      "project": {
+        "tsconfig.json": "{\"compilerOptions\":{\"paths\":{\"@/*\":[\"./src/*\"]}}}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "import { thing } from \"../other\";\nexport const x = thing as Bar;\nexport function go() {\n  console.log(\"debug\");\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        },
+        {
+          "write": {
+            "src/bad.ts": "import { thing } from \"../other\";\nexport const x = thing as Bar;\nexport function go() {\n  console.info(\"debug\");\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden ../ import"],
+      "absent": ["Forbidden console.log"]
+    },
+    {
+      "name": "assembled: ../ import without a @/ alias",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "import { thing } from \"../other\";\nexport const x = thing as Bar;\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden 'as' type assertion"],
+      "absent": ["Forbidden ../ import"]
+    },
+    {
+      "name": "assembled: @ts-expect-error in src",
+      "project": {
+        "tsconfig.json": "{\"compilerOptions\":{\"paths\":{\"@/*\":[\"./src/*\"]}}}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "// @ts-expect-error legacy boundary\nexport const b = thing();\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden suppression comment"]
+    },
+    {
+      "name": "assembled: clean file",
+      "project": {
+        "tsconfig.json": "{\"compilerOptions\":{\"paths\":{\"@/*\":[\"./src/*\"]}}}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/good.ts": "/** Adds two numbers. */\nexport function add(a: number, b: number): number {\n  return a + b;\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/good.ts"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "assembled: re-editing a failing file clean flips the gate",
+      "project": {
+        "tsconfig.json": "{\"compilerOptions\":{\"paths\":{\"@/*\":[\"./src/*\"]}}}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/x.ts": "export function b(){ throw 42; }\n"
+          },
+          "tool": "Edit",
+          "file": "src/x.ts"
+        },
+        {
+          "write": {
+            "src/x.ts": "export function b(){ throw new Error(\"boom\"); }\n"
+          },
+          "tool": "Edit",
+          "file": "src/x.ts"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["QUALITY VIOLATION"]
+    },
+    {
+      "name": "gate: clearing one file keeps another's failure",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "console.log(\"a\");\n"
+          },
+          "tool": "Edit",
+          "file": "src/a.ts"
+        },
+        {
+          "write": {
+            "src/b.ts": "console.log(\"b\");\n"
+          },
+          "tool": "Edit",
+          "file": "src/b.ts"
+        },
+        {
+          "write": {
+            "src/b.ts": "console.info(\"b\");\n"
+          },
+          "tool": "Edit",
+          "file": "src/b.ts"
+        },
+        {
+          "write": {
+            "src/a.ts": "console.info(\"a\");\n"
+          },
+          "tool": "Edit",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "gate: deleting a failing file clears its entry",
+      "hosts": ["claude", "codex"],
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "console.log(\"bad\");\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        },
+        {
+          "remove": ["src/bad.ts"],
+          "tool": "Delete",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "gate: a moved file clears its source entry and checks its target",
+      "hosts": ["codex"],
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/old.ts": "console.log(\"bad\");\n"
+          },
+          "tool": "Edit",
+          "file": "src/old.ts"
+        },
+        {
+          "write": {
+            "src/new.ts": "console.info(\"ok\");\n"
+          },
+          "remove": ["src/old.ts"],
+          "rawPatch": "*** Begin Patch\n*** Update File: src/old.ts\n*** Move to: src/new.ts\n@@\n-a\n+b\n*** End Patch"
+        }
+      ],
+      "expect": "silent"
+    },
+    {
+      "name": "codex: a written file with a violation",
+      "hosts": ["codex"],
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "console.log(\"bad\");\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden console.log"]
+    },
+    {
+      "name": "codex: one patch through ts-quality and rust-quality",
+      "hosts": ["codex"],
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": "",
+        "Cargo.toml": "[package]\nname = \"fixture\"\nversion = \"0.1.0\"\n"
+      },
+      "register": ["rust-quality"],
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "console.log(\"bad\");\n",
+            "src/bad.rs": "#[allow(dead_code)]\nfn bad() {}\n"
+          },
+          "patch": [
+            {
+              "op": "update",
+              "path": "src/bad.ts",
+              "lines": ["-a", "+b"]
+            },
+            {
+              "op": "update",
+              "path": "src/bad.rs",
+              "lines": ["-a", "+b"]
+            }
+          ]
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden console.log", "Forbidden lint suppression"]
+    },
+    {
+      "name": "tests: a test outside __tests__",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/foo.test.ts": "test(\"x\", () => {});\n"
+          },
+          "tool": "Write",
+          "file": "src/foo.test.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Test file outside __tests__/"]
+    },
+    {
+      "name": "tests: e2e specs keep their own layout",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/app/e2e/login.spec.ts": "test(\"x\", () => {});\n"
+          },
+          "tool": "Write",
+          "file": "src/app/e2e/login.spec.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Test file outside"]
+    },
+    {
+      "name": "tests: __tests__ nested in __tests__ is not co-located",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/__tests__/__tests__/a.test.ts": "test(\"x\", () => {});\n"
+          },
+          "tool": "Write",
+          "file": "src/__tests__/__tests__/a.test.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Test not co-located with source"]
+    },
+    {
+      "name": "tests: helpers and utils subdirectories are allowed",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/__tests__/helpers/a.test.ts": "test(\"x\", () => {});\n"
+          },
+          "tool": "Write",
+          "file": "src/__tests__/helpers/a.test.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Test nested in __tests__/ subdirectory"]
+    },
+    {
+      "name": "no-mocks: vi.mock",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/__tests__/foo.test.ts": "import { dep } from \"../dep\";\nvi.mock(\"../dep\");\ntest(\"uses dep\", () => {\n  expect(dep).toBeDefined();\n});\n"
+          },
+          "tool": "Write",
+          "file": "src/__tests__/foo.test.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Mocked test double", "QUALITY VIOLATION"]
+    },
+    {
+      "name": "no-mocks: jest.fn",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/__tests__/foo.test.ts": "const handler = jest.fn();\ntest(\"calls handler\", () => {\n  handler();\n  expect(handler).toBeDefined();\n});\n"
+          },
+          "tool": "Write",
+          "file": "src/__tests__/foo.test.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Mocked test double"]
+    },
+    {
+      "name": "no-mocks: one hit per mock rule",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/__tests__/foo.test.ts": "jest.mock(\"a\");\nvi.fn();\nsinon.spy();\njest.fn();\nvi.mock(\"b\");\n"
+          },
+          "tool": "Write",
+          "file": "src/__tests__/foo.test.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Mocked test double"],
+      "unordered": true
+    },
+    {
+      "name": "no-mocks: a real JSON fixture passes",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n",
+        "src/__tests__/fixtures/user.json": "{\"name\":\"Ada\"}\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/__tests__/foo.test.ts": "import { readFileSync } from \"node:fs\";\nimport { join } from \"node:path\";\n\ntest(\"loads a real user fixture\", () => {\n  const raw = readFileSync(join(__dirname, \"fixtures/user.json\"), \"utf8\");\n  expect(JSON.parse(raw).name).toBe(\"Ada\");\n});\n"
+          },
+          "tool": "Write",
+          "file": "src/__tests__/foo.test.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Mocked test double"]
+    },
+    {
+      "name": "no-mocks: ts-mockito import",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/__tests__/foo.test.ts": "import { mock, instance } from \"ts-mockito\";\n\ntest(\"uses ts-mockito\", () => {\n  expect(instance(mock<{ x: number }>())).toBeDefined();\n});\n"
+          },
+          "tool": "Write",
+          "file": "src/__tests__/foo.test.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Import from ts-mockito"]
+    },
+    {
+      "name": "no-mocks: lang.ts.noMocks=false",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/__tests__/foo.test.ts": "vi.mock(\"../dep\");\ntest(\"x\", () => {});\n"
+          },
+          "tool": "Write",
+          "file": "src/__tests__/foo.test.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Mocked test double"],
+      "config": {
+        "lang": {
+          "ts": {
+            "noMocks": false
+          }
+        }
+      }
+    },
+    {
+      "name": "no-mocks: __tests__/mocks is a nested test dir",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/__tests__/mocks/handlers.test.ts": "test(\"noop\", () => {\n  expect(true).toBe(true);\n});\n"
+          },
+          "tool": "Write",
+          "file": "src/__tests__/mocks/handlers.test.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Test nested in __tests__/ subdirectory"]
+    },
+    {
+      "name": "no-mocks: __tests__/fixtures is allowed",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/__tests__/fixtures/handlers.test.ts": "test(\"noop\", () => {\n  expect(true).toBe(true);\n});\n"
+          },
+          "tool": "Write",
+          "file": "src/__tests__/fixtures/handlers.test.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Test nested in __tests__/ subdirectory"]
+    },
+    {
+      "name": "no-mocks: e2e specs are exempt",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/app/e2e/login.spec.ts": "vi.mock(\"../session\");\ntest(\"logs in\", () => {\n  expect(true).toBe(true);\n});\n"
+          },
+          "tool": "Write",
+          "file": "src/app/e2e/login.spec.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Mocked test double"]
+    },
+    {
+      "name": "no-mocks: sinon.stub",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/__tests__/foo.test.ts": "import { dep } from \"../dep\";\nconst stub = sinon.stub(dep, \"toString\");\ntest(\"uses stub\", () => {\n  expect(stub).toBeDefined();\n});\n"
+          },
+          "tool": "Write",
+          "file": "src/__tests__/foo.test.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Mocked test double"]
+    },
+    {
+      "name": "no-mocks: ast-grep crash",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/__tests__/foo.test.ts": "test(\"clean\", () => {\n  expect(true).toBe(true);\n});\n"
+          },
+          "tool": "Write",
+          "file": "src/__tests__/foo.test.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["ast-grep failed while scanning", "boom"],
+      "env": {
+        "kind": "stubAstGrep",
+        "body": "echo boom >&2\nexit 2"
+      }
+    },
+    {
+      "name": "no-mocks: ast-grep exit 0 with empty output",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/__tests__/foo.test.ts": "test(\"clean\", () => {\n  expect(true).toBe(true);\n});\n"
+          },
+          "tool": "Write",
+          "file": "src/__tests__/foo.test.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["ast-grep failed while scanning", "empty output"],
+      "env": {
+        "kind": "stubAstGrep",
+        "body": "exit 0"
+      }
+    },
+    {
+      "name": "no-mocks: ast-grep exit 0 with non-JSON output",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/__tests__/foo.test.ts": "test(\"clean\", () => {});\n"
+          },
+          "tool": "Write",
+          "file": "src/__tests__/foo.test.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["did not parse as the documented JSON array"],
+      "env": {
+        "kind": "stubAstGrep",
+        "body": "echo nope"
+      }
+    },
+    {
+      "name": "no-mocks: ast-grep absent still checks ts-mockito",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/dep.ts": "export const dep = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/__tests__/foo.test.ts": "import { mock } from \"ts-mockito\";\nvi.mock(\"x\");\n"
+          },
+          "tool": "Write",
+          "file": "src/__tests__/foo.test.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Import from ts-mockito"],
+      "absent": ["Mocked test double"],
+      "env": {
+        "kind": "pathWithout",
+        "without": ["ast-grep", "sg"]
+      }
+    },
+    {
+      "name": "duplication: jscpd finds a clone in the package",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": "",
+        ".jscpd.json": "{\"threshold\":0,\"minLines\":5,\"reporters\":[\"console\"]}\n",
+        "packages/core/src/one.ts": "/** Sum. */\nexport function total(items: number[]): number {\n  const step0 = items.length * 0 + items.length;\n  const step1 = items.length * 1 + items.length;\n  const step2 = items.length * 2 + items.length;\n  const step3 = items.length * 3 + items.length;\n  const step4 = items.length * 4 + items.length;\n  const step5 = items.length * 5 + items.length;\n  const step6 = items.length * 6 + items.length;\n  const step7 = items.length * 7 + items.length;\n  const step8 = items.length * 8 + items.length;\n  const step9 = items.length * 9 + items.length;\n  const step10 = items.length * 10 + items.length;\n  const step11 = items.length * 11 + items.length;\n  return items.length;\n}\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "packages/core/src/two.ts": "/** Sum. */\nexport function total(items: number[]): number {\n  const step0 = items.length * 0 + items.length;\n  const step1 = items.length * 1 + items.length;\n  const step2 = items.length * 2 + items.length;\n  const step3 = items.length * 3 + items.length;\n  const step4 = items.length * 4 + items.length;\n  const step5 = items.length * 5 + items.length;\n  const step6 = items.length * 6 + items.length;\n  const step7 = items.length * 7 + items.length;\n  const step8 = items.length * 8 + items.length;\n  const step9 = items.length * 9 + items.length;\n  const step10 = items.length * 10 + items.length;\n  const step11 = items.length * 11 + items.length;\n  return items.length;\n}\n"
+          },
+          "tool": "Write",
+          "file": "packages/core/src/two.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Code duplication detected involving"],
+      "setup": [
+        {
+          "op": "write",
+          "path": "$PROJECT/node_modules/.bin/.keep",
+          "body": ""
+        },
+        {
+          "op": "symlink",
+          "path": "$PROJECT/node_modules/.bin/jscpd",
+          "target": {
+            "$path": "$REPO/node_modules/.bin/jscpd"
+          }
+        }
+      ]
+    },
+    {
+      "name": "duplication: a file name holding $ still matches jscpd's report",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": "",
+        ".jscpd.json": "{\"threshold\":0,\"minLines\":5,\"reporters\":[\"console\"]}\n",
+        "packages/core/src/one.ts": "/** Sum. */\nexport function total(items: number[]): number {\n  const step0 = items.length * 0 + items.length;\n  const step1 = items.length * 1 + items.length;\n  const step2 = items.length * 2 + items.length;\n  const step3 = items.length * 3 + items.length;\n  const step4 = items.length * 4 + items.length;\n  const step5 = items.length * 5 + items.length;\n  const step6 = items.length * 6 + items.length;\n  const step7 = items.length * 7 + items.length;\n  const step8 = items.length * 8 + items.length;\n  const step9 = items.length * 9 + items.length;\n  const step10 = items.length * 10 + items.length;\n  const step11 = items.length * 11 + items.length;\n  return items.length;\n}\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "packages/core/src/$id.ts": "/** Sum. */\nexport function total(items: number[]): number {\n  const step0 = items.length * 0 + items.length;\n  const step1 = items.length * 1 + items.length;\n  const step2 = items.length * 2 + items.length;\n  const step3 = items.length * 3 + items.length;\n  const step4 = items.length * 4 + items.length;\n  const step5 = items.length * 5 + items.length;\n  const step6 = items.length * 6 + items.length;\n  const step7 = items.length * 7 + items.length;\n  const step8 = items.length * 8 + items.length;\n  const step9 = items.length * 9 + items.length;\n  const step10 = items.length * 10 + items.length;\n  const step11 = items.length * 11 + items.length;\n  return items.length;\n}\n"
+          },
+          "tool": "Write",
+          "file": "packages/core/src/$id.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Code duplication detected involving"],
+      "setup": [
+        {
+          "op": "write",
+          "path": "$PROJECT/node_modules/.bin/.keep",
+          "body": ""
+        },
+        {
+          "op": "symlink",
+          "path": "$PROJECT/node_modules/.bin/jscpd",
+          "target": {
+            "$path": "$REPO/node_modules/.bin/jscpd"
+          }
+        }
+      ]
+    },
+    {
+      "name": "duplication: not under apps/ or packages/",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": "",
+        ".jscpd.json": "{\"threshold\":0,\"minLines\":5,\"reporters\":[\"console\"]}\n",
+        "src/one.ts": "/** Sum. */\nexport function total(items: number[]): number {\n  const step0 = items.length * 0 + items.length;\n  const step1 = items.length * 1 + items.length;\n  const step2 = items.length * 2 + items.length;\n  const step3 = items.length * 3 + items.length;\n  const step4 = items.length * 4 + items.length;\n  const step5 = items.length * 5 + items.length;\n  const step6 = items.length * 6 + items.length;\n  const step7 = items.length * 7 + items.length;\n  const step8 = items.length * 8 + items.length;\n  const step9 = items.length * 9 + items.length;\n  const step10 = items.length * 10 + items.length;\n  const step11 = items.length * 11 + items.length;\n  return items.length;\n}\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/two.ts": "/** Sum. */\nexport function total(items: number[]): number {\n  const step0 = items.length * 0 + items.length;\n  const step1 = items.length * 1 + items.length;\n  const step2 = items.length * 2 + items.length;\n  const step3 = items.length * 3 + items.length;\n  const step4 = items.length * 4 + items.length;\n  const step5 = items.length * 5 + items.length;\n  const step6 = items.length * 6 + items.length;\n  const step7 = items.length * 7 + items.length;\n  const step8 = items.length * 8 + items.length;\n  const step9 = items.length * 9 + items.length;\n  const step10 = items.length * 10 + items.length;\n  const step11 = items.length * 11 + items.length;\n  return items.length;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/two.ts"
+        }
+      ],
+      "expect": "silent",
+      "setup": [
+        {
+          "op": "write",
+          "path": "$PROJECT/node_modules/.bin/.keep",
+          "body": ""
+        },
+        {
+          "op": "symlink",
+          "path": "$PROJECT/node_modules/.bin/jscpd",
+          "target": {
+            "$path": "$REPO/node_modules/.bin/jscpd"
+          }
+        }
+      ]
+    },
+    {
+      "name": "size: project config lowers maxFileLines",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "config": {
+        "lang": {
+          "ts": {
+            "maxFileLines": 10
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/big.ts": "export const v1 = 1;\nexport const v2 = 2;\nexport const v3 = 3;\nexport const v4 = 4;\nexport const v5 = 5;\nexport const v6 = 6;\nexport const v7 = 7;\nexport const v8 = 8;\nexport const v9 = 9;\nexport const v10 = 10;\nexport const v11 = 11;\nexport const v12 = 12;\nexport const v13 = 13;\nexport const v14 = 14;\nexport const v15 = 15;\n"
+          },
+          "tool": "Write",
+          "file": "src/big.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["exceeds 10-line limit"]
+    },
+    {
+      "name": "size: comments and blank lines do not count",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "config": {
+        "lang": {
+          "ts": {
+            "maxFileLines": 10
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/padded.ts": "// explanatory comment 0\n\nexport const v0 = 0;\n// explanatory comment 1\n\nexport const v1 = 1;\n// explanatory comment 2\n\nexport const v2 = 2;\n// explanatory comment 3\n\nexport const v3 = 3;\n// explanatory comment 4\n\nexport const v4 = 4;\n// explanatory comment 5\n\nexport const v5 = 5;\n// explanatory comment 6\n\nexport const v6 = 6;\n// explanatory comment 7\n\nexport const v7 = 7;\n"
+          },
+          "tool": "Write",
+          "file": "src/padded.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["exceeds 10-line limit"]
+    },
+    {
+      "name": "size: eslint JSON max-lines is credited",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": "",
+        ".eslintrc.json": "{\"rules\":{\"max-lines\":10}}\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/big.ts": "export const v1 = 1;\nexport const v2 = 2;\nexport const v3 = 3;\nexport const v4 = 4;\nexport const v5 = 5;\nexport const v6 = 6;\nexport const v7 = 7;\nexport const v8 = 8;\nexport const v9 = 9;\nexport const v10 = 10;\nexport const v11 = 11;\nexport const v12 = 12;\nexport const v13 = 13;\nexport const v14 = 14;\nexport const v15 = 15;\n"
+          },
+          "tool": "Write",
+          "file": "src/big.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["eslint enforces this max-lines limit"]
+    },
+    {
+      "name": "size: oxlint max-lines object form is credited",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": "",
+        ".oxlintrc.json": "{\"rules\":{\"max-lines\":[\"error\",{\"max\":12}]}}\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/big.ts": "export const v1 = 1;\nexport const v2 = 2;\nexport const v3 = 3;\nexport const v4 = 4;\nexport const v5 = 5;\nexport const v6 = 6;\nexport const v7 = 7;\nexport const v8 = 8;\nexport const v9 = 9;\nexport const v10 = 10;\nexport const v11 = 11;\nexport const v12 = 12;\nexport const v13 = 13;\nexport const v14 = 14;\nexport const v15 = 15;\n"
+          },
+          "tool": "Write",
+          "file": "src/big.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["exceeds 12-line limit", "oxc enforces this max-lines limit"]
+    },
+    {
+      "name": "size: unparsed .eslintrc.cjs falls to the default with a hint",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": "",
+        ".eslintrc.cjs": "module.exports = { rules: {} };\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/huge.ts": "export const v1 = 1;\nexport const v2 = 2;\nexport const v3 = 3;\nexport const v4 = 4;\nexport const v5 = 5;\nexport const v6 = 6;\nexport const v7 = 7;\nexport const v8 = 8;\nexport const v9 = 9;\nexport const v10 = 10;\nexport const v11 = 11;\nexport const v12 = 12;\nexport const v13 = 13;\nexport const v14 = 14;\nexport const v15 = 15;\nexport const v16 = 16;\nexport const v17 = 17;\nexport const v18 = 18;\nexport const v19 = 19;\nexport const v20 = 20;\nexport const v21 = 21;\nexport const v22 = 22;\nexport const v23 = 23;\nexport const v24 = 24;\nexport const v25 = 25;\nexport const v26 = 26;\nexport const v27 = 27;\nexport const v28 = 28;\nexport const v29 = 29;\nexport const v30 = 30;\nexport const v31 = 31;\nexport const v32 = 32;\nexport const v33 = 33;\nexport const v34 = 34;\nexport const v35 = 35;\nexport const v36 = 36;\nexport const v37 = 37;\nexport const v38 = 38;\nexport const v39 = 39;\nexport const v40 = 40;\nexport const v41 = 41;\nexport const v42 = 42;\nexport const v43 = 43;\nexport const v44 = 44;\nexport const v45 = 45;\nexport const v46 = 46;\nexport const v47 = 47;\nexport const v48 = 48;\nexport const v49 = 49;\nexport const v50 = 50;\nexport const v51 = 51;\nexport const v52 = 52;\nexport const v53 = 53;\nexport const v54 = 54;\nexport const v55 = 55;\nexport const v56 = 56;\nexport const v57 = 57;\nexport const v58 = 58;\nexport const v59 = 59;\nexport const v60 = 60;\nexport const v61 = 61;\nexport const v62 = 62;\nexport const v63 = 63;\nexport const v64 = 64;\nexport const v65 = 65;\nexport const v66 = 66;\nexport const v67 = 67;\nexport const v68 = 68;\nexport const v69 = 69;\nexport const v70 = 70;\nexport const v71 = 71;\nexport const v72 = 72;\nexport const v73 = 73;\nexport const v74 = 74;\nexport const v75 = 75;\nexport const v76 = 76;\nexport const v77 = 77;\nexport const v78 = 78;\nexport const v79 = 79;\nexport const v80 = 80;\nexport const v81 = 81;\nexport const v82 = 82;\nexport const v83 = 83;\nexport const v84 = 84;\nexport const v85 = 85;\nexport const v86 = 86;\nexport const v87 = 87;\nexport const v88 = 88;\nexport const v89 = 89;\nexport const v90 = 90;\nexport const v91 = 91;\nexport const v92 = 92;\nexport const v93 = 93;\nexport const v94 = 94;\nexport const v95 = 95;\nexport const v96 = 96;\nexport const v97 = 97;\nexport const v98 = 98;\nexport const v99 = 99;\nexport const v100 = 100;\nexport const v101 = 101;\nexport const v102 = 102;\nexport const v103 = 103;\nexport const v104 = 104;\nexport const v105 = 105;\nexport const v106 = 106;\nexport const v107 = 107;\nexport const v108 = 108;\nexport const v109 = 109;\nexport const v110 = 110;\nexport const v111 = 111;\nexport const v112 = 112;\nexport const v113 = 113;\nexport const v114 = 114;\nexport const v115 = 115;\nexport const v116 = 116;\nexport const v117 = 117;\nexport const v118 = 118;\nexport const v119 = 119;\nexport const v120 = 120;\nexport const v121 = 121;\nexport const v122 = 122;\nexport const v123 = 123;\nexport const v124 = 124;\nexport const v125 = 125;\nexport const v126 = 126;\nexport const v127 = 127;\nexport const v128 = 128;\nexport const v129 = 129;\nexport const v130 = 130;\nexport const v131 = 131;\nexport const v132 = 132;\nexport const v133 = 133;\nexport const v134 = 134;\nexport const v135 = 135;\nexport const v136 = 136;\nexport const v137 = 137;\nexport const v138 = 138;\nexport const v139 = 139;\nexport const v140 = 140;\nexport const v141 = 141;\nexport const v142 = 142;\nexport const v143 = 143;\nexport const v144 = 144;\nexport const v145 = 145;\nexport const v146 = 146;\nexport const v147 = 147;\nexport const v148 = 148;\nexport const v149 = 149;\nexport const v150 = 150;\nexport const v151 = 151;\nexport const v152 = 152;\nexport const v153 = 153;\nexport const v154 = 154;\nexport const v155 = 155;\nexport const v156 = 156;\nexport const v157 = 157;\nexport const v158 = 158;\nexport const v159 = 159;\nexport const v160 = 160;\nexport const v161 = 161;\nexport const v162 = 162;\nexport const v163 = 163;\nexport const v164 = 164;\nexport const v165 = 165;\nexport const v166 = 166;\nexport const v167 = 167;\nexport const v168 = 168;\nexport const v169 = 169;\nexport const v170 = 170;\nexport const v171 = 171;\nexport const v172 = 172;\nexport const v173 = 173;\nexport const v174 = 174;\nexport const v175 = 175;\nexport const v176 = 176;\nexport const v177 = 177;\nexport const v178 = 178;\nexport const v179 = 179;\nexport const v180 = 180;\nexport const v181 = 181;\nexport const v182 = 182;\nexport const v183 = 183;\nexport const v184 = 184;\nexport const v185 = 185;\nexport const v186 = 186;\nexport const v187 = 187;\nexport const v188 = 188;\nexport const v189 = 189;\nexport const v190 = 190;\nexport const v191 = 191;\nexport const v192 = 192;\nexport const v193 = 193;\nexport const v194 = 194;\nexport const v195 = 195;\nexport const v196 = 196;\nexport const v197 = 197;\nexport const v198 = 198;\nexport const v199 = 199;\nexport const v200 = 200;\nexport const v201 = 201;\nexport const v202 = 202;\nexport const v203 = 203;\nexport const v204 = 204;\nexport const v205 = 205;\nexport const v206 = 206;\nexport const v207 = 207;\nexport const v208 = 208;\nexport const v209 = 209;\nexport const v210 = 210;\nexport const v211 = 211;\nexport const v212 = 212;\nexport const v213 = 213;\nexport const v214 = 214;\nexport const v215 = 215;\nexport const v216 = 216;\nexport const v217 = 217;\nexport const v218 = 218;\nexport const v219 = 219;\nexport const v220 = 220;\nexport const v221 = 221;\nexport const v222 = 222;\nexport const v223 = 223;\nexport const v224 = 224;\nexport const v225 = 225;\nexport const v226 = 226;\nexport const v227 = 227;\nexport const v228 = 228;\nexport const v229 = 229;\nexport const v230 = 230;\nexport const v231 = 231;\nexport const v232 = 232;\nexport const v233 = 233;\nexport const v234 = 234;\nexport const v235 = 235;\nexport const v236 = 236;\nexport const v237 = 237;\nexport const v238 = 238;\nexport const v239 = 239;\nexport const v240 = 240;\nexport const v241 = 241;\nexport const v242 = 242;\nexport const v243 = 243;\nexport const v244 = 244;\nexport const v245 = 245;\nexport const v246 = 246;\nexport const v247 = 247;\nexport const v248 = 248;\nexport const v249 = 249;\nexport const v250 = 250;\nexport const v251 = 251;\nexport const v252 = 252;\nexport const v253 = 253;\nexport const v254 = 254;\nexport const v255 = 255;\nexport const v256 = 256;\nexport const v257 = 257;\nexport const v258 = 258;\nexport const v259 = 259;\nexport const v260 = 260;\nexport const v261 = 261;\nexport const v262 = 262;\nexport const v263 = 263;\nexport const v264 = 264;\nexport const v265 = 265;\nexport const v266 = 266;\nexport const v267 = 267;\nexport const v268 = 268;\nexport const v269 = 269;\nexport const v270 = 270;\nexport const v271 = 271;\nexport const v272 = 272;\nexport const v273 = 273;\nexport const v274 = 274;\nexport const v275 = 275;\nexport const v276 = 276;\nexport const v277 = 277;\nexport const v278 = 278;\nexport const v279 = 279;\nexport const v280 = 280;\nexport const v281 = 281;\nexport const v282 = 282;\nexport const v283 = 283;\nexport const v284 = 284;\nexport const v285 = 285;\nexport const v286 = 286;\nexport const v287 = 287;\nexport const v288 = 288;\nexport const v289 = 289;\nexport const v290 = 290;\nexport const v291 = 291;\nexport const v292 = 292;\nexport const v293 = 293;\nexport const v294 = 294;\nexport const v295 = 295;\nexport const v296 = 296;\nexport const v297 = 297;\nexport const v298 = 298;\nexport const v299 = 299;\nexport const v300 = 300;\nexport const v301 = 301;\n"
+          },
+          "tool": "Write",
+          "file": "src/huge.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["didn't come from its config"]
+    },
+    {
+      "name": "size: eslint.config.js is not machine-readable either",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": "",
+        "eslint.config.js": "export default [];\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/huge.ts": "export const v1 = 1;\nexport const v2 = 2;\nexport const v3 = 3;\nexport const v4 = 4;\nexport const v5 = 5;\nexport const v6 = 6;\nexport const v7 = 7;\nexport const v8 = 8;\nexport const v9 = 9;\nexport const v10 = 10;\nexport const v11 = 11;\nexport const v12 = 12;\nexport const v13 = 13;\nexport const v14 = 14;\nexport const v15 = 15;\nexport const v16 = 16;\nexport const v17 = 17;\nexport const v18 = 18;\nexport const v19 = 19;\nexport const v20 = 20;\nexport const v21 = 21;\nexport const v22 = 22;\nexport const v23 = 23;\nexport const v24 = 24;\nexport const v25 = 25;\nexport const v26 = 26;\nexport const v27 = 27;\nexport const v28 = 28;\nexport const v29 = 29;\nexport const v30 = 30;\nexport const v31 = 31;\nexport const v32 = 32;\nexport const v33 = 33;\nexport const v34 = 34;\nexport const v35 = 35;\nexport const v36 = 36;\nexport const v37 = 37;\nexport const v38 = 38;\nexport const v39 = 39;\nexport const v40 = 40;\nexport const v41 = 41;\nexport const v42 = 42;\nexport const v43 = 43;\nexport const v44 = 44;\nexport const v45 = 45;\nexport const v46 = 46;\nexport const v47 = 47;\nexport const v48 = 48;\nexport const v49 = 49;\nexport const v50 = 50;\nexport const v51 = 51;\nexport const v52 = 52;\nexport const v53 = 53;\nexport const v54 = 54;\nexport const v55 = 55;\nexport const v56 = 56;\nexport const v57 = 57;\nexport const v58 = 58;\nexport const v59 = 59;\nexport const v60 = 60;\nexport const v61 = 61;\nexport const v62 = 62;\nexport const v63 = 63;\nexport const v64 = 64;\nexport const v65 = 65;\nexport const v66 = 66;\nexport const v67 = 67;\nexport const v68 = 68;\nexport const v69 = 69;\nexport const v70 = 70;\nexport const v71 = 71;\nexport const v72 = 72;\nexport const v73 = 73;\nexport const v74 = 74;\nexport const v75 = 75;\nexport const v76 = 76;\nexport const v77 = 77;\nexport const v78 = 78;\nexport const v79 = 79;\nexport const v80 = 80;\nexport const v81 = 81;\nexport const v82 = 82;\nexport const v83 = 83;\nexport const v84 = 84;\nexport const v85 = 85;\nexport const v86 = 86;\nexport const v87 = 87;\nexport const v88 = 88;\nexport const v89 = 89;\nexport const v90 = 90;\nexport const v91 = 91;\nexport const v92 = 92;\nexport const v93 = 93;\nexport const v94 = 94;\nexport const v95 = 95;\nexport const v96 = 96;\nexport const v97 = 97;\nexport const v98 = 98;\nexport const v99 = 99;\nexport const v100 = 100;\nexport const v101 = 101;\nexport const v102 = 102;\nexport const v103 = 103;\nexport const v104 = 104;\nexport const v105 = 105;\nexport const v106 = 106;\nexport const v107 = 107;\nexport const v108 = 108;\nexport const v109 = 109;\nexport const v110 = 110;\nexport const v111 = 111;\nexport const v112 = 112;\nexport const v113 = 113;\nexport const v114 = 114;\nexport const v115 = 115;\nexport const v116 = 116;\nexport const v117 = 117;\nexport const v118 = 118;\nexport const v119 = 119;\nexport const v120 = 120;\nexport const v121 = 121;\nexport const v122 = 122;\nexport const v123 = 123;\nexport const v124 = 124;\nexport const v125 = 125;\nexport const v126 = 126;\nexport const v127 = 127;\nexport const v128 = 128;\nexport const v129 = 129;\nexport const v130 = 130;\nexport const v131 = 131;\nexport const v132 = 132;\nexport const v133 = 133;\nexport const v134 = 134;\nexport const v135 = 135;\nexport const v136 = 136;\nexport const v137 = 137;\nexport const v138 = 138;\nexport const v139 = 139;\nexport const v140 = 140;\nexport const v141 = 141;\nexport const v142 = 142;\nexport const v143 = 143;\nexport const v144 = 144;\nexport const v145 = 145;\nexport const v146 = 146;\nexport const v147 = 147;\nexport const v148 = 148;\nexport const v149 = 149;\nexport const v150 = 150;\nexport const v151 = 151;\nexport const v152 = 152;\nexport const v153 = 153;\nexport const v154 = 154;\nexport const v155 = 155;\nexport const v156 = 156;\nexport const v157 = 157;\nexport const v158 = 158;\nexport const v159 = 159;\nexport const v160 = 160;\nexport const v161 = 161;\nexport const v162 = 162;\nexport const v163 = 163;\nexport const v164 = 164;\nexport const v165 = 165;\nexport const v166 = 166;\nexport const v167 = 167;\nexport const v168 = 168;\nexport const v169 = 169;\nexport const v170 = 170;\nexport const v171 = 171;\nexport const v172 = 172;\nexport const v173 = 173;\nexport const v174 = 174;\nexport const v175 = 175;\nexport const v176 = 176;\nexport const v177 = 177;\nexport const v178 = 178;\nexport const v179 = 179;\nexport const v180 = 180;\nexport const v181 = 181;\nexport const v182 = 182;\nexport const v183 = 183;\nexport const v184 = 184;\nexport const v185 = 185;\nexport const v186 = 186;\nexport const v187 = 187;\nexport const v188 = 188;\nexport const v189 = 189;\nexport const v190 = 190;\nexport const v191 = 191;\nexport const v192 = 192;\nexport const v193 = 193;\nexport const v194 = 194;\nexport const v195 = 195;\nexport const v196 = 196;\nexport const v197 = 197;\nexport const v198 = 198;\nexport const v199 = 199;\nexport const v200 = 200;\nexport const v201 = 201;\nexport const v202 = 202;\nexport const v203 = 203;\nexport const v204 = 204;\nexport const v205 = 205;\nexport const v206 = 206;\nexport const v207 = 207;\nexport const v208 = 208;\nexport const v209 = 209;\nexport const v210 = 210;\nexport const v211 = 211;\nexport const v212 = 212;\nexport const v213 = 213;\nexport const v214 = 214;\nexport const v215 = 215;\nexport const v216 = 216;\nexport const v217 = 217;\nexport const v218 = 218;\nexport const v219 = 219;\nexport const v220 = 220;\nexport const v221 = 221;\nexport const v222 = 222;\nexport const v223 = 223;\nexport const v224 = 224;\nexport const v225 = 225;\nexport const v226 = 226;\nexport const v227 = 227;\nexport const v228 = 228;\nexport const v229 = 229;\nexport const v230 = 230;\nexport const v231 = 231;\nexport const v232 = 232;\nexport const v233 = 233;\nexport const v234 = 234;\nexport const v235 = 235;\nexport const v236 = 236;\nexport const v237 = 237;\nexport const v238 = 238;\nexport const v239 = 239;\nexport const v240 = 240;\nexport const v241 = 241;\nexport const v242 = 242;\nexport const v243 = 243;\nexport const v244 = 244;\nexport const v245 = 245;\nexport const v246 = 246;\nexport const v247 = 247;\nexport const v248 = 248;\nexport const v249 = 249;\nexport const v250 = 250;\nexport const v251 = 251;\nexport const v252 = 252;\nexport const v253 = 253;\nexport const v254 = 254;\nexport const v255 = 255;\nexport const v256 = 256;\nexport const v257 = 257;\nexport const v258 = 258;\nexport const v259 = 259;\nexport const v260 = 260;\nexport const v261 = 261;\nexport const v262 = 262;\nexport const v263 = 263;\nexport const v264 = 264;\nexport const v265 = 265;\nexport const v266 = 266;\nexport const v267 = 267;\nexport const v268 = 268;\nexport const v269 = 269;\nexport const v270 = 270;\nexport const v271 = 271;\nexport const v272 = 272;\nexport const v273 = 273;\nexport const v274 = 274;\nexport const v275 = 275;\nexport const v276 = 276;\nexport const v277 = 277;\nexport const v278 = 278;\nexport const v279 = 279;\nexport const v280 = 280;\nexport const v281 = 281;\nexport const v282 = 282;\nexport const v283 = 283;\nexport const v284 = 284;\nexport const v285 = 285;\nexport const v286 = 286;\nexport const v287 = 287;\nexport const v288 = 288;\nexport const v289 = 289;\nexport const v290 = 290;\nexport const v291 = 291;\nexport const v292 = 292;\nexport const v293 = 293;\nexport const v294 = 294;\nexport const v295 = 295;\nexport const v296 = 296;\nexport const v297 = 297;\nexport const v298 = 298;\nexport const v299 = 299;\nexport const v300 = 300;\nexport const v301 = 301;\n"
+          },
+          "tool": "Write",
+          "file": "src/huge.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["exceeds 300-line limit", "didn't come from its config"]
+    },
+    {
+      "name": "size: biome has no max-lines equivalent",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": "",
+        "biome.json": "{}\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/huge.ts": "export const v1 = 1;\nexport const v2 = 2;\nexport const v3 = 3;\nexport const v4 = 4;\nexport const v5 = 5;\nexport const v6 = 6;\nexport const v7 = 7;\nexport const v8 = 8;\nexport const v9 = 9;\nexport const v10 = 10;\nexport const v11 = 11;\nexport const v12 = 12;\nexport const v13 = 13;\nexport const v14 = 14;\nexport const v15 = 15;\nexport const v16 = 16;\nexport const v17 = 17;\nexport const v18 = 18;\nexport const v19 = 19;\nexport const v20 = 20;\nexport const v21 = 21;\nexport const v22 = 22;\nexport const v23 = 23;\nexport const v24 = 24;\nexport const v25 = 25;\nexport const v26 = 26;\nexport const v27 = 27;\nexport const v28 = 28;\nexport const v29 = 29;\nexport const v30 = 30;\nexport const v31 = 31;\nexport const v32 = 32;\nexport const v33 = 33;\nexport const v34 = 34;\nexport const v35 = 35;\nexport const v36 = 36;\nexport const v37 = 37;\nexport const v38 = 38;\nexport const v39 = 39;\nexport const v40 = 40;\nexport const v41 = 41;\nexport const v42 = 42;\nexport const v43 = 43;\nexport const v44 = 44;\nexport const v45 = 45;\nexport const v46 = 46;\nexport const v47 = 47;\nexport const v48 = 48;\nexport const v49 = 49;\nexport const v50 = 50;\nexport const v51 = 51;\nexport const v52 = 52;\nexport const v53 = 53;\nexport const v54 = 54;\nexport const v55 = 55;\nexport const v56 = 56;\nexport const v57 = 57;\nexport const v58 = 58;\nexport const v59 = 59;\nexport const v60 = 60;\nexport const v61 = 61;\nexport const v62 = 62;\nexport const v63 = 63;\nexport const v64 = 64;\nexport const v65 = 65;\nexport const v66 = 66;\nexport const v67 = 67;\nexport const v68 = 68;\nexport const v69 = 69;\nexport const v70 = 70;\nexport const v71 = 71;\nexport const v72 = 72;\nexport const v73 = 73;\nexport const v74 = 74;\nexport const v75 = 75;\nexport const v76 = 76;\nexport const v77 = 77;\nexport const v78 = 78;\nexport const v79 = 79;\nexport const v80 = 80;\nexport const v81 = 81;\nexport const v82 = 82;\nexport const v83 = 83;\nexport const v84 = 84;\nexport const v85 = 85;\nexport const v86 = 86;\nexport const v87 = 87;\nexport const v88 = 88;\nexport const v89 = 89;\nexport const v90 = 90;\nexport const v91 = 91;\nexport const v92 = 92;\nexport const v93 = 93;\nexport const v94 = 94;\nexport const v95 = 95;\nexport const v96 = 96;\nexport const v97 = 97;\nexport const v98 = 98;\nexport const v99 = 99;\nexport const v100 = 100;\nexport const v101 = 101;\nexport const v102 = 102;\nexport const v103 = 103;\nexport const v104 = 104;\nexport const v105 = 105;\nexport const v106 = 106;\nexport const v107 = 107;\nexport const v108 = 108;\nexport const v109 = 109;\nexport const v110 = 110;\nexport const v111 = 111;\nexport const v112 = 112;\nexport const v113 = 113;\nexport const v114 = 114;\nexport const v115 = 115;\nexport const v116 = 116;\nexport const v117 = 117;\nexport const v118 = 118;\nexport const v119 = 119;\nexport const v120 = 120;\nexport const v121 = 121;\nexport const v122 = 122;\nexport const v123 = 123;\nexport const v124 = 124;\nexport const v125 = 125;\nexport const v126 = 126;\nexport const v127 = 127;\nexport const v128 = 128;\nexport const v129 = 129;\nexport const v130 = 130;\nexport const v131 = 131;\nexport const v132 = 132;\nexport const v133 = 133;\nexport const v134 = 134;\nexport const v135 = 135;\nexport const v136 = 136;\nexport const v137 = 137;\nexport const v138 = 138;\nexport const v139 = 139;\nexport const v140 = 140;\nexport const v141 = 141;\nexport const v142 = 142;\nexport const v143 = 143;\nexport const v144 = 144;\nexport const v145 = 145;\nexport const v146 = 146;\nexport const v147 = 147;\nexport const v148 = 148;\nexport const v149 = 149;\nexport const v150 = 150;\nexport const v151 = 151;\nexport const v152 = 152;\nexport const v153 = 153;\nexport const v154 = 154;\nexport const v155 = 155;\nexport const v156 = 156;\nexport const v157 = 157;\nexport const v158 = 158;\nexport const v159 = 159;\nexport const v160 = 160;\nexport const v161 = 161;\nexport const v162 = 162;\nexport const v163 = 163;\nexport const v164 = 164;\nexport const v165 = 165;\nexport const v166 = 166;\nexport const v167 = 167;\nexport const v168 = 168;\nexport const v169 = 169;\nexport const v170 = 170;\nexport const v171 = 171;\nexport const v172 = 172;\nexport const v173 = 173;\nexport const v174 = 174;\nexport const v175 = 175;\nexport const v176 = 176;\nexport const v177 = 177;\nexport const v178 = 178;\nexport const v179 = 179;\nexport const v180 = 180;\nexport const v181 = 181;\nexport const v182 = 182;\nexport const v183 = 183;\nexport const v184 = 184;\nexport const v185 = 185;\nexport const v186 = 186;\nexport const v187 = 187;\nexport const v188 = 188;\nexport const v189 = 189;\nexport const v190 = 190;\nexport const v191 = 191;\nexport const v192 = 192;\nexport const v193 = 193;\nexport const v194 = 194;\nexport const v195 = 195;\nexport const v196 = 196;\nexport const v197 = 197;\nexport const v198 = 198;\nexport const v199 = 199;\nexport const v200 = 200;\nexport const v201 = 201;\nexport const v202 = 202;\nexport const v203 = 203;\nexport const v204 = 204;\nexport const v205 = 205;\nexport const v206 = 206;\nexport const v207 = 207;\nexport const v208 = 208;\nexport const v209 = 209;\nexport const v210 = 210;\nexport const v211 = 211;\nexport const v212 = 212;\nexport const v213 = 213;\nexport const v214 = 214;\nexport const v215 = 215;\nexport const v216 = 216;\nexport const v217 = 217;\nexport const v218 = 218;\nexport const v219 = 219;\nexport const v220 = 220;\nexport const v221 = 221;\nexport const v222 = 222;\nexport const v223 = 223;\nexport const v224 = 224;\nexport const v225 = 225;\nexport const v226 = 226;\nexport const v227 = 227;\nexport const v228 = 228;\nexport const v229 = 229;\nexport const v230 = 230;\nexport const v231 = 231;\nexport const v232 = 232;\nexport const v233 = 233;\nexport const v234 = 234;\nexport const v235 = 235;\nexport const v236 = 236;\nexport const v237 = 237;\nexport const v238 = 238;\nexport const v239 = 239;\nexport const v240 = 240;\nexport const v241 = 241;\nexport const v242 = 242;\nexport const v243 = 243;\nexport const v244 = 244;\nexport const v245 = 245;\nexport const v246 = 246;\nexport const v247 = 247;\nexport const v248 = 248;\nexport const v249 = 249;\nexport const v250 = 250;\nexport const v251 = 251;\nexport const v252 = 252;\nexport const v253 = 253;\nexport const v254 = 254;\nexport const v255 = 255;\nexport const v256 = 256;\nexport const v257 = 257;\nexport const v258 = 258;\nexport const v259 = 259;\nexport const v260 = 260;\nexport const v261 = 261;\nexport const v262 = 262;\nexport const v263 = 263;\nexport const v264 = 264;\nexport const v265 = 265;\nexport const v266 = 266;\nexport const v267 = 267;\nexport const v268 = 268;\nexport const v269 = 269;\nexport const v270 = 270;\nexport const v271 = 271;\nexport const v272 = 272;\nexport const v273 = 273;\nexport const v274 = 274;\nexport const v275 = 275;\nexport const v276 = 276;\nexport const v277 = 277;\nexport const v278 = 278;\nexport const v279 = 279;\nexport const v280 = 280;\nexport const v281 = 281;\nexport const v282 = 282;\nexport const v283 = 283;\nexport const v284 = 284;\nexport const v285 = 285;\nexport const v286 = 286;\nexport const v287 = 287;\nexport const v288 = 288;\nexport const v289 = 289;\nexport const v290 = 290;\nexport const v291 = 291;\nexport const v292 = 292;\nexport const v293 = 293;\nexport const v294 = 294;\nexport const v295 = 295;\nexport const v296 = 296;\nexport const v297 = 297;\nexport const v298 = 298;\nexport const v299 = 299;\nexport const v300 = 300;\nexport const v301 = 301;\n"
+          },
+          "tool": "Write",
+          "file": "src/huge.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["biome has no max-lines equivalent"]
+    },
+    {
+      "name": "size: a toolu.config override beats the linter's limit",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": "",
+        ".eslintrc.json": "{\"rules\":{\"max-lines\":50}}\n"
+      },
+      "config": {
+        "lang": {
+          "ts": {
+            "maxFileLines": 10
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/big.ts": "export const v1 = 1;\nexport const v2 = 2;\nexport const v3 = 3;\nexport const v4 = 4;\nexport const v5 = 5;\nexport const v6 = 6;\nexport const v7 = 7;\nexport const v8 = 8;\nexport const v9 = 9;\nexport const v10 = 10;\nexport const v11 = 11;\nexport const v12 = 12;\nexport const v13 = 13;\nexport const v14 = 14;\nexport const v15 = 15;\n"
+          },
+          "tool": "Write",
+          "file": "src/big.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["exceeds 10-line limit"],
+      "absent": ["enforces this max-lines limit"]
+    },
+    {
+      "name": "size: an unterminated block comment marks the count approximate",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "config": {
+        "lang": {
+          "ts": {
+            "maxFileLines": 5
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/open.ts": "export const v1 = 1;\nexport const v2 = 2;\nexport const v3 = 3;\nexport const v4 = 4;\nexport const v5 = 5;\nexport const v6 = 6;\nexport const v7 = 7;\nexport const v8 = 8;\n/* never closed\n"
+          },
+          "tool": "Write",
+          "file": "src/open.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["size approximated"]
+    },
+    {
+      "name": "size: long exported arrow const",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "config": {
+        "lang": {
+          "ts": {
+            "maxFnLines": 3
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "export const fn = () => {\n  const a = 1;\n  const b = 2;\n  const c = 3;\n  return a + b + c;\n};\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long"]
+    },
+    {
+      "name": "size: one-line arrows before a function are not misattributed",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "config": {
+        "lang": {
+          "ts": {
+            "maxFnLines": 5
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "export const noop = () => undefined;\nexport const square = (x: number) => x * x;\nexport const upper = (s: string) => s.trim();\nexport function foo(): number {\n  const a = 1;\n  const b = 2;\n  return a + b;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Function too long"]
+    },
+    {
+      "name": "size: long function after one-line arrows",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "config": {
+        "lang": {
+          "ts": {
+            "maxFnLines": 3
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "export const noop = () => undefined;\nexport function foo(): number {\n  const a = 1;\n  const b = 2;\n  const c = 3;\n  const d = 4;\n  return a + b + c + d;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long"]
+    },
+    {
+      "name": "size: long class method",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "config": {
+        "lang": {
+          "ts": {
+            "maxFnLines": 3
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/svc.ts": "export class Service {\n  process(x: number): number {\n    const a = x + 1;\n    const b = a + 1;\n    const c = b + 1;\n    const d = c + 1;\n    return d;\n  }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/svc.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long"]
+    },
+    {
+      "name": "size: short method before other members",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "config": {
+        "lang": {
+          "ts": {
+            "maxFnLines": 3
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/svc.ts": "export class Service {\n  ping(): number {\n    return 1;\n  }\n  a = 1;\n  b = 2;\n  c = 3;\n  d = 4;\n  e = 5;\n  f = 6;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/svc.ts"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Function too long"]
+    },
+    {
+      "name": "size: arrow with a multi-line param list",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "config": {
+        "lang": {
+          "ts": {
+            "maxFnLines": 3
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "export const compute = (\n  a: number,\n  b: number,\n  c: number,\n) => {\n  const sum = a + b + c;\n  return sum * 2;\n};\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long"]
+    },
+    {
+      "name": "size: column-0 } in a template literal",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "config": {
+        "lang": {
+          "ts": {
+            "maxFnLines": 5
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/tmpl.ts": "export function render(): string {\n  const css = `\n.foo {\n  color: red;\n}\n`;\n  const a = 1;\n  const b = 2;\n  const c = 3;\n  return css + a + b + c;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/tmpl.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long"]
+    },
+    {
+      "name": "size: long const function expression",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "config": {
+        "lang": {
+          "ts": {
+            "maxFnLines": 3
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "export const fn = function() {\n  const a = 1;\n  const b = 2;\n  const c = 3;\n  return a + b + c;\n};\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long"]
+    },
+    {
+      "name": "size: method with a defaulted generic",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "config": {
+        "lang": {
+          "ts": {
+            "maxFnLines": 3
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/svc.ts": "export class Service {\n  process<T = number>(x: T): T {\n    const a = x;\n    const b = a;\n    const c = b;\n    const d = c;\n    return d;\n  }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/svc.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long"]
+    },
+    {
+      "name": "size: strings and control flow do not start or end a function",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "config": {
+        "lang": {
+          "ts": {
+            "maxFnLines": 3
+          }
+        }
+      },
+      "steps": [
+        {
+          "write": {
+            "src/flow.ts": "export function run(x: number): string {\n  if (x > 1) {\n    return \"}\";\n  }\n  for (const y of [1]) {\n    void y;\n  }\n  return '{' + `}`;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/flow.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Function too long"]
+    },
+    {
+      "name": "as: export { foo as Bar } is a re-export",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/reexport.ts": "import { foo } from \"@/foo\";\nexport { foo as Bar };\n"
+          },
+          "tool": "Write",
+          "file": "src/reexport.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Forbidden 'as' type assertion"]
+    },
+    {
+      "name": "as: export const x = foo as Bar",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "export const x = foo as Bar;\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden 'as' type assertion"]
+    },
+    {
+      "name": "as: as null / as void",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "const a = something as null;\nconst b = other as void;\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden 'as' type assertion"]
+    },
+    {
+      "name": "as: const, commented and import lines are exempt; the rest capped at five",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "import { a as b } from \"x\";\n// y as Foo\nconst k = [1] as const;\nconst a1 = v as A;\nconst a2 = v as B;\nconst a3 = (v) as C;\nconst a4 = v as any;\nconst a5 = v as unknown;\nconst a6 = v as string;\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden 'as' type assertion"]
+    },
+    {
+      "name": "type-dup: an exported type already in another package",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "packages/a/src/widget.ts": "export interface Widget { id: string }\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "packages/b/src/widget2.ts": "export interface Widget { id: string }\n"
+          },
+          "tool": "Write",
+          "file": "packages/b/src/widget2.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["already defined in packages/a/src/widget.ts"]
+    },
+    {
+      "name": "suppression: eslint-disable",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "// eslint-disable-next-line\nexport const a = thing();\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden suppression comment"]
+    },
+    {
+      "name": "suppression: @ts-expect-error outside tests",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "// @ts-expect-error legacy boundary\nexport const b = thing();\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden suppression comment"]
+    },
+    {
+      "name": "suppression: @ts-expect-error allowed in a test file",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "commit": {
+        "src/code.ts": "export const code = 1;\n"
+      },
+      "steps": [
+        {
+          "write": {
+            "src/__tests__/code.test.ts": "// @ts-expect-error asserting a type error is the point of this test\nconst z: string = 123;\n"
+          },
+          "tool": "Write",
+          "file": "src/__tests__/code.test.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Forbidden suppression comment"]
+    },
+    {
+      "name": "suppression: @ts-ignore in a /** */ block",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "/** @ts-ignore */\nexport const a = thing();\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden suppression comment"]
+    },
+    {
+      "name": "suppression: biome-ignore and @ts-nocheck, capped at three",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "// @ts-nocheck\n/* biome-ignore lint: x */\n// @ts-ignore\n// eslint-disable\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden suppression comment"]
+    },
+    {
+      "name": "radix: raw import",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "import { Dialog } from \"@radix-ui/react-dialog\";\nexport const x = 1;\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Raw radix import"]
+    },
+    {
+      "name": "radix: only in a comment",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "// import { Dialog } from \"@radix-ui/react-dialog\";\nexport const x = 1;\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Raw radix import"]
+    },
+    {
+      "name": "radix: allowed under packages/ui",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "packages/ui/src/dialog.ts": "import * as D from '@radix-ui/react-alert-dialog';\nexport const x = D;\n"
+          },
+          "tool": "Write",
+          "file": "packages/ui/src/dialog.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Raw radix import"]
+    },
+    {
+      "name": "docs: verbose JSDoc with /** in prose",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/api.ts": "/**\n * Does the thing.\n * line 3\n * line 4\n * line 5 use a /** block for docs, they said\n * line 6\n * line 7\n * line 8\n * line 9\n * line 10\n * line 11\n * line 12\n * line 13\n */\nexport function doThing() {\n  return 1;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/api.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["JSDoc block is"]
+    },
+    {
+      "name": "docs: exported function without JSDoc",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/api.ts": "export function doThing() {\n  return 1;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/api.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["missing a JSDoc"],
+      "absent": ["QUALITY VIOLATION"]
+    },
+    {
+      "name": "docs: pragma between JSDoc and export",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/api.ts": "/** Does the thing. */\n// eslint-disable-next-line @typescript-eslint/no-explicit-any\nexport function doThing() {\n  return 1;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/api.ts"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["missing a JSDoc"]
+    },
+    {
+      "name": "docs: documented export",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/api.ts": "/** Does the thing. */\nexport function doThing() {\n  return 1;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/api.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["missing a JSDoc"]
+    },
+    {
+      "name": "docs: camelCase exported arrow",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "export const myApi = () => {\n  return 1;\n};\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["missing a JSDoc"]
+    },
+    {
+      "name": "docs: index.ts and .d.ts are exempt",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/index.ts": "export function doThing() {\n  return 1;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/index.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["missing a JSDoc"]
+    },
+    {
+      "name": "docs: class, enum, default and interface exports",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/kinds.ts": "export class A {}\nexport enum B { X }\nexport default 1;\nexport interface C { x: number }\nexport type D = number;\n"
+          },
+          "tool": "Write",
+          "file": "src/kinds.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["missing a JSDoc"]
+    },
+    {
+      "name": "hooks: a hook file doing too many things",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/use-thing.ts": "/** Hook. */\nexport function useThing() {\n  const [a] = x;\n  const [b] = x;\n  useRef(1);\n  useEffect(() => a + b);\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/use-thing.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Hook does too many things"]
+    },
+    {
+      "name": "factory: more than two create functions",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/make.ts": "/** a */\nexport function createA() {}\n/** b */\nexport async function createB() {}\n/** c */\nexport function createC() {}\n"
+          },
+          "tool": "Write",
+          "file": "src/make.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Too many factory functions"]
+    },
+    {
+      "name": "typeguard: manual guard in a zod project",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\",\"dependencies\":{\"zod\":\"4\"}}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/guard.ts": "/** guard */\nexport function isFoo(x: unknown): x is Foo {\n  return x !== null;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/guard.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Manual type guard"]
+    },
+    {
+      "name": "typeguard: no zod, no rule",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/guard.ts": "/** guard */\nexport function isFoo(x: unknown): x is Foo {\n  return x !== null;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/guard.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["Manual type guard"]
+    },
+    {
+      "name": "naming: parts.tsx",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/components/parts.tsx": "/** p */\nexport function Parts() {\n  return null;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/components/parts.tsx"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden component filename"]
+    },
+    {
+      "name": "naming: card-sections.tsx",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/card-sections.tsx": "/** p */\nexport function CardSections() {\n  return null;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/card-sections.tsx"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden component filename"]
+    },
+    {
+      "name": "console: console.log, capped at three",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/log.ts": "console.log(\"a\");\n  console.log(\"b\");\n// console.log(\"c\");\nconsole.log(\"d\");\nconsole.log(\"e\");\n"
+          },
+          "tool": "Write",
+          "file": "src/log.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden console.log"]
+    },
+    {
+      "name": "confirm: confirm()/alert() in a component",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/components/del.tsx": "/** d */\nexport function Del() {\n  if (confirm(\"sure?\")) alert(\"gone\");\n  // confirm(\"no\")\n  customConfirm(\"fine\");\n  return <AlertDialog />;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/components/del.tsx"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden confirm()/alert()"]
+    },
+    {
+      "name": "confirm: only under components/ or routes/",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/lib/del.ts": "/** d */\nexport function del() {\n  return confirm(\"sure?\");\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/lib/del.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["confirm()/alert()"]
+    },
+    {
+      "name": "props: mutable props",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/card.tsx": "/** c */\nexport function Card(props: CardProps) {\n  return null;\n}\nfunction Row(rowProps: RowProps) {}\nfunction Ok(props: Readonly<OkProps>) {}\n"
+          },
+          "tool": "Write",
+          "file": "src/card.tsx"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Mutable props"]
+    },
+    {
+      "name": "imports: ../ import with a @/ alias",
+      "project": {
+        "tsconfig.json": "{\"compilerOptions\":{\"paths\":{\"@/*\":[\"./src/*\"]}}}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/deep/a.ts": "import { thing } from \"../other\";\nexport const x = thing;\n"
+          },
+          "tool": "Write",
+          "file": "src/deep/a.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Forbidden ../ import"]
+    },
+    {
+      "name": "errors: empty catch block",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "export function bad() {\n  try {\n    foo();\n  } catch (e) {}\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Empty catch block"]
+    },
+    {
+      "name": "errors: empty catch without a binding",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "export function bad() {\n  try { foo(); } catch { }\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Empty catch block"]
+    },
+    {
+      "name": "errors: silent .catch(() => {})",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "export function bad() {\n  foo().catch(() => {});\n  bar().catch(() => null);\n  baz().catch(() => undefined);\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Silent promise rejection"]
+    },
+    {
+      "name": "errors: clean error handling",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/good.ts": "export function good() {\n  try {\n    foo();\n  } catch (e) {\n    console.error(e);\n    throw e;\n  }\n  foo().catch((err) => console.error(err));\n  throw new Error(\"descriptive\");\n  throw new TypeError(\"typed\");\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/good.ts"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["QUALITY VIOLATION"]
+    },
+    {
+      "name": "errors: try/catch+toast in a component",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/components/save-button.tsx": "export function SaveButton() {\n  try {\n    save();\n  } catch (error) {\n    toast(\"save failed\");\n  }\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/components/save-button.tsx"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Manual try/catch+toast"]
+    },
+    {
+      "name": "errors: commented-out await",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "// await legacyCall() \u2014 kept for reference\nexport const flag = true;\n"
+          },
+          "tool": "Edit",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["uses await with no try/catch"]
+    },
+    {
+      "name": "errors: try only in a comment",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "// callers should try to handle this\nexport async function fetchIt(): Promise<number> {\n  const r = await doFetch();\n  return r;\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["uses await with no try/catch"]
+    },
+    {
+      "name": "errors: catch returns null",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "export function f() {\n  try {\n    risky();\n  } catch (e) {\n    return null;\n  }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["swallows the error"]
+    },
+    {
+      "name": "errors: catch returns undefined, both bindings",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "export function f() {\n  try { a(); } catch (e) { return undefined }\n  try { b(); } catch { return undefined }\n  try { c(); } catch { return null }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["swallows the error"]
+    },
+    {
+      "name": "errors: bare return in catch",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "export function f() {\n  try {\n    risky();\n  } catch {\n    return;\n  }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["swallows the error"]
+    },
+    {
+      "name": "errors: catch returning a non-nullish value",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/ok.ts": "/** Read a list, degrading to empty. */\nexport function readList(): string[] {\n  try {\n    return risky();\n  } catch {\n    return [];\n  }\n}\n/** Count things, degrading to zero. */\nexport function count(): number {\n  try {\n    return risky();\n  } catch (e) {\n    return 0;\n  }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/ok.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["swallows the error"]
+    },
+    {
+      "name": "errors: excerpts on real newlines",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "export function bad() {\n  try {\n    foo();\n  } catch (e) {}\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["Empty catch block in", "/src/bad.ts:4:"]
+    },
+    {
+      "name": "errors: await with no handler is an advisory",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "/** Fetch a thing. */\nexport async function f() {\n  const r = await fetchThing(\"x\");\n  return r;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["uses await with no try/catch"],
+      "absent": ["QUALITY VIOLATION"]
+    },
+    {
+      "name": "errors: await inside try/catch",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/a.ts": "/** Fetch a thing safely. */\nexport async function f() {\n  try {\n    return await fetchThing(\"x\");\n  } catch (e) {\n    throw new Error(\"fetch failed\", { cause: e });\n  }\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/a.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["uses await with no try/catch"]
+    },
+    {
+      "name": "errors: ast-grep crash is a violation",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/good.ts": "/** clean */\nexport function good() {\n  return 1;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/good.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["ast-grep failed", "boom", "exit 2"],
+      "env": {
+        "kind": "stubAstGrep",
+        "body": "echo boom >&2\nexit 2"
+      }
+    },
+    {
+      "name": "errors: ast-grep exit 0 with non-JSON output",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/good.ts": "/** clean */\nexport function good() {\n  return 1;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/good.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["did not parse as the documented JSON array"],
+      "env": {
+        "kind": "stubAstGrep",
+        "body": "echo 'not json'"
+      }
+    },
+    {
+      "name": "errors: ast-grep exit 0 with empty output passes",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/good.ts": "/** clean */\nexport function good() {\n  return 1;\n}\n"
+          },
+          "tool": "Write",
+          "file": "src/good.ts"
+        }
+      ],
+      "expect": "silent",
+      "absent": ["ast-grep failed"],
+      "env": {
+        "kind": "stubAstGrep",
+        "body": "exit 0"
+      }
+    },
+    {
+      "name": "errors: ast-grep absent skips the structural rules",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "export function bad() {\n  try {\n    foo();\n  } catch (e) {}\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["Empty catch block"],
+      "env": {
+        "kind": "pathWithout",
+        "without": ["ast-grep", "sg"]
+      }
+    },
+    {
+      "name": "throw: new Error() with no message",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "export function bad() {\n  throw new Error();\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["no message"]
+    },
+    {
+      "name": "throw: string literal",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "export function bad() {\n  throw \"bad\";\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["string literal"]
+    },
+    {
+      "name": "throw: template literal",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "export function bad() {\n  throw `bad`;\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["string literal"]
+    },
+    {
+      "name": "throw: numeric literal",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "export function bad() {\n  throw 42;\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["non-Error literal"]
+    },
+    {
+      "name": "throw: null",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "export function bad() {\n  throw null;\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["non-Error literal"]
+    },
+    {
+      "name": "throw: negative float, booleans and undefined, capped at three",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "function a() { throw -1.5; }\nfunction b() { throw true }\nfunction c() {throw false;}\nfunction d() { throw undefined; }\n"
+          },
+          "tool": "Edit",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["non-Error literal"]
+    },
+    {
+      "name": "throw: MultiEdit names the file",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/bad.ts": "export function bad() { throw 42; }\n"
+          },
+          "tool": "MultiEdit",
+          "file": "src/bad.ts"
+        }
+      ],
+      "expect": "advisory",
+      "contains": ["non-Error literal"]
+    },
+    {
+      "name": "throw: inside a // comment",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/good.ts": "export function good() {\n  const x = 1; // we used to throw 5 here\n  return x;\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/good.ts"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["non-Error literal"]
+    },
+    {
+      "name": "throw: inside a /* */ comment",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/good.ts": "export function good() {\n  /* avoid: throw 42 \u2014 use Error */\n  return 1;\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/good.ts"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["non-Error literal"]
+    },
+    {
+      "name": "throw: part of a longer identifier",
+      "project": {
+        "tsconfig.json": "{}\n",
+        "package.json": "{\"name\":\"x\"}\n",
+        "bun.lock": ""
+      },
+      "steps": [
+        {
+          "write": {
+            "src/good.ts": "export function good() {\n  rethrow 42;\n  $throw 1;\n}\n"
+          },
+          "tool": "Edit",
+          "file": "src/good.ts"
+        }
+      ],
+      "expect": "advisory",
+      "absent": ["non-Error literal"]
+    }
+  ]
+}

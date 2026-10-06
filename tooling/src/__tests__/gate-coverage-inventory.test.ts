@@ -8,7 +8,7 @@ import { z } from "zod";
 
 const ROOT = resolve(import.meta.dir, "../../..");
 const CLI = join(ROOT, "tooling/src/gate-coverage-inventory.ts");
-const INVENTORY = join(ROOT, "tooling/fixtures/gate-coverage/inventory.json");
+const INVENTORY = join(ROOT, "fixtures/gate-coverage/inventory.json");
 const MATRIX = join(ROOT, "docs/gate-coverage-matrix.md");
 /** A floor, not a count: future bundled hooks should extend this native inventory. */
 const MIN_ROWS = 32;

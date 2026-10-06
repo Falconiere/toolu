@@ -1,41 +1,52 @@
-/** Shapes of the ast-grep golden cases (#268): one hook call each, run through toolu's dispatcher. */
-import type { PretoolHost } from "@toolu/conformance/harness/pretool";
-import type { Sandbox } from "@toolu/conformance/harness/sandbox";
-import type { EnvPatch } from "@toolu/conformance/harness/spawn";
+/** Strict schemas for the shared ast-grep golden records (#268). */
+import { resolve } from "node:path";
+import { ActionSchema, readCaseFile } from "@toolu/conformance/harness/json-cases";
+import { z } from "zod";
 
-/** What search-nudge sees of ast-grep: installed, absent from PATH, or opted out in config. */
-export type AstGrepState = "available" | "missing" | "opt-out";
+const Hosts = z.array(z.enum(["claude", "codex"])).optional();
+const DeviationSchema = z.union([
+  z.strictObject({ silent: z.literal(true) }),
+  z.strictObject({ contains: z.string(), excludes: z.string().optional() }),
+  z.strictObject({ contains: z.string().optional(), excludes: z.string() }),
+]);
+const NudgeSchema = z.strictObject({
+  name: z.string().min(1),
+  hosts: Hosts,
+  state: z.enum(["available", "missing", "opt-out"]).optional(),
+  toolName: z.string(),
+  toolInput: z.record(z.string(), z.json()),
+  deviation: DeviationSchema.optional(),
+});
+const SavingsSchema = z.strictObject({
+  name: z.string().min(1),
+  hosts: Hosts,
+  payload: z.record(z.string(), z.json()),
+  env: z
+    .record(z.string(), z.union([z.string(), z.strictObject({ $path: z.string() })]))
+    .optional(),
+  setup: z.array(ActionSchema),
+  payloadSetup: z.array(ActionSchema),
+  deviation: DeviationSchema.optional(),
+});
+const ReportSchema = z.strictObject({
+  name: z.string().min(1),
+  ledger: z.string().optional(),
+  noArgument: z.boolean().optional(),
+  deviation: z.string().optional(),
+});
 
-export type NudgeCase = {
-  readonly name: string;
-  /** Default: Claude Code only. */
-  readonly hosts?: readonly PretoolHost[];
-  /** Default: `available`. */
-  readonly state?: AstGrepState;
-  readonly toolName: string;
-  readonly toolInput: Record<string, unknown>;
-};
+export type NudgeCase = z.infer<typeof NudgeSchema>;
+export type SavingsCase = z.infer<typeof SavingsSchema>;
+export type ReportCase = z.infer<typeof ReportSchema>;
+export type Deviation = z.infer<typeof DeviationSchema>;
 
-export type SavingsCase = {
-  readonly name: string;
-  readonly hosts?: readonly PretoolHost[];
-  /** The PostToolUse payload, minus `cwd` and `hook_event_name`. */
-  readonly payload: (sb: Sandbox) => Record<string, unknown>;
-  /** Extra hook environment, for registration and the call alike. */
-  readonly env?: (sb: Sandbox) => EnvPatch;
-  readonly setup?: (sb: Sandbox) => void;
-};
-
-export type ReportCase = {
-  readonly name: string;
-  /** Ledger body written to `ledger.jsonl`; absent means the argument names a missing file. */
-  readonly ledger?: string;
-  /** Pass no argument at all. */
-  readonly noArgument?: boolean;
-};
-
-/** What the TypeScript module does where bash was wrong (#283 item 10 and its parse-based consequences). */
-export type Deviation =
-  | { readonly silent: true }
-  | { readonly contains: string; readonly excludes?: string }
-  | { readonly contains?: string; readonly excludes: string };
+const ROOT = resolve(import.meta.dir, "../../../../../fixtures/ast-grep");
+export const NUDGE_CASES: readonly NudgeCase[] = readCaseFile(resolve(ROOT, "nudge.json")).map(
+  (item) => NudgeSchema.parse(item),
+);
+export const SAVINGS_CASES: readonly SavingsCase[] = readCaseFile(
+  resolve(ROOT, "savings.json"),
+).map((item) => SavingsSchema.parse(item));
+export const REPORT_CASES: readonly ReportCase[] = readCaseFile(resolve(ROOT, "report.json")).map(
+  (item) => ReportSchema.parse(item),
+);

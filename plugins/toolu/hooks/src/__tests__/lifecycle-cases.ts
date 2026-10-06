@@ -10,6 +10,7 @@ import { dirname, join, resolve } from "node:path";
 import { PERMISSIONS_SENTINEL } from "@toolu/core/config";
 import { z } from "zod";
 import { entryArgv } from "@toolu/conformance/harness/entry-command";
+import { readCaseFile } from "@toolu/conformance/harness/json-cases";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch, type RunResult } from "@toolu/conformance/harness/spawn";
 
@@ -21,37 +22,67 @@ export type LifecycleCase = {
   readonly name: string;
   readonly hook: LifecycleHook;
   readonly stdin: string;
-  readonly host?: "claude" | "codex";
+  readonly host?: "claude" | "codex" | undefined;
   /** Default true: the project is a git repo with one commit on `branch`. */
-  readonly git?: boolean;
-  readonly branch?: string;
+  readonly git?: boolean | undefined;
+  readonly branch?: string | undefined;
   /** Run inside this child of the project (created, and made the repo when `git`). */
-  readonly subdir?: string;
+  readonly subdir?: string | undefined;
   /** Committed with the initial commit. */
-  readonly files?: Readonly<Record<string, string>>;
+  readonly files?: Readonly<Record<string, string>> | undefined;
   /** Written after the commit (config, gate file, `context.sh`); `.sh` files are executable. */
-  readonly untracked?: Readonly<Record<string, string>>;
+  readonly untracked?: Readonly<Record<string, string>> | undefined;
   /** User-scope toolu.config.json. */
-  readonly userConfig?: object;
+  readonly userConfig?: object | undefined;
   /** Claude's installed_plugins.json; omitted means no file. */
-  readonly registry?: object;
+  readonly registry?: object | undefined;
   /** Publish `<config root>/<name>/search.sh` for each name. */
-  readonly wrappers?: readonly string[];
+  readonly wrappers?: readonly string[] | undefined;
   /** Replace CLAUDE_PLUGIN_ROOT with a synthetic plugin carrying these manifests. */
-  readonly manifest?: object;
-  readonly codexManifest?: object;
+  readonly manifest?: object | undefined;
+  readonly codexManifest?: object | undefined;
   /** `codex plugin list --json` output of a stub on PATH (Codex host only). */
-  readonly codexList?: string;
+  readonly codexList?: string | undefined;
   /** Put an `ast-grep` stub on PATH. */
-  readonly astGrep?: boolean;
+  readonly astGrep?: boolean | undefined;
   /** Leave the one-time notices and the permission write unseen (default: seen). */
-  readonly firstRun?: boolean;
-  readonly env?: Readonly<Record<string, string>>;
+  readonly firstRun?: boolean | undefined;
+  readonly env?: Readonly<Record<string, string>> | undefined;
 };
 
 export type Captured = { stdout: string; stderr: string; exitCode: number };
 
 export type Golden = { base: string; cases: Record<string, Captured> };
+
+const LifecycleCaseSchema = z.strictObject({
+  name: z.string(),
+  hook: z.enum(["session-start", "user-prompt-submit"]),
+  stdin: z.string(),
+  host: z.enum(["claude", "codex"]).optional(),
+  git: z.boolean().optional(),
+  branch: z.string().optional(),
+  subdir: z.string().optional(),
+  files: z.record(z.string(), z.string()).optional(),
+  untracked: z.record(z.string(), z.string()).optional(),
+  userConfig: z.record(z.string(), z.unknown()).optional(),
+  registry: z.record(z.string(), z.unknown()).optional(),
+  wrappers: z.array(z.string()).optional(),
+  manifest: z.record(z.string(), z.unknown()).optional(),
+  codexManifest: z.record(z.string(), z.unknown()).optional(),
+  codexList: z.string().optional(),
+  astGrep: z.boolean().optional(),
+  firstRun: z.boolean().optional(),
+  env: z.record(z.string(), z.string()).optional(),
+});
+
+/** Load either lifecycle hook's cases from the shared JSON contract. */
+export function readLifecycleCases(hook: LifecycleHook): LifecycleCase[] {
+  const path = resolve(import.meta.dir, "../../../../../fixtures/gates/lifecycle.json");
+  return z
+    .array(LifecycleCaseSchema)
+    .parse(readCaseFile(path))
+    .filter((item) => item.hook === hook);
+}
 
 function writeFile(path: string, body: string): void {
   mkdirSync(dirname(path), { recursive: true });

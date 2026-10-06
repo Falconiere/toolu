@@ -1,6 +1,6 @@
 /**
  * Every payload the hook launcher (#250) emits must pass Codex's own output
- * schemas, vendored verbatim under tooling/fixtures/codex-hook-schemas/. The
+ * schemas, vendored verbatim under fixtures/codex-hook-schemas/. The
  * payloads are produced by running the generated command for real with Bun
  * absent (advisory branch) and by the diagnostic helper the SessionStart bundle
  * prints (found branch). The enforcing branch writes nothing to stdout.
@@ -15,7 +15,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { launcherCommand, runtimeDiagnostic } from "@toolu/core/launcher";
 
-const SCHEMAS = resolve(import.meta.dir, "../../fixtures/codex-hook-schemas");
+const SCHEMAS = resolve(import.meta.dir, "../../../fixtures/codex-hook-schemas");
 const ANNOTATIONS = new Set(["$schema", "default", "description", "title", "definitions"]);
 const home = mkdtempSync(join(tmpdir(), "launcher-schemas-"));
 

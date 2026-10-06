@@ -1,172 +1,57 @@
-/**
- * The OpenCode status report (#359): the real status bundle reads the adapter's
- * status record from `TOOLU_CONFIG_DIR`, the data root OpenCode's bash gets,
- * and turns each state into a line with a next step. stdout is only the
- * report and stderr stays empty (`report` asserts both).
- */
+/** OpenCode status reports over shared startup record states. */
 import { expect, test } from "bun:test";
-import { realpathSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { materializeCaseValue, readCaseFile } from "@toolu/conformance/harness/json-cases";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
+import { z } from "zod";
 import { put, report, repo } from "./harness.ts";
 
-const WRITTEN = "2026-10-04T12:00:00.000Z";
+const CaseSchema = z.strictObject({
+  name: z.string(),
+  kind: z.literal("opencode-status"),
+  records: z.array(z.json()),
+  gate: z.string().optional(),
+  host: z.enum(["opencode", "codex"]),
+  checks: z
+    .array(
+      z.strictObject({ op: z.enum(["equal", "starts", "contains", "absent"]), value: z.json() }),
+    )
+    .min(1),
+});
+const cases = readCaseFile(
+  resolve(import.meta.dir, "../../../../../fixtures/statusline/cases.json"),
+)
+  .filter((raw) => raw.kind === "opencode-status")
+  .map((raw) => CaseSchema.parse(raw));
 
 function dataRoot(sb: Sandbox): string {
   return join(sb.project, ".opencode/toolu/state");
 }
-
-function recordAt(sb: Sandbox, body: string): string {
-  const path = join(dataRoot(sb), "toolu/opencode-status.json");
-  put(path, body);
-  return path;
+function recordAt(sb: Sandbox, body: string): void {
+  put(join(dataRoot(sb), "toolu/opencode-status.json"), body);
 }
 
-function opencode(sb: Sandbox): Promise<string> {
-  return report(sb, sb.project, {
-    TOOLU_HOST_OVERRIDE: "opencode",
-    TOOLU_CONFIG_DIR: dataRoot(sb),
+for (const c of cases) {
+  test.concurrent(c.name, async () => {
+    for (const record of c.records.length === 0 ? [undefined] : c.records) {
+      using sb = createSandbox();
+      repo(sb.project);
+      if (record !== undefined) {
+        const value = materializeCaseValue(sb, record);
+        recordAt(sb, typeof value === "string" ? value : JSON.stringify(value));
+      }
+      if (c.gate !== undefined) sb.write(".opencode/tmp/quality-gate-status.json", c.gate);
+      const out = await report(sb, sb.project, {
+        TOOLU_HOST_OVERRIDE: c.host,
+        TOOLU_CONFIG_DIR: dataRoot(sb),
+      });
+      for (const check of c.checks) {
+        const value = z.string().parse(materializeCaseValue(sb, check.value));
+        if (check.op === "equal") expect(out).toBe(value);
+        else if (check.op === "starts") expect(out).toStartWith(value);
+        else if (check.op === "contains") expect(out).toContain(value);
+        else expect(out).not.toContain(value);
+      }
+    }
   });
 }
-
-test.concurrent("status: OpenCode lists the plugins toolu started and its readiness", async () => {
-  using sb = createSandbox();
-  repo(sb.project);
-  const path = recordAt(
-    sb,
-    JSON.stringify({
-      version: 1,
-      written: WRITTEN,
-      project: sb.project,
-      status: "ready",
-      selection: "project",
-      plugins: [
-        { name: "jev", entries: ["session-start"], artifacts: 1 },
-        { name: "statusline", entries: ["session-start"], artifacts: 1 },
-      ],
-      notes: ['enabled plugin "nope" in plugins.json is not installed'],
-    }),
-  );
-  sb.write(".opencode/tmp/quality-gate-status.json", '{"status":"passing"}\n');
-  expect(await opencode(sb)).toBe(
-    [
-      "Host: OpenCode",
-      "toolu: ready — 2 plugins (project selection), 2 startup artifacts",
-      "Plugins: jev (session-start), statusline (session-start)",
-      'Startup notes: enabled plugin "nope" in plugins.json is not installed',
-      `Startup record: ${path}, written ${WRITTEN} for ${sb.project}`,
-      `Repository: ${realpathSync(sb.project)}`,
-      "Branch: main",
-      // The record and gate files sit untracked under .opencode/.
-      "Working tree: staged 0, unstaged 0, untracked 1",
-      "Quality gate: passing",
-      "",
-    ].join("\n"),
-  );
-});
-
-test.concurrent("status: OpenCode reports a not-ready startup with its cause", async () => {
-  using sb = createSandbox();
-  repo(sb.project);
-  const reason = "bootstrap: jev/session-start: exited 1";
-  const path = recordAt(
-    sb,
-    JSON.stringify({
-      version: 1,
-      written: WRITTEN,
-      project: sb.project,
-      status: "not-ready",
-      reason,
-      plugins: [],
-      notes: [],
-    }),
-  );
-  const out = await opencode(sb);
-  expect(out).toStartWith(
-    [
-      "Host: OpenCode",
-      `toolu: not ready — ${reason}; every tool call stays denied until OpenCode restarts with the cause fixed`,
-      `Startup record: ${path}, written ${WRITTEN} for ${sb.project}`,
-      `Repository: ${realpathSync(sb.project)}`,
-    ].join("\n"),
-  );
-  expect(out).toContain("Quality gate: no recorded state\n");
-});
-
-test.concurrent("status: OpenCode labels every plugin and selection shape", async () => {
-  using sb = createSandbox();
-  repo(sb.project);
-  recordAt(
-    sb,
-    JSON.stringify({
-      version: 1,
-      written: WRITTEN,
-      project: sb.project,
-      status: "ready",
-      selection: "default",
-      plugins: [{ name: "toolu", entries: [], artifacts: 0 }],
-      notes: [],
-    }),
-  );
-  const out = await opencode(sb);
-  expect(out).toContain(
-    "\ntoolu: ready — 1 plugins (all installed plugins), 0 startup artifacts\nPlugins: toolu\nStartup record: ",
-  );
-  expect(out).not.toContain("Startup notes:");
-});
-
-test.concurrent("status: OpenCode says so when a not-ready record carries no reason", async () => {
-  using sb = createSandbox();
-  repo(sb.project);
-  recordAt(
-    sb,
-    JSON.stringify({
-      version: 1,
-      written: WRITTEN,
-      project: sb.project,
-      status: "not-ready",
-      plugins: [],
-      notes: [],
-    }),
-  );
-  expect(await opencode(sb)).toContain(
-    "\ntoolu: not ready — no reason recorded; every tool call stays denied until OpenCode restarts with the cause fixed\n",
-  );
-});
-
-test.concurrent("status: OpenCode names a missing record and how to create it", async () => {
-  using sb = createSandbox();
-  repo(sb.project);
-  const path = join(dataRoot(sb), "toolu/opencode-status.json");
-  const out = await opencode(sb);
-  expect(out).toContain(
-    `\ntoolu: no startup record at ${path} — start OpenCode with the toolu plugin in this project, then run the status skill again\n`,
-  );
-  expect(out).toContain("Branch: main\n");
-});
-
-test.concurrent("status: OpenCode names an unreadable record and still reports the rest", async () => {
-  for (const body of ["{}", '{"version":1,"written":"x"']) {
-    using sb = createSandbox();
-    repo(sb.project);
-    const path = recordAt(sb, body);
-    const out = await opencode(sb);
-    expect(out).toContain(
-      `\ntoolu: unreadable startup record at ${path} — restart OpenCode to rewrite it\n`,
-    );
-    expect(out).toContain("Branch: main\n");
-    expect(out).not.toContain("toolu: ready");
-  }
-});
-
-test.concurrent("status: Codex never reads an OpenCode status record", async () => {
-  using sb = createSandbox();
-  repo(sb.project);
-  recordAt(sb, "{}");
-  const out = await report(sb, sb.project, {
-    TOOLU_HOST_OVERRIDE: "codex",
-    TOOLU_CONFIG_DIR: dataRoot(sb),
-  });
-  expect(out).not.toContain("toolu:");
-  expect(out).not.toContain("Startup record");
-});

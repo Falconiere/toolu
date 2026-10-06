@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "session, prompt and compaction are supported on the pinned hooks",
+      "events": {
+        "session/start": "supported",
+        "prompt": "supported",
+        "pre_compact": "supported",
+        "session/unload": "supported",
+        "permission/evaluate": "supported",
+        "tool/post": "supported"
+      },
+      "sdkHooks": {
+        "prompt": "chat.message",
+        "pre_compact": "experimental.session.compacting",
+        "startup": "experimental.chat.system.transform"
+      }
+    },
+    {
+      "name": "resume, clear and load have no OpenCode event",
+      "events": {
+        "session/resume": "unsupported",
+        "session/clear": "unsupported",
+        "session/load": "unsupported",
+        "tool/pre": "deferred",
+        "shell/pre": "deferred"
+      }
+    }
+  ]
+}

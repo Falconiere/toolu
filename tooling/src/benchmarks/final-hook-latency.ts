@@ -29,7 +29,7 @@ import {
   runBundle,
   type PretoolRun,
 } from "@toolu/conformance/harness/pretool";
-import { PRETOOL_CORPUS, prepare } from "@toolu/conformance/harness/pretool-corpus";
+import { PRETOOL_CORPUS, prepare, pretoolStdin } from "@toolu/conformance/harness/pretool-corpus";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type RunResult } from "@toolu/conformance/harness/spawn";
 import { percentile } from "@toolu/conformance/harness/timing";
@@ -106,7 +106,7 @@ async function measureCorpus(hooks: string, name: string, runs: number): Promise
   if (c === undefined) throw new Error(`no corpus case named ${name}`);
   using sb = createSandbox({ git: true });
   const extra = await prepare(sb, "claude", c);
-  const stdin = c.stdin ?? JSON.stringify(toStdin("claude", c.fixture(sb), { cwd: sb.project }));
+  const stdin = pretoolStdin(sb, "claude", c);
   const call: PretoolRun = { cwd: sb.project, env: pretoolEnv(sb, "claude", extra), stdin };
   const modSh = join(hooks, "pre-tools/mod.sh");
   const [bash, bundle] = await paired(

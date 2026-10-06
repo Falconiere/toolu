@@ -1,110 +1,112 @@
+/** OpenCode permission mapping and decision parity over shared JSON cases. */
 import { expect, test } from "bun:test";
-import type { Decision } from "@toolu/core/decision";
+import { resolve } from "node:path";
+import { readCaseFile } from "@toolu/conformance/harness/json-cases";
+import { z } from "zod";
 import {
   applyDecisionToPermission,
   mapPermissionEventToTool,
   type PermissionEvaluationEvent,
 } from "../permission-map.ts";
 
-const ctx = {
-  cwd: "/proj",
-  projectRoot: "/proj",
-  worktree: "/proj",
-  host: "opencode",
-};
+const EventSchema = z.strictObject({
+  sessionID: z.string(),
+  action: z.string(),
+  resources: z.array(z.string()),
+  effect: z.enum(["allow", "ask", "deny"]),
+  metadata: z.record(z.string(), z.json()).optional(),
+  message: z.string().optional(),
+});
+const DecisionSchema = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("deny"), reason: z.string() }),
+  z.strictObject({ kind: z.literal("ask"), reason: z.string() }),
+  z.strictObject({ kind: z.literal("allow") }),
+  z.strictObject({ kind: z.literal("advisory"), message: z.string() }),
+  z.strictObject({ kind: z.literal("post_block"), reason: z.string() }),
+  z.strictObject({
+    kind: z.literal("runtime_failure"),
+    reason: z.string(),
+    code: z.enum(["timeout", "parse", "cancelled", "truncated", "spawn", "nonzero"]),
+  }),
+]);
+const MappingSchema = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("skip") }),
+  z.strictObject({ kind: z.literal("deny"), reason: z.string() }),
+  z.strictObject({
+    kind: z.literal("request"),
+    request: z.strictObject({
+      session_id: z.string(),
+      tool_use_id: z.string(),
+      cwd: z.string(),
+      tool_name: z.string(),
+      tool_input: z.record(z.string(), z.json()),
+    }),
+  }),
+]);
+const MapSchema = z.strictObject({
+  name: z.string(),
+  kind: z.literal("map"),
+  event: EventSchema,
+  expected: MappingSchema,
+});
+const DecisionCaseSchema = z.strictObject({
+  name: z.string(),
+  kind: z.literal("decision"),
+  checks: z
+    .array(
+      z.strictObject({
+        decision: DecisionSchema,
+        event: EventSchema,
+        expected: z.strictObject({
+          effect: z.enum(["allow", "ask", "deny"]),
+          message: z.string().optional(),
+        }),
+      }),
+    )
+    .min(1),
+});
+const KindSchema = z.enum([
+  "map",
+  "decision",
+  "evaluate-protected",
+  "evaluate-bad-root",
+  "evaluate-registry",
+  "evaluate-gate-env",
+]);
+const cases = readCaseFile(
+  resolve(import.meta.dir, "../../../../../fixtures/opencode/permission-evaluate.json"),
+);
+const ctx = { cwd: "/proj", projectRoot: "/proj", worktree: "/proj", host: "opencode" };
 
-function event(overrides: Partial<PermissionEvaluationEvent> = {}): PermissionEvaluationEvent {
+function eventOf(value: z.infer<typeof EventSchema>): PermissionEvaluationEvent {
   return {
-    sessionID: "sess_1",
-    action: "edit",
-    resources: ["/proj/.env"],
-    effect: "allow",
-    ...overrides,
+    sessionID: value.sessionID,
+    action: value.action,
+    resources: value.resources,
+    effect: value.effect,
+    ...(value.metadata === undefined ? {} : { metadata: value.metadata }),
+    ...(value.message === undefined ? {} : { message: value.message }),
   };
 }
 
-test("AC-4: mapPermissionEventToTool maps edit to PreToolUse payload", () => {
-  const mapping = mapPermissionEventToTool(event(), ctx);
-  expect(mapping.kind).toBe("request");
-  if (mapping.kind !== "request") {
-    return;
+for (const raw of cases) {
+  const kind = KindSchema.parse(raw.kind);
+  if (kind === "map") {
+    const c = MapSchema.parse(raw);
+    test(c.name, () => {
+      expect(mapPermissionEventToTool(eventOf(c.event), ctx)).toEqual(c.expected);
+    });
+  } else if (kind === "decision") {
+    const c = DecisionCaseSchema.parse(raw);
+    test(c.name, () => {
+      for (const check of c.checks) {
+        const event = eventOf(check.event);
+        applyDecisionToPermission(check.decision, event);
+        expect(event.effect).toBe(check.expected.effect);
+        if (check.expected.message !== undefined)
+          expect(event.message).toBe(check.expected.message);
+        else expect(event.message).toBeUndefined();
+      }
+    });
   }
-  expect(mapping.request.tool_name).toBe("Edit");
-  expect(mapping.request.tool_input).toEqual({ file_path: "/proj/.env" });
-  expect(mapping.request.session_id).toBe("sess_1");
-});
-
-test("AC-4: mapPermissionEventToTool skips unknown actions", () => {
-  expect(mapPermissionEventToTool(event({ action: "read" }), ctx).kind).toBe("skip");
-});
-
-test("AC-4: gated write without path fails closed in mapper", () => {
-  const mapping = mapPermissionEventToTool(event({ action: "write", resources: [] }), ctx);
-  expect(mapping.kind).toBe("deny");
-});
-
-test("AC-4: bash maps command from metadata", () => {
-  const mapping = mapPermissionEventToTool(
-    event({
-      action: "bash",
-      resources: [],
-      metadata: { command: "rm -rf /" },
-    }),
-    ctx,
-  );
-  expect(mapping.kind).toBe("request");
-  if (mapping.kind !== "request") {
-    return;
-  }
-  expect(mapping.request.tool_name).toBe("Bash");
-  expect(mapping.request.tool_input).toEqual({ command: "rm -rf /" });
-});
-
-const decisionCases: Array<{
-  decision: Decision;
-  effect: PermissionEvaluationEvent["effect"];
-  message?: string;
-}> = [
-  { decision: { kind: "deny", reason: "blocked" }, effect: "deny", message: "blocked" },
-  { decision: { kind: "ask", reason: "confirm" }, effect: "deny", message: "confirm" },
-  { decision: { kind: "allow" }, effect: "allow" },
-  { decision: { kind: "advisory", message: "hint" }, effect: "allow" },
-  { decision: { kind: "post_block", reason: "post" }, effect: "deny", message: "post" },
-  {
-    decision: { kind: "runtime_failure", reason: "fail", code: "parse" },
-    effect: "deny",
-    message: "fail",
-  },
-];
-
-for (const { decision, effect, message } of decisionCases) {
-  test(`AC-4: applyDecisionToPermission ${decision.kind}`, () => {
-    const ev = event();
-    applyDecisionToPermission(decision, ev);
-    expect(ev.effect).toBe(effect);
-    if (message !== undefined) {
-      expect(ev.message).toBe(message);
-    }
-  });
 }
-
-test("toolu allow or advisory preserves a stricter native deny or ask", () => {
-  const decisions: Decision[] = [{ kind: "allow" }, { kind: "advisory", message: "hint" }];
-  for (const effect of ["deny", "ask"] as const) {
-    for (const decision of decisions) {
-      const ev = event({ effect, message: "native reason" });
-      applyDecisionToPermission(decision, ev);
-      expect(ev.effect).toBe(effect);
-      expect(ev.message).toBe("native reason");
-    }
-  }
-});
-
-test("a generated ask never weakens a native deny or replaces an existing native ask", () => {
-  for (const effect of ["deny", "ask"] as const) {
-    const ev = event({ effect, message: "native reason" });
-    applyDecisionToPermission({ kind: "ask", reason: "toolu ask" }, ev);
-    expect(ev.effect).toBe(effect);
-    expect(ev.message).toBe("native reason");
-  }
-});

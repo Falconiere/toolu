@@ -1,8 +1,12 @@
-import { afterAll, describe, expect, test } from "bun:test";
+/** Host-native roots and invocation parity over shared JSON cases. */
+import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
-import { join } from "node:path";
+import { mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
+import { materializeCaseValue, readCaseFile } from "@toolu/conformance/harness/json-cases";
+import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
+import { z } from "zod";
 import {
   configRoot,
   invocation,
@@ -16,191 +20,131 @@ import {
   projectStateRoot,
 } from "../host-roots.ts";
 
-const temps: string[] = [];
-afterAll(() => {
-  for (const dir of temps) rmSync(dir, { recursive: true, force: true });
+const FnSchema = z.enum([
+  "configRoot",
+  "projectRoot",
+  "projectConfigPath",
+  "projectStateRoot",
+  "projectStateDir",
+  "projectDirname",
+  "pluginRoot",
+  "pluginData",
+  "invocation",
+  "pluginInstallCommand",
+]);
+const CallsSchema = z.strictObject({
+  name: z.string(),
+  kind: z.literal("calls"),
+  git: z.boolean(),
+  dirs: z.array(z.string()),
+  checks: z
+    .array(
+      z.strictObject({
+        fn: FnSchema,
+        args: z.array(z.json()),
+        expected: z.json().optional(),
+        throws: z.literal("TypeError").optional(),
+      }),
+    )
+    .min(1),
 });
+const WarningSchema = z.strictObject({
+  name: z.string(),
+  kind: z.literal("warning"),
+  override: z.string(),
+  projectDir: z.string(),
+  warning: z.string(),
+});
+const OptionsSchema = z.strictObject({
+  env: z.record(z.string(), z.string()).optional(),
+  host: z.enum(["claude", "codex", "cursor", "hermes", "opencode"]).optional(),
+  cwd: z.string().optional(),
+  root: z.string().optional(),
+});
+const cases = readCaseFile(resolve(import.meta.dir, "../../../../../fixtures/host/root.json"));
 
-function temp(): string {
-  const dir = realpathSync(mkdtempSync(join(tmpdir(), "host-roots-")));
-  temps.push(dir);
-  return dir;
+function runtimeValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(runtimeValue);
+  if (typeof value !== "object" || value === null) return value;
+  const record = z.record(z.string(), z.unknown()).parse(value);
+  if (Object.keys(record).length === 1 && record.$runtime === "PATH")
+    return process.env.PATH ?? "/usr/bin:/bin";
+  if (Object.keys(record).length === 1 && record.$runtime === "OS_CLAUDE_HOME")
+    return join(homedir(), ".claude");
+  return Object.fromEntries(Object.entries(record).map(([key, item]) => [key, runtimeValue(item)]));
 }
 
-function gitRepo(): string {
-  const dir = join(temp(), "repo");
-  mkdirSync(join(dir, "src"), { recursive: true });
-  const res = spawnSync("git", ["init", "-q", dir], { encoding: "utf8" });
-  expect(res.status).toBe(0);
-  return dir;
-}
-
-const HOME = "/home/u";
-const PATH = process.env.PATH ?? "/usr/bin:/bin";
-
-describe("configRoot", () => {
-  test("each host has its native user root", () => {
-    const env = { HOME };
-    expect(configRoot({ env, host: "claude" })).toBe("/home/u/.claude");
-    expect(configRoot({ env, host: "codex" })).toBe("/home/u/.codex");
-    expect(configRoot({ env, host: "cursor" })).toBe("/home/u/.cursor");
-    expect(configRoot({ env, host: "hermes" })).toBe("/home/u/.hermes");
-    expect(configRoot({ env, host: "opencode" })).toBe("/home/u/.config/opencode");
-  });
-
-  test("host-native overrides apply to their own host only", () => {
-    const env = {
-      HOME,
-      CLAUDE_CONFIG_DIR: "/cc",
-      CODEX_HOME: "/cx",
-      HERMES_HOME: "/hh",
-      XDG_CONFIG_HOME: "/xdg",
+function call(sb: Sandbox, fn: z.infer<typeof FnSchema>, raw: readonly unknown[]): unknown {
+  const args = raw.map((value) => materializeCaseValue(sb, runtimeValue(value)));
+  const options = (value: unknown) => {
+    const parsed = OptionsSchema.parse(value);
+    return {
+      ...(parsed.env === undefined ? {} : { env: parsed.env }),
+      ...(parsed.host === undefined ? {} : { host: parsed.host }),
+      ...(parsed.cwd === undefined ? {} : { cwd: parsed.cwd }),
+      ...(parsed.root === undefined ? {} : { root: parsed.root }),
     };
-    expect(configRoot({ env, host: "claude" })).toBe("/cc");
-    expect(configRoot({ env, host: "codex" })).toBe("/cx");
-    expect(configRoot({ env, host: "hermes" })).toBe("/hh");
-    expect(configRoot({ env, host: "opencode" })).toBe("/xdg/opencode");
-    expect(configRoot({ env, host: "cursor" })).toBe("/home/u/.cursor");
-    expect(configRoot({ env: { ...env, TOOLU_OPENCODE_HOME: "/oc" }, host: "opencode" })).toBe(
-      "/oc",
-    );
-  });
-
-  test("TOOLU_CONFIG_DIR wins on every host", () => {
-    const env = { HOME, TOOLU_CONFIG_DIR: "/explicit", CODEX_HOME: "/wrong" };
-    for (const host of ["claude", "codex", "cursor", "hermes", "opencode"] as const) {
-      expect(configRoot({ env, host })).toBe("/explicit");
-    }
-  });
-
-  test("detects the host from env when none is given", () => {
-    expect(configRoot({ env: { HOME, PLUGIN_ROOT: "/p" } })).toBe("/home/u/.codex");
-  });
-
-  test("an unset HOME falls back to the OS home directory", () => {
-    expect(configRoot({ env: {}, host: "claude" })).toBe(join(homedir(), ".claude"));
-  });
-});
-
-describe("project paths", () => {
-  test("TOOLU_PROJECT_DIR wins, then the host's project variable", () => {
-    const env = { TOOLU_PROJECT_DIR: "/t", CLAUDE_PROJECT_DIR: "/c", CURSOR_PROJECT_DIR: "/k" };
-    expect(projectRoot({ env, host: "claude" })).toBe("/t");
-    const noToolu = { CLAUDE_PROJECT_DIR: "/c", CURSOR_PROJECT_DIR: "/k" };
-    expect(projectRoot({ env: noToolu, host: "claude" })).toBe("/c");
-    expect(projectRoot({ env: noToolu, host: "cursor" })).toBe("/k");
-  });
-
-  test("Codex ignores CLAUDE_PROJECT_DIR and falls back to the git toplevel of cwd", () => {
-    const repo = gitRepo();
-    const env = { PATH, CLAUDE_PROJECT_DIR: "/c" };
-    expect(projectRoot({ env, host: "codex", cwd: join(repo, "src") })).toBe(repo);
-  });
-
-  test("git runs with the caller's env, not the ambient one", () => {
-    const repo = gitRepo();
-    expect(projectRoot({ env: { PATH }, host: "codex", cwd: repo })).toBe(repo);
-    const ceiling = { PATH, GIT_CEILING_DIRECTORIES: repo };
-    expect(projectRoot({ env: ceiling, host: "codex", cwd: join(repo, "src") })).toBeUndefined();
-  });
-
-  test("outside a git repository there is no project root and no project paths", () => {
-    const cwd = temp();
-    const o = { env: { PATH }, host: "claude" as const, cwd };
-    expect(projectRoot(o)).toBeUndefined();
-    expect(projectConfigPath(o)).toBeUndefined();
-    expect(projectStateRoot(o)).toBeUndefined();
-    expect(projectStateDir("telemetry", o)).toBeUndefined();
-  });
-
-  test("config and state paths are isolated by host dirname", () => {
-    for (const host of ["claude", "codex", "cursor", "hermes", "opencode"] as const) {
-      const o = { env: { TOOLU_PROJECT_DIR: "/repo" }, host };
-      expect(projectDirname(o)).toBe(`.${host}`);
-      expect(projectConfigPath(o)).toBe(`/repo/.${host}/toolu.config.json`);
-      expect(projectStateDir("telemetry", o)).toBe(`/repo/.${host}/tmp/telemetry`);
-    }
-  });
-
-  test("TOOLU_PROJECT_CONFIG_DIRNAME and an explicit root override the defaults", () => {
-    const env = { TOOLU_PROJECT_DIR: "/repo", TOOLU_PROJECT_CONFIG_DIRNAME: ".test-state" };
-    expect(projectStateDir("telemetry", { env, host: "codex" })).toBe(
-      "/repo/.test-state/tmp/telemetry",
-    );
-    expect(projectStateRoot({ env, host: "codex", root: "/other" })).toBe("/other/.test-state/tmp");
-  });
-
-  test("an empty state-dir name is a caller error", () => {
-    expect(() => projectStateDir("", { env: { TOOLU_PROJECT_DIR: "/r" } })).toThrow(TypeError);
-  });
-});
-
-describe("plugin paths", () => {
-  const env = {
-    PLUGIN_ROOT: "/codex-root",
-    PLUGIN_DATA: "/codex-data",
-    CURSOR_PLUGIN_ROOT: "/cursor-root",
-    TOOLU_PLUGIN_ROOT: "/oc-root",
-    CLAUDE_PLUGIN_ROOT: "/claude-root",
-    CLAUDE_PLUGIN_DATA: "/claude-data",
   };
+  const o = () => options(args[0]);
+  switch (fn) {
+    case "configRoot":
+      return configRoot(o());
+    case "projectRoot":
+      return projectRoot(o());
+    case "projectConfigPath":
+      return projectConfigPath(o());
+    case "projectStateRoot":
+      return projectStateRoot(o());
+    case "projectDirname":
+      return projectDirname(o());
+    case "pluginRoot":
+      return pluginRoot(o());
+    case "pluginData":
+      return pluginData(o());
+    case "projectStateDir":
+      return projectStateDir(z.string().parse(args[0]), options(args[1]));
+    case "invocation":
+      return invocation(z.string().parse(args[0]), z.string().parse(args[1]), options(args[2]));
+    case "pluginInstallCommand":
+      return pluginInstallCommand(z.string().parse(args[0]), options(args[1]));
+  }
+}
 
-  test("each host reads its own plugin root first, then CLAUDE_PLUGIN_ROOT", () => {
-    expect(pluginRoot({ env, host: "codex" })).toBe("/codex-root");
-    expect(pluginRoot({ env, host: "cursor" })).toBe("/cursor-root");
-    expect(pluginRoot({ env, host: "opencode" })).toBe("/oc-root");
-    expect(pluginRoot({ env, host: "claude" })).toBe("/claude-root");
-    expect(pluginRoot({ env, host: "hermes" })).toBe("/claude-root");
-    expect(pluginRoot({ env: { CLAUDE_PLUGIN_ROOT: "/c" }, host: "codex" })).toBe("/c");
-    expect(pluginRoot({ env: {}, host: "claude" })).toBeUndefined();
-  });
-
-  test("plugin data is PLUGIN_DATA on Codex, else CLAUDE_PLUGIN_DATA", () => {
-    expect(pluginData({ env, host: "codex" })).toBe("/codex-data");
-    expect(pluginData({ env, host: "claude" })).toBe("/claude-data");
-    expect(pluginData({ env: {}, host: "cursor" })).toBeUndefined();
-  });
-});
-
-describe("invocation and install", () => {
-  test("invocation syntax is host-native", () => {
-    expect(invocation("toolu", "setup", { env: {}, host: "claude" })).toBe("/toolu:setup");
-    expect(invocation("toolu", "setup", { env: {}, host: "codex" })).toBe("$toolu:setup");
-    expect(invocation("toolu", "setup", { env: {}, host: "cursor" })).toBe("/toolu:setup");
-    expect(invocation("toolu", "setup", { env: {}, host: "hermes" })).toBe("/toolu:setup");
-    expect(invocation("toolu", "commit", { env: {}, host: "opencode" })).toBe("/toolu--commit");
-  });
-
-  test("an empty namespace or name is a caller error", () => {
-    expect(() => invocation("", "setup", { env: {} })).toThrow(TypeError);
-    expect(() => invocation("toolu", "", { env: {} })).toThrow(TypeError);
-  });
-
-  test("only Claude and Codex have a host-native per-plugin install command", () => {
-    expect(pluginInstallCommand("toolu@toolu", { env: {}, host: "claude" })).toBe(
-      "/plugin install toolu@toolu",
-    );
-    expect(pluginInstallCommand("toolu@toolu", { env: {}, host: "codex" })).toBe(
-      "codex plugin add toolu@toolu",
-    );
-    for (const host of ["cursor", "hermes", "opencode"] as const) {
-      expect(pluginInstallCommand("toolu@toolu", { env: {}, host })).toBeNull();
-    }
-    expect(() => pluginInstallCommand("", { env: {} })).toThrow(TypeError);
-  });
-});
-
-describe("detection runs once per call", () => {
-  test("an invalid override warns once from composite path functions", () => {
-    const host = join(import.meta.dir, "../host.ts");
-    const script = `import { projectConfigPath, codexPluginSnapshotPath } from ${JSON.stringify(host)};
-projectConfigPath(); process.stderr.write("--\\n"); codexPluginSnapshotPath();`;
-    const res = spawnSync(process.execPath, ["-e", script], {
-      encoding: "utf8",
-      env: { PATH, HOME: temp(), TOOLU_HOST_OVERRIDE: "bogus", TOOLU_PROJECT_DIR: "/repo" },
+for (const raw of cases) {
+  if (raw.kind === "calls") {
+    const c = CallsSchema.parse(raw);
+    test(c.name, () => {
+      using sb = createSandbox({ git: c.git });
+      for (const dir of c.dirs) {
+        const path = dir.startsWith("$ROOT/") ? join(sb.root, dir.slice(6)) : sb.path(dir);
+        mkdirSync(path, { recursive: true });
+      }
+      for (const check of c.checks) {
+        if (check.throws !== undefined) {
+          expect(() => call(sb, check.fn, check.args)).toThrow(TypeError);
+        } else {
+          const expected = materializeCaseValue(sb, runtimeValue(check.expected));
+          expect<unknown>(call(sb, check.fn, check.args) ?? null).toEqual(expected);
+        }
+      }
     });
-    expect(res.status).toBe(0);
-    const warning = "toolu-host: invalid TOOLU_HOST_OVERRIDE 'bogus' (using environment detection)";
-    expect(res.stderr).toBe(`${warning}\n--\n${warning}\n`);
-  });
-});
+  } else if (raw.kind === "warning") {
+    const c = WarningSchema.parse(raw);
+    test(c.name, () => {
+      using sb = createSandbox();
+      const host = join(import.meta.dir, "../host.ts");
+      const script = `import { projectConfigPath, codexPluginSnapshotPath } from ${JSON.stringify(host)};\nprojectConfigPath(); process.stderr.write("--\\n"); codexPluginSnapshotPath();`;
+      const res = spawnSync(process.execPath, ["-e", script], {
+        encoding: "utf8",
+        env: {
+          PATH: process.env.PATH ?? "/usr/bin:/bin",
+          HOME: sb.home,
+          TOOLU_HOST_OVERRIDE: c.override,
+          TOOLU_PROJECT_DIR: c.projectDir,
+        },
+      });
+      expect(res.status).toBe(0);
+      expect(res.stderr).toBe(`${c.warning}\n--\n${c.warning}\n`);
+    });
+  }
+}
