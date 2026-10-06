@@ -86,11 +86,14 @@ pub(crate) fn bun_script(patterns: &[Regex], command: &Command) -> Option<(Strin
   (!caught).then_some((script, stem))
 }
 
-/// The next word that is not a flag; `--cwd` takes the word after it.
+/// `bun` flags whose value is the next word.
+const VALUE_FLAGS: &[&str] = &["--cwd", "--env-file", "--config", "-c", "--preload", "-r"];
+
+/// The next word that is not a flag or a flag's value.
 fn operand(words: &mut impl Iterator<Item = String>) -> Option<String> {
   loop {
     let word = words.next()?;
-    if word == "--cwd" {
+    if VALUE_FLAGS.contains(&word.as_str()) {
       words.next();
     } else if !word.starts_with('-') {
       return Some(word);

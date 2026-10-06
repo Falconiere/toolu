@@ -88,6 +88,10 @@ fn bun_running_a_script_is_a_reference_unless_a_path_pattern_caught_it() {
     bun_script(&patterns, &first("bun --cwd dir route.ts")),
     Some(("route.ts".to_owned(), "route".to_owned()))
   );
+  assert_eq!(
+    bun_script(&patterns, &first("bun --env-file .env run scripts2/job.js")),
+    Some(("scripts2/job.js".to_owned(), "job".to_owned()))
+  );
   for text in [
     "bun run lint src/x.ts",
     "bun run test foo.test.ts",
