@@ -78,9 +78,9 @@ fn the_shipped_lists_read() {
 fn mcp_entries_split_as_mcp_blocker_did() {
   let cases = [
     (
-      "claude_ai_Atlassian -> use the host's native Jira tools instead",
-      "claude_ai_Atlassian",
-      "use the host's native Jira tools instead",
+      "claude_ai_Example -> use the host's native tools instead",
+      "claude_ai_Example",
+      "use the host's native tools instead",
     ),
     ("  figma  ", "figma", ""),
     ("canva -> a -> b", "canva", "a -> b"),
