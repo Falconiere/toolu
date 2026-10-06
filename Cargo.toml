@@ -11,6 +11,7 @@ members = [
   "crates/core/http",
   "crates/core/state",
   "crates/core/engine",
+  "crates/http-test-support",
   "crates/cli",
   "crates/xtask",
   "crates/toolu",

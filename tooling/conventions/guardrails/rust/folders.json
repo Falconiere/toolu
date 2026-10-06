@@ -56,7 +56,8 @@
     "jev",
     "statusline",
     "pr-babysit",
-    "epic-orchestrator"
+    "epic-orchestrator",
+    "http-test-support"
   ],
   "core": ["protocol", "runtime", "shell", "http", "state", "engine"]
 }

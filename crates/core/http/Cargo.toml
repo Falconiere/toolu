@@ -7,5 +7,19 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[features]
+test-support = []
+
+[dependencies]
+base64 = { version = "0.23", default-features = false, features = ["alloc"] }
+rustls = { version = "0.23", default-features = false, features = ["std", "ring"] }
+serde.workspace = true
+serde_json.workspace = true
+toolu-runtime = { path = "../runtime" }
+ureq = { version = "3.4", default-features = false, features = ["rustls-no-provider", "rustls-webpki-roots"] }
+
+[dev-dependencies]
+toolu-http-test-support = { path = "../../http-test-support" }
+
 [lints]
 workspace = true
