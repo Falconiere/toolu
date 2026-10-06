@@ -35,7 +35,7 @@ impl StateCtx {
 
   /// The fixed clock, else the system clock.
   pub fn now(&self) -> SystemTime {
-    self.now.unwrap_or_else(SystemTime::now)
+    self.now.unwrap_or(SystemTime::now())
   }
 
   /// The config, loaded for `root` on first use; its warnings join ours.
