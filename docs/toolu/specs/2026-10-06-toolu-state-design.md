@@ -1,6 +1,6 @@
 # toolu-state: gate file, telemetry, edit records and git facts without spawning git — Design
 
-**Date:** 2026-10-06   **Status:** Draft   **Author:** Claude (epic #402 worker)   **Topic:** Port `@toolu/core/state` and the shell-free half of `@toolu/core/detect` to `crates/core/state`, and read the per-call git facts from `.git` (#415)
+**Date:** 2026-10-06   **Status:** Approved   **Author:** Claude (epic #402 worker)   **Topic:** Port `@toolu/core/state` and the shell-free half of `@toolu/core/detect` to `crates/core/state`, and read the per-call git facts from `.git` (#415)
 
 ## Problem
 
@@ -35,13 +35,36 @@ Until #437 and #426–#428 land, TypeScript and Rust hooks write the same gate f
 - **D5 — strict v1 validation by hand** over document-order JSON (`toolu_runtime::json::ordered::Ordered`), with zod's `<path>: <message>` reason. serde's `deny_unknown_fields` is not used: it would drop key order, and it rejects `1.0` where `JSON.parse` sees `1`.
 - **D6 — JavaScript key order.** Gate entries are ordered as a JavaScript object orders them: array-index keys (canonical decimal below 2³²−1) first in ascending order, then the other keys in insertion order. This keeps the pinned divergence of the `ordering` fixture byte-identical to TypeScript.
 
+**Scope relative to the issue**, each item mapped to its AC:
+
+| Issue scope item | Where | AC |
+|---|---|---|
+| Multi-slot gate file: strict v1, TypeScript key order and formatting | `toolu_state::gate_file`, `schema` | AC-3, AC-4 |
+| Locked atomic writes: `tempfile` in the same directory, fsync, the lock protocol | `toolu_state::io`, `lock` | AC-1, AC-2, AC-4 (io cases: 0600, no temp left, stale/dead/live/takeover locks). fsync itself is not observable in a test; it is a code contract checked in review |
+| Closed-schema telemetry JSONL | `toolu_state::telemetry` | AC-4, AC-9 |
+| Edit-record normalization | `toolu_state::edit_records` | AC-8 |
+| State sweeper | `toolu_state::sweeper` | AC-10 |
+| `diffSha` | `toolu_state::diff_sha` | AC-4, AC-11 |
+| Git facts from the filesystem (toplevel, branch, linked worktree, common dir) | `toolu_runtime::git` (discovery), `toolu_state::git` | AC-5, AC-6 |
+| Shell-free detection (markers, linters, tools on `PATH`, line counts) | `toolu_state::detect` | AC-12 |
+
+**Deliberate deviations and additions** (each argued above):
+1. Discovery lives in `toolu-runtime`, and `Roots::project_root` and `config::quality` use it (D1).
+2. `process::Output` gains `stdout_bytes`, so `diff_sha` can pipe raw bytes.
+3. Session-time history and index queries still spawn git (D2).
+4. Two new shared goldens, each with a Bun test (D4).
+
+Nothing else is added.
+
 **Reuse:**
 - `toolu_runtime::json` for `JSON.stringify` and jq text (`Ordered`, `jq_text`, `js_number`);
 - `toolu_runtime::host::roots::Roots` for state and telemetry dirs;
 - `toolu_runtime::config::{load::load, read::enabled}` for the `telemetry.enabled` and `gates.sweep` switches and the TTL settings;
 - `toolu_runtime::process` for every spawn.
 
-`tempfile` (already a workspace dependency) supplies the 0600 temp file. `nix` (already a workspace dependency) supplies `kill(pid, 0)` for liveness, and its `user` feature, enabled in `toolu-state`'s manifest only, supplies `geteuid` for the ownership check.
+`tempfile` (already a workspace dependency) supplies the 0600 temp file. `nix` (already a workspace dependency, `signal` feature) supplies `kill(pid, 0)` for liveness in `toolu-state`. The discovery's ownership check needs `geteuid`, so `toolu-runtime`'s manifest adds `nix`'s `user` feature (`nix = { workspace = true, features = ["user"] }`); the root `Cargo.toml` is unchanged.
+
+Warnings are collected in `StateCtx::warnings` (or a `warnings` argument) and never printed. Stdio belongs to `toolu-protocol` and `toolu-cli` (rule 14), so the calling hook decides where warnings go, as with TypeScript's `warn` option.
 
 **Discovery algorithm** (`toolu_runtime::git::discover`), mirroring git's `setup_git_directory_gently_1`:
 1. If `GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR`, `GIT_CEILING_DIRECTORIES` or `GIT_DISCOVERY_ACROSS_FILESYSTEM` is set in the `Env`, return `AskGit`.
@@ -179,6 +202,8 @@ pub fn has_unterminated_block(path: &Path) -> bool;
   - A base ref starting with `-` gives `None` without spawning.
   - A failing `git diff` or `hash-object`, or an empty hash, gives `None`.
   - Diffs over 1 MiB, and non-UTF-8 diffs, hash exactly: raw stdout bytes are piped with no output budget.
+  - Each step runs under `toolu_runtime::process`'s default 30 s deadline, and a step past it gives `None`. TypeScript has no deadline, but a hook's own `hooks.json` timeout is shorter.
+- **Tool availability:** a `PATH` scan with no subprocess, cached per `(PATH, name)` for the life of the process. A `PATH` holding a relative or empty entry is probed every time and never cached. A name holding `/` must be an executable non-directory.
 - **Discovery:**
   - A nonexistent cwd gives `NotFound`.
   - An invalid `.git` file gives `NotFound` (git dies on it).
@@ -214,6 +239,7 @@ pub fn has_unterminated_block(path: &Path) -> bool;
   - a detached HEAD, and an unborn branch;
   - a branch held only in `packed-refs`;
   - a `--separate-git-dir` `.git` file pointer;
+  - a `.git` file pointing at a bare repository (`core.bare = true`, deferred to git);
   - a bare repository, and inside `.git`;
   - a directory outside any repository;
   - a branch name that is also a tag (deferred to git).
@@ -246,7 +272,7 @@ pub fn has_unterminated_block(path: &Path) -> bool;
   - the line counters on the snippet table, a missing file, a directory, NUL bytes and a file over 1 MiB.
   
   `count_code_lines`, `count_python_code_lines` and `has_unterminated_block` also agree with TypeScript on every tracked `*.ts`, `*.rs`, `*.py`, `*.sh` file of the repository.
-- **AC-13:** `cargo xtask gate` passes with no exemption: `toolu-state` coverage is at least 90% and `toolu-runtime` stays at 85% or more. `bun run test` passes, apart from this host's known environmental failures (comemory `be52369e`), which are checked against `origin/main`.
+- **AC-13:** `cargo xtask gate` passes with no exemption: `toolu-state` line coverage is at least 90%, and `toolu-runtime` stays at or above its recorded floor (`coverage-floor.json`, at least 85%). `bun run test` passes, apart from this host's known environmental failures (comemory `be52369e`), which are checked against `origin/main`.
 
 ## Acceptance evidence
 
@@ -280,3 +306,19 @@ None blocking. Resolved here:
 1. Which git queries may spawn: D2.
 2. Where discovery lives: D1.
 3. What happens when `bun` is absent from the Rust test environment. The AC-1/2 and AC-12 corpus tests fail closed with a clear message rather than skipping. The CI rust job installs Bun and runs `bun install` (AGENTS.md CI table).
+
+## Spec review (2026-10-06)
+
+Findings, all fixed in this revision:
+
+- Architecture: 🔴 blocker: the `nix` `user` feature was assigned to `toolu-state`, but the ownership check lives in the runtime discovery (D1). Moved it to `toolu-runtime`'s manifest.
+- Failure modes: 🟡 should-fix: the `diff_sha` deadline was unstated. Named the 30 s process deadline and its `None` outcome.
+- Failure modes: 🟡 should-fix: the tool-availability cache rule was missing. Stated the `(PATH, name)` cache and the relative-entry exception.
+- Architecture: 🟡 should-fix: it was unstated where warnings go, given that `src` may not write to stderr. They are collected in `StateCtx::warnings`.
+- Architecture: 🟡 should-fix: the issue scope was not mapped to ACs, and the deviations were scattered (Jev scope 0.53). Added the scope table and the list of deviations (Jev scope 0.76 after).
+- AC-5: 🟡 should-fix: "bare `.git` file pointer" has a second reading. Added a `.git` file pointing at a bare repository.
+- AC-13: 🔵 consider: the runtime coverage wording ignored recorded floors. It now names `coverage-floor.json`.
+
+Jev alignment of the issue's acceptance list with the ACs: I1 0.91, I2 0.90, I3 0.80, I4 0.92, I5 0.85.
+
+**Status:** Approved
