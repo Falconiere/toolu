@@ -1,17 +1,11 @@
 //! Hermes output shapes for each normalized decision.
 
-use serde_json::{Value, json};
+use serde_json::json;
 
 use super::output;
 use crate::encode::Normal;
+use crate::encode::tests::parsed;
 use crate::event::HostEvent;
-
-fn parsed(out: &str) -> Value {
-  if out.is_empty() {
-    return json!("");
-  }
-  serde_json::from_str(out).unwrap()
-}
 
 #[test]
 fn pre_tool_call_blocks_with_action_block_and_allow_and_advice_are_silent() {

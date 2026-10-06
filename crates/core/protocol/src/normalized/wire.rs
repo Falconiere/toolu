@@ -1,5 +1,6 @@
 //! The flat wire of [`NormalizedEvent`]: one strict struct for every type, and
-//! a table of the optional fields each type may carry.
+//! a table of the optional fields each type may carry, so a field of another
+//! type fails to parse as an unknown field would.
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};

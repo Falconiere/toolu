@@ -49,16 +49,22 @@ fn failure() -> Decision {
   decision("failure")
 }
 
-/// The command stdout, parsed; `""` for silent success.
-fn stdout(host: Host, event: HostEvent, decision: &Decision) -> Value {
-  let Ok(Encoded::Command(out)) = encode(host, event, decision) else {
-    panic!("expected command output for {host:?} {event:?}");
-  };
+/// One command line of output, parsed; `""` for silent success. The encoder
+/// submodules' tests share it.
+pub(super) fn parsed(out: &str) -> Value {
   if out.is_empty() {
     return json!("");
   }
   assert!(out.ends_with('\n'), "{out:?}");
-  serde_json::from_str(&out).unwrap()
+  serde_json::from_str(out).unwrap()
+}
+
+/// The command stdout, parsed.
+fn stdout(host: Host, event: HostEvent, decision: &Decision) -> Value {
+  let Ok(Encoded::Command(out)) = encode(host, event, decision) else {
+    panic!("expected command output for {host:?} {event:?}");
+  };
+  parsed(&out)
 }
 
 #[test]

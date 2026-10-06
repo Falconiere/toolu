@@ -1,15 +1,11 @@
 //! Cursor output shapes for each normalized decision.
 
-use serde_json::{Value, json};
+use serde_json::json;
 
 use super::output;
 use crate::encode::Normal;
+use crate::encode::tests::parsed;
 use crate::event::HostEvent;
-
-fn parsed(out: &str) -> Value {
-  assert!(out.ends_with('\n'), "{out:?}");
-  serde_json::from_str(out).unwrap()
-}
 
 #[test]
 fn permission_events_always_answer_with_a_permission() {
