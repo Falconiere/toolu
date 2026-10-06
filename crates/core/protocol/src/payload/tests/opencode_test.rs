@@ -2,7 +2,7 @@
 
 use serde_json::json;
 
-use super::OpencodePayload;
+use super::{OpencodeInput, OpencodePayload};
 
 #[test]
 fn tool_execute_before_reads_its_input_and_output() {
@@ -33,4 +33,14 @@ fn unknown_input_and_top_level_keys_stay_in_rest() {
     serde_json::from_str(r#"{"input":{"agent":"build"},"hook":"chat.message"}"#).unwrap();
   assert_eq!(payload.input.rest.get("agent"), Some(&json!("build")));
   assert_eq!(payload.rest.get("hook"), Some(&json!("chat.message")));
+}
+
+#[test]
+fn an_input_alone_parses_with_wrong_typed_ids_absent() {
+  let input: OpencodeInput =
+    serde_json::from_str(r#"{"tool":"write","sessionID":7,"callID":null}"#).unwrap();
+  assert_eq!(input.tool.as_str(), Some("write"));
+  assert_eq!(input.session_id.as_str(), None);
+  assert_eq!(input.call_id.as_str(), None);
+  assert_eq!(input.args, None);
 }
