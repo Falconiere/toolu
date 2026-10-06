@@ -14,5 +14,10 @@ serde_json.workspace = true
 [dev-dependencies]
 jsonschema.workspace = true
 
+# Runs itself as a child to see real exit codes and streams (#413).
+[[test]]
+name = "run_hook"
+harness = false
+
 [lints]
 workspace = true

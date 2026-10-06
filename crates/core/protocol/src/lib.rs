@@ -8,6 +8,7 @@ pub mod decision;
 pub mod encode;
 pub mod event;
 pub mod exit;
+pub mod hook;
 pub mod host;
 pub mod install;
 pub mod launcher;
