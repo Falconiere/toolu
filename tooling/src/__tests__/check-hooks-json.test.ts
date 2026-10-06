@@ -4,6 +4,7 @@ import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync }
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { launcherHook } from "@toolu/core/launcher";
+import { z } from "zod";
 import { checkHooksJson } from "../check-hooks-json.ts";
 
 const ROOT = resolve(import.meta.dir, "../../..");
@@ -140,6 +141,21 @@ test("a hand-written bun command fails even though it names a real bundle", () =
   ]);
 });
 
+test("a hand-written toolu hook command without the generated launcher fails", () => {
+  const root = copyOfRepo();
+  edit(root, TOOLU, (text) =>
+    text
+      .replace(JSON.stringify(sessionStart.command), JSON.stringify("toolu hook session-start"))
+      .replace(
+        `,\n            "commandWindows": ${JSON.stringify(sessionStart.commandWindows)}`,
+        "",
+      ),
+  );
+  expect(checkHooksJson(root).map((p) => p.problem)).toEqual([
+    "launcher hook names no hooks/dist/<entry>.js bundle",
+  ]);
+});
+
 test("an invalid entry name and malformed JSON are reported", () => {
   const badEntry = copyOfRepo();
   edit(badEntry, TOOLU, (text) =>
@@ -178,17 +194,77 @@ test("--print rejects missing or invalid arguments with a usage line", () => {
 
 /** The native launcher `cargo xtask print-hook` emits, from the committed Rust golden. */
 const NATIVE_COMMAND = readFileSync(
+  join(ROOT, "crates/core/protocol/src/tests/fixtures/launcher-session-start.txt"),
+  "utf8",
+);
+const NATIVE_PRE_TOOL = readFileSync(
   join(ROOT, "crates/core/protocol/src/tests/fixtures/launcher-pre-tool-use.txt"),
   "utf8",
 );
+const NativeHook = z.object({
+  type: z.literal("command"),
+  command: z.string(),
+  commandWindows: z.string(),
+  timeout: z.number(),
+});
+const NATIVE_SESSION_HOOK = NativeHook.parse(
+  JSON.parse(
+    readFileSync(join(ROOT, "tooling/fixtures/native-launcher/session-start.json"), "utf8"),
+  ),
+);
+const NATIVE_PRE_HOOK = NativeHook.parse(
+  JSON.parse(
+    readFileSync(join(ROOT, "tooling/fixtures/native-launcher/pre-tool-use.json"), "utf8"),
+  ),
+);
 
-test("a native entry is left to cargo xtask check-hooks while Bun entries stay gated", () => {
+function switchSessionStart(root: string): void {
+  const path = join(root, TOOLU);
+  const doc = JSON.parse(readFileSync(path, "utf8")) as {
+    hooks: { SessionStart: Array<{ hooks: Array<Record<string, unknown>> }> };
+  };
+  const hook = doc.hooks.SessionStart?.[0]?.hooks[0];
+  if (hook === undefined) throw new Error("toolu has no SessionStart hook");
+  Object.assign(hook, NATIVE_SESSION_HOOK);
+  writeFileSync(path, JSON.stringify(doc));
+}
+
+test("a generated native entry passes beside Bun entries and a hand edit fails", () => {
   expect(NATIVE_COMMAND).toContain("--hook-protocol");
-  expect(NATIVE_COMMAND).toContain("hooks/dist/pre-tools.js");
+  expect(NATIVE_COMMAND).toContain("hooks/dist/session-start.js");
+  expect(NATIVE_SESSION_HOOK.command).toBe(NATIVE_COMMAND);
   const root = copyOfRepo();
-  const native = { type: "command", command: NATIVE_COMMAND, commandWindows: "x", timeout: 60 };
+  switchSessionStart(root);
+  expect(checkHooksJson(root)).toEqual([]);
+  edit(root, TOOLU, (text) => text.replace("--hook-protocol", "--wrong-protocol"));
+  expect(checkHooksJson(root).map((p) => p.problem)).toEqual([
+    "command differs from the generated launcher",
+    "commandWindows differs from the generated launcher",
+  ]);
+});
+
+test("a native command with its protocol marker kept but its shell body edited fails", () => {
+  const root = copyOfRepo();
+  switchSessionStart(root);
   edit(root, TOOLU, (text) =>
-    text.replace('"PreToolUse": [', `"PreToolUse": [${JSON.stringify({ hooks: [native] })},`),
+    text.replace(
+      JSON.stringify(NATIVE_COMMAND),
+      JSON.stringify(NATIVE_COMMAND.replace("exit 0", "exit 1")),
+    ),
+  );
+  expect(checkHooksJson(root).map((p) => p.problem)).toEqual([
+    "command differs from the generated native launcher",
+  ]);
+});
+
+test("a native entry does not stop the Bun launcher check", () => {
+  const root = copyOfRepo();
+  expect(NATIVE_PRE_HOOK.command).toBe(NATIVE_PRE_TOOL);
+  edit(root, TOOLU, (text) =>
+    text.replace(
+      '"PreToolUse": [',
+      `"PreToolUse": [${JSON.stringify({ hooks: [NATIVE_PRE_HOOK] })},`,
+    ),
   );
   expect(checkHooksJson(root)).toEqual([]);
   edit(root, TOOLU, (text) =>
@@ -199,5 +275,20 @@ test("a native entry is left to cargo xtask check-hooks while Bun entries stay g
   );
   expect(checkHooksJson(root).map((p) => p.problem)).toEqual([
     "command differs from the generated launcher",
+  ]);
+});
+
+test("native Windows and timeout fields must retain the generated values", () => {
+  const root = copyOfRepo();
+  switchSessionStart(root);
+  edit(root, TOOLU, (text) => text.replace("where /q bun", "where bun"));
+  expect(checkHooksJson(root).map((p) => p.problem)).toEqual([
+    "commandWindows differs from the generated native launcher",
+  ]);
+  const missingTimeout = copyOfRepo();
+  switchSessionStart(missingTimeout);
+  edit(missingTimeout, TOOLU, (text) => text.replace('"timeout":60', '"timeout":0'));
+  expect(checkHooksJson(missingTimeout).map((p) => p.problem)).toEqual([
+    "timeout must be an integer from 1 to 600",
   ]);
 });

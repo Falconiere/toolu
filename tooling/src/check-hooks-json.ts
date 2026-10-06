@@ -5,16 +5,15 @@
  *
  * A hook is a launcher hook when its command names `hooks/dist/`, runs
  * `bun`, or carries `commandWindows`. Legacy script commands pass untouched until
- * their plugin is ported (epic #247). A native `toolu` entry (its command
- * probes `--hook-protocol`) also names `hooks/dist/` for its Bun fallback; it is
- * skipped here and gated by `cargo xtask check-hooks` (#412).
+ * their plugin is ported (epic #247). Native entries are checked against the
+ * #412 Rust command goldens; `cargo xtask check-hooks` checks every native field.
  *
  * Usage: bun run tooling/src/check-hooks-json.ts [--root <dir>]
  *        bun run tooling/src/check-hooks-json.ts --print <plugin> <event> <entry>
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { launcherHook, type LauncherHook } from "@toolu/core/launcher";
+import { isEnforcingEvent, launcherHook, type LauncherHook } from "@toolu/core/launcher";
 import { z } from "zod";
 
 export interface HooksJsonProblem {
@@ -31,6 +30,7 @@ const HookSchema = z
     type: z.string(),
     command: z.string().optional(),
     commandWindows: z.string().optional(),
+    timeout: z.number().optional(),
   })
   .passthrough();
 const HooksFileSchema = z
@@ -45,6 +45,62 @@ const DIST = /hooks[/\\]dist[/\\]([^"'\s/\\]+)\.js/;
 
 /** The marker of a native launcher entry (`toolu_protocol::launcher::MARKER`). */
 const NATIVE_MARKER = "--hook-protocol";
+const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+const NATIVE_EXAMPLES = {
+  enforcing: {
+    event: "PreToolUse",
+    entry: "pre-tools",
+    command: readFileSync(
+      join(
+        import.meta.dir,
+        "../../crates/core/protocol/src/tests/fixtures/launcher-pre-tool-use.txt",
+      ),
+      "utf8",
+    ),
+  },
+  context: {
+    event: "SessionStart",
+    entry: "session-start",
+    command: readFileSync(
+      join(
+        import.meta.dir,
+        "../../crates/core/protocol/src/tests/fixtures/launcher-session-start.txt",
+      ),
+      "utf8",
+    ),
+  },
+} as const;
+
+/** The Rust generator's checked-in command, with only its target fields changed. */
+function expectedNativeCommand(plugin: string, event: string, entry: string): string | undefined {
+  if (!NAME.test(plugin) || !NAME.test(entry) || !/^[A-Z][A-Za-z]+$/u.test(event)) return undefined;
+  const example = isEnforcingEvent(event) ? NATIVE_EXAMPLES.enforcing : NATIVE_EXAMPLES.context;
+  const prefix = plugin === "toolu" ? "" : `${plugin} `;
+  return example.command
+    .replace(
+      `hook ${example.entry} --event ${example.event}`,
+      `${prefix}hook ${entry} --event ${event}`,
+    )
+    .replaceAll(`hooks/dist/${example.entry}.js`, `hooks/dist/${entry}.js`)
+    .replaceAll("toolu plugin:", `${plugin} plugin:`);
+}
+
+/** The context golden carries the #412 install text used by both POSIX and Windows. */
+function nativeMissingMessage(plugin: string): string {
+  const message = /"systemMessage":"([^"]+)"/u.exec(NATIVE_EXAMPLES.context.command)?.[1];
+  if (message === undefined) throw new Error("native SessionStart golden has no install message");
+  return message.replace("toolu plugin:", `${plugin} plugin:`);
+}
+
+function expectedNativeWindows(plugin: string, event: string, entry: string): string {
+  const bundle = `"%PLUGIN_ROOT%\\hooks\\dist\\${entry}.js"`;
+  const home = '"%USERPROFILE%\\.bun\\bin\\bun.exe"';
+  const missing = nativeMissingMessage(plugin).replaceAll("|", "^|");
+  const absent = isEnforcingEvent(event)
+    ? `(1>&2 echo blocked: ${missing}& exit /b 2)`
+    : `(echo {"systemMessage":"${missing}"})`;
+  return `if exist "%TOOLU_BUN%" ("%TOOLU_BUN%" ${bundle}) else (where /q bun& if not errorlevel 1 (bun ${bundle}) else if exist ${home} (${home} ${bundle}) else ${absent})`;
+}
 
 function isNativeHook(hook: Hook): boolean {
   return (hook.command ?? "").includes(NATIVE_MARKER);
@@ -53,7 +109,10 @@ function isNativeHook(hook: Hook): boolean {
 function isLauncherHook(hook: Hook): boolean {
   const command = hook.command ?? "";
   return (
-    hook.commandWindows !== undefined || command.includes("hooks/dist/") || /\bbun\b/.test(command)
+    hook.commandWindows !== undefined ||
+    command.includes("hooks/dist/") ||
+    /\bbun\b/u.test(command) ||
+    /\btoolu(?:\s+[a-z0-9-]+)?\s+hook\s+[a-z0-9-]+/u.test(command)
   );
 }
 
@@ -105,6 +164,48 @@ function checkHook(site: HookSite, hook: Hook): HooksJsonProblem[] {
   return problems;
 }
 
+function checkNativeHook(site: HookSite, hook: Hook): HooksJsonProblem[] {
+  const { file, where } = site;
+  const entry = entryOf(hook);
+  if (entry === undefined)
+    return [{ file, where, problem: "native launcher names no hooks/dist/<entry>.js bundle" }];
+  const expected = expectedNativeCommand(site.plugin, site.event, entry);
+  if (expected === undefined) return [{ file, where, problem: "invalid native launcher target" }];
+  const problems: HooksJsonProblem[] = [];
+  if (hook.type !== "command")
+    problems.push({
+      file,
+      where,
+      problem: `type must be "command", got ${JSON.stringify(hook.type)}`,
+    });
+  if (hook.command !== expected)
+    problems.push({
+      file,
+      where,
+      problem: "command differs from the generated native launcher",
+      expected,
+    });
+  const windows = expectedNativeWindows(site.plugin, site.event, entry);
+  if (hook.commandWindows !== windows)
+    problems.push({
+      file,
+      where,
+      problem: "commandWindows differs from the generated native launcher",
+      expected: windows,
+    });
+  if (
+    hook.timeout === undefined ||
+    !Number.isInteger(hook.timeout) ||
+    hook.timeout < 1 ||
+    hook.timeout > 600
+  )
+    problems.push({ file, where, problem: "timeout must be an integer from 1 to 600" });
+  const bundle = `plugins/${site.plugin}/hooks/dist/${entry}.js`;
+  if (!existsSync(join(site.root, bundle)))
+    problems.push({ file, where, problem: `bundle ${bundle} is not committed` });
+  return problems;
+}
+
 function checkFile(root: string, plugin: string): HooksJsonProblem[] {
   const file = `plugins/${plugin}/hooks/hooks.json`;
   let parsed: z.infer<typeof HooksFileSchema>;
@@ -117,9 +218,14 @@ function checkFile(root: string, plugin: string): HooksJsonProblem[] {
   return Object.entries(parsed.hooks).flatMap(([event, groups]) =>
     groups.flatMap((group, i) =>
       group.hooks.flatMap((hook, j) =>
-        !isNativeHook(hook) && isLauncherHook(hook)
-          ? checkHook({ root, plugin, event, file, where: `${event}[${i}].hooks[${j}]` }, hook)
-          : [],
+        isNativeHook(hook)
+          ? checkNativeHook(
+              { root, plugin, event, file, where: `${event}[${i}].hooks[${j}]` },
+              hook,
+            )
+          : isLauncherHook(hook)
+            ? checkHook({ root, plugin, event, file, where: `${event}[${i}].hooks[${j}]` }, hook)
+            : [],
       ),
     ),
   );

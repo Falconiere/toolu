@@ -2,6 +2,10 @@ use super::{DEFAULT_TIMEOUT, MARKER, MAX_TIMEOUT, Target, hook, hook_name};
 
 const PRE_TOOL_USE: &str = include_str!("fixtures/launcher-pre-tool-use.txt");
 const SESSION_START: &str = include_str!("fixtures/launcher-session-start.txt");
+const SESSION_HOOK: &str =
+  include_str!("../../../../../tooling/fixtures/native-launcher/session-start.json");
+const PRE_HOOK: &str =
+  include_str!("../../../../../tooling/fixtures/native-launcher/pre-tool-use.json");
 
 fn target<'a>(plugin: &'a str, event: &'a str, name: &'a str) -> Target<'a> {
   Target {
@@ -25,6 +29,24 @@ fn enforcing_and_context_commands_match_the_committed_goldens() {
     generated("toolu", "SessionStart", "session-start").command,
     SESSION_START
   );
+}
+
+#[test]
+fn typescript_checker_fixtures_match_the_rust_generator() {
+  for (plugin, event, name, fixture) in [
+    ("toolu", "SessionStart", "session-start", SESSION_HOOK),
+    ("toolu", "PreToolUse", "pre-tools", PRE_HOOK),
+  ] {
+    let generated = generated(plugin, event, name);
+    let expected = serde_json::json!({
+      "type": "command",
+      "command": generated.command,
+      "commandWindows": generated.command_windows,
+      "timeout": generated.timeout,
+    });
+    let fixture: serde_json::Value = serde_json::from_str(fixture).unwrap();
+    assert_eq!(fixture, expected, "{plugin} {event} {name}");
+  }
 }
 
 #[test]
