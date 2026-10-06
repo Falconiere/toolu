@@ -63,7 +63,7 @@ the full gate.
   {
     "id": "musl-size",
     "title": "Build/run the TLS transport test on static musl, build a release-profile client probe and the CLI, measure both against 4 MiB, and inspect the dependency tree",
-    "check": "bun tooling/src/check-http-musl.ts",
+    "check": "bun run check:http-musl",
     "ac_refs": ["AC-5"],
     "depends_on": ["transport"],
     "paths": ["crates/core/http/", "crates/http-test-support/", "crates/cli/", "Cargo.toml", "Cargo.lock", "docs/resource-budgets.md", "tooling/src/check-http-musl.ts"],
@@ -105,7 +105,7 @@ test` covers workspace drift from the new member.
 The `pl_check_ac_refs` helper is unavailable in this shell, so a direct
 JSON/Markdown check confirmed exact AC-1 through AC-6 coverage and nonempty
 step checks. The initial musl/size step omitted its linked probe; it now runs
-`tooling/src/check-http-musl.ts`, which must build and measure that probe as well
+`bun run check:http-musl`, which must build and measure that probe as well
 as the CLI. Jev judged the revised ledger's criterion coverage strong (0.97).
 **Status: Approved.**
 
