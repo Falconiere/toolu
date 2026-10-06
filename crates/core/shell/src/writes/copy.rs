@@ -1,5 +1,5 @@
 //! `cp`/`mv`/`install` and the in-place editors `sed -i`/`perl -i`
-//! (`copyTargets`, `inPlaceTargets`).
+//! (`copyTargets`, `inPlaceTargets` in `shell-writes.ts`).
 
 use crate::analysis::ShellCommand;
 use crate::argv::basename;

@@ -51,7 +51,7 @@ impl Walker {
 
   /// Record a script that could not be parsed.
   pub(crate) fn fail(&mut self, failure: &ParseFailure, origin: CommandOrigin) {
-    self.cancelled |= *failure == ParseFailure::Cancelled;
+    self.failed = true;
     self.errors.push(ShellError {
       message: failure.message(),
       pos: 0,

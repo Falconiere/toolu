@@ -1,0 +1,4 @@
+# libFuzzer needs nightly's sanitizer flags; the crate itself builds on the
+# workspace toolchain (#455 admits this override for a crate's fuzz package).
+[toolchain]
+channel = "nightly"

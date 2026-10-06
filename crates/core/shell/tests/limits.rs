@@ -80,3 +80,16 @@ fn nesting_at_the_limit_is_still_read() {
       .any(|c| c.argv.first().cloned().flatten().as_deref() == Some("git"))
   );
 }
+
+#[test]
+fn heredocs_past_the_scanner_state_are_unknown_not_a_crash() {
+  for source in [
+    format!("{}\n", "cat <<EOF ".repeat(150)),
+    format!("cat <<{}\nx\n", "A".repeat(1_100)),
+    format!("bash -c '{}'", "cat <<EOF ".repeat(150)),
+  ] {
+    assert!(analyze(&source).unknown, "{:?}", source.get(..40));
+  }
+  let ten = "cat <<EOF\nx\nEOF\n".repeat(10);
+  assert!(!analyze(&ten).unknown);
+}

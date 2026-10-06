@@ -53,7 +53,7 @@ fn finish(source: &str, walker: Walker) -> ShellAnalysis {
       command.exit_proves = false;
     }
   }
-  let unknown = errored && (commands.is_empty() || walker.overflow || walker.cancelled);
+  let unknown = errored && (commands.is_empty() || walker.overflow || walker.failed);
   ShellAnalysis {
     source: source.to_owned(),
     commands,

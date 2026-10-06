@@ -1,0 +1,31 @@
+# Fuzz targets for toolu-shell (#416): `cargo +nightly fuzz run <target>` from
+# this directory. Not a member of the toolu workspace; see docs/shell-analysis.md.
+[package]
+name = "toolu-shell-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+toolu-shell = { path = ".." }
+
+[[bin]]
+name = "analyze"
+path = "fuzz_targets/analyze.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "nested"
+path = "fuzz_targets/nested.rs"
+test = false
+doc = false
+bench = false
+
+# Not a member of the toolu workspace.
+[workspace]

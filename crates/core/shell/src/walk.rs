@@ -64,8 +64,8 @@ pub(crate) struct Walker {
   pub(crate) errors: Vec<ShellError>,
   /// A nesting level past `MAX_NESTING` was cut off.
   pub(crate) overflow: bool,
-  /// A parse ran out of the budget.
-  pub(crate) cancelled: bool,
+  /// A script could not be parsed (budget, heredoc state).
+  pub(crate) failed: bool,
 }
 
 /// The tokens that end a `case` arm; anywhere else they are a syntax error.
@@ -97,7 +97,7 @@ impl Walker {
       compound_redirects: Vec::new(),
       errors: Vec::new(),
       overflow: false,
-      cancelled: false,
+      failed: false,
     }
   }
 
