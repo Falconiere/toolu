@@ -111,7 +111,7 @@ fn core_key(core: &mut Core, line: &str) -> Option<()> {
 
 /// A config value with its comment and blanks removed; `None` when quoted or escaped.
 fn plain(value: &str) -> Option<String> {
-  let value = value.split(['#', ';']).next().unwrap_or_default().trim();
+  let value = value.split(['#', ';']).next().unwrap_or("").trim();
   (!value.contains(['"', '\\'])).then(|| value.to_owned())
 }
 
