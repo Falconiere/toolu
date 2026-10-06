@@ -24,6 +24,7 @@ export type HookJob = {
   plugin: string;
   name: string;
   bundle: string;
+  command?: string;
   pluginDir: string;
   event: HookContextEvent;
 };
@@ -96,6 +97,7 @@ function jobsFor(
         plugin: plugin.name,
         name: entry.name,
         bundle: entry.bundle,
+        ...(entry.command === undefined ? {} : { command: entry.command }),
         pluginDir: plugin.pluginDir,
         event,
       });
@@ -145,6 +147,7 @@ async function deliverJob(
     spawned = await spawn({
       bun: plan.bun,
       bundle: job.bundle,
+      ...(job.command === undefined ? {} : { command: job.command }),
       cwd: plan.projectRoot,
       env,
       stdin,

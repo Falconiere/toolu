@@ -24,6 +24,7 @@ Coverage discovery normalizes Bun and native commands to the same `hooks/dist/<e
 
 - `StartupEntry`: `{ name, bundle, command?: string }`, where `command` is the generated native POSIX shell command and absent for Bun.
 - `SpawnRequest`: the existing fields plus an optional native command; when present the child argv is `/bin/sh -c <command>`.
+- `HookJob`: carries `StartupEntry.command` through prompt and compaction delivery to the same subprocess runner.
 - `Discovered`: the existing fields plus `hostMechanism: "bun-bundle" | "native"` for `hooks.json` rows; non-hook rows remain `"bun-bundle"`.
 - No new user configuration or host protocol field.
 

@@ -142,6 +142,7 @@ async function runEntry(
     const spawned = await spawnEntry({
       bun: run.bun,
       bundle: entry.bundle,
+      ...(entry.command === undefined ? {} : { command: entry.command }),
       cwd: run.projectRoot,
       env,
       stdin,

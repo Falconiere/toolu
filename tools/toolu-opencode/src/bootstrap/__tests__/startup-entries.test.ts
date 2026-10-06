@@ -1,11 +1,19 @@
 /** Startup entries come from each plugin's real `hooks.json` launchers (#342). */
 import { expect, test } from "bun:test";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { launcherHook } from "@toolu/core/launcher";
 import { z } from "zod";
 import { matcherCovers, pluginHookEntries, pluginStartupEntries } from "../entrypoint.ts";
 import { PLUGINS_ROOT, copiedPlugin, fixturePlugin, tempRoot } from "./fixtures.ts";
+
+const NATIVE_SESSION_START = readFileSync(
+  resolve(
+    import.meta.dir,
+    "../../../../../crates/core/protocol/src/tests/fixtures/launcher-session-start.txt",
+  ),
+  "utf8",
+);
 
 function entryNames(plugin: string): string[] {
   const plan = pluginStartupEntries(join(PLUGINS_ROOT, plugin));
@@ -29,6 +37,35 @@ test.concurrent("Jev SessionStart resolves its shipped bundle", () => {
   expect(pluginStartupEntries(plugin)).toEqual({
     ok: true,
     entries: [{ name: "session-start", bundle: join(plugin, "hooks", "dist", "session-start.js") }],
+  });
+});
+
+test.concurrent("a generated native SessionStart retains its declared shell command", () => {
+  using root = tempRoot("toolu-entries-native-");
+  const plugin = fixturePlugin(root.path, "toolu", {
+    entries: { "session-start": "process.exit(0);\n" },
+  });
+  writeFileSync(
+    join(plugin.pluginDir, "hooks", "hooks.json"),
+    JSON.stringify({
+      hooks: {
+        SessionStart: [
+          {
+            hooks: [{ type: "command", command: NATIVE_SESSION_START, timeout: 60 }],
+          },
+        ],
+      },
+    }),
+  );
+  expect(pluginStartupEntries(plugin.pluginDir)).toEqual({
+    ok: true,
+    entries: [
+      {
+        name: "session-start",
+        bundle: join(plugin.pluginDir, "hooks", "dist", "session-start.js"),
+        command: NATIVE_SESSION_START,
+      },
+    ],
   });
 });
 

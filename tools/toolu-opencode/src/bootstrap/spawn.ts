@@ -9,6 +9,8 @@ const MAX_OUTPUT_BYTES = 512_000;
 export type SpawnRequest = {
   bun: string;
   bundle: string;
+  /** The #412 generated POSIX command; absent means the Bun launcher. */
+  command?: string;
   cwd: string;
   env: Record<string, string>;
   stdin: string;
@@ -84,7 +86,11 @@ export async function spawnEntry(request: SpawnRequest): Promise<SpawnOutcome> {
   let proc: Bun.Subprocess<Blob, "pipe", "pipe">;
   try {
     // Every variable an entry needs is in `env`; a project .env must not add to it.
-    proc = Bun.spawn([request.bun, "--no-env-file", request.bundle], {
+    const argv =
+      request.command === undefined
+        ? [request.bun, "--no-env-file", request.bundle]
+        : ["/bin/sh", "-c", request.command];
+    proc = Bun.spawn(argv, {
       cwd: request.cwd,
       env: request.env,
       stdin: new Blob([request.stdin]),

@@ -16,11 +16,11 @@ Recognize and run native lifecycle entries, validate both launcher forms, retain
 [
   {
     "id": "bootstrap",
-    "title": "Recognize generated native lifecycle entries and run their POSIX command with the existing startup environment, deadline, report, output and cancellation path; reject unknown forms",
+    "title": "Recognize generated native lifecycle entries and run their POSIX command with the existing startup and prompt/compaction environment, deadline, report, output and cancellation path; reject unknown forms",
     "ac_refs": ["AC-1", "AC-2", "AC-5"],
-    "paths": ["tools/toolu-opencode/src/bootstrap/**", "packages/toolu-core/src/launcher/**", "crates/core/protocol/src/launcher.rs", "crates/core/protocol/src/tests/fixtures/**"],
+    "paths": ["tools/toolu-opencode/src/bootstrap/**", "tools/toolu-opencode/src/plugin/context-delivery.ts", "tools/toolu-opencode/src/plugin/__tests__/context-delivery.test.ts", "packages/toolu-core/src/launcher/**", "crates/core/protocol/src/launcher.rs", "crates/core/protocol/src/tests/fixtures/**"],
     "input": "Generated #412 SessionStart, UserPromptSubmit and PreCompact commands in disposable plugin dirs; Bun and native child outputs; invalid command, missing bundle, bad TOOLU_BIN, deadline and abort cases",
-    "check": "bun test --timeout 60000 tools/toolu-opencode/src/bootstrap/__tests__"
+    "check": "bun test --timeout 60000 tools/toolu-opencode/src/bootstrap/__tests__ tools/toolu-opencode/src/plugin/__tests__/context-delivery.test.ts"
   },
   {
     "id": "launcher-gate",
@@ -72,7 +72,7 @@ Recognize and run native lifecycle entries, validate both launcher forms, retain
 
 ## Critical files
 
-- `tools/toolu-opencode/src/bootstrap/{entrypoint,spawn,runtime}.ts` and colocated tests.
+- `tools/toolu-opencode/src/bootstrap/{entrypoint,spawn,runtime}.ts`, `tools/toolu-opencode/src/plugin/context-delivery.ts`, and colocated tests.
 - `tooling/src/check-hooks-json.ts`, `tooling/src/gate-coverage/{discover,fs-util,check,types}.ts`, and their tests.
 - Dedicated live OpenCode test and acceptance registry, `docs/opencode.md`, `docs/gate-coverage-matrix.md`, and generated mirrors.
 
@@ -83,3 +83,7 @@ Focused tests prove red then green with real generated launcher strings, subproc
 ## Delivery
 
 After green focused checks, commit and push each recoverable phase on `feat/461-opencode-bootstrap-and-repository-checks`. Before implementation and again before push, fetch and rebase if `origin/main` moved, then repeat affected checks. Final delivery runs the ledger with `--verify`, the version 2 review, and verdict status `overall: ready` before push. Create a PR to `main` with the issue and epic references at the top, then hand off to babysit. The epic orchestrator owns the merge.
+
+## Deviations
+
+- The bootstrap step now includes `plugin/context-delivery.ts`: the initial plan listed only startup files, but this adapter independently builds prompt and compaction jobs from the same entries. It must forward the native command to keep both lifecycle events running.
