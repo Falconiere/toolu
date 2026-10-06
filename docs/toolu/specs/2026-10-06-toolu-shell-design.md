@@ -1,6 +1,6 @@
 # toolu-shell: Bash/Shell command analysis in Rust — Design
 
-**Date:** 2026-10-06   **Status:** Draft   **Author:** epic worker (Claude Code)   **Topic:** #416. Port `@toolu/core/shell` to `crates/core/shell` (`toolu-shell`). For every fixture input it gives the same answers: what a command line runs, what it writes, its git invocations, and whether an exit status is observable. It is fuzzed in CI.
+**Date:** 2026-10-06   **Status:** Approved   **Author:** epic worker (Claude Code)   **Topic:** #416. Port `@toolu/core/shell` to `crates/core/shell` (`toolu-shell`). For every fixture input it gives the same answers: what a command line runs, what it writes, its git invocations, and whether an exit status is observable. It is fuzzed in CI.
 
 Brainstorm: `docs/toolu/brainstorms/2026-10-06-toolu-shell.md`. Builds on #455 (the quality bar and the admitted `fuzz/` layout), #408 (the shell fixtures and `unbash-baseline.json`) and #413 (the shared-fixture precedent, `fixtures/host/encode.json`).
 
@@ -24,15 +24,28 @@ The pre-tool and post-tool gates that #418–#423 port to Rust all ask one quest
 
 | unbash node | tree-sitter-bash node(s) | Handling |
 |---|---|---|
-| Statement list | `program`, compound bodies, `do_group`, `ERROR` | `walk_list`: only the last statement, when not backgrounded (`&`), keeps `proves` |
+| Statement list | `program`, compound bodies, `do_group`, `ERROR` | `walk_list`: only the last statement keeps `proves`, and only when it is not backgrounded. A statement is backgrounded when the terminator token after it is `&` |
 | AndOr | left-recursive `list` (`&&`, `\|\|`) | flattened iteratively into elements and operators. `proves` needs `&&` on both sides |
 | Pipeline | `pipeline` (`\|`, `\|&`), `negated_command` | positions `{index, size}`. Only the last element of a non-negated pipeline proves |
-| Command | `command`, `declaration_command`, `unset_command`, `variable_assignment(s)` (prefix only), `test_command` written `[ … ]` | `emit_command`, below |
+| Command | `command`, `declaration_command`, `unset_command`, and a `variable_assignment(s)` statement, which is an empty command with prefix only | `emit_command`, below |
+| Command `[ … ]` | `test_command` whose first token is `[` | a command whose words are `[`, each word and operator token inside in source order, then `]`, as unbash reads `[` |
+| Coproc | a `command` whose static first word is `coproc` | the remaining words are the command, walked with `proves = false`, as unbash's `Coproc` |
 | Statement redirects | `redirected_statement` around a compound body | `compound_redirects` |
-| If / While / For / Select / ArithmeticFor / Case | `if_statement`, `while_statement`, `for_statement`, `c_style_for_statement`, `case_statement` | bodies walked with `proves = false`. Words and conditions are scanned for nested scripts |
-| Function / Coproc | `function_definition` | body walked with `origin = function`, `proves = false`. Its redirects go to `compound_redirects` |
-| Subshell / BraceGroup | `subshell`, `compound_statement` | body walked with the same `proves` |
-| TestCommand / ArithmeticCommand | `test_command` written `[[ … ]]` or `(( … ))` | scanned for nested scripts only |
+| If / While / For / Select / ArithmeticFor / Case | `if_statement`, `while_statement`, `for_statement` (which is also `select`), `c_style_for_statement`, `case_statement` | bodies walked with `proves = false`. Words and conditions are scanned for nested scripts |
+| Function | `function_definition` | body walked with `origin = function`, `proves = false`. Its `redirect` children go to `compound_redirects` |
+| Subshell / BraceGroup | `subshell`, a `compound_statement` whose first token is `{` | body walked with the same `proves` |
+| TestCommand `[[ … ]]` / ArithmeticCommand `(( … ))` | `test_command` whose first token is `[[`, a `compound_statement` whose first token is `((` | scanned for nested scripts only |
+
+**Mapping notes.** These were measured with tree-sitter-bash 0.25.1 against the TypeScript answers.
+
+- **Heredoc continuation.** After `heredoc_start`, the rest of the line is nested inside the `heredoc_redirect` node:
+  - further redirects (`redirect:` fields) belong to the same command;
+  - a `pipeline` child continues the pipeline (`cat <<EOF | bash`);
+  - an operator plus a `right:` child continues the and-or list (`cat <<'EOF' >f && git push`).
+
+  The walk rebuilds the logical pipeline and and-or list from these, so the positions, `proves` and the order of commands match unbash. For `cat <<EOF | bash` that is: `cat` at pipeline 0 of 2, `bash` at 1 of 2, then `bash`'s unknown stdin script.
+- **Line continuation.** tree-sitter-bash treats `\` plus newline as whitespace, but bash removes it inside a word: `node -\<newline>e x` runs `node -e x`. Adjacent word nodes separated by exactly `\<newline>` or `\<CR><LF>` are joined into one word before resolution, so a deny rule still matches. `text` keeps the source as written.
+- **Glob detection.** tree-sitter-bash splits `.en[v]` into several `word` nodes. Consecutive unquoted literal parts are merged before the `*`/`?`/`[…]` test, which matches unbash's single `Literal` part.
 
 Rules that cut across these nodes:
 
@@ -129,6 +142,8 @@ Private modules, each at most 300 code lines and paired with its `src/tests/<mod
 - `options` (getopt);
 - `writes/copy` and `writes/python`.
 
+A module that would pass 300 code lines is split into a child module, such as `walk/compound`, at the same layer depth. Both the layer-depth limit (3 under `src`) and the size limit hold.
+
 `fixtures/shell/analysis.json`:
 
 ```json
@@ -168,6 +183,8 @@ The fields:
 | `bash -c "$CMD"`, `curl … \| bash`, recursion past depth 4 | an unknown command, `argv: [None]` |
 | `$g push`, `git $(echo push)` | `runs_git_subcommand` is `Unknown` |
 | Non-UTF-8 input | impossible through `&str`. The fuzz target skips invalid UTF-8, as the host JSON layer already decoded it |
+| Concurrent calls | `analyze` keeps no global or thread-local state. Each call owns its `Parser` and deadline, so calls on several threads are independent |
+| `node -\<newline>e x`, `[ -f "$x" ]`, `coproc git push`, `cat <<EOF \| bash` | TypeScript's answers (Mapping notes) |
 | A crash inside tree-sitter's C code | `catch_unwind` cannot catch it. The #412 launcher maps the signal to exit 2, so the action is blocked, fail closed. Fuzzing is the guard |
 
 ## Acceptance criteria
@@ -181,9 +198,10 @@ The fields:
   - `commit_messages`, `commands`, `exit_proves`, and `latency` within `maxMs`.
 - **AC-2:** For every one of the 203 inputs of `unbash-baseline.json`, Rust's projected analysis equals `fixtures/shell/analysis.json`'s `expect`, or its `rust.expect` when a `rust.reason` records an intended difference. TypeScript reproduces every `expect`, and the fixture's inputs equal the baseline's in order. Every intended difference is listed in `docs/shell-analysis.md` with its reason.
 - **AC-3:** Malformed input still reports the commands read. `git push origin main; echo "unterminated` and `git push origin main` followed by a newline and `echo 'x` both report the push (`Yes`) with errors, and `)` and `if` are `unknown`.
-- **AC-4:** `analyze` on 10,000 nested `$(…)` around `node -e x`, on a 2 MiB-stack thread, returns `unknown: true` with a nesting error and no overflow. The 100,000-term arithmetic and `&&` chains return without overflow.
-- **AC-5:** `cargo +nightly fuzz build` builds both targets. A local run of each target for at least 10 minutes finds no crash, panic or timeout. The `fuzz` job runs both targets in PR CI under the `typescript` aggregate, and `fuzz.yml` schedules longer runs. The package matches #455's `fuzz/clean` fixture layout, and `cargo xtask guardrails` passes.
-- **AC-6:** In a release build, `analyze` plus `runs_git_subcommand`, `push_targets` and `write_targets` have p99 ≤ 100 µs over the 203 fixture inputs (`cargo test --release -p toolu-shell --test latency`, run in the CI `rust` job). A debug build asserts a 20× smoke ceiling.
+- **AC-4:** `analyze` on 10,000 nested `$(…)` around `node -e x`, on a 2 MiB-stack thread, returns `unknown: true` with a nesting error and no overflow. The `bashCommandsDecide` rule from AC-1, with deny `node -e`, then answers `unknown`, never `allow`. The 100,000-term arithmetic and `&&` chains return without overflow.
+- **AC-5:** `cargo +nightly fuzz build` builds both targets. A local run of each target for at least 10 minutes finds no crash, panic or timeout. The `fuzz` job runs both targets in PR CI under the `typescript` aggregate, and `fuzz.yml` schedules longer runs. The package matches #455's `fuzz/clean` fixture layout, and `cargo xtask guardrails` passes. The first scheduled run can only happen after merge, because GitHub runs schedules from the default branch. Until then the PR job and the local 10-minute runs are the evidence, and the PR says so.
+- **AC-6:** In a release build, `analyze` plus `runs_git_subcommand`, `push_targets` and `write_targets` have p99 ≤ 100 µs over the 203 fixture inputs. Parse and walk are timed together with these helpers, which is stricter than parse and walk alone, as `bench:shell` times them (`cargo test --release -p toolu-shell --test latency`, run in the CI `rust` job). A debug or instrumented build asserts only a 100× smoke ceiling (10 ms), so that the coverage run on a loaded host cannot flake.
+- **AC-9:** Every behaviour test of `packages/toolu-core/src/shell/__tests__/shell-{argv,git,parse,rules,walk,writes}.test.ts` has a Rust test with the same inputs and expectations: 57 tests in total. The exceptions are the TypeScript-only source scan in `shell-walk.test.ts` and `shell-event.test.ts` (the per-event cache, Non-Goal 2). The probed constructs (line continuation, `[ … ]`, `coproc`, heredoc continuations) have Rust tests with TypeScript's answers.
 - **AC-7:** The issue's scenarios hold:
   - `git status && bash -c "rm -rf x" | head` yields `git status`, then `rm -rf x` (origin `shell`, depth 1), then `head`;
   - `git push origin main` plus an unterminated quote is still a push;
@@ -204,6 +222,7 @@ The fields:
 | AC-6 | the 203 inputs × 200 rounds | p99 ≤ 100 µs | `cargo test --release -p toolu-shell --test latency -- --nocapture` |
 | AC-7 | the scenario lines | as stated | `cargo test -p toolu-shell --test scenarios` |
 | AC-8 | the workspace | gate green | `cargo xtask gate`; `bun run test`; CI `rust`, `rust-musl` |
+| AC-9 | the TypeScript unit-test inputs, plus the probed constructs | the same expectations | `cargo test -p toolu-shell --lib` (the `src/tests/*_test.rs` files) |
 
 ## Documentation impact
 
@@ -218,3 +237,13 @@ The fields:
 None blocking.
 - brush-parser re-admission is a possible later `chore(gates):` PR. It does not block this one, and the owner is the epic.
 - Fuzz durations of 60 s per PR and 30 min scheduled are defaults. CI time per PR is tracked by #410.
+
+## Spec review
+
+**Status:** Approved (2026-10-06, epic worker). Jev, on whether each issue criterion is covered by an AC with a runnable check: parity 0.88, differential 0.90, malformed 0.88, nesting 0.85, fuzz 0.95, latency 0.81, scenarios 0.97.
+
+- Architecture: 🟡 should-fix (fixed). The walk table assumed `[ … ]` was a command, `(( … ))` a separate node and `coproc` a node. A tree-sitter-bash probe showed `test_command`, `compound_statement` and a plain command. It also showed heredoc continuations nested in `heredoc_redirect`, and that backslash-newline splits a word. Added the rows and the Mapping notes, each with TypeScript's measured answer.
+- Acceptance criteria: 🟡 should-fix (fixed). The TypeScript unit tests had no Rust counterpart. Added AC-9.
+- AC-4: 🔵 consider (fixed). "Nor allows the command" now names the decision rule's `unknown` verdict.
+- AC-6: 🔵 consider (fixed). It now states that the timed span includes parse and walk.
+- AC-5: 🔵 consider (fixed). The scheduled run cannot happen before merge. The spec now says so, and the PR will.
